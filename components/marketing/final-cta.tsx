@@ -49,7 +49,7 @@ export function FinalCta() {
                 size="lg"
                 className="!h-12 !px-6 text-[15px] !bg-transparent !text-white !ring-zinc-700 hover:!bg-zinc-900"
               >
-                <Terminal size={16} /> npx create-inari-page
+                <Terminal size={16} /> npx create-openlen-page
               </Button>
             </div>
             <div className="mt-5 text-xs text-zinc-500 flex flex-wrap items-center gap-4">

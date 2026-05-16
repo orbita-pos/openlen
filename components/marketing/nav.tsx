@@ -44,7 +44,7 @@ export function Nav({ dark, onToggleDark }: NavProps) {
               い
             </span>
           </span>
-          <span className="font-semibold tracking-tight text-[15px]">Inari Pages</span>
+          <span className="font-semibold tracking-tight text-[15px]">OpenLen</span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-1 text-sm">

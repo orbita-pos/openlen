@@ -36,7 +36,7 @@ export function Features() {
       <div className="mx-auto max-w-6xl px-6 py-24 sm:py-28">
         <div className="max-w-2xl">
           <Badge tone="coral">
-            <Heart size={11} /> Why Inari
+            <Heart size={11} /> Why OpenLen
           </Badge>
           <h2 className="mt-4 text-3xl sm:text-5xl font-semibold tracking-tightest leading-[1.05]">
             Built for people who&apos;d rather{" "}

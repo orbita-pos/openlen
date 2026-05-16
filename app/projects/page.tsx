@@ -4,7 +4,7 @@ import { listProjects } from "@/lib/projects";
 import { ProjectsView } from "./projects-view";
 
 export const metadata = {
-  title: "My pages · Inari Pages",
+  title: "My pages · OpenLen",
 };
 
 export const dynamic = "force-dynamic";

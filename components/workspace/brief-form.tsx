@@ -110,7 +110,7 @@ export function BriefForm({
             What do you want to build?
           </h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-1.5">
-            Describe your landing page in plain English. Inari handles copy,
+            Describe your landing page in plain English. OpenLen handles copy,
             layout, imagery, and code.
           </p>
 

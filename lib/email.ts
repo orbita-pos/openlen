@@ -10,7 +10,7 @@ import { Resend } from "resend";
 // ─────────────────────────────────────────────────────────────────────────────
 
 const apiKey = process.env.RESEND_API_KEY;
-const from = process.env.EMAIL_FROM ?? "Inari Pages <no-reply@inari.pages>";
+const from = process.env.EMAIL_FROM ?? "OpenLen <no-reply@openlen.com>";
 
 const client = apiKey ? new Resend(apiKey) : null;
 
@@ -37,7 +37,7 @@ export async function sendPasswordResetEmail(
   await client.emails.send({
     from,
     to: input.to,
-    subject: "Reset your Inari Pages password",
+    subject: "Reset your OpenLen password",
     html,
     text,
   });
@@ -48,13 +48,13 @@ function buildPasswordResetText({ name, resetUrl }: PasswordResetEmail): string 
   return [
     greeting,
     "",
-    "Click the link below to reset your Inari Pages password. The link expires in 1 hour.",
+    "Click the link below to reset your OpenLen password. The link expires in 1 hour.",
     "",
     resetUrl,
     "",
     "If you didn't request this, ignore this email — your password won't change.",
     "",
-    "— Inari Pages",
+    "— OpenLen",
   ].join("\n");
 }
 
@@ -67,7 +67,7 @@ function buildPasswordResetHtml({ name, resetUrl }: PasswordResetEmail): string 
     <tr><td>
       <div style="display:flex; align-items:center; gap:8px; margin-bottom:24px;">
         <span style="display:inline-block; width:24px; height:24px; background:#FF5A36; border-radius:6px; color:#fff; font-weight:700; text-align:center; line-height:24px; font-size:13px;">い</span>
-        <span style="font-weight:600; font-size:14px;">Inari Pages</span>
+        <span style="font-weight:600; font-size:14px;">OpenLen</span>
       </div>
       <h1 style="font-size:22px; margin:0 0 12px; letter-spacing:-0.02em;">Reset your password</h1>
       <p style="font-size:14px; line-height:1.5; color:#525252; margin:0 0 24px;">

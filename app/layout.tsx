@@ -18,7 +18,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Inari Pages — Beautiful landing pages. AI-built. Open source.",
+  title: "OpenLen — Beautiful landing pages. AI-built. Open source.",
   description:
     "Open-source AI landing-page generator. Lovable quality, your code, $19/month. Generate production-ready pages with smart multi-model routing.",
 };

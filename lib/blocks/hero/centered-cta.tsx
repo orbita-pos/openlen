@@ -2,7 +2,7 @@
  * Source: Tailark (MIT) — hero-section-1 pattern
  *   https://github.com/tailark/blocks
  * License: MIT — see /LICENSES/tailark.MIT.txt
- * Adapted for Inari Pages design tokens: hardcoded colours replaced with
+ * Adapted for OpenLen design tokens: hardcoded colours replaced with
  * `tokens.X`, copy lifted into the `slotsSchema`, mockup image moved to a
  * slot so the orchestrator's image step can populate it. No visual changes
  * beyond token substitution and slot extraction.

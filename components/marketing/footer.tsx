@@ -20,7 +20,7 @@ export function Footer() {
                   い
                 </span>
               </span>
-              <span className="font-semibold tracking-tight">Inari Pages</span>
+              <span className="font-semibold tracking-tight">OpenLen</span>
             </a>
             <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-500 max-w-sm">
               The open-source AI landing-page generator. Lovable quality, your code,
@@ -74,7 +74,7 @@ export function Footer() {
 
         <div className="mt-14 pt-6 border-t border-zinc-100 dark:border-zinc-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-zinc-500 dark:text-zinc-500">
           <div className="flex flex-wrap items-center gap-3">
-            <span>© 2026 Inari Labs</span>
+            <span>© 2026 OpenLen</span>
             <span className="text-zinc-300 dark:text-zinc-700">·</span>
             <a
               href="#license"
@@ -84,7 +84,7 @@ export function Footer() {
             </a>
             <span className="hidden sm:inline text-zinc-300 dark:text-zinc-700">·</span>
             <span className="hidden sm:inline">
-              Built with Inari Pages, naturally.
+              Built with OpenLen, naturally.
             </span>
           </div>
           <div className="flex items-center gap-1.5">

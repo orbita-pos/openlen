@@ -57,7 +57,7 @@ export default async function PreviewBlocksPage({
               className="text-sm font-medium"
               style={{ fontFamily: tokens.fontDisplay, color: tokens.text }}
             >
-              Inari · Block Library Preview
+              OpenLen · Block Library Preview
             </span>
             <span className="text-xs" style={{ color: tokens.textDim }}>
               {BLOCK_IDS.length} blocks · palette: {palette}

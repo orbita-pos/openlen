@@ -149,7 +149,7 @@ const CODE_TEMPLATES: Record<
   },
   shell: {
     lines: [
-      `$ inari deploy ./site`,
+      `$ openlen deploy ./site`,
       `building...`,
       `live at example.com`,
     ],

@@ -1,7 +1,7 @@
 import { ResetForm } from "./reset-form";
 
 export const metadata = {
-  title: "Set a new password · Inari Pages",
+  title: "Set a new password · OpenLen",
 };
 
 export default async function ResetPage({

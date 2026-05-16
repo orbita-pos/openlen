@@ -3,7 +3,7 @@ import { LoginForm } from "./login-form";
 import { auth, enabledOauthProviders } from "@/auth";
 
 export const metadata = {
-  title: "Sign in · Inari Pages",
+  title: "Sign in · OpenLen",
 };
 
 export default async function LoginPage({

@@ -63,7 +63,7 @@ const NAME_STOPLIST = new Set([
   "Show HN",
   "Hacker News",
   "Built With",
-  "Inari Pages",
+  "OpenLen Pages",
   "Pure HTML",
   "Open Source",
   "Privacy Policy",

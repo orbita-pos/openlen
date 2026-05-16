@@ -24,7 +24,7 @@ const COL_NAME =
   Math.max(12, ...BLOCK_IDS.map((id) => BLOCK_REGISTRY[id].meta.displayName.length)) +
   2;
 
-console.log("Inari block library — manifest\n");
+console.log("OpenLen block library — manifest\n");
 console.log(pad("ID", COL_ID) + pad("Display name", COL_NAME) + "Aesthetics");
 console.log("─".repeat(COL_ID + COL_NAME + 80));
 

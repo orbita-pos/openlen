@@ -41,7 +41,7 @@ export function AppHeader({ nav, actions }: AppHeaderProps) {
               </span>
             </span>
             <span className="hidden sm:inline font-semibold tracking-tight text-[14px]">
-              Inari Pages
+              OpenLen
             </span>
           </Link>
           {nav && (

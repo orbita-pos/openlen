@@ -37,8 +37,8 @@ function buildStorage(): StorageAdapter {
       accountId: R2_ACCOUNT_ID,
       accessKey: R2_ACCESS_KEY,
       secretKey: R2_SECRET_KEY,
-      bucket: R2_BUCKET || "inari-uploads",
-      publicUrlBase: R2_PUBLIC_URL || "https://uploads.inari-pages.com",
+      bucket: R2_BUCKET || "openlen-uploads",
+      publicUrlBase: R2_PUBLIC_URL || "https://uploads.openlen.com",
     });
   }
 

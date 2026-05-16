@@ -76,7 +76,7 @@ export function HeroPromptInput() {
               }
             }}
             rows={2}
-            placeholder="Ask Inari to build a landing page for…"
+            placeholder="Ask OpenLen to build a landing page for…"
             className="block w-full resize-none bg-transparent text-[15px] leading-relaxed text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none"
             style={{ minHeight: 56 }}
           />
@@ -108,7 +108,7 @@ export function HeroPromptInput() {
                 <span className="absolute inset-0 rounded-full bg-emerald-500 opacity-70 animate-ping" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
               </span>
-              Inari Orchestra · auto-routing
+              OpenLen Orchestra · auto-routing
             </span>
           </div>
 

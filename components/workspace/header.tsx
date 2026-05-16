@@ -87,7 +87,7 @@ export function Header({
               </span>
             </span>
             <span className="hidden sm:inline font-semibold tracking-tight text-[14px]">
-              Inari Pages
+              OpenLen
             </span>
           </Link>
           <div className="hidden md:block h-5 w-px bg-zinc-200 dark:bg-zinc-800 shrink-0" />

@@ -1,15 +1,15 @@
-# Show HN: Inari Pages — Open-source AI landing page generator with quality gates
+# Show HN: OpenLen — Open-source AI landing page generator with quality gates
 
 Hi HN,
 
-I built Inari Pages because every AI landing page generator I tried
+I built OpenLen because every AI landing page generator I tried
 (Lovable, Bolt, v0, Framer AI) produces something that *looks* OK in a demo
 but fails when you actually inspect it: missing alt text, broken contrast,
 "world-class" generic copy, mobile horizontal scroll, no schema.org markup,
 hero says "Three partners. 14 years." and the about section says "Three
 people. Six years." on the same generated page.
 
-Inari Pages does something none of the major ones do: every output passes
+OpenLen does something none of the major ones do: every output passes
 **6 quality gates before delivery**.
 
 - **a11y** — axe-core: alt text, labels, WCAG AA contrast, heading hierarchy
@@ -52,7 +52,7 @@ Smart routing across 7+ models on Together AI keeps real cost at
   detected" on clean copy; Kimi reads 3 KB HTML reliably
 
 Lovable runs on Claude Sonnet 4.5 ($3/$15 per M) — same call, ~10× the cost.
-Inari Pages is what you build when you decide the model bill matters as much
+OpenLen is what you build when you decide the model bill matters as much
 as the output quality.
 
 ## Honest eval
@@ -82,7 +82,7 @@ hosted modifications stay open source — if you fork it and run a competing
 service, your fork is also open. Vendored blocks keep their original MIT
 licenses.
 
-Hosted version coming soon at inari-pages.com.
+Hosted version coming soon at openlen.com.
 
 - **Repo:** https://github.com/jesusbernalrj/inari-pages
 - **Eval doc:** https://github.com/jesusbernalrj/inari-pages/blob/main/EVAL_PHASE_2.md
@@ -96,7 +96,7 @@ Genuinely curious about:
    whether anyone's solved fuzzy fact-match without an LLM in the loop.)
 2. Briefs I haven't tested that would break this. The eval covers
    saas / portfolio / event / ecommerce / agency. What's missing?
-3. The Lovable comparison is unfair in places (Inari does **only** landing
+3. The Lovable comparison is unfair in places (OpenLen does **only** landing
    pages — Lovable does any React app). Is the vertical-specialisation wedge
    strong enough to justify the framing?
 

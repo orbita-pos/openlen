@@ -1,6 +1,6 @@
 # `lib/blocks/` — the curated block library
 
-Inari's orchestrator does **not** ask an LLM to write JSX. It asks the LLM to:
+OpenLen's orchestrator does **not** ask an LLM to write JSX. It asks the LLM to:
 
 1. **Pick block IDs** (in the `plan.structure` step) from this registry.
 2. **Fill slot JSON** (in the `section.fill` step), validated by each block's
@@ -8,7 +8,7 @@ Inari's orchestrator does **not** ask an LLM to write JSX. It asks the LLM to:
 3. **Render deterministically** (in `compose.assemble`) using the React
    components in this folder.
 
-This is the architectural reason Inari does not suffer the "bug loops" Lovable
+This is the architectural reason OpenLen does not suffer the "bug loops" Lovable
 users complain about: the model never produces a `.tsx` file that could be
 broken. Pages are composed from pre-vetted blocks + structured slot data.
 
@@ -33,7 +33,7 @@ Where:
 ### Rules for components
 
 1. **Tokens-only for colour, type, radius, shadow.** Never hardcode a hex —
-   read from `tokens.X`. The five Inari palettes feed `tokens` at render time.
+   read from `tokens.X`. The five OpenLen palettes feed `tokens` at render time.
 2. **Slots are required.** If `slots.headline` is missing, the schema fails
    in `section.fill` long before the component runs — don't paper over
    missing data with hardcoded defaults inside the JSX.

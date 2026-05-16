@@ -79,7 +79,7 @@ export const meta: BlockMeta<typeof slotsSchema> = {
         features: [
           "Unlimited pages",
           "A/B race variants (3 at a time)",
-          "Inari domain hosting",
+          "OpenLen domain hosting",
           "Priority generation queue",
           "Email support, 24h response",
         ],

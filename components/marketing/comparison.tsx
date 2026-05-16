@@ -18,7 +18,7 @@ const cols = ["Price", "Quality gates", "Open source", "Your code", "Self-host"]
 
 const rows: Row[] = [
   {
-    name: "Inari Pages",
+    name: "OpenLen",
     us: true,
     values: [
       { type: "price", v: "$19/mo" },

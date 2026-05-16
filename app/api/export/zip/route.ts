@@ -136,7 +136,7 @@ ${html}
 function buildReadme(page: LandingPage): string {
   return `# ${page.meta.title}
 
-Generated with Inari Pages on ${page.meta.generatedAt}.
+Generated with OpenLen on ${page.meta.generatedAt}.
 
 ## How to use
 

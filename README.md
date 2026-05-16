@@ -1,4 +1,4 @@
-# Inari Pages
+# OpenLen
 
 > Beautiful landing pages. AI-built. Open source.
 > Lovable quality. Your code. $19 / month.
@@ -11,7 +11,7 @@
 
 ## What this is
 
-Inari Pages is an open-source AI landing page generator. Describe what you
+OpenLen is an open-source AI landing page generator. Describe what you
 want; we produce a complete, **conversion-validated** landing page in under
 60 seconds — pure HTML + Tailwind, no platform lock-in, no npm install on
 the output.
@@ -34,7 +34,7 @@ the output.
 
 ## Quick start — hosted (when public)
 
-Visit [inari-pages.com](https://inari-pages.com) → describe your landing →
+Visit [openlen.com](https://openlen.com) → describe your landing →
 your generated HTML downloads.
 
 ## Quick start — self-host
@@ -66,7 +66,7 @@ gate verdicts, and witness path.
 |------------------------|---------|------------------------------------------------------------------|
 | `TOGETHER_API_KEY`     | _none_  | Required when `MOCK_MODE` is off. Get one at together.ai.       |
 | `MOCK_MODE`            | _off_   | Set to `1` to use canned responses (no API spend, no key needed). |
-| `INARI_PAGES_DOMAIN`   | _none_  | Optional. Canonical URL used in generated meta tags.            |
+| `OPENLEN_DOMAIN`       | _none_  | Optional. Canonical URL used in generated meta tags.            |
 | `INARIWATCH_DSN`       | _none_  | Optional. Error monitoring DSN; auto-local in dev when blank.    |
 
 See [`.env.local.example`](./.env.local.example) for the full list.
@@ -110,7 +110,7 @@ LandingPage { html, css, images, meta, cost, witnessPath, qualityGrade }
 ## Quality gates — the open lane
 
 None of the major AI page builders (Lovable, Bolt, v0, Framer AI, Webflow AI)
-ship explicit gates. They rely on implicit model quality. Inari Pages enforces:
+ship explicit gates. They rely on implicit model quality. OpenLen enforces:
 
 1. **A11y** — axe-core: alt text, labels, WCAG AA contrast, heading hierarchy
 2. **Conversion** — banned-phrase regex + AI judge for primary CTA / hero

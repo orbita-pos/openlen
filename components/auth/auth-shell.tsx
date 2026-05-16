@@ -34,7 +34,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
             </span>
           </span>
           <span className="font-semibold tracking-tight text-[14px]">
-            Inari Pages
+            OpenLen
           </span>
         </Link>
         <button
@@ -53,7 +53,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
 
       <footer className="relative z-10 px-5 sm:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-zinc-400 dark:text-zinc-600">
         <div className="flex items-center gap-3">
-          <span>© 2026 Inari Labs</span>
+          <span>© 2026 OpenLen</span>
           <span className="text-zinc-300 dark:text-zinc-800">·</span>
           <a
             href="https://www.gnu.org/licenses/agpl-3.0.html"
