@@ -1,0 +1,22 @@
+{
+  "qualityGrade": "needs_review",
+  "refineAttempts": 2,
+  "criticalViolations": [
+    {
+      "gate": "conversion",
+      "code": "banned-phrase",
+      "message": "Found banned phrase: \"World-class\""
+    }
+  ],
+  "allGatesPassed": false,
+  "gatesPassed": [
+    "a11y",
+    "mobile",
+    "seo",
+    "security",
+    "performance"
+  ],
+  "gatesFailed": [
+    "conversion"
+  ]
+}
