@@ -59,8 +59,10 @@ export function PreviewPanel({ state, panelOpen, onOpenPanel }: PreviewPanelProp
   const [device, setDevice] = useState<Device>("desktop");
   const [zoom, setZoom] = useState<Zoom>("fit");
   const containerRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const [fitScale, setFitScale] = useState(1);
   const [iframeKey, setIframeKey] = useState(0);
+  const [contentHeight, setContentHeight] = useState(1200);
 
   const deviceWidth = DEVICE_WIDTHS[device];
 
@@ -90,6 +92,42 @@ export function PreviewPanel({ state, panelOpen, onOpenPanel }: PreviewPanelProp
     if (state.kind !== "generated") return null;
     return buildSrcDoc(state.result);
   }, [state]);
+
+  // Measure iframe content so the wrapper matches the real document height —
+  // without this the iframe falls back to its own scrollbar AND the dotted
+  // preview container also scrolls, giving the user two competing scrolls.
+  useEffect(() => {
+    if (!srcDoc) {
+      setContentHeight(1200);
+      return;
+    }
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    let observer: ResizeObserver | null = null;
+    const measure = () => {
+      const doc = iframe.contentDocument;
+      if (!doc) return;
+      const h = Math.max(
+        doc.documentElement?.scrollHeight ?? 0,
+        doc.body?.scrollHeight ?? 0,
+      );
+      if (h > 0) setContentHeight(h);
+    };
+    const onLoad = () => {
+      measure();
+      const doc = iframe.contentDocument;
+      if (doc?.body && typeof ResizeObserver !== "undefined") {
+        observer = new ResizeObserver(measure);
+        observer.observe(doc.body);
+      }
+    };
+    iframe.addEventListener("load", onLoad);
+    if (iframe.contentDocument?.readyState === "complete") onLoad();
+    return () => {
+      iframe.removeEventListener("load", onLoad);
+      observer?.disconnect();
+    };
+  }, [srcDoc, iframeKey]);
 
   return (
     <section className="md:flex-1 md:min-h-0 min-h-[600px] flex flex-col bg-zinc-100 dark:bg-zinc-950">
@@ -207,16 +245,19 @@ export function PreviewPanel({ state, panelOpen, onOpenPanel }: PreviewPanelProp
                     width: deviceWidth,
                     transform: `scale(${scale})`,
                     transformOrigin: "top left",
-                    height: 1700,
-                    marginBottom: -(1 - scale) * 1700,
+                    height: contentHeight,
+                    marginBottom: -(1 - scale) * contentHeight,
                   }}
                 >
                   <iframe
+                    ref={iframeRef}
                     key={iframeKey}
                     title="Generated page preview"
                     srcDoc={srcDoc}
-                    className="w-full h-full border-0 bg-white"
+                    className="w-full border-0 bg-white block"
+                    style={{ height: contentHeight }}
                     sandbox="allow-same-origin"
+                    scrolling="no"
                   />
                 </div>
               )}
