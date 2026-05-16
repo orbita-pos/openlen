@@ -52,12 +52,17 @@ export async function generateLandingPage(
     brief: options.brief,
     maxBudget: options.maxBudget,
     fastPath: options.fastPath,
+    images: options.images,
   });
 
   const generationId = randomUUID();
   const recorder = createRecorder(generationId);
   const budget = createBudget({ cap: parsed.maxBudget });
   const fastPath = shouldUseFastPath(parsed.brief, parsed.fastPath);
+  // Default ON. Only false when the caller explicitly opts out of AI imagery
+  // (the brief-form toggle). When false, the plan's imageNeeds is overridden
+  // below and the FLUX/Wan calls in `generateImages` are short-circuited.
+  const generateImagery = parsed.images !== false;
 
   const ctx: StepContext = {
     brief: parsed.brief,
@@ -87,12 +92,28 @@ export async function generateLandingPage(
     // a different one from our default selection based on aesthetic fit).
     ctx.palette = PALETTES[plan.palette];
 
+    // No-image mode: stamp out the plan's imageNeeds so downstream consumers
+    // (image-prompt builder, witness recording, UI cost charts) see a coherent
+    // zero. The block components honour empty `images` arrays at assemble time.
+    if (!generateImagery) {
+      plan.imageNeeds = { hero: false, decorative: 0 };
+    }
+
     // Fan-out: fill all blocks + generate images in parallel.
     const imagePrompts = buildImagePrompts(intent, plan);
     let [filledBlocks, images] = await Promise.all([
       fillAllBlocks(ctx, { plan, intent }),
       generateImages(ctx, imagePrompts),
     ]);
+
+    // No-image mode: the fill step follows the example slot which carries
+    // sample Unsplash URLs, so AI output WILL include `imageSrc`/`mockupSrc`
+    // even though the user opted out. Scrub those fields before assemble so
+    // the rendered page genuinely has no imagery (block components handle
+    // empty image slots with a centered/text-only fallback layout).
+    if (!generateImagery) {
+      filledBlocks = stripImageSlots(filledBlocks);
+    }
 
     // Deterministic assembly — no LLM call.
     let page = await assemble({
@@ -444,6 +465,50 @@ function buildDecorativePrompt(
   const theme = themes[index] ?? "supporting visual";
   const styleHint = aestheticStyleHint(plan.aesthetic);
   return `Decorative ${theme} for ${intent.industry}, ${intent.tone} register. ${styleHint}. Subject: abstract or product detail, no faces, no readable text. 4:3 framing.`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Image-slot scrubber for no-image mode. Removes the well-known image URL
+// keys recursively so block components fall back to their text-only variants.
+// Note: `logos[].src` in hero/logo-strip and `tiles[].imageSrc` in
+// features/bento-asymmetric are also stripped — both blocks already gracefully
+// render without those values (logos fall back to display name; bento tiles
+// to code/stats/none visual).
+//
+// Exported so regenerate-section can mirror the behaviour when the original
+// page was generated with images off (detected via plan.imageNeeds === 0).
+// ─────────────────────────────────────────────────────────────────────────────
+
+const STRIPPED_IMAGE_KEYS = new Set([
+  "imageSrc",
+  "imageAlt",
+  "mockupSrc",
+  "mockupAlt",
+  "logoSrc",
+]);
+
+export function stripImageSlots(filledBlocks: FilledBlock[]): FilledBlock[] {
+  return filledBlocks.map((b) => ({ ...b, slots: scrubImageKeys(b.slots) }));
+}
+
+function scrubImageKeys(value: unknown): unknown {
+  if (value === null || value === undefined) return value;
+  if (Array.isArray(value)) return value.map(scrubImageKeys);
+  if (typeof value !== "object") return value;
+  const obj = value as Record<string, unknown>;
+  // hero/logo-strip's `logos[]` are {name, src?} objects. Strip `src` only
+  // when the surrounding shape matches that pattern — broader "src" stripping
+  // would risk clobbering unrelated string fields (e.g. CTA `href`-adjacent).
+  const isLogoLike =
+    typeof obj.name === "string" &&
+    Object.keys(obj).every((k) => k === "name" || k === "src");
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (STRIPPED_IMAGE_KEYS.has(k)) continue;
+    if (isLogoLike && k === "src") continue;
+    out[k] = scrubImageKeys(v);
+  }
+  return out;
 }
 
 function aestheticStyleHint(aesthetic: Plan["aesthetic"]): string {

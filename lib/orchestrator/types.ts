@@ -428,5 +428,10 @@ export const GenerateRequestSchema = z.object({
   maxBudget: z.number().positive().max(10).optional(),
   // Force adaptive fast-path on/off. When omitted, the orchestrator decides.
   fastPath: z.boolean().optional(),
+  // When false, skip FLUX.2 hero + Wan decorative image generation entirely.
+  // Plan's imageNeeds is overridden to {hero:false, decorative:0}, blocks
+  // render their no-image variants, and the per-gen cost drops by ~$0.06–0.09.
+  // Default true keeps the existing "AI imagery on" behaviour.
+  images: z.boolean().optional(),
 });
 export type GenerateRequest = z.infer<typeof GenerateRequestSchema>;

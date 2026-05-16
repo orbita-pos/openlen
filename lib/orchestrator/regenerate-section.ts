@@ -3,6 +3,7 @@ import { createBudget } from "@/lib/budget";
 import { createRecorder } from "@/lib/witness/recorder";
 import { fillBlock } from "./fill";
 import { assemble } from "./assemble";
+import { stripImageSlots } from "./index";
 import type {
   CostBreakdown,
   FilledBlock,
@@ -85,9 +86,20 @@ export async function regenerateBlock(
     emphasis,
   });
 
-  const splicedFilledBlocks = input.filledBlocks.map((fb) =>
+  let splicedFilledBlocks = input.filledBlocks.map((fb) =>
     fb.index === input.blockIndex ? newFilled : fb,
   );
+
+  // No-image preference inheritance: if the original generation opted out of
+  // AI imagery (plan.imageNeeds zero), the fill step still emits the example
+  // imageSrc URLs from the schema. Strip them so the regenerated block
+  // matches the rest of the text-only page instead of dropping in a stray
+  // Unsplash placeholder.
+  const noImageMode =
+    !input.plan.imageNeeds.hero && input.plan.imageNeeds.decorative === 0;
+  if (noImageMode) {
+    splicedFilledBlocks = stripImageSlots(splicedFilledBlocks);
+  }
 
   const page = await assemble({
     ctx,
