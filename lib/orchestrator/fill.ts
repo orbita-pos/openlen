@@ -1,7 +1,7 @@
 import type { ChatMessage } from "@/lib/together/client";
 import { completeText } from "@/lib/together/client";
 import { getBlock, type BlockId } from "@/lib/blocks/_registry";
-import type { FilledBlock, Intent, Plan } from "./types";
+import type { FactsLedger, FilledBlock, Intent, Plan } from "./types";
 import { buildSystemMessageForStep, fallbackCount, pickTextModel } from "./routing";
 import { emit, emitStepResult, parseJson, type StepContext } from "./_shared";
 
@@ -95,6 +95,7 @@ export async function fillBlock(
     intent: args.intent,
     aesthetic: args.plan.aesthetic,
     brief: ctx.brief,
+    factsLedger: args.plan.factsLedger,
   });
 
   const messages: ChatMessage[] = [
@@ -251,6 +252,14 @@ interface BuildFillUserPromptArgs {
    * October virtual event → March SF event).
    */
   brief: string;
+  /**
+   * Authoritative facts extracted by the plan step. Stronger guarantee than the
+   * raw brief: structured key-value pairs all fill calls reference verbatim,
+   * eliminating cross-block contradictions (S6 agency: "14 years" hero vs
+   * "6 years" about). Empty arrays are normal — the brief may not have priced
+   * anything, named anyone, etc.
+   */
+  factsLedger: FactsLedger;
 }
 
 function buildFillUserPrompt(args: BuildFillUserPromptArgs): string {
@@ -269,12 +278,16 @@ function buildFillUserPrompt(args: BuildFillUserPromptArgs): string {
     args.brief,
     `</brief>`,
     ``,
+    renderFactsLedger(args.factsLedger),
+    ``,
     `BRIEF FIDELITY (non-negotiable):`,
     `- Reproduce exact facts from the brief: pricing numbers, dates, named people, named places, headcount, ticket prices, product features.`,
     `- Do NOT substitute or "round" prices ($29/mo stays $29/mo, never $24 or $30).`,
     `- Do NOT relocate the product geographically (Mexico stays Mexico, Berlin stays Berlin).`,
     `- Do NOT invent speakers, clients, or testimonial sources beyond what's reasonable for the block; never contradict named people in the brief.`,
     `- If the brief specifies a quantity ("6 projects", "3 case studies", "4 client logos"), match it.`,
+    `- The <facts_ledger> above is AUTHORITATIVE. When a fact in the ledger applies to a slot you're filling, copy the ledger value VERBATIM (string-for-string, including units / casing / punctuation).`,
+    `- Do NOT invent facts not in the ledger or the brief. If the ledger is silent on a value, you may compose plausible copy — but never contradict the ledger or the brief.`,
     ``,
     `Context:`,
     `${productLine}`,
@@ -293,6 +306,35 @@ function buildFillUserPrompt(args: BuildFillUserPromptArgs): string {
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+/**
+ * Inline the factsLedger so the fill model has a structured, hierarchical view
+ * of every brief fact. JSON-in-prompt rather than a bulleted text form because
+ * Kimi / Qwen3 both reach into structured data more reliably when it looks
+ * like a literal JSON sub-block they can mentally diff against the brief.
+ *
+ * When the ledger is fully empty we omit the section entirely — sending an
+ * empty `<facts_ledger>{}</facts_ledger>` confuses some models into treating
+ * it as a constraint ("ledger is empty, so I shouldn't mention any facts").
+ */
+function renderFactsLedger(ledger: FactsLedger): string {
+  const isEmpty =
+    ledger.prices.length === 0 &&
+    ledger.quantities.length === 0 &&
+    ledger.people.length === 0 &&
+    ledger.places.length === 0 &&
+    ledger.dates.length === 0 &&
+    ledger.clientLogos.length === 0 &&
+    !ledger.productName &&
+    !ledger.tagline;
+  if (isEmpty) return "";
+  return [
+    `<facts_ledger>`,
+    `(Authoritative — fill slots that reference these facts MUST use the verbatim values.)`,
+    JSON.stringify(ledger, null, 2),
+    `</facts_ledger>`,
+  ].join("\n");
 }
 
 function buildAttemptList(): Array<{ fallbackIndex: number | undefined }> {
