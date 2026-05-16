@@ -41,13 +41,25 @@ export function Hero() {
           </h1>
 
           <p className="mt-6 max-w-xl text-pretty text-lg text-zinc-600 dark:text-zinc-400">
-            Lovable quality.{" "}
             <span className="text-zinc-900 dark:text-zinc-100 font-medium">
-              Your code.
+              6 quality gates
             </span>{" "}
+            before delivery. Your code.{" "}
             <span className="whitespace-nowrap text-zinc-900 dark:text-zinc-100 font-medium">
               $19 / month.
             </span>
+          </p>
+          <p className="mt-3 max-w-xl text-pretty text-sm text-zinc-500 dark:text-zinc-500">
+            4.8/5 quality · $0.13 average cost · 0% bug-loops by construction. See{" "}
+            <a
+              href="https://github.com/jesusbernalrj/inari-pages/blob/main/EVAL_PHASE_2.md"
+              target="_blank"
+              rel="noreferrer"
+              className="underline decoration-zinc-300 dark:decoration-zinc-700 underline-offset-2 hover:decoration-coral-500 hover:text-coral-600 dark:hover:text-coral-400"
+            >
+              public eval
+            </a>
+            .
           </p>
 
           <div className="mt-10 w-full max-w-2xl">

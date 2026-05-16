@@ -14,7 +14,7 @@ interface Row {
   values: CellValue[];
 }
 
-const cols = ["Price", "Open source", "Your code", "AI image gen", "Self-host"];
+const cols = ["Price", "Quality gates", "Open source", "Your code", "Self-host"];
 
 const rows: Row[] = [
   {
@@ -22,9 +22,9 @@ const rows: Row[] = [
     us: true,
     values: [
       { type: "price", v: "$19/mo" },
+      { type: "yes", note: "6 gates" },
       { type: "yes" },
       { type: "yes" },
-      { type: "yes", note: "FLUX.2 HD" },
       { type: "yes" },
     ],
   },
@@ -33,8 +33,8 @@ const rows: Row[] = [
     values: [
       { type: "price", v: "$220/mo", strike: true },
       { type: "no" },
-      { type: "partial", v: "Export only" },
       { type: "no" },
+      { type: "partial", v: "Export only" },
       { type: "no" },
     ],
   },
@@ -53,8 +53,8 @@ const rows: Row[] = [
     values: [
       { type: "price", v: "$20/mo" },
       { type: "no" },
-      { type: "yes" },
       { type: "no" },
+      { type: "yes" },
       { type: "partial", v: "Vercel only" },
     ],
   },

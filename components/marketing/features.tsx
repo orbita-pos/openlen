@@ -1,4 +1,4 @@
-import { Code, Heart, Image, Unlock, Wallet, type LucideIcon } from "lucide-react";
+import { Code, Heart, Shield, Unlock, Wallet, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface FeatureItem {
@@ -9,24 +9,24 @@ interface FeatureItem {
 
 const items: FeatureItem[] = [
   {
-    icon: Unlock,
-    title: "Open source (AGPL)",
-    body: "Fork it. Audit it. Run it on your laptop. The whole generator is on GitHub — no SaaS lock-in disguised as a free tier.",
+    icon: Shield,
+    title: "6 quality gates before delivery",
+    body: "a11y · conversion · mobile · SEO · security · performance. No other AI page builder validates outputs. We do. 100% gates pass first-try on our public eval suite.",
   },
   {
     icon: Wallet,
-    title: "10× cheaper than Lovable",
-    body: "$19/month flat. No per-page fees, no per-message limits, no surprise overage bills at the end of the quarter.",
+    title: "$0.13/gen real cost",
+    body: "Measured across 5 representative briefs (saas, portfolio, event, ecommerce, agency). Lovable lands at $1.50+/gen. The math leaves room for a $19/mo flat price with healthy margin.",
   },
   {
     icon: Code,
     title: "Code you own — deploy anywhere",
-    body: "Pure Next.js + Tailwind output. Push to Vercel, Netlify, Cloudflare, your own server. We don't host your page.",
+    body: "Pure HTML + Tailwind. Push to Vercel, Netlify, Cloudflare, GitHub Pages, your own server. No npm install on the output, no platform lock-in.",
   },
   {
-    icon: Image,
-    title: "Beautiful by default",
-    body: "shadcn/ui components + FLUX.2 HD generated imagery. Looks like a $5k freelance job, ships in under a minute.",
+    icon: Unlock,
+    title: "Open source (AGPL v3)",
+    body: "Fork it. Audit it. Self-host it. The generator, prompts, routing table, eval harness, and witness recordings all live in the repo.",
   },
 ];
 
