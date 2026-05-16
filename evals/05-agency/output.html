@@ -8,369 +8,332 @@
 html, body { margin: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; background: #fff; color: #111; }
 :root {
-  --brand: #111;
-  --bg: #fff;
-  --fg: #111;
+  --brand: #000000;
+  --bg: #ffffff;
+  --fg: #000000;
   --muted: #f0f0f0;
-  --spacing-xs: 0.5rem;
-  --spacing-s: 1rem;
-  --spacing-m: 2rem;
-  --spacing-l: 4rem;
-  --font-sans: system-ui, -apple-system, sans-serif;
-  --font-size-sm: clamp(0.875rem, 0.8vw + 0.6rem, 1rem);
-  --font-size-base: clamp(1rem, 1.2vw + 0.7rem, 1.25rem);
-  --font-size-lg: clamp(1.25rem, 2vw + 0.75rem, 2rem);
-  --font-size-xl: clamp(1.75rem, 3vw + 1rem, 3rem);
+  --font-family: 'Helvetica Neue', Arial, sans-serif;
 }
 
 *,
-*::before,
-*::after {
+*:before,
+*:after {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  font-family: var(--font-sans);
+  font-family: var(--font-family);
   background-color: var(--bg);
   color: var(--fg);
   line-height: 1.5;
 }
 
-main {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 var(--spacing-s);
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  height: 64px;
 }
 
-/* Hero Section */
+.navbar-brand {
+  font-weight: bold;
+  font-size: 1.25rem;
+}
+
+.navbar-links {
+  display: none;
+}
+
+.navbar-cta {
+  background: var(--brand);
+  color: var(--bg);
+  padding: 0.5rem 1rem;
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.navbar-cta:hover,
+.navbar-cta:focus {
+  opacity: 0.9;
+}
+
+@media (min-width: 640px) {
+  .navbar-links {
+    display: flex;
+    gap: 1.5rem;
+  }
+  
+  .navbar-links a {
+    text-decoration: none;
+    color: var(--fg);
+    font-weight: 500;
+  }
+  
+  .navbar-links a:hover,
+  .navbar-links a:focus {
+    text-decoration: underline;
+  }
+}
+
+section {
+  padding: 3rem 1.5rem;
+}
+
 .hero {
   display: grid;
   grid-template-columns: 1fr;
-  gap: var(--spacing-m);
-  padding: var(--spacing-l) 0;
-}
-
-.hero__content h1 {
-  font-size: var(--font-size-xl);
-  margin-top: 0;
-  margin-bottom: var(--spacing-xs);
-}
-
-.hero__content p {
-  font-size: var(--font-size-base);
-  margin-top: 0;
-  margin-bottom: var(--spacing-m);
-  max-width: 60ch;
-}
-
-.hero__media img {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-/* Button */
-.button {
-  display: inline-block;
-  padding: var(--spacing-s) var(--spacing-m);
-  background-color: var(--brand);
-  color: var(--bg);
-  text-decoration: none;
-  font-weight: 500;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-}
-
-.button:hover,
-.button:focus {
-  background-color: #000;
-  outline: 2px solid var(--brand);
-  outline-offset: 2px;
-}
-
-/* Social Proof */
-.social_proof {
-  padding: var(--spacing-m) 0;
-  text-align: center;
-}
-
-.social_proof p {
-  margin-top: 0;
-  margin-bottom: var(--spacing-m);
-  font-size: var(--font-size-sm);
-  color: #666;
-}
-
-.logos {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--spacing-s);
-}
-
-.logo-pill {
-  display: inline-block;
-  padding: 0.5em 1em;
-  background-color: var(--muted);
-  border-radius: 999px;
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-}
-
-/* Features */
-.features {
-  padding: var(--spacing-l) 0;
-}
-
-.features header {
-  text-align: center;
-  margin-bottom: var(--spacing-l);
-}
-
-.features h2 {
-  font-size: var(--font-size-lg);
-  margin-top: 0;
-  margin-bottom: var(--spacing-xs);
-}
-
-.features header p {
-  font-size: var(--font-size-base);
+  gap: 2rem;
+  max-width: 1200px;
   margin: 0 auto;
-  max-width: 60ch;
-  color: #666;
 }
 
-.features__grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--spacing-m);
+.hero-content h1 {
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
+  margin: 0 0 1rem;
+  font-weight: 700;
 }
 
-.features article {
-  padding-bottom: var(--spacing-m);
-  border-bottom: 1px solid var(--muted);
+.hero-content p {
+  font-size: clamp(1rem, 3vw, 1.125rem);
+  max-width: 600px;
+  margin-bottom: 2rem;
 }
 
-.features article:last-child {
-  border-bottom: none;
+.hero button {
+  background: var(--brand);
+  color: var(--bg);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
-.features h3 {
-  font-size: var(--font-size-base);
-  margin-top: 0;
-  margin-bottom: var(--spacing-xs);
+.hero button:hover,
+.hero button:focus {
+  opacity: 0.9;
 }
 
-.features p {
-  margin-top: 0;
-  margin-bottom: var(--spacing-xs);
-  font-size: var(--font-size-sm);
-}
-
-.category,
-.duration {
-  font-size: var(--font-size-sm);
-  color: #666;
-  display: block;
-}
-
-/* CTA */
-.cta {
-  padding: var(--spacing-l) 0;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--spacing-m);
-}
-
-.cta__content {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.cta h2 {
-  font-size: var(--font-size-lg);
-  margin-top: 0;
-  margin-bottom: var(--spacing-xs);
-}
-
-.cta p {
-  font-size: var(--font-size-base);
-  margin-top: 0;
-  margin-bottom: var(--spacing-m);
-  max-width: 60ch;
-}
-
-.cta__media img {
+.hero img {
   width: 100%;
   height: auto;
-  display: block;
-  border-radius: 4px;
+  object-fit: cover;
 }
 
-/* Footer */
-.footer {
-  padding: var(--spacing-l) 0;
-  border-top: 1px solid var(--muted);
-}
-
-.footer__content {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-m);
-}
-
-.footer h3 {
-  margin: 0;
-  font-size: var(--font-size-base);
-}
-
-.footer address {
-  font-style: normal;
-  font-size: var(--font-size-sm);
-  line-height: 1.6;
-}
-
-.footer nav a {
-  font-size: var(--font-size-sm);
-  text-decoration: none;
-  color: var(--fg);
-}
-
-.footer nav a:hover,
-.footer nav a:focus {
-  text-decoration: underline;
-}
-
-/* Responsive Breakpoints */
-@media (min-width: 640px) {
+@media (min-width: 1024px) {
   .hero {
     grid-template-columns: 1fr 1fr;
     align-items: center;
   }
+}
 
-  .features__grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.social_proof {
+  text-align: center;
+  background: var(--muted);
+}
 
-  .cta {
-    grid-template-columns: 1fr 1fr;
-    align-items: center;
-  }
+.social_proof h2 {
+  margin: 0 0 2rem;
+  font-size: 1.25rem;
+  font-weight: 400;
+}
 
-  .footer__content {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-  }
+.logos {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.logo-pill {
+  background: var(--bg);
+  padding: 0.5rem 1.25rem;
+  border-radius: 9999px;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.features {
+  display: grid;
+  gap: 3rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.features article {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+.features h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.features p {
+  margin: 0;
+  max-width: 600px;
+}
+
+.features img {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  border-radius: 4px;
 }
 
 @media (min-width: 1024px) {
-  .features__grid {
+  .features {
     grid-template-columns: repeat(3, 1fr);
   }
-
-  .logos {
-    gap: var(--spacing-m);
+  
+  .features article {
+    grid-template-rows: auto 1fr auto;
   }
+}
+
+.cta {
+  background: var(--muted);
+  text-align: center;
+}
+
+.cta-content {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.cta-content h2 {
+  margin: 0 0 1rem;
+  font-size: clamp(1.75rem, 5vw, 2.25rem);
+}
+
+.cta-content p {
+  margin: 0 0 2rem;
+}
+
+.cta-button {
+  background: var(--brand);
+  color: var(--bg);
+  padding: 0.75rem 2rem;
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: 500;
+  display: inline-block;
+}
+
+.cta-button:hover,
+.cta-button:focus {
+  opacity: 0.9;
+}
+
+.footer {
+  background: var(--brand);
+  color: var(--bg);
+  padding: 2rem 1.5rem;
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.footer ul {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.footer a {
+  color: var(--bg);
+  text-decoration: none;
+}
+
+.footer a:hover,
+.footer a:focus {
+  text-decoration: underline;
 }
 </style>
 </head>
 <body>
 <main>
+  <header class="navbar">
+    <div class="navbar-brand">Pixelhaus</div>
+    <nav class="navbar-links">
+      <a href="#client-logos">Clients</a>
+      <a href="#case-studies">Work</a>
+      <a href="#cta-booking">Contact</a>
+    </nav>
+    <a href="#cta-booking" class="navbar-cta">Book a discovery call</a>
+  </header>
+
   <section class="hero" data-section-id="hero">
-    <div class="hero__content">
-      <h1>Brand identities that outlast funding rounds</h1>
-      <p>Pixelhaus is a 3-person studio in Berlin. We build visual systems for startups preparing to scale — from first pitch deck to national retail rollout.</p>
-      <a href="#cta-contact" class="button">Book a call</a>
+    <div class="hero-content">
+      <h1>We build brand systems that outlast trends.</h1>
+      <p>Pixelhaus is a three-person identity studio in Berlin. We design visual systems for founders who need clarity, not noise.</p>
+      <button type="button" onclick="location.href='#cta-booking'">Book a discovery call</button>
     </div>
-    <div class="hero__media">
-      <img src="https://api.together.ai/shrt/Axjoc3wJJeQVxV48" alt="Minimalist Berlin design studio interior with large paper mockups on white walls">
-    </div>
+    <img src="https://api.together.ai/shrt/3eAhKShB7gtQoIor" alt="Minimalist Berlin design studio interior with large format brand posters and soft natural light">
   </section>
 
   <section class="social_proof" data-section-id="client-logos">
-    <p>Trusted by teams with something to prove.</p>
+    <h2>Founders we've worked with</h2>
     <div class="logos">
-      <span class="logo-pill">Brewdog</span>
+      <span class="logo-pill">BrewDog</span>
       <span class="logo-pill">Patagonia</span>
-      <span class="logo-pill">Finn (local startup)</span>
-      <span class="logo-pill">Undisclosed scale-up</span>
+      <span class="logo-pill">European Startups</span>
     </div>
   </section>
 
   <section class="features" data-section-id="case-studies">
-    <header>
-      <h2>Selected work</h2>
-      <p>Three projects, three scales, one consistent standard.</p>
-    </header>
-    <div class="features__grid">
-      <article>
-        <h3>Brewdog — European Rebrand</h3>
-        <p>Unified packaging and bar signage across 12 countries. Cut production approval rounds by 40%.</p>
-        <span class="category">Consumer / Retail</span>
-      </article>
-      <article>
-        <h3>Patagonia — Retail Identity</h3>
-        <p>In-store signage and seasonal campaign toolkit. Delivered in 8 weeks for 34 store openings.</p>
-        <span class="category">Outdoor / Retail</span>
-      </article>
-      <article>
-        <h3>Finn — Seed to Series A</h3>
-        <p>Complete identity system for a Berlin fintech: logo, app UI kit, investor deck, and brand guidelines.</p>
-        <span class="category">Fintech / Startup</span>
-      </article>
-    </div>
+    <article>
+      <h3>BrewDog: A retail system that scales</h3>
+      <p>Unified the global bar and packaging experience into one modular identity. Same team, same beer, now coherent in 80+ locations.</p>
+      
+    </article>
+    <article>
+      <h3>Patagonia: Clarity for a complex story</h3>
+      <p>Distilled decades of activism into a print and digital language that guides customers without preaching.</p>
+      <img src="https://api.together.ai/shrt/1pMQrlopyC4gQecd" alt="Close-up of thick paper with embossed black ink logo">
+    </article>
+    <article>
+      <h3>Berlin startup: From seed to Series A</h3>
+      <p>Built the identity, pitch decks, and launch materials that helped a local team close their first institutional round.</p>
+      <img src="https://api.together.ai/shrt/CgtnazLujNXDvYRd" alt="Subtle grain of premium off-white cardstock texture">
+    </article>
   </section>
 
-  <section class="features" data-section-id="process">
-    <header>
-      <h2>How we work</h2>
-      <p>A three-week sprint designed for busy founders.</p>
-    </header>
-    <div class="features__grid">
-      <article>
-        <h3>1. Audit & Align</h3>
-        <p>We interview your team, audit existing assets, and map where the brand needs to perform in the next 18 months.</p>
-        <span class="duration">Week 1</span>
-      </article>
-      <article>
-        <h3>2. Design & Iterate</h3>
-        <p>You receive three visual directions. We refine one into a full system: type, colour, layout rules, and application mockups.</p>
-        <span class="duration">Week 2</span>
-      </article>
-      <article>
-        <h3>3. Handoff & Scale</h3>
-        <p>Production-ready files, guidelines your contractors can follow, and a 30-day support window.</p>
-        <span class="duration">Week 3</span>
-      </article>
-    </div>
-  </section>
-
-  <section class="cta" data-section-id="cta-contact">
-    <div class="cta__content">
-      <h2>Ready when you are</h2>
-      <p>Tell us where you're headed. We'll reply within one business day with available slots and a short prep questionnaire.</p>
-      <a href="#calendly-embed" class="button" aria-label="Book a discovery call via Calendly">Book via Calendly</a>
-    </div>
-    <div class="cta__media">
-      <img src="https://api.together.ai/shrt/kLHF0nHSwEPSvEHi" alt="Overhead flat-lay of printed brand identity system on gray stone">
+  <section class="cta" data-section-id="cta-booking">
+    <div class="cta-content">
+      <h2>Ready when you are.</h2>
+      <p>Tell us where you are and where you're headed. We'll reply within one business day with next steps and a Calendly link to book your 20-minute discovery call.</p>
+      <a href="https://calendly.com/pixelhaus" class="cta-button">Book a discovery call</a>
     </div>
   </section>
 
   <footer class="footer" data-section-id="footer">
-    <div class="footer__content">
-      <h3>Pixelhaus</h3>
-      <address>
-        Brand identity studio<br>
-        Warschauer Straße 70<br>
-        10243 Berlin<br><br>
-        hello@pixelhaus.studio
-      </address>
-      <nav>
-        <a href="/impressum">Legal</a>
-      </nav>
+    <div class="footer-content">
+      <p>Pixelhaus — Berlin</p>
+      <ul>
+        <li><a href="mailto:hello@pixelhaus.berlin">hello@pixelhaus.berlin</a></li>
+        <li><a href="https://instagram.com/pixelhaus.berlin">@pixelhaus.berlin</a></li>
+        <li><a href="/imprint">Legal</a></li>
+      </ul>
     </div>
   </footer>
 </main>

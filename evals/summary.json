@@ -3,8 +3,8 @@
     "slug": "05-agency",
     "label": "Agency",
     "ok": true,
-    "totalCostUsd": 0.10662664,
-    "wallClockMs": 76598,
+    "totalCostUsd": 0.10625498,
+    "wallClockMs": 57849,
     "imagesGenerated": 3,
     "fastPath": true,
     "intent": {
@@ -13,10 +13,9 @@
       "tone": "professional",
       "complexity": "standard",
       "goals": [
-        "showcase brand identity",
+        "showcase brand portfolio",
         "highlight case studies",
-        "prompt contact",
-        "display client logos"
+        "drive Calendly signups"
       ],
       "productName": "Pixelhaus"
     }

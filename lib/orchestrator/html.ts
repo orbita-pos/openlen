@@ -10,9 +10,10 @@ Output a SINGLE JSON object — no markdown, no commentary:
 { "html": "<main>...</main>", "css": "..." }
 
 HTML rules:
-- Wrap everything in a single <main> element. Inside <main>, each planned section is a <section class="<kind>" data-section-id="<id>"> element where <kind> is "hero", "features", "social_proof", etc. matching the plan's section.kind, AND <id> is the EXACT section.id from the plan. The footer is <footer class="footer" data-section-id="<footer-id>"> with the footer section's id from the plan. Both class AND data-section-id are required on every section/footer — the regenerate-section UI uses data-section-id to know which section to re-run.
+- Wrap everything in a single <main> element. The FIRST child of <main> is ALWAYS a <header class="navbar"> (page navigation). After it, each planned section is a <section class="<kind>" data-section-id="<id>"> element where <kind> is "hero", "features", "social_proof", etc. matching the plan's section.kind, AND <id> is the EXACT section.id from the plan. The footer is <footer class="footer" data-section-id="<footer-id>"> with the footer section's id from the plan. Both class AND data-section-id are required on every section/footer — the regenerate-section UI uses data-section-id to know which section to re-run.
+- The <header class="navbar"> contains three groups: (1) a brand mark on the left — the product name if you can derive one from the hero copy, otherwise a single concrete word from the headline; (2) 3–5 anchor links in the center or right, each href="#<sectionId>" pointing to one of the planned sections (skip "footer" and "hero" — link to features, pricing, faq, social_proof, etc.); (3) a primary CTA button on the far right that mirrors the hero's first CTA label and href. On viewports narrower than 640px hide the center nav links (show just brand + CTA) — DO NOT add hamburger menus or JavaScript toggles.
 - Use semantic HTML5: <section>, <article>, <header>, <h1>/<h2>/<h3>, <p>, <ul>/<li>, <a>, <img>.
-- The first <section class="hero"> MUST contain exactly one <img> with src="{{HERO_IMAGE}}" and a meaningful alt attribute. Assembly swaps the placeholder for a real URL.
+- The <section class="hero"> (the second child of <main>, after the navbar) MUST contain exactly one <img> with src="{{HERO_IMAGE}}" and a meaningful alt attribute. Assembly swaps the placeholder for a real URL.
 - Other image placeholders are src="{{IMG_<id>}}" using an id THAT EXISTS in the plan's imagePrompts list. Each <img> MUST have a non-empty alt attribute.
 - NEVER emit <img src=""> or <img src="#">. NEVER reference an image id that is not in imagePrompts. If the copy mentions a logo, brand mark, avatar, or other visual you don't have an imagePrompt for, render it as styled text instead — for example: <span class="logo-pill">Brewdog</span> styled in CSS. This is the rule for client logos, partner marks, team photos, and anything else the brief describes but the plan didn't generate.
 - Every <button> or icon-only <a> must have an aria-label.
@@ -28,6 +29,7 @@ CSS rules:
 - Match the plan's style direction (palette, typography, density, mood).
 - Provide hover/focus states on links and buttons for accessibility.
 - Reasonable defaults: html { box-sizing: border-box; } *,*:before,*:after { box-sizing: inherit; } body { margin: 0; }.
+- The .navbar is position: sticky; top: 0; z-index: 50 with a translucent background (e.g. background: rgba(255,255,255,0.85)) and backdrop-filter: blur(8px) so content scrolls underneath it. Comfortable height around 56–64px with horizontal padding matching the rest of the page.
 
 The HTML and CSS together must render a complete, attractive page when injected into a basic HTML document with no other styles.`;
 
@@ -142,5 +144,15 @@ function assertHtmlQuality(html: string): void {
   // Hero image placeholder must be present.
   if (!html.includes("{{HERO_IMAGE}}")) {
     throw new Error("html: hero section missing {{HERO_IMAGE}} placeholder");
+  }
+
+  // Navbar must be present and appear before the hero section.
+  const navMatch = /<header[^>]*class\s*=\s*(["'])[^"']*\bnavbar\b[^"']*\1/i.exec(html);
+  if (!navMatch) {
+    throw new Error("html: missing <header class=\"navbar\"> at the top of <main>");
+  }
+  const heroIdx = html.search(/<section[^>]*class\s*=\s*(["'])[^"']*\bhero\b[^"']*\1/i);
+  if (heroIdx !== -1 && navMatch.index > heroIdx) {
+    throw new Error("html: <header class=\"navbar\"> must appear before the hero section");
   }
 }

@@ -1,14 +1,16 @@
 classify	started		Parsing brief into structured intent
 classify	completed	0.0000	Parsing brief into structured intent
 plan	started		Adaptive fast-path planning (simple brief)
-plan	completed	0.0024	Adaptive fast-path planning (simple brief)
+plan	completed	0.0027	Adaptive fast-path planning (simple brief)
 image_hero	started		Rendering hero image: hero-studio
-image_decorative	started		Rendering decorative image: brand-collateral
-image_decorative	started		Rendering decorative image: signage-detail
+image_decorative	started		Rendering decorative image: abstract-brand-mark
+image_decorative	started		Rendering decorative image: case-study-brewdog
+image_decorative	started		Rendering background image: texture-background
 copy	started		Writing copy for each section
-image_decorative	completed	0.0324	Rendered signage-detail
-image_hero	completed	0.0624	Rendered hero-studio
-image_decorative	completed	0.0924	Rendered brand-collateral
-copy	completed	0.0964	Writing copy for each section
+image_hero	completed	0.0327	Rendered hero-studio
+image_decorative	completed	0.0627	Rendered abstract-brand-mark
+image_decorative	skipped		Skipped case-study-brewdog after 1 attempts: 400 {"id":"ojH5gYy-2kFHot-9fc7eeb4cc13fda5-PDX","error":{"message":"Unsupported use of 'seed' parameter. This parameter is not supported for the selected model.","type":"invalid_request_error","param":null,"code":null}}
+image_decorative	completed	0.0927	Rendered texture-background
+copy	completed	0.0965	Writing copy for each section
 html	started		Generating HTML and CSS
-html	completed	0.1066	Generating HTML and CSS
+html	completed	0.1063	Generating HTML and CSS

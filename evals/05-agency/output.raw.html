@@ -1,96 +1,66 @@
 <main>
+  <header class="navbar">
+    <div class="navbar-brand">Pixelhaus</div>
+    <nav class="navbar-links">
+      <a href="#client-logos">Clients</a>
+      <a href="#case-studies">Work</a>
+      <a href="#cta-booking">Contact</a>
+    </nav>
+    <a href="#cta-booking" class="navbar-cta">Book a discovery call</a>
+  </header>
+
   <section class="hero" data-section-id="hero">
-    <div class="hero__content">
-      <h1>Brand identities that outlast funding rounds</h1>
-      <p>Pixelhaus is a 3-person studio in Berlin. We build visual systems for startups preparing to scale — from first pitch deck to national retail rollout.</p>
-      <a href="#cta-contact" class="button">Book a call</a>
+    <div class="hero-content">
+      <h1>We build brand systems that outlast trends.</h1>
+      <p>Pixelhaus is a three-person identity studio in Berlin. We design visual systems for founders who need clarity, not noise.</p>
+      <button type="button" onclick="location.href='#cta-booking'">Book a discovery call</button>
     </div>
-    <div class="hero__media">
-      <img src="https://api.together.ai/shrt/Axjoc3wJJeQVxV48" alt="Minimalist Berlin design studio interior with large paper mockups on white walls">
-    </div>
+    <img src="https://api.together.ai/shrt/3eAhKShB7gtQoIor" alt="Minimalist Berlin design studio interior with large format brand posters and soft natural light">
   </section>
 
   <section class="social_proof" data-section-id="client-logos">
-    <p>Trusted by teams with something to prove.</p>
+    <h2>Founders we've worked with</h2>
     <div class="logos">
-      <span class="logo-pill">Brewdog</span>
+      <span class="logo-pill">BrewDog</span>
       <span class="logo-pill">Patagonia</span>
-      <span class="logo-pill">Finn (local startup)</span>
-      <span class="logo-pill">Undisclosed scale-up</span>
+      <span class="logo-pill">European Startups</span>
     </div>
   </section>
 
   <section class="features" data-section-id="case-studies">
-    <header>
-      <h2>Selected work</h2>
-      <p>Three projects, three scales, one consistent standard.</p>
-    </header>
-    <div class="features__grid">
-      <article>
-        <h3>Brewdog — European Rebrand</h3>
-        <p>Unified packaging and bar signage across 12 countries. Cut production approval rounds by 40%.</p>
-        <span class="category">Consumer / Retail</span>
-      </article>
-      <article>
-        <h3>Patagonia — Retail Identity</h3>
-        <p>In-store signage and seasonal campaign toolkit. Delivered in 8 weeks for 34 store openings.</p>
-        <span class="category">Outdoor / Retail</span>
-      </article>
-      <article>
-        <h3>Finn — Seed to Series A</h3>
-        <p>Complete identity system for a Berlin fintech: logo, app UI kit, investor deck, and brand guidelines.</p>
-        <span class="category">Fintech / Startup</span>
-      </article>
-    </div>
+    <article>
+      <h3>BrewDog: A retail system that scales</h3>
+      <p>Unified the global bar and packaging experience into one modular identity. Same team, same beer, now coherent in 80+ locations.</p>
+      
+    </article>
+    <article>
+      <h3>Patagonia: Clarity for a complex story</h3>
+      <p>Distilled decades of activism into a print and digital language that guides customers without preaching.</p>
+      <img src="https://api.together.ai/shrt/1pMQrlopyC4gQecd" alt="Close-up of thick paper with embossed black ink logo">
+    </article>
+    <article>
+      <h3>Berlin startup: From seed to Series A</h3>
+      <p>Built the identity, pitch decks, and launch materials that helped a local team close their first institutional round.</p>
+      <img src="https://api.together.ai/shrt/CgtnazLujNXDvYRd" alt="Subtle grain of premium off-white cardstock texture">
+    </article>
   </section>
 
-  <section class="features" data-section-id="process">
-    <header>
-      <h2>How we work</h2>
-      <p>A three-week sprint designed for busy founders.</p>
-    </header>
-    <div class="features__grid">
-      <article>
-        <h3>1. Audit & Align</h3>
-        <p>We interview your team, audit existing assets, and map where the brand needs to perform in the next 18 months.</p>
-        <span class="duration">Week 1</span>
-      </article>
-      <article>
-        <h3>2. Design & Iterate</h3>
-        <p>You receive three visual directions. We refine one into a full system: type, colour, layout rules, and application mockups.</p>
-        <span class="duration">Week 2</span>
-      </article>
-      <article>
-        <h3>3. Handoff & Scale</h3>
-        <p>Production-ready files, guidelines your contractors can follow, and a 30-day support window.</p>
-        <span class="duration">Week 3</span>
-      </article>
-    </div>
-  </section>
-
-  <section class="cta" data-section-id="cta-contact">
-    <div class="cta__content">
-      <h2>Ready when you are</h2>
-      <p>Tell us where you're headed. We'll reply within one business day with available slots and a short prep questionnaire.</p>
-      <a href="#calendly-embed" class="button" aria-label="Book a discovery call via Calendly">Book via Calendly</a>
-    </div>
-    <div class="cta__media">
-      <img src="https://api.together.ai/shrt/kLHF0nHSwEPSvEHi" alt="Overhead flat-lay of printed brand identity system on gray stone">
+  <section class="cta" data-section-id="cta-booking">
+    <div class="cta-content">
+      <h2>Ready when you are.</h2>
+      <p>Tell us where you are and where you're headed. We'll reply within one business day with next steps and a Calendly link to book your 20-minute discovery call.</p>
+      <a href="https://calendly.com/pixelhaus" class="cta-button">Book a discovery call</a>
     </div>
   </section>
 
   <footer class="footer" data-section-id="footer">
-    <div class="footer__content">
-      <h3>Pixelhaus</h3>
-      <address>
-        Brand identity studio<br>
-        Warschauer Straße 70<br>
-        10243 Berlin<br><br>
-        hello@pixelhaus.studio
-      </address>
-      <nav>
-        <a href="/impressum">Legal</a>
-      </nav>
+    <div class="footer-content">
+      <p>Pixelhaus — Berlin</p>
+      <ul>
+        <li><a href="mailto:hello@pixelhaus.berlin">hello@pixelhaus.berlin</a></li>
+        <li><a href="https://instagram.com/pixelhaus.berlin">@pixelhaus.berlin</a></li>
+        <li><a href="/imprint">Legal</a></li>
+      </ul>
     </div>
   </footer>
 </main>
