@@ -456,12 +456,12 @@ ${page.html}
   (function () {
     var last = 0;
     function send() {
-      var h = Math.max(
-        document.documentElement.scrollHeight || 0,
-        document.body.scrollHeight || 0,
-        document.documentElement.offsetHeight || 0,
-        document.body.offsetHeight || 0
-      );
+      // body.scrollHeight is the true content height. documentElement.scrollHeight
+      // returns max(viewport, content), which feeds back into the iframe size we
+      // just set — that loop is what was leaving extra whitespace at the bottom.
+      var body = document.body;
+      if (!body) return;
+      var h = body.scrollHeight;
       if (h > 0 && h !== last) {
         last = h;
         try { parent.postMessage({ type: 'inari:height', height: h }, '*'); } catch (e) {}
