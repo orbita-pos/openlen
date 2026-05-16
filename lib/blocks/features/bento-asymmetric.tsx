@@ -32,6 +32,31 @@ export const slotsSchema = z.object({
         visual: z.enum(TILE_VISUAL).optional(),
         imageSrc: z.string().optional(),
         imageAlt: z.string().max(140).optional(),
+        // Session 7: code-visual tiles can now carry a slot-driven snippet.
+        // Each tile decides independently — when `visual: "code"` AND a
+        // `codeSnippet` is provided, it renders. Otherwise the tile falls
+        // back to a contextual template by `codeKind` (see below) or a
+        // generic placeholder. The hardcoded `search("latency")` snippet that
+        // shipped in S6 is gone — it was unrelated to product context and
+        // read as filler text.
+        //
+        // Constraints kept tight so the model can't dump a 200-line snippet
+        // that breaks the tile layout.
+        codeSnippet: z
+          .object({
+            language: z.enum(["js", "ts", "py", "sh", "sql", "go", "rust"]).optional(),
+            // 4 lines max keeps the snippet fitting the small tile region.
+            // Each line ≤ 80 chars so it doesn't horizontal-scroll.
+            lines: z.array(z.string().max(80)).min(1).max(4),
+            // Optional summary echoed under the snippet (the original visual
+            // had "→ 247 matches · 184ms"). Strict cap — it's a caption, not
+            // a paragraph.
+            caption: z.string().max(60).optional(),
+          })
+          .optional(),
+        codeKind: z
+          .enum(["api", "database", "monitoring", "shell", "default"])
+          .optional(),
       })
     )
     .min(4)
@@ -63,6 +88,16 @@ export const meta: BlockMeta<typeof slotsSchema> = {
         title: "Sub-second search",
         body: "Local index, encrypted at rest. Find any ticket from the last two years in under 300ms.",
         visual: "code",
+        codeKind: "api",
+        codeSnippet: {
+          language: "ts",
+          lines: [
+            `const hits = await glass.search({`,
+            `  query: "shipped:true",`,
+            `});`,
+          ],
+          caption: "→ 247 matches · 184ms",
+        },
       },
       {
         size: "medium",
@@ -84,16 +119,64 @@ export const meta: BlockMeta<typeof slotsSchema> = {
   },
 };
 
+// Industry-keyed code templates. Used when the model picks visual="code" but
+// doesn't (yet) emit a slot-driven `codeSnippet`. The fill prompt's slot
+// example already shows the new shape, but older mocks and refine retries
+// may not populate it.
+const CODE_TEMPLATES: Record<
+  NonNullable<z.infer<typeof slotsSchema>["tiles"][number]["codeKind"]>,
+  { lines: string[]; caption?: string }
+> = {
+  api: {
+    lines: [`const result = await client.query({`, `  filter: "active",`, `});`],
+    caption: "→ 47 records · 92ms",
+  },
+  database: {
+    lines: [
+      `SELECT id, name`,
+      `FROM accounts`,
+      `WHERE active = true;`,
+    ],
+    caption: "→ 1,284 rows · 14ms",
+  },
+  monitoring: {
+    lines: [
+      `tide.trace({`,
+      `  session_id: req.id,`,
+      `});`,
+    ],
+    caption: "→ uploaded · 38ms",
+  },
+  shell: {
+    lines: [
+      `$ inari deploy ./site`,
+      `building...`,
+      `live at example.com`,
+    ],
+    caption: "→ 22s end-to-end",
+  },
+  default: {
+    lines: [
+      `import { generate } from "./api";`,
+      `await generate({ brief });`,
+    ],
+  },
+};
+
 function VisualBackdrop({
   visual,
   tokens,
   imageSrc,
   imageAlt,
+  codeSnippet,
+  codeKind,
 }: {
   visual: (typeof TILE_VISUAL)[number] | undefined;
   tokens: BlockComponentProps<typeof slotsSchema>["tokens"];
   imageSrc?: string;
   imageAlt?: string;
+  codeSnippet?: z.infer<typeof slotsSchema>["tiles"][number]["codeSnippet"];
+  codeKind?: z.infer<typeof slotsSchema>["tiles"][number]["codeKind"];
 }) {
   if (visual === "image" && imageSrc) {
     return (
@@ -106,23 +189,38 @@ function VisualBackdrop({
     );
   }
   if (visual === "code") {
+    // Resolution order: slot-driven snippet > industry template > default.
+    // The slot-driven path lets the fill step emit syntactically-valid code
+    // that references productName / actual capabilities; templates are a
+    // safety net for old briefs or refine retries that don't populate the
+    // snippet slot.
+    const snippet =
+      codeSnippet ?? CODE_TEMPLATES[codeKind ?? "default"] ?? CODE_TEMPLATES.default;
     return (
       <div
         className="px-5 pt-4"
         style={{ fontFamily: tokens.fontMono, color: tokens.textMuted }}
       >
-        <div className="text-xs leading-relaxed">
-          {/* Keywords & strings use `text` (high contrast against any surface)
-              with weight differences for visual hierarchy. The brand `accent`
-              is reserved for buttons / solid-fill surfaces where its WCAG
-              contrast holds — using it as inline text on `surfaceElevated`
-              fails AA in dark palettes (#5E6AD2 → 3.66:1 on #1A1B1F). */}
-          <span style={{ color: tokens.text, fontWeight: 600 }}>const</span> result =
-          <br />
-          &nbsp;&nbsp;await search(<span style={{ color: tokens.text }}>{`"latency"`}</span>);
-          <br />
-          <span style={{ color: tokens.textDim }}>→ 247 matches · 184ms</span>
-        </div>
+        {/* High-contrast text + monospace handles syntax visually — no
+            hardcoded keyword highlighting (the snippet may be in JS / SQL /
+            sh / SQL all in one bento, so a single highlight rule lies as
+            often as it helps). `tokens.text` keeps contrast in all five
+            palettes; brand `accent` would fail WCAG AA (#5E6AD2 = 3.66:1
+            on dark surfaces). */}
+        <pre
+          className="m-0 whitespace-pre text-xs leading-relaxed"
+          style={{ color: tokens.text, fontFamily: tokens.fontMono }}
+        >
+          {snippet.lines.join("\n")}
+        </pre>
+        {snippet.caption ? (
+          <div
+            className="mt-1 text-xs"
+            style={{ color: tokens.textDim, fontFamily: tokens.fontMono }}
+          >
+            {snippet.caption}
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -221,6 +319,8 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                 tokens={tokens}
                 imageSrc={tile.imageSrc}
                 imageAlt={tile.imageAlt}
+                codeSnippet={tile.codeSnippet}
+                codeKind={tile.codeKind}
               />
               <div className="flex flex-1 flex-col p-5">
                 <h3
