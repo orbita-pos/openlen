@@ -33,6 +33,11 @@ export interface RecordInput {
   note?: string;
   /** Design palette selected for this generation when the step ran. */
   palette?: PaletteName;
+  /**
+   * Few-shot variants injected for this step in "direction/variant" form.
+   * Absent for steps that skip few-shot loading.
+   */
+  fewShotVariants?: string[];
 }
 
 export interface Recorder {
@@ -92,6 +97,7 @@ export function createRecorder(generationId: string): Recorder {
         mocked: input.mocked,
         note: input.note,
         palette: input.palette,
+        fewShotVariants: input.fewShotVariants,
       };
       // Validate before write so a malformed record fails loudly instead of
       // silently polluting the recording.

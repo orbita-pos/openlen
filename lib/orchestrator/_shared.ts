@@ -61,6 +61,12 @@ export interface TextCallPlan<T> {
   /** A note attached to the witness record when this call is a fallback. */
   fallbackNote?: string;
   /**
+   * Few-shot variants injected into the system message for this step, in
+   * "direction/variant" form. Persisted to the witness record so we can audit
+   * which references shaped the output.
+   */
+  fewShotVariants?: string[];
+  /**
    * Final escape hatch when every model in the routing chain produced output
    * that failed `validate`. Receives the last raw content + the last error.
    * Returning a value succeeds the step; throwing propagates the error.
@@ -152,6 +158,7 @@ export async function runTextStep<T>(
       mocked: callResult.mocked,
       note: i > 0 ? `fallback attempt ${i}` : undefined,
       palette: ctx.palette.name,
+      fewShotVariants: plan.fewShotVariants,
     });
     ctx.budget.add(plan.step, callResult.costUsd);
     lastContent = callResult.content;

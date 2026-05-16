@@ -186,6 +186,11 @@ export const WitnessRecordSchema = z.object({
   // Design-engine palette in use when this step ran. Optional because pre-classify
   // calls (and legacy recordings) may not carry it.
   palette: PaletteNameSchema.optional(),
+  // Few-shot reference variants injected into the system prompt for this call,
+  // in the order they appeared. Format: "direction/variant" (e.g.
+  // "technical-minimal/tide"). Absent for steps that skip few-shot (classify,
+  // images) and for legacy recordings predating Session 2.
+  fewShotVariants: z.array(z.string()).optional(),
 });
 export type WitnessRecord = z.infer<typeof WitnessRecordSchema>;
 
