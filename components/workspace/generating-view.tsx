@@ -2,22 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Activity,
-  ArrowRight,
-  Brush,
   ChevronLeft,
   ChevronRight,
-  Code,
   Cpu,
-  DollarSign,
   Image as ImageIcon,
   Layers,
   Lock,
-  Sparkles,
-  Terminal,
-  Wand2,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { PipelineStep } from "@/lib/orchestrator/types";
 import type { GeneratingPartial } from "./types";
@@ -41,92 +32,24 @@ import type { GeneratingPartial } from "./types";
 // "generated" (see preview-panel.tsx).
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface ModelMeta {
-  name: string;
-  tag: string;
-  accent: string;
-  glyph: string;
-  icon: LucideIcon;
-}
-
-const MODELS: Record<string, ModelMeta> = {
-  lfm2:     { name: "LFM2",            tag: "classifier",       accent: "#3B82F6", glyph: "L", icon: Cpu },
-  kimi:     { name: "Kimi K2.6",       tag: "planner & writer", accent: "#8B5CF6", glyph: "K", icon: Wand2 },
-  flux:     { name: "FLUX.2",          tag: "image generation", accent: "#EC4899", glyph: "F", icon: ImageIcon },
-  qwen:     { name: "Qwen3-Coder",     tag: "code synthesis",   accent: "#10B981", glyph: "Q", icon: Code },
-  deepseek: { name: "DeepSeek V4",     tag: "polish & fallback",accent: "#F59E0B", glyph: "D", icon: Brush },
-};
-
-const MODEL_ORDER = ["lfm2", "kimi", "flux", "qwen", "deepseek"] as const;
-
 interface StepDef {
   id: PipelineStep;
   label: string;
-  model: keyof typeof MODELS;
 }
 
 const STEPS: StepDef[] = [
-  { id: "classify",         label: "Reading your brief",        model: "lfm2" },
-  { id: "plan",             label: "Drafting page plan",        model: "kimi" },
-  { id: "copy",             label: "Writing the copy",          model: "kimi" },
-  { id: "image_hero",       label: "Generating hero image",     model: "flux" },
-  { id: "image_decorative", label: "Generating supporting art", model: "flux" },
-  { id: "html",             label: "Composing layout",          model: "qwen" },
-  { id: "refine",           label: "Polishing details",         model: "deepseek" },
+  { id: "classify",         label: "Reading your brief" },
+  { id: "plan",             label: "Drafting page plan" },
+  { id: "copy",             label: "Writing the copy" },
+  { id: "image_hero",       label: "Generating hero image" },
+  { id: "image_decorative", label: "Generating supporting art" },
+  { id: "html",             label: "Composing layout" },
+  { id: "refine",           label: "Polishing details" },
 ];
 
-// Plausible "what the model is thinking" lines per step. These are decorative —
-// the actual model reasoning isn't streamed, but rotating these makes the
-// preview feel alive and gives the user something to read while they wait.
-const THINKING: Record<PipelineStep, string[]> = {
-  classify: [
-    "Tokenizing brief…",
-    "Detecting industry…",
-    "Extracting audience signal…",
-    "Classifying tone register…",
-    "Estimating complexity…",
-  ],
-  plan: [
-    "Drafting section sequence…",
-    "Choosing visual direction…",
-    "Picking palette + typography…",
-    "Composing image prompts…",
-    "Validating plan shape…",
-  ],
-  copy: [
-    "Drafting hero headline candidates…",
-    "Picking the punchier option…",
-    "Writing benefit-driven feature copy…",
-    "Tuning CTA verbs…",
-    "Cross-checking for generic phrases…",
-  ],
-  image_hero: [
-    "Composing prompt for FLUX.2…",
-    "Sampling latent…",
-    "Refining edges…",
-    "Color grading…",
-    "Compositing hero…",
-  ],
-  image_decorative: [
-    "Queueing supporting images…",
-    "Sampling decoratives…",
-    "Matching hero aesthetic…",
-    "Compositing…",
-    "Finalizing image set…",
-  ],
-  html: [
-    "Composing semantic sections…",
-    "Wiring data-section-id attributes…",
-    "Generating mobile-first CSS…",
-    "Auditing alt text + balance…",
-    "Bundling output JSON…",
-  ],
-  refine: [
-    "Auditing color contrast…",
-    "Tightening type rhythm…",
-    "Final lint pass…",
-  ],
-};
+// Indigo accent for the mock skeleton — independent of the real generated
+// page's palette (which only lands once html completes).
+const ACCENT = "#4F46E5";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Small reusable primitives
@@ -207,193 +130,6 @@ function useAnimatedNumber(target: number, speed = 0.12): number {
   return v;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// OrchestraStrip — top row of model routing chips
-// ─────────────────────────────────────────────────────────────────────────────
-
-function OrchestraStrip({
-  currentStepIdx,
-  completedCount,
-}: {
-  currentStepIdx: number;
-  completedCount: number;
-}) {
-  const stepsByModel = useMemo(() => {
-    const out: Record<string, { idx: number }[]> = {};
-    STEPS.forEach((s, idx) => {
-      if (!out[s.model]) out[s.model] = [];
-      out[s.model].push({ idx });
-    });
-    return out;
-  }, []);
-
-  return (
-    <div className="px-3.5 py-2 flex items-center gap-1.5 sm:gap-2 overflow-x-auto nice-scroll bg-zinc-50/80 dark:bg-zinc-950/60 border-b border-zinc-200 dark:border-zinc-800">
-      <div className="shrink-0 flex items-center gap-1.5 mr-1 text-[10px] uppercase tracking-[0.18em] text-zinc-400 font-semibold">
-        <Activity size={11} className="text-coral-500" />
-        Routing
-      </div>
-      {MODEL_ORDER.map((mId, i) => {
-        const m = MODELS[mId];
-        const mSteps = stepsByModel[mId] ?? [];
-        const isActive = mSteps.some((s) => s.idx === currentStepIdx);
-        const isDone = mSteps.every((s) => s.idx < completedCount);
-        const isPending = !isActive && !isDone;
-
-        return (
-          <span key={mId} className="contents">
-            <div
-              className={cn(
-                "relative shrink-0 flex items-center gap-1.5 rounded-md px-2 py-1 transition",
-                isActive &&
-                  "bg-white dark:bg-zinc-900 ring-1 ring-zinc-200 dark:ring-zinc-800 shadow-sm",
-                isPending && "opacity-50",
-              )}
-            >
-              <span className="relative inline-flex h-5 w-5 items-center justify-center rounded">
-                <span
-                  className="absolute inset-0 rounded transition"
-                  style={{
-                    background: isDone || isActive ? m.accent : "transparent",
-                    border:
-                      isDone || isActive ? "none" : `1px dashed ${m.accent}80`,
-                  }}
-                />
-                <span
-                  className="relative text-[10px] font-bold leading-none"
-                  style={{ color: isDone || isActive ? "#fff" : m.accent }}
-                >
-                  {m.glyph}
-                </span>
-                {isActive && (
-                  <span
-                    className="absolute inset-0 rounded ring-pulse"
-                    style={{ color: `${m.accent}80` }}
-                  />
-                )}
-              </span>
-              <div className="leading-tight">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] font-semibold tracking-tight">
-                    {m.name}
-                  </span>
-                </div>
-                <div className="text-[9.5px] uppercase tracking-wider text-zinc-400 font-medium">
-                  {m.tag}
-                </div>
-              </div>
-            </div>
-            {i < MODEL_ORDER.length - 1 && (
-              <div className="shrink-0 flex items-center">
-                <span className="block w-2.5 h-px bg-zinc-300 dark:bg-zinc-700" />
-                <ChevronRight
-                  size={11}
-                  className="text-zinc-300 dark:text-zinc-700 -ml-1"
-                />
-              </div>
-            )}
-          </span>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Floating overlays
-// ─────────────────────────────────────────────────────────────────────────────
-
-function BriefCard({ brief }: { brief: string }) {
-  return (
-    <div className="absolute top-3.5 left-3.5 z-20 max-w-md hidden md:block">
-      <div className="rounded-xl bg-white/90 dark:bg-zinc-900/90 backdrop-blur ring-1 ring-zinc-200 dark:ring-zinc-800 shadow-sm px-3.5 py-2.5">
-        <div className="flex items-center gap-1.5 mb-1">
-          <Sparkles size={11} className="text-coral-500" />
-          <span className="text-[10px] uppercase tracking-[0.18em] text-zinc-400 font-semibold">
-            Your brief
-          </span>
-        </div>
-        <p className="text-[12px] leading-relaxed text-zinc-600 dark:text-zinc-400 line-clamp-2">
-          {brief}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function CostTicker({
-  targetCost,
-  elapsed,
-}: {
-  targetCost: number;
-  elapsed: number;
-}) {
-  const animated = useAnimatedNumber(targetCost, 0.12);
-  return (
-    <div className="absolute top-3.5 right-3.5 z-20">
-      <div className="rounded-xl bg-white/90 dark:bg-zinc-900/90 backdrop-blur ring-1 ring-zinc-200 dark:ring-zinc-800 shadow-sm px-3 py-2 flex items-center gap-2.5">
-        <DollarSign size={13} className="text-coral-500" />
-        <div className="leading-tight">
-          <div className="text-[9.5px] uppercase tracking-[0.18em] text-zinc-400 font-semibold">
-            Spend
-          </div>
-          <div className="text-[13px] font-semibold tabular-nums tracking-tight">
-            ${animated.toFixed(3)}
-          </div>
-        </div>
-        <div className="h-7 w-px bg-zinc-200 dark:bg-zinc-800" />
-        <div className="leading-tight">
-          <div className="text-[9.5px] uppercase tracking-[0.18em] text-zinc-400 font-semibold">
-            Elapsed
-          </div>
-          <div className="text-[13px] font-semibold tabular-nums tracking-tight">
-            {elapsed.toFixed(1)}
-            <span className="text-zinc-400 font-normal">s</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ThinkingPeek({ stepId }: { stepId: PipelineStep }) {
-  const lines = THINKING[stepId] ?? [];
-  const [idx, setIdx] = useState(0);
-  useEffect(() => {
-    setIdx(0);
-    if (lines.length === 0) return;
-    const t = window.setInterval(() => {
-      setIdx((i) => (i + 1) % lines.length);
-    }, 1200);
-    return () => window.clearInterval(t);
-  }, [stepId, lines.length]);
-  if (lines.length === 0) return null;
-  const line = lines[idx] ?? "";
-  const step = STEPS.find((s) => s.id === stepId);
-  const model = MODELS[step?.model ?? "kimi"];
-  return (
-    <div className="absolute left-3.5 right-3.5 bottom-3.5 z-20 pointer-events-none">
-      <div className="mx-auto max-w-3xl rounded-xl bg-zinc-950/95 dark:bg-zinc-900 text-zinc-200 ring-1 ring-zinc-800 px-3.5 py-2.5 shadow-xl backdrop-blur flex items-center gap-3">
-        <Terminal size={13} className="shrink-0" style={{ color: model.accent }} />
-        <span
-          className="font-mono text-[10px] uppercase tracking-wider shrink-0"
-          style={{ color: model.accent }}
-        >
-          {model.name}
-        </span>
-        <span className="hidden sm:inline-block h-4 w-px bg-zinc-700" />
-        <span
-          key={`${stepId}-${idx}`}
-          className="font-mono text-[12px] truncate peek-in"
-        >
-          <span className="text-zinc-500">›</span> {line}
-          <span className="inline-block w-1.5 h-3 ml-1 -mb-0.5 bg-zinc-200 animate-blink align-middle" />
-        </span>
-      </div>
-    </div>
-  );
-}
-
 function IntentChips({
   partial,
 }: {
@@ -401,8 +137,8 @@ function IntentChips({
 }) {
   const intent = partial.intent;
   const plan = partial.plan;
-  const accentLfm = MODELS.lfm2.accent;
-  const accentKimi = MODELS.kimi.accent;
+  const accentLfm = "#3B82F6";
+  const accentKimi = "#8B5CF6";
   if (!intent && !plan) return null;
   return (
     <div className="flex flex-wrap items-center gap-1.5">
@@ -814,68 +550,6 @@ function ProgressivePage({ partial, currentStepIdx, level }: ProgressivePageProp
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// StepPipeline (bottom rail)
-// ─────────────────────────────────────────────────────────────────────────────
-
-function StepPipeline({ currentStepIdx }: { currentStepIdx: number }) {
-  return (
-    <div className="relative z-20 px-3.5 py-3 border-t border-zinc-200 dark:border-zinc-800 bg-white/85 dark:bg-[#0a0a0a]/85 backdrop-blur flex items-center gap-1 overflow-x-auto nice-scroll">
-      <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-400 font-semibold shrink-0 mr-1.5">
-        Steps
-      </div>
-      {STEPS.map((s, i) => {
-        const m = MODELS[s.model];
-        const done = i < currentStepIdx;
-        const active = i === currentStepIdx;
-        const pending = i > currentStepIdx;
-        return (
-          <span key={s.id} className="contents">
-            <div
-              className={cn(
-                "relative shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] transition",
-                active &&
-                  "ring-1 ring-coral-500/40 bg-coral-50 dark:bg-coral-500/10 text-coral-700 dark:text-coral-300",
-                done && !active && "text-zinc-700 dark:text-zinc-300",
-                pending && "text-zinc-400 dark:text-zinc-600",
-              )}
-            >
-              <span className="relative inline-flex h-3.5 w-3.5 items-center justify-center">
-                {done && !active && (
-                  <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none">
-                      <polyline
-                        points="20 6 9 17 4 12"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </span>
-                )}
-                {active && <Dot color="#FF5A36" pulse />}
-                {pending && (
-                  <span className="h-1 w-1 rounded-full bg-zinc-300 dark:bg-zinc-700" />
-                )}
-              </span>
-              <span className="font-medium">{s.label}</span>
-              {active && (
-                <span className="text-[10px] font-mono opacity-70">
-                  · {m.name}
-                </span>
-              )}
-            </div>
-            {i < STEPS.length - 1 && (
-              <span className="shrink-0 text-zinc-300 dark:text-zinc-700">·</span>
-            )}
-          </span>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Main exported view
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -890,6 +564,7 @@ export function GeneratingView({
   currentStep,
   completedSteps,
 }: GeneratingViewProps) {
+
   // Elapsed timer driven by `startedAt`. Tick every 100ms.
   const [elapsed, setElapsed] = useState(
     Math.max(0, (Date.now() - partial.startedAt) / 1000),
@@ -905,8 +580,6 @@ export function GeneratingView({
     0,
     STEPS.findIndex((s) => s.id === currentStep),
   );
-  const completedCount = completedSteps.length;
-
   // level: how much of the page skeleton to reveal.
   // 0 = nothing yet, 1 = classify done (intent), 2 = plan done (sections),
   // 3 = copy done (text), 4 = hero image, 5 = supporting images,
@@ -921,55 +594,50 @@ export function GeneratingView({
   }, [partial.intent?.productName]);
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-zinc-100 dark:bg-zinc-950">
-      <OrchestraStrip
-        currentStepIdx={currentStepIdx}
-        completedCount={completedCount}
-      />
-
-      <main className="relative flex-1 overflow-hidden dotted">
-        <BriefCard brief={partial.brief} />
-        <CostTicker targetCost={partial.costSoFar} elapsed={elapsed} />
-        <ThinkingPeek stepId={currentStep} />
-
-        <div className="h-full overflow-y-auto nice-scroll">
-          <div className="mx-auto max-w-5xl px-4 sm:px-8 pt-24 pb-32">
-            <div className="mb-3 flex items-center justify-between gap-3 min-h-[28px]">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] uppercase tracking-[0.18em] text-zinc-400 font-semibold">
-                  Detected
-                </span>
-                <IntentChips partial={partial} />
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-coral-50 dark:bg-coral-500/10 text-coral-700 dark:text-coral-300 ring-1 ring-coral-200 dark:ring-coral-500/30 px-2 py-0.5 text-[11px] font-medium">
-                  <Dot color="#FF5A36" pulse />
-                  {STEPS[currentStepIdx]?.label ?? "Working…"}
-                </span>
-              </div>
-            </div>
-
-            <BrowserChrome url={url} polished={level >= 7}>
-              <div className={cn("relative", level < 6 && "scan")}>
-                <ProgressivePage
-                  partial={partial}
-                  currentStepIdx={currentStepIdx}
-                  level={level}
-                />
-              </div>
-            </BrowserChrome>
-
-            <div className="mt-4 text-center text-[11px] text-zinc-400 dark:text-zinc-600">
-              Average build time is ~60 seconds. Refresh-proof — we stream as we
-              build.
-            </div>
+    <div className="h-full min-h-0 overflow-y-auto nice-scroll dotted bg-zinc-100 dark:bg-zinc-950">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 pt-6 pb-12">
+        {/* Subtle status line: detected chips on the left, current step + cost
+            + elapsed on the right. Replaces all the heavier chrome (orchestra
+            strip, step pipeline, floating cards) so the page-being-built is
+            the visual focus. */}
+        <div className="mb-4 flex items-center justify-between gap-3 flex-wrap min-h-[28px]">
+          <div className="flex items-center gap-2 flex-wrap min-w-0">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-coral-50 dark:bg-coral-500/10 text-coral-700 dark:text-coral-300 ring-1 ring-coral-200 dark:ring-coral-500/30 px-2 py-0.5 text-[11px] font-medium">
+              <Dot color="#FF5A36" pulse />
+              {STEPS[currentStepIdx]?.label ?? "Working…"}
+            </span>
+            <IntentChips partial={partial} />
+          </div>
+          <div className="flex items-center gap-2 shrink-0 text-[11px] tabular-nums text-zinc-500 dark:text-zinc-400">
+            <span>
+              <span className="text-zinc-400">$</span>
+              <AnimatedCost target={partial.costSoFar} />
+            </span>
+            <span className="text-zinc-300 dark:text-zinc-700">·</span>
+            <span>
+              {elapsed.toFixed(1)}
+              <span className="text-zinc-400">s</span>
+            </span>
           </div>
         </div>
-      </main>
 
-      <StepPipeline currentStepIdx={currentStepIdx} />
+        <BrowserChrome url={url} polished={level >= 7}>
+          <div className={cn("relative", level < 6 && "scan")}>
+            <ProgressivePage
+              partial={partial}
+              currentStepIdx={currentStepIdx}
+              level={level}
+            />
+          </div>
+        </BrowserChrome>
+      </div>
     </div>
   );
+}
+
+function AnimatedCost({ target }: { target: number }) {
+  const v = useAnimatedNumber(target, 0.18);
+  return <>{v.toFixed(3)}</>;
 }
 
 // Map streamed state → reveal level for the skeleton.
