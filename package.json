@@ -2,7 +2,7 @@
   "name": "inari-pages",
   "version": "0.1.0",
   "private": false,
-  "license": "AGPL-3.0-or-later",
+  "license": "AGPL-3.0-only",
   "description": "Open-source landing page generator with smart multi-model routing on Together AI.",
   "scripts": {
     "dev": "next dev",
