@@ -37,6 +37,19 @@ export interface TextCallPlan<T> {
   useFastPath?: boolean;
   /** A note attached to the witness record when this call is a fallback. */
   fallbackNote?: string;
+  /**
+   * Final escape hatch when every model in the routing chain produced output
+   * that failed `validate`. Receives the last raw content + the last error.
+   * Returning a value succeeds the step; throwing propagates the error.
+   *
+   * The html step uses this to invoke `refine` (Qwen3.5-9B) on whatever the
+   * stronger models produced, rather than failing the whole generation.
+   */
+  lastResort?: (
+    lastContent: string,
+    lastError: Error,
+    ctx: StepContext,
+  ) => Promise<T>;
 }
 
 /**
@@ -83,6 +96,7 @@ export async function runTextStep<T>(
   ];
 
   let lastError: unknown = null;
+  let lastContent = "";
   for (let i = 0; i < attempts.length; i++) {
     const { decision } = attempts[i];
     if (i > 0) {
@@ -116,6 +130,7 @@ export async function runTextStep<T>(
       note: i > 0 ? `fallback attempt ${i}` : undefined,
     });
     ctx.budget.add(plan.step, callResult.costUsd);
+    lastContent = callResult.content;
 
     try {
       const validated = plan.validate(callResult.content);
@@ -131,6 +146,31 @@ export async function runTextStep<T>(
       lastError = err;
       if (i === attempts.length - 1) break;
       // loop to fallback
+    }
+  }
+
+  // Final escape hatch — let the step rescue itself with a refine pass.
+  if (plan.lastResort && lastContent) {
+    const error =
+      lastError instanceof Error ? lastError : new Error(String(lastError));
+    emit(ctx, {
+      type: "progress",
+      step: plan.step,
+      status: "fallback",
+      details: "All models failed validation; running refine pass",
+    });
+    try {
+      const recovered = await plan.lastResort(lastContent, error, ctx);
+      emit(ctx, {
+        type: "progress",
+        step: plan.step,
+        status: "completed",
+        details: `${plan.progressDetail ?? plan.step} (recovered via refine)`,
+        costSoFar: ctx.budget.total(),
+      });
+      return recovered;
+    } catch (recoverErr) {
+      lastError = recoverErr;
     }
   }
 
