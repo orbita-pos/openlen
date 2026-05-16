@@ -125,7 +125,7 @@ export async function listProjects(userId: string): Promise<ProjectSummary[]> {
     deployUrl: row.deployUrl,
     thumbnailUrl: row.thumbnailUrl,
     costUsd: row.data?.cost?.total ?? 0,
-    sectionCount: row.data?.plan?.sections?.length ?? 0,
+    sectionCount: row.data?.plan?.blockSequence?.length ?? 0,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }));
@@ -157,7 +157,7 @@ export async function getProject(
     brief: row.brief,
     thumbnailUrl: row.thumbnailUrl,
     costUsd: row.data?.cost?.total ?? 0,
-    sectionCount: row.data?.plan?.sections?.length ?? 0,
+    sectionCount: row.data?.plan?.blockSequence?.length ?? 0,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     data: row.data,

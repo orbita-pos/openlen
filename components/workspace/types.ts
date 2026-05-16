@@ -1,5 +1,5 @@
 import type {
-  Copy,
+  FilledBlock,
   GeneratedImage,
   Intent,
   LandingPage,
@@ -17,7 +17,7 @@ export interface GeneratingPartial {
   brief: string;
   intent?: Intent;
   plan?: Plan;
-  copy?: Copy;
+  filledBlocks: FilledBlock[];
   images: GeneratedImage[];
   costSoFar: number;
   startedAt: number;

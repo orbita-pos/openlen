@@ -10,7 +10,7 @@ import {
   Lock,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import type { PipelineStep } from "@/lib/orchestrator/types";
+import type { FilledBlock, PipelineStep } from "@/lib/orchestrator/types";
 import type { GeneratingPartial } from "./types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -39,12 +39,11 @@ interface StepDef {
 
 const STEPS: StepDef[] = [
   { id: "classify",         label: "Reading your brief" },
-  { id: "plan",             label: "Drafting page plan" },
-  { id: "copy",             label: "Writing the copy" },
+  { id: "plan",             label: "Picking page blocks" },
+  { id: "fill",             label: "Filling slot content" },
   { id: "image_hero",       label: "Generating hero image" },
   { id: "image_decorative", label: "Generating supporting art" },
-  { id: "html",             label: "Composing layout" },
-  { id: "refine",           label: "Polishing details" },
+  { id: "assemble",         label: "Composing final page" },
 ];
 
 // Indigo accent for the mock skeleton — independent of the real generated
@@ -159,9 +158,9 @@ function IntentChips({
         <>
           <span className="text-zinc-300 dark:text-zinc-700">·</span>
           <Pill accent={accentKimi}>
-            <Layers size={10} /> {plan.sections.length} sections
+            <Layers size={10} /> {plan.blockSequence.length} blocks
           </Pill>
-          <Pill accent={accentKimi}>{plan.style.mood}</Pill>
+          <Pill accent={accentKimi}>{plan.aesthetic}</Pill>
         </>
       )}
     </div>
@@ -311,19 +310,21 @@ function ProgressivePage({ partial, currentStepIdx, level }: ProgressivePageProp
   const isActive = (stepId: PipelineStep) => currentStepId === stepId;
 
   const hero = partial.images.find((i) => i.purpose === "hero");
-  const heroCopy = partial.copy?.sectionTexts.find((s) =>
-    s.sectionId.includes("hero") || partial.plan?.sections.find((p) => p.id === s.sectionId)?.kind === "hero"
+  const heroFilled = partial.filledBlocks.find((b) =>
+    b.blockId.startsWith("hero/"),
   );
-  const featuresCopy = partial.copy?.sectionTexts.find((s) =>
-    partial.plan?.sections.find((p) => p.id === s.sectionId)?.kind === "features"
+  const featuresFilled = partial.filledBlocks.find((b) =>
+    b.blockId.startsWith("features/"),
   );
+  const heroCopy = extractHeroCopy(heroFilled);
+  const featuresCopy = extractFeaturesCopy(featuresFilled);
 
   return (
     <div className="relative bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
       {/* Nav */}
       <div className={cn("relative border-b border-zinc-100 dark:border-zinc-900", fullStyle ? "px-8 py-4" : "px-6 py-4")}>
         {showSectionLabels && (
-          <SectionLabel accent={accent} active={isActive("html")}>
+          <SectionLabel accent={accent} active={isActive("assemble")}>
             Nav
           </SectionLabel>
         )}
@@ -366,13 +367,13 @@ function ProgressivePage({ partial, currentStepIdx, level }: ProgressivePageProp
       {/* Hero */}
       <div className="relative">
         {showSectionLabels && (
-          <SectionLabel accent={accent} active={isActive("copy") || isActive("image_hero")}>
+          <SectionLabel accent={accent} active={isActive("fill") || isActive("image_hero")}>
             Hero
           </SectionLabel>
         )}
         <div className={cn("px-6 md:px-8 grid md:grid-cols-5 gap-8 items-center", fullStyle ? "pt-16 pb-20" : "pt-10 pb-12")}>
           <div className="md:col-span-3">
-            {showText && heroCopy?.headline ? (
+            {showText && heroCopy.headline ? (
               <>
                 {partial.intent && (
                   <div className="inline-flex items-center gap-2 rounded-full ring-1 ring-zinc-200 dark:ring-zinc-800 px-2.5 py-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-400 mb-5">
@@ -390,9 +391,9 @@ function ProgressivePage({ partial, currentStepIdx, level }: ProgressivePageProp
                     <Tokens text={heroCopy.subheadline} delay={400} perToken={18} />
                   </p>
                 )}
-                {(heroCopy.ctas?.length ?? 0) > 0 && (
+                {heroCopy.ctas.length > 0 && (
                   <div className="mt-7 flex flex-wrap items-center gap-3">
-                    {(heroCopy.ctas ?? []).slice(0, 2).map((cta, i) => (
+                    {heroCopy.ctas.slice(0, 2).map((cta, i) => (
                       <span
                         key={i}
                         className={cn(
@@ -431,13 +432,13 @@ function ProgressivePage({ partial, currentStepIdx, level }: ProgressivePageProp
       {/* Features */}
       <div className="relative bg-zinc-50 dark:bg-zinc-900/40">
         {showSectionLabels && (
-          <SectionLabel accent={accent} active={isActive("copy") || isActive("image_decorative")}>
+          <SectionLabel accent={accent} active={isActive("fill") || isActive("image_decorative")}>
             Features
           </SectionLabel>
         )}
         <div className="px-6 md:px-8 py-14">
           <div className="max-w-md mb-10">
-            {showText && featuresCopy?.headline ? (
+            {showText && featuresCopy.headline ? (
               <>
                 <div className="text-[11px] uppercase tracking-[0.18em] text-indigo-600 dark:text-indigo-400 font-semibold">
                   <Tokens text="What's inside" />
@@ -455,7 +456,7 @@ function ProgressivePage({ partial, currentStepIdx, level }: ProgressivePageProp
             )}
           </div>
           <div className="grid md:grid-cols-3 gap-5">
-            {(featuresCopy?.items ?? [null, null, null]).slice(0, 3).map((item, i) => {
+            {(featuresCopy.items.length > 0 ? featuresCopy.items : [null, null, null]).slice(0, 3).map((item, i) => {
               const decorative = partial.images.filter((img) => img.purpose !== "hero")[i];
               return (
                 <div
@@ -479,9 +480,9 @@ function ProgressivePage({ partial, currentStepIdx, level }: ProgressivePageProp
                       <div className="mt-4 font-semibold tracking-tight">
                         <Tokens text={item.title} delay={i * 120} />
                       </div>
-                      {item.description && (
+                      {item.body && (
                         <div className="mt-1 text-[13px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                          <Tokens text={item.description} delay={i * 120 + 200} perToken={16} />
+                          <Tokens text={item.body} delay={i * 120 + 200} perToken={16} />
                         </div>
                       )}
                     </>
@@ -507,7 +508,7 @@ function ProgressivePage({ partial, currentStepIdx, level }: ProgressivePageProp
         )}
       >
         {showSectionLabels && (
-          <SectionLabel accent={accent} active={isActive("html")}>
+          <SectionLabel accent={accent} active={isActive("assemble")}>
             Footer
           </SectionLabel>
         )}
@@ -648,12 +649,71 @@ function computeLevel(
   let level = 0;
   if (partial.intent) level = Math.max(level, 1);
   if (partial.plan) level = Math.max(level, 2);
-  if (partial.copy) level = Math.max(level, 3);
+  if (partial.filledBlocks.length > 0) level = Math.max(level, 3);
   if (partial.images.some((i) => i.purpose === "hero")) level = Math.max(level, 4);
   if (partial.images.some((i) => i.purpose !== "hero")) level = Math.max(level, 5);
-  if (completed.includes("html")) level = Math.max(level, 6);
-  if (completed.includes("refine")) level = Math.max(level, 7);
+  if (completed.includes("assemble")) level = Math.max(level, 7);
   return level;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Slot adapters — pull "copy-shaped" data out of arbitrary block slot JSON
+// so the skeleton reveal logic stays simple. Each block has its own slot
+// schema; we look for the conventional field names and fall back to empty.
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface HeroCopyShape {
+  headline: string;
+  subheadline?: string;
+  ctas: Array<{ label: string; href: string }>;
+}
+
+interface FeaturesCopyShape {
+  headline: string;
+  items: Array<{ title: string; body?: string }>;
+}
+
+function extractHeroCopy(filled: FilledBlock | undefined): HeroCopyShape {
+  if (!filled || !filled.slots || typeof filled.slots !== "object") {
+    return { headline: "", ctas: [] };
+  }
+  const s = filled.slots as Record<string, unknown>;
+  const headline = typeof s.headline === "string" ? s.headline : "";
+  const subheadline = typeof s.sub === "string" ? s.sub : undefined;
+  const ctas: HeroCopyShape["ctas"] = [];
+  if (isCta(s.primaryCTA)) ctas.push(s.primaryCTA);
+  if (isCta(s.secondaryCTA)) ctas.push(s.secondaryCTA);
+  return { headline, subheadline, ctas };
+}
+
+function extractFeaturesCopy(filled: FilledBlock | undefined): FeaturesCopyShape {
+  if (!filled || !filled.slots || typeof filled.slots !== "object") {
+    return { headline: "", items: [] };
+  }
+  const s = filled.slots as Record<string, unknown>;
+  const headline =
+    typeof s.title === "string"
+      ? s.title
+      : typeof s.headline === "string"
+        ? s.headline
+        : "";
+  const itemsRaw = Array.isArray(s.items) ? (s.items as Record<string, unknown>[]) : [];
+  const items: FeaturesCopyShape["items"] = itemsRaw
+    .filter((it): it is Record<string, unknown> => typeof it === "object" && it !== null)
+    .map((it) => ({
+      title: typeof it.title === "string" ? it.title : "",
+      body: typeof it.body === "string" ? it.body : undefined,
+    }));
+  return { headline, items };
+}
+
+function isCta(value: unknown): value is { label: string; href: string } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as Record<string, unknown>).label === "string" &&
+    typeof (value as Record<string, unknown>).href === "string"
+  );
 }
 
 function slugify(s: string): string {

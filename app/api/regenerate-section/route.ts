@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { auth } from "@/auth";
-import { regenerateSection } from "@/lib/orchestrator/regenerate-section";
+import { regenerateBlock } from "@/lib/orchestrator/regenerate-section";
 import {
-  CopySchema,
+  FilledBlockSchema,
   GeneratedImageSchema,
+  IntentSchema,
   PlanSchema,
 } from "@/lib/orchestrator/types";
 import { getProject, updateProjectPage } from "@/lib/projects";
@@ -20,19 +21,22 @@ export const dynamic = "force-dynamic";
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/regenerate-section
 //
-// Body: { brief, plan, copy, images, sectionId, additionalInstruction? }
-// Returns: { html, css, copy, cost, generationId }
+// Body: { brief, intent, plan, filledBlocks, images, blockIndex, additionalInstruction? }
+// Returns: { page, cost, generationId }
 //
 // Used by both the bare "Regenerate" overlay button (no instruction) and the
-// "Edit prompt" modal (with instruction).
+// "Edit prompt" modal (with instruction). The iframe overlay's data-section-id
+// is a "block-N" string the client parses into the numeric blockIndex passed
+// here.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const RequestSchema = z.object({
   brief: z.string().min(10).max(4000),
+  intent: IntentSchema,
   plan: PlanSchema,
-  copy: CopySchema,
+  filledBlocks: z.array(FilledBlockSchema),
   images: z.array(GeneratedImageSchema),
-  sectionId: z.string().min(1),
+  blockIndex: z.number().int().nonnegative(),
   additionalInstruction: z.string().max(2000).optional(),
   // Optional — when present, the updated page is persisted back to this
   // project. Ownership is verified server-side via the session.
@@ -88,7 +92,7 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   try {
-    const result = await regenerateSection(parsed.data);
+    const result = await regenerateBlock(parsed.data);
 
     // Persist back to the project when caller supplied a projectId and
     // owns it. The session was already loaded above for the quota check.
@@ -96,10 +100,7 @@ export async function POST(req: Request): Promise<Response> {
       const project = await getProject(parsed.data.projectId, userId);
       if (project) {
         const merged = {
-          ...project.data,
-          html: result.html,
-          css: result.css,
-          copy: result.copy,
+          ...result.page,
           cost: addBreakdowns(project.data.cost, result.cost),
         };
         await updateProjectPage(parsed.data.projectId, userId, merged);
@@ -114,17 +115,16 @@ export async function POST(req: Request): Promise<Response> {
 }
 
 function addBreakdowns(
-  a: { total: number; classify: number; plan: number; copy: number; html: number; images: number; refine: number },
-  b: { total: number; classify: number; plan: number; copy: number; html: number; images: number; refine: number },
+  a: { total: number; classify: number; plan: number; fill: number; images: number; assemble: number },
+  b: { total: number; classify: number; plan: number; fill: number; images: number; assemble: number },
 ) {
   return {
     total: a.total + b.total,
     classify: a.classify + b.classify,
     plan: a.plan + b.plan,
-    copy: a.copy + b.copy,
-    html: a.html + b.html,
+    fill: a.fill + b.fill,
     images: a.images + b.images,
-    refine: a.refine + b.refine,
+    assemble: a.assemble + b.assemble,
   };
 }
 

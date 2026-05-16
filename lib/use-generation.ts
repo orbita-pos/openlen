@@ -2,11 +2,12 @@
 
 import { useCallback, useRef, useState } from "react";
 import type {
-  Copy,
   CostBreakdown,
+  FilledBlock,
   GeneratedImage,
   GenerateRequest,
   Intent,
+  LandingPage,
   Plan,
   ProgressEvent,
   SseEvent,
@@ -30,9 +31,7 @@ export interface UseGenerationResult {
 }
 
 interface RegenResponse {
-  html: string;
-  css: string;
-  copy: Copy;
+  page: LandingPage;
   cost: CostBreakdown;
   generationId: string;
 }
@@ -60,6 +59,7 @@ export function useGeneration(): UseGenerationResult {
       progress: [],
       partial: {
         brief: req.brief,
+        filledBlocks: [],
         images: [],
         costSoFar: 0,
         startedAt: Date.now(),
@@ -148,6 +148,17 @@ export function useGeneration(): UseGenerationResult {
       if (current.kind !== "generated") return;
       const page = current.result;
 
+      // The iframe overlay emits sectionId in "block-N" form (assembled by
+      // lib/orchestrator/assemble.tsx). Parse it back into an integer.
+      const blockIndex = parseBlockIndex(args.sectionId);
+      if (blockIndex === null) {
+        // eslint-disable-next-line no-console
+        console.error(
+          `regenerateSection: cannot parse blockIndex from sectionId="${args.sectionId}"`,
+        );
+        return;
+      }
+
       setState({
         kind: "generated",
         result: page,
@@ -165,10 +176,11 @@ export function useGeneration(): UseGenerationResult {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             brief: page.meta.brief,
+            intent: page.meta.intent,
             plan: page.plan,
-            copy: page.copy,
+            filledBlocks: page.filledBlocks,
             images: page.images,
-            sectionId: args.sectionId,
+            blockIndex,
             additionalInstruction: args.additionalInstruction,
             projectId: current.projectId,
           }),
@@ -196,10 +208,7 @@ export function useGeneration(): UseGenerationResult {
       setState({
         kind: "generated",
         result: {
-          ...page,
-          html: data.html,
-          css: data.css,
-          copy: data.copy,
+          ...data.page,
           cost: addCostBreakdowns(page.cost, data.cost),
         },
         regen: undefined,
@@ -217,7 +226,7 @@ export function useGeneration(): UseGenerationResult {
         return;
       }
       const data = (await res.json()) as {
-        project: { id: string; title: string; data: WorkspaceState extends { kind: "generated"; result: infer R } ? R : never };
+        project: { id: string; title: string; data: LandingPage };
       };
       setState({
         kind: "generated",
@@ -236,6 +245,13 @@ export function useGeneration(): UseGenerationResult {
   return { state, generate, regenerateSection, loadProject, reset };
 }
 
+function parseBlockIndex(sectionId: string): number | null {
+  const m = sectionId.match(/^block-(\d+)$/);
+  if (!m) return null;
+  const n = Number.parseInt(m[1], 10);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
 function formatRelativeReset(iso: string): string {
   const ms = new Date(iso).getTime() - Date.now();
   if (ms <= 0) return "in a moment";
@@ -252,10 +268,9 @@ function addCostBreakdowns(a: CostBreakdown, b: CostBreakdown): CostBreakdown {
     total: a.total + b.total,
     classify: a.classify + b.classify,
     plan: a.plan + b.plan,
-    copy: a.copy + b.copy,
-    html: a.html + b.html,
+    fill: a.fill + b.fill,
     images: a.images + b.images,
-    refine: a.refine + b.refine,
+    assemble: a.assemble + b.assemble,
   };
 }
 
@@ -330,7 +345,13 @@ function applyEvent(
 }
 
 function freshPartial(): GeneratingPartial {
-  return { brief: "", images: [], costSoFar: 0, startedAt: Date.now() };
+  return {
+    brief: "",
+    filledBlocks: [],
+    images: [],
+    costSoFar: 0,
+    startedAt: Date.now(),
+  };
 }
 
 function mergeStepResult(
@@ -342,12 +363,20 @@ function mergeStepResult(
       return { ...partial, intent: event.data as Intent };
     case "plan":
       return { ...partial, plan: event.data as Plan };
-    case "copy":
-      return { ...partial, copy: event.data as Copy };
+    case "fill": {
+      const filled = event.data as FilledBlock;
+      const existing = partial.filledBlocks.findIndex(
+        (b) => b.index === filled.index,
+      );
+      const filledBlocks =
+        existing === -1
+          ? [...partial.filledBlocks, filled].sort((a, b) => a.index - b.index)
+          : partial.filledBlocks.map((b, i) => (i === existing ? filled : b));
+      return { ...partial, filledBlocks };
+    }
     case "image_hero":
     case "image_decorative": {
       const img = event.data as GeneratedImage;
-      // Replace by id if it already exists, otherwise append.
       const existing = partial.images.findIndex((i) => i.id === img.id);
       const images = existing === -1
         ? [...partial.images, img]
