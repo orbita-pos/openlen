@@ -1,0 +1,16 @@
+classify	started		Parsing brief into structured intent
+classify	completed	0.0000	Parsing brief into structured intent
+plan	started		Adaptive fast-path planning (simple brief)
+plan	completed	0.0030	Adaptive fast-path planning (simple brief)
+image_hero	started		Rendering hero image: hero-volcanic-bag
+image_decorative	started		Rendering decorative image: feature-farmer-hands
+image_decorative	started		Rendering decorative image: feature-roast-texture
+image_decorative	started		Rendering background image: background-mountain-mist
+copy	started		Writing copy for each section
+copy	completed	0.0076	Writing copy for each section
+html	started		Generating HTML and CSS
+image_hero	completed	0.0376	Rendered hero-volcanic-bag
+image_decorative	completed	0.0676	Rendered feature-farmer-hands
+image_decorative	completed	0.0976	Rendered feature-roast-texture
+image_decorative	completed	0.1276	Rendered background-mountain-mist
+html	completed	0.1387	Generating HTML and CSS

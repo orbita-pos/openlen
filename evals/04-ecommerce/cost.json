@@ -1,0 +1,31 @@
+{
+  "slug": "04-ecommerce",
+  "label": "E-commerce",
+  "brief": "Landing page for 'Volcánica', a single-origin coffee subscription from Mexican volcanoes. Hero: bag of coffee on volcanic stone. Subscription tiers: $19 monthly, $49 quarterly. Mission: support Mexican farmers.",
+  "totalCostUsd": 0.13871052,
+  "breakdown": {
+    "total": 0.13871052,
+    "classify": 0.000019319999999999998,
+    "plan": 0.0029614,
+    "copy": 0.0045758,
+    "html": 0.011154,
+    "images": 0.12,
+    "refine": 0
+  },
+  "wallClockMs": 52178,
+  "adaptiveFastPath": true,
+  "imagesGenerated": 4,
+  "intent": {
+    "industry": "single-origin coffee",
+    "audience": "ethical consumers",
+    "tone": "professional",
+    "complexity": "standard",
+    "goals": [
+      "highlight product",
+      "promote subscriptions",
+      "communicate impact"
+    ],
+    "productName": "Volcánica"
+  },
+  "generationId": "7b4c6f47-6992-42c6-81d9-3df7effee119"
+}

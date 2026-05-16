@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Volcánica</title>
+<style>
+html, body { margin: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; background: #fff; color: #111; }
+:root {
+  --brand: #5D4037;
+  --bg: #FDF6EF;
+  --fg: #2C2421;
+  --muted: #A1887F;
+  --accent: #D7CCC8;
+  --border: #D7CCC8;
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+html {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Georgia', serif;
+  background-color: var(--bg);
+  color: var(--fg);
+  line-height: 1.6;
+}
+
+h1, h2, h3, p {
+  margin: 0 0 1rem 0;
+}
+
+h1 {
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1.2;
+}
+
+h2 {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  line-height: 1.2;
+}
+
+h3 {
+  font-size: clamp(1.25rem, 3vw, 1.5rem);
+}
+
+a {
+  color: var(--brand);
+  text-decoration: none;
+}
+
+a:hover,
+a:focus {
+  text-decoration: underline;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.button {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--brand);
+  color: white;
+  border: none;
+  font-family: inherit;
+  font-size: 1rem;
+  text-align: center;
+  text-decoration: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.button:hover,
+.button:focus {
+  background-color: #4E342E;
+  text-decoration: none;
+}
+
+.button--secondary {
+  background-color: transparent;
+  color: var(--brand);
+  border: 1px solid var(--brand);
+}
+
+.button--secondary:hover,
+.button--secondary:focus {
+  background-color: var(--accent);
+}
+
+/* Hero Section */
+.hero {
+  padding: 2rem 1rem;
+  display: grid;
+  gap: 2rem;
+  align-items: center;
+}
+
+.hero__content {
+  text-align: center;
+}
+
+.hero__ctas {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.hero__image {
+  justify-self: center;
+}
+
+/* Features Section */
+.features {
+  padding: 3rem 1rem;
+  background-color: white;
+}
+
+.features__header {
+  text-align: center;
+  max-width: 40rem;
+  margin: 0 auto 2rem;
+}
+
+.features__grid {
+  display: grid;
+  gap: 2rem;
+  max-width: 60rem;
+  margin: 0 auto;
+}
+
+/* Social Proof Section */
+.social_proof {
+  padding: 3rem 1rem;
+  text-align: center;
+}
+
+.social_proof__grid {
+  display: grid;
+  gap: 2rem;
+  max-width: 60rem;
+  margin: 2rem auto 0;
+}
+
+.stat h3 {
+  font-weight: normal;
+  color: var(--brand);
+}
+
+/* Pricing Section */
+.pricing {
+  padding: 3rem 1rem;
+  background-color: white;
+}
+
+.pricing__header {
+  text-align: center;
+  max-width: 40rem;
+  margin: 0 auto 2rem;
+}
+
+.pricing__tiers {
+  display: grid;
+  gap: 2rem;
+  max-width: 60rem;
+  margin: 0 auto;
+}
+
+.tier {
+  padding: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.tier--highlight {
+  border-color: var(--brand);
+  background-color: #FBF6F2;
+  position: relative;
+}
+
+.tier--highlight:before {
+  content: 'Best Value';
+  position: absolute;
+  top: -0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--brand);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  border-radius: 4px;
+}
+
+.tier__price {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 0.5rem 0;
+}
+
+/* CTA Section */
+.cta {
+  padding: 4rem 1rem;
+  background-color: var(--brand);
+  color: white;
+  text-align: center;
+}
+
+.cta h2 {
+  color: white;
+}
+
+.cta a {
+  color: white;
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.cta a:hover,
+.cta a:focus {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Footer */
+.footer {
+  padding: 3rem 1rem;
+  background-color: #2C2421;
+  color: white;
+  display: grid;
+  gap: 2rem;
+}
+
+.footer h2 {
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.footer ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.footer a {
+  color: var(--accent);
+}
+
+.footer a:hover,
+.footer a:focus {
+  color: white;
+}
+
+/* Responsive Breakpoints */
+@media (min-width: 640px) {
+  .hero {
+    grid-template-columns: 1fr 1fr;
+    text-align: left;
+  }
+
+  .hero__content {
+    text-align: left;
+  }
+
+  .hero__ctas {
+    flex-direction: row;
+    justify-content: flex-start;
+  }
+
+  .features__grid,
+  .social_proof__grid,
+  .pricing__tiers {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .footer {
+    grid-template-columns: 1fr 2fr;
+  }
+
+  .footer ul {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero {
+    padding: 4rem 2rem;
+  }
+
+  .features,
+  .social_proof,
+  .pricing {
+    padding: 4rem 2rem;
+  }
+
+  .cta {
+    padding: 5rem 2rem;
+  }
+
+  .footer {
+    padding: 4rem 2rem;
+    grid-template-columns: 1fr 3fr;
+  }
+}
+</style>
+</head>
+<body>
+<main>
+  <section class="hero">
+    <div class="hero__content">
+      <h1>Coffee grown on Mexican volcanoes, delivered to your door.</h1>
+      <p>Single-origin beans from volcanic slopes in Oaxaca and Veracruz. Roasted in small batches and shipped within 48 hours of cooling. Every subscription directly funds the farmer cooperatives we source from.</p>
+      <div class="hero__ctas">
+        <a href="#pricing-tiers" class="button">Choose your plan</a>
+        <a href="#mission-impact" class="button button--secondary">Read our story</a>
+      </div>
+    </div>
+    <div class="hero__image">
+      <img src="https://api.together.ai/shrt/cpkWZGymWZaA2IRu" alt="Volcánica coffee bag on volcanic stone with morning light and steam">
+    </div>
+  </section>
+
+  <section class="features">
+    <header class="features__header">
+      <h2>Why volcano soil changes the cup.</h2>
+      <p>High-altitude farms on active volcanic ridges produce denser, more complex beans. We pay above-market rates to the growers who tend them.</p>
+    </header>
+    <div class="features__grid">
+      <article class="feature">
+        <h3>Volcanic terroir</h3>
+        <p>Mineral-rich soil and sharp diurnal temperature shifts create beans with pronounced sweetness and structured acidity.</p>
+      </article>
+      <article class="feature">
+        <h3>Direct farmer pricing</h3>
+        <p>We set purchase prices with cooperatives, not commodity exchanges. Farmers know their yield value before the harvest begins.</p>
+      </article>
+      <article class="feature">
+        <h3>Roast-to-door in 72 hours</h3>
+        <p>Beans leave our Puebla roastery within three days of roasting. You brew at peak aroma, not peak warehouse age.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="social_proof">
+    <header>
+      <h2>Impact in every bag.</h2>
+    </header>
+    <div class="social_proof__grid">
+      <article class="stat">
+        <h3>340 farmer families</h3>
+        <p>Currently under long-term supply contracts across four volcanic regions.</p>
+      </article>
+      <article class="stat">
+        <h3>12 indigenous communities</h3>
+        <p>Receiving reinvestment from harvest premiums and infrastructure funds.</p>
+      </article>
+      <article class="stat">
+        <h3>48-hour roast window</h3>
+        <p>Maximum time from cooling tray to sealed bag.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="pricing">
+    <header class="pricing__header">
+      <h2>Choose your frequency.</h2>
+      <p>Pause, switch, or cancel anytime. Shipping is always included.</p>
+    </header>
+    <div class="pricing__tiers">
+      <article class="tier">
+        <h3>Monthly</h3>
+        <p class="tier__price">$19/mo</p>
+        <p>One 12-oz bag of the current single-origin release, shipped fresh each month.</p>
+        <a href="#" class="button">Start monthly</a>
+      </article>
+      <article class="tier tier--highlight">
+        <h3>Quarterly</h3>
+        <p class="tier__price">$49/qtr</p>
+        <p>Three 12-oz bags per shipment—one for each month—at a lower per-bag rate.</p>
+        <a href="#" class="button">Start quarterly</a>
+      </article>
+    </div>
+  </section>
+
+  <section class="cta">
+    <div class="cta__content">
+      <h2>The price on the bag is the price the farmer negotiated.</h2>
+      <p>Volcánica exists because Mexican coffee growers deserve stable income, not auction-floor volatility. We publish our sourcing costs. We return 10% of subscription revenue to cooperative-led projects—water filtration, drying patios, agronomy training. This is not charity; it is a supply chain built on dignity.</p>
+      <a href="#pricing-tiers" class="button">Join the subscription</a>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer__brand">
+      <h2>Volcánica</h2>
+      <p>Coffee from volcanic soil. Income for the people who farm it.</p>
+    </div>
+    <nav class="footer__nav">
+      <ul>
+        <li><a href="#">Monthly</a></li>
+        <li><a href="#">Quarterly</a></li>
+        <li><a href="#">Our story</a></li>
+        <li><a href="#">Sourcing transparency</a></li>
+        <li><a href="#">Shipping & returns</a></li>
+        <li><a href="#">Contact</a></li>
+        <li><a href="#">Privacy policy</a></li>
+        <li><a href="#">Terms of service</a></li>
+      </ul>
+    </nav>
+  </footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,30 @@
+{
+  "slug": "02-portfolio",
+  "label": "Portfolio personal",
+  "brief": "Personal portfolio for a freelance UI/UX designer based in Mexico City named Sofia. She specializes in fintech and SaaS. Wants to showcase 6 projects and have a contact section.",
+  "totalCostUsd": 0.14370709,
+  "breakdown": {
+    "total": 0.14370709,
+    "classify": 0.00001839,
+    "plan": 0.0026795,
+    "copy": 0.0064372000000000006,
+    "html": 0.014572,
+    "images": 0.12,
+    "refine": 0
+  },
+  "wallClockMs": 60714,
+  "adaptiveFastPath": true,
+  "imagesGenerated": 4,
+  "intent": {
+    "industry": "fintech",
+    "audience": "freelance designers",
+    "tone": "professional",
+    "complexity": "standard",
+    "goals": [
+      "showcase projects",
+      "enable contact"
+    ],
+    "productName": "Sofia Portfolio"
+  },
+  "generationId": "874a79e9-7ee8-4732-a32f-c0e7c28e032c"
+}

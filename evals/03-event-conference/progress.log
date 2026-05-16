@@ -1,0 +1,16 @@
+classify	started		Parsing brief into structured intent
+classify	completed	0.0000	Parsing brief into structured intent
+plan	started		Adaptive fast-path planning (simple brief)
+plan	completed	0.0032	Adaptive fast-path planning (simple brief)
+image_hero	started		Rendering hero image: hero-audience
+image_decorative	started		Rendering decorative image: speaker-stage
+image_decorative	started		Rendering background image: community-mosaic
+image_decorative	started		Rendering decorative image: ticket-detail
+copy	started		Writing copy for each section
+copy	completed	0.0111	Writing copy for each section
+html	started		Generating HTML and CSS
+image_decorative	completed	0.0411	Rendered community-mosaic
+image_hero	completed	0.0711	Rendered hero-audience
+image_decorative	completed	0.1011	Rendered ticket-detail
+image_decorative	completed	0.1311	Rendered speaker-stage
+html	completed	0.1469	Generating HTML and CSS

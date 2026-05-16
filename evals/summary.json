@@ -1,0 +1,107 @@
+[
+  {
+    "slug": "01-saas-launch",
+    "label": "SaaS launch",
+    "ok": true,
+    "totalCostUsd": 0.14321879,
+    "wallClockMs": 69399,
+    "imagesGenerated": 4,
+    "fastPath": false,
+    "intent": {
+      "industry": "design tools",
+      "audience": "creative teams",
+      "tone": "professional",
+      "complexity": "standard",
+      "goals": [
+        "highlight AI features",
+        "showcase pricing",
+        "emphasize collaboration"
+      ],
+      "productName": "FlowDeck"
+    }
+  },
+  {
+    "slug": "02-portfolio",
+    "label": "Portfolio personal",
+    "ok": true,
+    "totalCostUsd": 0.14370709,
+    "wallClockMs": 60714,
+    "imagesGenerated": 4,
+    "fastPath": true,
+    "intent": {
+      "industry": "fintech",
+      "audience": "freelance designers",
+      "tone": "professional",
+      "complexity": "standard",
+      "goals": [
+        "showcase projects",
+        "enable contact"
+      ],
+      "productName": "Sofia Portfolio"
+    }
+  },
+  {
+    "slug": "03-event-conference",
+    "label": "Event / conference",
+    "ok": true,
+    "totalCostUsd": 0.14685357999999998,
+    "wallClockMs": 71686,
+    "imagesGenerated": 4,
+    "fastPath": true,
+    "intent": {
+      "industry": "entrepreneurship",
+      "audience": "indie hackers",
+      "tone": "professional",
+      "complexity": "standard",
+      "goals": [
+        "highlight event details",
+        "promote early-bird pricing",
+        "showcase speaker lineup"
+      ],
+      "productName": "Solo Founder Summit 2026"
+    }
+  },
+  {
+    "slug": "04-ecommerce",
+    "label": "E-commerce",
+    "ok": true,
+    "totalCostUsd": 0.13871052,
+    "wallClockMs": 52178,
+    "imagesGenerated": 4,
+    "fastPath": true,
+    "intent": {
+      "industry": "single-origin coffee",
+      "audience": "ethical consumers",
+      "tone": "professional",
+      "complexity": "standard",
+      "goals": [
+        "highlight product",
+        "promote subscriptions",
+        "communicate impact"
+      ],
+      "productName": "Volcánica"
+    }
+  },
+  {
+    "slug": "05-agency",
+    "label": "Agency",
+    "ok": true,
+    "totalCostUsd": 0.10301864,
+    "wallClockMs": 37157,
+    "imagesGenerated": 3,
+    "fastPath": true,
+    "intent": {
+      "industry": "branding",
+      "audience": "startups",
+      "tone": "professional",
+      "complexity": "standard",
+      "goals": [
+        "showcase brand identity",
+        "highlight case studies",
+        "prompt contact",
+        "display client logos"
+      ],
+      "productName": "Pixelhaus"
+    }
+  }
+]
