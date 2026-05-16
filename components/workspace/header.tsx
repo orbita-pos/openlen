@@ -1,0 +1,288 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import {
+  ArrowRight,
+  ChevronDown,
+  ChevronRight,
+  Cloud,
+  CloudCheck,
+  Download,
+  Globe,
+  Moon,
+  Sparkles,
+  Sun,
+} from "lucide-react";
+import { IconButton } from "@/components/ui/icon-button";
+import { Tooltip } from "@/components/ui/tooltip";
+import { GithubIcon } from "@/components/ui/brand-icons";
+import { VercelLogo } from "./vercel-logo";
+import { cn } from "@/lib/cn";
+
+export interface HeaderProps {
+  saved: boolean;
+  savedLabel: string;
+  dark: boolean;
+  onToggleDark: () => void;
+  projectName: string;
+  onRename: (next: string) => void;
+  generated: boolean;
+  totalCost?: number;
+}
+
+function formatUsd(n: number) {
+  return `$${n.toFixed(2)}`;
+}
+
+export function Header({
+  saved,
+  savedLabel,
+  dark,
+  onToggleDark,
+  projectName,
+  onRename,
+  generated,
+  totalCost,
+}: HeaderProps) {
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [deployOpen, setDeployOpen] = useState(false);
+  const profRef = useRef<HTMLDivElement>(null);
+  const deployRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (profRef.current && !profRef.current.contains(e.target as Node))
+        setProfileOpen(false);
+      if (deployRef.current && !deployRef.current.contains(e.target as Node))
+        setDeployOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
+
+  const [editingName, setEditingName] = useState(false);
+  const [draft, setDraft] = useState(projectName);
+  useEffect(() => setDraft(projectName), [projectName]);
+
+  const comingSoon = (label: string) => () => {
+    setDeployOpen(false);
+    alert(`${label} — coming in Phase 1B.`);
+  };
+
+  return (
+    <header className="sticky top-0 z-40 h-14 shrink-0 border-b border-zinc-200 dark:border-zinc-800 bg-white/85 dark:bg-[#0a0a0a]/85 backdrop-blur-md">
+      <div className="h-full px-4 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <Link href="/" className="flex items-center gap-2 group shrink-0">
+            <span className="relative inline-flex h-6 w-6 items-center justify-center">
+              <span className="absolute inset-0 rounded-md bg-coral-500" />
+              <span className="relative font-bold text-white text-[13px] leading-none">
+                い
+              </span>
+            </span>
+            <span className="hidden sm:inline font-semibold tracking-tight text-[14px]">
+              Inari Pages
+            </span>
+          </Link>
+          <div className="hidden md:block h-5 w-px bg-zinc-200 dark:bg-zinc-800 shrink-0" />
+          <nav className="flex items-center gap-1.5 text-sm min-w-0">
+            <Link
+              href="/"
+              className="hidden md:inline text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition shrink-0"
+            >
+              My landings
+            </Link>
+            <ChevronRight
+              size={14}
+              className="hidden md:inline text-zinc-300 dark:text-zinc-700 shrink-0"
+            />
+            {editingName ? (
+              <input
+                autoFocus
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={() => {
+                  onRename(draft.trim() || "Untitled");
+                  setEditingName(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") e.currentTarget.blur();
+                  if (e.key === "Escape") {
+                    setDraft(projectName);
+                    setEditingName(false);
+                  }
+                }}
+                className="h-7 px-1.5 -mx-1.5 text-sm font-medium bg-transparent ring-1 ring-coral-500 rounded outline-none min-w-[120px]"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setEditingName(true)}
+                className="text-sm font-medium text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 rounded px-1.5 -mx-1.5 py-0.5 truncate max-w-[200px] sm:max-w-[280px]"
+              >
+                {projectName}
+              </button>
+            )}
+          </nav>
+        </div>
+
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {generated && (
+            <>
+              {typeof totalCost === "number" && (
+                <Tooltip
+                  side="bottom"
+                  label={
+                    <span className="tabular-nums">
+                      Total: {formatUsd(totalCost)}
+                    </span>
+                  }
+                >
+                  <span className="hidden lg:inline-flex items-center gap-1.5 h-7 px-2 rounded-md ring-1 ring-zinc-200 dark:ring-zinc-800 bg-white dark:bg-[#0a0a0a] text-[11px] text-zinc-500 cursor-default">
+                    <Sparkles size={11} className="text-coral-500" />
+                    <span className="tabular-nums">{formatUsd(totalCost)}</span>
+                  </span>
+                </Tooltip>
+              )}
+
+              <span className="hidden sm:inline-flex">
+                <IconButton
+                  label="Download .zip — Coming in Phase 1B"
+                  onClick={() => alert("Download .zip — coming in Phase 1B.")}
+                >
+                  <Download size={14} />
+                </IconButton>
+              </span>
+
+              <div className="relative" ref={deployRef}>
+                <button
+                  type="button"
+                  onClick={() => setDeployOpen((o) => !o)}
+                  className="inline-flex items-center gap-1.5 h-8 px-2.5 sm:px-3 rounded-md bg-coral-500 text-white text-[12px] font-medium hover:bg-coral-600 active:bg-coral-700 btn-coral-shadow transition"
+                >
+                  <Sparkles size={12} />
+                  <span className="hidden sm:inline">Deploy</span>
+                  <ChevronDown
+                    size={11}
+                    className={cn("transition", deployOpen && "rotate-180")}
+                  />
+                </button>
+                {deployOpen && (
+                  <div className="absolute right-0 mt-2 w-64 rounded-xl ring-1 ring-zinc-200 dark:ring-zinc-800 bg-white dark:bg-[#0a0a0a] shadow-xl p-1.5 z-50">
+                    <div className="px-2.5 pt-1.5 pb-2 text-[10px] uppercase tracking-wider text-zinc-400">
+                      Ship it
+                    </div>
+                    {[
+                      {
+                        label: "Deploy to Vercel",
+                        sub: "Coming in Phase 1B",
+                        icon: <VercelLogo size={12} />,
+                      },
+                      {
+                        label: "Push to GitHub",
+                        sub: "Coming in Phase 1B",
+                        icon: <GithubIcon size={13} />,
+                      },
+                      {
+                        label: "Deploy to Cloudflare",
+                        sub: "Coming in Phase 1B",
+                        icon: <Globe size={13} />,
+                      },
+                    ].map((o) => (
+                      <button
+                        key={o.label}
+                        type="button"
+                        onClick={comingSoon(o.label)}
+                        className="flex items-center gap-3 w-full text-left px-2.5 py-2 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-900 transition group"
+                      >
+                        <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md ring-1 ring-zinc-200 dark:ring-zinc-800 bg-white dark:bg-[#0a0a0a] text-zinc-700 dark:text-zinc-300">
+                          {o.icon}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[13px] font-medium text-zinc-900 dark:text-zinc-100">
+                            {o.label}
+                          </span>
+                          <span className="block text-[11px] text-zinc-500">
+                            {o.sub}
+                          </span>
+                        </span>
+                        <ArrowRight
+                          size={12}
+                          className="text-zinc-300 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 transition"
+                        />
+                      </button>
+                    ))}
+                    <div className="border-t border-zinc-100 dark:border-zinc-900 my-1" />
+                    <button
+                      type="button"
+                      onClick={comingSoon("Download .zip")}
+                      className="flex items-center gap-2 w-full text-left px-2.5 py-1.5 rounded-md text-[12px] text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition"
+                    >
+                      <Download size={12} /> Download .zip instead
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="hidden sm:block h-5 w-px bg-zinc-200 dark:bg-zinc-800 mx-1" />
+            </>
+          )}
+
+          <div className="hidden sm:flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-500 mr-1">
+            {saved ? (
+              <CloudCheck size={14} className="text-emerald-500" />
+            ) : (
+              <Cloud size={14} className="text-zinc-400 animate-pulse" />
+            )}
+            <span>{savedLabel}</span>
+          </div>
+
+          <IconButton
+            label={dark ? "Light mode" : "Dark mode"}
+            onClick={onToggleDark}
+          >
+            {dark ? <Sun size={15} /> : <Moon size={15} />}
+          </IconButton>
+
+          <div className="relative" ref={profRef}>
+            <button
+              type="button"
+              onClick={() => setProfileOpen((o) => !o)}
+              className="flex items-center gap-1.5 rounded-full h-8 pl-0.5 pr-2 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition"
+            >
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-coral-400 to-coral-700 text-white text-[11px] font-semibold ring-2 ring-white dark:ring-[#0a0a0a]">
+                MK
+              </span>
+              <ChevronDown size={13} className="text-zinc-400" />
+            </button>
+            {profileOpen && (
+              <div className="absolute right-0 mt-2 w-60 rounded-xl ring-1 ring-zinc-200 dark:ring-zinc-800 bg-white dark:bg-[#0a0a0a] shadow-lg p-1.5">
+                <div className="px-3 py-2.5">
+                  <div className="text-sm font-medium">Mika Kondo</div>
+                  <div className="text-xs text-zinc-500">mika@inari.dev</div>
+                </div>
+                <div className="border-t border-zinc-100 dark:border-zinc-900 my-1" />
+                {["Settings", "Billing", "API keys", "Refer a friend"].map((l) => (
+                  <button
+                    type="button"
+                    key={l}
+                    className="flex items-center w-full text-left px-3 py-1.5 rounded-md text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                  >
+                    {l}
+                  </button>
+                ))}
+                <div className="border-t border-zinc-100 dark:border-zinc-900 my-1" />
+                <button
+                  type="button"
+                  className="flex items-center w-full text-left px-3 py-1.5 rounded-md text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                >
+                  Sign out
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
