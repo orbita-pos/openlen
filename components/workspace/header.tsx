@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { signOut, useSession } from "next-auth/react";
 import {
   ArrowRight,
   ChevronDown,
@@ -254,45 +255,73 @@ export function Header({
             {dark ? <Sun size={15} /> : <Moon size={15} />}
           </IconButton>
 
-          <div className="relative" ref={profRef}>
-            <button
-              type="button"
-              onClick={() => setProfileOpen((o) => !o)}
-              className="flex items-center gap-1.5 rounded-full h-8 pl-0.5 pr-2 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition"
-            >
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-coral-400 to-coral-700 text-white text-[11px] font-semibold ring-2 ring-white dark:ring-[#0a0a0a]">
-                MK
-              </span>
-              <ChevronDown size={13} className="text-zinc-400" />
-            </button>
-            {profileOpen && (
-              <div className="absolute right-0 mt-2 w-60 rounded-xl ring-1 ring-zinc-200 dark:ring-zinc-800 bg-white dark:bg-[#0a0a0a] shadow-lg p-1.5">
-                <div className="px-3 py-2.5">
-                  <div className="text-sm font-medium">Mika Kondo</div>
-                  <div className="text-xs text-zinc-500">mika@inari.dev</div>
-                </div>
-                <div className="border-t border-zinc-100 dark:border-zinc-900 my-1" />
-                {["Settings", "Billing", "API keys", "Refer a friend"].map((l) => (
-                  <button
-                    type="button"
-                    key={l}
-                    className="flex items-center w-full text-left px-3 py-1.5 rounded-md text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900"
-                  >
-                    {l}
-                  </button>
-                ))}
-                <div className="border-t border-zinc-100 dark:border-zinc-900 my-1" />
-                <button
-                  type="button"
-                  className="flex items-center w-full text-left px-3 py-1.5 rounded-md text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900"
-                >
-                  Sign out
-                </button>
-              </div>
-            )}
-          </div>
+          <UserMenu open={profileOpen} setOpen={setProfileOpen} profRef={profRef} />
         </div>
       </div>
     </header>
+  );
+}
+
+function UserMenu({
+  open,
+  setOpen,
+  profRef,
+}: {
+  open: boolean;
+  setOpen: (v: boolean | ((p: boolean) => boolean)) => void;
+  profRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const { data: session } = useSession();
+  const user = session?.user;
+  const initials = useMemo(() => {
+    const source = user?.name || user?.email || "";
+    if (!source) return "U";
+    const parts = source.split(/[\s@.]+/).filter(Boolean);
+    return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "U";
+  }, [user?.name, user?.email]);
+
+  return (
+    <div className="relative" ref={profRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1.5 rounded-full h-8 pl-0.5 pr-2 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition"
+      >
+        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-coral-400 to-coral-700 text-white text-[11px] font-semibold ring-2 ring-white dark:ring-[#0a0a0a]">
+          {initials}
+        </span>
+        <ChevronDown size={13} className="text-zinc-400" />
+      </button>
+      {open && (
+        <div className="absolute right-0 mt-2 w-60 rounded-xl ring-1 ring-zinc-200 dark:ring-zinc-800 bg-white dark:bg-[#0a0a0a] shadow-lg p-1.5">
+          <div className="px-3 py-2.5">
+            <div className="text-sm font-medium truncate">
+              {user?.name ?? "Signed in"}
+            </div>
+            <div className="text-xs text-zinc-500 truncate">
+              {user?.email ?? "—"}
+            </div>
+          </div>
+          <div className="border-t border-zinc-100 dark:border-zinc-900 my-1" />
+          {["Settings", "Billing", "API keys"].map((l) => (
+            <button
+              type="button"
+              key={l}
+              className="flex items-center w-full text-left px-3 py-1.5 rounded-md text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+            >
+              {l}
+            </button>
+          ))}
+          <div className="border-t border-zinc-100 dark:border-zinc-900 my-1" />
+          <button
+            type="button"
+            onClick={() => void signOut({ callbackUrl: "/login" })}
+            className="flex items-center w-full text-left px-3 py-1.5 rounded-md text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+          >
+            Sign out
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

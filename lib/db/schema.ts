@@ -1,0 +1,89 @@
+import {
+  boolean,
+  integer,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
+import type { AdapterAccountType } from "next-auth/adapters";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Drizzle schema for auth.
+//
+// Four tables come from the Auth.js Drizzle adapter contract — users,
+// accounts (OAuth links), sessions, verification_tokens. We add one
+// password_reset_tokens table for the forgot/reset flow (Auth.js doesn't
+// handle password reset natively).
+//
+// users.passwordHash is nullable because OAuth-first signups don't have a
+// password until they explicitly set one.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const users = pgTable("users", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  name: text("name"),
+  email: text("email").notNull().unique(),
+  emailVerified: timestamp("emailVerified", { mode: "date" }),
+  image: text("image"),
+  passwordHash: text("passwordHash"),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+});
+
+export const accounts = pgTable(
+  "accounts",
+  {
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").$type<AdapterAccountType>().notNull(),
+    provider: text("provider").notNull(),
+    providerAccountId: text("providerAccountId").notNull(),
+    refresh_token: text("refresh_token"),
+    access_token: text("access_token"),
+    expires_at: integer("expires_at"),
+    token_type: text("token_type"),
+    scope: text("scope"),
+    id_token: text("id_token"),
+    session_state: text("session_state"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.provider, table.providerAccountId] }),
+  ],
+);
+
+export const sessions = pgTable("sessions", {
+  sessionToken: text("sessionToken").primaryKey(),
+  userId: text("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  expires: timestamp("expires", { mode: "date" }).notNull(),
+});
+
+export const verificationTokens = pgTable(
+  "verificationTokens",
+  {
+    identifier: text("identifier").notNull(),
+    token: text("token").notNull(),
+    expires: timestamp("expires", { mode: "date" }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.identifier, table.token] }),
+  ],
+);
+
+// Password reset tokens — separate table so a leaked token only impacts
+// password reset and not session/email-verification flows.
+export const passwordResetTokens = pgTable("passwordResetTokens", {
+  // The hashed token. We store hash, not raw — the raw value lives only in
+  // the email we send to the user.
+  tokenHash: text("tokenHash").primaryKey(),
+  userId: text("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  expires: timestamp("expires", { mode: "date" }).notNull(),
+  used: boolean("used").notNull().default(false),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+});

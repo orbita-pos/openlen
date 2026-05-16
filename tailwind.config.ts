@@ -103,6 +103,10 @@ const config: Config = {
           from: { opacity: "0", filter: "blur(20px) saturate(0.4)", transform: "scale(1.04)" },
           to: { opacity: "1", filter: "none", transform: "none" },
         },
+        lift: {
+          from: { opacity: "0", transform: "translateY(8px)" },
+          to: { opacity: "1", transform: "none" },
+        },
       },
       animation: {
         skeleton: "skeleton 1.8s ease-in-out infinite",
