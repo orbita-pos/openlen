@@ -42,6 +42,7 @@ export function assemble(input: AssembleInput): LandingPage {
     html = html.replaceAll(`{{IMG_${img.id}}}`, img.url);
   }
   html = stripUnresolvedPlaceholders(html);
+  html = stripEmptySrcImages(html);
 
   const title = deriveTitle(input);
   const description = deriveDescription(input);
@@ -88,6 +89,14 @@ function stripUnresolvedPlaceholders(html: string): string {
   // Final pass: drop any remaining {{IMG_*}} or {{HERO_IMAGE}} tokens so they
   // don't appear in the rendered page if assembly missed something.
   return html.replace(/\{\{(HERO_IMAGE|IMG_[A-Za-z0-9_-]+)\}\}/g, "");
+}
+
+function stripEmptySrcImages(html: string): string {
+  // Defense in depth: after placeholder cleanup, any <img> left with src=""
+  // (or src="#") would render as a broken image. Drop the whole element.
+  // The html quality gate should already prevent this, but it can also appear
+  // if a placeholder got stripped and left empty quotes behind.
+  return html.replace(/<img\b[^>]*\ssrc\s*=\s*(["'])\s*\1[^>]*>/gi, "");
 }
 
 function escapeRegex(s: string): string {

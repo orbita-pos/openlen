@@ -13,7 +13,8 @@ HTML rules:
 - Wrap everything in a single <main> element. Inside <main>, each planned section is a <section class="<kind>"> element where <kind> is "hero", "features", "social_proof", etc., matching the plan's section.kind. The footer is a <footer class="footer"> element after </main> closes — but include it INSIDE <main> for this generator (the assembler handles that).
 - Use semantic HTML5: <section>, <article>, <header>, <h1>/<h2>/<h3>, <p>, <ul>/<li>, <a>, <img>.
 - The first <section class="hero"> MUST contain exactly one <img> with src="{{HERO_IMAGE}}" and a meaningful alt attribute. Assembly swaps the placeholder for a real URL.
-- Other image placeholders are src="{{IMG_<id>}}" using the imagePrompt id. Each <img> MUST have a non-empty alt attribute.
+- Other image placeholders are src="{{IMG_<id>}}" using an id THAT EXISTS in the plan's imagePrompts list. Each <img> MUST have a non-empty alt attribute.
+- NEVER emit <img src=""> or <img src="#">. NEVER reference an image id that is not in imagePrompts. If the copy mentions a logo, brand mark, avatar, or other visual you don't have an imagePrompt for, render it as styled text instead — for example: <span class="logo-pill">Brewdog</span> styled in CSS. This is the rule for client logos, partner marks, team photos, and anything else the brief describes but the plan didn't generate.
 - Every <button> or icon-only <a> must have an aria-label.
 - All interactive elements use <a href="..."> or <button type="button">. No JS handlers.
 - No <script> tags. No external CDN <link> or <script>. No inline event handlers.
@@ -120,6 +121,22 @@ function assertHtmlQuality(html: string): void {
   const missingAlt = imgs.filter((tag) => !/\salt\s*=/i.test(tag));
   if (missingAlt.length > 0) {
     throw new Error(`html: ${missingAlt.length} <img> tag(s) missing alt attribute`);
+  }
+
+  // Every <img> must have a non-empty src. Catches the agency-style bug where
+  // the model invents <img src="" alt="Brand logo"> entries for assets it has
+  // no imagePrompt for. The system prompt instructs to render those as styled
+  // text instead.
+  const emptySrc = imgs.filter((tag) => {
+    const m = tag.match(/\ssrc\s*=\s*(["'])([^"']*)\1/i);
+    if (!m) return true; // missing src entirely also disqualifies
+    const value = m[2].trim();
+    return value === "" || value === "#";
+  });
+  if (emptySrc.length > 0) {
+    throw new Error(
+      `html: ${emptySrc.length} <img> tag(s) with empty/placeholder src — render brand marks as styled text instead`,
+    );
   }
 
   // Hero image placeholder must be present.
