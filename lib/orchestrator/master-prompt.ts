@@ -1,5 +1,6 @@
 import type { Palette } from "./design-tokens";
 import { RADIUS, SHADOWS, TYPOGRAPHY } from "./design-tokens";
+import type { FewShotExample } from "./few-shots";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Master system prompt — the high-level quality bar, design principles, banned
@@ -8,15 +9,19 @@ import { RADIUS, SHADOWS, TYPOGRAPHY } from "./design-tokens";
 // fed to Qwen3-Coder / Kimi K2.6 / DeepSeek; do not freelance it.
 //
 // Per-step JSON schemas and step-specific rules are injected via
-// `taskSpecificAdditions`. Few-shot reference HTMLs are injected via
-// `fewShotExamples` (empty in Session 1; populated in Session 2).
+// `taskSpecificAdditions`. Few-shot reference variants are injected via
+// `fewShotExamples` — one per aesthetic direction, picked by routing.ts.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface MasterPromptInput {
   /** Palette selected for this generation (mono-dark for classify pre-intent). */
   palette: Palette;
-  /** Optional reference HTMLs to drop into the <few_shot_examples> block. */
-  fewShotExamples?: string[];
+  /**
+   * Reference variants to drop into the <few_shot_examples> block. Empty for
+   * steps that don't benefit (classify, refine); routing.ts loads them for
+   * plan / copy / html.
+   */
+  fewShotExamples?: FewShotExample[];
   /** Step-specific addendum injected into <task_specific> (JSON schemas, etc). */
   taskSpecificAdditions?: string;
 }
@@ -50,12 +55,24 @@ export function buildMasterPrompt(input: MasterPromptInput): string {
   const fewShotBlock =
     fewShotExamples.length > 0
       ? `<few_shot_examples>
-Three reference outputs follow. Match this level of refinement.
-Do not copy structure — match craft.
+Three reference variants follow, one per aesthetic direction. Match this level
+of refinement. Do NOT copy structure — match the craft demonstrated.
 
-${fewShotExamples.map((ex, i) => `EXAMPLE ${i + 1}:\n${ex}`).join("\n\n")}
+Each example is React + Tailwind JSX authored as a claude.ai artifact. Your
+output for this task is HTML + plain CSS (per <task_specific> below), not JSX.
+Translate the patterns: take the same density, restraint, semantic structure,
+type hierarchy, and accent discipline; emit them in semantic HTML.
+
+The example whose aesthetic best matches the brief is listed first.
+
+${fewShotExamples
+  .map(
+    (ex, i) =>
+      `EXAMPLE ${i + 1} — ${ex.direction.toUpperCase()} (${ex.variant}):\n\`\`\`jsx\n${ex.content}\n\`\`\``,
+  )
+  .join("\n\n")}
 </few_shot_examples>`
-      : "<!-- Few-shot examples will be added in Session 2 -->";
+      : "<!-- No few-shot examples loaded for this step -->";
 
   const taskBlock = taskSpecificAdditions
     ? `<task_specific>\n${taskSpecificAdditions}\n</task_specific>\n`
@@ -200,8 +217,6 @@ Before writing the file, internally plan:
 Only then, write the output.
 </thinking>
 
-${fewShotBlock}
-
 <final_constraint_check>
 Before emitting your answer, silently verify:
   [ ] Did I pick ONE aesthetic direction and execute it?
@@ -216,5 +231,7 @@ Before emitting your answer, silently verify:
   [ ] Would a Linear designer ship this?
 
 If any answer is no, rewrite before emitting.
-</final_constraint_check>`;
+</final_constraint_check>
+
+${fewShotBlock}`;
 }
