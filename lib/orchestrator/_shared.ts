@@ -9,6 +9,8 @@ import type {
 import type { Budget } from "@/lib/budget";
 import type { Recorder } from "@/lib/witness/recorder";
 import { pickTextModel, ROUTING_TABLE } from "./routing";
+import type { Palette } from "./design-tokens";
+import { PALETTES } from "./design-tokens";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared step context — threaded through every pipeline step.
@@ -24,6 +26,12 @@ export interface StepContext {
   recorder: Recorder;
   budget: Budget;
   fastPath: boolean;
+  /**
+   * Design palette in use for this generation. Mutates after classify once
+   * `selectPalette(intent)` resolves; defaults to mono-dark beforehand.
+   * Steps read this to compose the master system prompt.
+   */
+  palette: Palette;
   onProgress?: (event: ProgressEvent) => void;
   /**
    * Optional callback for mid-generation step output. Lets the client paint
@@ -32,6 +40,10 @@ export interface StepContext {
    */
   onStepResult?: (event: StepResultEvent) => void;
 }
+
+/** Default palette used by classify (before intent is known) and by step
+ *  contexts created without an explicit palette (e.g. regenerate-section). */
+export const DEFAULT_PALETTE: Palette = PALETTES["mono-dark"];
 
 export interface TextCallPlan<T> {
   step: PipelineStep;
@@ -139,6 +151,7 @@ export async function runTextStep<T>(
       costUsd: callResult.costUsd,
       mocked: callResult.mocked,
       note: i > 0 ? `fallback attempt ${i}` : undefined,
+      palette: ctx.palette.name,
     });
     ctx.budget.add(plan.step, callResult.costUsd);
     lastContent = callResult.content;

@@ -1,5 +1,7 @@
 import type { AnyModelId, ImageModelId, TextModelId } from "@/lib/together/models";
-import type { PipelineStep, RoutingDecision } from "./types";
+import type { Intent, PipelineStep, Plan, RoutingDecision } from "./types";
+import type { Palette } from "./design-tokens";
+import { buildMasterPrompt } from "./master-prompt";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Routing table — single source of truth for model selection across the
@@ -213,4 +215,228 @@ export function pickImageModel(ctx: PickContext): RoutingDecision & {
  *  when to stop attempting fallbacks. */
 export function fallbackCount(step: PipelineStep): number {
   return ROUTING_TABLE[step].fallbacks.length;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// System-message composition.
+//
+// Every text step builds its system message via `buildSystemMessageForStep`
+// instead of hardcoding one. The function injects the master prompt (role +
+// quality bar + banned patterns + brand voice + design tokens) and appends a
+// terse step-specific addendum that carries the JSON schema and structural
+// rules that change per step.
+//
+// Cacheability: the master prompt depends on `palette.name` and is otherwise
+// stable, so once a palette has been observed at least once in a session the
+// Together AI prompt cache hits for the full prefix. The brief and plan/copy
+// payloads ride in the user message — variable, never cached.
+// ─────────────────────────────────────────────────────────────────────────────
+
+type SystemMessageStep = Exclude<PipelineStep, "image_hero" | "image_decorative">;
+
+export interface SystemMessageContext {
+  palette: Palette;
+  /** Reserved for Session 2 — populates the <few_shot_examples> block. */
+  fewShotExamples?: string[];
+  /** Reserved for callers that want to layer extra task-specific content. */
+  extraTaskAdditions?: string;
+  /** Available downstream of classify; reserved for future task-specific hints. */
+  intent?: Intent;
+  /** Available downstream of plan; reserved for future task-specific hints. */
+  plan?: Plan;
+}
+
+const CLASSIFY_TASK = `TASK: Classify the brief into structured Intent.
+
+Output a SINGLE JSON object — nothing else. No markdown fences, no commentary.
+
+Schema:
+{
+  "industry": <2-4 word label, e.g. "fintech", "developer tools", "single-origin coffee">,
+  "audience": <2-4 word label, e.g. "indie hackers", "freelance designers", "wholesale buyers">,
+  "tone": <one of: bold | friendly | professional | playful | minimal | technical>,
+  "complexity": <one of: simple | standard | rich>,
+  "goals": <array of 2-4 short imperative phrases, e.g. ["drive signups", "communicate technical depth"]>,
+  "productName": <string when explicit in brief, omit otherwise>
+}
+
+Rules:
+- Pick the SINGLE best tone. Default "professional" when ambiguous.
+- "complexity" is a length cue: simple = ≤3 sections needed, standard = 4-6, rich = 7+.
+- "productName" must appear verbatim in the brief; never invent one.
+- Keep labels concrete. "saas" is too generic — prefer "kanban for designers".`;
+
+const PLAN_TASK = `TASK: Design the landing-page plan. Choose section sequence, visual direction, and image prompts.
+
+Output a SINGLE JSON object — no markdown, no commentary.
+
+Schema:
+{
+  "sections": [
+    { "id": "<kebab-slug>", "kind": "<hero|features|social_proof|testimonials|pricing|faq|cta|footer>", "purpose": "<one sentence on what this section accomplishes>", "copyDirection": "<one sentence: tone, length, angle>" }
+  ],
+  "style": {
+    "palette": "<mono | dual-accent | vibrant | earthy | neon>",
+    "typography": "<modern-sans | editorial-serif | geometric | mono>",
+    "density": "<airy | balanced | dense>",
+    "mood": "<short evocative phrase>"
+  },
+  "copyDirection": "<global voice guidance, 1-2 sentences>",
+  "imagePrompts": [
+    { "id": "<kebab-slug>", "purpose": "<hero|decorative|feature_icon|background>", "prompt": "<concrete compositional prompt — see rules>", "aspectRatio": "<16:9|1:1|4:3|3:4|9:16>" }
+  ]
+}
+
+Rules for sections:
+- Always start with "hero" and end with "footer".
+- Pick sections that match the brief. Don't include "pricing" if no pricing is mentioned. Don't include "testimonials" if no quotes are provided.
+- Order serves conversion: hero → value → proof → action.
+- Section "id" must be unique kebab-case (e.g. "hero", "features-grid", "pricing-tiers", "footer").
+
+Rules for style:
+- Match palette/typography to industry + tone. Coffee = earthy + editorial-serif. Developer tool = mono + geometric.
+
+Rules for image prompts (CRITICAL — these go straight to FLUX/Wan):
+- Always exactly ONE prompt with purpose="hero" (16:9 aspect).
+- 2-3 supporting prompts with purpose in {"decorative","feature_icon","background"}.
+- Prompts MUST be compositional, not abstract: subject → composition → lighting → aspect → style cue.
+  GOOD: "Bag of single-origin coffee on volcanic black stone, low-angle dramatic lighting, mist rising, cinematic 16:9, editorial photography"
+  BAD: "hero image" or "coffee image" or "an image showing the brand"
+- Never request text, logos, watermarks, or UI mockups in the image prompt.
+- Each prompt 15-40 words.`;
+
+const COPY_TASK = `TASK: Write landing-page copy for the planned sections. Specific, benefit-driven, never generic.
+
+Output a SINGLE JSON object — no markdown, no commentary.
+
+Schema:
+{
+  "sectionTexts": [
+    {
+      "sectionId": "<must match a section id from the plan>",
+      "headline": <short string, omit if not applicable>,
+      "subheadline": <short string, omit if not applicable>,
+      "body": <paragraph string, omit if not applicable>,
+      "ctas": [{ "label": "<verb-led 1-3 words>", "href": "<#anchor or url>" }],
+      "items": [
+        { "title": <optional>, "description": <optional>, "meta": { "<key>": "<value>" } }
+      ]
+    }
+  ]
+}
+
+PROHIBITED phrases (the master <banned_patterns> list is authoritative; this is the per-step shortlist enforced by the post-generation gate):
+- "lorem ipsum", "lorem"
+- "awesome", "amazing", "great experience", "world-class", "next-gen", "cutting-edge"
+- "powerful platform that empowers"
+- "revolutionize", "disrupt", "transform your business"
+
+Rules:
+- One section text per planned section. Match sectionId exactly.
+- Hero headline: ≤8 words. Concrete noun + concrete verb. Name what the product DOES, not how it FEELS.
+  GOOD: "Kanban that auto-prioritizes your sprint"
+  BAD: "The most powerful project management for modern teams"
+- Subheadlines: 1-2 sentences. Add specificity the headline omits.
+- Features: title 3-6 words, description 1-2 sentences each. Each feature must name a specific capability the user gets, not a vague benefit.
+- Pricing: tier title + price in meta.price + 1-line description. If brief gives prices, use them verbatim.
+- Social proof: prefer concrete logo names or metrics over generic "trusted by thousands".
+- Footer: simple — product name, tagline, link items.
+- CTAs: action verb. "Start free", "Book demo", "See pricing". Never "Learn more" alone.
+- Use the brief's product name and details verbatim where possible. Don't invent features the brief doesn't mention.`;
+
+const COPY_REGEN_TASK = `TASK: Rewrite ONE section of an existing landing page.
+
+Same prohibited-phrase list and voice rules as the full copy step (the master <banned_patterns> and <brand_voice> blocks apply verbatim).
+
+Output a SINGLE JSON object matching one section text — no markdown, no commentary:
+{
+  "sectionId": "<must match the requested sectionId exactly>",
+  "headline": <optional>,
+  "subheadline": <optional>,
+  "body": <optional>,
+  "ctas": [{ "label": "<verb-led>", "href": "<#anchor or url>" }],
+  "items": [{ "title": <optional>, "description": <optional>, "meta": { "<k>": "<v>" } }]
+}
+
+Rules:
+- Stay within the section.kind. A "hero" section gets a headline + subheadline + 1-2 CTAs. A "features" section gets a headline + items. A "pricing" section gets items with meta.price. Don't change the shape.
+- Use the rest of the page (other section copy, intent) as context to keep voice consistent.
+- If the user provided an additional instruction, follow it strictly. Otherwise just produce a stronger version of the current section.`;
+
+const HTML_TASK = `TASK: Generate production-ready HTML and plain CSS for a single landing page.
+
+Output a SINGLE JSON object — no markdown, no commentary:
+{ "html": "<main>...</main>", "css": "..." }
+
+HTML rules:
+- Wrap everything in a single <main> element. The FIRST child of <main> is ALWAYS a <header class="navbar"> (page navigation). After it, each planned section is a <section class="<kind>" data-section-id="<id>"> element where <kind> is "hero", "features", "social_proof", etc. matching the plan's section.kind, AND <id> is the EXACT section.id from the plan. The footer is <footer class="footer" data-section-id="<footer-id>"> with the footer section's id from the plan. Both class AND data-section-id are required on every section/footer — the regenerate-section UI uses data-section-id to know which section to re-run.
+- The <header class="navbar"> contains three groups: (1) a brand mark on the left — the product name if you can derive one from the hero copy, otherwise a single concrete word from the headline; (2) 3–5 anchor links in the center or right, each href="#<sectionId>" pointing to one of the planned sections (skip "footer" and "hero" — link to features, pricing, faq, social_proof, etc.); (3) a primary CTA button on the far right that mirrors the hero's first CTA label and href. On viewports narrower than 640px hide the center nav links (show just brand + CTA) — DO NOT add hamburger menus or JavaScript toggles.
+- Use semantic HTML5: <section>, <article>, <header>, <h1>/<h2>/<h3>, <p>, <ul>/<li>, <a>, <img>.
+- The <section class="hero"> (the second child of <main>, after the navbar) MUST contain exactly one <img> with src="{{HERO_IMAGE}}" and a meaningful alt attribute. Assembly swaps the placeholder for a real URL.
+- Other image placeholders are src="{{IMG_<id>}}" using an id THAT EXISTS in the plan's imagePrompts list. Each <img> MUST have a non-empty alt attribute.
+- NEVER emit <img src=""> or <img src="#">. NEVER reference an image id that is not in imagePrompts. If the copy mentions a logo, brand mark, avatar, or other visual you don't have an imagePrompt for, render it as styled text instead — for example: <span class="logo-pill">Brewdog</span> styled in CSS. This is the rule for client logos, partner marks, team photos, and anything else the brief describes but the plan didn't generate.
+- Every <button> or icon-only <a> must have an aria-label.
+- All interactive elements use <a href="..."> or <button type="button">. No JS handlers.
+- No <script> tags. No external CDN <link> or <script>. No inline event handlers.
+- Mobile-first responsive layout. Plan for breakpoints around 640px, 1024px.
+
+CSS rules:
+- Plain CSS (NOT Tailwind). Target the classes you set in the HTML. No CSS framework references.
+- Use CSS custom properties for the palette (--brand, --bg, --fg, --muted) mapped from the <design_tokens> block above. The palette tokens are normative — do not introduce hex literals not present there.
+- Mobile-first: base styles for narrow viewports, @media (min-width: 640px) and (min-width: 1024px) for larger.
+- Use modern features: flexbox, grid, clamp() for fluid type, gap for spacing.
+- Match the plan's style direction (palette, typography, density, mood).
+- Provide hover/focus states on links and buttons for accessibility.
+- Reasonable defaults: html { box-sizing: border-box; } *,*:before,*:after { box-sizing: inherit; } body { margin: 0; }.
+- The .navbar is position: sticky; top: 0; z-index: 50 with a translucent background and backdrop-filter: blur(8px) so content scrolls underneath it. Comfortable height around 56–64px with horizontal padding matching the rest of the page.
+
+The HTML and CSS together must render a complete, attractive page when injected into a basic HTML document with no other styles.`;
+
+const REFINE_TASK = `TASK: Receive HTML+CSS that has a specific quality-gate failure. Fix ONLY the listed issue and return the corrected payload.
+
+Output a SINGLE JSON object — no markdown, no commentary:
+{ "html": "<main>...</main>", "css": "..." }
+
+Strict rules:
+- DO NOT change the structure, copy, or styling. Only fix the specific issue listed.
+- DO NOT add or remove sections.
+- DO NOT introduce new image placeholders or change existing {{HERO_IMAGE}} / {{IMG_<id>}} tokens.
+- DO NOT add <script> tags or external <link> resources.
+- Preserve all existing class names, ids, and aria attributes.
+- The output html must start with <main> and end with </main>.
+
+Common fixes you handle:
+- Missing alt attribute on <img> → add a meaningful alt derived from surrounding context.
+- Unclosed or unbalanced tag → close it.
+- Stray markdown fences (\`\`\`html ... \`\`\`) leaking into output → strip them.
+- Trailing commentary after </main> → remove it.
+- Missing closing </main> → add it.`;
+
+const TASK_SPECIFIC_PROMPTS: Record<SystemMessageStep, string> = {
+  classify: CLASSIFY_TASK,
+  plan: PLAN_TASK,
+  copy: COPY_TASK,
+  html: HTML_TASK,
+  refine: REFINE_TASK,
+};
+
+export const COPY_REGEN_TASK_PROMPT = COPY_REGEN_TASK;
+
+export function taskAddendumFor(step: SystemMessageStep): string {
+  return TASK_SPECIFIC_PROMPTS[step];
+}
+
+export function buildSystemMessageForStep(
+  step: SystemMessageStep,
+  ctx: SystemMessageContext,
+): string {
+  const baseTask = TASK_SPECIFIC_PROMPTS[step];
+  const taskSpecificAdditions = ctx.extraTaskAdditions
+    ? `${baseTask}\n\n${ctx.extraTaskAdditions}`
+    : baseTask;
+  return buildMasterPrompt({
+    palette: ctx.palette,
+    fewShotExamples: ctx.fewShotExamples ?? [],
+    taskSpecificAdditions,
+  });
 }

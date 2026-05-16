@@ -2,6 +2,7 @@ import { mkdir, appendFile } from "node:fs/promises";
 import path from "node:path";
 import { WitnessRecordSchema } from "@/lib/orchestrator/types";
 import type {
+  PaletteName,
   PipelineStep,
   RoutingDecision,
   WitnessRecord,
@@ -30,6 +31,8 @@ export interface RecordInput {
   costUsd: number;
   mocked: boolean;
   note?: string;
+  /** Design palette selected for this generation when the step ran. */
+  palette?: PaletteName;
 }
 
 export interface Recorder {
@@ -88,6 +91,7 @@ export function createRecorder(generationId: string): Recorder {
         costUsd: input.costUsd,
         mocked: input.mocked,
         note: input.note,
+        palette: input.palette,
       };
       // Validate before write so a malformed record fails loudly instead of
       // silently polluting the recording.

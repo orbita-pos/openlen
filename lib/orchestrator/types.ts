@@ -160,6 +160,15 @@ export const RoutingDecisionSchema = z.object({
 });
 export type RoutingDecision = z.infer<typeof RoutingDecisionSchema>;
 
+export const PaletteNameSchema = z.enum([
+  "mono-dark",
+  "indigo-dark",
+  "emerald-dark",
+  "warm-dark",
+  "mono-light",
+]);
+export type PaletteName = z.infer<typeof PaletteNameSchema>;
+
 export const WitnessRecordSchema = z.object({
   // ISO timestamp of when the call started.
   ts: z.string(),
@@ -174,6 +183,9 @@ export const WitnessRecordSchema = z.object({
   note: z.string().optional(),
   // True when MOCK_MODE produced this record.
   mocked: z.boolean(),
+  // Design-engine palette in use when this step ran. Optional because pre-classify
+  // calls (and legacy recordings) may not carry it.
+  palette: PaletteNameSchema.optional(),
 });
 export type WitnessRecord = z.infer<typeof WitnessRecordSchema>;
 
