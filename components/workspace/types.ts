@@ -31,7 +31,15 @@ export type WorkspaceState =
       progress: ProgressEvent[];
       partial: GeneratingPartial;
     }
-  | { kind: "generated"; result: LandingPage; regen?: RegenInFlight }
+  | {
+      kind: "generated";
+      result: LandingPage;
+      regen?: RegenInFlight;
+      /** Project id when the page has been persisted server-side. */
+      projectId?: string;
+      /** Display title — populated from the project_saved event. */
+      title?: string;
+    }
   | { kind: "error"; message: string };
 
 export interface BriefFormState {

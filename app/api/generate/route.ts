@@ -1,12 +1,15 @@
+import { auth } from "@/auth";
 import { generateLandingPage, BudgetExceededError } from "@/lib/orchestrator";
 import { GenerateRequestSchema } from "@/lib/orchestrator/types";
 import type {
   ErrorEvent,
   ProgressEvent,
+  ProjectSavedEvent,
   ResultEvent,
   SseEvent,
   StepResultEvent,
 } from "@/lib/orchestrator/types";
+import { createProject, deriveTitle } from "@/lib/projects";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,11 +19,14 @@ export const dynamic = "force-dynamic";
 //
 // Accepts { brief, maxBudget?, fastPath? } and returns a Server-Sent Events
 // stream:
-//   event: progress  { step, status, details?, costSoFar? }
-//   event: error     { message, recoverable, step? }
-//   event: result    { page: LandingPage }
+//   event: progress       { step, status, details?, costSoFar? }
+//   event: step_result    { step, data }
+//   event: result         { page: LandingPage }
+//   event: project_saved  { projectId, title }   ← only when user is signed in
+//   event: error          { message, recoverable, step? }
 //
-// The stream closes after `result` or a non-recoverable `error`.
+// The stream closes after `project_saved` (or `result` for anonymous calls)
+// or a non-recoverable `error`.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function POST(req: Request): Promise<Response> {
@@ -37,6 +43,9 @@ export async function POST(req: Request): Promise<Response> {
     return badRequest(`Invalid request: ${parsed.error.message}`);
   }
 
+  const session = await auth();
+  const userId = session?.user?.id ?? null;
+
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const send = (event: SseEvent) => {
@@ -51,6 +60,28 @@ export async function POST(req: Request): Promise<Response> {
         });
         const result: ResultEvent = { type: "result", page };
         send(result);
+
+        // Persist to projects table when we know who the caller is. Failures
+        // here are surfaced as a non-fatal error event — the page itself was
+        // already generated and streamed back, so the user still gets value.
+        if (userId) {
+          try {
+            const projectId = await createProject(userId, page);
+            const saved: ProjectSavedEvent = {
+              type: "project_saved",
+              projectId,
+              title: deriveTitle(page),
+            };
+            send(saved);
+          } catch (err) {
+            const errorEvent: ErrorEvent = {
+              type: "error",
+              message: `Could not save project: ${err instanceof Error ? err.message : String(err)}`,
+              recoverable: true,
+            };
+            send(errorEvent);
+          }
+        }
       } catch (err) {
         const errorEvent: ErrorEvent = mapError(err);
         send(errorEvent);

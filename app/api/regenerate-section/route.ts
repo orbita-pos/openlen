@@ -1,10 +1,12 @@
 import { z } from "zod";
+import { auth } from "@/auth";
 import { regenerateSection } from "@/lib/orchestrator/regenerate-section";
 import {
   CopySchema,
   GeneratedImageSchema,
   PlanSchema,
 } from "@/lib/orchestrator/types";
+import { getProject, updateProjectPage } from "@/lib/projects";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,6 +28,9 @@ const RequestSchema = z.object({
   images: z.array(GeneratedImageSchema),
   sectionId: z.string().min(1),
   additionalInstruction: z.string().max(2000).optional(),
+  // Optional — when present, the updated page is persisted back to this
+  // project. Ownership is verified server-side via the session.
+  projectId: z.string().optional(),
 });
 
 export async function POST(req: Request): Promise<Response> {
@@ -43,11 +48,48 @@ export async function POST(req: Request): Promise<Response> {
 
   try {
     const result = await regenerateSection(parsed.data);
+
+    // Persist back to the project when caller supplied a projectId and is
+    // the owner. Silently skip on ownership mismatch — the regen still
+    // returns to the client either way.
+    if (parsed.data.projectId) {
+      const session = await auth();
+      const userId = session?.user?.id;
+      if (userId) {
+        const project = await getProject(parsed.data.projectId, userId);
+        if (project) {
+          const merged = {
+            ...project.data,
+            html: result.html,
+            css: result.css,
+            copy: result.copy,
+            cost: addBreakdowns(project.data.cost, result.cost),
+          };
+          await updateProjectPage(parsed.data.projectId, userId, merged);
+        }
+      }
+    }
+
     return json(result, 200);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return json({ error: message }, 500);
   }
+}
+
+function addBreakdowns(
+  a: { total: number; classify: number; plan: number; copy: number; html: number; images: number; refine: number },
+  b: { total: number; classify: number; plan: number; copy: number; html: number; images: number; refine: number },
+) {
+  return {
+    total: a.total + b.total,
+    classify: a.classify + b.classify,
+    plan: a.plan + b.plan,
+    copy: a.copy + b.copy,
+    html: a.html + b.html,
+    images: a.images + b.images,
+    refine: a.refine + b.refine,
+  };
 }
 
 function json(body: unknown, status: number): Response {

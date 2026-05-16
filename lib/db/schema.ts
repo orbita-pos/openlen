@@ -1,12 +1,15 @@
 import {
   boolean,
+  index,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
+import type { LandingPage } from "@/lib/orchestrator/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Drizzle schema for auth.
@@ -72,6 +75,31 @@ export const verificationTokens = pgTable(
   (table) => [
     primaryKey({ columns: [table.identifier, table.token] }),
   ],
+);
+
+// One row per generated landing page. The full LandingPage artifact lives
+// in the `data` JSONB column — html, css, images, intent, plan, copy, cost,
+// witnessPath, etc. Letting the orchestrator keep producing rich nested
+// data without us having to maintain a parallel relational schema.
+export const projects = pgTable(
+  "projects",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    brief: text("brief").notNull(),
+    // Hero image URL pulled out of `data` for cheap thumbnail rendering
+    // without having to deserialize the whole JSONB on listing pages.
+    thumbnailUrl: text("thumbnailUrl"),
+    data: jsonb("data").$type<LandingPage>().notNull(),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [index("projects_userId_idx").on(table.userId, table.updatedAt)],
 );
 
 // Password reset tokens — separate table so a leaked token only impacts

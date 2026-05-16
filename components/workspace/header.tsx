@@ -93,10 +93,10 @@ export function Header({
           <div className="hidden md:block h-5 w-px bg-zinc-200 dark:bg-zinc-800 shrink-0" />
           <nav className="flex items-center gap-1.5 text-sm min-w-0">
             <Link
-              href="/"
+              href="/projects"
               className="hidden md:inline text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition shrink-0"
             >
-              My landings
+              My pages
             </Link>
             <ChevronRight
               size={14}
@@ -303,6 +303,12 @@ function UserMenu({
             </div>
           </div>
           <div className="border-t border-zinc-100 dark:border-zinc-900 my-1" />
+          <Link
+            href="/projects"
+            className="flex items-center w-full text-left px-3 py-1.5 rounded-md text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+          >
+            My pages
+          </Link>
           {["Settings", "Billing", "API keys"].map((l) => (
             <button
               type="button"

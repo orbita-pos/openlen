@@ -8,6 +8,13 @@
       "when": 1778910032663,
       "tag": "0000_brave_stark_industries",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778911263103,
+      "tag": "0001_previous_white_tiger",
+      "breakpoints": true
     }
   ]
 }

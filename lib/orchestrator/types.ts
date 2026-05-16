@@ -257,11 +257,21 @@ export const ResultEventSchema = z.object({
 });
 export type ResultEvent = z.infer<typeof ResultEventSchema>;
 
+// Emitted after the result has been persisted to the projects table, so the
+// client can hold onto the project id for subsequent regen/edit calls.
+export const ProjectSavedEventSchema = z.object({
+  type: z.literal("project_saved"),
+  projectId: z.string(),
+  title: z.string(),
+});
+export type ProjectSavedEvent = z.infer<typeof ProjectSavedEventSchema>;
+
 export const SseEventSchema = z.union([
   ProgressEventSchema,
   StepResultEventSchema,
   ErrorEventSchema,
   ResultEventSchema,
+  ProjectSavedEventSchema,
 ]);
 export type SseEvent = z.infer<typeof SseEventSchema>;
 

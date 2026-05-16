@@ -25,6 +25,7 @@ export interface UseGenerationResult {
   state: WorkspaceState;
   generate: (req: GenerateRequest) => Promise<void>;
   regenerateSection: (args: RegenSectionArgs) => Promise<void>;
+  loadProject: (projectId: string) => Promise<void>;
   reset: () => void;
 }
 
@@ -144,6 +145,7 @@ export function useGeneration(): UseGenerationResult {
             images: page.images,
             sectionId: args.sectionId,
             additionalInstruction: args.additionalInstruction,
+            projectId: current.projectId,
           }),
         });
       } catch (err) {
@@ -181,7 +183,32 @@ export function useGeneration(): UseGenerationResult {
     [],
   );
 
-  return { state, generate, regenerateSection, reset };
+  const loadProject = useCallback(async (projectId: string) => {
+    try {
+      const res = await fetch(`/api/projects/${projectId}`);
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setState({ kind: "error", message: data.error ?? `Couldn't load project (${res.status})` });
+        return;
+      }
+      const data = (await res.json()) as {
+        project: { id: string; title: string; data: WorkspaceState extends { kind: "generated"; result: infer R } ? R : never };
+      };
+      setState({
+        kind: "generated",
+        result: data.project.data,
+        projectId: data.project.id,
+        title: data.project.title,
+      });
+    } catch (err) {
+      setState({
+        kind: "error",
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }, []);
+
+  return { state, generate, regenerateSection, loadProject, reset };
 }
 
 function addCostBreakdowns(a: CostBreakdown, b: CostBreakdown): CostBreakdown {
@@ -242,11 +269,27 @@ function applyEvent(
     return;
   }
   if (event.type === "error") {
-    setState(() => ({ kind: "error", message: event.message }));
+    setState((prev) => {
+      // Non-fatal errors (e.g. project save failed) shouldn't blow away an
+      // already-generated page.
+      if (prev.kind === "generated") return prev;
+      return { kind: "error", message: event.message };
+    });
     return;
   }
   if (event.type === "result") {
     setState(() => ({ kind: "generated", result: event.page }));
+    return;
+  }
+  if (event.type === "project_saved") {
+    setState((prev) => {
+      if (prev.kind !== "generated") return prev;
+      return {
+        ...prev,
+        projectId: event.projectId,
+        title: event.title,
+      };
+    });
   }
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { BriefForm, SAMPLE_BRIEF } from "@/components/workspace/brief-form";
 import { EditPromptModal } from "@/components/workspace/edit-prompt-modal";
 import { Header } from "@/components/workspace/header";
@@ -9,9 +10,21 @@ import { useDarkMode } from "@/lib/use-dark-mode";
 import { useGeneration } from "@/lib/use-generation";
 import { cn } from "@/lib/cn";
 
+// Outer shell exists only so useSearchParams() inside NewPageInner gets a
+// Suspense boundary — required by Next.js for client-side route params.
 export default function NewPage() {
+  return (
+    <Suspense fallback={null}>
+      <NewPageInner />
+    </Suspense>
+  );
+}
+
+function NewPageInner() {
   const [dark, toggleDark] = useDarkMode();
-  const { state, generate, regenerateSection } = useGeneration();
+  const { state, generate, regenerateSection, loadProject } = useGeneration();
+  const searchParams = useSearchParams();
+  const projectParam = searchParams.get("project");
   const [editTarget, setEditTarget] = useState<{
     sectionId: string;
     sectionName: string;
@@ -37,6 +50,24 @@ export default function NewPage() {
   useEffect(() => {
     if (state.kind === "generated") setSavedLabel("Saved just now");
   }, [state.kind]);
+
+  // Load a saved project when /new?project=<id> opens. Guard with a ref so
+  // a re-render with the same param doesn't re-fetch (which would clobber
+  // any in-flight regen).
+  const loadedProjectRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!projectParam) return;
+    if (loadedProjectRef.current === projectParam) return;
+    loadedProjectRef.current = projectParam;
+    void loadProject(projectParam);
+  }, [projectParam, loadProject]);
+
+  // Keep the header project name in sync with whichever project is open.
+  useEffect(() => {
+    if (state.kind === "generated" && state.title) {
+      setProjectName(state.title);
+    }
+  }, [state]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
