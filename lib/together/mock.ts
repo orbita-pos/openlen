@@ -403,7 +403,16 @@ img.hero-img { width: 100%; max-width: 900px; margin: 3rem auto 0; display: bloc
 
   const html = `
 <main>
-  <section class="hero">
+  <header class="navbar">
+    <a class="brand" href="#">${product}</a>
+    <nav class="navlinks">
+      <a href="#sec-1-features">Features</a>
+      <a href="#sec-3-pricing">Pricing</a>
+      <a href="#sec-4-cta">Get started</a>
+    </nav>
+    <a class="btn btn-primary navcta" href="#signup">Start free</a>
+  </header>
+  <section class="hero" data-section-id="sec-0-hero">
     <div class="container">
       <h1>${product} — the Kanban that thinks like you do.</h1>
       <p>Built for ${sig.audience} who are tired of generic project tools.</p>
@@ -412,7 +421,7 @@ img.hero-img { width: 100%; max-width: 900px; margin: 3rem auto 0; display: bloc
       <img class="hero-img" src="{{HERO_IMAGE}}" alt="${product} interface preview" />
     </div>
   </section>
-  <section class="features">
+  <section class="features" data-section-id="sec-1-features">
     <div class="container">
       <h2>Three things you'll feel in the first five minutes</h2>
       <div class="feature-grid">
@@ -422,30 +431,53 @@ img.hero-img { width: 100%; max-width: 900px; margin: 3rem auto 0; display: bloc
       </div>
     </div>
   </section>
-  <section class="cta">
+  <section class="cta" data-section-id="sec-4-cta">
     <div class="container">
       <h2>Stop wrestling with your tools. Start shipping.</h2>
       <a class="btn btn-primary" href="#signup">Start free</a>
     </div>
   </section>
-  <footer><div class="container">${product} · Made with care.</div></footer>
+  <footer class="footer" data-section-id="sec-5-footer"><div class="container">${product} · Made with care.</div></footer>
 </main>
   `.trim();
 
   return JSON.stringify({ html, css });
 }
 
+// Refine mock returns {html, css} (the same shape html step expects) so the
+// orchestrator's lastResort recovery path can be exercised end-to-end in
+// MOCK_MODE. The patch list metaphor was scoped out when refine became a
+// targeted HTML rewriter rather than a JSON patch step.
 function refineMock(sig: BriefSignal): string {
-  return JSON.stringify({
-    patches: [
-      {
-        target: "hero h1",
-        before: "Kanban that thinks like you do",
-        after: `Kanban for ${sig.audience} who think in flows, not lists`,
-        rationale: "Sharpens the audience anchor in the hero headline.",
-      },
-    ],
-  });
+  const palette = sig.tone === "bold" ? "#FF4D2E" : sig.tone === "minimal" ? "#0A0A0A" : "#5B5BD6";
+  const product = sig.productName;
+  const css = `
+:root { --brand: ${palette}; --fg: #0A0A0A; --bg: #FAFAFA; --muted: #6E6E73; }
+html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: ui-sans-serif, system-ui, sans-serif; }
+.navbar { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; height: 60px; background: rgba(255,255,255,0.85); backdrop-filter: blur(8px); border-bottom: 1px solid #EEE; }
+.navbar .brand { font-weight: 700; color: var(--fg); text-decoration: none; }
+.navbar .navlinks { display: flex; gap: 1.5rem; }
+.navbar .navlinks a { color: var(--muted); text-decoration: none; font-size: 0.95rem; }
+.btn { display: inline-block; padding: 0.6rem 1.1rem; border-radius: 8px; font-weight: 600; text-decoration: none; }
+.btn-primary { background: var(--brand); color: #FFF; }
+section { padding: 4rem 1.5rem; }
+  `.trim();
+  const html = `
+<main>
+  <header class="navbar">
+    <a class="brand" href="#">${product}</a>
+    <nav class="navlinks"><a href="#sec-1-features">Features</a></nav>
+    <a class="btn btn-primary" href="#signup">Start free</a>
+  </header>
+  <section class="hero" data-section-id="sec-0-hero">
+    <h1>${product}</h1>
+    <p>Refined fallback for ${sig.audience}.</p>
+    <img src="{{HERO_IMAGE}}" alt="${product} interface preview" />
+  </section>
+  <footer class="footer" data-section-id="sec-5-footer">${product} · Refined</footer>
+</main>
+  `.trim();
+  return JSON.stringify({ html, css });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

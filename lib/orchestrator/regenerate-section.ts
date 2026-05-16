@@ -9,7 +9,7 @@ import type {
   GeneratedImage,
   Plan,
 } from "./types";
-import type { StepContext } from "./_shared";
+import { DEFAULT_PALETTE, type StepContext } from "./_shared";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Single-section regeneration.
@@ -55,6 +55,12 @@ export async function regenerateSection(
     recorder,
     budget,
     fastPath: false,
+    // Regenerate doesn't currently know which palette the original generation
+    // used (Session 1 scope — intent isn't plumbed through this path).
+    // Default to mono-dark; the page already has its own CSS variables from
+    // the original render, so the master prompt's tokens act as a stylistic
+    // anchor rather than a strict swap. Session 4 will thread intent through.
+    palette: DEFAULT_PALETTE,
   };
 
   const newSectionCopy = await regenerateSectionCopy(ctx, {

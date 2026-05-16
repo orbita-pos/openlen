@@ -83,6 +83,7 @@ async function runOne(
         costUsd: result.costUsd,
         mocked: result.mocked,
         note: i > 0 ? `image fallback attempt ${i}` : undefined,
+        palette: ctx.palette.name,
       });
       ctx.budget.add(step, result.costUsd);
 

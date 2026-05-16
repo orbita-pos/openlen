@@ -2,53 +2,25 @@ import type { ChatMessage } from "@/lib/together/client";
 import { CopySchema, SectionCopySchema } from "./types";
 import type { Copy, Plan, SectionCopy, SectionPlan } from "./types";
 import { parseJson, runTextStep, type StepContext } from "./_shared";
+import {
+  COPY_REGEN_TASK_PROMPT,
+  buildSystemMessageForStep,
+} from "./routing";
+import { buildMasterPrompt } from "./master-prompt";
 
-const SYSTEM_PROMPT = `You write landing-page copy. Specific, benefit-driven, never generic.
-
-Output a SINGLE JSON object — no markdown, no commentary.
-
-Schema:
-{
-  "sectionTexts": [
-    {
-      "sectionId": "<must match a section id from the plan>",
-      "headline": <short string, omit if not applicable>,
-      "subheadline": <short string, omit if not applicable>,
-      "body": <paragraph string, omit if not applicable>,
-      "ctas": [{ "label": "<verb-led 1-3 words>", "href": "<#anchor or url>" }],
-      "items": [
-        { "title": <optional>, "description": <optional>, "meta": { "<key>": "<value>" } }
-      ]
-    }
-  ]
-}
-
-PROHIBITED phrases (rewrite if you catch yourself reaching for these):
-- "lorem ipsum", "lorem"
-- "awesome", "amazing", "great experience", "world-class", "next-gen", "cutting-edge"
-- "powerful platform that empowers"
-- "revolutionize", "disrupt", "transform your business"
-- placeholder text like "Lorem ipsum dolor sit amet"
-
-Rules:
-- One section text per planned section. Match sectionId exactly.
-- Hero headline: ≤8 words. Concrete noun + concrete verb. Name what the product DOES, not how it FEELS.
-  GOOD: "Kanban that auto-prioritizes your sprint"
-  BAD: "The most powerful project management for modern teams"
-- Subheadlines: 1-2 sentences. Add specificity the headline omits.
-- Features: title 3-6 words, description 1-2 sentences each. Each feature must name a specific capability the user gets, not a vague benefit.
-- Pricing: tier title + price in meta.price + 1-line description. If brief gives prices, use them verbatim.
-- Social proof: prefer concrete logo names or metrics over generic "trusted by thousands".
-- Footer: simple — product name, tagline, link items.
-- CTAs: action verb. "Start free", "Book demo", "See pricing". Never "Learn more" alone.
-- Use the brief's product name and details verbatim where possible. Don't invent features the brief doesn't mention.`;
-
-function buildMessages(brief: string, plan: Plan): ChatMessage[] {
+function buildMessages(ctx: StepContext, plan: Plan): ChatMessage[] {
   return [
-    { role: "system", content: SYSTEM_PROMPT, cache: true },
+    {
+      role: "system",
+      content: buildSystemMessageForStep("copy", {
+        palette: ctx.palette,
+        plan,
+      }),
+      cache: true,
+    },
     {
       role: "user",
-      content: `Brief:\n${brief}\n\nPlan JSON:\n${JSON.stringify(plan, null, 2)}`,
+      content: `Brief:\n${ctx.brief}\n\nPlan JSON:\n${JSON.stringify(plan, null, 2)}`,
     },
   ];
 }
@@ -82,36 +54,28 @@ function countGenericHits(copy: Copy): { count: number; samples: string[] } {
 }
 
 // Single-section copy regeneration prompt — used by /api/regenerate-section.
-// Reuses the same prohibited-phrase list and voice rules as the full copy
-// step so a regenerated section sounds like the rest of the page.
-const SECTION_SYSTEM_PROMPT = `You rewrite ONE section of an existing landing page. Same prohibited phrases and voice rules as the full copy step (no lorem, no "awesome"/"world-class"/"empower"/"disrupt", concrete nouns + verbs, brief content verbatim where possible).
-
-Output a SINGLE JSON object matching one section text — no markdown, no commentary:
-{
-  "sectionId": "<must match the requested sectionId exactly>",
-  "headline": <optional>,
-  "subheadline": <optional>,
-  "body": <optional>,
-  "ctas": [{ "label": "<verb-led>", "href": "<#anchor or url>" }],
-  "items": [{ "title": <optional>, "description": <optional>, "meta": { "<k>": "<v>" } }]
-}
-
-Rules:
-- Stay within the section.kind. A "hero" section gets a headline + subheadline + 1-2 CTAs. A "features" section gets a headline + items. A "pricing" section gets items with meta.price. Don't change the shape.
-- Use the rest of the page (other section copy, intent) as context to keep voice consistent.
-- If the user provided an additional instruction, follow it strictly. Otherwise just produce a stronger version of the current section.`;
-
+// Composes the master prompt with the regen-specific task addendum so a
+// regenerated section sounds like the rest of the page.
 const SectionRegenSchema = SectionCopySchema;
 
 function buildSectionRegenMessages(args: {
   brief: string;
+  ctx: StepContext;
   plan: Plan;
   copy: Copy;
   section: SectionPlan;
   currentSectionCopy: SectionCopy | undefined;
   additionalInstruction?: string;
 }): ChatMessage[] {
-  const { brief, plan, copy, section, currentSectionCopy, additionalInstruction } = args;
+  const {
+    brief,
+    ctx,
+    plan,
+    copy,
+    section,
+    currentSectionCopy,
+    additionalInstruction,
+  } = args;
   const others = copy.sectionTexts.filter((s) => s.sectionId !== section.id);
   const user = [
     `Brief:\n${brief}`,
@@ -128,8 +92,14 @@ function buildSectionRegenMessages(args: {
     .filter(Boolean)
     .join("\n");
 
+  const systemContent = buildMasterPrompt({
+    palette: ctx.palette,
+    fewShotExamples: [],
+    taskSpecificAdditions: COPY_REGEN_TASK_PROMPT,
+  });
+
   return [
-    { role: "system", content: SECTION_SYSTEM_PROMPT, cache: true },
+    { role: "system", content: systemContent, cache: true },
     { role: "user", content: user },
   ];
 }
@@ -161,6 +131,7 @@ export async function regenerateSectionCopy(
     buildMessages: () =>
       buildSectionRegenMessages({
         brief: ctx.brief,
+        ctx,
         plan: args.plan,
         copy: args.copy,
         section,
@@ -188,7 +159,7 @@ export async function generateCopy(
 ): Promise<Copy> {
   return runTextStep<Copy>(ctx, {
     step: "copy",
-    buildMessages: () => buildMessages(ctx.brief, plan),
+    buildMessages: () => buildMessages(ctx, plan),
     mockKey: "copy",
     callOptions: { responseFormat: "json", temperature: 0.7, maxTokens: 4096 },
     progressDetail: "Writing copy for each section",

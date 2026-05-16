@@ -15,7 +15,8 @@ import { generateCopy } from "./copy";
 import { generateHtml } from "./html";
 import { generateImages } from "./images";
 import { assemble } from "./assemble";
-import type { StepContext } from "./_shared";
+import { DEFAULT_PALETTE, type StepContext } from "./_shared";
+import { PALETTES, selectPalette } from "./design-tokens";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main orchestrator.
@@ -54,12 +55,22 @@ export async function generateLandingPage(
     recorder,
     budget,
     fastPath,
+    // Classify runs before intent exists, so start on the universal default
+    // (mono-dark). After classify resolves we re-pick based on intent signals
+    // and every downstream step sees the chosen palette.
+    palette: DEFAULT_PALETTE,
     onProgress: options.onProgress,
     onStepResult: options.onStepResult,
   };
 
   try {
     const intent = await classify(ctx);
+    ctx.palette = PALETTES[selectPalette({
+      industry: intent.industry,
+      audience: intent.audience,
+      tone: intent.tone,
+      signals: intent.goals,
+    })];
     const plan = await planStep(ctx, intent);
 
     // Kick off images immediately — they only need the plan, not copy.
