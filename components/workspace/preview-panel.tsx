@@ -8,6 +8,7 @@ import {
   Lock,
   Monitor,
   PanelRightOpen,
+  Pencil,
   RefreshCw,
   Smartphone,
   Sparkles,
@@ -36,6 +37,11 @@ export interface PreviewPanelProps {
   onOpenPanel: () => void;
   onRegenSection?: (sectionId: string, sectionName: string) => void;
   onEditSection?: (sectionId: string, sectionName: string) => void;
+  /** When provided, the preview header shows a "Edit content" button that
+   *  toggles the sidebar slot editor. The page-level component owns the
+   *  edit-mode state because it spans two panels. */
+  editMode?: boolean;
+  onToggleEdit?: () => void;
 }
 
 export function PreviewPanel({
@@ -44,6 +50,8 @@ export function PreviewPanel({
   onOpenPanel,
   onRegenSection,
   onEditSection,
+  editMode,
+  onToggleEdit,
 }: PreviewPanelProps) {
   const [device, setDevice] = useState<Device>("desktop");
   const [zoom, setZoom] = useState<Zoom>("fit");
@@ -167,6 +175,23 @@ export function PreviewPanel({
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
+          {state.kind === "generated" && onToggleEdit && (
+            <button
+              type="button"
+              onClick={onToggleEdit}
+              aria-pressed={editMode === true}
+              className={cn(
+                "inline-flex items-center gap-1.5 h-7 px-2.5 mr-1 text-[12px] font-medium rounded-md transition ring-1",
+                editMode
+                  ? "bg-coral-500 text-white ring-coral-500 hover:bg-coral-600"
+                  : "bg-white dark:bg-[#0a0a0a] text-zinc-700 dark:text-zinc-300 ring-zinc-200 dark:ring-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900",
+              )}
+            >
+              <Pencil size={11} />
+              <span className="hidden sm:inline">Edit content</span>
+              <span className="sm:hidden">Edit</span>
+            </button>
+          )}
           <div className="hidden lg:inline-flex items-center gap-0.5 rounded-md ring-1 ring-zinc-200 dark:ring-zinc-800 bg-white dark:bg-[#0a0a0a] p-0.5 mr-1">
             {(["50", "75", "100", "fit"] as Zoom[]).map((z) => (
               <button
