@@ -9,8 +9,8 @@ image_decorative	started		Rendering feature_icon image: img-feature-3
 copy	started		Writing copy for each section
 copy	completed	0.0760	Writing copy for each section
 html	started		Generating HTML and CSS
-image_decorative	completed	0.1060	Rendered img-feature-1
-image_decorative	completed	0.1360	Rendered img-feature-2
-image_decorative	completed	0.1660	Rendered img-feature-3
-image_hero	completed	0.1960	Rendered img-hero
-html	completed	0.2599	Generating HTML and CSS
+image_decorative	completed	0.1060	Rendered img-feature-2
+image_decorative	completed	0.1360	Rendered img-feature-1
+html	completed	0.1999	Generating HTML and CSS
+image_decorative	completed	0.2299	Rendered img-feature-3
+image_hero	completed	0.2599	Rendered img-hero
