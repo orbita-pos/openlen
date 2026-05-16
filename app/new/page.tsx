@@ -25,13 +25,14 @@ function NewPageInner() {
   const { state, generate, regenerateSection, loadProject } = useGeneration();
   const searchParams = useSearchParams();
   const projectParam = searchParams.get("project");
+  const briefParam = searchParams.get("brief");
   const [editTarget, setEditTarget] = useState<{
     sectionId: string;
     sectionName: string;
   } | null>(null);
   const [downloadingZip, setDownloadingZip] = useState(false);
 
-  const [prompt, setPrompt] = useState(SAMPLE_BRIEF);
+  const [prompt, setPrompt] = useState(() => briefParam?.trim() || SAMPLE_BRIEF);
   const [projectName, setProjectName] = useState("Untitled");
   const [savedLabel, setSavedLabel] = useState("Saved 2 min ago");
   const [panelOpen, setPanelOpen] = useState(true);

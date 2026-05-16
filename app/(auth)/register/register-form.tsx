@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { Card } from "@/components/auth/card";
@@ -16,12 +16,22 @@ import {
   StrengthBar,
 } from "@/components/auth/primitives";
 
+// Reject offsite ?next= so a crafted URL can't bounce the user to another
+// domain after sign-up.
+function sanitizeNext(raw: string | null): string {
+  if (!raw) return "/new";
+  if (!raw.startsWith("/") || raw.startsWith("//")) return "/new";
+  return raw;
+}
+
 export function RegisterForm({
   oauth,
 }: {
   oauth: { github: boolean; google: boolean };
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = sanitizeNext(searchParams.get("next"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -66,7 +76,7 @@ export function RegisterForm({
         setLoading(false);
         return;
       }
-      router.push("/new");
+      router.push(nextPath);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -76,7 +86,7 @@ export function RegisterForm({
 
   const onOAuth = async (provider: "github" | "google") => {
     setOauthLoading(provider);
-    await signIn(provider, { callbackUrl: "/new" });
+    await signIn(provider, { callbackUrl: nextPath });
   };
 
   return (
@@ -88,7 +98,7 @@ export function RegisterForm({
         <ErrorBanner>
           An account with this email already exists.{" "}
           <Link
-            href="/login"
+            href={`/login?next=${encodeURIComponent(nextPath)}`}
             className="font-semibold underline underline-offset-2 hover:no-underline"
           >
             Sign in instead?

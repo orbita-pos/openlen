@@ -1,7 +1,6 @@
-import Link from "next/link";
-import { ArrowRight, Sparkles, Star } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowRight, Star } from "lucide-react";
 import { GithubIcon } from "@/components/ui/brand-icons";
+import { HeroPromptInput } from "./hero-prompt-input";
 import { ThumbAcme, ThumbBloom, ThumbDrift } from "./thumbnails";
 
 const avatarColors = ["#FF5A36", "#22d3ee", "#a78bfa", "#facc15", "#34d399"];
@@ -51,36 +50,40 @@ export function Hero() {
             </span>
           </p>
 
-          <div className="mt-8 flex flex-col sm:flex-row items-center gap-3">
-            <Link href="/register" className="w-full sm:w-auto">
-              <Button size="lg" className="w-full sm:w-auto">
-                <Sparkles size={16} /> Generate yours free
-              </Button>
-            </Link>
-            <Button variant="outline" size="lg" className="w-full sm:w-auto">
-              <GithubIcon size={16} />
-              Star on GitHub
-              <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-zinc-100 dark:bg-zinc-900 px-2 py-0.5 text-[11px] font-medium tabular-nums text-zinc-600 dark:text-zinc-400">
-                <Star size={10} className="text-amber-500" />
-                2.4k
-              </span>
-            </Button>
+          <div className="mt-10 w-full max-w-2xl">
+            <HeroPromptInput />
           </div>
 
-          <div className="mt-4 flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-500">
-            <div className="flex -space-x-1.5">
-              {avatarColors.map((c, i) => (
-                <span
-                  key={i}
-                  className="h-5 w-5 rounded-full ring-2 ring-white dark:ring-[#0a0a0a]"
-                  style={{ background: c }}
-                />
-              ))}
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-zinc-500 dark:text-zinc-500">
+            <div className="flex items-center gap-2">
+              <div className="flex -space-x-1.5">
+                {avatarColors.map((c, i) => (
+                  <span
+                    key={i}
+                    className="h-5 w-5 rounded-full ring-2 ring-white dark:ring-[#0a0a0a]"
+                    style={{ background: c }}
+                  />
+                ))}
+              </div>
+              <span>
+                <span className="font-medium text-zinc-700 dark:text-zinc-300">1,284</span>{" "}
+                pages generated this week
+              </span>
             </div>
-            <span>
-              <span className="font-medium text-zinc-700 dark:text-zinc-300">1,284</span>{" "}
-              pages generated this week
-            </span>
+            <span className="hidden sm:inline text-zinc-300 dark:text-zinc-800">·</span>
+            <a
+              href="https://github.com/jesusbernalrj/inari-pages"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 hover:text-zinc-900 dark:hover:text-zinc-100 transition"
+            >
+              <GithubIcon size={12} />
+              <span>Star on GitHub</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 dark:bg-zinc-900 px-1.5 py-0.5 text-[10.5px] font-medium tabular-nums text-zinc-600 dark:text-zinc-400">
+                <Star size={9} className="text-amber-500" />
+                2.4k
+              </span>
+            </a>
           </div>
 
           <div className="mt-14 w-full">
