@@ -93,40 +93,32 @@ export function PreviewPanel({ state, panelOpen, onOpenPanel }: PreviewPanelProp
     return buildSrcDoc(state.result);
   }, [state]);
 
-  // Measure iframe content so the wrapper matches the real document height —
-  // without this the iframe falls back to its own scrollbar AND the dotted
-  // preview container also scrolls, giving the user two competing scrolls.
+  // The iframe self-reports its document height via postMessage (script
+  // injected by buildSrcDoc). This avoids parent-side contentDocument access,
+  // which is finicky around iframe load timing and sandboxing — and it lets
+  // the wrapper match the real height so the dotted-bg outer container owns
+  // the only scroll.
   useEffect(() => {
     if (!srcDoc) {
       setContentHeight(1200);
       return;
     }
     const iframe = iframeRef.current;
-    if (!iframe) return;
-    let observer: ResizeObserver | null = null;
-    const measure = () => {
-      const doc = iframe.contentDocument;
-      if (!doc) return;
-      const h = Math.max(
-        doc.documentElement?.scrollHeight ?? 0,
-        doc.body?.scrollHeight ?? 0,
-      );
-      if (h > 0) setContentHeight(h);
-    };
-    const onLoad = () => {
-      measure();
-      const doc = iframe.contentDocument;
-      if (doc?.body && typeof ResizeObserver !== "undefined") {
-        observer = new ResizeObserver(measure);
-        observer.observe(doc.body);
+    const onMessage = (e: MessageEvent) => {
+      if (iframe && e.source && e.source !== iframe.contentWindow) return;
+      const data = e.data;
+      if (
+        data &&
+        typeof data === "object" &&
+        data.type === "inari:height" &&
+        typeof data.height === "number" &&
+        data.height > 0
+      ) {
+        setContentHeight(data.height);
       }
     };
-    iframe.addEventListener("load", onLoad);
-    if (iframe.contentDocument?.readyState === "complete") onLoad();
-    return () => {
-      iframe.removeEventListener("load", onLoad);
-      observer?.disconnect();
-    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
   }, [srcDoc, iframeKey]);
 
   return (
@@ -256,7 +248,7 @@ export function PreviewPanel({ state, panelOpen, onOpenPanel }: PreviewPanelProp
                     srcDoc={srcDoc}
                     className="w-full border-0 bg-white block"
                     style={{ height: contentHeight }}
-                    sandbox="allow-same-origin"
+                    sandbox="allow-scripts"
                     scrolling="no"
                   />
                 </div>
@@ -453,12 +445,47 @@ function buildSrcDoc(page: LandingPage): string {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeHtml(page.meta.title)}</title>
   <style>
-    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; background: #fff; color: #111; }
+    html, body { margin: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; background: #fff; color: #111; }
     ${page.css}
   </style>
 </head>
 <body>
 ${page.html}
+<script>
+  (function () {
+    var last = 0;
+    function send() {
+      var h = Math.max(
+        document.documentElement.scrollHeight || 0,
+        document.body.scrollHeight || 0,
+        document.documentElement.offsetHeight || 0,
+        document.body.offsetHeight || 0
+      );
+      if (h > 0 && h !== last) {
+        last = h;
+        try { parent.postMessage({ type: 'inari:height', height: h }, '*'); } catch (e) {}
+      }
+    }
+    send();
+    window.addEventListener('load', send);
+    if (typeof ResizeObserver !== 'undefined') {
+      try { new ResizeObserver(send).observe(document.body); } catch (e) {}
+    }
+    // Catch late image loads
+    setTimeout(send, 100);
+    setTimeout(send, 500);
+    setTimeout(send, 1500);
+    // Swallow same-page anchor navigation so clicks in preview don't reload
+    document.addEventListener('click', function (e) {
+      var t = e.target;
+      while (t && t !== document.body) {
+        if (t.tagName === 'A') { e.preventDefault(); return; }
+        t = t.parentNode;
+      }
+    }, true);
+  })();
+</script>
 </body>
 </html>`;
 }
