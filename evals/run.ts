@@ -66,23 +66,10 @@ async function ensureDir(p: string) {
   if (!existsSync(p)) await mkdir(p, { recursive: true });
 }
 
-function buildSrcDoc(title: string, html: string, css: string): string {
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>${title.replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c] ?? c))}</title>
-<style>
-html, body { margin: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; background: #fff; color: #111; }
-${css}
-</style>
-</head>
-<body>
-${html}
-</body>
-</html>`;
+function buildSrcDoc(_title: string, html: string, _css: string): string {
+  // In the slot-filling pipeline, page.html is already a complete <!doctype>
+  // document built by lib/orchestrator/assemble.tsx — no wrapping needed.
+  return html;
 }
 
 interface RunSummary {

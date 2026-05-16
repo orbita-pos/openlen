@@ -1,16 +1,18 @@
 classify	started		Parsing brief into structured intent
 classify	completed	0.0001	Parsing brief into structured intent
-plan	started		Designing section sequence and visual direction
-plan	completed	0.0391	Designing section sequence and visual direction
-image_hero	started		Rendering hero image: img-hero
-image_decorative	started		Rendering feature_icon image: img-feature-1
-image_decorative	started		Rendering feature_icon image: img-feature-2
-image_decorative	started		Rendering feature_icon image: img-feature-3
-copy	started		Writing copy for each section
-copy	completed	0.0760	Writing copy for each section
-html	started		Generating HTML and CSS
-image_decorative	completed	0.1060	Rendered img-feature-2
-image_decorative	completed	0.1360	Rendered img-feature-1
-html	completed	0.1999	Generating HTML and CSS
-image_decorative	completed	0.2299	Rendered img-feature-3
-image_hero	completed	0.2599	Rendered img-hero
+plan	started		Designing block sequence and visual direction
+plan	completed	0.0388	Designing block sequence and visual direction
+fill	started		Filling slots for block 1: hero/centered-cta
+fill	started		Filling slots for block 2: features/icon-grid-3col
+fill	started		Filling slots for block 3: pricing/three-tier-highlight
+fill	started		Filling slots for block 4: cta/gradient-cta
+fill	started		Filling slots for block 5: footer/four-col-links
+image_hero	started		Rendering hero image: hero
+fill	completed	0.0394	Filled block 1: hero/centered-cta
+fill	completed	0.0401	Filled block 2: features/icon-grid-3col
+fill	completed	0.0408	Filled block 5: footer/four-col-links
+fill	completed	0.0415	Filled block 3: pricing/three-tier-highlight
+fill	completed	0.0420	Filled block 4: cta/gradient-cta
+image_hero	completed	0.0720	Rendered hero
+assemble	started		Composing final HTML deterministically
+assemble	completed	0.0720	Rendered 5 blocks

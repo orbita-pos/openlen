@@ -1,16 +1,18 @@
 classify	started		Parsing brief into structured intent
 classify	completed	0.0001	Parsing brief into structured intent
 plan	started		Adaptive fast-path planning (simple brief)
-plan	completed	0.0391	Adaptive fast-path planning (simple brief)
-image_hero	started		Rendering hero image: img-hero
-image_decorative	started		Rendering feature_icon image: img-feature-1
-image_decorative	started		Rendering feature_icon image: img-feature-2
-image_decorative	started		Rendering feature_icon image: img-feature-3
-copy	started		Writing copy for each section
-image_decorative	completed	0.0691	Rendered img-feature-3
-copy	completed	0.1060	Writing copy for each section
-html	started		Generating HTML and CSS
-image_hero	completed	0.1360	Rendered img-hero
-image_decorative	completed	0.1660	Rendered img-feature-1
-image_decorative	completed	0.1960	Rendered img-feature-2
-html	completed	0.2598	Generating HTML and CSS
+plan	completed	0.0362	Adaptive fast-path planning (simple brief)
+fill	started		Filling slots for block 1: hero/centered-cta
+fill	started		Filling slots for block 2: features/icon-grid-3col
+fill	started		Filling slots for block 3: pricing/three-tier-highlight
+fill	started		Filling slots for block 4: cta/gradient-cta
+fill	started		Filling slots for block 5: footer/four-col-links
+image_hero	started		Rendering hero image: hero
+fill	completed	0.0369	Filled block 5: footer/four-col-links
+fill	completed	0.0375	Filled block 1: hero/centered-cta
+fill	completed	0.0382	Filled block 3: pricing/three-tier-highlight
+fill	completed	0.0389	Filled block 2: features/icon-grid-3col
+fill	completed	0.0394	Filled block 4: cta/gradient-cta
+image_hero	completed	0.0694	Rendered hero
+assemble	started		Composing final HTML deterministically
+assemble	completed	0.0694	Rendered 5 blocks

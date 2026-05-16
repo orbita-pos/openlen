@@ -2,19 +2,18 @@
   "slug": "02-portfolio",
   "label": "Portfolio personal",
   "brief": "Personal portfolio for a freelance UI/UX designer based in Mexico City named Sofia. She specializes in fintech and SaaS. Wants to showcase 6 projects and have a contact section.",
-  "totalCostUsd": 0.25982689999999997,
+  "totalCostUsd": 0.06937749999999998,
   "breakdown": {
-    "total": 0.25982689999999997,
+    "total": 0.06937749999999998,
     "classify": 0.00006809999999999999,
-    "plan": 0.0389853,
-    "copy": 0.0369435,
-    "html": 0.06383,
-    "images": 0.12,
-    "refine": 0
+    "plan": 0.036101999999999995,
+    "fill": 0.0032074,
+    "images": 0.03,
+    "assemble": 0
   },
-  "wallClockMs": 353,
+  "wallClockMs": 316,
   "adaptiveFastPath": true,
-  "imagesGenerated": 4,
+  "imagesGenerated": 1,
   "intent": {
     "industry": "productivity software",
     "audience": "small teams",
@@ -27,5 +26,5 @@
     ],
     "productName": "Acme"
   },
-  "generationId": "27003e26-8bb8-4e36-8c30-90992442bed8"
+  "generationId": "c012ab73-9b01-4c72-93ea-1e28b665118c"
 }
