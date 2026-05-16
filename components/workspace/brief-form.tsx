@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, PanelLeftClose, RefreshCw, Sparkles } from "lucide-react";
+import { ArrowUp, ImageOff, PanelLeftClose, RefreshCw, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/cn";
@@ -45,6 +45,10 @@ export interface BriefFormProps {
   onGenerate: () => void;
   generating: boolean;
   onCollapse: () => void;
+  /** When true, ask the orchestrator to skip FLUX.2 + Wan image generation.
+   *  Owned by the page so it survives a panel collapse. */
+  includeImages: boolean;
+  onToggleIncludeImages: (value: boolean) => void;
 }
 
 export function BriefForm({
@@ -52,6 +56,8 @@ export function BriefForm({
   onGenerate,
   generating,
   onCollapse,
+  includeImages,
+  onToggleIncludeImages,
 }: BriefFormProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -163,6 +169,52 @@ export function BriefForm({
               </button>
             ))}
           </div>
+
+          <label className="mt-5 flex items-center justify-between gap-3 cursor-pointer select-none rounded-lg ring-1 ring-zinc-200 dark:ring-zinc-800 px-3 py-2.5 hover:ring-zinc-300 dark:hover:ring-zinc-700 transition">
+            <span className="flex items-start gap-2.5 min-w-0">
+              <ImageOff
+                size={14}
+                className={cn(
+                  "shrink-0 mt-0.5",
+                  includeImages
+                    ? "text-zinc-400 dark:text-zinc-600"
+                    : "text-coral-600 dark:text-coral-400",
+                )}
+              />
+              <span className="min-w-0">
+                <span className="block text-[12px] font-medium text-zinc-700 dark:text-zinc-300">
+                  Include AI-generated images
+                </span>
+                <span className="block text-[11px] text-zinc-500 dark:text-zinc-500 mt-0.5">
+                  {includeImages
+                    ? "FLUX hero + Wan decoratives. Adds ~$0.06–0.09."
+                    : "Text-only layout. Upload your own images in the editor."}
+                </span>
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={includeImages}
+              onChange={(e) => onToggleIncludeImages(e.target.checked)}
+              className="sr-only peer"
+            />
+            <span
+              aria-hidden="true"
+              className={cn(
+                "shrink-0 relative inline-flex h-5 w-9 rounded-full transition-colors",
+                includeImages
+                  ? "bg-coral-500"
+                  : "bg-zinc-300 dark:bg-zinc-700",
+              )}
+            >
+              <span
+                className={cn(
+                  "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform",
+                  includeImages ? "translate-x-4" : "translate-x-0.5",
+                )}
+              />
+            </span>
+          </label>
         </div>
 
         <div className="shrink-0 mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-900">
