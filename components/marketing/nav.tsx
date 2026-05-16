@@ -79,7 +79,13 @@ export function Nav({ dark, onToggleDark }: NavProps) {
           >
             {dark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
-          <Link href="/new" className="hidden sm:inline-flex">
+          <Link
+            href="/login"
+            className="hidden sm:inline-flex items-center h-9 px-3 rounded-md text-[13px] font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors"
+          >
+            Sign in
+          </Link>
+          <Link href="/register" className="hidden sm:inline-flex">
             <Button size="sm">
               Try it free <ArrowRight size={14} />
             </Button>

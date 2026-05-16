@@ -39,7 +39,7 @@ export function FinalCta() {
               </span>
             </p>
             <div className="mt-9 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-              <Link href="/new">
+              <Link href="/register">
                 <Button size="lg" className="!h-12 !px-6 text-[15px]">
                   <Sparkles size={16} /> Generate my page — free
                 </Button>

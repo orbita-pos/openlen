@@ -45,7 +45,7 @@ const tiers: Tier[] = [
     price: 19,
     suffix: "/month",
     blurb: "Hosted generator + premium image gen.",
-    cta: { label: "Start Pro — 14 days free", variant: "primary", icon: Sparkles, href: "/new" },
+    cta: { label: "Start Pro — 14 days free", variant: "primary", icon: Sparkles, href: "/register" },
     features: [
       "Everything in Free",
       "100 hosted generations / mo",

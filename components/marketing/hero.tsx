@@ -52,7 +52,7 @@ export function Hero() {
           </p>
 
           <div className="mt-8 flex flex-col sm:flex-row items-center gap-3">
-            <Link href="/new" className="w-full sm:w-auto">
+            <Link href="/register" className="w-full sm:w-auto">
               <Button size="lg" className="w-full sm:w-auto">
                 <Sparkles size={16} /> Generate yours free
               </Button>
