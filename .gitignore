@@ -42,6 +42,10 @@ next-env.d.ts
 # witness recordings — generated artifacts, never commit
 /recordings/
 
+# uploaded images (filesystem storage adapter) — user-supplied artifacts,
+# never commit. Per-deploy persistence comes from Docker volume / R2.
+/public/uploads/
+
 # IDE
 .vscode/
 .idea/
