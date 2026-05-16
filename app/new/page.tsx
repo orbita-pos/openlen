@@ -92,6 +92,9 @@ function NewPageInner() {
   const [panelOpen, setPanelOpen] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [editorSavedLabel, setEditorSavedLabel] = useState<string | null>(null);
+  // Default ON so first-time users see the full visual experience. Off means
+  // FLUX/Wan are skipped and the page renders text-only.
+  const [includeImages, setIncludeImages] = useState(true);
 
   const generating = state.kind === "generating";
   const generated = state.kind === "generated";
@@ -101,8 +104,8 @@ function NewPageInner() {
     const brief = prompt.trim();
     if (brief.length < 10) return;
     setSavedLabel("Saving…");
-    void generate({ brief });
-  }, [generating, prompt, generate]);
+    void generate({ brief, images: includeImages });
+  }, [generating, prompt, includeImages, generate]);
 
   useEffect(() => {
     if (state.kind === "generated") setSavedLabel("Saved just now");
@@ -169,9 +172,20 @@ function NewPageInner() {
   // Slot editing: debounced /api/reassemble + localStorage persistence.
   // The page component owns the debounce timer + an abort controller so a
   // burst of keystrokes coalesces into one round-trip.
+  //
+  // Regen-vs-reassemble race: a reassemble started just before a regen click
+  // could land its (stale, pre-regen) html AFTER the regen result, overwriting
+  // the freshly regenerated block. We guard with two mechanisms:
+  //   1. `regenEpochRef` — bumped each time a regen completes. The reassemble
+  //      callback compares the captured epoch to the current one and drops
+  //      the result if it changed mid-flight.
+  //   2. An effect that watches `state.regen` and aborts the pending timer +
+  //      fetch the moment a regen starts.
   // ──────────────────────────────────────────────────────────────────────────
   const reassembleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reassembleAbortRef = useRef<AbortController | null>(null);
+  const regenEpochRef = useRef(0);
+  const wasRegenInFlightRef = useRef(false);
 
   // Hydrate from localStorage when a fresh generation result lands. If the
   // user previously edited THIS page (same generationId), restore their work
@@ -222,6 +236,25 @@ function NewPageInner() {
     }
   }, [state]);
 
+  // Watch state.regen. When a regen starts, cancel any in-flight reassemble
+  // so its stale result doesn't land on top of the regenerated block. When a
+  // regen completes, bump the epoch — any *captured* epoch on a fetch that's
+  // still in flight will no longer match, so its .then() callback will drop.
+  useEffect(() => {
+    const inFlight = state.kind === "generated" && state.regen !== undefined;
+    if (inFlight && !wasRegenInFlightRef.current) {
+      if (reassembleTimerRef.current) {
+        clearTimeout(reassembleTimerRef.current);
+        reassembleTimerRef.current = null;
+      }
+      reassembleAbortRef.current?.abort();
+    }
+    if (!inFlight && wasRegenInFlightRef.current) {
+      regenEpochRef.current += 1;
+    }
+    wasRegenInFlightRef.current = inFlight;
+  }, [state]);
+
   const handleSlotsChange = useCallback(
     (newFilledBlocks: FilledBlock[]) => {
       if (state.kind !== "generated") return;
@@ -229,6 +262,15 @@ function NewPageInner() {
       // resolves, but the accordion reflects the edit immediately. The sync
       // effect above pushes the new blocks to localStorage on the next render.
       applyLiveEdit(newFilledBlocks);
+
+      // While a regen is in flight, skip the round-trip entirely. The regen
+      // will ship its own fresh html in ~10s, and reassembling against the
+      // pre-regen filledBlocks would either (a) lose the regen, or (b) be
+      // dropped by the epoch check anyway. Either way it's wasted work.
+      if (state.regen) {
+        setEditorSavedLabel("Regenerating — edits resume after");
+        return;
+      }
       setEditorSavedLabel("Saving…");
 
       // Debounce server round-trip.
@@ -236,6 +278,7 @@ function NewPageInner() {
         clearTimeout(reassembleTimerRef.current);
       }
       reassembleAbortRef.current?.abort();
+      const epochAtStart = regenEpochRef.current;
       reassembleTimerRef.current = setTimeout(() => {
         const controller = new AbortController();
         reassembleAbortRef.current = controller;
@@ -248,6 +291,9 @@ function NewPageInner() {
         )
           .then((html) => {
             if (!html) return;
+            // Drop stale html if a regen completed (or started) while we were
+            // fetching. The regen's filledBlocks are authoritative.
+            if (regenEpochRef.current !== epochAtStart) return;
             applyLiveEdit(newFilledBlocks, html);
             setEditorSavedLabel("Saved locally");
           })
@@ -332,6 +378,7 @@ function NewPageInner() {
               onClose={() => setEditMode(false)}
               savedLabel={editorSavedLabel ?? "Changes preview live"}
               onResetAll={handleResetAllEdits}
+              generationId={state.result.meta.generationId}
             />
           ) : (
             <BriefForm
@@ -339,6 +386,8 @@ function NewPageInner() {
               onGenerate={handleGenerate}
               generating={generating}
               onCollapse={() => setPanelOpen(false)}
+              includeImages={includeImages}
+              onToggleIncludeImages={setIncludeImages}
             />
           )}
         </div>
@@ -398,6 +447,7 @@ function SlotEditorWithReset({
   onClose,
   savedLabel,
   onResetAll,
+  generationId,
 }: {
   filledBlocks: FilledBlock[];
   originalBlocks: FilledBlock[];
@@ -405,6 +455,7 @@ function SlotEditorWithReset({
   onClose: () => void;
   savedLabel: string;
   onResetAll: () => void;
+  generationId: string;
 }) {
   const dirty =
     JSON.stringify(filledBlocks.map((b) => b.slots)) !==
@@ -419,6 +470,7 @@ function SlotEditorWithReset({
           onSlotsChange={onSlotsChange}
           onClose={onClose}
           savedLabel={savedLabel}
+          generationId={generationId}
         />
       </div>
       {dirty && (
