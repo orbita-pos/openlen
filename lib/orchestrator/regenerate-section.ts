@@ -1,52 +1,55 @@
 import { randomUUID } from "node:crypto";
 import { createBudget } from "@/lib/budget";
 import { createRecorder } from "@/lib/witness/recorder";
-import { regenerateSectionCopy } from "./copy";
-import { generateHtml } from "./html";
+import { fillBlock } from "./fill";
+import { assemble } from "./assemble";
 import type {
-  Copy,
   CostBreakdown,
+  FilledBlock,
   GeneratedImage,
+  Intent,
+  LandingPage,
   Plan,
 } from "./types";
 import { DEFAULT_PALETTE, type StepContext } from "./_shared";
+import { PALETTES } from "./design-tokens";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Single-section regeneration.
+// Single-block regeneration.
 //
-// Re-runs the copy step for ONE section (optionally with an additional
-// user instruction), splices the new text into the existing copy, then
-// re-runs the html step on the spliced copy. Images and the rest of the
-// page are preserved.
+// Re-runs the fill step for ONE block in plan.blockSequence (optionally with
+// an extra user instruction baked into the block's emphasis), splices the
+// new FilledBlock into the filledBlocks array, then re-runs the deterministic
+// assemble step to produce a new full HTML document.
 //
-// Returns the new copy + html + css + this regen's cost so the client can
-// merge them into its current page state.
+// Image generation is NOT re-run — the page keeps its existing images. This
+// matches the user's mental model of "regenerate this section only".
 // ─────────────────────────────────────────────────────────────────────────────
 
-export interface RegenerateSectionInput {
+export interface RegenerateBlockInput {
   brief: string;
+  intent: Intent;
   plan: Plan;
-  copy: Copy;
+  filledBlocks: FilledBlock[];
   images: GeneratedImage[];
-  sectionId: string;
+  /** Index in plan.blockSequence (0-based) of the block to re-fill. */
+  blockIndex: number;
   additionalInstruction?: string;
 }
 
-export interface RegenerateSectionResult {
-  html: string;
-  css: string;
-  copy: Copy;
-  cost: CostBreakdown;
+export interface RegenerateBlockResult {
+  page: LandingPage;
   generationId: string;
+  cost: CostBreakdown;
 }
 
-export async function regenerateSection(
-  input: RegenerateSectionInput,
-): Promise<RegenerateSectionResult> {
+export async function regenerateBlock(
+  input: RegenerateBlockInput,
+): Promise<RegenerateBlockResult> {
   const generationId = `regen-${randomUUID()}`;
   const recorder = createRecorder(generationId);
-  // Generous cap — single-section regen is two model calls (copy + html)
-  // bounded around $0.03 worst case.
+  // One block fill + a deterministic assemble = a few hundredths of a cent.
+  // Generous cap to absorb fallback retries.
   const budget = createBudget({ cap: 0.5 });
 
   const ctx: StepContext = {
@@ -55,51 +58,53 @@ export async function regenerateSection(
     recorder,
     budget,
     fastPath: false,
-    // Regenerate doesn't currently know which palette the original generation
-    // used (Session 1 scope — intent isn't plumbed through this path).
-    // Default to mono-dark; the page already has its own CSS variables from
-    // the original render, so the master prompt's tokens act as a stylistic
-    // anchor rather than a strict swap. Session 4 will thread intent through.
-    palette: DEFAULT_PALETTE,
+    palette: PALETTES[input.plan.palette] ?? DEFAULT_PALETTE,
   };
 
-  const newSectionCopy = await regenerateSectionCopy(ctx, {
+  const seqEntry = input.plan.blockSequence[input.blockIndex];
+  if (!seqEntry) {
+    throw new Error(
+      `regenerate-block: blockIndex ${input.blockIndex} out of bounds (sequence length ${input.plan.blockSequence.length})`,
+    );
+  }
+
+  // Layer the user's additional instruction onto the block's emphasis so the
+  // fill step sees it as block-specific guidance.
+  const emphasis = input.additionalInstruction
+    ? [seqEntry.emphasis, `User instruction: ${input.additionalInstruction}`]
+        .filter(Boolean)
+        .join(" — ")
+    : seqEntry.emphasis;
+
+  const newFilled = await fillBlock(ctx, {
+    blockId: seqEntry.blockId,
+    index: input.blockIndex,
+    intent: input.intent,
     plan: input.plan,
-    copy: input.copy,
-    sectionId: input.sectionId,
-    additionalInstruction: input.additionalInstruction,
+    purpose: seqEntry.purpose,
+    emphasis,
   });
 
-  const splicedCopy: Copy = {
-    sectionTexts: input.copy.sectionTexts.map((s) =>
-      s.sectionId === input.sectionId ? newSectionCopy : s,
-    ),
-  };
+  const splicedFilledBlocks = input.filledBlocks.map((fb) =>
+    fb.index === input.blockIndex ? newFilled : fb,
+  );
 
-  // Re-run html on the spliced copy. The same prompt + image placeholders are
-  // used, so existing images stay wired up via {{HERO_IMAGE}} / {{IMG_<id>}}.
-  const htmlOutput = await generateHtml(ctx, input.plan, splicedCopy);
-
-  // Re-assemble: swap image placeholders for the existing image URLs.
-  let html = htmlOutput.html;
-  const hero = input.images.find((i) => i.purpose === "hero");
-  if (hero) {
-    html = html.replaceAll("{{HERO_IMAGE}}", hero.url);
-  } else {
-    html = html.replace(/<img[^>]*\{\{HERO_IMAGE\}\}[^>]*\/?>/gi, "");
-  }
-  for (const img of input.images) {
-    if (img.purpose === "hero") continue;
-    html = html.replaceAll(`{{IMG_${img.id}}}`, img.url);
-  }
-  html = html.replace(/\{\{(HERO_IMAGE|IMG_[A-Za-z0-9_-]+)\}\}/g, "");
-  html = html.replace(/<img\b[^>]*\ssrc\s*=\s*(["'])\s*\1[^>]*>/gi, "");
+  const page = await assemble({
+    ctx,
+    brief: input.brief,
+    generationId,
+    intent: input.intent,
+    plan: input.plan,
+    filledBlocks: splicedFilledBlocks,
+    images: input.images,
+    cost: budget.breakdown(),
+    witnessPath: recorder.path,
+    adaptiveFastPath: false,
+  });
 
   return {
-    html,
-    css: htmlOutput.css,
-    copy: splicedCopy,
-    cost: budget.breakdown(),
+    page,
     generationId,
+    cost: budget.breakdown(),
   };
 }

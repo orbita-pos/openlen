@@ -1,4 +1,5 @@
 import type { AnyModelId, ImageModelId, TextModelId } from "@/lib/together/models";
+import { BLOCK_IDS, BLOCK_REGISTRY } from "@/lib/blocks/_registry";
 import type { Intent, PipelineStep, Plan, RoutingDecision } from "./types";
 import type { Palette } from "./design-tokens";
 import { buildMasterPrompt } from "./master-prompt";
@@ -14,8 +15,8 @@ import { loadFewShots, type FewShotExample } from "./few-shots";
 //   - `fallbacks[]` chain in priority order
 //   - optional `fastPath` override for the adaptive routing logic
 //
-// When you change pricing or model availability, edit this file and
-// `lib/together/models.ts` — nothing else should need touching.
+// The `assemble` step is deterministic (no LLM) and has no routing entry —
+// pickModel will throw if called for it.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface ModelEntry {
@@ -30,7 +31,12 @@ export interface StepRouting {
   fastPath?: ModelEntry;
 }
 
-export const ROUTING_TABLE: Record<PipelineStep, StepRouting> = {
+// Steps that consult the routing table for a model. `assemble` is excluded
+// because it's deterministic React SSR. Keeping this as a derived type means
+// adding a new step to PipelineStep + the table is a one-place change.
+export type RoutedStep = Exclude<PipelineStep, "assemble">;
+
+export const ROUTING_TABLE: Record<RoutedStep, StepRouting> = {
   classify: {
     primary: {
       model: "lfm2-24b-a2b",
@@ -44,55 +50,29 @@ export const ROUTING_TABLE: Record<PipelineStep, StepRouting> = {
     ],
   },
   plan: {
-    // Plan needs structured output across many fields. LFM2 fastpath was
-    // unreliable in practice (failed validation 5/5 times during wire-up) so
-    // we removed it; Kimi K2.6 is the default. Re-enable fastPath once we have
-    // a tighter LFM2 plan prompt that validates consistently.
     primary: {
       model: "moonshotai/Kimi-K2.6",
-      reason: "Mid-tier reasoning workhorse — best price/quality for section planning.",
+      reason:
+        "Mid-tier reasoning — best price/quality for picking block IDs from the catalog.",
     },
     fallbacks: [
       {
         model: "glm-5.1",
-        reason: "Heavier reasoning when Kimi's plan misses sections or is shallow.",
+        reason: "Heavier reasoning when Kimi's block sequence is incoherent or duplicates blocks.",
       },
     ],
   },
-  copy: {
-    primary: {
-      model: "moonshotai/Kimi-K2.6",
-      reason: "Best balance of cost and voice control for long-form section copy.",
-    },
-    fallbacks: [
-      {
-        model: "glm-5.1",
-        reason: "Switch when Kimi copy reads generic — glm-5.1 handles brand voice better in hard cases.",
-      },
-    ],
-  },
-  html: {
-    primary: {
-      model: "qwen3-coder-480b",
-      reason: "Strong code synthesis (480B MoE) — workhorse for HTML/CSS at $2/$2 per M tokens.",
-    },
-    fallbacks: [
-      {
-        model: "deepseek-ai/DeepSeek-V4-Pro",
-        reason:
-          "Hard-fix fallback: 80.6% SWE-bench, 93.5% LiveCodeBench. Trigger when Qwen3-Coder output fails quality gates.",
-      },
-    ],
-  },
-  refine: {
+  fill: {
     primary: {
       model: "qwen3-235b-tput",
-      reason: "Cheap throughput-tier — surgical patches don't need a 480B model.",
+      reason:
+        "Throughput-tier model for structured slot JSON — cheap ($0.20/$0.60 per M), fast, JSON-mode reliable. ~$0.0002 per block.",
     },
     fallbacks: [
       {
-        model: "qwen3-coder-480b",
-        reason: "Promote to the coder model when the patch is structural, not a string swap.",
+        model: "moonshotai/Kimi-K2.6",
+        reason:
+          "Promote to Kimi when Qwen3-235B fails schema validation on a block — bigger model better at coercing constraints.",
       },
     ],
   },
@@ -112,7 +92,7 @@ export const ROUTING_TABLE: Record<PipelineStep, StepRouting> = {
     primary: {
       model: "FLUX.2-flex",
       reason:
-        "FLUX.2-flex shares the FLUX.2 family aesthetic with the hero and accepts the same 1024×1024 sizing — Wan2.6 was dropped because its 1265-1440 area constraint complicated dimension handling.",
+        "FLUX.2-flex shares the FLUX.2 family aesthetic with the hero and accepts the same 1024×1024 sizing.",
     },
     fallbacks: [],
   },
@@ -138,7 +118,7 @@ export function shouldUseFastPath(brief: string, override?: boolean): boolean {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface PickContext {
-  step: PipelineStep;
+  step: RoutedStep;
   /** When true, prefer the fastPath entry if defined. */
   fastPath?: boolean;
   /** When provided, force a specific fallback index instead of primary. */
@@ -214,7 +194,7 @@ export function pickImageModel(ctx: PickContext): RoutingDecision & {
 
 /** How many fallback models exist for a step. Used by retry loops to know
  *  when to stop attempting fallbacks. */
-export function fallbackCount(step: PipelineStep): number {
+export function fallbackCount(step: RoutedStep): number {
   return ROUTING_TABLE[step].fallbacks.length;
 }
 
@@ -233,13 +213,13 @@ export function fallbackCount(step: PipelineStep): number {
 // payloads ride in the user message — variable, never cached.
 // ─────────────────────────────────────────────────────────────────────────────
 
-type SystemMessageStep = Exclude<PipelineStep, "image_hero" | "image_decorative">;
+type SystemMessageStep = Exclude<RoutedStep, "image_hero" | "image_decorative">;
 
 // Steps that benefit from few-shot examples. classify is a tiny structured-JSON
-// task where examples would dilute the schema; refine is a surgical patch step
-// that explicitly avoids rewriting structure. The remaining text steps (plan,
-// copy, html) all generate creative output that pattern-matches well.
-const FEW_SHOT_STEPS = new Set<SystemMessageStep>(["plan", "copy", "html"]);
+// task where examples would dilute the schema; fill is a focused per-block
+// task with the block's exampleSlots already in the user message. Plan is the
+// only remaining text step where reference variants meaningfully steer output.
+const FEW_SHOT_STEPS = new Set<SystemMessageStep>(["plan"]);
 
 export function stepNeedsFewShots(step: SystemMessageStep): boolean {
   return FEW_SHOT_STEPS.has(step);
@@ -250,8 +230,7 @@ export interface SystemMessageContext {
   /**
    * Optionally pre-loaded few-shot examples. When omitted on a step that
    * benefits (see FEW_SHOT_STEPS), the message builder calls loadFewShots()
-   * automatically. Pass explicitly when a caller wants deterministic examples
-   * (e.g. the regen path, which pins direction to the page's palette).
+   * automatically.
    */
   fewShotExamples?: FewShotExample[];
   /** Reserved for callers that want to layer extra task-specific content. */
@@ -282,161 +261,60 @@ Rules:
 - "productName" must appear verbatim in the brief; never invent one.
 - Keep labels concrete. "saas" is too generic — prefer "kanban for designers".`;
 
-const PLAN_TASK = `TASK: Design the landing-page plan. Choose section sequence, visual direction, and image prompts.
+const PLAN_TASK = `TASK: Design the landing-page plan. Choose an ordered block sequence from the catalog, the aesthetic direction, and the palette.
 
 Output a SINGLE JSON object — no markdown, no commentary.
 
 Schema:
 {
-  "sections": [
-    { "id": "<kebab-slug>", "kind": "<hero|features|social_proof|testimonials|pricing|faq|cta|footer>", "purpose": "<one sentence on what this section accomplishes>", "copyDirection": "<one sentence: tone, length, angle>" }
+  "blockSequence": [
+    { "blockId": "<one of the BlockIds listed below>", "purpose": "<one sentence on what this block accomplishes>", "emphasis": "<optional one-sentence override for fill step>" }
   ],
-  "style": {
-    "palette": "<mono | dual-accent | vibrant | earthy | neon>",
-    "typography": "<modern-sans | editorial-serif | geometric | mono>",
-    "density": "<airy | balanced | dense>",
-    "mood": "<short evocative phrase>"
-  },
-  "copyDirection": "<global voice guidance, 1-2 sentences>",
-  "imagePrompts": [
-    { "id": "<kebab-slug>", "purpose": "<hero|decorative|feature_icon|background>", "prompt": "<concrete compositional prompt — see rules>", "aspectRatio": "<16:9|1:1|4:3|3:4|9:16>" }
-  ]
-}
-
-Rules for sections:
-- Always start with "hero" and end with "footer".
-- Pick sections that match the brief. Don't include "pricing" if no pricing is mentioned. Don't include "testimonials" if no quotes are provided.
-- Order serves conversion: hero → value → proof → action.
-- Section "id" must be unique kebab-case (e.g. "hero", "features-grid", "pricing-tiers", "footer").
-
-Rules for style:
-- Match palette/typography to industry + tone. Coffee = earthy + editorial-serif. Developer tool = mono + geometric.
-
-Rules for image prompts (CRITICAL — these go straight to FLUX/Wan):
-- Always exactly ONE prompt with purpose="hero" (16:9 aspect).
-- 2-3 supporting prompts with purpose in {"decorative","feature_icon","background"}.
-- Prompts MUST be compositional, not abstract: subject → composition → lighting → aspect → style cue.
-  GOOD: "Bag of single-origin coffee on volcanic black stone, low-angle dramatic lighting, mist rising, cinematic 16:9, editorial photography"
-  BAD: "hero image" or "coffee image" or "an image showing the brand"
-- Never request text, logos, watermarks, or UI mockups in the image prompt.
-- Each prompt 15-40 words.`;
-
-const COPY_TASK = `TASK: Write landing-page copy for the planned sections. Specific, benefit-driven, never generic.
-
-Output a SINGLE JSON object — no markdown, no commentary.
-
-Schema:
-{
-  "sectionTexts": [
-    {
-      "sectionId": "<must match a section id from the plan>",
-      "headline": <short string, omit if not applicable>,
-      "subheadline": <short string, omit if not applicable>,
-      "body": <paragraph string, omit if not applicable>,
-      "ctas": [{ "label": "<verb-led 1-3 words>", "href": "<#anchor or url>" }],
-      "items": [
-        { "title": <optional>, "description": <optional>, "meta": { "<key>": "<value>" } }
-      ]
-    }
-  ]
-}
-
-PROHIBITED phrases (the master <banned_patterns> list is authoritative; this is the per-step shortlist enforced by the post-generation gate):
-- "lorem ipsum", "lorem"
-- "awesome", "amazing", "great experience", "world-class", "next-gen", "cutting-edge"
-- "powerful platform that empowers"
-- "revolutionize", "disrupt", "transform your business"
-
-Rules:
-- One section text per planned section. Match sectionId exactly.
-- Hero headline: ≤8 words. Concrete noun + concrete verb. Name what the product DOES, not how it FEELS.
-  GOOD: "Kanban that auto-prioritizes your sprint"
-  BAD: "The most powerful project management for modern teams"
-- Subheadlines: 1-2 sentences. Add specificity the headline omits.
-- Features: title 3-6 words, description 1-2 sentences each. Each feature must name a specific capability the user gets, not a vague benefit.
-- Pricing: tier title + price in meta.price + 1-line description. If brief gives prices, use them verbatim.
-- Social proof: prefer concrete logo names or metrics over generic "trusted by thousands".
-- Footer: simple — product name, tagline, link items.
-- CTAs: action verb. "Start free", "Book demo", "See pricing". Never "Learn more" alone.
-- Use the brief's product name and details verbatim where possible. Don't invent features the brief doesn't mention.`;
-
-const COPY_REGEN_TASK = `TASK: Rewrite ONE section of an existing landing page.
-
-Same prohibited-phrase list and voice rules as the full copy step (the master <banned_patterns> and <brand_voice> blocks apply verbatim).
-
-Output a SINGLE JSON object matching one section text — no markdown, no commentary:
-{
-  "sectionId": "<must match the requested sectionId exactly>",
-  "headline": <optional>,
-  "subheadline": <optional>,
-  "body": <optional>,
-  "ctas": [{ "label": "<verb-led>", "href": "<#anchor or url>" }],
-  "items": [{ "title": <optional>, "description": <optional>, "meta": { "<k>": "<v>" } }]
+  "aesthetic": "<technical-minimal | refined-editorial | warm-humanist | editorial-maximalist | brutalist-technical>",
+  "palette": "<mono-dark | indigo-dark | emerald-dark | warm-dark | mono-light>",
+  "rationale": "<1-2 sentences: why this sequence vs alternatives>",
+  "imageNeeds": { "hero": <boolean>, "decorative": <integer 0-6> }
 }
 
 Rules:
-- Stay within the section.kind. A "hero" section gets a headline + subheadline + 1-2 CTAs. A "features" section gets a headline + items. A "pricing" section gets items with meta.price. Don't change the shape.
-- Use the rest of the page (other section copy, intent) as context to keep voice consistent.
-- If the user provided an additional instruction, follow it strictly. Otherwise just produce a stronger version of the current section.`;
+- Pick blocks ONLY from the catalog listed in <available_blocks> below. Any other blockId fails validation.
+- The sequence MUST include at least one hero/* block and one footer/* block. A typical sequence is:
+  hero/* → features/* → pricing/* (when applicable) → testimonials/* or faq/* (when applicable) → cta/* → footer/*
+- Do NOT use the same blockId twice in one page.
+- Every chosen block's aesthetics list must include the chosen aesthetic. The catalog below shows each block's aesthetics.
+- imageNeeds.hero = true when the chosen hero block has an image slot (mockupSrc/imageSrc/heroImage). It's false for hero/animated-gradient (no image slot).
+- imageNeeds.decorative = how many supporting images to generate, max 3. Use 0 for pages whose blocks don't show images.
+- rationale is concrete and specific to the brief, not generic ("we picked X because Y").`;
 
-const HTML_TASK = `TASK: Generate production-ready HTML and plain CSS for a single landing page.
+const FILL_TASK = `TASK: Fill slot values for ONE specific block in the planned landing page.
 
-Output a SINGLE JSON object — no markdown, no commentary:
-{ "html": "<main>...</main>", "css": "..." }
+You receive: the block id, the block's purpose on this page, the brief context, and a reference example slot JSON for that block.
 
-HTML rules:
-- Wrap everything in a single <main> element. The FIRST child of <main> is ALWAYS a <header class="navbar"> (page navigation). After it, each planned section is a <section class="<kind>" data-section-id="<id>"> element where <kind> is "hero", "features", "social_proof", etc. matching the plan's section.kind, AND <id> is the EXACT section.id from the plan. The footer is <footer class="footer" data-section-id="<footer-id>"> with the footer section's id from the plan. Both class AND data-section-id are required on every section/footer — the regenerate-section UI uses data-section-id to know which section to re-run.
-- The <header class="navbar"> contains three groups: (1) a brand mark on the left — the product name if you can derive one from the hero copy, otherwise a single concrete word from the headline; (2) 3–5 anchor links in the center or right, each href="#<sectionId>" pointing to one of the planned sections (skip "footer" and "hero" — link to features, pricing, faq, social_proof, etc.); (3) a primary CTA button on the far right that mirrors the hero's first CTA label and href. On viewports narrower than 640px hide the center nav links (show just brand + CTA) — DO NOT add hamburger menus or JavaScript toggles.
-- Use semantic HTML5: <section>, <article>, <header>, <h1>/<h2>/<h3>, <p>, <ul>/<li>, <a>, <img>.
-- The <section class="hero"> (the second child of <main>, after the navbar) MUST contain exactly one <img> with src="{{HERO_IMAGE}}" and a meaningful alt attribute. Assembly swaps the placeholder for a real URL.
-- Other image placeholders are src="{{IMG_<id>}}" using an id THAT EXISTS in the plan's imagePrompts list. Each <img> MUST have a non-empty alt attribute.
-- NEVER emit <img src=""> or <img src="#">. NEVER reference an image id that is not in imagePrompts. If the copy mentions a logo, brand mark, avatar, or other visual you don't have an imagePrompt for, render it as styled text instead — for example: <span class="logo-pill">Brewdog</span> styled in CSS. This is the rule for client logos, partner marks, team photos, and anything else the brief describes but the plan didn't generate.
-- Every <button> or icon-only <a> must have an aria-label.
-- All interactive elements use <a href="..."> or <button type="button">. No JS handlers.
-- No <script> tags. No external CDN <link> or <script>. No inline event handlers.
-- Mobile-first responsive layout. Plan for breakpoints around 640px, 1024px.
+Output a SINGLE JSON object — slot values only, matching the example's shape. No markdown, no prose, no commentary.
 
-CSS rules:
-- Plain CSS (NOT Tailwind). Target the classes you set in the HTML. No CSS framework references.
-- Use CSS custom properties for the palette (--brand, --bg, --fg, --muted) mapped from the <design_tokens> block above. The palette tokens are normative — do not introduce hex literals not present there.
-- Mobile-first: base styles for narrow viewports, @media (min-width: 640px) and (min-width: 1024px) for larger.
-- Use modern features: flexbox, grid, clamp() for fluid type, gap for spacing.
-- Match the plan's style direction (palette, typography, density, mood).
-- Provide hover/focus states on links and buttons for accessibility.
-- Reasonable defaults: html { box-sizing: border-box; } *,*:before,*:after { box-sizing: inherit; } body { margin: 0; }.
-- The .navbar is position: sticky; top: 0; z-index: 50 with a translucent background and backdrop-filter: blur(8px) so content scrolls underneath it. Comfortable height around 56–64px with horizontal padding matching the rest of the page.
+Rules:
+- Copy MUST be specific to the brief — never generic boilerplate.
+- Headlines: 4-12 words. Concrete noun + concrete verb. Name what the product DOES.
+- Subheadlines: 1-2 sentences with the specificity the headline omits.
+- CTAs: imperative verb, ≤4 words ("Start free", "See pricing"). Never "Learn more".
+- Eyebrows are nouns, not slogans.
+- Pricing items use meta.price verbatim from the brief when given.
+- Logos / quotes: use names that look real for the audience. NEVER use lorem ipsum.
+- If the example has an image URL (mockupSrc, imageSrc, items[].image.src), leave it as the example value — the assemble step will overwrite it with the FLUX-generated URL.
+- Apply the master <banned_patterns> list strictly: no "world-class", "cutting-edge", "revolutionize", "AI-powered" (unless about AI), "next-gen", "transform your business", "leverage", "unlock", "supercharge", or any of the banned headline / layout / icon / code patterns.
+- Output ONLY a JSON object. No backticks, no comments.
 
-The HTML and CSS together must render a complete, attractive page when injected into a basic HTML document with no other styles.`;
-
-const REFINE_TASK = `TASK: Receive HTML+CSS that has a specific quality-gate failure. Fix ONLY the listed issue and return the corrected payload.
-
-Output a SINGLE JSON object — no markdown, no commentary:
-{ "html": "<main>...</main>", "css": "..." }
-
-Strict rules:
-- DO NOT change the structure, copy, or styling. Only fix the specific issue listed.
-- DO NOT add or remove sections.
-- DO NOT introduce new image placeholders or change existing {{HERO_IMAGE}} / {{IMG_<id>}} tokens.
-- DO NOT add <script> tags or external <link> resources.
-- Preserve all existing class names, ids, and aria attributes.
-- The output html must start with <main> and end with </main>.
-
-Common fixes you handle:
-- Missing alt attribute on <img> → add a meaningful alt derived from surrounding context.
-- Unclosed or unbalanced tag → close it.
-- Stray markdown fences (\`\`\`html ... \`\`\`) leaking into output → strip them.
-- Trailing commentary after </main> → remove it.
-- Missing closing </main> → add it.`;
+Failure modes (auto-rejected, will trigger retry):
+- Extra fields not in the example shape.
+- Missing required fields from the example.
+- Banned phrases in any string.
+- Markdown fences (\`\`\`json or \`\`\`).`;
 
 const TASK_SPECIFIC_PROMPTS: Record<SystemMessageStep, string> = {
   classify: CLASSIFY_TASK,
   plan: PLAN_TASK,
-  copy: COPY_TASK,
-  html: HTML_TASK,
-  refine: REFINE_TASK,
+  fill: FILL_TASK,
 };
-
-export const COPY_REGEN_TASK_PROMPT = COPY_REGEN_TASK;
 
 export function taskAddendumFor(step: SystemMessageStep): string {
   return TASK_SPECIFIC_PROMPTS[step];
@@ -454,9 +332,13 @@ export async function buildSystemMessageForStep(
   ctx: SystemMessageContext,
 ): Promise<SystemMessageBuildResult> {
   const baseTask = TASK_SPECIFIC_PROMPTS[step];
-  const taskSpecificAdditions = ctx.extraTaskAdditions
+  const baseAndExtras = ctx.extraTaskAdditions
     ? `${baseTask}\n\n${ctx.extraTaskAdditions}`
     : baseTask;
+  const taskSpecificAdditions =
+    step === "plan"
+      ? `${baseAndExtras}\n\n${buildAvailableBlocksSection()}`
+      : baseAndExtras;
 
   let fewShots = ctx.fewShotExamples;
   if (fewShots === undefined && stepNeedsFewShots(step)) {
@@ -476,4 +358,21 @@ export async function buildSystemMessageForStep(
     content,
     fewShotVariants: examples.map((ex) => `${ex.direction}/${ex.variant}`),
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Catalog injection for the plan step. Reads the live registry so the
+// prompt's allowed blockIds always match what the assemble step can render.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function buildAvailableBlocksSection(): string {
+  const lines: string[] = ["<available_blocks>"];
+  for (const id of BLOCK_IDS) {
+    const { meta } = BLOCK_REGISTRY[id];
+    lines.push(
+      `- ${id} — ${meta.description} (aesthetics: ${meta.aesthetics.join(", ")})`,
+    );
+  }
+  lines.push("</available_blocks>");
+  return lines.join("\n");
 }

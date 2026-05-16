@@ -7,7 +7,7 @@ import type { CostBreakdown, PipelineStep } from "@/lib/orchestrator/types";
 // `LandingPage.cost` schema. When `maxBudget` is set, calls to `guard()`
 // throw `BudgetExceededError` if adding the projected next-step cost would
 // blow the cap. Pipeline code is expected to call `guard()` before kicking
-// off expensive parallel batches (copy + HTML + images) so we fail fast.
+// off expensive parallel batches (fill + images) so we fail fast.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export class BudgetExceededError extends Error {
@@ -28,11 +28,10 @@ type CategoryKey = keyof Omit<CostBreakdown, "total">;
 const STEP_TO_CATEGORY: Record<PipelineStep, CategoryKey> = {
   classify: "classify",
   plan: "plan",
-  copy: "copy",
-  html: "html",
+  fill: "fill",
   image_hero: "images",
   image_decorative: "images",
-  refine: "refine",
+  assemble: "assemble",
 };
 
 export interface Budget {
@@ -47,10 +46,9 @@ export function createBudget(opts: { cap?: number } = {}): Budget {
   const categories: Record<CategoryKey, number> = {
     classify: 0,
     plan: 0,
-    copy: 0,
-    html: 0,
+    fill: 0,
     images: 0,
-    refine: 0,
+    assemble: 0,
   };
   let total = 0;
   const cap = opts.cap;
@@ -76,10 +74,9 @@ export function createBudget(opts: { cap?: number } = {}): Budget {
         total,
         classify: categories.classify,
         plan: categories.plan,
-        copy: categories.copy,
-        html: categories.html,
+        fill: categories.fill,
         images: categories.images,
-        refine: categories.refine,
+        assemble: categories.assemble,
       };
     },
   };

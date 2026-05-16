@@ -8,7 +8,7 @@ import type {
 } from "./types";
 import type { Budget } from "@/lib/budget";
 import type { Recorder } from "@/lib/witness/recorder";
-import { pickTextModel, ROUTING_TABLE } from "./routing";
+import { pickTextModel, ROUTING_TABLE, type RoutedStep } from "./routing";
 import type { Palette } from "./design-tokens";
 import { PALETTES } from "./design-tokens";
 
@@ -46,7 +46,7 @@ export interface StepContext {
 export const DEFAULT_PALETTE: Palette = PALETTES["mono-dark"];
 
 export interface TextCallPlan<T> {
-  step: PipelineStep;
+  step: RoutedStep;
   buildMessages: () => ChatMessage[];
   /** Validate + transform the raw `content` string into a typed result. Throw to trigger fallback. */
   validate: (content: string) => T;
@@ -235,21 +235,16 @@ export function emitStepResult<P extends StepResultPayload>(
 }
 
 // Convert validated step output into a step_result event when the step has a
-// streamable payload type. Steps that don't appear in StepResultPayload (like
-// refine — its output is the same shape as html and bundled into the html
-// branch by the caller) silently no-op.
+// streamable payload type. classify + plan emit here automatically; the fill
+// step emits its own per-block step_result via emitStepResult because it
+// produces N parallel results rather than a single validate() return.
 function maybeEmitStepResult(
   ctx: StepContext,
   step: PipelineStep,
   data: unknown,
 ): void {
   if (!ctx.onStepResult) return;
-  if (
-    step === "classify" ||
-    step === "plan" ||
-    step === "copy" ||
-    step === "html"
-  ) {
+  if (step === "classify" || step === "plan") {
     ctx.onStepResult({ type: "step_result", step, data });
   }
 }
