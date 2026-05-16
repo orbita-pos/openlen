@@ -13,6 +13,7 @@ import { StringField } from "./string-field";
 import { NumberField } from "./number-field";
 import { BooleanField } from "./boolean-field";
 import { EnumField } from "./enum-field";
+import { ImageField } from "./image-field";
 
 export interface SlotFieldProps {
   field: FormField;
@@ -78,6 +79,12 @@ export function SlotField({
         </div>
       ) : field.kind === "string" ? (
         <StringField
+          field={field}
+          value={typeof value === "string" ? value : ""}
+          onChange={onChange}
+        />
+      ) : field.kind === "image" ? (
+        <ImageField
           field={field}
           value={typeof value === "string" ? value : ""}
           onChange={onChange}

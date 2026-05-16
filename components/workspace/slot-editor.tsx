@@ -6,6 +6,7 @@ import { isBlockId, type BlockId } from "@/lib/blocks/_registry";
 import { Tooltip } from "@/components/ui/tooltip";
 import type { FilledBlock } from "@/lib/orchestrator/types";
 import { SlotEditorBlock } from "./slot-editor-block";
+import { SlotEditorContextProvider } from "./slot-editor-context";
 
 export interface SlotEditorProps {
   /** Block payloads from the generated page — the source of truth this editor
@@ -17,6 +18,9 @@ export interface SlotEditorProps {
   onSlotsChange: (filledBlocks: FilledBlock[]) => void;
   onClose: () => void;
   savedLabel?: string;
+  /** Scoping id for uploaded images. ImageField reads this off the editor
+   *  context to bucket uploads under `/uploads/<generationId>/…`. */
+  generationId: string;
 }
 
 export function SlotEditor({
@@ -25,6 +29,7 @@ export function SlotEditor({
   onSlotsChange,
   onClose,
   savedLabel,
+  generationId,
 }: SlotEditorProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
@@ -48,6 +53,7 @@ export function SlotEditor({
   );
 
   return (
+    <SlotEditorContextProvider generationId={generationId}>
     <aside className="w-full h-full flex flex-col bg-white dark:bg-[#0a0a0a] border-r border-zinc-200 dark:border-zinc-800 overflow-hidden">
       <header className="shrink-0 h-12 px-4 flex items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800">
         <div className="min-w-0">
@@ -94,6 +100,7 @@ export function SlotEditor({
         })}
       </div>
     </aside>
+    </SlotEditorContextProvider>
   );
 }
 

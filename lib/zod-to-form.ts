@@ -15,6 +15,7 @@ import { z } from "zod";
 
 export type FormField =
   | StringFormField
+  | ImageFormField
   | NumberFormField
   | BooleanFormField
   | EnumFormField
@@ -48,6 +49,15 @@ export interface StringFormField extends BaseFormField {
   pattern?: string;
   /** Free-form hint shown next to the input (e.g. regex meaning). */
   patternHint?: string;
+}
+
+// Special-cased string-shaped field for image URLs. The renderer swaps in a
+// dedicated upload widget instead of the bare text input. Detected from the
+// field key (imageSrc / mockupSrc / logoSrc / `src`) at schema-walk time so
+// the dispatcher stays a simple switch on `kind`.
+export interface ImageFormField extends BaseFormField {
+  kind: "image";
+  maxLength?: number;
 }
 
 export interface NumberFormField extends BaseFormField {
@@ -172,6 +182,13 @@ function buildField(
         patternHint = c.message ?? describePattern(c.regex.source);
       }
     }
+    if (IMAGE_URL_KEYS.has(key)) {
+      return {
+        ...base,
+        kind: "image",
+        maxLength,
+      };
+    }
     return {
       ...base,
       kind: "string",
@@ -257,6 +274,13 @@ function buildField(
  *  schemas; the maxLength fallback (>= 100) catches the rest. */
 const MULTILINE_KEY = /\b(body|description|sub|content|paragraph|quote|tagline|blurb|privacy|copyright|answer|note|reasoning)\b/i;
 
+/** String-typed slot keys we treat as image URLs. Matches what `humanize()`
+ *  below labels "Image URL" — every block whose schema uses these keys
+ *  expects a public image URL (uploaded asset or AI-generated FLUX/Wan
+ *  output). `src` is broad but in practice only logos[].src uses it, and the
+ *  block component already treats it as an image source. */
+const IMAGE_URL_KEYS = new Set(["imageSrc", "mockupSrc", "logoSrc", "src"]);
+
 function isMultiline(key: string, maxLength?: number): boolean {
   if (MULTILINE_KEY.test(key)) return true;
   if (typeof maxLength === "number" && maxLength >= 100) return true;
@@ -306,6 +330,7 @@ function describePattern(source: string): string {
 export function defaultValueFor(field: FormField): unknown {
   switch (field.kind) {
     case "string":
+    case "image":
       return "";
     case "number":
       return field.min ?? 0;
