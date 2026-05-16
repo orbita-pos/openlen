@@ -1,6 +1,6 @@
 import { generateImage } from "@/lib/together/client";
 import type { GeneratedImage, ImagePrompt } from "./types";
-import { pickImageModel } from "./routing";
+import { fallbackCount, pickImageModel } from "./routing";
 import { emit, type StepContext } from "./_shared";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -15,6 +15,10 @@ import { emit, type StepContext } from "./_shared";
 // page generation.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Hard cap on supporting images so a runaway plan can't blow the image
+// budget. 1 hero + 3 decoratives = $0.12 max at $0.03/image.
+const MAX_DECORATIVE_IMAGES = 3;
+
 export async function generateImages(
   ctx: StepContext,
   prompts: ImagePrompt[],
@@ -22,7 +26,9 @@ export async function generateImages(
   if (prompts.length === 0) return [];
 
   const hero = prompts.find((p) => p.purpose === "hero");
-  const rest = prompts.filter((p) => p.purpose !== "hero");
+  const rest = prompts
+    .filter((p) => p.purpose !== "hero")
+    .slice(0, MAX_DECORATIVE_IMAGES);
 
   const tasks: Promise<GeneratedImage | null>[] = [];
   if (hero) tasks.push(runOne(ctx, hero, "image_hero"));
@@ -48,11 +54,12 @@ async function runOne(
     details: `Rendering ${prompt.purpose} image: ${prompt.id}`,
   });
 
-  // One-retry policy: primary then a single fallback in the chain. Beyond that
-  // we degrade gracefully (return null, omit from final page).
+  // Primary first, then walk every defined fallback. If no fallbacks exist
+  // for the step, primary is the only attempt. Beyond that we degrade
+  // gracefully (return null, omit from final page).
   const attempts: Array<{ fallbackIndex?: number }> = [
     {},
-    { fallbackIndex: 0 },
+    ...Array.from({ length: fallbackCount(step) }, (_, idx) => ({ fallbackIndex: idx })),
   ];
 
   let lastError: unknown = null;

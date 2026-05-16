@@ -35,12 +35,16 @@ export const ROUTING_TABLE: Record<PipelineStep, StepRouting> = {
     },
     fallbacks: [
       {
-        model: "Qwen/Qwen3.5-9B-FP8",
-        reason: "Fallback if lfm2 returns invalid JSON; still cheap, slightly larger.",
+        model: "moonshotai/Kimi-K2.6",
+        reason: "Fallback if lfm2 returns invalid JSON; cached input keeps cost low.",
       },
     ],
   },
   plan: {
+    // Plan needs structured output across many fields. LFM2 fastpath was
+    // unreliable in practice (failed validation 5/5 times during wire-up) so
+    // we removed it; Kimi K2.6 is the default. Re-enable fastPath once we have
+    // a tighter LFM2 plan prompt that validates consistently.
     primary: {
       model: "moonshotai/Kimi-K2.6",
       reason: "Mid-tier reasoning workhorse — best price/quality for section planning.",
@@ -51,11 +55,6 @@ export const ROUTING_TABLE: Record<PipelineStep, StepRouting> = {
         reason: "Heavier reasoning when Kimi's plan misses sections or is shallow.",
       },
     ],
-    fastPath: {
-      model: "lfm2-24b-a2b",
-      reason:
-        "Adaptive fast path: simple brief (≤50 words, clear intent) → skip Kimi, use cheap classifier to emit a default-shape plan.",
-    },
   },
   copy: {
     primary: {
@@ -71,45 +70,46 @@ export const ROUTING_TABLE: Record<PipelineStep, StepRouting> = {
   },
   html: {
     primary: {
-      model: "Qwen/Qwen3-Coder-Next-FP8",
-      reason: "Strong code synthesis at low cost — the workhorse for HTML/CSS.",
+      model: "qwen3-coder-480b",
+      reason: "Strong code synthesis (480B MoE) — workhorse for HTML/CSS at $2/$2 per M tokens.",
     },
     fallbacks: [
       {
         model: "deepseek-ai/DeepSeek-V4-Pro",
         reason:
-          "Hard-fix fallback: 80.6% SWE-bench, 93.5% LiveCodeBench. Trigger when Qwen3-Coder output fails quality gates (malformed tags, unclosed selectors).",
+          "Hard-fix fallback: 80.6% SWE-bench, 93.5% LiveCodeBench. Trigger when Qwen3-Coder output fails quality gates.",
       },
     ],
   },
   refine: {
     primary: {
-      model: "Qwen/Qwen3.5-9B-FP8",
-      reason: "Tiny patch model — perfect for small edits, copy tweaks, CSS fixes.",
+      model: "qwen3-235b-tput",
+      reason: "Cheap throughput-tier — surgical patches don't need a 480B model.",
     },
     fallbacks: [
       {
-        model: "Qwen/Qwen3-Coder-Next-FP8",
-        reason: "Step up when the refine is structural (not just a string swap).",
+        model: "qwen3-coder-480b",
+        reason: "Promote to the coder model when the patch is structural, not a string swap.",
       },
     ],
   },
   image_hero: {
     primary: {
       model: "FLUX.2-pro",
-      reason: "HD hero imagery with legible text — 32K context handles brand-rich prompts.",
+      reason: "HD hero imagery with legible text — best of the FLUX.2 family for brand-rich prompts.",
     },
     fallbacks: [
       {
-        model: "Wan-2.6-Image",
-        reason: "Drop to decorative model if FLUX is unavailable rather than fail the whole page.",
+        model: "FLUX.2-flex",
+        reason: "Drop to FLUX.2-flex (same price) if pro is busy rather than fail the whole page.",
       },
     ],
   },
   image_decorative: {
     primary: {
-      model: "Wan-2.6-Image",
-      reason: "Cheap decorative imagery — backgrounds, accents, supporting visuals.",
+      model: "FLUX.2-flex",
+      reason:
+        "FLUX.2-flex shares the FLUX.2 family aesthetic with the hero and accepts the same 1024×1024 sizing — Wan2.6 was dropped because its 1265-1440 area constraint complicated dimension handling.",
     },
     fallbacks: [],
   },
@@ -207,4 +207,10 @@ export function pickImageModel(ctx: PickContext): RoutingDecision & {
     throw new Error(`pickImageModel called for text step ${decision.step}`);
   }
   return decision as RoutingDecision & { model: ImageModelId };
+}
+
+/** How many fallback models exist for a step. Used by retry loops to know
+ *  when to stop attempting fallbacks. */
+export function fallbackCount(step: PipelineStep): number {
+  return ROUTING_TABLE[step].fallbacks.length;
 }
