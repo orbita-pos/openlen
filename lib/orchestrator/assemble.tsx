@@ -53,63 +53,12 @@ export async function assemble(input: AssembleInput): Promise<LandingPage> {
     details: "Composing final HTML deterministically",
   });
 
-  const tokens = paletteToTokens(input.ctx.palette.name);
-  const ordered = [...input.filledBlocks].sort((a, b) => a.index - b.index);
-  const hero = input.images.find((i) => i.purpose === "hero");
-  const decoratives = input.images.filter((i) => i.purpose !== "hero");
-
-  // Render each block. The first hero/* block in the sequence gets the
-  // generated hero image URL injected into its image slot (if it has one).
-  let heroAssigned = false;
-  let decorativeCursor = 0;
-  const mainSections: string[] = [];
-  const footerSections: string[] = [];
-
-  for (const filled of ordered) {
-    const block = getBlock(filled.blockId);
-    let slots = filled.slots;
-    if (filled.blockId.startsWith("hero/") && !heroAssigned && hero) {
-      slots = injectImageIntoHeroSlots(slots, hero.url, hero.prompt);
-      heroAssigned = true;
-    } else if (filled.blockId.startsWith("features/") && decoratives.length > 0) {
-      const next = decoratives[decorativeCursor];
-      if (next) {
-        slots = injectImageIntoFeatureSlots(slots, next.url, next.prompt);
-        decorativeCursor += 1;
-      }
-    }
-
-    // The block component is typed as `BlockComponent<S>` where S is its own
-    // Zod schema. We've already validated slots against that schema at fill
-    // time; the cast here is safe but TypeScript can't prove it across the
-    // dynamic getBlock(id) lookup.
-    const Component = block.Component as React.FC<{
-      slots: unknown;
-      tokens: typeof tokens;
-    }>;
-
-    const raw = renderToStaticMarkup(
-      React.createElement(Component, { slots, tokens }),
-    );
-    const tagged = injectSectionId(raw, filled.index, filled.blockId);
-    // Footer blocks render their own <footer> tag and must sit outside
-    // <main> for the WCAG landmark structure (one main, footer at root).
-    if (filled.blockId.startsWith("footer/")) {
-      footerSections.push(tagged);
-    } else {
-      mainSections.push(tagged);
-    }
-  }
-
-  const sectionsHtml = `<main>\n${mainSections.join("\n")}\n</main>\n${footerSections.join("\n")}`;
-  const title = deriveTitle(input.intent);
-  const description = deriveDescription(input.intent, input.plan);
-
-  const html = wrapDocument({
-    title,
-    description,
-    bodyHtml: sectionsHtml,
-    tokens,
+  const { html, heroAssigned, decorativeCursor, ordered } = renderDeterministic({
+    paletteName: input.ctx.palette.name,
+    filledBlocks: input.filledBlocks,
+    images: input.images,
+    intent: input.intent,
+    plan: input.plan,
   });
 
   // Synthetic witness record so the recording shows assemble ran. Cost zero,
@@ -146,8 +95,8 @@ export async function assemble(input: AssembleInput): Promise<LandingPage> {
     css: "",
     images: input.images,
     meta: {
-      title,
-      description,
+      title: deriveTitle(input.intent),
+      description: deriveDescription(input.intent, input.plan),
       generationId: input.generationId,
       generatedAt: new Date().toISOString(),
       brief: input.brief,
@@ -165,6 +114,85 @@ export async function assemble(input: AssembleInput): Promise<LandingPage> {
     plan: input.plan,
     filledBlocks: ordered,
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Pure render function — no recorder, no progress events, no LandingPage
+// envelope. The assemble step (above) wraps this with the witness machinery;
+// /api/reassemble calls it directly so live edits don't write a JSONL line
+// for every keystroke.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface RenderDeterministicInput {
+  paletteName: Plan["palette"];
+  filledBlocks: FilledBlock[];
+  images: GeneratedImage[];
+  intent: Intent;
+  plan: Plan;
+}
+
+export interface RenderDeterministicResult {
+  html: string;
+  heroAssigned: boolean;
+  decorativeCursor: number;
+  ordered: FilledBlock[];
+}
+
+export function renderDeterministic(
+  input: RenderDeterministicInput,
+): RenderDeterministicResult {
+  const tokens = paletteToTokens(input.paletteName);
+  const ordered = [...input.filledBlocks].sort((a, b) => a.index - b.index);
+  const hero = input.images.find((i) => i.purpose === "hero");
+  const decoratives = input.images.filter((i) => i.purpose !== "hero");
+
+  let heroAssigned = false;
+  let decorativeCursor = 0;
+  const mainSections: string[] = [];
+  const footerSections: string[] = [];
+
+  for (const filled of ordered) {
+    const block = getBlock(filled.blockId);
+    let slots = filled.slots;
+    if (filled.blockId.startsWith("hero/") && !heroAssigned && hero) {
+      slots = injectImageIntoHeroSlots(slots, hero.url, hero.prompt);
+      heroAssigned = true;
+    } else if (filled.blockId.startsWith("features/") && decoratives.length > 0) {
+      const next = decoratives[decorativeCursor];
+      if (next) {
+        slots = injectImageIntoFeatureSlots(slots, next.url, next.prompt);
+        decorativeCursor += 1;
+      }
+    }
+
+    // Slots validated at fill time; the cast crosses the dynamic registry
+    // lookup which TS can't narrow.
+    const Component = block.Component as React.FC<{
+      slots: unknown;
+      tokens: typeof tokens;
+    }>;
+    const raw = renderToStaticMarkup(
+      React.createElement(Component, { slots, tokens }),
+    );
+    const tagged = injectSectionId(raw, filled.index, filled.blockId);
+    // Footer blocks render their own <footer> tag and must sit outside
+    // <main> for the WCAG landmark structure.
+    if (filled.blockId.startsWith("footer/")) {
+      footerSections.push(tagged);
+    } else {
+      mainSections.push(tagged);
+    }
+  }
+
+  const sectionsHtml = `<main>\n${mainSections.join("\n")}\n</main>\n${footerSections.join("\n")}`;
+  const html = wrapDocument({
+    title: deriveTitle(input.intent),
+    description: deriveDescription(input.intent, input.plan),
+    bodyHtml: sectionsHtml,
+    tokens,
+  });
+
+  return { html, heroAssigned, decorativeCursor, ordered };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
