@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  darkMode: ["class"],
+  darkMode: "class",
   content: [
     "./app/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
@@ -16,7 +16,26 @@ const config: Config = {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ["var(--font-inter)", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["var(--font-jetbrains-mono)", "JetBrains Mono", "ui-monospace", "monospace"],
+      },
+      letterSpacing: {
+        tightest: "-0.045em",
+      },
       colors: {
+        coral: {
+          50: "#FFF4F0",
+          100: "#FFE4D9",
+          200: "#FFC6B0",
+          300: "#FFA482",
+          400: "#FF7E55",
+          500: "#FF5A36",
+          600: "#F03E1A",
+          700: "#C72E10",
+          800: "#9E2510",
+          900: "#7D1F10",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -51,6 +70,24 @@ const config: Config = {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      keyframes: {
+        skeleton: {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
+        },
+        marquee: {
+          from: { transform: "translateX(0)" },
+          to: { transform: "translateX(-50%)" },
+        },
+        blink: {
+          to: { opacity: "0" },
+        },
+      },
+      animation: {
+        skeleton: "skeleton 1.8s ease-in-out infinite",
+        marquee: "marquee 40s linear infinite",
+        blink: "blink 1.2s steps(2, start) infinite",
       },
     },
   },

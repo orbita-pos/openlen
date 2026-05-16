@@ -46,11 +46,171 @@
 }
 
 @layer base {
-  * {
-    @apply border-border;
+  html {
+    font-feature-settings: "cv11", "ss01", "ss03";
   }
   body {
-    @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  ::selection {
+    background: #ff5a36;
+    color: #fff;
+  }
+  details > summary {
+    list-style: none;
+    cursor: pointer;
+  }
+  details > summary::-webkit-details-marker {
+    display: none;
+  }
+}
+
+@layer components {
+  .grid-bg {
+    background-image:
+      linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+  .dark .grid-bg {
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  }
+
+  .hero-glow {
+    background:
+      radial-gradient(60% 50% at 50% 0%, rgba(255, 90, 54, 0.18) 0%, rgba(255, 90, 54, 0) 60%),
+      radial-gradient(40% 40% at 80% 20%, rgba(255, 170, 90, 0.12) 0%, rgba(255, 170, 90, 0) 60%);
+  }
+  .dark .hero-glow {
+    background:
+      radial-gradient(60% 50% at 50% 0%, rgba(255, 90, 54, 0.28) 0%, rgba(255, 90, 54, 0) 60%),
+      radial-gradient(40% 40% at 80% 20%, rgba(255, 170, 90, 0.14) 0%, rgba(255, 170, 90, 0) 60%);
+  }
+
+  .btn-coral-shadow {
+    box-shadow:
+      0 1px 0 0 rgba(255, 255, 255, 0.25) inset,
+      0 -1px 0 0 rgba(0, 0, 0, 0.18) inset,
+      0 1px 2px 0 rgba(255, 90, 54, 0.4),
+      0 8px 24px -8px rgba(255, 90, 54, 0.55);
+  }
+
+  .ring-coral {
+    box-shadow:
+      0 0 0 1px rgba(255, 90, 54, 0.35),
+      0 20px 50px -20px rgba(255, 90, 54, 0.35);
+  }
+  .dark .ring-coral {
+    box-shadow:
+      0 0 0 1px rgba(255, 90, 54, 0.45),
+      0 20px 50px -20px rgba(255, 90, 54, 0.45);
+  }
+
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      110deg,
+      transparent 0%,
+      transparent 35%,
+      rgba(255, 255, 255, 0.35) 50%,
+      transparent 65%,
+      transparent 100%
+    );
+    transform: translateX(-100%);
+    transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+    pointer-events: none;
+  }
+  .shimmer:hover::after {
+    transform: translateX(100%);
+  }
+
+  .dotted {
+    background-image: radial-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+  .dark .dotted {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  }
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.04) 25%,
+      rgba(0, 0, 0, 0.1) 50%,
+      rgba(0, 0, 0, 0.04) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeleton 1.8s ease-in-out infinite;
+  }
+  .dark .skeleton {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.04) 25%,
+      rgba(255, 255, 255, 0.09) 50%,
+      rgba(255, 255, 255, 0.04) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeleton 1.8s ease-in-out infinite;
+  }
+
+  .nice-scroll::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  .nice-scroll::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.12);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  .nice-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.2);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+  }
+  .dark .nice-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+  }
+
+  .cb {
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  .mini {
+    font-size: 4px;
+    line-height: 1.3;
+  }
+  .mini-md {
+    font-size: 6px;
+    line-height: 1.3;
+  }
+
+  .scroll-marquee {
+    animation: marquee 40s linear infinite;
+  }
+
+  .blink {
+    animation: blink 1.2s steps(2, start) infinite;
+  }
+
+  .style-modern {
+    background: linear-gradient(135deg, #ffffff 0%, #f4f4f5 100%);
+  }
+  .style-bold {
+    background: linear-gradient(135deg, #0a0a0a 0%, #18181b 60%, #ff5a36 200%);
+  }
+  .style-warm {
+    background: linear-gradient(135deg, #fff6ee 0%, #fcd9c3 60%, #f9a06a 130%);
   }
 }
