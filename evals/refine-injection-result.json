@@ -1,6 +1,6 @@
 {
-  "qualityGrade": "needs_review",
-  "refineAttempts": 2,
+  "qualityGrade": "warning",
+  "refineAttempts": 1,
   "criticalViolations": [
     {
       "gate": "conversion",

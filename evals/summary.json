@@ -3,20 +3,19 @@
     "slug": "01-saas-launch",
     "label": "SaaS launch",
     "ok": true,
-    "totalCostUsd": 0.0811713,
-    "wallClockMs": 50075,
+    "totalCostUsd": 0.07740990000000002,
+    "wallClockMs": 6376,
     "imagesGenerated": 1,
     "fastPath": false,
     "intent": {
-      "industry": "design tools",
-      "audience": "freelance designers",
+      "industry": "productivity software",
+      "audience": "designers",
       "tone": "professional",
-      "complexity": "standard",
+      "complexity": "simple",
       "goals": [
-        "communicate core value",
-        "showcase AI prioritization",
-        "highlight integrations",
-        "drive signups"
+        "drive signups",
+        "communicate value clearly",
+        "showcase product"
       ],
       "productName": "FlowDeck"
     },
@@ -29,21 +28,21 @@
     "slug": "02-portfolio",
     "label": "Portfolio personal",
     "ok": true,
-    "totalCostUsd": 0.13763409000000004,
-    "wallClockMs": 41578,
-    "imagesGenerated": 3,
+    "totalCostUsd": 0.07475140000000001,
+    "wallClockMs": 2331,
+    "imagesGenerated": 1,
     "fastPath": true,
     "intent": {
-      "industry": "fintech",
-      "audience": "freelance UI/UX designers",
+      "industry": "productivity software",
+      "audience": "small teams",
       "tone": "professional",
-      "complexity": "standard",
+      "complexity": "simple",
       "goals": [
-        "showcase 6 projects",
-        "highlight fintech expertise",
-        "provide contact method"
+        "drive signups",
+        "communicate value clearly",
+        "showcase product"
       ],
-      "productName": "Sofia Portfolio"
+      "productName": "Acme"
     },
     "qualityGrade": "passed",
     "gatesPassed": 6,
@@ -54,20 +53,21 @@
     "slug": "03-event-conference",
     "label": "Event / conference",
     "ok": true,
-    "totalCostUsd": 0.052227240000000015,
-    "wallClockMs": 44934,
-    "imagesGenerated": 0,
+    "totalCostUsd": 0.07600752,
+    "wallClockMs": 2275,
+    "imagesGenerated": 1,
     "fastPath": true,
     "intent": {
-      "industry": "developer tools",
+      "industry": "saas",
       "audience": "indie hackers",
       "tone": "professional",
       "complexity": "simple",
       "goals": [
-        "communicate event purpose",
-        "drive ticket sales"
+        "drive signups",
+        "communicate value clearly",
+        "showcase product"
       ],
-      "productName": "Solo Founder Summit 2026"
+      "productName": "Acme"
     },
     "qualityGrade": "passed",
     "gatesPassed": 6,
@@ -78,21 +78,21 @@
     "slug": "04-ecommerce",
     "label": "E-commerce",
     "ok": true,
-    "totalCostUsd": 0.22008846,
-    "wallClockMs": 44348,
-    "imagesGenerated": 4,
+    "totalCostUsd": 0.07552629,
+    "wallClockMs": 2238,
+    "imagesGenerated": 1,
     "fastPath": true,
     "intent": {
-      "industry": "coffee",
-      "audience": "single-origin enthusiasts",
+      "industry": "saas",
+      "audience": "small teams",
       "tone": "professional",
       "complexity": "simple",
       "goals": [
-        "communicate origin story",
-        "promote subscription tiers",
-        "highlight social impact"
+        "drive signups",
+        "communicate value clearly",
+        "showcase product"
       ],
-      "productName": "Volcánica"
+      "productName": "Acme"
     },
     "qualityGrade": "passed",
     "gatesPassed": 6,
@@ -103,21 +103,21 @@
     "slug": "05-agency",
     "label": "Agency",
     "ok": true,
-    "totalCostUsd": 0.13820882,
-    "wallClockMs": 29049,
-    "imagesGenerated": 4,
+    "totalCostUsd": 0.07625408,
+    "wallClockMs": 2382,
+    "imagesGenerated": 1,
     "fastPath": true,
     "intent": {
-      "industry": "brand identity",
-      "audience": "Berlin startups and outdoor brands",
+      "industry": "saas",
+      "audience": "small teams",
       "tone": "professional",
-      "complexity": "standard",
+      "complexity": "simple",
       "goals": [
-        "showcase expertise",
-        "demonstrate results",
-        "prompt action"
+        "drive signups",
+        "communicate value clearly",
+        "showcase product"
       ],
-      "productName": "Pixelhaus"
+      "productName": "Acme"
     },
     "qualityGrade": "passed",
     "gatesPassed": 6,
