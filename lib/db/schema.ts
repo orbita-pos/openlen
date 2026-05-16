@@ -32,6 +32,9 @@ export const users = pgTable("users", {
   emailVerified: timestamp("emailVerified", { mode: "date" }),
   image: text("image"),
   passwordHash: text("passwordHash"),
+  // Subscription tier. Stripe webhook (Phase 3) is what flips this to "pro";
+  // for now everyone is "free". Free tier = 3 generations/month + 5/hour.
+  plan: text("plan").notNull().default("free"),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
 });
 
@@ -100,6 +103,23 @@ export const projects = pgTable(
     updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
   },
   (table) => [index("projects_userId_idx").on(table.userId, table.updatedAt)],
+);
+
+// Generic rate-limit event log. Each row is "thing X happened at time Y for
+// key K". Limit checks count rows in a sliding window. Keys are namespaced
+// so the same table covers per-user quotas (`user:<id>:generate`), per-IP
+// auth abuse limits (`ip:<addr>:register`), etc. Periodic cleanup deletes
+// rows older than 31 days.
+export const rateLimitEvents = pgTable(
+  "rateLimitEvents",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    key: text("key").notNull(),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [index("rateLimitEvents_key_createdAt_idx").on(table.key, table.createdAt)],
 );
 
 // Password reset tokens — separate table so a leaked token only impacts

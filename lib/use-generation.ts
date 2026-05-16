@@ -84,6 +84,31 @@ export function useGeneration(): UseGenerationResult {
     }
 
     if (!response.ok || !response.body) {
+      if (response.status === 429) {
+        const data = (await response.json().catch(() => ({}))) as {
+          scope?: string;
+          plan?: string;
+          max?: number;
+          resetAt?: string;
+        };
+        const scope = data.scope ?? "quota";
+        const resetMsg = data.resetAt
+          ? ` Resets ${formatRelativeReset(data.resetAt)}.`
+          : "";
+        const planMsg = data.plan === "free" ? " Upgrade to Pro for more." : "";
+        setState({
+          kind: "error",
+          message: `You've hit your ${scope} limit${data.max ? ` of ${data.max} generations` : ""}.${resetMsg}${planMsg}`,
+        });
+        return;
+      }
+      if (response.status === 401) {
+        setState({
+          kind: "error",
+          message: "You need to be signed in to generate. Reload the page.",
+        });
+        return;
+      }
       const text = await response.text().catch(() => response.statusText);
       setState({ kind: "error", message: text || `Request failed (${response.status})` });
       return;
@@ -209,6 +234,17 @@ export function useGeneration(): UseGenerationResult {
   }, []);
 
   return { state, generate, regenerateSection, loadProject, reset };
+}
+
+function formatRelativeReset(iso: string): string {
+  const ms = new Date(iso).getTime() - Date.now();
+  if (ms <= 0) return "in a moment";
+  const m = Math.round(ms / 60000);
+  if (m < 60) return `in ${m} min`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `in ${h}h`;
+  const d = Math.round(h / 24);
+  return `in ${d}d`;
 }
 
 function addCostBreakdowns(a: CostBreakdown, b: CostBreakdown): CostBreakdown {

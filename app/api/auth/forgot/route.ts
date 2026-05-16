@@ -3,6 +3,12 @@ import crypto from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { sendPasswordResetEmail } from "@/lib/email";
+import {
+  IP_LIMITS,
+  checkAndConsume,
+  getClientIp,
+  ipLimitKey,
+} from "@/lib/limits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,6 +39,22 @@ export async function POST(req: Request): Promise<Response> {
   const parsed = ForgotSchema.safeParse(body);
   if (!parsed.success) {
     return json({ error: "Invalid email" }, 400);
+  }
+
+  const ip = getClientIp(req);
+  const decision = await checkAndConsume(
+    ipLimitKey(ip, "forgot"),
+    IP_LIMITS.forgot,
+  );
+  if (!decision.ok && decision.blocked) {
+    return json(
+      {
+        error: "rate_limited",
+        scope: decision.blocked.label,
+        resetAt: decision.resetAt?.toISOString(),
+      },
+      429,
+    );
   }
 
   const { email } = parsed.data;

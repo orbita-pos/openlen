@@ -7,6 +7,12 @@ import {
   PlanSchema,
 } from "@/lib/orchestrator/types";
 import { getProject, updateProjectPage } from "@/lib/projects";
+import {
+  PLAN_LIMITS,
+  checkAndConsume,
+  getUserPlan,
+  userLimitKey,
+} from "@/lib/limits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,27 +52,57 @@ export async function POST(req: Request): Promise<Response> {
     return json({ error: `Invalid request: ${parsed.error.message}` }, 400);
   }
 
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) {
+    return json({ error: "unauthorized" }, 401);
+  }
+
+  // Regen has its own (more generous) bucket so a flurry of small edits
+  // doesn't immediately exhaust the monthly generate quota.
+  const plan = await getUserPlan(userId);
+  const decision = await checkAndConsume(
+    userLimitKey(userId, "regen"),
+    PLAN_LIMITS[plan].regen,
+  );
+  if (!decision.ok && decision.blocked) {
+    return new Response(
+      JSON.stringify({
+        error: "quota_exceeded",
+        scope: decision.blocked.label,
+        plan,
+        max: decision.blocked.max,
+        windowMs: decision.blocked.windowMs,
+        resetAt: decision.resetAt?.toISOString(),
+      }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": String(
+            Math.max(1, Math.ceil(((decision.resetAt?.getTime() ?? Date.now() + 60000) - Date.now()) / 1000)),
+          ),
+        },
+      },
+    );
+  }
+
   try {
     const result = await regenerateSection(parsed.data);
 
-    // Persist back to the project when caller supplied a projectId and is
-    // the owner. Silently skip on ownership mismatch — the regen still
-    // returns to the client either way.
+    // Persist back to the project when caller supplied a projectId and
+    // owns it. The session was already loaded above for the quota check.
     if (parsed.data.projectId) {
-      const session = await auth();
-      const userId = session?.user?.id;
-      if (userId) {
-        const project = await getProject(parsed.data.projectId, userId);
-        if (project) {
-          const merged = {
-            ...project.data,
-            html: result.html,
-            css: result.css,
-            copy: result.copy,
-            cost: addBreakdowns(project.data.cost, result.cost),
-          };
-          await updateProjectPage(parsed.data.projectId, userId, merged);
-        }
+      const project = await getProject(parsed.data.projectId, userId);
+      if (project) {
+        const merged = {
+          ...project.data,
+          html: result.html,
+          css: result.css,
+          copy: result.copy,
+          cost: addBreakdowns(project.data.cost, result.cost),
+        };
+        await updateProjectPage(parsed.data.projectId, userId, merged);
       }
     }
 

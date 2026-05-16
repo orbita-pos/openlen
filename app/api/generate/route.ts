@@ -10,6 +10,12 @@ import type {
   StepResultEvent,
 } from "@/lib/orchestrator/types";
 import { createProject, deriveTitle } from "@/lib/projects";
+import {
+  PLAN_LIMITS,
+  checkAndConsume,
+  getUserPlan,
+  userLimitKey,
+} from "@/lib/limits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,6 +51,40 @@ export async function POST(req: Request): Promise<Response> {
 
   const session = await auth();
   const userId = session?.user?.id ?? null;
+
+  // Auth required to generate. Anonymous /api/generate would let anyone
+  // burn through Together credits without ever creating an account.
+  if (!userId) {
+    return json({ error: "unauthorized" }, 401);
+  }
+
+  // Quota check. Hits hourly + monthly windows defined in lib/limits.ts.
+  const plan = await getUserPlan(userId);
+  const decision = await checkAndConsume(
+    userLimitKey(userId, "generate"),
+    PLAN_LIMITS[plan].generate,
+  );
+  if (!decision.ok && decision.blocked) {
+    return new Response(
+      JSON.stringify({
+        error: "quota_exceeded",
+        scope: decision.blocked.label,
+        plan,
+        max: decision.blocked.max,
+        windowMs: decision.blocked.windowMs,
+        resetAt: decision.resetAt?.toISOString(),
+      }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": String(
+            Math.max(1, Math.ceil(((decision.resetAt?.getTime() ?? Date.now() + 60000) - Date.now()) / 1000)),
+          ),
+        },
+      },
+    );
+  }
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -109,8 +149,12 @@ export async function POST(req: Request): Promise<Response> {
 }
 
 function badRequest(message: string): Response {
-  return new Response(JSON.stringify({ error: message }), {
-    status: 400,
+  return json({ error: message }, 400);
+}
+
+function json(body: unknown, status: number): Response {
+  return new Response(JSON.stringify(body), {
+    status,
     headers: { "Content-Type": "application/json" },
   });
 }

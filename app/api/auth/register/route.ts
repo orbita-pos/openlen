@@ -2,6 +2,12 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import {
+  IP_LIMITS,
+  checkAndConsume,
+  getClientIp,
+  ipLimitKey,
+} from "@/lib/limits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,6 +42,22 @@ export async function POST(req: Request): Promise<Response> {
   const parsed = RegisterSchema.safeParse(body);
   if (!parsed.success) {
     return json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, 400);
+  }
+
+  const ip = getClientIp(req);
+  const decision = await checkAndConsume(
+    ipLimitKey(ip, "register"),
+    IP_LIMITS.register,
+  );
+  if (!decision.ok && decision.blocked) {
+    return json(
+      {
+        error: "rate_limited",
+        scope: decision.blocked.label,
+        resetAt: decision.resetAt?.toISOString(),
+      },
+      429,
+    );
   }
 
   const { email, password, name } = parsed.data;

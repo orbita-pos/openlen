@@ -1,11 +1,16 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowUp, PanelLeftClose, RefreshCw, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/cn";
 import type { BriefFormState } from "./types";
+
+interface UsageInfo {
+  plan: "free" | "pro";
+  generate: Array<{ label: string; max: number; used: number; remaining: number }>;
+}
 
 const SAMPLE_PROMPT =
   "A landing page for my Stripe-based SaaS that helps freelancers track invoices and get paid faster — Calendly meets QuickBooks, but with fewer features and a personality.";
@@ -54,7 +59,25 @@ export function BriefForm({
     textareaRef.current?.focus();
   }, []);
 
-  const canGenerate = state.prompt.trim().length >= 10 && !generating;
+  // Fetch usage on mount and again after each generation completes so the
+  // counter stays accurate without a full page reload.
+  const [usage, setUsage] = useState<UsageInfo | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/usage")
+      .then((r) => (r.ok ? (r.json() as Promise<UsageInfo>) : null))
+      .then((data) => {
+        if (!cancelled) setUsage(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [generating]);
+
+  const monthly = usage?.generate.find((w) => w.label === "monthly");
+  const outOfQuota = monthly?.remaining === 0;
+  const canGenerate = state.prompt.trim().length >= 10 && !generating && !outOfQuota;
 
   return (
     <aside className="relative md:h-full md:overflow-y-auto overflow-x-hidden nice-scroll bg-white dark:bg-[#0a0a0a] border-b md:border-b-0 md:border-r border-zinc-200 dark:border-zinc-800 flex flex-col">
@@ -145,19 +168,52 @@ export function BriefForm({
         <div className="shrink-0 mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-900">
           <div className="flex items-center justify-between gap-3 text-[11px] text-zinc-500 dark:text-zinc-500">
             <span>
-              ~
-              <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                $0.13
-              </span>{" "}
-              per generation · 60s avg
+              {monthly ? (
+                <>
+                  <span
+                    className={cn(
+                      "font-medium tabular-nums",
+                      outOfQuota
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-zinc-700 dark:text-zinc-300",
+                    )}
+                  >
+                    {monthly.remaining} of {monthly.max}
+                  </span>{" "}
+                  {usage?.plan === "free" ? "free " : ""}generations left this month
+                </>
+              ) : (
+                <>
+                  ~
+                  <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                    $0.13
+                  </span>{" "}
+                  per generation · 60s avg
+                </>
+              )}
             </span>
-            <a
-              href="#upgrade"
-              className="font-medium text-coral-700 dark:text-coral-400 hover:underline"
-            >
-              Upgrade
-            </a>
+            {usage?.plan === "free" && (
+              <a
+                href="#upgrade"
+                className="font-medium text-coral-700 dark:text-coral-400 hover:underline"
+              >
+                Upgrade
+              </a>
+            )}
           </div>
+          {monthly && (
+            <div className="mt-2 h-1 rounded-full bg-zinc-100 dark:bg-zinc-900 overflow-hidden">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all",
+                  outOfQuota ? "bg-red-500" : "bg-coral-500",
+                )}
+                style={{
+                  width: `${Math.min(100, Math.round(((monthly.max - monthly.remaining) / monthly.max) * 100))}%`,
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
     </aside>
