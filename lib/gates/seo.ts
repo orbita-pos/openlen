@@ -1,4 +1,5 @@
 import { load } from "cheerio";
+import { runBriefFidelityGate } from "./brief-fidelity";
 import type { GateContext, GateResult, GateViolation } from "./types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -151,6 +152,13 @@ export async function runSeoGate(ctx: GateContext): Promise<GateResult> {
       message: "Page has no <title>.",
     });
   }
+
+  // ── 8. Brief fidelity (Session 7) ─────────────────────────────────────
+  // Riding under the seo gate id so we don't expand GATE_IDS — see comment in
+  // brief-fidelity.ts for the rationale. The check is deterministic regex-on-
+  // brief vs. rendered HTML; violations all warning severity.
+  const fidelity = await runBriefFidelityGate(ctx);
+  violations.push(...fidelity.violations);
 
   return {
     gate: "seo",
