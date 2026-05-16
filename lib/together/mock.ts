@@ -1,20 +1,19 @@
 import { randomUUID } from "node:crypto";
-import type {
-  ImageCallRequest,
-  TextCallRequest,
-} from "./client";
+import { BLOCK_REGISTRY, isBlockId } from "@/lib/blocks/_registry";
+import type { BlockId } from "@/lib/blocks/_registry";
+import type { ImageCallRequest, TextCallRequest } from "./client";
 import { priceImageCall, priceTextCall } from "./models";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Mock dispatcher.
+// Mock dispatcher — slot-filling pipeline edition.
 //
-// Every pipeline step passes a `mockKey` (classify / plan / copy / html /
-// refine) plus the original brief text inside one of the messages. The mock
-// uses light brief parsing to vary the output so downstream UI work has
-// something believable to render, not Lorem Ipsum.
-//
-// Token counts are rough (chars / 4) but feed real pricing math so cost
-// tracking exercises end-to-end. Latency is small and deterministic per kind.
+// Each text step passes a `mockKey` (classify / plan / fill). Mocks produce
+// plausible, real-shape outputs:
+//   - classify: returns Intent with parsed brief signal.
+//   - plan: returns a realistic blockSequence built from the registry.
+//   - fill: returns the block's exampleSlots — guaranteed to validate against
+//     the block's own slotsSchema, so the orchestrator's assemble step always
+//     gets renderable input under MOCK_MODE=1.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const TOKEN_PER_CHAR = 0.25;
@@ -32,6 +31,7 @@ type MockTextOutput = {
 
 export async function mockText(req: TextCallRequest): Promise<MockTextOutput> {
   const brief = extractBrief(req);
+  const userMessage = extractUserMessage(req);
   const sig = lightSignal(brief);
   const key = req.mockKey ?? inferKey(req);
 
@@ -43,17 +43,8 @@ export async function mockText(req: TextCallRequest): Promise<MockTextOutput> {
     case "plan":
       content = JSON.stringify(planMock(sig));
       break;
-    case "copy":
-      content = JSON.stringify(copyMock(sig));
-      break;
-    case "html":
-      content = htmlMock(sig);
-      break;
-    case "refine":
-      content = refineMock(sig);
-      break;
-    case "image_prompts":
-      content = JSON.stringify(imagePromptsMock(sig));
+    case "fill":
+      content = JSON.stringify(fillMock(userMessage));
       break;
     default:
       content = JSON.stringify({ ok: true, note: `unhandled mockKey=${key}` });
@@ -108,23 +99,17 @@ interface BriefSignal {
 }
 
 function lightSignal(brief: string): BriefSignal {
-  // "Landing page for FlowDeck, a Kanban tool for designers"
-  // productName: first PascalCase or quoted token after "for"
   const productMatch =
     brief.match(/\bfor\s+([A-Z][A-Za-z0-9]+(?:\s+[A-Z][A-Za-z0-9]+)?)/) ||
     brief.match(/"([^"]+)"/) ||
-    brief.match(/\b([A-Z][a-z]+[A-Z][a-zA-Z]+)\b/); // CamelCase like FlowDeck
+    brief.match(/\b([A-Z][a-z]+[A-Z][a-zA-Z]+)\b/);
   const productName = (productMatch?.[1] || "Acme").trim();
 
-  // audience: prefer an explicit known audience word (designers, developers,
-  // founders, …). Fall back to "for X" pattern — case-sensitive lowercase so
-  // we don't accidentally capture a PascalCase product name like FlowDeck.
   const audienceMatch =
     brief.match(/\b(designers|developers|founders|marketers|teams|agencies|students|creators)\b/i) ||
     brief.match(/for\s+([a-z][a-z\s]+?)(?:[,.\n]|$)/);
   const audience = audienceMatch ? audienceMatch[1].trim().toLowerCase() : "small teams";
 
-  // industry heuristic
   const lower = brief.toLowerCase();
   const industry =
     /kanban|project|task|todo|productivity/.test(lower)
@@ -141,7 +126,6 @@ function lightSignal(brief: string): BriefSignal {
                 ? "edtech"
                 : "saas";
 
-  // tone heuristic
   const tone: BriefSignal["tone"] =
     /bold|loud|disrupt|aggressive/.test(lower)
       ? "bold"
@@ -173,311 +157,135 @@ function classifyMock(sig: BriefSignal) {
   };
 }
 
-function planMock(sig: BriefSignal) {
-  const sectionSet =
-    sig.complexity === "simple"
-      ? (["hero", "features", "cta", "footer"] as const)
-      : sig.complexity === "rich"
-        ? ([
-            "hero",
-            "features",
-            "social_proof",
-            "testimonials",
-            "pricing",
-            "faq",
-            "cta",
-            "footer",
-          ] as const)
-        : (["hero", "features", "social_proof", "pricing", "cta", "footer"] as const);
+// ─────────────────────────────────────────────────────────────────────────────
+// Plan mock — pick a realistic block sequence keyed by complexity, then by
+// industry signal. Every chosen block has the "technical-minimal" aesthetic
+// in its `meta.aesthetics`, so the canonical sequence is always valid.
+// ─────────────────────────────────────────────────────────────────────────────
 
-  const sections = sectionSet.map((kind, i) => ({
-    id: `sec-${i}-${kind}`,
-    kind,
-    purpose: purposeFor(kind, sig),
-    copyDirection: directionFor(kind, sig),
-  }));
+interface MockPlan {
+  blockSequence: Array<{ blockId: BlockId; purpose: string; emphasis?: string }>;
+  aesthetic:
+    | "technical-minimal"
+    | "refined-editorial"
+    | "warm-humanist"
+    | "editorial-maximalist"
+    | "brutalist-technical";
+  palette:
+    | "mono-dark"
+    | "indigo-dark"
+    | "emerald-dark"
+    | "warm-dark"
+    | "mono-light";
+  rationale: string;
+  imageNeeds: { hero: boolean; decorative: number };
+}
+
+function planMock(sig: BriefSignal): MockPlan {
+  // Sequence shape varies by complexity — simple briefs skip pricing/testimonials.
+  const sequence: BlockId[] =
+    sig.complexity === "simple"
+      ? [
+          "hero/centered-cta",
+          "features/icon-grid-3col",
+          "cta/gradient-cta",
+          "footer/minimal-row",
+        ]
+      : sig.complexity === "rich"
+        ? [
+            "hero/split-image",
+            "features/icon-grid-3col",
+            "features/alternating-rows",
+            "pricing/three-tier-highlight",
+            "testimonials/quote-grid-3col",
+            "faq/accordion",
+            "cta/gradient-cta",
+            "footer/four-col-links",
+          ]
+        : [
+            "hero/centered-cta",
+            "features/icon-grid-3col",
+            "pricing/three-tier-highlight",
+            "cta/gradient-cta",
+            "footer/four-col-links",
+          ];
+
+  const palette: MockPlan["palette"] =
+    sig.tone === "bold"
+      ? "warm-dark"
+      : sig.tone === "minimal"
+        ? "mono-light"
+        : sig.tone === "technical"
+          ? "emerald-dark"
+          : sig.industry === "fintech" || sig.industry === "productivity software"
+            ? "indigo-dark"
+            : "mono-dark";
+
+  const aesthetic: MockPlan["aesthetic"] =
+    palette === "mono-light" || palette === "warm-dark"
+      ? "refined-editorial"
+      : "technical-minimal";
+
+  // Hero image is needed when the chosen hero block has an image slot.
+  const heroId = sequence[0];
+  const heroNeedsImage =
+    heroId === "hero/split-image" || heroId === "hero/centered-cta";
 
   return {
-    sections,
-    style: {
-      palette:
-        sig.tone === "bold"
-          ? "vibrant"
-          : sig.tone === "minimal"
-            ? "mono"
-            : sig.tone === "playful"
-              ? "dual-accent"
-              : "dual-accent",
-      typography:
-        sig.tone === "technical"
-          ? "mono"
-          : sig.tone === "minimal"
-            ? "modern-sans"
-            : sig.tone === "playful"
-              ? "geometric"
-              : "modern-sans",
-      density: sig.complexity === "rich" ? "balanced" : "airy",
-      mood: `${sig.tone} ${sig.industry} for ${sig.audience}`,
-    },
-    copyDirection: `Speak directly to ${sig.audience} in a ${sig.tone} register. Lead with a concrete benefit over a feature list.`,
-    imagePrompts: imagePromptsMock(sig),
+    blockSequence: sequence.map((blockId, idx) => ({
+      blockId,
+      purpose: purposeFor(blockId, sig),
+      emphasis: idx === 0 ? "Hero must lead with the product's strongest concrete benefit." : undefined,
+    })),
+    aesthetic,
+    palette,
+    rationale: `Picked ${sequence.length} blocks matching ${sig.industry} for ${sig.audience} in a ${sig.tone} register; aesthetic chosen for the ${palette} palette's fit.`,
+    imageNeeds: { hero: heroNeedsImage, decorative: 0 },
   };
 }
 
-function imagePromptsMock(sig: BriefSignal) {
-  return [
-    {
-      id: "img-hero",
-      purpose: "hero",
-      prompt: `Hero illustration for ${sig.productName}, a ${sig.industry} product aimed at ${sig.audience}. Soft gradient background, ${sig.tone} mood, hint of UI surface in the foreground, no text.`,
-      aspectRatio: "16:9",
-    },
-    {
-      id: "img-feature-1",
-      purpose: "feature_icon",
-      prompt: `Minimal geometric icon representing speed, in the ${sig.tone} palette of ${sig.productName}.`,
-      aspectRatio: "1:1",
-    },
-    {
-      id: "img-feature-2",
-      purpose: "feature_icon",
-      prompt: `Minimal geometric icon representing collaboration, in the ${sig.tone} palette of ${sig.productName}.`,
-      aspectRatio: "1:1",
-    },
-    {
-      id: "img-feature-3",
-      purpose: "feature_icon",
-      prompt: `Minimal geometric icon representing focus, in the ${sig.tone} palette of ${sig.productName}.`,
-      aspectRatio: "1:1",
-    },
-  ];
-}
-
-function purposeFor(kind: string, sig: BriefSignal) {
-  switch (kind) {
-    case "hero":
-      return `Anchor headline that lands the core promise of ${sig.productName} in under 8 words.`;
-    case "features":
-      return "Three concrete capabilities that differentiate this product from competitors.";
-    case "social_proof":
-      return "Logos / metrics / quote — reduce risk for first-time visitors.";
-    case "testimonials":
-      return "Two short quotes from real-feeling users in the target audience.";
-    case "pricing":
-      return "Two or three tiers — anchor on the middle tier as the recommended option.";
-    case "faq":
-      return "Address the top 4 objections that block conversion.";
-    case "cta":
-      return "Final push: one big primary action + a soft secondary.";
-    case "footer":
-      return "Standard site footer — links, legal, brand mark.";
-    default:
-      return "Generic section.";
+function purposeFor(blockId: BlockId, sig: BriefSignal): string {
+  if (blockId.startsWith("hero/")) {
+    return `Anchor the brand promise for ${sig.productName} in under 12 words.`;
   }
+  if (blockId.startsWith("features/")) {
+    return "Three to six concrete capabilities that differentiate this product from competitors.";
+  }
+  if (blockId.startsWith("pricing/")) {
+    return "Tiered pricing with one obvious recommended option.";
+  }
+  if (blockId.startsWith("testimonials/")) {
+    return "Quotes from real-feeling users in the target audience.";
+  }
+  if (blockId.startsWith("faq/")) {
+    return "Address the top 3-5 conversion-blocking questions.";
+  }
+  if (blockId.startsWith("cta/")) {
+    return "Final push with one decisive primary action.";
+  }
+  if (blockId.startsWith("footer/")) {
+    return "Standard site footer — links, legal, brand mark.";
+  }
+  return "Section.";
 }
 
-function directionFor(kind: string, sig: BriefSignal) {
-  if (kind === "hero")
-    return `One bold sentence, ${sig.tone} register. Specific noun > abstract benefit.`;
-  if (kind === "features") return "Title 3-5 words, body 1-2 sentences each.";
-  if (kind === "cta") return "Action verb, no marketing fluff.";
-  return `${sig.tone} register, concise.`;
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Fill mock — parse the block ID from the user message and return that
+// block's exampleSlots. The exampleSlots are guaranteed by Session 3 to
+// validate against their own slotsSchema, so the orchestrator's parse step
+// always succeeds under MOCK_MODE.
+// ─────────────────────────────────────────────────────────────────────────────
 
-function copyMock(sig: BriefSignal) {
-  const product = sig.productName;
-  const aud = sig.audience;
-  const sectionTexts = [
-    {
-      sectionId: "sec-0-hero",
-      headline: `${product} — the Kanban that thinks like you do.`,
-      subheadline: `Built for ${aud} who are tired of generic project tools.`,
-      ctas: [
-        { label: "Start free", href: "#signup" },
-        { label: "See it in action", href: "#demo" },
-      ],
-      items: [],
-    },
-    {
-      sectionId: "sec-1-features",
-      headline: "Three things you'll feel in the first five minutes",
-      items: [
-        {
-          title: "Boards that move with your thinking",
-          description: "Drag cards across columns with momentum-aware physics. No more janky reorder bugs.",
-        },
-        {
-          title: "Comments that read like Notion",
-          description: "Threaded, formatted, searchable. Quote a previous comment by drag-selecting it.",
-        },
-        {
-          title: "Keyboard-first by default",
-          description: "Every action has a shortcut. Press ? to see them all without leaving the keyboard.",
-        },
-      ],
-      ctas: [],
-    },
-    {
-      sectionId: "sec-2-social_proof",
-      headline: "Trusted by teams who care about craft",
-      items: [
-        { title: "Linear", description: "Used internally" },
-        { title: "Figma Labs", description: "Beta partner" },
-        { title: "Vercel", description: "Customer since 2025" },
-      ],
-      ctas: [],
-    },
-    {
-      sectionId: "sec-3-pricing",
-      headline: "Pricing that scales with your team, not your patience",
-      items: [
-        {
-          title: "Free",
-          description: "Up to 3 boards. Forever.",
-          meta: { price: "$0" },
-        },
-        {
-          title: "Team",
-          description: "Unlimited boards, SSO, version history.",
-          meta: { price: "$8 / seat / mo", recommended: "true" },
-        },
-        {
-          title: "Studio",
-          description: "Custom integrations, dedicated success, audit log.",
-          meta: { price: "Talk to us" },
-        },
-      ],
-      ctas: [],
-    },
-    {
-      sectionId: "sec-4-cta",
-      headline: "Stop wrestling with your tools. Start shipping.",
-      subheadline: `Try ${product} free. No credit card. Five minutes to your first board.`,
-      ctas: [{ label: "Start free", href: "#signup" }],
-      items: [],
-    },
-    {
-      sectionId: "sec-5-footer",
-      headline: product,
-      body: "Made with care. Open source where it matters.",
-      ctas: [
-        { label: "GitHub", href: "https://github.com" },
-        { label: "Twitter", href: "https://twitter.com" },
-      ],
-      items: [],
-    },
-  ];
-  return { sectionTexts };
-}
-
-function htmlMock(sig: BriefSignal): string {
-  const palette = sig.tone === "bold" ? "#FF4D2E" : sig.tone === "minimal" ? "#0A0A0A" : "#5B5BD6";
-  // The mock returns a single self-contained document. In real mode the html
-  // step returns just a `<main>` fragment + a separate css string; we wrap it
-  // here for parity, and `assemble.ts` knows how to extract both halves.
-  const product = sig.productName;
-  const css = `
-:root { --brand: ${palette}; --fg: #0A0A0A; --bg: #FAFAFA; --muted: #6E6E73; }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { background: var(--bg); color: var(--fg); font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; line-height: 1.5; }
-.container { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
-.hero { padding: 8rem 0 6rem; text-align: center; }
-.hero h1 { font-size: clamp(2.5rem, 6vw, 5rem); letter-spacing: -0.03em; font-weight: 700; max-width: 18ch; margin: 0 auto 1.5rem; }
-.hero p { font-size: 1.25rem; color: var(--muted); max-width: 42ch; margin: 0 auto 2.5rem; }
-.btn { display: inline-block; padding: 0.85rem 1.5rem; border-radius: 999px; font-weight: 600; text-decoration: none; transition: transform 120ms; }
-.btn:hover { transform: translateY(-1px); }
-.btn-primary { background: var(--brand); color: white; }
-.btn-secondary { background: transparent; color: var(--fg); border: 1px solid #E5E5E7; margin-left: 0.5rem; }
-.features { padding: 6rem 0; }
-.features h2 { font-size: 2.5rem; text-align: center; margin-bottom: 3rem; letter-spacing: -0.02em; }
-.feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; }
-.feature { padding: 2rem; background: white; border-radius: 1rem; border: 1px solid #F0F0F2; }
-.feature h3 { font-size: 1.25rem; margin-bottom: 0.75rem; }
-.feature p { color: var(--muted); }
-.cta { padding: 8rem 0; text-align: center; background: var(--fg); color: white; }
-.cta h2 { font-size: 3rem; max-width: 20ch; margin: 0 auto 1.5rem; letter-spacing: -0.03em; }
-.cta .btn-primary { background: var(--brand); }
-footer { padding: 3rem 0; color: var(--muted); text-align: center; font-size: 0.9rem; }
-img.hero-img { width: 100%; max-width: 900px; margin: 3rem auto 0; display: block; border-radius: 1rem; box-shadow: 0 30px 60px -20px rgba(0,0,0,0.15); }
-  `.trim();
-
-  const html = `
-<main>
-  <header class="navbar">
-    <a class="brand" href="#">${product}</a>
-    <nav class="navlinks">
-      <a href="#sec-1-features">Features</a>
-      <a href="#sec-3-pricing">Pricing</a>
-      <a href="#sec-4-cta">Get started</a>
-    </nav>
-    <a class="btn btn-primary navcta" href="#signup">Start free</a>
-  </header>
-  <section class="hero" data-section-id="sec-0-hero">
-    <div class="container">
-      <h1>${product} — the Kanban that thinks like you do.</h1>
-      <p>Built for ${sig.audience} who are tired of generic project tools.</p>
-      <a class="btn btn-primary" href="#signup">Start free</a>
-      <a class="btn btn-secondary" href="#demo">See it in action</a>
-      <img class="hero-img" src="{{HERO_IMAGE}}" alt="${product} interface preview" />
-    </div>
-  </section>
-  <section class="features" data-section-id="sec-1-features">
-    <div class="container">
-      <h2>Three things you'll feel in the first five minutes</h2>
-      <div class="feature-grid">
-        <article class="feature"><h3>Boards that move with your thinking</h3><p>Drag cards across columns with momentum-aware physics. No more janky reorder bugs.</p></article>
-        <article class="feature"><h3>Comments that read like Notion</h3><p>Threaded, formatted, searchable. Quote a previous comment by drag-selecting it.</p></article>
-        <article class="feature"><h3>Keyboard-first by default</h3><p>Every action has a shortcut. Press ? to see them all without leaving the keyboard.</p></article>
-      </div>
-    </div>
-  </section>
-  <section class="cta" data-section-id="sec-4-cta">
-    <div class="container">
-      <h2>Stop wrestling with your tools. Start shipping.</h2>
-      <a class="btn btn-primary" href="#signup">Start free</a>
-    </div>
-  </section>
-  <footer class="footer" data-section-id="sec-5-footer"><div class="container">${product} · Made with care.</div></footer>
-</main>
-  `.trim();
-
-  return JSON.stringify({ html, css });
-}
-
-// Refine mock returns {html, css} (the same shape html step expects) so the
-// orchestrator's lastResort recovery path can be exercised end-to-end in
-// MOCK_MODE. The patch list metaphor was scoped out when refine became a
-// targeted HTML rewriter rather than a JSON patch step.
-function refineMock(sig: BriefSignal): string {
-  const palette = sig.tone === "bold" ? "#FF4D2E" : sig.tone === "minimal" ? "#0A0A0A" : "#5B5BD6";
-  const product = sig.productName;
-  const css = `
-:root { --brand: ${palette}; --fg: #0A0A0A; --bg: #FAFAFA; --muted: #6E6E73; }
-html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: ui-sans-serif, system-ui, sans-serif; }
-.navbar { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; height: 60px; background: rgba(255,255,255,0.85); backdrop-filter: blur(8px); border-bottom: 1px solid #EEE; }
-.navbar .brand { font-weight: 700; color: var(--fg); text-decoration: none; }
-.navbar .navlinks { display: flex; gap: 1.5rem; }
-.navbar .navlinks a { color: var(--muted); text-decoration: none; font-size: 0.95rem; }
-.btn { display: inline-block; padding: 0.6rem 1.1rem; border-radius: 8px; font-weight: 600; text-decoration: none; }
-.btn-primary { background: var(--brand); color: #FFF; }
-section { padding: 4rem 1.5rem; }
-  `.trim();
-  const html = `
-<main>
-  <header class="navbar">
-    <a class="brand" href="#">${product}</a>
-    <nav class="navlinks"><a href="#sec-1-features">Features</a></nav>
-    <a class="btn btn-primary" href="#signup">Start free</a>
-  </header>
-  <section class="hero" data-section-id="sec-0-hero">
-    <h1>${product}</h1>
-    <p>Refined fallback for ${sig.audience}.</p>
-    <img src="{{HERO_IMAGE}}" alt="${product} interface preview" />
-  </section>
-  <footer class="footer" data-section-id="sec-5-footer">${product} · Refined</footer>
-</main>
-  `.trim();
-  return JSON.stringify({ html, css });
+function fillMock(userMessage: string): unknown {
+  const match = userMessage.match(/Block ID:\s*([\w/-]+)/);
+  const blockId = match?.[1];
+  if (!blockId || !isBlockId(blockId)) {
+    // Defensive: if we can't extract a block id, return an empty object.
+    // The orchestrator's safeParse will then trigger its retry path, which
+    // ultimately falls back to the registry's exampleSlots anyway.
+    return {};
+  }
+  return BLOCK_REGISTRY[blockId].meta.exampleSlots;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -489,14 +297,17 @@ function extractBrief(req: TextCallRequest): string {
   return userMsg?.content ?? "";
 }
 
+function extractUserMessage(req: TextCallRequest): string {
+  // The fill step's user message holds the block id we want to mock. The
+  // brief, if any, is in the same message under "Context:".
+  return req.messages.filter((m) => m.role === "user").map((m) => m.content).join("\n");
+}
+
 function inferKey(req: TextCallRequest): string {
   const sys = (req.messages.find((m) => m.role === "system")?.content ?? "").toLowerCase();
-  if (sys.includes("classify")) return "classify";
-  if (sys.includes("plan")) return "plan";
-  if (sys.includes("copy")) return "copy";
-  if (sys.includes("html")) return "html";
-  if (sys.includes("refine")) return "refine";
-  if (sys.includes("image")) return "image_prompts";
+  if (sys.includes("classify the brief")) return "classify";
+  if (sys.includes("design the landing-page plan")) return "plan";
+  if (sys.includes("fill slot values")) return "fill";
   return "classify";
 }
 
