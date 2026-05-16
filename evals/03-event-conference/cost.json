@@ -2,30 +2,30 @@
   "slug": "03-event-conference",
   "label": "Event / conference",
   "brief": "Landing page for 'Solo Founder Summit 2026', a 1-day virtual conference for indie hackers. October 15. Speakers: Pieter Levels, Justin Welsh, Marc Lou. Tickets $99 early bird.",
-  "totalCostUsd": 0.14685357999999998,
+  "totalCostUsd": 0.26001902,
   "breakdown": {
-    "total": 0.14685357999999998,
-    "classify": 0.00002058,
-    "plan": 0.0032107,
-    "copy": 0.0079163,
-    "html": 0.015705999999999998,
+    "total": 0.26001902,
+    "classify": 0.00006761999999999999,
+    "plan": 0.037149299999999996,
+    "copy": 0.0384981,
+    "html": 0.064304,
     "images": 0.12,
     "refine": 0
   },
-  "wallClockMs": 71686,
+  "wallClockMs": 352,
   "adaptiveFastPath": true,
   "imagesGenerated": 4,
   "intent": {
-    "industry": "entrepreneurship",
+    "industry": "saas",
     "audience": "indie hackers",
     "tone": "professional",
-    "complexity": "standard",
+    "complexity": "simple",
     "goals": [
-      "highlight event details",
-      "promote early-bird pricing",
-      "showcase speaker lineup"
+      "drive signups",
+      "communicate value clearly",
+      "showcase product"
     ],
-    "productName": "Solo Founder Summit 2026"
+    "productName": "Acme"
   },
-  "generationId": "e68d69c7-6747-4ea5-b660-b176536adb3f"
+  "generationId": "b921d285-02b7-449b-b09a-1277afa990ce"
 }

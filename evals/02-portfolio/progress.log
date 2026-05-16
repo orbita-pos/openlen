@@ -1,16 +1,16 @@
 classify	started		Parsing brief into structured intent
-classify	completed	0.0000	Parsing brief into structured intent
+classify	completed	0.0001	Parsing brief into structured intent
 plan	started		Adaptive fast-path planning (simple brief)
-plan	completed	0.0027	Adaptive fast-path planning (simple brief)
-image_hero	started		Rendering hero image: hero-workspace
-image_decorative	started		Rendering decorative image: project-thumb-abstract
-image_decorative	started		Rendering background image: mexico-city-texture
-image_decorative	started		Rendering feature_icon image: process-icon-materials
+plan	completed	0.0391	Adaptive fast-path planning (simple brief)
+image_hero	started		Rendering hero image: img-hero
+image_decorative	started		Rendering feature_icon image: img-feature-1
+image_decorative	started		Rendering feature_icon image: img-feature-2
+image_decorative	started		Rendering feature_icon image: img-feature-3
 copy	started		Writing copy for each section
-copy	completed	0.0091	Writing copy for each section
+image_decorative	completed	0.0691	Rendered img-feature-3
+copy	completed	0.1060	Writing copy for each section
 html	started		Generating HTML and CSS
-image_hero	completed	0.0391	Rendered hero-workspace
-image_decorative	completed	0.0691	Rendered project-thumb-abstract
-image_decorative	completed	0.0991	Rendered mexico-city-texture
-image_decorative	completed	0.1291	Rendered process-icon-materials
-html	completed	0.1437	Generating HTML and CSS
+image_hero	completed	0.1360	Rendered img-hero
+image_decorative	completed	0.1660	Rendered img-feature-1
+image_decorative	completed	0.1960	Rendered img-feature-2
+html	completed	0.2598	Generating HTML and CSS

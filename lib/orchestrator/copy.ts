@@ -7,22 +7,26 @@ import {
   buildSystemMessageForStep,
 } from "./routing";
 import { buildMasterPrompt } from "./master-prompt";
+import { loadFewShots } from "./few-shots";
 
-function buildMessages(ctx: StepContext, plan: Plan): ChatMessage[] {
-  return [
-    {
-      role: "system",
-      content: buildSystemMessageForStep("copy", {
-        palette: ctx.palette,
-        plan,
-      }),
-      cache: true,
-    },
-    {
-      role: "user",
-      content: `Brief:\n${ctx.brief}\n\nPlan JSON:\n${JSON.stringify(plan, null, 2)}`,
-    },
-  ];
+async function buildCopyMessages(
+  ctx: StepContext,
+  plan: Plan,
+): Promise<{ messages: ChatMessage[]; fewShotVariants: string[] }> {
+  const system = await buildSystemMessageForStep("copy", {
+    palette: ctx.palette,
+    plan,
+  });
+  return {
+    messages: [
+      { role: "system", content: system.content, cache: true },
+      {
+        role: "user",
+        content: `Brief:\n${ctx.brief}\n\nPlan JSON:\n${JSON.stringify(plan, null, 2)}`,
+      },
+    ],
+    fewShotVariants: system.fewShotVariants,
+  };
 }
 
 // Anti-generic detector. Catches the worst offenders so we can retry with the
@@ -58,7 +62,7 @@ function countGenericHits(copy: Copy): { count: number; samples: string[] } {
 // regenerated section sounds like the rest of the page.
 const SectionRegenSchema = SectionCopySchema;
 
-function buildSectionRegenMessages(args: {
+async function buildSectionRegenMessages(args: {
   brief: string;
   ctx: StepContext;
   plan: Plan;
@@ -66,7 +70,7 @@ function buildSectionRegenMessages(args: {
   section: SectionPlan;
   currentSectionCopy: SectionCopy | undefined;
   additionalInstruction?: string;
-}): ChatMessage[] {
+}): Promise<{ messages: ChatMessage[]; fewShotVariants: string[] }> {
   const {
     brief,
     ctx,
@@ -92,16 +96,25 @@ function buildSectionRegenMessages(args: {
     .filter(Boolean)
     .join("\n");
 
+  // Regen is a copy-variant creative step; it benefits from the same few-shot
+  // corpus as the full copy step. Pin the preferred direction to whatever the
+  // page's palette suggests so the rewritten section stays in voice.
+  const fewShots = await loadFewShots({
+    preferredDirection: ctx.palette.aestheticDirections[0],
+  });
   const systemContent = buildMasterPrompt({
     palette: ctx.palette,
-    fewShotExamples: [],
+    fewShotExamples: fewShots,
     taskSpecificAdditions: COPY_REGEN_TASK_PROMPT,
   });
 
-  return [
-    { role: "system", content: systemContent, cache: true },
-    { role: "user", content: user },
-  ];
+  return {
+    messages: [
+      { role: "system", content: systemContent, cache: true },
+      { role: "user", content: user },
+    ],
+    fewShotVariants: fewShots.map((ex) => `${ex.direction}/${ex.variant}`),
+  };
 }
 
 /**
@@ -126,19 +139,20 @@ export async function regenerateSectionCopy(
     (s) => s.sectionId === args.sectionId,
   );
 
+  const { messages, fewShotVariants } = await buildSectionRegenMessages({
+    brief: ctx.brief,
+    ctx,
+    plan: args.plan,
+    copy: args.copy,
+    section,
+    currentSectionCopy,
+    additionalInstruction: args.additionalInstruction,
+  });
   return runTextStep<SectionCopy>(ctx, {
     step: "copy",
-    buildMessages: () =>
-      buildSectionRegenMessages({
-        brief: ctx.brief,
-        ctx,
-        plan: args.plan,
-        copy: args.copy,
-        section,
-        currentSectionCopy,
-        additionalInstruction: args.additionalInstruction,
-      }),
+    buildMessages: () => messages,
     callOptions: { responseFormat: "json", temperature: 0.7, maxTokens: 1024 },
+    fewShotVariants,
     progressDetail: `Rewriting section "${args.sectionId}"`,
     validate: (content) => {
       const parsed = parseJson<unknown>(content, "regen-copy");
@@ -157,10 +171,13 @@ export async function generateCopy(
   ctx: StepContext,
   plan: Plan,
 ): Promise<Copy> {
+  // System message is stable across retries; compute once and reuse.
+  const { messages, fewShotVariants } = await buildCopyMessages(ctx, plan);
   return runTextStep<Copy>(ctx, {
     step: "copy",
-    buildMessages: () => buildMessages(ctx, plan),
+    buildMessages: () => messages,
     mockKey: "copy",
+    fewShotVariants,
     callOptions: { responseFormat: "json", temperature: 0.7, maxTokens: 4096 },
     progressDetail: "Writing copy for each section",
     fallbackNote: "Copy quality gate flagged generic phrases; retrying with stricter model.",

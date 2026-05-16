@@ -3,339 +3,71 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Pixelhaus</title>
+<title>Acme</title>
 <style>
 html, body { margin: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; background: #fff; color: #111; }
-:root {
-  --brand: #000000;
-  --bg: #ffffff;
-  --fg: #000000;
-  --muted: #f0f0f0;
-  --font-family: 'Helvetica Neue', Arial, sans-serif;
-}
-
-*,
-*:before,
-*:after {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: var(--font-family);
-  background-color: var(--bg);
-  color: var(--fg);
-  line-height: 1.5;
-}
-
-.navbar {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 1.5rem;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(8px);
-  height: 64px;
-}
-
-.navbar-brand {
-  font-weight: bold;
-  font-size: 1.25rem;
-}
-
-.navbar-links {
-  display: none;
-}
-
-.navbar-cta {
-  background: var(--brand);
-  color: var(--bg);
-  padding: 0.5rem 1rem;
-  text-decoration: none;
-  border-radius: 4px;
-  font-weight: 500;
-}
-
-.navbar-cta:hover,
-.navbar-cta:focus {
-  opacity: 0.9;
-}
-
-@media (min-width: 640px) {
-  .navbar-links {
-    display: flex;
-    gap: 1.5rem;
-  }
-  
-  .navbar-links a {
-    text-decoration: none;
-    color: var(--fg);
-    font-weight: 500;
-  }
-  
-  .navbar-links a:hover,
-  .navbar-links a:focus {
-    text-decoration: underline;
-  }
-}
-
-section {
-  padding: 3rem 1.5rem;
-}
-
-.hero {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.hero-content h1 {
-  font-size: clamp(1.75rem, 5vw, 2.5rem);
-  margin: 0 0 1rem;
-  font-weight: 700;
-}
-
-.hero-content p {
-  font-size: clamp(1rem, 3vw, 1.125rem);
-  max-width: 600px;
-  margin-bottom: 2rem;
-}
-
-.hero button {
-  background: var(--brand);
-  color: var(--bg);
-  border: none;
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
-  font-weight: 500;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.hero button:hover,
-.hero button:focus {
-  opacity: 0.9;
-}
-
-.hero img {
-  width: 100%;
-  height: auto;
-  object-fit: cover;
-}
-
-@media (min-width: 1024px) {
-  .hero {
-    grid-template-columns: 1fr 1fr;
-    align-items: center;
-  }
-}
-
-.social_proof {
-  text-align: center;
-  background: var(--muted);
-}
-
-.social_proof h2 {
-  margin: 0 0 2rem;
-  font-size: 1.25rem;
-  font-weight: 400;
-}
-
-.logos {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-}
-
-.logo-pill {
-  background: var(--bg);
-  padding: 0.5rem 1.25rem;
-  border-radius: 9999px;
-  font-weight: 500;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.features {
-  display: grid;
-  gap: 3rem;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.features article {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.5rem;
-}
-
-.features h3 {
-  margin: 0 0 0.5rem;
-  font-size: 1.5rem;
-  font-weight: 600;
-}
-
-.features p {
-  margin: 0;
-  max-width: 600px;
-}
-
-.features img {
-  width: 100%;
-  height: auto;
-  object-fit: cover;
-  border-radius: 4px;
-}
-
-@media (min-width: 1024px) {
-  .features {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  
-  .features article {
-    grid-template-rows: auto 1fr auto;
-  }
-}
-
-.cta {
-  background: var(--muted);
-  text-align: center;
-}
-
-.cta-content {
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.cta-content h2 {
-  margin: 0 0 1rem;
-  font-size: clamp(1.75rem, 5vw, 2.25rem);
-}
-
-.cta-content p {
-  margin: 0 0 2rem;
-}
-
-.cta-button {
-  background: var(--brand);
-  color: var(--bg);
-  padding: 0.75rem 2rem;
-  text-decoration: none;
-  border-radius: 4px;
-  font-weight: 500;
-  display: inline-block;
-}
-
-.cta-button:hover,
-.cta-button:focus {
-  opacity: 0.9;
-}
-
-.footer {
-  background: var(--brand);
-  color: var(--bg);
-  padding: 2rem 1.5rem;
-}
-
-.footer-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  text-align: center;
-}
-
-.footer ul {
-  list-style: none;
-  padding: 0;
-  margin: 1rem 0 0;
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-}
-
-.footer a {
-  color: var(--bg);
-  text-decoration: none;
-}
-
-.footer a:hover,
-.footer a:focus {
-  text-decoration: underline;
-}
+:root { --brand: #FF4D2E; --fg: #0A0A0A; --bg: #FAFAFA; --muted: #6E6E73; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); color: var(--fg); font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; line-height: 1.5; }
+.container { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
+.hero { padding: 8rem 0 6rem; text-align: center; }
+.hero h1 { font-size: clamp(2.5rem, 6vw, 5rem); letter-spacing: -0.03em; font-weight: 700; max-width: 18ch; margin: 0 auto 1.5rem; }
+.hero p { font-size: 1.25rem; color: var(--muted); max-width: 42ch; margin: 0 auto 2.5rem; }
+.btn { display: inline-block; padding: 0.85rem 1.5rem; border-radius: 999px; font-weight: 600; text-decoration: none; transition: transform 120ms; }
+.btn:hover { transform: translateY(-1px); }
+.btn-primary { background: var(--brand); color: white; }
+.btn-secondary { background: transparent; color: var(--fg); border: 1px solid #E5E5E7; margin-left: 0.5rem; }
+.features { padding: 6rem 0; }
+.features h2 { font-size: 2.5rem; text-align: center; margin-bottom: 3rem; letter-spacing: -0.02em; }
+.feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; }
+.feature { padding: 2rem; background: white; border-radius: 1rem; border: 1px solid #F0F0F2; }
+.feature h3 { font-size: 1.25rem; margin-bottom: 0.75rem; }
+.feature p { color: var(--muted); }
+.cta { padding: 8rem 0; text-align: center; background: var(--fg); color: white; }
+.cta h2 { font-size: 3rem; max-width: 20ch; margin: 0 auto 1.5rem; letter-spacing: -0.03em; }
+.cta .btn-primary { background: var(--brand); }
+footer { padding: 3rem 0; color: var(--muted); text-align: center; font-size: 0.9rem; }
+img.hero-img { width: 100%; max-width: 900px; margin: 3rem auto 0; display: block; border-radius: 1rem; box-shadow: 0 30px 60px -20px rgba(0,0,0,0.15); }
 </style>
 </head>
 <body>
 <main>
   <header class="navbar">
-    <div class="navbar-brand">Pixelhaus</div>
-    <nav class="navbar-links">
-      <a href="#client-logos">Clients</a>
-      <a href="#case-studies">Work</a>
-      <a href="#cta-booking">Contact</a>
+    <a class="brand" href="#">sections</a>
+    <nav class="navlinks">
+      <a href="#sec-1-features">Features</a>
+      <a href="#sec-3-pricing">Pricing</a>
+      <a href="#sec-4-cta">Get started</a>
     </nav>
-    <a href="#cta-booking" class="navbar-cta">Book a discovery call</a>
+    <a class="btn btn-primary navcta" href="#signup">Start free</a>
   </header>
-
-  <section class="hero" data-section-id="hero">
-    <div class="hero-content">
-      <h1>We build brand systems that outlast trends.</h1>
-      <p>Pixelhaus is a three-person identity studio in Berlin. We design visual systems for founders who need clarity, not noise.</p>
-      <button type="button" onclick="location.href='#cta-booking'">Book a discovery call</button>
-    </div>
-    <img src="https://api.together.ai/shrt/3eAhKShB7gtQoIor" alt="Minimalist Berlin design studio interior with large format brand posters and soft natural light">
-  </section>
-
-  <section class="social_proof" data-section-id="client-logos">
-    <h2>Founders we've worked with</h2>
-    <div class="logos">
-      <span class="logo-pill">BrewDog</span>
-      <span class="logo-pill">Patagonia</span>
-      <span class="logo-pill">European Startups</span>
+  <section class="hero" data-section-id="sec-0-hero">
+    <div class="container">
+      <h1>sections — the Kanban that thinks like you do.</h1>
+      <p>Built for teams who are tired of generic project tools.</p>
+      <a class="btn btn-primary" href="#signup">Start free</a>
+      <a class="btn btn-secondary" href="#demo">See it in action</a>
+      <img class="hero-img" src="https://picsum.photos/seed/inari-260/1280/720" alt="sections interface preview" />
     </div>
   </section>
-
-  <section class="features" data-section-id="case-studies">
-    <article>
-      <h3>BrewDog: A retail system that scales</h3>
-      <p>Unified the global bar and packaging experience into one modular identity. Same team, same beer, now coherent in 80+ locations.</p>
-      
-    </article>
-    <article>
-      <h3>Patagonia: Clarity for a complex story</h3>
-      <p>Distilled decades of activism into a print and digital language that guides customers without preaching.</p>
-      <img src="https://api.together.ai/shrt/1pMQrlopyC4gQecd" alt="Close-up of thick paper with embossed black ink logo">
-    </article>
-    <article>
-      <h3>Berlin startup: From seed to Series A</h3>
-      <p>Built the identity, pitch decks, and launch materials that helped a local team close their first institutional round.</p>
-      <img src="https://api.together.ai/shrt/CgtnazLujNXDvYRd" alt="Subtle grain of premium off-white cardstock texture">
-    </article>
-  </section>
-
-  <section class="cta" data-section-id="cta-booking">
-    <div class="cta-content">
-      <h2>Ready when you are.</h2>
-      <p>Tell us where you are and where you're headed. We'll reply within one business day with next steps and a Calendly link to book your 20-minute discovery call.</p>
-      <a href="https://calendly.com/pixelhaus" class="cta-button">Book a discovery call</a>
+  <section class="features" data-section-id="sec-1-features">
+    <div class="container">
+      <h2>Three things you'll feel in the first five minutes</h2>
+      <div class="feature-grid">
+        <article class="feature"><h3>Boards that move with your thinking</h3><p>Drag cards across columns with momentum-aware physics. No more janky reorder bugs.</p></article>
+        <article class="feature"><h3>Comments that read like Notion</h3><p>Threaded, formatted, searchable. Quote a previous comment by drag-selecting it.</p></article>
+        <article class="feature"><h3>Keyboard-first by default</h3><p>Every action has a shortcut. Press ? to see them all without leaving the keyboard.</p></article>
+      </div>
     </div>
   </section>
-
-  <footer class="footer" data-section-id="footer">
-    <div class="footer-content">
-      <p>Pixelhaus — Berlin</p>
-      <ul>
-        <li><a href="mailto:hello@pixelhaus.berlin">hello@pixelhaus.berlin</a></li>
-        <li><a href="https://instagram.com/pixelhaus.berlin">@pixelhaus.berlin</a></li>
-        <li><a href="/imprint">Legal</a></li>
-      </ul>
+  <section class="cta" data-section-id="sec-4-cta">
+    <div class="container">
+      <h2>Stop wrestling with your tools. Start shipping.</h2>
+      <a class="btn btn-primary" href="#signup">Start free</a>
     </div>
-  </footer>
+  </section>
+  <footer class="footer" data-section-id="sec-5-footer"><div class="container">sections · Made with care.</div></footer>
 </main>
 </body>
 </html>

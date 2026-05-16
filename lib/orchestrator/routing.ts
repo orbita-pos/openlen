@@ -2,6 +2,7 @@ import type { AnyModelId, ImageModelId, TextModelId } from "@/lib/together/model
 import type { Intent, PipelineStep, Plan, RoutingDecision } from "./types";
 import type { Palette } from "./design-tokens";
 import { buildMasterPrompt } from "./master-prompt";
+import { loadFewShots, type FewShotExample } from "./few-shots";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Routing table — single source of truth for model selection across the
@@ -234,10 +235,25 @@ export function fallbackCount(step: PipelineStep): number {
 
 type SystemMessageStep = Exclude<PipelineStep, "image_hero" | "image_decorative">;
 
+// Steps that benefit from few-shot examples. classify is a tiny structured-JSON
+// task where examples would dilute the schema; refine is a surgical patch step
+// that explicitly avoids rewriting structure. The remaining text steps (plan,
+// copy, html) all generate creative output that pattern-matches well.
+const FEW_SHOT_STEPS = new Set<SystemMessageStep>(["plan", "copy", "html"]);
+
+export function stepNeedsFewShots(step: SystemMessageStep): boolean {
+  return FEW_SHOT_STEPS.has(step);
+}
+
 export interface SystemMessageContext {
   palette: Palette;
-  /** Reserved for Session 2 — populates the <few_shot_examples> block. */
-  fewShotExamples?: string[];
+  /**
+   * Optionally pre-loaded few-shot examples. When omitted on a step that
+   * benefits (see FEW_SHOT_STEPS), the message builder calls loadFewShots()
+   * automatically. Pass explicitly when a caller wants deterministic examples
+   * (e.g. the regen path, which pins direction to the page's palette).
+   */
+  fewShotExamples?: FewShotExample[];
   /** Reserved for callers that want to layer extra task-specific content. */
   extraTaskAdditions?: string;
   /** Available downstream of classify; reserved for future task-specific hints. */
@@ -426,17 +442,38 @@ export function taskAddendumFor(step: SystemMessageStep): string {
   return TASK_SPECIFIC_PROMPTS[step];
 }
 
-export function buildSystemMessageForStep(
+export interface SystemMessageBuildResult {
+  content: string;
+  /** Few-shot variants in "direction/variant" form, in the order they were
+   *  injected. Empty when the step didn't load any. */
+  fewShotVariants: string[];
+}
+
+export async function buildSystemMessageForStep(
   step: SystemMessageStep,
   ctx: SystemMessageContext,
-): string {
+): Promise<SystemMessageBuildResult> {
   const baseTask = TASK_SPECIFIC_PROMPTS[step];
   const taskSpecificAdditions = ctx.extraTaskAdditions
     ? `${baseTask}\n\n${ctx.extraTaskAdditions}`
     : baseTask;
-  return buildMasterPrompt({
+
+  let fewShots = ctx.fewShotExamples;
+  if (fewShots === undefined && stepNeedsFewShots(step)) {
+    // Prefer the first aesthetic direction the palette suggests so the closest
+    // reference is listed first per Lost-in-the-Middle.
+    const preferredDirection = ctx.palette.aestheticDirections[0];
+    fewShots = await loadFewShots({ preferredDirection });
+  }
+
+  const examples = fewShots ?? [];
+  const content = buildMasterPrompt({
     palette: ctx.palette,
-    fewShotExamples: ctx.fewShotExamples ?? [],
+    fewShotExamples: examples,
     taskSpecificAdditions,
   });
+  return {
+    content,
+    fewShotVariants: examples.map((ex) => `${ex.direction}/${ex.variant}`),
+  };
 }

@@ -15,36 +15,32 @@ export interface HtmlOutput {
   css: string;
 }
 
-function buildMessages(ctx: StepContext, plan: Plan, copy: Copy): ChatMessage[] {
-  return [
-    {
-      role: "system",
-      content: buildSystemMessageForStep("html", {
-        palette: ctx.palette,
-        plan,
-      }),
-      cache: true,
-    },
-    {
-      role: "user",
-      content: `Plan JSON:\n${JSON.stringify(plan, null, 2)}\n\nCopy JSON:\n${JSON.stringify(copy, null, 2)}`,
-    },
-  ];
-}
-
 export async function generateHtml(
   ctx: StepContext,
   plan: Plan,
   copy: Copy,
 ): Promise<HtmlOutput> {
+  const system = await buildSystemMessageForStep("html", {
+    palette: ctx.palette,
+    plan,
+  });
+  const buildMessages = (): ChatMessage[] => [
+    { role: "system", content: system.content, cache: true },
+    {
+      role: "user",
+      content: `Plan JSON:\n${JSON.stringify(plan, null, 2)}\n\nCopy JSON:\n${JSON.stringify(copy, null, 2)}`,
+    },
+  ];
+
   return runTextStep<HtmlOutput>(ctx, {
     step: "html",
-    buildMessages: () => buildMessages(ctx, plan, copy),
+    buildMessages,
     mockKey: "html",
     callOptions: { responseFormat: "json", temperature: 0.4, maxTokens: 8192 },
     progressDetail: "Generating HTML and CSS",
     fallbackNote:
       "Quality gate failed on primary HTML output; escalating to DeepSeek V4 Pro for a hard fix.",
+    fewShotVariants: system.fewShotVariants,
     validate: (content) => {
       const parsed = parseJson<unknown>(content, "html");
       const out = HtmlOutputSchema.parse(parsed);

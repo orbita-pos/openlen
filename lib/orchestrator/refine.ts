@@ -23,22 +23,24 @@ const HtmlOutputSchema = z.object({
   css: z.string().min(20),
 });
 
-function buildMessages(
+async function buildRefineMessages(
   ctx: StepContext,
   prevContent: string,
   issue: string,
-): ChatMessage[] {
-  return [
-    {
-      role: "system",
-      content: buildSystemMessageForStep("refine", { palette: ctx.palette }),
-      cache: true,
-    },
-    {
-      role: "user",
-      content: `Issue to fix: ${issue}\n\nCurrent payload (raw model output, may include the JSON wrapper):\n${prevContent}`,
-    },
-  ];
+): Promise<{ messages: ChatMessage[]; fewShotVariants: string[] }> {
+  const system = await buildSystemMessageForStep("refine", {
+    palette: ctx.palette,
+  });
+  return {
+    messages: [
+      { role: "system", content: system.content, cache: true },
+      {
+        role: "user",
+        content: `Issue to fix: ${issue}\n\nCurrent payload (raw model output, may include the JSON wrapper):\n${prevContent}`,
+      },
+    ],
+    fewShotVariants: system.fewShotVariants,
+  };
 }
 
 /**
@@ -62,9 +64,14 @@ export async function refineHtml(
   const decision = pickTextModel({ step: "refine" });
   ctx.budget.guard();
 
+  const { messages, fewShotVariants } = await buildRefineMessages(
+    ctx,
+    prevContent,
+    prevError.message,
+  );
   const result = await completeText({
     model: decision.model,
-    messages: buildMessages(ctx, prevContent, prevError.message),
+    messages,
     responseFormat: "json",
     temperature: 0.2,
     maxTokens: 8192,
@@ -80,6 +87,7 @@ export async function refineHtml(
     mocked: result.mocked,
     note: `recovery from html: ${prevError.message.slice(0, 120)}`,
     palette: ctx.palette.name,
+    fewShotVariants: fewShotVariants.length > 0 ? fewShotVariants : undefined,
   });
   ctx.budget.add("refine", result.costUsd);
 

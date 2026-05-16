@@ -2,30 +2,30 @@
   "slug": "01-saas-launch",
   "label": "SaaS launch",
   "brief": "Landing page for FlowDeck, a Kanban tool for designers that uses AI to prioritize tasks. Features: AI prioritization, real-time sync, Slack integration. Pricing tiers: Free, Pro $29/mo, Team $99/mo.",
-  "totalCostUsd": 0.14321879,
+  "totalCostUsd": 0.2598708,
   "breakdown": {
-    "total": 0.14321879,
-    "classify": 0.00001929,
-    "plan": 0.0029605000000000005,
-    "copy": 0.0056029999999999995,
-    "html": 0.014636,
+    "total": 0.2598708,
+    "classify": 0.00006840000000000001,
+    "plan": 0.039004800000000006,
+    "copy": 0.03695759999999999,
+    "html": 0.06384000000000001,
     "images": 0.12,
     "refine": 0
   },
-  "wallClockMs": 69399,
+  "wallClockMs": 384,
   "adaptiveFastPath": false,
   "imagesGenerated": 4,
   "intent": {
-    "industry": "design tools",
-    "audience": "creative teams",
+    "industry": "productivity software",
+    "audience": "designers",
     "tone": "professional",
-    "complexity": "standard",
+    "complexity": "simple",
     "goals": [
-      "highlight AI features",
-      "showcase pricing",
-      "emphasize collaboration"
+      "drive signups",
+      "communicate value clearly",
+      "showcase product"
     ],
     "productName": "FlowDeck"
   },
-  "generationId": "f1ac931b-f218-42e8-b49a-f7fb54ec927b"
+  "generationId": "22e59f2e-52a5-471f-b077-52e6b9865abf"
 }
