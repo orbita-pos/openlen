@@ -10,7 +10,6 @@ import {
 } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
 import {
   Archive,
   ArrowUpDown,
@@ -35,6 +34,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import { AppHeader } from "@/components/app/app-header";
 import { cn } from "@/lib/cn";
 import type { ProjectStatus, ProjectSummary } from "@/lib/projects";
 
@@ -81,7 +81,6 @@ const STATUS_TONE: Record<
 
 export function ProjectsView({ projects: initial }: { projects: ProjectSummary[] }) {
   const router = useRouter();
-  const { data: session } = useSession();
   const [projects, setProjects] = useState(initial);
   const [view, setView] = useState<ViewMode>("grid");
   const [q, setQ] = useState("");
@@ -287,38 +286,21 @@ export function ProjectsView({ projects: initial }: { projects: ProjectSummary[]
 
   return (
     <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-[#0a0a0a]">
-      {/* Existing small top bar — intentionally minimal per user feedback. */}
-      <header className="sticky top-0 z-30 h-14 px-4 sm:px-6 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 bg-white/85 dark:bg-[#0a0a0a]/85 backdrop-blur">
-        <Link href="/" className="flex items-center gap-2 shrink-0">
-          <span className="relative inline-flex h-6 w-6 items-center justify-center">
-            <span className="absolute inset-0 rounded-md bg-coral-500" />
-            <span className="relative font-bold text-white text-[13px] leading-none">
-              い
-            </span>
+      <AppHeader
+        nav={
+          <span className="hidden md:inline text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
+            My pages
           </span>
-          <span className="hidden sm:inline font-semibold tracking-tight text-[14px]">
-            Inari Pages
-          </span>
-        </Link>
-        <div className="flex items-center gap-2">
+        }
+        actions={
           <Link
             href="/new"
             className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-coral-500 text-white text-[12px] font-medium hover:bg-coral-600 active:bg-coral-700 btn-coral-shadow transition"
           >
             <Plus size={13} /> New page
           </Link>
-          <div className="hidden sm:flex items-center gap-2 text-[11px] text-zinc-500">
-            <span>{session?.user?.email}</span>
-            <button
-              type="button"
-              onClick={() => void signOut({ callbackUrl: "/login" })}
-              className="underline underline-offset-2 hover:text-zinc-900 dark:hover:text-zinc-100"
-            >
-              Sign out
-            </button>
-          </div>
-        </div>
-      </header>
+        }
+      />
 
       <Toolbar
         total={total}
