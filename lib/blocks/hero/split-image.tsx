@@ -25,8 +25,10 @@ export const slotsSchema = z.object({
       href: z.string(),
     })
     .optional(),
-  imageSrc: z.string(),
-  imageAlt: z.string().max(140),
+  // Optional so the block can render a centered, image-less variant when the
+  // caller opted out of AI imagery (and hasn't uploaded a replacement yet).
+  imageSrc: z.string().optional(),
+  imageAlt: z.string().max(140).optional(),
 });
 
 export type Slots = z.infer<typeof slotsSchema>;
@@ -59,6 +61,12 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
   slots,
   tokens,
 }: BlockComponentProps<typeof slotsSchema>) => {
+  // Image presence drives the whole layout: with one we keep the 60/40 split;
+  // without we re-center the copy and widen it so the section reads like a
+  // centered hero. Avoids a half-empty right column when AI imagery is off.
+  const hasImage =
+    typeof slots.imageSrc === "string" && slots.imageSrc.length > 0;
+
   return (
     <section
       aria-labelledby="hero-split-image-headline"
@@ -69,8 +77,20 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
       }}
       className="relative w-full overflow-hidden"
     >
-      <div className="mx-auto grid max-w-[1280px] grid-cols-1 items-center gap-10 px-6 py-20 sm:py-28 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:py-36">
-        <div className="flex flex-col items-start text-left">
+      <div
+        className={
+          hasImage
+            ? "mx-auto grid max-w-[1280px] grid-cols-1 items-center gap-10 px-6 py-20 sm:py-28 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:py-36"
+            : "mx-auto flex max-w-[840px] flex-col items-center px-6 py-24 text-center sm:py-32 lg:py-40"
+        }
+      >
+        <div
+          className={
+            hasImage
+              ? "flex flex-col items-start text-left"
+              : "flex flex-col items-center text-center"
+          }
+        >
           {slots.eyebrow ? (
             <span
               className="mb-6 inline-flex items-center rounded-full px-3 py-1 text-xs font-medium tracking-wider uppercase"
@@ -103,7 +123,13 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
             {slots.sub}
           </p>
 
-          <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:gap-4">
+          <div
+            className={
+              hasImage
+                ? "mt-9 flex flex-col gap-3 sm:flex-row sm:gap-4"
+                : "mt-9 flex flex-col gap-3 sm:flex-row sm:gap-4 justify-center"
+            }
+          >
             <a
               href={slots.primaryCTA.href}
               className="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium"
@@ -132,22 +158,24 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
           </div>
         </div>
 
-        <div
-          className="relative overflow-hidden"
-          style={{
-            borderRadius: tokens.radius,
-            border: `1px solid ${tokens.border}`,
-            boxShadow: tokens.shadow,
-            background: tokens.surface,
-          }}
-        >
-          <img
-            src={slots.imageSrc}
-            alt={slots.imageAlt}
-            className="block h-auto w-full"
-            loading="lazy"
-          />
-        </div>
+        {hasImage ? (
+          <div
+            className="relative overflow-hidden"
+            style={{
+              borderRadius: tokens.radius,
+              border: `1px solid ${tokens.border}`,
+              boxShadow: tokens.shadow,
+              background: tokens.surface,
+            }}
+          >
+            <img
+              src={slots.imageSrc}
+              alt={slots.imageAlt ?? ""}
+              className="block h-auto w-full"
+              loading="lazy"
+            />
+          </div>
+        ) : null}
       </div>
     </section>
   );

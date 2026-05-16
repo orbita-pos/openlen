@@ -23,8 +23,10 @@ export const slotsSchema = z.object({
         body: z.string().max(260),
         bullets: z.array(z.string().max(120)).max(4).optional(),
         imagePosition: z.enum(IMAGE_POSITION),
-        imageSrc: z.string(),
-        imageAlt: z.string().max(140),
+        // Optional so the block can render text-only rows when the caller
+        // opted out of AI imagery (and hasn't uploaded per-row replacements).
+        imageSrc: z.string().optional(),
+        imageAlt: z.string().max(140).optional(),
       })
     )
     .min(2)
@@ -139,31 +141,47 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
         <div className="space-y-24 lg:space-y-32">
           {slots.rows.map((row, i) => {
             const imageFirst = row.imagePosition === "left";
+            const hasImage =
+              typeof row.imageSrc === "string" && row.imageSrc.length > 0;
             return (
               <article
                 key={i}
-                className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16"
+                className={
+                  hasImage
+                    ? "grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16"
+                    : "mx-auto max-w-[720px]"
+                }
               >
-                <div className={imageFirst ? "lg:order-1" : "lg:order-2"}>
-                  <div
-                    className="overflow-hidden"
-                    style={{
-                      borderRadius: tokens.radius,
-                      border: `1px solid ${tokens.border}`,
-                      boxShadow: tokens.shadow,
-                      background: tokens.surface,
-                    }}
-                  >
-                    <img
-                      src={row.imageSrc}
-                      alt={row.imageAlt}
-                      className="block h-auto w-full"
-                      loading="lazy"
-                    />
+                {hasImage ? (
+                  <div className={imageFirst ? "lg:order-1" : "lg:order-2"}>
+                    <div
+                      className="overflow-hidden"
+                      style={{
+                        borderRadius: tokens.radius,
+                        border: `1px solid ${tokens.border}`,
+                        boxShadow: tokens.shadow,
+                        background: tokens.surface,
+                      }}
+                    >
+                      <img
+                        src={row.imageSrc}
+                        alt={row.imageAlt ?? ""}
+                        className="block h-auto w-full"
+                        loading="lazy"
+                      />
+                    </div>
                   </div>
-                </div>
+                ) : null}
 
-                <div className={imageFirst ? "lg:order-2" : "lg:order-1"}>
+                <div
+                  className={
+                    hasImage
+                      ? imageFirst
+                        ? "lg:order-2"
+                        : "lg:order-1"
+                      : ""
+                  }
+                >
                   <h3
                     className="text-balance text-2xl leading-tight tracking-tight sm:text-3xl lg:text-4xl"
                     style={{
