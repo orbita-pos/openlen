@@ -115,8 +115,8 @@ export async function POST(req: Request): Promise<Response> {
 }
 
 function addBreakdowns(
-  a: { total: number; classify: number; plan: number; fill: number; images: number; assemble: number },
-  b: { total: number; classify: number; plan: number; fill: number; images: number; assemble: number },
+  a: { total: number; classify: number; plan: number; fill: number; images: number; assemble: number; gates: number },
+  b: { total: number; classify: number; plan: number; fill: number; images: number; assemble: number; gates: number },
 ) {
   return {
     total: a.total + b.total,
@@ -125,6 +125,7 @@ function addBreakdowns(
     fill: a.fill + b.fill,
     images: a.images + b.images,
     assemble: a.assemble + b.assemble,
+    gates: a.gates + b.gates,
   };
 }
 

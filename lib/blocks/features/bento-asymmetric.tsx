@@ -112,9 +112,14 @@ function VisualBackdrop({
         style={{ fontFamily: tokens.fontMono, color: tokens.textMuted }}
       >
         <div className="text-xs leading-relaxed">
-          <span style={{ color: tokens.accent }}>const</span> result =
+          {/* Keywords & strings use `text` (high contrast against any surface)
+              with weight differences for visual hierarchy. The brand `accent`
+              is reserved for buttons / solid-fill surfaces where its WCAG
+              contrast holds — using it as inline text on `surfaceElevated`
+              fails AA in dark palettes (#5E6AD2 → 3.66:1 on #1A1B1F). */}
+          <span style={{ color: tokens.text, fontWeight: 600 }}>const</span> result =
           <br />
-          &nbsp;&nbsp;await search(<span style={{ color: tokens.accent }}>{`"latency"`}</span>);
+          &nbsp;&nbsp;await search(<span style={{ color: tokens.text }}>{`"latency"`}</span>);
           <br />
           <span style={{ color: tokens.textDim }}>→ 247 matches · 184ms</span>
         </div>

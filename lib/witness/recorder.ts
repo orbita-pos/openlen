@@ -8,6 +8,7 @@ import type {
   RoutingDecision,
   WitnessRecord,
 } from "@/lib/orchestrator/types";
+import type { GateId } from "@/lib/gates/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Witness recorder.
@@ -47,6 +48,18 @@ export interface RecordInput {
    *  (e.g. the assemble step's deterministic record, or a fill fallback to
    *  exampleSlots). Distinguishes them from real model calls in audits. */
   deterministic?: boolean;
+  /** Gate ID — present only on `step="gates"` records (one per gate). */
+  gateId?: GateId;
+  /** True iff the gate passed (no critical violations). */
+  gatePassed?: boolean;
+  /** Total violations from this gate (critical + warning + info). */
+  gateViolationCount?: number;
+  /** Refine attempt number — present only on `step="refine"` records. */
+  refineAttempt?: number;
+  /** Block indices re-filled in this refine attempt. */
+  refinedBlockIndices?: number[];
+  /** Critical violations still present after this refine attempt. */
+  remainingCriticalViolations?: number;
 }
 
 export interface Recorder {
@@ -110,6 +123,12 @@ export function createRecorder(generationId: string): Recorder {
         blockId: input.blockId,
         blockIndex: input.blockIndex,
         deterministic: input.deterministic,
+        gateId: input.gateId,
+        gatePassed: input.gatePassed,
+        gateViolationCount: input.gateViolationCount,
+        refineAttempt: input.refineAttempt,
+        refinedBlockIndices: input.refinedBlockIndices,
+        remainingCriticalViolations: input.remainingCriticalViolations,
       };
       // Validate before write so a malformed record fails loudly instead of
       // silently polluting the recording.

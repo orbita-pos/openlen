@@ -271,6 +271,7 @@ function addCostBreakdowns(a: CostBreakdown, b: CostBreakdown): CostBreakdown {
     fill: a.fill + b.fill,
     images: a.images + b.images,
     assemble: a.assemble + b.assemble,
+    gates: a.gates + b.gates,
   };
 }
 

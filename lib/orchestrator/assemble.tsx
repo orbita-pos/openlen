@@ -62,7 +62,8 @@ export async function assemble(input: AssembleInput): Promise<LandingPage> {
   // generated hero image URL injected into its image slot (if it has one).
   let heroAssigned = false;
   let decorativeCursor = 0;
-  const renderedSections: string[] = [];
+  const mainSections: string[] = [];
+  const footerSections: string[] = [];
 
   for (const filled of ordered) {
     const block = getBlock(filled.blockId);
@@ -91,10 +92,16 @@ export async function assemble(input: AssembleInput): Promise<LandingPage> {
       React.createElement(Component, { slots, tokens }),
     );
     const tagged = injectSectionId(raw, filled.index, filled.blockId);
-    renderedSections.push(tagged);
+    // Footer blocks render their own <footer> tag and must sit outside
+    // <main> for the WCAG landmark structure (one main, footer at root).
+    if (filled.blockId.startsWith("footer/")) {
+      footerSections.push(tagged);
+    } else {
+      mainSections.push(tagged);
+    }
   }
 
-  const sectionsHtml = renderedSections.join("\n");
+  const sectionsHtml = `<main>\n${mainSections.join("\n")}\n</main>\n${footerSections.join("\n")}`;
   const title = deriveTitle(input.intent);
   const description = deriveDescription(input.intent, input.plan);
 
@@ -278,6 +285,12 @@ interface WrapDocumentArgs {
 }
 
 function wrapDocument(args: WrapDocumentArgs): string {
+  const jsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: args.title,
+    description: args.description,
+  });
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -285,10 +298,15 @@ function wrapDocument(args: WrapDocumentArgs): string {
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>${escapeHtml(args.title)}</title>
 <meta name="description" content="${escapeHtml(args.description)}" />
+<meta property="og:title" content="${escapeHtml(args.title)}" />
+<meta property="og:description" content="${escapeHtml(args.description)}" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary_large_image" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 <script src="https://cdn.tailwindcss.com"></script>
+<script type="application/ld+json">${jsonLd}</script>
 <style>
   :root {
     --color-bg: ${args.tokens.bg};

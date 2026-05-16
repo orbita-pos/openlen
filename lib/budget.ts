@@ -32,6 +32,11 @@ const STEP_TO_CATEGORY: Record<PipelineStep, CategoryKey> = {
   image_hero: "images",
   image_decorative: "images",
   assemble: "assemble",
+  // Refine calls are slot re-fills, so they count toward the same fill budget.
+  refine: "fill",
+  // Quality gates have their own line item — currently only the conversion
+  // gate's AI judge spends anything; the other five are $0.
+  gates: "gates",
 };
 
 export interface Budget {
@@ -49,6 +54,7 @@ export function createBudget(opts: { cap?: number } = {}): Budget {
     fill: 0,
     images: 0,
     assemble: 0,
+    gates: 0,
   };
   let total = 0;
   const cap = opts.cap;
@@ -77,6 +83,7 @@ export function createBudget(opts: { cap?: number } = {}): Budget {
         fill: categories.fill,
         images: categories.images,
         assemble: categories.assemble,
+        gates: categories.gates,
       };
     },
   };

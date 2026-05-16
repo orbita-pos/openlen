@@ -52,7 +52,8 @@ export const PALETTES: Record<PaletteName, Palette> = {
     borderStrong: "#404040",
     text: "#FAFAFA",
     textMuted: "#A1A1AA",
-    textDim: "#52525B",
+    // textDim bumped from #52525B to clear WCAG AA (4.5:1) for text-xs on bg.
+    textDim: "#8B8B91",
     aestheticDirections: ["technical-minimal", "brutalist-technical"],
   },
   "indigo-dark": {
@@ -67,7 +68,8 @@ export const PALETTES: Record<PaletteName, Palette> = {
     borderStrong: "#2E2F33",
     text: "#F4F5F8",
     textMuted: "#8A8F98",
-    textDim: "#62666D",
+    // textDim bumped from #62666D to clear WCAG AA for 12px text on bg.
+    textDim: "#8E939C",
     aestheticDirections: ["technical-minimal", "refined-editorial"],
   },
   "emerald-dark": {
@@ -82,7 +84,8 @@ export const PALETTES: Record<PaletteName, Palette> = {
     borderStrong: "#393939",
     text: "#EDEDED",
     textMuted: "#A0A0A0",
-    textDim: "#6B6B6B",
+    // textDim bumped from #6B6B6B to clear WCAG AA for 12px text on bg.
+    textDim: "#909090",
     aestheticDirections: ["technical-minimal", "brutalist-technical"],
   },
   "warm-dark": {
@@ -97,7 +100,8 @@ export const PALETTES: Record<PaletteName, Palette> = {
     borderStrong: "#3F3F46",
     text: "#FAFAF9",
     textMuted: "#A8A29E",
-    textDim: "#78716C",
+    // textDim bumped from #78716C to clear WCAG AA for 12px text on bg.
+    textDim: "#9C948C",
     aestheticDirections: ["refined-editorial", "warm-humanist"],
   },
   "mono-light": {
@@ -112,7 +116,8 @@ export const PALETTES: Record<PaletteName, Palette> = {
     borderStrong: "#D4D4D8",
     text: "#0A0A0A",
     textMuted: "#52525B",
-    textDim: "#A1A1AA",
+    // textDim bumped from #A1A1AA to clear WCAG AA on the lightest surface.
+    textDim: "#71717A",
     aestheticDirections: ["refined-editorial", "warm-humanist"],
   },
 };

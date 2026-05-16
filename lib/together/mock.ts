@@ -46,6 +46,9 @@ export async function mockText(req: TextCallRequest): Promise<MockTextOutput> {
     case "fill":
       content = JSON.stringify(fillMock(userMessage));
       break;
+    case "conversion-judge":
+      content = JSON.stringify(conversionJudgeMock(userMessage));
+      break;
     default:
       content = JSON.stringify({ ok: true, note: `unhandled mockKey=${key}` });
   }
@@ -289,12 +292,57 @@ function fillMock(userMessage: string): unknown {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Conversion-gate judge mock.
+//
+// The gate's deterministic banned-phrase pre-check has already run by the
+// time this mock fires. For mock pipeline output (block exampleSlots) we
+// know everything is clean, so default to all-true. We still inspect the
+// HTML for "lorem" / "world-class" so the test that deliberately injects a
+// banned phrase to verify the refine loop will produce a critical violation.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function conversionJudgeMock(userMessage: string): unknown {
+  // Only scan the ```html ... ``` block — the surrounding schema text in the
+  // prompt itself mentions "lorem ipsum" and "world-class" as examples, which
+  // would false-positive every mock run.
+  const htmlBlock = extractHtmlFromJudgePrompt(userMessage).toLowerCase();
+  const hasLorem = /lorem ipsum|\blorem\b/.test(htmlBlock);
+  const hasBanned = /world-class|cutting-edge|game-changing|revolutionary|the future of\s+\w+/.test(htmlBlock);
+  return {
+    hasOnePrimaryCTA: true,
+    heroHasOutcomeLanguage: true,
+    socialProofPresent: true,
+    formIsReasonable: true,
+    noLoremPresent: !hasLorem,
+    noBannedPhrases: !hasBanned,
+    pricingVisibleIfExpected: true,
+    footerHasCompanyInfo: true,
+    reasoning:
+      hasLorem || hasBanned
+        ? "Mock judge detected banned phrase or placeholder text in the rendered HTML."
+        : "Mock pass — all checks satisfied.",
+  };
+}
+
+function extractHtmlFromJudgePrompt(userMessage: string): string {
+  const match = userMessage.match(/```html\s*([\s\S]*?)```/);
+  return match?.[1] ?? "";
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Utilities
 // ─────────────────────────────────────────────────────────────────────────────
 
 function extractBrief(req: TextCallRequest): string {
   const userMsg = req.messages.find((m) => m.role === "user");
-  return userMsg?.content ?? "";
+  const raw = userMsg?.content ?? "";
+  // Plan step user content is "Brief:\n<brief>\n\nIntent JSON:\n<json>".
+  // The Intent JSON contains strings like "complexity":"simple" that would
+  // false-positive lightSignal's tone regex (/minimal|clean|simple|zen/),
+  // so we strip everything from "Intent JSON:" onward.
+  const intentSplit = raw.indexOf("\n\nIntent JSON:");
+  const briefBody = intentSplit >= 0 ? raw.slice(0, intentSplit) : raw;
+  return briefBody.replace(/^Brief:\s*/i, "").trim();
 }
 
 function extractUserMessage(req: TextCallRequest): string {
@@ -305,6 +353,7 @@ function extractUserMessage(req: TextCallRequest): string {
 
 function inferKey(req: TextCallRequest): string {
   const sys = (req.messages.find((m) => m.role === "system")?.content ?? "").toLowerCase();
+  if (sys.includes("strict conversion evaluator")) return "conversion-judge";
   if (sys.includes("classify the brief")) return "classify";
   if (sys.includes("design the landing-page plan")) return "plan";
   if (sys.includes("fill slot values")) return "fill";

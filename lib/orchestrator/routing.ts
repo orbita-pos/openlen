@@ -32,9 +32,10 @@ export interface StepRouting {
 }
 
 // Steps that consult the routing table for a model. `assemble` is excluded
-// because it's deterministic React SSR. Keeping this as a derived type means
-// adding a new step to PipelineStep + the table is a one-place change.
-export type RoutedStep = Exclude<PipelineStep, "assemble">;
+// because it's deterministic React SSR. `gates` doesn't have a routing entry
+// because the only gate that calls an LLM (conversion) hardcodes its model.
+// `refine` re-uses the fill step's routing — it calls fillBlock() internally.
+export type RoutedStep = Exclude<PipelineStep, "assemble" | "gates" | "refine">;
 
 export const ROUTING_TABLE: Record<RoutedStep, StepRouting> = {
   classify: {

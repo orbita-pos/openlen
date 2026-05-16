@@ -94,6 +94,7 @@ export async function fillBlock(
     exampleSlots: block.meta.exampleSlots,
     intent: args.intent,
     aesthetic: args.plan.aesthetic,
+    brief: ctx.brief,
   });
 
   const messages: ChatMessage[] = [
@@ -242,6 +243,14 @@ interface BuildFillUserPromptArgs {
   exampleSlots: unknown;
   intent: Intent;
   aesthetic: string;
+  /**
+   * Raw brief — included verbatim so the model preserves exact facts (pricing,
+   * dates, named speakers, locations). Without this, fill saw only the
+   * classifier's lossy Intent summary and routinely invented numbers / drifted
+   * facts (Session 6 finding: $99 → $96, Mexican volcanoes → Nicaraguan farms,
+   * October virtual event → March SF event).
+   */
+  brief: string;
 }
 
 function buildFillUserPrompt(args: BuildFillUserPromptArgs): string {
@@ -255,6 +264,17 @@ function buildFillUserPrompt(args: BuildFillUserPromptArgs): string {
     `Block description: ${args.blockDescription}`,
     `Block purpose on this page: ${args.purpose}`,
     args.emphasis ? `Emphasis: ${args.emphasis}` : "",
+    ``,
+    `<brief>`,
+    args.brief,
+    `</brief>`,
+    ``,
+    `BRIEF FIDELITY (non-negotiable):`,
+    `- Reproduce exact facts from the brief: pricing numbers, dates, named people, named places, headcount, ticket prices, product features.`,
+    `- Do NOT substitute or "round" prices ($29/mo stays $29/mo, never $24 or $30).`,
+    `- Do NOT relocate the product geographically (Mexico stays Mexico, Berlin stays Berlin).`,
+    `- Do NOT invent speakers, clients, or testimonial sources beyond what's reasonable for the block; never contradict named people in the brief.`,
+    `- If the brief specifies a quantity ("6 projects", "3 case studies", "4 client logos"), match it.`,
     ``,
     `Context:`,
     `${productLine}`,
