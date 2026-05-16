@@ -187,11 +187,32 @@ export function emit(ctx: StepContext, event: ProgressEvent): void {
 
 /** Parse JSON or throw — used by validators that want a thrown error to trigger fallback. */
 export function parseJson<T>(content: string, label: string): T {
+  let raw: unknown;
   try {
-    return JSON.parse(content) as T;
+    raw = JSON.parse(content);
   } catch (err) {
     throw new Error(
       `${label}: model returned invalid JSON (${(err as Error).message}). First 200 chars: ${content.slice(0, 200)}`,
     );
   }
+  // Models routinely emit `"field": null` for absent optional values instead
+  // of omitting the key. Zod's `.optional()` accepts missing, not null. We
+  // never use null as a meaningful value in our schemas, so stripping it
+  // universally is safe and avoids touching every schema with `.nullish()`.
+  return stripNulls(raw) as T;
+}
+
+function stripNulls(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(stripNulls);
+  }
+  if (value !== null && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      if (v === null) continue;
+      out[k] = stripNulls(v);
+    }
+    return out;
+  }
+  return value;
 }
