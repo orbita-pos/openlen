@@ -94,7 +94,7 @@ export default function NewPage() {
       >
         <div
           className={cn(
-            "min-w-0 overflow-hidden transition-opacity duration-200",
+            "min-w-0 min-h-0 overflow-hidden transition-opacity duration-200",
             !panelOpen && "md:opacity-0 md:pointer-events-none",
           )}
         >
@@ -105,7 +105,7 @@ export default function NewPage() {
             onCollapse={() => setPanelOpen(false)}
           />
         </div>
-        <div className="flex flex-col min-w-0">
+        <div className="flex flex-col min-w-0 min-h-0 overflow-hidden">
           <PreviewPanel
             state={state}
             panelOpen={panelOpen}

@@ -214,3 +214,12 @@
     background: linear-gradient(135deg, #fff6ee 0%, #fcd9c3 60%, #f9a06a 130%);
   }
 }
+
+@media (min-width: 768px) {
+  html.workspace-locked,
+  body.workspace-locked {
+    height: 100vh;
+    min-height: 0;
+    overflow: hidden;
+  }
+}

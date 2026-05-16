@@ -92,7 +92,7 @@ export function PreviewPanel({ state, panelOpen, onOpenPanel }: PreviewPanelProp
   }, [state]);
 
   return (
-    <section className="md:h-full min-h-[600px] flex flex-col bg-zinc-100 dark:bg-zinc-950">
+    <section className="md:flex-1 md:min-h-0 min-h-[600px] flex flex-col bg-zinc-100 dark:bg-zinc-950">
       <div className="relative z-30 shrink-0 h-12 px-3 sm:px-4 flex items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 bg-white/70 dark:bg-[#0a0a0a]/70 backdrop-blur">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           {!panelOpen && (
