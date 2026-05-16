@@ -1,36 +1,62 @@
-# Few-shot Reference HTMLs
+# Few-shot Reference Corpus
 
-This folder will hold 9 hand-crafted reference landing pages used as in-context
-examples for the AI orchestrator. They are NOT shipped to the browser — they
-go into the `<few_shot_examples>` block of the master system prompt so the
-model can pattern-match against bespoke Linear/Vercel/Stripe-grade output
-instead of generic AI defaults.
+Nine hand-crafted React + Tailwind JSX variants — three aesthetic directions
+× three variants each — injected into the master system prompt as in-context
+examples for the AI orchestrator. They are **not** shipped to the browser
+and never executed. They are loaded as plain text into the
+`<few_shot_examples>` block so the model can pattern-match against
+bespoke Linear / Vercel / Stripe-grade output instead of generic AI defaults.
 
-## Structure (to be populated in Session 2)
+## Structure
 
 ```
-technical-minimal/{01,02,03}.html
-refined-editorial/{01,02,03}.html
-warm-humanist/{01,02,03}.html
+lib/orchestrator/few-shots/
+  technical-minimal/{tide,arrow,glass}.jsx
+  refined-editorial/{folio,brace,letter}.jsx
+  warm-humanist/{daybreak,cohort,kettle}.jsx
+  index.ts                    ← loader + rotation
 ```
 
-Three references per aesthetic direction × three directions = nine total.
+Token budget per call (one variant per direction = three loaded): ~26K input
+tokens. See `scripts/measure-few-shot-tokens.ts` for the live breakdown and
+`EVAL_SESSION_2.md` for the trim decisions.
 
-## Selection logic per request
+## Loading
 
-Pick three (one per aesthetic direction) and rotate so the same triple is
-never used twice in a session. Token budget per few-shot block: ~6,000 tokens
-combined, comfortably within Together AI's 128k context for Qwen3-Coder /
-Kimi K2.6 / DeepSeek V4 Pro.
+```ts
+import { loadFewShots } from "@/lib/orchestrator/few-shots";
 
-## Session 2 will
+const examples = await loadFewShots({
+  preferredDirection: "technical-minimal",
+});
+// → 3 FewShotExample objects, with the preferred direction first per
+//   Lost-in-the-Middle ordering.
+```
 
-1. Receive nine HTMLs from the user (created via claude.ai artifacts with
-   dedicated prompts).
-2. Implement `loadFewShot()` rotation logic in `lib/orchestrator/few-shots/`.
-3. Wire into `buildMasterPrompt({ fewShotExamples: [...] })` from
-   `lib/orchestrator/master-prompt.ts`.
+`routing.ts → buildSystemMessageForStep` calls this automatically for the
+steps that benefit (plan, copy, html). classify and refine skip the corpus.
 
-Until then `fewShotExamples` defaults to `[]` and the master prompt emits a
-single comment placeholder where the block would go. The orchestrator already
-honours the empty case — no integration work is required when files land.
+## Rotation
+
+A session-scoped counter advances on every `loadFewShots()` call, so two
+consecutive calls pick different variants per direction. Three consecutive
+calls cycle through all variants per direction before repeating. This avoids
+the model anchoring on a single triple within a generation.
+
+## Rebuilding
+
+The source artifacts are NOT in this repo — they are authored in claude.ai
+artifacts and land in `~/Downloads/{technical-minimal,refined-editorial,
+warm-humanist}/`. To rebuild:
+
+```bash
+npx tsx scripts/build-few-shots.ts
+```
+
+The converter concatenates each variant's shared primitives in front of the
+variant body, trims the three technical-minimal variants' Testimonials + FAQ
+sections (the largest non-distinctive parts), and writes one self-contained
+`.jsx` per variant.
+
+The output files are ESLint-ignored (see `.eslintignore`) because they're
+reference text, not executable code.
