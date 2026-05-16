@@ -1,6 +1,11 @@
 import type { ChatMessage, TextCallRequest } from "@/lib/together/client";
 import { completeText } from "@/lib/together/client";
-import type { PipelineStep, ProgressEvent } from "./types";
+import type {
+  PipelineStep,
+  ProgressEvent,
+  StepResultEvent,
+  StepResultPayload,
+} from "./types";
 import type { Budget } from "@/lib/budget";
 import type { Recorder } from "@/lib/witness/recorder";
 import { pickTextModel, ROUTING_TABLE } from "./routing";
@@ -20,6 +25,12 @@ export interface StepContext {
   budget: Budget;
   fastPath: boolean;
   onProgress?: (event: ProgressEvent) => void;
+  /**
+   * Optional callback for mid-generation step output. Lets the client paint
+   * intent chips, page skeleton copy, and images as soon as each step
+   * finishes rather than waiting for the final assemble.
+   */
+  onStepResult?: (event: StepResultEvent) => void;
 }
 
 export interface TextCallPlan<T> {
@@ -134,6 +145,7 @@ export async function runTextStep<T>(
 
     try {
       const validated = plan.validate(callResult.content);
+      maybeEmitStepResult(ctx, plan.step, validated);
       emit(ctx, {
         type: "progress",
         step: plan.step,
@@ -161,6 +173,7 @@ export async function runTextStep<T>(
     });
     try {
       const recovered = await plan.lastResort(lastContent, error, ctx);
+      maybeEmitStepResult(ctx, plan.step, recovered);
       emit(ctx, {
         type: "progress",
         step: plan.step,
@@ -183,6 +196,42 @@ export async function runTextStep<T>(
 
 export function emit(ctx: StepContext, event: ProgressEvent): void {
   ctx.onProgress?.(event);
+}
+
+/**
+ * Type-safe step_result emitter. Pipeline code uses this directly for the
+ * image steps (which don't go through runTextStep) — the text steps emit
+ * automatically when validate() returns.
+ */
+export function emitStepResult<P extends StepResultPayload>(
+  ctx: StepContext,
+  payload: P,
+): void {
+  ctx.onStepResult?.({
+    type: "step_result",
+    step: payload.step,
+    data: payload.data,
+  });
+}
+
+// Convert validated step output into a step_result event when the step has a
+// streamable payload type. Steps that don't appear in StepResultPayload (like
+// refine — its output is the same shape as html and bundled into the html
+// branch by the caller) silently no-op.
+function maybeEmitStepResult(
+  ctx: StepContext,
+  step: PipelineStep,
+  data: unknown,
+): void {
+  if (!ctx.onStepResult) return;
+  if (
+    step === "classify" ||
+    step === "plan" ||
+    step === "copy" ||
+    step === "html"
+  ) {
+    ctx.onStepResult({ type: "step_result", step, data });
+  }
 }
 
 /** Parse JSON or throw — used by validators that want a thrown error to trigger fallback. */

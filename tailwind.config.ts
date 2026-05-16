@@ -83,6 +83,26 @@ const config: Config = {
         blink: {
           to: { opacity: "0" },
         },
+        tokenIn: {
+          from: { opacity: "0", filter: "blur(4px)", transform: "translateY(2px)" },
+          to: { opacity: "1", filter: "blur(0)", transform: "none" },
+        },
+        scan: {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(100%)" },
+        },
+        ringPulse: {
+          "0%, 100%": { boxShadow: "0 0 0 0 currentColor" },
+          "50%": { boxShadow: "0 0 0 4px transparent" },
+        },
+        peekIn: {
+          from: { opacity: "0", transform: "translateY(6px)", filter: "blur(3px)" },
+          to: { opacity: "1", transform: "none", filter: "blur(0)" },
+        },
+        imgReveal: {
+          from: { opacity: "0", filter: "blur(20px) saturate(0.4)", transform: "scale(1.04)" },
+          to: { opacity: "1", filter: "none", transform: "none" },
+        },
       },
       animation: {
         skeleton: "skeleton 1.8s ease-in-out infinite",

@@ -161,6 +161,73 @@
     animation: skeleton 1.8s ease-in-out infinite;
   }
 
+  .skeleton-soft {
+    background: linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.025) 25%,
+      rgba(0, 0, 0, 0.07) 50%,
+      rgba(0, 0, 0, 0.025) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeleton 2.4s ease-in-out infinite;
+  }
+  .dark .skeleton-soft {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.025) 25%,
+      rgba(255, 255, 255, 0.06) 50%,
+      rgba(255, 255, 255, 0.025) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeleton 2.4s ease-in-out infinite;
+  }
+
+  /* token-by-token text reveal used by the generating preview skeleton */
+  .tok {
+    display: inline-block;
+    opacity: 0;
+    animation: tokenIn 0.36s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  }
+
+  /* AI scanning sheen over the still-building preview */
+  .scan {
+    position: relative;
+  }
+  .scan::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      110deg,
+      transparent 35%,
+      rgba(255, 90, 54, 0.18) 50%,
+      transparent 65%
+    );
+    transform: translateX(-100%);
+    animation: scan 1.8s ease-in-out infinite;
+  }
+  .dark .scan::after {
+    background: linear-gradient(
+      110deg,
+      transparent 35%,
+      rgba(255, 126, 85, 0.25) 50%,
+      transparent 65%
+    );
+  }
+
+  .ring-pulse {
+    animation: ringPulse 1.6s ease-out infinite;
+  }
+
+  .peek-in {
+    animation: peekIn 0.35s ease-out both;
+  }
+
+  .img-reveal {
+    animation: imgReveal 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+
   .nice-scroll::-webkit-scrollbar {
     width: 10px;
     height: 10px;

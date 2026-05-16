@@ -6,6 +6,7 @@ import type {
   GenerateRequest,
   LandingPage,
   ProgressEvent,
+  StepResultEvent,
 } from "./types";
 import { shouldUseFastPath } from "./routing";
 import { classify } from "./classify";
@@ -30,6 +31,7 @@ import type { StepContext } from "./_shared";
 
 export interface GenerateOptions extends GenerateRequest {
   onProgress?: (event: ProgressEvent) => void;
+  onStepResult?: (event: StepResultEvent) => void;
 }
 
 export async function generateLandingPage(
@@ -53,6 +55,7 @@ export async function generateLandingPage(
     budget,
     fastPath,
     onProgress: options.onProgress,
+    onStepResult: options.onStepResult,
   };
 
   try {

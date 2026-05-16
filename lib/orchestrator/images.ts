@@ -1,7 +1,7 @@
 import { generateImage } from "@/lib/together/client";
 import type { GeneratedImage, ImagePrompt } from "./types";
 import { fallbackCount, pickImageModel } from "./routing";
-import { emit, type StepContext } from "./_shared";
+import { emit, emitStepResult, type StepContext } from "./_shared";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Image generation step.
@@ -86,6 +86,16 @@ async function runOne(
       });
       ctx.budget.add(step, result.costUsd);
 
+      const generated: GeneratedImage = {
+        id: prompt.id,
+        url: result.url,
+        purpose: prompt.purpose,
+        prompt: prompt.prompt,
+        model: decision.model,
+      };
+
+      emitStepResult(ctx, { step, data: generated });
+
       emit(ctx, {
         type: "progress",
         step,
@@ -94,13 +104,7 @@ async function runOne(
         costSoFar: ctx.budget.total(),
       });
 
-      return {
-        id: prompt.id,
-        url: result.url,
-        purpose: prompt.purpose,
-        prompt: prompt.prompt,
-        model: decision.model,
-      };
+      return generated;
     } catch (err) {
       lastError = err;
       // No more fallbacks → degrade gracefully.

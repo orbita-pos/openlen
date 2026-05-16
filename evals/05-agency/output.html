@@ -8,186 +8,257 @@
 html, body { margin: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; background: #fff; color: #111; }
 :root {
-  --brand: #111111;
-  --bg: #ffffff;
-  --fg: #333333;
+  --brand: #111;
+  --bg: #fff;
+  --fg: #111;
   --muted: #f0f0f0;
-  --font-primary: 'Helvetica Neue', Arial, sans-serif;
+  --spacing-xs: 0.5rem;
+  --spacing-s: 1rem;
+  --spacing-m: 2rem;
+  --spacing-l: 4rem;
+  --font-sans: system-ui, -apple-system, sans-serif;
+  --font-size-sm: clamp(0.875rem, 0.8vw + 0.6rem, 1rem);
+  --font-size-base: clamp(1rem, 1.2vw + 0.7rem, 1.25rem);
+  --font-size-lg: clamp(1.25rem, 2vw + 0.75rem, 2rem);
+  --font-size-xl: clamp(1.75rem, 3vw + 1rem, 3rem);
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  font-family: var(--font-primary);
+  font-family: var(--font-sans);
   background-color: var(--bg);
   color: var(--fg);
   line-height: 1.5;
 }
 
-h1, h2, h3 {
-  margin-top: 0;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-h1 {
-  font-size: clamp(2rem, 5vw, 3.5rem);
-}
-
-h2 {
-  font-size: clamp(1.75rem, 4vw, 2.5rem);
-}
-
-h3 {
-  font-size: clamp(1.25rem, 3vw, 1.5rem);
-}
-
-p {
-  margin-top: 0;
-  margin-bottom: 1rem;
-}
-
-a {
-  color: var(--brand);
-  text-decoration: none;
-}
-
-a:hover, a:focus {
-  text-decoration: underline;
-}
-
-img {
-  max-width: 100%;
-  height: auto;
-  display: block;
-}
-
-.button {
-  display: inline-block;
-  padding: 0.75rem 1.5rem;
-  background-color: var(--brand);
-  color: var(--bg);
-  font-weight: 700;
-  border: none;
-  cursor: pointer;
-  text-align: center;
-}
-
-.button:hover, .button:focus {
-  background-color: #000000;
-  text-decoration: none;
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-s);
 }
 
 /* Hero Section */
 .hero {
-  padding: 2rem 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-m);
+  padding: var(--spacing-l) 0;
 }
 
-.hero__content {
-  flex: 1;
+.hero__content h1 {
+  font-size: var(--font-size-xl);
+  margin-top: 0;
+  margin-bottom: var(--spacing-xs);
 }
 
-.hero__media {
-  flex: 1;
+.hero__content p {
+  font-size: var(--font-size-base);
+  margin-top: 0;
+  margin-bottom: var(--spacing-m);
+  max-width: 60ch;
 }
 
-/* Social Proof Section */
+.hero__media img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Button */
+.button {
+  display: inline-block;
+  padding: var(--spacing-s) var(--spacing-m);
+  background-color: var(--brand);
+  color: var(--bg);
+  text-decoration: none;
+  font-weight: 500;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.button:hover,
+.button:focus {
+  background-color: #000;
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* Social Proof */
 .social_proof {
-  padding: 3rem 1rem;
-  background-color: var(--muted);
+  padding: var(--spacing-m) 0;
   text-align: center;
 }
 
-.logo-grid {
+.social_proof p {
+  margin-top: 0;
+  margin-bottom: var(--spacing-m);
+  font-size: var(--font-size-sm);
+  color: #666;
+}
+
+.logos {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 1.5rem;
-  margin-top: 2rem;
+  gap: var(--spacing-s);
 }
 
 .logo-pill {
   display: inline-block;
-  padding: 0.5rem 1.25rem;
-  background-color: var(--bg);
-  border-radius: 2rem;
-  font-weight: 700;
+  padding: 0.5em 1em;
+  background-color: var(--muted);
+  border-radius: 999px;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
 }
 
-/* Features Section */
+/* Features */
 .features {
-  padding: 3rem 1rem;
+  padding: var(--spacing-l) 0;
+}
+
+.features header {
+  text-align: center;
+  margin-bottom: var(--spacing-l);
+}
+
+.features h2 {
+  font-size: var(--font-size-lg);
+  margin-top: 0;
+  margin-bottom: var(--spacing-xs);
+}
+
+.features header p {
+  font-size: var(--font-size-base);
+  margin: 0 auto;
+  max-width: 60ch;
+  color: #666;
 }
 
 .features__grid {
   display: grid;
-  gap: 3rem;
-  margin-top: 2rem;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-m);
 }
 
-.feature-card {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+.features article {
+  padding-bottom: var(--spacing-m);
+  border-bottom: 1px solid var(--muted);
 }
 
-.feature-card__content {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+.features article:last-child {
+  border-bottom: none;
 }
 
-/* CTA Section */
+.features h3 {
+  font-size: var(--font-size-base);
+  margin-top: 0;
+  margin-bottom: var(--spacing-xs);
+}
+
+.features p {
+  margin-top: 0;
+  margin-bottom: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+}
+
+.category,
+.duration {
+  font-size: var(--font-size-sm);
+  color: #666;
+  display: block;
+}
+
+/* CTA */
 .cta {
-  padding: 3rem 1rem;
-  background-color: var(--muted);
-  text-align: center;
+  padding: var(--spacing-l) 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-m);
+}
+
+.cta__content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.cta h2 {
+  font-size: var(--font-size-lg);
+  margin-top: 0;
+  margin-bottom: var(--spacing-xs);
+}
+
+.cta p {
+  font-size: var(--font-size-base);
+  margin-top: 0;
+  margin-bottom: var(--spacing-m);
+  max-width: 60ch;
+}
+
+.cta__media img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 4px;
 }
 
 /* Footer */
 .footer {
-  padding: 2rem 1rem;
+  padding: var(--spacing-l) 0;
   border-top: 1px solid var(--muted);
 }
 
 .footer__content {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: var(--spacing-m);
 }
 
-.footer__links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
+.footer h3 {
+  margin: 0;
+  font-size: var(--font-size-base);
 }
 
-/* Tablet Styles */
+.footer address {
+  font-style: normal;
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+
+.footer nav a {
+  font-size: var(--font-size-sm);
+  text-decoration: none;
+  color: var(--fg);
+}
+
+.footer nav a:hover,
+.footer nav a:focus {
+  text-decoration: underline;
+}
+
+/* Responsive Breakpoints */
 @media (min-width: 640px) {
   .hero {
-    flex-direction: row;
+    grid-template-columns: 1fr 1fr;
     align-items: center;
-    gap: 3rem;
   }
-  
-  .hero__content {
-    flex: 1;
-  }
-  
-  .hero__media {
-    flex: 1;
-  }
-  
+
   .features__grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
+  .cta {
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+  }
+
   .footer__content {
     flex-direction: row;
     justify-content: space-between;
@@ -195,36 +266,113 @@ img {
   }
 }
 
-/* Desktop Styles */
 @media (min-width: 1024px) {
-  .hero {
-    padding: 4rem 2rem;
-    gap: 4rem;
-  }
-  
-  .social_proof {
-    padding: 4rem 2rem;
-  }
-  
-  .features {
-    padding: 4rem 2rem;
-  }
-  
   .features__grid {
     grid-template-columns: repeat(3, 1fr);
   }
-  
-  .cta {
-    padding: 4rem 2rem;
-  }
-  
-  .footer {
-    padding: 3rem 2rem;
+
+  .logos {
+    gap: var(--spacing-m);
   }
 }
 </style>
 </head>
 <body>
-<main><section class="hero" data-section-id="hero"><div class="hero__content"><h1>Brands built with precision</h1><p>Three creatives in Berlin. We define brand identities for startups that intend to stand apart.</p><p>Pixelhaus is a three-person studio shaping brand identities from Berlin — strategic, crafted, and deliberately small so every project gets our full attention.</p><a href="#calendly" class="button">Book a call</a></div><div class="hero__media"><img src="https://api.together.ai/shrt/SnjrcyEQu9dotYMJ" alt="Minimal design studio interior with large paper rolls on a white oak table, afternoon light casting long shadows in a Berlin loft"></div></section><section class="social_proof" data-section-id="client-logos"><div class="social_proof__content"><h2>Trusted by names that don't need introductions</h2><div class="logo-grid"><span class="logo-pill">Brewdog</span><span class="logo-pill">Patagonia</span><span class="logo-pill">N26</span><span class="logo-pill">Flink</span></div></div></section><section class="features" data-section-id="case-studies"><div class="features__content"><h2>Selected work</h2><div class="features__grid"><article class="feature-card"><img src="https://api.together.ai/shrt/LPR42d2pjQY3imwv" alt="Close-up of embossed black business card on rough concrete"><div class="feature-card__content"><h3>Brewdog — Rebrand</h3><p><strong>Challenge:</strong> Refresh a cult beer brand losing visual cohesion across 50+ markets.</p><p><strong>Approach:</strong> Built a rigid typographic system and reduced the palette to black, white, and Pantone 021.</p><p><strong>Result:</strong> +32% brand recall in tracked markets within 6 months.</p></div></article><article class="feature-card"><img src="https://api.together.ai/shrt/BsLJbEj88ySp87Ho" alt="Outdoor apparel tag and woven label on weathered stone"><div class="feature-card__content"><h3>Patagonia — Europe Launch</h3><p><strong>Challenge:</strong> Introduce an established outdoor brand to urban European audiences.</p><p><strong>Approach:</strong> Paired Patagonia's environmental ethos with local community storytelling and restrained print applications.</p><p><strong>Result:</strong> 41% above launch-phase revenue targets in DACH region.</p></div></article><article class="feature-card"><img src="https://api.together.ai/shrt/nglgTkjcIQpBpYku" alt="Neon-lit laptop screen glow in dark co-working space"><div class="feature-card__content"><h3>Kleo — Series A Identity</h3><p><strong>Challenge:</strong> A Berlin fintech startup needed a complete identity before their Series A roadshow.</p><p><strong>Approach:</strong> Designed a modular logo, bespoke type specimen, and pitch collateral in a six-week sprint.</p><p><strong>Result:</strong> $18M raised; identity cited by two lead investors as a trust signal.</p></div></article></div></div></section><section class="cta" data-section-id="cta"><div class="cta__content"><h2>Let's define your identity</h2><p>Book a 30-minute discovery call. No pitch deck required — just bring your ambition.</p><a href="#calendly" class="button">Book a call</a></div></section><footer class="footer" data-section-id="footer"><div class="footer__content"><div class="footer__brand"><h3>Pixelhaus</h3><p>Brand identity studio, Berlin</p></div><div class="footer__links"><a href="https://instagram.com/pixelhaus" aria-label="Instagram">Instagram</a><a href="https://linkedin.com/company/pixelhaus" aria-label="LinkedIn">LinkedIn</a><a href="/imprint">Imprint</a><a href="/privacy">Privacy</a></div></div></footer></main>
+<main>
+  <section class="hero" data-section-id="hero">
+    <div class="hero__content">
+      <h1>Brand identities that outlast funding rounds</h1>
+      <p>Pixelhaus is a 3-person studio in Berlin. We build visual systems for startups preparing to scale — from first pitch deck to national retail rollout.</p>
+      <a href="#cta-contact" class="button">Book a call</a>
+    </div>
+    <div class="hero__media">
+      <img src="https://api.together.ai/shrt/Axjoc3wJJeQVxV48" alt="Minimalist Berlin design studio interior with large paper mockups on white walls">
+    </div>
+  </section>
+
+  <section class="social_proof" data-section-id="client-logos">
+    <p>Trusted by teams with something to prove.</p>
+    <div class="logos">
+      <span class="logo-pill">Brewdog</span>
+      <span class="logo-pill">Patagonia</span>
+      <span class="logo-pill">Finn (local startup)</span>
+      <span class="logo-pill">Undisclosed scale-up</span>
+    </div>
+  </section>
+
+  <section class="features" data-section-id="case-studies">
+    <header>
+      <h2>Selected work</h2>
+      <p>Three projects, three scales, one consistent standard.</p>
+    </header>
+    <div class="features__grid">
+      <article>
+        <h3>Brewdog — European Rebrand</h3>
+        <p>Unified packaging and bar signage across 12 countries. Cut production approval rounds by 40%.</p>
+        <span class="category">Consumer / Retail</span>
+      </article>
+      <article>
+        <h3>Patagonia — Retail Identity</h3>
+        <p>In-store signage and seasonal campaign toolkit. Delivered in 8 weeks for 34 store openings.</p>
+        <span class="category">Outdoor / Retail</span>
+      </article>
+      <article>
+        <h3>Finn — Seed to Series A</h3>
+        <p>Complete identity system for a Berlin fintech: logo, app UI kit, investor deck, and brand guidelines.</p>
+        <span class="category">Fintech / Startup</span>
+      </article>
+    </div>
+  </section>
+
+  <section class="features" data-section-id="process">
+    <header>
+      <h2>How we work</h2>
+      <p>A three-week sprint designed for busy founders.</p>
+    </header>
+    <div class="features__grid">
+      <article>
+        <h3>1. Audit & Align</h3>
+        <p>We interview your team, audit existing assets, and map where the brand needs to perform in the next 18 months.</p>
+        <span class="duration">Week 1</span>
+      </article>
+      <article>
+        <h3>2. Design & Iterate</h3>
+        <p>You receive three visual directions. We refine one into a full system: type, colour, layout rules, and application mockups.</p>
+        <span class="duration">Week 2</span>
+      </article>
+      <article>
+        <h3>3. Handoff & Scale</h3>
+        <p>Production-ready files, guidelines your contractors can follow, and a 30-day support window.</p>
+        <span class="duration">Week 3</span>
+      </article>
+    </div>
+  </section>
+
+  <section class="cta" data-section-id="cta-contact">
+    <div class="cta__content">
+      <h2>Ready when you are</h2>
+      <p>Tell us where you're headed. We'll reply within one business day with available slots and a short prep questionnaire.</p>
+      <a href="#calendly-embed" class="button" aria-label="Book a discovery call via Calendly">Book via Calendly</a>
+    </div>
+    <div class="cta__media">
+      <img src="https://api.together.ai/shrt/kLHF0nHSwEPSvEHi" alt="Overhead flat-lay of printed brand identity system on gray stone">
+    </div>
+  </section>
+
+  <footer class="footer" data-section-id="footer">
+    <div class="footer__content">
+      <h3>Pixelhaus</h3>
+      <address>
+        Brand identity studio<br>
+        Warschauer Straße 70<br>
+        10243 Berlin<br><br>
+        hello@pixelhaus.studio
+      </address>
+      <nav>
+        <a href="/impressum">Legal</a>
+      </nav>
+    </div>
+  </footer>
+</main>
 </body>
 </html>

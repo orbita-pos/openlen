@@ -18,6 +18,7 @@ import { Tabs } from "@/components/ui/tabs";
 import { Tooltip } from "@/components/ui/tooltip";
 import type { LandingPage, PipelineStep } from "@/lib/orchestrator/types";
 import { cn } from "@/lib/cn";
+import { GeneratingView } from "./generating-view";
 import type { WorkspaceState } from "./types";
 
 type Device = "desktop" | "tablet" | "mobile";
@@ -28,26 +29,6 @@ const DEVICE_WIDTHS: Record<Device, number> = {
   tablet: 820,
   mobile: 390,
 };
-
-const STEP_LABELS: Record<PipelineStep, string> = {
-  classify: "Reading your brief…",
-  plan: "Drafting page plan…",
-  copy: "Writing the copy…",
-  html: "Composing layout…",
-  image_hero: "Generating hero image…",
-  image_decorative: "Generating supporting imagery…",
-  refine: "Polishing details…",
-};
-
-const ALL_STEPS: PipelineStep[] = [
-  "classify",
-  "plan",
-  "copy",
-  "image_hero",
-  "image_decorative",
-  "html",
-  "refine",
-];
 
 export interface PreviewPanelProps {
   state: WorkspaceState;
@@ -131,6 +112,24 @@ export function PreviewPanel({
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, [srcDoc, iframeKey, onRegenSection, onEditSection]);
+
+  // The generating view is full-bleed — it owns its own chrome (orchestra
+  // strip, browser frame, step pipeline) so we bypass the device tabs and
+  // mock browser when in that state.
+  if (state.kind === "generating") {
+    const completedSteps = state.progress
+      .filter((p) => p.status === "completed")
+      .map((p) => p.step);
+    return (
+      <section className="md:flex-1 md:min-h-0 min-h-[600px] flex flex-col">
+        <GeneratingView
+          partial={state.partial}
+          currentStep={state.currentStep as PipelineStep}
+          completedSteps={completedSteps}
+        />
+      </section>
+    );
+  }
 
   return (
     <section className="md:flex-1 md:min-h-0 min-h-[600px] flex flex-col bg-zinc-100 dark:bg-zinc-950">
@@ -275,14 +274,6 @@ export function PreviewPanel({
                   />
                 </div>
               )}
-              {state.kind === "generating" && (
-                <GeneratingState
-                  currentStep={state.currentStep}
-                  completedSteps={state.progress
-                    .filter((p) => p.status === "completed")
-                    .map((p) => p.step)}
-                />
-              )}
               {state.kind === "idle" && <EmptyState />}
               {state.kind === "error" && <ErrorState message={state.message} />}
             </div>
@@ -336,95 +327,6 @@ function EmptyState() {
         </kbd>
         to generate
       </div>
-    </div>
-  );
-}
-
-function GeneratingState({
-  currentStep,
-  completedSteps,
-}: {
-  currentStep: string;
-  completedSteps: PipelineStep[];
-}) {
-  const currentLabel =
-    STEP_LABELS[currentStep as PipelineStep] ?? "Working on it…";
-  const completedCount = completedSteps.length;
-  const totalSteps = ALL_STEPS.length;
-  const progress = Math.min(
-    100,
-    Math.round(((completedCount + 0.5) / totalSteps) * 100),
-  );
-
-  return (
-    <div className="h-full min-h-[560px] flex flex-col items-center justify-center p-10 text-center">
-      <div className="relative h-12 w-12 mb-5">
-        <span className="absolute inset-0 rounded-2xl bg-coral-500 opacity-20 animate-ping" />
-        <span className="absolute inset-1 rounded-xl bg-coral-500 inline-flex items-center justify-center text-white">
-          <Sparkles size={18} />
-        </span>
-      </div>
-      <div className="text-[15px] font-semibold tracking-tight">{currentLabel}</div>
-      <p className="mt-1.5 max-w-sm text-sm text-zinc-500 dark:text-zinc-500">
-        Average build time is 47 seconds. Don&apos;t refresh — we&apos;ll stream when
-        ready.
-      </p>
-      <div className="mt-6 w-64 h-1 rounded-full bg-zinc-100 dark:bg-zinc-900 overflow-hidden">
-        <div
-          className="h-full bg-coral-500 rounded-full transition-all duration-500"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
-      <ul className="mt-6 w-72 text-left space-y-1.5 text-[12px]">
-        {ALL_STEPS.map((step) => {
-          const done = completedSteps.includes(step);
-          const active = step === currentStep && !done;
-          return (
-            <li
-              key={step}
-              className={cn(
-                "flex items-center gap-2 px-2.5 py-1.5 rounded-md transition",
-                active && "bg-coral-50 dark:bg-coral-500/10",
-                done && "text-zinc-400 dark:text-zinc-600",
-                !active && !done && "text-zinc-400 dark:text-zinc-600",
-              )}
-            >
-              <span
-                className={cn(
-                  "inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border",
-                  done
-                    ? "bg-emerald-500 border-emerald-500 text-white"
-                    : active
-                      ? "border-coral-500"
-                      : "border-zinc-300 dark:border-zinc-700",
-                )}
-              >
-                {done && (
-                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none">
-                    <polyline
-                      points="20 6 9 17 4 12"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                )}
-                {active && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-coral-500 animate-pulse" />
-                )}
-              </span>
-              <span
-                className={cn(
-                  active && "text-coral-700 dark:text-coral-300 font-medium",
-                )}
-              >
-                {STEP_LABELS[step]}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
     </div>
   );
 }

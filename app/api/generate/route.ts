@@ -5,6 +5,7 @@ import type {
   ProgressEvent,
   ResultEvent,
   SseEvent,
+  StepResultEvent,
 } from "@/lib/orchestrator/types";
 
 export const runtime = "nodejs";
@@ -46,6 +47,7 @@ export async function POST(req: Request): Promise<Response> {
         const page = await generateLandingPage({
           ...parsed.data,
           onProgress: (e: ProgressEvent) => send(e),
+          onStepResult: (e: StepResultEvent) => send(e),
         });
         const result: ResultEvent = { type: "result", page };
         send(result);

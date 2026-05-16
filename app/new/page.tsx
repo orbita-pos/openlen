@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BriefForm, SAMPLE_BRIEF } from "@/components/workspace/brief-form";
 import { EditPromptModal } from "@/components/workspace/edit-prompt-modal";
 import { Header } from "@/components/workspace/header";
@@ -46,6 +46,25 @@ export default function NewPage() {
   useEffect(() => {
     if (state.kind === "generated") setSavedLabel("Saved just now");
   }, [state.kind]);
+
+  // Auto-collapse the brief panel during generation so the immersive
+  // generating view gets the full width. Restore when generation completes
+  // (or errors) so the user can edit and re-generate.
+  const collapsedForGenRef = useRef(false);
+  useEffect(() => {
+    if (state.kind === "generating" && panelOpen) {
+      collapsedForGenRef.current = true;
+      setPanelOpen(false);
+      return;
+    }
+    if (
+      (state.kind === "generated" || state.kind === "error") &&
+      collapsedForGenRef.current
+    ) {
+      collapsedForGenRef.current = false;
+      setPanelOpen(true);
+    }
+  }, [state.kind, panelOpen]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

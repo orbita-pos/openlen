@@ -4,11 +4,15 @@ import { useCallback, useRef, useState } from "react";
 import type {
   Copy,
   CostBreakdown,
+  GeneratedImage,
   GenerateRequest,
+  Intent,
+  Plan,
   ProgressEvent,
   SseEvent,
+  StepResultEvent,
 } from "@/lib/orchestrator/types";
-import type { WorkspaceState } from "@/components/workspace/types";
+import type { GeneratingPartial, WorkspaceState } from "@/components/workspace/types";
 
 export interface RegenSectionArgs {
   sectionId: string;
@@ -49,7 +53,17 @@ export function useGeneration(): UseGenerationResult {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    setState({ kind: "generating", currentStep: "classify", progress: [] });
+    setState({
+      kind: "generating",
+      currentStep: "classify",
+      progress: [],
+      partial: {
+        brief: req.brief,
+        images: [],
+        costSoFar: 0,
+        startedAt: Date.now(),
+      },
+    });
 
     let response: Response;
     try {
@@ -202,14 +216,28 @@ function applyEvent(
 ) {
   if (event.type === "progress") {
     setState((prev) => {
-      if (prev.kind !== "generating") {
-        return { kind: "generating", currentStep: event.step, progress: [event] };
-      }
+      const partial = prev.kind === "generating"
+        ? {
+            ...prev.partial,
+            costSoFar: event.costSoFar ?? prev.partial.costSoFar,
+          }
+        : freshPartial();
       return {
         kind: "generating",
         currentStep: event.step,
-        progress: appendProgress(prev.progress, event),
+        progress: prev.kind === "generating"
+          ? appendProgress(prev.progress, event)
+          : [event],
+        partial,
       };
+    });
+    return;
+  }
+  if (event.type === "step_result") {
+    setState((prev) => {
+      if (prev.kind !== "generating") return prev;
+      const partial = mergeStepResult(prev.partial, event);
+      return { ...prev, partial };
     });
     return;
   }
@@ -219,6 +247,36 @@ function applyEvent(
   }
   if (event.type === "result") {
     setState(() => ({ kind: "generated", result: event.page }));
+  }
+}
+
+function freshPartial(): GeneratingPartial {
+  return { brief: "", images: [], costSoFar: 0, startedAt: Date.now() };
+}
+
+function mergeStepResult(
+  partial: GeneratingPartial,
+  event: StepResultEvent,
+): GeneratingPartial {
+  switch (event.step) {
+    case "classify":
+      return { ...partial, intent: event.data as Intent };
+    case "plan":
+      return { ...partial, plan: event.data as Plan };
+    case "copy":
+      return { ...partial, copy: event.data as Copy };
+    case "image_hero":
+    case "image_decorative": {
+      const img = event.data as GeneratedImage;
+      // Replace by id if it already exists, otherwise append.
+      const existing = partial.images.findIndex((i) => i.id === img.id);
+      const images = existing === -1
+        ? [...partial.images, img]
+        : partial.images.map((i, idx) => (idx === existing ? img : i));
+      return { ...partial, images };
+    }
+    default:
+      return partial;
   }
 }
 

@@ -223,6 +223,26 @@ export const ProgressEventSchema = z.object({
 });
 export type ProgressEvent = z.infer<typeof ProgressEventSchema>;
 
+// Streamed mid-generation. Lets the client paint intent chips, page
+// skeleton copy, and images as soon as each step finishes rather than
+// waiting for the final result. `data` is intentionally `unknown` at the
+// schema layer — the emitter is typed (see `emitStepResult` in
+// _shared.ts) and the consumer narrows on `step` before reading data.
+export const StepResultEventSchema = z.object({
+  type: z.literal("step_result"),
+  step: PipelineStepSchema,
+  data: z.unknown(),
+});
+export type StepResultEvent = z.infer<typeof StepResultEventSchema>;
+
+export type StepResultPayload =
+  | { step: "classify"; data: Intent }
+  | { step: "plan"; data: Plan }
+  | { step: "copy"; data: Copy }
+  | { step: "image_hero"; data: GeneratedImage }
+  | { step: "image_decorative"; data: GeneratedImage }
+  | { step: "html"; data: { html: string; css: string } };
+
 export const ErrorEventSchema = z.object({
   type: z.literal("error"),
   message: z.string(),
@@ -237,8 +257,9 @@ export const ResultEventSchema = z.object({
 });
 export type ResultEvent = z.infer<typeof ResultEventSchema>;
 
-export const SseEventSchema = z.discriminatedUnion("type", [
+export const SseEventSchema = z.union([
   ProgressEventSchema,
+  StepResultEventSchema,
   ErrorEventSchema,
   ResultEventSchema,
 ]);
