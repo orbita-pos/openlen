@@ -1,9 +1,15 @@
 import type { LandingPage, ProgressEvent } from "@/lib/orchestrator/types";
 
+export interface RegenInFlight {
+  sectionId: string;
+  sectionName: string;
+  mode: "regen" | "edit";
+}
+
 export type WorkspaceState =
   | { kind: "idle" }
   | { kind: "generating"; currentStep: string; progress: ProgressEvent[] }
-  | { kind: "generated"; result: LandingPage }
+  | { kind: "generated"; result: LandingPage; regen?: RegenInFlight }
   | { kind: "error"; message: string };
 
 export type StyleId = "modern" | "bold" | "warm";

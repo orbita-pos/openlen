@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BriefForm, SAMPLE_BRIEF } from "@/components/workspace/brief-form";
+import { EditPromptModal } from "@/components/workspace/edit-prompt-modal";
 import { Header } from "@/components/workspace/header";
 import { PreviewPanel } from "@/components/workspace/preview-panel";
 import type { StyleId, ToneId } from "@/components/workspace/types";
@@ -13,7 +14,12 @@ const DEFAULT_SECTIONS = ["Hero", "Features", "Pricing", "FAQ", "Footer"];
 
 export default function NewPage() {
   const [dark, toggleDark] = useDarkMode();
-  const { state, generate } = useGeneration();
+  const { state, generate, regenerateSection } = useGeneration();
+  const [editTarget, setEditTarget] = useState<{
+    sectionId: string;
+    sectionName: string;
+  } | null>(null);
+  const [downloadingZip, setDownloadingZip] = useState(false);
 
   const [prompt, setPrompt] = useState(SAMPLE_BRIEF);
   const [audience, setAudience] = useState(
@@ -52,6 +58,34 @@ export default function NewPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [handleGenerate]);
 
+  const handleDownloadZip = useCallback(async () => {
+    if (state.kind !== "generated" || downloadingZip) return;
+    setDownloadingZip(true);
+    try {
+      const response = await fetch("/api/export/zip", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(state.result),
+      });
+      if (!response.ok) {
+        const text = await response.text().catch(() => response.statusText);
+        // eslint-disable-next-line no-alert
+        alert(`Couldn't build the zip: ${text}`);
+        return;
+      }
+      const blob = await response.blob();
+      const disposition = response.headers.get("content-disposition") ?? "";
+      const match = disposition.match(/filename="([^"]+)"/);
+      const filename = match?.[1] ?? "landing-page.zip";
+      triggerBlobDownload(blob, filename);
+    } catch (err) {
+      // eslint-disable-next-line no-alert
+      alert(`Couldn't build the zip: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setDownloadingZip(false);
+    }
+  }, [state, downloadingZip]);
+
   const cost = state.kind === "generated" ? state.result.cost : undefined;
   const formState = useMemo(
     () => ({
@@ -82,6 +116,8 @@ export default function NewPage() {
         onRename={setProjectName}
         generated={generated}
         totalCost={cost?.total}
+        onDownloadZip={generated ? handleDownloadZip : undefined}
+        downloadingZip={downloadingZip}
       />
       <div
         className={cn(
@@ -109,11 +145,44 @@ export default function NewPage() {
             state={state}
             panelOpen={panelOpen}
             onOpenPanel={() => setPanelOpen(true)}
+            onRegenSection={(sectionId, sectionName) =>
+              void regenerateSection({ sectionId, sectionName, mode: "regen" })
+            }
+            onEditSection={(sectionId, sectionName) =>
+              setEditTarget({ sectionId, sectionName })
+            }
           />
         </div>
       </div>
+      {editTarget && (
+        <EditPromptModal
+          sectionName={editTarget.sectionName}
+          onCancel={() => setEditTarget(null)}
+          onApply={(instruction) => {
+            const { sectionId, sectionName } = editTarget;
+            setEditTarget(null);
+            void regenerateSection({
+              sectionId,
+              sectionName,
+              additionalInstruction: instruction,
+              mode: "edit",
+            });
+          }}
+        />
+      )}
     </div>
   );
+}
+
+function triggerBlobDownload(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 interface BriefInputs {

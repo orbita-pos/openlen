@@ -53,9 +53,17 @@ export interface PreviewPanelProps {
   state: WorkspaceState;
   panelOpen: boolean;
   onOpenPanel: () => void;
+  onRegenSection?: (sectionId: string, sectionName: string) => void;
+  onEditSection?: (sectionId: string, sectionName: string) => void;
 }
 
-export function PreviewPanel({ state, panelOpen, onOpenPanel }: PreviewPanelProps) {
+export function PreviewPanel({
+  state,
+  panelOpen,
+  onOpenPanel,
+  onRegenSection,
+  onEditSection,
+}: PreviewPanelProps) {
   const [device, setDevice] = useState<Device>("desktop");
   const [zoom, setZoom] = useState<Zoom>("fit");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -112,17 +120,17 @@ export function PreviewPanel({ state, panelOpen, onOpenPanel }: PreviewPanelProp
         setContentHeight(data.height);
         return;
       }
-      if (data.type === "inari:regen" && typeof data.section === "string") {
-        alert(`Regenerate "${data.section}" — coming in Phase 1B.`);
+      if (data.type === "inari:regen" && typeof data.sectionId === "string") {
+        onRegenSection?.(data.sectionId, data.sectionName ?? data.sectionId);
         return;
       }
-      if (data.type === "inari:edit" && typeof data.section === "string") {
-        alert(`Edit prompt for "${data.section}" — coming in Phase 1B.`);
+      if (data.type === "inari:edit" && typeof data.sectionId === "string") {
+        onEditSection?.(data.sectionId, data.sectionName ?? data.sectionId);
       }
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [srcDoc, iframeKey]);
+  }, [srcDoc, iframeKey, onRegenSection, onEditSection]);
 
   return (
     <section className="md:flex-1 md:min-h-0 min-h-[600px] flex flex-col bg-zinc-100 dark:bg-zinc-950">
@@ -234,6 +242,14 @@ export function PreviewPanel({ state, panelOpen, onOpenPanel }: PreviewPanelProp
               className="relative bg-white dark:bg-zinc-950"
               style={{ height: state.kind === "generated" ? "auto" : 560 }}
             >
+              {state.kind === "generated" && state.regen && (
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 z-40 inline-flex items-center gap-2 h-8 px-3 rounded-full bg-zinc-900 text-white text-[12px] shadow-lg shadow-black/20">
+                  <span className="inline-flex h-2 w-2 rounded-full bg-coral-400 animate-pulse" />
+                  {state.regen.mode === "edit" ? "Applying edit to" : "Regenerating"}{" "}
+                  <span className="font-semibold">{state.regen.sectionName}</span>
+                  <span className="text-zinc-400">· ~10s</span>
+                </div>
+              )}
               {state.kind === "generated" && srcDoc && (
                 <div
                   style={{
@@ -249,7 +265,10 @@ export function PreviewPanel({ state, panelOpen, onOpenPanel }: PreviewPanelProp
                     key={iframeKey}
                     title="Generated page preview"
                     srcDoc={srcDoc}
-                    className="w-full border-0 bg-white block"
+                    className={cn(
+                      "w-full border-0 bg-white block transition-opacity",
+                      state.kind === "generated" && state.regen && "opacity-60",
+                    )}
                     style={{ height: contentHeight }}
                     sandbox="allow-scripts"
                     scrolling="no"
@@ -478,13 +497,22 @@ ${page.html}
       }
     }
 
-    var NAME_MAP = { hero: 'Hero', features: 'Features', cta: 'CTA', pricing: 'Pricing', testimonials: 'Testimonials', faq: 'FAQ', social: 'Social proof' };
+    var NAME_MAP = { hero: 'Hero', features: 'Features', cta: 'CTA', pricing: 'Pricing', testimonials: 'Testimonials', faq: 'FAQ', social_proof: 'Social proof', footer: 'Footer' };
     function sectionName(el, idx) {
       if (el.tagName === 'FOOTER') return 'Footer';
       var cls = (el.className || '').split(/\\s+/)[0] || '';
       if (NAME_MAP[cls]) return NAME_MAP[cls];
       if (cls) return cls.charAt(0).toUpperCase() + cls.slice(1);
       return 'Section ' + (idx + 1);
+    }
+    function sectionId(el, idx) {
+      // Prefer the explicit data-section-id from the html generator. Fall back
+      // to the first class name + index so legacy outputs without the attr
+      // still produce a deterministic id.
+      var explicit = el.getAttribute && el.getAttribute('data-section-id');
+      if (explicit) return explicit;
+      var cls = (el.className || '').split(/\\s+/)[0] || 'section';
+      return cls + '-' + idx;
     }
 
     var REGEN_SVG = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>';
@@ -497,15 +525,16 @@ ${page.html}
         if (node.querySelector(':scope > .__inari-overlay')) continue;
         if (getComputedStyle(node).position === 'static') node.style.position = 'relative';
         var name = sectionName(node, i);
+        var sid = sectionId(node, i);
         var overlay = document.createElement('div');
         overlay.className = '__inari-overlay';
         overlay.innerHTML =
           '<div class="__inari-frame"></div>' +
           '<div class="__inari-name"><i></i>' + name + '</div>' +
           '<div class="__inari-actions">' +
-            '<button type="button" data-action="regen" data-section="' + name + '">' + REGEN_SVG + ' Regenerate</button>' +
+            '<button type="button" data-action="regen" data-section-id="' + sid + '" data-section-name="' + name + '">' + REGEN_SVG + ' Regenerate</button>' +
             '<span class="__inari-sep"></span>' +
-            '<button type="button" data-action="edit" data-section="' + name + '">' + EDIT_SVG + ' Edit prompt</button>' +
+            '<button type="button" data-action="edit" data-section-id="' + sid + '" data-section-name="' + name + '">' + EDIT_SVG + ' Edit prompt</button>' +
           '</div>';
         node.appendChild(overlay);
       }
@@ -521,7 +550,8 @@ ${page.html}
           try {
             parent.postMessage({
               type: 'inari:' + t.getAttribute('data-action'),
-              section: t.getAttribute('data-section')
+              sectionId: t.getAttribute('data-section-id'),
+              sectionName: t.getAttribute('data-section-name')
             }, '*');
           } catch (err) {}
           return;

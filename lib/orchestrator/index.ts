@@ -75,6 +75,8 @@ export async function generateLandingPage(
       brief: parsed.brief,
       generationId,
       intent,
+      plan,
+      copy,
       html,
       images,
       cost: budget.breakdown(),

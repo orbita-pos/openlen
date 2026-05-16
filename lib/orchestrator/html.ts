@@ -10,7 +10,7 @@ Output a SINGLE JSON object — no markdown, no commentary:
 { "html": "<main>...</main>", "css": "..." }
 
 HTML rules:
-- Wrap everything in a single <main> element. Inside <main>, each planned section is a <section class="<kind>"> element where <kind> is "hero", "features", "social_proof", etc., matching the plan's section.kind. The footer is a <footer class="footer"> element after </main> closes — but include it INSIDE <main> for this generator (the assembler handles that).
+- Wrap everything in a single <main> element. Inside <main>, each planned section is a <section class="<kind>" data-section-id="<id>"> element where <kind> is "hero", "features", "social_proof", etc. matching the plan's section.kind, AND <id> is the EXACT section.id from the plan. The footer is <footer class="footer" data-section-id="<footer-id>"> with the footer section's id from the plan. Both class AND data-section-id are required on every section/footer — the regenerate-section UI uses data-section-id to know which section to re-run.
 - Use semantic HTML5: <section>, <article>, <header>, <h1>/<h2>/<h3>, <p>, <ul>/<li>, <a>, <img>.
 - The first <section class="hero"> MUST contain exactly one <img> with src="{{HERO_IMAGE}}" and a meaningful alt attribute. Assembly swaps the placeholder for a real URL.
 - Other image placeholders are src="{{IMG_<id>}}" using an id THAT EXISTS in the plan's imagePrompts list. Each <img> MUST have a non-empty alt attribute.

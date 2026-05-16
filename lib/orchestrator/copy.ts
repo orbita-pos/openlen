@@ -1,6 +1,6 @@
 import type { ChatMessage } from "@/lib/together/client";
-import { CopySchema } from "./types";
-import type { Copy, Plan } from "./types";
+import { CopySchema, SectionCopySchema } from "./types";
+import type { Copy, Plan, SectionCopy, SectionPlan } from "./types";
 import { parseJson, runTextStep, type StepContext } from "./_shared";
 
 const SYSTEM_PROMPT = `You write landing-page copy. Specific, benefit-driven, never generic.
@@ -79,6 +79,107 @@ function countGenericHits(copy: Copy): { count: number; samples: string[] } {
     }
   }
   return { count, samples };
+}
+
+// Single-section copy regeneration prompt — used by /api/regenerate-section.
+// Reuses the same prohibited-phrase list and voice rules as the full copy
+// step so a regenerated section sounds like the rest of the page.
+const SECTION_SYSTEM_PROMPT = `You rewrite ONE section of an existing landing page. Same prohibited phrases and voice rules as the full copy step (no lorem, no "awesome"/"world-class"/"empower"/"disrupt", concrete nouns + verbs, brief content verbatim where possible).
+
+Output a SINGLE JSON object matching one section text — no markdown, no commentary:
+{
+  "sectionId": "<must match the requested sectionId exactly>",
+  "headline": <optional>,
+  "subheadline": <optional>,
+  "body": <optional>,
+  "ctas": [{ "label": "<verb-led>", "href": "<#anchor or url>" }],
+  "items": [{ "title": <optional>, "description": <optional>, "meta": { "<k>": "<v>" } }]
+}
+
+Rules:
+- Stay within the section.kind. A "hero" section gets a headline + subheadline + 1-2 CTAs. A "features" section gets a headline + items. A "pricing" section gets items with meta.price. Don't change the shape.
+- Use the rest of the page (other section copy, intent) as context to keep voice consistent.
+- If the user provided an additional instruction, follow it strictly. Otherwise just produce a stronger version of the current section.`;
+
+const SectionRegenSchema = SectionCopySchema;
+
+function buildSectionRegenMessages(args: {
+  brief: string;
+  plan: Plan;
+  copy: Copy;
+  section: SectionPlan;
+  currentSectionCopy: SectionCopy | undefined;
+  additionalInstruction?: string;
+}): ChatMessage[] {
+  const { brief, plan, copy, section, currentSectionCopy, additionalInstruction } = args;
+  const others = copy.sectionTexts.filter((s) => s.sectionId !== section.id);
+  const user = [
+    `Brief:\n${brief}`,
+    `\nPlan section to rewrite:\n${JSON.stringify(section, null, 2)}`,
+    currentSectionCopy
+      ? `\nCurrent copy for this section (do not preserve verbatim — rewrite):\n${JSON.stringify(currentSectionCopy, null, 2)}`
+      : "",
+    `\nOther sections (for voice consistency):\n${JSON.stringify(others, null, 2)}`,
+    `\nGlobal voice direction:\n${plan.copyDirection}`,
+    additionalInstruction
+      ? `\nUser instruction (MUST follow):\n${additionalInstruction}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return [
+    { role: "system", content: SECTION_SYSTEM_PROMPT, cache: true },
+    { role: "user", content: user },
+  ];
+}
+
+/**
+ * Regenerate copy for a single section. Used by the regenerate-section API
+ * route — both the bare "regenerate" button and the edit-prompt modal (which
+ * passes `additionalInstruction`).
+ */
+export async function regenerateSectionCopy(
+  ctx: StepContext,
+  args: {
+    plan: Plan;
+    copy: Copy;
+    sectionId: string;
+    additionalInstruction?: string;
+  },
+): Promise<SectionCopy> {
+  const section = args.plan.sections.find((s) => s.id === args.sectionId);
+  if (!section) {
+    throw new Error(`regenerate-section: section id "${args.sectionId}" not found in plan`);
+  }
+  const currentSectionCopy = args.copy.sectionTexts.find(
+    (s) => s.sectionId === args.sectionId,
+  );
+
+  return runTextStep<SectionCopy>(ctx, {
+    step: "copy",
+    buildMessages: () =>
+      buildSectionRegenMessages({
+        brief: ctx.brief,
+        plan: args.plan,
+        copy: args.copy,
+        section,
+        currentSectionCopy,
+        additionalInstruction: args.additionalInstruction,
+      }),
+    callOptions: { responseFormat: "json", temperature: 0.7, maxTokens: 1024 },
+    progressDetail: `Rewriting section "${args.sectionId}"`,
+    validate: (content) => {
+      const parsed = parseJson<unknown>(content, "regen-copy");
+      const out = SectionRegenSchema.parse(parsed);
+      if (out.sectionId !== args.sectionId) {
+        throw new Error(
+          `regen-copy: model returned sectionId "${out.sectionId}", expected "${args.sectionId}"`,
+        );
+      }
+      return out;
+    },
+  });
 }
 
 export async function generateCopy(

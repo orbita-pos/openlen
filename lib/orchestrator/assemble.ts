@@ -1,8 +1,10 @@
 import type {
+  Copy,
   CostBreakdown,
   GeneratedImage,
   Intent,
   LandingPage,
+  Plan,
 } from "./types";
 import type { HtmlOutput } from "./html";
 
@@ -20,6 +22,8 @@ export interface AssembleInput {
   brief: string;
   generationId: string;
   intent: Intent;
+  plan: Plan;
+  copy: Copy;
   html: HtmlOutput;
   images: GeneratedImage[];
   cost: CostBreakdown;
@@ -62,6 +66,8 @@ export function assemble(input: AssembleInput): LandingPage {
     cost: input.cost,
     witnessPath: input.witnessPath,
     adaptiveFastPath: input.adaptiveFastPath,
+    plan: input.plan,
+    copy: input.copy,
   };
 }
 

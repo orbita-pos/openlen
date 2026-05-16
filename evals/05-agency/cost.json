@@ -2,30 +2,31 @@
   "slug": "05-agency",
   "label": "Agency",
   "brief": "Landing page for 'Pixelhaus', a 3-person brand identity agency from Berlin. Show 4 client logos, 3 case studies (Brewdog, Patagonia, local startup). Contact via Calendly embed mention.",
-  "totalCostUsd": 0.13458782,
+  "totalCostUsd": 0.14087664,
   "breakdown": {
-    "total": 0.13458782,
-    "classify": 0.00002052,
-    "plan": 0.0025526999999999998,
-    "copy": 0.0031066,
-    "html": 0.008908,
+    "total": 0.14087664,
+    "classify": 0.000020039999999999998,
+    "plan": 0.0031352999999999997,
+    "copy": 0.0089913,
+    "html": 0.00873,
     "images": 0.12,
     "refine": 0
   },
-  "wallClockMs": 36067,
+  "wallClockMs": 90032,
   "adaptiveFastPath": true,
   "imagesGenerated": 4,
   "intent": {
-    "industry": "branding agency",
-    "audience": "startups and SMEs",
+    "industry": "branding",
+    "audience": "startups",
     "tone": "professional",
     "complexity": "standard",
     "goals": [
-      "showcase brand portfolio",
-      "demonstrate case studies",
-      "prompt contact via Calendly"
+      "showcase expertise",
+      "highlight client success",
+      "drive signups",
+      "facilitate outreach"
     ],
     "productName": "Pixelhaus"
   },
-  "generationId": "b916bca8-1ac7-428b-8345-6fe65084214f"
+  "generationId": "bed7ad2d-ff67-4ac3-9474-198f1ddaa3d3"
 }

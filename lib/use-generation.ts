@@ -2,21 +2,41 @@
 
 import { useCallback, useRef, useState } from "react";
 import type {
+  Copy,
+  CostBreakdown,
   GenerateRequest,
   ProgressEvent,
   SseEvent,
 } from "@/lib/orchestrator/types";
 import type { WorkspaceState } from "@/components/workspace/types";
 
+export interface RegenSectionArgs {
+  sectionId: string;
+  sectionName: string;
+  additionalInstruction?: string;
+  mode: "regen" | "edit";
+}
+
 export interface UseGenerationResult {
   state: WorkspaceState;
   generate: (req: GenerateRequest) => Promise<void>;
+  regenerateSection: (args: RegenSectionArgs) => Promise<void>;
   reset: () => void;
+}
+
+interface RegenResponse {
+  html: string;
+  css: string;
+  copy: Copy;
+  cost: CostBreakdown;
+  generationId: string;
 }
 
 export function useGeneration(): UseGenerationResult {
   const [state, setState] = useState<WorkspaceState>({ kind: "idle" });
   const abortRef = useRef<AbortController | null>(null);
+  const currentRef = useRef<WorkspaceState>(state);
+  currentRef.current = state;
 
   const reset = useCallback(() => {
     abortRef.current?.abort();
@@ -82,7 +102,84 @@ export function useGeneration(): UseGenerationResult {
     }
   }, []);
 
-  return { state, generate, reset };
+  const regenerateSection = useCallback(
+    async (args: RegenSectionArgs) => {
+      const current = currentRef.current;
+      if (current.kind !== "generated") return;
+      const page = current.result;
+
+      setState({
+        kind: "generated",
+        result: page,
+        regen: {
+          sectionId: args.sectionId,
+          sectionName: args.sectionName,
+          mode: args.mode,
+        },
+      });
+
+      let response: Response;
+      try {
+        response = await fetch("/api/regenerate-section", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            brief: page.meta.brief,
+            plan: page.plan,
+            copy: page.copy,
+            images: page.images,
+            sectionId: args.sectionId,
+            additionalInstruction: args.additionalInstruction,
+          }),
+        });
+      } catch (err) {
+        setState({
+          kind: "generated",
+          result: page,
+          regen: undefined,
+        });
+        // eslint-disable-next-line no-console
+        console.error("regenerate-section fetch failed:", err);
+        return;
+      }
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => response.statusText);
+        setState({ kind: "generated", result: page, regen: undefined });
+        // eslint-disable-next-line no-console
+        console.error("regenerate-section failed:", text);
+        return;
+      }
+
+      const data = (await response.json()) as RegenResponse;
+      setState({
+        kind: "generated",
+        result: {
+          ...page,
+          html: data.html,
+          css: data.css,
+          copy: data.copy,
+          cost: addCostBreakdowns(page.cost, data.cost),
+        },
+        regen: undefined,
+      });
+    },
+    [],
+  );
+
+  return { state, generate, regenerateSection, reset };
+}
+
+function addCostBreakdowns(a: CostBreakdown, b: CostBreakdown): CostBreakdown {
+  return {
+    total: a.total + b.total,
+    classify: a.classify + b.classify,
+    plan: a.plan + b.plan,
+    copy: a.copy + b.copy,
+    html: a.html + b.html,
+    images: a.images + b.images,
+    refine: a.refine + b.refine,
+  };
 }
 
 function parseSseChunk(chunk: string): SseEvent | null {

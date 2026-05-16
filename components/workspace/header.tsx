@@ -29,6 +29,8 @@ export interface HeaderProps {
   onRename: (next: string) => void;
   generated: boolean;
   totalCost?: number;
+  onDownloadZip?: () => void;
+  downloadingZip?: boolean;
 }
 
 function formatUsd(n: number) {
@@ -44,6 +46,8 @@ export function Header({
   onRename,
   generated,
   totalCost,
+  onDownloadZip,
+  downloadingZip,
 }: HeaderProps) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [deployOpen, setDeployOpen] = useState(false);
@@ -148,10 +152,11 @@ export function Header({
 
               <span className="hidden sm:inline-flex">
                 <IconButton
-                  label="Download .zip — Coming in Phase 1B"
-                  onClick={() => alert("Download .zip — coming in Phase 1B.")}
+                  label={downloadingZip ? "Preparing .zip…" : "Download .zip"}
+                  disabled={!onDownloadZip || downloadingZip}
+                  onClick={() => onDownloadZip?.()}
                 >
-                  <Download size={14} />
+                  <Download size={14} className={cn(downloadingZip && "animate-pulse")} />
                 </IconButton>
               </span>
 
@@ -216,10 +221,15 @@ export function Header({
                     <div className="border-t border-zinc-100 dark:border-zinc-900 my-1" />
                     <button
                       type="button"
-                      onClick={comingSoon("Download .zip")}
-                      className="flex items-center gap-2 w-full text-left px-2.5 py-1.5 rounded-md text-[12px] text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition"
+                      disabled={!onDownloadZip || downloadingZip}
+                      onClick={() => {
+                        setDeployOpen(false);
+                        onDownloadZip?.();
+                      }}
+                      className="flex items-center gap-2 w-full text-left px-2.5 py-1.5 rounded-md text-[12px] text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Download size={12} /> Download .zip instead
+                      <Download size={12} className={cn(downloadingZip && "animate-pulse")} />
+                      {downloadingZip ? "Preparing .zip…" : "Download .zip instead"}
                     </button>
                   </div>
                 )}

@@ -200,6 +200,12 @@ export const LandingPageSchema = z.object({
   witnessPath: z.string(),
   // Adaptive routing flag — true when we skipped Kimi planning for a simple brief.
   adaptiveFastPath: z.boolean(),
+  // Intermediate artifacts the client needs for per-section regeneration. The
+  // regenerate-section route accepts these back, mutates one section, and
+  // re-runs html. Without surfacing them, the client would have to call the
+  // full pipeline to change a single headline.
+  plan: PlanSchema,
+  copy: CopySchema,
 });
 export type LandingPage = z.infer<typeof LandingPageSchema>;
 
