@@ -3,17 +3,25 @@ import { IntentSchema } from "./types";
 import type { Intent } from "./types";
 import { parseJson, runTextStep, type StepContext } from "./_shared";
 
-const SYSTEM_PROMPT = `You are an intent classifier for a landing-page generator.
-Read the user's brief and emit a strict JSON object describing the page's industry, target audience, voice/tone, complexity level, top goals, and any product name explicitly mentioned.
-Return ONLY valid JSON with this shape (no commentary, no markdown fences):
+const SYSTEM_PROMPT = `You classify briefs for a landing-page generator into structured intent.
+
+Output a single JSON object — nothing else. No markdown fences, no commentary.
+
+Schema:
 {
-  "industry": "<short label>",
-  "audience": "<short label>",
-  "tone": "<one of: bold | friendly | professional | playful | minimal | technical>",
-  "complexity": "<one of: simple | standard | rich>",
-  "goals": ["<short goal>", ...],
-  "productName": "<string or omit>"
-}`;
+  "industry": <2-4 word label, e.g. "fintech", "developer tools", "single-origin coffee">,
+  "audience": <2-4 word label, e.g. "indie hackers", "freelance designers", "wholesale buyers">,
+  "tone": <one of: bold | friendly | professional | playful | minimal | technical>,
+  "complexity": <one of: simple | standard | rich>,
+  "goals": <array of 2-4 short imperative phrases, e.g. ["drive signups", "communicate technical depth"]>,
+  "productName": <string when explicit in brief, omit otherwise>
+}
+
+Rules:
+- Pick the SINGLE best tone. Default "professional" when ambiguous.
+- "complexity" is a length cue: simple = ≤3 sections needed, standard = 4-6, rich = 7+.
+- "productName" must appear verbatim in the brief; never invent one.
+- Keep labels concrete. "saas" is too generic — prefer "kanban for designers".`;
 
 function buildMessages(brief: string): ChatMessage[] {
   return [
