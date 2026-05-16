@@ -1,18 +1,38 @@
 classify	started		Parsing brief into structured intent
 classify	completed	0.0001	Parsing brief into structured intent
 plan	started		Adaptive fast-path planning (simple brief)
-plan	completed	0.0370	Adaptive fast-path planning (simple brief)
-fill	started		Filling slots for block 1: hero/centered-cta
-fill	started		Filling slots for block 2: features/icon-grid-3col
-fill	started		Filling slots for block 3: pricing/three-tier-highlight
-fill	started		Filling slots for block 4: cta/gradient-cta
-fill	started		Filling slots for block 5: footer/four-col-links
+plan	fallback		Retrying with glm-5.1
+plan	completed	0.0914	Adaptive fast-path planning (simple brief)
+fill	started		Filling slots for block 1: hero/split-image
+fill	started		Filling slots for block 2: features/alternating-rows
+fill	started		Filling slots for block 3: pricing/two-tier-simple
+fill	started		Filling slots for block 4: testimonials/quote-grid-3col
+fill	started		Filling slots for block 5: faq/accordion
+fill	started		Filling slots for block 6: cta/card-cta-form
+fill	started		Filling slots for block 7: footer/four-col-links
 image_hero	started		Rendering hero image: hero
-fill	completed	0.0375	Filled block 4: cta/gradient-cta
-fill	completed	0.0381	Filled block 1: hero/centered-cta
-fill	completed	0.0388	Filled block 5: footer/four-col-links
-fill	completed	0.0395	Filled block 2: features/icon-grid-3col
-image_hero	completed	0.0695	Rendered hero
-fill	completed	0.0702	Filled block 3: pricing/three-tier-highlight
+image_decorative	started		Rendering decorative image: decorative-1
+image_decorative	started		Rendering decorative image: decorative-2
+image_decorative	started		Rendering decorative image: decorative-3
+fill	completed	0.0921	Filled block 6: cta/card-cta-form
+fill	completed	0.0928	Filled block 1: hero/split-image
+fill	completed	0.0935	Filled block 3: pricing/two-tier-simple
+fill	completed	0.0942	Filled block 4: testimonials/quote-grid-3col
+fill	completed	0.0950	Filled block 5: faq/accordion
+image_hero	completed	0.1250	Rendered hero
+image_decorative	completed	0.1550	Rendered decorative-3
+image_decorative	completed	0.1850	Rendered decorative-2
+image_decorative	completed	0.2150	Rendered decorative-1
+fill	fallback		Retrying block footer/four-col-links with moonshotai/Kimi-K2.6
+fill	completed	0.2169	Filled block 2: features/alternating-rows
+fill	completed	0.2199	Filled block 7: footer/four-col-links
 assemble	started		Composing final HTML deterministically
-assemble	completed	0.0702	Rendered 5 blocks
+assemble	completed	0.2199	Rendered 7 blocks
+gates	started		Running 6 quality gates in parallel
+gates	completed		seo: pass (0 violations, 7ms)
+gates	completed		security: pass (0 violations, 5ms)
+gates	completed		performance: pass (4 violations, 4ms)
+gates	completed		conversion: pass (2 violations, 820ms)
+gates	completed		mobile: pass (1 violations, 1360ms)
+gates	completed		a11y: pass (0 violations, 2019ms)
+gates	completed	0.2201	6/6 gates passed (0 critical)

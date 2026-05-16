@@ -82,6 +82,10 @@ interface RunSummary {
   imagesGenerated?: number;
   fastPath?: boolean;
   intent?: unknown;
+  qualityGrade?: string;
+  gatesPassed?: number;
+  gatesTotal?: number;
+  refineAttempts?: number;
 }
 
 async function runOne(b: Brief): Promise<RunSummary> {
@@ -132,6 +136,35 @@ async function runOne(b: Brief): Promise<RunSummary> {
           imagesGenerated: page.images.length,
           intent: page.meta.intent,
           generationId: page.meta.generationId,
+          qualityGrade: page.meta.qualityGrade,
+          refineAttempts: page.meta.refineAttempts,
+          gatesPassed: page.meta.gateResults
+            ? Object.values(page.meta.gateResults.byGate).filter((g) => g.passed).length
+            : undefined,
+          gatesTotal: page.meta.gateResults
+            ? Object.keys(page.meta.gateResults.byGate).length
+            : undefined,
+          gateViolationCount: page.meta.gateResults?.allViolations.length,
+          // Persist the full gate results so a failing brief is easy to diagnose
+          // post-hoc without re-running the (expensive) pipeline.
+          gateResults: page.meta.gateResults
+            ? {
+                passed: page.meta.gateResults.passed,
+                criticalViolations: page.meta.gateResults.criticalViolations,
+                byGate: Object.fromEntries(
+                  Object.entries(page.meta.gateResults.byGate).map(([k, g]) => [
+                    k,
+                    {
+                      passed: g.passed,
+                      durationMs: g.durationMs,
+                      cost: g.cost,
+                      violationCount: g.violations.length,
+                      violations: g.violations.slice(0, 10),
+                    },
+                  ]),
+                ),
+              }
+            : undefined,
         },
         null,
         2,
@@ -163,6 +196,14 @@ async function runOne(b: Brief): Promise<RunSummary> {
       imagesGenerated: page.images.length,
       fastPath: page.adaptiveFastPath,
       intent: page.meta.intent,
+      qualityGrade: page.meta.qualityGrade,
+      gatesPassed: page.meta.gateResults
+        ? Object.values(page.meta.gateResults.byGate).filter((g) => g.passed).length
+        : undefined,
+      gatesTotal: page.meta.gateResults
+        ? Object.keys(page.meta.gateResults.byGate).length
+        : undefined,
+      refineAttempts: page.meta.refineAttempts,
     };
   } catch (err) {
     const wall = Date.now() - t0;
@@ -219,8 +260,15 @@ async function main() {
     if (s.ok) {
       totalCost += s.totalCostUsd ?? 0;
       totalTime += s.wallClockMs ?? 0;
+      const gateBadge =
+        s.gatesPassed !== undefined && s.gatesTotal !== undefined
+          ? ` ${s.gatesPassed}/${s.gatesTotal} gates`
+          : "";
+      const gradeBadge = s.qualityGrade ? ` [${s.qualityGrade}]` : "";
+      const refineBadge =
+        s.refineAttempts && s.refineAttempts > 0 ? ` ${s.refineAttempts}× refine` : "";
       console.log(
-        `  ${s.slug}  $${(s.totalCostUsd ?? 0).toFixed(4)}  ${((s.wallClockMs ?? 0) / 1000).toFixed(1)}s  ${s.imagesGenerated} images  ${s.fastPath ? "[fastpath]" : ""}`,
+        `  ${s.slug}  $${(s.totalCostUsd ?? 0).toFixed(4)}  ${((s.wallClockMs ?? 0) / 1000).toFixed(1)}s  ${s.imagesGenerated} images  ${s.fastPath ? "[fastpath]" : ""}${gateBadge}${gradeBadge}${refineBadge}`,
       );
     } else {
       console.log(`  ${s.slug}  FAILED: ${s.errorMessage}`);

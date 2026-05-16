@@ -2,29 +2,175 @@
   "slug": "04-ecommerce",
   "label": "E-commerce",
   "brief": "Landing page for 'Volcánica', a single-origin coffee subscription from Mexican volcanoes. Hero: bag of coffee on volcanic stone. Subscription tiers: $19 monthly, $49 quarterly. Mission: support Mexican farmers.",
-  "totalCostUsd": 0.07016959,
+  "totalCostUsd": 0.22008846,
   "breakdown": {
-    "total": 0.07016959,
-    "classify": 0.00006789,
-    "plan": 0.0368985,
-    "fill": 0.0032032,
-    "images": 0.03,
-    "assemble": 0
+    "total": 0.22008846,
+    "classify": 0.00007968,
+    "plan": 0.0913257,
+    "fill": 0.008477700000000001,
+    "images": 0.12,
+    "assemble": 0,
+    "gates": 0.00020538
   },
-  "wallClockMs": 248,
+  "wallClockMs": 44348,
   "adaptiveFastPath": true,
-  "imagesGenerated": 1,
+  "imagesGenerated": 4,
   "intent": {
-    "industry": "saas",
-    "audience": "small teams",
+    "industry": "coffee",
+    "audience": "single-origin enthusiasts",
     "tone": "professional",
     "complexity": "simple",
     "goals": [
-      "drive signups",
-      "communicate value clearly",
-      "showcase product"
+      "communicate origin story",
+      "promote subscription tiers",
+      "highlight social impact"
     ],
-    "productName": "Acme"
+    "productName": "Volcánica"
   },
-  "generationId": "1c11b4fb-9cbe-463c-b7e6-4aaa5f063116"
+  "generationId": "a2a52846-fc8e-4836-9504-575c337658fa",
+  "qualityGrade": "passed",
+  "refineAttempts": 0,
+  "gatesPassed": 6,
+  "gatesTotal": 6,
+  "gateViolationCount": 7,
+  "gateResults": {
+    "passed": true,
+    "criticalViolations": [],
+    "byGate": {
+      "a11y": {
+        "passed": true,
+        "durationMs": 2019,
+        "cost": 0,
+        "violationCount": 0,
+        "violations": []
+      },
+      "conversion": {
+        "passed": true,
+        "durationMs": 820,
+        "cost": 0.00020538,
+        "violationCount": 2,
+        "violations": [
+          {
+            "gate": "conversion",
+            "severity": "warning",
+            "code": "checklist-noLoremPresent",
+            "message": "Judge flagged possible placeholder text (low-confidence; verify manually)",
+            "suggestion": "Hero section contains outcome language and brand name but lacks concrete outcome; social proof present via testimonials; form has ≤4 fields; no placeholder text; no banned phrases; pricing visible; footer includes brand name and copyright."
+          },
+          {
+            "gate": "conversion",
+            "severity": "warning",
+            "code": "checklist-noBannedPhrases",
+            "message": "Judge flagged possible banned phrase (regex already authoritative; verify)",
+            "suggestion": "Hero section contains outcome language and brand name but lacks concrete outcome; social proof present via testimonials; form has ≤4 fields; no placeholder text; no banned phrases; pricing visible; footer includes brand name and copyright."
+          }
+        ]
+      },
+      "mobile": {
+        "passed": true,
+        "durationMs": 1360,
+        "cost": 0,
+        "violationCount": 1,
+        "violations": [
+          {
+            "gate": "mobile",
+            "severity": "warning",
+            "code": "small-tap-targets",
+            "message": "22 interactive element(s) below 44×44 CSS px (WCAG 2.5.5).",
+            "suggestion": "Increase padding on small buttons/links so the hit area reaches 44×44.",
+            "evidence": [
+              {
+                "tag": "a",
+                "w": 152,
+                "h": 40,
+                "html": "<a href=\"#pricing\" class=\"inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium\" style=\"background:#FF"
+              },
+              {
+                "tag": "a",
+                "w": 152,
+                "h": 42,
+                "html": "<a href=\"#farmers\" class=\"inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium\" style=\"background:tra"
+              },
+              {
+                "tag": "a",
+                "w": 254,
+                "h": 42,
+                "html": "<a href=\"#monthly\" class=\"mt-8 inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium\" style=\"backgroun"
+              },
+              {
+                "tag": "a",
+                "w": 254,
+                "h": 42,
+                "html": "<a href=\"#quarterly\" class=\"mt-8 inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium\" style=\"backgro"
+              },
+              {
+                "tag": "a",
+                "w": 36,
+                "h": 36,
+                "html": "<a href=\"https://twitter.com/volcanicacoffee\" aria-label=\"twitter\" class=\"inline-flex h-9 w-9 items-center justify-cente"
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {
+        "passed": true,
+        "durationMs": 7,
+        "cost": 0,
+        "violationCount": 0,
+        "violations": []
+      },
+      "security": {
+        "passed": true,
+        "durationMs": 5,
+        "cost": 0,
+        "violationCount": 0,
+        "violations": []
+      },
+      "performance": {
+        "passed": true,
+        "durationMs": 4,
+        "cost": 0,
+        "violationCount": 4,
+        "violations": [
+          {
+            "gate": "performance",
+            "severity": "warning",
+            "code": "image-no-dimensions",
+            "message": "Image 1 missing width and/or height attribute — causes cumulative layout shift.",
+            "evidence": {
+              "src": "https://api.together.ai/shrt/40GzBfrGCPEPM15l"
+            }
+          },
+          {
+            "gate": "performance",
+            "severity": "warning",
+            "code": "image-no-dimensions",
+            "message": "Image 2 missing width and/or height attribute — causes cumulative layout shift.",
+            "evidence": {
+              "src": "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=1400&q=80"
+            }
+          },
+          {
+            "gate": "performance",
+            "severity": "warning",
+            "code": "image-no-dimensions",
+            "message": "Image 3 missing width and/or height attribute — causes cumulative layout shift.",
+            "evidence": {
+              "src": "https://images.unsplash.com/photo-1518186285589-2f7649de83e0?auto=format&fit=crop&w=1400&q=80"
+            }
+          },
+          {
+            "gate": "performance",
+            "severity": "warning",
+            "code": "image-no-dimensions",
+            "message": "Image 4 missing width and/or height attribute — causes cumulative layout shift.",
+            "evidence": {
+              "src": "https://images.unsplash.com/photo-1494178270175-e96de2971df9?auto=format&fit=crop&w=1400&q=80"
+            }
+          }
+        ]
+      }
+    }
+  }
 }

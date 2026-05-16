@@ -3,105 +3,125 @@
     "slug": "01-saas-launch",
     "label": "SaaS launch",
     "ok": true,
-    "totalCostUsd": 0.07202410000000001,
-    "wallClockMs": 322,
+    "totalCostUsd": 0.0811713,
+    "wallClockMs": 50075,
     "imagesGenerated": 1,
     "fastPath": false,
     "intent": {
-      "industry": "productivity software",
-      "audience": "designers",
+      "industry": "design tools",
+      "audience": "freelance designers",
       "tone": "professional",
-      "complexity": "simple",
+      "complexity": "standard",
       "goals": [
-        "drive signups",
-        "communicate value clearly",
-        "showcase product"
+        "communicate core value",
+        "showcase AI prioritization",
+        "highlight integrations",
+        "drive signups"
       ],
       "productName": "FlowDeck"
-    }
+    },
+    "qualityGrade": "passed",
+    "gatesPassed": 6,
+    "gatesTotal": 6,
+    "refineAttempts": 0
   },
   {
     "slug": "02-portfolio",
     "label": "Portfolio personal",
     "ok": true,
-    "totalCostUsd": 0.06937749999999998,
-    "wallClockMs": 316,
-    "imagesGenerated": 1,
+    "totalCostUsd": 0.13763409000000004,
+    "wallClockMs": 41578,
+    "imagesGenerated": 3,
     "fastPath": true,
     "intent": {
-      "industry": "productivity software",
-      "audience": "small teams",
+      "industry": "fintech",
+      "audience": "freelance UI/UX designers",
       "tone": "professional",
-      "complexity": "simple",
+      "complexity": "standard",
       "goals": [
-        "drive signups",
-        "communicate value clearly",
-        "showcase product"
+        "showcase 6 projects",
+        "highlight fintech expertise",
+        "provide contact method"
       ],
-      "productName": "Acme"
-    }
+      "productName": "Sofia Portfolio"
+    },
+    "qualityGrade": "passed",
+    "gatesPassed": 6,
+    "gatesTotal": 6,
+    "refineAttempts": 0
   },
   {
     "slug": "03-event-conference",
     "label": "Event / conference",
     "ok": true,
-    "totalCostUsd": 0.07065872000000001,
-    "wallClockMs": 348,
-    "imagesGenerated": 1,
+    "totalCostUsd": 0.052227240000000015,
+    "wallClockMs": 44934,
+    "imagesGenerated": 0,
     "fastPath": true,
     "intent": {
-      "industry": "saas",
+      "industry": "developer tools",
       "audience": "indie hackers",
       "tone": "professional",
       "complexity": "simple",
       "goals": [
-        "drive signups",
-        "communicate value clearly",
-        "showcase product"
+        "communicate event purpose",
+        "drive ticket sales"
       ],
-      "productName": "Acme"
-    }
+      "productName": "Solo Founder Summit 2026"
+    },
+    "qualityGrade": "passed",
+    "gatesPassed": 6,
+    "gatesTotal": 6,
+    "refineAttempts": 0
   },
   {
     "slug": "04-ecommerce",
     "label": "E-commerce",
     "ok": true,
-    "totalCostUsd": 0.07016959,
-    "wallClockMs": 248,
-    "imagesGenerated": 1,
+    "totalCostUsd": 0.22008846,
+    "wallClockMs": 44348,
+    "imagesGenerated": 4,
     "fastPath": true,
     "intent": {
-      "industry": "saas",
-      "audience": "small teams",
+      "industry": "coffee",
+      "audience": "single-origin enthusiasts",
       "tone": "professional",
       "complexity": "simple",
       "goals": [
-        "drive signups",
-        "communicate value clearly",
-        "showcase product"
+        "communicate origin story",
+        "promote subscription tiers",
+        "highlight social impact"
       ],
-      "productName": "Acme"
-    }
+      "productName": "Volcánica"
+    },
+    "qualityGrade": "passed",
+    "gatesPassed": 6,
+    "gatesTotal": 6,
+    "refineAttempts": 0
   },
   {
     "slug": "05-agency",
     "label": "Agency",
     "ok": true,
-    "totalCostUsd": 0.07090258000000002,
-    "wallClockMs": 281,
-    "imagesGenerated": 1,
+    "totalCostUsd": 0.13820882,
+    "wallClockMs": 29049,
+    "imagesGenerated": 4,
     "fastPath": true,
     "intent": {
-      "industry": "saas",
-      "audience": "small teams",
+      "industry": "brand identity",
+      "audience": "Berlin startups and outdoor brands",
       "tone": "professional",
-      "complexity": "simple",
+      "complexity": "standard",
       "goals": [
-        "drive signups",
-        "communicate value clearly",
-        "showcase product"
+        "showcase expertise",
+        "demonstrate results",
+        "prompt action"
       ],
-      "productName": "Acme"
-    }
+      "productName": "Pixelhaus"
+    },
+    "qualityGrade": "passed",
+    "gatesPassed": 6,
+    "gatesTotal": 6,
+    "refineAttempts": 0
   }
 ]

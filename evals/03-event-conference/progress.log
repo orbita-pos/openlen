@@ -1,18 +1,27 @@
 classify	started		Parsing brief into structured intent
 classify	completed	0.0001	Parsing brief into structured intent
 plan	started		Adaptive fast-path planning (simple brief)
-plan	completed	0.0375	Adaptive fast-path planning (simple brief)
+plan	completed	0.0439	Adaptive fast-path planning (simple brief)
 fill	started		Filling slots for block 1: hero/centered-cta
 fill	started		Filling slots for block 2: features/icon-grid-3col
-fill	started		Filling slots for block 3: pricing/three-tier-highlight
-fill	started		Filling slots for block 4: cta/gradient-cta
-fill	started		Filling slots for block 5: footer/four-col-links
-image_hero	started		Rendering hero image: hero
-fill	completed	0.0380	Filled block 4: cta/gradient-cta
-fill	completed	0.0387	Filled block 3: pricing/three-tier-highlight
-fill	completed	0.0394	Filled block 2: features/icon-grid-3col
-fill	completed	0.0401	Filled block 5: footer/four-col-links
-fill	completed	0.0407	Filled block 1: hero/centered-cta
-image_hero	completed	0.0707	Rendered hero
+fill	started		Filling slots for block 3: testimonials/quote-grid-3col
+fill	started		Filling slots for block 4: faq/accordion
+fill	started		Filling slots for block 5: cta/card-cta-form
+fill	started		Filling slots for block 6: footer/minimal-row
+fill	completed	0.0446	Filled block 1: hero/centered-cta
+fill	completed	0.0453	Filled block 5: cta/card-cta-form
+fill	completed	0.0459	Filled block 6: footer/minimal-row
+fill	completed	0.0467	Filled block 4: faq/accordion
+fill	completed	0.0475	Filled block 3: testimonials/quote-grid-3col
+fill	fallback		Retrying block features/icon-grid-3col with moonshotai/Kimi-K2.6
+fill	completed	0.0520	Filled block 2: features/icon-grid-3col
 assemble	started		Composing final HTML deterministically
-assemble	completed	0.0707	Rendered 5 blocks
+assemble	completed	0.0520	Rendered 6 blocks
+gates	started		Running 6 quality gates in parallel
+gates	completed		seo: pass (0 violations, 6ms)
+gates	completed		security: pass (0 violations, 4ms)
+gates	completed		performance: pass (1 violations, 5ms)
+gates	completed		conversion: pass (3 violations, 860ms)
+gates	completed		mobile: pass (1 violations, 1334ms)
+gates	completed		a11y: pass (0 violations, 1962ms)
+gates	completed	0.0522	6/6 gates passed (0 critical)
