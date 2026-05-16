@@ -1,6 +1,7 @@
 import { mkdir, appendFile } from "node:fs/promises";
 import path from "node:path";
 import { WitnessRecordSchema } from "@/lib/orchestrator/types";
+import type { BlockId } from "@/lib/blocks/_registry";
 import type {
   PaletteName,
   PipelineStep,
@@ -38,6 +39,14 @@ export interface RecordInput {
    * Absent for steps that skip few-shot loading.
    */
   fewShotVariants?: string[];
+  /** Block ID this record relates to (set for `fill` and per-block events). */
+  blockId?: BlockId;
+  /** Index in plan.blockSequence (set for `fill` and per-block events). */
+  blockIndex?: number;
+  /** True for synthetic records that don't correspond to an LLM call
+   *  (e.g. the assemble step's deterministic record, or a fill fallback to
+   *  exampleSlots). Distinguishes them from real model calls in audits. */
+  deterministic?: boolean;
 }
 
 export interface Recorder {
@@ -98,6 +107,9 @@ export function createRecorder(generationId: string): Recorder {
         note: input.note,
         palette: input.palette,
         fewShotVariants: input.fewShotVariants,
+        blockId: input.blockId,
+        blockIndex: input.blockIndex,
+        deterministic: input.deterministic,
       };
       // Validate before write so a malformed record fails loudly instead of
       // silently polluting the recording.
