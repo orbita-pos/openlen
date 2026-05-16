@@ -1,3 +1,4 @@
+import { sql as sqlOp } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -95,6 +96,16 @@ export const projects = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     brief: text("brief").notNull(),
+    // Lifecycle state. 'draft' until the user explicitly publishes (which
+    // creates a hosted page in Phase 4). 'archived' hides the project from
+    // the default list view without deleting it.
+    status: text("status").notNull().default("draft"),
+    // Short labels surfaced on the list cards. Auto-populated from the
+    // intent (industry + tone) when the project is created.
+    tags: text("tags").array().notNull().default(sqlOp`'{}'::text[]`),
+    // Set when the project gets published (Phase 4). Lets the list page
+    // show "deployed at example.com" inline.
+    deployUrl: text("deployUrl"),
     // Hero image URL pulled out of `data` for cheap thumbnail rendering
     // without having to deserialize the whole JSONB on listing pages.
     thumbnailUrl: text("thumbnailUrl"),
@@ -102,7 +113,10 @@ export const projects = pgTable(
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
   },
-  (table) => [index("projects_userId_idx").on(table.userId, table.updatedAt)],
+  (table) => [
+    index("projects_userId_idx").on(table.userId, table.updatedAt),
+    index("projects_userId_status_idx").on(table.userId, table.status),
+  ],
 );
 
 // Generic rate-limit event log. Each row is "thing X happened at time Y for

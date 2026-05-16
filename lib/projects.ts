@@ -6,14 +6,21 @@ import type { LandingPage } from "@/lib/orchestrator/types";
 // Project persistence helpers.
 //
 // Kept in a single module so /api/generate, /api/regenerate-section, and the
-// listing pages all derive title and thumbnail the same way. Nothing here
-// touches auth — callers must verify ownership before passing a userId.
+// listing pages all derive title, tags, and thumbnail the same way. Nothing
+// here touches auth — callers must verify ownership before passing a userId.
 // ─────────────────────────────────────────────────────────────────────────────
+
+export type ProjectStatus = "draft" | "published" | "archived";
 
 export interface ProjectSummary {
   id: string;
   title: string;
+  status: ProjectStatus;
+  tags: string[];
+  deployUrl: string | null;
   thumbnailUrl: string | null;
+  costUsd: number;
+  sectionCount: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -35,6 +42,23 @@ export function deriveThumbnail(page: LandingPage): string | null {
   return hero?.url ?? page.images[0]?.url ?? null;
 }
 
+// Auto-tag from intent: industry (always), tone (when distinctive), plus
+// the style mood. Capped at 3 — list cards only show 3.
+export function deriveTags(page: LandingPage): string[] {
+  const tags = new Set<string>();
+  const intent = page.meta.intent;
+  if (intent.industry) tags.add(capitalize(intent.industry));
+  if (intent.tone && intent.tone !== "professional") {
+    tags.add(capitalize(intent.tone));
+  }
+  return Array.from(tags).slice(0, 3);
+}
+
+function asStatus(raw: string): ProjectStatus {
+  if (raw === "published" || raw === "archived" || raw === "draft") return raw;
+  return "draft";
+}
+
 export async function createProject(
   userId: string,
   page: LandingPage,
@@ -46,6 +70,8 @@ export async function createProject(
     title: deriveTitle(page),
     brief: page.meta.brief,
     thumbnailUrl: deriveThumbnail(page),
+    tags: deriveTags(page),
+    status: "draft",
     data: page,
   });
   return id;
@@ -61,6 +87,7 @@ export async function updateProjectPage(
     .set({
       title: deriveTitle(page),
       thumbnailUrl: deriveThumbnail(page),
+      tags: deriveTags(page),
       data: page,
       updatedAt: new Date(),
     })
@@ -77,7 +104,11 @@ export async function listProjects(userId: string): Promise<ProjectSummary[]> {
     .select({
       id: schema.projects.id,
       title: schema.projects.title,
+      status: schema.projects.status,
+      tags: schema.projects.tags,
+      deployUrl: schema.projects.deployUrl,
       thumbnailUrl: schema.projects.thumbnailUrl,
+      data: schema.projects.data,
       createdAt: schema.projects.createdAt,
       updatedAt: schema.projects.updatedAt,
     })
@@ -85,7 +116,19 @@ export async function listProjects(userId: string): Promise<ProjectSummary[]> {
     .where(eq(schema.projects.userId, userId))
     .orderBy(desc(schema.projects.updatedAt))
     .limit(200);
-  return rows;
+
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    status: asStatus(row.status),
+    tags: row.tags,
+    deployUrl: row.deployUrl,
+    thumbnailUrl: row.thumbnailUrl,
+    costUsd: row.data?.cost?.total ?? 0,
+    sectionCount: row.data?.plan?.sections?.length ?? 0,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  }));
 }
 
 export async function getProject(
@@ -108,8 +151,13 @@ export async function getProject(
     id: row.id,
     userId: row.userId,
     title: row.title,
+    status: asStatus(row.status),
+    tags: row.tags,
+    deployUrl: row.deployUrl,
     brief: row.brief,
     thumbnailUrl: row.thumbnailUrl,
+    costUsd: row.data?.cost?.total ?? 0,
+    sectionCount: row.data?.plan?.sections?.length ?? 0,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     data: row.data,
@@ -148,6 +196,45 @@ export async function renameProject(
     )
     .returning({ id: schema.projects.id });
   return result.length > 0;
+}
+
+export async function setProjectStatus(
+  projectId: string,
+  userId: string,
+  status: ProjectStatus,
+): Promise<boolean> {
+  const result = await db
+    .update(schema.projects)
+    .set({ status, updatedAt: new Date() })
+    .where(
+      and(
+        eq(schema.projects.id, projectId),
+        eq(schema.projects.userId, userId),
+      ),
+    )
+    .returning({ id: schema.projects.id });
+  return result.length > 0;
+}
+
+export async function duplicateProject(
+  projectId: string,
+  userId: string,
+): Promise<string | null> {
+  const existing = await getProject(projectId, userId);
+  if (!existing) return null;
+  const id = crypto.randomUUID();
+  await db.insert(schema.projects).values({
+    id,
+    userId,
+    title: `${existing.title} (copy)`,
+    brief: existing.brief,
+    status: "draft",
+    tags: existing.tags,
+    thumbnailUrl: existing.thumbnailUrl,
+    deployUrl: null,
+    data: existing.data,
+  });
+  return id;
 }
 
 function capitalize(s: string): string {

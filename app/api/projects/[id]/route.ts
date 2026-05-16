@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { auth } from "@/auth";
-import { deleteProject, getProject, renameProject } from "@/lib/projects";
+import {
+  deleteProject,
+  getProject,
+  renameProject,
+  setProjectStatus,
+} from "@/lib/projects";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,10 +23,15 @@ export async function GET(
   return json({ project }, 200);
 }
 
-// PATCH /api/projects/[id] — rename for now; surface more fields as needed.
+// PATCH /api/projects/[id] — accepts title and/or status. Apply only the
+// fields present in the body so the client doesn't have to send both.
 const PatchSchema = z.object({
-  title: z.string().min(1).max(200),
-});
+  title: z.string().min(1).max(200).optional(),
+  status: z.enum(["draft", "published", "archived"]).optional(),
+}).refine(
+  (v) => v.title !== undefined || v.status !== undefined,
+  { message: "Provide at least one of: title, status" },
+);
 
 export async function PATCH(
   req: Request,
@@ -42,8 +52,18 @@ export async function PATCH(
     return json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, 400);
   }
 
-  const ok = await renameProject(id, session.user.id, parsed.data.title);
-  if (!ok) return json({ error: "not_found" }, 404);
+  let touched = false;
+  if (parsed.data.title !== undefined) {
+    const ok = await renameProject(id, session.user.id, parsed.data.title);
+    if (!ok) return json({ error: "not_found" }, 404);
+    touched = true;
+  }
+  if (parsed.data.status !== undefined) {
+    const ok = await setProjectStatus(id, session.user.id, parsed.data.status);
+    if (!ok) return json({ error: "not_found" }, 404);
+    touched = true;
+  }
+  if (!touched) return json({ error: "no_op" }, 400);
   return json({ ok: true }, 200);
 }
 
