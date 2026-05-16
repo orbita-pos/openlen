@@ -4,7 +4,7 @@
     "label": "SaaS launch",
     "ok": true,
     "totalCostUsd": 0.2598708,
-    "wallClockMs": 384,
+    "wallClockMs": 335,
     "imagesGenerated": 4,
     "fastPath": false,
     "intent": {
@@ -18,90 +18,6 @@
         "showcase product"
       ],
       "productName": "FlowDeck"
-    }
-  },
-  {
-    "slug": "02-portfolio",
-    "label": "Portfolio personal",
-    "ok": true,
-    "totalCostUsd": 0.25982689999999997,
-    "wallClockMs": 353,
-    "imagesGenerated": 4,
-    "fastPath": true,
-    "intent": {
-      "industry": "productivity software",
-      "audience": "small teams",
-      "tone": "professional",
-      "complexity": "simple",
-      "goals": [
-        "drive signups",
-        "communicate value clearly",
-        "showcase product"
-      ],
-      "productName": "Acme"
-    }
-  },
-  {
-    "slug": "03-event-conference",
-    "label": "Event / conference",
-    "ok": true,
-    "totalCostUsd": 0.26001902,
-    "wallClockMs": 352,
-    "imagesGenerated": 4,
-    "fastPath": true,
-    "intent": {
-      "industry": "saas",
-      "audience": "indie hackers",
-      "tone": "professional",
-      "complexity": "simple",
-      "goals": [
-        "drive signups",
-        "communicate value clearly",
-        "showcase product"
-      ],
-      "productName": "Acme"
-    }
-  },
-  {
-    "slug": "04-ecommerce",
-    "label": "E-commerce",
-    "ok": true,
-    "totalCostUsd": 0.25998169,
-    "wallClockMs": 399,
-    "imagesGenerated": 4,
-    "fastPath": true,
-    "intent": {
-      "industry": "saas",
-      "audience": "small teams",
-      "tone": "professional",
-      "complexity": "simple",
-      "goals": [
-        "drive signups",
-        "communicate value clearly",
-        "showcase product"
-      ],
-      "productName": "Acme"
-    }
-  },
-  {
-    "slug": "05-agency",
-    "label": "Agency",
-    "ok": true,
-    "totalCostUsd": 0.25996468,
-    "wallClockMs": 321,
-    "imagesGenerated": 4,
-    "fastPath": true,
-    "intent": {
-      "industry": "saas",
-      "audience": "small teams",
-      "tone": "professional",
-      "complexity": "simple",
-      "goals": [
-        "drive signups",
-        "communicate value clearly",
-        "showcase product"
-      ],
-      "productName": "Acme"
     }
   }
 ]
