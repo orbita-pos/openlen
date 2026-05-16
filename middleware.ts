@@ -14,6 +14,7 @@ const PUBLIC_ROUTES = [
   "/login",
   "/register",
   "/forgot",
+  "/preview-blocks",
   // /reset/<token> matches via the startsWith check below
 ];
 
