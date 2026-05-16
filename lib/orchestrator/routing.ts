@@ -262,7 +262,7 @@ Rules:
 - "productName" must appear verbatim in the brief; never invent one.
 - Keep labels concrete. "saas" is too generic — prefer "kanban for designers".`;
 
-const PLAN_TASK = `TASK: Design the landing-page plan. Choose an ordered block sequence from the catalog, the aesthetic direction, and the palette.
+const PLAN_TASK = `TASK: Design the landing-page plan. Choose an ordered block sequence from the catalog, the aesthetic direction, the palette, and extract an authoritative factsLedger from the brief.
 
 Output a SINGLE JSON object — no markdown, no commentary.
 
@@ -274,7 +274,17 @@ Schema:
   "aesthetic": "<technical-minimal | refined-editorial | warm-humanist | editorial-maximalist | brutalist-technical>",
   "palette": "<mono-dark | indigo-dark | emerald-dark | warm-dark | mono-light>",
   "rationale": "<1-2 sentences: why this sequence vs alternatives>",
-  "imageNeeds": { "hero": <boolean>, "decorative": <integer 0-6> }
+  "imageNeeds": { "hero": <boolean>, "decorative": <integer 0-6> },
+  "factsLedger": {
+    "prices":      [ { "label": "<plan or item name>",     "amount": "<exact string from brief, e.g. \\"$29/mo\\">" } ],
+    "quantities":  [ { "label": "<what is being counted>", "value":  "<exact string, e.g. \\"14 years\\" / \\"3 partners\\">" } ],
+    "people":      [ { "name":  "<verbatim from brief>",   "role":   "<optional, verbatim>" } ],
+    "places":      [ "<exact city / region / country>" ],
+    "dates":       [ { "label": "<what the date marks>",   "date":   "<verbatim, e.g. \\"Sep 30\\" / \\"early-bird until Oct 15\\">" } ],
+    "clientLogos": [ "<exact company name from brief>" ],
+    "productName": "<exact product / brand name>",
+    "tagline":     "<exact tagline if brief gives one>"
+  }
 }
 
 Rules:
@@ -285,7 +295,15 @@ Rules:
 - Every chosen block's aesthetics list must include the chosen aesthetic. The catalog below shows each block's aesthetics.
 - imageNeeds.hero = true when the chosen hero block has an image slot (mockupSrc/imageSrc/heroImage). It's false for hero/animated-gradient (no image slot).
 - imageNeeds.decorative = how many supporting images to generate, max 3. Use 0 for pages whose blocks don't show images.
-- rationale is concrete and specific to the brief, not generic ("we picked X because Y").`;
+- rationale is concrete and specific to the brief, not generic ("we picked X because Y").
+
+factsLedger rules (NON-NEGOTIABLE — fill blocks reference this ledger verbatim):
+- Include ONLY facts that appear EXPLICITLY in the brief. Do NOT invent prices, dates, headcounts, or testimonial sources to make the ledger look fuller.
+- Numbers and currencies: copy verbatim from the brief ($29/mo stays "$29/mo"; "fourteen years" stays "fourteen years"; do NOT normalise to digits if the brief spelled it out).
+- Named people / places / companies: copy verbatim, including diacritics and casing.
+- Empty arrays are FINE. An empty ledger ([]) means "the brief specified nothing here"; that's a valid honest answer.
+- If a field doesn't apply (no products mentioned by name → no productName), OMIT it. Do not include "" or "n/a".
+- Max array sizes are tight (prices/quantities/dates/clientLogos: 12; people: 20; places: 12) — extract the most load-bearing facts, not every adjective.`;
 
 const FILL_TASK = `TASK: Fill slot values for ONE specific block in the planned landing page.
 

@@ -182,6 +182,16 @@ interface MockPlan {
     | "mono-light";
   rationale: string;
   imageNeeds: { hero: boolean; decorative: number };
+  factsLedger: {
+    prices: Array<{ label: string; amount: string }>;
+    quantities: Array<{ label: string; value: string }>;
+    people: Array<{ name: string; role?: string }>;
+    places: string[];
+    dates: Array<{ label: string; date: string }>;
+    clientLogos: string[];
+    productName?: string;
+    tagline?: string;
+  };
 }
 
 function planMock(sig: BriefSignal): MockPlan {
@@ -244,6 +254,18 @@ function planMock(sig: BriefSignal): MockPlan {
     palette,
     rationale: `Picked ${sequence.length} blocks matching ${sig.industry} for ${sig.audience} in a ${sig.tone} register; aesthetic chosen for the ${palette} palette's fit.`,
     imageNeeds: { hero: heroNeedsImage, decorative: 0 },
+    // Empty ledger by default in mock mode — the mock brief signal isn't
+    // structured enough to safely populate. Tests that need a ledger should
+    // build one explicitly via the real plan step or fixtures.
+    factsLedger: {
+      prices: [],
+      quantities: [],
+      people: [],
+      places: [],
+      dates: [],
+      clientLogos: [],
+      productName: sig.productName,
+    },
   };
 }
 

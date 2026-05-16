@@ -101,6 +101,64 @@ export const BlockSequenceEntrySchema = z.object({
 });
 export type BlockSequenceEntry = z.infer<typeof BlockSequenceEntrySchema>;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// FactsLedger — authoritative facts extracted from the brief by the plan step.
+//
+// Why this exists: fill blocks run in parallel with no shared context, so each
+// block independently reads the brief and can drift on the same fact (Session
+// 6 agency case: hero says "Three partners. Fourteen years." and about says
+// "Three people. Six years."). The ledger collapses every brief-specified
+// number / name / price into one authoritative reference all fill calls pin
+// to verbatim.
+//
+// What goes in: ONLY facts explicit in the brief. If the brief doesn't say
+// it, the field is omitted — fill is then free to generate plausibly but the
+// ledger doesn't lie about provenance.
+// ─────────────────────────────────────────────────────────────────────────────
+export const FactsLedgerSchema = z.object({
+  prices: z
+    .array(
+      z.object({
+        label: z.string().min(1).max(80),
+        amount: z.string().min(1).max(40),
+      }),
+    )
+    .max(12)
+    .default([]),
+  quantities: z
+    .array(
+      z.object({
+        label: z.string().min(1).max(80),
+        value: z.string().min(1).max(40),
+      }),
+    )
+    .max(12)
+    .default([]),
+  people: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(80),
+        role: z.string().max(80).optional(),
+      }),
+    )
+    .max(20)
+    .default([]),
+  places: z.array(z.string().min(1).max(80)).max(12).default([]),
+  dates: z
+    .array(
+      z.object({
+        label: z.string().min(1).max(80),
+        date: z.string().min(1).max(80),
+      }),
+    )
+    .max(12)
+    .default([]),
+  clientLogos: z.array(z.string().min(1).max(80)).max(20).default([]),
+  productName: z.string().max(80).optional(),
+  tagline: z.string().max(160).optional(),
+});
+export type FactsLedger = z.infer<typeof FactsLedgerSchema>;
+
 export const PlanSchema = z.object({
   blockSequence: z.array(BlockSequenceEntrySchema).min(2),
   aesthetic: AestheticDirectionSchema,
@@ -110,6 +168,17 @@ export const PlanSchema = z.object({
   imageNeeds: z.object({
     hero: z.boolean(),
     decorative: z.number().int().nonnegative().max(6),
+  }),
+  // Authoritative facts — fill blocks must reference these verbatim. Defaults
+  // to an empty ledger so older plan outputs (and the canonical fallback) keep
+  // working unchanged.
+  factsLedger: FactsLedgerSchema.default({
+    prices: [],
+    quantities: [],
+    people: [],
+    places: [],
+    dates: [],
+    clientLogos: [],
   }),
 });
 export type Plan = z.infer<typeof PlanSchema>;

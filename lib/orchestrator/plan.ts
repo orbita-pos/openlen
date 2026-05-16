@@ -154,6 +154,17 @@ function canonicalFallbackPlan(
     palette: ctx.palette.name,
     rationale: `Fallback sequence after plan step failed: ${message.slice(0, 200)}`,
     imageNeeds: { hero: true, decorative: 0 },
+    // Empty ledger — fallback path skipped fact extraction. Fill blocks then
+    // fall back to reading the raw brief verbatim (same behaviour as S6).
+    factsLedger: {
+      prices: [],
+      quantities: [],
+      people: [],
+      places: [],
+      dates: [],
+      clientLogos: [],
+      productName: intent.productName,
+    },
   };
 }
 
