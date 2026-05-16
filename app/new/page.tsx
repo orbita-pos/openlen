@@ -5,12 +5,9 @@ import { BriefForm, SAMPLE_BRIEF } from "@/components/workspace/brief-form";
 import { EditPromptModal } from "@/components/workspace/edit-prompt-modal";
 import { Header } from "@/components/workspace/header";
 import { PreviewPanel } from "@/components/workspace/preview-panel";
-import type { StyleId, ToneId } from "@/components/workspace/types";
 import { useDarkMode } from "@/lib/use-dark-mode";
 import { useGeneration } from "@/lib/use-generation";
 import { cn } from "@/lib/cn";
-
-const DEFAULT_SECTIONS = ["Hero", "Features", "Pricing", "FAQ", "Footer"];
 
 export default function NewPage() {
   const [dark, toggleDark] = useDarkMode();
@@ -22,13 +19,6 @@ export default function NewPage() {
   const [downloadingZip, setDownloadingZip] = useState(false);
 
   const [prompt, setPrompt] = useState(SAMPLE_BRIEF);
-  const [audience, setAudience] = useState(
-    "Independent freelance designers earning $40k–$120k/yr",
-  );
-  const [tone, setTone] = useState<ToneId>("professional");
-  const [industry, setIndustry] = useState("SaaS");
-  const [sections, setSections] = useState<string[]>(DEFAULT_SECTIONS);
-  const [style, setStyle] = useState<StyleId>("modern");
   const [projectName, setProjectName] = useState("Untitled");
   const [savedLabel, setSavedLabel] = useState("Saved 2 min ago");
   const [panelOpen, setPanelOpen] = useState(true);
@@ -38,10 +28,11 @@ export default function NewPage() {
 
   const handleGenerate = useCallback(() => {
     if (generating) return;
-    const brief = buildBrief({ prompt, audience, tone, industry, sections, style });
+    const brief = prompt.trim();
+    if (brief.length < 10) return;
     setSavedLabel("Saving…");
     void generate({ brief });
-  }, [generating, prompt, audience, tone, industry, sections, style, generate]);
+  }, [generating, prompt, generate]);
 
   useEffect(() => {
     if (state.kind === "generated") setSavedLabel("Saved just now");
@@ -88,21 +79,8 @@ export default function NewPage() {
 
   const cost = state.kind === "generated" ? state.result.cost : undefined;
   const formState = useMemo(
-    () => ({
-      prompt,
-      setPrompt,
-      audience,
-      setAudience,
-      tone,
-      setTone,
-      industry,
-      setIndustry,
-      sections,
-      setSections,
-      style,
-      setStyle,
-    }),
-    [prompt, audience, tone, industry, sections, style],
+    () => ({ prompt, setPrompt }),
+    [prompt],
   );
 
   return (
@@ -185,34 +163,3 @@ function triggerBlobDownload(blob: Blob, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-interface BriefInputs {
-  prompt: string;
-  audience: string;
-  tone: ToneId;
-  industry: string;
-  sections: string[];
-  style: StyleId;
-}
-
-function buildBrief({
-  prompt,
-  audience,
-  tone,
-  industry,
-  sections,
-  style,
-}: BriefInputs): string {
-  const lines = [prompt.trim()];
-  const extras: string[] = [];
-  if (audience.trim()) extras.push(`Target audience: ${audience.trim()}.`);
-  if (industry) extras.push(`Industry: ${industry}.`);
-  if (tone) extras.push(`Tone: ${tone}.`);
-  if (sections.length > 0) extras.push(`Sections to include: ${sections.join(", ")}.`);
-  if (style) extras.push(`Visual style: ${style}.`);
-  if (extras.length > 0) {
-    lines.push("");
-    lines.push(extras.join(" "));
-  }
-  const brief = lines.join("\n").trim();
-  return brief.length >= 10 ? brief : `${brief} — a landing page for this product.`;
-}
