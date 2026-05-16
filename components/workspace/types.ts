@@ -34,6 +34,9 @@ export type WorkspaceState =
   | {
       kind: "generated";
       result: LandingPage;
+      /** Snapshot of the AI-generated `filledBlocks` (refreshed on regen) so
+       *  the slot editor can compute per-block dirty state and reset edits. */
+      originalFilledBlocks: FilledBlock[];
       regen?: RegenInFlight;
       /** Project id when the page has been persisted server-side. */
       projectId?: string;

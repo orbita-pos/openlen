@@ -27,6 +27,14 @@ export interface UseGenerationResult {
   generate: (req: GenerateRequest) => Promise<void>;
   regenerateSection: (args: RegenSectionArgs) => Promise<void>;
   loadProject: (projectId: string) => Promise<void>;
+  /** Splice new filledBlocks (+ optionally a freshly-assembled html) into the
+   *  current result without disturbing the AI baseline. Called by the sidebar
+   *  slot editor after a debounced /api/reassemble round-trip. */
+  applyLiveEdit: (filledBlocks: FilledBlock[], html?: string) => void;
+  /** Restore the AI-generated `filledBlocks` from the snapshot. Used by the
+   *  editor's "Reset to AI version" affordance; caller is responsible for
+   *  reassembling the html afterwards. */
+  resetToOriginal: () => void;
   reset: () => void;
 }
 
@@ -162,6 +170,7 @@ export function useGeneration(): UseGenerationResult {
       setState({
         kind: "generated",
         result: page,
+        originalFilledBlocks: current.originalFilledBlocks,
         regen: {
           sectionId: args.sectionId,
           sectionName: args.sectionName,
@@ -189,6 +198,7 @@ export function useGeneration(): UseGenerationResult {
         setState({
           kind: "generated",
           result: page,
+          originalFilledBlocks: current.originalFilledBlocks,
           regen: undefined,
         });
         // eslint-disable-next-line no-console
@@ -198,7 +208,12 @@ export function useGeneration(): UseGenerationResult {
 
       if (!response.ok) {
         const text = await response.text().catch(() => response.statusText);
-        setState({ kind: "generated", result: page, regen: undefined });
+        setState({
+          kind: "generated",
+          result: page,
+          originalFilledBlocks: current.originalFilledBlocks,
+          regen: undefined,
+        });
         // eslint-disable-next-line no-console
         console.error("regenerate-section failed:", text);
         return;
@@ -211,11 +226,42 @@ export function useGeneration(): UseGenerationResult {
           ...data.page,
           cost: addCostBreakdowns(page.cost, data.cost),
         },
+        // A regen blesses the new slot payload as the AI baseline for this
+        // block. Future "reset" affordances should land here, not at the very
+        // first generation.
+        originalFilledBlocks: data.page.filledBlocks,
         regen: undefined,
       });
     },
     [],
   );
+
+  const applyLiveEdit = useCallback(
+    (filledBlocks: FilledBlock[], html?: string) => {
+      setState((prev) => {
+        if (prev.kind !== "generated") return prev;
+        return {
+          ...prev,
+          result: {
+            ...prev.result,
+            filledBlocks,
+            html: html ?? prev.result.html,
+          },
+        };
+      });
+    },
+    [],
+  );
+
+  const resetToOriginal = useCallback(() => {
+    setState((prev) => {
+      if (prev.kind !== "generated") return prev;
+      return {
+        ...prev,
+        result: { ...prev.result, filledBlocks: prev.originalFilledBlocks },
+      };
+    });
+  }, []);
 
   const loadProject = useCallback(async (projectId: string) => {
     try {
@@ -231,6 +277,7 @@ export function useGeneration(): UseGenerationResult {
       setState({
         kind: "generated",
         result: data.project.data,
+        originalFilledBlocks: data.project.data.filledBlocks,
         projectId: data.project.id,
         title: data.project.title,
       });
@@ -242,7 +289,15 @@ export function useGeneration(): UseGenerationResult {
     }
   }, []);
 
-  return { state, generate, regenerateSection, loadProject, reset };
+  return {
+    state,
+    generate,
+    regenerateSection,
+    loadProject,
+    applyLiveEdit,
+    resetToOriginal,
+    reset,
+  };
 }
 
 function parseBlockIndex(sectionId: string): number | null {
@@ -330,7 +385,11 @@ function applyEvent(
     return;
   }
   if (event.type === "result") {
-    setState(() => ({ kind: "generated", result: event.page }));
+    setState(() => ({
+      kind: "generated",
+      result: event.page,
+      originalFilledBlocks: event.page.filledBlocks,
+    }));
     return;
   }
   if (event.type === "project_saved") {
