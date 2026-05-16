@@ -1,4 +1,9 @@
+import { config as loadEnv } from "dotenv";
 import type { Config } from "drizzle-kit";
+
+// drizzle-kit doesn't read .env.local automatically (only .env). Load it
+// explicitly so `npm run db:push` etc. work without extra wrappers.
+loadEnv({ path: ".env.local" });
 
 export default {
   schema: "./lib/db/schema.ts",
