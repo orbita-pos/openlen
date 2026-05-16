@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActionBar } from "@/components/workspace/action-bar";
 import { BriefForm, SAMPLE_BRIEF } from "@/components/workspace/brief-form";
 import { Header } from "@/components/workspace/header";
 import { PreviewPanel } from "@/components/workspace/preview-panel";
@@ -111,7 +110,6 @@ export default function NewPage() {
             panelOpen={panelOpen}
             onOpenPanel={() => setPanelOpen(true)}
           />
-          <ActionBar visible={generated} cost={cost} />
         </div>
       </div>
     </div>

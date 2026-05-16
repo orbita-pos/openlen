@@ -93,11 +93,11 @@ export function PreviewPanel({ state, panelOpen, onOpenPanel }: PreviewPanelProp
     return buildSrcDoc(state.result);
   }, [state]);
 
-  // The iframe self-reports its document height via postMessage (script
-  // injected by buildSrcDoc). This avoids parent-side contentDocument access,
-  // which is finicky around iframe load timing and sandboxing — and it lets
-  // the wrapper match the real height so the dotted-bg outer container owns
-  // the only scroll.
+  // The iframe self-reports its document height + section-overlay clicks via
+  // postMessage (script injected by buildSrcDoc). This avoids parent-side
+  // contentDocument access, which is finicky around iframe load timing and
+  // sandboxing — and it lets the wrapper match the real height so the
+  // dotted-bg outer container owns the only scroll.
   useEffect(() => {
     if (!srcDoc) {
       setContentHeight(1200);
@@ -107,14 +107,17 @@ export function PreviewPanel({ state, panelOpen, onOpenPanel }: PreviewPanelProp
     const onMessage = (e: MessageEvent) => {
       if (iframe && e.source && e.source !== iframe.contentWindow) return;
       const data = e.data;
-      if (
-        data &&
-        typeof data === "object" &&
-        data.type === "inari:height" &&
-        typeof data.height === "number" &&
-        data.height > 0
-      ) {
+      if (!data || typeof data !== "object") return;
+      if (data.type === "inari:height" && typeof data.height === "number" && data.height > 0) {
         setContentHeight(data.height);
+        return;
+      }
+      if (data.type === "inari:regen" && typeof data.section === "string") {
+        alert(`Regenerate "${data.section}" — coming in Phase 1B.`);
+        return;
+      }
+      if (data.type === "inari:edit" && typeof data.section === "string") {
+        alert(`Edit prompt for "${data.section}" — coming in Phase 1B.`);
       }
     };
     window.addEventListener("message", onMessage);
@@ -448,6 +451,16 @@ function buildSrcDoc(page: LandingPage): string {
     html, body { margin: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; background: #fff; color: #111; }
     ${page.css}
+    /* Inari section-overlay UI — added at runtime, never affects layout */
+    .__inari-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 9999; opacity: 0; transition: opacity 120ms ease; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; }
+    section:hover > .__inari-overlay, footer:hover > .__inari-overlay { opacity: 1; }
+    .__inari-frame { position: absolute; inset: 0; outline: 2px solid rgba(255, 90, 54, 0.7); outline-offset: -2px; }
+    .__inari-name { position: absolute; top: 8px; left: 8px; background: rgba(24, 24, 27, 0.95); color: #fff; font-size: 11px; font-weight: 500; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
+    .__inari-name > i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #FF7E55; }
+    .__inari-actions { position: absolute; top: 8px; right: 8px; display: inline-flex; align-items: center; background: rgba(24, 24, 27, 0.95); color: #fff; border-radius: 6px; padding: 4px; pointer-events: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.18); gap: 2px; }
+    .__inari-actions button { background: transparent; border: 0; color: inherit; font: inherit; font-size: 11px; font-weight: 500; padding: 4px 8px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .__inari-actions button:hover { background: rgba(255, 255, 255, 0.15); }
+    .__inari-sep { width: 1px; align-self: stretch; background: rgba(255, 255, 255, 0.15); margin: 2px 0; }
   </style>
 </head>
 <body>
@@ -455,10 +468,7 @@ ${page.html}
 <script>
   (function () {
     var last = 0;
-    function send() {
-      // body.scrollHeight is the true content height. documentElement.scrollHeight
-      // returns max(viewport, content), which feeds back into the iframe size we
-      // just set — that loop is what was leaving extra whitespace at the bottom.
+    function sendHeight() {
       var body = document.body;
       if (!body) return;
       var h = body.scrollHeight;
@@ -467,23 +477,69 @@ ${page.html}
         try { parent.postMessage({ type: 'inari:height', height: h }, '*'); } catch (e) {}
       }
     }
-    send();
-    window.addEventListener('load', send);
-    if (typeof ResizeObserver !== 'undefined') {
-      try { new ResizeObserver(send).observe(document.body); } catch (e) {}
+
+    var NAME_MAP = { hero: 'Hero', features: 'Features', cta: 'CTA', pricing: 'Pricing', testimonials: 'Testimonials', faq: 'FAQ', social: 'Social proof' };
+    function sectionName(el, idx) {
+      if (el.tagName === 'FOOTER') return 'Footer';
+      var cls = (el.className || '').split(/\\s+/)[0] || '';
+      if (NAME_MAP[cls]) return NAME_MAP[cls];
+      if (cls) return cls.charAt(0).toUpperCase() + cls.slice(1);
+      return 'Section ' + (idx + 1);
     }
-    // Catch late image loads
-    setTimeout(send, 100);
-    setTimeout(send, 500);
-    setTimeout(send, 1500);
-    // Swallow same-page anchor navigation so clicks in preview don't reload
+
+    var REGEN_SVG = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>';
+    var EDIT_SVG = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>';
+
+    function decorate() {
+      var nodes = document.querySelectorAll('section, footer');
+      for (var i = 0; i < nodes.length; i++) {
+        var node = nodes[i];
+        if (node.querySelector(':scope > .__inari-overlay')) continue;
+        if (getComputedStyle(node).position === 'static') node.style.position = 'relative';
+        var name = sectionName(node, i);
+        var overlay = document.createElement('div');
+        overlay.className = '__inari-overlay';
+        overlay.innerHTML =
+          '<div class="__inari-frame"></div>' +
+          '<div class="__inari-name"><i></i>' + name + '</div>' +
+          '<div class="__inari-actions">' +
+            '<button type="button" data-action="regen" data-section="' + name + '">' + REGEN_SVG + ' Regenerate</button>' +
+            '<span class="__inari-sep"></span>' +
+            '<button type="button" data-action="edit" data-section="' + name + '">' + EDIT_SVG + ' Edit prompt</button>' +
+          '</div>';
+        node.appendChild(overlay);
+      }
+    }
+
     document.addEventListener('click', function (e) {
       var t = e.target;
-      while (t && t !== document.body) {
+      // Overlay actions
+      while (t && t.nodeType === 1) {
+        if (t.hasAttribute && t.hasAttribute('data-action')) {
+          e.preventDefault();
+          e.stopPropagation();
+          try {
+            parent.postMessage({
+              type: 'inari:' + t.getAttribute('data-action'),
+              section: t.getAttribute('data-section')
+            }, '*');
+          } catch (err) {}
+          return;
+        }
         if (t.tagName === 'A') { e.preventDefault(); return; }
         t = t.parentNode;
       }
     }, true);
+
+    sendHeight();
+    decorate();
+    window.addEventListener('load', function () { sendHeight(); decorate(); });
+    if (typeof ResizeObserver !== 'undefined') {
+      try { new ResizeObserver(sendHeight).observe(document.body); } catch (e) {}
+    }
+    setTimeout(function () { sendHeight(); decorate(); }, 100);
+    setTimeout(function () { sendHeight(); decorate(); }, 500);
+    setTimeout(function () { sendHeight(); decorate(); }, 1500);
   })();
 </script>
 </body>
