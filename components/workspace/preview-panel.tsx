@@ -55,6 +55,11 @@ export function PreviewPanel({
 
   const deviceWidth = DEVICE_WIDTHS[device];
 
+  // Include state.kind so the observer attaches the first time the container
+  // div mounts (during "idle"/"generating" it isn't in the tree because the
+  // component returns early). Without this, fitScale stays at 1 when the
+  // page first finishes generating, leaving the iframe at desktop width and
+  // making the user click a device tab to nudge the layout.
   useEffect(() => {
     if (!containerRef.current) return;
     const el = containerRef.current;
@@ -66,7 +71,7 @@ export function PreviewPanel({
     const ro = new ResizeObserver(compute);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [deviceWidth]);
+  }, [deviceWidth, state.kind]);
 
   const scale =
     zoom === "fit"
@@ -271,6 +276,16 @@ export function PreviewPanel({
                     style={{ height: contentHeight }}
                     sandbox="allow-scripts"
                     scrolling="no"
+                    onLoad={() => {
+                      // Backstop in case the iframe's first script-side
+                      // sendHeight fired before the parent attached the
+                      // window message listener. We ping the iframe and it
+                      // replies with its current height.
+                      iframeRef.current?.contentWindow?.postMessage(
+                        { type: "inari:request-height" },
+                        "*",
+                      );
+                    }}
                   />
                 </div>
               )}
@@ -462,6 +477,16 @@ ${page.html}
         t = t.parentNode;
       }
     }, true);
+
+    // Parent can ping us via postMessage; reply with current height. This is
+    // the backstop for races where the parent's window-message listener
+    // wasn't attached yet when our initial sendHeight() fired.
+    window.addEventListener('message', function (e) {
+      if (e.data && e.data.type === 'inari:request-height') {
+        last = 0; // force send even if same as before
+        sendHeight();
+      }
+    });
 
     sendHeight();
     decorate();
