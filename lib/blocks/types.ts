@@ -107,5 +107,21 @@ export const ICON_NAMES = [
 
 export type IconName = (typeof ICON_NAMES)[number];
 
-export const SOCIAL_PLATFORMS = ["twitter", "github", "linkedin", "youtube", "discord"] as const;
+// Session 7: widened from 5 → 10 platforms. Qwen3-235B fill consistently
+// emitted "instagram", "tiktok", and "bluesky" outside the enum and had to
+// fall back to Kimi (~$0.005/gen extra). Including the 2026-relevant ones
+// here keeps fill on the cheap primary path. Order is rough cultural
+// prominence; the AI picks per brief context.
+export const SOCIAL_PLATFORMS = [
+  "twitter",
+  "github",
+  "linkedin",
+  "youtube",
+  "discord",
+  "instagram",
+  "tiktok",
+  "mastodon",
+  "bluesky",
+  "threads",
+] as const;
 export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number];

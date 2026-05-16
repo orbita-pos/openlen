@@ -43,7 +43,10 @@ export const slotsSchema = z.object({
         href: z.string(),
       })
     )
-    .max(5)
+    // Widened from 5 → 6 in S7 — three icons is the visual minimum that reads
+    // as "social row" rather than "stray link", six is the cap before the row
+    // wraps awkwardly on mobile. Most pages will use 2–4.
+    .max(6)
     .optional(),
   copyright: z.string().max(140),
 });
