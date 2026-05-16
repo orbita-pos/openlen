@@ -356,7 +356,8 @@ async function runAllGatesAndRecord(
       step: "gates",
       decision: {
         step: g.gate === "conversion" ? "fill" : "assemble",
-        model: g.gate === "conversion" ? "lfm2-24b-a2b" : "deterministic",
+        model:
+          g.gate === "conversion" ? "moonshotai/Kimi-K2.6" : "deterministic",
         reason: `quality gate: ${g.gate}`,
         isFallback: false,
         fallbackChain: [],

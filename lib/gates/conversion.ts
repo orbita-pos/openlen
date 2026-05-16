@@ -9,13 +9,23 @@ import type { GateContext, GateResult, GateViolation } from "./types";
 //
 //   1. Banned-phrase regex (deterministic, instant). The master prompt already
 //      tells the fill step to avoid these — this catches escapes.
-//   2. LFM2-24B-A2B AI judge that scores the page against an 8-point
-//      conversion checklist. LFM2 prices at $0.03 / $0.12 per M tokens, so a
-//      typical judge call lands ~$0.0005-0.001.
+//   2. Moonshot Kimi-K2.6 AI judge that scores the page against an 8-point
+//      conversion checklist. Kimi prices at $1.20 / $4.50 per M (cached $0.20),
+//      so a typical judge call lands ~$0.003–0.006 — 5–10× more than the LFM2
+//      judge we used through Session 6, but Kimi reads 3KB HTML reliably (no
+//      hallucinated "Lorem ipsum detected" on clean copy, no spurious "no
+//      social proof" when testimonials are visible).
 //
-// Critical failures: missing/unclear CTA, weak hero copy, lorem ipsum, banned
-// phrases. Everything else (social proof, form length, pricing, footer) is a
-// warning — not worth re-filling for, but useful in meta.gateResults.
+// Critical failures (Session 7 restored the three checks demoted in S6):
+//   - hasOnePrimaryCTA          (Kimi can read CTA hierarchy accurately)
+//   - heroHasOutcomeLanguage    (Kimi can tell concrete from vague hero copy)
+//   - noLoremPresent            (deterministic regex below is authoritative;
+//                                judge agreement upgrades to critical for
+//                                non-"lorem" placeholder text like "TBD")
+//   - banned-phrase regex match (always critical, deterministic)
+//
+// Other checklist items (social proof, form length, pricing, footer) remain
+// warnings — not worth re-filling for, but useful in meta.gateResults.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ConversionJudgeSchema = z.object({
@@ -72,12 +82,15 @@ export async function runConversionGate(ctx: GateContext): Promise<GateResult> {
     });
   }
 
-  // ─── AI judge for the rest of the checklist. Keep the prompt terse;
-  //     LFM2-24B is a small model and a sprawling spec confuses it. ───
+  // ─── AI judge for the rest of the checklist. Kimi K2.6 reads 3KB HTML
+  //     reliably and follows the 8-field JSON schema; the LFM2 24B/A2B-
+  //     activation model we used through S6 hallucinated "Lorem ipsum
+  //     detected" twice on clean copy and false-positived "no social proof"
+  //     when testimonials were on the page. ───
   try {
     const judgePrompt = buildJudgePrompt(ctx.html);
     const response = await completeText({
-      model: "lfm2-24b-a2b",
+      model: "moonshotai/Kimi-K2.6",
       mockKey: "conversion-judge",
       messages: [
         {
@@ -90,7 +103,7 @@ export async function runConversionGate(ctx: GateContext): Promise<GateResult> {
       ],
       responseFormat: "json",
       temperature: 0.1,
-      maxTokens: 256,
+      maxTokens: 384,
     });
     cost = response.costUsd;
 
@@ -113,20 +126,46 @@ export async function runConversionGate(ctx: GateContext): Promise<GateResult> {
         evidence: judged.error.message,
       });
     } else {
-      // Treat ALL AI-judge checks as warnings. LFM2-24B is too small to
-      // reliably tell a clean page from a placeholder one — empirically it
-      // hallucinates "Lorem ipsum detected" on copy that has none. The
-      // deterministic banned-phrase regex above is authoritative for the
-      // critical bar; the judge produces soft signal for `meta.gateResults`
-      // and shows up in the UI's review panel without triggering refine.
+      // Kimi K2.6 is reliable enough that we promote the three high-leverage
+      // checks back to critical (Session 7). LFM2 false-positives on these
+      // (hallucinated "Lorem" detection on clean copy, missed obvious CTAs)
+      // forced them to warning in Session 6; with Kimi the signal is honest.
+      //
+      // `noLoremPresent` is special-cased: the deterministic regex above
+      // already catches "lorem ipsum" verbatim; the judge here detects other
+      // placeholder shapes ("TBD", "[REPLACE THIS]", "Coming soon" used as
+      // hero, etc) that the regex can't enumerate.
       const checks = judged.data;
-      const warnChecks: Array<[keyof typeof checks, string]> = [
-        ["hasOnePrimaryCTA", "Judge flagged: unclear primary CTA above the fold"],
+      const criticalChecks: Array<[keyof typeof checks, string, string]> = [
+        [
+          "hasOnePrimaryCTA",
+          "judge-critical-no-primary-cta",
+          "No clearly-primary CTA above the fold. A landing page needs ONE dominant call-to-action.",
+        ],
         [
           "heroHasOutcomeLanguage",
-          "Judge flagged: hero copy may lack audience/outcome specificity",
+          "judge-critical-weak-hero",
+          "Hero copy lacks audience + concrete outcome. Name who it's for and what it does.",
         ],
-        ["noLoremPresent", "Judge flagged possible placeholder text (low-confidence; verify manually)"],
+        [
+          "noLoremPresent",
+          "judge-critical-placeholder-text",
+          "Placeholder copy detected (lorem/TBD/'Coming soon'/[REPLACE]). Ship-blocking.",
+        ],
+      ];
+      for (const [key, code, msg] of criticalChecks) {
+        if (checks[key] === false) {
+          violations.push({
+            gate: "conversion",
+            severity: "critical",
+            code,
+            message: msg,
+            suggestion: checks.reasoning,
+          });
+        }
+      }
+
+      const warnChecks: Array<[keyof typeof checks, string]> = [
         [
           "socialProofPresent",
           "Judge flagged: no social proof (testimonials, logos, or concrete numbers)",
