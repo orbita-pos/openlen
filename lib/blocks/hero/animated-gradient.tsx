@@ -12,7 +12,7 @@
  */
 import React from "react";
 import { z } from "zod";
-import { EditableText, EditorContext } from "../_editable";
+import { EditableText, getEditorContext } from "../_editable";
 import type {
   BlockComponent,
   BlockComponentProps,
@@ -76,7 +76,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
   // one editable string. The accent-word gradient is decorative; sacrificing
   // it during editing keeps the contenteditable span simple (plaintext-only,
   // single text node). The published HTML still gets the accent split.
-  const { editorMode } = React.useContext(EditorContext);
+  const { editorMode } = React.useContext(getEditorContext());
   const { before, accent, after } = splitHeadline(slots.headline, slots.accentWord);
   const gradient = `linear-gradient(110deg, ${tokens.accent} 0%, ${tokens.accentHover} 45%, ${tokens.accent} 80%)`;
 

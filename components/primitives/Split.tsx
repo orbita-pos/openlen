@@ -7,7 +7,7 @@ import type { SplitProps, SplitSlots, SplitSide } from "./types";
 
 function SplitSideBySide({ id, slots }: { id: string; slots: SplitSlots }) {
   return (
-    <div style={{ background: "var(--color-bg)" }}>
+    <div style={{ background: "var(--primitive-section-bg, var(--color-bg))" }}>
       <div className="max-w-[80rem] mx-auto px-6 md:px-10 py-20 md:py-24">
         <SectionHead id={id} eyebrow={slots.eyebrow} title={slots.title} sub={slots.sub} align="left" />
         <div
@@ -100,7 +100,7 @@ function SplitComparisonTable({ id, slots }: { id: string; slots: SplitSlots }) 
   };
 
   return (
-    <div style={{ background: "var(--color-bg)" }}>
+    <div style={{ background: "var(--primitive-section-bg, var(--color-bg))" }}>
       <div className="max-w-[72rem] mx-auto px-6 md:px-10 py-20 md:py-24">
         <SectionHead id={id} eyebrow={slots.eyebrow} title={slots.title} sub={slots.sub} align="center" />
         <div
@@ -255,7 +255,7 @@ function BeforeAfterPanel({
 
 function SplitBeforeAfter({ id, slots }: { id: string; slots: SplitSlots }) {
   return (
-    <div style={{ background: "var(--color-bg)" }}>
+    <div style={{ background: "var(--primitive-section-bg, var(--color-bg))" }}>
       <div className="max-w-[80rem] mx-auto px-6 md:px-10 py-20 md:py-24">
         <SectionHead id={id} eyebrow={slots.eyebrow} title={slots.title} sub={slots.sub} align="center" />
         <div className="mt-14 relative grid md:grid-cols-2 gap-6 md:gap-10">

@@ -1,0 +1,861 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Anchor — Branch your Postgres like Git</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #08090A;
+    --bg-2: #0E0F12;
+    --bg-3: #131418;
+    --hair: rgba(255,255,255,0.06);
+    --hair-2: rgba(255,255,255,0.10);
+    --fg: #ECECEE;
+    --fg-dim: rgba(255,255,255,0.62);
+    --fg-faint: rgba(255,255,255,0.40);
+    --accent: #5E6AD2;
+    --accent-r: 94,106,210;
+    --accent-2: #8B92E8;
+  }
+  html, body { background: var(--bg); color: var(--fg); }
+  body {
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: "ss01","cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: 'Geist Mono', ui-monospace, monospace; }
+  .display { letter-spacing: -0.035em; line-height: 0.98; font-weight: 600; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .hairline { border-color: var(--hair); }
+  .hairline-2 { border-color: var(--hair-2); }
+  .dot-grid {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .radial-fade-accent {
+    background: radial-gradient(60% 50% at 50% 0%, rgba(var(--accent-r), 0.13), transparent 70%);
+  }
+  .radial-fade-soft {
+    background: radial-gradient(50% 60% at 50% 0%, rgba(var(--accent-r), 0.07), transparent 70%);
+  }
+  @keyframes pulse-dot {
+    0% { box-shadow: 0 0 0 0 rgba(var(--accent-r), 0.6); }
+    70% { box-shadow: 0 0 0 8px rgba(var(--accent-r), 0); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--accent-r), 0); }
+  }
+  .pulse-dot {
+    width: 6px; height: 6px; border-radius: 999px;
+    background: var(--accent);
+    animation: pulse-dot 1.8s infinite;
+  }
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .marquee-track { animation: marquee 42s linear infinite; }
+  .lift { transition: transform 110ms ease, background-color 110ms ease, box-shadow 120ms ease, border-color 110ms ease; }
+  .lift:hover { transform: translateY(-1px); }
+  .btn-primary {
+    background: var(--accent);
+    color: #F4F5FF;
+    font-weight: 600;
+  }
+  .btn-primary:hover { background: #6E7BE0; box-shadow: 0 6px 24px -8px rgba(var(--accent-r), 0.6); }
+  .accent { color: var(--accent-2); }
+  .ring-accent { box-shadow: 0 0 0 1px rgba(var(--accent-r), 0.6), 0 12px 40px -16px rgba(var(--accent-r), 0.4); }
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+  details[open] .faq-plus { transform: rotate(45deg); }
+  .faq-plus { transition: transform 150ms ease; color: var(--accent-2); }
+  .row-hover:hover { background: rgba(255,255,255,0.025); }
+  .half-tone { color: var(--fg-faint); }
+  .bento-tile { background: linear-gradient(180deg, rgba(255,255,255,0.014), rgba(255,255,255,0)); }
+  .seg-active { background: rgba(255,255,255,0.06); color: var(--fg); }
+  .seg { color: var(--fg-dim); }
+  .dot-divider {
+    background-image: linear-gradient(to right, rgba(255,255,255,0.16) 33%, rgba(255,255,255,0) 0%);
+    background-position: top;
+    background-size: 6px 1px;
+    background-repeat: repeat-x;
+    height: 1px;
+  }
+  .check {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 14px; height: 14px; border-radius: 999px;
+    background: rgba(var(--accent-r), 0.18); color: var(--accent-2);
+    flex: 0 0 14px;
+  }
+  .sql-key { color: #B6BCF0; }
+  .sql-str { color: #E8C998; }
+  .sql-num { color: #9EC1F5; }
+  .sql-cmt { color: rgba(255,255,255,0.32); }
+  .branch-line { stroke: rgba(255,255,255,0.20); stroke-width: 1.4; fill: none; }
+  .branch-line-accent { stroke: var(--accent); stroke-width: 1.4; fill: none; }
+  .pill-mute { background: rgba(255,255,255,0.04); color: var(--fg-dim); }
+  .pill-accent { background: rgba(var(--accent-r), 0.16); color: var(--accent-2); }
+  .pill-green { background: rgba(64,180,120,0.16); color: #7BD9A8; }
+  .pill-red { background: rgba(232,108,108,0.16); color: #F1A0A0; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- NAV -->
+<header class="sticky top-0 z-40 backdrop-blur-md bg-[rgba(8,9,10,0.72)] border-b hairline">
+  <div class="max-w-[1240px] mx-auto px-6 h-14 flex items-center justify-between">
+    <a href="#" class="flex items-center gap-2.5">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="6" cy="6" r="2.4" fill="#5E6AD2"/>
+        <circle cx="18" cy="6" r="2.4" stroke="#ECECEE" stroke-width="1.2"/>
+        <circle cx="12" cy="18" r="2.4" stroke="#ECECEE" stroke-width="1.2"/>
+        <path d="M6 8.4v3.6a3 3 0 003 3h0M18 8.4v3.6a3 3 0 01-3 3h0M9 15h6" stroke="#ECECEE" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>
+      <span class="text-[15px] font-semibold tracking-tight">Anchor</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-7 text-[13.5px] text-[color:var(--fg-dim)]">
+      <a class="hover:text-white lift" href="#">Product</a>
+      <a class="hover:text-white lift" href="#">Docs</a>
+      <a class="hover:text-white lift" href="#">Changelog</a>
+      <a class="hover:text-white lift" href="#pricing">Pricing</a>
+    </nav>
+    <div class="flex items-center gap-4">
+      <a href="#" class="text-[13.5px] text-[color:var(--fg-dim)] hover:text-white hidden sm:inline">Sign in</a>
+      <a href="#" class="btn-primary lift rounded-full pl-3.5 pr-2.5 h-8 inline-flex items-center gap-1 text-[13px]">
+        Try Anchor
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 dot-grid opacity-90 pointer-events-none"></div>
+  <div class="absolute inset-x-0 top-0 h-[640px] radial-fade-accent pointer-events-none"></div>
+  <div class="relative max-w-[1240px] mx-auto px-6 pt-20 pb-14">
+    <div class="flex flex-col items-center text-center max-w-3xl mx-auto">
+      <div class="mono text-[11px] tracking-wider uppercase text-[color:var(--fg-dim)] inline-flex items-center gap-2 border hairline rounded-full pl-2 pr-3 py-1 bg-[rgba(255,255,255,0.02)]">
+        <span class="pulse-dot"></span>
+        v3.1 · Postgres 16 + pgvector
+      </div>
+      <h1 class="display text-[56px] sm:text-[72px] md:text-[88px] mt-6">
+        Branch your Postgres like Git. <span class="half-tone">Stage every PR against real data.</span>
+      </h1>
+      <p class="mt-6 max-w-xl text-[15.5px] text-[color:var(--fg-dim)] leading-relaxed">
+        Anchor cuts a new branch from your production database in 1.4 seconds using copy-on-write storage. Test migrations, run integration suites, and tear it down when the PR merges — no shared staging, no cleanup scripts.
+      </p>
+      <div class="mt-8 flex items-center gap-3 flex-wrap justify-center">
+        <a href="#" class="btn-primary lift rounded-full px-4 h-10 inline-flex items-center gap-1.5 text-[14px]">
+          Try Anchor free
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#" class="lift rounded-full px-4 h-10 inline-flex items-center text-[14px] border hairline-2 hover:bg-white/[0.04]">
+          See the architecture
+        </a>
+      </div>
+      <div class="mt-6 mono text-[12.5px] text-[color:var(--fg-faint)]">
+        <span class="text-[color:var(--fg-dim)]">$</span> npx anchor branch create --from main
+      </div>
+    </div>
+
+    <!-- Hero tiles -->
+    <div class="mt-14 grid grid-cols-1 lg:grid-cols-[1.35fr_1fr] gap-4">
+      <!-- BIG: branch tree -->
+      <div class="rounded-2xl border hairline bg-[var(--bg-2)] overflow-hidden">
+        <div class="flex items-center justify-between px-4 h-10 border-b hairline">
+          <div class="flex items-center gap-2 mono text-[11.5px] text-[color:var(--fg-dim)]">
+            <span class="w-2 h-2 rounded-full bg-[#5E6AD2]/70"></span>
+            <span>anchor / acme-prod · 14 branches</span>
+          </div>
+          <div class="mono text-[11px] text-[color:var(--fg-faint)] flex items-center gap-2">
+            <span class="pulse-dot"></span> live
+          </div>
+        </div>
+
+        <div class="p-4">
+          <div class="grid grid-cols-[280px_1fr] gap-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)] pb-2">branch</div>
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)] pb-2 grid grid-cols-[80px_90px_70px_1fr] gap-3">
+              <span>rows</span><span>storage</span><span>created</span><span>author</span>
+            </div>
+          </div>
+
+          <!-- branch list -->
+          <div class="relative">
+            <!-- vertical guide -->
+            <div class="absolute left-[14px] top-0 bottom-0 w-px bg-[rgba(255,255,255,0.10)]"></div>
+
+            <!-- main -->
+            <div class="grid grid-cols-[280px_1fr] gap-4 items-center py-2.5 row-hover relative">
+              <div class="flex items-center gap-2.5 mono text-[12.5px] relative">
+                <span class="w-3 h-3 rounded-full border-2 border-[#5E6AD2] bg-[var(--bg-2)] relative z-10" style="margin-left:8px"></span>
+                <span class="font-medium">main</span>
+                <span class="mono text-[10.5px] pill-mute rounded px-1.5 py-0.5">prod</span>
+              </div>
+              <div class="grid grid-cols-[80px_90px_70px_1fr] gap-3 mono text-[12px] text-[color:var(--fg-dim)] tabular">
+                <span>14,208,402</span><span>284 GB</span><span class="text-[color:var(--fg-faint)]">—</span><span class="text-[color:var(--fg-faint)]">system</span>
+              </div>
+            </div>
+
+            <!-- branch 1 -->
+            <div class="grid grid-cols-[280px_1fr] gap-4 items-center py-2.5 row-hover relative">
+              <div class="flex items-center gap-2.5 mono text-[12.5px] relative pl-7">
+                <svg width="18" height="18" viewBox="0 0 18 18" class="absolute left-[8px] -top-2.5 text-white/20"><path d="M1 0 V8 Q1 12 5 12 H10" stroke="currentColor" stroke-width="1" fill="none"/></svg>
+                <span class="w-3 h-3 rounded-full border-2 border-[#5E6AD2] bg-[var(--bg-2)] relative z-10"></span>
+                <span class="font-medium">feat/checkout-rev2</span>
+                <span class="mono text-[10.5px] pill-accent rounded px-1.5 py-0.5">staging</span>
+              </div>
+              <div class="grid grid-cols-[80px_90px_70px_1fr] gap-3 mono text-[12px] text-[color:var(--fg-dim)] tabular">
+                <span>14,208,612</span><span>1.4 GB <span class="text-[color:var(--accent-2)]">·CoW</span></span><span>32s ago</span><span>m.tobin</span>
+              </div>
+            </div>
+
+            <!-- nested branch -->
+            <div class="grid grid-cols-[280px_1fr] gap-4 items-center py-2.5 row-hover relative">
+              <div class="flex items-center gap-2.5 mono text-[12.5px] relative pl-14">
+                <svg width="18" height="18" viewBox="0 0 18 18" class="absolute left-[36px] -top-2.5 text-white/14"><path d="M1 0 V8 Q1 12 5 12 H10" stroke="currentColor" stroke-width="1" fill="none"/></svg>
+                <span class="w-3 h-3 rounded-full border-2 border-white/30 bg-[var(--bg-2)] relative z-10"></span>
+                <span class="font-medium">stripe-3ds-test</span>
+                <span class="mono text-[10.5px] pill-mute rounded px-1.5 py-0.5">PR #4128</span>
+              </div>
+              <div class="grid grid-cols-[80px_90px_70px_1fr] gap-3 mono text-[12px] text-[color:var(--fg-dim)] tabular">
+                <span>14,208,612</span><span>402 MB</span><span>4m ago</span><span>p.anand</span>
+              </div>
+            </div>
+
+            <!-- branch 2 -->
+            <div class="grid grid-cols-[280px_1fr] gap-4 items-center py-2.5 row-hover relative">
+              <div class="flex items-center gap-2.5 mono text-[12.5px] relative pl-7">
+                <svg width="18" height="18" viewBox="0 0 18 18" class="absolute left-[8px] -top-2.5 text-white/20"><path d="M1 0 V8 Q1 12 5 12 H10" stroke="currentColor" stroke-width="1" fill="none"/></svg>
+                <span class="w-3 h-3 rounded-full border-2 border-white/30 bg-[var(--bg-2)] relative z-10"></span>
+                <span class="font-medium">fix/migration-031</span>
+                <span class="mono text-[10.5px] pill-green rounded px-1.5 py-0.5">tests pass</span>
+              </div>
+              <div class="grid grid-cols-[80px_90px_70px_1fr] gap-3 mono text-[12px] text-[color:var(--fg-dim)] tabular">
+                <span>14,208,402</span><span>61 MB</span><span>11m ago</span><span>h.suzuki</span>
+              </div>
+            </div>
+
+            <!-- branch 3 -->
+            <div class="grid grid-cols-[280px_1fr] gap-4 items-center py-2.5 row-hover relative">
+              <div class="flex items-center gap-2.5 mono text-[12.5px] relative pl-7">
+                <svg width="18" height="18" viewBox="0 0 18 18" class="absolute left-[8px] -top-2.5 text-white/20"><path d="M1 0 V8 Q1 12 5 12 H10" stroke="currentColor" stroke-width="1" fill="none"/></svg>
+                <span class="w-3 h-3 rounded-full border-2 border-white/30 bg-[var(--bg-2)] relative z-10"></span>
+                <span class="font-medium">spike/pgvector-rerank</span>
+                <span class="mono text-[10.5px] pill-mute rounded px-1.5 py-0.5">dev</span>
+              </div>
+              <div class="grid grid-cols-[80px_90px_70px_1fr] gap-3 mono text-[12px] text-[color:var(--fg-dim)] tabular">
+                <span>14,208,402</span><span>8.2 GB</span><span>1h ago</span><span>y.abara</span>
+              </div>
+            </div>
+
+            <!-- branch 4 -->
+            <div class="grid grid-cols-[280px_1fr] gap-4 items-center py-2.5 row-hover relative">
+              <div class="flex items-center gap-2.5 mono text-[12.5px] relative pl-7">
+                <svg width="18" height="18" viewBox="0 0 18 18" class="absolute left-[8px] -top-2.5 text-white/20"><path d="M1 0 V8 Q1 12 5 12 H10" stroke="currentColor" stroke-width="1" fill="none"/></svg>
+                <span class="w-3 h-3 rounded-full border-2 border-white/30 bg-[var(--bg-2)] relative z-10"></span>
+                <span class="font-medium">eu-dpa-shard-cut</span>
+                <span class="mono text-[10.5px] pill-red rounded px-1.5 py-0.5">3 conflicts</span>
+              </div>
+              <div class="grid grid-cols-[80px_90px_70px_1fr] gap-3 mono text-[12px] text-[color:var(--fg-dim)] tabular">
+                <span>14,208,402</span><span>184 MB</span><span>3h ago</span><span>i.calderon</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3 mono text-[11px] text-[color:var(--fg-faint)] flex items-center justify-between border-t hairline pt-3">
+            <span>showing 5 of 14 branches</span>
+            <span class="text-[color:var(--accent-2)] cursor-pointer">+ new branch · 1.4s</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="rounded-2xl border hairline bg-[var(--bg-2)] p-5 flex flex-col">
+        <div class="flex items-center justify-between">
+          <div class="mono text-[11px] uppercase tracking-wider text-[color:var(--fg-faint)]">acme-prod · today</div>
+          <div class="mono text-[11px] text-[color:var(--accent-2)] flex items-center gap-1.5"><span class="pulse-dot"></span>live</div>
+        </div>
+        <div class="grid grid-cols-2 gap-px mt-5 bg-[var(--hair)] rounded-xl overflow-hidden border hairline">
+          <div class="bg-[var(--bg-2)] p-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Active branches</div>
+            <div class="display text-3xl mt-2 tabular">14</div>
+            <div class="mono text-[11px] mt-1 text-[color:var(--accent-2)] tabular">+3 since Mon</div>
+          </div>
+          <div class="bg-[var(--bg-2)] p-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Avg create time</div>
+            <div class="display text-3xl mt-2 tabular">1.42<span class="text-base text-[color:var(--fg-dim)]"> s</span></div>
+            <div class="mono text-[11px] mt-1 text-[color:var(--accent-2)] tabular">P95 2.1s</div>
+          </div>
+          <div class="bg-[var(--bg-2)] p-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Storage saved via CoW</div>
+            <div class="display text-3xl mt-2 tabular">3.84<span class="text-base text-[color:var(--fg-dim)]"> TB</span></div>
+            <div class="mono text-[11px] mt-1 text-[color:var(--accent-2)] tabular">99.3% dedupe</div>
+          </div>
+          <div class="bg-[var(--bg-2)] p-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Migrations passing</div>
+            <div class="display text-3xl mt-2 tabular">28 / 31</div>
+            <div class="mono text-[11px] mt-1 text-[#F1A0A0] tabular">3 blocked on lock</div>
+          </div>
+        </div>
+        <div class="mt-5">
+          <div class="flex items-center justify-between mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">
+            <span>Branches over time</span>
+            <span class="tabular text-[color:var(--fg-dim)]">7d</span>
+          </div>
+          <svg viewBox="0 0 280 70" class="w-full h-[70px] mt-2" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="sparkA" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#5E6AD2" stop-opacity="0.3"/>
+                <stop offset="100%" stop-color="#5E6AD2" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <path id="spark1-area" fill="url(#sparkA)"></path>
+            <path id="spark1-line" fill="none" stroke="#5E6AD2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        </div>
+        <div class="mt-auto pt-5 mono text-[11.5px] text-[color:var(--fg-faint)] flex items-center justify-between">
+          <span>region: us-east-1 · eu-central-1</span>
+          <span class="text-[color:var(--fg-dim)]">PG 16.4</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LOGO CLOUD -->
+<section class="border-y hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-9">
+    <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)] text-center">Branching Postgres in production at</div>
+    <div class="overflow-hidden mt-6 [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]">
+      <div class="marquee-track flex gap-14 w-max items-center text-[color:var(--fg-dim)]">
+        <span class="text-2xl font-serif italic">Halcyon</span>
+        <span class="text-2xl font-semibold tracking-tight">QUARTERMAST</span>
+        <span class="text-2xl font-light tracking-[0.18em]">ATRIUM</span>
+        <span class="text-2xl font-serif">Stratos</span>
+        <span class="text-2xl font-semibold italic">Pavilion</span>
+        <span class="text-2xl font-mono tracking-tight">beacon/</span>
+        <span class="text-2xl font-bold tracking-tighter">Spool</span>
+        <span class="text-2xl font-serif italic">Lighthouse</span>
+        <span class="text-2xl font-serif italic">Halcyon</span>
+        <span class="text-2xl font-semibold tracking-tight">QUARTERMAST</span>
+        <span class="text-2xl font-light tracking-[0.18em]">ATRIUM</span>
+        <span class="text-2xl font-serif">Stratos</span>
+        <span class="text-2xl font-semibold italic">Pavilion</span>
+        <span class="text-2xl font-mono tracking-tight">beacon/</span>
+        <span class="text-2xl font-bold tracking-tighter">Spool</span>
+        <span class="text-2xl font-serif italic">Lighthouse</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BENTO -->
+<section class="relative">
+  <div class="max-w-[1240px] mx-auto px-6 py-24">
+    <div class="max-w-2xl">
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">Capabilities</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Everything you wanted from staging. <span class="half-tone">Without the cleanup.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4 max-w-xl">Anchor is one binary, one Helm chart, or a managed endpoint. Branch from prod, run your suite, share a connection string, throw it away.</p>
+    </div>
+
+    <div class="mt-12 grid grid-cols-12 grid-rows-[auto_auto] gap-4">
+      <!-- Big tile: query playground -->
+      <div class="col-span-12 lg:col-span-7 lg:row-span-2 bento-tile rounded-2xl border hairline p-6 overflow-hidden">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h12M4 18h8" stroke="#8B92E8" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Branch playground</div>
+        </div>
+        <h3 class="display text-2xl mt-4">Run a real query against a real branch.</h3>
+        <p class="text-[color:var(--fg-dim)] mt-2 text-sm leading-relaxed">Every branch ships with a JDBC string, a psql REPL, and a web playground that shows EXPLAIN + execution plan inline.</p>
+
+        <div class="mt-5 rounded-xl border hairline bg-black/40 overflow-hidden">
+          <div class="flex items-center justify-between border-b hairline px-3 h-8 mono text-[11px] text-[color:var(--fg-faint)]">
+            <span>branch: feat/checkout-rev2 · 14,208,612 rows</span>
+            <span class="text-[color:var(--accent-2)]">EXPLAIN ANALYZE · 41ms</span>
+          </div>
+          <pre class="mono text-[12.5px] leading-[1.65] p-4"><span class="sql-cmt">-- avg ticket size for cohorts that hit 3DS</span>
+<span class="sql-key">SELECT</span> c.cohort_month, <span class="sql-key">AVG</span>(o.amount_cents) / <span class="sql-num">100.0</span> <span class="sql-key">AS</span> avg_usd
+<span class="sql-key">FROM</span>   orders o
+<span class="sql-key">JOIN</span>   customers c <span class="sql-key">ON</span> c.id = o.customer_id
+<span class="sql-key">WHERE</span>  o.three_ds_status = <span class="sql-str">'challenged'</span>
+  <span class="sql-key">AND</span>  o.created_at &gt;= <span class="sql-str">'2026-01-01'</span>
+<span class="sql-key">GROUP BY</span> c.cohort_month
+<span class="sql-key">ORDER BY</span> c.cohort_month;</pre>
+          <div class="border-t hairline mono text-[12px]">
+            <div class="grid grid-cols-2 px-3 py-2 border-b hairline text-[color:var(--fg-faint)] text-[10.5px] uppercase tracking-wider">
+              <span>cohort_month</span><span>avg_usd</span>
+            </div>
+            <div class="grid grid-cols-2 px-3 py-1.5 row-hover"><span class="text-[color:var(--fg-dim)] tabular">2026-01</span><span class="tabular">142.08</span></div>
+            <div class="grid grid-cols-2 px-3 py-1.5 row-hover border-t hairline"><span class="text-[color:var(--fg-dim)] tabular">2026-02</span><span class="tabular">138.41</span></div>
+            <div class="grid grid-cols-2 px-3 py-1.5 row-hover border-t hairline"><span class="text-[color:var(--fg-dim)] tabular">2026-03</span><span class="tabular">156.22</span></div>
+            <div class="grid grid-cols-2 px-3 py-1.5 row-hover border-t hairline"><span class="text-[color:var(--fg-dim)] tabular">2026-04</span><span class="tabular">161.94</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Schema diff -->
+      <div class="col-span-12 md:col-span-6 lg:col-span-5 bento-tile rounded-2xl border hairline p-6">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 5h10M7 12h10M7 19h6" stroke="#8B92E8" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Schema diff</div>
+        </div>
+        <h3 class="display text-2xl mt-4">See exactly what the migration touches.</h3>
+        <p class="text-[color:var(--fg-dim)] mt-2 text-sm leading-relaxed">Generated from your live branch vs. main, not from the SQL file.</p>
+        <div class="mt-5 rounded-xl border hairline overflow-hidden mono text-[12px]">
+          <div class="px-3 py-2 border-b hairline bg-[rgba(232,108,108,0.05)]">
+            <span class="text-[#F1A0A0]">−</span> <span class="text-[color:var(--fg-dim)]">CREATE INDEX orders_customer_idx ON orders(customer_id)</span>
+          </div>
+          <div class="px-3 py-2 border-b hairline bg-[rgba(64,180,120,0.05)]">
+            <span class="text-[#7BD9A8]">+</span> <span class="text-[color:var(--fg-dim)]">CREATE INDEX CONCURRENTLY orders_customer_status_idx</span>
+          </div>
+          <div class="px-3 py-2 bg-[rgba(94,106,210,0.05)]">
+            <span class="text-[color:var(--accent-2)]">~</span> <span class="text-[color:var(--fg-dim)]">orders.three_ds_status: text → enum (4 variants)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Migration runner -->
+      <div class="col-span-12 md:col-span-6 lg:col-span-5 bento-tile rounded-2xl border hairline p-6">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 4v16l6-4 6 4V4" stroke="#8B92E8" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Migration runner</div>
+        </div>
+        <h3 class="display text-2xl mt-4">Test every migration. Against full prod.</h3>
+        <p class="text-[color:var(--fg-dim)] mt-2 text-sm leading-relaxed">Anchor runs your migration suite, records lock contention, and rejects PRs that would block.</p>
+        <div class="mt-5 space-y-1.5 mono text-[11.5px]">
+          <div class="flex items-center justify-between px-3 py-1.5 rounded border hairline">
+            <span><span class="text-[#7BD9A8]">✓</span> 026_add_3ds_columns</span><span class="text-[color:var(--fg-faint)] tabular">214ms</span>
+          </div>
+          <div class="flex items-center justify-between px-3 py-1.5 rounded border hairline">
+            <span><span class="text-[#7BD9A8]">✓</span> 027_backfill_status</span><span class="text-[color:var(--fg-faint)] tabular">4.1s</span>
+          </div>
+          <div class="flex items-center justify-between px-3 py-1.5 rounded border hairline">
+            <span><span class="text-[#7BD9A8]">✓</span> 028_drop_legacy_col</span><span class="text-[color:var(--fg-faint)] tabular">61ms</span>
+          </div>
+          <div class="flex items-center justify-between px-3 py-1.5 rounded border hairline">
+            <span><span class="text-[#7BD9A8]">✓</span> 029_create_enum</span><span class="text-[color:var(--fg-faint)] tabular">2ms</span>
+          </div>
+          <div class="flex items-center justify-between px-3 py-1.5 rounded border hairline bg-[rgba(232,108,108,0.04)]">
+            <span><span class="text-[#F1A0A0]">×</span> 030_alter_orders</span><span class="text-[#F1A0A0] tabular">ACCESS EXCL</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CI integration -->
+      <div class="col-span-12 md:col-span-5 lg:col-span-4 bento-tile rounded-2xl border hairline p-6">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="6" cy="6" r="2" stroke="#8B92E8" stroke-width="1.4"/><circle cx="18" cy="6" r="2" stroke="#8B92E8" stroke-width="1.4"/><circle cx="6" cy="18" r="2" stroke="#8B92E8" stroke-width="1.4"/><path d="M6 8v8M8 6h8" stroke="#8B92E8" stroke-width="1.4"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">git → branch</div>
+        </div>
+        <h3 class="display text-xl mt-4">A branch per PR. Auto.</h3>
+        <pre class="mono text-[11.5px] leading-relaxed mt-3 p-3 rounded-lg border hairline bg-black/40 overflow-x-auto"><span class="sql-cmt"># .github/workflows/ci.yml</span>
+- <span class="sql-key">uses</span>: anchor-hq/branch@v3
+  <span class="sql-key">with</span>:
+    from: main
+    ttl: <span class="sql-str">"4h"</span>
+    label: pr-${{ github.event.pull_request.number }}</pre>
+      </div>
+
+      <!-- RBAC -->
+      <div class="col-span-12 md:col-span-7 lg:col-span-7 bento-tile rounded-2xl border hairline p-6">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9" r="3" stroke="#8B92E8" stroke-width="1.4"/><path d="M5 19c1.5-3 4-4 7-4s5.5 1 7 4" stroke="#8B92E8" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Roles</div>
+        </div>
+        <h3 class="display text-xl mt-4">Devs branch. Reviewers approve. Auditors read.</h3>
+        <p class="text-[color:var(--fg-dim)] mt-2 text-sm leading-relaxed">RBAC scoped per branch with environment-level allowlists. Prod branches require a second approver for write access.</p>
+        <div class="mt-4 grid grid-cols-3 gap-2 mono text-[11px]">
+          <div class="border hairline rounded-lg px-3 py-2.5">
+            <div class="text-[color:var(--fg-dim)]">developer</div>
+            <div class="text-[color:var(--fg-faint)] text-[10.5px] mt-0.5">branch.* / read.prod</div>
+          </div>
+          <div class="border hairline rounded-lg px-3 py-2.5">
+            <div class="text-[color:var(--fg-dim)]">reviewer</div>
+            <div class="text-[color:var(--fg-faint)] text-[10.5px] mt-0.5">approve / merge</div>
+          </div>
+          <div class="border hairline rounded-lg px-3 py-2.5">
+            <div class="text-[color:var(--fg-dim)]">auditor</div>
+            <div class="text-[color:var(--fg-faint)] text-[10.5px] mt-0.5">read.audit_log</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BIG ALTERNATING -->
+<section class="border-t hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-24 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+    <div class="rounded-2xl border hairline bg-[var(--bg-2)] overflow-hidden">
+      <div class="flex items-center gap-1 px-3 h-10 border-b hairline">
+        <button class="seg seg-active rounded-md px-3 py-1 mono text-[12px]">Branches</button>
+        <button class="seg rounded-md px-3 py-1 mono text-[12px]">Queries</button>
+        <button class="seg rounded-md px-3 py-1 mono text-[12px]">Diffs</button>
+        <div class="ml-auto mono text-[11px] text-[color:var(--fg-faint)]">14d</div>
+      </div>
+      <div class="grid grid-cols-3 gap-px bg-[var(--hair)]">
+        <div class="bg-[var(--bg-2)] p-4">
+          <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Median lifetime</div>
+          <div class="display text-2xl mt-1 tabular">2h 14m</div>
+          <div class="mono text-[11px] text-[color:var(--accent-2)] tabular">↘ −38m / 14d</div>
+        </div>
+        <div class="bg-[var(--bg-2)] p-4">
+          <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Migrations tested</div>
+          <div class="display text-2xl mt-1 tabular">418</div>
+          <div class="mono text-[11px] text-[#7BD9A8] tabular">96.4% passed</div>
+        </div>
+        <div class="bg-[var(--bg-2)] p-4">
+          <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Cold-start P95</div>
+          <div class="display text-2xl mt-1 tabular">2.10 s</div>
+          <div class="mono text-[11px] text-[color:var(--accent-2)] tabular">incl. pgvector load</div>
+        </div>
+      </div>
+      <div class="p-5">
+        <div class="flex items-center justify-between mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">
+          <span>Branch lifetime distribution</span>
+          <span class="text-[color:var(--fg-dim)] tabular">418 branches</span>
+        </div>
+        <svg viewBox="0 0 520 180" class="w-full h-[180px] mt-3" preserveAspectRatio="none">
+          <g stroke="rgba(255,255,255,0.05)" stroke-dasharray="3 4">
+            <line x1="0" y1="36" x2="520" y2="36"/>
+            <line x1="0" y1="80" x2="520" y2="80"/>
+            <line x1="0" y1="124" x2="520" y2="124"/>
+          </g>
+          <g id="bars"></g>
+        </svg>
+        <div class="mono text-[10.5px] text-[color:var(--fg-faint)] mt-2 flex justify-between tabular">
+          <span>&lt;15m</span><span>1h</span><span>4h</span><span>12h</span><span>1d</span><span>3d+</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">Migration safety net</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Catch the lock <span class="half-tone">before production does.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4 leading-relaxed">Every PR opens a branch from the latest WAL position. We re-run your migration in a sandbox with the same indexes, the same row counts, and the same FKs. Locks that would stall prod show up as a red gate on the PR.</p>
+      <ul class="mt-6 space-y-3 text-[15px]">
+        <li class="flex gap-3 items-start"><span class="check mt-1.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Lock-graph capture: ACCESS EXCLUSIVE, SHARE ROW EXCLUSIVE, and table-rewrite detection.</span></li>
+        <li class="flex gap-3 items-start"><span class="check mt-1.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Replay the last 72 hours of prod write traffic against the branch — pre-merge.</span></li>
+        <li class="flex gap-3 items-start"><span class="check mt-1.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Index plan delta: did the planner pick the new index? See the row count.</span></li>
+        <li class="flex gap-3 items-start"><span class="check mt-1.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Extension support: pgvector, PostGIS, TimescaleDB, citus — all branch-safe.</span></li>
+      </ul>
+      <a href="#" class="inline-flex items-center gap-1 mt-7 accent text-[14px] lift">Read the safe-migration guide <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="border-t hairline relative">
+  <div class="absolute inset-x-0 top-0 h-[300px] radial-fade-soft pointer-events-none"></div>
+  <div class="relative max-w-[1240px] mx-auto px-6 py-24">
+    <div class="text-center max-w-2xl mx-auto">
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">Pricing</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Per branch. <span class="half-tone">Not per seat.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4">CoW storage means a 200GB branch costs less than the wifi at your offsite. Bring your own AWS / GCP / Azure on Scale.</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-12">
+      <div class="rounded-2xl border hairline p-7 bg-[var(--bg-2)] flex flex-col">
+        <div class="flex items-baseline justify-between">
+          <h3 class="text-lg font-semibold">Hobby</h3>
+          <span class="mono text-[11px] text-[color:var(--fg-faint)]">free forever</span>
+        </div>
+        <div class="display text-5xl mt-5 tabular">$0</div>
+        <div class="mono text-[11.5px] text-[color:var(--fg-faint)] mt-1">/ month</div>
+        <p class="text-[color:var(--fg-dim)] text-[14px] mt-4">For weekend projects and one-person teams.</p>
+        <div class="dot-divider my-6"></div>
+        <ul class="space-y-3 text-[14px]">
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>3 concurrent branches</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>500 MB CoW storage / branch</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>GitHub PR integration</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Community Slack</li>
+        </ul>
+        <a href="#" class="mt-auto pt-7 inline-flex items-center justify-center h-10 rounded-full border hairline-2 text-[14px] lift hover:bg-white/[0.04]">Start free</a>
+      </div>
+      <div class="relative rounded-2xl p-7 bg-[var(--bg-2)] flex flex-col ring-accent">
+        <span class="absolute -top-3 left-5 mono text-[10.5px] uppercase tracking-wider px-2.5 py-1 rounded-full text-white" style="background:#5E6AD2">Most popular</span>
+        <div class="flex items-baseline justify-between">
+          <h3 class="text-lg font-semibold">Team</h3>
+          <span class="mono text-[11px] accent">per seat</span>
+        </div>
+        <div class="display text-5xl mt-5 tabular">$29</div>
+        <div class="mono text-[11.5px] text-[color:var(--fg-faint)] mt-1">/ seat · month · annual</div>
+        <p class="text-[color:var(--fg-dim)] text-[14px] mt-4">For teams running a real Postgres against a real product.</p>
+        <div class="dot-divider my-6"></div>
+        <ul class="space-y-3 text-[14px]">
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>50 concurrent branches</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>100 GB CoW storage / branch</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Role-based access · 4 roles</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Migration safety gates on PR</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>SLA: branch create P95 &lt; 2.4s</li>
+        </ul>
+        <a href="#" class="btn-primary mt-auto pt-0 inline-flex items-center justify-center h-10 rounded-full text-[14px] lift" style="margin-top:1.75rem">Start 14-day trial</a>
+      </div>
+      <div class="rounded-2xl border hairline p-7 bg-[var(--bg-2)] flex flex-col">
+        <div class="flex items-baseline justify-between">
+          <h3 class="text-lg font-semibold">Scale</h3>
+          <span class="mono text-[11px] text-[color:var(--fg-faint)]">BYOC</span>
+        </div>
+        <div class="display text-5xl mt-5 tabular">$249</div>
+        <div class="mono text-[11.5px] text-[color:var(--fg-faint)] mt-1">/ month base · usage on top</div>
+        <p class="text-[color:var(--fg-dim)] text-[14px] mt-4">For 2TB+ databases and regulated workloads.</p>
+        <div class="dot-divider my-6"></div>
+        <ul class="space-y-3 text-[14px]">
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Unlimited concurrent branches</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Self-hosted in your VPC</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Signed audit log · SOC 2 + SSO</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Solution architect · 99.99% SLA</li>
+        </ul>
+        <a href="#" class="mt-auto pt-7 inline-flex items-center justify-center h-10 rounded-full border hairline-2 text-[14px] lift hover:bg-white/[0.04]">Talk to sales</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="border-t hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-24">
+    <div class="max-w-2xl">
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">Customers</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Backend teams who deleted their shared staging <span class="half-tone">and never looked back.</span></h2>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-12">
+      <div class="rounded-2xl border hairline p-6 bg-[var(--bg-2)]">
+        <div class="flex gap-0.5 accent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        </div>
+        <blockquote class="mt-4 text-[15px] leading-relaxed">"We retired our staging environment four months ago. Every PR gets a 1.4-second branch off prod. Cleanup is automatic when the PR closes."</blockquote>
+        <div class="flex items-center gap-3 mt-6">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center mono text-[12px] font-semibold" style="background:rgba(94,106,210,0.20);color:#8B92E8">YA</div>
+          <div class="text-[13px]">
+            <div class="font-medium">Yusuf Abara</div>
+            <div class="text-[color:var(--fg-faint)]">CTO · Mercury</div>
+          </div>
+        </div>
+      </div>
+      <div class="rounded-2xl border hairline p-6 bg-[var(--bg-2)]">
+        <div class="flex gap-0.5 accent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        </div>
+        <blockquote class="mt-4 text-[15px] leading-relaxed">"Anchor caught two ACCESS EXCLUSIVE locks last quarter that would have taken our checkout down. The PR-blocking is opinionated and we love it."</blockquote>
+        <div class="flex items-center gap-3 mt-6">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center mono text-[12px] font-semibold" style="background:rgba(94,106,210,0.20);color:#8B92E8">IC</div>
+          <div class="text-[13px]">
+            <div class="font-medium">Ines Calderón</div>
+            <div class="text-[color:var(--fg-faint)]">Head of Engineering · Brightwave</div>
+          </div>
+        </div>
+      </div>
+      <div class="rounded-2xl border hairline p-6 bg-[var(--bg-2)]">
+        <div class="flex gap-0.5 accent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        </div>
+        <blockquote class="mt-4 text-[15px] leading-relaxed">"Our pgvector index is 184GB. Branching used to be a half-day operation. Anchor does it in 2.1s. I still don't fully believe it."</blockquote>
+        <div class="flex items-center gap-3 mt-6">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center mono text-[12px] font-semibold" style="background:rgba(94,106,210,0.20);color:#8B92E8">PA</div>
+          <div class="text-[13px]">
+            <div class="font-medium">Priya Anand</div>
+            <div class="text-[color:var(--fg-faint)]">Staff Engineer · Linnea</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="border-t hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-24 grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-12">
+    <div>
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">FAQ</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Frequently asked, <span class="half-tone">honestly answered.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4 max-w-sm">Our team is largely ex-Postgres and ex-CockroachDB. If you have a deeper question, drop us a line at <a href="#" class="accent">engineering@anchor.dev</a>.</p>
+    </div>
+    <div>
+      <details class="py-5 border-b hairline">
+        <summary class="flex items-center justify-between gap-6">
+          <span class="text-[16px] font-medium">How does copy-on-write storage actually work under the hood?</span>
+          <span class="faq-plus mono text-lg leading-none">+</span>
+        </summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">We store every Postgres page in a content-addressed object store. A branch is a manifest: an ordered list of page hashes per relation. Branching is a manifest fork — O(relation count), not O(rows). When you write to a branch, the new page gets a new hash and replaces the entry; the original page stays referenced by main. Storage is shared until divergence.</p>
+      </details>
+      <details class="py-5 border-b hairline">
+        <summary class="flex items-center justify-between gap-6">
+          <span class="text-[16px] font-medium">What's the cold-start time on a new branch?</span>
+          <span class="faq-plus mono text-lg leading-none">+</span>
+        </summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">P50 1.4s, P95 2.1s, P99 3.4s — measured across our managed fleet over the last 30 days. The first query after create can be slower if the relevant pages aren't on the host's local cache; we pre-warm the buffer cache for the top 200 relations by size, which covers most real workloads.</p>
+      </details>
+      <details class="py-5 border-b hairline">
+        <summary class="flex items-center justify-between gap-6">
+          <span class="text-[16px] font-medium">Does it support Postgres extensions like pgvector?</span>
+          <span class="faq-plus mono text-lg leading-none">+</span>
+        </summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">Yes — pgvector, PostGIS, TimescaleDB, citus, pg_stat_statements, and 38 other extensions are pre-built into the branch image. We track upstream releases within 72 hours. For custom extensions, you can supply a build script and we'll bake it into your workspace image.</p>
+      </details>
+      <details class="py-5 border-b hairline">
+        <summary class="flex items-center justify-between gap-6">
+          <span class="text-[16px] font-medium">How do you handle long-running transactions during branch cut?</span>
+          <span class="faq-plus mono text-lg leading-none">+</span>
+        </summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">We branch at a logical WAL position, not a physical snapshot — so an in-flight transaction on main doesn't pin our cut. If you want point-in-time semantics, pass <span class="mono text-[12.5px] accent">--at-lsn</span> or a recent timestamp; we'll resolve it to the nearest WAL boundary that has no open writes touching the relations you specify.</p>
+      </details>
+      <details class="py-5 border-b hairline">
+        <summary class="flex items-center justify-between gap-6">
+          <span class="text-[16px] font-medium">What's the maximum branch tree depth?</span>
+          <span class="faq-plus mono text-lg leading-none">+</span>
+        </summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">Hard limit is 64 levels. In practice nobody goes past 4. Branches of branches share storage with their grandparent, so you can demo a customer-specific bug fix off a colleague's PR without doubling the storage cost.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="px-6 pb-24">
+  <div class="max-w-[1240px] mx-auto relative rounded-2xl border hairline overflow-hidden p-10 md:p-16 text-center" style="background:linear-gradient(180deg, rgba(94,106,210,0.05), rgba(255,255,255,0));">
+    <div class="absolute inset-0 dot-grid opacity-80 pointer-events-none"></div>
+    <div class="absolute inset-x-0 top-0 h-full radial-fade-accent pointer-events-none"></div>
+    <div class="relative">
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent inline-flex items-center gap-2"><span class="pulse-dot"></span>1.4s · branch from main</div>
+      <h2 class="display text-4xl md:text-6xl mt-5">Cut a branch. <span class="half-tone">Merge with confidence.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4 max-w-xl mx-auto">Connect your Postgres in 90 seconds. The first three branches are on us, forever.</p>
+      <div class="mt-7 flex items-center gap-3 justify-center flex-wrap">
+        <a href="#" class="btn-primary lift rounded-full px-5 h-11 inline-flex items-center gap-1.5 text-[14px]">
+          Try Anchor free
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#" class="lift rounded-full px-5 h-11 inline-flex items-center text-[14px] border hairline-2 hover:bg-white/[0.04]">Talk to sales</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="border-t hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-14 grid grid-cols-2 md:grid-cols-5 gap-8">
+    <div class="col-span-2">
+      <div class="flex items-center gap-2.5">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="6" cy="6" r="2.4" fill="#5E6AD2"/><circle cx="18" cy="6" r="2.4" stroke="#ECECEE" stroke-width="1.2"/><circle cx="12" cy="18" r="2.4" stroke="#ECECEE" stroke-width="1.2"/><path d="M6 8.4v3.6a3 3 0 003 3h0M18 8.4v3.6a3 3 0 01-3 3h0M9 15h6" stroke="#ECECEE" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <span class="text-[15px] font-semibold tracking-tight">Anchor</span>
+      </div>
+      <p class="text-[13.5px] text-[color:var(--fg-dim)] mt-3 max-w-xs">Database branching for staging environments. Postgres 16-native.</p>
+      <a href="#" class="mt-4 mono text-[11px] inline-flex items-center gap-2 border hairline rounded-full pl-2 pr-3 py-1 text-[color:var(--fg-dim)]"><span class="pulse-dot"></span>API · 99.998% / 90d</a>
+    </div>
+    <div>
+      <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Product</div>
+      <ul class="mt-3 space-y-2 text-[13.5px] text-[color:var(--fg-dim)]">
+        <li><a href="#" class="hover:text-white">Branching</a></li>
+        <li><a href="#" class="hover:text-white">Migration runner</a></li>
+        <li><a href="#" class="hover:text-white">Roles</a></li>
+        <li><a href="#" class="hover:text-white">Audit log</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Developers</div>
+      <ul class="mt-3 space-y-2 text-[13.5px] text-[color:var(--fg-dim)]">
+        <li><a href="#" class="hover:text-white">Docs</a></li>
+        <li><a href="#" class="hover:text-white">CLI reference</a></li>
+        <li><a href="#" class="hover:text-white">Architecture</a></li>
+        <li><a href="#" class="hover:text-white">Changelog</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Company</div>
+      <ul class="mt-3 space-y-2 text-[13.5px] text-[color:var(--fg-dim)]">
+        <li><a href="#" class="hover:text-white">About</a></li>
+        <li><a href="#" class="hover:text-white">Customers</a></li>
+        <li><a href="#" class="hover:text-white">Security</a></li>
+        <li><a href="#" class="hover:text-white">Careers · 7</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="border-t hairline">
+    <div class="max-w-[1240px] mx-auto px-6 py-5 flex flex-col md:flex-row items-center justify-between gap-3 mono text-[11.5px] text-[color:var(--fg-faint)]">
+      <div>© 2026 Anchor Data, Inc. · Berlin / NYC</div>
+      <div class="flex items-center gap-5">
+        <a href="#" class="hover:text-white">Privacy</a>
+        <a href="#" class="hover:text-white">Terms</a>
+        <a href="#" class="hover:text-white">DPA</a>
+        <span class="text-[color:var(--fg-faint)]">v3.1.4 · 0a14b8</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  function buildPath(data, opts) {
+    const { width, height, padY = 4, area = false } = opts;
+    const max = Math.max(...data), min = Math.min(...data);
+    const span = Math.max(1, max - min);
+    const stepX = width / (data.length - 1);
+    let d = '';
+    data.forEach((v, i) => {
+      const x = i * stepX;
+      const y = padY + (1 - (v - min) / span) * (height - padY * 2);
+      d += (i === 0 ? 'M' : 'L') + x.toFixed(2) + ',' + y.toFixed(2) + ' ';
+    });
+    if (area) d += `L${width},${height} L0,${height} Z`;
+    return d;
+  }
+  function series(n, base, vol, seed) {
+    let s = seed; const out = [];
+    for (let i = 0; i < n; i++) {
+      s = (s * 9301 + 49297) % 233280;
+      const r = s / 233280;
+      base = base + (r - 0.45) * vol;
+      out.push(base);
+    }
+    return out;
+  }
+  const d1 = series(28, 6, 1.4, 91).map((v, i) => v + i * 0.18);
+  document.getElementById('spark1-line').setAttribute('d', buildPath(d1, { width: 280, height: 70 }));
+  document.getElementById('spark1-area').setAttribute('d', buildPath(d1, { width: 280, height: 70, area: true }));
+
+  // bar chart
+  const barsEl = document.getElementById('bars');
+  const heights = [82, 156, 122, 64, 30, 14];
+  const colW = 520 / heights.length;
+  heights.forEach((h, i) => {
+    const x = i * colW + 16;
+    const w = colW - 32;
+    const y = 170 - h;
+    const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    r.setAttribute('x', x); r.setAttribute('y', y);
+    r.setAttribute('width', w); r.setAttribute('height', h);
+    r.setAttribute('rx', '3');
+    r.setAttribute('fill', i === 1 ? '#5E6AD2' : 'rgba(255,255,255,0.10)');
+    barsEl.appendChild(r);
+  });
+</script>
+
+</body>
+</html>

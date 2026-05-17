@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Quill — The essays your team should actually read.</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;1,8..60,400;1,8..60,500&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#F5F1EA;
+    --paper:#EDE7DD;
+    --paper-2:#FBF8F2;
+    --ink:#1F1B16;
+    --ink-2:#5C5448;
+    --ink-3:#8F8676;
+    --accent:#4F8259;
+    --accent-dk:#3E6A47;
+    --rule:rgba(31,27,22,0.10);
+    --rule-soft:rgba(31,27,22,0.06);
+  }
+  html,body{background:var(--bg);color:var(--ink);}
+  body{
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+    font-feature-settings:"ss01","cv11";
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  .serif{font-family:'Source Serif 4',Georgia,serif;font-optical-sizing:auto;letter-spacing:-0.016em;}
+  .display{font-family:'Source Serif 4',Georgia,serif;font-optical-sizing:auto;line-height:0.92;letter-spacing:-0.028em;font-weight:400;}
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace;}
+  em.editorial{font-style:italic;color:var(--accent);font-feature-settings:"ss01";font-weight:500;}
+  .tnum{font-variant-numeric:tabular-nums;}
+  .accent-line{display:inline-block;width:28px;height:1px;background:currentColor;opacity:0.4;vertical-align:middle;margin-right:10px;transform:translateY(-3px);}
+  .section-marker{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:var(--ink-2);}
+  .dropcap::first-letter{font-family:'Source Serif 4',Georgia,serif;float:left;font-size:4.5em;line-height:0.85;padding:0.06em 0.14em 0 0;font-weight:400;color:var(--accent);font-style:italic;}
+  .ul-link{position:relative;display:inline-block;}
+  .ul-link::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:1px;background:currentColor;transform:scaleX(0);transform-origin:right center;transition:transform 280ms cubic-bezier(.2,.7,.2,1);}
+  .ul-link:hover::after{transform:scaleX(1);transform-origin:left center;}
+  .mesh{
+    background-image:
+      radial-gradient(60% 50% at 18% 18%, rgba(79,130,89,0.10), transparent 65%),
+      radial-gradient(45% 40% at 90% 12%, rgba(79,130,89,0.06), transparent 70%),
+      radial-gradient(50% 45% at 78% 84%, rgba(79,130,89,0.045), transparent 70%);
+  }
+  .papergrid{
+    background-image:
+      linear-gradient(rgba(31,27,22,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(31,27,22,0.05) 1px, transparent 1px);
+    background-size:32px 32px;
+  }
+  .pulse-dot{position:relative;display:inline-block;width:7px;height:7px;border-radius:999px;background:var(--accent);box-shadow:0 0 0 0 rgba(79,130,89,0.55);animation:pulse 1.8s ease-out infinite;}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(79,130,89,0.55);}
+    70%{box-shadow:0 0 0 9px rgba(79,130,89,0);}
+    100%{box-shadow:0 0 0 0 rgba(79,130,89,0);}
+  }
+  .btn-primary{transition:transform 120ms ease, background 120ms ease;}
+  .btn-primary:hover{transform:translateY(-1px);background:var(--accent-dk);}
+  .btn-ghost{transition:transform 120ms ease, border-color 120ms ease;}
+  .btn-ghost:hover{transform:translateY(-1px);border-color:rgba(31,27,22,0.35);}
+  .hairline{border-color:var(--rule);}
+  .marquee{display:flex;gap:64px;animation:marq 38s linear infinite;width:max-content;align-items:center;}
+  @keyframes marq{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+  .marquee-mask{mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);}
+  details > summary{list-style:none;cursor:pointer;}
+  details > summary::-webkit-details-marker{display:none;}
+  details[open] .faq-plus{transform:rotate(45deg);}
+  .faq-plus{transition:transform 200ms ease;}
+  .tabbar{backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);background:rgba(245,241,234,0.75);}
+  ::selection{background:rgba(79,130,89,0.24);color:var(--ink);}
+  .scroll-arrow{transition:transform 160ms ease;}
+  a:hover .scroll-arrow{transform:translateX(3px);}
+  /* portrait placeholders */
+  .portrait{background:linear-gradient(160deg,#2c2a24 0%, #1f1b16 60%, #15110d 100%);position:relative;overflow:hidden;}
+  .portrait::after{content:"";position:absolute;inset:0;background:radial-gradient(60% 50% at 50% 35%, rgba(255,240,210,0.18), transparent 60%);}
+  .author-card{transition:transform 240ms cubic-bezier(.2,.7,.2,1), border-color 240ms ease, background 240ms ease;}
+  .author-card:hover{transform:translateY(-2px);border-color:rgba(31,27,22,0.22);background:var(--paper-2);}
+  .timeline-rule{background:linear-gradient(180deg,transparent, rgba(31,27,22,0.20), transparent);}
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ============ TABBAR ============ -->
+<div class="fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-[680px] w-[calc(100%-32px)]">
+  <div class="tabbar border hairline rounded-full pl-5 pr-2 py-2 flex items-center gap-5 text-[13px]">
+    <div class="flex items-center gap-2">
+      <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 12L9 4l3 3-7 7-3 0 0-2z" stroke="#1F1B16" stroke-width="1.1" fill="none" stroke-linejoin="round"/><path d="M9 4l1.5-1.5L12 4l-1 1" stroke="#4F8259" stroke-width="1.1" fill="none"/></svg>
+      <span class="serif text-[15px]">Quill</span>
+    </div>
+    <span class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--ink-3)] hidden sm:inline">§ Vol IV</span>
+    <nav class="ml-auto flex items-center gap-4 text-[color:var(--ink-2)]">
+      <a href="#authors" class="ul-link hidden sm:inline">Authors</a>
+      <a href="#essays" class="ul-link hidden sm:inline">Essays</a>
+      <a href="#pricing" class="ul-link hidden md:inline">Pricing</a>
+      <a href="#join" class="btn-primary inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] text-[#F5F1EA] font-medium px-3.5 py-1.5">Subscribe team</a>
+    </nav>
+  </div>
+</div>
+
+<!-- ============ HERO ============ -->
+<section class="relative overflow-hidden mesh">
+  <div class="absolute inset-0 papergrid opacity-60 pointer-events-none"></div>
+  <div class="relative max-w-[1200px] mx-auto px-6 md:px-10 pt-28 md:pt-36 pb-16 md:pb-24">
+
+    <header class="flex items-center justify-between mb-20 md:mb-28">
+      <div class="flex items-center gap-2.5">
+        <svg width="24" height="24" viewBox="0 0 14 14"><path d="M2 12L9 4l3 3-7 7-3 0 0-2z" stroke="#1F1B16" stroke-width="1.1" fill="none" stroke-linejoin="round"/><path d="M9 4l1.5-1.5L12 4l-1 1" stroke="#4F8259" stroke-width="1.1" fill="none"/></svg>
+        <span class="serif text-xl">Quill</span>
+        <span class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--ink-3)] ml-2 hidden sm:inline">Vol. IV · 2026</span>
+      </div>
+      <nav class="hidden md:flex items-center gap-7 text-sm text-[color:var(--ink-2)]">
+        <a href="#authors" class="ul-link">Authors</a>
+        <a href="#essays" class="ul-link">Essays</a>
+        <a href="#timeline" class="ul-link">Editorial</a>
+        <a href="#pricing" class="ul-link">Pricing</a>
+        <a href="#join" class="btn-primary inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] text-[#F5F1EA] font-medium px-4 py-2">Subscribe your team →</a>
+      </nav>
+      <a href="#join" class="md:hidden btn-primary rounded-full bg-[color:var(--accent)] text-[#F5F1EA] font-medium px-3.5 py-1.5 text-sm">Subscribe</a>
+    </header>
+
+    <div class="flex items-center gap-3 mb-9">
+      <span class="pulse-dot"></span>
+      <span class="section-marker"><span class="accent-line"></span>§ 01 · A reading list for engineering leadership</span>
+    </div>
+
+    <h1 class="display text-[clamp(48px,8.4vw,128px)] max-w-[13ch]">
+      The essays your team <br class="hidden sm:block"/>should actually <em class="editorial">read.</em>
+    </h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 mt-14 md:mt-20">
+      <div class="md:col-span-7 max-w-[58ch]">
+        <p class="serif text-[19px] md:text-[20px] leading-[1.55] opacity-95">
+          A weekly long-form essay from one of forty-seven principal engineers, VPs of Engineering, and CTOs we've quietly built relationships with over the past four years. Commissioned, edited, and fact-checked. One concrete idea per piece, ready to be forwarded to your staff list on a Tuesday morning.
+        </p>
+      </div>
+      <div class="md:col-span-5 flex md:flex-col gap-3 md:gap-4 md:items-end">
+        <a href="#join" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--accent)] text-[#F5F1EA] font-medium px-5 py-3 text-[15px]">Subscribe your team →</a>
+        <a href="#essays" class="btn-ghost inline-flex items-center justify-center gap-2 rounded-full border hairline text-[color:var(--ink)] font-medium px-5 py-3 text-[15px]">Read this week's essay</a>
+        <a href="#letter" class="serif italic text-[color:var(--ink-2)] text-[15px] mt-1 ul-link hidden md:inline-flex items-center gap-2">From the editors <span class="scroll-arrow">→</span></a>
+      </div>
+    </div>
+
+    <!-- metric strip -->
+    <div class="mt-20 md:mt-28 border-t hairline pt-8">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-y-8 md:gap-y-0">
+        <div class="md:pr-8 md:border-r hairline">
+          <div class="section-marker mb-3"><span class="accent-line"></span>Subscribed teams</div>
+          <div class="display text-[44px] md:text-[56px] tnum">1,408</div>
+          <div class="mono text-[11px] tracking-[0.08em] uppercase text-[color:var(--ink-3)] mt-1">42 of the YC top 100</div>
+        </div>
+        <div class="md:px-8 md:border-r hairline">
+          <div class="section-marker mb-3"><span class="accent-line"></span>Avg. seats / team</div>
+          <div class="display text-[44px] md:text-[56px] tnum">24</div>
+          <div class="mono text-[11px] tracking-[0.08em] uppercase text-[color:var(--ink-3)] mt-1">Forwarded internally x3.4</div>
+        </div>
+        <div class="md:px-8 md:border-r hairline">
+          <div class="section-marker mb-3"><span class="accent-line"></span>Featured authors</div>
+          <div class="display text-[44px] md:text-[56px] tnum">47</div>
+          <div class="mono text-[11px] tracking-[0.08em] uppercase text-[color:var(--ink-3)] mt-1">Industry voices, on retainer</div>
+        </div>
+        <div class="md:pl-8">
+          <div class="section-marker mb-3"><span class="accent-line"></span>Essays / year</div>
+          <div class="display text-[44px] md:text-[56px] tnum">78</div>
+          <div class="mono text-[11px] tracking-[0.08em] uppercase text-[color:var(--ink-3)] mt-1">Avg. 3,200 words · 11 min</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LOGO CLOUD ============ -->
+<section class="border-t hairline py-12 md:py-14">
+  <div class="max-w-[1200px] mx-auto px-6 md:px-10">
+    <div class="section-marker mb-7"><span class="accent-line"></span>Forwarded around the staff channels at</div>
+    <div class="marquee-mask overflow-hidden">
+      <div class="marquee text-[color:var(--ink-2)]">
+        <span class="serif text-[26px]">Linnea</span>
+        <span class="text-[26px] tracking-tight" style="font-family:Inter;font-weight:500">FORECAST</span>
+        <span class="serif italic text-[26px]">Glide</span>
+        <span class="mono text-[22px] tracking-[0.22em]">VANTAGE</span>
+        <span class="serif text-[26px]">Mercury</span>
+        <span class="text-[26px] tracking-tight" style="font-family:Inter;font-weight:500">brightwave</span>
+        <span class="serif italic text-[26px]">Halcyon</span>
+        <span class="text-[26px] tracking-tight" style="font-family:Inter">Northwind</span>
+        <span class="serif text-[26px]">Quartermast</span>
+        <span class="text-[26px] tracking-[0.06em]" style="font-family:Inter;font-weight:500">atrium</span>
+        <!-- dup -->
+        <span class="serif text-[26px]">Linnea</span>
+        <span class="text-[26px] tracking-tight" style="font-family:Inter;font-weight:500">FORECAST</span>
+        <span class="serif italic text-[26px]">Glide</span>
+        <span class="mono text-[22px] tracking-[0.22em]">VANTAGE</span>
+        <span class="serif text-[26px]">Mercury</span>
+        <span class="text-[26px] tracking-tight" style="font-family:Inter;font-weight:500">brightwave</span>
+        <span class="serif italic text-[26px]">Halcyon</span>
+        <span class="text-[26px] tracking-tight" style="font-family:Inter">Northwind</span>
+        <span class="serif text-[26px]">Quartermast</span>
+        <span class="text-[26px] tracking-[0.06em]" style="font-family:Inter;font-weight:500">atrium</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PULL QUOTE ============ -->
+<section id="letter" class="border-y hairline" style="background:var(--paper);">
+  <div class="max-w-[1100px] mx-auto px-6 md:px-10 py-24 md:py-32">
+    <div class="section-marker mb-10"><span class="accent-line"></span>§ 02 · From the editors</div>
+    <blockquote class="display text-[clamp(40px,5.6vw,88px)] max-w-[24ch]">
+      “If a single essay changes how your team works for a quarter, that's <em class="editorial">better than any conference.</em>”
+    </blockquote>
+    <div class="mt-12 flex items-center gap-4">
+      <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[#4F8259] to-[#2F5135]"></div>
+      <div>
+        <div class="serif text-[15px]">— Annika Voss, editor</div>
+        <div class="mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-3)] mt-1">Founding letter · Volume I · September 2022</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FEATURES — alternating ============ -->
+<section id="essays" class="max-w-[1200px] mx-auto px-6 md:px-10 py-24 md:py-32">
+  <div class="section-marker mb-16"><span class="accent-line"></span>§ 03 · What lands in your team's inbox</div>
+
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-16 items-start mb-24 md:mb-32">
+    <div class="md:col-span-7">
+      <h2 class="serif text-[34px] md:text-[44px] leading-[1.05] tracking-[-0.02em] mb-6 max-w-[18ch]">One essay. One question. Tuesday morning.</h2>
+      <p class="serif text-[18px] leading-[1.6] opacity-95 max-w-[58ch] dropcap">
+        Each essay opens with a question we've heard from at least three engineering leaders that month — "Should staff engineers be on-call?", "How do you measure platform team success?", "When do you fire a tech lead?" — and answers it with the practiced honesty of someone who's done the work. Three thousand words. Eleven minutes. Pre-circulated to your channels with a one-line summary so people actually open it.
+      </p>
+      <p class="text-[15px] leading-[1.7] text-[color:var(--ink-2)] mt-6 max-w-[58ch]">
+        Pieces are paid $0.78 per word on acceptance. We've sent twelve $400 kill-fees in three years — the standard is honest, the bar is high.
+      </p>
+    </div>
+    <aside class="md:col-span-5 border hairline rounded-md p-6 bg-[color:var(--paper-2)] shadow-[0_1px_0_rgba(31,27,22,0.04)]">
+      <div class="flex items-center justify-between mb-5">
+        <div class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--ink-3)]">Essay 078 · 28 January 2026</div>
+        <div class="flex items-center gap-1.5 mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--accent)]"><span class="pulse-dot" style="width:6px;height:6px;"></span> Live</div>
+      </div>
+      <div class="serif text-[24px] leading-[1.12] tracking-[-0.012em] mb-3">Why we promoted the wrong engineer to staff (twice).</div>
+      <div class="serif italic text-[14px] text-[color:var(--ink-2)] mb-5">By Marcus Tobin · VP Engineering, Forecast</div>
+      <div class="serif text-[15px] leading-[1.6] text-[color:var(--ink)] opacity-90">
+        <p><span class="serif italic text-[36px] float-left leading-[0.85] pr-2 pt-1 text-[color:var(--accent)]">W</span>e have a rubric that scores six dimensions on a 1–4 scale. It is a good rubric. It has helped us promote four staff engineers correctly. It has also helped us promote two staff engineers wrongly, and what I want to write about today is how the rubric quietly contributed to both mistakes…</p>
+      </div>
+      <div class="mt-5 pt-4 border-t hairline flex items-center justify-between text-[11px]">
+        <span class="mono text-[color:var(--ink-3)] tracking-[0.08em] uppercase">3,408 words · 11 min</span>
+        <span class="mono text-[color:var(--accent)] tracking-[0.08em] uppercase">Forwarded x 184</span>
+      </div>
+    </aside>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-16 items-start">
+    <aside class="md:col-span-5 md:order-1 order-2 border hairline rounded-md p-6 bg-[color:var(--paper-2)]">
+      <div class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--ink-3)] mb-5">Custom essays · Org plan only</div>
+      <ul class="space-y-4 text-[14px]">
+        <li class="flex items-baseline gap-4">
+          <span class="mono text-[10px] text-[color:var(--accent)] w-12 tnum tracking-[0.08em] uppercase">Q1</span>
+          <span class="serif text-[15px]">"What does a great platform team look like at 28 engineers?"</span>
+        </li>
+        <li class="flex items-baseline gap-4">
+          <span class="mono text-[10px] text-[color:var(--accent)] w-12 tnum tracking-[0.08em] uppercase">Q2</span>
+          <span class="serif text-[15px]">"Hiring senior ICs after a re-org — a playbook for VPs."</span>
+        </li>
+        <li class="flex items-baseline gap-4">
+          <span class="mono text-[10px] text-[color:var(--accent)] w-12 tnum tracking-[0.08em] uppercase">Q3</span>
+          <span class="serif text-[15px]">"Building an internal essay culture (without forcing it)."</span>
+        </li>
+        <li class="flex items-baseline gap-4 pt-3 border-t hairline">
+          <span class="mono text-[10px] text-[color:var(--ink-3)] w-12 tnum tracking-[0.08em] uppercase">Avg</span>
+          <span class="serif italic text-[14px] text-[color:var(--ink-2)]">14-day turnaround · one author matched to your brief</span>
+        </li>
+      </ul>
+    </aside>
+    <div class="md:col-span-7 md:order-2 order-1">
+      <h2 class="serif text-[34px] md:text-[44px] leading-[1.05] tracking-[-0.02em] mb-6 max-w-[18ch]">Commission essays for your team's actual problems.</h2>
+      <p class="serif text-[18px] leading-[1.6] opacity-95 max-w-[58ch]">
+        On the Org plan, you submit two questions a quarter and we match each one with an author who's solved that problem in production. The author writes the essay, our editors shape it, and the piece is delivered with your name redacted. Twenty-eight of our 1,408 teams use this; the renewal rate sits at 96%.
+      </p>
+      <p class="text-[15px] leading-[1.7] text-[color:var(--ink-2)] mt-6 max-w-[58ch]">
+        Pieces remain Quill's IP and run in the public archive six months later — your team gets it first, the industry gets it eventually.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ AUTHORS GRID ============ -->
+<section id="authors" class="border-t hairline" style="background:var(--paper);">
+  <div class="max-w-[1200px] mx-auto px-6 md:px-10 py-24 md:py-32">
+    <div class="flex items-end justify-between mb-14 gap-6 flex-wrap">
+      <div>
+        <div class="section-marker mb-6"><span class="accent-line"></span>§ 04 · The roster</div>
+        <h2 class="display text-[44px] md:text-[64px] max-w-[16ch]">Forty-seven authors. <em class="editorial">A few of them.</em></h2>
+      </div>
+      <a href="#" class="ul-link mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-2)]">Full masthead →</a>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[color:var(--rule)] border hairline">
+      <!-- 1 -->
+      <article class="author-card bg-[color:var(--bg)] p-7 md:p-8">
+        <div class="aspect-[5/4] portrait rounded-sm mb-6"></div>
+        <div class="flex items-baseline justify-between mb-2">
+          <h3 class="serif text-[22px] tracking-[-0.012em]">Priya Anand</h3>
+          <span class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--ink-3)]">№ 01</span>
+        </div>
+        <div class="mono text-[11px] tracking-[0.12em] uppercase text-[color:var(--accent)] mb-3">Staff Engineer · Linnea</div>
+        <p class="text-[13.5px] leading-[1.6] text-[color:var(--ink-2)]">Writes on incident review, observability culture, and what it actually takes to keep a senior IC at a Series A.</p>
+      </article>
+      <!-- 2 -->
+      <article class="author-card bg-[color:var(--bg)] p-7 md:p-8">
+        <div class="aspect-[5/4] portrait rounded-sm mb-6"></div>
+        <div class="flex items-baseline justify-between mb-2">
+          <h3 class="serif text-[22px] tracking-[-0.012em]">Marcus Tobin</h3>
+          <span class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--ink-3)]">№ 02</span>
+        </div>
+        <div class="mono text-[11px] tracking-[0.12em] uppercase text-[color:var(--accent)] mb-3">VP Engineering · Forecast</div>
+        <p class="text-[13.5px] leading-[1.6] text-[color:var(--ink-2)]">Twelve years scaling teams from 6 to 188. Writes on staff promotion, hiring loops, and the cost of org charts.</p>
+      </article>
+      <!-- 3 -->
+      <article class="author-card bg-[color:var(--bg)] p-7 md:p-8">
+        <div class="aspect-[5/4] portrait rounded-sm mb-6"></div>
+        <div class="flex items-baseline justify-between mb-2">
+          <h3 class="serif text-[22px] tracking-[-0.012em]">Hana Suzuki</h3>
+          <span class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--ink-3)]">№ 03</span>
+        </div>
+        <div class="mono text-[11px] tracking-[0.12em] uppercase text-[color:var(--accent)] mb-3">ML Lead · Glide</div>
+        <p class="text-[13.5px] leading-[1.6] text-[color:var(--ink-2)]">Built and shipped a 28-person ML org without a manager-track. Writes on flat structure, evaluation, and trust.</p>
+      </article>
+      <!-- 4 -->
+      <article class="author-card bg-[color:var(--bg)] p-7 md:p-8">
+        <div class="aspect-[5/4] portrait rounded-sm mb-6"></div>
+        <div class="flex items-baseline justify-between mb-2">
+          <h3 class="serif text-[22px] tracking-[-0.012em]">Yusuf Abara</h3>
+          <span class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--ink-3)]">№ 04</span>
+        </div>
+        <div class="mono text-[11px] tracking-[0.12em] uppercase text-[color:var(--accent)] mb-3">CTO · Mercury</div>
+        <p class="text-[13.5px] leading-[1.6] text-[color:var(--ink-2)]">Co-founder of a payments company at 188 engineers. Writes on what to delegate, when, and to whom.</p>
+      </article>
+      <!-- 5 -->
+      <article class="author-card bg-[color:var(--bg)] p-7 md:p-8">
+        <div class="aspect-[5/4] portrait rounded-sm mb-6"></div>
+        <div class="flex items-baseline justify-between mb-2">
+          <h3 class="serif text-[22px] tracking-[-0.012em]">Ines Calderón</h3>
+          <span class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--ink-3)]">№ 05</span>
+        </div>
+        <div class="mono text-[11px] tracking-[0.12em] uppercase text-[color:var(--accent)] mb-3">Head of Eng · Brightwave</div>
+        <p class="text-[13.5px] leading-[1.6] text-[color:var(--ink-2)]">Eight years on platform &amp; infra. Writes on developer experience, internal tools, and platform-as-product.</p>
+      </article>
+      <!-- 6 -->
+      <article class="author-card bg-[color:var(--bg)] p-7 md:p-8">
+        <div class="aspect-[5/4] portrait rounded-sm mb-6"></div>
+        <div class="flex items-baseline justify-between mb-2">
+          <h3 class="serif text-[22px] tracking-[-0.012em]">Tomás Reyes</h3>
+          <span class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--ink-3)]">№ 06</span>
+        </div>
+        <div class="mono text-[11px] tracking-[0.12em] uppercase text-[color:var(--accent)] mb-3">Principal Engineer · Halcyon</div>
+        <p class="text-[13.5px] leading-[1.6] text-[color:var(--ink-2)]">Sixteen years as IC, by choice. Writes on the principal-engineer ladder, technical leadership, and saying "no."</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TIMELINE ============ -->
+<section id="timeline" class="max-w-[1100px] mx-auto px-6 md:px-10 py-24 md:py-32">
+  <div class="section-marker mb-6"><span class="accent-line"></span>§ 05 · Editorial methodology</div>
+  <h2 class="display text-[44px] md:text-[64px] max-w-[20ch] mb-16">How an essay reaches your <em class="editorial">team's inbox.</em></h2>
+
+  <div class="relative pl-10 md:pl-16">
+    <div class="absolute left-3 md:left-6 top-2 bottom-0 w-px timeline-rule"></div>
+
+    <div class="relative grid grid-cols-1 md:grid-cols-12 gap-x-10 gap-y-2 pb-14 md:pb-16">
+      <span class="absolute -left-10 md:-left-16 top-2 w-3 h-3 rounded-full bg-[color:var(--accent)]"></span>
+      <div class="md:col-span-3 mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-2)]">Week 01 · Mon</div>
+      <div class="md:col-span-9">
+        <h3 class="serif text-[22px] md:text-[26px] tracking-[-0.012em] mb-2">Commission &amp; outline</h3>
+        <p class="text-[15px] leading-[1.65] text-[color:var(--ink-2)] max-w-[58ch]">An editor and an author sit on a 45-minute call. Out of it comes a 400-word outline, a thesis sentence, and the four objections an intelligent reader will raise.</p>
+      </div>
+    </div>
+
+    <div class="relative grid grid-cols-1 md:grid-cols-12 gap-x-10 gap-y-2 pb-14 md:pb-16">
+      <span class="absolute -left-10 md:-left-16 top-2 w-3 h-3 rounded-full bg-[color:var(--accent)]"></span>
+      <div class="md:col-span-3 mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-2)]">Week 02 · Fri</div>
+      <div class="md:col-span-9">
+        <h3 class="serif text-[22px] md:text-[26px] tracking-[-0.012em] mb-2">First draft &amp; structural edit</h3>
+        <p class="text-[15px] leading-[1.65] text-[color:var(--ink-2)] max-w-[58ch]">Author submits a draft. Editor returns it with structural marginalia within 48 hours. We average 4.2 rounds before line-editing.</p>
+      </div>
+    </div>
+
+    <div class="relative grid grid-cols-1 md:grid-cols-12 gap-x-10 gap-y-2 pb-14 md:pb-16">
+      <span class="absolute -left-10 md:-left-16 top-2 w-3 h-3 rounded-full bg-[color:var(--accent)]"></span>
+      <div class="md:col-span-3 mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-2)]">Week 03 · Wed</div>
+      <div class="md:col-span-9">
+        <h3 class="serif text-[22px] md:text-[26px] tracking-[-0.012em] mb-2">Line edit &amp; fact-check</h3>
+        <p class="text-[15px] leading-[1.65] text-[color:var(--ink-2)] max-w-[58ch]">Every claim about a company, a salary, a system, or a person is verified against at least one primary source. Numbers ending in ",000" are rejected on principle.</p>
+      </div>
+    </div>
+
+    <div class="relative grid grid-cols-1 md:grid-cols-12 gap-x-10 gap-y-2 pb-14 md:pb-16">
+      <span class="absolute -left-10 md:-left-16 top-2 w-3 h-3 rounded-full bg-[color:var(--accent)]"></span>
+      <div class="md:col-span-3 mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-2)]">Week 04 · Tue · 06:00</div>
+      <div class="md:col-span-9">
+        <h3 class="serif text-[22px] md:text-[26px] tracking-[-0.012em] mb-2">Delivered to your team</h3>
+        <p class="text-[15px] leading-[1.65] text-[color:var(--ink-2)] max-w-[58ch]">Email to every seat at 06:00 local. One-line summary on the corresponding Slack/Linear channel via integration. Archived to your private Quill workspace forever.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PRICING ============ -->
+<section id="pricing" class="border-t hairline" style="background:var(--paper);">
+  <div class="max-w-[1200px] mx-auto px-6 md:px-10 py-24 md:py-32">
+    <div class="section-marker mb-6"><span class="accent-line"></span>§ 06 · Two team plans</div>
+    <h2 class="display text-[44px] md:text-[72px] max-w-[16ch] mb-4">Team. <em class="editorial">Or Org.</em></h2>
+    <p class="serif text-[18px] text-[color:var(--ink-2)] max-w-[56ch] mb-16">Per-seat pricing that drops as your team grows. Both plans include the full archive, Slack &amp; Linear integrations, and the public-facing essay digest.</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-px bg-[color:var(--rule)] border hairline rounded-md overflow-hidden">
+      <div class="bg-[color:var(--bg)] p-8 md:p-12 flex flex-col">
+        <div class="flex items-baseline justify-between mb-8">
+          <h3 class="serif text-[34px] tracking-[-0.02em]">Team</h3>
+          <span class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--ink-3)]">§ A · 5+ seats</span>
+        </div>
+        <div class="flex items-baseline gap-2 mb-2">
+          <span class="display text-[68px] tnum">$14</span>
+          <span class="serif italic text-[18px] text-[color:var(--ink-2)]">/ seat / month</span>
+        </div>
+        <p class="text-[14px] text-[color:var(--ink-2)] mb-10">For a single engineering team. One essay a week, the full archive, integrations included.</p>
+        <ul class="space-y-3.5 text-[14.5px] mb-12">
+          <li class="flex gap-3"><span class="text-[color:var(--accent)]">§</span><span>One essay every Tuesday, 06:00 local</span></li>
+          <li class="flex gap-3"><span class="text-[color:var(--accent)]">§</span><span>Full archive (188 essays since Vol. I)</span></li>
+          <li class="flex gap-3"><span class="text-[color:var(--accent)]">§</span><span>Slack &amp; Linear integrations</span></li>
+          <li class="flex gap-3"><span class="text-[color:var(--accent)]">§</span><span>Internal forwarding tracker</span></li>
+        </ul>
+        <a href="#" class="ul-link serif italic text-[17px] mt-auto inline-flex items-center gap-2">Subscribe your team <span class="scroll-arrow">→</span></a>
+      </div>
+      <div class="bg-[color:var(--paper-2)] p-8 md:p-12 flex flex-col relative">
+        <div class="absolute top-6 right-6 mono text-[10px] tracking-[0.18em] uppercase px-2 py-1 border border-[color:var(--accent)] text-[color:var(--accent)] rounded-sm">Custom essays</div>
+        <div class="flex items-baseline justify-between mb-8">
+          <h3 class="serif text-[34px] tracking-[-0.02em]">Org</h3>
+          <span class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--ink-3)]">§ B · 50+ seats</span>
+        </div>
+        <div class="flex items-baseline gap-2 mb-2">
+          <span class="display text-[68px] tnum">$9</span>
+          <span class="serif italic text-[18px] text-[color:var(--ink-2)]">/ seat / month</span>
+        </div>
+        <p class="text-[14px] text-[color:var(--ink-2)] mb-10">When the essay program runs across multiple teams. Adds two custom-commissioned essays per quarter.</p>
+        <ul class="space-y-3.5 text-[14.5px] mb-12">
+          <li class="flex gap-3"><span class="text-[color:var(--accent)]">§</span><span>Everything in Team</span></li>
+          <li class="flex gap-3"><span class="text-[color:var(--accent)]">§</span><span>Two custom essays / quarter, matched author</span></li>
+          <li class="flex gap-3"><span class="text-[color:var(--accent)]">§</span><span>Private workspace, internal index</span></li>
+          <li class="flex gap-3"><span class="text-[color:var(--accent)]">§</span><span>Quarterly 60-min editor consultation</span></li>
+        </ul>
+        <a href="#" class="ul-link serif italic text-[17px] text-[color:var(--accent)] mt-auto inline-flex items-center gap-2">Speak with an editor <span class="scroll-arrow">→</span></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TESTIMONIALS ============ -->
+<section class="max-w-[1200px] mx-auto px-6 md:px-10 py-24 md:py-32">
+  <div class="section-marker mb-12"><span class="accent-line"></span>§ 07 · From engineering leaders</div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16">
+    <figure class="border-t hairline pt-10">
+      <blockquote class="serif italic text-[26px] md:text-[30px] leading-[1.25] tracking-[-0.01em]">
+        “We changed our staff-engineer rubric after one essay. <em class="editorial">It paid for the whole year</em> in twelve days.”
+      </blockquote>
+      <figcaption class="mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-2)] mt-8">— Yusuf Abara · CTO · Mercury</figcaption>
+    </figure>
+    <figure class="border-t hairline pt-10">
+      <blockquote class="serif italic text-[26px] md:text-[30px] leading-[1.25] tracking-[-0.01em]">
+        “I forward 6 of every 12 to my entire org. The hit-rate is <em class="editorial">unreasonably high.</em>”
+      </blockquote>
+      <figcaption class="mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-2)] mt-8">— Ines Calderón · Head of Eng · Brightwave</figcaption>
+    </figure>
+    <figure class="border-t hairline pt-10">
+      <blockquote class="serif italic text-[26px] md:text-[30px] leading-[1.25] tracking-[-0.01em]">
+        “The custom essay program is <em class="editorial">our best-kept secret.</em> We've shipped two re-orgs off the back of them.”
+      </blockquote>
+      <figcaption class="mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-2)] mt-8">— Marcus Tobin · VP Eng · Forecast</figcaption>
+    </figure>
+    <figure class="border-t hairline pt-10">
+      <blockquote class="serif italic text-[26px] md:text-[30px] leading-[1.25] tracking-[-0.01em]">
+        “The only newsletter my staff engineers <em class="editorial">actually read</em> without me asking.”
+      </blockquote>
+      <figcaption class="mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-2)] mt-8">— Priya Anand · Staff Engineer · Linnea</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section class="border-t hairline" style="background:var(--paper);">
+  <div class="max-w-[1100px] mx-auto px-6 md:px-10 py-24 md:py-32">
+    <div class="section-marker mb-10"><span class="accent-line"></span>§ 08 · Sensible questions</div>
+    <h2 class="display text-[40px] md:text-[60px] mb-16 max-w-[18ch]">Before you bring it to <em class="editorial">your director.</em></h2>
+
+    <div class="divide-y divide-[color:var(--rule)] border-y hairline">
+      <details class="group py-7" open>
+        <summary class="flex items-start gap-8 md:gap-12">
+          <span class="mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-3)] mt-2 tnum w-20 shrink-0">§ FAQ.01</span>
+          <h3 class="serif text-[22px] md:text-[26px] tracking-[-0.01em] flex-1">How do you vet authors? What's stopping a vendor-funded essay from sneaking in?</h3>
+          <span class="faq-plus serif text-[28px] text-[color:var(--ink-3)] leading-none">+</span>
+        </summary>
+        <p class="mt-5 ml-0 md:ml-32 max-w-[60ch] text-[15px] leading-[1.7] text-[color:var(--ink-2)]">Authors sign a conflict-of-interest disclosure at commission and a fact-checker re-verifies it at line-edit. No essay is funded, sponsored, or paid-for by any external party — full stop. We've turned away four vendor sponsorship offers in the past 14 months; none of our authors are paid more than $0.78 / word, and we publish their full disclosure with each piece.</p>
+      </details>
+      <details class="group py-7">
+        <summary class="flex items-start gap-8 md:gap-12">
+          <span class="mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-3)] mt-2 tnum w-20 shrink-0">§ FAQ.02</span>
+          <h3 class="serif text-[22px] md:text-[26px] tracking-[-0.01em] flex-1">Will essays show up on the public internet, or are they kept behind a team paywall?</h3>
+          <span class="faq-plus serif text-[28px] text-[color:var(--ink-3)] leading-none">+</span>
+        </summary>
+        <p class="mt-5 ml-0 md:ml-32 max-w-[60ch] text-[15px] leading-[1.7] text-[color:var(--ink-2)]">Your team reads every essay six months before the public sees it. After 180 days, the piece moves to the public archive with the author's permission. Custom essays commissioned via the Org plan stay private for 12 months.</p>
+      </details>
+      <details class="group py-7">
+        <summary class="flex items-start gap-8 md:gap-12">
+          <span class="mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-3)] mt-2 tnum w-20 shrink-0">§ FAQ.03</span>
+          <h3 class="serif text-[22px] md:text-[26px] tracking-[-0.01em] flex-1">Do you integrate with our SSO, and what's the SCIM provisioning story?</h3>
+          <span class="faq-plus serif text-[28px] text-[color:var(--ink-3)] leading-none">+</span>
+        </summary>
+        <p class="mt-5 ml-0 md:ml-32 max-w-[60ch] text-[15px] leading-[1.7] text-[color:var(--ink-2)]">SAML/SSO on Team and Org. SCIM 2.0 is included on Org without additional fees — we don't believe in the "SSO tax." We support Okta, Google Workspace, Azure AD, and JumpCloud. Setup averages 38 minutes.</p>
+      </details>
+      <details class="group py-7">
+        <summary class="flex items-start gap-8 md:gap-12">
+          <span class="mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-3)] mt-2 tnum w-20 shrink-0">§ FAQ.04</span>
+          <h3 class="serif text-[22px] md:text-[26px] tracking-[-0.01em] flex-1">Can we export the archive — a piece, or all of it — to ingest into our internal wiki?</h3>
+          <span class="faq-plus serif text-[28px] text-[color:var(--ink-3)] leading-none">+</span>
+        </summary>
+        <p class="mt-5 ml-0 md:ml-32 max-w-[60ch] text-[15px] leading-[1.7] text-[color:var(--ink-2)]">Yes. Markdown, HTML, or EPUB. We expose a small REST surface to feed Notion, Confluence, or Linear documents — about 28 teams pipe new essays into a "reading" project automatically. Custom essays from the Org plan are licensed for indefinite internal use.</p>
+      </details>
+      <details class="group py-7">
+        <summary class="flex items-start gap-8 md:gap-12">
+          <span class="mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-3)] mt-2 tnum w-20 shrink-0">§ FAQ.05</span>
+          <h3 class="serif text-[22px] md:text-[26px] tracking-[-0.01em] flex-1">What's the renewal track record, and what happens if half my team doesn't open the essays?</h3>
+          <span class="faq-plus serif text-[28px] text-[color:var(--ink-3)] leading-none">+</span>
+        </summary>
+        <p class="mt-5 ml-0 md:ml-32 max-w-[60ch] text-[15px] leading-[1.7] text-[color:var(--ink-2)]">Renewal sits at 92% across all 1,408 teams. If open rate on your seat falls below 40% in any given quarter, we'll pro-rate a refund — no calls, no clawback negotiation. We measured this in 2024 and the cost to us was $1,840 across 1,108 then-active teams.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FINAL CTA ============ -->
+<section id="join" class="border-t hairline">
+  <div class="max-w-[1200px] mx-auto px-6 md:px-10 py-28 md:py-40 text-center">
+    <div class="section-marker mb-8 inline-flex"><span class="accent-line"></span>§ 09 · The standing invitation</div>
+    <h2 class="display text-[clamp(48px,8vw,112px)] max-w-[20ch] mx-auto">Bring one essay to your next staff meeting. <em class="editorial">See what happens.</em></h2>
+    <p class="serif text-[18px] md:text-[20px] text-[color:var(--ink-2)] max-w-[58ch] mx-auto mt-8">28-day trial for five seats, no card. Cancel before day 28 and we'll send your team a print copy of Volume I, on us — 312 copies remain.</p>
+    <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+      <a href="#" class="btn-primary inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] text-[#F5F1EA] font-medium px-6 py-3.5 text-[15px]">Begin a 28-day trial →</a>
+      <a href="#" class="ul-link serif italic text-[17px] inline-flex items-center gap-2">Read this week's essay first <span class="scroll-arrow">→</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="border-t hairline" style="background:var(--paper);">
+  <div class="max-w-[1200px] mx-auto px-6 md:px-10 py-16">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
+      <div class="col-span-2 md:col-span-1">
+        <div class="flex items-center gap-2 mb-5">
+          <svg width="18" height="18" viewBox="0 0 14 14"><path d="M2 12L9 4l3 3-7 7-3 0 0-2z" stroke="#1F1B16" stroke-width="1.1" fill="none" stroke-linejoin="round"/><path d="M9 4l1.5-1.5L12 4l-1 1" stroke="#4F8259" stroke-width="1.1" fill="none"/></svg>
+          <span class="serif text-lg">Quill</span>
+        </div>
+        <p class="serif italic text-[14px] text-[color:var(--ink-2)] max-w-[34ch]">A weekly essay for engineering leadership. Edited in Stockholm &amp; Mexico City.</p>
+      </div>
+      <div>
+        <div class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--ink-3)] mb-4">About</div>
+        <ul class="space-y-2 text-[14px]">
+          <li><a href="#" class="ul-link">Editorial principles</a></li>
+          <li><a href="#" class="ul-link">Masthead</a></li>
+          <li><a href="#" class="ul-link">Disclosures</a></li>
+          <li><a href="#" class="ul-link">Contact</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--ink-3)] mb-4">Authors</div>
+        <ul class="space-y-2 text-[14px]">
+          <li><a href="#" class="ul-link">Full roster</a></li>
+          <li><a href="#" class="ul-link">Pitch an essay</a></li>
+          <li><a href="#" class="ul-link">Author fees</a></li>
+          <li><a href="#" class="ul-link">Conflicts policy</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--ink-3)] mb-4">Archives &amp; press</div>
+        <ul class="space-y-2 text-[14px]">
+          <li><a href="#" class="ul-link">Public archive</a></li>
+          <li><a href="#" class="ul-link">Press kit</a></li>
+          <li><a href="#" class="ul-link">Reprints &amp; licensing</a></li>
+          <li><a href="#" class="ul-link">Quill in print</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pt-8 border-t hairline">
+      <div class="mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-3)]">© MMXXVI Quill Editorial Ltd · All rights reserved</div>
+      <div class="mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-3)]">VOL. IV · ESSAY 078 · ISSN 2802-1147</div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

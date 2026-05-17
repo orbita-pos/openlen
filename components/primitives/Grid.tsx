@@ -7,7 +7,7 @@ import type { GridItem, GridProps, GridSlots } from "./types";
 
 function GridLogoBar({ id, slots }: { id: string; slots: GridSlots }) {
   return (
-    <div style={{ background: "var(--color-bg)" }}>
+    <div style={{ background: "var(--primitive-section-bg, var(--color-bg))" }}>
       <div className="max-w-[80rem] mx-auto px-6 md:px-10 py-16 md:py-20">
         {slots.title && (
           <div className="text-center">
@@ -42,7 +42,7 @@ function GridLogoBar({ id, slots }: { id: string; slots: GridSlots }) {
 
 function GridFeature3({ id, slots }: { id: string; slots: GridSlots }) {
   return (
-    <div style={{ background: "var(--color-bg)" }}>
+    <div style={{ background: "var(--primitive-section-bg, var(--color-bg))" }}>
       <div className="max-w-[80rem] mx-auto px-6 md:px-10 py-20 md:py-24">
         <SectionHead id={id} eyebrow={slots.eyebrow} title={slots.title} sub={slots.sub} align="left" />
         <div className="mt-14 grid md:grid-cols-3 gap-5">
@@ -160,7 +160,7 @@ function TestimonialCard({ id, i, it }: { id: string; i: number; it: GridItem })
 
 function GridTestimonialMasonry({ id, slots }: { id: string; slots: GridSlots }) {
   return (
-    <div style={{ background: "var(--color-bg)" }}>
+    <div style={{ background: "var(--primitive-section-bg, var(--color-bg))" }}>
       <div className="max-w-[80rem] mx-auto px-6 md:px-10 py-20 md:py-24">
         <SectionHead id={id} eyebrow={slots.eyebrow} title={slots.title} sub={slots.sub} align="center" />
         <div className="mt-14">
@@ -182,7 +182,7 @@ function GridTestimonialMasonry({ id, slots }: { id: string; slots: GridSlots })
 
 function GridStats4({ id, slots }: { id: string; slots: GridSlots }) {
   return (
-    <div style={{ background: "var(--color-bg)" }}>
+    <div style={{ background: "var(--primitive-section-bg, var(--color-bg))" }}>
       <div className="max-w-[80rem] mx-auto px-6 md:px-10 py-20 md:py-24">
         {(slots.eyebrow || slots.title) && (
           <SectionHead id={id} eyebrow={slots.eyebrow} title={slots.title} sub={slots.sub} align="left" />
@@ -239,7 +239,7 @@ function GridStats4({ id, slots }: { id: string; slots: GridSlots }) {
 
 function GridPricing3({ id, slots }: { id: string; slots: GridSlots }) {
   return (
-    <div style={{ background: "var(--color-bg)" }}>
+    <div style={{ background: "var(--primitive-section-bg, var(--color-bg))" }}>
       <div className="max-w-[80rem] mx-auto px-6 md:px-10 py-20 md:py-24">
         <SectionHead id={id} eyebrow={slots.eyebrow} title={slots.title} sub={slots.sub} align="center" />
         <div className="mt-14 grid md:grid-cols-3 gap-5 items-stretch">

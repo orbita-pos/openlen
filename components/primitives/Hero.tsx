@@ -9,7 +9,7 @@ import type { HeroProps, HeroSlots } from "./types";
 
 function HeroCentered({ id, slots }: { id: string; slots: HeroSlots }) {
   return (
-    <div className="relative overflow-hidden" style={{ background: "var(--color-bg)" }}>
+    <div className="relative overflow-hidden" style={{ background: "var(--primitive-section-bg, var(--color-bg))" }}>
       <div
         aria-hidden
         className="absolute inset-x-0 top-0 h-[60%] pointer-events-none"
@@ -62,7 +62,7 @@ function HeroCentered({ id, slots }: { id: string; slots: HeroSlots }) {
 
 function HeroSplit({ id, slots }: { id: string; slots: HeroSlots }) {
   return (
-    <div className="relative" style={{ background: "var(--color-bg)" }}>
+    <div className="relative" style={{ background: "var(--primitive-section-bg, var(--color-bg))" }}>
       <div className="max-w-[80rem] mx-auto px-6 md:px-10 py-20 md:py-28 grid md:grid-cols-2 gap-12 md:gap-16 items-center">
         <div>
           {slots.eyebrow && <Eyebrow path={`${id}.eyebrow`}>{slots.eyebrow}</Eyebrow>}
@@ -108,7 +108,7 @@ function HeroSplit({ id, slots }: { id: string; slots: HeroSlots }) {
 
 function HeroAsymmetric({ id, slots }: { id: string; slots: HeroSlots }) {
   return (
-    <div className="relative overflow-hidden bg-dotgrid" style={{ background: "var(--color-bg)" }}>
+    <div className="relative overflow-hidden bg-dotgrid" style={{ background: "var(--primitive-section-bg, var(--color-bg))" }}>
       <div
         aria-hidden
         className="absolute pointer-events-none"

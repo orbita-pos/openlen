@@ -40,29 +40,34 @@ export interface PaletteValidation {
 }
 
 export function generatePalette(brandHue: number, mode: PaletteMode): PaletteColors {
+  // Chroma values are bumped vs the original (0.005 → 0.03) so each palette
+  // has a visibly tinted base — "warm coral cream", "cool indigo mist", etc.
+  // — rather than reading as plain white/black. WCAG AA still passes by a
+  // wide margin (bg/fg contrast ~13:1 in both modes since luminance is what
+  // contrast measures and chroma barely affects it).
   if (mode === "light") {
     return {
-      bg:              `oklch(98% 0.005 ${brandHue})`,
-      fg:              `oklch(15% 0.01  ${brandHue})`,
-      fgMuted:         `oklch(45% 0.01  ${brandHue})`,
-      fgDim:           `oklch(60% 0.02  ${brandHue})`,
-      surface:         `oklch(96% 0.008 ${brandHue})`,
-      surfaceElevated: `oklch(94% 0.012 ${brandHue})`,
-      border:          `oklch(85% 0.008 ${brandHue} / 0.6)`,
-      borderStrong:    `oklch(70% 0.012 ${brandHue} / 0.8)`,
+      bg:              `oklch(96% 0.03  ${brandHue})`,
+      fg:              `oklch(15% 0.02  ${brandHue})`,
+      fgMuted:         `oklch(45% 0.03  ${brandHue})`,
+      fgDim:           `oklch(60% 0.04  ${brandHue})`,
+      surface:         `oklch(93% 0.045 ${brandHue})`,
+      surfaceElevated: `oklch(90% 0.055 ${brandHue})`,
+      border:          `oklch(82% 0.05  ${brandHue} / 0.6)`,
+      borderStrong:    `oklch(70% 0.06  ${brandHue} / 0.8)`,
       accent:          `oklch(58% 0.22  ${brandHue})`,
       accentFg:        `oklch(98% 0.005 ${brandHue})`,
     };
   }
   return {
-    bg:              `oklch(11% 0.01  ${brandHue})`,
-    fg:              `oklch(95% 0.005 ${brandHue})`,
-    fgMuted:         `oklch(70% 0.012 ${brandHue})`,
-    fgDim:           `oklch(55% 0.01  ${brandHue})`,
-    surface:         `oklch(15% 0.015 ${brandHue})`,
-    surfaceElevated: `oklch(18% 0.018 ${brandHue})`,
-    border:          `oklch(25% 0.012 ${brandHue} / 0.6)`,
-    borderStrong:    `oklch(40% 0.015 ${brandHue} / 0.8)`,
+    bg:              `oklch(13% 0.035 ${brandHue})`,
+    fg:              `oklch(95% 0.012 ${brandHue})`,
+    fgMuted:         `oklch(72% 0.025 ${brandHue})`,
+    fgDim:           `oklch(58% 0.03  ${brandHue})`,
+    surface:         `oklch(17% 0.04  ${brandHue})`,
+    surfaceElevated: `oklch(20% 0.05  ${brandHue})`,
+    border:          `oklch(27% 0.04  ${brandHue} / 0.6)`,
+    borderStrong:    `oklch(40% 0.05  ${brandHue} / 0.8)`,
     accent:          `oklch(68% 0.22  ${brandHue})`,
     accentFg:        `oklch(15% 0.01  ${brandHue})`,
   };

@@ -155,6 +155,10 @@ export function buildPreviewDoc({
     --font-body:               ${type.family};
     --space-section:           ${densityPad};
     --radius:                  ${radiusVal};
+    /* Section outers transparent so the bg preset (on body) reads through.
+       Primitives outside this context (/preview-v3) keep falling back to
+       --color-bg, so their gallery rendering is unchanged. */
+    --primitive-section-bg:    transparent;
     `
     : "";
 

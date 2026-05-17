@@ -49,7 +49,7 @@ function CTACenteredBanner({ id, slots }: { id: string; slots: CTASlots }) {
 
 function CTACardForm({ id, slots }: { id: string; slots: CTASlots }) {
   return (
-    <div style={{ background: "var(--color-bg)" }}>
+    <div style={{ background: "var(--primitive-section-bg, var(--color-bg))" }}>
       <div className="max-w-[64rem] mx-auto px-6 md:px-10 py-20 md:py-24">
         <div
           className="mx-auto max-w-[40rem] p-8 md:p-10 text-center"

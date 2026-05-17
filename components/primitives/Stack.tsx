@@ -6,7 +6,7 @@ import type { StackProps, StackSlots } from "./types";
 
 function StackVerticalCards({ id, slots }: { id: string; slots: StackSlots }) {
   return (
-    <div style={{ background: "var(--color-bg)" }}>
+    <div style={{ background: "var(--primitive-section-bg, var(--color-bg))" }}>
       <div className="max-w-[64rem] mx-auto px-6 md:px-10 py-20 md:py-24">
         <SectionHead id={id} eyebrow={slots.eyebrow} title={slots.title} sub={slots.sub} align="center" />
         <div className="mt-14 max-w-[42rem] mx-auto flex flex-col gap-4">
@@ -59,7 +59,7 @@ function StackVerticalCards({ id, slots }: { id: string; slots: StackSlots }) {
 
 function StackAlternatingRows({ id, slots }: { id: string; slots: StackSlots }) {
   return (
-    <div style={{ background: "var(--color-bg)" }}>
+    <div style={{ background: "var(--primitive-section-bg, var(--color-bg))" }}>
       <div className="max-w-[72rem] mx-auto px-6 md:px-10 py-20 md:py-24">
         <SectionHead id={id} eyebrow={slots.eyebrow} title={slots.title} sub={slots.sub} align="left" />
         <div className="mt-16 flex flex-col gap-16 md:gap-20">
@@ -111,7 +111,7 @@ function StackAlternatingRows({ id, slots }: { id: string; slots: StackSlots }) 
 
 function StackIconGrid3({ id, slots }: { id: string; slots: StackSlots }) {
   return (
-    <div style={{ background: "var(--color-bg)" }}>
+    <div style={{ background: "var(--primitive-section-bg, var(--color-bg))" }}>
       <div className="max-w-[80rem] mx-auto px-6 md:px-10 py-20 md:py-24">
         <SectionHead id={id} eyebrow={slots.eyebrow} title={slots.title} sub={slots.sub} align="left" />
         <div

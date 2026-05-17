@@ -7,7 +7,7 @@
 import React from "react";
 import { renderElementToHtml } from "./_render-element";
 import { getBlock, type BlockId } from "@/lib/blocks/_registry";
-import { EditorContext } from "@/lib/blocks/_editable";
+import { getEditorContext } from "@/lib/blocks/_editable";
 import { paletteToTokens } from "@/lib/blocks/palette-to-tokens";
 import type {
   CostBreakdown,
@@ -196,7 +196,7 @@ export function renderDeterministic(
     // this session — preserving publish + zip parity.
     const wrapped = editorMode
       ? React.createElement(
-          EditorContext.Provider,
+          getEditorContext().Provider,
           { value: { editorMode: true, blockIndex: filled.index } },
           blockElement,
         )

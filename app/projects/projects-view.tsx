@@ -305,7 +305,7 @@ export function ProjectsView({ projects: initial }: { projects: ProjectSummary[]
               Try the V2 workspace →
             </Link>
             <Link
-              href="/new"
+              href="/new-v2"
               className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-coral-500 text-white text-[12px] font-medium hover:bg-coral-600 active:bg-coral-700 btn-coral-shadow transition"
             >
               <Plus size={13} /> New page
@@ -1336,7 +1336,7 @@ function EmptyState() {
 
       <div className="mt-8 flex items-center justify-center gap-3">
         <Link
-          href="/new"
+          href="/new-v2"
           className="inline-flex items-center gap-1.5 h-11 px-5 rounded-lg bg-coral-500 text-white text-[14px] font-medium hover:bg-coral-600 btn-coral-shadow transition"
         >
           Start from scratch <Sparkles size={14} />
@@ -1373,7 +1373,7 @@ function NoResults({
           Clear search
         </button>
         <Link
-          href="/new"
+          href="/new-v2"
           className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-coral-500 text-white text-[13px] font-medium hover:bg-coral-600 btn-coral-shadow transition"
         >
           <Plus size={13} /> Create new

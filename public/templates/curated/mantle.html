@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mantle — One source of inventory truth.</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#FFFFFF;
+    --bg-2:#FAFAFB;
+    --ink:#0A0A0A;
+    --ink-2:#3F3F46;
+    --ink-3:#71717A;
+    --accent:#0E1A3A;
+    --accent-2:#1A2D5E;
+    --line:rgba(0,0,0,0.08);
+    --line-soft:rgba(0,0,0,0.05);
+    --ok:#15803D;
+    --warn:#B45309;
+    --bad:#DC2626;
+  }
+  html,body{background:var(--bg);color:var(--ink);}
+  body{font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-feature-settings:"ss01","cv11","tnum";-webkit-font-smoothing:antialiased;}
+  .font-display{font-family:"Inter";letter-spacing:-0.03em;font-weight:600;}
+  .font-mono{font-family:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-feature-settings:"tnum";}
+  .tabular{font-variant-numeric:tabular-nums;}
+  .hairline{border:1px solid var(--line);}
+  .hairline-soft{border:1px solid var(--line-soft);}
+  .dot-grid{background-image:radial-gradient(rgba(0,0,0,0.06) 1px,transparent 1px);background-size:32px 32px;}
+  .lift{transition:transform 100ms ease,box-shadow 100ms ease,background-color 100ms ease,color 100ms ease;}
+  .lift:hover{transform:translateY(-1px);}
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:hover{background:var(--accent-2);box-shadow:0 6px 18px -6px rgba(14,26,58,.35);}
+  .btn-ghost:hover{background:rgba(0,0,0,0.04);}
+  .shadow-card{box-shadow:0 1px 1px rgba(0,0,0,.02),0 1px 2px rgba(0,0,0,.04),0 8px 24px -10px rgba(0,0,0,.08);}
+  .shadow-hw{box-shadow:0 24px 60px -25px rgba(14,26,58,.35),0 8px 20px -10px rgba(0,0,0,.12);}
+  .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:9999px;padding:4px 10px;font-size:12px;background:white;}
+  .num-display{font-family:"Inter";letter-spacing:-0.03em;font-weight:600;font-variant-numeric:tabular-nums;}
+  .ambient{
+    background:
+      radial-gradient(50% 40% at 80% 0%,rgba(14,26,58,0.06),transparent 70%),
+      radial-gradient(40% 30% at 0% 30%,rgba(14,26,58,0.04),transparent 70%),
+      linear-gradient(180deg,rgba(0,0,0,0.01),transparent 50%);
+  }
+  @keyframes pulse-dot{
+    0%{box-shadow:0 0 0 0 rgba(220,38,38,.55);}
+    70%{box-shadow:0 0 0 9px rgba(220,38,38,0);}
+    100%{box-shadow:0 0 0 0 rgba(220,38,38,0);}
+  }
+  .pulse-dot{display:inline-block;width:8px;height:8px;border-radius:9999px;background:#DC2626;animation:pulse-dot 1.8s infinite;}
+  .pulse-dot-g{background:#15803D;animation-name:pulse-dot-g;}
+  @keyframes pulse-dot-g{
+    0%{box-shadow:0 0 0 0 rgba(21,128,61,.55);}
+    70%{box-shadow:0 0 0 9px rgba(21,128,61,0);}
+    100%{box-shadow:0 0 0 0 rgba(21,128,61,0);}
+  }
+  @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  .marquee-track{display:flex;width:max-content;animation:marquee 42s linear infinite;}
+  .arrow-flow{stroke-dasharray:4 4;animation:dash 2s linear infinite;}
+  @keyframes dash{to{stroke-dashoffset:-16;}}
+  .row-hover:hover{background:#FAFAFB;}
+  .tilt{transform:perspective(1600px) rotateY(-6deg) rotateX(3deg);}
+  .grad-navy{background:linear-gradient(135deg,#0E1A3A,#1A2D5E 60%,#2A3D6E);}
+  .data-grid{background:
+    linear-gradient(rgba(0,0,0,0.04) 1px,transparent 1px) 0 0/100% 32px,
+    linear-gradient(90deg,rgba(0,0,0,0.04) 1px,transparent 1px) 0 0/64px 100%;
+  }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- NAV -->
+<header class="sticky top-0 z-40 backdrop-blur bg-[rgba(255,255,255,0.85)] border-b border-[var(--line-soft)]">
+  <div class="max-w-[1240px] mx-auto px-5 lg:px-8 h-16 flex items-center justify-between">
+    <a href="#" class="flex items-center gap-2.5">
+      <svg width="22" height="22" viewBox="0 0 22 22"><path d="M2 16L11 3l9 13H2Z" fill="#0E1A3A"/><path d="M6 16h10l-5-7-5 7Z" fill="#fff"/></svg>
+      <span class="font-display text-[17px] tracking-tight">Mantle</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-7 text-[14px] text-[var(--ink-2)]">
+      <a href="#features" class="hover:text-[var(--ink)]">Platform</a>
+      <a href="#flow" class="hover:text-[var(--ink)]">Channels</a>
+      <a href="#pricing" class="hover:text-[var(--ink)]">Pricing</a>
+      <a href="#stories" class="hover:text-[var(--ink)]">Customers</a>
+      <a href="#" class="hover:text-[var(--ink)]">Changelog</a>
+    </nav>
+    <div class="flex items-center gap-3">
+      <a href="#" class="hidden sm:inline text-[14px] text-[var(--ink-2)] hover:text-[var(--ink)]">Book a tour</a>
+      <a href="#" class="lift btn-primary rounded-md px-4 py-2 text-[14px] font-medium">Get a demo</a>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="relative overflow-hidden ambient">
+  <div class="absolute inset-0 dot-grid opacity-50 pointer-events-none"></div>
+  <div class="max-w-[1240px] mx-auto px-5 lg:px-8 pt-16 pb-20 lg:pt-24 lg:pb-28 grid lg:grid-cols-12 gap-10 items-center relative">
+    <div class="lg:col-span-6">
+      <span class="chip"><span class="pulse-dot pulse-dot-g"></span><span class="text-[var(--ink-2)]">Live · 28,408 shipments routed today</span></span>
+      <h1 class="font-display text-[44px] sm:text-[58px] lg:text-[68px] leading-[1.02] mt-5 tracking-tight">
+        Stop bouncing between 4 dashboards. <span class="opacity-45">One source of inventory truth.</span>
+      </h1>
+      <p class="mt-5 text-[17px] leading-[1.55] text-[var(--ink-2)] max-w-[540px]">
+        Mantle is the operating layer between your warehouse, your 4.7 channels, and your reorder calendar — so a Shopify sale at 11:42pm doesn't oversell on Amazon at 11:43pm.
+      </p>
+      <div class="mt-7 flex flex-wrap items-center gap-3">
+        <a href="#" class="lift btn-primary rounded-md px-5 py-3 text-[15px] font-medium">Get a tour of your inventory</a>
+        <a href="#" class="lift btn-ghost hairline rounded-md px-5 py-3 text-[15px] font-medium">Read the architecture →</a>
+      </div>
+      <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px] text-[var(--ink-3)]">
+        <span class="flex items-center gap-2"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 7l3.2 3.2L12 3.5" stroke="#15803D" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Sync latency: 1.8s p95 across channels</span>
+        <span class="flex items-center gap-2"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 7l3.2 3.2L12 3.5" stroke="#15803D" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>SOC 2 Type II · GDPR · CCPA</span>
+        <span class="flex items-center gap-2"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 7l3.2 3.2L12 3.5" stroke="#15803D" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>14-day free pilot, bring your data</span>
+      </div>
+    </div>
+
+    <!-- Inventory dashboard mockup -->
+    <div class="lg:col-span-6 relative">
+      <div class="tilt shadow-hw rounded-2xl bg-white hairline overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-[var(--line-soft)] bg-[var(--bg-2)]">
+          <div class="flex items-center gap-2">
+            <div class="flex gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-[#FF5F57]"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-[#FEBC2E]"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-[#28C840]"></span>
+            </div>
+            <span class="ml-3 font-display text-[12.5px]">Mantle · Hana Made Inc.</span>
+          </div>
+          <div class="flex items-center gap-3 font-mono text-[10.5px] text-[var(--ink-3)]">
+            <span class="flex items-center gap-1"><span class="pulse-dot pulse-dot-g" style="width:6px;height:6px;"></span>SYNCED 04·12·26  14:08:11 UTC</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-12">
+          <!-- Sidebar -->
+          <aside class="col-span-3 border-r border-[var(--line-soft)] p-3 text-[11px] space-y-3 bg-white">
+            <div>
+              <div class="font-mono text-[9px] tracking-widest text-[var(--ink-3)] mb-1.5">WORKSPACE</div>
+              <div class="space-y-0.5">
+                <div class="px-2 py-1 rounded bg-[var(--accent)] text-white">Inventory</div>
+                <div class="px-2 py-1 text-[var(--ink-2)]">Orders</div>
+                <div class="px-2 py-1 text-[var(--ink-2)]">Purchase orders</div>
+                <div class="px-2 py-1 text-[var(--ink-2)]">Warehouses · 3</div>
+                <div class="px-2 py-1 text-[var(--ink-2)]">Channels · 5</div>
+                <div class="px-2 py-1 text-[var(--ink-2)]">Forecasts</div>
+              </div>
+            </div>
+            <div>
+              <div class="font-mono text-[9px] tracking-widest text-[var(--ink-3)] mb-1.5">REORDER SUGGESTIONS</div>
+              <div class="rounded-md hairline-soft p-2">
+                <div class="font-mono text-[10px]">CDL-AMBER-8oz</div>
+                <div class="text-[10px] text-[var(--ink-3)]">Below threshold · 14d cover</div>
+                <div class="mt-1 text-[10px] text-[var(--accent)]">Reorder 1,200 →</div>
+              </div>
+              <div class="rounded-md hairline-soft p-2 mt-1.5">
+                <div class="font-mono text-[10px]">CDL-CEDAR-8oz</div>
+                <div class="text-[10px] text-[var(--ink-3)]">Trending +28% / 7d</div>
+                <div class="mt-1 text-[10px] text-[var(--accent)]">Reorder 1,800 →</div>
+              </div>
+            </div>
+          </aside>
+          <!-- Table -->
+          <div class="col-span-9 p-4">
+            <div class="flex items-center justify-between mb-3">
+              <div class="font-display text-[14px]">All SKUs <span class="text-[var(--ink-3)] font-normal">· 1,408 items</span></div>
+              <div class="flex items-center gap-2 text-[10.5px] font-mono">
+                <span class="chip"><span class="w-1.5 h-1.5 rounded-full bg-[#DC2626]"></span>12 low</span>
+                <span class="chip"><span class="w-1.5 h-1.5 rounded-full bg-[#B45309]"></span>34 watch</span>
+                <span class="chip"><span class="w-1.5 h-1.5 rounded-full bg-[#15803D]"></span>1,362 ok</span>
+              </div>
+            </div>
+            <div class="hairline-soft rounded-lg overflow-hidden">
+              <div class="grid grid-cols-12 text-[10px] font-mono tracking-wider text-[var(--ink-3)] uppercase bg-[var(--bg-2)] px-3 py-2 border-b border-[var(--line-soft)]">
+                <div class="col-span-4">SKU · Variant</div>
+                <div class="col-span-3">Locations</div>
+                <div class="col-span-2 text-right">On hand</div>
+                <div class="col-span-2 text-right">Incoming</div>
+                <div class="col-span-1 text-center">⚑</div>
+              </div>
+              <!-- rows -->
+              <div class="grid grid-cols-12 items-center px-3 py-2 text-[11px] border-b border-[var(--line-soft)] row-hover">
+                <div class="col-span-4">
+                  <div class="font-mono text-[10.5px]">CDL-AMBER-8oz</div>
+                  <div class="text-[10px] text-[var(--ink-3)]">Amber Coast · 8oz tin</div>
+                </div>
+                <div class="col-span-3 text-[10px] text-[var(--ink-2)]">LA-1 · NJ-2 · OH-1</div>
+                <div class="col-span-2 text-right font-mono tabular text-[var(--bad)]">142</div>
+                <div class="col-span-2 text-right font-mono tabular">+1,200</div>
+                <div class="col-span-1 text-center"><span class="inline-block w-2 h-2 rounded-full bg-[#DC2626]"></span></div>
+              </div>
+              <div class="grid grid-cols-12 items-center px-3 py-2 text-[11px] border-b border-[var(--line-soft)] row-hover">
+                <div class="col-span-4">
+                  <div class="font-mono text-[10.5px]">CDL-CEDAR-8oz</div>
+                  <div class="text-[10px] text-[var(--ink-3)]">Cedar Cabin · 8oz tin</div>
+                </div>
+                <div class="col-span-3 text-[10px] text-[var(--ink-2)]">LA-1 · NJ-2</div>
+                <div class="col-span-2 text-right font-mono tabular text-[var(--warn)]">408</div>
+                <div class="col-span-2 text-right font-mono tabular">+1,800</div>
+                <div class="col-span-1 text-center"><span class="inline-block w-2 h-2 rounded-full bg-[#B45309]"></span></div>
+              </div>
+              <div class="grid grid-cols-12 items-center px-3 py-2 text-[11px] border-b border-[var(--line-soft)] row-hover">
+                <div class="col-span-4">
+                  <div class="font-mono text-[10.5px]">CDL-FIG-12oz</div>
+                  <div class="text-[10px] text-[var(--ink-3)]">Black Fig · 12oz jar</div>
+                </div>
+                <div class="col-span-3 text-[10px] text-[var(--ink-2)]">LA-1 · NJ-2 · OH-1</div>
+                <div class="col-span-2 text-right font-mono tabular">2,402</div>
+                <div class="col-span-2 text-right font-mono tabular">+600</div>
+                <div class="col-span-1 text-center"><span class="inline-block w-2 h-2 rounded-full bg-[#15803D]"></span></div>
+              </div>
+              <div class="grid grid-cols-12 items-center px-3 py-2 text-[11px] border-b border-[var(--line-soft)] row-hover">
+                <div class="col-span-4">
+                  <div class="font-mono text-[10.5px]">CDL-LIME-8oz</div>
+                  <div class="text-[10px] text-[var(--ink-3)]">Bitter Lime · 8oz tin</div>
+                </div>
+                <div class="col-span-3 text-[10px] text-[var(--ink-2)]">NJ-2 · OH-1</div>
+                <div class="col-span-2 text-right font-mono tabular">1,128</div>
+                <div class="col-span-2 text-right font-mono tabular">—</div>
+                <div class="col-span-1 text-center"><span class="inline-block w-2 h-2 rounded-full bg-[#15803D]"></span></div>
+              </div>
+              <div class="grid grid-cols-12 items-center px-3 py-2 text-[11px] row-hover">
+                <div class="col-span-4">
+                  <div class="font-mono text-[10.5px]">CDL-SALT-12oz</div>
+                  <div class="text-[10px] text-[var(--ink-3)]">Sea Salt · 12oz jar</div>
+                </div>
+                <div class="col-span-3 text-[10px] text-[var(--ink-2)]">LA-1 · NJ-2</div>
+                <div class="col-span-2 text-right font-mono tabular text-[var(--bad)]">38</div>
+                <div class="col-span-2 text-right font-mono tabular">+800</div>
+                <div class="col-span-1 text-center"><span class="inline-block w-2 h-2 rounded-full bg-[#DC2626]"></span></div>
+              </div>
+            </div>
+            <!-- Channel chips -->
+            <div class="mt-3 flex items-center gap-2 text-[10.5px] font-mono text-[var(--ink-3)]">
+              <span>SYNCED →</span>
+              <span class="chip">Shopify</span>
+              <span class="chip">Amazon</span>
+              <span class="chip">Faire</span>
+              <span class="chip">Wholesale</span>
+              <span class="chip">+1</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST BAR -->
+<section class="border-y border-[var(--line-soft)]">
+  <div class="max-w-[1240px] mx-auto px-5 lg:px-8 py-8 grid lg:grid-cols-12 gap-6 items-center">
+    <div class="lg:col-span-3">
+      <div class="font-mono text-[11px] tracking-widest text-[var(--ink-3)]">TRUSTED BY 8,408 DTC BRANDS</div>
+      <div class="font-display text-[20px] mt-1">From 100-SKU candle studios to 2,000-SKU apparel labels.</div>
+    </div>
+    <div class="lg:col-span-9 overflow-hidden relative" style="mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)">
+      <div class="marquee-track gap-12 items-center text-[var(--ink-2)]">
+        <span class="font-display text-[22px] shrink-0 tracking-tight">Linnea</span>
+        <span class="shrink-0" style="font-family:'Inter',serif;font-style:italic;font-weight:500;font-size:22px">Brightwave</span>
+        <span class="font-display text-[22px] shrink-0 tracking-tight">VANTAGE</span>
+        <span class="shrink-0 font-mono text-[20px]">mercury/</span>
+        <span class="font-display text-[22px] shrink-0">Halcyon Goods</span>
+        <span class="shrink-0" style="font-family:'Inter',serif;font-weight:600;font-size:22px;letter-spacing:-0.02em">Quartermast</span>
+        <span class="font-display text-[22px] shrink-0">Northwind</span>
+        <span class="font-display text-[22px] shrink-0 lowercase">foundry &amp; co.</span>
+        <span class="font-display text-[22px] shrink-0 tracking-tight">Linnea</span>
+        <span class="shrink-0" style="font-family:'Inter',serif;font-style:italic;font-weight:500;font-size:22px">Brightwave</span>
+        <span class="font-display text-[22px] shrink-0 tracking-tight">VANTAGE</span>
+        <span class="shrink-0 font-mono text-[20px]">mercury/</span>
+        <span class="font-display text-[22px] shrink-0">Halcyon Goods</span>
+        <span class="shrink-0" style="font-family:'Inter',serif;font-weight:600;font-size:22px;letter-spacing:-0.02em">Quartermast</span>
+        <span class="font-display text-[22px] shrink-0">Northwind</span>
+        <span class="font-display text-[22px] shrink-0 lowercase">foundry &amp; co.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features" class="py-24 lg:py-28">
+  <div class="max-w-[1240px] mx-auto px-5 lg:px-8">
+    <div class="max-w-[700px]">
+      <div class="font-mono text-[11px] tracking-widest text-[var(--accent)]">PLATFORM</div>
+      <h2 class="font-display text-[36px] sm:text-[44px] leading-[1.05] mt-3 tracking-tight">A real database under the spreadsheet you've been pretending is one.</h2>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-3 mt-12">
+      <!-- f1 -->
+      <div class="rounded-2xl bg-white hairline-soft p-6 shadow-card lift">
+        <div class="w-10 h-10 rounded-lg bg-[#EEF1F8] flex items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="12" rx="2" stroke="#0E1A3A" stroke-width="1.6"/><path d="M3 8h14M8 8v8" stroke="#0E1A3A" stroke-width="1.6"/></svg>
+        </div>
+        <h3 class="font-display text-[20px] mt-4">Multi-warehouse routing</h3>
+        <p class="text-[14.5px] leading-[1.55] text-[var(--ink-2)] mt-2">Allocate by ship-from cost, carrier SLA, or zip-zone — Mantle picks LA-1 for west-coast orders, NJ-2 for east, falls back to OH-1 when one runs dry.</p>
+        <ul class="mt-4 space-y-2 text-[13px] text-[var(--ink-2)]">
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#15803D" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Split-ship orders across warehouses</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#15803D" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Custom routing rules with dry-run preview</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#15803D" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>3PL-agnostic — ShipBob, ShipHero, your own</li>
+        </ul>
+      </div>
+
+      <!-- f2 -->
+      <div class="rounded-2xl bg-white hairline-soft p-6 shadow-card lift">
+        <div class="w-10 h-10 rounded-lg bg-[#EEF1F8] flex items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="6" cy="10" r="3" stroke="#0E1A3A" stroke-width="1.6"/><circle cx="14" cy="6" r="2" stroke="#0E1A3A" stroke-width="1.6"/><circle cx="14" cy="14" r="2" stroke="#0E1A3A" stroke-width="1.6"/><path d="M8.8 9l3 -2.4M8.8 11l3 2.4" stroke="#0E1A3A" stroke-width="1.6"/></svg>
+        </div>
+        <h3 class="font-display text-[20px] mt-4">Real-time channel sync</h3>
+        <p class="text-[14.5px] leading-[1.55] text-[var(--ink-2)] mt-2">A Shopify sale at 11:42pm pushes to Amazon, Faire, and TikTok Shop within 1.8s (p95). No oversells, no Saturday-morning emails to angry customers.</p>
+        <ul class="mt-4 space-y-2 text-[13px] text-[var(--ink-2)]">
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#15803D" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Webhook + polling fallback, both safe</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#15803D" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Bundles + kits resolved per-channel</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#15803D" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Backorder &amp; pre-order rules per SKU</li>
+        </ul>
+      </div>
+
+      <!-- f3 -->
+      <div class="rounded-2xl bg-white hairline-soft p-6 shadow-card lift">
+        <div class="w-10 h-10 rounded-lg bg-[#EEF1F8] flex items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 16V8m4 8V5m4 11V10m4 6V7" stroke="#0E1A3A" stroke-width="1.6" stroke-linecap="round"/><path d="M2 17h16" stroke="#0E1A3A" stroke-width="1.6"/></svg>
+        </div>
+        <h3 class="font-display text-[20px] mt-4">Reorder agents that forecast</h3>
+        <p class="text-[14.5px] leading-[1.55] text-[var(--ink-2)] mt-2">Mantle watches 12-month sales velocity per SKU, calculates lead time per supplier, and drops a draft PO on your desk Monday morning. Approve in one click.</p>
+        <ul class="mt-4 space-y-2 text-[13px] text-[var(--ink-2)]">
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#15803D" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Seasonality-aware forecasts (52w window)</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#15803D" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Supplier MOQ + lead-time variance</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#15803D" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Slack alerts when an agent disagrees with you</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CENTERPIECE: Flow diagram -->
+<section id="flow" class="py-24 lg:py-28 border-y border-[var(--line-soft)] bg-[var(--bg-2)] relative overflow-hidden">
+  <div class="absolute inset-0 dot-grid opacity-40 pointer-events-none"></div>
+  <div class="max-w-[1240px] mx-auto px-5 lg:px-8 relative">
+    <div class="flex items-end justify-between flex-wrap gap-4">
+      <div class="max-w-[640px]">
+        <div class="font-mono text-[11px] tracking-widest text-[var(--accent)]">THE INVENTORY FLOW</div>
+        <h2 class="font-display text-[36px] sm:text-[44px] leading-[1.05] mt-3 tracking-tight">Every channel reads from the same warehouse, in real time.</h2>
+      </div>
+      <div class="chip"><span class="pulse-dot pulse-dot-g"></span>Last write propagated in 1.18s · 14:08:11</div>
+    </div>
+
+    <div class="mt-12 rounded-2xl bg-white hairline shadow-card p-6 sm:p-10 relative">
+      <svg viewBox="0 0 1100 480" class="w-full h-auto" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#0E1A3A"/>
+          </marker>
+        </defs>
+
+        <!-- Left column: Warehouses -->
+        <g font-family="Geist Mono" font-size="11" fill="#3F3F46">
+          <text x="60" y="40" font-size="10" fill="#71717A">WAREHOUSES</text>
+
+          <g>
+            <rect x="40" y="60" width="200" height="80" rx="10" fill="#fff" stroke="#0E1A3A" stroke-opacity="0.12"/>
+            <text x="60" y="90" font-family="Inter" font-size="14" font-weight="600" fill="#0A0A0A">LA-1 · El Segundo</text>
+            <text x="60" y="110" font-size="11">on-hand 28,408</text>
+            <text x="60" y="126" font-size="11" fill="#15803D">capacity 64%</text>
+          </g>
+          <g>
+            <rect x="40" y="160" width="200" height="80" rx="10" fill="#fff" stroke="#0E1A3A" stroke-opacity="0.12"/>
+            <text x="60" y="190" font-family="Inter" font-size="14" font-weight="600" fill="#0A0A0A">NJ-2 · Edison</text>
+            <text x="60" y="210" font-size="11">on-hand 18,902</text>
+            <text x="60" y="226" font-size="11" fill="#15803D">capacity 41%</text>
+          </g>
+          <g>
+            <rect x="40" y="260" width="200" height="80" rx="10" fill="#fff" stroke="#0E1A3A" stroke-opacity="0.12"/>
+            <text x="60" y="290" font-family="Inter" font-size="14" font-weight="600" fill="#0A0A0A">OH-1 · Columbus</text>
+            <text x="60" y="310" font-size="11">on-hand 6,140</text>
+            <text x="60" y="326" font-size="11" fill="#B45309">capacity 88%</text>
+          </g>
+          <g>
+            <rect x="40" y="360" width="200" height="80" rx="10" fill="#fff" stroke="#0E1A3A" stroke-opacity="0.12" stroke-dasharray="4 4"/>
+            <text x="60" y="390" font-family="Inter" font-size="14" font-weight="600" fill="#0A0A0A">3PL · ShipBob</text>
+            <text x="60" y="410" font-size="11">on-hand 4,802</text>
+            <text x="60" y="426" font-size="11" fill="#3F3F46">virtual node</text>
+          </g>
+        </g>
+
+        <!-- Center: Mantle core -->
+        <g>
+          <rect x="430" y="180" width="240" height="120" rx="14" fill="#0E1A3A"/>
+          <text x="550" y="210" text-anchor="middle" font-family="Inter" font-size="14" font-weight="600" fill="#fff">Mantle Core</text>
+          <text x="550" y="232" text-anchor="middle" font-family="Geist Mono" font-size="10.5" fill="#9DB3E0">single source of truth</text>
+          <rect x="450" y="246" width="200" height="36" rx="6" fill="#1A2D5E"/>
+          <text x="550" y="269" text-anchor="middle" font-family="Geist Mono" font-size="10" fill="#9DB3E0">stock.allocate(sku, qty, channel)</text>
+        </g>
+
+        <!-- Right: Channels -->
+        <g font-family="Geist Mono" font-size="11" fill="#3F3F46">
+          <text x="860" y="40" font-size="10" fill="#71717A">CHANNELS &amp; CARRIERS</text>
+
+          <g>
+            <rect x="860" y="60" width="200" height="60" rx="10" fill="#fff" stroke="#0E1A3A" stroke-opacity="0.12"/>
+            <text x="880" y="86" font-family="Inter" font-size="13" font-weight="600" fill="#0A0A0A">Shopify · DTC</text>
+            <text x="880" y="104" font-size="10.5">12,408 orders / 30d</text>
+          </g>
+          <g>
+            <rect x="860" y="135" width="200" height="60" rx="10" fill="#fff" stroke="#0E1A3A" stroke-opacity="0.12"/>
+            <text x="880" y="161" font-family="Inter" font-size="13" font-weight="600" fill="#0A0A0A">Amazon FBM</text>
+            <text x="880" y="179" font-size="10.5">3,402 orders / 30d</text>
+          </g>
+          <g>
+            <rect x="860" y="210" width="200" height="60" rx="10" fill="#fff" stroke="#0E1A3A" stroke-opacity="0.12"/>
+            <text x="880" y="236" font-family="Inter" font-size="13" font-weight="600" fill="#0A0A0A">Faire · Wholesale</text>
+            <text x="880" y="254" font-size="10.5">408 orders / 30d</text>
+          </g>
+          <g>
+            <rect x="860" y="285" width="200" height="60" rx="10" fill="#fff" stroke="#0E1A3A" stroke-opacity="0.12"/>
+            <text x="880" y="311" font-family="Inter" font-size="13" font-weight="600" fill="#0A0A0A">TikTok Shop</text>
+            <text x="880" y="329" font-size="10.5">1,802 orders / 30d</text>
+          </g>
+          <g>
+            <rect x="860" y="360" width="200" height="60" rx="10" fill="#fff" stroke="#0E1A3A" stroke-opacity="0.12"/>
+            <text x="880" y="386" font-family="Inter" font-size="13" font-weight="600" fill="#0A0A0A">Manual / B2B</text>
+            <text x="880" y="404" font-size="10.5">188 orders / 30d</text>
+          </g>
+        </g>
+
+        <!-- Arrows in -->
+        <g stroke="#0E1A3A" stroke-width="1.6" fill="none" class="arrow-flow">
+          <path d="M240,100 C 320,100 360,180 430,220" marker-end="url(#ar2)"/>
+          <path d="M240,200 C 320,200 360,220 430,240" marker-end="url(#ar2)"/>
+          <path d="M240,300 C 320,300 360,260 430,250" marker-end="url(#ar2)"/>
+          <path d="M240,400 C 320,400 360,300 430,280" marker-end="url(#ar2)"/>
+        </g>
+        <!-- Arrows out -->
+        <g stroke="#0E1A3A" stroke-width="1.6" fill="none" class="arrow-flow">
+          <path d="M670,210 C 760,150 800,100 860,90" marker-end="url(#ar2)"/>
+          <path d="M670,230 C 760,200 800,170 860,165" marker-end="url(#ar2)"/>
+          <path d="M670,250 C 760,250 800,240 860,240" marker-end="url(#ar2)"/>
+          <path d="M670,270 C 760,290 800,310 860,315" marker-end="url(#ar2)"/>
+          <path d="M670,290 C 760,340 800,380 860,390" marker-end="url(#ar2)"/>
+        </g>
+      </svg>
+
+      <div class="mt-6 grid sm:grid-cols-3 gap-3 text-[12px] font-mono text-[var(--ink-3)] border-t border-[var(--line-soft)] pt-5">
+        <div>WRITES · sale · return · transfer</div>
+        <div>READS · stock · velocity · ETA</div>
+        <div>WEBHOOKS · 14 channels · 23 carriers</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="py-20">
+  <div class="max-w-[1240px] mx-auto px-5 lg:px-8">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="rounded-2xl bg-white hairline-soft p-6 shadow-card">
+        <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)]">SKUS TRACKED · AVG BRAND</div>
+        <div class="num-display text-[44px] mt-2 tabular">1,408</div>
+        <div class="text-[12px] text-[var(--ink-2)] mt-1">across 4.7 sales channels</div>
+      </div>
+      <div class="rounded-2xl bg-white hairline-soft p-6 shadow-card">
+        <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)]">STOCKOUT DAYS / BRAND</div>
+        <div class="num-display text-[44px] mt-2 tabular flex items-baseline gap-2"><span class="text-[var(--ink-3)] line-through text-[24px]">12</span><span>→ 1.8</span></div>
+        <div class="text-[12px] text-[var(--ink-2)] mt-1">90 days after onboarding (median)</div>
+      </div>
+      <div class="rounded-2xl grad-navy text-white p-6 shadow-card">
+        <div class="font-mono text-[10px] tracking-widest text-[#9DB3E0]">SHIPMENTS ROUTED / DAY</div>
+        <div class="num-display text-[44px] mt-2 tabular">28,408</div>
+        <div class="text-[12px] text-[#C7D2EB] mt-1">peak day · Black Friday 2025</div>
+      </div>
+      <div class="rounded-2xl bg-white hairline-soft p-6 shadow-card">
+        <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)]">SYNC LATENCY · P95</div>
+        <div class="num-display text-[44px] mt-2 tabular">1.18<span class="text-[20px] text-[var(--ink-3)]"> s</span></div>
+        <div class="text-[12px] text-[var(--ink-2)] mt-1">channel-to-channel · 30d trailing</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="py-24 lg:py-28">
+  <div class="max-w-[1240px] mx-auto px-5 lg:px-8">
+    <div class="max-w-[700px]">
+      <div class="font-mono text-[11px] tracking-widest text-[var(--accent)]">PRICING</div>
+      <h2 class="font-display text-[36px] sm:text-[44px] leading-[1.05] mt-3 tracking-tight">Flat by SKU count. <span class="opacity-45">No per-order tax on growth.</span></h2>
+      <p class="text-[var(--ink-2)] mt-4 text-[15.5px]">Pricing scales with catalog size, not with how well your business is doing. Unlimited orders on every plan.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-3 mt-12">
+      <div class="rounded-2xl bg-white hairline p-8 shadow-card">
+        <div class="flex items-center justify-between">
+          <div class="font-display text-[22px]">Studio</div>
+          <span class="chip">For brands &lt; $1M ARR</span>
+        </div>
+        <div class="mt-4 flex items-baseline gap-1">
+          <span class="num-display text-[44px] tabular">$129</span>
+          <span class="text-[var(--ink-3)] text-[14px]">/mo</span>
+        </div>
+        <div class="text-[13px] text-[var(--ink-2)]">500 SKUs · 2 channels · 1 warehouse</div>
+        <a href="#" class="lift block text-center btn-ghost hairline rounded-md mt-6 py-2.5 font-medium text-[14px]">Start 14-day pilot</a>
+        <ul class="mt-6 space-y-2.5 text-[14px]">
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#15803D" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Real-time channel sync</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#15803D" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Bundles, kits, variants</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#15803D" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>QuickBooks / Xero accounting sync</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#15803D" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Slack alerts on low stock</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#15803D" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Email support · 4-hour SLA</li>
+        </ul>
+      </div>
+      <div class="relative rounded-2xl grad-navy text-white p-8 shadow-card overflow-hidden">
+        <div class="absolute -right-12 -top-12 w-40 h-40 rounded-full" style="background:radial-gradient(circle,rgba(155,179,224,.4),transparent 70%);"></div>
+        <div class="flex items-center justify-between relative">
+          <div class="font-display text-[22px]">Scale</div>
+          <span class="chip" style="background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.16);color:#C7D2EB">For brands $1M+ ARR</span>
+        </div>
+        <div class="mt-4 flex items-baseline gap-1">
+          <span class="num-display text-[44px] tabular">$399</span>
+          <span class="text-[#9DB3E0] text-[14px]">/mo</span>
+        </div>
+        <div class="text-[13px] text-[#C7D2EB]">5,000 SKUs · unlimited channels · 3 warehouses</div>
+        <a href="#" class="lift block text-center bg-white text-[var(--accent)] rounded-md mt-6 py-2.5 font-medium text-[14px] hover:bg-[#F0F2F7]">Book onboarding</a>
+        <ul class="mt-6 space-y-2.5 text-[14px] text-[#E2E8F4]">
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#9DB3E0" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Everything in Studio</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#9DB3E0" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Reorder agents + 52-week forecasts</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#9DB3E0" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Custom routing rules + dry-run preview</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#9DB3E0" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>3PL connectors (ShipBob, ShipHero, BYO)</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#9DB3E0" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Dedicated CSM + Slack Connect channel</li>
+        </ul>
+      </div>
+    </div>
+    <p class="mt-6 text-center text-[12.5px] text-[var(--ink-3)]">Over 5k SKUs or 10+ warehouses? Mantle Enterprise — custom contract, on-prem option, SAML SSO.</p>
+  </div>
+</section>
+
+<!-- CUSTOMER STORY -->
+<section id="stories" class="py-24 lg:py-28 border-y border-[var(--line-soft)] bg-[var(--bg-2)]">
+  <div class="max-w-[1240px] mx-auto px-5 lg:px-8 grid lg:grid-cols-12 gap-10 items-center">
+    <div class="lg:col-span-5">
+      <div class="chip"><span class="pulse-dot pulse-dot-g"></span>Customer story · Q1 2026</div>
+      <h2 class="font-display text-[32px] sm:text-[40px] leading-[1.05] mt-4 tracking-tight">Hana Made cut stockouts <span class="opacity-45">by 92% in three months.</span></h2>
+      <div class="mt-5 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#0E1A3A] to-[#3A5BAA]"></div>
+        <div>
+          <div class="font-display text-[15px]">Hana Suzuki</div>
+          <div class="text-[12px] text-[var(--ink-3)]">Founder · Hana Made · Los Angeles · 1,408 SKUs</div>
+        </div>
+      </div>
+    </div>
+    <div class="lg:col-span-7">
+      <blockquote class="font-display text-[20px] sm:text-[22px] leading-[1.45] tracking-tight">
+        "We were running a $4M candle business out of three Google Sheets and a Shopify tab open in a Brave window. Every Monday I'd find we'd oversold something on Amazon over the weekend and have to email customers. Three months on Mantle and I genuinely don't think about stock anymore — the reorder agent has a draft PO sitting in Slack by 9am Monday."
+      </blockquote>
+      <p class="mt-5 text-[15px] text-[var(--ink-2)] leading-[1.6]">
+        "The thing nobody tells you about scaling DTC is that the spreadsheet doesn't break, you do. Mantle is the database we never had the engineering team to build."
+      </p>
+      <div class="grid grid-cols-3 gap-3 mt-7">
+        <div class="rounded-xl bg-white hairline-soft p-4">
+          <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)]">STOCKOUTS</div>
+          <div class="num-display text-[24px] tabular text-[var(--ok)] mt-1">−92%</div>
+        </div>
+        <div class="rounded-xl bg-white hairline-soft p-4">
+          <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)]">CHANNELS LIVE</div>
+          <div class="num-display text-[24px] tabular text-[var(--accent)] mt-1">2 → 5</div>
+        </div>
+        <div class="rounded-xl bg-white hairline-soft p-4">
+          <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)]">OPS HEADCOUNT</div>
+          <div class="num-display text-[24px] tabular text-[var(--accent)] mt-1">−1.5</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INTEGRATIONS -->
+<section class="py-20">
+  <div class="max-w-[1240px] mx-auto px-5 lg:px-8">
+    <div class="flex items-end justify-between flex-wrap gap-4">
+      <div>
+        <div class="font-mono text-[11px] tracking-widest text-[var(--accent)]">INTEGRATIONS</div>
+        <h2 class="font-display text-[28px] sm:text-[34px] leading-[1.1] mt-2 tracking-tight">14 channels. 23 carriers. 8 accounting tools.</h2>
+      </div>
+      <a href="#" class="text-[14px] text-[var(--ink-2)] underline-offset-4 hover:underline">All 84 connectors →</a>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 mt-8">
+      <div class="rounded-xl bg-white hairline-soft p-4 flex items-center gap-3 lift"><div class="w-7 h-7 rounded-md bg-[#95BF47]"></div><span class="text-[13px]">Shopify</span></div>
+      <div class="rounded-xl bg-white hairline-soft p-4 flex items-center gap-3 lift"><div class="w-7 h-7 rounded-md bg-[#FF9900]"></div><span class="text-[13px]">Amazon</span></div>
+      <div class="rounded-xl bg-white hairline-soft p-4 flex items-center gap-3 lift"><div class="w-7 h-7 rounded-md bg-[#F26200]"></div><span class="text-[13px]">Faire</span></div>
+      <div class="rounded-xl bg-white hairline-soft p-4 flex items-center gap-3 lift"><div class="w-7 h-7 rounded-md bg-[#000]"></div><span class="text-[13px]">TikTok Shop</span></div>
+      <div class="rounded-xl bg-white hairline-soft p-4 flex items-center gap-3 lift"><div class="w-7 h-7 rounded-md bg-[#0066FF]"></div><span class="text-[13px]">Stripe</span></div>
+      <div class="rounded-xl bg-white hairline-soft p-4 flex items-center gap-3 lift"><div class="w-7 h-7 rounded-md bg-[#2EBD59]"></div><span class="text-[13px]">QuickBooks</span></div>
+      <div class="rounded-xl bg-white hairline-soft p-4 flex items-center gap-3 lift"><div class="w-7 h-7 rounded-md bg-[#13B5EA]"></div><span class="text-[13px]">Xero</span></div>
+      <div class="rounded-xl bg-white hairline-soft p-4 flex items-center gap-3 lift"><div class="w-7 h-7 rounded-md bg-[#5C2EFF]"></div><span class="text-[13px]">ShipBob</span></div>
+      <div class="rounded-xl bg-white hairline-soft p-4 flex items-center gap-3 lift"><div class="w-7 h-7 rounded-md bg-[#1F1B16]"></div><span class="text-[13px]">ShipHero</span></div>
+      <div class="rounded-xl bg-white hairline-soft p-4 flex items-center gap-3 lift"><div class="w-7 h-7 rounded-md bg-[#A02020]"></div><span class="text-[13px]">EasyPost</span></div>
+      <div class="rounded-xl bg-white hairline-soft p-4 flex items-center gap-3 lift"><div class="w-7 h-7 rounded-md bg-[#FF3B30]"></div><span class="text-[13px]">DoorDash Drive</span></div>
+      <div class="rounded-xl bg-white hairline-soft p-4 flex items-center gap-3 lift"><div class="w-7 h-7 rounded-md bg-[#7B61FF]"></div><span class="text-[13px]">Klaviyo</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="py-24 lg:py-28 border-t border-[var(--line-soft)]">
+  <div class="max-w-[1000px] mx-auto px-5 lg:px-8">
+    <div class="text-center">
+      <div class="font-mono text-[11px] tracking-widest text-[var(--accent)]">FREQUENTLY ASKED</div>
+      <h2 class="font-display text-[36px] sm:text-[44px] leading-[1.05] mt-3 tracking-tight">Questions ops leaders ask <span class="opacity-45">on the procurement call.</span></h2>
+    </div>
+
+    <div class="mt-12 divide-y divide-[var(--line-soft)] hairline rounded-2xl bg-white shadow-card">
+      <details class="group p-6 open:bg-[#FAFAFB]" open>
+        <summary class="cursor-pointer flex items-start justify-between gap-6 list-none">
+          <span class="font-display text-[17px]">Does inventory sync in real-time across channels, or is it polling on a cron?</span>
+          <span class="text-[var(--ink-3)] group-open:rotate-45 transition">+</span>
+        </summary>
+        <p class="mt-3 text-[14.5px] text-[var(--ink-2)] leading-[1.6]">Both, by design. We subscribe to webhooks on channels that support them (Shopify, TikTok Shop, Faire) and use a 30-second polling fallback on Amazon, where webhooks are unreliable. End-to-end p50 is 640ms; p95 is 1.18s. We benchmark this publicly at <span class="font-mono text-[12px]">mantle.dev/latency</span>.</p>
+      </details>
+      <details class="group p-6">
+        <summary class="cursor-pointer flex items-start justify-between gap-6 list-none">
+          <span class="font-display text-[17px]">What carriers do you support out of the box, and is rate-shopping included?</span>
+          <span class="text-[var(--ink-3)] group-open:rotate-45 transition">+</span>
+        </summary>
+        <p class="mt-3 text-[14.5px] text-[var(--ink-2)] leading-[1.6]">23 carriers via direct integrations plus the long tail through EasyPost. USPS, UPS, FedEx, DHL, Canada Post, Royal Mail, Yodel, Sendle, OnTrac. Rate-shopping is included on Scale — Studio gets static-rule routing only.</p>
+      </details>
+      <details class="group p-6">
+        <summary class="cursor-pointer flex items-start justify-between gap-6 list-none">
+          <span class="font-display text-[17px]">How does Mantle handle backorders and pre-orders without overselling?</span>
+          <span class="text-[var(--ink-3)] group-open:rotate-45 transition">+</span>
+        </summary>
+        <p class="mt-3 text-[14.5px] text-[var(--ink-2)] leading-[1.6]">Per-SKU policy. You set a "virtual stock" cap that's the sum of on-hand + incoming PO with an expected-receive date. Mantle exposes that cap to channels, marks the line as "ships by Mar 14", and decrements it as orders come in. If the PO slips, we pause new pre-orders and email your inbox.</p>
+      </details>
+      <details class="group p-6">
+        <summary class="cursor-pointer flex items-start justify-between gap-6 list-none">
+          <span class="font-display text-[17px]">Does it forecast demand, or am I still doing that in spreadsheets?</span>
+          <span class="text-[var(--ink-3)] group-open:rotate-45 transition">+</span>
+        </summary>
+        <p class="mt-3 text-[14.5px] text-[var(--ink-2)] leading-[1.6]">Mantle's forecast uses a 52-week velocity window per SKU, blended with category seasonality and your supplier's lead-time variance. We output a recommended reorder quantity and a confidence band. The agent will only auto-draft a PO; a human always approves the send.</p>
+      </details>
+      <details class="group p-6">
+        <summary class="cursor-pointer flex items-start justify-between gap-6 list-none">
+          <span class="font-display text-[17px]">Can I bring my own 3PL or am I locked into a specific warehouse network?</span>
+          <span class="text-[var(--ink-3)] group-open:rotate-45 transition">+</span>
+        </summary>
+        <p class="mt-3 text-[14.5px] text-[var(--ink-2)] leading-[1.6]">3PL-agnostic. ShipBob and ShipHero are first-party connectors, but any 3PL with an EDI 940/944 feed or a REST API connects in under a week. We also support self-fulfilled warehouses with our barcode-scanning pick app on iOS / Android.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="px-5 lg:px-8 pb-20">
+  <div class="max-w-[1240px] mx-auto rounded-3xl p-10 sm:p-16 relative overflow-hidden shadow-card grad-navy text-white">
+    <div class="absolute inset-0 opacity-30" style="background:radial-gradient(40% 60% at 90% 10%,rgba(155,179,224,.4),transparent 60%),radial-gradient(40% 60% at 0% 100%,rgba(0,0,0,.3),transparent 60%);"></div>
+    <div class="absolute inset-0 dot-grid opacity-20"></div>
+    <div class="relative grid lg:grid-cols-12 gap-8 items-center">
+      <div class="lg:col-span-8">
+        <div class="font-mono text-[11px] tracking-widest text-[#9DB3E0]">CLOSE THE TABS</div>
+        <h2 class="font-display text-[36px] sm:text-[48px] leading-[1.05] mt-3 tracking-tight">Give us your messy CSV. We'll give you back a database.</h2>
+        <p class="text-[#C7D2EB] mt-3 max-w-[560px] text-[15.5px]">Drop your Shopify export and a snapshot from your 3PL. Mantle generates a reconciliation report in 4 minutes — you'll see exactly how much stock you've miscounted before signing anything.</p>
+      </div>
+      <div class="lg:col-span-4 flex lg:justify-end gap-3 flex-wrap">
+        <a href="#" class="lift bg-white text-[var(--accent)] rounded-md px-5 py-3 text-[15px] font-medium">Run the reconciliation</a>
+        <a href="#" class="lift rounded-md px-5 py-3 text-[15px] font-medium text-white" style="border:1px solid rgba(255,255,255,.35)">Talk to ops</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="border-t border-[var(--line-soft)]">
+  <div class="max-w-[1240px] mx-auto px-5 lg:px-8 py-14 grid grid-cols-2 sm:grid-cols-5 gap-8 text-[13px]">
+    <div class="col-span-2 sm:col-span-1">
+      <div class="flex items-center gap-2">
+        <svg width="22" height="22" viewBox="0 0 22 22"><path d="M2 16L11 3l9 13H2Z" fill="#0E1A3A"/><path d="M6 16h10l-5-7-5 7Z" fill="#fff"/></svg>
+        <span class="font-display text-[16px]">Mantle</span>
+      </div>
+      <p class="mt-3 text-[12.5px] text-[var(--ink-3)] leading-[1.55] max-w-[200px]">The inventory + fulfillment OS for DTC brands.</p>
+      <div class="mt-3 chip"><span class="pulse-dot pulse-dot-g"></span>All systems normal</div>
+    </div>
+    <div>
+      <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)] mb-3">PRODUCT</div>
+      <ul class="space-y-2 text-[var(--ink-2)]">
+        <li><a href="#" class="hover:text-[var(--ink)]">Inventory</a></li>
+        <li><a href="#" class="hover:text-[var(--ink)]">Channels</a></li>
+        <li><a href="#" class="hover:text-[var(--ink)]">Reorder agents</a></li>
+        <li><a href="#" class="hover:text-[var(--ink)]">Forecasts</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)] mb-3">CONNECTORS</div>
+      <ul class="space-y-2 text-[var(--ink-2)]">
+        <li><a href="#" class="hover:text-[var(--ink)]">Shopify</a></li>
+        <li><a href="#" class="hover:text-[var(--ink)]">Amazon</a></li>
+        <li><a href="#" class="hover:text-[var(--ink)]">Faire</a></li>
+        <li><a href="#" class="hover:text-[var(--ink)]">All 84 →</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)] mb-3">COMPANY</div>
+      <ul class="space-y-2 text-[var(--ink-2)]">
+        <li><a href="#" class="hover:text-[var(--ink)]">About</a></li>
+        <li><a href="#" class="hover:text-[var(--ink)]">Customers</a></li>
+        <li><a href="#" class="hover:text-[var(--ink)]">Security</a></li>
+        <li><a href="#" class="hover:text-[var(--ink)]">Careers · 14</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)] mb-3">RESOURCES</div>
+      <ul class="space-y-2 text-[var(--ink-2)]">
+        <li><a href="#" class="hover:text-[var(--ink)]">Docs</a></li>
+        <li><a href="#" class="hover:text-[var(--ink)]">Changelog</a></li>
+        <li><a href="#" class="hover:text-[var(--ink)]">DTC Benchmarks 2026</a></li>
+        <li><a href="#" class="hover:text-[var(--ink)]">Architecture notes</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="max-w-[1240px] mx-auto px-5 lg:px-8 py-6 border-t border-[var(--line-soft)] flex items-center justify-between text-[12px] text-[var(--ink-3)] font-mono flex-wrap gap-3">
+    <span>© 2026 Mantle Systems, Inc.</span>
+    <span>SOC 2 Type II · GDPR · CCPA · 99.99% uptime · 90d</span>
+  </div>
+</footer>
+</body>
+</html>
