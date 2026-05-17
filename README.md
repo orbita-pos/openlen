@@ -1,8 +1,9 @@
 # OpenLen
 
 > Beautiful landing pages. AI-built. Open source.
-> Lovable quality. Your code. $19 / month.
+> Lovable quality. Your code. Your subdomain. $19 / month.
 
+[![Live](https://img.shields.io/badge/Live-openlen.com-FF5A36)](https://openlen.com)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](./LICENSE)
 [![Quality: 4.8/5](https://img.shields.io/badge/Eval%20quality-4.8%2F5-brightgreen)](./EVAL_PHASE_2.md)
 [![Cost: $0.13/gen](https://img.shields.io/badge/Avg%20cost-%240.13%2Fgen-brightgreen)](./EVAL_PHASE_2.md)
@@ -14,7 +15,11 @@
 OpenLen is an open-source AI landing page generator. Describe what you
 want; we produce a complete, **conversion-validated** landing page in under
 60 seconds — pure HTML + Tailwind, no platform lock-in, no npm install on
-the output.
+the output. Generated pages publish to `<your-name>.openlen.com` with one
+click; you can also export the HTML and host it anywhere.
+
+Try it live at [openlen.com](https://openlen.com). First user-published
+landing: [inari.openlen.com](https://inari.openlen.com).
 
 **Key differentiators:**
 
@@ -40,13 +45,17 @@ your generated HTML downloads.
 ## Quick start — self-host
 
 ```bash
-git clone https://github.com/jesusbernalrj/inari-pages
-cd inari-pages
+git clone https://github.com/orbita-pos/openlen
+cd openlen
 npm install
 cp .env.local.example .env.local
-# Add TOGETHER_API_KEY, or leave MOCK_MODE=1 for offline dev
+# Add TOGETHER_API_KEY, DATABASE_URL (Neon), NEXTAUTH_SECRET
+# Or leave MOCK_MODE=1 for offline dev (no DB/API needed)
 npm run dev
 ```
+
+For self-hosted production deployment (Hetzner box + nginx wildcard +
+Let's Encrypt + systemd), see [`infra/SETUP.md`](./infra/SETUP.md).
 
 Then in another terminal:
 
@@ -202,12 +211,38 @@ what cost, and on which fallback.
 
 ## Roadmap
 
-- **Sessions 1–7** (✓ done) — slot-filling pipeline + quality gates + eval + ship prep
-- **Session 8** — sidebar slot editor (non-devs edit generated copy via panel)
+### Shipped
+
+- **Sessions 1–7** — slot-filling pipeline + 6 quality gates + 5-brief eval (4.8/5 avg, $0.126/gen)
+- **Session 8** — sidebar slot editor (non-devs edit generated copy without prompting)
 - **Session 9** — image upload + cropping for hero/decorative slots
-- **Session 10–11** — hosted free tier on Hetzner, auth, Stripe checkout
-- **Session 12+** — multi-page support, per-tier image caps, premium Claude
-  escalation as opt-in Pro Plus tier
+- **Sessions 10 + 10.5** — Hetzner self-host deploy (nginx wildcard + Let's Encrypt wildcard cert + systemd + Kamal-less). Live at [openlen.com](https://openlen.com).
+- **Session 11** — per-user subdomain publish flow. Click "Publish" → page lives at `<sub>.openlen.com` via atomic filesystem write + nginx wildcard. First user page: [inari.openlen.com](https://inari.openlen.com).
+- **Session 12** — in-iframe WYSIWYG text editing. Click any text in the preview, type, hit Enter — instant update, sidebar reflects, debounced reassemble persists to DB.
+
+### In progress (V3 pivot)
+
+Architecture research ([`RESEARCH_FINDINGS.md`](./RESEARCH_FINDINGS.md))
+identified that the catalog approach has a ceiling. V3 pivots to:
+
+- **Curated design system** (8 backgrounds + 20 palettes + 6 typography systems + 5 layout primitives) hand-tuned in claude.ai
+- **AI runtime composes from menu** (Kimi K2.6 planner + writer, single Together AI vendor, ~$0.015/gen — 8× cheaper than V1)
+- **Visual design knobs in the workspace** — click thumbnails to swap bg/palette/typography/density/radius/decoration instantly. Zero AI call per knob change.
+- **No more AI image gen** — replaced with Unsplash API + SVG decoration primitives + user uploads. Editorial photo quality, no FLUX cost or hallucinations.
+
+See [`V3_AUDIT.md`](./V3_AUDIT.md) for the file-by-file pivot plan,
+[`SESSION_13_PROMPT.md`](./SESSION_13_PROMPT.md) and
+[`SESSION_14_PROMPT.md`](./SESSION_14_PROMPT.md) for the implementation
+sessions. Both pipelines coexist behind feature flag `OPENLEN_PIPELINE_V3`
+during the rollout window.
+
+### After V3
+
+- Custom domains (CNAME `mydomain.com` → openlen.com via dynamic certbot)
+- Multi-page support (linked landings, shared design system)
+- Per-tier image upload caps (free 5/page, pro unlimited)
+- Stripe billing
+- Show HN launch
 
 ## Contributing
 
@@ -217,7 +252,7 @@ AGPL over GPL). By submitting code you agree to license it under the same
 terms.
 
 Issues for bug reports, feature requests, and brief-fidelity false-positives
-all go to [github.com/jesusbernalrj/inari-pages/issues](https://github.com/jesusbernalrj/inari-pages/issues).
+all go to [github.com/orbita-pos/openlen/issues](https://github.com/orbita-pos/openlen/issues).
 
 ## License
 
