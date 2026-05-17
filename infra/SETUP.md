@@ -9,31 +9,42 @@ Companion docs:
 - [`dns/MIGRATION.md`](./dns/MIGRATION.md) — Hostinger → Cloudflare nameserver swap
 - [`dns/CLOUDFLARE_TOKEN.md`](./dns/CLOUDFLARE_TOKEN.md) — API token for DNS-01 ACME
 - [`scripts/setup-hetzner.sh`](./scripts/setup-hetzner.sh) — idempotent box bootstrap
-- [`nginx/openlen.conf`](./nginx/openlen.conf) — wildcard subdomain config
+- [`nginx/openlen.conf`](./nginx/openlen.conf) — apex/www proxy + wildcard subdomain config
 - [`scripts/deploy-key-setup.md`](./scripts/deploy-key-setup.md) — SSH key for SCP deploys
 - [`scripts/smoke-test.md`](./scripts/smoke-test.md) — 5 tests proving it works
+- [`app/setup-node.sh`](./app/setup-node.sh) — Node 22 + Chromium runtime install
+- [`app/install-app.sh`](./app/install-app.sh) — Next.js scaffolding (dirs, env, systemd unit)
+- [`app/openlen-app.service`](./app/openlen-app.service) — systemd unit for the Node process
+- [`scripts/deploy.sh`](./scripts/deploy.sh) — local build + rsync + service restart
 
 ---
 
 ## Architecture
 
 ```
-openlen.com (apex)         ──→  Vercel (Next.js app: marketing + workspace)
-www.openlen.com            ──→  Vercel
-*.openlen.com (wildcard)   ──→  Hetzner CX22 (nginx serving static HTML)
+openlen.com (apex)         ─┐
+www.openlen.com            ─┤→  Hetzner CX22, nginx → Node 22 (openlen-app.service)
+                            │     └── Next.js standalone server on 127.0.0.1:3000
+                            │     └── /uploads/  served from /var/openlen/uploads/
+                            │     └── /_next/static/ served from /opt/openlen-app/.next/static/
+                            │
+*.openlen.com (wildcard)   ─┘   Hetzner CX22, nginx serving static HTML
                                   └── /var/www/openlen/<sub>/index.html
                                   └── wildcard TLS via Let's Encrypt DNS-01
 ```
 
-The split is intentional. Vercel handles the dynamic Next.js app; Hetzner
-serves the cheap static HTML output of the generator. Cloudflare handles
-DNS for the whole zone (proxy OFF — we use it for DNS hosting and DNS-01
-challenge support only).
+Everything runs on a single Hetzner box. The Next.js app handles apex/www;
+wildcard subdomains serve cheap static HTML straight from disk. Cloudflare
+handles DNS for the whole zone (proxy OFF — we use it for DNS hosting and
+DNS-01 challenge support only).
 
-**Why not put everything on Vercel?** Vercel's bandwidth and cost-per-page
-scale poorly for hosting thousands of generated landings. €4.49/mo for a
-Hetzner box gets ~20K landings on its 40GB SSD with negligible per-request
-cost.
+**Why self-host instead of Vercel?** Three reasons:
+
+1. **Brand consistency.** Open-source product → self-hosted infrastructure.
+2. **Predictable cost.** €4.49/mo flat for the CX22 vs Vercel's
+   function-invocation billing that scales with traffic.
+3. **Single mental model.** One box, one playbook, no vendor lock-in. The
+   Next.js standalone build deploys anywhere that runs Node.
 
 ---
 
@@ -134,7 +145,7 @@ Follow [`scripts/deploy-key-setup.md`](./scripts/deploy-key-setup.md).
 
 ---
 
-## Step 6 — Smoke-test
+## Step 6 — Smoke-test wildcard
 
 Follow [`scripts/smoke-test.md`](./scripts/smoke-test.md). All 5 tests
 must pass.
@@ -143,14 +154,100 @@ must pass.
 valid wildcard TLS cert; `https://nothing-here.openlen.com` returns the
 friendly OpenLen 404.
 
+At this point the wildcard subdomain side is fully working. Apex/www
+still return 444 (catch-all) until Section 10.5 runs.
+
+---
+
+## Section 10.5 — Deploy the Next.js app to apex + www
+
+The wildcard subdomain side is independent of the app. Skip this section
+if you only want subdomain hosting; complete it to serve marketing +
+workspace at `openlen.com` from the same box.
+
+### Step 1 — Install Node 22 + Chromium
+
+```bash
+scp -i ~/.ssh/openlen-admin infra/app/setup-node.sh root@<HETZNER_IP>:/root/
+ssh -i ~/.ssh/openlen-admin root@<HETZNER_IP> "bash /root/setup-node.sh"
+```
+
+Chromium is required at runtime by the puppeteer gates (a11y + mobile).
+The systemd unit points `PUPPETEER_EXECUTABLE_PATH` at the apt-installed
+binary so puppeteer doesn't try to download its own Chromium.
+
+### Step 2 — Scaffold dirs, env file, systemd unit
+
+```bash
+scp -i ~/.ssh/openlen-admin -r infra/app root@<HETZNER_IP>:/root/openlen-app-scripts
+ssh -i ~/.ssh/openlen-admin root@<HETZNER_IP> "bash /root/openlen-app-scripts/install-app.sh"
+```
+
+This creates `/opt/openlen-app` (release dir), `/var/openlen/{uploads,witness}`
+(persistent data), `/etc/openlen/openlen.env` (secrets template), and
+installs `openlen-app.service`. The service is enabled but **not started**
+— it needs env values first.
+
+### Step 3 — Paste secrets into the env file
+
+Edit interactively over SSH so the secrets never land in shell history
+or chat:
+
+```bash
+ssh -i ~/.ssh/openlen-admin root@<HETZNER_IP>
+nano /etc/openlen/openlen.env
+# Fill in TOGETHER_API_KEY, DATABASE_URL, NEXTAUTH_SECRET, NEXTAUTH_URL
+# (see infra/app/env.example for the full list)
+```
+
+### Step 4 — Reload nginx with apex + www server block
+
+Push the updated config (which now includes the apex + www reverse-proxy
+block alongside the existing wildcard block):
+
+```bash
+scp -i ~/.ssh/openlen-admin -r infra/nginx root@<HETZNER_IP>:/root/openlen-nginx
+ssh -i ~/.ssh/openlen-admin root@<HETZNER_IP> "bash /root/openlen-nginx/install-config.sh"
+```
+
+`install-config.sh` runs `nginx -t` before reloading; the reload fails
+loudly if anything is wrong.
+
+### Step 5 — First deploy
+
+From your local checkout:
+
+```bash
+bash infra/scripts/deploy.sh
+```
+
+This builds the Next.js standalone bundle locally, rsyncs `.next/standalone/`
+to `/opt/openlen-app/`, and `systemctl restart openlen-app`. The script
+ends with a curl smoke check against `https://openlen.com`.
+
+### Step 6 — Confirm
+
+```bash
+curl -I --resolve openlen.com:443:<HETZNER_IP> https://openlen.com         # 200
+curl -I --resolve openlen.com:443:<HETZNER_IP> https://openlen.com/new     # 200
+curl -I --resolve test.openlen.com:443:<HETZNER_IP> https://test.openlen.com  # 200 (wildcard untouched)
+ssh -i ~/.ssh/openlen-admin root@<HETZNER_IP> "systemctl status openlen-app --no-pager | head -10"
+```
+
+**Checkpoint:** apex returns the marketing landing, `/new` returns the
+workspace, the wildcard subdomain still serves, and the service is
+`active (running)`.
+
 ---
 
 ## Verify all green
 
 After all steps, this checklist should be entirely ticked:
 
-- [ ] `https://openlen.com` — Vercel Next.js app (apex)
-- [ ] `https://www.openlen.com` — same Vercel app
+- [ ] `https://openlen.com` — Next.js marketing landing
+- [ ] `https://www.openlen.com` — same app, same box
+- [ ] `https://openlen.com/new` — workspace UI
+- [ ] `https://openlen.com/api/generate` accepts POST (returns SSE stream)
 - [ ] `https://test.openlen.com` — 200 OK, "Hello from test"
 - [ ] `https://anyrandom.openlen.com` — 404 + default OpenLen page
 - [ ] TLS cert valid for `*.openlen.com` and `openlen.com`
@@ -158,6 +255,7 @@ After all steps, this checklist should be entirely ticked:
 - [ ] `ufw status` shows 22/80/443 allowed, defaults deny incoming
 - [ ] `systemctl is-enabled fail2ban` → enabled
 - [ ] `systemctl is-enabled certbot.timer` → enabled
+- [ ] `systemctl is-enabled openlen-app` → enabled, `is-active` → active
 
 ---
 
@@ -167,20 +265,23 @@ If the Hetzner box dies (hardware failure, accidental destroy, etc.):
 
 1. Provision a new box (Step 0) — note the new IP
 2. Update Cloudflare DNS:
-   - Edit the `*` A record → new `<HETZNER_IP>`
-   - Apex + www unchanged (still Vercel)
+   - Edit the `*`, apex (`@`), and `www` A records → new `<HETZNER_IP>`
+   - All three now point at Hetzner (no Vercel fallback)
 3. Run the box setup script (Step 3) — `cloudflare.ini` re-creation is
    in [`dns/CLOUDFLARE_TOKEN.md`](./dns/CLOUDFLARE_TOKEN.md)
 4. Install nginx config (Step 4)
 5. Re-add deploy user public key (Step 5) — same key, just a fresh
    `authorized_keys`
-6. Re-sync deployed subdomain content. Session 11+ stores
+6. Install Node + Chromium + scaffold (Section 10.5 Steps 1–2)
+7. Restore `/etc/openlen/openlen.env` from secrets vault (Step 3 of 10.5)
+8. Deploy the app (`bash infra/scripts/deploy.sh`) — Step 5 of 10.5
+9. Re-sync deployed subdomain content. Session 11+ stores
    `<subdomain> → <user_id>` in Postgres, so the Next.js app can
    re-push every active subdomain from the DB. Until then, the box is
    functional but empty until each user clicks "Deploy" again.
 
 DR drill recommendation: spin up a second box once, run through these
-steps, confirm < 60 min recovery time. Then destroy the drill box.
+steps, confirm < 90 min recovery time end-to-end. Then destroy the drill box.
 
 ---
 
