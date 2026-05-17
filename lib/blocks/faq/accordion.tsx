@@ -10,7 +10,7 @@
  * without client-side JS. Tokens substituted.
  */
 import { z } from "zod";
-import { Plus } from "lucide-react";
+import { Plus } from "../_icons";
 import type {
   BlockComponent,
   BlockComponentProps,

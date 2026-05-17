@@ -9,7 +9,7 @@
  * the orchestrator's job in compose.
  */
 import { z } from "zod";
-import { Check } from "lucide-react";
+import { Check } from "../_icons";
 import type {
   BlockComponent,
   BlockComponentProps,

@@ -9,7 +9,7 @@
  * AI can't drift to three (which would just become three-tier-highlight).
  */
 import { z } from "zod";
-import { Check } from "lucide-react";
+import { Check } from "../_icons";
 import type {
   BlockComponent,
   BlockComponentProps,
