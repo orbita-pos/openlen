@@ -292,12 +292,25 @@ export function ProjectsView({ projects: initial }: { projects: ProjectSummary[]
           </span>
         }
         actions={
-          <Link
-            href="/new"
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-coral-500 text-white text-[12px] font-medium hover:bg-coral-600 active:bg-coral-700 btn-coral-shadow transition"
-          >
-            <Plus size={13} /> New page
-          </Link>
+          <>
+            <Link
+              href={
+                selected.size === 1
+                  ? `/new-v2?project=${Array.from(selected)[0]}`
+                  : "/new-v2"
+              }
+              className="hidden sm:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[11.5px] font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition"
+              title="Preview the V2 workspace (parallel route — V1 stays at /new)"
+            >
+              Try the V2 workspace →
+            </Link>
+            <Link
+              href="/new"
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-coral-500 text-white text-[12px] font-medium hover:bg-coral-600 active:bg-coral-700 btn-coral-shadow transition"
+            >
+              <Plus size={13} /> New page
+            </Link>
+          </>
         }
       />
 
