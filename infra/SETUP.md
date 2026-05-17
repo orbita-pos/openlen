@@ -240,6 +240,97 @@ workspace, the wildcard subdomain still serves, and the service is
 
 ---
 
+## Section 11 — per-user subdomain publish flow
+
+Session 11 lets signed-in users claim `<sub>.openlen.com` from the workspace
+and writes one directory per subdomain into the same `/var/www/openlen/`
+root the wildcard nginx block already serves from.
+
+The Next.js app is the one writing those directories now (previously empty —
+Session 10 only proved the static-hosting path). One-time box prep, then
+deploy as usual.
+
+### Step 1 — Open up `/var/www/openlen/` to the deploy user
+
+The app process runs as `User=openlen-deploy` / `Group=www-data`. The
+wildcard root needs to be group-writable by `www-data`, with the setgid
+bit set so subdirectories inherit the group ownership:
+
+```bash
+ssh -i ~/.ssh/openlen-admin root@<HETZNER_IP>
+chown -R openlen-deploy:www-data /var/www/openlen
+chmod 2775 /var/www/openlen
+# Sanity: openlen-deploy can now touch a file in there.
+sudo -u openlen-deploy install -m 644 /dev/null /var/www/openlen/.write-test
+ls -l /var/www/openlen/.write-test    # owner=openlen-deploy group=www-data
+rm /var/www/openlen/.write-test
+exit
+```
+
+`_default/` and any test subdirs from Session 10 keep working — the chown
+preserves the existing tree, only the permissions and group change.
+
+### Step 2 — Apply the systemd unit changes
+
+The unit now whitelists `/var/www/openlen` in `ReadWritePaths=` and adds
+`Environment=PUBLISH_ROOT=/var/www/openlen` and
+`Environment=PUBLISH_BASE_HOST=openlen.com`. Push and reload:
+
+```bash
+scp -i ~/.ssh/openlen-admin infra/app/openlen-app.service \
+  root@<HETZNER_IP>:/etc/systemd/system/openlen-app.service
+ssh -i ~/.ssh/openlen-admin root@<HETZNER_IP> \
+  "systemctl daemon-reload && systemctl restart openlen-app"
+```
+
+`deploy-phase-2.ps1` rebuilds and ships the app code itself — this step only
+covers the unit-file delta.
+
+### Step 3 — Push the updated nginx config
+
+The wildcard server block now serves `/uploads/` from
+`/var/openlen/uploads/` (so the published page can reference user-uploaded
+images without going cross-origin via the apex). Reload nginx:
+
+```bash
+scp -i ~/.ssh/openlen-admin -r infra/nginx root@<HETZNER_IP>:/root/openlen-nginx
+ssh -i ~/.ssh/openlen-admin root@<HETZNER_IP> \
+  "bash /root/openlen-nginx/install-config.sh"
+```
+
+`install-config.sh` runs `nginx -t` before reloading; the reload fails
+loudly if anything is wrong.
+
+### Step 4 — Apply the Drizzle schema migration
+
+Three new columns on `projects` (`subdomain` UNIQUE, `publishedAt`,
+`publishedHtml`). Run from the local checkout against the same Neon DB the
+app uses in production:
+
+```powershell
+npx drizzle-kit push --force
+```
+
+`--force` is needed because the new `UNIQUE` constraint can't be created
+implicitly. Inspect the printed plan first if you're uneasy.
+
+### Step 5 — Smoke test
+
+After `.\deploy-phase-2.ps1` is done:
+
+```bash
+# Pick a fresh subdomain via the workspace UI → click "Publish to openlen.com".
+# Then check from your laptop:
+curl -I https://<sub>.openlen.com
+# Expect: HTTP/2 200, Content-Type: text/html, valid wildcard TLS.
+
+# Click Unpublish, then:
+curl -I https://<sub>.openlen.com
+# Expect: HTTP/2 404, served by the friendly _default block.
+```
+
+---
+
 ## Verify all green
 
 After all steps, this checklist should be entirely ticked:

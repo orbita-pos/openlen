@@ -6,6 +6,7 @@ import { BriefForm, SAMPLE_BRIEF } from "@/components/workspace/brief-form";
 import { EditPromptModal } from "@/components/workspace/edit-prompt-modal";
 import { Header } from "@/components/workspace/header";
 import { PreviewPanel } from "@/components/workspace/preview-panel";
+import { PublishModal } from "@/components/workspace/publish-modal";
 import { SlotEditor } from "@/components/workspace/slot-editor";
 import { useDarkMode } from "@/lib/use-dark-mode";
 import { useGeneration } from "@/lib/use-generation";
@@ -80,11 +81,50 @@ function NewPageInner() {
   const searchParams = useSearchParams();
   const projectParam = searchParams.get("project");
   const briefParam = searchParams.get("brief");
+  const publishParam = searchParams.get("publish");
   const [editTarget, setEditTarget] = useState<{
     sectionId: string;
     sectionName: string;
   } | null>(null);
   const [downloadingZip, setDownloadingZip] = useState(false);
+
+  // Session 11 — publish state. Fetched from /api/projects/[id] alongside
+  // the data the workspace already pulls; not threaded through useGeneration
+  // because WorkspaceState only carries page-render data. Tracking it
+  // separately keeps the change surface small.
+  const [publishState, setPublishState] = useState<{
+    subdomain: string | null;
+    publishedAt: Date | null;
+    hasUnpublishedChanges: boolean;
+  }>({ subdomain: null, publishedAt: null, hasUnpublishedChanges: false });
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const publishAutoOpenedRef = useRef(false);
+
+  const refreshPublishState = useCallback(
+    async (projectId: string) => {
+      try {
+        const res = await fetch(`/api/projects/${projectId}`);
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          project: {
+            subdomain: string | null;
+            publishedAt: string | null;
+            hasUnpublishedChanges: boolean;
+          };
+        };
+        setPublishState({
+          subdomain: data.project.subdomain,
+          publishedAt: data.project.publishedAt
+            ? new Date(data.project.publishedAt)
+            : null,
+          hasUnpublishedChanges: data.project.hasUnpublishedChanges,
+        });
+      } catch {
+        // Network blip — leave state as-is.
+      }
+    },
+    [],
+  );
 
   const [prompt, setPrompt] = useState(() => briefParam?.trim() || SAMPLE_BRIEF);
   const [projectName, setProjectName] = useState("Untitled");
@@ -128,6 +168,26 @@ function NewPageInner() {
       setProjectName(state.title);
     }
   }, [state]);
+
+  // Refresh publish state whenever we land on a project (either via
+  // ?project= or via the project_saved SSE event after a fresh generation).
+  useEffect(() => {
+    if (state.kind !== "generated") return;
+    const pid = state.projectId;
+    if (!pid) return;
+    void refreshPublishState(pid);
+  }, [state, refreshPublishState]);
+
+  // Auto-open the publish modal when /new?project=<id>&publish=1 is hit —
+  // only once per page load and only after the project finished loading.
+  useEffect(() => {
+    if (publishParam !== "1") return;
+    if (publishAutoOpenedRef.current) return;
+    if (state.kind !== "generated") return;
+    if (!state.projectId) return;
+    publishAutoOpenedRef.current = true;
+    setPublishModalOpen(true);
+  }, [publishParam, state]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -355,6 +415,19 @@ function NewPageInner() {
         totalCost={cost?.total}
         onDownloadZip={generated ? handleDownloadZip : undefined}
         downloadingZip={downloadingZip}
+        published={
+          publishState.subdomain
+            ? {
+                subdomain: publishState.subdomain,
+                hasUnpublishedChanges: publishState.hasUnpublishedChanges,
+              }
+            : null
+        }
+        onPublishClick={
+          generated && state.kind === "generated" && state.projectId
+            ? () => setPublishModalOpen(true)
+            : undefined
+        }
       />
       <div
         className={cn(
@@ -430,6 +503,30 @@ function NewPageInner() {
               additionalInstruction: instruction,
               mode: "edit",
             });
+          }}
+        />
+      )}
+
+      {state.kind === "generated" && state.projectId && (
+        <PublishModal
+          open={publishModalOpen}
+          onClose={() => setPublishModalOpen(false)}
+          project={{
+            id: state.projectId,
+            subdomain: publishState.subdomain,
+            publishedAt: publishState.publishedAt,
+            hasUnpublishedChanges: publishState.hasUnpublishedChanges,
+          }}
+          onSuccess={(newSubdomain) => {
+            // Optimistic update so the header pill flips immediately; a
+            // background refresh follows to pick up publishedAt + drift.
+            setPublishState((prev) => ({
+              ...prev,
+              subdomain: newSubdomain,
+              publishedAt: newSubdomain ? new Date() : null,
+              hasUnpublishedChanges: false,
+            }));
+            if (state.projectId) void refreshPublishState(state.projectId);
           }}
         />
       )}

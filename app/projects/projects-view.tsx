@@ -27,7 +27,6 @@ import {
   Pencil,
   Plus,
   Search,
-  Share2,
   SlidersHorizontal,
   Sparkles,
   Trash2,
@@ -871,24 +870,55 @@ function ProjectCard({
       </Link>
 
       <div className="px-3.5 py-3">
-        <h3 className="text-[13.5px] font-semibold tracking-tight leading-snug line-clamp-1">
-          <Highlight text={project.title} q={q} />
+        <h3 className="text-[13.5px] font-semibold tracking-tight leading-snug line-clamp-1 flex items-center gap-1.5">
+          {project.subdomain && (
+            <span
+              aria-label="Published"
+              title="Published"
+              className="relative inline-flex h-1.5 w-1.5 shrink-0"
+            >
+              <span className="absolute inset-0 rounded-full bg-emerald-500 opacity-70 animate-ping" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            </span>
+          )}
+          <span className="truncate">
+            <Highlight text={project.title} q={q} />
+          </span>
+          {project.subdomain && project.hasUnpublishedChanges && (
+            <span className="ml-1 inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-1 ring-inset ring-amber-200 dark:ring-amber-500/30 px-1.5 py-0 text-[9.5px] font-medium uppercase tracking-wider whitespace-nowrap">
+              Unpublished changes
+            </span>
+          )}
         </h3>
         <div className="mt-1 text-[11.5px] text-zinc-500 dark:text-zinc-500 flex items-center gap-1.5">
           <span>Edited {relativeTime(project.updatedAt)}</span>
-          {project.deployUrl && (
+          {project.subdomain ? (
+            <>
+              <span className="text-zinc-300 dark:text-zinc-700">·</span>
+              <a
+                href={`https://${project.subdomain}.openlen.com`}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 hover:text-zinc-900 dark:hover:text-zinc-100 transition"
+              >
+                <Globe size={10} /> {project.subdomain}.openlen.com
+              </a>
+            </>
+          ) : project.deployUrl ? (
             <>
               <span className="text-zinc-300 dark:text-zinc-700">·</span>
               <a
                 href={`https://${project.deployUrl}`}
                 target="_blank"
                 rel="noreferrer"
+                onClick={(e) => e.stopPropagation()}
                 className="inline-flex items-center gap-1 hover:text-zinc-900 dark:hover:text-zinc-100 transition"
               >
                 <Globe size={10} /> {project.deployUrl}
               </a>
             </>
-          )}
+          ) : null}
         </div>
         {project.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
@@ -978,11 +1008,32 @@ function ProjectRow({
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="text-[13.5px] font-medium truncate">
-          <Highlight text={project.title} q={q} />
+        <div className="text-[13.5px] font-medium truncate flex items-center gap-1.5">
+          {project.subdomain && (
+            <span
+              aria-label="Published"
+              title="Published"
+              className="relative inline-flex h-1.5 w-1.5 shrink-0"
+            >
+              <span className="absolute inset-0 rounded-full bg-emerald-500 opacity-70 animate-ping" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            </span>
+          )}
+          <span className="truncate">
+            <Highlight text={project.title} q={q} />
+          </span>
+          {project.subdomain && project.hasUnpublishedChanges && (
+            <span className="ml-1 inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-1 ring-inset ring-amber-200 dark:ring-amber-500/30 px-1.5 py-0 text-[9.5px] font-medium uppercase tracking-wider whitespace-nowrap">
+              Unpublished changes
+            </span>
+          )}
         </div>
         <div className="text-[11px] text-zinc-500 dark:text-zinc-500 truncate">
-          {project.deployUrl ? (
+          {project.subdomain ? (
+            <span className="inline-flex items-center gap-1">
+              <Globe size={10} /> {project.subdomain}.openlen.com
+            </span>
+          ) : project.deployUrl ? (
             <span className="inline-flex items-center gap-1">
               <Globe size={10} /> {project.deployUrl}
             </span>
@@ -1078,7 +1129,26 @@ function MenuDropdown({
     { icon: Copy, label: "Duplicate", onClick: onDuplicate },
     { icon: Pencil, label: "Rename", onClick: onRename },
     { icon: Download, label: "Download .zip", onClick: onDownloadZip },
-    { icon: Share2, label: "Share link", onClick: () => alert("Share links — coming soon."), disabled: true, hint: "Soon" },
+    // Session 11 — replaces the disabled "Share link — Soon" stub. Two
+    // variants: an outbound link to the live subdomain when published, or
+    // a route into the workspace with publish=1 to auto-open the modal.
+    project.subdomain
+      ? {
+          icon: Globe,
+          label: "Open published page",
+          onClick: () =>
+            window.open(
+              `https://${project.subdomain}.openlen.com`,
+              "_blank",
+              "noopener,noreferrer",
+            ),
+        }
+      : {
+          icon: Globe,
+          label: "Publish…",
+          onClick: () =>
+            window.location.assign(`/new?project=${project.id}&publish=1`),
+        },
     { icon: Archive, label: project.status === "archived" ? "Archived" : "Archive", onClick: onArchive, disabled: project.status === "archived" },
     { icon: Trash2, label: "Delete", onClick: onDelete, danger: true },
   ];

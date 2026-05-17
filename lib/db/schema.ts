@@ -104,12 +104,25 @@ export const projects = pgTable(
     // intent (industry + tone) when the project is created.
     tags: text("tags").array().notNull().default(sqlOp`'{}'::text[]`),
     // Set when the project gets published (Phase 4). Lets the list page
-    // show "deployed at example.com" inline.
+    // show "deployed at example.com" inline. Kept around alongside `subdomain`
+    // for one release while the UI migrates — derive from subdomain in code.
     deployUrl: text("deployUrl"),
     // Hero image URL pulled out of `data` for cheap thumbnail rendering
     // without having to deserialize the whole JSONB on listing pages.
     thumbnailUrl: text("thumbnailUrl"),
     data: jsonb("data").$type<LandingPage>().notNull(),
+    // Session 11 — claimed subdomain (e.g. `acme` → acme.openlen.com).
+    // UNIQUE constraint enforces global uniqueness; clearing it
+    // (unpublish) frees it for immediate re-claim. The unique index
+    // doubles as the lookup index for "does sub X exist".
+    subdomain: text("subdomain").unique(),
+    // Timestamp of the most-recent successful publish. Null = not
+    // currently published. Republish overwrites this.
+    publishedAt: timestamp("publishedAt", { mode: "date" }),
+    // Snapshot of `data.html` at the moment it was published. Drift
+    // detection in the UI compares this against current `data.html`
+    // to surface an "unpublished changes" pill.
+    publishedHtml: text("publishedHtml"),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
   },

@@ -10,10 +10,13 @@ import {
   Cloud,
   CloudCheck,
   Download,
+  ExternalLink,
   Globe,
   Moon,
+  RefreshCw,
   Sparkles,
   Sun,
+  Trash2,
 } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -32,6 +35,14 @@ export interface HeaderProps {
   totalCost?: number;
   onDownloadZip?: () => void;
   downloadingZip?: boolean;
+  // Session 11 — surfaces the current publish state in the Deploy menu and
+  // gives the workspace a way to open the publish modal from in here. Pass
+  // `null` for `published` when the project isn't published.
+  published?: {
+    subdomain: string;
+    hasUnpublishedChanges: boolean;
+  } | null;
+  onPublishClick?: () => void;
 }
 
 function formatUsd(n: number) {
@@ -49,6 +60,8 @@ export function Header({
   totalCost,
   onDownloadZip,
   downloadingZip,
+  published,
+  onPublishClick,
 }: HeaderProps) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [deployOpen, setDeployOpen] = useState(false);
@@ -175,10 +188,96 @@ export function Header({
                   />
                 </button>
                 {deployOpen && (
-                  <div className="absolute right-0 mt-2 w-64 rounded-xl ring-1 ring-zinc-200 dark:ring-zinc-800 bg-white dark:bg-[#0a0a0a] shadow-xl p-1.5 z-50">
+                  <div className="absolute right-0 mt-2 w-72 rounded-xl ring-1 ring-zinc-200 dark:ring-zinc-800 bg-white dark:bg-[#0a0a0a] shadow-xl p-1.5 z-50">
                     <div className="px-2.5 pt-1.5 pb-2 text-[10px] uppercase tracking-wider text-zinc-400">
                       Ship it
                     </div>
+
+                    {/* Session 11 — primary publish item. Mirrors the Vercel
+                        row style but with a clickable live-status block when
+                        the page is already published. */}
+                    {published ? (
+                      <div className="rounded-md ring-1 ring-emerald-200 dark:ring-emerald-500/30 bg-emerald-50/60 dark:bg-emerald-500/5 px-2.5 py-2 mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className="relative inline-flex h-2 w-2 shrink-0">
+                            <span className="absolute inset-0 rounded-full bg-emerald-500 opacity-70 animate-ping" />
+                            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                          </span>
+                          <span className="text-[11.5px] font-semibold tracking-tight text-emerald-800 dark:text-emerald-300 truncate">
+                            Live at {published.subdomain}.openlen.com
+                          </span>
+                        </div>
+                        {published.hasUnpublishedChanges && (
+                          <div className="mt-1 text-[10.5px] text-amber-700 dark:text-amber-300">
+                            You have unpublished changes.
+                          </div>
+                        )}
+                        <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                          <a
+                            href={`https://${published.subdomain}.openlen.com`}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={() => setDeployOpen(false)}
+                            className="inline-flex items-center gap-1 h-6 px-2 rounded text-[11px] font-medium text-emerald-800 dark:text-emerald-300 ring-1 ring-emerald-200 dark:ring-emerald-500/30 hover:bg-emerald-100 dark:hover:bg-emerald-500/10 transition"
+                          >
+                            <ExternalLink size={10} /> Open
+                          </a>
+                          {onPublishClick && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDeployOpen(false);
+                                  onPublishClick();
+                                }}
+                                className="inline-flex items-center gap-1 h-6 px-2 rounded text-[11px] font-medium text-emerald-800 dark:text-emerald-300 ring-1 ring-emerald-200 dark:ring-emerald-500/30 hover:bg-emerald-100 dark:hover:bg-emerald-500/10 transition"
+                              >
+                                <RefreshCw size={10} /> Re-publish
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDeployOpen(false);
+                                  onPublishClick();
+                                }}
+                                className="inline-flex items-center gap-1 h-6 px-2 rounded text-[11px] font-medium text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-500/10 transition"
+                              >
+                                <Trash2 size={10} /> Unpublish
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeployOpen(false);
+                          onPublishClick?.();
+                        }}
+                        disabled={!onPublishClick}
+                        className="flex items-center gap-3 w-full text-left px-2.5 py-2 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-900 transition group disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md ring-1 ring-coral-200 dark:ring-coral-500/30 bg-coral-50 dark:bg-coral-500/10 text-coral-600 dark:text-coral-400">
+                          <Globe size={13} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[13px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                            Publish to openlen.com
+                          </span>
+                          <span className="block text-[11px] text-zinc-500">
+                            Free hosting on your own subdomain
+                          </span>
+                        </span>
+                        <ArrowRight
+                          size={12}
+                          className="text-zinc-300 group-hover:text-coral-500 transition"
+                        />
+                      </button>
+                    )}
+
+                    <div className="border-t border-zinc-100 dark:border-zinc-900 my-1" />
+
                     {[
                       {
                         label: "Deploy to Vercel",

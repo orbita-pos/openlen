@@ -23,6 +23,13 @@ Environment=UPLOADS_DIR=/var/openlen/uploads
 Environment=UPLOADS_PUBLIC_URL=/uploads
 Environment=WITNESS_DIR=/var/openlen/witness
 
+# Session 11 — per-user subdomain hosting. The publish flow writes one
+# directory per claimed subdomain to PUBLISH_ROOT; nginx serves it. The
+# wildcard server block reads from the same root. PUBLISH_BASE_HOST is
+# the bare host that subdomains are stitched onto when building URLs.
+Environment=PUBLISH_ROOT=/var/www/openlen
+Environment=PUBLISH_BASE_HOST=openlen.com
+
 # Puppeteer reaches Chrome through this binary path (installed by
 # setup-node.sh via apt). Without this the gates module hunts in
 # ~/.cache/puppeteer which doesn't exist for a system user.
@@ -52,7 +59,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
 ProtectHome=read-only
-ReadWritePaths=/var/openlen
+ReadWritePaths=/var/openlen /var/www/openlen
 
 [Install]
 WantedBy=multi-user.target
