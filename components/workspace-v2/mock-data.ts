@@ -235,6 +235,16 @@ export type DensityValue = (typeof DENSITY_OPTS)[number]["value"];
 export type RadiusValue = (typeof RADIUS_OPTS)[number]["value"];
 export type DecorationValue = (typeof DECORATION_OPTS)[number]["value"];
 
+/** A single section in the composed landing. id is local to the page
+ *  (e.g., "sec-1"); primitive + variant point at one of the 17 LayoutPresets. */
+export interface SectionInstance {
+  /** Per-page unique id so React keys + state edits target the right one. */
+  id: string;
+  /** LayoutPreset.id (e.g., "hero-centered", "grid-pricing-3"). Look up the
+   *  primitive + variant + demo slots via LAYOUT_PRESETS. */
+  layoutId: string;
+}
+
 export interface DesignState {
   bg: string;
   paletteId: string;
@@ -243,11 +253,31 @@ export interface DesignState {
   density: DensityValue;
   radius: RadiusValue;
   decoration: DecorationValue;
-  /** When set, the preview iframe renders this primitive variant instead
-   *  of the mock Acme landing. id matches LayoutPreset.id from
-   *  lib/design/demo-slots.ts (e.g., "hero-split", "grid-pricing-3"). */
-  layoutId: string | null;
+  /** Ordered list of section instances that make up the current landing.
+   *  Empty array OR null means "use mock Acme landing". A non-empty array
+   *  causes /api/render-layout to render each and the iframe to show them
+   *  stacked top-to-bottom. */
+  composition: SectionInstance[];
 }
+
+// A sensible default SaaS landing composition — 5 sections that read like
+// a real product page from start to finish.
+function makeId(): string {
+  return `sec-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+// Default composition now uses V1-derived FAQ + Footer too — a more
+// realistic SaaS landing structure (hero → social proof → features →
+// pricing → FAQ → CTA → footer).
+export const DEFAULT_COMPOSITION: SectionInstance[] = [
+  { id: makeId(), layoutId: "hero-centered" },
+  { id: makeId(), layoutId: "grid-logo-bar" },
+  { id: makeId(), layoutId: "stack-icon-grid" },
+  { id: makeId(), layoutId: "grid-pricing-3" },
+  { id: makeId(), layoutId: "faq-accordion" },
+  { id: makeId(), layoutId: "cta-centered" },
+  { id: makeId(), layoutId: "footer-four-col" },
+];
 
 // Initial state references real preset ids.
 // First palette is "coral-editorial" (brandHue 12 = OpenLen's coral brand).
@@ -259,12 +289,16 @@ export const INITIAL_DESIGN: DesignState = {
   density: "standard",
   radius: "soft",
   decoration: "balanced",
-  layoutId: null,
+  composition: DEFAULT_COMPOSITION,
 };
 
 // Re-export LAYOUT_PRESETS from the demo-slots SSOT so the design panel
 // can iterate without a second import.
 export { LAYOUT_PRESETS, type LayoutPreset } from "@/lib/design/demo-slots";
+
+// Stable id-generator exposed for the panel + page when they need to add
+// new sections at runtime.
+export { makeId as makeSectionId };
 
 export interface ChatMessage {
   from: "ai" | "me";

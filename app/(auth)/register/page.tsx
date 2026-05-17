@@ -24,7 +24,7 @@ export default async function RegisterPage({
 }
 
 function sanitizeNext(raw?: string): string {
-  if (!raw) return "/new";
-  if (!raw.startsWith("/") || raw.startsWith("//")) return "/new";
+  if (!raw) return "/new-v2";
+  if (!raw.startsWith("/") || raw.startsWith("//")) return "/new-v2";
   return raw;
 }

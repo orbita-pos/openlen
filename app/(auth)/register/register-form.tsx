@@ -19,8 +19,8 @@ import {
 // Reject offsite ?next= so a crafted URL can't bounce the user to another
 // domain after sign-up.
 function sanitizeNext(raw: string | null): string {
-  if (!raw) return "/new";
-  if (!raw.startsWith("/") || raw.startsWith("//")) return "/new";
+  if (!raw) return "/new-v2";
+  if (!raw.startsWith("/") || raw.startsWith("//")) return "/new-v2";
   return raw;
 }
 

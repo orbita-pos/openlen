@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Smartphone,
   Tablet,
+  X,
 } from "./icons";
 import { IconBtn, Segmented } from "./ui";
 
@@ -21,9 +22,28 @@ type Zoom = "50" | "75" | "100" | "fit";
 interface PreviewAreaProps {
   doc: string;
   inlineEdit: boolean;
+  /** When set, the iframe loads this URL directly (a curated template from
+   *  /public/templates/curated/) instead of using the composed-from-primitives
+   *  HTML in `doc`. Cleared via `onClearTemplate`. */
+  previewUrl?: string | null;
+  templateName?: string | null;
+  onClearTemplate?: () => void;
+  /** When a template is being previewed, this commits the choice — the
+   *  parent runs the from-template API call and redirects to the new
+   *  project. Shown as the primary action button in the template banner. */
+  onUseTemplate?: () => void;
+  useTemplateLoading?: boolean;
 }
 
-export function PreviewArea({ doc, inlineEdit }: PreviewAreaProps) {
+export function PreviewArea({
+  doc,
+  inlineEdit,
+  previewUrl,
+  templateName,
+  onClearTemplate,
+  onUseTemplate,
+  useTemplateLoading = false,
+}: PreviewAreaProps) {
   const [device, setDevice] = useState<Device>("desktop");
   const [zoom, setZoom] = useState<Zoom>("fit");
   const [gridOverlay, setGridOverlay] = useState(false);
@@ -122,6 +142,46 @@ export function PreviewArea({ doc, inlineEdit }: PreviewAreaProps) {
           to cancel
         </div>
       )}
+      {previewUrl && (
+        <div className="relative z-10 shrink-0 h-9 flex items-center px-3 gap-3 text-[11.5px] bg-accent-soft text-accent border-b bd ui-small fade-in">
+          <span className="font-medium">
+            Previewing{templateName ? `: ${templateName}` : " template"}
+          </span>
+          <span className="fg-faint hidden sm:inline">·</span>
+          <span className="fg-muted hidden sm:inline">
+            Read-only — nothing saved until you commit
+          </span>
+          <div className="ml-auto flex items-center gap-1.5">
+            {onUseTemplate && (
+              <button
+                type="button"
+                onClick={onUseTemplate}
+                disabled={useTemplateLoading}
+                className="inline-flex items-center gap-1 h-6 px-2 rounded bg-[var(--accent)] text-white text-[11px] font-medium hover:brightness-105 shadow-coral transition disabled:opacity-60 disabled:cursor-wait"
+              >
+                {useTemplateLoading ? (
+                  <>
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-white/80 animate-pulse" />
+                    Cloning…
+                  </>
+                ) : (
+                  <>Use this template →</>
+                )}
+              </button>
+            )}
+            {onClearTemplate && (
+              <button
+                type="button"
+                onClick={onClearTemplate}
+                disabled={useTemplateLoading}
+                className="inline-flex items-center gap-1 h-6 px-2 rounded bg-app/40 hover:bg-app/70 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <X size={10} /> Clear
+              </button>
+            )}
+          </div>
+        </div>
+      )}
       <div
         ref={containerRef}
         className="relative flex-1 overflow-auto nice-scroll p-3 sm:p-4"
@@ -135,8 +195,10 @@ export function PreviewArea({ doc, inlineEdit }: PreviewAreaProps) {
             style={{ height: 800 * scale }}
           >
             <iframe
-              key={doc.slice(0, 120)}
-              srcDoc={doc}
+              key={previewUrl ?? doc.slice(0, 120)}
+              {...(previewUrl
+                ? { src: previewUrl }
+                : { srcDoc: doc })}
               title="OpenLen workspace preview"
               sandbox="allow-scripts allow-same-origin"
               style={{

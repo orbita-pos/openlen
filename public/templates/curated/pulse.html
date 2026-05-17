@@ -1,0 +1,779 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Pulse — See the bug. Not the stack trace.</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #000000;
+    --bg-2: #0B0B0C;
+    --bg-3: #111113;
+    --hair: rgba(255,255,255,0.06);
+    --hair-2: rgba(255,255,255,0.10);
+    --fg: #EFEFEF;
+    --fg-dim: rgba(255,255,255,0.62);
+    --fg-faint: rgba(255,255,255,0.40);
+    --accent: #E5407B;
+    --accent-r: 229,64,123;
+    --accent-2: #F286AC;
+    --amber: #F5B86B;
+    --rose: #F47373;
+    --green: #7BD9A8;
+  }
+  html, body { background: var(--bg); color: var(--fg); }
+  body {
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: "ss01","cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: 'Geist Mono', ui-monospace, monospace; }
+  .display { letter-spacing: -0.035em; line-height: 0.98; font-weight: 600; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .hairline { border-color: var(--hair); }
+  .hairline-2 { border-color: var(--hair-2); }
+  .dot-grid {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .radial-fade-accent {
+    background: radial-gradient(60% 50% at 50% 0%, rgba(var(--accent-r), 0.13), transparent 70%);
+  }
+  .radial-fade-soft {
+    background: radial-gradient(50% 60% at 50% 0%, rgba(var(--accent-r), 0.07), transparent 70%);
+  }
+  @keyframes pulse-dot {
+    0% { box-shadow: 0 0 0 0 rgba(var(--accent-r), 0.6); }
+    70% { box-shadow: 0 0 0 8px rgba(var(--accent-r), 0); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--accent-r), 0); }
+  }
+  .pulse-dot {
+    width: 6px; height: 6px; border-radius: 999px;
+    background: var(--accent);
+    animation: pulse-dot 1.8s infinite;
+  }
+  .pulse-dot-rose { background: var(--rose); animation: pulse-dot 1.8s infinite;
+    box-shadow: 0 0 0 0 rgba(244,115,115,0.55); }
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .marquee-track { animation: marquee 40s linear infinite; }
+  .lift { transition: transform 110ms ease, background-color 110ms ease, box-shadow 130ms ease, border-color 110ms ease; }
+  .lift:hover { transform: translateY(-1px); }
+  .btn-primary {
+    background: var(--accent);
+    color: #1A0612;
+    font-weight: 600;
+  }
+  .btn-primary:hover { background: #F25393; box-shadow: 0 6px 24px -8px rgba(var(--accent-r), 0.55); }
+  .accent { color: var(--accent-2); }
+  .ring-accent { box-shadow: 0 0 0 1px rgba(var(--accent-r), 0.55), 0 12px 40px -16px rgba(var(--accent-r), 0.35); }
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+  details[open] .faq-plus { transform: rotate(45deg); }
+  .faq-plus { transition: transform 150ms ease; color: var(--accent-2); }
+  .half-tone { color: var(--fg-faint); }
+  .bento-tile { background: linear-gradient(180deg, rgba(255,255,255,0.014), rgba(255,255,255,0)); }
+  .seg-active { background: rgba(255,255,255,0.06); color: var(--fg); }
+  .seg { color: var(--fg-dim); }
+  .dot-divider {
+    background-image: linear-gradient(to right, rgba(255,255,255,0.16) 33%, rgba(255,255,255,0) 0%);
+    background-position: top;
+    background-size: 6px 1px;
+    background-repeat: repeat-x;
+    height: 1px;
+  }
+  .check {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 14px; height: 14px; border-radius: 999px;
+    background: rgba(var(--accent-r), 0.16); color: var(--accent-2);
+    flex: 0 0 14px;
+  }
+  .row-hover:hover { background: rgba(255,255,255,0.025); }
+  .pill-mute { background: rgba(255,255,255,0.04); color: var(--fg-dim); }
+  .pill-rose { background: rgba(244,115,115,0.16); color: #F8A1A1; }
+  .pill-amber { background: rgba(245,184,107,0.16); color: #F5C892; }
+  .pill-accent { background: rgba(var(--accent-r), 0.16); color: var(--accent-2); }
+  .code-cmt { color: rgba(255,255,255,0.32); }
+  .code-key { color: #F286AC; }
+  .code-str { color: #E8C998; }
+  .code-num { color: #9EC1F5; }
+  .heat-0 { background: rgba(255,255,255,0.05); }
+  .heat-1 { background: rgba(229,64,123,0.18); }
+  .heat-2 { background: rgba(229,64,123,0.35); }
+  .heat-3 { background: rgba(229,64,123,0.55); }
+  .heat-4 { background: rgba(229,64,123,0.78); }
+  .blink::after {
+    content: "▍"; color: var(--accent-2); margin-left: 2px;
+    animation: blink 1s steps(2) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- NAV -->
+<header class="sticky top-0 z-40 backdrop-blur-md bg-[rgba(0,0,0,0.7)] border-b hairline">
+  <div class="max-w-[1240px] mx-auto px-6 h-14 flex items-center justify-between">
+    <a href="#" class="flex items-center gap-2.5">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M2 12h4l2-6 4 14 3-10 2 4 2-2h3" stroke="#E5407B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="text-[15px] font-semibold tracking-tight">Pulse</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-7 text-[13.5px] text-[color:var(--fg-dim)]">
+      <a class="hover:text-white lift" href="#">Product</a>
+      <a class="hover:text-white lift" href="#">Docs</a>
+      <a class="hover:text-white lift" href="#">Changelog</a>
+      <a class="hover:text-white lift" href="#pricing">Pricing</a>
+    </nav>
+    <div class="flex items-center gap-4">
+      <a href="#" class="text-[13.5px] text-[color:var(--fg-dim)] hover:text-white hidden sm:inline">Sign in</a>
+      <a href="#" class="btn-primary lift rounded-full pl-3.5 pr-2.5 h-8 inline-flex items-center gap-1 text-[13px]">
+        Start replaying
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 dot-grid opacity-90 pointer-events-none"></div>
+  <div class="absolute inset-x-0 top-0 h-[640px] radial-fade-accent pointer-events-none"></div>
+  <div class="relative max-w-[1240px] mx-auto px-6 pt-20 pb-14">
+    <div class="flex flex-col items-center text-center max-w-3xl mx-auto">
+      <div class="mono text-[11px] tracking-wider uppercase text-[color:var(--fg-dim)] inline-flex items-center gap-2 border hairline rounded-full pl-2 pr-3 py-1 bg-[rgba(255,255,255,0.02)]">
+        <span class="pulse-dot"></span>
+        v4.2 · React 19 + RN 0.79
+      </div>
+      <h1 class="display text-[56px] sm:text-[72px] md:text-[88px] mt-6">
+        See the bug. <span class="half-tone">Not the stack trace.</span>
+      </h1>
+      <p class="mt-6 max-w-xl text-[15.5px] text-[color:var(--fg-dim)] leading-relaxed">
+        Pulse records the 14 seconds before every error: clicks, network calls, console output, redux state. Open the session, scrub the timeline, ship the fix in one sitting.
+      </p>
+      <div class="mt-8 flex items-center gap-3 flex-wrap justify-center">
+        <a href="#" class="btn-primary lift rounded-full px-4 h-10 inline-flex items-center gap-1.5 text-[14px]">
+          Try Pulse free
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#" class="lift rounded-full px-4 h-10 inline-flex items-center text-[14px] border hairline-2 hover:bg-white/[0.04]">
+          Watch the demo replay
+        </a>
+      </div>
+      <div class="mt-6 mono text-[12.5px] text-[color:var(--fg-faint)]">
+        <span class="text-[color:var(--fg-dim)]">$</span> pnpm add @pulse-io/web
+      </div>
+    </div>
+
+    <!-- Hero tiles -->
+    <div class="mt-14 grid grid-cols-1 lg:grid-cols-[1.35fr_1fr] gap-4">
+      <!-- BIG: session replay player -->
+      <div class="rounded-2xl border hairline bg-[var(--bg-2)] overflow-hidden">
+        <div class="flex items-center justify-between px-4 h-10 border-b hairline">
+          <div class="flex items-center gap-2 mono text-[11.5px] text-[color:var(--fg-dim)]">
+            <span>session · 8f2a1c…b418 · checkout-flow</span>
+          </div>
+          <div class="mono text-[11px] flex items-center gap-3 text-[color:var(--fg-faint)]">
+            <span class="text-[color:var(--rose)] inline-flex items-center gap-1.5"><span class="pulse-dot-rose"></span>error: 14:02:11</span>
+            <span>chromium 124 · macOS</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-[1fr_280px] min-h-[440px]">
+          <!-- Player canvas -->
+          <div class="relative p-4 border-r hairline">
+            <!-- frame placeholder: a fake checkout UI -->
+            <div class="rounded-lg border hairline overflow-hidden bg-[var(--bg-3)] aspect-[16/10] relative">
+              <div class="absolute inset-0" style="background: linear-gradient(135deg, #1A0F18, #0B0B0C 60%);"></div>
+              <div class="relative p-4 grid grid-cols-[1fr_240px] gap-4 h-full">
+                <div>
+                  <div class="text-[12px] mono text-[color:var(--fg-faint)]">acme.app/checkout</div>
+                  <div class="mt-5 text-[18px] font-semibold">Confirm your order</div>
+                  <div class="mt-2 text-[12.5px] text-[color:var(--fg-dim)]">3 items · billed to •••• 4128</div>
+                  <div class="mt-4 space-y-2">
+                    <div class="border hairline rounded-md px-3 py-2 text-[12px] flex justify-between"><span class="text-[color:var(--fg-dim)]">Pro Plan · 1 yr</span><span class="mono tabular">$348.00</span></div>
+                    <div class="border hairline rounded-md px-3 py-2 text-[12px] flex justify-between"><span class="text-[color:var(--fg-dim)]">Seats × 4</span><span class="mono tabular">$96.00</span></div>
+                    <div class="border hairline rounded-md px-3 py-2 text-[12px] flex justify-between"><span class="text-[color:var(--fg-dim)]">Tax (CA)</span><span class="mono tabular">$36.40</span></div>
+                  </div>
+                </div>
+                <div class="flex flex-col">
+                  <div class="text-[11px] mono text-[color:var(--fg-faint)]">total</div>
+                  <div class="display text-3xl mt-1 tabular">$480.40</div>
+                  <button class="mt-auto rounded-md h-9 text-[12.5px] font-semibold" style="background:#E5407B;color:#1A0612">Refund order</button>
+                </div>
+              </div>
+              <!-- error overlay -->
+              <div class="absolute bottom-3 left-3 right-3 rounded-md border" style="background:rgba(244,115,115,0.10); border-color:rgba(244,115,115,0.35)">
+                <div class="px-3 py-2 flex items-center gap-2 mono text-[11.5px]">
+                  <span class="w-2 h-2 rounded-full bg-[#F47373]"></span>
+                  <span class="text-[#F8A1A1]">TypeError</span>
+                  <span class="text-[color:var(--fg-dim)]">Cannot read properties of undefined (reading 'refund')</span>
+                </div>
+              </div>
+              <!-- cursor -->
+              <div class="absolute" style="left:64%; top:71%">
+                <svg width="14" height="14" viewBox="0 0 24 24"><path d="M3 3l7 16 2-7 7-2L3 3z" fill="#FFF"/></svg>
+              </div>
+            </div>
+            <!-- scrubber -->
+            <div class="mt-4">
+              <div class="flex items-center gap-3 mono text-[11px] text-[color:var(--fg-faint)]">
+                <button class="w-7 h-7 rounded-full border hairline flex items-center justify-center text-[color:var(--fg)]">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
+                </button>
+                <span class="tabular text-[color:var(--fg-dim)]">00:14.31</span>
+                <div class="flex-1 relative h-1.5 rounded-full bg-white/[0.06]">
+                  <div class="absolute left-0 top-0 h-full w-[71%] rounded-full" style="background:linear-gradient(90deg, rgba(229,64,123,0.45), #E5407B)"></div>
+                  <!-- event markers -->
+                  <div class="absolute -top-[5px] w-2 h-2 rounded-full bg-white/40" style="left:18%"></div>
+                  <div class="absolute -top-[5px] w-2 h-2 rounded-full bg-white/40" style="left:32%"></div>
+                  <div class="absolute -top-[5px] w-2 h-2 rounded-full bg-[#F5B86B]" style="left:54%"></div>
+                  <div class="absolute -top-[5px] w-2.5 h-2.5 rounded-full bg-[#F47373]" style="left:71%; box-shadow:0 0 0 3px rgba(244,115,115,0.25)"></div>
+                </div>
+                <span class="tabular text-[color:var(--fg-dim)]">00:20.04</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Breadcrumb side panel -->
+          <div class="overflow-hidden">
+            <div class="px-4 py-2 mono text-[11px] uppercase tracking-wider text-[color:var(--fg-faint)] border-b hairline flex items-center justify-between">
+              <span>Breadcrumbs · 12</span>
+              <span class="text-[color:var(--accent-2)]">latest</span>
+            </div>
+            <div class="mono text-[12px] divide-y" style="--tw-divide-opacity:1">
+              <div class="px-4 py-2 row-hover"><span class="text-[color:var(--fg-faint)] tabular">14:01:54</span><div class="text-[color:var(--fg-dim)]">page → /checkout</div></div>
+              <div class="px-4 py-2 row-hover hairline"><span class="text-[color:var(--fg-faint)] tabular">14:01:58</span><div class="text-[color:var(--fg-dim)]">click <span class="text-white">"Add seat"</span></div></div>
+              <div class="px-4 py-2 row-hover hairline"><span class="text-[color:var(--fg-faint)] tabular">14:02:02</span><div class="text-[color:var(--fg-dim)]">fetch GET /api/cart <span class="text-[color:var(--accent-2)]">200</span></div></div>
+              <div class="px-4 py-2 row-hover hairline"><span class="text-[color:var(--fg-faint)] tabular">14:02:07</span><div class="text-[color:var(--fg-dim)]">click <span class="text-white">"Confirm"</span></div></div>
+              <div class="px-4 py-2 row-hover hairline"><span class="text-[color:var(--fg-faint)] tabular">14:02:08</span><div class="text-[color:var(--fg-dim)]">fetch POST /api/refund <span class="text-[#F8A1A1]">500</span></div></div>
+              <div class="px-4 py-2 row-hover hairline" style="background:rgba(244,115,115,0.06)"><span class="text-[color:var(--fg-faint)] tabular">14:02:11</span><div class="text-[#F8A1A1]">error TypeError stripe.refund</div></div>
+              <div class="px-4 py-2 row-hover hairline"><span class="text-[color:var(--fg-faint)] tabular">14:02:13</span><div class="text-[color:var(--fg-dim)]">console.error <span class="text-[color:var(--fg-faint)]">"retrying"</span></div></div>
+              <div class="px-4 py-2 row-hover hairline"><span class="text-[color:var(--fg-faint)] tabular">14:02:14</span><div class="text-[color:var(--fg-dim)]">fetch POST /api/refund <span class="text-[#F8A1A1]">500</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="rounded-2xl border hairline bg-[var(--bg-2)] p-5 flex flex-col">
+        <div class="flex items-center justify-between">
+          <div class="mono text-[11px] uppercase tracking-wider text-[color:var(--fg-faint)]">prod · last 24h</div>
+          <div class="mono text-[11px] text-[color:var(--accent-2)] flex items-center gap-1.5"><span class="pulse-dot"></span>live</div>
+        </div>
+        <div class="grid grid-cols-2 gap-px mt-5 bg-[var(--hair)] rounded-xl overflow-hidden border hairline">
+          <div class="bg-[var(--bg-2)] p-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Sessions captured</div>
+            <div class="display text-3xl mt-2 tabular">3,184,402</div>
+            <div class="mono text-[11px] mt-1 text-[color:var(--accent-2)] tabular">+8.4% vs Tue</div>
+          </div>
+          <div class="bg-[var(--bg-2)] p-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Errors caught</div>
+            <div class="display text-3xl mt-2 tabular">12,408</div>
+            <div class="mono text-[11px] mt-1 text-[#F1A0A0] tabular">+3.2% vs Tue</div>
+          </div>
+          <div class="bg-[var(--bg-2)] p-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">MTTR P50</div>
+            <div class="display text-3xl mt-2 tabular">14 m</div>
+            <div class="mono text-[11px] mt-1 text-[color:var(--accent-2)] tabular">−38% vs Tue</div>
+          </div>
+          <div class="bg-[var(--bg-2)] p-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Replay open rate</div>
+            <div class="display text-3xl mt-2 tabular">84.1<span class="text-base text-[color:var(--fg-dim)]"> %</span></div>
+            <div class="mono text-[11px] mt-1 text-[color:var(--accent-2)] tabular">team avg</div>
+          </div>
+        </div>
+        <div class="mt-5">
+          <div class="flex items-center justify-between mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">
+            <span>Errors per minute</span>
+            <span class="tabular text-[color:var(--fg-dim)]">peak 184/m</span>
+          </div>
+          <svg viewBox="0 0 280 70" class="w-full h-[70px] mt-2" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="sparkA" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#E5407B" stop-opacity="0.3"/>
+                <stop offset="100%" stop-color="#E5407B" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <path id="spark1-area" fill="url(#sparkA)"></path>
+            <path id="spark1-line" fill="none" stroke="#E5407B" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        </div>
+        <div class="mt-auto pt-5 mono text-[11.5px] text-[color:var(--fg-faint)] flex items-center justify-between">
+          <span>ingest: 4 regions</span>
+          <span class="text-[color:var(--fg-dim)]">SDK 9.2 KB gz</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LOGO CLOUD -->
+<section class="border-y hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-9">
+    <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)] text-center">Debugging production at</div>
+    <div class="overflow-hidden mt-6 [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]">
+      <div class="marquee-track flex gap-14 w-max items-center text-[color:var(--fg-dim)]">
+        <span class="text-2xl font-serif italic">Drift</span>
+        <span class="text-2xl font-semibold tracking-tight">FOLIO</span>
+        <span class="text-2xl font-light tracking-[0.18em]">RECEIPTS</span>
+        <span class="text-2xl font-serif">Northwind</span>
+        <span class="text-2xl font-semibold italic">Cassette</span>
+        <span class="text-2xl font-mono tracking-tight">lattice/</span>
+        <span class="text-2xl font-bold tracking-tighter">Folio Press</span>
+        <span class="text-2xl font-serif italic">Halcyon Studio</span>
+        <span class="text-2xl font-serif italic">Drift</span>
+        <span class="text-2xl font-semibold tracking-tight">FOLIO</span>
+        <span class="text-2xl font-light tracking-[0.18em]">RECEIPTS</span>
+        <span class="text-2xl font-serif">Northwind</span>
+        <span class="text-2xl font-semibold italic">Cassette</span>
+        <span class="text-2xl font-mono tracking-tight">lattice/</span>
+        <span class="text-2xl font-bold tracking-tighter">Folio Press</span>
+        <span class="text-2xl font-serif italic">Halcyon Studio</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BENTO -->
+<section class="relative">
+  <div class="max-w-[1240px] mx-auto px-6 py-24">
+    <div class="max-w-2xl">
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">Capabilities</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Everything a frontend engineer needs <span class="half-tone">at 2am.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4 max-w-xl">Sessions, breadcrumbs, errors, performance, and the network waterfall — all stitched to the same timeline. No tab-hopping.</p>
+    </div>
+
+    <div class="mt-12 grid grid-cols-12 grid-rows-[auto_auto] gap-4">
+      <!-- BIG: error timeline with heatmap -->
+      <div class="col-span-12 lg:col-span-7 lg:row-span-2 bento-tile rounded-2xl border hairline p-6 overflow-hidden">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 18l4-10 4 6 4-4 4 8" stroke="#F286AC" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Issue timeline</div>
+        </div>
+        <h3 class="display text-2xl mt-4">When the spike happened. Who got hit.</h3>
+        <p class="text-[color:var(--fg-dim)] mt-2 text-sm leading-relaxed">Stacked by issue, colored by severity. Hover any cell for the impacted session count and top-3 user agents.</p>
+
+        <div class="mt-5 rounded-xl border hairline overflow-hidden">
+          <!-- header -->
+          <div class="flex items-center justify-between px-3 h-9 border-b hairline mono text-[11px] text-[color:var(--fg-faint)]">
+            <span>last 72h · UTC</span>
+            <span class="flex items-center gap-3">
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded heat-1"></span>1-10</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded heat-2"></span>10-100</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded heat-3"></span>100-1k</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded heat-4"></span>1k+</span>
+            </span>
+          </div>
+          <!-- rows -->
+          <div class="p-3 space-y-2 mono text-[11.5px]" id="heatmap"></div>
+          <div class="px-3 py-2 border-t hairline flex justify-between mono text-[10.5px] text-[color:var(--fg-faint)] tabular">
+            <span>−72h</span><span>−48h</span><span>−24h</span><span>now</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stack trace -->
+      <div class="col-span-12 md:col-span-6 lg:col-span-5 bento-tile rounded-2xl border hairline p-6">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 5h16M4 11h10M4 17h13" stroke="#F286AC" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Source-mapped trace</div>
+        </div>
+        <h3 class="display text-2xl mt-4">The minified line. The original file. Side by side.</h3>
+        <p class="text-[color:var(--fg-dim)] mt-2 text-sm leading-relaxed">Sourcemaps uploaded at build time, with retention until you delete the release.</p>
+        <pre class="mono text-[12px] leading-[1.7] mt-4 p-3 rounded-lg border hairline bg-black/40 overflow-x-auto"><span class="code-cmt">// CheckoutConfirm.tsx · line 142</span>
+<span class="code-key">async function</span> handleRefund(orderId) {
+  <span class="code-key">const</span> client = useStripeClient();
+<span style="background:rgba(229,64,123,0.10); display:block; margin:0 -12px; padding:0 12px;"> <span class="code-cmt">→</span> <span class="code-key">await</span> client.<span style="color:#F8A1A1">refund</span>(orderId);  <span class="code-cmt">// undefined here</span></span>
+  toast(<span class="code-str">"Refund queued"</span>);
+}</pre>
+      </div>
+
+      <!-- Console output -->
+      <div class="col-span-12 md:col-span-6 lg:col-span-5 bento-tile rounded-2xl border hairline p-6">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 5l5 5-5 5M11 17h8" stroke="#F286AC" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Console</div>
+        </div>
+        <h3 class="display text-2xl mt-4">Captured. Even from production.</h3>
+        <p class="text-[color:var(--fg-dim)] mt-2 text-sm leading-relaxed">console.log, console.warn, console.error, with the originating React component.</p>
+        <div class="mt-4 rounded-lg border hairline overflow-hidden mono text-[12px]">
+          <div class="px-3 py-2 border-b hairline flex gap-3"><span class="text-[color:var(--fg-faint)] tabular">14:02:11</span><span class="text-[#F8A1A1]">error</span><span class="text-[color:var(--fg-dim)] truncate">[stripe] refund() not on client</span></div>
+          <div class="px-3 py-2 border-b hairline flex gap-3"><span class="text-[color:var(--fg-faint)] tabular">14:02:13</span><span class="text-[#F5C892]">warn</span><span class="text-[color:var(--fg-dim)] truncate">retrying once · attempt 1/3</span></div>
+          <div class="px-3 py-2 flex gap-3"><span class="text-[color:var(--fg-faint)] tabular">14:02:14</span><span class="text-[color:var(--accent-2)]">log</span><span class="text-[color:var(--fg-dim)] truncate">[react-query] invalidate(['orders'])<span class="blink"></span></span></div>
+        </div>
+      </div>
+
+      <!-- Issue grouping -->
+      <div class="col-span-12 md:col-span-5 lg:col-span-4 bento-tile rounded-2xl border hairline p-6">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="7" cy="7" r="3" stroke="#F286AC" stroke-width="1.4"/><circle cx="17" cy="7" r="3" stroke="#F286AC" stroke-width="1.4"/><circle cx="12" cy="17" r="3" stroke="#F286AC" stroke-width="1.4"/><path d="M9 9l3 5M15 9l-3 5" stroke="#F286AC" stroke-width="1.4"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Issue grouping</div>
+        </div>
+        <h3 class="display text-xl mt-4">12,408 errors → 38 issues.</h3>
+        <p class="text-[color:var(--fg-dim)] mt-2 text-sm leading-relaxed">We cluster by stack frame, browser, and user cohort so the same bug doesn't page you twice.</p>
+        <div class="mt-3 mono text-[11.5px] space-y-1.5">
+          <div class="flex justify-between border hairline rounded px-3 py-1.5"><span class="text-[color:var(--fg-dim)] truncate">TypeError · stripe.refund</span><span class="text-[color:var(--accent-2)] tabular">4,212</span></div>
+          <div class="flex justify-between border hairline rounded px-3 py-1.5"><span class="text-[color:var(--fg-dim)] truncate">NetworkError · /api/cart</span><span class="tabular text-[color:var(--fg-dim)]">2,841</span></div>
+          <div class="flex justify-between border hairline rounded px-3 py-1.5"><span class="text-[color:var(--fg-dim)] truncate">HydrationMismatch · &lt;Cart/&gt;</span><span class="tabular text-[color:var(--fg-dim)]">1,408</span></div>
+        </div>
+      </div>
+
+      <!-- Alert routing -->
+      <div class="col-span-12 md:col-span-7 lg:col-span-7 bento-tile rounded-2xl border hairline p-6">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2" stroke="#F286AC" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Alert routing</div>
+        </div>
+        <h3 class="display text-xl mt-4">The right channel. The right human.</h3>
+        <p class="text-[color:var(--fg-dim)] mt-2 text-sm leading-relaxed">Rules: spike rate, new-in-release, customer-tier impact, and a regex on the error message. Send to Slack on noisy, PagerDuty on revenue-impacting.</p>
+        <div class="mt-4 flex flex-wrap gap-2 mono text-[11px]">
+          <span class="border hairline rounded-full px-2.5 py-1 text-[color:var(--fg-dim)]">Slack #fe-on-call</span>
+          <span class="border hairline rounded-full px-2.5 py-1 text-[color:var(--fg-dim)]">PagerDuty · sev-2</span>
+          <span class="border hairline rounded-full px-2.5 py-1 text-[color:var(--fg-dim)]">Linear · auto-issue</span>
+          <span class="border hairline rounded-full px-2.5 py-1 text-[color:var(--fg-dim)]">Webhook</span>
+          <span class="border hairline rounded-full px-2.5 py-1 text-[color:var(--fg-dim)]">Discord</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BIG ALTERNATING -->
+<section class="border-t hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-24 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+    <div class="rounded-2xl border hairline bg-[var(--bg-2)] overflow-hidden">
+      <div class="flex items-center gap-1 px-3 h-10 border-b hairline">
+        <button class="seg seg-active rounded-md px-3 py-1 mono text-[12px]">Errors</button>
+        <button class="seg rounded-md px-3 py-1 mono text-[12px]">Sessions</button>
+        <button class="seg rounded-md px-3 py-1 mono text-[12px]">Performance</button>
+        <div class="ml-auto mono text-[11px] text-[color:var(--fg-faint)]">checkout-flow</div>
+      </div>
+      <div class="grid grid-cols-3 gap-px bg-[var(--hair)]">
+        <div class="bg-[var(--bg-2)] p-4">
+          <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Error rate</div>
+          <div class="display text-2xl mt-1 tabular">0.094%</div>
+          <div class="mono text-[11px] text-[#F1A0A0] tabular">↗ +0.018pp / 24h</div>
+        </div>
+        <div class="bg-[var(--bg-2)] p-4">
+          <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Web vitals · LCP P95</div>
+          <div class="display text-2xl mt-1 tabular">1.84 s</div>
+          <div class="mono text-[11px] accent tabular">−0.41s / 7d</div>
+        </div>
+        <div class="bg-[var(--bg-2)] p-4">
+          <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Replays opened</div>
+          <div class="display text-2xl mt-1 tabular">1,408</div>
+          <div class="mono text-[11px] text-[color:var(--fg-dim)] tabular">31 reviewers</div>
+        </div>
+      </div>
+      <div class="p-5">
+        <div class="flex items-center justify-between mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">
+          <span>Network waterfall · session 8f2a1c</span>
+          <span class="text-[color:var(--fg-dim)] tabular">2.04 s</span>
+        </div>
+        <div class="mt-3 space-y-1.5 mono text-[11.5px]">
+          <!-- waterfall rows -->
+          <div class="grid grid-cols-[160px_1fr_56px] items-center gap-3">
+            <div class="text-[color:var(--fg-dim)] truncate">document /</div>
+            <div class="relative h-3 bg-white/[0.04] rounded"><div class="absolute top-0 left-[2%] h-full w-[20%] rounded bg-[color:var(--accent-2)]/70"></div></div>
+            <div class="text-right text-[color:var(--fg-faint)] tabular">182ms</div>
+          </div>
+          <div class="grid grid-cols-[160px_1fr_56px] items-center gap-3">
+            <div class="text-[color:var(--fg-dim)] truncate">_app.js</div>
+            <div class="relative h-3 bg-white/[0.04] rounded"><div class="absolute top-0 left-[18%] h-full w-[14%] rounded bg-[color:var(--accent-2)]/70"></div></div>
+            <div class="text-right text-[color:var(--fg-faint)] tabular">128ms</div>
+          </div>
+          <div class="grid grid-cols-[160px_1fr_56px] items-center gap-3">
+            <div class="text-[color:var(--fg-dim)] truncate">/api/cart</div>
+            <div class="relative h-3 bg-white/[0.04] rounded"><div class="absolute top-0 left-[30%] h-full w-[8%] rounded bg-white/30"></div></div>
+            <div class="text-right text-[color:var(--fg-faint)] tabular">71ms</div>
+          </div>
+          <div class="grid grid-cols-[160px_1fr_56px] items-center gap-3">
+            <div class="text-[color:var(--fg-dim)] truncate">stripe.js</div>
+            <div class="relative h-3 bg-white/[0.04] rounded"><div class="absolute top-0 left-[38%] h-full w-[24%] rounded bg-white/30"></div></div>
+            <div class="text-right text-[color:var(--fg-faint)] tabular">214ms</div>
+          </div>
+          <div class="grid grid-cols-[160px_1fr_56px] items-center gap-3">
+            <div class="text-[color:var(--fg-dim)] truncate">/api/refund</div>
+            <div class="relative h-3 bg-white/[0.04] rounded"><div class="absolute top-0 left-[62%] h-full w-[12%] rounded bg-[#F47373]"></div></div>
+            <div class="text-right text-[#F1A0A0] tabular">500</div>
+          </div>
+          <div class="grid grid-cols-[160px_1fr_56px] items-center gap-3">
+            <div class="text-[color:var(--fg-dim)] truncate">/api/refund (retry)</div>
+            <div class="relative h-3 bg-white/[0.04] rounded"><div class="absolute top-0 left-[74%] h-full w-[12%] rounded bg-[#F47373]"></div></div>
+            <div class="text-right text-[#F1A0A0] tabular">500</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">Replay-first debugging</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Less guessing. <span class="half-tone">More watching.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4 leading-relaxed">Replays are stitched to errors, breadcrumbs, network calls, and your Redux/Zustand state. You can scrub to any tick and see what the DOM, the network, and the store all looked like together.</p>
+      <ul class="mt-6 space-y-3 text-[15px]">
+        <li class="flex gap-3 items-start"><span class="check mt-1.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>14s pre-roll buffer per session — extended to 2 minutes on capture trigger.</span></li>
+        <li class="flex gap-3 items-start"><span class="check mt-1.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Auto-redact <span class="mono text-[12.5px]">[data-private]</span> elements and any password field.</span></li>
+        <li class="flex gap-3 items-start"><span class="check mt-1.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Share a replay with one URL — public-link or org-scoped, your call.</span></li>
+        <li class="flex gap-3 items-start"><span class="check mt-1.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>SDK is 9.2 KB gzipped. No layout-shift, no main-thread tax beyond a 4ms init.</span></li>
+      </ul>
+      <a href="#" class="inline-flex items-center gap-1 mt-7 accent text-[14px] lift">Read the replay guide <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="border-t hairline relative">
+  <div class="absolute inset-x-0 top-0 h-[300px] radial-fade-soft pointer-events-none"></div>
+  <div class="relative max-w-[1240px] mx-auto px-6 py-24">
+    <div class="text-center max-w-2xl mx-auto">
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">Pricing</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Per session. <span class="half-tone">Replays included.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4">Sessions include errors, breadcrumbs, console, network, performance, and the replay video. No tiered features hiding behind add-ons.</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-12">
+      <div class="rounded-2xl border hairline p-7 bg-[var(--bg-2)] flex flex-col">
+        <div class="flex items-baseline justify-between"><h3 class="text-lg font-semibold">Solo</h3><span class="mono text-[11px] text-[color:var(--fg-faint)]">free forever</span></div>
+        <div class="display text-5xl mt-5 tabular">$0</div>
+        <div class="mono text-[11.5px] text-[color:var(--fg-faint)] mt-1">/ month</div>
+        <p class="text-[color:var(--fg-dim)] text-[14px] mt-4">For one-person projects and side hustles.</p>
+        <div class="dot-divider my-6"></div>
+        <ul class="space-y-3 text-[14px]">
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>5,000 sessions / mo</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>30-day replay retention</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Web + React Native SDK</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Community Slack</li>
+        </ul>
+        <a href="#" class="mt-auto pt-7 inline-flex items-center justify-center h-10 rounded-full border hairline-2 text-[14px] lift hover:bg-white/[0.04]">Start free</a>
+      </div>
+      <div class="relative rounded-2xl p-7 bg-[var(--bg-2)] flex flex-col ring-accent">
+        <span class="absolute -top-3 left-5 mono text-[10.5px] uppercase tracking-wider px-2.5 py-1 rounded-full" style="background:#E5407B;color:#1A0612">Most popular</span>
+        <div class="flex items-baseline justify-between"><h3 class="text-lg font-semibold">Team</h3><span class="mono text-[11px] accent">per seat</span></div>
+        <div class="display text-5xl mt-5 tabular">$39</div>
+        <div class="mono text-[11.5px] text-[color:var(--fg-faint)] mt-1">/ seat · month · annual</div>
+        <p class="text-[color:var(--fg-dim)] text-[14px] mt-4">For teams chasing real customer impact.</p>
+        <div class="dot-divider my-6"></div>
+        <ul class="space-y-3 text-[14px]">
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>100,000 sessions / mo · pooled</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>90-day replay retention</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Issue grouping + alert routing</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Source maps · unlimited</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Linear + PagerDuty + Slack</li>
+        </ul>
+        <a href="#" class="btn-primary mt-auto pt-0 inline-flex items-center justify-center h-10 rounded-full text-[14px] lift" style="margin-top:1.75rem">Start 14-day trial</a>
+      </div>
+      <div class="rounded-2xl border hairline p-7 bg-[var(--bg-2)] flex flex-col">
+        <div class="flex items-baseline justify-between"><h3 class="text-lg font-semibold">Org</h3><span class="mono text-[11px] text-[color:var(--fg-faint)]">BYOC</span></div>
+        <div class="display text-5xl mt-5 tabular">$249</div>
+        <div class="mono text-[11.5px] text-[color:var(--fg-faint)] mt-1">/ month base · usage on top</div>
+        <p class="text-[color:var(--fg-dim)] text-[14px] mt-4">For regulated industries and 500-engineer orgs.</p>
+        <div class="dot-divider my-6"></div>
+        <ul class="space-y-3 text-[14px]">
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Self-hosted ingest in your VPC</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>SAML SSO + SCIM + audit log</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>SOC 2 + HIPAA · DPA on request</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Solution architect · 1h SLA</li>
+        </ul>
+        <a href="#" class="mt-auto pt-7 inline-flex items-center justify-center h-10 rounded-full border hairline-2 text-[14px] lift hover:bg-white/[0.04]">Talk to sales</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="border-t hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-24">
+    <div class="max-w-2xl">
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">Customers</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">For engineers who shipped the bug <span class="half-tone">and now have to find it.</span></h2>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-12">
+      <div class="rounded-2xl border hairline p-6 bg-[var(--bg-2)]">
+        <div class="flex gap-0.5 accent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        </div>
+        <blockquote class="mt-4 text-[15px] leading-relaxed">"MTTR went from 4 hours to 14 minutes. The replay tells me what the user did before I ask them, and our support load on bug-reports dropped 38%."</blockquote>
+        <div class="flex items-center gap-3 mt-6">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center mono text-[12px] font-semibold" style="background:rgba(229,64,123,0.18);color:#F286AC">PA</div>
+          <div class="text-[13px]"><div class="font-medium">Priya Anand</div><div class="text-[color:var(--fg-faint)]">Staff Engineer · Linnea</div></div>
+        </div>
+      </div>
+      <div class="rounded-2xl border hairline p-6 bg-[var(--bg-2)]">
+        <div class="flex gap-0.5 accent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        </div>
+        <blockquote class="mt-4 text-[15px] leading-relaxed">"We replaced two error trackers and a session-replay vendor with Pulse. SDK is 9.2KB, doesn't move our LCP, and the masking story is the cleanest I've seen."</blockquote>
+        <div class="flex items-center gap-3 mt-6">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center mono text-[12px] font-semibold" style="background:rgba(229,64,123,0.18);color:#F286AC">MT</div>
+          <div class="text-[13px]"><div class="font-medium">Marcus Tobin</div><div class="text-[color:var(--fg-faint)]">Founding Engineer · Forecast</div></div>
+        </div>
+      </div>
+      <div class="rounded-2xl border hairline p-6 bg-[var(--bg-2)]">
+        <div class="flex gap-0.5 accent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        </div>
+        <blockquote class="mt-4 text-[15px] leading-relaxed">"The issue grouping just works. 12,408 errors landed last week and they collapsed into 38 tickets, with a clear top-1 that we fixed in two hours."</blockquote>
+        <div class="flex items-center gap-3 mt-6">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center mono text-[12px] font-semibold" style="background:rgba(229,64,123,0.18);color:#F286AC">IC</div>
+          <div class="text-[13px]"><div class="font-medium">Ines Calderón</div><div class="text-[color:var(--fg-faint)]">Head of Engineering · Brightwave</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="border-t hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-24 grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-12">
+    <div>
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">FAQ</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Frequently asked, <span class="half-tone">honestly answered.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4 max-w-sm">Have a privacy question we haven't covered? Email <a href="#" class="accent">security@pulse.io</a> and we'll write back within a working day.</p>
+    </div>
+    <div>
+      <details class="py-5 border-b hairline">
+        <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">How do you mask sensitive form fields during replay?</span><span class="faq-plus mono text-lg leading-none">+</span></summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">Three layers. (1) Inputs with <span class="mono text-[12.5px]">type="password"</span>, <span class="mono text-[12.5px]">autocomplete="cc-*"</span>, and any element tagged <span class="mono text-[12.5px]">data-private</span> are replaced with grey blocks before they leave the browser. (2) Heuristic regexes for emails, IPs, and 16-digit numbers run in the SDK. (3) A server-side scan re-checks every event against a customizable allow-list before persistence.</p>
+      </details>
+      <details class="py-5 border-b hairline">
+        <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">What's your storage retention for video?</span><span class="faq-plus mono text-lg leading-none">+</span></summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">Solo: 30 days. Team: 90 days. Org: configurable up to 14 months. Replays are stored as JSON event streams, not video — about 18KB per session second on a typical SPA. You can pin specific sessions to "permanent" if they're attached to a customer report.</p>
+      </details>
+      <details class="py-5 border-b hairline">
+        <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">Does it work with React Native?</span><span class="faq-plus mono text-lg leading-none">+</span></summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">Yes — <span class="mono text-[12.5px]">@pulse-io/react-native</span> records component tree snapshots, gestures, and network calls. We currently support RN 0.72+ on iOS 15+ and Android 9+. Replay rendering happens server-side because RN doesn't ship a browser DOM; the result plays back as an interactive timeline rather than pixel-for-pixel video.</p>
+      </details>
+      <details class="py-5 border-b hairline">
+        <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">How is bundle size impacted by the SDK?</span><span class="faq-plus mono text-lg leading-none">+</span></summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">The base SDK is 9.2 KB gzipped and loads after the page is interactive. Replay capture is a 14 KB chunk fetched lazily after first input or after 8 seconds, whichever comes first. We have a strict zero-blocking-resource policy: nothing we ship can show up on your LCP critical path.</p>
+      </details>
+      <details class="py-5 border-b hairline">
+        <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">Can I export sessions to my own S3?</span><span class="faq-plus mono text-lg leading-none">+</span></summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">On the Team plan you can stream events to a customer-owned S3 bucket via signed PUTs. On Org you can configure us to write directly and never persist on our side. Schemas are stable and documented at <span class="mono text-[12.5px] accent">pulse.io/docs/export</span>.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="px-6 pb-24">
+  <div class="max-w-[1240px] mx-auto relative rounded-2xl border hairline overflow-hidden p-10 md:p-16 text-center" style="background:linear-gradient(180deg, rgba(229,64,123,0.05), rgba(255,255,255,0));">
+    <div class="absolute inset-0 dot-grid opacity-80 pointer-events-none"></div>
+    <div class="absolute inset-x-0 top-0 h-full radial-fade-accent pointer-events-none"></div>
+    <div class="relative">
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent inline-flex items-center gap-2"><span class="pulse-dot"></span>SDK 9.2 KB · LCP-safe</div>
+      <h2 class="display text-4xl md:text-6xl mt-5">Watch your next bug. <span class="half-tone">Ship the fix.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4 max-w-xl mx-auto">5,000 sessions a month, forever free. Add the SDK and the first replay lands in your inbox within a minute.</p>
+      <div class="mt-7 flex items-center gap-3 justify-center flex-wrap">
+        <a href="#" class="btn-primary lift rounded-full px-5 h-11 inline-flex items-center gap-1.5 text-[14px]">Try Pulse free<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        <a href="#" class="lift rounded-full px-5 h-11 inline-flex items-center text-[14px] border hairline-2 hover:bg-white/[0.04]">Talk to sales</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="border-t hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-14 grid grid-cols-2 md:grid-cols-5 gap-8">
+    <div class="col-span-2">
+      <div class="flex items-center gap-2.5">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M2 12h4l2-6 4 14 3-10 2 4 2-2h3" stroke="#E5407B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="text-[15px] font-semibold tracking-tight">Pulse</span>
+      </div>
+      <p class="text-[13.5px] text-[color:var(--fg-dim)] mt-3 max-w-xs">Real-time error tracking with session replay. Built for the browser.</p>
+      <a href="#" class="mt-4 mono text-[11px] inline-flex items-center gap-2 border hairline rounded-full pl-2 pr-3 py-1 text-[color:var(--fg-dim)]"><span class="pulse-dot"></span>Ingest · 99.991% / 90d</a>
+    </div>
+    <div><div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Product</div>
+      <ul class="mt-3 space-y-2 text-[13.5px] text-[color:var(--fg-dim)]"><li><a href="#" class="hover:text-white">Errors</a></li><li><a href="#" class="hover:text-white">Replays</a></li><li><a href="#" class="hover:text-white">Performance</a></li><li><a href="#" class="hover:text-white">Alerts</a></li></ul>
+    </div>
+    <div><div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Developers</div>
+      <ul class="mt-3 space-y-2 text-[13.5px] text-[color:var(--fg-dim)]"><li><a href="#" class="hover:text-white">Docs</a></li><li><a href="#" class="hover:text-white">SDK reference</a></li><li><a href="#" class="hover:text-white">Source maps</a></li><li><a href="#" class="hover:text-white">Changelog</a></li></ul>
+    </div>
+    <div><div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Company</div>
+      <ul class="mt-3 space-y-2 text-[13.5px] text-[color:var(--fg-dim)]"><li><a href="#" class="hover:text-white">About</a></li><li><a href="#" class="hover:text-white">Customers</a></li><li><a href="#" class="hover:text-white">Security</a></li><li><a href="#" class="hover:text-white">Careers · 6</a></li></ul>
+    </div>
+  </div>
+  <div class="border-t hairline">
+    <div class="max-w-[1240px] mx-auto px-6 py-5 flex flex-col md:flex-row items-center justify-between gap-3 mono text-[11.5px] text-[color:var(--fg-faint)]">
+      <div>© 2026 Pulse Software, Inc. · London / Toronto</div>
+      <div class="flex items-center gap-5"><a href="#" class="hover:text-white">Privacy</a><a href="#" class="hover:text-white">Terms</a><a href="#" class="hover:text-white">DPA</a><span>v4.2.0 · 1c8f3a</span></div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // sparkline
+  function buildPath(data, opts) {
+    const { width, height, padY = 4, area = false } = opts;
+    const max = Math.max(...data), min = Math.min(...data);
+    const span = Math.max(1, max - min);
+    const stepX = width / (data.length - 1);
+    let d = '';
+    data.forEach((v, i) => {
+      const x = i * stepX;
+      const y = padY + (1 - (v - min) / span) * (height - padY * 2);
+      d += (i === 0 ? 'M' : 'L') + x.toFixed(2) + ',' + y.toFixed(2) + ' ';
+    });
+    if (area) d += `L${width},${height} L0,${height} Z`;
+    return d;
+  }
+  function series(n, base, vol, seed) {
+    let s = seed; const out = [];
+    for (let i = 0; i < n; i++) {
+      s = (s * 9301 + 49297) % 233280;
+      const r = s / 233280;
+      base = base + (r - 0.4) * vol;
+      out.push(Math.max(2, base));
+    }
+    return out;
+  }
+  const d1 = series(28, 80, 10, 53);
+  document.getElementById('spark1-line').setAttribute('d', buildPath(d1, { width: 280, height: 70 }));
+  document.getElementById('spark1-area').setAttribute('d', buildPath(d1, { width: 280, height: 70, area: true }));
+
+  // heatmap
+  const issues = [
+    { name: "TypeError · stripe.refund", row: [0,0,1,1,2,1,1,2,3,2,2,3,3,4,3,4,4,3,3,4,4,3,4,4] },
+    { name: "NetworkError · /api/cart", row: [1,1,1,0,1,2,1,1,1,2,1,2,2,1,2,3,2,2,2,1,2,2,2,1] },
+    { name: "HydrationMismatch · <Cart/>", row: [0,1,0,0,0,1,1,0,1,1,1,0,1,2,1,1,1,2,1,1,1,2,1,1] },
+    { name: "ChunkLoadError", row: [0,0,0,0,0,0,1,0,1,0,1,0,0,1,1,0,2,1,1,1,0,1,1,0] },
+    { name: "InvariantError · query key", row: [1,0,0,1,0,0,0,1,0,0,0,1,1,0,0,1,0,1,0,0,0,1,0,1] },
+    { name: "AbortError · checkout", row: [0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,1,0,0,0,1,0] },
+    { name: "RangeError · price calc", row: [0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1] }
+  ];
+  const hm = document.getElementById('heatmap');
+  issues.forEach((iss, i) => {
+    const total = iss.row.reduce((a,b)=>a+(b===0?0:Math.pow(8,b)),0);
+    const row = document.createElement('div');
+    row.className = 'grid grid-cols-[180px_1fr_56px] gap-3 items-center';
+    row.innerHTML = `
+      <div class="text-[color:var(--fg-dim)] truncate">${iss.name}</div>
+      <div class="grid grid-cols-24 gap-[2px]" style="grid-template-columns:repeat(24,minmax(0,1fr))">
+        ${iss.row.map(v=>`<div class="h-4 rounded-[2px] heat-${v}"></div>`).join('')}
+      </div>
+      <div class="text-right text-[color:var(--fg-faint)] tabular">${total.toLocaleString()}</div>`;
+    hm.appendChild(row);
+  });
+</script>
+
+</body>
+</html>

@@ -13,6 +13,15 @@ import type {
   SplitSlots,
   StackSlots,
 } from "@/components/primitives/types";
+// V1 blocks expose their own example slots via meta.exampleSlots — we
+// reuse those as the demo data for the V1-derived primitive variants.
+import { meta as animatedGradientMeta } from "@/lib/blocks/hero/animated-gradient";
+import { meta as logoStripMeta } from "@/lib/blocks/hero/logo-strip";
+import { meta as twoTierMeta } from "@/lib/blocks/pricing/two-tier-simple";
+import { meta as quoteGrid3Meta } from "@/lib/blocks/testimonials/quote-grid-3col";
+import { meta as faqAccordionMeta } from "@/lib/blocks/faq/accordion";
+import { meta as footerFourColMeta } from "@/lib/blocks/footer/four-col-links";
+import { meta as footerMinimalMeta } from "@/lib/blocks/footer/minimal-row";
 
 export const heroSlots: HeroSlots = {
   eyebrow: "New in v3",
@@ -298,36 +307,58 @@ export type LayoutSlotsFor<P extends string> = P extends "Hero"
           ? CTASlots
           : never;
 
+export type PrimitiveName =
+  | "Hero" | "Stack" | "Split" | "Grid" | "CTA"
+  | "V1HeroAnimatedGradient" | "V1HeroLogoStrip"
+  | "V1PricingTwoTier" | "V1Testimonials3Col"
+  | "V1FAQAccordion" | "V1FooterFourCol" | "V1FooterMinimal";
+
+export type LayoutGroup = "Hero" | "Stack" | "Split" | "Grid" | "CTA" | "FAQ" | "Footer";
+
 export interface LayoutPreset {
   id: string;
-  primitive: "Hero" | "Stack" | "Split" | "Grid" | "CTA";
+  primitive: PrimitiveName;
   variant: string;
   label: string;
-  group: "Hero" | "Stack" | "Split" | "Grid" | "CTA";
+  group: LayoutGroup;
 }
 
 export const LAYOUT_PRESETS: LayoutPreset[] = [
-  { id: "hero-centered",         primitive: "Hero",  variant: "centered",           label: "Centered",          group: "Hero" },
-  { id: "hero-split",            primitive: "Hero",  variant: "split",              label: "Split",             group: "Hero" },
-  { id: "hero-asymmetric",       primitive: "Hero",  variant: "asymmetric",         label: "Asymmetric",        group: "Hero" },
-  { id: "stack-vertical-cards",  primitive: "Stack", variant: "vertical-cards",     label: "Vertical cards",    group: "Stack" },
-  { id: "stack-alternating",     primitive: "Stack", variant: "alternating-rows",   label: "Alternating rows",  group: "Stack" },
-  { id: "stack-icon-grid",       primitive: "Stack", variant: "icon-grid-3col",     label: "Icon grid 3-col",   group: "Stack" },
-  { id: "split-side-by-side",    primitive: "Split", variant: "side-by-side",       label: "Side-by-side",      group: "Split" },
-  { id: "split-comparison",      primitive: "Split", variant: "comparison-table",   label: "Comparison table",  group: "Split" },
-  { id: "split-before-after",    primitive: "Split", variant: "before-after",       label: "Before / After",    group: "Split" },
-  { id: "grid-logo-bar",         primitive: "Grid",  variant: "logo-bar",           label: "Logo bar",          group: "Grid" },
-  { id: "grid-feature-3col",     primitive: "Grid",  variant: "feature-3col",       label: "Feature 3-col",     group: "Grid" },
-  { id: "grid-testimonials",     primitive: "Grid",  variant: "testimonial-masonry",label: "Testimonial masonry",group: "Grid" },
-  { id: "grid-stats-4",          primitive: "Grid",  variant: "stats-4-grid",       label: "Stats 4-grid",      group: "Grid" },
-  { id: "grid-pricing-3",        primitive: "Grid",  variant: "pricing-3tier",      label: "Pricing 3-tier",    group: "Grid" },
-  { id: "cta-centered",          primitive: "CTA",   variant: "centered-banner",    label: "Centered banner",   group: "CTA" },
-  { id: "cta-card-form",         primitive: "CTA",   variant: "card-form",          label: "Card form",         group: "CTA" },
-  { id: "cta-gradient",          primitive: "CTA",   variant: "gradient-banner",    label: "Gradient banner",   group: "CTA" },
+  // Hero (V3 + V1)
+  { id: "hero-centered",         primitive: "Hero",                   variant: "centered",            label: "Centered",            group: "Hero" },
+  { id: "hero-split",            primitive: "Hero",                   variant: "split",               label: "Split",               group: "Hero" },
+  { id: "hero-asymmetric",       primitive: "Hero",                   variant: "asymmetric",          label: "Asymmetric",          group: "Hero" },
+  { id: "hero-animated-gradient",primitive: "V1HeroAnimatedGradient", variant: "default",             label: "Animated gradient",   group: "Hero" },
+  { id: "hero-logo-strip",       primitive: "V1HeroLogoStrip",        variant: "default",             label: "Logo-strip hero",     group: "Hero" },
+  // Stack
+  { id: "stack-vertical-cards",  primitive: "Stack",                  variant: "vertical-cards",      label: "Vertical cards",      group: "Stack" },
+  { id: "stack-alternating",     primitive: "Stack",                  variant: "alternating-rows",    label: "Alternating rows",    group: "Stack" },
+  { id: "stack-icon-grid",       primitive: "Stack",                  variant: "icon-grid-3col",      label: "Icon grid 3-col",     group: "Stack" },
+  // Split
+  { id: "split-side-by-side",    primitive: "Split",                  variant: "side-by-side",        label: "Side-by-side",        group: "Split" },
+  { id: "split-comparison",      primitive: "Split",                  variant: "comparison-table",    label: "Comparison table",    group: "Split" },
+  { id: "split-before-after",    primitive: "Split",                  variant: "before-after",        label: "Before / After",      group: "Split" },
+  // Grid (V3 + V1)
+  { id: "grid-logo-bar",         primitive: "Grid",                   variant: "logo-bar",            label: "Logo bar",            group: "Grid" },
+  { id: "grid-feature-3col",     primitive: "Grid",                   variant: "feature-3col",        label: "Feature 3-col",       group: "Grid" },
+  { id: "grid-testimonials",     primitive: "Grid",                   variant: "testimonial-masonry", label: "Testimonial masonry", group: "Grid" },
+  { id: "grid-testimonials-3",   primitive: "V1Testimonials3Col",     variant: "default",             label: "Testimonials 3-col",  group: "Grid" },
+  { id: "grid-stats-4",          primitive: "Grid",                   variant: "stats-4-grid",        label: "Stats 4-grid",        group: "Grid" },
+  { id: "grid-pricing-3",        primitive: "Grid",                   variant: "pricing-3tier",       label: "Pricing 3-tier",      group: "Grid" },
+  { id: "grid-pricing-2",        primitive: "V1PricingTwoTier",       variant: "default",             label: "Pricing 2-tier",      group: "Grid" },
+  // CTA
+  { id: "cta-centered",          primitive: "CTA",                    variant: "centered-banner",     label: "Centered banner",     group: "CTA" },
+  { id: "cta-card-form",         primitive: "CTA",                    variant: "card-form",           label: "Card form",           group: "CTA" },
+  { id: "cta-gradient",          primitive: "CTA",                    variant: "gradient-banner",     label: "Gradient banner",     group: "CTA" },
+  // FAQ + Footer (V1-only — V3 doesn't have these primitive types)
+  { id: "faq-accordion",         primitive: "V1FAQAccordion",         variant: "default",             label: "Accordion",           group: "FAQ" },
+  { id: "footer-four-col",       primitive: "V1FooterFourCol",        variant: "default",             label: "Four-col + socials",  group: "Footer" },
+  { id: "footer-minimal",        primitive: "V1FooterMinimal",        variant: "default",             label: "Minimal row",         group: "Footer" },
 ];
 
 // Look up demo slots for any (primitive, variant) combination.
 export function getDemoSlots(primitive: string, variant: string): unknown {
+  // V3 core primitives
   if (primitive === "Hero") return heroSlots;
   if (primitive === "Stack") {
     if (variant === "icon-grid-3col") return { ...stackSlots, items: stackSlots.items.slice(0, 3) };
@@ -356,5 +387,13 @@ export function getDemoSlots(primitive: string, variant: string): unknown {
     if (variant === "gradient-banner") return ctaGradientSlots;
     return ctaCenteredSlots;
   }
+  // V1-derived primitives — each reuses its meta.exampleSlots
+  if (primitive === "V1HeroAnimatedGradient") return animatedGradientMeta.exampleSlots;
+  if (primitive === "V1HeroLogoStrip") return logoStripMeta.exampleSlots;
+  if (primitive === "V1PricingTwoTier") return twoTierMeta.exampleSlots;
+  if (primitive === "V1Testimonials3Col") return quoteGrid3Meta.exampleSlots;
+  if (primitive === "V1FAQAccordion") return faqAccordionMeta.exampleSlots;
+  if (primitive === "V1FooterFourCol") return footerFourColMeta.exampleSlots;
+  if (primitive === "V1FooterMinimal") return footerMinimalMeta.exampleSlots;
   return null;
 }

@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Receipts — Stripe API. Better fees. Your own logo.</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#0A0A0A;
+    --bg-2:#0F0F12;
+    --panel:#121216;
+    --panel-2:#16161B;
+    --ink:#FFFFFF;
+    --ink-2:#B4B4BD;
+    --ink-3:#76767F;
+    --accent:#B388FF;
+    --accent-2:#D2B6FF;
+    --accent-deep:#7E58E0;
+    --green:#3DDC84;
+    --red:#FF5470;
+    --amber:#F5A623;
+    --line:rgba(255,255,255,0.06);
+    --line-soft:rgba(255,255,255,0.04);
+    --line-strong:rgba(255,255,255,0.10);
+  }
+  *{-webkit-font-smoothing:antialiased;}
+  html,body{background:var(--bg);color:var(--ink);}
+  body{font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-feature-settings:"ss01","cv11","tnum";}
+  .font-display{font-family:"Inter";letter-spacing:-0.035em;font-weight:600;}
+  .font-mono{font-family:"Geist Mono",ui-monospace,monospace;font-feature-settings:"tnum";}
+  .tabular{font-variant-numeric:tabular-nums;}
+  .hairline{border:1px solid var(--line);}
+  .hairline-strong{border:1px solid var(--line-strong);}
+  .hairline-soft{border:1px solid var(--line-soft);}
+  .dot-grid{background-image:radial-gradient(rgba(255,255,255,0.06) 1px,transparent 1px);background-size:32px 32px;}
+  .lift{transition:transform 100ms ease,box-shadow 100ms ease,background-color 100ms ease,color 100ms ease,border-color 100ms ease;}
+  .lift:hover{transform:translateY(-1px);}
+  .btn-primary{background:var(--accent);color:#1A0D40;font-weight:600;}
+  .btn-primary:hover{background:var(--accent-2);box-shadow:0 8px 28px -8px rgba(179,136,255,.55);}
+  .btn-ghost{background:transparent;color:var(--ink);}
+  .btn-ghost:hover{background:rgba(255,255,255,0.04);}
+  .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:9999px;padding:4px 10px;font-size:12px;background:rgba(255,255,255,0.02);color:var(--ink-2);}
+  .num-display{font-family:"Inter";letter-spacing:-0.03em;font-weight:600;font-variant-numeric:tabular-nums;}
+  .ambient{
+    background:
+      radial-gradient(60% 50% at 80% 0%,rgba(179,136,255,0.20),transparent 65%),
+      radial-gradient(40% 35% at 0% 20%,rgba(126,88,224,0.16),transparent 70%),
+      linear-gradient(180deg,#0E0A18 0%,#0A0A0A 65%);
+  }
+  .glow-card{
+    background:linear-gradient(180deg,rgba(179,136,255,0.06),rgba(255,255,255,0) 50%),#121216;
+    border:1px solid var(--line);
+    box-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 30px 80px -30px rgba(179,136,255,.20),0 12px 24px -10px rgba(0,0,0,.6);
+  }
+  .panel-card{background:#121216;border:1px solid var(--line);}
+  @keyframes pulse-dot{
+    0%{box-shadow:0 0 0 0 rgba(61,220,132,.55);}
+    70%{box-shadow:0 0 0 9px rgba(61,220,132,0);}
+    100%{box-shadow:0 0 0 0 rgba(61,220,132,0);}
+  }
+  .pulse-dot{display:inline-block;width:8px;height:8px;border-radius:9999px;background:#3DDC84;animation:pulse-dot 1.8s infinite;}
+  @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  .marquee-track{display:flex;width:max-content;animation:marquee 38s linear infinite;}
+  .arrow-flow{stroke-dasharray:5 5;animation:dash 2.2s linear infinite;}
+  @keyframes dash{to{stroke-dashoffset:-20;}}
+  .grad-text{
+    background:linear-gradient(180deg,#FFFFFF 0%,#A892D6 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .code-kw{color:#FF8BC9;}
+  .code-fn{color:#B388FF;}
+  .code-str{color:#9EE6A8;}
+  .code-num{color:#F5A623;}
+  .code-com{color:#76767F;font-style:italic;}
+  .code-var{color:#EBE5FF;}
+  .code-key{color:#7DD3FF;}
+  details > summary::-webkit-details-marker{display:none;}
+  .sparkline polyline{fill:none;stroke-width:1.5;}
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- NAV -->
+<header class="sticky top-0 z-40 backdrop-blur bg-[rgba(10,10,10,0.78)] border-b border-[var(--line-soft)]">
+  <div class="max-w-[1240px] mx-auto px-5 lg:px-8 h-16 flex items-center justify-between">
+    <a href="#" class="flex items-center gap-2.5">
+      <svg width="22" height="22" viewBox="0 0 22 22"><rect x="1" y="1" width="20" height="20" rx="6" fill="#B388FF"/><path d="M6 5.5h10v2.5l-3 8h-2.5l3-8H6v-2.5Z" fill="#1A0D40"/></svg>
+      <span class="font-display text-[17px] tracking-tight">Receipts</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-7 text-[14px] text-[var(--ink-2)]">
+      <a href="#features" class="hover:text-white">Platform</a>
+      <a href="#flow" class="hover:text-white">Flow</a>
+      <a href="#pricing" class="hover:text-white">Pricing</a>
+      <a href="#" class="hover:text-white">Docs</a>
+      <a href="#" class="hover:text-white">Changelog</a>
+    </nav>
+    <div class="flex items-center gap-3">
+      <a href="#" class="hidden sm:inline text-[14px] text-[var(--ink-2)] hover:text-white">Read the docs</a>
+      <a href="#" class="lift btn-primary rounded-md px-4 py-2 text-[14px]">Get an API key</a>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="relative overflow-hidden ambient">
+  <div class="absolute inset-0 dot-grid opacity-50 pointer-events-none"></div>
+  <div class="max-w-[1240px] mx-auto px-5 lg:px-8 pt-16 pb-20 lg:pt-24 lg:pb-28 grid lg:grid-cols-12 gap-10 items-center relative">
+    <div class="lg:col-span-6">
+      <span class="chip"><span class="pulse-dot"></span><span>v3.2 just shipped · 240ms p95 charge latency</span></span>
+      <h1 class="font-display text-[44px] sm:text-[58px] lg:text-[72px] leading-[1.0] mt-5 tracking-tight">
+        Stripe API. <br><span class="grad-text">Better fees. Your own logo.</span>
+      </h1>
+      <p class="mt-5 text-[17px] leading-[1.55] text-[var(--ink-2)] max-w-[540px]">
+        Receipts is the payments processor for indie devs and bootstrapped founders who do the math on Stripe's 2.9% + 30¢ and find it absurd. Drop-in SDK, lower interchange, payouts on T+1.
+      </p>
+
+      <!-- Inline install -->
+      <div class="mt-7 rounded-lg panel-card font-mono text-[13px] overflow-hidden">
+        <div class="flex items-center justify-between px-3 py-2 border-b border-[var(--line-soft)] bg-[var(--bg-2)]">
+          <span class="text-[var(--ink-3)] text-[11px]">~ install</span>
+          <span class="text-[var(--ink-3)] text-[11px]">copy</span>
+        </div>
+        <div class="px-4 py-3 text-[var(--ink-2)]"><span class="text-[var(--accent)]">$</span> npm i @receipts/sdk</div>
+      </div>
+
+      <div class="mt-6 flex flex-wrap items-center gap-3">
+        <a href="#" class="lift btn-primary rounded-md px-5 py-3 text-[15px]">Get an API key</a>
+        <a href="#" class="lift btn-ghost hairline rounded-md px-5 py-3 text-[15px]">Read the API ref →</a>
+      </div>
+      <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px] text-[var(--ink-3)]">
+        <span class="flex items-center gap-2"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 7l3.2 3.2L12 3.5" stroke="#3DDC84" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Stripe API-compatible · drop-in</span>
+        <span class="flex items-center gap-2"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 7l3.2 3.2L12 3.5" stroke="#3DDC84" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>PCI-DSS Level 1 · SOC 2 Type II</span>
+        <span class="flex items-center gap-2"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 7l3.2 3.2L12 3.5" stroke="#3DDC84" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>47 countries · 23 currencies</span>
+      </div>
+    </div>
+
+    <!-- Hero: split code + receipt -->
+    <div class="lg:col-span-6 relative">
+      <div class="grid grid-cols-1 gap-4">
+        <!-- code block -->
+        <div class="glow-card rounded-2xl overflow-hidden">
+          <div class="flex items-center justify-between px-4 py-2.5 border-b border-[var(--line-soft)] bg-[var(--bg-2)]">
+            <div class="flex items-center gap-2">
+              <div class="flex gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-[#FF5F57]"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-[#FEBC2E]"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-[#28C840]"></span>
+              </div>
+              <span class="ml-2 font-mono text-[11px] text-[var(--ink-3)]">charge.ts</span>
+            </div>
+            <span class="font-mono text-[10px] text-[var(--ink-3)]">node 22 · typescript 5.4</span>
+          </div>
+          <pre class="font-mono text-[12.5px] leading-[1.7] px-5 py-4 overflow-x-auto"><code><span class="code-kw">import</span> <span class="code-var">{ receipts }</span> <span class="code-kw">from</span> <span class="code-str">"@receipts/sdk"</span><span class="code-var">;</span>
+
+<span class="code-kw">const</span> <span class="code-var">charge</span> <span class="code-var">=</span> <span class="code-kw">await</span> <span class="code-var">receipts.</span><span class="code-fn">charges</span><span class="code-var">.</span><span class="code-fn">create</span><span class="code-var">({</span>
+  <span class="code-key">amount</span><span class="code-var">:</span> <span class="code-num">10000</span><span class="code-var">,</span>             <span class="code-com">// $100.00 in cents</span>
+  <span class="code-key">currency</span><span class="code-var">:</span> <span class="code-str">"usd"</span><span class="code-var">,</span>
+  <span class="code-key">source</span><span class="code-var">:</span> <span class="code-var">token,</span>           <span class="code-com">// from checkout.js</span>
+  <span class="code-key">brand</span><span class="code-var">:</span> <span class="code-var">{</span> <span class="code-key">logoUrl</span><span class="code-var">:</span> <span class="code-str">"cdn.cargo.studio/logo.svg"</span> <span class="code-var">},</span>
+  <span class="code-key">metadata</span><span class="code-var">:</span> <span class="code-var">{</span> <span class="code-key">invoice</span><span class="code-var">:</span> <span class="code-str">"INV-0418"</span> <span class="code-var">}</span>
+<span class="code-var">});</span>
+
+<span class="code-com">// charge.fee → 145, charge.net → 9855</span>
+<span class="code-com">// stripe would have taken 320. you saved 175.</span></code></pre>
+        </div>
+
+        <!-- receipt + fee compare -->
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div class="panel-card rounded-2xl p-5">
+            <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)]">RECEIPT · CH_1A8F2K</div>
+            <div class="mt-2 font-mono text-[13px]">
+              <div class="flex justify-between text-[var(--ink-2)] py-1"><span>Subtotal</span><span class="tabular">$100.00</span></div>
+              <div class="flex justify-between text-[var(--ink-3)] py-1"><span>Receipts fee · 1.4% + 20¢</span><span class="tabular">$1.45</span></div>
+              <div class="border-t border-[var(--line-soft)] my-2"></div>
+              <div class="flex justify-between text-[var(--ink-2)] py-1"><span class="line-through">Stripe fee · 2.9% + 30¢</span><span class="tabular line-through">$3.20</span></div>
+              <div class="border-t border-[var(--line-soft)] my-2"></div>
+              <div class="flex justify-between py-1"><span class="text-white">Net to bank</span><span class="tabular text-[var(--accent)]">$98.55</span></div>
+              <div class="flex justify-between py-1 text-[var(--green)]"><span>You saved</span><span class="tabular">$1.75 / $100</span></div>
+            </div>
+          </div>
+          <div class="panel-card rounded-2xl p-5">
+            <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)]">@ $30K MRR · ANNUAL</div>
+            <div class="mt-2">
+              <div class="text-[var(--ink-3)] text-[12px]">Stripe annual fees</div>
+              <div class="font-mono text-[20px] tabular text-[var(--ink-2)] line-through">$11,520</div>
+              <div class="text-[var(--ink-3)] text-[12px] mt-3">Receipts annual fees</div>
+              <div class="num-display text-[28px] tabular text-white">$5,328</div>
+              <div class="mt-3 inline-flex items-center gap-2 text-[12px] text-[var(--green)] font-mono"><span>↓ $6,192</span><span class="text-[var(--ink-3)]">/year saved</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST BAR -->
+<section class="border-y border-[var(--line)]">
+  <div class="max-w-[1240px] mx-auto px-5 lg:px-8 py-8 grid lg:grid-cols-12 gap-6 items-center">
+    <div class="lg:col-span-3">
+      <div class="font-mono text-[11px] tracking-widest text-[var(--ink-3)]">PROCESSING FOR 8,408 MERCHANTS</div>
+      <div class="font-display text-[20px] mt-1 text-white">From hobby SaaS to $50M/yr storefronts.</div>
+    </div>
+    <div class="lg:col-span-9 overflow-hidden relative" style="mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)">
+      <div class="marquee-track gap-12 items-center text-[var(--ink-2)]">
+        <span class="font-display text-[22px] shrink-0 tracking-tight">Linnea</span>
+        <span class="shrink-0 font-mono text-[20px]">cargo·studio</span>
+        <span class="font-display text-[22px] shrink-0">FORECAST</span>
+        <span class="shrink-0" style="font-family:'Inter',serif;font-style:italic;font-weight:500;font-size:22px">Mercury</span>
+        <span class="font-display text-[22px] shrink-0 lowercase">brightwave</span>
+        <span class="font-display text-[22px] shrink-0">Quartermast</span>
+        <span class="shrink-0 font-mono text-[20px]">nimbus/</span>
+        <span class="font-display text-[22px] shrink-0">HALCYON</span>
+        <span class="font-display text-[22px] shrink-0 tracking-tight">Linnea</span>
+        <span class="shrink-0 font-mono text-[20px]">cargo·studio</span>
+        <span class="font-display text-[22px] shrink-0">FORECAST</span>
+        <span class="shrink-0" style="font-family:'Inter',serif;font-style:italic;font-weight:500;font-size:22px">Mercury</span>
+        <span class="font-display text-[22px] shrink-0 lowercase">brightwave</span>
+        <span class="font-display text-[22px] shrink-0">Quartermast</span>
+        <span class="shrink-0 font-mono text-[20px]">nimbus/</span>
+        <span class="font-display text-[22px] shrink-0">HALCYON</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features" class="py-24 lg:py-28">
+  <div class="max-w-[1240px] mx-auto px-5 lg:px-8">
+    <div class="max-w-[720px]">
+      <div class="font-mono text-[11px] tracking-widest text-[var(--accent)]">PLATFORM</div>
+      <h2 class="font-display text-[36px] sm:text-[48px] leading-[1.05] mt-3 tracking-tight">Same API surface. <span class="opacity-45">Different economics underneath.</span></h2>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-3 mt-12">
+      <div class="panel-card rounded-2xl p-6 lift">
+        <div class="w-10 h-10 rounded-lg bg-[rgba(179,136,255,0.12)] flex items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 4h12M4 10h12M4 16h8" stroke="#B388FF" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </div>
+        <h3 class="font-display text-[20px] mt-4">Drop-in for Stripe migrations</h3>
+        <p class="text-[14.5px] leading-[1.55] text-[var(--ink-2)] mt-2">Charge, Customer, PaymentMethod, Subscription, Invoice. Same shape, same idempotency keys, same webhook events. Most teams swap in 47 minutes.</p>
+        <ul class="mt-4 space-y-2 text-[13px] text-[var(--ink-2)]">
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#3DDC84" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>SDKs for Node, Go, Python, Ruby, Rust</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#3DDC84" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Webhook signatures match Stripe v2024-04</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#3DDC84" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>One-command import of customers + cards</li>
+        </ul>
+      </div>
+
+      <div class="panel-card rounded-2xl p-6 lift">
+        <div class="w-10 h-10 rounded-lg bg-[rgba(179,136,255,0.12)] flex items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="6" width="14" height="10" rx="2" stroke="#B388FF" stroke-width="1.6"/><path d="M3 10h14M7 13h2" stroke="#B388FF" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </div>
+        <h3 class="font-display text-[20px] mt-4">White-label receipts</h3>
+        <p class="text-[14.5px] leading-[1.55] text-[var(--ink-2)] mt-2">Receipts your customers see — emailed, on the success page, in their bank statement descriptor — all your brand. We're the rails; you're the storefront.</p>
+        <ul class="mt-4 space-y-2 text-[13px] text-[var(--ink-2)]">
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#3DDC84" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Custom statement descriptor (no "stripe*")</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#3DDC84" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>HTML + PDF receipts, MJML-templatable</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#3DDC84" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Branded hosted-checkout (or build your own)</li>
+        </ul>
+      </div>
+
+      <div class="panel-card rounded-2xl p-6 lift">
+        <div class="w-10 h-10 rounded-lg bg-[rgba(179,136,255,0.12)] flex items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 16V8m4 8V5m4 11V10m4 6V7" stroke="#B388FF" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </div>
+        <h3 class="font-display text-[20px] mt-4">240ms p95. 99.99% uptime.</h3>
+        <p class="text-[14.5px] leading-[1.55] text-[var(--ink-2)] mt-2">Multi-region issuing in us-east-1, eu-west-2, ap-south-1. Status page is publicly streaming charge.created latency every 5 seconds — go check it.</p>
+        <ul class="mt-4 space-y-2 text-[13px] text-[var(--ink-2)]">
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#3DDC84" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>240ms p95 · 64ms p50 (rolling 7d)</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#3DDC84" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Auto-retry on network blips, idempotent</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#3DDC84" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>SOC 2 Type II · PCI-DSS L1</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CENTERPIECE: Payment flow diagram -->
+<section id="flow" class="py-24 lg:py-28 border-y border-[var(--line)] bg-[var(--bg-2)] relative overflow-hidden">
+  <div class="absolute inset-0 dot-grid opacity-40 pointer-events-none"></div>
+  <div class="max-w-[1240px] mx-auto px-5 lg:px-8 relative">
+    <div class="flex items-end justify-between flex-wrap gap-4">
+      <div class="max-w-[640px]">
+        <div class="font-mono text-[11px] tracking-widest text-[var(--accent)]">CHARGE FLOW</div>
+        <h2 class="font-display text-[36px] sm:text-[48px] leading-[1.05] mt-3 tracking-tight">Five hops. <span class="opacity-45">Median 64 milliseconds.</span></h2>
+      </div>
+      <div class="chip"><span class="pulse-dot"></span>Live · streaming from status.receipts.dev</div>
+    </div>
+
+    <div class="mt-12 rounded-2xl bg-[var(--panel)] hairline shadow-xl p-6 sm:p-10 relative">
+      <svg viewBox="0 0 1200 320" class="w-full h-auto" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="ar5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#B388FF"/>
+          </marker>
+        </defs>
+
+        <!-- Nodes -->
+        <g font-family="Inter" font-size="13" fill="#FFFFFF">
+          <!-- 1 customer -->
+          <g>
+            <rect x="20" y="100" width="180" height="120" rx="14" fill="#16161B" stroke="rgba(255,255,255,0.10)"/>
+            <text x="40" y="138" font-weight="600">Customer</text>
+            <text x="40" y="158" font-family="Geist Mono" font-size="10.5" fill="#76767F">browser · card</text>
+            <text x="40" y="180" font-family="Geist Mono" font-size="10.5" fill="#76767F">checkout.js</text>
+            <text x="40" y="200" font-family="Geist Mono" font-size="10.5" fill="#3DDC84">tokenized client-side</text>
+          </g>
+          <!-- 2 sdk -->
+          <g>
+            <rect x="240" y="100" width="180" height="120" rx="14" fill="#16161B" stroke="rgba(255,255,255,0.10)"/>
+            <text x="260" y="138" font-weight="600">@receipts/sdk</text>
+            <text x="260" y="158" font-family="Geist Mono" font-size="10.5" fill="#76767F">your server</text>
+            <text x="260" y="180" font-family="Geist Mono" font-size="10.5" fill="#B388FF">charges.create()</text>
+            <text x="260" y="200" font-family="Geist Mono" font-size="10.5" fill="#76767F">+ idempotency key</text>
+          </g>
+          <!-- 3 receipts core -->
+          <g>
+            <rect x="460" y="80" width="200" height="160" rx="16" fill="#1A0D40" stroke="#B388FF" stroke-opacity="0.5"/>
+            <text x="480" y="118" font-weight="600" fill="#EBE5FF">Receipts Core</text>
+            <text x="480" y="138" font-family="Geist Mono" font-size="10.5" fill="#A892D6">risk · fraud · 3DS</text>
+            <rect x="478" y="148" width="164" height="28" rx="6" fill="rgba(179,136,255,0.18)"/>
+            <text x="560" y="166" text-anchor="middle" font-family="Geist Mono" font-size="10" fill="#D2B6FF">interchange + 0.6%</text>
+            <text x="480" y="194" font-family="Geist Mono" font-size="10.5" fill="#A892D6">us-east-1 → ap-south-1</text>
+            <text x="480" y="214" font-family="Geist Mono" font-size="10.5" fill="#3DDC84">p95 240ms · uptime 99.99</text>
+          </g>
+          <!-- 4 networks -->
+          <g>
+            <rect x="700" y="100" width="200" height="120" rx="14" fill="#16161B" stroke="rgba(255,255,255,0.10)"/>
+            <text x="720" y="138" font-weight="600">Card networks</text>
+            <text x="720" y="158" font-family="Geist Mono" font-size="10.5" fill="#76767F">visa · mc · amex</text>
+            <text x="720" y="180" font-family="Geist Mono" font-size="10.5" fill="#76767F">+ ach · sepa</text>
+            <text x="720" y="200" font-family="Geist Mono" font-size="10.5" fill="#76767F">issuer auth · t+0</text>
+          </g>
+          <!-- 5 bank -->
+          <g>
+            <rect x="940" y="100" width="220" height="120" rx="14" fill="#16161B" stroke="rgba(255,255,255,0.10)"/>
+            <text x="960" y="138" font-weight="600">Your bank</text>
+            <text x="960" y="158" font-family="Geist Mono" font-size="10.5" fill="#76767F">payout · ach · wire</text>
+            <text x="960" y="180" font-family="Geist Mono" font-size="10.5" fill="#3DDC84">net $98.55</text>
+            <text x="960" y="200" font-family="Geist Mono" font-size="10.5" fill="#76767F">arrival t+1 by 5pm ET</text>
+          </g>
+        </g>
+
+        <!-- Arrows -->
+        <g stroke="#B388FF" stroke-width="1.8" fill="none" class="arrow-flow">
+          <path d="M200,160 L240,160" marker-end="url(#ar5)"/>
+          <path d="M420,160 L460,160" marker-end="url(#ar5)"/>
+          <path d="M660,160 L700,160" marker-end="url(#ar5)"/>
+          <path d="M900,160 L940,160" marker-end="url(#ar5)"/>
+        </g>
+
+        <!-- Timeline -->
+        <g font-family="Geist Mono" font-size="9.5" fill="#76767F">
+          <line x1="20" y1="280" x2="1160" y2="280" stroke="rgba(255,255,255,0.10)"/>
+          <g>
+            <line x1="110" y1="276" x2="110" y2="284" stroke="rgba(255,255,255,0.2)"/>
+            <text x="110" y="298" text-anchor="middle">0 ms</text>
+          </g>
+          <g>
+            <line x1="330" y1="276" x2="330" y2="284" stroke="rgba(255,255,255,0.2)"/>
+            <text x="330" y="298" text-anchor="middle">14 ms</text>
+          </g>
+          <g>
+            <line x1="560" y1="276" x2="560" y2="284" stroke="rgba(255,255,255,0.2)"/>
+            <text x="560" y="298" text-anchor="middle">38 ms</text>
+          </g>
+          <g>
+            <line x1="800" y1="276" x2="800" y2="284" stroke="rgba(255,255,255,0.2)"/>
+            <text x="800" y="298" text-anchor="middle">52 ms</text>
+          </g>
+          <g>
+            <line x1="1050" y1="276" x2="1050" y2="284" stroke="rgba(255,255,255,0.2)"/>
+            <text x="1050" y="298" text-anchor="middle">64 ms (p50)</text>
+          </g>
+        </g>
+      </svg>
+
+      <div class="mt-6 grid sm:grid-cols-3 gap-3 text-[12px] font-mono text-[var(--ink-3)] border-t border-[var(--line-soft)] pt-5">
+        <div>HOPS · 5 · region-local where possible</div>
+        <div>RETRIES · idempotent · 3× exp backoff</div>
+        <div>WEBHOOKS · ≤ 8s after charge.created</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="py-20">
+  <div class="max-w-[1240px] mx-auto px-5 lg:px-8">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="panel-card rounded-2xl p-6">
+        <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)]">AVG FEE SAVED · ANNUAL</div>
+        <div class="num-display text-[44px] mt-2 tabular text-[var(--accent)]">$28,408</div>
+        <div class="text-[12px] text-[var(--ink-2)] mt-1">vs. Stripe, weighted-median merchant</div>
+        <svg class="sparkline mt-3 w-full" viewBox="0 0 120 28" preserveAspectRatio="none">
+          <polyline points="0,22 10,20 20,18 30,19 40,15 50,12 60,14 70,10 80,8 90,9 100,6 110,4 120,2" stroke="#B388FF"/>
+        </svg>
+      </div>
+      <div class="panel-card rounded-2xl p-6">
+        <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)]">MERCHANTS · 47 COUNTRIES</div>
+        <div class="num-display text-[44px] mt-2 tabular">8,408</div>
+        <div class="text-[12px] text-[var(--ink-2)] mt-1">+12.4% MoM net adds</div>
+      </div>
+      <div class="panel-card rounded-2xl p-6">
+        <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)]">CHARGE LATENCY · P95</div>
+        <div class="num-display text-[44px] mt-2 tabular">240<span class="text-[20px] text-[var(--ink-3)]"> ms</span></div>
+        <div class="text-[12px] text-[var(--ink-2)] mt-1">p50 64ms · rolling 7d</div>
+      </div>
+      <div class="panel-card rounded-2xl p-6">
+        <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)]">UPTIME · LAST 90 DAYS</div>
+        <div class="num-display text-[44px] mt-2 tabular">99.99<span class="text-[20px] text-[var(--ink-3)]">%</span></div>
+        <div class="text-[12px] text-[var(--green)] mt-1 flex items-center gap-1"><span class="pulse-dot" style="width:6px;height:6px"></span>all systems normal</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="py-24 lg:py-28">
+  <div class="max-w-[1240px] mx-auto px-5 lg:px-8">
+    <div class="max-w-[700px]">
+      <div class="font-mono text-[11px] tracking-widest text-[var(--accent)]">PRICING</div>
+      <h2 class="font-display text-[36px] sm:text-[48px] leading-[1.05] mt-3 tracking-tight">Two plans. <span class="opacity-45">Both cheaper than Stripe.</span></h2>
+      <p class="text-[var(--ink-2)] mt-4 text-[15.5px]">Real interchange-plus pricing — we publish our cost stack at <span class="font-mono">receipts.dev/honest-pricing</span>. Volume plan pays for itself at $11k/mo in card volume.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-3 mt-12">
+      <div class="rounded-2xl panel-card p-8">
+        <div class="flex items-center justify-between">
+          <div class="font-display text-[22px]">Pay-as-you-go</div>
+          <span class="chip">For indie devs</span>
+        </div>
+        <div class="mt-4 flex items-baseline gap-1.5">
+          <span class="num-display text-[44px] tabular">1.4%</span>
+          <span class="text-[var(--ink-3)] text-[16px]">+ 20¢</span>
+          <span class="text-[var(--ink-3)] text-[13px] ml-2">per successful charge</span>
+        </div>
+        <div class="text-[13px] text-[var(--ink-2)]">No monthly fee · no minimums · no failed-charge fee</div>
+        <a href="#" class="lift block text-center btn-ghost hairline rounded-md mt-6 py-2.5 font-medium text-[14px]">Get an API key</a>
+        <ul class="mt-6 space-y-2.5 text-[14px] text-[var(--ink-2)]">
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#3DDC84" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Cards · Apple Pay · Google Pay · Link</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#3DDC84" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>White-label hosted checkout</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#3DDC84" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Subscriptions + invoices</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#3DDC84" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Payouts T+1, free ACH</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#3DDC84" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Community Slack + 24h email</li>
+        </ul>
+      </div>
+
+      <div class="relative rounded-2xl glow-card p-8 overflow-hidden">
+        <div class="absolute -right-16 -top-16 w-56 h-56 rounded-full" style="background:radial-gradient(circle,rgba(179,136,255,.35),transparent 70%);"></div>
+        <div class="flex items-center justify-between relative">
+          <div class="font-display text-[22px]">Volume</div>
+          <span class="chip" style="background:rgba(179,136,255,.08);border-color:rgba(179,136,255,.18);color:#D2B6FF">For $50k+/mo</span>
+        </div>
+        <div class="mt-4 flex items-baseline gap-1.5">
+          <span class="num-display text-[44px] tabular">1.0%</span>
+          <span class="text-[var(--ink-3)] text-[16px]">+ 15¢</span>
+          <span class="text-[var(--ink-3)] text-[13px] ml-2">+ $99 /mo</span>
+        </div>
+        <div class="text-[13px] text-[var(--ink-2)]">Plus ACH @ 0.6% capped $4 · SEPA @ €0.18 flat</div>
+        <a href="#" class="lift block text-center btn-primary rounded-md mt-6 py-2.5 font-medium text-[14px]">Talk to volume team</a>
+        <ul class="mt-6 space-y-2.5 text-[14px] text-[var(--ink-2)]">
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#3DDC84" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Everything in Pay-as-you-go</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#3DDC84" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>ACH · SEPA · BACS · UPI · Bancontact</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#3DDC84" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>3DS / SCA managed exemptions</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#3DDC84" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Dedicated risk + dispute analyst</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#3DDC84" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>99.99% SLA · 1h response p1</li>
+        </ul>
+      </div>
+    </div>
+    <p class="mt-6 text-center text-[12.5px] text-[var(--ink-3)]">Over $1M/mo card volume? Custom interchange-plus, you'll see our cost stack line by line.</p>
+  </div>
+</section>
+
+<!-- CUSTOMER STORY -->
+<section class="py-24 lg:py-28 border-y border-[var(--line)] bg-[var(--bg-2)]">
+  <div class="max-w-[1240px] mx-auto px-5 lg:px-8 grid lg:grid-cols-12 gap-10 items-center">
+    <div class="lg:col-span-5">
+      <div class="chip"><span class="pulse-dot"></span>Customer story · indie agency · €€€</div>
+      <h2 class="font-display text-[32px] sm:text-[44px] leading-[1.05] mt-4 tracking-tight">Cargo Studio saved <span class="opacity-45">$14,208 in 2025.</span></h2>
+      <div class="mt-5 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full" style="background:linear-gradient(135deg,#B388FF,#7E58E0)"></div>
+        <div>
+          <div class="font-display text-[15px]">Ines Calderón</div>
+          <div class="text-[12px] text-[var(--ink-3)]">CTO · Cargo Studio · Berlin · 3 founders, 7 contractors</div>
+        </div>
+      </div>
+    </div>
+    <div class="lg:col-span-7">
+      <blockquote class="font-display text-[20px] sm:text-[22px] leading-[1.45]">
+        "We're a 10-person studio invoicing six-figure projects four times a year. Stripe's 2.9% on €240k was €6,960 we were essentially renting from them for the privilege of using their dashboard. Switched to Receipts on a Friday — first wire on Monday. Same API, half the fee. The migration was literally a find-and-replace plus a new env var."
+      </blockquote>
+      <p class="mt-5 text-[15px] text-[var(--ink-2)] leading-[1.6]">
+        "What I didn't expect: the bank statement descriptor now reads 'CARGO STUDIO' instead of 'STRIPE*CARGO'. Clients stopped asking us what Stripe was."
+      </p>
+      <div class="grid grid-cols-3 gap-3 mt-7">
+        <div class="rounded-xl panel-card p-4">
+          <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)]">FEES SAVED 2025</div>
+          <div class="num-display text-[24px] tabular text-[var(--accent)] mt-1">$14,208</div>
+        </div>
+        <div class="rounded-xl panel-card p-4">
+          <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)]">MIGRATION TIME</div>
+          <div class="num-display text-[24px] tabular text-[var(--accent)] mt-1">47 min</div>
+        </div>
+        <div class="rounded-xl panel-card p-4">
+          <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)]">DISPUTES &amp; CHARGEBACKS</div>
+          <div class="num-display text-[24px] tabular text-[var(--accent)] mt-1">−40%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INTEGRATIONS -->
+<section class="py-20">
+  <div class="max-w-[1240px] mx-auto px-5 lg:px-8">
+    <div class="flex items-end justify-between flex-wrap gap-4">
+      <div>
+        <div class="font-mono text-[11px] tracking-widest text-[var(--accent)]">SDKS &amp; INTEGRATIONS</div>
+        <h2 class="font-display text-[28px] sm:text-[36px] leading-[1.1] mt-2 tracking-tight">In every stack you'd ship.</h2>
+      </div>
+      <a href="#" class="text-[14px] text-[var(--ink-2)] underline-offset-4 hover:underline">All 42 integrations →</a>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 mt-8">
+      <div class="rounded-xl panel-card p-4 flex items-center gap-3 lift"><div class="w-7 h-7 rounded-md bg-[#3C873A]"></div><span class="text-[13px]">Node SDK</span></div>
+      <div class="rounded-xl panel-card p-4 flex items-center gap-3 lift"><div class="w-7 h-7 rounded-md bg-[#00ADD8]"></div><span class="text-[13px]">Go SDK</span></div>
+      <div class="rounded-xl panel-card p-4 flex items-center gap-3 lift"><div class="w-7 h-7 rounded-md bg-[#3776AB]"></div><span class="text-[13px]">Python SDK</span></div>
+      <div class="rounded-xl panel-card p-4 flex items-center gap-3 lift"><div class="w-7 h-7 rounded-md bg-[#CC342D]"></div><span class="text-[13px]">Ruby SDK</span></div>
+      <div class="rounded-xl panel-card p-4 flex items-center gap-3 lift"><div class="w-7 h-7 rounded-md bg-[#DEA584]"></div><span class="text-[13px]">Rust SDK</span></div>
+      <div class="rounded-xl panel-card p-4 flex items-center gap-3 lift"><div class="w-7 h-7 rounded-md bg-[#FFCA28]"></div><span class="text-[13px]">Firebase</span></div>
+      <div class="rounded-xl panel-card p-4 flex items-center gap-3 lift"><div class="w-7 h-7 rounded-md bg-[#000]"></div><span class="text-[13px]">Vercel</span></div>
+      <div class="rounded-xl panel-card p-4 flex items-center gap-3 lift"><div class="w-7 h-7 rounded-md bg-[#3ECF8E]"></div><span class="text-[13px]">Supabase</span></div>
+      <div class="rounded-xl panel-card p-4 flex items-center gap-3 lift"><div class="w-7 h-7 rounded-md bg-[#2EBD59]"></div><span class="text-[13px]">QuickBooks</span></div>
+      <div class="rounded-xl panel-card p-4 flex items-center gap-3 lift"><div class="w-7 h-7 rounded-md bg-[#13B5EA]"></div><span class="text-[13px]">Xero</span></div>
+      <div class="rounded-xl panel-card p-4 flex items-center gap-3 lift"><div class="w-7 h-7 rounded-md bg-[#4A154B]"></div><span class="text-[13px]">Slack alerts</span></div>
+      <div class="rounded-xl panel-card p-4 flex items-center gap-3 lift"><div class="w-7 h-7 rounded-md bg-[#5C2EFF]"></div><span class="text-[13px]">Linear</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="py-24 lg:py-28 border-t border-[var(--line)]">
+  <div class="max-w-[1000px] mx-auto px-5 lg:px-8">
+    <div class="text-center">
+      <div class="font-mono text-[11px] tracking-widest text-[var(--accent)]">FREQUENTLY ASKED</div>
+      <h2 class="font-display text-[36px] sm:text-[48px] leading-[1.05] mt-3 tracking-tight">Questions devs ask <span class="opacity-45">before swapping the env var.</span></h2>
+    </div>
+
+    <div class="mt-12 divide-y divide-[var(--line)] hairline rounded-2xl panel-card">
+      <details class="group p-6 open:bg-[rgba(179,136,255,0.05)]" open>
+        <summary class="cursor-pointer flex items-start justify-between gap-6 list-none">
+          <span class="font-display text-[17px] text-white">What's your actual interchange + processor cost — how do you charge less than Stripe?</span>
+          <span class="text-[var(--ink-3)] group-open:rotate-45 transition">+</span>
+        </summary>
+        <p class="mt-3 text-[14.5px] text-[var(--ink-2)] leading-[1.6]">Same interchange as Stripe — interchange is set by Visa/Mastercard, not by the processor. The difference is what stacks on top: Stripe charges ~1.5% above interchange, we charge 0.6%. We do less white-glove fraud review on small merchants, run our own (smaller) sales team, and don't have a billion-dollar dashboard PM org. Our full cost stack is published at <span class="font-mono">receipts.dev/honest-pricing</span> — pull the JSON.</p>
+      </details>
+      <details class="group p-6">
+        <summary class="cursor-pointer flex items-start justify-between gap-6 list-none">
+          <span class="font-display text-[17px] text-white">Do you support ACH, SEPA, and local payment methods?</span>
+          <span class="text-[var(--ink-3)] group-open:rotate-45 transition">+</span>
+        </summary>
+        <p class="mt-3 text-[14.5px] text-[var(--ink-2)] leading-[1.6]">ACH (US), SEPA (EU), BACS (UK), UPI (India), Bancontact (BE), iDEAL (NL), PIX (BR) — on Volume. Pay-as-you-go is cards + wallets only. ACH is 0.6% capped at $4. SEPA is flat €0.18.</p>
+      </details>
+      <details class="group p-6">
+        <summary class="cursor-pointer flex items-start justify-between gap-6 list-none">
+          <span class="font-display text-[17px] text-white">What about 3DS and SCA for European customers?</span>
+          <span class="text-[var(--ink-3)] group-open:rotate-45 transition">+</span>
+        </summary>
+        <p class="mt-3 text-[14.5px] text-[var(--ink-2)] leading-[1.6]">Managed by default — we run a risk engine over every EU charge, request 3DS challenge only when SCA exemption thresholds (TRA, low-value, allow-list) don't apply. Our challenge rate is 14% vs an EU industry average of 28%, with the same auth-rate. Auto-exemption decisions are logged on every charge object.</p>
+      </details>
+      <details class="group p-6">
+        <summary class="cursor-pointer flex items-start justify-between gap-6 list-none">
+          <span class="font-display text-[17px] text-white">How fast are payouts to my bank?</span>
+          <span class="text-[var(--ink-3)] group-open:rotate-45 transition">+</span>
+        </summary>
+        <p class="mt-3 text-[14.5px] text-[var(--ink-2)] leading-[1.6]">T+1 default — charge on Monday, money in your bank Tuesday by 5pm local. Volume customers can opt into instant payouts (1% fee, 30 minutes) or weekly batching (free, more predictable). Free ACH on all plans. We never hold reserves on accounts under 1.5% dispute rate.</p>
+      </details>
+      <details class="group p-6">
+        <summary class="cursor-pointer flex items-start justify-between gap-6 list-none">
+          <span class="font-display text-[17px] text-white">What's your dispute / chargeback flow look like?</span>
+          <span class="text-[var(--ink-3)] group-open:rotate-45 transition">+</span>
+        </summary>
+        <p class="mt-3 text-[14.5px] text-[var(--ink-2)] leading-[1.6]">Webhook on <span class="font-mono text-[12.5px]">dispute.created</span>, plus a $14 chargeback fee (vs Stripe's $15). For Volume customers, we'll auto-respond with evidence we collect from charge metadata, IP, device fingerprint — our win rate on auto-defended disputes is 47% vs 28% if you write the response yourself at 11pm. Dashboard preview at <span class="font-mono text-[12.5px]">receipts.dev/disputes</span>.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="px-5 lg:px-8 pb-20">
+  <div class="max-w-[1240px] mx-auto rounded-3xl p-10 sm:p-16 relative overflow-hidden hairline-strong" style="background:radial-gradient(80% 100% at 0% 0%,rgba(179,136,255,0.30),transparent 60%),radial-gradient(60% 80% at 100% 100%,rgba(126,88,224,0.30),transparent 60%),#0F0A20;">
+    <div class="absolute inset-0 dot-grid opacity-30"></div>
+    <div class="relative grid lg:grid-cols-12 gap-8 items-center">
+      <div class="lg:col-span-8">
+        <div class="font-mono text-[11px] tracking-widest text-[var(--accent-2)]">SHIP TONIGHT</div>
+        <h2 class="font-display text-[36px] sm:text-[52px] leading-[1.02] mt-3 tracking-tight">Swap one env var. <br><span class="opacity-50">Keep the rest of your weekend.</span></h2>
+        <p class="text-[var(--ink-2)] mt-3 max-w-[560px] text-[15.5px]">Generate a test key, run our migration script against your Stripe customers, deploy. Most teams are live on Receipts inside 47 minutes. First $1,000 in volume is free.</p>
+      </div>
+      <div class="lg:col-span-4 flex lg:justify-end gap-3 flex-wrap">
+        <a href="#" class="lift btn-primary rounded-md px-5 py-3 text-[15px]">Get an API key</a>
+        <a href="#" class="lift rounded-md px-5 py-3 text-[15px] text-white" style="border:1px solid rgba(255,255,255,.25)">Run the migration script</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="border-t border-[var(--line)]">
+  <div class="max-w-[1240px] mx-auto px-5 lg:px-8 py-14 grid grid-cols-2 sm:grid-cols-5 gap-8 text-[13px]">
+    <div class="col-span-2 sm:col-span-1">
+      <div class="flex items-center gap-2">
+        <svg width="22" height="22" viewBox="0 0 22 22"><rect x="1" y="1" width="20" height="20" rx="6" fill="#B388FF"/><path d="M6 5.5h10v2.5l-3 8h-2.5l3-8H6v-2.5Z" fill="#1A0D40"/></svg>
+        <span class="font-display text-[16px]">Receipts</span>
+      </div>
+      <p class="mt-3 text-[12.5px] text-[var(--ink-3)] leading-[1.55] max-w-[220px]">Payments rails for builders who do the math.</p>
+      <div class="mt-3 chip"><span class="pulse-dot"></span>All systems normal</div>
+    </div>
+    <div>
+      <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)] mb-3">PLATFORM</div>
+      <ul class="space-y-2 text-[var(--ink-2)]">
+        <li><a href="#" class="hover:text-white">Charges</a></li>
+        <li><a href="#" class="hover:text-white">Subscriptions</a></li>
+        <li><a href="#" class="hover:text-white">Invoices</a></li>
+        <li><a href="#" class="hover:text-white">Hosted Checkout</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)] mb-3">DEVELOPERS</div>
+      <ul class="space-y-2 text-[var(--ink-2)]">
+        <li><a href="#" class="hover:text-white">API Reference</a></li>
+        <li><a href="#" class="hover:text-white">SDKs · 5</a></li>
+        <li><a href="#" class="hover:text-white">Webhooks</a></li>
+        <li><a href="#" class="hover:text-white">Status · 99.99%</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)] mb-3">COMPANY</div>
+      <ul class="space-y-2 text-[var(--ink-2)]">
+        <li><a href="#" class="hover:text-white">Honest pricing</a></li>
+        <li><a href="#" class="hover:text-white">Security</a></li>
+        <li><a href="#" class="hover:text-white">Careers · 9</a></li>
+        <li><a href="#" class="hover:text-white">Manifesto</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)] mb-3">RESOURCES</div>
+      <ul class="space-y-2 text-[var(--ink-2)]">
+        <li><a href="#" class="hover:text-white">Migration guide</a></li>
+        <li><a href="#" class="hover:text-white">Stripe vs. Receipts</a></li>
+        <li><a href="#" class="hover:text-white">Disputes playbook</a></li>
+        <li><a href="#" class="hover:text-white">Changelog</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="max-w-[1240px] mx-auto px-5 lg:px-8 py-6 border-t border-[var(--line)] flex items-center justify-between text-[12px] text-[var(--ink-3)] font-mono flex-wrap gap-3">
+    <span>© 2026 Receipts Payments, Inc. · Berlin · NYC</span>
+    <span>PCI-DSS L1 · SOC 2 Type II · 99.99% uptime · 90d</span>
+  </div>
+</footer>
+
+<script>
+  // Live-feel: jitter the p95 latency in stats every 2.4s
+  (function(){
+    var el = document.querySelectorAll('.num-display');
+    var latency;
+    el.forEach(function(n){ if(n.textContent.trim().startsWith('240')) latency = n; });
+    if(!latency) return;
+    var base = 240;
+    setInterval(function(){
+      var v = base + Math.round((Math.random() - 0.5) * 14);
+      latency.innerHTML = v + '<span class="text-[20px] text-[var(--ink-3)]"> ms</span>';
+    }, 2400);
+  })();
+</script>
+</body>
+</html>

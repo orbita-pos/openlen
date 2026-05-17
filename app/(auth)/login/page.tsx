@@ -33,7 +33,7 @@ export default async function LoginPage({
 // Only allow same-origin relative paths so a crafted ?next=https://evil.com
 // doesn't bounce the user off-site after sign-in.
 function sanitizeNext(next?: string): string {
-  if (!next) return "/new";
-  if (!next.startsWith("/") || next.startsWith("//")) return "/new";
+  if (!next) return "/new-v2";
+  if (!next.startsWith("/") || next.startsWith("//")) return "/new-v2";
   return next;
 }

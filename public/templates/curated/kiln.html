@@ -1,0 +1,819 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Kiln — CI/CD built for monorepos</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0F0F0F;
+    --bg-2: #141312;
+    --bg-3: #19171535;
+    --hair: rgba(255,255,255,0.06);
+    --hair-2: rgba(255,255,255,0.10);
+    --fg: #ECECEC;
+    --fg-dim: rgba(255,255,255,0.62);
+    --fg-faint: rgba(255,255,255,0.40);
+    --accent: #F5C26B;
+    --accent-r: 245,194,107;
+    --accent-2: #F8D496;
+    --rose: #F47373;
+    --green: #7BD9A8;
+  }
+  html, body { background: var(--bg); color: var(--fg); }
+  body {
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: "ss01","cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: 'Geist Mono', ui-monospace, monospace; }
+  .display { letter-spacing: -0.035em; line-height: 0.98; font-weight: 600; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .hairline { border-color: var(--hair); }
+  .hairline-2 { border-color: var(--hair-2); }
+  .dot-grid {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .radial-fade-accent { background: radial-gradient(60% 50% at 50% 0%, rgba(var(--accent-r), 0.10), transparent 70%); }
+  .radial-fade-soft { background: radial-gradient(50% 60% at 50% 0%, rgba(var(--accent-r), 0.06), transparent 70%); }
+  @keyframes pulse-dot {
+    0% { box-shadow: 0 0 0 0 rgba(var(--accent-r), 0.6); }
+    70% { box-shadow: 0 0 0 8px rgba(var(--accent-r), 0); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--accent-r), 0); }
+  }
+  .pulse-dot { width: 6px; height: 6px; border-radius: 999px; background: var(--accent); animation: pulse-dot 1.8s infinite; }
+  @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+  .marquee-track { animation: marquee 40s linear infinite; }
+  .lift { transition: transform 110ms ease, background-color 110ms ease, box-shadow 130ms ease, border-color 110ms ease; }
+  .lift:hover { transform: translateY(-1px); }
+  .btn-primary { background: var(--accent); color: #231908; font-weight: 600; }
+  .btn-primary:hover { background: #F8D08A; box-shadow: 0 6px 24px -8px rgba(var(--accent-r), 0.55); }
+  .accent { color: var(--accent-2); }
+  .ring-accent { box-shadow: 0 0 0 1px rgba(var(--accent-r), 0.55), 0 12px 40px -16px rgba(var(--accent-r), 0.28); }
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+  details[open] .faq-plus { transform: rotate(45deg); }
+  .faq-plus { transition: transform 150ms ease; color: var(--accent-2); }
+  .half-tone { color: var(--fg-faint); }
+  .bento-tile { background: linear-gradient(180deg, rgba(255,255,255,0.014), rgba(255,255,255,0)); }
+  .seg-active { background: rgba(255,255,255,0.06); color: var(--fg); }
+  .seg { color: var(--fg-dim); }
+  .dot-divider {
+    background-image: linear-gradient(to right, rgba(255,255,255,0.16) 33%, rgba(255,255,255,0) 0%);
+    background-position: top; background-size: 6px 1px; background-repeat: repeat-x; height: 1px;
+  }
+  .check {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 14px; height: 14px; border-radius: 999px;
+    background: rgba(var(--accent-r), 0.18); color: var(--accent-2);
+    flex: 0 0 14px;
+  }
+  .row-hover:hover { background: rgba(255,255,255,0.025); }
+  .code-cmt { color: rgba(255,255,255,0.32); }
+  .code-key { color: var(--accent-2); }
+  .code-str { color: #C3E8D2; }
+  .code-num { color: #9EC1F5; }
+  @keyframes pulse-soft {
+    0%,100% { opacity: 0.4; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.08); }
+  }
+  .node-running { animation: pulse-soft 1.4s ease-in-out infinite; }
+  .pill-green { background: rgba(123,217,168,0.16); color: #9CE9BC; }
+  .pill-mute { background: rgba(255,255,255,0.05); color: var(--fg-dim); }
+  .pill-amber { background: rgba(245,194,107,0.18); color: var(--accent-2); }
+  .pill-skip { background: rgba(255,255,255,0.04); color: var(--fg-faint); }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- NAV -->
+<header class="sticky top-0 z-40 backdrop-blur-md bg-[rgba(15,15,15,0.72)] border-b hairline">
+  <div class="max-w-[1240px] mx-auto px-6 h-14 flex items-center justify-between">
+    <a href="#" class="flex items-center gap-2.5">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M6 22h12L20 8h-4l-1-4h-6l-1 4H4z" stroke="#ECECEC" stroke-width="1.2" stroke-linejoin="round"/>
+        <path d="M12 18c1.6-1.4 2-2.5 2-4 0-1.2-.8-2-.8-3 0 1-1 1.4-1 2 .2-1.5-1-2.4-1.2-3-.4 1.4-2 2.6-2 4.6 0 1.8.8 2.6 3 3.4z" fill="#F5C26B"/>
+      </svg>
+      <span class="text-[15px] font-semibold tracking-tight">Kiln</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-7 text-[13.5px] text-[color:var(--fg-dim)]">
+      <a class="hover:text-white lift" href="#">Product</a>
+      <a class="hover:text-white lift" href="#">Docs</a>
+      <a class="hover:text-white lift" href="#">Changelog</a>
+      <a class="hover:text-white lift" href="#pricing">Pricing</a>
+    </nav>
+    <div class="flex items-center gap-4">
+      <a href="#" class="text-[13.5px] text-[color:var(--fg-dim)] hover:text-white hidden sm:inline">Sign in</a>
+      <a href="#" class="btn-primary lift rounded-full pl-3.5 pr-2.5 h-8 inline-flex items-center gap-1 text-[13px]">
+        Try Kiln free
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 dot-grid opacity-90 pointer-events-none"></div>
+  <div class="absolute inset-x-0 top-0 h-[640px] radial-fade-accent pointer-events-none"></div>
+  <div class="relative max-w-[1240px] mx-auto px-6 pt-20 pb-14">
+    <div class="flex flex-col items-center text-center max-w-3xl mx-auto">
+      <div class="mono text-[11px] tracking-wider uppercase text-[color:var(--fg-dim)] inline-flex items-center gap-2 border hairline rounded-full pl-2 pr-3 py-1 bg-[rgba(255,255,255,0.02)]">
+        <span class="pulse-dot"></span>
+        v2.1 · pnpm + Bazel + Nx
+      </div>
+      <h1 class="display text-[56px] sm:text-[72px] md:text-[88px] mt-6">
+        Build only what changed. <span class="half-tone">Cache like you mean it.</span>
+      </h1>
+      <p class="mt-6 max-w-xl text-[15.5px] text-[color:var(--fg-dim)] leading-relaxed">
+        Kiln watches your task graph, fingerprints inputs, and skips packages that didn't change since the last green main. The average PR in a 47-package monorepo touches 3 — so 44 should be a cache hit.
+      </p>
+      <div class="mt-8 flex items-center gap-3 flex-wrap justify-center">
+        <a href="#" class="btn-primary lift rounded-full px-4 h-10 inline-flex items-center gap-1.5 text-[14px]">
+          Try Kiln free
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#" class="lift rounded-full px-4 h-10 inline-flex items-center text-[14px] border hairline-2 hover:bg-white/[0.04]">
+          See cache architecture
+        </a>
+      </div>
+      <div class="mt-6 mono text-[12.5px] text-[color:var(--fg-faint)]">
+        <span class="text-[color:var(--fg-dim)]">$</span> pnpm dlx kiln init
+      </div>
+    </div>
+
+    <!-- Hero tiles -->
+    <div class="mt-14 grid grid-cols-1 lg:grid-cols-[1.35fr_1fr] gap-4">
+      <!-- BIG: pipeline DAG -->
+      <div class="rounded-2xl border hairline bg-[var(--bg-2)] overflow-hidden">
+        <div class="flex items-center justify-between px-4 h-10 border-b hairline">
+          <div class="flex items-center gap-2 mono text-[11.5px] text-[color:var(--fg-dim)]">
+            <span>pipeline · PR #4128 · 3 of 47 packages affected</span>
+          </div>
+          <div class="mono text-[11px] flex items-center gap-3 text-[color:var(--fg-faint)]">
+            <span class="pulse-dot"></span><span class="accent">running · 1m 41s</span>
+            <span>commit 8f2a1c</span>
+          </div>
+        </div>
+
+        <div class="relative p-2">
+          <svg viewBox="0 0 720 360" class="w-full h-[360px]" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <marker id="kArrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L6,3 L0,6 z" fill="rgba(255,255,255,0.30)"/></marker>
+              <marker id="kArrowHot" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L6,3 L0,6 z" fill="#F5C26B"/></marker>
+            </defs>
+
+            <!-- columns: install -> lint/typecheck -> test -> build -> deploy -->
+            <!-- edges -->
+            <g stroke="rgba(255,255,255,0.18)" stroke-width="1.1" fill="none">
+              <path d="M118,180 C160,180 170,90 200,90" marker-end="url(#kArrow)"/>
+              <path d="M118,180 C160,180 170,180 200,180" marker-end="url(#kArrow)"/>
+              <path d="M118,180 C160,180 170,270 200,270" marker-end="url(#kArrow)"/>
+              <path d="M278,90 C320,90 330,150 360,150" marker-end="url(#kArrow)"/>
+              <path d="M278,180 C320,180 330,150 360,150" marker-end="url(#kArrow)"/>
+              <path d="M278,180 C320,180 330,210 360,210" marker-end="url(#kArrow)"/>
+              <path d="M278,270 C320,270 330,210 360,210" marker-end="url(#kArrow)"/>
+            </g>
+            <g stroke="#F5C26B" stroke-width="1.3" fill="none">
+              <path d="M438,150 C470,150 490,180 520,180" marker-end="url(#kArrowHot)"/>
+              <path d="M438,210 C470,210 490,180 520,180" marker-end="url(#kArrowHot)"/>
+              <path d="M598,180 C620,180 640,180 660,180" marker-end="url(#kArrowHot)"/>
+            </g>
+
+            <!-- nodes: install -->
+            <g transform="translate(80,180)">
+              <rect x="-38" y="-18" width="76" height="36" rx="6" fill="#141312" stroke="#7BD9A8" stroke-width="1.4"/>
+              <text y="-2" text-anchor="middle" class="mono" font-size="10" fill="#ECECEC">install</text>
+              <text y="10" text-anchor="middle" class="mono" font-size="8.5" fill="#9CE9BC">cache hit</text>
+            </g>
+
+            <!-- nodes: lint/typecheck/test (parallel) -->
+            <g transform="translate(240,90)">
+              <rect x="-38" y="-18" width="76" height="36" rx="6" fill="#141312" stroke="rgba(255,255,255,0.30)" stroke-width="1.4"/>
+              <text y="-2" text-anchor="middle" class="mono" font-size="10" fill="#ECECEC">lint</text>
+              <text y="10" text-anchor="middle" class="mono" font-size="8.5" fill="rgba(255,255,255,0.45)">skipped 44</text>
+            </g>
+            <g transform="translate(240,180)">
+              <rect x="-38" y="-18" width="76" height="36" rx="6" fill="#141312" stroke="rgba(255,255,255,0.30)" stroke-width="1.4"/>
+              <text y="-2" text-anchor="middle" class="mono" font-size="10" fill="#ECECEC">typecheck</text>
+              <text y="10" text-anchor="middle" class="mono" font-size="8.5" fill="rgba(255,255,255,0.45)">skipped 44</text>
+            </g>
+            <g transform="translate(240,270)">
+              <rect x="-38" y="-18" width="76" height="36" rx="6" fill="#141312" stroke="#F5C26B" stroke-width="1.4" class="node-running"/>
+              <text y="-2" text-anchor="middle" class="mono" font-size="10" fill="#ECECEC">unit</text>
+              <text y="10" text-anchor="middle" class="mono" font-size="8.5" fill="#F8D496">3 of 47 · run</text>
+            </g>
+
+            <!-- nodes: test/build -->
+            <g transform="translate(400,150)">
+              <rect x="-38" y="-18" width="76" height="36" rx="6" fill="#141312" stroke="rgba(255,255,255,0.30)" stroke-width="1.4"/>
+              <text y="-2" text-anchor="middle" class="mono" font-size="10" fill="#ECECEC">e2e</text>
+              <text y="10" text-anchor="middle" class="mono" font-size="8.5" fill="rgba(255,255,255,0.45)">queued</text>
+            </g>
+            <g transform="translate(400,210)">
+              <rect x="-38" y="-18" width="76" height="36" rx="6" fill="#141312" stroke="#F5C26B" stroke-width="1.4" class="node-running"/>
+              <text y="-2" text-anchor="middle" class="mono" font-size="10" fill="#ECECEC">build</text>
+              <text y="10" text-anchor="middle" class="mono" font-size="8.5" fill="#F8D496">3 of 47 · run</text>
+            </g>
+
+            <!-- container build -->
+            <g transform="translate(560,180)">
+              <rect x="-38" y="-18" width="76" height="36" rx="6" fill="#141312" stroke="rgba(255,255,255,0.30)" stroke-width="1.4"/>
+              <text y="-2" text-anchor="middle" class="mono" font-size="10" fill="#ECECEC">container</text>
+              <text y="10" text-anchor="middle" class="mono" font-size="8.5" fill="rgba(255,255,255,0.45)">queued · 3 oci</text>
+            </g>
+
+            <!-- deploy -->
+            <g transform="translate(680,180)">
+              <rect x="-22" y="-18" width="44" height="36" rx="6" fill="#141312" stroke="rgba(255,255,255,0.30)" stroke-width="1.4"/>
+              <text y="-2" text-anchor="middle" class="mono" font-size="10" fill="#ECECEC">deploy</text>
+              <text y="10" text-anchor="middle" class="mono" font-size="8.5" fill="rgba(255,255,255,0.45)">preview</text>
+            </g>
+
+            <!-- column labels -->
+            <g class="mono" font-size="9" fill="rgba(255,255,255,0.40)" text-anchor="middle">
+              <text x="80" y="40">install</text>
+              <text x="240" y="40">check</text>
+              <text x="400" y="40">test &amp; build</text>
+              <text x="560" y="40">artifact</text>
+              <text x="680" y="40">deploy</text>
+            </g>
+          </svg>
+
+          <div class="absolute left-4 bottom-3 mono text-[10.5px] text-[color:var(--fg-faint)] flex gap-3">
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm border" style="border-color:#7BD9A8"></span>cached</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm border" style="border-color:#F5C26B"></span>running</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm border" style="border-color:rgba(255,255,255,0.30)"></span>queued</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="rounded-2xl border hairline bg-[var(--bg-2)] p-5 flex flex-col">
+        <div class="flex items-center justify-between">
+          <div class="mono text-[11px] uppercase tracking-wider text-[color:var(--fg-faint)]">acme/web · 14d</div>
+          <div class="mono text-[11px] accent flex items-center gap-1.5"><span class="pulse-dot"></span>live</div>
+        </div>
+        <div class="grid grid-cols-2 gap-px mt-5 bg-[var(--hair)] rounded-xl overflow-hidden border hairline">
+          <div class="bg-[var(--bg-2)] p-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Avg build time</div>
+            <div class="display text-3xl mt-2 tabular">2m 41s</div>
+            <div class="mono text-[11px] mt-1 accent tabular">−68% / 30d</div>
+          </div>
+          <div class="bg-[var(--bg-2)] p-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Cache hit ratio</div>
+            <div class="display text-3xl mt-2 tabular">89.4<span class="text-base text-[color:var(--fg-dim)]"> %</span></div>
+            <div class="mono text-[11px] mt-1 accent tabular">+8.2pp / 30d</div>
+          </div>
+          <div class="bg-[var(--bg-2)] p-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Parallel jobs P95</div>
+            <div class="display text-3xl mt-2 tabular">18</div>
+            <div class="mono text-[11px] mt-1 text-[color:var(--fg-dim)] tabular">runner pool 32</div>
+          </div>
+          <div class="bg-[var(--bg-2)] p-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Cost per build</div>
+            <div class="display text-3xl mt-2 tabular">$0.0064</div>
+            <div class="mono text-[11px] mt-1 accent tabular">−$0.018 / 30d</div>
+          </div>
+        </div>
+        <div class="mt-5">
+          <div class="flex items-center justify-between mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">
+            <span>Build minutes / day</span>
+            <span class="tabular text-[color:var(--fg-dim)]">14d</span>
+          </div>
+          <svg viewBox="0 0 280 70" class="w-full h-[70px] mt-2" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="sparkA" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#F5C26B" stop-opacity="0.28"/>
+                <stop offset="100%" stop-color="#F5C26B" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <path id="spark1-area" fill="url(#sparkA)"></path>
+            <path id="spark1-line" fill="none" stroke="#F5C26B" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        </div>
+        <div class="mt-auto pt-5 mono text-[11.5px] text-[color:var(--fg-faint)] flex items-center justify-between">
+          <span>runners: us-east + eu-west</span>
+          <span class="text-[color:var(--fg-dim)]">cache 4.8 TB</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LOGO CLOUD -->
+<section class="border-y hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-9">
+    <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)] text-center">Building monorepos in production at</div>
+    <div class="overflow-hidden mt-6 [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]">
+      <div class="marquee-track flex gap-14 w-max items-center text-[color:var(--fg-dim)]">
+        <span class="text-2xl font-serif italic">Cargo</span>
+        <span class="text-2xl font-semibold tracking-tight">SPOOL</span>
+        <span class="text-2xl font-light tracking-[0.18em]">FOLIO</span>
+        <span class="text-2xl font-serif">Beacon</span>
+        <span class="text-2xl font-semibold italic">Nimbus Labs</span>
+        <span class="text-2xl font-mono tracking-tight">mercury/build</span>
+        <span class="text-2xl font-bold tracking-tighter">Forecast Engineering</span>
+        <span class="text-2xl font-serif italic">Linnea Platform</span>
+        <span class="text-2xl font-serif italic">Cargo</span>
+        <span class="text-2xl font-semibold tracking-tight">SPOOL</span>
+        <span class="text-2xl font-light tracking-[0.18em]">FOLIO</span>
+        <span class="text-2xl font-serif">Beacon</span>
+        <span class="text-2xl font-semibold italic">Nimbus Labs</span>
+        <span class="text-2xl font-mono tracking-tight">mercury/build</span>
+        <span class="text-2xl font-bold tracking-tighter">Forecast Engineering</span>
+        <span class="text-2xl font-serif italic">Linnea Platform</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BENTO -->
+<section>
+  <div class="max-w-[1240px] mx-auto px-6 py-24">
+    <div class="max-w-2xl">
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">Capabilities</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">A graph-aware build system <span class="half-tone">that finally feels native.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4 max-w-xl">Kiln reads your <span class="mono text-[12.5px]">pnpm-workspace.yaml</span>, your Bazel BUILD files, or your Nx project graph — and turns it into a fingerprinted DAG. Cache anywhere. Run anywhere.</p>
+    </div>
+
+    <div class="mt-12 grid grid-cols-12 grid-rows-[auto_auto] gap-4">
+      <!-- BIG: pipeline editor -->
+      <div class="col-span-12 lg:col-span-7 lg:row-span-2 bento-tile rounded-2xl border hairline p-6 overflow-hidden">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 6h14M5 12h10M5 18h7" stroke="#F8D496" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Pipeline as code</div>
+        </div>
+        <h3 class="display text-2xl mt-4">Tasks. Inputs. Outputs. That's the whole config.</h3>
+        <p class="text-[color:var(--fg-dim)] mt-2 text-sm leading-relaxed">A task declares what it reads and what it writes. Kiln fingerprints the input set, looks up the cache, and either skips the task or runs it on the next free runner.</p>
+
+        <div class="mt-5 rounded-xl border hairline bg-black/40 overflow-hidden">
+          <div class="flex items-center justify-between border-b hairline px-3 h-8 mono text-[11px] text-[color:var(--fg-faint)]">
+            <span>kiln.yaml</span>
+            <span class="accent">v2 · cache: remote</span>
+          </div>
+          <pre class="mono text-[12.5px] leading-[1.65] p-4 overflow-x-auto"><span class="code-cmt"># task graph for acme/web</span>
+<span class="code-key">tasks</span>:
+  <span class="code-key">build</span>:
+    <span class="code-key">depends_on</span>: [typecheck, lint]
+    <span class="code-key">inputs</span>:
+      - <span class="code-str">"src/**/*.{ts,tsx}"</span>
+      - <span class="code-str">"package.json"</span>
+      - <span class="code-str">"!**/*.test.ts"</span>
+    <span class="code-key">outputs</span>:
+      - <span class="code-str">".next/standalone"</span>
+      - <span class="code-str">".next/static"</span>
+    <span class="code-key">command</span>: pnpm next build
+    <span class="code-key">cache</span>: remote
+
+  <span class="code-key">container</span>:
+    <span class="code-key">depends_on</span>: [build]
+    <span class="code-key">command</span>: docker buildx --cache-to=kiln
+    <span class="code-key">runner</span>: <span class="code-str">"oci-builder-xl"</span></pre>
+        </div>
+      </div>
+
+      <!-- Cache hit chart -->
+      <div class="col-span-12 md:col-span-6 lg:col-span-5 bento-tile rounded-2xl border hairline p-6">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 17l5-6 4 3 7-9" stroke="#F8D496" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Cache hit ratio</div>
+        </div>
+        <h3 class="display text-2xl mt-4">30% on day one. 89% by week four.</h3>
+        <p class="text-[color:var(--fg-dim)] mt-2 text-sm leading-relaxed">Remote cache, content-addressed by input fingerprint, scoped per branch and per package.</p>
+        <svg viewBox="0 0 320 130" class="w-full h-[130px] mt-4" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="cacheG" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stop-color="#F5C26B" stop-opacity="0.30"/>
+              <stop offset="100%" stop-color="#F5C26B" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <g stroke="rgba(255,255,255,0.05)" stroke-dasharray="3 4">
+            <line x1="0" y1="30" x2="320" y2="30"/>
+            <line x1="0" y1="65" x2="320" y2="65"/>
+            <line x1="0" y1="100" x2="320" y2="100"/>
+          </g>
+          <path id="cacheArea" fill="url(#cacheG)"></path>
+          <path id="cacheLine" fill="none" stroke="#F5C26B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+        <div class="flex justify-between mono text-[10.5px] text-[color:var(--fg-faint)] mt-1">
+          <span>day 1</span><span>day 7</span><span>day 14</span><span>day 21</span><span>day 28</span>
+        </div>
+      </div>
+
+      <!-- Parallel gantt -->
+      <div class="col-span-12 md:col-span-6 lg:col-span-5 bento-tile rounded-2xl border hairline p-6">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="4" y="6" width="10" height="3" rx="1" stroke="#F8D496" stroke-width="1.4"/><rect x="8" y="11" width="12" height="3" rx="1" stroke="#F8D496" stroke-width="1.4"/><rect x="6" y="16" width="8" height="3" rx="1" stroke="#F8D496" stroke-width="1.4"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Parallel runner timeline</div>
+        </div>
+        <h3 class="display text-2xl mt-4">32 jobs in flight. None of them rebuilding the world.</h3>
+        <p class="text-[color:var(--fg-dim)] mt-2 text-sm leading-relaxed">A gantt of the current build. Bars colored by package, grayed if pulled from cache.</p>
+        <div class="mt-4 space-y-1.5 mono text-[11px]">
+          <div class="grid grid-cols-[100px_1fr_56px] items-center gap-3"><div class="text-[color:var(--fg-dim)] truncate">@acme/web</div><div class="relative h-3 bg-white/[0.04] rounded"><div class="absolute h-full rounded" style="left:0;width:48%;background:#F5C26B"></div></div><div class="text-right text-[color:var(--fg-faint)] tabular">48s</div></div>
+          <div class="grid grid-cols-[100px_1fr_56px] items-center gap-3"><div class="text-[color:var(--fg-dim)] truncate">@acme/ui</div><div class="relative h-3 bg-white/[0.04] rounded"><div class="absolute h-full rounded" style="left:0;width:14%;background:rgba(255,255,255,0.20)"></div></div><div class="text-right text-[color:var(--fg-faint)] tabular">cache</div></div>
+          <div class="grid grid-cols-[100px_1fr_56px] items-center gap-3"><div class="text-[color:var(--fg-dim)] truncate">@acme/api</div><div class="relative h-3 bg-white/[0.04] rounded"><div class="absolute h-full rounded" style="left:8%;width:24%;background:#F5C26B"></div></div><div class="text-right text-[color:var(--fg-faint)] tabular">24s</div></div>
+          <div class="grid grid-cols-[100px_1fr_56px] items-center gap-3"><div class="text-[color:var(--fg-dim)] truncate">@acme/sdk</div><div class="relative h-3 bg-white/[0.04] rounded"><div class="absolute h-full rounded" style="left:0;width:11%;background:rgba(255,255,255,0.20)"></div></div><div class="text-right text-[color:var(--fg-faint)] tabular">cache</div></div>
+          <div class="grid grid-cols-[100px_1fr_56px] items-center gap-3"><div class="text-[color:var(--fg-dim)] truncate">@acme/cli</div><div class="relative h-3 bg-white/[0.04] rounded"><div class="absolute h-full rounded" style="left:32%;width:18%;background:#F5C26B"></div></div><div class="text-right text-[color:var(--fg-faint)] tabular">18s</div></div>
+          <div class="grid grid-cols-[100px_1fr_56px] items-center gap-3"><div class="text-[color:var(--fg-dim)] truncate">@acme/db</div><div class="relative h-3 bg-white/[0.04] rounded"><div class="absolute h-full rounded" style="left:0;width:12%;background:rgba(255,255,255,0.20)"></div></div><div class="text-right text-[color:var(--fg-faint)] tabular">cache</div></div>
+        </div>
+      </div>
+
+      <!-- Affected detector -->
+      <div class="col-span-12 md:col-span-5 lg:col-span-4 bento-tile rounded-2xl border hairline p-6">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 4v4M12 16v4M4 12h4M16 12h4M12 8v8M8 12h8" stroke="#F8D496" stroke-width="1.4"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Affected detector</div>
+        </div>
+        <h3 class="display text-xl mt-4">3 of 47 packages changed.</h3>
+        <p class="text-[color:var(--fg-dim)] mt-2 text-sm leading-relaxed">Computed from the dependency graph + file fingerprints in the diff. We never run downstream what wasn't actually touched.</p>
+        <div class="mt-3 mono text-[11.5px] space-y-1">
+          <div class="flex justify-between border hairline rounded px-2.5 py-1.5"><span class="text-[color:var(--fg-dim)]">@acme/web</span><span class="pill-amber rounded px-1.5 py-0.5 text-[10px]">changed</span></div>
+          <div class="flex justify-between border hairline rounded px-2.5 py-1.5"><span class="text-[color:var(--fg-dim)]">@acme/ui</span><span class="pill-amber rounded px-1.5 py-0.5 text-[10px]">changed</span></div>
+          <div class="flex justify-between border hairline rounded px-2.5 py-1.5"><span class="text-[color:var(--fg-dim)]">@acme/checkout</span><span class="pill-amber rounded px-1.5 py-0.5 text-[10px]">touch</span></div>
+          <div class="flex justify-between border hairline rounded px-2.5 py-1.5 opacity-60"><span class="text-[color:var(--fg-dim)]">+ 44 packages</span><span class="pill-skip rounded px-1.5 py-0.5 text-[10px]">skipped</span></div>
+        </div>
+      </div>
+
+      <!-- Approval queue -->
+      <div class="col-span-12 md:col-span-7 lg:col-span-7 bento-tile rounded-2xl border hairline p-6">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 11l3 3 9-9" stroke="#F8D496" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 12v6a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2h6" stroke="#F8D496" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Deploy approvals</div>
+        </div>
+        <h3 class="display text-xl mt-4">Promote a build. Not a re-build.</h3>
+        <p class="text-[color:var(--fg-dim)] mt-2 text-sm leading-relaxed">Promotions reuse the exact OCI digest that passed CI. No "deploy will recompile" surprises.</p>
+        <div class="mt-4 grid grid-cols-3 gap-3 mono text-[11.5px]">
+          <div class="border hairline rounded-lg px-3 py-2.5">
+            <div class="text-[color:var(--fg-faint)] text-[10.5px] uppercase tracking-wider">staging</div>
+            <div class="mt-1 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-[#7BD9A8]"></span>8f2a1c <span class="text-[color:var(--fg-faint)]">2m</span></div>
+          </div>
+          <div class="border hairline rounded-lg px-3 py-2.5">
+            <div class="text-[color:var(--fg-faint)] text-[10.5px] uppercase tracking-wider">canary 5%</div>
+            <div class="mt-1 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-[#F5C26B] node-running"></span>3c1b80 <span class="text-[color:var(--fg-faint)]">8m</span></div>
+          </div>
+          <div class="border hairline rounded-lg px-3 py-2.5">
+            <div class="text-[color:var(--fg-faint)] text-[10.5px] uppercase tracking-wider">production</div>
+            <div class="mt-1 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-white/30"></span>71a4e2 <span class="text-[color:var(--fg-faint)]">1h ago</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BIG ALTERNATING -->
+<section class="border-t hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-24 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+    <div class="rounded-2xl border hairline bg-[var(--bg-2)] overflow-hidden">
+      <div class="flex items-center gap-1 px-3 h-10 border-b hairline">
+        <button class="seg seg-active rounded-md px-3 py-1 mono text-[12px]">Builds</button>
+        <button class="seg rounded-md px-3 py-1 mono text-[12px]">Cache</button>
+        <button class="seg rounded-md px-3 py-1 mono text-[12px]">Deploys</button>
+        <div class="ml-auto mono text-[11px] text-[color:var(--fg-faint)]">acme/web · 47 pkgs</div>
+      </div>
+      <div class="grid grid-cols-3 gap-px bg-[var(--hair)]">
+        <div class="bg-[var(--bg-2)] p-4">
+          <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Avg PR build</div>
+          <div class="display text-2xl mt-1 tabular">2m 41s</div>
+          <div class="mono text-[11px] accent tabular">↘ −5m 38s / 30d</div>
+        </div>
+        <div class="bg-[var(--bg-2)] p-4">
+          <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Packages skipped</div>
+          <div class="display text-2xl mt-1 tabular">44 / 47</div>
+          <div class="mono text-[11px] accent tabular">94% per PR avg</div>
+        </div>
+        <div class="bg-[var(--bg-2)] p-4">
+          <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Cache writes / day</div>
+          <div class="display text-2xl mt-1 tabular">12,408</div>
+          <div class="mono text-[11px] text-[color:var(--fg-dim)] tabular">348 GB total</div>
+        </div>
+      </div>
+      <!-- task graph: dep-aware skip -->
+      <div class="p-5">
+        <div class="flex items-center justify-between mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">
+          <span>Task graph · this PR</span>
+          <span class="text-[color:var(--fg-dim)]">3 of 47 to run</span>
+        </div>
+        <svg viewBox="0 0 540 220" class="w-full h-[220px] mt-3">
+          <!-- columns of nodes representing packages -->
+          <g class="mono" font-size="9.5" fill="rgba(255,255,255,0.40)">
+            <text x="20" y="20">src</text>
+            <text x="190" y="20">build</text>
+            <text x="360" y="20">test</text>
+            <text x="500" y="20" text-anchor="end">app</text>
+          </g>
+          <!-- node generator -->
+          <g id="dagNodes"></g>
+          <g id="dagEdges"></g>
+        </svg>
+      </div>
+    </div>
+
+    <div>
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">Smart task graph</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Skip 39 packages. <span class="half-tone">With proof.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4 leading-relaxed">Kiln walks your dependency graph from the diff, fingerprints the inputs of every reachable task, and only schedules the work that actually changed. The graph is signed — you can prove which packages a release contains.</p>
+      <ul class="mt-6 space-y-3 text-[15px]">
+        <li class="flex gap-3 items-start"><span class="check mt-1.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Input fingerprints include sourcemap-resolved deps — refactors don't bust the cache.</span></li>
+        <li class="flex gap-3 items-start"><span class="check mt-1.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Remote cache speaks the gRPC RBE protocol so Bazel users get instant adoption.</span></li>
+        <li class="flex gap-3 items-start"><span class="check mt-1.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Spawn an isolated preview environment per package, not per PR.</span></li>
+        <li class="flex gap-3 items-start"><span class="check mt-1.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>SLSA-3 attestations on every artifact; signed by your org key, not ours.</span></li>
+      </ul>
+      <a href="#" class="inline-flex items-center gap-1 mt-7 accent text-[14px] lift">Read the task-graph guide <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="border-t hairline relative">
+  <div class="absolute inset-x-0 top-0 h-[300px] radial-fade-soft pointer-events-none"></div>
+  <div class="relative max-w-[1240px] mx-auto px-6 py-24">
+    <div class="text-center max-w-2xl mx-auto">
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">Pricing</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Pay for the builds you ran. <span class="half-tone">Not the ones we skipped.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4">Cache hits are free. We bill per minute of actual compute, plus a flat platform fee.</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-12">
+      <div class="rounded-2xl border hairline p-7 bg-[var(--bg-2)] flex flex-col">
+        <div class="flex items-baseline justify-between"><h3 class="text-lg font-semibold">Hobby</h3><span class="mono text-[11px] text-[color:var(--fg-faint)]">free forever</span></div>
+        <div class="display text-5xl mt-5 tabular">$0</div>
+        <div class="mono text-[11.5px] text-[color:var(--fg-faint)] mt-1">/ month</div>
+        <p class="text-[color:var(--fg-dim)] text-[14px] mt-4">For OSS and weekend projects.</p>
+        <div class="dot-divider my-6"></div>
+        <ul class="space-y-3 text-[14px]">
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>100 build mins / mo</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>1 GB remote cache</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Shared runners · 2 vCPU</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Community Slack</li>
+        </ul>
+        <a href="#" class="mt-auto pt-7 inline-flex items-center justify-center h-10 rounded-full border hairline-2 text-[14px] lift hover:bg-white/[0.04]">Start free</a>
+      </div>
+      <div class="relative rounded-2xl p-7 bg-[var(--bg-2)] flex flex-col ring-accent">
+        <span class="absolute -top-3 left-5 mono text-[10.5px] uppercase tracking-wider px-2.5 py-1 rounded-full" style="background:#F5C26B;color:#231908">Most popular</span>
+        <div class="flex items-baseline justify-between"><h3 class="text-lg font-semibold">Pro</h3><span class="mono text-[11px] accent">per seat</span></div>
+        <div class="display text-5xl mt-5 tabular">$49</div>
+        <div class="mono text-[11.5px] text-[color:var(--fg-faint)] mt-1">/ seat · month · annual</div>
+        <p class="text-[color:var(--fg-dim)] text-[14px] mt-4">For teams shipping every weekday.</p>
+        <div class="dot-divider my-6"></div>
+        <ul class="space-y-3 text-[14px]">
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>5,000 build mins / mo · pooled</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>100 GB remote cache · global</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Runners up to 16 vCPU / 64 GB</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>SLSA-3 attestations</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Preview envs · 14d TTL</li>
+        </ul>
+        <a href="#" class="btn-primary mt-auto pt-0 inline-flex items-center justify-center h-10 rounded-full text-[14px] lift" style="margin-top:1.75rem">Start 14-day trial</a>
+      </div>
+      <div class="rounded-2xl border hairline p-7 bg-[var(--bg-2)] flex flex-col">
+        <div class="flex items-baseline justify-between"><h3 class="text-lg font-semibold">Enterprise</h3><span class="mono text-[11px] text-[color:var(--fg-faint)]">self-hosted</span></div>
+        <div class="display text-5xl mt-5 tabular">$299</div>
+        <div class="mono text-[11.5px] text-[color:var(--fg-faint)] mt-1">/ month base · usage on top</div>
+        <p class="text-[color:var(--fg-dim)] text-[14px] mt-4">For platform teams with their own runner farm.</p>
+        <div class="dot-divider my-6"></div>
+        <ul class="space-y-3 text-[14px]">
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Unlimited build mins</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>BYO runners · 0 egress</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>SAML SSO · SCIM · audit log</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>SOC 2 · solution architect</li>
+        </ul>
+        <a href="#" class="mt-auto pt-7 inline-flex items-center justify-center h-10 rounded-full border hairline-2 text-[14px] lift hover:bg-white/[0.04]">Talk to sales</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="border-t hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-24">
+    <div class="max-w-2xl">
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">Customers</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Platform &amp; DX teams who got their afternoons back <span class="half-tone">last quarter.</span></h2>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-12">
+      <div class="rounded-2xl border hairline p-6 bg-[var(--bg-2)]">
+        <div class="flex gap-0.5 accent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        </div>
+        <blockquote class="mt-4 text-[15px] leading-relaxed">"We had an 18-minute build that the team had stopped trying to fix. Kiln got it to 2m 41s in the first week, just by being honest about which packages a PR actually touched."</blockquote>
+        <div class="flex items-center gap-3 mt-6">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center mono text-[12px] font-semibold" style="background:rgba(245,194,107,0.22);color:#F8D496">MT</div>
+          <div class="text-[13px]"><div class="font-medium">Marcus Tobin</div><div class="text-[color:var(--fg-faint)]">Platform Lead · Forecast</div></div>
+        </div>
+      </div>
+      <div class="rounded-2xl border hairline p-6 bg-[var(--bg-2)]">
+        <div class="flex gap-0.5 accent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        </div>
+        <blockquote class="mt-4 text-[15px] leading-relaxed">"Cache hit ratio sat at 30% under our old setup. After moving to Kiln's RBE-compatible cache it's been 89% for the last 28 days, and our CI bill dropped 64%."</blockquote>
+        <div class="flex items-center gap-3 mt-6">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center mono text-[12px] font-semibold" style="background:rgba(245,194,107,0.22);color:#F8D496">YA</div>
+          <div class="text-[13px]"><div class="font-medium">Yusuf Abara</div><div class="text-[color:var(--fg-faint)]">CTO · Mercury</div></div>
+        </div>
+      </div>
+      <div class="rounded-2xl border hairline p-6 bg-[var(--bg-2)]">
+        <div class="flex gap-0.5 accent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        </div>
+        <blockquote class="mt-4 text-[15px] leading-relaxed">"Migration from Nx Cloud took an afternoon. The promotion model — same OCI digest from canary to prod — is the part our SRE team actually cared about."</blockquote>
+        <div class="flex items-center gap-3 mt-6">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center mono text-[12px] font-semibold" style="background:rgba(245,194,107,0.22);color:#F8D496">PA</div>
+          <div class="text-[13px]"><div class="font-medium">Priya Anand</div><div class="text-[color:var(--fg-faint)]">Staff Engineer · Linnea</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="border-t hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-24 grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-12">
+    <div>
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">FAQ</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Frequently asked, <span class="half-tone">honestly answered.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4 max-w-sm">Most of our team is ex-Bazel and ex-Buck. If you have a deeper question, ping <a href="#" class="accent">platform@kiln.build</a>.</p>
+    </div>
+    <div>
+      <details class="py-5 border-b hairline">
+        <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">How does it compare to Turborepo or Nx Cloud?</span><span class="faq-plus mono text-lg leading-none">+</span></summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">Turbo's caching is filename-shaped — you tell it "if these files change, rerun this task." Kiln resolves the actual import graph, so renaming a file or moving an export still hits the cache. Versus Nx Cloud: Kiln's cache speaks Bazel's gRPC RBE protocol, which means you can also bring Bazel rules and our cache will hit them. Most teams migrating tell us they keep Turbo for hot reload locally and run Kiln in CI.</p>
+      </details>
+      <details class="py-5 border-b hairline">
+        <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">Can I bring my own self-hosted runners?</span><span class="faq-plus mono text-lg leading-none">+</span></summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">Yes. Self-hosted runners are a first-class deployment target. The runner is a single static binary that registers with our control plane over outbound HTTPS — no inbound port. Most customers run a Karpenter-managed pool on EC2 spot, with auto-scaling driven by Kiln queue depth. Egress between your runners and our cache is free.</p>
+      </details>
+      <details class="py-5 border-b hairline">
+        <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">What's the protocol for the remote cache (HTTP/gRPC)?</span><span class="faq-plus mono text-lg leading-none">+</span></summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">Both. The native protocol is gRPC Remote Execution v2 (the Bazel RBE wire format) over HTTP/2 with mTLS. We also expose a HTTP/1.1 fallback for environments without gRPC support — tested with Turborepo, Nx, and a homegrown CLI. Content addressing is SHA-256, max blob 4 GB, no compression on the wire (we rely on TLS-layer compression where available).</p>
+      </details>
+      <details class="py-5 border-b hairline">
+        <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">Does it support Bazel rules_oci out of the box?</span><span class="faq-plus mono text-lg leading-none">+</span></summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">Yes — both rules_oci and rules_docker. The OCI artifact lands in our content-addressed store, which means a downstream <span class="mono text-[12.5px]">oci_push</span> action is a pointer move rather than a re-pack. Container builds that used to take 7 minutes drop to about 12 seconds end-to-end once cached.</p>
+      </details>
+      <details class="py-5 border-b hairline">
+        <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">How do you handle secret injection during builds?</span><span class="faq-plus mono text-lg leading-none">+</span></summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">Secrets are scoped per task in <span class="mono text-[12.5px]">kiln.yaml</span>, fetched from Vault / AWS Secrets Manager / GCP Secret Manager at runner startup, and exposed via tmpfs file paths — never as env vars unless you explicitly opt in. Secret-bearing tasks are excluded from the remote cache by default so a malicious PR can't exfiltrate them via a poisoned cache key.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="px-6 pb-24">
+  <div class="max-w-[1240px] mx-auto relative rounded-2xl border hairline overflow-hidden p-10 md:p-16 text-center" style="background:linear-gradient(180deg, rgba(245,194,107,0.04), rgba(255,255,255,0));">
+    <div class="absolute inset-0 dot-grid opacity-80 pointer-events-none"></div>
+    <div class="absolute inset-x-0 top-0 h-full radial-fade-accent pointer-events-none"></div>
+    <div class="relative">
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent inline-flex items-center gap-2"><span class="pulse-dot"></span>89% cache hit · 30 days</div>
+      <h2 class="display text-4xl md:text-6xl mt-5">Trim the build. <span class="half-tone">Keep the speed.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4 max-w-xl mx-auto">Connect your monorepo in 5 minutes. The free tier covers 100 minutes a month — enough to feel the difference on day one.</p>
+      <div class="mt-7 flex items-center gap-3 justify-center flex-wrap">
+        <a href="#" class="btn-primary lift rounded-full px-5 h-11 inline-flex items-center gap-1.5 text-[14px]">Try Kiln free<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        <a href="#" class="lift rounded-full px-5 h-11 inline-flex items-center text-[14px] border hairline-2 hover:bg-white/[0.04]">Talk to sales</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="border-t hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-14 grid grid-cols-2 md:grid-cols-5 gap-8">
+    <div class="col-span-2">
+      <div class="flex items-center gap-2.5">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 22h12L20 8h-4l-1-4h-6l-1 4H4z" stroke="#ECECEC" stroke-width="1.2" stroke-linejoin="round"/><path d="M12 18c1.6-1.4 2-2.5 2-4 0-1.2-.8-2-.8-3 0 1-1 1.4-1 2 .2-1.5-1-2.4-1.2-3-.4 1.4-2 2.6-2 4.6 0 1.8.8 2.6 3 3.4z" fill="#F5C26B"/></svg>
+        <span class="text-[15px] font-semibold tracking-tight">Kiln</span>
+      </div>
+      <p class="text-[13.5px] text-[color:var(--fg-dim)] mt-3 max-w-xs">CI/CD built for monorepos. Cache by content, not by name.</p>
+      <a href="#" class="mt-4 mono text-[11px] inline-flex items-center gap-2 border hairline rounded-full pl-2 pr-3 py-1 text-[color:var(--fg-dim)]"><span class="pulse-dot"></span>Runners · 99.994% / 90d</a>
+    </div>
+    <div><div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Product</div>
+      <ul class="mt-3 space-y-2 text-[13.5px] text-[color:var(--fg-dim)]"><li><a href="#" class="hover:text-white">Pipelines</a></li><li><a href="#" class="hover:text-white">Remote cache</a></li><li><a href="#" class="hover:text-white">Runners</a></li><li><a href="#" class="hover:text-white">Deploys</a></li></ul>
+    </div>
+    <div><div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Developers</div>
+      <ul class="mt-3 space-y-2 text-[13.5px] text-[color:var(--fg-dim)]"><li><a href="#" class="hover:text-white">Docs</a></li><li><a href="#" class="hover:text-white">CLI reference</a></li><li><a href="#" class="hover:text-white">RBE protocol</a></li><li><a href="#" class="hover:text-white">Changelog</a></li></ul>
+    </div>
+    <div><div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Company</div>
+      <ul class="mt-3 space-y-2 text-[13.5px] text-[color:var(--fg-dim)]"><li><a href="#" class="hover:text-white">About</a></li><li><a href="#" class="hover:text-white">Customers</a></li><li><a href="#" class="hover:text-white">Security</a></li><li><a href="#" class="hover:text-white">Careers · 5</a></li></ul>
+    </div>
+  </div>
+  <div class="border-t hairline">
+    <div class="max-w-[1240px] mx-auto px-6 py-5 flex flex-col md:flex-row items-center justify-between gap-3 mono text-[11.5px] text-[color:var(--fg-faint)]">
+      <div>© 2026 Kiln Build, Inc. · Brooklyn / Amsterdam</div>
+      <div class="flex items-center gap-5"><a href="#" class="hover:text-white">Privacy</a><a href="#" class="hover:text-white">Terms</a><a href="#" class="hover:text-white">DPA</a><span>v2.1.4 · b418cf</span></div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  function buildPath(data, opts) {
+    const { width, height, padY = 4, area = false } = opts;
+    const max = Math.max(...data), min = Math.min(...data);
+    const span = Math.max(1, max - min);
+    const stepX = width / (data.length - 1);
+    let d = '';
+    data.forEach((v, i) => {
+      const x = i * stepX;
+      const y = padY + (1 - (v - min) / span) * (height - padY * 2);
+      d += (i === 0 ? 'M' : 'L') + x.toFixed(2) + ',' + y.toFixed(2) + ' ';
+    });
+    if (area) d += `L${width},${height} L0,${height} Z`;
+    return d;
+  }
+  function series(n, base, vol, seed) {
+    let s = seed; const out = [];
+    for (let i = 0; i < n; i++) {
+      s = (s * 9301 + 49297) % 233280;
+      const r = s / 233280;
+      base = base + (r - 0.5) * vol;
+      out.push(base);
+    }
+    return out;
+  }
+  const d1 = series(28, 100, 14, 71).map((v, i) => v - i * 1.2);
+  document.getElementById('spark1-line').setAttribute('d', buildPath(d1, { width: 280, height: 70 }));
+  document.getElementById('spark1-area').setAttribute('d', buildPath(d1, { width: 280, height: 70, area: true }));
+
+  // cache ratio: from 30 to 89
+  const cache = [];
+  for (let i = 0; i < 28; i++) {
+    const target = 30 + (89 - 30) * (i / 27);
+    cache.push(target + ((i*97)%7 - 3) * 0.8);
+  }
+  document.getElementById('cacheLine').setAttribute('d', buildPath(cache, { width: 320, height: 130, padY: 10 }));
+  document.getElementById('cacheArea').setAttribute('d', buildPath(cache, { width: 320, height: 130, padY: 10, area: true }));
+
+  // DAG nodes
+  const nodesEl = document.getElementById('dagNodes');
+  const edgesEl = document.getElementById('dagEdges');
+  const cols = [
+    { x: 50,  count: 12, label: 'src' },
+    { x: 220, count: 12, label: 'build' },
+    { x: 380, count: 12, label: 'test' },
+    { x: 500, count: 6,  label: 'app' }
+  ];
+  // pick 3 of 47 as active
+  const activeIdx = new Set(['0-1','1-1','1-2','2-2','3-1']);
+  const positions = {};
+  cols.forEach((c, ci) => {
+    const top = 40, bottom = 200;
+    const step = (bottom - top) / Math.max(1, c.count - 1);
+    for (let i = 0; i < c.count; i++) {
+      const y = top + i * step;
+      const key = `${ci}-${i}`;
+      positions[key] = { x: c.x, y };
+      const active = activeIdx.has(key);
+      const r = active ? 5.2 : 3.4;
+      const fill = active ? '#F5C26B' : 'rgba(255,255,255,0.18)';
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', c.x);
+      circle.setAttribute('cy', y);
+      circle.setAttribute('r', r);
+      circle.setAttribute('fill', fill);
+      if (active) circle.setAttribute('class', 'node-running');
+      nodesEl.appendChild(circle);
+    }
+  });
+  // edges (random-ish but stable)
+  let seed = 13;
+  function rng() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+  for (let ci = 0; ci < cols.length - 1; ci++) {
+    const cur = cols[ci], next = cols[ci + 1];
+    for (let i = 0; i < cur.count; i++) {
+      const fanOut = 1 + Math.floor(rng() * 2);
+      for (let f = 0; f < fanOut; f++) {
+        const j = Math.floor(rng() * next.count);
+        const p1 = positions[`${ci}-${i}`];
+        const p2 = positions[`${ci+1}-${j}`];
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const c1x = (p1.x + p2.x) / 2, c1y = p1.y;
+        const c2x = (p1.x + p2.x) / 2, c2y = p2.y;
+        path.setAttribute('d', `M${p1.x},${p1.y} C${c1x},${c1y} ${c2x},${c2y} ${p2.x},${p2.y}`);
+        const hot = activeIdx.has(`${ci}-${i}`) && activeIdx.has(`${ci+1}-${j}`);
+        path.setAttribute('stroke', hot ? '#F5C26B' : 'rgba(255,255,255,0.10)');
+        path.setAttribute('stroke-width', hot ? 1.4 : 0.8);
+        path.setAttribute('fill', 'none');
+        edgesEl.appendChild(path);
+      }
+    }
+  }
+</script>
+
+</body>
+</html>

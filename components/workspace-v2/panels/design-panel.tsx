@@ -4,18 +4,23 @@
 
 "use client";
 
-import { useRef, useState, type ComponentType } from "react";
+import { useMemo, useRef, useState, type ComponentType } from "react";
+import type { LayoutPreset } from "@/lib/design/demo-slots";
+import { LayoutWireframe } from "../layout-wireframes";
 import {
   Check,
   ChevronDown,
+  ChevronUp,
   type IconProps,
   ImageIcon,
   Layers,
   PaletteIcon,
+  Plus,
   Rows,
   Sparkles,
   SquareDashed,
   Type,
+  X,
 } from "../icons";
 import {
   BG_PRESETS,
@@ -25,11 +30,13 @@ import {
   PALETTES,
   RADIUS_OPTS,
   TYPE_SYSTEMS,
+  makeSectionId,
   type DecorationValue,
   type DensityValue,
   type DesignState,
   type Palette,
   type RadiusValue,
+  type SectionInstance,
   type TypeSystem,
 } from "../mock-data";
 import { BgThumb } from "../thumbs";
@@ -367,63 +374,227 @@ interface DesignPanelProps {
   setDesign: (patch: Partial<DesignState>) => void;
 }
 
-export function DesignPanel({ design, setDesign }: DesignPanelProps) {
-  // Group the 17 layouts by primitive family for the picker.
-  const grouped = LAYOUT_PRESETS.reduce<Record<string, typeof LAYOUT_PRESETS>>(
-    (acc, l) => {
-      (acc[l.group] = acc[l.group] || []).push(l);
-      return acc;
-    },
-    {},
+// ─────────────────────────────────────────────────────────────────────────────
+// CompositionEditor — the ordered list of sections that make up the current
+// landing. Click a section to swap its variant. Plus button at the bottom
+// inserts a new section. Up/down arrows reorder. Trash removes.
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface CompositionEditorProps {
+  composition: SectionInstance[];
+  onChange: (next: SectionInstance[]) => void;
+}
+
+function CompositionEditor({ composition, onChange }: CompositionEditorProps) {
+  // Local state: which section is currently in "swap variant" picker mode.
+  const [openVariantFor, setOpenVariantFor] = useState<string | null>(null);
+  // Local state: showing the "add section" picker (lists all 17 layouts).
+  const [adding, setAdding] = useState(false);
+
+  const grouped = useMemo<Record<string, LayoutPreset[]>>(
+    () =>
+      LAYOUT_PRESETS.reduce<Record<string, LayoutPreset[]>>((acc, l) => {
+        (acc[l.group] = acc[l.group] || []).push(l);
+        return acc;
+      }, {}),
+    [],
   );
+
+  const swap = (sectionId: string, newLayoutId: string) => {
+    onChange(
+      composition.map((s) =>
+        s.id === sectionId ? { ...s, layoutId: newLayoutId } : s,
+      ),
+    );
+    setOpenVariantFor(null);
+  };
+  const move = (sectionId: string, dir: -1 | 1) => {
+    const idx = composition.findIndex((s) => s.id === sectionId);
+    if (idx === -1) return;
+    const next = [...composition];
+    const target = idx + dir;
+    if (target < 0 || target >= next.length) return;
+    [next[idx], next[target]] = [next[target], next[idx]];
+    onChange(next);
+  };
+  const remove = (sectionId: string) => {
+    onChange(composition.filter((s) => s.id !== sectionId));
+  };
+  const add = (layoutId: string) => {
+    onChange([...composition, { id: makeSectionId(), layoutId }]);
+    setAdding(false);
+  };
+
   return (
-    <div className="overflow-y-auto nice-scroll h-full">
-      <DesignSection label="Layout" icon={Layers}>
-        <div className="flex flex-col gap-3">
-          <button
-            type="button"
-            onClick={() => setDesign({ layoutId: null })}
-            className={`text-left px-2.5 py-2 rounded-md text-[12px] transition ${
-              design.layoutId === null
-                ? "bg-accent-soft text-accent ring-1 ring-[var(--accent)]"
-                : "fg-muted hover:bg-hover bd ring-1 ring-[color:var(--border)]"
-            }`}
-          >
-            <span className="font-medium">Mock Acme landing</span>
-            <span className="block text-[10.5px] fg-faint mt-0.5">
-              Default preview · nav + 5 sections + footer
-            </span>
-          </button>
-          {Object.entries(grouped).map(([group, items]) => (
-            <div key={group}>
-              <div
-                className="text-[9.5px] uppercase tracking-[0.18em] font-semibold fg-faint mb-1.5 px-0.5 ui-small"
+    <div className="flex flex-col gap-1.5">
+      {composition.map((sec, i) => {
+        const preset = LAYOUT_PRESETS.find((l) => l.id === sec.layoutId);
+        const open = openVariantFor === sec.id;
+        return (
+          <div key={sec.id}>
+            <div
+              className="flex items-center gap-2 px-2 py-1.5 rounded-md text-[12px] bd ring-1 ring-[color:var(--border)] bg-[color:var(--bg)]"
+            >
+              <span className="font-mono text-[9.5px] tabular-nums fg-faint w-4 ui-small">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <button
+                type="button"
+                onClick={() => setOpenVariantFor(open ? null : sec.id)}
+                className="flex-1 text-left flex items-center gap-2 min-w-0"
+                title={preset?.label}
               >
-                {group}
+                <span className="shrink-0 fg-faint">
+                  <LayoutWireframe layoutId={sec.layoutId} size={42} />
+                </span>
+                <span className="min-w-0 flex flex-col gap-0">
+                  <span className="font-medium fg truncate leading-tight">
+                    {preset?.group ?? "??"}
+                  </span>
+                  <span className="fg-muted truncate text-[10.5px] leading-tight">
+                    {preset?.label ?? sec.layoutId}
+                  </span>
+                </span>
+                <ChevronDown
+                  size={10}
+                  className={`fg-faint ml-auto transition-transform ${open ? "rotate-180" : ""}`}
+                />
+              </button>
+              <button
+                type="button"
+                title="Move up"
+                onClick={() => move(sec.id, -1)}
+                disabled={i === 0}
+                className="p-1 rounded fg-faint hover:bg-hover disabled:opacity-30"
+              >
+                <ChevronUp size={11} />
+              </button>
+              <button
+                type="button"
+                title="Move down"
+                onClick={() => move(sec.id, 1)}
+                disabled={i === composition.length - 1}
+                className="p-1 rounded fg-faint hover:bg-hover disabled:opacity-30"
+              >
+                <ChevronDown size={11} />
+              </button>
+              <button
+                type="button"
+                title="Remove section"
+                onClick={() => remove(sec.id)}
+                className="p-1 rounded fg-faint hover:bg-hover hover:text-[oklch(58%_0.22_25)]"
+              >
+                <X size={11} />
+              </button>
+            </div>
+            {open && (
+              <div className="mt-1.5 mb-2 ml-5 pl-2 border-l-[1.5px] bd flex flex-col gap-1.5">
+                {Object.entries(grouped).map(([group, items]) => (
+                  <div key={group} className="py-1">
+                    <div className="text-[9px] uppercase tracking-[0.16em] font-semibold fg-faint mb-1 ui-small">
+                      {group}
+                    </div>
+                    <div className="grid grid-cols-3 gap-1">
+                      {items.map((l) => {
+                        const active = sec.layoutId === l.id;
+                        return (
+                          <button
+                            key={l.id}
+                            type="button"
+                            onClick={() => swap(sec.id, l.id)}
+                            title={l.label}
+                            className={`group flex flex-col items-center gap-1 p-1 rounded-md text-[9.5px] transition ${
+                              active
+                                ? "bg-accent-soft ring-1 ring-[var(--accent)]"
+                                : "ring-1 ring-[color:var(--border)] hover:ring-[color:var(--border-strong)] hover:bg-hover"
+                            }`}
+                          >
+                            <span className={active ? "text-accent" : "fg-faint"}>
+                              <LayoutWireframe layoutId={l.id} size={46} />
+                            </span>
+                            <span
+                              className={`truncate w-full text-center leading-tight ${active ? "text-accent font-medium" : "fg-muted"}`}
+                            >
+                              {l.label}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="flex flex-col gap-1">
-                {items.map((l) => {
-                  const active = design.layoutId === l.id;
-                  return (
+            )}
+          </div>
+        );
+      })}
+      {adding ? (
+        <div className="border-t bd pt-2 mt-1">
+          <div className="text-[9.5px] uppercase tracking-[0.16em] font-semibold fg-faint mb-1.5 px-1 ui-small">
+            Pick a section to add
+          </div>
+          <div className="max-h-72 overflow-y-auto nice-scroll flex flex-col gap-1.5">
+            {Object.entries(grouped).map(([group, items]) => (
+              <div key={group} className="py-0.5">
+                <div className="text-[8.5px] uppercase tracking-[0.16em] font-semibold fg-faint mb-1 px-1 ui-small">
+                  {group}
+                </div>
+                <div className="grid grid-cols-3 gap-1">
+                  {items.map((l) => (
                     <button
                       key={l.id}
                       type="button"
-                      onClick={() => setDesign({ layoutId: l.id })}
-                      className={`flex items-center justify-between text-left px-2.5 py-1.5 rounded-md text-[12px] transition ${
-                        active
-                          ? "bg-accent-soft text-accent ring-1 ring-[var(--accent)]"
-                          : "fg-muted hover:bg-hover"
-                      }`}
+                      onClick={() => add(l.id)}
+                      title={l.label}
+                      className="group flex flex-col items-center gap-1 p-1 rounded-md text-[9.5px] ring-1 ring-[color:var(--border)] hover:ring-[color:var(--border-strong)] hover:bg-hover transition"
                     >
-                      <span>{l.label}</span>
-                      {active && <Check size={11} stroke={3} className="text-accent" />}
+                      <span className="fg-faint group-hover:text-accent">
+                        <LayoutWireframe layoutId={l.id} size={46} />
+                      </span>
+                      <span className="truncate w-full text-center fg-muted leading-tight">
+                        {l.label}
+                      </span>
                     </button>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setAdding(false)}
+            className="mt-1 w-full text-[10.5px] fg-faint py-1 hover:bg-hover rounded transition"
+          >
+            Cancel
+          </button>
         </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="flex items-center justify-center gap-1.5 w-full px-2 py-1.5 rounded-md text-[11.5px] bd ring-1 ring-[color:var(--border)] hover:ring-[color:var(--border-strong)] hover:bg-hover transition fg-muted"
+        >
+          <Plus size={11} />
+          Add section
+        </button>
+      )}
+      {composition.length === 0 && (
+        <div className="text-[10.5px] fg-faint italic px-1">
+          No sections — preview shows the mock Acme landing.
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function DesignPanel({ design, setDesign }: DesignPanelProps) {
+  return (
+    <div className="overflow-y-auto nice-scroll h-full">
+      <DesignSection label="Composition" icon={Layers}>
+        <CompositionEditor
+          composition={design.composition}
+          onChange={(next) => setDesign({ composition: next })}
+        />
       </DesignSection>
       <DesignSection label="Background" icon={ImageIcon}>
         <div className="grid grid-cols-4 gap-1.5">

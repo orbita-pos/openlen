@@ -1,0 +1,814 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Compass — Service mesh observability for Kubernetes</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0F0F0F;
+    --bg-2: #131315;
+    --bg-3: #18181B;
+    --hair: rgba(255,255,255,0.06);
+    --hair-2: rgba(255,255,255,0.10);
+    --fg: #ECECEC;
+    --fg-dim: rgba(255,255,255,0.62);
+    --fg-faint: rgba(255,255,255,0.40);
+    --accent: #00D4D4;
+    --accent-r: 0,212,212;
+    --accent-2: #65E6E6;
+    --amber: #F5B86B;
+    --rose: #F47373;
+    --green: #7BD9A8;
+  }
+  html, body { background: var(--bg); color: var(--fg); }
+  body {
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: "ss01","cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: 'Geist Mono', ui-monospace, monospace; }
+  .display { letter-spacing: -0.035em; line-height: 0.98; font-weight: 600; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .hairline { border-color: var(--hair); }
+  .hairline-2 { border-color: var(--hair-2); }
+  .dot-grid {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .radial-fade-accent { background: radial-gradient(60% 50% at 50% 0%, rgba(var(--accent-r), 0.10), transparent 70%); }
+  .radial-fade-soft { background: radial-gradient(50% 60% at 50% 0%, rgba(var(--accent-r), 0.06), transparent 70%); }
+  @keyframes pulse-dot {
+    0% { box-shadow: 0 0 0 0 rgba(var(--accent-r), 0.6); }
+    70% { box-shadow: 0 0 0 8px rgba(var(--accent-r), 0); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--accent-r), 0); }
+  }
+  .pulse-dot { width: 6px; height: 6px; border-radius: 999px; background: var(--accent); animation: pulse-dot 1.8s infinite; }
+  @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+  .marquee-track { animation: marquee 40s linear infinite; }
+  .lift { transition: transform 110ms ease, background-color 110ms ease, box-shadow 130ms ease, border-color 110ms ease; }
+  .lift:hover { transform: translateY(-1px); }
+  .btn-primary { background: var(--accent); color: #002323; font-weight: 600; }
+  .btn-primary:hover { background: #1AE0E0; box-shadow: 0 6px 24px -8px rgba(var(--accent-r), 0.55); }
+  .accent { color: var(--accent-2); }
+  .ring-accent { box-shadow: 0 0 0 1px rgba(var(--accent-r), 0.55), 0 12px 40px -16px rgba(var(--accent-r), 0.30); }
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+  details[open] .faq-plus { transform: rotate(45deg); }
+  .faq-plus { transition: transform 150ms ease; color: var(--accent-2); }
+  .half-tone { color: var(--fg-faint); }
+  .bento-tile { background: linear-gradient(180deg, rgba(255,255,255,0.014), rgba(255,255,255,0)); }
+  .seg-active { background: rgba(255,255,255,0.06); color: var(--fg); }
+  .seg { color: var(--fg-dim); }
+  .dot-divider {
+    background-image: linear-gradient(to right, rgba(255,255,255,0.16) 33%, rgba(255,255,255,0) 0%);
+    background-position: top; background-size: 6px 1px; background-repeat: repeat-x; height: 1px;
+  }
+  .check {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 14px; height: 14px; border-radius: 999px;
+    background: rgba(var(--accent-r), 0.16); color: var(--accent-2);
+    flex: 0 0 14px;
+  }
+  .row-hover:hover { background: rgba(255,255,255,0.025); }
+  .pill-mute { background: rgba(255,255,255,0.04); color: var(--fg-dim); }
+  .pill-rose { background: rgba(244,115,115,0.16); color: #F8A1A1; }
+  .pill-amber { background: rgba(245,184,107,0.16); color: #F5C892; }
+  .pill-accent { background: rgba(var(--accent-r), 0.16); color: var(--accent-2); }
+  .pill-green { background: rgba(64,180,120,0.16); color: #7BD9A8; }
+  .code-cmt { color: rgba(255,255,255,0.32); }
+  .code-key { color: var(--accent-2); }
+  .code-str { color: #E8C998; }
+  .code-num { color: #9EC1F5; }
+  .node-circle { fill: var(--bg-2); stroke: var(--accent); stroke-width: 1.4; }
+  .node-circle-dim { fill: var(--bg-2); stroke: rgba(255,255,255,0.30); stroke-width: 1.4; }
+  .node-circle-err { fill: var(--bg-2); stroke: var(--rose); stroke-width: 1.4; }
+  .edge { stroke: rgba(255,255,255,0.18); stroke-width: 1.1; fill: none; }
+  .edge-hot { stroke: var(--accent); stroke-width: 1.4; fill: none; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- NAV -->
+<header class="sticky top-0 z-40 backdrop-blur-md bg-[rgba(15,15,15,0.72)] border-b hairline">
+  <div class="max-w-[1240px] mx-auto px-6 h-14 flex items-center justify-between">
+    <a href="#" class="flex items-center gap-2.5">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" stroke="#ECECEC" stroke-width="1.2"/>
+        <path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="#ECECEC" stroke-width="1.2" stroke-linecap="round"/>
+        <path d="M12 6l2.4 5.6L12 18l-2.4-6.4L12 6z" fill="#00D4D4"/>
+      </svg>
+      <span class="text-[15px] font-semibold tracking-tight">Compass</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-7 text-[13.5px] text-[color:var(--fg-dim)]">
+      <a class="hover:text-white lift" href="#">Product</a>
+      <a class="hover:text-white lift" href="#">Docs</a>
+      <a class="hover:text-white lift" href="#">Changelog</a>
+      <a class="hover:text-white lift" href="#pricing">Pricing</a>
+    </nav>
+    <div class="flex items-center gap-4">
+      <a href="#" class="text-[13.5px] text-[color:var(--fg-dim)] hover:text-white hidden sm:inline">Sign in</a>
+      <a href="#" class="btn-primary lift rounded-full pl-3.5 pr-2.5 h-8 inline-flex items-center gap-1 text-[13px]">
+        Start tracing free
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 dot-grid opacity-90 pointer-events-none"></div>
+  <div class="absolute inset-x-0 top-0 h-[640px] radial-fade-accent pointer-events-none"></div>
+  <div class="relative max-w-[1240px] mx-auto px-6 pt-20 pb-14">
+    <div class="flex flex-col items-center text-center max-w-3xl mx-auto">
+      <div class="mono text-[11px] tracking-wider uppercase text-[color:var(--fg-dim)] inline-flex items-center gap-2 border hairline rounded-full pl-2 pr-3 py-1 bg-[rgba(255,255,255,0.02)]">
+        <span class="pulse-dot"></span>
+        v3.8 · eBPF + OTel
+      </div>
+      <h1 class="display text-[56px] sm:text-[72px] md:text-[88px] mt-6">
+        See every hop in your cluster. <span class="half-tone">Without rebuilding your stack.</span>
+      </h1>
+      <p class="mt-6 max-w-xl text-[15.5px] text-[color:var(--fg-dim)] leading-relaxed">
+        Compass picks up traces, RPS, and error rates from your existing Envoy and Linkerd proxies using eBPF — no code changes, no sidecar redeploys. Sub-1% CPU overhead per pod.
+      </p>
+      <div class="mt-8 flex items-center gap-3 flex-wrap justify-center">
+        <a href="#" class="btn-primary lift rounded-full px-4 h-10 inline-flex items-center gap-1.5 text-[14px]">
+          Start tracing free
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#" class="lift rounded-full px-4 h-10 inline-flex items-center text-[14px] border hairline-2 hover:bg-white/[0.04]">
+          Read the architecture
+        </a>
+      </div>
+      <div class="mt-6 mono text-[12.5px] text-[color:var(--fg-faint)]">
+        <span class="text-[color:var(--fg-dim)]">$</span> helm install compass compass/agent --namespace observability
+      </div>
+    </div>
+
+    <!-- Hero tiles -->
+    <div class="mt-14 grid grid-cols-1 lg:grid-cols-[1.35fr_1fr] gap-4">
+      <!-- BIG: topology -->
+      <div class="rounded-2xl border hairline bg-[var(--bg-2)] overflow-hidden">
+        <div class="flex items-center justify-between px-4 h-10 border-b hairline">
+          <div class="flex items-center gap-2 mono text-[11.5px] text-[color:var(--fg-dim)]">
+            <span>cluster · prod-us-east-1 · 58 services</span>
+          </div>
+          <div class="flex items-center gap-2 mono text-[11px] text-[color:var(--fg-faint)]">
+            <span class="pulse-dot"></span> live
+            <span class="ml-3">last 5m</span>
+          </div>
+        </div>
+
+        <div class="relative">
+          <svg viewBox="0 0 720 420" class="w-full h-[420px]" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <marker id="arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L6,3 L0,6 z" fill="rgba(255,255,255,0.30)"/></marker>
+              <marker id="arrow-hot" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L6,3 L0,6 z" fill="#00D4D4"/></marker>
+            </defs>
+
+            <!-- edges -->
+            <path class="edge-hot" d="M110,210 C200,210 240,180 320,180" marker-end="url(#arrow-hot)"/>
+            <path class="edge" d="M110,210 C200,210 240,260 320,260" marker-end="url(#arrow)"/>
+            <path class="edge-hot" d="M380,180 C460,180 480,120 540,120" marker-end="url(#arrow-hot)"/>
+            <path class="edge" d="M380,180 C460,180 470,210 540,220" marker-end="url(#arrow)"/>
+            <path class="edge" d="M380,260 C470,260 480,320 540,320" marker-end="url(#arrow)"/>
+            <path class="edge" d="M380,260 C470,260 470,220 540,220" marker-end="url(#arrow)"/>
+            <path class="edge" d="M600,120 C640,120 660,180 660,200" marker-end="url(#arrow)"/>
+            <path class="edge" d="M600,220 C640,220 660,260 660,290" marker-end="url(#arrow)"/>
+
+            <!-- edge labels (RPS) -->
+            <g class="mono" font-size="9" fill="#65E6E6">
+              <text x="218" y="170" text-anchor="middle">2.4k rps</text>
+              <text x="218" y="280">418 rps</text>
+              <text x="470" y="138">1.8k</text>
+              <text x="470" y="338">214</text>
+            </g>
+
+            <!-- ingress node -->
+            <g transform="translate(110,210)">
+              <circle class="node-circle" r="28"/>
+              <text y="2" text-anchor="middle" class="mono" font-size="9.5" fill="#65E6E6">ingress</text>
+              <text y="14" text-anchor="middle" class="mono" font-size="8.5" fill="rgba(255,255,255,0.45)">envoy</text>
+            </g>
+
+            <!-- gateway, auth -->
+            <g transform="translate(350,180)">
+              <circle class="node-circle" r="28"/>
+              <text y="-1" text-anchor="middle" class="mono" font-size="9.5" fill="#ECECEC">gateway</text>
+              <text y="11" text-anchor="middle" class="mono" font-size="8.5" fill="rgba(255,255,255,0.45)">0.04%</text>
+            </g>
+            <g transform="translate(350,260)">
+              <circle class="node-circle-dim" r="24"/>
+              <text y="2" text-anchor="middle" class="mono" font-size="9" fill="#ECECEC">auth</text>
+            </g>
+
+            <!-- product services -->
+            <g transform="translate(570,120)">
+              <circle class="node-circle" r="26"/>
+              <text y="-1" text-anchor="middle" class="mono" font-size="9.5" fill="#ECECEC">orders</text>
+              <text y="11" text-anchor="middle" class="mono" font-size="8.5" fill="#F5C892">1.2% err</text>
+            </g>
+            <g transform="translate(570,220)">
+              <circle class="node-circle-dim" r="24"/>
+              <text y="2" text-anchor="middle" class="mono" font-size="9" fill="#ECECEC">catalog</text>
+            </g>
+            <g transform="translate(570,320)">
+              <circle class="node-circle-err" r="24"/>
+              <text y="-1" text-anchor="middle" class="mono" font-size="9" fill="#ECECEC">pricing</text>
+              <text y="11" text-anchor="middle" class="mono" font-size="8.5" fill="#F1A0A0">4.8% err</text>
+            </g>
+
+            <!-- db layer -->
+            <g transform="translate(670,210)">
+              <rect x="-30" y="-14" width="60" height="28" rx="4" class="node-circle"/>
+              <text y="2" text-anchor="middle" class="mono" font-size="9" fill="#65E6E6">postgres</text>
+            </g>
+            <g transform="translate(670,300)">
+              <rect x="-30" y="-14" width="60" height="28" rx="4" class="node-circle-dim"/>
+              <text y="2" text-anchor="middle" class="mono" font-size="9" fill="#ECECEC">redis</text>
+            </g>
+          </svg>
+          <!-- legend -->
+          <div class="absolute left-4 bottom-3 mono text-[10.5px] text-[color:var(--fg-faint)] flex gap-3">
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#00D4D4"></span>healthy</span>
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#F5B86B"></span>degraded</span>
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#F47373"></span>error</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="rounded-2xl border hairline bg-[var(--bg-2)] p-5 flex flex-col">
+        <div class="flex items-center justify-between">
+          <div class="mono text-[11px] uppercase tracking-wider text-[color:var(--fg-faint)]">cluster · last 5m</div>
+          <div class="mono text-[11px] accent flex items-center gap-1.5"><span class="pulse-dot"></span>live</div>
+        </div>
+        <div class="grid grid-cols-2 gap-px mt-5 bg-[var(--hair)] rounded-xl overflow-hidden border hairline">
+          <div class="bg-[var(--bg-2)] p-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Services tracked</div>
+            <div class="display text-3xl mt-2 tabular">58</div>
+            <div class="mono text-[11px] mt-1 accent tabular">+2 this week</div>
+          </div>
+          <div class="bg-[var(--bg-2)] p-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Spans / second</div>
+            <div class="display text-3xl mt-2 tabular">142,408</div>
+            <div class="mono text-[11px] mt-1 accent tabular">peak 184k</div>
+          </div>
+          <div class="bg-[var(--bg-2)] p-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Mesh latency overhead P95</div>
+            <div class="display text-3xl mt-2 tabular">0.84<span class="text-base text-[color:var(--fg-dim)]"> ms</span></div>
+            <div class="mono text-[11px] mt-1 accent tabular">−0.18ms / 7d</div>
+          </div>
+          <div class="bg-[var(--bg-2)] p-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Active alerts</div>
+            <div class="display text-3xl mt-2 tabular">3</div>
+            <div class="mono text-[11px] mt-1 text-[#F5C892] tabular">1 sev-2, 2 sev-3</div>
+          </div>
+        </div>
+        <div class="mt-5">
+          <div class="flex items-center justify-between mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">
+            <span>Spans / sec</span>
+            <span class="tabular text-[color:var(--fg-dim)]">last 24h</span>
+          </div>
+          <svg viewBox="0 0 280 70" class="w-full h-[70px] mt-2" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="sparkA" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#00D4D4" stop-opacity="0.28"/>
+                <stop offset="100%" stop-color="#00D4D4" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <path id="spark1-area" fill="url(#sparkA)"></path>
+            <path id="spark1-line" fill="none" stroke="#00D4D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        </div>
+        <div class="mt-auto pt-5 mono text-[11.5px] text-[color:var(--fg-faint)] flex items-center justify-between">
+          <span>EKS · Linkerd 2.14</span>
+          <span class="text-[color:var(--fg-dim)]">DaemonSet 12 nodes</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LOGO CLOUD -->
+<section class="border-y hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-9">
+    <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)] text-center">Observing clusters in production at</div>
+    <div class="overflow-hidden mt-6 [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]">
+      <div class="marquee-track flex gap-14 w-max items-center text-[color:var(--fg-dim)]">
+        <span class="text-2xl font-serif italic">Crucible</span>
+        <span class="text-2xl font-semibold tracking-tight">CINDER</span>
+        <span class="text-2xl font-light tracking-[0.18em]">FOUNDRY &amp; CO</span>
+        <span class="text-2xl font-serif">Cargo</span>
+        <span class="text-2xl font-semibold italic">Strata</span>
+        <span class="text-2xl font-mono tracking-tight">lattice/cloud</span>
+        <span class="text-2xl font-bold tracking-tighter">Volt</span>
+        <span class="text-2xl font-serif italic">Beacon Labs</span>
+        <span class="text-2xl font-serif italic">Crucible</span>
+        <span class="text-2xl font-semibold tracking-tight">CINDER</span>
+        <span class="text-2xl font-light tracking-[0.18em]">FOUNDRY &amp; CO</span>
+        <span class="text-2xl font-serif">Cargo</span>
+        <span class="text-2xl font-semibold italic">Strata</span>
+        <span class="text-2xl font-mono tracking-tight">lattice/cloud</span>
+        <span class="text-2xl font-bold tracking-tighter">Volt</span>
+        <span class="text-2xl font-serif italic">Beacon Labs</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BENTO -->
+<section>
+  <div class="max-w-[1240px] mx-auto px-6 py-24">
+    <div class="max-w-2xl">
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">Capabilities</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">The four panes platform teams open <span class="half-tone">on a bad day.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4 max-w-xl">Topology, traces, latency, and saturation — joined on workload labels, not service names. Works on EKS, GKE, AKS, on-prem k3s.</p>
+    </div>
+
+    <div class="mt-12 grid grid-cols-12 grid-rows-[auto_auto] gap-4">
+      <!-- BIG: trace flame -->
+      <div class="col-span-12 lg:col-span-7 lg:row-span-2 bento-tile rounded-2xl border hairline p-6 overflow-hidden">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 5h16M6 11h12M8 17h8" stroke="#65E6E6" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Trace flame chart</div>
+        </div>
+        <h3 class="display text-2xl mt-4">A request, 7 services, one line of vision.</h3>
+        <p class="text-[color:var(--fg-dim)] mt-2 text-sm leading-relaxed">Drilled to span; colored by service. The slow leg of every request is one click away.</p>
+
+        <div class="mt-5 rounded-xl border hairline overflow-hidden">
+          <div class="flex items-center justify-between px-3 h-9 border-b hairline mono text-[11px] text-[color:var(--fg-faint)]">
+            <span>trace 7f1a4c · POST /checkout · 1.18s</span>
+            <span class="accent">P95 of last 1k</span>
+          </div>
+          <div class="p-3 space-y-1.5 mono text-[11px]">
+            <div class="grid grid-cols-[180px_1fr_56px] items-center gap-3">
+              <div class="text-[color:var(--fg-dim)] truncate">ingress · envoy</div>
+              <div class="relative h-3.5 bg-white/[0.04] rounded"><div class="absolute top-0 left-0 h-full rounded" style="width:100%; background:rgba(0,212,212,0.7)"></div></div>
+              <div class="text-right text-[color:var(--fg-faint)] tabular">1180ms</div>
+            </div>
+            <div class="grid grid-cols-[180px_1fr_56px] items-center gap-3">
+              <div class="text-[color:var(--fg-dim)] truncate pl-3">↳ gateway · /checkout</div>
+              <div class="relative h-3.5 bg-white/[0.04] rounded"><div class="absolute top-0 h-full rounded" style="left:2%; width:96%; background:rgba(101,230,230,0.6)"></div></div>
+              <div class="text-right text-[color:var(--fg-faint)] tabular">1128ms</div>
+            </div>
+            <div class="grid grid-cols-[180px_1fr_56px] items-center gap-3">
+              <div class="text-[color:var(--fg-dim)] truncate pl-6">↳ auth · /verify</div>
+              <div class="relative h-3.5 bg-white/[0.04] rounded"><div class="absolute top-0 h-full rounded" style="left:4%; width:11%; background:rgba(255,255,255,0.3)"></div></div>
+              <div class="text-right text-[color:var(--fg-faint)] tabular">128ms</div>
+            </div>
+            <div class="grid grid-cols-[180px_1fr_56px] items-center gap-3">
+              <div class="text-[color:var(--fg-dim)] truncate pl-6">↳ orders · /create</div>
+              <div class="relative h-3.5 bg-white/[0.04] rounded"><div class="absolute top-0 h-full rounded" style="left:17%; width:48%; background:rgba(101,230,230,0.6)"></div></div>
+              <div class="text-right text-[color:var(--fg-faint)] tabular">566ms</div>
+            </div>
+            <div class="grid grid-cols-[180px_1fr_56px] items-center gap-3">
+              <div class="text-[color:var(--fg-dim)] truncate pl-9">↳ pricing · /quote</div>
+              <div class="relative h-3.5 bg-white/[0.04] rounded"><div class="absolute top-0 h-full rounded" style="left:21%; width:32%; background:#F5B86B"></div></div>
+              <div class="text-right text-[#F5C892] tabular">378ms</div>
+            </div>
+            <div class="grid grid-cols-[180px_1fr_56px] items-center gap-3">
+              <div class="text-[color:var(--fg-dim)] truncate pl-12">↳ pg.query <span class="text-[color:var(--fg-faint)]">SELECT … pricing_rules</span></div>
+              <div class="relative h-3.5 bg-white/[0.04] rounded"><div class="absolute top-0 h-full rounded" style="left:24%; width:24%; background:#F47373"></div></div>
+              <div class="text-right text-[#F1A0A0] tabular">284ms</div>
+            </div>
+            <div class="grid grid-cols-[180px_1fr_56px] items-center gap-3">
+              <div class="text-[color:var(--fg-dim)] truncate pl-9">↳ catalog · /sku</div>
+              <div class="relative h-3.5 bg-white/[0.04] rounded"><div class="absolute top-0 h-full rounded" style="left:55%; width:8%; background:rgba(255,255,255,0.3)"></div></div>
+              <div class="text-right text-[color:var(--fg-faint)] tabular">92ms</div>
+            </div>
+            <div class="grid grid-cols-[180px_1fr_56px] items-center gap-3">
+              <div class="text-[color:var(--fg-dim)] truncate pl-6">↳ payments · /charge</div>
+              <div class="relative h-3.5 bg-white/[0.04] rounded"><div class="absolute top-0 h-full rounded" style="left:66%; width:30%; background:rgba(101,230,230,0.6)"></div></div>
+              <div class="text-right text-[color:var(--fg-faint)] tabular">354ms</div>
+            </div>
+          </div>
+          <div class="border-t hairline px-3 py-2 mono text-[10.5px] text-[color:var(--fg-faint)] flex justify-between">
+            <span>0ms</span><span>295ms</span><span>590ms</span><span>885ms</span><span>1.18s</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Latency heatmap -->
+      <div class="col-span-12 md:col-span-6 lg:col-span-5 bento-tile rounded-2xl border hairline p-6">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="3" height="3" stroke="#65E6E6" stroke-width="1.4"/><rect x="9" y="4" width="3" height="3" stroke="#65E6E6" stroke-width="1.4"/><rect x="14" y="4" width="3" height="3" stroke="#65E6E6" stroke-width="1.4"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Latency heatmap</div>
+        </div>
+        <h3 class="display text-2xl mt-4">Services × time. Hot cells = bad day.</h3>
+        <p class="text-[color:var(--fg-dim)] mt-2 text-sm leading-relaxed">P95 latency per service, binned in 15-second buckets.</p>
+        <div class="mt-4 mono text-[11px]" id="latHeat"></div>
+      </div>
+
+      <!-- mTLS grid -->
+      <div class="col-span-12 md:col-span-6 lg:col-span-5 bento-tile rounded-2xl border hairline p-6">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="1.5" stroke="#65E6E6" stroke-width="1.4"/><path d="M8 11V8a4 4 0 018 0v3" stroke="#65E6E6" stroke-width="1.4"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">mTLS status</div>
+        </div>
+        <h3 class="display text-2xl mt-4">Mutual TLS, but make it visible.</h3>
+        <p class="text-[color:var(--fg-dim)] mt-2 text-sm leading-relaxed">Pair-wise cert status across the mesh — one yellow flags an expiring cert before Istio does.</p>
+        <div class="mt-4 grid grid-cols-7 gap-1.5">
+          <!-- header row -->
+          <div></div>
+          <div class="mono text-[9.5px] text-[color:var(--fg-faint)] text-center -rotate-45">gw</div>
+          <div class="mono text-[9.5px] text-[color:var(--fg-faint)] text-center -rotate-45">auth</div>
+          <div class="mono text-[9.5px] text-[color:var(--fg-faint)] text-center -rotate-45">ord</div>
+          <div class="mono text-[9.5px] text-[color:var(--fg-faint)] text-center -rotate-45">cat</div>
+          <div class="mono text-[9.5px] text-[color:var(--fg-faint)] text-center -rotate-45">pri</div>
+          <div class="mono text-[9.5px] text-[color:var(--fg-faint)] text-center -rotate-45">pay</div>
+          <!-- rows -->
+          <div class="mono text-[10px] text-[color:var(--fg-dim)] flex items-center">ingress</div>
+          <div class="aspect-square rounded bg-[rgba(0,212,212,0.55)]"></div>
+          <div class="aspect-square rounded bg-[rgba(0,212,212,0.55)]"></div>
+          <div class="aspect-square rounded bg-white/[0.05]"></div>
+          <div class="aspect-square rounded bg-white/[0.05]"></div>
+          <div class="aspect-square rounded bg-white/[0.05]"></div>
+          <div class="aspect-square rounded bg-white/[0.05]"></div>
+
+          <div class="mono text-[10px] text-[color:var(--fg-dim)] flex items-center">gateway</div>
+          <div class="aspect-square rounded bg-white/[0.05]"></div>
+          <div class="aspect-square rounded bg-[rgba(0,212,212,0.55)]"></div>
+          <div class="aspect-square rounded bg-[rgba(0,212,212,0.55)]"></div>
+          <div class="aspect-square rounded bg-[rgba(0,212,212,0.55)]"></div>
+          <div class="aspect-square rounded bg-[rgba(245,184,107,0.7)]"></div>
+          <div class="aspect-square rounded bg-[rgba(0,212,212,0.55)]"></div>
+
+          <div class="mono text-[10px] text-[color:var(--fg-dim)] flex items-center">orders</div>
+          <div class="aspect-square rounded bg-white/[0.05]"></div>
+          <div class="aspect-square rounded bg-white/[0.05]"></div>
+          <div class="aspect-square rounded bg-[rgba(0,212,212,0.55)]"></div>
+          <div class="aspect-square rounded bg-[rgba(0,212,212,0.55)]"></div>
+          <div class="aspect-square rounded bg-[rgba(0,212,212,0.55)]"></div>
+          <div class="aspect-square rounded bg-[rgba(0,212,212,0.55)]"></div>
+        </div>
+        <div class="mt-4 mono text-[10.5px] text-[color:var(--fg-faint)] flex items-center gap-3">
+          <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded" style="background:rgba(0,212,212,0.6)"></span>verified</span>
+          <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded" style="background:rgba(245,184,107,0.7)"></span>cert &lt; 7d</span>
+          <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded bg-white/[0.05]"></span>no path</span>
+        </div>
+      </div>
+
+      <!-- Retry budget -->
+      <div class="col-span-12 md:col-span-5 lg:col-span-4 bento-tile rounded-2xl border hairline p-6">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 1 0 3-6" stroke="#65E6E6" stroke-width="1.4" stroke-linecap="round"/><path d="M3 4v4h4" stroke="#65E6E6" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Retry budget</div>
+        </div>
+        <h3 class="display text-xl mt-4">Cap the retry-storm. Globally.</h3>
+        <pre class="mono text-[11.5px] leading-relaxed mt-3 p-3 rounded-lg border hairline bg-black/40 overflow-x-auto"><span class="code-cmt"># retries.yaml</span>
+<span class="code-key">budget</span>:
+  <span class="code-key">ratio</span>: <span class="code-num">0.2</span>
+  <span class="code-key">min_per_sec</span>: <span class="code-num">10</span>
+  <span class="code-key">ttl</span>: <span class="code-str">"5s"</span>
+<span class="code-key">backoff</span>: exponential
+<span class="code-key">cap</span>: <span class="code-num">3</span></pre>
+      </div>
+
+      <!-- sidecar resources -->
+      <div class="col-span-12 md:col-span-7 lg:col-span-7 bento-tile rounded-2xl border hairline p-6">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 18l4-8 4 4 4-10 4 14" stroke="#65E6E6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Pod resources</div>
+        </div>
+        <h3 class="display text-xl mt-4">Sub-1% CPU per pod. Verified.</h3>
+        <p class="text-[color:var(--fg-dim)] mt-2 text-sm leading-relaxed">eBPF agent runs as a DaemonSet, not a sidecar. Average CPU 0.6%, memory 38 MB resident — measured across 24h on a 12-node EKS cluster.</p>
+        <div class="mt-4 grid grid-cols-3 gap-3 mono text-[11.5px]">
+          <div class="border hairline rounded-lg px-3 py-2.5">
+            <div class="text-[color:var(--fg-faint)] text-[10.5px] uppercase tracking-wider">CPU avg</div>
+            <div class="text-[18px] tabular mt-1">0.61%</div>
+          </div>
+          <div class="border hairline rounded-lg px-3 py-2.5">
+            <div class="text-[color:var(--fg-faint)] text-[10.5px] uppercase tracking-wider">Mem RSS</div>
+            <div class="text-[18px] tabular mt-1">38 MB</div>
+          </div>
+          <div class="border hairline rounded-lg px-3 py-2.5">
+            <div class="text-[color:var(--fg-faint)] text-[10.5px] uppercase tracking-wider">P99 hook</div>
+            <div class="text-[18px] tabular mt-1">14 µs</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BIG ALTERNATING -->
+<section class="border-t hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-24 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+    <div class="rounded-2xl border hairline bg-[var(--bg-2)] overflow-hidden">
+      <div class="flex items-center gap-1 px-3 h-10 border-b hairline">
+        <button class="seg seg-active rounded-md px-3 py-1 mono text-[12px]">Traces</button>
+        <button class="seg rounded-md px-3 py-1 mono text-[12px]">Latency</button>
+        <button class="seg rounded-md px-3 py-1 mono text-[12px]">Errors</button>
+        <button class="seg rounded-md px-3 py-1 mono text-[12px]">Saturation</button>
+        <div class="ml-auto mono text-[11px] text-[color:var(--fg-faint)]">prod · last 15m</div>
+      </div>
+      <div class="grid grid-cols-3 gap-px bg-[var(--hair)]">
+        <div class="bg-[var(--bg-2)] p-4">
+          <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Traces / sec</div>
+          <div class="display text-2xl mt-1 tabular">38,402</div>
+          <div class="mono text-[11px] accent tabular">↗ +8.2% / 24h</div>
+        </div>
+        <div class="bg-[var(--bg-2)] p-4">
+          <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">P95 e2e latency</div>
+          <div class="display text-2xl mt-1 tabular">1.18 s</div>
+          <div class="mono text-[11px] accent tabular">↘ −214ms / 7d</div>
+        </div>
+        <div class="bg-[var(--bg-2)] p-4">
+          <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Error rate</div>
+          <div class="display text-2xl mt-1 tabular">0.084%</div>
+          <div class="mono text-[11px] text-[#F5C892] tabular">↗ pricing 4.8%</div>
+        </div>
+      </div>
+      <!-- flame for sample request -->
+      <div class="p-5">
+        <div class="flex items-center justify-between mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">
+          <span>Sample · POST /checkout · 7 services</span>
+          <span class="tabular text-[color:var(--fg-dim)]">1.18s</span>
+        </div>
+        <div class="mt-3 space-y-1.5 mono text-[11px]">
+          <div class="grid grid-cols-[140px_1fr_56px] items-center gap-3"><div class="text-[color:var(--fg-dim)]">envoy</div><div class="relative h-3.5 bg-white/[0.04] rounded"><div class="absolute h-full rounded" style="left:0;width:100%;background:rgba(0,212,212,0.7)"></div></div><div class="text-right text-[color:var(--fg-faint)] tabular">1180ms</div></div>
+          <div class="grid grid-cols-[140px_1fr_56px] items-center gap-3"><div class="text-[color:var(--fg-dim)]">gateway</div><div class="relative h-3.5 bg-white/[0.04] rounded"><div class="absolute h-full rounded" style="left:1%;width:97%;background:rgba(101,230,230,0.6)"></div></div><div class="text-right text-[color:var(--fg-faint)] tabular">1140ms</div></div>
+          <div class="grid grid-cols-[140px_1fr_56px] items-center gap-3"><div class="text-[color:var(--fg-dim)]">auth</div><div class="relative h-3.5 bg-white/[0.04] rounded"><div class="absolute h-full rounded" style="left:2%;width:11%;background:rgba(255,255,255,0.3)"></div></div><div class="text-right text-[color:var(--fg-faint)] tabular">128ms</div></div>
+          <div class="grid grid-cols-[140px_1fr_56px] items-center gap-3"><div class="text-[color:var(--fg-dim)]">orders</div><div class="relative h-3.5 bg-white/[0.04] rounded"><div class="absolute h-full rounded" style="left:15%;width:48%;background:rgba(101,230,230,0.6)"></div></div><div class="text-right text-[color:var(--fg-faint)] tabular">566ms</div></div>
+          <div class="grid grid-cols-[140px_1fr_56px] items-center gap-3"><div class="text-[color:var(--fg-dim)]">pricing</div><div class="relative h-3.5 bg-white/[0.04] rounded"><div class="absolute h-full rounded" style="left:20%;width:32%;background:#F5B86B"></div></div><div class="text-right text-[#F5C892] tabular">378ms</div></div>
+          <div class="grid grid-cols-[140px_1fr_56px] items-center gap-3"><div class="text-[color:var(--fg-dim)]">catalog</div><div class="relative h-3.5 bg-white/[0.04] rounded"><div class="absolute h-full rounded" style="left:55%;width:8%;background:rgba(255,255,255,0.3)"></div></div><div class="text-right text-[color:var(--fg-faint)] tabular">92ms</div></div>
+          <div class="grid grid-cols-[140px_1fr_56px] items-center gap-3"><div class="text-[color:var(--fg-dim)]">payments</div><div class="relative h-3.5 bg-white/[0.04] rounded"><div class="absolute h-full rounded" style="left:66%;width:30%;background:rgba(101,230,230,0.6)"></div></div><div class="text-right text-[color:var(--fg-faint)] tabular">354ms</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">Zero-config tracing</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Don't touch the code. <span class="half-tone">See the traces.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4 leading-relaxed">Compass attaches at the kernel — eBPF tracepoints on the socket layer pick up every TLS-terminated request inside the mesh. No SDK, no instrumentation library, no rebuild.</p>
+      <ul class="mt-6 space-y-3 text-[15px]">
+        <li class="flex gap-3 items-start"><span class="check mt-1.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Speaks HTTP/1.1, HTTP/2, gRPC, Postgres, Kafka, Redis out of the box.</span></li>
+        <li class="flex gap-3 items-start"><span class="check mt-1.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Reads W3C <span class="mono text-[12.5px]">traceparent</span> from the wire when your app sets one.</span></li>
+        <li class="flex gap-3 items-start"><span class="check mt-1.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Stitches synthetic trace IDs across uninstrumented hops via timing + headers.</span></li>
+        <li class="flex gap-3 items-start"><span class="check mt-1.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Exports OTLP to Jaeger, Tempo, Honeycomb — Compass UI is optional.</span></li>
+      </ul>
+      <a href="#" class="inline-flex items-center gap-1 mt-7 accent text-[14px] lift">Read the eBPF guide <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="border-t hairline relative">
+  <div class="absolute inset-x-0 top-0 h-[300px] radial-fade-soft pointer-events-none"></div>
+  <div class="relative max-w-[1240px] mx-auto px-6 py-24">
+    <div class="text-center max-w-2xl mx-auto">
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">Pricing</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Per cluster. <span class="half-tone">Not per host.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4">Run as many pods as you like. Compass charges by cluster footprint and span retention, not node count.</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-12">
+      <div class="rounded-2xl border hairline p-7 bg-[var(--bg-2)] flex flex-col">
+        <div class="flex items-baseline justify-between"><h3 class="text-lg font-semibold">Cluster</h3><span class="mono text-[11px] text-[color:var(--fg-faint)]">free forever</span></div>
+        <div class="display text-5xl mt-5 tabular">$0</div>
+        <div class="mono text-[11.5px] text-[color:var(--fg-faint)] mt-1">/ month</div>
+        <p class="text-[color:var(--fg-dim)] text-[14px] mt-4">For one cluster up to 30 services.</p>
+        <div class="dot-divider my-6"></div>
+        <ul class="space-y-3 text-[14px]">
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>1 cluster · unlimited nodes</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>7-day trace retention</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Topology + flame chart</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Community Slack</li>
+        </ul>
+        <a href="#" class="mt-auto pt-7 inline-flex items-center justify-center h-10 rounded-full border hairline-2 text-[14px] lift hover:bg-white/[0.04]">Install Helm chart</a>
+      </div>
+      <div class="relative rounded-2xl p-7 bg-[var(--bg-2)] flex flex-col ring-accent">
+        <span class="absolute -top-3 left-5 mono text-[10.5px] uppercase tracking-wider px-2.5 py-1 rounded-full" style="background:#00D4D4;color:#002323">Most popular</span>
+        <div class="flex items-baseline justify-between"><h3 class="text-lg font-semibold">Multi-cluster</h3><span class="mono text-[11px] accent">incl. alerting</span></div>
+        <div class="display text-5xl mt-5 tabular">$199</div>
+        <div class="mono text-[11.5px] text-[color:var(--fg-faint)] mt-1">/ month · billed annually</div>
+        <p class="text-[color:var(--fg-dim)] text-[14px] mt-4">For teams running 2–10 clusters per region.</p>
+        <div class="dot-divider my-6"></div>
+        <ul class="space-y-3 text-[14px]">
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>10 clusters · cross-cluster joins</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>30-day trace retention</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>SLO + burn-rate alerting</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>OTLP export · Grafana plugin</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>SLA: 99.95% query API</li>
+        </ul>
+        <a href="#" class="btn-primary mt-auto pt-0 inline-flex items-center justify-center h-10 rounded-full text-[14px] lift" style="margin-top:1.75rem">Start 14-day trial</a>
+      </div>
+      <div class="rounded-2xl border hairline p-7 bg-[var(--bg-2)] flex flex-col">
+        <div class="flex items-baseline justify-between"><h3 class="text-lg font-semibold">Fleet</h3><span class="mono text-[11px] text-[color:var(--fg-faint)]">air-gap</span></div>
+        <div class="display text-5xl mt-5 tabular">$499</div>
+        <div class="mono text-[11.5px] text-[color:var(--fg-faint)] mt-1">/ month base · usage on top</div>
+        <p class="text-[color:var(--fg-dim)] text-[14px] mt-4">For platform teams with 50+ clusters and regulated workloads.</p>
+        <div class="dot-divider my-6"></div>
+        <ul class="space-y-3 text-[14px]">
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Unlimited clusters · multi-tenant</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Air-gapped deploy · self-host</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Signed audit log · SOC 2 · SSO</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Customer-managed encryption</li>
+        </ul>
+        <a href="#" class="mt-auto pt-7 inline-flex items-center justify-center h-10 rounded-full border hairline-2 text-[14px] lift hover:bg-white/[0.04]">Talk to sales</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="border-t hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-24">
+    <div class="max-w-2xl">
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">Customers</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Platform teams running real clusters <span class="half-tone">at real scale.</span></h2>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-12">
+      <div class="rounded-2xl border hairline p-6 bg-[var(--bg-2)]">
+        <div class="flex gap-0.5 accent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        </div>
+        <blockquote class="mt-4 text-[15px] leading-relaxed">"We rolled Compass out across 31 EKS clusters in three hours. No code changes. The CPU overhead on our 8k-pod fleet is 0.6%, end of story."</blockquote>
+        <div class="flex items-center gap-3 mt-6">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center mono text-[12px] font-semibold" style="background:rgba(0,212,212,0.20);color:#65E6E6">YA</div>
+          <div class="text-[13px]"><div class="font-medium">Yusuf Abara</div><div class="text-[color:var(--fg-faint)]">CTO · Mercury</div></div>
+        </div>
+      </div>
+      <div class="rounded-2xl border hairline p-6 bg-[var(--bg-2)]">
+        <div class="flex gap-0.5 accent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        </div>
+        <blockquote class="mt-4 text-[15px] leading-relaxed">"The eBPF approach means our app teams don't need to touch their dockerfiles. Compass detected a retry storm in pricing 14 seconds before our SLO burn alarm did."</blockquote>
+        <div class="flex items-center gap-3 mt-6">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center mono text-[12px] font-semibold" style="background:rgba(0,212,212,0.20);color:#65E6E6">HS</div>
+          <div class="text-[13px]"><div class="font-medium">Hana Suzuki</div><div class="text-[color:var(--fg-faint)]">Platform Lead · Glide</div></div>
+        </div>
+      </div>
+      <div class="rounded-2xl border hairline p-6 bg-[var(--bg-2)]">
+        <div class="flex gap-0.5 accent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        </div>
+        <blockquote class="mt-4 text-[15px] leading-relaxed">"Our previous mesh dashboard required redeploying every sidecar. Compass dropped in as a DaemonSet and we got better fidelity that night."</blockquote>
+        <div class="flex items-center gap-3 mt-6">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center mono text-[12px] font-semibold" style="background:rgba(0,212,212,0.20);color:#65E6E6">IC</div>
+          <div class="text-[13px]"><div class="font-medium">Ines Calderón</div><div class="text-[color:var(--fg-faint)]">Head of Platform · Brightwave</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="border-t hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-24 grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-12">
+    <div>
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">FAQ</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Frequently asked, <span class="half-tone">honestly answered.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4 max-w-sm">Most of our team is ex-Cilium and ex-Datadog. If something here doesn't satisfy, ping <a href="#" class="accent">platform@compass.dev</a>.</p>
+    </div>
+    <div>
+      <details class="py-5 border-b hairline">
+        <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">Does it require sidecar injection or can I use Envoy at the ingress?</span><span class="faq-plus mono text-lg leading-none">+</span></summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">Neither is required. The agent runs as a DaemonSet and reads kernel events directly. If you already have Envoy or Linkerd injected, Compass also consumes their stats endpoint for richer L7 metadata — but it's strictly additive. A pod with no proxy still gets full topology and RPS coverage.</p>
+      </details>
+      <details class="py-5 border-b hairline">
+        <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">What's the CPU/memory overhead per pod?</span><span class="faq-plus mono text-lg leading-none">+</span></summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">The agent itself is per-node, not per-pod. On a typical mixed workload we measure 0.6% CPU and 38 MB RSS per node averaged over 24h, and a P99 hook latency of 14µs. There is zero overhead added to the application pods themselves — they don't run any Compass code.</p>
+      </details>
+      <details class="py-5 border-b hairline">
+        <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">Can I export traces to my existing Jaeger?</span><span class="faq-plus mono text-lg leading-none">+</span></summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">Yes. The agent's primary protocol is OTLP — point it at Jaeger, Tempo, Honeycomb, or any OTLP-compatible collector and you can use Compass purely as a capture layer. Our UI is optional and you only pay for what you query.</p>
+      </details>
+      <details class="py-5 border-b hairline">
+        <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">How do you handle multi-tenancy in a shared cluster?</span><span class="faq-plus mono text-lg leading-none">+</span></summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">Namespaces are the tenant boundary. The agent applies a tenant label to every span based on the source pod's namespace, and our RBAC enforces row-level filters at query time. You can scope an API token to a single namespace, multiple, or the whole cluster.</p>
+      </details>
+      <details class="py-5 border-b hairline">
+        <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">Does it work on EKS Fargate?</span><span class="faq-plus mono text-lg leading-none">+</span></summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">Fargate denies kernel-level access, so eBPF mode is out. We ship a Fargate-compatible userspace agent that consumes the Envoy admin endpoint and proxy access logs. Coverage is slightly lower (no DB-protocol parsing without proxy support) but topology, RPS, and HTTP latency are intact.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="px-6 pb-24">
+  <div class="max-w-[1240px] mx-auto relative rounded-2xl border hairline overflow-hidden p-10 md:p-16 text-center" style="background:linear-gradient(180deg, rgba(0,212,212,0.04), rgba(255,255,255,0));">
+    <div class="absolute inset-0 dot-grid opacity-80 pointer-events-none"></div>
+    <div class="absolute inset-x-0 top-0 h-full radial-fade-accent pointer-events-none"></div>
+    <div class="relative">
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent inline-flex items-center gap-2"><span class="pulse-dot"></span>Helm install · 90 seconds</div>
+      <h2 class="display text-4xl md:text-6xl mt-5">One DaemonSet. <span class="half-tone">A full mesh map.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4 max-w-xl mx-auto">Free for a single cluster, forever. No credit card, no contract — just a Helm chart and a topology graph in your browser.</p>
+      <div class="mt-7 flex items-center gap-3 justify-center flex-wrap">
+        <a href="#" class="btn-primary lift rounded-full px-5 h-11 inline-flex items-center gap-1.5 text-[14px]">Start tracing free<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        <a href="#" class="lift rounded-full px-5 h-11 inline-flex items-center text-[14px] border hairline-2 hover:bg-white/[0.04]">Talk to sales</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="border-t hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-14 grid grid-cols-2 md:grid-cols-5 gap-8">
+    <div class="col-span-2">
+      <div class="flex items-center gap-2.5">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#ECECEC" stroke-width="1.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="#ECECEC" stroke-width="1.2" stroke-linecap="round"/><path d="M12 6l2.4 5.6L12 18l-2.4-6.4L12 6z" fill="#00D4D4"/></svg>
+        <span class="text-[15px] font-semibold tracking-tight">Compass</span>
+      </div>
+      <p class="text-[13.5px] text-[color:var(--fg-dim)] mt-3 max-w-xs">Service mesh observability for Kubernetes. eBPF + OTel.</p>
+      <a href="#" class="mt-4 mono text-[11px] inline-flex items-center gap-2 border hairline rounded-full pl-2 pr-3 py-1 text-[color:var(--fg-dim)]"><span class="pulse-dot"></span>Query API · 99.97% / 90d</a>
+    </div>
+    <div><div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Product</div>
+      <ul class="mt-3 space-y-2 text-[13.5px] text-[color:var(--fg-dim)]"><li><a href="#" class="hover:text-white">Topology</a></li><li><a href="#" class="hover:text-white">Traces</a></li><li><a href="#" class="hover:text-white">Alerts</a></li><li><a href="#" class="hover:text-white">SLOs</a></li></ul>
+    </div>
+    <div><div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Developers</div>
+      <ul class="mt-3 space-y-2 text-[13.5px] text-[color:var(--fg-dim)]"><li><a href="#" class="hover:text-white">Docs</a></li><li><a href="#" class="hover:text-white">Helm chart</a></li><li><a href="#" class="hover:text-white">OTLP export</a></li><li><a href="#" class="hover:text-white">Changelog</a></li></ul>
+    </div>
+    <div><div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Company</div>
+      <ul class="mt-3 space-y-2 text-[13.5px] text-[color:var(--fg-dim)]"><li><a href="#" class="hover:text-white">About</a></li><li><a href="#" class="hover:text-white">Customers</a></li><li><a href="#" class="hover:text-white">Security</a></li><li><a href="#" class="hover:text-white">Careers · 8</a></li></ul>
+    </div>
+  </div>
+  <div class="border-t hairline">
+    <div class="max-w-[1240px] mx-auto px-6 py-5 flex flex-col md:flex-row items-center justify-between gap-3 mono text-[11.5px] text-[color:var(--fg-faint)]">
+      <div>© 2026 Compass Systems, Inc. · Seattle / Lisbon</div>
+      <div class="flex items-center gap-5"><a href="#" class="hover:text-white">Privacy</a><a href="#" class="hover:text-white">Terms</a><a href="#" class="hover:text-white">DPA</a><span>v3.8.2 · 84a1c0</span></div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  function buildPath(data, opts) {
+    const { width, height, padY = 4, area = false } = opts;
+    const max = Math.max(...data), min = Math.min(...data);
+    const span = Math.max(1, max - min);
+    const stepX = width / (data.length - 1);
+    let d = '';
+    data.forEach((v, i) => {
+      const x = i * stepX;
+      const y = padY + (1 - (v - min) / span) * (height - padY * 2);
+      d += (i === 0 ? 'M' : 'L') + x.toFixed(2) + ',' + y.toFixed(2) + ' ';
+    });
+    if (area) d += `L${width},${height} L0,${height} Z`;
+    return d;
+  }
+  function series(n, base, vol, seed) {
+    let s = seed; const out = [];
+    for (let i = 0; i < n; i++) {
+      s = (s * 9301 + 49297) % 233280;
+      const r = s / 233280;
+      base = base + (r - 0.45) * vol;
+      out.push(base);
+    }
+    return out;
+  }
+  const d1 = series(28, 120, 8, 31);
+  document.getElementById('spark1-line').setAttribute('d', buildPath(d1, { width: 280, height: 70 }));
+  document.getElementById('spark1-area').setAttribute('d', buildPath(d1, { width: 280, height: 70, area: true }));
+
+  // latency heatmap
+  const services = ['gateway','auth','orders','catalog','pricing','payments','search'];
+  const cols = 24;
+  function heatColor(v) {
+    if (v <= 0) return 'rgba(255,255,255,0.05)';
+    const a = Math.min(0.85, 0.12 + v * 0.18);
+    return `rgba(0,212,212,${a})`;
+  }
+  const lh = document.getElementById('latHeat');
+  services.forEach((svc, idx) => {
+    let s = idx * 91 + 7;
+    const cells = [];
+    for (let i = 0; i < cols; i++) {
+      s = (s * 9301 + 49297) % 233280;
+      const r = s / 233280;
+      // give pricing and orders some hot spots
+      let v = Math.floor(r * 4);
+      if (svc === 'pricing' && i > 10 && i < 18) v = 4;
+      if (svc === 'orders' && i > 14 && i < 19) v = 3;
+      cells.push(v);
+    }
+    const row = document.createElement('div');
+    row.className = 'grid grid-cols-[80px_1fr] gap-3 items-center py-0.5';
+    row.innerHTML = `
+      <div class="text-[color:var(--fg-dim)]">${svc}</div>
+      <div class="grid gap-[2px]" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">
+        ${cells.map(v => `<div class="h-3 rounded-[2px]" style="background:${heatColor(v)}"></div>`).join('')}
+      </div>`;
+    lh.appendChild(row);
+  });
+</script>
+
+</body>
+</html>
