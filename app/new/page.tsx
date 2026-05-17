@@ -131,6 +131,11 @@ function NewPageInner() {
   const [savedLabel, setSavedLabel] = useState("Saved 2 min ago");
   const [panelOpen, setPanelOpen] = useState(true);
   const [editMode, setEditMode] = useState(false);
+  // Session 12 — editor-mode HTML (carries `data-slot-path` + contenteditable)
+  // for the workspace iframe when `editMode` is on. The canonical
+  // `state.result.html` stays clean (publish/zip-safe). Cleared when edit mode
+  // toggles off so the next ON can request a fresh render.
+  const [editorHtml, setEditorHtml] = useState<string | null>(null);
   const [editorSavedLabel, setEditorSavedLabel] = useState<string | null>(null);
   // Default ON so first-time users see the full visual experience. Off means
   // FLUX/Wan are skipped and the page renders text-only.
@@ -264,9 +269,20 @@ function NewPageInner() {
     // preview iframe is in sync. If the request fails we silently keep the
     // blocks — the user can edit again to force another reassemble.
     applyLiveEdit(cached);
-    void reassembleNow(state.result.plan, cached, state.result.images, state.result.meta.intent)
-      .then((html) => {
-        if (html) applyLiveEdit(cached, html);
+    void reassembleNow(
+      state.result.plan,
+      cached,
+      state.result.images,
+      state.result.meta.intent,
+      undefined,
+      false,
+      // Session 13 — flush localStorage-cached edits to DB on hydration so
+      // edits made before this session's persistence fix don't get stuck
+      // on the device they were authored on.
+      state.projectId,
+    )
+      .then((res) => {
+        if (res) applyLiveEdit(cached, res.html);
       })
       .catch(() => {
         // ignore — see comment above
@@ -316,7 +332,10 @@ function NewPageInner() {
   }, [state]);
 
   const handleSlotsChange = useCallback(
-    (newFilledBlocks: FilledBlock[]) => {
+    (
+      newFilledBlocks: FilledBlock[],
+      source: "sidebar" | "iframe" = "sidebar",
+    ) => {
       if (state.kind !== "generated") return;
       // Optimistic local update — iframe shows stale html until reassemble
       // resolves, but the accordion reflects the edit immediately. The sync
@@ -339,6 +358,13 @@ function NewPageInner() {
       }
       reassembleAbortRef.current?.abort();
       const epochAtStart = regenEpochRef.current;
+      const requestEditor = editMode;
+      const sourceAtStart = source;
+      // Capture projectId at debounce-start so a re-render-induced state
+      // identity change doesn't drop persistence on a coalesced burst of
+      // edits. (state.projectId is stable once the project_saved SSE
+      // event lands, but capturing matches the epoch/editor pattern.)
+      const projectIdAtStart = state.projectId;
       reassembleTimerRef.current = setTimeout(() => {
         const controller = new AbortController();
         reassembleAbortRef.current = controller;
@@ -348,13 +374,23 @@ function NewPageInner() {
           state.result.images,
           state.result.meta.intent,
           controller.signal,
+          requestEditor,
+          projectIdAtStart,
         )
-          .then((html) => {
-            if (!html) return;
+          .then((res) => {
+            if (!res) return;
             // Drop stale html if a regen completed (or started) while we were
             // fetching. The regen's filledBlocks are authoritative.
             if (regenEpochRef.current !== epochAtStart) return;
-            applyLiveEdit(newFilledBlocks, html);
+            applyLiveEdit(newFilledBlocks, res.html);
+            // Only refresh the iframe srcDoc when the change came from the
+            // sidebar — refreshing it on an iframe-originated edit would
+            // reload the iframe and steal focus from whichever span the user
+            // just moved to (Lovable-style hot-typing). The optimistic local
+            // DOM mutation already shows the new value in the iframe.
+            if (requestEditor && res.editorHtml && sourceAtStart !== "iframe") {
+              setEditorHtml(res.editorHtml);
+            }
             setEditorSavedLabel("Saved locally");
           })
           .catch((err) => {
@@ -365,7 +401,7 @@ function NewPageInner() {
           });
       }, REASSEMBLE_DEBOUNCE_MS);
     },
-    [state, applyLiveEdit],
+    [state, applyLiveEdit, editMode],
   );
 
   // Cleanup any pending reassemble when the page unmounts so we don't leak
@@ -377,22 +413,100 @@ function NewPageInner() {
     };
   }, []);
 
+  // Session 12 — inline edits posted from the iframe-editor running inside
+  // the workspace iframe. Parse the slot path, mutate the right block's
+  // slots, and feed it through the same handleSlotsChange machinery as the
+  // sidebar (decision #10: last-write-wins, single source of truth).
+  const handleInlineEdit = useCallback(
+    ({ path, value }: { path: string; value: string }) => {
+      if (state.kind !== "generated") return;
+      const parsed = parseSlotPath(path);
+      if (!parsed) return;
+      const target = state.result.filledBlocks.find(
+        (b) => b.index === parsed.blockIndex,
+      );
+      if (!target) return;
+      const nextSlots = setAtPath(target.slots, parsed.subpath, value);
+      // setAtPath returns null when the path doesn't resolve against the
+      // current slots — that means the block layout changed between the
+      // render and the commit (regen mid-edit). Just drop the message.
+      if (nextSlots === null) return;
+      if (nextSlots === target.slots) return; // value unchanged
+      const newFilledBlocks = state.result.filledBlocks.map((b) =>
+        b.index === parsed.blockIndex ? { ...b, slots: nextSlots } : b,
+      );
+      handleSlotsChange(newFilledBlocks, "iframe");
+    },
+    [state, handleSlotsChange],
+  );
+
+  // When edit mode toggles ON, prime the iframe with editor-mode HTML so the
+  // user can start clicking immediately. Without this one-shot, the iframe
+  // would show clean HTML (no data-slot-path spans) until the first edit
+  // round-trip — and the first edit wouldn't have anything to click.
+  //
+  // We only fetch on the off→on transition. Once editMode is on, the
+  // `handleSlotsChange` path keeps editorHtml in sync for sidebar-originated
+  // edits, and iframe-originated edits intentionally skip the refresh (the
+  // span DOM is already updated optimistically). Regen-section is not
+  // tracked here — after a regen completes, the editor iframe is one toggle
+  // away from a fresh render.
+  const prevEditModeRef = useRef(false);
+  useEffect(() => {
+    const wasOff = !prevEditModeRef.current;
+    prevEditModeRef.current = editMode;
+    if (!editMode) {
+      setEditorHtml(null);
+      return;
+    }
+    if (!wasOff) return;
+    if (state.kind !== "generated") return;
+    let cancelled = false;
+    void reassembleNow(
+      state.result.plan,
+      state.result.filledBlocks,
+      state.result.images,
+      state.result.meta.intent,
+      undefined,
+      true,
+    )
+      .then((res) => {
+        if (cancelled || !res?.editorHtml) return;
+        setEditorHtml(res.editorHtml);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        // eslint-disable-next-line no-console
+        console.error("editor reassemble failed:", err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [editMode, state]);
+
   const handleResetAllEdits = useCallback(() => {
     if (state.kind !== "generated") return;
     clearEditCache(state.result.meta.generationId);
     resetToOriginal();
     setEditorSavedLabel("Reset to AI version");
     // Reassemble immediately — the optimistic UI already shows the original
-    // blocks, but the html still reflects edits until we re-render.
+    // blocks, but the html still reflects edits until we re-render. Pass
+    // projectId so the DB also drops back to the AI baseline; otherwise a
+    // hard reload would resurrect the discarded edits.
     void reassembleNow(
       state.result.plan,
       state.originalFilledBlocks,
       state.result.images,
       state.result.meta.intent,
-    ).then((html) => {
-      if (html) applyLiveEdit(state.originalFilledBlocks, html);
+      undefined,
+      editMode,
+      state.projectId,
+    ).then((res) => {
+      if (!res) return;
+      applyLiveEdit(state.originalFilledBlocks, res.html);
+      if (editMode && res.editorHtml) setEditorHtml(res.editorHtml);
     });
-  }, [state, resetToOriginal, applyLiveEdit]);
+  }, [state, resetToOriginal, applyLiveEdit, editMode]);
 
   const cost = state.kind === "generated" ? state.result.cost : undefined;
   const formState = useMemo(
@@ -487,6 +601,8 @@ function NewPageInner() {
                   }
                 : undefined
             }
+            editorHtml={editorHtml}
+            onSlotEdit={handleInlineEdit}
           />
         </div>
       </div>
@@ -608,19 +724,95 @@ async function reassembleNow(
   images: import("@/lib/orchestrator/types").GeneratedImage[],
   intent: import("@/lib/orchestrator/types").Intent,
   signal?: AbortSignal,
-): Promise<string | null> {
+  editorMode?: boolean,
+  // Session 13 — when set, the server also persists the new filledBlocks +
+  // rendered html to projects.data. Pass for real edits (sidebar/iframe
+  // slot changes, reset-to-AI). Skip for no-op re-renders like the
+  // edit-mode toggle where filledBlocks haven't changed.
+  projectId?: string | null,
+): Promise<{ html: string; editorHtml: string | null } | null> {
   const res = await fetch("/api/reassemble", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ plan, filledBlocks, images, intent }),
+    body: JSON.stringify({
+      plan,
+      filledBlocks,
+      images,
+      intent,
+      editorMode: !!editorMode,
+      projectId: projectId ?? undefined,
+    }),
     signal,
   });
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
     throw new Error(text || `reassemble HTTP ${res.status}`);
   }
-  const data = (await res.json()) as { html?: string };
-  return data.html ?? null;
+  const data = (await res.json()) as { html?: string; editorHtml?: string };
+  if (!data.html) return null;
+  return { html: data.html, editorHtml: data.editorHtml ?? null };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Slot path parsing for Session 12 inline editing.
+//
+// The iframe-editor stamps `data-slot-path="blocks.<i>.slots.<subpath>"` on
+// every editable span. When the iframe posts an `openlen-edit`, we parse the
+// path back into a (blockIndex, subpath[]) pair and mutate that location in
+// the filledBlocks array.
+//
+// Subpath tokens are produced left-to-right: e.g.
+//   "blocks.2.slots.features[3].title"
+//     → blockIndex: 2
+//     → subpath: ["features", 3, "title"]
+// ─────────────────────────────────────────────────────────────────────────────
+function parseSlotPath(
+  path: string,
+): { blockIndex: number; subpath: Array<string | number> } | null {
+  const m = path.match(/^blocks\.(\d+)\.slots\.(.+)$/);
+  if (!m) return null;
+  const blockIndex = Number.parseInt(m[1], 10);
+  if (!Number.isFinite(blockIndex) || blockIndex < 0) return null;
+  const tokens: Array<string | number> = [];
+  for (const segment of m[2].split(".")) {
+    if (segment.length === 0) return null;
+    const re = /([a-zA-Z_$][\w$]*)|\[(\d+)\]/g;
+    let cursor = 0;
+    let part: RegExpExecArray | null;
+    while ((part = re.exec(segment)) !== null) {
+      if (part.index !== cursor) return null;
+      if (part[1] !== undefined) tokens.push(part[1]);
+      else if (part[2] !== undefined) tokens.push(Number.parseInt(part[2], 10));
+      cursor = re.lastIndex;
+    }
+    if (cursor !== segment.length) return null;
+  }
+  return { blockIndex, subpath: tokens };
+}
+
+function setAtPath(
+  target: unknown,
+  subpath: Array<string | number>,
+  value: string,
+): unknown | null {
+  if (subpath.length === 0) return value;
+  const [head, ...rest] = subpath;
+  if (Array.isArray(target)) {
+    if (typeof head !== "number" || head < 0 || head >= target.length) return null;
+    const child = setAtPath(target[head], rest, value);
+    if (child === null) return null;
+    const next = target.slice();
+    next[head] = child;
+    return next;
+  }
+  if (target && typeof target === "object") {
+    if (typeof head !== "string") return null;
+    if (!(head in (target as Record<string, unknown>))) return null;
+    const child = setAtPath((target as Record<string, unknown>)[head], rest, value);
+    if (child === null) return null;
+    return { ...(target as Record<string, unknown>), [head]: child };
+  }
+  return null;
 }
 
 function triggerBlobDownload(blob: Blob, filename: string): void {

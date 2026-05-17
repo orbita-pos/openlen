@@ -7,6 +7,7 @@
 import React from "react";
 import { renderElementToHtml } from "./_render-element";
 import { getBlock, type BlockId } from "@/lib/blocks/_registry";
+import { EditorContext } from "@/lib/blocks/_editable";
 import { paletteToTokens } from "@/lib/blocks/palette-to-tokens";
 import type {
   CostBreakdown,
@@ -137,6 +138,14 @@ export interface RenderDeterministicInput {
   plan: Plan;
 }
 
+export interface RenderOptions {
+  /** When true, every text slot wrapped in <EditableText> emits a span
+   *  with `data-slot-path` + `contenteditable="plaintext-only"` so the
+   *  iframe-editor script can target it. Default false — publish, zip
+   *  export, and the canonical `page.html` field MUST stay clean. */
+  editorMode?: boolean;
+}
+
 export interface RenderDeterministicResult {
   html: string;
   heroAssigned: boolean;
@@ -146,7 +155,9 @@ export interface RenderDeterministicResult {
 
 export function renderDeterministic(
   input: RenderDeterministicInput,
+  opts: RenderOptions = {},
 ): RenderDeterministicResult {
+  const editorMode = opts.editorMode === true;
   const tokens = paletteToTokens(input.paletteName);
   const ordered = [...input.filledBlocks].sort((a, b) => a.index - b.index);
   const hero = input.images.find((i) => i.purpose === "hero");
@@ -177,9 +188,20 @@ export function renderDeterministic(
       slots: unknown;
       tokens: typeof tokens;
     }>;
-    const raw = renderElementToHtml(
-      React.createElement(Component, { slots, tokens }),
-    );
+    const blockElement = React.createElement(Component, { slots, tokens });
+    // In editor mode, wrap in the EditorContext so every <EditableText>
+    // inside the block can stamp `data-slot-path` with the right block index
+    // without each block having to know about it. In normal mode the provider
+    // is omitted entirely so the rendered output is byte-identical to before
+    // this session — preserving publish + zip parity.
+    const wrapped = editorMode
+      ? React.createElement(
+          EditorContext.Provider,
+          { value: { editorMode: true, blockIndex: filled.index } },
+          blockElement,
+        )
+      : blockElement;
+    const raw = renderElementToHtml(wrapped);
     const tagged = injectSectionId(raw, filled.index, filled.blockId);
     // Footer blocks render their own <footer> tag and must sit outside
     // <main> for the WCAG landmark structure.

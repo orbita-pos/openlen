@@ -10,7 +10,9 @@
  * occurrence) is wrapped in an aurora gradient span. Falls back to plain text
  * if `accentWord` is omitted or not found.
  */
+import React from "react";
 import { z } from "zod";
+import { EditableText, EditorContext } from "../_editable";
 import type {
   BlockComponent,
   BlockComponentProps,
@@ -70,6 +72,11 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
   slots,
   tokens,
 }: BlockComponentProps<typeof slotsSchema>) => {
+  // When the workspace iframe is in inline-edit mode, render the headline as
+  // one editable string. The accent-word gradient is decorative; sacrificing
+  // it during editing keeps the contenteditable span simple (plaintext-only,
+  // single text node). The published HTML still gets the accent split.
+  const { editorMode } = React.useContext(EditorContext);
   const { before, accent, after } = splitHeadline(slots.headline, slots.accentWord);
   const gradient = `linear-gradient(110deg, ${tokens.accent} 0%, ${tokens.accentHover} 45%, ${tokens.accent} 80%)`;
 
@@ -103,7 +110,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
               color: tokens.textMuted,
             }}
           >
-            {slots.eyebrow}
+            <EditableText slot="eyebrow">{slots.eyebrow}</EditableText>
           </span>
         ) : null}
 
@@ -116,29 +123,35 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
             fontWeight: 600,
           }}
         >
-          {before}
-          {accent ? (
-            <span
-              style={{
-                backgroundImage: gradient,
-                backgroundSize: "200% 200%",
-                WebkitBackgroundClip: "text",
-                backgroundClip: "text",
-                color: "transparent",
-                animation: "inari-aurora-shift 6s ease-in-out infinite",
-              }}
-            >
-              {accent}
-            </span>
-          ) : null}
-          {after}
+          {editorMode ? (
+            <EditableText slot="headline">{slots.headline}</EditableText>
+          ) : (
+            <>
+              {before}
+              {accent ? (
+                <span
+                  style={{
+                    backgroundImage: gradient,
+                    backgroundSize: "200% 200%",
+                    WebkitBackgroundClip: "text",
+                    backgroundClip: "text",
+                    color: "transparent",
+                    animation: "inari-aurora-shift 6s ease-in-out infinite",
+                  }}
+                >
+                  {accent}
+                </span>
+              ) : null}
+              {after}
+            </>
+          )}
         </h1>
 
         <p
           className="mt-6 max-w-[640px] text-pretty text-base leading-relaxed sm:text-lg"
           style={{ color: tokens.textMuted }}
         >
-          {slots.sub}
+          <EditableText slot="sub">{slots.sub}</EditableText>
         </p>
 
         <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:gap-4">
@@ -151,7 +164,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
               borderRadius: tokens.radius,
             }}
           >
-            {slots.primaryCTA.label}
+            <EditableText slot="primaryCTA.label">{slots.primaryCTA.label}</EditableText>
           </a>
           {slots.secondaryCTA ? (
             <a
@@ -164,7 +177,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                 borderRadius: tokens.radius,
               }}
             >
-              {slots.secondaryCTA.label}
+              <EditableText slot="secondaryCTA.label">{slots.secondaryCTA.label}</EditableText>
             </a>
           ) : null}
         </div>

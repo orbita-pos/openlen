@@ -10,6 +10,7 @@
  * `imageSrc` once image generation lands.
  */
 import { z } from "zod";
+import { EditableText } from "../_editable";
 import type {
   BlockComponent,
   BlockComponentProps,
@@ -279,7 +280,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                 color: tokens.textMuted,
               }}
             >
-              {slots.eyebrow}
+              <EditableText slot="eyebrow">{slots.eyebrow}</EditableText>
             </span>
           ) : null}
           <h2
@@ -291,14 +292,14 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
               fontWeight: 600,
             }}
           >
-            {slots.title}
+            <EditableText slot="title">{slots.title}</EditableText>
           </h2>
           {slots.sub ? (
             <p
               className="mt-5 text-pretty text-base leading-relaxed sm:text-lg"
               style={{ color: tokens.textMuted }}
             >
-              {slots.sub}
+              <EditableText slot="sub">{slots.sub}</EditableText>
             </p>
           ) : null}
         </div>
@@ -331,13 +332,13 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                     color: tokens.text,
                   }}
                 >
-                  {tile.title}
+                  <EditableText slot={`tiles[${i}].title`}>{tile.title}</EditableText>
                 </h3>
                 <p
                   className="mt-2 text-sm leading-relaxed"
                   style={{ color: tokens.textMuted }}
                 >
-                  {tile.body}
+                  <EditableText slot={`tiles[${i}].body`}>{tile.body}</EditableText>
                 </p>
               </div>
             </article>

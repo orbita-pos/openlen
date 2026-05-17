@@ -8,6 +8,7 @@
  * beyond token substitution and slot extraction.
  */
 import { z } from "zod";
+import { EditableText } from "../_editable";
 import type {
   BlockComponent,
   BlockComponentProps,
@@ -77,7 +78,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
               color: tokens.textMuted,
             }}
           >
-            {slots.eyebrow}
+            <EditableText slot="eyebrow">{slots.eyebrow}</EditableText>
           </span>
         ) : null}
 
@@ -90,14 +91,14 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
             fontWeight: 600,
           }}
         >
-          {slots.headline}
+          <EditableText slot="headline">{slots.headline}</EditableText>
         </h1>
 
         <p
           className="mt-6 max-w-[640px] text-pretty text-base leading-relaxed sm:text-lg"
           style={{ color: tokens.textMuted }}
         >
-          {slots.sub}
+          <EditableText slot="sub">{slots.sub}</EditableText>
         </p>
 
         <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:gap-4">
@@ -110,7 +111,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
               borderRadius: tokens.radius,
             }}
           >
-            {slots.primaryCTA.label}
+            <EditableText slot="primaryCTA.label">{slots.primaryCTA.label}</EditableText>
           </a>
           {slots.secondaryCTA ? (
             <a
@@ -123,7 +124,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                 borderRadius: tokens.radius,
               }}
             >
-              {slots.secondaryCTA.label}
+              <EditableText slot="secondaryCTA.label">{slots.secondaryCTA.label}</EditableText>
             </a>
           ) : null}
         </div>

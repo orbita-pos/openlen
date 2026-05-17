@@ -57,6 +57,18 @@ export async function publishToDir(params: PublishParams): Promise<void> {
   if (!v.ok) {
     throw new Error(`publishToDir: invalid subdomain (${v.reason})`);
   }
+  // Session 12 defense-in-depth: the workspace iframe renders editor-mode
+  // HTML carrying `data-slot-path` + contenteditable spans. That payload
+  // must never reach disk — a leaked publish would show outlined-on-hover
+  // editable text to every visitor and ruin the page's styling. The
+  // canonical `result.html` field is rendered with editorMode=false, so
+  // any HTML containing this marker reflects a bug upstream of here. We
+  // refuse rather than write.
+  if (params.html.includes("data-slot-path=")) {
+    throw new Error(
+      "publishToDir: refusing to write HTML containing data-slot-path (Session 12 editor-mode leaked into publish path)",
+    );
+  }
   const sub = v.value;
   const root = getRoot();
   await mkdir(root, { recursive: true });

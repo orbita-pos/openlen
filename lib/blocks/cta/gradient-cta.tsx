@@ -8,6 +8,7 @@
  * separate two content sections.
  */
 import { z } from "zod";
+import { EditableText } from "../_editable";
 import type {
   BlockComponent,
   BlockComponentProps,
@@ -93,7 +94,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
               color: tokens.text,
             }}
           >
-            {slots.title}
+            <EditableText slot="title">{slots.title}</EditableText>
           </h2>
 
           {slots.sub ? (
@@ -101,7 +102,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
               className="relative mx-auto mt-5 max-w-[560px] text-pretty text-base leading-relaxed sm:text-lg"
               style={{ color: tokens.textMuted }}
             >
-              {slots.sub}
+              <EditableText slot="sub">{slots.sub}</EditableText>
             </p>
           ) : null}
 
@@ -115,7 +116,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                 borderRadius: tokens.radius,
               }}
             >
-              {slots.primaryCTA.label}
+              <EditableText slot="primaryCTA.label">{slots.primaryCTA.label}</EditableText>
             </a>
             {slots.secondaryCTA ? (
               <a
@@ -128,7 +129,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                   borderRadius: tokens.radius,
                 }}
               >
-                {slots.secondaryCTA.label}
+                <EditableText slot="secondaryCTA.label">{slots.secondaryCTA.label}</EditableText>
               </a>
             ) : null}
           </div>

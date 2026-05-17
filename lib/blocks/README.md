@@ -78,3 +78,58 @@ Every vendored file carries a header pointing to its source and to
 
 If the source repo's license is anything other than MIT/BSD/Apache 2.0, **do
 not vendor it**. Pick a different source.
+
+---
+
+## `EditableText` — inline WYSIWYG contract (Session 12)
+
+Every block must wrap **every text-bearing slot** in `<EditableText>` from
+`lib/blocks/_editable.tsx`. The wrapper renders a passthrough when the
+workspace is in normal mode (zero overhead, byte-identical to the pre-S12
+output) and a `<span data-slot-path="..." contenteditable="plaintext-only">`
+when the workspace iframe asks for editor-mode HTML.
+
+```tsx
+// Plain slot:
+<h1>
+  <EditableText slot="headline">{slots.headline}</EditableText>
+</h1>
+
+// Nested-object slot:
+<a href={slots.primaryCTA.href}>
+  <EditableText slot="primaryCTA.label">{slots.primaryCTA.label}</EditableText>
+</a>
+
+// Array slot — bracketed indices:
+{slots.items.map((item, i) => (
+  <li key={i}>
+    <EditableText slot={`items[${i}].title`}>{item.title}</EditableText>
+    <EditableText slot={`items[${i}].body`}>{item.body}</EditableText>
+  </li>
+))}
+```
+
+What to wrap:
+
+- **All visible plaintext slots:** headlines, eyebrows, body copy, list
+  items, button labels, FAQ questions/answers, pricing tier names/prices,
+  testimonial quotes/names.
+
+What **not** to wrap:
+
+- Image `src` and `alt` (alt is invisible; image swap is sidebar-only).
+- Enum slots (icons, aesthetic direction, social platform).
+- Link `href` values.
+- Anything that would inject DOM beyond a single `<span>` (e.g. the
+  animated-gradient block conditionally renders plain text in edit mode and
+  the accent-split decoration otherwise — see that block for the pattern
+  when you need to bypass the wrapper).
+
+The block index is supplied automatically via `EditorContext` from
+`renderDeterministic`. Don't pass it in. The full path stamped onto the span
+is `blocks.<index>.slots.<slot-prop>`.
+
+Forgetting to wrap a slot means that slot becomes invisible to inline
+editing — the user can still edit it via the sidebar slot editor. Adding
+`<EditableText>` does not change the published HTML in any way (the wrapper
+is a passthrough by default).

@@ -5,6 +5,7 @@
  * Adapted: tokens substituted, copy + images lifted to slot array.
  */
 import { z } from "zod";
+import { EditableText } from "../_editable";
 import type {
   BlockComponent,
   BlockComponentProps,
@@ -121,7 +122,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                   color: tokens.textMuted,
                 }}
               >
-                {slots.eyebrow}
+                <EditableText slot="eyebrow">{slots.eyebrow}</EditableText>
               </span>
             ) : null}
             <h2
@@ -133,7 +134,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                 fontWeight: 600,
               }}
             >
-              {slots.title}
+              <EditableText slot="title">{slots.title}</EditableText>
             </h2>
           </div>
         ) : null}
@@ -191,13 +192,13 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                       color: tokens.text,
                     }}
                   >
-                    {row.title}
+                    <EditableText slot={`rows[${i}].title`}>{row.title}</EditableText>
                   </h3>
                   <p
                     className="mt-4 text-base leading-relaxed sm:text-lg"
                     style={{ color: tokens.textMuted }}
                   >
-                    {row.body}
+                    <EditableText slot={`rows[${i}].body`}>{row.body}</EditableText>
                   </p>
                   {row.bullets && row.bullets.length > 0 ? (
                     <ul role="list" className="mt-6 space-y-3">
@@ -212,7 +213,9 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                             className="mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full"
                             style={{ background: tokens.accent }}
                           />
-                          <span>{bullet}</span>
+                          <span>
+                            <EditableText slot={`rows[${i}].bullets[${b}]`}>{bullet}</EditableText>
+                          </span>
                         </li>
                       ))}
                     </ul>

@@ -6,6 +6,7 @@
  * only emits enum string names rather than JSX.
  */
 import { z } from "zod";
+import { EditableText } from "../_editable";
 import { getIcon } from "../_icons";
 import { ICON_NAMES, type BlockComponent, type BlockComponentProps, type BlockMeta } from "../types";
 
@@ -104,7 +105,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                 color: tokens.textMuted,
               }}
             >
-              {slots.eyebrow}
+              <EditableText slot="eyebrow">{slots.eyebrow}</EditableText>
             </span>
           ) : null}
 
@@ -117,7 +118,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
               fontWeight: 600,
             }}
           >
-            {slots.title}
+            <EditableText slot="title">{slots.title}</EditableText>
           </h2>
 
           {slots.sub ? (
@@ -125,7 +126,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
               className="mt-5 text-pretty text-base leading-relaxed sm:text-lg"
               style={{ color: tokens.textMuted }}
             >
-              {slots.sub}
+              <EditableText slot="sub">{slots.sub}</EditableText>
             </p>
           ) : null}
         </div>
@@ -157,13 +158,13 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                     color: tokens.text,
                   }}
                 >
-                  {item.title}
+                  <EditableText slot={`items[${i}].title`}>{item.title}</EditableText>
                 </h3>
                 <p
                   className="mt-2 text-sm leading-relaxed"
                   style={{ color: tokens.textMuted }}
                 >
-                  {item.body}
+                  <EditableText slot={`items[${i}].body`}>{item.body}</EditableText>
                 </p>
               </li>
             );

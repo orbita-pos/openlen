@@ -7,6 +7,7 @@
  * where a 4-col block would be visual overkill.
  */
 import { z } from "zod";
+import { EditableText } from "../_editable";
 import { SocialIcon } from "../_social";
 import {
   SOCIAL_PLATFORMS,
@@ -87,10 +88,10 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
               color: tokens.text,
             }}
           >
-            {slots.logoText}
+            <EditableText slot="logoText">{slots.logoText}</EditableText>
           </span>
           <span className="text-xs" style={{ color: tokens.textDim }}>
-            {slots.copyright}
+            <EditableText slot="copyright">{slots.copyright}</EditableText>
           </span>
         </div>
 
@@ -98,14 +99,14 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
           {slots.links && slots.links.length > 0 ? (
             <nav aria-label="Footer">
               <ul role="list" className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-                {slots.links.map((link) => (
+                {slots.links.map((link, li) => (
                   <li key={link.label}>
                     <a
                       href={link.href}
                       style={{ color: tokens.textMuted }}
                       className="transition-colors"
                     >
-                      {link.label}
+                      <EditableText slot={`links[${li}].label`}>{link.label}</EditableText>
                     </a>
                   </li>
                 ))}

@@ -8,6 +8,7 @@
  * (production landing pages rarely have real photos for every quote).
  */
 import { z } from "zod";
+import { EditableText } from "../_editable";
 import type {
   BlockComponent,
   BlockComponentProps,
@@ -111,7 +112,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                   color: tokens.textMuted,
                 }}
               >
-                {slots.eyebrow}
+                <EditableText slot="eyebrow">{slots.eyebrow}</EditableText>
               </span>
             ) : null}
             <h2
@@ -123,7 +124,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                 fontWeight: 600,
               }}
             >
-              {slots.title}
+              <EditableText slot="title">{slots.title}</EditableText>
             </h2>
           </div>
         ) : null}
@@ -147,7 +148,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                 style={{ color: tokens.text }}
               >
                 <span aria-hidden="true">{"“"}</span>
-                {t.quote}
+                <EditableText slot={`items[${i}].quote`}>{t.quote}</EditableText>
                 <span aria-hidden="true">{"”"}</span>
               </blockquote>
               <footer className="mt-5 flex items-center gap-3">
@@ -167,13 +168,15 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                     className="truncate text-sm font-medium"
                     style={{ color: tokens.text }}
                   >
-                    {t.name}
+                    <EditableText slot={`items[${i}].name`}>{t.name}</EditableText>
                   </div>
                   <div
                     className="truncate text-xs"
                     style={{ color: tokens.textDim }}
                   >
-                    {t.role} · {t.company}
+                    <EditableText slot={`items[${i}].role`}>{t.role}</EditableText>
+                    {" · "}
+                    <EditableText slot={`items[${i}].company`}>{t.company}</EditableText>
                   </div>
                 </div>
               </footer>

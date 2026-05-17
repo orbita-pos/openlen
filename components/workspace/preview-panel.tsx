@@ -42,6 +42,13 @@ export interface PreviewPanelProps {
    *  edit-mode state because it spans two panels. */
   editMode?: boolean;
   onToggleEdit?: () => void;
+  /** Session 12 — editor-mode HTML (carries `data-slot-path` + contenteditable
+   *  spans). Used for srcDoc when `editMode` is on; otherwise the iframe
+   *  shows the clean `state.result.html`. */
+  editorHtml?: string | null;
+  /** Session 12 — callback when an inline edit is committed in the iframe.
+   *  The page-level component handles state + reassemble. */
+  onSlotEdit?: (message: { path: string; value: string }) => void;
 }
 
 export function PreviewPanel({
@@ -52,6 +59,8 @@ export function PreviewPanel({
   onEditSection,
   editMode,
   onToggleEdit,
+  editorHtml,
+  onSlotEdit,
 }: PreviewPanelProps) {
   const [device, setDevice] = useState<Device>("desktop");
   const [zoom, setZoom] = useState<Zoom>("fit");
@@ -92,8 +101,11 @@ export function PreviewPanel({
 
   const srcDoc = useMemo(() => {
     if (state.kind !== "generated") return null;
-    return buildSrcDoc(state.result);
-  }, [state]);
+    return buildSrcDoc(state.result, {
+      editMode: editMode === true,
+      editorHtml: editorHtml ?? null,
+    });
+  }, [state, editMode, editorHtml]);
 
   // The iframe self-reports its document height + section-overlay clicks via
   // postMessage (script injected by buildSrcDoc). This avoids parent-side
@@ -120,11 +132,20 @@ export function PreviewPanel({
       }
       if (data.type === "inari:edit" && typeof data.sectionId === "string") {
         onEditSection?.(data.sectionId, data.sectionName ?? data.sectionId);
+        return;
+      }
+      // Session 12 — inline text edit committed from inside the iframe.
+      if (
+        data.type === "openlen-edit" &&
+        typeof data.path === "string" &&
+        typeof data.value === "string"
+      ) {
+        onSlotEdit?.({ path: data.path, value: data.value });
       }
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [srcDoc, iframeKey, onRegenSection, onEditSection]);
+  }, [srcDoc, iframeKey, onRegenSection, onEditSection, onSlotEdit]);
 
   // The generating view is full-bleed — it owns its own chrome (orchestra
   // strip, browser frame, step pipeline) so we bypass the device tabs and
@@ -401,7 +422,21 @@ function ErrorState({ message }: { message: string }) {
   );
 }
 
-function buildSrcDoc(page: LandingPage): string {
+interface BuildSrcDocOptions {
+  editMode: boolean;
+  editorHtml: string | null;
+}
+
+function buildSrcDoc(page: LandingPage, options: BuildSrcDocOptions): string {
+  // In edit mode we prefer the editor-mode HTML the server rendered (with
+  // data-slot-path spans). If it hasn't arrived yet on the very first
+  // toggle, fall back to the clean HTML — the iframe-editor.js will simply
+  // find zero editable spans and stand by until the next reassemble lands.
+  const bodyHtml =
+    options.editMode && options.editorHtml ? options.editorHtml : page.html;
+  const editorScriptTag = options.editMode
+    ? '<script src="/iframe-editor.js" defer></script>'
+    : "";
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -425,7 +460,8 @@ function buildSrcDoc(page: LandingPage): string {
   </style>
 </head>
 <body>
-${page.html}
+${bodyHtml}
+${editorScriptTag}
 <script>
   (function () {
     var last = 0;

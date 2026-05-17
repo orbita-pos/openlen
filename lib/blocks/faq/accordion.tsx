@@ -10,6 +10,7 @@
  * without client-side JS. Tokens substituted.
  */
 import { z } from "zod";
+import { EditableText } from "../_editable";
 import { Plus } from "../_icons";
 import type {
   BlockComponent,
@@ -100,14 +101,14 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                 fontWeight: 600,
               }}
             >
-              {slots.title}
+              <EditableText slot="title">{slots.title}</EditableText>
             </h2>
             {slots.sub ? (
               <p
                 className="mt-5 text-pretty text-base leading-relaxed sm:text-lg"
                 style={{ color: tokens.textMuted }}
               >
-                {slots.sub}
+                <EditableText slot="sub">{slots.sub}</EditableText>
               </p>
             ) : null}
           </div>
@@ -137,7 +138,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                     letterSpacing: "-0.01em",
                   }}
                 >
-                  {item.q}
+                  <EditableText slot={`items[${i}].q`}>{item.q}</EditableText>
                 </span>
                 <Plus
                   size={18}
@@ -151,7 +152,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                 className="pb-5 pr-8 text-sm leading-relaxed sm:text-base"
                 style={{ color: tokens.textMuted }}
               >
-                {item.a}
+                <EditableText slot={`items[${i}].a`}>{item.a}</EditableText>
               </p>
             </details>
           ))}

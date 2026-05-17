@@ -12,6 +12,7 @@
  * lead form to stay under 5 fields; we hard-cap here.
  */
 import { z } from "zod";
+import { EditableText } from "../_editable";
 import type {
   BlockComponent,
   BlockComponentProps,
@@ -102,7 +103,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
               fontWeight: 600,
             }}
           >
-            {slots.title}
+            <EditableText slot="title">{slots.title}</EditableText>
           </h2>
 
           {slots.sub ? (
@@ -110,7 +111,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
               className="mt-4 text-pretty text-base leading-relaxed"
               style={{ color: tokens.textMuted }}
             >
-              {slots.sub}
+              <EditableText slot="sub">{slots.sub}</EditableText>
             </p>
           ) : null}
 
@@ -161,7 +162,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                 borderRadius: tokens.radius,
               }}
             >
-              {slots.submitLabel}
+              <EditableText slot="submitLabel">{slots.submitLabel}</EditableText>
             </button>
           </form>
 
@@ -170,7 +171,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
               className="mt-4 text-xs leading-relaxed"
               style={{ color: tokens.textDim }}
             >
-              {slots.privacyNote}
+              <EditableText slot="privacyNote">{slots.privacyNote}</EditableText>
             </p>
           ) : null}
         </div>

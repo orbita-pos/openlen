@@ -8,6 +8,7 @@
  * SOCIAL_PLATFORMS enum so the AI emits strings, not JSX.
  */
 import { z } from "zod";
+import { EditableText } from "../_editable";
 import { SocialIcon } from "../_social";
 import {
   SOCIAL_PLATFORMS,
@@ -140,14 +141,14 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                 color: tokens.text,
               }}
             >
-              {slots.logoText}
+              <EditableText slot="logoText">{slots.logoText}</EditableText>
             </div>
             {slots.tagline ? (
               <p
                 className="mt-3 max-w-[280px] text-sm leading-relaxed"
                 style={{ color: tokens.textMuted }}
               >
-                {slots.tagline}
+                <EditableText slot="tagline">{slots.tagline}</EditableText>
               </p>
             ) : null}
 
@@ -173,23 +174,23 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
             ) : null}
           </div>
 
-          {slots.columns.map((col) => (
+          {slots.columns.map((col, ci) => (
             <nav key={col.title} aria-label={col.title}>
               <h3
                 className="text-xs font-medium uppercase tracking-wider"
                 style={{ color: tokens.textDim }}
               >
-                {col.title}
+                <EditableText slot={`columns[${ci}].title`}>{col.title}</EditableText>
               </h3>
               <ul role="list" className="mt-4 space-y-2.5">
-                {col.links.map((link) => (
+                {col.links.map((link, li) => (
                   <li key={link.label}>
                     <a
                       href={link.href}
                       className="text-sm transition-colors"
                       style={{ color: tokens.textMuted }}
                     >
-                      {link.label}
+                      <EditableText slot={`columns[${ci}].links[${li}].label`}>{link.label}</EditableText>
                     </a>
                   </li>
                 ))}
@@ -205,7 +206,9 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
             color: tokens.textDim,
           }}
         >
-          <span>{slots.copyright}</span>
+          <span>
+            <EditableText slot="copyright">{slots.copyright}</EditableText>
+          </span>
         </div>
       </div>
     </footer>

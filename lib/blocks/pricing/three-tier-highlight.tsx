@@ -9,6 +9,7 @@
  * the orchestrator's job in compose.
  */
 import { z } from "zod";
+import { EditableText } from "../_editable";
 import { Check } from "../_icons";
 import type {
   BlockComponent,
@@ -129,7 +130,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                 color: tokens.textMuted,
               }}
             >
-              {slots.eyebrow}
+              <EditableText slot="eyebrow">{slots.eyebrow}</EditableText>
             </span>
           ) : null}
           <h2
@@ -141,14 +142,14 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
               fontWeight: 600,
             }}
           >
-            {slots.title}
+            <EditableText slot="title">{slots.title}</EditableText>
           </h2>
           {slots.sub ? (
             <p
               className="mt-5 text-pretty text-base leading-relaxed sm:text-lg"
               style={{ color: tokens.textMuted }}
             >
-              {slots.sub}
+              <EditableText slot="sub">{slots.sub}</EditableText>
             </p>
           ) : null}
 
@@ -206,7 +207,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                       color: tokens.text,
                     }}
                   >
-                    {tier.name}
+                    <EditableText slot={`tiers[${i}].name`}>{tier.name}</EditableText>
                   </h3>
                   <div className="mt-4 flex items-baseline gap-2">
                     <span
@@ -217,20 +218,20 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                         color: tokens.text,
                       }}
                     >
-                      {tier.price}
+                      <EditableText slot={`tiers[${i}].price`}>{tier.price}</EditableText>
                     </span>
                     <span
                       className="text-sm"
                       style={{ color: tokens.textDim }}
                     >
-                      {tier.period}
+                      <EditableText slot={`tiers[${i}].period`}>{tier.period}</EditableText>
                     </span>
                   </div>
                   <p
                     className="mt-3 text-sm leading-relaxed"
                     style={{ color: tokens.textMuted }}
                   >
-                    {tier.blurb}
+                    <EditableText slot={`tiers[${i}].blurb`}>{tier.blurb}</EditableText>
                   </p>
                 </header>
 
@@ -247,7 +248,9 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                         aria-hidden="true"
                         style={{ color: tokens.accent, marginTop: "2px", flexShrink: 0 }}
                       />
-                      <span>{f}</span>
+                      <span>
+                        <EditableText slot={`tiers[${i}].features[${j}]`}>{f}</EditableText>
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -262,7 +265,7 @@ export const Component: BlockComponent<typeof slotsSchema> = ({
                     borderRadius: tokens.radius,
                   }}
                 >
-                  {tier.cta.label}
+                  <EditableText slot={`tiers[${i}].cta.label`}>{tier.cta.label}</EditableText>
                 </a>
               </article>
             );

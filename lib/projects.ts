@@ -116,6 +116,58 @@ export async function updateProjectPage(
     );
 }
 
+// Session 13 — narrow slot-edit persistence.
+//
+// Called from /api/reassemble after the deterministic re-render. Overwrites
+// only `filledBlocks` + `html` inside the JSONB `data` column, preserving
+// meta, witness path, cost, plan, images, and everything else verbatim.
+// Title / thumbnail / tags don't change on slot edits (they derive from
+// intent + hero image, neither of which the editor touches), so we skip the
+// recompute that updateProjectPage does.
+//
+// Returns false silently when the project isn't owned by `userId` (or
+// doesn't exist). The reassemble itself succeeded — we don't want to fail
+// the response just because the edit happened on an in-memory generation
+// the user never persisted.
+//
+// Note: publishedHtml is intentionally NOT updated. It stays as the snapshot
+// of the last actual publish so the drift indicator (data.html !==
+// publishedHtml) lights up after the user edits, prompting a Re-publish.
+export async function updateProjectSlots(
+  projectId: string,
+  userId: string,
+  filledBlocks: LandingPage["filledBlocks"],
+  html: string,
+): Promise<boolean> {
+  const rows = await db
+    .select({ data: schema.projects.data })
+    .from(schema.projects)
+    .where(
+      and(
+        eq(schema.projects.id, projectId),
+        eq(schema.projects.userId, userId),
+      ),
+    )
+    .limit(1);
+  const existing = rows[0];
+  if (!existing) return false;
+  const nextData: LandingPage = {
+    ...existing.data,
+    filledBlocks,
+    html,
+  };
+  await db
+    .update(schema.projects)
+    .set({ data: nextData, updatedAt: new Date() })
+    .where(
+      and(
+        eq(schema.projects.id, projectId),
+        eq(schema.projects.userId, userId),
+      ),
+    );
+  return true;
+}
+
 export async function listProjects(userId: string): Promise<ProjectSummary[]> {
   const rows = await db
     .select({
