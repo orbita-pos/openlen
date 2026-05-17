@@ -1,5 +1,11 @@
+// `react-dom/server` lives in `_render-element.ts` — a sibling module that
+// imports React only. Importing it directly here trips Next.js 15's RSC graph
+// check, which forbids any single module from importing both `react-dom/
+// server` AND React component exports (this module reaches the block
+// components transitively via `@/lib/blocks/_registry`). The sibling helper
+// is "components-free", so the check passes.
 import React from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderElementToHtml } from "./_render-element";
 import { getBlock, type BlockId } from "@/lib/blocks/_registry";
 import { paletteToTokens } from "@/lib/blocks/palette-to-tokens";
 import type {
@@ -171,7 +177,7 @@ export function renderDeterministic(
       slots: unknown;
       tokens: typeof tokens;
     }>;
-    const raw = renderToStaticMarkup(
+    const raw = renderElementToHtml(
       React.createElement(Component, { slots, tokens }),
     );
     const tagged = injectSectionId(raw, filled.index, filled.blockId);
