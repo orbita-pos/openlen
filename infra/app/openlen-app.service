@@ -1,0 +1,58 @@
+[Unit]
+Description=OpenLen Next.js application
+After=network.target nginx.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=openlen-deploy
+Group=www-data
+WorkingDirectory=/opt/openlen-app
+
+# Bind to localhost only — nginx is the only thing that should reach the
+# Node process. 0.0.0.0 here would be reachable from the public internet
+# despite ufw, since nginx isn't in the path.
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOSTNAME=127.0.0.1
+
+# Persistent data dirs survive deploys (deploy.sh rsync --delete only wipes
+# /opt/openlen-app, not /var/openlen). Filesystem storage adapter writes to
+# UPLOADS_DIR; witness records write to WITNESS_DIR.
+Environment=UPLOADS_DIR=/var/openlen/uploads
+Environment=UPLOADS_PUBLIC_URL=/uploads
+Environment=WITNESS_DIR=/var/openlen/witness
+
+# Puppeteer reaches Chrome through this binary path (installed by
+# setup-node.sh via apt). Without this the gates module hunts in
+# ~/.cache/puppeteer which doesn't exist for a system user.
+Environment=PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+# Secrets (TOGETHER_API_KEY, DATABASE_URL, NEXTAUTH_SECRET, etc.) live in
+# /etc/openlen/openlen.env. install-app.sh sets perms to 640 root:openlen-deploy
+# so the systemd User= can read but other users can't.
+EnvironmentFile=/etc/openlen/openlen.env
+
+ExecStart=/usr/bin/node /opt/openlen-app/server.js
+
+# Restart policy: crash → 5s wait → retry, up to 3 times in 60s before giving
+# up. journalctl -u openlen-app surfaces the reason in either case.
+Restart=on-failure
+RestartSec=5s
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=openlen-app
+
+# Security hardening. ProtectSystem=full keeps /usr, /boot, /etc read-only;
+# ReadWritePaths re-opens just the dirs the app needs to write.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/var/openlen
+
+[Install]
+WantedBy=multi-user.target
