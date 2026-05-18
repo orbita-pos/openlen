@@ -63,6 +63,10 @@ bash infra/scripts/deploy.sh  # build locally + rsync to Hetzner + systemctl res
 
 ## Template gallery scaling roadmap
 
+**Curated stays in repo. Community is additive — never a replacement.**
+
+The ~50 curated templates (Mirror, Anchor, Foundry, Counter, … and whatever else lands by PR) live as `.html` files in `public/templates/curated/` + entries in `components/templates/_registry.ts`. They ship with `git clone`, they survive deploys without a DB seed, and they're the "out of the box" gallery a self-hoster sees on first boot. Do NOT propose moving curated templates to the database — the user has explicitly chosen the in-repo path to keep the OSS self-host story simple and to keep template design under PR review. Curated grows via PR ("a contributor writes a beautiful Vercel-style page, owner reviews, merges"). Community contributions, if/when that feature ships, layer ON TOP of curated via the DB schema below.
+
 Current state: 15-30 templates live as a static `TEMPLATES` array in `components/templates/_registry.ts` + matching `.html` files in `public/templates/curated/`. `TemplatePreviewFrame` lazy-mounts each card's iframe via IntersectionObserver, so the in-memory list scales further than the visible viewport. Don't add infinite scroll or DB-backed templates "just in case" — both are real features tied to specific triggers below.
 
 **Trigger 1 — Scanning feels slow** (~30+ templates, when scrolling the sidebar to find the right one becomes annoying):
@@ -72,8 +76,12 @@ Current state: 15-30 templates live as a static `TEMPLATES` array in `components
 - New table `community_templates` in Postgres: `id`, `ownerUserId`, `title`, `family`, `html`, `status` (`draft` | `pending_review` | `approved` | `rejected`), `createdAt`, `approvedAt`. Drizzle schema goes in `lib/db/schema.ts`.
 - New endpoint `GET /api/templates?cursor=<id>&limit=N&family=<f>&q=<search>` — cursor-based pagination, only returns `status = approved`.
 - New endpoint `POST /api/templates/submit` for users to submit their own; `POST /api/templates/<id>/approve` for moderation.
-- `TemplatesPanel` switches from reading the static array to fetching this endpoint + infinite scroll (IntersectionObserver on the bottom sentinel triggers next page) or virtualization with `react-window` if the catalog hits 1000+.
-- The 15-30 curated templates in `_registry.ts` stay as the "official" set, possibly seeded into the DB on bootstrap. Or kept as a separate static collection alongside the community one — user picks.
+- `TemplatesPanel` reads via a `useTemplates({ source: "all" })` hook that internally concatenates `[...CURATED, ...await fetchCommunity({ cursor })]`. Infinite scroll lives on the community half only — curated is always fully loaded (it's a small in-memory array). Cards don't care which source they came from.
+- The curated set in `_registry.ts` stays the canonical "official" gallery, **not migrated to DB**. Each self-host instance decides whether to enable the community endpoint at all — a minimalist self-host can ship with curated only and never touch the community table.
+- Optional `tier: "free" | "pro"` field on `TemplateEntry` to gate certain curated designs behind a paywall (still in-repo, just rendered as locked in the UI for non-pro users). Premium curated stays in repo for the OSS+freemium model.
+
+**What stays in DB regardless** (orthogonal to where templates live):
+- `template_clone_events` for analytics (which templates get cloned, when, by whom). Logged in `from-template` route handler — no need to move the templates themselves to DB to get usage data.
 
 **Out of scope for both triggers**: AI moderation of submitted HTMLs, fraud detection, abuse reports, take-down flow. Those land if/when the gallery is publicly open.
 
