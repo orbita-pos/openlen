@@ -52,3 +52,6 @@ next-env.d.ts
 
 # local tooling
 .claude/
+
+# Style Match test artifacts (screenshots + computed-styles JSON dumps)
+.style-match-test/
