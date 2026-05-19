@@ -15,6 +15,12 @@ interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
+// Only the slugs in generateStaticParams() are valid. Any other slug
+// returns 404 BEFORE the page renders — without this, Next 15 happily
+// renders the not-found UI but with HTTP 200 (a real bug for crawlers
+// and for our smoke tests).
+export const dynamicParams = false;
+
 export async function generateStaticParams() {
   return TEMPLATES.map((t) => ({ slug: t.id }));
 }

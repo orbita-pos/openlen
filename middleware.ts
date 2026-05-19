@@ -9,36 +9,31 @@ import { NextResponse } from "next/server";
 // internal routes (/api/auth/*) are always allowed.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const PUBLIC_ROUTES = [
-  "/",
-  "/templates",
-  "/login",
-  "/register",
-  "/forgot",
-  "/preview-blocks",
-  "/robots.txt",
-  "/sitemap.xml",
-];
+// Routes whose subtree requires an authenticated session for page access.
+// Anything not listed here flows through to the route handler — unknown
+// URLs land on the global 404 instead of being bounced to /login.
+//
+// API routes are NOT gated by this middleware: each `/api/*` handler runs
+// its own auth() check and returns 401 on its own. That keeps API responses
+// honest (401 means unauthorized, not "redirect to login HTML").
+const PROTECTED_PAGE_PREFIXES = ["/new", "/new-v2", "/projects"];
 
-// Prefixes whose entire subtree is public (detail pages, iframe templates,
-// reset tokens).
-const PUBLIC_PREFIXES = ["/templates/", "/reset/"];
+function isProtected(pathname: string): boolean {
+  for (const p of PROTECTED_PAGE_PREFIXES) {
+    if (pathname === p || pathname.startsWith(p + "/")) return true;
+  }
+  return false;
+}
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
-
-  if (pathname.startsWith("/api/auth")) return NextResponse.next();
-  if (PUBLIC_ROUTES.includes(pathname)) return NextResponse.next();
-  if (PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))) {
-    return NextResponse.next();
-  }
+  if (!isProtected(pathname)) return NextResponse.next();
 
   if (!req.auth) {
     const loginUrl = new URL("/login", req.nextUrl.origin);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }
-
   return NextResponse.next();
 });
 
