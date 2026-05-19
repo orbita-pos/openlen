@@ -102,6 +102,17 @@ const checks: Check[] = [
     contentType: "application/json",
     expect: [401, 403, 307],
   },
+  {
+    // Regression test for the SSRF fix in app/api/export/zip/route.ts —
+    // anon must NOT reach downloadImage(). 401 is correct, 200 means the
+    // auth gate was removed.
+    name: "POST /api/export/zip (anon -> 401)",
+    path: "/api/export/zip",
+    method: "POST",
+    body: JSON.stringify({}),
+    contentType: "application/json",
+    expect: [401, 403],
+  },
 ];
 
 interface Result {

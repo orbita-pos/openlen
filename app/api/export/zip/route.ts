@@ -1,4 +1,7 @@
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
 import JSZip from "jszip";
+import { auth } from "@/auth";
 import { LandingPageSchema } from "@/lib/orchestrator/types";
 import type { LandingPage } from "@/lib/orchestrator/types";
 
@@ -18,9 +21,19 @@ export const dynamic = "force-dynamic";
 // The export is intentionally a folder of plain files so a non-technical user
 // can double-click index.html locally or drop the folder into any static host
 // (Netlify Drop, GitHub Pages, S3, Cloudflare Pages) without further build steps.
+//
+// Security: requires an authenticated session, and downloadImage() rejects
+// any URL that is not https:// or that resolves to a private/loopback/
+// link-local address (SSRF defense — image URLs in the body are caller-
+// controlled and we fetch them server-side).
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function POST(req: Request): Promise<Response> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return json({ error: "unauthorized" }, 401);
+  }
+
   let body: unknown;
   try {
     body = await req.json();
@@ -94,7 +107,11 @@ async function downloadImage(
   purpose: string,
 ): Promise<ImageAsset | null> {
   try {
-    const response = await fetch(url, { redirect: "follow" });
+    if (!(await isSafeImageUrl(url))) return null;
+    // redirect: "manual" — Together signed URLs don't redirect, and a
+    // following redirect could bypass the pre-fetch host check by 302'ing
+    // to a private address.
+    const response = await fetch(url, { redirect: "manual" });
     if (!response.ok) return null;
     const buffer = new Uint8Array(await response.arrayBuffer());
     const contentType = response.headers.get("content-type") ?? "";
@@ -106,6 +123,70 @@ async function downloadImage(
   } catch {
     return null;
   }
+}
+
+// SSRF guard. Reject anything that isn't https, has an IP-literal in a
+// private/loopback/link-local range, or resolves to one via DNS.
+async function isSafeImageUrl(raw: string): Promise<boolean> {
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== "https:") return false;
+  const host = parsed.hostname;
+
+  // Reject IP literals in unsafe ranges directly.
+  if (isIP(host)) {
+    if (isPrivateIp(host)) return false;
+    return true;
+  }
+
+  // For hostnames, resolve and reject if any returned address is private.
+  // Note: this does not defend against DNS rebinding (a name that resolves
+  // to a public IP at check time and a private IP at fetch time). Acceptable
+  // residual risk for an authenticated endpoint.
+  try {
+    const addresses = await lookup(host, { all: true, verbatim: true });
+    for (const a of addresses) {
+      if (isPrivateIp(a.address)) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isPrivateIp(ip: string): boolean {
+  // IPv4 private / reserved.
+  if (isIP(ip) === 4) {
+    const [a, b] = ip.split(".").map((n) => parseInt(n, 10));
+    if (a === 10) return true;
+    if (a === 127) return true;
+    if (a === 0) return true;
+    if (a === 169 && b === 254) return true; // link-local + AWS metadata
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    if (a >= 224) return true; // multicast + reserved
+    return false;
+  }
+  // IPv6 private / reserved.
+  if (isIP(ip) === 6) {
+    const lower = ip.toLowerCase();
+    if (lower === "::1") return true;
+    if (lower === "::") return true;
+    if (lower.startsWith("fc") || lower.startsWith("fd")) return true; // ULA
+    if (lower.startsWith("fe80:")) return true; // link-local
+    if (lower.startsWith("ff")) return true; // multicast
+    // IPv4-mapped (::ffff:x.x.x.x)
+    if (lower.startsWith("::ffff:")) {
+      const v4 = lower.slice("::ffff:".length);
+      if (isIP(v4) === 4) return isPrivateIp(v4);
+    }
+    return false;
+  }
+  return true; // unknown → treat as unsafe
 }
 
 function extensionFor(contentType: string): string {
