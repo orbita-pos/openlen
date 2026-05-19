@@ -637,6 +637,596 @@ Produce all 5 as separate text/html artifacts.
 
 ---
 
+## Prompt 7 — Fintech / Money (5 pages, mixed modes)
+
+```
+Brief: Produce 5 landing pages for fintech products — banking, trading, crypto treasury, expense management, payment infrastructure. Robinhood / Plaid / Cash App / Wise level. Heavy on numerical visualizations (account balances, transaction lists, charts, asset breakdowns), trust signals (FDIC, SOC2, PCI badges), and live data feel.
+
+SHARED AESTHETIC (all 5 variants):
+- Display: Inter Display 600-700, -0.03em letter-spacing.
+- Body: Inter 400-500.
+- Mono: Geist Mono 400-500 — used HEAVILY for account numbers, transaction IDs, currency amounts, ticker symbols.
+- Tabular nums on every number representing money or quantity (font-variant-numeric: tabular-nums).
+- Currency formatting: thousands separators, 2 decimals for fiat (1,408.42), variable for crypto (0.0064 BTC).
+- Live-feel: pulse-dot indicators on "balance updated 4s ago", "market open", "settling".
+- Sparkline SVGs for asset performance (24-48 data points, area fill at accent 20% opacity, stroke 1.5px).
+- Hairline borders rgba(0,0,0,0.08) on light / rgba(255,255,255,0.07) on dark.
+- Trust badges row: FDIC, SOC2 Type II, PCI-DSS, audit firm names — small mono uppercase tracking-wide.
+
+SHARED SECTION SKELETON:
+1. Sticky nav: wordmark + 4 nav links (Product, Security, Pricing, Help) + Sign-in text + accent CTA pill ("Open an account" / "Start" / "Get the API key").
+2. Hero: pill badge with regulatory mention ("FDIC-insured up to $250k" / "SEC-registered" / etc.) + display headline (half-tone trick on second clause) + sub paragraph 25 words + dual CTA + product mockup (account dashboard, trading terminal, payment flow). Mockup ~50% width.
+3. Trust bar: "Used by 8,408 founders" + customer wordmarks marquee + regulatory badges row beneath.
+4. Centerpiece visualization: BIG product detail mockup — bank account ledger, trading terminal, wallet transfer, expense dashboard, or payment routing diagram. Specific to variant.
+5. Features 3-col grid: each col has icon + sans h3 + paragraph + sub-bullet list with checkmarks. Money-product specifics (instant transfers, no FX fees, granular permissions, audit trail).
+6. Stats banner: 4 large metric cards with mono labels + tabular nums + sub-detail ("avg savings $14,408/yr" / "P95 settlement 4 min").
+7. Pricing: 2-3 tier OR a transparent fee table. Always show what you DON'T charge for vs competitors (e.g. "0% FX fees" or "no monthly minimum").
+8. Customer story: 1 spotlight with company + role + 2-paragraph quote + 3 ROI metrics row ("+$28,408 saved on FX" / "0 audit findings").
+9. Security section: dedicated band with bank-level encryption, fund segregation, third-party audits, insured custody.
+10. FAQ: 5 fintech-specific questions (regulatory, fund safety, audit reports, fees disclosure, cross-border).
+11. Final CTA: gradient banner + dual CTA.
+12. Footer: 5-col with Product / Pricing / Security / Legal (Compliance / Disclosures / Risks) / Company.
+
+VISUAL FLOURISHES SPECIFIC TO FINTECH:
+- "Live balance" widget: large tabular number that animates a +1 pulse on a fake update.
+- Transaction list: mono columns for date / merchant / category / amount, alternating row hover state.
+- Asset card: ticker symbol + 24h sparkline + bid/ask spread + tabular % change in accent (green up / red down).
+- Network status pill: "Settled · 12s avg" with pulse-dot.
+- Map cluster (cross-border): SVG world outline with dot markers at major financial centers.
+
+THE 5 VARIANTS:
+
+VARIANT 01: Reservoir — A business bank account for indie founders.
+- Mode: dark navy. Bg #0A0F1A. Accent: electric green #3ECF8E. Text #F4F2EE.
+- Pitch: "A business bank account that finally <em>feels like software</em>."
+- Audience: solo founders and 2-10 person startups with $0-$500k MRR who hate Brex's enterprise UI and Mercury's growing-up vibe.
+- Hero mockup: account dashboard — top card with checking balance ($148,408.22) + last-updated pulse-dot, 7-day cashflow sparkline, transaction list with recent ACH + outgoing wires + card charges. Sidebar "Cards / Bills / Transfers / Treasury".
+- Centerpiece: cash management UI — interest-bearing treasury sub-account with current APY (4.42%), maturity schedule, instant transfers to checking.
+- Stats: Avg monthly fees ($0 vs industry $48), Treasury APY (4.42% with daily compounding), Instant transfer SLA (P95 12s), Founders served (28,408).
+- Customer story: "Cargo Studio · 4-person design agency NYC · earned $4,408 in interest in 2025 vs $0 at old bank".
+- Pricing: Free (checking + cards + ACH + wire, $0/mo with $1k min balance) + Treasury (auto-sweep into 4%+ MMF, 0.08% management fee, no minimum).
+- FAQ: "Is my money FDIC-insured and to what limit?", "Difference between sweep treasury and high-yield savings — do I lose access?", "How do you make money if there are no fees?", "Can I receive international wires and what's the FX spread?", "What happens if Reservoir shuts down — where does my money go?".
+- Logos: Cargo, Folio, Linnea, Stratos, Quartermast, Halcyon, Cobalt, Atrium.
+
+VARIANT 02: Pivot — A trading platform for technical analysts.
+- Mode: dark mono. Bg #08090A. Accent: cyan #67E8F9. Text #F0F1F4.
+- Pitch: "Your terminal, your data, <em>your edge</em>."
+- Audience: technical traders (day + swing) and quant hobbyists tired of Robinhood's gamified UI and willing to pay for serious tooling.
+- Hero mockup: trading terminal — left watchlist with 8 tickers (NVDA / TSLA / AAPL / SPY / BTC / ETH) showing last + change% + sparkline. Right is candlestick chart with EMA20, EMA50, RSI panel below. Bottom: order entry strip with bid/ask spread.
+- Centerpiece: "Strategy back-tester" — code-editor mockup where user writes a Python strategy + results panel showing equity curve, max drawdown, Sharpe ratio.
+- Stats: P95 order routing latency (4.2ms direct-to-exchange), Backtest run time on 5yr minute data (~38s), Strategies hosted (28,408), Cost per filled order ($0.0064 vs Robinhood "free" with PFOF spread).
+- Customer story: "Marcus Tobin · Founding Quant at Forecast · saved $14,408 in 2025 on options spreads via direct routing".
+- Pricing: Free (paper trading + EOD data), Trader ($24/mo, real-time + 100 backtests/mo + direct routing), Pro ($99/mo, unlimited backtests + tick data + API).
+- FAQ: "Are orders routed for PFOF or direct to exchange?", "What's your data source and how delayed is it really?", "Can I run Python strategies on real money or only paper?", "Historical data coverage — how far back, what assets?", "How is PDT enforced — can I trade options spreads under $25k?".
+- Logos: Forecast, Cobalt, Nimbus, Beacon Capital, Lattice Trading, Quartermast, Folio Labs, Coast Markets.
+
+VARIANT 03: Tether — Stablecoin treasury for crypto-native companies.
+- Mode: dark. Bg #0E1014. Accent: gold #E5B047. Text #F8F2E8.
+- Pitch: "Hold dollars on-chain. Move them <em>everywhere</em>."
+- Audience: crypto-native companies and DAO treasuries managing $100k-$50M in stablecoins, frustrated with manual multi-sig + spreadsheet treasury.
+- Hero mockup: multi-chain wallet dashboard — total stablecoin balance ($14.408M), broken down by chain (Ethereum 8.2M, Polygon 3.1M, Base 2.4M, Solana 0.7M). Live transfer panel: "Send 50,000 USDC to Cargo Studio · Polygon · Settlement ~12s · Network fee $0.04".
+- Centerpiece: cross-chain bridge orchestration — visual showing USDC moving Ethereum → Polygon → Arbitrum with mono labels for each hop's fee + settlement time.
+- Stats: Total stablecoins under management ($1.4B), Avg cross-chain settlement (P50 28s, P95 4min), Companies using Tether (1,408), Aggregate FX cost saved ($28.4M in 2025).
+- Customer story: "Stratos Protocol · DAO treasury · moved $8.4M cross-chain in Q4 without a single failed transaction".
+- Pricing: Self-custody (free, you hold keys), Managed ($499/mo, multi-sig setup + 24/7 ops + insurance), Enterprise (custom, BYOC + audit + dedicated support).
+- FAQ: "Custody — non-custodial or do you hold keys?", "Insurance coverage on managed accounts?", "Which stablecoins and chains supported?", "How do you handle a depeg event (USDC March 2023)?", "SOC2 / audit status?".
+- Logos: Stratos, Cinder, Atrium DAO, Lattice Protocol, Reverb Capital, Crucible Labs, Cobalt Network, Folio DAO.
+
+VARIANT 04: Margin — Expense management for ops teams.
+- Mode: cream. Bg #FAF7F2. Accent: sage green #7CA982. Text #1F1B16.
+- Pitch: "Where every dollar your team spends shows up <em>before</em> the credit card statement."
+- Audience: finance / ops at 20-200 person companies tired of waiting until month-end to know what was spent.
+- Hero mockup: expense dashboard — month-to-date spend ($148,408) broken down by category (SaaS 38%, Travel 22%, Equipment 18%, Other 22%) as horizontal stacked bar. Live activity feed: "Hana Suzuki spent $89.42 at Anthropic · 12s ago · auto-categorized as 'AI subscriptions'".
+- Centerpiece: receipt-to-expense pipeline — photo of receipt → AI extraction → policy check → GL entry posted.
+- Stats: Avg time from purchase to GL (4 min vs spreadsheet 14 days), Manual categorization rate (3% — rest is AI auto), Avg policy savings (8% of spend), Companies using Margin (4,408).
+- Customer story: "Brightwave Inc · 120-person SaaS · caught $48,408 of duplicate SaaS subscriptions in first 90 days".
+- Pricing: Starter ($8/seat/mo, virtual cards + receipt capture + GL sync) + Growth ($24/seat/mo, +policy automation + analytics) + Enterprise (custom, SAML + audit + procurement).
+- FAQ: "Integrate with QuickBooks, Xero, NetSuite?", "How do virtual cards work for SaaS specifically?", "Can policies trigger by category, amount, vendor, or all three?", "Receipt capture accuracy and what happens when it's wrong?", "How are cash reimbursements handled?".
+- Logos: Brightwave, Forecast, Cargo, Cobalt, Lattice, Linnea, Halcyon, Stratos.
+
+VARIANT 05: Conduit — Payment infrastructure for marketplaces.
+- Mode: dark. Bg #0B0E1A. Accent: electric purple #8B7CFF. Text #FFFFFF.
+- Pitch: "Split, route, and reconcile payments across <em>thousands of sellers</em>."
+- Audience: marketplace platforms (Etsy-like, Uber-like, DoorDash-like) with 100-100k sellers needing complex payment splits, KYC, and 1099/W-9 handling.
+- Hero mockup: split-payment visualization — $148.42 charge routes via platform → 70% to seller ($103.89) → 20% to platform ($29.68) → 10% to tax escrow ($14.84). Settlement timeline per leg.
+- Centerpiece: KYC dashboard — seller onboarding funnel with stages (email → identity verified → bank linked → first payout) + cohort retention chart.
+- Stats: Sellers onboarded across all marketplaces (4.4M), Median time from signup to first payout (28 min), Aggregate GMV processed in 2025 ($14.4B), Multi-currency support (84 currencies).
+- Customer story: "Trove Marketplace · handmade goods · onboarded 14,408 makers in 6 months with 92% completing payout setup".
+- Pricing: Pay-as-you-go (0.25% + $0.10 per transaction, after Stripe's costs), Volume ($999/mo + 0.15% + $0.08 for $1M+/mo GMV), Custom (negotiated for $10M+/mo).
+- FAQ: "How does this compare to Stripe Connect?", "KYC tier support (Tier 1, Tier 2, Tier 3 with EDD)?", "1099-K forms for US sellers?", "Dispute / chargeback flow for split payments?", "Which countries can sellers be in and which can platform be in?".
+- Logos: Trove, Folio, Drift, Cassette, Cargo Market, Nimbus Marketplace, Halcyon Shops, Stratos Sales.
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 8 — Health-tech (5 pages, mostly light + cream modes)
+
+```
+Brief: Produce 5 landing pages for health-tech products — telehealth, fitness coaching, mental health, EHR, medical billing. Headspace / One Medical / Whoop / Eden / Athelas level. CALMER than B2B SaaS: warm soft accents (sage, coral, lavender), serif accents for emotional weight, generous whitespace, lots of "trust + care" signaling. Mostly light/cream modes with one dark variant for the fitness/athletic vibe.
+
+SHARED AESTHETIC (all 5 variants):
+- Display: Inter 500-600 + occasional serif accent (Fraunces or Source Serif 4 italic) for emotional emphasis.
+- Body: Inter 400 — line-height 1.6 (slightly looser than B2B SaaS) to feel calmer.
+- Mono: Geist Mono 400 ONLY for clinical-feeling metrics (heart rate, BP, fasting glucose, SpO₂).
+- Generous spacing — 96px+ between sections (not 64px).
+- Soft drop shadows: 0 24px 48px -16px rgba(0,0,0,0.06).
+- Rounded corners 16-24px on cards (softer than fintech's 12px).
+- Subtle paper-grain texture via 22px radial-gradient at 0.025 opacity.
+- Color palette: warm neutrals (cream, sand, soft white) + ONE warm accent per variant.
+- Pulse-dot for "live" / "available" uses muted greens (#6F9F6A, not electric).
+
+SHARED SECTION SKELETON:
+1. Nav: wordmark + 4 links (How it works, Pricing, About, Members) + Sign-in text + accent CTA pill.
+2. Hero: small pill badge + display headline (often serif italic accent on the emotional word) + sub paragraph 30 words (longer, more reassuring) + single CTA "Get started" or "Start free" + product mockup OR human-feel gradient placeholder.
+3. Trust bar: 1-line testimonial OR "Used by 28,408 patients/members" + soft icons row of clinical accreditations (HIPAA, SOC2, NCQA).
+4. "How it works" 3-step visualization: numbered cards walking through onboarding → use → outcomes. Soft icons, warm colors.
+5. Big feature: 2-col split with product mockup + serif h2 + paragraph + accent text link.
+6. Outcomes / clinical results: bar chart or before/after metric cards backed by a stat ("members lost 14lbs avg in 12 weeks" / "anxiety scores improved 38% in 8 weeks") with study link reference (mono).
+7. Member story spotlight: 1 testimonial with photo placeholder + 2-paragraph quote + 3 outcome metrics row.
+8. Pricing: 1-2 tier (intentionally simple — these audiences value clarity over options) OR insurance-billed model ("In-network with most major insurers").
+9. Provider / network section: list of partner clinics, doctors, or coaches (Dr. Hana Suzuki MD, Dr. Marcus Tobin DDS).
+10. FAQ: 5 health-specific questions (privacy, insurance, license coverage, clinical evidence, cancellation).
+11. Safety / privacy band: dedicated section on HIPAA, data handling, when human escalates. Softer language than SaaS security band.
+12. Final CTA: simple bordered card with "Start your first visit / week / session — $0 to try."
+13. Footer: minimal, warm — wordmark + Clinical / Privacy / About / Careers / Contact + state licensure mono line.
+
+VISUAL FLOURISHES SPECIFIC TO HEALTH-TECH:
+- Vital sign cards: large heart rate / BP / sleep score in soft pill containers with mono labels.
+- Progress rings: SVG circles showing % to goal with accent fill.
+- Photo placeholders: warm gradient blobs simulating clinical / lifestyle photography (not generic gray).
+- "Speak with a doctor" pill: green pulse-dot + "available now" in mono.
+- Provider card: photo placeholder + name + credentials (mono) + specialty + state licenses.
+- Calendar slot picker: 7-day strip with available slots highlighted in accent.
+
+THE 5 VARIANTS:
+
+VARIANT 01: Hearth — A primary care doctor in your pocket.
+- Mode: cream. Bg #FAF6EF. Accent: sage green #6F9F6A. Text #1F1B16.
+- Pitch: "A primary care doctor who <em>knows you</em>, in your pocket."
+- Audience: adults 25-55 frustrated with insurance-driven 6-min visits, want a doctor via app for $0-$30/visit who actually remembers their history.
+- Hero mockup: phone-app mockup — chat thread with Dr. Suzuki ("How's the sleep been since we tried the new dose?") + member's reply + calendar pill showing "Next appointment: Tue Mar 5 · 2pm video". Sidebar: vitals card (BP 118/76, resting HR 64) + medications list.
+- Centerpiece: 3-step "how it works" — (1) tell us about you (intake form), (2) get matched with a doctor (provider card with photo + credentials), (3) chat or video any time (chat UI mockup).
+- Outcomes: "Members who got same-day appointment (94%)", "Avg response time to a message (12 min)", "Members who saved $400+/yr vs urgent care (78%)", "Avg member satisfaction (4.8/5 NPS)".
+- Member story: "Priya Anand · 34 · Brooklyn — switched from Aetna's mediocre primary care, finally has a doctor who remembers her family history".
+- Pricing: $0/visit + $39/mo membership (unlimited visits, prescription refills, labs at cost) OR insurance covered for in-network plans.
+- FAQ: "Is this actually primary care or just urgent care?", "Are my doctors licensed in my state?", "Does it work with my insurance — what does it cover?", "What if I need a specialist?", "Where is my medical record stored and can I export it?".
+
+VARIANT 02: Cadence — Training that adapts to your biometrics.
+- Mode: dark. Bg #0F1115. Accent: electric green #5BE584. Text #F0F3F0.
+- Pitch: "Train smarter. The watch tells you <em>when</em>."
+- Audience: serious amateur athletes (runners, cyclists, lifters) doing 5-10 hrs/wk training with a wearable.
+- Hero mockup: training dashboard — large weekly training load gauge (green = on track, amber = under, red = over), next session card ("Threshold run · 38min · target 162 bpm avg"), sleep + HRV sparkline.
+- Centerpiece: "training periodization" calendar showing 12 weeks of planned workouts color-coded by intensity, with watch icon overlaid showing live HRV adjustments.
+- Outcomes: "Members hitting 12-week goal (84%)", "Avg VO2max improvement after 6 months (+4.2 ml/kg/min)", "Avg sleep improvement (+38min/night)", "Members consistent past month 3 (78% vs industry 18%)".
+- Member story: "Hana Ito · marathon PR runner from Tokyo · went sub-3:00 in 14 weeks using Cadence's plan".
+- Pricing: Plus ($24/mo, AI-coached + adaptive plan + sleep tracking) + Pro ($99/mo, plus monthly call with human coach + nutrition guidance).
+- FAQ: "What watches supported (Apple, Garmin, Polar, Whoop)?", "How does the coach interpret my HRV?", "Can I use it without a wearable?", "Cancellation policy — am I locked in?", "Are human coaches certified (USAT, NSCA)?".
+
+VARIANT 03: Quiet — Therapy that fits between meetings.
+- Mode: light + lavender. Bg #FFFDFB with #F5F0FA accent bg. Accent: muted lavender #8060C0. Text #1A1714.
+- Pitch: "Therapy that fits between <em>meetings</em>."
+- Audience: working professionals (25-50) who'd benefit from therapy but find scheduling weekly 60-min sessions impossible. Async chat + 30-min video.
+- Hero mockup: phone messaging UI — therapist response thread "Hi Priya — that 3pm Slack message thing is a familiar pattern, want to unpack it Friday at 7pm?" + member's reply. Sidebar: "Mood check" weekly trend line + next-session card.
+- Centerpiece: 3-step "how it works" — (1) match with a licensed therapist (provider card with credentials, modalities CBT/ACT/EMDR), (2) message any time or schedule video, (3) track wellbeing over time (mood chart).
+- Outcomes: "Members with measurable improvement in 8 weeks (84%)", "Avg therapist response time (4 hours)", "Members continuing past month 1 (91%)", "Cost vs traditional in-person (−62%)".
+- Member story: "Marcus Tobin · founding engineer at Forecast · cut work-related panic attacks 80% over 12 weeks of Quiet".
+- Pricing: $39/wk (async + monthly video) or $79/wk (async + 2 video/mo) — billed monthly, cancel anytime. HSA/FSA reimbursable.
+- FAQ: "Are therapists licensed in my state?", "Different from BetterHelp?", "If I'm in crisis — what's the protocol?", "Is messaging private or logged for training?", "Can I switch therapists if it's not a fit?".
+
+VARIANT 04: Vita — Patient records that don't fight you.
+- Mode: light. Bg #FFFFFF. Accent: soft blue #5070C8. Text #0F1419.
+- Pitch: "Patient records that don't fight you <em>at every click</em>."
+- Audience: independent primary care, family medicine, small specialty clinics (1-15 providers) on Epic/Athenahealth and exhausted by their UX.
+- Hero mockup: clinician EHR screen — patient summary card (name, age, last visit), problem list with active conditions, recent labs with reference ranges, medications. Side panel "Next patient: Hana Suzuki · 2:45pm · annual wellness".
+- Centerpiece: charting UI mockup — clinician dictates a note into voice input → AI structures into SOAP format → ICD-10 codes suggested → billing fields pre-filled.
+- Outcomes: "Avg note completion time (4 min vs Epic 14 min)", "Clinician burnout score improvement (−38% in 6 months)", "Patients seen per day (+22%)", "After-hours charting reduced (−84%)".
+- Provider story: "Dr. Yusuf Abara MD · 5-provider family practice in Austin · reclaimed 2hrs/day from charting".
+- Pricing: $200/provider/mo (cloud EHR + scheduling + billing) + $99/provider/mo (voice charting addon) + Setup ($1,500 one-time, includes data migration).
+- FAQ: "Interoperability — CommonWell / Carequality?", "Migration path from Epic/Athena/Eclinical?", "Voice charting accuracy — what model and what HIPAA pipeline?", "Insurance eligibility checks and claim submission?", "Practice management — scheduling, billing, statements?".
+
+VARIANT 05: Reckon — Medical billing for small practices.
+- Mode: cream + warm. Bg #FAF5EF. Accent: warm sienna #B05030. Text #1A1714.
+- Pitch: "Get paid what you billed. Without chasing insurance <em>for 90 days</em>."
+- Audience: independent doctors, dentists, and small clinics (1-10 providers) tired of insurance underpaying / denying without explanation.
+- Hero mockup: claims dashboard — claim status board with columns ("Submitted: 47", "Under review: 28", "Paid: 142", "Denied: 8 — appeals filed"). One denied claim highlighted with reason ("Modifier missing — auto-corrected, resubmitted 12s ago"). Aging report sidebar.
+- Centerpiece: claim lifecycle — visit → coded → submitted → adjudication → paid OR denied → auto-appealed → paid. Each step with avg duration in mono.
+- Outcomes: "Avg time-to-payment (28 days vs industry 62)", "First-pass acceptance rate (94% vs industry 78%)", "Claim denial recovery rate (84% via auto-appeals)", "Providers using Reckon (1,408)".
+- Provider story: "Dr. Ines Calderón DDS · 3-chair dental practice in Miami · recovered $48,408 in previously-denied claims in 2025".
+- Pricing: 4% of collected revenue (no fee on denied claims, no monthly minimum) OR Custom ($1,499/mo flat for $200k+/mo collections).
+- FAQ: "Priced compared to current billing company (typically 8-10%)?", "Do you actually call insurance on appeals or just resubmit?", "Which payers and clearinghouses do you connect to?", "Credentialing services?", "What if denied for non-medical-necessity — do you fight that?".
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 9 — Personal / Portfolio (5 pages, mixed modes)
+
+```
+Brief: Produce 5 PERSONAL PORTFOLIOS — a single individual's home page. NOT a product landing. Structurally completely different: no pricing, no FAQ, no testimonials grid, no feature trio. Instead: name + role bio + selected work + writing/talks + about + contact. Quieter, slower, typography-driven. Frank Chimero meets Tobias van Schneider meets a craftsperson's calling card.
+
+SHARED AESTHETIC (all 5 variants):
+- Display: variant-specific — usually serif (Source Serif 4, Fraunces, Newsreader) for emotional weight.
+- Body: Inter 400 OR Newsreader 400.
+- Mono: JetBrains Mono 400 — used only for dates, locations, metadata footnotes.
+- Long reading line widths (max-w-prose ~ 65ch) — slower scan rhythm.
+- Asymmetric layouts: text doesn't always center, often slightly left-shifted with margin notes on the right.
+- "Marginalia": small mono notes at the right edge of paragraphs (page-numbered references, side commentary).
+- Subtle paper / cream background.
+- Soft animations: fade-in-on-scroll for new sections (not aggressive).
+- Single-page (no real navigation — anchors only).
+
+SHARED SECTION SKELETON (DIFFERENT from product landings):
+1. Sticky thin nav: just the person's wordmark + 3-4 anchor links (Work, Writing, About, Contact). NO sign-in, NO CTA pill.
+2. Hero: name as DISPLAY size (often serif), role in 1 line below, 1-2 sentence bio paragraph (max-w 50ch). Optional small photo / avatar / illustration to the right or below.
+3. Selected work: 3-6 case study cards with image placeholder (gradient blob simulating photo) + serif title + 1-line client + 1-line outcome. Cards stack vertically OR grid-cols-2.
+4. Writing / talks / press: a numbered LIST (not grid) with mono dates + serif titles + venue/publication + short blurb. 6-12 entries.
+5. About (long-form prose): 2-3 paragraphs. Includes "places I've worked" (timeline as mono list: 2022—Now / Company / Role) + "things I make outside work" (woodworking, ceramics, photo — humanize).
+6. Now / currently: short "what I'm doing now" snippet (4-6 lines, dated).
+7. Contact: large email link + 3-4 social link icons (Twitter, LinkedIn, GitHub, RSS). Optional booking link.
+8. Footer: minimal — name + © year + "made by hand · last updated" mono.
+
+VISUAL FLOURISHES SPECIFIC TO PORTFOLIOS:
+- Drop-cap on the about paragraph.
+- Decorative rule (28px hairline) above each section heading.
+- Marginalia at section starts: small mono "§ Work — selected 2018–2025" right-aligned.
+- Hover state on work cards: subtle lift + accent underline grows from left.
+- Inline italic emphasis on one phrase per paragraph.
+
+THE 5 VARIANTS:
+
+VARIANT 01: Marquee — Yuki Tanaka, brand designer in Tokyo.
+- Mode: warm dark. Bg #14110D. Accent: warm orange #F97316 (sparingly). Text #F4EEE0.
+- Display font: Source Serif 4 weight 500, italic for emphasis.
+- Bio: "Yuki Tanaka — Brand designer in Tokyo. I help founders find the visual language that already wants to come out."
+- Selected work (4 cards): "Atrium — Series-A SaaS brand refresh · 2024", "Reverb — Music tech identity from scratch · 2023", "Hana Pottery — DTC e-commerce visual system · 2023", "Cargo Studio — co-founding designer · ongoing".
+- Writing/talks: 8 entries — "Brand systems are conversations" essay 2026, talk at Brand New Conf 2025, podcast guest on Design Details.
+- About (with drop-cap): "I went to Tama Art University in Tokyo and spent four years at a Sogetsu ikebana studio before landing in brand design through a side door — I think arrangement, balance, and negative space matter more than which Pantone you choose..."
+- Now: "Currently consulting for 3 early-stage founders on visual identity systems. Open to 1 more engagement starting Q3 2026."
+
+VARIANT 02: Notebook — Jamie Lin, indie SaaS builder.
+- Mode: light + warm. Bg #FBF8F2. Accent: deep coral #C53A22 (rare). Text #1F1B16.
+- Display font: Inter 600 (NOT serif — signals indie hacker aesthetic).
+- Bio: "Jamie Lin — I build small SaaS products. Notebook is what I call this site because that's what it is — every project I've shipped, plus what I've learned doing it."
+- Selected work (5 cards): "Codex Tags — $4,408 MRR · feeds aggregator for indie devs", "Pivot Alert — $1,408 MRR · price-drop alerts for Steam games", "Sift — $402 MRR · spam filter for personal email", "Halcyon Tracker — sunset · habit tracker", "Cinder Notes — open source · markdown knowledge tool".
+- Writing/talks: 12 entries — quarterly "indie hacker income reports", talk at Microconf Europe 2025, "How I priced my SaaS in a week" essay.
+- About: "I quit my Series-B engineering job in 2022 to see if I could make a living building tiny SaaS products. I haven't replaced my salary yet but I'm getting closer every year, and I'd rather keep doing this than go back. I write about it openly because the indie hacker space lies a lot."
+- Now: "Working on a new product, Pebble Notes — a small notes app for people who type too fast for normal note-taking. Open beta in Q3."
+
+VARIANT 03: Frame — Hana Ito, photographer.
+- Mode: pure dark. Bg #000000. Accent: subtle warm gold #C8A88A (only on link underlines). Text #FFFFFF.
+- Display font: Source Serif 4 italic, weight 400 — like a museum caption.
+- Bio: "Hana Ito — photographer based in Brooklyn and Tokyo. I shoot people at work — engineers, chefs, dancers, surgeons. Editorial + commissioned."
+- Selected work: image-first grid — 12 placeholder gradient cards in brick layout (different aspect ratios — full-bleed wide / portrait / square mixed). Hover shows caption (project name + client + year).
+- Writing/talks: "PUBLICATIONS" — list of 14 magazines featured: Aperture Mag, Tide Quarterly, The Reading Room, Form Press, Coastline Annual.
+- About: "I went to art school for painting and switched to photography after a documentary class in my third year. I make pictures because painting felt too slow for what the world looks like now."
+- Now: "Currently working on a long-form series about hospital surgeons in Lagos. Will exhibit in Tokyo spring 2027."
+
+VARIANT 04: Sketchbook — Priya Anand, illustrator.
+- Mode: cream paper. Bg #FBF6EB. Accent: deep teal #2D5F66 (rare). Text #1A1714.
+- Display font: Newsreader weight 500. Body is Newsreader 400 for prose.
+- Bio: "Priya Anand — illustrator working in editorial, books, and identity. I make pictures that hold up at small sizes and don't argue with the words around them."
+- Selected work (6 cards): "Cover for The Believer · Issue 138 · 2025", "Book illustration · 'Cinder Hill' by Maya Levenson · Henry Holt · 2024", "Brand mark for Tide Coffee · 2023", "Editorial set for The Atlantic · climate piece · 2024", "Sticker pack for Linear · 2024", "Greeting card series · self-published · ongoing".
+- Writing/talks: less talks, more interviews + features. 6 entries.
+- About: "I was a biology major in college and learned to draw because my professors made us draw what we saw under microscopes. I still mostly draw what I see — but the things I see now are usually metaphors people pay me to make visible."
+- Now: "Open for editorial commissions starting Q3 2026. Have 2 book covers under contract through 2027."
+
+VARIANT 05: Resume — Marcus Tobin, senior engineer & consultant.
+- Mode: pure light. Bg #FFFFFF. Accent: charcoal #1A1A1A (mono). Text #0A0A0A.
+- Display font: Inter 600 — restrained, no flourish. The page IS the resume.
+- Bio: "Marcus Tobin — Distributed systems engineer. I work with high-performance teams on database internals, query planning, and concurrency. Available for short engagements."
+- Selected work (5 entries, NOT cards — list format with mono dates):
+  - "2024—Now · Forecast · Founding engineer · Built the realtime query engine"
+  - "2021—2024 · Linnea · Staff engineer · Led Postgres-to-Cockroach migration"
+  - "2018—2021 · Halcyon · Senior engineer · Distributed tracing platform"
+  - "2016—2018 · Stratos Protocol · Engineer · Custom k-d tree index for geo queries"
+  - "2014—2016 · Atrium · Engineer · Started here out of CMU CS"
+- Writing/talks: technical talks at SREcon, PgCon, Strange Loop. Open-source contributions to Postgres, Bevy, Tokio.
+- About: "I write code professionally for ~10 years. I'm picky about the work I take on because most companies don't actually need someone like me — they need to hire 5 mids. If you actually have a hard distributed-systems problem and want someone with deep query engine + concurrency experience for 4-12 weeks, here's how to reach me."
+- Now: "Booked through Q3 2026. Available for a 6-week engagement starting October."
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 10 — Pre-launch / Coming Soon (5 pages, mixed modes)
+
+```
+Brief: Produce 5 landing pages that are PRE-LAUNCH teasers — minimal, single-purpose, hype-building. NO pricing, NO testimonials, NO long feature lists. Just enough copy to make someone subscribe to a waitlist. Apple's September event teaser meets indie launch meets Kickstarter intro page.
+
+SHARED AESTHETIC (all 5 variants):
+- Display: HUGE — clamp(72px, 12vw, 200px) display sizes. Tight letter-spacing -0.04em.
+- Body: minimal — usually 1-2 short sentences max per section.
+- Lots of whitespace. Sections breathe.
+- Single primary CTA throughout (waitlist email signup).
+- Optional: countdown timer to launch date (real CSS animation, fictional date 90-120 days out).
+- Animated subtle background (gradient shift, particles, mesh — slow + low-key).
+- No nav bar at top (or minimal — just wordmark, maybe one "About" link).
+
+SHARED SECTION SKELETON (much shorter than product landings):
+1. Minimal nav OR no nav — wordmark left, MAYBE one anchor link right.
+2. Hero (occupies 70-100vh): pill badge tease + HUGE display headline (1-2 lines) + 1-sentence tease + email input + accent CTA pill ("Join the waitlist" / "Get notified").
+3. Optional: live counter showing N people already waitlisted (mono tabular nums).
+4. Optional: countdown — days / hours / minutes / seconds to launch (mono tabular nums).
+5. Optional: founder's note (signed, with photo placeholder).
+6. Optional: 3-4 line "what's coming" tease.
+7. Optional: backed-by / coming-from credibility row (8-12 small mono wordmarks).
+8. Optional: roadmap as a numbered list (Phase 01: closed beta · Phase 02: open beta · Phase 03: launch).
+9. Minimal footer: wordmark + privacy link + © year.
+
+VISUAL FLOURISHES:
+- Animated gradient mesh background (slow keyframes, low opacity).
+- Pulse-dot on "waitlist active" indicator.
+- Tabular nums for countdown.
+- Marquee of waitlist member avatars (small circle gradients) — fictional but conveys momentum.
+
+THE 5 VARIANTS:
+
+VARIANT 01: Eclipse — Stealth AI startup pre-launch.
+- Mode: pure dark. Bg #050505. Accent: electric purple #B388FF. Text #FFFFFF.
+- Hero headline: "Something is being built. <em>Slowly</em>."
+- Tease: "An AI tool for hard problems. Coming in 2026."
+- Waitlist count: "4,408 builders waitlisted."
+- Countdown: "Launch in 087 days · 14 hours · 02 minutes."
+- Founder note: "We're a four-person team out of San Francisco and Stockholm. We've been heads-down for 11 months. — Maya, founding engineer."
+- Backed by: 6 fictional VC logos (Halcyon Capital, Cinder Fund, Beacon Ventures, Coast Partners, Linnea Capital, Stratos VC).
+- Footer: just wordmark + privacy + ©.
+
+VARIANT 02: Constellation — Indie SaaS waitlist (open beta soon).
+- Mode: dark navy. Bg #0A0F1A. Accent: cyan #67E8F9. Text #FFFFFF.
+- Hero headline: "The CRM you'll <em>actually</em> use."
+- Tease: "A solo-founder CRM that thinks like you do. Open beta in October."
+- Waitlist count: "1,402 founders waitlisted."
+- Countdown: "Beta opens in 028 days · 14 hours."
+- Founder note: "I quit my Salesforce job because their CRM made me want to quit my Salesforce job. — Jamie, building Constellation alone."
+- "What's coming" 3-line tease: contact management as a graph, AI follow-up scheduling, single keyboard-driven UI.
+- Footer minimal.
+
+VARIANT 03: Tide — Product Hunt launch tease.
+- Mode: cream + warm. Bg #FAF6F0. Accent: warm coral #FF5A36. Text #1A1714.
+- Hero headline: "Tide — launching <em>on Product Hunt</em>."
+- Tease: "A scheduling tool that doesn't think it's a calendar. Launching October 14."
+- Waitlist count: "8,408 makers excited."
+- Countdown: "Launching in 014 days · 04 hours."
+- "What is Tide" 4-line tease + 4-card preview of features with rough sketches.
+- "Help us launch big" 3-step list: (1) follow on Product Hunt, (2) get an upvote reminder email, (3) we'll DM you on launch day.
+- Founder photo + signature.
+
+VARIANT 04: Pulse Lab — Hardware preorder.
+- Mode: dark. Bg #000000. Accent: amber #F5C26B. Text #FFFFFF.
+- Hero headline: "Pulse Lab — the desk timer for <em>deep work</em>."
+- Tease: "Wood + brass + a single button. Made in Brooklyn. 200 units in the first batch."
+- Hero mockup: photo placeholder of the device (gradient cylinder simulating a wooden timer with a brass button).
+- "Preorder open" with $148 price + Estimated delivery: November 2026.
+- Inventory counter: "078 of 200 spoken for."
+- Founder note: 2 paragraphs about why a physical desk timer in 2026.
+- "Why this exists" 3-line tease.
+- Press: 4 fictional press mentions (Wirecutter, Kickstarter, Field Notes, The Verge).
+
+VARIANT 05: Vellum — Writer's pre-launch newsletter.
+- Mode: paper light. Bg #FBF8F0. Accent: deep sienna #B05030. Text #1A1714.
+- Display font: serif (Newsreader weight 500). Editorial vibes throughout.
+- Hero headline: "<em>Vellum</em> — a weekly letter starting January 2026."
+- Tease: "Long-form pieces about engineering culture, every Tuesday morning. From the desk of Maya Levenson, Issue 01 lands January 14, 2026."
+- About the writer: 2-paragraph bio with serif italic emphasis on key phrases. Photo placeholder.
+- "What it'll be" 4-line tease: "Each issue will be ~2,000 words. No paywall, no ads. Just one writer, one editor, one good idea per week."
+- Sample piece teaser: 3 fictional issue titles + dates.
+- Subscribe form: email + "I write twice and rest once a year".
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 11 — Event / Conference (5 pages, mixed modes)
+
+```
+Brief: Produce 5 landing pages for events — conferences, workshops, hackathons, summits, meetups. SXSW / Strange Loop / Config / Future Workshop level. Information-dense (schedule, speakers, venue), big register CTAs, social proof via past attendees, sponsor logos.
+
+SHARED AESTHETIC (all 5 variants):
+- Display: variant-appropriate — usually large, often italic for moment-driven feel.
+- Body: Inter 400-500.
+- Mono: dates, times, room numbers, ticket types.
+- "Live event" pulse-dot on "Register open" or "Sold out — waitlist".
+- Ticket card with serif typography for sense of artifact.
+- Schedule grid with time columns and session blocks (color-coded by track).
+- Speaker cards: photo placeholder + name + role + company.
+
+SHARED SECTION SKELETON:
+1. Nav: wordmark + Schedule, Speakers, Venue, Sponsors, Register links + accent CTA pill "Register" / "Buy tickets".
+2. Hero: pill badge with date + venue + countdown ("Mar 18-19 · Brooklyn · 47 days away") + huge display headline + 1-sentence tagline + ticket CTA + key info row (date, location, format).
+3. About the event: 2-paragraph description + small mockup of "what to expect" (3-4 cards: keynotes / workshops / networking).
+4. Speakers grid: 12-24 speaker cards in 4-col grid. Each: photo placeholder + name + role + company + mono session title.
+5. Schedule: tabular by day. Time-blocked rows. Multi-track if applicable (color-coded). Each row: time + session title + speaker + room + duration.
+6. Sponsors: tiered logo grid (Platinum/Gold/Silver/Community) with mono labels.
+7. Venue: photo placeholder + address + map link + "Getting there" tips (subway / parking / hotels nearby).
+8. Tickets: 2-3 tier pricing (Early bird / Standard / Late) OR (Member / Industry / Student) with mono prices + features.
+9. Past attendees / testimonials: 6-8 quote cards from past editions.
+10. FAQ: 5 event-specific (refund policy, recording availability, dress code, dietary restrictions, accessibility).
+11. Final register CTA banner.
+12. Footer: org details + privacy + © + sponsorship inquiry email.
+
+VISUAL FLOURISHES:
+- Countdown to event date.
+- Schedule grid: visually striking time blocks.
+- Speaker carousel with hover state.
+- Ticket "stub" graphic with perforation lines.
+
+THE 5 VARIANTS:
+
+VARIANT 01: Refract — Tech conference, 2 days.
+- Mode: dark. Bg #0A0F14. Accent: cyan #67E8F9. Text #F4F6F8.
+- Display font: Inter 700 large display.
+- Event: "Refract Conf 2026 — March 18-19 — Brooklyn — Two days on building durable systems."
+- Audience: senior engineers, EMs, principal engineers.
+- Speakers: 24 fictional names (Maya Levenson — Distributed systems at Forecast, Priya Anand — Staff at Linnea, Marcus Tobin — Founding Eng at Cinder).
+- Schedule: 2 days × 4 tracks. Day 1 morning keynote + 2 workshops. Day 1 afternoon 6 talks. Day 2 similar.
+- Sponsors: 4 platinum (Linear, Vercel, Stripe, Neon) + 8 gold + 12 community.
+- Venue: "The Refinery · Brooklyn Navy Yard · accessible · 600 capacity".
+- Tickets: Early Bird ($499 — sold out), Standard ($799), Student ($199 — 50 spots).
+- FAQ: refund window 1 week before, recordings free for attendees + $99 public 60 days later, accessibility (ASL, captions, accessible venue).
+
+VARIANT 02: Forge Lab — 4-session masterclass workshop.
+- Mode: cream + warm. Bg #FAF6EF. Accent: warm sienna #B05030. Text #1F1B16.
+- Display font: Source Serif 4 italic.
+- Event: "Forge Lab — Distributed Systems Mastermind — 4-week intensive · April 2026 · Online".
+- Audience: senior engineers wanting depth on consensus, fault-tolerance, partitions.
+- Format: 4 weekly 3-hour sessions + async work + Slack community. 28 spots.
+- Instructor: "Dr. Yusuf Abara — formerly principal at Forecast and Cinder, taught at CMU".
+- Schedule: Week 1 Consensus protocols (Raft, Paxos, ZAB). Week 2 Replication models. Week 3 Failure modes + recovery. Week 4 Capstone — design a small distributed system.
+- Sponsors: minimal (1-2 community).
+- Tickets: $1,499 standard (28 spots, 12 confirmed already), $399 community grant rate (4 spots reserved).
+- FAQ: prerequisites (production engineering experience), live attendance required for Weeks 1-3 (only Week 4 recorded), refund window 2 weeks, cohort size cap, certificate.
+
+VARIANT 03: Cohort — Hackathon weekend.
+- Mode: dark. Bg #0F0F12. Accent: electric green #5BFF89. Text #FFFFFF.
+- Display font: Inter 800.
+- Event: "Cohort Hack — 48 hours · LA · April 5-7 · ship a real product".
+- Audience: developers (10 LOC for years to fresh bootcampers welcome).
+- Theme: "Build something a single user would pay $10 for."
+- Schedule: Friday 6pm kickoff + dinner + team formation. Saturday 8am-midnight hack. Sunday 8am-2pm finish + demos.
+- Prizes: $14,408 cash for top 3 + free workspace + audience-choice swag.
+- Sponsors: 6 sponsors (cloud credits, dev tools, food/coffee).
+- Venue: "Beacon Studios · DTLA · 200 capacity · all-night access".
+- Tickets: Hacker ($89 — food, swag, judging), Spectator ($24 — Sunday demos only).
+- FAQ: solo or team (1-4), what to bring (laptop, charger, hoodie — beds NOT provided), Wi-Fi capacity (yes, hardened), dietary options, license of submissions (you own it).
+
+VARIANT 04: Summit — Invite-only industry summit.
+- Mode: deep navy + gold. Bg #0E1A3A. Accent: gold #C8A06A. Text #F4F2EE.
+- Display font: Fraunces serif 500.
+- Event: "Stratos Summit 2026 — by invite — November 7-9 — Mendocino, CA — for engineering leaders at scale".
+- Audience: VPs, CTOs, principal engineers at 500+ person companies. Capped 80 attendees.
+- Format: 3 days at a coastal lodge. Daytime 4 sessions/day with 2 keynotes. Evenings dinners + bonfire conversations.
+- Speakers: 12 carefully curated names, no slides allowed for half the sessions.
+- Sponsors: NONE (no sponsor signage, pure attendee fees model).
+- Venue: "Stratos Lodge · 200 acres · Mendocino coast · 80 rooms + meeting hall".
+- Tickets: $4,408 standard (3 nights lodging + all meals + activities). Scholarships for underrepresented attendees.
+- FAQ: Why no sponsors? (we don't want sales pitches). Recording? (no — Chatham House rules). Dress code? (no). Dietary? (catered for everything). Bring partner? (yes for $1,499 add-on, partner gets day-off track).
+
+VARIANT 05: Salon — Recurring monthly meetup series.
+- Mode: warm light. Bg #FBF8F2. Accent: deep coral #C53A22. Text #1A1714.
+- Display font: Newsreader serif 500.
+- Event: "Brooklyn Engineering Salon — third Wednesday of every month — small + free".
+- Audience: NY-based engineers, ~80-120 per session.
+- Format: 6pm doors + drinks, 7pm 1 talk + Q&A, 8pm open conversation + snacks, 10pm done.
+- Past lineup: 28 sessions held, 4-6 listed by topic + speaker.
+- Sponsors: 3 friend-companies covering venue + drinks.
+- Venue: "Atrium Loft · 47 Berry St · Brooklyn · subway accessible".
+- Tickets: Free with RSVP. 110 spots monthly. Waitlist common after RSVP fills (typically full within 4 hours).
+- FAQ: Code of conduct (yes, take it seriously), recording (no — built for live attendance), photography (only with consent), what topics (anything technical, no pitches), open to non-engineers (welcoming but content is engineering).
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 12 — Agency / Studio (5 pages, mixed modes)
+
+```
+Brief: Produce 5 landing pages for creative agencies/studios — brand design, dev shop, motion design, marketing/growth, architecture. Pentagram / Mast / frog level. Heavy on case studies (selected work with outcome metrics), restrained aesthetic, team page emphasis, "process" diagrams.
+
+SHARED AESTHETIC (all 5 variants):
+- Display: variant-appropriate — usually serif or large sans, asymmetric.
+- Body: Inter 400.
+- Mono: project codes, dates, location metadata.
+- Case-study cards: HEAVY visual emphasis — image placeholder is 60-70% of card, text minimal.
+- Studio voice: confident, opinionated, "we work with X — we don't work with Y".
+- Hover states subtle but textured.
+- Studio logo treatments distinctive per variant (mark + wordmark).
+
+SHARED SECTION SKELETON:
+1. Nav: studio wordmark + 4 links (Work, Services, Process, Contact). No sign-in. CTA pill "Start a project" or "Say hello".
+2. Hero: studio wordmark big + 1-sentence positioning (opinionated) + selected client logos row.
+3. Selected work: 4-6 case study cards. Each: hero image placeholder + client name (mono small) + project title (serif large) + 1-line outcome metric + year. Hover reveals more.
+4. Services / capabilities: 4-8 tiles with icon + h3 + paragraph. Specific to studio type.
+5. Process: 3-5 step diagram (numbered, mono labels) showing how the studio engages clients.
+6. Team: 4-12 person cards with photo placeholder + name + role + 1-line bio.
+7. Press / awards / featured-in: 8-12 small mono wordmarks.
+8. Featured case study deep-dive: ONE highlighted case with hero image + 3-4 paragraph story + outcome metrics + client quote.
+9. Contact: large headline + email link + studio locations (1-3 cities) + booking calendar mention.
+10. Footer: studio name + locations + © year + Privacy + sometimes a "made with care" line.
+
+VISUAL FLOURISHES:
+- "Currently engaged with" row: 3-4 client logos + "open for 1 more Q3 2026" mono.
+- Awards / press row with mono publication names.
+- Process diagram: connected dots/circles with mono week labels.
+- Team grid with hover-to-flip cards.
+
+THE 5 VARIANTS:
+
+VARIANT 01: Atrium — Brand design studio.
+- Mode: cream. Bg #FAF5EC. Accent: deep teal #1F4F5E. Text #1A1714.
+- Display font: Source Serif 4 italic, weight 500.
+- Positioning: "Atrium — A brand studio. We work on identity systems for software companies who plan to be around in 10 years."
+- Founded: 2018 · NYC + Stockholm · 12 people.
+- Selected work: "Linear — identity system · 2022", "Linnea — brand from scratch · 2023", "Forecast — rebrand · 2024", "Cargo — naming + identity · 2024", "Halcyon — visual system + book · 2025", "Stratos Protocol — DAO identity · 2025".
+- Services: Brand strategy, Identity design, Type systems, Naming, Brand books, Implementation oversight.
+- Process: 5-step — Discovery (2 weeks) → Strategy (3 weeks) → Identity design (8 weeks) → Implementation (4 weeks) → Hand-off (1 week).
+- Team: 12 cards — Maya Levenson (creative director), Yuki Tanaka (senior designer), Hana Suzuki (researcher), Marcus Tobin (writer).
+- Featured case: "Linnea — A brand for the engineering era". 4 paragraphs + before/after image placeholders + CEO quote + metrics: "Brand recognition +84% in 12 months · NPS +14 points · Inbound deal flow +38%".
+- Contact: "Ready to start? Email start@atrium.design. We respond within 48 hours. Open for 2 new engagements in Q3 2026."
+- Press: 8 mono wordmarks — Brand New, It's Nice That, Eye on Design.
+
+VARIANT 02: Workshop — Dev shop / engineering consultancy.
+- Mode: light. Bg #FFFFFF. Accent: cobalt blue #2D5BFF. Text #0A0A0A.
+- Display font: Inter 700.
+- Positioning: "Workshop — A small engineering shop. We build hard backend systems for companies that have already tried hiring."
+- Founded: 2020 · Remote (Berlin + Brooklyn + Lisbon) · 8 engineers.
+- Selected work: 6 case studies — "Forecast — realtime query engine · 2024", "Cinder Trading — order matching engine · 2024", "Halcyon Bio — bioinformatics pipeline · 2023", "Linnea — Postgres-to-Cockroach migration · 2023", "Stratos — cross-chain settlement · 2025", "Brightwave — embedded analytics · 2025".
+- Services: Distributed systems, Database internals, Realtime infra, Migrations, Performance work, On-site team augmentation.
+- Process: 4-step — Scoping call (1 hr free) → Pilot project (4 weeks fixed-bid) → Engagement (6-16 weeks) → Hand-off + 30-day support.
+- Team: 8 senior engineers each with prior staff/principal role + brief credentials.
+- Featured case: "Forecast — Realtime engine for 240k QPS". Technical details + architecture diagram placeholder + metrics: "P95 latency 4ms → 0.8ms · QPS handled 24k → 240k · Engineering team unblocked".
+- Contact: "If you have a hard backend problem and want a small team that's seen it before, email project@workshop.co. Typical response 24h."
+- Press: 6 mono wordmarks — InfoQ, The Pragmatic Engineer.
+
+VARIANT 03: Reverb — Motion design studio.
+- Mode: dark. Bg #0B0B0F. Accent: electric magenta #FF3E8A. Text #FFFFFF.
+- Display font: Inter 800.
+- Positioning: "Reverb — A motion design studio. We make tech products feel less stiff."
+- Founded: 2019 · LA · 6 designers + 2 directors.
+- Selected work: 5 case studies — "Vercel — product launch film · 2024", "Linear — homepage hero animation · 2023", "Cargo — brand spot · 2023", "Tide Music — campaign · 2024", "Cinder — TVC for product launch · 2025".
+- Services: Brand films, Product motion, UI animation, Spots, Site animations, Direction for tech brands.
+- Process: 4-step — Brief + reference → Storyboard → Animation + revisions (2 rounds) → Final + delivery.
+- Team: 8 cards with motion specialists.
+- Featured case: "Vercel — A product launch film". 3 paragraphs + still frames + outcome: "Views in 30 days · 4.2M · Time-on-page lifted +28% · Sign-ups attributed +14%".
+- Contact: "Curious if we'd be a fit? Send a brief to hello@reverb.studio. Response in 24 hours."
+- Press: 4 motion design publications.
+
+VARIANT 04: Halcyon — Marketing / growth agency.
+- Mode: warm + light. Bg #FBF7EF. Accent: warm orange #F97316. Text #1A1714.
+- Display font: Inter 600 + occasional serif accents.
+- Positioning: "Halcyon — Growth marketing for B2B SaaS. We don't do paid ads. We do everything else."
+- Founded: 2021 · Remote · 14 marketers + strategists.
+- Selected work: 6 case studies — "Cinder Trading — content + SEO · 2024", "Brightwave — outbound revamp · 2024", "Linnea — webinar series · 2023", "Cargo — partnerships program · 2025", "Forecast — community + advocacy · 2024", "Pebble — launch campaign · 2025".
+- Services: Content strategy, SEO, Outbound, Partnerships, Community, Webinars, Launch campaigns.
+- Process: 5-step — Audit (2 weeks) → Strategy → Execution (3-6 month retainer) → Quarterly review → Renew or finish.
+- Team: 14 cards.
+- Featured case: "Cinder Trading — Content as a growth channel". 4 paragraphs + outcome: "Organic traffic +428% in 12 months · Inbound qualified leads × 4.2 · CAC reduced 38%".
+- Contact: "We typically work on 6-month retainers starting at $14k/mo. Email partners@halcyon.co with your stage and goals."
+- Press: 6 marketing publications.
+
+VARIANT 05: Mason — Architecture firm.
+- Mode: cream + warm. Bg #F5EFE4. Accent: deep teal #1C3F47. Text #1A1714.
+- Display font: Fraunces serif 500.
+- Positioning: "Mason — Architecture and interiors. We make spaces that feel built by people who give a damn."
+- Founded: 2014 · NYC + Mendocino · 18 people.
+- Selected work: 6 projects — "Stratos HQ · NYC · adaptive reuse · 2024", "Halcyon Lodge · Mendocino · ground-up · 2023", "Tide Roastery · Brooklyn · interiors · 2024", "Cinder Residence · Hudson Valley · private home · 2022", "Beacon School · Stratos · public commission · 2025", "Atrium Studio · LIC · workplace interiors · 2024".
+- Services: Architecture, Interior design, Adaptive reuse, Master planning, Workplace interiors.
+- Process: 5-step — Site visit → Schematic design → Design development → Construction documents → Construction administration.
+- Team: 18 cards — architects + interior designers + craftsmen partners.
+- Featured case: "Halcyon Lodge — A coastal retreat in Mendocino". 5 paragraphs + project photos + metrics: "Sq ft built · 8,408 · Project duration · 18 months · Awarded · ALA Honor 2024".
+- Contact: "We typically take on 4-6 projects per year. Email work@masonarch.com to start a conversation. Response within 1 week."
+- Press: 8 architecture publications — Architectural Record, Dwell, Wallpaper, Architectural Digest.
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
 ## After claude.ai produces the HTML(s)
 
 Save each artifact as `.html` locally. To get one published as a landing page on your subdomain, paste the HTML content here in Claude Code chat — I'll create a project + tell you the URL to open in `/new-v2` and hit Deploy.

@@ -9,7 +9,13 @@ export type TemplateFamily =
   | "commerce"
   | "documentation"
   | "saas"
-  | "ai-ml";
+  | "ai-ml"
+  | "fintech"
+  | "health-tech"
+  | "portfolio"
+  | "pre-launch"
+  | "event"
+  | "agency";
 
 export type TemplateMode = "dark" | "light" | "cream";
 export type TemplateStatus = "draft" | "published" | "archived";
@@ -47,5 +53,35 @@ export const TEMPLATE_FAMILY_META: Record<
     label: "AI / ML",
     tagline:
       "Model playgrounds, eval dashboards, agent traces. For LLM and ML products.",
+  },
+  fintech: {
+    label: "Fintech",
+    tagline:
+      "Banking, payments, trading. Trust signals, tabular numbers, regulatory badges.",
+  },
+  "health-tech": {
+    label: "Health-tech",
+    tagline:
+      "Telehealth, fitness, mental health, EHR. Calmer typography, warm accents, clinical trust signals.",
+  },
+  portfolio: {
+    label: "Portfolio",
+    tagline:
+      "Personal home page — name + work + writing + contact. Quieter, typography-driven, no pricing.",
+  },
+  "pre-launch": {
+    label: "Pre-launch",
+    tagline:
+      "Single-purpose teaser. Display headline + waitlist input + optional countdown. Hype-building.",
+  },
+  event: {
+    label: "Event",
+    tagline:
+      "Conferences, workshops, meetups. Schedule grids, speaker cards, ticket tiers.",
+  },
+  agency: {
+    label: "Agency / Studio",
+    tagline:
+      "Brand studios, dev shops, motion houses. Case-study heavy, restrained voice, team-focused.",
   },
 };

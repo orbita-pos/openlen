@@ -12,6 +12,12 @@ export const FAMILY = z.enum([
   "documentation",
   "saas",
   "ai-ml",
+  "fintech",
+  "health-tech",
+  "portfolio",
+  "pre-launch",
+  "event",
+  "agency",
 ]);
 export const MODE = z.enum(["dark", "light", "cream"]);
 export const STATUS = z.enum(["draft", "published", "archived"]);

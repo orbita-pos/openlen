@@ -36,6 +36,12 @@ const FAMILIES: TemplateFamily[] = [
   "documentation",
   "saas",
   "ai-ml",
+  "fintech",
+  "health-tech",
+  "portfolio",
+  "pre-launch",
+  "event",
+  "agency",
 ];
 
 export default async function TemplatesPage() {
