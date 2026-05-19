@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useFocusTrap } from "./use-focus-trap";
 
 type Tab = "image" | "text";
 
@@ -302,6 +303,8 @@ export function AutofillModal({
     setStartedAt(null);
   }, []);
 
+  const trapRef = useFocusTrap(open);
+
   if (!open) return null;
 
   const isBusy =
@@ -315,22 +318,29 @@ export function AutofillModal({
 
   return (
     <div
-      className="workspace-v2 fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm fade-in"
+      className="workspace-v2 fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm fade-in overflow-y-auto"
       onClick={() => {
         if (!isBusy) onClose();
       }}
     >
       <div
-        className="relative w-full max-w-2xl mx-4 rounded-2xl bg-elev border bd shadow-elev overflow-hidden slide-down"
+        ref={trapRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="autofill-modal-title"
+        className="relative w-full max-w-2xl sm:mx-4 rounded-t-2xl sm:rounded-2xl bg-elev border bd shadow-elev overflow-hidden slide-down my-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-5 py-4 border-b bd flex items-center justify-between">
-          <div className="min-w-0 pr-3">
-            <div className="text-[15px] font-semibold fg font-display">
+        <div className="px-4 sm:px-5 py-3 sm:py-4 border-b bd flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <div id="autofill-modal-title" className="text-[14px] sm:text-[15px] font-semibold fg font-display">
               Llenar con tu info
             </div>
-            <div className="text-[12px] fg-faint mt-0.5 leading-snug">
+            <div className="hidden sm:block text-[12px] fg-faint mt-0.5 leading-snug">
               Subí una imagen con la info de tu negocio o escribí los datos a mano. Tu template se llena con tu contenido real — el diseño no cambia.
+            </div>
+            <div className="sm:hidden text-[11px] fg-faint mt-0.5 leading-snug">
+              Imagen o datos → tu template se llena con tu contenido.
             </div>
           </div>
           <button
@@ -344,7 +354,7 @@ export function AutofillModal({
           </button>
         </div>
 
-        <div className="px-5 pt-3.5 flex gap-1 text-[12.5px]">
+        <div className="px-4 sm:px-5 pt-3 sm:pt-3.5 flex gap-1 text-[12.5px]">
           <button
             type="button"
             onClick={() => setTab("image")}
@@ -367,7 +377,7 @@ export function AutofillModal({
           </button>
         </div>
 
-        <div className="px-5 py-4 min-h-[280px]">
+        <div className="px-4 sm:px-5 py-3 sm:py-4 min-h-[240px] sm:min-h-[280px] max-h-[60vh] sm:max-h-[70vh] overflow-y-auto nice-scroll">
           {tab === "image" && (
             <div>
               <div
@@ -438,7 +448,7 @@ export function AutofillModal({
                 onChange={(v) => setTextForm((s) => ({ ...s, pitch: v }))}
                 placeholder="Más de 30 años sirviendo los mejores tacos al pastor de Monterrey. Tradición familiar, ingredientes frescos."
               />
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <Field
                   label="Palabra clave del hero"
                   value={textForm.hero_keyword}
@@ -456,8 +466,8 @@ export function AutofillModal({
           )}
         </div>
 
-        <div className="px-5 py-3 border-t bd bg-side flex items-center justify-between">
-          <div className="text-[11.5px] fg-faint flex items-center gap-2 min-w-0 pr-3">
+        <div className="px-4 sm:px-5 py-3 border-t bd bg-side flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3">
+          <div className="text-[11.5px] fg-faint flex items-center gap-2 min-w-0 order-2 sm:order-1">
             {isBusy && (
               <>
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--accent)] animate-pulse" />
@@ -492,7 +502,7 @@ export function AutofillModal({
               </span>
             )}
           </div>
-          <div className="flex gap-2 shrink-0">
+          <div className="flex gap-2 shrink-0 order-1 sm:order-2 justify-end">
             {isBusy ? (
               <button
                 type="button"

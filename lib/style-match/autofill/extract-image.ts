@@ -4,6 +4,11 @@
 // template. Never invents — only extracts what's visible.
 
 import {
+  getCachedExtraction,
+  hashImage,
+  setCachedExtraction,
+} from "./cache";
+import {
   ExtractedBusinessDataSchema,
   type ExtractedBusinessData,
   type ImageMime,
@@ -122,6 +127,19 @@ export async function extractFromImage(
         kind: "missing-key",
         message: "GEMINI_API_KEY not set. Get one at https://aistudio.google.com/",
       },
+      durationMs: Date.now() - t0,
+    };
+  }
+
+  // Cache check — same image bytes = same extraction (assumed deterministic
+  // enough at temperature 0.2). Saves ~$0.0003 and 2s per repeat call.
+  const imageHash = hashImage(input.image);
+  const cached = getCachedExtraction(imageHash);
+  if (cached) {
+    return {
+      ok: true,
+      data: cached,
+      raw: "(cached)",
       durationMs: Date.now() - t0,
     };
   }
@@ -259,6 +277,7 @@ export async function extractFromImage(
     };
   }
 
+  setCachedExtraction(imageHash, validated.data);
   return {
     ok: true,
     data: validated.data,

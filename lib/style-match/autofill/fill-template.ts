@@ -3,6 +3,7 @@
 // arrive (used by the API route to forward SSE events to the client).
 
 import { applyOps, parseOps, stripOpIds, tagWithOpIds } from "@/lib/html-ops";
+import { getCachedFill, hashFillInput, setCachedFill } from "./cache";
 import { sanitizeFilledHtml } from "./sanitize";
 import type { ExtractedBusinessData } from "./types";
 
@@ -209,6 +210,23 @@ export async function fillTemplate(
       ok: false,
       error: { kind: "empty-html", message: "sourceHtml must be a full HTML document" },
       durationMs: Date.now() - t0,
+    };
+  }
+
+  // Cache check before tagging — same (sourceHtml + data) = same filledHtml.
+  // Saves ~$0.002 and ~6s on repeat fills (demo flows, retries, multi-tab).
+  const fillHash = hashFillInput(input.sourceHtml, input.data);
+  const cachedFill = getCachedFill(fillHash);
+  if (cachedFill) {
+    return {
+      ok: true,
+      filledHtml: cachedFill,
+      appliedOps: 0,
+      totalOps: 0,
+      cascadeErrors: 0,
+      finishReason: "cached",
+      durationMs: Date.now() - t0,
+      rawResponse: "(cached)",
     };
   }
 
@@ -421,6 +439,7 @@ export async function fillTemplate(
     // failing the request — Kimi cleaned up as it should.
     console.warn("[autofill] sanitizer stripped:", sanitized.removed);
   }
+  setCachedFill(fillHash, sanitized.html);
   return {
     ok: true,
     filledHtml: sanitized.html,
