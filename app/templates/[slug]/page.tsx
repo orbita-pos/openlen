@@ -65,7 +65,7 @@ export default async function TemplateDetailPage({ params }: PageProps) {
         <div className="mx-auto max-w-6xl px-6 pt-6 sm:pt-8">
           <Link
             href="/templates"
-            className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition"
+            className="inline-flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition"
           >
             <ArrowLeft size={12} />
             Todos los templates
@@ -82,7 +82,7 @@ export default async function TemplateDetailPage({ params }: PageProps) {
                   style={{ background: template.accent }}
                   aria-hidden
                 />
-                <span className="text-[10.5px] uppercase tracking-wider text-zinc-500 dark:text-zinc-500 font-medium">
+                <span className="text-[10.5px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-medium">
                   {family.label}
                 </span>
               </div>
@@ -92,7 +92,7 @@ export default async function TemplateDetailPage({ params }: PageProps) {
               <p className="mt-2 text-base sm:text-lg text-zinc-700 dark:text-zinc-300 leading-snug">
                 {template.pitch}
               </p>
-              <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-500 leading-relaxed">
+              <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
                 {template.description}
               </p>
 
@@ -110,7 +110,7 @@ export default async function TemplateDetailPage({ params }: PageProps) {
 
               <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                 <div>
-                  <dt className="text-[10.5px] uppercase tracking-wider text-zinc-400 dark:text-zinc-600 font-medium mb-1">
+                  <dt className="text-[10.5px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-medium mb-1">
                     Familia
                   </dt>
                   <dd className="text-zinc-900 dark:text-zinc-100">
@@ -118,7 +118,7 @@ export default async function TemplateDetailPage({ params }: PageProps) {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[10.5px] uppercase tracking-wider text-zinc-400 dark:text-zinc-600 font-medium mb-1">
+                  <dt className="text-[10.5px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-medium mb-1">
                     Modo
                   </dt>
                   <dd className="text-zinc-900 dark:text-zinc-100 capitalize">
@@ -126,7 +126,7 @@ export default async function TemplateDetailPage({ params }: PageProps) {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[10.5px] uppercase tracking-wider text-zinc-400 dark:text-zinc-600 font-medium mb-1">
+                  <dt className="text-[10.5px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-medium mb-1">
                     Color accent
                   </dt>
                   <dd className="text-zinc-900 dark:text-zinc-100 inline-flex items-center gap-1.5">
@@ -139,7 +139,7 @@ export default async function TemplateDetailPage({ params }: PageProps) {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[10.5px] uppercase tracking-wider text-zinc-400 dark:text-zinc-600 font-medium mb-1">
+                  <dt className="text-[10.5px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-medium mb-1">
                     Formato
                   </dt>
                   <dd className="text-zinc-900 dark:text-zinc-100">
@@ -151,7 +151,7 @@ export default async function TemplateDetailPage({ params }: PageProps) {
 
             {/* Preview */}
             <div className="lg:sticky lg:top-24">
-              <TemplateCard template={template} />
+              <TemplateCard template={template} compact />
             </div>
           </div>
         </section>
@@ -162,7 +162,7 @@ export default async function TemplateDetailPage({ params }: PageProps) {
             <h2 className="text-xl sm:text-2xl font-semibold tracking-tight mb-2">
               Más de {family.label}
             </h2>
-            <p className="text-sm text-zinc-500 dark:text-zinc-500 mb-8">
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8">
               {family.tagline}
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">

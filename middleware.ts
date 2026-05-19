@@ -11,25 +11,28 @@ import { NextResponse } from "next/server";
 
 const PUBLIC_ROUTES = [
   "/",
+  "/templates",
   "/login",
   "/register",
   "/forgot",
   "/preview-blocks",
-  // /reset/<token> matches via the startsWith check below
+  "/robots.txt",
+  "/sitemap.xml",
 ];
+
+// Prefixes whose entire subtree is public (detail pages, iframe templates,
+// reset tokens).
+const PUBLIC_PREFIXES = ["/templates/", "/reset/"];
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
 
-  // Auth.js handles its own routes
   if (pathname.startsWith("/api/auth")) return NextResponse.next();
-
-  // Public marketing + auth pages
   if (PUBLIC_ROUTES.includes(pathname)) return NextResponse.next();
-  if (pathname.startsWith("/reset/")) return NextResponse.next();
+  if (PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))) {
+    return NextResponse.next();
+  }
 
-  // Static + image assets are excluded by the `matcher` below — anything
-  // remaining here is an app route that requires auth.
   if (!req.auth) {
     const loginUrl = new URL("/login", req.nextUrl.origin);
     loginUrl.searchParams.set("next", pathname);

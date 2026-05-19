@@ -22,7 +22,7 @@ export function Footer() {
               </span>
               <span className="font-semibold tracking-tight">OpenLen</span>
             </a>
-            <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-500 max-w-sm">
+            <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400 max-w-sm">
               The open-source AI landing-page generator. Lovable quality, your code,
               $19/month.
             </p>
@@ -53,7 +53,7 @@ export function Footer() {
 
           {columns.map((col) => (
             <div key={col.title}>
-              <div className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-600">
+              <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                 {col.title}
               </div>
               <ul className="mt-4 space-y-3">
@@ -72,7 +72,7 @@ export function Footer() {
           ))}
         </div>
 
-        <div className="mt-14 pt-6 border-t border-zinc-100 dark:border-zinc-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-zinc-500 dark:text-zinc-500">
+        <div className="mt-14 pt-6 border-t border-zinc-100 dark:border-zinc-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-zinc-500 dark:text-zinc-400">
           <div className="flex flex-wrap items-center gap-3">
             <span>© 2026 OpenLen</span>
             <span className="text-zinc-300 dark:text-zinc-700">·</span>

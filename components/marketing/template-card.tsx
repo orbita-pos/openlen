@@ -6,24 +6,20 @@ import { TEMPLATE_FAMILY_META, type TemplateEntry } from "@/components/templates
 
 interface TemplateCardProps {
   template: TemplateEntry;
-  /** When true, render a larger detail-page-style preview. */
-  large?: boolean;
+  /** Hide the name + family + pitch footer. Used on the detail page where
+   *  that metadata is already presented as h1 + dl in the left column —
+   *  rendering it again as an h3 here would break the heading hierarchy. */
+  compact?: boolean;
 }
 
-export function TemplateCard({ template, large = false }: TemplateCardProps) {
+export function TemplateCard({ template, compact = false }: TemplateCardProps) {
   const wrapperRef = useRef<HTMLAnchorElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [scale, setScale] = useState(0);
-  // Native iframe dimensions — must match the actual iframe render size so
-  // the aspect-ratio'd container has zero empty space below the scaled
-  // iframe. `large` no longer changes height (would create dead space);
-  // instead it should affect parent container width (caller's grid).
   const nativeWidth = 1280;
   const nativeHeight = 800;
-  // Hint to caller about visual prominence — kept for future use.
-  void large;
 
   useEffect(() => {
     if (!wrapperRef.current || mounted) return;
@@ -64,13 +60,21 @@ export function TemplateCard({ template, large = false }: TemplateCardProps) {
       ref={wrapperRef}
       href={`/templates/${template.id}`}
       className="group relative block rounded-xl overflow-hidden ring-1 ring-zinc-200 dark:ring-zinc-800 bg-white dark:bg-zinc-900 hover:ring-zinc-300 dark:hover:ring-zinc-700 hover:shadow-lg transition-all"
+      // content-visibility: auto lets the browser skip rendering + layout
+      // for off-screen cards on the gallery. contain-intrinsic-size reserves
+      // a placeholder height so scroll height stays accurate. Massive TBT
+      // win when 15 cards each carry their own iframe/observer setup.
+      style={{
+        contentVisibility: "auto",
+        containIntrinsicSize: compact ? "360px 220px" : "360px 320px",
+      }}
     >
       {/* Browser chrome strip */}
       <div className="relative z-10 flex items-center gap-1.5 h-6 px-2.5 border-b border-zinc-200/60 dark:border-zinc-800/60 bg-zinc-50/60 dark:bg-zinc-900/60 backdrop-blur-sm">
         <span className="w-2 h-2 rounded-full bg-[#FF5F57]" aria-hidden />
         <span className="w-2 h-2 rounded-full bg-[#FEBC2E]" aria-hidden />
         <span className="w-2 h-2 rounded-full bg-[#28C840]" aria-hidden />
-        <span className="ml-1 truncate text-[10px] text-zinc-500 dark:text-zinc-500 font-medium tracking-tight">
+        <span className="ml-1 truncate text-[10px] text-zinc-500 dark:text-zinc-400 font-medium tracking-tight">
           {template.id}.openlen.com
         </span>
       </div>
@@ -121,29 +125,30 @@ export function TemplateCard({ template, large = false }: TemplateCardProps) {
         )}
       </div>
 
-      {/* Card metadata footer */}
-      <div className="p-4 sm:p-5 border-t border-zinc-200/60 dark:border-zinc-800/60">
-        <div className="flex items-start gap-2">
-          <span
-            className="mt-1 shrink-0 inline-block w-2 h-2 rounded-full"
-            style={{ background: template.accent }}
-            aria-hidden
-          />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-baseline gap-2 flex-wrap">
-              <h3 className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-                {template.name}
-              </h3>
-              <span className="text-[10.5px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-medium">
-                {family.label}
-              </span>
+      {!compact && (
+        <div className="p-4 sm:p-5 border-t border-zinc-200/60 dark:border-zinc-800/60">
+          <div className="flex items-start gap-2">
+            <span
+              className="mt-1 shrink-0 inline-block w-2 h-2 rounded-full"
+              style={{ background: template.accent }}
+              aria-hidden
+            />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <h3 className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                  {template.name}
+                </h3>
+                <span className="text-[10.5px] uppercase tracking-wider text-zinc-400 dark:text-zinc-400 font-medium">
+                  {family.label}
+                </span>
+              </div>
+              <p className="mt-1 text-[12.5px] text-zinc-600 dark:text-zinc-400 leading-relaxed line-clamp-2">
+                {template.pitch}
+              </p>
             </div>
-            <p className="mt-1 text-[12.5px] text-zinc-600 dark:text-zinc-400 leading-relaxed line-clamp-2">
-              {template.pitch}
-            </p>
           </div>
         </div>
-      </div>
+      )}
 
       <style jsx>{`
         @keyframes marketingTplShimmer {

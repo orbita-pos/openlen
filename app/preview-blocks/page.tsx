@@ -15,7 +15,10 @@ import { BLOCK_IDS, getBlock } from "@/lib/blocks/_registry";
 import { paletteToTokens } from "@/lib/blocks/palette-to-tokens";
 import type { PaletteName } from "@/lib/orchestrator/design-tokens";
 
-export const dynamic = "force-static";
+// Dev-only QA route. The block components transitively pull in editor
+// context (lazy at runtime), but static prerender forces eager evaluation
+// which hits Next 15's RSC createContext ban. Mark dynamic to skip SSG.
+export const dynamic = "force-dynamic";
 
 const VALID_PALETTES: PaletteName[] = [
   "mono-dark",

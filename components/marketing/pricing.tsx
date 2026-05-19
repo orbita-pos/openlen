@@ -81,9 +81,9 @@ export function Pricing() {
           </Badge>
           <h2 className="mt-4 text-3xl sm:text-5xl font-semibold tracking-tightest leading-[1.05]">
             Priced like a tool.{" "}
-            <span className="text-zinc-500 dark:text-zinc-500">Not like a SaaS.</span>
+            <span className="text-zinc-500 dark:text-zinc-400">Not like a SaaS.</span>
           </h2>
-          <p className="mt-4 text-zinc-500 dark:text-zinc-500">
+          <p className="mt-4 text-zinc-500 dark:text-zinc-400">
             Generous free tier. The Pro plan is what a single Lovable invoice usually
             costs.
           </p>
@@ -109,7 +109,7 @@ export function Pricing() {
               >
                 {t.featured && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-coral-500 px-3 py-1 text-[11px] font-semibold text-white shadow-md">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-coral-700 px-3 py-1 text-[11px] font-semibold text-white shadow-md">
                       <Sparkles size={11} /> Most popular
                     </span>
                   </div>
@@ -129,13 +129,13 @@ export function Pricing() {
                     </span>
                   )}
                 </div>
-                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-500">{t.blurb}</p>
+                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{t.blurb}</p>
 
                 <div className="mt-6 flex items-end gap-1.5">
                   <span className="text-5xl font-semibold tracking-tightest tabular-nums">
                     ${t.price}
                   </span>
-                  <span className="text-sm text-zinc-500 dark:text-zinc-500 mb-1.5">
+                  <span className="text-sm text-zinc-500 dark:text-zinc-400 mb-1.5">
                     {t.suffix}
                   </span>
                 </div>
@@ -164,7 +164,7 @@ export function Pricing() {
           })}
         </div>
 
-        <div className="mt-10 text-center text-xs text-zinc-400 dark:text-zinc-600">
+        <div className="mt-10 text-center text-xs text-zinc-500 dark:text-zinc-400">
           All plans include the open-source generator under AGPL. Hosted plans add
           convenience, not features.
         </div>

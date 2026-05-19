@@ -31,10 +31,10 @@ export function DemoStrip() {
             <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight">
               Templates de verdad.
               <br className="sm:hidden" />
-              <span className="text-zinc-500 dark:text-zinc-500"> Pickeás, llenás, publicás.</span>
+              <span className="text-zinc-500 dark:text-zinc-400"> Pickeás, llenás, publicás.</span>
             </h2>
           </div>
-          <div className="text-sm text-zinc-500 dark:text-zinc-500 max-w-xs">
+          <div className="text-sm text-zinc-500 dark:text-zinc-400 max-w-xs">
             Cada template es HTML estático, optimizado, listo para tu subdominio
             en `openlen.com`. Pickeá una, llenala con tu info, deployá.
           </div>

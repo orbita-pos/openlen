@@ -40,7 +40,7 @@ export function Features() {
           </Badge>
           <h2 className="mt-4 text-3xl sm:text-5xl font-semibold tracking-tightest leading-[1.05]">
             Built for people who&apos;d rather{" "}
-            <span className="text-zinc-500 dark:text-zinc-500">own software</span> than
+            <span className="text-zinc-500 dark:text-zinc-400">own software</span> than
             rent it.
           </h2>
         </div>
