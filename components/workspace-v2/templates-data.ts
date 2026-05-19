@@ -37,6 +37,24 @@ export const TEMPLATE_FAMILIES: TemplateFamilyMeta[] = [
     tagline:
       "Modern retail tech, payment flows, product mockups. For POS and marketplace.",
   },
+  {
+    id: "documentation",
+    label: "Documentation",
+    tagline:
+      "Side-nav, code blocks, callouts. For SDKs, APIs, and developer references.",
+  },
+  {
+    id: "saas",
+    label: "SaaS",
+    tagline:
+      "Long-form marketing pages with social proof, pricing, and conversion sections.",
+  },
+  {
+    id: "ai-ml",
+    label: "AI / ML",
+    tagline:
+      "Model playgrounds, eval dashboards, agent traces. For LLM and ML products.",
+  },
 ];
 
 // Shape the TemplatesPanel cards consume. Derived from the API list

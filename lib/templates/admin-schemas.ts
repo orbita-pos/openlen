@@ -5,7 +5,14 @@ import { z } from "zod";
 // validation rules live in one place. The CLI under scripts/templates-add.ts
 // validates against the same shape before dispatching to upsertTemplate().
 
-export const FAMILY = z.enum(["technical-minimal", "editorial", "commerce"]);
+export const FAMILY = z.enum([
+  "technical-minimal",
+  "editorial",
+  "commerce",
+  "documentation",
+  "saas",
+  "ai-ml",
+]);
 export const MODE = z.enum(["dark", "light", "cream"]);
 export const STATUS = z.enum(["draft", "published", "archived"]);
 

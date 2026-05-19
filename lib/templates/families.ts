@@ -3,7 +3,14 @@
 // browser bundle. The server-only store.ts re-exports these so existing
 // `from "@/lib/templates/store"` imports continue to work.
 
-export type TemplateFamily = "technical-minimal" | "editorial" | "commerce";
+export type TemplateFamily =
+  | "technical-minimal"
+  | "editorial"
+  | "commerce"
+  | "documentation"
+  | "saas"
+  | "ai-ml";
+
 export type TemplateMode = "dark" | "light" | "cream";
 export type TemplateStatus = "draft" | "published" | "archived";
 
@@ -25,5 +32,20 @@ export const TEMPLATE_FAMILY_META: Record<
     label: "Commerce",
     tagline:
       "Modern retail tech, payment flows, product mockups. For POS and marketplace.",
+  },
+  documentation: {
+    label: "Documentation",
+    tagline:
+      "Side-nav, code blocks, callouts. For SDKs, APIs, and developer references.",
+  },
+  saas: {
+    label: "SaaS",
+    tagline:
+      "Long-form marketing pages with social proof, pricing, and conversion sections.",
+  },
+  "ai-ml": {
+    label: "AI / ML",
+    tagline:
+      "Model playgrounds, eval dashboards, agent traces. For LLM and ML products.",
   },
 };
