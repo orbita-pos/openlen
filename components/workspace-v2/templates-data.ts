@@ -55,6 +55,42 @@ export const TEMPLATE_FAMILIES: TemplateFamilyMeta[] = [
     tagline:
       "Model playgrounds, eval dashboards, agent traces. For LLM and ML products.",
   },
+  {
+    id: "fintech",
+    label: "Fintech",
+    tagline:
+      "Banking, payments, trading. Trust signals, tabular numbers, regulatory badges.",
+  },
+  {
+    id: "health-tech",
+    label: "Health-tech",
+    tagline:
+      "Telehealth, fitness, mental health, EHR. Calmer typography, warm accents, clinical trust signals.",
+  },
+  {
+    id: "portfolio",
+    label: "Portfolio",
+    tagline:
+      "Personal home page — name + work + writing + contact. Quieter, typography-driven, no pricing.",
+  },
+  {
+    id: "pre-launch",
+    label: "Pre-launch",
+    tagline:
+      "Single-purpose teaser. Display headline + waitlist input + optional countdown. Hype-building.",
+  },
+  {
+    id: "event",
+    label: "Event",
+    tagline:
+      "Conferences, workshops, meetups. Schedule grids, speaker cards, ticket tiers.",
+  },
+  {
+    id: "agency",
+    label: "Agency / Studio",
+    tagline:
+      "Brand studios, dev shops, motion houses. Case-study heavy, restrained voice, team-focused.",
+  },
 ];
 
 // Shape the TemplatesPanel cards consume. Derived from the API list
