@@ -42,6 +42,10 @@ const FAMILIES: TemplateFamily[] = [
   "pre-launch",
   "event",
   "agency",
+  "real-estate",
+  "hospitality",
+  "ecommerce",
+  "climate",
 ];
 
 export default async function TemplatesPage() {

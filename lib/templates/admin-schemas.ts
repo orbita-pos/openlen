@@ -18,6 +18,10 @@ export const FAMILY = z.enum([
   "pre-launch",
   "event",
   "agency",
+  "real-estate",
+  "hospitality",
+  "ecommerce",
+  "climate",
 ]);
 export const MODE = z.enum(["dark", "light", "cream"]);
 export const STATUS = z.enum(["draft", "published", "archived"]);

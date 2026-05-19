@@ -1227,6 +1227,448 @@ Produce all 5 as separate text/html artifacts.
 
 ---
 
+## Prompt 13 — Real Estate (5 pages, mostly light + cream modes)
+
+```
+Brief: Produce 5 landing pages for real-estate products — boutique brokerages, property listings sites, agent personal pages, vacation rental platforms, property-management software. Compass / Zillow / Sotheby's International / Airbnb / Doorstead level. HEAVY on photography (gradient placeholders for property photos), maps, and "place-feel" details (neighborhood data, school ratings, walk scores).
+
+SHARED AESTHETIC (all 5 variants):
+- Display: Inter Display 500-600 OR serif (Fraunces / Source Serif) for high-end brokerage variants.
+- Body: Inter 400-500, comfortable line-height 1.5+ (real-estate readers slow-scan).
+- Mono: Geist Mono 400 — used for listing prices, sq-ft, bed/bath counts, MLS numbers, dates.
+- Tabular nums on every numeric value (price, sq ft, $/sq ft).
+- Generous whitespace + soft rounded cards (16-20px radius).
+- Photo placeholders: warm gradient blobs simulating real-estate photography. Big — 16:9 hero, 4:3 cards.
+- Map placeholders: SVG outline of a generic city street grid OR pin-cluster overlay.
+- "Place pills": small mono badges with neighborhood / city / state / zip.
+
+SHARED SECTION SKELETON:
+1. Nav: wordmark + 4 nav links (Buy, Sell, Agents, Resources) + Sign-in + accent CTA pill ("Search homes" / "Get an estimate").
+2. Hero: pill badge + display headline + sub paragraph 25 words + dual CTA + LARGE property photo placeholder (or map view) taking ~50% of hero width.
+3. Search bar: prominent location-search input — placeholder text shows actual neighborhood ("Park Slope, Brooklyn") + price range slider + bed/bath filters + "Apply" pill. Even if non-functional, it should look REAL.
+4. Featured listings grid: 6-9 property cards. Each: photo placeholder + price (mono tabular) + address + 3 key stats (beds · baths · sq ft) + neighborhood pill + "Just listed" or "Open Sunday" badge for some.
+5. Map + listings split: split-pane mockup — left has map with pin clusters at major neighborhoods (zoomable feel via stacked circles), right has 3-4 property cards.
+6. Big alternating feature: market data dashboard OR neighborhood guide OR agent matching tool. Specific to variant. Includes a small chart (median price trend, days-on-market).
+7. Trust band: stats banner ("2,408 homes sold in 2025 · Avg days on market 18 · Client NPS 4.7/5 · Featured in WSJ, NYT, Bloomberg") OR agent count.
+8. Customer / agent stories: 3-4 testimonials with photo placeholder + name + neighborhood + 1-2 sentence quote.
+9. Pricing / commission section (varies): brokerage commission rates OR platform fees OR software pricing.
+10. FAQ: 5 real-estate questions (commission rates, listing duration, escrow, market trends, off-market deals).
+11. Final CTA: "Find your next home" or "List your property" banner.
+12. Footer: 5-col with Buy / Sell / Resources / Agents / Company + state licensure mono line.
+
+VISUAL FLOURISHES SPECIFIC TO REAL ESTATE:
+- Property card: photo placeholder (16:9 or 4:3) + price overlay + "New" / "Open Sun" pill + 3-stat row.
+- Map mockup: SVG grid with pin markers in accent, optional pulse animation on currently-hovered pin.
+- Walk Score / Transit Score badge: small circular gauge SVG with number.
+- Comparable sales table: mono columns for address / beds / sq ft / sold / $.
+- Floor plan diagram: simple geometric SVG.
+- Agent card: round photo placeholder + name + license number + "47 homes sold in 2025" mono.
+
+THE 5 VARIANTS:
+
+VARIANT 01: Doorway — A boutique brokerage in Brooklyn + Manhattan.
+- Mode: cream. Bg #FAF6EE. Accent: deep teal #1F4F5E. Text #1A1714.
+- Display font: Fraunces serif 500, italic for emphasis.
+- Pitch: "We sell homes in five neighborhoods. We <em>know</em> all five."
+- Audience: NYC buyers and sellers in $800k-$3M range looking for personal service over volume.
+- Hero mockup: brownstone facade photo placeholder (warm-toned gradient) + small overlay card "227 Cumberland St · Fort Greene · $1,485,000 · Open Sat 12-2".
+- Featured listings: 9 cards across Park Slope, Fort Greene, Boerum Hill, Carroll Gardens, Cobble Hill.
+- Centerpiece: agent grid — 8 cards with photo placeholder + name + license + neighborhoods (each agent covers 1-2 nbhds intensely).
+- Stats: Homes sold in 2025 (84), Median time on market (14 days), Above-ask sale rate (62%), Avg client NPS (4.9/5).
+- Customer story: "Priya & Marcus · bought a brownstone in Fort Greene · 'Doorway showed us 12 homes total and we bought the 9th. They knew which ones we'd actually love.'"
+- Pricing: Standard 5.5% commission (2.5% buyer's agent + 3% listing) OR flat-fee $14,408 for listings $1.5M+.
+- FAQ Q's: "What's your commission structure for sellers under $1M?", "Do you list off-market exclusively?", "How does Doorway compare to a place like Compass or Sotheby's?", "What's the timeline from list to close in this market?", "Do you handle co-ops or only condos and townhouses?".
+
+VARIANT 02: Plotline — A modern property listings site for buyers.
+- Mode: light. Bg #FFFFFF. Accent: cobalt #2D5BFF. Text #0A0A0A.
+- Display font: Inter 600.
+- Pitch: "Listings that don't <em>waste your weekend</em>."
+- Audience: tech-savvy buyers in 5 metros (NYC, SF, Austin, Seattle, Boston) doing $500k-$2M searches who hate Zillow's bloat.
+- Hero mockup: split-pane mockup — left a map view of San Francisco neighborhoods with 14 active pins (color-coded by price range), right a scrollable listings list showing 4 cards with photos + price + stats.
+- Search bar: prominent with placeholder "Mission, San Francisco" + filters for price / beds / commute time to a saved work address.
+- Featured listings: 9 cards mixing markets.
+- Centerpiece: "smart filters" panel — commute-time-to-work overlay on map, school district overlay, "off-market in this neighborhood" tab, saved-searches feature.
+- Stats: Listings indexed (1.4M across 5 metros), Update frequency (every 12 minutes from MLS), Buyers saved $0 in fees (we're free), Off-market deals available (2,408 in 2025).
+- Customer story: "Jamie Lin · bought in Mission Bay · 'I saw it on Plotline 4 hours before it hit Redfin. Made the offer that morning.'"
+- Pricing: Free for buyers. We make $0 from buyers — agents pay us to be visible. No referral fees taken from buyers.
+- FAQ Q's: "How is this free for buyers — what's the business model?", "How fresh is the listings data?", "Do you cover my market?", "How are off-market listings sourced?", "Can I save a search and get alerts when matching listings appear?".
+
+VARIANT 03: Hearth — Vacation rental marketplace for design-conscious travelers.
+- Mode: warm cream. Bg #FAF5EC. Accent: warm terracotta #C66B3D. Text #1F1B16.
+- Display font: Source Serif 4 weight 500.
+- Pitch: "Vacation rentals we'd <em>actually stay in</em>."
+- Audience: design-conscious travelers (couples + small families) frustrated by Airbnb's mediocre stock, willing to pay $300-$1,500/night for curated stays.
+- Hero mockup: large 16:9 photo placeholder of a coastal cabin interior (warm-toned gradient) + small overlay "Bookable June 14-21 · 2 BR · Mendocino, CA · $480/night".
+- Featured stays: 9 property cards organized by location tags ("Mendocino coast", "Catskills retreat", "Joshua Tree desert", "Hudson Valley farmhouse").
+- Centerpiece: "How we curate" — 3-step explanation (we visit every property, we screen the hosts, we update photography ourselves) + 3 photo placeholders.
+- Stats: Properties curated (1,408 across 47 destinations), Avg stay length (4.2 nights), Returning guests in 2025 (42%), Editorial team (12 in-house curators).
+- Customer story: "Hana & Yuki · stayed at a Catskills A-frame in October · 'Hearth has spoiled us — we can't go back to Airbnb.'"
+- Pricing: 12% commission on bookings (vs Airbnb 14-18%). Hosts keep more, guests pay no service fees beyond cleaning.
+- FAQ Q's: "What's the application process for hosts — can I list my place?", "What's your cancellation policy?", "Does Hearth offer insurance for hosts?", "How does pricing compare to Airbnb for similar stays?", "Do you support stays longer than 30 days?".
+
+VARIANT 04: Beacon — Real estate agent personal page.
+- Mode: light + warm. Bg #FBF8F2. Accent: deep coral #C53A22. Text #1A1714.
+- Display font: Fraunces serif weight 500.
+- Pitch: "Hi, I'm Hana Suzuki. I sell homes in <em>Park Slope and Prospect Heights</em>."
+- Audience: NYC buyers/sellers in Park Slope/Prospect Heights neighborhood who want a single trusted agent vs a faceless brokerage.
+- Hero mockup: round portrait photo placeholder (large) + name + license + "237 homes sold since 2018 · top 2% of Brooklyn agents".
+- Featured listings: 6 current listings the agent represents.
+- Centerpiece: "What working with me looks like" — 4-step process (intake call → tour curation → offer strategy → close) with mono week labels.
+- Stats: Homes sold (237 since 2018), Median above-ask result (+2.4%), Buyer/seller split (60/40), Repeat client rate (38%).
+- Customer story: 4 testimonials with quotes from past clients, name + neighborhood + year.
+- Press: agent featured in NY Times Realty, Brooklyn Magazine, etc. (4 mono wordmarks).
+- Pricing: Standard 6% commission for sellers (2.5% buyer agent + 3.5% listing) OR refer to broker for flat-fee options.
+- FAQ Q's: "Which firm are you with and how long?", "What's your typical timeline for a listing?", "Do you work with first-time buyers?", "How do you handle a buyer competing against multiple offers?", "Can you recommend mortgage brokers and inspectors?".
+
+VARIANT 05: Threshold — Property management software for small landlords.
+- Mode: dark. Bg #0A0A0A. Accent: electric green #5BD39B. Text #FFFFFF.
+- Display font: Inter 700.
+- Pitch: "Property management that <em>doesn't need an MBA</em>."
+- Audience: independent landlords managing 2-20 doors (small portfolio rental investors) tired of spreadsheets and Yardi's enterprise UI.
+- Hero mockup: portfolio dashboard — top card with 8 properties listed (address + occupancy status + rent collected MTD), below it a cashflow chart showing monthly net income across past 12 months. Right side: open maintenance tickets list.
+- Centerpiece: "tenant portal" mockup — what the tenant sees (rent due, payment history, request maintenance, lease docs). Combined with landlord side.
+- Stats: Landlords using (4,408 across US), Avg time saved per door per month (4.2 hours), Vacancy rate of users (3.8% vs national 6.2%), Tenant satisfaction (4.6/5).
+- Customer story: "Marcus Tobin · 8 doors in Buffalo · 'Switched from spreadsheets in March. Now I do everything in 30 minutes/month instead of a Saturday.'"
+- Pricing: Free (up to 3 doors, basic features), Pro ($24/mo for unlimited doors + payment processing + maintenance + leasing), Add-ons ($99/lease for state-compliant lease generation).
+- FAQ Q's: "What states do you support for lease generation?", "Do you handle online rent payment / ACH / what fees?", "Does it integrate with QuickBooks for Schedule E?", "What about Section 8 / housing voucher landlords?", "How does maintenance ticket routing work — do I need a vendor network?".
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 14 — Restaurant / Hospitality (5 pages, mostly cream + warm modes)
+
+```
+Brief: Produce 5 landing pages for hospitality businesses — full-service restaurants, boutique hotels, coffee shops, wine bars, food markets. These are the BUSINESSES' own marketing pages, not the SaaS that powers them (that's Counter/Tessera in Commerce). Eleven Madison Park / Atrium Hotel / Sweetleaf Coffee / Aman / Berkshire Mountain Bakery level. HEAVY on ambient photography (gradient placeholders for food + space shots), real menus, reservation flows, chef/owner stories.
+
+SHARED AESTHETIC (all 5 variants):
+- Display: serif HEAVY (Fraunces, Newsreader, Source Serif 4, Cormorant Garamond) — restaurants signal craft via type.
+- Body: Inter 400 OR Newsreader 400. Line-height 1.6.
+- Mono: Geist Mono 400 — used for prices, hours, addresses, reservation times.
+- Photo placeholders: warm gradients simulating food + interior + portrait photography. Think dim, candlelit, intimate.
+- Menu typography: serif headlines + mono prices. Each menu item: name (serif) + description (sans light) + price (mono right-aligned).
+- "Hours pill": "Open 5:30pm – 11pm · Tuesday – Saturday" mono.
+- Reservation button always prominent.
+- No "buy now" CTAs — it's "Reserve" / "Book a table" / "Order online" instead.
+
+SHARED SECTION SKELETON:
+1. Nav: restaurant/hotel wordmark + Menu, About, Reservations, Contact, Gift cards + accent CTA pill ("Reserve" or "Book").
+2. Hero: pill badge with type ("FULL-SERVICE TRATTORIA" / "10-ROOM INN" / "ESPRESSO BAR") + display headline + sub paragraph + reservation CTA + LARGE photo placeholder of food/interior.
+3. About the place: 2-paragraph story with serif italic emphasis. Often the chef or owner's perspective.
+4. Menu OR Rooms OR Coffee selection — the CENTERPIECE that varies per variant. Real-feeling sections with actual prices/names.
+5. Reservation widget: date picker + party size + time slots (8 visible in a row) + reserve button. Looks functional even if it's a mockup.
+6. Press / accolades: small mono row of publication wordmarks ("Featured in: The Times, Eater, Bon Appétit, Saveur") OR awards (Michelin, James Beard).
+7. Photo gallery section: 6-9 photo placeholders in a varied grid (some full-bleed, some thumbnails) — food, drinks, dining room, exterior.
+8. Owner / chef bio: photo placeholder + serif name + 2-paragraph story.
+9. Hours + location + contact band: hours mono table + address + phone (mono) + map placeholder.
+10. Private events / catering blurb: 1 small section about hosting private dinners, weddings, or corporate events.
+11. Footer: location address + hours + phone + Instagram link.
+
+VISUAL FLOURISHES SPECIFIC TO HOSPITALITY:
+- Menu items: serif name + sans-serif tasting description + mono price ($18 / $34) right-aligned.
+- Tasting menu format: numbered courses with serif item names.
+- "Today's special" pill with mono "Friday Oct 11" and accent.
+- Reservation time slots: pill grid 5:00 / 5:15 / 5:30 / 5:45 ... with "Available" highlighted in accent.
+- Wine list / cocktail menu: mono with origin/year.
+- Photo placeholders should suggest dim lighting (warm gradient with low contrast — not bright photography).
+- Accolade badges: Michelin star SVG, James Beard "Finalist" badge.
+
+THE 5 VARIANTS:
+
+VARIANT 01: Marcato — Full-service Italian trattoria in Brooklyn.
+- Mode: warm cream + dim. Bg #FBF6EC. Accent: deep terracotta #B05030. Text #1A1714.
+- Display font: Fraunces italic 500 for headlines, regular 500 for menu items.
+- Pitch: "Pasta cut by hand. Wine from <em>one valley</em>. Open since 2019."
+- Audience: Brooklyn locals + travelers booking 4-week-ahead reservations for date nights and small gatherings.
+- Hero mockup: dim photo of a candlelit table with pasta + wine glasses + soft hands.
+- Centerpiece menu: tasting menu format — "ANTIPASTI" / "PRIMI" / "SECONDI" / "DOLCI" sections with 4-5 items each. Examples: "Bresaola — beef cured 4 months, San Marzano · $19", "Tagliatelle al ragù — 14-hour bolognese · $29", "Branzino — sea bass, salt-crusted, served whole · $54".
+- Press: 5 publications — NYT Dining, Eater Best Of 2024, Bon Appétit Top 10 Italian, James Beard nominee.
+- Owner bio: "Marcato Bianco — born in Bologna, trained at Babbo and Lilia, opened Marcato in 2019 with his sister Sofia (front of house)".
+- Hours: Tue-Thu 5:30-10pm · Fri-Sat 5:30-11pm · Sun 5-9pm · Closed Mondays.
+- Reservations: book on Resy 4 weeks ahead. Bar seating walk-in only.
+
+VARIANT 02: Halcyon Lodge — A 10-room coastal inn in Mendocino.
+- Mode: warm cream + sage. Bg #F5EFE4. Accent: deep sage #3F6F4F. Text #1F1B14.
+- Display font: Newsreader serif 500.
+- Pitch: "Ten rooms. <em>Ocean from each one</em>. Nothing else."
+- Audience: couples seeking quiet weekends within 3hrs of SF, willing to pay $400-$800/night for a curated stay.
+- Hero mockup: dim photo of a coastal cabin interior with fireplace + wide window showing ocean fade.
+- Centerpiece "rooms": 10 room cards in a 3-col grid — each with photo placeholder + room name (serif: "The Cove", "The Lookout", "The Cypress") + 1-line description + base rate.
+- Centerpiece "what's included": 4-card layout (breakfast included, no Wi-Fi rooms by request, fireplaces stocked, ocean access in 90 seconds).
+- Press: 4 placements — Conde Nast Traveler, NY Times Travel, Sunset, Travel + Leisure.
+- Owner bio: "Hana Tomita and her partner Marcus built Halcyon Lodge in 2018, after 12 years in restaurant kitchens — they wanted a quieter craft".
+- Hours / reservations: 2-night minimum on weekends. Direct booking saves the 12% Booking.com fee.
+
+VARIANT 03: Tide Coffee Roastery — A specialty roaster + café in DTLA.
+- Mode: cream. Bg #FAF5EC. Accent: warm orange #C66B3D. Text #1F1B16.
+- Display font: Inter 700 for display, mono for prices.
+- Pitch: "Single-origin coffee. Roasted Tuesday. <em>Ground in front of you</em>."
+- Audience: LA coffee snobs and locals doing daily orders + visiting tourists wanting "the specialty spot".
+- Hero mockup: pour-over preparation photo (warm-toned, hands + V60 + clear glass).
+- Centerpiece menu: drinks menu in 3 columns (Espresso · Filter · Specialty). Examples: "Cortado · $5", "Hario V60 — Ethiopia Yirgacheffe · $7", "Cardamom oat latte · $7".
+- Coffee for home: 4 single-origins as 12oz bags (Ethiopia Yirgacheffe $24, Colombia La Esperanza $22, Guatemala Pulcal $26, Kenya Karatu $28).
+- Centerpiece "Open to roast tours": 3-step process (book a tour, see the Probat roaster in action, taste 4 origins side by side).
+- Hours: Mon-Fri 7am-3pm · Sat-Sun 8am-4pm.
+- Press: 4 mentions in Sprudge, LA Eater, LA Magazine, Sightglass features.
+- Owner bio: "Hiroshi Tanaka started Tide in 2016 after sourcing for Blue Bottle for 8 years — wanted to do it smaller and slower".
+
+VARIANT 04: Anchor & Vine — A natural wine bar in Williamsburg.
+- Mode: dark + warm. Bg #18120A. Accent: gold #C8A05A. Text #F4EEDC.
+- Display font: Cormorant Garamond italic, Fraunces serif as fallback. Serif on dark.
+- Pitch: "Natural wine. <em>Honest food</em>. No reservations needed."
+- Audience: Brooklyn locals 28-40 looking for a walk-in spot for wine + small plates after work.
+- Hero mockup: dim photo of a bar counter with wine glasses + dim warm lights + people in conversation.
+- Centerpiece wine list: organized by region (Loire, Beaujolais, Etna, Slovenia, etc.). Each entry: producer (serif) + appellation (mono) + year + price by-glass / by-bottle. "Loire Valley · Domaine de la Pépière · Muscadet 2022 · $14 / $52".
+- Small plates menu: 12 items, serif names + prices ("Whipped lardo on grilled bread · $11", "Anchovies on butter · $14", "Octopus terrine · $18").
+- Reservations: walk-in only. Bar seats 22.
+- Press: 4 mentions in PUNCH, Wine Enthusiast, NY Mag, Bon Appétit.
+- Owner bio: "Sofia Russo opened Anchor & Vine in 2020 after sommelier years at Frenchette and a brief stint at Septime in Paris".
+
+VARIANT 05: Berkshire Bakery — A wood-fired bakery in the Hudson Valley.
+- Mode: paper light + warm. Bg #FBF7EE. Accent: deep cinnamon #8E4F1B. Text #1A1410.
+- Display font: Newsreader serif 500.
+- Pitch: "Sourdough. Croissants. <em>One ingredient less</em> in everything."
+- Audience: Hudson Valley locals + weekend visitors from NYC doing pickup orders + day-trippers.
+- Hero mockup: warm photo of a hand cutting into a sourdough boule on a wooden table.
+- Centerpiece bake list: weekly bake schedule shown as a calendar — "Tuesday: country sourdough, baguettes · Thursday: pain au chocolat, croissants · Saturday: chocolate babka, cinnamon roll · Sunday: pretzels, focaccia".
+- Pricing list: serif items + mono prices — "Country sourdough · $11", "Baguette · $5", "Pain au chocolat · $4.50".
+- Pickup model: order Wednesday by 9pm, pick up Saturday 8am-noon. Limited walk-in stock.
+- Press: 4 mentions in NY Mag Best Of, Hudson Valley Magazine, Edible Hudson Valley, Cherry Bombe.
+- Owner bio: "Lila Russo trained at Tartine and Acme — opened Berkshire Bakery in 2022 to bake fewer things, better".
+- CSA / subscription: $48/mo for weekly bread + croissant pickup.
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 15 — E-commerce PDP (5 pages, mixed modes)
+
+```
+Brief: Produce 5 landing pages that are SINGLE-PRODUCT detail pages for DTC (direct-to-consumer) brands. Allbirds shoes / Magic Spoon cereal / Cometeer coffee / Eight Sleep mattress / Hims testosterone / Aesop hand cream level. Each page sells ONE physical product to consumers. Heavy on multiple product images, variant selection, size/fit guides, reviews, "add to cart" UI, and conversion-focused copy.
+
+SHARED AESTHETIC (all 5 variants):
+- Display: Inter Display 500-700 OR variant-appropriate serif (Fraunces for premium/beauty, Inter for athletic/tech).
+- Body: Inter 400-500.
+- Mono: Geist Mono 400 — for SKUs, prices, model numbers, sizing.
+- Tabular nums for prices, ratings (4.7 stars), review counts (1,408 reviews).
+- Photo placeholders: simulate clean studio product photography. Hero placeholder is LARGE (50%+ of viewport on desktop).
+- Variant selector chips (Size XS/S/M/L/XL or Color Black/Cream/Sand) — selected state with accent ring.
+- "Add to cart" sticky CTA on desktop scroll (mock — visible after scrolling past hero on desktop).
+- Star rating: 5 SVG stars with accent fill.
+- Review snippets with name + verified badge + date.
+- Free shipping / 30-day return badges in trust-bar.
+
+SHARED SECTION SKELETON:
+1. Sticky nav: brand wordmark + 4 nav links (Shop, About, Reviews, Stockists) + cart icon with count.
+2. Hero PDP: 2-col split — left has 4-5 product photo placeholders (1 hero + 3-4 thumbnails to swap), right has product info: name + price (large) + 3-star rating with review count + 1-sentence description + variant chips (size / color / quantity) + add-to-cart button + 3-bullet trust row (free shipping, 30-day returns, 1-year warranty).
+3. "Why X" features 3-col grid: 3 reason cards with small icon + h3 + paragraph (material, durability, sustainability claims).
+4. Big alternating feature 1: product detail photo + paragraph explaining materials / process / craftsmanship + small data callout.
+5. Big alternating feature 2: lifestyle photo + paragraph + customer quote inline.
+6. Size guide / fit guide / how-to-use section: 3-4 cards with diagrams (size chart table, fit illustrations, dosing schedule, washing instructions).
+7. Reviews section: aggregated star rating + count + filter pills + 5-8 review cards. Each card: avatar circle + name + verified badge + 5 stars + headline + 2-3 sentence body + photos (1-2 small placeholders) + helpful count.
+8. FAQ: 5 product-specific questions.
+9. Comparison: "X vs alternatives" small table (3-col) showing why this beats competitors.
+10. Press / featured-in row: 6-8 publication wordmarks.
+11. Final CTA: bottom CTA "Add to cart" / "Subscribe and save 15%" banner with photo.
+12. Footer: 5-col with Shop / About / Help / Sustainability / Company + Instagram + Privacy.
+
+VISUAL FLOURISHES SPECIFIC TO E-COMMERCE:
+- Image gallery: hero + 4 thumbs with click-to-swap (use simple JS in head to swap visible image — okay per shared constraints).
+- Star rating row with mono review count "4.7 (1,408 reviews)".
+- Variant chips: color swatches as small filled circles, size as pill chips, selected state with ring.
+- "Bundle and save" widget: 3 items in a row with checkmarks + discounted bundle price.
+- "Subscribe and save" toggle: One-time vs Every 4 weeks (-15%) — radio toggle.
+- Add-to-cart button: large, accent background, "Add to Cart · $48" with mono price.
+- Sticky bar appears on scroll past hero with product name + variant + add-to-cart.
+
+THE 5 VARIANTS:
+
+VARIANT 01: Pebble Walkers — Casual everyday sneakers.
+- Mode: light. Bg #FAFAF7. Accent: deep navy #0E1A3A. Text #1A1714.
+- Display font: Inter 600.
+- Product: "Pebble Walkers — the everyday sneaker. Merino wool upper, FSC-certified rubber sole. $128."
+- Audience: 25-45 year olds who walk a lot, want one quality pair, and care about materials.
+- Hero photos: 5 photo placeholders — side angle, top down, on foot, sole detail, lifestyle (urban walking).
+- Variants: 6 colors (Cream, Slate, Charcoal, Sand, Olive, Mahogany) + sizes (M 6-13, W 5-12).
+- Features: "Merino wool — temperature regulating year-round", "FSC-certified rubber — sustainable supply chain", "Removable insole — air drying friendly", "100,000 footsteps tested — durability rated".
+- Size guide: chart for M + W + diagram showing how to measure foot length.
+- Reviews: 1,408 reviews, 4.7 stars. Featured review from "Marcus T. · NYC · purchased 8 months ago: 'I've walked 400 miles in these. Still feel like new.'"
+- Press: Outside Magazine "Best Walking Shoe 2025", GQ, NY Times Wirecutter, Refinery29.
+- Pricing: $128 one-time. Subscribe-and-save not offered (durable goods, single purchase).
+- FAQ Q's: "What's the sole made of and is it slip-resistant?", "How does sizing run — should I size up?", "Are these washable?", "What's the return policy if they don't fit?", "Vegan version available?".
+
+VARIANT 02: Cometeer Cold Brew — Frozen coffee capsules.
+- Mode: light + cool. Bg #FCFCFC. Accent: deep purple #4B2E83. Text #0A0A0A.
+- Display font: Inter 700 (modern tech-vibe for new format).
+- Product: "Cometeer — flash-frozen coffee in capsules. Real specialty coffee, no machine needed. $48 / box of 8."
+- Audience: serious coffee drinkers who don't want to do daily brewing but won't accept Nespresso quality.
+- Hero photos: 5 — capsule pack hero, capsule held in hand, melting into hot water, in iced drink, side-by-side with espresso shot.
+- Variants: 4 origin packs (Ethiopia, Colombia, Guatemala blend, Decaf) + quantity (8-pack one-time vs 8-pack subscription).
+- Features: "Flash-frozen at -321°F — locks in fresh-brewed flavor", "Specialty grade only — 87+ score from Q-grader", "10 second prep — drop in hot water or milk", "Recyclable aluminum + compostable foil seal".
+- Subscription: One-time $48 vs Every 2 weeks ($40, -17%).
+- Reviews: 4.6 stars, 8,408 reviews. Featured: "Hana S. · Brooklyn: 'I dropped my $400 espresso machine routine. These taste better.'"
+- Press: NY Times Wirecutter, Bon Appétit Best Coffee 2024, Sprudge, Cherry Bombe.
+- FAQ Q's: "How long does the capsule stay good frozen?", "Can I make iced coffee — what's the dilution?", "Is this real specialty coffee or bulk grade?", "What's the carbon footprint of frozen shipping?", "Do you offer single-origin subscriptions or only the blend?".
+
+VARIANT 03: Atrium Loft Mattress — A wool-and-coil hybrid mattress.
+- Mode: cream. Bg #FAF7F1. Accent: deep teal #1F4F5E. Text #1A1714.
+- Display font: Fraunces serif 500 italic for emphasis.
+- Product: "Atrium Loft — wool, latex, pocket coils. <em>One mattress, 100-night home trial</em>. From $1,448 Queen."
+- Audience: 30-55 year olds replacing a 10-year-old mattress, looking for natural materials over memory foam.
+- Hero photos: 5 — bedroom lifestyle shot, layer cutaway, top down on bedframe, wool detail, latex detail.
+- Variants: sizes (Twin XL $1,148, Full $1,348, Queen $1,448, King $1,748, Cal King $1,748).
+- Features: "Talalay latex — 100% natural, no off-gassing", "American wool — temperature-regulating", "Recycled-steel pocket coils — 988 in queen", "FSC-certified wood frame in case version".
+- Centerpiece layer diagram: cross-section SVG showing 7 layers from cover to base.
+- 100-night trial: 3-step process visualization (order → ship in 5 days → sleep 100 nights → keep or return).
+- Reviews: 4.8 stars, 2,408 reviews. Sleep specialist quote.
+- Press: Wirecutter "Best Natural Mattress 2025", Good Housekeeping, Dwell.
+- FAQ Q's: "What's the firmness — can I customize?", "How is it shipped — boxed or unboxed?", "Is it really edge-supportive?", "How does the 100-night trial work if I return it?", "What's the warranty and is it transferable?".
+
+VARIANT 04: Solva — A skincare retinol serum.
+- Mode: light + warm. Bg #FBF7F0. Accent: warm coral #E07863. Text #1A1410.
+- Display font: Source Serif 4 italic for headers, Inter for body.
+- Product: "Solva — 0.5% encapsulated retinol serum. <em>Clinical-strength, derm-tested</em>. $68 / 30ml."
+- Audience: 28-50 year olds investing in skincare, willing to pay $40-$80 per product for evidence-based formulas.
+- Hero photos: 5 — bottle on hand, dropper detail, applied to skin (cheek closeup), packaging, ingredient lab shot.
+- Variants: strength levels (0.25% for beginners, 0.5% standard, 1.0% advanced) + bottle size (15ml $38, 30ml $68).
+- Features: "0.5% encapsulated retinol — slow-release, less irritation", "Niacinamide 5% — brightening + soothing", "Squalane base — non-comedogenic", "Derm-tested on 240 participants over 12 weeks".
+- Routine guide: when to use (PM only) + what to pair with (NOT vitamin C, YES hyaluronic acid) + ramp-up schedule (2x/week → daily over 4 weeks).
+- Before/after section: 3 side-by-side photo placeholders with weeks-of-use labels (4 weeks, 8 weeks, 12 weeks).
+- Reviews: 4.7 stars, 1,402 reviews. Featured derm quote: "Dr. Sarah Chen, board-certified dermatologist".
+- Press: Allure, Marie Claire, Glamour, byrdie, refinery29.
+- Subscription: One-time $68 OR every 8 weeks ($58, -15%).
+- FAQ Q's: "Can I use this if I'm pregnant or breastfeeding?", "How long until I see results?", "Is this comedogenic?", "Can I use this with my prescription retinol?", "What's the bottle opacity — does it preserve the actives?".
+
+VARIANT 05: Vellum — A leather notebook.
+- Mode: warm dark + cream details. Bg #14110D. Accent: cream #F4EEDC. Text #F4EEDC.
+- Display font: Newsreader serif 500.
+- Product: "Vellum — A leather-bound A5 notebook. <em>Refillable, 240 pages</em>. $94."
+- Audience: writers, designers, executives, students 25-55 wanting a heritage object for daily journaling.
+- Hero photos: 5 — closed cover, open with handwritten pages, leather grain closeup, on a desk lifestyle shot, refillable mechanism detail.
+- Variants: 4 leather colors (Saddle, Cognac, Black, Forest), 2 paper types (Lined, Dot grid), monogram option (+$14).
+- Features: "Vegetable-tanned leather from Tärnsjö, Sweden — ages with use", "Tomoe River 68gsm paper — fountain-pen friendly", "Refillable — replace the insert every ~6 months", "Made by hand in Brooklyn — 4-week lead time".
+- Monogramming: 3-letter monogram embossed on cover, available in 4 fonts shown side-by-side.
+- Refill subscription: $24 every 4 months (Tomoe River insert refill).
+- Reviews: 4.9 stars, 808 reviews. Featured: "Marcus T. · writer in Seattle: 'I bought it 3 years ago. It's now my favorite object.'"
+- Press: Field Notes blog, Cool Hunting, Uncrate, Hodinkee, Quill & Pad.
+- FAQ Q's: "How long is the lead time to ship?", "What if my fountain pen feathers — does Tomoe River?", "Can I monogram in Spanish or Japanese?", "Is the leather cruelty-certified?", "Do you offer larger sizes (A4, journal)?".
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 16 — Climate / Sustainability (5 pages, mixed modes)
+
+```
+Brief: Produce 5 landing pages for climate-tech and sustainability products — corporate carbon accounting, ESG dashboards for investors, supply-chain traceability, regenerative agriculture platforms, climate consulting. Watershed / Persefoni / Plan A / Sweep / Pachama level. Visual language: charts (emissions over time, scope 1/2/3 stacked bars), supply-chain maps, certification badges, "data-feel" but with a green sensibility (not garish eco-cliché — think Linear meets a carbon accounting firm).
+
+SHARED AESTHETIC (all 5 variants):
+- Display: Inter Display 600-700, -0.025em letter-spacing.
+- Body: Inter 400-500.
+- Mono: Geist Mono 400 — for emissions numbers (CO₂e), measurement units, dates, certification IDs.
+- Color palette: data-driven greens (NOT bright eco-green) — deep forest, sage, moss, gray-greens. Or accent could be dark navy or warm earth tone with green data viz.
+- Tabular nums on every CO₂e / tCO₂e value.
+- Hairline borders rgba(0,0,0,0.08) on light / rgba(255,255,255,0.07) on dark.
+- Certification badges: small mono uppercase tracking-wide — "SBTi-aligned", "B-Corp", "GRI-compliant", "TCFD-disclosed", "ISO 14064-1".
+
+SHARED SECTION SKELETON:
+1. Sticky nav: wordmark + 4 nav links (Platform, Methodology, Case studies, Pricing) + Sign-in + accent CTA pill ("Start a free audit" / "Get a demo").
+2. Hero: pill badge with methodology mention ("SBTi-aligned methodology" / "GHG Protocol certified") + display headline (half-tone trick) + sub paragraph 25 words + dual CTA + product mockup (dashboard / map / report). Mockup ~50% of hero.
+3. Trust bar: "Used by 408 companies tracking 14.4 Mt CO₂e" + customer wordmarks marquee + certification badges row.
+4. Centerpiece dashboard mockup: BIG product detail — emissions dashboard with scope 1/2/3 stacked area chart, supply-chain map, abatement scenario planner, or compliance report. Specific to variant.
+5. Features 3-col grid: each col has icon + sans h3 + paragraph + sub-bullet checkmarks. Climate-specific (automated calculation, scope coverage, audit trail, reporting frameworks).
+6. Methodology section: dedicated band explaining the calculation approach with mono spec — "We use GHG Protocol Scope 1/2/3 boundaries · IPCC AR6 GWP factors · annually reviewed by Bureau Veritas".
+7. Stats banner: 4 metric cards ("14.4 Mt CO₂e tracked" / "84% scope 3 coverage avg" / "Methodology audit pass rate 100%" / "Companies in 47 countries").
+8. Customer story: 1 spotlight company + 2-paragraph quote from sustainability lead + 3 outcome metrics row.
+9. Reporting frameworks supported: badges grid showing TCFD, CDP, GRI, SASB, EU CSRD, SEC climate disclosure.
+10. Pricing: 2-3 tier OR call-to-discuss model (enterprise climate-tech is typically sales-led).
+11. FAQ: 5 climate-specific questions (data sources, scope 3 estimation, audit/verification, regulatory alignment, abatement vs offset).
+12. Final CTA: gradient banner with demo CTA.
+13. Footer: 5-col with Platform / Methodology / Resources / Company / Climate disclosures (their OWN scope 1/2/3 footprint).
+
+VISUAL FLOURISHES SPECIFIC TO CLIMATE:
+- Stacked area chart: scope 1 / 2 / 3 emissions over 5 years with mono labels.
+- Supply chain map: SVG with nodes (suppliers) connected by edges (material flow) + CO₂e weight per edge.
+- Abatement curve / MACC chart: bars sorted by $/tCO₂e abated.
+- Certification badge row in mono.
+- "Net zero by 2030" pill with progress bar mockup.
+- Methodology footnote with mono superscripts (¹GHG Protocol · ²IPCC AR6 · ³Bureau Veritas).
+
+THE 5 VARIANTS:
+
+VARIANT 01: Tideline — Carbon accounting for mid-market companies.
+- Mode: light. Bg #FFFFFF. Accent: deep forest #2F5F47. Text #0A1410.
+- Display font: Inter 600.
+- Pitch: "Your company's footprint — measured, audited, <em>reported</em>."
+- Audience: sustainability/finance leads at 200-2,000 person companies starting their first carbon-accounting program, facing CSRD / SEC disclosure mandates.
+- Hero mockup: emissions dashboard — current FY footprint card (14,408 tCO₂e), scope 1/2/3 breakdown stacked bar, year-over-year trend line, top emission sources table.
+- Centerpiece methodology: "How we calculate" — 4-step (data ingestion via spend + meter readings + invoices → emission factor application → scope assignment → audit review). Each step with mono spec.
+- Stats: Companies tracked (408), Total CO₂e measured (14.4 Mt), Avg scope 3 coverage (84% — vs industry 38%), Audit pass rate (100% across Bureau Veritas reviews).
+- Customer story: "Linnea Inc · 1,400 employees · series-C SaaS · published first CDP disclosure in 6 weeks vs typical 6 months".
+- Pricing: Starter ($2,408/mo, scope 1 + 2 + simplified scope 3 for <500 employees) + Pro ($4,408/mo, full scope 3 + frameworks + audit support) + Enterprise (custom for 2,000+ employees).
+- FAQ Q's: "What's your scope 3 estimation methodology — spend-based, activity-based, or hybrid?", "Are you audited by Bureau Veritas or DNV?", "Do you support CSRD reporting for EU subsidiaries?", "How do you handle insetting vs offsetting?", "What's your data ingestion model — do I need to upload spreadsheets monthly?".
+- Logos: Linnea, Forecast, Cargo, Halcyon, Cinder, Brightwave, Stratos, Atrium.
+
+VARIANT 02: Tendril — ESG dashboard for institutional investors.
+- Mode: dark. Bg #0A1410. Accent: sage green #7CA982. Text #F4F8F2.
+- Display font: Inter 700.
+- Pitch: "Real climate data on every company in your portfolio. <em>Not glossy ESG scores</em>."
+- Audience: ESG analysts and portfolio managers at PE / asset management / pension funds with $1B+ AUM, frustrated by MSCI/Sustainalytics black-box scores.
+- Hero mockup: portfolio screen — 47 holdings table with columns (Company / Sector / Mkt Cap / Scope 1+2 CO₂e / Scope 3 / Trend / SBTi status). One company highlighted with detailed flyout showing 5-year emissions trend chart.
+- Centerpiece "Drill into any company": company profile mockup with sourced data fields (emissions, water use, board diversity, etc.) each with link to underlying disclosure (10-K, CDP, sustainability report).
+- Stats: Companies covered (4,408 public + 1,408 private), Data sources per company (47 on avg), Update frequency (data refreshed within 14 days of disclosure), AUM analyzed by Tendril clients ($248B).
+- Customer story: "Halcyon Capital · $14B PE fund · used Tendril to identify 8 portcos lagging on SBTi alignment, drove targeted engagement".
+- Pricing: by AUM — $48k/yr ($1-5B AUM), $148k/yr ($5-50B), Enterprise (custom for $50B+ + multi-asset class).
+- FAQ Q's: "How does this differ from MSCI ESG ratings or Sustainalytics?", "What's the data quality — primary vs estimated?", "Do you cover private companies and how is that data sourced?", "Can I integrate Tendril data into our IBOR or PMS?", "How are you compliant with EU SFDR?".
+- Logos: Halcyon Capital, Stratos VC, Cinder Fund, Lattice Asset Management, Pavilion Partners, Coast Capital, Beacon Investors.
+
+VARIANT 03: Strand — Supply chain traceability for fashion and food brands.
+- Mode: cream + warm. Bg #FAF5EC. Accent: warm earth #8E4F1B. Text #1A1714.
+- Display font: Source Serif 4 weight 500.
+- Pitch: "Trace every component, from <em>farm to label</em>."
+- Audience: sustainability and sourcing leads at $50M-$1B fashion or food brands wanting to verify supply chain claims (Fairtrade, GOTS, organic, etc.) and prep for EU due-diligence laws.
+- Hero mockup: supply chain map — origin (Peru cotton farm) → ginning facility → mill in Tamil Nadu → cut-and-sew in Vietnam → distribution → retail. Each node with CO₂e + certification badges + photo placeholder.
+- Centerpiece traceability: "Click any product to see its full chain" — example garment (T-shirt) with 12 traceability nodes from cotton field to shelf, each with verification badge.
+- Stats: Products traced (148,408 SKUs), Suppliers in network (4,408 across 47 countries), Audit findings logged (28,408), Avg time from order to traceability report (12 days).
+- Customer story: "Yuki Pottery + Hana Made · indie skincare brand · achieved Climate Neutral certification in 90 days vs typical 6 months using Strand's traceability data".
+- Pricing: Per-SKU tier ($148/SKU/yr for <500 SKUs) + Pro ($14,408/yr for 500-5k SKUs + supplier portal) + Enterprise (custom).
+- FAQ Q's: "How do you verify supplier claims — site audits, blockchain, or trust-but-verify?", "Do you support CSRD / EU CSDDD compliance?", "What certifications do you map to (GOTS, Fair Trade, GRS, etc.)?", "How long does onboarding take for a 500-SKU brand?", "Can I share supplier data publicly via a QR code?".
+- Logos: Cargo Apparel, Atrium Goods, Linnea Textiles, Beacon Foods, Stratos Crafts, Halcyon Apparel.
+
+VARIANT 04: Floodgate — Regenerative agriculture data platform.
+- Mode: light + warm earth. Bg #FBF7EE. Accent: deep moss #4A7A4A. Text #1A1410.
+- Display font: Inter 600 + occasional serif italic accent.
+- Pitch: "Soil that holds carbon. <em>Farmers paid to do it</em>."
+- Audience: regenerative ag co-ops, food brands buying outcome-based commodities, and carbon offset buyers wanting real soil-carbon data (not just acres).
+- Hero mockup: farm field map — bird's-eye view of a 408-acre farm divided into 28 management zones, color-coded by soil organic carbon (SOC) change. Side panel: "+1.8 tCO₂e/acre/yr · 14% SOC increase since baseline · Cover crops 84% of season".
+- Centerpiece "How we measure soil carbon": 4-step process — baseline soil sample → annual remote sensing + targeted resamples → carbon accrual calculation → payment to farmer per verified tCO₂e.
+- Stats: Acres enrolled (1.4M across 47 states), Farmers in network (4,408), tCO₂e sequestered in 2025 (148,408), Avg per-acre payment ($28/acre/yr).
+- Customer story: "Berkshire Farm Co-op · 124 farmers · earned $1.4M in soil carbon payments in 2025, 38% above commodity prices".
+- Pricing: Free for farmers (we take 18% of verified carbon payment) + Buyer ($148/tCO₂e for verified soil carbon credits with 100-year permanence guarantee).
+- FAQ Q's: "How is soil carbon measured at scale — remote sensing accuracy?", "What's the additionality and permanence story?", "Who's your verifier (Verra, Gold Standard, registry)?", "Do farmers actually get paid above commodity rates?", "How does this compare to nature-based offset projects?".
+- Logos: Berkshire Co-op, Halcyon Foods, Cargo Naturals, Stratos Grains, Pavilion Agriculture.
+
+VARIANT 05: Compass Climate — Climate consulting for industrial decarbonization.
+- Mode: dark. Bg #0E1410. Accent: cyan-teal #4FAA9A. Text #F2F4F0.
+- Display font: Inter 700.
+- Pitch: "We make heavy industry's net-zero plan <em>actually feasible</em>."
+- Audience: VPs of sustainability + ops at heavy industry / manufacturing / cement / steel / chemicals companies trying to plan capital allocation for decarbonization.
+- Hero mockup: abatement curve (MACC chart) — 28 abatement levers sorted by $/tCO₂e, color-coded by feasibility (green = ready now, amber = needs CapEx, red = pre-commercial tech). Filter pills above for "By 2030", "2030-2040", "2040-2050".
+- Centerpiece scenario planner: side-by-side comparison of 3 abatement pathways (full electrification, hydrogen + CCS, hybrid) with capex / opex / emissions reduction for each.
+- Stats: Industrial sites analyzed (408 across cement / steel / chemicals / paper), Total tCO₂e in abatement plans we authored (148.4 Mt by 2035), Capex modeled ($14.8B), Industry sectors covered (12 heavy industries).
+- Customer story: "Stratos Steel · 4 mills · used Compass to identify $1.4B of abatement opportunities below $80/tCO₂e, board approved $480M phase-1 in Q3".
+- Pricing: Engagement-based — Scoping ($148k flat, 8 weeks), Strategy ($480k+, 12-20 weeks), Implementation support ($1.4M+/yr retainer).
+- FAQ Q's: "What's your sector specialization — do you handle cement, or only steel?", "How is your modeling different from McKinsey / BCG climate practices?", "Do you have engineering capability for capital project scoping?", "How do you handle policy uncertainty (EU CBAM, US 45Q)?", "Can you support transition finance structuring (sustainability-linked debt, transition bonds)?".
+- Logos: Stratos Steel, Cinder Cement, Halcyon Industrial, Beacon Chemicals, Pavilion Manufacturing, Atrium Paper.
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
 ## After claude.ai produces the HTML(s)
 
 Save each artifact as `.html` locally. To get one published as a landing page on your subdomain, paste the HTML content here in Claude Code chat — I'll create a project + tell you the URL to open in `/new-v2` and hit Deploy.

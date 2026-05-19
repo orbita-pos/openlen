@@ -15,7 +15,11 @@ export type TemplateFamily =
   | "portfolio"
   | "pre-launch"
   | "event"
-  | "agency";
+  | "agency"
+  | "real-estate"
+  | "hospitality"
+  | "ecommerce"
+  | "climate";
 
 export type TemplateMode = "dark" | "light" | "cream";
 export type TemplateStatus = "draft" | "published" | "archived";
@@ -83,5 +87,25 @@ export const TEMPLATE_FAMILY_META: Record<
     label: "Agency / Studio",
     tagline:
       "Brand studios, dev shops, motion houses. Case-study heavy, restrained voice, team-focused.",
+  },
+  "real-estate": {
+    label: "Real Estate",
+    tagline:
+      "Property listings, agents, brokerages. Photo galleries, map views, comparable sales.",
+  },
+  hospitality: {
+    label: "Hospitality",
+    tagline:
+      "Restaurants, hotels, cafés. Menus, reservations, ambient photography, chef and owner stories.",
+  },
+  ecommerce: {
+    label: "E-commerce",
+    tagline:
+      "Single-product DTC landings. Multiple images, variants, size guides, reviews, add-to-cart.",
+  },
+  climate: {
+    label: "Climate / Sustainability",
+    tagline:
+      "Carbon accounting, ESG dashboards, climate tech. Emission charts, supply chain maps, certification badges.",
   },
 };
