@@ -8,9 +8,10 @@ import { GithubIcon } from "@/components/ui/brand-icons";
 import { cn } from "@/lib/cn";
 
 const links = [
-  { label: "Features", href: "#features" },
-  { label: "Pricing", href: "#pricing" },
-  { label: "Docs", href: "#docs" },
+  { label: "Templates", href: "/templates" },
+  { label: "Features", href: "/#features" },
+  { label: "Pricing", href: "/#pricing" },
+  { label: "Docs", href: "/#docs" },
 ] as const;
 
 export interface NavProps {
