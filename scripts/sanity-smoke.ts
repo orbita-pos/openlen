@@ -119,6 +119,34 @@ const checks: Check[] = [
     contentType: "application/json",
     expect: [401, 403],
   },
+  // --- Admin templates endpoints reject anon ---
+  {
+    name: "GET /api/admin/templates (anon -> 401)",
+    path: "/api/admin/templates",
+    expect: [401, 403],
+  },
+  {
+    name: "POST /api/admin/templates (anon -> 401)",
+    path: "/api/admin/templates",
+    method: "POST",
+    body: JSON.stringify({}),
+    contentType: "application/json",
+    expect: [401, 403],
+  },
+  {
+    name: "PUT /api/admin/templates/anchor (anon -> 401)",
+    path: "/api/admin/templates/anchor",
+    method: "PUT",
+    body: JSON.stringify({ name: "Anchor 2" }),
+    contentType: "application/json",
+    expect: [401, 403],
+  },
+  {
+    name: "DELETE /api/admin/templates/anchor (anon -> 401)",
+    path: "/api/admin/templates/anchor",
+    method: "DELETE",
+    expect: [401, 403],
+  },
 ];
 
 interface Result {
