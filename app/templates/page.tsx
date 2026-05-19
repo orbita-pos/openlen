@@ -39,29 +39,27 @@ export default function TemplatesPage() {
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
       <MarketingChrome>
-        {/* Hero */}
+        {/* Hero — compact: small eyebrow + tight headline + 1-line lede */}
         <section className="border-b border-zinc-200 dark:border-zinc-800">
-          <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
-            <div className="inline-flex items-center gap-2 text-xs font-medium text-coral-700 dark:text-coral-400 mb-3">
+          <div className="mx-auto max-w-6xl px-6 py-8 sm:py-10">
+            <div className="inline-flex items-center gap-2 text-[11px] font-medium text-coral-700 dark:text-coral-400 mb-2">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="absolute inline-flex h-full w-full rounded-full bg-coral-500 opacity-75 animate-ping" />
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-coral-500" />
               </span>
               {TEMPLATES.length} TEMPLATES CURADAS
             </div>
-            <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight max-w-3xl">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight max-w-3xl">
               Landing pages diseñadas a mano. Listas para hacerlas tuyas.
             </h1>
-            <p className="mt-4 text-base sm:text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl">
-              Cada template es HTML estático, optimizado, con su propio sistema
-              de diseño coherente. Pickeá una, llenala con tu info via AI o
-              chat, deployá a tu subdominio en un click.
+            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400 max-w-2xl">
+              HTML estático, optimizado. Pickeá una, llenala con tu info, deployá a tu subdominio en un click.
             </p>
           </div>
         </section>
 
         {/* Templates by family */}
-        <div className="mx-auto max-w-6xl px-6 py-16 space-y-20">
+        <div className="mx-auto max-w-6xl px-6 py-10 sm:py-12 space-y-14">
           {FAMILIES.map((family) => {
             const meta = TEMPLATE_FAMILY_META[family];
             const templates = TEMPLATES.filter((t) => t.family === family);

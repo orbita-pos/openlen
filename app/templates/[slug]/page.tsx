@@ -73,10 +73,10 @@ export default async function TemplateDetailPage({ params }: PageProps) {
         </div>
 
         {/* Hero */}
-        <section className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-8 lg:gap-12 items-start">
+        <section className="mx-auto max-w-6xl px-6 py-6 sm:py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-6 lg:gap-10 items-start">
             <div>
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-2">
                 <span
                   className="inline-block w-2 h-2 rounded-full"
                   style={{ background: template.accent }}
@@ -86,17 +86,17 @@ export default async function TemplateDetailPage({ params }: PageProps) {
                   {family.label}
                 </span>
               </div>
-              <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight">
+              <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">
                 {template.name}
               </h1>
-              <p className="mt-4 text-lg sm:text-xl text-zinc-700 dark:text-zinc-300 leading-snug">
+              <p className="mt-2 text-base sm:text-lg text-zinc-700 dark:text-zinc-300 leading-snug">
                 {template.pitch}
               </p>
-              <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-500 leading-relaxed">
+              <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-500 leading-relaxed">
                 {template.description}
               </p>
 
-              <div className="mt-7 flex flex-col sm:flex-row gap-3">
+              <div className="mt-5 flex flex-col sm:flex-row gap-3">
                 <UseTemplateButton templateId={template.id} />
                 <a
                   href={`/templates/curated/${template.fileName}`}
@@ -108,7 +108,7 @@ export default async function TemplateDetailPage({ params }: PageProps) {
                 </a>
               </div>
 
-              <dl className="mt-10 grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
+              <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                 <div>
                   <dt className="text-[10.5px] uppercase tracking-wider text-zinc-400 dark:text-zinc-600 font-medium mb-1">
                     Familia
@@ -151,14 +151,14 @@ export default async function TemplateDetailPage({ params }: PageProps) {
 
             {/* Preview */}
             <div className="lg:sticky lg:top-24">
-              <TemplateCard template={template} large />
+              <TemplateCard template={template} />
             </div>
           </div>
         </section>
 
         {/* Related templates from same family */}
         {related.length > 0 && (
-          <section className="mx-auto max-w-6xl px-6 py-14 border-t border-zinc-200 dark:border-zinc-800">
+          <section className="mx-auto max-w-6xl px-6 py-10 sm:py-12 border-t border-zinc-200 dark:border-zinc-800">
             <h2 className="text-xl sm:text-2xl font-semibold tracking-tight mb-2">
               Más de {family.label}
             </h2>

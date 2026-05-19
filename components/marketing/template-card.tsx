@@ -16,8 +16,14 @@ export function TemplateCard({ template, large = false }: TemplateCardProps) {
   const [mounted, setMounted] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [scale, setScale] = useState(0);
+  // Native iframe dimensions — must match the actual iframe render size so
+  // the aspect-ratio'd container has zero empty space below the scaled
+  // iframe. `large` no longer changes height (would create dead space);
+  // instead it should affect parent container width (caller's grid).
   const nativeWidth = 1280;
-  const nativeHeight = large ? 880 : 800;
+  const nativeHeight = 800;
+  // Hint to caller about visual prominence — kept for future use.
+  void large;
 
   useEffect(() => {
     if (!wrapperRef.current || mounted) return;
@@ -51,7 +57,6 @@ export function TemplateCard({ template, large = false }: TemplateCardProps) {
     return () => ro.disconnect();
   }, []);
 
-  const stageHeight = nativeHeight * scale;
   const family = TEMPLATE_FAMILY_META[template.family];
 
   return (
@@ -70,11 +75,15 @@ export function TemplateCard({ template, large = false }: TemplateCardProps) {
         </span>
       </div>
 
-      {/* Iframe stage */}
+      {/* Iframe stage. CSS aspect-ratio reserves the final height at first
+          paint (prevents CLS). The iframe MUST be position:absolute — its
+          intrinsic 1280×800 box would otherwise push the stage to 800px
+          regardless of aspect-ratio (transform: scale doesn't shrink layout).
+          overflow-hidden clips the scaled-out portion of the iframe. */}
       <div
         ref={stageRef}
-        className="relative bg-zinc-50 dark:bg-zinc-950"
-        style={{ height: stageHeight > 0 ? stageHeight : nativeHeight * 0.25 }}
+        className="relative overflow-hidden bg-zinc-50 dark:bg-zinc-950"
+        style={{ aspectRatio: `${nativeWidth} / ${nativeHeight}` }}
       >
         <div
           aria-hidden
@@ -95,6 +104,9 @@ export function TemplateCard({ template, large = false }: TemplateCardProps) {
             referrerPolicy="no-referrer"
             onLoad={() => setLoaded(true)}
             style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
               width: nativeWidth,
               height: nativeHeight,
               transform: `scale(${scale})`,
