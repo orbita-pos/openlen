@@ -4,9 +4,9 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import {
   TEMPLATE_FAMILY_META,
-  TEMPLATES,
   getTemplate,
-} from "@/components/templates/_registry";
+  listTemplates,
+} from "@/lib/templates/store";
 import { TemplateCard } from "@/components/marketing/template-card";
 import { UseTemplateButton } from "@/components/marketing/use-template-button";
 import { MarketingChrome } from "@/components/marketing/marketing-chrome";
@@ -16,21 +16,20 @@ interface PageProps {
 }
 
 // Only the slugs in generateStaticParams() are valid. Any other slug
-// returns 404 BEFORE the page renders — without this, Next 15 happily
-// renders the not-found UI but with HTTP 200 (a real bug for crawlers
-// and for our smoke tests).
+// returns 404 BEFORE the page renders.
 export const dynamicParams = false;
 
 export async function generateStaticParams() {
-  return TEMPLATES.map((t) => ({ slug: t.id }));
+  const all = await listTemplates();
+  return all.map((t) => ({ slug: t.id }));
 }
 
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const t = getTemplate(slug);
-  if (!t) {
+  const t = await getTemplate(slug);
+  if (!t || t.status !== "published") {
     return { title: "Template not found | OpenLen" };
   }
   const familyLabel = TEMPLATE_FAMILY_META[t.family].label;
@@ -56,13 +55,14 @@ export async function generateMetadata({
 
 export default async function TemplateDetailPage({ params }: PageProps) {
   const { slug } = await params;
-  const template = getTemplate(slug);
-  if (!template) notFound();
+  const template = await getTemplate(slug);
+  if (!template || template.status !== "published") notFound();
 
   const family = TEMPLATE_FAMILY_META[template.family];
-  const related = TEMPLATES.filter(
-    (t) => t.family === template.family && t.id !== template.id,
-  ).slice(0, 3);
+  const all = await listTemplates({ family: template.family });
+  const related = all
+    .filter((t) => t.id !== template.id)
+    .slice(0, 3);
 
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
@@ -105,7 +105,7 @@ export default async function TemplateDetailPage({ params }: PageProps) {
               <div className="mt-5 flex flex-col sm:flex-row gap-3">
                 <UseTemplateButton templateId={template.id} />
                 <a
-                  href={`/templates/curated/${template.fileName}`}
+                  href={template.storageUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center gap-1.5 rounded-full ring-1 ring-zinc-300 dark:ring-zinc-700 hover:ring-zinc-900 dark:hover:ring-zinc-100 px-5 py-2.5 text-sm font-medium text-zinc-900 dark:text-zinc-100 transition"

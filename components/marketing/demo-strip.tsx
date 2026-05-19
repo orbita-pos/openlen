@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { getTemplate } from "@/components/templates/_registry";
+import { getTemplate } from "@/lib/templates/store";
 import { TemplateCard } from "./template-card";
 
 // Featured templates on the marketing landing page. We pick one per family
@@ -8,9 +8,12 @@ import { TemplateCard } from "./template-card";
 // breadth. Full gallery at /templates.
 const FEATURED_IDS = ["mirror", "manuscript", "counter"] as const;
 
-export function DemoStrip() {
-  const featured = FEATURED_IDS.map((id) => getTemplate(id)).filter(
-    (t): t is NonNullable<typeof t> => t !== undefined,
+export async function DemoStrip() {
+  const fetched = await Promise.all(
+    FEATURED_IDS.map((id) => getTemplate(id)),
+  );
+  const featured = fetched.filter(
+    (t): t is NonNullable<typeof t> => t !== null,
   );
 
   return (

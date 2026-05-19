@@ -1,20 +1,20 @@
 import type { Metadata } from "next";
 import {
   TEMPLATE_FAMILY_META,
-  TEMPLATES,
+  listTemplates,
   type TemplateFamily,
-} from "@/components/templates/_registry";
+} from "@/lib/templates/store";
 import { TemplateCard } from "@/components/marketing/template-card";
 import { MarketingChrome } from "@/components/marketing/marketing-chrome";
 
 export const metadata: Metadata = {
   title: "Templates de landing pages curados | OpenLen",
   description:
-    "15 templates de landing pages diseñadas a mano para SaaS, devtools, ecommerce, restaurantes, blogs editoriales. HTML estático, optimizado, listo para publicar en tu subdominio openlen.com.",
+    "Templates de landing pages diseñadas a mano para SaaS, devtools, ecommerce, restaurantes, blogs editoriales. HTML estático, optimizado, listo para publicar en tu subdominio openlen.com.",
   openGraph: {
     title: "Templates de landing pages | OpenLen",
     description:
-      "15 templates curadas, listas para llenar con tu info y publicar.",
+      "Templates curadas, listas para llenar con tu info y publicar.",
     type: "website",
     url: "https://openlen.com/templates",
   },
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Templates de landing pages | OpenLen",
     description:
-      "15 templates curadas para SaaS, ecommerce, restaurantes, blogs.",
+      "Templates curadas para SaaS, ecommerce, restaurantes, blogs.",
   },
   alternates: {
     canonical: "https://openlen.com/templates",
@@ -35,7 +35,9 @@ const FAMILIES: TemplateFamily[] = [
   "commerce",
 ];
 
-export default function TemplatesPage() {
+export default async function TemplatesPage() {
+  const all = await listTemplates();
+
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
       <MarketingChrome>
@@ -47,7 +49,7 @@ export default function TemplatesPage() {
                 <span className="absolute inline-flex h-full w-full rounded-full bg-coral-500 opacity-75 animate-ping" />
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-coral-500" />
               </span>
-              {TEMPLATES.length} TEMPLATES CURADAS
+              {all.length} TEMPLATES CURADAS
             </div>
             <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight max-w-3xl">
               Landing pages diseñadas a mano. Listas para hacerlas tuyas.
@@ -62,7 +64,7 @@ export default function TemplatesPage() {
         <div className="mx-auto max-w-6xl px-6 py-10 sm:py-12 space-y-14">
           {FAMILIES.map((family) => {
             const meta = TEMPLATE_FAMILY_META[family];
-            const templates = TEMPLATES.filter((t) => t.family === family);
+            const templates = all.filter((t) => t.family === family);
             if (templates.length === 0) return null;
             return (
               <section key={family} id={family}>
@@ -101,8 +103,8 @@ export default function TemplatesPage() {
               name: "OpenLen Templates",
               description:
                 "Curated landing page templates for SaaS, devtools, ecommerce, restaurants, and editorial brands.",
-              numberOfItems: TEMPLATES.length,
-              itemListElement: TEMPLATES.map((t, i) => ({
+              numberOfItems: all.length,
+              itemListElement: all.map((t, i) => ({
                 "@type": "ListItem",
                 position: i + 1,
                 url: `https://openlen.com/templates/${t.id}`,

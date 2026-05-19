@@ -11,6 +11,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "eval": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json evals/run.ts",
+    "templates:seed": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates-seed.ts",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push --force",
     "db:studio": "drizzle-kit studio"

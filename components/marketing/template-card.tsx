@@ -2,10 +2,26 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { TEMPLATE_FAMILY_META, type TemplateEntry } from "@/components/templates/_registry";
+import {
+  TEMPLATE_FAMILY_META,
+  type TemplateFamily,
+} from "@/lib/templates/families";
+
+// Minimal shape this component needs. Marketing pages pass DB records
+// directly; the schema lives in @/lib/templates/store.
+export interface TemplateCardData {
+  id: string;
+  name: string;
+  family: TemplateFamily;
+  accent: string;
+  pitch: string;
+  /** Public URL to the HTML body the iframe should load. R2 in prod,
+   *  filesystem fallback in dev — store layer returns the resolved URL. */
+  storageUrl: string;
+}
 
 interface TemplateCardProps {
-  template: TemplateEntry;
+  template: TemplateCardData;
   /** Hide the name + family + pitch footer. Used on the detail page where
    *  that metadata is already presented as h1 + dl in the left column —
    *  rendering it again as an h3 here would break the heading hierarchy. */
@@ -101,7 +117,7 @@ export function TemplateCard({ template, compact = false }: TemplateCardProps) {
         />
         {mounted && scale > 0 && (
           <iframe
-            src={`/templates/curated/${template.fileName}`}
+            src={template.storageUrl}
             title={`${template.name} live preview`}
             sandbox="allow-scripts allow-same-origin"
             loading="lazy"

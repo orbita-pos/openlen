@@ -1,12 +1,8 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
-import {
-  getTemplate,
-  isTemplateId,
-} from "@/components/templates/_registry";
+import { getTemplate, getTemplateHtml } from "@/lib/templates/store";
 import type { LandingPage } from "@/lib/orchestrator/types";
+import { createVersion } from "@/lib/projects/versions";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/projects/from-template
@@ -67,37 +63,19 @@ export async function POST(req: Request): Promise<Response> {
   if (!body || typeof body.templateId !== "string") {
     return json({ error: "invalid_body" }, 400);
   }
-  if (!isTemplateId(body.templateId)) {
-    return json(
-      { error: "unknown_template", id: body.templateId },
-      404,
-    );
+
+  const entry = await getTemplate(body.templateId);
+  if (!entry || entry.status !== "published") {
+    return json({ error: "unknown_template", id: body.templateId }, 404);
   }
 
-  const entry = getTemplate(body.templateId);
-  if (!entry) return json({ error: "unknown_template" }, 404);
-
-  // Read the curated HTML straight from disk. /public/templates/curated/ is
-  // tracked in the repo + copied into .next/standalone/public/ by deploy.sh,
-  // so this works in both dev and production on the Hetzner box.
-  const filePath = path.join(
-    process.cwd(),
-    "public",
-    "templates",
-    "curated",
-    entry.fileName,
-  );
-  let html: string;
-  try {
-    html = await readFile(filePath, "utf8");
-  } catch (err) {
+  // Fetch the canonical HTML body from object storage. Cached at the CDN
+  // edge in prod (R2); local FS read in dev.
+  const html = await getTemplateHtml(entry.id);
+  if (!html) {
     // eslint-disable-next-line no-console
-    console.error(
-      "[from-template] failed to read template file",
-      filePath,
-      err,
-    );
-    return json({ error: "template_file_missing" }, 500);
+    console.error("[from-template] failed to fetch template body", entry.id);
+    return json({ error: "template_body_unavailable" }, 500);
   }
 
   // Defense in depth: the publish flow rejects HTML containing this marker.
@@ -192,6 +170,20 @@ export async function POST(req: Request): Promise<Response> {
     console.error("[from-template] db insert failed", err);
     return json({ error: "db_insert_failed" }, 500);
   }
+
+  // Seed the version history with the freshly-cloned template — gives the
+  // user a "back to original" target if they chat the page into oblivion.
+  await createVersion({
+    projectId,
+    html,
+    label: `Initial: ${entry.name}`,
+    source: "initial",
+  }).catch((err: unknown) => {
+    // Don't fail the create on a version-write hiccup — the project itself
+    // is fine; user just won't have a v0 in their timeline.
+    // eslint-disable-next-line no-console
+    console.error("[from-template] initial version snapshot failed", err);
+  });
 
   return json({ projectId, title: entry.name }, 200);
 }

@@ -17,10 +17,10 @@ import {
 } from "../template-preview-frame";
 import {
   TEMPLATE_FAMILIES,
-  templatesByFamily,
   type TemplateFamily,
   type TemplateSpec,
 } from "../templates-data";
+import { useTemplates } from "../use-templates";
 
 interface TemplatesPanelProps {
   /** Set the template the workspace previews in the main area. Click in
@@ -145,6 +145,7 @@ export function TemplatesPanel({
   );
   const searchParams = useSearchParams();
   const currentProjectId = searchParams.get("project");
+  const { templates, byFamily, isLoading, error } = useTemplates();
 
   const visibleFamilies = TEMPLATE_FAMILIES.filter(
     (f) => familyFilter === "all" || familyFilter === f.id,
@@ -182,7 +183,7 @@ export function TemplatesPanel({
               : "fg-muted bg-hover hover:fg"
           }`}
         >
-          All 15
+          All{templates.length > 0 ? ` ${templates.length}` : ""}
         </button>
         {TEMPLATE_FAMILIES.map((f) => (
           <button
@@ -200,28 +201,45 @@ export function TemplatesPanel({
         ))}
       </div>
 
-      {visibleFamilies.map((family) => {
-        const templates = templatesByFamily(family.id);
-        return (
-          <section key={family.id} className="mb-5 last:mb-2">
-            <FamilyHeader
-              label={family.label}
-              tagline={family.tagline}
-              count={templates.length}
-            />
-            <div className="flex flex-col gap-3">
-              {templates.map((t) => (
-                <TemplateCard
-                  key={t.id}
-                  template={t}
-                  onPreview={onPreview}
-                  previewing={previewingId === t.id}
-                />
-              ))}
-            </div>
-          </section>
-        );
-      })}
+      {error && (
+        <div className="mb-3 px-2.5 py-2 rounded-md ring-1 ring-rose-300/60 dark:ring-rose-500/30 bg-rose-50 dark:bg-rose-500/5 text-[11px] text-rose-700 dark:text-rose-300">
+          Failed to load templates — {error}
+        </div>
+      )}
+
+      {isLoading &&
+        Array.from({ length: 3 }).map((_, i) => (
+          <div
+            key={`skel-${i}`}
+            className="mb-3 h-40 rounded-lg ring-1 ring-[color:var(--border)] animate-pulse"
+            style={{ background: "var(--bg-elev)" }}
+          />
+        ))}
+
+      {!isLoading &&
+        visibleFamilies.map((family) => {
+          const familyTemplates = byFamily(family.id);
+          if (familyTemplates.length === 0) return null;
+          return (
+            <section key={family.id} className="mb-5 last:mb-2">
+              <FamilyHeader
+                label={family.label}
+                tagline={family.tagline}
+                count={familyTemplates.length}
+              />
+              <div className="flex flex-col gap-3">
+                {familyTemplates.map((t) => (
+                  <TemplateCard
+                    key={t.id}
+                    template={t}
+                    onPreview={onPreview}
+                    previewing={previewingId === t.id}
+                  />
+                ))}
+              </div>
+            </section>
+          );
+        })}
 
       <div className="mt-4 px-1 text-[10px] fg-faint leading-relaxed">
         Templates are static HTML — pure markup, Tailwind CDN, Google Fonts.

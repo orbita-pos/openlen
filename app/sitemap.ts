@@ -1,9 +1,9 @@
 import type { MetadataRoute } from "next";
-import { TEMPLATES } from "@/components/templates/_registry";
+import { listTemplates } from "@/lib/templates/store";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://openlen.com";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   const staticRoutes: MetadataRoute.Sitemap = [
     {
@@ -20,9 +20,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
-  const templateRoutes: MetadataRoute.Sitemap = TEMPLATES.map((t) => ({
+  const templates = await listTemplates();
+  const templateRoutes: MetadataRoute.Sitemap = templates.map((t) => ({
     url: `${SITE_URL}/templates/${t.id}`,
-    lastModified: now,
+    lastModified: t.updatedAt,
     changeFrequency: "monthly",
     priority: 0.8,
   }));

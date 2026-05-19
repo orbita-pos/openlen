@@ -65,12 +65,18 @@ const checks: Check[] = [
   { name: "Register", path: "/register", expect: 200 },
   { name: "Forgot", path: "/forgot", expect: 200 },
 
-  // --- Iframe-served curated HTML (covered by /templates/ public prefix) ---
+  // --- Templates API: list returns metadata for the seeded templates ---
   {
-    name: "Curated iframe (anchor)",
-    path: "/templates/curated/anchor.html",
+    name: "GET /api/templates returns list with anchor",
+    path: "/api/templates",
     expect: 200,
-    must: ["<!doctype html>"],
+    must: [`"id":"anchor"`, `"storageUrl"`],
+  },
+  {
+    name: "GET /api/templates/anchor returns single record",
+    path: "/api/templates/anchor",
+    expect: 200,
+    must: [`"id":"anchor"`, `"storageUrl"`],
   },
 
   // --- Gated routes redirect to login when unauthenticated ---
