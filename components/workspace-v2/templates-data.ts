@@ -91,6 +91,30 @@ export const TEMPLATE_FAMILIES: TemplateFamilyMeta[] = [
     tagline:
       "Brand studios, dev shops, motion houses. Case-study heavy, restrained voice, team-focused.",
   },
+  {
+    id: "real-estate",
+    label: "Real Estate",
+    tagline:
+      "Property listings, agents, brokerages. Photo galleries, map views, comparable sales.",
+  },
+  {
+    id: "hospitality",
+    label: "Hospitality",
+    tagline:
+      "Restaurants, hotels, cafés. Menus, reservations, ambient photography, chef and owner stories.",
+  },
+  {
+    id: "ecommerce",
+    label: "E-commerce",
+    tagline:
+      "Single-product DTC landings. Multiple images, variants, size guides, reviews, add-to-cart.",
+  },
+  {
+    id: "climate",
+    label: "Climate / Sustainability",
+    tagline:
+      "Carbon accounting, ESG dashboards, climate tech. Emission charts, supply chain maps, certification badges.",
+  },
 ];
 
 // Shape the TemplatesPanel cards consume. Derived from the API list
