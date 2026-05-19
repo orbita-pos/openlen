@@ -74,6 +74,17 @@ export async function listTemplates(opts?: {
   return rows.map(rowToRecord);
 }
 
+// Admin-only: list EVERY row regardless of status (drafts + archived too).
+// Public listTemplates() filters to published; the admin UI needs the
+// full picture to manage state transitions.
+export async function listAllForAdmin(): Promise<TemplateRecord[]> {
+  const rows = await db
+    .select()
+    .from(schema.templates)
+    .orderBy(schema.templates.createdAt);
+  return rows.map(rowToRecord);
+}
+
 export async function getTemplate(id: string): Promise<TemplateRecord | null> {
   const rows = await db
     .select()
