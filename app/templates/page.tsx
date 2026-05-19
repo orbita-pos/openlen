@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
-import {
-  TEMPLATE_FAMILY_META,
-  listTemplates,
-  type TemplateFamily,
-} from "@/lib/templates/store";
-import { TemplateCard } from "@/components/marketing/template-card";
+import { listTemplates } from "@/lib/templates/store";
 import { MarketingChrome } from "@/components/marketing/marketing-chrome";
+import { TemplatesGallery } from "@/components/marketing/templates-gallery";
+import type { TemplateCardData } from "@/components/marketing/template-card";
+
+// Gallery content changes whenever the admin adds/edits/archives a template.
+// Static prerender would cache the count at build time, so we render on
+// demand. The DB query is one SELECT against indexed (status, family) and
+// completes well under 50ms — acceptable TTFB for a page hit once per session.
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Templates de landing pages curados | OpenLen",
@@ -29,27 +32,19 @@ export const metadata: Metadata = {
   },
 };
 
-const FAMILIES: TemplateFamily[] = [
-  "technical-minimal",
-  "editorial",
-  "commerce",
-  "documentation",
-  "saas",
-  "ai-ml",
-  "fintech",
-  "health-tech",
-  "portfolio",
-  "pre-launch",
-  "event",
-  "agency",
-  "real-estate",
-  "hospitality",
-  "ecommerce",
-  "climate",
-];
-
 export default async function TemplatesPage() {
   const all = await listTemplates();
+  // Slim the DB rows down to what the gallery cards need — keeps the
+  // serialized props payload sent to the client small (60 templates ×
+  // ~7 fields vs ~13 fields).
+  const cards: TemplateCardData[] = all.map((t) => ({
+    id: t.id,
+    name: t.name,
+    family: t.family,
+    accent: t.accent,
+    pitch: t.pitch,
+    storageUrl: t.storageUrl,
+  }));
 
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
@@ -73,37 +68,8 @@ export default async function TemplatesPage() {
           </div>
         </section>
 
-        {/* Templates by family */}
-        <div className="mx-auto max-w-6xl px-6 py-10 sm:py-12 space-y-14">
-          {FAMILIES.map((family) => {
-            const meta = TEMPLATE_FAMILY_META[family];
-            const templates = all.filter((t) => t.family === family);
-            if (templates.length === 0) return null;
-            return (
-              <section key={family} id={family}>
-                <div className="mb-8 flex items-baseline justify-between gap-4 flex-wrap">
-                  <div>
-                    <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">
-                      {meta.label}
-                    </h2>
-                    <p className="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400 max-w-md">
-                      {meta.tagline}
-                    </p>
-                  </div>
-                  <span className="text-xs text-zinc-400 dark:text-zinc-400 uppercase tracking-wider font-medium">
-                    {templates.length}{" "}
-                    {templates.length === 1 ? "template" : "templates"}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
-                  {templates.map((t) => (
-                    <TemplateCard key={t.id} template={t} />
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-        </div>
+        {/* Search bar + filtered gallery (client component owns state) */}
+        <TemplatesGallery templates={cards} />
 
         {/* Schema.org structured data — helps search engines understand
             this is a catalog of software products. */}
