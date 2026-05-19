@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { validateSubdomain } from "@/lib/subdomain/validate";
+import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Publish-to-disk primitives.
@@ -73,13 +74,18 @@ export async function publishToDir(params: PublishParams): Promise<void> {
   const root = getRoot();
   await mkdir(root, { recursive: true });
 
+  // Optimize for production before writing: strips Tailwind CDN, inlines
+  // the baked utility set so the visitor doesn't pay the runtime compile.
+  // Idempotent — pages without a CDN script pass through unchanged.
+  const optimized = await optimizeHtmlForProduction(params.html);
+
   const tmpDir = safeJoin(root, `.tmp-${sub}-${randomUUID()}`);
   const liveDir = safeJoin(root, sub);
   const oldDir = safeJoin(root, `.old-${sub}-${randomUUID()}`);
 
   await mkdir(tmpDir, { recursive: true });
   try {
-    await writeFile(path.join(tmpDir, "index.html"), params.html, "utf8");
+    await writeFile(path.join(tmpDir, "index.html"), optimized.html, "utf8");
 
     // Check if a live dir already exists.
     let liveExists = false;
