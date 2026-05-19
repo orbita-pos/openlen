@@ -3,6 +3,7 @@
 // arrive (used by the API route to forward SSE events to the client).
 
 import { applyOps, parseOps, stripOpIds, tagWithOpIds } from "@/lib/html-ops";
+import { sanitizeFilledHtml } from "./sanitize";
 import type { ExtractedBusinessData } from "./types";
 
 const TOGETHER_ENDPOINT = "https://api.together.xyz/v1/chat/completions";
@@ -26,17 +27,22 @@ You emit op="replace" ONLY on LEAF text-bearing elements:
 
   Why: replacing a container DELETES all its children. The template has hundreds of tagged elements, most of which are leaves nested inside containers. If you replace a container, every child id becomes invalid and every subsequent op fails.
 
-For containers you want REMOVED (a whole section the business doesn't need), use:
-  <edit op="delete" target="<container-id>" />
+DELETIONS ARE FORBIDDEN IN AUTOFILL MODE.
+Do NOT emit op="delete" for ANY element under ANY circumstance. The template's structure is sacred — it's what the user picked and it's already beautiful. Your job is to replace LEAF TEXT only, never remove structure.
 
-NEVER use op="replace" on a container. Either leave it alone or delete it.
+If a template section semantically doesn't match the user's business (e.g., "API documentation" section on a restaurant template), LEAVE IT ALONE — emit no ops for it. The user can either:
+  (a) accept the section as-is (it's still beautiful structure)
+  (b) edit it via free-form chat later
+  (c) pick a different template that fits their business
+But you, the autofill model, do NOT delete sections. Ever.
 
 ═══════════════════════════════════════════
 PROTOCOL — ID-tagged ops
 ═══════════════════════════════════════════
 
 <edit op="replace" target="<id-of-LEAF-element>"><new-element-html /></edit>
-<edit op="delete" target="<id-of-container-or-leaf>" />
+
+(op="delete" is NOT allowed in autofill mode. See deletion rules below.)
 
 When you replace a leaf, the <new> content should be just the leaf element itself with new text inside. Example for an h1:
   GOOD: <edit op="replace" target="q"><new><h1 class="display mt-6">Tacos de Juan — Auténticos al pastor desde 1989</h1></new></edit>
@@ -69,10 +75,10 @@ Match user's business data to contextually appropriate text slots:
 - tagline (es or en based on user's language) → hero subheading
 - pitch → hero subheading paragraph (if there's one BELOW the h1)
 - hero_keyword → spans a single word in the hero h1 with the template's accent class (look at the template's existing accent span pattern, reuse the same classes)
-- features[] → feature card titles + descriptions, 1:1 mapping; if user has 4 features but template has 6 cards, only fill the first 4
-- pricing[] → pricing tier names + prices + bullet lists; if user has 2 tiers but template has 3, delete the 3rd tier container via op="delete"
-- testimonials[] → testimonial quotes + author lines; 1:1 mapping with cap at template count
-- faq_questions[] → FAQ Q + A pairs; same 1:1 with cap
+- features[] → feature card titles + descriptions, 1:1 mapping; if user has 4 features but template has 6 cards, only fill the first 4 and leave the rest untouched
+- pricing[] → pricing tier names + prices + bullet lists; if user has 2 tiers but template has 3, fill the first 2 and leave the 3rd as the template's original copy (do NOT delete it)
+- testimonials[] → testimonial quotes + author lines; 1:1 mapping with cap at template count; leftover slots stay as original
+- faq_questions[] → FAQ Q + A pairs; same 1:1 with cap; leftovers stay as original
 
 PRESERVE the LANGUAGE the user is using (Spanish vs English vs Portuguese, based on language_detected or which tagline field is filled). Do NOT translate the template's original copy that you DON'T replace.
 
@@ -344,7 +350,11 @@ export async function fillTemplate(
   }
 
   input.onStage?.("applying");
-  const { ops, errors: parseErrors } = parseOps(accumulated);
+  const { ops: rawOps, errors: parseErrors } = parseOps(accumulated);
+  // Belt-and-suspenders: drop any delete ops Kimi might emit despite the
+  // prompt explicitly forbidding them. Autofill preserves structure;
+  // deletions break the template's layout and orphan future chat edits.
+  const ops = rawOps.filter((op) => op.type !== "delete");
   if (parseErrors.length > 0 && ops.length === 0) {
     return {
       ok: false,
@@ -399,10 +409,21 @@ export async function fillTemplate(
     };
   }
 
-  const cleanHtml = stripOpIds(applyResult.html);
+  const strippedHtml = stripOpIds(applyResult.html);
+  const sanitized = sanitizeFilledHtml(strippedHtml);
+  if (
+    sanitized.removed.scripts > 0 ||
+    sanitized.removed.eventHandlers > 0 ||
+    sanitized.removed.dangerousUrls > 0 ||
+    sanitized.removed.iframes > 0
+  ) {
+    // Log so prompt-injection attempts surface in telemetry without
+    // failing the request — Kimi cleaned up as it should.
+    console.warn("[autofill] sanitizer stripped:", sanitized.removed);
+  }
   return {
     ok: true,
-    filledHtml: cleanHtml,
+    filledHtml: sanitized.html,
     appliedOps: applyResult.appliedCount,
     totalOps: ops.length,
     cascadeErrors: applyResult.errors.length,

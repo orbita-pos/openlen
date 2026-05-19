@@ -67,7 +67,13 @@ export interface ExtractImageOk {
 export interface ExtractImageErr {
   ok: false;
   error: {
-    kind: "missing-key" | "api" | "parse" | "schema" | "aborted";
+    kind:
+      | "missing-key"
+      | "api"
+      | "parse"
+      | "schema"
+      | "aborted"
+      | "no-business-info";
     message: string;
   };
   raw?: string;
@@ -215,6 +221,37 @@ export async function extractFromImage(
           .slice(0, 3)
           .map((i) => `${i.path.join(".")}: ${i.message}`)
           .join(" | ")}`,
+      },
+      raw,
+      usage,
+      durationMs: Date.now() - t0,
+    };
+  }
+
+  // Sanity check: did Gemini extract ANYTHING meaningful? If the user uploaded
+  // a selfie / meme / abstract art / pure photograph with no business
+  // content, every field comes back null/empty. Reject with a friendly
+  // error so the UI can tell the user to try a different image.
+  const d = validated.data;
+  const isEmpty =
+    !d.business_name &&
+    !d.tagline_es &&
+    !d.tagline_en &&
+    !d.pitch &&
+    !d.industry &&
+    !d.cta_primary &&
+    !d.cta_secondary &&
+    d.features.length === 0 &&
+    d.pricing.length === 0 &&
+    d.testimonials.length === 0 &&
+    d.faq_questions.length === 0;
+  if (isEmpty) {
+    return {
+      ok: false,
+      error: {
+        kind: "no-business-info",
+        message:
+          "No encontramos info de negocio en esa imagen. Probá con una captura de tu sitio actual, foto del menú, brochure, o tarjeta de presentación.",
       },
       raw,
       usage,

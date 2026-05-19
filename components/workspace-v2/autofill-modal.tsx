@@ -86,13 +86,46 @@ export function AutofillModal({
     }
   }, [open]);
 
+  // ESC closes the modal — but only if no request is in flight. While busy
+  // the user must click Cancel explicitly so they don't accidentally
+  // abandon a partial run.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (
+        stage === "extracting" ||
+        stage === "tagging" ||
+        stage === "calling-model" ||
+        stage === "applying" ||
+        stage === "persisting"
+      ) {
+        return;
+      }
+      e.preventDefault();
+      onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose, stage]);
+
   const handleFile = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) {
       setErrorMessage("El archivo no es una imagen.");
       return;
     }
+    if (file.type !== "image/jpeg" && file.type !== "image/png") {
+      setErrorMessage("Solo aceptamos JPG o PNG.");
+      return;
+    }
     if (file.size > 8 * 1024 * 1024) {
-      setErrorMessage(`Imagen muy grande (${(file.size / 1024 / 1024).toFixed(1)} MB, máximo 8 MB).`);
+      setErrorMessage(
+        `Imagen muy grande (${(file.size / 1024 / 1024).toFixed(1)} MB, máximo 8 MB).`,
+      );
+      return;
+    }
+    if (file.size < 4 * 1024) {
+      setErrorMessage("Imagen muy chica — probá con un screenshot o foto real (mínimo 4 KB).");
       return;
     }
     setErrorMessage(null);
@@ -100,7 +133,23 @@ export function AutofillModal({
     setImageMime(file.type === "image/png" ? "image/png" : "image/jpeg");
     const reader = new FileReader();
     reader.onload = () => {
-      if (typeof reader.result === "string") setImageDataUrl(reader.result);
+      if (typeof reader.result !== "string") return;
+      // Dimension sanity check via a probe Image — rejects tiny meme images.
+      const probe = new Image();
+      probe.onload = () => {
+        if (probe.naturalWidth < 200 || probe.naturalHeight < 200) {
+          setErrorMessage(
+            `Imagen muy chica (${probe.naturalWidth}×${probe.naturalHeight}px). Mínimo 200×200 — probá con un screenshot de tu sitio o foto del menú.`,
+          );
+          setImageDataUrl(null);
+          return;
+        }
+        setImageDataUrl(reader.result as string);
+      };
+      probe.onerror = () => {
+        setErrorMessage("No pudimos leer la imagen. Probá con otra.");
+      };
+      probe.src = reader.result;
     };
     reader.readAsDataURL(file);
   }, []);
@@ -266,43 +315,43 @@ export function AutofillModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      className="workspace-v2 fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm fade-in"
       onClick={() => {
         if (!isBusy) onClose();
       }}
     >
       <div
-        className="relative w-full max-w-2xl mx-4 rounded-2xl bg-zinc-900 border border-white/10 shadow-2xl overflow-hidden"
+        className="relative w-full max-w-2xl mx-4 rounded-2xl bg-elev border bd shadow-elev overflow-hidden slide-down"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
-          <div>
-            <div className="text-[15px] font-semibold text-white">Llenar con tu info</div>
-            <div className="text-[12px] text-white/40 mt-0.5">
-              Subí una imagen de referencia o escribí los datos de tu negocio. Tu template se llena con tu contenido real.
+        <div className="px-5 py-4 border-b bd flex items-center justify-between">
+          <div className="min-w-0 pr-3">
+            <div className="text-[15px] font-semibold fg font-display">
+              Llenar con tu info
+            </div>
+            <div className="text-[12px] fg-faint mt-0.5 leading-snug">
+              Subí una imagen con la info de tu negocio o escribí los datos a mano. Tu template se llena con tu contenido real — el diseño no cambia.
             </div>
           </div>
           <button
             type="button"
             onClick={() => !isBusy && onClose()}
             disabled={isBusy}
-            className="text-white/50 hover:text-white/80 text-lg leading-none disabled:opacity-30"
+            className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-md fg-faint hover:fg hover:bg-hover transition disabled:opacity-30"
             aria-label="Cerrar"
           >
             ✕
           </button>
         </div>
 
-        <div className="px-5 pt-4 flex gap-1.5 text-[13px]">
+        <div className="px-5 pt-3.5 flex gap-1 text-[12.5px]">
           <button
             type="button"
             onClick={() => setTab("image")}
             disabled={isBusy}
-            className={`px-3 py-1.5 rounded-md transition ${
-              tab === "image"
-                ? "bg-white/10 text-white"
-                : "text-white/50 hover:text-white/80"
-            } disabled:opacity-40`}
+            className={`px-3 py-1.5 rounded-md transition disabled:opacity-40 ${
+              tab === "image" ? "seg-active" : "fg-muted hover:fg hover:bg-hover"
+            }`}
           >
             📷 Subir imagen
           </button>
@@ -310,9 +359,9 @@ export function AutofillModal({
             type="button"
             onClick={() => setTab("text")}
             disabled={isBusy}
-            className={`px-3 py-1.5 rounded-md transition ${
-              tab === "text" ? "bg-white/10 text-white" : "text-white/50 hover:text-white/80"
-            } disabled:opacity-40`}
+            className={`px-3 py-1.5 rounded-md transition disabled:opacity-40 ${
+              tab === "text" ? "seg-active" : "fg-muted hover:fg hover:bg-hover"
+            }`}
           >
             ✍️ Escribir info
           </button>
@@ -325,27 +374,27 @@ export function AutofillModal({
                 onDrop={handleDrop}
                 onDragOver={(e) => e.preventDefault()}
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-white/[0.12] rounded-xl p-8 text-center cursor-pointer hover:border-white/[0.25] transition"
+                className="border-2 border-dashed bd hover:bd-strong rounded-xl p-8 text-center cursor-pointer transition bg-app"
               >
                 {imageDataUrl ? (
                   <div>
                     <img
                       src={imageDataUrl}
                       alt="Preview"
-                      className="max-h-48 mx-auto rounded-md"
+                      className="max-h-48 mx-auto rounded-md shadow-card"
                     />
-                    <div className="mt-3 text-[12px] text-white/40">
+                    <div className="mt-3 text-[12px] fg-faint">
                       {(imageBytes / 1024).toFixed(0)} KB · click para cambiar
                     </div>
                   </div>
                 ) : (
                   <div>
                     <div className="text-3xl mb-2">📷</div>
-                    <div className="text-[13px] text-white/80">
-                      Arrastrá una imagen aquí, click para elegir, o pegá del portapapeles
+                    <div className="text-[13px] fg">
+                      Arrastrá una imagen, click para elegir, o pegá del portapapeles
                     </div>
-                    <div className="text-[11px] text-white/40 mt-2">
-                      JPG o PNG · máximo 8 MB · screenshots, fotos de menú, brochures, etc.
+                    <div className="text-[11px] fg-faint mt-2">
+                      JPG o PNG · máximo 8 MB · screenshots, fotos de menú, brochures…
                     </div>
                   </div>
                 )}
@@ -391,7 +440,7 @@ export function AutofillModal({
               />
               <div className="grid grid-cols-2 gap-2">
                 <Field
-                  label="Palabra clave del hero (para destacar)"
+                  label="Palabra clave del hero"
                   value={textForm.hero_keyword}
                   onChange={(v) => setTextForm((s) => ({ ...s, hero_keyword: v }))}
                   placeholder="tradición"
@@ -407,12 +456,12 @@ export function AutofillModal({
           )}
         </div>
 
-        <div className="px-5 py-3 border-t border-white/[0.06] bg-black/30 flex items-center justify-between">
-          <div className="text-[11.5px] text-white/50 flex items-center gap-2">
+        <div className="px-5 py-3 border-t bd bg-side flex items-center justify-between">
+          <div className="text-[11.5px] fg-faint flex items-center gap-2 min-w-0 pr-3">
             {isBusy && (
               <>
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
-                <span>
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--accent)] animate-pulse" />
+                <span className="truncate">
                   {STAGE_LABELS[stage as Exclude<Stage, "idle">]} · {elapsedSec}s
                   {bytes > 0 && stage === "calling-model"
                     ? ` · ${(bytes / 1024).toFixed(1)} KB`
@@ -421,30 +470,34 @@ export function AutofillModal({
               </>
             )}
             {stage === "done" && (
-              <span className="text-emerald-400">✓ Listo · {elapsedSec}s</span>
+              <span className="text-emerald-600 dark:text-emerald-400">
+                ✓ Listo · {elapsedSec}s
+              </span>
             )}
             {stage === "error" && errorMessage && (
-              <span className="text-rose-400 truncate max-w-[400px]">
+              <span className="text-red-600 dark:text-rose-400 truncate">
                 ✗ {errorMessage}
               </span>
             )}
             {stage === "idle" && !errorMessage && (
-              <span>
+              <span className="truncate">
                 {tab === "image"
-                  ? "Tip: una screenshot del sitio que querés copiar, o foto de tu menú, funciona bien."
-                  : "Tip: con solo nombre + tagline + pitch alcanza. El resto del template queda intacto."}
+                  ? "Tip: foto del menú, captura de tu sitio, brochure — todo sirve."
+                  : "Tip: con nombre + tagline + pitch alcanza. Resto del template queda intacto."}
               </span>
             )}
             {stage === "idle" && errorMessage && (
-              <span className="text-rose-400">✗ {errorMessage}</span>
+              <span className="text-red-600 dark:text-rose-400 truncate">
+                ✗ {errorMessage}
+              </span>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 shrink-0">
             {isBusy ? (
               <button
                 type="button"
                 onClick={cancel}
-                className="px-3 py-1.5 text-[12.5px] text-white/60 hover:text-white/90 rounded-md"
+                className="px-3 py-1.5 text-[12.5px] fg-muted hover:fg hover:bg-hover rounded-md transition"
               >
                 Cancelar
               </button>
@@ -452,7 +505,7 @@ export function AutofillModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-3 py-1.5 text-[12.5px] text-white/60 hover:text-white/90 rounded-md"
+                className="px-3 py-1.5 text-[12.5px] fg-muted hover:fg hover:bg-hover rounded-md transition"
               >
                 Cerrar
               </button>
@@ -461,7 +514,7 @@ export function AutofillModal({
               type="button"
               onClick={() => void submit()}
               disabled={isBusy || stage === "done"}
-              className="px-4 py-1.5 text-[12.5px] font-medium rounded-md bg-white text-black hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-4 py-1.5 text-[12.5px] font-medium rounded-md bg-[color:var(--accent)] text-white shadow-coral hover:brightness-105 active:brightness-95 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
             >
               {isBusy ? "Procesando…" : "Aplicar"}
             </button>
@@ -485,7 +538,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="text-[11px] font-medium text-white/60 uppercase tracking-wider">
+      <span className="text-[10.5px] font-medium fg-muted uppercase tracking-wider">
         {label}
       </span>
       <input
@@ -493,7 +546,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="mt-1 w-full px-3 py-2 text-[13px] text-white bg-black/40 border border-white/[0.08] rounded-md focus:border-white/[0.25] focus:outline-none placeholder:text-white/25"
+        className="mt-1 w-full px-3 py-2 text-[13px] fg bg-app border bd rounded-md focus:bd-strong focus:outline-none placeholder:fg-faint transition"
       />
     </label>
   );
@@ -512,7 +565,7 @@ function FieldTextarea({
 }) {
   return (
     <label className="block">
-      <span className="text-[11px] font-medium text-white/60 uppercase tracking-wider">
+      <span className="text-[10.5px] font-medium fg-muted uppercase tracking-wider">
         {label}
       </span>
       <textarea
@@ -520,7 +573,7 @@ function FieldTextarea({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={3}
-        className="mt-1 w-full px-3 py-2 text-[13px] text-white bg-black/40 border border-white/[0.08] rounded-md focus:border-white/[0.25] focus:outline-none placeholder:text-white/25 resize-none"
+        className="mt-1 w-full px-3 py-2 text-[13px] fg bg-app border bd rounded-md focus:bd-strong focus:outline-none placeholder:fg-faint resize-none transition"
       />
     </label>
   );

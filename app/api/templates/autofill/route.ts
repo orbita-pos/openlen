@@ -1,8 +1,10 @@
 import { and, eq } from "drizzle-orm";
+import { captureException } from "@inariwatch/capture";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import type { LandingPage } from "@/lib/orchestrator/types";
 import { createVersion } from "@/lib/projects/versions";
+import { consumeToken, RATE_LIMITS } from "@/lib/rate-limit";
 import {
   ExtractedBusinessDataSchema,
   extractFromImage,
@@ -28,10 +30,38 @@ export const runtime = "nodejs";
 const ENCODER = new TextEncoder();
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
+// In-flight protection: only one autofill per project at a time. If a user
+// double-clicks Apply (or has multiple tabs open on the same project), the
+// 2nd request gets 409 Conflict instead of racing the 1st write. Cleared
+// in a finally block so a crash doesn't permanently lock the project.
+const inFlightProjects = new Set<string>();
+
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) return errorJson(401, "unauthenticated");
   const userId = session.user.id;
+
+  // Rate limit BEFORE doing any work. Autofill burns ~\$0.002/call which
+  // adds up fast if a user spams. 10/hour is the free-tier ceiling.
+  const rateCheck = consumeToken(`autofill:${userId}`, RATE_LIMITS.autofill);
+  if (!rateCheck.allowed) {
+    const retryAfterSec = Math.ceil(rateCheck.retryAfterMs / 1000);
+    return new Response(
+      JSON.stringify({
+        error: `Rate limit excedido — máximo ${rateCheck.limit} autofills por hora. Probá de nuevo en ${formatRetry(retryAfterSec)}.`,
+        retryAfterSec,
+      }),
+      {
+        status: 429,
+        headers: {
+          "content-type": "application/json",
+          "retry-after": String(retryAfterSec),
+          "x-ratelimit-limit": String(rateCheck.limit),
+          "x-ratelimit-remaining": "0",
+        },
+      },
+    );
+  }
 
   let body: {
     projectId?: unknown;
@@ -102,6 +132,21 @@ export async function POST(req: Request) {
   if (!/<html[\s>]/i.test(currentHtml) || !/<\/html>/i.test(currentHtml)) {
     return errorJson(400, "project HTML is missing or malformed");
   }
+
+  // Concurrent request protection.
+  const inFlightKey = `${userId}:${projectId}`;
+  if (inFlightProjects.has(inFlightKey)) {
+    return new Response(
+      JSON.stringify({
+        error: "Ya hay un autofill en proceso para este proyecto. Esperá a que termine antes de empezar otro.",
+      }),
+      {
+        status: 409,
+        headers: { "content-type": "application/json" },
+      },
+    );
+  }
+  inFlightProjects.add(inFlightKey);
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -185,6 +230,9 @@ export async function POST(req: Request) {
           source: "style-match",
         }).catch((err: unknown) => {
           console.error("[autofill] pre-apply snapshot failed", err);
+          if (err instanceof Error) {
+            captureException(err, { route: "autofill", stage: "pre-snapshot", projectId, userId });
+          }
         });
 
         const now = new Date();
@@ -201,6 +249,9 @@ export async function POST(req: Request) {
             );
         } catch (err) {
           console.error("[autofill] db update failed", err);
+          if (err instanceof Error) {
+            captureException(err, { route: "autofill", stage: "db-update", projectId, userId });
+          }
           emit("error", { kind: "db", message: "Filled successfully but failed to save — try again." });
           closeStream();
           return;
@@ -229,11 +280,17 @@ export async function POST(req: Request) {
         closeStream();
       } catch (err) {
         console.error("[autofill] stream failed", err);
+        if (err instanceof Error) {
+          captureException(err, { route: "autofill", stage: "stream", projectId, userId });
+        }
         emit("error", {
           kind: "unhandled",
           message: err instanceof Error ? err.message : "Unknown error",
         });
         closeStream();
+      } finally {
+        // Always release the in-flight lock, even on errors / cancellation.
+        inFlightProjects.delete(inFlightKey);
       }
     },
   });
@@ -252,4 +309,10 @@ function errorJson(status: number, message: string): Response {
     status,
     headers: { "content-type": "application/json" },
   });
+}
+
+function formatRetry(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.ceil(seconds / 60)} min`;
+  return `${Math.ceil(seconds / 3600)} hr`;
 }
