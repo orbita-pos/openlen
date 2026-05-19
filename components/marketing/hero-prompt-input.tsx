@@ -103,7 +103,7 @@ export function HeroPromptInput() {
               <span className="hidden sm:inline">{isPublic ? "Public" : "Private"}</span>
             </button>
             <span className="hidden md:inline h-4 w-px bg-zinc-200 dark:bg-zinc-800 mx-1" />
-            <span className="hidden md:inline-flex items-center gap-1.5 h-8 px-2 rounded-lg text-[11.5px] font-medium text-zinc-500 dark:text-zinc-500">
+            <span className="hidden md:inline-flex items-center gap-1.5 h-8 px-2 rounded-lg text-[11.5px] font-medium text-zinc-500 dark:text-zinc-400">
               <span className="relative inline-flex h-1.5 w-1.5">
                 <span className="absolute inset-0 rounded-full bg-emerald-500 opacity-70 animate-ping" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -139,7 +139,7 @@ export function HeroPromptInput() {
       </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5">
-        <span className="text-[11px] uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-600 font-semibold mr-1">
+        <span className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400 font-semibold mr-1">
           Try
         </span>
         {SUGGESTED_PROMPTS.map((p) => (

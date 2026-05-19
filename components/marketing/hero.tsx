@@ -33,7 +33,7 @@ export function Hero() {
           <h1 className="mt-7 max-w-4xl text-balance text-5xl sm:text-6xl md:text-7xl font-semibold tracking-tightest leading-[1.02]">
             Beautiful landing pages.
             <br />
-            <span className="text-zinc-500 dark:text-zinc-500">AI-built.</span>{" "}
+            <span className="text-zinc-500 dark:text-zinc-400">AI-built.</span>{" "}
             <span className="bg-gradient-to-br from-coral-500 to-coral-700 bg-clip-text text-transparent">
               Open source.
             </span>
@@ -48,7 +48,7 @@ export function Hero() {
               $19 / month.
             </span>
           </p>
-          <p className="mt-3 max-w-xl text-pretty text-sm text-zinc-500 dark:text-zinc-500">
+          <p className="mt-3 max-w-xl text-pretty text-sm text-zinc-500 dark:text-zinc-400">
             4.8/5 quality · $0.13 average cost · 0% bug-loops by construction. See{" "}
             <a
               href="https://github.com/jesusbernalrj/inari-pages/blob/main/EVAL_PHASE_2.md"
@@ -65,7 +65,7 @@ export function Hero() {
             <HeroPromptInput />
           </div>
 
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-zinc-500 dark:text-zinc-500">
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-zinc-500 dark:text-zinc-400">
             <div className="flex items-center gap-2">
               <div className="flex -space-x-1.5">
                 {avatarColors.map((c, i) => (

@@ -71,11 +71,11 @@ export default function TemplatesPage() {
                     <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">
                       {meta.label}
                     </h2>
-                    <p className="mt-1.5 text-sm text-zinc-500 dark:text-zinc-500 max-w-md">
+                    <p className="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400 max-w-md">
                       {meta.tagline}
                     </p>
                   </div>
-                  <span className="text-xs text-zinc-400 dark:text-zinc-500 uppercase tracking-wider font-medium">
+                  <span className="text-xs text-zinc-400 dark:text-zinc-400 uppercase tracking-wider font-medium">
                     {templates.length}{" "}
                     {templates.length === 1 ? "template" : "templates"}
                   </span>

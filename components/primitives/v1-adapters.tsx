@@ -62,8 +62,9 @@ interface V1AdapterProps<S> {
   slots: S;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyV1Slots = any;
+// V1 slots are intentionally dynamic — adapters wrap legacy components
+// whose prop shapes vary at runtime, so `any` here is load-bearing.
+type AnyV1Slots = any; // eslint-disable-line
 
 export function V1HeroAnimatedGradient({ slots }: V1AdapterProps<AnyV1Slots>) {
   return <AnimatedGradient slots={slots} tokens={V1_TOKENS_CSS_VARS} />;

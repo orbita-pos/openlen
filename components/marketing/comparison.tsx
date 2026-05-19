@@ -82,7 +82,7 @@ function Cell({ v }: { v: CellValue }) {
           <Check size={12} strokeWidth={2.5} />
         </span>
         {v.note && (
-          <span className="text-[11px] font-normal text-zinc-500 dark:text-zinc-500">
+          <span className="text-[11px] font-normal text-zinc-500 dark:text-zinc-400">
             {v.note}
           </span>
         )}
@@ -103,7 +103,7 @@ function Cell({ v }: { v: CellValue }) {
       <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-500/15 ring-1 ring-amber-200/60 dark:ring-amber-500/30 text-[10px] font-bold">
         ~
       </span>
-      <span className="text-[11px] text-zinc-500 dark:text-zinc-500">{v.v}</span>
+      <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{v.v}</span>
     </span>
   );
 }
@@ -119,7 +119,7 @@ export function Comparison() {
           <h2 className="mt-4 text-3xl sm:text-5xl font-semibold tracking-tightest leading-[1.05]">
             We did the math, so you don&apos;t have to.
           </h2>
-          <p className="mt-4 text-zinc-500 dark:text-zinc-500">
+          <p className="mt-4 text-zinc-500 dark:text-zinc-400">
             An honest, unflattering side-by-side. Updated May 2026.
           </p>
         </div>
@@ -129,11 +129,11 @@ export function Comparison() {
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950">
-                  <th className="sticky left-0 z-10 bg-zinc-50/80 dark:bg-zinc-950 px-6 py-4 text-xs font-medium uppercase tracking-wider text-zinc-500" />
+                  <th className="sticky left-0 z-10 bg-zinc-50/80 dark:bg-zinc-950 px-6 py-4 text-xs font-medium uppercase tracking-wider text-zinc-600 dark:text-zinc-400" />
                   {cols.map((c) => (
                     <th
                       key={c}
-                      className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-zinc-500 whitespace-nowrap"
+                      className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-zinc-600 dark:text-zinc-400 whitespace-nowrap"
                     >
                       {c}
                     </th>
@@ -190,7 +190,7 @@ export function Comparison() {
           </div>
         </div>
 
-        <p className="mt-4 text-xs text-zinc-400 dark:text-zinc-600">
+        <p className="mt-4 text-xs text-zinc-500 dark:text-zinc-400">
           * Lovable price reflects their published &ldquo;Scale&rdquo; tier including
           generation credits. Comparisons based on public pricing at the time of writing.
         </p>
