@@ -1,0 +1,29 @@
+[Unit]
+Description=OpenLen — nightly R2 backup of published landings
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=openlen-deploy
+Group=www-data
+
+# rclone config lives in /etc/openlen/ alongside the app env file (same
+# perms model: 640 root:openlen-deploy).
+Environment=RCLONE_CONF=/etc/openlen/rclone.conf
+Environment=PUBLISH_ROOT=/var/www/openlen
+Environment=OPENLEN_BACKUP_REMOTE=r2-published:openlen-published
+
+ExecStart=/bin/bash /opt/openlen-app/infra/scripts/backup-published-to-r2.sh
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=openlen-backup
+
+# Defensive — same posture as openlen-app.service.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+# Read-only access to the publish root is enough; we only push to R2.
+ReadOnlyPaths=/var/www/openlen

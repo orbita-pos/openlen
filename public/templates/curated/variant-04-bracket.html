@@ -1,0 +1,1346 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bracket — A modern CLI framework for Rust, Go &amp; TypeScript</title>
+<meta name="description" content="Bracket is a CLI framework for Rust, Go and TypeScript with one consistent authoring model: zero-config color, auto-generated man pages, shell completions, JSON output and sub-200ms cold starts." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          bg: "#08090A",
+          ink: "#FFFFFF",
+          green: "#5BFF89",
+        },
+        fontFamily: {
+          sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+          mono: ["JetBrains Mono", "ui-monospace", "Menlo", "monospace"],
+        },
+      },
+    },
+  };
+</script>
+<style>
+  :root{
+    --bg:#08090A;
+    --panel:#0C0E10;
+    --text:#FFFFFF;
+    --muted:rgba(255,255,255,0.60);
+    --faint:rgba(255,255,255,0.40);
+    --ghost:rgba(255,255,255,0.26);
+    --green:#5BFF89;
+    --green-dim:rgba(91,255,137,0.62);
+    --line:rgba(255,255,255,0.06);
+    --line-2:rgba(255,255,255,0.10);
+    --surface:rgba(255,255,255,0.028);
+  }
+  *{ -webkit-tap-highlight-color:transparent; }
+  html{ scroll-behavior:smooth; }
+  html,body{ background:var(--bg); color:var(--text); }
+  body{
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+    font-feature-settings:"ss01","cv11";
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    line-height:1.55;
+    overflow-x:hidden;
+  }
+  .mono{ font-family:'JetBrains Mono',ui-monospace,Menlo,monospace; }
+  .display{ font-family:'JetBrains Mono',ui-monospace,Menlo,monospace; font-weight:600; letter-spacing:-0.01em; line-height:1.06; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  .halftone{ opacity:0.45; }
+  .accent-frag{ color:var(--green); }
+  .eyebrow{ font-family:'JetBrains Mono',ui-monospace,Menlo,monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--faint); }
+
+  /* ambient backgrounds */
+  .dotgrid{
+    background-image:radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size:32px 32px;
+    background-position:center top;
+  }
+  .hero-radial{
+    background:
+      radial-gradient(620px 380px at 50% -4%, rgba(91,255,137,0.16), transparent 70%),
+      radial-gradient(900px 520px at 50% 0%, rgba(91,255,137,0.05), transparent 72%);
+  }
+  .mesh-blob{
+    position:absolute;
+    border-radius:999px;
+    filter:blur(120px);
+    opacity:0.5;
+    pointer-events:none;
+  }
+
+  /* hairline borders */
+  .hair{ border:1px solid var(--line); }
+  .hair-t{ border-top:1px solid var(--line); }
+  .hair-b{ border-bottom:1px solid var(--line); }
+  .hair-strong{ border:1px solid var(--line-2); }
+
+  /* keyframes */
+  @keyframes marquee{
+    0%{ transform:translateX(0); }
+    100%{ transform:translateX(-50%); }
+  }
+  .marquee-track{
+    display:flex;
+    width:max-content;
+    animation:marquee 38s linear infinite;
+  }
+  .marquee-wrap:hover .marquee-track{ animation-play-state:paused; }
+
+  @keyframes pulse-dot{
+    0%{ box-shadow:0 0 0 0 rgba(91,255,137,0.55); }
+    70%{ box-shadow:0 0 0 9px rgba(91,255,137,0); }
+    100%{ box-shadow:0 0 0 0 rgba(91,255,137,0); }
+  }
+  .pulse-dot{
+    position:relative; display:inline-block;
+    width:7px; height:7px; border-radius:999px;
+    background:var(--green);
+    box-shadow:0 0 0 0 rgba(91,255,137,0.55);
+    animation:pulse-dot 2.1s ease-out infinite;
+  }
+
+  @keyframes caret-blink{
+    0%,49%{ opacity:1; }
+    50%,100%{ opacity:0; }
+  }
+  .caret{
+    display:inline-block;
+    width:0.62ch; height:1.02em;
+    margin-left:0.06em;
+    background:var(--green);
+    vertical-align:-0.16em;
+    animation:caret-blink 1.05s steps(1) infinite;
+  }
+
+  @keyframes copy-pulse{
+    0%{ box-shadow:0 0 0 0 rgba(91,255,137,0.5); }
+    100%{ box-shadow:0 0 0 14px rgba(91,255,137,0); }
+  }
+  .copy-pulsing{ animation:copy-pulse 0.5s ease-out 1; }
+
+  @keyframes count-shimmer{
+    0%{ background-position:-220% 0; }
+    100%{ background-position:220% 0; }
+  }
+  .count-shimmer{
+    background-image:linear-gradient(100deg, transparent 38%, rgba(91,255,137,0.85) 50%, transparent 62%);
+    background-size:220% 100%;
+    -webkit-background-clip:text; background-clip:text;
+    -webkit-text-fill-color:transparent;
+    color:transparent;
+    animation:count-shimmer 1.5s ease-out 1;
+  }
+
+  /* reveal */
+  .reveal{ opacity:0; transform:translateY(14px); transition:opacity 620ms cubic-bezier(.16,.84,.44,1), transform 620ms cubic-bezier(.16,.84,.44,1); }
+  .reveal.in{ opacity:1; transform:translateY(0); }
+
+  /* interactive */
+  .btn{ transition:transform 120ms ease, border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease, color 120ms ease; }
+  .btn:hover{ transform:translateY(-1px); }
+  .btn-primary{
+    background:linear-gradient(180deg, #74FF9D, #44E874);
+    color:#04210F;
+    box-shadow:0 0 0 1px rgba(91,255,137,0.4), 0 10px 26px -14px rgba(91,255,137,0.7);
+  }
+  .btn-primary:hover{ box-shadow:0 0 0 1px rgba(91,255,137,0.62), 0 16px 34px -14px rgba(91,255,137,0.85); }
+  .btn-ghost{ background:rgba(255,255,255,0.03); border:1px solid var(--line-2); color:var(--text); }
+  .btn-ghost:hover{ border-color:rgba(91,255,137,0.5); background:rgba(91,255,137,0.07); }
+  .chev{ transition:transform 120ms ease; }
+  .btn:hover .chev{ transform:translateX(2px); }
+
+  .card-lift{ transition:transform 130ms ease, border-color 130ms ease, box-shadow 130ms ease, background-color 130ms ease; }
+  .card-lift:hover{ transform:translateY(-3px); border-color:rgba(91,255,137,0.34); box-shadow:0 22px 46px -30px rgba(91,255,137,0.55); background-color:rgba(255,255,255,0.04); }
+
+  .soc{ transition:transform 120ms ease, color 120ms ease, border-color 120ms ease, background-color 120ms ease; }
+  .soc:hover{ transform:translateY(-2px); color:var(--green); border-color:rgba(91,255,137,0.46); background-color:rgba(91,255,137,0.08); }
+
+  .navlink{ transition:color 120ms ease; }
+  .navlink:hover{ color:var(--text); }
+
+  /* terminal window */
+  .term{
+    background:#0A0C0D;
+    border:1px solid var(--line-2);
+    border-radius:14px;
+    box-shadow:0 30px 70px -44px rgba(0,0,0,0.9), inset 0 0 0 1px rgba(255,255,255,0.012);
+    overflow:hidden;
+  }
+  .term-bar{
+    display:flex; align-items:center; gap:8px;
+    padding:11px 14px;
+    border-bottom:1px solid var(--line);
+    background:rgba(255,255,255,0.018);
+  }
+  .tl{ width:11px; height:11px; border-radius:999px; }
+  .term-body{ padding:18px 18px 20px; }
+  .lineno{ color:rgba(255,255,255,0.20); user-select:none; display:inline-block; width:2.2ch; text-align:right; margin-right:1.4ch; }
+
+  /* hand-authored syntax tokens */
+  .tok-kw{ color:#FF8FB1; }
+  .tok-fn{ color:#7CC4FF; }
+  .tok-type{ color:#5BFF89; }
+  .tok-str{ color:#C8FFB0; }
+  .tok-num{ color:#F4C97A; }
+  .tok-attr{ color:#9D8DFF; }
+  .tok-com{ color:rgba(255,255,255,0.32); font-style:italic; }
+  .tok-punc{ color:rgba(255,255,255,0.52); }
+  .tok-var{ color:#E7EBE8; }
+  .tok-flag{ color:#7CC4FF; }
+  .tok-prompt{ color:#5BFF89; }
+  .tok-path{ color:rgba(255,255,255,0.46); }
+
+  /* misc */
+  .ring-green:focus-visible{ outline:2px solid rgba(91,255,137,0.6); outline-offset:2px; }
+  ::selection{ background:rgba(91,255,137,0.26); color:#fff; }
+  details.faq summary{ list-style:none; cursor:pointer; }
+  details.faq summary::-webkit-details-marker{ display:none; }
+  details.faq[open] .faq-plus{ transform:rotate(45deg); }
+  .faq-plus{ transition:transform 150ms ease; }
+  details.faq{ transition:border-color 130ms ease; }
+  details.faq:hover{ border-color:rgba(91,255,137,0.26); }
+  .scrollbar-thin::-webkit-scrollbar{ height:6px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.12); border-radius:999px; }
+  .tab-on{ color:var(--green); border-color:rgba(91,255,137,0.5); background:rgba(91,255,137,0.07); }
+  .grid-line{ background:linear-gradient(90deg, transparent, var(--line) 18%, var(--line) 82%, transparent); }
+</style>
+</head>
+<body class="antialiased">
+
+  <!-- =================== 1. STICKY TOP NAV =================== -->
+  <header class="sticky top-0 z-50 hair-b backdrop-blur-xl" style="background:rgba(8,9,10,0.82);">
+    <nav class="mx-auto flex max-w-[1180px] items-center justify-between gap-4 px-5 py-3.5 sm:px-7">
+      <a href="#top" class="flex items-center gap-2.5 group" aria-label="Bracket home">
+        <span class="grid h-8 w-8 place-items-center rounded-[9px]" style="background:rgba(91,255,137,0.1);border:1px solid rgba(91,255,137,0.28);">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M9 4 4 4 4 20 9 20" stroke="#5BFF89" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M15 4 20 4 20 20 15 20" stroke="#5BFF89" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="12" cy="12" r="1.7" fill="#5BFF89"/>
+          </svg>
+        </span>
+        <span class="mono text-[15px] font-600 tracking-tight">bracket</span>
+        <span class="mono hidden rounded-md px-1.5 py-0.5 text-[10px] sm:inline" style="color:var(--faint);border:1px solid var(--line);">v0.8</span>
+      </a>
+
+      <div class="hidden items-center gap-7 md:flex">
+        <a href="#quickstart" class="navlink mono text-[13px]" style="color:var(--muted);">Docs</a>
+        <a href="#examples" class="navlink mono text-[13px]" style="color:var(--muted);">Examples</a>
+        <a href="#why" class="navlink mono text-[13px]" style="color:var(--muted);">Blog</a>
+        <a href="#community" class="navlink mono text-[13px]" style="color:var(--muted);">Community</a>
+      </div>
+
+      <div class="flex items-center gap-2.5">
+        <a href="#top" class="btn hidden items-center gap-2 rounded-lg px-3 py-2 hair-strong sm:flex" style="background:rgba(255,255,255,0.02);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#5BFF89" aria-hidden="true">
+            <path d="M12 2.5l2.95 5.98 6.6.96-4.78 4.66 1.13 6.57L12 17.55 6.1 20.67l1.13-6.57L2.45 9.44l6.6-.96L12 2.5z"/>
+          </svg>
+          <span class="mono text-[12.5px] font-500 tnum"><span id="nav-stars">0</span></span>
+          <span class="mono text-[11px]" style="color:var(--faint);">stars</span>
+        </a>
+        <a href="#quickstart" class="btn btn-primary mono flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[12.5px] font-600">
+          Get started
+          <svg class="chev" width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <button id="menu-btn" class="btn grid h-9 w-9 place-items-center rounded-lg hair-strong md:hidden" style="background:rgba(255,255,255,0.02);" aria-label="Open menu" aria-expanded="false">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </nav>
+    <div id="mobile-menu" class="hidden hair-t px-5 py-3 md:hidden" style="background:rgba(8,9,10,0.97);">
+      <div class="flex flex-col gap-1">
+        <a href="#quickstart" class="navlink mono rounded-md px-2 py-2 text-[13.5px]" style="color:var(--muted);">Docs</a>
+        <a href="#examples" class="navlink mono rounded-md px-2 py-2 text-[13.5px]" style="color:var(--muted);">Examples</a>
+        <a href="#why" class="navlink mono rounded-md px-2 py-2 text-[13.5px]" style="color:var(--muted);">Blog</a>
+        <a href="#community" class="navlink mono rounded-md px-2 py-2 text-[13.5px]" style="color:var(--muted);">Community</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+
+    <!-- =================== 2. HERO =================== -->
+    <section class="relative overflow-hidden hair-b">
+      <div class="hero-radial absolute inset-0" aria-hidden="true"></div>
+      <div class="mesh-blob" style="width:380px;height:380px;background:rgba(91,255,137,0.22);top:-120px;left:50%;transform:translateX(-50%);" aria-hidden="true"></div>
+      <div class="absolute inset-0 dotgrid opacity-60" aria-hidden="true" style="mask-image:linear-gradient(180deg,transparent,#000 20%,#000 70%,transparent);-webkit-mask-image:linear-gradient(180deg,transparent,#000 20%,#000 70%,transparent);"></div>
+
+      <div class="relative mx-auto max-w-[1180px] px-5 pb-20 pt-16 text-center sm:px-7 sm:pb-24 sm:pt-24">
+        <a href="#community" class="reveal mono inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11.5px]" style="border:1px solid rgba(91,255,137,0.24);background:rgba(91,255,137,0.06);color:var(--green-dim);">
+          <span class="pulse-dot"></span>
+          <span style="color:var(--muted);">v0.8</span>
+          <span style="color:var(--ghost);">·</span>
+          <span style="color:var(--muted);">Released Mar 14, 2026</span>
+          <span style="color:var(--ghost);">·</span>
+          <span>Apache-2.0</span>
+        </a>
+
+        <h1 class="reveal display mx-auto mt-7 max-w-[15ch] text-[clamp(2.5rem,7.4vw,4.65rem)]">
+          CLIs that <em class="not-italic accent-frag">respect your terminal</em>.<span class="caret" aria-hidden="true"></span>
+        </h1>
+
+        <p class="reveal mx-auto mt-6 max-w-[58ch] text-[15.5px] sm:text-[16.5px]" style="color:var(--muted);">
+          One authoring model for Rust, Go and TypeScript — colored output, real help text, shell completions and man pages, all generated, all under a sub-200ms cold start.
+        </p>
+
+        <!-- install terminal -->
+        <div class="reveal mx-auto mt-9 max-w-[560px] text-left">
+          <div class="term">
+            <div class="term-bar">
+              <span class="tl" style="background:#FF5F57;"></span>
+              <span class="tl" style="background:#FEBC2E;"></span>
+              <span class="tl" style="background:#28C840;"></span>
+              <span class="mono ml-2 text-[11.5px]" style="color:var(--faint);">install — bash</span>
+              <div class="ml-auto flex items-center gap-1.5">
+                <span class="pulse-dot" style="width:5px;height:5px;"></span>
+                <span class="mono text-[10px]" style="color:var(--ghost);">ready</span>
+              </div>
+            </div>
+            <div class="term-body flex items-center gap-3">
+              <code class="mono flex-1 overflow-x-auto whitespace-nowrap text-[13.5px] scrollbar-thin">
+                <span class="tok-prompt select-none">$</span>
+                <span class="tok-var ml-1">cargo</span>
+                <span class="tok-var"> install</span>
+                <span class="tok-flag"> bracket</span>
+              </code>
+              <button class="copy-btn btn grid h-8 w-8 shrink-0 place-items-center rounded-md hair-strong" data-copy="cargo install bracket" style="background:rgba(255,255,255,0.03);" aria-label="Copy install command">
+                <svg class="ic-copy" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2.2" stroke="currentColor" stroke-width="2"/><path d="M5 15V5a2 2 0 012-2h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                <svg class="ic-check hidden" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="#5BFF89" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+          </div>
+          <p class="mono mt-2.5 text-center text-[11px]" style="color:var(--ghost);">also available via <span style="color:var(--faint);">go install</span> and <span style="color:var(--faint);">npm i -g</span></p>
+        </div>
+
+        <div class="reveal mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <a href="#quickstart" class="btn btn-primary mono flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-[13.5px] font-600 sm:w-auto">
+            Read the docs
+            <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a href="#community" class="btn btn-ghost mono flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-[13.5px] font-600 sm:w-auto">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58v-2c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.74.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5.99.11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 016 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.25 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.8 5.62-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.21.69.82.58A12 12 0 0024 12.5C24 5.87 18.63.5 12 .5z"/></svg>
+            View on GitHub · <span class="tnum">8.4k</span> stars
+          </a>
+        </div>
+
+        <p class="reveal mono mt-7 text-[11.5px]" style="color:var(--ghost);">Works on macOS, Linux &amp; Windows · bash · zsh · fish · PowerShell</p>
+      </div>
+    </section>
+
+    <!-- =================== 3. TRUST BAR =================== -->
+    <section class="hair-b py-9" style="background:var(--panel);">
+      <p class="eyebrow mb-6 text-center">Trusted in production at</p>
+      <div class="marquee-wrap relative overflow-hidden" style="mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);">
+        <div class="marquee-track items-center gap-12 px-6">
+          <!-- track A -->
+          <svg width="92" height="22" viewBox="0 0 92 22" fill="none" aria-label="Linear" class="shrink-0" style="opacity:0.5;"><text x="0" y="16" font-family="JetBrains Mono" font-size="15" font-weight="600" fill="#fff">Linear</text></svg>
+          <svg width="100" height="22" viewBox="0 0 100 22" fill="none" aria-label="Supabase" class="shrink-0" style="opacity:0.5;"><text x="0" y="16" font-family="JetBrains Mono" font-size="15" font-weight="600" fill="#fff">Supabase</text></svg>
+          <svg width="78" height="22" viewBox="0 0 78 22" fill="none" aria-label="Vercel" class="shrink-0" style="opacity:0.5;"><text x="0" y="16" font-family="JetBrains Mono" font-size="15" font-weight="600" fill="#fff">Vercel</text></svg>
+          <svg width="106" height="22" viewBox="0 0 106 22" fill="none" aria-label="Cloudflare" class="shrink-0" style="opacity:0.5;"><text x="0" y="16" font-family="JetBrains Mono" font-size="15" font-weight="600" fill="#fff">Cloudflare</text></svg>
+          <svg width="64" height="22" viewBox="0 0 64 22" fill="none" aria-label="Fly.io" class="shrink-0" style="opacity:0.5;"><text x="0" y="16" font-family="JetBrains Mono" font-size="15" font-weight="600" fill="#fff">Fly.io</text></svg>
+          <svg width="74" height="22" viewBox="0 0 74 22" fill="none" aria-label="Railway" class="shrink-0" style="opacity:0.5;"><text x="0" y="16" font-family="JetBrains Mono" font-size="15" font-weight="600" fill="#fff">Railway</text></svg>
+          <svg width="62" height="22" viewBox="0 0 62 22" fill="none" aria-label="ngrok" class="shrink-0" style="opacity:0.5;"><text x="0" y="16" font-family="JetBrains Mono" font-size="15" font-weight="600" fill="#fff">ngrok</text></svg>
+          <svg width="58" height="22" viewBox="0 0 58 22" fill="none" aria-label="Deno" class="shrink-0" style="opacity:0.5;"><text x="0" y="16" font-family="JetBrains Mono" font-size="15" font-weight="600" fill="#fff">Deno</text></svg>
+          <svg width="78" height="22" viewBox="0 0 78 22" fill="none" aria-label="Turso" class="shrink-0" style="opacity:0.5;"><text x="0" y="16" font-family="JetBrains Mono" font-size="15" font-weight="600" fill="#fff">Turso</text></svg>
+          <svg width="92" height="22" viewBox="0 0 92 22" fill="none" aria-label="Hashicorp" class="shrink-0" style="opacity:0.5;"><text x="0" y="16" font-family="JetBrains Mono" font-size="15" font-weight="600" fill="#fff">HashiCorp</text></svg>
+          <!-- track B (duplicate) -->
+          <svg width="92" height="22" viewBox="0 0 92 22" fill="none" aria-hidden="true" class="shrink-0" style="opacity:0.5;"><text x="0" y="16" font-family="JetBrains Mono" font-size="15" font-weight="600" fill="#fff">Linear</text></svg>
+          <svg width="100" height="22" viewBox="0 0 100 22" fill="none" aria-hidden="true" class="shrink-0" style="opacity:0.5;"><text x="0" y="16" font-family="JetBrains Mono" font-size="15" font-weight="600" fill="#fff">Supabase</text></svg>
+          <svg width="78" height="22" viewBox="0 0 78 22" fill="none" aria-hidden="true" class="shrink-0" style="opacity:0.5;"><text x="0" y="16" font-family="JetBrains Mono" font-size="15" font-weight="600" fill="#fff">Vercel</text></svg>
+          <svg width="106" height="22" viewBox="0 0 106 22" fill="none" aria-hidden="true" class="shrink-0" style="opacity:0.5;"><text x="0" y="16" font-family="JetBrains Mono" font-size="15" font-weight="600" fill="#fff">Cloudflare</text></svg>
+          <svg width="64" height="22" viewBox="0 0 64 22" fill="none" aria-hidden="true" class="shrink-0" style="opacity:0.5;"><text x="0" y="16" font-family="JetBrains Mono" font-size="15" font-weight="600" fill="#fff">Fly.io</text></svg>
+          <svg width="74" height="22" viewBox="0 0 74 22" fill="none" aria-hidden="true" class="shrink-0" style="opacity:0.5;"><text x="0" y="16" font-family="JetBrains Mono" font-size="15" font-weight="600" fill="#fff">Railway</text></svg>
+          <svg width="62" height="22" viewBox="0 0 62 22" fill="none" aria-hidden="true" class="shrink-0" style="opacity:0.5;"><text x="0" y="16" font-family="JetBrains Mono" font-size="15" font-weight="600" fill="#fff">ngrok</text></svg>
+          <svg width="58" height="22" viewBox="0 0 58 22" fill="none" aria-hidden="true" class="shrink-0" style="opacity:0.5;"><text x="0" y="16" font-family="JetBrains Mono" font-size="15" font-weight="600" fill="#fff">Deno</text></svg>
+          <svg width="78" height="22" viewBox="0 0 78 22" fill="none" aria-hidden="true" class="shrink-0" style="opacity:0.5;"><text x="0" y="16" font-family="JetBrains Mono" font-size="15" font-weight="600" fill="#fff">Turso</text></svg>
+          <svg width="92" height="22" viewBox="0 0 92 22" fill="none" aria-hidden="true" class="shrink-0" style="opacity:0.5;"><text x="0" y="16" font-family="JetBrains Mono" font-size="15" font-weight="600" fill="#fff">HashiCorp</text></svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================== 4. HERO CODE EXAMPLE =================== -->
+    <section id="examples" class="relative hair-b py-20 sm:py-24">
+      <div class="mesh-blob" style="width:340px;height:340px;background:rgba(91,255,137,0.12);top:60px;right:-90px;" aria-hidden="true"></div>
+      <div class="relative mx-auto max-w-[1180px] px-5 sm:px-7">
+        <div class="reveal mx-auto mb-10 max-w-[44ch] text-center">
+          <p class="eyebrow mb-3">A complete CLI in one file</p>
+          <h2 class="display text-[clamp(1.7rem,3.6vw,2.4rem)]">Define it once. Get the <em class="not-italic accent-frag">whole experience</em>.</h2>
+          <p class="mt-3 text-[14.5px]" style="color:var(--muted);">Subcommands, typed flags, colored output and a full <span class="mono" style="color:var(--faint);">--help</span> tree — derived from this struct, no boilerplate.</p>
+        </div>
+
+        <div class="reveal mx-auto max-w-[760px]">
+          <div class="term">
+            <div class="term-bar">
+              <span class="tl" style="background:#FF5F57;"></span>
+              <span class="tl" style="background:#FEBC2E;"></span>
+              <span class="tl" style="background:#28C840;"></span>
+              <span class="mono ml-2 flex items-center gap-1.5 text-[11.5px]" style="color:var(--faint);">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="#F4C97A" aria-hidden="true"><path d="M12 2 2 12l10 10 10-10z"/></svg>
+                main.rs
+              </span>
+              <button class="copy-btn btn ml-auto flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] hair-strong" data-copy="// see bracket.dev/examples/deploy-cli" style="background:rgba(255,255,255,0.03);" aria-label="Copy example">
+                <svg class="ic-copy" width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2.2" stroke="currentColor" stroke-width="2"/><path d="M5 15V5a2 2 0 012-2h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                <svg class="ic-check hidden" width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="#5BFF89" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span class="copy-label">Copy</span>
+              </button>
+            </div>
+            <div class="term-body overflow-x-auto scrollbar-thin">
+<pre class="mono text-[12.5px] leading-[1.85]"><code><span class="lineno">1</span><span class="tok-kw">use</span> <span class="tok-type">bracket</span><span class="tok-punc">::</span><span class="tok-punc">{</span><span class="tok-type">Command</span><span class="tok-punc">,</span> <span class="tok-type">Subcommand</span><span class="tok-punc">,</span> <span class="tok-type">Color</span><span class="tok-punc">}</span><span class="tok-punc">;</span>
+<span class="lineno">2</span>
+<span class="lineno">3</span><span class="tok-attr">#[derive(Command)]</span>
+<span class="lineno">4</span><span class="tok-attr">#[bracket(name = <span class="tok-str">"deploy"</span>, about = <span class="tok-str">"Ship a build to an edge region"</span>)]</span>
+<span class="lineno">5</span><span class="tok-kw">struct</span> <span class="tok-type">Deploy</span> <span class="tok-punc">{</span>
+<span class="lineno">6</span>    <span class="tok-com">/// Skip the pre-flight health check</span>
+<span class="lineno">7</span>    <span class="tok-attr">#[flag(short = <span class="tok-str">'f'</span>)]</span>  <span class="tok-var">force</span><span class="tok-punc">:</span> <span class="tok-type">bool</span><span class="tok-punc">,</span>
+<span class="lineno">8</span>    <span class="tok-attr">#[option(default = <span class="tok-str">"iad"</span>)]</span> <span class="tok-var">region</span><span class="tok-punc">:</span> <span class="tok-type">String</span><span class="tok-punc">,</span>
+<span class="lineno">9</span>    <span class="tok-attr">#[subcommand]</span> <span class="tok-var">cmd</span><span class="tok-punc">:</span> <span class="tok-type">Action</span><span class="tok-punc">,</span>
+<span class="lineno">10</span><span class="tok-punc">}</span>
+<span class="lineno">11</span>
+<span class="lineno">12</span><span class="tok-attr">#[derive(Subcommand)]</span>
+<span class="lineno">13</span><span class="tok-kw">enum</span> <span class="tok-type">Action</span> <span class="tok-punc">{</span> <span class="tok-type">Push</span><span class="tok-punc">,</span> <span class="tok-type">Rollback</span><span class="tok-punc">,</span> <span class="tok-type">Status</span> <span class="tok-punc">}</span>
+<span class="lineno">14</span>
+<span class="lineno">15</span><span class="tok-kw">fn</span> <span class="tok-fn">run</span><span class="tok-punc">(</span><span class="tok-var">cli</span><span class="tok-punc">:</span> <span class="tok-type">Deploy</span><span class="tok-punc">)</span> <span class="tok-punc">-&gt;</span> <span class="tok-type">Result</span> <span class="tok-punc">{</span>
+<span class="lineno">16</span>    <span class="tok-type">Color</span><span class="tok-punc">::</span><span class="tok-fn">ok</span><span class="tok-punc">(</span><span class="tok-fn">format!</span><span class="tok-punc">(</span><span class="tok-str">"→ pushing to {}"</span><span class="tok-punc">,</span> <span class="tok-var">cli</span><span class="tok-punc">.</span><span class="tok-var">region</span><span class="tok-punc">))</span><span class="tok-punc">;</span>
+<span class="lineno">17</span>    <span class="tok-type">Deploy</span><span class="tok-punc">::</span><span class="tok-fn">parse</span><span class="tok-punc">()</span><span class="tok-punc">.</span><span class="tok-fn">dispatch</span><span class="tok-punc">(</span><span class="tok-var">cli</span><span class="tok-punc">.</span><span class="tok-var">cmd</span><span class="tok-punc">)</span>
+<span class="lineno">18</span><span class="tok-punc">}</span>
+</code></pre>
+            </div>
+          </div>
+          <p class="mono mt-3 text-center text-[11.5px]" style="color:var(--ghost);">
+            <span class="tok-prompt">$</span> deploy --help <span style="color:var(--ghost);">·</span> generates the full usage tree, colored, with completions registered.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================== 5. WHY THIS EXISTS =================== -->
+    <section id="why" class="relative hair-b py-20 sm:py-24">
+      <div class="absolute inset-0 dotgrid opacity-40" aria-hidden="true" style="mask-image:linear-gradient(180deg,transparent,#000 30%,#000 70%,transparent);-webkit-mask-image:linear-gradient(180deg,transparent,#000 30%,#000 70%,transparent);"></div>
+      <div class="relative mx-auto max-w-[1180px] px-5 sm:px-7">
+        <div class="grid gap-12 lg:grid-cols-[1.35fr_1fr] lg:gap-16">
+          <div class="reveal">
+            <p class="eyebrow mb-3">Why Bracket exists</p>
+            <h2 class="display max-w-[18ch] text-[clamp(1.7rem,3.6vw,2.4rem)]">The terminal is a <em class="not-italic accent-frag">product surface</em>.</h2>
+            <div class="mt-6 space-y-5 text-[14.5px]" style="color:var(--muted);">
+              <p>
+                A CLI is the first thing a developer touches and the last thing most teams polish. Help text reads like a stack trace, colors are an afterthought, completions never ship, and the binary takes 900ms to print <span class="mono" style="color:var(--faint);">--version</span>. We think that's backwards. The command line is a UX surface with the same standards as anything you'd put behind a login screen — it just hasn't been treated like one.
+              </p>
+              <p>
+                The Rust crate <span class="mono" style="color:var(--faint);">clap</span> nailed typed, derive-based parsing. Go's <span class="mono" style="color:var(--faint);">cobra</span> nailed subcommand trees and the docs generator. JavaScript's <span class="mono" style="color:var(--faint);">yargs</span> nailed ergonomics for quick scripts. Each is excellent in its lane — and each leaves you re-learning a different mental model the moment you switch languages. A team shipping a Rust core, a Go agent and a Node wrapper writes the same CLI three times, three ways.
+              </p>
+              <p>
+                Bracket is one authoring model across all three. The same declarative command definition, the same generated help, the same completion scripts, the same JSON output flag — whether you compile to a Rust binary, a Go binary or an npm-distributed Node entrypoint. On top of that sits a plugin system, so a `deploy` CLI can gain a `deploy db` subcommand from a crate you didn't write. Define the surface once; Bracket makes it feel native everywhere.
+              </p>
+            </div>
+          </div>
+
+          <div class="reveal">
+            <div class="hair rounded-2xl p-6" style="background:var(--surface);">
+              <p class="mono mb-4 flex items-center gap-2 text-[12px]" style="color:var(--faint);">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" stroke="#FF8FB1" stroke-width="2.4" stroke-linecap="round"/></svg>
+                Things we don't do
+              </p>
+              <ul class="space-y-3.5 text-[13.5px]">
+                <li class="flex gap-3">
+                  <span class="mono shrink-0" style="color:#FF8FB1;">—</span>
+                  <span style="color:var(--muted);"><span class="text-ink font-600">No runtime config files.</span> Your command surface is code. No YAML schema to drift out of sync.</span>
+                </li>
+                <li class="flex gap-3">
+                  <span class="mono shrink-0" style="color:#FF8FB1;">—</span>
+                  <span style="color:var(--muted);"><span class="text-ink font-600">No interactive wizard mode.</span> Bracket builds flags-and-args CLIs. TUIs are a different tool, on purpose.</span>
+                </li>
+                <li class="flex gap-3">
+                  <span class="mono shrink-0" style="color:#FF8FB1;">—</span>
+                  <span style="color:var(--muted);"><span class="text-ink font-600">No telemetry, ever.</span> The framework phones nobody. Your users' invocations are theirs.</span>
+                </li>
+                <li class="flex gap-3">
+                  <span class="mono shrink-0" style="color:#FF8FB1;">—</span>
+                  <span style="color:var(--muted);"><span class="text-ink font-600">No bundled HTTP client.</span> Bracket parses and renders. Networking is your dependency, not ours.</span>
+                </li>
+                <li class="flex gap-3">
+                  <span class="mono shrink-0" style="color:#FF8FB1;">—</span>
+                  <span style="color:var(--muted);"><span class="text-ink font-600">No magic global state.</span> Parsed input is a value you own and pass — never a hidden singleton.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================== 6. FEATURES GRID =================== -->
+    <section class="hair-b py-20 sm:py-24">
+      <div class="mx-auto max-w-[1180px] px-5 sm:px-7">
+        <div class="reveal mb-12 max-w-[46ch]">
+          <p class="eyebrow mb-3">What you get out of the box</p>
+          <h2 class="display text-[clamp(1.7rem,3.6vw,2.4rem)]">Six things <em class="not-italic accent-frag">you'd build anyway</em>.</h2>
+          <p class="mt-3 text-[14.5px]" style="color:var(--muted);">Every feature below ships on by default. None of them needs a config file, and none of them costs you cold-start budget.</p>
+        </div>
+
+        <div class="grid gap-px overflow-hidden rounded-2xl hair-strong sm:grid-cols-2 lg:grid-cols-3" style="background:var(--line);">
+          <!-- feature 1 -->
+          <article class="card-lift p-6" style="background:var(--bg);">
+            <span class="grid h-10 w-10 place-items-center rounded-xl" style="background:rgba(91,255,137,0.09);border:1px solid rgba(91,255,137,0.22);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 16.5 9 7l4 6 3-4.5 2 8" stroke="#5BFF89" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="7" r="1.6" fill="#5BFF89"/></svg>
+            </span>
+            <h3 class="mono mt-4 text-[15px] font-600">Zero-config color output</h3>
+            <p class="mt-2 text-[13.5px]" style="color:var(--muted);">Semantic helpers — <span class="mono" style="color:var(--faint);">ok</span>, <span class="mono" style="color:var(--faint);">warn</span>, <span class="mono" style="color:var(--faint);">fail</span> — that respect <span class="mono" style="color:var(--faint);">NO_COLOR</span>, detect TTYs and degrade cleanly when piped.</p>
+            <div class="mt-4 rounded-lg hair p-2.5" style="background:var(--surface);">
+              <code class="mono text-[11.5px]"><span class="tok-type">Color</span><span class="tok-punc">::</span><span class="tok-fn">warn</span><span class="tok-punc">(</span><span class="tok-str">"low disk"</span><span class="tok-punc">);</span></code>
+            </div>
+          </article>
+          <!-- feature 2 -->
+          <article class="card-lift p-6" style="background:var(--bg);">
+            <span class="grid h-10 w-10 place-items-center rounded-xl" style="background:rgba(91,255,137,0.09);border:1px solid rgba(91,255,137,0.22);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 3h9l4 4v14H6z" stroke="#5BFF89" stroke-width="2.1" stroke-linejoin="round"/><path d="M9 11h7M9 15h7M9 7h3" stroke="#5BFF89" stroke-width="2.1" stroke-linecap="round"/></svg>
+            </span>
+            <h3 class="mono mt-4 text-[15px] font-600">Auto-generated man pages</h3>
+            <p class="mt-2 text-[13.5px]" style="color:var(--muted);">Your command tree compiles straight to <span class="mono" style="color:var(--faint);">roff</span>. Real <span class="mono" style="color:var(--faint);">man yourcli</span> entries, no hand-written nroff.</p>
+            <div class="mt-4 rounded-lg hair p-2.5" style="background:var(--surface);">
+              <code class="mono text-[11.5px]"><span class="tok-prompt">$</span> <span class="tok-var">bracket man &gt; cli.1</span></code>
+            </div>
+          </article>
+          <!-- feature 3 -->
+          <article class="card-lift p-6" style="background:var(--bg);">
+            <span class="grid h-10 w-10 place-items-center rounded-xl" style="background:rgba(91,255,137,0.09);border:1px solid rgba(91,255,137,0.22);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m4 7 4 4-4 4M11 16h9" stroke="#5BFF89" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <h3 class="mono mt-4 text-[15px] font-600">Completion scripts</h3>
+            <p class="mt-2 text-[13.5px]" style="color:var(--muted);">Tab-complete for bash, zsh and fish — including dynamic value completion for options that resolve at runtime.</p>
+            <div class="mt-4 rounded-lg hair p-2.5" style="background:var(--surface);">
+              <code class="mono text-[11.5px]"><span class="tok-prompt">$</span> <span class="tok-var">bracket completions zsh</span></code>
+            </div>
+          </article>
+          <!-- feature 4 -->
+          <article class="card-lift p-6" style="background:var(--bg);">
+            <span class="grid h-10 w-10 place-items-center rounded-xl" style="background:rgba(91,255,137,0.09);border:1px solid rgba(91,255,137,0.22);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z" stroke="#5BFF89" stroke-width="2.1" stroke-linejoin="round"/></svg>
+            </span>
+            <h3 class="mono mt-4 text-[15px] font-600">Sub-200ms cold start</h3>
+            <p class="mt-2 text-[13.5px]" style="color:var(--muted);">Parsing is generated at build time, not reflected at runtime. A no-op invocation returns in <span class="mono" style="color:var(--faint);">~40ms</span>.</p>
+            <div class="mt-4 rounded-lg hair p-2.5" style="background:var(--surface);">
+              <code class="mono text-[11.5px]"><span class="tok-com"># p99 startup</span> <span class="tok-num">183ms</span></code>
+            </div>
+          </article>
+          <!-- feature 5 -->
+          <article class="card-lift p-6" style="background:var(--bg);">
+            <span class="grid h-10 w-10 place-items-center rounded-xl" style="background:rgba(91,255,137,0.09);border:1px solid rgba(91,255,137,0.22);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 4H6a2 2 0 0 0-2 2v3a2 2 0 0 1-2 2 2 2 0 0 1 2 2v3a2 2 0 0 0 2 2h2M16 4h2a2 2 0 0 1 2 2v3a2 2 0 0 0 2 2 2 2 0 0 0-2 2v3a2 2 0 0 1-2 2h-2" stroke="#5BFF89" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <h3 class="mono mt-4 text-[15px] font-600">JSON output mode</h3>
+            <p class="mt-2 text-[13.5px]" style="color:var(--muted);">Every command gets a free <span class="mono" style="color:var(--faint);">--json</span> flag. Human-readable by default, machine-parseable on demand.</p>
+            <div class="mt-4 rounded-lg hair p-2.5" style="background:var(--surface);">
+              <code class="mono text-[11.5px]"><span class="tok-prompt">$</span> <span class="tok-var">deploy status --json</span></code>
+            </div>
+          </article>
+          <!-- feature 6 -->
+          <article class="card-lift p-6" style="background:var(--bg);">
+            <span class="grid h-10 w-10 place-items-center rounded-xl" style="background:rgba(91,255,137,0.09);border:1px solid rgba(91,255,137,0.22);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.6" stroke="#5BFF89" stroke-width="2.1"/><rect x="13" y="13" width="8" height="8" rx="1.6" stroke="#5BFF89" stroke-width="2.1"/><path d="M11 7h4a2 2 0 0 1 2 2v4" stroke="#5BFF89" stroke-width="2.1" stroke-linecap="round"/></svg>
+            </span>
+            <h3 class="mono mt-4 text-[15px] font-600">Plugin system</h3>
+            <p class="mt-2 text-[13.5px]" style="color:var(--muted);">Third-party crates and packages register subcommands at build time — sandboxed, versioned, opt-in.</p>
+            <div class="mt-4 rounded-lg hair p-2.5" style="background:var(--surface);">
+              <code class="mono text-[11.5px]"><span class="tok-prompt">$</span> <span class="tok-var">bracket plugin add db</span></code>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================== 7. COMPARISON TABLE =================== -->
+    <section class="hair-b py-20 sm:py-24" style="background:var(--panel);">
+      <div class="mx-auto max-w-[1180px] px-5 sm:px-7">
+        <div class="reveal mb-10 max-w-[46ch]">
+          <p class="eyebrow mb-3">How it compares</p>
+          <h2 class="display text-[clamp(1.7rem,3.6vw,2.4rem)]">One model, <em class="not-italic accent-frag">three languages</em>.</h2>
+          <p class="mt-3 text-[14.5px]" style="color:var(--muted);">Each tool below is excellent in its language. Bracket's claim is the row no single-language framework can fill.</p>
+        </div>
+
+        <div class="reveal overflow-x-auto scrollbar-thin">
+          <table class="w-full min-w-[640px] border-collapse text-[13.5px]">
+            <thead>
+              <tr class="hair-b">
+                <th class="py-3.5 pr-4 text-left mono text-[12px] font-500" style="color:var(--faint);">Capability</th>
+                <th class="px-3 py-3.5 text-center">
+                  <span class="mono inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[12.5px] font-600" style="color:var(--green);border:1px solid rgba(91,255,137,0.32);background:rgba(91,255,137,0.07);">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 4 5 4 5 20 9 20M15 4 19 4 19 20 15 20" stroke="#5BFF89" stroke-width="2.6" stroke-linecap="round"/></svg>
+                    Bracket
+                  </span>
+                </th>
+                <th class="px-3 py-3.5 text-center mono text-[12.5px] font-500" style="color:var(--muted);">Clap <span style="color:var(--ghost);">· Rust</span></th>
+                <th class="px-3 py-3.5 text-center mono text-[12.5px] font-500" style="color:var(--muted);">Cobra <span style="color:var(--ghost);">· Go</span></th>
+                <th class="pl-3 py-3.5 text-center mono text-[12.5px] font-500" style="color:var(--muted);">Commander.js</th>
+              </tr>
+            </thead>
+            <tbody class="mono">
+              <!-- rows -->
+              <tr class="hair-b">
+                <td class="py-3.5 pr-4" style="color:var(--muted);">Cold start under 200ms</td>
+                <td class="px-3 py-3.5 text-center" style="background:rgba(91,255,137,0.035);">
+                  <svg class="mx-auto" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="rgba(91,255,137,0.12)"/><path d="M17 8.5 10.5 15.5 7 12" stroke="#5BFF89" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </td>
+                <td class="px-3 py-3.5 text-center text-[12px]" style="color:var(--green-dim);">~210ms</td>
+                <td class="px-3 py-3.5 text-center text-[12px]" style="color:var(--faint);">~340ms</td>
+                <td class="pl-3 py-3.5 text-center"><svg class="mx-auto" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="rgba(255,255,255,0.05)"/><path d="M15 9 9 15M9 9l6 6" stroke="rgba(255,255,255,0.32)" stroke-width="2.4" stroke-linecap="round"/></svg></td>
+              </tr>
+              <tr class="hair-b">
+                <td class="py-3.5 pr-4" style="color:var(--muted);">Plugin system</td>
+                <td class="px-3 py-3.5 text-center" style="background:rgba(91,255,137,0.035);">
+                  <svg class="mx-auto" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="rgba(91,255,137,0.12)"/><path d="M17 8.5 10.5 15.5 7 12" stroke="#5BFF89" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </td>
+                <td class="px-3 py-3.5 text-center"><svg class="mx-auto" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="rgba(255,255,255,0.05)"/><path d="M15 9 9 15M9 9l6 6" stroke="rgba(255,255,255,0.32)" stroke-width="2.4" stroke-linecap="round"/></svg></td>
+                <td class="px-3 py-3.5 text-center text-[12px]" style="color:var(--green-dim);">partial</td>
+                <td class="pl-3 py-3.5 text-center"><svg class="mx-auto" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="rgba(255,255,255,0.05)"/><path d="M15 9 9 15M9 9l6 6" stroke="rgba(255,255,255,0.32)" stroke-width="2.4" stroke-linecap="round"/></svg></td>
+              </tr>
+              <tr class="hair-b">
+                <td class="py-3.5 pr-4" style="color:var(--muted);">3-language consistency</td>
+                <td class="px-3 py-3.5 text-center" style="background:rgba(91,255,137,0.035);">
+                  <svg class="mx-auto" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="rgba(91,255,137,0.12)"/><path d="M17 8.5 10.5 15.5 7 12" stroke="#5BFF89" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </td>
+                <td class="px-3 py-3.5 text-center text-[12px]" style="color:var(--ghost);">Rust only</td>
+                <td class="px-3 py-3.5 text-center text-[12px]" style="color:var(--ghost);">Go only</td>
+                <td class="pl-3 py-3.5 text-center text-[12px]" style="color:var(--ghost);">JS only</td>
+              </tr>
+              <tr class="hair-b">
+                <td class="py-3.5 pr-4" style="color:var(--muted);">Auto-generated man pages</td>
+                <td class="px-3 py-3.5 text-center" style="background:rgba(91,255,137,0.035);">
+                  <svg class="mx-auto" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="rgba(91,255,137,0.12)"/><path d="M17 8.5 10.5 15.5 7 12" stroke="#5BFF89" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </td>
+                <td class="px-3 py-3.5 text-center text-[12px]" style="color:var(--green-dim);">via crate</td>
+                <td class="px-3 py-3.5 text-center"><svg class="mx-auto" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="rgba(91,255,137,0.12)"/><path d="M17 8.5 10.5 15.5 7 12" stroke="#5BFF89" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></td>
+                <td class="pl-3 py-3.5 text-center"><svg class="mx-auto" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="rgba(255,255,255,0.05)"/><path d="M15 9 9 15M9 9l6 6" stroke="rgba(255,255,255,0.32)" stroke-width="2.4" stroke-linecap="round"/></svg></td>
+              </tr>
+              <tr class="hair-b">
+                <td class="py-3.5 pr-4" style="color:var(--muted);">Shell completions (bash/zsh/fish)</td>
+                <td class="px-3 py-3.5 text-center" style="background:rgba(91,255,137,0.035);">
+                  <svg class="mx-auto" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="rgba(91,255,137,0.12)"/><path d="M17 8.5 10.5 15.5 7 12" stroke="#5BFF89" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </td>
+                <td class="px-3 py-3.5 text-center"><svg class="mx-auto" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="rgba(91,255,137,0.12)"/><path d="M17 8.5 10.5 15.5 7 12" stroke="#5BFF89" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></td>
+                <td class="px-3 py-3.5 text-center"><svg class="mx-auto" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="rgba(91,255,137,0.12)"/><path d="M17 8.5 10.5 15.5 7 12" stroke="#5BFF89" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></td>
+                <td class="pl-3 py-3.5 text-center text-[12px]" style="color:var(--green-dim);">bash only</td>
+              </tr>
+              <tr>
+                <td class="py-3.5 pr-4" style="color:var(--muted);">JSON output mode</td>
+                <td class="px-3 py-3.5 text-center" style="background:rgba(91,255,137,0.035);">
+                  <svg class="mx-auto" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="rgba(91,255,137,0.12)"/><path d="M17 8.5 10.5 15.5 7 12" stroke="#5BFF89" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </td>
+                <td class="px-3 py-3.5 text-center text-[12px]" style="color:var(--ghost);">manual</td>
+                <td class="px-3 py-3.5 text-center text-[12px]" style="color:var(--ghost);">manual</td>
+                <td class="pl-3 py-3.5 text-center text-[12px]" style="color:var(--ghost);">manual</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="mono mt-4 text-[11px]" style="color:var(--ghost);">Cold-start figures: median of 1,000 no-op invocations on an M2 / Linux 6.8, Bracket 0.8 · measured Mar 2026.</p>
+
+        <!-- benchmark bars -->
+        <div class="reveal mt-10 grid gap-6 lg:grid-cols-[1fr_1.1fr]">
+          <div class="hair rounded-2xl p-6" style="background:var(--surface);">
+            <p class="mono mb-1 text-[12px]" style="color:var(--faint);">Cold start · no-op invocation</p>
+            <p class="mono text-[11px]" style="color:var(--ghost);">lower is better — median ms</p>
+            <svg id="bench-svg" viewBox="0 0 320 168" class="mt-5 w-full" role="img" aria-label="Cold-start benchmark: Bracket 40ms, Clap 210ms, Cobra 340ms, Commander.js 290ms"></svg>
+          </div>
+          <div class="hair rounded-2xl p-6" style="background:var(--surface);">
+            <p class="mono mb-1 text-[12px]" style="color:var(--faint);">GitHub stars · last 12 months</p>
+            <p class="mono text-[11px]" style="color:var(--ghost);">8,408 today — up from 1,120 a year ago</p>
+            <svg id="stars-svg" viewBox="0 0 320 168" class="mt-5 w-full" role="img" aria-label="Star growth sparkline over twelve months, ending at 8,408 stars"></svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================== 8. QUICK START =================== -->
+    <section id="quickstart" class="relative hair-b py-20 sm:py-24">
+      <div class="mesh-blob" style="width:320px;height:320px;background:rgba(91,255,137,0.1);bottom:40px;left:-100px;" aria-hidden="true"></div>
+      <div class="relative mx-auto max-w-[1180px] px-5 sm:px-7">
+        <div class="reveal mb-12 text-center">
+          <p class="eyebrow mb-3">Quick start</p>
+          <h2 class="display mx-auto max-w-[22ch] text-[clamp(1.7rem,3.6vw,2.4rem)]">Hello world in <em class="not-italic accent-frag">under 60 seconds</em>.</h2>
+          <p class="mx-auto mt-3 max-w-[48ch] text-[14.5px]" style="color:var(--muted);">Three steps from an empty directory to a colored, completion-aware binary you can ship.</p>
+        </div>
+
+        <div class="mx-auto grid max-w-[940px] gap-5 lg:grid-cols-3">
+          <!-- step 1 -->
+          <div class="reveal">
+            <div class="mb-3 flex items-center gap-3">
+              <span class="mono grid h-8 w-8 place-items-center rounded-lg text-[14px] font-700" style="color:var(--green);background:rgba(91,255,137,0.09);border:1px solid rgba(91,255,137,0.26);">1</span>
+              <h3 class="mono text-[14px] font-600">Install the CLI</h3>
+            </div>
+            <div class="term h-[148px]">
+              <div class="term-bar">
+                <span class="tl" style="background:#FF5F57;"></span><span class="tl" style="background:#FEBC2E;"></span><span class="tl" style="background:#28C840;"></span>
+                <span class="mono ml-2 text-[10.5px]" style="color:var(--faint);">shell</span>
+              </div>
+              <div class="term-body">
+                <pre class="mono text-[11.5px] leading-[1.85]"><code><span class="tok-prompt">$</span> <span class="tok-var">cargo install bracket</span>
+<span class="tok-com"># or: go install</span>
+<span class="tok-path">  github.com/bracket/cli@latest</span>
+<span class="tok-com"># or: npm i -g @bracket/cli</span></code></pre>
+              </div>
+            </div>
+          </div>
+          <!-- step 2 -->
+          <div class="reveal">
+            <div class="mb-3 flex items-center gap-3">
+              <span class="mono grid h-8 w-8 place-items-center rounded-lg text-[14px] font-700" style="color:var(--green);background:rgba(91,255,137,0.09);border:1px solid rgba(91,255,137,0.26);">2</span>
+              <h3 class="mono text-[14px] font-600">Scaffold a command</h3>
+            </div>
+            <div class="term h-[148px]">
+              <div class="term-bar">
+                <span class="tl" style="background:#FF5F57;"></span><span class="tl" style="background:#FEBC2E;"></span><span class="tl" style="background:#28C840;"></span>
+                <span class="mono ml-2 text-[10.5px]" style="color:var(--faint);">shell</span>
+              </div>
+              <div class="term-body">
+                <pre class="mono text-[11.5px] leading-[1.85]"><code><span class="tok-prompt">$</span> <span class="tok-var">bracket new greet</span>
+<span class="tok-type">  ✓</span> <span class="tok-path">created greet/main.rs</span>
+<span class="tok-type">  ✓</span> <span class="tok-path">added Greet command</span>
+<span class="tok-prompt">$</span> <span class="tok-var">cd greet</span></code></pre>
+              </div>
+            </div>
+          </div>
+          <!-- step 3 -->
+          <div class="reveal">
+            <div class="mb-3 flex items-center gap-3">
+              <span class="mono grid h-8 w-8 place-items-center rounded-lg text-[14px] font-700" style="color:var(--green);background:rgba(91,255,137,0.09);border:1px solid rgba(91,255,137,0.26);">3</span>
+              <h3 class="mono text-[14px] font-600">Run it</h3>
+            </div>
+            <div class="term h-[148px]">
+              <div class="term-bar">
+                <span class="tl" style="background:#FF5F57;"></span><span class="tl" style="background:#FEBC2E;"></span><span class="tl" style="background:#28C840;"></span>
+                <span class="mono ml-2 text-[10.5px]" style="color:var(--faint);">shell</span>
+              </div>
+              <div class="term-body">
+                <pre class="mono text-[11.5px] leading-[1.85]"><code><span class="tok-prompt">$</span> <span class="tok-var">bracket run -- --name Mai</span>
+<span class="tok-type">  hello, Mai</span> <span class="tok-com">👋</span>
+<span class="tok-prompt">$</span> <span class="tok-var">bracket run -- --help</span>
+<span class="tok-path">  full usage tree printed</span></code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="reveal mx-auto mt-10 flex max-w-[940px] flex-col items-center justify-between gap-3 rounded-xl hair p-5 sm:flex-row" style="background:var(--surface);">
+          <p class="text-[13.5px]" style="color:var(--muted);">That's a complete CLI — colored output, <span class="mono" style="color:var(--faint);">--help</span>, completions and a man page, all generated.</p>
+          <a href="#examples" class="btn btn-ghost mono flex shrink-0 items-center gap-2 rounded-lg px-4 py-2.5 text-[12.5px] font-600">
+            See full examples
+            <svg class="chev" width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================== 9. COMMUNITY =================== -->
+    <section id="community" class="hair-b py-20 sm:py-24" style="background:var(--panel);">
+      <div class="mx-auto max-w-[1180px] px-5 sm:px-7">
+        <div class="reveal mb-12 max-w-[46ch]">
+          <p class="eyebrow mb-3">Community</p>
+          <h2 class="display text-[clamp(1.7rem,3.6vw,2.4rem)]">Built in the open, <em class="not-italic accent-frag">reviewed by 148</em>.</h2>
+          <p class="mt-3 text-[14.5px]" style="color:var(--muted);">Every RFC, every breaking change and every plugin API lands through public discussion. Come argue about flag naming with us.</p>
+        </div>
+
+        <div class="grid gap-5 lg:grid-cols-[1fr_1fr]">
+          <!-- stats cards -->
+          <div class="grid gap-5 sm:grid-cols-2">
+            <a href="#community" class="card-lift hair rounded-2xl p-5" style="background:var(--bg);">
+              <div class="flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.6 8.6 0 0 1-3.8-.9L3 21l1.9-5.1A8.4 8.4 0 1 1 21 11.5z" stroke="#5BFF89" stroke-width="2" stroke-linejoin="round"/></svg>
+                <span class="mono text-[12px]" style="color:var(--faint);">GitHub Discussions</span>
+              </div>
+              <p class="mono mt-3 text-[30px] font-700 tnum">1,287</p>
+              <p class="mt-1 text-[12.5px]" style="color:var(--muted);">open threads — RFCs, help and show-and-tell.</p>
+            </a>
+            <a href="#community" class="card-lift hair rounded-2xl p-5" style="background:var(--bg);">
+              <div class="flex items-center gap-2">
+                <span class="pulse-dot"></span>
+                <span class="mono text-[12px]" style="color:var(--faint);">Discord · live now</span>
+              </div>
+              <p class="mono mt-3 text-[30px] font-700 tnum">6,940</p>
+              <p class="mt-1 text-[12.5px]" style="color:var(--muted);">members — <span style="color:var(--green-dim);">412 online</span> as you read this.</p>
+            </a>
+          </div>
+
+          <!-- maintainers -->
+          <div class="hair rounded-2xl p-6" style="background:var(--bg);">
+            <p class="mono mb-4 text-[12px]" style="color:var(--faint);">Core maintainers</p>
+            <ul class="space-y-3.5">
+              <li class="flex items-center gap-3">
+                <span class="mono grid h-9 w-9 shrink-0 place-items-center rounded-full text-[12px] font-700" style="background:rgba(91,255,137,0.13);color:var(--green);border:1px solid rgba(91,255,137,0.26);">SK</span>
+                <div class="min-w-0">
+                  <p class="text-[13.5px] font-600">Soren Kvist</p>
+                  <p class="mono text-[11.5px]" style="color:var(--faint);">@sorenkv · parser &amp; codegen</p>
+                </div>
+              </li>
+              <li class="flex items-center gap-3">
+                <span class="mono grid h-9 w-9 shrink-0 place-items-center rounded-full text-[12px] font-700" style="background:rgba(124,196,255,0.13);color:#7CC4FF;border:1px solid rgba(124,196,255,0.26);">PR</span>
+                <div class="min-w-0">
+                  <p class="text-[13.5px] font-600">Priya Rao</p>
+                  <p class="mono text-[11.5px]" style="color:var(--faint);">@priyacli · Go runtime &amp; plugins</p>
+                </div>
+              </li>
+              <li class="flex items-center gap-3">
+                <span class="mono grid h-9 w-9 shrink-0 place-items-center rounded-full text-[12px] font-700" style="background:rgba(255,143,177,0.13);color:#FF8FB1;border:1px solid rgba(255,143,177,0.26);">TA</span>
+                <div class="min-w-0">
+                  <p class="text-[13.5px] font-600">Tomás Aguilar</p>
+                  <p class="mono text-[11.5px]" style="color:var(--faint);">@tomasagl · TypeScript &amp; npm dist</p>
+                </div>
+              </li>
+              <li class="flex items-center gap-3">
+                <span class="mono grid h-9 w-9 shrink-0 place-items-center rounded-full text-[12px] font-700" style="background:rgba(157,141,255,0.13);color:#9D8DFF;border:1px solid rgba(157,141,255,0.26);">NW</span>
+                <div class="min-w-0">
+                  <p class="text-[13.5px] font-600">Naomi Webb</p>
+                  <p class="mono text-[11.5px]" style="color:var(--faint);">@nwebb · docs, completions, DX</p>
+                </div>
+              </li>
+            </ul>
+            <a href="#sponsors" class="btn mono mt-5 flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-[12px] font-600 hair-strong" style="background:rgba(255,255,255,0.02);color:var(--muted);">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#FF8FB1" aria-hidden="true"><path d="M12 21s-7.2-4.4-9.6-9C.8 9 2 5 5.5 5 8 5 9.5 7 12 9.5 14.5 7 16 5 18.5 5 22 5 23.2 9 21.6 12c-2.4 4.6-9.6 9-9.6 9z"/></svg>
+              Become a sponsor
+            </a>
+          </div>
+        </div>
+
+        <div class="reveal mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl hair px-5 py-4" style="background:var(--bg);">
+          <span class="mono text-[12px]" style="color:var(--faint);">Also reachable on</span>
+          <a href="#community" class="navlink mono flex items-center gap-1.5 text-[12.5px]" style="color:var(--muted);">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.3 4.4A19.8 19.8 0 0 0 15.4 3l-.3.5a14.6 14.6 0 0 1 4.3 1.3 16.3 16.3 0 0 0-14.8 0A14.6 14.6 0 0 1 8.9 3.5L8.6 3a19.8 19.8 0 0 0-4.9 1.4C.6 9 .1 13.5.3 17.9A19.9 19.9 0 0 0 6.4 21l.5-.7a13 13 0 0 1-2-1l.5-.4a14.2 14.2 0 0 0 12.2 0l.5.4a13 13 0 0 1-2 1l.5.7a19.9 19.9 0 0 0 6.1-3.1c.3-5.1-.5-9.6-2.4-13.5zM8.5 15.3c-1.2 0-2.2-1.1-2.2-2.5s1-2.5 2.2-2.5 2.2 1.1 2.2 2.5-1 2.5-2.2 2.5zm7 0c-1.2 0-2.2-1.1-2.2-2.5s1-2.5 2.2-2.5 2.2 1.1 2.2 2.5-1 2.5-2.2 2.5z"/></svg>
+            Matrix #bracket:matrix.org
+          </a>
+          <a href="#community" class="navlink mono flex items-center gap-1.5 text-[12.5px]" style="color:var(--muted);">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58v-2c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.74.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5.99.11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 016 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.25 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.8 5.62-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.21.69.82.58A12 12 0 0024 12.5C24 5.87 18.63.5 12 2.5z"/></svg>
+            github.com/bracket/cli
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================== 10. SPONSOR ROW =================== -->
+    <section id="sponsors" class="hair-b py-20 sm:py-24">
+      <div class="mx-auto max-w-[1180px] px-5 sm:px-7">
+        <div class="reveal mb-10 text-center">
+          <p class="eyebrow mb-3">Backed by</p>
+          <h2 class="display mx-auto max-w-[20ch] text-[clamp(1.6rem,3.2vw,2.1rem)]">GitHub Sponsors keep <em class="not-italic accent-frag">Bracket independent</em>.</h2>
+          <p class="mx-auto mt-3 max-w-[46ch] text-[14.5px]" style="color:var(--muted);">No VC, no paid tier, no asterisks. Three companies and 38 individuals fund the maintenance budget.</p>
+        </div>
+
+        <!-- company sponsors -->
+        <div class="reveal mx-auto grid max-w-[760px] gap-4 sm:grid-cols-3">
+          <div class="card-lift grid h-24 place-items-center rounded-2xl hair" style="background:var(--surface);">
+            <svg width="92" height="26" viewBox="0 0 92 26" fill="none" aria-label="ngrok"><text x="0" y="19" font-family="JetBrains Mono" font-size="18" font-weight="700" fill="#fff" opacity="0.82">ngrok</text></svg>
+          </div>
+          <div class="card-lift grid h-24 place-items-center rounded-2xl hair" style="background:var(--surface);">
+            <svg width="96" height="26" viewBox="0 0 96 26" fill="none" aria-label="Fly.io"><text x="0" y="19" font-family="JetBrains Mono" font-size="18" font-weight="700" fill="#fff" opacity="0.82">Fly.io</text></svg>
+          </div>
+          <div class="card-lift grid h-24 place-items-center rounded-2xl hair" style="background:var(--surface);">
+            <svg width="108" height="26" viewBox="0 0 108 26" fill="none" aria-label="Railway"><text x="0" y="19" font-family="JetBrains Mono" font-size="18" font-weight="700" fill="#fff" opacity="0.82">Railway</text></svg>
+          </div>
+        </div>
+
+        <!-- individual sponsors -->
+        <div class="reveal mx-auto mt-9 max-w-[760px]">
+          <p class="mono mb-4 text-center text-[12px]" style="color:var(--faint);">+ 38 individual sponsors</p>
+          <div id="sponsor-grid" class="flex flex-wrap justify-center gap-2.5"></div>
+          <div class="mt-8 text-center">
+            <a href="#sponsors" class="btn btn-primary mono inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-[12.5px] font-600">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#04210F" aria-hidden="true"><path d="M12 21s-7.2-4.4-9.6-9C.8 9 2 5 5.5 5 8 5 9.5 7 12 9.5 14.5 7 16 5 18.5 5 22 5 23.2 9 21.6 12c-2.4 4.6-9.6 9-9.6 9z"/></svg>
+              Sponsor Bracket
+            </a>
+            <p class="mono mt-3 text-[11px]" style="color:var(--ghost);">From $5/mo · funds CI, security audits and a part-time maintainer.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================== 11. FAQ =================== -->
+    <section class="hair-b py-20 sm:py-24" style="background:var(--panel);">
+      <div class="mx-auto max-w-[820px] px-5 sm:px-7">
+        <div class="reveal mb-10 text-center">
+          <p class="eyebrow mb-3">Frequently asked</p>
+          <h2 class="display text-[clamp(1.7rem,3.6vw,2.4rem)]">Questions, <em class="not-italic accent-frag">answered straight</em>.</h2>
+        </div>
+
+        <div class="space-y-3">
+          <details class="faq reveal group rounded-xl hair p-5" style="background:var(--bg);">
+            <summary class="flex items-center justify-between gap-4">
+              <span class="mono text-[14.5px] font-600">Is Bracket production-ready?</span>
+              <svg class="faq-plus shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="#5BFF89" stroke-width="2.4" stroke-linecap="round"/></svg>
+            </summary>
+            <p class="mt-3 text-[13.5px]" style="color:var(--muted);">Yes, with the honesty a 0.8 deserves. Bracket ships 4,408 CLIs in production today, including tools at ngrok, Fly.io and Railway, and the parser and codegen layers have been API-stable since 0.6. We're pre-1.0 only because the plugin manifest format may still get one more breaking revision before we freeze it. Everything else follows semver, every release runs against a 1,900-case conformance suite across all three languages, and we publish a migration note for any change that touches user code.</p>
+          </details>
+
+          <details class="faq reveal group rounded-xl hair p-5" style="background:var(--bg);">
+            <summary class="flex items-center justify-between gap-4">
+              <span class="mono text-[14.5px] font-600">Why three languages, not one?</span>
+              <svg class="faq-plus shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="#5BFF89" stroke-width="2.4" stroke-linecap="round"/></svg>
+            </summary>
+            <p class="mt-3 text-[13.5px]" style="color:var(--muted);">Because real teams already are. A typical infrastructure team ships a Rust core for performance, a Go agent for portability and a Node wrapper because that's what their users <span class="mono" style="color:var(--faint);">npm install</span>. Without Bracket, that's three CLI codebases with three flag conventions, three help styles and three sets of completion bugs. Bracket gives each language a native, idiomatic API — derive macros in Rust, struct tags in Go, decorators in TypeScript — that all compile down to the same command model, the same help renderer and the same completion engine. One spec, three native binaries.</p>
+          </details>
+
+          <details class="faq reveal group rounded-xl hair p-5" style="background:var(--bg);">
+            <summary class="flex items-center justify-between gap-4">
+              <span class="mono text-[14.5px] font-600">How does the plugin model handle security?</span>
+              <svg class="faq-plus shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="#5BFF89" stroke-width="2.4" stroke-linecap="round"/></svg>
+            </summary>
+            <p class="mt-3 text-[13.5px]" style="color:var(--muted);">Plugins are resolved and linked at build time, never downloaded or executed at runtime — so there is no auto-update surface to exploit. Each plugin declares its capabilities (filesystem, network, environment) in a manifest, and <span class="mono" style="color:var(--faint);">bracket plugin add</span> shows that capability set before it writes anything to your lockfile. A plugin that never declared network access cannot open a socket; the generated code simply doesn't expose the API. Plugin versions are pinned by content hash, and our advisory feed lets you fail a build if a linked plugin has a known CVE.</p>
+          </details>
+
+          <details class="faq reveal group rounded-xl hair p-5" style="background:var(--bg);">
+            <summary class="flex items-center justify-between gap-4">
+              <span class="mono text-[14.5px] font-600">What are the cold-start guarantees?</span>
+              <svg class="faq-plus shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="#5BFF89" stroke-width="2.4" stroke-linecap="round"/></svg>
+            </summary>
+            <p class="mt-3 text-[13.5px]" style="color:var(--muted);">All argument parsing is generated at build time as a flat match table — there is no reflection, no schema construction and no allocation on the hot path. On the Rust and Go targets a no-op invocation returns in roughly 40ms median and stays under 200ms at p99 on commodity hardware. The Node target carries V8 startup, so it lands closer to 90ms median; still well inside budget. We treat any regression past the 200ms p99 line as a release blocker, and every CI run prints the cold-start histogram so a slow change can't merge unnoticed.</p>
+          </details>
+
+          <details class="faq reveal group rounded-xl hair p-5" style="background:var(--bg);">
+            <summary class="flex items-center justify-between gap-4">
+              <span class="mono text-[14.5px] font-600">Best practices for testing a CLI built with Bracket?</span>
+              <svg class="faq-plus shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="#5BFF89" stroke-width="2.4" stroke-linecap="round"/></svg>
+            </summary>
+            <p class="mt-3 text-[13.5px]" style="color:var(--muted);">Test the three layers separately. Parsing is pure — call <span class="mono" style="color:var(--faint);">Cmd::parse_from(&amp;["deploy","--region","ord"])</span> and assert on the resulting struct, no process needed. For command logic, write your <span class="mono" style="color:var(--faint);">run</span> functions to take parsed input and return a value, so they're ordinary unit tests. For end-to-end behavior, Bracket ships a <span class="mono" style="color:var(--faint);">bracket::test</span> harness that captures stdout, stderr and exit code, and supports golden-file snapshots of help text so a docs regression fails loudly. Always assert against <span class="mono" style="color:var(--faint);">--json</span> output in CI — it's stable across color and terminal-width changes.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================== 12. FINAL CTA =================== -->
+    <section class="relative overflow-hidden hair-b py-24">
+      <div class="hero-radial absolute inset-0" aria-hidden="true"></div>
+      <div class="mesh-blob" style="width:420px;height:340px;background:rgba(91,255,137,0.18);bottom:-140px;left:50%;transform:translateX(-50%);" aria-hidden="true"></div>
+      <div class="absolute inset-0 dotgrid opacity-50" aria-hidden="true" style="mask-image:radial-gradient(circle at 50% 50%,#000,transparent 72%);-webkit-mask-image:radial-gradient(circle at 50% 50%,#000,transparent 72%);"></div>
+
+      <div class="relative mx-auto max-w-[680px] px-5 text-center sm:px-7">
+        <p class="reveal eyebrow mb-4">Ready when you are</p>
+        <h2 class="reveal display text-[clamp(2rem,5vw,3.1rem)]">Get started in <em class="not-italic accent-frag">60 seconds</em>.</h2>
+        <p class="reveal mx-auto mt-4 max-w-[42ch] text-[15px]" style="color:var(--muted);">One command installs the CLI. The next scaffolds a colored, completion-aware tool you can ship today.</p>
+
+        <div class="reveal mx-auto mt-8 max-w-[440px]">
+          <div class="term">
+            <div class="term-bar">
+              <span class="tl" style="background:#FF5F57;"></span><span class="tl" style="background:#FEBC2E;"></span><span class="tl" style="background:#28C840;"></span>
+              <span class="mono ml-2 text-[11px]" style="color:var(--faint);">install</span>
+            </div>
+            <div class="term-body flex items-center gap-3">
+              <code class="mono flex-1 overflow-x-auto whitespace-nowrap text-[13.5px] scrollbar-thin">
+                <span class="tok-prompt select-none">$</span> <span class="tok-var">cargo install bracket</span>
+              </code>
+              <button class="copy-btn btn grid h-8 w-8 shrink-0 place-items-center rounded-md hair-strong" data-copy="cargo install bracket" style="background:rgba(255,255,255,0.03);" aria-label="Copy install command">
+                <svg class="ic-copy" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2.2" stroke="currentColor" stroke-width="2"/><path d="M5 15V5a2 2 0 012-2h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                <svg class="ic-check hidden" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="#5BFF89" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="reveal mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <a href="#quickstart" class="btn btn-primary mono flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3 text-[13.5px] font-600 sm:w-auto">
+            Read the docs
+            <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a href="#examples" class="btn btn-ghost mono flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3 text-[13.5px] font-600 sm:w-auto">
+            Browse examples
+          </a>
+        </div>
+        <p class="reveal mono mt-6 text-[11.5px]" style="color:var(--ghost);">Apache-2.0 · no account · no telemetry</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- =================== 13. FOOTER =================== -->
+  <footer class="py-14">
+    <div class="mx-auto max-w-[1180px] px-5 sm:px-7">
+      <div class="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+        <div>
+          <a href="#top" class="flex items-center gap-2.5">
+            <span class="grid h-8 w-8 place-items-center rounded-[9px]" style="background:rgba(91,255,137,0.1);border:1px solid rgba(91,255,137,0.28);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M9 4 4 4 4 20 9 20" stroke="#5BFF89" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M15 4 20 4 20 20 15 20" stroke="#5BFF89" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="12" cy="12" r="1.7" fill="#5BFF89"/>
+              </svg>
+            </span>
+            <span class="mono text-[15px] font-600">bracket</span>
+          </a>
+          <p class="mt-4 max-w-[34ch] text-[13px]" style="color:var(--muted);">A modern CLI framework for Rust, Go and TypeScript. One authoring model, native everywhere.</p>
+          <div class="mt-5 flex items-center gap-2.5">
+            <a href="#community" class="soc grid h-9 w-9 place-items-center rounded-lg hair-strong" style="background:rgba(255,255,255,0.02);color:var(--muted);" aria-label="GitHub">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58v-2c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.74.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5.99.11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 016 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.25 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.8 5.62-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.21.69.82.58A12 12 0 0024 12.5C24 5.87 18.63.5 12 .5z"/></svg>
+            </a>
+            <a href="#community" class="soc grid h-9 w-9 place-items-center rounded-lg hair-strong" style="background:rgba(255,255,255,0.02);color:var(--muted);" aria-label="Discord">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.3 4.4A19.8 19.8 0 0 0 15.4 3l-.3.5a14.6 14.6 0 0 1 4.3 1.3 16.3 16.3 0 0 0-14.8 0A14.6 14.6 0 0 1 8.9 3.5L8.6 3a19.8 19.8 0 0 0-4.9 1.4C.6 9 .1 13.5.3 17.9A19.9 19.9 0 0 0 6.4 21l.5-.7a13 13 0 0 1-2-1l.5-.4a14.2 14.2 0 0 0 12.2 0l.5.4a13 13 0 0 1-2 1l.5.7a19.9 19.9 0 0 0 6.1-3.1c.3-5.1-.5-9.6-2.4-13.5zM8.5 15.3c-1.2 0-2.2-1.1-2.2-2.5s1-2.5 2.2-2.5 2.2 1.1 2.2 2.5-1 2.5-2.2 2.5zm7 0c-1.2 0-2.2-1.1-2.2-2.5s1-2.5 2.2-2.5 2.2 1.1 2.2 2.5-1 2.5-2.2 2.5z"/></svg>
+            </a>
+            <a href="#community" class="soc grid h-9 w-9 place-items-center rounded-lg hair-strong" style="background:rgba(255,255,255,0.02);color:var(--muted);" aria-label="Matrix">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 2v20M21 2v20M3 4c4-2 6 0 6 4M21 4c-4-2-6 0-6 4M3 20c4 2 6 0 6-4M21 20c-4 2-6 0-6-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <nav aria-label="Docs">
+          <p class="mono mb-3 text-[11px]" style="color:var(--faint);letter-spacing:0.12em;text-transform:uppercase;">Docs</p>
+          <ul class="space-y-2.5 text-[13px]">
+            <li><a href="#quickstart" class="navlink" style="color:var(--muted);">Getting started</a></li>
+            <li><a href="#examples" class="navlink" style="color:var(--muted);">Command reference</a></li>
+            <li><a href="#why" class="navlink" style="color:var(--muted);">Plugin authoring</a></li>
+            <li><a href="#quickstart" class="navlink" style="color:var(--muted);">Migration guide</a></li>
+            <li><a href="#examples" class="navlink" style="color:var(--muted);">API stability</a></li>
+          </ul>
+        </nav>
+
+        <nav aria-label="Examples">
+          <p class="mono mb-3 text-[11px]" style="color:var(--faint);letter-spacing:0.12em;text-transform:uppercase;">Examples</p>
+          <ul class="space-y-2.5 text-[13px]">
+            <li><a href="#examples" class="navlink" style="color:var(--muted);">Rust starter</a></li>
+            <li><a href="#examples" class="navlink" style="color:var(--muted);">Go agent CLI</a></li>
+            <li><a href="#examples" class="navlink" style="color:var(--muted);">TypeScript wrapper</a></li>
+            <li><a href="#examples" class="navlink" style="color:var(--muted);">Subcommand trees</a></li>
+            <li><a href="#examples" class="navlink" style="color:var(--muted);">JSON output mode</a></li>
+          </ul>
+        </nav>
+
+        <nav aria-label="Community">
+          <p class="mono mb-3 text-[11px]" style="color:var(--faint);letter-spacing:0.12em;text-transform:uppercase;">Community</p>
+          <ul class="space-y-2.5 text-[13px]">
+            <li><a href="#community" class="navlink" style="color:var(--muted);">GitHub Discussions</a></li>
+            <li><a href="#community" class="navlink" style="color:var(--muted);">Discord</a></li>
+            <li><a href="#community" class="navlink" style="color:var(--muted);">Matrix</a></li>
+            <li><a href="#sponsors" class="navlink" style="color:var(--muted);">Sponsor Bracket</a></li>
+            <li><a href="#why" class="navlink" style="color:var(--muted);">RFC process</a></li>
+          </ul>
+        </nav>
+      </div>
+
+      <div class="mt-12 flex flex-col items-start justify-between gap-4 hair-t pt-7 sm:flex-row sm:items-center">
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+          <span class="mono text-[12px]" style="color:var(--faint);">© 2026 Bracket</span>
+          <span class="mono rounded-md px-1.5 py-0.5 text-[10.5px]" style="color:var(--faint);border:1px solid var(--line);">Apache-2.0</span>
+          <span class="mono flex items-center gap-1.5 text-[12px]" style="color:var(--ghost);">
+            <span class="pulse-dot" style="width:5px;height:5px;"></span>
+            all systems operational
+          </span>
+        </div>
+        <p class="mono text-[12px]" style="color:var(--faint);">
+          Made with care by <span style="color:var(--green-dim);">Soren Kvist</span> + <span class="tnum">148</span> contributors.
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- =================== SCRIPT (vanilla only) =================== -->
+  <script>
+    (function () {
+      "use strict";
+
+      /* ---- mobile menu ---- */
+      var menuBtn = document.getElementById("menu-btn");
+      var mobileMenu = document.getElementById("mobile-menu");
+      if (menuBtn && mobileMenu) {
+        menuBtn.addEventListener("click", function () {
+          var open = !mobileMenu.classList.contains("hidden");
+          mobileMenu.classList.toggle("hidden");
+          menuBtn.setAttribute("aria-expanded", String(!open));
+        });
+        mobileMenu.querySelectorAll("a").forEach(function (a) {
+          a.addEventListener("click", function () {
+            mobileMenu.classList.add("hidden");
+            menuBtn.setAttribute("aria-expanded", "false");
+          });
+        });
+      }
+
+      /* ---- copy to clipboard ---- */
+      document.querySelectorAll(".copy-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var text = btn.getAttribute("data-copy") || "";
+          var done = function () {
+            var copyIc = btn.querySelector(".ic-copy");
+            var checkIc = btn.querySelector(".ic-check");
+            var label = btn.querySelector(".copy-label");
+            if (copyIc) copyIc.classList.add("hidden");
+            if (checkIc) checkIc.classList.remove("hidden");
+            if (label) label.textContent = "Copied";
+            btn.classList.add("copy-pulsing");
+            setTimeout(function () {
+              if (copyIc) copyIc.classList.remove("hidden");
+              if (checkIc) checkIc.classList.add("hidden");
+              if (label) label.textContent = "Copy";
+              btn.classList.remove("copy-pulsing");
+            }, 1600);
+          };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, done);
+          } else {
+            var ta = document.createElement("textarea");
+            ta.value = text;
+            ta.style.position = "fixed";
+            ta.style.opacity = "0";
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand("copy"); } catch (e) {}
+            document.body.removeChild(ta);
+            done();
+          }
+        });
+      });
+
+      /* ---- animated count-up ---- */
+      function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+      function countUp(el, target, dur) {
+        var start = null;
+        function step(ts) {
+          if (start === null) start = ts;
+          var p = Math.min((ts - start) / dur, 1);
+          el.textContent = Math.round(easeOut(p) * target).toLocaleString("en-US");
+          if (p < 1) requestAnimationFrame(step);
+          else el.textContent = target.toLocaleString("en-US");
+        }
+        requestAnimationFrame(step);
+      }
+      var navStars = document.getElementById("nav-stars");
+      if (navStars) {
+        setTimeout(function () {
+          navStars.classList.add("count-shimmer");
+          countUp(navStars, 8408, 1500);
+          setTimeout(function () { navStars.classList.remove("count-shimmer"); }, 1600);
+        }, 280);
+      }
+
+      /* ---- IntersectionObserver reveal ---- */
+      var revealEls = document.querySelectorAll(".reveal");
+      if ("IntersectionObserver" in window) {
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) {
+            if (e.isIntersecting) {
+              e.target.classList.add("in");
+              io.unobserve(e.target);
+            }
+          });
+        }, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
+        revealEls.forEach(function (el, i) {
+          el.style.transitionDelay = Math.min(i % 6, 5) * 42 + "ms";
+          io.observe(el);
+        });
+      } else {
+        revealEls.forEach(function (el) { el.classList.add("in"); });
+      }
+
+      /* ---- individual sponsor monograms ---- */
+      var sponsorNames = [
+        "Aki Moreau","Lena Park","Diego Sol","Yuki Tan","Omar Reza","Ines Vogel",
+        "Theo Marsh","Nadia Khoury","Rune Holt","Mei Chen","Felix Adler","Sana Iqbal",
+        "Bram De Vos","Tara Singh","Noa Castro","Leon Frei","Hana Mori","Pim Bakker",
+        "Cleo Banks","Ravi Nair","Esther Lund","Jonas Berg","Wei Lim","Marta Cruz",
+        "Kofi Owusu","Liv Aas","Eero Niemi","Sora Abe","Dana Roth","Ugo Conti",
+        "Vera Klein","Pablo Diaz","Anya Volk","Tom Healy","Ife Bello","Niko Rapp",
+        "Suri Patel","Joel Brandt"
+      ];
+      var palettes = [
+        ["rgba(91,255,137,0.13)", "#5BFF89", "rgba(91,255,137,0.26)"],
+        ["rgba(124,196,255,0.13)", "#7CC4FF", "rgba(124,196,255,0.26)"],
+        ["rgba(255,143,177,0.13)", "#FF8FB1", "rgba(255,143,177,0.26)"],
+        ["rgba(157,141,255,0.13)", "#9D8DFF", "rgba(157,141,255,0.26)"],
+        ["rgba(244,201,122,0.13)", "#F4C97A", "rgba(244,201,122,0.26)"]
+      ];
+      var grid = document.getElementById("sponsor-grid");
+      if (grid) {
+        sponsorNames.forEach(function (name, i) {
+          var parts = name.split(" ");
+          var initials = (parts[0][0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
+          var pal = palettes[i % palettes.length];
+          var d = document.createElement("div");
+          d.className = "soc grid h-9 w-9 place-items-center rounded-full mono text-[10.5px] font-700";
+          d.style.background = pal[0];
+          d.style.color = pal[1];
+          d.style.border = "1px solid " + pal[2];
+          d.title = name;
+          d.textContent = initials;
+          d.setAttribute("aria-label", "Sponsor " + name);
+          grid.appendChild(d);
+        });
+      }
+
+      /* ---- benchmark bars (computed from data) ---- */
+      var benchSvg = document.getElementById("bench-svg");
+      if (benchSvg) {
+        var bench = [
+          { name: "Bracket", ms: 40, hl: true },
+          { name: "Clap", ms: 210, hl: false },
+          { name: "Commander.js", ms: 290, hl: false },
+          { name: "Cobra", ms: 340, hl: false }
+        ];
+        var bW = 320, bH = 168, bLeft = 96, bRight = 16, bTop = 6, bGap = 14;
+        var maxMs = 360;
+        var rowH = (bH - bTop) / bench.length;
+        var barH = rowH - bGap;
+        var trackW = bW - bLeft - bRight;
+        var svgNS = "http://www.w3.org/2000/svg";
+        bench.forEach(function (row, i) {
+          var y = bTop + i * rowH;
+          var w = Math.max(4, (row.ms / maxMs) * trackW);
+          var label = document.createElementNS(svgNS, "text");
+          label.setAttribute("x", "0");
+          label.setAttribute("y", String(y + barH / 2 + 4));
+          label.setAttribute("font-family", "JetBrains Mono");
+          label.setAttribute("font-size", "10.5");
+          label.setAttribute("fill", row.hl ? "#5BFF89" : "rgba(255,255,255,0.6)");
+          label.textContent = row.name;
+          benchSvg.appendChild(label);
+          var track = document.createElementNS(svgNS, "rect");
+          track.setAttribute("x", String(bLeft));
+          track.setAttribute("y", String(y));
+          track.setAttribute("width", String(trackW));
+          track.setAttribute("height", String(barH));
+          track.setAttribute("rx", "4");
+          track.setAttribute("fill", "rgba(255,255,255,0.04)");
+          benchSvg.appendChild(track);
+          var bar = document.createElementNS(svgNS, "rect");
+          bar.setAttribute("x", String(bLeft));
+          bar.setAttribute("y", String(y));
+          bar.setAttribute("width", "0");
+          bar.setAttribute("height", String(barH));
+          bar.setAttribute("rx", "4");
+          bar.setAttribute("fill", row.hl ? "#5BFF89" : "rgba(255,255,255,0.16)");
+          benchSvg.appendChild(bar);
+          var val = document.createElementNS(svgNS, "text");
+          val.setAttribute("y", String(y + barH / 2 + 4));
+          val.setAttribute("font-family", "JetBrains Mono");
+          val.setAttribute("font-size", "10");
+          val.setAttribute("fill", row.hl ? "#04210F" : "rgba(255,255,255,0.7)");
+          val.textContent = row.ms + "ms";
+          benchSvg.appendChild(val);
+          var animate = function () {
+            var s = null, dur = 900;
+            function tick(ts) {
+              if (s === null) s = ts;
+              var p = Math.min((ts - s) / dur, 1);
+              var cw = easeOut(p) * w;
+              bar.setAttribute("width", String(cw));
+              if (cw > 38) {
+                val.setAttribute("x", String(bLeft + cw - 6));
+                val.setAttribute("text-anchor", "end");
+                val.setAttribute("fill", row.hl ? "#04210F" : "#08090A");
+              } else {
+                val.setAttribute("x", String(bLeft + cw + 6));
+                val.setAttribute("text-anchor", "start");
+                val.setAttribute("fill", row.hl ? "#5BFF89" : "rgba(255,255,255,0.7)");
+              }
+              if (p < 1) requestAnimationFrame(tick);
+            }
+            requestAnimationFrame(tick);
+          };
+          if ("IntersectionObserver" in window) {
+            var bo = new IntersectionObserver(function (es) {
+              es.forEach(function (e) {
+                if (e.isIntersecting) { animate(); bo.disconnect(); }
+              });
+            }, { threshold: 0.4 });
+            bo.observe(benchSvg);
+          } else { animate(); }
+        });
+      }
+
+      /* ---- star-growth sparkline (computed path d=) ---- */
+      var starsSvg = document.getElementById("stars-svg");
+      if (starsSvg) {
+        var data = [1120, 1480, 1960, 2470, 2980, 3610, 4280, 5150, 6020, 6880, 7640, 8408];
+        var sW = 320, sH = 168, padL = 8, padR = 8, padT = 14, padB = 22;
+        var maxV = 8408, minV = 1120;
+        var n = data.length;
+        var iw = sW - padL - padR;
+        var ih = sH - padT - padB;
+        function px(i) { return padL + (i / (n - 1)) * iw; }
+        function py(v) { return padT + ih - ((v - minV) / (maxV - minV)) * ih; }
+        var line = "", area = "";
+        data.forEach(function (v, i) {
+          var x = px(i).toFixed(1), y = py(v).toFixed(1);
+          line += (i === 0 ? "M" : "L") + x + " " + y + " ";
+        });
+        area = line + "L" + px(n - 1).toFixed(1) + " " + (padT + ih) + " L" + px(0).toFixed(1) + " " + (padT + ih) + " Z";
+        var sNS = "http://www.w3.org/2000/svg";
+        var defs = document.createElementNS(sNS, "defs");
+        defs.innerHTML =
+          '<linearGradient id="starFill" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0%" stop-color="rgba(91,255,137,0.32)"/>' +
+          '<stop offset="100%" stop-color="rgba(91,255,137,0)"/>' +
+          "</linearGradient>";
+        starsSvg.appendChild(defs);
+        // baseline
+        var base = document.createElementNS(sNS, "line");
+        base.setAttribute("x1", String(padL));
+        base.setAttribute("x2", String(sW - padR));
+        base.setAttribute("y1", String(padT + ih));
+        base.setAttribute("y2", String(padT + ih));
+        base.setAttribute("stroke", "rgba(255,255,255,0.07)");
+        base.setAttribute("stroke-width", "1");
+        starsSvg.appendChild(base);
+        var areaEl = document.createElementNS(sNS, "path");
+        areaEl.setAttribute("d", area);
+        areaEl.setAttribute("fill", "url(#starFill)");
+        starsSvg.appendChild(areaEl);
+        var lineEl = document.createElementNS(sNS, "path");
+        lineEl.setAttribute("d", line.trim());
+        lineEl.setAttribute("fill", "none");
+        lineEl.setAttribute("stroke", "#5BFF89");
+        lineEl.setAttribute("stroke-width", "2.2");
+        lineEl.setAttribute("stroke-linecap", "round");
+        lineEl.setAttribute("stroke-linejoin", "round");
+        starsSvg.appendChild(lineEl);
+        var len = lineEl.getTotalLength ? lineEl.getTotalLength() : 0;
+        if (len) {
+          lineEl.style.strokeDasharray = len;
+          lineEl.style.strokeDashoffset = len;
+          lineEl.style.transition = "stroke-dashoffset 1400ms ease";
+        }
+        // endpoint dot
+        var dot = document.createElementNS(sNS, "circle");
+        dot.setAttribute("cx", px(n - 1).toFixed(1));
+        dot.setAttribute("cy", py(maxV).toFixed(1));
+        dot.setAttribute("r", "3.6");
+        dot.setAttribute("fill", "#5BFF89");
+        dot.setAttribute("stroke", "#08090A");
+        dot.setAttribute("stroke-width", "2");
+        starsSvg.appendChild(dot);
+        // labels
+        var lbl = document.createElementNS(sNS, "text");
+        lbl.setAttribute("x", String(padL));
+        lbl.setAttribute("y", String(sH - 6));
+        lbl.setAttribute("font-family", "JetBrains Mono");
+        lbl.setAttribute("font-size", "9.5");
+        lbl.setAttribute("fill", "rgba(255,255,255,0.34)");
+        lbl.textContent = "Mar 2025";
+        starsSvg.appendChild(lbl);
+        var lbl2 = document.createElementNS(sNS, "text");
+        lbl2.setAttribute("x", String(sW - padR));
+        lbl2.setAttribute("y", String(sH - 6));
+        lbl2.setAttribute("text-anchor", "end");
+        lbl2.setAttribute("font-family", "JetBrains Mono");
+        lbl2.setAttribute("font-size", "9.5");
+        lbl2.setAttribute("fill", "#5BFF89");
+        lbl2.textContent = "8,408 ★";
+        starsSvg.appendChild(lbl2);
+        if (len && "IntersectionObserver" in window) {
+          var so = new IntersectionObserver(function (es) {
+            es.forEach(function (e) {
+              if (e.isIntersecting) {
+                requestAnimationFrame(function () { lineEl.style.strokeDashoffset = "0"; });
+                so.disconnect();
+              }
+            });
+          }, { threshold: 0.4 });
+          so.observe(starsSvg);
+        } else if (len) {
+          lineEl.style.strokeDashoffset = "0";
+        }
+      }
+    })();
+  </script>
+</body>
+</html>

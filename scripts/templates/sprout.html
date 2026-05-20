@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sprout — Learn to speak, not to swipe</title>
+<meta name="description" content="Language learning that doesn't feel like a game. 15 minutes of adaptive lessons plus two weekly AI conversations — conversational fluency by month four.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --bg-top:#FFFFFF; --bg-bot:#ECFDF5; --surface:#FFFFFF;
+    --accent:#10B981; --accent-2:#059669; --accent-3:#047857;
+    --accent-soft:rgba(16,185,129,.1);
+    --text:#064E3B; --dim:rgba(6,78,59,.62); --faint:rgba(6,78,59,.4);
+    --hairline:rgba(6,78,59,.08); --hairline2:rgba(6,78,59,.16);
+  }
+  html,body{font-family:'Inter',system-ui,sans-serif;font-feature-settings:'cv11','ss01';background:radial-gradient(ellipse at top,var(--bg-top),var(--bg-bot));background-attachment:fixed;color:var(--text);line-height:1.55;-webkit-font-smoothing:antialiased;min-height:100vh;}
+  .font-display{font-family:'Inter',sans-serif;font-weight:700;letter-spacing:-0.035em;line-height:1.04;}
+  .font-mono{font-family:'Geist Mono',ui-monospace,monospace;font-feature-settings:'tnum','ss01';}
+  .halftone{opacity:.45;}
+  .dim{color:var(--dim);} .faint{color:var(--faint);}
+  .hairline{border:1px solid var(--hairline);} .hairline2{border:1px solid var(--hairline2);}
+  .surface{background:var(--surface);}
+  .text-accent{color:var(--accent);} .bg-accent-soft{background:var(--accent-soft);}
+  .dot-grid{background-image:radial-gradient(circle at 1px 1px,rgba(16,185,129,.14) 1px,transparent 0);background-size:32px 32px;}
+  .mesh{position:absolute;border-radius:50%;filter:blur(100px);pointer-events:none;}
+  .pulse-dot{position:relative;width:8px;height:8px;border-radius:50%;background:var(--accent);}
+  .pulse-dot::after{content:'';position:absolute;inset:-4px;border-radius:50%;background:var(--accent);opacity:.5;animation:pulse 2s ease-out infinite;}
+  @keyframes pulse{0%{transform:scale(.8);opacity:.5;}100%{transform:scale(2.2);opacity:0;}}
+
+  .phone{position:relative;border-radius:48px;background:linear-gradient(135deg,#0B3B2C 0%,#021A12 100%);padding:10px;box-shadow:0 40px 80px -20px rgba(6,78,59,.22),0 0 0 1px rgba(6,78,59,.08),inset 0 0 0 1px rgba(255,255,255,.06);}
+  .phone-screen{position:relative;width:100%;height:100%;border-radius:38px;overflow:hidden;background:linear-gradient(180deg,#FFFFFF,#F0FDF7);color:var(--text);}
+  .phone-notch{position:absolute;top:14px;left:50%;transform:translateX(-50%);width:96px;height:26px;background:#021A12;border-radius:13px;z-index:10;}
+  .phone-status{position:absolute;top:18px;left:0;right:0;padding:0 26px;display:flex;justify-content:space-between;align-items:center;color:var(--text);font-family:'Geist Mono',monospace;font-size:13px;font-weight:500;z-index:11;}
+  .phone-status .icons{display:flex;gap:5px;align-items:center;}
+  .phone-tilt{transform:perspective(1600px) rotateY(-6deg) rotateX(2deg);}
+  .phone-float{animation:float 6s ease-in-out infinite;}
+  @keyframes float{0%,100%{transform:perspective(1600px) rotateY(-6deg) rotateX(2deg) translateY(0);}50%{transform:perspective(1600px) rotateY(-6deg) rotateX(2deg) translateY(-12px);}}
+  .phone-content{position:absolute;inset:0;padding:60px 18px 18px;overflow:hidden;}
+  .phone-scroll{animation:pscroll 14s ease-in-out infinite;}
+  @keyframes pscroll{0%,15%{transform:translateY(0);}45%,55%{transform:translateY(-56px);}85%,100%{transform:translateY(0);}}
+  .phone-glow{position:absolute;bottom:-30px;left:50%;transform:translateX(-50%);width:80%;height:80px;background:radial-gradient(ellipse,var(--accent) 0%,transparent 70%);opacity:.3;filter:blur(40px);pointer-events:none;}
+
+  .app-icon{border-radius:22%;background:linear-gradient(135deg,#34D399 0%,#10B981 50%,#047857 100%);box-shadow:0 16px 32px -10px rgba(16,185,129,.5),inset 0 1px 0 rgba(255,255,255,.3);}
+
+  .badge-store{display:inline-flex;align-items:center;gap:10px;padding:10px 16px;border-radius:12px;background:#064E3B;color:#FFFFFF;border:1px solid #064E3B;transition:transform 120ms ease,box-shadow 120ms ease;}
+  .badge-store:hover{transform:translateY(-1px);box-shadow:0 12px 24px -8px rgba(6,78,59,.4);}
+  .badge-label{font-size:10px;opacity:.8;text-transform:uppercase;letter-spacing:.06em;line-height:1;}
+  .badge-name{font-size:18px;font-weight:600;letter-spacing:-.01em;line-height:1.05;}
+
+  .marquee-track{display:flex;width:max-content;animation:marquee 38s linear infinite;}
+  @keyframes marquee{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+
+  .card{background:var(--surface);border:1px solid var(--hairline);border-radius:24px;transition:transform 150ms ease,box-shadow 150ms ease,border-color 150ms ease;}
+  .card:hover{transform:translateY(-2px);box-shadow:0 16px 40px -12px rgba(16,185,129,.18);border-color:rgba(16,185,129,.3);}
+
+  .btn-primary{background:linear-gradient(135deg,#10B981,#047857);color:#fff;transition:transform 120ms ease,box-shadow 120ms ease;}
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 12px 32px -10px rgba(16,185,129,.5);}
+  .btn-ghost{background:var(--surface);border:1px solid var(--hairline2);color:var(--text);transition:background 120ms ease;}
+  .btn-ghost:hover{background:#F0FDF7;}
+
+  .star{fill:#F59E0B;} .star-dim{fill:rgba(245,158,11,.2);}
+
+  .bar-track{height:8px;background:rgba(6,78,59,.06);border-radius:999px;overflow:hidden;}
+  .bar-fill{height:100%;background:linear-gradient(90deg,#10B981,#047857);border-radius:999px;}
+
+  details summary{list-style:none;cursor:pointer;}
+  details summary::-webkit-details-marker{display:none;}
+  details[open] summary .chev{transform:rotate(180deg);}
+  .chev{transition:transform 200ms ease;}
+
+  .hero-halo{position:absolute;inset:auto 0 0 0;height:600px;background:radial-gradient(ellipse 60% 100% at 50% 100%,rgba(16,185,129,.15) 0%,transparent 60%);pointer-events:none;}
+
+  /* Waveform */
+  .wave-bar{display:inline-block;width:3px;border-radius:3px;background:#10B981;margin:0 1px;animation:wave 1.2s ease-in-out infinite;}
+  @keyframes wave{0%,100%{height:6px;opacity:.6;}50%{height:24px;opacity:1;}}
+
+  @media (max-width:768px){.phone-tilt{transform:none;}.phone-float{animation:float-m 6s ease-in-out infinite;}@keyframes float-m{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}}
+</style>
+</head>
+<body class="relative overflow-x-hidden">
+<div class="mesh" style="background:#10B981;width:480px;height:480px;top:-200px;right:-160px;opacity:.18;"></div>
+<div class="mesh" style="background:#34D399;width:380px;height:380px;top:560px;left:-160px;opacity:.15;"></div>
+
+<!-- NAV -->
+<nav class="relative z-20 max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+  <a href="#" class="flex items-center gap-2.5">
+    <div class="app-icon w-9 h-9 flex items-center justify-center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V10M12 10c0-3 1.5-6 5-7-.5 3.5-1.5 6-5 7zM12 12c0-2.5-1-5-4-6 .5 3 1 5 4 6z" fill="white" fill-opacity=".25"/></svg>
+    </div>
+    <span class="font-display text-lg">Sprout</span>
+  </a>
+  <div class="hidden md:flex items-center gap-8 text-sm dim">
+    <a href="#features" class="hover:text-[color:var(--text)] transition-colors">Features</a>
+    <a href="#how" class="hover:text-[color:var(--text)] transition-colors">How it works</a>
+    <a href="#languages" class="hover:text-[color:var(--text)] transition-colors">Languages</a>
+    <a href="#pricing" class="hover:text-[color:var(--text)] transition-colors">Pricing</a>
+  </div>
+  <a href="#download" class="text-sm font-medium px-4 py-2 rounded-full" style="background:var(--accent);color:#fff;">Start learning</a>
+</nav>
+
+<!-- HERO -->
+<section class="relative max-w-7xl mx-auto px-6 pt-10 pb-24 md:pt-20 md:pb-32">
+  <div class="grid md:grid-cols-2 gap-12 md:gap-10 items-center">
+    <div class="relative z-10">
+      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent-soft text-accent text-xs font-medium mb-8">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4-6.2-4.5-6.2 4.5 2.4-7.4L2 9.4h7.6z"/></svg>
+        Featured on App Store · Editor's Choice 2025
+      </div>
+      <h1 class="font-display text-5xl sm:text-6xl lg:text-7xl mb-7">
+        Learn to <em class="not-italic" style="font-style:italic;font-weight:600;">speak</em>, <span class="halftone">not to swipe.</span>
+      </h1>
+      <p class="text-lg md:text-xl dim max-w-lg mb-10">
+        15 minutes of adaptive lessons a day, plus two weekly AI conversations that actually answer back. 84% of consistent users hit conversational by month four.
+      </p>
+      <div class="flex flex-wrap gap-3 mb-9">
+        <a href="#" class="badge-store">
+          <svg width="22" height="26" viewBox="0 0 24 28" fill="currentColor"><path d="M17.5 14.7c0-3 2.5-4.5 2.6-4.5-1.4-2.1-3.6-2.4-4.4-2.4-1.9-.2-3.6 1.1-4.6 1.1-1 0-2.4-1.1-4-1-2 0-3.9 1.2-5 3-2.2 3.7-.6 9.2 1.5 12.2 1 1.5 2.2 3.2 3.8 3.1 1.5-.1 2.1-1 3.9-1 1.8 0 2.4 1 4 1 1.6 0 2.7-1.5 3.7-3 1.2-1.7 1.6-3.4 1.7-3.5-.1 0-3.2-1.3-3.2-4.9zm-3-9c.9-1 1.4-2.4 1.3-3.7-1.2 0-2.7.8-3.6 1.8-.8.9-1.5 2.3-1.3 3.6 1.3.1 2.7-.7 3.6-1.7z"/></svg>
+          <div class="flex flex-col text-left"><span class="badge-label">Download on the</span><span class="badge-name">App Store</span></div>
+        </a>
+        <a href="#" class="badge-store">
+          <svg width="22" height="24" viewBox="0 0 22 24"><path d="M1.4 1.2c-.3.3-.4.8-.4 1.4v18.8c0 .7.1 1.2.4 1.4l.1.1L11.7 12.1v-.2L1.5 1.1l-.1.1z" fill="#5BC9F4"/><path d="M15.1 15.6l-3.4-3.4v-.2l3.4-3.4.1.1 4.1 2.3c1.2.7 1.2 1.7 0 2.3l-4.1 2.3-.1z" fill="#FECC2F"/><path d="M15.2 15.5L11.7 12 1.4 22.8c.4.4 1 .5 1.8.1l12-6.8" fill="#EF4136"/><path d="M15.2 8.5L3.2 1.7c-.8-.4-1.4-.3-1.8.1L11.7 12l3.5-3.5z" fill="#0F9D58"/></svg>
+          <div class="flex flex-col text-left"><span class="badge-label">Get it on</span><span class="badge-name">Google Play</span></div>
+        </a>
+      </div>
+      <div class="flex flex-wrap items-center gap-3 text-sm">
+        <div class="flex gap-0.5">
+          <svg width="18" height="18" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="18" height="18" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="18" height="18" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="18" height="18" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="18" height="18" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg>
+        </div>
+        <span class="font-medium">4.8</span>
+        <span class="faint">·</span>
+        <span class="dim font-mono text-xs">38,408 reviews</span>
+        <span class="faint">·</span>
+        <span class="dim text-xs flex items-center gap-1.5"><span class="pulse-dot"></span> 12 languages with native AI tutors</span>
+      </div>
+    </div>
+
+    <!-- Hero phone -->
+    <div class="relative flex justify-center md:justify-end">
+      <div class="phone-glow"></div>
+      <div class="phone phone-tilt phone-float" style="width:280px;height:578px;">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="phone-status">
+            <span>9:41</span>
+            <div class="icons">
+              <svg width="16" height="10" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="6" width="2" height="5" rx=".5"/><rect x="4" y="4" width="2" height="7" rx=".5"/><rect x="8" y="2" width="2" height="9" rx=".5"/><rect x="12" y="0" width="2" height="11" rx=".5"/></svg>
+              <svg width="14" height="10" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M.7 5.6a8 8 0 0114.6 0"/><path d="M3 7.2a5.2 5.2 0 0110 0"/><path d="M5.4 8.8a2.8 2.8 0 015.2 0"/><circle cx="8" cy="10.4" r="1" fill="currentColor"/></svg>
+              <svg width="22" height="10" viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="1"><rect x="1" y="1" width="20" height="10" rx="2"/><rect x="22" y="3.5" width="1.5" height="5" fill="currentColor"/><rect x="2.5" y="2.5" width="14" height="7" rx="1.2" fill="currentColor"/></svg>
+            </div>
+          </div>
+          <div class="phone-content">
+            <div class="phone-scroll">
+              <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 rounded-full flex items-center justify-center" style="background:linear-gradient(135deg,#FBBF24,#F59E0B);"><span class="text-[10px] font-bold text-white">A</span></div>
+                  <div><p class="text-[11px] font-medium leading-tight">Andrés</p><p class="text-[9px] faint">AI tutor · Madrid</p></div>
+                </div>
+                <p class="text-[9px] faint font-mono">Lesson 24/120</p>
+              </div>
+              <!-- AI speaking -->
+              <div class="rounded-2xl rounded-bl-md p-3 mb-2" style="background:#F0FDF7;border:1px solid var(--hairline);">
+                <p class="text-[8px] faint font-mono uppercase tracking-widest mb-1.5">Andrés</p>
+                <p class="text-[12px] mb-2" style="font-style:italic;">"¿Dónde aprendiste a hablar español tan bien?"</p>
+                <div class="flex items-end gap-0.5 h-6">
+                  <span class="wave-bar" style="animation-delay:0s;height:8px;"></span>
+                  <span class="wave-bar" style="animation-delay:.1s;height:16px;"></span>
+                  <span class="wave-bar" style="animation-delay:.2s;height:22px;"></span>
+                  <span class="wave-bar" style="animation-delay:.3s;height:12px;"></span>
+                  <span class="wave-bar" style="animation-delay:.4s;height:18px;"></span>
+                  <span class="wave-bar" style="animation-delay:.5s;height:8px;"></span>
+                  <span class="wave-bar" style="animation-delay:.6s;height:14px;"></span>
+                  <span class="wave-bar" style="animation-delay:.7s;height:20px;"></span>
+                  <span class="wave-bar" style="animation-delay:.8s;height:10px;"></span>
+                  <span class="wave-bar" style="animation-delay:.9s;height:16px;"></span>
+                  <span class="wave-bar" style="animation-delay:1s;height:6px;"></span>
+                  <span class="wave-bar" style="animation-delay:1.1s;height:12px;"></span>
+                </div>
+                <p class="text-[9px] faint mt-1.5">Tap to replay slower</p>
+              </div>
+              <!-- User speaking -->
+              <div class="rounded-2xl rounded-br-md p-3 ml-6 mb-2" style="background:#10B981;color:#fff;">
+                <p class="text-[8px] opacity-70 font-mono uppercase tracking-widest mb-1.5">You · transcribed</p>
+                <p class="text-[12px]">"Aprendí en la <span class="bg-yellow-300/40 px-1 rounded">universidad</span> y luego viviendo en Buenos Aires por un año."</p>
+                <p class="text-[9px] opacity-80 mt-1.5">Accent ★★★★☆ · grammar 5/5</p>
+              </div>
+              <!-- Hint -->
+              <div class="rounded-xl p-2.5 mb-2 hairline" style="background:#FEF3C7;">
+                <p class="text-[10px]" style="color:#92400E;"><strong>Nudge:</strong> "universidad" — try softening the 'd' to nearly silent.</p>
+              </div>
+              <button class="w-full py-3 rounded-2xl text-[12px] font-medium" style="background:linear-gradient(135deg,#10B981,#047857);color:white;">Try that again</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- APP ICON BAND -->
+<section class="relative py-20 md:py-28">
+  <div class="max-w-3xl mx-auto px-6 text-center">
+    <div class="app-icon w-24 h-24 mx-auto flex items-center justify-center mb-8">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V10M12 10c0-3 1.5-6 5-7-.5 3.5-1.5 6-5 7zM12 12c0-2.5-1-5-4-6 .5 3 1 5 4 6z" fill="white" fill-opacity=".3"/></svg>
+    </div>
+    <h2 class="font-display text-3xl md:text-4xl mb-3">Built to actually speak, not just to score.</h2>
+    <p class="dim text-lg max-w-xl mx-auto">No streaks. No leagues. No owl shaming you at 11pm. Just real conversation practice with a tutor who keeps up.</p>
+  </div>
+</section>
+
+<!-- SCREENSHOTS STRIP -->
+<section class="relative py-12 overflow-hidden">
+  <div class="absolute inset-0 dot-grid opacity-50 pointer-events-none"></div>
+  <div class="marquee-track">
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;">
+        <div class="absolute inset-0 p-5 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Today</p>
+          <h4 class="font-display text-base mb-3">Spanish · day 42</h4>
+          <div class="space-y-1.5">
+            <div class="hairline rounded-lg p-2.5 text-[10px]"><p class="font-medium">Conditional + ojalá</p><p class="text-[9px] faint">6 min</p></div>
+            <div class="hairline rounded-lg p-2.5 text-[10px]"><p class="font-medium">Listen · Bogotá café</p><p class="text-[9px] faint">5 min</p></div>
+            <div class="hairline rounded-lg p-2.5 text-[10px]"><p class="font-medium">Speak with Andrés</p><p class="text-[9px] faint">8 min · live</p></div>
+          </div>
+          <div class="mt-3 rounded-lg p-2 text-[9px]" style="background:rgba(16,185,129,.1);">
+            <p class="font-mono">Streak: <span class="text-accent">retired in 2024 ✓</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;background:linear-gradient(180deg,#10B981,#064E3B);color:#fff;">
+        <div class="absolute inset-0 p-5 pt-12">
+          <p class="text-[8px] opacity-70 font-mono uppercase tracking-widest mb-2">Live · Andrés</p>
+          <div class="w-20 h-20 mx-auto rounded-full mb-3 flex items-center justify-center" style="background:rgba(255,255,255,.15);"><div class="flex items-end gap-0.5 h-8"><span class="wave-bar" style="background:#fff;height:8px;"></span><span class="wave-bar" style="background:#fff;animation-delay:.1s;"></span><span class="wave-bar" style="background:#fff;animation-delay:.2s;height:24px;"></span><span class="wave-bar" style="background:#fff;animation-delay:.3s;"></span><span class="wave-bar" style="background:#fff;animation-delay:.4s;height:10px;"></span></div></div>
+          <p class="text-center text-[11px] mb-1">Andrés is speaking…</p>
+          <p class="text-center text-[9px] opacity-70 font-mono">5:14 elapsed</p>
+        </div>
+      </div>
+    </div>
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;">
+        <div class="absolute inset-0 p-5 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Progress · 6 mo</p>
+          <h4 class="font-display text-base mb-3">Conversational ✓</h4>
+          <div class="grid grid-cols-3 gap-1 text-[8px] mb-3">
+            <div class="aspect-square rounded p-1 flex flex-col justify-between" style="background:rgba(16,185,129,.18);"><p class="faint">CEFR</p><p class="font-mono text-accent font-bold">B2</p></div>
+            <div class="aspect-square rounded p-1 flex flex-col justify-between" style="background:rgba(16,185,129,.18);"><p class="faint">Words</p><p class="font-mono text-accent font-bold">2,408</p></div>
+            <div class="aspect-square rounded p-1 flex flex-col justify-between" style="background:rgba(16,185,129,.18);"><p class="faint">Hours</p><p class="font-mono text-accent font-bold">62</p></div>
+          </div>
+          <svg viewBox="0 0 140 60" class="w-full"><polyline points="0,52 14,48 28,46 42,38 56,40 70,28 84,30 98,18 112,22 126,12 140,8" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+    </div>
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;">
+        <div class="absolute inset-0 p-5 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Languages</p>
+          <div class="space-y-1.5">
+            <div class="hairline rounded-lg p-2 text-[10px] flex items-center gap-2"><span>🇪🇸</span><span class="font-medium">Spanish</span><span class="ml-auto font-mono faint">B2</span></div>
+            <div class="hairline rounded-lg p-2 text-[10px] flex items-center gap-2"><span>🇯🇵</span><span class="font-medium">Japanese</span><span class="ml-auto font-mono faint">A2</span></div>
+            <div class="hairline rounded-lg p-2 text-[10px] flex items-center gap-2"><span>🇫🇷</span><span class="font-medium">French</span><span class="ml-auto font-mono faint">A1</span></div>
+            <div class="hairline rounded-lg p-2 text-[10px] flex items-center gap-2"><span>🇨🇳</span><span class="font-medium">Mandarin</span><span class="ml-auto font-mono faint">—</span></div>
+            <div class="hairline rounded-lg p-2 text-[10px] flex items-center gap-2 opacity-50"><span>+</span><span>Add another</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;">
+        <div class="absolute inset-0 p-5 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Listening</p>
+          <h4 class="font-display text-base mb-3">Bogotá café</h4>
+          <div class="rounded-lg p-3 mb-2 hairline" style="background:#F0FDF7;">
+            <p class="text-[10px] italic">"Bueno, lo que pasa es que..."</p>
+            <p class="text-[9px] faint mt-1.5">— Sofía, barista</p>
+          </div>
+          <div class="rounded-lg p-3 mb-2 hairline">
+            <p class="text-[10px] italic faint">"...es que cobramos siete mil por el café con leche."</p>
+            <p class="text-[9px] faint mt-1.5">— Sofía, barista</p>
+          </div>
+          <p class="text-[9px] text-center font-mono faint mt-2">Tap for transcript</p>
+        </div>
+      </div>
+    </div>
+    <!-- duplicate -->
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;">
+        <div class="absolute inset-0 p-5 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Today</p>
+          <h4 class="font-display text-base mb-3">Spanish · day 42</h4>
+          <div class="space-y-1.5">
+            <div class="hairline rounded-lg p-2.5 text-[10px]"><p class="font-medium">Conditional + ojalá</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;background:linear-gradient(180deg,#10B981,#064E3B);color:#fff;">
+        <div class="absolute inset-0 p-5 pt-12">
+          <p class="text-[8px] opacity-70 font-mono uppercase tracking-widest mb-2">Live · Andrés</p>
+          <p class="text-center text-[11px]">Andrés is speaking…</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how" class="relative max-w-7xl mx-auto px-6 py-24 md:py-32">
+  <div class="max-w-2xl mb-16">
+    <p class="text-accent font-mono text-xs uppercase tracking-widest mb-4">How it works</p>
+    <h2 class="font-display text-4xl md:text-5xl mb-5">From "hola" to a real conversation in 16 weeks.</h2>
+    <p class="dim text-lg">Three things compound: vocabulary built around your interests, listening practice with native speakers, and weekly conversation with an AI tutor who tracks your accent.</p>
+  </div>
+  <div class="grid md:grid-cols-3 gap-6">
+    <div class="card p-7 relative">
+      <div class="flex items-center justify-between mb-6"><span class="font-mono text-xs faint">01</span><span class="text-xs px-2.5 py-1 rounded-full bg-accent-soft text-accent">~5 minutes</span></div>
+      <div class="phone mx-auto mb-7" style="width:160px;height:320px;padding:5px;border-radius:28px;">
+        <div class="phone-screen" style="border-radius:23px;">
+          <div class="absolute inset-0 p-4 pt-10">
+            <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Placement</p>
+            <h5 class="font-display text-[13px] mb-3">Hablas un poco?</h5>
+            <div class="space-y-1.5 text-[10px]">
+              <div class="rounded-lg p-2" style="background:rgba(16,185,129,.1);border:1px solid var(--accent);"><span class="font-medium">Un poquito — basics</span></div>
+              <div class="hairline rounded-lg p-2">Some travel-level Spanish</div>
+              <div class="hairline rounded-lg p-2">Took a class in high school</div>
+              <div class="hairline rounded-lg p-2">Already conversational</div>
+              <div class="hairline rounded-lg p-2 faint">Total beginner</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h3 class="font-display text-xl mb-2">5-minute placement.</h3>
+      <p class="dim text-sm">Speak a few phrases, tell us why you're learning. We calibrate to your CEFR level + your real motivation (work, family, travel, just curious).</p>
+    </div>
+    <div class="card p-7 relative">
+      <div class="flex items-center justify-between mb-6"><span class="font-mono text-xs faint">02</span><span class="text-xs px-2.5 py-1 rounded-full bg-accent-soft text-accent">15 min/day</span></div>
+      <div class="phone mx-auto mb-7" style="width:160px;height:320px;padding:5px;border-radius:28px;">
+        <div class="phone-screen" style="border-radius:23px;">
+          <div class="absolute inset-0 p-4 pt-10">
+            <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Today · 15 min</p>
+            <div class="space-y-1.5 text-[10px]">
+              <div class="flex items-center gap-2 p-1.5 rounded-lg hairline"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2"><path d="M12 19c-4 0-8-3-8-7 0-1.5.5-3 1.5-4.5"/><path d="M20 12c0 4-4 7-8 7"/><path d="M16 5l4 7-7 4"/></svg><span class="font-medium">Words</span><span class="ml-auto font-mono faint">5m</span></div>
+              <div class="flex items-center gap-2 p-1.5 rounded-lg hairline"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2"><path d="M3 12a9 9 0 0118 0M3 12a9 9 0 0018 0"/></svg><span class="font-medium">Listen</span><span class="ml-auto font-mono faint">5m</span></div>
+              <div class="flex items-center gap-2 p-1.5 rounded-lg hairline"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/></svg><span class="font-medium">Speak</span><span class="ml-auto font-mono faint">5m</span></div>
+            </div>
+            <div class="rounded-lg p-2 mt-3 text-[9px]" style="background:rgba(16,185,129,.1);">
+              <p class="font-mono text-accent">Twice a week:</p>
+              <p>20-min live with Andrés</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h3 class="font-display text-xl mb-2">15 minutes adaptive lessons.</h3>
+      <p class="dim text-sm">Vocabulary tied to your interests. Listening to real native speakers. Speaking with phonetic correction. Daily, automatically.</p>
+    </div>
+    <div class="card p-7 relative">
+      <div class="flex items-center justify-between mb-6"><span class="font-mono text-xs faint">03</span><span class="text-xs px-2.5 py-1 rounded-full bg-accent-soft text-accent">Month 4</span></div>
+      <div class="phone mx-auto mb-7" style="width:160px;height:320px;padding:5px;border-radius:28px;">
+        <div class="phone-screen" style="border-radius:23px;background:linear-gradient(180deg,#10B981,#047857);color:#fff;">
+          <div class="absolute inset-0 p-4 pt-10 text-center">
+            <p class="text-[8px] opacity-70 font-mono uppercase tracking-widest mb-3">Milestone</p>
+            <svg width="40" height="40" viewBox="0 0 24 24" class="mx-auto mb-3" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M22 12h-4M6 12H2M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>
+            <h5 class="font-display text-base mb-1">B1 → B2</h5>
+            <p class="text-[10px] opacity-80">Conversational</p>
+            <p class="text-[9px] opacity-60 font-mono mt-3">62h total · day 124</p>
+          </div>
+        </div>
+      </div>
+      <h3 class="font-display text-xl mb-2">Conversational by month 4.</h3>
+      <p class="dim text-sm">84% of consistent users hit B1/B2 by month four. Real conversations, real situations — not "the cat is on the table" indefinitely.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURE TRIO -->
+<section id="features" class="relative max-w-7xl mx-auto px-6 py-20">
+  <div class="grid md:grid-cols-2 gap-12 md:gap-16 items-center mb-28">
+    <div>
+      <p class="text-accent font-mono text-xs uppercase tracking-widest mb-4">AI tutors</p>
+      <h3 class="font-display text-3xl md:text-4xl mb-5">Tutors who speak the way locals actually do.</h3>
+      <p class="dim text-lg mb-6">Each language has 3–5 AI tutors with distinct regional voices. Spanish has Andrés from Madrid, Sofía from Bogotá, Marcos from Mexico City. They have personalities, they remember last week's conversation, and they slow down when you ask.</p>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-[color:var(--text)]">Real accents, not "neutral".</span> <span class="dim">You'll learn rioplatense if you choose Buenos Aires Sofía, not Castilian-by-default.</span></span></li>
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-[color:var(--text)]">Memory across conversations.</span> <span class="dim">Andrés knows you're a backend engineer who's planning a trip to Sevilla in October.</span></span></li>
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-[color:var(--text)]">Adjustable speed + transcript.</span> <span class="dim">Slow it down, replay a phrase, see the text. All three on one tap.</span></span></li>
+      </ul>
+    </div>
+    <div class="relative flex justify-center">
+      <div class="phone-glow"></div>
+      <div class="phone phone-tilt" style="width:240px;height:496px;">
+        <div class="phone-notch" style="width:84px;height:24px;"></div>
+        <div class="phone-screen">
+          <div class="absolute inset-0 p-4 pt-12">
+            <p class="text-[9px] faint font-mono uppercase tracking-widest mb-3">Choose a tutor</p>
+            <div class="space-y-2.5">
+              <div class="rounded-2xl p-3 hairline flex items-center gap-3" style="background:#F0FDF7;border-color:var(--accent);">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background:linear-gradient(135deg,#F59E0B,#D97706);"><span class="text-white font-bold text-sm">A</span></div>
+                <div class="flex-1"><p class="text-[11px] font-medium">Andrés</p><p class="text-[9px] dim">Madrid · Castilian</p></div>
+                <svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>
+              </div>
+              <div class="rounded-2xl p-3 hairline flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background:linear-gradient(135deg,#EC4899,#DB2777);"><span class="text-white font-bold text-sm">S</span></div>
+                <div class="flex-1"><p class="text-[11px] font-medium">Sofía</p><p class="text-[9px] dim">Bogotá · Colombian</p></div>
+              </div>
+              <div class="rounded-2xl p-3 hairline flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background:linear-gradient(135deg,#8B5CF6,#7C3AED);"><span class="text-white font-bold text-sm">M</span></div>
+                <div class="flex-1"><p class="text-[11px] font-medium">Marcos</p><p class="text-[9px] dim">CDMX · Mexican</p></div>
+              </div>
+              <div class="rounded-2xl p-3 hairline flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background:linear-gradient(135deg,#06B6D4,#0891B2);"><span class="text-white font-bold text-sm">V</span></div>
+                <div class="flex-1"><p class="text-[11px] font-medium">Valentina</p><p class="text-[9px] dim">Buenos Aires · Rioplatense</p></div>
+              </div>
+            </div>
+            <p class="text-[9px] faint font-mono text-center mt-4">Switch anytime · history carries</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-12 md:gap-16 items-center mb-28">
+    <div class="md:order-2">
+      <p class="text-accent font-mono text-xs uppercase tracking-widest mb-4">Accent training</p>
+      <h3 class="font-display text-3xl md:text-4xl mb-5">Hear your own accent — and fix it.</h3>
+      <p class="dim text-lg mb-6">Each spoken sentence is graded on pronunciation by syllable. You see where your accent diverges from native, hear the difference back-to-back, and re-record until it lands. Not perfectionism — just specific.</p>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-[color:var(--text)]">Per-syllable breakdown.</span> <span class="dim">"u-ni-ver-si-dad" → which syllable was off, by how much.</span></span></li>
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-[color:var(--text)]">A/B native playback.</span> <span class="dim">Tap to hear your version, then native, side-by-side, instantly.</span></span></li>
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-[color:var(--text)]">Region-specific scoring.</span> <span class="dim">If you chose Buenos Aires Spanish, you're scored against that, not Madrid.</span></span></li>
+      </ul>
+    </div>
+    <div class="relative md:order-1 flex justify-center">
+      <div class="phone-glow"></div>
+      <div class="phone phone-tilt" style="width:240px;height:496px;transform:perspective(1600px) rotateY(6deg) rotateX(2deg);">
+        <div class="phone-notch" style="width:84px;height:24px;"></div>
+        <div class="phone-screen">
+          <div class="absolute inset-0 p-4 pt-12">
+            <p class="text-[9px] faint font-mono uppercase tracking-widest mb-2">Accent check</p>
+            <h5 class="font-display text-base mb-2">¿Dónde está la universidad?</h5>
+            <div class="flex flex-wrap gap-1 mb-4">
+              <span class="text-[11px] px-1.5 py-0.5 rounded" style="background:rgba(16,185,129,.16);color:#047857;">¿Dón</span>
+              <span class="text-[11px] px-1.5 py-0.5 rounded" style="background:rgba(16,185,129,.16);color:#047857;">de</span>
+              <span class="text-[11px] px-1.5 py-0.5 rounded" style="background:rgba(16,185,129,.16);color:#047857;">es</span>
+              <span class="text-[11px] px-1.5 py-0.5 rounded" style="background:rgba(16,185,129,.16);color:#047857;">tá</span>
+              <span class="text-[11px] px-1.5 py-0.5 rounded" style="background:rgba(16,185,129,.16);color:#047857;">la</span>
+              <span class="text-[11px] px-1.5 py-0.5 rounded" style="background:rgba(245,158,11,.2);color:#92400E;">u-ni</span>
+              <span class="text-[11px] px-1.5 py-0.5 rounded" style="background:rgba(245,158,11,.2);color:#92400E;">-ver</span>
+              <span class="text-[11px] px-1.5 py-0.5 rounded" style="background:rgba(239,68,68,.2);color:#991B1B;">-si</span>
+              <span class="text-[11px] px-1.5 py-0.5 rounded" style="background:rgba(16,185,129,.16);color:#047857;">-dad?</span>
+            </div>
+            <div class="rounded-xl p-3 hairline mb-3" style="background:#F0FDF7;">
+              <p class="text-[10px] mb-2"><strong>Nudge:</strong> The 'd' in <span class="font-mono">-dad</span> is nearly silent in Castilian.</p>
+              <div class="flex gap-2">
+                <button class="flex-1 py-1.5 rounded-lg text-[10px] font-medium hairline">You</button>
+                <button class="flex-1 py-1.5 rounded-lg text-[10px] font-medium" style="background:var(--accent);color:#fff;">Andrés</button>
+              </div>
+            </div>
+            <button class="w-full py-2.5 rounded-xl text-[11px] font-medium" style="background:linear-gradient(135deg,#10B981,#047857);color:#fff;">Try again</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-12 md:gap-16 items-center">
+    <div>
+      <p class="text-accent font-mono text-xs uppercase tracking-widest mb-4">Real situations</p>
+      <h3 class="font-display text-3xl md:text-4xl mb-5">Conversations that map to your real life.</h3>
+      <p class="dim text-lg mb-6">Tell us why you're learning — moving to Japan, partner's family in Mexico, work trip to Paris. Lesson content rebuilds around it. The vocab for "leasing an apartment" gets pushed up if you said Tokyo in October.</p>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-[color:var(--text)]">Goal-driven curriculum.</span> <span class="dim">"DELE B2 in 8 months" reshapes everything from grammar order to vocab priority.</span></span></li>
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-[color:var(--text)]">Built-in scenarios.</span> <span class="dim">Pharmacy in Mexico City. Train ticket in Tokyo. Dinner with your in-laws. 184 scenarios.</span></span></li>
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-[color:var(--text)]">Career packs.</span> <span class="dim">Spanish for medicine, French for legal, Japanese for engineering. Optional, add-on.</span></span></li>
+      </ul>
+    </div>
+    <div class="relative flex justify-center">
+      <div class="phone-glow"></div>
+      <div class="phone phone-tilt" style="width:240px;height:496px;">
+        <div class="phone-notch" style="width:84px;height:24px;"></div>
+        <div class="phone-screen">
+          <div class="absolute inset-0 p-4 pt-12">
+            <p class="text-[9px] faint font-mono uppercase tracking-widest mb-2">Scenarios · Spanish</p>
+            <div class="space-y-2 text-[11px]">
+              <div class="rounded-xl p-3 hairline" style="background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.3);"><p class="font-medium">🏥 At the pharmacy · Bogotá</p><p class="text-[9px] dim mt-1">Filling a prescription with a Q&A back-and-forth</p></div>
+              <div class="rounded-xl p-3 hairline"><p class="font-medium">🍴 Dinner with your in-laws · Mexico</p><p class="text-[9px] dim mt-1">Formal address, food vocab, polite refusal</p></div>
+              <div class="rounded-xl p-3 hairline"><p class="font-medium">✈️ Airbnb check-in · Madrid</p><p class="text-[9px] dim mt-1">"The boiler isn't working" + handling repairs</p></div>
+              <div class="rounded-xl p-3 hairline"><p class="font-medium">💼 First day at the office · Buenos Aires</p><p class="text-[9px] dim mt-1">Workplace introductions, asking for clarification</p></div>
+              <div class="rounded-xl p-3 hairline opacity-50"><p class="font-medium">🚂 Train delays · Barcelona</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- OUTCOMES -->
+<section id="languages" class="relative py-24 md:py-28 border-t hairline">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <p class="text-accent font-mono text-xs uppercase tracking-widest mb-3">By the numbers</p>
+      <h2 class="font-display text-3xl md:text-4xl">1.4 million adults. 12 languages. One that works.</h2>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div class="card p-7 text-center">
+        <p class="font-display text-5xl md:text-6xl mb-2 text-accent">1.4<span class="text-2xl">M</span></p>
+        <p class="text-sm dim">adult learners worldwide</p>
+      </div>
+      <div class="card p-7 text-center">
+        <p class="font-display text-5xl md:text-6xl mb-2 text-accent">84<span class="text-2xl">%</span></p>
+        <p class="text-sm dim">hit conversational by month 4 (consistent users)</p>
+      </div>
+      <div class="card p-7 text-center">
+        <p class="font-display text-5xl md:text-6xl mb-2 text-accent">12</p>
+        <p class="text-sm dim">languages with native AI tutors</p>
+      </div>
+      <div class="card p-7 text-center">
+        <p class="font-display text-5xl md:text-6xl mb-2 text-accent">4.8<span class="text-2xl">★</span></p>
+        <p class="text-sm dim">from 38,408 App Store reviews</p>
+      </div>
+    </div>
+    <div class="mt-12 flex flex-wrap gap-2 justify-center">
+      <span class="px-3 py-1.5 rounded-full text-xs font-medium hairline" style="background:#fff;">🇪🇸 Spanish</span>
+      <span class="px-3 py-1.5 rounded-full text-xs font-medium hairline" style="background:#fff;">🇯🇵 Japanese</span>
+      <span class="px-3 py-1.5 rounded-full text-xs font-medium hairline" style="background:#fff;">🇫🇷 French</span>
+      <span class="px-3 py-1.5 rounded-full text-xs font-medium hairline" style="background:#fff;">🇨🇳 Mandarin</span>
+      <span class="px-3 py-1.5 rounded-full text-xs font-medium hairline" style="background:#fff;">🇩🇪 German</span>
+      <span class="px-3 py-1.5 rounded-full text-xs font-medium hairline" style="background:#fff;">🇮🇹 Italian</span>
+      <span class="px-3 py-1.5 rounded-full text-xs font-medium hairline" style="background:#fff;">🇰🇷 Korean</span>
+      <span class="px-3 py-1.5 rounded-full text-xs font-medium hairline" style="background:#fff;">🇧🇷 Portuguese</span>
+      <span class="px-3 py-1.5 rounded-full text-xs font-medium hairline" style="background:#fff;">🇸🇦 Arabic</span>
+      <span class="px-3 py-1.5 rounded-full text-xs font-medium hairline" style="background:#fff;">🇳🇱 Dutch</span>
+      <span class="px-3 py-1.5 rounded-full text-xs font-medium hairline" style="background:#fff;">🇹🇷 Turkish</span>
+      <span class="px-3 py-1.5 rounded-full text-xs font-medium hairline" style="background:#fff;">🇵🇱 Polish</span>
+    </div>
+  </div>
+</section>
+
+<!-- REVIEWS -->
+<section class="relative max-w-7xl mx-auto px-6 py-24 md:py-32">
+  <div class="max-w-2xl mb-14">
+    <p class="text-accent font-mono text-xs uppercase tracking-widest mb-4">Reviews</p>
+    <h2 class="font-display text-4xl md:text-5xl mb-5">Adult learners. Real conversations.</h2>
+  </div>
+  <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+    <div class="card p-7">
+      <div class="flex gap-0.5 mb-4"><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg></div>
+      <p class="text-base leading-relaxed mb-5">"Six months of Sprout > 3 years of Duolingo. I actually had a 20-minute conversation with my partner's grandmother last week."</p>
+      <p class="text-sm dim">— Hana, San Francisco</p>
+    </div>
+    <div class="card p-7">
+      <div class="flex gap-0.5 mb-4"><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg></div>
+      <p class="text-base leading-relaxed mb-5">"Andrés is patient in a way no human tutor I could afford has ever been. He never sighs when I get a tense wrong."</p>
+      <p class="text-sm dim">— Marcus, Austin</p>
+    </div>
+    <div class="card p-7">
+      <div class="flex gap-0.5 mb-4"><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg></div>
+      <p class="text-base leading-relaxed mb-5">"Took the JLPT N4 after 5 months on Sprout, passed first try. The scenario for 'the conbini at 2am' was suspiciously perfect."</p>
+      <p class="text-sm dim">— Priya, London</p>
+    </div>
+    <div class="card p-7">
+      <div class="flex gap-0.5 mb-4"><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star-dim"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg></div>
+      <p class="text-base leading-relaxed mb-5">"Wish German had more tutors — only two right now. But the two it has are excellent, and my accent went from 'foreign' to 'maybe Swiss' in 4 months."</p>
+      <p class="text-sm dim">— Yusuf, Amsterdam</p>
+    </div>
+    <div class="card p-7">
+      <div class="flex gap-0.5 mb-4"><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg></div>
+      <p class="text-base leading-relaxed mb-5">"I'm 47 and was sure language was over for me. Eight months in, I moderated a meeting in French. With a sense of humor, even."</p>
+      <p class="text-sm dim">— Ines, Toronto</p>
+    </div>
+    <div class="card p-7">
+      <div class="flex gap-0.5 mb-4"><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg></div>
+      <p class="text-base leading-relaxed mb-5">"The fact that there's no 'streak' is the unlock. I miss two days, I come back, no penalty. Lessons just pick up. Imagine."</p>
+      <p class="text-sm dim">— Aoife, Galway</p>
+    </div>
+  </div>
+</section>
+
+<!-- APP STORE RATING -->
+<section class="relative py-24 md:py-28 border-t hairline">
+  <div class="max-w-5xl mx-auto px-6">
+    <div class="grid md:grid-cols-2 gap-12 md:gap-16 items-center">
+      <div class="text-center md:text-left">
+        <p class="text-accent font-mono text-xs uppercase tracking-widest mb-4">App Store rating</p>
+        <p class="font-display text-7xl md:text-8xl mb-3">4.8<span class="text-3xl text-accent">★</span></p>
+        <div class="flex gap-1 justify-center md:justify-start mb-4">
+          <svg width="22" height="22" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="22" height="22" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="22" height="22" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="22" height="22" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="22" height="22" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg>
+        </div>
+        <p class="dim font-mono text-sm">38,408 ratings · Education · Top 8</p>
+      </div>
+      <div class="space-y-3">
+        <div class="flex items-center gap-3"><span class="text-xs font-mono w-4 dim">5★</span><div class="bar-track flex-1"><div class="bar-fill" style="width:86%;"></div></div><span class="text-xs font-mono w-12 text-right dim">86%</span></div>
+        <div class="flex items-center gap-3"><span class="text-xs font-mono w-4 dim">4★</span><div class="bar-track flex-1"><div class="bar-fill" style="width:10%;"></div></div><span class="text-xs font-mono w-12 text-right dim">10%</span></div>
+        <div class="flex items-center gap-3"><span class="text-xs font-mono w-4 dim">3★</span><div class="bar-track flex-1"><div class="bar-fill" style="width:2%;"></div></div><span class="text-xs font-mono w-12 text-right dim">2%</span></div>
+        <div class="flex items-center gap-3"><span class="text-xs font-mono w-4 dim">2★</span><div class="bar-track flex-1"><div class="bar-fill" style="width:1%;"></div></div><span class="text-xs font-mono w-12 text-right dim">1%</span></div>
+        <div class="flex items-center gap-3"><span class="text-xs font-mono w-4 dim">1★</span><div class="bar-track flex-1"><div class="bar-fill" style="width:1%;"></div></div><span class="text-xs font-mono w-12 text-right dim">1%</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="relative max-w-5xl mx-auto px-6 py-24 md:py-32">
+  <div class="max-w-2xl mb-14">
+    <p class="text-accent font-mono text-xs uppercase tracking-widest mb-4">Pricing</p>
+    <h2 class="font-display text-4xl md:text-5xl mb-5">$14/mo, less than one tutor hour.</h2>
+    <p class="dim text-lg">Free is enough to know if Sprout is for you. Plus is what gets you to conversational.</p>
+  </div>
+  <div class="grid md:grid-cols-2 gap-5">
+    <div class="card p-8">
+      <div class="flex items-baseline justify-between mb-1"><h3 class="font-display text-2xl">Free</h3><p class="font-mono text-sm dim">$0</p></div>
+      <p class="dim text-sm mb-7">Test-drive without a card.</p>
+      <ul class="space-y-3 text-sm mb-8">
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>1 language</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>5 lessons/week</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>1 AI conversation/week</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>1 tutor voice per language</li>
+      </ul>
+      <a href="#" class="block text-center py-3 rounded-full text-sm font-medium btn-ghost">Start free</a>
+    </div>
+    <div class="card p-8 relative" style="background:linear-gradient(135deg,#ECFDF5,#D1FAE5);border-color:var(--accent);">
+      <div class="absolute -top-3 right-6 px-2.5 py-1 rounded-full text-[10px] font-medium font-mono uppercase tracking-widest" style="background:var(--accent);color:white;">Most popular</div>
+      <div class="flex items-baseline justify-between mb-1"><h3 class="font-display text-2xl">Plus</h3><p class="font-mono text-sm"><span class="text-2xl">$14</span><span class="dim">/mo</span></p></div>
+      <p class="dim text-sm mb-7">Get to conversational.</p>
+      <ul class="space-y-3 text-sm mb-8">
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>All 12 languages</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Unlimited lessons + AI conversations</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>All tutor voices (3–5 per language)</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>184 real-world scenarios</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Accent training + offline mode</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>7-day trial · cancel in-app</li>
+      </ul>
+      <a href="#" class="block text-center py-3 rounded-full text-sm font-medium btn-primary">Start Plus trial</a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="relative max-w-3xl mx-auto px-6 py-24 md:py-28">
+  <div class="text-center mb-14">
+    <p class="text-accent font-mono text-xs uppercase tracking-widest mb-4">FAQ</p>
+    <h2 class="font-display text-4xl md:text-5xl">What every adult learner asks first.</h2>
+  </div>
+  <div class="space-y-3">
+    <details class="card p-6" open>
+      <summary class="flex items-center justify-between gap-4">
+        <span class="font-display text-lg">How is this different from Duolingo, Babbel, Pimsleur?</span>
+        <svg class="chev shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <p class="mt-4 dim leading-relaxed">Duolingo gamifies vocabulary; you can't speak after a year. Pimsleur is audio-only and excellent for accent but slow on grammar. Babbel is solid for written exercises but rarely produces conversation. Sprout's core difference is the weekly AI conversations and per-syllable accent feedback — those two things make speaking the goal, not a side-effect. About 28% of our power users came from Duolingo specifically, and 84% of consistent users hit B1/B2 by month four; that's not a number Duolingo or Babbel publish.</p>
+    </details>
+    <details class="card p-6">
+      <summary class="flex items-center justify-between gap-4">
+        <span class="font-display text-lg">Is the AI tutor a real voice or synthetic?</span>
+        <svg class="chev shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <p class="mt-4 dim leading-relaxed">Synthetic, generated from a recording of a real native speaker who consented + is credited and paid royalties per conversation. The voice you hear as "Andrés" is built on hundreds of hours of recordings by a real Madrileño actor named Andrés Fuentes. We use modern voice models that handle prosody and regional intonation — most users tell us they couldn't tell within the first conversation, and the ones who could didn't mind.</p>
+    </details>
+    <details class="card p-6">
+      <summary class="flex items-center justify-between gap-4">
+        <span class="font-display text-lg">Can I practice for DELE / JLPT / DELF?</span>
+        <svg class="chev shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <p class="mt-4 dim leading-relaxed">Yes — Plus members can switch into an exam track for DELE (Spanish), JLPT N5–N1 (Japanese), DELF/DALF (French), HSK (Mandarin), and Goethe (German). The track replaces the default daily lessons with exam-aligned reading + listening + writing exercises, plus a final mock test with timing. About 14,000 of our members have passed an exam they prepped for on Sprout, JLPT N3 being the most common.</p>
+    </details>
+    <details class="card p-6">
+      <summary class="flex items-center justify-between gap-4">
+        <span class="font-display text-lg">Does it work offline on long flights?</span>
+        <svg class="chev shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <p class="mt-4 dim leading-relaxed">Plus members get a 7-day offline cache — lessons, listening exercises, vocab review all work without network. AI conversations require a connection (we run them server-side for latency), so you can't speak to Andrés mid-flight, but you can do everything else. Progress syncs the next time you're online.</p>
+    </details>
+    <details class="card p-6">
+      <summary class="flex items-center justify-between gap-4">
+        <span class="font-display text-lg">What languages are coming next?</span>
+        <svg class="chev shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <p class="mt-4 dim leading-relaxed">Hindi is launching in July 2026 (already in beta with 2,400 members). Vietnamese and Greek are slated for Q4. Hebrew is being scoped. We don't add languages until we have the native tutor talent + scenario library at the level the existing 12 ship at — half-baked language support is worse than no support, and we've held that line since launch. Vote for what you want next in Settings → Wishlist.</p>
+    </details>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section id="download" class="relative max-w-7xl mx-auto px-6 py-24 md:py-32">
+  <div class="hero-halo"></div>
+  <div class="text-center mb-12 relative z-10">
+    <h2 class="font-display text-4xl md:text-6xl mb-6">By month four, you'll have a conversation.</h2>
+    <p class="text-lg md:text-xl dim max-w-xl mx-auto mb-10">Free forever for one language. 7-day Plus trial when you're ready for the rest.</p>
+    <div class="flex flex-wrap gap-3 justify-center mb-10">
+      <a href="#" class="badge-store">
+        <svg width="22" height="26" viewBox="0 0 24 28" fill="currentColor"><path d="M17.5 14.7c0-3 2.5-4.5 2.6-4.5-1.4-2.1-3.6-2.4-4.4-2.4-1.9-.2-3.6 1.1-4.6 1.1-1 0-2.4-1.1-4-1-2 0-3.9 1.2-5 3-2.2 3.7-.6 9.2 1.5 12.2 1 1.5 2.2 3.2 3.8 3.1 1.5-.1 2.1-1 3.9-1 1.8 0 2.4 1 4 1 1.6 0 2.7-1.5 3.7-3 1.2-1.7 1.6-3.4 1.7-3.5-.1 0-3.2-1.3-3.2-4.9zm-3-9c.9-1 1.4-2.4 1.3-3.7-1.2 0-2.7.8-3.6 1.8-.8.9-1.5 2.3-1.3 3.6 1.3.1 2.7-.7 3.6-1.7z"/></svg>
+        <div class="flex flex-col text-left"><span class="badge-label">Download on the</span><span class="badge-name">App Store</span></div>
+      </a>
+      <a href="#" class="badge-store">
+        <svg width="22" height="24" viewBox="0 0 22 24"><path d="M1.4 1.2c-.3.3-.4.8-.4 1.4v18.8c0 .7.1 1.2.4 1.4l.1.1L11.7 12.1v-.2L1.5 1.1l-.1.1z" fill="#5BC9F4"/><path d="M15.1 15.6l-3.4-3.4v-.2l3.4-3.4.1.1 4.1 2.3c1.2.7 1.2 1.7 0 2.3l-4.1 2.3-.1z" fill="#FECC2F"/><path d="M15.2 15.5L11.7 12 1.4 22.8c.4.4 1 .5 1.8.1l12-6.8" fill="#EF4136"/><path d="M15.2 8.5L3.2 1.7c-.8-.4-1.4-.3-1.8.1L11.7 12l3.5-3.5z" fill="#0F9D58"/></svg>
+        <div class="flex flex-col text-left"><span class="badge-label">Get it on</span><span class="badge-name">Google Play</span></div>
+      </a>
+    </div>
+  </div>
+  <div class="relative flex justify-center">
+    <div class="phone-glow" style="width:60%;height:120px;"></div>
+    <div class="phone phone-float" style="width:300px;height:614px;">
+      <div class="phone-notch"></div>
+      <div class="phone-screen" style="background:linear-gradient(180deg,#ECFDF5,#D1FAE5);">
+        <div class="absolute inset-0 p-5 pt-14 flex flex-col items-center justify-center">
+          <div class="app-icon w-20 h-20 mb-6 flex items-center justify-center"><svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V10M12 10c0-3 1.5-6 5-7-.5 3.5-1.5 6-5 7zM12 12c0-2.5-1-5-4-6 .5 3 1 5 4 6z" fill="white" fill-opacity=".3"/></svg></div>
+          <h3 class="font-display text-2xl mb-2 text-center">¡Hola! Welcome to Sprout</h3>
+          <p class="text-[12px] dim text-center mb-6 max-w-[200px]">Pick a language. We'll calibrate in five minutes.</p>
+          <button class="w-full py-3 rounded-2xl text-sm font-medium" style="background:linear-gradient(135deg,#10B981,#047857);color:white;">Get started</button>
+          <p class="text-[10px] faint font-mono mt-4">No card · No streaks</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="relative border-t hairline py-10" style="background:#fff;">
+  <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div class="flex items-center gap-2.5">
+      <div class="app-icon w-7 h-7 flex items-center justify-center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V10M12 10c0-3 1.5-6 5-7-.5 3.5-1.5 6-5 7zM12 12c0-2.5-1-5-4-6 .5 3 1 5 4 6z" fill="white" fill-opacity=".3"/></svg></div>
+      <span class="font-display text-base">Sprout</span>
+      <span class="dim font-mono text-xs ml-3">v 5.4.2</span>
+    </div>
+    <div class="flex flex-wrap gap-7 text-sm dim">
+      <a href="#" class="hover:text-[color:var(--text)]">Privacy</a>
+      <a href="#" class="hover:text-[color:var(--text)]">Terms</a>
+      <a href="#" class="hover:text-[color:var(--text)]">Support</a>
+      <a href="#" class="hover:text-[color:var(--text)]">Careers</a>
+      <a href="#" class="hover:text-[color:var(--text)]">Roadmap</a>
+    </div>
+    <p class="faint text-xs font-mono">© 2026 Sprout Learning, Inc.</p>
+  </div>
+</footer>
+
+</body>
+</html>

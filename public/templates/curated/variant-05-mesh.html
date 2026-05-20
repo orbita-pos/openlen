@@ -1,0 +1,1620 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mesh — A distributed key/value store with built-in replication</title>
+  <meta name="description" content="Mesh is a distributed key/value store with built-in Raft replication, optimistic transactions, watches, and range queries. One static binary, 3-node minimum, no external coordination service." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: "#0A0F1A",
+            ink2: "#0D1320",
+            ink3: "#111927",
+            cream: "#F4F2EE",
+            gold: "#E5B047",
+            goldsoft: "#F0CE82",
+          },
+          fontFamily: {
+            sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+            mono: ["JetBrains Mono", "ui-monospace", "SFMono-Regular", "monospace"],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root {
+      --ink: #0A0F1A;
+      --gold: #E5B047;
+      --cream: #F4F2EE;
+      --hairline: rgba(255, 255, 255, 0.06);
+      --hairline-strong: rgba(255, 255, 255, 0.10);
+    }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+    body {
+      background: var(--ink);
+      color: var(--cream);
+      font-feature-settings: "ss01", "cv11";
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+    }
+    .display { letter-spacing: -0.04em; }
+    .display-tight { letter-spacing: -0.03em; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .hairline { border-color: var(--hairline); }
+    .hairline-t { border-top: 1px solid var(--hairline); }
+    .hairline-b { border-bottom: 1px solid var(--hairline); }
+    .hairline-strong { border-color: var(--hairline-strong); }
+
+    /* Ambient backgrounds */
+    .dot-grid {
+      background-image: radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+    .mesh-blob {
+      position: absolute;
+      border-radius: 9999px;
+      filter: blur(110px);
+      opacity: 0.5;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .hero-glow {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(560px 320px at 50% 8%, rgba(229, 176, 71, 0.20), transparent 70%),
+        radial-gradient(900px 480px at 50% -10%, rgba(229, 176, 71, 0.07), transparent 75%);
+      z-index: 0;
+    }
+
+    /* Marquee */
+    @keyframes marquee {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+    .marquee-track {
+      display: flex;
+      width: max-content;
+      animation: marquee 38s linear infinite;
+    }
+    .marquee-wrap:hover .marquee-track { animation-play-state: paused; }
+    @media (prefers-reduced-motion: reduce) {
+      .marquee-track { animation: none; }
+    }
+
+    /* Pulse dot */
+    @keyframes pulse-dot {
+      0% { box-shadow: 0 0 0 0 rgba(99, 209, 138, 0.55); }
+      70% { box-shadow: 0 0 0 9px rgba(99, 209, 138, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(99, 209, 138, 0); }
+    }
+    .pulse-dot {
+      width: 8px; height: 8px;
+      border-radius: 9999px;
+      background: #63D18A;
+      animation: pulse-dot 2.1s ease-out infinite;
+    }
+    @keyframes pulse-dot-gold {
+      0% { box-shadow: 0 0 0 0 rgba(229, 176, 71, 0.5); }
+      70% { box-shadow: 0 0 0 8px rgba(229, 176, 71, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(229, 176, 71, 0); }
+    }
+    .pulse-dot-gold {
+      width: 7px; height: 7px;
+      border-radius: 9999px;
+      background: var(--gold);
+      animation: pulse-dot-gold 2.4s ease-out infinite;
+    }
+
+    /* Copy pulse */
+    @keyframes copy-pulse {
+      0% { box-shadow: 0 0 0 0 rgba(229, 176, 71, 0.45); }
+      100% { box-shadow: 0 0 0 14px rgba(229, 176, 71, 0); }
+    }
+    .copy-pulse { animation: copy-pulse 0.6s ease-out; }
+
+    /* Count shimmer */
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .shimmer {
+      background: linear-gradient(100deg, var(--cream) 38%, var(--gold) 50%, var(--cream) 62%);
+      background-size: 200% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: shimmer 3.4s linear infinite;
+    }
+
+    /* Reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal.in { opacity: 1; transform: translateY(0); }
+    @media (prefers-reduced-motion: reduce) {
+      .reveal { opacity: 1; transform: none; transition: none; }
+    }
+
+    /* Code / syntax theme */
+    .code-panel {
+      background: #0B111E;
+      border: 1px solid var(--hairline);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    pre, code, .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+    .code-body {
+      font-size: 13px;
+      line-height: 1.72;
+      overflow-x: auto;
+    }
+    .code-body::-webkit-scrollbar { height: 8px; }
+    .code-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 8px; }
+    .ln {
+      display: inline-block;
+      width: 2.1em;
+      margin-right: 1.1em;
+      text-align: right;
+      color: rgba(244, 242, 238, 0.24);
+      user-select: none;
+    }
+    .tok-kw { color: #E5B047; }
+    .tok-fn { color: #7FB4E8; }
+    .tok-str { color: #97C794; }
+    .tok-num { color: #D89A6A; }
+    .tok-com { color: rgba(244, 242, 238, 0.34); font-style: italic; }
+    .tok-type { color: #C9A6E6; }
+    .tok-prop { color: #E0C98A; }
+    .tok-punc { color: rgba(244, 242, 238, 0.55); }
+    .tok-var { color: #F4F2EE; }
+    .tok-bool { color: #D89A6A; }
+    .tok-prompt { color: #E5B047; user-select: none; }
+
+    /* Buttons */
+    .btn {
+      transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn:active { transform: translateY(0); }
+
+    .card-lift {
+      transition: transform 0.13s ease, border-color 0.13s ease, background-color 0.13s ease;
+    }
+    .card-lift:hover {
+      transform: translateY(-3px);
+      border-color: var(--hairline-strong);
+    }
+
+    .gold-glow { box-shadow: 0 8px 40px -12px rgba(229, 176, 71, 0.42); }
+
+    /* FAQ */
+    details > summary { list-style: none; cursor: pointer; }
+    details > summary::-webkit-details-marker { display: none; }
+    details[open] .faq-chevron { transform: rotate(45deg); }
+    .faq-chevron { transition: transform 0.18s ease; }
+
+    /* Nav scrolled */
+    .nav-scrolled {
+      background: rgba(10, 15, 26, 0.82);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--hairline);
+    }
+
+    /* Mobile menu */
+    #mobileMenu { transition: opacity 0.2s ease, transform 0.2s ease; }
+    #mobileMenu.hidden-menu { opacity: 0; transform: translateY(-8px); pointer-events: none; }
+
+    ::selection { background: rgba(229, 176, 71, 0.30); color: #fff; }
+
+    .link-muted { transition: color 0.12s ease; }
+    .link-muted:hover { color: var(--cream); }
+
+    .node-pulse { animation: nodepulse 2.6s ease-in-out infinite; }
+    @keyframes nodepulse {
+      0%, 100% { opacity: 0.85; }
+      50% { opacity: 1; }
+    }
+  </style>
+</head>
+<body class="font-sans antialiased">
+
+  <!-- ============ 1. STICKY TOP NAV ============ -->
+  <header id="nav" class="fixed top-0 inset-x-0 z-50 transition-all duration-200">
+    <nav class="max-w-7xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
+      <!-- Logo + wordmark -->
+      <a href="#top" class="flex items-center gap-2.5 group">
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true" class="shrink-0">
+          <rect width="32" height="32" rx="8" fill="#111927"/>
+          <rect width="32" height="32" rx="8" stroke="#E5B047" stroke-opacity="0.25"/>
+          <circle cx="16" cy="8.5" r="2.6" fill="#E5B047"/>
+          <circle cx="8.4" cy="20.5" r="2.6" fill="#E5B047" fill-opacity="0.55"/>
+          <circle cx="23.6" cy="20.5" r="2.6" fill="#E5B047" fill-opacity="0.55"/>
+          <path d="M16 8.5 L8.4 20.5 M16 8.5 L23.6 20.5 M8.4 20.5 L23.6 20.5" stroke="#E5B047" stroke-width="1.4" stroke-opacity="0.7"/>
+        </svg>
+        <span class="text-[16.5px] font-700 display-tight">Mesh</span>
+      </a>
+
+      <!-- Desktop nav -->
+      <div class="hidden md:flex items-center gap-7 text-[14px] text-cream/62">
+        <a href="#docs" class="link-muted">Docs</a>
+        <a href="#examples" class="link-muted">Examples</a>
+        <a href="#blog" class="link-muted">Blog</a>
+        <a href="#community" class="link-muted">Community</a>
+      </div>
+
+      <!-- Right side -->
+      <div class="flex items-center gap-2.5">
+        <a href="#github" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full border hairline bg-ink3/60 text-[13px] btn hover:bg-ink3">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="text-cream/70">
+            <path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.9-.01 3.29 0 .32.22.7.83.58A12.01 12.01 0 0 0 24 12.5C24 5.87 18.63.5 12 .5Z"/>
+          </svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#E5B047" aria-hidden="true">
+            <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+          </svg>
+          <span class="mono text-[12.5px] tnum text-cream/80"><span data-count="14408" data-suffix="">0</span></span>
+        </a>
+        <a href="#start" class="hidden sm:inline-flex items-center px-4 py-1.5 rounded-full bg-gold text-ink text-[13px] font-600 btn hover:bg-goldsoft gold-glow">
+          Get started
+        </a>
+        <!-- Mobile toggle -->
+        <button id="menuBtn" class="md:hidden p-2 -mr-1 rounded-lg border hairline bg-ink3/60" aria-label="Open menu" aria-expanded="false">
+          <svg id="menuIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="text-cream">
+            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Mobile menu -->
+    <div id="mobileMenu" class="hidden-menu md:hidden mx-4 mb-3 rounded-2xl border hairline bg-ink2/95 backdrop-blur-lg p-4">
+      <div class="flex flex-col">
+        <a href="#docs" class="py-2.5 px-2 rounded-lg text-[15px] text-cream/80 hover:bg-ink3 hover:text-cream link-muted">Docs</a>
+        <a href="#examples" class="py-2.5 px-2 rounded-lg text-[15px] text-cream/80 hover:bg-ink3 hover:text-cream link-muted">Examples</a>
+        <a href="#blog" class="py-2.5 px-2 rounded-lg text-[15px] text-cream/80 hover:bg-ink3 hover:text-cream link-muted">Blog</a>
+        <a href="#community" class="py-2.5 px-2 rounded-lg text-[15px] text-cream/80 hover:bg-ink3 hover:text-cream link-muted">Community</a>
+        <div class="hairline-t mt-2 pt-3 flex flex-col gap-2">
+          <a href="#github" class="flex items-center justify-center gap-2 py-2.5 rounded-xl border hairline bg-ink3/60 text-[14px]">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" class="text-cream/70" aria-hidden="true"><path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.9-.01 3.29 0 .32.22.7.83.58A12.01 12.01 0 0 0 24 12.5C24 5.87 18.63.5 12 .5Z"/></svg>
+            <span>GitHub</span><span class="mono text-[12.5px] tnum text-gold">14.4k</span>
+          </a>
+          <a href="#start" class="flex items-center justify-center py-2.5 rounded-xl bg-gold text-ink text-[14px] font-600">Get started</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+
+    <!-- ============ 2. HERO ============ -->
+    <section class="relative overflow-hidden pt-32 sm:pt-40 pb-20 sm:pb-28">
+      <div class="hero-glow"></div>
+      <div class="mesh-blob" style="width:380px;height:380px;background:#E5B047;top:-90px;left:-60px;opacity:0.16;"></div>
+      <div class="mesh-blob" style="width:420px;height:420px;background:#3E5B86;bottom:-160px;right:-100px;opacity:0.22;"></div>
+
+      <div class="relative z-10 max-w-4xl mx-auto px-5 sm:px-8 text-center">
+        <!-- Version pill -->
+        <a href="#blog" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border hairline-strong bg-ink3/70 text-[12.5px] mb-7 btn hover:bg-ink3">
+          <span class="pulse-dot-gold"></span>
+          <span class="mono text-gold">v0.12</span>
+          <span class="text-cream/40">·</span>
+          <span class="text-cream/62">Released Mar 14, 2026</span>
+          <span class="text-cream/40">·</span>
+          <span class="text-cream/62">MIT</span>
+        </a>
+
+        <!-- Display headline (half-tone) -->
+        <h1 class="display text-[42px] leading-[1.04] sm:text-[64px] sm:leading-[1.02] lg:text-[74px] font-800">
+          Distributed K/V
+          <br class="hidden sm:block" />
+          <em class="not-italic text-gold">without the operational tax.</em>
+        </h1>
+
+        <p class="mt-6 text-[16.5px] sm:text-[18.5px] leading-relaxed text-cream/60 max-w-2xl mx-auto">
+          Mesh is a replicated key/value store with Raft built in — transactions, watches, and range queries
+          in one static binary. Three nodes, no Zookeeper, sane defaults.
+        </p>
+
+        <!-- Install code block -->
+        <div class="mt-9 max-w-xl mx-auto text-left">
+          <div class="code-panel">
+            <div class="flex items-center justify-between px-3.5 h-9 hairline-b bg-ink3/50">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-cream/12"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-cream/12"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-cream/12"></span>
+                <span class="mono text-[11.5px] text-cream/40 ml-1.5">Terminal — install</span>
+              </div>
+              <button class="copy-btn flex items-center gap-1.5 px-2 py-1 rounded-md text-[11.5px] text-cream/55 hover:text-cream hover:bg-cream/8 transition-colors" data-copy="cargo install mesh-server">
+                <svg class="copy-ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                <span class="copy-label">Copy</span>
+              </button>
+            </div>
+            <div class="px-4 py-3 mono text-[13.5px] leading-[1.7]">
+              <div><span class="tok-prompt">$</span> <span class="text-cream/90">cargo install mesh-server</span></div>
+              <div class="mt-1.5"><span class="tok-prompt">$</span> <span class="text-cream/90">npm install @mesh/client</span></div>
+            </div>
+          </div>
+          <p class="mt-2.5 text-[12px] text-cream/40 text-center">
+            Go and Python clients also available — <a href="#docs" class="text-cream/60 underline decoration-cream/20 underline-offset-2 hover:text-cream">see all SDKs</a>.
+          </p>
+        </div>
+
+        <!-- Dual CTA -->
+        <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <a href="#docs" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gold text-ink text-[14.5px] font-600 btn hover:bg-goldsoft gold-glow">
+            Read the docs
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </a>
+          <a href="#github" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl border hairline-strong bg-ink3/60 text-[14.5px] font-500 btn hover:bg-ink3">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="text-cream/80" aria-hidden="true"><path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.9-.01 3.29 0 .32.22.7.83.58A12.01 12.01 0 0 0 24 12.5C24 5.87 18.63.5 12 .5Z"/></svg>
+            View on GitHub · <span class="mono text-gold tnum">14.4k</span> stars
+          </a>
+        </div>
+
+        <!-- Stars sparkline -->
+        <div class="mt-10 inline-flex items-center gap-3 px-3.5 py-2 rounded-xl border hairline bg-ink2/60">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#E5B047" aria-hidden="true"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+          <span class="text-[12px] text-cream/55">Stars over 18 months</span>
+          <svg id="sparkline" width="148" height="32" viewBox="0 0 148 32" fill="none" aria-hidden="true">
+            <path id="sparkArea" fill="url(#sparkFill)" fill-opacity="0.5" d=""/>
+            <path id="sparkLine" stroke="#E5B047" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round" d=""/>
+            <circle id="sparkDot" r="2.4" fill="#E5B047"/>
+            <defs>
+              <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#E5B047" stop-opacity="0.35"/>
+                <stop offset="100%" stop-color="#E5B047" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <span class="mono text-[12px] text-gold tnum">+14.4k</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 3. TRUST BAR ============ -->
+    <section class="relative py-10 hairline-t hairline-b bg-ink2/40">
+      <p class="text-center text-[12px] uppercase tracking-[0.18em] text-cream/38 mb-7">Trusted in production at</p>
+      <div class="marquee-wrap relative overflow-hidden" style="mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);">
+        <div class="marquee-track items-center gap-14 px-7">
+          <!-- Track A -->
+          <svg width="118" height="24" viewBox="0 0 118 24" class="text-cream/40 shrink-0"><text x="0" y="17" font-family="Inter,sans-serif" font-size="17" font-weight="700" letter-spacing="-0.02em" fill="currentColor">Northwind</text></svg>
+          <svg width="92" height="24" viewBox="0 0 92 24" class="text-cream/40 shrink-0"><text x="0" y="17" font-family="Inter,sans-serif" font-size="17" font-weight="700" letter-spacing="-0.02em" fill="currentColor">Coilbase</text></svg>
+          <svg width="86" height="24" viewBox="0 0 86 24" class="text-cream/40 shrink-0"><text x="0" y="17" font-family="Inter,sans-serif" font-size="17" font-weight="800" letter-spacing="-0.03em" fill="currentColor">Helix</text></svg>
+          <svg width="108" height="24" viewBox="0 0 108 24" class="text-cream/40 shrink-0"><text x="0" y="17" font-family="Inter,sans-serif" font-size="17" font-weight="700" letter-spacing="-0.02em" fill="currentColor">Brightpath</text></svg>
+          <svg width="96" height="24" viewBox="0 0 96 24" class="text-cream/40 shrink-0"><text x="0" y="17" font-family="Inter,sans-serif" font-size="17" font-weight="700" letter-spacing="-0.02em" fill="currentColor">Quanta</text></svg>
+          <svg width="120" height="24" viewBox="0 0 120 24" class="text-cream/40 shrink-0"><text x="0" y="17" font-family="JetBrains Mono,monospace" font-size="15" font-weight="600" fill="currentColor">stream/io</text></svg>
+          <svg width="84" height="24" viewBox="0 0 84 24" class="text-cream/40 shrink-0"><text x="0" y="17" font-family="Inter,sans-serif" font-size="17" font-weight="800" letter-spacing="-0.03em" fill="currentColor">Drift</text></svg>
+          <svg width="104" height="24" viewBox="0 0 104 24" class="text-cream/40 shrink-0"><text x="0" y="17" font-family="Inter,sans-serif" font-size="17" font-weight="700" letter-spacing="-0.02em" fill="currentColor">Lumenly</text></svg>
+          <svg width="98" height="24" viewBox="0 0 98 24" class="text-cream/40 shrink-0"><text x="0" y="17" font-family="Inter,sans-serif" font-size="17" font-weight="700" letter-spacing="-0.02em" fill="currentColor">Pebble</text></svg>
+          <svg width="92" height="24" viewBox="0 0 92 24" class="text-cream/40 shrink-0"><text x="0" y="17" font-family="Inter,sans-serif" font-size="17" font-weight="700" letter-spacing="-0.02em" fill="currentColor">Vantix</text></svg>
+          <!-- Track B (duplicate) -->
+          <svg width="118" height="24" viewBox="0 0 118 24" class="text-cream/40 shrink-0" aria-hidden="true"><text x="0" y="17" font-family="Inter,sans-serif" font-size="17" font-weight="700" letter-spacing="-0.02em" fill="currentColor">Northwind</text></svg>
+          <svg width="92" height="24" viewBox="0 0 92 24" class="text-cream/40 shrink-0" aria-hidden="true"><text x="0" y="17" font-family="Inter,sans-serif" font-size="17" font-weight="700" letter-spacing="-0.02em" fill="currentColor">Coilbase</text></svg>
+          <svg width="86" height="24" viewBox="0 0 86 24" class="text-cream/40 shrink-0" aria-hidden="true"><text x="0" y="17" font-family="Inter,sans-serif" font-size="17" font-weight="800" letter-spacing="-0.03em" fill="currentColor">Helix</text></svg>
+          <svg width="108" height="24" viewBox="0 0 108 24" class="text-cream/40 shrink-0" aria-hidden="true"><text x="0" y="17" font-family="Inter,sans-serif" font-size="17" font-weight="700" letter-spacing="-0.02em" fill="currentColor">Brightpath</text></svg>
+          <svg width="96" height="24" viewBox="0 0 96 24" class="text-cream/40 shrink-0" aria-hidden="true"><text x="0" y="17" font-family="Inter,sans-serif" font-size="17" font-weight="700" letter-spacing="-0.02em" fill="currentColor">Quanta</text></svg>
+          <svg width="120" height="24" viewBox="0 0 120 24" class="text-cream/40 shrink-0" aria-hidden="true"><text x="0" y="17" font-family="JetBrains Mono,monospace" font-size="15" font-weight="600" fill="currentColor">stream/io</text></svg>
+          <svg width="84" height="24" viewBox="0 0 84 24" class="text-cream/40 shrink-0" aria-hidden="true"><text x="0" y="17" font-family="Inter,sans-serif" font-size="17" font-weight="800" letter-spacing="-0.03em" fill="currentColor">Drift</text></svg>
+          <svg width="104" height="24" viewBox="0 0 104 24" class="text-cream/40 shrink-0" aria-hidden="true"><text x="0" y="17" font-family="Inter,sans-serif" font-size="17" font-weight="700" letter-spacing="-0.02em" fill="currentColor">Lumenly</text></svg>
+          <svg width="98" height="24" viewBox="0 0 98 24" class="text-cream/40 shrink-0" aria-hidden="true"><text x="0" y="17" font-family="Inter,sans-serif" font-size="17" font-weight="700" letter-spacing="-0.02em" fill="currentColor">Pebble</text></svg>
+          <svg width="92" height="24" viewBox="0 0 92 24" class="text-cream/40 shrink-0" aria-hidden="true"><text x="0" y="17" font-family="Inter,sans-serif" font-size="17" font-weight="700" letter-spacing="-0.02em" fill="currentColor">Vantix</text></svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 4. HERO CODE EXAMPLE ============ -->
+    <section id="examples" class="relative py-20 sm:py-28 dot-grid">
+      <div class="absolute inset-0 bg-gradient-to-b from-ink via-transparent to-ink pointer-events-none"></div>
+      <div class="relative z-10 max-w-3xl mx-auto px-5 sm:px-8">
+        <div class="text-center mb-9 reveal">
+          <span class="text-[12px] uppercase tracking-[0.18em] text-gold/80">The client API</span>
+          <h2 class="mt-3 display text-[28px] sm:text-[38px] font-800 leading-[1.08]">
+            Connect, write, watch — <span class="text-cream/45">in twelve lines.</span>
+          </h2>
+          <p class="mt-3 text-[15px] text-cream/55 max-w-xl mx-auto">
+            No connection pool to tune, no consensus to configure. The client finds the leader and
+            follows it through elections automatically.
+          </p>
+        </div>
+
+        <div class="code-panel reveal gold-glow">
+          <div class="flex items-center justify-between px-3.5 h-10 hairline-b bg-ink3/50">
+            <div class="flex items-center gap-2.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-cream/12"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-cream/12"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-cream/12"></span>
+              <span class="mono text-[12px] text-cream/55 ml-1.5">client.ts</span>
+            </div>
+            <button class="copy-btn flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[12px] text-cream/55 hover:text-cream hover:bg-cream/8 transition-colors" data-copy="import { connect } from '@mesh/client'&#10;&#10;const cluster = await connect(['10.0.0.1:7700', '10.0.0.2:7700', '10.0.0.3:7700'])&#10;&#10;await cluster.put('user:1042', { name: 'Ada', tier: 'pro' })&#10;const user = await cluster.get('user:1042')&#10;&#10;const watcher = cluster.watch('user:1042')&#10;watcher.on('change', (ev) => console.log('updated ->', ev.value))&#10;&#10;await cluster.txn(async (tx) => {&#10;  const seats = await tx.get('org:9:seats')&#10;  if (seats.count >= seats.limit) throw new Error('seat limit reached')&#10;  await tx.put('org:9:seats', { ...seats, count: seats.count + 1 })&#10;})">
+              <svg class="copy-ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <span class="copy-label">Copy</span>
+            </button>
+          </div>
+          <div class="code-body px-4 py-4">
+<pre class="mono"><span class="ln">1</span><span class="tok-kw">import</span> <span class="tok-punc">{</span> <span class="tok-fn">connect</span> <span class="tok-punc">}</span> <span class="tok-kw">from</span> <span class="tok-str">'@mesh/client'</span>
+<span class="ln">2</span>
+<span class="ln">3</span><span class="tok-com">// the client tracks the leader through elections</span>
+<span class="ln">4</span><span class="tok-kw">const</span> <span class="tok-var">cluster</span> <span class="tok-punc">=</span> <span class="tok-kw">await</span> <span class="tok-fn">connect</span><span class="tok-punc">([</span><span class="tok-str">'10.0.0.1:7700'</span><span class="tok-punc">,</span> <span class="tok-str">'10.0.0.2:7700'</span><span class="tok-punc">,</span> <span class="tok-str">'10.0.0.3:7700'</span><span class="tok-punc">])</span>
+<span class="ln">5</span>
+<span class="ln">6</span><span class="tok-kw">await</span> <span class="tok-var">cluster</span><span class="tok-punc">.</span><span class="tok-fn">put</span><span class="tok-punc">(</span><span class="tok-str">'user:1042'</span><span class="tok-punc">,</span> <span class="tok-punc">{</span> <span class="tok-prop">name</span><span class="tok-punc">:</span> <span class="tok-str">'Ada'</span><span class="tok-punc">,</span> <span class="tok-prop">tier</span><span class="tok-punc">:</span> <span class="tok-str">'pro'</span> <span class="tok-punc">})</span>
+<span class="ln">7</span><span class="tok-kw">const</span> <span class="tok-var">user</span> <span class="tok-punc">=</span> <span class="tok-kw">await</span> <span class="tok-var">cluster</span><span class="tok-punc">.</span><span class="tok-fn">get</span><span class="tok-punc">(</span><span class="tok-str">'user:1042'</span><span class="tok-punc">)</span>
+<span class="ln">8</span>
+<span class="ln">9</span><span class="tok-com">// stream every change to a key</span>
+<span class="ln">10</span><span class="tok-kw">const</span> <span class="tok-var">watcher</span> <span class="tok-punc">=</span> <span class="tok-var">cluster</span><span class="tok-punc">.</span><span class="tok-fn">watch</span><span class="tok-punc">(</span><span class="tok-str">'user:1042'</span><span class="tok-punc">)</span>
+<span class="ln">11</span><span class="tok-var">watcher</span><span class="tok-punc">.</span><span class="tok-fn">on</span><span class="tok-punc">(</span><span class="tok-str">'change'</span><span class="tok-punc">,</span> <span class="tok-punc">(</span><span class="tok-var">ev</span><span class="tok-punc">)</span> <span class="tok-kw">=&gt;</span> <span class="tok-var">console</span><span class="tok-punc">.</span><span class="tok-fn">log</span><span class="tok-punc">(</span><span class="tok-str">'updated -&gt;'</span><span class="tok-punc">,</span> <span class="tok-var">ev</span><span class="tok-punc">.</span><span class="tok-prop">value</span><span class="tok-punc">))</span>
+<span class="ln">12</span>
+<span class="ln">13</span><span class="tok-com">// optimistic transaction — retried on conflict</span>
+<span class="ln">14</span><span class="tok-kw">await</span> <span class="tok-var">cluster</span><span class="tok-punc">.</span><span class="tok-fn">txn</span><span class="tok-punc">(</span><span class="tok-kw">async</span> <span class="tok-punc">(</span><span class="tok-var">tx</span><span class="tok-punc">)</span> <span class="tok-kw">=&gt;</span> <span class="tok-punc">{</span>
+<span class="ln">15</span>  <span class="tok-kw">const</span> <span class="tok-var">seats</span> <span class="tok-punc">=</span> <span class="tok-kw">await</span> <span class="tok-var">tx</span><span class="tok-punc">.</span><span class="tok-fn">get</span><span class="tok-punc">(</span><span class="tok-str">'org:9:seats'</span><span class="tok-punc">)</span>
+<span class="ln">16</span>  <span class="tok-kw">if</span> <span class="tok-punc">(</span><span class="tok-var">seats</span><span class="tok-punc">.</span><span class="tok-prop">count</span> <span class="tok-punc">&gt;=</span> <span class="tok-var">seats</span><span class="tok-punc">.</span><span class="tok-prop">limit</span><span class="tok-punc">)</span> <span class="tok-kw">throw new</span> <span class="tok-type">Error</span><span class="tok-punc">(</span><span class="tok-str">'seat limit reached'</span><span class="tok-punc">)</span>
+<span class="ln">17</span>  <span class="tok-kw">await</span> <span class="tok-var">tx</span><span class="tok-punc">.</span><span class="tok-fn">put</span><span class="tok-punc">(</span><span class="tok-str">'org:9:seats'</span><span class="tok-punc">,</span> <span class="tok-punc">{</span> <span class="tok-punc">...</span><span class="tok-var">seats</span><span class="tok-punc">,</span> <span class="tok-prop">count</span><span class="tok-punc">:</span> <span class="tok-var">seats</span><span class="tok-punc">.</span><span class="tok-prop">count</span> <span class="tok-punc">+</span> <span class="tok-num">1</span> <span class="tok-punc">})</span>
+<span class="ln">18</span><span class="tok-punc">})</span></pre>
+          </div>
+        </div>
+        <p class="mt-4 text-center text-[12.5px] text-cream/40">
+          The same five primitives exist verbatim in the Go, Python, and Rust clients.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============ 5. WHY THIS EXISTS ============ -->
+    <section id="docs" class="relative py-20 sm:py-28 hairline-t">
+      <div class="max-w-5xl mx-auto px-5 sm:px-8">
+        <div class="grid lg:grid-cols-[0.85fr_1.15fr] gap-12 lg:gap-16">
+          <div class="reveal">
+            <span class="text-[12px] uppercase tracking-[0.18em] text-gold/80">Why Mesh exists</span>
+            <h2 class="mt-3 display text-[28px] sm:text-[38px] font-800 leading-[1.08]">
+              There's a gap between Redis and a real database.
+            </h2>
+            <p class="mt-4 text-[14.5px] text-cream/55 leading-relaxed">
+              Mesh lives in that gap on purpose. It is bigger than a cache and far smaller than a SQL cluster —
+              the shape most teams actually reach for.
+            </p>
+            <div class="mt-7 p-4 rounded-xl border hairline bg-ink2/50">
+              <p class="mono text-[11.5px] text-gold mb-2.5">// the sweet spot</p>
+              <div class="flex items-center gap-2 text-[12.5px] text-cream/65">
+                <span class="mono text-cream/35">Redis</span>
+                <span class="flex-1 h-px bg-gradient-to-r from-cream/10 via-gold/40 to-cream/10"></span>
+                <span class="mono text-gold font-600">Mesh</span>
+                <span class="flex-1 h-px bg-gradient-to-r from-cream/10 via-gold/40 to-cream/10"></span>
+                <span class="mono text-cream/35">CockroachDB</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-5">
+            <p class="text-[15.5px] leading-[1.75] text-cream/72 reveal">
+              <span class="text-cream font-600">etcd, Consul, and FoundationDB are overkill for roughly 80% of the systems
+              that reach for them.</span> They were built for the hardest coordination problems on earth, and they
+              carry that weight everywhere: an external quorum to babysit, a Zookeeper-shaped learning curve, ops
+              runbooks measured in pages. If you are not running a control plane for a fleet, you are paying a tax
+              you will never use.
+            </p>
+            <p class="text-[15.5px] leading-[1.75] text-cream/72 reveal">
+              <span class="text-cream font-600">Redis, even with persistence turned on, is the wrong model the moment
+              you need replication and transactions.</span> AOF and RDB are durability bolted onto a single-process
+              cache; Sentinel and Cluster are failover bolted onto that. It works until a partition, a failover, or a
+              multi-key invariant exposes that there was never a consensus log underneath — and by then it is load-bearing.
+            </p>
+            <p class="text-[15.5px] leading-[1.75] text-cream/72 reveal">
+              <span class="text-cream font-600">Mesh is the boring middle, and that is the whole pitch.</span> One static
+              binary you can <span class="mono text-gold text-[14px]">scp</span> and run. A three-node minimum that elects a
+              leader and replicates through Raft with no external coordinator. Transactions, watches, and range queries are
+              first-class, not add-ons. Defaults that are correct on a fresh cluster — you tune Mesh when you have a reason,
+              never just to make it start.
+            </p>
+          </div>
+        </div>
+
+        <!-- Things we don't do -->
+        <div class="mt-12 p-6 sm:p-8 rounded-2xl border hairline bg-ink2/40 reveal">
+          <div class="flex items-center gap-2.5 mb-5">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E5B047" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></svg>
+            <h3 class="text-[15px] font-700 display-tight">Things Mesh deliberately does not do</h3>
+          </div>
+          <div class="grid sm:grid-cols-2 gap-x-8 gap-y-3.5">
+            <div class="flex gap-3 items-start">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7B8494" stroke-width="2.4" stroke-linecap="round" class="mt-1 shrink-0"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              <p class="text-[13.5px] text-cream/62 leading-relaxed"><span class="text-cream/85 font-500">No SQL or query planner.</span> It is a key/value store with range scans, not a relational database. If you need joins, you need Postgres.</p>
+            </div>
+            <div class="flex gap-3 items-start">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7B8494" stroke-width="2.4" stroke-linecap="round" class="mt-1 shrink-0"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              <p class="text-[13.5px] text-cream/62 leading-relaxed"><span class="text-cream/85 font-500">No external coordination service.</span> Mesh runs its own Raft. There is no Zookeeper, no separate quorum to operate.</p>
+            </div>
+            <div class="flex gap-3 items-start">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7B8494" stroke-width="2.4" stroke-linecap="round" class="mt-1 shrink-0"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              <p class="text-[13.5px] text-cream/62 leading-relaxed"><span class="text-cream/85 font-500">No tunable consistency knobs.</span> Reads and writes are linearizable. We do not ship an eventual-consistency mode for you to misconfigure.</p>
+            </div>
+            <div class="flex gap-3 items-start">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7B8494" stroke-width="2.4" stroke-linecap="round" class="mt-1 shrink-0"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              <p class="text-[13.5px] text-cream/62 leading-relaxed"><span class="text-cream/85 font-500">No plugin runtime or stored procedures.</span> No Lua, no server-side scripting. Logic lives in your application.</p>
+            </div>
+            <div class="flex gap-3 items-start">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7B8494" stroke-width="2.4" stroke-linecap="round" class="mt-1 shrink-0"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              <p class="text-[13.5px] text-cream/62 leading-relaxed"><span class="text-cream/85 font-500">No values over 8 MiB.</span> Mesh is not a blob store. Large objects belong in S3 with the key pointing at them.</p>
+            </div>
+            <div class="flex gap-3 items-start">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7B8494" stroke-width="2.4" stroke-linecap="round" class="mt-1 shrink-0"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              <p class="text-[13.5px] text-cream/62 leading-relaxed"><span class="text-cream/85 font-500">No hosted control panel.</span> Mesh is software you run. There is no SaaS upsell hiding behind the open-source label.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 6. FEATURES GRID ============ -->
+    <section class="relative py-20 sm:py-28 hairline-t bg-ink2/30">
+      <div class="max-w-6xl mx-auto px-5 sm:px-8">
+        <div class="text-center mb-12 reveal">
+          <span class="text-[12px] uppercase tracking-[0.18em] text-gold/80">What's in the binary</span>
+          <h2 class="mt-3 display text-[28px] sm:text-[40px] font-800 leading-[1.07]">
+            Everything a replicated store needs. <span class="text-cream/45">Nothing it doesn't.</span>
+          </h2>
+        </div>
+
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- 1 -->
+          <article class="card-lift p-5 rounded-2xl border hairline bg-ink/60">
+            <div class="w-9 h-9 rounded-lg bg-gold/12 border border-gold/20 flex items-center justify-center mb-3.5">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E5B047" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 1 0-7 7M19 12l2-2M19 12l2 2"/></svg>
+            </div>
+            <h3 class="text-[15.5px] font-700 display-tight">Built-in Raft replication</h3>
+            <p class="mt-2 text-[13px] text-cream/58 leading-relaxed">Every write goes through a Raft log replicated to a majority before it commits. Leader elections are automatic and finish in well under a second.</p>
+            <div class="mt-3.5 px-2.5 py-1.5 rounded-md bg-ink3/70 border hairline mono text-[11px] text-cream/65">commit_quorum = majority</div>
+          </article>
+          <!-- 2 -->
+          <article class="card-lift p-5 rounded-2xl border hairline bg-ink/60">
+            <div class="w-9 h-9 rounded-lg bg-gold/12 border border-gold/20 flex items-center justify-center mb-3.5">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E5B047" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 0 20M12 2a15.3 15.3 0 0 0 0 20"/></svg>
+            </div>
+            <h3 class="text-[15.5px] font-700 display-tight">Multi-region clusters</h3>
+            <p class="mt-2 text-[13px] text-cream/58 leading-relaxed">Pin replicas to regions and let learners serve low-latency local reads. Witness nodes break ties without storing a full copy of the data.</p>
+            <div class="mt-3.5 px-2.5 py-1.5 rounded-md bg-ink3/70 border hairline mono text-[11px] text-cream/65">--region=eu-west --witness</div>
+          </article>
+          <!-- 3 -->
+          <article class="card-lift p-5 rounded-2xl border hairline bg-ink/60">
+            <div class="w-9 h-9 rounded-lg bg-gold/12 border border-gold/20 flex items-center justify-center mb-3.5">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E5B047" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M8 21H3v-5M21 3l-7 7M3 21l7-7"/></svg>
+            </div>
+            <h3 class="text-[15.5px] font-700 display-tight">Optimistic transactions</h3>
+            <p class="mt-2 text-[13px] text-cream/58 leading-relaxed">Read keys, check invariants, write atomically. Mesh tracks the read set and aborts on conflict — the client retries the closure for you.</p>
+            <div class="mt-3.5 px-2.5 py-1.5 rounded-md bg-ink3/70 border hairline mono text-[11px] text-cream/65">cluster.txn(async tx =&gt; …)</div>
+          </article>
+          <!-- 4 -->
+          <article class="card-lift p-5 rounded-2xl border hairline bg-ink/60">
+            <div class="w-9 h-9 rounded-lg bg-gold/12 border border-gold/20 flex items-center justify-center mb-3.5">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E5B047" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+            <h3 class="text-[15.5px] font-700 display-tight">Watches</h3>
+            <p class="mt-2 text-[13px] text-cream/58 leading-relaxed">Subscribe to a key or a prefix and receive an ordered stream of changes — no polling. Watches resume from a revision after a reconnect.</p>
+            <div class="mt-3.5 px-2.5 py-1.5 rounded-md bg-ink3/70 border hairline mono text-[11px] text-cream/65">cluster.watch('cfg/', { since })</div>
+          </article>
+          <!-- 5 -->
+          <article class="card-lift p-5 rounded-2xl border hairline bg-ink/60">
+            <div class="w-9 h-9 rounded-lg bg-gold/12 border border-gold/20 flex items-center justify-center mb-3.5">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E5B047" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1.4"/><circle cx="3.5" cy="12" r="1.4"/><circle cx="3.5" cy="18" r="1.4"/></svg>
+            </div>
+            <h3 class="text-[15.5px] font-700 display-tight">Range queries</h3>
+            <p class="mt-2 text-[13px] text-cream/58 leading-relaxed">Keys sort lexicographically, so prefix and bounded scans are native. Paginate large ranges with a cursor — no full table read.</p>
+            <div class="mt-3.5 px-2.5 py-1.5 rounded-md bg-ink3/70 border hairline mono text-[11px] text-cream/65">cluster.range('user:', 'user:~')</div>
+          </article>
+          <!-- 6 -->
+          <article class="card-lift p-5 rounded-2xl border hairline bg-ink/60">
+            <div class="w-9 h-9 rounded-lg bg-gold/12 border border-gold/20 flex items-center justify-center mb-3.5">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E5B047" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            </div>
+            <h3 class="text-[15.5px] font-700 display-tight">Three-node minimum</h3>
+            <p class="mt-2 text-[13px] text-cream/58 leading-relaxed">Tolerate one node down with three; two down with five. No Zookeeper, no config server — the cluster <em class="not-italic text-gold">is</em> the quorum.</p>
+            <div class="mt-3.5 px-2.5 py-1.5 rounded-md bg-ink3/70 border hairline mono text-[11px] text-cream/65">mesh-server --join node-a,node-b</div>
+          </article>
+          <!-- 7 -->
+          <article class="card-lift p-5 rounded-2xl border hairline bg-ink/60">
+            <div class="w-9 h-9 rounded-lg bg-gold/12 border border-gold/20 flex items-center justify-center mb-3.5">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E5B047" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/></svg>
+            </div>
+            <h3 class="text-[15.5px] font-700 display-tight">ARM and x86</h3>
+            <p class="mt-2 text-[13px] text-cream/58 leading-relaxed">First-class builds for arm64 and x86-64. Run a dev cluster on a Raspberry Pi rack; run production on Graviton. Identical binary behavior.</p>
+            <div class="mt-3.5 px-2.5 py-1.5 rounded-md bg-ink3/70 border hairline mono text-[11px] text-cream/65">linux/arm64 · linux/amd64</div>
+          </article>
+          <!-- 8 -->
+          <article class="card-lift p-5 rounded-2xl border hairline bg-ink/60">
+            <div class="w-9 h-9 rounded-lg bg-gold/12 border border-gold/20 flex items-center justify-center mb-3.5">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E5B047" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></svg>
+            </div>
+            <h3 class="text-[15.5px] font-700 display-tight">Single static binary</h3>
+            <p class="mt-2 text-[13px] text-cream/58 leading-relaxed">No JVM, no sidecars, no shared libraries. An 18 MB statically linked binary — the server and the CLI are the same file.</p>
+            <div class="mt-3.5 px-2.5 py-1.5 rounded-md bg-ink3/70 border hairline mono text-[11px] text-cream/65">ldd $(which mesh-server)  # not a dynamic</div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 7. COMPARISON TABLE ============ -->
+    <section class="relative py-20 sm:py-28 hairline-t">
+      <div class="max-w-5xl mx-auto px-5 sm:px-8">
+        <div class="text-center mb-11 reveal">
+          <span class="text-[12px] uppercase tracking-[0.18em] text-gold/80">Where Mesh fits</span>
+          <h2 class="mt-3 display text-[28px] sm:text-[40px] font-800 leading-[1.07]">
+            The honest comparison.
+          </h2>
+          <p class="mt-3 text-[15px] text-cream/55 max-w-xl mx-auto">
+            Each of these is excellent at what it was built for. The question is only whether you need what it costs.
+          </p>
+        </div>
+
+        <div class="reveal rounded-2xl border hairline bg-ink2/40 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-[13.5px] min-w-[640px]">
+              <thead>
+                <tr class="hairline-b">
+                  <th class="text-left font-500 text-cream/55 px-5 py-4">Capability</th>
+                  <th class="px-4 py-4 text-center">
+                    <div class="inline-flex items-center gap-1.5 font-700 text-gold">
+                      <svg width="14" height="14" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="8" r="3" fill="#E5B047"/><circle cx="8" cy="22" r="3" fill="#E5B047" fill-opacity="0.6"/><circle cx="24" cy="22" r="3" fill="#E5B047" fill-opacity="0.6"/><path d="M16 8 8 22M16 8l8 14M8 22h16" stroke="#E5B047" stroke-width="1.6"/></svg>
+                      Mesh
+                    </div>
+                  </th>
+                  <th class="px-4 py-4 text-center font-600 text-cream/55">etcd</th>
+                  <th class="px-4 py-4 text-center font-600 text-cream/55">Consul KV</th>
+                  <th class="px-4 py-4 text-center font-600 text-cream/55">Redis<span class="block text-[10.5px] font-400 text-cream/35">+ persistence</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- row template -->
+                <tr class="hairline-b">
+                  <td class="px-5 py-3.5 text-cream/78">Operational simplicity</td>
+                  <td class="px-4 py-3.5 text-center bg-gold/[0.05]"><span class="mono text-[11px] text-gold font-600">excellent</span></td>
+                  <td class="px-4 py-3.5 text-center"><span class="mono text-[11px] text-cream/45">heavy</span></td>
+                  <td class="px-4 py-3.5 text-center"><span class="mono text-[11px] text-cream/45">heavy</span></td>
+                  <td class="px-4 py-3.5 text-center"><span class="mono text-[11px] text-cream/55">good</span></td>
+                </tr>
+                <tr class="hairline-b">
+                  <td class="px-5 py-3.5 text-cream/78">Multi-region built in</td>
+                  <td class="px-4 py-3.5 text-center bg-gold/[0.05]">
+                    <svg class="inline" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E5B047" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  </td>
+                  <td class="px-4 py-3.5 text-center"><span class="mono text-[10.5px] text-cream/40">add-on</span></td>
+                  <td class="px-4 py-3.5 text-center">
+                    <svg class="inline" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B6373" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                  </td>
+                  <td class="px-4 py-3.5 text-center">
+                    <svg class="inline" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B6373" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                  </td>
+                </tr>
+                <tr class="hairline-b">
+                  <td class="px-5 py-3.5 text-cream/78">Native range queries</td>
+                  <td class="px-4 py-3.5 text-center bg-gold/[0.05]">
+                    <svg class="inline" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E5B047" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  </td>
+                  <td class="px-4 py-3.5 text-center">
+                    <svg class="inline" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7B8494" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  </td>
+                  <td class="px-4 py-3.5 text-center"><span class="mono text-[10.5px] text-cream/40">prefix only</span></td>
+                  <td class="px-4 py-3.5 text-center">
+                    <svg class="inline" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B6373" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                  </td>
+                </tr>
+                <tr class="hairline-b">
+                  <td class="px-5 py-3.5 text-cream/78">Multi-key transactions</td>
+                  <td class="px-4 py-3.5 text-center bg-gold/[0.05]">
+                    <svg class="inline" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E5B047" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  </td>
+                  <td class="px-4 py-3.5 text-center"><span class="mono text-[10.5px] text-cream/40">compare-only</span></td>
+                  <td class="px-4 py-3.5 text-center"><span class="mono text-[10.5px] text-cream/40">CAS-only</span></td>
+                  <td class="px-4 py-3.5 text-center"><span class="mono text-[10.5px] text-cream/40">MULTI/EXEC</span></td>
+                </tr>
+                <tr class="hairline-b">
+                  <td class="px-5 py-3.5 text-cream/78">Watches / change streams</td>
+                  <td class="px-4 py-3.5 text-center bg-gold/[0.05]">
+                    <svg class="inline" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E5B047" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  </td>
+                  <td class="px-4 py-3.5 text-center">
+                    <svg class="inline" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7B8494" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  </td>
+                  <td class="px-4 py-3.5 text-center">
+                    <svg class="inline" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7B8494" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  </td>
+                  <td class="px-4 py-3.5 text-center"><span class="mono text-[10.5px] text-cream/40">pub/sub</span></td>
+                </tr>
+                <tr class="hairline-b">
+                  <td class="px-5 py-3.5 text-cream/78">External coordination service</td>
+                  <td class="px-4 py-3.5 text-center bg-gold/[0.05]"><span class="mono text-[11px] text-gold font-600">none</span></td>
+                  <td class="px-4 py-3.5 text-center"><span class="mono text-[10.5px] text-cream/40">self-hosts quorum</span></td>
+                  <td class="px-4 py-3.5 text-center"><span class="mono text-[10.5px] text-cream/40">self-hosts quorum</span></td>
+                  <td class="px-4 py-3.5 text-center"><span class="mono text-[10.5px] text-cream/40">Sentinel</span></td>
+                </tr>
+                <tr>
+                  <td class="px-5 py-3.5 text-cream/78">Single static binary</td>
+                  <td class="px-4 py-3.5 text-center bg-gold/[0.05]">
+                    <svg class="inline" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E5B047" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  </td>
+                  <td class="px-4 py-3.5 text-center">
+                    <svg class="inline" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7B8494" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  </td>
+                  <td class="px-4 py-3.5 text-center">
+                    <svg class="inline" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7B8494" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  </td>
+                  <td class="px-4 py-3.5 text-center">
+                    <svg class="inline" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B6373" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <p class="mt-4 text-center text-[12px] text-cream/40">
+          Comparison reflects default out-of-the-box configuration as of Mar 2026. Corrections welcome via PR.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============ 8. QUICK START ============ -->
+    <section id="start" class="relative py-20 sm:py-28 hairline-t bg-ink2/30 dot-grid">
+      <div class="absolute inset-0 bg-gradient-to-b from-ink2/60 via-transparent to-ink2/60 pointer-events-none"></div>
+      <div class="relative z-10 max-w-5xl mx-auto px-5 sm:px-8">
+        <div class="text-center mb-12 reveal">
+          <span class="text-[12px] uppercase tracking-[0.18em] text-gold/80">Quick start</span>
+          <h2 class="mt-3 display text-[28px] sm:text-[40px] font-800 leading-[1.07]">
+            A live three-node cluster <span class="text-cream/45">in under 60 seconds.</span>
+          </h2>
+        </div>
+
+        <div class="space-y-5">
+          <!-- Step 1 -->
+          <div class="reveal grid lg:grid-cols-[1fr_1.3fr] gap-5 lg:gap-8 items-center">
+            <div class="flex gap-4 items-start">
+              <div class="shrink-0 w-9 h-9 rounded-lg bg-gold text-ink flex items-center justify-center font-700 text-[15px] tnum">1</div>
+              <div>
+                <h3 class="text-[16px] font-700 display-tight">Install the binary</h3>
+                <p class="mt-1.5 text-[13.5px] text-cream/58 leading-relaxed">Pull <span class="mono text-gold text-[12.5px]">mesh-server</span> from crates.io. It is one statically linked file — server and CLI in the same binary.</p>
+              </div>
+            </div>
+            <div class="code-panel">
+              <div class="flex items-center justify-between px-3.5 h-9 hairline-b bg-ink3/50">
+                <span class="mono text-[11.5px] text-cream/45">install.sh</span>
+                <button class="copy-btn flex items-center gap-1.5 px-2 py-1 rounded-md text-[11.5px] text-cream/55 hover:text-cream hover:bg-cream/8 transition-colors" data-copy="cargo install mesh-server">
+                  <svg class="copy-ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  <span class="copy-label">Copy</span>
+                </button>
+              </div>
+              <div class="px-4 py-3 mono text-[12.5px] leading-[1.7]">
+                <div><span class="tok-prompt">$</span> <span class="text-cream/90">cargo install mesh-server</span></div>
+                <div class="tok-com mt-1">  Installed mesh-server v0.12.0 (18.4 MB)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="reveal grid lg:grid-cols-[1fr_1.3fr] gap-5 lg:gap-8 items-center">
+            <div class="flex gap-4 items-start">
+              <div class="shrink-0 w-9 h-9 rounded-lg bg-gold text-ink flex items-center justify-center font-700 text-[15px] tnum">2</div>
+              <div>
+                <h3 class="text-[16px] font-700 display-tight">Bootstrap three nodes</h3>
+                <p class="mt-1.5 text-[13.5px] text-cream/58 leading-relaxed">Start three processes that know each other's addresses. They elect a leader through Raft and report ready.</p>
+              </div>
+            </div>
+            <div class="code-panel">
+              <div class="flex items-center justify-between px-3.5 h-9 hairline-b bg-ink3/50">
+                <span class="mono text-[11.5px] text-cream/45">cluster.sh</span>
+                <button class="copy-btn flex items-center gap-1.5 px-2 py-1 rounded-md text-[11.5px] text-cream/55 hover:text-cream hover:bg-cream/8 transition-colors" data-copy="mesh-server --node a --listen :7700 --peers b,c &#10;mesh-server --node b --listen :7701 --peers a,c &#10;mesh-server --node c --listen :7702 --peers a,b">
+                  <svg class="copy-ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  <span class="copy-label">Copy</span>
+                </button>
+              </div>
+              <div class="px-4 py-3 mono text-[12.5px] leading-[1.65]">
+                <div><span class="tok-prompt">$</span> <span class="text-cream/90">mesh-server --node a --listen :7700 --peers b,c</span></div>
+                <div><span class="tok-prompt">$</span> <span class="text-cream/90">mesh-server --node b --listen :7701 --peers a,c</span></div>
+                <div><span class="tok-prompt">$</span> <span class="text-cream/90">mesh-server --node c --listen :7702 --peers a,b</span></div>
+                <div class="tok-com mt-1">  raft: node 'a' elected leader (term 1) — cluster ready</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="reveal grid lg:grid-cols-[1fr_1.3fr] gap-5 lg:gap-8 items-center">
+            <div class="flex gap-4 items-start">
+              <div class="shrink-0 w-9 h-9 rounded-lg bg-gold text-ink flex items-center justify-center font-700 text-[15px] tnum">3</div>
+              <div>
+                <h3 class="text-[16px] font-700 display-tight">Write your first key</h3>
+                <p class="mt-1.5 text-[13.5px] text-cream/58 leading-relaxed">From the client, <span class="mono text-gold text-[12.5px]">put</span> a value and read it back. It is now replicated across all three nodes.</p>
+              </div>
+            </div>
+            <div class="code-panel">
+              <div class="flex items-center justify-between px-3.5 h-9 hairline-b bg-ink3/50">
+                <span class="mono text-[11.5px] text-cream/45">hello.ts</span>
+                <button class="copy-btn flex items-center gap-1.5 px-2 py-1 rounded-md text-[11.5px] text-cream/55 hover:text-cream hover:bg-cream/8 transition-colors" data-copy="import { connect } from '@mesh/client'&#10;const mesh = await connect(['localhost:7700'])&#10;await mesh.put('hello', 'world')&#10;console.log(await mesh.get('hello')) // -> world">
+                  <svg class="copy-ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  <span class="copy-label">Copy</span>
+                </button>
+              </div>
+              <div class="code-body px-4 py-3">
+<pre class="mono text-[12.5px] leading-[1.7]"><span class="tok-kw">import</span> <span class="tok-punc">{</span> <span class="tok-fn">connect</span> <span class="tok-punc">}</span> <span class="tok-kw">from</span> <span class="tok-str">'@mesh/client'</span>
+<span class="tok-kw">const</span> <span class="tok-var">mesh</span> <span class="tok-punc">=</span> <span class="tok-kw">await</span> <span class="tok-fn">connect</span><span class="tok-punc">([</span><span class="tok-str">'localhost:7700'</span><span class="tok-punc">])</span>
+<span class="tok-kw">await</span> <span class="tok-var">mesh</span><span class="tok-punc">.</span><span class="tok-fn">put</span><span class="tok-punc">(</span><span class="tok-str">'hello'</span><span class="tok-punc">,</span> <span class="tok-str">'world'</span><span class="tok-punc">)</span>
+<span class="tok-var">console</span><span class="tok-punc">.</span><span class="tok-fn">log</span><span class="tok-punc">(</span><span class="tok-kw">await</span> <span class="tok-var">mesh</span><span class="tok-punc">.</span><span class="tok-fn">get</span><span class="tok-punc">(</span><span class="tok-str">'hello'</span><span class="tok-punc">))</span> <span class="tok-com">// -&gt; world</span></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-10 text-center reveal">
+          <a href="#docs" class="inline-flex items-center gap-2 text-[14px] text-gold font-600 link-muted hover:text-goldsoft">
+            Read the full deployment guide
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ STATS + RAFT DIAGRAM STRIP ============ -->
+    <section class="relative py-16 sm:py-20 hairline-t">
+      <div class="max-w-6xl mx-auto px-5 sm:px-8">
+        <div class="grid lg:grid-cols-[1.05fr_0.95fr] gap-10 lg:gap-14 items-center">
+          <!-- Stats -->
+          <div class="reveal">
+            <h2 class="display text-[24px] sm:text-[32px] font-800 leading-[1.1]">
+              Numbers from the field.
+            </h2>
+            <p class="mt-2.5 text-[14px] text-cream/55">Throughput measured on a 5-node cluster, c7g.2xlarge, 50/50 read-write, 256-byte values.</p>
+            <div class="mt-7 grid grid-cols-2 gap-3.5">
+              <div class="p-4 rounded-xl border hairline bg-ink2/50">
+                <div class="display text-[26px] font-800 text-gold tnum"><span data-count="184000" data-suffix="">0</span><span class="text-[16px]">/s</span></div>
+                <p class="mt-1 text-[12px] text-cream/52">Sustained ops throughput</p>
+              </div>
+              <div class="p-4 rounded-xl border hairline bg-ink2/50">
+                <div class="display text-[26px] font-800 text-gold tnum">1.18<span class="text-[15px]">ms</span></div>
+                <p class="mt-1 text-[12px] text-cream/52">P99 write latency</p>
+              </div>
+              <div class="p-4 rounded-xl border hairline bg-ink2/50">
+                <div class="display text-[26px] font-800 text-gold tnum"><span data-count="1408" data-suffix="">0</span></div>
+                <p class="mt-1 text-[12px] text-cream/52">Production deployments tracked</p>
+              </div>
+              <div class="p-4 rounded-xl border hairline bg-ink2/50">
+                <div class="display text-[26px] font-800 text-gold tnum">0.34<span class="text-[15px]">s</span></div>
+                <p class="mt-1 text-[12px] text-cream/52">Median leader failover</p>
+              </div>
+            </div>
+            <!-- Throughput bars -->
+            <div class="mt-6 p-4 rounded-xl border hairline bg-ink2/40">
+              <p class="mono text-[11px] text-cream/45 mb-3">ops/s by cluster size</p>
+              <div class="space-y-2.5" id="thBars">
+                <div class="flex items-center gap-3">
+                  <span class="mono text-[11px] text-cream/50 w-12 shrink-0">3-node</span>
+                  <div class="flex-1 h-3 rounded bg-ink3 overflow-hidden"><div class="th-bar h-full bg-gold/60 rounded" data-w="58"></div></div>
+                  <span class="mono text-[11px] text-cream/55 w-16 text-right tnum">112k</span>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="mono text-[11px] text-cream/50 w-12 shrink-0">5-node</span>
+                  <div class="flex-1 h-3 rounded bg-ink3 overflow-hidden"><div class="th-bar h-full bg-gold rounded" data-w="95"></div></div>
+                  <span class="mono text-[11px] text-gold w-16 text-right tnum">184k</span>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="mono text-[11px] text-cream/50 w-12 shrink-0">7-node</span>
+                  <div class="flex-1 h-3 rounded bg-ink3 overflow-hidden"><div class="th-bar h-full bg-gold/60 rounded" data-w="71"></div></div>
+                  <span class="mono text-[11px] text-cream/55 w-16 text-right tnum">142k</span>
+                </div>
+              </div>
+              <p class="mt-3 text-[11px] text-cream/38">Five nodes is the throughput sweet spot — beyond it, replication fan-out costs more than it adds.</p>
+            </div>
+          </div>
+
+          <!-- Raft topology diagram -->
+          <div class="reveal">
+            <div class="rounded-2xl border hairline bg-ink2/40 p-6 sm:p-7">
+              <div class="flex items-center justify-between mb-1">
+                <h3 class="text-[14.5px] font-700 display-tight">Raft replication topology</h3>
+                <span class="inline-flex items-center gap-1.5 text-[11px] text-cream/55"><span class="pulse-dot"></span>live</span>
+              </div>
+              <p class="text-[12px] text-cream/48 mb-2">A 5-node cluster — the leader streams the log to every follower.</p>
+              <svg id="raftDiagram" viewBox="0 0 360 300" class="w-full" aria-label="Raft cluster topology with one leader and four followers">
+                <!-- edges + nodes drawn by JS -->
+                <g id="raftEdges"></g>
+                <g id="raftNodes"></g>
+              </svg>
+              <div class="flex items-center gap-5 mt-1 text-[11px]">
+                <span class="inline-flex items-center gap-1.5 text-cream/60"><span class="w-2.5 h-2.5 rounded-full bg-gold"></span>Leader</span>
+                <span class="inline-flex items-center gap-1.5 text-cream/60"><span class="w-2.5 h-2.5 rounded-full" style="background:#3E5B86"></span>Follower</span>
+                <span class="inline-flex items-center gap-1.5 text-cream/60"><span class="w-4 h-px" style="background:#E5B047;opacity:0.6"></span>Replication</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 9. COMMUNITY ============ -->
+    <section id="community" class="relative py-20 sm:py-28 hairline-t bg-ink2/30">
+      <div class="max-w-6xl mx-auto px-5 sm:px-8">
+        <div class="text-center mb-12 reveal">
+          <span class="text-[12px] uppercase tracking-[0.18em] text-gold/80">Community</span>
+          <h2 class="mt-3 display text-[28px] sm:text-[40px] font-800 leading-[1.07]">
+            Built in the open, <span class="text-cream/45">answered fast.</span>
+          </h2>
+        </div>
+
+        <div class="grid lg:grid-cols-3 gap-4 mb-10">
+          <a href="#github" class="card-lift p-5 rounded-2xl border hairline bg-ink/60 block">
+            <div class="flex items-center gap-2.5 mb-3">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E5B047" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <span class="text-[14px] font-700">GitHub Discussions</span>
+            </div>
+            <div class="display text-[28px] font-800 text-cream tnum"><span data-count="2914" data-suffix="">0</span></div>
+            <p class="mt-1 text-[12.5px] text-cream/52">threads — design RFCs, help, and release notes</p>
+          </a>
+          <a href="#community" class="card-lift p-5 rounded-2xl border hairline bg-ink/60 block">
+            <div class="flex items-center gap-2.5 mb-3">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#E5B047" aria-hidden="true"><path d="M20.3 4.4A19.8 19.8 0 0 0 15.4 3l-.2.4a18.3 18.3 0 0 1 4.3 1.3 14 14 0 0 0-12 0A18.3 18.3 0 0 1 11.6 3.4L11.4 3A19.8 19.8 0 0 0 6.5 4.4 21 21 0 0 0 3 18.4a19.9 19.9 0 0 0 6 3l.8-1.3a13 13 0 0 1-2-1l.5-.4a14 14 0 0 0 12 0l.5.4a13 13 0 0 1-2 1l.8 1.3a19.9 19.9 0 0 0 6-3 21 21 0 0 0-3.6-14ZM9.7 15.3c-1.2 0-2.2-1.1-2.2-2.4S8.5 10.5 9.7 10.5s2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Zm4.6 0c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Z"/></svg>
+              <span class="text-[14px] font-700">Discord</span>
+            </div>
+            <div class="display text-[28px] font-800 text-cream tnum flex items-baseline gap-2">
+              <span data-count="6740" data-suffix="">0</span>
+              <span class="inline-flex items-center gap-1.5 text-[11px] font-500 text-cream/55"><span class="pulse-dot"></span>418 online</span>
+            </div>
+            <p class="mt-1 text-[12.5px] text-cream/52">members — maintainers active daily</p>
+          </a>
+          <a href="#community" class="card-lift p-5 rounded-2xl border hairline bg-ink/60 block">
+            <div class="flex items-center gap-2.5 mb-3">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E5B047" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg>
+              <span class="text-[14px] font-700">Matrix</span>
+            </div>
+            <div class="display text-[28px] font-800 text-cream tnum"><span data-count="1190" data-suffix="">0</span></div>
+            <p class="mt-1 text-[12.5px] text-cream/52">members in <span class="mono text-cream/65 text-[11.5px]">#mesh:matrix.org</span></p>
+          </a>
+        </div>
+
+        <!-- Maintainers -->
+        <div class="reveal rounded-2xl border hairline bg-ink/50 p-6 sm:p-7">
+          <div class="flex items-center justify-between flex-wrap gap-3 mb-5">
+            <h3 class="text-[15px] font-700 display-tight">Core maintainers</h3>
+            <span class="text-[12px] text-cream/45">+ 148 contributors across 31 countries</span>
+          </div>
+          <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+            <!-- maintainer card -->
+            <div class="flex items-center gap-3 p-3 rounded-xl border hairline bg-ink2/40 card-lift">
+              <span class="w-10 h-10 rounded-full flex items-center justify-center font-700 text-[13px] text-ink shrink-0" style="background:linear-gradient(135deg,#E5B047,#C98F2E)">SK</span>
+              <div class="min-w-0">
+                <p class="text-[13.5px] font-600 truncate">Sasha Korin</p>
+                <p class="mono text-[11px] text-cream/45 truncate">@skorin · lead</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 p-3 rounded-xl border hairline bg-ink2/40 card-lift">
+              <span class="w-10 h-10 rounded-full flex items-center justify-center font-700 text-[13px] text-ink shrink-0" style="background:linear-gradient(135deg,#7FB4E8,#4E83BC)">RA</span>
+              <div class="min-w-0">
+                <p class="text-[13.5px] font-600 truncate">Rafael Antunes</p>
+                <p class="mono text-[11px] text-cream/45 truncate">@rantunes · raft</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 p-3 rounded-xl border hairline bg-ink2/40 card-lift">
+              <span class="w-10 h-10 rounded-full flex items-center justify-center font-700 text-[13px] text-ink shrink-0" style="background:linear-gradient(135deg,#97C794,#5E9A5B)">MN</span>
+              <div class="min-w-0">
+                <p class="text-[13.5px] font-600 truncate">Mira Nakamura</p>
+                <p class="mono text-[11px] text-cream/45 truncate">@mirank · storage</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 p-3 rounded-xl border hairline bg-ink2/40 card-lift">
+              <span class="w-10 h-10 rounded-full flex items-center justify-center font-700 text-[13px] text-ink shrink-0" style="background:linear-gradient(135deg,#C9A6E6,#9B72C4)">DO</span>
+              <div class="min-w-0">
+                <p class="text-[13.5px] font-600 truncate">ديانا عثمان</p>
+                <p class="mono text-[11px] text-cream/45 truncate">@dosman · clients</p>
+              </div>
+            </div>
+          </div>
+          <div class="mt-5 hairline-t pt-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <p class="text-[13px] text-cream/55">Mesh is independent and unfunded — sponsorship keeps the maintainers shipping.</p>
+            <a href="#sponsors" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gold/30 bg-gold/10 text-[13px] font-600 text-gold btn hover:bg-gold/16">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21.35 10.55 20C5.4 15.36 2 12.27 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.08C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.77-3.4 6.86-8.55 11.53Z"/></svg>
+              Become a sponsor
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 10. SPONSOR ROW ============ -->
+    <section id="sponsors" class="relative py-20 sm:py-24 hairline-t">
+      <div class="max-w-5xl mx-auto px-5 sm:px-8">
+        <div class="text-center mb-10 reveal">
+          <span class="text-[12px] uppercase tracking-[0.18em] text-gold/80">GitHub Sponsors</span>
+          <h2 class="mt-3 display text-[26px] sm:text-[36px] font-800 leading-[1.08]">
+            Funded by the teams who run it.
+          </h2>
+        </div>
+
+        <!-- Company sponsors -->
+        <div class="reveal mb-9">
+          <p class="text-center text-[11.5px] uppercase tracking-[0.16em] text-cream/38 mb-5">Organization sponsors</p>
+          <div class="grid sm:grid-cols-3 gap-3.5">
+            <div class="card-lift flex items-center justify-center h-20 rounded-xl border hairline bg-ink2/50">
+              <svg width="138" height="30" viewBox="0 0 138 30" aria-label="Cloudflare">
+                <path d="M22 19.5c.4-1.4.25-2.7-.43-3.6-.62-.86-1.66-1.36-2.9-1.42l-23.6-.3a.46.46 0 0 1-.37-.2.47.47 0 0 1-.05-.42.62.62 0 0 1 .55-.42l23.8-.3c2.83-.13 5.9-2.43 6.97-5.24l1.36-3.55a.8.8 0 0 0 .03-.46A15.5 15.5 0 0 0 -1.6 14.4l.84-.02" fill="none"/>
+                <text x="6" y="20" font-family="Inter,sans-serif" font-size="17" font-weight="700" letter-spacing="-0.02em" fill="#F4F2EE" fill-opacity="0.62">Cloudflare</text>
+                <path d="M0 12c0-1.3 1-2.4 2.3-2.5C3 7 5.2 5.4 7.6 5.4c2 0 3.8 1.1 4.7 2.8.5-.2 1-.3 1.6-.3 2 0 3.6 1.5 3.9 3.4H0Z" fill="#E5B047" fill-opacity="0.5" transform="translate(112,3) scale(0.7)"/>
+              </svg>
+            </div>
+            <div class="card-lift flex items-center justify-center h-20 rounded-xl border hairline bg-ink2/50">
+              <svg width="110" height="30" viewBox="0 0 110 30" aria-label="Fly.io">
+                <circle cx="14" cy="15" r="9" fill="none" stroke="#E5B047" stroke-opacity="0.55" stroke-width="2"/>
+                <path d="M9 16c2-3 8-3 10 0" fill="none" stroke="#E5B047" stroke-opacity="0.55" stroke-width="2" stroke-linecap="round"/>
+                <text x="30" y="20" font-family="Inter,sans-serif" font-size="17" font-weight="700" letter-spacing="-0.02em" fill="#F4F2EE" fill-opacity="0.62">Fly.io</text>
+              </svg>
+            </div>
+            <div class="card-lift flex items-center justify-center h-20 rounded-xl border hairline bg-ink2/50">
+              <svg width="120" height="30" viewBox="0 0 120 30" aria-label="Vercel">
+                <path d="M14 6 23 22 5 22Z" fill="#F4F2EE" fill-opacity="0.62"/>
+                <text x="34" y="20" font-family="Inter,sans-serif" font-size="17" font-weight="700" letter-spacing="-0.03em" fill="#F4F2EE" fill-opacity="0.62">Vercel</text>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Individual sponsors -->
+        <div class="reveal rounded-2xl border hairline bg-ink2/40 p-6 sm:p-7">
+          <div class="flex items-center justify-between flex-wrap gap-2 mb-5">
+            <h3 class="text-[14px] font-700 display-tight">Individual sponsors</h3>
+            <span class="text-[12px] text-cream/45"><span class="mono text-gold tnum">28</span> people chipping in monthly</span>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <!-- monogram circles -->
+            <span class="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-700 text-ink" style="background:linear-gradient(135deg,#E5B047,#C98F2E)" title="Theo Vasquez">TV</span>
+            <span class="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-700 text-ink" style="background:linear-gradient(135deg,#7FB4E8,#4E83BC)" title="Anaïs Lefèvre">AL</span>
+            <span class="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-700 text-ink" style="background:linear-gradient(135deg,#97C794,#5E9A5B)" title="Kenji Watanabe">KW</span>
+            <span class="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-700 text-ink" style="background:linear-gradient(135deg,#C9A6E6,#9B72C4)" title="Priya Raman">PR</span>
+            <span class="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-700 text-ink" style="background:linear-gradient(135deg,#E8957F,#BC5E4E)" title="Lukas Brandt">LB</span>
+            <span class="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-700 text-ink" style="background:linear-gradient(135deg,#E5B047,#C98F2E)" title="Sofia Marchetti">SM</span>
+            <span class="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-700 text-ink" style="background:linear-gradient(135deg,#7FB4E8,#4E83BC)" title="Idris Bello">IB</span>
+            <span class="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-700 text-ink" style="background:linear-gradient(135deg,#97C794,#5E9A5B)" title="Hannah O'Neill">HO</span>
+            <span class="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-700 text-ink" style="background:linear-gradient(135deg,#C9A6E6,#9B72C4)" title="Mateus Rocha">MR</span>
+            <span class="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-700 text-ink" style="background:linear-gradient(135deg,#E8957F,#BC5E4E)" title="Yuki Tanabe">YT</span>
+            <span class="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-700 text-ink" style="background:linear-gradient(135deg,#E5B047,#C98F2E)" title="Greta Lindqvist">GL</span>
+            <span class="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-700 text-ink" style="background:linear-gradient(135deg,#7FB4E8,#4E83BC)" title="Omar Haddad">OH</span>
+            <span class="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-700 text-ink" style="background:linear-gradient(135deg,#97C794,#5E9A5B)" title="Nina Kovač">NK</span>
+            <span class="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-700 text-ink" style="background:linear-gradient(135deg,#C9A6E6,#9B72C4)" title="Diego Salazar">DS</span>
+            <span class="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-700 text-ink" style="background:linear-gradient(135deg,#E8957F,#BC5E4E)" title="Esha Kapoor">EK</span>
+            <span class="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-700 text-ink" style="background:linear-gradient(135deg,#E5B047,#C98F2E)" title="Paul Mercier">PM</span>
+            <span class="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-700 text-ink" style="background:linear-gradient(135deg,#7FB4E8,#4E83BC)" title="Wei Chen">WC</span>
+            <span class="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-700 text-ink" style="background:linear-gradient(135deg,#97C794,#5E9A5B)" title="Tomas Holm">TH</span>
+            <span class="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-700 text-cream/70 bg-ink3 border hairline" title="and 10 more">+10</span>
+          </div>
+          <div class="mt-5 hairline-t pt-4 text-center">
+            <a href="#sponsors" class="text-[13px] text-gold font-600 link-muted hover:text-goldsoft">Sponsor Mesh on GitHub →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 11. FAQ ============ -->
+    <section id="faq" class="relative py-20 sm:py-28 hairline-t bg-ink2/30">
+      <div class="max-w-3xl mx-auto px-5 sm:px-8">
+        <div class="text-center mb-10 reveal">
+          <span class="text-[12px] uppercase tracking-[0.18em] text-gold/80">FAQ</span>
+          <h2 class="mt-3 display text-[28px] sm:text-[38px] font-800 leading-[1.08]">
+            The questions we get most.
+          </h2>
+        </div>
+
+        <div class="space-y-3">
+          <details class="reveal group rounded-xl border hairline bg-ink/60 px-5 open:bg-ink2/60">
+            <summary class="flex items-center justify-between gap-4 py-4">
+              <span class="text-[15px] font-600 display-tight">Is Mesh production-ready?</span>
+              <svg class="faq-chevron shrink-0 text-gold" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </summary>
+            <p class="pb-5 text-[13.5px] text-cream/62 leading-[1.7]">
+              Yes, with a clear-eyed view of the version. Mesh is v0.12 — the on-disk format and the wire protocol are
+              stable and we will not break them without a migration path, and 1,408 clusters report production
+              telemetry today. What v0.x signals is that the <span class="text-cream/85">client API surface</span> may
+              still gain methods before 1.0. Mesh runs continuous Jepsen-style partition testing on every release and
+              the storage layer is fuzzed against power-loss injection. Run three or five nodes, keep one version
+              behind the bleeding edge, and it is a sound choice for service discovery, feature flags, leader election,
+              and configuration.
+            </p>
+          </details>
+
+          <details class="reveal group rounded-xl border hairline bg-ink/60 px-5 open:bg-ink2/60">
+            <summary class="flex items-center justify-between gap-4 py-4">
+              <span class="text-[15px] font-600 display-tight">How does failover work during a network partition?</span>
+              <svg class="faq-chevron shrink-0 text-gold" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </summary>
+            <p class="pb-5 text-[13.5px] text-cream/62 leading-[1.7]">
+              Mesh follows Raft strictly, so it always favors consistency over availability. During a partition only
+              the side holding a <span class="text-cream/85">majority quorum</span> can elect a leader and accept
+              writes — in a five-node cluster split 3/2, the minority side rejects writes and serves only stale reads
+              it explicitly labels as such. The majority side keeps a leader the whole time; if it was the old leader
+              that got isolated, it steps down within an election timeout. When the partition heals, the stale nodes
+              catch up from the leader's log and rejoin. There is no split-brain and no divergent history — a write
+              that was acknowledged stays acknowledged. Median observed failover is 0.34s.
+            </p>
+          </details>
+
+          <details class="reveal group rounded-xl border hairline bg-ink/60 px-5 open:bg-ink2/60">
+            <summary class="flex items-center justify-between gap-4 py-4">
+              <span class="text-[15px] font-600 display-tight">What's the realistic throughput ceiling?</span>
+              <svg class="faq-chevron shrink-0 text-gold" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </summary>
+            <p class="pb-5 text-[13.5px] text-cream/62 leading-[1.7]">
+              On a five-node c7g.2xlarge cluster with 256-byte values and a 50/50 read-write mix, Mesh sustains about
+              <span class="mono text-gold">184k ops/s</span> with a 1.18ms P99 on writes. Reads served by the leader
+              are linearizable; reads served by followers are bounded-staleness and scale roughly with node count.
+              The ceiling on writes is the Raft commit path — every write needs a majority fsync — so write throughput
+              is gated by your slowest disk and your cross-node RTT, not by CPU. Mesh is built for high-frequency
+              small values, not for pushing gigabytes; if you are saturating it, you are likely storing values that
+              belong in object storage.
+            </p>
+          </details>
+
+          <details class="reveal group rounded-xl border hairline bg-ink/60 px-5 open:bg-ink2/60">
+            <summary class="flex items-center justify-between gap-4 py-4">
+              <span class="text-[15px] font-600 display-tight">What's the backup and restore story?</span>
+              <svg class="faq-chevron shrink-0 text-gold" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </summary>
+            <p class="pb-5 text-[13.5px] text-cream/62 leading-[1.7]">
+              <span class="mono text-gold">mesh snapshot</span> writes a consistent point-in-time image of the
+              keyspace at a known Raft revision — it is safe to run against a live cluster and streams straight to a
+              file or to S3-compatible storage. Restore is <span class="mono text-gold">mesh restore</span> into a
+              fresh cluster, which replays the snapshot and resumes. For continuous protection, point-in-time recovery
+              ships the Raft log segments after the last snapshot, so you can roll forward to any revision. Snapshots
+              are content-addressed and incremental, so a daily backup of a steady cluster is cheap. We recommend a
+              nightly snapshot plus log shipping; full disaster recovery of a 10 GB keyspace restores in a few minutes.
+            </p>
+          </details>
+
+          <details class="reveal group rounded-xl border hairline bg-ink/60 px-5 open:bg-ink2/60">
+            <summary class="flex items-center justify-between gap-4 py-4">
+              <span class="text-[15px] font-600 display-tight">How does Mesh compare to FoundationDB?</span>
+              <svg class="faq-chevron shrink-0 text-gold" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </summary>
+            <p class="pb-5 text-[13.5px] text-cream/62 leading-[1.7]">
+              FoundationDB is a genuinely remarkable piece of engineering and, for the very hardest distributed-storage
+              problems, it is more capable than Mesh — strict-serializable transactions across an enormous keyspace,
+              a deterministic simulation test suite that is the gold standard of the field. It is also a multi-process
+              system with distinct roles (coordinators, storage, transaction logs, proxies) that you size and
+              operate as a unit. Mesh trades that ceiling for an operational floor: <span class="text-cream/85">one
+              binary, three-node minimum, no roles to plan</span>. If you are building a database or a platform on top
+              of an ordered transactional store, reach for FoundationDB. If you need a replicated K/V store for
+              configuration, coordination, and small stateful data — and you want to run it without a dedicated
+              team — that is exactly the seam Mesh is cut for.
+            </p>
+          </details>
+        </div>
+
+        <p class="mt-7 text-center text-[13px] text-cream/48 reveal">
+          More questions? Ask in <a href="#community" class="text-gold link-muted hover:text-goldsoft">GitHub Discussions</a> or the Discord.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============ 12. FINAL CTA ============ -->
+    <section class="relative py-20 sm:py-28 overflow-hidden hairline-t">
+      <div class="mesh-blob" style="width:420px;height:420px;background:#E5B047;top:50%;left:50%;transform:translate(-50%,-50%);opacity:0.13;"></div>
+      <div class="absolute inset-0" style="background:radial-gradient(520px 280px at 50% 50%, rgba(229,176,71,0.10), transparent 72%);"></div>
+      <div class="relative z-10 max-w-2xl mx-auto px-5 sm:px-8 text-center">
+        <h2 class="display text-[32px] sm:text-[46px] font-800 leading-[1.05]">
+          Get started <span class="text-cream/45">in 60 seconds.</span>
+        </h2>
+        <p class="mt-4 text-[15.5px] text-cream/58 max-w-lg mx-auto">
+          Install the server, bootstrap three nodes, write your first key. No account, no signup — just
+          <span class="mono text-gold text-[14px]">cargo install</span> and go.
+        </p>
+
+        <div class="mt-8 max-w-md mx-auto code-panel gold-glow">
+          <div class="flex items-center justify-between px-3.5 h-9 hairline-b bg-ink3/50">
+            <span class="mono text-[11.5px] text-cream/45">Terminal</span>
+            <button class="copy-btn flex items-center gap-1.5 px-2 py-1 rounded-md text-[11.5px] text-cream/55 hover:text-cream hover:bg-cream/8 transition-colors" data-copy="cargo install mesh-server">
+              <svg class="copy-ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <span class="copy-label">Copy</span>
+            </button>
+          </div>
+          <div class="px-4 py-3.5 mono text-[13.5px] text-left">
+            <span class="tok-prompt">$</span> <span class="text-cream/90">cargo install mesh-server</span>
+          </div>
+        </div>
+
+        <div class="mt-7 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <a href="#docs" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gold text-ink text-[14.5px] font-600 btn hover:bg-goldsoft gold-glow">
+            Read the docs
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </a>
+          <a href="#github" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl border hairline-strong bg-ink3/60 text-[14.5px] font-500 btn hover:bg-ink3">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="text-cream/80" aria-hidden="true"><path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.9-.01 3.29 0 .32.22.7.83.58A12.01 12.01 0 0 0 24 12.5C24 5.87 18.63.5 12 .5Z"/></svg>
+            Star on GitHub
+          </a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============ 13. FOOTER ============ -->
+  <footer class="relative hairline-t bg-ink2/50">
+    <div class="max-w-6xl mx-auto px-5 sm:px-8 py-14">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-9 lg:gap-8">
+        <!-- Brand -->
+        <div class="lg:col-span-1">
+          <a href="#top" class="flex items-center gap-2.5">
+            <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+              <rect width="32" height="32" rx="8" fill="#111927"/>
+              <rect width="32" height="32" rx="8" stroke="#E5B047" stroke-opacity="0.25"/>
+              <circle cx="16" cy="8.5" r="2.6" fill="#E5B047"/>
+              <circle cx="8.4" cy="20.5" r="2.6" fill="#E5B047" fill-opacity="0.55"/>
+              <circle cx="23.6" cy="20.5" r="2.6" fill="#E5B047" fill-opacity="0.55"/>
+              <path d="M16 8.5 L8.4 20.5 M16 8.5 L23.6 20.5 M8.4 20.5 L23.6 20.5" stroke="#E5B047" stroke-width="1.4" stroke-opacity="0.7"/>
+            </svg>
+            <span class="text-[15px] font-700 display-tight">Mesh</span>
+          </a>
+          <p class="mt-3.5 text-[12.5px] text-cream/48 leading-relaxed">A distributed key/value store with built-in replication.</p>
+          <div class="mt-4 inline-flex items-center gap-2 text-[11.5px] text-cream/45">
+            <span class="pulse-dot-gold"></span>
+            <span class="mono">v0.12 · MIT</span>
+          </div>
+        </div>
+
+        <!-- Docs -->
+        <div>
+          <h4 class="text-[12px] uppercase tracking-[0.14em] text-cream/40 mb-3.5">Docs</h4>
+          <ul class="space-y-2.5 text-[13px] text-cream/58">
+            <li><a href="#docs" class="link-muted">Getting started</a></li>
+            <li><a href="#docs" class="link-muted">Cluster operations</a></li>
+            <li><a href="#docs" class="link-muted">Client API reference</a></li>
+            <li><a href="#docs" class="link-muted">Transactions &amp; watches</a></li>
+            <li><a href="#docs" class="link-muted">Backup &amp; restore</a></li>
+          </ul>
+        </div>
+
+        <!-- Examples -->
+        <div>
+          <h4 class="text-[12px] uppercase tracking-[0.14em] text-cream/40 mb-3.5">Examples</h4>
+          <ul class="space-y-2.5 text-[13px] text-cream/58">
+            <li><a href="#examples" class="link-muted">Service discovery</a></li>
+            <li><a href="#examples" class="link-muted">Feature flags</a></li>
+            <li><a href="#examples" class="link-muted">Leader election</a></li>
+            <li><a href="#examples" class="link-muted">Distributed locks</a></li>
+            <li><a href="#examples" class="link-muted">Config management</a></li>
+          </ul>
+        </div>
+
+        <!-- Community -->
+        <div>
+          <h4 class="text-[12px] uppercase tracking-[0.14em] text-cream/40 mb-3.5">Community</h4>
+          <ul class="space-y-2.5 text-[13px] text-cream/58">
+            <li><a href="#github" class="link-muted">GitHub</a></li>
+            <li><a href="#community" class="link-muted">Discussions</a></li>
+            <li><a href="#community" class="link-muted">Discord</a></li>
+            <li><a href="#community" class="link-muted">Matrix</a></li>
+            <li><a href="#sponsors" class="link-muted">Sponsor Mesh</a></li>
+          </ul>
+        </div>
+
+        <!-- About -->
+        <div>
+          <h4 class="text-[12px] uppercase tracking-[0.14em] text-cream/40 mb-3.5">About</h4>
+          <ul class="space-y-2.5 text-[13px] text-cream/58">
+            <li><a href="#blog" class="link-muted">Blog</a></li>
+            <li><a href="#docs" class="link-muted">Roadmap</a></li>
+            <li><a href="#docs" class="link-muted">Changelog</a></li>
+            <li><a href="#docs" class="link-muted">Security policy</a></li>
+            <li><a href="#docs" class="link-muted">Brand assets</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="mt-12 hairline-t pt-7 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex flex-col sm:flex-row items-center gap-x-4 gap-y-1.5 text-center sm:text-left">
+          <p class="text-[12.5px] text-cream/45">© 2026 Mesh · Released under the MIT License</p>
+          <span class="hidden sm:block text-cream/20">·</span>
+          <p class="text-[12.5px] text-cream/45">Made with care by Sasha Korin + <span class="mono text-cream/60">148</span> contributors</p>
+        </div>
+        <div class="flex items-center gap-2.5">
+          <a href="#github" aria-label="GitHub" class="w-9 h-9 rounded-lg border hairline bg-ink3/50 flex items-center justify-center btn hover:bg-ink3 text-cream/60 hover:text-cream">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.9-.01 3.29 0 .32.22.7.83.58A12.01 12.01 0 0 0 24 12.5C24 5.87 18.63.5 12 .5Z"/></svg>
+          </a>
+          <a href="#community" aria-label="Discord" class="w-9 h-9 rounded-lg border hairline bg-ink3/50 flex items-center justify-center btn hover:bg-ink3 text-cream/60 hover:text-cream">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 4.4A19.8 19.8 0 0 0 15.4 3l-.2.4a18.3 18.3 0 0 1 4.3 1.3 14 14 0 0 0-12 0A18.3 18.3 0 0 1 11.6 3.4L11.4 3A19.8 19.8 0 0 0 6.5 4.4 21 21 0 0 0 3 18.4a19.9 19.9 0 0 0 6 3l.8-1.3a13 13 0 0 1-2-1l.5-.4a14 14 0 0 0 12 0l.5.4a13 13 0 0 1-2 1l.8 1.3a19.9 19.9 0 0 0 6-3 21 21 0 0 0-3.6-14ZM9.7 15.3c-1.2 0-2.2-1.1-2.2-2.4S8.5 10.5 9.7 10.5s2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Zm4.6 0c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Z"/></svg>
+          </a>
+          <a href="#community" aria-label="Matrix" class="w-9 h-9 rounded-lg border hairline bg-ink3/50 flex items-center justify-center btn hover:bg-ink3 text-cream/60 hover:text-cream">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 2v20M21 2v20M3 4c2 0 3 1 3 3M3 20c2 0 3-1 3-3M21 4c-2 0-3 1-3 3M21 20c-2 0-3-1-3-3M9 8v8M15 8v8M9 9c1.5-2 4.5-2 6 0"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============ SINGLE VANILLA JS BLOCK ============ -->
+  <script>
+    (function () {
+      "use strict";
+      var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      /* ---- Mobile menu ---- */
+      var menuBtn = document.getElementById("menuBtn");
+      var mobileMenu = document.getElementById("mobileMenu");
+      function closeMenu() {
+        mobileMenu.classList.add("hidden-menu");
+        menuBtn.setAttribute("aria-expanded", "false");
+      }
+      menuBtn.addEventListener("click", function () {
+        var open = !mobileMenu.classList.contains("hidden-menu");
+        if (open) { closeMenu(); }
+        else {
+          mobileMenu.classList.remove("hidden-menu");
+          menuBtn.setAttribute("aria-expanded", "true");
+        }
+      });
+      mobileMenu.querySelectorAll("a").forEach(function (a) {
+        a.addEventListener("click", closeMenu);
+      });
+
+      /* ---- Nav scrolled state ---- */
+      var nav = document.getElementById("nav");
+      function onScroll() {
+        if (window.scrollY > 12) { nav.classList.add("nav-scrolled"); }
+        else { nav.classList.remove("nav-scrolled"); }
+      }
+      onScroll();
+      window.addEventListener("scroll", onScroll, { passive: true });
+
+      /* ---- Copy to clipboard ---- */
+      document.querySelectorAll(".copy-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var text = (btn.getAttribute("data-copy") || "").replace(/ /g, "\n");
+          var label = btn.querySelector(".copy-label");
+          var icon = btn.querySelector(".copy-ic");
+          var done = function () {
+            if (label) label.textContent = "Copied";
+            btn.classList.add("copy-pulse", "text-gold");
+            if (icon) {
+              icon.innerHTML = '<path d="M20 6 9 17l-5-5"/>';
+            }
+            setTimeout(function () {
+              if (label) label.textContent = "Copy";
+              btn.classList.remove("copy-pulse", "text-gold");
+              if (icon) {
+                icon.innerHTML = '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>';
+              }
+            }, 1700);
+          };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done).catch(function () {
+              fallbackCopy(text); done();
+            });
+          } else {
+            fallbackCopy(text); done();
+          }
+        });
+      });
+      function fallbackCopy(text) {
+        var ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand("copy"); } catch (e) {}
+        document.body.removeChild(ta);
+      }
+
+      /* ---- Animated count-up ---- */
+      function formatCount(n) {
+        return Math.round(n).toLocaleString("en-US");
+      }
+      function animateCount(el) {
+        var target = parseInt(el.getAttribute("data-count"), 10) || 0;
+        var suffix = el.getAttribute("data-suffix") || "";
+        if (reduced) { el.textContent = formatCount(target) + suffix; return; }
+        var dur = 1400, start = null;
+        function step(ts) {
+          if (!start) start = ts;
+          var p = Math.min((ts - start) / dur, 1);
+          var eased = 1 - Math.pow(1 - p, 3);
+          el.textContent = formatCount(target * eased) + suffix;
+          if (p < 1) requestAnimationFrame(step);
+          else el.textContent = formatCount(target) + suffix;
+        }
+        requestAnimationFrame(step);
+      }
+
+      /* ---- IntersectionObserver: reveal + counters + bars ---- */
+      var revealEls = document.querySelectorAll(".reveal");
+      if ("IntersectionObserver" in window) {
+        var ro = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) {
+            if (e.isIntersecting) {
+              e.target.classList.add("in");
+              ro.unobserve(e.target);
+            }
+          });
+        }, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
+        revealEls.forEach(function (el) { ro.observe(el); });
+
+        var countEls = document.querySelectorAll("[data-count]");
+        var co = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) {
+            if (e.isIntersecting) {
+              animateCount(e.target);
+              co.unobserve(e.target);
+            }
+          });
+        }, { threshold: 0.4 });
+        countEls.forEach(function (el) { co.observe(el); });
+
+        var bars = document.querySelectorAll(".th-bar");
+        var bo = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) {
+            if (e.isIntersecting) {
+              var w = e.target.getAttribute("data-w");
+              e.target.style.width = "0%";
+              e.target.style.transition = reduced ? "none" : "width 1s cubic-bezier(0.16,1,0.3,1)";
+              requestAnimationFrame(function () {
+                requestAnimationFrame(function () { e.target.style.width = w + "%"; });
+              });
+              bo.unobserve(e.target);
+            }
+          });
+        }, { threshold: 0.5 });
+        bars.forEach(function (b) { bo.observe(b); });
+      } else {
+        revealEls.forEach(function (el) { el.classList.add("in"); });
+        document.querySelectorAll("[data-count]").forEach(animateCount);
+        document.querySelectorAll(".th-bar").forEach(function (b) {
+          b.style.width = b.getAttribute("data-w") + "%";
+        });
+      }
+
+      /* ---- Nav star count animates on load ---- */
+      window.addEventListener("load", function () {
+        var navStar = document.querySelector("#nav [data-count]");
+        if (navStar) animateCount(navStar);
+      });
+
+      /* ---- Stars sparkline: compute path from data ---- */
+      (function () {
+        var data = [120, 240, 380, 560, 900, 1500, 2400, 3600, 5200, 7100, 9000, 10800, 12200, 13300, 14000, 14408];
+        var W = 148, H = 32, pad = 3;
+        var max = Math.max.apply(null, data);
+        var min = Math.min.apply(null, data);
+        var pts = data.map(function (v, i) {
+          var x = pad + (i / (data.length - 1)) * (W - pad * 2);
+          var y = H - pad - ((v - min) / (max - min)) * (H - pad * 2);
+          return [x, y];
+        });
+        var line = pts.map(function (p, i) {
+          return (i === 0 ? "M" : "L") + p[0].toFixed(1) + " " + p[1].toFixed(1);
+        }).join(" ");
+        var area = line + " L" + pts[pts.length - 1][0].toFixed(1) + " " + (H - pad) +
+                   " L" + pts[0][0].toFixed(1) + " " + (H - pad) + " Z";
+        document.getElementById("sparkLine").setAttribute("d", line);
+        document.getElementById("sparkArea").setAttribute("d", area);
+        var dot = document.getElementById("sparkDot");
+        dot.setAttribute("cx", pts[pts.length - 1][0].toFixed(1));
+        dot.setAttribute("cy", pts[pts.length - 1][1].toFixed(1));
+      })();
+
+      /* ---- Raft topology diagram: compute node ring + replication edges ---- */
+      (function () {
+        var svgNS = "http://www.w3.org/2000/svg";
+        var edgesG = document.getElementById("raftEdges");
+        var nodesG = document.getElementById("raftNodes");
+        if (!edgesG || !nodesG) return;
+
+        var cx = 180, cy = 148, R = 104;
+        var N = 5;
+        var leaderIndex = 0;
+        var nodes = [];
+        for (var i = 0; i < N; i++) {
+          // start at top, go clockwise
+          var ang = -Math.PI / 2 + (i / N) * Math.PI * 2;
+          nodes.push({
+            x: cx + R * Math.cos(ang),
+            y: cy + R * Math.sin(ang),
+            leader: i === leaderIndex,
+            label: i === leaderIndex ? "L" : "F" + i
+          });
+        }
+
+        // Replication edges: leader -> every follower
+        var leader = nodes[leaderIndex];
+        for (var j = 0; j < N; j++) {
+          if (j === leaderIndex) continue;
+          var f = nodes[j];
+          var path = document.createElementNS(svgNS, "path");
+          // slight quadratic curve toward center for a "spoke" look
+          var mx = (leader.x + f.x) / 2 + (cx - (leader.x + f.x) / 2) * 0.28;
+          var my = (leader.y + f.y) / 2 + (cy - (leader.y + f.y) / 2) * 0.28;
+          path.setAttribute("d", "M" + leader.x.toFixed(1) + " " + leader.y.toFixed(1) +
+            " Q" + mx.toFixed(1) + " " + my.toFixed(1) + " " + f.x.toFixed(1) + " " + f.y.toFixed(1));
+          path.setAttribute("stroke", "#E5B047");
+          path.setAttribute("stroke-width", "1.6");
+          path.setAttribute("stroke-opacity", "0.55");
+          path.setAttribute("fill", "none");
+          path.setAttribute("stroke-dasharray", "4 4");
+          if (!reduced) {
+            var anim = document.createElementNS(svgNS, "animate");
+            anim.setAttribute("attributeName", "stroke-dashoffset");
+            anim.setAttribute("from", "16");
+            anim.setAttribute("to", "0");
+            anim.setAttribute("dur", "1.1s");
+            anim.setAttribute("repeatCount", "indefinite");
+            path.appendChild(anim);
+          }
+          edgesG.appendChild(path);
+        }
+
+        // Faint follower-to-follower ring (heartbeat mesh)
+        for (var k = 0; k < N; k++) {
+          var a = nodes[k], b = nodes[(k + 1) % N];
+          var ring = document.createElementNS(svgNS, "line");
+          ring.setAttribute("x1", a.x.toFixed(1));
+          ring.setAttribute("y1", a.y.toFixed(1));
+          ring.setAttribute("x2", b.x.toFixed(1));
+          ring.setAttribute("y2", b.y.toFixed(1));
+          ring.setAttribute("stroke", "#FFFFFF");
+          ring.setAttribute("stroke-opacity", "0.06");
+          ring.setAttribute("stroke-width", "1");
+          edgesG.appendChild(ring);
+        }
+
+        // Nodes
+        nodes.forEach(function (n) {
+          var g = document.createElementNS(svgNS, "g");
+          if (!reduced && !n.leader) g.setAttribute("class", "node-pulse");
+
+          if (n.leader) {
+            var halo = document.createElementNS(svgNS, "circle");
+            halo.setAttribute("cx", n.x.toFixed(1));
+            halo.setAttribute("cy", n.y.toFixed(1));
+            halo.setAttribute("r", "26");
+            halo.setAttribute("fill", "#E5B047");
+            halo.setAttribute("fill-opacity", "0.10");
+            g.appendChild(halo);
+          }
+
+          var c = document.createElementNS(svgNS, "circle");
+          c.setAttribute("cx", n.x.toFixed(1));
+          c.setAttribute("cy", n.y.toFixed(1));
+          c.setAttribute("r", n.leader ? "20" : "16");
+          c.setAttribute("fill", n.leader ? "#E5B047" : "#16223A");
+          c.setAttribute("stroke", n.leader ? "#F0CE82" : "#3E5B86");
+          c.setAttribute("stroke-width", "1.6");
+          g.appendChild(c);
+
+          var t = document.createElementNS(svgNS, "text");
+          t.setAttribute("x", n.x.toFixed(1));
+          t.setAttribute("y", (n.y + 4).toFixed(1));
+          t.setAttribute("text-anchor", "middle");
+          t.setAttribute("font-family", "JetBrains Mono, monospace");
+          t.setAttribute("font-size", n.leader ? "13" : "11");
+          t.setAttribute("font-weight", "700");
+          t.setAttribute("fill", n.leader ? "#0A0F1A" : "#9FB4D4");
+          t.textContent = n.label;
+          g.appendChild(t);
+
+          nodesG.appendChild(g);
+        });
+
+        // center caption
+        var cap = document.createElementNS(svgNS, "text");
+        cap.setAttribute("x", cx);
+        cap.setAttribute("y", cy + 4);
+        cap.setAttribute("text-anchor", "middle");
+        cap.setAttribute("font-family", "JetBrains Mono, monospace");
+        cap.setAttribute("font-size", "10");
+        cap.setAttribute("fill", "#E5B047");
+        cap.setAttribute("fill-opacity", "0.7");
+        cap.textContent = "term 7";
+        nodesG.appendChild(cap);
+      })();
+    })();
+  </script>
+</body>
+</html>

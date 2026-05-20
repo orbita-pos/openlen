@@ -1,0 +1,783 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lumen — Fall asleep without thinking about it</title>
+<meta name="description" content="A tonight-only sleep program built for adults who can't unwind. Wind-down breath, body scans, sleep stories, and ambient — picked from how you actually slept last night.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --bg-top:#0A0814; --bg-bot:#1A0E2E;
+    --accent:#B388FF; --accent-2:#6B4DFF;
+    --accent-soft:rgba(179,136,255,.16);
+    --text:#F4F0FA; --dim:rgba(244,240,250,.6); --faint:rgba(244,240,250,.4);
+    --hairline:rgba(255,255,255,.06); --hairline2:rgba(255,255,255,.1);
+    --card:rgba(255,255,255,.03);
+  }
+  html,body{font-family:'Inter',system-ui,sans-serif;font-feature-settings:'cv11','ss01';background:radial-gradient(ellipse at top,var(--bg-top),var(--bg-bot));background-attachment:fixed;color:var(--text);line-height:1.55;-webkit-font-smoothing:antialiased;}
+  .font-display{font-family:'Inter',sans-serif;font-weight:700;letter-spacing:-0.035em;line-height:1.04;}
+  .font-mono{font-family:'Geist Mono',ui-monospace,monospace;font-feature-settings:'tnum','ss01';}
+  .halftone{opacity:.45;}
+  .dim{color:var(--dim);} .faint{color:var(--faint);}
+  .hairline{border:1px solid var(--hairline);} .hairline2{border:1px solid var(--hairline2);}
+  .bg-card{background:var(--card);}
+  .text-accent{color:var(--accent);} .bg-accent-soft{background:var(--accent-soft);}
+  .dot-grid{background-image:radial-gradient(circle at 1px 1px,rgba(255,255,255,.08) 1px,transparent 0);background-size:32px 32px;}
+  .mesh{position:absolute;border-radius:50%;filter:blur(90px);pointer-events:none;}
+  .pulse-dot{position:relative;width:8px;height:8px;border-radius:50%;background:var(--accent);}
+  .pulse-dot::after{content:'';position:absolute;inset:-4px;border-radius:50%;background:var(--accent);opacity:.5;animation:pulse 2s ease-out infinite;}
+  @keyframes pulse{0%{transform:scale(.8);opacity:.5;}100%{transform:scale(2.2);opacity:0;}}
+
+  /* Phone */
+  .phone{position:relative;border-radius:48px;background:linear-gradient(135deg,#2a2438 0%,#15101F 100%);padding:10px;box-shadow:0 40px 80px -20px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.06),inset 0 0 0 1px rgba(255,255,255,.04);}
+  .phone-screen{position:relative;width:100%;height:100%;border-radius:38px;overflow:hidden;background:linear-gradient(180deg,#1c1430 0%,#0d0820 100%);}
+  .phone-notch{position:absolute;top:14px;left:50%;transform:translateX(-50%);width:96px;height:26px;background:#000;border-radius:13px;z-index:10;}
+  .phone-status{position:absolute;top:18px;left:0;right:0;padding:0 26px;display:flex;justify-content:space-between;align-items:center;color:var(--text);font-family:'Geist Mono',monospace;font-size:13px;font-weight:500;z-index:11;}
+  .phone-status .icons{display:flex;gap:5px;align-items:center;}
+  .phone-tilt{transform:perspective(1600px) rotateY(-6deg) rotateX(2deg);}
+  .phone-float{animation:float 6s ease-in-out infinite;}
+  @keyframes float{0%,100%{transform:perspective(1600px) rotateY(-6deg) rotateX(2deg) translateY(0);}50%{transform:perspective(1600px) rotateY(-6deg) rotateX(2deg) translateY(-12px);}}
+  .phone-content{position:absolute;inset:0;padding:60px 18px 18px;overflow:hidden;}
+  .phone-scroll{animation:pscroll 14s ease-in-out infinite;}
+  @keyframes pscroll{0%,15%{transform:translateY(0);}45%,55%{transform:translateY(-72px);}85%,100%{transform:translateY(0);}}
+  .phone-glow{position:absolute;bottom:-30px;left:50%;transform:translateX(-50%);width:80%;height:80px;background:radial-gradient(ellipse,var(--accent) 0%,transparent 70%);opacity:.3;filter:blur(36px);pointer-events:none;}
+
+  /* App icon */
+  .app-icon{border-radius:22%;background:linear-gradient(135deg,#B388FF 0%,#6B4DFF 60%,#3F2A99 100%);box-shadow:0 16px 40px -8px rgba(179,136,255,.5),inset 0 1px 0 rgba(255,255,255,.25);}
+
+  /* Badges */
+  .badge-store{display:inline-flex;align-items:center;gap:10px;padding:10px 16px;border-radius:12px;background:#000;color:#fff;border:1px solid rgba(255,255,255,.14);transition:transform 120ms ease,box-shadow 120ms ease;}
+  .badge-store:hover{transform:translateY(-1px);box-shadow:0 12px 24px -8px rgba(0,0,0,.5);}
+  .badge-label{font-size:10px;opacity:.85;text-transform:uppercase;letter-spacing:.06em;line-height:1;}
+  .badge-name{font-size:18px;font-weight:600;letter-spacing:-.01em;line-height:1.05;}
+
+  /* Marquee */
+  .marquee-track{display:flex;width:max-content;animation:marquee 38s linear infinite;}
+  @keyframes marquee{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+
+  /* Cards */
+  .card{background:var(--card);border:1px solid var(--hairline);border-radius:24px;transition:transform 150ms ease,background 150ms ease,border-color 150ms ease;}
+  .card:hover{transform:translateY(-2px);background:rgba(255,255,255,.05);border-color:var(--hairline2);}
+
+  /* Buttons */
+  .btn-primary{background:linear-gradient(135deg,#B388FF,#6B4DFF);color:#fff;transition:transform 120ms ease,box-shadow 120ms ease;}
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 16px 40px -10px rgba(179,136,255,.6);}
+  .btn-ghost{background:rgba(255,255,255,.04);border:1px solid var(--hairline2);transition:background 120ms ease;}
+  .btn-ghost:hover{background:rgba(255,255,255,.08);}
+
+  /* Star */
+  .star{fill:#F5C842;} .star-dim{fill:rgba(245,200,66,.18);}
+
+  /* Bar */
+  .bar-track{height:8px;background:rgba(255,255,255,.06);border-radius:999px;overflow:hidden;}
+  .bar-fill{height:100%;background:linear-gradient(90deg,#B388FF,#6B4DFF);border-radius:999px;}
+
+  /* FAQ accordion (visual only — details/summary) */
+  details summary{list-style:none;cursor:pointer;}
+  details summary::-webkit-details-marker{display:none;}
+  details[open] summary .chev{transform:rotate(180deg);}
+  .chev{transition:transform 200ms ease;}
+
+  /* Hero halo */
+  .hero-halo{position:absolute;inset:auto 0 0 0;height:600px;background:radial-gradient(ellipse 60% 100% at 50% 100%,rgba(179,136,255,.25) 0%,transparent 60%);pointer-events:none;}
+
+  @media (max-width:768px){
+    .phone-tilt{transform:none;}
+    .phone-float{animation:float-m 6s ease-in-out infinite;}
+    @keyframes float-m{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
+  }
+</style>
+</head>
+<body class="relative overflow-x-hidden">
+<div class="mesh" style="background:#B388FF;width:560px;height:560px;top:-260px;left:-140px;opacity:.35;"></div>
+<div class="mesh" style="background:#6B4DFF;width:480px;height:480px;top:240px;right:-200px;opacity:.25;"></div>
+
+<!-- NAV -->
+<nav class="relative z-20 max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+  <a href="#" class="flex items-center gap-2.5">
+    <div class="app-icon w-9 h-9 flex items-center justify-center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z" fill="white" fill-opacity=".95"/></svg>
+    </div>
+    <span class="font-display text-lg">Lumen</span>
+  </a>
+  <div class="hidden md:flex items-center gap-8 text-sm dim">
+    <a href="#features" class="hover:text-white transition-colors">Features</a>
+    <a href="#how" class="hover:text-white transition-colors">How it works</a>
+    <a href="#reviews" class="hover:text-white transition-colors">Reviews</a>
+    <a href="#pricing" class="hover:text-white transition-colors">Pricing</a>
+  </div>
+  <a href="#download" class="text-sm font-medium px-4 py-2 rounded-full text-white" style="background:rgba(179,136,255,.16);border:1px solid rgba(179,136,255,.32);">Get the app</a>
+</nav>
+
+<!-- HERO -->
+<section class="relative max-w-7xl mx-auto px-6 pt-10 pb-24 md:pt-20 md:pb-32">
+  <div class="grid md:grid-cols-2 gap-12 md:gap-10 items-center">
+    <div class="relative z-10">
+      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent-soft text-accent text-xs font-medium mb-8">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4-6.2-4.5-6.2 4.5 2.4-7.4L2 9.4h7.6z"/></svg>
+        Featured on App Store · Editor's Choice
+      </div>
+      <h1 class="font-display text-5xl sm:text-6xl lg:text-7xl mb-7">
+        Fall asleep without <span class="halftone">thinking about it.</span>
+      </h1>
+      <p class="text-lg md:text-xl dim max-w-lg mb-10">
+        A tonight-only program made for you in 90 seconds — wind-down breath, body scan, sleep story, ambient. Picked from how you actually slept last night.
+      </p>
+      <div class="flex flex-wrap gap-3 mb-9">
+        <a href="#" class="badge-store">
+          <svg width="22" height="26" viewBox="0 0 24 28" fill="currentColor"><path d="M17.5 14.7c0-3 2.5-4.5 2.6-4.5-1.4-2.1-3.6-2.4-4.4-2.4-1.9-.2-3.6 1.1-4.6 1.1-1 0-2.4-1.1-4-1-2 0-3.9 1.2-5 3-2.2 3.7-.6 9.2 1.5 12.2 1 1.5 2.2 3.2 3.8 3.1 1.5-.1 2.1-1 3.9-1 1.8 0 2.4 1 4 1 1.6 0 2.7-1.5 3.7-3 1.2-1.7 1.6-3.4 1.7-3.5-.1 0-3.2-1.3-3.2-4.9zm-3-9c.9-1 1.4-2.4 1.3-3.7-1.2 0-2.7.8-3.6 1.8-.8.9-1.5 2.3-1.3 3.6 1.3.1 2.7-.7 3.6-1.7z"/></svg>
+          <div class="flex flex-col text-left"><span class="badge-label">Download on the</span><span class="badge-name">App Store</span></div>
+        </a>
+        <a href="#" class="badge-store">
+          <svg width="22" height="24" viewBox="0 0 22 24"><path d="M1.4 1.2c-.3.3-.4.8-.4 1.4v18.8c0 .7.1 1.2.4 1.4l.1.1L11.7 12.1v-.2L1.5 1.1l-.1.1z" fill="#5BC9F4"/><path d="M15.1 15.6l-3.4-3.4v-.2l3.4-3.4.1.1 4.1 2.3c1.2.7 1.2 1.7 0 2.3l-4.1 2.3-.1z" fill="#FECC2F"/><path d="M15.2 15.5L11.7 12 1.4 22.8c.4.4 1 .5 1.8.1l12-6.8" fill="#EF4136"/><path d="M15.2 8.5L3.2 1.7c-.8-.4-1.4-.3-1.8.1L11.7 12l3.5-3.5z" fill="#0F9D58"/></svg>
+          <div class="flex flex-col text-left"><span class="badge-label">Get it on</span><span class="badge-name">Google Play</span></div>
+        </a>
+      </div>
+      <div class="flex items-center gap-3 text-sm">
+        <div class="flex gap-0.5">
+          <svg width="18" height="18" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg>
+        </div>
+        <span class="font-medium">4.8</span>
+        <span class="faint">·</span>
+        <span class="dim font-mono text-xs">28,408 reviews</span>
+        <span class="faint">·</span>
+        <span class="dim text-xs flex items-center gap-1.5"><span class="pulse-dot"></span> 2,184 people winding down right now</span>
+      </div>
+    </div>
+
+    <!-- Hero phone -->
+    <div class="relative flex justify-center md:justify-end">
+      <div class="phone-glow"></div>
+      <div class="phone phone-tilt phone-float" style="width:280px;height:578px;">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="phone-status">
+            <span>9:41</span>
+            <div class="icons">
+              <svg width="16" height="10" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="6" width="2" height="5" rx=".5"/><rect x="4" y="4" width="2" height="7" rx=".5"/><rect x="8" y="2" width="2" height="9" rx=".5"/><rect x="12" y="0" width="2" height="11" rx=".5"/></svg>
+              <svg width="14" height="10" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M.7 5.6a8 8 0 0114.6 0"/><path d="M3 7.2a5.2 5.2 0 0110 0"/><path d="M5.4 8.8a2.8 2.8 0 015.2 0"/><circle cx="8" cy="10.4" r="1" fill="currentColor"/></svg>
+              <svg width="22" height="10" viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="1"><rect x="1" y="1" width="20" height="10" rx="2"/><rect x="22" y="3.5" width="1.5" height="5" fill="currentColor"/><rect x="2.5" y="2.5" width="14" height="7" rx="1.2" fill="currentColor"/></svg>
+            </div>
+          </div>
+          <div class="phone-content">
+            <div class="phone-scroll">
+              <div class="text-center mb-5">
+                <p class="text-[10px] uppercase tracking-[0.18em] faint mb-1.5 font-mono">Sunday · 11:14 pm</p>
+                <h3 class="font-display text-[20px] leading-tight mb-1">Tonight's wind-down</h3>
+                <p class="text-[11px] dim">Built around how you slept last night</p>
+              </div>
+              <div class="space-y-2.5">
+                <div class="rounded-2xl p-3 flex items-center gap-3" style="background:rgba(255,255,255,.05);border:1px solid var(--hairline);">
+                  <div class="w-9 h-9 rounded-xl flex items-center justify-center text-accent" style="background:var(--accent-soft);">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 12c0-3 2-5 6-5s6 2 6 5-2 5-6 5"/><circle cx="12" cy="12" r="9"/></svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-[12px] font-medium leading-tight">Wind-down breath · 4-7-8</p>
+                    <p class="text-[10px] faint font-mono mt-0.5">12 min · narrated by Olu</p>
+                  </div>
+                </div>
+                <div class="rounded-2xl p-3 flex items-center gap-3" style="background:rgba(255,255,255,.05);border:1px solid var(--hairline);">
+                  <div class="w-9 h-9 rounded-xl flex items-center justify-center text-accent" style="background:var(--accent-soft);">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M22 12h-3M5 12H2M19 5l-2 2M7 17l-2 2M19 19l-2-2M7 7L5 5"/></svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-[12px] font-medium leading-tight">Slow body scan</p>
+                    <p class="text-[10px] faint font-mono mt-0.5">8 min · feet → crown</p>
+                  </div>
+                </div>
+                <div class="rounded-2xl p-3 flex items-center gap-3" style="background:rgba(255,255,255,.05);border:1px solid var(--hairline);">
+                  <div class="w-9 h-9 rounded-xl flex items-center justify-center text-accent" style="background:var(--accent-soft);">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 19.5A2.5 2.5 0 015.5 17H21"/><path d="M5.5 2H21v20H5.5A2.5 2.5 0 013 19.5v-15A2.5 2.5 0 015.5 2z"/></svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-[12px] font-medium leading-tight">The Lighthouse Keeper</p>
+                    <p class="text-[10px] faint font-mono mt-0.5">22 min sleep story · Aoife N.</p>
+                  </div>
+                </div>
+                <div class="rounded-2xl p-3 flex items-center gap-3" style="background:rgba(255,255,255,.05);border:1px solid var(--hairline);">
+                  <div class="w-9 h-9 rounded-xl flex items-center justify-center text-accent" style="background:var(--accent-soft);">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h2.6l2.4-7 4 16 3-9h8"/></svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-[12px] font-medium leading-tight">Rain on a cabin roof</p>
+                    <p class="text-[10px] faint font-mono mt-0.5">2-hr ambient · fades out</p>
+                  </div>
+                </div>
+              </div>
+              <button class="mt-5 w-full py-3 rounded-2xl text-[13px] font-medium" style="background:linear-gradient(135deg,#B388FF,#6B4DFF);color:white;box-shadow:0 8px 24px -10px rgba(179,136,255,.6);">Begin tonight's program</button>
+              <p class="text-center text-[10px] faint mt-3 font-mono">est. 44 min · ends 11:58 pm</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- APP ICON BAND -->
+<section class="relative py-20 md:py-28">
+  <div class="max-w-3xl mx-auto px-6 text-center">
+    <div class="app-icon w-24 h-24 mx-auto flex items-center justify-center mb-8">
+      <svg width="46" height="46" viewBox="0 0 24 24" fill="none"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z" fill="white"/></svg>
+    </div>
+    <h2 class="font-display text-3xl md:text-4xl mb-3">Tonight is its own program.</h2>
+    <p class="dim text-lg max-w-xl mx-auto">No streaks. No leaderboards. Nothing to fail at. Just the right thing for the night you're actually having.</p>
+  </div>
+</section>
+
+<!-- SCREENSHOTS STRIP -->
+<section class="relative py-12 overflow-hidden">
+  <div class="absolute inset-0 dot-grid opacity-30 pointer-events-none"></div>
+  <div class="marquee-track">
+    <!-- Tile 1 -->
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;">
+        <div class="absolute inset-0 p-5 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Library · Sleep stories</p>
+          <h4 class="font-display text-base mb-3">Drift</h4>
+          <div class="space-y-2">
+            <div class="h-12 rounded-lg" style="background:linear-gradient(135deg,#6B4DFF,#3F2A99);"></div>
+            <div class="h-12 rounded-lg" style="background:linear-gradient(135deg,#B388FF,#6B4DFF);"></div>
+            <div class="h-12 rounded-lg" style="background:linear-gradient(135deg,#FF8AD9,#B388FF);"></div>
+            <div class="h-12 rounded-lg" style="background:linear-gradient(135deg,#4DB2FF,#6B4DFF);"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Tile 2 -->
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;">
+        <div class="absolute inset-0 p-5 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Last 14 nights</p>
+          <h4 class="font-display text-base mb-3">Patterns</h4>
+          <svg viewBox="0 0 140 90" class="w-full h-24">
+            <polyline points="0,60 12,52 24,58 36,42 48,46 60,30 72,38 84,24 96,32 108,20 120,28 132,18 140,22" fill="none" stroke="#B388FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="0,60 12,52 24,58 36,42 48,46 60,30 72,38 84,24 96,32 108,20 120,28 132,18 140,22 140,90 0,90" fill="url(#g1)" opacity=".25"/>
+            <defs><linearGradient id="g1" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#B388FF"/><stop offset="1" stop-color="#B388FF" stop-opacity="0"/></linearGradient></defs>
+          </svg>
+          <div class="mt-3 space-y-1 text-[10px] font-mono">
+            <div class="flex justify-between"><span class="dim">Avg onset</span><span>18 min</span></div>
+            <div class="flex justify-between"><span class="dim">Deep sleep</span><span>1h 28m</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Tile 3 -->
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;background:linear-gradient(180deg,#3F2A99,#0d0820);">
+        <div class="absolute inset-0 p-5 pt-12 flex flex-col items-center">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-3">Now playing</p>
+          <div class="w-32 h-32 rounded-2xl mb-3" style="background:linear-gradient(135deg,#B388FF,#FF8AD9);"></div>
+          <h4 class="font-display text-sm mb-1">The Lighthouse Keeper</h4>
+          <p class="text-[10px] faint font-mono mb-3">14:22 / 22:00</p>
+          <div class="w-full h-1 rounded-full bg-white/10"><div class="h-full rounded-full" style="width:65%;background:#B388FF;"></div></div>
+        </div>
+      </div>
+    </div>
+    <!-- Tile 4 -->
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;">
+        <div class="absolute inset-0 p-5 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Ambient</p>
+          <h4 class="font-display text-base mb-3">Layered sound</h4>
+          <div class="space-y-1.5">
+            <div class="flex items-center gap-2 text-[10px]"><span class="w-1.5 h-1.5 rounded-full bg-accent"></span>Rain<span class="ml-auto font-mono faint">62%</span></div>
+            <div class="flex items-center gap-2 text-[10px]"><span class="w-1.5 h-1.5 rounded-full bg-accent"></span>Distant thunder<span class="ml-auto font-mono faint">28%</span></div>
+            <div class="flex items-center gap-2 text-[10px]"><span class="w-1.5 h-1.5 rounded-full bg-accent"></span>Wood crackle<span class="ml-auto font-mono faint">12%</span></div>
+          </div>
+          <div class="mt-4 grid grid-cols-3 gap-1.5">
+            <div class="aspect-square rounded-lg" style="background:rgba(179,136,255,.18);"></div>
+            <div class="aspect-square rounded-lg" style="background:rgba(179,136,255,.32);"></div>
+            <div class="aspect-square rounded-lg" style="background:rgba(179,136,255,.12);"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Tile 5 -->
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;">
+        <div class="absolute inset-0 p-5 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Morning</p>
+          <h4 class="font-display text-base mb-3">Wake gently</h4>
+          <div class="text-center my-3">
+            <p class="font-display text-3xl">6:42</p>
+            <p class="text-[10px] faint font-mono">in 7 hr 28 min</p>
+          </div>
+          <div class="rounded-xl p-2.5" style="background:rgba(255,255,255,.05);border:1px solid var(--hairline);">
+            <p class="text-[10px] dim">Dawn chorus → soft chime</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- duplicate for loop -->
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;">
+        <div class="absolute inset-0 p-5 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Library · Sleep stories</p>
+          <h4 class="font-display text-base mb-3">Drift</h4>
+          <div class="space-y-2">
+            <div class="h-12 rounded-lg" style="background:linear-gradient(135deg,#6B4DFF,#3F2A99);"></div>
+            <div class="h-12 rounded-lg" style="background:linear-gradient(135deg,#B388FF,#6B4DFF);"></div>
+            <div class="h-12 rounded-lg" style="background:linear-gradient(135deg,#FF8AD9,#B388FF);"></div>
+            <div class="h-12 rounded-lg" style="background:linear-gradient(135deg,#4DB2FF,#6B4DFF);"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;">
+        <div class="absolute inset-0 p-5 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Last 14 nights</p>
+          <h4 class="font-display text-base mb-3">Patterns</h4>
+          <svg viewBox="0 0 140 90" class="w-full h-24"><polyline points="0,60 12,52 24,58 36,42 48,46 60,30 72,38 84,24 96,32 108,20 120,28 132,18 140,22" fill="none" stroke="#B388FF" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how" class="relative max-w-7xl mx-auto px-6 py-24 md:py-32">
+  <div class="max-w-2xl mb-16">
+    <p class="text-accent text-sm font-mono uppercase tracking-widest mb-4">How it works</p>
+    <h2 class="font-display text-4xl md:text-5xl mb-5">Three nights and it starts knowing you.</h2>
+    <p class="dim text-lg">No goal-setting, no "wind-down score". You answer a few things on day one and it adapts from there.</p>
+  </div>
+  <div class="grid md:grid-cols-3 gap-6">
+    <!-- Step 1 -->
+    <div class="card p-7 relative">
+      <div class="flex items-center justify-between mb-6">
+        <span class="font-mono text-xs faint">01</span>
+        <span class="text-xs px-2.5 py-1 rounded-full bg-accent-soft text-accent">~2 minutes</span>
+      </div>
+      <div class="phone mx-auto mb-7" style="width:160px;height:320px;padding:5px;border-radius:28px;">
+        <div class="phone-screen" style="border-radius:23px;">
+          <div class="absolute inset-0 p-4 pt-10">
+            <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Quick start</p>
+            <h5 class="font-display text-[13px] mb-3 leading-tight">When did you last sleep through?</h5>
+            <div class="space-y-1.5">
+              <div class="text-[10px] p-2 rounded-lg" style="background:rgba(255,255,255,.05);border:1px solid var(--hairline);">Last night</div>
+              <div class="text-[10px] p-2 rounded-lg" style="background:rgba(179,136,255,.16);border:1px solid rgba(179,136,255,.4);color:#fff;">A few days ago</div>
+              <div class="text-[10px] p-2 rounded-lg" style="background:rgba(255,255,255,.05);border:1px solid var(--hairline);">More than a week</div>
+              <div class="text-[10px] p-2 rounded-lg" style="background:rgba(255,255,255,.05);border:1px solid var(--hairline);">Honestly can't remember</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h3 class="font-display text-xl mb-2">Tell us about your nights.</h3>
+      <p class="dim text-sm">Eight questions, plain English. No tracker required — though we'll happily read your Apple Health if you want.</p>
+    </div>
+    <!-- Step 2 -->
+    <div class="card p-7 relative">
+      <div class="flex items-center justify-between mb-6">
+        <span class="font-mono text-xs faint">02</span>
+        <span class="text-xs px-2.5 py-1 rounded-full bg-accent-soft text-accent">~90 seconds</span>
+      </div>
+      <div class="phone mx-auto mb-7" style="width:160px;height:320px;padding:5px;border-radius:28px;">
+        <div class="phone-screen" style="border-radius:23px;background:linear-gradient(180deg,#3F2A99,#0d0820);">
+          <div class="absolute inset-0 p-4 pt-10 text-center">
+            <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Tonight</p>
+            <h5 class="font-display text-[13px] mb-4">Building your program</h5>
+            <div class="relative w-20 h-20 mx-auto mb-3">
+              <svg viewBox="0 0 36 36" class="w-full h-full"><circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="2"/><circle cx="18" cy="18" r="15" fill="none" stroke="#B388FF" stroke-width="2" stroke-dasharray="68 100" transform="rotate(-90 18 18)" stroke-linecap="round"/></svg>
+              <div class="absolute inset-0 flex items-center justify-center font-mono text-xs">68%</div>
+            </div>
+            <p class="text-[9px] faint font-mono">Matching sleep stories…</p>
+          </div>
+        </div>
+      </div>
+      <h3 class="font-display text-xl mb-2">Get tonight's program.</h3>
+      <p class="dim text-sm">A 30-90 minute sequence built just for tonight — not a generic playlist. It will look different tomorrow.</p>
+    </div>
+    <!-- Step 3 -->
+    <div class="card p-7 relative">
+      <div class="flex items-center justify-between mb-6">
+        <span class="font-mono text-xs faint">03</span>
+        <span class="text-xs px-2.5 py-1 rounded-full bg-accent-soft text-accent">Every morning</span>
+      </div>
+      <div class="phone mx-auto mb-7" style="width:160px;height:320px;padding:5px;border-radius:28px;">
+        <div class="phone-screen" style="border-radius:23px;">
+          <div class="absolute inset-0 p-4 pt-10">
+            <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">This week</p>
+            <h5 class="font-display text-[13px] mb-3">Patterns, not scores</h5>
+            <div class="space-y-2 text-[10px]">
+              <div class="flex items-center justify-between"><span class="dim">Onset</span><span class="font-mono">↓ 14m</span></div>
+              <div class="flex items-center justify-between"><span class="dim">Deep</span><span class="font-mono text-accent">+22m</span></div>
+              <div class="flex items-center justify-between"><span class="dim">Wakings</span><span class="font-mono">2.1 avg</span></div>
+            </div>
+            <div class="mt-3 p-2 rounded-lg text-[9px] dim" style="background:rgba(179,136,255,.1);">"Better when you skipped late screens 3+ days."</div>
+          </div>
+        </div>
+      </div>
+      <h3 class="font-display text-xl mb-2">Track patterns without obsessing.</h3>
+      <p class="dim text-sm">One small insight a week. No "sleep debt" number, no streak to ruin — just the thing that's actually moving the needle.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURE TRIO -->
+<section id="features" class="relative max-w-7xl mx-auto px-6 py-20">
+  <!-- Feature 1 -->
+  <div class="grid md:grid-cols-2 gap-12 md:gap-16 items-center mb-28">
+    <div>
+      <p class="text-accent font-mono text-xs uppercase tracking-widest mb-4">Wind-downs</p>
+      <h3 class="font-display text-3xl md:text-4xl mb-5">Built for the bad nights, not just the easy ones.</h3>
+      <p class="dim text-lg mb-6">If you only sleep 4 hours, Lumen knows. Tonight's program runs shorter, swaps in faster onset techniques, and drops the calm-narrator script we use when you're tired-but-fine.</p>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-white">Six wind-down protocols</span> <span class="dim">— 4-7-8 breath, body scan, progressive relaxation, NSDR, yoga nidra, cyclic sighing.</span></span></li>
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-white">Eight narrator voices</span> <span class="dim">— Olu, Aoife, Marie, Ren, Ines, Kofi, Hana, Daniel. Pick the one that lulls you.</span></span></li>
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-white">Drift-out timer</span> <span class="dim">— audio fades automatically when your phone stops moving for 6 minutes.</span></span></li>
+      </ul>
+    </div>
+    <div class="relative flex justify-center">
+      <div class="phone-glow"></div>
+      <div class="phone phone-tilt" style="width:240px;height:496px;">
+        <div class="phone-notch" style="width:84px;height:24px;"></div>
+        <div class="phone-screen">
+          <div class="absolute inset-0 p-4 pt-12">
+            <div class="text-center mb-4">
+              <p class="text-[9px] faint font-mono uppercase tracking-widest mb-1">Tonight · 4-7-8 breath</p>
+              <h5 class="font-display text-base">Round 6 of 8</h5>
+            </div>
+            <div class="flex items-center justify-center my-6">
+              <div class="relative w-32 h-32">
+                <svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="50" r="44" fill="none" stroke="rgba(179,136,255,.18)" stroke-width="2"/><circle cx="50" cy="50" r="44" fill="none" stroke="#B388FF" stroke-width="2" stroke-dasharray="138 276" stroke-linecap="round" transform="rotate(-90 50 50)"/></svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center"><p class="font-display text-2xl">Hold</p><p class="text-[10px] dim font-mono">7s</p></div>
+              </div>
+            </div>
+            <div class="mt-4 p-3 rounded-xl" style="background:rgba(255,255,255,.05);border:1px solid var(--hairline);">
+              <div class="flex items-center gap-2 mb-2">
+                <div class="w-1.5 h-1.5 rounded-full bg-accent"></div>
+                <p class="text-[10px] dim">Heart variability</p>
+              </div>
+              <svg viewBox="0 0 200 30" class="w-full h-6"><polyline points="0,18 20,14 40,20 60,8 80,16 100,6 120,14 140,4 160,12 180,8 200,10" fill="none" stroke="#B388FF" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature 2 (flipped) -->
+  <div class="grid md:grid-cols-2 gap-12 md:gap-16 items-center mb-28">
+    <div class="md:order-2">
+      <p class="text-accent font-mono text-xs uppercase tracking-widest mb-4">Sleep stories</p>
+      <h3 class="font-display text-3xl md:text-4xl mb-5">Written by novelists. Read by people you'd actually trust.</h3>
+      <p class="dim text-lg mb-6">240+ original sleep stories written by published authors, not scraped from public domain. Recorded in quiet booths with breath-sound editing, so nothing pops.</p>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-white">New every Friday.</span> <span class="dim">A new story drops weekly. Past stories never expire from your library.</span></span></li>
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-white">Calm endings, no plot.</span> <span class="dim">Stories are intentionally low-stakes — a quiet evening at the lighthouse, not a chase scene.</span></span></li>
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-white">Real voices, never AI.</span> <span class="dim">Every narration is a human in a booth. You can hear the difference.</span></span></li>
+      </ul>
+    </div>
+    <div class="relative md:order-1 flex justify-center">
+      <div class="phone-glow"></div>
+      <div class="phone phone-tilt" style="width:240px;height:496px;transform:perspective(1600px) rotateY(6deg) rotateX(2deg);">
+        <div class="phone-notch" style="width:84px;height:24px;"></div>
+        <div class="phone-screen" style="background:linear-gradient(180deg,#3F2A99,#0d0820);">
+          <div class="absolute inset-0 p-4 pt-12 flex flex-col">
+            <div class="text-center mb-3">
+              <p class="text-[9px] faint font-mono uppercase tracking-widest mb-1">Sleep story · 22 min</p>
+              <h5 class="font-display text-base">The Lighthouse Keeper</h5>
+              <p class="text-[10px] dim mt-0.5">Read by Aoife N.</p>
+            </div>
+            <div class="w-36 h-36 mx-auto rounded-2xl mb-4" style="background:linear-gradient(135deg,#FF8AD9 0%,#B388FF 50%,#3F2A99 100%);box-shadow:0 16px 32px -8px rgba(179,136,255,.5);"></div>
+            <div class="flex-1"></div>
+            <div>
+              <div class="flex justify-between text-[10px] font-mono dim mb-2"><span>14:22</span><span>−7:38</span></div>
+              <div class="w-full h-1 rounded-full bg-white/10 mb-4"><div class="h-full rounded-full" style="width:65%;background:#B388FF;"></div></div>
+              <div class="flex items-center justify-around">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="opacity-60"><path d="M19 20L9 12l10-8v16zM5 19V5"/></svg>
+                <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center" style="color:#3F2A99;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></div>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="opacity-60"><path d="M5 4l10 8-10 8V4zM19 5v14"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature 3 -->
+  <div class="grid md:grid-cols-2 gap-12 md:gap-16 items-center">
+    <div>
+      <p class="text-accent font-mono text-xs uppercase tracking-widest mb-4">Patterns</p>
+      <h3 class="font-display text-3xl md:text-4xl mb-5">One insight a week. Not a dashboard.</h3>
+      <p class="dim text-lg mb-6">Lumen reads your sleep, but the weekly summary is one short sentence — the strongest thing it noticed. Because tracking should reduce anxiety, not become a new source of it.</p>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-white">No streaks, ever.</span> <span class="dim">Missing a night doesn't reset anything. Lumen isn't a duolingo for sleep.</span></span></li>
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-white">Apple Health & Oura sync.</span> <span class="dim">If you wear something, we use it. If not, your own self-report is fine.</span></span></li>
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-white">Export your data anytime.</span> <span class="dim">CSV or JSON. Your account, your sleep history, your call.</span></span></li>
+      </ul>
+    </div>
+    <div class="relative flex justify-center">
+      <div class="phone-glow"></div>
+      <div class="phone phone-tilt" style="width:240px;height:496px;">
+        <div class="phone-notch" style="width:84px;height:24px;"></div>
+        <div class="phone-screen">
+          <div class="absolute inset-0 p-4 pt-12">
+            <p class="text-[9px] faint font-mono uppercase tracking-widest mb-1">This week's insight</p>
+            <h5 class="font-display text-[15px] leading-snug mb-4">Sleep onset was 18 min faster on nights you finished the body-scan.</h5>
+            <div class="rounded-xl p-3 mb-3" style="background:rgba(179,136,255,.1);border:1px solid rgba(179,136,255,.18);">
+              <p class="text-[10px] dim">14-day onset</p>
+              <p class="font-display text-2xl text-accent mb-1">22<span class="text-sm font-normal">m</span></p>
+              <p class="text-[9px] faint font-mono">↓ from 40m last month</p>
+            </div>
+            <div class="grid grid-cols-7 gap-1 mb-3">
+              <div class="h-12 rounded" style="background:rgba(179,136,255,.4);"></div>
+              <div class="h-10 rounded" style="background:rgba(179,136,255,.3);"></div>
+              <div class="h-14 rounded" style="background:rgba(179,136,255,.55);"></div>
+              <div class="h-8 rounded" style="background:rgba(179,136,255,.2);"></div>
+              <div class="h-12 rounded" style="background:rgba(179,136,255,.4);"></div>
+              <div class="h-16 rounded" style="background:rgba(179,136,255,.7);"></div>
+              <div class="h-11 rounded" style="background:rgba(179,136,255,.35);"></div>
+            </div>
+            <p class="text-[9px] faint font-mono text-center">Mon – Sun · last 7 nights</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- OUTCOMES -->
+<section class="relative py-24 md:py-28 border-t hairline">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <p class="text-accent font-mono text-xs uppercase tracking-widest mb-3">By the numbers</p>
+      <h2 class="font-display text-3xl md:text-4xl">What 28,408 sleepers have seen.</h2>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div class="card p-7 text-center">
+        <p class="font-display text-5xl md:text-6xl mb-2 text-accent">−32<span class="text-2xl">min</span></p>
+        <p class="text-sm dim">avg sleep onset after 30 nights, self-reported</p>
+      </div>
+      <div class="card p-7 text-center">
+        <p class="font-display text-5xl md:text-6xl mb-2 text-accent">84<span class="text-2xl">%</span></p>
+        <p class="text-sm dim">of members still active past month 6</p>
+      </div>
+      <div class="card p-7 text-center">
+        <p class="font-display text-5xl md:text-6xl mb-2 text-accent">240<span class="text-2xl">+</span></p>
+        <p class="text-sm dim">original sleep stories in the library</p>
+      </div>
+      <div class="card p-7 text-center">
+        <p class="font-display text-5xl md:text-6xl mb-2 text-accent">4.8<span class="text-2xl">★</span></p>
+        <p class="text-sm dim">from 28,408 App Store reviews</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- REVIEWS -->
+<section id="reviews" class="relative max-w-7xl mx-auto px-6 py-24 md:py-32">
+  <div class="max-w-2xl mb-14">
+    <p class="text-accent font-mono text-xs uppercase tracking-widest mb-4">Reviews</p>
+    <h2 class="font-display text-4xl md:text-5xl mb-5">Real reviews. We don't pay for these.</h2>
+  </div>
+  <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+    <div class="card p-7">
+      <div class="flex gap-0.5 mb-4"><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg></div>
+      <p class="text-base leading-relaxed mb-5">"I'd tried Calm and Headspace for years. This one finally got the assignment — it actually shortens when I'm exhausted instead of making me 'meditate longer'."</p>
+      <p class="text-sm dim">— Priya, Brooklyn</p>
+    </div>
+    <div class="card p-7">
+      <div class="flex gap-0.5 mb-4"><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg></div>
+      <p class="text-base leading-relaxed mb-5">"Aoife's lighthouse story took me out cold on a transatlantic flight. First time I've slept on a plane in years."</p>
+      <p class="text-sm dim">— Marcus, Cape Town</p>
+    </div>
+    <div class="card p-7">
+      <div class="flex gap-0.5 mb-4"><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg></div>
+      <p class="text-base leading-relaxed mb-5">"The 'one insight a week' is the move. I deleted three other tracking apps that were making me anxious."</p>
+      <p class="text-sm dim">— Hana, Tokyo</p>
+    </div>
+    <div class="card p-7">
+      <div class="flex gap-0.5 mb-4"><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg></div>
+      <p class="text-base leading-relaxed mb-5">"As a parent of two under five, I needed a wind-down that's 8 minutes not 45. The short programs are why I stayed."</p>
+      <p class="text-sm dim">— Yusuf, Manchester</p>
+    </div>
+    <div class="card p-7">
+      <div class="flex gap-0.5 mb-4"><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg></div>
+      <p class="text-base leading-relaxed mb-5">"Tried it after my second postpartum insomnia spiral. The lullaby protocols actually understand that 'go to sleep' isn't useful advice at 3 am."</p>
+      <p class="text-sm dim">— Ines, Lisbon</p>
+    </div>
+    <div class="card p-7">
+      <div class="flex gap-0.5 mb-4"><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg></div>
+      <p class="text-base leading-relaxed mb-5">"The voices aren't trying to perform spirituality at you. Just calm humans. Olu could read a takeout menu and I'd be out."</p>
+      <p class="text-sm dim">— Jamie, Stockholm</p>
+    </div>
+  </div>
+</section>
+
+<!-- APP STORE RATING -->
+<section class="relative py-24 md:py-28 border-t hairline">
+  <div class="max-w-5xl mx-auto px-6">
+    <div class="grid md:grid-cols-2 gap-12 md:gap-16 items-center">
+      <div class="text-center md:text-left">
+        <p class="text-accent font-mono text-xs uppercase tracking-widest mb-4">App Store rating</p>
+        <p class="font-display text-7xl md:text-8xl mb-3">4.8<span class="text-3xl text-accent">★</span></p>
+        <div class="flex gap-1 justify-center md:justify-start mb-4">
+          <svg width="22" height="22" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="22" height="22" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="22" height="22" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="22" height="22" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="22" height="22" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg>
+        </div>
+        <p class="dim font-mono text-sm">28,408 ratings · Health & Fitness · Top 12</p>
+      </div>
+      <div class="space-y-3">
+        <div class="flex items-center gap-3"><span class="text-xs font-mono w-4 dim">5★</span><div class="bar-track flex-1"><div class="bar-fill" style="width:84%;"></div></div><span class="text-xs font-mono w-12 text-right dim">84%</span></div>
+        <div class="flex items-center gap-3"><span class="text-xs font-mono w-4 dim">4★</span><div class="bar-track flex-1"><div class="bar-fill" style="width:11%;"></div></div><span class="text-xs font-mono w-12 text-right dim">11%</span></div>
+        <div class="flex items-center gap-3"><span class="text-xs font-mono w-4 dim">3★</span><div class="bar-track flex-1"><div class="bar-fill" style="width:3%;"></div></div><span class="text-xs font-mono w-12 text-right dim">3%</span></div>
+        <div class="flex items-center gap-3"><span class="text-xs font-mono w-4 dim">2★</span><div class="bar-track flex-1"><div class="bar-fill" style="width:1%;"></div></div><span class="text-xs font-mono w-12 text-right dim">1%</span></div>
+        <div class="flex items-center gap-3"><span class="text-xs font-mono w-4 dim">1★</span><div class="bar-track flex-1"><div class="bar-fill" style="width:1%;"></div></div><span class="text-xs font-mono w-12 text-right dim">1%</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="relative max-w-5xl mx-auto px-6 py-24 md:py-32">
+  <div class="max-w-2xl mb-14">
+    <p class="text-accent font-mono text-xs uppercase tracking-widest mb-4">Pricing</p>
+    <h2 class="font-display text-4xl md:text-5xl mb-5">Free works. Plus works better.</h2>
+    <p class="dim text-lg">Cancel from inside the app. No "are you sure?" gauntlet, no email exit interview. We'd rather you come back than be trapped.</p>
+  </div>
+  <div class="grid md:grid-cols-2 gap-5">
+    <div class="card p-8">
+      <div class="flex items-baseline justify-between mb-1">
+        <h3 class="font-display text-2xl">Free</h3>
+        <p class="font-mono text-sm dim">$0</p>
+      </div>
+      <p class="dim text-sm mb-7">Everything you need for the bad-sleep weeks.</p>
+      <ul class="space-y-3 text-sm mb-8">
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>3 tonight-programs per week</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Library of 60+ wind-downs & stories</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Apple Health / Oura read-only sync</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>One narrator (Olu)</li>
+      </ul>
+      <a href="#" class="block text-center py-3 rounded-full text-sm font-medium btn-ghost">Start free</a>
+    </div>
+    <div class="card p-8 relative" style="background:rgba(179,136,255,.08);border-color:rgba(179,136,255,.3);">
+      <div class="absolute -top-3 right-6 px-2.5 py-1 rounded-full text-[10px] font-medium font-mono uppercase tracking-widest" style="background:#B388FF;color:#0A0814;">Most popular</div>
+      <div class="flex items-baseline justify-between mb-1">
+        <h3 class="font-display text-2xl">Plus</h3>
+        <p class="font-mono text-sm"><span class="text-2xl text-white">$14</span><span class="dim">/mo</span></p>
+      </div>
+      <p class="dim text-sm mb-7">Unlimited tonight-programs and the full library.</p>
+      <ul class="space-y-3 text-sm mb-8">
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Unlimited tonight-only programs</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Full 240+ story library + weekly drop</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>All 8 narrator voices</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Sleep journal + weekly insight</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Offline downloads</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>14-day trial, cancel in-app</li>
+      </ul>
+      <a href="#" class="block text-center py-3 rounded-full text-sm font-medium btn-primary">Try Plus for 14 days</a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="relative max-w-3xl mx-auto px-6 py-24 md:py-28">
+  <div class="text-center mb-14">
+    <p class="text-accent font-mono text-xs uppercase tracking-widest mb-4">FAQ</p>
+    <h2 class="font-display text-4xl md:text-5xl">The questions sleep-deprived adults actually ask.</h2>
+  </div>
+  <div class="space-y-3">
+    <details class="card p-6 group" open>
+      <summary class="flex items-center justify-between gap-4">
+        <span class="font-display text-lg">Does it work without headphones?</span>
+        <svg class="chev shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <p class="mt-4 dim leading-relaxed">Yes. Every track is mixed for phone speakers too — we test on a 2018 iPhone, not just AirPods Pro. Some users actually prefer it: the soft speaker hiss adds a layer of ambient. For partners, there's a 'low-bedside' mix that drops the bass and EQs above 80 Hz so it carries less.</p>
+    </details>
+    <details class="card p-6 group">
+      <summary class="flex items-center justify-between gap-4">
+        <span class="font-display text-lg">Can I use it offline on flights?</span>
+        <svg class="chev shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <p class="mt-4 dim leading-relaxed">Plus members can download any wind-down, story, or ambient track for 30 days of offline playback. The Tonight program needs network for the initial build, but once it's built, the whole sequence is cached locally. Long-haul tested by our team flying SFO–SYD.</p>
+    </details>
+    <details class="card p-6 group">
+      <summary class="flex items-center justify-between gap-4">
+        <span class="font-display text-lg">How does this compare to Calm or Headspace?</span>
+        <svg class="chev shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <p class="mt-4 dim leading-relaxed">Calm and Headspace are libraries — you pick the thing. Lumen builds you a 30–90 minute sequence each night based on inputs about your day and (optionally) your wearable. We're smaller, focused only on sleep, and we don't ship daytime meditation, courses, or kids' content. If you want a broad mindfulness app, Calm is great. If you want one job done well at 11pm, that's us.</p>
+    </details>
+    <details class="card p-6 group">
+      <summary class="flex items-center justify-between gap-4">
+        <span class="font-display text-lg">What's the cancellation flow?</span>
+        <svg class="chev shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <p class="mt-4 dim leading-relaxed">Settings → Subscription → Cancel. Two taps. No retention screen, no "wait, here's 50% off!", no email gauntlet. App Store / Play Store cancellations work the same — and we don't charge for the remainder of your billing period, you just keep Plus until then.</p>
+    </details>
+    <details class="card p-6 group">
+      <summary class="flex items-center justify-between gap-4">
+        <span class="font-display text-lg">Are the voices AI-generated or human?</span>
+        <svg class="chev shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <p class="mt-4 dim leading-relaxed">100% human. Every narrator records in a treated booth in London, Brooklyn, or Tokyo. We considered AI for the long-tail languages but decided against it — the micro-pauses and breath patterns that actually help you drift off are exactly what synthetic voices miss. Each narrator is paid per session and credited.</p>
+    </details>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section id="download" class="relative max-w-7xl mx-auto px-6 py-24 md:py-32">
+  <div class="hero-halo"></div>
+  <div class="text-center mb-12 relative z-10">
+    <h2 class="font-display text-4xl md:text-6xl mb-6">Tonight could be different.</h2>
+    <p class="text-lg md:text-xl dim max-w-xl mx-auto mb-10">First three nights on us. No card needed. The program builds in 90 seconds and the only button is "Begin".</p>
+    <div class="flex flex-wrap gap-3 justify-center mb-10">
+      <a href="#" class="badge-store">
+        <svg width="22" height="26" viewBox="0 0 24 28" fill="currentColor"><path d="M17.5 14.7c0-3 2.5-4.5 2.6-4.5-1.4-2.1-3.6-2.4-4.4-2.4-1.9-.2-3.6 1.1-4.6 1.1-1 0-2.4-1.1-4-1-2 0-3.9 1.2-5 3-2.2 3.7-.6 9.2 1.5 12.2 1 1.5 2.2 3.2 3.8 3.1 1.5-.1 2.1-1 3.9-1 1.8 0 2.4 1 4 1 1.6 0 2.7-1.5 3.7-3 1.2-1.7 1.6-3.4 1.7-3.5-.1 0-3.2-1.3-3.2-4.9zm-3-9c.9-1 1.4-2.4 1.3-3.7-1.2 0-2.7.8-3.6 1.8-.8.9-1.5 2.3-1.3 3.6 1.3.1 2.7-.7 3.6-1.7z"/></svg>
+        <div class="flex flex-col text-left"><span class="badge-label">Download on the</span><span class="badge-name">App Store</span></div>
+      </a>
+      <a href="#" class="badge-store">
+        <svg width="22" height="24" viewBox="0 0 22 24"><path d="M1.4 1.2c-.3.3-.4.8-.4 1.4v18.8c0 .7.1 1.2.4 1.4l.1.1L11.7 12.1v-.2L1.5 1.1l-.1.1z" fill="#5BC9F4"/><path d="M15.1 15.6l-3.4-3.4v-.2l3.4-3.4.1.1 4.1 2.3c1.2.7 1.2 1.7 0 2.3l-4.1 2.3-.1z" fill="#FECC2F"/><path d="M15.2 15.5L11.7 12 1.4 22.8c.4.4 1 .5 1.8.1l12-6.8" fill="#EF4136"/><path d="M15.2 8.5L3.2 1.7c-.8-.4-1.4-.3-1.8.1L11.7 12l3.5-3.5z" fill="#0F9D58"/></svg>
+        <div class="flex flex-col text-left"><span class="badge-label">Get it on</span><span class="badge-name">Google Play</span></div>
+      </a>
+    </div>
+  </div>
+  <div class="relative flex justify-center">
+    <div class="phone-glow" style="width:60%;height:120px;"></div>
+    <div class="phone phone-float" style="width:300px;height:614px;">
+      <div class="phone-notch"></div>
+      <div class="phone-screen" style="background:radial-gradient(ellipse at top,#3F2A99 0%,#0d0820 70%);">
+        <div class="absolute inset-0 p-5 pt-14 flex flex-col items-center justify-center">
+          <div class="app-icon w-20 h-20 mb-6"><div class="w-full h-full flex items-center justify-center"><svg width="42" height="42" viewBox="0 0 24 24" fill="none"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z" fill="white"/></svg></div></div>
+          <h3 class="font-display text-2xl mb-2 text-center">Welcome to Lumen</h3>
+          <p class="text-[12px] dim text-center mb-6 max-w-[200px]">Eight quick questions about how you sleep. Then your first program is ready.</p>
+          <button class="w-full py-3 rounded-2xl text-sm font-medium" style="background:linear-gradient(135deg,#B388FF,#6B4DFF);color:white;">Get started</button>
+          <p class="text-[10px] faint font-mono mt-4">No card · No account yet</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="relative border-t hairline py-10">
+  <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div class="flex items-center gap-2.5">
+      <div class="app-icon w-7 h-7 flex items-center justify-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z" fill="white"/></svg></div>
+      <span class="font-display text-base">Lumen</span>
+      <span class="dim font-mono text-xs ml-3">v 3.18.4</span>
+    </div>
+    <div class="flex flex-wrap gap-7 text-sm dim">
+      <a href="#" class="hover:text-white">Privacy</a>
+      <a href="#" class="hover:text-white">Terms</a>
+      <a href="#" class="hover:text-white">Support</a>
+      <a href="#" class="hover:text-white">Careers</a>
+      <a href="#" class="hover:text-white">Press</a>
+    </div>
+    <p class="faint text-xs font-mono">© 2026 Lumen Sleep, Inc.</p>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,1428 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Heron — HTML is the API</title>
+  <meta name="description" content="Heron is a minimalist 8kb web framework for hypermedia apps. Drive your UI with HTML attributes — server-rendered, no build step, no bundler. v1.4, MIT licensed." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,500;0,8..60,600;1,8..60,500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            paper: "#FCFAF6",
+            ink: "#1A1714",
+            rust: "#C2410C",
+            "rust-deep": "#9A3412",
+            "code-bg": "#F4F0E7",
+            "code-bg-2": "#EFEADE",
+          },
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            serif: ['"Source Serif 4"', 'ui-serif', 'Georgia', 'serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root {
+      --hairline: rgba(0, 0, 0, 0.08);
+      --hairline-strong: rgba(0, 0, 0, 0.14);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: #FCFAF6;
+      color: #1A1714;
+      font-feature-settings: "ss01", "cv11";
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    ::selection {
+      background: rgba(194, 65, 12, 0.16);
+      color: #1A1714;
+    }
+
+    .font-display {
+      font-family: '"Source Serif 4"', serif;
+      font-style: italic;
+      font-weight: 500;
+      letter-spacing: -0.03em;
+    }
+
+    .tnum { font-variant-numeric: tabular-nums; }
+
+    /* ---- Hairline borders ---- */
+    .hairline { border: 1px solid var(--hairline); }
+    .hairline-t { border-top: 1px solid var(--hairline); }
+    .hairline-b { border-bottom: 1px solid var(--hairline); }
+    .hairline-l { border-left: 1px solid var(--hairline); }
+    .hairline-r { border-right: 1px solid var(--hairline); }
+
+    /* ---- Dot grid ---- */
+    .dot-grid {
+      background-image: radial-gradient(rgba(26, 23, 20, 0.10) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+
+    /* ---- Ambient mesh blobs ---- */
+    .mesh-blob {
+      position: absolute;
+      border-radius: 9999px;
+      filter: blur(90px);
+      opacity: 0.5;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ---- Hero radial ---- */
+    .hero-radial {
+      background:
+        radial-gradient(620px circle at 50% 8%, rgba(194, 65, 12, 0.10), transparent 70%),
+        radial-gradient(900px circle at 84% 0%, rgba(154, 52, 18, 0.07), transparent 60%);
+    }
+
+    /* ---- Marquee ---- */
+    @keyframes marquee {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    .marquee-track {
+      display: flex;
+      width: max-content;
+      animation: marquee 38s linear infinite;
+    }
+    .marquee-mask:hover .marquee-track { animation-play-state: paused; }
+    .marquee-mask {
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+      mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+    }
+
+    /* ---- Pulse dot ---- */
+    @keyframes pulse-dot {
+      0%   { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.55); }
+      70%  { box-shadow: 0 0 0 9px rgba(22, 163, 74, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+    }
+    .pulse-dot {
+      width: 8px; height: 8px;
+      border-radius: 9999px;
+      background: #16A34A;
+      animation: pulse-dot 2.2s ease-out infinite;
+    }
+
+    /* ---- Count shimmer ---- */
+    @keyframes count-shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    .count-shimmer {
+      background: linear-gradient(100deg, currentColor 38%, rgba(194,65,12,0.55) 50%, currentColor 62%);
+      background-size: 200% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: count-shimmer 2.6s ease-in-out 1;
+    }
+
+    /* ---- Copy pulse ---- */
+    @keyframes copy-pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(194, 65, 12, 0.45); }
+      100% { box-shadow: 0 0 0 12px rgba(194, 65, 12, 0); }
+    }
+    .copy-pulse { animation: copy-pulse 0.6s ease-out 1; }
+
+    /* ---- Reveal on scroll ---- */
+    .reveal {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1), transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .reveal.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ---- Light syntax theme — earthy, paper ---- */
+    .code-block {
+      background: #F4F0E7;
+      color: #2A2620;
+      font-family: '"JetBrains Mono"', monospace;
+    }
+    .tok-tag    { color: #9A3412; }
+    .tok-attr   { color: #B45309; }
+    .tok-string { color: #4D7C0F; }
+    .tok-kw     { color: #C2410C; font-weight: 600; }
+    .tok-fn     { color: #0F766E; }
+    .tok-punct  { color: #8A7E6C; }
+    .tok-comment{ color: #A39A86; font-style: italic; }
+    .tok-num    { color: #B45309; }
+    .tok-prompt { color: #C2410C; font-weight: 600; user-select: none; }
+
+    .ln {
+      display: inline-block;
+      width: 2.1rem;
+      margin-right: 1.1rem;
+      text-align: right;
+      color: #BDB2A0;
+      user-select: none;
+    }
+
+    /* ---- Nav blur ---- */
+    .nav-blur {
+      background: rgba(252, 250, 246, 0.82);
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+    }
+
+    /* ---- Card hover ---- */
+    .lift {
+      transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+    }
+    .lift:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 14px 34px -18px rgba(26, 23, 20, 0.30);
+      border-color: var(--hairline-strong);
+    }
+
+    .btn {
+      transition: transform 110ms ease, background-color 110ms ease, box-shadow 110ms ease, border-color 110ms ease, color 110ms ease;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+
+    .link-u {
+      transition: color 110ms ease;
+    }
+    .link-u:hover { color: #C2410C; }
+
+    details > summary { list-style: none; cursor: pointer; }
+    details > summary::-webkit-details-marker { display: none; }
+    details[open] .faq-chevron { transform: rotate(45deg); }
+    .faq-chevron { transition: transform 140ms ease; }
+
+    .mobile-menu { display: none; }
+    .mobile-menu.open { display: block; }
+
+    /* code wrap on small screens */
+    .code-scroll { overflow-x: auto; }
+    .code-scroll::-webkit-scrollbar { height: 7px; }
+    .code-scroll::-webkit-scrollbar-thumb { background: rgba(26,23,20,0.18); border-radius: 9999px; }
+  </style>
+</head>
+<body class="font-sans antialiased">
+
+  <!-- ============ 1. STICKY TOP NAV ============ -->
+  <header class="sticky top-0 z-50 nav-blur hairline-b">
+    <nav class="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5 sm:px-6">
+      <!-- Logo + wordmark -->
+      <a href="#top" class="flex items-center gap-2.5" aria-label="Heron home">
+        <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <path d="M5 27c4-1 6.5-3 8-6.5C14.6 16.8 15 12 17.5 8.2 19.7 4.9 23 3.3 27 3c-1.1 3.4-1 6.4-3.4 9.6-2 2.7-4.6 3.6-7.8 4.2-3 .56-5.4 1.6-7.2 4.3" stroke="#C2410C" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="23.6" cy="8.4" r="2" fill="#1A1714"/>
+          <path d="M5 27h7" stroke="#1A1714" stroke-width="2.1" stroke-linecap="round"/>
+        </svg>
+        <span class="text-[17px] font-semibold tracking-tight">Heron</span>
+        <span class="ml-1 hidden rounded-full bg-rust/10 px-1.5 py-0.5 font-mono text-[10px] font-medium text-rust sm:inline">v1.4</span>
+      </a>
+
+      <!-- Desktop links -->
+      <div class="hidden items-center gap-7 md:flex">
+        <a href="#quickstart" class="link-u text-[14px] text-ink/70">Docs</a>
+        <a href="#code" class="link-u text-[14px] text-ink/70">Examples</a>
+        <a href="#why" class="link-u text-[14px] text-ink/70">Blog</a>
+        <a href="#community" class="link-u text-[14px] text-ink/70">Community</a>
+      </div>
+
+      <!-- Right cluster -->
+      <div class="flex items-center gap-2.5">
+        <a href="#top" class="btn hidden items-center gap-1.5 rounded-full hairline bg-white/60 px-3 py-1.5 text-[13px] font-medium text-ink/80 hover:bg-white sm:flex">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="#C2410C" aria-hidden="true">
+            <path d="M8 .9l2.06 4.43L15 6.03l-3.5 3.5.86 4.96L8 12.2l-4.36 2.29.86-4.96L1 6.03l4.94-.7L8 .9z"/>
+          </svg>
+          <span class="tnum font-mono font-semibold text-ink" id="nav-star-count">0</span>
+          <span class="text-ink/55">stars</span>
+        </a>
+        <a href="#quickstart" class="btn rounded-full bg-rust px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm hover:bg-rust-deep">Get started</a>
+        <!-- Mobile toggle -->
+        <button id="menu-toggle" class="btn flex h-9 w-9 items-center justify-center rounded-full hairline bg-white/60 md:hidden" aria-label="Toggle menu" aria-expanded="false">
+          <svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="#1A1714" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+            <path d="M3 6h14M3 10h14M3 14h14"/>
+          </svg>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Mobile menu -->
+    <div id="mobile-menu" class="mobile-menu hairline-t md:hidden">
+      <div class="mx-auto flex max-w-6xl flex-col gap-1 px-5 py-3">
+        <a href="#quickstart" class="rounded-lg px-3 py-2.5 text-[15px] text-ink/80 hover:bg-rust/5">Docs</a>
+        <a href="#code" class="rounded-lg px-3 py-2.5 text-[15px] text-ink/80 hover:bg-rust/5">Examples</a>
+        <a href="#why" class="rounded-lg px-3 py-2.5 text-[15px] text-ink/80 hover:bg-rust/5">Blog</a>
+        <a href="#community" class="rounded-lg px-3 py-2.5 text-[15px] text-ink/80 hover:bg-rust/5">Community</a>
+        <a href="#top" class="mt-1 flex items-center gap-2 rounded-lg px-3 py-2.5 text-[15px] text-ink/80 hover:bg-rust/5">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="#C2410C" aria-hidden="true"><path d="M8 .9l2.06 4.43L15 6.03l-3.5 3.5.86 4.96L8 12.2l-4.36 2.29.86-4.96L1 6.03l4.94-.7L8 .9z"/></svg>
+          28,408 stars on GitHub
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+
+    <!-- ============ 2. HERO ============ -->
+    <section class="relative overflow-hidden hero-radial">
+      <div class="mesh-blob" style="background:#C2410C; width:340px; height:340px; top:-90px; left:-80px;"></div>
+      <div class="mesh-blob" style="background:#B45309; width:300px; height:300px; top:120px; right:-110px; opacity:0.32;"></div>
+
+      <div class="relative z-10 mx-auto max-w-3xl px-5 pb-16 pt-20 text-center sm:px-6 sm:pb-24 sm:pt-28">
+        <!-- Version pill -->
+        <a href="#faq" class="btn mb-8 inline-flex items-center gap-2 rounded-full hairline bg-white/70 px-3.5 py-1.5 text-[12.5px] font-medium text-ink/70 hover:bg-white">
+          <span class="h-1.5 w-1.5 rounded-full bg-rust"></span>
+          <span class="tnum">v1.4 · Released Mar 14, 2026 · MIT</span>
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#C2410C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
+        </a>
+
+        <!-- Headline — half-tone trick -->
+        <h1 class="font-display text-[44px] leading-[1.04] tracking-[-0.035em] sm:text-[68px] sm:leading-[1.02]">
+          HTML is the API.
+          <br class="hidden sm:block" />
+          <em class="text-rust">Always was.</em>
+        </h1>
+
+        <p class="mx-auto mt-6 max-w-xl text-[16.5px] leading-relaxed text-ink/65">
+          Heron is an 8kb framework for hypermedia apps. Drive your UI with a handful of HTML attributes — server-rendered, no build step, no bundler, no virtual DOM.
+        </p>
+
+        <!-- Install code block -->
+        <div class="mx-auto mt-9 max-w-md">
+          <div class="overflow-hidden rounded-xl hairline bg-white/70 shadow-[0_10px_30px_-22px_rgba(26,23,20,0.5)]">
+            <div class="flex items-center justify-between hairline-b bg-code-bg-2 px-3.5 py-2">
+              <div class="flex items-center gap-1.5">
+                <span class="h-2.5 w-2.5 rounded-full bg-ink/10"></span>
+                <span class="ml-1.5 font-mono text-[11px] text-ink/45">terminal</span>
+              </div>
+              <span class="font-mono text-[10.5px] text-ink/35">npm</span>
+            </div>
+            <div class="flex items-center justify-between gap-3 px-4 py-3.5">
+              <code class="font-mono text-[14px] text-ink/90">
+                <span class="tok-prompt">$ </span>npm install heron
+              </code>
+              <button class="copy-btn btn flex h-7 w-7 shrink-0 items-center justify-center rounded-md hairline bg-paper hover:border-rust/40" data-copy="npm install heron" aria-label="Copy install command">
+                <svg class="copy-icon" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#6B6253" stroke-width="1.6" aria-hidden="true">
+                  <rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/>
+                  <path d="M3.5 10.5h-1A1 1 0 0 1 1.5 9.5v-7a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v1"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dual CTA -->
+        <div class="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <a href="#quickstart" class="btn w-full rounded-full bg-ink px-6 py-3 text-[14.5px] font-semibold text-paper shadow-sm hover:bg-rust sm:w-auto">
+            Read the docs
+          </a>
+          <a href="#community" class="btn flex w-full items-center justify-center gap-2 rounded-full hairline bg-white/70 px-6 py-3 text-[14.5px] font-semibold text-ink/85 hover:bg-white sm:w-auto">
+            <svg width="17" height="17" viewBox="0 0 16 16" fill="#1A1714" aria-hidden="true">
+              <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38v-1.34c-2.23.48-2.7-1.07-2.7-1.07-.36-.93-.89-1.18-.89-1.18-.73-.5.05-.49.05-.49.8.06 1.23.83 1.23.83.72 1.23 1.87.87 2.33.67.07-.52.28-.87.5-1.07-1.78-.2-3.64-.89-3.64-3.96 0-.87.31-1.59.83-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.22 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.52.56.83 1.28.83 2.15 0 3.08-1.87 3.76-3.65 3.96.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/>
+            </svg>
+            View on GitHub
+            <span class="tnum font-mono text-[12.5px] text-ink/45">· 28.4k stars</span>
+          </a>
+        </div>
+
+        <p class="mt-6 font-mono text-[11.5px] text-ink/40">Zero dependencies · Works with any backend · 8kb gzipped</p>
+      </div>
+    </section>
+
+    <!-- ============ 3. TRUST BAR ============ -->
+    <section class="hairline-y border-y border-[var(--hairline)] bg-white/40 py-9">
+      <p class="mb-7 text-center font-mono text-[11.5px] uppercase tracking-[0.18em] text-ink/40">Trusted in production at</p>
+      <div class="marquee-mask">
+        <div class="marquee-track items-center gap-12 px-6">
+          <!-- Track A -->
+          <svg width="118" height="22" viewBox="0 0 118 22" class="shrink-0 opacity-45 transition-opacity hover:opacity-90" aria-label="Northwind">
+            <circle cx="11" cy="11" r="7.5" fill="none" stroke="#1A1714" stroke-width="2"/><path d="M11 4.5v13M4.5 11h13" stroke="#1A1714" stroke-width="2"/>
+            <text x="26" y="15.5" font-family="Inter,sans-serif" font-size="14" font-weight="700" fill="#1A1714">Northwind</text>
+          </svg>
+          <svg width="104" height="22" viewBox="0 0 104 22" class="shrink-0 opacity-45 transition-opacity hover:opacity-90" aria-label="Cobalt">
+            <rect x="3" y="4" width="14" height="14" rx="3.5" fill="#1A1714"/>
+            <text x="24" y="15.5" font-family="Inter,sans-serif" font-size="14" font-weight="700" fill="#1A1714" letter-spacing="-0.4">Cobalt</text>
+          </svg>
+          <svg width="120" height="22" viewBox="0 0 120 22" class="shrink-0 opacity-45 transition-opacity hover:opacity-90" aria-label="Driftwood">
+            <path d="M10 3l7 8-7 8-7-8 7-8z" fill="none" stroke="#1A1714" stroke-width="2" stroke-linejoin="round"/>
+            <text x="24" y="15.5" font-family="Inter,sans-serif" font-size="14" font-weight="700" fill="#1A1714">Driftwood</text>
+          </svg>
+          <svg width="96" height="22" viewBox="0 0 96 22" class="shrink-0 opacity-45 transition-opacity hover:opacity-90" aria-label="Maple">
+            <path d="M10 3.5l2.8 5L18 9l-4 4 1 5.5L10 16l-5 2.5 1-5.5-4-4 5.2-.5L10 3.5z" fill="#1A1714"/>
+            <text x="24" y="15.5" font-family="Inter,sans-serif" font-size="14" font-weight="700" fill="#1A1714">Maple</text>
+          </svg>
+          <svg width="112" height="22" viewBox="0 0 112 22" class="shrink-0 opacity-45 transition-opacity hover:opacity-90" aria-label="Tessera">
+            <rect x="3" y="4" width="6.5" height="6.5" fill="#1A1714"/><rect x="11" y="11.5" width="6.5" height="6.5" fill="#1A1714"/>
+            <text x="24" y="15.5" font-family="Inter,sans-serif" font-size="14" font-weight="700" fill="#1A1714">Tessera</text>
+          </svg>
+          <svg width="100" height="22" viewBox="0 0 100 22" class="shrink-0 opacity-45 transition-opacity hover:opacity-90" aria-label="Harbor">
+            <path d="M10 3v15M4 13c0 3 3 5 6 5s6-2 6-5" fill="none" stroke="#1A1714" stroke-width="2" stroke-linecap="round"/>
+            <text x="24" y="15.5" font-family="Inter,sans-serif" font-size="14" font-weight="700" fill="#1A1714">Harbor</text>
+          </svg>
+          <svg width="110" height="22" viewBox="0 0 110 22" class="shrink-0 opacity-45 transition-opacity hover:opacity-90" aria-label="Lumen Labs">
+            <circle cx="10" cy="11" r="7" fill="#1A1714"/><circle cx="10" cy="11" r="3" fill="#FCFAF6"/>
+            <text x="24" y="15.5" font-family="Inter,sans-serif" font-size="14" font-weight="700" fill="#1A1714">Lumen Labs</text>
+          </svg>
+          <svg width="98" height="22" viewBox="0 0 98 22" class="shrink-0 opacity-45 transition-opacity hover:opacity-90" aria-label="Verdant">
+            <path d="M10 18c0-5 3-9 7-11-1 5-3 9-7 11zM10 18C10 13 7 9 3 7c1 5 3 9 7 11z" fill="#1A1714"/>
+            <text x="22" y="15.5" font-family="Inter,sans-serif" font-size="14" font-weight="700" fill="#1A1714">Verdant</text>
+          </svg>
+          <svg width="92" height="22" viewBox="0 0 92 22" class="shrink-0 opacity-45 transition-opacity hover:opacity-90" aria-label="Quill">
+            <path d="M4 18C8 14 12 8 17 4c0 6-4 12-9 14H4z" fill="#1A1714"/>
+            <text x="24" y="15.5" font-family="Inter,sans-serif" font-size="14" font-weight="700" fill="#1A1714">Quill</text>
+          </svg>
+          <!-- Track B (duplicate for seamless loop) -->
+          <svg width="118" height="22" viewBox="0 0 118 22" class="shrink-0 opacity-45 transition-opacity hover:opacity-90" aria-hidden="true">
+            <circle cx="11" cy="11" r="7.5" fill="none" stroke="#1A1714" stroke-width="2"/><path d="M11 4.5v13M4.5 11h13" stroke="#1A1714" stroke-width="2"/>
+            <text x="26" y="15.5" font-family="Inter,sans-serif" font-size="14" font-weight="700" fill="#1A1714">Northwind</text>
+          </svg>
+          <svg width="104" height="22" viewBox="0 0 104 22" class="shrink-0 opacity-45 transition-opacity hover:opacity-90" aria-hidden="true">
+            <rect x="3" y="4" width="14" height="14" rx="3.5" fill="#1A1714"/>
+            <text x="24" y="15.5" font-family="Inter,sans-serif" font-size="14" font-weight="700" fill="#1A1714" letter-spacing="-0.4">Cobalt</text>
+          </svg>
+          <svg width="120" height="22" viewBox="0 0 120 22" class="shrink-0 opacity-45 transition-opacity hover:opacity-90" aria-hidden="true">
+            <path d="M10 3l7 8-7 8-7-8 7-8z" fill="none" stroke="#1A1714" stroke-width="2" stroke-linejoin="round"/>
+            <text x="24" y="15.5" font-family="Inter,sans-serif" font-size="14" font-weight="700" fill="#1A1714">Driftwood</text>
+          </svg>
+          <svg width="96" height="22" viewBox="0 0 96 22" class="shrink-0 opacity-45 transition-opacity hover:opacity-90" aria-hidden="true">
+            <path d="M10 3.5l2.8 5L18 9l-4 4 1 5.5L10 16l-5 2.5 1-5.5-4-4 5.2-.5L10 3.5z" fill="#1A1714"/>
+            <text x="24" y="15.5" font-family="Inter,sans-serif" font-size="14" font-weight="700" fill="#1A1714">Maple</text>
+          </svg>
+          <svg width="112" height="22" viewBox="0 0 112 22" class="shrink-0 opacity-45 transition-opacity hover:opacity-90" aria-hidden="true">
+            <rect x="3" y="4" width="6.5" height="6.5" fill="#1A1714"/><rect x="11" y="11.5" width="6.5" height="6.5" fill="#1A1714"/>
+            <text x="24" y="15.5" font-family="Inter,sans-serif" font-size="14" font-weight="700" fill="#1A1714">Tessera</text>
+          </svg>
+          <svg width="100" height="22" viewBox="0 0 100 22" class="shrink-0 opacity-45 transition-opacity hover:opacity-90" aria-hidden="true">
+            <path d="M10 3v15M4 13c0 3 3 5 6 5s6-2 6-5" fill="none" stroke="#1A1714" stroke-width="2" stroke-linecap="round"/>
+            <text x="24" y="15.5" font-family="Inter,sans-serif" font-size="14" font-weight="700" fill="#1A1714">Harbor</text>
+          </svg>
+          <svg width="110" height="22" viewBox="0 0 110 22" class="shrink-0 opacity-45 transition-opacity hover:opacity-90" aria-hidden="true">
+            <circle cx="10" cy="11" r="7" fill="#1A1714"/><circle cx="10" cy="11" r="3" fill="#FCFAF6"/>
+            <text x="24" y="15.5" font-family="Inter,sans-serif" font-size="14" font-weight="700" fill="#1A1714">Lumen Labs</text>
+          </svg>
+          <svg width="98" height="22" viewBox="0 0 98 22" class="shrink-0 opacity-45 transition-opacity hover:opacity-90" aria-hidden="true">
+            <path d="M10 18c0-5 3-9 7-11-1 5-3 9-7 11zM10 18C10 13 7 9 3 7c1 5 3 9 7 11z" fill="#1A1714"/>
+            <text x="22" y="15.5" font-family="Inter,sans-serif" font-size="14" font-weight="700" fill="#1A1714">Verdant</text>
+          </svg>
+          <svg width="92" height="22" viewBox="0 0 92 22" class="shrink-0 opacity-45 transition-opacity hover:opacity-90" aria-hidden="true">
+            <path d="M4 18C8 14 12 8 17 4c0 6-4 12-9 14H4z" fill="#1A1714"/>
+            <text x="24" y="15.5" font-family="Inter,sans-serif" font-size="14" font-weight="700" fill="#1A1714">Quill</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 4. HERO CODE EXAMPLE ============ -->
+    <section id="code" class="relative px-5 py-20 sm:px-6 sm:py-28">
+      <div class="mx-auto max-w-3xl text-center reveal">
+        <p class="mb-3 font-mono text-[11.5px] uppercase tracking-[0.18em] text-rust">The whole idea, in twelve lines</p>
+        <h2 class="font-display text-[32px] leading-tight tracking-[-0.03em] sm:text-[42px]">
+          Search-as-you-type. <em class="text-rust">No JavaScript.</em>
+        </h2>
+        <p class="mx-auto mt-4 max-w-lg text-[15.5px] leading-relaxed text-ink/60">
+          The server sends HTML. The browser swaps it in. Heron is the thin layer of attributes between those two facts — nothing more.
+        </p>
+      </div>
+
+      <div class="mx-auto mt-10 max-w-2xl reveal">
+        <div class="overflow-hidden rounded-2xl hairline bg-white shadow-[0_24px_60px_-34px_rgba(26,23,20,0.45)]">
+          <!-- Filename tab -->
+          <div class="flex items-center justify-between hairline-b bg-code-bg-2 px-4 py-2.5">
+            <div class="flex items-center gap-3">
+              <div class="flex gap-1.5">
+                <span class="h-2.5 w-2.5 rounded-full bg-ink/10"></span>
+                <span class="h-2.5 w-2.5 rounded-full bg-ink/10"></span>
+                <span class="h-2.5 w-2.5 rounded-full bg-ink/10"></span>
+              </div>
+              <span class="flex items-center gap-1.5 rounded-md bg-paper px-2 py-1 font-mono text-[11.5px] text-ink/70 hairline">
+                <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="#C2410C" stroke-width="1.6" aria-hidden="true"><path d="M3 1.5h7l3.5 3.5v9.5H3z"/><path d="M10 1.5V5h3.5"/></svg>
+                search.html
+              </span>
+            </div>
+            <button class="copy-btn btn flex items-center gap-1.5 rounded-md hairline bg-paper px-2.5 py-1 font-mono text-[11px] text-ink/60 hover:border-rust/40 hover:text-rust" data-copy='<input type="search" name="q" placeholder="Search the docs…" hx-get="/search" hx-trigger="keyup changed delay:200ms" hx-target="#results" hx-indicator="#spin" />' aria-label="Copy code example">
+              <svg class="copy-icon" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                <rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/>
+                <path d="M3.5 10.5h-1A1 1 0 0 1 1.5 9.5v-7a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v1"/>
+              </svg>
+              <span class="copy-label">Copy</span>
+            </button>
+          </div>
+          <!-- Code body -->
+          <div class="code-block code-scroll px-4 py-5 text-[13px] leading-[1.85] sm:px-6 sm:text-[13.5px]">
+<pre class="font-mono"><span class="ln">1</span><span class="tok-comment">&lt;!-- The input asks the server on every keystroke --&gt;</span>
+<span class="ln">2</span><span class="tok-punct">&lt;</span><span class="tok-tag">input</span> <span class="tok-attr">type</span><span class="tok-punct">=</span><span class="tok-string">"search"</span> <span class="tok-attr">name</span><span class="tok-punct">=</span><span class="tok-string">"q"</span> <span class="tok-attr">placeholder</span><span class="tok-punct">=</span><span class="tok-string">"Search the docs…"</span>
+<span class="ln">3</span>       <span class="tok-kw">hx-get</span><span class="tok-punct">=</span><span class="tok-string">"/search"</span>
+<span class="ln">4</span>       <span class="tok-kw">hx-trigger</span><span class="tok-punct">=</span><span class="tok-string">"keyup changed delay:200ms"</span>
+<span class="ln">5</span>       <span class="tok-kw">hx-target</span><span class="tok-punct">=</span><span class="tok-string">"#results"</span>
+<span class="ln">6</span>       <span class="tok-kw">hx-indicator</span><span class="tok-punct">=</span><span class="tok-string">"#spin"</span> <span class="tok-punct">/&gt;</span>
+<span class="ln">7</span>
+<span class="ln">8</span><span class="tok-comment">&lt;!-- A spinner Heron shows while the request is in flight --&gt;</span>
+<span class="ln">9</span><span class="tok-punct">&lt;</span><span class="tok-tag">span</span> <span class="tok-attr">id</span><span class="tok-punct">=</span><span class="tok-string">"spin"</span> <span class="tok-attr">class</span><span class="tok-punct">=</span><span class="tok-string">"heron-indicator"</span><span class="tok-punct">&gt;</span>searching…<span class="tok-punct">&lt;/</span><span class="tok-tag">span</span><span class="tok-punct">&gt;</span>
+<span class="ln">10</span>
+<span class="ln">11</span><span class="tok-comment">&lt;!-- The server's HTML response lands right here --&gt;</span>
+<span class="ln">12</span><span class="tok-punct">&lt;</span><span class="tok-tag">ul</span> <span class="tok-attr">id</span><span class="tok-punct">=</span><span class="tok-string">"results"</span><span class="tok-punct">&gt;&lt;/</span><span class="tok-tag">ul</span><span class="tok-punct">&gt;</span></pre>
+          </div>
+          <!-- Caption strip -->
+          <div class="flex flex-wrap items-center gap-x-5 gap-y-1.5 hairline-t bg-code-bg/60 px-4 py-2.5 font-mono text-[11px] text-ink/45 sm:px-6">
+            <span><span class="text-rust">hx-get</span> — the URL to fetch</span>
+            <span><span class="text-rust">hx-trigger</span> — when to fetch it</span>
+            <span><span class="text-rust">hx-target</span> — where the HTML goes</span>
+          </div>
+        </div>
+        <p class="mt-4 text-center text-[13px] text-ink/45">That is the entire feature. No state store, no client router, no rebuild on save.</p>
+      </div>
+    </section>
+
+    <!-- ============ 5. WHY THIS EXISTS ============ -->
+    <section id="why" class="relative overflow-hidden border-y border-[var(--hairline)] bg-white/45">
+      <div class="dot-grid absolute inset-0 opacity-[0.55]" aria-hidden="true"></div>
+      <div class="relative z-10 mx-auto grid max-w-6xl gap-12 px-5 py-20 sm:px-6 sm:py-28 lg:grid-cols-[1fr_0.82fr]">
+        <!-- Philosophy paragraphs -->
+        <div class="reveal">
+          <p class="mb-3 font-mono text-[11.5px] uppercase tracking-[0.18em] text-rust">Why Heron exists</p>
+          <h2 class="font-display text-[30px] leading-tight tracking-[-0.03em] sm:text-[40px]">
+            Most apps were never <em class="text-rust">single-page apps.</em>
+          </h2>
+
+          <div class="mt-7 space-y-5 text-[15.5px] leading-[1.72] text-ink/70">
+            <p>
+              Roughly four in five web apps are content-driven: a dashboard, a catalogue, a settings page, an admin panel. They navigate, they submit forms, they refresh a fragment. Hypermedia — links and forms that return HTML — already describes that shape perfectly. It has since 1993. Heron's whole bet is that you can extend that model with a thin layer of attributes instead of throwing it away for a client-side runtime.
+            </p>
+            <p>
+              A React SPA pays a fixed tax for every one of those pages: a bundler, a build step, a hydration pass, a state library, an API layer that exists only to feed the client, and a second copy of your routing logic. For a genuinely interactive surface — a spreadsheet, a canvas editor — that tax buys something real. For a pricing page or an issue tracker, you have paid 240kb to re-implement what an anchor tag did for free.
+            </p>
+            <p>
+              HTMX proved the hypermedia approach at scale, and Heron owes it everything. Heron is the leaner sibling: 8kb gzipped instead of 14, eleven attributes instead of forty, and stricter defaults — requests are scoped, swaps are explicit, and history is opt-in. Fewer knobs, fewer footguns, the same idea. If you outgrow it, you outgrow it onto plain HTML, not onto a migration.
+            </p>
+          </div>
+        </div>
+
+        <!-- Things we don't do -->
+        <div class="reveal">
+          <div class="rounded-2xl hairline bg-paper p-6 sm:p-7">
+            <h3 class="font-display text-[22px] tracking-[-0.02em]">Things we don't do</h3>
+            <p class="mt-1.5 text-[13.5px] text-ink/55">Heron is defined as much by its omissions as its features.</p>
+            <ul class="mt-5 space-y-3.5">
+              <li class="flex gap-3">
+                <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-rust/10">
+                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#C2410C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 3l6 6M9 3l-6 6"/></svg>
+                </span>
+                <span class="text-[14.5px] leading-snug text-ink/75"><span class="font-semibold text-ink">No virtual DOM.</span> The browser's DOM is the only tree. Heron swaps real nodes.</span>
+              </li>
+              <li class="flex gap-3">
+                <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-rust/10">
+                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#C2410C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 3l6 6M9 3l-6 6"/></svg>
+                </span>
+                <span class="text-[14.5px] leading-snug text-ink/75"><span class="font-semibold text-ink">No client-side state store.</span> Your database is the state. The page is a view of it.</span>
+              </li>
+              <li class="flex gap-3">
+                <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-rust/10">
+                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#C2410C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 3l6 6M9 3l-6 6"/></svg>
+                </span>
+                <span class="text-[14.5px] leading-snug text-ink/75"><span class="font-semibold text-ink">No build step.</span> One script tag, or one npm import. Nothing to compile, nothing to watch.</span>
+              </li>
+              <li class="flex gap-3">
+                <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-rust/10">
+                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#C2410C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 3l6 6M9 3l-6 6"/></svg>
+                </span>
+                <span class="text-[14.5px] leading-snug text-ink/75"><span class="font-semibold text-ink">No JSX or template DSL.</span> You write HTML. Your server writes HTML. That's the contract.</span>
+              </li>
+              <li class="flex gap-3">
+                <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-rust/10">
+                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#C2410C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 3l6 6M9 3l-6 6"/></svg>
+                </span>
+                <span class="text-[14.5px] leading-snug text-ink/75"><span class="font-semibold text-ink">No opinion on your backend.</span> Rails, Go, Django, PHP, a flat file — Heron never asks.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 6. FEATURES GRID ============ -->
+    <section class="px-5 py-20 sm:px-6 sm:py-28">
+      <div class="mx-auto max-w-2xl text-center reveal">
+        <p class="mb-3 font-mono text-[11.5px] uppercase tracking-[0.18em] text-rust">What you get</p>
+        <h2 class="font-display text-[32px] leading-tight tracking-[-0.03em] sm:text-[42px]">
+          Eleven attributes. <em class="text-rust">Eight kilobytes.</em>
+        </h2>
+        <p class="mt-4 text-[15.5px] leading-relaxed text-ink/60">
+          Every feature below is reachable from an HTML attribute. There is no imperative API to learn and no escape hatch you'll be forced into.
+        </p>
+      </div>
+
+      <div class="mx-auto mt-12 grid max-w-6xl gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <!-- Feature 1 -->
+        <article class="lift reveal rounded-2xl hairline bg-white/70 p-6">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-rust/10">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="13" rx="2"/><path d="M3 9h18M8 21h8M12 17v4"/>
+            </svg>
+          </div>
+          <h3 class="mt-4 text-[16.5px] font-semibold tracking-tight">Server-rendered, always</h3>
+          <p class="mt-2 text-[14px] leading-relaxed text-ink/65">
+            Your server owns every byte of markup. Pages are crawlable, printable, and viewable with JavaScript disabled — Heron only enhances what's already there.
+          </p>
+          <code class="mt-4 block rounded-lg bg-code-bg px-3 py-2 font-mono text-[11.5px] text-ink/75">return render("results.html", rows)</code>
+        </article>
+
+        <!-- Feature 2 -->
+        <article class="lift reveal rounded-2xl hairline bg-white/70 p-6">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-rust/10">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 7h16M4 12h16M4 17h10"/><path d="M19 15l3 3-3 3" transform="translate(-3,-2)"/>
+            </svg>
+          </div>
+          <h3 class="mt-4 text-[16.5px] font-semibold tracking-tight">No build step</h3>
+          <p class="mt-2 text-[14px] leading-relaxed text-ink/65">
+            Drop in one script tag and ship. No transpiler, no dev server to keep alive, no source maps to debug. The file you write is the file the browser runs.
+          </p>
+          <code class="mt-4 block rounded-lg bg-code-bg px-3 py-2 font-mono text-[11.5px] text-ink/75">&lt;script src="heron.min.js"&gt;&lt;/script&gt;</code>
+        </article>
+
+        <!-- Feature 3 -->
+        <article class="lift reveal rounded-2xl hairline bg-white/70 p-6">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-rust/10">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 12h6l2-5 3 10 2-5h5"/>
+            </svg>
+          </div>
+          <h3 class="mt-4 text-[16.5px] font-semibold tracking-tight">No bundler in sight</h3>
+          <p class="mt-2 text-[14px] leading-relaxed text-ink/65">
+            Webpack, Vite, esbuild, Rollup — Heron needs none of them. Dependency graphs, tree-shaking and chunk-splitting are problems you simply no longer have.
+          </p>
+          <code class="mt-4 block rounded-lg bg-code-bg px-3 py-2 font-mono text-[11.5px] text-ink/75"># node_modules: 1 package</code>
+        </article>
+
+        <!-- Feature 4 -->
+        <article class="lift reveal rounded-2xl hairline bg-white/70 p-6">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-rust/10">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 3v18M3 12h18" opacity="0.35"/><circle cx="12" cy="12" r="9"/><path d="M12 7l2.5 5L12 17l-2.5-5L12 7z"/>
+            </svg>
+          </div>
+          <h3 class="mt-4 text-[16.5px] font-semibold tracking-tight">8kb gzipped, audited</h3>
+          <p class="mt-2 text-[14px] leading-relaxed text-ink/65">
+            The entire runtime is 8,192 bytes over the wire — smaller than most hero images. A CI gate fails the build if a commit pushes it past that line.
+          </p>
+          <code class="mt-4 block rounded-lg bg-code-bg px-3 py-2 font-mono text-[11.5px] text-ink/75">heron.min.js.gz → <span class="text-rust">8.0 kB</span></code>
+        </article>
+
+        <!-- Feature 5 -->
+        <article class="lift reveal rounded-2xl hairline bg-white/70 p-6">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-rust/10">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 7l-3 5 3 5M19 7l3 5-3 5M14 4l-4 16"/>
+            </svg>
+          </div>
+          <h3 class="mt-4 text-[16.5px] font-semibold tracking-tight">Framework-agnostic backend</h3>
+          <p class="mt-2 text-[14px] leading-relaxed text-ink/65">
+            Heron speaks plain HTTP and reads plain HTML. Pair it with Rails, Laravel, Express, Flask, ASP.NET or a static generator — no adapter, no SDK.
+          </p>
+          <code class="mt-4 block rounded-lg bg-code-bg px-3 py-2 font-mono text-[11.5px] text-ink/75">GET /search → 200 text/html</code>
+        </article>
+
+        <!-- Feature 6 -->
+        <article class="lift reveal rounded-2xl hairline bg-white/70 p-6">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-rust/10">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 6h16M4 12h12M4 18h8"/><circle cx="19" cy="16" r="3"/>
+            </svg>
+          </div>
+          <h3 class="mt-4 text-[16.5px] font-semibold tracking-tight">Declarative attributes only</h3>
+          <p class="mt-2 text-[14px] leading-relaxed text-ink/65">
+            Behaviour lives in markup, next to the element it affects. Read an HTML file top to bottom and you have read the whole feature — no jumping to a controller.
+          </p>
+          <code class="mt-4 block rounded-lg bg-code-bg px-3 py-2 font-mono text-[11.5px] text-ink/75">hx-post="/cart" hx-swap="outerHTML"</code>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============ 7. COMPARISON TABLE ============ -->
+    <section class="border-y border-[var(--hairline)] bg-white/45 px-5 py-20 sm:px-6 sm:py-28">
+      <div class="mx-auto max-w-2xl text-center reveal">
+        <p class="mb-3 font-mono text-[11.5px] uppercase tracking-[0.18em] text-rust">How it compares</p>
+        <h2 class="font-display text-[32px] leading-tight tracking-[-0.03em] sm:text-[42px]">
+          The same app, <em class="text-rust">a fraction of the weight.</em>
+        </h2>
+        <p class="mt-4 text-[15.5px] leading-relaxed text-ink/60">
+          Numbers below are for an equivalent CRUD admin panel, measured at the same feature parity.
+        </p>
+      </div>
+
+      <div class="mx-auto mt-11 max-w-4xl overflow-x-auto reveal">
+        <table class="w-full min-w-[640px] border-separate border-spacing-0 text-left">
+          <thead>
+            <tr>
+              <th class="w-[34%] px-4 py-3 text-[12.5px] font-medium text-ink/45"></th>
+              <th class="px-3 py-3 text-center">
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-rust px-3 py-1 text-[12.5px] font-semibold text-white">
+                  <svg width="12" height="12" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M5 27c4-1 6.5-3 8-6.5C14.6 16.8 15 12 17.5 8.2 19.7 4.9 23 3.3 27 3c-1.1 3.4-1 6.4-3.4 9.6-2 2.7-4.6 3.6-7.8 4.2-3 .56-5.4 1.6-7.2 4.3" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  Heron
+                </span>
+              </th>
+              <th class="px-3 py-3 text-center text-[13px] font-semibold text-ink/55">React</th>
+              <th class="px-3 py-3 text-center text-[13px] font-semibold text-ink/55">HTMX</th>
+              <th class="px-3 py-3 text-center text-[13px] font-semibold text-ink/55">Hotwire</th>
+            </tr>
+          </thead>
+          <tbody class="text-[13.5px]">
+            <!-- Row 1 -->
+            <tr>
+              <td class="hairline-b hairline-t rounded-tl-lg bg-paper px-4 py-3.5 font-medium text-ink/80">Runtime size (gzipped)</td>
+              <td class="hairline-b hairline-t bg-rust/[0.06] px-3 py-3.5 text-center font-mono font-semibold text-rust tnum">8 kb</td>
+              <td class="hairline-b hairline-t px-3 py-3.5 text-center font-mono text-ink/55 tnum">240 kb</td>
+              <td class="hairline-b hairline-t px-3 py-3.5 text-center font-mono text-ink/55 tnum">14 kb</td>
+              <td class="hairline-b hairline-t px-3 py-3.5 text-center font-mono text-ink/55 tnum">39 kb</td>
+            </tr>
+            <!-- Row 2 -->
+            <tr>
+              <td class="hairline-b bg-paper px-4 py-3.5 font-medium text-ink/80">Build step required</td>
+              <td class="hairline-b bg-rust/[0.06] px-3 py-3.5"><div class="flex justify-center"><span class="font-mono text-[12px] font-semibold text-rust">None</span></div></td>
+              <td class="hairline-b px-3 py-3.5 text-center font-mono text-[12px] text-ink/55">Webpack</td>
+              <td class="hairline-b px-3 py-3.5"><div class="flex justify-center"><span class="font-mono text-[12px] text-ink/55">None</span></div></td>
+              <td class="hairline-b px-3 py-3.5 text-center font-mono text-[12px] text-ink/55">esbuild</td>
+            </tr>
+            <!-- Row 3 -->
+            <tr>
+              <td class="hairline-b bg-paper px-4 py-3.5 font-medium text-ink/80">Authoring model</td>
+              <td class="hairline-b bg-rust/[0.06] px-3 py-3.5 text-center font-mono text-[12px] font-semibold text-rust">HTML attrs</td>
+              <td class="hairline-b px-3 py-3.5 text-center font-mono text-[12px] text-ink/55">JSX</td>
+              <td class="hairline-b px-3 py-3.5 text-center font-mono text-[12px] text-ink/55">HTML attrs</td>
+              <td class="hairline-b px-3 py-3.5 text-center font-mono text-[12px] text-ink/55">HTML + Stimulus</td>
+            </tr>
+            <!-- Row 4 -->
+            <tr>
+              <td class="hairline-b bg-paper px-4 py-3.5 font-medium text-ink/80">SSR-native (no hydration)</td>
+              <td class="hairline-b bg-rust/[0.06] px-3 py-3.5"><div class="flex justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-label="yes"><circle cx="12" cy="12" r="10" stroke="#16A34A" stroke-width="1.6" opacity="0.3"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>
+              </div></td>
+              <td class="hairline-b px-3 py-3.5"><div class="flex justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="2.2" stroke-linecap="round" aria-label="no"><circle cx="12" cy="12" r="10" stroke-width="1.6" opacity="0.3"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7"/></svg>
+              </div></td>
+              <td class="hairline-b px-3 py-3.5"><div class="flex justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-label="yes"><circle cx="12" cy="12" r="10" stroke-width="1.6" opacity="0.3"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>
+              </div></td>
+              <td class="hairline-b px-3 py-3.5"><div class="flex justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-label="yes"><circle cx="12" cy="12" r="10" stroke-width="1.6" opacity="0.3"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>
+              </div></td>
+            </tr>
+            <!-- Row 5 -->
+            <tr>
+              <td class="hairline-b bg-paper px-4 py-3.5 font-medium text-ink/80">Works with no JS (graceful)</td>
+              <td class="hairline-b bg-rust/[0.06] px-3 py-3.5"><div class="flex justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-label="yes"><circle cx="12" cy="12" r="10" stroke-width="1.6" opacity="0.3"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>
+              </div></td>
+              <td class="hairline-b px-3 py-3.5"><div class="flex justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="2.2" stroke-linecap="round" aria-label="no"><circle cx="12" cy="12" r="10" stroke-width="1.6" opacity="0.3"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7"/></svg>
+              </div></td>
+              <td class="hairline-b px-3 py-3.5"><div class="flex justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-label="yes"><circle cx="12" cy="12" r="10" stroke-width="1.6" opacity="0.3"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>
+              </div></td>
+              <td class="hairline-b px-3 py-3.5"><div class="flex justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-label="yes"><circle cx="12" cy="12" r="10" stroke-width="1.6" opacity="0.3"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>
+              </div></td>
+            </tr>
+            <!-- Row 6 -->
+            <tr>
+              <td class="hairline-b bg-paper px-4 py-3.5 font-medium text-ink/80">Distinct API surface</td>
+              <td class="hairline-b bg-rust/[0.06] px-3 py-3.5 text-center font-mono text-[12px] font-semibold text-rust tnum">11 attrs</td>
+              <td class="hairline-b px-3 py-3.5 text-center font-mono text-[12px] text-ink/55">~120 hooks/APIs</td>
+              <td class="hairline-b px-3 py-3.5 text-center font-mono text-[12px] text-ink/55 tnum">~40 attrs</td>
+              <td class="hairline-b px-3 py-3.5 text-center font-mono text-[12px] text-ink/55 tnum">~30 + Stimulus</td>
+            </tr>
+            <!-- Row 7 -->
+            <tr>
+              <td class="rounded-bl-lg hairline-b bg-paper px-4 py-3.5 font-medium text-ink/80">Time to first interaction*</td>
+              <td class="hairline-b bg-rust/[0.06] px-3 py-3.5 text-center font-mono font-semibold text-rust tnum">0.21s</td>
+              <td class="hairline-b px-3 py-3.5 text-center font-mono text-ink/55 tnum">1.18s</td>
+              <td class="hairline-b px-3 py-3.5 text-center font-mono text-ink/55 tnum">0.34s</td>
+              <td class="hairline-b px-3 py-3.5 text-center font-mono text-ink/55 tnum">0.52s</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="mx-auto mt-4 max-w-4xl text-[12px] text-ink/40">* P95, cold cache, simulated Fast 3G, 4× CPU throttle — Lighthouse 12, median of 28 runs against the reference admin panel.</p>
+    </section>
+
+    <!-- ============ 8. QUICK-START ============ -->
+    <section id="quickstart" class="px-5 py-20 sm:px-6 sm:py-28">
+      <div class="mx-auto max-w-2xl text-center reveal">
+        <p class="mb-3 font-mono text-[11.5px] uppercase tracking-[0.18em] text-rust">Quick start</p>
+        <h2 class="font-display text-[32px] leading-tight tracking-[-0.03em] sm:text-[42px]">
+          Hello world in <em class="text-rust">under 60 seconds.</em>
+        </h2>
+        <p class="mt-4 text-[15.5px] leading-relaxed text-ink/60">
+          Three steps. No scaffolding command, no project template, no account. Add Heron to a page you already have.
+        </p>
+      </div>
+
+      <div class="mx-auto mt-12 max-w-3xl space-y-5">
+        <!-- Step 1 -->
+        <div class="reveal flex gap-4 sm:gap-5">
+          <div class="flex flex-col items-center">
+            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rust font-mono text-[14px] font-semibold text-white">1</span>
+            <span class="mt-1 w-px flex-1 bg-[var(--hairline-strong)]"></span>
+          </div>
+          <div class="flex-1 pb-2">
+            <h3 class="text-[16.5px] font-semibold tracking-tight">Add Heron to the page</h3>
+            <p class="mt-1 text-[14px] text-ink/60">Install via npm, or for a no-build site, drop the CDN tag straight into your <span class="font-mono text-[12.5px] text-rust">&lt;head&gt;</span>.</p>
+            <div class="mt-3 overflow-hidden rounded-xl hairline bg-white">
+              <div class="flex items-center justify-between hairline-b bg-code-bg-2 px-3.5 py-2">
+                <span class="font-mono text-[11px] text-ink/50">terminal</span>
+                <button class="copy-btn btn flex items-center gap-1.5 rounded-md hairline bg-paper px-2 py-1 font-mono text-[10.5px] text-ink/55 hover:border-rust/40 hover:text-rust" data-copy="npm install heron" aria-label="Copy step 1">
+                  <svg class="copy-icon" width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M3.5 10.5h-1A1 1 0 0 1 1.5 9.5v-7a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v1"/></svg>
+                  <span class="copy-label">Copy</span>
+                </button>
+              </div>
+              <div class="code-block px-4 py-3 text-[13px]">
+                <code class="font-mono"><span class="tok-prompt">$ </span>npm install heron</code>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="reveal flex gap-4 sm:gap-5">
+          <div class="flex flex-col items-center">
+            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rust font-mono text-[14px] font-semibold text-white">2</span>
+            <span class="mt-1 w-px flex-1 bg-[var(--hairline-strong)]"></span>
+          </div>
+          <div class="flex-1 pb-2">
+            <h3 class="text-[16.5px] font-semibold tracking-tight">Mark up an interaction</h3>
+            <p class="mt-1 text-[14px] text-ink/60">Add three attributes to a button. It now asks the server for HTML and swaps the reply in place.</p>
+            <div class="mt-3 overflow-hidden rounded-xl hairline bg-white">
+              <div class="flex items-center justify-between hairline-b bg-code-bg-2 px-3.5 py-2">
+                <span class="font-mono text-[11px] text-ink/50">index.html</span>
+                <button class="copy-btn btn flex items-center gap-1.5 rounded-md hairline bg-paper px-2 py-1 font-mono text-[10.5px] text-ink/55 hover:border-rust/40 hover:text-rust" data-copy='<button hx-get="/quote" hx-target="#out" hx-swap="innerHTML">Get a quote</button>&#10;<div id="out"></div>' aria-label="Copy step 2">
+                  <svg class="copy-icon" width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M3.5 10.5h-1A1 1 0 0 1 1.5 9.5v-7a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v1"/></svg>
+                  <span class="copy-label">Copy</span>
+                </button>
+              </div>
+              <div class="code-block code-scroll px-4 py-3 text-[13px] leading-[1.8]">
+<pre class="font-mono"><span class="tok-punct">&lt;</span><span class="tok-tag">button</span> <span class="tok-kw">hx-get</span><span class="tok-punct">=</span><span class="tok-string">"/quote"</span> <span class="tok-kw">hx-target</span><span class="tok-punct">=</span><span class="tok-string">"#out"</span> <span class="tok-kw">hx-swap</span><span class="tok-punct">=</span><span class="tok-string">"innerHTML"</span><span class="tok-punct">&gt;</span>
+  Get a quote
+<span class="tok-punct">&lt;/</span><span class="tok-tag">button</span><span class="tok-punct">&gt;</span>
+<span class="tok-punct">&lt;</span><span class="tok-tag">div</span> <span class="tok-attr">id</span><span class="tok-punct">=</span><span class="tok-string">"out"</span><span class="tok-punct">&gt;&lt;/</span><span class="tok-tag">div</span><span class="tok-punct">&gt;</span></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="reveal flex gap-4 sm:gap-5">
+          <div class="flex flex-col items-center">
+            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink font-mono text-[14px] font-semibold text-white">3</span>
+          </div>
+          <div class="flex-1">
+            <h3 class="text-[16.5px] font-semibold tracking-tight">Return an HTML fragment</h3>
+            <p class="mt-1 text-[14px] text-ink/60">Your route replies with a snippet of HTML — not JSON. Heron places it exactly where you pointed it.</p>
+            <div class="mt-3 overflow-hidden rounded-xl hairline bg-white">
+              <div class="flex items-center justify-between hairline-b bg-code-bg-2 px-3.5 py-2">
+                <span class="font-mono text-[11px] text-ink/50">server.js</span>
+                <button class="copy-btn btn flex items-center gap-1.5 rounded-md hairline bg-paper px-2 py-1 font-mono text-[10.5px] text-ink/55 hover:border-rust/40 hover:text-rust" data-copy='app.get("/quote", (req, res) => {&#10;  res.send("<p>That will be $48/mo.</p>");&#10;});' aria-label="Copy step 3">
+                  <svg class="copy-icon" width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M3.5 10.5h-1A1 1 0 0 1 1.5 9.5v-7a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v1"/></svg>
+                  <span class="copy-label">Copy</span>
+                </button>
+              </div>
+              <div class="code-block code-scroll px-4 py-3 text-[13px] leading-[1.8]">
+<pre class="font-mono"><span class="tok-fn">app</span><span class="tok-punct">.</span><span class="tok-fn">get</span><span class="tok-punct">(</span><span class="tok-string">"/quote"</span><span class="tok-punct">,</span> <span class="tok-punct">(</span><span class="tok-fn">req</span><span class="tok-punct">,</span> <span class="tok-fn">res</span><span class="tok-punct">)</span> <span class="tok-kw">=&gt;</span> <span class="tok-punct">{</span>
+  <span class="tok-fn">res</span><span class="tok-punct">.</span><span class="tok-fn">send</span><span class="tok-punct">(</span><span class="tok-string">"&lt;p&gt;That will be $48/mo.&lt;/p&gt;"</span><span class="tok-punct">);</span>
+<span class="tok-punct">});</span></pre>
+              </div>
+            </div>
+            <div class="mt-4 flex items-center gap-2 rounded-xl bg-rust/[0.06] px-4 py-3">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-5"/></svg>
+              <p class="text-[13.5px] text-ink/70">That's a working interaction. No bundler ran, no client state, no page reload — <span class="font-medium text-ink">elapsed: about forty seconds.</span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- No-build alternative -->
+      <div class="mx-auto mt-12 max-w-3xl reveal">
+        <div class="rounded-2xl hairline bg-white/70 p-6 sm:p-7">
+          <div class="flex items-start gap-3">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0" aria-hidden="true"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+            <div class="flex-1">
+              <h3 class="text-[16px] font-semibold tracking-tight">Prefer no npm at all?</h3>
+              <p class="mt-1 text-[14px] text-ink/60">Skip step 1 entirely. Paste this one tag into your page's <span class="font-mono text-[12.5px] text-rust">&lt;head&gt;</span> and you're done — no install, no build.</p>
+              <div class="mt-3 overflow-hidden rounded-xl hairline bg-white">
+                <div class="flex items-center justify-between hairline-b bg-code-bg-2 px-3.5 py-2">
+                  <span class="font-mono text-[11px] text-ink/50">no-build · CDN</span>
+                  <button class="copy-btn btn flex items-center gap-1.5 rounded-md hairline bg-paper px-2 py-1 font-mono text-[10.5px] text-ink/55 hover:border-rust/40 hover:text-rust" data-copy='<script src="https://unpkg.com/heron@1.4"></script>' aria-label="Copy CDN tag">
+                    <svg class="copy-icon" width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M3.5 10.5h-1A1 1 0 0 1 1.5 9.5v-7a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v1"/></svg>
+                    <span class="copy-label">Copy</span>
+                  </button>
+                </div>
+                <div class="code-block code-scroll px-4 py-3 text-[13px]">
+<pre class="font-mono"><span class="tok-punct">&lt;</span><span class="tok-tag">script</span> <span class="tok-attr">src</span><span class="tok-punct">=</span><span class="tok-string">"https://unpkg.com/heron@1.4"</span><span class="tok-punct">&gt;&lt;/</span><span class="tok-tag">script</span><span class="tok-punct">&gt;</span></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 9. COMMUNITY ============ -->
+    <section id="community" class="relative overflow-hidden border-y border-[var(--hairline)] bg-white/45">
+      <div class="mesh-blob" style="background:#C2410C; width:280px; height:280px; bottom:-100px; left:10%; opacity:0.3;"></div>
+      <div class="relative z-10 mx-auto max-w-6xl px-5 py-20 sm:px-6 sm:py-28">
+        <div class="max-w-2xl reveal">
+          <p class="mb-3 font-mono text-[11.5px] uppercase tracking-[0.18em] text-rust">Community</p>
+          <h2 class="font-display text-[32px] leading-tight tracking-[-0.03em] sm:text-[42px]">
+            Built in the open, <em class="text-rust">answered fast.</em>
+          </h2>
+          <p class="mt-4 text-[15.5px] leading-relaxed text-ink/60">
+            Heron is maintained by a small team and a wide circle of contributors. Questions get real answers — most discussion threads close within a day.
+          </p>
+        </div>
+
+        <!-- Stat cards -->
+        <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div class="lift reveal rounded-2xl hairline bg-paper p-6">
+            <div class="flex items-center gap-2">
+              <svg width="18" height="18" viewBox="0 0 16 16" fill="#1A1714" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.34c-2.23.48-2.7-1.07-2.7-1.07-.36-.93-.89-1.18-.89-1.18-.73-.5.05-.49.05-.49.8.06 1.23.83 1.23.83.72 1.23 1.87.87 2.33.67.07-.52.28-.87.5-1.07-1.78-.2-3.64-.89-3.64-3.96 0-.87.31-1.59.83-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.22 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.52.56.83 1.28.83 2.15 0 3.08-1.87 3.76-3.65 3.96.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 8 0Z"/></svg>
+              <span class="font-mono text-[11px] uppercase tracking-wide text-ink/45">GitHub Discussions</span>
+            </div>
+            <p class="mt-3 font-display text-[34px] tracking-[-0.02em] tnum">2,941</p>
+            <p class="mt-1 text-[13.5px] text-ink/55">threads · 94% answered within 24h</p>
+          </div>
+
+          <div class="lift reveal rounded-2xl hairline bg-paper p-6">
+            <div class="flex items-center gap-2">
+              <span class="pulse-dot" aria-hidden="true"></span>
+              <span class="font-mono text-[11px] uppercase tracking-wide text-ink/45">Discord — online now</span>
+            </div>
+            <p class="mt-3 font-display text-[34px] tracking-[-0.02em] tnum">6,182</p>
+            <p class="mt-1 text-[13.5px] text-ink/55">members · #help, #showcase, #internals</p>
+          </div>
+
+          <div class="lift reveal rounded-2xl hairline bg-paper p-6 sm:col-span-2 lg:col-span-1">
+            <div class="flex items-center gap-2">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.5 5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-1L12 3z"/></svg>
+              <span class="font-mono text-[11px] uppercase tracking-wide text-ink/45">Contributors</span>
+            </div>
+            <p class="mt-3 font-display text-[34px] tracking-[-0.02em] tnum">148</p>
+            <p class="mt-1 text-[13.5px] text-ink/55">across 36 countries · 11 with commit access</p>
+          </div>
+        </div>
+
+        <!-- Maintainers -->
+        <div class="mt-12 reveal">
+          <h3 class="font-display text-[21px] tracking-[-0.02em]">Core maintainers</h3>
+          <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <!-- M1 -->
+            <div class="flex items-center gap-3 rounded-xl hairline bg-paper px-4 py-3">
+              <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-rust to-rust-deep font-mono text-[13px] font-semibold text-white">EM</span>
+              <div>
+                <p class="text-[14px] font-semibold leading-tight">Esther Maguire</p>
+                <p class="font-mono text-[11.5px] text-ink/50">@esmag · lead</p>
+              </div>
+            </div>
+            <!-- M2 -->
+            <div class="flex items-center gap-3 rounded-xl hairline bg-paper px-4 py-3">
+              <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-ink to-rust-deep font-mono text-[13px] font-semibold text-white">RT</span>
+              <div>
+                <p class="text-[14px] font-semibold leading-tight">Rafael Tavares</p>
+                <p class="font-mono text-[11.5px] text-ink/50">@rtav · core</p>
+              </div>
+            </div>
+            <!-- M3 -->
+            <div class="flex items-center gap-3 rounded-xl hairline bg-paper px-4 py-3">
+              <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-rust-deep to-ink font-mono text-[13px] font-semibold text-white">AK</span>
+              <div>
+                <p class="text-[14px] font-semibold leading-tight">Anjali Khanna</p>
+                <p class="font-mono text-[11.5px] text-ink/50">@anjk · docs</p>
+              </div>
+            </div>
+            <!-- M4 -->
+            <div class="flex items-center gap-3 rounded-xl hairline bg-paper px-4 py-3">
+              <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-rust to-ink font-mono text-[13px] font-semibold text-white">LN</span>
+              <div>
+                <p class="text-[14px] font-semibold leading-tight">Lukas Nielsen</p>
+                <p class="font-mono text-[11.5px] text-ink/50">@lukn · runtime</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sponsor invitation -->
+        <div class="mt-8 reveal flex flex-col items-start justify-between gap-4 rounded-2xl border border-rust/20 bg-rust/[0.05] p-6 sm:flex-row sm:items-center sm:p-7">
+          <div>
+            <h3 class="text-[16.5px] font-semibold tracking-tight">Heron has no company behind it.</h3>
+            <p class="mt-1 text-[14px] text-ink/60">It runs on GitHub Sponsors. If your business ships on it, fund a maintainer day.</p>
+          </div>
+          <a href="#sponsors" class="btn shrink-0 rounded-full bg-rust px-5 py-2.5 text-[13.5px] font-semibold text-white hover:bg-rust-deep">Become a sponsor</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 10. SPONSOR ROW ============ -->
+    <section id="sponsors" class="px-5 py-20 sm:px-6 sm:py-28">
+      <div class="mx-auto max-w-2xl text-center reveal">
+        <p class="mb-3 font-mono text-[11.5px] uppercase tracking-[0.18em] text-rust">Sponsors</p>
+        <h2 class="font-display text-[32px] leading-tight tracking-[-0.03em] sm:text-[42px]">
+          Funded by people <em class="text-rust">who depend on it.</em>
+        </h2>
+        <p class="mt-4 text-[15.5px] leading-relaxed text-ink/60">
+          Every sponsorship goes directly to maintainer hours, security review, and the documentation site. Thank you.
+        </p>
+      </div>
+
+      <!-- Company sponsors -->
+      <div class="mx-auto mt-11 max-w-4xl reveal">
+        <p class="mb-4 text-center font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink/40">Organisation sponsors</p>
+        <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <!-- Vercel -->
+          <div class="lift flex items-center justify-center gap-2.5 rounded-2xl hairline bg-white/70 px-4 py-6">
+            <svg width="20" height="18" viewBox="0 0 24 22" aria-label="Vercel"><path d="M12 1l11 19H1L12 1z" fill="#1A1714"/></svg>
+            <span class="text-[16px] font-semibold tracking-tight text-ink">Vercel</span>
+          </div>
+          <!-- Cloudflare -->
+          <div class="lift flex items-center justify-center gap-2.5 rounded-2xl hairline bg-white/70 px-4 py-6">
+            <svg width="26" height="18" viewBox="0 0 32 22" aria-label="Cloudflare"><path d="M22 17H7a5 5 0 0 1 .4-9.9A8 8 0 0 1 23 9.5a4 4 0 0 1-1 7.5z" fill="none" stroke="#1A1714" stroke-width="2.1" stroke-linejoin="round"/></svg>
+            <span class="text-[15px] font-semibold tracking-tight text-ink">Cloudflare</span>
+          </div>
+          <!-- Sentry -->
+          <div class="lift flex items-center justify-center gap-2.5 rounded-2xl hairline bg-white/70 px-4 py-6">
+            <svg width="20" height="20" viewBox="0 0 24 24" aria-label="Sentry"><path d="M12 3l8 14h-3.4L12 8.6 8.2 15h2.3a7 7 0 0 1 3 4H4l8-16z" fill="#1A1714"/></svg>
+            <span class="text-[16px] font-semibold tracking-tight text-ink">Sentry</span>
+          </div>
+          <!-- Linear -->
+          <div class="lift flex items-center justify-center gap-2.5 rounded-2xl hairline bg-white/70 px-4 py-6">
+            <svg width="19" height="19" viewBox="0 0 24 24" aria-label="Linear"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="#1A1714" stroke-width="2.2"/><path d="M7 13l4 4M7 8l9 9" stroke="#1A1714" stroke-width="2.2" stroke-linecap="round"/></svg>
+            <span class="text-[16px] font-semibold tracking-tight text-ink">Linear</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Individual sponsors -->
+      <div class="mx-auto mt-12 max-w-3xl reveal">
+        <p class="mb-5 text-center font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink/40">
+          47 individual sponsors
+        </p>
+        <div class="flex flex-wrap justify-center gap-2.5">
+          <!-- monogram circles -->
+          <span class="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-rust to-rust-deep font-mono text-[12px] font-semibold text-white" title="Marisol Ibáñez">MI</span>
+          <span class="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-ink to-rust-deep font-mono text-[12px] font-semibold text-white" title="Theo Park">TP</span>
+          <span class="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-rust-deep to-ink font-mono text-[12px] font-semibold text-white" title="Nadia Roux">NR</span>
+          <span class="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-rust to-ink font-mono text-[12px] font-semibold text-white" title="Sven Aaltonen">SA</span>
+          <span class="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-ink to-rust font-mono text-[12px] font-semibold text-white" title="Priya Deshmukh">PD</span>
+          <span class="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-rust-deep to-rust font-mono text-[12px] font-semibold text-white" title="Caleb Wong">CW</span>
+          <span class="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-rust to-rust-deep font-mono text-[12px] font-semibold text-white" title="Hana Suzuki">HS</span>
+          <span class="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-ink to-rust-deep font-mono text-[12px] font-semibold text-white" title="Diego Salas">DS</span>
+          <span class="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-rust-deep to-ink font-mono text-[12px] font-semibold text-white" title="Yara Haddad">YH</span>
+          <span class="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-rust to-ink font-mono text-[12px] font-semibold text-white" title="Oskar Lindqvist">OL</span>
+          <span class="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-ink to-rust font-mono text-[12px] font-semibold text-white" title="Fatima Noor">FN</span>
+          <span class="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-rust-deep to-rust font-mono text-[12px] font-semibold text-white" title="Grace Bennett">GB</span>
+          <span class="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-rust to-rust-deep font-mono text-[12px] font-semibold text-white" title="Kenji Mori">KM</span>
+          <span class="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-ink to-rust-deep font-mono text-[12px] font-semibold text-white" title="Lucia Ferraro">LF</span>
+          <span class="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-rust-deep to-ink font-mono text-[12px] font-semibold text-white" title="Amir Soltani">AS</span>
+          <span class="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-rust to-ink font-mono text-[12px] font-semibold text-white" title="Bea Cortez">BC</span>
+          <span class="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-ink/80 to-ink font-mono text-[11.5px] font-semibold text-white" title="and 31 more sponsors">+31</span>
+        </div>
+        <div class="mt-9 text-center">
+          <a href="#cta" class="btn inline-flex items-center gap-2 rounded-full hairline bg-white px-5 py-2.5 text-[13.5px] font-semibold text-ink/85 hover:border-rust/40 hover:text-rust">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.5-1.5 3-3.3 3-5.5A4.5 4.5 0 0 0 12 6 4.5 4.5 0 0 0 2 8.5C2 12 5.5 15 12 20c2.6-2 4.8-3.8 6.4-5.4z"/></svg>
+            Join them on GitHub Sponsors
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 11. FAQ ============ -->
+    <section id="faq" class="border-y border-[var(--hairline)] bg-white/45 px-5 py-20 sm:px-6 sm:py-28">
+      <div class="mx-auto max-w-2xl text-center reveal">
+        <p class="mb-3 font-mono text-[11.5px] uppercase tracking-[0.18em] text-rust">FAQ</p>
+        <h2 class="font-display text-[32px] leading-tight tracking-[-0.03em] sm:text-[42px]">
+          The questions <em class="text-rust">people actually ask.</em>
+        </h2>
+      </div>
+
+      <div class="mx-auto mt-10 max-w-2xl space-y-3">
+        <!-- Q1 -->
+        <details class="reveal group rounded-2xl hairline bg-paper px-5 py-4 open:bg-white">
+          <summary class="flex items-center justify-between gap-4">
+            <span class="text-[15.5px] font-semibold tracking-tight">Is this production-ready?</span>
+            <span class="faq-chevron flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rust/10">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#C2410C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 2v8M2 6h8"/></svg>
+            </span>
+          </summary>
+          <p class="mt-3 text-[14.5px] leading-relaxed text-ink/65">
+            Yes. Heron has been on a stable 1.x line since October 2025 and follows strict semver — no breaking change ships outside a major. It powers 4,408 sites we can see in the wild, including the Northwind and Driftwood admin panels above. The runtime carries a 600-case test suite run against every supported browser, and security-relevant fixes are backported to the previous minor for twelve months.
+          </p>
+        </details>
+
+        <!-- Q2 -->
+        <details class="reveal group rounded-2xl hairline bg-paper px-5 py-4 open:bg-white">
+          <summary class="flex items-center justify-between gap-4">
+            <span class="text-[15.5px] font-semibold tracking-tight">Why not just use HTMX?</span>
+            <span class="faq-chevron flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rust/10">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#C2410C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 2v8M2 6h8"/></svg>
+            </span>
+          </summary>
+          <p class="mt-3 text-[14.5px] leading-relaxed text-ink/65">
+            HTMX is excellent, and Heron exists because of it — please use HTMX if it fits. Heron is a deliberately narrower take: eleven attributes instead of roughly forty, 8kb instead of 14, and stricter defaults so there are fewer ways to surprise yourself. Requests are scoped to their element, swaps must be named explicitly, and history is opt-in. If you want the broader, more configurable toolkit, stay on HTMX. If you want the smallest possible hypermedia layer with sharp edges sanded off, that's Heron.
+          </p>
+        </details>
+
+        <!-- Q3 -->
+        <details class="reveal group rounded-2xl hairline bg-paper px-5 py-4 open:bg-white">
+          <summary class="flex items-center justify-between gap-4">
+            <span class="text-[15.5px] font-semibold tracking-tight">Does it work with React / Vue?</span>
+            <span class="faq-chevron flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rust/10">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#C2410C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 2v8M2 6h8"/></svg>
+            </span>
+          </summary>
+          <p class="mt-3 text-[14.5px] leading-relaxed text-ink/65">
+            It can coexist, though that isn't the design goal. Heron only touches elements carrying <span class="font-mono text-[12.5px] text-rust">hx-</span> attributes, so you can keep a React or Vue island elsewhere on the page and Heron will never reach inside it. Many teams use Heron for the content-driven 80% of a product and reserve a framework for the genuinely interactive 20% — a canvas, a complex editor. What we don't recommend is rendering a React tree and then asking Heron to swap nodes inside it; pick one owner per region of the DOM.
+          </p>
+        </details>
+
+        <!-- Q4 -->
+        <details class="reveal group rounded-2xl hairline bg-paper px-5 py-4 open:bg-white">
+          <summary class="flex items-center justify-between gap-4">
+            <span class="text-[15.5px] font-semibold tracking-tight">Bundle size guarantees?</span>
+            <span class="faq-chevron flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rust/10">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#C2410C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 2v8M2 6h8"/></svg>
+            </span>
+          </summary>
+          <p class="mt-3 text-[14.5px] leading-relaxed text-ink/65">
+            The 8kb figure is enforced, not aspirational. Every pull request runs a size check in CI; if the gzipped runtime would cross 8,192 bytes, the build fails and the PR cannot merge until it's back under budget. The number is published on each release and has not moved since 1.0. Heron also ships zero runtime dependencies, so your lockfile gains exactly one line and there is no transitive tree to audit.
+          </p>
+        </details>
+
+        <!-- Q5 -->
+        <details class="reveal group rounded-2xl hairline bg-paper px-5 py-4 open:bg-white">
+          <summary class="flex items-center justify-between gap-4">
+            <span class="text-[15.5px] font-semibold tracking-tight">Long-term maintenance commitment?</span>
+            <span class="faq-chevron flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rust/10">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#C2410C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 2v8M2 6h8"/></svg>
+            </span>
+          </summary>
+          <p class="mt-3 text-[14.5px] leading-relaxed text-ink/65">
+            Heron is MIT-licensed and governed by a four-person maintainer team plus 148 contributors, so it does not depend on any single person. Funding comes through GitHub Sponsors from organisations including Vercel, Cloudflare, Sentry and Linear, which pays for steady maintainer hours rather than a launch-and-leave release. The 1.x line has a published support window through at least 2029, and because the API is just HTML attributes, the worst-case migration path is plain HTML you already own.
+          </p>
+        </details>
+      </div>
+    </section>
+
+    <!-- ============ 12. FINAL CTA ============ -->
+    <section id="cta" class="relative overflow-hidden">
+      <div class="hero-radial absolute inset-0" aria-hidden="true"></div>
+      <div class="mesh-blob" style="background:#C2410C; width:320px; height:320px; top:-120px; right:6%; opacity:0.32;"></div>
+      <div class="relative z-10 mx-auto max-w-2xl px-5 py-24 text-center sm:px-6 sm:py-32">
+        <div class="reveal">
+          <h2 class="font-display text-[36px] leading-[1.06] tracking-[-0.035em] sm:text-[52px]">
+            Get started in <em class="text-rust">60 seconds.</em>
+          </h2>
+          <p class="mx-auto mt-5 max-w-md text-[16px] leading-relaxed text-ink/65">
+            One install, three attributes, a page you already have. Heron stays out of your way and ships nothing you didn't write.
+          </p>
+
+          <!-- Install command -->
+          <div class="mx-auto mt-9 max-w-md">
+            <div class="overflow-hidden rounded-xl hairline bg-white shadow-[0_14px_36px_-22px_rgba(26,23,20,0.5)]">
+              <div class="flex items-center justify-between hairline-b bg-code-bg-2 px-3.5 py-2">
+                <span class="font-mono text-[11px] text-ink/50">terminal</span>
+                <span class="font-mono text-[10.5px] text-ink/35">npm · 8kb</span>
+              </div>
+              <div class="flex items-center justify-between gap-3 px-4 py-3.5">
+                <code class="font-mono text-[14.5px] text-ink/90"><span class="tok-prompt">$ </span>npm install heron</code>
+                <button class="copy-btn btn flex h-7 w-7 shrink-0 items-center justify-center rounded-md hairline bg-paper hover:border-rust/40" data-copy="npm install heron" aria-label="Copy install command">
+                  <svg class="copy-icon" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#6B6253" stroke-width="1.6" aria-hidden="true">
+                    <rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/>
+                    <path d="M3.5 10.5h-1A1 1 0 0 1 1.5 9.5v-7a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v1"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <a href="#quickstart" class="btn w-full rounded-full bg-rust px-7 py-3 text-[14.5px] font-semibold text-white shadow-sm hover:bg-rust-deep sm:w-auto">
+              Read the docs
+            </a>
+            <a href="#top" class="btn flex w-full items-center justify-center gap-2 rounded-full hairline bg-white px-7 py-3 text-[14.5px] font-semibold text-ink/85 hover:border-rust/40 sm:w-auto">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="#1A1714" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.34c-2.23.48-2.7-1.07-2.7-1.07-.36-.93-.89-1.18-.89-1.18-.73-.5.05-.49.05-.49.8.06 1.23.83 1.23.83.72 1.23 1.87.87 2.33.67.07-.52.28-.87.5-1.07-1.78-.2-3.64-.89-3.64-3.96 0-.87.31-1.59.83-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.22 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.52.56.83 1.28.83 2.15 0 3.08-1.87 3.76-3.65 3.96.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 8 0Z"/></svg>
+              Star on GitHub
+            </a>
+          </div>
+
+          <!-- Mini stats row with sparkline -->
+          <div class="mx-auto mt-12 flex max-w-lg flex-wrap items-center justify-center gap-x-8 gap-y-4">
+            <div class="text-center">
+              <p class="font-display text-[24px] tracking-[-0.02em] tnum">28,408</p>
+              <p class="font-mono text-[10.5px] uppercase tracking-wide text-ink/45">GitHub stars</p>
+            </div>
+            <div class="h-9 w-px bg-[var(--hairline)] hidden sm:block"></div>
+            <div class="text-center">
+              <p class="font-display text-[24px] tracking-[-0.02em] tnum">148,408</p>
+              <p class="font-mono text-[10.5px] uppercase tracking-wide text-ink/45">npm / week</p>
+            </div>
+            <div class="h-9 w-px bg-[var(--hairline)] hidden sm:block"></div>
+            <!-- Sparkline -->
+            <div class="text-center">
+              <svg id="star-spark" width="120" height="36" viewBox="0 0 120 36" class="overflow-visible" aria-label="Star growth over time">
+                <defs>
+                  <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#C2410C" stop-opacity="0.22"/>
+                    <stop offset="100%" stop-color="#C2410C" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <path id="spark-area" fill="url(#sparkFill)"/>
+                <path id="spark-line" fill="none" stroke="#C2410C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle id="spark-dot" r="2.6" fill="#C2410C"/>
+              </svg>
+              <p class="font-mono text-[10.5px] uppercase tracking-wide text-ink/45">Stars · 12 months</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 13. FOOTER ============ -->
+    <footer class="border-t border-[var(--hairline)] bg-white/55">
+      <div class="mx-auto max-w-6xl px-5 py-14 sm:px-6">
+        <div class="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
+          <!-- Brand col -->
+          <div class="lg:col-span-1">
+            <a href="#top" class="flex items-center gap-2.5" aria-label="Heron home">
+              <svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <path d="M5 27c4-1 6.5-3 8-6.5C14.6 16.8 15 12 17.5 8.2 19.7 4.9 23 3.3 27 3c-1.1 3.4-1 6.4-3.4 9.6-2 2.7-4.6 3.6-7.8 4.2-3 .56-5.4 1.6-7.2 4.3" stroke="#C2410C" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="23.6" cy="8.4" r="2" fill="#1A1714"/>
+                <path d="M5 27h7" stroke="#1A1714" stroke-width="2.1" stroke-linecap="round"/>
+              </svg>
+              <span class="text-[16px] font-semibold tracking-tight">Heron</span>
+            </a>
+            <p class="mt-3 max-w-[15rem] text-[13px] leading-relaxed text-ink/55">
+              A minimalist web framework for hypermedia apps. HTML is the API.
+            </p>
+            <div class="mt-4 flex items-center gap-2">
+              <a href="#top" class="btn flex h-8 w-8 items-center justify-center rounded-lg hairline bg-paper hover:border-rust/40" aria-label="GitHub">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="#1A1714" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.34c-2.23.48-2.7-1.07-2.7-1.07-.36-.93-.89-1.18-.89-1.18-.73-.5.05-.49.05-.49.8.06 1.23.83 1.23.83.72 1.23 1.87.87 2.33.67.07-.52.28-.87.5-1.07-1.78-.2-3.64-.89-3.64-3.96 0-.87.31-1.59.83-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.22 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.52.56.83 1.28.83 2.15 0 3.08-1.87 3.76-3.65 3.96.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 8 0Z"/></svg>
+              </a>
+              <a href="#community" class="btn flex h-8 w-8 items-center justify-center rounded-lg hairline bg-paper hover:border-rust/40" aria-label="Discord">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="#1A1714" aria-hidden="true"><path d="M13.5 3.2A12 12 0 0 0 10.6 2.3l-.18.36c1 .3 1.84.74 2.6 1.3a9 9 0 0 0-9.96 0c.76-.55 1.62-1 2.6-1.3L5.4 2.3a12 12 0 0 0-2.9.9C.7 6 .25 8.7.5 11.3a12 12 0 0 0 3.6 1.8l.45-.7a7 7 0 0 1-1.2-.6l.3-.22a8.6 8.6 0 0 0 7.3 0l.3.22c-.38.24-.78.44-1.2.6l.45.7a12 12 0 0 0 3.6-1.8c.3-3.07-.45-5.74-2-8.1ZM5.7 9.7c-.7 0-1.28-.65-1.28-1.45 0-.8.56-1.46 1.28-1.46.72 0 1.3.66 1.28 1.46 0 .8-.56 1.45-1.28 1.45Zm4.6 0c-.7 0-1.28-.65-1.28-1.45 0-.8.56-1.46 1.28-1.46.72 0 1.3.66 1.28 1.46 0 .8-.56 1.45-1.28 1.45Z"/></svg>
+              </a>
+              <a href="#top" class="btn flex h-8 w-8 items-center justify-center rounded-lg hairline bg-paper hover:border-rust/40" aria-label="Matrix">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#1A1714" stroke-width="1.6" aria-hidden="true"><path d="M3 1H1.5v14H3M13 1h1.5v14H13M4.5 5v6M4.5 5c0-.8.7-1.5 1.6-1.5 1.4 0 1.6 1.2 1.6 1.5M7.7 11V5M7.7 5c0-.3.2-1.5 1.6-1.5.9 0 1.6.7 1.6 1.5v6"/></svg>
+              </a>
+            </div>
+          </div>
+
+          <!-- Docs col -->
+          <div>
+            <h3 class="font-mono text-[11px] uppercase tracking-[0.14em] text-ink/40">Docs</h3>
+            <ul class="mt-4 space-y-2.5 text-[13.5px]">
+              <li><a href="#quickstart" class="link-u text-ink/65">Getting started</a></li>
+              <li><a href="#code" class="link-u text-ink/65">Attribute reference</a></li>
+              <li><a href="#quickstart" class="link-u text-ink/65">Server responses</a></li>
+              <li><a href="#why" class="link-u text-ink/65">Hypermedia guide</a></li>
+              <li><a href="#faq" class="link-u text-ink/65">Migration from HTMX</a></li>
+            </ul>
+          </div>
+
+          <!-- Examples col -->
+          <div>
+            <h3 class="font-mono text-[11px] uppercase tracking-[0.14em] text-ink/40">Examples</h3>
+            <ul class="mt-4 space-y-2.5 text-[13.5px]">
+              <li><a href="#code" class="link-u text-ink/65">Search as you type</a></li>
+              <li><a href="#code" class="link-u text-ink/65">Infinite scroll</a></li>
+              <li><a href="#code" class="link-u text-ink/65">Inline edit</a></li>
+              <li><a href="#code" class="link-u text-ink/65">Active search filters</a></li>
+              <li><a href="#code" class="link-u text-ink/65">Multi-step forms</a></li>
+            </ul>
+          </div>
+
+          <!-- Community col -->
+          <div>
+            <h3 class="font-mono text-[11px] uppercase tracking-[0.14em] text-ink/40">Community</h3>
+            <ul class="mt-4 space-y-2.5 text-[13.5px]">
+              <li><a href="#community" class="link-u text-ink/65">GitHub Discussions</a></li>
+              <li><a href="#community" class="link-u text-ink/65">Discord server</a></li>
+              <li><a href="#sponsors" class="link-u text-ink/65">GitHub Sponsors</a></li>
+              <li><a href="#community" class="link-u text-ink/65">Contributing guide</a></li>
+              <li><a href="#community" class="link-u text-ink/65">Code of conduct</a></li>
+            </ul>
+          </div>
+
+          <!-- About col -->
+          <div>
+            <h3 class="font-mono text-[11px] uppercase tracking-[0.14em] text-ink/40">About</h3>
+            <ul class="mt-4 space-y-2.5 text-[13.5px]">
+              <li><a href="#why" class="link-u text-ink/65">Philosophy</a></li>
+              <li><a href="#why" class="link-u text-ink/65">Blog &amp; changelog</a></li>
+              <li><a href="#faq" class="link-u text-ink/65">Roadmap</a></li>
+              <li><a href="#top" class="link-u text-ink/65">Brand assets</a></li>
+              <li><a href="#faq" class="link-u text-ink/65">MIT license</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Bottom bar -->
+        <div class="mt-12 flex flex-col items-start justify-between gap-3 border-t border-[var(--hairline)] pt-6 sm:flex-row sm:items-center">
+          <p class="text-[12.5px] text-ink/45">© 2026 Heron · Released under the MIT License</p>
+          <p class="flex items-center gap-1.5 text-[12.5px] text-ink/45">
+            Made with care by
+            <span class="font-medium text-ink/70">Esther Maguire</span>
+            <span class="text-ink/30">+</span>
+            <span class="tnum font-medium text-rust">148 contributors</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#C2410C" class="ml-0.5" aria-hidden="true"><path d="M12 21C5.5 16.5 2 13 2 8.5A4.5 4.5 0 0 1 12 6 4.5 4.5 0 0 1 22 8.5C22 13 18.5 16.5 12 21z"/></svg>
+          </p>
+        </div>
+      </div>
+    </footer>
+
+  </main>
+
+  <!-- ============ SCRIPT ============ -->
+  <script>
+    (function () {
+      "use strict";
+
+      /* ---------- Mobile menu ---------- */
+      var toggle = document.getElementById("menu-toggle");
+      var menu = document.getElementById("mobile-menu");
+      if (toggle && menu) {
+        toggle.addEventListener("click", function () {
+          var open = menu.classList.toggle("open");
+          toggle.setAttribute("aria-expanded", open ? "true" : "false");
+        });
+        menu.querySelectorAll("a").forEach(function (a) {
+          a.addEventListener("click", function () {
+            menu.classList.remove("open");
+            toggle.setAttribute("aria-expanded", "false");
+          });
+        });
+      }
+
+      /* ---------- Copy to clipboard ---------- */
+      function fallbackCopy(text) {
+        var ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand("copy"); } catch (e) {}
+        document.body.removeChild(ta);
+      }
+
+      document.querySelectorAll(".copy-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var text = btn.getAttribute("data-copy") || "";
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).catch(function () { fallbackCopy(text); });
+          } else {
+            fallbackCopy(text);
+          }
+
+          btn.classList.remove("copy-pulse");
+          void btn.offsetWidth;
+          btn.classList.add("copy-pulse");
+
+          var label = btn.querySelector(".copy-label");
+          var icon = btn.querySelector(".copy-icon");
+          if (label) {
+            var prev = label.textContent;
+            label.textContent = "Copied";
+            if (icon) icon.style.stroke = "#16A34A";
+            setTimeout(function () {
+              label.textContent = prev;
+              if (icon) icon.style.stroke = "";
+            }, 1400);
+          } else if (icon) {
+            icon.style.stroke = "#16A34A";
+            setTimeout(function () { icon.style.stroke = ""; }, 1400);
+          }
+        });
+      });
+
+      /* ---------- Animated count-up ---------- */
+      function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+      function countUp(el, target, duration) {
+        var start = performance.now();
+        function frame(now) {
+          var p = Math.min((now - start) / duration, 1);
+          var val = Math.round(easeOutCubic(p) * target);
+          el.textContent = val.toLocaleString("en-US");
+          if (p < 1) requestAnimationFrame(frame);
+          else el.textContent = target.toLocaleString("en-US");
+        }
+        requestAnimationFrame(frame);
+      }
+
+      var navStar = document.getElementById("nav-star-count");
+      if (navStar) {
+        navStar.classList.add("count-shimmer");
+        countUp(navStar, 28408, 1800);
+      }
+
+      /* ---------- Star sparkline (procedural) ---------- */
+      // 12 months of cumulative star counts
+      var starData = [9100, 10800, 12400, 13900, 15800, 17600, 19400, 21300, 23100, 24900, 26700, 28408];
+      (function drawSpark() {
+        var W = 120, H = 36, pad = 3;
+        var min = Math.min.apply(null, starData);
+        var max = Math.max.apply(null, starData);
+        var n = starData.length;
+        var pts = starData.map(function (v, i) {
+          var x = pad + (i / (n - 1)) * (W - pad * 2);
+          var y = H - pad - ((v - min) / (max - min)) * (H - pad * 2);
+          return [x, y];
+        });
+        var line = pts.map(function (p, i) {
+          return (i === 0 ? "M" : "L") + p[0].toFixed(1) + " " + p[1].toFixed(1);
+        }).join(" ");
+        var area = line + " L" + (W - pad).toFixed(1) + " " + (H - pad) + " L" + pad + " " + (H - pad) + " Z";
+
+        var lineEl = document.getElementById("spark-line");
+        var areaEl = document.getElementById("spark-area");
+        var dotEl = document.getElementById("spark-dot");
+        if (lineEl) lineEl.setAttribute("d", line);
+        if (areaEl) areaEl.setAttribute("d", area);
+        if (dotEl) {
+          var last = pts[pts.length - 1];
+          dotEl.setAttribute("cx", last[0].toFixed(1));
+          dotEl.setAttribute("cy", last[1].toFixed(1));
+        }
+      })();
+
+      /* ---------- IntersectionObserver reveal ---------- */
+      var reveals = document.querySelectorAll(".reveal");
+      if ("IntersectionObserver" in window) {
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("is-visible");
+              io.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+        reveals.forEach(function (el) { io.observe(el); });
+      } else {
+        reveals.forEach(function (el) { el.classList.add("is-visible"); });
+      }
+    })();
+  </script>
+</body>
+</html>

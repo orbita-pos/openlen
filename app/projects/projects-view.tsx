@@ -44,11 +44,11 @@ import type { ProjectStatus, ProjectSummary } from "@/lib/projects";
 
 type ViewMode = "grid" | "list";
 type FilterId = "all" | "draft" | "published" | "archived";
-type SortId = "edited" | "created" | "name" | "cost";
+type SortId = "edited" | "created" | "name";
 
 interface UsageInfo {
   plan: "free" | "pro";
-  generate: Array<{ label: string; max: number; used: number; remaining: number }>;
+  credits: { balance: number; allotment: number };
 }
 
 const STATUS_TONE: Record<
@@ -137,7 +137,6 @@ export function ProjectsView({ projects: initial }: { projects: ProjectSummary[]
     if (sort === "created")
       out.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     if (sort === "name") out.sort((a, b) => a.title.localeCompare(b.title));
-    if (sort === "cost") out.sort((a, b) => b.costUsd - a.costUsd);
     return out;
   }, [projects, q, filter, sort]);
 
@@ -366,7 +365,6 @@ export function ProjectsView({ projects: initial }: { projects: ProjectSummary[]
                 <span className="hidden sm:block w-24">Status</span>
                 <span className="hidden lg:block w-32">Tags</span>
                 <span className="w-24 text-right">Edited</span>
-                <span className="w-14 text-right">Cost</span>
                 <span className="w-7" />
               </div>
               <div className="divide-y divide-zinc-100 dark:divide-zinc-900">
@@ -484,7 +482,6 @@ function Toolbar({
     { id: "edited", label: "Last edited" },
     { id: "created", label: "Date created" },
     { id: "name", label: "Name (A → Z)" },
-    { id: "cost", label: "Cost (high → low)" },
   ];
 
   const filterLabel = filter !== "all" ? STATUS_TONE[filter as ProjectStatus]?.label : null;
@@ -650,11 +647,9 @@ function UsageStrip({
   projectCount: number;
   onDismiss: () => void;
 }) {
-  const monthly = usage.generate.find((w) => w.label === "monthly");
-  const remaining = monthly?.remaining ?? 0;
-  const used = monthly?.used ?? 0;
-  const max = monthly?.max ?? 0;
-  const pct = max > 0 ? Math.round((used / max) * 100) : 0;
+  const { balance, allotment } = usage.credits;
+  const used = Math.max(0, allotment - balance);
+  const pct = allotment > 0 ? Math.round((used / allotment) * 100) : 0;
 
   return (
     <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 pb-3">
@@ -683,7 +678,7 @@ function UsageStrip({
               This month
             </div>
             <div className="text-[13.5px] font-medium leading-tight tabular-nums">
-              {used} / {max} generations
+              {used} / {allotment} credits used
             </div>
           </div>
         </div>
@@ -697,13 +692,13 @@ function UsageStrip({
               {usage.plan === "free" ? "Free plan" : "Pro plan"}
             </div>
             <div className="text-[13.5px] font-medium leading-tight tabular-nums">
-              {remaining} generation{remaining === 1 ? "" : "s"} left
+              {balance} credit{balance === 1 ? "" : "s"} left
             </div>
             <div className="mt-1.5 h-1 rounded-full bg-zinc-100 dark:bg-zinc-900 overflow-hidden">
               <div
                 className={cn(
                   "h-full rounded-full",
-                  remaining === 0 ? "bg-red-500" : "bg-indigo-500",
+                  balance === 0 ? "bg-red-500" : "bg-indigo-500",
                 )}
                 style={{ width: `${Math.min(100, pct)}%` }}
               />
@@ -813,7 +808,7 @@ function ProjectCard({
       )}
     >
       <Link
-        href={`/new?project=${project.id}`}
+        href={`/new-v2?project=${project.id}`}
         className="block relative aspect-[16/10] overflow-hidden rounded-t-xl bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-950"
       >
         <label
@@ -941,16 +936,9 @@ function ProjectCard({
           </div>
         )}
         <div className="mt-3 flex items-center justify-between border-t border-zinc-100 dark:border-zinc-900 pt-2.5 text-[11.5px] text-zinc-500 dark:text-zinc-500">
-          <div className="flex items-center gap-2.5">
-            <span className="inline-flex items-center gap-1">
-              <Zap size={11} className="text-coral-500" /> $
-              {project.costUsd.toFixed(2)}
-            </span>
-            <span className="text-zinc-300 dark:text-zinc-700">·</span>
-            <span className="inline-flex items-center gap-1">
-              <Layers size={11} /> {project.sectionCount} sections
-            </span>
-          </div>
+          <span className="inline-flex items-center gap-1">
+            <Layers size={11} /> {project.sectionCount} sections
+          </span>
           <ChevronRight
             size={13}
             className="text-zinc-300 dark:text-zinc-700 group-hover:text-zinc-500 transition"
@@ -976,7 +964,7 @@ function ProjectRow({
 }) {
   return (
     <Link
-      href={`/new?project=${project.id}`}
+      href={`/new-v2?project=${project.id}`}
       className={cn(
         "group relative flex items-center gap-3 px-3 sm:px-4 h-14 transition",
         selected
@@ -1070,10 +1058,6 @@ function ProjectRow({
         {relativeTime(project.updatedAt)}
       </div>
 
-      <div className="hidden md:block shrink-0 text-[11.5px] text-zinc-500 dark:text-zinc-500 w-14 tabular-nums text-right">
-        ${project.costUsd.toFixed(2)}
-      </div>
-
       <button
         type="button"
         onClick={(e) => {
@@ -1138,7 +1122,7 @@ function MenuDropdown({
     disabled?: boolean;
     hint?: string;
   }> = [
-    { icon: ExternalLink, label: "Open", onClick: () => window.location.assign(`/new?project=${project.id}`) },
+    { icon: ExternalLink, label: "Open", onClick: () => window.location.assign(`/new-v2?project=${project.id}`) },
     { icon: Copy, label: "Duplicate", onClick: onDuplicate },
     { icon: Pencil, label: "Rename", onClick: onRename },
     { icon: Download, label: "Download .zip", onClick: onDownloadZip },
@@ -1160,7 +1144,7 @@ function MenuDropdown({
           icon: Globe,
           label: "Publish…",
           onClick: () =>
-            window.location.assign(`/new?project=${project.id}&publish=1`),
+            window.location.assign(`/new-v2?project=${project.id}`),
         },
     { icon: Archive, label: project.status === "archived" ? "Archived" : "Archive", onClick: onArchive, disabled: project.status === "archived" },
     { icon: Trash2, label: "Delete", onClick: onDelete, danger: true },
@@ -1312,7 +1296,7 @@ function EmptyState() {
         {examples.map((ex) => (
           <Link
             key={ex.title}
-            href={`/new?brief=${encodeURIComponent(ex.brief)}`}
+            href={`/new-v2?mode=ai&brief=${encodeURIComponent(ex.brief)}`}
             className="group relative flex items-start gap-3 rounded-xl bg-white dark:bg-[#0a0a0a] ring-1 ring-zinc-200 dark:ring-zinc-800 hover:ring-coral-300 dark:hover:ring-coral-500/40 hover:shadow-sm transition p-3.5 text-left"
           >
             <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 group-hover:bg-coral-50 group-hover:text-coral-600 dark:group-hover:bg-coral-500/10 dark:group-hover:text-coral-400 transition">

@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Jamie Lin — indie builder</title>
+<meta name="description" content="Jamie Lin — indie builder running 5 small SaaS products at $28k MRR. Quarterly income reports, a new book, the Founders 101 cohort, talks, and open office hours." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#0F1115;
+    --text:#F0F3F0;
+    --muted:rgba(240,243,240,0.58);
+    --faint:rgba(240,243,240,0.40);
+    --green:#5BE584;
+    --line:rgba(255,255,255,0.075);
+    --surface:rgba(255,255,255,0.038);
+  }
+  *{ -webkit-tap-highlight-color:transparent; }
+  html{ scroll-behavior:smooth; }
+  html,body{ background:var(--bg); color:var(--text); }
+  body{
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+    font-feature-settings:"ss01","cv11";
+    font-optical-sizing:auto;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    line-height:1.5;
+  }
+  .display{ font-weight:700; letter-spacing:-0.03em; line-height:1.04; }
+  .mono{ font-family:'Geist Mono',ui-monospace,Menlo,monospace; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  .halftone{ opacity:0.45; }
+  .marker{ font-family:'Geist Mono',ui-monospace,Menlo,monospace; font-size:10px; letter-spacing:0.17em; text-transform:uppercase; color:var(--faint); }
+  .dotgrid{
+    background-image:radial-gradient(rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size:32px 32px;
+    background-position:center top;
+  }
+  .pulse-dot{ position:relative; display:inline-block; width:6px; height:6px; border-radius:999px; background:var(--green); box-shadow:0 0 0 0 rgba(91,229,132,0.55); animation:pulse 2s ease-out infinite; }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(91,229,132,0.5); }
+    70%{ box-shadow:0 0 0 8px rgba(91,229,132,0); }
+    100%{ box-shadow:0 0 0 0 rgba(91,229,132,0); }
+  }
+  .lnk{ transition:transform 130ms ease, border-color 130ms ease, background-color 130ms ease, box-shadow 130ms ease; }
+  .lnk:hover{ transform:translateY(-1px); border-color:rgba(91,229,132,0.42); background-color:rgba(255,255,255,0.052); box-shadow:0 0 0 1px rgba(91,229,132,0.24), 0 14px 30px -20px rgba(91,229,132,0.55); }
+  .lnk-primary{ background:linear-gradient(180deg, rgba(91,229,132,0.13), rgba(91,229,132,0.045)); border-color:rgba(91,229,132,0.3); }
+  .lnk-primary:hover{ border-color:rgba(91,229,132,0.62); box-shadow:0 0 0 1px rgba(91,229,132,0.34), 0 16px 34px -18px rgba(91,229,132,0.6); }
+  .chev{ transition:transform 130ms ease; }
+  .lnk:hover .chev{ transform:translateX(2px); }
+  .card-lift{ transition:transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease; }
+  .card-lift:hover{ transform:translateY(-2px); border-color:rgba(91,229,132,0.36); box-shadow:0 18px 40px -26px rgba(91,229,132,0.5); }
+  .soc{ transition:transform 130ms ease, color 130ms ease, border-color 130ms ease, background-color 130ms ease; }
+  .soc:hover{ transform:translateY(-2px); color:var(--green); border-color:rgba(91,229,132,0.45); background-color:rgba(91,229,132,0.08); }
+  .book-cover{ background:linear-gradient(165deg,#1C2A22 0%, #11140F 72%); box-shadow:inset 0 0 0 1px rgba(91,229,132,0.18), 0 10px 22px -12px rgba(0,0,0,0.7); }
+  ::selection{ background:rgba(91,229,132,0.26); color:#fff; }
+  @media (prefers-reduced-motion:reduce){
+    .pulse-dot{ animation:none; }
+    html{ scroll-behavior:auto; }
+  }
+</style>
+</head>
+<body class="min-h-screen">
+
+<div aria-hidden="true" class="dotgrid pointer-events-none fixed inset-0 -z-10">
+  <div class="absolute left-1/2 top-0 h-72 w-72 -translate-x-1/2 -translate-y-1/3 rounded-full bg-[#5BE584] opacity-[0.12] blur-[120px]"></div>
+</div>
+
+<main class="relative mx-auto w-full max-w-md px-5 pb-14 pt-16 sm:pt-20">
+
+  <!-- HERO -->
+  <header class="flex flex-col items-center text-center">
+    <div class="grid h-[86px] w-[86px] place-items-center rounded-[20px]" style="background:linear-gradient(142deg, #7CF0A0 0%, #5BE584 38%, #25B587 72%, #178A6E 100%); box-shadow:0 0 0 1px rgba(255,255,255,0.10), 0 16px 44px -14px rgba(91,229,132,0.6);">
+      <span class="display text-[34px]" style="color:#0C1410;">J</span>
+    </div>
+    <h1 class="display mt-4 text-[32px] text-white">Jamie Lin</h1>
+    <p class="mt-2 max-w-[19rem] text-[12.5px] text-[var(--muted)]">
+      indie builder <span class="text-[var(--faint)]">·</span> <span class="tnum">5 products</span> <span class="text-[var(--faint)]">·</span> <span class="tnum font-semibold text-[var(--green)]">$28k MRR</span> combined
+    </p>
+    <p class="mt-3 max-w-[20.5rem] text-[14.5px] leading-relaxed text-[var(--muted)]">
+      I ship small SaaS, write a book a year, and run a 4-week course quarterly. <span class="halftone">Open about all of it.</span>
+    </p>
+  </header>
+
+  <!-- FEATURED ON -->
+  <div class="mt-6 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
+    <div class="marker text-center">Featured on</div>
+    <div class="mt-1.5 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-[12.5px] font-medium text-[var(--muted)]">
+      <span>Indie Hackers</span>
+      <span class="text-[var(--faint)]">·</span>
+      <span>Hacker News</span>
+      <span class="text-[var(--faint)]">·</span>
+      <span>Lenny’s Newsletter</span>
+    </div>
+  </div>
+
+  <!-- BUTTON STACK -->
+  <nav class="mt-7 space-y-2.5" aria-label="Links">
+
+    <a href="#" class="lnk lnk-primary group flex items-center gap-3 rounded-2xl border px-4 py-3">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[rgba(91,229,132,0.28)] bg-[rgba(91,229,132,0.13)] text-[var(--green)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 16.5 10 10.5l3.6 3.6L20 7.7"/><path d="M15.4 7.7H20v4.6"/></svg>
+      </span>
+      <span class="min-w-0 flex-1">
+        <span class="block text-[14px] font-semibold text-white">Indie hacker income report</span>
+        <span class="mt-0.5 block text-[12px] text-[var(--muted)]">Q1 2026 · revenue + churn</span>
+      </span>
+      <span class="flex shrink-0 flex-col items-end">
+        <svg id="anvil-spark" viewBox="0 0 72 30" preserveAspectRatio="none" class="h-[26px] w-[58px]" aria-hidden="true">
+          <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5BE584" stop-opacity="0.34"/><stop offset="1" stop-color="#5BE584" stop-opacity="0"/></linearGradient></defs>
+          <path id="anvil-area" fill="url(#ag)" stroke="none"></path>
+          <path id="anvil-line" fill="none" stroke="#5BE584" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+          <circle id="anvil-dot" r="2.4" fill="#5BE584"></circle>
+        </svg>
+        <span class="tnum mt-0.5 text-[11px] font-bold leading-none text-[var(--green)]">$28k MRR</span>
+      </span>
+    </a>
+
+    <a href="#" class="lnk group flex items-center gap-3.5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3.5">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--line)] bg-white/[0.04] text-[var(--muted)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 4H18a1 1 0 0 1 1 1v13.5H7A2.5 2.5 0 0 0 4.5 21V6.5A2.5 2.5 0 0 1 6.5 4Z"/><path d="M4.5 18.5A2.5 2.5 0 0 1 7 16h12"/></svg>
+      </span>
+      <span class="flex-1 text-[14.5px] font-medium text-white">My new book: ‘Slow growth’</span>
+      <span class="tnum text-[12px] text-[var(--faint)]">$28</span>
+      <svg class="chev shrink-0 text-[var(--faint)]" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </a>
+
+    <a href="#" class="lnk group flex items-center gap-3.5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--line)] bg-white/[0.04] text-[var(--muted)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4 2.8 8.4 12 12.8l9.2-4.4L12 4Z"/><path d="M6.6 10.8V15c0 1.5 2.4 2.7 5.4 2.7s5.4-1.2 5.4-2.7v-4.2"/><path d="M21.2 8.4v5.2"/></svg>
+      </span>
+      <span class="min-w-0 flex-1">
+        <span class="block text-[14.5px] font-medium text-white">Founders 101 cohort</span>
+        <span class="mt-0.5 block text-[12px] text-[var(--muted)]">May 12 – Jun 8</span>
+      </span>
+      <span class="flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-[var(--green)]">
+        <span class="pulse-dot"></span>24 spots
+      </span>
+    </a>
+
+    <a href="#" class="lnk group flex items-center gap-3.5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3.5">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--line)] bg-white/[0.04] text-[var(--muted)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.6" y="3.6" width="7" height="7" rx="1.7"/><rect x="13.4" y="3.6" width="7" height="7" rx="1.7"/><rect x="3.6" y="13.4" width="7" height="7" rx="1.7"/><rect x="13.4" y="13.4" width="7" height="7" rx="1.7"/></svg>
+      </span>
+      <span class="flex-1 text-[14.5px] font-medium text-white">All 5 SaaS products</span>
+      <span class="text-[12px] text-[var(--faint)]">The shelf</span>
+      <svg class="chev shrink-0 text-[var(--faint)]" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </a>
+
+    <a href="#" class="lnk group flex items-center gap-3.5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--line)] bg-white/[0.04] text-[var(--muted)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 4 4 6.6l2 3.6 2.2-1.1V20h7.6V9.1L18 10.2l2-3.6L15.5 4a3.6 3.6 0 0 1-7 0Z"/></svg>
+      </span>
+      <span class="min-w-0 flex-1">
+        <span class="block text-[14.5px] font-medium text-white">Merch shop</span>
+        <span class="mt-0.5 block text-[12px] text-[var(--muted)]">‘Built in one weekend’ hoodie</span>
+      </span>
+      <svg class="chev shrink-0 text-[var(--faint)]" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </a>
+
+    <a href="#" class="lnk group flex items-center gap-3.5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3.5">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--line)] bg-white/[0.04] text-[var(--muted)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4a2.7 2.7 0 0 0-2.7 2.7v4.6a2.7 2.7 0 0 0 5.4 0V6.7A2.7 2.7 0 0 0 12 4Z"/><path d="M6 11.5a6 6 0 0 0 12 0"/><path d="M12 17.5V21"/></svg>
+      </span>
+      <span class="flex-1 text-[14.5px] font-medium text-white">Upcoming talks</span>
+      <span class="text-[12px] text-[var(--faint)]">MicroConf 2026</span>
+      <svg class="chev shrink-0 text-[var(--faint)]" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </a>
+
+    <a href="#" class="lnk group flex items-center gap-3.5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3.5">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--line)] bg-white/[0.04] text-[var(--muted)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.6"/><path d="m4 7.5 8 5.5 8-5.5"/></svg>
+      </span>
+      <span class="flex-1 text-[14.5px] font-medium text-white">Newsletter</span>
+      <span class="text-[12px] text-[var(--faint)]">Every other Friday</span>
+      <svg class="chev shrink-0 text-[var(--faint)]" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </a>
+
+    <a href="#" class="lnk group flex items-center gap-3.5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3.5">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--line)] bg-white/[0.04] text-[var(--muted)]">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"/></svg>
+      </span>
+      <span class="flex-1 text-[14.5px] font-medium text-white">Twitter</span>
+      <span class="tnum text-[12px] text-[var(--faint)]">31.2k</span>
+      <svg class="chev shrink-0 text-[var(--faint)]" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </a>
+
+    <a href="#" class="lnk group flex items-center gap-3.5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3.5">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--line)] bg-white/[0.04] text-[var(--muted)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5.5" width="19" height="13" rx="4.2"/><path d="M10.3 9.4 15.4 12l-5.1 2.6Z" fill="currentColor" stroke="none"/></svg>
+      </span>
+      <span class="flex-1 text-[14.5px] font-medium text-white">YouTube</span>
+      <span class="text-[12px] text-[var(--faint)]">Build streams</span>
+      <svg class="chev shrink-0 text-[var(--faint)]" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </a>
+
+    <a href="#" class="lnk group flex items-center gap-3.5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3.5">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--line)] bg-white/[0.04] text-[var(--muted)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.6V12l3 1.8"/></svg>
+      </span>
+      <span class="flex-1 text-[14.5px] font-medium text-white">Office hours</span>
+      <span class="tnum text-[12px] text-[var(--green)]">30 min · $0</span>
+      <svg class="chev shrink-0 text-[var(--faint)]" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </a>
+
+  </nav>
+
+  <!-- FEATURED: BOOK -->
+  <section class="mt-9">
+    <div class="marker mb-3 flex items-center gap-2"><span class="pulse-dot"></span> New release</div>
+    <a href="#" class="card-lift block rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+      <div class="flex gap-4">
+        <div class="book-cover relative flex h-[128px] w-[92px] shrink-0 flex-col justify-between rounded-md p-2.5">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5BE584" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 17 11 11l3 3 5-7"/><path d="M15.5 7H19v3.5"/></svg>
+          <div>
+            <div class="text-[13px] font-extrabold leading-[1.05] tracking-[-0.02em] text-white">SLOW<br />GROWTH</div>
+            <div class="mt-1.5 h-px w-7 bg-[rgba(91,229,132,0.6)]"></div>
+            <div class="mono mt-1.5 text-[7.5px] tracking-[0.14em] text-[var(--faint)]">JAMIE LIN</div>
+          </div>
+        </div>
+        <div class="flex min-w-0 flex-col justify-center">
+          <div class="marker text-[var(--green)]">New book</div>
+          <div class="display mt-1 text-[22px] text-white">Slow growth</div>
+          <p class="mt-1.5 text-[12.5px] leading-relaxed text-[var(--muted)]">
+            Building software businesses that compound instead of spike. 11 chapters, 228 pages.
+          </p>
+          <div class="mt-2.5 flex items-center gap-3">
+            <span class="tnum text-[14px] font-bold text-white">$28</span>
+            <span class="inline-flex items-center gap-1 text-[13px] font-semibold text-[var(--green)]">
+              Get the book
+              <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+            </span>
+          </div>
+        </div>
+      </div>
+    </a>
+  </section>
+
+  <!-- SOCIAL + FOOTER -->
+  <footer class="mt-10 flex flex-col items-center">
+    <div class="flex items-center justify-center gap-2.5">
+      <a href="#" aria-label="Twitter" class="soc grid h-11 w-11 place-items-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)]">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"/></svg>
+      </a>
+      <a href="#" aria-label="GitHub" class="soc grid h-11 w-11 place-items-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-4 1.3-4-2-5.5-2.5M15 21.5v-3.4c0-1 .3-1.7.8-2.2-3-.3-6-1.4-6-6.3 0-1.4.5-2.5 1.3-3.4-.2-.5-.6-1.9.1-3.6 0 0 1.1-.3 3.6 1.3a12 12 0 0 1 6.4 0c2.5-1.6 3.6-1.3 3.6-1.3.7 1.7.3 3.1.1 3.6.8.9 1.3 2 1.3 3.4 0 4.9-3 6-6 6.3.5.5.9 1.5.9 2.9v3.4"/></svg>
+      </a>
+      <a href="#" aria-label="YouTube" class="soc grid h-11 w-11 place-items-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5.5" width="19" height="13" rx="4.2"/><path d="M10.3 9.4 15.4 12l-5.1 2.6Z" fill="currentColor" stroke="none"/></svg>
+      </a>
+      <a href="#" aria-label="RSS" class="soc grid h-11 w-11 place-items-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)]">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 11a8 8 0 0 1 8 8"/><path d="M5 5.5A13.5 13.5 0 0 1 18.5 19"/><circle cx="6" cy="18" r="1.7" fill="currentColor" stroke="none"/></svg>
+      </a>
+    </div>
+    <p class="mono mt-6 text-[10.5px] tracking-[0.04em] text-[var(--faint)]">
+      made with Tide · updated Mar 2026 · © 2026 Jamie Lin
+    </p>
+  </footer>
+
+</main>
+
+<script>
+  (function(){
+    var line = document.getElementById('anvil-line');
+    if(!line) return;
+    var area = document.getElementById('anvil-area');
+    var dot = document.getElementById('anvil-dot');
+    var data = [9.2,10.1,9.8,12.4,13.0,14.6,16.1,18.0,19.4,22.7,25.3,28.0];
+    var W = 72, H = 30, pad = 4;
+    var min = Math.min.apply(null,data), max = Math.max.apply(null,data), span = (max-min)||1;
+    var pts = data.map(function(v,i){
+      return [ pad + (W-2*pad)*i/(data.length-1), H-pad - (H-2*pad)*(v-min)/span ];
+    });
+    var d = pts.map(function(p,i){ return (i?'L':'M') + p[0].toFixed(2) + ' ' + p[1].toFixed(2); }).join(' ');
+    line.setAttribute('d', d);
+    area.setAttribute('d', d + ' L' + pts[pts.length-1][0].toFixed(2) + ' ' + (H-pad) + ' L' + pts[0][0].toFixed(2) + ' ' + (H-pad) + ' Z');
+    dot.setAttribute('cx', pts[pts.length-1][0].toFixed(2));
+    dot.setAttribute('cy', pts[pts.length-1][1].toFixed(2));
+  })();
+</script>
+</body>
+</html>

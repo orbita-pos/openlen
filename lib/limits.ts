@@ -32,28 +32,17 @@ export interface PlanLimits {
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
-const MONTH = 30 * DAY;
 
+// The monthly budget is enforced by the credit system (lib/credits.ts).
+// These windows are only anti-burst abuse protection — a per-hour ceiling.
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
   free: {
-    generate: [
-      { windowMs: HOUR, max: 5, label: "hourly" },
-      { windowMs: MONTH, max: 3, label: "monthly" },
-    ],
-    regen: [
-      { windowMs: HOUR, max: 10, label: "hourly" },
-      { windowMs: MONTH, max: 30, label: "monthly" },
-    ],
+    generate: [{ windowMs: HOUR, max: 5, label: "hourly" }],
+    regen: [{ windowMs: HOUR, max: 10, label: "hourly" }],
   },
   pro: {
-    generate: [
-      { windowMs: HOUR, max: 30, label: "hourly" },
-      { windowMs: MONTH, max: 100, label: "monthly" },
-    ],
-    regen: [
-      { windowMs: HOUR, max: 60, label: "hourly" },
-      { windowMs: MONTH, max: 500, label: "monthly" },
-    ],
+    generate: [{ windowMs: HOUR, max: 30, label: "hourly" }],
+    regen: [{ windowMs: HOUR, max: 60, label: "hourly" }],
   },
 };
 

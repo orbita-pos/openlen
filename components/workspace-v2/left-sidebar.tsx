@@ -1,6 +1,15 @@
-// Unified left sidebar — 6 modes (chat, content, design, pages, versions,
-// comments). Collapsible to a 48px icon-rail. The artifact replaced separate
+// Unified left sidebar — 6 modes (chat, content, templates, pages, versions,
+// brief). Collapsible to a 48px icon-rail. The artifact replaced separate
 // left+right sidebars with this single panel; we keep that decision.
+//
+// "Design" used to be a tab with palette/typography/layout swatches; it was
+// removed once Chat became the sole design surface for flat projects and the
+// slot-based design controls for rich projects never made it into V2 in
+// practice. If/when rich-project design controls land here, fold them into
+// Chat as quick-prompts rather than re-adding a separate tab.
+//
+// "Brief" used to be a multi-user Comments mock; pivoted to a per-project
+// AI-injected context field (Claude.ai "Project instructions" equivalent).
 
 "use client";
 
@@ -10,17 +19,17 @@ import {
   Grid3,
   HistoryIcon,
   Layers,
-  MessageSq,
-  PaletteIcon,
   PanelLeft,
   PanelRight,
   Pencil,
+  Sparkles,
 } from "./icons";
 import type { Section } from "./mock-data";
-import { ChatPanel } from "./panels/chat-panel";
-import { CommentsPanel } from "./panels/comments-panel";
+import { BriefPanel } from "./panels/brief-panel";
+import type { BriefFormState } from "@/components/workspace/types";
+import { AiBriefPanel } from "./panels/ai-brief-panel";
+import { ChatPanel, type ScopedSelection } from "./panels/chat-panel";
 import { ContentPanel } from "./panels/content-panel";
-import { DesignPanel } from "./panels/design-panel";
 import { PagesPanel } from "./panels/pages-panel";
 import { PastePanel } from "./panels/paste-panel";
 import { TemplatesPanel } from "./panels/templates-panel";
@@ -28,16 +37,14 @@ import { VersionsPanel } from "./panels/versions-panel";
 import { IconBtn, Tooltip } from "./ui";
 
 import type { ComponentType } from "react";
-import type { DesignState } from "./mock-data";
 
 export type SidebarMode =
   | "chat"
   | "content"
-  | "design"
   | "templates"
   | "pages"
   | "versions"
-  | "comments";
+  | "brief";
 
 interface ModeTab {
   id: SidebarMode;
@@ -49,11 +56,10 @@ interface ModeTab {
 const MODE_TABS: ModeTab[] = [
   { id: "chat", icon: ChatIcon, label: "Chat", title: "Chat with Orchestra" },
   { id: "content", icon: Pencil, label: "Content", title: "Edit content" },
-  { id: "design", icon: PaletteIcon, label: "Design", title: "Design system" },
   { id: "templates", icon: Grid3, label: "Templates", title: "Start from a template" },
   { id: "pages", icon: FileText, label: "Pages", title: "Recent projects" },
   { id: "versions", icon: HistoryIcon, label: "Versions", title: "Version history" },
-  { id: "comments", icon: MessageSq, label: "Comments", title: "Comments" },
+  { id: "brief", icon: Sparkles, label: "Brief", title: "Project brief (AI context)" },
 ];
 
 interface LeftSidebarProps {
@@ -65,8 +71,6 @@ interface LeftSidebarProps {
   expanded: string | null;
   setExpanded: (id: string | null) => void;
   onUpdateSection: (id: string, fields: Section["fields"]) => void;
-  design: DesignState;
-  setDesign: (patch: Partial<DesignState>) => void;
   /** Called when the user clicks a template card — sets the previewed
    *  template in the parent so PreviewArea loads its URL. */
   onPreviewTemplate?: (t: {
@@ -86,6 +90,51 @@ interface LeftSidebarProps {
    *  matching entry-mode component (PastePanel for `paste`, etc). The
    *  default mode-based panel rendering only applies in `editing` mode. */
   entryMode?: "choosing" | "ai" | "template" | "paste" | "editing";
+  /** Raw HTML of the currently loaded flat project (template-clone or paste).
+   *  When present, ChatPanel switches from the mock Orchestra round-trip to
+   *  the real Kimi K2.6 design surface, and ContentPanel renders a hint
+   *  card pointing the user at the iframe (instead of the slot form). */
+  flatProjectHtml?: string;
+  flatProjectId?: string;
+  onFlatHtmlUpdate?: (html: string) => void;
+  /** True while the parent is mid-fetch on /api/projects/<id>. Forwarded
+   *  to ChatPanel so reloads show a skeleton instead of the empty state. */
+  projectLoading?: boolean;
+  /** Save indicator mirrored from the parent — surfaced inside the
+   *  flat-project ContentPanel hint card so the user knows their iframe
+   *  edits are persisting. */
+  savingStatus?: "idle" | "saving" | "saved" | null;
+  /** ID of the currently loaded project (any kind) — used by PagesPanel
+   *  to highlight the active card and no-op its click, and by VersionsPanel
+   *  to fetch the project's snapshot timeline. */
+  currentProjectId?: string | null;
+  /** Called after a version restore succeeds, with the restored HTML so
+   *  the parent can refresh `loadedProject.html` and the preview iframe. */
+  onRestoreApplied?: (html: string) => void;
+  /** The persistent AI-context the user wrote in the Brief tab. Loaded
+   *  alongside the project; mirror updates back via `onBriefSaved`. */
+  initialBrief?: string;
+  onBriefSaved?: (brief: string) => void;
+  /** Section-select state owned by the parent and threaded into ChatPanel
+   *  so the iframe (in PreviewArea) and the chat composer stay in sync. */
+  sectionSelectMode?: boolean;
+  onToggleSectionSelect?: (active: boolean) => void;
+  scopedSelection?: ScopedSelection | null;
+  onClearScope?: () => void;
+  /** Open the Autofill modal (Sparkles icon in chat composer). */
+  onAutofill?: () => void;
+  /** When set, ChatPanel applies this string to its draft on the next
+   *  effect run. Used by the post-swap "Update copy?" chip to push a
+   *  context-aware prompt into the composer. The parent must clear via
+   *  `onPendingDraftConsumed` so the same draft isn't reapplied. */
+  pendingDraft?: string | null;
+  onPendingDraftConsumed?: () => void;
+  /** AI generation brief form state — only used when entryMode === "ai".
+   *  Rendered in the sidebar panel slot so the brief input lives next
+   *  to the empty preview, like the other entry modes. */
+  aiBriefState?: BriefFormState;
+  aiOnGenerate?: () => void;
+  aiGenerating?: boolean;
 }
 
 export function LeftSidebar({
@@ -97,22 +146,49 @@ export function LeftSidebar({
   expanded,
   setExpanded,
   onUpdateSection,
-  design,
-  setDesign,
   onPreviewTemplate,
   previewingTemplateId,
   lockedTabs,
   lockReason,
   entryMode = "editing",
+  flatProjectHtml,
+  flatProjectId,
+  onFlatHtmlUpdate,
+  projectLoading = false,
+  savingStatus = null,
+  currentProjectId = null,
+  onRestoreApplied,
+  initialBrief = "",
+  onBriefSaved,
+  sectionSelectMode = false,
+  onToggleSectionSelect,
+  scopedSelection = null,
+  onClearScope,
+  onAutofill,
+  pendingDraft = null,
+  onPendingDraftConsumed,
+  aiBriefState,
+  aiOnGenerate,
+  aiGenerating = false,
 }: LeftSidebarProps) {
+  const isFlatProject = flatProjectId !== undefined;
   const lockedSet = new Set(lockedTabs ?? []);
   const isLocked = (id: SidebarMode) => lockedSet.has(id);
   const activeMeta = MODE_TABS.find((t) => t.id === mode) ?? MODE_TABS[0];
 
+  // Templates is an entry-flow surface — its preview + "Use this template"
+  // commit path only renders while entryMode === "template". Once a project
+  // is open there's nothing to commit to, so we drop the tab in editing
+  // rather than show a dead gallery.
+  const visibleTabs =
+    entryMode === "editing"
+      ? MODE_TABS.filter((t) => t.id !== "templates")
+      : MODE_TABS;
+
   if (collapsed) {
     return (
-      <aside className="h-full w-12 shrink-0 bg-side border-r bd flex flex-col items-center pt-2 gap-0.5">
-        {MODE_TABS.map((t) => {
+      <aside className="h-full w-12 shrink-0 bg-side border-r bd flex flex-col items-center pt-2 gap-1">
+        {visibleTabs.map((t) => {
           const active = mode === t.id;
           const locked = isLocked(t.id);
           const I = t.icon;
@@ -130,9 +206,9 @@ export function LeftSidebar({
                   setMode(t.id);
                   onToggleCollapse();
                 }}
-                className={`h-8 w-8 inline-flex items-center justify-center rounded-md transition ${
+                className={`h-8 w-8 inline-flex items-center justify-center rounded-md transition-all duration-150 ease-out ${
                   locked
-                    ? "fg-faint opacity-40 cursor-not-allowed"
+                    ? "fg-faint opacity-50 cursor-not-allowed"
                     : active
                       ? "bg-elev fg shadow-card border bd"
                       : "fg-muted hover:fg hover:bg-hover"
@@ -160,7 +236,7 @@ export function LeftSidebar({
     <aside className="h-full w-[320px] shrink-0 bg-side border-r bd flex flex-col">
       <div className="flex items-center justify-between px-2 pt-2 pb-1.5 border-b bd shrink-0">
         <div className="inline-flex items-center gap-0.5">
-          {MODE_TABS.map((t) => {
+          {visibleTabs.map((t) => {
             const active = mode === t.id;
             const locked = isLocked(t.id);
             const I = t.icon;
@@ -176,9 +252,9 @@ export function LeftSidebar({
                     if (locked) return;
                     setMode(t.id);
                   }}
-                  className={`h-7 w-8 inline-flex items-center justify-center rounded-md transition ${
+                  className={`h-7 w-8 inline-flex items-center justify-center rounded-md transition-all duration-150 ease-out ${
                     locked
-                      ? "fg-faint opacity-40 cursor-not-allowed"
+                      ? "fg-faint opacity-50 cursor-not-allowed"
                       : active
                         ? "bg-elev fg shadow-card border bd"
                         : "fg-muted hover:fg hover:bg-hover"
@@ -204,19 +280,38 @@ export function LeftSidebar({
           <ChoosingPlaceholder />
         ) : entryMode === "paste" ? (
           <PastePanel />
+        ) : entryMode === "ai" && aiBriefState ? (
+          <AiBriefPanel
+            state={aiBriefState}
+            onGenerate={aiOnGenerate ?? (() => {})}
+            generating={aiGenerating}
+          />
         ) : (
           <>
-            {mode === "chat" && <ChatPanel />}
+            {mode === "chat" && (
+              <ChatPanel
+                flatProjectId={flatProjectId}
+                flatProjectHtml={flatProjectHtml}
+                onFlatHtmlUpdate={onFlatHtmlUpdate}
+                projectLoading={projectLoading}
+                sectionSelectMode={sectionSelectMode}
+                onToggleSectionSelect={onToggleSectionSelect}
+                scopedSelection={scopedSelection}
+                onClearScope={onClearScope}
+                onAutofill={onAutofill}
+                pendingDraft={pendingDraft}
+                onPendingDraftConsumed={onPendingDraftConsumed}
+              />
+            )}
             {mode === "content" && (
               <ContentPanel
                 sections={sections}
                 expanded={expanded}
                 setExpanded={setExpanded}
                 onUpdate={onUpdateSection}
+                flat={isFlatProject}
+                savingStatus={savingStatus}
               />
-            )}
-            {mode === "design" && (
-              <DesignPanel design={design} setDesign={setDesign} />
             )}
             {mode === "templates" && (
               <TemplatesPanel
@@ -230,9 +325,22 @@ export function LeftSidebar({
                 previewingId={previewingTemplateId ?? null}
               />
             )}
-            {mode === "pages" && <PagesPanel />}
-            {mode === "versions" && <VersionsPanel />}
-            {mode === "comments" && <CommentsPanel />}
+            {mode === "pages" && (
+              <PagesPanel currentProjectId={currentProjectId} />
+            )}
+            {mode === "versions" && (
+              <VersionsPanel
+                currentProjectId={currentProjectId}
+                onRestoreApplied={onRestoreApplied}
+              />
+            )}
+            {mode === "brief" && (
+              <BriefPanel
+                currentProjectId={currentProjectId}
+                initialBrief={initialBrief}
+                onSaved={onBriefSaved}
+              />
+            )}
           </>
         )}
       </div>

@@ -1,0 +1,795 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Roundtable — One day. One topic. Operational depth.</title>
+<meta name="description" content="Single-day, live workshops for senior PMs and engineering leaders. One operator, one hard topic — pricing, hiring, growth, observability — and a room of 24 peers. Solved in a day." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#FFFFFF;
+    --bg-2:#F7F8FA;
+    --bg-3:#EDF0F4;
+    --ink:#0A0A0A;
+    --ink-2:#54585F;
+    --ink-3:#8A8F98;
+    --blue:#4F8FFF;
+    --blue-2:#3B7AEE;
+    --blue-tint:#EDF3FF;
+    --line:rgba(10,10,12,0.10);
+    --line-soft:rgba(10,10,12,0.055);
+  }
+  *{ -webkit-tap-highlight-color:transparent; }
+  html{ scroll-behavior:smooth; }
+  html,body{ background:var(--bg); color:var(--ink); }
+  body{
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+    font-feature-settings:"ss01","cv11";
+    font-optical-sizing:auto;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.55;
+  }
+  .display{ font-weight:800; letter-spacing:-0.035em; line-height:1.04; }
+  .mono{ font-family:'Geist Mono',ui-monospace,Menlo,monospace; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  em.blue{ font-style:normal; color:var(--blue); }
+  .halftone{ opacity:0.38; }
+  .marker{ font-family:'Geist Mono',monospace; font-size:11px; letter-spacing:0.15em; text-transform:uppercase; color:var(--ink-3); }
+  .accent-line{ display:inline-block; width:24px; height:1px; background:var(--blue); vertical-align:middle; margin-right:9px; }
+  .rule{ border-color:var(--line); }
+  .rule-soft{ border-color:var(--line-soft); }
+  .dotgrid{
+    background-image:radial-gradient(rgba(10,10,12,0.055) 1px, transparent 1px);
+    background-size:32px 32px;
+    background-position:-8px -8px;
+  }
+  .mesh{
+    background-image:
+      radial-gradient(50% 44% at 84% 2%, rgba(79,143,255,0.14), transparent 64%),
+      radial-gradient(44% 38% at 6% 26%, rgba(79,143,255,0.08), transparent 70%);
+  }
+  .pulse-dot{ position:relative; display:inline-block; width:7px; height:7px; border-radius:999px; background:var(--blue); box-shadow:0 0 0 0 rgba(79,143,255,0.6); animation:pulse 1.8s ease-out infinite; }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(79,143,255,0.5); }
+    70%{ box-shadow:0 0 0 9px rgba(79,143,255,0); }
+    100%{ box-shadow:0 0 0 0 rgba(79,143,255,0); }
+  }
+  .btn-primary{ transition:transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease; }
+  .btn-primary:hover{ transform:translateY(-1px); background-color:var(--blue-2); box-shadow:0 10px 26px -10px rgba(79,143,255,0.55); }
+  .btn-ghost{ transition:transform 120ms ease, border-color 120ms ease, background-color 120ms ease; }
+  .btn-ghost:hover{ transform:translateY(-1px); border-color:rgba(10,10,12,0.28); background-color:var(--bg-2); }
+  .card{ box-shadow:0 1px 2px rgba(10,10,12,0.04); }
+  .card-lift{ transition:transform 130ms ease, box-shadow 130ms ease, border-color 130ms ease; }
+  .card-lift:hover{ transform:translateY(-2px); box-shadow:0 18px 36px -22px rgba(10,10,12,0.28); border-color:rgba(10,10,12,0.2); }
+  .ul-link{ position:relative; }
+  .ul-link::after{ content:""; position:absolute; left:0; right:0; bottom:-3px; height:1px; background:var(--blue); transform:scaleX(0); transform-origin:right center; transition:transform 250ms cubic-bezier(.2,.7,.2,1); }
+  .ul-link:hover::after{ transform:scaleX(1); transform-origin:left center; }
+  .marquee-mask{ -webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent); mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent); }
+  .marquee{ display:flex; gap:56px; width:max-content; align-items:center; animation:marq 38s linear infinite; }
+  @keyframes marq{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+  .blob-1{ background:radial-gradient(125% 100% at 28% 22%, #A9C8FF 0%, #4F8FFF 46%, #1E3F86 100%); }
+  .blob-2{ background:radial-gradient(125% 100% at 70% 24%, #9BE3D4 0%, #2E9E8C 48%, #114540 100%); }
+  .blob-3{ background:radial-gradient(125% 100% at 32% 22%, #C7B4F2 0%, #7B5BD0 48%, #2E2056 100%); }
+  .blob-4{ background:radial-gradient(125% 100% at 66% 26%, #FFC59B 0%, #E0823F 48%, #6A3812 100%); }
+  details>summary{ list-style:none; cursor:pointer; }
+  details>summary::-webkit-details-marker{ display:none; }
+  details[open] .acc-sign{ transform:rotate(45deg); }
+  .acc-sign{ transition:transform 200ms ease; }
+  details[open] .acc-row{ background-color:var(--bg-2); }
+  .navbar{ backdrop-filter:blur(14px) saturate(150%); -webkit-backdrop-filter:blur(14px) saturate(150%); background:rgba(255,255,255,0.82); }
+  ::selection{ background:rgba(79,143,255,0.22); color:var(--ink); }
+  .scroll-x{ transition:transform 150ms ease; }
+  a:hover .scroll-x{ transform:translateX(3px); }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ================= NAV ================= -->
+<header class="navbar fixed top-0 inset-x-0 z-50 border-b rule-soft">
+  <div class="max-w-[1180px] mx-auto px-5 sm:px-8 h-[64px] flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" fill="none" stroke="#0A0A0A" stroke-width="1.5"/>
+        <circle cx="12" cy="5.6" r="1.9" fill="#4F8FFF"/>
+        <circle cx="17.5" cy="15" r="1.9" fill="#4F8FFF"/>
+        <circle cx="6.5" cy="15" r="1.9" fill="#4F8FFF"/>
+      </svg>
+      <span class="text-[19px] font-extrabold tracking-tight">Roundtable</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8 text-[14px] text-[color:var(--ink-2)]">
+      <a href="#workshops" class="ul-link">Workshops</a>
+      <a href="#operators" class="ul-link">Operators</a>
+      <a href="#attendees" class="ul-link">Attendees</a>
+      <a href="#faq" class="ul-link">FAQ</a>
+    </nav>
+    <a href="#reserve" class="btn-primary inline-flex items-center gap-2 rounded-lg bg-[color:var(--blue)] text-white font-semibold text-[14px] px-4 py-2">
+      Reserve a seat
+    </a>
+  </div>
+</header>
+
+<!-- ================= HERO ================= -->
+<section id="top" class="relative overflow-hidden mesh pt-[64px]">
+  <div class="absolute inset-0 dotgrid opacity-80 pointer-events-none"></div>
+  <div class="relative max-w-[1180px] mx-auto px-5 sm:px-8 pt-16 sm:pt-20 pb-16 sm:pb-24">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
+
+      <div class="lg:col-span-7">
+        <div class="inline-flex items-center gap-2.5 rounded-full border rule bg-white pl-2.5 pr-3.5 py-1.5 mb-7 card">
+          <span class="pulse-dot"></span>
+          <span class="mono text-[11px] sm:text-[12px] text-[color:var(--ink-2)]">Next · Growth experiments · May 30 · 15 of 24 seats</span>
+        </div>
+
+        <h1 class="display text-[clamp(44px,7.4vw,92px)]">
+          One day. One topic.<br/>
+          <em class="blue">Operational depth.</em>
+        </h1>
+
+        <p class="text-[16px] sm:text-[18px] text-[color:var(--ink-2)] leading-[1.6] mt-7 max-w-[54ch]">
+          Single-day, live workshops for senior PMs and engineering leaders. No survey courses. No six-week drip. One operator who's actually done it, one genuinely hard topic, and a room of 24 peers — worked through in a single day.
+        </p>
+
+        <div class="flex flex-col sm:flex-row gap-3 mt-8">
+          <a href="#reserve" class="btn-primary inline-flex items-center justify-center gap-2 rounded-lg bg-[color:var(--blue)] text-white font-semibold px-6 py-3.5 text-[15px]">
+            Reserve a seat · $499 <span class="scroll-x">→</span>
+          </a>
+          <a href="#workshops" class="btn-ghost inline-flex items-center justify-center gap-2 rounded-lg border rule text-[color:var(--ink)] font-semibold px-6 py-3.5 text-[15px]">
+            See upcoming workshops
+          </a>
+        </div>
+        <p class="marker mt-7">Led by operators from Stripe, Linear, Figma &amp; Vercel</p>
+      </div>
+
+      <!-- next workshop card -->
+      <div class="lg:col-span-5">
+        <div class="rounded-2xl border rule bg-white p-6 sm:p-7 card">
+          <div class="flex items-center justify-between">
+            <div class="mono text-[11px] text-[color:var(--blue)]">● NEXT WORKSHOP</div>
+            <div class="mono text-[11px] text-[color:var(--ink-3)]">FRI · MAY 30</div>
+          </div>
+          <h3 class="text-[20px] font-bold mt-3 leading-snug">Growth experiments for product-led growth</h3>
+          <div class="flex items-center gap-2.5 mt-3">
+            <div class="blob-1 size-8 rounded-full border rule shrink-0"></div>
+            <span class="text-[13px] text-[color:var(--ink-2)]">Led by <span class="font-semibold text-[color:var(--ink)]">Elena Vasquez</span> · ex-Growth Lead, Vercel</span>
+          </div>
+
+          <!-- seats -->
+          <div class="mt-5">
+            <div class="flex justify-between text-[12px] mb-2">
+              <span class="mono text-[color:var(--ink-2)]">Seats reserved</span>
+              <span class="mono text-[color:var(--ink)] tnum">15 / 24</span>
+            </div>
+            <div class="h-2 rounded-full bg-[color:var(--bg-3)] overflow-hidden">
+              <div class="h-full rounded-full bg-[color:var(--blue)]" style="width:62.5%"></div>
+            </div>
+            <div class="mono text-[11px] text-[color:var(--blue)] mt-2">9 seats remain</div>
+          </div>
+
+          <!-- countdown -->
+          <div class="mt-6 pt-5 border-t rule-soft">
+            <div class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em] mb-3">Doors open in</div>
+            <div class="grid grid-cols-4 gap-2">
+              <div class="rounded-lg bg-[color:var(--bg-2)] border rule-soft py-2.5 text-center">
+                <div id="cd-d" class="display tnum text-[24px]">00</div>
+                <div class="mono text-[9px] text-[color:var(--ink-3)] mt-0.5">DAYS</div>
+              </div>
+              <div class="rounded-lg bg-[color:var(--bg-2)] border rule-soft py-2.5 text-center">
+                <div id="cd-h" class="display tnum text-[24px]">00</div>
+                <div class="mono text-[9px] text-[color:var(--ink-3)] mt-0.5">HRS</div>
+              </div>
+              <div class="rounded-lg bg-[color:var(--bg-2)] border rule-soft py-2.5 text-center">
+                <div id="cd-m" class="display tnum text-[24px]">00</div>
+                <div class="mono text-[9px] text-[color:var(--ink-3)] mt-0.5">MIN</div>
+              </div>
+              <div class="rounded-lg bg-[color:var(--bg-2)] border rule-soft py-2.5 text-center">
+                <div id="cd-s" class="display tnum text-[24px]">00</div>
+                <div class="mono text-[9px] text-[color:var(--ink-3)] mt-0.5">SEC</div>
+              </div>
+            </div>
+          </div>
+          <a href="#reserve" class="btn-primary mt-5 w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[color:var(--blue)] text-white font-semibold px-5 py-3 text-[14px]">
+            Reserve this seat
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ================= TRUST BAR ================= -->
+<section class="border-y rule-soft bg-[color:var(--bg-2)] py-11">
+  <div class="max-w-[1180px] mx-auto px-5 sm:px-8">
+    <div class="marker mb-7"><span class="accent-line"></span>Attendees lead product &amp; engineering at</div>
+    <div class="marquee-mask overflow-hidden">
+      <div class="marquee text-[color:var(--ink-2)]">
+        <span class="text-[23px] font-bold tracking-tight">Linnea</span>
+        <span class="text-[23px] font-semibold tracking-tight">Brightwave</span>
+        <span class="text-[23px] font-bold tracking-tight">Mercury</span>
+        <span class="mono text-[19px] tracking-[0.16em]">NIMBUS</span>
+        <span class="text-[23px] font-semibold tracking-[0.05em] lowercase">atrium</span>
+        <span class="text-[23px] font-bold tracking-tight">Forecast</span>
+        <span class="text-[23px] font-medium tracking-tight">Northwind</span>
+        <span class="text-[23px] font-semibold tracking-tight">Vantage</span>
+        <span class="text-[23px] font-bold tracking-tight">Glide</span>
+        <span class="text-[23px] font-medium tracking-tight">Halcyon</span>
+        <span aria-hidden="true" class="text-[23px] font-bold tracking-tight">Linnea</span>
+        <span aria-hidden="true" class="text-[23px] font-semibold tracking-tight">Brightwave</span>
+        <span aria-hidden="true" class="text-[23px] font-bold tracking-tight">Mercury</span>
+        <span aria-hidden="true" class="mono text-[19px] tracking-[0.16em]">NIMBUS</span>
+        <span aria-hidden="true" class="text-[23px] font-semibold tracking-[0.05em] lowercase">atrium</span>
+        <span aria-hidden="true" class="text-[23px] font-bold tracking-tight">Forecast</span>
+        <span aria-hidden="true" class="text-[23px] font-medium tracking-tight">Northwind</span>
+        <span aria-hidden="true" class="text-[23px] font-semibold tracking-tight">Vantage</span>
+        <span aria-hidden="true" class="text-[23px] font-bold tracking-tight">Glide</span>
+        <span aria-hidden="true" class="text-[23px] font-medium tracking-tight">Halcyon</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= UPCOMING WORKSHOPS ================= -->
+<section id="workshops" class="max-w-[1180px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="max-w-[58ch]">
+    <div class="marker mb-5"><span class="accent-line"></span>What's on the calendar</div>
+    <h2 class="display text-[clamp(32px,4.6vw,54px)]">
+      Four workshops. <em class="blue">Pick the one you need.</em>
+    </h2>
+    <p class="text-[16px] sm:text-[17px] text-[color:var(--ink-2)] mt-5 leading-[1.6]">
+      Topics rotate monthly. Each is a complete, self-contained day — come to the one that matches the problem on your desk this quarter, skip the rest with no FOMO.
+    </p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-12">
+    <div class="rounded-2xl border-2 border-[color:var(--blue)] bg-white p-7 card-lift relative">
+      <div class="absolute -top-3 left-7 mono text-[10px] tracking-[0.12em] uppercase bg-[color:var(--blue)] text-white px-3 py-1 rounded-full">Enrolling now</div>
+      <div class="flex items-center justify-between">
+        <span class="mono text-[12px] text-[color:var(--blue)]">FRI · MAY 30</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)]">9 seats left</span>
+      </div>
+      <h3 class="text-[20px] font-bold mt-2.5">Growth experiments for PLG</h3>
+      <ul class="mt-3.5 space-y-2 text-[14px] text-[color:var(--ink-2)]">
+        <li class="flex gap-2.5"><span class="text-[color:var(--blue)]">▸</span> Designing experiments that survive a real funnel</li>
+        <li class="flex gap-2.5"><span class="text-[color:var(--blue)]">▸</span> Activation metrics that aren't vanity</li>
+        <li class="flex gap-2.5"><span class="text-[color:var(--blue)]">▸</span> Reading a result you didn't want</li>
+      </ul>
+      <div class="mono text-[12px] text-[color:var(--ink-3)] mt-5 pt-4 border-t rule-soft">RESOURCE PACK — Experiment brief + readout templates</div>
+    </div>
+    <div class="rounded-2xl border rule bg-white p-7 card card-lift">
+      <div class="flex items-center justify-between">
+        <span class="mono text-[12px] text-[color:var(--ink-2)]">FRI · JUN 20</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)]">24 seats open</span>
+      </div>
+      <h3 class="text-[20px] font-bold mt-2.5">Observability without the 3am page</h3>
+      <ul class="mt-3.5 space-y-2 text-[14px] text-[color:var(--ink-2)]">
+        <li class="flex gap-2.5"><span class="text-[color:var(--blue)]">▸</span> SLOs your team will actually defend</li>
+        <li class="flex gap-2.5"><span class="text-[color:var(--blue)]">▸</span> Alerting that pages a human only when it should</li>
+        <li class="flex gap-2.5"><span class="text-[color:var(--blue)]">▸</span> On-call rotations that don't burn people out</li>
+      </ul>
+      <div class="mono text-[12px] text-[color:var(--ink-3)] mt-5 pt-4 border-t rule-soft">RESOURCE PACK — SLO worksheet + alert audit checklist</div>
+    </div>
+    <div class="rounded-2xl border rule bg-white p-7 card card-lift">
+      <div class="flex items-center justify-between">
+        <span class="mono text-[12px] text-[color:var(--ink-2)]">FRI · JUL 11</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)]">24 seats open</span>
+      </div>
+      <h3 class="text-[20px] font-bold mt-2.5">Pricing &amp; packaging for B2B SaaS</h3>
+      <ul class="mt-3.5 space-y-2 text-[14px] text-[color:var(--ink-2)]">
+        <li class="flex gap-2.5"><span class="text-[color:var(--blue)]">▸</span> Choosing the metric you charge on</li>
+        <li class="flex gap-2.5"><span class="text-[color:var(--blue)]">▸</span> Tiering without confusing the buyer</li>
+        <li class="flex gap-2.5"><span class="text-[color:var(--blue)]">▸</span> Shipping a price change without the panic</li>
+      </ul>
+      <div class="mono text-[12px] text-[color:var(--ink-3)] mt-5 pt-4 border-t rule-soft">RESOURCE PACK — Packaging canvas + migration playbook</div>
+    </div>
+    <div class="rounded-2xl border rule bg-white p-7 card card-lift">
+      <div class="flex items-center justify-between">
+        <span class="mono text-[12px] text-[color:var(--ink-2)]">FRI · AUG 1</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)]">24 seats open</span>
+      </div>
+      <h3 class="text-[20px] font-bold mt-2.5">Hiring senior ICs</h3>
+      <ul class="mt-3.5 space-y-2 text-[14px] text-[color:var(--ink-2)]">
+        <li class="flex gap-2.5"><span class="text-[color:var(--blue)]">▸</span> A loop that predicts the job, not the trivia</li>
+        <li class="flex gap-2.5"><span class="text-[color:var(--blue)]">▸</span> Sourcing senior people who aren't looking</li>
+        <li class="flex gap-2.5"><span class="text-[color:var(--blue)]">▸</span> Closing without overpaying or overpromising</li>
+      </ul>
+      <div class="mono text-[12px] text-[color:var(--ink-3)] mt-5 pt-4 border-t rule-soft">RESOURCE PACK — Interview rubric + scorecard set</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= OPERATORS ================= -->
+<section id="operators" class="border-y rule-soft bg-[color:var(--bg-2)]">
+  <div class="max-w-[1180px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="max-w-[58ch]">
+      <div class="marker mb-5"><span class="accent-line"></span>Who runs the room</div>
+      <h2 class="display text-[clamp(32px,4.6vw,54px)]">Operators, <em class="blue">not lecturers.</em></h2>
+      <p class="text-[16px] text-[color:var(--ink-2)] mt-5 leading-[1.6]">
+        Every workshop is led by someone who owned the problem at scale — and is still close enough to it to answer the question behind your question.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-12">
+      <div class="rounded-2xl border rule bg-white p-4 card card-lift">
+        <div class="blob-1 rounded-xl border rule aspect-[4/5] w-full"></div>
+        <div class="mt-4">
+          <div class="font-bold text-[15px]">Elena Vasquez</div>
+          <div class="mono text-[11px] text-[color:var(--blue)] mt-0.5">GROWTH EXPERIMENTS</div>
+          <p class="text-[13px] text-[color:var(--ink-2)] mt-2.5 leading-[1.5]">Ran the PLG motion that took Vercel from 40k to 900k developers.</p>
+          <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 pt-3 border-t rule-soft">Ex-Growth Lead · Vercel</div>
+        </div>
+      </div>
+      <div class="rounded-2xl border rule bg-white p-4 card card-lift">
+        <div class="blob-2 rounded-xl border rule aspect-[4/5] w-full"></div>
+        <div class="mt-4">
+          <div class="font-bold text-[15px]">Yusuf Abara</div>
+          <div class="mono text-[11px] text-[color:var(--blue)] mt-0.5">OBSERVABILITY</div>
+          <p class="text-[13px] text-[color:var(--ink-2)] mt-2.5 leading-[1.5]">Owned the on-call that watched a billion events a day. Has strong views on pages.</p>
+          <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 pt-3 border-t rule-soft">Ex-Staff SRE · Datadog</div>
+        </div>
+      </div>
+      <div class="rounded-2xl border rule bg-white p-4 card card-lift">
+        <div class="blob-3 rounded-xl border rule aspect-[4/5] w-full"></div>
+        <div class="mt-4">
+          <div class="font-bold text-[15px]">Hana Suzuki</div>
+          <div class="mono text-[11px] text-[color:var(--blue)] mt-0.5">PRICING &amp; PACKAGING</div>
+          <p class="text-[13px] text-[color:var(--ink-2)] mt-2.5 leading-[1.5]">Owned three pricing-model changes at Stripe — and is candid about the one that didn't land.</p>
+          <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 pt-3 border-t rule-soft">Ex-Pricing Lead · Stripe</div>
+        </div>
+      </div>
+      <div class="rounded-2xl border rule bg-white p-4 card card-lift">
+        <div class="blob-4 rounded-xl border rule aspect-[4/5] w-full"></div>
+        <div class="mt-4">
+          <div class="font-bold text-[15px]">Marcus Tobin</div>
+          <div class="mono text-[11px] text-[color:var(--blue)] mt-0.5">HIRING SENIOR ICs</div>
+          <p class="text-[13px] text-[color:var(--ink-2)] mt-2.5 leading-[1.5]">Hired 60 of Linear's first 120 engineers, and rebuilt the loop twice to get there.</p>
+          <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 pt-3 border-t rule-soft">Ex-Eng Hiring Lead · Linear</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= THE DAY ================= -->
+<section id="theday" class="max-w-[1100px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-10">
+    <div class="max-w-[44ch]">
+      <div class="marker mb-5"><span class="accent-line"></span>How a day runs</div>
+      <h2 class="display text-[clamp(32px,4.6vw,54px)]">10am to 5pm, no filler.</h2>
+    </div>
+    <div class="mono text-[12px] text-[color:var(--ink-3)] sm:text-right leading-relaxed">
+      Live on Zoom · 24 seats<br/>pre-reading sent 5 days ahead
+    </div>
+  </div>
+
+  <!-- procedural day timeline -->
+  <div class="rounded-2xl border rule bg-white p-5 sm:p-7 card mb-6">
+    <svg id="dayTimeline" viewBox="0 0 760 120" class="w-full h-auto" aria-label="Workshop day schedule from 10am to 5pm"></svg>
+  </div>
+
+  <div class="border rule rounded-2xl overflow-hidden divide-y divide-[color:var(--line-soft)]">
+    <details open>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--blue)] w-20 shrink-0">10:00</span>
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">Open &amp; framing</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-6 pt-1 sm:pl-[108px] text-[14px] text-[color:var(--ink-2)] leading-[1.6]">
+        Twenty-four people, brief intros, and the operator framing the problem honestly — including where the easy advice on this topic is wrong. You'll also name the specific version of the problem you brought, so the day stays anchored to real work.
+      </div>
+    </details>
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--blue)] w-20 shrink-0">10:30</span>
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">The framework</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-6 pt-1 sm:pl-[108px] text-[14px] text-[color:var(--ink-2)] leading-[1.6]">
+        The core teaching block — the mental model the operator actually used, with the real decisions and the real trade-offs, not a sanitized case study. This is the one stretch of the day that looks like a talk, and it's kept under an hour on purpose.
+      </div>
+    </details>
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--blue)] w-20 shrink-0">11:30</span>
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">Working session I</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-6 pt-1 sm:pl-[108px] text-[14px] text-[color:var(--ink-2)] leading-[1.6]">
+        You apply the framework to your own situation in small breakout groups, with the operator rotating between rooms. You leave this block with a first draft of something real — an experiment brief, a pricing canvas, an interview rubric.
+      </div>
+    </details>
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--blue)] w-20 shrink-0">13:30</span>
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">Working session II</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-6 pt-1 sm:pl-[108px] text-[14px] text-[color:var(--ink-2)] leading-[1.6]">
+        The harder half: the edge cases, the politics, and the constraints that make this difficult in a real org. Groups pressure-test each other's drafts, and the operator does a few teardowns live, in front of everyone, with permission.
+      </div>
+    </details>
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--blue)] w-20 shrink-0">15:00</span>
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">Live teardowns</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-6 pt-1 sm:pl-[108px] text-[14px] text-[color:var(--ink-2)] leading-[1.6]">
+        Volunteers put their actual artifact on the screen and the room — operator included — works it over. Attendees consistently rate this the highest-value block; it's where the abstract advice becomes specific to your company.
+      </div>
+    </details>
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--blue)] w-20 shrink-0">16:15</span>
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">Synthesis &amp; an action plan</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-6 pt-1 sm:pl-[108px] text-[14px] text-[color:var(--ink-2)] leading-[1.6]">
+        You leave with a written, three-step plan for the next two weeks — not notes, a plan — plus the full resource pack. The day closes by 5pm sharp, because respecting your calendar is part of the product.
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- ================= OUTCOMES ================= -->
+<section class="border-y rule-soft bg-[color:var(--bg-2)]">
+  <div class="max-w-[1180px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="max-w-[52ch]">
+      <div class="marker mb-5"><span class="accent-line"></span>The track record</div>
+      <h2 class="display text-[clamp(32px,4.6vw,54px)]">Two years. <em class="blue">It holds up.</em></h2>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-12">
+      <div class="rounded-2xl border rule bg-white p-6 card">
+        <div class="display tnum text-[clamp(40px,5.2vw,62px)]">38</div>
+        <p class="text-[13.5px] text-[color:var(--ink-2)] mt-2 leading-[1.5]">workshops run since the first session in 2024.</p>
+      </div>
+      <div class="rounded-2xl border rule bg-white p-6 card">
+        <div class="display tnum text-[clamp(40px,5.2vw,62px)]">84</div>
+        <p class="text-[13.5px] text-[color:var(--ink-2)] mt-2 leading-[1.5]">average NPS across every workshop, every operator.</p>
+      </div>
+      <div class="rounded-2xl border rule bg-white p-6 card">
+        <div class="display tnum text-[clamp(40px,5.2vw,62px)]">62%</div>
+        <p class="text-[13.5px] text-[color:var(--ink-2)] mt-2 leading-[1.5]">of attendees come back for a second topic within a year.</p>
+      </div>
+      <div class="rounded-2xl border rule bg-white p-6 card">
+        <div class="display tnum text-[clamp(38px,4.8vw,56px)]">28,408</div>
+        <p class="text-[13.5px] text-[color:var(--ink-2)] mt-2 leading-[1.5]">resource-pack downloads — the templates outlive the day.</p>
+      </div>
+    </div>
+
+    <!-- testimonials -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-6" id="attendees">
+      <figure class="rounded-2xl border rule bg-white p-7 card card-lift">
+        <div class="flex items-center gap-3.5">
+          <div class="blob-1 size-12 rounded-full border rule shrink-0"></div>
+          <figcaption>
+            <div class="font-bold text-[15px]">Priya Anand</div>
+            <div class="mono text-[11px] text-[color:var(--ink-3)]">VP Product · Brightwave</div>
+          </figcaption>
+        </div>
+        <blockquote class="text-[15px] text-[color:var(--ink-2)] leading-[1.62] mt-5">
+          "I've expensed a great deal of 'leadership development.' Roundtable is the only one where I left with a spreadsheet I used the next morning. One day, one topic, and genuinely zero filler."
+        </blockquote>
+        <div class="mono text-[11px] text-[color:var(--blue)] mt-5 pt-4 border-t rule-soft">→ SHIPPED A PRICING CHANGE 3 WEEKS LATER</div>
+      </figure>
+      <figure class="rounded-2xl border rule bg-white p-7 card card-lift">
+        <div class="flex items-center gap-3.5">
+          <div class="blob-2 size-12 rounded-full border rule shrink-0"></div>
+          <figcaption>
+            <div class="font-bold text-[15px]">Ines Calderón</div>
+            <div class="mono text-[11px] text-[color:var(--ink-3)]">Director of Eng · Mercury</div>
+          </figcaption>
+        </div>
+        <blockquote class="text-[15px] text-[color:var(--ink-2)] leading-[1.62] mt-5">
+          "The hiring workshop paid for itself before lunch. We rebuilt our IC interview loop that same week and closed two staff candidates we had been quietly losing for a month."
+        </blockquote>
+        <div class="mono text-[11px] text-[color:var(--blue)] mt-5 pt-4 border-t rule-soft">→ 2 STAFF HIRES CLOSED IN 9 DAYS</div>
+      </figure>
+      <figure class="rounded-2xl border rule bg-white p-7 card card-lift">
+        <div class="flex items-center gap-3.5">
+          <div class="blob-4 size-12 rounded-full border rule shrink-0"></div>
+          <figcaption>
+            <div class="font-bold text-[15px]">Tomás Reyes</div>
+            <div class="mono text-[11px] text-[color:var(--ink-3)]">Head of Growth · Forecast</div>
+          </figcaption>
+        </div>
+        <blockquote class="text-[15px] text-[color:var(--ink-2)] leading-[1.62] mt-5">
+          "Most courses pad one good afternoon into six weeks. Roundtable does the opposite — it respects that I'm senior and busy, and it just gets straight to the operational depth."
+        </blockquote>
+        <div class="mono text-[11px] text-[color:var(--blue)] mt-5 pt-4 border-t rule-soft">→ BOOKED THE 3-WORKSHOP PACK NEXT</div>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FORMAT ================= -->
+<section class="max-w-[1180px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14">
+    <div class="md:col-span-4">
+      <div class="marker mb-5"><span class="accent-line"></span>The format</div>
+      <h2 class="display text-[clamp(28px,3.8vw,44px)]">Built for one busy day.</h2>
+      <p class="text-[15px] text-[color:var(--ink-2)] mt-5 leading-[1.6]">
+        No homework, no cohort obligations, no Slack to keep up with. You clear one Friday, and you come back with the work mostly done.
+      </p>
+    </div>
+    <div class="md:col-span-8">
+      <dl class="grid sm:grid-cols-2 gap-4">
+        <div class="rounded-xl border rule bg-white p-5 card">
+          <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Length</dt>
+          <dd class="text-[15px] mt-1.5">One day — 10am to 5pm ET, with two breaks</dd>
+        </div>
+        <div class="rounded-xl border rule bg-white p-5 card">
+          <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Where</dt>
+          <dd class="text-[15px] mt-1.5">Live on Zoom — camera-on, breakout-based</dd>
+        </div>
+        <div class="rounded-xl border rule bg-white p-5 card">
+          <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Room size</dt>
+          <dd class="text-[15px] mt-1.5">24 seats, capped — small enough to speak in</dd>
+        </div>
+        <div class="rounded-xl border rule bg-white p-5 card">
+          <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Before &amp; after</dt>
+          <dd class="text-[15px] mt-1.5">Pre-reading 5 days ahead · resource pack after</dd>
+        </div>
+        <div class="rounded-xl border rule bg-white p-5 card">
+          <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Who it's for</dt>
+          <dd class="text-[15px] mt-1.5">Senior PMs &amp; engineering leaders — 5+ years in</dd>
+        </div>
+        <div class="rounded-xl border rule bg-white p-5 card">
+          <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Refund</dt>
+          <dd class="text-[15px] mt-1.5">Full refund up to 72 hours before the workshop</dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PRICING ================= -->
+<section id="reserve" class="border-y rule-soft bg-[color:var(--bg-2)]">
+  <div class="max-w-[1180px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="max-w-[52ch] mb-12">
+      <div class="marker mb-5"><span class="accent-line"></span>Reserve a seat</div>
+      <h2 class="display text-[clamp(32px,4.6vw,54px)]">Pay per day. <em class="blue">Or save with three.</em></h2>
+      <p class="text-[16px] text-[color:var(--ink-2)] mt-5 leading-[1.6]">
+        No subscription, no membership. Reserve the workshop you need — or grab the pack if you can already see three on the calendar worth your Friday.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div class="rounded-2xl border rule bg-white p-7 sm:p-9 card">
+        <div class="mono text-[12px] text-[color:var(--ink-3)]">SINGLE WORKSHOP</div>
+        <h3 class="text-[22px] font-bold mt-2">One seat, one day</h3>
+        <div class="flex items-baseline gap-2 mt-4">
+          <span class="display tnum text-[54px]">$499</span>
+          <span class="mono text-[12px] text-[color:var(--ink-3)]">per workshop</span>
+        </div>
+        <ul class="mt-6 space-y-2.5 text-[14px] text-[color:var(--ink-2)]">
+          <li class="flex gap-2.5"><span class="text-[color:var(--blue)] mt-0.5">✓</span> One full-day live workshop, 24 seats</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--blue)] mt-0.5">✓</span> Pre-reading + complete resource pack</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--blue)] mt-0.5">✓</span> Session recording for your own review</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--blue)] mt-0.5">✓</span> Itemized invoice for expensing</li>
+        </ul>
+        <a href="#reserve" class="btn-ghost mt-7 w-full inline-flex items-center justify-center rounded-lg border rule font-semibold px-5 py-3.5 text-[15px]">
+          Reserve a single seat
+        </a>
+      </div>
+
+      <div class="rounded-2xl border-2 border-[color:var(--blue)] bg-white p-7 sm:p-9 relative">
+        <div class="absolute -top-3 left-8 mono text-[10px] tracking-[0.12em] uppercase bg-[color:var(--blue)] text-white px-3 py-1 rounded-full font-bold">Best value</div>
+        <div class="mono text-[12px] text-[color:var(--ink-3)]">3-WORKSHOP PACK</div>
+        <h3 class="text-[22px] font-bold mt-2">Any three, any time</h3>
+        <div class="flex items-baseline gap-2 mt-4">
+          <span class="display tnum text-[54px]">$999</span>
+          <span class="mono text-[12px] text-[color:var(--ink-3)]">3 workshops · save $498</span>
+        </div>
+        <ul class="mt-6 space-y-2.5 text-[14px] text-[color:var(--ink-2)]">
+          <li class="flex gap-2.5"><span class="text-[color:var(--blue)] mt-0.5">✓</span> Any 3 workshops within 6 months</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--blue)] mt-0.5">✓</span> Seats transferable to a teammate</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--blue)] mt-0.5">✓</span> Everything in the single-seat plan</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--blue)] mt-0.5">✓</span> Priority booking on sold-out dates</li>
+        </ul>
+        <a href="#reserve" class="btn-primary mt-7 w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[color:var(--blue)] text-white font-semibold px-5 py-3.5 text-[15px]">
+          Get the 3-workshop pack <span class="scroll-x">→</span>
+        </a>
+      </div>
+    </div>
+    <p class="text-[13px] text-[color:var(--ink-3)] mt-6 text-center leading-[1.6]">
+      <span class="text-[color:var(--blue)] mono text-[12px]">TEAMS —</span>
+      Sending 4 or more from one company gets 20% off and a private breakout room. Email team@roundtable.work.
+    </p>
+  </div>
+</section>
+
+<!-- ================= FAQ ================= -->
+<section id="faq" class="max-w-[820px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="text-center mb-12">
+    <div class="marker mb-5 inline-block">Good questions</div>
+    <h2 class="display text-[clamp(30px,4.4vw,50px)]">Before you reserve.</h2>
+  </div>
+  <div class="divide-y divide-[color:var(--line)] border-y rule">
+    <details>
+      <summary class="flex items-start gap-4 py-5">
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">Will the workshop be recorded?</span>
+        <span class="acc-sign text-[color:var(--blue)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        The teaching blocks are recorded and shared with attendees for personal review for 60 days. The breakout sessions and live teardowns are not — people speak candidly about real numbers and real hiring decisions, and that only works if it stays in the room. The recording is a backup, not a substitute: roughly all of the value is in being there live and in the work you do during the day.
+      </p>
+    </details>
+    <details>
+      <summary class="flex items-start gap-4 py-5">
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">Can my company expense it?</span>
+        <span class="acc-sign text-[color:var(--blue)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        Almost everyone does. At $499, a workshop sits well under most managers' discretionary approval limit, and we issue a proper itemized invoice in your company's name immediately on booking. We can also bill a company directly via PO if your finance team prefers that — just choose "invoice my company" at checkout, or email us and we'll set it up the same day.
+      </p>
+    </details>
+    <details>
+      <summary class="flex items-start gap-4 py-5">
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">Are workshops live every month?</span>
+        <span class="acc-sign text-[color:var(--blue)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        Yes — there's a workshop roughly every three to four weeks, and the topic rotates. Popular topics like pricing and hiring come back two or three times a year, so if the one you need has already passed, it will return. The calendar is published a full quarter ahead, and pack holders can see and book unannounced dates first.
+      </p>
+    </details>
+    <details>
+      <summary class="flex items-start gap-4 py-5">
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">What if I have to miss the live day?</span>
+        <span class="acc-sign text-[color:var(--blue)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        Plans change, so a seat can be moved to any future date for free up to 72 hours before the workshop — or handed to a colleague at any time, including the morning of. Inside 72 hours, we can roll your seat to the next run of the same topic. Because the format is one self-contained day, rescheduling costs you nothing but the wait.
+      </p>
+    </details>
+    <details>
+      <summary class="flex items-start gap-4 py-5">
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">Do you offer group discounts for teams?</span>
+        <span class="acc-sign text-[color:var(--blue)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        Yes. Four or more people from the same company attending the same workshop get 20% off every seat and a private breakout room, so your team works its own real problem together rather than being split across strangers. For a larger group or a topic delivered privately for one company, email team@roundtable.work and we'll quote a dedicated session.
+      </p>
+    </details>
+  </div>
+</section>
+
+<!-- ================= FINAL CTA ================= -->
+<section class="relative overflow-hidden border-t rule-soft bg-[color:var(--ink)]">
+  <div class="absolute inset-0 pointer-events-none" style="background:radial-gradient(58% 70% at 50% 0%, rgba(79,143,255,0.3), transparent 72%)"></div>
+  <div class="absolute inset-0 dotgrid opacity-40 pointer-events-none"></div>
+  <div class="relative max-w-[900px] mx-auto px-5 sm:px-8 py-24 sm:py-32 text-center">
+    <div class="inline-flex items-center gap-2.5 rounded-full border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.04)] px-4 py-1.5 mb-8">
+      <span class="pulse-dot"></span>
+      <span class="mono text-[11px] text-[#C9CDD4]">Growth experiments · May 30 · 9 of 24 seats left</span>
+    </div>
+    <h2 class="display text-[clamp(38px,6.6vw,84px)] text-white">
+      Clear one Friday.<br/>
+      <span class="halftone">Leave with the work done.</span>
+    </h2>
+    <p class="text-[17px] text-[#9CA1AA] mt-6 max-w-[46ch] mx-auto leading-[1.6]">
+      The next workshop fills the way every Roundtable does — quietly, then suddenly. Nine seats are open as of now.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-3 justify-center mt-9">
+      <a href="#reserve" class="btn-primary inline-flex items-center justify-center gap-2 rounded-lg bg-[color:var(--blue)] text-white font-semibold px-7 py-4 text-[16px]">
+        Reserve a seat · $499 <span class="scroll-x">→</span>
+      </a>
+      <a href="#workshops" class="btn-ghost inline-flex items-center justify-center rounded-lg border border-[rgba(255,255,255,0.18)] text-white font-semibold px-7 py-4 text-[16px]">
+        See the full calendar
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer class="bg-[color:var(--ink)] border-t border-[rgba(255,255,255,0.07)]">
+  <div class="max-w-[1180px] mx-auto px-5 sm:px-8 py-12 flex flex-col sm:flex-row items-center justify-between gap-6">
+    <div class="flex items-center gap-2.5">
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" fill="none" stroke="#9CA1AA" stroke-width="1.5"/>
+        <circle cx="12" cy="5.6" r="1.9" fill="#4F8FFF"/>
+        <circle cx="17.5" cy="15" r="1.9" fill="#4F8FFF"/>
+        <circle cx="6.5" cy="15" r="1.9" fill="#4F8FFF"/>
+      </svg>
+      <span class="text-[17px] font-extrabold text-white">Roundtable</span>
+      <span class="mono text-[11px] text-[#8A8F98] ml-2 hidden sm:inline">38 workshops since 2024</span>
+    </div>
+    <nav class="flex items-center gap-7 text-[13px] text-[#C9CDD4]">
+      <a href="#workshops" class="ul-link">Workshop archive</a>
+      <a href="#operators" class="ul-link">About</a>
+      <a href="#faq" class="ul-link">Privacy</a>
+    </nav>
+    <div class="mono text-[11px] text-[#8A8F98]">© 2026 Roundtable</div>
+  </div>
+</footer>
+
+<script>
+  (function(){
+    /* countdown to next workshop */
+    var target = new Date('2026-05-30T10:00:00-04:00').getTime();
+    var els = { d:document.getElementById('cd-d'), h:document.getElementById('cd-h'), m:document.getElementById('cd-m'), s:document.getElementById('cd-s') };
+    function pad(n){ return String(n).padStart(2,'0'); }
+    function tick(){
+      var gap = target - Date.now();
+      if(gap < 0) gap = 0;
+      els.d.textContent = pad(Math.floor(gap/864e5));
+      els.h.textContent = pad(Math.floor(gap%864e5/36e5));
+      els.m.textContent = pad(Math.floor(gap%36e5/6e4));
+      els.s.textContent = pad(Math.floor(gap%6e4/1e3));
+    }
+    tick();
+    setInterval(tick, 1000);
+
+    /* procedural day timeline */
+    var blocks = [
+      { start:0,   len:30,  label:'Open',           sub:'10:00' },
+      { start:30,  len:60,  label:'Framework',      sub:'10:30' },
+      { start:90,  len:75,  label:'Working I',      sub:'11:30' },
+      { start:165, len:45,  label:'Lunch',          sub:'12:45', muted:true },
+      { start:210, len:90,  label:'Working II',     sub:'13:30' },
+      { start:300, len:75,  label:'Teardowns',      sub:'15:00' },
+      { start:375, len:45,  label:'Synthesis',      sub:'16:15' }
+    ];
+    var svg = document.getElementById('dayTimeline');
+    var ns = 'http://www.w3.org/2000/svg';
+    var W = 760, x0 = 8, x1 = 752, total = 420, gap = 4;
+    var trackW = x1 - x0;
+    function px(min){ return x0 + (min/total) * trackW; }
+    blocks.forEach(function(b){
+      var bx = px(b.start) + gap/2;
+      var bw = (b.len/total) * trackW - gap;
+      var rect = document.createElementNS(ns,'rect');
+      rect.setAttribute('x', bx); rect.setAttribute('y', 30);
+      rect.setAttribute('width', Math.max(bw,2)); rect.setAttribute('height', 30);
+      rect.setAttribute('rx', 5);
+      rect.setAttribute('fill', b.muted ? 'rgba(10,10,12,0.07)' : 'rgba(79,143,255,0.16)');
+      rect.setAttribute('stroke', b.muted ? 'rgba(10,10,12,0.12)' : 'rgba(79,143,255,0.5)');
+      rect.setAttribute('stroke-width', '1');
+      svg.appendChild(rect);
+      var tick = document.createElementNS(ns,'line');
+      tick.setAttribute('x1', bx); tick.setAttribute('x2', bx);
+      tick.setAttribute('y1', 24); tick.setAttribute('y2', 30);
+      tick.setAttribute('stroke', 'rgba(10,10,12,0.3)'); tick.setAttribute('stroke-width','1');
+      svg.appendChild(tick);
+      var sub = document.createElementNS(ns,'text');
+      sub.setAttribute('x', bx); sub.setAttribute('y', 18);
+      sub.setAttribute('font-size','11'); sub.setAttribute('font-family','Geist Mono, monospace');
+      sub.setAttribute('fill','#8A8F98');
+      sub.textContent = b.sub;
+      svg.appendChild(sub);
+      var lab = document.createElementNS(ns,'text');
+      lab.setAttribute('x', bx + Math.max(bw,2)/2); lab.setAttribute('y', 80);
+      lab.setAttribute('text-anchor','middle');
+      lab.setAttribute('font-size','12'); lab.setAttribute('font-family','Inter, sans-serif');
+      lab.setAttribute('font-weight','600');
+      lab.setAttribute('fill', b.muted ? '#8A8F98' : '#0A0A0A');
+      lab.textContent = b.label;
+      svg.appendChild(lab);
+    });
+    var endTick = document.createElementNS(ns,'line');
+    endTick.setAttribute('x1', x1); endTick.setAttribute('x2', x1);
+    endTick.setAttribute('y1', 24); endTick.setAttribute('y2', 30);
+    endTick.setAttribute('stroke','rgba(10,10,12,0.3)'); endTick.setAttribute('stroke-width','1');
+    svg.appendChild(endTick);
+    var endLab = document.createElementNS(ns,'text');
+    endLab.setAttribute('x', x1); endLab.setAttribute('y', 18);
+    endLab.setAttribute('text-anchor','end');
+    endLab.setAttribute('font-size','11'); endLab.setAttribute('font-family','Geist Mono, monospace');
+    endLab.setAttribute('fill','#8A8F98');
+    endLab.textContent = '17:00';
+    svg.appendChild(endLab);
+    var close = document.createElementNS(ns,'text');
+    close.setAttribute('x', x1); close.setAttribute('y', 80);
+    close.setAttribute('text-anchor','end');
+    close.setAttribute('font-size','12'); close.setAttribute('font-family','Inter, sans-serif');
+    close.setAttribute('font-weight','700'); close.setAttribute('fill','#4F8FFF');
+    close.textContent = 'Close · 5pm';
+    svg.appendChild(close);
+  })();
+</script>
+</body>
+</html>

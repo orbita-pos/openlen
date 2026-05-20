@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hana Ito — musician, Brooklyn</title>
+<meta name="description" content="Producer and musician Hana Ito. New album 'Halcyon' out May 8, 2026, a Japan tour in May, and every place to listen — one link." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,700;1,800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#08090E;
+    --text:#FFFFFF;
+    --muted:rgba(255,255,255,0.60);
+    --faint:rgba(255,255,255,0.42);
+    --pink:#FF4D8F;
+    --violet:#7B3FE4;
+    --line:rgba(255,255,255,0.08);
+    --surface:rgba(255,255,255,0.045);
+  }
+  *{ -webkit-tap-highlight-color:transparent; }
+  html{ scroll-behavior:smooth; }
+  html,body{ background:var(--bg); color:var(--text); }
+  body{
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+    font-feature-settings:"ss01","cv11";
+    font-optical-sizing:auto;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    line-height:1.5;
+    background:radial-gradient(116% 70% at 50% -8%, #2A1140 0%, #1A0B26 38%, #08090E 74%);
+    background-attachment:fixed;
+  }
+  .display{ font-weight:700; font-style:italic; letter-spacing:-0.03em; line-height:1.04; }
+  .mono{ font-family:'Geist Mono',ui-monospace,Menlo,monospace; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  .halftone{ opacity:0.45; }
+  .marker{ font-family:'Geist Mono',ui-monospace,Menlo,monospace; font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:var(--faint); }
+  .pulse-dot{ position:relative; display:inline-block; width:7px; height:7px; border-radius:999px; background:var(--pink); box-shadow:0 0 0 0 rgba(255,77,143,0.6); animation:pulse 2s ease-out infinite; }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(255,77,143,0.5); }
+    70%{ box-shadow:0 0 0 9px rgba(255,77,143,0); }
+    100%{ box-shadow:0 0 0 0 rgba(255,77,143,0); }
+  }
+  .lnk{ transition:transform 130ms ease, border-color 130ms ease, background-color 130ms ease, box-shadow 130ms ease; }
+  .lnk:hover{ transform:translateY(-1px); border-color:rgba(255,77,143,0.5); background-color:rgba(255,255,255,0.065); box-shadow:0 0 0 1px rgba(255,77,143,0.32), 0 14px 30px -18px rgba(255,77,143,0.75); }
+  .lnk-primary{ background:linear-gradient(180deg, rgba(255,77,143,0.17), rgba(255,77,143,0.07)); border-color:rgba(255,77,143,0.34); }
+  .lnk-primary:hover{ border-color:rgba(255,77,143,0.72); box-shadow:0 0 0 1px rgba(255,77,143,0.4), 0 16px 34px -16px rgba(255,77,143,0.8); }
+  .chev{ transition:transform 130ms ease; }
+  .lnk:hover .chev{ transform:translateX(2px); }
+  .card-lift{ transition:transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease; }
+  .card-lift:hover{ transform:translateY(-2px); border-color:rgba(255,77,143,0.42); box-shadow:0 18px 40px -24px rgba(255,77,143,0.62); }
+  .vinyl{
+    background:
+      radial-gradient(circle at 50% 50%, #FF4D8F 0 6.5%, rgba(255,77,143,0) 7.2%),
+      repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,0.11) 0 1px, rgba(255,255,255,0) 1px 5px),
+      radial-gradient(130% 120% at 30% 22%, #5A2270 0%, #2A0E3A 56%, #150823 100%);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,0.07);
+  }
+  .eq{ display:flex; align-items:flex-end; gap:2.5px; height:15px; }
+  .eq i{ width:2.5px; border-radius:2px; background:var(--pink); transform-origin:bottom; animation:eq 900ms ease-in-out infinite; }
+  .eq i:nth-child(1){ height:42%; animation-delay:-200ms; }
+  .eq i:nth-child(2){ height:100%; animation-delay:-560ms; }
+  .eq i:nth-child(3){ height:64%; animation-delay:-90ms; }
+  .eq i:nth-child(4){ height:84%; animation-delay:-720ms; }
+  @keyframes eq{ 0%,100%{ transform:scaleY(0.32); } 50%{ transform:scaleY(1); } }
+  .soc{ transition:transform 130ms ease, color 130ms ease, border-color 130ms ease, background-color 130ms ease; }
+  .soc:hover{ transform:translateY(-2px); color:var(--pink); border-color:rgba(255,77,143,0.5); background-color:rgba(255,77,143,0.09); }
+  .avatar-glow{ box-shadow:0 0 0 1px rgba(255,255,255,0.10), 0 16px 50px -14px rgba(255,77,143,0.6); }
+  ::selection{ background:rgba(255,77,143,0.32); color:#fff; }
+  @media (prefers-reduced-motion:reduce){
+    .eq i,.pulse-dot{ animation:none; }
+    .eq i{ transform:scaleY(0.7); }
+    html{ scroll-behavior:auto; }
+  }
+</style>
+</head>
+<body class="min-h-screen">
+
+<div aria-hidden="true" class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+  <div class="absolute -top-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-[#FF4D8F] opacity-[0.20] blur-[100px]"></div>
+  <div class="absolute top-[36%] -right-20 h-72 w-72 rounded-full bg-[#7B3FE4] opacity-[0.22] blur-[110px]"></div>
+  <div class="absolute -bottom-16 -left-16 h-64 w-64 rounded-full bg-[#7B3FE4] opacity-[0.16] blur-[110px]"></div>
+</div>
+
+<main class="relative mx-auto w-full max-w-md px-5 pb-14 pt-16 sm:pt-20">
+
+  <!-- HERO -->
+  <header class="flex flex-col items-center text-center">
+    <div class="avatar-glow grid h-[88px] w-[88px] place-items-center rounded-full" style="background:radial-gradient(130% 130% at 30% 25%, #FF9CC2 0%, #FF4D8F 40%, #9D3FD0 72%, #7B3FE4 100%);">
+      <span class="display text-[34px] text-white" style="text-shadow:0 1px 12px rgba(0,0,0,0.28);">H</span>
+    </div>
+    <h1 class="display mt-4 text-[33px] text-white">Hana Ito</h1>
+    <p class="mt-2 text-[12.5px] uppercase tracking-[0.14em] text-[var(--muted)]">
+      musician <span class="text-[var(--faint)]">·</span> brooklyn
+    </p>
+    <p class="mt-3 max-w-[19.5rem] text-[14.5px] leading-relaxed text-[var(--muted)]">
+      Producing my next album <span class="text-white">‘Halcyon’</span> for spring 2026. Touring Japan in May. <span class="halftone">Hi.</span>
+    </p>
+  </header>
+
+  <!-- BUTTON STACK -->
+  <nav class="mt-7 space-y-2.5" aria-label="Links">
+
+    <a href="#" class="lnk lnk-primary group flex items-center gap-3.5 rounded-2xl border px-4 py-3">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[rgba(255,77,143,0.3)] bg-[rgba(255,77,143,0.13)]">
+        <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      </span>
+      <span class="min-w-0 flex-1">
+        <span class="block text-[14.5px] font-semibold text-white">Listen to ‘Eclipse’</span>
+        <span class="mt-0.5 block text-[12px] text-[var(--muted)]">Latest single · now playing</span>
+      </span>
+      <svg class="chev shrink-0 text-[var(--faint)]" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </a>
+
+    <a href="#" class="lnk group flex items-center gap-3.5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3.5">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--line)] bg-white/[0.04] text-[var(--muted)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6.5-5.1-6.5-10A6.5 6.5 0 0 1 18.5 11c0 4.9-6.5 10-6.5 10Z"/><circle cx="12" cy="11" r="2.4"/></svg>
+      </span>
+      <span class="flex-1 text-[14.5px] font-medium text-white">Tour dates</span>
+      <span class="text-[12px] text-[var(--faint)]">Japan · May</span>
+      <svg class="chev shrink-0 text-[var(--faint)]" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </a>
+
+    <a href="#" class="lnk group flex items-center gap-3.5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3.5">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--line)] bg-white/[0.04] text-[var(--muted)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1.1 11.2a1 1 0 0 1-1 .8H7.1a1 1 0 0 1-1-.8L5 8Z"/><path d="M9 8.5V6.6a3 3 0 0 1 6 0V8.5"/></svg>
+      </span>
+      <span class="flex-1 text-[14.5px] font-medium text-white">Merch shop</span>
+      <span class="inline-flex items-center gap-1 text-[12px] text-[var(--pink)]"><span class="h-1.5 w-1.5 rounded-full bg-[var(--pink)]"></span>New drop</span>
+      <svg class="chev shrink-0 text-[var(--faint)]" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </a>
+
+    <a href="#" class="lnk group flex items-center gap-3.5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3.5">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--line)] bg-white/[0.04] text-[var(--muted)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5.2"/><circle cx="12" cy="12" r="4.1"/><circle cx="17.3" cy="6.7" r="1.15" fill="currentColor" stroke="none"/></svg>
+      </span>
+      <span class="flex-1 text-[14.5px] font-medium text-white">Instagram</span>
+      <span class="tnum text-[12px] text-[var(--faint)]">284k</span>
+      <svg class="chev shrink-0 text-[var(--faint)]" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </a>
+
+    <a href="#" class="lnk group flex items-center gap-3.5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3.5">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--line)] bg-white/[0.04] text-[var(--muted)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5.5" width="19" height="13" rx="4.2"/><path d="M10.3 9.4 15.4 12l-5.1 2.6Z" fill="currentColor" stroke="none"/></svg>
+      </span>
+      <span class="flex-1 text-[14.5px] font-medium text-white">YouTube</span>
+      <span class="tnum text-[12px] text-[var(--faint)]">112k</span>
+      <svg class="chev shrink-0 text-[var(--faint)]" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </a>
+
+    <a href="#" class="lnk group flex items-center gap-3.5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3.5">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--line)] bg-white/[0.04] text-[var(--muted)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M7 10.4c3.5-1 7.2-.5 10 1.3"/><path d="M7.7 13.8c2.9-.8 5.9-.4 8.3 1.1"/><path d="M8.4 16.9c2.2-.6 4.4-.3 6.2.8"/></svg>
+      </span>
+      <span class="flex-1 text-[14.5px] font-medium text-white">Spotify</span>
+      <span class="tnum text-[12px] text-[var(--faint)]">1.2M monthly</span>
+      <svg class="chev shrink-0 text-[var(--faint)]" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </a>
+
+    <a href="#" class="lnk group flex items-center gap-3.5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3.5">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--line)] bg-white/[0.04] text-[var(--muted)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16.4 13.1c0 3.4-1.9 6-3.3 6-.9 0-1.4-.5-2.6-.5s-1.8.5-2.6.5C6.2 19.1 4.3 16.2 4.3 13c0-3 2-4.8 3.9-4.8 1.1 0 2 .6 2.9.6.9 0 1.8-.6 3-.6 1 0 2.4.5 3.1 1.7-1.4.8-1.8 2.2-.8 3.2Z"/><path d="M13 6.3c.6-.8.9-1.8.7-2.8-1 .1-2 .7-2.6 1.5"/></svg>
+      </span>
+      <span class="flex-1 text-[14.5px] font-medium text-white">Apple Music</span>
+      <svg class="chev shrink-0 text-[var(--faint)]" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </a>
+
+    <a href="#" class="lnk group flex items-center gap-3.5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3.5">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--line)] bg-white/[0.04] text-[var(--muted)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.6"/><path d="m4 7.5 8 5.5 8-5.5"/></svg>
+      </span>
+      <span class="flex-1 text-[14.5px] font-medium text-white">Newsletter signup</span>
+      <span class="text-[12px] text-[var(--faint)]">Tour alerts</span>
+      <svg class="chev shrink-0 text-[var(--faint)]" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </a>
+
+  </nav>
+
+  <!-- FEATURED: ALBUM -->
+  <section class="mt-9">
+    <div class="marker mb-3 flex items-center gap-2"><span class="pulse-dot"></span> Pre-save open</div>
+    <a href="#" class="card-lift block rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3.5">
+      <div class="flex items-center gap-4">
+        <div class="vinyl h-[92px] w-[92px] shrink-0 rounded-xl"></div>
+        <div class="min-w-0">
+          <div class="marker text-[var(--pink)]">New album</div>
+          <div class="display mt-1 text-[24px] text-white">Halcyon</div>
+          <div class="mt-1 text-[12.5px] text-[var(--muted)]">11 tracks · out May 8, 2026</div>
+          <div class="mt-2 inline-flex items-center gap-1 text-[13px] font-semibold text-[var(--pink)]">
+            Pre-save now
+            <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+          </div>
+        </div>
+      </div>
+    </a>
+  </section>
+
+  <!-- EVENTS: TOUR -->
+  <section class="mt-9">
+    <div class="mb-3 flex items-center justify-between">
+      <div class="marker">On tour · spring 2026</div>
+      <div class="mono text-[11px] text-[var(--faint)]">5 shows</div>
+    </div>
+    <div class="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
+
+      <a href="#" class="flex items-center gap-3.5 border-b border-[var(--line)] px-4 py-3 transition-colors hover:bg-white/[0.035]">
+        <div class="mono w-11 shrink-0 leading-none">
+          <div class="text-[10px] text-[var(--faint)]">MAY</div>
+          <div class="tnum mt-1 text-[16px] text-white">14</div>
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="text-[14px] font-medium text-white">Liquidroom</div>
+          <div class="text-[12px] text-[var(--muted)]">Tokyo, JP</div>
+        </div>
+        <span class="text-[11px] text-[var(--faint)]">Sold out</span>
+      </a>
+
+      <a href="#" class="flex items-center gap-3.5 border-b border-[var(--line)] px-4 py-3 transition-colors hover:bg-white/[0.035]">
+        <div class="mono w-11 shrink-0 leading-none">
+          <div class="text-[10px] text-[var(--faint)]">MAY</div>
+          <div class="tnum mt-1 text-[16px] text-white">18</div>
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="text-[14px] font-medium text-white">Big Cat</div>
+          <div class="text-[12px] text-[var(--muted)]">Osaka, JP</div>
+        </div>
+        <span class="text-[11px] font-medium text-[var(--pink)]">Tickets</span>
+      </a>
+
+      <a href="#" class="flex items-center gap-3.5 border-b border-[var(--line)] px-4 py-3 transition-colors hover:bg-white/[0.035]">
+        <div class="mono w-11 shrink-0 leading-none">
+          <div class="text-[10px] text-[var(--faint)]">MAY</div>
+          <div class="tnum mt-1 text-[16px] text-white">21</div>
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="text-[14px] font-medium text-white">Club Quattro</div>
+          <div class="text-[12px] text-[var(--muted)]">Nagoya, JP</div>
+        </div>
+        <span class="text-[11px] font-medium text-[var(--pink)]">Tickets</span>
+      </a>
+
+      <a href="#" class="flex items-center gap-3.5 border-b border-[var(--line)] px-4 py-3 transition-colors hover:bg-white/[0.035]">
+        <div class="mono w-11 shrink-0 leading-none">
+          <div class="text-[10px] text-[var(--faint)]">MAY</div>
+          <div class="tnum mt-1 text-[16px] text-white">24</div>
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="text-[14px] font-medium text-white">Club Metro</div>
+          <div class="text-[12px] text-[var(--muted)]">Kyoto, JP</div>
+        </div>
+        <span class="text-[11px] font-medium text-[var(--pink)]">Few left</span>
+      </a>
+
+      <a href="#" class="flex items-center gap-3.5 px-4 py-3 transition-colors hover:bg-white/[0.035]">
+        <div class="mono w-11 shrink-0 leading-none">
+          <div class="text-[10px] text-[var(--faint)]">MAY</div>
+          <div class="tnum mt-1 text-[16px] text-white">27</div>
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="text-[14px] font-medium text-white">Drum Logos</div>
+          <div class="text-[12px] text-[var(--muted)]">Fukuoka, JP</div>
+        </div>
+        <span class="text-[11px] font-medium text-[var(--pink)]">Tickets</span>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- SOCIAL + FOOTER -->
+  <footer class="mt-10 flex flex-col items-center">
+    <div class="flex items-center justify-center gap-2.5">
+      <a href="#" aria-label="Instagram" class="soc grid h-11 w-11 place-items-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5.2"/><circle cx="12" cy="12" r="4.1"/><circle cx="17.3" cy="6.7" r="1.15" fill="currentColor" stroke="none"/></svg>
+      </a>
+      <a href="#" aria-label="TikTok" class="soc grid h-11 w-11 place-items-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.6 4v9.7a3.6 3.6 0 1 1-3-3.55"/><path d="M13.6 4.4c.5 2.3 2.2 3.9 4.6 4.2"/></svg>
+      </a>
+      <a href="#" aria-label="YouTube" class="soc grid h-11 w-11 place-items-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5.5" width="19" height="13" rx="4.2"/><path d="M10.3 9.4 15.4 12l-5.1 2.6Z" fill="currentColor" stroke="none"/></svg>
+      </a>
+      <a href="#" aria-label="Spotify" class="soc grid h-11 w-11 place-items-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M7 10.4c3.5-1 7.2-.5 10 1.3"/><path d="M7.7 13.8c2.9-.8 5.9-.4 8.3 1.1"/><path d="M8.4 16.9c2.2-.6 4.4-.3 6.2.8"/></svg>
+      </a>
+      <a href="#" aria-label="Bandcamp" class="soc grid h-11 w-11 place-items-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 8.5h16l-4.2 7.5H4z"/></svg>
+      </a>
+    </div>
+    <p class="mono mt-6 text-[10.5px] tracking-[0.04em] text-[var(--faint)]">
+      made with Tide · updated Mar 2026 · © 2026 Hana Ito
+    </p>
+  </footer>
+
+</main>
+</body>
+</html>

@@ -60,7 +60,8 @@ apt-get install -y \
   ufw \
   fail2ban \
   curl \
-  ca-certificates
+  ca-certificates \
+  rclone
 
 # ─── 2. Deploy user ───────────────────────────────────────────────────────────
 

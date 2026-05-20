@@ -2,8 +2,9 @@ import { and, eq } from "drizzle-orm";
 import { captureException } from "@inariwatch/capture";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
-import type { LandingPage } from "@/lib/orchestrator/types";
+import type { ProjectData } from "@/lib/projects/types";
 import { createVersion } from "@/lib/projects/versions";
+import { getCreditState, debitCredits, AUTOFILL_CREDIT_COST } from "@/lib/credits";
 import { consumeToken, RATE_LIMITS } from "@/lib/rate-limit";
 import {
   ExtractedBusinessDataSchema,
@@ -173,6 +174,19 @@ export async function POST(req: Request) {
       };
 
       try {
+        // Credit gate — autofill is a flat charge (Gemini read + Kimi
+        // fill), debited on success below.
+        const { balance } = await getCreditState(userId);
+        if (balance < 1) {
+          emit("error", {
+            kind: "credits",
+            message:
+              "Te quedaste sin créditos este mes. Esperá al reset mensual o pasá a Pro.",
+          });
+          closeStream();
+          return;
+        }
+
         let businessData: ExtractedBusinessData;
 
         if (source === "image" && imageBuffer) {
@@ -237,7 +251,7 @@ export async function POST(req: Request) {
 
         const now = new Date();
         try {
-          const nextData: LandingPage = { ...existing.data, html: fill.filledHtml };
+          const nextData: ProjectData = { html: fill.filledHtml };
           await db
             .update(schema.projects)
             .set({ data: nextData, updatedAt: now })
@@ -266,6 +280,8 @@ export async function POST(req: Request) {
           console.error("[autofill] post-apply snapshot failed", err);
           return null;
         });
+
+        await debitCredits(userId, AUTOFILL_CREDIT_COST);
 
         emit("done", {
           source,

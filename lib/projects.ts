@@ -1,10 +1,19 @@
 import { and, desc, eq, isNotNull, ne, sql as sqlOp } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import type { LandingPage } from "@/lib/orchestrator/types";
+import type { ProjectData } from "@/lib/projects/types";
 import { getUserPlan } from "@/lib/limits";
 import { subdomainLimitForPlan } from "@/lib/subdomain/limits";
 import { validateSubdomain } from "@/lib/subdomain/validate";
-import { publishToDir, unpublishDir } from "@/lib/publish/filesystem";
+import {
+  publishToDir,
+  unpublishDir,
+  rollbackToSha,
+  readRelease,
+  ReleaseNotFoundError,
+} from "@/lib/publish/filesystem";
+import { purgeSubdomain } from "@/lib/publish/cache-purge";
+import { backupReleaseToR2 } from "@/lib/publish/backup-r2";
+import { createVersion } from "@/lib/projects/versions";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Project persistence helpers.
@@ -26,7 +35,6 @@ export interface ProjectSummary {
   subdomain: string | null;
   publishedAt: Date | null;
   hasUnpublishedChanges: boolean;
-  costUsd: number;
   sectionCount: number;
   createdAt: Date;
   updatedAt: Date;
@@ -35,7 +43,10 @@ export interface ProjectSummary {
 export interface ProjectFull extends ProjectSummary {
   userId: string;
   brief: string;
-  data: LandingPage;
+  /** Per-project AI context surfaced in the Brief sidebar tab. Prepended
+   *  to every chat prompt by `/api/templates/ai-design`. */
+  userBrief: string | null;
+  data: ProjectData;
 }
 
 function publishBaseHost(): string {
@@ -48,27 +59,17 @@ function deployUrlFor(subdomain: string | null): string | null {
   return `https://${subdomain}.${publishBaseHost()}`;
 }
 
-export function deriveTitle(page: LandingPage): string {
-  if (page.meta.title && page.meta.title.trim()) return page.meta.title.trim();
-  if (page.meta.intent.productName) return page.meta.intent.productName;
-  return `${capitalize(page.meta.intent.industry)} landing page`;
+/** Pull the document <title> for the project name. */
+function titleFromHtml(html: string): string | null {
+  const m = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  const inner = m?.[1]?.trim();
+  return inner && inner.length > 0 ? inner.slice(0, 200) : null;
 }
 
-export function deriveThumbnail(page: LandingPage): string | null {
-  const hero = page.images.find((i) => i.purpose === "hero");
-  return hero?.url ?? page.images[0]?.url ?? null;
-}
-
-// Auto-tag from intent: industry (always), tone (when distinctive), plus
-// the style mood. Capped at 3 — list cards only show 3.
-export function deriveTags(page: LandingPage): string[] {
-  const tags = new Set<string>();
-  const intent = page.meta.intent;
-  if (intent.industry) tags.add(capitalize(intent.industry));
-  if (intent.tone && intent.tone !== "professional") {
-    tags.add(capitalize(intent.tone));
-  }
-  return Array.from(tags).slice(0, 3);
+/** Cheap section count for the project-list cards — counts <section> tags. */
+function countSections(html: string): number {
+  const m = html.match(/<section[\s>]/gi);
+  return m ? m.length : 0;
 }
 
 function asStatus(raw: string): ProjectStatus {
@@ -76,96 +77,38 @@ function asStatus(raw: string): ProjectStatus {
   return "draft";
 }
 
+export interface CreateProjectInput {
+  /** The full standalone HTML document. */
+  html: string;
+  /** The brief the page was generated from — stored on the `brief` column
+   *  for the projects list and the Brief sidebar tab. */
+  brief: string;
+  /** Explicit project title. Falls back to the HTML <title>, then a brief
+   *  snippet. */
+  title?: string;
+}
+
 export async function createProject(
   userId: string,
-  page: LandingPage,
+  input: CreateProjectInput,
 ): Promise<string> {
   const id = crypto.randomUUID();
+  const title =
+    input.title?.trim() ||
+    titleFromHtml(input.html) ||
+    input.brief.slice(0, 60).trim() ||
+    "Untitled page";
   await db.insert(schema.projects).values({
     id,
     userId,
-    title: deriveTitle(page),
-    brief: page.meta.brief,
-    thumbnailUrl: deriveThumbnail(page),
-    tags: deriveTags(page),
+    title,
+    brief: input.brief,
+    thumbnailUrl: null,
+    tags: [],
     status: "draft",
-    data: page,
+    data: { html: input.html },
   });
   return id;
-}
-
-export async function updateProjectPage(
-  projectId: string,
-  userId: string,
-  page: LandingPage,
-): Promise<void> {
-  await db
-    .update(schema.projects)
-    .set({
-      title: deriveTitle(page),
-      thumbnailUrl: deriveThumbnail(page),
-      tags: deriveTags(page),
-      data: page,
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(schema.projects.id, projectId),
-        eq(schema.projects.userId, userId),
-      ),
-    );
-}
-
-// Session 13 — narrow slot-edit persistence.
-//
-// Called from /api/reassemble after the deterministic re-render. Overwrites
-// only `filledBlocks` + `html` inside the JSONB `data` column, preserving
-// meta, witness path, cost, plan, images, and everything else verbatim.
-// Title / thumbnail / tags don't change on slot edits (they derive from
-// intent + hero image, neither of which the editor touches), so we skip the
-// recompute that updateProjectPage does.
-//
-// Returns false silently when the project isn't owned by `userId` (or
-// doesn't exist). The reassemble itself succeeded — we don't want to fail
-// the response just because the edit happened on an in-memory generation
-// the user never persisted.
-//
-// Note: publishedHtml is intentionally NOT updated. It stays as the snapshot
-// of the last actual publish so the drift indicator (data.html !==
-// publishedHtml) lights up after the user edits, prompting a Re-publish.
-export async function updateProjectSlots(
-  projectId: string,
-  userId: string,
-  filledBlocks: LandingPage["filledBlocks"],
-  html: string,
-): Promise<boolean> {
-  const rows = await db
-    .select({ data: schema.projects.data })
-    .from(schema.projects)
-    .where(
-      and(
-        eq(schema.projects.id, projectId),
-        eq(schema.projects.userId, userId),
-      ),
-    )
-    .limit(1);
-  const existing = rows[0];
-  if (!existing) return false;
-  const nextData: LandingPage = {
-    ...existing.data,
-    filledBlocks,
-    html,
-  };
-  await db
-    .update(schema.projects)
-    .set({ data: nextData, updatedAt: new Date() })
-    .where(
-      and(
-        eq(schema.projects.id, projectId),
-        eq(schema.projects.userId, userId),
-      ),
-    );
-  return true;
 }
 
 export async function listProjects(userId: string): Promise<ProjectSummary[]> {
@@ -207,8 +150,7 @@ export async function listProjects(userId: string): Promise<ProjectSummary[]> {
         row.subdomain !== null && row.publishedHtml !== null
           ? row.publishedHtml !== currentHtml
           : false,
-      costUsd: row.data?.cost?.total ?? 0,
-      sectionCount: row.data?.plan?.blockSequence?.length ?? 0,
+      sectionCount: countSections(currentHtml),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
@@ -241,6 +183,7 @@ export async function getProject(
     tags: row.tags,
     deployUrl: derivedDeploy ?? row.deployUrl,
     brief: row.brief,
+    userBrief: row.userBrief ?? null,
     thumbnailUrl: row.thumbnailUrl,
     subdomain: row.subdomain,
     publishedAt: row.publishedAt,
@@ -248,8 +191,7 @@ export async function getProject(
       row.subdomain !== null && row.publishedHtml !== null
         ? row.publishedHtml !== currentHtml
         : false,
-    costUsd: row.data?.cost?.total ?? 0,
-    sectionCount: row.data?.plan?.blockSequence?.length ?? 0,
+    sectionCount: countSections(currentHtml),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     data: row.data,
@@ -319,6 +261,30 @@ export async function setProjectStatus(
   const result = await db
     .update(schema.projects)
     .set({ status, updatedAt: new Date() })
+    .where(
+      and(
+        eq(schema.projects.id, projectId),
+        eq(schema.projects.userId, userId),
+      ),
+    )
+    .returning({ id: schema.projects.id });
+  return result.length > 0;
+}
+
+const USER_BRIEF_MAX = 4000;
+
+/** Persist the user-controlled project brief — the text that gets injected
+ *  into every Chat tab prompt. Empty string clears it (stored as NULL). */
+export async function setProjectUserBrief(
+  projectId: string,
+  userId: string,
+  rawBrief: string,
+): Promise<boolean> {
+  const trimmed = rawBrief.slice(0, USER_BRIEF_MAX);
+  const value = trimmed.trim().length === 0 ? null : trimmed;
+  const result = await db
+    .update(schema.projects)
+    .set({ userBrief: value, updatedAt: new Date() })
     .where(
       and(
         eq(schema.projects.id, projectId),
@@ -453,6 +419,7 @@ export async function publishProject(
     .select({
       publishedAt: schema.projects.publishedAt,
       publishedHtml: schema.projects.publishedHtml,
+      publishedReleaseSha: schema.projects.publishedReleaseSha,
       status: schema.projects.status,
     })
     .from(schema.projects)
@@ -480,8 +447,13 @@ export async function publishProject(
   // 5. Filesystem write. On failure, undo the DB row so the user can
   // try again (or pick a different subdomain) without the row claiming
   // a sub they didn't actually publish.
+  let publishResult: { sha: string; html: string; written: boolean };
   try {
-    await publishToDir({ subdomain: v.value, html });
+    publishResult = await publishToDir({
+      subdomain: v.value,
+      html,
+      projectId: params.projectId,
+    });
   } catch (err) {
     await db
       .update(schema.projects)
@@ -489,6 +461,7 @@ export async function publishProject(
         subdomain: previousSubdomain,
         publishedAt: prev?.publishedAt ?? null,
         publishedHtml: prev?.publishedHtml ?? null,
+        publishedReleaseSha: prev?.publishedReleaseSha ?? null,
         status: prev?.status ?? "draft",
         deployUrl: previousSubdomain
           ? `${previousSubdomain}.${publishBaseHost()}`
@@ -503,10 +476,52 @@ export async function publishProject(
     throw err;
   }
 
+  // 5b. Persist the release sha so the rollback UI knows which entry is
+  // currently live. The first UPDATE above happens before publishToDir
+  // because we need to claim the subdomain in DB before writing the
+  // filesystem; this second UPDATE happens after publishToDir succeeds.
+  await db
+    .update(schema.projects)
+    .set({ publishedReleaseSha: publishResult.sha, updatedAt: now })
+    .where(eq(schema.projects.id, params.projectId))
+    .catch((err) => {
+      // The release is live on disk; missing the SHA in DB just means the
+      // "Previous deploys" UI won't highlight which is current. Soft-fail.
+      // eslint-disable-next-line no-console
+      console.error("[publish] failed to persist publishedReleaseSha", err);
+    });
+
+  // 5c. Fire-and-forget R2 backup of the release HTML. The nightly rclone
+  // sync is the durability backstop; this gives us a lower-RPO copy that
+  // lands in cloud storage seconds after the publish. Soft-fails if R2
+  // env vars are unset or the upload errors — neither blocks the publish.
+  if (publishResult.written) {
+    void backupReleaseToR2(v.value, publishResult.sha, publishResult.html);
+  }
+
   // 6. If the project's subdomain changed (rename), clean up the old dir.
   if (previousSubdomain && previousSubdomain !== v.value) {
     await unpublishDir(previousSubdomain).catch(() => {});
   }
+
+  // 7. Snapshot the published HTML into the version history so the user
+  // has a permanent "this is what's live right now" marker. Soft-fail —
+  // the publish itself is already done.
+  await createVersion({
+    projectId: params.projectId,
+    html,
+    label: `Published to ${v.value}.${publishBaseHost()}`,
+    source: "publish",
+  }).catch((err) => {
+    // eslint-disable-next-line no-console
+    console.error("[publish] version snapshot failed", err);
+  });
+
+  // 8. Purge the Cloudflare edge cache so the next visitor sees the
+  // new HTML instead of the previous deploy. Soft-fails when CF env
+  // vars aren't set or the API call errors — stale edge content will
+  // flush within `s-maxage` anyway.
+  await purgeSubdomain(v.value);
 
   return {
     subdomain: v.value,
@@ -547,6 +562,7 @@ export async function unpublishProject(params: UnpublishParams): Promise<void> {
       subdomain: null,
       publishedAt: null,
       publishedHtml: null,
+      publishedReleaseSha: null,
       // Flip published → draft. Archived stays archived (deliberate
       // un-publish of an archived project is rare but should preserve
       // its archived state).
@@ -560,6 +576,103 @@ export async function unpublishProject(params: UnpublishParams): Promise<void> {
   // the DB update above; a stranded dir is harmless because nginx will
   // 404 once nobody re-claims it.
   await unpublishDir(sub).catch(() => {});
+
+  // Purge the edge cache so visitors get a 404 immediately instead of
+  // a stale HIT for up to `s-maxage`.
+  await purgeSubdomain(sub);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Rollback — flip the live `current` symlink to a prior release.
+//
+// Does NOT regenerate HTML or run the orchestrator. The release dir already
+// holds the optimized HTML from when it was first published; we just point
+// the symlink at it and purge CF. publishedHtml + publishedReleaseSha are
+// re-synced to the rolled-back content so the UI's drift detection stays
+// accurate.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export class ReleaseUnavailableError extends Error {
+  constructor() {
+    super("release unavailable");
+    this.name = "ReleaseUnavailableError";
+  }
+}
+
+interface RollbackParams {
+  projectId: string;
+  userId: string;
+  sha: string;
+}
+interface RollbackResult {
+  sha: string;
+  url: string;
+  publishedAt: Date;
+}
+
+export async function rollbackProject(
+  params: RollbackParams,
+): Promise<RollbackResult> {
+  const rows = await db
+    .select({
+      id: schema.projects.id,
+      subdomain: schema.projects.subdomain,
+    })
+    .from(schema.projects)
+    .where(
+      and(
+        eq(schema.projects.id, params.projectId),
+        eq(schema.projects.userId, params.userId),
+      ),
+    )
+    .limit(1);
+  const row = rows[0];
+  if (!row) throw new ProjectNotFoundError();
+  if (!row.subdomain) throw new ReleaseUnavailableError();
+
+  let html: string;
+  try {
+    html = await readRelease(row.subdomain, params.sha);
+  } catch (err) {
+    if (err instanceof ReleaseNotFoundError) throw new ReleaseUnavailableError();
+    throw err;
+  }
+
+  try {
+    await rollbackToSha(row.subdomain, params.sha);
+  } catch (err) {
+    if (err instanceof ReleaseNotFoundError) throw new ReleaseUnavailableError();
+    throw err;
+  }
+
+  const now = new Date();
+  await db
+    .update(schema.projects)
+    .set({
+      publishedAt: now,
+      publishedHtml: html,
+      publishedReleaseSha: params.sha,
+      updatedAt: now,
+    })
+    .where(eq(schema.projects.id, params.projectId));
+
+  await createVersion({
+    projectId: params.projectId,
+    html,
+    label: `Rolled back to ${params.sha}`,
+    source: "publish",
+  }).catch((err) => {
+    // eslint-disable-next-line no-console
+    console.error("[rollback] version snapshot failed", err);
+  });
+
+  await purgeSubdomain(row.subdomain);
+
+  return {
+    sha: params.sha,
+    url: `https://${row.subdomain}.${publishBaseHost()}`,
+    publishedAt: now,
+  };
 }
 
 export async function getSubdomainOwner(
@@ -604,8 +717,4 @@ function isUniqueViolation(err: unknown): boolean {
   // neon-http sometimes packs the message as "...code: 23505...".
   const msg = err instanceof Error ? err.message : "";
   return /23505/.test(msg);
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }

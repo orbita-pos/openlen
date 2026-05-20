@@ -15,13 +15,16 @@ import {
   X,
 } from "./icons";
 import { IconBtn, Segmented } from "./ui";
+import { injectImageReplace } from "./use-image-replace";
+import { injectInlineEdit } from "./use-inline-edit";
+import { injectSectionReorder } from "./use-section-reorder";
+import { injectSectionSelect } from "./use-section-select";
 
 type Device = "desktop" | "tablet" | "mobile";
 type Zoom = "50" | "75" | "100" | "fit";
 
 interface PreviewAreaProps {
   doc: string;
-  inlineEdit: boolean;
   /** When set, the iframe loads this URL directly (a curated template from
    *  /public/templates/curated/) instead of using the composed-from-primitives
    *  HTML in `doc`. Cleared via `onClearTemplate`. */
@@ -33,22 +36,119 @@ interface PreviewAreaProps {
    *  project. Shown as the primary action button in the template banner. */
   onUseTemplate?: () => void;
   useTemplateLoading?: boolean;
+  /** When true, srcDoc is run through the inline-edit injector (see
+   *  use-inline-edit.ts) and the "Click any text…" hint banner is shown.
+   *  Active when the parent has the Content sidebar tab open on a flat
+   *  project — rich projects use the slot-based editor and don't go
+   *  through this path. We snapshot the derived srcDoc on toggle change
+   *  so live keystrokes (which the parent mirrors back into `doc` via
+   *  postMessage) don't churn the iframe. */
+  editableInjection?: boolean;
+  /** URL to open in a new tab when the user clicks the "Open in new tab"
+   *  toolbar button. Parent computes: published subdomain → /api/projects/<id>/raw
+   *  → templates URL → null. When null, the toolbar button is hidden. */
+  openInNewTabUrl?: string | null;
+  /** When true, srcDoc is run through the section-select injector (see
+   *  use-section-select.ts). Takes priority over editableInjection — the
+   *  iframe enters click-to-select mode + shows a banner. The parent
+   *  listens for `openlen:section-selected` / `openlen:section-select-
+   *  cancelled` postMessages to capture the result and flip this off. */
+  sectionSelectMode?: boolean;
+  /** True when the user is on the Content tab — gates ALL editing
+   *  affordances (drag handles, replace hover buttons, image click-to-
+   *  swap, plus inline-edit if the project is flat). When false, the
+   *  iframe shows the page exactly as a visitor would. */
+  editingActive?: boolean;
+  /** Callback fired with the iframe element after mount. Parent stashes
+   *  this to send `openlen:swap-asset` messages back to the iframe when
+   *  the user picks a new asset in the Replace modal. */
+  onIframeRef?: (iframe: HTMLIFrameElement | null) => void;
 }
 
 export function PreviewArea({
   doc,
-  inlineEdit,
   previewUrl,
   templateName,
   onClearTemplate,
   onUseTemplate,
   useTemplateLoading = false,
+  editableInjection = false,
+  openInNewTabUrl = null,
+  sectionSelectMode = false,
+  editingActive = false,
+  onIframeRef,
 }: PreviewAreaProps) {
   const [device, setDevice] = useState<Device>("desktop");
   const [zoom, setZoom] = useState<Zoom>("fit");
   const [gridOverlay, setGridOverlay] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const [fitScale, setFitScale] = useState(1);
+
+  // srcDoc snapshot — re-derived only when an injection mode flips, or
+  // when `doc` changes outside of an active in-place mutation session.
+  //
+  // Priority order:
+  //   section-select   → ONLY select script (Crosshair from chat takes over)
+  //   editingActive    → reorder + replace (always); inline-edit if also flat
+  //   else             → raw doc, no scripts (preview-like default)
+  //
+  // The user enters editing mode by clicking the Content (pencil) tab.
+  // Other tabs (Chat, Pages, Versions, etc.) leave the iframe clean —
+  // no hover outlines, no drag handles, just the page.
+  const derive = (
+    rawDoc: string,
+    edit: boolean,
+    select: boolean,
+    editing: boolean,
+  ): string => {
+    if (select) return injectSectionSelect(rawDoc);
+    if (!editing) return rawDoc;
+    // Replace BEFORE Reorder so Replace's mousemove listener registers
+    // first → fires first on each event → sets the `over-image` body
+    // attribute before Reorder's listener reads it. Avoids a one-frame
+    // flicker where the drag handle briefly appears over an image.
+    let html = injectImageReplace(rawDoc);
+    html = injectSectionReorder(html);
+    if (edit) html = injectInlineEdit(html);
+    return html;
+  };
+  const [stableSrcDoc, setStableSrcDoc] = useState<string>(() =>
+    derive(doc, editableInjection, sectionSelectMode, editingActive),
+  );
+  const prevInjectionRef = useRef({
+    edit: editableInjection,
+    select: sectionSelectMode,
+    editing: editingActive,
+  });
+  useEffect(() => {
+    const prev = prevInjectionRef.current;
+    const modeChanged =
+      prev.edit !== editableInjection ||
+      prev.select !== sectionSelectMode ||
+      prev.editing !== editingActive;
+    prevInjectionRef.current = {
+      edit: editableInjection,
+      select: sectionSelectMode,
+      editing: editingActive,
+    };
+    if (modeChanged) {
+      setStableSrcDoc(
+        derive(doc, editableInjection, sectionSelectMode, editingActive),
+      );
+      return;
+    }
+    // Inline-edit is the ONLY surface where mid-stream doc updates would
+    // wreck the user's state (cursor inside a contentEditable). Every
+    // other surface (default preview, section-select, editingActive but
+    // not text-edit) mirrors doc updates so chat completions, undo,
+    // restore, etc. show up live.
+    if (!editableInjection) {
+      setStableSrcDoc(
+        derive(doc, editableInjection, sectionSelectMode, editingActive),
+      );
+    }
+  }, [doc, editableInjection, sectionSelectMode, editingActive]);
 
   const deviceWidth = { desktop: 1280, tablet: 820, mobile: 390 }[device];
 
@@ -125,15 +225,43 @@ export function PreviewArea({
           >
             <Grid3 size={12} />
           </IconBtn>
-          <IconBtn label="Refresh preview" size="sm">
+          <IconBtn
+            label="Refresh preview"
+            size="sm"
+            onClick={() => setRefreshTick((t) => t + 1)}
+          >
             <RefreshCw size={12} />
           </IconBtn>
-          <IconBtn label="Open in new tab" size="sm">
-            <ExternalLink size={12} />
-          </IconBtn>
+          {openInNewTabUrl && (
+            <IconBtn
+              label="Open in new tab"
+              size="sm"
+              onClick={() => {
+                window.open(
+                  openInNewTabUrl,
+                  "_blank",
+                  "noopener,noreferrer",
+                );
+              }}
+            >
+              <ExternalLink size={12} />
+            </IconBtn>
+          )}
         </div>
       </div>
-      {inlineEdit && (
+      {sectionSelectMode && (
+        <div className="relative z-10 shrink-0 h-7 flex items-center justify-center gap-2 text-[11.5px] bg-accent-soft text-accent border-b bd ui-small fade-in">
+          <span className="inline-flex h-3 w-3 items-center justify-center rounded-full ring-1 ring-[color:var(--accent)]">
+            <span className="block h-1 w-1 rounded-full bg-[var(--accent)]" />
+          </span>
+          Click any section to scope your next chat ·{" "}
+          <kbd className="px-1 rounded bg-elev border bd font-mono text-[10px]">
+            ESC
+          </kbd>{" "}
+          to cancel
+        </div>
+      )}
+      {editableInjection && !sectionSelectMode && (
         <div className="relative z-10 shrink-0 h-7 flex items-center justify-center gap-2 text-[11.5px] bg-accent-soft text-accent border-b bd ui-small fade-in">
           <Pencil size={11} /> Click any text in the page to edit it inline ·{" "}
           <kbd className="px-1 rounded bg-elev border bd font-mono text-[10px]">
@@ -195,10 +323,13 @@ export function PreviewArea({
             style={{ height: 800 * scale }}
           >
             <iframe
-              key={previewUrl ?? doc.slice(0, 120)}
+              key={`${previewUrl ?? doc.slice(0, 120)}:${refreshTick}`}
+              ref={(el) => {
+                if (onIframeRef) onIframeRef(el);
+              }}
               {...(previewUrl
                 ? { src: previewUrl }
-                : { srcDoc: doc })}
+                : { srcDoc: stableSrcDoc })}
               title="OpenLen workspace preview"
               sandbox="allow-scripts allow-same-origin"
               style={{

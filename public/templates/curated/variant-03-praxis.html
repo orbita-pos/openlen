@@ -1,0 +1,740 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Praxis — Read closely. Argue precisely. Think for yourself.</title>
+<meta name="description" content="A six-week application-based seminar in close reading and clear argument, for knowledge workers. Twelve texts, four essays, twenty-eight people. Led by Dr. Maya Levenson, PhD Philosophy, Princeton." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500;1,6..72,600&family=Inter:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#FBF8F0;
+    --paper:#F2EEE0;
+    --card:#FEFCF6;
+    --ink:#1A1714;
+    --ink-2:#514B42;
+    --ink-3:#867E70;
+    --forest:#2D5F3F;
+    --forest-2:#21482F;
+    --line:rgba(26,23,20,0.14);
+    --line-soft:rgba(26,23,20,0.07);
+  }
+  *{ -webkit-tap-highlight-color:transparent; }
+  html{ scroll-behavior:smooth; }
+  html,body{ background:var(--bg); color:var(--ink); }
+  body{
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+    font-feature-settings:"ss01","cv11";
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    line-height:1.55;
+  }
+  .serif{ font-family:'Newsreader',Georgia,serif; font-optical-sizing:auto; }
+  .display{ font-family:'Newsreader',Georgia,serif; font-weight:500; font-optical-sizing:auto; letter-spacing:-0.021em; line-height:1.06; }
+  .mono{ font-family:'Geist Mono',ui-monospace,Menlo,monospace; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  em.forest{ font-style:italic; color:var(--forest); }
+  .halftone{ opacity:0.42; }
+  .marker{ font-family:'Geist Mono',monospace; font-size:11px; letter-spacing:0.17em; text-transform:uppercase; color:var(--ink-3); }
+  .accent-line{ display:inline-block; width:26px; height:1px; background:var(--forest); vertical-align:middle; margin-right:10px; }
+  .rule{ border-color:var(--line); }
+  .rule-soft{ border-color:var(--line-soft); }
+  .papergrid{
+    background-image:
+      linear-gradient(rgba(26,23,20,0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(26,23,20,0.045) 1px, transparent 1px);
+    background-size:34px 34px;
+  }
+  .mesh{
+    background-image:
+      radial-gradient(54% 46% at 14% 12%, rgba(45,95,63,0.10), transparent 66%),
+      radial-gradient(44% 40% at 90% 6%, rgba(45,95,63,0.06), transparent 70%);
+  }
+  .pulse-dot{ position:relative; display:inline-block; width:7px; height:7px; border-radius:999px; background:var(--forest); box-shadow:0 0 0 0 rgba(45,95,63,0.5); animation:pulse 2s ease-out infinite; }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(45,95,63,0.45); }
+    70%{ box-shadow:0 0 0 9px rgba(45,95,63,0); }
+    100%{ box-shadow:0 0 0 0 rgba(45,95,63,0); }
+  }
+  .btn-primary{ transition:transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease; }
+  .btn-primary:hover{ transform:translateY(-1px); background-color:var(--forest-2); box-shadow:0 9px 24px -12px rgba(45,95,63,0.6); }
+  .btn-ghost{ transition:transform 120ms ease, border-color 120ms ease, background-color 120ms ease; }
+  .btn-ghost:hover{ transform:translateY(-1px); border-color:rgba(26,23,20,0.36); background-color:var(--card); }
+  .card-lift{ transition:transform 130ms ease, box-shadow 130ms ease, border-color 130ms ease; }
+  .card-lift:hover{ transform:translateY(-2px); box-shadow:0 16px 34px -24px rgba(26,23,20,0.42); border-color:rgba(26,23,20,0.24); }
+  .ul-link{ position:relative; }
+  .ul-link::after{ content:""; position:absolute; left:0; right:0; bottom:-3px; height:1px; background:currentColor; transform:scaleX(0); transform-origin:right center; transition:transform 260ms cubic-bezier(.2,.7,.2,1); }
+  .ul-link:hover::after{ transform:scaleX(1); transform-origin:left center; }
+  .marquee-mask{ -webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent); mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent); }
+  .marquee{ display:flex; gap:56px; width:max-content; align-items:center; animation:marq 42s linear infinite; }
+  @keyframes marq{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+  .blob-instr{ background:radial-gradient(126% 96% at 30% 22%, #A9CBA8 0%, #4E8761 38%, #2D5F3F 64%, #16331F 100%); }
+  .blob-a{ background:radial-gradient(120% 100% at 30% 25%, #AECBA6 0%, #4F8560 52%, #1F3C28 100%); }
+  .blob-b{ background:radial-gradient(120% 100% at 70% 28%, #D9CFA0 0%, #9A8A55 52%, #3E3720 100%); }
+  .blob-c{ background:radial-gradient(120% 100% at 36% 70%, #C9B7A0 0%, #8B7256 52%, #352A1E 100%); }
+  .blob-d{ background:radial-gradient(120% 100% at 62% 30%, #A6C2C4 0%, #5B8587 52%, #21383A 100%); }
+  details>summary{ list-style:none; cursor:pointer; }
+  details>summary::-webkit-details-marker{ display:none; }
+  details[open] .acc-sign{ transform:rotate(45deg); }
+  .acc-sign{ transition:transform 200ms ease; }
+  details[open] .acc-row{ background-color:var(--card); }
+  .navbar{ backdrop-filter:blur(12px) saturate(150%); -webkit-backdrop-filter:blur(12px) saturate(150%); background:rgba(251,248,240,0.84); }
+  ::selection{ background:rgba(45,95,63,0.2); color:var(--ink); }
+  .scroll-x{ transition:transform 150ms ease; }
+  a:hover .scroll-x{ transform:translateX(3px); }
+  .dropcap::first-letter{
+    font-family:'Newsreader',Georgia,serif;
+    float:left; font-size:4.4em; line-height:0.82; padding:0.04em 0.1em 0 0;
+    font-weight:500; font-style:italic; color:var(--forest);
+  }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ================= NAV ================= -->
+<header class="navbar fixed top-0 inset-x-0 z-50 border-b rule-soft">
+  <div class="max-w-[1180px] mx-auto px-5 sm:px-8 h-[68px] flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 20V4h8.5L19 8.5V20" fill="none" stroke="#1A1714" stroke-width="1.3" stroke-linejoin="round"/>
+        <path d="M9 9.5h6M9 13h6M9 16.5h3.5" stroke="#2D5F3F" stroke-width="1.3" stroke-linecap="round"/>
+      </svg>
+      <span class="serif text-[21px] font-semibold tracking-tight">Praxis</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8 text-[14px] text-[color:var(--ink-2)]">
+      <a href="#syllabus" class="ul-link">Syllabus</a>
+      <a href="#instructor" class="ul-link">Instructor</a>
+      <a href="#alumni" class="ul-link">Alumni</a>
+      <a href="#faq" class="ul-link">Questions</a>
+    </nav>
+    <a href="#apply" class="btn-primary inline-flex items-center gap-2 rounded-full bg-[color:var(--forest)] text-[#FBF8F0] font-medium text-[14px] px-4 py-2">
+      Apply
+    </a>
+  </div>
+</header>
+
+<!-- ================= HERO ================= -->
+<section id="top" class="relative overflow-hidden mesh pt-[68px]">
+  <div class="absolute inset-0 papergrid opacity-70 pointer-events-none"></div>
+  <div class="relative max-w-[1180px] mx-auto px-5 sm:px-8 pt-16 sm:pt-24 pb-14 sm:pb-20">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+
+      <div class="lg:col-span-7">
+        <div class="inline-flex items-center gap-2.5 rounded-full border rule bg-[color:var(--card)] pl-2.5 pr-3.5 py-1.5 mb-8">
+          <span class="pulse-dot"></span>
+          <span class="mono text-[11px] sm:text-[12px] text-[color:var(--ink-2)]">Cohort 15 · 19 of 28 seats taken</span>
+        </div>
+
+        <h1 class="display text-[clamp(44px,7.4vw,92px)]">
+          Read closely.<br/>
+          Argue precisely.<br/>
+          Think for <em class="forest">yourself.</em>
+        </h1>
+
+        <p class="serif text-[19px] sm:text-[21px] text-[color:var(--ink-2)] leading-[1.5] mt-8 max-w-[52ch]">
+          A six-week seminar in close reading and clear argument — for the knowledge worker who suspects their thinking has gotten faster, but not better. Twenty-eight people. Twelve texts. One genuinely hard question.
+        </p>
+
+        <div class="flex flex-col sm:flex-row gap-3 mt-8">
+          <a href="#apply" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--forest)] text-[#FBF8F0] font-medium px-6 py-3.5 text-[15px]">
+            Apply for Cohort 15 <span class="scroll-x">→</span>
+          </a>
+          <a href="#syllabus" class="btn-ghost inline-flex items-center justify-center gap-2 rounded-full border rule text-[color:var(--ink)] font-medium px-6 py-3.5 text-[15px]">
+            Read the syllabus
+          </a>
+        </div>
+        <p class="marker mt-7">Past cohorts have drawn founders, analysts &amp; editors from Stripe, Linnea &amp; Brightwave</p>
+      </div>
+
+      <!-- reading list card -->
+      <div class="lg:col-span-5">
+        <div class="rounded-2xl border rule bg-[color:var(--card)] p-6 sm:p-7">
+          <div class="flex items-center justify-between mb-5">
+            <div class="marker">The reading list</div>
+            <div class="mono text-[11px] text-[color:var(--ink-3)]">12 texts</div>
+          </div>
+          <ol class="space-y-3">
+            <li class="flex gap-3.5 items-baseline">
+              <span class="mono text-[11px] text-[color:var(--forest)] w-6 shrink-0">01</span>
+              <span class="serif text-[16px]">Aristotle — <span class="italic">Rhetoric</span>, Book I</span>
+            </li>
+            <li class="flex gap-3.5 items-baseline">
+              <span class="mono text-[11px] text-[color:var(--forest)] w-6 shrink-0">03</span>
+              <span class="serif text-[16px]">Toulmin — <span class="italic">The Uses of Argument</span></span>
+            </li>
+            <li class="flex gap-3.5 items-baseline">
+              <span class="mono text-[11px] text-[color:var(--forest)] w-6 shrink-0">05</span>
+              <span class="serif text-[16px]">Joan Didion — <span class="italic">The White Album</span></span>
+            </li>
+            <li class="flex gap-3.5 items-baseline">
+              <span class="mono text-[11px] text-[color:var(--forest)] w-6 shrink-0">07</span>
+              <span class="serif text-[16px]">J.S. Mill — <span class="italic">On Liberty</span>, ch. 2</span>
+            </li>
+            <li class="flex gap-3.5 items-baseline">
+              <span class="mono text-[11px] text-[color:var(--forest)] w-6 shrink-0">10</span>
+              <span class="serif text-[16px]">Annie Dillard — <span class="italic">Total Eclipse</span></span>
+            </li>
+            <li class="flex gap-3.5 items-baseline">
+              <span class="mono text-[11px] text-[color:var(--forest)] w-6 shrink-0">12</span>
+              <span class="serif text-[16px]">Montaigne — <span class="italic">Of Experience</span></span>
+            </li>
+          </ol>
+          <div class="mt-5 pt-4 border-t rule-soft serif italic text-[14px] text-[color:var(--ink-3)]">
+            "…and six more, chosen so that each argues with the one before it."
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- metric strip -->
+    <div class="mt-16 md:mt-20 border-t rule pt-8">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-y-8">
+        <div class="md:pr-8 md:border-r rule-soft">
+          <div class="marker mb-2.5">Cohort size</div>
+          <div class="display tnum text-[40px] sm:text-[50px]">28</div>
+          <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">people · never more</div>
+        </div>
+        <div class="md:px-8 md:border-r rule-soft">
+          <div class="marker mb-2.5">Length</div>
+          <div class="display tnum text-[40px] sm:text-[50px]">6<span class="text-[color:var(--ink-3)] text-[22px] sm:text-[26px]"> wks</span></div>
+          <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">Tue &amp; Thu evenings</div>
+        </div>
+        <div class="md:px-8 md:border-r rule-soft">
+          <div class="marker mb-2.5">Acceptance</div>
+          <div class="display tnum text-[40px] sm:text-[50px]">28<span class="text-[color:var(--ink-3)] text-[26px] sm:text-[30px]">%</span></div>
+          <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">of applicants, last 4 cohorts</div>
+        </div>
+        <div class="md:pl-8">
+          <div class="marker mb-2.5">They return</div>
+          <div class="display tnum text-[40px] sm:text-[50px]">38<span class="text-[color:var(--ink-3)] text-[26px] sm:text-[30px]">%</span></div>
+          <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">come back for a follow-on cohort</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= TRUST BAR ================= -->
+<section class="border-y rule-soft bg-[color:var(--paper)] py-11">
+  <div class="max-w-[1180px] mx-auto px-5 sm:px-8">
+    <div class="marker mb-7"><span class="accent-line"></span>Where past cohorts have come from</div>
+    <div class="marquee-mask overflow-hidden">
+      <div class="marquee text-[color:var(--ink-2)]">
+        <span class="text-[24px] font-bold tracking-tight">Stripe</span>
+        <span class="serif italic text-[26px]">Linnea</span>
+        <span class="text-[24px] font-semibold tracking-tight">Brightwave</span>
+        <span class="serif text-[26px]">The Atlantic</span>
+        <span class="text-[24px] font-medium">Mercury</span>
+        <span class="serif italic text-[26px]">Forecast</span>
+        <span class="mono text-[20px] tracking-[0.16em]">NIMBUS</span>
+        <span class="serif text-[26px]">Quartermast</span>
+        <span class="text-[24px] font-semibold tracking-[0.04em]">Vantage</span>
+        <span class="serif italic text-[26px]">Coast Review</span>
+        <span aria-hidden="true" class="text-[24px] font-bold tracking-tight">Stripe</span>
+        <span aria-hidden="true" class="serif italic text-[26px]">Linnea</span>
+        <span aria-hidden="true" class="text-[24px] font-semibold tracking-tight">Brightwave</span>
+        <span aria-hidden="true" class="serif text-[26px]">The Atlantic</span>
+        <span aria-hidden="true" class="text-[24px] font-medium">Mercury</span>
+        <span aria-hidden="true" class="serif italic text-[26px]">Forecast</span>
+        <span aria-hidden="true" class="mono text-[20px] tracking-[0.16em]">NIMBUS</span>
+        <span aria-hidden="true" class="serif text-[26px]">Quartermast</span>
+        <span aria-hidden="true" class="text-[24px] font-semibold tracking-[0.04em]">Vantage</span>
+        <span aria-hidden="true" class="serif italic text-[26px]">Coast Review</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= WHAT YOU'LL LEARN ================= -->
+<section id="learn" class="max-w-[1180px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="max-w-[60ch]">
+    <div class="marker mb-5"><span class="accent-line"></span>What the seminar builds</div>
+    <h2 class="display text-[clamp(34px,5vw,62px)]">
+      Four faculties, in six weeks.
+    </h2>
+    <p class="serif text-[18px] sm:text-[20px] text-[color:var(--ink-2)] mt-5 leading-[1.5]">
+      Praxis is not a survey. It trains four specific habits of mind — and you practice each on a real text, in live discussion, with twenty-seven other people watching you reason.
+    </p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-px mt-12 bg-[color:var(--line)] border rule rounded-2xl overflow-hidden">
+    <div class="bg-[color:var(--card)] p-7 sm:p-9 card-lift">
+      <div class="flex items-baseline justify-between">
+        <span class="display text-[44px] text-[color:var(--forest)]">I.</span>
+        <span class="marker">Weeks 1–2</span>
+      </div>
+      <h3 class="serif text-[24px] font-semibold mt-1">Close Reading</h3>
+      <p class="text-[14px] text-[color:var(--ink-2)] mt-3 leading-[1.55]">Reading at one-tenth speed: annotation, what the sentence actually says versus what you assumed, and the discipline of staying with a paragraph.</p>
+      <div class="mono text-[12px] text-[color:var(--ink-3)] mt-5 pt-4 border-t rule-soft">PRACTICED ON — Aristotle &amp; Susan Sontag</div>
+    </div>
+    <div class="bg-[color:var(--card)] p-7 sm:p-9 card-lift">
+      <div class="flex items-baseline justify-between">
+        <span class="display text-[44px] text-[color:var(--forest)]">II.</span>
+        <span class="marker">Weeks 2–3</span>
+      </div>
+      <h3 class="serif text-[24px] font-semibold mt-1">Argument</h3>
+      <p class="text-[14px] text-[color:var(--ink-2)] mt-3 leading-[1.55]">The anatomy of a case — claim, ground, warrant — and how to tell a real argument from a confident assertion wearing its clothes.</p>
+      <div class="mono text-[12px] text-[color:var(--ink-3)] mt-5 pt-4 border-t rule-soft">PRACTICED ON — Toulmin &amp; a dissected op-ed</div>
+    </div>
+    <div class="bg-[color:var(--card)] p-7 sm:p-9 card-lift">
+      <div class="flex items-baseline justify-between">
+        <span class="display text-[44px] text-[color:var(--forest)]">III.</span>
+        <span class="marker">Weeks 4–5</span>
+      </div>
+      <h3 class="serif text-[24px] font-semibold mt-1">Objection</h3>
+      <p class="text-[14px] text-[color:var(--ink-2)] mt-3 leading-[1.55]">Steelmanning: building the strongest version of the view you reject, and the intellectual charity that makes disagreement worth having.</p>
+      <div class="mono text-[12px] text-[color:var(--ink-3)] mt-5 pt-4 border-t rule-soft">PRACTICED ON — Mill &amp; a live debate</div>
+    </div>
+    <div class="bg-[color:var(--card)] p-7 sm:p-9 card-lift">
+      <div class="flex items-baseline justify-between">
+        <span class="display text-[44px] text-[color:var(--forest)]">IV.</span>
+        <span class="marker">Weeks 5–6</span>
+      </div>
+      <h3 class="serif text-[24px] font-semibold mt-1">Synthesis</h3>
+      <p class="text-[14px] text-[color:var(--ink-2)] mt-3 leading-[1.55]">Holding two true things at once, writing to think rather than to report, and arriving — finally — at a position that is genuinely yours.</p>
+      <div class="mono text-[12px] text-[color:var(--ink-3)] mt-5 pt-4 border-t rule-soft">PRACTICED ON — Dillard &amp; Montaigne</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= INSTRUCTOR ================= -->
+<section id="instructor" class="border-y rule-soft bg-[color:var(--paper)]">
+  <div class="max-w-[1180px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14 items-start">
+      <div class="md:col-span-4">
+        <div class="blob-instr rounded-2xl border rule aspect-[3/4] w-full max-w-[320px] relative overflow-hidden">
+          <div class="absolute inset-0" style="background:radial-gradient(120% 60% at 50% 120%, rgba(0,0,0,0.4), transparent 60%)"></div>
+          <div class="absolute left-5 bottom-5">
+            <div class="serif italic text-[#FBF8F0] text-[21px] leading-tight">Dr. Maya Levenson</div>
+            <div class="mono text-[11px] text-[#FBF8F0] opacity-80 mt-1">SEMINAR LEADER</div>
+          </div>
+        </div>
+      </div>
+      <div class="md:col-span-8">
+        <div class="marker mb-5"><span class="accent-line"></span>Who leads it</div>
+        <h2 class="display text-[clamp(30px,4.4vw,52px)] max-w-[20ch]">
+          She has taught this seminar <em class="forest">fourteen times.</em>
+        </h2>
+        <div class="serif text-[18px] sm:text-[19px] text-[color:var(--ink-2)] leading-[1.6] mt-6 space-y-4 max-w-[60ch]">
+          <p class="dropcap">Maya Levenson took her PhD in philosophy at Princeton, where she wrote on the ethics of persuasion, and then spent six years lecturing at Stanford to rooms she felt were too large to actually teach. A seminar, she'll tell you, has a hard upper bound — and it is well below a hundred.</p>
+          <p>In 2023 she left to found The Reading Room, a small publication for the unhurried essay, and to build Praxis: the course she had wanted to teach all along, at the size it actually requires. Twenty-eight people, because the twenty-ninth changes the room.</p>
+          <p>She reads every application herself. She reads every essay herself. This is not a brand promise; it is simply the only way she knows how to run it.</p>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 mt-8 max-w-[42rem]">
+          <div class="mono text-[12px] text-[color:var(--ink-2)] flex gap-2.5"><span class="text-[color:var(--forest)]">·</span> PhD Philosophy, Princeton</div>
+          <div class="mono text-[12px] text-[color:var(--ink-2)] flex gap-2.5"><span class="text-[color:var(--forest)]">·</span> Former lecturer, Stanford</div>
+          <div class="mono text-[12px] text-[color:var(--ink-2)] flex gap-2.5"><span class="text-[color:var(--forest)]">·</span> Founding editor, The Reading Room</div>
+          <div class="mono text-[12px] text-[color:var(--ink-2)] flex gap-2.5"><span class="text-[color:var(--forest)]">·</span> 14 cohorts of Praxis taught</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SYLLABUS DEEP-DIVE ================= -->
+<section id="syllabus" class="max-w-[1080px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-11">
+    <div class="max-w-[44ch]">
+      <div class="marker mb-5"><span class="accent-line"></span>The syllabus</div>
+      <h2 class="display text-[clamp(34px,5vw,60px)]">Six weeks, in order.</h2>
+    </div>
+    <div class="mono text-[12px] text-[color:var(--ink-3)] sm:text-right leading-relaxed">
+      Tue &amp; Thu · 7–9pm ET<br/>4 short essays + 1 synthesis paper
+    </div>
+  </div>
+
+  <div class="border rule rounded-2xl overflow-hidden divide-y divide-[color:var(--line-soft)]">
+
+    <details open>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--forest)] w-16 shrink-0">WEEK 1</span>
+        <span class="serif text-[18px] sm:text-[21px] font-semibold flex-1">What Close Reading Actually Is</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-7 pt-1 sm:pl-[88px]">
+        <p class="text-[14px] text-[color:var(--ink-2)] leading-[1.6] mb-4">We begin by reading a single paragraph for an entire evening — and discovering how much was skimmed past the first time.</p>
+        <div class="text-[13px] text-[color:var(--ink-3)] space-y-1.5">
+          <p><span class="mono text-[color:var(--forest)]">TEXTS</span> &nbsp;Aristotle, <span class="serif italic">Rhetoric</span> Bk. I · Susan Sontag, <span class="serif italic">Against Interpretation</span></p>
+          <p><span class="mono text-[color:var(--forest)]">ESSAY</span> &nbsp;600 words on one paragraph of your choosing</p>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--forest)] w-16 shrink-0">WEEK 2</span>
+        <span class="serif text-[18px] sm:text-[21px] font-semibold flex-1">The Anatomy of an Argument</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-7 pt-1 sm:pl-[88px]">
+        <p class="text-[14px] text-[color:var(--ink-2)] leading-[1.6] mb-4">Claim, ground, warrant. We take a published op-ed apart on the page until its hidden assumptions are visible — and then put it back together, better.</p>
+        <div class="text-[13px] text-[color:var(--ink-3)] space-y-1.5">
+          <p><span class="mono text-[color:var(--forest)]">TEXTS</span> &nbsp;Stephen Toulmin, <span class="serif italic">The Uses of Argument</span> · a contemporary op-ed</p>
+          <p><span class="mono text-[color:var(--forest)]">ESSAY</span> &nbsp;Diagram a working argument; defend the warrant</p>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--forest)] w-16 shrink-0">WEEK 3</span>
+        <span class="serif text-[18px] sm:text-[21px] font-semibold flex-1">Evidence &amp; Its Discontents</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-7 pt-1 sm:pl-[88px]">
+        <p class="text-[14px] text-[color:var(--ink-2)] leading-[1.6] mb-4">What counts as evidence — and to whom? We read an essayist and an empirical paper side by side, and find they are doing stranger things than they admit.</p>
+        <div class="text-[13px] text-[color:var(--ink-3)] space-y-1.5">
+          <p><span class="mono text-[color:var(--forest)]">TEXTS</span> &nbsp;Joan Didion, from <span class="serif italic">The White Album</span> · a contested research paper</p>
+          <p><span class="mono text-[color:var(--forest)]">ESSAY</span> &nbsp;Where the two readings disagree about proof</p>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--forest)] w-16 shrink-0">WEEK 4</span>
+        <span class="serif text-[18px] sm:text-[21px] font-semibold flex-1">The Strongest Objection</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-7 pt-1 sm:pl-[88px]">
+        <p class="text-[14px] text-[color:var(--ink-2)] leading-[1.6] mb-4">You will argue, in writing and aloud, for a position you do not hold — and build it strong enough that its real defenders would recognise it.</p>
+        <div class="text-[13px] text-[color:var(--ink-3)] space-y-1.5">
+          <p><span class="mono text-[color:var(--forest)]">TEXTS</span> &nbsp;J.S. Mill, <span class="serif italic">On Liberty</span> ch. 2 · a live transcript debate</p>
+          <p><span class="mono text-[color:var(--forest)]">ESSAY</span> &nbsp;Steelman the view you most want to dismiss</p>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--forest)] w-16 shrink-0">WEEK 5</span>
+        <span class="serif text-[18px] sm:text-[21px] font-semibold flex-1">Ambiguity, and Holding Two Things</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-7 pt-1 sm:pl-[88px]">
+        <p class="text-[14px] text-[color:var(--ink-2)] leading-[1.6] mb-4">Some questions resolve; many do not. We read for the precision that comes from admitting uncertainty rather than papering over it.</p>
+        <div class="text-[13px] text-[color:var(--ink-3)] space-y-1.5">
+          <p><span class="mono text-[color:var(--forest)]">TEXTS</span> &nbsp;Annie Dillard, <span class="serif italic">Total Eclipse</span> · one short poem</p>
+          <p><span class="mono text-[color:var(--forest)]">ESSAY</span> &nbsp;A contradiction you've stopped trying to resolve</p>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--forest)] w-16 shrink-0">WEEK 6</span>
+        <span class="serif text-[18px] sm:text-[21px] font-semibold flex-1">Thinking for Yourself</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-7 pt-1 sm:pl-[88px]">
+        <p class="text-[14px] text-[color:var(--ink-2)] leading-[1.6] mb-4">The synthesis week. You write the longest piece of the course — not a summary of others, but a position the seminar has earned you the right to hold.</p>
+        <div class="text-[13px] text-[color:var(--ink-3)] space-y-1.5">
+          <p><span class="mono text-[color:var(--forest)]">TEXTS</span> &nbsp;Montaigne, <span class="serif italic">Of Experience</span> · a closing letter from Dr. Levenson</p>
+          <p><span class="mono text-[color:var(--forest)]">PAPER</span> &nbsp;Final synthesis — 2,000 words, workshopped live</p>
+        </div>
+      </div>
+    </details>
+
+  </div>
+</section>
+
+<!-- ================= ALUMNI OUTCOMES ================= -->
+<section id="alumni" class="border-y rule-soft bg-[color:var(--paper)]">
+  <div class="max-w-[1180px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="max-w-[54ch]">
+      <div class="marker mb-5"><span class="accent-line"></span>What alumni report</div>
+      <h2 class="display text-[clamp(34px,5vw,60px)]">The seminar ends. The <em class="forest">habit doesn't.</em></h2>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-px mt-12 bg-[color:var(--line)] border rule rounded-2xl overflow-hidden">
+      <div class="bg-[color:var(--card)] p-6 sm:p-8">
+        <div class="display tnum text-[clamp(40px,5.4vw,66px)]">94%</div>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.5]">say Praxis changed how they read — surveyed three months after the final week.</p>
+      </div>
+      <div class="bg-[color:var(--card)] p-6 sm:p-8">
+        <div class="display tnum text-[clamp(40px,5.4vw,66px)]">14</div>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.5]">cohorts run since the seminar began in 2023 — Cohort 15 enrolls now.</p>
+      </div>
+      <div class="bg-[color:var(--card)] p-6 sm:p-8">
+        <div class="display tnum text-[clamp(40px,5.4vw,66px)]">28%</div>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.5]">of applicants are offered a seat — admission is by written application only.</p>
+      </div>
+      <div class="bg-[color:var(--card)] p-6 sm:p-8">
+        <div class="display tnum text-[clamp(40px,5.4vw,66px)]">38%</div>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.5]">of alumni come back — applying again for a follow-on cohort or reading group.</p>
+      </div>
+    </div>
+
+    <!-- testimonials -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-6">
+      <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7 card-lift">
+        <div class="flex items-center gap-3.5">
+          <div class="blob-a size-11 rounded-full border rule shrink-0"></div>
+          <figcaption>
+            <div class="serif font-semibold text-[16px]">Priya Anand</div>
+            <div class="mono text-[11px] text-[color:var(--ink-3)]">Founder · Linnea</div>
+          </figcaption>
+        </div>
+        <blockquote class="serif text-[16px] text-[color:var(--ink-2)] leading-[1.6] mt-5">
+          "I came in able to argue and left able to think — which I had assumed were the same skill. They are not. I still read everything one-tenth slower, and it has not once been a waste of the time."
+        </blockquote>
+        <div class="mono text-[11px] text-[color:var(--forest)] mt-5 pt-4 border-t rule-soft">→ NOW RUNS HER STRATEGY MEMOS THROUGH WEEK 2</div>
+      </figure>
+      <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7 card-lift">
+        <div class="flex items-center gap-3.5">
+          <div class="blob-d size-11 rounded-full border rule shrink-0"></div>
+          <figcaption>
+            <div class="serif font-semibold text-[16px]">Ines Calderón</div>
+            <div class="mono text-[11px] text-[color:var(--ink-3)]">Senior Analyst · Brightwave</div>
+          </figcaption>
+        </div>
+        <blockquote class="serif text-[16px] text-[color:var(--ink-2)] leading-[1.6] mt-5">
+          "Praxis ruined skim-reading for me, permanently and entirely for the better. The week on evidence quietly rewired how I read every research memo that now crosses my desk."
+        </blockquote>
+        <div class="mono text-[11px] text-[color:var(--forest)] mt-5 pt-4 border-t rule-soft">→ FOUR ESSAYS LATER, STILL ANNOTATES BY HAND</div>
+      </figure>
+      <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7 card-lift">
+        <div class="flex items-center gap-3.5">
+          <div class="blob-b size-11 rounded-full border rule shrink-0"></div>
+          <figcaption>
+            <div class="serif font-semibold text-[16px]">Marcus Tobin</div>
+            <div class="mono text-[11px] text-[color:var(--ink-3)]">Essayist &amp; Editor</div>
+          </figcaption>
+        </div>
+        <blockquote class="serif text-[16px] text-[color:var(--ink-2)] leading-[1.6] mt-5">
+          "I hold an MFA, and I learned more about argument in week two of Praxis than in two years of workshop. Dr. Levenson runs the seminar as though the texts genuinely matter — because, to her, they plainly do."
+        </blockquote>
+        <div class="mono text-[11px] text-[color:var(--forest)] mt-5 pt-4 border-t rule-soft">→ RETURNED FOR TWO FOLLOW-ON COHORTS</div>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FORMAT / LOGISTICS ================= -->
+<section class="max-w-[1180px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14">
+    <div class="md:col-span-4">
+      <div class="marker mb-5"><span class="accent-line"></span>The format</div>
+      <h2 class="display text-[clamp(30px,4vw,46px)]">Small, live, and <em class="forest">genuinely demanding.</em></h2>
+      <p class="serif text-[16px] text-[color:var(--ink-2)] mt-5 leading-[1.6]">
+        Praxis asks for two evenings a week and the reading between them. It is not heavy — it is dense. Plan to be present for it.
+      </p>
+    </div>
+    <div class="md:col-span-8">
+      <dl class="grid sm:grid-cols-2 gap-px bg-[color:var(--line)] border rule rounded-2xl overflow-hidden">
+        <div class="bg-[color:var(--card)] p-6">
+          <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Length</dt>
+          <dd class="serif text-[17px] mt-2">6 weeks · 12 live sessions</dd>
+        </div>
+        <div class="bg-[color:var(--card)] p-6">
+          <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Sessions</dt>
+          <dd class="serif text-[17px] mt-2">Tuesday &amp; Thursday, 7–9pm ET — live discussion</dd>
+        </div>
+        <div class="bg-[color:var(--card)] p-6">
+          <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Reading load</dt>
+          <dd class="serif text-[17px] mt-2">3–4 hours a week — short texts, read slowly</dd>
+        </div>
+        <div class="bg-[color:var(--card)] p-6">
+          <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Written work</dt>
+          <dd class="serif text-[17px] mt-2">Four 600-word essays + one synthesis paper</dd>
+        </div>
+        <div class="bg-[color:var(--card)] p-6">
+          <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Cohort</dt>
+          <dd class="serif text-[17px] mt-2">28 people, by written application — no prerequisites</dd>
+        </div>
+        <div class="bg-[color:var(--card)] p-6">
+          <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Refund</dt>
+          <dd class="serif text-[17px] mt-2">Full refund through the end of week 1, no questions</dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PRICING ================= -->
+<section id="apply" class="border-y rule-soft bg-[color:var(--paper)]">
+  <div class="max-w-[1180px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="max-w-[52ch] mb-12">
+      <div class="marker mb-5"><span class="accent-line"></span>Tuition</div>
+      <h2 class="display text-[clamp(34px,5vw,58px)]">Apply first. <em class="forest">Pay once you're in.</em></h2>
+      <p class="serif text-[17px] text-[color:var(--ink-2)] mt-5 leading-[1.6]">
+        Admission is by written application. If you're offered a seat, you'll complete enrollment by Stripe checkout — at one of two rates.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div class="rounded-2xl border-2 border-[color:var(--forest)] bg-[color:var(--card)] p-7 sm:p-9 relative">
+        <div class="absolute -top-3 left-8 mono text-[10px] tracking-[0.12em] uppercase bg-[color:var(--forest)] text-[#FBF8F0] px-3 py-1 rounded-full">Standard seat</div>
+        <h3 class="serif text-[22px] font-semibold mt-1">Standard</h3>
+        <div class="flex items-baseline gap-2 mt-3">
+          <span class="display tnum text-[56px]">$1,499</span>
+          <span class="mono text-[12px] text-[color:var(--ink-3)]">for the full seminar</span>
+        </div>
+        <ul class="mt-6 space-y-2.5 text-[14px] text-[color:var(--ink-2)]">
+          <li class="flex gap-2.5"><span class="text-[color:var(--forest)] mt-0.5">✓</span> All 12 live sessions with Dr. Levenson</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--forest)] mt-0.5">✓</span> Written feedback on every essay</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--forest)] mt-0.5">✓</span> The complete annotated reading list</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--forest)] mt-0.5">✓</span> Lifetime access to the alumni reading group</li>
+        </ul>
+        <a href="#apply" class="btn-primary mt-7 w-full inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--forest)] text-[#FBF8F0] font-medium px-5 py-3.5 text-[15px]">
+          Apply for Cohort 15 <span class="scroll-x">→</span>
+        </a>
+      </div>
+
+      <div class="rounded-2xl border rule bg-[color:var(--card)] p-7 sm:p-9">
+        <div class="mono text-[10px] tracking-[0.12em] uppercase text-[color:var(--ink-3)] mt-1">Reduced seat · 4 per cohort</div>
+        <h3 class="serif text-[22px] font-semibold mt-1">Reduced rate</h3>
+        <div class="flex items-baseline gap-2 mt-3">
+          <span class="display tnum text-[56px]">$499</span>
+          <span class="mono text-[12px] text-[color:var(--ink-3)]">same seminar, same seat</span>
+        </div>
+        <ul class="mt-6 space-y-2.5 text-[14px] text-[color:var(--ink-2)]">
+          <li class="flex gap-2.5"><span class="text-[color:var(--forest)] mt-0.5">✓</span> Identical to the standard seat in every way</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--forest)] mt-0.5">✓</span> For current graduate students</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--forest)] mt-0.5">✓</span> And for full-time non-profit employees</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--forest)] mt-0.5">✓</span> No separate form — note it in your application</li>
+        </ul>
+        <a href="#apply" class="btn-ghost mt-7 w-full inline-flex items-center justify-center rounded-full border rule text-[color:var(--ink)] font-medium px-5 py-3.5 text-[15px]">
+          Apply at the reduced rate
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FAQ ================= -->
+<section id="faq" class="max-w-[820px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="text-center mb-12">
+    <div class="marker mb-5 inline-block">Before you apply</div>
+    <h2 class="display text-[clamp(32px,4.6vw,52px)]">Questions worth asking.</h2>
+  </div>
+  <div class="divide-y divide-[color:var(--line)] border-y rule">
+    <details>
+      <summary class="flex items-start gap-4 py-5">
+        <span class="serif text-[17px] sm:text-[20px] font-semibold flex-1">How is this different from a philosophy class on Coursera?</span>
+        <span class="acc-sign text-[color:var(--forest)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        A recorded course transfers information; Praxis is a seminar, and a seminar is an argument you participate in. There is no lecture to press play on. Every session is live, capped at twenty-eight people, and built around your reading and your writing being discussed in the room. You can watch a philosophy lecture for free this afternoon — what you can't do alone is be reasoned with, and pushed, by a philosopher and twenty-seven peers.
+      </p>
+    </details>
+    <details>
+      <summary class="flex items-start gap-4 py-5">
+        <span class="serif text-[17px] sm:text-[20px] font-semibold flex-1">How much weekly reading should I expect?</span>
+        <span class="acc-sign text-[color:var(--forest)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        Three to four hours a week — and that is by design a low number. The texts are short; the point is to read them slowly, more than once, with a pen. A 600-word essay accompanies most weeks. If you can protect two evenings for the live sessions and a few unhurried hours for the reading, the load is entirely manageable alongside a full-time job. Most of the cohort has one.
+      </p>
+    </details>
+    <details>
+      <summary class="flex items-start gap-4 py-5">
+        <span class="serif text-[17px] sm:text-[20px] font-semibold flex-1">What's the application process?</span>
+        <span class="acc-sign text-[color:var(--forest)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        A short written application: a few questions about why you want the seminar, and one prompt asking you to respond to a brief passage. It takes most people thirty to forty-five minutes, and it is not a test of credentials — Dr. Levenson reads for curiosity and care, not pedigree. About 28% of applicants are offered a seat, mostly to keep the room balanced rather than to be exclusive. You'll hear back within a week.
+      </p>
+    </details>
+    <details>
+      <summary class="flex items-start gap-4 py-5">
+        <span class="serif text-[17px] sm:text-[20px] font-semibold flex-1">Is live attendance required?</span>
+        <span class="acc-sign text-[color:var(--forest)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        Largely, yes — the seminar is the live discussion, and it doesn't work as a recording. We ask you to commit to at least ten of the twelve sessions before you accept a seat. Life happens, so sessions are recorded for your own review if you miss one, but a cohort with empty squares is a worse cohort for everyone. If you already know two evenings a week is impossible this season, apply for the next one instead.
+      </p>
+    </details>
+    <details>
+      <summary class="flex items-start gap-4 py-5">
+        <span class="serif text-[17px] sm:text-[20px] font-semibold flex-1">Will I get a certificate?</span>
+        <span class="acc-sign text-[color:var(--forest)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        You'll receive a letter of completion from Dr. Levenson and The Reading Room — but, candidly, it is not the reason to come. Praxis is not accredited and grants no formal credit. What you leave with is the final synthesis paper, four essays you can reread, and a way of reading that alumni report still using years later. If you need a credential, this isn't it; if you need to think better, it very much is.
+      </p>
+    </details>
+  </div>
+</section>
+
+<!-- ================= FINAL CTA ================= -->
+<section class="relative overflow-hidden border-t rule-soft bg-[color:var(--ink)]">
+  <div class="absolute inset-0 pointer-events-none" style="background:radial-gradient(58% 64% at 50% 0%, rgba(45,95,63,0.34), transparent 72%)"></div>
+  <div class="relative max-w-[900px] mx-auto px-5 sm:px-8 py-24 sm:py-32 text-center">
+    <div class="inline-flex items-center gap-2.5 rounded-full border border-[rgba(255,255,255,0.14)] px-4 py-1.5 mb-8">
+      <span class="pulse-dot"></span>
+      <span class="mono text-[11px] text-[#D8D2C4]">Cohort 15 begins June 16 · 9 of 28 seats open</span>
+    </div>
+    <h2 class="display text-[clamp(40px,7vw,86px)] text-[#FBF8F0]">
+      Twenty-eight seats.<br/>
+      <span class="halftone">One of them could be yours.</span>
+    </h2>
+    <p class="serif text-[19px] text-[#C2BCAD] mt-6 max-w-[46ch] mx-auto leading-[1.5]">
+      Applications for Cohort 15 close June 2. The written application takes about forty minutes — and is, itself, a small taste of the work.
+    </p>
+
+    <!-- countdown -->
+    <div class="inline-flex items-end gap-3 sm:gap-5 mt-9 rounded-xl border border-[rgba(255,255,255,0.12)] px-6 py-4">
+      <div><span id="cd-d" class="display tnum text-[34px] sm:text-[42px] text-[#FBF8F0]">00</span><span class="mono text-[10px] text-[#9B9486] ml-1">d</span></div>
+      <span class="display text-[26px] text-[rgba(255,255,255,0.2)]">:</span>
+      <div><span id="cd-h" class="display tnum text-[34px] sm:text-[42px] text-[#FBF8F0]">00</span><span class="mono text-[10px] text-[#9B9486] ml-1">h</span></div>
+      <span class="display text-[26px] text-[rgba(255,255,255,0.2)]">:</span>
+      <div><span id="cd-m" class="display tnum text-[34px] sm:text-[42px] text-[#FBF8F0]">00</span><span class="mono text-[10px] text-[#9B9486] ml-1">m</span></div>
+      <span class="display text-[26px] text-[rgba(255,255,255,0.2)]">:</span>
+      <div><span id="cd-s" class="display tnum text-[34px] sm:text-[42px] text-[#FBF8F0]">00</span><span class="mono text-[10px] text-[#9B9486] ml-1">s</span></div>
+    </div>
+
+    <div class="flex flex-col sm:flex-row gap-3 justify-center mt-9">
+      <a href="#apply" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--forest)] text-[#FBF8F0] font-medium px-7 py-4 text-[16px]">
+        Begin your application <span class="scroll-x">→</span>
+      </a>
+      <a href="#syllabus" class="btn-ghost inline-flex items-center justify-center rounded-full border border-[rgba(255,255,255,0.18)] text-[#FBF8F0] font-medium px-7 py-4 text-[16px]">
+        Read the syllabus
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer class="bg-[color:var(--ink)] border-t border-[rgba(255,255,255,0.07)]">
+  <div class="max-w-[1180px] mx-auto px-5 sm:px-8 py-12 flex flex-col sm:flex-row items-center justify-between gap-6">
+    <div class="flex items-center gap-2.5">
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 20V4h8.5L19 8.5V20" fill="none" stroke="#C2BCAD" stroke-width="1.3" stroke-linejoin="round"/>
+        <path d="M9 9.5h6M9 13h6M9 16.5h3.5" stroke="#5E9C76" stroke-width="1.3" stroke-linecap="round"/>
+      </svg>
+      <span class="serif text-[18px] text-[#FBF8F0] font-semibold">Praxis</span>
+      <span class="mono text-[11px] text-[#867E70] ml-2 hidden sm:inline">A seminar by The Reading Room</span>
+    </div>
+    <nav class="flex items-center gap-7 text-[13px] text-[#C2BCAD]">
+      <a href="#syllabus" class="ul-link">Cohort archive</a>
+      <a href="#instructor" class="ul-link">About</a>
+      <a href="#faq" class="ul-link">Privacy</a>
+    </nav>
+    <div class="mono text-[11px] text-[#867E70]">© 2026 Praxis</div>
+  </div>
+</footer>
+
+<script>
+  (function(){
+    var target = new Date('2026-06-02T23:59:00-04:00').getTime();
+    var els = { d:document.getElementById('cd-d'), h:document.getElementById('cd-h'), m:document.getElementById('cd-m'), s:document.getElementById('cd-s') };
+    function pad(n){ return String(n).padStart(2,'0'); }
+    function tick(){
+      var gap = target - Date.now();
+      if(gap < 0) gap = 0;
+      els.d.textContent = pad(Math.floor(gap/864e5));
+      els.h.textContent = pad(Math.floor(gap%864e5/36e5));
+      els.m.textContent = pad(Math.floor(gap%36e5/6e4));
+      els.s.textContent = pad(Math.floor(gap%6e4/1e3));
+    }
+    tick();
+    setInterval(tick, 1000);
+  })();
+</script>
+</body>
+</html>

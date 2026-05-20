@@ -1,0 +1,14 @@
+[Unit]
+Description=OpenLen — nightly R2 backup timer
+Requires=openlen-backup.service
+
+[Timer]
+# 03:17 UTC every day. Offset from common 03:00 schedules to spread load
+# off CF / R2 rate-window starts. Persistent=true catches up any run
+# missed during downtime when the timer next fires.
+OnCalendar=*-*-* 03:17:00
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,149 @@
+import sharp from "sharp";
+import { and, eq } from "drizzle-orm";
+import { auth } from "@/auth";
+import { db, schema } from "@/lib/db";
+import {
+  ACCEPTED_MIMES,
+  extForMime,
+  getAssetStorage,
+  MAX_UPLOAD_BYTES,
+} from "@/lib/projects/assets";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/projects/[id]/assets — upload an image asset for a project.
+//
+// Body: multipart/form-data with a single `file` field.
+// Response: { url, filename, contentType, size }
+//
+// Auth: user must own the project. The asset is stored under that project's
+// namespace (LocalFs: <upload-dir>/<id>/<hash>.<ext>; S3: <id>/<hash>.<ext>).
+// Hash-based filename means re-uploading the same file is idempotent.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const runtime = "nodejs";
+
+const ACCEPTED_MIME_SET = new Set<string>(ACCEPTED_MIMES);
+
+export async function POST(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+): Promise<Response> {
+  const session = await auth();
+  if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
+  const { id } = await params;
+
+  // Verify ownership before touching the upload.
+  const rows = await db
+    .select({ id: schema.projects.id })
+    .from(schema.projects)
+    .where(
+      and(
+        eq(schema.projects.id, id),
+        eq(schema.projects.userId, session.user.id),
+      ),
+    )
+    .limit(1);
+  if (rows.length === 0) return json({ error: "not_found" }, 404);
+
+  let form: FormData;
+  try {
+    form = await req.formData();
+  } catch {
+    return json({ error: "invalid_form" }, 400);
+  }
+
+  const file = form.get("file");
+  if (!(file instanceof File)) {
+    return json({ error: "missing_file" }, 400);
+  }
+
+  const size = file.size;
+  if (size <= 0) return json({ error: "empty_file" }, 400);
+  if (size > MAX_UPLOAD_BYTES) {
+    return json(
+      {
+        error: "too_large",
+        message: `Max upload size is ${Math.floor(MAX_UPLOAD_BYTES / 1024 / 1024)} MB`,
+      },
+      413,
+    );
+  }
+
+  const mime = (file.type || "").toLowerCase();
+  if (!ACCEPTED_MIME_SET.has(mime)) {
+    return json(
+      {
+        error: "unsupported_type",
+        message: `Allowed types: ${ACCEPTED_MIMES.join(", ")}`,
+      },
+      415,
+    );
+  }
+
+  const ext = extForMime(mime);
+  if (!ext) return json({ error: "unsupported_type" }, 415);
+
+  let buffer: Buffer;
+  try {
+    const arr = await file.arrayBuffer();
+    buffer = Buffer.from(arr);
+  } catch {
+    return json({ error: "read_failed" }, 500);
+  }
+
+  // Optimize before storage. SVG (vector) and GIF (animation) bypass —
+  // sharp can lose them. Everything else: downscale to 2000px max + WebP
+  // at quality 85. On any sharp failure, ship the original — the page
+  // still works, just heavier.
+  let finalBuffer = buffer;
+  let finalExt = ext;
+  let finalMime = mime;
+  if (mime !== "image/svg+xml" && mime !== "image/gif") {
+    try {
+      finalBuffer = await sharp(buffer)
+        .rotate() // honor EXIF orientation
+        .resize({
+          width: 2000,
+          height: 2000,
+          fit: "inside",
+          withoutEnlargement: true,
+        })
+        .webp({ quality: 85, effort: 4 })
+        .toBuffer();
+      finalExt = "webp";
+      finalMime = "image/webp";
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[projects/assets] sharp optimization failed; using original", err);
+    }
+  }
+
+  try {
+    const storage = getAssetStorage();
+    const meta = await storage.put(id, finalBuffer, finalExt, finalMime);
+    return json(
+      {
+        ...meta,
+        originalBytes: buffer.length,
+      },
+      200,
+    );
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[projects/assets] put failed", err);
+    return json(
+      {
+        error: "storage_failed",
+        message: err instanceof Error ? err.message : "Unknown error",
+      },
+      500,
+    );
+  }
+}
+
+function json(body: unknown, status: number): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
+}

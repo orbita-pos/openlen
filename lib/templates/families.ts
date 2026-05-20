@@ -19,7 +19,12 @@ export type TemplateFamily =
   | "real-estate"
   | "hospitality"
   | "ecommerce"
-  | "climate";
+  | "climate"
+  | "mobile-app"
+  | "education"
+  | "creator"
+  | "open-source"
+  | "music";
 
 export type TemplateMode = "dark" | "light" | "cream";
 export type TemplateStatus = "draft" | "published" | "archived";
@@ -107,5 +112,30 @@ export const TEMPLATE_FAMILY_META: Record<
     label: "Climate / Sustainability",
     tagline:
       "Carbon accounting, ESG dashboards, climate tech. Emission charts, supply chain maps, certification badges.",
+  },
+  "mobile-app": {
+    label: "Mobile App",
+    tagline:
+      "Consumer iOS / Android apps. Phone mockups as hero, App Store + Google Play badges, star ratings, B2C-friendly chroma.",
+  },
+  education: {
+    label: "Course / Education",
+    tagline:
+      "Online courses, cohorts, bootcamps, workshops, memberships. Syllabus grids, instructor bios, enrollment urgency.",
+  },
+  creator: {
+    label: "Creator / Link-in-bio",
+    tagline:
+      "Single-page link hubs — avatar, bio, vertical button stack. For musicians, podcasters, writers, and creators.",
+  },
+  "open-source": {
+    label: "Open Source",
+    tagline:
+      "OSS project home pages — install command, code examples, GitHub stars, contributor community. For frameworks, libraries, and tools.",
+  },
+  music: {
+    label: "Music / Release",
+    tagline:
+      "Album and EP release pages — giant album art, tracklist, streaming badges, tour dates, press quotes, merch.",
   },
 };

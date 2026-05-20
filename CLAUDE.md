@@ -7,17 +7,16 @@ OpenLen is a landing-page builder. Users describe a page (or pick a template, or
 | Path | What lives here |
 |---|---|
 | `app/` | Next.js App Router pages + API routes |
-| `app/new/` | V1 workspace — AI brief → orchestrator → page. Still ships, but V2 is the new entry. |
-| `app/new-v2/` | V2 workspace — 3 entry paths (AI / Template / Paste) + editing + Deploy dropdown. Primary entry point. |
+| `app/new-v2/` | The workspace — 3 entry paths (AI / Template / Paste) + editing + Deploy dropdown. The only workspace route; legacy `/new` was retired and redirects here via middleware. |
 | `app/projects/` | Project list view. "New" buttons route to `/new-v2`. |
 | `app/api/projects/[id]/publish/` | POST/DELETE — claim subdomain + write `project.data.html` to disk via `publishToDir`. |
 | `app/api/projects/from-template/` | POST — clone a curated template's HTML into a new user project. |
 | `app/api/projects/from-html/` | POST — accept raw HTML (typically from claude.ai), create project. |
-| `app/api/generate/` | Orchestrator pipeline (classify → plan → fill → assemble → gates → refine). |
-| `components/workspace-v2/` | V2 workspace UI — TopBar, LeftSidebar (7-tab panel), PreviewArea, panels for each mode. |
+| `app/api/generate/` | POST — free-form AI generation: one Kimi K2.6 streaming call (system prompt from `lib/design-guidance.ts`) → a complete HTML document, saved as a new project. |
+| `app/api/templates/ai-design/` | POST — conversational page editing (the Chat tab). Same Kimi K2.6 engine as `generate`, but editing an existing page; Mode A ops / Mode B full rewrite. |
+| `components/workspace-v2/` | V2 workspace UI — TopBar, LeftSidebar (tabbed panel), PreviewArea, panels for each mode. |
 | `components/templates/_registry.ts` | The 15 (eventually 30) curated templates registry. Adding a new template = one entry here + one `.html` file. |
-| `lib/blocks/` | 15 vendored MIT-licensed block components (hero / features / pricing / etc.) the orchestrator composes pages from. |
-| `lib/orchestrator/` | The AI pipeline + `assemble.ts` which renders blocks → static HTML via `_render-element.ts`. |
+| `lib/design-guidance.ts` | `DESIGN_GUIDANCE` — the distilled design system fed into both AI surfaces (`generate` + `ai-design`). |
 | `lib/publish/filesystem.ts` | `publishToDir` — atomic write to `/var/www/openlen/<sub>/index.html`. |
 | `infra/` | Hetzner deploy stack — nginx wildcard config, systemd unit, deploy.sh, bootstrap. |
 | `public/templates/curated/` | The 15 curated landing HTMLs served directly to the workspace's template gallery. |
@@ -28,21 +27,19 @@ OpenLen is a landing-page builder. Users describe a page (or pick a template, or
 1. **Templates are HTML files, not React components**. The 15 in `public/templates/curated/` are pure HTML (Tailwind CDN + Google Fonts inline). Do NOT port them to TSX — we tried, the user rejected it. Adding more = drop `.html` + register entry.
 2. **Templates never claim subdomains**. Only user projects do, at publish time. `mirror.html` is inspiration; `<myco>.openlen.com` is what a user gets after cloning Mirror + clicking Deploy.
 3. **Published output is static HTML**. `project.data.html` → `/var/www/openlen/<sub>/index.html` → nginx serves direct from disk. No React runtime, no Node hop on the user's published page. Tailwind via CDN is OK.
-4. **`<EditableText>` lives in `lib/blocks/_editable.tsx`** — uses lazy `getEditorContext()` to dodge Next 15's RSC `createContext` ban at module-load time. Do not call `React.createContext` at module top level in any file imported into the RSC graph.
-5. **`react-dom/server` lives only in `lib/orchestrator/_render-element.ts`** — it uses `createRequire` to hide the import from webpack's RSC graph check. Anything else that needs `renderToStaticMarkup` should go through this helper.
-6. **`publishToDir` rejects HTML containing `data-slot-path=`** — that marker means editor-mode HTML and must never reach disk. The orchestrator passes `editorMode: false` to `renderDeterministic` for the canonical `page.html`.
+4. **`publishToDir` rejects HTML containing `data-slot-path=`** — a reserved editor-mode marker. The `from-html`, `from-template`, and `ai-design` paths reject it too (defense in depth) — it must never reach disk or the DB.
 
 ## Workspace V2 mental model
 
 `/new-v2` has an `EntryMode` state machine derived from URL params:
 
 - `?` (no params) → `choosing` → EmptyState with 3 cards (AI / Template / Paste)
-- `?mode=ai` → `ai` → redirects to `/new` (V1 brief flow) for now
+- `?mode=ai` → `ai` → renders the AI brief panel; on submit, `useGeneration` opens an SSE stream to `/api/generate` (one free-form Kimi K2.6 call) and shows a live preview of the streaming HTML, then redirects to `?project=<id>` once the project is saved
 - `?mode=template` → `template` → templates gallery in sidebar + preview-first commit flow in main area
 - `?mode=paste` → `paste` → PastePanel in sidebar (textarea + title)
 - `?project=<id>` → `editing` → workspace with TopBar Deploy, sidebar tabs, full preview
 
-The sidebar locks tabs per entry mode. In `editing`, "flat" projects (template-clone or paste, `data.filledBlocks.length === 0`) lock Content + Design because those panels only apply to AI-generated slot-based pages. Inline-edit toggle in TopBar hides on flat projects for the same reason.
+The sidebar locks tabs per entry mode — in an entry flow only the relevant tab is interactive; in `editing` every tab opens. Every project is a single flat HTML document: `data` is just `{ html }` (there is no slot-based project type — generation is free-form). The Content tab activates in-iframe editing (inline-edit + section reorder + asset replace); the Chat tab redesigns the page end-to-end via Kimi K2.6.
 
 ## Commands
 
@@ -84,6 +81,10 @@ Current state: 15-30 templates live as a static `TEMPLATES` array in `components
 - `template_clone_events` for analytics (which templates get cloned, when, by whom). Logged in `from-template` route handler — no need to move the templates themselves to DB to get usage data.
 
 **Out of scope for both triggers**: AI moderation of submitted HTMLs, fraud detection, abuse reports, take-down flow. Those land if/when the gallery is publicly open.
+
+**Design surface philosophy.** Customization of a project's design happens exclusively in the **Chat tab** (`components/workspace-v2/panels/chat-panel.tsx`). It routes to the `AIDesignChat` sub-component which talks to `/api/templates/ai-design` (Kimi K2.6 streaming SSE). No swatches, no font dropdowns, no vibes, no variations, no manual controls of any kind. Kimi receives the full current HTML + the user's request and streams back a complete new page (reasoning text + new HTML). The AI has full creative freedom — token tweaks, section rewrites, full restructuring are all in scope per request. The Content tab is a separate surface — direct in-iframe text editing, section reorder, and asset replace — not design controls.
+
+Architecturally: don't add manual controls back. Don't introduce "quick presets" or vibe cards. Don't add a parallel design-controls panel. The user explicitly rejected those after we shipped a token-diff prototype — that approach treated AI as a glorified color picker and was the wrong tier of ambition for the 2026 positioning. Chat is the surface. If users want shortcuts, the chat has quick-prompt chips that fill the input.
 
 ## Other context worth knowing
 

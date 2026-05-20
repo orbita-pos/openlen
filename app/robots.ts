@@ -10,7 +10,6 @@ export default function robots(): MetadataRoute.Robots {
         allow: ["/", "/templates", "/templates/curated/"],
         disallow: [
           "/api/",
-          "/new",
           "/new-v2",
           "/projects",
           "/login",
