@@ -7,6 +7,8 @@
 // and a centered pulsing brand mark. No skeletons of unknown page content —
 // that would mislead the user about what's coming.
 
+import { OpenLenMark } from "@/components/openlen-logo";
+
 export default function GlobalLoading() {
   return (
     <div className="fixed inset-0 z-[100] pointer-events-none">
@@ -20,10 +22,8 @@ export default function GlobalLoading() {
       />
       <div className="flex h-full items-center justify-center">
         <div className="relative inline-flex h-10 w-10 items-center justify-center">
-          <span className="absolute inset-0 rounded-xl bg-coral-500 opacity-15 animate-ping" />
-          <span className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl bg-coral-700 text-white font-bold text-[18px] leading-none shadow-[0_8px_24px_-8px_rgba(255,90,54,0.6)]">
-            い
-          </span>
+          <span className="absolute inset-0 rounded-full bg-coral-500 opacity-20 animate-ping" />
+          <OpenLenMark className="relative h-10 w-10" />
         </div>
       </div>
       <style>{`

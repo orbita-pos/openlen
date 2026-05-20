@@ -6,6 +6,7 @@ import { ArrowRight, Moon, Star, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GithubIcon } from "@/components/ui/brand-icons";
 import { cn } from "@/lib/cn";
+import { OpenLenMark } from "@/components/openlen-logo";
 
 const links = [
   { label: "Templates", href: "/templates" },
@@ -39,13 +40,10 @@ export function Nav({ dark, onToggleDark }: NavProps) {
     >
       <div className="mx-auto max-w-6xl px-6 h-14 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group">
-          <span className="relative inline-flex h-6 w-6 items-center justify-center">
-            <span className="absolute inset-0 rounded-md bg-coral-500" />
-            <span className="relative font-bold text-white text-[13px] leading-none">
-              い
-            </span>
+          <OpenLenMark className="h-6 w-6 shrink-0" />
+          <span className="font-semibold tracking-tight text-[15px]">
+            Open<span className="text-coral-500 dark:text-coral-400">Len</span>
           </span>
-          <span className="font-semibold tracking-tight text-[15px]">OpenLen</span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-1 text-sm">

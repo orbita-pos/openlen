@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Moon, Sun } from "lucide-react";
 import { useDarkMode } from "@/lib/use-dark-mode";
+import { OpenLenMark } from "@/components/openlen-logo";
 import type { ReactNode } from "react";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -27,14 +28,9 @@ export function AuthShell({ children }: { children: ReactNode }) {
 
       <header className="relative z-10 h-14 px-5 sm:px-8 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group">
-          <span className="relative inline-flex h-6 w-6 items-center justify-center">
-            <span className="absolute inset-0 rounded-md bg-coral-500" />
-            <span className="relative font-bold text-white text-[13px] leading-none">
-              い
-            </span>
-          </span>
+          <OpenLenMark className="h-6 w-6 shrink-0" />
           <span className="font-semibold tracking-tight text-[14px]">
-            OpenLen
+            Open<span className="text-coral-500 dark:text-coral-400">Len</span>
           </span>
         </Link>
         <button

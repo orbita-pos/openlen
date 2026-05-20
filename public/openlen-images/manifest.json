@@ -1,0 +1,915 @@
+{
+  "version": 1,
+  "generated": "2026-05-20T01:35:13.183Z",
+  "count": 60,
+  "images": [
+    {
+      "id": "01-warm-glassy",
+      "promptNum": 1,
+      "style": "3d-abstract",
+      "family": [
+        "saas",
+        "portfolio"
+      ],
+      "alt": "Three floating frosted glass forms in warm peach gradient",
+      "src": {
+        "hero": "/openlen-images/01-warm-glassy-1920.webp",
+        "tablet": "/openlen-images/01-warm-glassy-800.webp",
+        "thumb": "/openlen-images/01-warm-glassy-400.webp"
+      }
+    },
+    {
+      "id": "02-chrome-ribbon",
+      "promptNum": 2,
+      "style": "3d-abstract",
+      "family": [
+        "agency",
+        "ecommerce",
+        "editorial"
+      ],
+      "alt": "Liquid chrome ribbon sculpture in neutral cream studio",
+      "src": {
+        "hero": "/openlen-images/02-chrome-ribbon-1920.webp",
+        "tablet": "/openlen-images/02-chrome-ribbon-800.webp",
+        "thumb": "/openlen-images/02-chrome-ribbon-400.webp"
+      }
+    },
+    {
+      "id": "03-dark-aurora",
+      "promptNum": 3,
+      "style": "3d-abstract",
+      "family": [
+        "ai-ml",
+        "technical-minimal"
+      ],
+      "alt": "Glowing wireframe form in deep aurora indigo-magenta gradient",
+      "src": {
+        "hero": "/openlen-images/03-dark-aurora-1920.webp",
+        "tablet": "/openlen-images/03-dark-aurora-800.webp",
+        "thumb": "/openlen-images/03-dark-aurora-400.webp"
+      }
+    },
+    {
+      "id": "04-clay-primitives",
+      "promptNum": 4,
+      "style": "3d-abstract",
+      "family": [
+        "saas",
+        "portfolio"
+      ],
+      "alt": "Cluster of pastel clay primitives in warm peach scene",
+      "src": {
+        "hero": "/openlen-images/04-clay-primitives-1920.webp",
+        "tablet": "/openlen-images/04-clay-primitives-800.webp",
+        "thumb": "/openlen-images/04-clay-primitives-400.webp"
+      }
+    },
+    {
+      "id": "05-crystalline-shards",
+      "promptNum": 5,
+      "style": "3d-abstract",
+      "family": [
+        "ecommerce",
+        "editorial"
+      ],
+      "alt": "Tight cluster of translucent amber and rose crystal shards on dark taupe",
+      "src": {
+        "hero": "/openlen-images/05-crystalline-shards-1920.webp",
+        "tablet": "/openlen-images/05-crystalline-shards-800.webp",
+        "thumb": "/openlen-images/05-crystalline-shards-400.webp"
+      }
+    },
+    {
+      "id": "06-liquid-mercury",
+      "promptNum": 6,
+      "style": "3d-abstract",
+      "family": [
+        "technical-minimal",
+        "ai-ml"
+      ],
+      "alt": "Iridescent mercury pool with suspended droplets on deep charcoal",
+      "src": {
+        "hero": "/openlen-images/06-liquid-mercury-1920.webp",
+        "tablet": "/openlen-images/06-liquid-mercury-800.webp",
+        "thumb": "/openlen-images/06-liquid-mercury-400.webp"
+      }
+    },
+    {
+      "id": "07-bokeh-aurora",
+      "promptNum": 7,
+      "style": "3d-abstract",
+      "family": [
+        "portfolio",
+        "editorial"
+      ],
+      "alt": "Warm sunset bokeh particles drifting through volumetric haze",
+      "src": {
+        "hero": "/openlen-images/07-bokeh-aurora-1920.webp",
+        "tablet": "/openlen-images/07-bokeh-aurora-800.webp",
+        "thumb": "/openlen-images/07-bokeh-aurora-400.webp"
+      }
+    },
+    {
+      "id": "08-brushed-tiles",
+      "promptNum": 8,
+      "style": "3d-abstract",
+      "family": [
+        "documentation",
+        "technical-minimal"
+      ],
+      "alt": "Isometric grid of brushed aluminum tiles with raking sidelight",
+      "src": {
+        "hero": "/openlen-images/08-brushed-tiles-1920.webp",
+        "tablet": "/openlen-images/08-brushed-tiles-800.webp",
+        "thumb": "/openlen-images/08-brushed-tiles-400.webp"
+      }
+    },
+    {
+      "id": "09-draped-silk",
+      "promptNum": 9,
+      "style": "3d-abstract",
+      "family": [
+        "ecommerce",
+        "editorial"
+      ],
+      "alt": "Champagne silk fabric draped over unseen form, macro detail",
+      "src": {
+        "hero": "/openlen-images/09-draped-silk-1920.webp",
+        "tablet": "/openlen-images/09-draped-silk-800.webp",
+        "thumb": "/openlen-images/09-draped-silk-400.webp"
+      }
+    },
+    {
+      "id": "10-topo-layers",
+      "promptNum": 10,
+      "style": "3d-abstract",
+      "family": [
+        "fintech",
+        "saas",
+        "ai-ml"
+      ],
+      "alt": "Stacked translucent topographic layers in cool teal and navy",
+      "src": {
+        "hero": "/openlen-images/10-topo-layers-1920.webp",
+        "tablet": "/openlen-images/10-topo-layers-800.webp",
+        "thumb": "/openlen-images/10-topo-layers-400.webp"
+      }
+    },
+    {
+      "id": "11-neon-tunnel",
+      "promptNum": 11,
+      "style": "3d-abstract",
+      "family": [
+        "ai-ml",
+        "editorial"
+      ],
+      "alt": "Cinematic volumetric tunnel of light receding into magenta vanishing point",
+      "src": {
+        "hero": "/openlen-images/11-neon-tunnel-1920.webp",
+        "tablet": "/openlen-images/11-neon-tunnel-800.webp",
+        "thumb": "/openlen-images/11-neon-tunnel-400.webp"
+      }
+    },
+    {
+      "id": "12-marble-sculpture",
+      "promptNum": 12,
+      "style": "3d-abstract",
+      "family": [
+        "agency",
+        "portfolio",
+        "editorial"
+      ],
+      "alt": "Abstract Carrara marble sculpture in warm gallery sweep",
+      "src": {
+        "hero": "/openlen-images/12-marble-sculpture-1920.webp",
+        "tablet": "/openlen-images/12-marble-sculpture-800.webp",
+        "thumb": "/openlen-images/12-marble-sculpture-400.webp"
+      }
+    },
+    {
+      "id": "13-iridescent-wave",
+      "promptNum": 13,
+      "style": "3d-abstract",
+      "family": [
+        "saas",
+        "ai-ml",
+        "editorial"
+      ],
+      "alt": "Frozen iridescent fluid wave arching across deep navy",
+      "src": {
+        "hero": "/openlen-images/13-iridescent-wave-1920.webp",
+        "tablet": "/openlen-images/13-iridescent-wave-800.webp",
+        "thumb": "/openlen-images/13-iridescent-wave-400.webp"
+      }
+    },
+    {
+      "id": "14-cool-glassy",
+      "promptNum": 14,
+      "style": "3d-abstract",
+      "family": [
+        "fintech",
+        "saas"
+      ],
+      "alt": "Floating frosted glass forms in cool ice-blue to slate gradient",
+      "src": {
+        "hero": "/openlen-images/14-cool-glassy-1920.webp",
+        "tablet": "/openlen-images/14-cool-glassy-800.webp",
+        "thumb": "/openlen-images/14-cool-glassy-400.webp"
+      }
+    },
+    {
+      "id": "15-folded-paper",
+      "promptNum": 15,
+      "style": "3d-abstract",
+      "family": [
+        "agency",
+        "portfolio",
+        "editorial"
+      ],
+      "alt": "Sculptural origami-like folded paper form in warm ivory",
+      "src": {
+        "hero": "/openlen-images/15-folded-paper-1920.webp",
+        "tablet": "/openlen-images/15-folded-paper-800.webp",
+        "thumb": "/openlen-images/15-folded-paper-400.webp"
+      }
+    },
+    {
+      "id": "16-light-ribbon",
+      "promptNum": 16,
+      "style": "3d-abstract",
+      "family": [
+        "technical-minimal",
+        "saas",
+        "ai-ml"
+      ],
+      "alt": "Glowing ribbon of light tracing an S-curve through dark ink-blue fog",
+      "src": {
+        "hero": "/openlen-images/16-light-ribbon-1920.webp",
+        "tablet": "/openlen-images/16-light-ribbon-800.webp",
+        "thumb": "/openlen-images/16-light-ribbon-400.webp"
+      }
+    },
+    {
+      "id": "17-botanical-macro",
+      "promptNum": 17,
+      "style": "3d-abstract",
+      "family": [
+        "health-tech",
+        "ecommerce"
+      ],
+      "alt": "Backlit translucent botanical leaves catching golden hour sun",
+      "src": {
+        "hero": "/openlen-images/17-botanical-macro-1920.webp",
+        "tablet": "/openlen-images/17-botanical-macro-800.webp",
+        "thumb": "/openlen-images/17-botanical-macro-400.webp"
+      }
+    },
+    {
+      "id": "18-stacked-stones",
+      "promptNum": 18,
+      "style": "3d-abstract",
+      "family": [
+        "health-tech",
+        "editorial"
+      ],
+      "alt": "Stacked smooth river stones in soft warm light, wabi-sabi",
+      "src": {
+        "hero": "/openlen-images/18-stacked-stones-1920.webp",
+        "tablet": "/openlen-images/18-stacked-stones-800.webp",
+        "thumb": "/openlen-images/18-stacked-stones-400.webp"
+      }
+    },
+    {
+      "id": "20-cloud-forms",
+      "promptNum": 20,
+      "style": "3d-abstract",
+      "family": [
+        "health-tech",
+        "editorial"
+      ],
+      "alt": "Soft volumetric pastel cloud forms drifting in sunrise sky",
+      "src": {
+        "hero": "/openlen-images/20-cloud-forms-1920.webp",
+        "tablet": "/openlen-images/20-cloud-forms-800.webp",
+        "thumb": "/openlen-images/20-cloud-forms-400.webp"
+      }
+    },
+    {
+      "id": "21-water-droplet",
+      "promptNum": 21,
+      "style": "3d-abstract",
+      "family": [
+        "health-tech",
+        "ecommerce"
+      ],
+      "alt": "Hyper-real macro of a crystal water droplet on translucent surface",
+      "src": {
+        "hero": "/openlen-images/21-water-droplet-1920.webp",
+        "tablet": "/openlen-images/21-water-droplet-800.webp",
+        "thumb": "/openlen-images/21-water-droplet-400.webp"
+      }
+    },
+    {
+      "id": "22-confetti-burst",
+      "promptNum": 22,
+      "style": "3d-abstract",
+      "family": [
+        "event",
+        "pre-launch"
+      ],
+      "alt": "Frozen mid-air burst of colorful confetti and curling ribbons",
+      "src": {
+        "hero": "/openlen-images/22-confetti-burst-1920.webp",
+        "tablet": "/openlen-images/22-confetti-burst-800.webp",
+        "thumb": "/openlen-images/22-confetti-burst-400.webp"
+      }
+    },
+    {
+      "id": "23-light-beam",
+      "promptNum": 23,
+      "style": "3d-abstract",
+      "family": [
+        "saas",
+        "agency",
+        "editorial"
+      ],
+      "alt": "Dramatic warm light beam cutting diagonally through volumetric fog",
+      "src": {
+        "hero": "/openlen-images/23-light-beam-1920.webp",
+        "tablet": "/openlen-images/23-light-beam-800.webp",
+        "thumb": "/openlen-images/23-light-beam-400.webp"
+      }
+    },
+    {
+      "id": "24-sound-wave-bars",
+      "promptNum": 24,
+      "style": "3d-abstract",
+      "family": [
+        "saas",
+        "portfolio",
+        "editorial"
+      ],
+      "alt": "3D equalizer landscape of vertical bars in warm magenta-to-yellow gradient",
+      "src": {
+        "hero": "/openlen-images/24-sound-wave-bars-1920.webp",
+        "tablet": "/openlen-images/24-sound-wave-bars-800.webp",
+        "thumb": "/openlen-images/24-sound-wave-bars-400.webp"
+      }
+    },
+    {
+      "id": "25-holographic-plinths",
+      "promptNum": 25,
+      "style": "3d-abstract",
+      "family": [
+        "fintech",
+        "technical-minimal",
+        "ai-ml"
+      ],
+      "alt": "Floating crystal plinths in cool cyber space with subtle grid",
+      "src": {
+        "hero": "/openlen-images/25-holographic-plinths-1920.webp",
+        "tablet": "/openlen-images/25-holographic-plinths-800.webp",
+        "thumb": "/openlen-images/25-holographic-plinths-400.webp"
+      }
+    },
+    {
+      "id": "26-paper-map",
+      "promptNum": 26,
+      "style": "3d-abstract",
+      "family": [
+        "hospitality",
+        "portfolio",
+        "editorial"
+      ],
+      "alt": "Folded warm paper map abstraction with soft topographic creases",
+      "src": {
+        "hero": "/openlen-images/26-paper-map-1920.webp",
+        "tablet": "/openlen-images/26-paper-map-800.webp",
+        "thumb": "/openlen-images/26-paper-map-400.webp"
+      }
+    },
+    {
+      "id": "27-marble-swirl",
+      "promptNum": 27,
+      "style": "3d-abstract",
+      "family": [
+        "ecommerce",
+        "editorial"
+      ],
+      "alt": "Macro of swirling marbled oil pattern in burgundy and champagne",
+      "src": {
+        "hero": "/openlen-images/27-marble-swirl-1920.webp",
+        "tablet": "/openlen-images/27-marble-swirl-800.webp",
+        "thumb": "/openlen-images/27-marble-swirl-400.webp"
+      }
+    },
+    {
+      "id": "28-orbs-velvet",
+      "promptNum": 28,
+      "style": "3d-abstract",
+      "family": [
+        "ecommerce",
+        "editorial"
+      ],
+      "alt": "Cluster of glass orbs resting on deep emerald velvet fabric",
+      "src": {
+        "hero": "/openlen-images/28-orbs-velvet-1920.webp",
+        "tablet": "/openlen-images/28-orbs-velvet-800.webp",
+        "thumb": "/openlen-images/28-orbs-velvet-400.webp"
+      }
+    },
+    {
+      "id": "29-pastel-landscape",
+      "promptNum": 29,
+      "style": "3d-abstract",
+      "family": [
+        "saas",
+        "portfolio",
+        "editorial"
+      ],
+      "alt": "Stylized mini 3D landscape with pastel hills, abstract sun, soft clouds",
+      "src": {
+        "hero": "/openlen-images/29-pastel-landscape-1920.webp",
+        "tablet": "/openlen-images/29-pastel-landscape-800.webp",
+        "thumb": "/openlen-images/29-pastel-landscape-400.webp"
+      }
+    },
+    {
+      "id": "30-iridescent-threads",
+      "promptNum": 30,
+      "style": "3d-abstract",
+      "family": [
+        "ecommerce",
+        "editorial",
+        "agency"
+      ],
+      "alt": "Macro of woven iridescent threads with oil-slick shimmer on dark warm",
+      "src": {
+        "hero": "/openlen-images/30-iridescent-threads-1920.webp",
+        "tablet": "/openlen-images/30-iridescent-threads-800.webp",
+        "thumb": "/openlen-images/30-iridescent-threads-400.webp"
+      }
+    },
+    {
+      "id": "31-person-at-desk",
+      "promptNum": 31,
+      "style": "claymorph",
+      "family": [
+        "saas",
+        "portfolio"
+      ],
+      "alt": "Stylized claymorph character at floating desk with laptop, lavender skin",
+      "src": {
+        "hero": "/openlen-images/31-person-at-desk-1920.webp",
+        "tablet": "/openlen-images/31-person-at-desk-800.webp",
+        "thumb": "/openlen-images/31-person-at-desk-400.webp"
+      }
+    },
+    {
+      "id": "32-two-collaborating",
+      "promptNum": 32,
+      "style": "claymorph",
+      "family": [
+        "saas",
+        "agency"
+      ],
+      "alt": "Two claymorph characters pointing at floating holographic screen between them",
+      "src": {
+        "hero": "/openlen-images/32-two-collaborating-1920.webp",
+        "tablet": "/openlen-images/32-two-collaborating-800.webp",
+        "thumb": "/openlen-images/32-two-collaborating-400.webp"
+      }
+    },
+    {
+      "id": "33-climbing-platforms",
+      "promptNum": 33,
+      "style": "claymorph",
+      "family": [
+        "saas",
+        "editorial"
+      ],
+      "alt": "Claymorph character climbing diagonal floating pastel platforms toward abstract sun",
+      "src": {
+        "hero": "/openlen-images/33-climbing-platforms-1920.webp",
+        "tablet": "/openlen-images/33-climbing-platforms-800.webp",
+        "thumb": "/openlen-images/33-climbing-platforms-400.webp"
+      }
+    },
+    {
+      "id": "34-meditating",
+      "promptNum": 34,
+      "style": "claymorph",
+      "family": [
+        "health-tech"
+      ],
+      "alt": "Claymorph character meditating cross-legged on cloud-like platform",
+      "src": {
+        "hero": "/openlen-images/34-meditating-1920.webp",
+        "tablet": "/openlen-images/34-meditating-800.webp",
+        "thumb": "/openlen-images/34-meditating-400.webp"
+      }
+    },
+    {
+      "id": "35-group-celebration",
+      "promptNum": 35,
+      "style": "claymorph",
+      "family": [
+        "event",
+        "pre-launch",
+        "saas"
+      ],
+      "alt": "Four claymorph characters celebrating with arms raised and frozen confetti",
+      "src": {
+        "hero": "/openlen-images/35-group-celebration-1920.webp",
+        "tablet": "/openlen-images/35-group-celebration-800.webp",
+        "thumb": "/openlen-images/35-group-celebration-400.webp"
+      }
+    },
+    {
+      "id": "36-reading",
+      "promptNum": 36,
+      "style": "claymorph",
+      "family": [
+        "editorial",
+        "saas"
+      ],
+      "alt": "Claymorph character reading book with floating idea icons around them",
+      "src": {
+        "hero": "/openlen-images/36-reading-1920.webp",
+        "tablet": "/openlen-images/36-reading-800.webp",
+        "thumb": "/openlen-images/36-reading-400.webp"
+      }
+    },
+    {
+      "id": "37-stretching",
+      "promptNum": 37,
+      "style": "claymorph",
+      "family": [
+        "health-tech"
+      ],
+      "alt": "Claymorph character in graceful yoga stretch balanced on one leg",
+      "src": {
+        "hero": "/openlen-images/37-stretching-1920.webp",
+        "tablet": "/openlen-images/37-stretching-800.webp",
+        "thumb": "/openlen-images/37-stretching-400.webp"
+      }
+    },
+    {
+      "id": "38-two-chatting",
+      "promptNum": 38,
+      "style": "claymorph",
+      "family": [
+        "saas",
+        "portfolio"
+      ],
+      "alt": "Two claymorph characters facing each other at a small floating round table",
+      "src": {
+        "hero": "/openlen-images/38-two-chatting-1920.webp",
+        "tablet": "/openlen-images/38-two-chatting-800.webp",
+        "thumb": "/openlen-images/38-two-chatting-400.webp"
+      }
+    },
+    {
+      "id": "39-team-lineup",
+      "promptNum": 39,
+      "style": "claymorph",
+      "family": [
+        "agency",
+        "saas",
+        "portfolio"
+      ],
+      "alt": "Four diverse claymorph characters standing shoulder-to-shoulder in friendly lineup",
+      "src": {
+        "hero": "/openlen-images/39-team-lineup-1920.webp",
+        "tablet": "/openlen-images/39-team-lineup-800.webp",
+        "thumb": "/openlen-images/39-team-lineup-400.webp"
+      }
+    },
+    {
+      "id": "40-shopping-packages",
+      "promptNum": 40,
+      "style": "claymorph",
+      "family": [
+        "ecommerce",
+        "commerce"
+      ],
+      "alt": "Claymorph character surrounded by 3-4 floating gift boxes and shopping bags",
+      "src": {
+        "hero": "/openlen-images/40-shopping-packages-1920.webp",
+        "tablet": "/openlen-images/40-shopping-packages-800.webp",
+        "thumb": "/openlen-images/40-shopping-packages-400.webp"
+      }
+    },
+    {
+      "id": "41-studio-minimalist",
+      "promptNum": 41,
+      "style": "fashion-editorial",
+      "family": [
+        "ecommerce",
+        "editorial"
+      ],
+      "alt": "Editorial portrait of model in minimalist cream linen oversized suit",
+      "src": {
+        "hero": "/openlen-images/41-studio-minimalist-1920.webp",
+        "tablet": "/openlen-images/41-studio-minimalist-800.webp",
+        "thumb": "/openlen-images/41-studio-minimalist-400.webp"
+      }
+    },
+    {
+      "id": "42-golden-hour-wheat",
+      "promptNum": 42,
+      "style": "fashion-editorial",
+      "family": [
+        "ecommerce",
+        "editorial"
+      ],
+      "alt": "Golden hour outdoor lifestyle of model walking through wheat field in rust knit sweater",
+      "src": {
+        "hero": "/openlen-images/42-golden-hour-wheat-1920.webp",
+        "tablet": "/openlen-images/42-golden-hour-wheat-800.webp",
+        "thumb": "/openlen-images/42-golden-hour-wheat-400.webp"
+      }
+    },
+    {
+      "id": "43-urban-streetwear",
+      "promptNum": 43,
+      "style": "fashion-editorial",
+      "family": [
+        "ecommerce",
+        "editorial"
+      ],
+      "alt": "Urban editorial of model leaning against graffiti wall in cobalt streetwear hoodie",
+      "src": {
+        "hero": "/openlen-images/43-urban-streetwear-1920.webp",
+        "tablet": "/openlen-images/43-urban-streetwear-800.webp",
+        "thumb": "/openlen-images/43-urban-streetwear-400.webp"
+      }
+    },
+    {
+      "id": "44-duo-romantic",
+      "promptNum": 44,
+      "style": "fashion-editorial",
+      "family": [
+        "ecommerce",
+        "editorial"
+      ],
+      "alt": "Soft duo editorial of two models close together in cream knit dress and oat shirt",
+      "src": {
+        "hero": "/openlen-images/44-duo-romantic-1920.webp",
+        "tablet": "/openlen-images/44-duo-romantic-800.webp",
+        "thumb": "/openlen-images/44-duo-romantic-400.webp"
+      }
+    },
+    {
+      "id": "45-hand-handbag",
+      "promptNum": 45,
+      "style": "fashion-editorial",
+      "family": [
+        "ecommerce",
+        "editorial"
+      ],
+      "alt": "Macro detail of hand emerging from camel coat sleeve holding tan leather handbag",
+      "src": {
+        "hero": "/openlen-images/45-hand-handbag-1920.webp",
+        "tablet": "/openlen-images/45-hand-handbag-800.webp",
+        "thumb": "/openlen-images/45-hand-handbag-400.webp"
+      }
+    },
+    {
+      "id": "46-athletic-stretch",
+      "promptNum": 46,
+      "style": "fashion-editorial",
+      "family": [
+        "ecommerce",
+        "health-tech"
+      ],
+      "alt": "Editorial athletic stretch of model in sage green sports bra and leggings",
+      "src": {
+        "hero": "/openlen-images/46-athletic-stretch-1920.webp",
+        "tablet": "/openlen-images/46-athletic-stretch-800.webp",
+        "thumb": "/openlen-images/46-athletic-stretch-400.webp"
+      }
+    },
+    {
+      "id": "47-group-three",
+      "promptNum": 47,
+      "style": "fashion-editorial",
+      "family": [
+        "ecommerce",
+        "editorial"
+      ],
+      "alt": "Editorial group of three diverse models in cream, mustard and terracotta outfits",
+      "src": {
+        "hero": "/openlen-images/47-group-three-1920.webp",
+        "tablet": "/openlen-images/47-group-three-800.webp",
+        "thumb": "/openlen-images/47-group-three-400.webp"
+      }
+    },
+    {
+      "id": "48-back-chignon",
+      "promptNum": 48,
+      "style": "fashion-editorial",
+      "family": [
+        "ecommerce",
+        "editorial"
+      ],
+      "alt": "Dramatic back portrait of model in charcoal silk gown with sleek low chignon",
+      "src": {
+        "hero": "/openlen-images/48-back-chignon-1920.webp",
+        "tablet": "/openlen-images/48-back-chignon-800.webp",
+        "thumb": "/openlen-images/48-back-chignon-400.webp"
+      }
+    },
+    {
+      "id": "49-vintage-70s",
+      "promptNum": 49,
+      "style": "fashion-editorial",
+      "family": [
+        "ecommerce",
+        "editorial"
+      ],
+      "alt": "Vintage 70s portrait of model seated in mustard corduroy jacket and rust trousers",
+      "src": {
+        "hero": "/openlen-images/49-vintage-70s-1920.webp",
+        "tablet": "/openlen-images/49-vintage-70s-800.webp",
+        "thumb": "/openlen-images/49-vintage-70s-400.webp"
+      }
+    },
+    {
+      "id": "50-loungewear-sofa",
+      "promptNum": 50,
+      "style": "fashion-editorial",
+      "family": [
+        "ecommerce",
+        "editorial"
+      ],
+      "alt": "Cozy lifestyle portrait of model on cream linen sofa with morning window light",
+      "src": {
+        "hero": "/openlen-images/50-loungewear-sofa-1920.webp",
+        "tablet": "/openlen-images/50-loungewear-sofa-800.webp",
+        "thumb": "/openlen-images/50-loungewear-sofa-400.webp"
+      }
+    },
+    {
+      "id": "51-avant-garde",
+      "promptNum": 51,
+      "style": "fashion-editorial",
+      "family": [
+        "ecommerce",
+        "editorial"
+      ],
+      "alt": "Sculptural avant-garde editorial of model in ivory architectural dress in empty gallery",
+      "src": {
+        "hero": "/openlen-images/51-avant-garde-1920.webp",
+        "tablet": "/openlen-images/51-avant-garde-800.webp",
+        "thumb": "/openlen-images/51-avant-garde-400.webp"
+      }
+    },
+    {
+      "id": "52-brutalist-concrete",
+      "promptNum": 52,
+      "style": "3d-abstract",
+      "family": [
+        "real-estate",
+        "agency"
+      ],
+      "alt": "Monolithic brutalist concrete sculpture with raking architectural light",
+      "src": {
+        "hero": "/openlen-images/52-brutalist-concrete-1920.webp",
+        "tablet": "/openlen-images/52-brutalist-concrete-800.webp",
+        "thumb": "/openlen-images/52-brutalist-concrete-400.webp"
+      }
+    },
+    {
+      "id": "53-building-cluster",
+      "promptNum": 53,
+      "style": "3d-abstract",
+      "family": [
+        "real-estate"
+      ],
+      "alt": "Cluster of simplified 3D architectural building forms like a warm scale model",
+      "src": {
+        "hero": "/openlen-images/53-building-cluster-1920.webp",
+        "tablet": "/openlen-images/53-building-cluster-800.webp",
+        "thumb": "/openlen-images/53-building-cluster-400.webp"
+      }
+    },
+    {
+      "id": "54-sunlit-interior",
+      "promptNum": 54,
+      "style": "3d-abstract",
+      "family": [
+        "real-estate",
+        "hospitality"
+      ],
+      "alt": "Serene sunlit minimalist architectural interior with long soft light shapes",
+      "src": {
+        "hero": "/openlen-images/54-sunlit-interior-1920.webp",
+        "tablet": "/openlen-images/54-sunlit-interior-800.webp",
+        "thumb": "/openlen-images/54-sunlit-interior-400.webp"
+      }
+    },
+    {
+      "id": "55-wind-turbines",
+      "promptNum": 55,
+      "style": "3d-abstract",
+      "family": [
+        "climate"
+      ],
+      "alt": "Stylized 3D wind turbines on rolling terrain under clean daylight",
+      "src": {
+        "hero": "/openlen-images/55-wind-turbines-1920.webp",
+        "tablet": "/openlen-images/55-wind-turbines-800.webp",
+        "thumb": "/openlen-images/55-wind-turbines-400.webp"
+      }
+    },
+    {
+      "id": "56-forest-canopy",
+      "promptNum": 56,
+      "style": "3d-abstract",
+      "family": [
+        "climate",
+        "health-tech"
+      ],
+      "alt": "Layered atmospheric forest canopy with golden god-rays through mist",
+      "src": {
+        "hero": "/openlen-images/56-forest-canopy-1920.webp",
+        "tablet": "/openlen-images/56-forest-canopy-800.webp",
+        "thumb": "/openlen-images/56-forest-canopy-400.webp"
+      }
+    },
+    {
+      "id": "57-carbon-data",
+      "promptNum": 57,
+      "style": "3d-abstract",
+      "family": [
+        "climate",
+        "fintech"
+      ],
+      "alt": "Descending frosted-glass data columns shifting from amber to teal",
+      "src": {
+        "hero": "/openlen-images/57-carbon-data-1920.webp",
+        "tablet": "/openlen-images/57-carbon-data-800.webp",
+        "thumb": "/openlen-images/57-carbon-data-400.webp"
+      }
+    },
+    {
+      "id": "58-restaurant-glow",
+      "promptNum": 58,
+      "style": "3d-abstract",
+      "family": [
+        "hospitality"
+      ],
+      "alt": "Intimate restaurant interior glowing at golden hour with pendant light",
+      "src": {
+        "hero": "/openlen-images/58-restaurant-glow-1920.webp",
+        "tablet": "/openlen-images/58-restaurant-glow-800.webp",
+        "thumb": "/openlen-images/58-restaurant-glow-400.webp"
+      }
+    },
+    {
+      "id": "59-cafe-table",
+      "promptNum": 59,
+      "style": "3d-abstract",
+      "family": [
+        "hospitality"
+      ],
+      "alt": "Soft still-life of a cafe table with ceramic cup in warm morning light",
+      "src": {
+        "hero": "/openlen-images/59-cafe-table-1920.webp",
+        "tablet": "/openlen-images/59-cafe-table-800.webp",
+        "thumb": "/openlen-images/59-cafe-table-400.webp"
+      }
+    },
+    {
+      "id": "60-doc-panels",
+      "promptNum": 60,
+      "style": "3d-abstract",
+      "family": [
+        "documentation",
+        "technical-minimal"
+      ],
+      "alt": "Floating translucent documentation panels stacked in gentle depth",
+      "src": {
+        "hero": "/openlen-images/60-doc-panels-1920.webp",
+        "tablet": "/openlen-images/60-doc-panels-800.webp",
+        "thumb": "/openlen-images/60-doc-panels-400.webp"
+      }
+    },
+    {
+      "id": "61-spotlight-orb",
+      "promptNum": 61,
+      "style": "3d-abstract",
+      "family": [
+        "pre-launch",
+        "event"
+      ],
+      "alt": "Luminous orb suspended under a dramatic spotlight beam in dark atmospheric space",
+      "src": {
+        "hero": "/openlen-images/61-spotlight-orb-1920.webp",
+        "tablet": "/openlen-images/61-spotlight-orb-800.webp",
+        "thumb": "/openlen-images/61-spotlight-orb-400.webp"
+      }
+    }
+  ]
+}

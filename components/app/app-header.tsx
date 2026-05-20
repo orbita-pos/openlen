@@ -6,6 +6,8 @@ import { signOut, useSession } from "next-auth/react";
 import { ChevronDown, Moon, Sun, X } from "lucide-react";
 import { useDarkMode } from "@/lib/use-dark-mode";
 import { cn } from "@/lib/cn";
+import { CreditPill } from "@/components/app/credit-pill";
+import { OpenLenMark } from "@/components/openlen-logo";
 import type { ReactNode } from "react";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -34,14 +36,9 @@ export function AppHeader({ nav, actions }: AppHeaderProps) {
       <div className="h-full px-4 sm:px-6 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <Link href="/" className="flex items-center gap-2 shrink-0">
-            <span className="relative inline-flex h-6 w-6 items-center justify-center">
-              <span className="absolute inset-0 rounded-md bg-coral-500" />
-              <span className="relative font-bold text-white text-[13px] leading-none">
-                い
-              </span>
-            </span>
+            <OpenLenMark className="h-6 w-6 shrink-0" />
             <span className="hidden sm:inline font-semibold tracking-tight text-[14px]">
-              OpenLen
+              Open<span className="text-coral-500 dark:text-coral-400">Len</span>
             </span>
           </Link>
           {nav && (
@@ -57,6 +54,7 @@ export function AppHeader({ nav, actions }: AppHeaderProps) {
           {actions && (
             <div className="hidden sm:block h-5 w-px bg-zinc-200 dark:bg-zinc-800 mx-1" />
           )}
+          <CreditPill />
           <button
             type="button"
             onClick={toggleDark}
