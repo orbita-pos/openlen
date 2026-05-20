@@ -64,3 +64,7 @@ lighthouse-*.json
 # Local-filesystem fallback for template object storage (used when no R2
 # credentials are configured). Seeded files re-uploaded on demand.
 public/template-objects/
+
+# "Imagenes by OpenLen" — WebP variants live in R2 (or the local FS fallback
+# when no R2 creds); only manifest.json is committed. process.ts regenerates.
+public/openlen-images/*.webp

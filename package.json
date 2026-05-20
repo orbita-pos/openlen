@@ -14,7 +14,7 @@
     "templates:add": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates-add.ts",
     "templates:republish": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates-republish.ts",
     "templates:count": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/count-templates.ts",
-    "openlen-images:process": "tsx --tsconfig tsconfig.eval.json scripts/openlen-images/process.ts",
+    "openlen-images:process": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/openlen-images/process.ts",
     "reset-quota": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/reset-quota.ts",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push --force",
