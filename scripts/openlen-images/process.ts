@@ -1,20 +1,23 @@
-// Reads the 50 ChatGPT-exported PNGs from a source directory (default:
+// Reads the ChatGPT-exported PNGs from a source directory (default:
 // $USERPROFILE/Downloads/img-chatgpt or $HOME/Downloads/img-chatgpt), sorts
-// them by filename (which matches generation order = prompt order with #19
-// skipped per meta.ts), generates 3 WebP variants per image (1920w hero /
-// 800w tablet / 400w thumb), writes them to public/openlen-images/ and emits
-// a manifest.json the picker reads at runtime.
+// them by file mtime (= generation order = prompt order, with #19 skipped per
+// meta.ts), generates 3 WebP variants per image (1920w hero / 800w tablet /
+// 400w thumb), and uploads them through the openlen-images storage adapter
+// (R2 when R2_* env vars are set, else ./public/openlen-images/). Emits
+// public/openlen-images/manifest.json — committed; its src URLs point wherever
+// the adapter uploaded (absolute R2 URLs in prod).
 //
 // Source PNGs are read-only — this script never modifies the input directory.
 //
 // Run with: npm run openlen-images:process
 // Override input: OPENLEN_IMAGES_INPUT=/some/other/dir npm run openlen-images:process
 
-import { mkdir, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import sharp from "sharp";
 import { IMAGE_META, type ImageMeta, type ImageStyle } from "./meta";
 import type { TemplateFamily } from "../../lib/templates/families";
+import { getOpenLenImageStorage } from "../../lib/storage/openlen-images";
 
 const DEFAULT_INPUT_DIR = join(
   process.env.USERPROFILE ?? process.env.HOME ?? "",
@@ -23,7 +26,6 @@ const DEFAULT_INPUT_DIR = join(
 );
 const INPUT_DIR = process.env.OPENLEN_IMAGES_INPUT ?? DEFAULT_INPUT_DIR;
 const OUTPUT_DIR = resolve("public", "openlen-images");
-const PUBLIC_URL_BASE = "/openlen-images";
 
 const SIZES = [
   { key: "hero",   width: 1920 },
@@ -52,14 +54,34 @@ function id(meta: ImageMeta): string {
 }
 
 async function main() {
-  console.log(`Input:  ${INPUT_DIR}`);
-  console.log(`Output: ${OUTPUT_DIR}\n`);
+  const storage = getOpenLenImageStorage();
+  const usingR2 = !!(
+    process.env.R2_ACCOUNT_ID &&
+    process.env.R2_ACCESS_KEY &&
+    process.env.R2_SECRET_KEY
+  );
+  console.log(`Input:   ${INPUT_DIR}`);
+  console.log(
+    usingR2
+      ? `Storage: R2 — ${process.env.R2_IMAGES_BUCKET || "openlen-images"}`
+      : `Storage: filesystem — ${OUTPUT_DIR}\n         (manifest URLs will be local; set R2_* to upload to R2)`,
+  );
+  console.log("");
 
   let files: string[];
   try {
-    files = (await readdir(INPUT_DIR))
-      .filter((f) => /\.png$/i.test(f))
-      .sort();
+    const pngs = (await readdir(INPUT_DIR)).filter((f) => /\.png$/i.test(f));
+    // Sort by file mtime, not filename: PNGs are generated in prompt order, but
+    // ChatGPT's export filename format varies between batches, so a plain
+    // lexicographic sort interleaves them. Creation time is the true order.
+    const stamped = await Promise.all(
+      pngs.map(async (name) => ({
+        name,
+        mtimeMs: (await stat(join(INPUT_DIR, name))).mtimeMs,
+      })),
+    );
+    stamped.sort((a, b) => a.mtimeMs - b.mtimeMs);
+    files = stamped.map((s) => s.name);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     throw new Error(`Cannot read ${INPUT_DIR}: ${msg}`);
@@ -89,13 +111,16 @@ async function main() {
 
     const src = {} as ManifestImage["src"];
     for (const size of SIZES) {
-      const outName = `${baseId}-${size.width}.webp`;
-      const outPath = join(OUTPUT_DIR, outName);
-      await sharp(inputPath)
+      const body = await sharp(inputPath)
         .resize({ width: size.width, withoutEnlargement: true })
         .webp({ quality: 82 })
-        .toFile(outPath);
-      src[size.key] = `${PUBLIC_URL_BASE}/${outName}`;
+        .toBuffer();
+      const { url } = await storage.upload({
+        key: `${baseId}-${size.width}.webp`,
+        contentType: "image/webp",
+        body,
+      });
+      src[size.key] = url;
     }
 
     manifest.images.push({
@@ -114,7 +139,9 @@ async function main() {
   const manifestPath = join(OUTPUT_DIR, "manifest.json");
   await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + "\n", "utf8");
 
-  console.log(`\nDone. ${manifest.count} images × 3 sizes = ${manifest.count * 3} WebP files written.`);
+  console.log(
+    `\nDone. ${manifest.count} images × 3 sizes = ${manifest.count * 3} WebP variants ${usingR2 ? "uploaded to R2" : "written to disk"}.`,
+  );
   console.log(`Manifest: ${manifestPath}`);
 }
 
