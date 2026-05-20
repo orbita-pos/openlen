@@ -1,5 +1,6 @@
 import { FileCode, ShieldCheck } from "lucide-react";
 import { GithubIcon, TwitterIcon } from "@/components/ui/brand-icons";
+import { OpenLenMark } from "@/components/openlen-logo";
 
 const columns = [
   { title: "Product", links: ["Features", "Pricing", "Changelog", "Roadmap"] },
@@ -14,13 +15,10 @@ export function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-10">
           <div className="col-span-2 md:col-span-2">
             <a href="#top" className="flex items-center gap-2 group">
-              <span className="relative inline-flex h-6 w-6 items-center justify-center">
-                <span className="absolute inset-0 rounded-md bg-coral-500" />
-                <span className="relative font-bold text-white text-[13px] leading-none">
-                  い
-                </span>
+              <OpenLenMark className="h-6 w-6 shrink-0" />
+              <span className="font-semibold tracking-tight">
+                Open<span className="text-coral-500 dark:text-coral-400">Len</span>
               </span>
-              <span className="font-semibold tracking-tight">OpenLen</span>
             </a>
             <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400 max-w-sm">
               The open-source AI landing-page generator. Lovable quality, your code,

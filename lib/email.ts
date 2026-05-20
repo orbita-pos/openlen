@@ -66,7 +66,7 @@ function buildPasswordResetHtml({ name, resetUrl }: PasswordResetEmail): string 
   <table align="center" style="max-width:480px; width:100%; background:#fff; border-radius:16px; padding:32px; border:1px solid #e5e5e5;">
     <tr><td>
       <div style="display:flex; align-items:center; gap:8px; margin-bottom:24px;">
-        <span style="display:inline-block; width:24px; height:24px; background:#FF5A36; border-radius:6px; color:#fff; font-weight:700; text-align:center; line-height:24px; font-size:13px;">い</span>
+        <span style="display:inline-block; width:24px; height:24px; background:#FF5A36; border-radius:6px; color:#fff; font-weight:700; text-align:center; line-height:24px; font-size:15px;">O</span>
         <span style="font-weight:600; font-size:14px;">OpenLen</span>
       </div>
       <h1 style="font-size:22px; margin:0 0 12px; letter-spacing:-0.02em;">Reset your password</h1>

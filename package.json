@@ -10,11 +10,12 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "eval": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json evals/run.ts",
     "templates:seed": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates-seed.ts",
     "templates:add": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates-add.ts",
     "templates:republish": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates-republish.ts",
     "templates:count": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/count-templates.ts",
+    "openlen-images:process": "tsx --tsconfig tsconfig.eval.json scripts/openlen-images/process.ts",
+    "reset-quota": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/reset-quota.ts",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push --force",
     "db:studio": "drizzle-kit studio"
@@ -43,6 +44,7 @@
     "react-dom": "^19.0.0",
     "resend": "^6.12.3",
     "server-only": "^0.0.1",
+    "sharp": "^0.34.5",
     "tailwind-merge": "^3.6.0",
     "together-ai": "^0.21.0",
     "zod": "^3.24.1"
