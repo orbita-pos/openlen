@@ -15,7 +15,7 @@ export default async function RegisterPage({
   const target = sanitizeNext(next);
 
   // Already signed in? Skip the form. Honor ?next= so a Hero submission
-  // with a brief in the URL keeps flowing to /new?brief=…
+  // with a brief in the URL keeps flowing to /new-v2?mode=ai&brief=…
   const session = await auth();
   if (session?.user) {
     redirect(target);

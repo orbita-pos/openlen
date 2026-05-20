@@ -5,6 +5,7 @@ import {
   getProject,
   renameProject,
   setProjectStatus,
+  setProjectUserBrief,
 } from "@/lib/projects";
 
 export const runtime = "nodejs";
@@ -23,14 +24,20 @@ export async function GET(
   return json({ project }, 200);
 }
 
-// PATCH /api/projects/[id] — accepts title and/or status. Apply only the
-// fields present in the body so the client doesn't have to send both.
+// PATCH /api/projects/[id] — accepts title, status, and/or userBrief. Apply
+// only the fields present in the body so the client doesn't have to send all.
 const PatchSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   status: z.enum(["draft", "published", "archived"]).optional(),
+  // userBrief is the persistent AI context the user writes in the Brief
+  // sidebar tab. Empty string clears it (stored as NULL).
+  userBrief: z.string().max(4000).optional(),
 }).refine(
-  (v) => v.title !== undefined || v.status !== undefined,
-  { message: "Provide at least one of: title, status" },
+  (v) =>
+    v.title !== undefined ||
+    v.status !== undefined ||
+    v.userBrief !== undefined,
+  { message: "Provide at least one of: title, status, userBrief" },
 );
 
 export async function PATCH(
@@ -60,6 +67,15 @@ export async function PATCH(
   }
   if (parsed.data.status !== undefined) {
     const ok = await setProjectStatus(id, session.user.id, parsed.data.status);
+    if (!ok) return json({ error: "not_found" }, 404);
+    touched = true;
+  }
+  if (parsed.data.userBrief !== undefined) {
+    const ok = await setProjectUserBrief(
+      id,
+      session.user.id,
+      parsed.data.userBrief,
+    );
     if (!ok) return json({ error: "not_found" }, 404);
     touched = true;
   }

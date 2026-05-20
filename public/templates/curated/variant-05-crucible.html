@@ -1,0 +1,746 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Crucible — The peer group you'd actually call.</title>
+<meta name="description" content="A private membership for engineering leaders running real orgs. Monthly facilitated rooms of eight, an annual retreat, and a back-channel of 280 peers. Application-based, capped at 280 members." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#0E1A3A;
+    --bg-2:#13204A;
+    --bg-3:#1B2A58;
+    --ink:#F4F2EE;
+    --ink-2:#A8AFC6;
+    --ink-3:#6E7799;
+    --gold:#C8A06A;
+    --gold-2:#DCBA88;
+    --line:rgba(255,255,255,0.10);
+    --line-2:rgba(255,255,255,0.055);
+    --gold-line:rgba(200,160,106,0.34);
+  }
+  *{ -webkit-tap-highlight-color:transparent; }
+  html{ scroll-behavior:smooth; }
+  html,body{ background:var(--bg); color:var(--ink); }
+  body{
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+    font-feature-settings:"ss01","cv11";
+    font-optical-sizing:auto;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.55;
+  }
+  .display{ font-weight:800; letter-spacing:-0.034em; line-height:1.04; }
+  .mono{ font-family:'Geist Mono',ui-monospace,Menlo,monospace; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  em.gold{ font-style:normal; color:var(--gold); }
+  .halftone{ opacity:0.4; }
+  .marker{ font-family:'Geist Mono',monospace; font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:var(--ink-3); }
+  .accent-line{ display:inline-block; width:24px; height:1px; background:var(--gold); vertical-align:middle; margin-right:9px; }
+  .rule{ border-color:var(--line); }
+  .rule-2{ border-color:var(--line-2); }
+  .rule-gold{ border-color:var(--gold-line); }
+  .dotgrid{
+    background-image:radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size:34px 34px;
+    background-position:-10px -10px;
+  }
+  .mesh{
+    background-image:
+      radial-gradient(52% 46% at 84% 2%, rgba(200,160,106,0.16), transparent 64%),
+      radial-gradient(48% 42% at 6% 28%, rgba(200,160,106,0.07), transparent 70%);
+  }
+  .pulse-dot{ position:relative; display:inline-block; width:7px; height:7px; border-radius:999px; background:var(--gold); box-shadow:0 0 0 0 rgba(200,160,106,0.6); animation:pulse 2s ease-out infinite; }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(200,160,106,0.5); }
+    70%{ box-shadow:0 0 0 9px rgba(200,160,106,0); }
+    100%{ box-shadow:0 0 0 0 rgba(200,160,106,0); }
+  }
+  .btn-gold{ transition:transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease; }
+  .btn-gold:hover{ transform:translateY(-1px); background-color:var(--gold-2); box-shadow:0 10px 30px -10px rgba(200,160,106,0.5); }
+  .btn-ghost{ transition:transform 120ms ease, border-color 120ms ease, background-color 120ms ease; }
+  .btn-ghost:hover{ transform:translateY(-1px); border-color:rgba(255,255,255,0.3); background-color:var(--bg-3); }
+  .card-lift{ transition:transform 130ms ease, border-color 130ms ease, background-color 130ms ease; }
+  .card-lift:hover{ transform:translateY(-2px); border-color:var(--gold-line); }
+  .ul-link{ position:relative; }
+  .ul-link::after{ content:""; position:absolute; left:0; right:0; bottom:-3px; height:1px; background:var(--gold); transform:scaleX(0); transform-origin:right center; transition:transform 250ms cubic-bezier(.2,.7,.2,1); }
+  .ul-link:hover::after{ transform:scaleX(1); transform-origin:left center; }
+  .marquee-mask{ -webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent); mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent); }
+  .marquee{ display:flex; gap:58px; width:max-content; align-items:center; animation:marq 42s linear infinite; }
+  @keyframes marq{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+  .blob-founder{ background:radial-gradient(128% 96% at 30% 22%, #E6CC9B 0%, #C8A06A 38%, #7A5C30 66%, #2A2113 100%); }
+  .blob-1{ background:radial-gradient(125% 100% at 28% 22%, #E2C892 0%, #B98E52 48%, #4A3719 100%); }
+  .blob-2{ background:radial-gradient(125% 100% at 70% 24%, #9FB4E6 0%, #5A6FB0 48%, #232C54 100%); }
+  .blob-3{ background:radial-gradient(125% 100% at 32% 24%, #A6CFC4 0%, #557F73 48%, #213431 100%); }
+  .blob-4{ background:radial-gradient(125% 100% at 66% 26%, #D6AEB0 0%, #9A5F66 48%, #3C2528 100%); }
+  details>summary{ list-style:none; cursor:pointer; }
+  details>summary::-webkit-details-marker{ display:none; }
+  details[open] .acc-sign{ transform:rotate(45deg); }
+  .acc-sign{ transition:transform 200ms ease; }
+  details[open] .acc-row{ background-color:var(--bg-3); }
+  .navbar{ backdrop-filter:blur(14px) saturate(150%); -webkit-backdrop-filter:blur(14px) saturate(150%); background:rgba(14,26,58,0.8); }
+  ::selection{ background:rgba(200,160,106,0.3); color:#fff; }
+  .scroll-x{ transition:transform 150ms ease; }
+  a:hover .scroll-x{ transform:translateX(3px); }
+  .gold-card{ box-shadow:0 0 0 1px var(--gold-line), 0 30px 60px -42px rgba(200,160,106,0.4); }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ================= NAV ================= -->
+<header class="navbar fixed top-0 inset-x-0 z-50 border-b rule-2">
+  <div class="max-w-[1180px] mx-auto px-5 sm:px-8 h-[66px] flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="24" height="26" viewBox="0 0 24 26" aria-hidden="true">
+        <path d="M5 3h14l-2.5 9a4.7 4.7 0 0 1-9 0L5 3Z" fill="none" stroke="#C8A06A" stroke-width="1.4" stroke-linejoin="round"/>
+        <path d="M12 16.5V21M8 23h8" stroke="#F4F2EE" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      <span class="text-[20px] font-extrabold tracking-tight">Crucible</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8 text-[14px] text-[color:var(--ink-2)]">
+      <a href="#membership" class="ul-link">Membership</a>
+      <a href="#founder" class="ul-link">Founder</a>
+      <a href="#members" class="ul-link">Members</a>
+      <a href="#faq" class="ul-link">FAQ</a>
+    </nav>
+    <a href="#apply" class="btn-gold inline-flex items-center gap-2 rounded-lg bg-[color:var(--gold)] text-[#0E1A3A] font-bold text-[14px] px-4 py-2">
+      Apply
+    </a>
+  </div>
+</header>
+
+<!-- ================= HERO ================= -->
+<section id="top" class="relative overflow-hidden mesh pt-[66px]">
+  <div class="absolute inset-0 dotgrid opacity-70 pointer-events-none"></div>
+  <div class="relative max-w-[1180px] mx-auto px-5 sm:px-8 pt-16 sm:pt-20 pb-16 sm:pb-24">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
+
+      <div class="lg:col-span-7">
+        <div class="inline-flex items-center gap-2.5 rounded-full border rule-gold bg-[color:var(--bg-2)] pl-2.5 pr-3.5 py-1.5 mb-7">
+          <span class="pulse-dot"></span>
+          <span class="mono text-[11px] sm:text-[12px] text-[color:var(--ink-2)]">Spring intake · 9 of 280 seats open</span>
+        </div>
+
+        <h1 class="display text-[clamp(44px,7.2vw,90px)]">
+          The peer group<br/>you'd <em class="gold">actually call.</em>
+        </h1>
+
+        <p class="text-[16px] sm:text-[18px] text-[color:var(--ink-2)] leading-[1.6] mt-7 max-w-[54ch]">
+          A private membership for engineering leaders running real orgs. A monthly facilitated room of eight, an annual retreat, and a back-channel of 280 peers who have already had the exact week you're having.
+        </p>
+
+        <div class="flex flex-col sm:flex-row gap-3 mt-8">
+          <a href="#apply" class="btn-gold inline-flex items-center justify-center gap-2 rounded-lg bg-[color:var(--gold)] text-[#0E1A3A] font-bold px-6 py-3.5 text-[15px]">
+            Apply for membership <span class="scroll-x">→</span>
+          </a>
+          <a href="#membership" class="btn-ghost inline-flex items-center justify-center gap-2 rounded-lg border rule text-[color:var(--ink)] font-semibold px-6 py-3.5 text-[15px]">
+            How membership works
+          </a>
+        </div>
+        <p class="marker mt-7">Members lead engineering at companies from 50 to 2,000 people</p>
+      </div>
+
+      <!-- membership card -->
+      <div class="lg:col-span-5">
+        <div class="rounded-2xl border rule-gold bg-[color:var(--bg-2)] p-6 sm:p-7 gold-card">
+          <div class="flex items-center justify-between">
+            <div class="mono text-[12px] text-[color:var(--ink-2)]">SPRING 2026 INTAKE</div>
+            <div class="mono text-[11px] text-[color:var(--gold)]">● REVIEWING</div>
+          </div>
+
+          <!-- seats -->
+          <div class="mt-5">
+            <div class="flex justify-between text-[12px] mb-2">
+              <span class="mono text-[color:var(--ink-2)]">Membership</span>
+              <span class="mono text-[color:var(--ink)] tnum">271 / 280</span>
+            </div>
+            <div class="h-2 rounded-full bg-[color:var(--bg-3)] overflow-hidden">
+              <div class="h-full rounded-full bg-[color:var(--gold)]" style="width:96.8%"></div>
+            </div>
+            <div class="mono text-[11px] text-[color:var(--gold)] mt-2">9 seats open as members rotate out</div>
+          </div>
+
+          <!-- countdown -->
+          <div class="mt-6 pt-5 border-t rule-2">
+            <div class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em] mb-3">Applications reviewed through</div>
+            <div class="grid grid-cols-4 gap-2">
+              <div class="rounded-lg bg-[color:var(--bg-3)] border rule-2 py-2.5 text-center">
+                <div id="cd-d" class="display tnum text-[24px]">00</div>
+                <div class="mono text-[9px] text-[color:var(--ink-3)] mt-0.5">DAYS</div>
+              </div>
+              <div class="rounded-lg bg-[color:var(--bg-3)] border rule-2 py-2.5 text-center">
+                <div id="cd-h" class="display tnum text-[24px]">00</div>
+                <div class="mono text-[9px] text-[color:var(--ink-3)] mt-0.5">HRS</div>
+              </div>
+              <div class="rounded-lg bg-[color:var(--bg-3)] border rule-2 py-2.5 text-center">
+                <div id="cd-m" class="display tnum text-[24px]">00</div>
+                <div class="mono text-[9px] text-[color:var(--ink-3)] mt-0.5">MIN</div>
+              </div>
+              <div class="rounded-lg bg-[color:var(--bg-3)] border rule-2 py-2.5 text-center">
+                <div id="cd-s" class="display tnum text-[24px]">00</div>
+                <div class="mono text-[9px] text-[color:var(--ink-3)] mt-0.5">SEC</div>
+              </div>
+            </div>
+          </div>
+
+          <ul class="mt-5 space-y-2 text-[13px] text-[color:var(--ink-2)]">
+            <li class="flex gap-2.5"><span class="text-[color:var(--gold)]">◆</span> A monthly facilitated room of 8</li>
+            <li class="flex gap-2.5"><span class="text-[color:var(--gold)]">◆</span> The annual 3-day retreat</li>
+            <li class="flex gap-2.5"><span class="text-[color:var(--gold)]">◆</span> The 280-member back-channel</li>
+            <li class="flex gap-2.5"><span class="text-[color:var(--gold)]">◆</span> The curated essay archive</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ================= TRUST BAR ================= -->
+<section class="border-y rule-2 bg-[color:var(--bg-2)] py-11">
+  <div class="max-w-[1180px] mx-auto px-5 sm:px-8">
+    <div class="marker mb-7"><span class="accent-line"></span>Members lead engineering at</div>
+    <div class="marquee-mask overflow-hidden">
+      <div class="marquee text-[color:var(--ink-2)]">
+        <span class="text-[24px] font-bold tracking-tight">Linnea</span>
+        <span class="text-[24px] font-semibold tracking-tight">Forecast</span>
+        <span class="text-[24px] font-bold tracking-tight">Cinder</span>
+        <span class="text-[24px] font-medium">Brightwave</span>
+        <span class="mono text-[20px] tracking-[0.14em]">NIMBUS</span>
+        <span class="text-[24px] font-bold tracking-tight">Mercury</span>
+        <span class="text-[24px] font-semibold tracking-[0.04em]">Vantage</span>
+        <span class="text-[24px] font-medium tracking-tight">Halcyon</span>
+        <span class="text-[24px] font-bold tracking-tight">Glide</span>
+        <span class="text-[24px] font-semibold tracking-tight">Northwind</span>
+        <span aria-hidden="true" class="text-[24px] font-bold tracking-tight">Linnea</span>
+        <span aria-hidden="true" class="text-[24px] font-semibold tracking-tight">Forecast</span>
+        <span aria-hidden="true" class="text-[24px] font-bold tracking-tight">Cinder</span>
+        <span aria-hidden="true" class="text-[24px] font-medium">Brightwave</span>
+        <span aria-hidden="true" class="mono text-[20px] tracking-[0.14em]">NIMBUS</span>
+        <span aria-hidden="true" class="text-[24px] font-bold tracking-tight">Mercury</span>
+        <span aria-hidden="true" class="text-[24px] font-semibold tracking-[0.04em]">Vantage</span>
+        <span aria-hidden="true" class="text-[24px] font-medium tracking-tight">Halcyon</span>
+        <span aria-hidden="true" class="text-[24px] font-bold tracking-tight">Glide</span>
+        <span aria-hidden="true" class="text-[24px] font-semibold tracking-tight">Northwind</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= WHAT MEMBERSHIP IS ================= -->
+<section id="membership" class="max-w-[1180px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="max-w-[58ch]">
+    <div class="marker mb-5"><span class="accent-line"></span>What membership is</div>
+    <h2 class="display text-[clamp(32px,4.6vw,54px)]">
+      Four things, <em class="gold">held together by trust.</em>
+    </h2>
+    <p class="text-[16px] sm:text-[17px] text-[color:var(--ink-2)] mt-5 leading-[1.6]">
+      Crucible isn't a course you finish or a feed you scroll. It is a standing set of rooms — small enough to be honest in, run for long enough that the relationships actually compound.
+    </p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-12">
+    <div class="rounded-2xl border rule bg-[color:var(--bg-2)] p-7 card-lift">
+      <div class="flex items-center justify-between">
+        <span class="mono text-[12px] text-[color:var(--gold)]">PILLAR I</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)]">Every month</span>
+      </div>
+      <h3 class="text-[21px] font-bold mt-2.5">The Monthly Room</h3>
+      <p class="text-[14px] text-[color:var(--ink-2)] mt-3 leading-[1.6]">The same eight leaders, every month, with a trained facilitator. No agenda but the ones you bring — the reorg you're dreading, the report you can't reach, the number you can't say out loud anywhere else.</p>
+      <div class="mono text-[12px] text-[color:var(--ink-3)] mt-5 pt-4 border-t rule-2">CADENCE — 2 hours, monthly, the same 8 for a full year</div>
+    </div>
+    <div class="rounded-2xl border rule bg-[color:var(--bg-2)] p-7 card-lift">
+      <div class="flex items-center justify-between">
+        <span class="mono text-[12px] text-[color:var(--gold)]">PILLAR II</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)]">Once a year</span>
+      </div>
+      <h3 class="text-[21px] font-bold mt-2.5">The Annual Retreat</h3>
+      <p class="text-[14px] text-[color:var(--ink-2)] mt-3 leading-[1.6]">Three days, off the record, no laptops and no performance. It is where a useful peer group becomes a group of people you'd take a 2am call from — and the single thing members say they'd protect first.</p>
+      <div class="mono text-[12px] text-[color:var(--ink-3)] mt-5 pt-4 border-t rule-2">FORMAT — 3 days · travel included in membership</div>
+    </div>
+    <div class="rounded-2xl border rule bg-[color:var(--bg-2)] p-7 card-lift">
+      <div class="flex items-center justify-between">
+        <span class="mono text-[12px] text-[color:var(--gold)]">PILLAR III</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)]">Always on</span>
+      </div>
+      <h3 class="text-[21px] font-bold mt-2.5">The Back-Channel</h3>
+      <p class="text-[14px] text-[color:var(--ink-2)] mt-3 leading-[1.6]">A private Slack of all 280 members. Ask a real question — a comp band, a vendor, a board dynamic — and get answers in minutes from people who solved it last quarter. Not opinions. Solutions, with the numbers.</p>
+      <div class="mono text-[12px] text-[color:var(--ink-3)] mt-5 pt-4 border-t rule-2">NORM — median first reply under 14 minutes</div>
+    </div>
+    <div class="rounded-2xl border rule bg-[color:var(--bg-2)] p-7 card-lift">
+      <div class="flex items-center justify-between">
+        <span class="mono text-[12px] text-[color:var(--gold)]">PILLAR IV</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)]">Curated</span>
+      </div>
+      <h3 class="text-[21px] font-bold mt-2.5">The Archive</h3>
+      <p class="text-[14px] text-[color:var(--ink-2)] mt-3 leading-[1.6]">A small, deliberately un-bloated library: the best essays on the actual job of engineering leadership, plus anonymized notes from past rooms on the problems that recur. Edited down, never padded.</p>
+      <div class="mono text-[12px] text-[color:var(--ink-3)] mt-5 pt-4 border-t rule-2">SIZE — ~140 pieces · roughly 2 added a month</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FOUNDER ================= -->
+<section id="founder" class="border-y rule-2 bg-[color:var(--bg-2)]">
+  <div class="max-w-[1180px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14 items-start">
+      <div class="md:col-span-4">
+        <div class="blob-founder rounded-2xl border rule-gold aspect-[3/4] w-full max-w-[320px] relative overflow-hidden">
+          <div class="absolute inset-0" style="background:radial-gradient(120% 60% at 50% 120%, rgba(0,0,0,0.5), transparent 60%)"></div>
+          <div class="absolute left-5 bottom-5">
+            <div class="text-[#F4F2EE] font-bold text-[19px] leading-tight">Yusuf Abara</div>
+            <div class="mono text-[11px] text-[#F4F2EE] opacity-80 mt-1">FOUNDER · FACILITATOR</div>
+          </div>
+        </div>
+      </div>
+      <div class="md:col-span-8">
+        <div class="marker mb-5"><span class="accent-line"></span>Who built it</div>
+        <h2 class="display text-[clamp(28px,4.2vw,50px)] max-w-[20ch]">
+          It started as a dinner for <em class="gold">twelve people.</em>
+        </h2>
+        <div class="text-[16px] sm:text-[17px] text-[color:var(--ink-2)] leading-[1.65] mt-6 space-y-4 max-w-[60ch]">
+          <p>Yusuf spent a decade as a VP of Engineering — first at Cinder, then at Forecast, through its scale from 60 people to 1,400. The job, he'll tell you, is lonely in a specific way: surrounded by people, accountable to all of them, and able to be fully honest with almost none of them.</p>
+          <p>So in 2019 he started a standing dinner for eleven other engineering leaders he trusted. No deck, no agenda — just the conversation you can't have with your CEO, your reports, or your board. It quietly became the most useful two hours of his month.</p>
+          <p>Crucible, since 2022, is that dinner made deliberate and made to scale — without losing the thing that worked. The rooms stay at eight. The membership stays curated. And Yusuf still reads every single application himself.</p>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 mt-8 max-w-[42rem]">
+          <div class="mono text-[12px] text-[color:var(--ink-2)] flex gap-2.5"><span class="text-[color:var(--gold)]">·</span> Ex-VP Engineering, Forecast</div>
+          <div class="mono text-[12px] text-[color:var(--ink-2)] flex gap-2.5"><span class="text-[color:var(--gold)]">·</span> Ex-VP Engineering, Cinder</div>
+          <div class="mono text-[12px] text-[color:var(--ink-2)] flex gap-2.5"><span class="text-[color:var(--gold)]">·</span> Built the original 2019 peer group</div>
+          <div class="mono text-[12px] text-[color:var(--ink-2)] flex gap-2.5"><span class="text-[color:var(--gold)]">·</span> Has facilitated 300+ Crucible rooms</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= HOW MEMBERSHIP WORKS ================= -->
+<section id="how" class="max-w-[1080px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-10">
+    <div class="max-w-[44ch]">
+      <div class="marker mb-5"><span class="accent-line"></span>How it actually works</div>
+      <h2 class="display text-[clamp(32px,4.6vw,54px)]">The mechanics, in full.</h2>
+    </div>
+    <div class="mono text-[12px] text-[color:var(--ink-3)] sm:text-right leading-relaxed">
+      Annual membership · no lock-in<br/>capped at 280, always
+    </div>
+  </div>
+
+  <div class="border rule rounded-2xl overflow-hidden divide-y divide-[color:var(--line-2)]">
+    <details open>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--gold)] w-8 shrink-0">01</span>
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">How your room of eight is formed</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-6 pt-1 sm:pl-[76px] text-[14px] text-[color:var(--ink-2)] leading-[1.65]">
+        New members are matched by stage and situation, not job title — so your room holds people running orgs of a roughly similar size and shape, with no direct competitors and no reporting lines between them. You can flag anyone you'd rather not share a room with, no reason needed. Most rooms stay together for a full year before reshuffling.
+      </div>
+    </details>
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--gold)] w-8 shrink-0">02</span>
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">What a monthly session looks like</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-6 pt-1 sm:pl-[76px] text-[14px] text-[color:var(--ink-2)] leading-[1.65]">
+        Two hours, video, with a trained facilitator who keeps it honest and on time. The format is simple: each member gets the floor for a real problem, and the room works it — not with advice-giving, but with the questions and the lived experience that move it forward. One member calls it "the only meeting I never reschedule."
+      </div>
+    </details>
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--gold)] w-8 shrink-0">03</span>
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">The annual retreat</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-6 pt-1 sm:pl-[76px] text-[14px] text-[color:var(--ink-2)] leading-[1.65]">
+        Three days, once a year, in one place — most recently a quiet property outside Santa Fe. It is deliberately under-programmed: a few facilitated sessions, long meals, and a great deal of unstructured time, because that is when the real conversations happen. It is strictly off the record, and travel and lodging are included in your membership.
+      </div>
+    </details>
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--gold)] w-8 shrink-0">04</span>
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">The back-channel, and its norms</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-6 pt-1 sm:pl-[76px] text-[14px] text-[color:var(--ink-2)] leading-[1.65]">
+        The Slack is organized around questions, not chatter — a small set of channels, a strong norm of answering specifically and concretely, and zero tolerance for selling. Members share real compensation data, real vendor experiences, and real board dynamics, because the room is closed and everyone in it has something equivalent to lose.
+      </div>
+    </details>
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--gold)] w-8 shrink-0">05</span>
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">Renewing — or leaving</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-6 pt-1 sm:pl-[76px] text-[14px] text-[color:var(--ink-2)] leading-[1.65]">
+        Membership is annual, and that's the whole commitment — there is no multi-year contract and no penalty for not renewing. When a member leaves, between jobs or simply because the season has changed, their seat opens for the next intake. That rotation is the only reason new seats exist at all; the cap of 280 never moves.
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- ================= OUTCOMES + NETWORK ================= -->
+<section class="border-y rule-2 bg-[color:var(--bg-2)]">
+  <div class="max-w-[1180px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="max-w-[52ch]">
+      <div class="marker mb-5"><span class="accent-line"></span>By the numbers</div>
+      <h2 class="display text-[clamp(32px,4.6vw,54px)]">Small on purpose. <em class="gold">Sticky as a result.</em></h2>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-12">
+      <div class="rounded-2xl border rule bg-[color:var(--bg)] p-6">
+        <div class="display tnum text-[clamp(40px,5.2vw,62px)] text-[color:var(--gold)]">280</div>
+        <p class="text-[13.5px] text-[color:var(--ink-2)] mt-2 leading-[1.5]">active members — a hard cap, held since the first full year.</p>
+      </div>
+      <div class="rounded-2xl border rule bg-[color:var(--bg)] p-6">
+        <div class="display tnum text-[clamp(40px,5.2vw,62px)] text-[color:var(--gold)]">28</div>
+        <p class="text-[13.5px] text-[color:var(--ink-2)] mt-2 leading-[1.5]">months of average tenure — members renew, and keep renewing.</p>
+      </div>
+      <div class="rounded-2xl border rule bg-[color:var(--bg)] p-6">
+        <div class="display tnum text-[clamp(40px,5.2vw,62px)] text-[color:var(--gold)]">12</div>
+        <p class="text-[13.5px] text-[color:var(--ink-2)] mt-2 leading-[1.5]">retreats hosted since 2022 — regional gatherings included.</p>
+      </div>
+      <div class="rounded-2xl border rule bg-[color:var(--bg)] p-6">
+        <div class="display tnum text-[clamp(40px,5.2vw,62px)] text-[color:var(--gold)]">14%</div>
+        <p class="text-[13.5px] text-[color:var(--ink-2)] mt-2 leading-[1.5]">of applicants are offered a seat — to keep the rooms right.</p>
+      </div>
+    </div>
+
+    <!-- network visual -->
+    <div class="mt-4 rounded-2xl border rule bg-[color:var(--bg)] p-6 sm:p-8">
+      <div class="flex items-baseline justify-between mb-5">
+        <div class="font-bold text-[15px]">280 leaders. One closed back-channel.</div>
+        <div class="mono text-[11px] text-[color:var(--ink-3)] hidden sm:block">◆ = a member in your stage</div>
+      </div>
+      <svg id="netGraph" viewBox="0 0 720 300" class="w-full h-auto" aria-label="A network diagram of Crucible's 280 connected members"></svg>
+    </div>
+  </div>
+</section>
+
+<!-- ================= TESTIMONIALS ================= -->
+<section id="members" class="max-w-[1180px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="max-w-[54ch] mb-12">
+    <div class="marker mb-5"><span class="accent-line"></span>From the rooms</div>
+    <h2 class="display text-[clamp(32px,4.6vw,54px)]">Why members <em class="gold">stay.</em></h2>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <figure class="rounded-2xl border rule bg-[color:var(--bg-2)] p-7 card-lift">
+      <div class="flex items-center gap-3.5">
+        <div class="blob-2 size-12 rounded-full border rule shrink-0"></div>
+        <figcaption>
+          <div class="font-bold text-[15px]">Hana Suzuki</div>
+          <div class="mono text-[11px] text-[color:var(--ink-3)]">VP Engineering · Brightwave</div>
+        </figcaption>
+      </div>
+      <blockquote class="text-[15px] text-[color:var(--ink-2)] leading-[1.62] mt-5">
+        "I joined the month I was promoted into a job nobody had prepared me for. My room of eight has now watched me through two reorgs and one layoff I genuinely did not see coming. I would not have done those well alone."
+      </blockquote>
+      <div class="mono text-[11px] text-[color:var(--gold)] mt-5 pt-4 border-t rule-2">◆ MEMBER 34 MONTHS · ROOM 09</div>
+    </figure>
+    <figure class="rounded-2xl border rule bg-[color:var(--bg-2)] p-7 card-lift">
+      <div class="flex items-center gap-3.5">
+        <div class="blob-1 size-12 rounded-full border rule shrink-0"></div>
+        <figcaption>
+          <div class="font-bold text-[15px]">Daniel Okafor</div>
+          <div class="mono text-[11px] text-[color:var(--ink-3)]">CTO · Linnea</div>
+        </figcaption>
+      </div>
+      <blockquote class="text-[15px] text-[color:var(--ink-2)] leading-[1.62] mt-5">
+        "I've been in three of these groups. The others were networking with a recurring calendar invite. Crucible is the only one where I've actually picked up the phone at 9pm — and had someone who'd been through that exact thing pick up."
+      </blockquote>
+      <div class="mono text-[11px] text-[color:var(--gold)] mt-5 pt-4 border-t rule-2">◆ MEMBER 41 MONTHS · ROOM 02</div>
+    </figure>
+    <figure class="rounded-2xl border rule bg-[color:var(--bg-2)] p-7 card-lift">
+      <div class="flex items-center gap-3.5">
+        <div class="blob-4 size-12 rounded-full border rule shrink-0"></div>
+        <figcaption>
+          <div class="font-bold text-[15px]">Ines Calderón</div>
+          <div class="mono text-[11px] text-[color:var(--ink-3)]">Director of Eng · Mercury</div>
+        </figcaption>
+      </div>
+      <blockquote class="text-[15px] text-[color:var(--ink-2)] leading-[1.62] mt-5">
+        "The back-channel alone is worth the fee. I asked a question about a thorny compensation problem at 11am and had four answers by lunch from people who had already solved it — not opinions, solutions, with the actual numbers."
+      </blockquote>
+      <div class="mono text-[11px] text-[color:var(--gold)] mt-5 pt-4 border-t rule-2">◆ MEMBER 22 MONTHS · ROOM 17</div>
+    </figure>
+  </div>
+</section>
+
+<!-- ================= COMMITMENT ================= -->
+<section class="border-y rule-2 bg-[color:var(--bg-2)]">
+  <div class="max-w-[1180px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14">
+      <div class="md:col-span-4">
+        <div class="marker mb-5"><span class="accent-line"></span>The commitment</div>
+        <h2 class="display text-[clamp(28px,3.8vw,44px)]">Light on time. <em class="gold">Heavy on trust.</em></h2>
+        <p class="text-[15px] text-[color:var(--ink-2)] mt-5 leading-[1.6]">
+          Crucible asks for a few hours a month and a real willingness to be honest in a room. That second part is the actual prerequisite.
+        </p>
+      </div>
+      <div class="md:col-span-8">
+        <dl class="grid sm:grid-cols-2 gap-4">
+          <div class="rounded-xl border rule bg-[color:var(--bg)] p-5">
+            <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Term</dt>
+            <dd class="text-[15px] mt-1.5">Ongoing annual membership — no multi-year lock-in</dd>
+          </div>
+          <div class="rounded-xl border rule bg-[color:var(--bg)] p-5">
+            <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Time</dt>
+            <dd class="text-[15px] mt-1.5">~3 hours a month, plus the 3-day retreat</dd>
+          </div>
+          <div class="rounded-xl border rule bg-[color:var(--bg)] p-5">
+            <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Who it's for</dt>
+            <dd class="text-[15px] mt-1.5">Directors, VPs &amp; CTOs at 50–2,000-person companies</dd>
+          </div>
+          <div class="rounded-xl border rule bg-[color:var(--bg)] p-5">
+            <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Admission</dt>
+            <dd class="text-[15px] mt-1.5">By application — reviewed by Yusuf, every one</dd>
+          </div>
+          <div class="rounded-xl border rule bg-[color:var(--bg)] p-5">
+            <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Size</dt>
+            <dd class="text-[15px] mt-1.5">280 members, capped — rooms of 8, never larger</dd>
+          </div>
+          <div class="rounded-xl border rule bg-[color:var(--bg)] p-5">
+            <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Trial</dt>
+            <dd class="text-[15px] mt-1.5">Attend your first room before any charge is final</dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PRICING ================= -->
+<section id="apply" class="max-w-[1180px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center">
+    <div class="lg:col-span-5">
+      <div class="marker mb-5"><span class="accent-line"></span>Membership</div>
+      <h2 class="display text-[clamp(32px,4.8vw,56px)]">One fee.<br/><em class="gold">Everything in.</em></h2>
+      <p class="text-[16px] text-[color:var(--ink-2)] mt-5 leading-[1.6] max-w-[44ch]">
+        No tiers, no add-ons, no per-seat upsell. Membership is a single annual fee, and it covers the retreat — travel included — so the cost of saying yes is never a surprise.
+      </p>
+      <p class="text-[14px] text-[color:var(--ink-3)] mt-5 leading-[1.6] max-w-[44ch]">
+        Most members are sponsored by their company as a leadership-development line. We invoice your org directly if you'd prefer.
+      </p>
+    </div>
+
+    <div class="lg:col-span-7">
+      <div class="rounded-2xl border-2 rule-gold bg-[color:var(--bg-2)] p-7 sm:p-10 relative gold-card">
+        <div class="absolute -top-3 left-8 mono text-[10px] tracking-[0.12em] uppercase bg-[color:var(--gold)] text-[#0E1A3A] px-3 py-1 rounded-full font-bold">Full membership</div>
+        <div class="flex items-baseline justify-between flex-wrap gap-3">
+          <div>
+            <div class="text-[22px] font-bold">Crucible — Annual</div>
+            <div class="mono text-[12px] text-[color:var(--ink-3)] mt-1">Billed yearly · application required</div>
+          </div>
+          <div class="text-right">
+            <div class="display tnum text-[52px] sm:text-[58px] text-[color:var(--gold)]">$4,408</div>
+            <div class="mono text-[11px] text-[color:var(--ink-3)]">per year, all in</div>
+          </div>
+        </div>
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-3 mt-7 text-[14px] text-[color:var(--ink-2)]">
+          <li class="flex gap-2.5"><span class="text-[color:var(--gold)] mt-0.5">✓</span> A monthly facilitated room of 8</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--gold)] mt-0.5">✓</span> The annual 3-day retreat</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--gold)] mt-0.5">✓</span> Retreat travel &amp; lodging included</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--gold)] mt-0.5">✓</span> The 280-member back-channel</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--gold)] mt-0.5">✓</span> The full curated essay archive</li>
+          <li class="flex gap-2.5"><span class="text-[color:var(--gold)] mt-0.5">✓</span> Regional member meetups</li>
+        </ul>
+        <a href="#apply" class="btn-gold mt-8 w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[color:var(--gold)] text-[#0E1A3A] font-bold px-6 py-4 text-[16px]">
+          Apply for membership <span class="scroll-x">→</span>
+        </a>
+        <p class="text-[12px] text-[color:var(--ink-3)] text-center mt-4 leading-[1.5]">
+          The application takes about 25 minutes. You'll hear back within two weeks — and you can sit in on a room before anything is charged.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FAQ ================= -->
+<section id="faq" class="max-w-[820px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="text-center mb-12">
+    <div class="marker mb-5 inline-block">Fair questions</div>
+    <h2 class="display text-[clamp(30px,4.4vw,50px)]">Before you apply.</h2>
+  </div>
+  <div class="divide-y divide-[color:var(--line)] border-y rule">
+    <details>
+      <summary class="flex items-start gap-4 py-5">
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">How is this different from CTO Connection or Reforge?</span>
+        <span class="acc-sign text-[color:var(--gold)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        Those are excellent at what they do — conferences and courses, content delivered to a large audience. Crucible is deliberately the opposite shape. There is no curriculum and no stage; the product is a small, fixed room of peers who know your situation in detail and stay with you through it for years. Reforge teaches you a framework. Crucible gives you eight people to call when the framework meets a Tuesday. Most members keep one of those memberships and Crucible — they solve different problems.
+      </p>
+    </details>
+    <details>
+      <summary class="flex items-start gap-4 py-5">
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">What's the application process?</span>
+        <span class="acc-sign text-[color:var(--gold)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        A written application of about 25 minutes — your role and org, what you're navigating right now, and what you'd bring to a room — followed by a 30-minute conversation with Yusuf or a senior facilitator. The bar is not seniority or logo; it is whether you'll be honest in a room and generous in return. Roughly 14% of applicants are offered a seat, almost entirely to keep the rooms well-matched. You'll have a decision within two weeks.
+      </p>
+    </details>
+    <details>
+      <summary class="flex items-start gap-4 py-5">
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">Do members actually use it, or is it a dead Slack?</span>
+        <span class="acc-sign text-[color:var(--gold)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        It's a fair worry — most communities are graveyards. Two things keep Crucible from being one. First, the monthly room is a standing commitment with the same eight people, so engagement isn't optional in the way a Slack is. Second, the back-channel is small and curated: 280 members, a strong norm of answering concretely, and zero selling. The honest signals are the numbers above — 28-month average tenure and a sub-14-minute median reply — and they're the figures we watch most closely ourselves.
+      </p>
+    </details>
+    <details>
+      <summary class="flex items-start gap-4 py-5">
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">Can I expense this?</span>
+        <span class="acc-sign text-[color:var(--gold)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        Most members do. At the Director-to-CTO level, $4,408 a year sits comfortably within a leadership-development or executive-coaching budget, and it is meaningfully less than an executive coach for the year. We invoice your company directly if that's easier, and we'll provide whatever a finance team needs — a W-9, a clear scope of services, or a short note for your manager explaining what the membership is and is not.
+      </p>
+    </details>
+    <details>
+      <summary class="flex items-start gap-4 py-5">
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">What actually happens at the annual retreat?</span>
+        <span class="acc-sign text-[color:var(--gold)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        Three days, one place, no laptops and no performing. The schedule is intentionally light — a handful of facilitated sessions on the problems members raised in advance, and otherwise long meals, walks, and unstructured time, because that is when the conversations that matter actually happen. It is strictly off the record. Travel and lodging are included in membership, and members consistently name it the part they would protect first if they could keep only one.
+      </p>
+    </details>
+  </div>
+</section>
+
+<!-- ================= FINAL CTA ================= -->
+<section class="relative overflow-hidden border-t rule-2">
+  <div class="absolute inset-0 pointer-events-none" style="background:radial-gradient(58% 72% at 50% 0%, rgba(200,160,106,0.22), transparent 72%)"></div>
+  <div class="absolute inset-0 dotgrid opacity-60 pointer-events-none"></div>
+  <div class="relative max-w-[900px] mx-auto px-5 sm:px-8 py-24 sm:py-32 text-center">
+    <div class="inline-flex items-center gap-2.5 rounded-full border rule-gold bg-[color:var(--bg-2)] px-4 py-1.5 mb-8">
+      <span class="pulse-dot"></span>
+      <span class="mono text-[11px] text-[color:var(--ink-2)]">Spring intake · 9 of 280 seats · applications close June 12</span>
+    </div>
+    <h2 class="display text-[clamp(38px,6.6vw,84px)]">
+      The job is lonely.<br/>
+      <span class="halftone">It doesn't have to be.</span>
+    </h2>
+    <p class="text-[17px] text-[color:var(--ink-2)] mt-6 max-w-[48ch] mx-auto leading-[1.6]">
+      Nine seats open this intake, as members rotate out. Yusuf reads every application himself — yours included.
+    </p>
+
+    <!-- countdown -->
+    <div class="inline-flex items-end gap-3 sm:gap-5 mt-9 rounded-xl border rule-gold bg-[color:var(--bg-2)] px-6 py-4">
+      <div><span id="cd2-d" class="display tnum text-[34px] sm:text-[42px] text-[color:var(--gold)]">00</span><span class="mono text-[10px] text-[color:var(--ink-3)] ml-1">d</span></div>
+      <span class="display text-[26px] text-[color:var(--line)]">:</span>
+      <div><span id="cd2-h" class="display tnum text-[34px] sm:text-[42px] text-[color:var(--gold)]">00</span><span class="mono text-[10px] text-[color:var(--ink-3)] ml-1">h</span></div>
+      <span class="display text-[26px] text-[color:var(--line)]">:</span>
+      <div><span id="cd2-m" class="display tnum text-[34px] sm:text-[42px] text-[color:var(--gold)]">00</span><span class="mono text-[10px] text-[color:var(--ink-3)] ml-1">m</span></div>
+      <span class="display text-[26px] text-[color:var(--line)]">:</span>
+      <div><span id="cd2-s" class="display tnum text-[34px] sm:text-[42px] text-[color:var(--gold)]">00</span><span class="mono text-[10px] text-[color:var(--ink-3)] ml-1">s</span></div>
+    </div>
+
+    <div class="flex flex-col sm:flex-row gap-3 justify-center mt-9">
+      <a href="#apply" class="btn-gold inline-flex items-center justify-center gap-2 rounded-lg bg-[color:var(--gold)] text-[#0E1A3A] font-bold px-7 py-4 text-[16px]">
+        Apply for membership <span class="scroll-x">→</span>
+      </a>
+      <a href="#membership" class="btn-ghost inline-flex items-center justify-center rounded-lg border rule text-[color:var(--ink)] font-semibold px-7 py-4 text-[16px]">
+        How membership works
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer class="bg-[color:var(--bg-2)] border-t rule-2">
+  <div class="max-w-[1180px] mx-auto px-5 sm:px-8 py-12 flex flex-col sm:flex-row items-center justify-between gap-6">
+    <div class="flex items-center gap-2.5">
+      <svg width="22" height="24" viewBox="0 0 24 26" aria-hidden="true">
+        <path d="M5 3h14l-2.5 9a4.7 4.7 0 0 1-9 0L5 3Z" fill="none" stroke="#C8A06A" stroke-width="1.4" stroke-linejoin="round"/>
+        <path d="M12 16.5V21M8 23h8" stroke="#A8AFC6" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      <span class="text-[17px] font-extrabold">Crucible</span>
+      <span class="mono text-[11px] text-[color:var(--ink-3)] ml-2 hidden sm:inline">Since 2022 · 280 members</span>
+    </div>
+    <nav class="flex items-center gap-7 text-[13px] text-[color:var(--ink-2)]">
+      <a href="#how" class="ul-link">Retreat archive</a>
+      <a href="#founder" class="ul-link">About</a>
+      <a href="#faq" class="ul-link">Privacy</a>
+    </nav>
+    <div class="mono text-[11px] text-[color:var(--ink-3)]">© 2026 Crucible</div>
+  </div>
+</footer>
+
+<script>
+  (function(){
+    /* countdown to applications close — two displays, same target */
+    var target = new Date('2026-06-12T23:59:00-04:00').getTime();
+    var sets = [
+      { d:'cd-d', h:'cd-h', m:'cd-m', s:'cd-s' },
+      { d:'cd2-d', h:'cd2-h', m:'cd2-m', s:'cd2-s' }
+    ].map(function(o){
+      return { d:document.getElementById(o.d), h:document.getElementById(o.h), m:document.getElementById(o.m), s:document.getElementById(o.s) };
+    });
+    function pad(n){ return String(n).padStart(2,'0'); }
+    function tick(){
+      var gap = target - Date.now();
+      if(gap < 0) gap = 0;
+      var dd = pad(Math.floor(gap/864e5)), hh = pad(Math.floor(gap%864e5/36e5)),
+          mm = pad(Math.floor(gap%36e5/6e4)), ss = pad(Math.floor(gap%6e4/1e3));
+      sets.forEach(function(e){
+        if(!e.d) return;
+        e.d.textContent = dd; e.h.textContent = hh; e.m.textContent = mm; e.s.textContent = ss;
+      });
+    }
+    tick();
+    setInterval(tick, 1000);
+
+    /* procedural member-network constellation */
+    var c = document.getElementById('netGraph');
+    var ns = 'http://www.w3.org/2000/svg';
+    var CW = 720, CH = 300, cols = 12, rows = 6;
+    var seed = 20260612;
+    function rnd(){ seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; }
+    var nodes = [];
+    for(var r=0;r<rows;r++){
+      for(var col=0;col<cols;col++){
+        var x = 40 + col*(CW-80)/(cols-1) + (rnd()-0.5)*40;
+        var y = 34 + r*(CH-68)/(rows-1) + (rnd()-0.5)*36;
+        nodes.push({ x:x, y:y, gold: rnd() > 0.87 });
+      }
+    }
+    for(var i=0;i<nodes.length;i++){
+      for(var j=i+1;j<nodes.length;j++){
+        var dx = nodes[i].x-nodes[j].x, dy = nodes[i].y-nodes[j].y;
+        var dist = Math.sqrt(dx*dx + dy*dy);
+        if(dist < 92){
+          var ln = document.createElementNS(ns,'line');
+          ln.setAttribute('x1', nodes[i].x); ln.setAttribute('y1', nodes[i].y);
+          ln.setAttribute('x2', nodes[j].x); ln.setAttribute('y2', nodes[j].y);
+          var hot = nodes[i].gold || nodes[j].gold;
+          ln.setAttribute('stroke', hot ? 'rgba(200,160,106,0.3)' : 'rgba(168,175,198,0.16)');
+          ln.setAttribute('stroke-width', '1');
+          c.appendChild(ln);
+        }
+      }
+    }
+    nodes.forEach(function(n){
+      if(n.gold){
+        var halo = document.createElementNS(ns,'circle');
+        halo.setAttribute('cx', n.x); halo.setAttribute('cy', n.y);
+        halo.setAttribute('r', 9);
+        halo.setAttribute('fill', 'rgba(200,160,106,0.14)');
+        c.appendChild(halo);
+      }
+      var ci = document.createElementNS(ns,'circle');
+      ci.setAttribute('cx', n.x); ci.setAttribute('cy', n.y);
+      ci.setAttribute('r', n.gold ? 4.4 : 2.5);
+      ci.setAttribute('fill', n.gold ? '#C8A06A' : 'rgba(168,175,198,0.6)');
+      c.appendChild(ci);
+    });
+  })();
+</script>
+</body>
+</html>

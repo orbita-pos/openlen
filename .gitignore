@@ -45,6 +45,7 @@ next-env.d.ts
 # uploaded images (filesystem storage adapter) — user-supplied artifacts,
 # never commit. Per-deploy persistence comes from Docker volume / R2.
 /public/uploads/
+/uploads/
 
 # IDE
 .vscode/

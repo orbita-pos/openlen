@@ -1,0 +1,836 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Maya Levenson — Cascade</title>
+<meta name="description" content="Cascade — the third album by Maya Levenson. Six long-form ambient pieces. Out April 4, 2026 on Kranky. LP / digital / cassette." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg-outer: #08141A;
+    --bg-glow: #0E2A2F;
+    --accent: #4FE5D4;
+    --text: #E8F4F2;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: #08141A;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+  /* ---- page ambient backdrop ---- */
+  .page-bg {
+    background:
+      radial-gradient(900px 620px at 50% 4%, rgba(79,229,212,0.16), transparent 62%),
+      radial-gradient(1200px 900px at 50% 30%, #0E2A2F 0%, transparent 70%),
+      #08141A;
+  }
+
+  .dot-grid {
+    background-image: radial-gradient(rgba(79,229,212,0.10) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  .hairline { border-color: rgba(232,244,242,0.10); }
+
+  .tabnum { font-variant-numeric: tabular-nums; }
+
+  /* ---- display type ---- */
+  .display {
+    font-weight: 300;
+    letter-spacing: -0.035em;
+    line-height: 1.04;
+  }
+  .display-tight { letter-spacing: -0.03em; }
+
+  .halftone-dim { opacity: 0.45; }
+
+  /* ---- mesh blobs ---- */
+  .mesh-blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(110px);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  /* ---- album art glow ---- */
+  .album-glow::before {
+    content: "";
+    position: absolute;
+    inset: -16% -16% -22% -16%;
+    background: radial-gradient(closest-side, rgba(79,229,212,0.42), transparent 78%);
+    filter: blur(46px);
+    z-index: 0;
+    animation: glow-breathe 9s ease-in-out infinite;
+  }
+  @keyframes glow-breathe {
+    0%, 100% { opacity: 0.62; transform: scale(0.97); }
+    50%      { opacity: 1;    transform: scale(1.04); }
+  }
+
+  /* ---- pulse dot ---- */
+  .pulse-dot {
+    width: 7px; height: 7px;
+    border-radius: 9999px;
+    background: var(--accent);
+    box-shadow: 0 0 0 0 rgba(79,229,212,0.55);
+    animation: pulse-ring 2.6s cubic-bezier(0.4,0,0.2,1) infinite;
+  }
+  @keyframes pulse-ring {
+    0%   { box-shadow: 0 0 0 0 rgba(79,229,212,0.50); }
+    70%  { box-shadow: 0 0 0 11px rgba(79,229,212,0); }
+    100% { box-shadow: 0 0 0 0 rgba(79,229,212,0); }
+  }
+
+  /* ---- press-logo marquee ---- */
+  .marquee-mask {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent);
+            mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent);
+  }
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marquee 46s linear infinite;
+  }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  /* ---- waveform — calm, slow, undulating ---- */
+  .wave-bar {
+    width: 3px;
+    border-radius: 9999px;
+    background: var(--accent);
+    transform-origin: center;
+    animation: wave-undulate 4.4s ease-in-out infinite;
+  }
+  @keyframes wave-undulate {
+    0%, 100% { transform: scaleY(0.30); opacity: 0.55; }
+    50%      { transform: scaleY(1);    opacity: 1; }
+  }
+
+  /* ---- hover lifts ---- */
+  .lift { transition: transform 130ms ease, box-shadow 130ms ease, border-color 130ms ease; }
+  .lift:hover { transform: translateY(-3px); }
+
+  /* ---- tour rows ---- */
+  .tour-row { transition: transform 140ms ease, background-color 140ms ease; }
+  .tour-row:hover { transform: translateX(8px); }
+  .tour-underline {
+    height: 1px; width: 0;
+    background: var(--accent);
+    transition: width 200ms ease;
+  }
+  .tour-row:hover .tour-underline { width: 100%; }
+
+  /* ---- tracklist rows ---- */
+  .track-row { transition: background-color 140ms ease; }
+  .track-row:hover { background-color: rgba(79,229,212,0.045); }
+  .play-glyph { transition: transform 130ms ease, color 130ms ease; }
+  .track-row:hover .play-glyph { transform: scale(1.18); color: var(--accent); }
+
+  /* ---- sold-out stamp ---- */
+  .soldout-stamp {
+    border: 1.5px solid rgba(79,229,212,0.55);
+    color: var(--accent);
+    letter-spacing: 0.16em;
+    transform: rotate(-7deg);
+  }
+
+  /* ---- nav blur ---- */
+  .nav-blur {
+    background: rgba(8,20,26,0.72);
+    -webkit-backdrop-filter: blur(14px);
+            backdrop-filter: blur(14px);
+  }
+
+  .accent-cta { transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease; }
+  .accent-cta:hover { transform: translateY(-2px); box-shadow: 0 12px 34px -10px rgba(79,229,212,0.45); }
+
+  ::selection { background: rgba(79,229,212,0.30); color: #fff; }
+</style>
+</head>
+<body class="page-bg">
+
+  <!-- ============ 1. STICKY NAV ============ -->
+  <nav class="nav-blur sticky top-0 z-50 border-b hairline">
+    <div class="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-8">
+      <a href="#top" class="flex items-center gap-2.5">
+        <span class="h-2.5 w-2.5 rounded-full" style="background:var(--accent)"></span>
+        <span class="text-[15px] font-medium tracking-tight">Maya Levenson</span>
+      </a>
+      <div class="hidden items-center gap-9 md:flex">
+        <a href="#music" class="text-[13.5px] text-[#E8F4F2]/65 transition-colors hover:text-[#E8F4F2]">Music</a>
+        <a href="#tour" class="text-[13.5px] text-[#E8F4F2]/65 transition-colors hover:text-[#E8F4F2]">Tour</a>
+        <a href="#merch" class="text-[13.5px] text-[#E8F4F2]/65 transition-colors hover:text-[#E8F4F2]">Merch</a>
+        <a href="#about" class="text-[13.5px] text-[#E8F4F2]/65 transition-colors hover:text-[#E8F4F2]">About</a>
+      </div>
+      <a href="#music" class="accent-cta rounded-full px-4.5 py-2 text-[13px] font-medium text-[#08141A]" style="background:var(--accent);padding-left:1.05rem;padding-right:1.05rem;">
+        Pre-save Cascade
+      </a>
+    </div>
+  </nav>
+
+  <!-- ============ 2. HERO ============ -->
+  <header id="top" class="relative overflow-hidden">
+    <div class="mesh-blob" style="width:520px;height:520px;background:#4FE5D4;top:-160px;left:-140px;"></div>
+    <div class="mesh-blob" style="width:460px;height:460px;background:#0E5A55;bottom:-200px;right:-120px;opacity:0.4;"></div>
+
+    <div id="music" class="relative mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28 lg:py-32">
+      <div class="grid items-center gap-14 lg:grid-cols-2 lg:gap-20">
+
+        <!-- album art -->
+        <div class="album-glow relative mx-auto w-full max-w-[480px]">
+          <div class="relative z-10 aspect-square w-full overflow-hidden rounded-2xl border border-[#4FE5D4]/15"
+               style="background:
+                 radial-gradient(120% 110% at 22% 14%, rgba(79,229,212,0.55), transparent 56%),
+                 radial-gradient(130% 120% at 84% 92%, rgba(13,68,72,0.95), transparent 60%),
+                 linear-gradient(150deg, #0B2C30 0%, #08171C 58%, #0A2226 100%);">
+            <!-- cascading horizon lines -->
+            <svg viewBox="0 0 480 480" class="absolute inset-0 h-full w-full" preserveAspectRatio="none" aria-hidden="true">
+              <g fill="none" stroke="rgba(232,244,242,0.20)" stroke-width="1">
+                <path d="M0,150 C120,108 240,182 360,140 C420,120 460,150 480,138" />
+                <path d="M0,196 C120,156 240,228 360,188 C420,168 460,196 480,184" />
+                <path d="M0,242 C120,204 240,272 360,236 C420,218 460,242 480,232" />
+                <path d="M0,288 C120,252 240,316 360,284 C420,268 460,288 480,280" />
+                <path d="M0,334 C120,300 240,360 360,330 C420,316 460,334 480,328" />
+              </g>
+              <g fill="none" stroke="rgba(79,229,212,0.55)" stroke-width="1.5">
+                <path d="M0,219 C120,180 240,250 360,212 C420,194 460,219 480,208" />
+              </g>
+            </svg>
+            <div class="absolute bottom-6 left-6 right-6 flex items-end justify-between">
+              <div>
+                <div class="font-mono text-[10.5px] uppercase tracking-[0.22em] text-[#4FE5D4]/80">Maya Levenson</div>
+                <div class="display mt-1 text-3xl text-white">Cascade</div>
+              </div>
+              <div class="font-mono text-[10.5px] tracking-widest text-[#E8F4F2]/45">003</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- album meta -->
+        <div>
+          <div class="flex items-center gap-2.5">
+            <span class="pulse-dot"></span>
+            <span class="font-mono text-[11px] uppercase tracking-[0.2em] text-[#4FE5D4]">New release · pre-save open</span>
+          </div>
+
+          <h1 class="display mt-6 text-6xl sm:text-7xl lg:text-[5.5rem]">
+            Cascade<span class="halftone-dim"> — long-form pieces</span>
+          </h1>
+
+          <p class="mt-5 font-mono text-[13px] tracking-wide text-[#E8F4F2]/55">
+            April 4, 2026 · LP / digital / cassette
+          </p>
+
+          <p class="mt-3 text-[15px] text-[#E8F4F2]/80">
+            The third album by <span class="text-[#E8F4F2]">Maya Levenson</span>
+          </p>
+
+          <p class="mt-6 max-w-md text-[17px] font-light leading-relaxed text-[#E8F4F2]/72">
+            Six pieces that move at the speed of weather — modular synthesis and Icelandic field recordings, recorded over fourteen unhurried months.
+          </p>
+
+          <!-- streaming badges -->
+          <p class="mt-9 font-mono text-[11px] uppercase tracking-[0.2em] text-[#E8F4F2]/40">Stream &amp; pre-save</p>
+          <div class="mt-3 flex flex-wrap gap-2.5">
+            <!-- Spotify -->
+            <a href="#" class="lift flex items-center gap-2 rounded-full px-3.5 py-2 text-[12.5px] font-medium" style="background:#1DB954;color:#062b14;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0a12 12 0 100 24 12 12 0 000-24zm5.5 17.3a.75.75 0 01-1.03.25c-2.82-1.72-6.37-2.11-10.56-1.16a.75.75 0 11-.33-1.46c4.58-1.04 8.5-.59 11.67 1.34.35.22.47.68.25 1.03zm1.47-3.27a.94.94 0 01-1.29.31c-3.23-1.99-8.16-2.56-11.98-1.4a.94.94 0 11-.55-1.8c4.37-1.33 9.8-.69 13.5 1.6.44.27.58.85.32 1.29zm.13-3.4C15.8 6.66 8.46 6.43 4.77 7.55a1.12 1.12 0 11-.65-2.15c4.24-1.29 12.35-1.04 17.04 1.74a1.12 1.12 0 11-1.15 1.92z"/></svg>
+              Spotify
+            </a>
+            <!-- Apple Music -->
+            <a href="#" class="lift flex items-center gap-2 rounded-full px-3.5 py-2 text-[12.5px] font-medium text-white" style="background:#FA243C;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.6 3.4l-8.3 1.7c-.5.1-.8.5-.8 1v8.7a3 3 0 10.9 2.1V9.1l7.4-1.5v5.3a3 3 0 10.9 2.1V4.4c0-.7-.6-1.1-1.1-1z"/></svg>
+              Apple Music
+            </a>
+            <!-- Bandcamp -->
+            <a href="#" class="lift flex items-center gap-2 rounded-full px-3.5 py-2 text-[12.5px] font-medium text-white" style="background:#1DA0C3;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M0 18.75l7.4-13.5H24l-7.4 13.5H0z"/></svg>
+              Bandcamp
+            </a>
+            <!-- SoundCloud -->
+            <a href="#" class="lift flex items-center gap-2 rounded-full px-3.5 py-2 text-[12.5px] font-medium text-white" style="background:#FF5500;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M1 14.5c0-1 .2-2 .5-2.9.3.9.4 1.9.4 2.9s-.1 2-.4 2.9c-.3-.9-.5-1.9-.5-2.9zm2.6-3.6v7.2h.9V10.9h-.9zm2 .5v6.7h.9V11.4h-.9zm2-.6v7.3h.9V10.8h-.9zm2 .3v7h.9V11.1h-.9zm2.6-1.6c-.5 0-.9.4-.9.9v8.3h10.2a2.7 2.7 0 000-5.4c-.4 0-.8.1-1.1.2A4.6 4.6 0 0014.5 8c-.7 0-1.4.2-2 .5V10c0-.5-.1-.8-.3-.5z"/></svg>
+              SoundCloud
+            </a>
+            <!-- YouTube Music -->
+            <a href="#" class="lift flex items-center gap-2 rounded-full px-3.5 py-2 text-[12.5px] font-medium text-white" style="background:#FF0000;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-2 14.5v-9l8 4.5-8 4.5z"/></svg>
+              YouTube Music
+            </a>
+            <!-- Tidal -->
+            <a href="#" class="lift flex items-center gap-2 rounded-full border border-white/15 px-3.5 py-2 text-[12.5px] font-medium text-white" style="background:#0a0a0a;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 6l4 4 4-4 4 4 4-4-4-4-4 4-4-4-4 4zm0 8l4 4 4-4-4-4-4 4zm8 0l4 4 4-4-4-4-4 4z"/></svg>
+              Tidal
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- now playing mock player -->
+      <div class="mx-auto mt-16 max-w-md">
+        <div class="lift rounded-2xl border hairline bg-[#0B2126]/70 p-4">
+          <div class="flex items-center gap-4">
+            <div class="h-14 w-14 flex-none overflow-hidden rounded-lg"
+                 style="background:radial-gradient(120% 120% at 25% 20%, rgba(79,229,212,0.6), transparent 60%), linear-gradient(150deg,#0B2C30,#08171C);"></div>
+            <div class="min-w-0 flex-1">
+              <div class="font-mono text-[10px] uppercase tracking-[0.2em] text-[#4FE5D4]/75">Now playing · preview</div>
+              <div class="mt-0.5 truncate text-[14px] font-medium">Halcyon Field</div>
+              <div class="font-mono text-[11px] text-[#E8F4F2]/45 tabnum">02 · 22:48</div>
+            </div>
+            <!-- waveform -->
+            <div class="flex h-9 items-center gap-[3px]">
+              <span class="wave-bar" style="height:34px;animation-delay:-0.0s"></span>
+              <span class="wave-bar" style="height:34px;animation-delay:-0.5s"></span>
+              <span class="wave-bar" style="height:34px;animation-delay:-1.0s"></span>
+              <span class="wave-bar" style="height:34px;animation-delay:-1.7s"></span>
+              <span class="wave-bar" style="height:34px;animation-delay:-2.3s"></span>
+              <span class="wave-bar" style="height:34px;animation-delay:-2.9s"></span>
+              <span class="wave-bar" style="height:34px;animation-delay:-3.4s"></span>
+              <span class="wave-bar" style="height:34px;animation-delay:-3.9s"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- press marquee -->
+    <div class="border-y hairline py-6">
+      <div class="marquee-mask overflow-hidden">
+        <div class="marquee-track items-center gap-14 pr-14 font-mono text-[12px] uppercase tracking-[0.22em] text-[#E8F4F2]/35">
+          <span>Pitchfork</span><span>·</span><span>The Quietus</span><span>·</span><span>Boomkat</span><span>·</span>
+          <span>The Wire</span><span>·</span><span>Bandcamp Daily</span><span>·</span><span>Fact Magazine</span><span>·</span>
+          <span>NTS Radio</span><span>·</span><span>Aquarium Drunkard</span><span>·</span>
+          <span>Pitchfork</span><span>·</span><span>The Quietus</span><span>·</span><span>Boomkat</span><span>·</span>
+          <span>The Wire</span><span>·</span><span>Bandcamp Daily</span><span>·</span><span>Fact Magazine</span><span>·</span>
+          <span>NTS Radio</span><span>·</span><span>Aquarium Drunkard</span><span>·</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ 3. TRACKLIST ============ -->
+  <section class="relative mx-auto max-w-5xl px-5 py-24 sm:px-8 sm:py-28">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p class="font-mono text-[11px] uppercase tracking-[0.22em] text-[#4FE5D4]">Tracklist</p>
+        <h2 class="display mt-3 text-4xl sm:text-5xl">Six movements</h2>
+      </div>
+      <p class="font-mono text-[12px] tracking-wide text-[#E8F4F2]/45 tabnum">
+        Total runtime 1:48:14 · CASCADE-003
+      </p>
+    </div>
+
+    <div class="mt-12 overflow-hidden rounded-2xl border hairline bg-[#0A1F24]/55">
+      <!-- header row -->
+      <div class="hidden grid-cols-[48px_1fr_auto_44px] gap-4 border-b hairline px-6 py-3 font-mono text-[10.5px] uppercase tracking-[0.2em] text-[#E8F4F2]/35 sm:grid">
+        <span>#</span><span>Title</span><span>Length</span><span></span>
+      </div>
+
+      <!-- 01 -->
+      <div class="track-row grid grid-cols-[40px_1fr_44px] items-center gap-3 border-b hairline px-5 py-4 sm:grid-cols-[48px_1fr_auto_44px] sm:gap-4 sm:px-6 sm:py-5">
+        <span class="font-mono text-[13px] text-[#E8F4F2]/45 tabnum">01</span>
+        <span class="min-w-0">
+          <span class="block truncate text-[15px] font-light sm:text-[16px]">Cascade <span class="text-[#E8F4F2]/45">(slow movement)</span></span>
+          <span class="font-mono text-[11px] text-[#E8F4F2]/35 sm:hidden tabnum">14:08</span>
+        </span>
+        <span class="hidden font-mono text-[13px] text-[#E8F4F2]/55 sm:block tabnum">14:08</span>
+        <span class="play-glyph flex justify-end text-[#E8F4F2]/35"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+      </div>
+      <!-- 02 -->
+      <div class="track-row grid grid-cols-[40px_1fr_44px] items-center gap-3 border-b hairline px-5 py-4 sm:grid-cols-[48px_1fr_auto_44px] sm:gap-4 sm:px-6 sm:py-5">
+        <span class="font-mono text-[13px] text-[#E8F4F2]/45 tabnum">02</span>
+        <span class="min-w-0">
+          <span class="block truncate text-[15px] font-light sm:text-[16px]">Halcyon Field <span class="text-[#E8F4F2]/45">ft. Hildur Aradóttir</span></span>
+          <span class="font-mono text-[11px] text-[#E8F4F2]/35 sm:hidden tabnum">22:48</span>
+        </span>
+        <span class="hidden font-mono text-[13px] text-[#E8F4F2]/55 sm:block tabnum">22:48</span>
+        <span class="play-glyph flex justify-end text-[#E8F4F2]/35"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+      </div>
+      <!-- 03 -->
+      <div class="track-row grid grid-cols-[40px_1fr_44px] items-center gap-3 border-b hairline px-5 py-4 sm:grid-cols-[48px_1fr_auto_44px] sm:gap-4 sm:px-6 sm:py-5">
+        <span class="font-mono text-[13px] text-[#E8F4F2]/45 tabnum">03</span>
+        <span class="min-w-0">
+          <span class="block truncate text-[15px] font-light sm:text-[16px]">Mirror in C</span>
+          <span class="font-mono text-[11px] text-[#E8F4F2]/35 sm:hidden tabnum">18:24</span>
+        </span>
+        <span class="hidden font-mono text-[13px] text-[#E8F4F2]/55 sm:block tabnum">18:24</span>
+        <span class="play-glyph flex justify-end text-[#E8F4F2]/35"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+      </div>
+      <!-- 04 -->
+      <div class="track-row grid grid-cols-[40px_1fr_44px] items-center gap-3 border-b hairline px-5 py-4 sm:grid-cols-[48px_1fr_auto_44px] sm:gap-4 sm:px-6 sm:py-5">
+        <span class="font-mono text-[13px] text-[#E8F4F2]/45 tabnum">04</span>
+        <span class="min-w-0">
+          <span class="block truncate text-[15px] font-light sm:text-[16px]">Driftwood Sonar</span>
+          <span class="font-mono text-[11px] text-[#E8F4F2]/35 sm:hidden tabnum">15:52</span>
+        </span>
+        <span class="hidden font-mono text-[13px] text-[#E8F4F2]/55 sm:block tabnum">15:52</span>
+        <span class="play-glyph flex justify-end text-[#E8F4F2]/35"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+      </div>
+      <!-- 05 -->
+      <div class="track-row grid grid-cols-[40px_1fr_44px] items-center gap-3 border-b hairline px-5 py-4 sm:grid-cols-[48px_1fr_auto_44px] sm:gap-4 sm:px-6 sm:py-5">
+        <span class="font-mono text-[13px] text-[#E8F4F2]/45 tabnum">05</span>
+        <span class="min-w-0">
+          <span class="block truncate text-[15px] font-light sm:text-[16px]">Glacier Erratics <span class="text-[#E8F4F2]/45">ft. Nils Okkenhaug</span></span>
+          <span class="font-mono text-[11px] text-[#E8F4F2]/35 sm:hidden tabnum">13:54</span>
+        </span>
+        <span class="hidden font-mono text-[13px] text-[#E8F4F2]/55 sm:block tabnum">13:54</span>
+        <span class="play-glyph flex justify-end text-[#E8F4F2]/35"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+      </div>
+      <!-- 06 -->
+      <div class="track-row grid grid-cols-[40px_1fr_44px] items-center gap-3 px-5 py-4 sm:grid-cols-[48px_1fr_auto_44px] sm:gap-4 sm:px-6 sm:py-5">
+        <span class="font-mono text-[13px] text-[#E8F4F2]/45 tabnum">06</span>
+        <span class="min-w-0">
+          <span class="block truncate text-[15px] font-light sm:text-[16px]">Last Light, Vík</span>
+          <span class="font-mono text-[11px] text-[#E8F4F2]/35 sm:hidden tabnum">23:08</span>
+        </span>
+        <span class="hidden font-mono text-[13px] text-[#E8F4F2]/55 sm:block tabnum">23:08</span>
+        <span class="play-glyph flex justify-end text-[#E8F4F2]/35"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+      </div>
+    </div>
+
+    <p class="mt-6 font-mono text-[11.5px] tracking-wide text-[#E8F4F2]/40">
+      All pieces written, performed &amp; produced by Maya Levenson. Mastered at half-speed by Rashad Becker.
+    </p>
+  </section>
+
+  <!-- ============ 4. PRESS QUOTES ============ -->
+  <section class="relative mx-auto max-w-6xl px-5 py-24 sm:px-8 dot-grid">
+    <p class="font-mono text-[11px] uppercase tracking-[0.22em] text-[#4FE5D4]">Press</p>
+    <h2 class="display mt-3 text-4xl sm:text-5xl">What they're saying</h2>
+
+    <div class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <!-- 1 -->
+      <figure class="lift flex flex-col rounded-2xl border hairline bg-[#0B2126]/55 p-7">
+        <div class="flex items-center gap-2">
+          <span class="font-mono text-[26px] font-medium text-[#4FE5D4] tabnum">8.2</span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.18em] text-[#E8F4F2]/40">Score</span>
+        </div>
+        <blockquote class="mt-4 text-[18px] font-light leading-snug text-[#E8F4F2]/90">"Drone music that breathes — Cascade asks for an hour and gives back a day."</blockquote>
+        <figcaption class="mt-5 font-mono text-[12px] uppercase tracking-[0.16em] text-[#E8F4F2]/45">Pitchfork</figcaption>
+      </figure>
+      <!-- 2 -->
+      <figure class="lift flex flex-col rounded-2xl border hairline bg-[#0B2126]/55 p-7">
+        <blockquote class="text-[18px] font-light leading-snug text-[#E8F4F2]/90">"Levenson's most patient work — a record that refuses to hurry, and is wiser for it."</blockquote>
+        <figcaption class="mt-auto pt-6 font-mono text-[12px] uppercase tracking-[0.16em] text-[#E8F4F2]/45">The Quietus</figcaption>
+      </figure>
+      <!-- 3 -->
+      <figure class="lift flex flex-col rounded-2xl border hairline bg-[#0B2126]/55 p-7">
+        <blockquote class="text-[18px] font-light leading-snug text-[#E8F4F2]/90">"Essential ambient listening for 2026. Few releases this year feel so completely realised."</blockquote>
+        <figcaption class="mt-auto pt-6 font-mono text-[12px] uppercase tracking-[0.16em] text-[#E8F4F2]/45">Boomkat</figcaption>
+      </figure>
+      <!-- 4 -->
+      <figure class="lift flex flex-col rounded-2xl border hairline bg-[#0B2126]/55 p-7">
+        <blockquote class="text-[18px] font-light leading-snug text-[#E8F4F2]/90">"Twenty-two minutes of 'Halcyon Field' pass like a slow exhale. Astonishing control of stillness."</blockquote>
+        <figcaption class="mt-auto pt-6 font-mono text-[12px] uppercase tracking-[0.16em] text-[#E8F4F2]/45">The Wire</figcaption>
+      </figure>
+      <!-- 5 -->
+      <figure class="lift flex flex-col rounded-2xl border hairline bg-[#0B2126]/55 p-7">
+        <blockquote class="text-[18px] font-light leading-snug text-[#E8F4F2]/90">"You can hear Iceland in every reverb tail. A field recording elevated into composition."</blockquote>
+        <figcaption class="mt-auto pt-6 font-mono text-[12px] uppercase tracking-[0.16em] text-[#E8F4F2]/45">Bandcamp Daily</figcaption>
+      </figure>
+      <!-- 6 -->
+      <figure class="lift flex flex-col rounded-2xl border hairline bg-[#0B2126]/55 p-7">
+        <blockquote class="text-[18px] font-light leading-snug text-[#E8F4F2]/90">"The rare ambient album that earns its length. Cascade is glacial in the best possible sense."</blockquote>
+        <figcaption class="mt-auto pt-6 font-mono text-[12px] uppercase tracking-[0.16em] text-[#E8F4F2]/45">Fact Magazine</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ============ 5. TOUR DATES ============ -->
+  <section id="tour" class="relative mx-auto max-w-5xl px-5 py-24 sm:px-8 sm:py-28">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p class="font-mono text-[11px] uppercase tracking-[0.22em] text-[#4FE5D4]">Live</p>
+        <h2 class="display mt-3 text-4xl sm:text-5xl">Cascade — performed in full</h2>
+      </div>
+      <div class="flex items-center gap-2.5">
+        <span class="pulse-dot"></span>
+        <span class="font-mono text-[12px] uppercase tracking-[0.18em] text-[#E8F4F2]/55">8 dates · galleries &amp; art spaces</span>
+      </div>
+    </div>
+
+    <div class="mt-11 divide-y divide-[#E8F4F2]/10 border-t hairline">
+
+      <!-- date 1 -->
+      <div class="tour-row group px-2 py-5 sm:px-4">
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-[140px_1fr_auto] sm:items-center sm:gap-6">
+          <span class="font-mono text-[13px] tracking-wide text-[#4FE5D4] tabnum">Apr 09 2026</span>
+          <span>
+            <span class="block text-[16px] font-light">Issue Project Room</span>
+            <span class="font-mono text-[11.5px] text-[#E8F4F2]/45">Brooklyn, NY · 75-min set</span>
+          </span>
+          <a href="#" class="accent-cta justify-self-start rounded-full border border-[#4FE5D4]/40 px-4 py-1.5 text-[12px] font-medium text-[#4FE5D4] sm:justify-self-end">Tickets</a>
+        </div>
+        <div class="tour-underline mt-3"></div>
+      </div>
+
+      <!-- date 2 — SOLD OUT -->
+      <div class="tour-row group px-2 py-5 sm:px-4">
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-[140px_1fr_auto] sm:items-center sm:gap-6">
+          <span class="font-mono text-[13px] tracking-wide text-[#E8F4F2]/40 tabnum">Apr 14 2026</span>
+          <span>
+            <span class="block text-[16px] font-light text-[#E8F4F2]/65">The Lab</span>
+            <span class="font-mono text-[11.5px] text-[#E8F4F2]/35">San Francisco, CA · 90-min set</span>
+          </span>
+          <div class="flex items-center gap-3 sm:justify-self-end">
+            <span class="soldout-stamp rounded px-2.5 py-1 font-mono text-[10px] font-medium uppercase">Sold Out</span>
+            <span class="cursor-not-allowed rounded-full border border-[#E8F4F2]/12 px-4 py-1.5 text-[12px] text-[#E8F4F2]/30">Tickets</span>
+          </div>
+        </div>
+        <div class="tour-underline mt-3"></div>
+      </div>
+
+      <!-- date 3 -->
+      <div class="tour-row group px-2 py-5 sm:px-4">
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-[140px_1fr_auto] sm:items-center sm:gap-6">
+          <span class="font-mono text-[13px] tracking-wide text-[#4FE5D4] tabnum">Apr 22 2026</span>
+          <span>
+            <span class="block text-[16px] font-light">Cafe OTO</span>
+            <span class="font-mono text-[11.5px] text-[#E8F4F2]/45">London, UK · 80-min set</span>
+          </span>
+          <a href="#" class="accent-cta justify-self-start rounded-full border border-[#4FE5D4]/40 px-4 py-1.5 text-[12px] font-medium text-[#4FE5D4] sm:justify-self-end">Tickets</a>
+        </div>
+        <div class="tour-underline mt-3"></div>
+      </div>
+
+      <!-- date 4 -->
+      <div class="tour-row group px-2 py-5 sm:px-4">
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-[140px_1fr_auto] sm:items-center sm:gap-6">
+          <span class="font-mono text-[13px] tracking-wide text-[#4FE5D4] tabnum">Apr 27 2026</span>
+          <span>
+            <span class="block text-[16px] font-light">Berghain — Kantine</span>
+            <span class="font-mono text-[11.5px] text-[#E8F4F2]/45">Berlin, DE · 90-min set</span>
+          </span>
+          <a href="#" class="accent-cta justify-self-start rounded-full border border-[#4FE5D4]/40 px-4 py-1.5 text-[12px] font-medium text-[#4FE5D4] sm:justify-self-end">Tickets</a>
+        </div>
+        <div class="tour-underline mt-3"></div>
+      </div>
+
+      <!-- date 5 -->
+      <div class="tour-row group px-2 py-5 sm:px-4">
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-[140px_1fr_auto] sm:items-center sm:gap-6">
+          <span class="font-mono text-[13px] tracking-wide text-[#4FE5D4] tabnum">May 03 2026</span>
+          <span>
+            <span class="block text-[16px] font-light">Harpa — Kaldalón Hall</span>
+            <span class="font-mono text-[11.5px] text-[#E8F4F2]/45">Reykjavík, IS · 85-min set</span>
+          </span>
+          <a href="#" class="accent-cta justify-self-start rounded-full border border-[#4FE5D4]/40 px-4 py-1.5 text-[12px] font-medium text-[#4FE5D4] sm:justify-self-end">Tickets</a>
+        </div>
+        <div class="tour-underline mt-3"></div>
+      </div>
+
+      <!-- date 6 — SOLD OUT -->
+      <div class="tour-row group px-2 py-5 sm:px-4">
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-[140px_1fr_auto] sm:items-center sm:gap-6">
+          <span class="font-mono text-[13px] tracking-wide text-[#E8F4F2]/40 tabnum">May 09 2026</span>
+          <span>
+            <span class="block text-[16px] font-light text-[#E8F4F2]/65">Le Guess Who? — Pieterskerk</span>
+            <span class="font-mono text-[11.5px] text-[#E8F4F2]/35">Utrecht, NL · 60-min set</span>
+          </span>
+          <div class="flex items-center gap-3 sm:justify-self-end">
+            <span class="soldout-stamp rounded px-2.5 py-1 font-mono text-[10px] font-medium uppercase">Sold Out</span>
+            <span class="cursor-not-allowed rounded-full border border-[#E8F4F2]/12 px-4 py-1.5 text-[12px] text-[#E8F4F2]/30">Tickets</span>
+          </div>
+        </div>
+        <div class="tour-underline mt-3"></div>
+      </div>
+
+      <!-- date 7 -->
+      <div class="tour-row group px-2 py-5 sm:px-4">
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-[140px_1fr_auto] sm:items-center sm:gap-6">
+          <span class="font-mono text-[13px] tracking-wide text-[#4FE5D4] tabnum">May 16 2026</span>
+          <span>
+            <span class="block text-[16px] font-light">Pioneer Works</span>
+            <span class="font-mono text-[11.5px] text-[#E8F4F2]/45">Brooklyn, NY · 90-min set</span>
+          </span>
+          <a href="#" class="accent-cta justify-self-start rounded-full border border-[#4FE5D4]/40 px-4 py-1.5 text-[12px] font-medium text-[#4FE5D4] sm:justify-self-end">Tickets</a>
+        </div>
+        <div class="tour-underline mt-3"></div>
+      </div>
+
+      <!-- date 8 -->
+      <div class="tour-row group px-2 py-5 sm:px-4">
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-[140px_1fr_auto] sm:items-center sm:gap-6">
+          <span class="font-mono text-[13px] tracking-wide text-[#4FE5D4] tabnum">May 24 2026</span>
+          <span>
+            <span class="block text-[16px] font-light">MCA — Edlis Neeson Theater</span>
+            <span class="font-mono text-[11.5px] text-[#E8F4F2]/45">Chicago, IL · 80-min set</span>
+          </span>
+          <a href="#" class="accent-cta justify-self-start rounded-full border border-[#4FE5D4]/40 px-4 py-1.5 text-[12px] font-medium text-[#4FE5D4] sm:justify-self-end">Tickets</a>
+        </div>
+        <div class="tour-underline mt-3"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ 6. MUSIC / LYRIC VIDEO ============ -->
+  <section class="relative mx-auto max-w-5xl px-5 py-24 sm:px-8">
+    <p class="font-mono text-[11px] uppercase tracking-[0.22em] text-[#4FE5D4]">Visual album</p>
+    <h2 class="display mt-3 text-4xl sm:text-5xl">Cascade<span class="halftone-dim"> — moving image</span></h2>
+
+    <div class="album-glow relative mt-10">
+      <div class="lift relative z-10 aspect-video w-full overflow-hidden rounded-2xl border border-[#4FE5D4]/15"
+           style="background:
+             radial-gradient(90% 130% at 30% 12%, rgba(79,229,212,0.40), transparent 58%),
+             radial-gradient(100% 130% at 86% 96%, rgba(11,44,48,0.95), transparent 60%),
+             linear-gradient(150deg,#0B2C30,#08171C 60%,#0A2226);">
+        <svg viewBox="0 0 960 540" class="absolute inset-0 h-full w-full" preserveAspectRatio="none" aria-hidden="true">
+          <g fill="none" stroke="rgba(232,244,242,0.13)" stroke-width="1">
+            <path d="M0,180 C240,130 480,230 720,170 C840,140 920,180 960,165" />
+            <path d="M0,260 C240,210 480,310 720,250 C840,220 920,260 960,245" />
+            <path d="M0,340 C240,290 480,390 720,330 C840,300 920,340 960,325" />
+          </g>
+        </svg>
+        <!-- play overlay -->
+        <div class="absolute inset-0 flex items-center justify-center">
+          <div class="flex h-20 w-20 items-center justify-center rounded-full border border-[#4FE5D4]/40 bg-[#08141A]/50 backdrop-blur-sm transition-transform duration-150 hover:scale-105">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="#4FE5D4"><path d="M8 5v14l11-7z"/></svg>
+          </div>
+        </div>
+        <div class="absolute bottom-5 left-6 right-6 flex items-center justify-between">
+          <span class="font-mono text-[11px] uppercase tracking-[0.18em] text-[#E8F4F2]/55">Visual album excerpt</span>
+          <span class="font-mono text-[11px] text-[#E8F4F2]/55 tabnum">14:08</span>
+        </div>
+      </div>
+    </div>
+    <p class="mt-6 text-[15px] font-light text-[#E8F4F2]/70">
+      <span class="text-[#E8F4F2]">Cascade (visual album excerpt)</span> — projected at MoMA PS1, January 2026. Direction &amp; 16mm transfer by Lúa Marín.
+    </p>
+
+    <!-- lyrics / text excerpt pull-quote -->
+    <figure class="mx-auto mt-16 max-w-2xl text-center">
+      <blockquote class="font-light italic leading-relaxed text-[#E8F4F2]/80" style="font-size:1.5rem;letter-spacing:-0.01em;">
+        "Water keeps no record of the stone — it only remembers the falling, and the falling, and the falling."
+      </blockquote>
+      <figcaption class="mt-5 font-mono text-[11px] uppercase tracking-[0.2em] text-[#4FE5D4]/70">
+        from the liner notes — "Mirror in C"
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ============ 7. BIO / ABOUT ============ -->
+  <section id="about" class="relative mx-auto max-w-6xl px-5 py-24 sm:px-8 sm:py-28">
+    <div class="grid items-center gap-14 lg:grid-cols-5 lg:gap-16">
+      <!-- artist photo -->
+      <div class="lg:col-span-2">
+        <div class="relative mx-auto aspect-[4/5] w-full max-w-sm overflow-hidden rounded-2xl border hairline"
+             style="background:
+               radial-gradient(120% 90% at 28% 18%, rgba(79,229,212,0.34), transparent 56%),
+               linear-gradient(160deg,#0C2A2E 0%,#081A1F 70%);">
+          <svg viewBox="0 0 320 400" class="absolute inset-0 h-full w-full" preserveAspectRatio="none" aria-hidden="true">
+            <g fill="none" stroke="rgba(232,244,242,0.16)" stroke-width="1">
+              <path d="M0,150 C80,120 160,180 240,150 C280,135 300,155 320,148" />
+              <path d="M0,210 C80,180 160,240 240,210 C280,195 300,215 320,208" />
+              <path d="M0,270 C80,240 160,300 240,270 C280,255 300,275 320,268" />
+            </g>
+          </svg>
+          <div class="absolute bottom-5 left-5 font-mono text-[10.5px] uppercase tracking-[0.2em] text-[#E8F4F2]/45">
+            Maya Levenson · Vík, IS · 2025
+          </div>
+        </div>
+      </div>
+      <!-- bio text -->
+      <div class="lg:col-span-3">
+        <p class="font-mono text-[11px] uppercase tracking-[0.22em] text-[#4FE5D4]">About</p>
+        <h2 class="display mt-3 text-4xl sm:text-5xl">Maya Levenson</h2>
+        <div class="mt-7 space-y-5 text-[16px] font-light leading-relaxed text-[#E8F4F2]/75">
+          <p>
+            Maya Levenson builds slow music from two materials: a wall of modular synthesis she has tuned by hand for a decade, and field recordings — wind across lava fields, meltwater, the long room tone of empty churches. Nothing on a Levenson record is in a hurry. A phrase is allowed to arrive, settle, and dissolve on its own clock.
+          </p>
+          <p>
+            <span class="text-[#E8F4F2]">Cascade</span>, her third album, took fourteen months to record. Much of its raw material was gathered across two winters in Iceland — at Vík, on the black-sand coast, and in the gallery spaces of Reykjavík where she first performed the pieces as 90-minute durational works. She brought those recordings back to a studio in upstate New York and let them weather: re-pitched, stretched, played back through the modular until the field and the synthesis stopped being distinguishable.
+          </p>
+          <p>
+            The result is six long-form pieces — none shorter than thirteen minutes — meant to be heard the way they were made: patiently, in one sitting, with the lights low. Following <span class="text-[#E8F4F2]">Tideline</span> (2021) and <span class="text-[#E8F4F2]">Quiet Hours</span> (2023), Cascade is Levenson's most fully realised statement, and her first for the Kranky imprint.
+          </p>
+        </div>
+        <div class="mt-8 flex flex-wrap gap-x-8 gap-y-3 font-mono text-[12px] tracking-wide text-[#E8F4F2]/45">
+          <span>Based in upstate New York</span>
+          <span>3 albums · 2018–2026</span>
+          <span class="text-[#4FE5D4]">248,119 monthly listeners</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 8. MERCH SHOP ============ -->
+  <section id="merch" class="relative mx-auto max-w-6xl px-5 py-24 sm:px-8 dot-grid">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p class="font-mono text-[11px] uppercase tracking-[0.22em] text-[#4FE5D4]">Shop</p>
+        <h2 class="display mt-3 text-4xl sm:text-5xl">Cascade — physical editions</h2>
+      </div>
+      <p class="font-mono text-[12px] tracking-wide text-[#E8F4F2]/45">Ships worldwide from the Kranky store</p>
+    </div>
+
+    <div class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+
+      <!-- 2xLP -->
+      <div class="lift group flex flex-col overflow-hidden rounded-2xl border hairline bg-[#0B2126]/55">
+        <div class="aspect-square w-full" style="background:radial-gradient(120% 120% at 26% 18%, rgba(79,229,212,0.48), transparent 58%), linear-gradient(150deg,#0C2C30,#08181D);"></div>
+        <div class="flex flex-1 flex-col p-5">
+          <h3 class="text-[15px] font-light">2×LP gatefold</h3>
+          <p class="mt-1 font-mono text-[11px] text-[#E8F4F2]/45">180g sea-glass vinyl · 12-page insert</p>
+          <div class="mt-auto flex items-center justify-between pt-5">
+            <span class="font-mono text-[15px] text-[#4FE5D4] tabnum">$48</span>
+            <span class="accent-cta rounded-full border border-[#4FE5D4]/40 px-3.5 py-1.5 text-[11.5px] font-medium text-[#4FE5D4]">Add</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cassette -->
+      <div class="lift group flex flex-col overflow-hidden rounded-2xl border hairline bg-[#0B2126]/55">
+        <div class="aspect-square w-full" style="background:radial-gradient(120% 120% at 74% 22%, rgba(79,229,212,0.40), transparent 56%), linear-gradient(150deg,#0A2428,#07161A);"></div>
+        <div class="flex flex-1 flex-col p-5">
+          <h3 class="text-[15px] font-light">Cassette</h3>
+          <p class="mt-1 font-mono text-[11px] text-[#E8F4F2]/45">Chrome tape · clear shell · ltd. 300</p>
+          <div class="mt-auto flex items-center justify-between pt-5">
+            <span class="font-mono text-[15px] text-[#4FE5D4] tabnum">$14</span>
+            <span class="accent-cta rounded-full border border-[#4FE5D4]/40 px-3.5 py-1.5 text-[11.5px] font-medium text-[#4FE5D4]">Add</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Art print -->
+      <div class="lift group flex flex-col overflow-hidden rounded-2xl border hairline bg-[#0B2126]/55">
+        <div class="aspect-square w-full" style="background:radial-gradient(110% 120% at 40% 32%, rgba(79,229,212,0.34), transparent 56%), linear-gradient(160deg,#0C2A2E,#081A1F);"></div>
+        <div class="flex flex-1 flex-col p-5">
+          <h3 class="text-[15px] font-light">Signed art print</h3>
+          <p class="mt-1 font-mono text-[11px] text-[#E8F4F2]/45">A2 giclée · signed &amp; numbered /150</p>
+          <div class="mt-auto flex items-center justify-between pt-5">
+            <span class="font-mono text-[15px] text-[#4FE5D4] tabnum">$88</span>
+            <span class="accent-cta rounded-full border border-[#4FE5D4]/40 px-3.5 py-1.5 text-[11.5px] font-medium text-[#4FE5D4]">Add</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Zine -->
+      <div class="lift group flex flex-col overflow-hidden rounded-2xl border hairline bg-[#0B2126]/55">
+        <div class="aspect-square w-full" style="background:radial-gradient(120% 120% at 60% 70%, rgba(79,229,212,0.38), transparent 58%), linear-gradient(150deg,#0B262A,#07151A);"></div>
+        <div class="flex flex-1 flex-col p-5">
+          <h3 class="text-[15px] font-light">Album zine</h3>
+          <p class="mt-1 font-mono text-[11px] text-[#E8F4F2]/45">48pp · field photos &amp; process notes</p>
+          <div class="mt-auto flex items-center justify-between pt-5">
+            <span class="font-mono text-[15px] text-[#4FE5D4] tabnum">$28</span>
+            <span class="accent-cta rounded-full border border-[#4FE5D4]/40 px-3.5 py-1.5 text-[11.5px] font-medium text-[#4FE5D4]">Add</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ 9. NEWSLETTER ============ -->
+  <section class="relative mx-auto max-w-3xl px-5 py-24 sm:px-8 sm:py-28">
+    <div class="relative overflow-hidden rounded-3xl border border-[#4FE5D4]/15 bg-[#0B2126]/60 p-9 text-center sm:p-14">
+      <div class="mesh-blob" style="width:340px;height:340px;background:#4FE5D4;top:-160px;left:50%;transform:translateX(-50%);opacity:0.3;"></div>
+      <div class="relative">
+        <div class="mb-5 flex items-center justify-center gap-2.5">
+          <span class="pulse-dot"></span>
+          <span class="font-mono text-[11px] uppercase tracking-[0.2em] text-[#4FE5D4]">Stay close</span>
+        </div>
+        <h2 class="display text-3xl sm:text-4xl">Get tour dates + new releases</h2>
+        <p class="mx-auto mt-4 max-w-md text-[15px] font-light text-[#E8F4F2]/70">
+          Subscribe for first access to performance tickets, physical pressings, and quiet news between records. No more than once a month.
+        </p>
+        <form class="mx-auto mt-8 flex max-w-md flex-col gap-3 sm:flex-row" onsubmit="return false">
+          <input type="email" required placeholder="you@email.com"
+                 class="w-full flex-1 rounded-full border border-[#E8F4F2]/12 bg-[#08141A]/70 px-5 py-3 text-[14px] text-[#E8F4F2] placeholder-[#E8F4F2]/35 outline-none transition-colors focus:border-[#4FE5D4]/55" />
+          <button type="submit" class="accent-cta rounded-full px-6 py-3 text-[14px] font-medium text-[#08141A]" style="background:var(--accent)">
+            Subscribe
+          </button>
+        </form>
+        <p class="mt-4 font-mono text-[10.5px] tracking-wide text-[#E8F4F2]/35">Unsubscribe anytime · no list sharing, ever</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 10. SOCIAL + STREAMING ROW ============ -->
+  <section class="relative mx-auto max-w-5xl px-5 pb-20 sm:px-8">
+    <div class="rounded-2xl border hairline bg-[#0A1F24]/50 px-6 py-7">
+      <p class="text-center font-mono text-[11px] uppercase tracking-[0.22em] text-[#E8F4F2]/40">Follow Maya Levenson</p>
+      <div class="mt-5 flex flex-wrap items-center justify-center gap-3.5">
+        <!-- Spotify -->
+        <a href="#" aria-label="Spotify" class="lift flex h-11 w-11 items-center justify-center rounded-full border hairline text-[#E8F4F2]/65 hover:text-[#4FE5D4]">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0a12 12 0 100 24 12 12 0 000-24zm5.5 17.3a.75.75 0 01-1.03.25c-2.82-1.72-6.37-2.11-10.56-1.16a.75.75 0 11-.33-1.46c4.58-1.04 8.5-.59 11.67 1.34.35.22.47.68.25 1.03zm1.47-3.27a.94.94 0 01-1.29.31c-3.23-1.99-8.16-2.56-11.98-1.4a.94.94 0 11-.55-1.8c4.37-1.33 9.8-.69 13.5 1.6.44.27.58.85.32 1.29zm.13-3.4C15.8 6.66 8.46 6.43 4.77 7.55a1.12 1.12 0 11-.65-2.15c4.24-1.29 12.35-1.04 17.04 1.74a1.12 1.12 0 11-1.15 1.92z"/></svg>
+        </a>
+        <!-- Apple Music -->
+        <a href="#" aria-label="Apple Music" class="lift flex h-11 w-11 items-center justify-center rounded-full border hairline text-[#E8F4F2]/65 hover:text-[#4FE5D4]">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.6 3.4l-8.3 1.7c-.5.1-.8.5-.8 1v8.7a3 3 0 10.9 2.1V9.1l7.4-1.5v5.3a3 3 0 10.9 2.1V4.4c0-.7-.6-1.1-1.1-1z"/></svg>
+        </a>
+        <!-- Bandcamp -->
+        <a href="#" aria-label="Bandcamp" class="lift flex h-11 w-11 items-center justify-center rounded-full border hairline text-[#E8F4F2]/65 hover:text-[#4FE5D4]">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M0 18.75l7.4-13.5H24l-7.4 13.5H0z"/></svg>
+        </a>
+        <!-- SoundCloud -->
+        <a href="#" aria-label="SoundCloud" class="lift flex h-11 w-11 items-center justify-center rounded-full border hairline text-[#E8F4F2]/65 hover:text-[#4FE5D4]">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M1 14.5c0-1 .2-2 .5-2.9.3.9.4 1.9.4 2.9s-.1 2-.4 2.9c-.3-.9-.5-1.9-.5-2.9zm2.6-3.6v7.2h.9V10.9h-.9zm2 .5v6.7h.9V11.4h-.9zm2-.6v7.3h.9V10.8h-.9zm2 .3v7h.9V11.1h-.9zm2.6-1.6c-.5 0-.9.4-.9.9v8.3h10.2a2.7 2.7 0 000-5.4c-.4 0-.8.1-1.1.2A4.6 4.6 0 0014.5 8c-.7 0-1.4.2-2 .5V10c0-.5-.1-.8-.3-.5z"/></svg>
+        </a>
+        <!-- YouTube Music -->
+        <a href="#" aria-label="YouTube Music" class="lift flex h-11 w-11 items-center justify-center rounded-full border hairline text-[#E8F4F2]/65 hover:text-[#4FE5D4]">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-2 14.5v-9l8 4.5-8 4.5z"/></svg>
+        </a>
+        <!-- Tidal -->
+        <a href="#" aria-label="Tidal" class="lift flex h-11 w-11 items-center justify-center rounded-full border hairline text-[#E8F4F2]/65 hover:text-[#4FE5D4]">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6l4 4 4-4 4 4 4-4-4-4-4 4-4-4-4 4zm0 8l4 4 4-4-4-4-4 4zm8 0l4 4 4-4-4-4-4 4z"/></svg>
+        </a>
+        <!-- Instagram -->
+        <a href="#" aria-label="Instagram" class="lift flex h-11 w-11 items-center justify-center rounded-full border hairline text-[#E8F4F2]/65 hover:text-[#4FE5D4]">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+        </a>
+        <!-- Bluesky -->
+        <a href="#" aria-label="Bluesky" class="lift flex h-11 w-11 items-center justify-center rounded-full border hairline text-[#E8F4F2]/65 hover:text-[#4FE5D4]">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 10.8C10.7 8.3 7.2 3.8 4 3.1 2 2.7 1.2 4 1.2 5.5c0 1.5.8 6.4 1.4 7.2.6.9 1.5 1.2 3.2 1 .3 0 .6-.1.9-.1-.3 0-.6.1-.9.2-2.5.8-1.6 3.6 0 4 3 .9 4.6-2.5 5.2-3.4.6.9 2.2 4.3 5.2 3.4 1.6-.4 2.5-3.2 0-4-.3-.1-.6-.2-.9-.2.3 0 .6.1.9.1 1.7.2 2.6-.1 3.2-1 .6-.8 1.4-5.7 1.4-7.2 0-1.5-.8-2.8-2.8-2.4-3.2.7-6.7 5.2-8 7.7z"/></svg>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 11. FOOTER ============ -->
+  <footer class="border-t hairline">
+    <div class="mx-auto max-w-6xl px-5 py-12 sm:px-8">
+      <div class="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div class="flex items-center gap-2.5">
+            <span class="h-2.5 w-2.5 rounded-full" style="background:var(--accent)"></span>
+            <span class="text-[15px] font-medium tracking-tight">Maya Levenson</span>
+          </div>
+          <p class="mt-3 max-w-xs text-[13px] font-light text-[#E8F4F2]/55">
+            Cascade — out April 4, 2026. Long-form ambient music for patient listening.
+          </p>
+        </div>
+        <div class="flex flex-col gap-2 font-mono text-[12px] tracking-wide text-[#E8F4F2]/50">
+          <span class="text-[#E8F4F2]/35">Booking &amp; press</span>
+          <a href="mailto:booking@mayalevenson.com" class="transition-colors hover:text-[#4FE5D4]">booking@mayalevenson.com</a>
+        </div>
+      </div>
+
+      <div class="mt-10 flex flex-col gap-3 border-t hairline pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <p class="font-mono text-[11.5px] tracking-wide text-[#E8F4F2]/40">
+          © 2026 Maya Levenson · all rights reserved
+        </p>
+        <p class="font-mono text-[11.5px] tracking-wide text-[#E8F4F2]/40">
+          CASCADE-003 · LP / digital · Kranky imprint
+        </p>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

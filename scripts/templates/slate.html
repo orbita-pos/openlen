@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slate — Notes that keep up</title>
+<meta name="description" content="A notes app for people who type too fast. Capture anywhere, organize lazily, sync in 84ms across every device you own.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --bg:#FCFCF8; --bg-2:#F4F3EC; --surface:#FFFFFF;
+    --accent:#1A1A1A; --accent-2:#000000; --accent-soft:rgba(26,26,26,.06);
+    --text:#0A0A0A; --dim:rgba(10,10,10,.6); --faint:rgba(10,10,10,.36);
+    --hairline:rgba(10,10,10,.07); --hairline2:rgba(10,10,10,.14);
+  }
+  html,body{font-family:'Inter',system-ui,sans-serif;font-feature-settings:'cv11','ss01';background:var(--bg);color:var(--text);line-height:1.55;-webkit-font-smoothing:antialiased;}
+  .font-display{font-family:'Inter',sans-serif;font-weight:700;letter-spacing:-0.035em;line-height:1.04;}
+  .font-mono{font-family:'Geist Mono',ui-monospace,monospace;font-feature-settings:'tnum','ss01';}
+  .font-serif{font-family:'Newsreader',serif;font-feature-settings:'kern','liga';}
+  .halftone{opacity:.42;}
+  .dim{color:var(--dim);} .faint{color:var(--faint);}
+  .hairline{border:1px solid var(--hairline);} .hairline2{border:1px solid var(--hairline2);}
+  .surface{background:var(--surface);}
+  .text-accent{color:var(--accent);} .bg-accent-soft{background:var(--accent-soft);}
+  .dot-grid{background-image:radial-gradient(circle at 1px 1px,rgba(10,10,10,.08) 1px,transparent 0);background-size:32px 32px;}
+  .pulse-dot{position:relative;width:8px;height:8px;border-radius:50%;background:var(--accent);}
+  .pulse-dot::after{content:'';position:absolute;inset:-4px;border-radius:50%;background:var(--accent);opacity:.4;animation:pulse 2s ease-out infinite;}
+  @keyframes pulse{0%{transform:scale(.8);opacity:.4;}100%{transform:scale(2.2);opacity:0;}}
+
+  .phone{position:relative;border-radius:48px;background:linear-gradient(135deg,#1A1A1A 0%,#0A0A0A 100%);padding:10px;box-shadow:0 40px 80px -20px rgba(10,10,10,.22),0 0 0 1px rgba(10,10,10,.06),inset 0 0 0 1px rgba(255,255,255,.08);}
+  .phone-screen{position:relative;width:100%;height:100%;border-radius:38px;overflow:hidden;background:#FCFCF8;color:var(--text);}
+  .phone-notch{position:absolute;top:14px;left:50%;transform:translateX(-50%);width:96px;height:26px;background:#000;border-radius:13px;z-index:10;}
+  .phone-status{position:absolute;top:18px;left:0;right:0;padding:0 26px;display:flex;justify-content:space-between;align-items:center;color:var(--text);font-family:'Geist Mono',monospace;font-size:13px;font-weight:500;z-index:11;}
+  .phone-status .icons{display:flex;gap:5px;align-items:center;}
+  .phone-tilt{transform:perspective(1600px) rotateY(-6deg) rotateX(2deg);}
+  .phone-float{animation:float 6s ease-in-out infinite;}
+  @keyframes float{0%,100%{transform:perspective(1600px) rotateY(-6deg) rotateX(2deg) translateY(0);}50%{transform:perspective(1600px) rotateY(-6deg) rotateX(2deg) translateY(-12px);}}
+  .phone-content{position:absolute;inset:0;padding:60px 18px 18px;overflow:hidden;}
+  .phone-scroll{animation:pscroll 14s ease-in-out infinite;}
+  @keyframes pscroll{0%,15%{transform:translateY(0);}45%,55%{transform:translateY(-64px);}85%,100%{transform:translateY(0);}}
+  .phone-glow{position:absolute;bottom:-28px;left:50%;transform:translateX(-50%);width:80%;height:80px;background:radial-gradient(ellipse,rgba(10,10,10,.4) 0%,transparent 70%);opacity:.4;filter:blur(36px);pointer-events:none;}
+
+  .app-icon{border-radius:22%;background:linear-gradient(135deg,#2A2A2A 0%,#0A0A0A 100%);box-shadow:0 16px 32px -10px rgba(10,10,10,.4),inset 0 1px 0 rgba(255,255,255,.12);}
+
+  .badge-store{display:inline-flex;align-items:center;gap:10px;padding:10px 16px;border-radius:12px;background:#0A0A0A;color:#FCFCF8;border:1px solid #0A0A0A;transition:transform 120ms ease,box-shadow 120ms ease;}
+  .badge-store:hover{transform:translateY(-1px);box-shadow:0 12px 24px -8px rgba(10,10,10,.4);}
+  .badge-label{font-size:10px;opacity:.78;text-transform:uppercase;letter-spacing:.06em;line-height:1;}
+  .badge-name{font-size:18px;font-weight:600;letter-spacing:-.01em;line-height:1.05;}
+
+  .marquee-track{display:flex;width:max-content;animation:marquee 40s linear infinite;}
+  @keyframes marquee{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+
+  .card{background:var(--surface);border:1px solid var(--hairline);border-radius:24px;transition:transform 150ms ease,box-shadow 150ms ease,border-color 150ms ease;}
+  .card:hover{transform:translateY(-2px);box-shadow:0 12px 32px -10px rgba(10,10,10,.12);border-color:var(--hairline2);}
+
+  .btn-primary{background:#0A0A0A;color:#FCFCF8;transition:transform 120ms ease,box-shadow 120ms ease;}
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 12px 32px -10px rgba(10,10,10,.4);}
+  .btn-ghost{background:var(--surface);border:1px solid var(--hairline2);color:var(--text);transition:background 120ms ease;}
+  .btn-ghost:hover{background:#F4F3EC;}
+
+  .star{fill:#1A1A1A;} .star-dim{fill:rgba(10,10,10,.16);}
+
+  .bar-track{height:8px;background:rgba(10,10,10,.06);border-radius:999px;overflow:hidden;}
+  .bar-fill{height:100%;background:#0A0A0A;border-radius:999px;}
+
+  details summary{list-style:none;cursor:pointer;}
+  details summary::-webkit-details-marker{display:none;}
+  details[open] summary .chev{transform:rotate(180deg);}
+  .chev{transition:transform 200ms ease;}
+
+  .hero-halo{position:absolute;inset:auto 0 0 0;height:600px;background:radial-gradient(ellipse 60% 100% at 50% 100%,rgba(10,10,10,.08) 0%,transparent 60%);pointer-events:none;}
+
+  kbd{display:inline-flex;align-items:center;justify-content:center;font-family:'Geist Mono',monospace;font-size:10px;padding:1px 5px;border-radius:4px;background:rgba(10,10,10,.06);border:1px solid var(--hairline2);box-shadow:inset 0 -1px 0 rgba(10,10,10,.08);}
+
+  @media (max-width:768px){.phone-tilt{transform:none;}.phone-float{animation:float-m 6s ease-in-out infinite;}@keyframes float-m{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}}
+</style>
+</head>
+<body class="relative overflow-x-hidden">
+
+<!-- NAV -->
+<nav class="relative z-20 max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+  <a href="#" class="flex items-center gap-2.5">
+    <div class="app-icon w-9 h-9 flex items-center justify-center">
+      <span class="font-serif text-white text-lg" style="font-weight:500;">S</span>
+    </div>
+    <span class="font-display text-lg">Slate</span>
+  </a>
+  <div class="hidden md:flex items-center gap-8 text-sm dim">
+    <a href="#features" class="hover:text-[color:var(--text)] transition-colors">Features</a>
+    <a href="#how" class="hover:text-[color:var(--text)] transition-colors">How it works</a>
+    <a href="#reviews" class="hover:text-[color:var(--text)] transition-colors">Reviews</a>
+    <a href="#pricing" class="hover:text-[color:var(--text)] transition-colors">Pricing</a>
+  </div>
+  <a href="#download" class="text-sm font-medium px-4 py-2 rounded-full" style="background:#0A0A0A;color:#FCFCF8;">Get the app</a>
+</nav>
+
+<!-- HERO -->
+<section class="relative max-w-7xl mx-auto px-6 pt-10 pb-24 md:pt-20 md:pb-32">
+  <div class="grid md:grid-cols-2 gap-12 md:gap-10 items-center">
+    <div class="relative z-10">
+      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent-soft text-xs font-medium mb-8 hairline2">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4-6.2-4.5-6.2 4.5 2.4-7.4L2 9.4h7.6z"/></svg>
+        Featured on App Store · "Best of 2025"
+      </div>
+      <h1 class="font-display text-5xl sm:text-6xl lg:text-7xl mb-7">
+        Notes that <span class="halftone">keep up.</span>
+      </h1>
+      <p class="text-lg md:text-xl dim max-w-lg mb-10">
+        Capture from anywhere — lock screen, share sheet, keyboard widget. Organize lazily, search finds it. Syncs across every device in 84 milliseconds, P95.
+      </p>
+      <div class="flex flex-wrap gap-3 mb-9">
+        <a href="#" class="badge-store">
+          <svg width="22" height="26" viewBox="0 0 24 28" fill="currentColor"><path d="M17.5 14.7c0-3 2.5-4.5 2.6-4.5-1.4-2.1-3.6-2.4-4.4-2.4-1.9-.2-3.6 1.1-4.6 1.1-1 0-2.4-1.1-4-1-2 0-3.9 1.2-5 3-2.2 3.7-.6 9.2 1.5 12.2 1 1.5 2.2 3.2 3.8 3.1 1.5-.1 2.1-1 3.9-1 1.8 0 2.4 1 4 1 1.6 0 2.7-1.5 3.7-3 1.2-1.7 1.6-3.4 1.7-3.5-.1 0-3.2-1.3-3.2-4.9zm-3-9c.9-1 1.4-2.4 1.3-3.7-1.2 0-2.7.8-3.6 1.8-.8.9-1.5 2.3-1.3 3.6 1.3.1 2.7-.7 3.6-1.7z"/></svg>
+          <div class="flex flex-col text-left"><span class="badge-label">Download on the</span><span class="badge-name">App Store</span></div>
+        </a>
+        <a href="#" class="badge-store">
+          <svg width="22" height="24" viewBox="0 0 22 24"><path d="M1.4 1.2c-.3.3-.4.8-.4 1.4v18.8c0 .7.1 1.2.4 1.4l.1.1L11.7 12.1v-.2L1.5 1.1l-.1.1z" fill="#5BC9F4"/><path d="M15.1 15.6l-3.4-3.4v-.2l3.4-3.4.1.1 4.1 2.3c1.2.7 1.2 1.7 0 2.3l-4.1 2.3-.1z" fill="#FECC2F"/><path d="M15.2 15.5L11.7 12 1.4 22.8c.4.4 1 .5 1.8.1l12-6.8" fill="#EF4136"/><path d="M15.2 8.5L3.2 1.7c-.8-.4-1.4-.3-1.8.1L11.7 12l3.5-3.5z" fill="#0F9D58"/></svg>
+          <div class="flex flex-col text-left"><span class="badge-label">Get it on</span><span class="badge-name">Google Play</span></div>
+        </a>
+      </div>
+      <div class="flex flex-wrap items-center gap-3 text-sm">
+        <div class="flex gap-0.5">
+          <svg width="18" height="18" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="18" height="18" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="18" height="18" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="18" height="18" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="18" height="18" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg>
+        </div>
+        <span class="font-medium">4.9</span>
+        <span class="faint">·</span>
+        <span class="dim font-mono text-xs">47,408 reviews</span>
+        <span class="faint">·</span>
+        <span class="dim text-xs flex items-center gap-1.5"><span class="pulse-dot"></span> 28M notes synced today</span>
+      </div>
+    </div>
+
+    <!-- Hero phone -->
+    <div class="relative flex justify-center md:justify-end">
+      <div class="phone-glow"></div>
+      <div class="phone phone-tilt phone-float" style="width:280px;height:578px;">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="phone-status">
+            <span>9:41</span>
+            <div class="icons">
+              <svg width="16" height="10" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="6" width="2" height="5" rx=".5"/><rect x="4" y="4" width="2" height="7" rx=".5"/><rect x="8" y="2" width="2" height="9" rx=".5"/><rect x="12" y="0" width="2" height="11" rx=".5"/></svg>
+              <svg width="14" height="10" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M.7 5.6a8 8 0 0114.6 0"/><path d="M3 7.2a5.2 5.2 0 0110 0"/><path d="M5.4 8.8a2.8 2.8 0 015.2 0"/><circle cx="8" cy="10.4" r="1" fill="currentColor"/></svg>
+              <svg width="22" height="10" viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="1"><rect x="1" y="1" width="20" height="10" rx="2"/><rect x="22" y="3.5" width="1.5" height="5" fill="currentColor"/><rect x="2.5" y="2.5" width="14" height="7" rx="1.2" fill="currentColor"/></svg>
+            </div>
+          </div>
+          <div class="phone-content">
+            <div class="phone-scroll">
+              <!-- Cmd+K bar -->
+              <div class="rounded-xl px-3 py-2 mb-3 flex items-center gap-2 hairline" style="background:#F4F3EC;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+                <p class="text-[11px] flex-1 faint">Search or jump to…</p>
+                <kbd class="text-[8px]">⌘K</kbd>
+              </div>
+              <!-- Breadcrumb -->
+              <p class="text-[9px] faint font-mono uppercase tracking-widest mb-3">Work · Q4 planning</p>
+              <!-- Title -->
+              <h1 class="font-serif text-[20px] leading-snug mb-3" style="font-weight:500;">Q4 planning thoughts</h1>
+              <p class="text-[10px] faint font-mono mb-4">Edited 2 minutes ago · 1,408 words</p>
+              <!-- Note body -->
+              <div class="space-y-2.5 font-serif text-[12px] leading-relaxed" style="font-weight:400;color:#222;">
+                <p>The thing we keep missing is the ramp on enterprise — not the deals, the time-to-close.</p>
+                <p>Three priorities, ordered:</p>
+                <ul class="space-y-1 pl-3 text-[11px]">
+                  <li class="list-disc list-inside">Cut activation from 14 days to 4</li>
+                  <li class="list-disc list-inside">Procurement self-serve flow</li>
+                  <li class="list-disc list-inside">Move SOC2 from "request" → "download"</li>
+                </ul>
+                <p class="text-[11px]">Risk: if procurement self-serve slips, the activation work doesn't matter — they'll still bottleneck on legal.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- APP ICON BAND -->
+<section class="relative py-20 md:py-28">
+  <div class="max-w-3xl mx-auto px-6 text-center">
+    <div class="app-icon w-24 h-24 mx-auto flex items-center justify-center mb-8">
+      <span class="font-serif text-white" style="font-size:48px;font-weight:500;line-height:1;">S</span>
+    </div>
+    <h2 class="font-display text-3xl md:text-4xl mb-3">A real notes app, kept small on purpose.</h2>
+    <p class="dim text-lg max-w-xl mx-auto">No databases, no kanban boards, no AI summarization you didn't ask for. Just notes — written fast, found instantly, synced everywhere.</p>
+  </div>
+</section>
+
+<!-- SCREENSHOTS STRIP -->
+<section class="relative py-12 overflow-hidden">
+  <div class="absolute inset-0 dot-grid opacity-50 pointer-events-none"></div>
+  <div class="marquee-track">
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;">
+        <div class="absolute inset-0 p-4 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Inbox</p>
+          <h4 class="font-display text-sm mb-3">28 notes</h4>
+          <div class="space-y-1.5">
+            <div class="text-[10px] p-1.5 rounded hairline"><span class="font-serif" style="font-weight:500;">Q4 planning thoughts</span><p class="faint text-[8px]">2m ago</p></div>
+            <div class="text-[10px] p-1.5 rounded hairline"><span class="font-serif" style="font-weight:500;">Lina's onboarding</span><p class="faint text-[8px]">18m ago</p></div>
+            <div class="text-[10px] p-1.5 rounded hairline"><span class="font-serif" style="font-weight:500;">React 19 migration risks</span><p class="faint text-[8px]">42m ago</p></div>
+            <div class="text-[10px] p-1.5 rounded hairline"><span class="font-serif" style="font-weight:500;">Books · 2026</span><p class="faint text-[8px]">2h ago</p></div>
+            <div class="text-[10px] p-1.5 rounded hairline"><span class="font-serif" style="font-weight:500;">Aoife — coffee Thursday</span><p class="faint text-[8px]">yesterday</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;">
+        <div class="absolute inset-0 p-4 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Cmd+K</p>
+          <div class="rounded-md p-2 mb-2 hairline" style="background:#F4F3EC;"><p class="text-[10px] faint">react migrat...</p></div>
+          <div class="space-y-1">
+            <div class="text-[9px] p-1.5 rounded hairline" style="background:#fff;"><span class="font-serif font-medium">React 19 migration risks</span><p class="faint text-[7px]">Work · 42m ago</p></div>
+            <div class="text-[9px] p-1.5 rounded hairline"><span class="font-serif">React notes from Tel Aviv talk</span></div>
+            <div class="text-[9px] p-1.5 rounded hairline"><span class="font-serif">Old React patterns to retire</span></div>
+            <div class="text-[9px] p-1.5 rounded hairline"><span class="font-serif">Project: useState migrations</span></div>
+            <div class="text-[9px] p-1.5 rounded hairline"><span class="font-serif">Reactor design notes</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;background:linear-gradient(180deg,#FCFCF8,#F4F3EC);">
+        <div class="absolute inset-0 p-4 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Lock-screen widget</p>
+          <h4 class="font-display text-sm mb-3">Quick capture</h4>
+          <div class="rounded-xl p-3" style="background:#0A0A0A;color:#FCFCF8;">
+            <p class="text-[8px] opacity-60 font-mono uppercase tracking-widest mb-1">New note</p>
+            <p class="font-serif text-[12px]" style="font-weight:400;">Idea — what if onboarding was actually three small wins not one big setup…</p>
+            <div class="flex items-center justify-between mt-3"><span class="text-[8px] font-mono opacity-60">Now</span><span class="text-[8px] font-mono opacity-60">∾ syncing</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;">
+        <div class="absolute inset-0 p-4 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Sidebar</p>
+          <div class="space-y-0.5 text-[10px]">
+            <p class="font-mono py-1">▾ Inbox <span class="faint">28</span></p>
+            <p class="font-mono py-1 pl-2">▾ Work <span class="faint">142</span></p>
+            <p class="font-mono py-1 pl-4 faint">Q4 planning</p>
+            <p class="font-mono py-1 pl-4 faint">Engineering</p>
+            <p class="font-mono py-1 pl-4 faint">1:1s</p>
+            <p class="font-mono py-1 pl-2">▸ Personal <span class="faint">88</span></p>
+            <p class="font-mono py-1 pl-2">▸ Reading <span class="faint">214</span></p>
+            <p class="font-mono py-1 pl-2">▸ Archive <span class="faint">1,402</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;">
+        <div class="absolute inset-0 p-4 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Versions</p>
+          <h4 class="font-display text-sm mb-3">Q4 planning thoughts</h4>
+          <div class="space-y-1.5">
+            <div class="text-[9px] p-2 rounded hairline" style="background:#fff;border-color:#0A0A0A;"><span class="font-mono font-medium">Now</span><p class="faint text-[8px] mt-0.5">2 min ago · 1,408w</p></div>
+            <div class="text-[9px] p-2 rounded hairline"><span class="font-mono">−18m</span><p class="faint text-[8px]">1,402w</p></div>
+            <div class="text-[9px] p-2 rounded hairline"><span class="font-mono">−2h</span><p class="faint text-[8px]">1,128w</p></div>
+            <div class="text-[9px] p-2 rounded hairline"><span class="font-mono">Yesterday</span><p class="faint text-[8px]">412w</p></div>
+            <div class="text-[9px] p-2 rounded hairline"><span class="font-mono">May 14</span><p class="faint text-[8px]">240w</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- duplicate -->
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;">
+        <div class="absolute inset-0 p-4 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Inbox</p>
+          <h4 class="font-display text-sm mb-3">28 notes</h4>
+          <div class="space-y-1.5">
+            <div class="text-[10px] p-1.5 rounded hairline"><span class="font-serif" style="font-weight:500;">Q4 planning thoughts</span></div>
+            <div class="text-[10px] p-1.5 rounded hairline"><span class="font-serif" style="font-weight:500;">Lina's onboarding</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;">
+        <div class="absolute inset-0 p-4 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Cmd+K</p>
+          <div class="rounded-md p-2 mb-2 hairline" style="background:#F4F3EC;"><p class="text-[10px] faint">react migrat...</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how" class="relative max-w-7xl mx-auto px-6 py-24 md:py-32">
+  <div class="max-w-2xl mb-16">
+    <p class="font-mono text-xs uppercase tracking-widest mb-4">How it works</p>
+    <h2 class="font-display text-4xl md:text-5xl mb-5">Three ways in. One source of truth.</h2>
+    <p class="dim text-lg">Slate is built for capture-first. Whatever device is closest, your note lands in the same Inbox.</p>
+  </div>
+  <div class="grid md:grid-cols-3 gap-6">
+    <div class="card p-7 relative">
+      <div class="flex items-center justify-between mb-6"><span class="font-mono text-xs faint">01</span><span class="text-xs px-2.5 py-1 rounded-full bg-accent-soft">Capture</span></div>
+      <div class="phone mx-auto mb-7" style="width:160px;height:320px;padding:5px;border-radius:28px;">
+        <div class="phone-screen" style="border-radius:23px;background:#0A0A0A;color:#fff;">
+          <div class="absolute inset-0 p-4 pt-10">
+            <p class="text-[8px] opacity-60 font-mono uppercase tracking-widest mb-2">Lock-screen widget</p>
+            <h5 class="font-display text-[13px] mb-3">New note</h5>
+            <p class="font-serif text-[12px] opacity-90" style="font-weight:400;">"What if we just shipped the email digest, instead of building a feed reader for it…"</p>
+            <p class="text-[8px] opacity-50 font-mono mt-4">tap to expand · ∾ syncing</p>
+          </div>
+        </div>
+      </div>
+      <h3 class="font-display text-xl mb-2">Capture from anywhere.</h3>
+      <p class="dim text-sm">Lock-screen widget, share extension, keyboard shortcut, Apple Watch dictation. Five seconds from idea to saved.</p>
+    </div>
+    <div class="card p-7 relative">
+      <div class="flex items-center justify-between mb-6"><span class="font-mono text-xs faint">02</span><span class="text-xs px-2.5 py-1 rounded-full bg-accent-soft">Organize</span></div>
+      <div class="phone mx-auto mb-7" style="width:160px;height:320px;padding:5px;border-radius:28px;">
+        <div class="phone-screen" style="border-radius:23px;">
+          <div class="absolute inset-0 p-4 pt-10">
+            <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Organize</p>
+            <h5 class="font-display text-[13px] mb-3">Drag into a folder</h5>
+            <div class="space-y-1 text-[9px]">
+              <p class="font-mono py-1">▾ Inbox <span class="faint">3 new</span></p>
+              <p class="font-mono py-1 pl-2 rounded" style="background:rgba(10,10,10,.04);"><span class="font-serif">Q4 planning thoughts</span></p>
+              <p class="font-mono py-1 pl-2 rounded" style="background:rgba(10,10,10,.04);"><span class="font-serif">Lina's onboarding</span></p>
+              <p class="font-mono py-1">▾ Work</p>
+              <p class="font-mono py-1 pl-4 faint">Engineering</p>
+              <p class="font-mono py-1 pl-4 faint">1:1s</p>
+              <p class="font-mono py-1 pl-2 rounded border border-dashed" style="border-color:#0A0A0A;"><span class="font-serif faint">Drop here</span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h3 class="font-display text-xl mb-2">Or don't organize at all.</h3>
+      <p class="dim text-sm">Search across 50,000 notes returns the right one in 12ms. Filing is optional — and most power users skip it entirely.</p>
+    </div>
+    <div class="card p-7 relative">
+      <div class="flex items-center justify-between mb-6"><span class="font-mono text-xs faint">03</span><span class="text-xs px-2.5 py-1 rounded-full bg-accent-soft">Sync</span></div>
+      <div class="phone mx-auto mb-7" style="width:160px;height:320px;padding:5px;border-radius:28px;">
+        <div class="phone-screen" style="border-radius:23px;">
+          <div class="absolute inset-0 p-4 pt-10">
+            <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Sync · P95</p>
+            <h5 class="font-display text-[13px] mb-3">Devices</h5>
+            <div class="space-y-2 text-[10px]">
+              <div class="flex items-center justify-between p-2 rounded hairline"><span>iPhone 16 Pro</span><span class="font-mono faint">62ms</span></div>
+              <div class="flex items-center justify-between p-2 rounded hairline"><span>MacBook Pro</span><span class="font-mono faint">48ms</span></div>
+              <div class="flex items-center justify-between p-2 rounded hairline"><span>iPad mini</span><span class="font-mono faint">81ms</span></div>
+              <div class="flex items-center justify-between p-2 rounded hairline"><span>Web · Chrome</span><span class="font-mono faint">96ms</span></div>
+            </div>
+            <p class="text-[8px] font-mono text-center faint mt-3">All caught up · 0.4s ago</p>
+          </div>
+        </div>
+      </div>
+      <h3 class="font-display text-xl mb-2">Sync that you don't notice.</h3>
+      <p class="dim text-sm">84ms P95 sync across iOS, Android, macOS, Windows, Linux, and web. CRDT-backed, offline-first, conflict-free even from the bottom of an airplane.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURE TRIO -->
+<section id="features" class="relative max-w-7xl mx-auto px-6 py-20">
+  <div class="grid md:grid-cols-2 gap-12 md:gap-16 items-center mb-28">
+    <div>
+      <p class="font-mono text-xs uppercase tracking-widest mb-4">Keyboard-first</p>
+      <h3 class="font-display text-3xl md:text-4xl mb-5">Designed for hands that don't leave the keyboard.</h3>
+      <p class="dim text-lg mb-6">Every action has a shortcut. The most-used ones are also gestures on iOS, so you can move at-pace whether you're on a Magic Keyboard or thumb-typing on the subway.</p>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><kbd class="shrink-0">⌘K</kbd><span class="dim">Quick-switcher to any note, folder, or recent capture.</span></li>
+        <li class="flex gap-3"><kbd class="shrink-0">⌘N</kbd><span class="dim">New note. No friction, no folder prompt.</span></li>
+        <li class="flex gap-3"><kbd class="shrink-0">⌘/</kbd><span class="dim">Full-text search across everything you've ever written.</span></li>
+        <li class="flex gap-3"><kbd class="shrink-0">⌘⌥V</kbd><span class="dim">Paste-as-quote — markdown blockquote in one stroke.</span></li>
+        <li class="flex gap-3"><kbd class="shrink-0">⌘⇧.</kbd><span class="dim">Focus mode: hide everything but the cursor.</span></li>
+      </ul>
+    </div>
+    <div class="relative flex justify-center">
+      <div class="phone-glow"></div>
+      <div class="phone phone-tilt" style="width:240px;height:496px;">
+        <div class="phone-notch" style="width:84px;height:24px;"></div>
+        <div class="phone-screen">
+          <div class="absolute inset-0 p-4 pt-12">
+            <div class="rounded-xl p-3 mb-4 hairline2" style="background:#F4F3EC;">
+              <div class="flex items-center gap-2 mb-2">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+                <p class="text-[10px]">react 19 mig</p>
+                <span class="ml-auto flex gap-0.5"><kbd>↑</kbd><kbd>↓</kbd></span>
+              </div>
+            </div>
+            <div class="space-y-1">
+              <div class="p-2 rounded text-[10px]" style="background:#0A0A0A;color:#FCFCF8;">
+                <p class="font-serif font-medium">React 19 migration risks</p>
+                <p class="opacity-60 text-[9px] mt-0.5">Work · Engineering · 42m ago</p>
+              </div>
+              <div class="p-2 rounded text-[10px] hairline">
+                <p class="font-serif font-medium">React notes from Tel Aviv talk</p>
+                <p class="faint text-[9px] mt-0.5">Reading · 14 May</p>
+              </div>
+              <div class="p-2 rounded text-[10px] hairline">
+                <p class="font-serif font-medium">Project: useState migrations</p>
+                <p class="faint text-[9px] mt-0.5">Work · 02 May</p>
+              </div>
+              <div class="p-2 rounded text-[10px] hairline">
+                <p class="font-serif font-medium">Reactor design notes</p>
+                <p class="faint text-[9px] mt-0.5">Personal · 28 Apr</p>
+              </div>
+              <div class="p-2 rounded text-[10px] hairline">
+                <p class="font-serif font-medium">Re-acting to feedback (essay)</p>
+                <p class="faint text-[9px] mt-0.5">Reading · 12 Apr</p>
+              </div>
+            </div>
+            <p class="text-[9px] faint font-mono text-center mt-3">12ms · 1,408 notes scanned</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-12 md:gap-16 items-center mb-28">
+    <div class="md:order-2">
+      <p class="font-mono text-xs uppercase tracking-widest mb-4">Encryption</p>
+      <h3 class="font-display text-3xl md:text-4xl mb-5">Your notes belong to you.</h3>
+      <p class="dim text-lg mb-6">Optional end-to-end encryption with keys generated on-device. Slate's servers see ciphertext only — even if we wanted to read your notes, we couldn't. The same encryption applies to backups and shared notes (yes, even shared ones).</p>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-[color:var(--text)]">XChaCha20-Poly1305</span> <span class="dim">— modern AEAD cipher with key wrapping per note.</span></span></li>
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-[color:var(--text)]">Zero-knowledge backups</span> <span class="dim">— iCloud, Google Drive, S3 — all ciphertext to us, all encrypted at rest.</span></span></li>
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-[color:var(--text)]">Open source crypto path</span> <span class="dim">— the entire encryption module is on GitHub. Audit it yourself.</span></span></li>
+      </ul>
+    </div>
+    <div class="relative md:order-1 flex justify-center">
+      <div class="phone-glow"></div>
+      <div class="phone phone-tilt" style="width:240px;height:496px;transform:perspective(1600px) rotateY(6deg) rotateX(2deg);">
+        <div class="phone-notch" style="width:84px;height:24px;"></div>
+        <div class="phone-screen">
+          <div class="absolute inset-0 p-4 pt-12">
+            <p class="text-[9px] faint font-mono uppercase tracking-widest mb-2">Encryption · End-to-end</p>
+            <h5 class="font-display text-base mb-4">All 4,402 notes</h5>
+            <div class="flex items-center justify-center my-5">
+              <div class="w-20 h-20 rounded-full flex items-center justify-center" style="background:#0A0A0A;color:#FCFCF8;">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+              </div>
+            </div>
+            <div class="rounded-xl p-3 hairline space-y-2">
+              <div class="flex justify-between text-[10px]"><span class="faint">Cipher</span><span class="font-mono">XChaCha20</span></div>
+              <div class="flex justify-between text-[10px]"><span class="faint">Key length</span><span class="font-mono">256-bit</span></div>
+              <div class="flex justify-between text-[10px]"><span class="faint">Backup</span><span class="font-mono">iCloud E2EE</span></div>
+              <div class="flex justify-between text-[10px]"><span class="faint">Server sees</span><span class="font-mono">Ciphertext</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-12 md:gap-16 items-center">
+    <div>
+      <p class="font-mono text-xs uppercase tracking-widest mb-4">Markdown</p>
+      <h3 class="font-display text-3xl md:text-4xl mb-5">Markdown, but it renders while you write.</h3>
+      <p class="dim text-lg mb-6">Headings, code blocks, todos, math, callouts — type the syntax, see it formatted. Export to .md, .pdf, or a clean HTML file. Import from Apple Notes, Bear, Obsidian, and Roam without a script.</p>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-[color:var(--text)]">CommonMark + GFM</span> <span class="dim">— spec-compliant, no proprietary dialect to learn.</span></span></li>
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-[color:var(--text)]">Code highlighting in 188 languages.</span> <span class="dim">Powered by Tree-sitter. Looks great inline, looks great in exports.</span></span></li>
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-[color:var(--text)]">Round-trip with Obsidian.</span> <span class="dim">Frontmatter preserved, link syntax preserved. Your vault is still yours.</span></span></li>
+      </ul>
+    </div>
+    <div class="relative flex justify-center">
+      <div class="phone-glow"></div>
+      <div class="phone phone-tilt" style="width:240px;height:496px;">
+        <div class="phone-notch" style="width:84px;height:24px;"></div>
+        <div class="phone-screen">
+          <div class="absolute inset-0 p-4 pt-12">
+            <p class="text-[9px] faint font-mono uppercase tracking-widest mb-2">Editor</p>
+            <h1 class="font-serif text-base mb-2" style="font-weight:500;">Engineering principles</h1>
+            <p class="font-serif text-[11px] mb-2" style="color:#222;">Three things we agreed on at the offsite:</p>
+            <ol class="font-serif text-[11px] space-y-1 pl-4" style="color:#222;list-style:decimal;">
+              <li>Ship narrow first. Generalize on the second caller.</li>
+              <li>Boring choices unless boring is wrong.</li>
+              <li>One PR = one decision.</li>
+            </ol>
+            <div class="rounded-md p-2.5 my-3 text-[9px] font-mono" style="background:#0A0A0A;color:#7FE3A5;">
+              <p>def migrate(notes):</p>
+              <p class="pl-2">for n in notes:</p>
+              <p class="pl-4">n.body = upgrade(n.body)</p>
+              <p class="pl-2">return notes</p>
+            </div>
+            <p class="font-serif text-[11px]" style="color:#222;">See also: <span class="underline">[[Q4 planning thoughts]]</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- OUTCOMES -->
+<section class="relative py-24 md:py-28 border-t hairline" style="background:linear-gradient(180deg,var(--bg) 0%,var(--bg-2) 100%);">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <p class="font-mono text-xs uppercase tracking-widest mb-3">By the numbers</p>
+      <h2 class="font-display text-3xl md:text-4xl">The kind of stats engineers actually read.</h2>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div class="card p-7 text-center">
+        <p class="font-display text-5xl md:text-6xl mb-2">1.4<span class="text-2xl">M</span></p>
+        <p class="text-sm dim">active users worldwide</p>
+      </div>
+      <div class="card p-7 text-center">
+        <p class="font-display text-5xl md:text-6xl mb-2">28<span class="text-2xl">M</span></p>
+        <p class="text-sm dim">notes synced every day</p>
+      </div>
+      <div class="card p-7 text-center">
+        <p class="font-display text-5xl md:text-6xl mb-2">84<span class="text-2xl">ms</span></p>
+        <p class="text-sm dim">sync latency at P95 globally</p>
+      </div>
+      <div class="card p-7 text-center">
+        <p class="font-display text-5xl md:text-6xl mb-2">4.9<span class="text-2xl">★</span></p>
+        <p class="text-sm dim">from 47,408 App Store reviews</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- REVIEWS -->
+<section id="reviews" class="relative max-w-7xl mx-auto px-6 py-24 md:py-32">
+  <div class="max-w-2xl mb-14">
+    <p class="font-mono text-xs uppercase tracking-widest mb-4">Reviews</p>
+    <h2 class="font-display text-4xl md:text-5xl mb-5">Engineers, researchers, writers, professors.</h2>
+  </div>
+  <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+    <div class="card p-7">
+      <div class="flex gap-0.5 mb-4"><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg></div>
+      <p class="text-base leading-relaxed mb-5">"Notes app that finally respects my keyboard. ⌘K is faster than my brain on a good day, and I'm coming from Alfred."</p>
+      <p class="text-sm dim">— Jamie, Stockholm</p>
+    </div>
+    <div class="card p-7">
+      <div class="flex gap-0.5 mb-4"><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg></div>
+      <p class="text-base leading-relaxed mb-5">"Imported 14,000 notes from Bear in 38 seconds, frontmatter intact, links intact. I was prepared for a weekend, it took a coffee."</p>
+      <p class="text-sm dim">— Priya, Bangalore</p>
+    </div>
+    <div class="card p-7">
+      <div class="flex gap-0.5 mb-4"><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg></div>
+      <p class="text-base leading-relaxed mb-5">"As a PhD student writing across iPad, MacBook, and a backup ThinkPad with Linux, the sync just works. I forgot what conflict markers look like."</p>
+      <p class="text-sm dim">— Hana, Kyoto</p>
+    </div>
+    <div class="card p-7">
+      <div class="flex gap-0.5 mb-4"><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg></div>
+      <p class="text-base leading-relaxed mb-5">"Notion took 20 minutes to load on the BART. Slate takes 0.4 seconds. That alone justified it. The keyboard-first design is the cherry."</p>
+      <p class="text-sm dim">— Marcus, San Francisco</p>
+    </div>
+    <div class="card p-7">
+      <div class="flex gap-0.5 mb-4"><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg></div>
+      <p class="text-base leading-relaxed mb-5">"E2EE that's actually on by default and that I can verify on GitHub. After my previous app got 'acquired', this matters more than I'd like to admit."</p>
+      <p class="text-sm dim">— Yusuf, Berlin</p>
+    </div>
+    <div class="card p-7">
+      <div class="flex gap-0.5 mb-4"><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg></div>
+      <p class="text-base leading-relaxed mb-5">"Apple Notes for the casual stuff, Notion for the team docs, Slate for me. The boundary became really clear about three weeks in."</p>
+      <p class="text-sm dim">— Aoife, Dublin</p>
+    </div>
+  </div>
+</section>
+
+<!-- APP STORE RATING -->
+<section class="relative py-24 md:py-28 border-t hairline">
+  <div class="max-w-5xl mx-auto px-6">
+    <div class="grid md:grid-cols-2 gap-12 md:gap-16 items-center">
+      <div class="text-center md:text-left">
+        <p class="font-mono text-xs uppercase tracking-widest mb-4">App Store rating</p>
+        <p class="font-display text-7xl md:text-8xl mb-3">4.9<span class="text-3xl">★</span></p>
+        <div class="flex gap-1 justify-center md:justify-start mb-4">
+          <svg width="22" height="22" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="22" height="22" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="22" height="22" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="22" height="22" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="22" height="22" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg>
+        </div>
+        <p class="dim font-mono text-sm">47,408 ratings · Productivity · Top 4</p>
+      </div>
+      <div class="space-y-3">
+        <div class="flex items-center gap-3"><span class="text-xs font-mono w-4 dim">5★</span><div class="bar-track flex-1"><div class="bar-fill" style="width:91%;"></div></div><span class="text-xs font-mono w-12 text-right dim">91%</span></div>
+        <div class="flex items-center gap-3"><span class="text-xs font-mono w-4 dim">4★</span><div class="bar-track flex-1"><div class="bar-fill" style="width:6%;"></div></div><span class="text-xs font-mono w-12 text-right dim">6%</span></div>
+        <div class="flex items-center gap-3"><span class="text-xs font-mono w-4 dim">3★</span><div class="bar-track flex-1"><div class="bar-fill" style="width:2%;"></div></div><span class="text-xs font-mono w-12 text-right dim">2%</span></div>
+        <div class="flex items-center gap-3"><span class="text-xs font-mono w-4 dim">2★</span><div class="bar-track flex-1"><div class="bar-fill" style="width:0.5%;"></div></div><span class="text-xs font-mono w-12 text-right dim">&lt;1%</span></div>
+        <div class="flex items-center gap-3"><span class="text-xs font-mono w-4 dim">1★</span><div class="bar-track flex-1"><div class="bar-fill" style="width:0.5%;"></div></div><span class="text-xs font-mono w-12 text-right dim">&lt;1%</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="relative max-w-5xl mx-auto px-6 py-24 md:py-32">
+  <div class="max-w-2xl mb-14">
+    <p class="font-mono text-xs uppercase tracking-widest mb-4">Pricing</p>
+    <h2 class="font-display text-4xl md:text-5xl mb-5">Free works. Pro is $4.</h2>
+    <p class="dim text-lg">We pay engineers, not influencers. Pro is what funds the team. No enterprise tier, no upsell creep — same product for everyone.</p>
+  </div>
+  <div class="grid md:grid-cols-2 gap-5">
+    <div class="card p-8">
+      <div class="flex items-baseline justify-between mb-1"><h3 class="font-display text-2xl">Free</h3><p class="font-mono text-sm dim">$0</p></div>
+      <p class="dim text-sm mb-7">Plenty for getting hooked.</p>
+      <ul class="space-y-3 text-sm mb-8">
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Up to 1,000 notes</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>1 device, full feature set</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>All keyboard shortcuts</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>End-to-end encryption</li>
+      </ul>
+      <a href="#" class="block text-center py-3 rounded-full text-sm font-medium btn-ghost">Start free</a>
+    </div>
+    <div class="card p-8 relative" style="background:#0A0A0A;color:#FCFCF8;border-color:#0A0A0A;">
+      <div class="absolute -top-3 right-6 px-2.5 py-1 rounded-full text-[10px] font-medium font-mono uppercase tracking-widest" style="background:#FCFCF8;color:#0A0A0A;">Most popular</div>
+      <div class="flex items-baseline justify-between mb-1"><h3 class="font-display text-2xl">Pro</h3><p class="font-mono text-sm"><span class="text-2xl">$4</span><span class="opacity-70">/mo</span></p></div>
+      <p class="text-sm mb-7 opacity-70">Unlimited everything.</p>
+      <ul class="space-y-3 text-sm mb-8">
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Unlimited notes & devices</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Unlimited version history</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Public share links + read-only embeds</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Custom CSS themes</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Priority sync (~40ms P95)</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>14-day trial · cancel in-app</li>
+      </ul>
+      <a href="#" class="block text-center py-3 rounded-full text-sm font-medium" style="background:#FCFCF8;color:#0A0A0A;">Try Pro for 14 days</a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="relative max-w-3xl mx-auto px-6 py-24 md:py-28">
+  <div class="text-center mb-14">
+    <p class="font-mono text-xs uppercase tracking-widest mb-4">FAQ</p>
+    <h2 class="font-display text-4xl md:text-5xl">Questions an engineer would ask.</h2>
+  </div>
+  <div class="space-y-3">
+    <details class="card p-6" open>
+      <summary class="flex items-center justify-between gap-4">
+        <span class="font-display text-lg">Is my data encrypted?</span>
+        <svg class="chev shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <p class="mt-4 dim leading-relaxed">Yes — and by default, with end-to-end encryption that's on without you flipping a switch. We use XChaCha20-Poly1305 with per-note keys wrapped by an account-level master key generated on your first device. Slate's servers store ciphertext; we cannot read your notes, decrypt your backups, or recover them if you lose your key (we'll remind you to back the key up). The encryption module is open-source on GitHub and has been audited by Cure53.</p>
+    </details>
+    <details class="card p-6">
+      <summary class="flex items-center justify-between gap-4">
+        <span class="font-display text-lg">Does it work offline?</span>
+        <svg class="chev shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <p class="mt-4 dim leading-relaxed">Yes. Slate is offline-first by design — the editor never round-trips to a server for normal operations, and your full note database lives on-device. When you reconnect, changes sync via CRDT, so concurrent edits from a plane and a coffee shop merge without conflicts or "which one wins" prompts. We test offline on a 9-hour SFO–FRA flight every release.</p>
+    </details>
+    <details class="card p-6">
+      <summary class="flex items-center justify-between gap-4">
+        <span class="font-display text-lg">Can I import from Apple Notes, Bear, Obsidian, Roam?</span>
+        <svg class="chev shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <p class="mt-4 dim leading-relaxed">All four, plus Notion, Evernote, Day One, Standard Notes, and any markdown directory. Apple Notes uses the share extension; everything else accepts the export bundle. Frontmatter, links, attachments, code blocks, and tags are preserved on round-trip. The largest import we've handled was 142,000 notes from a Roam graph — took 18 minutes, came out clean.</p>
+    </details>
+    <details class="card p-6">
+      <summary class="flex items-center justify-between gap-4">
+        <span class="font-display text-lg">What's the markdown story?</span>
+        <svg class="chev shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <p class="mt-4 dim leading-relaxed">CommonMark + GFM (GitHub Flavored Markdown), no proprietary dialect. The editor renders inline as you type — headings shrink, code highlights, todos become checkboxes — but the underlying file stays portable .md you could copy into any other tool. We support frontmatter, mermaid diagrams, math (KaTeX), callouts, and code highlighting in 188 languages via Tree-sitter. Backlinks use `[[brackets]]` and are stored in-file, not in a sidecar DB.</p>
+    </details>
+    <details class="card p-6">
+      <summary class="flex items-center justify-between gap-4">
+        <span class="font-display text-lg">Is there a web version?</span>
+        <svg class="chev shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <p class="mt-4 dim leading-relaxed">Yes — slate.app/web, full-featured, offline-capable via service worker. Most users live in the native app (iOS/Android/macOS/Windows/Linux), but the web client is the same code path: same editor, same shortcuts, same encryption. Works in any modern browser including Brave and Arc. Particularly nice for hopping onto a borrowed machine without installing anything.</p>
+    </details>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section id="download" class="relative max-w-7xl mx-auto px-6 py-24 md:py-32">
+  <div class="hero-halo"></div>
+  <div class="text-center mb-12 relative z-10">
+    <h2 class="font-display text-4xl md:text-6xl mb-6">The next note is a tap away.</h2>
+    <p class="text-lg md:text-xl dim max-w-xl mx-auto mb-10">Free forever for up to 1,000 notes. Pro is $4/mo when you outgrow it. Import takes 30 seconds.</p>
+    <div class="flex flex-wrap gap-3 justify-center mb-10">
+      <a href="#" class="badge-store">
+        <svg width="22" height="26" viewBox="0 0 24 28" fill="currentColor"><path d="M17.5 14.7c0-3 2.5-4.5 2.6-4.5-1.4-2.1-3.6-2.4-4.4-2.4-1.9-.2-3.6 1.1-4.6 1.1-1 0-2.4-1.1-4-1-2 0-3.9 1.2-5 3-2.2 3.7-.6 9.2 1.5 12.2 1 1.5 2.2 3.2 3.8 3.1 1.5-.1 2.1-1 3.9-1 1.8 0 2.4 1 4 1 1.6 0 2.7-1.5 3.7-3 1.2-1.7 1.6-3.4 1.7-3.5-.1 0-3.2-1.3-3.2-4.9zm-3-9c.9-1 1.4-2.4 1.3-3.7-1.2 0-2.7.8-3.6 1.8-.8.9-1.5 2.3-1.3 3.6 1.3.1 2.7-.7 3.6-1.7z"/></svg>
+        <div class="flex flex-col text-left"><span class="badge-label">Download on the</span><span class="badge-name">App Store</span></div>
+      </a>
+      <a href="#" class="badge-store">
+        <svg width="22" height="24" viewBox="0 0 22 24"><path d="M1.4 1.2c-.3.3-.4.8-.4 1.4v18.8c0 .7.1 1.2.4 1.4l.1.1L11.7 12.1v-.2L1.5 1.1l-.1.1z" fill="#5BC9F4"/><path d="M15.1 15.6l-3.4-3.4v-.2l3.4-3.4.1.1 4.1 2.3c1.2.7 1.2 1.7 0 2.3l-4.1 2.3-.1z" fill="#FECC2F"/><path d="M15.2 15.5L11.7 12 1.4 22.8c.4.4 1 .5 1.8.1l12-6.8" fill="#EF4136"/><path d="M15.2 8.5L3.2 1.7c-.8-.4-1.4-.3-1.8.1L11.7 12l3.5-3.5z" fill="#0F9D58"/></svg>
+        <div class="flex flex-col text-left"><span class="badge-label">Get it on</span><span class="badge-name">Google Play</span></div>
+      </a>
+    </div>
+  </div>
+  <div class="relative flex justify-center">
+    <div class="phone-glow" style="width:60%;height:120px;"></div>
+    <div class="phone phone-float" style="width:300px;height:614px;">
+      <div class="phone-notch"></div>
+      <div class="phone-screen">
+        <div class="absolute inset-0 p-5 pt-14 flex flex-col items-center justify-center">
+          <div class="app-icon w-20 h-20 mb-6 flex items-center justify-center"><span class="font-serif text-white" style="font-size:44px;font-weight:500;">S</span></div>
+          <h3 class="font-display text-2xl mb-2 text-center">Welcome to Slate</h3>
+          <p class="text-[12px] dim text-center mb-6 max-w-[200px]">Press <kbd class="text-[10px]">⌘N</kbd> to start writing. <kbd class="text-[10px]">⌘K</kbd> for everything else.</p>
+          <button class="w-full py-3 rounded-2xl text-sm font-medium" style="background:#0A0A0A;color:#FCFCF8;">Create your first note</button>
+          <p class="text-[10px] faint font-mono mt-4">No card · No account yet</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="relative border-t hairline py-10" style="background:var(--bg-2);">
+  <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div class="flex items-center gap-2.5">
+      <div class="app-icon w-7 h-7 flex items-center justify-center"><span class="font-serif text-white" style="font-size:14px;font-weight:500;">S</span></div>
+      <span class="font-display text-base">Slate</span>
+      <span class="dim font-mono text-xs ml-3">v 4.2.8</span>
+    </div>
+    <div class="flex flex-wrap gap-7 text-sm dim">
+      <a href="#" class="hover:text-[color:var(--text)]">Privacy</a>
+      <a href="#" class="hover:text-[color:var(--text)]">Terms</a>
+      <a href="#" class="hover:text-[color:var(--text)]">Support</a>
+      <a href="#" class="hover:text-[color:var(--text)]">Careers</a>
+      <a href="#" class="hover:text-[color:var(--text)]">Changelog</a>
+    </div>
+    <p class="faint text-xs font-mono">© 2026 Slate Notes, Inc.</p>
+  </div>
+</footer>
+
+</body>
+</html>

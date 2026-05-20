@@ -1,0 +1,1081 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cinder Quintet — Cantata</title>
+<meta name="description" content="Cantata — the debut album from Cinder Quintet. Recorded live to 2-inch tape at the Village Vanguard. Out April 18, 2026 on the Blue Note imprint." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@1,8..60,400;1,8..60,500;1,8..60,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --cream: #FBF6EB;
+    --ink: #1A1714;
+    --burgundy: #722F3A;
+    --hair: rgba(0,0,0,0.08);
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: var(--cream);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .font-serif-display {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-style: italic;
+    font-weight: 500;
+    letter-spacing: -0.025em;
+  }
+  .font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .tight { letter-spacing: -0.03em; }
+  .tighter { letter-spacing: -0.04em; }
+
+  /* ambient backgrounds */
+  .dot-grid {
+    background-image: radial-gradient(rgba(26,23,20,0.10) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .mesh-blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(90px);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .radial-fade {
+    background: radial-gradient(60% 70% at 50% 0%, rgba(114,47,58,0.10) 0%, rgba(114,47,58,0) 70%);
+  }
+
+  /* hero album glow */
+  .album-glow::before {
+    content: "";
+    position: absolute;
+    inset: -14%;
+    border-radius: 9999px;
+    background: radial-gradient(closest-side, rgba(114,47,58,0.42), rgba(114,47,58,0.10) 55%, transparent 78%);
+    filter: blur(34px);
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* pulse dot */
+  .pulse-dot {
+    position: relative;
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 9999px;
+    background: var(--burgundy);
+  }
+  .pulse-dot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    box-shadow: 0 0 0 0 rgba(114,47,58,0.55);
+    animation: pulse 2.4s cubic-bezier(0.4,0,0.2,1) infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(114,47,58,0.55); }
+    70%  { box-shadow: 0 0 0 13px rgba(114,47,58,0); }
+    100% { box-shadow: 0 0 0 0 rgba(114,47,58,0); }
+  }
+
+  /* marquee */
+  .marquee {
+    display: flex;
+    width: max-content;
+    animation: marquee 38s linear infinite;
+  }
+  .marquee:hover { animation-play-state: paused; }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  /* waveform bars */
+  .wave-bar {
+    width: 3px;
+    border-radius: 9999px;
+    background: var(--burgundy);
+    transform-origin: bottom;
+    animation: wave 1.05s ease-in-out infinite;
+  }
+  @keyframes wave {
+    0%, 100% { transform: scaleY(0.28); }
+    50%      { transform: scaleY(1); }
+  }
+
+  /* lift interactions */
+  .lift { transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease; }
+  .lift:hover { transform: translateY(-3px); }
+
+  /* tour row hover */
+  .tour-row { transition: transform 130ms ease, background-color 130ms ease; }
+  .tour-row:hover { transform: translateX(6px); }
+  .tour-underline {
+    height: 1px; width: 0;
+    background: var(--burgundy);
+    transition: width 180ms ease;
+  }
+  .tour-row:hover .tour-underline { width: 100%; }
+
+  /* track row hover */
+  .track-row { transition: background-color 120ms ease; }
+  .track-row:hover { background-color: rgba(114,47,58,0.05); }
+  .track-row:hover .play-glyph { color: var(--burgundy); border-color: var(--burgundy); }
+  .play-glyph { transition: color 120ms ease, border-color 120ms ease; }
+
+  .sold-stamp {
+    transform: rotate(-9deg);
+    border: 1.5px solid rgba(114,47,58,0.55);
+    color: var(--burgundy);
+  }
+
+  .hair-t { border-top: 1px solid var(--hair); }
+  .hair-b { border-bottom: 1px solid var(--hair); }
+
+  .nav-blur {
+    background: rgba(251,246,235,0.82);
+    backdrop-filter: saturate(180%) blur(12px);
+    -webkit-backdrop-filter: saturate(180%) blur(12px);
+  }
+
+  ::selection { background: rgba(114,47,58,0.18); }
+</style>
+</head>
+<body class="antialiased">
+
+<!-- ============ 1. STICKY NAV ============ -->
+<header class="sticky top-0 z-50 nav-blur hair-b">
+  <nav class="mx-auto max-w-6xl px-5 sm:px-8 h-16 flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5 group">
+      <span class="h-7 w-7 rounded-full flex items-center justify-center" style="background:var(--burgundy)">
+        <span class="font-serif-display text-cream text-sm" style="color:var(--cream)">C</span>
+      </span>
+      <span class="font-serif-display text-lg tight">Cinder Quintet</span>
+    </a>
+    <div class="hidden md:flex items-center gap-8 text-sm text-[#5a554e]">
+      <a href="#music" class="hover:text-[#1A1714] transition-colors">Music</a>
+      <a href="#tour" class="hover:text-[#1A1714] transition-colors">Tour</a>
+      <a href="#merch" class="hover:text-[#1A1714] transition-colors">Merch</a>
+      <a href="#about" class="hover:text-[#1A1714] transition-colors">About</a>
+    </div>
+    <a href="#music"
+       class="lift inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-[#FBF6EB]"
+       style="background:var(--burgundy)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+      Listen now
+    </a>
+  </nav>
+</header>
+
+<main id="top">
+
+  <!-- ============ 2. HERO ============ -->
+  <section class="relative overflow-hidden radial-fade">
+    <div class="mesh-blob" style="width:380px;height:380px;background:#722F3A;top:-120px;right:-80px;"></div>
+    <div class="mesh-blob" style="width:300px;height:300px;background:#C99B6B;bottom:-140px;left:-100px;opacity:0.35;"></div>
+
+    <div class="mx-auto max-w-6xl px-5 sm:px-8 pt-16 sm:pt-24 pb-20">
+      <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+
+        <!-- album art -->
+        <div class="order-1 lg:order-none">
+          <div class="album-glow relative mx-auto" style="max-width:540px;">
+            <div class="relative z-10 aspect-square w-full rounded-xl overflow-hidden shadow-2xl"
+                 style="box-shadow:0 40px 80px -30px rgba(114,47,58,0.45); border:1px solid var(--hair);">
+              <div class="absolute inset-0" style="background:linear-gradient(150deg,#3a1820 0%,#722F3A 44%,#9c5a3a 78%,#caa274 100%);"></div>
+              <!-- cover art composition -->
+              <div class="absolute inset-0 flex flex-col justify-between p-8 sm:p-10">
+                <div class="flex items-center justify-between">
+                  <span class="font-mono text-[10px] tracking-[0.28em] uppercase" style="color:rgba(251,246,235,0.7)">Blue Note Imprint</span>
+                  <span class="font-mono text-[10px] tnum" style="color:rgba(251,246,235,0.7)">CINDER-001</span>
+                </div>
+                <div class="flex items-center justify-center">
+                  <!-- abstract horn / sound emblem -->
+                  <svg width="170" height="170" viewBox="0 0 200 200" fill="none" aria-hidden="true">
+                    <circle cx="100" cy="100" r="78" stroke="rgba(251,246,235,0.34)" stroke-width="1.2"/>
+                    <circle cx="100" cy="100" r="54" stroke="rgba(251,246,235,0.5)" stroke-width="1.2"/>
+                    <circle cx="100" cy="100" r="30" stroke="rgba(251,246,235,0.7)" stroke-width="1.2"/>
+                    <path d="M22 100 H178 M100 22 V178" stroke="rgba(251,246,235,0.18)" stroke-width="1"/>
+                    <circle cx="100" cy="100" r="6" fill="rgba(251,246,235,0.92)"/>
+                  </svg>
+                </div>
+                <div>
+                  <p class="font-serif-display text-cream leading-none" style="color:#FBF6EB;font-size:clamp(2.6rem,7vw,4rem);">Cantata</p>
+                  <p class="mt-2 font-mono text-[11px] tracking-[0.22em] uppercase" style="color:rgba(251,246,235,0.78)">Cinder Quintet</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- hero text -->
+        <div class="order-2 lg:order-none">
+          <div class="inline-flex items-center gap-2.5 rounded-full px-3 py-1.5 hair-b bg-white/40 border border-[rgba(0,0,0,0.08)]">
+            <span class="pulse-dot"></span>
+            <span class="font-mono text-[11px] tracking-[0.16em] uppercase text-[#5a554e]">New release · the debut LP</span>
+          </div>
+
+          <h1 class="mt-6 font-serif-display tighter leading-[0.94]" style="font-size:clamp(3.4rem,9vw,6rem);">
+            Cantata
+          </h1>
+
+          <p class="mt-4 font-mono text-sm tnum text-[#5a554e]">April 18, 2026 · streaming + LP</p>
+
+          <p class="mt-5 text-lg sm:text-xl leading-relaxed text-[#3a352f] max-w-md">
+            Eight long-form pieces from <span class="text-[#1A1714] font-medium">Cinder Quintet</span> — a horn section, a rhythm trio, and one continuous take. <span class="opacity-45">Recorded live to tape, nothing fixed in the mix.</span>
+          </p>
+
+          <!-- streaming badges -->
+          <p class="mt-8 font-mono text-[11px] tracking-[0.18em] uppercase text-[#857f76]">Stream &amp; pre-save</p>
+          <div class="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-w-lg">
+            <!-- Spotify -->
+            <a href="#music" class="lift flex items-center gap-2 rounded-lg px-3 py-2.5 text-white text-sm font-medium" style="background:#1DB954;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.5 17.3a.75.75 0 01-1.03.25c-2.82-1.72-6.37-2.11-10.55-1.16a.75.75 0 11-.33-1.46c4.57-1.04 8.5-.59 11.66 1.34.36.22.47.69.25 1.03zm1.47-3.27a.94.94 0 01-1.29.31c-3.23-1.99-8.15-2.56-11.97-1.4a.94.94 0 11-.55-1.8c4.37-1.33 9.8-.69 13.5 1.59.44.27.58.85.31 1.3zm.13-3.4C15.78 8.34 9.5 8.13 5.8 9.25a1.12 1.12 0 11-.65-2.15c4.25-1.29 11.18-1.04 15.58 1.57a1.13 1.13 0 01-1.16 1.93z"/></svg>
+              Spotify
+            </a>
+            <!-- Apple Music -->
+            <a href="#music" class="lift flex items-center gap-2 rounded-lg px-3 py-2.5 text-white text-sm font-medium" style="background:linear-gradient(135deg,#FA2D48,#F84E6F);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.99 6.12c0-.5-.05-1-.16-1.49a4.5 4.5 0 00-1.43-2.42A4.6 4.6 0 0019.6.86c-.6-.13-1.21-.16-1.82-.18-.16 0-.16 0-.32-.01H6.54c-.2.01-.4.02-.6.03-.6.03-1.2.07-1.78.27A4.5 4.5 0 001 3.79c-.2.5-.27 1.04-.31 1.58-.02.24-.03.49-.04.73v11.8c.01.24.02.49.04.73.04.54.11 1.08.31 1.58a4.5 4.5 0 003.16 2.81c.58.2 1.18.24 1.78.27.2.01.4.02.6.02h10.92c.61-.02 1.22-.05 1.82-.18a4.6 4.6 0 002.8-1.35 4.5 4.5 0 001.43-2.42c.11-.49.16-.99.16-1.49.01-.2.01-.4.01-.6V6.72c0-.2 0-.4-.01-.6zM17.8 16.6c0 .35-.02.7-.18 1.02-.24.5-.66.8-1.2.9-.36.07-.72.07-1.06-.05a1.55 1.55 0 01-1.04-1.32c-.06-.6.2-1.18.74-1.5.27-.16.57-.22.88-.27l1.05-.21V8.92l-6.96 1.4v8.36c0 .35-.02.7-.18 1.02-.24.5-.67.8-1.2.9-.36.07-.72.07-1.07-.05a1.55 1.55 0 01-1.03-1.32c-.07-.6.2-1.18.73-1.5.28-.16.58-.22.89-.27l1.05-.21V7.27c0-.13 0-.26.04-.39.07-.27.28-.4.53-.46l.21-.05 7.78-1.57c.14-.02.28-.04.42-.01.32.06.5.3.55.62.01.07.02.14.02.21V16.6z"/></svg>
+              Apple Music
+            </a>
+            <!-- Bandcamp -->
+            <a href="#music" class="lift flex items-center gap-2 rounded-lg px-3 py-2.5 text-white text-sm font-medium" style="background:#1DA0C3;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M0 18.75l7.437-13.5H24l-7.437 13.5H0z"/></svg>
+              Bandcamp
+            </a>
+            <!-- SoundCloud -->
+            <a href="#music" class="lift flex items-center gap-2 rounded-lg px-3 py-2.5 text-white text-sm font-medium" style="background:#FF5500;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M1.18 12.6c-.07 0-.12.05-.13.12l-.2 2.07.2 2.03c.01.07.06.12.13.12.06 0 .11-.05.12-.12l.23-2.03-.23-2.07c-.01-.07-.06-.12-.12-.12zm1.27-.93a.15.15 0 00-.14.14l-.27 3.02.27 2.92c0 .08.07.14.14.14.08 0 .14-.06.15-.14l.3-2.92-.3-3.02a.15.15 0 00-.15-.14zm10.6-5.1c-.39 0-.77.08-1.1.22-.22-2.5-2.31-4.46-4.87-4.46-.63 0-1.24.12-1.78.33-.21.08-.26.16-.27.32v13.4c0 .17.13.3.29.32h7.73c1.54 0 2.79-1.24 2.79-2.78a2.78 2.78 0 00-2.79-2.79c-.01 0-.01 0 0 0zM6.3 3.62a.16.16 0 00-.16.15l-.36 11.06.36 2.86a.16.16 0 00.16.15c.08 0 .15-.07.16-.15l.4-2.86-.4-11.06a.16.16 0 00-.16-.15zm-1.4.83a.16.16 0 00-.16.15l-.32 10.23.32 2.9c0 .09.07.16.16.16.08 0 .15-.07.16-.16l.36-2.9-.36-10.23a.16.16 0 00-.16-.15zm-1.4 1.1a.16.16 0 00-.15.16l-.3 9.13.3 2.92c0 .09.07.16.15.16.09 0 .16-.07.16-.16l.34-2.92-.34-9.13a.16.16 0 00-.16-.16z"/></svg>
+              SoundCloud
+            </a>
+            <!-- YouTube Music -->
+            <a href="#music" class="lift flex items-center gap-2 rounded-lg px-3 py-2.5 text-white text-sm font-medium" style="background:#FF0000;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm0 19.2A7.2 7.2 0 1119.2 12 7.21 7.21 0 0112 19.2zm0-11.4a4.2 4.2 0 104.2 4.2A4.2 4.2 0 0012 7.8zM9.6 15.6V8.4l6 3.6z"/></svg>
+              YT Music
+            </a>
+            <!-- Tidal -->
+            <a href="#music" class="lift flex items-center gap-2 rounded-lg px-3 py-2.5 text-white text-sm font-medium" style="background:#0A0A0A;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.012 3.992L8.008 7.996 4.004 3.992 0 7.996 4.004 12l4.004-4.004L12.012 12l-4.004 4.004 4.004 4.004 4.004-4.004L12.016 12l4-4.004-4-4.004zM16.02 7.996l3.99-4.004L24 7.996l-3.99 4.004z"/></svg>
+              Tidal
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ NOW PLAYING MOCK PLAYER ============ -->
+  <section class="mx-auto max-w-6xl px-5 sm:px-8 -mt-4 mb-20">
+    <div class="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white/55 p-4 sm:p-5 flex items-center gap-4 sm:gap-5 max-w-xl"
+         style="box-shadow:0 14px 34px -22px rgba(26,23,20,0.35);">
+      <!-- thumbnail -->
+      <div class="h-14 w-14 sm:h-16 sm:w-16 rounded-lg shrink-0 overflow-hidden" style="background:linear-gradient(150deg,#3a1820,#722F3A 60%,#9c5a3a);border:1px solid var(--hair);">
+        <div class="h-full w-full flex items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" stroke="rgba(251,246,235,0.5)" stroke-width="1.2"/>
+            <circle cx="12" cy="12" r="2.4" fill="rgba(251,246,235,0.9)"/>
+          </svg>
+        </div>
+      </div>
+      <!-- meta -->
+      <div class="min-w-0 flex-1">
+        <p class="font-mono text-[10px] tracking-[0.2em] uppercase text-[#857f76] flex items-center gap-2">
+          <span class="pulse-dot" style="width:6px;height:6px;"></span> Now playing
+        </p>
+        <p class="mt-1 font-medium text-[#1A1714] truncate">Walking in Brooklyn</p>
+        <p class="text-sm text-[#857f76] truncate">Cinder Quintet — Cantata</p>
+      </div>
+      <!-- waveform -->
+      <div class="flex items-end gap-[3px] h-9 sm:h-10 shrink-0" aria-hidden="true">
+        <span class="wave-bar h-full" style="animation-delay:0s;"></span>
+        <span class="wave-bar h-full" style="animation-delay:.12s;"></span>
+        <span class="wave-bar h-full" style="animation-delay:.30s;"></span>
+        <span class="wave-bar h-full" style="animation-delay:.08s;"></span>
+        <span class="wave-bar h-full" style="animation-delay:.42s;"></span>
+        <span class="wave-bar h-full" style="animation-delay:.20s;"></span>
+        <span class="wave-bar h-full" style="animation-delay:.36s;"></span>
+        <span class="wave-bar h-full" style="animation-delay:.05s;"></span>
+        <span class="wave-bar h-full" style="animation-delay:.27s;"></span>
+      </div>
+      <!-- play -->
+      <button class="lift h-10 w-10 rounded-full shrink-0 flex items-center justify-center text-[#FBF6EB]" style="background:var(--burgundy);" aria-label="Play">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- ============ PRESS LOGO MARQUEE ============ -->
+  <section class="hair-t hair-b bg-white/35 overflow-hidden">
+    <div class="py-6">
+      <p class="text-center font-mono text-[10px] tracking-[0.26em] uppercase text-[#857f76] mb-5">Pressed &amp; praised in</p>
+      <div class="relative">
+        <div class="marquee">
+          <!-- group repeated twice for seamless loop -->
+          <div class="flex items-center gap-12 sm:gap-16 px-8 shrink-0">
+            <span class="font-serif-display text-xl text-[#5a554e] whitespace-nowrap">JazzTimes</span>
+            <span class="font-serif-display text-xl text-[#5a554e] whitespace-nowrap">Pitchfork</span>
+            <span class="font-serif-display text-xl text-[#5a554e] whitespace-nowrap">The New Yorker</span>
+            <span class="font-serif-display text-xl text-[#5a554e] whitespace-nowrap">DownBeat</span>
+            <span class="font-serif-display text-xl text-[#5a554e] whitespace-nowrap">NPR Music</span>
+            <span class="font-serif-display text-xl text-[#5a554e] whitespace-nowrap">The Guardian</span>
+            <span class="font-serif-display text-xl text-[#5a554e] whitespace-nowrap">Stereogum</span>
+            <span class="font-serif-display text-xl text-[#5a554e] whitespace-nowrap">All About Jazz</span>
+          </div>
+          <div class="flex items-center gap-12 sm:gap-16 px-8 shrink-0" aria-hidden="true">
+            <span class="font-serif-display text-xl text-[#5a554e] whitespace-nowrap">JazzTimes</span>
+            <span class="font-serif-display text-xl text-[#5a554e] whitespace-nowrap">Pitchfork</span>
+            <span class="font-serif-display text-xl text-[#5a554e] whitespace-nowrap">The New Yorker</span>
+            <span class="font-serif-display text-xl text-[#5a554e] whitespace-nowrap">DownBeat</span>
+            <span class="font-serif-display text-xl text-[#5a554e] whitespace-nowrap">NPR Music</span>
+            <span class="font-serif-display text-xl text-[#5a554e] whitespace-nowrap">The Guardian</span>
+            <span class="font-serif-display text-xl text-[#5a554e] whitespace-nowrap">Stereogum</span>
+            <span class="font-serif-display text-xl text-[#5a554e] whitespace-nowrap">All About Jazz</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3. TRACKLIST ============ -->
+  <section id="music" class="mx-auto max-w-6xl px-5 sm:px-8 py-20 sm:py-28">
+    <div class="grid lg:grid-cols-12 gap-10 lg:gap-16">
+      <!-- heading column -->
+      <div class="lg:col-span-4">
+        <p class="font-mono text-[11px] tracking-[0.22em] uppercase text-[#857f76]">The album</p>
+        <h2 class="mt-3 font-serif-display tighter leading-[1.02]" style="font-size:clamp(2.4rem,5vw,3.5rem);">
+          Eight pieces,<br><span class="opacity-45">one continuous room.</span>
+        </h2>
+        <p class="mt-5 text-[#3a352f] leading-relaxed">
+          Sequenced as a single arc — overture to coda. Total running time 1:08:42. Mixed from the live 2-inch master by Rudy Hahn at Sear Sound.
+        </p>
+        <dl class="mt-7 space-y-3 font-mono text-sm">
+          <div class="flex justify-between hair-b pb-2">
+            <dt class="text-[#857f76]">Catalog</dt>
+            <dd class="tnum text-[#1A1714]">CINDER-001</dd>
+          </div>
+          <div class="flex justify-between hair-b pb-2">
+            <dt class="text-[#857f76]">Format</dt>
+            <dd class="text-[#1A1714]">LP / digital</dd>
+          </div>
+          <div class="flex justify-between hair-b pb-2">
+            <dt class="text-[#857f76]">Imprint</dt>
+            <dd class="text-[#1A1714]">Blue Note</dd>
+          </div>
+          <div class="flex justify-between hair-b pb-2">
+            <dt class="text-[#857f76]">Released</dt>
+            <dd class="tnum text-[#1A1714]">2026-04-18</dd>
+          </div>
+        </dl>
+      </div>
+
+      <!-- tracklist table -->
+      <div class="lg:col-span-8">
+        <div class="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white/45 overflow-hidden">
+          <div class="px-5 sm:px-6 py-3 hair-b flex items-center justify-between">
+            <span class="font-mono text-[10px] tracking-[0.22em] uppercase text-[#857f76]">Side A · Side B</span>
+            <span class="font-mono text-[10px] tracking-[0.22em] uppercase text-[#857f76] tnum">8 tracks · 1:08:42</span>
+          </div>
+
+          <!-- track 01 -->
+          <div class="track-row group flex items-center gap-4 px-5 sm:px-6 py-4 hair-b">
+            <span class="font-mono text-sm tnum text-[#857f76] w-7 shrink-0">01</span>
+            <div class="flex-1 min-w-0">
+              <p class="font-medium text-[#1A1714] truncate">Overture in B minor</p>
+            </div>
+            <span class="font-mono text-sm tnum text-[#5a554e] shrink-0">8:24</span>
+            <span class="play-glyph h-8 w-8 rounded-full border border-[rgba(0,0,0,0.12)] flex items-center justify-center text-[#857f76] shrink-0">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            </span>
+          </div>
+          <!-- track 02 -->
+          <div class="track-row group flex items-center gap-4 px-5 sm:px-6 py-4 hair-b">
+            <span class="font-mono text-sm tnum text-[#857f76] w-7 shrink-0">02</span>
+            <div class="flex-1 min-w-0">
+              <p class="font-medium text-[#1A1714] truncate">Walking in Brooklyn</p>
+              <p class="text-xs text-[#857f76]">ft. Mireille Okafor — trumpet</p>
+            </div>
+            <span class="font-mono text-sm tnum text-[#5a554e] shrink-0">6:48</span>
+            <span class="play-glyph h-8 w-8 rounded-full border border-[rgba(0,0,0,0.12)] flex items-center justify-center text-[#857f76] shrink-0">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            </span>
+          </div>
+          <!-- track 03 -->
+          <div class="track-row group flex items-center gap-4 px-5 sm:px-6 py-4 hair-b">
+            <span class="font-mono text-sm tnum text-[#857f76] w-7 shrink-0">03</span>
+            <div class="flex-1 min-w-0">
+              <p class="font-medium text-[#1A1714] truncate">Ode to Halcyon</p>
+            </div>
+            <span class="font-mono text-sm tnum text-[#5a554e] shrink-0">12:08</span>
+            <span class="play-glyph h-8 w-8 rounded-full border border-[rgba(0,0,0,0.12)] flex items-center justify-center text-[#857f76] shrink-0">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            </span>
+          </div>
+          <!-- track 04 -->
+          <div class="track-row group flex items-center gap-4 px-5 sm:px-6 py-4 hair-b">
+            <span class="font-mono text-sm tnum text-[#857f76] w-7 shrink-0">04</span>
+            <div class="flex-1 min-w-0">
+              <p class="font-medium text-[#1A1714] truncate">Letter from the Pullman Porter</p>
+              <p class="text-xs text-[#857f76]">ft. Desmond Aubrey — tenor saxophone</p>
+            </div>
+            <span class="font-mono text-sm tnum text-[#5a554e] shrink-0">9:52</span>
+            <span class="play-glyph h-8 w-8 rounded-full border border-[rgba(0,0,0,0.12)] flex items-center justify-center text-[#857f76] shrink-0">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            </span>
+          </div>
+          <!-- track 05 -->
+          <div class="track-row group flex items-center gap-4 px-5 sm:px-6 py-4 hair-b">
+            <span class="font-mono text-sm tnum text-[#857f76] w-7 shrink-0">05</span>
+            <div class="flex-1 min-w-0">
+              <p class="font-medium text-[#1A1714] truncate">Solstice for a Quiet Hall</p>
+            </div>
+            <span class="font-mono text-sm tnum text-[#5a554e] shrink-0">5:36</span>
+            <span class="play-glyph h-8 w-8 rounded-full border border-[rgba(0,0,0,0.12)] flex items-center justify-center text-[#857f76] shrink-0">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            </span>
+          </div>
+          <!-- track 06 -->
+          <div class="track-row group flex items-center gap-4 px-5 sm:px-6 py-4 hair-b">
+            <span class="font-mono text-sm tnum text-[#857f76] w-7 shrink-0">06</span>
+            <div class="flex-1 min-w-0">
+              <p class="font-medium text-[#1A1714] truncate">Threnody, Then Daybreak</p>
+              <p class="text-xs text-[#857f76]">ft. the full horn section</p>
+            </div>
+            <span class="font-mono text-sm tnum text-[#5a554e] shrink-0">11:19</span>
+            <span class="play-glyph h-8 w-8 rounded-full border border-[rgba(0,0,0,0.12)] flex items-center justify-center text-[#857f76] shrink-0">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            </span>
+          </div>
+          <!-- track 07 -->
+          <div class="track-row group flex items-center gap-4 px-5 sm:px-6 py-4 hair-b">
+            <span class="font-mono text-sm tnum text-[#857f76] w-7 shrink-0">07</span>
+            <div class="flex-1 min-w-0">
+              <p class="font-medium text-[#1A1714] truncate">The Long Way Through Harlem</p>
+            </div>
+            <span class="font-mono text-sm tnum text-[#5a554e] shrink-0">7:41</span>
+            <span class="play-glyph h-8 w-8 rounded-full border border-[rgba(0,0,0,0.12)] flex items-center justify-center text-[#857f76] shrink-0">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            </span>
+          </div>
+          <!-- track 08 -->
+          <div class="track-row group flex items-center gap-4 px-5 sm:px-6 py-4">
+            <span class="font-mono text-sm tnum text-[#857f76] w-7 shrink-0">08</span>
+            <div class="flex-1 min-w-0">
+              <p class="font-medium text-[#1A1714] truncate">Coda — Cantata Reprise</p>
+              <p class="text-xs text-[#857f76]">ft. Mireille Okafor &amp; Desmond Aubrey</p>
+            </div>
+            <span class="font-mono text-sm tnum text-[#5a554e] shrink-0">6:54</span>
+            <span class="play-glyph h-8 w-8 rounded-full border border-[rgba(0,0,0,0.12)] flex items-center justify-center text-[#857f76] shrink-0">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- lyric excerpt pull-quote -->
+        <figure class="mt-8 pl-5 border-l-2" style="border-color:var(--burgundy);">
+          <blockquote class="font-serif-display text-xl sm:text-2xl leading-relaxed text-[#3a352f]">
+            “We took the long way through Harlem so the song would have somewhere to end —
+            and the horns kept the streetlights on.”
+          </blockquote>
+          <figcaption class="mt-3 font-mono text-[11px] tracking-[0.16em] uppercase text-[#857f76]">
+            — from “The Long Way Through Harlem”
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 4. PRESS QUOTES ============ -->
+  <section class="hair-t bg-white/35 dot-grid">
+    <div class="mx-auto max-w-6xl px-5 sm:px-8 py-20 sm:py-28">
+      <div class="max-w-2xl">
+        <p class="font-mono text-[11px] tracking-[0.22em] uppercase text-[#857f76]">Critical reception</p>
+        <h2 class="mt-3 font-serif-display tighter leading-[1.04]" style="font-size:clamp(2.4rem,5vw,3.5rem);">
+          What the critics<br><span class="opacity-45">heard in the room.</span>
+        </h2>
+      </div>
+
+      <div class="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- quote 1 -->
+        <figure class="lift rounded-xl border border-[rgba(0,0,0,0.08)] bg-[#FBF6EB] p-6">
+          <div class="flex gap-1 text-[#722F3A]" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5l3.1 6.9 7.4.7-5.6 5 1.7 7.4L12 23.5 5.4 27l1.7-7.4L1.5 14.6l7.4-.7z"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5l3.1 6.9 7.4.7-5.6 5 1.7 7.4L12 23.5 5.4 27l1.7-7.4L1.5 14.6l7.4-.7z"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5l3.1 6.9 7.4.7-5.6 5 1.7 7.4L12 23.5 5.4 27l1.7-7.4L1.5 14.6l7.4-.7z"/></svg>
+          </div>
+          <blockquote class="mt-4 font-serif-display text-xl leading-snug text-[#1A1714]">
+            “Serious, sophisticated, alive — a debut that behaves like a fourth record.”
+          </blockquote>
+          <figcaption class="mt-5 hair-t pt-3 flex items-center justify-between">
+            <span class="text-sm font-medium text-[#1A1714]">JazzTimes</span>
+            <span class="font-mono text-[10px] tracking-[0.18em] uppercase text-[#857f76]">Review</span>
+          </figcaption>
+        </figure>
+
+        <!-- quote 2 -->
+        <figure class="lift rounded-xl border border-[rgba(0,0,0,0.08)] p-6 text-[#FBF6EB]" style="background:var(--burgundy);">
+          <p class="font-mono text-[10px] tracking-[0.2em] uppercase" style="color:rgba(251,246,235,0.7)">Score</p>
+          <p class="mt-1 font-serif-display tnum leading-none" style="font-size:3.4rem;">8.4</p>
+          <blockquote class="mt-4 font-serif-display text-xl leading-snug">
+            “Among the year's best jazz debuts — patient, generous, and unafraid of length.”
+          </blockquote>
+          <figcaption class="mt-5 pt-3 flex items-center justify-between" style="border-top:1px solid rgba(251,246,235,0.18);">
+            <span class="text-sm font-medium">Pitchfork</span>
+            <span class="font-mono text-[10px] tracking-[0.18em] uppercase" style="color:rgba(251,246,235,0.7)">Best New</span>
+          </figcaption>
+        </figure>
+
+        <!-- quote 3 -->
+        <figure class="lift rounded-xl border border-[rgba(0,0,0,0.08)] bg-[#FBF6EB] p-6">
+          <div class="flex gap-1 text-[#722F3A]" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5l3.1 6.9 7.4.7-5.6 5 1.7 7.4L12 23.5 5.4 27l1.7-7.4L1.5 14.6l7.4-.7z"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5l3.1 6.9 7.4.7-5.6 5 1.7 7.4L12 23.5 5.4 27l1.7-7.4L1.5 14.6l7.4-.7z"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5l3.1 6.9 7.4.7-5.6 5 1.7 7.4L12 23.5 5.4 27l1.7-7.4L1.5 14.6l7.4-.7z"/></svg>
+          </div>
+          <blockquote class="mt-4 font-serif-display text-xl leading-snug text-[#1A1714]">
+            “A quintet that listens — five players negotiating one idea in real time.”
+          </blockquote>
+          <figcaption class="mt-5 hair-t pt-3 flex items-center justify-between">
+            <span class="text-sm font-medium text-[#1A1714]">The New Yorker</span>
+            <span class="font-mono text-[10px] tracking-[0.18em] uppercase text-[#857f76]">Goings On</span>
+          </figcaption>
+        </figure>
+
+        <!-- quote 4 -->
+        <figure class="lift rounded-xl border border-[rgba(0,0,0,0.08)] bg-[#FBF6EB] p-6">
+          <div class="flex gap-1 text-[#722F3A]" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5l3.1 6.9 7.4.7-5.6 5 1.7 7.4L12 23.5 5.4 27l1.7-7.4L1.5 14.6l7.4-.7z"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5l3.1 6.9 7.4.7-5.6 5 1.7 7.4L12 23.5 5.4 27l1.7-7.4L1.5 14.6l7.4-.7z"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5l3.1 6.9 7.4.7-5.6 5 1.7 7.4L12 23.5 5.4 27l1.7-7.4L1.5 14.6l7.4-.7z"/></svg>
+          </div>
+          <blockquote class="mt-4 font-serif-display text-xl leading-snug text-[#1A1714]">
+            “Recorded to tape and it shows — warmth, room, and the audible risk of a single take.”
+          </blockquote>
+          <figcaption class="mt-5 hair-t pt-3 flex items-center justify-between">
+            <span class="text-sm font-medium text-[#1A1714]">DownBeat</span>
+            <span class="font-mono text-[10px] tracking-[0.18em] uppercase text-[#857f76]">4½ stars</span>
+          </figcaption>
+        </figure>
+
+        <!-- quote 5 -->
+        <figure class="lift rounded-xl border border-[rgba(0,0,0,0.08)] bg-[#FBF6EB] p-6">
+          <div class="flex gap-1 text-[#722F3A]" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5l3.1 6.9 7.4.7-5.6 5 1.7 7.4L12 23.5 5.4 27l1.7-7.4L1.5 14.6l7.4-.7z"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5l3.1 6.9 7.4.7-5.6 5 1.7 7.4L12 23.5 5.4 27l1.7-7.4L1.5 14.6l7.4-.7z"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5l3.1 6.9 7.4.7-5.6 5 1.7 7.4L12 23.5 5.4 27l1.7-7.4L1.5 14.6l7.4-.7z"/></svg>
+          </div>
+          <blockquote class="mt-4 font-serif-display text-xl leading-snug text-[#1A1714]">
+            “‘Ode to Halcyon' is twelve minutes that never once asks for your patience.”
+          </blockquote>
+          <figcaption class="mt-5 hair-t pt-3 flex items-center justify-between">
+            <span class="text-sm font-medium text-[#1A1714]">NPR Music</span>
+            <span class="font-mono text-[10px] tracking-[0.18em] uppercase text-[#857f76]">First Listen</span>
+          </figcaption>
+        </figure>
+
+        <!-- quote 6 -->
+        <figure class="lift rounded-xl border border-[rgba(0,0,0,0.08)] bg-[#FBF6EB] p-6">
+          <div class="flex gap-1 text-[#722F3A]" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5l3.1 6.9 7.4.7-5.6 5 1.7 7.4L12 23.5 5.4 27l1.7-7.4L1.5 14.6l7.4-.7z"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5l3.1 6.9 7.4.7-5.6 5 1.7 7.4L12 23.5 5.4 27l1.7-7.4L1.5 14.6l7.4-.7z"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5l3.1 6.9 7.4.7-5.6 5 1.7 7.4L12 23.5 5.4 27l1.7-7.4L1.5 14.6l7.4-.7z"/></svg>
+          </div>
+          <blockquote class="mt-4 font-serif-display text-xl leading-snug text-[#1A1714]">
+            “The horn writing is the headline — five voices arranged like one breathing instrument.”
+          </blockquote>
+          <figcaption class="mt-5 hair-t pt-3 flex items-center justify-between">
+            <span class="text-sm font-medium text-[#1A1714]">The Guardian</span>
+            <span class="font-mono text-[10px] tracking-[0.18em] uppercase text-[#857f76]">★★★★★</span>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 6. MUSIC / LYRIC VIDEO ============ -->
+  <section class="mx-auto max-w-6xl px-5 sm:px-8 py-20 sm:py-28">
+    <div class="max-w-2xl">
+      <p class="font-mono text-[11px] tracking-[0.22em] uppercase text-[#857f76]">Live session</p>
+      <h2 class="mt-3 font-serif-display tighter leading-[1.04]" style="font-size:clamp(2.4rem,5vw,3.5rem);">
+        Watch the session.
+      </h2>
+      <p class="mt-4 text-[#3a352f] leading-relaxed">
+        Filmed on a single Bolex during the basement set at the Village Vanguard — one camera, one take, the band facing the room.
+      </p>
+    </div>
+
+    <div class="mt-10 group cursor-pointer lift">
+      <div class="relative aspect-video w-full rounded-xl overflow-hidden border border-[rgba(0,0,0,0.08)]"
+           style="box-shadow:0 30px 60px -34px rgba(26,23,20,0.5);">
+        <div class="absolute inset-0" style="background:linear-gradient(125deg,#2a1014 0%,#722F3A 48%,#9c5a3a 76%,#caa274 100%);"></div>
+        <div class="absolute inset-0 dot-grid opacity-30"></div>
+        <!-- play overlay -->
+        <div class="absolute inset-0 flex items-center justify-center">
+          <span class="h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-[#FBF6EB]/95 flex items-center justify-center shadow-2xl transition-transform duration-150 group-hover:scale-105">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M8 5v14l11-7z" fill="#722F3A"/>
+            </svg>
+          </span>
+        </div>
+        <!-- duration chip -->
+        <div class="absolute bottom-4 right-4 rounded-md bg-black/55 px-2.5 py-1">
+          <span class="font-mono text-xs tnum text-white">14:08</span>
+        </div>
+        <!-- corner label -->
+        <div class="absolute top-4 left-4 flex items-center gap-2">
+          <span class="pulse-dot" style="width:7px;height:7px;background:#FBF6EB;"></span>
+          <span class="font-mono text-[10px] tracking-[0.2em] uppercase text-[#FBF6EB]/85">Live to tape</span>
+        </div>
+      </div>
+      <div class="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <h3 class="font-serif-display text-2xl tight">Walking in Brooklyn</h3>
+        <span class="text-[#857f76]">(live at the Vanguard)</span>
+        <span class="font-mono text-sm tnum text-[#857f76]">· 14:08</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 5. TOUR DATES ============ -->
+  <section id="tour" class="hair-t bg-white/35">
+    <div class="mx-auto max-w-6xl px-5 sm:px-8 py-20 sm:py-28">
+      <div class="flex flex-wrap items-end justify-between gap-6">
+        <div class="max-w-xl">
+          <p class="font-mono text-[11px] tracking-[0.22em] uppercase text-[#857f76] flex items-center gap-2">
+            <span class="pulse-dot" style="width:7px;height:7px;"></span> On tour · spring 2026
+          </p>
+          <h2 class="mt-3 font-serif-display tighter leading-[1.04]" style="font-size:clamp(2.4rem,5vw,3.5rem);">
+            Eight rooms,<br><span class="opacity-45">three continents.</span>
+          </h2>
+        </div>
+        <p class="font-mono text-sm tnum text-[#857f76]">8 dates · 2 sold out</p>
+      </div>
+
+      <div class="mt-10 rounded-xl border border-[rgba(0,0,0,0.08)] bg-[#FBF6EB] overflow-hidden">
+
+        <!-- date 1 -->
+        <div class="tour-row group hair-b">
+          <div class="flex items-center gap-4 sm:gap-6 px-5 sm:px-6 py-5">
+            <span class="font-mono text-sm tnum text-[#857f76] w-20 shrink-0">Apr 24</span>
+            <div class="flex-1 min-w-0">
+              <p class="font-medium text-[#1A1714] truncate">Village Vanguard</p>
+              <p class="text-sm text-[#857f76] truncate">New York, NY</p>
+              <div class="tour-underline mt-1"></div>
+            </div>
+            <a href="#" class="lift hidden sm:inline-flex items-center gap-1.5 rounded-full border border-[rgba(0,0,0,0.14)] px-4 py-2 text-sm font-medium text-[#1A1714] hover:border-[#722F3A]">
+              Tickets
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- date 2 — SOLD OUT -->
+        <div class="tour-row group hair-b opacity-90">
+          <div class="flex items-center gap-4 sm:gap-6 px-5 sm:px-6 py-5">
+            <span class="font-mono text-sm tnum text-[#857f76] w-20 shrink-0">Apr 27</span>
+            <div class="flex-1 min-w-0 flex items-center gap-3">
+              <div class="min-w-0">
+                <p class="font-medium text-[#1A1714] truncate">Smalls Jazz Club</p>
+                <p class="text-sm text-[#857f76] truncate">New York, NY</p>
+              </div>
+              <span class="sold-stamp font-mono text-[10px] tracking-[0.16em] uppercase px-2 py-0.5 rounded shrink-0">Sold out</span>
+            </div>
+            <span class="hidden sm:inline-flex items-center rounded-full border border-[rgba(0,0,0,0.10)] px-4 py-2 text-sm text-[#b5afa6] cursor-not-allowed">
+              Tickets
+            </span>
+          </div>
+        </div>
+
+        <!-- date 3 -->
+        <div class="tour-row group hair-b">
+          <div class="flex items-center gap-4 sm:gap-6 px-5 sm:px-6 py-5">
+            <span class="font-mono text-sm tnum text-[#857f76] w-20 shrink-0">May 02</span>
+            <div class="flex-1 min-w-0">
+              <p class="font-medium text-[#1A1714] truncate">Constellation</p>
+              <p class="text-sm text-[#857f76] truncate">Chicago, IL</p>
+              <div class="tour-underline mt-1"></div>
+            </div>
+            <a href="#" class="lift hidden sm:inline-flex items-center gap-1.5 rounded-full border border-[rgba(0,0,0,0.14)] px-4 py-2 text-sm font-medium text-[#1A1714] hover:border-[#722F3A]">
+              Tickets
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- date 4 -->
+        <div class="tour-row group hair-b">
+          <div class="flex items-center gap-4 sm:gap-6 px-5 sm:px-6 py-5">
+            <span class="font-mono text-sm tnum text-[#857f76] w-20 shrink-0">May 09</span>
+            <div class="flex-1 min-w-0">
+              <p class="font-medium text-[#1A1714] truncate">SFJAZZ Center</p>
+              <p class="text-sm text-[#857f76] truncate">San Francisco, CA</p>
+              <div class="tour-underline mt-1"></div>
+            </div>
+            <a href="#" class="lift hidden sm:inline-flex items-center gap-1.5 rounded-full border border-[rgba(0,0,0,0.14)] px-4 py-2 text-sm font-medium text-[#1A1714] hover:border-[#722F3A]">
+              Tickets
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- date 5 — SOLD OUT -->
+        <div class="tour-row group hair-b opacity-90">
+          <div class="flex items-center gap-4 sm:gap-6 px-5 sm:px-6 py-5">
+            <span class="font-mono text-sm tnum text-[#857f76] w-20 shrink-0">May 16</span>
+            <div class="flex-1 min-w-0 flex items-center gap-3">
+              <div class="min-w-0">
+                <p class="font-medium text-[#1A1714] truncate">Ronnie Scott's</p>
+                <p class="text-sm text-[#857f76] truncate">London, UK</p>
+              </div>
+              <span class="sold-stamp font-mono text-[10px] tracking-[0.16em] uppercase px-2 py-0.5 rounded shrink-0">Sold out</span>
+            </div>
+            <span class="hidden sm:inline-flex items-center rounded-full border border-[rgba(0,0,0,0.10)] px-4 py-2 text-sm text-[#b5afa6] cursor-not-allowed">
+              Tickets
+            </span>
+          </div>
+        </div>
+
+        <!-- date 6 -->
+        <div class="tour-row group hair-b">
+          <div class="flex items-center gap-4 sm:gap-6 px-5 sm:px-6 py-5">
+            <span class="font-mono text-sm tnum text-[#857f76] w-20 shrink-0">May 21</span>
+            <div class="flex-1 min-w-0">
+              <p class="font-medium text-[#1A1714] truncate">Jazz Café</p>
+              <p class="text-sm text-[#857f76] truncate">London, UK</p>
+              <div class="tour-underline mt-1"></div>
+            </div>
+            <a href="#" class="lift hidden sm:inline-flex items-center gap-1.5 rounded-full border border-[rgba(0,0,0,0.14)] px-4 py-2 text-sm font-medium text-[#1A1714] hover:border-[#722F3A]">
+              Tickets
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- date 7 -->
+        <div class="tour-row group hair-b">
+          <div class="flex items-center gap-4 sm:gap-6 px-5 sm:px-6 py-5">
+            <span class="font-mono text-sm tnum text-[#857f76] w-20 shrink-0">May 30</span>
+            <div class="flex-1 min-w-0">
+              <p class="font-medium text-[#1A1714] truncate">Birdland</p>
+              <p class="text-sm text-[#857f76] truncate">New York, NY</p>
+              <div class="tour-underline mt-1"></div>
+            </div>
+            <a href="#" class="lift hidden sm:inline-flex items-center gap-1.5 rounded-full border border-[rgba(0,0,0,0.14)] px-4 py-2 text-sm font-medium text-[#1A1714] hover:border-[#722F3A]">
+              Tickets
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- date 8 -->
+        <div class="tour-row group">
+          <div class="flex items-center gap-4 sm:gap-6 px-5 sm:px-6 py-5">
+            <span class="font-mono text-sm tnum text-[#857f76] w-20 shrink-0">Jun 06</span>
+            <div class="flex-1 min-w-0">
+              <p class="font-medium text-[#1A1714] truncate">Blue Note Tokyo</p>
+              <p class="text-sm text-[#857f76] truncate">Tokyo, JP</p>
+              <div class="tour-underline mt-1"></div>
+            </div>
+            <a href="#" class="lift hidden sm:inline-flex items-center gap-1.5 rounded-full border border-[rgba(0,0,0,0.14)] px-4 py-2 text-sm font-medium text-[#1A1714] hover:border-[#722F3A]">
+              Tickets
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </a>
+          </div>
+        </div>
+
+      </div>
+      <p class="mt-4 font-mono text-xs text-[#857f76]">More dates announced through summer — join the list below for first access.</p>
+    </div>
+  </section>
+
+  <!-- ============ 7. BIO / ABOUT ============ -->
+  <section id="about" class="mx-auto max-w-6xl px-5 sm:px-8 py-20 sm:py-28">
+    <div class="grid lg:grid-cols-12 gap-10 lg:gap-16 items-start">
+      <!-- artist photo -->
+      <div class="lg:col-span-5">
+        <div class="relative aspect-[4/5] w-full rounded-xl overflow-hidden border border-[rgba(0,0,0,0.08)]"
+             style="box-shadow:0 30px 60px -38px rgba(26,23,20,0.5);">
+          <div class="absolute inset-0" style="background:linear-gradient(160deg,#2a1014 0%,#722F3A 52%,#9c5a3a 82%,#caa274 100%);"></div>
+          <div class="absolute inset-0 dot-grid opacity-25"></div>
+          <!-- five-figure quintet motif -->
+          <div class="absolute inset-0 flex items-end justify-center gap-2.5 pb-12">
+            <div class="w-9 h-24 rounded-t-full" style="background:rgba(251,246,235,0.16);"></div>
+            <div class="w-9 h-32 rounded-t-full" style="background:rgba(251,246,235,0.22);"></div>
+            <div class="w-9 h-40 rounded-t-full" style="background:rgba(251,246,235,0.30);"></div>
+            <div class="w-9 h-32 rounded-t-full" style="background:rgba(251,246,235,0.22);"></div>
+            <div class="w-9 h-24 rounded-t-full" style="background:rgba(251,246,235,0.16);"></div>
+          </div>
+          <div class="absolute bottom-4 left-4">
+            <span class="font-mono text-[10px] tracking-[0.2em] uppercase text-[#FBF6EB]/80">The Cinder Quintet · est. 2023</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- bio text -->
+      <div class="lg:col-span-7">
+        <p class="font-mono text-[11px] tracking-[0.22em] uppercase text-[#857f76]">The quintet</p>
+        <h2 class="mt-3 font-serif-display tighter leading-[1.04]" style="font-size:clamp(2.4rem,5vw,3.5rem);">
+          Five players, one take.
+        </h2>
+
+        <div class="mt-6 space-y-5 text-[#3a352f] leading-relaxed text-[17px]">
+          <p>
+            Cinder Quintet came together in a fourth-floor practice room at Juilliard in the spring of 2023 — trumpet, tenor saxophone, piano, upright bass, and drums, five students who kept missing curfew because a tune wasn't finished. They played weddings, brunch sets, and one notorious six-hour loft session before they ever called themselves a band.
+          </p>
+          <p>
+            <em class="font-serif-display not-italic">Cantata</em> was cut in two days at Sear Sound — live to a single 2-inch tape machine, no overdubs, no punch-ins, no click. What you hear is the room: the squeak of a bass stool, a horn player counting under their breath, the decay of the piano against the back wall. When a take fell apart, they kept the take that didn't. The quintet wanted the record to remember exactly what happened.
+          </p>
+          <p>
+            The result is eight long-form pieces — an overture, two ballads, a twelve-minute centerpiece, and a reprise that closes the loop. It is a debut that sounds unhurried because it was: a young band that decided their first statement should be the music they'd actually want to sit inside, all the way through, with the needle down.
+          </p>
+        </div>
+
+        <!-- members strip -->
+        <div class="mt-8 grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div class="rounded-lg border border-[rgba(0,0,0,0.08)] bg-white/45 px-4 py-3">
+            <p class="text-sm font-medium text-[#1A1714]">Mireille Okafor</p>
+            <p class="font-mono text-[10px] tracking-[0.14em] uppercase text-[#857f76]">Trumpet</p>
+          </div>
+          <div class="rounded-lg border border-[rgba(0,0,0,0.08)] bg-white/45 px-4 py-3">
+            <p class="text-sm font-medium text-[#1A1714]">Desmond Aubrey</p>
+            <p class="font-mono text-[10px] tracking-[0.14em] uppercase text-[#857f76]">Tenor sax</p>
+          </div>
+          <div class="rounded-lg border border-[rgba(0,0,0,0.08)] bg-white/45 px-4 py-3">
+            <p class="text-sm font-medium text-[#1A1714]">Lev Castellanos</p>
+            <p class="font-mono text-[10px] tracking-[0.14em] uppercase text-[#857f76]">Piano</p>
+          </div>
+          <div class="rounded-lg border border-[rgba(0,0,0,0.08)] bg-white/45 px-4 py-3">
+            <p class="text-sm font-medium text-[#1A1714]">Ines Bergström</p>
+            <p class="font-mono text-[10px] tracking-[0.14em] uppercase text-[#857f76]">Upright bass</p>
+          </div>
+          <div class="rounded-lg border border-[rgba(0,0,0,0.08)] bg-white/45 px-4 py-3">
+            <p class="text-sm font-medium text-[#1A1714]">Théo Marchetti</p>
+            <p class="font-mono text-[10px] tracking-[0.14em] uppercase text-[#857f76]">Drums</p>
+          </div>
+          <div class="rounded-lg border border-[rgba(0,0,0,0.08)] px-4 py-3 flex items-center" style="background:rgba(114,47,58,0.06);">
+            <p class="font-mono text-[11px] tracking-[0.14em] uppercase text-[#722F3A]">Recorded live to tape</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 8. MERCH SHOP ============ -->
+  <section id="merch" class="hair-t bg-white/35 dot-grid">
+    <div class="mx-auto max-w-6xl px-5 sm:px-8 py-20 sm:py-28">
+      <div class="flex flex-wrap items-end justify-between gap-6">
+        <div class="max-w-xl">
+          <p class="font-mono text-[11px] tracking-[0.22em] uppercase text-[#857f76]">The shop</p>
+          <h2 class="mt-3 font-serif-display tighter leading-[1.04]" style="font-size:clamp(2.4rem,5vw,3.5rem);">
+            Take the record home.
+          </h2>
+        </div>
+        <p class="font-mono text-sm text-[#857f76]">Ships worldwide · pressed at QRP</p>
+      </div>
+
+      <div class="mt-10 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+
+        <!-- LP -->
+        <div class="lift rounded-xl border border-[rgba(0,0,0,0.08)] bg-[#FBF6EB] overflow-hidden">
+          <div class="relative aspect-square" style="background:linear-gradient(150deg,#3a1820,#722F3A 58%,#9c5a3a);">
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="h-28 w-28 sm:h-32 sm:w-32 rounded-full flex items-center justify-center" style="background:radial-gradient(circle,#1A1714 36%,#000 38%);">
+                <div class="h-9 w-9 rounded-full flex items-center justify-center" style="background:var(--burgundy);">
+                  <div class="h-1.5 w-1.5 rounded-full bg-[#FBF6EB]"></div>
+                </div>
+              </div>
+            </div>
+            <span class="absolute top-3 left-3 font-mono text-[9px] tracking-[0.16em] uppercase text-[#FBF6EB]/80">Vinyl</span>
+          </div>
+          <div class="p-4">
+            <p class="text-sm font-medium text-[#1A1714] leading-snug">180-gram LP — <em class="font-serif-display not-italic">Cantata</em></p>
+            <p class="mt-1 text-xs text-[#857f76]">Gatefold sleeve, black vinyl</p>
+            <div class="mt-3 flex items-center justify-between">
+              <span class="font-mono text-lg tnum text-[#1A1714]">$48</span>
+              <button class="lift rounded-full px-3.5 py-1.5 text-xs font-medium text-[#FBF6EB]" style="background:var(--burgundy);">Add</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- test pressing -->
+        <div class="lift rounded-xl border border-[rgba(0,0,0,0.08)] bg-[#FBF6EB] overflow-hidden">
+          <div class="relative aspect-square" style="background:linear-gradient(150deg,#2a1014,#9c5a3a 60%,#caa274);">
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="h-28 w-28 sm:h-32 sm:w-32 rounded-full flex items-center justify-center" style="background:radial-gradient(circle,#3a352f 36%,#1A1714 38%); box-shadow:0 0 0 1px rgba(251,246,235,0.2);">
+                <div class="h-12 w-12 rounded-full flex items-center justify-center bg-[#FBF6EB]">
+                  <span class="font-mono text-[8px] tracking-tight text-[#1A1714]">TEST</span>
+                </div>
+              </div>
+            </div>
+            <span class="absolute top-3 left-3 font-mono text-[9px] tracking-[0.16em] uppercase text-[#FBF6EB]/80">Limited 30</span>
+          </div>
+          <div class="p-4">
+            <p class="text-sm font-medium text-[#1A1714] leading-snug">Signed test pressing</p>
+            <p class="mt-1 text-xs text-[#857f76]">Numbered, signed by all five</p>
+            <div class="mt-3 flex items-center justify-between">
+              <span class="font-mono text-lg tnum text-[#1A1714]">$148</span>
+              <button class="lift rounded-full px-3.5 py-1.5 text-xs font-medium text-[#FBF6EB]" style="background:var(--burgundy);">Add</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- sheet music -->
+        <div class="lift rounded-xl border border-[rgba(0,0,0,0.08)] bg-[#FBF6EB] overflow-hidden">
+          <div class="relative aspect-square" style="background:linear-gradient(150deg,#caa274,#9c5a3a 62%,#722F3A);">
+            <div class="absolute inset-0 flex items-center justify-center">
+              <svg width="86" height="86" viewBox="0 0 100 100" fill="none" aria-hidden="true">
+                <rect x="22" y="14" width="56" height="72" rx="3" fill="rgba(251,246,235,0.94)"/>
+                <line x1="30" y1="30" x2="70" y2="30" stroke="#722F3A" stroke-width="1.4"/>
+                <line x1="30" y1="38" x2="70" y2="38" stroke="#722F3A" stroke-width="1.4"/>
+                <line x1="30" y1="46" x2="70" y2="46" stroke="#722F3A" stroke-width="1.4"/>
+                <line x1="30" y1="54" x2="70" y2="54" stroke="#722F3A" stroke-width="1.4"/>
+                <line x1="30" y1="62" x2="70" y2="62" stroke="#722F3A" stroke-width="1.4"/>
+                <circle cx="42" cy="58" r="4" fill="#1A1714"/>
+                <circle cx="58" cy="50" r="4" fill="#1A1714"/>
+                <rect x="45" y="40" width="1.6" height="18" fill="#1A1714"/>
+                <rect x="61" y="32" width="1.6" height="18" fill="#1A1714"/>
+              </svg>
+            </div>
+            <span class="absolute top-3 left-3 font-mono text-[9px] tracking-[0.16em] uppercase text-[#FBF6EB]/85">Digital</span>
+          </div>
+          <div class="p-4">
+            <p class="text-sm font-medium text-[#1A1714] leading-snug">Sheet music — full score</p>
+            <p class="mt-1 text-xs text-[#857f76]">PDF, all 8 charts &amp; parts</p>
+            <div class="mt-3 flex items-center justify-between">
+              <span class="font-mono text-lg tnum text-[#1A1714]">$28</span>
+              <button class="lift rounded-full px-3.5 py-1.5 text-xs font-medium text-[#FBF6EB]" style="background:var(--burgundy);">Add</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- hoodie -->
+        <div class="lift rounded-xl border border-[rgba(0,0,0,0.08)] bg-[#FBF6EB] overflow-hidden">
+          <div class="relative aspect-square" style="background:linear-gradient(150deg,#3a352f,#5a554e 60%,#857f76);">
+            <div class="absolute inset-0 flex items-center justify-center">
+              <svg width="96" height="96" viewBox="0 0 100 100" fill="none" aria-hidden="true">
+                <path d="M30 26c0-6 8-10 20-10s20 4 20 10l12 8-7 14-9-4v34H34V52l-9 4-7-14z" fill="rgba(251,246,235,0.92)"/>
+                <path d="M40 22c2 7 18 7 20 0" stroke="#3a352f" stroke-width="2.2" fill="none"/>
+                <text x="50" y="64" font-family="serif" font-style="italic" font-size="13" fill="#722F3A" text-anchor="middle">Cinder</text>
+              </svg>
+            </div>
+            <span class="absolute top-3 left-3 font-mono text-[9px] tracking-[0.16em] uppercase text-[#FBF6EB]/85">Apparel</span>
+          </div>
+          <div class="p-4">
+            <p class="text-sm font-medium text-[#1A1714] leading-snug">Quintet hoodie</p>
+            <p class="mt-1 text-xs text-[#857f76]">Heavyweight cotton, embroidered</p>
+            <div class="mt-3 flex items-center justify-between">
+              <span class="font-mono text-lg tnum text-[#1A1714]">$88</span>
+              <button class="lift rounded-full px-3.5 py-1.5 text-xs font-medium text-[#FBF6EB]" style="background:var(--burgundy);">Add</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 9. NEWSLETTER ============ -->
+  <section class="mx-auto max-w-6xl px-5 sm:px-8 py-20 sm:py-28">
+    <div class="relative overflow-hidden rounded-2xl border border-[rgba(0,0,0,0.08)] px-6 sm:px-12 py-12 sm:py-16"
+         style="background:var(--burgundy);">
+      <div class="mesh-blob" style="width:280px;height:280px;background:#caa274;top:-120px;right:-60px;opacity:0.35;"></div>
+      <div class="mesh-blob" style="width:240px;height:240px;background:#2a1014;bottom:-130px;left:-70px;opacity:0.5;"></div>
+
+      <div class="relative max-w-2xl">
+        <p class="font-mono text-[11px] tracking-[0.22em] uppercase" style="color:rgba(251,246,235,0.7)">The mailing list</p>
+        <h2 class="mt-3 font-serif-display tighter leading-[1.04]" style="font-size:clamp(2.2rem,5vw,3.2rem);color:#FBF6EB;">
+          Get tour dates &amp;<br><span style="opacity:0.45;">new releases.</span>
+        </h2>
+        <p class="mt-4 leading-relaxed" style="color:rgba(251,246,235,0.82);">
+          One letter a month — new dates, pressing restocks, the occasional unreleased live cut. No noise. Unsubscribe in one click.
+        </p>
+
+        <form class="mt-7 flex flex-col sm:flex-row gap-3 max-w-lg" onsubmit="return false;">
+          <input type="email" required placeholder="you@example.com"
+                 class="flex-1 rounded-full bg-[#FBF6EB] px-5 py-3 text-sm text-[#1A1714] placeholder:text-[#857f76] outline-none focus:ring-2"
+                 style="--tw-ring-color:#caa274;" />
+          <button type="submit"
+                  class="lift rounded-full px-6 py-3 text-sm font-semibold text-[#722F3A] bg-[#FBF6EB] whitespace-nowrap">
+            Subscribe
+          </button>
+        </form>
+        <p class="mt-3 font-mono text-[11px]" style="color:rgba(251,246,235,0.55);">
+          Joined by 4,210 listeners since the album announce.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 10. SOCIAL + STREAMING ROW ============ -->
+  <section class="hair-t hair-b bg-white/35">
+    <div class="mx-auto max-w-6xl px-5 sm:px-8 py-12">
+      <div class="flex flex-col items-center gap-5">
+        <p class="font-mono text-[10px] tracking-[0.26em] uppercase text-[#857f76]">Follow Cinder Quintet</p>
+        <div class="flex flex-wrap items-center justify-center gap-3">
+          <!-- Spotify -->
+          <a href="#" aria-label="Spotify" class="lift h-11 w-11 rounded-full flex items-center justify-center text-white" style="background:#1DB954;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.5 17.3a.75.75 0 01-1.03.25c-2.82-1.72-6.37-2.11-10.55-1.16a.75.75 0 11-.33-1.46c4.57-1.04 8.5-.59 11.66 1.34.36.22.47.69.25 1.03zm1.47-3.27a.94.94 0 01-1.29.31c-3.23-1.99-8.15-2.56-11.97-1.4a.94.94 0 11-.55-1.8c4.37-1.33 9.8-.69 13.5 1.59.44.27.58.85.31 1.3zm.13-3.4C15.78 8.34 9.5 8.13 5.8 9.25a1.12 1.12 0 11-.65-2.15c4.25-1.29 11.18-1.04 15.58 1.57a1.13 1.13 0 01-1.16 1.93z"/></svg>
+          </a>
+          <!-- Apple Music -->
+          <a href="#" aria-label="Apple Music" class="lift h-11 w-11 rounded-full flex items-center justify-center text-white" style="background:linear-gradient(135deg,#FA2D48,#F84E6F);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M23.99 6.12c0-.5-.05-1-.16-1.49a4.5 4.5 0 00-1.43-2.42A4.6 4.6 0 0019.6.86c-.6-.13-1.21-.16-1.82-.18H6.54c-.2.01-.4.02-.6.03-.6.03-1.2.07-1.78.27A4.5 4.5 0 001 3.79c-.2.5-.27 1.04-.31 1.58-.02.24-.03.49-.04.73v11.8c.01.24.02.49.04.73.04.54.11 1.08.31 1.58a4.5 4.5 0 003.16 2.81c.58.2 1.18.24 1.78.27.2.01.4.02.6.02h10.92c.61-.02 1.22-.05 1.82-.18a4.6 4.6 0 002.8-1.35 4.5 4.5 0 001.43-2.42c.11-.49.16-.99.16-1.49V6.72zM17.8 16.6c0 .35-.02.7-.18 1.02-.24.5-.66.8-1.2.9-.36.07-.72.07-1.06-.05a1.55 1.55 0 01-1.04-1.32c-.06-.6.2-1.18.74-1.5.27-.16.57-.22.88-.27l1.05-.21V8.92l-6.96 1.4v8.36c0 .35-.02.7-.18 1.02-.24.5-.67.8-1.2.9-.36.07-.72.07-1.07-.05a1.55 1.55 0 01-1.03-1.32c-.07-.6.2-1.18.73-1.5.28-.16.58-.22.89-.27l1.05-.21V7.27c0-.13 0-.26.04-.39.07-.27.28-.4.53-.46l8-1.62c.14-.02.28-.04.42-.01.32.06.5.3.55.62.01.07.02.14.02.21V16.6z"/></svg>
+          </a>
+          <!-- Bandcamp -->
+          <a href="#" aria-label="Bandcamp" class="lift h-11 w-11 rounded-full flex items-center justify-center text-white" style="background:#1DA0C3;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M0 18.75l7.437-13.5H24l-7.437 13.5H0z"/></svg>
+          </a>
+          <!-- SoundCloud -->
+          <a href="#" aria-label="SoundCloud" class="lift h-11 w-11 rounded-full flex items-center justify-center text-white" style="background:#FF5500;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M1.18 12.6c-.07 0-.12.05-.13.12l-.2 2.07.2 2.03c.01.07.06.12.13.12.06 0 .11-.05.12-.12l.23-2.03-.23-2.07c-.01-.07-.06-.12-.12-.12zm1.27-.93a.15.15 0 00-.14.14l-.27 3.02.27 2.92c0 .08.07.14.14.14.08 0 .14-.06.15-.14l.3-2.92-.3-3.02a.15.15 0 00-.15-.14zm10.6-5.1c-.39 0-.77.08-1.1.22-.22-2.5-2.31-4.46-4.87-4.46-.63 0-1.24.12-1.78.33-.21.08-.26.16-.27.32v13.4c0 .17.13.3.29.32h7.73c1.54 0 2.79-1.24 2.79-2.78a2.78 2.78 0 00-2.79-2.79zM6.3 3.62a.16.16 0 00-.16.15l-.36 11.06.36 2.86a.16.16 0 00.16.15c.08 0 .15-.07.16-.15l.4-2.86-.4-11.06a.16.16 0 00-.16-.15zm-1.4.83a.16.16 0 00-.16.15l-.32 10.23.32 2.9c0 .09.07.16.16.16.08 0 .15-.07.16-.16l.36-2.9-.36-10.23a.16.16 0 00-.16-.15z"/></svg>
+          </a>
+          <!-- YouTube -->
+          <a href="#" aria-label="YouTube Music" class="lift h-11 w-11 rounded-full flex items-center justify-center text-white" style="background:#FF0000;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm0 19.2A7.2 7.2 0 1119.2 12 7.21 7.21 0 0112 19.2zm0-11.4a4.2 4.2 0 104.2 4.2A4.2 4.2 0 0012 7.8zM9.6 15.6V8.4l6 3.6z"/></svg>
+          </a>
+          <!-- Tidal -->
+          <a href="#" aria-label="Tidal" class="lift h-11 w-11 rounded-full flex items-center justify-center text-white" style="background:#0A0A0A;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12.012 3.992L8.008 7.996 4.004 3.992 0 7.996 4.004 12l4.004-4.004L12.012 12l-4.004 4.004 4.004 4.004 4.004-4.004L12.016 12l4-4.004-4-4.004zM16.02 7.996l3.99-4.004L24 7.996l-3.99 4.004z"/></svg>
+          </a>
+          <!-- Instagram -->
+          <a href="#" aria-label="Instagram" class="lift h-11 w-11 rounded-full flex items-center justify-center text-white" style="background:linear-gradient(45deg,#F58529,#DD2A7B,#8134AF);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none"/></svg>
+          </a>
+          <!-- Bluesky -->
+          <a href="#" aria-label="Bluesky" class="lift h-11 w-11 rounded-full flex items-center justify-center text-white" style="background:#1185FE;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M5.5 4.2C8.3 6.3 11.3 10.5 12 12.8c.7-2.3 3.7-6.5 6.5-8.6 2-1.5 5.3-2.7 5.3 1.1 0 .8-.4 6.4-.7 7.3-.9 3.2-4.2 4-7.1 3.5 5.1.9 6.4 3.7 3.6 6.6-5.3 5.5-7.6-1.4-8.2-3.1l-.4-1.1-.4 1.1c-.6 1.7-2.9 8.6-8.2 3.1-2.8-2.9-1.5-5.7 3.6-6.6-2.9.5-6.2-.3-7.1-3.5C-.5 13.3-.8 7.7-.8 6.9c0-3.8 3.3-2.6 5.3-1.1z" transform="translate(0.8 0)"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 11. FOOTER ============ -->
+  <footer class="mx-auto max-w-6xl px-5 sm:px-8 py-12">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+      <a href="#top" class="flex items-center gap-2.5">
+        <span class="h-7 w-7 rounded-full flex items-center justify-center" style="background:var(--burgundy)">
+          <span class="font-serif-display text-sm" style="color:var(--cream)">C</span>
+        </span>
+        <span class="font-serif-display text-lg tight">Cinder Quintet</span>
+      </a>
+      <div class="text-sm text-[#857f76]">
+        <p>Booking &amp; press: <a href="mailto:booking@cinderquintet.com" class="text-[#1A1714] hover:text-[#722F3A] transition-colors">booking@cinderquintet.com</a></p>
+      </div>
+    </div>
+
+    <div class="mt-8 hair-t pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <p class="font-mono text-xs text-[#857f76]">© 2026 Cinder Quintet. All rights reserved.</p>
+      <p class="font-mono text-xs text-[#857f76] tnum">CINDER-001 · LP / digital · Blue Note imprint</p>
+    </div>
+  </footer>
+
+</main>
+
+</body>
+</html>

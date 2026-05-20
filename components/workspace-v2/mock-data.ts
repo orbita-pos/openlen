@@ -292,10 +292,6 @@ export const INITIAL_DESIGN: DesignState = {
   composition: DEFAULT_COMPOSITION,
 };
 
-// Re-export LAYOUT_PRESETS from the demo-slots SSOT so the design panel
-// can iterate without a second import.
-export { LAYOUT_PRESETS, type LayoutPreset } from "@/lib/design/demo-slots";
-
 // Stable id-generator exposed for the panel + page when they need to add
 // new sections at runtime.
 export { makeId as makeSectionId };

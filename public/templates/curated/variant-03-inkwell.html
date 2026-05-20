@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Maya Levenson — writer of the Vellum letter</title>
+<meta name="description" content="Maya Levenson writes the Vellum letter — long-form essays on engineering culture, roughly 2,000 words every Monday. Read the latest, subscribe, or browse 148 essays." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,500;1,8..60,600&family=Inter:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#FBF6EB;
+    --card:#FFFFFF;
+    --ink:#1A1714;
+    --ink-2:rgba(26,23,20,0.62);
+    --ink-3:rgba(26,23,20,0.44);
+    --sienna:#B05030;
+    --sienna-2:#974226;
+    --line:rgba(26,23,20,0.12);
+    --line-soft:rgba(26,23,20,0.07);
+    --chip:#F3EAD8;
+  }
+  *{ -webkit-tap-highlight-color:transparent; }
+  html{ scroll-behavior:smooth; }
+  html,body{ background:var(--bg); color:var(--ink); }
+  body{
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+    font-feature-settings:"ss01","cv11";
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    line-height:1.55;
+    background:radial-gradient(64% 30% at 50% 0%, rgba(176,80,48,0.055), rgba(176,80,48,0) 70%), var(--bg);
+    background-attachment:fixed;
+  }
+  .display{ font-family:'Source Serif 4',Georgia,serif; font-weight:500; font-optical-sizing:auto; letter-spacing:-0.02em; line-height:1.06; }
+  .serif{ font-family:'Source Serif 4',Georgia,serif; font-optical-sizing:auto; letter-spacing:-0.012em; }
+  .mono{ font-family:'Geist Mono',ui-monospace,Menlo,monospace; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  .halftone{ opacity:0.45; }
+  .marker{ font-family:'Geist Mono',ui-monospace,Menlo,monospace; font-size:10.5px; letter-spacing:0.16em; text-transform:uppercase; color:var(--ink-3); }
+  .pulse-dot{ position:relative; display:inline-block; width:6px; height:6px; border-radius:999px; background:var(--sienna); box-shadow:0 0 0 0 rgba(176,80,48,0.55); animation:pulse 2.1s ease-out infinite; }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(176,80,48,0.5); }
+    70%{ box-shadow:0 0 0 8px rgba(176,80,48,0); }
+    100%{ box-shadow:0 0 0 0 rgba(176,80,48,0); }
+  }
+  .lnk{ transition:transform 130ms ease, border-color 130ms ease, box-shadow 130ms ease, background-color 130ms ease; }
+  .lnk:hover{ transform:translateY(-1px); border-color:rgba(176,80,48,0.46); box-shadow:0 0 0 1px rgba(176,80,48,0.18), 0 12px 26px -16px rgba(176,80,48,0.42); }
+  .lnk-tint{ background:rgba(176,80,48,0.055); border-color:rgba(176,80,48,0.24); }
+  .lnk-fill{ background:var(--sienna); border-color:var(--sienna); color:#FBF6EB; }
+  .lnk-fill:hover{ transform:translateY(-1px); background:var(--sienna-2); border-color:var(--sienna-2); box-shadow:0 14px 28px -14px rgba(176,80,48,0.6); }
+  .chev{ transition:transform 130ms ease; }
+  .lnk:hover .chev{ transform:translateX(2px); }
+  .card-lift{ transition:transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease; }
+  .card-lift:hover{ transform:translateY(-2px); border-color:rgba(176,80,48,0.4); box-shadow:0 20px 40px -26px rgba(26,23,20,0.5); }
+  .essay-row{ transition:color 130ms ease, background-color 130ms ease; }
+  .essay-row:hover{ background-color:rgba(176,80,48,0.045); }
+  .essay-row:hover .essay-title{ color:var(--sienna); }
+  .soc{ transition:transform 130ms ease, color 130ms ease, border-color 130ms ease, background-color 130ms ease; }
+  .soc:hover{ transform:translateY(-2px); color:var(--sienna); border-color:rgba(176,80,48,0.45); background-color:rgba(176,80,48,0.06); }
+  ::selection{ background:rgba(176,80,48,0.20); color:var(--ink); }
+  @media (prefers-reduced-motion:reduce){
+    .pulse-dot{ animation:none; }
+    html{ scroll-behavior:auto; }
+  }
+</style>
+</head>
+<body class="min-h-screen">
+
+<main class="relative mx-auto w-full max-w-md px-5 pb-14 pt-16 sm:pt-20">
+
+  <!-- HERO -->
+  <header class="flex flex-col items-center text-center">
+    <div class="grid h-[86px] w-[86px] place-items-center rounded-full" style="background:radial-gradient(130% 130% at 30% 24%, #F6E9D2 0%, #E6CDA8 56%, #CC9F72 100%); box-shadow:0 0 0 1px rgba(26,23,20,0.10), 0 14px 36px -18px rgba(176,80,48,0.45);">
+      <span class="serif text-[34px] italic text-[var(--sienna)]" style="font-weight:600;">M</span>
+    </div>
+    <h1 class="display mt-4 text-[31px] text-[var(--ink)]">Maya Levenson</h1>
+    <p class="mt-2 text-[12.5px] text-[var(--ink-2)]">
+      writer <span class="text-[var(--ink-3)]">·</span> <span class="text-[var(--sienna)]">the Vellum letter</span> <span class="halftone">· Mondays</span>
+    </p>
+    <p class="mt-3 max-w-[20.5rem] text-[14.5px] leading-relaxed text-[var(--ink-2)]">
+      Long-form essays on engineering culture — roughly 2,000 words, every Monday. Read by <span class="tnum font-semibold text-[var(--sienna)]">14,408</span> people.
+    </p>
+  </header>
+
+  <!-- BUTTON STACK -->
+  <nav class="mt-7 space-y-2.5" aria-label="Links">
+
+    <a href="#" class="lnk lnk-tint group flex items-center gap-3.5 rounded-2xl border px-4 py-3.5">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[rgba(176,80,48,0.22)] bg-[rgba(176,80,48,0.10)] text-[var(--sienna)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 4.5C13 4.5 8 8 6 14l-1.6 4.2 4.4-1.6c6-2 9.2-7.1 9.2-13.6Z"/><path d="M5.5 18.5 12 12"/><path d="M11 11.2h4.2"/></svg>
+      </span>
+      <span class="min-w-0 flex-1">
+        <span class="block text-[14.5px] font-semibold text-[var(--ink)]">Read the latest essay</span>
+        <span class="mt-0.5 flex items-center gap-1.5 text-[12px] text-[var(--ink-2)]"><span class="pulse-dot"></span> Published Mar 14</span>
+      </span>
+      <svg class="chev shrink-0 text-[var(--ink-3)]" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </a>
+
+    <a href="#" class="lnk group flex items-center gap-3.5 rounded-2xl border border-[var(--line)] bg-[var(--card)] px-4 py-3.5">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--line-soft)] bg-[var(--chip)] text-[var(--ink-2)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.6"/><path d="m4 7.5 8 5.5 8-5.5"/></svg>
+      </span>
+      <span class="flex-1 text-[14.5px] font-medium text-[var(--ink)]">Subscribe free</span>
+      <span class="text-[12px] text-[var(--ink-3)]">Every Monday</span>
+      <svg class="chev shrink-0 text-[var(--ink-3)]" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </a>
+
+    <a href="#" class="lnk lnk-fill group flex items-center gap-3.5 rounded-2xl border px-4 py-3.5">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[rgba(255,255,255,0.22)] bg-[rgba(255,255,255,0.14)] text-[#FBF6EB]">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.6 14.6 9l5.9.9-4.3 4.1 1 5.8L12 17.1 6.8 19.8l1-5.8L3.5 9.9 9.4 9Z"/></svg>
+      </span>
+      <span class="min-w-0 flex-1">
+        <span class="block text-[14.5px] font-semibold">Become a paying member</span>
+        <span class="mt-0.5 block text-[12px] opacity-80">Full archive · the Sunday thread</span>
+      </span>
+      <span class="tnum text-[13px] font-semibold">$60 / yr</span>
+    </a>
+
+    <a href="#" class="lnk group flex items-center gap-3.5 rounded-2xl border border-[var(--line)] bg-[var(--card)] px-4 py-3.5">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--line-soft)] bg-[var(--chip)] text-[var(--ink-2)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.4" y="4.8" width="17.2" height="4.2" rx="1.4"/><path d="M5 9v9.2a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9"/><path d="M10 13h4"/></svg>
+      </span>
+      <span class="flex-1 text-[14.5px] font-medium text-[var(--ink)]">Browse the archive</span>
+      <span class="tnum text-[12px] text-[var(--ink-3)]">148 essays</span>
+      <svg class="chev shrink-0 text-[var(--ink-3)]" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </a>
+
+    <a href="#" class="lnk group flex items-center gap-3.5 rounded-2xl border border-[var(--line)] bg-[var(--card)] px-4 py-3.5">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--line-soft)] bg-[var(--chip)] text-[var(--ink-2)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4a2.7 2.7 0 0 0-2.7 2.7v4.6a2.7 2.7 0 0 0 5.4 0V6.7A2.7 2.7 0 0 0 12 4Z"/><path d="M6 11.5a6 6 0 0 0 12 0"/><path d="M12 17.5V21"/></svg>
+      </span>
+      <span class="flex-1 text-[14.5px] font-medium text-[var(--ink)]">Talks &amp; podcast appearances</span>
+      <svg class="chev shrink-0 text-[var(--ink-3)]" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </a>
+
+    <a href="#" class="lnk group flex items-center gap-3.5 rounded-2xl border border-[var(--line)] bg-[var(--card)] px-4 py-3.5">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--line-soft)] bg-[var(--chip)] text-[var(--ink-2)]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8.4" r="3.6"/><path d="M5.5 19.5c0-3.4 2.9-5.6 6.5-5.6s6.5 2.2 6.5 5.6"/></svg>
+      </span>
+      <span class="flex-1 text-[14.5px] font-medium text-[var(--ink)]">About Maya</span>
+      <svg class="chev shrink-0 text-[var(--ink-3)]" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </a>
+
+  </nav>
+
+  <!-- FEATURED: LATEST ESSAY -->
+  <section class="mt-9">
+    <div class="marker mb-3">The latest letter</div>
+    <a href="#" class="card-lift block rounded-2xl border border-[var(--line)] bg-[var(--card)] p-5">
+      <div class="flex items-center justify-between">
+        <span class="mono text-[11px] text-[var(--sienna)]">Letter № 148</span>
+        <span class="mono text-[11px] text-[var(--ink-3)]">Mar 14, 2026</span>
+      </div>
+      <h2 class="serif mt-2.5 text-[21px] font-semibold leading-snug text-[var(--ink)]">
+        The most senior thing you can do is write it down
+      </h2>
+      <p class="mt-2 text-[13.5px] leading-relaxed text-[var(--ink-2)]">
+        Documentation isn’t bureaucracy. It’s how the best engineers scale their judgment past the room they happen to be standing in.
+      </p>
+      <div class="mt-4 flex items-center justify-between border-t border-[var(--line-soft)] pt-3">
+        <span class="mono text-[11px] text-[var(--ink-3)]">9 min read</span>
+        <span class="inline-flex items-center gap-1 text-[13px] font-semibold text-[var(--sienna)]">
+          Read the essay
+          <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+        </span>
+      </div>
+    </a>
+  </section>
+
+  <!-- RECENT ESSAYS -->
+  <section class="mt-9">
+    <div class="marker mb-1">From the archive</div>
+    <div>
+      <a href="#" class="essay-row -mx-2 flex items-baseline gap-3 rounded-lg border-t border-[var(--line-soft)] px-2 py-3">
+        <span class="mono mt-0.5 w-14 shrink-0 text-[11px] text-[var(--ink-3)]">Mar 07</span>
+        <span class="essay-title serif text-[15px] leading-snug text-[var(--ink)] transition-colors">The cost of being the person who ships fastest</span>
+      </a>
+      <a href="#" class="essay-row -mx-2 flex items-baseline gap-3 rounded-lg border-t border-[var(--line-soft)] px-2 py-3">
+        <span class="mono mt-0.5 w-14 shrink-0 text-[11px] text-[var(--ink-3)]">Feb 28</span>
+        <span class="essay-title serif text-[15px] leading-snug text-[var(--ink)] transition-colors">Notes on reversible decisions</span>
+      </a>
+      <a href="#" class="essay-row -mx-2 flex items-baseline gap-3 rounded-lg border-t border-[var(--line-soft)] px-2 py-3">
+        <span class="mono mt-0.5 w-14 shrink-0 text-[11px] text-[var(--ink-3)]">Feb 21</span>
+        <span class="essay-title serif text-[15px] leading-snug text-[var(--ink)] transition-colors">What 200 code reviews taught me about trust</span>
+      </a>
+      <a href="#" class="essay-row -mx-2 flex items-baseline gap-3 rounded-lg border-y border-[var(--line-soft)] px-2 py-3">
+        <span class="mono mt-0.5 w-14 shrink-0 text-[11px] text-[var(--ink-3)]">Feb 14</span>
+        <span class="essay-title serif text-[15px] leading-snug text-[var(--ink)] transition-colors">The standup that should have been three sentences</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- SOCIAL + FOOTER -->
+  <footer class="mt-10 flex flex-col items-center">
+    <div class="flex items-center justify-center gap-2.5">
+      <a href="#" aria-label="Twitter" class="soc grid h-11 w-11 place-items-center rounded-full border border-[var(--line)] bg-[var(--card)] text-[var(--ink-2)]">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"/></svg>
+      </a>
+      <a href="#" aria-label="RSS" class="soc grid h-11 w-11 place-items-center rounded-full border border-[var(--line)] bg-[var(--card)] text-[var(--ink-2)]">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 11a8 8 0 0 1 8 8"/><path d="M5 5.5A13.5 13.5 0 0 1 18.5 19"/><circle cx="6" cy="18" r="1.7" fill="currentColor" stroke="none"/></svg>
+      </a>
+      <a href="#" aria-label="Mastodon" class="soc grid h-11 w-11 place-items-center rounded-full border border-[var(--line)] bg-[var(--card)] text-[var(--ink-2)]">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 16.5V8.5A4.5 4.5 0 0 1 9.5 4h5A4.5 4.5 0 0 1 19 8.5V13a4 4 0 0 1-4 4H9.2L5 20.3Z"/><path d="M9.6 9.4v3.2M14.4 9.4v3.2"/></svg>
+      </a>
+    </div>
+    <p class="mono mt-6 text-[10.5px] tracking-[0.04em] text-[var(--ink-3)]">
+      made with Tide · updated Mar 2026 · © 2026 Maya Levenson
+    </p>
+  </footer>
+
+</main>
+</body>
+</html>

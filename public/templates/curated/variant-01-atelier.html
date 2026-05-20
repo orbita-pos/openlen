@@ -1,0 +1,902 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Atelier — Learn to see before you learn to draw.</title>
+<meta name="description" content="A 12-module self-paced course on visual design fundamentals — composition, type, color, hierarchy — for the PM, engineer, or marketer who wants to read design fluently. Lifetime access. Taught by Yuki Tanaka, formerly of IDEO." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400;1,8..60,500;1,8..60,600&family=Inter:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#FAF5EC;
+    --paper:#F2EADA;
+    --card:#FCFAF3;
+    --ink:#1F1B16;
+    --ink-2:#5A5043;
+    --ink-3:#8E806B;
+    --coral:#C53A22;
+    --coral-2:#A82E1A;
+    --rule:rgba(31,27,22,0.13);
+    --rule-soft:rgba(31,27,22,0.06);
+  }
+  *{ -webkit-tap-highlight-color:transparent; }
+  html{ scroll-behavior:smooth; }
+  html,body{ background:var(--bg); color:var(--ink); }
+  body{
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+    font-feature-settings:"ss01","cv11";
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    line-height:1.55;
+  }
+  .serif{ font-family:'Source Serif 4',Georgia,serif; font-optical-sizing:auto; letter-spacing:-0.014em; }
+  .display{ font-family:'Source Serif 4',Georgia,serif; font-style:italic; font-weight:500; font-optical-sizing:auto; letter-spacing:-0.028em; line-height:1.03; }
+  .mono{ font-family:'Geist Mono',ui-monospace,Menlo,monospace; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  em.coral{ font-style:italic; color:var(--coral); }
+  .halftone{ opacity:0.42; }
+  .marker{ font-family:'Geist Mono',monospace; font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:var(--ink-3); }
+  .accent-line{ display:inline-block; width:26px; height:1px; background:var(--coral); vertical-align:middle; margin-right:10px; }
+  .rule{ border-color:var(--rule); }
+  .rule-soft{ border-color:var(--rule-soft); }
+  .dotgrid{
+    background-image:radial-gradient(rgba(31,27,22,0.08) 1px, transparent 1px);
+    background-size:32px 32px;
+    background-position:-9px -9px;
+  }
+  .mesh{
+    background-image:
+      radial-gradient(58% 48% at 16% 14%, rgba(197,58,34,0.10), transparent 66%),
+      radial-gradient(46% 42% at 92% 8%, rgba(197,58,34,0.07), transparent 70%);
+  }
+  .pulse-dot{ position:relative; display:inline-block; width:7px; height:7px; border-radius:999px; background:var(--coral); box-shadow:0 0 0 0 rgba(197,58,34,0.55); animation:pulse 1.9s ease-out infinite; }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(197,58,34,0.5); }
+    70%{ box-shadow:0 0 0 9px rgba(197,58,34,0); }
+    100%{ box-shadow:0 0 0 0 rgba(197,58,34,0); }
+  }
+  .btn-primary{ transition:transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease; }
+  .btn-primary:hover{ transform:translateY(-1px); background-color:var(--coral-2); box-shadow:0 8px 22px -10px rgba(197,58,34,0.6); }
+  .btn-ghost{ transition:transform 120ms ease, border-color 120ms ease, background-color 120ms ease; }
+  .btn-ghost:hover{ transform:translateY(-1px); border-color:rgba(31,27,22,0.34); background-color:var(--card); }
+  .card-lift{ transition:transform 130ms ease, box-shadow 130ms ease, border-color 130ms ease; }
+  .card-lift:hover{ transform:translateY(-2px); box-shadow:0 16px 34px -22px rgba(31,27,22,0.4); border-color:rgba(31,27,22,0.22); }
+  .ul-link{ position:relative; }
+  .ul-link::after{ content:""; position:absolute; left:0; right:0; bottom:-3px; height:1px; background:currentColor; transform:scaleX(0); transform-origin:right center; transition:transform 260ms cubic-bezier(.2,.7,.2,1); }
+  .ul-link:hover::after{ transform:scaleX(1); transform-origin:left center; }
+  .marquee-mask{ -webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent); mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent); }
+  .marquee{ display:flex; gap:60px; width:max-content; align-items:center; animation:marq 40s linear infinite; }
+  @keyframes marq{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+  .blob-instr{ background:radial-gradient(128% 96% at 28% 22%, #F6C9A6 0%, #E07A4B 36%, #C53A22 64%, #6E1B0E 100%); }
+  .blob-a{ background:radial-gradient(120% 100% at 30% 25%, #F3CBA0 0%, #C97E4E 52%, #5C2E15 100%); }
+  .blob-b{ background:radial-gradient(120% 100% at 70% 30%, #EFB89A 0%, #C5523A 50%, #5A170C 100%); }
+  .blob-c{ background:radial-gradient(120% 100% at 35% 70%, #E8C99A 0%, #A87B4E 52%, #3F2A16 100%); }
+  .blob-d{ background:radial-gradient(120% 100% at 60% 30%, #F0CDB2 0%, #B96A4A 52%, #5A2516 100%); }
+  details>summary{ list-style:none; cursor:pointer; }
+  details>summary::-webkit-details-marker{ display:none; }
+  details[open] .acc-sign{ transform:rotate(45deg); }
+  .acc-sign{ transition:transform 200ms ease; }
+  details[open] .acc-row{ background-color:var(--card); }
+  .navbar{ backdrop-filter:blur(12px) saturate(150%); -webkit-backdrop-filter:blur(12px) saturate(150%); background:rgba(250,245,236,0.82); }
+  ::selection{ background:rgba(197,58,34,0.22); color:var(--ink); }
+  .scroll-x{ transition:transform 150ms ease; }
+  a:hover .scroll-x{ transform:translateX(3px); }
+  .num-ghost{ font-family:'Source Serif 4',Georgia,serif; font-style:italic; font-weight:600; color:var(--rule); line-height:1; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ================= NAV ================= -->
+<header class="navbar fixed top-0 inset-x-0 z-50 border-b rule-soft">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 h-[68px] flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="2.6" y="2.6" width="18.8" height="18.8" rx="2" fill="none" stroke="#1F1B16" stroke-width="1.3"/>
+        <circle cx="12" cy="12" r="5.4" fill="none" stroke="#C53A22" stroke-width="1.3"/>
+        <circle cx="12" cy="12" r="1.5" fill="#C53A22"/>
+      </svg>
+      <span class="serif text-[20px] font-semibold tracking-tight">Atelier</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8 text-[14px] text-[color:var(--ink-2)]">
+      <a href="#learn" class="ul-link">Modules</a>
+      <a href="#instructor" class="ul-link">Instructor</a>
+      <a href="#alumni" class="ul-link">Alumni</a>
+      <a href="#faq" class="ul-link">Questions</a>
+    </nav>
+    <a href="#enroll" class="btn-primary inline-flex items-center gap-2 rounded-full bg-[color:var(--coral)] text-[#FAF5EC] font-medium text-[14px] px-4 py-2">
+      Enroll · $399
+    </a>
+  </div>
+</header>
+
+<!-- ================= HERO ================= -->
+<section id="top" class="relative overflow-hidden mesh pt-[68px]">
+  <div class="absolute inset-0 dotgrid opacity-70 pointer-events-none"></div>
+  <div class="relative max-w-[1200px] mx-auto px-5 sm:px-8 pt-16 sm:pt-24 pb-14 sm:pb-20">
+
+    <div class="inline-flex items-center gap-2.5 rounded-full border rule bg-[color:var(--card)] pl-2.5 pr-3.5 py-1.5 mb-8">
+      <span class="pulse-dot"></span>
+      <span class="mono text-[11px] sm:text-[12px] tracking-[0.04em] text-[color:var(--ink-2)]">Self-paced · 8,408 enrolled · price rises Jun 1</span>
+    </div>
+
+    <h1 class="display text-[clamp(46px,8.6vw,108px)] max-w-[15ch]">
+      Learn to <em class="coral">see</em><br class="hidden sm:block"/>
+      <span class="halftone">before you learn to draw.</span>
+    </h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 mt-12 md:mt-16">
+      <div class="md:col-span-7">
+        <p class="serif text-[19px] sm:text-[21px] leading-[1.55] text-[color:var(--ink)] max-w-[54ch]">
+          A 12-module course on the fundamentals of visual design — composition, type, color, hierarchy, restraint. Built for the PM, engineer, or marketer who wants to <span class="serif italic">read</span> design fluently. Not necessarily make it.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3 mt-9">
+          <a href="#enroll" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--coral)] text-[#FAF5EC] font-medium px-6 py-3.5 text-[15px]">
+            Enroll · $399 <span class="scroll-x">→</span>
+          </a>
+          <a href="#syllabus" class="btn-ghost inline-flex items-center justify-center gap-2 rounded-full border rule text-[color:var(--ink)] font-medium px-6 py-3.5 text-[15px]">
+            Read the syllabus
+          </a>
+        </div>
+        <p class="marker mt-7">Taken by people who ship at Linnea, Mercury, Vercel &amp; Stripe</p>
+      </div>
+
+      <div class="md:col-span-5">
+        <div class="rounded-2xl border rule bg-[color:var(--card)] p-6 sm:p-7">
+          <div class="marker mb-5"><span class="accent-line"></span>A composition study</div>
+          <svg viewBox="0 0 280 230" class="w-full h-auto" aria-hidden="true">
+            <defs>
+              <linearGradient id="atg" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#E07A4B"/><stop offset="1" stop-color="#C53A22"/>
+              </linearGradient>
+            </defs>
+            <g stroke="rgba(31,27,22,0.16)" stroke-width="1" fill="none">
+              <rect x="20" y="20" width="240" height="190"/>
+              <line x1="112" y1="20" x2="112" y2="210"/>
+              <line x1="20" y1="113" x2="260" y2="113"/>
+              <line x1="186" y1="20" x2="186" y2="210"/>
+            </g>
+            <rect x="20" y="20" width="92" height="93" fill="url(#atg)" opacity="0.16"/>
+            <circle cx="186" cy="113" r="34" fill="none" stroke="#C53A22" stroke-width="1.6"/>
+            <circle cx="186" cy="113" r="4.4" fill="#C53A22"/>
+            <path d="M20 210 L112 113 L186 113 L260 20" fill="none" stroke="#C53A22" stroke-width="1.4" stroke-dasharray="3 4"/>
+            <text x="24" y="34" class="mono" font-size="9" fill="#8E806B">FOCAL</text>
+            <text x="196" y="160" class="mono" font-size="9" fill="#8E806B">THE EYE LANDS HERE</text>
+          </svg>
+          <p class="text-[13px] text-[color:var(--ink-2)] mt-4 leading-[1.5]">
+            Module 02 — where the eye lands first, and how to decide that on purpose.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- metric strip -->
+    <div class="mt-14 md:mt-20 border-t rule pt-8">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-y-8">
+        <div class="md:pr-8 md:border-r rule-soft">
+          <div class="marker mb-2.5">Total learners</div>
+          <div class="display text-[40px] sm:text-[52px] tnum not-italic" style="font-style:normal">8,408</div>
+          <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">since the first module · 2022</div>
+        </div>
+        <div class="md:px-8 md:border-r rule-soft">
+          <div class="marker mb-2.5">Modules finished</div>
+          <div class="display text-[40px] sm:text-[52px] tnum" style="font-style:normal">10.4<span class="text-[color:var(--ink-3)] text-[22px] sm:text-[26px]"> / 12</span></div>
+          <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">avg learner · MOOCs see 3</div>
+        </div>
+        <div class="md:px-8 md:border-r rule-soft">
+          <div class="marker mb-2.5">Use it weekly</div>
+          <div class="display text-[40px] sm:text-[52px] tnum" style="font-style:normal">84<span class="text-[color:var(--ink-3)] text-[26px] sm:text-[30px]">%</span></div>
+          <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">a lesson, in a typical work week</div>
+        </div>
+        <div class="md:pl-8">
+          <div class="marker mb-2.5">Refund rate</div>
+          <div class="display text-[40px] sm:text-[52px] tnum" style="font-style:normal">&lt;2<span class="text-[color:var(--ink-3)] text-[26px] sm:text-[30px]">%</span></div>
+          <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">across 3 years of enrollment</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= TRUST BAR ================= -->
+<section class="border-y rule-soft bg-[color:var(--paper)] py-11">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8">
+    <div class="marker mb-7"><span class="accent-line"></span>Where our learners do their work</div>
+    <div class="marquee-mask overflow-hidden">
+      <div class="marquee text-[color:var(--ink-2)]">
+        <span class="serif italic text-[25px]">Linnea</span>
+        <span class="text-[24px] tracking-tight" style="font-weight:600">Mercury</span>
+        <span class="serif text-[25px]">Foundry &amp; Co.</span>
+        <span class="mono text-[20px] tracking-[0.16em]">NIMBUS</span>
+        <span class="text-[24px] tracking-[0.06em] lowercase">atrium</span>
+        <span class="serif italic text-[25px]">Brightwave</span>
+        <span class="text-[24px] tracking-tight" style="font-weight:500">Coast &amp; Co.</span>
+        <span class="serif text-[25px]">Halcyon</span>
+        <span class="text-[24px] tracking-tight" style="font-weight:600">Vantage</span>
+        <span class="serif italic text-[25px]">Quartermast</span>
+        <span aria-hidden="true" class="serif italic text-[25px]">Linnea</span>
+        <span class="text-[24px] tracking-tight" style="font-weight:600">Mercury</span>
+        <span class="serif text-[25px]">Foundry &amp; Co.</span>
+        <span class="mono text-[20px] tracking-[0.16em]">NIMBUS</span>
+        <span class="text-[24px] tracking-[0.06em] lowercase">atrium</span>
+        <span class="serif italic text-[25px]">Brightwave</span>
+        <span class="text-[24px] tracking-tight" style="font-weight:500">Coast &amp; Co.</span>
+        <span class="serif text-[25px]">Halcyon</span>
+        <span class="text-[24px] tracking-tight" style="font-weight:600">Vantage</span>
+        <span class="serif italic text-[25px]">Quartermast</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= WHAT YOU'LL LEARN ================= -->
+<section id="learn" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="max-w-[62ch]">
+    <div class="marker mb-5"><span class="accent-line"></span>What you'll learn</div>
+    <h2 class="display text-[clamp(34px,5vw,60px)]">
+      Twelve modules, in four <em class="coral">movements.</em>
+    </h2>
+    <p class="serif text-[18px] sm:text-[19px] text-[color:var(--ink-2)] mt-5 leading-[1.55]">
+      No software. No Figma. Atelier trains the eye — the thing that decides whether work looks considered or looks cheap — and gives you the vocabulary to say why.
+    </p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-px mt-12 bg-[color:var(--rule)] border rule rounded-2xl overflow-hidden">
+    <!-- arc 1 -->
+    <div class="bg-[color:var(--card)] p-7 sm:p-9 card-lift">
+      <div class="flex items-baseline justify-between">
+        <span class="num-ghost text-[58px]">01</span>
+        <span class="marker">Modules 1–3</span>
+      </div>
+      <h3 class="serif text-[24px] font-semibold mt-2">Seeing</h3>
+      <ul class="mt-4 space-y-2.5 text-[15px] text-[color:var(--ink-2)]">
+        <li class="flex gap-3"><span class="text-[color:var(--coral)]">—</span> How attention actually moves across a page</li>
+        <li class="flex gap-3"><span class="text-[color:var(--coral)]">—</span> Composition: the grid as a decision, not a cage</li>
+        <li class="flex gap-3"><span class="text-[color:var(--coral)]">—</span> Hierarchy, contrast, and the order of reading</li>
+      </ul>
+      <div class="mono text-[12px] text-[color:var(--ink-3)] mt-6 pt-5 border-t rule-soft">
+        PROJECT — Squint-test five products you trust daily
+      </div>
+    </div>
+    <!-- arc 2 -->
+    <div class="bg-[color:var(--card)] p-7 sm:p-9 card-lift">
+      <div class="flex items-baseline justify-between">
+        <span class="num-ghost text-[58px]">02</span>
+        <span class="marker">Modules 4–6</span>
+      </div>
+      <h3 class="serif text-[24px] font-semibold mt-2">Type</h3>
+      <ul class="mt-4 space-y-2.5 text-[15px] text-[color:var(--ink-2)]">
+        <li class="flex gap-3"><span class="text-[color:var(--coral)]">—</span> Letterform anatomy, and how to actually look at a face</li>
+        <li class="flex gap-3"><span class="text-[color:var(--coral)]">—</span> Pairing without fear; the modular scale</li>
+        <li class="flex gap-3"><span class="text-[color:var(--coral)]">—</span> Type in product — numerals, measure, the cruel ellipsis</li>
+      </ul>
+      <div class="mono text-[12px] text-[color:var(--ink-3)] mt-6 pt-5 border-t rule-soft">
+        PROJECT — Set one long-form article end to end
+      </div>
+    </div>
+    <!-- arc 3 -->
+    <div class="bg-[color:var(--card)] p-7 sm:p-9 card-lift">
+      <div class="flex items-baseline justify-between">
+        <span class="num-ghost text-[58px]">03</span>
+        <span class="marker">Modules 7–9</span>
+      </div>
+      <h3 class="serif text-[24px] font-semibold mt-2">Color &amp; Space</h3>
+      <ul class="mt-4 space-y-2.5 text-[15px] text-[color:var(--ink-2)]">
+        <li class="flex gap-3"><span class="text-[color:var(--coral)]">—</span> Why RGB lies, and thinking in three dials instead</li>
+        <li class="flex gap-3"><span class="text-[color:var(--coral)]">—</span> Palettes that survive dark mode and a contrast check</li>
+        <li class="flex gap-3"><span class="text-[color:var(--coral)]">—</span> Whitespace, density, and the eye's need to rest</li>
+      </ul>
+      <div class="mono text-[12px] text-[color:var(--ink-3)] mt-6 pt-5 border-t rule-soft">
+        PROJECT — Recolor &amp; re-space a real dashboard
+      </div>
+    </div>
+    <!-- arc 4 -->
+    <div class="bg-[color:var(--card)] p-7 sm:p-9 card-lift">
+      <div class="flex items-baseline justify-between">
+        <span class="num-ghost text-[58px]">04</span>
+        <span class="marker">Modules 10–12</span>
+      </div>
+      <h3 class="serif text-[24px] font-semibold mt-2">Craft</h3>
+      <ul class="mt-4 space-y-2.5 text-[15px] text-[color:var(--ink-2)]">
+        <li class="flex gap-3"><span class="text-[color:var(--coral)]">—</span> Imagery: choosing a photograph, or choosing not to</li>
+        <li class="flex gap-3"><span class="text-[color:var(--coral)]">—</span> Motion with restraint — the 120ms rule</li>
+        <li class="flex gap-3"><span class="text-[color:var(--coral)]">—</span> The critical edit, and knowing when it's done</li>
+      </ul>
+      <div class="mono text-[12px] text-[color:var(--ink-3)] mt-6 pt-5 border-t rule-soft">
+        PROJECT — Redesign your own work from module 1
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= INSTRUCTOR ================= -->
+<section id="instructor" class="border-y rule-soft bg-[color:var(--paper)]">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14 items-start">
+      <div class="md:col-span-4">
+        <div class="blob-instr rounded-2xl border rule aspect-[3/4] w-full max-w-[320px] relative overflow-hidden">
+          <div class="absolute inset-0" style="background:radial-gradient(120% 60% at 50% 120%, rgba(0,0,0,0.42), transparent 60%)"></div>
+          <div class="absolute left-5 bottom-5">
+            <div class="serif italic text-[#FAF5EC] text-[20px] leading-tight">Yuki Tanaka</div>
+            <div class="mono text-[11px] text-[#FAF5EC] opacity-80 mt-1">INSTRUCTOR · FOUNDER</div>
+          </div>
+        </div>
+      </div>
+      <div class="md:col-span-8">
+        <div class="marker mb-5"><span class="accent-line"></span>Your instructor</div>
+        <h2 class="display text-[clamp(30px,4.4vw,52px)] max-w-[18ch]">
+          Nine years at IDEO. One course she <em class="coral">wished existed.</em>
+        </h2>
+        <div class="serif text-[17px] sm:text-[18px] text-[color:var(--ink-2)] leading-[1.6] mt-6 space-y-4 max-w-[58ch]">
+          <p>Yuki spent nine years at IDEO building brand and product systems — for companies most people have never heard of, and a few everyone has. She left in 2021 to do the part of the job she actually missed, which turned out not to be the deliverables. It was the teaching.</p>
+          <p>Atelier is the course she wishes she could have handed every sharp, non-design colleague who ever asked her to "just make the deck look nicer." It is not about tools. There is no Figma in it, on purpose. It is about the eye — and the only reason designers seem to have a sixth sense is that they were taught to look.</p>
+          <p>She still consults, quietly, a handful of Series-A founders at a time. Which is why every example in every module is real, recent, and occasionally still a little embarrassing.</p>
+        </div>
+        <div class="grid grid-cols-2 gap-x-6 gap-y-3 mt-8 max-w-[40rem]">
+          <div class="mono text-[12px] text-[color:var(--ink-2)] flex gap-2.5"><span class="text-[color:var(--coral)]">·</span> Ex-IDEO brand designer</div>
+          <div class="mono text-[12px] text-[color:var(--ink-2)] flex gap-2.5"><span class="text-[color:var(--coral)]">·</span> MFA, School of Visual Arts</div>
+          <div class="mono text-[12px] text-[color:var(--ink-2)] flex gap-2.5"><span class="text-[color:var(--coral)]">·</span> Author of <span class="italic">Quiet Eye</span> (2023)</div>
+          <div class="mono text-[12px] text-[color:var(--ink-2)] flex gap-2.5"><span class="text-[color:var(--coral)]">·</span> Design partner to 40+ founders</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SYLLABUS DEEP-DIVE ================= -->
+<section id="syllabus" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-11">
+    <div class="max-w-[52ch]">
+      <div class="marker mb-5"><span class="accent-line"></span>The full syllabus</div>
+      <h2 class="display text-[clamp(34px,5vw,60px)]">Twelve modules, in detail.</h2>
+    </div>
+    <div class="mono text-[12px] text-[color:var(--ink-3)] sm:text-right leading-relaxed">
+      ~58 hours total · 4–6 hrs each<br/>self-paced · lifetime access
+    </div>
+  </div>
+
+  <div class="border rule rounded-2xl overflow-hidden divide-y divide-[color:var(--rule-soft)]">
+
+    <details open>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--coral)] w-9 shrink-0">01</span>
+        <span class="serif text-[18px] sm:text-[20px] font-semibold flex-1">The Eye</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)] hidden sm:inline">4.5 hrs</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-7 pt-1 sm:pl-[76px]">
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-2 text-[14px] text-[color:var(--ink-2)]">
+          <li>· How attention moves: the scanpath</li>
+          <li>· Gestalt grouping, spotted in the wild</li>
+          <li>· Figure, ground, and the space between</li>
+          <li>· The three-second squint test</li>
+        </ul>
+        <div class="mt-4 pt-4 border-t rule-soft text-[13px] text-[color:var(--ink-3)] space-y-1">
+          <p><span class="mono text-[color:var(--coral)]">READING</span> &nbsp;Berger, <span class="italic">Ways of Seeing</span> — chapter 1</p>
+          <p><span class="mono text-[color:var(--coral)]">PROJECT</span> &nbsp;Squint-test five products you trust, and write down what survives</p>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--coral)] w-9 shrink-0">02</span>
+        <span class="serif text-[18px] sm:text-[20px] font-semibold flex-1">Composition</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)] hidden sm:inline">5.0 hrs</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-7 pt-1 sm:pl-[76px]">
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-2 text-[14px] text-[color:var(--ink-2)]">
+          <li>· The grid as a decision, not a cage</li>
+          <li>· Alignment and the invisible edge</li>
+          <li>· Proximity, and the law of grouping</li>
+          <li>· Tension, balance, the off-center</li>
+        </ul>
+        <div class="mt-4 pt-4 border-t rule-soft text-[13px] text-[color:var(--ink-3)] space-y-1">
+          <p><span class="mono text-[color:var(--coral)]">PROJECT</span> &nbsp;Recompose a cluttered settings page, twice</p>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--coral)] w-9 shrink-0">03</span>
+        <span class="serif text-[18px] sm:text-[20px] font-semibold flex-1">Hierarchy</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)] hidden sm:inline">4.5 hrs</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-7 pt-1 sm:pl-[76px]">
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-2 text-[14px] text-[color:var(--ink-2)]">
+          <li>· Visual weight and the order of reading</li>
+          <li>· Contrast as a tool, not decoration</li>
+          <li>· Scale, and the courage of the size jump</li>
+          <li>· Depth without a single drop shadow</li>
+        </ul>
+        <div class="mt-4 pt-4 border-t rule-soft text-[13px] text-[color:var(--ink-3)] space-y-1">
+          <p><span class="mono text-[color:var(--coral)]">READING</span> &nbsp;Leborg, <span class="italic">Visual Grammar</span> — pp. 40–58</p>
+          <p><span class="mono text-[color:var(--coral)]">PROJECT</span> &nbsp;Rank every element on a real pricing page, 1 to last</p>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--coral)] w-9 shrink-0">04</span>
+        <span class="serif text-[18px] sm:text-[20px] font-semibold flex-1">Type — the Anatomy</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)] hidden sm:inline">5.5 hrs</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-7 pt-1 sm:pl-[76px]">
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-2 text-[14px] text-[color:var(--ink-2)]">
+          <li>· x-height, counters, and why they matter</li>
+          <li>· Serif, sans, and the third option</li>
+          <li>· Weight, width, and optical size</li>
+          <li>· How to actually look at a typeface</li>
+        </ul>
+        <div class="mt-4 pt-4 border-t rule-soft text-[13px] text-[color:var(--ink-3)] space-y-1">
+          <p><span class="mono text-[color:var(--coral)]">PROJECT</span> &nbsp;Annotate five typefaces you already use, by hand</p>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--coral)] w-9 shrink-0">05</span>
+        <span class="serif text-[18px] sm:text-[20px] font-semibold flex-1">Type — the System</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)] hidden sm:inline">5.0 hrs</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-7 pt-1 sm:pl-[76px]">
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-2 text-[14px] text-[color:var(--ink-2)]">
+          <li>· Pairing without fear</li>
+          <li>· The modular scale</li>
+          <li>· Line-height, measure, and rhythm</li>
+          <li>· Tracking — display versus body</li>
+        </ul>
+        <div class="mt-4 pt-4 border-t rule-soft text-[13px] text-[color:var(--ink-3)] space-y-1">
+          <p><span class="mono text-[color:var(--coral)]">READING</span> &nbsp;Bringhurst, <span class="italic">The Elements of Typographic Style</span> — excerpt</p>
+          <p><span class="mono text-[color:var(--coral)]">PROJECT</span> &nbsp;Set one long article, end to end, defending every choice</p>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--coral)] w-9 shrink-0">06</span>
+        <span class="serif text-[18px] sm:text-[20px] font-semibold flex-1">Type in Product</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)] hidden sm:inline">4.5 hrs</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-7 pt-1 sm:pl-[76px]">
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-2 text-[14px] text-[color:var(--ink-2)]">
+          <li>· Interface type is a different craft</li>
+          <li>· Numerals — tabular, and otherwise</li>
+          <li>· Truncation, wrapping, the cruel ellipsis</li>
+          <li>· Localisation, and the 30% rule</li>
+        </ul>
+        <div class="mt-4 pt-4 border-t rule-soft text-[13px] text-[color:var(--ink-3)] space-y-1">
+          <p><span class="mono text-[color:var(--coral)]">PROJECT</span> &nbsp;Fix the type in a real dashboard you find unbearable</p>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--coral)] w-9 shrink-0">07</span>
+        <span class="serif text-[18px] sm:text-[20px] font-semibold flex-1">Color — the Theory</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)] hidden sm:inline">5.0 hrs</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-7 pt-1 sm:pl-[76px]">
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-2 text-[14px] text-[color:var(--ink-2)]">
+          <li>· Why RGB lies to you</li>
+          <li>· HSL, and thinking in three dials</li>
+          <li>· Temperature, and the neutral that isn't</li>
+          <li>· Simultaneous contrast</li>
+        </ul>
+        <div class="mt-4 pt-4 border-t rule-soft text-[13px] text-[color:var(--ink-3)] space-y-1">
+          <p><span class="mono text-[color:var(--coral)]">PROJECT</span> &nbsp;Build a nine-step neutral ramp that doesn't go muddy</p>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--coral)] w-9 shrink-0">08</span>
+        <span class="serif text-[18px] sm:text-[20px] font-semibold flex-1">Color — the System</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)] hidden sm:inline">4.5 hrs</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-7 pt-1 sm:pl-[76px]">
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-2 text-[14px] text-[color:var(--ink-2)]">
+          <li>· Palettes that survive dark mode</li>
+          <li>· Accessible contrast without ugliness</li>
+          <li>· Semantic color, and the danger of red</li>
+          <li>· Brand color versus interface color</li>
+        </ul>
+        <div class="mt-4 pt-4 border-t rule-soft text-[13px] text-[color:var(--ink-3)] space-y-1">
+          <p><span class="mono text-[color:var(--coral)]">READING</span> &nbsp;Albers, <span class="italic">Interaction of Color</span> — plates 1–6</p>
+          <p><span class="mono text-[color:var(--coral)]">PROJECT</span> &nbsp;Audit a palette against WCAG, then fix it on taste</p>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--coral)] w-9 shrink-0">09</span>
+        <span class="serif text-[18px] sm:text-[20px] font-semibold flex-1">Space &amp; Rhythm</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)] hidden sm:inline">4.0 hrs</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-7 pt-1 sm:pl-[76px]">
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-2 text-[14px] text-[color:var(--ink-2)]">
+          <li>· Whitespace is not empty space</li>
+          <li>· The 8-point grid, and when to break it</li>
+          <li>· Density, breathing room, the rest</li>
+          <li>· Vertical rhythm across a long page</li>
+        </ul>
+        <div class="mt-4 pt-4 border-t rule-soft text-[13px] text-[color:var(--ink-3)] space-y-1">
+          <p><span class="mono text-[color:var(--coral)]">PROJECT</span> &nbsp;Re-space a landing page until it can breathe</p>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--coral)] w-9 shrink-0">10</span>
+        <span class="serif text-[18px] sm:text-[20px] font-semibold flex-1">Imagery</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)] hidden sm:inline">4.5 hrs</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-7 pt-1 sm:pl-[76px]">
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-2 text-[14px] text-[color:var(--ink-2)]">
+          <li>· Choosing a photograph — or choosing not to</li>
+          <li>· When to illustrate instead</li>
+          <li>· Icon systems and the weight match</li>
+          <li>· The gradient placeholder, as a real choice</li>
+        </ul>
+        <div class="mt-4 pt-4 border-t rule-soft text-[13px] text-[color:var(--ink-3)] space-y-1">
+          <p><span class="mono text-[color:var(--coral)]">PROJECT</span> &nbsp;Replace three stock photos with better, cheaper calls</p>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--coral)] w-9 shrink-0">11</span>
+        <span class="serif text-[18px] sm:text-[20px] font-semibold flex-1">Motion, with Restraint</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)] hidden sm:inline">3.5 hrs</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-7 pt-1 sm:pl-[76px]">
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-2 text-[14px] text-[color:var(--ink-2)]">
+          <li>· Easing curves, and what they feel like</li>
+          <li>· Duration — the 120-millisecond rule</li>
+          <li>· Choreography and staggering</li>
+          <li>· The animation you should delete</li>
+        </ul>
+        <div class="mt-4 pt-4 border-t rule-soft text-[13px] text-[color:var(--ink-3)] space-y-1">
+          <p><span class="mono text-[color:var(--coral)]">PROJECT</span> &nbsp;Critique the motion in an app you love, frame by frame</p>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-6 px-5 sm:px-7 py-5">
+        <span class="mono text-[12px] text-[color:var(--coral)] w-9 shrink-0">12</span>
+        <span class="serif text-[18px] sm:text-[20px] font-semibold flex-1">The Critical Edit</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)] hidden sm:inline">3.5 hrs</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-7 pt-1 sm:pl-[76px]">
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-2 text-[14px] text-[color:var(--ink-2)]">
+          <li>· The second pass, scheduled on purpose</li>
+          <li>· Killing your darlings without grief</li>
+          <li>· Running a critique without ego</li>
+          <li>· Knowing, finally, when it's done</li>
+        </ul>
+        <div class="mt-4 pt-4 border-t rule-soft text-[13px] text-[color:var(--ink-3)] space-y-1">
+          <p><span class="mono text-[color:var(--coral)]">READING</span> &nbsp;A one-page closing letter from Yuki</p>
+          <p><span class="mono text-[color:var(--coral)]">PROJECT</span> &nbsp;Redesign your module-1 project — and watch the gap</p>
+        </div>
+      </div>
+    </details>
+
+  </div>
+</section>
+
+<!-- ================= ALUMNI OUTCOMES ================= -->
+<section id="alumni" class="border-y rule-soft bg-[color:var(--paper)]">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="max-w-[54ch]">
+      <div class="marker mb-5"><span class="accent-line"></span>What changes afterward</div>
+      <h2 class="display text-[clamp(34px,5vw,60px)]">The eye, once trained, <em class="coral">stays trained.</em></h2>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-px mt-12 bg-[color:var(--rule)] border rule rounded-2xl overflow-hidden">
+      <div class="bg-[color:var(--card)] p-6 sm:p-8">
+        <div class="display tnum text-[clamp(40px,5.6vw,68px)]" style="font-style:normal">84%</div>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.5]">say they use a lesson from Atelier in a typical work week — a year or more after finishing.</p>
+      </div>
+      <div class="bg-[color:var(--card)] p-6 sm:p-8">
+        <div class="display tnum text-[clamp(40px,5.6vw,68px)]" style="font-style:normal">10.4</div>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.5]">modules the average learner finishes, of 12. Most self-paced courses see closer to three.</p>
+      </div>
+      <div class="bg-[color:var(--card)] p-6 sm:p-8">
+        <div class="display tnum text-[clamp(40px,5.6vw,68px)]" style="font-style:normal">8,408</div>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.5]">learners since the first module shipped — PMs, engineers, marketers, founders.</p>
+      </div>
+      <div class="bg-[color:var(--card)] p-6 sm:p-8">
+        <div class="display tnum text-[clamp(40px,5.6vw,68px)]" style="font-style:normal">&lt;2%</div>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.5]">refund rate across three years — the only number we'll point to about whether it works.</p>
+      </div>
+    </div>
+
+    <!-- testimonials -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-6">
+      <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7 card-lift">
+        <div class="flex items-center gap-3.5">
+          <div class="blob-a size-11 rounded-full border rule shrink-0"></div>
+          <figcaption>
+            <div class="serif font-semibold text-[15px]">Priya Anand</div>
+            <div class="mono text-[11px] text-[color:var(--ink-3)]">Senior PM · Linnea</div>
+          </figcaption>
+        </div>
+        <blockquote class="serif text-[16px] text-[color:var(--ink-2)] leading-[1.6] mt-5">
+          "I used to send 'can we make this nicer?' Slacks and hope. Now I send an annotated screenshot with three specific fixes. My designer told me, unprompted, that reviews got faster."
+        </blockquote>
+        <div class="mono text-[11px] text-[color:var(--coral)] mt-5 pt-4 border-t rule-soft">→ DESIGN-REVIEW CYCLES ROUGHLY HALVED</div>
+      </figure>
+      <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7 card-lift">
+        <div class="flex items-center gap-3.5">
+          <div class="blob-b size-11 rounded-full border rule shrink-0"></div>
+          <figcaption>
+            <div class="serif font-semibold text-[15px]">Marcus Tobin</div>
+            <div class="mono text-[11px] text-[color:var(--ink-3)]">Founding Engineer · Forecast</div>
+          </figcaption>
+        </div>
+        <blockquote class="serif text-[16px] text-[color:var(--ink-2)] leading-[1.6] mt-5">
+          "Module 4 broke something open. I'd shipped UI for six years without being able to say why a screen felt cheap. Now I can — and I fix it before the designer ever sees the branch."
+        </blockquote>
+        <div class="mono text-[11px] text-[color:var(--coral)] mt-5 pt-4 border-t rule-soft">→ NOW OWNS THE DESIGN SYSTEM</div>
+      </figure>
+      <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7 card-lift">
+        <div class="flex items-center gap-3.5">
+          <div class="blob-c size-11 rounded-full border rule shrink-0"></div>
+          <figcaption>
+            <div class="serif font-semibold text-[15px]">Hana Suzuki</div>
+            <div class="mono text-[11px] text-[color:var(--ink-3)]">Growth Lead · Mercury</div>
+          </figcaption>
+        </div>
+        <blockquote class="serif text-[16px] text-[color:var(--ink-2)] leading-[1.6] mt-5">
+          "Our marketing pages stopped looking like a Notion doc. I didn't hire anyone. I just stopped making the four mistakes Atelier names, by name, in module two."
+        </blockquote>
+        <div class="mono text-[11px] text-[color:var(--coral)] mt-5 pt-4 border-t rule-soft">→ LANDING-PAGE CONVERSION +19%</div>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FORMAT / LOGISTICS ================= -->
+<section class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14">
+    <div class="md:col-span-4">
+      <div class="marker mb-5"><span class="accent-line"></span>How it works</div>
+      <h2 class="display text-[clamp(30px,4vw,46px)]">No live sessions. No deadlines. <em class="coral">No expiry.</em></h2>
+      <p class="serif text-[16px] text-[color:var(--ink-2)] mt-5 leading-[1.6]">
+        Atelier is built to be returned to. You will not "finish" it the way you finish a webinar — you'll keep it, the way you keep a good reference book.
+      </p>
+    </div>
+    <div class="md:col-span-8">
+      <dl class="grid sm:grid-cols-2 gap-px bg-[color:var(--rule)] border rule rounded-2xl overflow-hidden">
+        <div class="bg-[color:var(--card)] p-6">
+          <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Length</dt>
+          <dd class="serif text-[17px] mt-2">12 modules · ~58 hours of video and exercises</dd>
+        </div>
+        <div class="bg-[color:var(--card)] p-6">
+          <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Pace</dt>
+          <dd class="serif text-[17px] mt-2">100% self-paced — most finish in 4 to 6 weeks</dd>
+        </div>
+        <div class="bg-[color:var(--card)] p-6">
+          <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Access</dt>
+          <dd class="serif text-[17px] mt-2">Lifetime — every future module update included free</dd>
+        </div>
+        <div class="bg-[color:var(--card)] p-6">
+          <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Portfolio review</dt>
+          <dd class="serif text-[17px] mt-2">One 40-minute async video critique from Yuki's studio</dd>
+        </div>
+        <div class="bg-[color:var(--card)] p-6">
+          <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Prerequisites</dt>
+          <dd class="serif text-[17px] mt-2">None. If you have opinions about things looking good, you're ready</dd>
+        </div>
+        <div class="bg-[color:var(--card)] p-6">
+          <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Refund</dt>
+          <dd class="serif text-[17px] mt-2">14 days, no questions — even partway through a module</dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PRICING ================= -->
+<section id="enroll" class="border-y rule-soft bg-[color:var(--paper)]">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center">
+      <div class="lg:col-span-5">
+        <div class="marker mb-5"><span class="accent-line"></span>Enrollment</div>
+        <h2 class="display text-[clamp(34px,5vw,58px)]">One payment.<br/><em class="coral">Lifetime</em> of it.</h2>
+        <p class="serif text-[17px] text-[color:var(--ink-2)] mt-5 leading-[1.6] max-w-[44ch]">
+          Atelier is $399 today. When module 13 — <span class="italic">Designing with AI</span> — ships in June, the price becomes $449. Enroll now and every future module stays free for you, forever.
+        </p>
+        <!-- countdown -->
+        <div class="mt-8 rounded-xl border rule bg-[color:var(--card)] p-5">
+          <div class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em] mb-3">Price rises to $449 in</div>
+          <div class="flex items-end gap-3 sm:gap-5">
+            <div><span id="cd-d" class="display tnum text-[34px] sm:text-[42px]" style="font-style:normal">00</span><span class="mono text-[11px] text-[color:var(--ink-3)] ml-1">days</span></div>
+            <span class="display text-[28px] text-[color:var(--rule)]" style="font-style:normal">:</span>
+            <div><span id="cd-h" class="display tnum text-[34px] sm:text-[42px]" style="font-style:normal">00</span><span class="mono text-[11px] text-[color:var(--ink-3)] ml-1">hrs</span></div>
+            <span class="display text-[28px] text-[color:var(--rule)]" style="font-style:normal">:</span>
+            <div><span id="cd-m" class="display tnum text-[34px] sm:text-[42px]" style="font-style:normal">00</span><span class="mono text-[11px] text-[color:var(--ink-3)] ml-1">min</span></div>
+            <span class="display text-[28px] text-[color:var(--rule)]" style="font-style:normal">:</span>
+            <div><span id="cd-s" class="display tnum text-[34px] sm:text-[42px]" style="font-style:normal">00</span><span class="mono text-[11px] text-[color:var(--ink-3)] ml-1">sec</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-7">
+        <div class="rounded-2xl border-2 border-[color:var(--coral)] bg-[color:var(--card)] p-7 sm:p-10 relative">
+          <div class="absolute -top-3 left-8 mono text-[10px] tracking-[0.14em] uppercase bg-[color:var(--coral)] text-[#FAF5EC] px-3 py-1 rounded-full">The whole course</div>
+          <div class="flex items-baseline justify-between flex-wrap gap-3">
+            <div>
+              <div class="serif text-[22px] font-semibold">Atelier — Full Access</div>
+              <div class="mono text-[12px] text-[color:var(--ink-3)] mt-1">One-time payment · no subscription, ever</div>
+            </div>
+            <div class="text-right">
+              <div class="display tnum text-[52px] sm:text-[60px]" style="font-style:normal">$399</div>
+              <div class="mono text-[11px] text-[color:var(--ink-3)]"><s>$449 from June 1</s></div>
+            </div>
+          </div>
+          <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-3 mt-7 text-[14px] text-[color:var(--ink-2)]">
+            <li class="flex gap-2.5"><span class="text-[color:var(--coral)] mt-0.5">✓</span> All 12 modules — ~58 hours</li>
+            <li class="flex gap-2.5"><span class="text-[color:var(--coral)] mt-0.5">✓</span> Lifetime access &amp; future updates</li>
+            <li class="flex gap-2.5"><span class="text-[color:var(--coral)] mt-0.5">✓</span> One 40-min portfolio review</li>
+            <li class="flex gap-2.5"><span class="text-[color:var(--coral)] mt-0.5">✓</span> Downloadable studio workbook</li>
+            <li class="flex gap-2.5"><span class="text-[color:var(--coral)] mt-0.5">✓</span> Certificate of completion</li>
+            <li class="flex gap-2.5"><span class="text-[color:var(--coral)] mt-0.5">✓</span> 14-day, no-questions refund</li>
+          </ul>
+          <a href="#enroll" class="btn-primary mt-8 w-full inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--coral)] text-[#FAF5EC] font-semibold px-6 py-4 text-[16px]">
+            Enroll via Stripe — $399 <span class="scroll-x">→</span>
+          </a>
+          <p class="text-[12px] text-[color:var(--ink-3)] text-center mt-4 leading-[1.5]">
+            Expensable — we send an itemised invoice in your or your company's name.
+            <br class="hidden sm:block"/>Team of 5+? Studio licenses from $1,790 — <span class="ul-link text-[color:var(--ink-2)]">studio@atelier.courses</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FAQ ================= -->
+<section id="faq" class="max-w-[820px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="text-center mb-12">
+    <div class="marker mb-5 inline-block">Questions worth asking</div>
+    <h2 class="display text-[clamp(32px,4.6vw,52px)]">Before you enroll.</h2>
+  </div>
+  <div class="divide-y divide-[color:var(--rule)] border-y rule">
+    <details class="group">
+      <summary class="flex items-start gap-4 py-5">
+        <span class="serif text-[17px] sm:text-[19px] font-semibold flex-1">Is this for me if I'm not a designer, and never plan to be?</span>
+        <span class="acc-sign text-[color:var(--coral)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        Yes — that is, precisely, who it's for. Roughly 70% of learners are PMs, engineers, and marketers. The goal is fluency, not a career change: to read design well enough to brief it, critique it, and not get rolled in a review. The other 30% are designers filling gaps, and they're welcome too.
+      </p>
+    </details>
+    <details class="group">
+      <summary class="flex items-start gap-4 py-5">
+        <span class="serif text-[17px] sm:text-[19px] font-semibold flex-1">How long does it actually take to finish?</span>
+        <span class="acc-sign text-[color:var(--coral)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        The 12 modules total roughly 58 hours of video and exercises. Self-directed learners average four to six weeks at a few hours a week; plenty take a full year, returning module by module. There are no deadlines and access never expires — so the honest answer is: exactly as long as you want.
+      </p>
+    </details>
+    <details class="group">
+      <summary class="flex items-start gap-4 py-5">
+        <span class="serif text-[17px] sm:text-[19px] font-semibold flex-1">Do I get a certificate?</span>
+        <span class="acc-sign text-[color:var(--coral)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        Yes — a certificate of completion once you finish all 12 modules and submit the final project. It's nice on a LinkedIn profile and meaningless to anyone who already knows you. The real credential is the work you can suddenly do, and the reviews you stop losing.
+      </p>
+    </details>
+    <details class="group">
+      <summary class="flex items-start gap-4 py-5">
+        <span class="serif text-[17px] sm:text-[19px] font-semibold flex-1">Can my company expense it?</span>
+        <span class="acc-sign text-[color:var(--coral)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        Almost always. $399 sits comfortably under most teams' learning-and-development budgets, and we send a proper itemised invoice in your name or your company's. Many employers reimburse Atelier as professional development — at checkout there's a one-paragraph justification you can forward to a manager verbatim.
+      </p>
+    </details>
+    <details class="group">
+      <summary class="flex items-start gap-4 py-5">
+        <span class="serif text-[17px] sm:text-[19px] font-semibold flex-1">What if I don't like module 1 — can I get a refund?</span>
+        <span class="acc-sign text-[color:var(--coral)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        Yes. Fourteen days, no questions asked, even if you're partway through. We'd genuinely rather you leave cleanly than sit on a course you resent. The under-2% refund rate across three years is the only marketing claim we'll make about whether it lands.
+      </p>
+    </details>
+  </div>
+</section>
+
+<!-- ================= FINAL CTA ================= -->
+<section class="relative overflow-hidden border-t rule-soft bg-[color:var(--ink)]">
+  <div class="absolute inset-0 pointer-events-none" style="background:radial-gradient(60% 60% at 50% 0%, rgba(197,58,34,0.28), transparent 70%)"></div>
+  <div class="relative max-w-[900px] mx-auto px-5 sm:px-8 py-24 sm:py-32 text-center">
+    <div class="inline-flex items-center gap-2.5 rounded-full border border-[rgba(255,255,255,0.14)] px-4 py-1.5 mb-8">
+      <span class="pulse-dot"></span>
+      <span class="mono text-[11px] tracking-[0.06em] text-[#E8DFCF]">Enrollment open · price rises June 1</span>
+    </div>
+    <h2 class="display text-[clamp(40px,7vw,86px)] text-[#FAF5EC]">
+      You already have taste.<br/>
+      <span class="halftone">Atelier makes it legible.</span>
+    </h2>
+    <p class="serif text-[18px] text-[#C9BEA9] mt-6 max-w-[48ch] mx-auto leading-[1.6]">
+      Twelve modules. Lifetime access. One small studio's attempt to teach the most useful skill nobody tells you is learnable.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-3 justify-center mt-9">
+      <a href="#enroll" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--coral)] text-[#FAF5EC] font-semibold px-7 py-4 text-[16px]">
+        Enroll · $399 <span class="scroll-x">→</span>
+      </a>
+      <a href="#syllabus" class="btn-ghost inline-flex items-center justify-center rounded-full border border-[rgba(255,255,255,0.18)] text-[#FAF5EC] font-medium px-7 py-4 text-[16px]">
+        Read the syllabus
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer class="bg-[color:var(--ink)] border-t border-[rgba(255,255,255,0.07)]">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-12 flex flex-col sm:flex-row items-center justify-between gap-6">
+    <div class="flex items-center gap-2.5">
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="2.6" y="2.6" width="18.8" height="18.8" rx="2" fill="none" stroke="#C9BEA9" stroke-width="1.3"/>
+        <circle cx="12" cy="12" r="5.4" fill="none" stroke="#C53A22" stroke-width="1.3"/>
+        <circle cx="12" cy="12" r="1.5" fill="#C53A22"/>
+      </svg>
+      <span class="serif text-[18px] text-[#FAF5EC] font-semibold">Atelier</span>
+      <span class="mono text-[11px] text-[#8E806B] ml-2 hidden sm:inline">A small studio course</span>
+    </div>
+    <nav class="flex items-center gap-7 text-[13px] text-[#C9BEA9]">
+      <a href="#syllabus" class="ul-link">Module archive</a>
+      <a href="#instructor" class="ul-link">About</a>
+      <a href="#faq" class="ul-link">Privacy</a>
+    </nav>
+    <div class="mono text-[11px] text-[#8E806B]">© 2026 Atelier</div>
+  </div>
+</footer>
+
+<script>
+  (function(){
+    var target = new Date('2026-06-01T00:00:00-04:00').getTime();
+    var els = { d:document.getElementById('cd-d'), h:document.getElementById('cd-h'), m:document.getElementById('cd-m'), s:document.getElementById('cd-s') };
+    function pad(n){ return String(n).padStart(2,'0'); }
+    function tick(){
+      var gap = target - Date.now();
+      if(gap < 0) gap = 0;
+      els.d.textContent = pad(Math.floor(gap/864e5));
+      els.h.textContent = pad(Math.floor(gap%864e5/36e5));
+      els.m.textContent = pad(Math.floor(gap%36e5/6e4));
+      els.s.textContent = pad(Math.floor(gap%6e4/1e3));
+    }
+    tick();
+    setInterval(tick, 1000);
+  })();
+</script>
+</body>
+</html>

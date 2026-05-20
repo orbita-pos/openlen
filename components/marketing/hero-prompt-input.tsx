@@ -11,8 +11,8 @@ import { cn } from "@/lib/cn";
 //
 // Replaces the previous "Generate yours free / Star on GitHub" CTA pair with
 // a chat-style textarea. Submit routes to:
-//   - /new?brief=<text>             when the user is already signed in
-//   - /register?next=/new?brief=…   otherwise (sign in via the link inside)
+//   - /new-v2?mode=ai&brief=<text>             when the user is already signed in
+//   - /register?next=/new-v2?mode=ai&brief=…   otherwise (sign in via the link inside)
 //
 // The brief is carried through register so the user lands in the workspace
 // with their idea pre-filled and just has to hit Generate.
@@ -47,7 +47,7 @@ export function HeroPromptInput() {
     if (!canSend || submitting) return;
     setSubmitting(true);
     const brief = value.trim();
-    const target = `/new?brief=${encodeURIComponent(brief)}`;
+    const target = `/new-v2?mode=ai&brief=${encodeURIComponent(brief)}`;
     if (status === "authenticated") {
       router.push(target);
     } else {

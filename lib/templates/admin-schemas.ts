@@ -22,6 +22,11 @@ export const FAMILY = z.enum([
   "hospitality",
   "ecommerce",
   "climate",
+  "mobile-app",
+  "education",
+  "creator",
+  "open-source",
+  "music",
 ]);
 export const MODE = z.enum(["dark", "light", "cream"]);
 export const STATUS = z.enum(["draft", "published", "archived"]);

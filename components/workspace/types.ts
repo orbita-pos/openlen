@@ -1,50 +1,6 @@
-import type {
-  FilledBlock,
-  GeneratedImage,
-  Intent,
-  LandingPage,
-  Plan,
-  ProgressEvent,
-} from "@/lib/orchestrator/types";
-
-export interface RegenInFlight {
-  sectionId: string;
-  sectionName: string;
-  mode: "regen" | "edit";
-}
-
-export interface GeneratingPartial {
-  brief: string;
-  intent?: Intent;
-  plan?: Plan;
-  filledBlocks: FilledBlock[];
-  images: GeneratedImage[];
-  costSoFar: number;
-  startedAt: number;
-}
-
-export type WorkspaceState =
-  | { kind: "idle" }
-  | {
-      kind: "generating";
-      currentStep: string;
-      progress: ProgressEvent[];
-      partial: GeneratingPartial;
-    }
-  | {
-      kind: "generated";
-      result: LandingPage;
-      /** Snapshot of the AI-generated `filledBlocks` (refreshed on regen) so
-       *  the slot editor can compute per-block dirty state and reset edits. */
-      originalFilledBlocks: FilledBlock[];
-      regen?: RegenInFlight;
-      /** Project id when the page has been persisted server-side. */
-      projectId?: string;
-      /** Display title — populated from the project_saved event. */
-      title?: string;
-    }
-  | { kind: "error"; message: string };
-
+// Shared state shape for the brief-input form — the AI entry panel
+// (components/workspace-v2/panels/ai-brief-panel.tsx) and the left-sidebar
+// wiring both consume it.
 export interface BriefFormState {
   prompt: string;
   setPrompt: (v: string) => void;

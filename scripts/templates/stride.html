@@ -1,0 +1,734 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stride — Train for your race, not for an algorithm</title>
+<meta name="description" content="A running coach in your pocket. 16-week plans that adapt to your sleep, HRV, and life. 84% of consistent users hit their goal time.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --bg:#08090A; --bg-2:#0F1012; --surface:#111315;
+    --accent:#5BFF89; --accent-2:#22D366; --accent-3:#18B557;
+    --accent-soft:rgba(91,255,137,.12);
+    --text:#FFFFFF; --dim:rgba(255,255,255,.62); --faint:rgba(255,255,255,.38);
+    --hairline:rgba(255,255,255,.07); --hairline2:rgba(255,255,255,.14);
+  }
+  html,body{font-family:'Inter',system-ui,sans-serif;font-feature-settings:'cv11','ss01';background:var(--bg);color:var(--text);line-height:1.55;-webkit-font-smoothing:antialiased;}
+  .font-display{font-family:'Inter',sans-serif;font-weight:700;letter-spacing:-0.035em;line-height:1.04;}
+  .font-mono{font-family:'Geist Mono',ui-monospace,monospace;font-feature-settings:'tnum','ss01';}
+  .halftone{opacity:.42;}
+  .dim{color:var(--dim);} .faint{color:var(--faint);}
+  .hairline{border:1px solid var(--hairline);} .hairline2{border:1px solid var(--hairline2);}
+  .surface{background:var(--surface);}
+  .text-accent{color:var(--accent);} .bg-accent-soft{background:var(--accent-soft);}
+  .dot-grid{background-image:radial-gradient(circle at 1px 1px,rgba(91,255,137,.16) 1px,transparent 0);background-size:32px 32px;}
+  .mesh{position:absolute;border-radius:50%;filter:blur(120px);pointer-events:none;}
+  .pulse-dot{position:relative;width:8px;height:8px;border-radius:50%;background:var(--accent);}
+  .pulse-dot::after{content:'';position:absolute;inset:-4px;border-radius:50%;background:var(--accent);opacity:.6;animation:pulse 1.4s ease-out infinite;}
+  @keyframes pulse{0%{transform:scale(.8);opacity:.6;}100%{transform:scale(2.4);opacity:0;}}
+
+  .phone{position:relative;border-radius:48px;background:linear-gradient(135deg,#1A1D20 0%,#0A0B0D 100%);padding:10px;box-shadow:0 40px 80px -16px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.07),inset 0 0 0 1px rgba(255,255,255,.04),0 0 60px -20px rgba(91,255,137,.18);}
+  .phone-screen{position:relative;width:100%;height:100%;border-radius:38px;overflow:hidden;background:linear-gradient(180deg,#0F1114 0%,#070809 100%);color:var(--text);}
+  .phone-notch{position:absolute;top:14px;left:50%;transform:translateX(-50%);width:96px;height:26px;background:#000;border-radius:13px;z-index:10;}
+  .phone-status{position:absolute;top:18px;left:0;right:0;padding:0 26px;display:flex;justify-content:space-between;align-items:center;color:var(--text);font-family:'Geist Mono',monospace;font-size:13px;font-weight:500;z-index:11;}
+  .phone-status .icons{display:flex;gap:5px;align-items:center;}
+  .phone-tilt{transform:perspective(1600px) rotateY(-6deg) rotateX(2deg);}
+  .phone-float{animation:float 6s ease-in-out infinite;}
+  @keyframes float{0%,100%{transform:perspective(1600px) rotateY(-6deg) rotateX(2deg) translateY(0);}50%{transform:perspective(1600px) rotateY(-6deg) rotateX(2deg) translateY(-12px);}}
+  .phone-content{position:absolute;inset:0;padding:60px 18px 18px;overflow:hidden;}
+  .phone-scroll{animation:pscroll 14s ease-in-out infinite;}
+  @keyframes pscroll{0%,15%{transform:translateY(0);}45%,55%{transform:translateY(-68px);}85%,100%{transform:translateY(0);}}
+  .phone-glow{position:absolute;bottom:-40px;left:50%;transform:translateX(-50%);width:90%;height:120px;background:radial-gradient(ellipse,var(--accent) 0%,transparent 70%);opacity:.32;filter:blur(48px);pointer-events:none;}
+
+  .app-icon{border-radius:22%;background:#000;box-shadow:0 16px 32px -10px rgba(91,255,137,.35),inset 0 1px 0 rgba(255,255,255,.06),inset 0 0 0 1px rgba(91,255,137,.4);}
+
+  .badge-store{display:inline-flex;align-items:center;gap:10px;padding:10px 16px;border-radius:12px;background:#000;color:#fff;border:1px solid rgba(255,255,255,.18);transition:transform 120ms ease,box-shadow 120ms ease;}
+  .badge-store:hover{transform:translateY(-1px);box-shadow:0 12px 24px -8px rgba(91,255,137,.3);}
+  .badge-label{font-size:10px;opacity:.78;text-transform:uppercase;letter-spacing:.06em;line-height:1;}
+  .badge-name{font-size:18px;font-weight:600;letter-spacing:-.01em;line-height:1.05;}
+
+  .marquee-track{display:flex;width:max-content;animation:marquee 36s linear infinite;}
+  @keyframes marquee{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+
+  .card{background:var(--surface);border:1px solid var(--hairline);border-radius:24px;transition:transform 150ms ease,box-shadow 150ms ease,border-color 150ms ease;}
+  .card:hover{transform:translateY(-2px);border-color:rgba(91,255,137,.2);box-shadow:0 16px 40px -16px rgba(91,255,137,.18);}
+
+  .btn-primary{background:var(--accent);color:#000;transition:transform 120ms ease,box-shadow 120ms ease;font-weight:600;}
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 12px 32px -8px rgba(91,255,137,.5);}
+  .btn-ghost{background:transparent;border:1px solid var(--hairline2);color:#fff;transition:background 120ms ease;}
+  .btn-ghost:hover{background:rgba(255,255,255,.06);}
+
+  .star{fill:#5BFF89;} .star-dim{fill:rgba(91,255,137,.2);}
+
+  .bar-track{height:8px;background:rgba(255,255,255,.06);border-radius:999px;overflow:hidden;}
+  .bar-fill{height:100%;background:linear-gradient(90deg,#5BFF89,#22D366);border-radius:999px;}
+
+  details summary{list-style:none;cursor:pointer;}
+  details summary::-webkit-details-marker{display:none;}
+  details[open] summary .chev{transform:rotate(180deg);}
+  .chev{transition:transform 200ms ease;}
+
+  .hero-halo{position:absolute;inset:auto 0 0 0;height:600px;background:radial-gradient(ellipse 60% 100% at 50% 100%,rgba(91,255,137,.18) 0%,transparent 60%);pointer-events:none;}
+
+  .neon-text{text-shadow:0 0 24px rgba(91,255,137,.5);}
+
+  @media (max-width:768px){.phone-tilt{transform:none;}.phone-float{animation:float-m 6s ease-in-out infinite;}@keyframes float-m{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}}
+</style>
+</head>
+<body class="relative overflow-x-hidden">
+<div class="mesh" style="background:#5BFF89;width:560px;height:560px;top:-260px;right:-160px;opacity:.08;"></div>
+<div class="mesh" style="background:#22D366;width:480px;height:480px;top:480px;left:-200px;opacity:.06;"></div>
+
+<!-- NAV -->
+<nav class="relative z-20 max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+  <a href="#" class="flex items-center gap-2.5">
+    <div class="app-icon w-9 h-9 flex items-center justify-center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5BFF89" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l6-12 5 8 5-3"/></svg>
+    </div>
+    <span class="font-display text-lg">Stride</span>
+  </a>
+  <div class="hidden md:flex items-center gap-8 text-sm dim">
+    <a href="#features" class="hover:text-white transition-colors">Plans</a>
+    <a href="#how" class="hover:text-white transition-colors">How it works</a>
+    <a href="#reviews" class="hover:text-white transition-colors">Reviews</a>
+    <a href="#pricing" class="hover:text-white transition-colors">Pricing</a>
+  </div>
+  <a href="#download" class="text-sm font-semibold px-4 py-2 rounded-full" style="background:var(--accent);color:#000;">Start training</a>
+</nav>
+
+<!-- HERO -->
+<section class="relative max-w-7xl mx-auto px-6 pt-10 pb-24 md:pt-20 md:pb-32">
+  <div class="grid md:grid-cols-2 gap-12 md:gap-10 items-center">
+    <div class="relative z-10">
+      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent-soft text-accent text-xs font-medium mb-8">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4-6.2-4.5-6.2 4.5 2.4-7.4L2 9.4h7.6z"/></svg>
+        Featured on App Store · Health & Fitness 2025
+      </div>
+      <h1 class="font-display text-5xl sm:text-6xl lg:text-7xl mb-7">
+        Train for your race. <span class="halftone">Not for an algorithm.</span>
+      </h1>
+      <p class="text-lg md:text-xl dim max-w-lg mb-10">
+        Tell us your goal race + date. We build a 16-week plan that adapts to your sleep, HRV, and the days life punches you. Show up on race day ready.
+      </p>
+      <div class="flex flex-wrap gap-3 mb-9">
+        <a href="#" class="badge-store">
+          <svg width="22" height="26" viewBox="0 0 24 28" fill="currentColor"><path d="M17.5 14.7c0-3 2.5-4.5 2.6-4.5-1.4-2.1-3.6-2.4-4.4-2.4-1.9-.2-3.6 1.1-4.6 1.1-1 0-2.4-1.1-4-1-2 0-3.9 1.2-5 3-2.2 3.7-.6 9.2 1.5 12.2 1 1.5 2.2 3.2 3.8 3.1 1.5-.1 2.1-1 3.9-1 1.8 0 2.4 1 4 1 1.6 0 2.7-1.5 3.7-3 1.2-1.7 1.6-3.4 1.7-3.5-.1 0-3.2-1.3-3.2-4.9zm-3-9c.9-1 1.4-2.4 1.3-3.7-1.2 0-2.7.8-3.6 1.8-.8.9-1.5 2.3-1.3 3.6 1.3.1 2.7-.7 3.6-1.7z"/></svg>
+          <div class="flex flex-col text-left"><span class="badge-label">Download on the</span><span class="badge-name">App Store</span></div>
+        </a>
+        <a href="#" class="badge-store">
+          <svg width="22" height="24" viewBox="0 0 22 24"><path d="M1.4 1.2c-.3.3-.4.8-.4 1.4v18.8c0 .7.1 1.2.4 1.4l.1.1L11.7 12.1v-.2L1.5 1.1l-.1.1z" fill="#5BC9F4"/><path d="M15.1 15.6l-3.4-3.4v-.2l3.4-3.4.1.1 4.1 2.3c1.2.7 1.2 1.7 0 2.3l-4.1 2.3-.1z" fill="#FECC2F"/><path d="M15.2 15.5L11.7 12 1.4 22.8c.4.4 1 .5 1.8.1l12-6.8" fill="#EF4136"/><path d="M15.2 8.5L3.2 1.7c-.8-.4-1.4-.3-1.8.1L11.7 12l3.5-3.5z" fill="#0F9D58"/></svg>
+          <div class="flex flex-col text-left"><span class="badge-label">Get it on</span><span class="badge-name">Google Play</span></div>
+        </a>
+      </div>
+      <div class="flex flex-wrap items-center gap-3 text-sm">
+        <div class="flex gap-0.5">
+          <svg width="18" height="18" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="18" height="18" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="18" height="18" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="18" height="18" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="18" height="18" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg>
+        </div>
+        <span class="font-medium">4.9</span>
+        <span class="faint">·</span>
+        <span class="dim font-mono text-xs">14,408 reviews</span>
+        <span class="faint">·</span>
+        <span class="dim text-xs flex items-center gap-1.5"><span class="pulse-dot"></span> 38,408 marathons in 2025</span>
+      </div>
+    </div>
+
+    <!-- Hero phone -->
+    <div class="relative flex justify-center md:justify-end">
+      <div class="phone-glow"></div>
+      <div class="phone phone-tilt phone-float" style="width:280px;height:578px;">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="phone-status">
+            <span>9:41</span>
+            <div class="icons">
+              <svg width="16" height="10" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="6" width="2" height="5" rx=".5"/><rect x="4" y="4" width="2" height="7" rx=".5"/><rect x="8" y="2" width="2" height="9" rx=".5"/><rect x="12" y="0" width="2" height="11" rx=".5"/></svg>
+              <svg width="14" height="10" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M.7 5.6a8 8 0 0114.6 0"/><path d="M3 7.2a5.2 5.2 0 0110 0"/><path d="M5.4 8.8a2.8 2.8 0 015.2 0"/><circle cx="8" cy="10.4" r="1" fill="currentColor"/></svg>
+              <svg width="22" height="10" viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="1"><rect x="1" y="1" width="20" height="10" rx="2"/><rect x="22" y="3.5" width="1.5" height="5" fill="currentColor"/><rect x="2.5" y="2.5" width="14" height="7" rx="1.2" fill="currentColor"/></svg>
+            </div>
+          </div>
+          <div class="phone-content">
+            <div class="phone-scroll">
+              <div class="flex items-center justify-between mb-3">
+                <p class="text-[10px] faint font-mono uppercase tracking-widest">Tue · day 42/112</p>
+                <p class="text-[10px] font-mono text-accent">on plan</p>
+              </div>
+              <h3 class="font-display text-[20px] leading-tight mb-1">Threshold tempo</h3>
+              <p class="text-[11px] dim mb-4">Recover fast, hit pace, repeat ×4</p>
+              <!-- Stats grid -->
+              <div class="grid grid-cols-3 gap-1.5 mb-4">
+                <div class="rounded-xl p-2.5 text-center" style="background:rgba(91,255,137,.08);border:1px solid rgba(91,255,137,.2);"><p class="text-[8px] faint font-mono uppercase tracking-widest">Distance</p><p class="font-display text-base text-accent">5.0<span class="text-[10px] font-mono opacity-70">mi</span></p></div>
+                <div class="rounded-xl p-2.5 text-center hairline"><p class="text-[8px] faint font-mono uppercase tracking-widest">Target</p><p class="font-display text-base font-mono">7:42</p></div>
+                <div class="rounded-xl p-2.5 text-center hairline"><p class="text-[8px] faint font-mono uppercase tracking-widest">Est.</p><p class="font-display text-base font-mono">28m</p></div>
+              </div>
+              <!-- Map -->
+              <div class="rounded-xl overflow-hidden mb-4 relative" style="background:linear-gradient(180deg,#0A0B0D,#161A1D);height:128px;border:1px solid var(--hairline);">
+                <svg viewBox="0 0 280 128" class="w-full h-full" preserveAspectRatio="none">
+                  <defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0v20" fill="none" stroke="rgba(255,255,255,.04)" stroke-width="1"/></pattern></defs>
+                  <rect width="280" height="128" fill="url(#grid)"/>
+                  <path d="M20 100 Q60 60 100 70 T180 50 Q220 40 260 90" fill="none" stroke="#5BFF89" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 6px rgba(91,255,137,.6));"/>
+                  <circle cx="20" cy="100" r="4" fill="#5BFF89"/>
+                  <circle cx="260" cy="90" r="4" fill="#fff" stroke="#5BFF89" stroke-width="2"/>
+                </svg>
+                <p class="absolute top-2 left-3 text-[9px] font-mono faint uppercase tracking-widest">McCarren loop · 5.02 mi</p>
+              </div>
+              <!-- Splits -->
+              <p class="text-[8px] faint font-mono uppercase tracking-widest mb-1.5">Splits</p>
+              <div class="grid grid-cols-5 gap-1 mb-4 text-[10px] font-mono">
+                <div class="text-center p-1 rounded" style="background:rgba(91,255,137,.12);"><p class="text-accent">7:38</p></div>
+                <div class="text-center p-1 rounded" style="background:rgba(91,255,137,.12);"><p class="text-accent">7:42</p></div>
+                <div class="text-center p-1 rounded hairline"><p class="faint">—</p></div>
+                <div class="text-center p-1 rounded hairline"><p class="faint">—</p></div>
+                <div class="text-center p-1 rounded hairline"><p class="faint">—</p></div>
+              </div>
+              <button class="w-full py-3 rounded-2xl text-[13px]" style="background:#5BFF89;color:#000;font-weight:600;box-shadow:0 8px 32px -8px rgba(91,255,137,.45);">Start workout</button>
+              <p class="text-center text-[9px] faint font-mono mt-2">HRV 62 · sleep 7h 12m · ready</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- APP ICON BAND -->
+<section class="relative py-20 md:py-28">
+  <div class="max-w-3xl mx-auto px-6 text-center">
+    <div class="app-icon w-24 h-24 mx-auto flex items-center justify-center mb-8">
+      <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#5BFF89" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l6-12 5 8 5-3"/></svg>
+    </div>
+    <h2 class="font-display text-3xl md:text-4xl mb-3">A coach. Not a workout app.</h2>
+    <p class="dim text-lg max-w-xl mx-auto">Plans are written by USATF-certified coaches and adapted nightly by an engine that reads your sleep, HRV, and last 14 days of training load.</p>
+  </div>
+</section>
+
+<!-- SCREENSHOTS STRIP -->
+<section class="relative py-12 overflow-hidden">
+  <div class="absolute inset-0 dot-grid opacity-30 pointer-events-none"></div>
+  <div class="marquee-track">
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;">
+        <div class="absolute inset-0 p-5 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">16-wk plan</p>
+          <h4 class="font-display text-base mb-3">Brooklyn Marathon</h4>
+          <div class="space-y-1">
+            <div class="hairline rounded p-1.5 text-[9px] flex justify-between"><span>Wk 6 · Build</span><span class="font-mono text-accent">●●●●○ </span></div>
+            <div class="hairline rounded p-1.5 text-[9px] flex justify-between"><span>Wk 7 · Build</span><span class="font-mono faint">○○○○○ </span></div>
+            <div class="hairline rounded p-1.5 text-[9px] flex justify-between"><span>Wk 8 · Recovery</span><span class="font-mono faint">○○○○○</span></div>
+            <div class="hairline rounded p-1.5 text-[9px] flex justify-between"><span>Wk 9 · Peak</span><span class="font-mono faint">○○○○○</span></div>
+            <div class="hairline rounded p-1.5 text-[9px] flex justify-between"><span>Wk 10 · Peak</span><span class="font-mono faint">○○○○○</span></div>
+            <div class="hairline rounded p-1.5 text-[9px] flex justify-between"><span>Wk 16 · Race</span><span class="font-mono faint">🏁</span></div>
+          </div>
+          <p class="text-[8px] text-center font-mono text-accent mt-2">Goal: sub 3:38</p>
+        </div>
+      </div>
+    </div>
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;background:linear-gradient(180deg,#0A0B0D,#000);">
+        <div class="absolute inset-0 p-5 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Live · mile 3</p>
+          <p class="font-display text-4xl text-accent neon-text mb-1">7:39</p>
+          <p class="text-[9px] faint font-mono mb-3">target 7:42</p>
+          <div class="grid grid-cols-2 gap-1.5 text-[9px]">
+            <div class="rounded p-1.5 hairline"><p class="faint">Time</p><p class="font-mono">22:14</p></div>
+            <div class="rounded p-1.5 hairline"><p class="faint">Dist</p><p class="font-mono">2.92 mi</p></div>
+            <div class="rounded p-1.5 hairline"><p class="faint">HR</p><p class="font-mono">168</p></div>
+            <div class="rounded p-1.5 hairline"><p class="faint">Cadence</p><p class="font-mono">182</p></div>
+          </div>
+          <svg viewBox="0 0 140 30" class="w-full h-6 mt-3"><polyline points="0,20 14,16 28,22 42,12 56,18 70,8 84,14 98,18 112,10 126,16 140,12" fill="none" stroke="#5BFF89" stroke-width="1.5"/></svg>
+        </div>
+      </div>
+    </div>
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;">
+        <div class="absolute inset-0 p-5 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Recovery · wk 6</p>
+          <h4 class="font-display text-base mb-3">Readiness 84</h4>
+          <div class="space-y-2">
+            <div><div class="flex justify-between text-[9px] mb-1"><span class="faint">HRV</span><span class="font-mono text-accent">62 ms</span></div><div class="bar-track"><div class="bar-fill" style="width:72%;"></div></div></div>
+            <div><div class="flex justify-between text-[9px] mb-1"><span class="faint">Sleep</span><span class="font-mono">7h 12m</span></div><div class="bar-track"><div class="bar-fill" style="width:84%;"></div></div></div>
+            <div><div class="flex justify-between text-[9px] mb-1"><span class="faint">Resting HR</span><span class="font-mono">48</span></div><div class="bar-track"><div class="bar-fill" style="width:88%;"></div></div></div>
+            <div><div class="flex justify-between text-[9px] mb-1"><span class="faint">Load 7d</span><span class="font-mono">38 TSS</span></div><div class="bar-track"><div class="bar-fill" style="width:62%;"></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;">
+        <div class="absolute inset-0 p-5 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Race day</p>
+          <h4 class="font-display text-base mb-3">Brooklyn · Oct 12</h4>
+          <div class="rounded-xl p-3 mb-2" style="background:rgba(91,255,137,.08);border:1px solid rgba(91,255,137,.2);">
+            <p class="text-[9px] faint">Pacing plan</p>
+            <div class="grid grid-cols-3 gap-1 mt-1 text-[10px] font-mono">
+              <div class="text-center"><p class="faint">1-10</p><p class="text-accent">8:18</p></div>
+              <div class="text-center"><p class="faint">11-20</p><p class="text-accent">8:12</p></div>
+              <div class="text-center"><p class="faint">21-26</p><p class="text-accent">8:00</p></div>
+            </div>
+          </div>
+          <p class="text-[9px] dim">Negative-split, fuel at miles 6, 12, 18, 22.</p>
+        </div>
+      </div>
+    </div>
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;">
+        <div class="absolute inset-0 p-5 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Devices</p>
+          <div class="space-y-1.5 text-[10px]">
+            <div class="rounded hairline p-2 flex items-center justify-between"><span>Garmin · 965</span><span class="font-mono text-accent">●</span></div>
+            <div class="rounded hairline p-2 flex items-center justify-between"><span>Apple Watch · U2</span><span class="font-mono text-accent">●</span></div>
+            <div class="rounded hairline p-2 flex items-center justify-between"><span>Coros · Pace 3</span><span class="font-mono text-accent">●</span></div>
+            <div class="rounded hairline p-2 flex items-center justify-between"><span>Whoop 5</span><span class="font-mono text-accent">●</span></div>
+            <div class="rounded hairline p-2 flex items-center justify-between"><span>Strava</span><span class="font-mono text-accent">●</span></div>
+            <div class="rounded hairline p-2 flex items-center justify-between opacity-50"><span>Polar</span><span class="font-mono">+</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- duplicate -->
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;">
+        <div class="absolute inset-0 p-5 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">16-wk plan</p>
+          <h4 class="font-display text-base mb-3">Brooklyn Marathon</h4>
+        </div>
+      </div>
+    </div>
+    <div class="mx-4 shrink-0 phone" style="width:180px;height:380px;padding:6px;border-radius:32px;">
+      <div class="phone-screen" style="border-radius:26px;background:linear-gradient(180deg,#0A0B0D,#000);">
+        <div class="absolute inset-0 p-5 pt-12">
+          <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Live · mile 3</p>
+          <p class="font-display text-4xl text-accent neon-text">7:39</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how" class="relative max-w-7xl mx-auto px-6 py-24 md:py-32">
+  <div class="max-w-2xl mb-16">
+    <p class="text-accent font-mono text-xs uppercase tracking-widest mb-4">How it works</p>
+    <h2 class="font-display text-4xl md:text-5xl mb-5">Goal in. Plan out. Adapt every night.</h2>
+    <p class="dim text-lg">No "training zones" you have to learn. No spreadsheets. Just the next workout, picked for the body you have today.</p>
+  </div>
+  <div class="grid md:grid-cols-3 gap-6">
+    <div class="card p-7 relative">
+      <div class="flex items-center justify-between mb-6"><span class="font-mono text-xs faint">01</span><span class="text-xs px-2.5 py-1 rounded-full bg-accent-soft text-accent">~3 minutes</span></div>
+      <div class="phone mx-auto mb-7" style="width:160px;height:320px;padding:5px;border-radius:28px;">
+        <div class="phone-screen" style="border-radius:23px;">
+          <div class="absolute inset-0 p-4 pt-10">
+            <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Goal</p>
+            <h5 class="font-display text-[13px] mb-3">What's the race?</h5>
+            <div class="space-y-1.5 text-[10px]">
+              <div class="rounded-lg p-2" style="background:rgba(91,255,137,.1);border:1px solid var(--accent);"><p class="font-medium">Marathon</p><p class="text-[9px] faint">26.2 mi</p></div>
+              <div class="hairline rounded-lg p-2"><p class="font-medium">Half marathon</p></div>
+              <div class="hairline rounded-lg p-2"><p class="font-medium">10K</p></div>
+              <div class="hairline rounded-lg p-2"><p class="font-medium">5K</p></div>
+              <div class="hairline rounded-lg p-2"><p class="font-medium">Ultra · 50K+</p></div>
+            </div>
+            <p class="text-[9px] text-center font-mono faint mt-3">Date: Oct 12, 2026</p>
+          </div>
+        </div>
+      </div>
+      <h3 class="font-display text-xl mb-2">Tell us your goal race.</h3>
+      <p class="dim text-sm">5K to ultra. Goal time optional. We'll back-solve a 16-week plan and we'll be honest if the date isn't realistic.</p>
+    </div>
+    <div class="card p-7 relative">
+      <div class="flex items-center justify-between mb-6"><span class="font-mono text-xs faint">02</span><span class="text-xs px-2.5 py-1 rounded-full bg-accent-soft text-accent">Every night</span></div>
+      <div class="phone mx-auto mb-7" style="width:160px;height:320px;padding:5px;border-radius:28px;">
+        <div class="phone-screen" style="border-radius:23px;">
+          <div class="absolute inset-0 p-4 pt-10">
+            <p class="text-[8px] faint font-mono uppercase tracking-widest mb-2">Adapted at 3am</p>
+            <h5 class="font-display text-[13px] mb-3">Today's session</h5>
+            <div class="rounded-lg p-3 mb-3" style="background:rgba(91,255,137,.08);border:1px solid rgba(91,255,137,.2);">
+              <p class="text-[10px] font-medium">Easy 6 mi — was 9 mi</p>
+              <p class="text-[9px] dim mt-1">HRV down 14% · cut 3 mi to protect Saturday's long run.</p>
+            </div>
+            <div class="text-[9px] dim space-y-0.5">
+              <p>· Sleep: 5h 42m</p>
+              <p>· HRV: 48 (↓ from 62)</p>
+              <p>· Resting HR: 54</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h3 class="font-display text-xl mb-2">Plan adapts every night.</h3>
+      <p class="dim text-sm">Bad sleep? Tomorrow's run gets shorter. Killer HRV? Add an extra interval. Travel + a stomach bug? Rest day reshuffles.</p>
+    </div>
+    <div class="card p-7 relative">
+      <div class="flex items-center justify-between mb-6"><span class="font-mono text-xs faint">03</span><span class="text-xs px-2.5 py-1 rounded-full bg-accent-soft text-accent">Race day</span></div>
+      <div class="phone mx-auto mb-7" style="width:160px;height:320px;padding:5px;border-radius:28px;">
+        <div class="phone-screen" style="border-radius:23px;background:linear-gradient(180deg,#5BFF89,#22D366);color:#000;">
+          <div class="absolute inset-0 p-4 pt-10 text-center">
+            <p class="text-[8px] opacity-70 font-mono uppercase tracking-widest mb-2">PR'd</p>
+            <p class="font-display text-3xl mb-1">3:24:18</p>
+            <p class="text-[10px] opacity-80 font-mono mb-3">−14 min from last marathon</p>
+            <div class="rounded-xl p-2.5" style="background:rgba(0,0,0,.15);">
+              <p class="text-[9px] font-mono">Avg 7:48 · Cadence 182</p>
+              <p class="text-[9px] font-mono">Negative split: 1:43 / 1:41</p>
+            </div>
+            <p class="text-[10px] mt-3 font-medium">Brooklyn Marathon · Oct 12</p>
+          </div>
+        </div>
+      </div>
+      <h3 class="font-display text-xl mb-2">Race day with a pacing plan.</h3>
+      <p class="dim text-sm">Negative-split strategy, fuel timing, taper-tuned. 84% of consistent users hit or beat goal time. The rest still finish — and learn for next time.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURE TRIO -->
+<section id="features" class="relative max-w-7xl mx-auto px-6 py-20">
+  <div class="grid md:grid-cols-2 gap-12 md:gap-16 items-center mb-28">
+    <div>
+      <p class="text-accent font-mono text-xs uppercase tracking-widest mb-4">Adaptive engine</p>
+      <h3 class="font-display text-3xl md:text-4xl mb-5">Reads your body. Updates your plan.</h3>
+      <p class="dim text-lg mb-6">Every morning at 3am local, the adaptive engine looks at last night's sleep, HRV trend, training load over 7/14/28 days, and the next 3 workouts on plan. If anything's off, today's session is rewritten before your alarm.</p>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-white">14 input signals.</span> <span class="dim">Sleep, HRV, resting HR, weight, perceived exertion from last 5 runs, weather, time-zone shifts.</span></span></li>
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-white">Conservative by default.</span> <span class="dim">Engine errs on the side of recovery. Better to skip an interval than risk an Achilles flare.</span></span></li>
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-white">Coach review for $40 add-on.</span> <span class="dim">Twice a month, a real USATF coach reviews your plan. Flagged for athletes targeting BQ or sub-3.</span></span></li>
+      </ul>
+    </div>
+    <div class="relative flex justify-center">
+      <div class="phone-glow"></div>
+      <div class="phone phone-tilt" style="width:240px;height:496px;">
+        <div class="phone-notch" style="width:84px;height:24px;"></div>
+        <div class="phone-screen">
+          <div class="absolute inset-0 p-4 pt-12">
+            <p class="text-[9px] faint font-mono uppercase tracking-widest mb-2">Last 28 days</p>
+            <h5 class="font-display text-base mb-4">Training load</h5>
+            <svg viewBox="0 0 200 80" class="w-full mb-4">
+              <defs><linearGradient id="ld" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5BFF89" stop-opacity=".4"/><stop offset="1" stop-color="#5BFF89" stop-opacity="0"/></linearGradient></defs>
+              <polyline points="0,60 14,55 28,58 42,42 56,46 70,32 84,38 98,28 112,32 126,22 140,28 154,20 168,18 182,12 196,16" fill="none" stroke="#5BFF89" stroke-width="2" stroke-linecap="round"/>
+              <polyline points="0,60 14,55 28,58 42,42 56,46 70,32 84,38 98,28 112,32 126,22 140,28 154,20 168,18 182,12 196,16 196,80 0,80" fill="url(#ld)"/>
+            </svg>
+            <div class="grid grid-cols-2 gap-2 text-[10px] mb-3">
+              <div class="rounded p-2 hairline"><p class="faint">Acute load</p><p class="font-mono text-accent text-lg">62</p></div>
+              <div class="rounded p-2 hairline"><p class="faint">Chronic</p><p class="font-mono text-lg">58</p></div>
+            </div>
+            <div class="rounded-lg p-2.5" style="background:rgba(91,255,137,.08);">
+              <p class="text-[10px]">Sustainable load. <span class="text-accent">Green to add intensity next week.</span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-12 md:gap-16 items-center mb-28">
+    <div class="md:order-2">
+      <p class="text-accent font-mono text-xs uppercase tracking-widest mb-4">Plan structure</p>
+      <h3 class="font-display text-3xl md:text-4xl mb-5">Pfitzinger-grade. Without the spreadsheet.</h3>
+      <p class="dim text-lg mb-6">Periodization through Base → Build → Peak → Taper. Workout types pulled from Pfitz, Daniels, and Hansons depending on your goal. The plans are the same caliber a coach would write you — they just adapt every day instead of every 4 weeks.</p>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-white">9 workout types.</span> <span class="dim">Easy, long, threshold, intervals, fartlek, hills, progression, steady, race-pace tune-up.</span></span></li>
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-white">Cycles 12 to 24 weeks.</span> <span class="dim">Default 16. Shortens for 5K, expands for ultras + first marathons.</span></span></li>
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-white">Reverse periodization available.</span> <span class="dim">Speed-first for runners with a strong aerobic base. One toggle.</span></span></li>
+      </ul>
+    </div>
+    <div class="relative md:order-1 flex justify-center">
+      <div class="phone-glow"></div>
+      <div class="phone phone-tilt" style="width:240px;height:496px;transform:perspective(1600px) rotateY(6deg) rotateX(2deg);">
+        <div class="phone-notch" style="width:84px;height:24px;"></div>
+        <div class="phone-screen">
+          <div class="absolute inset-0 p-4 pt-12">
+            <p class="text-[9px] faint font-mono uppercase tracking-widest mb-2">Plan · 16 weeks</p>
+            <div class="space-y-1.5">
+              <div class="flex items-center gap-2 text-[10px]"><span class="w-1 h-4 rounded" style="background:#5BFF89;"></span><span class="flex-1">Base · wk 1-4</span><span class="font-mono faint">38 mi</span></div>
+              <div class="flex items-center gap-2 text-[10px]"><span class="w-1 h-4 rounded" style="background:#5BFF89;"></span><span class="flex-1">Build · wk 5-8</span><span class="font-mono faint">52 mi</span></div>
+              <div class="flex items-center gap-2 text-[10px]"><span class="w-1 h-4 rounded" style="background:#5BFF89;"></span><span class="flex-1">Build · wk 9-12</span><span class="font-mono faint">62 mi</span></div>
+              <div class="flex items-center gap-2 text-[10px]"><span class="w-1 h-4 rounded" style="background:#5BFF89;opacity:.4;"></span><span class="flex-1">Peak · wk 13-14</span><span class="font-mono faint">58 mi</span></div>
+              <div class="flex items-center gap-2 text-[10px]"><span class="w-1 h-4 rounded" style="background:#5BFF89;opacity:.4;"></span><span class="flex-1">Taper · wk 15</span><span class="font-mono faint">38 mi</span></div>
+              <div class="flex items-center gap-2 text-[10px]"><span class="w-1 h-4 rounded" style="background:#5BFF89;opacity:.4;"></span><span class="flex-1">Race · wk 16</span><span class="font-mono faint">26.2</span></div>
+            </div>
+            <div class="mt-4 grid grid-cols-7 gap-0.5">
+              <div class="aspect-square rounded-sm" style="background:rgba(91,255,137,.6);"></div>
+              <div class="aspect-square rounded-sm" style="background:rgba(91,255,137,.2);"></div>
+              <div class="aspect-square rounded-sm" style="background:rgba(91,255,137,.8);"></div>
+              <div class="aspect-square rounded-sm" style="background:rgba(91,255,137,.3);"></div>
+              <div class="aspect-square rounded-sm" style="background:rgba(91,255,137,.7);"></div>
+              <div class="aspect-square rounded-sm" style="background:rgba(91,255,137,.25);"></div>
+              <div class="aspect-square rounded-sm" style="background:rgba(91,255,137,.9);"></div>
+            </div>
+            <p class="text-[8px] text-center font-mono faint mt-2">M T W Th F Sa Su</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-12 md:gap-16 items-center">
+    <div>
+      <p class="text-accent font-mono text-xs uppercase tracking-widest mb-4">Race day</p>
+      <h3 class="font-display text-3xl md:text-4xl mb-5">Pacing strategy down to the mile.</h3>
+      <p class="dim text-lg mb-6">The week before your race, Stride builds a pacing strategy based on your last 14 days of training, the course elevation profile, and the weather forecast. Negative-split by default. Fuel timing built in.</p>
+      <ul class="space-y-3 text-sm">
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-white">Course-aware pacing.</span> <span class="dim">Stride knows the Brooklyn Marathon's hill at mile 18 and slows your target accordingly.</span></span></li>
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-white">Fuel reminders.</span> <span class="dim">Buzz at gel time. Pre-set to your gut's tolerance from training-day data.</span></span></li>
+        <li class="flex gap-3"><span class="text-accent">→</span><span><span class="text-white">Plan-B "bail" path.</span> <span class="dim">If you blow up at mile 14, the watch flips to "finish strong" pacing instead of "PR or bust".</span></span></li>
+      </ul>
+    </div>
+    <div class="relative flex justify-center">
+      <div class="phone-glow"></div>
+      <div class="phone phone-tilt" style="width:240px;height:496px;">
+        <div class="phone-notch" style="width:84px;height:24px;"></div>
+        <div class="phone-screen">
+          <div class="absolute inset-0 p-4 pt-12">
+            <p class="text-[9px] faint font-mono uppercase tracking-widest mb-2">Race day · Oct 12</p>
+            <h5 class="font-display text-base mb-4">Brooklyn Marathon</h5>
+            <div class="grid grid-cols-3 gap-1 mb-3 text-[9px] font-mono">
+              <div class="rounded p-1.5 text-center" style="background:rgba(91,255,137,.1);"><p class="faint">Target</p><p class="text-accent text-sm">3:34</p></div>
+              <div class="rounded p-1.5 text-center hairline"><p class="faint">Weather</p><p class="text-sm">52°F</p></div>
+              <div class="rounded p-1.5 text-center hairline"><p class="faint">Wind</p><p class="text-sm">6mph N</p></div>
+            </div>
+            <p class="text-[8px] faint font-mono uppercase tracking-widest mb-1.5">Mile pacing</p>
+            <div class="space-y-1 text-[10px]">
+              <div class="flex items-center justify-between"><span class="faint">1–5 · warmup</span><span class="font-mono text-accent">8:18</span></div>
+              <div class="flex items-center justify-between"><span class="faint">6–13 · cruise</span><span class="font-mono text-accent">8:12</span></div>
+              <div class="flex items-center justify-between"><span class="faint">14–18 · hold</span><span class="font-mono text-accent">8:14</span></div>
+              <div class="flex items-center justify-between"><span class="faint">18 · hill +0:08</span><span class="font-mono">8:22</span></div>
+              <div class="flex items-center justify-between"><span class="faint">19–24 · finish</span><span class="font-mono text-accent">8:00</span></div>
+              <div class="flex items-center justify-between"><span class="faint">25-26.2 · empty</span><span class="font-mono text-accent">7:48</span></div>
+            </div>
+            <div class="rounded-lg p-2 mt-3 text-[9px]" style="background:rgba(91,255,137,.08);">
+              <p>Fuel: gel at 6, 12, 18, 22 · water station 8, 14</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- OUTCOMES -->
+<section class="relative py-24 md:py-28 border-t hairline" style="background:linear-gradient(180deg,var(--bg) 0%,var(--bg-2) 100%);">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <p class="text-accent font-mono text-xs uppercase tracking-widest mb-3">By the numbers</p>
+      <h2 class="font-display text-3xl md:text-4xl">Runners who actually show up on race day.</h2>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div class="card p-7 text-center">
+        <p class="font-display text-5xl md:text-6xl mb-2 text-accent neon-text">84<span class="text-2xl">%</span></p>
+        <p class="text-sm dim">hit or beat goal time (consistent users)</p>
+      </div>
+      <div class="card p-7 text-center">
+        <p class="font-display text-5xl md:text-6xl mb-2 text-accent neon-text">78<span class="text-2xl">%</span></p>
+        <p class="text-sm dim">avg plan completion · industry 18%</p>
+      </div>
+      <div class="card p-7 text-center">
+        <p class="font-display text-5xl md:text-6xl mb-2 text-accent neon-text">38,408</p>
+        <p class="text-sm dim">marathons run by Stride users in 2025</p>
+      </div>
+      <div class="card p-7 text-center">
+        <p class="font-display text-5xl md:text-6xl mb-2 text-accent neon-text">4.9<span class="text-2xl">★</span></p>
+        <p class="text-sm dim">from 14,408 App Store reviews</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- REVIEWS -->
+<section id="reviews" class="relative max-w-7xl mx-auto px-6 py-24 md:py-32">
+  <div class="max-w-2xl mb-14">
+    <p class="text-accent font-mono text-xs uppercase tracking-widest mb-4">Reviews</p>
+    <h2 class="font-display text-4xl md:text-5xl mb-5">Runners with PRs to show.</h2>
+  </div>
+  <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+    <div class="card p-7">
+      <div class="flex gap-0.5 mb-4"><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg></div>
+      <p class="text-base leading-relaxed mb-5">"PR'd my marathon by 14 min. Coach Stride knew what to do — the threshold work in weeks 9-11 was the unlock."</p>
+      <p class="text-sm dim">— Marcus, Austin · 3:24 marathon</p>
+    </div>
+    <div class="card p-7">
+      <div class="flex gap-0.5 mb-4"><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg></div>
+      <p class="text-base leading-relaxed mb-5">"Stride pulled an interval session after a brutal sleep night. I was annoyed. Next morning I felt fine. The engine knew."</p>
+      <p class="text-sm dim">— Priya, Boston · BQ 3:38</p>
+    </div>
+    <div class="card p-7">
+      <div class="flex gap-0.5 mb-4"><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg></div>
+      <p class="text-base leading-relaxed mb-5">"First half marathon at 42. The 12-week plan said I'd hit 1:48. I hit 1:46 with two miles of headwind. Hooked."</p>
+      <p class="text-sm dim">— Hana, Toronto · 1:46 half</p>
+    </div>
+    <div class="card p-7">
+      <div class="flex gap-0.5 mb-4"><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg></div>
+      <p class="text-base leading-relaxed mb-5">"I had a coach last year — $250/mo, replied to messages 2-3 days late. Stride replies in 8 seconds, costs $14, knows my HRV. The math is the math."</p>
+      <p class="text-sm dim">— Yusuf, Dubai · sub-3 attempt</p>
+    </div>
+    <div class="card p-7">
+      <div class="flex gap-0.5 mb-4"><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg></div>
+      <p class="text-base leading-relaxed mb-5">"50K plan handled a torn calf interrupt better than my actual PT did. Pulled long runs, kept easy mileage, rebuilt me into race day."</p>
+      <p class="text-sm dim">— Ines, Madrid · 50K finisher</p>
+    </div>
+    <div class="card p-7">
+      <div class="flex gap-0.5 mb-4"><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg></div>
+      <p class="text-base leading-relaxed mb-5">"5K plan for my first race. Eight weeks. 24:18 on race day. Stride was patient when I treated 'easy' too fast. Held the line."</p>
+      <p class="text-sm dim">— Aoife, Dublin · 24:18 5K</p>
+    </div>
+  </div>
+</section>
+
+<!-- APP STORE RATING -->
+<section class="relative py-24 md:py-28 border-t hairline">
+  <div class="max-w-5xl mx-auto px-6">
+    <div class="grid md:grid-cols-2 gap-12 md:gap-16 items-center">
+      <div class="text-center md:text-left">
+        <p class="text-accent font-mono text-xs uppercase tracking-widest mb-4">App Store rating</p>
+        <p class="font-display text-7xl md:text-8xl mb-3 neon-text">4.9<span class="text-3xl text-accent">★</span></p>
+        <div class="flex gap-1 justify-center md:justify-start mb-4">
+          <svg width="22" height="22" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="22" height="22" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="22" height="22" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="22" height="22" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg><svg width="22" height="22" viewBox="0 0 24 24" class="star"><path d="M12 2l2.6 7.6h8L16.2 14l2.4 7.6L12 17l-6.6 4.6L7.8 14 1.4 9.6h8z"/></svg>
+        </div>
+        <p class="dim font-mono text-sm">14,408 ratings · Health & Fitness · Top 14</p>
+      </div>
+      <div class="space-y-3">
+        <div class="flex items-center gap-3"><span class="text-xs font-mono w-4 dim">5★</span><div class="bar-track flex-1"><div class="bar-fill" style="width:92%;"></div></div><span class="text-xs font-mono w-12 text-right dim">92%</span></div>
+        <div class="flex items-center gap-3"><span class="text-xs font-mono w-4 dim">4★</span><div class="bar-track flex-1"><div class="bar-fill" style="width:5%;"></div></div><span class="text-xs font-mono w-12 text-right dim">5%</span></div>
+        <div class="flex items-center gap-3"><span class="text-xs font-mono w-4 dim">3★</span><div class="bar-track flex-1"><div class="bar-fill" style="width:2%;"></div></div><span class="text-xs font-mono w-12 text-right dim">2%</span></div>
+        <div class="flex items-center gap-3"><span class="text-xs font-mono w-4 dim">2★</span><div class="bar-track flex-1"><div class="bar-fill" style="width:0.5%;"></div></div><span class="text-xs font-mono w-12 text-right dim">&lt;1%</span></div>
+        <div class="flex items-center gap-3"><span class="text-xs font-mono w-4 dim">1★</span><div class="bar-track flex-1"><div class="bar-fill" style="width:0.5%;"></div></div><span class="text-xs font-mono w-12 text-right dim">&lt;1%</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="relative max-w-5xl mx-auto px-6 py-24 md:py-32">
+  <div class="max-w-2xl mb-14">
+    <p class="text-accent font-mono text-xs uppercase tracking-widest mb-4">Pricing</p>
+    <h2 class="font-display text-4xl md:text-5xl mb-5">$14/mo. Less than two race entries.</h2>
+    <p class="dim text-lg">Free version is enough for casual runs. Plus is what gets you to the start line ready.</p>
+  </div>
+  <div class="grid md:grid-cols-2 gap-5">
+    <div class="card p-8">
+      <div class="flex items-baseline justify-between mb-1"><h3 class="font-display text-2xl">Free</h3><p class="font-mono text-sm dim">$0</p></div>
+      <p class="dim text-sm mb-7">For non-race runners.</p>
+      <ul class="space-y-3 text-sm mb-8">
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Templated 5K + 10K plans</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>GPS workout tracking</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Strava + Garmin sync</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Basic recovery metrics</li>
+      </ul>
+      <a href="#" class="block text-center py-3 rounded-full text-sm font-medium btn-ghost">Start free</a>
+    </div>
+    <div class="card p-8 relative" style="background:linear-gradient(135deg,rgba(91,255,137,.08),rgba(34,211,102,.02));border-color:rgba(91,255,137,.3);">
+      <div class="absolute -top-3 right-6 px-2.5 py-1 rounded-full text-[10px] font-medium font-mono uppercase tracking-widest" style="background:var(--accent);color:#000;">Most popular</div>
+      <div class="flex items-baseline justify-between mb-1"><h3 class="font-display text-2xl">Plus</h3><p class="font-mono text-sm"><span class="text-2xl">$14</span><span class="dim">/mo</span></p></div>
+      <p class="dim text-sm mb-7">PR-grade coaching.</p>
+      <ul class="space-y-3 text-sm mb-8">
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Adaptive plans · 5K → ultra</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>HRV-driven nightly re-plan</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Course-aware race day strategy</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Whoop + Oura + Apple Health</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Periodization reports + load</li>
+        <li class="flex gap-2.5"><svg width="14" height="14" viewBox="0 0 24 24" class="text-accent" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>14-day trial · cancel in-app</li>
+      </ul>
+      <a href="#" class="block text-center py-3 rounded-full text-sm btn-primary">Start Plus trial</a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="relative max-w-3xl mx-auto px-6 py-24 md:py-28">
+  <div class="text-center mb-14">
+    <p class="text-accent font-mono text-xs uppercase tracking-widest mb-4">FAQ</p>
+    <h2 class="font-display text-4xl md:text-5xl">Questions runners ask before signing up.</h2>
+  </div>
+  <div class="space-y-3">
+    <details class="card p-6" open>
+      <summary class="flex items-center justify-between gap-4">
+        <span class="font-display text-lg">What watches does it work with (Garmin, Apple, Coros)?</span>
+        <svg class="chev shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <p class="mt-4 dim leading-relaxed">All three, plus Polar, Suunto, and Whoop. Native Connect IQ app on Garmin (workouts push to the watch with intervals + pace alerts pre-loaded). Native Apple Watch app with live haptic pace cues. Coros Vertix + Pace + Apex sync via the same OAuth flow. Strava sync is on by default — every workout from Stride lands on your Strava activity feed with the workout type tagged.</p>
+    </details>
+    <details class="card p-6">
+      <summary class="flex items-center justify-between gap-4">
+        <span class="font-display text-lg">Can I import training history from Strava?</span>
+        <svg class="chev shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <p class="mt-4 dim leading-relaxed">Yes — connect Strava once and we pull your last 24 months of activities. The adaptive engine uses that history to calibrate your fitness baseline, training load tolerance, and recommended starting volume. You'll get a more accurate first-plan estimate if we have 6+ months of history. Power users sometimes import from Garmin Connect or TrainingPeaks too — both supported.</p>
+    </details>
+    <details class="card p-6">
+      <summary class="flex items-center justify-between gap-4">
+        <span class="font-display text-lg">What if I miss a workout — does it re-plan?</span>
+        <svg class="chev shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <p class="mt-4 dim leading-relaxed">Yes, automatically. Miss a Tuesday workout? Tomorrow's session shrinks slightly and Thursday gets prioritized. Miss four days in a row (sick, traveling, etc.)? The plan rebuilds the next week with reduced volume, ramps back up over 7-10 days, and re-evaluates race-day target time. No guilt, no streak-loss, no "tap to acknowledge you failed".</p>
+    </details>
+    <details class="card p-6">
+      <summary class="flex items-center justify-between gap-4">
+        <span class="font-display text-lg">Are the plans certified-coach-reviewed?</span>
+        <svg class="chev shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <p class="mt-4 dim leading-relaxed">Every plan template is written by a USATF Level 2 coach on staff (we have four). The adaptive engine then individualizes each plan — but the structural decisions (which weeks are build vs recovery, which workout types appear when, how taper is structured) come from human coaches. Plus members targeting BQ or sub-3 marathon get bi-weekly review from a coach. Add-on coach plan with a real human in your DMs is $40/mo.</p>
+    </details>
+    <details class="card p-6">
+      <summary class="flex items-center justify-between gap-4">
+        <span class="font-display text-lg">Does it work for ultra distances?</span>
+        <svg class="chev shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <p class="mt-4 dim leading-relaxed">50K and 50-mile, yes — 24-week structured plans with back-to-back long-run weekends, vertical-gain workouts, and time-on-feet sessions. 100K and 100-miler plans are in beta; we'll let you join the beta if you select that race distance. Trail-specific options (vert-targeted intervals, hike-walk strategy, gear and nutrition prompts) ship with the 50K plan by default.</p>
+    </details>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section id="download" class="relative max-w-7xl mx-auto px-6 py-24 md:py-32">
+  <div class="hero-halo"></div>
+  <div class="text-center mb-12 relative z-10">
+    <h2 class="font-display text-4xl md:text-6xl mb-6">Pick the race. We'll do the rest.</h2>
+    <p class="text-lg md:text-xl dim max-w-xl mx-auto mb-10">14-day Plus trial. No card. The first plan is built in 90 seconds.</p>
+    <div class="flex flex-wrap gap-3 justify-center mb-10">
+      <a href="#" class="badge-store">
+        <svg width="22" height="26" viewBox="0 0 24 28" fill="currentColor"><path d="M17.5 14.7c0-3 2.5-4.5 2.6-4.5-1.4-2.1-3.6-2.4-4.4-2.4-1.9-.2-3.6 1.1-4.6 1.1-1 0-2.4-1.1-4-1-2 0-3.9 1.2-5 3-2.2 3.7-.6 9.2 1.5 12.2 1 1.5 2.2 3.2 3.8 3.1 1.5-.1 2.1-1 3.9-1 1.8 0 2.4 1 4 1 1.6 0 2.7-1.5 3.7-3 1.2-1.7 1.6-3.4 1.7-3.5-.1 0-3.2-1.3-3.2-4.9zm-3-9c.9-1 1.4-2.4 1.3-3.7-1.2 0-2.7.8-3.6 1.8-.8.9-1.5 2.3-1.3 3.6 1.3.1 2.7-.7 3.6-1.7z"/></svg>
+        <div class="flex flex-col text-left"><span class="badge-label">Download on the</span><span class="badge-name">App Store</span></div>
+      </a>
+      <a href="#" class="badge-store">
+        <svg width="22" height="24" viewBox="0 0 22 24"><path d="M1.4 1.2c-.3.3-.4.8-.4 1.4v18.8c0 .7.1 1.2.4 1.4l.1.1L11.7 12.1v-.2L1.5 1.1l-.1.1z" fill="#5BC9F4"/><path d="M15.1 15.6l-3.4-3.4v-.2l3.4-3.4.1.1 4.1 2.3c1.2.7 1.2 1.7 0 2.3l-4.1 2.3-.1z" fill="#FECC2F"/><path d="M15.2 15.5L11.7 12 1.4 22.8c.4.4 1 .5 1.8.1l12-6.8" fill="#EF4136"/><path d="M15.2 8.5L3.2 1.7c-.8-.4-1.4-.3-1.8.1L11.7 12l3.5-3.5z" fill="#0F9D58"/></svg>
+        <div class="flex flex-col text-left"><span class="badge-label">Get it on</span><span class="badge-name">Google Play</span></div>
+      </a>
+    </div>
+  </div>
+  <div class="relative flex justify-center">
+    <div class="phone-glow" style="width:60%;height:120px;"></div>
+    <div class="phone phone-float" style="width:300px;height:614px;">
+      <div class="phone-notch"></div>
+      <div class="phone-screen">
+        <div class="absolute inset-0 p-5 pt-14 flex flex-col items-center justify-center">
+          <div class="app-icon w-20 h-20 mb-6 flex items-center justify-center"><svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#5BFF89" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l6-12 5 8 5-3"/></svg></div>
+          <h3 class="font-display text-2xl mb-2 text-center">Welcome to Stride</h3>
+          <p class="text-[12px] dim text-center mb-6 max-w-[200px]">Tell us your race + date. The plan builds in 90 seconds.</p>
+          <button class="w-full py-3 rounded-2xl text-sm" style="background:#5BFF89;color:#000;font-weight:600;">Pick your race</button>
+          <p class="text-[10px] faint font-mono mt-4">14-day Plus trial · no card</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="relative border-t hairline py-10" style="background:var(--bg-2);">
+  <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div class="flex items-center gap-2.5">
+      <div class="app-icon w-7 h-7 flex items-center justify-center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5BFF89" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l6-12 5 8 5-3"/></svg></div>
+      <span class="font-display text-base">Stride</span>
+      <span class="dim font-mono text-xs ml-3">v 3.8.4</span>
+    </div>
+    <div class="flex flex-wrap gap-7 text-sm dim">
+      <a href="#" class="hover:text-white">Privacy</a>
+      <a href="#" class="hover:text-white">Terms</a>
+      <a href="#" class="hover:text-white">Support</a>
+      <a href="#" class="hover:text-white">Careers</a>
+      <a href="#" class="hover:text-white">Coaches</a>
+    </div>
+    <p class="faint text-xs font-mono">© 2026 Stride Run, Inc.</p>
+  </div>
+</footer>
+
+</body>
+</html>

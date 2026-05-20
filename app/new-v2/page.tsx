@@ -7,25 +7,23 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PublishModal } from "@/components/workspace/publish-modal";
+import { useGeneration } from "@/lib/use-generation";
+import { AutofillModal } from "@/components/workspace-v2/autofill-modal";
 import { EmptyState } from "@/components/workspace-v2/empty-state";
 import { LeftSidebar, type SidebarMode } from "@/components/workspace-v2/left-sidebar";
 import { PreviewPlaceholder } from "@/components/workspace-v2/preview-placeholder";
-import {
-  ACTIVITY_LOG,
-  INITIAL_DESIGN,
-  LAYOUT_PRESETS,
-  PALETTES,
-  SECTIONS,
-  TYPE_SYSTEMS,
-  type DesignState,
-  type Section,
-} from "@/components/workspace-v2/mock-data";
+import { SECTIONS, type Section } from "@/components/workspace-v2/mock-data";
 import { PreviewArea } from "@/components/workspace-v2/preview-area";
-import { buildPreviewDoc } from "@/components/workspace-v2/preview-doc";
+import {
+  ReplaceAssetModal,
+  type ReplaceKind,
+  type ReplacePayload,
+} from "@/components/workspace-v2/replace-asset-modal";
 import { StatusBar } from "@/components/workspace-v2/status-bar";
 import { TopBar } from "@/components/workspace-v2/top-bar";
 import { useDarkMode } from "@/lib/use-dark-mode";
@@ -35,8 +33,8 @@ import { useDarkMode } from "@/lib/use-dark-mode";
 export default function NewV2Page() {
   return (
     <Suspense fallback={null}>
-      {/* Fonts for the design panel typography cards. The preview iframe
-          loads its own copy via preview-doc.ts. Next hoists these to <head>. */}
+      {/* Fonts the workspace chrome + iframe-injected previews use. Next
+          hoists these to <head>. */}
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link
@@ -61,11 +59,14 @@ interface LoadedProject {
   html: string;
   /** True when this project was created from a template or pasted HTML —
    *  i.e. `data.filledBlocks` is empty. Flat projects don't have slot-
-   *  based structure, so the Content/Design panels and the inline-edit
-   *  toggle don't apply (they're designed for the orchestrator's filled-
-   *  block model). The sidebar locks those tabs and the topbar hides the
-   *  toggle when this is true. */
+   *  based structure, so customization splits into two surfaces:
+   *  - **Chat tab** redesigns the page end-to-end via Kimi K2.6 streaming.
+   *  - **Content tab** activates contentEditable in the iframe so the
+   *    user can click any text and edit it directly (autosaved). */
   isFlat: boolean;
+  /** Persistent AI context from the Brief sidebar tab — auto-prepended
+   *  to every Chat tab prompt by `/api/templates/ai-design`. */
+  userBrief: string;
 }
 
 type EntryMode = "choosing" | "ai" | "template" | "paste" | "editing";
@@ -73,11 +74,10 @@ type EntryMode = "choosing" | "ai" | "template" | "paste" | "editing";
 const ALL_TABS: SidebarMode[] = [
   "chat",
   "content",
-  "design",
   "templates",
   "pages",
   "versions",
-  "comments",
+  "brief",
 ];
 
 function NewV2Inner() {
@@ -105,26 +105,130 @@ function NewV2Inner() {
       ? "templates"
       : entryMode === "paste"
         ? "content"
-        : entryMode === "ai"
-          ? "chat"
-          : "design",
+        : "chat",
   );
-  const [inlineEdit, setInlineEdit] = useState(false);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
-  const [activityIdx, setActivityIdx] = useState(0);
   const [saving, setSaving] = useState(false);
   const [loadedProject, setLoadedProject] = useState<LoadedProject | null>(null);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [autofillModalOpen, setAutofillModalOpen] = useState(false);
+
+  // Section-select coordination — iframe ↔ chat composer. The Chat panel
+  // toggles `sectionSelectMode`; PreviewArea injects the selection script
+  // into the iframe and listens for the resulting postMessage at this level
+  // (so the captured payload can flow back into the chat composer's chip).
+  const [sectionSelectMode, setSectionSelectMode] = useState(false);
+  const [scopedSelection, setScopedSelection] = useState<{
+    hint: string;
+    path: string;
+  } | null>(null);
+  const [assetModal, setAssetModal] = useState<{
+    kind: ReplaceKind;
+    path: string;
+    currentSvg: string | null;
+    currentSrc: string | null;
+  } | null>(null);
+  const [pendingChatDraft, setPendingChatDraft] = useState<string | null>(null);
+  const iframeElRef = useRef<HTMLIFrameElement | null>(null);
+
+  // AI generation flow — owned here so the brief survives panel switches
+  // inside the same /new-v2?mode=ai session. On completion, we redirect
+  // to ?project=<id> which drops the user into editing mode.
+  const {
+    state: aiGenState,
+    generate: aiGenerate,
+  } = useGeneration();
+  // Brief can be pre-filled from a deep link (homepage hero CTA, projects
+  // example cards, etc.) via ?brief=<urlencoded>.
+  const briefParam = searchParams.get("brief");
+  const [aiPrompt, setAiPrompt] = useState(() => briefParam?.trim() ?? "");
+  const aiBriefFormState = useMemo(
+    () => ({ prompt: aiPrompt, setPrompt: setAiPrompt }),
+    [aiPrompt],
+  );
+  const aiGenerating = aiGenState.kind === "generating";
+  const handleAiGenerate = useCallback(() => {
+    if (aiGenerating) return;
+    const brief = aiPrompt.trim();
+    if (brief.length < 10) return;
+    void aiGenerate(brief);
+  }, [aiGenerating, aiPrompt, aiGenerate]);
+  // When generation completes and the project has been persisted, drop
+  // the user into the editing surface for that project.
+  useEffect(() => {
+    if (aiGenState.kind !== "done") return;
+    window.location.href = `/new-v2?project=${aiGenState.projectId}`;
+  }, [aiGenState]);
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      const data = e.data;
+      if (!data || typeof data !== "object") return;
+      if (data.type === "openlen:section-selected") {
+        if (
+          typeof data.hint === "string" &&
+          typeof data.path === "string"
+        ) {
+          setScopedSelection({ hint: data.hint, path: data.path });
+        }
+        setSectionSelectMode(false);
+      } else if (data.type === "openlen:section-select-cancelled") {
+        setSectionSelectMode(false);
+      } else if (data.type === "openlen:reorder-cancelled") {
+        // Legacy event — kept for back-compat with iframe scripts that
+        // still post it. With always-on editing there's no mode to flip.
+      } else if (data.type === "openlen:replace-cancelled") {
+        // Same — legacy. Close any open asset modal as a courtesy.
+        setAssetModal(null);
+      } else if (data.type === "openlen:asset-clicked") {
+        const kind = data.kind === "icon" || data.kind === "image"
+          ? (data.kind as ReplaceKind)
+          : null;
+        if (!kind || typeof data.path !== "string") return;
+        setAssetModal({
+          kind,
+          path: data.path,
+          currentSvg:
+            typeof data.currentSvg === "string" ? data.currentSvg : null,
+          currentSrc:
+            typeof data.currentSrc === "string" ? data.currentSrc : null,
+        });
+      } else if (data.type === "openlen:asset-copy-chip-clicked") {
+        const kind =
+          data.kind === "icon" || data.kind === "image"
+            ? (data.kind as ReplaceKind)
+            : null;
+        if (
+          !kind ||
+          typeof data.path !== "string" ||
+          typeof data.hint !== "string"
+        ) {
+          return;
+        }
+        // Exit replace mode so the chat surface gets full attention,
+        // scope the next chat to the swapped element (hard-pin via path),
+        // switch to the Chat tab, and push a context-aware draft into the
+        // composer. The user can hit Send as-is or edit first.
+        setAssetModal(null);
+        setScopedSelection({ hint: data.hint, path: data.path });
+        setMode("chat");
+        setPendingChatDraft(
+          kind === "icon"
+            ? "I just changed the icon here. Update the surrounding title and description so the meaning matches the new icon."
+            : "I just changed the image here. Update the surrounding copy so it matches what the image shows.",
+        );
+      }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+  // Leaving the Chat tab drops the in-progress selection mode (selection
+  // chip persists so the user comes back to it).
+  useEffect(() => {
+    if (mode !== "chat" && sectionSelectMode) setSectionSelectMode(false);
+  }, [mode, sectionSelectMode]);
 
   const [sections, setSections] = useState<Section[]>(SECTIONS);
   const [expanded, setExpanded] = useState<string | null>("hero");
-
-  const [design, setDesignState] = useState<DesignState>(INITIAL_DESIGN);
-  const setDesign = useCallback(
-    (patch: Partial<DesignState>) =>
-      setDesignState((prev) => ({ ...prev, ...patch })),
-    [],
-  );
 
   // Selected template the user is previewing in the main area. Clicking
   // a card sets this; clicking "Use this template →" in the preview banner
@@ -136,24 +240,6 @@ function NewV2Inner() {
   } | null>(null);
   const [committingTemplate, setCommittingTemplate] = useState(false);
   const [templateError, setTemplateError] = useState<string | null>(null);
-
-  const activePalette = useMemo(
-    () => PALETTES.find((p) => p.id === design.paletteId) ?? PALETTES[0],
-    [design.paletteId],
-  );
-  const activeType = useMemo(
-    () => TYPE_SYSTEMS.find((t) => t.id === design.typeId) ?? TYPE_SYSTEMS[0],
-    [design.typeId],
-  );
-
-  // Cycle the bottom-bar activity log so the workspace feels alive.
-  useEffect(() => {
-    const t = setInterval(
-      () => setActivityIdx((i) => (i + 1) % ACTIVITY_LOG.length),
-      4500,
-    );
-    return () => clearInterval(t);
-  }, []);
 
   // Light-up "Saving…" pill for 700ms whenever a section field mutates.
   const updateSection = useCallback(
@@ -170,106 +256,59 @@ function NewV2Inner() {
   // Load real project metadata when /new-v2?project=<id> opens. The mock
   // preview iframe stays in charge of visual content for this session —
   // wiring V3 primitives into the preview is deferred to a follow-up.
+  const refetchProject = useCallback(
+    async (id: string): Promise<void> => {
+      const res = await fetch(`/api/projects/${id}`);
+      if (!res.ok) return;
+      const data = (await res.json().catch(() => null)) as
+        | {
+            project?: {
+              id: string;
+              title: string;
+              subdomain: string | null;
+              publishedAt: string | null;
+              hasUnpublishedChanges: boolean;
+              tags?: string[];
+              userBrief?: string | null;
+              data: { html?: string; filledBlocks?: unknown[] };
+            };
+          }
+        | null;
+      const p = data?.project;
+      if (!p) return;
+      const filledCount = Array.isArray(p.data?.filledBlocks)
+        ? p.data.filledBlocks.length
+        : 0;
+      const html = p.data?.html ?? "";
+      setLoadedProject({
+        id: p.id,
+        title: p.title,
+        subdomain: p.subdomain,
+        publishedAt: p.publishedAt ? new Date(p.publishedAt) : null,
+        hasUnpublishedChanges: p.hasUnpublishedChanges,
+        html,
+        isFlat: filledCount === 0,
+        userBrief: p.userBrief ?? "",
+      });
+      setProjectName(p.title);
+    },
+    [],
+  );
+
   useEffect(() => {
     if (!projectParam) {
       setLoadedProject(null);
       return;
     }
     let cancelled = false;
-    void fetch(`/api/projects/${projectParam}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (cancelled || !data?.project) return;
-        const p = data.project as {
-          id: string;
-          title: string;
-          subdomain: string | null;
-          publishedAt: string | null;
-          hasUnpublishedChanges: boolean;
-          data: { html?: string; filledBlocks?: unknown[] };
-        };
-        const filledCount = Array.isArray(p.data?.filledBlocks)
-          ? p.data.filledBlocks.length
-          : 0;
-        setLoadedProject({
-          id: p.id,
-          title: p.title,
-          subdomain: p.subdomain,
-          publishedAt: p.publishedAt ? new Date(p.publishedAt) : null,
-          hasUnpublishedChanges: p.hasUnpublishedChanges,
-          html: p.data?.html ?? "",
-          isFlat: filledCount === 0,
-        });
-        setProjectName(p.title);
-      })
-      .catch(() => {
-        /* network blip — leave demo state */
-      });
+    void refetchProject(projectParam).catch(() => {
+      if (cancelled) return;
+      /* network blip — leave demo state */
+    });
     return () => {
       cancelled = true;
     };
-  }, [projectParam]);
-
-  // When the user has a non-empty composition, fetch the server-rendered HTML
-  // for all sections stacked top-to-bottom and plug it into the preview iframe.
-  // An empty array means "show the mock Acme landing" (legacy default).
-  //
-  // We serialise design.composition into a stable key so the effect doesn't
-  // refetch when palette/typography/density swap — only when the section list
-  // changes. The CSS variables for design tokens flow in via preview-doc.
-  const compositionKey = useMemo(
-    () => design.composition.map((s) => `${s.id}:${s.layoutId}`).join("|"),
-    [design.composition],
-  );
-  const [layoutHtml, setLayoutHtml] = useState<string | null>(null);
-  useEffect(() => {
-    if (design.composition.length === 0) {
-      setLayoutHtml(null);
-      return;
-    }
-    const instances = design.composition
-      .map((s) => {
-        const preset = LAYOUT_PRESETS.find((l) => l.id === s.layoutId);
-        if (!preset) return null;
-        return { id: s.id, primitive: preset.primitive, variant: preset.variant };
-      })
-      .filter((x): x is { id: string; primitive: "Hero" | "Stack" | "Split" | "Grid" | "CTA"; variant: string } => x !== null);
-    if (instances.length === 0) {
-      setLayoutHtml(null);
-      return;
-    }
-    let cancelled = false;
-    void fetch("/api/render-layout", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ instances }),
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (cancelled) return;
-        if (data && typeof data.html === "string") setLayoutHtml(data.html);
-      })
-      .catch(() => {
-        /* keep last preview on transient failure */
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [compositionKey]);
-
-  const previewDoc = useMemo(
-    () =>
-      buildPreviewDoc({
-        sections,
-        design,
-        palette: activePalette,
-        type: activeType,
-        inlineEdit,
-        layoutHtml,
-      }),
-    [sections, design, activePalette, activeType, inlineEdit, layoutHtml],
-  );
+  }, [projectParam, refetchProject]);
 
   const published = loadedProject?.subdomain
     ? {
@@ -279,38 +318,45 @@ function NewV2Inner() {
     : null;
 
   const onPublish = loadedProject ? () => setPublishModalOpen(true) : undefined;
+  // Editing mode = Content (pencil) tab is active on a loaded project.
+  // Gates ALL iframe affordances: drag handles, image/icon replace,
+  // and (for flat projects) inline-edit. Other tabs render the iframe
+  // clean — no hover outlines, no drag, no replace buttons.
+  const editingActive =
+    mode === "content" &&
+    entryMode === "editing" &&
+    !!loadedProject;
+  // Autofill is a flat-project feature (you fill a template's generic copy
+  // with your business data). It doesn't apply to slot-based AI projects
+  // which already have AI-generated content for each slot.
+  const onAutofill =
+    loadedProject?.isFlat ? () => setAutofillModalOpen(true) : undefined;
 
   // Compute which sidebar tabs are locked based on the entry mode + the
   // loaded project's shape. In an entry flow, only the relevant tab is
-  // interactive. In editing, "flat" projects (template-clone / paste)
-  // lock Content + Design because those panels expect slot-based structure
-  // the orchestrator produces (filledBlocks); a pure-HTML project has none.
+  // interactive. In editing mode every tab opens — flat projects show a
+  // hint-only Content panel (no slot form) and the iframe enters inline
+  // edit when that tab is active.
   const lockedTabs = useMemo<SidebarMode[]>(() => {
-    if (entryMode === "editing") {
-      return loadedProject?.isFlat
-        ? (["content", "design"] as SidebarMode[])
-        : [];
-    }
+    if (entryMode === "editing") return [];
     if (entryMode === "choosing") return [...ALL_TABS];
     if (entryMode === "ai") return ALL_TABS.filter((t) => t !== "chat");
     if (entryMode === "template")
       return ALL_TABS.filter((t) => t !== "templates");
     if (entryMode === "paste") return ALL_TABS.filter((t) => t !== "content");
     return [];
-  }, [entryMode, loadedProject?.isFlat]);
+  }, [entryMode]);
 
   const lockReason =
     entryMode === "choosing"
       ? "Pick a starting point first"
-      : entryMode === "editing" && loadedProject?.isFlat
-        ? "Only available on AI-generated projects (your project is template-based HTML)"
-        : "Available once your page is created";
+      : "Available once your page is created";
 
   // If the project's "shape" makes the current sidebar tab inert, snap to
   // the first unlocked tab. Without this, a flat project loaded straight
-  // into `mode === "design"` would leave the user staring at a panel they
-  // can't interact with (the tab button is locked, but the panel content
-  // would still render because state outlived the lock decision).
+  // into a locked mode would leave the user staring at a panel they can't
+  // interact with (the tab button is locked, but the panel content would
+  // still render because state outlived the lock decision).
   useEffect(() => {
     if (lockedTabs.includes(mode)) {
       const next = ALL_TABS.find((t) => !lockedTabs.includes(t));
@@ -318,34 +364,161 @@ function NewV2Inner() {
     }
   }, [lockedTabs, mode]);
 
-  // Inline-edit toggle only makes sense on slot-based AI-generated pages
-  // (`<EditableText>` wrappers carry `data-slot-path` markers we listen
-  // for). Flat HTML projects have none of that — hide the toggle there.
-  const inlineEditAvailable =
-    entryMode === "editing" && !!loadedProject && !loadedProject.isFlat;
+  // When the workspace transitions into "editing" (e.g. a template-clone or
+  // paste flow commits and we land on ?project=<id>), drop the user on the
+  // Chat tab — that's the design surface for flat projects and the most
+  // useful starting point for rich projects too. Without this hook the user
+  // would stay on "templates" (the entry-flow default) after a commit.
+  const prevEntryModeRef = useRef(entryMode);
+  useEffect(() => {
+    if (
+      entryMode === "editing" &&
+      prevEntryModeRef.current !== "editing"
+    ) {
+      setMode("chat");
+    }
+    prevEntryModeRef.current = entryMode;
+  }, [entryMode]);
 
-  // ⌘E toggles inline edit, matching the artifact and V1 muscle memory.
-  // Disabled when inline edit isn't applicable (no project, flat project).
+  // Inline editing is activated implicitly by the Content sidebar tab.
+  // Used to be gated on `isFlat` (flat = template-clone / paste) but the
+  // distinction is gone now — the same contentEditable + Reorder +
+  // Replace surface works for every project, AI-generated or not. The
+  // PATCH path (/api/projects/<id>/html) doesn't care about isFlat.
+  const editableInjection =
+    mode === "content" && entryMode === "editing" && !!loadedProject;
+
+  // Save state surfaced to TopBar (chrome polish session renders the pill;
+  // we just track it here so the contract is wired end-to-end).
+  const [savingStatus, setSavingStatus] = useState<"idle" | "saving" | "saved">(
+    "idle",
+  );
+  const saveTimerRef = useRef<number | null>(null);
+  const savedFlashRef = useRef<number | null>(null);
+
+  // Listen for the iframe's `openlen:html-changed` messages whenever the
+  // user is in Content tab editing mode. Inline-edit, Reorder, and
+  // Replace all emit via this same contract; the scripts only inject
+  // when editingActive is true, so we only accept messages then.
+  const acceptsHtmlChanged = editingActive;
+  useEffect(() => {
+    if (!acceptsHtmlChanged || !loadedProject) return;
+    const projectId = loadedProject.id;
+
+    const onMessage = (e: MessageEvent) => {
+      if (!e.data || e.data.type !== "openlen:html-changed") return;
+      const html = typeof e.data.outerHtml === "string" ? e.data.outerHtml : "";
+      if (!html) return;
+      const source =
+        e.data.source === "reorder"
+          ? "reorder"
+          : e.data.source === "replace"
+            ? "replace"
+            : "inline-edit";
+      setLoadedProject((prev) =>
+        prev && prev.id === projectId ? { ...prev, html } : prev,
+      );
+      if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = window.setTimeout(() => {
+        setSavingStatus("saving");
+        void fetch(`/api/projects/${projectId}/html`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ html, source }),
+        })
+          .then((r) => {
+            setSavingStatus(r.ok ? "saved" : "idle");
+            if (r.ok) {
+              setLoadedProject((prev) =>
+                prev && prev.id === projectId
+                  ? { ...prev, hasUnpublishedChanges: !!prev.subdomain }
+                  : prev,
+              );
+              if (savedFlashRef.current !== null)
+                window.clearTimeout(savedFlashRef.current);
+              savedFlashRef.current = window.setTimeout(
+                () => setSavingStatus("idle"),
+                1600,
+              );
+            }
+          })
+          .catch(() => setSavingStatus("idle"));
+      }, 500);
+    };
+
+    window.addEventListener("message", onMessage);
+    return () => {
+      window.removeEventListener("message", onMessage);
+      if (saveTimerRef.current !== null) {
+        window.clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+      if (savedFlashRef.current !== null) {
+        window.clearTimeout(savedFlashRef.current);
+        savedFlashRef.current = null;
+      }
+    };
+  }, [acceptsHtmlChanged, loadedProject?.id, loadedProject?.subdomain]);
+
+  // Reset transient interaction modes whenever the loaded project changes
+  // (cross-project switches inside /new-v2). Without this, the iframe
+  // derive effect would refuse to refresh srcDoc while reorder or inline-
+  // edit is active, leaving the user staring at the OLD project's HTML.
+  const prevLoadedIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const newId = loadedProject?.id ?? null;
+    if (newId !== prevLoadedIdRef.current) {
+      setSectionSelectMode(false);
+      setScopedSelection(null);
+      setAssetModal(null);
+      setPendingChatDraft(null);
+    }
+    prevLoadedIdRef.current = newId;
+  }, [loadedProject?.id]);
+
+  // ⌘E toggles to/from the Content tab; Esc backs out of the active mode.
+  // The iframe-injected scripts have their own Esc handlers, but those only
+  // fire when the iframe itself has focus — this covers the common case
+  // where the user activated a mode from the sidebar, so keyboard focus is
+  // on the parent document and the iframe never sees the keypress.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!inlineEditAvailable) return;
+      if (entryMode !== "editing" || !loadedProject) return;
       const t = e.target as HTMLElement | null;
       if (t && /input|textarea/i.test(t.tagName)) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "e") {
         e.preventDefault();
-        setInlineEdit((v) => !v);
+        setMode((prev) => (prev === "content" ? "chat" : "content"));
+        return;
+      }
+      if (e.key === "Escape") {
+        // A modal owns Escape while it's open.
+        if (publishModalOpen || autofillModalOpen || assetModal) return;
+        if (sectionSelectMode) {
+          e.preventDefault();
+          setSectionSelectMode(false);
+          return;
+        }
+        if (mode === "content") {
+          e.preventDefault();
+          setMode("chat");
+        }
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [inlineEditAvailable]);
+  }, [
+    entryMode,
+    loadedProject,
+    mode,
+    sectionSelectMode,
+    publishModalOpen,
+    autofillModalOpen,
+    assetModal,
+  ]);
 
   const handlePickAI = () => {
-    // V2 deep AI integration (brief form + SSE in the chat panel) is a
-    // follow-up — for this session we send the user to /new which already
-    // wires the orchestrator end-to-end. Once they generate there and have
-    // a project, opening /new-v2?project=<id> drops them into V2 editing.
-    window.location.href = "/new";
+    router.push("/new-v2?mode=ai");
   };
   const handlePickTemplate = () => {
     router.push("/new-v2?mode=template");
@@ -393,11 +566,16 @@ function NewV2Inner() {
       <TopBar
         projectName={projectName}
         onRename={setProjectName}
-        inlineEdit={inlineEdit}
-        setInlineEdit={setInlineEdit}
-        inlineEditAvailable={inlineEditAvailable}
+        projectLoading={!!projectParam && !loadedProject}
+        savingStatus={savingStatus}
         onPublish={onPublish}
         published={published}
+        projectId={loadedProject?.id}
+        onRolledBack={() => {
+          if (loadedProject?.id) {
+            void refetchProject(loadedProject.id);
+          }
+        }}
         dark={dark}
         onToggleDark={toggleDark}
       />
@@ -411,8 +589,6 @@ function NewV2Inner() {
           expanded={expanded}
           setExpanded={setExpanded}
           onUpdateSection={updateSection}
-          design={design}
-          setDesign={setDesign}
           onPreviewTemplate={(t) => {
             setPreviewingTemplate(t);
             setTemplateError(null);
@@ -421,6 +597,42 @@ function NewV2Inner() {
           lockedTabs={lockedTabs}
           lockReason={lockReason}
           entryMode={entryMode}
+          flatProjectHtml={loadedProject?.html}
+          flatProjectId={loadedProject?.id}
+          onFlatHtmlUpdate={(newHtml) =>
+            setLoadedProject((prev) =>
+              prev ? { ...prev, html: newHtml } : prev,
+            )
+          }
+          projectLoading={!!projectParam && !loadedProject}
+          savingStatus={savingStatus}
+          currentProjectId={loadedProject?.id ?? null}
+          onRestoreApplied={(newHtml) =>
+            setLoadedProject((prev) =>
+              prev ? { ...prev, html: newHtml } : prev,
+            )
+          }
+          initialBrief={loadedProject?.userBrief ?? ""}
+          onBriefSaved={(newBrief) =>
+            setLoadedProject((prev) =>
+              prev ? { ...prev, userBrief: newBrief } : prev,
+            )
+          }
+          sectionSelectMode={sectionSelectMode}
+          onToggleSectionSelect={(active) => {
+            setSectionSelectMode(active);
+            if (!active) {
+              /* nothing else — user can cancel and re-engage */
+            }
+          }}
+          scopedSelection={scopedSelection}
+          onClearScope={() => setScopedSelection(null)}
+          onAutofill={onAutofill}
+          pendingDraft={pendingChatDraft}
+          onPendingDraftConsumed={() => setPendingChatDraft(null)}
+          aiBriefState={aiBriefFormState}
+          aiOnGenerate={handleAiGenerate}
+          aiGenerating={aiGenerating}
         />
         {entryMode === "choosing" && (
           <EmptyState
@@ -439,9 +651,9 @@ function NewV2Inner() {
               )}
               <PreviewArea
                 doc=""
-                inlineEdit={false}
                 previewUrl={previewingTemplate.previewUrl}
                 templateName={previewingTemplate.name}
+                openInNewTabUrl={previewingTemplate.previewUrl}
                 onUseTemplate={() => {
                   void handleUseTemplate();
                 }}
@@ -455,12 +667,69 @@ function NewV2Inner() {
           ) : (
             <PreviewPlaceholder mode="template" />
           ))}
-        {(entryMode === "ai" || entryMode === "paste") && (
+        {entryMode === "ai" && (
+          aiGenState.kind === "generating" ? (
+            <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-preview-a">
+              <div className="h-9 shrink-0 flex items-center gap-2 px-4 border-b bd text-[11.5px] fg-muted">
+                <span className="h-3 w-3 rounded-full border-2 border-coral-500 border-t-transparent animate-spin" />
+                {aiGenState.html
+                  ? "Designing your page…"
+                  : "Thinking through the design…"}
+              </div>
+              {aiGenState.html ? (
+                <iframe
+                  title="Generating preview"
+                  srcDoc={aiGenState.html}
+                  className="flex-1 min-h-0 w-full border-0 bg-white"
+                  sandbox="allow-scripts"
+                />
+              ) : (
+                <div className="flex-1 min-h-0 flex items-center justify-center px-6">
+                  <div className="max-w-md text-center text-[12.5px] fg-muted leading-relaxed">
+                    {aiGenState.reasoning || "Reading your brief…"}
+                  </div>
+                </div>
+              )}
+            </section>
+          ) : aiGenState.kind === "error" ? (
+            <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-preview-a">
+              <div className="flex-1 min-h-0 flex items-center justify-center px-6">
+                <div className="text-center max-w-md">
+                  <div className="text-[13px] text-red-600 dark:text-red-400 mb-1">
+                    Generation failed
+                  </div>
+                  <div className="text-[12px] fg-muted">
+                    {aiGenState.message}
+                  </div>
+                  <div className="mt-3 text-[11px] fg-faint">
+                    Tweak your brief in the sidebar and try again.
+                  </div>
+                </div>
+              </div>
+            </section>
+          ) : (
+            <PreviewPlaceholder mode="ai" />
+          )
+        )}
+        {entryMode === "paste" && (
           <PreviewPlaceholder mode={entryMode} />
         )}
         {entryMode === "editing" &&
           (loadedProject?.html ? (
-            <PreviewArea doc={loadedProject.html} inlineEdit={inlineEdit} />
+            <PreviewArea
+              doc={loadedProject.html}
+              editableInjection={editableInjection}
+              sectionSelectMode={sectionSelectMode}
+              editingActive={editingActive}
+              onIframeRef={(el) => {
+                iframeElRef.current = el;
+              }}
+              openInNewTabUrl={
+                loadedProject.subdomain
+                  ? `https://${loadedProject.subdomain}.openlen.com`
+                  : `/api/projects/${loadedProject.id}/raw`
+              }
+            />
           ) : (
             <div className="flex-1 flex items-center justify-center bg-preview-a">
               <div className="text-[12px] fg-faint">
@@ -471,7 +740,7 @@ function NewV2Inner() {
             </div>
           ))}
       </div>
-      <StatusBar activityIdx={activityIdx} saving={saving} />
+      <StatusBar saving={saving} published={published} />
       {loadedProject && (
         <PublishModal
           open={publishModalOpen}
@@ -496,6 +765,42 @@ function NewV2Inner() {
           }}
         />
       )}
+      {loadedProject?.isFlat && (
+        <AutofillModal
+          open={autofillModalOpen}
+          projectId={loadedProject.id}
+          onClose={() => setAutofillModalOpen(false)}
+          onApplied={(newHtml) =>
+            setLoadedProject((prev) =>
+              prev ? { ...prev, html: newHtml, hasUnpublishedChanges: true } : prev,
+            )
+          }
+        />
+      )}
+      <ReplaceAssetModal
+        open={!!assetModal}
+        kind={assetModal?.kind ?? null}
+        currentSvg={assetModal?.currentSvg ?? null}
+        currentSrc={assetModal?.currentSrc ?? null}
+        projectId={loadedProject?.id ?? null}
+        onClose={() => setAssetModal(null)}
+        onPick={(payload: ReplacePayload) => {
+          if (!assetModal) return;
+          const iframe = iframeElRef.current;
+          if (iframe?.contentWindow) {
+            iframe.contentWindow.postMessage(
+              {
+                type: "openlen:swap-asset",
+                kind: assetModal.kind,
+                path: assetModal.path,
+                payload,
+              },
+              "*",
+            );
+          }
+          setAssetModal(null);
+        }}
+      />
     </div>
   );
 }

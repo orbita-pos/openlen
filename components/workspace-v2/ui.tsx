@@ -33,7 +33,7 @@ export function Tooltip({
     <span className="relative inline-flex group">
       {children}
       <span
-        className={`pointer-events-none absolute z-50 whitespace-nowrap rounded-md bg-zinc-900 dark:bg-zinc-800 px-2 py-1 text-[11px] font-medium text-white opacity-0 transition group-hover:opacity-100 shadow-md ${sidePos} ${className}`}
+        className={`pointer-events-none absolute z-50 max-w-[200px] rounded-md border bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:border-zinc-200/60 border-zinc-700/60 px-2 py-1 text-[11px] font-medium leading-snug opacity-0 transition group-hover:opacity-100 shadow-md ${sidePos} ${className}`}
       >
         {label}
       </span>

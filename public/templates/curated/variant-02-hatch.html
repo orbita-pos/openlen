@@ -1,0 +1,925 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hatch — Career-change to engineering in 12 weeks.</title>
+<meta name="description" content="A full-time, 12-week software engineering bootcamp for career switchers with zero coding background. Live instruction, 1:1 mentorship, capstone, and job-placement support. 84% placement, $82,408 average starting salary." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#08090A;
+    --bg-2:#0D0F10;
+    --bg-3:#141618;
+    --ink:#F4F2EE;
+    --ink-2:#A6A49E;
+    --ink-3:#6C6B66;
+    --amber:#F5C26B;
+    --amber-2:#FFD78F;
+    --line:rgba(255,255,255,0.085);
+    --line-2:rgba(255,255,255,0.05);
+  }
+  *{ -webkit-tap-highlight-color:transparent; }
+  html{ scroll-behavior:smooth; }
+  html,body{ background:var(--bg); color:var(--ink); }
+  body{
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+    font-feature-settings:"ss01","cv11";
+    font-optical-sizing:auto;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.55;
+  }
+  .display{ font-weight:800; letter-spacing:-0.035em; line-height:1.02; }
+  .mono{ font-family:'Geist Mono',ui-monospace,Menlo,monospace; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  em.amber{ font-style:normal; color:var(--amber); }
+  .halftone{ opacity:0.4; }
+  .marker{ font-family:'Geist Mono',monospace; font-size:11px; letter-spacing:0.15em; text-transform:uppercase; color:var(--ink-3); }
+  .accent-line{ display:inline-block; width:24px; height:1px; background:var(--amber); vertical-align:middle; margin-right:9px; }
+  .rule{ border-color:var(--line); }
+  .rule-2{ border-color:var(--line-2); }
+  .dotgrid{
+    background-image:radial-gradient(rgba(255,255,255,0.055) 1px, transparent 1px);
+    background-size:34px 34px;
+    background-position:-10px -10px;
+  }
+  .mesh{
+    background-image:
+      radial-gradient(52% 44% at 82% 4%, rgba(245,194,107,0.16), transparent 64%),
+      radial-gradient(46% 40% at 8% 22%, rgba(245,194,107,0.07), transparent 70%);
+  }
+  .pulse-dot{ position:relative; display:inline-block; width:7px; height:7px; border-radius:999px; background:var(--amber); box-shadow:0 0 0 0 rgba(245,194,107,0.6); animation:pulse 1.8s ease-out infinite; }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(245,194,107,0.5); }
+    70%{ box-shadow:0 0 0 9px rgba(245,194,107,0); }
+    100%{ box-shadow:0 0 0 0 rgba(245,194,107,0); }
+  }
+  .btn-amber{ transition:transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease; }
+  .btn-amber:hover{ transform:translateY(-1px); background-color:var(--amber-2); box-shadow:0 10px 30px -10px rgba(245,194,107,0.5); }
+  .btn-ghost{ transition:transform 120ms ease, border-color 120ms ease, background-color 120ms ease; }
+  .btn-ghost:hover{ transform:translateY(-1px); border-color:rgba(255,255,255,0.28); background-color:var(--bg-3); }
+  .card-lift{ transition:transform 130ms ease, border-color 130ms ease, background-color 130ms ease; }
+  .card-lift:hover{ transform:translateY(-2px); border-color:rgba(255,255,255,0.2); }
+  .ul-link{ position:relative; }
+  .ul-link::after{ content:""; position:absolute; left:0; right:0; bottom:-3px; height:1px; background:var(--amber); transform:scaleX(0); transform-origin:right center; transition:transform 250ms cubic-bezier(.2,.7,.2,1); }
+  .ul-link:hover::after{ transform:scaleX(1); transform-origin:left center; }
+  .marquee-mask{ -webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent); mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent); }
+  .marquee{ display:flex; gap:58px; width:max-content; align-items:center; animation:marq 38s linear infinite; }
+  @keyframes marq{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+  .blob-1{ background:radial-gradient(125% 100% at 28% 20%, #FBD89B 0%, #E0913C 44%, #6A3C0E 100%); }
+  .blob-2{ background:radial-gradient(125% 100% at 70% 22%, #8FD8C8 0%, #2F8E86 46%, #0E3936 100%); }
+  .blob-3{ background:radial-gradient(125% 100% at 32% 24%, #C3AEF0 0%, #6E51B8 46%, #271A4A 100%); }
+  .blob-4{ background:radial-gradient(125% 100% at 66% 26%, #F3AEB8 0%, #C04D63 46%, #4A1722 100%); }
+  details>summary{ list-style:none; cursor:pointer; }
+  details>summary::-webkit-details-marker{ display:none; }
+  details[open] .acc-sign{ transform:rotate(45deg); }
+  .acc-sign{ transition:transform 200ms ease; }
+  details[open] .acc-row{ background-color:var(--bg-3); }
+  .navbar{ backdrop-filter:blur(14px) saturate(150%); -webkit-backdrop-filter:blur(14px) saturate(150%); background:rgba(8,9,10,0.78); }
+  ::selection{ background:rgba(245,194,107,0.28); color:#fff; }
+  .scroll-x{ transition:transform 150ms ease; }
+  a:hover .scroll-x{ transform:translateX(3px); }
+  .glow-card{ box-shadow:0 0 0 1px var(--line), 0 30px 60px -40px rgba(245,194,107,0.35); }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ================= NAV ================= -->
+<header class="navbar fixed top-0 inset-x-0 z-50 border-b rule-2">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 h-[66px] flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
+        <path d="M5 21V8.5L13 4l8 4.5V21" fill="none" stroke="#F4F2EE" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M9.5 21v-6.5h7V21" fill="none" stroke="#F5C26B" stroke-width="1.5" stroke-linejoin="round"/>
+      </svg>
+      <span class="text-[20px] font-extrabold tracking-tight">Hatch</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8 text-[14px] text-[color:var(--ink-2)]">
+      <a href="#curriculum" class="ul-link">Curriculum</a>
+      <a href="#instructors" class="ul-link">Instructors</a>
+      <a href="#outcomes" class="ul-link">Outcomes</a>
+      <a href="#faq" class="ul-link">FAQ</a>
+    </nav>
+    <a href="#apply" class="btn-amber inline-flex items-center gap-2 rounded-lg bg-[color:var(--amber)] text-[#0A0A0A] font-bold text-[14px] px-4 py-2">
+      Apply now
+    </a>
+  </div>
+</header>
+
+<!-- ================= HERO ================= -->
+<section id="top" class="relative overflow-hidden mesh pt-[66px]">
+  <div class="absolute inset-0 dotgrid opacity-80 pointer-events-none"></div>
+  <div class="relative max-w-[1200px] mx-auto px-5 sm:px-8 pt-16 sm:pt-20 pb-16 sm:pb-24">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
+
+      <div class="lg:col-span-7">
+        <div class="inline-flex items-center gap-2.5 rounded-full border rule bg-[color:var(--bg-2)] pl-2.5 pr-3.5 py-1.5 mb-7">
+          <span class="pulse-dot"></span>
+          <span class="mono text-[11px] sm:text-[12px] text-[color:var(--ink-2)]">Cohort 29 · 17 of 24 seats taken</span>
+        </div>
+
+        <h1 class="display text-[clamp(40px,6.6vw,80px)]">
+          Career-change to<br/>engineering in 12 weeks.<br/>
+          <em class="amber">No CS degree required.</em>
+        </h1>
+
+        <p class="text-[16px] sm:text-[18px] text-[color:var(--ink-2)] leading-[1.6] mt-7 max-w-[56ch]">
+          A full-time, 12-week immersive for career switchers with zero coding background. Live instruction Monday to Friday, a 1:1 mentor, a portfolio-grade capstone, and job-placement support that doesn't stop until you're hired.
+        </p>
+
+        <div class="flex flex-col sm:flex-row gap-3 mt-8">
+          <a href="#apply" class="btn-amber inline-flex items-center justify-center gap-2 rounded-lg bg-[color:var(--amber)] text-[#0A0A0A] font-bold px-6 py-3.5 text-[15px]">
+            Apply for Cohort 29 <span class="scroll-x">→</span>
+          </a>
+          <a href="#outcomes" class="btn-ghost inline-flex items-center justify-center gap-2 rounded-lg border rule text-[color:var(--ink)] font-semibold px-6 py-3.5 text-[15px]">
+            See the placement data
+          </a>
+        </div>
+        <p class="marker mt-7">Graduates now build at Linear, Vercel, Stripe &amp; 380+ teams</p>
+      </div>
+
+      <!-- cohort card -->
+      <div class="lg:col-span-5">
+        <div class="rounded-2xl border rule bg-[color:var(--bg-2)] p-6 sm:p-7 glow-card">
+          <div class="flex items-center justify-between">
+            <div class="mono text-[12px] text-[color:var(--ink-2)]">COHORT 29</div>
+            <div class="mono text-[11px] text-[color:var(--amber)]">● ENROLLING</div>
+          </div>
+          <div class="mono text-[14px] text-[color:var(--ink)] mt-2">Jun 23 &nbsp;→&nbsp; Sep 12, 2026</div>
+
+          <!-- seats -->
+          <div class="mt-5">
+            <div class="flex justify-between text-[12px] mb-2">
+              <span class="mono text-[color:var(--ink-2)]">Seats filled</span>
+              <span class="mono text-[color:var(--ink)] tnum">17 / 24</span>
+            </div>
+            <div class="h-2 rounded-full bg-[color:var(--bg-3)] overflow-hidden">
+              <div class="h-full rounded-full bg-[color:var(--amber)]" style="width:70.8%"></div>
+            </div>
+            <div class="mono text-[11px] text-[color:var(--amber)] mt-2">7 seats remain</div>
+          </div>
+
+          <!-- countdown -->
+          <div class="mt-6 pt-5 border-t rule-2">
+            <div class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em] mb-3">Applications close in</div>
+            <div class="grid grid-cols-4 gap-2">
+              <div class="rounded-lg bg-[color:var(--bg-3)] border rule-2 py-2.5 text-center">
+                <div id="cd-d" class="display tnum text-[26px]">00</div>
+                <div class="mono text-[9px] text-[color:var(--ink-3)] mt-0.5">DAYS</div>
+              </div>
+              <div class="rounded-lg bg-[color:var(--bg-3)] border rule-2 py-2.5 text-center">
+                <div id="cd-h" class="display tnum text-[26px]">00</div>
+                <div class="mono text-[9px] text-[color:var(--ink-3)] mt-0.5">HRS</div>
+              </div>
+              <div class="rounded-lg bg-[color:var(--bg-3)] border rule-2 py-2.5 text-center">
+                <div id="cd-m" class="display tnum text-[26px]">00</div>
+                <div class="mono text-[9px] text-[color:var(--ink-3)] mt-0.5">MIN</div>
+              </div>
+              <div class="rounded-lg bg-[color:var(--bg-3)] border rule-2 py-2.5 text-center">
+                <div id="cd-s" class="display tnum text-[26px]">00</div>
+                <div class="mono text-[9px] text-[color:var(--ink-3)] mt-0.5">SEC</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 mt-5">
+            <div class="rounded-lg bg-[color:var(--bg-3)] border rule-2 p-3.5">
+              <div class="display tnum text-[28px] text-[color:var(--amber)]">84%</div>
+              <div class="mono text-[10px] text-[color:var(--ink-3)] mt-0.5">placed in 6 months</div>
+            </div>
+            <div class="rounded-lg bg-[color:var(--bg-3)] border rule-2 p-3.5">
+              <div class="display tnum text-[28px] text-[color:var(--amber)]">$82.4k</div>
+              <div class="mono text-[10px] text-[color:var(--ink-3)] mt-0.5">avg starting salary</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ================= TRUST BAR ================= -->
+<section class="border-y rule-2 bg-[color:var(--bg-2)] py-11">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8">
+    <div class="marker mb-7"><span class="accent-line"></span>Where our graduates work now</div>
+    <div class="marquee-mask overflow-hidden">
+      <div class="marquee text-[color:var(--ink-2)]">
+        <span class="text-[24px] font-bold tracking-tight">Linear</span>
+        <span class="text-[24px] font-semibold tracking-tight">Vercel</span>
+        <span class="text-[24px] font-bold tracking-tight">Stripe</span>
+        <span class="text-[24px] font-semibold">Mercury</span>
+        <span class="mono text-[20px] tracking-[0.14em]">NIMBUS</span>
+        <span class="text-[24px] font-bold tracking-tight">Brightwave</span>
+        <span class="text-[24px] font-medium tracking-tight">Forecast</span>
+        <span class="text-[24px] font-semibold tracking-[0.04em]">Vantage</span>
+        <span class="text-[24px] font-bold tracking-tight">Glide</span>
+        <span class="text-[24px] font-medium tracking-tight">Northwind</span>
+        <span aria-hidden="true" class="text-[24px] font-bold tracking-tight">Linear</span>
+        <span aria-hidden="true" class="text-[24px] font-semibold tracking-tight">Vercel</span>
+        <span aria-hidden="true" class="text-[24px] font-bold tracking-tight">Stripe</span>
+        <span aria-hidden="true" class="text-[24px] font-semibold">Mercury</span>
+        <span aria-hidden="true" class="mono text-[20px] tracking-[0.14em]">NIMBUS</span>
+        <span aria-hidden="true" class="text-[24px] font-bold tracking-tight">Brightwave</span>
+        <span aria-hidden="true" class="text-[24px] font-medium tracking-tight">Forecast</span>
+        <span aria-hidden="true" class="text-[24px] font-semibold tracking-[0.04em]">Vantage</span>
+        <span aria-hidden="true" class="text-[24px] font-bold tracking-tight">Glide</span>
+        <span aria-hidden="true" class="text-[24px] font-medium tracking-tight">Northwind</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= WHAT YOU'LL LEARN ================= -->
+<section id="learn" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="max-w-[60ch]">
+    <div class="marker mb-5"><span class="accent-line"></span>What you'll learn</div>
+    <h2 class="display text-[clamp(32px,4.6vw,54px)]">
+      Twelve weeks. Four phases.<br/><em class="amber">Zero to job-ready.</em>
+    </h2>
+    <p class="text-[16px] sm:text-[17px] text-[color:var(--ink-2)] mt-5 leading-[1.6]">
+      The curriculum is sequenced the way a real engineering team is built — foundations first, then the frontend, then the backend that holds it up, then a capstone you can put a hiring manager in front of.
+    </p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-12">
+    <div class="rounded-2xl border rule bg-[color:var(--bg-2)] p-7 card-lift">
+      <div class="flex items-center justify-between">
+        <span class="mono text-[12px] text-[color:var(--amber)]">PHASE 01</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)]">Weeks 1–3</span>
+      </div>
+      <h3 class="text-[21px] font-bold mt-2.5">Foundations</h3>
+      <ul class="mt-4 space-y-2 text-[14px] text-[color:var(--ink-2)]">
+        <li class="flex gap-2.5"><span class="text-[color:var(--amber)]">▸</span> The command line, HTML, and CSS layout</li>
+        <li class="flex gap-2.5"><span class="text-[color:var(--amber)]">▸</span> JavaScript fundamentals — the DOM and events</li>
+        <li class="flex gap-2.5"><span class="text-[color:var(--amber)]">▸</span> Git, GitHub, and your first deployed URL</li>
+      </ul>
+      <div class="mono text-[12px] text-[color:var(--ink-3)] mt-5 pt-4 border-t rule-2">DELIVERABLE — An interactive site, shipped live</div>
+    </div>
+    <div class="rounded-2xl border rule bg-[color:var(--bg-2)] p-7 card-lift">
+      <div class="flex items-center justify-between">
+        <span class="mono text-[12px] text-[color:var(--amber)]">PHASE 02</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)]">Weeks 4–6</span>
+      </div>
+      <h3 class="text-[21px] font-bold mt-2.5">The Frontend</h3>
+      <ul class="mt-4 space-y-2 text-[14px] text-[color:var(--ink-2)]">
+        <li class="flex gap-2.5"><span class="text-[color:var(--amber)]">▸</span> Async JavaScript, fetch, and real APIs</li>
+        <li class="flex gap-2.5"><span class="text-[color:var(--amber)]">▸</span> React — components, state, hooks</li>
+        <li class="flex gap-2.5"><span class="text-[color:var(--amber)]">▸</span> TypeScript and testing with Vitest</li>
+      </ul>
+      <div class="mono text-[12px] text-[color:var(--ink-3)] mt-5 pt-4 border-t rule-2">DELIVERABLE — A typed, tested React application</div>
+    </div>
+    <div class="rounded-2xl border rule bg-[color:var(--bg-2)] p-7 card-lift">
+      <div class="flex items-center justify-between">
+        <span class="mono text-[12px] text-[color:var(--amber)]">PHASE 03</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)]">Weeks 7–9</span>
+      </div>
+      <h3 class="text-[21px] font-bold mt-2.5">The Backend</h3>
+      <ul class="mt-4 space-y-2 text-[14px] text-[color:var(--ink-2)]">
+        <li class="flex gap-2.5"><span class="text-[color:var(--amber)]">▸</span> Node, Express, and REST API design</li>
+        <li class="flex gap-2.5"><span class="text-[color:var(--amber)]">▸</span> SQL, Postgres, indexes, and migrations</li>
+        <li class="flex gap-2.5"><span class="text-[color:var(--amber)]">▸</span> Auth, security basics, and deployment</li>
+      </ul>
+      <div class="mono text-[12px] text-[color:var(--ink-3)] mt-5 pt-4 border-t rule-2">DELIVERABLE — A full-stack app in production</div>
+    </div>
+    <div class="rounded-2xl border rule bg-[color:var(--bg-2)] p-7 card-lift">
+      <div class="flex items-center justify-between">
+        <span class="mono text-[12px] text-[color:var(--amber)]">PHASE 04</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)]">Weeks 10–12</span>
+      </div>
+      <h3 class="text-[21px] font-bold mt-2.5">Capstone &amp; Career</h3>
+      <ul class="mt-4 space-y-2 text-[14px] text-[color:var(--ink-2)]">
+        <li class="flex gap-2.5"><span class="text-[color:var(--amber)]">▸</span> A portfolio-grade capstone, built in a team</li>
+        <li class="flex gap-2.5"><span class="text-[color:var(--amber)]">▸</span> System design and interview technique</li>
+        <li class="flex gap-2.5"><span class="text-[color:var(--amber)]">▸</span> Resume, take-homes, and offer negotiation</li>
+      </ul>
+      <div class="mono text-[12px] text-[color:var(--ink-3)] mt-5 pt-4 border-t rule-2">DELIVERABLE — A finished job-application kit</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= INSTRUCTORS ================= -->
+<section id="instructors" class="border-y rule-2 bg-[color:var(--bg-2)]">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="max-w-[58ch]">
+      <div class="marker mb-5"><span class="accent-line"></span>Who teaches you</div>
+      <h2 class="display text-[clamp(32px,4.6vw,54px)]">Four leads. <em class="amber">Not a TA in sight.</em></h2>
+      <p class="text-[16px] text-[color:var(--ink-2)] mt-5 leading-[1.6]">
+        Every cohort is taught — live, all day — by four lead instructors who shipped production software before they taught it. They review your code themselves. They're the ones in the room.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-12">
+      <div class="rounded-2xl border rule bg-[color:var(--bg)] p-4 card-lift">
+        <div class="blob-1 rounded-xl border rule aspect-[4/5] w-full"></div>
+        <div class="mt-4">
+          <div class="font-bold text-[15px]">Daniel Okafor</div>
+          <div class="mono text-[11px] text-[color:var(--amber)] mt-0.5">LEAD · FRONTEND</div>
+          <p class="text-[13px] text-[color:var(--ink-2)] mt-2.5 leading-[1.5]">Has taught 600+ engineers to think in components.</p>
+          <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 pt-3 border-t rule-2">Ex-Meta · React core contributor</div>
+        </div>
+      </div>
+      <div class="rounded-2xl border rule bg-[color:var(--bg)] p-4 card-lift">
+        <div class="blob-2 rounded-xl border rule aspect-[4/5] w-full"></div>
+        <div class="mt-4">
+          <div class="font-bold text-[15px]">Sara Lindqvist</div>
+          <div class="mono text-[11px] text-[color:var(--amber)] mt-0.5">LEAD · BACKEND</div>
+          <p class="text-[13px] text-[color:var(--ink-2)] mt-2.5 leading-[1.5]">Believes everyone should fear a missing index, once.</p>
+          <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 pt-3 border-t rule-2">Ex-Stripe · payments infrastructure</div>
+        </div>
+      </div>
+      <div class="rounded-2xl border rule bg-[color:var(--bg)] p-4 card-lift">
+        <div class="blob-3 rounded-xl border rule aspect-[4/5] w-full"></div>
+        <div class="mt-4">
+          <div class="font-bold text-[15px]">Marcus Tobin</div>
+          <div class="mono text-[11px] text-[color:var(--amber)] mt-0.5">LEAD · FOUNDATIONS</div>
+          <p class="text-[13px] text-[color:var(--ink-2)] mt-2.5 leading-[1.5]">Has watched 1,400 people write their first for-loop.</p>
+          <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 pt-3 border-t rule-2">Ex-Amazon · then 3 startups</div>
+        </div>
+      </div>
+      <div class="rounded-2xl border rule bg-[color:var(--bg)] p-4 card-lift">
+        <div class="blob-4 rounded-xl border rule aspect-[4/5] w-full"></div>
+        <div class="mt-4">
+          <div class="font-bold text-[15px]">Hana Suzuki</div>
+          <div class="mono text-[11px] text-[color:var(--amber)] mt-0.5">CAREER DIRECTOR</div>
+          <p class="text-[13px] text-[color:var(--ink-2)] mt-2.5 leading-[1.5]">Has sat on the hiring side of 9,000 interviews.</p>
+          <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 pt-3 border-t rule-2">Ex-Linear · recruiting lead</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SYLLABUS DEEP-DIVE ================= -->
+<section id="curriculum" class="max-w-[1100px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-10">
+    <div>
+      <div class="marker mb-5"><span class="accent-line"></span>Week by week</div>
+      <h2 class="display text-[clamp(32px,4.6vw,54px)]">The full 12-week curriculum.</h2>
+    </div>
+    <div class="mono text-[12px] text-[color:var(--ink-3)] sm:text-right leading-relaxed">
+      Live Mon–Fri · ~45 hrs/week<br/>every project graded by a lead
+    </div>
+  </div>
+
+  <div class="border rule rounded-2xl overflow-hidden divide-y divide-[color:var(--line-2)]">
+
+    <details open>
+      <summary class="acc-row flex items-center gap-4 sm:gap-5 px-5 sm:px-7 py-[18px]">
+        <span class="mono text-[12px] text-[color:var(--amber)] w-16 shrink-0">WEEK 01</span>
+        <span class="text-[16px] sm:text-[17px] font-bold flex-1">The Terminal &amp; The Web</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-6 pt-1 sm:pl-[96px]">
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1.5 text-[13.5px] text-[color:var(--ink-2)]">
+          <li>· The command line, and not fearing it</li>
+          <li>· How the internet actually works</li>
+          <li>· HTML as structure, not decoration</li>
+          <li>· Your first deployed page</li>
+        </ul>
+        <div class="mono text-[12px] text-[color:var(--amber)] mt-3.5 pt-3.5 border-t rule-2">PROJECT — Ship a personal site to a live URL by Friday</div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-5 px-5 sm:px-7 py-[18px]">
+        <span class="mono text-[12px] text-[color:var(--amber)] w-16 shrink-0">WEEK 02</span>
+        <span class="text-[16px] sm:text-[17px] font-bold flex-1">CSS &amp; Layout</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-6 pt-1 sm:pl-[96px]">
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1.5 text-[13.5px] text-[color:var(--ink-2)]">
+          <li>· The box model, for real this time</li>
+          <li>· Flexbox and grid</li>
+          <li>· Responsive from 360px up</li>
+          <li>· Design tokens and reuse</li>
+        </ul>
+        <div class="mono text-[12px] text-[color:var(--amber)] mt-3.5 pt-3.5 border-t rule-2">PROJECT — Rebuild a real product's landing page, pixel-close</div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-5 px-5 sm:px-7 py-[18px]">
+        <span class="mono text-[12px] text-[color:var(--amber)] w-16 shrink-0">WEEK 03</span>
+        <span class="text-[16px] sm:text-[17px] font-bold flex-1">JavaScript Foundations</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-6 pt-1 sm:pl-[96px]">
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1.5 text-[13.5px] text-[color:var(--ink-2)]">
+          <li>· Variables, types, control flow</li>
+          <li>· Functions and scope</li>
+          <li>· Arrays, objects, iteration</li>
+          <li>· The DOM and events</li>
+        </ul>
+        <div class="mono text-[12px] text-[color:var(--amber)] mt-3.5 pt-3.5 border-t rule-2">PROJECT — An interactive quiz app, no frameworks allowed</div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-5 px-5 sm:px-7 py-[18px]">
+        <span class="mono text-[12px] text-[color:var(--amber)] w-16 shrink-0">WEEK 04</span>
+        <span class="text-[16px] sm:text-[17px] font-bold flex-1">JavaScript, Deeper</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-6 pt-1 sm:pl-[96px]">
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1.5 text-[13.5px] text-[color:var(--ink-2)]">
+          <li>· Async, promises, and fetch</li>
+          <li>· ES modules and bundlers</li>
+          <li>· Closures and the call stack</li>
+          <li>· Debugging like an engineer</li>
+        </ul>
+        <div class="mono text-[12px] text-[color:var(--amber)] mt-3.5 pt-3.5 border-t rule-2">PROJECT — A weather dashboard pulling a live API</div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-5 px-5 sm:px-7 py-[18px]">
+        <span class="mono text-[12px] text-[color:var(--amber)] w-16 shrink-0">WEEK 05</span>
+        <span class="text-[16px] sm:text-[17px] font-bold flex-1">React</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-6 pt-1 sm:pl-[96px]">
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1.5 text-[13.5px] text-[color:var(--ink-2)]">
+          <li>· Components and props</li>
+          <li>· State and the render cycle</li>
+          <li>· Hooks — useState, useEffect</li>
+          <li>· Lists, keys, and forms</li>
+        </ul>
+        <div class="mono text-[12px] text-[color:var(--amber)] mt-3.5 pt-3.5 border-t rule-2">PROJECT — A multi-view task manager with persistence</div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-5 px-5 sm:px-7 py-[18px]">
+        <span class="mono text-[12px] text-[color:var(--amber)] w-16 shrink-0">WEEK 06</span>
+        <span class="text-[16px] sm:text-[17px] font-bold flex-1">TypeScript &amp; Testing</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-6 pt-1 sm:pl-[96px]">
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1.5 text-[13.5px] text-[color:var(--ink-2)]">
+          <li>· Types, interfaces, generics</li>
+          <li>· Typing a React app end to end</li>
+          <li>· Unit tests with Vitest</li>
+          <li>· What to test, and what to skip</li>
+        </ul>
+        <div class="mono text-[12px] text-[color:var(--amber)] mt-3.5 pt-3.5 border-t rule-2">PROJECT — Add full types and a test suite to week 5</div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-5 px-5 sm:px-7 py-[18px]">
+        <span class="mono text-[12px] text-[color:var(--amber)] w-16 shrink-0">WEEK 07</span>
+        <span class="text-[16px] sm:text-[17px] font-bold flex-1">Node &amp; APIs</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-6 pt-1 sm:pl-[96px]">
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1.5 text-[13.5px] text-[color:var(--ink-2)]">
+          <li>· Node, npm, the event loop</li>
+          <li>· A REST API with Express</li>
+          <li>· Routing, middleware, errors</li>
+          <li>· Designing an endpoint well</li>
+        </ul>
+        <div class="mono text-[12px] text-[color:var(--amber)] mt-3.5 pt-3.5 border-t rule-2">PROJECT — A REST API for a bookshelf app</div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-5 px-5 sm:px-7 py-[18px]">
+        <span class="mono text-[12px] text-[color:var(--amber)] w-16 shrink-0">WEEK 08</span>
+        <span class="text-[16px] sm:text-[17px] font-bold flex-1">Databases</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-6 pt-1 sm:pl-[96px]">
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1.5 text-[13.5px] text-[color:var(--ink-2)]">
+          <li>· Relational data modeling</li>
+          <li>· SQL — joins, indexes, query plans</li>
+          <li>· Postgres and an ORM</li>
+          <li>· Migrations without fear</li>
+        </ul>
+        <div class="mono text-[12px] text-[color:var(--amber)] mt-3.5 pt-3.5 border-t rule-2">PROJECT — Persist week 7's API in Postgres</div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-5 px-5 sm:px-7 py-[18px]">
+        <span class="mono text-[12px] text-[color:var(--amber)] w-16 shrink-0">WEEK 09</span>
+        <span class="text-[16px] sm:text-[17px] font-bold flex-1">Auth, Security &amp; Deploy</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-6 pt-1 sm:pl-[96px]">
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1.5 text-[13.5px] text-[color:var(--ink-2)]">
+          <li>· Sessions, tokens, hashing</li>
+          <li>· The OWASP basics that matter</li>
+          <li>· CI and environments</li>
+          <li>· Shipping to production</li>
+        </ul>
+        <div class="mono text-[12px] text-[color:var(--amber)] mt-3.5 pt-3.5 border-t rule-2">PROJECT — Add real auth, deploy the full stack</div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-5 px-5 sm:px-7 py-[18px]">
+        <span class="mono text-[12px] text-[color:var(--amber)] w-16 shrink-0">WEEK 10</span>
+        <span class="text-[16px] sm:text-[17px] font-bold flex-1">Capstone I</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-6 pt-1 sm:pl-[96px]">
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1.5 text-[13.5px] text-[color:var(--ink-2)]">
+          <li>· Scoping a real project</li>
+          <li>· Architecture and a build plan</li>
+          <li>· Working in a team of three</li>
+          <li>· Code review, the real kind</li>
+        </ul>
+        <div class="mono text-[12px] text-[color:var(--amber)] mt-3.5 pt-3.5 border-t rule-2">PROJECT — Begin a portfolio-grade capstone</div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-5 px-5 sm:px-7 py-[18px]">
+        <span class="mono text-[12px] text-[color:var(--amber)] w-16 shrink-0">WEEK 11</span>
+        <span class="text-[16px] sm:text-[17px] font-bold flex-1">Capstone II + System Design</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-6 pt-1 sm:pl-[96px]">
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1.5 text-[13.5px] text-[color:var(--ink-2)]">
+          <li>· Building under a deadline</li>
+          <li>· System design fundamentals</li>
+          <li>· Performance and profiling</li>
+          <li>· Polishing for a hiring manager</li>
+        </ul>
+        <div class="mono text-[12px] text-[color:var(--amber)] mt-3.5 pt-3.5 border-t rule-2">PROJECT — Ship the capstone, demo it live</div>
+      </div>
+    </details>
+
+    <details>
+      <summary class="acc-row flex items-center gap-4 sm:gap-5 px-5 sm:px-7 py-[18px]">
+        <span class="mono text-[12px] text-[color:var(--amber)] w-16 shrink-0">WEEK 12</span>
+        <span class="text-[16px] sm:text-[17px] font-bold flex-1">The Job Search</span>
+        <span class="acc-sign text-[color:var(--ink-3)] text-[20px] leading-none w-5 text-center shrink-0">+</span>
+      </summary>
+      <div class="px-5 sm:px-7 pb-6 pt-1 sm:pl-[96px]">
+        <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1.5 text-[13.5px] text-[color:var(--ink-2)]">
+          <li>· The resume that gets read</li>
+          <li>· Behavioral and technical interviews</li>
+          <li>· The take-home, dissected</li>
+          <li>· Negotiating your first offer</li>
+        </ul>
+        <div class="mono text-[12px] text-[color:var(--amber)] mt-3.5 pt-3.5 border-t rule-2">PROJECT — Mock interviews + a finished application kit</div>
+      </div>
+    </details>
+
+  </div>
+</section>
+
+<!-- ================= OUTCOMES ================= -->
+<section id="outcomes" class="border-y rule-2 bg-[color:var(--bg-2)]">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="max-w-[56ch]">
+      <div class="marker mb-5"><span class="accent-line"></span>The outcomes</div>
+      <h2 class="display text-[clamp(32px,4.6vw,54px)]">The numbers we'd want <em class="amber">audited.</em></h2>
+      <p class="text-[16px] text-[color:var(--ink-2)] mt-5 leading-[1.6]">
+        Every figure below is reported under the Council on Integrity in Career Outcomes standard, third-party audited, and published in full each cohort. We'll show you the methodology before you owe us a cent.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-12">
+      <div class="rounded-2xl border rule bg-[color:var(--bg)] p-6">
+        <div class="display tnum text-[clamp(38px,5vw,58px)] text-[color:var(--amber)]">84%</div>
+        <p class="text-[13.5px] text-[color:var(--ink-2)] mt-2 leading-[1.5]">of graduates are placed in a paid engineering role within 6 months.</p>
+      </div>
+      <div class="rounded-2xl border rule bg-[color:var(--bg)] p-6">
+        <div class="display tnum text-[clamp(34px,4.4vw,52px)] text-[color:var(--amber)]">$82,408</div>
+        <p class="text-[13.5px] text-[color:var(--ink-2)] mt-2 leading-[1.5]">average starting salary — across all roles, all locations, last 8 cohorts.</p>
+      </div>
+      <div class="rounded-2xl border rule bg-[color:var(--bg)] p-6">
+        <div class="display tnum text-[clamp(38px,5vw,58px)] text-[color:var(--amber)]">380+</div>
+        <p class="text-[13.5px] text-[color:var(--ink-2)] mt-2 leading-[1.5]">alumni now working at top-20 startups and public tech companies.</p>
+      </div>
+      <div class="rounded-2xl border rule bg-[color:var(--bg)] p-6">
+        <div class="display tnum text-[clamp(38px,5vw,58px)] text-[color:var(--amber)]">28</div>
+        <p class="text-[13.5px] text-[color:var(--ink-2)] mt-2 leading-[1.5]">cohorts run since 2022 — Cohort 29 enrolls now.</p>
+      </div>
+    </div>
+
+    <!-- placement chart -->
+    <div class="mt-4 rounded-2xl border rule bg-[color:var(--bg)] p-6 sm:p-8">
+      <div class="flex items-baseline justify-between mb-6">
+        <div class="font-bold text-[15px]">6-month placement rate, by cohort</div>
+        <div class="mono text-[11px] text-[color:var(--ink-3)]">Cohorts 19 → 28</div>
+      </div>
+      <svg id="placeChart" viewBox="0 0 720 200" class="w-full h-auto" aria-label="Placement rate by cohort, ranging 79 to 87 percent">
+        <line x1="0" y1="170" x2="720" y2="170" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+        <g id="bars"></g>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ================= TESTIMONIALS ================= -->
+<section id="alumni" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="max-w-[54ch] mb-12">
+    <div class="marker mb-5"><span class="accent-line"></span>Graduates</div>
+    <h2 class="display text-[clamp(32px,4.6vw,54px)]">They started where <em class="amber">you are.</em></h2>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <figure class="rounded-2xl border rule bg-[color:var(--bg-2)] p-7 card-lift">
+      <div class="flex items-center gap-3.5">
+        <div class="blob-2 size-12 rounded-full border rule shrink-0"></div>
+        <figcaption>
+          <div class="font-bold text-[15px]">Aisha Bello</div>
+          <div class="mono text-[11px] text-[color:var(--ink-3)]">SW Engineer · Mercury</div>
+        </figcaption>
+      </div>
+      <blockquote class="text-[15px] text-[color:var(--ink-2)] leading-[1.62] mt-5">
+        "I applied the week I realized I'd be doing document review until I was fifty. Twelve weeks later I had a capstone I was proud of and three onsite interviews. The career team didn't stop calling me until I'd signed an offer."
+      </blockquote>
+      <div class="mono text-[11px] text-[color:var(--amber)] mt-5 pt-4 border-t rule-2">↑ PARALEGAL → $86K OFFER, 5 WEEKS OUT</div>
+    </figure>
+    <figure class="rounded-2xl border rule bg-[color:var(--bg-2)] p-7 card-lift">
+      <div class="flex items-center gap-3.5">
+        <div class="blob-1 size-12 rounded-full border rule shrink-0"></div>
+        <figcaption>
+          <div class="font-bold text-[15px]">Tomás Reyes</div>
+          <div class="mono text-[11px] text-[color:var(--ink-3)]">Frontend Eng · Brightwave</div>
+        </figcaption>
+      </div>
+      <blockquote class="text-[15px] text-[color:var(--ink-2)] leading-[1.62] mt-5">
+        "I'd never written a line of code before week one. By week six I was reviewing other people's React in class. The forty-hour weeks were genuinely brutal — the only reason I'd do it again is the simple fact that it worked."
+      </blockquote>
+      <div class="mono text-[11px] text-[color:var(--amber)] mt-5 pt-4 border-t rule-2">↑ LINE COOK → HIRED BEFORE GRADUATION</div>
+    </figure>
+    <figure class="rounded-2xl border rule bg-[color:var(--bg-2)] p-7 card-lift">
+      <div class="flex items-center gap-3.5">
+        <div class="blob-4 size-12 rounded-full border rule shrink-0"></div>
+        <figcaption>
+          <div class="font-bold text-[15px]">Grace Mendoza</div>
+          <div class="mono text-[11px] text-[color:var(--ink-3)]">Backend Eng · Forecast</div>
+        </figcaption>
+      </div>
+      <blockquote class="text-[15px] text-[color:var(--ink-2)] leading-[1.62] mt-5">
+        "Sara made me genuinely afraid of a missing database index, which turns out to be a useful fear to carry into an interview. My salary went from $48k teaching to $91k. I have read that sentence back several times; it is not a typo."
+      </blockquote>
+      <div class="mono text-[11px] text-[color:var(--amber)] mt-5 pt-4 border-t rule-2">↑ TEACHER → +$43,000 SALARY DELTA</div>
+    </figure>
+  </div>
+</section>
+
+<!-- ================= FORMAT / LOGISTICS ================= -->
+<section class="border-y rule-2 bg-[color:var(--bg-2)]">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14">
+      <div class="md:col-span-4">
+        <div class="marker mb-5"><span class="accent-line"></span>The commitment</div>
+        <h2 class="display text-[clamp(28px,3.8vw,44px)]">It is full-time. <em class="amber">We mean it.</em></h2>
+        <p class="text-[15px] text-[color:var(--ink-2)] mt-5 leading-[1.6]">
+          Hatch works because it asks for everything for twelve weeks. If you can't clear the calendar, wait for a cohort where you can — the part-time version of this doesn't exist for a reason.
+        </p>
+      </div>
+      <div class="md:col-span-8">
+        <dl class="grid sm:grid-cols-2 gap-4">
+          <div class="rounded-xl border rule bg-[color:var(--bg)] p-5">
+            <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Length</dt>
+            <dd class="text-[15px] mt-1.5">12 weeks, full-time — ~45 hours every week</dd>
+          </div>
+          <div class="rounded-xl border rule bg-[color:var(--bg)] p-5">
+            <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Schedule</dt>
+            <dd class="text-[15px] mt-1.5">Live on Zoom, Mon–Fri 9–5 ET, plus async evenings</dd>
+          </div>
+          <div class="rounded-xl border rule bg-[color:var(--bg)] p-5">
+            <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Mentorship</dt>
+            <dd class="text-[15px] mt-1.5">A weekly 1:1 with a working engineer, all 12 weeks</dd>
+          </div>
+          <div class="rounded-xl border rule bg-[color:var(--bg)] p-5">
+            <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">After you graduate</dt>
+            <dd class="text-[15px] mt-1.5">Job-placement support for up to 6 months, or until hired</dd>
+          </div>
+          <div class="rounded-xl border rule bg-[color:var(--bg)] p-5">
+            <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Prerequisites</dt>
+            <dd class="text-[15px] mt-1.5">None — admission is a logic challenge, not a coding test</dd>
+          </div>
+          <div class="rounded-xl border rule bg-[color:var(--bg)] p-5">
+            <dt class="mono text-[11px] text-[color:var(--ink-3)] uppercase tracking-[0.12em]">Refund window</dt>
+            <dd class="text-[15px] mt-1.5">Full refund through the end of week 1, no questions</dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PRICING ================= -->
+<section id="apply" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="max-w-[54ch] mb-12">
+    <div class="marker mb-5"><span class="accent-line"></span>Tuition</div>
+    <h2 class="display text-[clamp(32px,4.6vw,54px)]">Pay up front, or <em class="amber">pay when it works.</em></h2>
+    <p class="text-[16px] text-[color:var(--ink-2)] mt-5 leading-[1.6]">
+      Two ways in. Choose the one that fits your situation — the curriculum, the instructors, and the job support are identical either way.
+    </p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <div class="rounded-2xl border rule bg-[color:var(--bg-2)] p-7 sm:p-9">
+      <div class="mono text-[12px] text-[color:var(--ink-3)]">OPTION A</div>
+      <h3 class="text-[22px] font-bold mt-2">Upfront tuition</h3>
+      <div class="flex items-baseline gap-2 mt-4">
+        <span class="display tnum text-[52px]">$14,408</span>
+        <span class="mono text-[12px] text-[color:var(--ink-3)]">paid before week 1</span>
+      </div>
+      <ul class="mt-6 space-y-2.5 text-[14px] text-[color:var(--ink-2)]">
+        <li class="flex gap-2.5"><span class="text-[color:var(--amber)] mt-0.5">✓</span> The full 12-week program</li>
+        <li class="flex gap-2.5"><span class="text-[color:var(--amber)] mt-0.5">✓</span> Weekly 1:1 mentorship</li>
+        <li class="flex gap-2.5"><span class="text-[color:var(--amber)] mt-0.5">✓</span> Up to 6 months of job support</li>
+        <li class="flex gap-2.5"><span class="text-[color:var(--amber)] mt-0.5">✓</span> Pay-in-3 available, no interest</li>
+        <li class="flex gap-2.5"><span class="text-[color:var(--amber)] mt-0.5">✓</span> Nothing owed after you graduate</li>
+      </ul>
+      <a href="#apply" class="btn-ghost mt-7 w-full inline-flex items-center justify-center rounded-lg border rule font-semibold px-5 py-3.5 text-[15px]">
+        Apply &amp; pay upfront
+      </a>
+    </div>
+
+    <div class="rounded-2xl border-2 border-[color:var(--amber)] bg-[color:var(--bg-2)] p-7 sm:p-9 relative">
+      <div class="absolute -top-3 left-8 mono text-[10px] tracking-[0.12em] uppercase bg-[color:var(--amber)] text-[#0A0A0A] px-3 py-1 rounded-full font-bold">$0 to start</div>
+      <div class="mono text-[12px] text-[color:var(--ink-3)]">OPTION B</div>
+      <h3 class="text-[22px] font-bold mt-2">Income-share agreement</h3>
+      <div class="flex items-baseline gap-2 mt-4">
+        <span class="display tnum text-[52px]">$0</span>
+        <span class="mono text-[12px] text-[color:var(--ink-3)]">upfront — then 12% of salary</span>
+      </div>
+      <ul class="mt-6 space-y-2.5 text-[14px] text-[color:var(--ink-2)]">
+        <li class="flex gap-2.5"><span class="text-[color:var(--amber)] mt-0.5">✓</span> Nothing due until you're hired</li>
+        <li class="flex gap-2.5"><span class="text-[color:var(--amber)] mt-0.5">✓</span> Payments start only above $80k/year</li>
+        <li class="flex gap-2.5"><span class="text-[color:var(--amber)] mt-0.5">✓</span> 12% of salary, for 24 months</li>
+        <li class="flex gap-2.5"><span class="text-[color:var(--amber)] mt-0.5">✓</span> Hard cap of $21,000 — never more</li>
+        <li class="flex gap-2.5"><span class="text-[color:var(--amber)] mt-0.5">✓</span> Pauses automatically between jobs</li>
+      </ul>
+      <a href="#apply" class="btn-amber mt-7 w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[color:var(--amber)] text-[#0A0A0A] font-bold px-5 py-3.5 text-[15px]">
+        Apply with the ISA <span class="scroll-x">→</span>
+      </a>
+    </div>
+  </div>
+  <p class="text-[13px] text-[color:var(--ink-3)] mt-6 text-center leading-[1.6] max-w-[70ch] mx-auto">
+    <span class="text-[color:var(--amber)] mono text-[12px]">SCHOLARSHIPS —</span>
+    Four need-based seats per cohort are reserved for people from backgrounds underrepresented in engineering. Scholarship applicants follow the same admissions process; the scholarship form is on the next page.
+  </p>
+</section>
+
+<!-- ================= FAQ ================= -->
+<section id="faq" class="max-w-[820px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="text-center mb-12">
+    <div class="marker mb-5 inline-block">The hard questions</div>
+    <h2 class="display text-[clamp(30px,4.4vw,50px)]">Ask us the uncomfortable ones.</h2>
+  </div>
+  <div class="divide-y divide-[color:var(--line)] border-y rule">
+    <details>
+      <summary class="flex items-start gap-4 py-5">
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">What's the actual job placement rate — audited?</span>
+        <span class="acc-sign text-[color:var(--amber)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        84%, measured as graduates in a paid engineering role within six months of completing the program, audited annually by an independent third party against the Council on Integrity in Career Outcomes standard. We exclude no one to flatter the number — students who deferred, withdrew, or weren't job-seeking are reported as their own line. The full methodology PDF is linked from your application portal.
+      </p>
+    </details>
+    <details>
+      <summary class="flex items-start gap-4 py-5">
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">The income-share agreement — what's the fine print?</span>
+        <span class="acc-sign text-[color:var(--amber)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        You pay 12% of your gross salary for 24 months of payments — but only while you earn $80,000 a year or more. Below that threshold, you pay nothing and the clock pauses, including any gap between jobs. Total payments are capped at $21,000, so the ISA can never cost more than a moderate premium over the upfront price, and often costs less. There is no interest and no penalty for paying it off early.
+      </p>
+    </details>
+    <details>
+      <summary class="flex items-start gap-4 py-5">
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">Do I need to know any coding to start?</span>
+        <span class="acc-sign text-[color:var(--amber)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        No — and most successful applicants don't. Week 1 genuinely starts at "open a terminal." Admission isn't a coding test; it's a short logic and problem-solving challenge that predicts whether the pace will work for you. There is a free two-hour prep packet we send everyone who applies, so you walk in on day one with momentum, not anxiety.
+      </p>
+    </details>
+    <details>
+      <summary class="flex items-start gap-4 py-5">
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">What if I can't find a job — is there a refund?</span>
+        <span class="acc-sign text-[color:var(--amber)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        On the ISA, the answer is structural: no qualifying job means no payments, ever — your risk is your time, not your money. On upfront tuition, graduates who complete the program, meet the job-search commitments, and aren't hired within 9 months receive a full tuition refund under our written job guarantee. The exact terms are in the enrollment agreement, and we'll walk you through them before you sign anything.
+      </p>
+    </details>
+    <details>
+      <summary class="flex items-start gap-4 py-5">
+        <span class="text-[16px] sm:text-[18px] font-bold flex-1">Do you support international students with visas?</span>
+        <span class="acc-sign text-[color:var(--amber)] text-[22px] leading-none shrink-0">+</span>
+      </summary>
+      <p class="text-[15px] text-[color:var(--ink-2)] leading-[1.65] pb-6 pr-8">
+        Hatch is fully remote, so you can take the program from anywhere in the world without a US visa — about a third of every cohort joins from outside North America. We do not sponsor work visas ourselves, but our career team has placed graduates with employers who do, and we'll connect you with an immigration attorney partner for a free initial consult. We're candid in admissions about which markets are realistic for your situation.
+      </p>
+    </details>
+  </div>
+</section>
+
+<!-- ================= FINAL CTA ================= -->
+<section class="relative overflow-hidden border-t rule-2">
+  <div class="absolute inset-0 pointer-events-none" style="background:radial-gradient(58% 70% at 50% 0%, rgba(245,194,107,0.2), transparent 72%)"></div>
+  <div class="absolute inset-0 dotgrid opacity-60 pointer-events-none"></div>
+  <div class="relative max-w-[900px] mx-auto px-5 sm:px-8 py-24 sm:py-32 text-center">
+    <div class="inline-flex items-center gap-2.5 rounded-full border rule bg-[color:var(--bg-2)] px-4 py-1.5 mb-8">
+      <span class="pulse-dot"></span>
+      <span class="mono text-[11px] text-[color:var(--ink-2)]">Cohort 29 starts June 23 · 7 of 24 seats left</span>
+    </div>
+    <h2 class="display text-[clamp(38px,6.6vw,82px)]">
+      Twelve weeks from now,<br/><em class="amber">you could be an engineer.</em>
+    </h2>
+    <p class="text-[17px] text-[color:var(--ink-2)] mt-6 max-w-[48ch] mx-auto leading-[1.6]">
+      Applications for Cohort 29 close soon, and seats are first-reviewed, first-offered. The challenge takes about forty minutes.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-3 justify-center mt-9">
+      <a href="#apply" class="btn-amber inline-flex items-center justify-center gap-2 rounded-lg bg-[color:var(--amber)] text-[#0A0A0A] font-bold px-7 py-4 text-[16px]">
+        Start your application <span class="scroll-x">→</span>
+      </a>
+      <a href="#curriculum" class="btn-ghost inline-flex items-center justify-center rounded-lg border rule text-[color:var(--ink)] font-semibold px-7 py-4 text-[16px]">
+        Review the curriculum
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer class="bg-[color:var(--bg-2)] border-t rule-2">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-12 flex flex-col sm:flex-row items-center justify-between gap-6">
+    <div class="flex items-center gap-2.5">
+      <svg width="22" height="22" viewBox="0 0 26 26" aria-hidden="true">
+        <path d="M5 21V8.5L13 4l8 4.5V21" fill="none" stroke="#A6A49E" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M9.5 21v-6.5h7V21" fill="none" stroke="#F5C26B" stroke-width="1.5" stroke-linejoin="round"/>
+      </svg>
+      <span class="text-[17px] font-extrabold">Hatch</span>
+      <span class="mono text-[11px] text-[color:var(--ink-3)] ml-2 hidden sm:inline">28 cohorts since 2022</span>
+    </div>
+    <nav class="flex items-center gap-7 text-[13px] text-[color:var(--ink-2)]">
+      <a href="#outcomes" class="ul-link">Cohort archive</a>
+      <a href="#instructors" class="ul-link">About</a>
+      <a href="#faq" class="ul-link">Privacy</a>
+    </nav>
+    <div class="mono text-[11px] text-[color:var(--ink-3)]">© 2026 Hatch Academy</div>
+  </div>
+</footer>
+
+<script>
+  (function(){
+    /* countdown to applications close */
+    var target = new Date('2026-06-06T23:59:00-04:00').getTime();
+    var els = { d:document.getElementById('cd-d'), h:document.getElementById('cd-h'), m:document.getElementById('cd-m'), s:document.getElementById('cd-s') };
+    function pad(n){ return String(n).padStart(2,'0'); }
+    function tick(){
+      var gap = target - Date.now();
+      if(gap < 0) gap = 0;
+      els.d.textContent = pad(Math.floor(gap/864e5));
+      els.h.textContent = pad(Math.floor(gap%864e5/36e5));
+      els.m.textContent = pad(Math.floor(gap%36e5/6e4));
+      els.s.textContent = pad(Math.floor(gap%6e4/1e3));
+    }
+    tick();
+    setInterval(tick, 1000);
+
+    /* placement bar chart */
+    var data = [
+      {c:'C19',v:79},{c:'C20',v:81},{c:'C21',v:80},{c:'C22',v:83},{c:'C23',v:82},
+      {c:'C24',v:85},{c:'C25',v:84},{c:'C26',v:86},{c:'C27',v:85},{c:'C28',v:87}
+    ];
+    var W = 720, base = 170, top = 24, slot = W / data.length, bw = 44;
+    var min = 70, max = 92;
+    var g = document.getElementById('bars');
+    var ns = 'http://www.w3.org/2000/svg';
+    data.forEach(function(d, i){
+      var h = (d.v - min) / (max - min) * (base - top);
+      var x = i * slot + (slot - bw) / 2;
+      var y = base - h;
+      var rect = document.createElementNS(ns, 'rect');
+      rect.setAttribute('x', x); rect.setAttribute('y', y);
+      rect.setAttribute('width', bw); rect.setAttribute('height', h);
+      rect.setAttribute('rx', 3);
+      rect.setAttribute('fill', i === data.length - 1 ? '#F5C26B' : 'rgba(245,194,107,0.32)');
+      g.appendChild(rect);
+      var val = document.createElementNS(ns, 'text');
+      val.setAttribute('x', x + bw/2); val.setAttribute('y', y - 8);
+      val.setAttribute('text-anchor', 'middle');
+      val.setAttribute('font-size', '12'); val.setAttribute('font-family', 'Geist Mono, monospace');
+      val.setAttribute('fill', i === data.length - 1 ? '#F5C26B' : '#A6A49E');
+      val.textContent = d.v + '%';
+      g.appendChild(val);
+      var lab = document.createElementNS(ns, 'text');
+      lab.setAttribute('x', x + bw/2); lab.setAttribute('y', 190);
+      lab.setAttribute('text-anchor', 'middle');
+      lab.setAttribute('font-size', '11'); lab.setAttribute('font-family', 'Geist Mono, monospace');
+      lab.setAttribute('fill', '#6C6B66');
+      lab.textContent = d.c;
+      g.appendChild(lab);
+    });
+  })();
+</script>
+</body>
+</html>

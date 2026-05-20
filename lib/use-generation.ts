@@ -1,85 +1,51 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import type {
-  CostBreakdown,
-  FilledBlock,
-  GeneratedImage,
-  GenerateRequest,
-  Intent,
-  LandingPage,
-  Plan,
-  ProgressEvent,
-  SseEvent,
-  StepResultEvent,
-} from "@/lib/orchestrator/types";
-import type { GeneratingPartial, WorkspaceState } from "@/components/workspace/types";
 
-export interface RegenSectionArgs {
-  sectionId: string;
-  sectionName: string;
-  additionalInstruction?: string;
-  mode: "regen" | "edit";
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// useGeneration — drives the /new-v2 AI entry flow.
+//
+// POSTs a brief to /api/generate and consumes the Server-Sent Events stream
+// (reasoning_chunk / html_chunk / project_saved / error). The page renders the
+// streaming reasoning, then a live preview of the streaming HTML, then
+// redirects to ?project=<id> when `project_saved` lands.
+//
+// No orchestrator pipeline, no slot blocks — generation is one free-form Kimi
+// K2.6 call producing a complete HTML document. The resulting project is a
+// flat HTML project, edited the same way as template-clone / paste projects.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type GenerationState =
+  | { kind: "idle" }
+  | { kind: "generating"; reasoning: string; html: string }
+  | { kind: "done"; projectId: string; title: string }
+  | { kind: "error"; message: string };
 
 export interface UseGenerationResult {
-  state: WorkspaceState;
-  generate: (req: GenerateRequest) => Promise<void>;
-  regenerateSection: (args: RegenSectionArgs) => Promise<void>;
-  loadProject: (projectId: string) => Promise<void>;
-  /** Splice new filledBlocks (+ optionally a freshly-assembled html) into the
-   *  current result without disturbing the AI baseline. Called by the sidebar
-   *  slot editor after a debounced /api/reassemble round-trip. */
-  applyLiveEdit: (filledBlocks: FilledBlock[], html?: string) => void;
-  /** Restore the AI-generated `filledBlocks` from the snapshot. Used by the
-   *  editor's "Reset to AI version" affordance; caller is responsible for
-   *  reassembling the html afterwards. */
-  resetToOriginal: () => void;
-  reset: () => void;
-}
-
-interface RegenResponse {
-  page: LandingPage;
-  cost: CostBreakdown;
-  generationId: string;
+  state: GenerationState;
+  generate: (brief: string) => Promise<void>;
 }
 
 export function useGeneration(): UseGenerationResult {
-  const [state, setState] = useState<WorkspaceState>({ kind: "idle" });
+  const [state, setState] = useState<GenerationState>({ kind: "idle" });
   const abortRef = useRef<AbortController | null>(null);
-  const currentRef = useRef<WorkspaceState>(state);
-  currentRef.current = state;
 
-  const reset = useCallback(() => {
-    abortRef.current?.abort();
-    abortRef.current = null;
-    setState({ kind: "idle" });
-  }, []);
-
-  const generate = useCallback(async (req: GenerateRequest) => {
+  const generate = useCallback(async (brief: string) => {
+    // Cancel any in-flight generation before starting a new one.
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
-
-    setState({
-      kind: "generating",
-      currentStep: "classify",
-      progress: [],
-      partial: {
-        brief: req.brief,
-        filledBlocks: [],
-        images: [],
-        costSoFar: 0,
-        startedAt: Date.now(),
-      },
-    });
+    setState({ kind: "generating", reasoning: "", html: "" });
 
     let response: Response;
     try {
       response = await fetch("/api/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
-        body: JSON.stringify(req),
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "text/event-stream",
+        },
+        body: JSON.stringify({ brief }),
         signal: controller.signal,
       });
     } catch (err) {
@@ -92,53 +58,23 @@ export function useGeneration(): UseGenerationResult {
     }
 
     if (!response.ok || !response.body) {
-      if (response.status === 429) {
-        const data = (await response.json().catch(() => ({}))) as {
-          scope?: string;
-          plan?: string;
-          max?: number;
-          resetAt?: string;
-        };
-        const scope = data.scope ?? "quota";
-        const resetMsg = data.resetAt
-          ? ` Resets ${formatRelativeReset(data.resetAt)}.`
-          : "";
-        const planMsg = data.plan === "free" ? " Upgrade to Pro for more." : "";
-        setState({
-          kind: "error",
-          message: `You've hit your ${scope} limit${data.max ? ` of ${data.max} generations` : ""}.${resetMsg}${planMsg}`,
-        });
-        return;
-      }
-      if (response.status === 401) {
-        setState({
-          kind: "error",
-          message: "You need to be signed in to generate. Reload the page.",
-        });
-        return;
-      }
-      const text = await response.text().catch(() => response.statusText);
-      setState({ kind: "error", message: text || `Request failed (${response.status})` });
+      setState({ kind: "error", message: await errorMessage(response) });
       return;
     }
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
-
     try {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
-
-        let sepIndex: number;
-        while ((sepIndex = buffer.indexOf("\n\n")) !== -1) {
-          const rawEvent = buffer.slice(0, sepIndex);
-          buffer = buffer.slice(sepIndex + 2);
-          const event = parseSseChunk(rawEvent);
-          if (!event) continue;
-          applyEvent(event, setState);
+        let sep: number;
+        while ((sep = buffer.indexOf("\n\n")) !== -1) {
+          const rawEvent = buffer.slice(0, sep);
+          buffer = buffer.slice(sep + 2);
+          applyEvent(rawEvent, setState);
         }
       }
     } catch (err) {
@@ -150,161 +86,76 @@ export function useGeneration(): UseGenerationResult {
     }
   }, []);
 
-  const regenerateSection = useCallback(
-    async (args: RegenSectionArgs) => {
-      const current = currentRef.current;
-      if (current.kind !== "generated") return;
-      const page = current.result;
-
-      // The iframe overlay emits sectionId in "block-N" form (assembled by
-      // lib/orchestrator/assemble.tsx). Parse it back into an integer.
-      const blockIndex = parseBlockIndex(args.sectionId);
-      if (blockIndex === null) {
-        // eslint-disable-next-line no-console
-        console.error(
-          `regenerateSection: cannot parse blockIndex from sectionId="${args.sectionId}"`,
-        );
-        return;
-      }
-
-      setState({
-        kind: "generated",
-        result: page,
-        originalFilledBlocks: current.originalFilledBlocks,
-        regen: {
-          sectionId: args.sectionId,
-          sectionName: args.sectionName,
-          mode: args.mode,
-        },
-      });
-
-      let response: Response;
-      try {
-        response = await fetch("/api/regenerate-section", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            brief: page.meta.brief,
-            intent: page.meta.intent,
-            plan: page.plan,
-            filledBlocks: page.filledBlocks,
-            images: page.images,
-            blockIndex,
-            additionalInstruction: args.additionalInstruction,
-            projectId: current.projectId,
-          }),
-        });
-      } catch (err) {
-        setState({
-          kind: "generated",
-          result: page,
-          originalFilledBlocks: current.originalFilledBlocks,
-          regen: undefined,
-        });
-        // eslint-disable-next-line no-console
-        console.error("regenerate-section fetch failed:", err);
-        return;
-      }
-
-      if (!response.ok) {
-        const text = await response.text().catch(() => response.statusText);
-        setState({
-          kind: "generated",
-          result: page,
-          originalFilledBlocks: current.originalFilledBlocks,
-          regen: undefined,
-        });
-        // eslint-disable-next-line no-console
-        console.error("regenerate-section failed:", text);
-        return;
-      }
-
-      const data = (await response.json()) as RegenResponse;
-      setState({
-        kind: "generated",
-        result: {
-          ...data.page,
-          cost: addCostBreakdowns(page.cost, data.cost),
-        },
-        // A regen blesses the new slot payload as the AI baseline for this
-        // block. Future "reset" affordances should land here, not at the very
-        // first generation.
-        originalFilledBlocks: data.page.filledBlocks,
-        regen: undefined,
-      });
-    },
-    [],
-  );
-
-  const applyLiveEdit = useCallback(
-    (filledBlocks: FilledBlock[], html?: string) => {
-      setState((prev) => {
-        if (prev.kind !== "generated") return prev;
-        return {
-          ...prev,
-          result: {
-            ...prev.result,
-            filledBlocks,
-            html: html ?? prev.result.html,
-          },
-        };
-      });
-    },
-    [],
-  );
-
-  const resetToOriginal = useCallback(() => {
-    setState((prev) => {
-      if (prev.kind !== "generated") return prev;
-      return {
-        ...prev,
-        result: { ...prev.result, filledBlocks: prev.originalFilledBlocks },
-      };
-    });
-  }, []);
-
-  const loadProject = useCallback(async (projectId: string) => {
-    try {
-      const res = await fetch(`/api/projects/${projectId}`);
-      if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
-        setState({ kind: "error", message: data.error ?? `Couldn't load project (${res.status})` });
-        return;
-      }
-      const data = (await res.json()) as {
-        project: { id: string; title: string; data: LandingPage };
-      };
-      setState({
-        kind: "generated",
-        result: data.project.data,
-        originalFilledBlocks: data.project.data.filledBlocks,
-        projectId: data.project.id,
-        title: data.project.title,
-      });
-    } catch (err) {
-      setState({
-        kind: "error",
-        message: err instanceof Error ? err.message : String(err),
-      });
-    }
-  }, []);
-
-  return {
-    state,
-    generate,
-    regenerateSection,
-    loadProject,
-    applyLiveEdit,
-    resetToOriginal,
-    reset,
-  };
+  return { state, generate };
 }
 
-function parseBlockIndex(sectionId: string): number | null {
-  const m = sectionId.match(/^block-(\d+)$/);
-  if (!m) return null;
-  const n = Number.parseInt(m[1], 10);
-  return Number.isFinite(n) && n >= 0 ? n : null;
+async function errorMessage(response: Response): Promise<string> {
+  if (response.status === 401) {
+    return "You need to be signed in to generate. Reload the page.";
+  }
+  if (response.status === 429) {
+    const data = (await response.json().catch(() => ({}))) as {
+      scope?: string;
+      plan?: string;
+      max?: number;
+      resetAt?: string;
+    };
+    const scope = data.scope ?? "quota";
+    const resetMsg = data.resetAt
+      ? ` Resets ${formatRelativeReset(data.resetAt)}.`
+      : "";
+    const planMsg = data.plan === "free" ? " Upgrade to Pro for more." : "";
+    return `You've hit your ${scope} limit${
+      data.max ? ` of ${data.max} generations` : ""
+    }.${resetMsg}${planMsg}`;
+  }
+  const text = await response.text().catch(() => response.statusText);
+  return text || `Request failed (${response.status})`;
+}
+
+function applyEvent(
+  rawEvent: string,
+  setState: (updater: (prev: GenerationState) => GenerationState) => void,
+) {
+  let event = "";
+  const dataLines: string[] = [];
+  for (const line of rawEvent.split("\n")) {
+    if (line.startsWith("event:")) event = line.slice(6).trim();
+    else if (line.startsWith("data:")) {
+      dataLines.push(line.slice(5).replace(/^ /, ""));
+    }
+  }
+  if (!event || dataLines.length === 0) return;
+
+  let data: Record<string, unknown>;
+  try {
+    data = JSON.parse(dataLines.join("\n")) as Record<string, unknown>;
+  } catch {
+    return;
+  }
+
+  if (event === "reasoning_chunk" && typeof data.text === "string") {
+    const text = data.text;
+    setState((prev) =>
+      prev.kind === "generating"
+        ? { ...prev, reasoning: prev.reasoning + text }
+        : prev,
+    );
+  } else if (event === "html_chunk" && typeof data.text === "string") {
+    const text = data.text;
+    setState((prev) =>
+      prev.kind === "generating" ? { ...prev, html: prev.html + text } : prev,
+    );
+  } else if (event === "project_saved") {
+    const projectId = typeof data.projectId === "string" ? data.projectId : "";
+    const title =
+      typeof data.title === "string" ? data.title : "Untitled page";
+    if (projectId) setState(() => ({ kind: "done", projectId, title }));
+  } else if (event === "error") {
+    const message =
+      typeof data.message === "string" ? data.message : "Generation failed";
+    setState(() => ({ kind: "error", message }));
+  }
 }
 
 function formatRelativeReset(iso: string): string {
@@ -316,140 +167,4 @@ function formatRelativeReset(iso: string): string {
   if (h < 24) return `in ${h}h`;
   const d = Math.round(h / 24);
   return `in ${d}d`;
-}
-
-function addCostBreakdowns(a: CostBreakdown, b: CostBreakdown): CostBreakdown {
-  return {
-    total: a.total + b.total,
-    classify: a.classify + b.classify,
-    plan: a.plan + b.plan,
-    fill: a.fill + b.fill,
-    images: a.images + b.images,
-    assemble: a.assemble + b.assemble,
-    gates: a.gates + b.gates,
-  };
-}
-
-function parseSseChunk(chunk: string): SseEvent | null {
-  const dataLines = chunk
-    .split("\n")
-    .filter((line) => line.startsWith("data:"))
-    .map((line) => line.slice(5).trimStart());
-  if (dataLines.length === 0) return null;
-  const json = dataLines.join("\n");
-  try {
-    return JSON.parse(json) as SseEvent;
-  } catch {
-    return null;
-  }
-}
-
-function applyEvent(
-  event: SseEvent,
-  setState: (updater: (prev: WorkspaceState) => WorkspaceState) => void,
-) {
-  if (event.type === "progress") {
-    setState((prev) => {
-      const partial = prev.kind === "generating"
-        ? {
-            ...prev.partial,
-            costSoFar: event.costSoFar ?? prev.partial.costSoFar,
-          }
-        : freshPartial();
-      return {
-        kind: "generating",
-        currentStep: event.step,
-        progress: prev.kind === "generating"
-          ? appendProgress(prev.progress, event)
-          : [event],
-        partial,
-      };
-    });
-    return;
-  }
-  if (event.type === "step_result") {
-    setState((prev) => {
-      if (prev.kind !== "generating") return prev;
-      const partial = mergeStepResult(prev.partial, event);
-      return { ...prev, partial };
-    });
-    return;
-  }
-  if (event.type === "error") {
-    setState((prev) => {
-      // Non-fatal errors (e.g. project save failed) shouldn't blow away an
-      // already-generated page.
-      if (prev.kind === "generated") return prev;
-      return { kind: "error", message: event.message };
-    });
-    return;
-  }
-  if (event.type === "result") {
-    setState(() => ({
-      kind: "generated",
-      result: event.page,
-      originalFilledBlocks: event.page.filledBlocks,
-    }));
-    return;
-  }
-  if (event.type === "project_saved") {
-    setState((prev) => {
-      if (prev.kind !== "generated") return prev;
-      return {
-        ...prev,
-        projectId: event.projectId,
-        title: event.title,
-      };
-    });
-  }
-}
-
-function freshPartial(): GeneratingPartial {
-  return {
-    brief: "",
-    filledBlocks: [],
-    images: [],
-    costSoFar: 0,
-    startedAt: Date.now(),
-  };
-}
-
-function mergeStepResult(
-  partial: GeneratingPartial,
-  event: StepResultEvent,
-): GeneratingPartial {
-  switch (event.step) {
-    case "classify":
-      return { ...partial, intent: event.data as Intent };
-    case "plan":
-      return { ...partial, plan: event.data as Plan };
-    case "fill": {
-      const filled = event.data as FilledBlock;
-      const existing = partial.filledBlocks.findIndex(
-        (b) => b.index === filled.index,
-      );
-      const filledBlocks =
-        existing === -1
-          ? [...partial.filledBlocks, filled].sort((a, b) => a.index - b.index)
-          : partial.filledBlocks.map((b, i) => (i === existing ? filled : b));
-      return { ...partial, filledBlocks };
-    }
-    case "image_hero":
-    case "image_decorative": {
-      const img = event.data as GeneratedImage;
-      const existing = partial.images.findIndex((i) => i.id === img.id);
-      const images = existing === -1
-        ? [...partial.images, img]
-        : partial.images.map((i, idx) => (idx === existing ? img : i));
-      return { ...partial, images };
-    }
-    default:
-      return partial;
-  }
-}
-
-function appendProgress(prev: ProgressEvent[], next: ProgressEvent): ProgressEvent[] {
-  const last = prev[prev.length - 1];
-  if (last && last.step === next.step && last.status === next.status) return prev;
-  return [...prev, next];
 }

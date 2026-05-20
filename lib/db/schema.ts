@@ -10,7 +10,7 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
-import type { LandingPage } from "@/lib/orchestrator/types";
+import type { ProjectData } from "@/lib/projects/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Drizzle schema for auth.
@@ -39,6 +39,11 @@ export const users = pgTable("users", {
   // Role for admin-gated endpoints (template upload/edit/delete). 'user' for
   // everyone by default; flip to 'admin' manually in DB or via seed script.
   role: text("role").notNull().default("user"),
+  // Credit balance for AI operations — debited by lib/credits.ts. A fresh
+  // row (credits 0, creditsRefreshedAt null) gets its plan allotment granted
+  // on the first balance read.
+  credits: integer("credits").notNull().default(0),
+  creditsRefreshedAt: timestamp("creditsRefreshedAt", { mode: "date" }),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
 });
 
@@ -84,10 +89,9 @@ export const verificationTokens = pgTable(
   ],
 );
 
-// One row per generated landing page. The full LandingPage artifact lives
-// in the `data` JSONB column — html, css, images, intent, plan, copy, cost,
-// witnessPath, etc. Letting the orchestrator keep producing rich nested
-// data without us having to maintain a parallel relational schema.
+// One row per project. The rendered HTML document lives in the `data` JSONB
+// column ({ html }) — the same artifact whether the page came from AI
+// generation, a template clone, or pasted HTML.
 export const projects = pgTable(
   "projects",
   {
@@ -113,7 +117,7 @@ export const projects = pgTable(
     // Hero image URL pulled out of `data` for cheap thumbnail rendering
     // without having to deserialize the whole JSONB on listing pages.
     thumbnailUrl: text("thumbnailUrl"),
-    data: jsonb("data").$type<LandingPage>().notNull(),
+    data: jsonb("data").$type<ProjectData>().notNull(),
     // Per-project AI context — user-controlled instructions that get
     // prepended to every Chat tab prompt sent to Kimi K2.6. Equivalent to
     // Claude.ai's "Project instructions" feature: persistent system-prompt-
@@ -133,6 +137,12 @@ export const projects = pgTable(
     // detection in the UI compares this against current `data.html`
     // to surface an "unpublished changes" pill.
     publishedHtml: text("publishedHtml"),
+    // First 12 chars of sha256(optimized published HTML). Points at the
+    // on-disk release dir under /var/www/openlen/<sub>/releases/<sha>/.
+    // The TopBar "Previous deploys" UI joins this against listReleases()
+    // to identify which entry is currently live. Updated atomically with
+    // publishedHtml.
+    publishedReleaseSha: text("publishedReleaseSha"),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
   },

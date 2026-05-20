@@ -51,10 +51,14 @@ else
   echo "  ↳ already exists — leaving in place."
 fi
 
-echo "[4/4] Installing + enabling systemd unit..."
+echo "[4/4] Installing + enabling systemd units..."
 install -m 644 "${SCRIPT_DIR}/openlen-app.service" /etc/systemd/system/openlen-app.service
+install -m 644 "${SCRIPT_DIR}/openlen-backup.service" /etc/systemd/system/openlen-backup.service
+install -m 644 "${SCRIPT_DIR}/openlen-backup.timer"   /etc/systemd/system/openlen-backup.timer
 systemctl daemon-reload
 systemctl enable openlen-app.service
+# Backup timer stays disabled until /etc/openlen/rclone.conf is populated.
+# Enable manually with: systemctl enable --now openlen-backup.timer
 
 echo
 echo "✓ App scaffolding installed."
@@ -64,3 +68,8 @@ echo "  1. Paste TOGETHER_API_KEY (and DATABASE_URL etc.) into /etc/openlen/open
 echo "  2. From your local machine: bash infra/scripts/deploy.sh"
 echo "  3. systemctl start openlen-app"
 echo "  4. journalctl -u openlen-app -f   # tail logs to confirm startup"
+echo
+echo "Optional — nightly R2 backup of published landings:"
+echo "  a. Create /etc/openlen/rclone.conf with an [r2-published] remote (see"
+echo "     infra/scripts/backup-published-to-r2.sh for the format)."
+echo "  b. systemctl enable --now openlen-backup.timer"

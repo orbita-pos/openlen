@@ -1,6 +1,13 @@
-// Content mode panel — section accordions with per-variant slot forms.
-// Mirrors the artifact's ContentPanel; renders against mock SECTIONS so
-// the wow moment (knob → preview repaints) doesn't require a real project.
+// Content mode panel — two paths:
+//
+// 1. Flat projects (template-clone / paste): renders a hint card explaining
+//    that clicking text in the iframe edits it directly. Selecting this tab
+//    is what activates contentEditable in the iframe (the parent derives
+//    `editableInjection` from `mode === "content" + isFlat`).
+//
+// 2. Rich projects (AI-generated, future V2 path): section accordions with
+//    per-variant slot forms. Mirrors the artifact's ContentPanel; renders
+//    against mock SECTIONS so the wow moment doesn't require a real project.
 
 "use client";
 
@@ -12,8 +19,11 @@ import {
   HelpCircle,
   ImageIcon,
   Layers,
+  Pencil,
   Plus,
+  Rows,
   Sparkles,
+  Type,
   X,
   Zap,
 } from "../icons";
@@ -425,6 +435,13 @@ interface ContentPanelProps {
   expanded: string | null;
   setExpanded: (id: string | null) => void;
   onUpdate: (id: string, fields: Section["fields"]) => void;
+  /** When true (flat project loaded), the panel renders a hint card
+   *  pointing the user at the iframe — there are no slot fields to
+   *  surface because the HTML is opaque. */
+  flat?: boolean;
+  /** Mirrored from the parent so we can hint the user that edits are
+   *  saving while they're inside this panel. */
+  savingStatus?: "idle" | "saving" | "saved" | null;
 }
 
 export function ContentPanel({
@@ -432,7 +449,10 @@ export function ContentPanel({
   expanded,
   setExpanded,
   onUpdate,
+  flat = false,
+  savingStatus = null,
 }: ContentPanelProps) {
+  if (flat) return <FlatContentHint savingStatus={savingStatus} />;
   return (
     <div className="flex flex-col h-full">
       <div className="px-3 pt-3 pb-2 flex items-center justify-between">
@@ -467,6 +487,108 @@ export function ContentPanel({
         <Button variant="ghost" size="sm" className="w-full justify-center">
           <Plus size={12} /> Add section
         </Button>
+      </div>
+    </div>
+  );
+}
+
+function EditAffordanceRow({
+  icon,
+  title,
+  desc,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+}) {
+  return (
+    <div className="flex items-start gap-2.5 px-2.5 py-2 rounded-md ring-1 ring-[color:var(--border)] bg-[color:var(--bg)]">
+      <span className="shrink-0 mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded fg-muted">
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <div className="text-[11.5px] font-medium fg leading-tight">
+          {title}
+        </div>
+        <div className="text-[10.5px] fg-faint mt-0.5 leading-snug">
+          {desc}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FlatContentHint({
+  savingStatus,
+}: {
+  savingStatus: "idle" | "saving" | "saved" | null;
+}) {
+  return (
+    <div className="h-full flex flex-col">
+      <div className="flex-1 min-h-0 overflow-y-auto nice-scroll px-4 py-5">
+        <div className="text-center mb-4">
+          <div className="mx-auto mb-2.5 inline-flex h-9 w-9 items-center justify-center rounded-md ring-1 ring-[color:var(--border)] bg-elev text-accent">
+            <Pencil size={14} />
+          </div>
+          <h3 className="text-[14px] font-semibold fg leading-tight">
+            Editing mode on
+          </h3>
+          <p className="mt-1 text-[11.5px] fg-faint leading-relaxed">
+            Hover anywhere in the preview. Each action saves automatically.
+          </p>
+        </div>
+        <div className="space-y-1.5 mb-3">
+          <EditAffordanceRow
+            icon={<Type size={12} />}
+            title="Edit text inline"
+            desc="Click any text in the preview to edit it directly."
+          />
+          <EditAffordanceRow
+            icon={<ImageIcon size={12} />}
+            title="Replace images & icons"
+            desc="Click an image or icon to swap it — Lucide picker for icons, Unsplash / URL / upload for images."
+          />
+          <EditAffordanceRow
+            icon={<Rows size={12} />}
+            title="Reorder sections"
+            desc="Hover a section and drag the ⋮⋮ handle on the left edge to move it up or down."
+          />
+        </div>
+        <div className="rounded-md ring-1 ring-[color:var(--border)] bg-[color:var(--bg)] px-3 py-2.5 text-[11px] fg-muted leading-relaxed">
+          <div className="flex items-center gap-1.5 mb-1.5 text-[10px] uppercase tracking-wider fg-faint font-semibold ui-small">
+            Shortcuts
+          </div>
+          <div className="flex items-center justify-between py-0.5">
+            <span>Toggle edit mode</span>
+            <kbd className="px-1.5 py-px rounded bg-elev border bd font-mono text-[10px]">
+              ⌘E
+            </kbd>
+          </div>
+          <div className="flex items-center justify-between py-0.5">
+            <span>Cancel edit / exit mode</span>
+            <kbd className="px-1.5 py-px rounded bg-elev border bd font-mono text-[10px]">
+              ESC
+            </kbd>
+          </div>
+        </div>
+      </div>
+      <div className="shrink-0 px-3 py-2 border-t bd flex items-center gap-1.5 text-[10.5px] fg-faint ui-small">
+        {savingStatus === "saving" ? (
+          <>
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] pulse-soft" />
+            <span>Saving…</span>
+          </>
+        ) : savingStatus === "saved" ? (
+          <>
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <span>Saved · just now</span>
+          </>
+        ) : (
+          <>
+            <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--border-strong)]" />
+            <span>Ready</span>
+          </>
+        )}
       </div>
     </div>
   );

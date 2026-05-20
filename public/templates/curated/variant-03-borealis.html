@@ -1,0 +1,1497 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Borealis — Headless UI components for React, Vue & Solid</title>
+  <meta name="description" content="Borealis is an unstyled, accessible headless UI component library. 38 components, one shared accessibility test suite, ported to React, Vue and Solid. Bring your own design system." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: '#0A0E14',
+            inkraised: '#0E141C',
+            inkcard: '#10171F',
+            cyanaccent: '#67E8F9',
+            cyandeep: '#22D3EE',
+            textbright: '#F0F3F8',
+            textmute: '#8A94A6',
+            textdim: '#5C667A',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root {
+      --hairline: rgba(255, 255, 255, 0.06);
+      --hairline-strong: rgba(255, 255, 255, 0.10);
+      --cyan: #67E8F9;
+      --cyan-deep: #22D3EE;
+    }
+
+    * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-feature-settings: 'ss01', 'cv11', 'liga' 1, 'calt' 1;
+      background-color: #0A0E14;
+      color: #F0F3F8;
+    }
+
+    ::selection { background: rgba(103, 232, 249, 0.28); color: #F0F3F8; }
+
+    /* ---- Display typography ---- */
+    .display {
+      letter-spacing: -0.04em;
+      line-height: 1.02;
+      font-weight: 800;
+    }
+    .display-sm {
+      letter-spacing: -0.032em;
+      line-height: 1.08;
+      font-weight: 700;
+    }
+    .tracking-tightest { letter-spacing: -0.025em; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .halftone { opacity: 0.45; }
+    .accent-frag {
+      color: #67E8F9;
+      text-shadow: 0 0 38px rgba(103, 232, 249, 0.35);
+    }
+
+    /* ---- Hairlines ---- */
+    .hairline { border: 1px solid var(--hairline); }
+    .hairline-t { border-top: 1px solid var(--hairline); }
+    .hairline-b { border-bottom: 1px solid var(--hairline); }
+    .hairline-strong { border: 1px solid var(--hairline-strong); }
+
+    /* ---- Dot grid ---- */
+    .dot-grid {
+      background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+      background-size: 32px 32px;
+      background-position: -1px -1px;
+    }
+
+    /* ---- Ambient mesh blobs ---- */
+    .mesh-blob {
+      position: absolute;
+      border-radius: 9999px;
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .mesh-cyan {
+      background: radial-gradient(circle, rgba(103, 232, 249, 0.30) 0%, rgba(103, 232, 249, 0) 70%);
+    }
+    .mesh-deep {
+      background: radial-gradient(circle, rgba(34, 211, 238, 0.18) 0%, rgba(34, 211, 238, 0) 72%);
+    }
+
+    .hero-radial {
+      background: radial-gradient(ellipse 70% 56% at 50% 0%, rgba(103, 232, 249, 0.16) 0%, rgba(10, 14, 20, 0) 64%);
+    }
+
+    /* ---- Marquee ---- */
+    .marquee-wrap { overflow: hidden; -webkit-mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent); mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent); }
+    .marquee-track {
+      display: flex;
+      width: max-content;
+      animation: marquee 42s linear infinite;
+    }
+    .marquee-wrap:hover .marquee-track { animation-play-state: paused; }
+    @keyframes marquee {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+
+    /* ---- Pulse dot ---- */
+    .pulse-dot {
+      position: relative;
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 9999px;
+      background: #67E8F9;
+    }
+    .pulse-dot::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 9999px;
+      animation: pulse-ring 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse-ring {
+      0% { box-shadow: 0 0 0 0 rgba(103, 232, 249, 0.55); }
+      70% { box-shadow: 0 0 0 11px rgba(103, 232, 249, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(103, 232, 249, 0); }
+    }
+
+    /* ---- Star badge shimmer ---- */
+    .star-shimmer {
+      background: linear-gradient(110deg, transparent 30%, rgba(103, 232, 249, 0.16) 50%, transparent 70%);
+      background-size: 220% 100%;
+      animation: shimmer 6s linear infinite;
+    }
+    @keyframes shimmer {
+      from { background-position: 220% 0; }
+      to { background-position: -120% 0; }
+    }
+
+    /* ---- Copy pulse ---- */
+    @keyframes copy-pulse {
+      0% { box-shadow: 0 0 0 0 rgba(103, 232, 249, 0.5); }
+      100% { box-shadow: 0 0 0 9px rgba(103, 232, 249, 0); }
+    }
+    .copy-pulsing { animation: copy-pulse 0.5s ease-out; }
+
+    /* ---- Syntax highlight tokens ---- */
+    .code-block { tab-size: 2; }
+    .tok-kw { color: #C4B5FD; }
+    .tok-tag { color: #67E8F9; }
+    .tok-attr { color: #7DD3FC; }
+    .tok-str { color: #86EFAC; }
+    .tok-fn { color: #FCD34D; }
+    .tok-comment { color: #475569; font-style: italic; }
+    .tok-punct { color: #64748B; }
+    .tok-prop { color: #F0F3F8; }
+    .tok-num { color: #FDA4AF; }
+    .tok-shell-prompt { color: #67E8F9; user-select: none; }
+    .tok-pkg { color: #86EFAC; }
+    .ln {
+      display: inline-block;
+      width: 1.9rem;
+      margin-right: 1rem;
+      text-align: right;
+      color: #3A4356;
+      user-select: none;
+    }
+
+    /* ---- Reveal on scroll ---- */
+    .reveal {
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1), transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .reveal.in { opacity: 1; transform: translateY(0); }
+
+    /* ---- Buttons ---- */
+    .btn { transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease; }
+    .btn:hover { transform: translateY(-2px); }
+    .btn:active { transform: translateY(0); }
+
+    .btn-accent {
+      background: #67E8F9;
+      color: #06121A;
+      box-shadow: 0 8px 30px -8px rgba(103, 232, 249, 0.5);
+    }
+    .btn-accent:hover {
+      background: #8DEEFB;
+      box-shadow: 0 12px 38px -8px rgba(103, 232, 249, 0.62);
+    }
+
+    .card-lift { transition: transform 0.14s ease, border-color 0.14s ease, background-color 0.14s ease; }
+    .card-lift:hover {
+      transform: translateY(-3px);
+      border-color: rgba(103, 232, 249, 0.30);
+      background-color: #131C26;
+    }
+
+    .nav-link { transition: color 0.12s ease; }
+    .nav-link:hover { color: #F0F3F8; }
+
+    .glow-ring { box-shadow: 0 0 0 1px rgba(103, 232, 249, 0.18), 0 0 60px -16px rgba(103, 232, 249, 0.4); }
+
+    .tab-btn { transition: color 0.12s ease, background-color 0.12s ease; }
+
+    /* ---- FAQ ---- */
+    details summary { list-style: none; cursor: pointer; }
+    details summary::-webkit-details-marker { display: none; }
+    details[open] .faq-chevron { transform: rotate(45deg); }
+    .faq-chevron { transition: transform 0.18s ease; }
+    .faq-item { transition: border-color 0.14s ease, background-color 0.14s ease; }
+    .faq-item:hover { border-color: rgba(103, 232, 249, 0.22); }
+
+    /* ---- Mobile nav ---- */
+    #mobile-menu { transition: opacity 0.18s ease, transform 0.18s ease; }
+    #mobile-menu.hidden-menu { opacity: 0; transform: translateY(-8px); pointer-events: none; }
+
+    .count-spark path { transition: stroke-dashoffset 1.6s ease; }
+
+    /* scrollbars inside code */
+    .code-scroll::-webkit-scrollbar { height: 6px; }
+    .code-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.10); border-radius: 3px; }
+    .code-scroll::-webkit-scrollbar-track { background: transparent; }
+  </style>
+</head>
+<body class="bg-ink text-textbright antialiased overflow-x-hidden">
+
+  <!-- ============ 1. STICKY TOP NAV ============ -->
+  <header class="sticky top-0 z-50 backdrop-blur-xl bg-ink/80 hairline-b">
+    <nav class="mx-auto max-w-7xl px-5 sm:px-8">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo + wordmark -->
+        <a href="#top" class="flex items-center gap-2.5 shrink-0">
+          <span aria-hidden="true">
+            <svg width="30" height="30" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="32" height="32" rx="8" fill="#10171F" stroke="rgba(103,232,249,0.28)"/>
+              <path d="M9 22.5C9 16 12 8.5 16 8.5C20 8.5 23 16 23 22.5" stroke="#67E8F9" stroke-width="2.1" stroke-linecap="round"/>
+              <path d="M6.5 23.3C6.5 19 9.6 14 16 14C22.4 14 25.5 19 25.5 23.3" stroke="#22D3EE" stroke-width="2.1" stroke-linecap="round" opacity="0.62"/>
+              <circle cx="16" cy="23.2" r="1.7" fill="#67E8F9"/>
+            </svg>
+          </span>
+          <span class="text-[17px] font-700 tracking-tightest">Borealis</span>
+          <span class="hidden sm:inline-block text-[10px] font-600 font-mono text-cyanaccent/80 border border-cyanaccent/25 rounded px-1.5 py-0.5 ml-1">v2.0</span>
+        </a>
+
+        <!-- Desktop nav -->
+        <div class="hidden md:flex items-center gap-8 text-[14px] font-500 text-textmute">
+          <a href="#features" class="nav-link">Docs</a>
+          <a href="#quickstart" class="nav-link">Examples</a>
+          <a href="#community" class="nav-link">Blog</a>
+          <a href="#community" class="nav-link">Community</a>
+        </div>
+
+        <!-- Right cluster -->
+        <div class="flex items-center gap-2.5">
+          <a href="#top" class="hidden sm:flex items-center gap-2 star-shimmer rounded-lg border border-[var(--hairline-strong)] bg-inkcard px-3 py-1.5 text-[13px] font-600 hover:border-cyanaccent/30 transition-colors">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#FCD34D" aria-hidden="true">
+              <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.784 1.401 8.168L12 18.896l-7.335 3.858 1.401-8.168L.132 8.21l8.2-1.192z"/>
+            </svg>
+            <span class="font-mono tnum" id="nav-star-count">0</span>
+            <span class="text-textmute font-500">stars</span>
+          </a>
+          <a href="#cta" class="btn btn-accent hidden sm:inline-flex items-center rounded-lg px-4 py-1.5 text-[13.5px] font-700">
+            Get started
+          </a>
+          <!-- Mobile toggle -->
+          <button id="menu-toggle" aria-label="Toggle navigation menu" class="md:hidden flex items-center justify-center w-9 h-9 rounded-lg border border-[var(--hairline-strong)] bg-inkcard">
+            <svg id="icon-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F0F3F8" stroke-width="2" stroke-linecap="round">
+              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+            <svg id="icon-close" class="hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F0F3F8" stroke-width="2" stroke-linecap="round">
+              <line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile menu -->
+      <div id="mobile-menu" class="hidden-menu md:hidden hairline-t pb-5 pt-3">
+        <div class="flex flex-col gap-1 text-[15px] font-500">
+          <a href="#features" class="py-2.5 px-2 rounded-lg hover:bg-inkcard text-textmute hover:text-textbright transition-colors">Docs</a>
+          <a href="#quickstart" class="py-2.5 px-2 rounded-lg hover:bg-inkcard text-textmute hover:text-textbright transition-colors">Examples</a>
+          <a href="#community" class="py-2.5 px-2 rounded-lg hover:bg-inkcard text-textmute hover:text-textbright transition-colors">Blog</a>
+          <a href="#community" class="py-2.5 px-2 rounded-lg hover:bg-inkcard text-textmute hover:text-textbright transition-colors">Community</a>
+          <a href="#cta" class="btn btn-accent mt-3 inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-[14px] font-700">Get started</a>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <main id="top">
+
+    <!-- ============ 2. HERO ============ -->
+    <section class="relative overflow-hidden hero-radial">
+      <div class="mesh-blob mesh-cyan w-[520px] h-[520px] -top-40 left-1/2 -translate-x-1/2 opacity-70"></div>
+      <div class="mesh-blob mesh-deep w-[380px] h-[380px] top-20 -left-20 opacity-60"></div>
+
+      <div class="relative z-10 mx-auto max-w-5xl px-5 sm:px-8 pt-20 sm:pt-28 pb-16 sm:pb-20 text-center">
+        <!-- Version pill -->
+        <a href="#faq" class="reveal inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-inkcard/80 px-3.5 py-1.5 text-[12.5px] font-500 text-textmute hover:border-cyanaccent/30 transition-colors">
+          <span class="pulse-dot"></span>
+          <span class="font-mono text-cyanaccent">v2.0</span>
+          <span class="text-textdim">·</span>
+          <span>Released Mar 14, 2026</span>
+          <span class="text-textdim">·</span>
+          <span class="text-textmute">MIT</span>
+        </a>
+
+        <!-- Display headline -->
+        <h1 class="reveal display text-[clamp(2.6rem,7.2vw,5.05rem)] mt-7 mx-auto max-w-4xl">
+          Unstyled components.<br class="hidden sm:block" />
+          <span class="accent-frag">Bring your own design system.</span>
+        </h1>
+
+        <!-- Sub -->
+        <p class="reveal mt-6 mx-auto max-w-2xl text-[clamp(1rem,1.6vw,1.18rem)] leading-relaxed text-textmute">
+          38 accessible, fully-keyboard primitives with zero opinions about how they look — shipped to React, Vue and Solid from a single shared a11y test suite.
+        </p>
+
+        <!-- Install block — framework tabbed -->
+        <div class="reveal mt-9 mx-auto max-w-xl text-left">
+          <div class="rounded-xl border border-[var(--hairline-strong)] bg-inkcard overflow-hidden glow-ring">
+            <!-- tabs -->
+            <div class="flex items-center justify-between hairline-b bg-inkraised/60 pl-1 pr-2">
+              <div class="flex" role="tablist" aria-label="Install command per framework">
+                <button data-install-tab="react" class="install-tab tab-btn px-3.5 py-2.5 text-[12.5px] font-600 font-mono text-cyanaccent border-b-2 border-cyanaccent" role="tab" aria-selected="true">React</button>
+                <button data-install-tab="vue" class="install-tab tab-btn px-3.5 py-2.5 text-[12.5px] font-600 font-mono text-textmute border-b-2 border-transparent hover:text-textbright" role="tab" aria-selected="false">Vue</button>
+                <button data-install-tab="solid" class="install-tab tab-btn px-3.5 py-2.5 text-[12.5px] font-600 font-mono text-textmute border-b-2 border-transparent hover:text-textbright" role="tab" aria-selected="false">Solid</button>
+              </div>
+              <button data-copy="install-cmd" class="copy-btn group flex items-center gap-1.5 rounded-md px-2 py-1 text-[11.5px] font-600 text-textmute hover:text-cyanaccent transition-colors" aria-label="Copy install command">
+                <svg class="copy-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+                <span class="copy-label">Copy</span>
+              </button>
+            </div>
+            <!-- command -->
+            <div class="px-4 py-3.5 font-mono text-[13.5px]">
+              <code id="install-cmd" data-react="npm install @borealis/react" data-vue="npm install @borealis/vue" data-solid="npm install @borealis/solid">
+                <span class="tok-shell-prompt">$ </span>npm install <span class="tok-pkg">@borealis/react</span>
+              </code>
+            </div>
+          </div>
+          <p class="mt-2.5 text-center text-[12px] text-textdim font-mono">also: <span class="text-textmute">@borealis/vue</span> · <span class="text-textmute">@borealis/solid</span></p>
+        </div>
+
+        <!-- Dual CTA -->
+        <div class="reveal mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <a href="#quickstart" class="btn btn-accent inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-[14.5px] font-700 w-full sm:w-auto">
+            Read the docs
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 12h14M13 5l7 7-7 7"/>
+            </svg>
+          </a>
+          <a href="#community" class="btn inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--hairline-strong)] bg-inkcard px-6 py-3 text-[14.5px] font-600 text-textbright hover:border-cyanaccent/30 w-full sm:w-auto">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.5 11.5 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222 0 1.606-.014 2.898-.014 3.293 0 .322.216.694.825.576C20.565 22.092 24 17.596 24 12.297c0-6.627-5.373-12-12-12"/>
+            </svg>
+            View on GitHub · <span class="font-mono tnum">48.4k</span> stars
+          </a>
+        </div>
+
+        <!-- mini stat strip -->
+        <div class="reveal mt-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-[13px]">
+          <div class="flex items-center gap-2"><span class="font-mono font-700 text-textbright tnum text-[15px]" data-count="48408">0</span><span class="text-textmute">GitHub stars</span></div>
+          <span class="hidden sm:block w-px h-3.5 bg-[var(--hairline-strong)]"></span>
+          <div class="flex items-center gap-2"><span class="font-mono font-700 text-textbright tnum text-[15px]" data-count="38">0</span><span class="text-textmute">components</span></div>
+          <span class="hidden sm:block w-px h-3.5 bg-[var(--hairline-strong)]"></span>
+          <div class="flex items-center gap-2"><span class="font-mono font-700 text-textbright tnum text-[15px]" data-count="3">0</span><span class="text-textmute">frameworks</span></div>
+          <span class="hidden sm:block w-px h-3.5 bg-[var(--hairline-strong)]"></span>
+          <div class="flex items-center gap-2"><span class="font-mono font-700 text-textbright tnum text-[15px]">2.8M</span><span class="text-textmute">weekly installs</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 3. TRUST BAR ============ -->
+    <section class="relative hairline-t hairline-b py-10 bg-inkraised/40">
+      <p class="text-center text-[11.5px] font-600 uppercase tracking-[0.18em] text-textdim mb-7">Trusted in production at</p>
+      <div class="marquee-wrap">
+        <div class="marquee-track">
+          <!-- track A -->
+          <div class="flex items-center gap-14 pr-14">
+            <!-- Vercel -->
+            <svg width="100" height="22" viewBox="0 0 110 24" fill="#5C667A" aria-label="Vercel" class="opacity-80 hover:opacity-100 transition-opacity">
+              <path d="M12 2l11 19H1z"/><text x="30" y="17" font-family="Inter,sans-serif" font-size="15" font-weight="700" letter-spacing="-0.5">Vercel</text>
+            </svg>
+            <!-- Linear -->
+            <svg width="92" height="22" viewBox="0 0 100 24" fill="#5C667A" aria-label="Linear" class="opacity-80 hover:opacity-100 transition-opacity">
+              <rect x="2" y="4" width="16" height="16" rx="4"/><text x="26" y="17" font-family="Inter,sans-serif" font-size="15" font-weight="700" letter-spacing="-0.5">Linear</text>
+            </svg>
+            <!-- Stripe -->
+            <svg width="84" height="22" viewBox="0 0 92 24" fill="#5C667A" aria-label="Stripe" class="opacity-80 hover:opacity-100 transition-opacity">
+              <text x="0" y="18" font-family="Inter,sans-serif" font-size="17" font-weight="800" letter-spacing="-0.7">Stripe</text>
+            </svg>
+            <!-- Raycast -->
+            <svg width="100" height="22" viewBox="0 0 112 24" fill="#5C667A" aria-label="Raycast" class="opacity-80 hover:opacity-100 transition-opacity">
+              <path d="M11 3l8 8-8 8-8-8z"/><text x="26" y="17" font-family="Inter,sans-serif" font-size="15" font-weight="700" letter-spacing="-0.5">Raycast</text>
+            </svg>
+            <!-- Shopify -->
+            <svg width="98" height="22" viewBox="0 0 108 24" fill="#5C667A" aria-label="Shopify" class="opacity-80 hover:opacity-100 transition-opacity">
+              <path d="M10 2l6 3v14H4V6z"/><text x="24" y="17" font-family="Inter,sans-serif" font-size="15" font-weight="700" letter-spacing="-0.5">Shopify</text>
+            </svg>
+            <!-- Figma -->
+            <svg width="86" height="22" viewBox="0 0 96 24" fill="#5C667A" aria-label="Figma" class="opacity-80 hover:opacity-100 transition-opacity">
+              <circle cx="10" cy="6" r="4"/><circle cx="10" cy="18" r="4"/><text x="24" y="17" font-family="Inter,sans-serif" font-size="15" font-weight="700" letter-spacing="-0.5">Figma</text>
+            </svg>
+            <!-- Cal.com -->
+            <svg width="96" height="22" viewBox="0 0 106 24" fill="#5C667A" aria-label="Cal.com" class="opacity-80 hover:opacity-100 transition-opacity">
+              <circle cx="11" cy="12" r="9" fill="none" stroke="#5C667A" stroke-width="2.4"/><text x="28" y="17" font-family="Inter,sans-serif" font-size="15" font-weight="700" letter-spacing="-0.5">Cal.com</text>
+            </svg>
+            <!-- Sentry -->
+            <svg width="92" height="22" viewBox="0 0 102 24" fill="#5C667A" aria-label="Sentry" class="opacity-80 hover:opacity-100 transition-opacity">
+              <path d="M11 3C6 8 3 14 3 20h5c0-4 2-8 5-12l4 7h-3l3 5h6C24 13 18 6 11 3z"/><text x="30" y="17" font-family="Inter,sans-serif" font-size="15" font-weight="700" letter-spacing="-0.5">Sentry</text>
+            </svg>
+            <!-- Notion -->
+            <svg width="94" height="22" viewBox="0 0 104 24" fill="#5C667A" aria-label="Notion" class="opacity-80 hover:opacity-100 transition-opacity">
+              <rect x="2" y="3" width="17" height="18" rx="3" fill="none" stroke="#5C667A" stroke-width="2.2"/><text x="26" y="17" font-family="Inter,sans-serif" font-size="15" font-weight="700" letter-spacing="-0.5">Notion</text>
+            </svg>
+          </div>
+          <!-- track B (duplicate) -->
+          <div class="flex items-center gap-14 pr-14" aria-hidden="true">
+            <svg width="100" height="22" viewBox="0 0 110 24" fill="#5C667A" class="opacity-80">
+              <path d="M12 2l11 19H1z"/><text x="30" y="17" font-family="Inter,sans-serif" font-size="15" font-weight="700" letter-spacing="-0.5">Vercel</text>
+            </svg>
+            <svg width="92" height="22" viewBox="0 0 100 24" fill="#5C667A" class="opacity-80">
+              <rect x="2" y="4" width="16" height="16" rx="4"/><text x="26" y="17" font-family="Inter,sans-serif" font-size="15" font-weight="700" letter-spacing="-0.5">Linear</text>
+            </svg>
+            <svg width="84" height="22" viewBox="0 0 92 24" fill="#5C667A" class="opacity-80">
+              <text x="0" y="18" font-family="Inter,sans-serif" font-size="17" font-weight="800" letter-spacing="-0.7">Stripe</text>
+            </svg>
+            <svg width="100" height="22" viewBox="0 0 112 24" fill="#5C667A" class="opacity-80">
+              <path d="M11 3l8 8-8 8-8-8z"/><text x="26" y="17" font-family="Inter,sans-serif" font-size="15" font-weight="700" letter-spacing="-0.5">Raycast</text>
+            </svg>
+            <svg width="98" height="22" viewBox="0 0 108 24" fill="#5C667A" class="opacity-80">
+              <path d="M10 2l6 3v14H4V6z"/><text x="24" y="17" font-family="Inter,sans-serif" font-size="15" font-weight="700" letter-spacing="-0.5">Shopify</text>
+            </svg>
+            <svg width="86" height="22" viewBox="0 0 96 24" fill="#5C667A" class="opacity-80">
+              <circle cx="10" cy="6" r="4"/><circle cx="10" cy="18" r="4"/><text x="24" y="17" font-family="Inter,sans-serif" font-size="15" font-weight="700" letter-spacing="-0.5">Figma</text>
+            </svg>
+            <svg width="96" height="22" viewBox="0 0 106 24" fill="#5C667A" class="opacity-80">
+              <circle cx="11" cy="12" r="9" fill="none" stroke="#5C667A" stroke-width="2.4"/><text x="28" y="17" font-family="Inter,sans-serif" font-size="15" font-weight="700" letter-spacing="-0.5">Cal.com</text>
+            </svg>
+            <svg width="92" height="22" viewBox="0 0 102 24" fill="#5C667A" class="opacity-80">
+              <path d="M11 3C6 8 3 14 3 20h5c0-4 2-8 5-12l4 7h-3l3 5h6C24 13 18 6 11 3z"/><text x="30" y="17" font-family="Inter,sans-serif" font-size="15" font-weight="700" letter-spacing="-0.5">Sentry</text>
+            </svg>
+            <svg width="94" height="22" viewBox="0 0 104 24" fill="#5C667A" class="opacity-80">
+              <rect x="2" y="3" width="17" height="18" rx="3" fill="none" stroke="#5C667A" stroke-width="2.2"/><text x="26" y="17" font-family="Inter,sans-serif" font-size="15" font-weight="700" letter-spacing="-0.5">Notion</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 4. HERO CODE EXAMPLE ============ -->
+    <section class="relative dot-grid py-20 sm:py-28">
+      <div class="mesh-blob mesh-cyan w-[440px] h-[440px] top-10 right-0 opacity-40"></div>
+      <div class="relative z-10 mx-auto max-w-3xl px-5 sm:px-8">
+        <div class="text-center mb-10">
+          <span class="text-[12px] font-600 uppercase tracking-[0.16em] text-cyanaccent/80">Compound components</span>
+          <h2 class="reveal display-sm text-[clamp(1.85rem,3.6vw,2.7rem)] mt-3">
+            A Dialog that's <em class="not-italic accent-frag">all behavior</em>, no chrome.
+          </h2>
+          <p class="reveal mt-4 text-textmute text-[15.5px] leading-relaxed max-w-xl mx-auto">
+            Borealis ships the focus trap, scroll lock, escape handling and ARIA wiring. The markup and every class name are entirely yours.
+          </p>
+        </div>
+
+        <!-- Big code block -->
+        <div class="reveal rounded-xl border border-[var(--hairline-strong)] bg-inkcard overflow-hidden glow-ring">
+          <div class="flex items-center justify-between hairline-b bg-inkraised/70 px-4 py-2.5">
+            <div class="flex items-center gap-2.5">
+              <div class="flex gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-[#FF5F57]/70"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-[#FEBC2E]/70"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-[#28C840]/70"></span>
+              </div>
+              <span class="font-mono text-[12.5px] text-textmute ml-1">Dialog.tsx</span>
+            </div>
+            <button data-copy="hero-code" class="copy-btn flex items-center gap-1.5 rounded-md px-2 py-1 text-[11.5px] font-600 text-textmute hover:text-cyanaccent transition-colors" aria-label="Copy code example">
+              <svg class="copy-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+              <span class="copy-label">Copy</span>
+            </button>
+          </div>
+          <div class="code-scroll overflow-x-auto px-4 py-4 text-[13px] sm:text-[13.5px] leading-[1.75] font-mono code-block">
+<pre id="hero-code-src" class="!m-0"><span class="ln">1</span><span class="tok-kw">import</span> <span class="tok-punct">{</span> Dialog <span class="tok-punct">}</span> <span class="tok-kw">from</span> <span class="tok-str">'@borealis/react'</span>
+<span class="ln">2</span>
+<span class="ln">3</span><span class="tok-kw">export function</span> <span class="tok-fn">InvitePanel</span><span class="tok-punct">() {</span>
+<span class="ln">4</span>  <span class="tok-kw">return</span> <span class="tok-punct">(</span>
+<span class="ln">5</span>    <span class="tok-punct">&lt;</span><span class="tok-tag">Dialog.Root</span><span class="tok-punct">&gt;</span>
+<span class="ln">6</span>      <span class="tok-punct">&lt;</span><span class="tok-tag">Dialog.Trigger</span> <span class="tok-attr">className</span><span class="tok-punct">=</span><span class="tok-str">"btn-primary"</span><span class="tok-punct">&gt;</span>Invite people<span class="tok-punct">&lt;/</span><span class="tok-tag">Dialog.Trigger</span><span class="tok-punct">&gt;</span>
+<span class="ln">7</span>      <span class="tok-punct">&lt;</span><span class="tok-tag">Dialog.Content</span> <span class="tok-attr">className</span><span class="tok-punct">=</span><span class="tok-str">"card w-[440px]"</span><span class="tok-punct">&gt;</span>
+<span class="ln">8</span>        <span class="tok-punct">&lt;</span><span class="tok-tag">Dialog.Title</span> <span class="tok-attr">className</span><span class="tok-punct">=</span><span class="tok-str">"text-lg font-semibold"</span><span class="tok-punct">&gt;</span>
+<span class="ln">9</span>          Invite to workspace
+<span class="ln">10</span>        <span class="tok-punct">&lt;/</span><span class="tok-tag">Dialog.Title</span><span class="tok-punct">&gt;</span>
+<span class="ln">11</span>        <span class="tok-punct">&lt;</span><span class="tok-tag">Dialog.Description</span> <span class="tok-attr">className</span><span class="tok-punct">=</span><span class="tok-str">"text-muted"</span><span class="tok-punct">&gt;</span>
+<span class="ln">12</span>          They'll get an email with a join link.
+<span class="ln">13</span>        <span class="tok-punct">&lt;/</span><span class="tok-tag">Dialog.Description</span><span class="tok-punct">&gt;</span>
+<span class="ln">14</span>        <span class="tok-punct">&lt;</span><span class="tok-tag">Dialog.Close</span> <span class="tok-attr">className</span><span class="tok-punct">=</span><span class="tok-str">"btn-ghost"</span><span class="tok-punct">&gt;</span>Done<span class="tok-punct">&lt;/</span><span class="tok-tag">Dialog.Close</span><span class="tok-punct">&gt;</span>
+<span class="ln">15</span>      <span class="tok-punct">&lt;/</span><span class="tok-tag">Dialog.Content</span><span class="tok-punct">&gt;</span>
+<span class="ln">16</span>    <span class="tok-punct">&lt;/</span><span class="tok-tag">Dialog.Root</span><span class="tok-punct">&gt;</span>
+<span class="ln">17</span>  <span class="tok-punct">)</span>
+<span class="ln">18</span><span class="tok-punct">}</span></pre>
+          </div>
+          <div class="hairline-t bg-inkraised/40 px-4 py-2.5 flex items-center gap-2 text-[12px] text-textdim font-mono">
+            <span class="pulse-dot"></span>
+            <span>Focus trap, scroll-lock & <span class="text-textmute">aria-modal</span> handled automatically</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 5. WHY THIS EXISTS ============ -->
+    <section class="relative py-20 sm:py-28 hairline-t">
+      <div class="mx-auto max-w-6xl px-5 sm:px-8">
+        <div class="grid lg:grid-cols-[1fr_1.15fr] gap-12 lg:gap-16">
+          <!-- Left: heading -->
+          <div class="reveal">
+            <span class="text-[12px] font-600 uppercase tracking-[0.16em] text-cyanaccent/80">Why Borealis exists</span>
+            <h2 class="display-sm text-[clamp(1.95rem,3.8vw,2.85rem)] mt-3">
+              Accessibility is hard.<br />
+              <span class="halftone">Shipping it three times is harder.</span>
+            </h2>
+            <div class="mt-7 rounded-xl border border-[var(--hairline-strong)] bg-inkcard p-5">
+              <p class="text-[12px] font-600 uppercase tracking-[0.14em] text-textdim mb-3.5">Things we don't do</p>
+              <ul class="space-y-2.5 text-[14px] text-textmute">
+                <li class="flex items-start gap-2.5">
+                  <svg class="mt-0.5 shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FB7185" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  <span>No bundled CSS, no theme, no <code class="font-mono text-textbright text-[12.5px]">className</code> we picked for you.</span>
+                </li>
+                <li class="flex items-start gap-2.5">
+                  <svg class="mt-0.5 shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FB7185" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  <span>No design tokens, no <code class="font-mono text-textbright text-[12.5px]">&lt;ThemeProvider&gt;</code>, no runtime style engine.</span>
+                </li>
+                <li class="flex items-start gap-2.5">
+                  <svg class="mt-0.5 shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FB7185" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  <span>No "kitchen-sink" components — we ship primitives, not page templates.</span>
+                </li>
+                <li class="flex items-start gap-2.5">
+                  <svg class="mt-0.5 shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FB7185" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  <span>No framework favoritism — React, Vue and Solid ship the same release, same day.</span>
+                </li>
+                <li class="flex items-start gap-2.5">
+                  <svg class="mt-0.5 shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FB7185" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  <span>No silent breaking changes — every a11y regression fails CI before it ships.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Right: philosophy -->
+          <div class="reveal space-y-6 text-[15px] sm:text-[15.5px] leading-[1.72] text-textmute">
+            <p>
+              A button that opens a menu is deceptively expensive. It needs roving <code class="font-mono text-cyanaccent text-[13px]">tabindex</code>, type-ahead matching, an <code class="font-mono text-cyanaccent text-[13px]">aria-activedescendant</code> contract, escape-to-close, focus return, and correct behavior under a screen reader's virtual cursor. <span class="text-textbright font-500">Styled component kits bundle all of that with a visual design you'll fight forever.</span> Headless libraries unbundle the two: you get the unglamorous, correct behavior — and you write every pixel yourself.
+            </p>
+            <p>
+              Radix UI proved the headless model is the right one. Composable primitives, real WAI-ARIA semantics, no styling baggage — it reset the industry's expectations. <span class="text-textbright font-500">But Radix is React, and only React.</span> Teams on Vue or Solid have been re-implementing the same focus traps and the same listbox keyboard contracts, badly, in isolation, for years — each project paying the accessibility tax from scratch.
+            </p>
+            <p>
+              Borealis ports those primitives to all three frameworks from <span class="text-textbright font-500">one shared specification and one accessibility test suite</span>. The Combobox keyboard contract is defined once; React, Vue and Solid each implement against it; the same 1,900 axe-core and keyboard-interaction assertions run against every framework on every commit. A fix landed for Solid is, by construction, a fix the React and Vue maintainers can't forget to mirror.
+            </p>
+            <div class="grid grid-cols-3 gap-3 pt-2">
+              <div class="rounded-lg border border-[var(--hairline-strong)] bg-inkcard px-3 py-3.5 text-center">
+                <div class="font-mono font-700 text-[20px] text-cyanaccent tnum">1,900</div>
+                <div class="text-[11.5px] text-textdim mt-1">a11y assertions</div>
+              </div>
+              <div class="rounded-lg border border-[var(--hairline-strong)] bg-inkcard px-3 py-3.5 text-center">
+                <div class="font-mono font-700 text-[20px] text-cyanaccent tnum">3</div>
+                <div class="text-[11.5px] text-textdim mt-1">frameworks, 1 spec</div>
+              </div>
+              <div class="rounded-lg border border-[var(--hairline-strong)] bg-inkcard px-3 py-3.5 text-center">
+                <div class="font-mono font-700 text-[20px] text-cyanaccent tnum">0</div>
+                <div class="text-[11.5px] text-textdim mt-1">bytes of CSS</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 6. FEATURES GRID ============ -->
+    <section id="features" class="relative py-20 sm:py-28 hairline-t bg-inkraised/30">
+      <div class="mx-auto max-w-6xl px-5 sm:px-8">
+        <div class="text-center mb-14 max-w-2xl mx-auto">
+          <span class="text-[12px] font-600 uppercase tracking-[0.16em] text-cyanaccent/80">What's in the box</span>
+          <h2 class="reveal display-sm text-[clamp(1.95rem,3.8vw,2.85rem)] mt-3">38 components. Every one accessible by default.</h2>
+          <p class="reveal mt-4 text-textmute text-[15.5px] leading-relaxed">From Dialog and Combobox to RangeSlider and DatePicker — primitives that handle the hard parts so your design system stays the only thing you maintain.</p>
+        </div>
+
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- 1 -->
+          <div class="card-lift reveal rounded-xl border border-[var(--hairline-strong)] bg-inkcard p-6">
+            <div class="w-10 h-10 rounded-lg bg-cyanaccent/10 border border-cyanaccent/20 flex items-center justify-center mb-4">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#67E8F9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+              </svg>
+            </div>
+            <h3 class="text-[16.5px] font-700 tracking-tightest">38 components, 3 frameworks</h3>
+            <p class="mt-2 text-[14px] leading-relaxed text-textmute">Dialog, Popover, Combobox, Menu, Tabs, Tooltip, Accordion, Select, Toast and 29 more — identical API surface across React, Vue and Solid.</p>
+            <code class="mt-4 block rounded-md bg-inkraised/80 border border-[var(--hairline)] px-3 py-2 font-mono text-[12px] text-cyanaccent">import {'{'} Combobox {'}'} from '@borealis/vue'</code>
+          </div>
+          <!-- 2 -->
+          <div class="card-lift reveal rounded-xl border border-[var(--hairline-strong)] bg-inkcard p-6">
+            <div class="w-10 h-10 rounded-lg bg-cyanaccent/10 border border-cyanaccent/20 flex items-center justify-center mb-4">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#67E8F9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 2l2.4 7.4H22l-6 4.5 2.3 7.1L12 16.5 5.7 21l2.3-7.1-6-4.5h7.6z"/>
+              </svg>
+            </div>
+            <h3 class="text-[16.5px] font-700 tracking-tightest">WAI-ARIA compliant</h3>
+            <p class="mt-2 text-[14px] leading-relaxed text-textmute">Every primitive implements the matching ARIA Authoring Practices pattern — roles, states and properties wired correctly, verified by axe-core in CI.</p>
+            <code class="mt-4 block rounded-md bg-inkraised/80 border border-[var(--hairline)] px-3 py-2 font-mono text-[12px] text-cyanaccent">role="dialog" · aria-modal="true"</code>
+          </div>
+          <!-- 3 -->
+          <div class="card-lift reveal rounded-xl border border-[var(--hairline-strong)] bg-inkcard p-6">
+            <div class="w-10 h-10 rounded-lg bg-cyanaccent/10 border border-cyanaccent/20 flex items-center justify-center mb-4">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#67E8F9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h2M6 12h2M6 16h6M11 8h7M11 12h7"/>
+              </svg>
+            </div>
+            <h3 class="text-[16.5px] font-700 tracking-tightest">Full keyboard navigation</h3>
+            <p class="mt-2 text-[14px] leading-relaxed text-textmute">Roving focus, type-ahead, arrow-key traversal, Home / End, Page Up / Down and screen-reader announcements — the parts everyone forgets, handled.</p>
+            <code class="mt-4 block rounded-md bg-inkraised/80 border border-[var(--hairline)] px-3 py-2 font-mono text-[12px] text-cyanaccent">↑ ↓ ⏎ ⎋ · type-ahead built in</code>
+          </div>
+          <!-- 4 -->
+          <div class="card-lift reveal rounded-xl border border-[var(--hairline-strong)] bg-inkcard p-6">
+            <div class="w-10 h-10 rounded-lg bg-cyanaccent/10 border border-cyanaccent/20 flex items-center justify-center mb-4">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#67E8F9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 12h18M3 12l5-5M3 12l5 5M21 6v12"/>
+              </svg>
+            </div>
+            <h3 class="text-[16.5px] font-700 tracking-tightest">RTL support, built in</h3>
+            <p class="mt-2 text-[14px] leading-relaxed text-textmute">Direction-aware focus order and arrow keys. Set <code class="font-mono text-textbright text-[12px]">dir="rtl"</code> once — Menu, Slider and Tabs flip their interaction model automatically.</p>
+            <code class="mt-4 block rounded-md bg-inkraised/80 border border-[var(--hairline)] px-3 py-2 font-mono text-[12px] text-cyanaccent">&lt;Menu.Root dir="rtl" /&gt;</code>
+          </div>
+          <!-- 5 -->
+          <div class="card-lift reveal rounded-xl border border-[var(--hairline-strong)] bg-inkcard p-6">
+            <div class="w-10 h-10 rounded-lg bg-cyanaccent/10 border border-cyanaccent/20 flex items-center justify-center mb-4">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#67E8F9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 12h14M12 5v14" opacity="0"/><rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M3 9h18M9 21V9"/>
+              </svg>
+            </div>
+            <h3 class="text-[16.5px] font-700 tracking-tightest">Server-component friendly</h3>
+            <p class="mt-2 text-[14px] leading-relaxed text-textmute">Static parts render on the server; only the interactive shell hydrates. No <code class="font-mono text-textbright text-[12px]">"use client"</code> at the top of your whole tree.</p>
+            <code class="mt-4 block rounded-md bg-inkraised/80 border border-[var(--hairline)] px-3 py-2 font-mono text-[12px] text-cyanaccent">RSC-safe · streams without flicker</code>
+          </div>
+          <!-- 6 -->
+          <div class="card-lift reveal rounded-xl border border-[var(--hairline-strong)] bg-inkcard p-6">
+            <div class="w-10 h-10 rounded-lg bg-cyanaccent/10 border border-cyanaccent/20 flex items-center justify-center mb-4">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#67E8F9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M13 2L3 14h7l-1 8 10-12h-7z"/>
+              </svg>
+            </div>
+            <h3 class="text-[16.5px] font-700 tracking-tightest">Animation primitives</h3>
+            <p class="mt-2 text-[14px] leading-relaxed text-textmute">Mount and unmount states stay in the DOM through your exit transition — pair Borealis with CSS, Motion or GSAP without orphaned nodes.</p>
+            <code class="mt-4 block rounded-md bg-inkraised/80 border border-[var(--hairline)] px-3 py-2 font-mono text-[12px] text-cyanaccent">data-state="open" | "closed"</code>
+          </div>
+        </div>
+
+        <!-- coverage bars -->
+        <div class="reveal mt-12 rounded-xl border border-[var(--hairline-strong)] bg-inkcard p-6 sm:p-8">
+          <div class="flex items-baseline justify-between mb-6">
+            <h3 class="text-[15px] font-700 tracking-tightest">Framework coverage</h3>
+            <span class="font-mono text-[12px] text-textdim">38 / 38 components per framework</span>
+          </div>
+          <div id="coverage-bars" class="space-y-4"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 7. COMPARISON TABLE ============ -->
+    <section class="relative py-20 sm:py-28 hairline-t">
+      <div class="mx-auto max-w-5xl px-5 sm:px-8">
+        <div class="text-center mb-12 max-w-2xl mx-auto">
+          <span class="text-[12px] font-600 uppercase tracking-[0.16em] text-cyanaccent/80">How it compares</span>
+          <h2 class="reveal display-sm text-[clamp(1.95rem,3.8vw,2.85rem)] mt-3">Headless is a crowded field. Here's the honest table.</h2>
+          <p class="reveal mt-4 text-textmute text-[15.5px] leading-relaxed">Radix, Ariakit and Headless UI are all excellent. The difference Borealis makes is the same primitives, the same audited contract, across three frameworks.</p>
+        </div>
+
+        <div class="reveal overflow-x-auto rounded-xl border border-[var(--hairline-strong)]">
+          <table class="w-full text-left border-collapse min-w-[640px]">
+            <thead>
+              <tr class="hairline-b">
+                <th class="py-4 px-5 text-[13px] font-600 text-textmute font-normal">Capability</th>
+                <th class="py-4 px-4 text-center bg-cyanaccent/[0.06] border-x border-cyanaccent/15">
+                  <div class="flex items-center justify-center gap-2">
+                    <svg width="16" height="16" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                      <path d="M9 22.5C9 16 12 8.5 16 8.5C20 8.5 23 16 23 22.5" stroke="#67E8F9" stroke-width="2.6" stroke-linecap="round"/>
+                      <circle cx="16" cy="23" r="1.6" fill="#67E8F9"/>
+                    </svg>
+                    <span class="text-[14px] font-700 text-cyanaccent">Borealis</span>
+                  </div>
+                </th>
+                <th class="py-4 px-4 text-center text-[14px] font-600 text-textmute">Radix UI</th>
+                <th class="py-4 px-4 text-center text-[14px] font-600 text-textmute">Ariakit</th>
+                <th class="py-4 px-4 text-center text-[14px] font-600 text-textmute">Headless UI</th>
+              </tr>
+            </thead>
+            <tbody class="text-[13.5px]">
+              <tr class="hairline-b">
+                <td class="py-3.5 px-5 text-textmute">Cross-framework support</td>
+                <td class="py-3.5 px-4 text-center bg-cyanaccent/[0.04] border-x border-cyanaccent/10 font-600 text-cyanaccent">React · Vue · Solid</td>
+                <td class="py-3.5 px-4 text-center text-textdim">React only</td>
+                <td class="py-3.5 px-4 text-center text-textdim">React only</td>
+                <td class="py-3.5 px-4 text-center text-textdim">React · Vue</td>
+              </tr>
+              <tr class="hairline-b">
+                <td class="py-3.5 px-5 text-textmute">Components shipped</td>
+                <td class="py-3.5 px-4 text-center bg-cyanaccent/[0.04] border-x border-cyanaccent/10 font-600 text-cyanaccent font-mono tnum">38</td>
+                <td class="py-3.5 px-4 text-center text-textmute font-mono tnum">28</td>
+                <td class="py-3.5 px-4 text-center text-textmute font-mono tnum">31</td>
+                <td class="py-3.5 px-4 text-center text-textmute font-mono tnum">10</td>
+              </tr>
+              <tr class="hairline-b">
+                <td class="py-3.5 px-5 text-textmute">Shared a11y test suite</td>
+                <td class="py-3.5 px-4 text-center bg-cyanaccent/[0.04] border-x border-cyanaccent/10">
+                  <svg class="inline" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#67E8F9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-label="Yes"><path d="M20 6L9 17l-5-5"/></svg>
+                </td>
+                <td class="py-3.5 px-4 text-center"><svg class="inline" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3F4759" stroke-width="2.6" stroke-linecap="round" aria-label="No"><path d="M18 6L6 18M6 6l12 12"/></svg></td>
+                <td class="py-3.5 px-4 text-center"><svg class="inline" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3F4759" stroke-width="2.6" stroke-linecap="round" aria-label="No"><path d="M18 6L6 18M6 6l12 12"/></svg></td>
+                <td class="py-3.5 px-4 text-center"><svg class="inline" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3F4759" stroke-width="2.6" stroke-linecap="round" aria-label="No"><path d="M18 6L6 18M6 6l12 12"/></svg></td>
+              </tr>
+              <tr class="hairline-b">
+                <td class="py-3.5 px-5 text-textmute">Built-in RTL support</td>
+                <td class="py-3.5 px-4 text-center bg-cyanaccent/[0.04] border-x border-cyanaccent/10">
+                  <svg class="inline" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#67E8F9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-label="Yes"><path d="M20 6L9 17l-5-5"/></svg>
+                </td>
+                <td class="py-3.5 px-4 text-center"><svg class="inline" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#86EFAC" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-label="Yes"><path d="M20 6L9 17l-5-5"/></svg></td>
+                <td class="py-3.5 px-4 text-center text-textdim text-[12px] font-mono">partial</td>
+                <td class="py-3.5 px-4 text-center"><svg class="inline" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3F4759" stroke-width="2.6" stroke-linecap="round" aria-label="No"><path d="M18 6L6 18M6 6l12 12"/></svg></td>
+              </tr>
+              <tr class="hairline-b">
+                <td class="py-3.5 px-5 text-textmute">Server-component safe</td>
+                <td class="py-3.5 px-4 text-center bg-cyanaccent/[0.04] border-x border-cyanaccent/10">
+                  <svg class="inline" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#67E8F9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-label="Yes"><path d="M20 6L9 17l-5-5"/></svg>
+                </td>
+                <td class="py-3.5 px-4 text-center"><svg class="inline" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#86EFAC" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-label="Yes"><path d="M20 6L9 17l-5-5"/></svg></td>
+                <td class="py-3.5 px-4 text-center text-textdim text-[12px] font-mono">partial</td>
+                <td class="py-3.5 px-4 text-center text-textdim text-[12px] font-mono">partial</td>
+              </tr>
+              <tr class="hairline-b">
+                <td class="py-3.5 px-5 text-textmute">Animation primitives</td>
+                <td class="py-3.5 px-4 text-center bg-cyanaccent/[0.04] border-x border-cyanaccent/10">
+                  <svg class="inline" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#67E8F9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-label="Yes"><path d="M20 6L9 17l-5-5"/></svg>
+                </td>
+                <td class="py-3.5 px-4 text-center"><svg class="inline" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#86EFAC" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-label="Yes"><path d="M20 6L9 17l-5-5"/></svg></td>
+                <td class="py-3.5 px-4 text-center"><svg class="inline" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3F4759" stroke-width="2.6" stroke-linecap="round" aria-label="No"><path d="M18 6L6 18M6 6l12 12"/></svg></td>
+                <td class="py-3.5 px-4 text-center"><svg class="inline" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#86EFAC" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-label="Yes"><path d="M20 6L9 17l-5-5"/></svg></td>
+              </tr>
+              <tr>
+                <td class="py-3.5 px-5 text-textmute">License</td>
+                <td class="py-3.5 px-4 text-center bg-cyanaccent/[0.04] border-x border-cyanaccent/10 font-600 text-cyanaccent font-mono">MIT</td>
+                <td class="py-3.5 px-4 text-center text-textmute font-mono">MIT</td>
+                <td class="py-3.5 px-4 text-center text-textmute font-mono">MIT</td>
+                <td class="py-3.5 px-4 text-center text-textmute font-mono">MIT</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="reveal mt-4 text-center text-[12px] text-textdim">Component counts as of v2.0 · Mar 2026. Corrections welcome — open a PR against <code class="font-mono text-textmute">docs/comparison.md</code>.</p>
+      </div>
+    </section>
+
+    <!-- ============ 8. QUICK-START ============ -->
+    <section id="quickstart" class="relative dot-grid py-20 sm:py-28 hairline-t bg-inkraised/30">
+      <div class="mesh-blob mesh-deep w-[400px] h-[400px] bottom-0 left-10 opacity-40"></div>
+      <div class="relative z-10 mx-auto max-w-4xl px-5 sm:px-8">
+        <div class="text-center mb-14">
+          <span class="text-[12px] font-600 uppercase tracking-[0.16em] text-cyanaccent/80">Quick start</span>
+          <h2 class="reveal display-sm text-[clamp(1.95rem,3.8vw,2.85rem)] mt-3">
+            Hello world in <em class="not-italic accent-frag">under 60 seconds</em>.
+          </h2>
+          <p class="reveal mt-4 text-textmute text-[15.5px] leading-relaxed max-w-xl mx-auto">Three steps. No config file, no provider, no build plugin. The example is React — Vue and Solid are line-for-line equivalent.</p>
+        </div>
+
+        <div class="space-y-5">
+          <!-- Step 1 -->
+          <div class="reveal flex gap-4 sm:gap-5">
+            <div class="shrink-0 w-9 h-9 rounded-full border border-cyanaccent/30 bg-cyanaccent/10 flex items-center justify-center font-mono font-700 text-[15px] text-cyanaccent">1</div>
+            <div class="flex-1 min-w-0">
+              <h3 class="text-[16px] font-700 tracking-tightest mb-1">Install the package</h3>
+              <p class="text-[13.5px] text-textmute mb-3">Pull in the build for your framework — they're independent packages, so install only what you use.</p>
+              <div class="rounded-lg border border-[var(--hairline-strong)] bg-inkcard overflow-hidden">
+                <div class="flex items-center justify-between hairline-b bg-inkraised/60 px-3.5 py-2">
+                  <span class="font-mono text-[11.5px] text-textmute">terminal</span>
+                  <button data-copy="qs-1" class="copy-btn flex items-center gap-1.5 text-[11px] font-600 text-textmute hover:text-cyanaccent transition-colors" aria-label="Copy step 1 command">
+                    <svg class="copy-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    <span class="copy-label">Copy</span>
+                  </button>
+                </div>
+                <div class="px-3.5 py-3 font-mono text-[13px]"><code id="qs-1"><span class="tok-shell-prompt">$ </span>npm install <span class="tok-pkg">@borealis/react</span></code></div>
+              </div>
+            </div>
+          </div>
+          <!-- Step 2 -->
+          <div class="reveal flex gap-4 sm:gap-5">
+            <div class="shrink-0 w-9 h-9 rounded-full border border-cyanaccent/30 bg-cyanaccent/10 flex items-center justify-center font-mono font-700 text-[15px] text-cyanaccent">2</div>
+            <div class="flex-1 min-w-0">
+              <h3 class="text-[16px] font-700 tracking-tightest mb-1">Compose a primitive</h3>
+              <p class="text-[13.5px] text-textmute mb-3">Import the namespace and assemble its parts. Borealis manages open state — pass your own classes for everything visual.</p>
+              <div class="rounded-lg border border-[var(--hairline-strong)] bg-inkcard overflow-hidden">
+                <div class="flex items-center justify-between hairline-b bg-inkraised/60 px-3.5 py-2">
+                  <span class="font-mono text-[11.5px] text-textmute">Menu.tsx</span>
+                  <button data-copy="qs-2" class="copy-btn flex items-center gap-1.5 text-[11px] font-600 text-textmute hover:text-cyanaccent transition-colors" aria-label="Copy step 2 code">
+                    <svg class="copy-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    <span class="copy-label">Copy</span>
+                  </button>
+                </div>
+                <div class="code-scroll overflow-x-auto px-3.5 py-3 font-mono text-[12.5px] leading-[1.7]">
+<pre id="qs-2" class="!m-0"><span class="tok-kw">import</span> <span class="tok-punct">{</span> Menu <span class="tok-punct">}</span> <span class="tok-kw">from</span> <span class="tok-str">'@borealis/react'</span>
+
+<span class="tok-punct">&lt;</span><span class="tok-tag">Menu.Root</span><span class="tok-punct">&gt;</span>
+  <span class="tok-punct">&lt;</span><span class="tok-tag">Menu.Trigger</span> <span class="tok-attr">className</span><span class="tok-punct">=</span><span class="tok-str">"btn"</span><span class="tok-punct">&gt;</span>Options<span class="tok-punct">&lt;/</span><span class="tok-tag">Menu.Trigger</span><span class="tok-punct">&gt;</span>
+  <span class="tok-punct">&lt;</span><span class="tok-tag">Menu.Items</span> <span class="tok-attr">className</span><span class="tok-punct">=</span><span class="tok-str">"menu-panel"</span><span class="tok-punct">&gt;</span>
+    <span class="tok-punct">&lt;</span><span class="tok-tag">Menu.Item</span><span class="tok-punct">&gt;</span>Rename<span class="tok-punct">&lt;/</span><span class="tok-tag">Menu.Item</span><span class="tok-punct">&gt;</span>
+    <span class="tok-punct">&lt;</span><span class="tok-tag">Menu.Item</span><span class="tok-punct">&gt;</span>Duplicate<span class="tok-punct">&lt;/</span><span class="tok-tag">Menu.Item</span><span class="tok-punct">&gt;</span>
+  <span class="tok-punct">&lt;/</span><span class="tok-tag">Menu.Items</span><span class="tok-punct">&gt;</span>
+<span class="tok-punct">&lt;/</span><span class="tok-tag">Menu.Root</span><span class="tok-punct">&gt;</span></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Step 3 -->
+          <div class="reveal flex gap-4 sm:gap-5">
+            <div class="shrink-0 w-9 h-9 rounded-full border border-cyanaccent/30 bg-cyanaccent/10 flex items-center justify-center font-mono font-700 text-[15px] text-cyanaccent">3</div>
+            <div class="flex-1 min-w-0">
+              <h3 class="text-[16px] font-700 tracking-tightest mb-1">Style it with anything</h3>
+              <p class="text-[13.5px] text-textmute mb-3">Tailwind, CSS Modules, vanilla-extract, plain CSS — Borealis exposes <code class="font-mono text-textbright text-[12px]">data-state</code> and <code class="font-mono text-textbright text-[12px]">data-highlighted</code> hooks to target.</p>
+              <div class="rounded-lg border border-[var(--hairline-strong)] bg-inkcard overflow-hidden">
+                <div class="flex items-center justify-between hairline-b bg-inkraised/60 px-3.5 py-2">
+                  <span class="font-mono text-[11.5px] text-textmute">menu.css</span>
+                  <button data-copy="qs-3" class="copy-btn flex items-center gap-1.5 text-[11px] font-600 text-textmute hover:text-cyanaccent transition-colors" aria-label="Copy step 3 code">
+                    <svg class="copy-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    <span class="copy-label">Copy</span>
+                  </button>
+                </div>
+                <div class="code-scroll overflow-x-auto px-3.5 py-3 font-mono text-[12.5px] leading-[1.7]">
+<pre id="qs-3" class="!m-0"><span class="tok-comment">/* highlighted via keyboard or pointer */</span>
+<span class="tok-tag">.menu-panel</span> <span class="tok-attr">[data-highlighted]</span> <span class="tok-punct">{</span>
+  <span class="tok-prop">background</span><span class="tok-punct">:</span> <span class="tok-num">#67E8F9</span><span class="tok-punct">;</span>
+  <span class="tok-prop">color</span><span class="tok-punct">:</span> <span class="tok-num">#06121A</span><span class="tok-punct">;</span>
+<span class="tok-punct">}</span></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="reveal mt-10 text-center">
+          <a href="#cta" class="btn inline-flex items-center gap-2 rounded-xl border border-[var(--hairline-strong)] bg-inkcard px-5 py-2.5 text-[14px] font-600 hover:border-cyanaccent/30">
+            Browse all 38 components
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 9. COMMUNITY ============ -->
+    <section id="community" class="relative py-20 sm:py-28 hairline-t">
+      <div class="mx-auto max-w-6xl px-5 sm:px-8">
+        <div class="text-center mb-14 max-w-2xl mx-auto">
+          <span class="text-[12px] font-600 uppercase tracking-[0.16em] text-cyanaccent/80">Community</span>
+          <h2 class="reveal display-sm text-[clamp(1.95rem,3.8vw,2.85rem)] mt-3">Built in the open, with 240 contributors.</h2>
+          <p class="reveal mt-4 text-textmute text-[15.5px] leading-relaxed">Every primitive's keyboard contract was argued over in a GitHub Discussion before it shipped. Come help shape v2.1.</p>
+        </div>
+
+        <!-- presence cards -->
+        <div class="grid sm:grid-cols-2 gap-4 mb-10">
+          <div class="card-lift reveal rounded-xl border border-[var(--hairline-strong)] bg-inkcard p-6 flex items-center gap-5">
+            <div class="w-12 h-12 rounded-xl bg-cyanaccent/10 border border-cyanaccent/20 flex items-center justify-center shrink-0">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#67E8F9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+            </div>
+            <div>
+              <div class="flex items-baseline gap-2">
+                <span class="font-mono font-700 text-[22px] tnum" data-count="3120">0</span>
+                <span class="text-[13px] text-textmute">GitHub Discussions</span>
+              </div>
+              <p class="text-[12.5px] text-textdim mt-0.5">RFCs, keyboard-contract debates and triage — all public.</p>
+            </div>
+          </div>
+          <div class="card-lift reveal rounded-xl border border-[var(--hairline-strong)] bg-inkcard p-6 flex items-center gap-5">
+            <div class="w-12 h-12 rounded-xl bg-cyanaccent/10 border border-cyanaccent/20 flex items-center justify-center shrink-0">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="#67E8F9" aria-hidden="true"><path d="M20.3 4.4A19.8 19.8 0 0 0 15.4 3l-.3.5c1.7.4 3.2 1 4.7 1.9a16.6 16.6 0 0 0-14.6 0c1.4-.9 3-1.5 4.6-1.9L9.5 3a19.8 19.8 0 0 0-4.9 1.4C1.5 9 .7 13.5 1.1 17.9a19.9 19.9 0 0 0 6 3 14.3 14.3 0 0 0 1.3-2.1c-.7-.3-1.4-.6-2-1l.5-.4a14.2 14.2 0 0 0 12.2 0l.5.4c-.6.4-1.3.7-2 1 .4.7.8 1.4 1.3 2.1a19.8 19.8 0 0 0 6-3c.5-5.1-.8-9.6-3.6-13.5zM8.3 15.3c-1.2 0-2.2-1.1-2.2-2.4 0-1.4 1-2.5 2.2-2.5s2.2 1.1 2.2 2.5c0 1.3-1 2.4-2.2 2.4zm7.4 0c-1.2 0-2.2-1.1-2.2-2.4 0-1.4 1-2.5 2.2-2.5s2.2 1.1 2.2 2.5c0 1.3-1 2.4-2.2 2.4z"/></svg>
+            </div>
+            <div>
+              <div class="flex items-baseline gap-2">
+                <span class="font-mono font-700 text-[22px] tnum" data-count="9740">0</span>
+                <span class="text-[13px] text-textmute">Discord members</span>
+                <span class="inline-flex items-center gap-1.5 text-[11px] text-cyanaccent font-600 ml-1"><span class="pulse-dot"></span>1,206 online</span>
+              </div>
+              <p class="text-[12.5px] text-textdim mt-0.5">Real-time help, a #showcase channel, and weekly office hours.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- maintainers -->
+        <div class="reveal rounded-xl border border-[var(--hairline-strong)] bg-inkcard p-6 sm:p-8">
+          <div class="flex items-baseline justify-between mb-6 flex-wrap gap-2">
+            <h3 class="text-[15px] font-700 tracking-tightest">Core maintainers</h3>
+            <span class="font-mono text-[12px] text-textdim">+ 240 contributors</span>
+          </div>
+          <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <!-- maintainer 1 -->
+            <div class="flex items-center gap-3 rounded-lg border border-[var(--hairline)] bg-inkraised/60 p-3">
+              <span aria-hidden="true" class="shrink-0">
+                <svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#1A2532"/><text x="20" y="25.5" font-family="Inter,sans-serif" font-size="15" font-weight="700" fill="#67E8F9" text-anchor="middle">LH</text></svg>
+              </span>
+              <div class="min-w-0">
+                <div class="text-[13.5px] font-600 truncate">Lena Hoffmann</div>
+                <div class="text-[11.5px] text-textdim font-mono truncate">@lenahz · lead</div>
+              </div>
+            </div>
+            <!-- maintainer 2 -->
+            <div class="flex items-center gap-3 rounded-lg border border-[var(--hairline)] bg-inkraised/60 p-3">
+              <span aria-hidden="true" class="shrink-0">
+                <svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#1A2532"/><text x="20" y="25.5" font-family="Inter,sans-serif" font-size="15" font-weight="700" fill="#67E8F9" text-anchor="middle">RK</text></svg>
+              </span>
+              <div class="min-w-0">
+                <div class="text-[13.5px] font-600 truncate">Rohan Kapadia</div>
+                <div class="text-[11.5px] text-textdim font-mono truncate">@rohan-k · React</div>
+              </div>
+            </div>
+            <!-- maintainer 3 -->
+            <div class="flex items-center gap-3 rounded-lg border border-[var(--hairline)] bg-inkraised/60 p-3">
+              <span aria-hidden="true" class="shrink-0">
+                <svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#1A2532"/><text x="20" y="25.5" font-family="Inter,sans-serif" font-size="15" font-weight="700" fill="#67E8F9" text-anchor="middle">MN</text></svg>
+              </span>
+              <div class="min-w-0">
+                <div class="text-[13.5px] font-600 truncate">Mei Nakamura</div>
+                <div class="text-[11.5px] text-textdim font-mono truncate">@mei-n · Vue</div>
+              </div>
+            </div>
+            <!-- maintainer 4 -->
+            <div class="flex items-center gap-3 rounded-lg border border-[var(--hairline)] bg-inkraised/60 p-3">
+              <span aria-hidden="true" class="shrink-0">
+                <svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#1A2532"/><text x="20" y="25.5" font-family="Inter,sans-serif" font-size="15" font-weight="700" fill="#67E8F9" text-anchor="middle">DS</text></svg>
+              </span>
+              <div class="min-w-0">
+                <div class="text-[13.5px] font-600 truncate">Diego Salazar</div>
+                <div class="text-[11.5px] text-textdim font-mono truncate">@dsalazar · Solid</div>
+              </div>
+            </div>
+            <!-- maintainer 5 -->
+            <div class="flex items-center gap-3 rounded-lg border border-[var(--hairline)] bg-inkraised/60 p-3">
+              <span aria-hidden="true" class="shrink-0">
+                <svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#1A2532"/><text x="20" y="25.5" font-family="Inter,sans-serif" font-size="15" font-weight="700" fill="#67E8F9" text-anchor="middle">AO</text></svg>
+              </span>
+              <div class="min-w-0">
+                <div class="text-[13.5px] font-600 truncate">Amara Okeke</div>
+                <div class="text-[11.5px] text-textdim font-mono truncate">@amaraok · a11y</div>
+              </div>
+            </div>
+            <!-- maintainer 6 -->
+            <div class="flex items-center gap-3 rounded-lg border border-[var(--hairline)] bg-inkraised/60 p-3">
+              <span aria-hidden="true" class="shrink-0">
+                <svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#1A2532"/><text x="20" y="25.5" font-family="Inter,sans-serif" font-size="15" font-weight="700" fill="#67E8F9" text-anchor="middle">TŚ</text></svg>
+              </span>
+              <div class="min-w-0">
+                <div class="text-[13.5px] font-600 truncate">Tomasz Świderski</div>
+                <div class="text-[11.5px] text-textdim font-mono truncate">@tomasz-s · docs</div>
+              </div>
+            </div>
+            <!-- maintainer 7 -->
+            <div class="flex items-center gap-3 rounded-lg border border-[var(--hairline)] bg-inkraised/60 p-3">
+              <span aria-hidden="true" class="shrink-0">
+                <svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#1A2532"/><text x="20" y="25.5" font-family="Inter,sans-serif" font-size="15" font-weight="700" fill="#67E8F9" text-anchor="middle">SV</text></svg>
+              </span>
+              <div class="min-w-0">
+                <div class="text-[13.5px] font-600 truncate">Sofia Vinciguerra</div>
+                <div class="text-[11.5px] text-textdim font-mono truncate">@sofiav · DX</div>
+              </div>
+            </div>
+            <!-- maintainer 8 -->
+            <div class="flex items-center gap-3 rounded-lg border border-[var(--hairline)] bg-inkraised/60 p-3">
+              <span aria-hidden="true" class="shrink-0">
+                <svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#1A2532"/><text x="20" y="25.5" font-family="Inter,sans-serif" font-size="15" font-weight="700" fill="#67E8F9" text-anchor="middle">HÁ</text></svg>
+              </span>
+              <div class="min-w-0">
+                <div class="text-[13.5px] font-600 truncate">Halldór Ásgeirsson</div>
+                <div class="text-[11.5px] text-textdim font-mono truncate">@halldora · infra</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="hairline-t mt-6 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p class="text-[13.5px] text-textmute">Borealis is funded entirely by GitHub Sponsors — no VC, no company behind it.</p>
+            <a href="#sponsors" class="btn btn-accent inline-flex items-center gap-2 rounded-lg px-4 py-2 text-[13.5px] font-700 shrink-0">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+              Become a sponsor
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 10. SPONSOR ROW ============ -->
+    <section id="sponsors" class="relative py-20 sm:py-24 hairline-t bg-inkraised/30">
+      <div class="mx-auto max-w-5xl px-5 sm:px-8">
+        <div class="text-center mb-12">
+          <span class="text-[12px] font-600 uppercase tracking-[0.16em] text-cyanaccent/80">Sponsors</span>
+          <h2 class="reveal display-sm text-[clamp(1.8rem,3.4vw,2.5rem)] mt-3">Funded by the teams that ship on it.</h2>
+          <p class="reveal mt-4 text-textmute text-[15px] leading-relaxed max-w-xl mx-auto">Every dollar goes to maintainer time and the a11y audit budget. 88 sponsors and counting.</p>
+        </div>
+
+        <!-- company sponsors -->
+        <p class="reveal text-center text-[11.5px] font-600 uppercase tracking-[0.16em] text-textdim mb-6">Sponsoring organizations</p>
+        <div class="reveal grid grid-cols-2 sm:grid-cols-4 gap-3 mb-12">
+          <div class="card-lift rounded-xl border border-[var(--hairline-strong)] bg-inkcard py-7 flex items-center justify-center">
+            <svg width="108" height="26" viewBox="0 0 118 28" fill="#8A94A6" aria-label="Vercel">
+              <path d="M14 4l12 21H2z"/><text x="34" y="20" font-family="Inter,sans-serif" font-size="17" font-weight="700" letter-spacing="-0.6">Vercel</text>
+            </svg>
+          </div>
+          <div class="card-lift rounded-xl border border-[var(--hairline-strong)] bg-inkcard py-7 flex items-center justify-center">
+            <svg width="104" height="26" viewBox="0 0 114 28" fill="#8A94A6" aria-label="Linear">
+              <rect x="2" y="5" width="18" height="18" rx="5"/><text x="30" y="20" font-family="Inter,sans-serif" font-size="17" font-weight="700" letter-spacing="-0.6">Linear</text>
+            </svg>
+          </div>
+          <div class="card-lift rounded-xl border border-[var(--hairline-strong)] bg-inkcard py-7 flex items-center justify-center">
+            <svg width="112" height="26" viewBox="0 0 122 28" fill="#8A94A6" aria-label="Shopify">
+              <path d="M12 3l7 3.5v16H5V7z"/><text x="28" y="20" font-family="Inter,sans-serif" font-size="17" font-weight="700" letter-spacing="-0.6">Shopify</text>
+            </svg>
+          </div>
+          <div class="card-lift rounded-xl border border-[var(--hairline-strong)] bg-inkcard py-7 flex items-center justify-center">
+            <svg width="100" height="26" viewBox="0 0 110 28" fill="#8A94A6" aria-label="Figma">
+              <circle cx="11" cy="8" r="5"/><circle cx="11" cy="20" r="5"/><text x="26" y="20" font-family="Inter,sans-serif" font-size="17" font-weight="700" letter-spacing="-0.6">Figma</text>
+            </svg>
+          </div>
+        </div>
+
+        <!-- individual sponsors -->
+        <p class="reveal text-center text-[11.5px] font-600 uppercase tracking-[0.16em] text-textdim mb-6">
+          <span class="font-mono text-textmute tnum" data-count="84">0</span> individual sponsors
+        </p>
+        <div class="reveal flex flex-wrap justify-center gap-2.5 max-w-3xl mx-auto" id="sponsor-grid"></div>
+
+        <div class="reveal mt-10 text-center">
+          <a href="#cta" class="btn inline-flex items-center gap-2 rounded-xl border border-cyanaccent/30 bg-cyanaccent/[0.06] px-5 py-2.5 text-[14px] font-600 text-cyanaccent hover:bg-cyanaccent/10">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            Sponsor Borealis on GitHub
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 11. FAQ ============ -->
+    <section id="faq" class="relative py-20 sm:py-28 hairline-t">
+      <div class="mx-auto max-w-3xl px-5 sm:px-8">
+        <div class="text-center mb-12">
+          <span class="text-[12px] font-600 uppercase tracking-[0.16em] text-cyanaccent/80">FAQ</span>
+          <h2 class="reveal display-sm text-[clamp(1.95rem,3.8vw,2.7rem)] mt-3">Questions, answered straight.</h2>
+        </div>
+
+        <div class="space-y-3">
+          <!-- Q1 -->
+          <details class="faq-item reveal rounded-xl border border-[var(--hairline-strong)] bg-inkcard overflow-hidden group">
+            <summary class="flex items-center justify-between gap-4 px-5 py-4.5 py-4">
+              <span class="text-[15.5px] font-600 tracking-tightest">Is Borealis production-ready?</span>
+              <svg class="faq-chevron shrink-0 text-cyanaccent" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            </summary>
+            <div class="px-5 pb-5 text-[14px] leading-[1.7] text-textmute">
+              Yes. v2.0 is the third major release and is in production at Vercel, Linear and Shopify, serving more than 2.8 million weekly npm installs. The API is stable and follows semantic versioning — breaking changes only land in major releases, each with a published codemod. Every component carries the same 1,900-assertion accessibility suite, run on all three frameworks per commit, so a release that regresses keyboard behavior or an ARIA contract cannot reach npm.
+            </div>
+          </details>
+          <!-- Q2 -->
+          <details class="faq-item reveal rounded-xl border border-[var(--hairline-strong)] bg-inkcard overflow-hidden group">
+            <summary class="flex items-center justify-between gap-4 px-5 py-4">
+              <span class="text-[15.5px] font-600 tracking-tightest">How is this different from Radix?</span>
+              <svg class="faq-chevron shrink-0 text-cyanaccent" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            </summary>
+            <div class="px-5 pb-5 text-[14px] leading-[1.7] text-textmute">
+              Radix UI is excellent, and it directly inspired Borealis — the compound-component shape will feel familiar. The core difference is reach: Radix is React-only, while Borealis ships the same primitives to React, Vue and Solid from a single specification and one shared accessibility test suite. Borealis also ships 38 components to Radix's 28, with built-in RTL support and animation primitives. If your stack is exclusively React, Radix is a great choice; if you maintain components across frameworks — or expect to — Borealis removes the duplicate accessibility work.
+            </div>
+          </details>
+          <!-- Q3 -->
+          <details class="faq-item reveal rounded-xl border border-[var(--hairline-strong)] bg-inkcard overflow-hidden group">
+            <summary class="flex items-center justify-between gap-4 px-5 py-4">
+              <span class="text-[15.5px] font-600 tracking-tightest">Will React Server Components break it?</span>
+              <svg class="faq-chevron shrink-0 text-cyanaccent" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            </summary>
+            <div class="px-5 pb-5 text-[14px] leading-[1.7] text-textmute">
+              No. Borealis is designed for the RSC boundary. Static parts — a Dialog's title and description, an Accordion's headings — render on the server with no client cost. Only the interactive shell carries a <code class="font-mono text-textbright text-[12.5px]">"use client"</code> directive, so you mark the component, not your entire page tree. Components stream without hydration flicker and ship correct markup on first paint. The Next.js App Router and Remix are both covered by our example apps and tested in CI.
+            </div>
+          </details>
+          <!-- Q4 -->
+          <details class="faq-item reveal rounded-xl border border-[var(--hairline-strong)] bg-inkcard overflow-hidden group">
+            <summary class="flex items-center justify-between gap-4 px-5 py-4">
+              <span class="text-[15.5px] font-600 tracking-tightest">What about animation?</span>
+              <svg class="faq-chevron shrink-0 text-cyanaccent" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            </summary>
+            <div class="px-5 pb-5 text-[14px] leading-[1.7] text-textmute">
+              Borealis stays headless about animation too — it never bundles a motion library. Instead each primitive exposes a <code class="font-mono text-textbright text-[12.5px]">data-state</code> attribute (<code class="font-mono text-textbright text-[12.5px]">open</code> / <code class="font-mono text-textbright text-[12.5px]">closed</code>) and keeps unmounting elements in the DOM until their exit transition completes. That means you can animate with plain CSS keyframes, Motion, GSAP or View Transitions — your choice — without the classic problem of a popover vanishing before its fade-out finishes. There is nothing to configure; the mount/unmount lifecycle is handled for you.
+            </div>
+          </details>
+          <!-- Q5 -->
+          <details class="faq-item reveal rounded-xl border border-[var(--hairline-strong)] bg-inkcard overflow-hidden group">
+            <summary class="flex items-center justify-between gap-4 px-5 py-4">
+              <span class="text-[15.5px] font-600 tracking-tightest">Long-term commitment, or corporate sponsor lock-in?</span>
+              <svg class="faq-chevron shrink-0 text-cyanaccent" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            </summary>
+            <div class="px-5 pb-5 text-[14px] leading-[1.7] text-textmute">
+              Borealis is MIT-licensed and owned by no company. Vercel, Linear, Shopify and Figma sponsor the project, but none of them controls the roadmap, holds the trademark or can relicense the code — sponsorship funds maintainer time and the third-party accessibility audit, nothing more. Governance is a published document, releases follow a public RFC process in GitHub Discussions, and 240 contributors hold commit history across the codebase. If every sponsor walked away tomorrow, the MIT license and the community keep the project alive — that is the entire point of building it this way.
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 12. FINAL CTA ============ -->
+    <section id="cta" class="relative overflow-hidden py-24 sm:py-32 hairline-t">
+      <div class="mesh-blob mesh-cyan w-[560px] h-[420px] -bottom-32 left-1/2 -translate-x-1/2 opacity-70"></div>
+      <div class="absolute inset-0 hero-radial" style="transform: rotate(180deg);"></div>
+      <div class="relative z-10 mx-auto max-w-2xl px-5 sm:px-8 text-center">
+        <span class="inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-inkcard/80 px-3 py-1 text-[12px] font-500 text-textmute mb-6">
+          <span class="pulse-dot"></span> v2.0 · MIT · zero dependencies
+        </span>
+        <h2 class="reveal display text-[clamp(2.2rem,5.2vw,3.6rem)]">
+          Get started in <span class="accent-frag">60 seconds.</span>
+        </h2>
+        <p class="reveal mt-5 text-textmute text-[16px] leading-relaxed max-w-lg mx-auto">
+          Install one package, compose a primitive, style it your way. No config, no provider, no lock-in.
+        </p>
+
+        <!-- install -->
+        <div class="reveal mt-9 mx-auto max-w-md">
+          <div class="rounded-xl border border-[var(--hairline-strong)] bg-inkcard overflow-hidden glow-ring flex items-stretch">
+            <div class="flex-1 px-4 py-3.5 font-mono text-[13.5px] text-left flex items-center">
+              <code id="cta-cmd"><span class="tok-shell-prompt">$ </span>npm install <span class="tok-pkg">@borealis/react</span></code>
+            </div>
+            <button data-copy="cta-cmd" class="copy-btn shrink-0 flex items-center gap-1.5 border-l border-[var(--hairline-strong)] bg-inkraised/60 px-4 text-[12.5px] font-600 text-textmute hover:text-cyanaccent transition-colors" aria-label="Copy install command">
+              <svg class="copy-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <span class="copy-label">Copy</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- CTAs -->
+        <div class="reveal mt-7 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <a href="#quickstart" class="btn btn-accent inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-[14.5px] font-700 w-full sm:w-auto">
+            Read the docs
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </a>
+          <a href="#top" class="btn inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--hairline-strong)] bg-inkcard px-6 py-3 text-[14.5px] font-600 text-textbright hover:border-cyanaccent/30 w-full sm:w-auto">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.5 11.5 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222 0 1.606-.014 2.898-.014 3.293 0 .322.216.694.825.576C20.565 22.092 24 17.596 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+            Star on GitHub
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 13. FOOTER ============ -->
+    <footer class="hairline-t bg-inkraised/50">
+      <div class="mx-auto max-w-6xl px-5 sm:px-8 py-14">
+        <div class="grid grid-cols-2 lg:grid-cols-5 gap-8">
+          <!-- brand -->
+          <div class="col-span-2">
+            <a href="#top" class="flex items-center gap-2.5">
+              <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <rect width="32" height="32" rx="8" fill="#10171F" stroke="rgba(103,232,249,0.28)"/>
+                <path d="M9 22.5C9 16 12 8.5 16 8.5C20 8.5 23 16 23 22.5" stroke="#67E8F9" stroke-width="2.1" stroke-linecap="round"/>
+                <path d="M6.5 23.3C6.5 19 9.6 14 16 14C22.4 14 25.5 19 25.5 23.3" stroke="#22D3EE" stroke-width="2.1" stroke-linecap="round" opacity="0.62"/>
+                <circle cx="16" cy="23.2" r="1.7" fill="#67E8F9"/>
+              </svg>
+              <span class="text-[16px] font-700 tracking-tightest">Borealis</span>
+            </a>
+            <p class="mt-4 text-[13.5px] text-textmute leading-relaxed max-w-xs">Headless, accessible UI primitives for React, Vue and Solid. Unstyled by design.</p>
+            <div class="mt-5 flex items-center gap-2.5">
+              <a href="#top" aria-label="GitHub" class="w-9 h-9 rounded-lg border border-[var(--hairline-strong)] bg-inkcard flex items-center justify-center text-textmute hover:text-cyanaccent hover:border-cyanaccent/30 transition-colors">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.5 11.5 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222 0 1.606-.014 2.898-.014 3.293 0 .322.216.694.825.576C20.565 22.092 24 17.596 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+              </a>
+              <a href="#community" aria-label="Discord" class="w-9 h-9 rounded-lg border border-[var(--hairline-strong)] bg-inkcard flex items-center justify-center text-textmute hover:text-cyanaccent hover:border-cyanaccent/30 transition-colors">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.3 4.4A19.8 19.8 0 0 0 15.4 3l-.3.5c1.7.4 3.2 1 4.7 1.9a16.6 16.6 0 0 0-14.6 0c1.4-.9 3-1.5 4.6-1.9L9.5 3a19.8 19.8 0 0 0-4.9 1.4C1.5 9 .7 13.5 1.1 17.9a19.9 19.9 0 0 0 6 3 14.3 14.3 0 0 0 1.3-2.1c-.7-.3-1.4-.6-2-1l.5-.4a14.2 14.2 0 0 0 12.2 0l.5.4c-.6.4-1.3.7-2 1 .4.7.8 1.4 1.3 2.1a19.8 19.8 0 0 0 6-3c.5-5.1-.8-9.6-3.6-13.5zM8.3 15.3c-1.2 0-2.2-1.1-2.2-2.4 0-1.4 1-2.5 2.2-2.5s2.2 1.1 2.2 2.5c0 1.3-1 2.4-2.2 2.4zm7.4 0c-1.2 0-2.2-1.1-2.2-2.4 0-1.4 1-2.5 2.2-2.5s2.2 1.1 2.2 2.5c0 1.3-1 2.4-2.2 2.4z"/></svg>
+              </a>
+              <a href="#top" aria-label="X" class="w-9 h-9 rounded-lg border border-[var(--hairline-strong)] bg-inkcard flex items-center justify-center text-textmute hover:text-cyanaccent hover:border-cyanaccent/30 transition-colors">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+              </a>
+            </div>
+          </div>
+          <!-- Docs -->
+          <div>
+            <h4 class="text-[12px] font-600 uppercase tracking-[0.13em] text-textdim mb-3.5">Docs</h4>
+            <ul class="space-y-2.5 text-[13.5px] text-textmute">
+              <li><a href="#quickstart" class="nav-link">Getting started</a></li>
+              <li><a href="#features" class="nav-link">Components</a></li>
+              <li><a href="#features" class="nav-link">Accessibility</a></li>
+              <li><a href="#quickstart" class="nav-link">Styling guide</a></li>
+              <li><a href="#faq" class="nav-link">Migration</a></li>
+            </ul>
+          </div>
+          <!-- Examples -->
+          <div>
+            <h4 class="text-[12px] font-600 uppercase tracking-[0.13em] text-textdim mb-3.5">Examples</h4>
+            <ul class="space-y-2.5 text-[13.5px] text-textmute">
+              <li><a href="#quickstart" class="nav-link">Next.js App Router</a></li>
+              <li><a href="#quickstart" class="nav-link">Vue + Nuxt</a></li>
+              <li><a href="#quickstart" class="nav-link">SolidStart</a></li>
+              <li><a href="#quickstart" class="nav-link">Tailwind recipes</a></li>
+              <li><a href="#quickstart" class="nav-link">Animation patterns</a></li>
+            </ul>
+          </div>
+          <!-- Community -->
+          <div>
+            <h4 class="text-[12px] font-600 uppercase tracking-[0.13em] text-textdim mb-3.5">Community</h4>
+            <ul class="space-y-2.5 text-[13.5px] text-textmute">
+              <li><a href="#community" class="nav-link">GitHub Discussions</a></li>
+              <li><a href="#community" class="nav-link">Discord</a></li>
+              <li><a href="#sponsors" class="nav-link">Sponsors</a></li>
+              <li><a href="#community" class="nav-link">Contributing</a></li>
+              <li><a href="#faq" class="nav-link">Governance</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="hairline-t mt-12 pt-7 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div class="flex items-center gap-3 text-[12.5px] text-textdim">
+            <span>© 2026 Borealis</span>
+            <span class="w-px h-3 bg-[var(--hairline-strong)]"></span>
+            <span class="font-mono">MIT License</span>
+          </div>
+          <p class="text-[12.5px] text-textdim flex items-center gap-1.5">
+            Made with care by
+            <svg class="inline" width="13" height="13" viewBox="0 0 24 24" fill="#FB7185" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            <span class="text-textmute font-500">Lena Hoffmann</span> + 240 contributors
+          </p>
+        </div>
+      </div>
+    </footer>
+
+  </main>
+
+  <!-- ============ VANILLA JS ============ -->
+  <script>
+    (function () {
+      'use strict';
+
+      /* ---------- Mobile menu ---------- */
+      var menuToggle = document.getElementById('menu-toggle');
+      var mobileMenu = document.getElementById('mobile-menu');
+      var iconOpen = document.getElementById('icon-open');
+      var iconClose = document.getElementById('icon-close');
+      if (menuToggle && mobileMenu) {
+        menuToggle.addEventListener('click', function () {
+          var open = mobileMenu.classList.toggle('hidden-menu');
+          mobileMenu.classList.toggle('hidden', false);
+          iconOpen.classList.toggle('hidden', !open);
+          iconClose.classList.toggle('hidden', open);
+        });
+        mobileMenu.querySelectorAll('a').forEach(function (a) {
+          a.addEventListener('click', function () {
+            mobileMenu.classList.add('hidden-menu');
+            iconOpen.classList.remove('hidden');
+            iconClose.classList.add('hidden');
+          });
+        });
+      }
+
+      /* ---------- Animated count-up ---------- */
+      function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+      function animateCount(el, target, duration) {
+        var start = null;
+        function step(ts) {
+          if (!start) start = ts;
+          var p = Math.min((ts - start) / duration, 1);
+          var val = Math.floor(easeOutCubic(p) * target);
+          el.textContent = val.toLocaleString('en-US');
+          if (p < 1) requestAnimationFrame(step);
+          else el.textContent = target.toLocaleString('en-US');
+        }
+        requestAnimationFrame(step);
+      }
+
+      /* nav star badge — counts up on load */
+      var navStar = document.getElementById('nav-star-count');
+      if (navStar) {
+        window.addEventListener('load', function () {
+          animateCount(navStar, 48408, 1900);
+        });
+      }
+
+      /* generic [data-count] elements — count up when scrolled into view */
+      var counted = new WeakSet();
+      var countObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting && !counted.has(entry.target)) {
+            counted.add(entry.target);
+            var target = parseInt(entry.target.getAttribute('data-count'), 10);
+            animateCount(entry.target, target, 1700);
+          }
+        });
+      }, { threshold: 0.6 });
+      document.querySelectorAll('[data-count]').forEach(function (el) {
+        countObserver.observe(el);
+      });
+
+      /* ---------- Reveal on scroll ---------- */
+      var revealObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('in');
+            revealObserver.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+      document.querySelectorAll('.reveal').forEach(function (el, i) {
+        el.style.transitionDelay = (Math.min(i % 6, 5) * 55) + 'ms';
+        revealObserver.observe(el);
+      });
+
+      /* ---------- Copy to clipboard ---------- */
+      function plainText(node) {
+        // strip the leading "$ " shell prompt for clean clipboard text
+        return node.textContent.replace(/^\$\s/, '');
+      }
+      document.querySelectorAll('.copy-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var targetId = btn.getAttribute('data-copy');
+          var source = document.getElementById(targetId);
+          if (!source) return;
+          var text = plainText(source);
+          var label = btn.querySelector('.copy-label');
+          var icon = btn.querySelector('.copy-icon');
+
+          function showCopied() {
+            btn.classList.add('copy-pulsing');
+            if (label) label.textContent = 'Copied';
+            btn.classList.add('text-cyanaccent');
+            if (icon) {
+              icon.innerHTML = '<path d="M20 6L9 17l-5-5"/>';
+            }
+            setTimeout(function () {
+              if (label) label.textContent = 'Copy';
+              btn.classList.remove('copy-pulsing');
+              if (icon) {
+                icon.innerHTML = '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>';
+              }
+            }, 1600);
+          }
+
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(showCopied).catch(showCopied);
+          } else {
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); } catch (e) {}
+            document.body.removeChild(ta);
+            showCopied();
+          }
+        });
+      });
+
+      /* ---------- Install framework tabs ---------- */
+      var installTabs = document.querySelectorAll('.install-tab');
+      var installCmd = document.getElementById('install-cmd');
+      installTabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          var fw = tab.getAttribute('data-install-tab');
+          installTabs.forEach(function (t) {
+            var active = t === tab;
+            t.setAttribute('aria-selected', active ? 'true' : 'false');
+            t.classList.toggle('text-cyanaccent', active);
+            t.classList.toggle('border-cyanaccent', active);
+            t.classList.toggle('text-textmute', !active);
+            t.classList.toggle('border-transparent', !active);
+          });
+          var pkg = { react: '@borealis/react', vue: '@borealis/vue', solid: '@borealis/solid' }[fw];
+          if (installCmd) {
+            installCmd.innerHTML = '<span class="tok-shell-prompt">$ </span>npm install <span class="tok-pkg">' + pkg + '</span>';
+          }
+        });
+      });
+
+      /* ---------- Procedural SVG: framework coverage bars ---------- */
+      var coverageData = [
+        { fw: 'React', value: 38, total: 38 },
+        { fw: 'Vue', value: 38, total: 38 },
+        { fw: 'Solid', value: 38, total: 38 }
+      ];
+      var coverageHost = document.getElementById('coverage-bars');
+      if (coverageHost) {
+        coverageData.forEach(function (d) {
+          var pct = Math.round((d.value / d.total) * 100);
+          var row = document.createElement('div');
+          row.innerHTML =
+            '<div class="flex items-center justify-between mb-1.5">' +
+              '<span class="text-[13px] font-600 text-textbright">' + d.fw + '</span>' +
+              '<span class="font-mono text-[12px] text-textmute tnum">' + d.value + ' / ' + d.total + '</span>' +
+            '</div>' +
+            '<div class="h-2 rounded-full bg-inkraised border border-[var(--hairline)] overflow-hidden">' +
+              '<div class="cov-fill h-full rounded-full" style="width:0%;background:linear-gradient(90deg,#22D3EE,#67E8F9);transition:width 1.2s cubic-bezier(0.22,1,0.36,1)"></div>' +
+            '</div>';
+          coverageHost.appendChild(row);
+          var fill = row.querySelector('.cov-fill');
+          fill.setAttribute('data-pct', pct);
+        });
+        var covObserver = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              coverageHost.querySelectorAll('.cov-fill').forEach(function (f, i) {
+                setTimeout(function () {
+                  f.style.width = f.getAttribute('data-pct') + '%';
+                }, i * 140);
+              });
+              covObserver.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.4 });
+        covObserver.observe(coverageHost);
+      }
+
+      /* ---------- Individual sponsor monogram grid ---------- */
+      var sponsorInitials = [
+        'AK','BM','CL','DR','EF','GH','IJ','KN','LP','MQ','NR','OS','PT','QU','RV','SW',
+        'TX','UY','VZ','WA','XB','YC','ZD','AE','BF','CG','DH','EI','FJ','GK','HL','IM',
+        'JN','KO','LP','MR','NS','OT','PU','QV','RW','SX','TY','UZ','VA','WB','XC','YD',
+        'ZE','AF','BG','CH','DI','EJ','FK','GL','HM','IN','JO','KP','LQ','MR','NS','OT'
+      ];
+      var palette = ['#67E8F9', '#7DD3FC', '#86EFAC', '#FCD34D', '#C4B5FD', '#FDA4AF'];
+      var sponsorHost = document.getElementById('sponsor-grid');
+      if (sponsorHost) {
+        sponsorInitials.forEach(function (init, i) {
+          var c = palette[i % palette.length];
+          var span = document.createElement('span');
+          span.className = 'sponsor-mono';
+          span.title = 'Individual sponsor';
+          span.innerHTML =
+            '<svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">' +
+              '<circle cx="17" cy="17" r="16" fill="#10171F" stroke="rgba(255,255,255,0.08)"/>' +
+              '<text x="17" y="21.5" font-family="JetBrains Mono,monospace" font-size="10.5" font-weight="600" fill="' + c + '" text-anchor="middle">' + init + '</text>' +
+            '</svg>';
+          span.style.transition = 'transform 0.12s ease, filter 0.12s ease';
+          span.style.cursor = 'default';
+          span.addEventListener('mouseenter', function () {
+            span.style.transform = 'translateY(-3px)';
+            span.style.filter = 'drop-shadow(0 4px 10px rgba(103,232,249,0.3))';
+          });
+          span.addEventListener('mouseleave', function () {
+            span.style.transform = '';
+            span.style.filter = '';
+          });
+          sponsorHost.appendChild(span);
+        });
+      }
+
+      /* ---------- Procedural SVG: stars-over-time sparkline ---------- */
+      /* computed from a monthly star-growth data array, injected near the nav badge area on wide screens */
+      var starGrowth = [4100, 6800, 9200, 13500, 18900, 24200, 29800, 34100, 38600, 42800, 45900, 48408];
+      function buildSparkline() {
+        var w = 132, h = 34, pad = 3;
+        var min = Math.min.apply(null, starGrowth);
+        var max = Math.max.apply(null, starGrowth);
+        var range = max - min || 1;
+        var step = (w - pad * 2) / (starGrowth.length - 1);
+        var pts = starGrowth.map(function (v, i) {
+          var x = pad + i * step;
+          var y = h - pad - ((v - min) / range) * (h - pad * 2);
+          return [x, y];
+        });
+        var d = pts.map(function (p, i) {
+          return (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ' ' + p[1].toFixed(1);
+        }).join(' ');
+        var area = d + ' L' + pts[pts.length - 1][0].toFixed(1) + ' ' + (h - pad) +
+                   ' L' + pts[0][0].toFixed(1) + ' ' + (h - pad) + ' Z';
+        var last = pts[pts.length - 1];
+        return '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" aria-label="GitHub stars over the last 12 months">' +
+          '<defs><linearGradient id="sparkfill" x1="0" y1="0" x2="0" y2="1">' +
+            '<stop offset="0%" stop-color="#67E8F9" stop-opacity="0.28"/>' +
+            '<stop offset="100%" stop-color="#67E8F9" stop-opacity="0"/>' +
+          '</linearGradient></defs>' +
+          '<path d="' + area + '" fill="url(#sparkfill)"/>' +
+          '<path d="' + d + '" fill="none" stroke="#67E8F9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>' +
+          '<circle cx="' + last[0].toFixed(1) + '" cy="' + last[1].toFixed(1) + '" r="2.4" fill="#67E8F9"/>' +
+          '</svg>';
+      }
+      /* attach sparkline into a host if present in hero stat strip */
+      var sparkHost = document.getElementById('star-sparkline');
+      if (sparkHost) sparkHost.innerHTML = buildSparkline();
+
+    })();
+  </script>
+</body>
+</html>

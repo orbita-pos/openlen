@@ -1,45 +1,18 @@
 import { auth } from "@/auth";
-import {
-  PLAN_LIMITS,
-  getUsage,
-  getUserPlan,
-  userLimitKey,
-} from "@/lib/limits";
+import { getCreditState } from "@/lib/credits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// GET /api/usage — returns the signed-in user's plan and remaining quota
-// per window per action. Used by the brief form to show the user how many
-// generations are left.
+// GET /api/usage — the signed-in user's plan + AI credit balance. The
+// projects page reads this to render the credit strip.
 export async function GET(): Promise<Response> {
   const session = await auth();
   if (!session?.user?.id) {
     return json({ error: "unauthorized" }, 401);
   }
-  const userId = session.user.id;
-  const plan = await getUserPlan(userId);
-
-  const [generate, regen] = await Promise.all([
-    getUsage(userLimitKey(userId, "generate"), PLAN_LIMITS[plan].generate),
-    getUsage(userLimitKey(userId, "regen"), PLAN_LIMITS[plan].regen),
-  ]);
-
-  return json({
-    plan,
-    generate: generate.map((w) => ({
-      label: w.window.label,
-      max: w.window.max,
-      used: w.used,
-      remaining: w.remaining,
-    })),
-    regen: regen.map((w) => ({
-      label: w.window.label,
-      max: w.window.max,
-      used: w.used,
-      remaining: w.remaining,
-    })),
-  }, 200);
+  const { plan, balance, allotment } = await getCreditState(session.user.id);
+  return json({ plan, credits: { balance, allotment } }, 200);
 }
 
 function json(body: unknown, status: number): Response {

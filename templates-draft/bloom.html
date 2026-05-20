@@ -1,0 +1,1085 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sofia Reyes — Bloom (2026) · Official Album Site</title>
+<meta name="description" content="Bloom — the second full-length album from singer-songwriter Sofia Reyes. Out May 18, 2026 on LP, CD and digital. Indie-folk, recorded in a Catskills barn." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500;1,6..72,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --rose: #C9788E;
+    --rose-deep: #A85A72;
+    --ink: #2A1810;
+    --hair: rgba(0,0,0,0.08);
+    --hair-strong: rgba(0,0,0,0.14);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: linear-gradient(155deg, #FFFAF0 0%, #FFF4EE 42%, #FFF0F5 100%);
+    background-attachment: fixed;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection { background: rgba(201,120,142,0.26); color: var(--ink); }
+
+  .serif {
+    font-family: 'Newsreader', Georgia, serif;
+    font-style: italic;
+    font-weight: 500;
+  }
+
+  .mono {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  .tight   { letter-spacing: -0.025em; }
+  .tighter { letter-spacing: -0.035em; }
+  .tightest{ letter-spacing: -0.04em; }
+
+  .hair      { border-color: var(--hair); }
+  .hair-strong { border-color: var(--hair-strong); }
+
+  /* dot-grid tile */
+  .dotgrid {
+    background-image: radial-gradient(rgba(42,24,16,0.10) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  /* ambient mesh blobs */
+  .mesh-blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(78px);
+    pointer-events: none;
+    opacity: 0.55;
+  }
+
+  /* pulse dot */
+  .pulse-dot {
+    width: 8px; height: 8px; border-radius: 9999px;
+    background: var(--rose);
+    box-shadow: 0 0 0 0 rgba(201,120,142,0.55);
+    animation: pulse 2200ms ease-out infinite;
+    flex-shrink: 0;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(201,120,142,0.55); }
+    70%  { box-shadow: 0 0 0 13px rgba(201,120,142,0); }
+    100% { box-shadow: 0 0 0 0 rgba(201,120,142,0); }
+  }
+
+  /* album-art ambient glow */
+  .art-glow::before {
+    content: "";
+    position: absolute;
+    inset: -14%;
+    border-radius: 9999px;
+    background: radial-gradient(closest-side, rgba(201,120,142,0.50), rgba(201,120,142,0) 72%);
+    filter: blur(36px);
+    z-index: 0;
+  }
+
+  /* marquee */
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marquee 38s linear infinite;
+  }
+  .marquee:hover .marquee-track { animation-play-state: paused; }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  /* waveform bars */
+  .wf-bar {
+    width: 3px;
+    border-radius: 9999px;
+    background: var(--rose);
+    animation: wf 1100ms ease-in-out infinite;
+  }
+  @keyframes wf {
+    0%, 100% { height: 22%; }
+    50%      { height: 100%; }
+  }
+
+  /* hover lifts */
+  .lift { transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease; }
+  .lift:hover { transform: translateY(-3px); }
+
+  .btn-rose {
+    background: var(--rose);
+    color: #FFFAF0;
+    transition: transform 110ms ease, box-shadow 110ms ease, background 110ms ease;
+    box-shadow: 0 8px 22px -10px rgba(201,120,142,0.62);
+  }
+  .btn-rose:hover {
+    transform: translateY(-2px);
+    background: var(--rose-deep);
+    box-shadow: 0 14px 30px -10px rgba(201,120,142,0.70);
+  }
+
+  /* tracklist + tour rows */
+  .row-slide { transition: transform 130ms ease, background 130ms ease; }
+  .row-slide:hover { transform: translateX(6px); background: rgba(201,120,142,0.06); }
+
+  .tour-row { transition: transform 130ms ease, background 130ms ease; }
+  .tour-row:hover { transform: translateX(7px); background: rgba(201,120,142,0.055); }
+  .tour-row .tour-underline {
+    height: 1.5px; width: 0; background: var(--rose);
+    transition: width 180ms ease;
+  }
+  .tour-row:hover .tour-underline { width: 100%; }
+
+  .play-glyph { transition: transform 120ms ease, background 120ms ease, color 120ms ease; }
+  .row-slide:hover .play-glyph { background: var(--rose); color: #FFFAF0; transform: scale(1.06); }
+
+  /* streaming badge */
+  .badge { transition: transform 110ms ease, box-shadow 110ms ease; }
+  .badge:hover { transform: translateY(-2px); box-shadow: 0 12px 26px -14px rgba(42,24,16,0.45); }
+
+  .stamp {
+    transform: rotate(-9deg);
+    border: 1.5px solid var(--rose-deep);
+    color: var(--rose-deep);
+    letter-spacing: 0.14em;
+  }
+
+  /* video play overlay */
+  .video-play {
+    transition: transform 150ms ease, background 150ms ease;
+    backdrop-filter: blur(4px);
+  }
+  .video-card:hover .video-play { transform: scale(1.07); background: rgba(255,250,240,0.96); }
+
+  .underline-link { position: relative; }
+  .underline-link::after {
+    content: ""; position: absolute; left: 0; bottom: -2px;
+    width: 0; height: 1px; background: currentColor; transition: width 150ms ease;
+  }
+  .underline-link:hover::after { width: 100%; }
+
+  .fade-edge-l { -webkit-mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent); mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent); }
+</style>
+</head>
+<body class="antialiased">
+
+<!-- ============ 1. NAV ============ -->
+<header class="sticky top-0 z-50 backdrop-blur-md" style="background:rgba(255,250,240,0.82);border-bottom:1px solid var(--hair);">
+  <nav class="mx-auto max-w-6xl px-5 sm:px-8 h-16 flex items-center justify-between">
+    <a href="#top" class="serif text-xl sm:text-2xl tighter" style="color:var(--ink);">Sofia&nbsp;Reyes</a>
+    <div class="hidden md:flex items-center gap-8 text-[13px] font-medium tracking-tight" style="color:rgba(42,24,16,0.66);">
+      <a href="#music" class="underline-link hover:text-[color:var(--ink)] transition-colors">Music</a>
+      <a href="#tour" class="underline-link hover:text-[color:var(--ink)] transition-colors">Tour</a>
+      <a href="#merch" class="underline-link hover:text-[color:var(--ink)] transition-colors">Merch</a>
+      <a href="#about" class="underline-link hover:text-[color:var(--ink)] transition-colors">About</a>
+    </div>
+    <a href="#music" class="btn-rose rounded-full px-4 sm:px-5 py-2 text-[13px] font-semibold tracking-tight">Pre-save Bloom</a>
+  </nav>
+</header>
+
+<main id="top">
+
+  <!-- ============ 2. HERO ============ -->
+  <section class="relative overflow-hidden">
+    <div class="mesh-blob" style="width:520px;height:520px;background:#FADCE4;top:-160px;right:-120px;"></div>
+    <div class="mesh-blob" style="width:460px;height:460px;background:#FBE7CE;bottom:-200px;left:-140px;"></div>
+    <div class="absolute inset-0 dotgrid opacity-[0.5]"></div>
+
+    <div class="relative mx-auto max-w-6xl px-5 sm:px-8 pt-16 sm:pt-24 pb-20 sm:pb-28">
+      <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+
+        <!-- Album art -->
+        <div class="order-1">
+          <div class="art-glow relative mx-auto w-full max-w-[480px] aspect-square">
+            <div class="relative z-10 w-full h-full rounded-2xl overflow-hidden"
+                 style="background:linear-gradient(150deg,#F7C9A8 0%,#E9A7B0 46%,#C9788E 100%);box-shadow:0 40px 80px -28px rgba(168,90,114,0.55), 0 0 0 1px rgba(0,0,0,0.06);">
+              <!-- soft sun + petals motif, all SVG -->
+              <svg viewBox="0 0 480 480" class="w-full h-full" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                <defs>
+                  <radialGradient id="sun" cx="50%" cy="38%" r="55%">
+                    <stop offset="0%" stop-color="#FFF6E6" stop-opacity="0.95"/>
+                    <stop offset="60%" stop-color="#FFF6E6" stop-opacity="0.0"/>
+                  </radialGradient>
+                </defs>
+                <rect width="480" height="480" fill="url(#sun)"/>
+                <g opacity="0.92">
+                  <ellipse cx="240" cy="186" rx="34" ry="74" fill="#FFF1DC" transform="rotate(0 240 186)"/>
+                  <ellipse cx="240" cy="186" rx="34" ry="74" fill="#FBE3D0" transform="rotate(60 240 186)"/>
+                  <ellipse cx="240" cy="186" rx="34" ry="74" fill="#FFF1DC" transform="rotate(120 240 186)"/>
+                  <ellipse cx="240" cy="186" rx="34" ry="74" fill="#FBE3D0" transform="rotate(30 240 186)"/>
+                  <ellipse cx="240" cy="186" rx="34" ry="74" fill="#FFF1DC" transform="rotate(90 240 186)"/>
+                  <ellipse cx="240" cy="186" rx="34" ry="74" fill="#FBE3D0" transform="rotate(150 240 186)"/>
+                </g>
+                <circle cx="240" cy="186" r="40" fill="#C9788E"/>
+                <circle cx="240" cy="186" r="40" fill="none" stroke="#FFF6E6" stroke-opacity="0.5" stroke-width="2"/>
+                <!-- stem -->
+                <path d="M240 226 C236 300 244 360 240 432" stroke="#A85A72" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.85"/>
+                <path d="M240 312 C214 296 196 300 184 318 C210 332 230 330 240 312 Z" fill="#E9A7B0" opacity="0.9"/>
+                <path d="M240 360 C266 344 286 348 298 366 C272 380 252 378 240 360 Z" fill="#F7C9A8" opacity="0.9"/>
+              </svg>
+              <div class="absolute left-5 bottom-5 right-5 flex items-end justify-between">
+                <div class="serif text-2xl sm:text-3xl tighter" style="color:#FFFAF0;text-shadow:0 2px 14px rgba(80,30,46,0.4);">Bloom</div>
+                <div class="mono text-[10px] tracking-wider" style="color:rgba(255,250,240,0.82);">BLOOM-002</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Now Playing mock player -->
+          <div class="relative z-10 mx-auto mt-6 w-full max-w-[480px]">
+            <div class="rounded-xl border bg-white/70 backdrop-blur px-4 py-3 flex items-center gap-3.5 hair">
+              <div class="h-12 w-12 rounded-md flex-shrink-0" style="background:linear-gradient(140deg,#F7C9A8,#C9788E);box-shadow:0 0 0 1px rgba(0,0,0,0.06);"></div>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2">
+                  <span class="pulse-dot"></span>
+                  <span class="mono text-[10px] tracking-wider" style="color:var(--rose-deep);">NOW PLAYING</span>
+                </div>
+                <div class="serif text-[15px] truncate tight mt-0.5">Berkshire in May</div>
+              </div>
+              <div class="flex items-end gap-[3px] h-7 pr-1" aria-hidden="true">
+                <span class="wf-bar" style="animation-delay:0ms"></span>
+                <span class="wf-bar" style="animation-delay:160ms"></span>
+                <span class="wf-bar" style="animation-delay:320ms"></span>
+                <span class="wf-bar" style="animation-delay:90ms"></span>
+                <span class="wf-bar" style="animation-delay:420ms"></span>
+                <span class="wf-bar" style="animation-delay:240ms"></span>
+                <span class="wf-bar" style="animation-delay:520ms"></span>
+              </div>
+              <span class="mono text-[11px]" style="color:rgba(42,24,16,0.5);">2:11</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hero text -->
+        <div class="order-2">
+          <div class="inline-flex items-center gap-2 rounded-full border bg-white/60 px-3 py-1.5 hair mb-6">
+            <span class="pulse-dot"></span>
+            <span class="mono text-[10.5px] tracking-wider" style="color:var(--rose-deep);">NEW RELEASE · OUT MAY 18</span>
+          </div>
+
+          <h1 class="serif tightest leading-[0.92] text-6xl sm:text-7xl lg:text-[5.6rem]">
+            Bloom
+          </h1>
+          <p class="serif text-2xl sm:text-3xl tighter mt-2" style="color:rgba(42,24,16,0.45);">
+            the second record.
+          </p>
+
+          <div class="mono text-[12px] tracking-wide mt-5 mb-1" style="color:rgba(42,24,16,0.6);">
+            MAY 18, 2026 · LP / STREAMING
+          </div>
+          <div class="text-[15px] font-medium" style="color:var(--ink);">
+            Sofia Reyes — singer-songwriter
+          </div>
+
+          <p class="serif text-xl sm:text-2xl leading-snug tight mt-6 max-w-md" style="color:rgba(42,24,16,0.82);">
+            Twelve songs about leaving the farm and learning, slowly, how to grow somewhere new.
+          </p>
+
+          <!-- Streaming badges -->
+          <div class="mt-8">
+            <div class="mono text-[10.5px] tracking-wider mb-3" style="color:rgba(42,24,16,0.5);">LISTEN EVERYWHERE</div>
+            <div class="flex flex-wrap gap-2.5">
+              <!-- Spotify -->
+              <a href="#music" class="badge inline-flex items-center gap-2 rounded-full pl-2.5 pr-3.5 py-2 text-[12.5px] font-semibold text-white" style="background:#1DB954;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0a12 12 0 100 24 12 12 0 000-24zm5.5 17.3a.75.75 0 01-1.03.25c-2.82-1.72-6.37-2.11-10.55-1.16a.75.75 0 11-.33-1.46c4.57-1.04 8.5-.59 11.66 1.34.36.22.47.69.25 1.03zm1.47-3.27a.94.94 0 01-1.29.31c-3.23-1.98-8.15-2.56-11.97-1.4a.94.94 0 11-.54-1.8c4.37-1.32 9.79-.67 13.5 1.6.44.27.58.85.3 1.29zm.13-3.4C15.86 8.32 9.6 8.1 5.92 9.22a1.12 1.12 0 11-.65-2.15c4.23-1.28 11.15-1.03 15.35 1.46a1.13 1.13 0 01-1.15 1.94z"/></svg>
+                Spotify
+              </a>
+              <!-- Apple Music -->
+              <a href="#music" class="badge inline-flex items-center gap-2 rounded-full pl-2.5 pr-3.5 py-2 text-[12.5px] font-semibold text-white" style="background:#FA243C;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.5 3.2c0-.2-.06-.36-.3-.32l-7.9 1.6c-.27.06-.4.2-.4.5v9.5c-.45-.2-.97-.27-1.5-.18-1.4.24-2.4 1.35-2.23 2.5.17 1.14 1.45 1.86 2.85 1.62 1.3-.22 2.27-1.2 2.28-2.27V8.06l6.4-1.3v5.13c-.45-.2-.98-.28-1.52-.19-1.4.24-2.4 1.35-2.23 2.5.17 1.14 1.45 1.86 2.86 1.62 1.3-.22 2.26-1.2 2.27-2.27l.14-9.78z"/></svg>
+                Apple Music
+              </a>
+              <!-- Bandcamp -->
+              <a href="#music" class="badge inline-flex items-center gap-2 rounded-full pl-2.5 pr-3.5 py-2 text-[12.5px] font-semibold text-white" style="background:#1DA0C3;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 16.5l5-9h15l-5 9H2z"/></svg>
+                Bandcamp
+              </a>
+              <!-- SoundCloud -->
+              <a href="#music" class="badge inline-flex items-center gap-2 rounded-full pl-2.5 pr-3.5 py-2 text-[12.5px] font-semibold text-white" style="background:#FF5500;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 14v4h1.1v-4H2zm2.3-1v5H5.4v-5H4.3zm2.3-1.6V18h1.1v-6.6H6.6zm2.3-1V18H10v-7.6H8.9zM11.2 9V18h1.1V9h-1.1zm2.7-.4c-.4 0-.8.1-1.1.3V18h7.1c1.6 0 2.9-1.2 2.9-2.8 0-1.5-1.3-2.8-2.9-2.8-.4 0-.7.07-1.04.2C18.5 10 16.4 8.6 13.9 8.6z"/></svg>
+                SoundCloud
+              </a>
+              <!-- YouTube Music -->
+              <a href="#music" class="badge inline-flex items-center gap-2 rounded-full pl-2.5 pr-3.5 py-2 text-[12.5px] font-semibold text-white" style="background:#FF0000;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 15.5a5.5 5.5 0 110-11 5.5 5.5 0 010 11zm-1.6-8.3v5.6l4.8-2.8-4.8-2.8z"/></svg>
+                YouTube Music
+              </a>
+              <!-- Tidal -->
+              <a href="#music" class="badge inline-flex items-center gap-2 rounded-full pl-2.5 pr-3.5 py-2 text-[12.5px] font-semibold text-white border" style="background:#0A0A0A;border-color:rgba(255,255,255,0.12);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 6l4 4-4 4-4-4 4-4zm8 0l4 4-4 4-4-4 4-4zm8 0l4 4-4 4-4-4 4-4zm-8 8l4 4-4 4-4-4 4-4z"/></svg>
+                Tidal
+              </a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PRESS MARQUEE ============ -->
+  <section class="relative border-y hair bg-white/45">
+    <div class="mx-auto max-w-6xl px-5 sm:px-8 py-3">
+      <div class="mono text-[10px] tracking-[0.2em] text-center mb-3" style="color:rgba(42,24,16,0.42);">PRESS &amp; RADIO</div>
+    </div>
+    <div class="marquee fade-edge-l overflow-hidden pb-5">
+      <div class="marquee-track items-center gap-12 pr-12">
+        <!-- group repeated twice for seamless loop -->
+        <span class="serif text-2xl tighter shrink-0" style="color:rgba(42,24,16,0.55);">Pitchfork</span>
+        <span class="serif text-2xl tighter shrink-0" style="color:rgba(42,24,16,0.55);">NPR&nbsp;Music</span>
+        <span class="serif text-2xl tighter shrink-0" style="color:rgba(42,24,16,0.55);">No&nbsp;Depression</span>
+        <span class="serif text-2xl tighter shrink-0" style="color:rgba(42,24,16,0.55);">Uncut</span>
+        <span class="serif text-2xl tighter shrink-0" style="color:rgba(42,24,16,0.55);">Folk&nbsp;Radio&nbsp;UK</span>
+        <span class="serif text-2xl tighter shrink-0" style="color:rgba(42,24,16,0.55);">The&nbsp;Guardian</span>
+        <span class="serif text-2xl tighter shrink-0" style="color:rgba(42,24,16,0.55);">Paste</span>
+        <span class="serif text-2xl tighter shrink-0" style="color:rgba(42,24,16,0.55);">WXPN</span>
+        <span class="serif text-2xl tighter shrink-0" style="color:rgba(42,24,16,0.55);" aria-hidden="true">Pitchfork</span>
+        <span class="serif text-2xl tighter shrink-0" style="color:rgba(42,24,16,0.55);" aria-hidden="true">NPR&nbsp;Music</span>
+        <span class="serif text-2xl tighter shrink-0" style="color:rgba(42,24,16,0.55);" aria-hidden="true">No&nbsp;Depression</span>
+        <span class="serif text-2xl tighter shrink-0" style="color:rgba(42,24,16,0.55);" aria-hidden="true">Uncut</span>
+        <span class="serif text-2xl tighter shrink-0" style="color:rgba(42,24,16,0.55);" aria-hidden="true">Folk&nbsp;Radio&nbsp;UK</span>
+        <span class="serif text-2xl tighter shrink-0" style="color:rgba(42,24,16,0.55);" aria-hidden="true">The&nbsp;Guardian</span>
+        <span class="serif text-2xl tighter shrink-0" style="color:rgba(42,24,16,0.55);" aria-hidden="true">Paste</span>
+        <span class="serif text-2xl tighter shrink-0" style="color:rgba(42,24,16,0.55);" aria-hidden="true">WXPN</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3. TRACKLIST ============ -->
+  <section id="music" class="relative mx-auto max-w-6xl px-5 sm:px-8 py-20 sm:py-28 scroll-mt-20">
+    <div class="grid lg:grid-cols-[1fr_1.4fr] gap-10 lg:gap-16">
+      <div class="lg:sticky lg:top-28 self-start">
+        <div class="mono text-[10.5px] tracking-[0.2em]" style="color:var(--rose-deep);">THE RECORD</div>
+        <h2 class="serif text-4xl sm:text-5xl tightest leading-[0.95] mt-3">
+          Twelve songs,<br/><span style="opacity:0.45;">recorded in a barn.</span>
+        </h2>
+        <p class="text-[14.5px] leading-relaxed mt-5 max-w-sm" style="color:rgba(42,24,16,0.7);">
+          Tracked live to tape over nine days in a hay barn outside Phoenicia, New York. Acoustic guitar, upright bass, brushed drums, and a small string trio on four songs. No click track — you can hear the room breathe.
+        </p>
+        <div class="mt-6 rounded-lg border hair bg-white/55 p-4 text-[12.5px]" style="color:rgba(42,24,16,0.62);">
+          <div class="mono text-[10.5px] tracking-wider mb-2" style="color:rgba(42,24,16,0.45);">CATALOG</div>
+          <div class="mono text-[12.5px] leading-relaxed" style="color:var(--ink);">BLOOM-002 · CD / LP / digital</div>
+          <div class="mono text-[12.5px] leading-relaxed" style="color:var(--ink);">Folkways imprint · 2026</div>
+          <div class="mt-2 pt-2 border-t hair tnum">Total runtime — 49:36</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="rounded-2xl border hair bg-white/55 overflow-hidden">
+          <div class="flex items-center justify-between px-5 sm:px-6 py-3 border-b hair">
+            <span class="mono text-[10.5px] tracking-wider" style="color:rgba(42,24,16,0.5);">TRACKLIST · 12</span>
+            <span class="mono text-[10.5px] tracking-wider" style="color:rgba(42,24,16,0.5);">DURATION</span>
+          </div>
+          <ol class="divide-y hair">
+            <!-- track template -->
+            <li class="row-slide flex items-center gap-3 sm:gap-4 px-5 sm:px-6 py-3.5">
+              <span class="mono text-[12px] w-6 text-right" style="color:rgba(42,24,16,0.4);">01</span>
+              <button class="play-glyph h-7 w-7 rounded-full border hair flex items-center justify-center text-[color:var(--rose-deep)] flex-shrink-0" aria-label="Play Bloom">
+                <svg width="9" height="9" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M2 1l8 5-8 5V1z"/></svg>
+              </button>
+              <span class="serif text-[16px] sm:text-[17px] tight flex-1 min-w-0 truncate">Bloom</span>
+              <span class="mono text-[12px] tnum" style="color:rgba(42,24,16,0.5);">4:08</span>
+            </li>
+            <li class="row-slide flex items-center gap-3 sm:gap-4 px-5 sm:px-6 py-3.5">
+              <span class="mono text-[12px] w-6 text-right" style="color:rgba(42,24,16,0.4);">02</span>
+              <button class="play-glyph h-7 w-7 rounded-full border hair flex items-center justify-center text-[color:var(--rose-deep)] flex-shrink-0" aria-label="Play Mama's Garden">
+                <svg width="9" height="9" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M2 1l8 5-8 5V1z"/></svg>
+              </button>
+              <span class="serif text-[16px] sm:text-[17px] tight flex-1 min-w-0 truncate">Mama&rsquo;s Garden</span>
+              <span class="mono text-[12px] tnum" style="color:rgba(42,24,16,0.5);">3:48</span>
+            </li>
+            <li class="row-slide flex items-center gap-3 sm:gap-4 px-5 sm:px-6 py-3.5">
+              <span class="mono text-[12px] w-6 text-right" style="color:rgba(42,24,16,0.4);">03</span>
+              <button class="play-glyph h-7 w-7 rounded-full border hair flex items-center justify-center text-[color:var(--rose-deep)] flex-shrink-0" aria-label="Play Berkshire in May">
+                <svg width="9" height="9" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M2 1l8 5-8 5V1z"/></svg>
+              </button>
+              <span class="serif text-[16px] sm:text-[17px] tight flex-1 min-w-0 truncate">Berkshire in May</span>
+              <span class="mono text-[12px] tnum" style="color:rgba(42,24,16,0.5);">5:24</span>
+            </li>
+            <li class="row-slide flex items-center gap-3 sm:gap-4 px-5 sm:px-6 py-3.5">
+              <span class="mono text-[12px] w-6 text-right" style="color:rgba(42,24,16,0.4);">04</span>
+              <button class="play-glyph h-7 w-7 rounded-full border hair flex items-center justify-center text-[color:var(--rose-deep)] flex-shrink-0" aria-label="Play Apple Wine">
+                <svg width="9" height="9" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M2 1l8 5-8 5V1z"/></svg>
+              </button>
+              <span class="serif text-[16px] sm:text-[17px] tight flex-1 min-w-0 truncate">Apple Wine</span>
+              <span class="mono text-[12px] tnum" style="color:rgba(42,24,16,0.5);">3:31</span>
+            </li>
+            <li class="row-slide flex items-center gap-3 sm:gap-4 px-5 sm:px-6 py-3.5">
+              <span class="mono text-[12px] w-6 text-right" style="color:rgba(42,24,16,0.4);">05</span>
+              <button class="play-glyph h-7 w-7 rounded-full border hair flex items-center justify-center text-[color:var(--rose-deep)] flex-shrink-0" aria-label="Play The Long Way Down the Hill">
+                <svg width="9" height="9" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M2 1l8 5-8 5V1z"/></svg>
+              </button>
+              <span class="serif text-[16px] sm:text-[17px] tight flex-1 min-w-0 truncate">The Long Way Down the Hill <span class="not-italic mono text-[10.5px] align-middle" style="color:rgba(42,24,16,0.4);">ft. Liana Crowe</span></span>
+              <span class="mono text-[12px] tnum" style="color:rgba(42,24,16,0.5);">4:52</span>
+            </li>
+            <li class="row-slide flex items-center gap-3 sm:gap-4 px-5 sm:px-6 py-3.5">
+              <span class="mono text-[12px] w-6 text-right" style="color:rgba(42,24,16,0.4);">06</span>
+              <button class="play-glyph h-7 w-7 rounded-full border hair flex items-center justify-center text-[color:var(--rose-deep)] flex-shrink-0" aria-label="Play Winter Tenants">
+                <svg width="9" height="9" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M2 1l8 5-8 5V1z"/></svg>
+              </button>
+              <span class="serif text-[16px] sm:text-[17px] tight flex-1 min-w-0 truncate">Winter Tenants</span>
+              <span class="mono text-[12px] tnum" style="color:rgba(42,24,16,0.5);">3:09</span>
+            </li>
+            <li class="row-slide flex items-center gap-3 sm:gap-4 px-5 sm:px-6 py-3.5">
+              <span class="mono text-[12px] w-6 text-right" style="color:rgba(42,24,16,0.4);">07</span>
+              <button class="play-glyph h-7 w-7 rounded-full border hair flex items-center justify-center text-[color:var(--rose-deep)] flex-shrink-0" aria-label="Play Tin Roof, Hard Rain">
+                <svg width="9" height="9" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M2 1l8 5-8 5V1z"/></svg>
+              </button>
+              <span class="serif text-[16px] sm:text-[17px] tight flex-1 min-w-0 truncate">Tin Roof, Hard Rain</span>
+              <span class="mono text-[12px] tnum" style="color:rgba(42,24,16,0.5);">5:17</span>
+            </li>
+            <li class="row-slide flex items-center gap-3 sm:gap-4 px-5 sm:px-6 py-3.5">
+              <span class="mono text-[12px] w-6 text-right" style="color:rgba(42,24,16,0.4);">08</span>
+              <button class="play-glyph h-7 w-7 rounded-full border hair flex items-center justify-center text-[color:var(--rose-deep)] flex-shrink-0" aria-label="Play Cardinal">
+                <svg width="9" height="9" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M2 1l8 5-8 5V1z"/></svg>
+              </button>
+              <span class="serif text-[16px] sm:text-[17px] tight flex-1 min-w-0 truncate">Cardinal</span>
+              <span class="mono text-[12px] tnum" style="color:rgba(42,24,16,0.5);">3:44</span>
+            </li>
+            <li class="row-slide flex items-center gap-3 sm:gap-4 px-5 sm:px-6 py-3.5">
+              <span class="mono text-[12px] w-6 text-right" style="color:rgba(42,24,16,0.4);">09</span>
+              <button class="play-glyph h-7 w-7 rounded-full border hair flex items-center justify-center text-[color:var(--rose-deep)] flex-shrink-0" aria-label="Play Phoenicia">
+                <svg width="9" height="9" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M2 1l8 5-8 5V1z"/></svg>
+              </button>
+              <span class="serif text-[16px] sm:text-[17px] tight flex-1 min-w-0 truncate">Phoenicia <span class="not-italic mono text-[10.5px] align-middle" style="color:rgba(42,24,16,0.4);">ft. The Catskill Strings</span></span>
+              <span class="mono text-[12px] tnum" style="color:rgba(42,24,16,0.5);">4:36</span>
+            </li>
+            <li class="row-slide flex items-center gap-3 sm:gap-4 px-5 sm:px-6 py-3.5">
+              <span class="mono text-[12px] w-6 text-right" style="color:rgba(42,24,16,0.4);">10</span>
+              <button class="play-glyph h-7 w-7 rounded-full border hair flex items-center justify-center text-[color:var(--rose-deep)] flex-shrink-0" aria-label="Play Half a Field of Clover">
+                <svg width="9" height="9" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M2 1l8 5-8 5V1z"/></svg>
+              </button>
+              <span class="serif text-[16px] sm:text-[17px] tight flex-1 min-w-0 truncate">Half a Field of Clover</span>
+              <span class="mono text-[12px] tnum" style="color:rgba(42,24,16,0.5);">3:02</span>
+            </li>
+            <li class="row-slide flex items-center gap-3 sm:gap-4 px-5 sm:px-6 py-3.5">
+              <span class="mono text-[12px] w-6 text-right" style="color:rgba(42,24,16,0.4);">11</span>
+              <button class="play-glyph h-7 w-7 rounded-full border hair flex items-center justify-center text-[color:var(--rose-deep)] flex-shrink-0" aria-label="Play Ohio Pawnshop Guitar">
+                <svg width="9" height="9" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M2 1l8 5-8 5V1z"/></svg>
+              </button>
+              <span class="serif text-[16px] sm:text-[17px] tight flex-1 min-w-0 truncate">Ohio Pawnshop Guitar</span>
+              <span class="mono text-[12px] tnum" style="color:rgba(42,24,16,0.5);">4:01</span>
+            </li>
+            <li class="row-slide flex items-center gap-3 sm:gap-4 px-5 sm:px-6 py-3.5">
+              <span class="mono text-[12px] w-6 text-right" style="color:rgba(42,24,16,0.4);">12</span>
+              <button class="play-glyph h-7 w-7 rounded-full border hair flex items-center justify-center text-[color:var(--rose-deep)] flex-shrink-0" aria-label="Play Bloom (Reprise)">
+                <svg width="9" height="9" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M2 1l8 5-8 5V1z"/></svg>
+              </button>
+              <span class="serif text-[16px] sm:text-[17px] tight flex-1 min-w-0 truncate">Bloom (Reprise) <span class="not-italic mono text-[10.5px] align-middle" style="color:rgba(42,24,16,0.4);">ft. The Catskill Strings</span></span>
+              <span class="mono text-[12px] tnum" style="color:rgba(42,24,16,0.5);">4:04</span>
+            </li>
+          </ol>
+        </div>
+
+        <!-- lyric pull-quote -->
+        <figure class="mt-8 rounded-2xl border hair px-7 sm:px-9 py-8" style="background:radial-gradient(120% 140% at 0% 0%, rgba(201,120,142,0.10), rgba(255,255,255,0.4));">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" class="mb-3" aria-hidden="true"><path d="M10 7H6a3 3 0 00-3 3v7h7v-7H5.5C5.5 8.5 7 8 10 8V7zM21 7h-4a3 3 0 00-3 3v7h7v-7h-2.5c0-1.5 1.5-2 4-2V7z" fill="#C9788E" opacity="0.55"/></svg>
+          <blockquote class="serif text-2xl sm:text-3xl leading-snug tight" style="color:rgba(42,24,16,0.88);">
+            &ldquo;I packed the truck in the dark so the dog wouldn&rsquo;t wake — every plant in the garden still asleep, not knowing I was gone.&rdquo;
+          </blockquote>
+          <figcaption class="mono text-[11px] tracking-wider mt-5" style="color:rgba(42,24,16,0.5);">— FROM &ldquo;MAMA&rsquo;S GARDEN&rdquo;, TRACK 02</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 4. PRESS QUOTES ============ -->
+  <section class="relative border-y hair bg-white/45">
+    <div class="mx-auto max-w-6xl px-5 sm:px-8 py-20 sm:py-24">
+      <div class="flex items-end justify-between gap-6 mb-10">
+        <h2 class="serif text-4xl sm:text-5xl tightest leading-[0.95]">
+          What they&rsquo;re<br/><span style="opacity:0.45;">saying about Bloom.</span>
+        </h2>
+        <span class="mono text-[10.5px] tracking-wider hidden sm:block" style="color:rgba(42,24,16,0.45);">06 NOTICES</span>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+        <!-- Pitchfork -->
+        <figure class="lift rounded-xl border hair bg-white/70 p-6 flex flex-col">
+          <div class="flex items-center justify-between mb-4">
+            <span class="serif text-lg tight">Pitchfork</span>
+            <span class="mono text-[12px] rounded-md px-2 py-1 tnum" style="background:rgba(201,120,142,0.12);color:var(--rose-deep);">7.6</span>
+          </div>
+          <blockquote class="serif text-[19px] leading-snug tight flex-1" style="color:rgba(42,24,16,0.86);">
+            &ldquo;Gentle, weighty — Reyes writes the small domestic image and lets it carry the whole grief of a decade.&rdquo;
+          </blockquote>
+          <figcaption class="mono text-[10.5px] tracking-wider mt-5" style="color:rgba(42,24,16,0.45);">REVIEW · APRIL 2026</figcaption>
+        </figure>
+        <!-- Folk Radio -->
+        <figure class="lift rounded-xl border hair bg-white/70 p-6 flex flex-col">
+          <div class="flex items-center justify-between mb-4">
+            <span class="serif text-lg tight">Folk Radio UK</span>
+            <span class="mono text-[11px]" style="color:var(--rose-deep);">★★★★½</span>
+          </div>
+          <blockquote class="serif text-[19px] leading-snug tight flex-1" style="color:rgba(42,24,16,0.86);">
+            &ldquo;A songwriter at peak craft. Bloom never raises its voice, and never needs to.&rdquo;
+          </blockquote>
+          <figcaption class="mono text-[10.5px] tracking-wider mt-5" style="color:rgba(42,24,16,0.45);">ALBUM OF THE MONTH</figcaption>
+        </figure>
+        <!-- NPR -->
+        <figure class="lift rounded-xl border hair bg-white/70 p-6 flex flex-col">
+          <div class="flex items-center justify-between mb-4">
+            <span class="serif text-lg tight">NPR Music</span>
+            <span class="mono text-[10px] tracking-wider rounded-md px-2 py-1" style="background:rgba(42,24,16,0.06);color:rgba(42,24,16,0.55);">FEATURED</span>
+          </div>
+          <blockquote class="serif text-[19px] leading-snug tight flex-1" style="color:rgba(42,24,16,0.86);">
+            &ldquo;The best folk debut of 2024 was Sofia&rsquo;s first album. This one is even better.&rdquo;
+          </blockquote>
+          <figcaption class="mono text-[10.5px] tracking-wider mt-5" style="color:rgba(42,24,16,0.45);">NEW MUSIC FRIDAY</figcaption>
+        </figure>
+        <!-- No Depression -->
+        <figure class="lift rounded-xl border hair bg-white/70 p-6 flex flex-col">
+          <div class="flex items-center justify-between mb-4">
+            <span class="serif text-lg tight">No Depression</span>
+            <span class="mono text-[10px] tracking-wider rounded-md px-2 py-1" style="background:rgba(42,24,16,0.06);color:rgba(42,24,16,0.55);">ROOTS</span>
+          </div>
+          <blockquote class="serif text-[19px] leading-snug tight flex-1" style="color:rgba(42,24,16,0.86);">
+            &ldquo;Recorded to tape in a Catskills barn, you can hear the floorboards. It feels less like a record than an invitation indoors.&rdquo;
+          </blockquote>
+          <figcaption class="mono text-[10.5px] tracking-wider mt-5" style="color:rgba(42,24,16,0.45);">FIRST LISTEN</figcaption>
+        </figure>
+        <!-- Uncut -->
+        <figure class="lift rounded-xl border hair bg-white/70 p-6 flex flex-col">
+          <div class="flex items-center justify-between mb-4">
+            <span class="serif text-lg tight">Uncut</span>
+            <span class="mono text-[12px] tnum" style="color:var(--rose-deep);">8/10</span>
+          </div>
+          <blockquote class="serif text-[19px] leading-snug tight flex-1" style="color:rgba(42,24,16,0.86);">
+            &ldquo;The string trio on &lsquo;Phoenicia&rsquo; arrives like weather. A quietly devastating sophomore album.&rdquo;
+          </blockquote>
+          <figcaption class="mono text-[10.5px] tracking-wider mt-5" style="color:rgba(42,24,16,0.45);">PRINT EDITION · MAY 2026</figcaption>
+        </figure>
+        <!-- The Guardian -->
+        <figure class="lift rounded-xl border hair bg-white/70 p-6 flex flex-col">
+          <div class="flex items-center justify-between mb-4">
+            <span class="serif text-lg tight">The Guardian</span>
+            <span class="mono text-[11px]" style="color:var(--rose-deep);">★★★★☆</span>
+          </div>
+          <blockquote class="serif text-[19px] leading-snug tight flex-1" style="color:rgba(42,24,16,0.86);">
+            &ldquo;Reyes turns leaving home into something almost holy — twelve songs that grow on you like ivy.&rdquo;
+          </blockquote>
+          <figcaption class="mono text-[10.5px] tracking-wider mt-5" style="color:rgba(42,24,16,0.45);">FOLK ALBUM OF THE WEEK</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 5. TOUR DATES ============ -->
+  <section id="tour" class="relative mx-auto max-w-6xl px-5 sm:px-8 py-20 sm:py-28 scroll-mt-20">
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-10">
+      <div>
+        <div class="inline-flex items-center gap-2 rounded-full border bg-white/60 px-3 py-1.5 hair mb-4">
+          <span class="pulse-dot"></span>
+          <span class="mono text-[10.5px] tracking-wider" style="color:var(--rose-deep);">ON TOUR · THE BLOOM LISTENING ROOMS</span>
+        </div>
+        <h2 class="serif text-4xl sm:text-5xl tightest leading-[0.95]">
+          Small rooms,<br/><span style="opacity:0.45;">close enough to whisper.</span>
+        </h2>
+      </div>
+      <p class="text-[13.5px] leading-relaxed max-w-xs" style="color:rgba(42,24,16,0.65);">
+        14 dates across listening rooms, folk clubs, and a handful of literal house concerts. Every show seated, every show acoustic.
+      </p>
+    </div>
+
+    <div class="rounded-2xl border hair bg-white/55 overflow-hidden">
+      <div class="hidden sm:grid grid-cols-[112px_1fr_1fr_120px] gap-4 px-6 py-3 border-b hair mono text-[10px] tracking-wider" style="color:rgba(42,24,16,0.42);">
+        <span>DATE</span><span>VENUE</span><span>CITY</span><span class="text-right">TICKETS</span>
+      </div>
+      <div class="divide-y hair">
+
+        <!-- row -->
+        <div class="tour-row relative px-6 py-4">
+          <div class="grid sm:grid-cols-[112px_1fr_1fr_120px] gap-1 sm:gap-4 sm:items-center">
+            <span class="mono text-[12px] tnum" style="color:var(--rose-deep);">MAY 22</span>
+            <span class="serif text-[17px] tight">The Parlor Room</span>
+            <span class="text-[13px]" style="color:rgba(42,24,16,0.62);">Northampton, MA</span>
+            <a href="#" class="justify-self-start sm:justify-self-end text-[12.5px] font-semibold underline-link" style="color:var(--rose-deep);">Tickets →</a>
+          </div>
+          <div class="tour-underline mt-2"></div>
+        </div>
+
+        <div class="tour-row relative px-6 py-4">
+          <div class="grid sm:grid-cols-[112px_1fr_1fr_120px] gap-1 sm:gap-4 sm:items-center">
+            <span class="mono text-[12px] tnum" style="color:var(--rose-deep);">MAY 24</span>
+            <span class="serif text-[17px] tight flex items-center gap-2">Club Passim <span class="stamp inline-block rounded-[3px] px-1.5 py-0.5 text-[8.5px] font-bold">SOLD OUT</span></span>
+            <span class="text-[13px]" style="color:rgba(42,24,16,0.62);">Cambridge, MA</span>
+            <span class="justify-self-start sm:justify-self-end mono text-[10.5px] tracking-wider" style="color:rgba(42,24,16,0.32);">SOLD OUT</span>
+          </div>
+          <div class="tour-underline mt-2"></div>
+        </div>
+
+        <div class="tour-row relative px-6 py-4">
+          <div class="grid sm:grid-cols-[112px_1fr_1fr_120px] gap-1 sm:gap-4 sm:items-center">
+            <span class="mono text-[12px] tnum" style="color:var(--rose-deep);">MAY 27</span>
+            <span class="serif text-[17px] tight">A House Concert on Maple St.</span>
+            <span class="text-[13px]" style="color:rgba(42,24,16,0.62);">Hudson, NY</span>
+            <a href="#" class="justify-self-start sm:justify-self-end text-[12.5px] font-semibold underline-link" style="color:var(--rose-deep);">Tickets →</a>
+          </div>
+          <div class="tour-underline mt-2"></div>
+        </div>
+
+        <div class="tour-row relative px-6 py-4">
+          <div class="grid sm:grid-cols-[112px_1fr_1fr_120px] gap-1 sm:gap-4 sm:items-center">
+            <span class="mono text-[12px] tnum" style="color:var(--rose-deep);">MAY 30</span>
+            <span class="serif text-[17px] tight">Rockwood Music Hall, Stage 2</span>
+            <span class="text-[13px]" style="color:rgba(42,24,16,0.62);">New York, NY</span>
+            <a href="#" class="justify-self-start sm:justify-self-end text-[12.5px] font-semibold underline-link" style="color:var(--rose-deep);">Tickets →</a>
+          </div>
+          <div class="tour-underline mt-2"></div>
+        </div>
+
+        <div class="tour-row relative px-6 py-4">
+          <div class="grid sm:grid-cols-[112px_1fr_1fr_120px] gap-1 sm:gap-4 sm:items-center">
+            <span class="mono text-[12px] tnum" style="color:var(--rose-deep);">JUN 03</span>
+            <span class="serif text-[17px] tight flex items-center gap-2">Johnny Brenda&rsquo;s <span class="stamp inline-block rounded-[3px] px-1.5 py-0.5 text-[8.5px] font-bold">SOLD OUT</span></span>
+            <span class="text-[13px]" style="color:rgba(42,24,16,0.62);">Philadelphia, PA</span>
+            <span class="justify-self-start sm:justify-self-end mono text-[10.5px] tracking-wider" style="color:rgba(42,24,16,0.32);">SOLD OUT</span>
+          </div>
+          <div class="tour-underline mt-2"></div>
+        </div>
+
+        <div class="tour-row relative px-6 py-4">
+          <div class="grid sm:grid-cols-[112px_1fr_1fr_120px] gap-1 sm:gap-4 sm:items-center">
+            <span class="mono text-[12px] tnum" style="color:var(--rose-deep);">JUN 06</span>
+            <span class="serif text-[17px] tight">The Barns at Wolf Trap</span>
+            <span class="text-[13px]" style="color:rgba(42,24,16,0.62);">Vienna, VA</span>
+            <a href="#" class="justify-self-start sm:justify-self-end text-[12.5px] font-semibold underline-link" style="color:var(--rose-deep);">Tickets →</a>
+          </div>
+          <div class="tour-underline mt-2"></div>
+        </div>
+
+        <div class="tour-row relative px-6 py-4">
+          <div class="grid sm:grid-cols-[112px_1fr_1fr_120px] gap-1 sm:gap-4 sm:items-center">
+            <span class="mono text-[12px] tnum" style="color:var(--rose-deep);">JUN 09</span>
+            <span class="serif text-[17px] tight">Eddie&rsquo;s Attic</span>
+            <span class="text-[13px]" style="color:rgba(42,24,16,0.62);">Decatur, GA</span>
+            <a href="#" class="justify-self-start sm:justify-self-end text-[12.5px] font-semibold underline-link" style="color:var(--rose-deep);">Tickets →</a>
+          </div>
+          <div class="tour-underline mt-2"></div>
+        </div>
+
+        <div class="tour-row relative px-6 py-4">
+          <div class="grid sm:grid-cols-[112px_1fr_1fr_120px] gap-1 sm:gap-4 sm:items-center">
+            <span class="mono text-[12px] tnum" style="color:var(--rose-deep);">JUN 12</span>
+            <span class="serif text-[17px] tight">The Basement</span>
+            <span class="text-[13px]" style="color:rgba(42,24,16,0.62);">Nashville, TN</span>
+            <a href="#" class="justify-self-start sm:justify-self-end text-[12.5px] font-semibold underline-link" style="color:var(--rose-deep);">Tickets →</a>
+          </div>
+          <div class="tour-underline mt-2"></div>
+        </div>
+
+        <div class="tour-row relative px-6 py-4">
+          <div class="grid sm:grid-cols-[112px_1fr_1fr_120px] gap-1 sm:gap-4 sm:items-center">
+            <span class="mono text-[12px] tnum" style="color:var(--rose-deep);">JUN 15</span>
+            <span class="serif text-[17px] tight">A House Concert on Bell Ave.</span>
+            <span class="text-[13px]" style="color:rgba(42,24,16,0.62);">Asheville, NC</span>
+            <a href="#" class="justify-self-start sm:justify-self-end text-[12.5px] font-semibold underline-link" style="color:var(--rose-deep);">Tickets →</a>
+          </div>
+          <div class="tour-underline mt-2"></div>
+        </div>
+
+        <div class="tour-row relative px-6 py-4">
+          <div class="grid sm:grid-cols-[112px_1fr_1fr_120px] gap-1 sm:gap-4 sm:items-center">
+            <span class="mono text-[12px] tnum" style="color:var(--rose-deep);">JUN 19</span>
+            <span class="serif text-[17px] tight flex items-center gap-2">The Hideout <span class="stamp inline-block rounded-[3px] px-1.5 py-0.5 text-[8.5px] font-bold">SOLD OUT</span></span>
+            <span class="text-[13px]" style="color:rgba(42,24,16,0.62);">Chicago, IL</span>
+            <span class="justify-self-start sm:justify-self-end mono text-[10.5px] tracking-wider" style="color:rgba(42,24,16,0.32);">SOLD OUT</span>
+          </div>
+          <div class="tour-underline mt-2"></div>
+        </div>
+
+        <div class="tour-row relative px-6 py-4">
+          <div class="grid sm:grid-cols-[112px_1fr_1fr_120px] gap-1 sm:gap-4 sm:items-center">
+            <span class="mono text-[12px] tnum" style="color:var(--rose-deep);">JUN 22</span>
+            <span class="serif text-[17px] tight">Cedar Cultural Center</span>
+            <span class="text-[13px]" style="color:rgba(42,24,16,0.62);">Minneapolis, MN</span>
+            <a href="#" class="justify-self-start sm:justify-self-end text-[12.5px] font-semibold underline-link" style="color:var(--rose-deep);">Tickets →</a>
+          </div>
+          <div class="tour-underline mt-2"></div>
+        </div>
+
+        <div class="tour-row relative px-6 py-4">
+          <div class="grid sm:grid-cols-[112px_1fr_1fr_120px] gap-1 sm:gap-4 sm:items-center">
+            <span class="mono text-[12px] tnum" style="color:var(--rose-deep);">JUN 26</span>
+            <span class="serif text-[17px] tight">Old Town School of Folk Music</span>
+            <span class="text-[13px]" style="color:rgba(42,24,16,0.62);">Denver, CO</span>
+            <a href="#" class="justify-self-start sm:justify-self-end text-[12.5px] font-semibold underline-link" style="color:var(--rose-deep);">Tickets →</a>
+          </div>
+          <div class="tour-underline mt-2"></div>
+        </div>
+
+        <div class="tour-row relative px-6 py-4">
+          <div class="grid sm:grid-cols-[112px_1fr_1fr_120px] gap-1 sm:gap-4 sm:items-center">
+            <span class="mono text-[12px] tnum" style="color:var(--rose-deep);">JUN 29</span>
+            <span class="serif text-[17px] tight">A House Concert in Laurelhurst</span>
+            <span class="text-[13px]" style="color:rgba(42,24,16,0.62);">Portland, OR</span>
+            <a href="#" class="justify-self-start sm:justify-self-end text-[12.5px] font-semibold underline-link" style="color:var(--rose-deep);">Tickets →</a>
+          </div>
+          <div class="tour-underline mt-2"></div>
+        </div>
+
+        <div class="tour-row relative px-6 py-4">
+          <div class="grid sm:grid-cols-[112px_1fr_1fr_120px] gap-1 sm:gap-4 sm:items-center">
+            <span class="mono text-[12px] tnum" style="color:var(--rose-deep);">JUL 02</span>
+            <span class="serif text-[17px] tight">Freight &amp; Salvage</span>
+            <span class="text-[13px]" style="color:rgba(42,24,16,0.62);">Berkeley, CA</span>
+            <a href="#" class="justify-self-start sm:justify-self-end text-[12.5px] font-semibold underline-link" style="color:var(--rose-deep);">Tickets →</a>
+          </div>
+          <div class="tour-underline mt-2"></div>
+        </div>
+
+      </div>
+    </div>
+    <p class="mono text-[11px] tracking-wide mt-4 text-center" style="color:rgba(42,24,16,0.45);">
+      House concert host? Write <a href="#newsletter" class="underline-link" style="color:var(--rose-deep);">hello@sofiareyesmusic.com</a> — we&rsquo;re still adding living rooms.
+    </p>
+  </section>
+
+  <!-- ============ 6. MUSIC VIDEO ============ -->
+  <section class="relative border-y hair bg-white/45">
+    <div class="mx-auto max-w-6xl px-5 sm:px-8 py-20 sm:py-24">
+      <div class="text-center max-w-2xl mx-auto mb-10">
+        <div class="mono text-[10.5px] tracking-[0.2em]" style="color:var(--rose-deep);">LIVE VIDEO</div>
+        <h2 class="serif text-4xl sm:text-5xl tightest leading-[0.97] mt-3">
+          Mama&rsquo;s Garden, <span style="opacity:0.45;">filmed on the lawn at Newport.</span>
+        </h2>
+      </div>
+
+      <div class="video-card group relative mx-auto max-w-4xl">
+        <div class="relative aspect-video rounded-2xl overflow-hidden border hair"
+             style="background:linear-gradient(135deg,#F7C9A8 0%,#E9A7B0 45%,#C9788E 100%);box-shadow:0 30px 70px -30px rgba(168,90,114,0.5);">
+          <!-- soft scene -->
+          <svg viewBox="0 0 1200 675" class="w-full h-full" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <defs>
+              <radialGradient id="vsun" cx="50%" cy="34%" r="60%">
+                <stop offset="0%" stop-color="#FFF6E6" stop-opacity="0.9"/>
+                <stop offset="65%" stop-color="#FFF6E6" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <rect width="1200" height="675" fill="url(#vsun)"/>
+            <path d="M0 520 Q300 470 600 510 T1200 500 V675 H0 Z" fill="#B6647C" opacity="0.5"/>
+            <path d="M0 575 Q360 540 720 575 T1200 560 V675 H0 Z" fill="#A85A72" opacity="0.55"/>
+            <circle cx="600" cy="220" r="62" fill="#FFF1DC" opacity="0.85"/>
+          </svg>
+          <!-- play overlay -->
+          <div class="absolute inset-0 flex items-center justify-center">
+            <div class="video-play h-20 w-20 rounded-full bg-white/85 flex items-center justify-center" style="box-shadow:0 14px 36px -10px rgba(80,30,46,0.55);">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" style="color:var(--rose-deep);margin-left:3px;" aria-hidden="true"><path d="M5 3l16 9-16 9V3z"/></svg>
+            </div>
+          </div>
+          <!-- duration chip -->
+          <div class="absolute bottom-4 right-4 mono text-[11px] rounded-md px-2 py-1 tnum" style="background:rgba(42,24,16,0.6);color:#FFFAF0;">4:48</div>
+          <div class="absolute top-4 left-4 mono text-[10px] tracking-wider rounded-md px-2.5 py-1" style="background:rgba(255,250,240,0.85);color:var(--rose-deep);">LIVE SESSION</div>
+        </div>
+        <div class="flex items-center justify-between gap-4 mt-4 px-1">
+          <div>
+            <div class="serif text-xl tight">Mama&rsquo;s Garden</div>
+            <div class="mono text-[11.5px] mt-0.5" style="color:rgba(42,24,16,0.5);">Live at Newport Folk Festival · 4:48</div>
+          </div>
+          <a href="#" class="hidden sm:inline-flex items-center gap-1.5 text-[12.5px] font-semibold underline-link" style="color:var(--rose-deep);">
+            Watch on YouTube →
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 7. BIO / ABOUT ============ -->
+  <section id="about" class="relative mx-auto max-w-6xl px-5 sm:px-8 py-20 sm:py-28 scroll-mt-20">
+    <div class="grid lg:grid-cols-[0.85fr_1.15fr] gap-10 lg:gap-16 items-start">
+      <!-- artist photo -->
+      <div class="lg:sticky lg:top-28">
+        <div class="relative aspect-[4/5] rounded-2xl overflow-hidden border hair"
+             style="background:linear-gradient(160deg,#FBE7CE 0%,#F0B9B0 52%,#C9788E 100%);box-shadow:0 30px 60px -30px rgba(168,90,114,0.45);">
+          <svg viewBox="0 0 400 500" class="w-full h-full" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <defs>
+              <radialGradient id="pglow" cx="50%" cy="36%" r="55%">
+                <stop offset="0%" stop-color="#FFF6E6" stop-opacity="0.85"/>
+                <stop offset="70%" stop-color="#FFF6E6" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <rect width="400" height="500" fill="url(#pglow)"/>
+            <!-- simple seated figure with guitar silhouette -->
+            <ellipse cx="200" cy="150" rx="46" ry="50" fill="#A85A72" opacity="0.55"/>
+            <path d="M120 500 C120 360 150 300 200 300 C250 300 280 360 280 500 Z" fill="#A85A72" opacity="0.5"/>
+            <ellipse cx="245" cy="370" rx="62" ry="74" fill="#8E4860" opacity="0.45"/>
+            <rect x="232" y="250" width="9" height="130" rx="4" fill="#8E4860" opacity="0.5"/>
+          </svg>
+          <div class="absolute left-4 bottom-4 mono text-[10px] tracking-wider rounded-md px-2.5 py-1" style="background:rgba(255,250,240,0.85);color:var(--rose-deep);">SOFIA REYES · 2026</div>
+        </div>
+        <div class="mt-4 grid grid-cols-3 gap-3 text-center">
+          <div class="rounded-lg border hair bg-white/55 py-3">
+            <div class="serif text-2xl tnum tight" style="color:var(--rose-deep);">248,119</div>
+            <div class="mono text-[9px] tracking-wider mt-0.5" style="color:rgba(42,24,16,0.45);">MONTHLY LISTENERS</div>
+          </div>
+          <div class="rounded-lg border hair bg-white/55 py-3">
+            <div class="serif text-2xl tnum tight" style="color:var(--rose-deep);">02</div>
+            <div class="mono text-[9px] tracking-wider mt-0.5" style="color:rgba(42,24,16,0.45);">FULL-LENGTHS</div>
+          </div>
+          <div class="rounded-lg border hair bg-white/55 py-3">
+            <div class="serif text-2xl tnum tight" style="color:var(--rose-deep);">9</div>
+            <div class="mono text-[9px] tracking-wider mt-0.5" style="color:rgba(42,24,16,0.45);">DAYS TO TAPE</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- bio text -->
+      <div>
+        <div class="mono text-[10.5px] tracking-[0.2em]" style="color:var(--rose-deep);">ABOUT THE ARTIST</div>
+        <h2 class="serif text-4xl sm:text-5xl tightest leading-[0.95] mt-3">
+          A farm girl who<br/><span style="opacity:0.45;">found a city to miss it from.</span>
+        </h2>
+
+        <div class="mt-7 space-y-5 text-[15.5px] leading-[1.75]" style="color:rgba(42,24,16,0.82);">
+          <p>
+            Sofia Reyes grew up on forty acres of dairy land in the Berkshire Mountains of western Massachusetts, the kind of place where the nearest streetlight was a town over. She learned guitar on her grandmother&rsquo;s nylon-string, picked apples every September, and spent most of her teens convinced the rest of the world was happening somewhere she wasn&rsquo;t. At nineteen she packed a truck before dawn and drove south.
+          </p>
+          <p>
+            Brooklyn took the better part of a decade to forgive her for not being the country. She waited tables in Greenpoint, played open mics until the rooms started filling, and in 2024 released her debut, <span class="serif" style="color:var(--ink);">First Frost</span> — NPR called it the best folk debut of that year. But the songs that became <span class="serif" style="color:var(--ink);">Bloom</span> kept pulling her back upstate, toward gardens and tin roofs and the people she&rsquo;d left mid-sentence.
+          </p>
+          <p>
+            So she went home to make it. <span class="serif" style="color:var(--ink);">Bloom</span> was recorded over nine days in a hay barn outside Phoenicia, New York, the band tracking live to tape with the doors open. A string trio drove up from the city for two of the sessions. It is a record about leaving — and about the slow, unglamorous work of putting down roots somewhere new, and learning to call that home too.
+          </p>
+        </div>
+
+        <div class="mt-7 flex flex-wrap gap-2">
+          <span class="rounded-full border hair bg-white/55 px-3 py-1.5 mono text-[10.5px] tracking-wider" style="color:rgba(42,24,16,0.6);">INDIE-FOLK</span>
+          <span class="rounded-full border hair bg-white/55 px-3 py-1.5 mono text-[10.5px] tracking-wider" style="color:rgba(42,24,16,0.6);">SINGER-SONGWRITER</span>
+          <span class="rounded-full border hair bg-white/55 px-3 py-1.5 mono text-[10.5px] tracking-wider" style="color:rgba(42,24,16,0.6);">BROOKLYN, NY</span>
+          <span class="rounded-full border hair bg-white/55 px-3 py-1.5 mono text-[10.5px] tracking-wider" style="color:rgba(42,24,16,0.6);">FOLKWAYS IMPRINT</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 8. MERCH ============ -->
+  <section id="merch" class="relative border-y hair bg-white/45 scroll-mt-20">
+    <div class="mx-auto max-w-6xl px-5 sm:px-8 py-20 sm:py-24">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
+        <div>
+          <div class="mono text-[10.5px] tracking-[0.2em]" style="color:var(--rose-deep);">THE SHOP</div>
+          <h2 class="serif text-4xl sm:text-5xl tightest leading-[0.95] mt-3">
+            Take a little<br/><span style="opacity:0.45;">of the barn home.</span>
+          </h2>
+        </div>
+        <p class="text-[13px] mono tracking-wide" style="color:rgba(42,24,16,0.5);">FREE U.S. SHIPPING OVER $40</p>
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+
+        <!-- LP -->
+        <div class="lift rounded-xl border hair bg-white/70 overflow-hidden flex flex-col">
+          <div class="relative aspect-square" style="background:linear-gradient(150deg,#F7C9A8,#C9788E);">
+            <svg viewBox="0 0 200 200" class="w-full h-full" aria-hidden="true">
+              <circle cx="100" cy="100" r="78" fill="#3A2018" opacity="0.55"/>
+              <circle cx="100" cy="100" r="78" fill="none" stroke="#FFF6E6" stroke-opacity="0.18" stroke-width="1"/>
+              <circle cx="100" cy="100" r="54" fill="none" stroke="#FFF6E6" stroke-opacity="0.14" stroke-width="1"/>
+              <circle cx="100" cy="100" r="26" fill="#C9788E"/>
+              <circle cx="100" cy="100" r="4" fill="#FFF6E6"/>
+            </svg>
+            <span class="absolute top-3 left-3 mono text-[9px] tracking-wider rounded px-1.5 py-0.5" style="background:rgba(255,250,240,0.85);color:var(--rose-deep);">VINYL</span>
+          </div>
+          <div class="p-4 flex flex-col flex-1">
+            <div class="serif text-[17px] tight">Bloom — LP</div>
+            <div class="text-[12px] mt-1 flex-1" style="color:rgba(42,24,16,0.55);">180g rose-marbled vinyl, gatefold sleeve with full lyrics.</div>
+            <div class="flex items-center justify-between mt-3">
+              <span class="mono text-[15px] tnum font-medium">$32</span>
+              <button class="btn-rose rounded-full px-3.5 py-1.5 text-[11.5px] font-semibold">Add</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CD -->
+        <div class="lift rounded-xl border hair bg-white/70 overflow-hidden flex flex-col">
+          <div class="relative aspect-square" style="background:linear-gradient(150deg,#FBE7CE,#E9A7B0);">
+            <svg viewBox="0 0 200 200" class="w-full h-full" aria-hidden="true">
+              <rect x="36" y="36" width="128" height="128" rx="6" fill="#FFF6E6" opacity="0.55"/>
+              <circle cx="100" cy="100" r="44" fill="#C9788E" opacity="0.85"/>
+              <circle cx="100" cy="100" r="13" fill="#FBE7CE"/>
+            </svg>
+            <span class="absolute top-3 left-3 mono text-[9px] tracking-wider rounded px-1.5 py-0.5" style="background:rgba(255,250,240,0.85);color:var(--rose-deep);">COMPACT DISC</span>
+          </div>
+          <div class="p-4 flex flex-col flex-1">
+            <div class="serif text-[17px] tight">Bloom — CD</div>
+            <div class="text-[12px] mt-1 flex-1" style="color:rgba(42,24,16,0.55);">Digipak edition with a 16-page booklet of barn-session photos.</div>
+            <div class="flex items-center justify-between mt-3">
+              <span class="mono text-[15px] tnum font-medium">$14</span>
+              <button class="btn-rose rounded-full px-3.5 py-1.5 text-[11.5px] font-semibold">Add</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tour poster -->
+        <div class="lift rounded-xl border hair bg-white/70 overflow-hidden flex flex-col">
+          <div class="relative aspect-square" style="background:linear-gradient(150deg,#F0B9B0,#C9788E);">
+            <svg viewBox="0 0 200 200" class="w-full h-full" aria-hidden="true">
+              <rect x="58" y="28" width="84" height="144" rx="3" fill="#FFF6E6" opacity="0.6"/>
+              <circle cx="100" cy="78" r="22" fill="#C9788E"/>
+              <g stroke="#C9788E" stroke-width="2" opacity="0.7">
+                <line x1="74" y1="118" x2="126" y2="118"/>
+                <line x1="74" y1="130" x2="126" y2="130"/>
+                <line x1="74" y1="142" x2="112" y2="142"/>
+              </g>
+            </svg>
+            <span class="absolute top-3 left-3 mono text-[9px] tracking-wider rounded px-1.5 py-0.5" style="background:rgba(255,250,240,0.85);color:var(--rose-deep);">PRINT</span>
+          </div>
+          <div class="p-4 flex flex-col flex-1">
+            <div class="serif text-[17px] tight">2026 Tour Poster</div>
+            <div class="text-[12px] mt-1 flex-1" style="color:rgba(42,24,16,0.55);">18×24" letterpress, illustrated by Sofia. All 14 dates listed.</div>
+            <div class="flex items-center justify-between mt-3">
+              <span class="mono text-[15px] tnum font-medium">$24</span>
+              <button class="btn-rose rounded-full px-3.5 py-1.5 text-[11.5px] font-semibold">Add</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Handwritten lyrics print -->
+        <div class="lift rounded-xl border hair bg-white/70 overflow-hidden flex flex-col">
+          <div class="relative aspect-square" style="background:linear-gradient(150deg,#FFF0F5,#E9A7B0);">
+            <svg viewBox="0 0 200 200" class="w-full h-full" aria-hidden="true">
+              <rect x="48" y="40" width="104" height="120" rx="3" fill="#FFFAF0" opacity="0.85"/>
+              <g stroke="#C9788E" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.8">
+                <path d="M62 66 q10 -8 20 0 t20 0 t16 -2"/>
+                <path d="M62 86 q12 -7 22 1 t24 -2"/>
+                <path d="M62 106 q9 -6 18 1 t18 0 t14 -1"/>
+                <path d="M62 126 q11 -8 20 0 t16 1"/>
+              </g>
+            </svg>
+            <span class="absolute top-3 left-3 mono text-[9px] tracking-wider rounded px-1.5 py-0.5" style="background:var(--rose-deep);color:#FFFAF0;">LIMITED · 100</span>
+          </div>
+          <div class="p-4 flex flex-col flex-1">
+            <div class="serif text-[17px] tight">Handwritten Lyrics</div>
+            <div class="text-[12px] mt-1 flex-1" style="color:rgba(42,24,16,0.55);">&ldquo;Mama&rsquo;s Garden&rdquo; in Sofia&rsquo;s hand, signed &amp; numbered, archival paper.</div>
+            <div class="flex items-center justify-between mt-3">
+              <span class="mono text-[15px] tnum font-medium">$48</span>
+              <button class="btn-rose rounded-full px-3.5 py-1.5 text-[11.5px] font-semibold">Add</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 9. NEWSLETTER ============ -->
+  <section id="newsletter" class="relative overflow-hidden scroll-mt-20">
+    <div class="mesh-blob" style="width:440px;height:440px;background:#FADCE4;top:-160px;left:8%;"></div>
+    <div class="mesh-blob" style="width:380px;height:380px;background:#FBE7CE;bottom:-180px;right:6%;"></div>
+    <div class="absolute inset-0 dotgrid opacity-[0.45]"></div>
+
+    <div class="relative mx-auto max-w-3xl px-5 sm:px-8 py-20 sm:py-28 text-center">
+      <div class="inline-flex items-center gap-2 rounded-full border bg-white/65 px-3 py-1.5 hair mb-6">
+        <span class="pulse-dot"></span>
+        <span class="mono text-[10.5px] tracking-wider" style="color:var(--rose-deep);">THE GARDEN LETTER</span>
+      </div>
+      <h2 class="serif text-4xl sm:text-5xl tightest leading-[0.97]">
+        Get tour dates <span style="opacity:0.45;">+ new releases.</span>
+      </h2>
+      <p class="text-[15px] leading-relaxed mt-4 max-w-md mx-auto" style="color:rgba(42,24,16,0.7);">
+        A short, occasional letter from Sofia — show announcements, the odd unreleased demo, and photos from the road. No more than once a month.
+      </p>
+
+      <form class="mt-8 flex flex-col sm:flex-row gap-3 max-w-md mx-auto" onsubmit="return false">
+        <input type="email" required placeholder="you@email.com" aria-label="Email address"
+               class="flex-1 rounded-full border bg-white/80 px-5 py-3 text-[14px] outline-none hair focus:border-[color:var(--rose)] transition-colors" />
+        <button type="submit" class="btn-rose rounded-full px-6 py-3 text-[13.5px] font-semibold whitespace-nowrap">Subscribe</button>
+      </form>
+      <p class="mono text-[10.5px] tracking-wide mt-4" style="color:rgba(42,24,16,0.42);">
+        12,400+ subscribers · unsubscribe any time · no spam, ever
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ 10. SOCIAL + STREAMING ROW ============ -->
+  <section class="relative border-t hair bg-white/45">
+    <div class="mx-auto max-w-6xl px-5 sm:px-8 py-12">
+      <div class="flex flex-col items-center gap-6">
+        <div class="mono text-[10px] tracking-[0.2em]" style="color:rgba(42,24,16,0.42);">FOLLOW &amp; LISTEN</div>
+        <div class="flex flex-wrap items-center justify-center gap-3">
+          <!-- Spotify -->
+          <a href="#" aria-label="Spotify" class="lift h-11 w-11 rounded-full flex items-center justify-center text-white" style="background:#1DB954;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0a12 12 0 100 24 12 12 0 000-24zm5.5 17.3a.75.75 0 01-1.03.25c-2.82-1.72-6.37-2.11-10.55-1.16a.75.75 0 11-.33-1.46c4.57-1.04 8.5-.59 11.66 1.34.36.22.47.69.25 1.03zm1.47-3.27a.94.94 0 01-1.29.31c-3.23-1.98-8.15-2.56-11.97-1.4a.94.94 0 11-.54-1.8c4.37-1.32 9.79-.67 13.5 1.6.44.27.58.85.3 1.29zm.13-3.4C15.86 8.32 9.6 8.1 5.92 9.22a1.12 1.12 0 11-.65-2.15c4.23-1.28 11.15-1.03 15.35 1.46a1.13 1.13 0 01-1.15 1.94z"/></svg>
+          </a>
+          <!-- Apple Music -->
+          <a href="#" aria-label="Apple Music" class="lift h-11 w-11 rounded-full flex items-center justify-center text-white" style="background:#FA243C;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.5 3.2c0-.2-.06-.36-.3-.32l-7.9 1.6c-.27.06-.4.2-.4.5v9.5c-.45-.2-.97-.27-1.5-.18-1.4.24-2.4 1.35-2.23 2.5.17 1.14 1.45 1.86 2.85 1.62 1.3-.22 2.27-1.2 2.28-2.27V8.06l6.4-1.3v5.13c-.45-.2-.98-.28-1.52-.19-1.4.24-2.4 1.35-2.23 2.5.17 1.14 1.45 1.86 2.86 1.62 1.3-.22 2.26-1.2 2.27-2.27l.14-9.78z"/></svg>
+          </a>
+          <!-- Bandcamp -->
+          <a href="#" aria-label="Bandcamp" class="lift h-11 w-11 rounded-full flex items-center justify-center text-white" style="background:#1DA0C3;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 16.5l5-9h15l-5 9H2z"/></svg>
+          </a>
+          <!-- SoundCloud -->
+          <a href="#" aria-label="SoundCloud" class="lift h-11 w-11 rounded-full flex items-center justify-center text-white" style="background:#FF5500;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 14v4h1.1v-4H2zm2.3-1v5H5.4v-5H4.3zm2.3-1.6V18h1.1v-6.6H6.6zm2.3-1V18H10v-7.6H8.9zM11.2 9V18h1.1V9h-1.1zm2.7-.4c-.4 0-.8.1-1.1.3V18h7.1c1.6 0 2.9-1.2 2.9-2.8 0-1.5-1.3-2.8-2.9-2.8-.4 0-.7.07-1.04.2C18.5 10 16.4 8.6 13.9 8.6z"/></svg>
+          </a>
+          <!-- YouTube Music -->
+          <a href="#" aria-label="YouTube Music" class="lift h-11 w-11 rounded-full flex items-center justify-center text-white" style="background:#FF0000;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 15.5a5.5 5.5 0 110-11 5.5 5.5 0 010 11zm-1.6-8.3v5.6l4.8-2.8-4.8-2.8z"/></svg>
+          </a>
+          <!-- Tidal -->
+          <a href="#" aria-label="Tidal" class="lift h-11 w-11 rounded-full flex items-center justify-center text-white border hair-strong" style="background:#0A0A0A;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 6l4 4-4 4-4-4 4-4zm8 0l4 4-4 4-4-4 4-4zm8 0l4 4-4 4-4-4 4-4zm-8 8l4 4-4 4-4-4 4-4z"/></svg>
+          </a>
+          <span class="h-6 w-px mx-1" style="background:var(--hair-strong);"></span>
+          <!-- Instagram -->
+          <a href="#" aria-label="Instagram" class="lift h-11 w-11 rounded-full flex items-center justify-center border hair bg-white/70" style="color:var(--rose-deep);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="3.6"/><circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" stroke="none"/></svg>
+          </a>
+          <!-- TikTok -->
+          <a href="#" aria-label="TikTok" class="lift h-11 w-11 rounded-full flex items-center justify-center border hair bg-white/70" style="color:var(--rose-deep);">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 3v9.5a3.5 3.5 0 11-3-3.46V12a1.5 1.5 0 101.5 1.5V3H14c.3 1.9 1.7 3.5 3.6 3.9V9.5c-1.4-.1-2.7-.6-3.6-1.4V3z"/></svg>
+          </a>
+          <!-- YouTube -->
+          <a href="#" aria-label="YouTube" class="lift h-11 w-11 rounded-full flex items-center justify-center border hair bg-white/70" style="color:var(--rose-deep);">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22 12c0-2.3-.2-3.5-.4-4.2a2.6 2.6 0 00-1.8-1.8C18.4 5.7 12 5.7 12 5.7s-6.4 0-7.8.3A2.6 2.6 0 002.4 7.8C2.2 8.5 2 9.7 2 12s.2 3.5.4 4.2a2.6 2.6 0 001.8 1.8c1.4.3 7.8.3 7.8.3s6.4 0 7.8-.3a2.6 2.6 0 001.8-1.8c.2-.7.4-1.9.4-4.2zM10 15V9l5.2 3-5.2 3z"/></svg>
+          </a>
+        </div>
+        <p class="mono text-[10.5px] tracking-wide" style="color:rgba(42,24,16,0.42);">@sofiareyesmusic</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 11. FOOTER ============ -->
+  <footer class="relative border-t hair">
+    <div class="mx-auto max-w-6xl px-5 sm:px-8 py-12">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-8">
+        <div>
+          <a href="#top" class="serif text-2xl tighter" style="color:var(--ink);">Sofia&nbsp;Reyes</a>
+          <p class="serif text-base mt-1.5" style="color:rgba(42,24,16,0.5);">Bloom — out May 18, 2026.</p>
+          <div class="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-[12.5px] font-medium" style="color:rgba(42,24,16,0.6);">
+            <a href="#music" class="underline-link hover:text-[color:var(--ink)] transition-colors">Music</a>
+            <a href="#tour" class="underline-link hover:text-[color:var(--ink)] transition-colors">Tour</a>
+            <a href="#merch" class="underline-link hover:text-[color:var(--ink)] transition-colors">Merch</a>
+            <a href="#about" class="underline-link hover:text-[color:var(--ink)] transition-colors">About</a>
+          </div>
+        </div>
+        <div class="sm:text-right space-y-1.5">
+          <div class="mono text-[11px]" style="color:rgba(42,24,16,0.55);">BOOKING &amp; PRESS</div>
+          <a href="#" class="serif text-lg tight underline-link" style="color:var(--rose-deep);">booking@sofiareyesmusic.com</a>
+          <div class="mono text-[10.5px] tracking-wide pt-1" style="color:rgba(42,24,16,0.42);">BLOOM-002 · CD / LP / DIGITAL · FOLKWAYS IMPRINT</div>
+        </div>
+      </div>
+
+      <div class="mt-10 pt-6 border-t hair flex flex-col sm:flex-row items-center justify-between gap-3">
+        <p class="mono text-[10.5px] tracking-wide" style="color:rgba(42,24,16,0.42);">© 2026 SOFIA REYES. ALL RIGHTS RESERVED.</p>
+        <p class="mono text-[10.5px] tracking-wide" style="color:rgba(42,24,16,0.42);">RECORDED IN A BARN · PHOENICIA, NY</p>
+      </div>
+    </div>
+  </footer>
+
+</main>
+
+</body>
+</html>

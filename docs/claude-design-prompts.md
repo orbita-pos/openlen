@@ -1293,7 +1293,7 @@ VARIANT 02: Plotline — A modern property listings site for buyers.
 - Pricing: Free for buyers. We make $0 from buyers — agents pay us to be visible. No referral fees taken from buyers.
 - FAQ Q's: "How is this free for buyers — what's the business model?", "How fresh is the listings data?", "Do you cover my market?", "How are off-market listings sourced?", "Can I save a search and get alerts when matching listings appear?".
 
-VARIANT 03: Hearth — Vacation rental marketplace for design-conscious travelers.
+VARIANT 03: Sojourn — Vacation rental marketplace for design-conscious travelers.
 - Mode: warm cream. Bg #FAF5EC. Accent: warm terracotta #C66B3D. Text #1F1B16.
 - Display font: Source Serif 4 weight 500.
 - Pitch: "Vacation rentals we'd <em>actually stay in</em>."
@@ -1302,9 +1302,9 @@ VARIANT 03: Hearth — Vacation rental marketplace for design-conscious traveler
 - Featured stays: 9 property cards organized by location tags ("Mendocino coast", "Catskills retreat", "Joshua Tree desert", "Hudson Valley farmhouse").
 - Centerpiece: "How we curate" — 3-step explanation (we visit every property, we screen the hosts, we update photography ourselves) + 3 photo placeholders.
 - Stats: Properties curated (1,408 across 47 destinations), Avg stay length (4.2 nights), Returning guests in 2025 (42%), Editorial team (12 in-house curators).
-- Customer story: "Hana & Yuki · stayed at a Catskills A-frame in October · 'Hearth has spoiled us — we can't go back to Airbnb.'"
+- Customer story: "Hana & Yuki · stayed at a Catskills A-frame in October · 'Sojourn has spoiled us — we can't go back to Airbnb.'"
 - Pricing: 12% commission on bookings (vs Airbnb 14-18%). Hosts keep more, guests pay no service fees beyond cleaning.
-- FAQ Q's: "What's the application process for hosts — can I list my place?", "What's your cancellation policy?", "Does Hearth offer insurance for hosts?", "How does pricing compare to Airbnb for similar stays?", "Do you support stays longer than 30 days?".
+- FAQ Q's: "What's the application process for hosts — can I list my place?", "What's your cancellation policy?", "Does Sojourn offer insurance for hosts?", "How does pricing compare to Airbnb for similar stays?", "Do you support stays longer than 30 days?".
 
 VARIANT 04: Beacon — Real estate agent personal page.
 - Mode: light + warm. Bg #FBF8F2. Accent: deep coral #C53A22. Text #1A1714.
@@ -1541,10 +1541,10 @@ VARIANT 04: Solva — A skincare retinol serum.
 - Subscription: One-time $68 OR every 8 weeks ($58, -15%).
 - FAQ Q's: "Can I use this if I'm pregnant or breastfeeding?", "How long until I see results?", "Is this comedogenic?", "Can I use this with my prescription retinol?", "What's the bottle opacity — does it preserve the actives?".
 
-VARIANT 05: Vellum — A leather notebook.
+VARIANT 05: Quire — A leather notebook.
 - Mode: warm dark + cream details. Bg #14110D. Accent: cream #F4EEDC. Text #F4EEDC.
 - Display font: Newsreader serif 500.
-- Product: "Vellum — A leather-bound A5 notebook. <em>Refillable, 240 pages</em>. $94."
+- Product: "Quire — A leather-bound A5 notebook. <em>Refillable, 240 pages</em>. $94."
 - Audience: writers, designers, executives, students 25-55 wanting a heritage object for daily journaling.
 - Hero photos: 5 — closed cover, open with handwritten pages, leather grain closeup, on a desk lifestyle shot, refillable mechanism detail.
 - Variants: 4 leather colors (Saddle, Cognac, Black, Forest), 2 paper types (Lined, Dot grid), monogram option (+$14).
@@ -1663,6 +1663,504 @@ VARIANT 05: Compass Climate — Climate consulting for industrial decarbonizatio
 - Pricing: Engagement-based — Scoping ($148k flat, 8 weeks), Strategy ($480k+, 12-20 weeks), Implementation support ($1.4M+/yr retainer).
 - FAQ Q's: "What's your sector specialization — do you handle cement, or only steel?", "How is your modeling different from McKinsey / BCG climate practices?", "Do you have engineering capability for capital project scoping?", "How do you handle policy uncertainty (EU CBAM, US 45Q)?", "Can you support transition finance structuring (sustainability-linked debt, transition bonds)?".
 - Logos: Stratos Steel, Cinder Cement, Halcyon Industrial, Beacon Chemicals, Pavilion Manufacturing, Atrium Paper.
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 17 — Mobile App Landing (5 pages, mixed modes)
+
+```
+Brief: Produce 5 landing pages for CONSUMER MOBILE APPS — Apple App Store / Google Play Store aesthetic with a phone mockup as the centerpiece. Headspace / Cash App / Linear Mobile / Whoop level. The phone mockup IS the hero — everything orbits around it.
+
+SHARED AESTHETIC (all 5 variants):
+- Display: Inter Display 700, letter-spacing -0.035em.
+- Body: Inter 400-500, line-height 1.55 (looser, consumer-friendly).
+- Mono: Geist Mono 400 — only for version numbers / in-app metrics.
+- Phone mockups: stylized iPhone-shape SVG with rounded corners (~8% radius), notch, status bar (mono "9:41" time + battery + signal icons). Screen content rendered as HTML inside the phone frame via clip-path or container.
+- Phone tilt: 3D perspective `rotateY(-6deg) rotateX(2deg)` with soft glow underneath (radial-gradient accent at 30% opacity, 80px blur).
+- App Store + Google Play badges: SVG badges in hero CTA area (NOT just "Download" buttons).
+- Animated phone screens: subtle CSS scroll animation inside the phone frame (~12s loop).
+- More chroma than B2B (less hairline, more bloom + gradient).
+
+SHARED SECTION SKELETON:
+1. Nav: app icon (rounded square) + wordmark + 3-4 nav links + sign-in text + accent CTA pill linking to App Store.
+2. Hero: 2-col split. Left: pill badge ("Featured on App Store · Editor's Choice"), display headline 6-10 words, sub 25 words, dual CTA (App Store badge + Google Play badge), 4.8★ rating row with "12,408 reviews". Right: PHONE MOCKUP showing the main screen with live-animation.
+3. App icon + tagline band: huge centered rounded-square app icon (gradient or glyph), 1-line tagline below.
+4. "How it works" 3-step grid: each step has a smaller phone mockup showing the screen for that step.
+5. Feature trio with phone mockups: 3 alternating rows, each with phone showing a different screen + text describing the feature.
+6. Outcomes banner: 4 user-facing metrics ("Sleep improved 38 min/night avg", "Downloaded 4.4M times in 2025").
+7. Reviews carousel: 5-star reviews with reviewer first name + location ("Hana, Tokyo · ★★★★★ · This app changed my mornings.")
+8. App Store rating section: BIG 4.8★ display + ratings breakdown chart (5-star 84%, 4-star 12%, etc.).
+9. FAQ: 5 consumer-app questions (privacy, offline use, subscription cancellation, device support, free vs paid tier).
+10. Final CTA: BIG centered phone with App Store + Google Play badges.
+11. Footer: minimal — app icon + wordmark + Privacy / Terms / Support / Careers + © year.
+
+VISUAL FLOURISHES SPECIFIC TO MOBILE:
+- Phone mockup at 50-60% hero width on desktop.
+- App icon rendered as 80px rounded-square (16% radius) gradient with optional glyph centered.
+- Star ratings as SVG (filled gold stars + half star where applicable).
+- "Featured on App Store" badge in hero.
+- App Store screenshots strip: 4-5 phone-aspect tiles showing different screens in horizontal scroll.
+- Subtle floating animation on hero phone (gentle 4-6s up/down bob).
+
+THE 5 VARIANTS:
+
+VARIANT 01: Lumen — A sleep + meditation app for adults who can't unwind.
+- Mode: gradient dark→lavender. Bg radial from #0A0814 (top) to #1A0E2E (bottom). Accent: deep lavender #B388FF. Text #F4F0FA.
+- Pitch: "Fall asleep without <em>thinking about it</em>."
+- Audience: adults 25-50 with chronic sleep struggles, willing to pay $14/mo for a tool that helps them wind down without screens-in-bed guilt.
+- Hero phone mockup: tonight's program — "12-min wind-down · 8-min body scan · 22-min sleep story · 2-hr ambient" with soft "Begin" CTA at bottom.
+- 3-step: (1) Tell us about your nights, (2) Get a tonight-only program, (3) Track patterns without obsession.
+- Outcomes: Avg sleep onset improvement (32 min faster after 30 days), Members renewing past month 6 (84%), Sleep stories in library (240+), App Store rating (4.8 from 28,408 reviews).
+- Reviews: 5 real-sounding short reviews — "I'd tried Calm and Headspace. This one finally got the assignment. — Priya, Brooklyn".
+- Pricing: Free (3 sessions/week + basic library) + Plus ($14/mo, unlimited + tonight programs + sleep journal).
+- FAQ: "Does it work without headphones?", "Can I use it offline on flights?", "How does it compare to Calm?", "What's the cancellation flow?", "Are voices AI-generated or human?".
+
+VARIANT 02: Ribbon — Expense splitting for couples (not roommates).
+- Mode: warm cream. Bg #FAF7F0. Accent: sage green #7CA982. Text #1F1B16.
+- Pitch: "The money conversation, <em>without the conversation</em>."
+- Audience: couples (married, partnered, cohabiting) who hate Splitwise's frat-house vibe and want something quieter + adult.
+- Hero phone mockup: home — "This month · You owe Hana $148.42" + recent transactions list (Whole Foods $84.20 split 50/50, Verizon $128 split 60/40, rent auto-split 50/50).
+- 3-step: (1) Connect both your accounts, (2) Set your default split (50/50, by income, custom), (3) See where the month landed — no math required.
+- Outcomes: Couples on Ribbon (208,408), Money-fight reduction (self-reported −62% in survey), Auto-categorization accuracy (94%), App Store rating (4.7 from 14,402 reviews).
+- Reviews: "We stopped having the 'who paid for what' fight. — Marcus & Yuki, Brooklyn".
+- Pricing: Free (1 shared budget + manual entry) + Plus ($8/mo, bank-sync + recurring bills + tax-year exports).
+- FAQ: "Do you see our actual transactions?", "What if our incomes are very different?", "Does it work with joint AND separate accounts?", "Can we use this if we're not married?", "How is this different from Splitwise?".
+
+VARIANT 03: Slate — A notes app for people who type too fast.
+- Mode: paper light. Bg #FCFCF8. Accent: charcoal #1A1A1A. Text #0A0A0A.
+- Pitch: "Notes that <em>keep up</em>."
+- Audience: knowledge workers (PMs, researchers, writers) who outgrew Apple Notes but find Notion overwhelming.
+- Hero phone mockup: note editor — title "Q4 planning thoughts" in serif body, sidebar with folder structure (Inbox · Work · Personal · Archive), Cmd+K bar visible at top.
+- 3-step: (1) Capture anywhere (widget, share extension, lock-screen), (2) Organize lazily — or not at all, search finds it, (3) Sync across all devices in ~80ms.
+- Outcomes: Active users (1.4M), Notes synced daily (28M), Avg sync latency P95 (84ms), App Store rating (4.9 from 47,408 reviews).
+- Reviews: "Notes app that finally respects my keyboard. — Jamie, Stockholm".
+- Pricing: Free (1k notes + 1 device) + Pro ($4/mo, unlimited + all devices + version history + share links).
+- FAQ: "Is my data encrypted?", "Does it work offline?", "Can I import from Apple Notes / Bear / Obsidian?", "What's the markdown story?", "Is there a web version?".
+
+VARIANT 04: Sprout — Language learning that doesn't feel like a game.
+- Mode: gradient light → mint. Bg radial from #FFFFFF to #ECFDF5. Accent: emerald #10B981. Text #064E3B.
+- Pitch: "Learn to <em>speak</em>, not to swipe."
+- Audience: adults 22-45 who want to actually become conversational in Spanish / Japanese / French / Mandarin within 6 months — tired of Duolingo's gamification loops.
+- Hero phone mockup: conversation practice screen — AI tutor speaking in Spanish (waveform animation), user's response shown as transcribed text with subtle accent correction overlay, "Try again" button.
+- 3-step: (1) Take a 5-min placement, (2) 15 min/day adaptive lessons + 2 weekly AI conversations, (3) Hit conversational by month 4 (~85% of consistent users).
+- Outcomes: Adult learners worldwide (1.4M), Hit conversational milestone by month 4 (84% of consistent users), Languages supported (12 with native AI tutors), App Store rating (4.8 from 38,408 reviews).
+- Reviews: "Six months of Sprout > 3 years of Duolingo. — Hana, San Francisco".
+- Pricing: Free (1 language, 5 lessons/week + 1 AI conversation/week) + Plus ($14/mo, unlimited everything + offline + accent training).
+- FAQ: "How is this different from Duolingo / Babbel / Pimsleur?", "Is the AI tutor a real voice or synthetic?", "Can I practice for the DELE / JLPT?", "Does it work offline on long flights?", "What languages are coming next?".
+
+VARIANT 05: Stride — A running coach in your pocket.
+- Mode: dark + neon. Bg #08090A. Accent: electric green #5BFF89. Text #FFFFFF.
+- Pitch: "Train for your race. <em>Not for an algorithm</em>."
+- Audience: runners (5k → marathon) training for a goal race, age 25-50, want adaptive coaching without a $200/mo human coach.
+- Hero phone mockup: today's workout — "Threshold tempo · 5 mi · 7:42 pace target · 28 min" with the route map below and a green "Start workout" CTA.
+- 3-step: (1) Tell us your goal race + date, (2) Get a 16-week plan that adapts to your sleep + HRV + life, (3) Show up on race day ready.
+- Outcomes: Runners hit goal time (84% of consistent users), Avg plan completion (78% vs industry 18%), Marathons run by Stride users in 2025 (38,408), App Store rating (4.9 from 14,408 reviews).
+- Reviews: "PR'd my marathon by 14 min. Coach Stride knew what to do. — Marcus, Austin".
+- Pricing: Free (basic plans + GPS) + Plus ($14/mo, AI coach + adaptive plan + HRV integration + race-day strategy).
+- FAQ: "What watches does it work with (Garmin, Apple, Coros)?", "Can I import training history from Strava?", "What if I miss a workout — does it re-plan?", "Are the plans certified-coach-reviewed?", "Does it work for ultra distances?".
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 18 — Course / Cohort / Online Education (5 pages, mixed modes)
+
+```
+Brief: Produce 5 landing pages for ONLINE COURSES, cohort programs, bootcamps, workshops, and membership communities. Maven / Lambda / Frontend Masters / Reforge / Akimbo level. Editorial gravitas for the content + modern enrollment urgency.
+
+SHARED AESTHETIC (all 5 variants):
+- Display: variant-specific — usually Inter Display 700 OR Source Serif 4 500 italic for the editorial-y ones.
+- Body: Inter 400-500, line-height 1.55.
+- Mono: Geist Mono 400 — for cohort dates, syllabus weeks, seat counts.
+- Instructor photos: warm gradient blobs (no faces) at portrait aspect with hairline border.
+- Syllabus rendered as numbered week-by-week list with mono week labels.
+- "Cohort dates" mono pill: "Cohort 12 · Apr 18 → May 30 · 14 of 24 seats taken".
+- Enrollment urgency: countdown timer to enrollment deadline + seat counter.
+- Lots of alumni testimonials with name + role + company + outcome metric.
+
+SHARED SECTION SKELETON:
+1. Nav: wordmark + 4 links (Syllabus, Instructor, Alumni, FAQ) + sign-in text + accent CTA pill ("Enroll now" or "Apply").
+2. Hero: pill badge ("Cohort 12 · 14 of 24 seats taken"), display headline 6-10 words, sub 30 words, dual CTA ("Enroll · $1,499" + "Read syllabus"), 1-line proof ("Alumni went to Linear, Vercel, Stripe").
+3. Trust bar: 8-10 alumni-company wordmarks ("Where our alumni work") in marquee.
+4. "What you'll learn" 4-week grid: each week as a numbered card with bullet points of topics + project deliverable.
+5. Instructor section: photo placeholder + bio (3 short paragraphs) + 4 credentials in mono ("Ex-Stripe Eng · MS CMU · Author of X").
+6. Syllabus deep-dive: collapsible accordion with each week expanded showing 4-6 specific lessons + reading list + project.
+7. Alumni outcomes: 4 ROI cards ("78% got a promo within 6 months", "Avg salary delta +$28,408", "184 graduated across 12 cohorts", "Cohort completion rate 89% vs industry 8%").
+8. 3-4 alumni testimonials with photo placeholder + name + role/company + 3-sentence quote + outcome metric.
+9. Format / logistics section: cohort length, weekly time commitment, live sessions vs async, refund policy, prereqs.
+10. Pricing: 1-2 tier (most cohorts are single-tier). Stripe checkout CTA. Scholarship mention if relevant.
+11. FAQ: 5 cohort-specific questions (refund, time commitment, prereqs, certificate, missing live sessions).
+12. Final CTA: "Cohort 12 opens April 18 · 10 of 24 seats taken" + enroll button.
+13. Footer: minimal — wordmark + Cohorts archive + About + Privacy + © year.
+
+THE 5 VARIANTS:
+
+VARIANT 01: Atelier — Self-paced design fundamentals course.
+- Mode: warm cream. Bg #FAF5EC. Accent: deep coral #C53A22. Text #1F1B16.
+- Display: Source Serif 4 500 italic.
+- Pitch: "Learn to <em>see</em> before you learn to draw."
+- Audience: working PMs, engineers, marketers (28-45) who want to up-level visual taste — not become designers, but read design.
+- Format: 12 self-paced modules, 4-6 hours each, lifetime access. No live sessions.
+- Instructor: "Yuki Tanaka — brand designer (formerly at IDEO, currently consulting Series-A founders)".
+- Outcomes: Alumni reporting "actually use this weekly" (84%), Modules completed avg per learner (10.4 of 12), Total learners (8,408), Refund rate (<2%).
+- Pricing: $399 one-time (lifetime access + 1 portfolio review).
+- FAQ: "Is this for me if I'm not a designer?", "How long does it take to finish?", "Do I get a certificate?", "Can my company expense it?", "What if I don't like module 1 — refund?".
+
+VARIANT 02: Hatch — A 12-week full-stack bootcamp with job placement.
+- Mode: dark + amber. Bg #08090A. Accent: amber #F5C26B. Text #F4F2EE.
+- Display: Inter Display 700.
+- Pitch: "Career-change to engineering in 12 weeks. <em>No CS degree required</em>."
+- Audience: career-switchers (24-40) with 0 coding background, willing to commit 40+ hrs/week for 12 weeks for a $74k+ first dev role.
+- Format: 12 weeks full-time, live Mon-Fri + 1:1 mentorship + capstone project + job-placement support up to 6 months post-grad.
+- Instructor team: 4 lead instructors with photos + ex-FAANG / startup backgrounds.
+- Outcomes: Job placement rate 6 months post-grad (84%), Avg starting salary ($82,408), Alumni at top-20 startups (380+), Cohorts run since 2022 (28).
+- Pricing: $14,408 upfront OR $0 upfront + 12% ISA on first $80k salary for 24 months. Scholarships for underrepresented (4 per cohort).
+- FAQ: "What's the actual job placement rate, audited?", "Income-share-agreement terms — fine print?", "Do I need to know any coding to start?", "What if I can't find a job — refund?", "Visa support for international students?".
+
+VARIANT 03: Praxis — 6-week cohort seminar on critical thinking.
+- Mode: paper light. Bg #FBF8F0. Accent: deep forest #2D5F3F. Text #1A1714.
+- Display: Newsreader 500 (serif).
+- Pitch: "Read closely. Argue precisely. Think for <em>yourself</em>."
+- Audience: knowledge workers (PMs, founders, analysts, writers) who want to sharpen reasoning — 28 spots per cohort, application-based.
+- Format: 6 weeks · Tuesday + Thursday 7-9pm ET · live discussion · 4 essays · final synthesis paper.
+- Instructor: "Dr. Maya Levenson — PhD Philosophy Princeton, formerly lectured at Stanford, founding editor at The Reading Room".
+- Reading list mention: 12 carefully chosen texts spanning Aristotle to Annie Dillard.
+- Outcomes: Alumni reporting "changed how I read" (94%), Cohorts run (14 since 2023), Application acceptance rate (28%), Returning alumni for follow-on cohorts (38%).
+- Pricing: $1,499 standard. $499 reduced rate for grad students + non-profit workers (4 spots per cohort).
+- FAQ: "How is this different from a philosophy class on Coursera?", "How much weekly reading?", "What's the application process?", "Is live attendance required?", "Will I get a certificate?".
+
+VARIANT 04: Roundtable — 1-day intensive product workshops.
+- Mode: clean white. Bg #FFFFFF. Accent: electric blue #4F8FFF. Text #0A0A0A.
+- Display: Inter Display 700.
+- Pitch: "One day. One topic. <em>Operational depth</em>."
+- Audience: senior PMs and engineering leaders who want focused 1-day deep-dives on specific topics (pricing, hiring, growth, observability) — NOT survey-of-everything courses.
+- Format: 1 full day · 10am-5pm ET · live on Zoom · 24 spots · pre-reading + workshop + post-session resource pack.
+- Topics: rotating monthly — "Pricing & packaging for B2B SaaS · Apr 18", "Hiring senior ICs · May 9", "Growth experiments for product-led-growth · May 30".
+- Instructor varies per workshop: each topic has its own ex-operator (ex-Stripe pricing lead, ex-Linear hiring lead, etc.).
+- Outcomes: Workshops run since 2024 (38), Avg NPS per workshop (84), Returning attendees (62%), Resource packs shipped (28,408 downloads).
+- Pricing: $499 single workshop · $999 for 3-workshop pack (any 3 in 6 months).
+- FAQ: "Will this be recorded?", "Can my company expense it?", "Are workshops live every month?", "What if I miss the live day?", "Group discounts for teams?".
+
+VARIANT 05: Crucible — A membership community for engineering leaders.
+- Mode: deep navy + gold. Bg #0E1A3A. Accent: gold #C8A06A. Text #F4F2EE.
+- Display: Inter Display 700.
+- Pitch: "The peer group you'd <em>actually call</em>."
+- Audience: engineering leaders (Director / VP / CTO) at 50-2000 person companies, application-based, capped at 280 members.
+- Format: ongoing membership · monthly small-group sessions (8 leaders, facilitated) · annual 3-day retreat · private Slack · curated essay archive.
+- Founder: "Yusuf Abara — ex-VP Eng at Forecast and Cinder, ran the original 12-leader peer group in 2019 that became Crucible in 2022".
+- Outcomes: Active members (280, cap), Avg tenure (28 months), Retreats hosted (12 since 2022), Application acceptance rate (14%).
+- Pricing: $4,408/year (includes retreat travel for cohort discussions). Org-sponsored OK.
+- FAQ: "How is this different from CTO Connection / Reforge?", "What's the application process?", "Do members actually use it or is it dead Slack?", "Can I expense this?", "What happens at the annual retreat?".
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 19 — Creator / Link-in-bio (5 pages, mixed modes)
+
+```
+Brief: Produce 5 SINGLE-PAGE link-in-bio sites — Carrd / Linktree / Beacons / Bento.me level. STRUCTURALLY DIFFERENT from product landings: single column, mobile-first, big name + avatar + bio + vertical stack of 5-10 CTA buttons + small footer. No pricing, no FAQ, no testimonials grid, no feature trio.
+
+SHARED AESTHETIC (all 5 variants):
+- Display: variant-specific — usually serif OR bold sans, large.
+- Body: Inter 400-500.
+- Mono: rare — only for "since 2018" metadata.
+- Single column max-w-md (~448px) on desktop. Mobile-native.
+- Hero stack: avatar (rounded circle or square, gradient placeholder), display name, role/tagline 1 line, bio 2-3 lines.
+- 5-10 vertical CTA buttons (rounded-2xl, full-width). Each button: optional icon left + label + optional small subtitle right (or below).
+- Hover state: subtle lift (translateY -1px) + accent ring.
+- Strong personality through color + typography — each variant feels DIFFERENT.
+- Background: variant-specific (gradient, photo blob, paper, dark).
+- Small footer: social icons row + "made by [name]" mono.
+
+SHARED SECTION SKELETON:
+1. Hero stack (centered, ~50vh): avatar + name + role + bio.
+2. CTA button stack: 5-10 buttons (each a different destination).
+3. Optional: featured content card (a current project highlight with image placeholder + 1-line description + CTA).
+4. Optional: upcoming events list (3-5 dates with mono date + venue + city).
+5. Optional: small social icons row (Twitter, Instagram, YouTube, GitHub, etc.).
+6. Footer: 1-line mono ("made with Tide · last updated Mar 2026 · ©").
+
+THE 5 VARIANTS:
+
+VARIANT 01: Pier — Indie musician with upcoming releases + tour.
+- Mode: dark + gradient. Bg radial from #08090E to #1F0E2E. Accent: hot pink #FF4D8F. Text #FFFFFF.
+- Display: Inter Display 700, italic.
+- Name + avatar: "Hana Ito" — circular gradient avatar in pink→violet.
+- Role: "musician · brooklyn".
+- Bio: "Producing new album 'Halcyon' for spring 2026. Touring Japan in May. Hi."
+- CTA buttons (8): "Listen to 'Eclipse' (latest single)" / "Tour dates" / "Merch shop" / "Instagram" / "YouTube" / "Spotify" / "Apple Music" / "Newsletter signup".
+- Featured card: album art placeholder (square gradient) + "New album 'Halcyon' · May 8, 2026 · Pre-save now".
+- Upcoming events: 5 tour dates (Tokyo · May 14 · Liquidroom, Osaka · May 18 · Big Cat, etc.).
+- Social icons: Instagram, TikTok, YouTube, Spotify, Bandcamp.
+
+VARIANT 02: Coil — Podcast host (audio-first link-in-bio).
+- Mode: dark mono. Bg #0A0A0A. Accent: amber #F5C26B. Text #FFFFFF.
+- Display: Inter Display 700.
+- Name + avatar: "Marcus Tobin" — circular avatar placeholder.
+- Role: "Host of The Quiet Hour · 240 episodes".
+- Bio: "Weekly conversations with people doing slow, careful work. Mondays, ~38 min."
+- CTA buttons (7): "Latest episode: 'On second drafts' (12 min ago)" / "Subscribe on Apple Podcasts" / "Subscribe on Spotify" / "RSS feed" / "Newsletter (weekly recap)" / "Sponsor an episode" / "Recommended reading list".
+- Featured card: episode artwork placeholder + "Episode 240 · 'On second drafts' · 38 min · with Maya Levenson".
+- Stats inline: "240 episodes · 8.4M downloads · 4 years".
+- Social icons: Twitter, Instagram, YouTube (clips).
+
+VARIANT 03: Inkwell — Newsletter writer (long-form, paid tier).
+- Mode: paper cream. Bg #FBF6EB. Accent: deep sienna #B05030. Text #1A1714.
+- Display: Source Serif 4 500.
+- Name + avatar: "Maya Levenson" — soft cream avatar placeholder.
+- Role: "writer · Vellum letter · Mondays".
+- Bio: "Long-form essays on engineering culture. ~2,000 words, every Monday. 14,408 subscribers."
+- CTA buttons (6): "Read the latest essay (Mar 14)" / "Subscribe free" / "Become a paying member ($60/yr)" / "Browse the archive (148 essays)" / "Talks + Podcast appearances" / "About me".
+- Featured card: latest essay card with serif title + 1-line excerpt + read-time + date.
+- Recent essays: 3-4 mono-dated entries with serif titles.
+- Social icons: Twitter, RSS, Mastodon.
+
+VARIANT 04: Halo — Lifestyle creator with affiliate links + brand collabs.
+- Mode: warm gradient. Bg radial from #FFF7F0 to #FFE5D9. Accent: warm coral #FF6B5A. Text #1F1B16.
+- Display: Fraunces 500 italic.
+- Name + avatar: "Priya Anand" — warm gradient avatar.
+- Role: "creator · NYC + Mexico City · wellness + travel".
+- Bio: "Currently obsessed with: cold plunge tubs, slow mornings, Mexico City coffee shops. 408k IG."
+- CTA buttons (10): "My Instagram" / "YouTube (vlogs)" / "Sunday morning routine post" / "My everyday products" / "Mexico City guide" / "Cold plunge I use (affiliate)" / "Book recommendations" / "Newsletter (Sundays)" / "Brand partnerships → email" / "Newest collab: Aesop x Halo bath ritual".
+- Featured card: latest blog post image placeholder + "New post · Sunday morning routine · 12 min read".
+- Affiliate disclosure mono line: "some links earn me a small commission — supports the work, costs you nothing".
+- Social icons: Instagram, TikTok, YouTube, Pinterest, Substack.
+
+VARIANT 05: Anvil — Multi-product creator (courses + books + merch + talks).
+- Mode: dark + green. Bg #0F1115. Accent: electric green #5BE584. Text #F0F3F0.
+- Display: Inter Display 700.
+- Name + avatar: "Jamie Lin" — gradient green avatar.
+- Role: "indie builder · 5 products · 28k MRR combined".
+- Bio: "I ship small SaaS, write a book a year, run a 4-week course quarterly. Open about all of it."
+- CTA buttons (10): "Indie hacker income report (Q1 2026)" / "My new book: 'Slow growth' ($28)" / "Founders 101 cohort (May 12-Jun 8 · 24 spots)" / "All 5 SaaS products" / "Merch shop ('built in 1 weekend' hoodie)" / "Upcoming talks (Microconf 2026)" / "Newsletter (every other Friday)" / "Twitter" / "YouTube (build streams)" / "Office hours (book 30 min · $0)".
+- Featured card: book cover placeholder + "New book · 'Slow growth' · Available now · $28".
+- Recent achievements line: "Featured on: Indie Hackers · Hacker News · Lenny's Newsletter".
+- Social icons: Twitter, GitHub, YouTube, RSS.
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 20 — Open Source Project Home (5 pages, mixed modes)
+
+```
+Brief: Produce 5 landing pages for OPEN SOURCE PROJECT HOME pages — htmx.org / drizzle.team / biome.dev / bun.sh / astro.build / vitejs.dev level. These are the project's MARKETING + DOCS-ENTRY home, not the docs themselves. Strongly opinionated typography, code-block-heavy, GitHub-prominent, install command front and center.
+
+SHARED AESTHETIC (all 5 variants):
+- Display: variant-specific — usually mono-forward OR Inter Display tight (-0.04em).
+- Body: Inter 400-500.
+- Mono: Geist Mono OR JetBrains Mono — HEAVY use throughout (install commands, code examples, version numbers, file paths).
+- Code blocks: syntax-highlighted with line numbers, copy button top-right, filename header tab, theme matches variant.
+- GitHub star count badge prominently displayed.
+- "npm install" command front and center in the hero, with one-click copy.
+- Sponsor row (GitHub Sponsors / OpenCollective / Polar).
+- "Used by" logo cloud of well-known companies (Vercel, Linear, Stripe, Cloudflare).
+- Quick-start emphasis — get someone to "hello world" in <60 seconds.
+
+SHARED SECTION SKELETON:
+1. Sticky nav: project logo + wordmark + 4 nav links (Docs, Examples, Blog, Community) + GitHub star count + accent CTA pill ("Get started" → docs quickstart).
+2. Hero: pill badge ("v2.4 · released Mar 14"), HUGE display headline (project's one-line pitch), sub 25 words, install command in a styled code block with copy button, dual CTA ("Read the docs" + "View on GitHub · 28.4k stars").
+3. Trust bar: "Trusted in production at" + 8-10 well-known company logos.
+4. Hero code example: BIG centered code block showing the project's most distinctive 8-15 line example. Filename tab + copy button + syntax highlighting.
+5. Why-this-exists section: 3-paragraph philosophy + "Things we don't do" list (opinionated rejections).
+6. Features 3-col or bento grid: 4-6 features with icon + h3 + paragraph + small code snippet.
+7. Comparison table: this project vs 2-3 competitors (with checkmarks).
+8. Quick-start steps: numbered 1-2-3 with code blocks per step.
+9. Community section: GitHub Discussions count + Discord members + maintainers list + sponsor invitation.
+10. Sponsor row: GitHub Sponsors logos of companies + individual sponsors.
+11. FAQ: 5 OSS-specific questions (license, production-ready, who maintains it, will it stay free, performance).
+12. Final CTA: "Get started in 60 seconds" + install command + read docs CTA.
+13. Footer: 4-col with Docs / Examples / Community / About + © + MIT license mention.
+
+VISUAL FLOURISHES SPECIFIC TO OSS:
+- GitHub star counter badge with live-feel number.
+- Copy-to-clipboard pulse animation on code blocks.
+- Mono command prompts with `$` prefix.
+- "Made with care by [maintainer] + 148 contributors" line.
+- Discord / Matrix / IRC presence indicators.
+
+THE 5 VARIANTS:
+
+VARIANT 01: Heron — A minimalist web framework for hypermedia apps.
+- Mode: paper light. Bg #FCFAF6. Accent: rust orange #C2410C. Text #1A1714.
+- Display: Source Serif 4 500 italic (opinionated, htmx-inspired).
+- Version: "v1.4 · Released Mar 14, 2026 · MIT".
+- Pitch: "HTML is the API. <em>Always was</em>."
+- Install: `npm install heron` or `<script src="https://unpkg.com/heron@1.4"></script>`.
+- Hero code: 12-line HTML example with `hx-get` / `hx-trigger` attributes showing a search-as-you-type interaction.
+- Why-it-exists: 3 paragraphs about why hypermedia is the right abstraction for 80% of web apps, why React is overkill, why HTMX inspired this but Heron is leaner.
+- Features: server-side rendering, no build step, no bundler, 8kb gzipped, framework-agnostic backend, declarative attributes only.
+- Comparison: "Heron vs React: 8kb vs 240kb · 0 build step vs Webpack · HTML attributes vs JSX". Also vs HTMX, vs Hotwire.
+- Stats: GitHub stars (28,408), npm weekly downloads (148,408), Contributors (148), Production sites tracked (4,408).
+- Sponsors: Vercel, Cloudflare, Sentry, Linear (fictional sponsorship), 47 individual sponsors.
+- FAQ: "Is this production-ready?", "Why not just use HTMX?", "Does it work with React / Vue?", "Bundle size guarantees?", "Long-term maintenance commitment?".
+
+VARIANT 02: Cinder — A blazing-fast structured logger for Node + Bun.
+- Mode: dark. Bg #08090A. Accent: electric orange #FF6A1F. Text #F4F2EE.
+- Display: Inter Display 700.
+- Version: "v3.2 · Released Mar 14, 2026 · MIT".
+- Pitch: "Structured logging at <em>148ns per log call</em>."
+- Install: `npm install cinder` or `bun install cinder`.
+- Hero code: 10-line TypeScript example showing logger setup + structured log + child logger + JSON output side-by-side.
+- Why-it-exists: 3 paragraphs about why Pino is great but Cinder is 4x faster + zero-config TypeScript + better child loggers.
+- Features: 148ns/log benchmark, JSON output, child loggers, redaction support, transport pipeline, hot-reload-safe, works in Bun + Node + Deno.
+- Comparison: "Cinder vs Pino: 148ns vs 580ns · TypeScript-native vs JS-first · Built-in redaction". Also vs Winston, vs console.log.
+- Stats: GitHub stars (14,408), npm weekly downloads (4.4M), Contributors (84), Microsoft / Vercel / Linear use it.
+- Sponsors: Sentry, DataDog, Better Stack, 28 individual sponsors.
+- FAQ: "Production-ready?", "Why not Pino?", "TypeScript types accurate?", "How fast is fast — what benchmark?", "Does it support OpenTelemetry?".
+
+VARIANT 03: Borealis — A headless UI component library for React + Vue + Solid.
+- Mode: dark + cyan. Bg #0A0E14. Accent: cyan #67E8F9. Text #F0F3F8.
+- Display: Inter Display 700.
+- Version: "v2.0 · Released Mar 14, 2026 · MIT".
+- Pitch: "Unstyled components. <em>Bring your own design system</em>."
+- Install: `npm install @borealis/react` or `@borealis/vue` or `@borealis/solid`.
+- Hero code: 14-line JSX example showing a Dialog component composed via `<Dialog.Root>` / `<Dialog.Trigger>` / `<Dialog.Content>`.
+- Why-it-exists: 3 paragraphs about why headless > styled (Radix UI inspired, but cross-framework + accessibility-tested).
+- Features: 38 components across React/Vue/Solid, ARIA-compliant, keyboard navigation, RTL support, server-component-friendly, animation primitives.
+- Comparison: "Borealis vs Radix UI: cross-framework vs React-only · 38 components vs 28 · Vue/Solid support". Also vs Ariakit, vs Headless UI.
+- Stats: GitHub stars (48,408), npm weekly downloads (2.8M), Contributors (240), Components covered (38).
+- Sponsors: Vercel, Linear, Shopify, Figma, 84 individual sponsors.
+- FAQ: "Production-ready?", "How is this different from Radix?", "Will React Server Components break it?", "What about animation?", "Long-term commitment vs corporate sponsor lock-in?".
+
+VARIANT 04: Bracket — A modern CLI framework for Rust + Go + TypeScript.
+- Mode: dark + green. Bg #08090A. Accent: electric green #5BFF89. Text #FFFFFF.
+- Display: JetBrains Mono 600 (mono display — leaning into the CLI aesthetic).
+- Version: "v0.8 · Released Mar 14, 2026 · Apache 2.0".
+- Pitch: "CLIs that <em>respect your terminal</em>."
+- Install: `cargo install bracket` OR `go install github.com/bracket/cli@latest` OR `npm install -g @bracket/cli`.
+- Hero code: 18-line Rust example showing command definition with subcommands, flags, help-text generation, color output.
+- Why-it-exists: 3 paragraphs about why CLIs are first-class UX (not afterthoughts), and what clap/cobra/yargs do well but missed.
+- Features: zero-config color output, auto-generated man pages, completion scripts for bash/zsh/fish, sub-200ms cold-start, JSON output mode for scripts, plugin system.
+- Comparison: "Bracket vs Clap (Rust): faster cold-start · plugin system · 3-language consistency". Also vs Cobra (Go), vs Commander.js.
+- Stats: GitHub stars (8,408), Downloads via cargo+go+npm (1.4M), Contributors (148), CLIs built with it (4,408 listed).
+- Sponsors: ngrok, Fly.io, Railway, 38 individual sponsors.
+- FAQ: "Production-ready?", "Why 3 languages, not 1?", "Plugin model security?", "Cold start guarantees?", "Best practices for testing a CLI?".
+
+VARIANT 05: Mesh — A distributed K/V store with built-in replication.
+- Mode: dark navy. Bg #0A0F1A. Accent: gold #E5B047. Text #F4F2EE.
+- Display: Inter Display 700.
+- Version: "v0.12 · Released Mar 14, 2026 · MIT".
+- Pitch: "Distributed K/V <em>without the operational tax</em>."
+- Install: `cargo install mesh-server` + `npm install @mesh/client` (or Go / Python clients).
+- Hero code: 12-line TypeScript client example showing connect + put + get + watch + transactional update.
+- Why-it-exists: 3 paragraphs about why etcd / Consul / FoundationDB are overkill for 80% of use cases, and Mesh sits in the sweet spot — bigger than Redis, simpler than Cockroach.
+- Features: built-in Raft replication, multi-region, optimistic transactions, watches, range queries, 3-node minimum (no Zookeeper), ARM + x86, single static binary.
+- Comparison: "Mesh vs etcd: simpler ops · multi-region built-in · range queries native". Also vs Consul KV, vs Redis (with persistence).
+- Stats: GitHub stars (14,408), Production deployments tracked (1,408), Contributors (148), Avg cluster size (5 nodes).
+- Sponsors: Cloudflare, Fly.io, Vercel, 28 individual sponsors.
+- FAQ: "Production-ready?", "How does failover work in a partition?", "What's the throughput ceiling?", "Backup + restore story?", "How does this compare to FoundationDB?".
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 21 — Music / Album Release (5 pages, mixed modes)
+
+```
+Brief: Produce 5 landing pages for MUSIC RELEASES — independent musicians, album/EP launches, podcast networks. Bandcamp / Spotify-for-Artists / SoundCloud-Pro level — but the artist's own site, not a platform. Album art is hero. Tracklist + streaming platform badges + tour dates + press quotes.
+
+SHARED AESTHETIC (all 5 variants):
+- Display: variant-specific — usually large + opinionated (often italic, sometimes mono).
+- Body: Inter 400-500.
+- Mono: Geist Mono — for track numbers, durations, dates, catalog numbers.
+- Album cover art: GIANT placeholder gradient at 1:1 aspect (square) at hero — minimum 480px on desktop, full-bleed feel.
+- Tracklist: numbered table with mono track number, song title, duration, optional play button.
+- Streaming badges: SVG badges for Spotify, Apple Music, Bandcamp, SoundCloud, YouTube Music, Tidal (a row of 6).
+- Tour dates: list with mono date + venue + city + "Tickets" CTA.
+- Press quotes: from fictional but believable publications (Pitchfork, NME, Stereogum, The Fader, etc.).
+- Often dark or bold colored modes (music sites lean visual + emotional).
+
+SHARED SECTION SKELETON:
+1. Minimal nav: artist wordmark + 3-4 anchor links (Music, Tour, Merch, About) + accent CTA pill ("Listen now" or "Pre-save").
+2. Hero: 2-col on desktop, stacked on mobile. Left: album art HUGE placeholder. Right: album title display, release date mono, artist name, 1-line tagline, streaming-platform badges row.
+3. Tracklist: numbered table — track # / title / duration / play button. Includes feature credits ("ft. Marcus Tobin").
+4. Press quotes section: 4-6 pull quotes from publications with attribution.
+5. Tour dates: list of 8-14 upcoming dates with date / venue / city / Tickets CTA.
+6. Music video / lyric video embed: large 16:9 placeholder with play button overlay + video title.
+7. Bio / about: 3 paragraphs about the artist with photo placeholder.
+8. Merch shop section: 4-card grid of merch items (LP / cassette / tee / hoodie) with photo placeholders + price.
+9. Newsletter signup: "Get tour dates + new releases · subscribe".
+10. Social + streaming icons row.
+11. Footer: minimal — artist wordmark + © year + Booking inquiry email + Label credit (mono).
+
+VISUAL FLOURISHES SPECIFIC TO MUSIC:
+- Album art with subtle ambient glow (radial-gradient behind the cover).
+- "Now playing" mock UI element with waveform animation.
+- Streaming platform badges as full-color SVG (not monochrome).
+- Tour date row hover: subtle slide-right animation + accent underline.
+- "SOLD OUT" stamp overlay on tour dates that are gone.
+- Lyrics excerpt as pull-quote in serif italic.
+
+THE 5 VARIANTS:
+
+VARIANT 01: Solstice — Indie electronic album (4th album).
+- Mode: dark gradient. Bg radial from #0A0A14 to #2E0E4F. Accent: hot magenta #E5407B. Text #FFFFFF.
+- Display: Inter Display 700.
+- Artist: "Hana Ito" — 4th studio album titled "Solstice".
+- Release date: "May 8, 2026 · pre-save now". Catalog: "MIRROR-014 · LP / digital".
+- Tracklist (10 tracks): "01 · Equinox · 4:12 · ft. Cinder", "02 · Halcyon Dust · 3:48", "03 · Mirror Year · 5:24", ... up to "10 · Solstice Theme · 6:48".
+- Press quotes: "Pitchfork — 'her most fearless work yet'", "The Fader — 'electronic music with a heartbeat'", "NME — 'four albums in, Ito is hitting her stride'".
+- Tour dates: 14 dates across US + Japan in summer 2026.
+- Music video: "Solstice (official video) · directed by Yuki Tanaka · 4:48".
+- Bio: 3 paragraphs about Hana's journey from bedroom producer to four-album career.
+- Merch: 12" LP ($38) / cassette ($14) / album tee ($28) / hoodie ($68).
+
+VARIANT 02: Cantata — Classical jazz album with a horn section.
+- Mode: cream + warm. Bg #FBF6EB. Accent: deep burgundy #722F3A. Text #1A1714.
+- Display: Source Serif 4 italic 500.
+- Artist: "Cinder Quintet" — debut album titled "Cantata".
+- Release date: "April 18, 2026 · streaming + LP". Catalog: "CINDER-001 · LP / digital · Blue Note imprint".
+- Tracklist (8 tracks): "01 · Overture in B minor · 8:24", "02 · Walking in Brooklyn · 6:48", "03 · Ode to Halcyon · 12:08" (long-form jazz tracks).
+- Press: "JazzTimes — 'serious, sophisticated, alive'", "Pitchfork — '8.4 · among the year's best jazz debuts'", "The New Yorker — 'a quintet that listens'".
+- Tour dates: 8 dates at jazz venues (Village Vanguard NYC, Smalls, Birdland, Blue Note Tokyo, Ronnie Scott's London, etc.).
+- Music video: "Walking in Brooklyn (live at the Vanguard) · 14:08".
+- Bio: 3 paragraphs about the quintet — formed at Juilliard, recorded live to 2-inch tape, no overdubs.
+- Merch: 180-gram LP ($48) / signed test pressing ($148) / sheet music PDF ($28) / quintet hoodie ($88).
+
+VARIANT 03: Static — Punk hardcore EP (single 7" release).
+- Mode: brutalist high-contrast. Bg #FFFFFF. Accent: pure red #FF0000. Text #000000.
+- Display: Inter 900 ALL CAPS, tight tracking -0.05em.
+- Artist: "Reverb Front" — 5-song EP titled "STATIC".
+- Release date: "MARCH 28, 2026 · 7" / DIGITAL". Catalog: "STATIC-005 · LIMITED 500 COPIES".
+- Tracklist (5 tracks, all under 2 min): "01 · STATIC · 1:48", "02 · NO COMPROMISE · 1:24", "03 · MIRROR THE SOUND · 2:08", "04 · TRADE BOOK · 1:14", "05 · STATIC (REPRISE) · 0:48".
+- Press: "Maximum Rocknroll — 'pure intent · zero filler'", "Brooklyn Vegan — 'the EP we needed'", "Pitchfork — '7.8 · loud, fast, smart'".
+- Tour dates: 28 dates DIY hardcore tour US + Europe (small venues).
+- Music video: "STATIC (live at Saint Vitus) · raw cell phone footage · 1:48".
+- Bio: 2 paragraphs — formed in 2024, this is their 3rd EP, no full-length plans.
+- Merch: 7" vinyl ($14, limit 500) / EP tee ($24) / patch ($8) / poster ($14).
+
+VARIANT 04: Bloom — Indie folk album from a singer-songwriter.
+- Mode: warm pastels. Bg gradient #FFFAF0 → #FFF0F5. Accent: dusty rose #C9788E. Text #2A1810.
+- Display: Newsreader 500 italic (serif).
+- Artist: "Sofia Reyes" — 2nd full-length album titled "Bloom".
+- Release date: "May 18, 2026 · LP / streaming". Catalog: "BLOOM-002 · CD / LP / digital · Folkways imprint".
+- Tracklist (12 tracks): "01 · Bloom · 4:08", "02 · Mama's Garden · 3:48", "03 · Berkshire in May · 5:24" (folk + acoustic guitar + occasional strings).
+- Press: "Pitchfork — '7.6 · gentle, weighty'", "Folk Radio — 'a songwriter at peak craft'", "NPR — 'best folk debut of 2024 was Sofia's first album · this one is even better'".
+- Tour dates: 14 dates at folk venues + house concerts.
+- Music video: "Mama's Garden (live at Newport Folk) · 4:48".
+- Bio: 3 paragraphs about Sofia's path from Berkshire Mountains farm girl to Brooklyn-based songwriter, recorded album in a Catskills barn.
+- Merch: LP ($32) / CD ($14) / tour poster ($24) / handwritten lyrics print ($48 limited).
+
+VARIANT 05: Cascade — Ambient electronic album (long-form pieces).
+- Mode: dark teal. Bg radial from #08141A to #0E2A2F. Accent: cyan-teal #4FE5D4. Text #E8F4F2.
+- Display: Inter Display 500 thin (lighter weight, ambient feel).
+- Artist: "Maya Levenson" — 3rd album titled "Cascade".
+- Release date: "April 4, 2026 · LP / digital / cassette". Catalog: "CASCADE-003 · LP / digital · Kranky imprint".
+- Tracklist (6 long-form pieces): "01 · Cascade (slow movement) · 14:08", "02 · Halcyon Field · 22:48", "03 · Mirror in C · 18:24" (durations ranging 14-24 min, total album 1h 48m).
+- Press: "Pitchfork — '8.2 · drone music that breathes'", "The Quietus — 'Levenson's most patient work'", "Boomkat — 'essential ambient listening for 2026'".
+- Tour dates: 8 dates at galleries + art spaces (long-form performances 60-90 min).
+- Music video: "Cascade (visual album excerpt) · projected at MoMA PS1 · 14:08".
+- Bio: 3 paragraphs about Maya's process — modular synthesis, field recordings from Iceland, recorded over 14 months.
+- Merch: 2xLP gatefold ($48) / cassette ($14) / signed art print ($88) / album zine ($28).
 
 Produce all 5 as separate text/html artifacts.
 ```
