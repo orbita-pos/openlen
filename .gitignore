@@ -68,3 +68,15 @@ public/template-objects/
 # "Imagenes by OpenLen" — WebP variants live in R2 (or the local FS fallback
 # when no R2 creds); only manifest.json is committed. process.ts regenerates.
 public/openlen-images/*.webp
+
+# Internal dev docs — eval reports, session notes, planning + research
+# drafts. Working artifacts; not for the public open-source repo.
+/EVAL_*.md
+/SESSION_*.md
+/WORKSPACE_*.md
+/BLOCKS_PROMPTS.md
+/PRESETS_PROMPTS.md
+/RESEARCH_FINDINGS.md
+/V3_AUDIT.md
+/INARI_DESIGN_ENGINE.md
+/docs/SHOW_HN_DRAFT.md
