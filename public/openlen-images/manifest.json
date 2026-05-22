@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generated": "2026-05-20T20:46:53.183Z",
-  "count": 110,
+  "generated": "2026-05-22T21:08:04.395Z",
+  "count": 230,
   "images": [
     {
       "id": "01-warm-glassy",
@@ -1659,6 +1659,1797 @@
         "hero": "https://images.openlen.com/111-glowing-heart-1920.webp",
         "tablet": "https://images.openlen.com/111-glowing-heart-800.webp",
         "thumb": "https://images.openlen.com/111-glowing-heart-400.webp"
+      }
+    },
+    {
+      "id": "112-laptop-dashboard",
+      "promptNum": 112,
+      "style": "device-mockup",
+      "family": [
+        "saas",
+        "technical-minimal"
+      ],
+      "alt": "Floating laptop showing an abstract dashboard UI in cool off-white and coral",
+      "src": {
+        "hero": "https://images.openlen.com/112-laptop-dashboard-1920.webp",
+        "tablet": "https://images.openlen.com/112-laptop-dashboard-800.webp",
+        "thumb": "https://images.openlen.com/112-laptop-dashboard-400.webp"
+      }
+    },
+    {
+      "id": "113-laptop-analytics",
+      "promptNum": 113,
+      "style": "device-mockup",
+      "family": [
+        "fintech",
+        "ai-ml"
+      ],
+      "alt": "Floating laptop showing an abstract analytics view with soft charts and metric cards",
+      "src": {
+        "hero": "https://images.openlen.com/113-laptop-analytics-1920.webp",
+        "tablet": "https://images.openlen.com/113-laptop-analytics-800.webp",
+        "thumb": "https://images.openlen.com/113-laptop-analytics-400.webp"
+      }
+    },
+    {
+      "id": "114-laptop-code-editor",
+      "promptNum": 114,
+      "style": "device-mockup",
+      "family": [
+        "technical-minimal",
+        "documentation"
+      ],
+      "alt": "Floating dark laptop showing an abstract code-editor UI in charcoal and mint",
+      "src": {
+        "hero": "https://images.openlen.com/114-laptop-code-editor-1920.webp",
+        "tablet": "https://images.openlen.com/114-laptop-code-editor-800.webp",
+        "thumb": "https://images.openlen.com/114-laptop-code-editor-400.webp"
+      }
+    },
+    {
+      "id": "115-monitor-board",
+      "promptNum": 115,
+      "style": "device-mockup",
+      "family": [
+        "saas",
+        "agency"
+      ],
+      "alt": "Floating desktop monitor showing an abstract kanban board of soft rounded cards",
+      "src": {
+        "hero": "https://images.openlen.com/115-monitor-board-1920.webp",
+        "tablet": "https://images.openlen.com/115-monitor-board-800.webp",
+        "thumb": "https://images.openlen.com/115-monitor-board-400.webp"
+      }
+    },
+    {
+      "id": "116-laptop-glow",
+      "promptNum": 116,
+      "style": "device-mockup",
+      "family": [
+        "pre-launch",
+        "saas"
+      ],
+      "alt": "Half-open laptop with a glowing screen casting soft coral light in a dark scene",
+      "src": {
+        "hero": "https://images.openlen.com/116-laptop-glow-1920.webp",
+        "tablet": "https://images.openlen.com/116-laptop-glow-800.webp",
+        "thumb": "https://images.openlen.com/116-laptop-glow-400.webp"
+      }
+    },
+    {
+      "id": "117-laptop-storefront",
+      "promptNum": 117,
+      "style": "device-mockup",
+      "family": [
+        "ecommerce",
+        "commerce"
+      ],
+      "alt": "Floating laptop showing an abstract online-store grid in warm cream and peach",
+      "src": {
+        "hero": "https://images.openlen.com/117-laptop-storefront-1920.webp",
+        "tablet": "https://images.openlen.com/117-laptop-storefront-800.webp",
+        "thumb": "https://images.openlen.com/117-laptop-storefront-400.webp"
+      }
+    },
+    {
+      "id": "118-phone-app-home",
+      "promptNum": 118,
+      "style": "device-mockup",
+      "family": [
+        "mobile-app",
+        "saas"
+      ],
+      "alt": "Floating smartphone showing an abstract app home screen with a soft icon grid",
+      "src": {
+        "hero": "https://images.openlen.com/118-phone-app-home-1920.webp",
+        "tablet": "https://images.openlen.com/118-phone-app-home-800.webp",
+        "thumb": "https://images.openlen.com/118-phone-app-home-400.webp"
+      }
+    },
+    {
+      "id": "119-phone-finance",
+      "promptNum": 119,
+      "style": "device-mockup",
+      "family": [
+        "fintech",
+        "mobile-app"
+      ],
+      "alt": "Floating smartphone showing an abstract finance UI with a balance card and a chart",
+      "src": {
+        "hero": "https://images.openlen.com/119-phone-finance-1920.webp",
+        "tablet": "https://images.openlen.com/119-phone-finance-800.webp",
+        "thumb": "https://images.openlen.com/119-phone-finance-400.webp"
+      }
+    },
+    {
+      "id": "120-phone-health",
+      "promptNum": 120,
+      "style": "device-mockup",
+      "family": [
+        "health-tech",
+        "wellness"
+      ],
+      "alt": "Floating smartphone showing an abstract health UI with soft activity rings",
+      "src": {
+        "hero": "https://images.openlen.com/120-phone-health-1920.webp",
+        "tablet": "https://images.openlen.com/120-phone-health-800.webp",
+        "thumb": "https://images.openlen.com/120-phone-health-400.webp"
+      }
+    },
+    {
+      "id": "121-phone-chat",
+      "promptNum": 121,
+      "style": "device-mockup",
+      "family": [
+        "saas",
+        "mobile-app"
+      ],
+      "alt": "Floating smartphone showing an abstract messaging UI with soft rounded chat bubbles",
+      "src": {
+        "hero": "https://images.openlen.com/121-phone-chat-1920.webp",
+        "tablet": "https://images.openlen.com/121-phone-chat-800.webp",
+        "thumb": "https://images.openlen.com/121-phone-chat-400.webp"
+      }
+    },
+    {
+      "id": "122-phone-map",
+      "promptNum": 122,
+      "style": "device-mockup",
+      "family": [
+        "real-estate",
+        "local-services"
+      ],
+      "alt": "Floating smartphone showing an abstract map UI with soft paths and a location pin",
+      "src": {
+        "hero": "https://images.openlen.com/122-phone-map-1920.webp",
+        "tablet": "https://images.openlen.com/122-phone-map-800.webp",
+        "thumb": "https://images.openlen.com/122-phone-map-400.webp"
+      }
+    },
+    {
+      "id": "123-phone-calendar",
+      "promptNum": 123,
+      "style": "device-mockup",
+      "family": [
+        "hospitality",
+        "event"
+      ],
+      "alt": "Floating smartphone showing an abstract calendar UI with a soft month grid",
+      "src": {
+        "hero": "https://images.openlen.com/123-phone-calendar-1920.webp",
+        "tablet": "https://images.openlen.com/123-phone-calendar-800.webp",
+        "thumb": "https://images.openlen.com/123-phone-calendar-400.webp"
+      }
+    },
+    {
+      "id": "124-tablet-design",
+      "promptNum": 124,
+      "style": "device-mockup",
+      "family": [
+        "portfolio",
+        "agency"
+      ],
+      "alt": "Floating tablet showing an abstract design-canvas UI with shapes and a toolbar",
+      "src": {
+        "hero": "https://images.openlen.com/124-tablet-design-1920.webp",
+        "tablet": "https://images.openlen.com/124-tablet-design-800.webp",
+        "thumb": "https://images.openlen.com/124-tablet-design-400.webp"
+      }
+    },
+    {
+      "id": "125-tablet-reading",
+      "promptNum": 125,
+      "style": "device-mockup",
+      "family": [
+        "editorial",
+        "documentation"
+      ],
+      "alt": "Floating tablet showing an abstract article UI with soft text blocks and an image",
+      "src": {
+        "hero": "https://images.openlen.com/125-tablet-reading-1920.webp",
+        "tablet": "https://images.openlen.com/125-tablet-reading-800.webp",
+        "thumb": "https://images.openlen.com/125-tablet-reading-400.webp"
+      }
+    },
+    {
+      "id": "126-laptop-phone-duo",
+      "promptNum": 126,
+      "style": "device-mockup",
+      "family": [
+        "saas",
+        "mobile-app"
+      ],
+      "alt": "Floating laptop and smartphone together showing a matching abstract UI",
+      "src": {
+        "hero": "https://images.openlen.com/126-laptop-phone-duo-1920.webp",
+        "tablet": "https://images.openlen.com/126-laptop-phone-duo-800.webp",
+        "thumb": "https://images.openlen.com/126-laptop-phone-duo-400.webp"
+      }
+    },
+    {
+      "id": "127-phones-fanned",
+      "promptNum": 127,
+      "style": "device-mockup",
+      "family": [
+        "mobile-app",
+        "ecommerce"
+      ],
+      "alt": "Three smartphones floating in a fanned arc, each with a different abstract app view",
+      "src": {
+        "hero": "https://images.openlen.com/127-phones-fanned-1920.webp",
+        "tablet": "https://images.openlen.com/127-phones-fanned-800.webp",
+        "thumb": "https://images.openlen.com/127-phones-fanned-400.webp"
+      }
+    },
+    {
+      "id": "128-devices-podium",
+      "promptNum": 128,
+      "style": "device-mockup",
+      "family": [
+        "commerce",
+        "ecommerce"
+      ],
+      "alt": "Laptop, tablet and phone resting together on a soft rounded podium",
+      "src": {
+        "hero": "https://images.openlen.com/128-devices-podium-1920.webp",
+        "tablet": "https://images.openlen.com/128-devices-podium-800.webp",
+        "thumb": "https://images.openlen.com/128-devices-podium-400.webp"
+      }
+    },
+    {
+      "id": "129-devices-layered",
+      "promptNum": 129,
+      "style": "device-mockup",
+      "family": [
+        "agency",
+        "ai-ml"
+      ],
+      "alt": "Smartphone, tablet and laptop screen floating in a layered exploded stack",
+      "src": {
+        "hero": "https://images.openlen.com/129-devices-layered-1920.webp",
+        "tablet": "https://images.openlen.com/129-devices-layered-800.webp",
+        "thumb": "https://images.openlen.com/129-devices-layered-400.webp"
+      }
+    },
+    {
+      "id": "130-floating-ui-cards",
+      "promptNum": 130,
+      "style": "device-mockup",
+      "family": [
+        "saas",
+        "technical-minimal"
+      ],
+      "alt": "Cluster of floating UI panels and rounded cards with soft charts, no device frame",
+      "src": {
+        "hero": "https://images.openlen.com/130-floating-ui-cards-1920.webp",
+        "tablet": "https://images.openlen.com/130-floating-ui-cards-800.webp",
+        "thumb": "https://images.openlen.com/130-floating-ui-cards-400.webp"
+      }
+    },
+    {
+      "id": "131-smartwatch-activity",
+      "promptNum": 131,
+      "style": "device-mockup",
+      "family": [
+        "health-tech",
+        "wellness"
+      ],
+      "alt": "Floating smartwatch showing an abstract activity UI with soft progress rings",
+      "src": {
+        "hero": "https://images.openlen.com/131-smartwatch-activity-1920.webp",
+        "tablet": "https://images.openlen.com/131-smartwatch-activity-800.webp",
+        "thumb": "https://images.openlen.com/131-smartwatch-activity-400.webp"
+      }
+    },
+    {
+      "id": "132-phone-widgets",
+      "promptNum": 132,
+      "style": "device-mockup",
+      "family": [
+        "saas",
+        "pre-launch"
+      ],
+      "alt": "Floating smartphone surrounded by small drifting widget cards and charts",
+      "src": {
+        "hero": "https://images.openlen.com/132-phone-widgets-1920.webp",
+        "tablet": "https://images.openlen.com/132-phone-widgets-800.webp",
+        "thumb": "https://images.openlen.com/132-phone-widgets-400.webp"
+      }
+    },
+    {
+      "id": "133-payment-terminal",
+      "promptNum": 133,
+      "style": "device-mockup",
+      "family": [
+        "fintech",
+        "commerce"
+      ],
+      "alt": "Floating card-payment terminal showing an abstract payment confirmation UI",
+      "src": {
+        "hero": "https://images.openlen.com/133-payment-terminal-1920.webp",
+        "tablet": "https://images.openlen.com/133-payment-terminal-800.webp",
+        "thumb": "https://images.openlen.com/133-payment-terminal-400.webp"
+      }
+    },
+    {
+      "id": "134-phone-notifications",
+      "promptNum": 134,
+      "style": "device-mockup",
+      "family": [
+        "saas",
+        "mobile-app"
+      ],
+      "alt": "Floating smartphone with soft notification cards stacking off the top of the screen",
+      "src": {
+        "hero": "https://images.openlen.com/134-phone-notifications-1920.webp",
+        "tablet": "https://images.openlen.com/134-phone-notifications-800.webp",
+        "thumb": "https://images.openlen.com/134-phone-notifications-400.webp"
+      }
+    },
+    {
+      "id": "135-curved-dashboard",
+      "promptNum": 135,
+      "style": "device-mockup",
+      "family": [
+        "ai-ml",
+        "agency"
+      ],
+      "alt": "Large gently curved display showing an abstract dashboard with soft wide charts",
+      "src": {
+        "hero": "https://images.openlen.com/135-curved-dashboard-1920.webp",
+        "tablet": "https://images.openlen.com/135-curved-dashboard-800.webp",
+        "thumb": "https://images.openlen.com/135-curved-dashboard-400.webp"
+      }
+    },
+    {
+      "id": "136-serum-bottle",
+      "promptNum": 136,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "health-tech"
+      ],
+      "alt": "Frosted-glass serum dropper bottle on a soft podium in warm cream and amber",
+      "src": {
+        "hero": "https://images.openlen.com/136-serum-bottle-1920.webp",
+        "tablet": "https://images.openlen.com/136-serum-bottle-800.webp",
+        "thumb": "https://images.openlen.com/136-serum-bottle-400.webp"
+      }
+    },
+    {
+      "id": "137-cream-jar",
+      "promptNum": 137,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "wellness"
+      ],
+      "alt": "Round cosmetic cream jar on a soft pedestal in blush and warm ivory",
+      "src": {
+        "hero": "https://images.openlen.com/137-cream-jar-1920.webp",
+        "tablet": "https://images.openlen.com/137-cream-jar-800.webp",
+        "thumb": "https://images.openlen.com/137-cream-jar-400.webp"
+      }
+    },
+    {
+      "id": "138-perfume-bottle",
+      "promptNum": 138,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "editorial"
+      ],
+      "alt": "Sculptural faceted-glass perfume bottle floating above a soft podium",
+      "src": {
+        "hero": "https://images.openlen.com/138-perfume-bottle-1920.webp",
+        "tablet": "https://images.openlen.com/138-perfume-bottle-800.webp",
+        "thumb": "https://images.openlen.com/138-perfume-bottle-400.webp"
+      }
+    },
+    {
+      "id": "139-skincare-set",
+      "promptNum": 139,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "commerce"
+      ],
+      "alt": "Collection of three unbranded skincare bottles and jars on a soft podium",
+      "src": {
+        "hero": "https://images.openlen.com/139-skincare-set-1920.webp",
+        "tablet": "https://images.openlen.com/139-skincare-set-800.webp",
+        "thumb": "https://images.openlen.com/139-skincare-set-400.webp"
+      }
+    },
+    {
+      "id": "140-cosmetic-tube",
+      "promptNum": 140,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "health-tech"
+      ],
+      "alt": "Soft cosmetic tube standing on a soft podium in warm cream and coral",
+      "src": {
+        "hero": "https://images.openlen.com/140-cosmetic-tube-1920.webp",
+        "tablet": "https://images.openlen.com/140-cosmetic-tube-800.webp",
+        "thumb": "https://images.openlen.com/140-cosmetic-tube-400.webp"
+      }
+    },
+    {
+      "id": "141-soap-bar",
+      "promptNum": 141,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "wellness"
+      ],
+      "alt": "Smooth bar of soap on a ceramic dish in warm oat and terracotta tones",
+      "src": {
+        "hero": "https://images.openlen.com/141-soap-bar-1920.webp",
+        "tablet": "https://images.openlen.com/141-soap-bar-800.webp",
+        "thumb": "https://images.openlen.com/141-soap-bar-400.webp"
+      }
+    },
+    {
+      "id": "142-supplement-bottle",
+      "promptNum": 142,
+      "style": "product-still-life",
+      "family": [
+        "wellness",
+        "health-tech"
+      ],
+      "alt": "Rounded supplement bottle with a few capsules beside it on a soft podium",
+      "src": {
+        "hero": "https://images.openlen.com/142-supplement-bottle-1920.webp",
+        "tablet": "https://images.openlen.com/142-supplement-bottle-800.webp",
+        "thumb": "https://images.openlen.com/142-supplement-bottle-400.webp"
+      }
+    },
+    {
+      "id": "143-gummy-jar",
+      "promptNum": 143,
+      "style": "product-still-life",
+      "family": [
+        "wellness",
+        "health-tech"
+      ],
+      "alt": "Squat jar of soft translucent gummies on a soft podium in peach tones",
+      "src": {
+        "hero": "https://images.openlen.com/143-gummy-jar-1920.webp",
+        "tablet": "https://images.openlen.com/143-gummy-jar-800.webp",
+        "thumb": "https://images.openlen.com/143-gummy-jar-400.webp"
+      }
+    },
+    {
+      "id": "144-coffee-bag",
+      "promptNum": 144,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "hospitality"
+      ],
+      "alt": "Standing kraft-paper coffee pouch with scattered beans on a soft surface",
+      "src": {
+        "hero": "https://images.openlen.com/144-coffee-bag-1920.webp",
+        "tablet": "https://images.openlen.com/144-coffee-bag-800.webp",
+        "thumb": "https://images.openlen.com/144-coffee-bag-400.webp"
+      }
+    },
+    {
+      "id": "145-beverage-can",
+      "promptNum": 145,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "commerce"
+      ],
+      "alt": "Slim unbranded beverage can floating above a soft podium with light condensation",
+      "src": {
+        "hero": "https://images.openlen.com/145-beverage-can-1920.webp",
+        "tablet": "https://images.openlen.com/145-beverage-can-800.webp",
+        "thumb": "https://images.openlen.com/145-beverage-can-400.webp"
+      }
+    },
+    {
+      "id": "146-oil-bottle",
+      "promptNum": 146,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "hospitality"
+      ],
+      "alt": "Tall glass bottle of golden oil on a soft surface in cream and olive tones",
+      "src": {
+        "hero": "https://images.openlen.com/146-oil-bottle-1920.webp",
+        "tablet": "https://images.openlen.com/146-oil-bottle-800.webp",
+        "thumb": "https://images.openlen.com/146-oil-bottle-400.webp"
+      }
+    },
+    {
+      "id": "147-honey-jar",
+      "promptNum": 147,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "hospitality"
+      ],
+      "alt": "Rounded glass jar of soft golden spread on a soft podium in honey tones",
+      "src": {
+        "hero": "https://images.openlen.com/147-honey-jar-1920.webp",
+        "tablet": "https://images.openlen.com/147-honey-jar-800.webp",
+        "thumb": "https://images.openlen.com/147-honey-jar-400.webp"
+      }
+    },
+    {
+      "id": "148-headphones",
+      "promptNum": 148,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "hardware"
+      ],
+      "alt": "Pair of unbranded over-ear headphones floating above a soft podium",
+      "src": {
+        "hero": "https://images.openlen.com/148-headphones-1920.webp",
+        "tablet": "https://images.openlen.com/148-headphones-800.webp",
+        "thumb": "https://images.openlen.com/148-headphones-400.webp"
+      }
+    },
+    {
+      "id": "149-earbuds-case",
+      "promptNum": 149,
+      "style": "product-still-life",
+      "family": [
+        "hardware",
+        "ecommerce"
+      ],
+      "alt": "Open earbuds charging case with two earbuds on a soft podium",
+      "src": {
+        "hero": "https://images.openlen.com/149-earbuds-case-1920.webp",
+        "tablet": "https://images.openlen.com/149-earbuds-case-800.webp",
+        "thumb": "https://images.openlen.com/149-earbuds-case-400.webp"
+      }
+    },
+    {
+      "id": "150-smart-speaker",
+      "promptNum": 150,
+      "style": "product-still-life",
+      "family": [
+        "hardware",
+        "ecommerce"
+      ],
+      "alt": "Rounded fabric-mesh smart speaker on a soft surface in warm sand tones",
+      "src": {
+        "hero": "https://images.openlen.com/150-smart-speaker-1920.webp",
+        "tablet": "https://images.openlen.com/150-smart-speaker-800.webp",
+        "thumb": "https://images.openlen.com/150-smart-speaker-400.webp"
+      }
+    },
+    {
+      "id": "151-power-bank",
+      "promptNum": 151,
+      "style": "product-still-life",
+      "family": [
+        "hardware",
+        "ecommerce"
+      ],
+      "alt": "Slim portable charger floating above a soft podium in cool off-white and slate",
+      "src": {
+        "hero": "https://images.openlen.com/151-power-bank-1920.webp",
+        "tablet": "https://images.openlen.com/151-power-bank-800.webp",
+        "thumb": "https://images.openlen.com/151-power-bank-400.webp"
+      }
+    },
+    {
+      "id": "152-desk-lamp",
+      "promptNum": 152,
+      "style": "product-still-life",
+      "family": [
+        "hardware",
+        "agency"
+      ],
+      "alt": "Minimalist desk lamp with a soft warm glow on a calm surface",
+      "src": {
+        "hero": "https://images.openlen.com/152-desk-lamp-1920.webp",
+        "tablet": "https://images.openlen.com/152-desk-lamp-800.webp",
+        "thumb": "https://images.openlen.com/152-desk-lamp-400.webp"
+      }
+    },
+    {
+      "id": "153-mechanical-keyboard",
+      "promptNum": 153,
+      "style": "product-still-life",
+      "family": [
+        "hardware",
+        "technical-minimal"
+      ],
+      "alt": "Compact mechanical keyboard with blank keycaps floating above a soft podium",
+      "src": {
+        "hero": "https://images.openlen.com/153-mechanical-keyboard-1920.webp",
+        "tablet": "https://images.openlen.com/153-mechanical-keyboard-800.webp",
+        "thumb": "https://images.openlen.com/153-mechanical-keyboard-400.webp"
+      }
+    },
+    {
+      "id": "154-scented-candle",
+      "promptNum": 154,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "hospitality"
+      ],
+      "alt": "Candle in a ceramic vessel with a soft flame on a soft podium in terracotta tones",
+      "src": {
+        "hero": "https://images.openlen.com/154-scented-candle-1920.webp",
+        "tablet": "https://images.openlen.com/154-scented-candle-800.webp",
+        "thumb": "https://images.openlen.com/154-scented-candle-400.webp"
+      }
+    },
+    {
+      "id": "155-water-bottle",
+      "promptNum": 155,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "wellness"
+      ],
+      "alt": "Reusable water bottle standing on a soft surface in sage and cream tones",
+      "src": {
+        "hero": "https://images.openlen.com/155-water-bottle-1920.webp",
+        "tablet": "https://images.openlen.com/155-water-bottle-800.webp",
+        "thumb": "https://images.openlen.com/155-water-bottle-400.webp"
+      }
+    },
+    {
+      "id": "156-ceramic-mug",
+      "promptNum": 156,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "hospitality"
+      ],
+      "alt": "Rounded ceramic mug with a wisp of steam on a soft podium in warm oat tones",
+      "src": {
+        "hero": "https://images.openlen.com/156-ceramic-mug-1920.webp",
+        "tablet": "https://images.openlen.com/156-ceramic-mug-800.webp",
+        "thumb": "https://images.openlen.com/156-ceramic-mug-400.webp"
+      }
+    },
+    {
+      "id": "157-sneakers",
+      "promptNum": 157,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "commerce"
+      ],
+      "alt": "Pair of clean minimalist sneakers floating at an angle above a soft podium",
+      "src": {
+        "hero": "https://images.openlen.com/157-sneakers-1920.webp",
+        "tablet": "https://images.openlen.com/157-sneakers-800.webp",
+        "thumb": "https://images.openlen.com/157-sneakers-400.webp"
+      }
+    },
+    {
+      "id": "158-sunglasses",
+      "promptNum": 158,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "editorial"
+      ],
+      "alt": "Pair of modern sunglasses floating at an angle above a soft podium in sand tones",
+      "src": {
+        "hero": "https://images.openlen.com/158-sunglasses-1920.webp",
+        "tablet": "https://images.openlen.com/158-sunglasses-800.webp",
+        "thumb": "https://images.openlen.com/158-sunglasses-400.webp"
+      }
+    },
+    {
+      "id": "159-backpack",
+      "promptNum": 159,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "commerce"
+      ],
+      "alt": "Soft minimalist backpack standing upright on a soft surface in warm tan tones",
+      "src": {
+        "hero": "https://images.openlen.com/159-backpack-1920.webp",
+        "tablet": "https://images.openlen.com/159-backpack-800.webp",
+        "thumb": "https://images.openlen.com/159-backpack-400.webp"
+      }
+    },
+    {
+      "id": "160-plated-fine-dining",
+      "promptNum": 160,
+      "style": "food-editorial",
+      "family": [
+        "hospitality",
+        "editorial"
+      ],
+      "alt": "Editorial photograph of an elegant fine-dining plated dish with delicate garnishes",
+      "src": {
+        "hero": "https://images.openlen.com/160-plated-fine-dining-1920.webp",
+        "tablet": "https://images.openlen.com/160-plated-fine-dining-800.webp",
+        "thumb": "https://images.openlen.com/160-plated-fine-dining-400.webp"
+      }
+    },
+    {
+      "id": "161-pasta-bowl",
+      "promptNum": 161,
+      "style": "food-editorial",
+      "family": [
+        "hospitality"
+      ],
+      "alt": "Editorial photograph of a rustic bowl of fresh pasta with cheese and basil",
+      "src": {
+        "hero": "https://images.openlen.com/161-pasta-bowl-1920.webp",
+        "tablet": "https://images.openlen.com/161-pasta-bowl-800.webp",
+        "thumb": "https://images.openlen.com/161-pasta-bowl-400.webp"
+      }
+    },
+    {
+      "id": "162-gourmet-burger",
+      "promptNum": 162,
+      "style": "food-editorial",
+      "family": [
+        "hospitality"
+      ],
+      "alt": "Editorial photograph of a tall stacked gourmet burger on a slate board",
+      "src": {
+        "hero": "https://images.openlen.com/162-gourmet-burger-1920.webp",
+        "tablet": "https://images.openlen.com/162-gourmet-burger-800.webp",
+        "thumb": "https://images.openlen.com/162-gourmet-burger-400.webp"
+      }
+    },
+    {
+      "id": "163-grain-bowl",
+      "promptNum": 163,
+      "style": "food-editorial",
+      "family": [
+        "wellness",
+        "hospitality"
+      ],
+      "alt": "Editorial photograph of a fresh colorful grain bowl shot from overhead",
+      "src": {
+        "hero": "https://images.openlen.com/163-grain-bowl-1920.webp",
+        "tablet": "https://images.openlen.com/163-grain-bowl-800.webp",
+        "thumb": "https://images.openlen.com/163-grain-bowl-400.webp"
+      }
+    },
+    {
+      "id": "164-ramen-bowl",
+      "promptNum": 164,
+      "style": "food-editorial",
+      "family": [
+        "hospitality"
+      ],
+      "alt": "Editorial photograph of a steaming bowl of ramen with a soft egg and toppings",
+      "src": {
+        "hero": "https://images.openlen.com/164-ramen-bowl-1920.webp",
+        "tablet": "https://images.openlen.com/164-ramen-bowl-800.webp",
+        "thumb": "https://images.openlen.com/164-ramen-bowl-400.webp"
+      }
+    },
+    {
+      "id": "165-brunch-plate",
+      "promptNum": 165,
+      "style": "food-editorial",
+      "family": [
+        "hospitality"
+      ],
+      "alt": "Editorial photograph of a brunch plate with poached eggs, avocado and toast",
+      "src": {
+        "hero": "https://images.openlen.com/165-brunch-plate-1920.webp",
+        "tablet": "https://images.openlen.com/165-brunch-plate-800.webp",
+        "thumb": "https://images.openlen.com/165-brunch-plate-400.webp"
+      }
+    },
+    {
+      "id": "166-latte-art",
+      "promptNum": 166,
+      "style": "food-editorial",
+      "family": [
+        "hospitality"
+      ],
+      "alt": "Editorial overhead photograph of a cappuccino with delicate latte art",
+      "src": {
+        "hero": "https://images.openlen.com/166-latte-art-1920.webp",
+        "tablet": "https://images.openlen.com/166-latte-art-800.webp",
+        "thumb": "https://images.openlen.com/166-latte-art-400.webp"
+      }
+    },
+    {
+      "id": "167-croissants",
+      "promptNum": 167,
+      "style": "food-editorial",
+      "family": [
+        "hospitality"
+      ],
+      "alt": "Editorial photograph of a spread of fresh flaky croissants and pastries",
+      "src": {
+        "hero": "https://images.openlen.com/167-croissants-1920.webp",
+        "tablet": "https://images.openlen.com/167-croissants-800.webp",
+        "thumb": "https://images.openlen.com/167-croissants-400.webp"
+      }
+    },
+    {
+      "id": "168-cake-slice",
+      "promptNum": 168,
+      "style": "food-editorial",
+      "family": [
+        "hospitality",
+        "event"
+      ],
+      "alt": "Editorial photograph of a single slice of layer cake on a small plate",
+      "src": {
+        "hero": "https://images.openlen.com/168-cake-slice-1920.webp",
+        "tablet": "https://images.openlen.com/168-cake-slice-800.webp",
+        "thumb": "https://images.openlen.com/168-cake-slice-400.webp"
+      }
+    },
+    {
+      "id": "169-pancake-stack",
+      "promptNum": 169,
+      "style": "food-editorial",
+      "family": [
+        "hospitality"
+      ],
+      "alt": "Editorial photograph of a tall stack of fluffy pancakes with syrup and berries",
+      "src": {
+        "hero": "https://images.openlen.com/169-pancake-stack-1920.webp",
+        "tablet": "https://images.openlen.com/169-pancake-stack-800.webp",
+        "thumb": "https://images.openlen.com/169-pancake-stack-400.webp"
+      }
+    },
+    {
+      "id": "171-plated-dessert",
+      "promptNum": 171,
+      "style": "food-editorial",
+      "family": [
+        "hospitality",
+        "editorial"
+      ],
+      "alt": "Editorial photograph of a fine-dining plated dessert with a quenelle and berries",
+      "src": {
+        "hero": "https://images.openlen.com/171-plated-dessert-1920.webp",
+        "tablet": "https://images.openlen.com/171-plated-dessert-800.webp",
+        "thumb": "https://images.openlen.com/171-plated-dessert-400.webp"
+      }
+    },
+    {
+      "id": "172-craft-cocktail",
+      "promptNum": 172,
+      "style": "food-editorial",
+      "family": [
+        "hospitality",
+        "event"
+      ],
+      "alt": "Editorial photograph of a craft cocktail garnished with citrus and herbs",
+      "src": {
+        "hero": "https://images.openlen.com/172-craft-cocktail-1920.webp",
+        "tablet": "https://images.openlen.com/172-craft-cocktail-800.webp",
+        "thumb": "https://images.openlen.com/172-craft-cocktail-400.webp"
+      }
+    },
+    {
+      "id": "173-wine-cheese",
+      "promptNum": 173,
+      "style": "food-editorial",
+      "family": [
+        "hospitality",
+        "editorial"
+      ],
+      "alt": "Editorial photograph of a glass of red wine beside a small cheese board",
+      "src": {
+        "hero": "https://images.openlen.com/173-wine-cheese-1920.webp",
+        "tablet": "https://images.openlen.com/173-wine-cheese-800.webp",
+        "thumb": "https://images.openlen.com/173-wine-cheese-400.webp"
+      }
+    },
+    {
+      "id": "174-iced-coffee",
+      "promptNum": 174,
+      "style": "food-editorial",
+      "family": [
+        "hospitality",
+        "ecommerce"
+      ],
+      "alt": "Editorial photograph of a glass of iced coffee with a swirl of milk and ice",
+      "src": {
+        "hero": "https://images.openlen.com/174-iced-coffee-1920.webp",
+        "tablet": "https://images.openlen.com/174-iced-coffee-800.webp",
+        "thumb": "https://images.openlen.com/174-iced-coffee-400.webp"
+      }
+    },
+    {
+      "id": "175-smoothie",
+      "promptNum": 175,
+      "style": "food-editorial",
+      "family": [
+        "wellness",
+        "health-tech"
+      ],
+      "alt": "Editorial photograph of a vibrant smoothie topped with fresh fruit and seeds",
+      "src": {
+        "hero": "https://images.openlen.com/175-smoothie-1920.webp",
+        "tablet": "https://images.openlen.com/175-smoothie-800.webp",
+        "thumb": "https://images.openlen.com/175-smoothie-400.webp"
+      }
+    },
+    {
+      "id": "176-tea-setup",
+      "promptNum": 176,
+      "style": "food-editorial",
+      "family": [
+        "hospitality",
+        "wellness"
+      ],
+      "alt": "Editorial photograph of a calm tea setup with a ceramic pot and a cup of tea",
+      "src": {
+        "hero": "https://images.openlen.com/176-tea-setup-1920.webp",
+        "tablet": "https://images.openlen.com/176-tea-setup-800.webp",
+        "thumb": "https://images.openlen.com/176-tea-setup-400.webp"
+      }
+    },
+    {
+      "id": "177-coffee-pastry",
+      "promptNum": 177,
+      "style": "food-editorial",
+      "family": [
+        "hospitality"
+      ],
+      "alt": "Editorial photograph of a cup of coffee and a small pastry on a cafe table",
+      "src": {
+        "hero": "https://images.openlen.com/177-coffee-pastry-1920.webp",
+        "tablet": "https://images.openlen.com/177-coffee-pastry-800.webp",
+        "thumb": "https://images.openlen.com/177-coffee-pastry-400.webp"
+      }
+    },
+    {
+      "id": "178-vegetables-flatlay",
+      "promptNum": 178,
+      "style": "food-editorial",
+      "family": [
+        "wellness",
+        "hospitality"
+      ],
+      "alt": "Editorial overhead flat-lay of fresh colorful vegetables",
+      "src": {
+        "hero": "https://images.openlen.com/178-vegetables-flatlay-1920.webp",
+        "tablet": "https://images.openlen.com/178-vegetables-flatlay-800.webp",
+        "thumb": "https://images.openlen.com/178-vegetables-flatlay-400.webp"
+      }
+    },
+    {
+      "id": "179-herbs-spices",
+      "promptNum": 179,
+      "style": "food-editorial",
+      "family": [
+        "hospitality",
+        "ecommerce"
+      ],
+      "alt": "Editorial overhead flat-lay of fresh herbs and bowls of colorful spices",
+      "src": {
+        "hero": "https://images.openlen.com/179-herbs-spices-1920.webp",
+        "tablet": "https://images.openlen.com/179-herbs-spices-800.webp",
+        "thumb": "https://images.openlen.com/179-herbs-spices-400.webp"
+      }
+    },
+    {
+      "id": "180-charcuterie-board",
+      "promptNum": 180,
+      "style": "food-editorial",
+      "family": [
+        "hospitality",
+        "event"
+      ],
+      "alt": "Editorial photograph of a generous grazing board with meats, cheeses and fruit",
+      "src": {
+        "hero": "https://images.openlen.com/180-charcuterie-board-1920.webp",
+        "tablet": "https://images.openlen.com/180-charcuterie-board-800.webp",
+        "thumb": "https://images.openlen.com/180-charcuterie-board-400.webp"
+      }
+    },
+    {
+      "id": "181-fruit-bowl",
+      "promptNum": 181,
+      "style": "food-editorial",
+      "family": [
+        "wellness",
+        "health-tech"
+      ],
+      "alt": "Editorial photograph of a fresh fruit arrangement in a shallow ceramic bowl",
+      "src": {
+        "hero": "https://images.openlen.com/181-fruit-bowl-1920.webp",
+        "tablet": "https://images.openlen.com/181-fruit-bowl-800.webp",
+        "thumb": "https://images.openlen.com/181-fruit-bowl-400.webp"
+      }
+    },
+    {
+      "id": "182-set-table",
+      "promptNum": 182,
+      "style": "food-editorial",
+      "family": [
+        "hospitality",
+        "event"
+      ],
+      "alt": "Editorial overhead photograph of a beautifully set dining table",
+      "src": {
+        "hero": "https://images.openlen.com/182-set-table-1920.webp",
+        "tablet": "https://images.openlen.com/182-set-table-800.webp",
+        "thumb": "https://images.openlen.com/182-set-table-400.webp"
+      }
+    },
+    {
+      "id": "183-brunch-table",
+      "promptNum": 183,
+      "style": "food-editorial",
+      "family": [
+        "hospitality"
+      ],
+      "alt": "Editorial photograph of a relaxed brunch table spread with pastries and coffee",
+      "src": {
+        "hero": "https://images.openlen.com/183-brunch-table-1920.webp",
+        "tablet": "https://images.openlen.com/183-brunch-table-800.webp",
+        "thumb": "https://images.openlen.com/183-brunch-table-400.webp"
+      }
+    },
+    {
+      "id": "170-artisan-bread",
+      "promptNum": 170,
+      "style": "food-editorial",
+      "family": [
+        "hospitality",
+        "ecommerce"
+      ],
+      "alt": "Editorial photograph of rustic artisan bread loaves with a crisp scored crust",
+      "src": {
+        "hero": "https://images.openlen.com/170-artisan-bread-1920.webp",
+        "tablet": "https://images.openlen.com/170-artisan-bread-800.webp",
+        "thumb": "https://images.openlen.com/170-artisan-bread-400.webp"
+      }
+    },
+    {
+      "id": "184-open-plan-office",
+      "promptNum": 184,
+      "style": "interior-editorial",
+      "family": [
+        "saas",
+        "agency"
+      ],
+      "alt": "Editorial interior photograph of a bright open-plan office with shared desks and large windows",
+      "src": {
+        "hero": "https://images.openlen.com/184-open-plan-office-1920.webp",
+        "tablet": "https://images.openlen.com/184-open-plan-office-800.webp",
+        "thumb": "https://images.openlen.com/184-open-plan-office-400.webp"
+      }
+    },
+    {
+      "id": "185-coworking-space",
+      "promptNum": 185,
+      "style": "interior-editorial",
+      "family": [
+        "saas",
+        "local-services"
+      ],
+      "alt": "Editorial interior photograph of a relaxed coworking space with lounge sofas and communal tables",
+      "src": {
+        "hero": "https://images.openlen.com/185-coworking-space-1920.webp",
+        "tablet": "https://images.openlen.com/185-coworking-space-800.webp",
+        "thumb": "https://images.openlen.com/185-coworking-space-400.webp"
+      }
+    },
+    {
+      "id": "186-home-office-desk",
+      "promptNum": 186,
+      "style": "interior-editorial",
+      "family": [
+        "creator",
+        "portfolio"
+      ],
+      "alt": "Editorial interior photograph of a tidy home-office desk with a laptop, lamp and books",
+      "src": {
+        "hero": "https://images.openlen.com/186-home-office-desk-1920.webp",
+        "tablet": "https://images.openlen.com/186-home-office-desk-800.webp",
+        "thumb": "https://images.openlen.com/186-home-office-desk-400.webp"
+      }
+    },
+    {
+      "id": "187-hotel-lobby",
+      "promptNum": 187,
+      "style": "interior-editorial",
+      "family": [
+        "hospitality",
+        "travel"
+      ],
+      "alt": "Editorial interior photograph of an elegant boutique hotel lobby with a velvet sofa and greenery",
+      "src": {
+        "hero": "https://images.openlen.com/187-hotel-lobby-1920.webp",
+        "tablet": "https://images.openlen.com/187-hotel-lobby-800.webp",
+        "thumb": "https://images.openlen.com/187-hotel-lobby-400.webp"
+      }
+    },
+    {
+      "id": "188-retail-interior",
+      "promptNum": 188,
+      "style": "interior-editorial",
+      "family": [
+        "commerce",
+        "ecommerce"
+      ],
+      "alt": "Editorial interior photograph of a minimalist boutique retail space with open shelving",
+      "src": {
+        "hero": "https://images.openlen.com/188-retail-interior-1920.webp",
+        "tablet": "https://images.openlen.com/188-retail-interior-800.webp",
+        "thumb": "https://images.openlen.com/188-retail-interior-400.webp"
+      }
+    },
+    {
+      "id": "189-restaurant-interior",
+      "promptNum": 189,
+      "style": "interior-editorial",
+      "family": [
+        "hospitality",
+        "food-beverage"
+      ],
+      "alt": "Editorial interior photograph of an intimate restaurant dining room with set tables and pendant lights",
+      "src": {
+        "hero": "https://images.openlen.com/189-restaurant-interior-1920.webp",
+        "tablet": "https://images.openlen.com/189-restaurant-interior-800.webp",
+        "thumb": "https://images.openlen.com/189-restaurant-interior-400.webp"
+      }
+    },
+    {
+      "id": "190-coffee-shop-interior",
+      "promptNum": 190,
+      "style": "interior-editorial",
+      "family": [
+        "hospitality",
+        "local-services"
+      ],
+      "alt": "Editorial interior photograph of a cozy specialty coffee shop with a wooden counter and plants",
+      "src": {
+        "hero": "https://images.openlen.com/190-coffee-shop-interior-1920.webp",
+        "tablet": "https://images.openlen.com/190-coffee-shop-interior-800.webp",
+        "thumb": "https://images.openlen.com/190-coffee-shop-interior-400.webp"
+      }
+    },
+    {
+      "id": "191-creative-studio",
+      "promptNum": 191,
+      "style": "interior-editorial",
+      "family": [
+        "agency",
+        "creator"
+      ],
+      "alt": "Editorial interior photograph of a bright creative studio with a worktable and mood boards",
+      "src": {
+        "hero": "https://images.openlen.com/191-creative-studio-1920.webp",
+        "tablet": "https://images.openlen.com/191-creative-studio-800.webp",
+        "thumb": "https://images.openlen.com/191-creative-studio-400.webp"
+      }
+    },
+    {
+      "id": "192-conference-room",
+      "promptNum": 192,
+      "style": "interior-editorial",
+      "family": [
+        "saas",
+        "fintech"
+      ],
+      "alt": "Editorial interior photograph of a modern conference room with a long table and wall screen",
+      "src": {
+        "hero": "https://images.openlen.com/192-conference-room-1920.webp",
+        "tablet": "https://images.openlen.com/192-conference-room-800.webp",
+        "thumb": "https://images.openlen.com/192-conference-room-400.webp"
+      }
+    },
+    {
+      "id": "193-office-lounge",
+      "promptNum": 193,
+      "style": "interior-editorial",
+      "family": [
+        "hospitality",
+        "agency"
+      ],
+      "alt": "Editorial interior photograph of a stylish office lounge with modular sofas and floor lamps",
+      "src": {
+        "hero": "https://images.openlen.com/193-office-lounge-1920.webp",
+        "tablet": "https://images.openlen.com/193-office-lounge-800.webp",
+        "thumb": "https://images.openlen.com/193-office-lounge-400.webp"
+      }
+    },
+    {
+      "id": "194-library-reading-room",
+      "promptNum": 194,
+      "style": "interior-editorial",
+      "family": [
+        "education",
+        "editorial"
+      ],
+      "alt": "Editorial interior photograph of a quiet library reading room with tall bookshelves",
+      "src": {
+        "hero": "https://images.openlen.com/194-library-reading-room-1920.webp",
+        "tablet": "https://images.openlen.com/194-library-reading-room-800.webp",
+        "thumb": "https://images.openlen.com/194-library-reading-room-400.webp"
+      }
+    },
+    {
+      "id": "195-loft-workspace",
+      "promptNum": 195,
+      "style": "interior-editorial",
+      "family": [
+        "agency",
+        "creator"
+      ],
+      "alt": "Editorial interior photograph of an industrial loft workspace with exposed brick and a long desk",
+      "src": {
+        "hero": "https://images.openlen.com/195-loft-workspace-1920.webp",
+        "tablet": "https://images.openlen.com/195-loft-workspace-800.webp",
+        "thumb": "https://images.openlen.com/195-loft-workspace-400.webp"
+      }
+    },
+    {
+      "id": "196-reception-desk",
+      "promptNum": 196,
+      "style": "interior-editorial",
+      "family": [
+        "agency",
+        "fintech"
+      ],
+      "alt": "Editorial interior photograph of a minimalist office reception with a sculptural front desk",
+      "src": {
+        "hero": "https://images.openlen.com/196-reception-desk-1920.webp",
+        "tablet": "https://images.openlen.com/196-reception-desk-800.webp",
+        "thumb": "https://images.openlen.com/196-reception-desk-400.webp"
+      }
+    },
+    {
+      "id": "197-focus-pod",
+      "promptNum": 197,
+      "style": "interior-editorial",
+      "family": [
+        "saas",
+        "technical-minimal"
+      ],
+      "alt": "Editorial interior photograph of a private office focus pod with an upholstered booth",
+      "src": {
+        "hero": "https://images.openlen.com/197-focus-pod-1920.webp",
+        "tablet": "https://images.openlen.com/197-focus-pod-800.webp",
+        "thumb": "https://images.openlen.com/197-focus-pod-400.webp"
+      }
+    },
+    {
+      "id": "198-co-living-room",
+      "promptNum": 198,
+      "style": "interior-editorial",
+      "family": [
+        "real-estate",
+        "hospitality"
+      ],
+      "alt": "Editorial interior photograph of a warm co-living common room with a sofa and shared table",
+      "src": {
+        "hero": "https://images.openlen.com/198-co-living-room-1920.webp",
+        "tablet": "https://images.openlen.com/198-co-living-room-800.webp",
+        "thumb": "https://images.openlen.com/198-co-living-room-400.webp"
+      }
+    },
+    {
+      "id": "199-architecture-studio",
+      "promptNum": 199,
+      "style": "interior-editorial",
+      "family": [
+        "portfolio",
+        "agency"
+      ],
+      "alt": "Editorial interior photograph of an architecture studio desk with drawings and a scale model",
+      "src": {
+        "hero": "https://images.openlen.com/199-architecture-studio-1920.webp",
+        "tablet": "https://images.openlen.com/199-architecture-studio-800.webp",
+        "thumb": "https://images.openlen.com/199-architecture-studio-400.webp"
+      }
+    },
+    {
+      "id": "200-spa-interior",
+      "promptNum": 200,
+      "style": "interior-editorial",
+      "family": [
+        "wellness",
+        "hospitality"
+      ],
+      "alt": "Editorial interior photograph of a serene spa treatment room with a daybed and folded towels",
+      "src": {
+        "hero": "https://images.openlen.com/200-spa-interior-1920.webp",
+        "tablet": "https://images.openlen.com/200-spa-interior-800.webp",
+        "thumb": "https://images.openlen.com/200-spa-interior-400.webp"
+      }
+    },
+    {
+      "id": "201-modern-kitchen",
+      "promptNum": 201,
+      "style": "interior-editorial",
+      "family": [
+        "real-estate",
+        "hospitality"
+      ],
+      "alt": "Editorial interior photograph of a modern kitchen with a clean island and open shelving",
+      "src": {
+        "hero": "https://images.openlen.com/201-modern-kitchen-1920.webp",
+        "tablet": "https://images.openlen.com/201-modern-kitchen-800.webp",
+        "thumb": "https://images.openlen.com/201-modern-kitchen-400.webp"
+      }
+    },
+    {
+      "id": "202-living-room",
+      "promptNum": 202,
+      "style": "interior-editorial",
+      "family": [
+        "real-estate",
+        "editorial"
+      ],
+      "alt": "Editorial interior photograph of a bright contemporary living room with a low sofa and plant",
+      "src": {
+        "hero": "https://images.openlen.com/202-living-room-1920.webp",
+        "tablet": "https://images.openlen.com/202-living-room-800.webp",
+        "thumb": "https://images.openlen.com/202-living-room-400.webp"
+      }
+    },
+    {
+      "id": "203-hotel-room",
+      "promptNum": 203,
+      "style": "interior-editorial",
+      "family": [
+        "hospitality",
+        "travel"
+      ],
+      "alt": "Editorial interior photograph of a calm boutique hotel room with a neatly made bed",
+      "src": {
+        "hero": "https://images.openlen.com/203-hotel-room-1920.webp",
+        "tablet": "https://images.openlen.com/203-hotel-room-800.webp",
+        "thumb": "https://images.openlen.com/203-hotel-room-400.webp"
+      }
+    },
+    {
+      "id": "204-showroom-gallery",
+      "promptNum": 204,
+      "style": "interior-editorial",
+      "family": [
+        "commerce",
+        "editorial"
+      ],
+      "alt": "Editorial interior photograph of a minimalist showroom gallery with a sculptural object on a plinth",
+      "src": {
+        "hero": "https://images.openlen.com/204-showroom-gallery-1920.webp",
+        "tablet": "https://images.openlen.com/204-showroom-gallery-800.webp",
+        "thumb": "https://images.openlen.com/204-showroom-gallery-400.webp"
+      }
+    },
+    {
+      "id": "205-rooftop-lounge",
+      "promptNum": 205,
+      "style": "interior-editorial",
+      "family": [
+        "hospitality",
+        "event"
+      ],
+      "alt": "Editorial interior photograph of a rooftop terrace lounge with outdoor sofas and string lights",
+      "src": {
+        "hero": "https://images.openlen.com/205-rooftop-lounge-1920.webp",
+        "tablet": "https://images.openlen.com/205-rooftop-lounge-800.webp",
+        "thumb": "https://images.openlen.com/205-rooftop-lounge-400.webp"
+      }
+    },
+    {
+      "id": "206-podcast-studio",
+      "promptNum": 206,
+      "style": "interior-editorial",
+      "family": [
+        "podcast",
+        "music"
+      ],
+      "alt": "Editorial interior photograph of a cozy podcast studio with microphones and acoustic panels",
+      "src": {
+        "hero": "https://images.openlen.com/206-podcast-studio-1920.webp",
+        "tablet": "https://images.openlen.com/206-podcast-studio-800.webp",
+        "thumb": "https://images.openlen.com/206-podcast-studio-400.webp"
+      }
+    },
+    {
+      "id": "207-classroom",
+      "promptNum": 207,
+      "style": "interior-editorial",
+      "family": [
+        "education",
+        "local-services"
+      ],
+      "alt": "Editorial interior photograph of a bright modern classroom with wooden desks and a board wall",
+      "src": {
+        "hero": "https://images.openlen.com/207-classroom-1920.webp",
+        "tablet": "https://images.openlen.com/207-classroom-800.webp",
+        "thumb": "https://images.openlen.com/207-classroom-400.webp"
+      }
+    },
+    {
+      "id": "208-mountain-range",
+      "promptNum": 208,
+      "style": "nature-editorial",
+      "family": [
+        "travel",
+        "wellness"
+      ],
+      "alt": "Editorial landscape photograph of a layered mountain range fading into haze at dawn",
+      "src": {
+        "hero": "https://images.openlen.com/208-mountain-range-1920.webp",
+        "tablet": "https://images.openlen.com/208-mountain-range-800.webp",
+        "thumb": "https://images.openlen.com/208-mountain-range-400.webp"
+      }
+    },
+    {
+      "id": "209-coastal-cliffs",
+      "promptNum": 209,
+      "style": "nature-editorial",
+      "family": [
+        "travel",
+        "hospitality"
+      ],
+      "alt": "Editorial landscape photograph of dramatic coastal cliffs meeting the ocean with white surf",
+      "src": {
+        "hero": "https://images.openlen.com/209-coastal-cliffs-1920.webp",
+        "tablet": "https://images.openlen.com/209-coastal-cliffs-800.webp",
+        "thumb": "https://images.openlen.com/209-coastal-cliffs-400.webp"
+      }
+    },
+    {
+      "id": "210-misty-forest",
+      "promptNum": 210,
+      "style": "nature-editorial",
+      "family": [
+        "wellness",
+        "climate"
+      ],
+      "alt": "Editorial landscape photograph of a misty evergreen forest with trunks fading into fog",
+      "src": {
+        "hero": "https://images.openlen.com/210-misty-forest-1920.webp",
+        "tablet": "https://images.openlen.com/210-misty-forest-800.webp",
+        "thumb": "https://images.openlen.com/210-misty-forest-400.webp"
+      }
+    },
+    {
+      "id": "211-desert-dunes",
+      "promptNum": 211,
+      "style": "nature-editorial",
+      "family": [
+        "travel",
+        "editorial"
+      ],
+      "alt": "Editorial landscape photograph of rolling desert sand dunes with soft curving shadows",
+      "src": {
+        "hero": "https://images.openlen.com/211-desert-dunes-1920.webp",
+        "tablet": "https://images.openlen.com/211-desert-dunes-800.webp",
+        "thumb": "https://images.openlen.com/211-desert-dunes-400.webp"
+      }
+    },
+    {
+      "id": "212-lake-reflection",
+      "promptNum": 212,
+      "style": "nature-editorial",
+      "family": [
+        "wellness",
+        "travel"
+      ],
+      "alt": "Editorial landscape photograph of a calm mountain lake mirroring distant peaks",
+      "src": {
+        "hero": "https://images.openlen.com/212-lake-reflection-1920.webp",
+        "tablet": "https://images.openlen.com/212-lake-reflection-800.webp",
+        "thumb": "https://images.openlen.com/212-lake-reflection-400.webp"
+      }
+    },
+    {
+      "id": "213-green-hills",
+      "promptNum": 213,
+      "style": "nature-editorial",
+      "family": [
+        "travel",
+        "climate"
+      ],
+      "alt": "Editorial landscape photograph of rolling green hills under a wide cloud-scattered sky",
+      "src": {
+        "hero": "https://images.openlen.com/213-green-hills-1920.webp",
+        "tablet": "https://images.openlen.com/213-green-hills-800.webp",
+        "thumb": "https://images.openlen.com/213-green-hills-400.webp"
+      }
+    },
+    {
+      "id": "214-forest-waterfall",
+      "promptNum": 214,
+      "style": "nature-editorial",
+      "family": [
+        "travel",
+        "wellness"
+      ],
+      "alt": "Editorial landscape photograph of a forest waterfall cascading into a clear pool",
+      "src": {
+        "hero": "https://images.openlen.com/214-forest-waterfall-1920.webp",
+        "tablet": "https://images.openlen.com/214-forest-waterfall-800.webp",
+        "thumb": "https://images.openlen.com/214-forest-waterfall-400.webp"
+      }
+    },
+    {
+      "id": "215-aerial-coastline",
+      "promptNum": 215,
+      "style": "nature-editorial",
+      "family": [
+        "travel",
+        "real-estate"
+      ],
+      "alt": "Editorial aerial photograph of a curving coastline with turquoise shallows and pale sand",
+      "src": {
+        "hero": "https://images.openlen.com/215-aerial-coastline-1920.webp",
+        "tablet": "https://images.openlen.com/215-aerial-coastline-800.webp",
+        "thumb": "https://images.openlen.com/215-aerial-coastline-400.webp"
+      }
+    },
+    {
+      "id": "216-alpine-peaks",
+      "promptNum": 216,
+      "style": "nature-editorial",
+      "family": [
+        "travel",
+        "event"
+      ],
+      "alt": "Editorial landscape photograph of snowy alpine peaks against a clear sky",
+      "src": {
+        "hero": "https://images.openlen.com/216-alpine-peaks-1920.webp",
+        "tablet": "https://images.openlen.com/216-alpine-peaks-800.webp",
+        "thumb": "https://images.openlen.com/216-alpine-peaks-400.webp"
+      }
+    },
+    {
+      "id": "217-tropical-beach",
+      "promptNum": 217,
+      "style": "nature-editorial",
+      "family": [
+        "travel",
+        "hospitality"
+      ],
+      "alt": "Editorial landscape photograph of a quiet tropical beach with pale sand and turquoise water",
+      "src": {
+        "hero": "https://images.openlen.com/217-tropical-beach-1920.webp",
+        "tablet": "https://images.openlen.com/217-tropical-beach-800.webp",
+        "thumb": "https://images.openlen.com/217-tropical-beach-400.webp"
+      }
+    },
+    {
+      "id": "218-pine-forest-path",
+      "promptNum": 218,
+      "style": "nature-editorial",
+      "family": [
+        "wellness",
+        "travel"
+      ],
+      "alt": "Editorial landscape photograph of a quiet path through a tall pine forest",
+      "src": {
+        "hero": "https://images.openlen.com/218-pine-forest-path-1920.webp",
+        "tablet": "https://images.openlen.com/218-pine-forest-path-800.webp",
+        "thumb": "https://images.openlen.com/218-pine-forest-path-400.webp"
+      }
+    },
+    {
+      "id": "219-golden-field",
+      "promptNum": 219,
+      "style": "nature-editorial",
+      "family": [
+        "climate",
+        "editorial"
+      ],
+      "alt": "Editorial landscape photograph of a wide golden grain field glowing at sunset",
+      "src": {
+        "hero": "https://images.openlen.com/219-golden-field-1920.webp",
+        "tablet": "https://images.openlen.com/219-golden-field-800.webp",
+        "thumb": "https://images.openlen.com/219-golden-field-400.webp"
+      }
+    },
+    {
+      "id": "220-mountain-stream",
+      "promptNum": 220,
+      "style": "nature-editorial",
+      "family": [
+        "wellness",
+        "travel"
+      ],
+      "alt": "Editorial landscape photograph of a clear rocky mountain stream over smooth stones",
+      "src": {
+        "hero": "https://images.openlen.com/220-mountain-stream-1920.webp",
+        "tablet": "https://images.openlen.com/220-mountain-stream-800.webp",
+        "thumb": "https://images.openlen.com/220-mountain-stream-400.webp"
+      }
+    },
+    {
+      "id": "221-northern-lights",
+      "promptNum": 221,
+      "style": "nature-editorial",
+      "family": [
+        "travel",
+        "editorial"
+      ],
+      "alt": "Editorial landscape photograph of the northern lights over a still arctic landscape",
+      "src": {
+        "hero": "https://images.openlen.com/221-northern-lights-1920.webp",
+        "tablet": "https://images.openlen.com/221-northern-lights-800.webp",
+        "thumb": "https://images.openlen.com/221-northern-lights-400.webp"
+      }
+    },
+    {
+      "id": "222-red-rock-canyon",
+      "promptNum": 222,
+      "style": "nature-editorial",
+      "family": [
+        "travel",
+        "editorial"
+      ],
+      "alt": "Editorial landscape photograph of a vast red-rock canyon with layered sandstone walls",
+      "src": {
+        "hero": "https://images.openlen.com/222-red-rock-canyon-1920.webp",
+        "tablet": "https://images.openlen.com/222-red-rock-canyon-800.webp",
+        "thumb": "https://images.openlen.com/222-red-rock-canyon-400.webp"
+      }
+    },
+    {
+      "id": "223-lavender-field",
+      "promptNum": 223,
+      "style": "nature-editorial",
+      "family": [
+        "wellness",
+        "event"
+      ],
+      "alt": "Editorial landscape photograph of a blooming lavender field in long purple rows",
+      "src": {
+        "hero": "https://images.openlen.com/223-lavender-field-1920.webp",
+        "tablet": "https://images.openlen.com/223-lavender-field-800.webp",
+        "thumb": "https://images.openlen.com/223-lavender-field-400.webp"
+      }
+    },
+    {
+      "id": "224-autumn-forest",
+      "promptNum": 224,
+      "style": "nature-editorial",
+      "family": [
+        "editorial",
+        "travel"
+      ],
+      "alt": "Editorial landscape photograph of an autumn forest in warm gold and amber foliage",
+      "src": {
+        "hero": "https://images.openlen.com/224-autumn-forest-1920.webp",
+        "tablet": "https://images.openlen.com/224-autumn-forest-800.webp",
+        "thumb": "https://images.openlen.com/224-autumn-forest-400.webp"
+      }
+    },
+    {
+      "id": "225-river-delta",
+      "promptNum": 225,
+      "style": "nature-editorial",
+      "family": [
+        "climate",
+        "editorial"
+      ],
+      "alt": "Editorial aerial photograph of a branching river delta threading through green and earth tones",
+      "src": {
+        "hero": "https://images.openlen.com/225-river-delta-1920.webp",
+        "tablet": "https://images.openlen.com/225-river-delta-800.webp",
+        "thumb": "https://images.openlen.com/225-river-delta-400.webp"
+      }
+    },
+    {
+      "id": "226-waterfall-lagoon",
+      "promptNum": 226,
+      "style": "nature-editorial",
+      "family": [
+        "travel",
+        "hospitality"
+      ],
+      "alt": "Editorial landscape photograph of a tropical waterfall falling into an emerald jungle lagoon",
+      "src": {
+        "hero": "https://images.openlen.com/226-waterfall-lagoon-1920.webp",
+        "tablet": "https://images.openlen.com/226-waterfall-lagoon-800.webp",
+        "thumb": "https://images.openlen.com/226-waterfall-lagoon-400.webp"
+      }
+    },
+    {
+      "id": "227-rolling-vineyard",
+      "promptNum": 227,
+      "style": "nature-editorial",
+      "family": [
+        "hospitality",
+        "food-beverage"
+      ],
+      "alt": "Editorial landscape photograph of a rolling vineyard with neat rows curving over hills",
+      "src": {
+        "hero": "https://images.openlen.com/227-rolling-vineyard-1920.webp",
+        "tablet": "https://images.openlen.com/227-rolling-vineyard-800.webp",
+        "thumb": "https://images.openlen.com/227-rolling-vineyard-400.webp"
+      }
+    },
+    {
+      "id": "228-foggy-valley",
+      "promptNum": 228,
+      "style": "nature-editorial",
+      "family": [
+        "wellness",
+        "travel"
+      ],
+      "alt": "Editorial landscape photograph of a valley overlook above a sea of soft fog",
+      "src": {
+        "hero": "https://images.openlen.com/228-foggy-valley-1920.webp",
+        "tablet": "https://images.openlen.com/228-foggy-valley-800.webp",
+        "thumb": "https://images.openlen.com/228-foggy-valley-400.webp"
+      }
+    },
+    {
+      "id": "229-palm-oasis",
+      "promptNum": 229,
+      "style": "nature-editorial",
+      "family": [
+        "travel",
+        "hospitality"
+      ],
+      "alt": "Editorial landscape photograph of a desert palm grove oasis around still water",
+      "src": {
+        "hero": "https://images.openlen.com/229-palm-oasis-1920.webp",
+        "tablet": "https://images.openlen.com/229-palm-oasis-800.webp",
+        "thumb": "https://images.openlen.com/229-palm-oasis-400.webp"
+      }
+    },
+    {
+      "id": "230-glacier-landscape",
+      "promptNum": 230,
+      "style": "nature-editorial",
+      "family": [
+        "climate",
+        "travel"
+      ],
+      "alt": "Editorial landscape photograph of a glacier landscape with pale blue ice and a meltwater lagoon",
+      "src": {
+        "hero": "https://images.openlen.com/230-glacier-landscape-1920.webp",
+        "tablet": "https://images.openlen.com/230-glacier-landscape-800.webp",
+        "thumb": "https://images.openlen.com/230-glacier-landscape-400.webp"
+      }
+    },
+    {
+      "id": "231-wildflower-meadow",
+      "promptNum": 231,
+      "style": "nature-editorial",
+      "family": [
+        "wellness",
+        "climate"
+      ],
+      "alt": "Editorial landscape photograph of an alpine wildflower meadow with mountains behind",
+      "src": {
+        "hero": "https://images.openlen.com/231-wildflower-meadow-1920.webp",
+        "tablet": "https://images.openlen.com/231-wildflower-meadow-800.webp",
+        "thumb": "https://images.openlen.com/231-wildflower-meadow-400.webp"
       }
     }
   ]
