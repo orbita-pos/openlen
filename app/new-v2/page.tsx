@@ -40,13 +40,19 @@ import { StatusBar } from "@/components/workspace-v2/status-bar";
 import { TopBar } from "@/components/workspace-v2/top-bar";
 import { useDarkMode } from "@/lib/use-dark-mode";
 import type { Document as DocModel } from "@/lib/doc/model";
-import { CanvaInspector } from "@/components/workspace-v2/model/canva-inspector";
+import {
+  CanvaInspector,
+  ELEMENT_TEMPLATES,
+} from "@/components/workspace-v2/model/canva-inspector";
+import { SECTION_TEMPLATES } from "@/lib/section-templates";
+import { buildSubtree } from "@/lib/doc/build";
 import { useDocEditor } from "@/lib/use-doc-editor";
 import type { NodeId } from "@/lib/doc/model";
 import {
   editAddBreakpoint,
   editDuplicate,
   editGroup,
+  editInsert,
   editMove,
   editRemove,
   editSetProps,
@@ -227,6 +233,48 @@ function NewV2Inner() {
   useEffect(() => {
     setEditCondition(null);
   }, [loadedProject?.id]);
+
+  // Center a freshly-inserted / freshly-relevant node in the iframe. Called
+  // after Library inserts (click or drop) so the user sees what landed.
+  const scrollIframeTo = useCallback((id: NodeId) => {
+    const w = iframeElRef.current?.contentWindow;
+    if (!w) return;
+    w.postMessage({ type: "openlen:model-scroll-to", id }, "*");
+  }, []);
+
+  // Drop from the Library rail (drag-and-drop). Looks up the template by
+  // kind+id, builds its subtree, and inserts at the resolved position from
+  // the iframe drop planner. Selection + scroll go to the new node so the
+  // user lands on what they just dropped.
+  const handleLibraryDrop = useCallback(
+    (
+      payload: { kind: "element" | "section"; id: string },
+      toParentId: NodeId,
+      toIndex: number,
+    ) => {
+      const doc = docEditor.state?.doc;
+      if (!doc) return;
+      const list =
+        payload.kind === "element" ? ELEMENT_TEMPLATES : SECTION_TEMPLATES;
+      const tpl = list.find((t) => t.id === payload.id);
+      if (!tpl) return;
+      const built = buildSubtree(tpl.spec);
+      if ("err" in built) return;
+      const op = editInsert(
+        doc,
+        toParentId,
+        toIndex,
+        built.ok.rootId,
+        built.ok.nodes,
+      );
+      if (!op) return;
+      docEditor.applyEdit([op]);
+      setModelSelectedIds([built.ok.rootId]);
+      // Defer one frame so the morph completes before we scrollIntoView.
+      requestAnimationFrame(() => scrollIframeTo(built.ok.rootId));
+    },
+    [docEditor, scrollIframeTo],
+  );
 
   // Duplicate the current selection. Fires from the iframe's ⌘D handler
   // (via PreviewArea's onModelDuplicate bridge) or from a window-level
@@ -1140,6 +1188,9 @@ function NewV2Inner() {
           }
           modelSelectedIds={modelSelectedIds}
           onModelSelect={setModelSelectedIds}
+          onLibraryInserted={(id) =>
+            requestAnimationFrame(() => scrollIframeTo(id))
+          }
         />
         {entryMode === "choosing" && (
           <EmptyState
@@ -1263,6 +1314,7 @@ function NewV2Inner() {
                 onModelDelete={deleteSelection}
                 onModelAction={dispatchModelAction}
                 onModelUndo={(redo) => (redo ? docEditor.redo() : docEditor.undo())}
+                onLibraryDrop={handleLibraryDrop}
                 redesigning={chatRedesigning}
                 editableInjection={false}
                 sectionSelectMode={sectionSelectMode}
