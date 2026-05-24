@@ -46,6 +46,7 @@ interface IconBtnProps {
   label: string;
   onClick?: () => void;
   active?: boolean;
+  disabled?: boolean;
   size?: "sm" | "md" | "lg";
   className?: string;
 }
@@ -55,6 +56,7 @@ export function IconBtn({
   label,
   onClick,
   active = false,
+  disabled = false,
   size = "md",
   className = "",
 }: IconBtnProps) {
@@ -64,10 +66,13 @@ export function IconBtn({
       <button
         type="button"
         onClick={onClick}
+        disabled={disabled}
         className={`inline-flex ${sizes[size]} items-center justify-center rounded-md transition ${
-          active
-            ? "bg-[var(--accent)] text-white"
-            : "fg-muted hover:fg hover:bg-hover"
+          disabled
+            ? "fg-faint opacity-40 cursor-not-allowed"
+            : active
+              ? "bg-[var(--accent)] text-white"
+              : "fg-muted hover:fg hover:bg-hover"
         } ${className}`}
       >
         {children}
