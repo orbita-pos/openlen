@@ -178,6 +178,9 @@ interface LeftSidebarProps {
    *  multi-element arrays for shift-click. Omitted in non-Canva projects. */
   modelSelectedIds?: NodeId[];
   onModelSelect?: (ids: NodeId[]) => void;
+  /** Fires after a click-insert from the Library tab with the new node's
+   *  id. Parent uses it to scroll the iframe to the new element. */
+  onLibraryInserted?: (id: NodeId) => void;
 }
 
 export function LeftSidebar({
@@ -221,6 +224,7 @@ export function LeftSidebar({
   documentMode,
   modelSelectedIds = EMPTY_IDS,
   onModelSelect,
+  onLibraryInserted,
 }: LeftSidebarProps) {
   const isFlatProject = flatProjectId !== undefined;
   const isCanvaMode = !!documentMode;
@@ -391,6 +395,7 @@ export function LeftSidebar({
                 selectedIds={modelSelectedIds}
                 onSelect={onModelSelect ?? (() => {})}
                 onEdit={documentMode.applyEdit}
+                onAfterInsert={onLibraryInserted}
               />
             )}
             {mode === "layers" && documentMode && (

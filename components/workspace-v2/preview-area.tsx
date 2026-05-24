@@ -115,6 +115,14 @@ interface PreviewAreaProps {
   onModelAction?: (action: string) => void;
   /** Fires on ⌘Z / ⌘⇧Z inside the iframe. `redo` true = redo, false = undo. */
   onModelUndo?: (redo: boolean) => void;
+  /** Fires when something is dropped from the Library rail onto the iframe.
+   *  Payload identifies the template; toParentId/toIndex give the resolved
+   *  insert position (after-detach semantics; matches editInsert). */
+  onLibraryDrop?: (
+    payload: { kind: "element" | "section"; id: string },
+    toParentId: NodeId,
+    toIndex: number,
+  ) => void;
 }
 
 // Stable empty-array default so a missing prop doesn't re-trigger the iframe
@@ -146,6 +154,7 @@ export function PreviewArea({
   onModelDelete,
   onModelAction,
   onModelUndo,
+  onLibraryDrop,
 }: PreviewAreaProps) {
   const [device, setDevice] = useState<Device>("desktop");
   const [zoom, setZoom] = useState<Zoom>("fit");
@@ -332,6 +341,24 @@ export function PreviewArea({
       }
       if (d.type === "openlen:model-undo") {
         onModelUndo?.(!!d.redo);
+        return;
+      }
+      if (d.type === "openlen:library-drop") {
+        if (
+          !d.payload ||
+          typeof d.payload !== "object" ||
+          typeof d.payload.id !== "string" ||
+          (d.payload.kind !== "element" && d.payload.kind !== "section") ||
+          typeof d.toParentId !== "string" ||
+          typeof d.toIndex !== "number"
+        ) {
+          return;
+        }
+        onLibraryDrop?.(
+          { kind: d.payload.kind, id: d.payload.id },
+          d.toParentId,
+          d.toIndex,
+        );
       }
     };
     window.addEventListener("message", onMsg);
@@ -346,6 +373,7 @@ export function PreviewArea({
     onModelDelete,
     onModelAction,
     onModelUndo,
+    onLibraryDrop,
   ]);
 
   // Push external selection changes (Layers click, inspector breadcrumb) into

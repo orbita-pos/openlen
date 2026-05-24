@@ -36,6 +36,8 @@
 //   OUT { type: "openlen:model-delete" }                       -- Del / Backspace
 //   OUT { type: "openlen:model-action", action: string }       -- context menu
 //   OUT { type: "openlen:model-undo", redo: boolean }          -- ⌘Z / ⌘⇧Z
+//   OUT { type: "openlen:library-drop", payload, toParentId, toIndex }
+//   IN  { type: "openlen:model-scroll-to", id }                -- center node
 //   IN  { type: "openlen:model-set-selected", ids: string[] }  -- also accepts
 //                                                                 { id } for
 //                                                                 backcompat
@@ -922,11 +924,100 @@ const SCRIPT = `
   }
   requestAnimationFrame(tick);
 
-  // Push from parent: accept either { ids: string[] } (preferred) or
-  // { id: string | null } (backcompat) and reconcile DOM markers.
+  // ── DRAG-FROM-LIBRARY (parent rail → iframe) ────────────────────────
+  // Library items in the LeftSidebar tag their drag with the mime type below
+  // and a JSON {kind:'element'|'section', id} payload. We compute a drop plan
+  // the same way as in-iframe drag-to-reorder (3 zones) and post the resolved
+  // {payload, toParentId, toIndex} back so the parent can dispatch editInsert.
+  var LIBRARY_MIME = 'application/openlen-library';
+  function isLibraryDrag(e) {
+    if (!e.dataTransfer || !e.dataTransfer.types) return false;
+    var t = e.dataTransfer.types;
+    for (var i = 0; i < t.length; i++) {
+      if (t[i] === LIBRARY_MIME) return true;
+    }
+    return false;
+  }
+  function findLibraryDropPlan(point) {
+    var el = document.elementFromPoint(point.x, point.y);
+    if (!el || !el.closest) return null;
+    var t = el.closest('[data-ol-id]');
+    if (!t) return null;
+    var rect = t.getBoundingClientRect();
+    var top3 = rect.top + rect.height / 3;
+    var bot3 = rect.bottom - rect.height / 3;
+    var intent;
+    if (point.y < top3) intent = 'before';
+    else if (point.y > bot3) intent = 'after';
+    else intent = isContainerEl(t) ? 'inside' : 'after';
+    if (intent !== 'inside' && !parentDataEl(t)) {
+      if (isContainerEl(t)) intent = 'inside';
+      else return null;
+    }
+    return { target: t, intent: intent };
+  }
+  document.addEventListener('dragover', function (e) {
+    if (!isLibraryDrag(e)) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    var plan = findLibraryDropPlan({ x: e.clientX, y: e.clientY });
+    if (plan) showDropIndicator(plan.target, plan.intent);
+    else hideDropIndicator();
+  });
+  document.addEventListener('dragleave', function (e) {
+    if (!isLibraryDrag(e)) return;
+    if (!e.relatedTarget) hideDropIndicator();
+  });
+  document.addEventListener('drop', function (e) {
+    if (!isLibraryDrag(e)) return;
+    e.preventDefault();
+    hideDropIndicator();
+    var raw = '';
+    try { raw = e.dataTransfer ? e.dataTransfer.getData(LIBRARY_MIME) : ''; } catch (_) {}
+    var payload = null;
+    try { payload = raw ? JSON.parse(raw) : null; } catch (_) {}
+    if (!payload) return;
+    var plan = findLibraryDropPlan({ x: e.clientX, y: e.clientY });
+    if (!plan) return;
+    var target = plan.target;
+    var intent = plan.intent;
+    var toParentId, toIndex;
+    if (intent === 'inside') {
+      toParentId = target.getAttribute('data-ol-id');
+      toIndex = siblingsOf(target).length;
+    } else {
+      var p = parentDataEl(target);
+      if (!p) return;
+      toParentId = p.getAttribute('data-ol-id');
+      var sibs = siblingsOf(p);
+      var tIdx = sibs.indexOf(target);
+      if (tIdx < 0) return;
+      toIndex = intent === 'after' ? tIdx + 1 : tIdx;
+    }
+    try {
+      window.parent.postMessage({
+        type: 'openlen:library-drop',
+        payload: payload,
+        toParentId: toParentId,
+        toIndex: toIndex
+      }, '*');
+    } catch (_) {}
+  });
+
+  // Push from parent: { ids: string[] } sets selection; { id } also accepted
+  // for backcompat. { type: 'model-scroll-to', id } centers a node in view.
   window.addEventListener('message', function (e) {
     var d = e.data;
-    if (!d || typeof d !== 'object' || d.type !== 'openlen:model-set-selected') return;
+    if (!d || typeof d !== 'object') return;
+    if (d.type === 'openlen:model-scroll-to') {
+      if (typeof d.id !== 'string') return;
+      var sel = document.querySelector('[data-ol-id="' + cssEscape(d.id) + '"]');
+      if (sel && sel.scrollIntoView) {
+        try { sel.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
+      }
+      return;
+    }
+    if (d.type !== 'openlen:model-set-selected') return;
     var ids = null;
     if (Array.isArray(d.ids)) {
       ids = [];
