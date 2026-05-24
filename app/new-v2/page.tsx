@@ -13,12 +13,24 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { PublishModal } from "@/components/workspace/publish-modal";
 import { useGeneration } from "@/lib/use-generation";
+import { useAIModel } from "@/components/workspace-v2/model-picker";
+import type {
+  FormConfig,
+  ProjectSettings,
+  StoredChatTurn,
+} from "@/lib/projects/types";
 import { AutofillModal } from "@/components/workspace-v2/autofill-modal";
 import { EmptyState } from "@/components/workspace-v2/empty-state";
 import { LeftSidebar, type SidebarMode } from "@/components/workspace-v2/left-sidebar";
 import { PreviewPlaceholder } from "@/components/workspace-v2/preview-placeholder";
 import { SECTIONS, type Section } from "@/components/workspace-v2/mock-data";
 import { PreviewArea } from "@/components/workspace-v2/preview-area";
+import {
+  PropertiesPanel,
+  type InspectSelection,
+  type PageMeta,
+} from "@/components/workspace-v2/panels/properties-panel";
+import { PageBuildingLoader } from "@/components/workspace-v2/page-building-loader";
 import {
   ReplaceAssetModal,
   type ReplaceKind,
@@ -27,6 +39,20 @@ import {
 import { StatusBar } from "@/components/workspace-v2/status-bar";
 import { TopBar } from "@/components/workspace-v2/top-bar";
 import { useDarkMode } from "@/lib/use-dark-mode";
+import type { Document as DocModel } from "@/lib/doc/model";
+import { CanvaInspector } from "@/components/workspace-v2/model/canva-inspector";
+import { useDocEditor } from "@/lib/use-doc-editor";
+import type { NodeId } from "@/lib/doc/model";
+import {
+  editAddBreakpoint,
+  editDuplicate,
+  editGroup,
+  editMove,
+  editRemove,
+  editSetProps,
+  editSetStyle,
+  editUngroup,
+} from "@/lib/doc/edits";
 
 // Outer shell exists so `useSearchParams()` in the inner component has a
 // Suspense boundary, matching the /new V1 pattern.
@@ -67,6 +93,76 @@ interface LoadedProject {
   /** Persistent AI context from the Brief sidebar tab — auto-prepended
    *  to every Chat tab prompt by `/api/templates/ai-design`. */
   userBrief: string;
+  /** Persisted Chat-tab transcript — seeds the chat panel so a reload or
+   *  sidebar tab switch restores the conversation. Kept fresh in this
+   *  state by the chat's `onChatChange` so a panel remount re-seeds it. */
+  chatHistory: StoredChatTurn[];
+  /** Non-HTML project settings (Phase 2 form config). Loaded with the
+   *  project; updated in place when the inspector edits a form. */
+  settings: ProjectSettings | undefined;
+  /** Present ⇒ a model-backed project; the workspace mounts the model editor
+   *  instead of the legacy sidebar + HTML preview (docs/document-model.md §14). */
+  document?: DocModel;
+}
+
+// Strip every OpenLen editor-mode marker from an HTML document string.
+//
+// The Content tab injects three editing scripts into the preview iframe at
+// once — inline-edit, section-reorder, image-replace. Each script's own
+// "post clean HTML" step only removes ITS OWN markers, so the HTML it posts
+// back still carries the other two scripts plus any `contenteditable`
+// attributes. Persisted unchecked, that HTML keeps the page editable on
+// every other tab — and would ship editor scripts to the published page.
+// We sanitize here so `data.html` is always the as-a-visitor-sees-it
+// document. Fast path skips the parse when there's nothing to strip.
+function stripEditorInstrumentation(html: string): string {
+  if (!html) return html;
+  if (!html.includes("data-openlen-") && !html.includes("contenteditable")) {
+    return html;
+  }
+  if (typeof DOMParser === "undefined") return html;
+  try {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    // Injected <style>/<script> + the UI nodes they create (drag handles,
+    // replace buttons, drop indicator, copy chip) all carry their script's
+    // marker — removing the marked elements clears the whole surface.
+    doc
+      .querySelectorAll(
+        "[data-openlen-inline-edit],[data-openlen-reorder],[data-openlen-replace],[data-openlen-section-select],[data-openlen-inspect]",
+      )
+      .forEach((n) => n.remove());
+    // Editing-only attributes left on real content elements — strip the
+    // attribute, keep the element.
+    doc
+      .querySelectorAll("[contenteditable]")
+      .forEach((n) => n.removeAttribute("contenteditable"));
+    for (const attr of [
+      "data-openlen-reorder-index",
+      "data-openlen-hovering",
+      "data-openlen-dragging",
+      "data-openlen-drag-bg-applied",
+      "data-openlen-replace-target",
+      "data-openlen-select-hover",
+      "data-openlen-inspect-hover",
+      "data-openlen-inspect-selected",
+    ]) {
+      doc.querySelectorAll(`[${attr}]`).forEach((n) => n.removeAttribute(attr));
+    }
+    if (doc.body) {
+      for (const attr of [
+        "data-openlen-drag-active",
+        "data-openlen-replace-mode",
+        "data-openlen-over-image",
+        "data-openlen-select-mode",
+        "data-openlen-inspect-mode",
+      ]) {
+        doc.body.removeAttribute(attr);
+      }
+    }
+    return "<!doctype html>\n" + doc.documentElement.outerHTML;
+  } catch {
+    return html;
+  }
 }
 
 type EntryMode = "choosing" | "ai" | "template" | "paste" | "editing";
@@ -76,6 +172,7 @@ const ALL_TABS: SidebarMode[] = [
   "content",
   "templates",
   "pages",
+  "leads",
   "versions",
   "brief",
 ];
@@ -110,6 +207,152 @@ function NewV2Inner() {
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadedProject, setLoadedProject] = useState<LoadedProject | null>(null);
+  // Canva-mode editor state — null when the loaded project is not model-backed.
+  // Owned at the page level so the canvas (PreviewArea), the inspector
+  // (CanvaInspector), and the LeftSidebar Chat tab all dispatch against the
+  // same Document.
+  const docEditor = useDocEditor(
+    loadedProject?.document ?? null,
+    loadedProject?.id ?? null,
+  );
+  const [modelSelectedIds, setModelSelectedIds] = useState<NodeId[]>([]);
+  // Which layer the inspector edits into. `null` = base (unconditioned).
+  // `{kind:"breakpoint",bp}` → set via TopBar chip strip.
+  // `{kind:"state",state}` → set via the inspector's state picker row.
+  // Compound conditions (hover @ md) aren't surfaced in v1 — picking from one
+  // axis replaces the other. Reset on project change.
+  const [editCondition, setEditCondition] = useState<
+    import("@/lib/doc/model").Condition | null
+  >(null);
+  useEffect(() => {
+    setEditCondition(null);
+  }, [loadedProject?.id]);
+
+  // Duplicate the current selection. Fires from the iframe's ⌘D handler
+  // (via PreviewArea's onModelDuplicate bridge) or from a window-level
+  // ⌘D when focus is outside the iframe.
+  const duplicateSelection = useCallback(() => {
+    const doc = docEditor.state?.doc;
+    if (!doc || modelSelectedIds.length === 0) return;
+    const r = editDuplicate(doc, modelSelectedIds);
+    if (!r) return;
+    docEditor.applyEdit(r.ops);
+    setModelSelectedIds(r.newIds);
+  }, [docEditor, modelSelectedIds]);
+
+  // Dispatch a context-menu / shortcut action against the current selection.
+  // Lives on page.tsx because it touches docEditor state + selection state.
+  const dispatchModelAction = useCallback(
+    (action: string) => {
+      const doc = docEditor.state?.doc;
+      if (!doc || modelSelectedIds.length === 0) return;
+      switch (action) {
+        case "duplicate": {
+          const r = editDuplicate(doc, modelSelectedIds);
+          if (!r) return;
+          docEditor.applyEdit(r.ops);
+          setModelSelectedIds(r.newIds);
+          return;
+        }
+        case "delete": {
+          const ops = modelSelectedIds
+            .map((id) => editRemove(doc, id))
+            .filter(Boolean) as ReturnType<typeof editRemove>[];
+          if (ops.length === 0) return;
+          docEditor.applyEdit(
+            ops as Parameters<typeof docEditor.applyEdit>[0],
+          );
+          setModelSelectedIds([]);
+          return;
+        }
+        case "group":
+        case "wrap": {
+          // wrap = group on a single id, same builder (relaxed to accept 1).
+          const ops = editGroup(doc, modelSelectedIds);
+          if (!ops || ops.length === 0) return;
+          docEditor.applyEdit(ops);
+          const first = ops[0];
+          if (first.t === "insert_node") setModelSelectedIds([first.rootId]);
+          return;
+        }
+        case "ungroup": {
+          if (modelSelectedIds.length !== 1) return;
+          const ops = editUngroup(doc, modelSelectedIds[0]);
+          if (!ops || ops.length === 0) return;
+          docEditor.applyEdit(ops);
+          setModelSelectedIds([]);
+          return;
+        }
+        case "moveUp":
+        case "moveDown": {
+          if (modelSelectedIds.length !== 1) return;
+          const id = modelSelectedIds[0];
+          const node = doc.nodes[id];
+          if (!node?.parentId) return;
+          const parent = doc.nodes[node.parentId];
+          if (!parent) return;
+          const idx = parent.childIds.indexOf(id);
+          if (idx < 0) return;
+          const delta = action === "moveUp" ? -1 : 1;
+          const newIdx = idx + delta;
+          if (newIdx < 0 || newIdx >= parent.childIds.length) return;
+          const op = editMove(doc, id, parent.id, newIdx);
+          if (op) docEditor.applyEdit([op]);
+          return;
+        }
+      }
+    },
+    [docEditor, modelSelectedIds],
+  );
+
+  // Delete the current selection (Del / Backspace from iframe or window).
+  const deleteSelection = useCallback(() => {
+    const doc = docEditor.state?.doc;
+    if (!doc || modelSelectedIds.length === 0) return;
+    const ops = modelSelectedIds
+      .map((id) => editRemove(doc, id))
+      .filter(Boolean) as ReturnType<typeof editRemove>[];
+    if (ops.length === 0) return;
+    docEditor.applyEdit(ops as Parameters<typeof docEditor.applyEdit>[0]);
+    setModelSelectedIds([]);
+  }, [docEditor, modelSelectedIds]);
+
+  // Window-level fallback for ⌘D + Del/Backspace + ⌘Z/⌘⇧Z — the iframe has
+  // its own listeners but only fire when focus is inside it. When the user
+  // clicks the inspector then hits one of these, the keydown lands here.
+  useEffect(() => {
+    if (!docEditor.state) return;
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t) {
+        const tag = t.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || t.isContentEditable) return;
+      }
+      if ((e.metaKey || e.ctrlKey) && (e.key === "z" || e.key === "Z")) {
+        e.preventDefault();
+        if (e.shiftKey) docEditor.redo();
+        else docEditor.undo();
+        return;
+      }
+      if (modelSelectedIds.length === 0) return;
+      if ((e.metaKey || e.ctrlKey) && (e.key === "d" || e.key === "D")) {
+        e.preventDefault();
+        duplicateSelection();
+        return;
+      }
+      if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        deleteSelection();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [
+    docEditor,
+    duplicateSelection,
+    deleteSelection,
+    modelSelectedIds.length,
+  ]);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [autofillModalOpen, setAutofillModalOpen] = useState(false);
 
@@ -122,6 +365,13 @@ function NewV2Inner() {
     hint: string;
     path: string;
   } | null>(null);
+  // Inspector (Phase 1 properties panel) — right-side drawer. inspectMode
+  // gates the iframe's element-inspect script; selection + pageMeta mirror
+  // what that script reports back over postMessage.
+  const [inspectMode, setInspectMode] = useState(false);
+  const [inspectSelection, setInspectSelection] =
+    useState<InspectSelection | null>(null);
+  const [pageMeta, setPageMeta] = useState<PageMeta | null>(null);
   const [assetModal, setAssetModal] = useState<{
     kind: ReplaceKind;
     path: string;
@@ -129,7 +379,14 @@ function NewV2Inner() {
     currentSrc: string | null;
   } | null>(null);
   const [pendingChatDraft, setPendingChatDraft] = useState<string | null>(null);
+  const [chatRedesigning, setChatRedesigning] = useState(false);
   const iframeElRef = useRef<HTMLIFrameElement | null>(null);
+  // Optimistic-concurrency base — the project's updatedAt this tab last
+  // wrote. Sent with every HTML save; the server snapshots the current state
+  // before overwriting when it no longer matches (another tab wrote since).
+  // Starts 0 (resets on project switch) — the first save's mismatch is
+  // harmless, it just dedups against the project's existing version.
+  const projectUpdatedAtRef = useRef(0);
 
   // AI generation flow — owned here so the brief survives panel switches
   // inside the same /new-v2?mode=ai session. On completion, we redirect
@@ -141,18 +398,49 @@ function NewV2Inner() {
   // Brief can be pre-filled from a deep link (homepage hero CTA, projects
   // example cards, etc.) via ?brief=<urlencoded>.
   const briefParam = searchParams.get("brief");
+  const autostartParam = searchParams.get("autostart");
   const [aiPrompt, setAiPrompt] = useState(() => briefParam?.trim() ?? "");
   const aiBriefFormState = useMemo(
     () => ({ prompt: aiPrompt, setPrompt: setAiPrompt }),
     [aiPrompt],
   );
   const aiGenerating = aiGenState.kind === "generating";
+  const [genSlow, setGenSlow] = useState(false);
+  const [genModel, setGenModel] = useAIModel();
   const handleAiGenerate = useCallback(() => {
     if (aiGenerating) return;
     const brief = aiPrompt.trim();
     if (brief.length < 10) return;
-    void aiGenerate(brief);
-  }, [aiGenerating, aiPrompt, aiGenerate]);
+    void aiGenerate(brief, genModel);
+  }, [aiGenerating, aiPrompt, aiGenerate, genModel]);
+  // A deep link with `?autostart=1` (the homepage hero) kicks generation
+  // off on arrival. The param is stripped right after so a manual reload of
+  // this URL doesn't re-fire — and re-bill — the generation.
+  const autostartedRef = useRef(false);
+  useEffect(() => {
+    if (autostartedRef.current || autostartParam !== "1") return;
+    autostartedRef.current = true;
+    handleAiGenerate();
+    router.replace(
+      briefParam
+        ? `/new-v2?mode=ai&brief=${encodeURIComponent(briefParam)}`
+        : "/new-v2?mode=ai",
+    );
+  }, [autostartParam, briefParam, handleAiGenerate, router]);
+  // After ~8s of a silent generation (no reasoning, no HTML yet) surface a
+  // "server saturated" note so the long wait doesn't read as a freeze.
+  useEffect(() => {
+    if (
+      aiGenState.kind !== "generating" ||
+      aiGenState.reasoning ||
+      aiGenState.html
+    ) {
+      setGenSlow(false);
+      return;
+    }
+    const t = setTimeout(() => setGenSlow(true), 8000);
+    return () => clearTimeout(t);
+  }, [aiGenState]);
   // When generation completes and the project has been persisted, drop
   // the user into the editing surface for that project.
   useEffect(() => {
@@ -216,6 +504,49 @@ function NewV2Inner() {
             ? "I just changed the icon here. Update the surrounding title and description so the meaning matches the new icon."
             : "I just changed the image here. Update the surrounding copy so it matches what the image shows.",
         );
+      } else if (data.type === "openlen:element-selected") {
+        if (typeof data.path === "string" && typeof data.tag === "string") {
+          setInspectSelection({
+            path: data.path,
+            tag: data.tag,
+            hint: typeof data.hint === "string" ? data.hint : data.tag,
+            props:
+              data.props && typeof data.props === "object" ? data.props : {},
+            formIndex:
+              typeof data.formIndex === "number" ? data.formIndex : null,
+            style:
+              data.style && typeof data.style === "object"
+                ? data.style
+                : undefined,
+          });
+        }
+      } else if (data.type === "openlen:element-deselected") {
+        setInspectSelection(null);
+      } else if (data.type === "openlen:page-meta") {
+        const m = data.meta;
+        if (m && typeof m === "object") {
+          setPageMeta({
+            title: typeof m.title === "string" ? m.title : "",
+            description: typeof m.description === "string" ? m.description : "",
+            ogImage: typeof m.ogImage === "string" ? m.ogImage : "",
+            favicon: typeof m.favicon === "string" ? m.favicon : "",
+            radiusScale:
+              typeof m.radiusScale === "number" ? m.radiusScale : null,
+            typeScale:
+              typeof m.typeScale === "number" ? m.typeScale : null,
+            spaceScale:
+              typeof m.spaceScale === "number" ? m.spaceScale : null,
+            displayFont:
+              typeof m.displayFont === "string" ? m.displayFont : null,
+            accent: typeof m.accent === "string" ? m.accent : null,
+            bg: typeof m.bg === "string" ? m.bg : null,
+            surface: typeof m.surface === "string" ? m.surface : null,
+            fg: typeof m.fg === "string" ? m.fg : null,
+            border: typeof m.border === "string" ? m.border : null,
+            mode: m.mode === "dark" ? "dark" : "light",
+            hasDark: m.hasDark === true,
+          });
+        }
       }
     };
     window.addEventListener("message", onMessage);
@@ -270,7 +601,13 @@ function NewV2Inner() {
               hasUnpublishedChanges: boolean;
               tags?: string[];
               userBrief?: string | null;
-              data: { html?: string; filledBlocks?: unknown[] };
+              chatHistory?: StoredChatTurn[];
+              data: {
+                html?: string;
+                filledBlocks?: unknown[];
+                settings?: ProjectSettings;
+                document?: DocModel;
+              };
             };
           }
         | null;
@@ -279,7 +616,9 @@ function NewV2Inner() {
       const filledCount = Array.isArray(p.data?.filledBlocks)
         ? p.data.filledBlocks.length
         : 0;
-      const html = p.data?.html ?? "";
+      // Sanitize on load too — a project edited before this fix shipped may
+      // already have leaked editor scripts baked into data.html.
+      const html = stripEditorInstrumentation(p.data?.html ?? "");
       setLoadedProject({
         id: p.id,
         title: p.title,
@@ -289,6 +628,9 @@ function NewV2Inner() {
         html,
         isFlat: filledCount === 0,
         userBrief: p.userBrief ?? "",
+        chatHistory: p.chatHistory ?? [],
+        settings: p.data?.settings,
+        document: p.data?.document,
       });
       setProjectName(p.title);
     },
@@ -296,6 +638,8 @@ function NewV2Inner() {
   );
 
   useEffect(() => {
+    // New project context — reset the concurrency base.
+    projectUpdatedAtRef.current = 0;
     if (!projectParam) {
       setLoadedProject(null);
       return;
@@ -309,6 +653,32 @@ function NewV2Inner() {
       cancelled = true;
     };
   }, [projectParam, refetchProject]);
+
+  // ── Cross-tab / cross-device convergence ────────────────────────────────
+  // Same browser: a BroadcastChannel — a save in one tab nudges the others to
+  // refetch. Cross-device: a refetch when the tab regains focus. Both just
+  // re-pull the project; the append-only chat log + projectVersions make the
+  // refetched state the merged truth, never a clobber.
+  const syncChannelRef = useRef<BroadcastChannel | null>(null);
+  useEffect(() => {
+    const id = loadedProject?.id;
+    if (!id) return;
+    const onFocus = () => void refetchProject(id);
+    window.addEventListener("focus", onFocus);
+    let channel: BroadcastChannel | null = null;
+    if (typeof BroadcastChannel !== "undefined") {
+      channel = new BroadcastChannel("openlen-project-sync");
+      syncChannelRef.current = channel;
+      channel.onmessage = (e: MessageEvent) => {
+        if (e.data?.projectId === id) void refetchProject(id);
+      };
+    }
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      channel?.close();
+      syncChannelRef.current = null;
+    };
+  }, [loadedProject?.id, refetchProject]);
 
   const published = loadedProject?.subdomain
     ? {
@@ -400,21 +770,28 @@ function NewV2Inner() {
   // user is in Content tab editing mode. Inline-edit, Reorder, and
   // Replace all emit via this same contract; the scripts only inject
   // when editingActive is true, so we only accept messages then.
-  const acceptsHtmlChanged = editingActive;
+  const acceptsHtmlChanged = editingActive || inspectMode;
   useEffect(() => {
     if (!acceptsHtmlChanged || !loadedProject) return;
     const projectId = loadedProject.id;
 
     const onMessage = (e: MessageEvent) => {
       if (!e.data || e.data.type !== "openlen:html-changed") return;
-      const html = typeof e.data.outerHtml === "string" ? e.data.outerHtml : "";
-      if (!html) return;
+      const rawHtml =
+        typeof e.data.outerHtml === "string" ? e.data.outerHtml : "";
+      if (!rawHtml) return;
+      // Each injected editor script only cleans its own markers; co-injected
+      // scripts leak through. This is the one funnel every edit passes — strip
+      // here so the stored + PATCHed HTML is the clean visitor document.
+      const html = stripEditorInstrumentation(rawHtml);
       const source =
         e.data.source === "reorder"
           ? "reorder"
           : e.data.source === "replace"
             ? "replace"
-            : "inline-edit";
+            : e.data.source === "props"
+              ? "props"
+              : "inline-edit";
       setLoadedProject((prev) =>
         prev && prev.id === projectId ? { ...prev, html } : prev,
       );
@@ -424,11 +801,27 @@ function NewV2Inner() {
         void fetch(`/api/projects/${projectId}/html`, {
           method: "PATCH",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ html, source }),
+          body: JSON.stringify({
+            html,
+            source,
+            baseUpdatedAt: projectUpdatedAtRef.current,
+          }),
         })
-          .then((r) => {
+          .then(async (r) => {
             setSavingStatus(r.ok ? "saved" : "idle");
             if (r.ok) {
+              // Nudge other tabs of this project to refetch the new HTML.
+              syncChannelRef.current?.postMessage({ projectId });
+              // Advance the concurrency base to the version the server just
+              // wrote — so this tab's own next save isn't read as a clobber.
+              const saved = (await r.json().catch(() => null)) as
+                | { updatedAt?: string }
+                | null;
+              if (saved?.updatedAt) {
+                projectUpdatedAtRef.current = new Date(
+                  saved.updatedAt,
+                ).getTime();
+              }
               setLoadedProject((prev) =>
                 prev && prev.id === projectId
                   ? { ...prev, hasUnpublishedChanges: !!prev.subdomain }
@@ -472,6 +865,9 @@ function NewV2Inner() {
       setScopedSelection(null);
       setAssetModal(null);
       setPendingChatDraft(null);
+      setInspectMode(false);
+      setInspectSelection(null);
+      setPageMeta(null);
     }
     prevLoadedIdRef.current = newId;
   }, [loadedProject?.id]);
@@ -516,6 +912,79 @@ function NewV2Inner() {
     autofillModalOpen,
     assetModal,
   ]);
+
+  // Inspector — post a property edit into the preview iframe; the inspect
+  // script mutates the live DOM and persists via openlen:html-changed.
+  const applyElementProp = useCallback(
+    (path: string, name: string, value: string | null) => {
+      iframeElRef.current?.contentWindow?.postMessage(
+        { type: "openlen:apply-prop", scope: "element", path, name, value },
+        "*",
+      );
+    },
+    [],
+  );
+  const applyPageMeta = useCallback((field: keyof PageMeta, value: string) => {
+    iframeElRef.current?.contentWindow?.postMessage(
+      { type: "openlen:apply-prop", scope: "page", field, value },
+      "*",
+    );
+  }, []);
+  // Selection-scoped style — set one inline-style property on the element.
+  const applyStyle = useCallback(
+    (path: string, prop: string, value: string) => {
+      iframeElRef.current?.contentWindow?.postMessage(
+        { type: "openlen:apply-prop", scope: "style", path, prop, value },
+        "*",
+      );
+    },
+    [],
+  );
+  // Form config is not HTML — it persists straight to ProjectData.settings
+  // (so the notify email never reaches the published page source).
+  const applyFormConfig = useCallback(
+    (formIndex: number, patch: Partial<FormConfig>) => {
+      const projectId = loadedProject?.id;
+      if (!projectId) return;
+      void fetch(`/api/projects/${projectId}/settings`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ formIndex, patch }),
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((res) => {
+          if (!res) return;
+          // Mirror the server's merged form config into local state.
+          setLoadedProject((prev) => {
+            if (!prev) return prev;
+            const forms = { ...(prev.settings?.forms ?? {}) };
+            if (res.config) forms[String(formIndex)] = res.config;
+            else delete forms[String(formIndex)];
+            return { ...prev, settings: { ...prev.settings, forms } };
+          });
+        })
+        .catch(() => {});
+    },
+    [loadedProject?.id],
+  );
+  // Page-level theme tokens (Tier 3) — e.g. the global corner-radius scale.
+  const applyTheme = useCallback((prop: string, value: string) => {
+    iframeElRef.current?.contentWindow?.postMessage(
+      { type: "openlen:apply-prop", scope: "theme", prop, value },
+      "*",
+    );
+  }, []);
+  // Apply a curated theme preset — a bundle of tokens — in one message.
+  const applyThemeBundle = useCallback((tokens: Record<string, string>) => {
+    iframeElRef.current?.contentWindow?.postMessage(
+      { type: "openlen:apply-prop", scope: "theme-bundle", tokens },
+      "*",
+    );
+  }, []);
+  const toggleInspect = useCallback(() => {
+    setInspectMode((m) => !m);
+    setInspectSelection(null);
+  }, []);
 
   const handlePickAI = () => {
     router.push("/new-v2?mode=ai");
@@ -578,6 +1047,22 @@ function NewV2Inner() {
         }}
         dark={dark}
         onToggleDark={toggleDark}
+        canvasUndo={docEditor.state ? docEditor.undo : undefined}
+        canvasRedo={docEditor.state ? docEditor.redo : undefined}
+        canvasCanUndo={docEditor.canUndo}
+        canvasCanRedo={docEditor.canRedo}
+        canvasBreakpoints={docEditor.state?.doc.breakpoints}
+        canvasEditCondition={editCondition}
+        canvasOnEditCondition={setEditCondition}
+        canvasOnAddBp={(name, minWidth) => {
+          const doc = docEditor.state?.doc;
+          if (!doc) return;
+          const op = editAddBreakpoint(doc, name, minWidth);
+          if (op) {
+            docEditor.applyEdit([op]);
+            setEditCondition({ kind: "breakpoint", bp: name });
+          }
+        }}
       />
       <div className="flex-1 min-h-0 flex">
         <LeftSidebar
@@ -604,6 +1089,15 @@ function NewV2Inner() {
               prev ? { ...prev, html: newHtml } : prev,
             )
           }
+          flatProjectChat={loadedProject?.chatHistory}
+          onChatChange={() => {
+            const id = loadedProject?.id;
+            if (id) {
+              void refetchProject(id);
+              syncChannelRef.current?.postMessage({ projectId: id });
+            }
+          }}
+          onRedesigningChange={setChatRedesigning}
           projectLoading={!!projectParam && !loadedProject}
           savingStatus={savingStatus}
           currentProjectId={loadedProject?.id ?? null}
@@ -633,6 +1127,19 @@ function NewV2Inner() {
           aiBriefState={aiBriefFormState}
           aiOnGenerate={handleAiGenerate}
           aiGenerating={aiGenerating}
+          aiModel={genModel}
+          aiOnModelChange={setGenModel}
+          documentMode={
+            docEditor.state
+              ? {
+                  doc: docEditor.state.doc,
+                  applyEdit: docEditor.applyEdit,
+                  undo: docEditor.undo,
+                }
+              : undefined
+          }
+          modelSelectedIds={modelSelectedIds}
+          onModelSelect={setModelSelectedIds}
         />
         {entryMode === "choosing" && (
           <EmptyState
@@ -676,20 +1183,15 @@ function NewV2Inner() {
                   ? "Designing your page…"
                   : "Thinking through the design…"}
               </div>
-              {aiGenState.html ? (
-                <iframe
-                  title="Generating preview"
-                  srcDoc={aiGenState.html}
-                  className="flex-1 min-h-0 w-full border-0 bg-white"
-                  sandbox="allow-scripts"
+              <div className="flex-1 min-h-0">
+                <PageBuildingLoader
+                  caption={
+                    genSlow
+                      ? "El servidor está muy saturado — esto puede tardar. No cierres la página, por favor."
+                      : aiGenState.reasoning || "Reading your brief…"
+                  }
                 />
-              ) : (
-                <div className="flex-1 min-h-0 flex items-center justify-center px-6">
-                  <div className="max-w-md text-center text-[12.5px] fg-muted leading-relaxed">
-                    {aiGenState.reasoning || "Reading your brief…"}
-                  </div>
-                </div>
-              )}
+              </div>
             </section>
           ) : aiGenState.kind === "error" ? (
             <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-preview-a">
@@ -715,21 +1217,120 @@ function NewV2Inner() {
           <PreviewPlaceholder mode={entryMode} />
         )}
         {entryMode === "editing" &&
-          (loadedProject?.html ? (
-            <PreviewArea
-              doc={loadedProject.html}
-              editableInjection={editableInjection}
-              sectionSelectMode={sectionSelectMode}
-              editingActive={editingActive}
-              onIframeRef={(el) => {
-                iframeElRef.current = el;
-              }}
-              openInNewTabUrl={
-                loadedProject.subdomain
-                  ? `https://${loadedProject.subdomain}.openlen.com`
-                  : `/api/projects/${loadedProject.id}/raw`
-              }
-            />
+          (loadedProject?.document && docEditor.state ? (
+            // Canva-mode: PreviewArea handles the canvas (device toggle,
+            // zoom, fit, grid, refresh, open-in-tab — all the toolbar
+            // features keep working) by compiling the Document on each
+            // render. CanvaInspector renders to the right of it,
+            // permanently visible since the inspector IS the editing
+            // surface for model projects.
+            <>
+              <PreviewArea
+                doc=""
+                modelDoc={docEditor.state.doc}
+                modelSelectedIds={modelSelectedIds}
+                onModelSelect={setModelSelectedIds}
+                onModelTextEdit={(id, text) => {
+                  const doc = docEditor.state?.doc;
+                  if (!doc) return;
+                  const node = doc.nodes[id];
+                  if (!node) return;
+                  const op = editSetProps(doc, id, {
+                    ...node.props,
+                    runs: [{ text }],
+                  });
+                  if (op) docEditor.applyEdit([op]);
+                }}
+                onModelReorder={(id, toParentId, toIndex) => {
+                  const doc = docEditor.state?.doc;
+                  if (!doc) return;
+                  const op = editMove(doc, id, toParentId, toIndex);
+                  if (op) docEditor.applyEdit([op]);
+                }}
+                onModelResize={(id, width, height) => {
+                  const doc = docEditor.state?.doc;
+                  if (!doc) return;
+                  const node = doc.nodes[id];
+                  if (!node) return;
+                  const op = editSetStyle(doc, id, null, {
+                    ...node.style.base,
+                    width,
+                    height,
+                  });
+                  if (op) docEditor.applyEdit([op]);
+                }}
+                onModelDuplicate={duplicateSelection}
+                onModelDelete={deleteSelection}
+                onModelAction={dispatchModelAction}
+                onModelUndo={(redo) => (redo ? docEditor.redo() : docEditor.undo())}
+                redesigning={chatRedesigning}
+                editableInjection={false}
+                sectionSelectMode={sectionSelectMode}
+                editingActive={false}
+                inspectMode={false}
+                onIframeRef={(el) => {
+                  iframeElRef.current = el;
+                }}
+                openInNewTabUrl={
+                  loadedProject.subdomain
+                    ? `https://${loadedProject.subdomain}.openlen.com`
+                    : `/api/projects/${loadedProject.id}/raw`
+                }
+              />
+              <CanvaInspector
+                doc={docEditor.state.doc}
+                selectedIds={modelSelectedIds}
+                onEdit={docEditor.applyEdit}
+                onSelect={setModelSelectedIds}
+                projectId={loadedProject.id}
+                editCondition={editCondition}
+                onEditCondition={setEditCondition}
+              />
+            </>
+          ) : loadedProject?.html ? (
+            <>
+              <PreviewArea
+                doc={loadedProject.html}
+                redesigning={chatRedesigning}
+                editableInjection={editableInjection}
+                sectionSelectMode={sectionSelectMode}
+                editingActive={editingActive}
+                inspectMode={inspectMode}
+                onToggleInspect={toggleInspect}
+                onIframeRef={(el) => {
+                  iframeElRef.current = el;
+                }}
+                openInNewTabUrl={
+                  loadedProject.subdomain
+                    ? `https://${loadedProject.subdomain}.openlen.com`
+                    : `/api/projects/${loadedProject.id}/raw`
+                }
+              />
+              {inspectMode && (
+                <PropertiesPanel
+                  selection={inspectSelection}
+                  pageMeta={pageMeta}
+                  formConfig={
+                    typeof inspectSelection?.formIndex === "number"
+                      ? loadedProject?.settings?.forms?.[
+                          String(inspectSelection.formIndex)
+                        ] ?? null
+                      : null
+                  }
+                  onApplyElementProp={applyElementProp}
+                  onApplyPageMeta={applyPageMeta}
+                  onApplyFormConfig={applyFormConfig}
+                  onApplyStyle={applyStyle}
+                  onApplyTheme={applyTheme}
+                  onApplyThemeBundle={applyThemeBundle}
+                  onClearSelection={() => setInspectSelection(null)}
+                  onClose={() => {
+                    setInspectMode(false);
+                    setInspectSelection(null);
+                  }}
+                />
+              )}
+            </>
           ) : (
             <div className="flex-1 flex items-center justify-center bg-preview-a">
               <div className="text-[12px] fg-faint">
@@ -804,3 +1405,4 @@ function NewV2Inner() {
     </div>
   );
 }
+

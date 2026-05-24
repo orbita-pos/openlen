@@ -29,8 +29,12 @@ export interface ReplaceCredit {
 }
 
 export interface ReplacePayload {
-  /** For kind="icon": the inline SVG markup to swap in. */
+  /** For kind="icon": the inline SVG markup to swap in. HTML-mode uses this
+   *  to replace the iframe element. */
   svgMarkup?: string;
+  /** For kind="icon": the Lucide name (e.g. "check"). Canva-mode uses this
+   *  to set `props.name` on the Icon node; the compiler inlines the SVG. */
+  iconName?: string;
   /** For kind="image": the new image URL. */
   url?: string;
   /** For kind="image": alt text (optional). */
@@ -174,7 +178,8 @@ function IconPicker({
     (e: React.MouseEvent<HTMLButtonElement>) => {
       const svg = e.currentTarget.querySelector("svg");
       if (!svg) return;
-      onPick({ svgMarkup: svg.outerHTML });
+      const name = e.currentTarget.dataset.iconName;
+      onPick({ svgMarkup: svg.outerHTML, iconName: name });
     },
     [onPick],
   );
@@ -224,6 +229,7 @@ function IconPicker({
                     key={name}
                     type="button"
                     onClick={handlePick}
+                    data-icon-name={name}
                     title={name}
                     aria-label={`Pick ${name}`}
                     className="group relative h-12 flex flex-col items-center justify-center gap-0.5 rounded-md ring-1 ring-[color:var(--border)] bg-app hover:bg-hover hover:ring-[color:var(--accent)]/50 transition fg-muted hover:text-[color:var(--accent)]"
@@ -438,13 +444,25 @@ function PasteUrlTab({
 }
 
 // ────────────────────────────────────────────────────────────────────────
-// By OpenLen tab — curated AI-generated hero images. Manifest is built by
-// scripts/openlen-images/process.ts from the source PNGs and served from
-// /openlen-images/manifest.json. Shipped with the repo so self-host works
-// offline; migrate to R2 by changing src URLs in the manifest if needed.
+// By OpenLen tab — curated AI-generated hero images. The manifest is built by
+// scripts/openlen-images/process.ts from the source PNGs and committed at
+// /openlen-images/manifest.json; the WebP variants it points to live on R2
+// (images.openlen.com), with a local-filesystem fallback when R2 isn't set.
 // ────────────────────────────────────────────────────────────────────────
 
-type OpenLenStyle = "3d-abstract" | "claymorph" | "fashion-editorial";
+type OpenLenStyle =
+  | "3d-abstract"
+  | "claymorph"
+  | "fashion-editorial"
+  | "device-mockup"
+  | "product-still-life"
+  | "food-editorial"
+  | "interior-editorial"
+  | "nature-editorial"
+  | "architecture-editorial"
+  | "lifestyle-editorial"
+  | "gradient-bg"
+  | "pet-editorial";
 
 interface OpenLenImage {
   id: string;
@@ -465,9 +483,34 @@ interface OpenLenManifest {
 const OPENLEN_STYLE_FILTERS: { value: OpenLenStyle | "all"; label: string }[] = [
   { value: "all", label: "All" },
   { value: "3d-abstract", label: "3D" },
+  { value: "gradient-bg", label: "Gradients" },
+  { value: "device-mockup", label: "Mockups" },
+  { value: "product-still-life", label: "Products" },
   { value: "claymorph", label: "Clay" },
+  { value: "interior-editorial", label: "Interiors" },
+  { value: "architecture-editorial", label: "Architecture" },
+  { value: "nature-editorial", label: "Nature" },
+  { value: "food-editorial", label: "Food" },
+  { value: "lifestyle-editorial", label: "Lifestyle" },
+  { value: "pet-editorial", label: "Pets" },
   { value: "fashion-editorial", label: "Fashion" },
 ];
+
+// Short badge shown on each card's hover overlay.
+const OPENLEN_STYLE_BADGE: Record<OpenLenStyle, string> = {
+  "3d-abstract": "3D",
+  "gradient-bg": "Gradient",
+  "device-mockup": "Mockup",
+  "product-still-life": "Product",
+  claymorph: "Clay",
+  "interior-editorial": "Interior",
+  "architecture-editorial": "Architecture",
+  "nature-editorial": "Nature",
+  "food-editorial": "Food",
+  "lifestyle-editorial": "Lifestyle",
+  "pet-editorial": "Pet",
+  "fashion-editorial": "Fashion",
+};
 
 function OpenLenTab({
   onPick,
@@ -516,7 +559,14 @@ function OpenLenTab({
   }, [data, query, styleFilter]);
 
   const handlePick = (image: OpenLenImage) => {
-    onPick({ url: image.src.hero, alt: image.alt });
+    // image.src.hero is a root-relative path (/openlen-images/...). Resolve
+    // it to an absolute URL against the app origin — a relative URL gets
+    // rejected by the chat's attached-image check and breaks once the page
+    // is published to a subdomain.
+    onPick({
+      url: new URL(image.src.hero, window.location.origin).href,
+      alt: image.alt,
+    });
   };
 
   return (
@@ -616,11 +666,7 @@ function OpenLenCard({
       <div className="absolute inset-x-0 bottom-0 px-2 py-1.5 bg-gradient-to-t from-black/70 to-transparent text-white text-[10.5px] opacity-0 group-hover:opacity-100 transition flex items-center justify-between">
         <span className="truncate">{image.family[0] ?? image.style}</span>
         <span className="ml-1 px-1.5 py-0.5 rounded-sm bg-white/20 backdrop-blur-sm text-[9.5px] uppercase tracking-wider shrink-0">
-          {image.style === "3d-abstract"
-            ? "3D"
-            : image.style === "claymorph"
-              ? "Clay"
-              : "Fashion"}
+          {OPENLEN_STYLE_BADGE[image.style]}
         </span>
       </div>
     </button>

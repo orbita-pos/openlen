@@ -13,36 +13,52 @@
 
 "use client";
 
+import { useEffect } from "react";
 import {
   ChatIcon,
   FileText,
   Grid3,
   HistoryIcon,
+  Inbox,
   Layers,
   PanelLeft,
   PanelRight,
   Pencil,
+  Plus,
   Sparkles,
 } from "./icons";
 import type { Section } from "./mock-data";
 import { BriefPanel } from "./panels/brief-panel";
 import type { BriefFormState } from "@/components/workspace/types";
+import type { AIModel } from "@/lib/ai-provider";
+import type { StoredChatTurn } from "@/lib/projects/types";
 import { AiBriefPanel } from "./panels/ai-brief-panel";
-import { ChatPanel, type ScopedSelection } from "./panels/chat-panel";
+import {
+  ChatPanel,
+  type DocumentMode,
+  type ScopedSelection,
+} from "./panels/chat-panel";
 import { ContentPanel } from "./panels/content-panel";
+import { LayersPanel } from "./panels/layers-panel";
+import { LibraryPanel } from "./panels/library-panel";
 import { PagesPanel } from "./panels/pages-panel";
 import { PastePanel } from "./panels/paste-panel";
+import { SubmissionsPanel } from "./panels/submissions-panel";
 import { TemplatesPanel } from "./panels/templates-panel";
 import { VersionsPanel } from "./panels/versions-panel";
 import { IconBtn, Tooltip } from "./ui";
 
 import type { ComponentType } from "react";
+import type { NodeId } from "@/lib/doc/model";
 
 export type SidebarMode =
   | "chat"
   | "content"
+  | "library"
+  | "layers"
   | "templates"
   | "pages"
+  | "leads"
   | "versions"
   | "brief";
 
@@ -53,11 +69,18 @@ interface ModeTab {
   title: string;
 }
 
+// Stable empty-array default so a missing prop doesn't re-trigger render
+// dependencies in child panels.
+const EMPTY_IDS: never[] = [];
+
 const MODE_TABS: ModeTab[] = [
   { id: "chat", icon: ChatIcon, label: "Chat", title: "Chat with Orchestra" },
   { id: "content", icon: Pencil, label: "Content", title: "Edit content" },
+  { id: "library", icon: Plus, label: "Library", title: "Add elements & sections" },
+  { id: "layers", icon: Layers, label: "Layers", title: "Layers" },
   { id: "templates", icon: Grid3, label: "Templates", title: "Start from a template" },
   { id: "pages", icon: FileText, label: "Pages", title: "Recent projects" },
+  { id: "leads", icon: Inbox, label: "Leads", title: "Form submissions" },
   { id: "versions", icon: HistoryIcon, label: "Versions", title: "Version history" },
   { id: "brief", icon: Sparkles, label: "Brief", title: "Project brief (AI context)" },
 ];
@@ -97,6 +120,15 @@ interface LeftSidebarProps {
   flatProjectHtml?: string;
   flatProjectId?: string;
   onFlatHtmlUpdate?: (html: string) => void;
+  /** Persisted Chat-tab transcript — seeds the chat so a reload / tab
+   *  switch restores the conversation instead of an empty composer. */
+  flatProjectChat?: StoredChatTurn[];
+  /** Fired after the chat panel persists a turn — the parent refetches so
+   *  its mirror, and other tabs (via BroadcastChannel), converge. */
+  onChatChange?: () => void;
+  /** Forwarded to ChatPanel — fires with the chat's streaming state so the
+   *  parent can overlay the page-building loader on the preview. */
+  onRedesigningChange?: (active: boolean) => void;
   /** True while the parent is mid-fetch on /api/projects/<id>. Forwarded
    *  to ChatPanel so reloads show a skeleton instead of the empty state. */
   projectLoading?: boolean;
@@ -135,6 +167,17 @@ interface LeftSidebarProps {
   aiBriefState?: BriefFormState;
   aiOnGenerate?: () => void;
   aiGenerating?: boolean;
+  /** Model choice (Kimi / Gemini) for generation — forwarded to AiBriefPanel. */
+  aiModel?: AIModel;
+  aiOnModelChange?: (m: AIModel) => void;
+  /** Canva-mode hook-up forwarded to ChatPanel — present ⇒ this project
+   *  has a Document, so chat send routes to the ops endpoint. */
+  documentMode?: DocumentMode;
+  /** Currently-selected model node ids — used by the Layers tab to highlight
+   *  + to set selection on tree click. Single id arrays for normal click;
+   *  multi-element arrays for shift-click. Omitted in non-Canva projects. */
+  modelSelectedIds?: NodeId[];
+  onModelSelect?: (ids: NodeId[]) => void;
 }
 
 export function LeftSidebar({
@@ -154,6 +197,9 @@ export function LeftSidebar({
   flatProjectHtml,
   flatProjectId,
   onFlatHtmlUpdate,
+  flatProjectChat,
+  onChatChange,
+  onRedesigningChange,
   projectLoading = false,
   savingStatus = null,
   currentProjectId = null,
@@ -170,20 +216,40 @@ export function LeftSidebar({
   aiBriefState,
   aiOnGenerate,
   aiGenerating = false,
+  aiModel = "kimi",
+  aiOnModelChange,
+  documentMode,
+  modelSelectedIds = EMPTY_IDS,
+  onModelSelect,
 }: LeftSidebarProps) {
   const isFlatProject = flatProjectId !== undefined;
+  const isCanvaMode = !!documentMode;
   const lockedSet = new Set(lockedTabs ?? []);
   const isLocked = (id: SidebarMode) => lockedSet.has(id);
   const activeMeta = MODE_TABS.find((t) => t.id === mode) ?? MODE_TABS[0];
 
-  // Templates is an entry-flow surface — its preview + "Use this template"
-  // commit path only renders while entryMode === "template". Once a project
-  // is open there's nothing to commit to, so we drop the tab in editing
-  // rather than show a dead gallery.
-  const visibleTabs =
-    entryMode === "editing"
-      ? MODE_TABS.filter((t) => t.id !== "templates")
-      : MODE_TABS;
+  // Tabs that don't apply to the current surface:
+  //   - Templates is an entry-flow surface only — once a project is open
+  //     there's nothing to commit to, so we drop it in editing mode.
+  //   - Content is the HTML-mode editing affordance card; in Canva-mode
+  //     the right inspector IS the content surface (section list + per-
+  //     element panels), so the tab is dead weight here.
+  //   - Layers + Library are Document-tree views — only meaningful when a
+  //     Document exists, so they show only in Canva-mode.
+  const visibleTabs = MODE_TABS.filter((t) => {
+    if (entryMode === "editing" && t.id === "templates") return false;
+    if (isCanvaMode && t.id === "content") return false;
+    if (!isCanvaMode && (t.id === "layers" || t.id === "library")) return false;
+    return true;
+  });
+
+  // If the user lands here with a stale selection on a tab that is no longer
+  // visible (content in Canva-mode, layers/library in HTML-mode), redirect
+  // to chat so they don't see an orphaned panel with no tab highlighted.
+  useEffect(() => {
+    if (isCanvaMode && mode === "content") setMode("chat");
+    if (!isCanvaMode && (mode === "layers" || mode === "library")) setMode("chat");
+  }, [isCanvaMode, mode, setMode]);
 
   if (collapsed) {
     return (
@@ -285,6 +351,8 @@ export function LeftSidebar({
             state={aiBriefState}
             onGenerate={aiOnGenerate ?? (() => {})}
             generating={aiGenerating}
+            model={aiModel}
+            onModelChange={aiOnModelChange ?? (() => {})}
           />
         ) : (
           <>
@@ -293,6 +361,9 @@ export function LeftSidebar({
                 flatProjectId={flatProjectId}
                 flatProjectHtml={flatProjectHtml}
                 onFlatHtmlUpdate={onFlatHtmlUpdate}
+                flatProjectChat={flatProjectChat}
+                onChatChange={onChatChange}
+                onRedesigningChange={onRedesigningChange}
                 projectLoading={projectLoading}
                 sectionSelectMode={sectionSelectMode}
                 onToggleSectionSelect={onToggleSectionSelect}
@@ -301,6 +372,7 @@ export function LeftSidebar({
                 onAutofill={onAutofill}
                 pendingDraft={pendingDraft}
                 onPendingDraftConsumed={onPendingDraftConsumed}
+                documentMode={documentMode}
               />
             )}
             {mode === "content" && (
@@ -311,6 +383,22 @@ export function LeftSidebar({
                 onUpdate={onUpdateSection}
                 flat={isFlatProject}
                 savingStatus={savingStatus}
+              />
+            )}
+            {mode === "library" && documentMode && (
+              <LibraryPanel
+                doc={documentMode.doc}
+                selectedIds={modelSelectedIds}
+                onSelect={onModelSelect ?? (() => {})}
+                onEdit={documentMode.applyEdit}
+              />
+            )}
+            {mode === "layers" && documentMode && (
+              <LayersPanel
+                doc={documentMode.doc}
+                selectedIds={modelSelectedIds}
+                onSelect={onModelSelect ?? (() => {})}
+                onEdit={documentMode.applyEdit}
               />
             )}
             {mode === "templates" && (
@@ -327,6 +415,9 @@ export function LeftSidebar({
             )}
             {mode === "pages" && (
               <PagesPanel currentProjectId={currentProjectId} />
+            )}
+            {mode === "leads" && (
+              <SubmissionsPanel currentProjectId={currentProjectId} />
             )}
             {mode === "versions" && (
               <VersionsPanel
