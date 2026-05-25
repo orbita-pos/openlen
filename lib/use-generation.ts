@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import type { AIModel } from "@/lib/ai-provider";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // useGeneration — drives the /new-v2 AI entry flow.
@@ -10,9 +11,9 @@ import { useCallback, useRef, useState } from "react";
 // streaming reasoning, then a live preview of the streaming HTML, then
 // redirects to ?project=<id> when `project_saved` lands.
 //
-// No orchestrator pipeline, no slot blocks — generation is one free-form Kimi
-// K2.6 call producing a complete HTML document. The resulting project is a
-// flat HTML project, edited the same way as template-clone / paste projects.
+// A client-side watchdog aborts if the server goes fully silent (a wedged
+// route, a dead connection, no SSE at all) — the server's own stall guard
+// normally errors first, this is the catch-all so the UI never hangs forever.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type GenerationState =
@@ -23,19 +24,44 @@ export type GenerationState =
 
 export interface UseGenerationResult {
   state: GenerationState;
-  generate: (brief: string) => Promise<void>;
+  generate: (brief: string, model?: AIModel) => Promise<void>;
 }
+
+// No SSE byte for this long → assume the server is wedged and give up.
+// Generous — Together is slow under load but usually finishes, and the route
+// streams bytes throughout (html_chunk, or a progress ping while building the
+// model spec), so a healthy generation always keeps this reset. The server's
+// own stall guard (720s) normally errors first.
+const SILENCE_TIMEOUT_MS = 780_000;
 
 export function useGeneration(): UseGenerationResult {
   const [state, setState] = useState<GenerationState>({ kind: "idle" });
   const abortRef = useRef<AbortController | null>(null);
 
-  const generate = useCallback(async (brief: string) => {
+  const generate = useCallback(async (brief: string, model: AIModel = "gemini-pro") => {
     // Cancel any in-flight generation before starting a new one.
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
     setState({ kind: "generating", reasoning: "", html: "" });
+
+    // Watchdog — reset on every byte from the server. Only fires on real
+    // silence (no response at all, or the stream went dead).
+    let timedOut = false;
+    let watchdog: ReturnType<typeof setTimeout> | undefined;
+    const armWatchdog = () => {
+      if (watchdog) clearTimeout(watchdog);
+      watchdog = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, SILENCE_TIMEOUT_MS);
+    };
+    const clearWatchdog = () => {
+      if (watchdog) clearTimeout(watchdog);
+      watchdog = undefined;
+    };
+
+    armWatchdog();
 
     let response: Response;
     try {
@@ -45,11 +71,21 @@ export function useGeneration(): UseGenerationResult {
           "Content-Type": "application/json",
           Accept: "text/event-stream",
         },
-        body: JSON.stringify({ brief }),
+        body: JSON.stringify({ brief, model }),
         signal: controller.signal,
       });
     } catch (err) {
-      if (controller.signal.aborted) return;
+      clearWatchdog();
+      if (controller.signal.aborted) {
+        if (timedOut) {
+          setState({
+            kind: "error",
+            message:
+              "La generación no respondió a tiempo — probá de nuevo.",
+          });
+        }
+        return;
+      }
       setState({
         kind: "error",
         message: err instanceof Error ? err.message : String(err),
@@ -58,6 +94,7 @@ export function useGeneration(): UseGenerationResult {
     }
 
     if (!response.ok || !response.body) {
+      clearWatchdog();
       setState({ kind: "error", message: await errorMessage(response) });
       return;
     }
@@ -69,6 +106,7 @@ export function useGeneration(): UseGenerationResult {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
+        armWatchdog(); // bytes flowing — reset the silence clock
         buffer += decoder.decode(value, { stream: true });
         let sep: number;
         while ((sep = buffer.indexOf("\n\n")) !== -1) {
@@ -77,8 +115,19 @@ export function useGeneration(): UseGenerationResult {
           applyEvent(rawEvent, setState);
         }
       }
+      clearWatchdog();
     } catch (err) {
-      if (controller.signal.aborted) return;
+      clearWatchdog();
+      if (controller.signal.aborted) {
+        if (timedOut) {
+          setState({
+            kind: "error",
+            message:
+              "La generación se quedó sin respuesta — probá de nuevo.",
+          });
+        }
+        return;
+      }
       setState({
         kind: "error",
         message: err instanceof Error ? err.message : String(err),

@@ -33,7 +33,14 @@ interface PatchBody {
    *  structural mutations (reorder, replace) which always snapshot so the
    *  version timeline shows them distinctly. Anything unrecognized is
    *  treated as inline-edit. */
-  source?: "inline-edit" | "reorder" | "replace";
+  source?: "inline-edit" | "reorder" | "replace" | "props";
+  /** ms-epoch of the project's updatedAt this tab last wrote. When it no
+   *  longer matches, another writer (typically a second browser tab) changed
+   *  data.html since — the current HTML is about to be clobbered, so we
+   *  snapshot it into the version history first. Inline-edit autosaves are
+   *  only idle-checkpointed every few minutes, so without this a two-tab
+   *  edit race could drop text that lives in no version. */
+  baseUpdatedAt?: number;
 }
 
 export async function PATCH(
@@ -70,7 +77,10 @@ export async function PATCH(
   }
 
   const rows = await db
-    .select({ data: schema.projects.data })
+    .select({
+      data: schema.projects.data,
+      updatedAt: schema.projects.updatedAt,
+    })
     .from(schema.projects)
     .where(
       and(
@@ -82,7 +92,35 @@ export async function PATCH(
   const existing = rows[0];
   if (!existing) return json({ error: "not_found" }, 404);
 
-  const nextData: ProjectData = { html };
+  // Concurrency guard. If another writer changed data.html since the client
+  // loaded its base, the current HTML is about to be clobbered — snapshot it
+  // into the version history first so the about-to-be-lost state stays
+  // recoverable. createVersion dedups against the latest version, so the
+  // common no-conflict first save (base 0) costs nothing. Soft — never
+  // blocks the save.
+  if (
+    typeof body.baseUpdatedAt === "number" &&
+    existing.updatedAt.getTime() !== body.baseUpdatedAt
+  ) {
+    const staleHtml = existing.data?.html ?? "";
+    if (staleHtml && staleHtml !== html) {
+      try {
+        await createVersion({
+          projectId: id,
+          html: staleHtml,
+          label: "Saved before a concurrent edit",
+          source: "manual",
+        });
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("[projects/html] conflict snapshot failed", err);
+      }
+    }
+  }
+
+  // Preserve everything else in `data` (notably data.settings — the Phase 2
+  // form config) — only `html` is being replaced here.
+  const nextData: ProjectData = { ...existing.data, html };
   const now = new Date();
 
   try {
@@ -119,6 +157,15 @@ export async function PATCH(
         html,
         label: "Replaced asset",
         source: "replace",
+      });
+    } else if (body.source === "props") {
+      // Inspector edits (link target, alt text, SEO) are discrete,
+      // intentional actions — snapshot each as its own undo point.
+      await createVersion({
+        projectId: id,
+        html,
+        label: "Edited properties",
+        source: "manual",
       });
     } else {
       // Inline-edit autosave: idle-checkpoint as before.

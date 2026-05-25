@@ -1,0 +1,15 @@
+[Unit]
+Description=OpenLen — daily analytics rollup timer
+Requires=openlen-analytics-rollup.service
+
+[Timer]
+# 03:42 UTC every day. Offset 25min after openlen-backup.timer (03:17) so
+# the two jobs don't overlap on Neon — the rollup reads + writes events,
+# the backup pushes published HTML to R2. Persistent=true catches up any
+# run missed during downtime when the timer next fires.
+OnCalendar=*-*-* 03:42:00
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target

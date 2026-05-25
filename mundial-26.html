@@ -1,0 +1,913 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mundial 26 — June 11 to July 19, 2026 · The unofficial fan resource</title>
+<meta name="description" content="The biggest football party the planet has ever hosted. 48 teams. 104 matches. 16 cities across the US, Mexico, and Canada. June 11 to July 19, 2026.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #E63946;
+    --green: #06A77D;
+    --blue: #2563EB;
+    --yellow: #FFC700;
+    --cream: #FFF8EC;
+    --navy: #0A1628;
+    --muted: #525252;
+    --faint: #A1A1A1;
+    --hairline: rgba(0, 0, 0, 0.08);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--cream);
+    color: var(--navy);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .font-display { font-family: 'Anton', 'Bebas Neue', Impact, sans-serif; letter-spacing: -0.025em; line-height: 0.92; font-weight: 400; }
+  .font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+  .text-red { color: var(--red); }
+  .text-green { color: var(--green); }
+  .text-blue { color: var(--blue); }
+  .text-yellow { color: var(--yellow); }
+  .text-navy { color: var(--navy); }
+  .text-muted { color: var(--muted); }
+  .text-faint { color: var(--faint); }
+  .text-cream { color: var(--cream); }
+
+  .bg-red { background-color: var(--red); }
+  .bg-green { background-color: var(--green); }
+  .bg-blue { background-color: var(--blue); }
+  .bg-yellow { background-color: var(--yellow); }
+  .bg-cream { background-color: var(--cream); }
+  .bg-navy { background-color: var(--navy); }
+
+  .border-hairline { border: 1px solid var(--hairline); }
+  .border-b-hairline { border-bottom: 1px solid var(--hairline); }
+  .border-t-hairline { border-top: 1px solid var(--hairline); }
+
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+
+  .mega-headline {
+    font-family: 'Anton', 'Bebas Neue', Impact, sans-serif;
+    line-height: 0.88;
+    letter-spacing: -0.035em;
+    font-weight: 400;
+  }
+  .display-h2 {
+    font-family: 'Anton', 'Bebas Neue', Impact, sans-serif;
+    line-height: 0.92;
+    letter-spacing: -0.03em;
+    font-weight: 400;
+  }
+  .display-num {
+    font-family: 'Anton', 'Bebas Neue', Impact, sans-serif;
+    letter-spacing: -0.04em;
+    line-height: 0.85;
+    font-weight: 400;
+  }
+
+  .cta-red {
+    background-color: var(--red);
+    color: white;
+    transition: background-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+  }
+  .cta-red:hover {
+    background-color: var(--navy);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(10, 22, 40, 0.18);
+  }
+
+  .cta-outline {
+    border: 2px solid var(--navy);
+    color: var(--navy);
+    background: transparent;
+    transition: all 180ms ease;
+  }
+  .cta-outline:hover {
+    background-color: var(--blue);
+    color: white;
+    border-color: var(--blue);
+    transform: translateY(-1px);
+  }
+
+  .cta-white {
+    background-color: white;
+    color: var(--navy);
+    transition: background-color 180ms ease, color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+  }
+  .cta-white:hover {
+    background-color: var(--navy);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 26px rgba(0,0,0,0.22);
+  }
+
+  .card-lift { transition: transform 160ms ease, box-shadow 160ms ease; }
+  .card-lift:hover { transform: translateY(-2px); }
+  .ring-red:hover { box-shadow: 0 0 0 2px var(--red), 0 12px 30px rgba(0,0,0,0.06); }
+  .ring-green:hover { box-shadow: 0 0 0 2px var(--green), 0 12px 30px rgba(0,0,0,0.06); }
+  .ring-blue:hover { box-shadow: 0 0 0 2px var(--blue), 0 12px 30px rgba(0,0,0,0.06); }
+  .ring-yellow:hover { box-shadow: 0 0 0 2px var(--yellow), 0 12px 30px rgba(0,0,0,0.06); }
+
+  .wm-r { color: var(--red); }
+  .wm-g { color: var(--green); }
+  .wm-n { color: var(--navy); }
+  .wm-y { color: var(--yellow); }
+
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+  details[open] .faq-icon { transform: rotate(45deg); }
+  .faq-icon { transition: transform 200ms ease; display: inline-block; transform-origin: center; }
+
+  .form-input { transition: outline-color 160ms ease, box-shadow 160ms ease; outline: 2px solid transparent; outline-offset: 2px; }
+  .form-input:focus { outline-color: var(--yellow); }
+
+  @keyframes pulseSoft {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.55; transform: scale(0.9); }
+  }
+  .pulse-soft { animation: pulseSoft 2.2s ease-in-out infinite; }
+
+  @keyframes sway {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(3px); }
+  }
+  .papel-sway { animation: sway 6s ease-in-out infinite; transform-origin: top center; }
+
+  .eyebrow {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  .full-bleed { width: 100vw; margin-left: calc(50% - 50vw); }
+
+  .poster-num {
+    font-family: 'Anton', 'Bebas Neue', Impact, sans-serif;
+    font-size: clamp(56px, 9vw, 120px);
+    line-height: 0.85;
+    letter-spacing: -0.04em;
+    color: transparent;
+    -webkit-text-stroke: 2px #FFFFFF;
+    paint-order: stroke fill;
+    filter: drop-shadow(0 2px 12px rgba(0, 0, 0, 0.28));
+    font-weight: 400;
+  }
+
+  .poster-panel { transition: transform 280ms ease, box-shadow 280ms ease; }
+  .poster-panel:hover { transform: translateY(-8px); box-shadow: 0 18px 40px rgba(0, 0, 0, 0.2); z-index: 10; }
+  .poster-overlay { transition: opacity 280ms ease; }
+  .poster-panel:hover .poster-overlay { opacity: 0.82; }
+
+  @media (max-width: 380px) {
+    .mega-headline { font-size: 52px !important; }
+  }
+</style>
+</head>
+
+<body class="bg-cream text-navy">
+
+<!-- ========================================================================
+     1 · STICKY NAV
+======================================================================== -->
+<nav class="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b-hairline">
+  <div class="max-w-7xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
+
+    <a href="#" class="font-display text-2xl md:text-[28px] flex items-center" aria-label="Mundial 26 home">
+      <span class="wm-r">M</span><span class="wm-g">U</span><span class="wm-n">N</span><span class="wm-r">D</span><span class="wm-g">I</span><span class="wm-n">A</span><span class="wm-r">L</span>
+      <span class="wm-y mx-1.5 text-[22px]">★</span>
+      <span class="wm-g">2</span><span class="wm-n">6</span>
+    </a>
+
+    <div class="hidden lg:flex items-center gap-9 text-[14px] font-medium text-navy">
+      <a href="#calendar" class="hover:text-red transition-colors">Schedule</a>
+      <a href="#teams" class="hover:text-red transition-colors">Teams</a>
+      <a href="#cities" class="hover:text-red transition-colors">Cities</a>
+      <a href="#stadiums" class="hover:text-red transition-colors">Stadiums</a>
+      <a href="#tickets" class="hover:text-red transition-colors">Tickets</a>
+    </div>
+
+    <div class="flex items-center gap-3 md:gap-5">
+      <a href="#signin" class="hidden md:inline-block text-[14px] font-medium text-navy hover:text-red transition-colors">Sign in</a>
+      <a href="#alerts" class="cta-red rounded-full px-4 md:px-5 py-2 text-[13px] font-semibold inline-flex items-center gap-1.5">
+        <span class="hidden sm:inline">Get fixture alerts</span>
+        <span class="sm:hidden">Alerts</span>
+        <span aria-hidden="true">→</span>
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- ========================================================================
+     2 · HERO
+======================================================================== -->
+<section class="relative bg-cream overflow-hidden" style="min-height: calc(100vh - 4rem);">
+
+  <!-- Confetti background -->
+  <svg class="absolute inset-0 w-full h-full pointer-events-none opacity-40" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <rect x="80" y="60" width="8" height="20" fill="#E63946" transform="rotate(20 84 70)"/>
+    <rect x="170" y="140" width="6" height="14" fill="#06A77D" transform="rotate(-15 173 147)"/>
+    <circle cx="250" cy="50" r="4" fill="#FFC700"/>
+    <rect x="370" y="160" width="10" height="22" fill="#2563EB" transform="rotate(45 375 171)"/>
+    <circle cx="450" cy="80" r="5" fill="#E63946"/>
+    <rect x="540" y="40" width="8" height="18" fill="#06A77D" transform="rotate(-30 544 49)"/>
+    <circle cx="640" cy="180" r="3" fill="#2563EB"/>
+    <rect x="730" y="90" width="8" height="20" fill="#FFC700" transform="rotate(60 734 100)"/>
+    <circle cx="850" cy="60" r="4" fill="#E63946"/>
+    <rect x="940" y="190" width="10" height="22" fill="#06A77D" transform="rotate(-45 945 201)"/>
+    <circle cx="1090" cy="70" r="3" fill="#FFC700"/>
+
+    <circle cx="60" cy="300" r="4" fill="#2563EB"/>
+    <rect x="140" y="380" width="6" height="14" fill="#FFC700" transform="rotate(50 143 387)"/>
+    <circle cx="270" cy="420" r="5" fill="#E63946"/>
+    <rect x="40" y="500" width="8" height="18" fill="#06A77D" transform="rotate(35 44 509)"/>
+    <circle cx="180" cy="620" r="4" fill="#FFC700"/>
+    <rect x="290" y="700" width="8" height="20" fill="#2563EB" transform="rotate(-20 294 710)"/>
+    <circle cx="80" cy="740" r="3" fill="#E63946"/>
+
+    <rect x="1100" y="330" width="6" height="14" fill="#FFC700" transform="rotate(50 1103 337)"/>
+    <circle cx="1130" cy="450" r="4" fill="#06A77D"/>
+    <rect x="1080" y="560" width="8" height="20" fill="#E63946" transform="rotate(-20 1084 570)"/>
+    <circle cx="1110" cy="680" r="3" fill="#2563EB"/>
+  </svg>
+
+  <div class="relative max-w-7xl mx-auto px-4 md:px-8 pt-12 md:pt-20 pb-16 md:pb-24">
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-10 lg:gap-12 items-center">
+
+      <!-- LEFT (60%) -->
+      <div class="lg:col-span-3">
+        <div class="inline-flex items-center gap-2 bg-red text-white eyebrow px-4 py-2 rounded-full mb-8">
+          <span class="w-2 h-2 rounded-full bg-yellow pulse-soft"></span>
+          <span>17 days until kickoff</span>
+        </div>
+
+        <h1 class="mega-headline uppercase mb-8" style="font-size: clamp(56px, 11vw, 140px);">
+          <span class="block text-red">The World</span>
+          <span class="block text-green">Meets In</span>
+          <span class="block text-blue">North America</span>
+        </h1>
+
+        <p class="text-lg md:text-xl text-muted max-w-2xl mb-10 leading-relaxed">
+          June 11 to July 19, 2026. 48 teams. 104 matches. 16 cities across three countries. The biggest football party the planet has ever hosted.
+        </p>
+
+        <div class="flex flex-wrap gap-3 md:gap-4 mb-10">
+          <a href="#alerts" class="cta-red rounded-full px-7 py-3.5 font-semibold inline-flex items-center gap-2">
+            Get fixture alerts <span aria-hidden="true">→</span>
+          </a>
+          <a href="#calendar" class="cta-outline rounded-full px-7 py-3.5 font-semibold">
+            See the schedule
+          </a>
+        </div>
+
+        <div class="flex flex-wrap gap-2.5">
+          <span class="inline-flex items-center gap-2 bg-blue text-white px-4 py-2 rounded-full text-[13px] font-medium">
+            <span aria-hidden="true">🇺🇸</span> 11 US cities
+          </span>
+          <span class="inline-flex items-center gap-2 bg-green text-white px-4 py-2 rounded-full text-[13px] font-medium">
+            <span aria-hidden="true">🇲🇽</span> 3 Mexico
+          </span>
+          <span class="inline-flex items-center gap-2 bg-red text-white px-4 py-2 rounded-full text-[13px] font-medium">
+            <span aria-hidden="true">🇨🇦</span> 2 Canada
+          </span>
+          <span class="inline-flex items-center gap-2 bg-yellow text-navy px-4 py-2 rounded-full text-[13px] font-medium">
+            <span aria-hidden="true">⚽</span> 48 teams
+          </span>
+        </div>
+      </div>
+
+      <!-- RIGHT (40%) -->
+      <div class="lg:col-span-2 relative">
+        <div class="relative bg-red rounded-3xl border-[6px] border-white shadow-2xl aspect-[3/4] overflow-hidden">
+          <img src="https://images.openlen.com/400-worldcup-striker-1920.webp" alt="The hero striker, in full flight" class="w-full h-full object-cover">
+
+          <!-- Confetti around image -->
+          <svg class="absolute -top-7 -right-7 w-32 h-32 z-20" viewBox="0 0 100 100" aria-hidden="true">
+            <rect x="18" y="20" width="6" height="14" fill="#FFC700" transform="rotate(20 21 27)"/>
+            <circle cx="40" cy="36" r="3" fill="#06A77D"/>
+            <rect x="56" y="28" width="8" height="16" fill="#2563EB" transform="rotate(-30 60 36)"/>
+            <circle cx="78" cy="56" r="4" fill="#FFC700"/>
+            <rect x="60" y="62" width="6" height="14" fill="#E63946" transform="rotate(45 63 69)"/>
+          </svg>
+          <svg class="absolute -bottom-6 -left-6 w-24 h-24 z-20" viewBox="0 0 100 100" aria-hidden="true">
+            <circle cx="20" cy="20" r="4" fill="#FFC700"/>
+            <rect x="36" y="40" width="8" height="18" fill="#06A77D" transform="rotate(35 40 49)"/>
+            <circle cx="60" cy="70" r="3" fill="#E63946"/>
+            <rect x="74" y="50" width="6" height="14" fill="#2563EB" transform="rotate(-20 77 57)"/>
+          </svg>
+        </div>
+
+        <!-- Floating mini-tag -->
+        <div class="hidden md:block absolute -bottom-4 -left-4 bg-white rounded-2xl border-hairline shadow-lg px-4 py-3">
+          <div class="eyebrow text-faint">Opening match</div>
+          <div class="font-display text-xl text-navy mt-0.5">11 Jun · Azteca</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================================
+     3 · MEGA COUNTDOWN
+======================================================================== -->
+<section class="bg-green relative pt-20 md:pt-24 pb-20 md:pb-24 overflow-hidden">
+
+  <!-- Papel picado at top -->
+  <div class="absolute top-0 left-0 right-0 h-12 pointer-events-none papel-sway" aria-hidden="true">
+    <svg viewBox="0 0 1200 50" preserveAspectRatio="none" class="w-full h-full">
+      <line x1="0" y1="5" x2="1200" y2="5" stroke="rgba(255,255,255,0.65)" stroke-width="1.5"/>
+      <polygon points="10,5 40,5 25,40" fill="#FFC700"/>
+      <polygon points="55,5 85,5 70,40" fill="#FFFFFF"/>
+      <polygon points="100,5 130,5 115,40" fill="#E63946"/>
+      <polygon points="145,5 175,5 160,40" fill="#FFFFFF"/>
+      <polygon points="190,5 220,5 205,40" fill="#2563EB"/>
+      <polygon points="235,5 265,5 250,40" fill="#FFFFFF"/>
+      <polygon points="280,5 310,5 295,40" fill="#FFC700"/>
+      <polygon points="325,5 355,5 340,40" fill="#FFFFFF"/>
+      <polygon points="370,5 400,5 385,40" fill="#E63946"/>
+      <polygon points="415,5 445,5 430,40" fill="#FFFFFF"/>
+      <polygon points="460,5 490,5 475,40" fill="#2563EB"/>
+      <polygon points="505,5 535,5 520,40" fill="#FFFFFF"/>
+      <polygon points="550,5 580,5 565,40" fill="#FFC700"/>
+      <polygon points="595,5 625,5 610,40" fill="#FFFFFF"/>
+      <polygon points="640,5 670,5 655,40" fill="#E63946"/>
+      <polygon points="685,5 715,5 700,40" fill="#FFFFFF"/>
+      <polygon points="730,5 760,5 745,40" fill="#2563EB"/>
+      <polygon points="775,5 805,5 790,40" fill="#FFFFFF"/>
+      <polygon points="820,5 850,5 835,40" fill="#FFC700"/>
+      <polygon points="865,5 895,5 880,40" fill="#FFFFFF"/>
+      <polygon points="910,5 940,5 925,40" fill="#E63946"/>
+      <polygon points="955,5 985,5 970,40" fill="#FFFFFF"/>
+      <polygon points="1000,5 1030,5 1015,40" fill="#2563EB"/>
+      <polygon points="1045,5 1075,5 1060,40" fill="#FFFFFF"/>
+      <polygon points="1090,5 1120,5 1105,40" fill="#FFC700"/>
+      <polygon points="1135,5 1165,5 1150,40" fill="#FFFFFF"/>
+    </svg>
+  </div>
+
+  <div class="relative max-w-6xl mx-auto px-4 md:px-8 text-center pt-10">
+    <div class="eyebrow text-yellow mb-3">● Countdown to kickoff</div>
+    <p class="text-white text-lg md:text-xl mb-12 max-w-2xl mx-auto leading-relaxed">June 11, 2026 · 8:00 PM ET · Estadio Azteca, Mexico City</p>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5 mb-10 max-w-4xl mx-auto">
+      <div class="bg-white rounded-3xl py-8 md:py-12 px-3 shadow-lg">
+        <div class="display-num text-navy tabular-nums" style="font-size: clamp(60px, 10vw, 120px);">17</div>
+        <div class="eyebrow text-muted mt-2">Days</div>
+      </div>
+      <div class="bg-white rounded-3xl py-8 md:py-12 px-3 shadow-lg">
+        <div class="display-num text-navy tabular-nums" style="font-size: clamp(60px, 10vw, 120px);">04</div>
+        <div class="eyebrow text-muted mt-2">Hours</div>
+      </div>
+      <div class="bg-white rounded-3xl py-8 md:py-12 px-3 shadow-lg">
+        <div class="display-num text-navy tabular-nums" style="font-size: clamp(60px, 10vw, 120px);">32</div>
+        <div class="eyebrow text-muted mt-2">Minutes</div>
+      </div>
+      <div class="bg-white rounded-3xl py-8 md:py-12 px-3 shadow-lg">
+        <div class="display-num text-navy tabular-nums" style="font-size: clamp(60px, 10vw, 120px);">18</div>
+        <div class="eyebrow text-muted mt-2">Seconds</div>
+      </div>
+    </div>
+
+    <p class="eyebrow text-white/80">Opening match · Mexico vs Opponent TBD</p>
+  </div>
+</section>
+
+<!-- ========================================================================
+     4 · STATS STRIP
+======================================================================== -->
+<section class="bg-cream py-20 md:py-28 px-4 md:px-8">
+  <div class="max-w-6xl mx-auto">
+    <div class="flex flex-wrap md:flex-nowrap items-center justify-center md:justify-between gap-y-14">
+
+      <div class="w-1/2 md:w-auto text-center md:text-left md:px-6">
+        <div class="display-num text-navy tabular-nums" style="font-size: clamp(64px, 8vw, 96px);">3</div>
+        <div class="eyebrow text-muted mt-3">Countries hosting</div>
+      </div>
+
+      <div class="hidden md:block w-px h-24 bg-red"></div>
+
+      <div class="w-1/2 md:w-auto text-center md:text-left md:px-6">
+        <div class="display-num text-navy tabular-nums" style="font-size: clamp(64px, 8vw, 96px);">48</div>
+        <div class="eyebrow text-muted mt-3">Teams qualified</div>
+      </div>
+
+      <div class="hidden md:block w-px h-24 bg-red"></div>
+
+      <div class="w-1/2 md:w-auto text-center md:text-left md:px-6">
+        <div class="display-num text-navy tabular-nums" style="font-size: clamp(64px, 8vw, 96px);">104</div>
+        <div class="eyebrow text-muted mt-3">Matches scheduled</div>
+      </div>
+
+      <div class="hidden md:block w-px h-24 bg-red"></div>
+
+      <div class="w-1/2 md:w-auto text-center md:text-left md:px-6">
+        <div class="display-num text-navy tabular-nums" style="font-size: clamp(64px, 8vw, 96px);">16</div>
+        <div class="eyebrow text-muted mt-3">Cities · 39 days</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================================
+     5 · THE THREE HOSTS
+======================================================================== -->
+<section id="cities" class="bg-cream pb-20 md:pb-28 px-4 md:px-8">
+  <div class="max-w-7xl mx-auto">
+    <div class="text-center mb-14">
+      <div class="eyebrow text-red mb-3">● The hosts</div>
+      <h2 class="display-h2 uppercase max-w-2xl mx-auto" style="font-size: clamp(40px, 7vw, 72px);">Three countries. One tournament.</h2>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
+
+      <!-- US -->
+      <article class="card-lift ring-blue bg-blue text-white rounded-3xl p-7 md:p-9">
+        <div class="flex items-center justify-between mb-6">
+          <div class="bg-white p-1.5 rounded shadow-md">
+            <svg viewBox="0 0 60 40" width="42" height="28" aria-label="US flag">
+              <rect width="60" height="40" fill="#FFFFFF"/>
+              <rect y="3" width="60" height="3" fill="#B22234"/>
+              <rect y="9" width="60" height="3" fill="#B22234"/>
+              <rect y="15" width="60" height="3" fill="#B22234"/>
+              <rect y="21" width="60" height="3" fill="#B22234"/>
+              <rect y="27" width="60" height="3" fill="#B22234"/>
+              <rect y="33" width="60" height="3" fill="#B22234"/>
+              <rect width="24" height="21" fill="#3C3B6E"/>
+            </svg>
+          </div>
+          <div class="eyebrow opacity-75">Host A</div>
+        </div>
+        <h3 class="display-h2 uppercase text-3xl md:text-4xl mb-1">United States</h3>
+        <p class="eyebrow opacity-80 mb-6">11 cities · 78 matches</p>
+        <ul class="space-y-1.5 text-[15px] font-medium">
+          <li>Atlanta</li>
+          <li>Boston</li>
+          <li>Dallas</li>
+          <li>Houston</li>
+          <li>Kansas City</li>
+          <li>Los Angeles</li>
+          <li>Miami</li>
+          <li>NY / NJ</li>
+          <li>Philadelphia</li>
+          <li>San Francisco</li>
+          <li>Seattle</li>
+        </ul>
+      </article>
+
+      <!-- MX -->
+      <article class="card-lift ring-yellow bg-green text-white rounded-3xl p-7 md:p-9">
+        <div class="flex items-center justify-between mb-6">
+          <div class="bg-white p-1.5 rounded shadow-md">
+            <svg viewBox="0 0 60 40" width="42" height="28" aria-label="Mexico flag">
+              <rect width="20" height="40" fill="#006847"/>
+              <rect x="20" width="20" height="40" fill="#FFFFFF"/>
+              <rect x="40" width="20" height="40" fill="#CE1126"/>
+              <circle cx="30" cy="20" r="4" fill="none" stroke="#5C2C0D" stroke-width="0.8"/>
+            </svg>
+          </div>
+          <div class="eyebrow opacity-75">Host B</div>
+        </div>
+        <h3 class="display-h2 uppercase text-3xl md:text-4xl mb-1">Mexico</h3>
+        <p class="eyebrow opacity-85 mb-6">3 cities · 13 matches</p>
+        <ul class="space-y-1.5 text-[15px] font-medium mb-6">
+          <li>Ciudad de México</li>
+          <li>Guadalajara</li>
+          <li>Monterrey</li>
+        </ul>
+        <div class="border-t border-white/25 pt-5">
+          <div class="eyebrow text-yellow mb-1.5">Host of the</div>
+          <div class="font-display uppercase text-xl">Opening match · Jun 11</div>
+        </div>
+      </article>
+
+      <!-- CAN -->
+      <article class="card-lift ring-yellow bg-red text-white rounded-3xl p-7 md:p-9">
+        <div class="flex items-center justify-between mb-6">
+          <div class="bg-white p-1.5 rounded shadow-md">
+            <svg viewBox="0 0 60 40" width="42" height="28" aria-label="Canada flag">
+              <rect width="15" height="40" fill="#FF0000"/>
+              <rect x="15" width="30" height="40" fill="#FFFFFF"/>
+              <rect x="45" width="15" height="40" fill="#FF0000"/>
+              <path d="M30 9 L31.4 13 L35 12.5 L33.6 16 L37 17.5 L33.6 19.5 L34.5 23.5 L31 22 L30 26 L29 22 L25.5 23.5 L26.4 19.5 L23 17.5 L26.4 16 L25 12.5 L28.6 13 Z" fill="#FF0000"/>
+            </svg>
+          </div>
+          <div class="eyebrow opacity-75">Host C</div>
+        </div>
+        <h3 class="display-h2 uppercase text-3xl md:text-4xl mb-1">Canada</h3>
+        <p class="eyebrow opacity-85 mb-6">2 cities · 13 matches</p>
+        <ul class="space-y-1.5 text-[15px] font-medium mb-6">
+          <li>Toronto</li>
+          <li>Vancouver</li>
+        </ul>
+        <div class="border-t border-white/25 pt-5">
+          <div class="eyebrow text-yellow mb-1.5">First time</div>
+          <div class="font-display uppercase text-xl">Host country debut</div>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================================
+     6 · THE PATH TO GLORY — 4 vertical poster panels
+======================================================================== -->
+<section id="calendar" class="bg-cream py-20 md:py-28">
+  <div class="max-w-7xl mx-auto px-4 md:px-8 text-center mb-12 md:mb-16">
+    <div class="eyebrow text-red mb-3">● The path to glory</div>
+    <h2 class="display-h2 uppercase max-w-3xl mx-auto" style="font-size: clamp(40px, 7vw, 76px);">Four phases. 39 days. One champion.</h2>
+  </div>
+
+  <div class="max-w-[1600px] mx-auto px-2 md:px-6">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-1 md:gap-2 rounded-2xl md:rounded-3xl overflow-visible">
+
+      <!-- PANEL 01 — Group Stage / RED -->
+      <article class="poster-panel relative aspect-[3/5] overflow-hidden group cursor-pointer rounded-xl md:rounded-2xl">
+        <img src="https://images.openlen.com/401-worldcup-celebration-1920.webp" alt="Group stage — celebration" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+
+        <div class="poster-num absolute top-3 left-4 md:top-5 md:left-6 z-10 select-none">01</div>
+
+        <svg class="absolute top-5 right-4 md:top-7 md:right-6 w-16 h-16 md:w-20 md:h-20 z-10 opacity-95" viewBox="0 0 60 60" aria-hidden="true">
+          <rect x="8" y="12" width="5" height="11" fill="#FFC700" transform="rotate(20 10 17)"/>
+          <circle cx="28" cy="10" r="2.5" fill="#FFFFFF"/>
+          <rect x="40" y="22" width="6" height="12" fill="#FFFFFF" transform="rotate(-30 43 28)"/>
+          <circle cx="48" cy="46" r="2" fill="#FFC700"/>
+          <rect x="14" y="40" width="5" height="11" fill="#FFC700" transform="rotate(40 16 46)"/>
+        </svg>
+
+        <div class="poster-overlay absolute bottom-0 left-0 right-0 px-5 py-5 md:px-7 md:py-7 flex flex-col justify-end text-white" style="background-color: #E63946; height: 45%;">
+          <h3 class="font-display uppercase leading-[0.95] mb-3" style="font-size: clamp(20px, 3.1vw, 40px); letter-spacing: -0.03em;">Group Stage</h3>
+          <div class="font-mono uppercase mb-3" style="font-size: clamp(9px, 0.85vw, 12px); letter-spacing: 0.14em;">Jun 11 — Jun 27</div>
+          <div class="font-mono leading-relaxed opacity-90" style="font-size: clamp(9px, 0.8vw, 11px);">72 matches · 12 groups · every nation, a story</div>
+        </div>
+      </article>
+
+      <!-- PANEL 02 — Round of 32 / GREEN -->
+      <article class="poster-panel relative aspect-[3/5] overflow-hidden group cursor-pointer rounded-xl md:rounded-2xl">
+        <img src="https://images.openlen.com/402-worldcup-captain-1920.webp" alt="Round of 32 — captain dribbling" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+
+        <div class="poster-num absolute top-3 left-4 md:top-5 md:left-6 z-10 select-none">02</div>
+
+        <svg class="absolute top-5 right-4 md:top-7 md:right-6 w-16 h-16 md:w-20 md:h-20 z-10 opacity-95" viewBox="0 0 60 60" aria-hidden="true">
+          <circle cx="14" cy="12" r="2.5" fill="#FFC700"/>
+          <rect x="30" y="20" width="5" height="11" fill="#FFFFFF" transform="rotate(-25 32 25)"/>
+          <circle cx="48" cy="14" r="2" fill="#FFFFFF"/>
+          <rect x="20" y="46" width="6" height="12" fill="#FFC700" transform="rotate(40 23 52)"/>
+          <circle cx="46" cy="44" r="2.5" fill="#FFC700"/>
+        </svg>
+
+        <div class="poster-overlay absolute bottom-0 left-0 right-0 px-5 py-5 md:px-7 md:py-7 flex flex-col justify-end text-white" style="background-color: #06A77D; height: 45%;">
+          <h3 class="font-display uppercase leading-[0.95] mb-3" style="font-size: clamp(20px, 3.1vw, 40px); letter-spacing: -0.03em;">Round of 32</h3>
+          <div class="font-mono uppercase mb-3" style="font-size: clamp(9px, 0.85vw, 12px); letter-spacing: 0.14em;">Jun 28 — Jul 3</div>
+          <div class="font-mono leading-relaxed opacity-90" style="font-size: clamp(9px, 0.8vw, 11px);">16 matches · no second chances</div>
+        </div>
+      </article>
+
+      <!-- PANEL 03 — Quarters + Semis / BLUE -->
+      <article class="poster-panel relative aspect-[3/5] overflow-hidden group cursor-pointer rounded-xl md:rounded-2xl">
+        <img src="https://images.openlen.com/403-worldcup-sprint-1920.webp" alt="Quarter & semi-finals — sprint" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+
+        <div class="poster-num absolute top-3 left-4 md:top-5 md:left-6 z-10 select-none">03</div>
+
+        <svg class="absolute top-5 right-4 md:top-7 md:right-6 w-16 h-16 md:w-20 md:h-20 z-10 opacity-95" viewBox="0 0 60 60" aria-hidden="true">
+          <rect x="10" y="10" width="5" height="11" fill="#FFC700" transform="rotate(30 12 16)"/>
+          <circle cx="32" cy="14" r="2.5" fill="#FFFFFF"/>
+          <rect x="44" y="24" width="6" height="12" fill="#FFC700" transform="rotate(-30 47 30)"/>
+          <circle cx="14" cy="44" r="2" fill="#FFC700"/>
+          <rect x="34" y="44" width="5" height="11" fill="#FFFFFF" transform="rotate(15 36 50)"/>
+        </svg>
+
+        <div class="poster-overlay absolute bottom-0 left-0 right-0 px-5 py-5 md:px-7 md:py-7 flex flex-col justify-end text-white" style="background-color: #2563EB; height: 45%;">
+          <h3 class="font-display uppercase leading-[0.95] mb-3" style="font-size: clamp(20px, 3.1vw, 40px); letter-spacing: -0.03em;">Quarters + Semis</h3>
+          <div class="font-mono uppercase mb-3" style="font-size: clamp(9px, 0.85vw, 12px); letter-spacing: 0.14em;">Jul 4 — Jul 14</div>
+          <div class="font-mono leading-relaxed opacity-90" style="font-size: clamp(9px, 0.8vw, 11px);">12 matches · from 16 to 4</div>
+        </div>
+      </article>
+
+      <!-- PANEL 04 — The Final / YELLOW -->
+      <article class="poster-panel relative aspect-[3/5] overflow-hidden group cursor-pointer rounded-xl md:rounded-2xl">
+        <img src="https://images.openlen.com/404-worldcup-goalkeeper-1920.webp" alt="The final — goalkeeper save" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+
+        <div class="poster-num absolute top-3 left-4 md:top-5 md:left-6 z-10 select-none">04</div>
+
+        <svg class="absolute top-5 right-4 md:top-7 md:right-6 w-16 h-16 md:w-20 md:h-20 z-10 opacity-95" viewBox="0 0 60 60" aria-hidden="true">
+          <circle cx="14" cy="14" r="2.5" fill="#FFC700"/>
+          <rect x="28" y="22" width="5" height="11" fill="#FFFFFF" transform="rotate(40 30 27)"/>
+          <circle cx="48" cy="20" r="2" fill="#FFFFFF"/>
+          <rect x="40" y="44" width="6" height="12" fill="#FFC700" transform="rotate(-25 43 50)"/>
+          <circle cx="20" cy="48" r="2" fill="#FFC700"/>
+        </svg>
+
+        <div class="poster-overlay absolute bottom-0 left-0 right-0 px-5 py-5 md:px-7 md:py-7 flex flex-col justify-end text-navy" style="background-color: #FFC700; height: 45%;">
+          <h3 class="font-display uppercase leading-[0.95] mb-3" style="font-size: clamp(20px, 3.1vw, 40px); letter-spacing: -0.03em;">The Final</h3>
+          <div class="font-mono uppercase mb-3 opacity-85" style="font-size: clamp(9px, 0.85vw, 12px); letter-spacing: 0.14em;">Jul 19</div>
+          <div class="font-mono leading-relaxed opacity-80" style="font-size: clamp(9px, 0.8vw, 11px);">1 match · MetLife Stadium · 5B viewers</div>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================================
+     7 · FULL-BLEED STADIUM BANNER
+======================================================================== -->
+<section class="relative full-bleed">
+  <div class="relative w-full aspect-[16/9] bg-navy overflow-hidden">
+    <img src="https://images.openlen.com/406-worldcup-stadium-1920.webp" alt="A packed stadium under floodlights" class="absolute inset-0 w-full h-full object-cover">
+    <div class="absolute inset-0" style="background: linear-gradient(180deg, rgba(10,22,40,0.25) 0%, rgba(10,22,40,0.45) 100%);"></div>
+
+    <div class="relative h-full flex items-center justify-center px-6">
+      <h2 class="font-display text-white text-center uppercase" style="font-size: clamp(40px, 9vw, 120px); letter-spacing: -0.03em; text-shadow: 0 2px 30px rgba(0,0,0,0.4);">Where dreams come to life</h2>
+    </div>
+
+    <div class="absolute bottom-4 right-4 md:bottom-6 md:right-8 eyebrow text-white/80">Stadium TBD · July 19 · 2026</div>
+  </div>
+</section>
+
+<!-- ========================================================================
+     8 · THE TROPHY
+======================================================================== -->
+<section class="bg-cream py-20 md:py-28 px-4 md:px-8 overflow-hidden">
+  <div class="max-w-3xl mx-auto text-center">
+    <div class="eyebrow text-red mb-3">● The prize</div>
+    <h2 class="display-h2 uppercase mb-14" style="font-size: clamp(40px, 7vw, 80px);">Lift it. Or chase it for another four years.</h2>
+
+    <div class="relative inline-block mb-14">
+
+      <!-- Surrounding confetti -->
+      <svg class="absolute -top-10 -left-12 w-28 h-28 md:w-32 md:h-32" viewBox="0 0 100 100" aria-hidden="true">
+        <rect x="14" y="22" width="6" height="14" fill="#E63946" transform="rotate(20 17 29)"/>
+        <circle cx="38" cy="14" r="3" fill="#06A77D"/>
+        <rect x="50" y="36" width="8" height="16" fill="#2563EB" transform="rotate(-30 54 44)"/>
+        <circle cx="78" cy="20" r="4" fill="#FFC700"/>
+        <rect x="20" y="68" width="6" height="14" fill="#FFC700" transform="rotate(45 23 75)"/>
+      </svg>
+
+      <svg class="absolute -top-6 -right-12 w-24 h-24 md:w-32 md:h-32" viewBox="0 0 100 100" aria-hidden="true">
+        <circle cx="20" cy="24" r="3" fill="#FFC700"/>
+        <rect x="36" y="18" width="8" height="16" fill="#06A77D" transform="rotate(35 40 26)"/>
+        <circle cx="64" cy="44" r="4" fill="#E63946"/>
+        <rect x="74" y="62" width="6" height="14" fill="#2563EB" transform="rotate(-20 77 69)"/>
+        <circle cx="36" cy="80" r="3" fill="#FFC700"/>
+      </svg>
+
+      <svg class="absolute -bottom-6 -left-12 w-24 h-24 md:w-28 md:h-28" viewBox="0 0 100 100" aria-hidden="true">
+        <rect x="16" y="30" width="8" height="18" fill="#06A77D" transform="rotate(25 20 39)"/>
+        <circle cx="46" cy="52" r="3" fill="#E63946"/>
+        <rect x="64" y="22" width="6" height="14" fill="#FFC700" transform="rotate(60 67 29)"/>
+        <circle cx="80" cy="70" r="4" fill="#2563EB"/>
+      </svg>
+
+      <svg class="absolute -bottom-10 -right-8 w-28 h-28 md:w-32 md:h-32" viewBox="0 0 100 100" aria-hidden="true">
+        <circle cx="22" cy="30" r="4" fill="#E63946"/>
+        <rect x="42" y="14" width="6" height="14" fill="#2563EB" transform="rotate(-35 45 21)"/>
+        <circle cx="68" cy="56" r="3" fill="#FFC700"/>
+        <rect x="78" y="26" width="8" height="18" fill="#06A77D" transform="rotate(40 82 35)"/>
+      </svg>
+
+      <!-- Trophy image -->
+      <div class="w-64 md:w-80 mx-auto relative z-10">
+        <img src="https://images.openlen.com/405-worldcup-trophy-1920.webp" alt="The trophy" class="w-full h-auto" style="filter: drop-shadow(0 24px 50px rgba(0,0,0,0.18)) drop-shadow(0 6px 12px rgba(0,0,0,0.06));">
+      </div>
+    </div>
+
+    <p class="text-lg md:text-xl text-muted leading-relaxed max-w-2xl mx-auto">Eighteen pounds of solid gold. The single most coveted object in sport. Lifted once on July 19. Chased for another four years by every nation that came up short.</p>
+  </div>
+</section>
+
+<!-- ========================================================================
+     9 · FULL-BLEED CITY BANNER
+======================================================================== -->
+<section class="relative full-bleed">
+  <div class="relative w-full aspect-[16/9] bg-navy overflow-hidden">
+    <img src="https://images.openlen.com/407-worldcup-skyline-1920.webp" alt="New York at sunset" class="absolute inset-0 w-full h-full object-cover">
+    <div class="absolute inset-0" style="background: linear-gradient(180deg, rgba(10,22,40,0.15) 0%, rgba(230,57,70,0.32) 100%);"></div>
+
+    <div class="relative h-full flex items-center justify-center px-6">
+      <h2 class="font-display text-white text-center uppercase max-w-5xl" style="font-size: clamp(36px, 7.5vw, 104px); letter-spacing: -0.03em; text-shadow: 0 2px 30px rgba(0,0,0,0.45);">Every city turns the colors of football</h2>
+    </div>
+
+    <div class="absolute bottom-4 right-4 md:bottom-6 md:right-8 eyebrow text-white/85">New York · Starting June 11</div>
+  </div>
+</section>
+
+<!-- ========================================================================
+     10 · FIXTURE ALERTS SIGNUP
+======================================================================== -->
+<section id="alerts" class="bg-red relative py-20 md:py-28 px-4 md:px-8 overflow-hidden">
+
+  <!-- Confetti decoration -->
+  <svg class="absolute top-8 left-6 w-28 h-28 opacity-70 hidden md:block" viewBox="0 0 100 100" aria-hidden="true">
+    <rect x="16" y="20" width="6" height="14" fill="#FFC700" transform="rotate(20 19 27)"/>
+    <circle cx="42" cy="14" r="3" fill="#FFFFFF"/>
+    <rect x="56" y="32" width="8" height="16" fill="#FFC700" transform="rotate(-30 60 40)"/>
+    <circle cx="80" cy="56" r="4" fill="#FFFFFF"/>
+    <rect x="22" y="62" width="6" height="14" fill="#FFFFFF" transform="rotate(45 25 69)"/>
+  </svg>
+
+  <svg class="absolute top-12 right-8 w-32 h-32 opacity-70 hidden md:block" viewBox="0 0 100 100" aria-hidden="true">
+    <circle cx="20" cy="20" r="4" fill="#FFC700"/>
+    <rect x="40" y="36" width="6" height="14" fill="#FFFFFF" transform="rotate(35 43 43)"/>
+    <circle cx="68" cy="58" r="3" fill="#FFC700"/>
+    <rect x="78" y="22" width="6" height="14" fill="#FFFFFF" transform="rotate(-20 81 29)"/>
+  </svg>
+
+  <svg class="absolute bottom-10 left-1/4 w-20 h-20 opacity-70 hidden md:block" viewBox="0 0 100 100" aria-hidden="true">
+    <circle cx="40" cy="40" r="3" fill="#FFFFFF"/>
+    <rect x="60" y="50" width="6" height="14" fill="#FFC700" transform="rotate(40 63 57)"/>
+  </svg>
+
+  <svg class="absolute bottom-12 right-1/4 w-24 h-24 opacity-70 hidden md:block" viewBox="0 0 100 100" aria-hidden="true">
+    <rect x="18" y="30" width="8" height="16" fill="#FFC700" transform="rotate(25 22 38)"/>
+    <circle cx="60" cy="50" r="4" fill="#FFFFFF"/>
+    <rect x="74" y="62" width="6" height="14" fill="#FFC700" transform="rotate(-30 77 69)"/>
+  </svg>
+
+  <div class="relative max-w-2xl mx-auto text-center">
+    <div class="eyebrow text-yellow mb-3">● Stay in the loop</div>
+    <h2 class="display-h2 uppercase text-white mb-6" style="font-size: clamp(40px, 7vw, 80px);">Never miss a match.</h2>
+    <p class="text-white/95 text-lg md:text-xl mb-10 leading-relaxed">Match-day alerts, score updates, and exclusive city guides. One email per match-day during the tournament. Zero spam.</p>
+
+    <form class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+      <label class="sr-only" for="alerts-email">Email</label>
+      <input id="alerts-email" type="email" required placeholder="you@email.com" class="form-input flex-1 bg-white rounded-full px-5 py-3.5 text-navy placeholder:text-faint shadow-md font-medium">
+      <button type="submit" class="cta-white rounded-full px-7 py-3.5 font-semibold whitespace-nowrap shadow-md">Sign me up →</button>
+    </form>
+
+    <p class="eyebrow text-white/75 mt-6">Replies within 48 hours · Free during the tournament · Unsubscribe anytime</p>
+  </div>
+</section>
+
+<!-- ========================================================================
+     11 · FAQ
+======================================================================== -->
+<section class="bg-cream py-20 md:py-28 px-4 md:px-8">
+  <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20">
+
+    <div>
+      <div class="eyebrow text-red mb-3">● FAQ</div>
+      <h2 class="display-h2 uppercase" style="font-size: clamp(40px, 6.5vw, 76px);">The questions everyone asks.</h2>
+      <p class="text-muted mt-6 max-w-md leading-relaxed">Quick answers to what most fans ask us. Send a follow-up if yours isn't here — we read everything.</p>
+    </div>
+
+    <div class="divide-y" style="border-color: var(--hairline);">
+      <details class="group py-6" style="border-color: var(--hairline);">
+        <summary class="flex items-start justify-between gap-4">
+          <h3 class="font-semibold text-lg md:text-xl pr-4">When does it start and end?</h3>
+          <span class="faq-icon text-red text-3xl shrink-0 leading-none">+</span>
+        </summary>
+        <p class="mt-4 text-muted leading-relaxed">June 11, 2026 (opening match in Mexico City) to July 19, 2026 (final at MetLife Stadium).</p>
+      </details>
+
+      <details class="group py-6" style="border-color: var(--hairline);">
+        <summary class="flex items-start justify-between gap-4">
+          <h3 class="font-semibold text-lg md:text-xl pr-4">How is the format different from previous World Cups?</h3>
+          <span class="faq-icon text-red text-3xl shrink-0 leading-none">+</span>
+        </summary>
+        <p class="mt-4 text-muted leading-relaxed">First-ever 48-team field, expanded from 32. A new "Round of 32" knockout phase has been added between the group stage and the round of 16. More matches, more groups, more drama.</p>
+      </details>
+
+      <details class="group py-6" style="border-color: var(--hairline);">
+        <summary class="flex items-start justify-between gap-4">
+          <h3 class="font-semibold text-lg md:text-xl pr-4">Where can I watch?</h3>
+          <span class="faq-icon text-red text-3xl shrink-0 leading-none">+</span>
+        </summary>
+        <p class="mt-4 text-muted leading-relaxed">Local broadcast varies by country. Major US: Fox + Telemundo. Mexico: Televisa + TUDN. Canada: TSN + RDS. Check your regional listings closer to kickoff — we'll publish a full breakdown by region in May.</p>
+      </details>
+
+      <details class="group py-6" style="border-color: var(--hairline);">
+        <summary class="flex items-start justify-between gap-4">
+          <h3 class="font-semibold text-lg md:text-xl pr-4">How do I get tickets?</h3>
+          <span class="faq-icon text-red text-3xl shrink-0 leading-none">+</span>
+        </summary>
+        <p class="mt-4 text-muted leading-relaxed">Phase 1 sales open through the official tournament ticketing portal. Watch for hospitality packages from select tour operators in each host country — those tend to bundle accommodation, transport, and seat access.</p>
+      </details>
+
+      <details class="group py-6" style="border-color: var(--hairline);">
+        <summary class="flex items-start justify-between gap-4">
+          <h3 class="font-semibold text-lg md:text-xl pr-4">Is travel between host countries practical?</h3>
+          <span class="faq-icon text-red text-3xl shrink-0 leading-none">+</span>
+        </summary>
+        <p class="mt-4 text-muted leading-relaxed">Yes for fans willing to plan. Most fans pick one country (or two adjacent). Mexico ↔ US flights are 2–4 hours. US ↔ Canada are short hops. We'll publish multi-city routing guides as the draw confirms matchups.</p>
+      </details>
+    </div>
+
+  </div>
+</section>
+
+<!-- ========================================================================
+     12 · FOOTER
+======================================================================== -->
+<footer class="bg-cream pt-20 pb-10 px-4 md:px-8 border-t-hairline">
+  <div class="max-w-7xl mx-auto">
+
+    <div class="grid grid-cols-2 lg:grid-cols-6 gap-10 lg:gap-12 mb-16">
+
+      <!-- Brand + newsletter (2 cols on lg) -->
+      <div class="col-span-2">
+        <a href="#" class="font-display text-3xl flex items-center mb-3" aria-label="Mundial 26 home">
+          <span class="wm-r">M</span><span class="wm-g">U</span><span class="wm-n">N</span><span class="wm-r">D</span><span class="wm-g">I</span><span class="wm-n">A</span><span class="wm-r">L</span>
+          <span class="wm-y mx-1.5 text-[24px]">★</span>
+          <span class="wm-g">2</span><span class="wm-n">6</span>
+        </a>
+        <p class="text-sm text-muted mb-6 max-w-xs leading-relaxed">An unofficial fan resource. Not affiliated with FIFA.</p>
+
+        <form class="flex gap-2 max-w-xs">
+          <label class="sr-only" for="footer-email">Email</label>
+          <input id="footer-email" type="email" placeholder="you@email.com" class="form-input flex-1 bg-white border-hairline rounded-full px-4 py-2 text-sm">
+          <button type="submit" class="cta-red rounded-full px-4 py-2 text-sm font-semibold inline-flex items-center" aria-label="Subscribe">→</button>
+        </form>
+      </div>
+
+      <!-- Tournament -->
+      <div>
+        <div class="eyebrow text-navy mb-4">Tournament</div>
+        <ul class="space-y-2.5 text-[14px] text-muted">
+          <li><a href="#" class="hover:text-red transition-colors">Schedule</a></li>
+          <li><a href="#" class="hover:text-red transition-colors">Teams</a></li>
+          <li><a href="#" class="hover:text-red transition-colors">Cities</a></li>
+          <li><a href="#" class="hover:text-red transition-colors">Stadiums</a></li>
+        </ul>
+      </div>
+
+      <!-- Watch -->
+      <div>
+        <div class="eyebrow text-navy mb-4">Watch</div>
+        <ul class="space-y-2.5 text-[14px] text-muted">
+          <li><a href="#" class="hover:text-red transition-colors">Broadcasters</a></li>
+          <li><a href="#" class="hover:text-red transition-colors">Streaming</a></li>
+          <li><a href="#" class="hover:text-red transition-colors">Times by region</a></li>
+        </ul>
+      </div>
+
+      <!-- About -->
+      <div>
+        <div class="eyebrow text-navy mb-4">About</div>
+        <ul class="space-y-2.5 text-[14px] text-muted">
+          <li><a href="#" class="hover:text-red transition-colors">Our story</a></li>
+          <li><a href="#" class="hover:text-red transition-colors">Contact</a></li>
+          <li><a href="#" class="hover:text-red transition-colors">Press</a></li>
+        </ul>
+      </div>
+
+      <!-- Legal -->
+      <div>
+        <div class="eyebrow text-navy mb-4">Legal</div>
+        <ul class="space-y-2.5 text-[14px] text-muted">
+          <li><a href="#" class="hover:text-red transition-colors">Terms</a></li>
+          <li><a href="#" class="hover:text-red transition-colors">Privacy</a></li>
+          <li><a href="#" class="hover:text-red transition-colors">Disclaimer</a></li>
+        </ul>
+      </div>
+
+    </div>
+
+    <div class="border-t-hairline pt-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+      <p class="font-mono text-[10px] md:text-[11px] text-faint uppercase tracking-wider max-w-3xl leading-relaxed">© 2026 Mundial 26 · An unofficial fan community resource. Not affiliated with FIFA, the International Football Federation, or any host country.</p>
+
+      <div class="flex items-center gap-5">
+        <a href="#" aria-label="Instagram" class="text-muted hover:text-red transition-colors">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+          </svg>
+        </a>
+        <a href="#" aria-label="TikTok" class="text-muted hover:text-red transition-colors">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5.8 20.1a6.34 6.34 0 0 0 10.86-4.43V8.45a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.84-.38z"/>
+          </svg>
+        </a>
+        <a href="#" aria-label="YouTube" class="text-muted hover:text-red transition-colors">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M21.582 6.186a2.506 2.506 0 0 0-1.768-1.768C18.254 4 12 4 12 4s-6.254 0-7.814.418a2.506 2.506 0 0 0-1.768 1.768C2 7.746 2 12 2 12s0 4.254.418 5.814a2.506 2.506 0 0 0 1.768 1.768C5.746 20 12 20 12 20s6.254 0 7.814-.418a2.506 2.506 0 0 0 1.768-1.768C22 16.254 22 12 22 12s0-4.254-.418-5.814zM10 15.464V8.536L16 12l-6 3.464z"/>
+          </svg>
+        </a>
+        <a href="#" aria-label="X" class="text-muted hover:text-red transition-colors">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,1426 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Switchback — The Dolomites High Route · 9 days, hut to hut</title>
+<meta name="description" content="A guided 9-day hut-to-hut trek across the Italian Dolomites — Alpe di Siusi to the Tre Cime, six rifugios, one 3,000m summit day. Max 12 walkers, IFMGA guides, from $2,890. Departures June–September 2026." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          bg: '#0E1113',
+          surface: '#161A1D',
+          surface2: '#1B2024',
+          ink: '#EEF1F2',
+          mute: '#9AA3A6',
+          faint: '#646C70',
+          accent: '#EE6C2B',
+          accent2: '#F4915C',
+        },
+        fontFamily: {
+          sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+          mono: ['"Geist Mono"', 'ui-monospace', 'monospace'],
+        },
+      },
+    },
+  };
+</script>
+<style>
+  :root{
+    --bg:#0E1113;
+    --surface:#161A1D;
+    --surface-2:#1B2024;
+    --text:#EEF1F2;
+    --muted:#9AA3A6;
+    --faint:#646C70;
+    --accent:#EE6C2B;
+    --accent-2:#F4915C;
+    --line:rgba(255,255,255,0.07);
+    --line-strong:rgba(255,255,255,0.11);
+    --line-accent:rgba(238,108,43,0.32);
+  }
+  *{ -webkit-tap-highlight-color:transparent; }
+  html{ scroll-behavior:smooth; }
+  html,body{ background:var(--bg); color:var(--text); }
+  body{
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+    font-feature-settings:"ss01","cv11";
+    font-optical-sizing:auto;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    text-rendering:optimizeLegibility;
+    line-height:1.6;
+  }
+  section[id]{ scroll-margin-top:88px; }
+
+  /* ---- typography ---- */
+  .display{
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    letter-spacing:-0.035em;
+    line-height:1.03;
+    font-optical-sizing:auto;
+  }
+  .display-sm{
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    letter-spacing:-0.03em;
+    line-height:1.08;
+  }
+  .mono{ font-family:'Geist Mono',ui-monospace,Menlo,monospace; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  .halftone{ opacity:0.45; }
+  .eyebrow{
+    font-family:'Geist Mono',ui-monospace,monospace;
+    font-size:11px;
+    letter-spacing:0.19em;
+    text-transform:uppercase;
+    color:var(--faint);
+  }
+  .accent-line{ display:inline-block; width:26px; height:1px; background:var(--accent); vertical-align:middle; margin-right:11px; }
+
+  /* ---- hairlines ---- */
+  .line{ border-color:var(--line); }
+  .line-strong{ border-color:var(--line-strong); }
+  .line-accent{ border-color:var(--line-accent); }
+
+  /* ---- ambient ---- */
+  .dot-grid{
+    background-image:radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size:32px 32px;
+    background-position:-8px -8px;
+  }
+  .mesh-blob{
+    position:absolute;
+    border-radius:9999px;
+    filter:blur(120px);
+    pointer-events:none;
+    z-index:0;
+  }
+  .mesh-warm{ background:radial-gradient(circle, rgba(238,108,43,0.22) 0%, rgba(238,108,43,0) 70%); }
+  .mesh-cool{ background:radial-gradient(circle, rgba(74,108,128,0.16) 0%, rgba(74,108,128,0) 72%); }
+  .hero-glow{ background:radial-gradient(ellipse 64% 52% at 50% 0%, rgba(238,108,43,0.14) 0%, rgba(14,17,19,0) 62%); }
+
+  /* ---- pulse dot ---- */
+  .pulse-dot{
+    position:relative;
+    display:inline-block;
+    width:7px;
+    height:7px;
+    border-radius:9999px;
+    background:var(--accent);
+  }
+  .pulse-dot::after{
+    content:'';
+    position:absolute;
+    inset:0;
+    border-radius:9999px;
+    animation:pulse-ring 2.3s cubic-bezier(0.4,0,0.6,1) infinite;
+  }
+  @keyframes pulse-ring{
+    0%{ box-shadow:0 0 0 0 rgba(238,108,43,0.55); }
+    70%{ box-shadow:0 0 0 10px rgba(238,108,43,0); }
+    100%{ box-shadow:0 0 0 0 rgba(238,108,43,0); }
+  }
+
+  /* ---- marquee ---- */
+  .marquee-wrap{
+    overflow:hidden;
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);
+    mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);
+  }
+  .marquee-track{
+    display:flex;
+    width:max-content;
+    align-items:center;
+    animation:marquee 44s linear infinite;
+  }
+  .marquee-wrap:hover .marquee-track{ animation-play-state:paused; }
+  @keyframes marquee{
+    from{ transform:translateX(0); }
+    to{ transform:translateX(-50%); }
+  }
+
+  /* ---- buttons ---- */
+  .btn{ transition:transform 110ms ease, background-color 110ms ease, border-color 110ms ease, box-shadow 110ms ease; }
+  .btn:hover{ transform:translateY(-2px); }
+  .btn:active{ transform:translateY(0); }
+  .btn-accent{
+    background:var(--accent);
+    color:#160C04;
+    box-shadow:0 10px 30px -10px rgba(238,108,43,0.55);
+  }
+  .btn-accent:hover{
+    background:var(--accent-2);
+    box-shadow:0 14px 38px -10px rgba(238,108,43,0.66);
+  }
+  .btn-ghost{
+    background:var(--surface);
+    border:1px solid var(--line-strong);
+    color:var(--text);
+  }
+  .btn-ghost:hover{ border-color:var(--line-accent); background:var(--surface-2); }
+
+  /* ---- card lift ---- */
+  .card-lift{ transition:transform 140ms ease, border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease; }
+  .card-lift:hover{
+    transform:translateY(-3px);
+    border-color:var(--line-accent);
+    box-shadow:0 20px 44px -28px rgba(0,0,0,0.85);
+  }
+
+  /* ---- navlink ---- */
+  .navlink{ position:relative; transition:color 120ms ease; }
+  .navlink::after{
+    content:'';
+    position:absolute;
+    left:0; right:0; bottom:-5px;
+    height:1px;
+    background:var(--accent);
+    transform:scaleX(0);
+    transform-origin:right center;
+    transition:transform 240ms cubic-bezier(.2,.7,.2,1);
+  }
+  .navlink:hover{ color:var(--text); }
+  .navlink:hover::after{ transform:scaleX(1); transform-origin:left center; }
+
+  .arrow-x{ transition:transform 140ms ease; }
+  a:hover .arrow-x, button:hover .arrow-x{ transform:translateX(3px); }
+
+  /* ---- gradient "photo" placeholders — destination-evocative ---- */
+  .photo-hero{
+    background:
+      radial-gradient(120% 76% at 50% 118%, rgba(14,17,19,0.97) 0%, transparent 54%),
+      radial-gradient(58% 46% at 78% 16%, rgba(244,145,92,0.30) 0%, transparent 60%),
+      radial-gradient(50% 40% at 16% 12%, rgba(238,108,43,0.18) 0%, transparent 64%),
+      linear-gradient(172deg, #2A1E16 0%, #3A2A1C 24%, #4A3624 46%, #614536 64%, #2B2530 82%, #14171B 100%);
+  }
+  .photo-dawn{ background:linear-gradient(165deg, #3C2A1E 0%, #5A3D26 32%, #7A5236 56%, #A07246 74%, #2A2128 100%); }
+  .photo-ridge{ background:linear-gradient(158deg, #2D2218 0%, #4A3722 40%, #6E5234 64%, #8A6840 82%, #20242A 100%); }
+  .photo-bluehour{ background:linear-gradient(172deg, #1A2230 0%, #29384C 42%, #3C5066 66%, #4A6178 82%, #161B22 100%); }
+  .photo-meadow{ background:linear-gradient(160deg, #283222 0%, #3E4E2E 46%, #57683C 70%, #6E7A48 86%, #1E222A 100%); }
+  .photo-glacier{ background:linear-gradient(168deg, #20303A 0%, #34505C 44%, #4A6E7C 68%, #6A8E98 84%, #181E24 100%); }
+  .photo-hut-a{ background:linear-gradient(156deg, #322519 0%, #4E3A24 48%, #6A5034 74%, #221F22 100%); }
+  .photo-hut-b{ background:linear-gradient(150deg, #2A2230 0%, #3E3448 46%, #56486C 72%, #1E222A 100%); }
+  .photo-hut-c{ background:linear-gradient(166deg, #1E2A2E 0%, #324448 46%, #4A6064 72%, #1A2024 100%); }
+  .photo-hut-d{ background:linear-gradient(160deg, #322014 0%, #523620 44%, #774E2E 70%, #20191A 100%); }
+  .photo-summit{
+    background:
+      radial-gradient(60% 44% at 50% 16%, rgba(244,145,92,0.30) 0%, transparent 62%),
+      linear-gradient(176deg, #3A2A1E 0%, #5C4128 36%, #886040 60%, #B98E5E 80%, #1C212A 100%);
+  }
+  .photo-trip-a{ background:linear-gradient(160deg, #2C2218 0%, #4A3724 48%, #6E5236 74%, #20242A 100%); }
+  .photo-trip-b{ background:linear-gradient(164deg, #1E2632 0%, #324050 46%, #48607A 72%, #181D24 100%); }
+  .photo-trip-c{ background:linear-gradient(158deg, #263022 0%, #3C4C30 46%, #56683E 72%, #1E222A 100%); }
+
+  /* guide avatars */
+  .av-1{ background:radial-gradient(122% 112% at 30% 22%, #F4915C 0%, #A05A2E 54%, #2E2018 100%); }
+  .av-2{ background:radial-gradient(122% 112% at 68% 26%, #8FA8B6 0%, #4A5E6C 54%, #1E262C 100%); }
+
+  /* ---- details / FAQ ---- */
+  details>summary{ list-style:none; cursor:pointer; }
+  details>summary::-webkit-details-marker{ display:none; }
+  details[open] .faq-sign{ transform:rotate(45deg); }
+  .faq-sign{ transition:transform 200ms ease; }
+  .faq-item{ transition:border-color 140ms ease, background-color 140ms ease; }
+  .faq-item:hover{ border-color:var(--line-accent); }
+
+  /* ---- nav ---- */
+  .navbar{
+    backdrop-filter:blur(14px) saturate(150%);
+    -webkit-backdrop-filter:blur(14px) saturate(150%);
+    background:rgba(14,17,19,0.82);
+  }
+
+  ::selection{ background:rgba(238,108,43,0.28); color:var(--text); }
+
+  @media (prefers-reduced-motion:reduce){
+    *{ animation:none !important; transition:none !important; scroll-behavior:auto !important; }
+  }
+</style>
+</head>
+<body class="bg-bg text-ink antialiased overflow-x-hidden">
+
+<!-- ===== 1 · STICKY NAV ===== -->
+<header class="navbar fixed top-0 inset-x-0 z-50 border-b line">
+  <nav class="max-w-[1200px] mx-auto px-5 sm:px-8">
+    <div class="flex items-center justify-between h-[68px]">
+      <a href="#top" class="flex items-center gap-2.5 shrink-0" aria-label="Switchback — home">
+        <span aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="32" height="32" rx="8" fill="#161A1D" stroke="rgba(238,108,43,0.34)"/>
+            <path d="M6 23 L11 23 L13 16 L18 16 L20 9 L26 9" stroke="#EE6C2B" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="11" cy="23" r="1.7" fill="#EE6C2B"/>
+            <circle cx="18" cy="16" r="1.7" fill="#F4915C"/>
+            <circle cx="26" cy="9" r="1.7" fill="#EE6C2B"/>
+          </svg>
+        </span>
+        <span class="text-[17px] font-700 tracking-[-0.02em]">Switchback</span>
+      </a>
+
+      <div class="hidden md:flex items-center gap-8 text-[14px] font-500 text-mute">
+        <a href="#route" class="navlink">The Route</a>
+        <a href="#itinerary" class="navlink">Itinerary</a>
+        <a href="#dates" class="navlink">Dates</a>
+        <a href="#guides" class="navlink">About</a>
+      </div>
+
+      <a href="#dates" class="btn btn-accent inline-flex items-center gap-2 rounded-full px-4 py-2 text-[13.5px] font-700">
+        Book this trek
+      </a>
+    </div>
+  </nav>
+</header>
+
+<main id="top">
+
+  <!-- ===== 2 · HERO ===== -->
+  <section class="relative overflow-hidden hero-glow">
+    <div class="absolute inset-0 photo-hero" aria-hidden="true"></div>
+    <div class="absolute inset-0 dot-grid opacity-30 pointer-events-none" aria-hidden="true"></div>
+    <div class="mesh-blob mesh-warm w-[520px] h-[520px] -top-40 right-[6%] opacity-70"></div>
+
+    <!-- distant ridgeline -->
+    <svg class="absolute bottom-0 inset-x-0 w-full h-[40vh] min-h-[200px] pointer-events-none" viewBox="0 0 1440 340" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 340 V196 L160 150 L300 214 L440 110 L580 198 L720 84 L860 186 L1000 64 L1140 172 L1290 124 L1440 184 V340 Z" fill="rgba(20,24,28,0.5)"/>
+      <path d="M0 340 V252 L190 214 L350 264 L510 188 L670 256 L830 168 L990 248 L1170 200 L1330 262 L1440 226 V340 Z" fill="rgba(14,17,19,0.86)"/>
+    </svg>
+
+    <div class="relative z-10 max-w-[1200px] mx-auto px-5 sm:px-8 pt-[128px] sm:pt-[152px] pb-20 sm:pb-24">
+      <!-- season pill -->
+      <div class="inline-flex items-center gap-2.5 rounded-full border line-accent bg-[rgba(238,108,43,0.08)] pl-2.5 pr-4 py-1.5 mb-8">
+        <span class="pulse-dot"></span>
+        <span class="mono text-[11px] sm:text-[12px] tracking-[0.04em] text-ink">Summer 2026 · June–September departures</span>
+      </div>
+
+      <h1 class="display text-[clamp(2.7rem,7.6vw,5.6rem)] max-w-[15ch]">
+        The Dolomites, the high way.<br class="hidden sm:block" />
+        <span class="halftone">A bed and a hot dinner at every stop.</span>
+      </h1>
+
+      <p class="mt-7 max-w-[58ch] text-[clamp(1.05rem,1.7vw,1.24rem)] leading-[1.62] text-mute">
+        Nine days ridge-to-ridge across the Italian Dolomites — no tent, no resupply, no second-guessing the weather. You walk; we carry the logistics. <em class="not-italic text-ink font-500">Every night ends at a warm rifugio.</em>
+      </p>
+
+      <div class="mt-9 flex flex-col sm:flex-row gap-3.5">
+        <a href="#dates" class="btn btn-accent inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-700 w-full sm:w-auto">
+          Book this trek
+          <svg class="arrow-x" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </a>
+        <a href="#itinerary" class="btn btn-ghost inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-600 w-full sm:w-auto">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          Download the day-by-day
+        </a>
+      </div>
+
+      <!-- trip-facts strip -->
+      <div class="mt-12 rounded-2xl border line-strong bg-[rgba(22,26,29,0.72)] overflow-hidden">
+        <dl class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-y sm:divide-y-0 divide-[color:var(--line)]">
+          <div class="px-5 py-4">
+            <dt class="eyebrow">Duration</dt>
+            <dd class="mono text-[16px] sm:text-[17px] text-ink mt-1.5 tnum">9 days</dd>
+          </div>
+          <div class="px-5 py-4">
+            <dt class="eyebrow">Group size</dt>
+            <dd class="mono text-[16px] sm:text-[17px] text-ink mt-1.5 tnum">max 12</dd>
+          </div>
+          <div class="px-5 py-4">
+            <dt class="eyebrow">Grade</dt>
+            <dd class="mono text-[16px] sm:text-[17px] text-ink mt-1.5">mod–hard</dd>
+          </div>
+          <div class="px-5 py-4">
+            <dt class="eyebrow">Best season</dt>
+            <dd class="mono text-[16px] sm:text-[17px] text-ink mt-1.5">Jun–Sep</dd>
+          </div>
+          <div class="px-5 py-4 col-span-2 sm:col-span-1">
+            <dt class="eyebrow">Price from</dt>
+            <dd class="mono text-[16px] sm:text-[17px] text-accent mt-1.5 tnum">$2,890</dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 3 · TRUST BAR ===== -->
+  <section class="relative border-y line bg-surface/40">
+    <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-11">
+      <!-- metric row -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-px bg-[color:var(--line)] border line rounded-2xl overflow-hidden">
+        <div class="bg-bg px-5 py-6 text-center">
+          <div class="mono font-500 text-[clamp(22px,3vw,30px)] text-ink tnum">38,408</div>
+          <div class="text-[12.5px] text-mute mt-1.5">travelers hosted</div>
+        </div>
+        <div class="bg-bg px-5 py-6 text-center">
+          <div class="mono font-500 text-[clamp(22px,3vw,30px)] text-ink tnum">1994</div>
+          <div class="text-[12.5px] text-mute mt-1.5">guiding since</div>
+        </div>
+        <div class="bg-bg px-5 py-6 text-center">
+          <div class="mono font-500 text-[clamp(22px,3vw,30px)] text-accent tnum">4.9</div>
+          <div class="text-[12.5px] text-mute mt-1.5">average rating</div>
+        </div>
+        <div class="bg-bg px-5 py-6 text-center">
+          <div class="mono font-500 text-[clamp(22px,3vw,30px)] text-ink tnum">60+</div>
+          <div class="text-[12.5px] text-mute mt-1.5">routes worldwide</div>
+        </div>
+      </div>
+
+      <!-- press marquee -->
+      <p class="eyebrow text-center mt-10 mb-6">As featured in</p>
+      <div class="marquee-wrap">
+        <div class="marquee-track text-faint">
+          <div class="flex items-center gap-12 pr-12">
+            <span class="text-[21px] font-700 tracking-[-0.03em]">Meridian</span>
+            <span class="mono text-[15px] tracking-[0.16em]">THE PASSAGE</span>
+            <span class="text-[21px] font-600 italic" style="font-family:Georgia,serif">Off-Season</span>
+            <span class="text-[20px] font-700 tracking-[-0.02em]">Wander Quarterly</span>
+            <span class="mono text-[15px] tracking-[0.16em]">ALPINE JOURNAL</span>
+            <span class="text-[21px] font-700 tracking-[-0.03em]">Northbound</span>
+            <span class="text-[20px] font-600 italic" style="font-family:Georgia,serif">Compass &amp; Co</span>
+            <span class="text-[20px] font-700 tracking-[-0.02em]">Summit &amp; Trail</span>
+          </div>
+          <div class="flex items-center gap-12 pr-12" aria-hidden="true">
+            <span class="text-[21px] font-700 tracking-[-0.03em]">Meridian</span>
+            <span class="mono text-[15px] tracking-[0.16em]">THE PASSAGE</span>
+            <span class="text-[21px] font-600 italic" style="font-family:Georgia,serif">Off-Season</span>
+            <span class="text-[20px] font-700 tracking-[-0.02em]">Wander Quarterly</span>
+            <span class="mono text-[15px] tracking-[0.16em]">ALPINE JOURNAL</span>
+            <span class="text-[21px] font-700 tracking-[-0.03em]">Northbound</span>
+            <span class="text-[20px] font-600 italic" style="font-family:Georgia,serif">Compass &amp; Co</span>
+            <span class="text-[20px] font-700 tracking-[-0.02em]">Summit &amp; Trail</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 4 · TRIP OVERVIEW ===== -->
+  <section id="route" class="relative py-20 sm:py-28">
+    <div class="mesh-blob mesh-cool w-[420px] h-[420px] top-20 -left-24 opacity-60"></div>
+    <div class="relative z-10 max-w-[1200px] mx-auto px-5 sm:px-8">
+      <div class="grid lg:grid-cols-[1fr_1.05fr] gap-12 lg:gap-16">
+        <!-- left: prose -->
+        <div>
+          <div class="eyebrow mb-5"><span class="accent-line"></span>The Dolomites High Route</div>
+          <h2 class="display-sm text-[clamp(1.95rem,4vw,3rem)]">
+            One range, end to end —<br />
+            <span class="halftone">Alpe di Siusi to the Tre Cime.</span>
+          </h2>
+          <div class="mt-7 space-y-5 text-[15.5px] sm:text-[16px] leading-[1.72] text-mute">
+            <p>
+              The Dolomites are not one mountain — they are a hundred pale towers crowded into a corner of northern Italy, and the High Route threads a line between them. You start on the rolling pastureland of the <span class="text-ink font-500">Alpe di Siusi</span>, climb through the Sassolungo group, cross <span class="text-ink font-500">Passo Gardena</span> at 2,121m, and finish nine days later beneath the three sheer cliffs of the <span class="text-ink font-500">Tre Cime di Lavaredo</span>.
+            </p>
+            <p>
+              It is a hut-to-hut trek, and that changes everything. You carry a 7kg daypack — a fleece, a shell, water, lunch — and nothing else. Every night a rifugio is waiting with a bunk, a hot shower, a three-course dinner and a glass of something local. Total ascent across the route is <span class="mono text-ink tnum">6,840m</span>; the hardest single day, the summit of Cima di Mezzo, is <span class="mono text-ink tnum">1,340m</span> of climbing to a col that sits at <span class="mono text-ink tnum">2,994m</span>.
+            </p>
+            <p>
+              Twelve walkers, two IFMGA guides, one fixed route we have run since 1998. We pace it so the strong days are short and the long days are gentle. You bring the legs and the curiosity. We bring the rest.
+            </p>
+          </div>
+        </div>
+
+        <!-- right: highlight photos -->
+        <div class="grid grid-cols-2 gap-3.5">
+          <figure class="col-span-2 rounded-2xl border line overflow-hidden card-lift">
+            <div class="photo-dawn relative aspect-[16/9]">
+              <div class="absolute inset-0" style="box-shadow:inset 0 0 0 1px rgba(255,255,255,0.05)" aria-hidden="true"></div>
+              <div class="absolute inset-0" style="background:radial-gradient(70% 80% at 30% 26%, transparent, rgba(0,0,0,0.42))" aria-hidden="true"></div>
+              <svg class="absolute bottom-0 inset-x-0 w-full h-1/2" viewBox="0 0 800 200" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M0 200 V124 L150 84 L320 142 L480 68 L640 134 L800 96 V200 Z" fill="rgba(14,17,19,0.52)"/>
+                <circle cx="600" cy="58" r="26" fill="rgba(244,145,92,0.55)"/>
+              </svg>
+            </div>
+            <figcaption class="flex items-center justify-between px-4 py-3 bg-surface">
+              <span class="text-[13px] text-mute">Dawn over the Sassolungo group, Day 2</span>
+              <span class="mono text-[10.5px] text-faint tnum">2,180 m</span>
+            </figcaption>
+          </figure>
+          <figure class="rounded-2xl border line overflow-hidden card-lift">
+            <div class="photo-ridge relative aspect-[4/3]">
+              <div class="absolute inset-0" style="background:radial-gradient(80% 90% at 60% 24%, transparent, rgba(0,0,0,0.4))" aria-hidden="true"></div>
+              <svg class="absolute bottom-0 inset-x-0 w-full h-3/5" viewBox="0 0 400 160" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M0 160 V92 L90 56 L200 110 L300 48 L400 100 V160 Z" fill="rgba(14,17,19,0.5)"/>
+              </svg>
+            </div>
+            <figcaption class="px-3.5 py-2.5 bg-surface">
+              <span class="text-[12.5px] text-mute">Golden ridgeline, Forcella Pordoi</span>
+            </figcaption>
+          </figure>
+          <figure class="rounded-2xl border line overflow-hidden card-lift">
+            <div class="photo-bluehour relative aspect-[4/3]">
+              <div class="absolute inset-0" style="background:radial-gradient(80% 90% at 38% 70%, transparent, rgba(0,0,0,0.42))" aria-hidden="true"></div>
+              <svg class="absolute bottom-0 inset-x-0 w-full h-3/5" viewBox="0 0 400 160" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M0 160 V104 L110 64 L230 116 L320 70 L400 110 V160 Z" fill="rgba(14,17,19,0.55)"/>
+              </svg>
+            </div>
+            <figcaption class="px-3.5 py-2.5 bg-surface">
+              <span class="text-[12.5px] text-mute">Blue hour in the Funes valley</span>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <!-- stylized route map -->
+      <div class="mt-14 rounded-2xl border line-strong bg-surface/60 overflow-hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-5 sm:px-7 py-4 border-b line">
+          <h3 class="text-[15px] font-700 tracking-[-0.02em]">The route at a glance</h3>
+          <span class="mono text-[11.5px] text-faint tnum">98 km · 6,840 m ascent · 6 rifugios</span>
+        </div>
+        <div class="px-3 sm:px-7 py-9 dot-grid">
+          <svg viewBox="0 0 1100 220" class="w-full h-auto" aria-label="Stylized route map — nine stops from Ortisei to the Tre Cime di Lavaredo">
+            <!-- route line -->
+            <path d="M60 168 L190 96 L320 150 L450 70 L580 132 L710 58 L840 124 L970 78 L1040 150"
+                  fill="none" stroke="#EE6C2B" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 9"/>
+            <!-- stop nodes -->
+            <g font-family="'Geist Mono',monospace">
+              <!-- node template repeated -->
+              <g><circle cx="60" cy="168" r="13" fill="#161A1D" stroke="#EE6C2B" stroke-width="2"/><text x="60" y="172" text-anchor="middle" font-size="12" fill="#EE6C2B">1</text><text x="60" y="200" text-anchor="middle" font-size="10.5" fill="#9AA3A6">Ortisei</text></g>
+              <g><circle cx="190" cy="96" r="13" fill="#161A1D" stroke="#EE6C2B" stroke-width="2"/><text x="190" y="100" text-anchor="middle" font-size="12" fill="#EE6C2B">2</text><text x="190" y="64" text-anchor="middle" font-size="10.5" fill="#9AA3A6">Alpe di Siusi</text></g>
+              <g><circle cx="320" cy="150" r="13" fill="#161A1D" stroke="#EE6C2B" stroke-width="2"/><text x="320" y="154" text-anchor="middle" font-size="12" fill="#EE6C2B">3</text><text x="320" y="182" text-anchor="middle" font-size="10.5" fill="#9AA3A6">Sassolungo</text></g>
+              <g><circle cx="450" cy="70" r="13" fill="#161A1D" stroke="#EE6C2B" stroke-width="2"/><text x="450" y="74" text-anchor="middle" font-size="12" fill="#EE6C2B">4</text><text x="450" y="38" text-anchor="middle" font-size="10.5" fill="#9AA3A6">Passo Gardena</text></g>
+              <g><circle cx="580" cy="132" r="13" fill="#161A1D" stroke="#EE6C2B" stroke-width="2"/><text x="580" y="136" text-anchor="middle" font-size="12" fill="#EE6C2B">5</text><text x="580" y="164" text-anchor="middle" font-size="10.5" fill="#9AA3A6">Puez plateau</text></g>
+              <g><circle cx="710" cy="58" r="13" fill="#161A1D" stroke="#F4915C" stroke-width="2.4"/><text x="710" y="62" text-anchor="middle" font-size="12" fill="#F4915C">6</text><text x="710" y="26" text-anchor="middle" font-size="10.5" fill="#F4915C">Cima di Mezzo</text></g>
+              <g><circle cx="840" cy="124" r="13" fill="#161A1D" stroke="#EE6C2B" stroke-width="2"/><text x="840" y="128" text-anchor="middle" font-size="12" fill="#EE6C2B">7</text><text x="840" y="156" text-anchor="middle" font-size="10.5" fill="#9AA3A6">Val di Funes</text></g>
+              <g><circle cx="970" cy="78" r="13" fill="#161A1D" stroke="#EE6C2B" stroke-width="2"/><text x="970" y="82" text-anchor="middle" font-size="12" fill="#EE6C2B">8</text><text x="970" y="46" text-anchor="middle" font-size="10.5" fill="#9AA3A6">Lago di Braies</text></g>
+              <g><circle cx="1040" cy="150" r="13" fill="#161A1D" stroke="#EE6C2B" stroke-width="2"/><text x="1040" y="154" text-anchor="middle" font-size="12" fill="#EE6C2B">9</text><text x="1040" y="182" text-anchor="middle" font-size="10.5" fill="#9AA3A6">Tre Cime</text></g>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 5 · DAY-BY-DAY ITINERARY ===== -->
+  <section id="itinerary" class="relative py-20 sm:py-28 border-t line bg-surface/30">
+    <div class="max-w-[1200px] mx-auto px-5 sm:px-8">
+      <div class="max-w-[58ch]">
+        <div class="eyebrow mb-5"><span class="accent-line"></span>Day by day</div>
+        <h2 class="display-sm text-[clamp(1.95rem,4vw,3rem)]">Nine days, nine huts, one summit.</h2>
+        <p class="mt-4 text-[15.5px] sm:text-[16px] leading-[1.7] text-mute">
+          Distances and ascent are measured, not estimated — pulled from the GPS tracks our guides log every season. Walking hours assume a steady, conversational pace with stops.
+        </p>
+      </div>
+
+      <!-- timeline -->
+      <ol class="mt-12 relative">
+        <!-- connecting route line -->
+        <div class="absolute left-[18px] sm:left-[26px] top-3 bottom-3 w-px bg-[color:var(--line-strong)]" aria-hidden="true"></div>
+
+        <!-- Day 1 -->
+        <li class="relative pl-14 sm:pl-20 pb-8">
+          <span class="absolute left-0 sm:left-[8px] top-1 flex items-center justify-center w-9 h-9 rounded-full bg-surface2 border line-accent mono text-[13px] font-500 text-accent tnum">01</span>
+          <div class="rounded-xl border line bg-surface card-lift p-5 sm:p-6">
+            <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1.5">
+              <h3 class="text-[17px] font-700 tracking-[-0.02em]">Ortisei — arrival &amp; the Alpe di Siusi rim</h3>
+              <span class="mono text-[11.5px] text-faint tnum shrink-0">7 km · 320 m ↑ · 2.5 h</span>
+            </div>
+            <p class="mt-2 text-[14px] leading-[1.62] text-mute">
+              Meet your guides in Ortisei at 16:00 for kit checks and a gentle leg-stretch up to the meadow rim. Welcome dinner at the valley hotel — the last bed with a private bathroom for a week.
+            </p>
+          </div>
+        </li>
+
+        <!-- Day 2 -->
+        <li class="relative pl-14 sm:pl-20 pb-8">
+          <span class="absolute left-0 sm:left-[8px] top-1 flex items-center justify-center w-9 h-9 rounded-full bg-surface2 border line-accent mono text-[13px] font-500 text-accent tnum">02</span>
+          <div class="rounded-xl border line bg-surface card-lift p-5 sm:p-6">
+            <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1.5">
+              <h3 class="text-[17px] font-700 tracking-[-0.02em]">Across the Alpe di Siusi to Rifugio Bolzano</h3>
+              <span class="mono text-[11.5px] text-faint tnum shrink-0">14 km · 690 m ↑ · 5.5 h</span>
+            </div>
+            <p class="mt-2 text-[14px] leading-[1.62] text-mute">
+              The widest high pasture in the Alps, with the Sassolungo towers ahead all day. We climb the Schlern massif's flank to a 2,450m refuge perched on the plateau edge — sunset over the Catinaccio is the reward.
+            </p>
+          </div>
+        </li>
+
+        <!-- Day 3 -->
+        <li class="relative pl-14 sm:pl-20 pb-8">
+          <span class="absolute left-0 sm:left-[8px] top-1 flex items-center justify-center w-9 h-9 rounded-full bg-surface2 border line-accent mono text-[13px] font-500 text-accent tnum">03</span>
+          <div class="rounded-xl border line bg-surface card-lift p-5 sm:p-6">
+            <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1.5">
+              <h3 class="text-[17px] font-700 tracking-[-0.02em]">The Sassolungo circuit to Rifugio Vicenza</h3>
+              <span class="mono text-[11.5px] text-faint tnum shrink-0">12 km · 540 m ↑ · 5 h</span>
+            </div>
+            <p class="mt-2 text-[14px] leading-[1.62] text-mute">
+              A loop beneath the Sassolungo's vertical walls, scrambling over old scree fields where the rock is fractured pale and sharp. Short day on purpose — legs need it before the pass crossings begin.
+            </p>
+          </div>
+        </li>
+
+        <!-- Day 4 -->
+        <li class="relative pl-14 sm:pl-20 pb-8">
+          <span class="absolute left-0 sm:left-[8px] top-1 flex items-center justify-center w-9 h-9 rounded-full bg-surface2 border line-accent mono text-[13px] font-500 text-accent tnum">04</span>
+          <div class="rounded-xl border line bg-surface card-lift p-5 sm:p-6">
+            <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1.5">
+              <h3 class="text-[17px] font-700 tracking-[-0.02em]">Over Passo Gardena into the Puez group</h3>
+              <span class="mono text-[11.5px] text-faint tnum shrink-0">16 km · 880 m ↑ · 6.5 h</span>
+            </div>
+            <p class="mt-2 text-[14px] leading-[1.62] text-mute">
+              The route's first big pass at 2,121m, then a long traverse onto the lunar limestone tableland of the Puez. Night at Rifugio Puez, a small stone hut with no road for ten kilometres in any direction.
+            </p>
+          </div>
+        </li>
+
+        <!-- Day 5 -->
+        <li class="relative pl-14 sm:pl-20 pb-8">
+          <span class="absolute left-0 sm:left-[8px] top-1 flex items-center justify-center w-9 h-9 rounded-full bg-surface2 border line-accent mono text-[13px] font-500 text-accent tnum">05</span>
+          <div class="rounded-xl border line bg-surface card-lift p-5 sm:p-6">
+            <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1.5">
+              <h3 class="text-[17px] font-700 tracking-[-0.02em]">The Puez plateau &amp; Forcella de Furcia</h3>
+              <span class="mono text-[11.5px] text-faint tnum shrink-0">13 km · 610 m ↑ · 5 h</span>
+            </div>
+            <p class="mt-2 text-[14px] leading-[1.62] text-mute">
+              A high, exposed crossing of the plateau with two minor cols and views east to tomorrow's summit. We arrive early at Rifugio Genova to rest, eat well, and brief the climb.
+            </p>
+          </div>
+        </li>
+
+        <!-- Day 6 — SUMMIT -->
+        <li class="relative pl-14 sm:pl-20 pb-8">
+          <span class="absolute left-0 sm:left-[8px] top-1 flex items-center justify-center w-9 h-9 rounded-full bg-accent border border-accent mono text-[13px] font-500 text-[#160C04] tnum">06</span>
+          <div class="rounded-xl border line-accent bg-[rgba(238,108,43,0.05)] card-lift p-5 sm:p-6">
+            <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1.5">
+              <h3 class="text-[17px] font-700 tracking-[-0.02em] text-ink">
+                <span class="inline-flex items-center gap-2">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#EE6C2B" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M3 20 L9 8 L13 14 L17 6 L21 20 Z"/></svg>
+                  Summit day — Cima di Mezzo, 2,994 m
+                </span>
+              </h3>
+              <span class="mono text-[11.5px] text-accent tnum shrink-0">11 km · 1,340 m ↑ · 8 h</span>
+            </div>
+            <p class="mt-2 text-[14px] leading-[1.62] text-mute">
+              The big one. A pre-dawn start, a steady switchback climb, and a final airy ridge — non-technical but exposed — to a col just shy of 3,000m. On a clear morning the whole range lays out below you; it was <span class="mono text-ink tnum">−6°C</span> at the col last June. Down to Rifugio Firenze for a long, well-earned dinner.
+            </p>
+          </div>
+        </li>
+
+        <!-- Day 7 -->
+        <li class="relative pl-14 sm:pl-20 pb-8">
+          <span class="absolute left-0 sm:left-[8px] top-1 flex items-center justify-center w-9 h-9 rounded-full bg-surface2 border line-accent mono text-[13px] font-500 text-accent tnum">07</span>
+          <div class="rounded-xl border line bg-surface card-lift p-5 sm:p-6">
+            <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1.5">
+              <h3 class="text-[17px] font-700 tracking-[-0.02em]">Descent through the Val di Funes</h3>
+              <span class="mono text-[11.5px] text-faint tnum shrink-0">15 km · 240 m ↑ · 5 h</span>
+            </div>
+            <p class="mt-2 text-[14px] leading-[1.62] text-mute">
+              A recovery day — mostly downhill through larch forest into the green Funes valley, beneath the famous Odle spires. Spruce, cowbells, and a long lunch at a working dairy farm.
+            </p>
+          </div>
+        </li>
+
+        <!-- Day 8 -->
+        <li class="relative pl-14 sm:pl-20 pb-8">
+          <span class="absolute left-0 sm:left-[8px] top-1 flex items-center justify-center w-9 h-9 rounded-full bg-surface2 border line-accent mono text-[13px] font-500 text-accent tnum">08</span>
+          <div class="rounded-xl border line bg-surface card-lift p-5 sm:p-6">
+            <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1.5">
+              <h3 class="text-[17px] font-700 tracking-[-0.02em]">Lago di Braies &amp; the approach to the Tre Cime</h3>
+              <span class="mono text-[11.5px] text-faint tnum shrink-0">14 km · 720 m ↑ · 5.5 h</span>
+            </div>
+            <p class="mt-2 text-[14px] leading-[1.62] text-mute">
+              From the emerald water of Lago di Braies we climb toward the most photographed cliffs in the Alps. Night at Rifugio Locatelli, directly across the cirque from the three towers.
+            </p>
+          </div>
+        </li>
+
+        <!-- Day 9 -->
+        <li class="relative pl-14 sm:pl-20">
+          <span class="absolute left-0 sm:left-[8px] top-1 flex items-center justify-center w-9 h-9 rounded-full bg-surface2 border line-accent mono text-[13px] font-500 text-accent tnum">09</span>
+          <div class="rounded-xl border line bg-surface card-lift p-5 sm:p-6">
+            <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1.5">
+              <h3 class="text-[17px] font-700 tracking-[-0.02em]">The Tre Cime circuit &amp; farewell in Cortina</h3>
+              <span class="mono text-[11.5px] text-faint tnum shrink-0">9 km · 300 m ↑ · 3.5 h</span>
+            </div>
+            <p class="mt-2 text-[14px] leading-[1.62] text-mute">
+              A morning loop around the base of the Tre Cime di Lavaredo, then transfer to Cortina d'Ampezzo. Farewell lunch at 14:00; trip ends mid-afternoon for onward travel.
+            </p>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ===== 6 · WHAT'S INCLUDED / NOT INCLUDED ===== -->
+  <section id="included" class="relative py-20 sm:py-28 border-t line">
+    <div class="max-w-[1200px] mx-auto px-5 sm:px-8">
+      <div class="max-w-[52ch]">
+        <div class="eyebrow mb-5"><span class="accent-line"></span>The fine print</div>
+        <h2 class="display-sm text-[clamp(1.95rem,4vw,3rem)]">What's included — and what isn't.</h2>
+        <p class="mt-4 text-[15.5px] sm:text-[16px] leading-[1.7] text-mute">
+          No surprises at the trailhead. The price covers everything between the welcome dinner and the farewell lunch. Here is the exact line.
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-4 mt-12">
+        <!-- included -->
+        <div class="rounded-2xl border line-strong bg-surface p-6 sm:p-7">
+          <div class="flex items-center gap-2.5 mb-5">
+            <span class="flex items-center justify-center w-7 h-7 rounded-full bg-[rgba(238,108,43,0.12)] border line-accent">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#EE6C2B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+            </span>
+            <h3 class="text-[15px] font-700 tracking-[-0.02em]">Included in $2,890</h3>
+          </div>
+          <ul class="space-y-3 text-[14px] text-mute">
+            <li class="flex items-start gap-2.5"><span class="text-accent mt-0.5">·</span><span><span class="text-ink font-500">8 nights' accommodation</span> — 1 valley hotel, 7 mountain rifugios, half-board.</span></li>
+            <li class="flex items-start gap-2.5"><span class="text-accent mt-0.5">·</span><span><span class="text-ink font-500">All breakfasts and dinners</span>, plus a packed trail lunch every walking day.</span></li>
+            <li class="flex items-start gap-2.5"><span class="text-accent mt-0.5">·</span><span><span class="text-ink font-500">Two IFMGA-certified mountain guides</span> for the full nine days.</span></li>
+            <li class="flex items-start gap-2.5"><span class="text-accent mt-0.5">·</span><span>All cable cars and transfers on the route, and the final transfer to Cortina.</span></li>
+            <li class="flex items-start gap-2.5"><span class="text-accent mt-0.5">·</span><span>Luggage transport — your main bag is moved valley-to-valley while you walk.</span></li>
+            <li class="flex items-start gap-2.5"><span class="text-accent mt-0.5">·</span><span>A pre-trip kit consultation and a GPX route file for your own device.</span></li>
+          </ul>
+        </div>
+        <!-- not included -->
+        <div class="rounded-2xl border line-strong bg-surface p-6 sm:p-7">
+          <div class="flex items-center gap-2.5 mb-5">
+            <span class="flex items-center justify-center w-7 h-7 rounded-full bg-[rgba(255,255,255,0.05)] border line-strong">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9AA3A6" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </span>
+            <h3 class="text-[15px] font-700 tracking-[-0.02em]">Not included</h3>
+          </div>
+          <ul class="space-y-3 text-[14px] text-mute">
+            <li class="flex items-start gap-2.5"><span class="text-faint mt-0.5">·</span><span><span class="text-ink font-500">Travel to Ortisei</span> and home from Cortina — we send a detailed travel guide.</span></li>
+            <li class="flex items-start gap-2.5"><span class="text-faint mt-0.5">·</span><span><span class="text-ink font-500">Travel insurance</span> with mountain-rescue cover — mandatory, your own policy.</span></li>
+            <li class="flex items-start gap-2.5"><span class="text-faint mt-0.5">·</span><span>Lunches and drinks on the two non-walking days, and bar drinks at the huts.</span></li>
+            <li class="flex items-start gap-2.5"><span class="text-faint mt-0.5">·</span><span>Personal hiking gear — boots, poles, pack, layers (rental list provided).</span></li>
+            <li class="flex items-start gap-2.5"><span class="text-faint mt-0.5">·</span><span>The hotel night before Day 1 if you arrive early — we can book it for you.</span></li>
+            <li class="flex items-start gap-2.5"><span class="text-faint mt-0.5">·</span><span>Tips for the guides — appreciated, never expected, entirely your call.</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 7 · WHERE YOU'LL STAY ===== -->
+  <section id="stay" class="relative py-20 sm:py-28 border-t line bg-surface/30">
+    <div class="max-w-[1200px] mx-auto px-5 sm:px-8">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-12">
+        <div class="max-w-[46ch]">
+          <div class="eyebrow mb-5"><span class="accent-line"></span>Where you'll stay</div>
+          <h2 class="display-sm text-[clamp(1.95rem,4vw,3rem)]">Seven rifugios, each with a view.</h2>
+        </div>
+        <p class="mono text-[12px] text-faint sm:text-right leading-relaxed">
+          half-board, every night<br />hot showers · drying rooms
+        </p>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- hut 1 -->
+        <article class="rounded-2xl border line overflow-hidden card-lift bg-surface">
+          <div class="photo-hut-a relative aspect-[4/3]">
+            <div class="absolute inset-0" style="background:radial-gradient(80% 90% at 50% 25%, transparent, rgba(0,0,0,0.4))" aria-hidden="true"></div>
+            <svg class="absolute bottom-0 inset-x-0 w-full h-1/2" viewBox="0 0 320 120" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M0 120 V72 L80 44 L170 86 L250 50 L320 80 V120 Z" fill="rgba(14,17,19,0.5)"/>
+            </svg>
+          </div>
+          <div class="p-5">
+            <div class="flex items-baseline justify-between gap-2">
+              <h3 class="text-[15.5px] font-700 tracking-[-0.02em]">Rifugio Bolzano</h3>
+              <span class="mono text-[11px] text-accent tnum shrink-0">2,450 m</span>
+            </div>
+            <p class="mt-2 text-[13px] leading-[1.6] text-mute">
+              The oldest hut on the Schlern, run by the same family since 1955. Shared bunk rooms of 4–8, blankets provided, a wood-panelled dining room that smells of fresh bread.
+            </p>
+          </div>
+        </article>
+        <!-- hut 2 -->
+        <article class="rounded-2xl border line overflow-hidden card-lift bg-surface">
+          <div class="photo-hut-b relative aspect-[4/3]">
+            <div class="absolute inset-0" style="background:radial-gradient(80% 90% at 60% 30%, transparent, rgba(0,0,0,0.4))" aria-hidden="true"></div>
+            <svg class="absolute bottom-0 inset-x-0 w-full h-1/2" viewBox="0 0 320 120" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M0 120 V80 L90 50 L180 92 L270 56 L320 84 V120 Z" fill="rgba(14,17,19,0.5)"/>
+            </svg>
+          </div>
+          <div class="p-5">
+            <div class="flex items-baseline justify-between gap-2">
+              <h3 class="text-[15.5px] font-700 tracking-[-0.02em]">Rifugio Puez</h3>
+              <span class="mono text-[11px] text-accent tnum shrink-0">2,475 m</span>
+            </div>
+            <p class="mt-2 text-[13px] leading-[1.6] text-mute">
+              A small stone refuge marooned on the limestone plateau — the most remote night of the route. Compact dormitories, candle-lit if the generator sleeps, and the deepest silence you'll meet.
+            </p>
+          </div>
+        </article>
+        <!-- hut 3 -->
+        <article class="rounded-2xl border line overflow-hidden card-lift bg-surface">
+          <div class="photo-hut-c relative aspect-[4/3]">
+            <div class="absolute inset-0" style="background:radial-gradient(80% 90% at 40% 30%, transparent, rgba(0,0,0,0.4))" aria-hidden="true"></div>
+            <svg class="absolute bottom-0 inset-x-0 w-full h-1/2" viewBox="0 0 320 120" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M0 120 V76 L70 48 L160 88 L240 52 L320 82 V120 Z" fill="rgba(14,17,19,0.5)"/>
+            </svg>
+          </div>
+          <div class="p-5">
+            <div class="flex items-baseline justify-between gap-2">
+              <h3 class="text-[15.5px] font-700 tracking-[-0.02em]">Rifugio Firenze</h3>
+              <span class="mono text-[11px] text-accent tnum shrink-0">2,037 m</span>
+            </div>
+            <p class="mt-2 text-[13px] leading-[1.6] text-mute">
+              Where you land after summit day. Larger and warmer, with a few twin rooms we reserve first for couples, a proper bar, and a sun terrace built for tired legs.
+            </p>
+          </div>
+        </article>
+        <!-- hut 4 -->
+        <article class="rounded-2xl border line overflow-hidden card-lift bg-surface">
+          <div class="photo-hut-d relative aspect-[4/3]">
+            <div class="absolute inset-0" style="background:radial-gradient(80% 90% at 55% 25%, transparent, rgba(0,0,0,0.4))" aria-hidden="true"></div>
+            <svg class="absolute bottom-0 inset-x-0 w-full h-1/2" viewBox="0 0 320 120" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M0 120 V70 L100 46 L190 90 L260 54 L320 80 V120 Z" fill="rgba(14,17,19,0.5)"/>
+            </svg>
+          </div>
+          <div class="p-5">
+            <div class="flex items-baseline justify-between gap-2">
+              <h3 class="text-[15.5px] font-700 tracking-[-0.02em]">Rifugio Locatelli</h3>
+              <span class="mono text-[11px] text-accent tnum shrink-0">2,405 m</span>
+            </div>
+            <p class="mt-2 text-[13px] leading-[1.6] text-mute">
+              The grand finale — perched dead opposite the Tre Cime di Lavaredo. Dorms of 6–10, an enormous dining hall, and a window that frames the three towers at first light.
+            </p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 8 · THE GUIDES ===== -->
+  <section id="guides" class="relative py-20 sm:py-28 border-t line">
+    <div class="max-w-[1200px] mx-auto px-5 sm:px-8">
+      <div class="max-w-[52ch]">
+        <div class="eyebrow mb-5"><span class="accent-line"></span>Your guides</div>
+        <h2 class="display-sm text-[clamp(1.95rem,4vw,3rem)]">Two guides who know this range cold.</h2>
+        <p class="mt-4 text-[15.5px] sm:text-[16px] leading-[1.7] text-mute">
+          Both hold the IFMGA carnet — the international mountain-guide qualification — and both have walked the Dolomites High Route more times than they can count. They lead, they cook breakfast jokes, they read the weather.
+        </p>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-4 mt-12">
+        <!-- guide 1 -->
+        <article class="rounded-2xl border line-strong bg-surface card-lift p-6 sm:p-7">
+          <div class="flex items-center gap-4">
+            <div class="av-1 w-16 h-16 rounded-2xl shrink-0 border line" aria-hidden="true"></div>
+            <div>
+              <h3 class="text-[17px] font-700 tracking-[-0.02em]">Lukas Brunner</h3>
+              <p class="mono text-[11px] text-accent mt-1">IFMGA · LEAD GUIDE</p>
+            </div>
+          </div>
+          <p class="mt-4 text-[14px] leading-[1.65] text-mute">
+            Born in the Val Gardena, Lukas has guided the Dolomites for two decades and skied its couloirs in winter. He paces a group like a metronome and knows which rifugio cook makes the best canederli.
+          </p>
+          <dl class="mt-5 grid grid-cols-2 gap-px bg-[color:var(--line)] border line rounded-xl overflow-hidden">
+            <div class="bg-surface2 px-4 py-3">
+              <dt class="eyebrow">Languages</dt>
+              <dd class="text-[13px] text-ink mt-1">English · German · Italian</dd>
+            </div>
+            <div class="bg-surface2 px-4 py-3">
+              <dt class="eyebrow">Guiding since</dt>
+              <dd class="mono text-[13px] text-ink mt-1 tnum">2003 · 21 years</dd>
+            </div>
+          </dl>
+        </article>
+        <!-- guide 2 -->
+        <article class="rounded-2xl border line-strong bg-surface card-lift p-6 sm:p-7">
+          <div class="flex items-center gap-4">
+            <div class="av-2 w-16 h-16 rounded-2xl shrink-0 border line" aria-hidden="true"></div>
+            <div>
+              <h3 class="text-[17px] font-700 tracking-[-0.02em]">Margaux Devereux</h3>
+              <p class="mono text-[11px] text-accent mt-1">IFMGA · MOUNTAIN GUIDE</p>
+            </div>
+          </div>
+          <p class="mt-4 text-[14px] leading-[1.65] text-mute">
+            A Chamonix-trained guide who came to the Dolomites for the rock and stayed for the light. Margaux runs the summit-day briefings and is the calmest voice you'll hear on an exposed ridge.
+          </p>
+          <dl class="mt-5 grid grid-cols-2 gap-px bg-[color:var(--line)] border line rounded-xl overflow-hidden">
+            <div class="bg-surface2 px-4 py-3">
+              <dt class="eyebrow">Languages</dt>
+              <dd class="text-[13px] text-ink mt-1">English · French · Italian</dd>
+            </div>
+            <div class="bg-surface2 px-4 py-3">
+              <dt class="eyebrow">Guiding since</dt>
+              <dd class="mono text-[13px] text-ink mt-1 tnum">2011 · 13 years</dd>
+            </div>
+          </dl>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 9 · DEPARTURES + PRICING ===== -->
+  <section id="dates" class="relative py-20 sm:py-28 border-t line bg-surface/30">
+    <div class="max-w-[1200px] mx-auto px-5 sm:px-8">
+      <div class="max-w-[54ch]">
+        <div class="eyebrow mb-5"><span class="accent-line"></span>Departures &amp; pricing</div>
+        <h2 class="display-sm text-[clamp(1.95rem,4vw,3rem)]">2026 dates — book the season.</h2>
+        <p class="mt-4 text-[15.5px] sm:text-[16px] leading-[1.7] text-mute">
+          Twelve places per departure. July and August fill first; June and September walk in cooler air with thinner trails. Prices are per person, twin-share at the huts.
+        </p>
+      </div>
+
+      <!-- departures table -->
+      <div class="mt-12 rounded-2xl border line-strong bg-surface overflow-hidden">
+        <div class="hidden sm:grid grid-cols-[1.4fr_1fr_1.4fr_auto] gap-4 px-6 py-3.5 border-b line eyebrow">
+          <span>Departure</span>
+          <span>Price pp</span>
+          <span>Availability</span>
+          <span class="text-right">&nbsp;</span>
+        </div>
+        <ul>
+          <!-- row 1 -->
+          <li class="grid grid-cols-2 sm:grid-cols-[1.4fr_1fr_1.4fr_auto] gap-x-4 gap-y-2 px-6 py-4 border-b line items-center">
+            <span class="mono text-[14px] text-ink tnum">07–15 Jun 2026</span>
+            <span class="mono text-[14px] text-ink tnum">$2,890</span>
+            <span class="text-[13.5px] text-mute flex items-center gap-2 col-span-2 sm:col-span-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-faint"></span>Open
+            </span>
+            <a href="#enquire" class="hidden sm:inline-flex justify-self-end items-center gap-1.5 text-[13px] font-600 text-accent">Reserve <span class="arrow-x">→</span></a>
+          </li>
+          <!-- row 2 -->
+          <li class="grid grid-cols-2 sm:grid-cols-[1.4fr_1fr_1.4fr_auto] gap-x-4 gap-y-2 px-6 py-4 border-b line items-center">
+            <span class="mono text-[14px] text-ink tnum">21–29 Jun 2026</span>
+            <span class="mono text-[14px] text-ink tnum">$2,890</span>
+            <span class="text-[13.5px] text-mute flex items-center gap-2 col-span-2 sm:col-span-1">
+              <span class="pulse-dot"></span><span class="text-ink font-500">5 spots left</span>
+            </span>
+            <a href="#enquire" class="hidden sm:inline-flex justify-self-end items-center gap-1.5 text-[13px] font-600 text-accent">Reserve <span class="arrow-x">→</span></a>
+          </li>
+          <!-- row 3 -->
+          <li class="grid grid-cols-2 sm:grid-cols-[1.4fr_1fr_1.4fr_auto] gap-x-4 gap-y-2 px-6 py-4 border-b line items-center">
+            <span class="mono text-[14px] text-faint tnum line-through">05–13 Jul 2026</span>
+            <span class="mono text-[14px] text-faint tnum">$3,150</span>
+            <span class="text-[13.5px] text-faint flex items-center gap-2 col-span-2 sm:col-span-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-faint"></span>Sold out
+            </span>
+            <span class="hidden sm:block justify-self-end text-[13px] text-faint">Waitlist</span>
+          </li>
+          <!-- row 4 -->
+          <li class="grid grid-cols-2 sm:grid-cols-[1.4fr_1fr_1.4fr_auto] gap-x-4 gap-y-2 px-6 py-4 border-b line items-center">
+            <span class="mono text-[14px] text-ink tnum">19–27 Jul 2026</span>
+            <span class="mono text-[14px] text-ink tnum">$3,150</span>
+            <span class="text-[13.5px] text-mute flex items-center gap-2 col-span-2 sm:col-span-1">
+              <span class="pulse-dot"></span><span class="text-ink font-500">3 spots left</span>
+            </span>
+            <a href="#enquire" class="hidden sm:inline-flex justify-self-end items-center gap-1.5 text-[13px] font-600 text-accent">Reserve <span class="arrow-x">→</span></a>
+          </li>
+          <!-- row 5 -->
+          <li class="grid grid-cols-2 sm:grid-cols-[1.4fr_1fr_1.4fr_auto] gap-x-4 gap-y-2 px-6 py-4 border-b line items-center">
+            <span class="mono text-[14px] text-faint tnum line-through">02–10 Aug 2026</span>
+            <span class="mono text-[14px] text-faint tnum">$3,150</span>
+            <span class="text-[13.5px] text-faint flex items-center gap-2 col-span-2 sm:col-span-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-faint"></span>Sold out
+            </span>
+            <span class="hidden sm:block justify-self-end text-[13px] text-faint">Waitlist</span>
+          </li>
+          <!-- row 6 -->
+          <li class="grid grid-cols-2 sm:grid-cols-[1.4fr_1fr_1.4fr_auto] gap-x-4 gap-y-2 px-6 py-4 border-b line items-center">
+            <span class="mono text-[14px] text-ink tnum">16–24 Aug 2026</span>
+            <span class="mono text-[14px] text-ink tnum">$3,150</span>
+            <span class="text-[13.5px] text-mute flex items-center gap-2 col-span-2 sm:col-span-1">
+              <span class="pulse-dot"></span><span class="text-ink font-500">3 spots left</span>
+            </span>
+            <a href="#enquire" class="hidden sm:inline-flex justify-self-end items-center gap-1.5 text-[13px] font-600 text-accent">Reserve <span class="arrow-x">→</span></a>
+          </li>
+          <!-- row 7 -->
+          <li class="grid grid-cols-2 sm:grid-cols-[1.4fr_1fr_1.4fr_auto] gap-x-4 gap-y-2 px-6 py-4 border-b line items-center">
+            <span class="mono text-[14px] text-ink tnum">06–14 Sep 2026</span>
+            <span class="mono text-[14px] text-ink tnum">$2,890</span>
+            <span class="text-[13.5px] text-mute flex items-center gap-2 col-span-2 sm:col-span-1">
+              <span class="pulse-dot"></span><span class="text-ink font-500">5 spots left</span>
+            </span>
+            <a href="#enquire" class="hidden sm:inline-flex justify-self-end items-center gap-1.5 text-[13px] font-600 text-accent">Reserve <span class="arrow-x">→</span></a>
+          </li>
+          <!-- row 8 -->
+          <li class="grid grid-cols-2 sm:grid-cols-[1.4fr_1fr_1.4fr_auto] gap-x-4 gap-y-2 px-6 py-4 items-center">
+            <span class="mono text-[14px] text-ink tnum">20–28 Sep 2026</span>
+            <span class="mono text-[14px] text-ink tnum">$2,890</span>
+            <span class="text-[13.5px] text-mute flex items-center gap-2 col-span-2 sm:col-span-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-faint"></span>Open
+            </span>
+            <a href="#enquire" class="hidden sm:inline-flex justify-self-end items-center gap-1.5 text-[13px] font-600 text-accent">Reserve <span class="arrow-x">→</span></a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- price includes + deposit -->
+      <div class="grid md:grid-cols-[1.4fr_1fr] gap-4 mt-4">
+        <div class="rounded-2xl border line bg-surface p-6">
+          <h3 class="text-[14px] font-700 tracking-[-0.02em] mb-3.5">What the price includes</h3>
+          <p class="text-[13.5px] leading-[1.65] text-mute">
+            8 nights' half-board accommodation, every breakfast, dinner and trail lunch, two IFMGA guides for the full nine days, all on-route transfers and cable cars, valley-to-valley luggage transport, and the final transfer to Cortina. June and September departures run <span class="mono text-ink tnum">$2,890</span>; peak July–August dates are <span class="mono text-ink tnum">$3,150</span>.
+          </p>
+        </div>
+        <div class="rounded-2xl border line-accent bg-[rgba(238,108,43,0.05)] p-6">
+          <h3 class="text-[14px] font-700 tracking-[-0.02em] mb-3.5 flex items-center gap-2">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#EE6C2B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+            Deposit &amp; balance
+          </h3>
+          <p class="text-[13.5px] leading-[1.65] text-mute">
+            A <span class="mono text-ink tnum">$450</span> deposit secures your place. The balance is due <span class="text-ink font-500">60 days</span> before departure. Book within 60 days and the full amount is payable at the time of booking.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 10 · BEST TIME TO GO — SEASON BAR ===== -->
+  <section id="season" class="relative py-20 sm:py-28 border-t line">
+    <div class="max-w-[1200px] mx-auto px-5 sm:px-8">
+      <div class="max-w-[52ch]">
+        <div class="eyebrow mb-5"><span class="accent-line"></span>Best time to go</div>
+        <h2 class="display-sm text-[clamp(1.95rem,4vw,3rem)]">The trail has a season — pick yours.</h2>
+        <p class="mt-4 text-[15.5px] sm:text-[16px] leading-[1.7] text-mute">
+          The huts open in June and shutter at the end of September. Within that window, conditions shift week to week. Here is what each part of the season actually feels like underfoot.
+        </p>
+      </div>
+
+      <div class="mt-12 rounded-2xl border line-strong bg-surface overflow-hidden">
+        <!-- month scale -->
+        <div class="grid grid-cols-5 border-b line eyebrow text-center">
+          <span class="px-2 py-3 border-r line">Jun</span>
+          <span class="px-2 py-3 border-r line">Jul</span>
+          <span class="px-2 py-3 border-r line">Aug</span>
+          <span class="px-2 py-3 border-r line">Sep</span>
+          <span class="px-2 py-3">Oct</span>
+        </div>
+        <!-- season bars -->
+        <div class="p-5 sm:p-7 space-y-4">
+          <!-- trail conditions -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-[12.5px] text-mute">Trail conditions</span>
+              <span class="mono text-[10.5px] text-faint">opens mid-June</span>
+            </div>
+            <div class="relative h-2.5 rounded-full bg-surface2 overflow-hidden">
+              <div class="absolute inset-y-0 rounded-full" style="left:8%;width:84%;background:linear-gradient(90deg,rgba(238,108,43,0.45),#EE6C2B 40%,#EE6C2B 80%,rgba(238,108,43,0.5))"></div>
+            </div>
+          </div>
+          <!-- lingering snow -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-[12.5px] text-mute">Lingering snow at the cols</span>
+              <span class="mono text-[10.5px] text-faint">early June only</span>
+            </div>
+            <div class="relative h-2.5 rounded-full bg-surface2 overflow-hidden">
+              <div class="absolute inset-y-0 rounded-full" style="left:0%;width:22%;background:linear-gradient(90deg,#6A8E98,rgba(106,142,152,0.3))"></div>
+            </div>
+          </div>
+          <!-- wildflowers -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-[12.5px] text-mute">Wildflower meadows</span>
+              <span class="mono text-[10.5px] text-faint">peak late June–July</span>
+            </div>
+            <div class="relative h-2.5 rounded-full bg-surface2 overflow-hidden">
+              <div class="absolute inset-y-0 rounded-full" style="left:10%;width:46%;background:linear-gradient(90deg,rgba(110,122,72,0.4),#8A9A52 60%,rgba(138,154,82,0.3))"></div>
+            </div>
+          </div>
+          <!-- crowds -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-[12.5px] text-mute">Crowds on the trail</span>
+              <span class="mono text-[10.5px] text-faint">busiest in August</span>
+            </div>
+            <div class="relative h-2.5 rounded-full bg-surface2 overflow-hidden">
+              <div class="absolute inset-y-0 rounded-full" style="left:28%;width:40%;background:linear-gradient(90deg,rgba(154,163,166,0.3),#9AA3A6 50%,rgba(154,163,166,0.3))"></div>
+            </div>
+          </div>
+        </div>
+        <div class="border-t line px-5 sm:px-7 py-3.5 flex items-center gap-2.5">
+          <span class="pulse-dot"></span>
+          <p class="text-[12.5px] text-mute">Our pick — <span class="text-ink font-500">mid-June</span> for wildflowers and quiet trails, or <span class="text-ink font-500">September</span> for crisp air, clear summits and the year's best light.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 11 · REVIEWS ===== -->
+  <section id="reviews" class="relative py-20 sm:py-28 border-t line bg-surface/30">
+    <div class="max-w-[1200px] mx-auto px-5 sm:px-8">
+      <div class="grid lg:grid-cols-[0.85fr_1.15fr] gap-12 lg:gap-16">
+        <!-- aggregate -->
+        <div>
+          <div class="eyebrow mb-5"><span class="accent-line"></span>Reviews</div>
+          <h2 class="display-sm text-[clamp(1.95rem,4vw,3rem)]">Walked it. Loved it. Said so.</h2>
+          <div class="mt-7 rounded-2xl border line-strong bg-surface p-6">
+            <div class="flex items-baseline gap-3">
+              <span class="display text-[clamp(2.6rem,5vw,3.4rem)] text-accent tnum">4.9</span>
+              <div class="flex gap-0.5 mb-1.5" aria-hidden="true">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+              </div>
+            </div>
+            <p class="mt-3 text-[13.5px] text-mute leading-relaxed">
+              Average of <span class="mono text-ink tnum">2,104</span> verified reviews from walkers on the Dolomites High Route since 2019. <span class="mono text-ink tnum">96%</span> would recommend the trip to a friend.
+            </p>
+            <dl class="mt-5 space-y-2.5">
+              <div class="flex items-center gap-3">
+                <dt class="text-[12px] text-faint w-28 shrink-0">Guiding</dt>
+                <dd class="flex-1 h-1.5 rounded-full bg-surface2 overflow-hidden"><span class="block h-full rounded-full bg-accent" style="width:99%"></span></dd>
+                <span class="mono text-[11px] text-mute tnum">5.0</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <dt class="text-[12px] text-faint w-28 shrink-0">Accommodation</dt>
+                <dd class="flex-1 h-1.5 rounded-full bg-surface2 overflow-hidden"><span class="block h-full rounded-full bg-accent" style="width:94%"></span></dd>
+                <span class="mono text-[11px] text-mute tnum">4.7</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <dt class="text-[12px] text-faint w-28 shrink-0">Value</dt>
+                <dd class="flex-1 h-1.5 rounded-full bg-surface2 overflow-hidden"><span class="block h-full rounded-full bg-accent" style="width:92%"></span></dd>
+                <span class="mono text-[11px] text-mute tnum">4.6</span>
+              </div>
+            </dl>
+          </div>
+        </div>
+
+        <!-- traveler reviews -->
+        <div class="space-y-4">
+          <!-- review 1 -->
+          <figure class="rounded-2xl border line bg-surface card-lift p-5 sm:p-6">
+            <div class="flex gap-0.5 mb-3" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+            </div>
+            <blockquote class="text-[14.5px] leading-[1.65] text-ink">
+              "I'd never walked above 2,500m and the summit day terrified me on paper. Margaux talked the whole group up that ridge like it was nothing. Standing at the col at −6°C with the entire range below us — that's a morning I'll have forever."
+            </blockquote>
+            <figcaption class="mt-4 flex items-center gap-3 text-[12.5px]">
+              <span class="w-8 h-8 rounded-full shrink-0" style="background:radial-gradient(120% 110% at 30% 25%,#F4915C,#A05A2E 60%,#2E2018)"></span>
+              <span><span class="text-ink font-600">Hannah Okafor</span><span class="text-faint"> · Dolomites High Route · Sep 2025</span></span>
+            </figcaption>
+          </figure>
+          <!-- review 2 -->
+          <figure class="rounded-2xl border line bg-surface card-lift p-5 sm:p-6">
+            <div class="flex gap-0.5 mb-3" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+            </div>
+            <blockquote class="text-[14.5px] leading-[1.65] text-ink">
+              "Came solo, worried I'd feel like a spare part. By Day 3 we were a proper little crew swapping snacks and blister tape. The 7kg daypack is the genius of it — you actually look up at the mountains instead of at your own boots."
+            </blockquote>
+            <figcaption class="mt-4 flex items-center gap-3 text-[12.5px]">
+              <span class="w-8 h-8 rounded-full shrink-0" style="background:radial-gradient(120% 110% at 65% 30%,#8FA8B6,#4A5E6C 60%,#1E262C)"></span>
+              <span><span class="text-ink font-600">Daniel Reinholt</span><span class="text-faint"> · Dolomites High Route · Jul 2025</span></span>
+            </figcaption>
+          </figure>
+          <!-- review 3 -->
+          <figure class="rounded-2xl border line bg-surface card-lift p-5 sm:p-6">
+            <div class="flex gap-0.5 mb-3" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+            </div>
+            <blockquote class="text-[14.5px] leading-[1.65] text-ink">
+              "Rifugio Puez at night, no road for miles, the Milky Way overhead — my wife and I have walked a lot of trails and that hour is near the top of the list. Lukas reads weather like a book; he flipped two days around to dodge a storm and we never got wet."
+            </blockquote>
+            <figcaption class="mt-4 flex items-center gap-3 text-[12.5px]">
+              <span class="w-8 h-8 rounded-full shrink-0" style="background:radial-gradient(120% 110% at 35% 70%,#C2B7A2,#7A715C 55%,#2E2A22)"></span>
+              <span><span class="text-ink font-600">Sofia Maréchal</span><span class="text-faint"> · Dolomites High Route · Aug 2024</span></span>
+            </figcaption>
+          </figure>
+          <!-- review 4 -->
+          <figure class="rounded-2xl border line bg-surface card-lift p-5 sm:p-6">
+            <div class="flex gap-0.5 mb-3" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#EE6C2B"><path d="M12 .6l3.7 7.4 8.2 1.2-5.9 5.8 1.4 8.2L12 18.9 4.6 22.7 6 14.5.1 8.7l8.2-1.2z"/></svg>
+            </div>
+            <blockquote class="text-[14.5px] leading-[1.65] text-ink">
+              "Switchback got the pacing exactly right — the brutal days are short, the long days are flat. I'm 58 and trained for three months; I never once felt rushed or held back. The canederli at Rifugio Bolzano alone are worth the airfare."
+            </blockquote>
+            <figcaption class="mt-4 flex items-center gap-3 text-[12.5px]">
+              <span class="w-8 h-8 rounded-full shrink-0" style="background:radial-gradient(120% 110% at 70% 35%,#9CAF88,#586848 55%,#232A1F)"></span>
+              <span><span class="text-ink font-600">Takeshi Yamada</span><span class="text-faint"> · Dolomites High Route · Jun 2025</span></span>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 12 · MORE SWITCHBACK TRIPS ===== -->
+  <section id="trips" class="relative py-20 sm:py-28 border-t line">
+    <div class="max-w-[1200px] mx-auto px-5 sm:px-8">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-12">
+        <div class="max-w-[44ch]">
+          <div class="eyebrow mb-5"><span class="accent-line"></span>More Switchback trips</div>
+          <h2 class="display-sm text-[clamp(1.95rem,4vw,3rem)]">This is one of 60+ routes.</h2>
+        </div>
+        <p class="mono text-[12px] text-faint sm:text-right leading-relaxed">
+          hut-to-hut · small groups<br />guided since 1994
+        </p>
+      </div>
+
+      <div class="grid sm:grid-cols-3 gap-4">
+        <!-- trip A -->
+        <a href="#enquire" class="group rounded-2xl border line overflow-hidden card-lift bg-surface block">
+          <div class="photo-trip-a relative aspect-[16/10]">
+            <div class="absolute inset-0" style="background:radial-gradient(80% 90% at 50% 25%, transparent, rgba(0,0,0,0.4))" aria-hidden="true"></div>
+            <svg class="absolute bottom-0 inset-x-0 w-full h-1/2" viewBox="0 0 360 120" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M0 120 V72 L90 44 L190 86 L280 50 L360 78 V120 Z" fill="rgba(14,17,19,0.5)"/>
+            </svg>
+          </div>
+          <div class="p-5">
+            <h3 class="text-[16px] font-700 tracking-[-0.02em]">Tour du Mont Blanc</h3>
+            <p class="mt-1.5 text-[13px] leading-[1.55] text-mute">The classic circuit of the Mont Blanc massif — France, Italy, Switzerland on foot.</p>
+            <div class="mt-4 flex items-center gap-3 mono text-[11px] text-faint tnum">
+              <span>11 days</span><span class="text-[color:var(--line-strong)]">·</span>
+              <span>moderate</span><span class="text-[color:var(--line-strong)]">·</span>
+              <span class="text-accent">from $3,240</span>
+            </div>
+          </div>
+        </a>
+        <!-- trip B -->
+        <a href="#enquire" class="group rounded-2xl border line overflow-hidden card-lift bg-surface block">
+          <div class="photo-trip-b relative aspect-[16/10]">
+            <div class="absolute inset-0" style="background:radial-gradient(80% 90% at 55% 25%, transparent, rgba(0,0,0,0.4))" aria-hidden="true"></div>
+            <svg class="absolute bottom-0 inset-x-0 w-full h-1/2" viewBox="0 0 360 120" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M0 120 V66 L100 42 L200 88 L290 48 L360 80 V120 Z" fill="rgba(14,17,19,0.5)"/>
+            </svg>
+          </div>
+          <div class="p-5">
+            <h3 class="text-[16px] font-700 tracking-[-0.02em]">The Walker's Haute Route</h3>
+            <p class="mt-1.5 text-[13px] leading-[1.55] text-mute">Chamonix to Zermatt under ten 4,000m peaks — the great Alpine traverse.</p>
+            <div class="mt-4 flex items-center gap-3 mono text-[11px] text-faint tnum">
+              <span>14 days</span><span class="text-[color:var(--line-strong)]">·</span>
+              <span>hard</span><span class="text-[color:var(--line-strong)]">·</span>
+              <span class="text-accent">from $3,980</span>
+            </div>
+          </div>
+        </a>
+        <!-- trip C -->
+        <a href="#enquire" class="group rounded-2xl border line overflow-hidden card-lift bg-surface block">
+          <div class="photo-trip-c relative aspect-[16/10]">
+            <div class="absolute inset-0" style="background:radial-gradient(80% 90% at 45% 25%, transparent, rgba(0,0,0,0.4))" aria-hidden="true"></div>
+            <svg class="absolute bottom-0 inset-x-0 w-full h-1/2" viewBox="0 0 360 120" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M0 120 V70 L85 46 L185 88 L275 50 L360 78 V120 Z" fill="rgba(14,17,19,0.5)"/>
+            </svg>
+          </div>
+          <div class="p-5">
+            <h3 class="text-[16px] font-700 tracking-[-0.02em]">The Julian Alps Traverse</h3>
+            <p class="mt-1.5 text-[13px] leading-[1.55] text-mute">A wild, quiet crossing of Slovenia's Triglav National Park, hut to hut.</p>
+            <div class="mt-4 flex items-center gap-3 mono text-[11px] text-faint tnum">
+              <span>8 days</span><span class="text-[color:var(--line-strong)]">·</span>
+              <span>moderate</span><span class="text-[color:var(--line-strong)]">·</span>
+              <span class="text-accent">from $2,420</span>
+            </div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 13 · FAQ ===== -->
+  <section id="faq" class="relative py-20 sm:py-28 border-t line bg-surface/30">
+    <div class="max-w-[860px] mx-auto px-5 sm:px-8">
+      <div class="max-w-[48ch]">
+        <div class="eyebrow mb-5"><span class="accent-line"></span>Before you book</div>
+        <h2 class="display-sm text-[clamp(1.95rem,4vw,3rem)]">Honest answers to the real questions.</h2>
+      </div>
+
+      <div class="mt-11 space-y-3">
+        <!-- Q1 -->
+        <details class="faq-item rounded-xl border line-strong bg-surface px-5 sm:px-6 py-1">
+          <summary class="flex items-center justify-between gap-4 py-4.5 py-4">
+            <span class="text-[15.5px] font-600 tracking-[-0.01em]">How fit do I need to be?</span>
+            <span class="faq-sign shrink-0 text-accent text-[20px] leading-none">+</span>
+          </summary>
+          <p class="pb-5 -mt-1 text-[14px] leading-[1.7] text-mute">
+            This is a moderate-to-hard trek. You should be comfortable walking <span class="mono text-ink tnum">5–7 hours</span> a day for nine days, carrying a light pack, with summit day reaching <span class="mono text-ink tnum">1,340m</span> of ascent. We tell everyone to train for three months — regular hill walks, some stairs, a few back-to-back days. If you can do a long hilly day and feel good doing another the next morning, you're ready. We're glad to talk through your fitness before you commit.
+          </p>
+        </details>
+        <!-- Q2 -->
+        <details class="faq-item rounded-xl border line-strong bg-surface px-5 sm:px-6 py-1">
+          <summary class="flex items-center justify-between gap-4 py-4">
+            <span class="text-[15.5px] font-600 tracking-[-0.01em]">Do I need technical climbing experience?</span>
+            <span class="faq-sign shrink-0 text-accent text-[20px] leading-none">+</span>
+          </summary>
+          <p class="pb-5 -mt-1 text-[14px] leading-[1.7] text-mute">
+            No. The entire route, summit day included, is walking and occasional easy scrambling on a marked path — no ropes, no harness, no via ferrata. There's some exposure on the final summit ridge, meaning steep ground beside the trail, but the path itself is straightforward and your guides brief and pace it carefully. If you've hiked steep mountain terrain before, you have everything you need.
+          </p>
+        </details>
+        <!-- Q3 -->
+        <details class="faq-item rounded-xl border line-strong bg-surface px-5 sm:px-6 py-1">
+          <summary class="flex items-center justify-between gap-4 py-4">
+            <span class="text-[15.5px] font-600 tracking-[-0.01em]">Is it okay to come solo?</span>
+            <span class="faq-sign shrink-0 text-accent text-[20px] leading-none">+</span>
+          </summary>
+          <p class="pb-5 -mt-1 text-[14px] leading-[1.7] text-mute">
+            Absolutely — roughly half of every group books solo, and the shared-walking, shared-hut format makes a trekking group close fast. There's no single supplement: hut accommodation is dormitory or twin-share by default, and we pair solo travellers of the same gender. If you'd prefer a private room on the nights it's available, we can arrange that for a small surcharge.
+          </p>
+        </details>
+        <!-- Q4 -->
+        <details class="faq-item rounded-xl border line-strong bg-surface px-5 sm:px-6 py-1">
+          <summary class="flex items-center justify-between gap-4 py-4">
+            <span class="text-[15.5px] font-600 tracking-[-0.01em]">What gear do I bring vs. rent?</span>
+            <span class="faq-sign shrink-0 text-accent text-[20px] leading-none">+</span>
+          </summary>
+          <p class="pb-5 -mt-1 text-[14px] leading-[1.7] text-mute">
+            Bring your own broken-in boots, a daypack, walking poles and layered clothing — a full packing list goes out the moment you book. The rifugios provide blankets and pillows, so a lightweight sleeping-bag liner is all you need for sleeping. We can arrange rental of poles, packs and shell jackets in Ortisei if you'd rather not fly with them. The one rule: never bring brand-new boots on Day 1.
+          </p>
+        </details>
+        <!-- Q5 -->
+        <details class="faq-item rounded-xl border line-strong bg-surface px-5 sm:px-6 py-1">
+          <summary class="flex items-center justify-between gap-4 py-4">
+            <span class="text-[15.5px] font-600 tracking-[-0.01em]">What's the cancellation and insurance policy?</span>
+            <span class="faq-sign shrink-0 text-accent text-[20px] leading-none">+</span>
+          </summary>
+          <p class="pb-5 -mt-1 text-[14px] leading-[1.7] text-mute">
+            The <span class="mono text-ink tnum">$450</span> deposit is non-refundable; the balance is fully refundable if you cancel more than <span class="mono text-ink tnum">60 days</span> before departure, 50% between 60 and 30 days, and non-refundable inside 30 days. Comprehensive travel insurance that covers trekking to <span class="mono text-ink tnum">3,000m</span> and mountain rescue is mandatory — we'll ask for your policy number before departure, and we recommend buying it the same week you book.
+          </p>
+        </details>
+        <!-- Q6 -->
+        <details class="faq-item rounded-xl border line-strong bg-surface px-5 sm:px-6 py-1">
+          <summary class="flex items-center justify-between gap-4 py-4">
+            <span class="text-[15.5px] font-600 tracking-[-0.01em]">How big are the groups?</span>
+            <span class="faq-sign shrink-0 text-accent text-[20px] leading-none">+</span>
+          </summary>
+          <p class="pb-5 -mt-1 text-[14px] leading-[1.7] text-mute">
+            A maximum of <span class="mono text-ink tnum">12</span> walkers, with two IFMGA guides — a ratio of one guide to six. That keeps the group nimble at the cols, easy to seat together at the huts, and small enough that the guides know everyone's pace by Day 2. A departure runs with a minimum of <span class="mono text-ink tnum">4</span> guests; in eleven seasons we have never cancelled one for low numbers.
+          </p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 14 · FINAL CTA ===== -->
+  <section id="enquire" class="relative overflow-hidden border-t line">
+    <div class="absolute inset-0 hero-glow" aria-hidden="true"></div>
+    <div class="absolute inset-0 dot-grid opacity-25 pointer-events-none" aria-hidden="true"></div>
+    <div class="mesh-blob mesh-warm w-[460px] h-[460px] -bottom-40 left-1/2 -translate-x-1/2 opacity-60"></div>
+    <svg class="absolute bottom-0 inset-x-0 w-full h-[30vh] min-h-[150px] pointer-events-none" viewBox="0 0 1440 240" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 240 V150 L200 110 L420 168 L640 90 L880 158 L1120 86 L1320 150 L1440 118 V240 Z" fill="rgba(20,24,28,0.5)"/>
+      <path d="M0 240 V190 L240 156 L480 200 L720 138 L960 196 L1200 150 L1440 192 V240 Z" fill="rgba(14,17,19,0.82)"/>
+    </svg>
+
+    <div class="relative z-10 max-w-[1200px] mx-auto px-5 sm:px-8 py-24 sm:py-32 text-center">
+      <div class="inline-flex items-center gap-2.5 rounded-full border line-accent bg-[rgba(238,108,43,0.08)] px-3.5 py-1.5 mb-7">
+        <span class="pulse-dot"></span>
+        <span class="mono text-[11.5px] tracking-[0.04em] text-ink">Next departure · 07–15 Jun 2026 · open now</span>
+      </div>
+      <h2 class="display text-[clamp(2.2rem,5.6vw,3.9rem)] max-w-[18ch] mx-auto">
+        Nine days to the Tre Cime. <span class="halftone">Twelve seats a trip.</span>
+      </h2>
+      <p class="mt-6 max-w-[52ch] mx-auto text-[16px] leading-[1.65] text-mute">
+        Hold your place with a <span class="mono text-ink tnum">$450</span> deposit, or send us a question first — a real guide answers, usually within a day.
+      </p>
+      <div class="mt-9 flex flex-col sm:flex-row gap-3.5 justify-center">
+        <a href="#dates" class="btn btn-accent inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-700 w-full sm:w-auto">
+          Book the Dolomites High Route
+          <svg class="arrow-x" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </a>
+        <a href="#guides" class="btn btn-ghost inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-600 w-full sm:w-auto">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Ask a guide a question
+        </a>
+      </div>
+      <p class="mt-7 mono text-[11.5px] text-faint">
+        <span class="text-accent">●</span> 4.9 / 5 across 2,104 reviews · 38,408 travelers hosted since 1994
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<!-- ===== 15 · FOOTER ===== -->
+<footer class="border-t line bg-surface/40">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-14">
+    <div class="grid sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr] gap-10 lg:gap-8">
+      <!-- brand -->
+      <div>
+        <a href="#top" class="flex items-center gap-2.5" aria-label="Switchback — home">
+          <svg width="26" height="26" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect width="32" height="32" rx="8" fill="#161A1D" stroke="rgba(238,108,43,0.34)"/>
+            <path d="M6 23 L11 23 L13 16 L18 16 L20 9 L26 9" stroke="#EE6C2B" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="11" cy="23" r="1.7" fill="#EE6C2B"/>
+            <circle cx="18" cy="16" r="1.7" fill="#F4915C"/>
+            <circle cx="26" cy="9" r="1.7" fill="#EE6C2B"/>
+          </svg>
+          <span class="text-[16px] font-700 tracking-[-0.02em]">Switchback</span>
+        </a>
+        <p class="mt-4 text-[13.5px] leading-[1.65] text-mute max-w-[34ch]">
+          A small-group adventure trekking outfit running 60+ guided hut-to-hut routes across the world's mountain ranges since 1994.
+        </p>
+        <p class="mt-5 eyebrow">Ortisei · Chamonix · Kathmandu</p>
+      </div>
+
+      <!-- trips -->
+      <nav>
+        <h3 class="eyebrow mb-4">Trips</h3>
+        <ul class="space-y-2.5 text-[13.5px] text-mute">
+          <li><a href="#route" class="navlink">Dolomites High Route</a></li>
+          <li><a href="#trips" class="navlink">Tour du Mont Blanc</a></li>
+          <li><a href="#trips" class="navlink">Walker's Haute Route</a></li>
+          <li><a href="#trips" class="navlink">Julian Alps Traverse</a></li>
+          <li><a href="#trips" class="navlink">All 60+ routes</a></li>
+        </ul>
+      </nav>
+
+      <!-- about -->
+      <nav>
+        <h3 class="eyebrow mb-4">About</h3>
+        <ul class="space-y-2.5 text-[13.5px] text-mute">
+          <li><a href="#guides" class="navlink">Our guides</a></li>
+          <li><a href="#reviews" class="navlink">Traveler reviews</a></li>
+          <li><a href="#season" class="navlink">Why hut to hut</a></li>
+          <li><a href="#stay" class="navlink">The rifugios</a></li>
+        </ul>
+      </nav>
+
+      <!-- travel info -->
+      <nav>
+        <h3 class="eyebrow mb-4">Travel info</h3>
+        <ul class="space-y-2.5 text-[13.5px] text-mute">
+          <li><a href="#included" class="navlink">What's included</a></li>
+          <li><a href="#faq" class="navlink">Fitness &amp; grades</a></li>
+          <li><a href="#faq" class="navlink">Booking &amp; cancellation</a></li>
+          <li><a href="#enquire" class="navlink">Contact a guide</a></li>
+        </ul>
+      </nav>
+    </div>
+
+    <!-- financial protection + bottom -->
+    <div class="mt-12 pt-7 border-t line flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+      <div class="flex items-center gap-3.5">
+        <!-- ATOL-style protection badge placeholder -->
+        <span class="flex items-center gap-2.5 rounded-lg border line-strong bg-surface px-3.5 py-2.5">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 2.5 L4 6 V11.5 C4 16.5 7.5 20.5 12 21.5 C16.5 20.5 20 16.5 20 11.5 V6 Z" stroke="#EE6C2B" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M8.8 12 L11 14.2 L15.4 9.5" stroke="#EE6C2B" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="leading-tight">
+            <span class="block mono text-[10px] tracking-[0.13em] text-faint uppercase">Financial protection</span>
+            <span class="block text-[12.5px] font-600 text-ink">Trust-account bonded · ABTOT 5417</span>
+          </span>
+        </span>
+        <p class="text-[12px] text-faint max-w-[26ch] leading-snug">
+          Every booking is fully financially protected from deposit to return.
+        </p>
+      </div>
+
+      <div class="text-[12.5px] text-faint lg:text-right">
+        <p>© 2026 Switchback Mountain Journeys Ltd. All rights reserved.</p>
+        <p class="mt-1.5 flex items-center gap-1.5 lg:justify-end">
+          <span class="w-1.5 h-1.5 rounded-full bg-accent inline-block"></span>
+          We offset every guest's trail transfers and plant 12 larches per departure.
+        </p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

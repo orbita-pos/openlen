@@ -18,6 +18,7 @@ type CtaIconComponent =
 interface Tier {
   name: string;
   featured?: boolean;
+  comingSoon?: boolean;
   price: number;
   suffix: string;
   blurb: string;
@@ -29,44 +30,45 @@ const tiers: Tier[] = [
   {
     name: "Free",
     price: 0,
-    suffix: "forever",
-    blurb: "For tinkerers and side projects.",
-    cta: { label: "Clone the repo", variant: "outline", icon: GithubIcon },
+    suffix: "during alpha",
+    blurb: "Everything works. No paywall during the alpha.",
+    cta: { label: "Try it free", variant: "primary", icon: Sparkles, href: "/register" },
     features: [
-      "Run the generator locally",
-      "Unlimited self-hosted pages",
-      "Bring your own LLM key (OpenAI, Anthropic, local)",
-      "Community Discord",
+      "Generate from a prompt (Gemini 2.5 Pro)",
+      "165 templates including 30 link-in-bio",
+      "Publish to <you>.openlen.com",
+      "Privacy-first analytics + per-link click tracking",
+      "Lead forms with email notifications",
     ],
   },
   {
     name: "Pro",
     featured: true,
+    comingSoon: true,
     price: 19,
     suffix: "/month",
-    blurb: "Hosted generator + premium image gen.",
-    cta: { label: "Start Pro — 14 days free", variant: "primary", icon: Sparkles, href: "/register" },
+    blurb: "Higher generation limits + custom domains.",
+    cta: { label: "Get notified at launch", variant: "outline", icon: ArrowRight, href: "/register" },
     features: [
       "Everything in Free",
-      "100 hosted generations / mo",
-      "FLUX.2 HD images included",
-      "1-click deploy to Vercel & Cloudflare",
-      "Custom domains on hosted pages",
+      "1,000 AI generations / month",
+      "Custom domains (links.your-brand.com)",
+      "Analytics retention beyond 90 days",
       "Priority email support",
     ],
   },
   {
-    name: "Team",
-    price: 49,
-    suffix: "/month per seat",
-    blurb: "For agencies and product teams.",
-    cta: { label: "Talk to sales", variant: "outline", icon: ArrowRight },
+    name: "Self-host",
+    price: 0,
+    suffix: "forever",
+    blurb: "Run the whole stack on your own box.",
+    cta: { label: "Clone the repo", variant: "outline", icon: GithubIcon, href: "https://github.com/jesusbernalrj/inari-pages" },
     features: [
-      "Everything in Pro",
-      "Unlimited generations",
-      "Shared brand kit & component library",
-      "SSO + audit log",
-      "Slack-shared support channel",
+      "AGPLv3 — yours to modify + redistribute",
+      "Bring your own Gemini / Kimi API key",
+      "Single Hetzner box runs everything",
+      "Wildcard subdomain via nginx",
+      "No bill, no rate limit, no oversight",
     ],
   },
 ];
@@ -80,12 +82,13 @@ export function Pricing() {
             <Wallet size={11} /> Pricing
           </Badge>
           <h2 className="mt-4 text-3xl sm:text-5xl font-semibold tracking-tightest leading-[1.05]">
-            Priced like a tool.{" "}
-            <span className="text-zinc-500 dark:text-zinc-400">Not like a SaaS.</span>
+            Free during alpha.{" "}
+            <span className="text-zinc-500 dark:text-zinc-400">Self-host forever.</span>
           </h2>
           <p className="mt-4 text-zinc-500 dark:text-zinc-400">
-            Generous free tier. The Pro plan is what a single Lovable invoice usually
-            costs.
+            No paywall while we&apos;re shipping v1 — every feature is open
+            for testing. Pro tier with custom domains + higher limits is in
+            the works.
           </p>
         </div>
 
@@ -109,8 +112,8 @@ export function Pricing() {
               >
                 {t.featured && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-coral-700 px-3 py-1 text-[11px] font-semibold text-white shadow-md">
-                      <Sparkles size={11} /> Most popular
+                    <span className="inline-flex items-center gap-1 rounded-full bg-zinc-900 dark:bg-zinc-200 px-3 py-1 text-[11px] font-semibold text-white dark:text-zinc-900 shadow-md">
+                      {t.comingSoon ? "Coming soon" : (<><Sparkles size={11} /> Most popular</>)}
                     </span>
                   </div>
                 )}
@@ -123,7 +126,7 @@ export function Pricing() {
                   >
                     {t.name}
                   </h3>
-                  {t.name === "Free" && (
+                  {t.name === "Self-host" && (
                     <span className="text-[11px] uppercase tracking-wider text-zinc-400">
                       OSS
                     </span>
@@ -140,7 +143,24 @@ export function Pricing() {
                   </span>
                 </div>
 
-                {t.cta.href ? <Link href={t.cta.href}>{ctaButton}</Link> : ctaButton}
+                {t.cta.href ? (
+                  <Link
+                    href={t.cta.href}
+                    // External repo links (Self-host tier) share their
+                    // accessible name with the other GitHub anchors on
+                    // the page so screen readers don't read four
+                    // different labels for the same destination.
+                    aria-label={
+                      t.cta.href.startsWith("https://github.com/")
+                        ? "OpenLen on GitHub"
+                        : undefined
+                    }
+                  >
+                    {ctaButton}
+                  </Link>
+                ) : (
+                  ctaButton
+                )}
 
                 <div className="mt-7 border-t border-zinc-100 dark:border-zinc-900 pt-6">
                   <ul className="space-y-3">

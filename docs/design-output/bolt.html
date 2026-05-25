@@ -1,0 +1,1200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bolt — Drop 14 · Friday 10AM ET</title>
+<meta name="description" content="Bolt is a streetwear label built on weekly drops. Heavyweight graphic tees, hoodies, caps and cut-and-sew, released Fridays at 10AM ET. Drop 14 lands this week." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#0C0C0E;
+    --ink:#F2F2F3;
+    --volt:#E8FF3A;
+    --hair:rgba(255,255,255,0.06);
+    --hair-strong:rgba(255,255,255,0.12);
+    --muted:#8A8A8F;
+    --muted-2:#6A6A70;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    font-feature-settings:"ss01","cv11";
+    -webkit-font-smoothing:antialiased;
+    margin:0;
+    overflow-x:hidden;
+  }
+  ::selection{background:var(--volt);color:#0C0C0E}
+
+  .display{
+    font-family:'Inter Tight','Inter',sans-serif;
+    font-weight:900;
+    letter-spacing:-0.035em;
+    line-height:0.92;
+  }
+  .display-800{
+    font-family:'Inter Tight','Inter',sans-serif;
+    font-weight:800;
+    letter-spacing:-0.028em;
+  }
+  .tnum{font-variant-numeric:tabular-nums}
+  .halftone{opacity:0.45}
+
+  .label{
+    font-family:'Inter Tight','Inter',sans-serif;
+    text-transform:uppercase;
+    letter-spacing:0.2em;
+    font-weight:700;
+    font-size:0.7rem;
+  }
+  .label-wide{letter-spacing:0.24em}
+
+  /* hairline */
+  .hair{border-color:var(--hair)}
+  .frame{box-shadow:inset 0 0 0 1px var(--hair)}
+  .frame-volt{box-shadow:inset 0 0 0 1px rgba(232,255,58,0.35)}
+
+  /* buttons */
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:0.55rem;
+    font-family:'Inter Tight','Inter',sans-serif;
+    font-weight:800;letter-spacing:-0.01em;
+    transition:transform 110ms ease, box-shadow 110ms ease, background-color 110ms ease, color 110ms ease;
+    cursor:pointer;
+    will-change:transform;
+  }
+  .btn-volt{
+    background:var(--volt);color:#0C0C0E;
+    box-shadow:0 0 0 0 rgba(232,255,58,0);
+  }
+  .btn-volt:hover{
+    transform:translateY(-2px);
+    box-shadow:0 12px 30px -10px rgba(232,255,58,0.55);
+    background:#F1FF6E;
+  }
+  .btn-volt:active{transform:translateY(0)}
+  .btn-ghost{
+    background:transparent;color:var(--ink);
+    box-shadow:inset 0 0 0 1px var(--hair-strong);
+  }
+  .btn-ghost:hover{
+    transform:translateY(-2px);
+    box-shadow:inset 0 0 0 1px rgba(232,255,58,0.6);
+    color:var(--volt);
+  }
+  .btn-ghost:active{transform:translateY(0)}
+  .btn-dark{
+    background:#161618;color:var(--ink);
+    box-shadow:inset 0 0 0 1px var(--hair);
+  }
+  .btn-dark:hover{
+    transform:translateY(-2px);
+    background:#1d1d20;
+    box-shadow:inset 0 0 0 1px var(--hair-strong), 0 14px 28px -16px rgba(0,0,0,0.9);
+  }
+  .btn-dark:active{transform:translateY(0)}
+
+  a,button,summary,input{outline:none}
+  a:focus-visible,button:focus-visible,summary:focus-visible,input:focus-visible,.tile:focus-visible{
+    outline:2px solid var(--volt);
+    outline-offset:3px;
+    border-radius:2px;
+  }
+
+  /* ambient backgrounds */
+  .dotgrid{
+    background-image:radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size:32px 32px;
+  }
+  .mesh::before{
+    content:"";position:absolute;inset:-20% -10%;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(420px 320px at 12% 8%, rgba(232,255,58,0.10), transparent 60%),
+      radial-gradient(520px 420px at 88% 22%, rgba(232,255,58,0.06), transparent 65%),
+      radial-gradient(680px 520px at 50% 110%, rgba(255,255,255,0.04), transparent 60%);
+    filter:blur(28px);
+  }
+
+  /* film grain noise overlay for placeholders */
+  .grain{position:relative;overflow:hidden}
+  .grain::after{
+    content:"";position:absolute;inset:0;pointer-events:none;mix-blend-mode:overlay;opacity:0.085;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* campaign-photo placeholder bases */
+  .ph-base{
+    background:
+      radial-gradient(120% 90% at 26% 14%, rgba(255,255,255,0.10), transparent 56%),
+      radial-gradient(120% 120% at 80% 96%, rgba(0,0,0,0.66), transparent 60%),
+      linear-gradient(155deg,#222226 0%,#141416 46%,#0a0a0c 100%);
+  }
+  .ph-volt{
+    background:
+      radial-gradient(110% 90% at 24% 8%, rgba(232,255,58,0.34), transparent 52%),
+      radial-gradient(130% 120% at 84% 100%, rgba(0,0,0,0.72), transparent 58%),
+      linear-gradient(150deg,#2a2c14 0%,#16170d 44%,#0a0a08 100%);
+  }
+  .ph-cool{
+    background:
+      radial-gradient(110% 100% at 78% 12%, rgba(255,255,255,0.12), transparent 54%),
+      radial-gradient(120% 120% at 14% 100%, rgba(0,0,0,0.7), transparent 60%),
+      linear-gradient(200deg,#26262b 0%,#161619 50%,#0b0b0d 100%);
+  }
+  .ph-deep{
+    background:
+      radial-gradient(120% 90% at 50% 6%, rgba(255,255,255,0.08), transparent 52%),
+      radial-gradient(150% 130% at 50% 120%, rgba(0,0,0,0.8), transparent 58%),
+      linear-gradient(170deg,#1c1c20 0%,#101012 52%,#08080a 100%);
+  }
+  .ph-flat{
+    background:
+      radial-gradient(90% 80% at 30% 22%, rgba(232,255,58,0.16), transparent 60%),
+      radial-gradient(120% 120% at 80% 100%, rgba(0,0,0,0.62), transparent 58%),
+      linear-gradient(160deg,#212126 0%,#141417 60%,#0c0c0e 100%);
+  }
+
+  /* image-scale on hover within overflow-hidden frame */
+  .tile{overflow:hidden;position:relative;display:block}
+  .tile .tile-img{transition:transform 600ms cubic-bezier(.2,.7,.2,1)}
+  .tile:hover .tile-img{transform:scale(1.045)}
+  .tile .tile-cap{
+    transition:opacity 220ms ease, transform 220ms ease;
+  }
+  .tile-fade .tile-cap{opacity:0;transform:translateY(6px)}
+  .tile-fade:hover .tile-cap{opacity:1;transform:translateY(0)}
+
+  /* pulse dot */
+  .pulse{
+    width:9px;height:9px;border-radius:999px;background:var(--volt);
+    box-shadow:0 0 0 0 rgba(232,255,58,0.7);
+    animation:pulse 1.9s ease-out infinite;
+    flex:none;
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(232,255,58,0.55)}
+    70%{box-shadow:0 0 0 12px rgba(232,255,58,0)}
+    100%{box-shadow:0 0 0 0 rgba(232,255,58,0)}
+  }
+
+  /* marquee */
+  .marquee{display:flex;width:max-content;animation:scroll 34s linear infinite}
+  .marquee-slow{animation-duration:48s}
+  @keyframes scroll{
+    from{transform:translateX(0)}
+    to{transform:translateX(-50%)}
+  }
+  .marquee-wrap:hover .marquee{animation-play-state:paused}
+
+  /* countdown blocks */
+  .cd-block{
+    font-family:'Inter Tight','Inter',sans-serif;
+    font-weight:900;letter-spacing:-0.04em;
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* faq accordion */
+  details{border-bottom:1px solid var(--hair)}
+  details summary{
+    list-style:none;cursor:pointer;
+    display:flex;align-items:center;justify-content:space-between;gap:1.5rem;
+  }
+  details summary::-webkit-details-marker{display:none}
+  .faq-plus{
+    transition:transform 180ms ease;
+    flex:none;
+  }
+  details[open] .faq-plus{transform:rotate(45deg)}
+  details .faq-body{
+    overflow:hidden;
+    max-height:0;
+    transition:max-height 240ms ease;
+  }
+  details[open] .faq-body{max-height:420px}
+
+  /* nav scrolled */
+  .navbar{transition:background-color 200ms ease, border-color 200ms ease}
+
+  /* utility */
+  .wrap{max-width:1280px;margin-left:auto;margin-right:auto}
+  .vstroke{ -webkit-text-stroke:1.5px rgba(232,255,58,0.55); color:transparent }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important;transition:none !important;scroll-behavior:auto}
+  }
+</style>
+</head>
+<body class="dotgrid">
+
+<!-- ============ NAV ============ -->
+<header id="top" class="fixed top-0 inset-x-0 z-50">
+  <nav class="navbar border-b hair" style="background:rgba(12,12,14,0.82);backdrop-filter:blur(14px)">
+    <div class="wrap px-5 sm:px-8 h-16 flex items-center justify-between">
+      <a href="#top" class="flex items-center gap-2.5 group" aria-label="Bolt — home">
+        <span aria-hidden="true" class="grid place-items-center w-8 h-8 rounded-[7px]" style="background:var(--volt)">
+          <svg width="14" height="16" viewBox="0 0 14 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8.5 0L0 9.2h4.6L5.5 16 14 6.8H9.4L8.5 0z" fill="#0C0C0E"/>
+          </svg>
+        </span>
+        <span class="display-800 text-xl tracking-tight">BOLT</span>
+      </a>
+      <div class="hidden md:flex items-center gap-9 label text-[0.72rem]" style="letter-spacing:0.16em">
+        <a href="#collection" class="text-[var(--muted)] hover:text-[var(--ink)] transition-colors">SHOP</a>
+        <a href="#lookbook" class="text-[var(--muted)] hover:text-[var(--ink)] transition-colors">LOOKBOOK</a>
+        <a href="#about" class="text-[var(--muted)] hover:text-[var(--ink)] transition-colors">ABOUT</a>
+        <a href="#stockists" class="text-[var(--muted)] hover:text-[var(--ink)] transition-colors">STOCKISTS</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="hidden sm:inline-flex items-center gap-2 label text-[0.62rem] text-[var(--volt)]" style="letter-spacing:0.2em">
+          <span class="pulse" aria-hidden="true"></span> DROP 14 LIVE FRI
+        </span>
+        <a href="#collection" class="btn btn-volt text-[0.78rem] px-4 py-2 rounded-[7px]">Shop</a>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<main>
+
+<!-- ============ 1+2. HERO (campaign) ============ -->
+<section class="relative mesh pt-16 overflow-hidden">
+  <div class="relative z-10 wrap px-5 sm:px-8 pt-14 sm:pt-20 pb-12">
+    <div class="flex flex-wrap items-center gap-3 mb-8">
+      <span class="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 label text-[0.62rem]" style="background:var(--volt);color:#0C0C0E">
+        <span class="w-1.5 h-1.5 rounded-full bg-[#0C0C0E]" aria-hidden="true"></span>
+        DROP 14 · FRIDAY 10AM ET
+      </span>
+      <span class="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 label text-[0.62rem] text-[var(--muted)] frame">
+        SEASON — FW · "CROSSWIRE"
+      </span>
+    </div>
+
+    <h1 class="display text-[clamp(3.4rem,12vw,9.5rem)] max-w-[15ch]">
+      WEAR IT<br/>
+      <span class="text-[var(--volt)]">FAST.</span> <span class="halftone">MOVE FASTER.</span>
+    </h1>
+
+    <div class="mt-9 grid md:grid-cols-[1.15fr_0.85fr] gap-8 items-end">
+      <p class="text-[var(--muted)] text-base sm:text-lg leading-relaxed max-w-[52ch]">
+        Bolt is a streetwear label that runs on weekly drops. Drop 14 — "Crosswire" — is
+        twelve pieces of heavyweight cotton, screen-printed graphics, and one cut-and-sew
+        jacket. It lands Friday and it does not wait around.
+      </p>
+      <div class="flex flex-wrap gap-3 md:justify-end">
+        <a href="#collection" class="btn btn-volt text-[0.95rem] px-6 py-3.5 rounded-[9px]">
+          Shop the collection
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h9M8 3l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#drop" class="btn btn-ghost text-[0.95rem] px-6 py-3.5 rounded-[9px]">See the drop</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- full-bleed campaign image -->
+  <div class="relative z-10 mt-4">
+    <figure class="grain ph-volt frame aspect-[16/10] sm:aspect-[16/8] md:aspect-[16/7] w-full">
+      <div class="absolute inset-0 grid place-items-center">
+        <span class="display text-[clamp(4rem,20vw,18rem)] text-[#0C0C0E] opacity-[0.16] select-none">CROSSWIRE</span>
+      </div>
+      <figcaption class="absolute bottom-0 inset-x-0 p-5 sm:p-7 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p class="label text-[0.62rem] text-[#0C0C0E]/70">CAMPAIGN — FW "CROSSWIRE"</p>
+          <p class="display-800 text-2xl sm:text-3xl text-[#0C0C0E] mt-1">Shot on the overpass, 6AM.</p>
+        </div>
+        <p class="label text-[0.6rem] text-[#0C0C0E]/65 max-w-[26ch] leading-relaxed" style="letter-spacing:0.14em">
+          PHOTOGRAPHY — DARIUS OKONKWO · CREATIVE DIRECTION — MAYA TROST
+        </p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <!-- ticker marquee -->
+  <div class="marquee-wrap relative z-10 border-y hair overflow-hidden py-3 mt-px" style="background:var(--volt)">
+    <div class="marquee" aria-hidden="true">
+      <div class="flex items-center gap-8 pr-8 label text-[0.74rem] text-[#0C0C0E]" style="letter-spacing:0.16em">
+        <span>DROP 14 · FRIDAY 10AM ET</span><span aria-hidden="true">✦</span>
+        <span>12 PIECES · NO RESTOCK</span><span aria-hidden="true">✦</span>
+        <span>EARLY ACCESS FOR THE LIST</span><span aria-hidden="true">✦</span>
+        <span>SHIPS WORLDWIDE IN 48H</span><span aria-hidden="true">✦</span>
+        <span>DROP 14 · FRIDAY 10AM ET</span><span aria-hidden="true">✦</span>
+        <span>12 PIECES · NO RESTOCK</span><span aria-hidden="true">✦</span>
+        <span>EARLY ACCESS FOR THE LIST</span><span aria-hidden="true">✦</span>
+        <span>SHIPS WORLDWIDE IN 48H</span><span aria-hidden="true">✦</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DROP SECTION TWIST (countdown + archive) ============ -->
+<section id="drop" class="relative mesh border-b hair">
+  <div class="relative z-10 wrap px-5 sm:px-8 py-16 sm:py-24">
+    <div class="flex items-center gap-3 mb-3">
+      <span class="pulse" aria-hidden="true"></span>
+      <span class="label text-[0.66rem] text-[var(--volt)]">THE DROP — LIVE COUNTDOWN</span>
+    </div>
+    <h2 class="display text-[clamp(2.6rem,7vw,5.6rem)] max-w-[16ch]">
+      DROP 14 LANDS<br/><span class="text-[var(--volt)]">FRIDAY, 10AM ET.</span>
+    </h2>
+
+    <div class="mt-10 grid lg:grid-cols-[1.05fr_0.95fr] gap-10 lg:gap-14 items-start">
+
+      <!-- countdown card -->
+      <div class="rounded-2xl frame p-6 sm:p-8" style="background:linear-gradient(165deg,#161618,#0e0e10)">
+        <div class="flex items-center justify-between gap-4">
+          <p class="label text-[0.62rem] text-[var(--muted)]">TIME UNTIL "CROSSWIRE"</p>
+          <span class="label text-[0.58rem] text-[var(--volt)] frame-volt rounded-full px-2.5 py-1">REMINDER OPEN</span>
+        </div>
+
+        <div class="mt-6 grid grid-cols-4 gap-2.5 sm:gap-3.5">
+          <div class="rounded-xl frame text-center py-5 sm:py-7" style="background:#0C0C0E">
+            <div class="cd-block text-[clamp(2.2rem,7vw,4rem)] text-[var(--ink)]">02</div>
+            <div class="label text-[0.54rem] text-[var(--muted-2)] mt-1">DAYS</div>
+          </div>
+          <div class="rounded-xl frame text-center py-5 sm:py-7" style="background:#0C0C0E">
+            <div class="cd-block text-[clamp(2.2rem,7vw,4rem)] text-[var(--ink)]">14</div>
+            <div class="label text-[0.54rem] text-[var(--muted-2)] mt-1">HRS</div>
+          </div>
+          <div class="rounded-xl frame text-center py-5 sm:py-7" style="background:#0C0C0E">
+            <div class="cd-block text-[clamp(2.2rem,7vw,4rem)] text-[var(--ink)]">36</div>
+            <div class="label text-[0.54rem] text-[var(--muted-2)] mt-1">MIN</div>
+          </div>
+          <div class="rounded-xl text-center py-5 sm:py-7" style="background:var(--volt)">
+            <div class="cd-block text-[clamp(2.2rem,7vw,4rem)] text-[#0C0C0E]">09</div>
+            <div class="label text-[0.54rem] text-[#0C0C0E]/65 mt-1">SEC</div>
+          </div>
+        </div>
+
+        <div class="mt-7 flex flex-wrap gap-3">
+          <button type="button" class="btn btn-volt text-[0.92rem] px-5 py-3 rounded-lg flex-1 sm:flex-none">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 4v4l3 2" stroke="#0C0C0E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="8" r="6.2" stroke="#0C0C0E" stroke-width="2"/></svg>
+            Set a reminder
+          </button>
+          <a href="#community" class="btn btn-dark text-[0.92rem] px-5 py-3 rounded-lg flex-1 sm:flex-none">Join the list for early access</a>
+        </div>
+        <p class="mt-4 text-[0.82rem] text-[var(--muted-2)] leading-relaxed">
+          The list shops 60 minutes before the public. No password, no raffle — just be on it
+          before Thursday midnight.
+        </p>
+      </div>
+
+      <!-- past drops archive -->
+      <div>
+        <div class="flex items-end justify-between gap-4 mb-5">
+          <h3 class="display-800 text-xl">Past drops</h3>
+          <span class="label text-[0.58rem] text-[var(--muted)]">13 SHIPPED · ALL SOLD THROUGH</span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <!-- Drop 13 -->
+          <a href="#collection" class="tile rounded-xl frame">
+            <div class="grain ph-cool tile-img aspect-square"></div>
+            <div class="absolute top-2 left-2 label text-[0.52rem] rounded px-1.5 py-0.5" style="background:#0C0C0E;color:var(--ink)">DROP 13</div>
+            <div class="absolute bottom-2 right-2 label text-[0.5rem] rounded px-1.5 py-0.5" style="background:var(--volt);color:#0C0C0E">SOLD OUT</div>
+          </a>
+          <!-- Drop 12 -->
+          <a href="#collection" class="tile rounded-xl frame">
+            <div class="grain ph-deep tile-img aspect-square"></div>
+            <div class="absolute top-2 left-2 label text-[0.52rem] rounded px-1.5 py-0.5" style="background:#0C0C0E;color:var(--ink)">DROP 12</div>
+            <div class="absolute bottom-2 right-2 label text-[0.5rem] rounded px-1.5 py-0.5" style="background:var(--volt);color:#0C0C0E">SOLD OUT</div>
+          </a>
+          <!-- Drop 11 -->
+          <a href="#collection" class="tile rounded-xl frame">
+            <div class="grain ph-flat tile-img aspect-square"></div>
+            <div class="absolute top-2 left-2 label text-[0.52rem] rounded px-1.5 py-0.5" style="background:#0C0C0E;color:var(--ink)">DROP 11</div>
+            <div class="absolute bottom-2 right-2 label text-[0.5rem] rounded px-1.5 py-0.5" style="background:var(--volt);color:#0C0C0E">SOLD OUT</div>
+          </a>
+          <!-- Drop 10 -->
+          <a href="#collection" class="tile rounded-xl frame">
+            <div class="grain ph-base tile-img aspect-square"></div>
+            <div class="absolute top-2 left-2 label text-[0.52rem] rounded px-1.5 py-0.5" style="background:#0C0C0E;color:var(--ink)">DROP 10</div>
+            <div class="absolute bottom-2 right-2 label text-[0.5rem] rounded px-1.5 py-0.5 frame" style="background:#0C0C0E;color:var(--muted)">3 LEFT</div>
+          </a>
+          <!-- Drop 09 -->
+          <a href="#collection" class="tile rounded-xl frame">
+            <div class="grain ph-volt tile-img aspect-square"></div>
+            <div class="absolute top-2 left-2 label text-[0.52rem] rounded px-1.5 py-0.5" style="background:#0C0C0E;color:var(--ink)">DROP 09</div>
+            <div class="absolute bottom-2 right-2 label text-[0.5rem] rounded px-1.5 py-0.5" style="background:var(--volt);color:#0C0C0E">SOLD OUT</div>
+          </a>
+          <!-- Drop 08 -->
+          <a href="#collection" class="tile rounded-xl frame">
+            <div class="grain ph-cool tile-img aspect-square"></div>
+            <div class="absolute top-2 left-2 label text-[0.52rem] rounded px-1.5 py-0.5" style="background:#0C0C0E;color:var(--ink)">DROP 08</div>
+            <div class="absolute bottom-2 right-2 label text-[0.5rem] rounded px-1.5 py-0.5" style="background:var(--volt);color:#0C0C0E">SOLD OUT</div>
+          </a>
+        </div>
+        <p class="mt-4 text-[0.82rem] text-[var(--muted-2)] leading-relaxed">
+          We don't reprint. Every drop is its own run — what's gone is gone, and the archive
+          stays here so you can see what you missed.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3. THE COLLECTION ============ -->
+<section id="collection" class="relative border-b hair">
+  <div class="wrap px-5 sm:px-8 py-16 sm:py-24">
+    <div class="flex flex-wrap items-end justify-between gap-6 mb-10">
+      <div>
+        <p class="label text-[0.66rem] text-[var(--volt)] mb-3">THE COLLECTION — DROP 14</p>
+        <h2 class="display text-[clamp(2.4rem,6.5vw,5rem)] max-w-[14ch]">
+          TWELVE PIECES.<br/><span class="halftone">ONE FRIDAY.</span>
+        </h2>
+      </div>
+      <p class="text-[var(--muted)] text-sm max-w-[34ch] leading-relaxed">
+        Heavyweight cotton, water-based screen prints, boxy cuts. Sizing runs XS–XXL.
+        Two pieces below already cleared the early-access window.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+
+      <!-- piece 1 -->
+      <article class="group">
+        <a href="#collection" class="tile tile-fade rounded-xl frame block">
+          <div class="grain ph-deep tile-img aspect-[4/5]"></div>
+          <span class="tile-cap absolute bottom-2.5 left-2.5 label text-[0.52rem] rounded px-1.5 py-0.5" style="background:#0C0C0E;color:var(--volt)">VIEW PIECE</span>
+        </a>
+        <div class="mt-3 flex items-start justify-between gap-3">
+          <div>
+            <h3 class="display-800 text-[0.98rem] leading-tight">Crosswire Tee — Bone</h3>
+            <p class="text-[0.74rem] text-[var(--muted-2)] mt-0.5">8.6oz combed cotton</p>
+          </div>
+          <p class="tnum text-[0.92rem] font-semibold text-[var(--muted)]">$68</p>
+        </div>
+      </article>
+
+      <!-- piece 2 -->
+      <article class="group">
+        <a href="#collection" class="tile tile-fade rounded-xl frame block">
+          <div class="grain ph-volt tile-img aspect-[4/5]"></div>
+          <span class="tile-cap absolute bottom-2.5 left-2.5 label text-[0.52rem] rounded px-1.5 py-0.5" style="background:#0C0C0E;color:var(--volt)">VIEW PIECE</span>
+        </a>
+        <div class="mt-3 flex items-start justify-between gap-3">
+          <div>
+            <h3 class="display-800 text-[0.98rem] leading-tight">Volt Arc Hoodie</h3>
+            <p class="text-[0.74rem] text-[var(--muted-2)] mt-0.5">14oz brushed fleece</p>
+          </div>
+          <p class="tnum text-[0.92rem] font-semibold text-[var(--muted)]">$145</p>
+        </div>
+      </article>
+
+      <!-- piece 3 — SOLD OUT -->
+      <article class="group">
+        <a href="#collection" class="tile rounded-xl frame block">
+          <div class="grain ph-base tile-img aspect-[4/5]"></div>
+          <div class="absolute inset-0" style="background:rgba(12,12,14,0.5)"></div>
+          <span class="absolute top-2.5 left-2.5 label text-[0.52rem] rounded px-2 py-0.5" style="background:var(--volt);color:#0C0C0E">SOLD OUT</span>
+        </a>
+        <div class="mt-3 flex items-start justify-between gap-3">
+          <div>
+            <h3 class="display-800 text-[0.98rem] leading-tight text-[var(--muted)]">Service Cap — Black</h3>
+            <p class="text-[0.74rem] text-[var(--muted-2)] mt-0.5">6-panel washed twill</p>
+          </div>
+          <p class="tnum text-[0.92rem] font-semibold text-[var(--muted-2)] line-through">$52</p>
+        </div>
+      </article>
+
+      <!-- piece 4 -->
+      <article class="group">
+        <a href="#collection" class="tile tile-fade rounded-xl frame block">
+          <div class="grain ph-cool tile-img aspect-[4/5]"></div>
+          <span class="tile-cap absolute bottom-2.5 left-2.5 label text-[0.52rem] rounded px-1.5 py-0.5" style="background:#0C0C0E;color:var(--volt)">VIEW PIECE</span>
+        </a>
+        <div class="mt-3 flex items-start justify-between gap-3">
+          <div>
+            <h3 class="display-800 text-[0.98rem] leading-tight">Static Long Sleeve</h3>
+            <p class="text-[0.74rem] text-[var(--muted-2)] mt-0.5">9.2oz heavyweight jersey</p>
+          </div>
+          <p class="tnum text-[0.92rem] font-semibold text-[var(--muted)]">$84</p>
+        </div>
+      </article>
+
+      <!-- piece 5 — cut-and-sew -->
+      <article class="group">
+        <a href="#collection" class="tile tile-fade rounded-xl frame block">
+          <div class="grain ph-flat tile-img aspect-[4/5]"></div>
+          <span class="absolute top-2.5 left-2.5 label text-[0.5rem] rounded px-2 py-0.5 frame-volt" style="background:#0C0C0E;color:var(--volt)">CUT &amp; SEW</span>
+          <span class="tile-cap absolute bottom-2.5 left-2.5 label text-[0.52rem] rounded px-1.5 py-0.5" style="background:#0C0C0E;color:var(--volt)">VIEW PIECE</span>
+        </a>
+        <div class="mt-3 flex items-start justify-between gap-3">
+          <div>
+            <h3 class="display-800 text-[0.98rem] leading-tight">Overpass Jacket</h3>
+            <p class="text-[0.74rem] text-[var(--muted-2)] mt-0.5">Ripstop nylon · taped seams</p>
+          </div>
+          <p class="tnum text-[0.92rem] font-semibold text-[var(--muted)]">$268</p>
+        </div>
+      </article>
+
+      <!-- piece 6 -->
+      <article class="group">
+        <a href="#collection" class="tile tile-fade rounded-xl frame block">
+          <div class="grain ph-deep tile-img aspect-[4/5]"></div>
+          <span class="tile-cap absolute bottom-2.5 left-2.5 label text-[0.52rem] rounded px-1.5 py-0.5" style="background:#0C0C0E;color:var(--volt)">VIEW PIECE</span>
+        </a>
+        <div class="mt-3 flex items-start justify-between gap-3">
+          <div>
+            <h3 class="display-800 text-[0.98rem] leading-tight">Grid Tee — Volt</h3>
+            <p class="text-[0.74rem] text-[var(--muted-2)] mt-0.5">8.6oz combed cotton</p>
+          </div>
+          <p class="tnum text-[0.92rem] font-semibold text-[var(--muted)]">$68</p>
+        </div>
+      </article>
+
+      <!-- piece 7 — SOLD OUT -->
+      <article class="group">
+        <a href="#collection" class="tile rounded-xl frame block">
+          <div class="grain ph-volt tile-img aspect-[4/5]"></div>
+          <div class="absolute inset-0" style="background:rgba(12,12,14,0.5)"></div>
+          <span class="absolute top-2.5 left-2.5 label text-[0.52rem] rounded px-2 py-0.5" style="background:var(--volt);color:#0C0C0E">SOLD OUT</span>
+        </a>
+        <div class="mt-3 flex items-start justify-between gap-3">
+          <div>
+            <h3 class="display-800 text-[0.98rem] leading-tight text-[var(--muted)]">Crew Beanie — Acid</h3>
+            <p class="text-[0.74rem] text-[var(--muted-2)] mt-0.5">Ribbed merino blend</p>
+          </div>
+          <p class="tnum text-[0.92rem] font-semibold text-[var(--muted-2)] line-through">$48</p>
+        </div>
+      </article>
+
+      <!-- piece 8 -->
+      <article class="group">
+        <a href="#collection" class="tile tile-fade rounded-xl frame block">
+          <div class="grain ph-cool tile-img aspect-[4/5]"></div>
+          <span class="tile-cap absolute bottom-2.5 left-2.5 label text-[0.52rem] rounded px-1.5 py-0.5" style="background:#0C0C0E;color:var(--volt)">VIEW PIECE</span>
+        </a>
+        <div class="mt-3 flex items-start justify-between gap-3">
+          <div>
+            <h3 class="display-800 text-[0.98rem] leading-tight">Relay Shorts — Slate</h3>
+            <p class="text-[0.74rem] text-[var(--muted-2)] mt-0.5">12oz cotton terry</p>
+          </div>
+          <p class="tnum text-[0.92rem] font-semibold text-[var(--muted)]">$76</p>
+        </div>
+      </article>
+
+    </div>
+
+    <div class="mt-10 flex flex-wrap items-center gap-4">
+      <a href="#collection" class="btn btn-volt text-[0.92rem] px-6 py-3.5 rounded-lg">Shop all 12 pieces</a>
+      <p class="text-[0.8rem] text-[var(--muted-2)]">Free shipping over $120 · ships within 48 hours</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4. LOOKBOOK ============ -->
+<section id="lookbook" class="relative mesh border-b hair">
+  <div class="relative z-10 wrap px-5 sm:px-8 py-16 sm:py-24">
+    <div class="flex flex-wrap items-end justify-between gap-6 mb-10">
+      <div>
+        <p class="label text-[0.66rem] text-[var(--volt)] mb-3">LOOKBOOK — FW "CROSSWIRE"</p>
+        <h2 class="display text-[clamp(2.4rem,6.5vw,5rem)] max-w-[13ch]">
+          SHOT ON THE<br/>SERVICE ROAD.
+        </h2>
+      </div>
+      <p class="text-[var(--muted)] text-sm max-w-[34ch] leading-relaxed">
+        Eight looks photographed across two mornings — concrete, chain-link, and the volt
+        seam that runs through the whole season.
+      </p>
+    </div>
+
+    <!-- editorial mixed-crop grid -->
+    <div class="grid grid-cols-2 lg:grid-cols-12 gap-3 sm:gap-4 auto-rows-auto">
+      <!-- big vertical -->
+      <a href="#lookbook" class="tile tile-fade rounded-xl frame col-span-2 lg:col-span-5 lg:row-span-2">
+        <div class="grain ph-volt tile-img aspect-[4/5] lg:h-full lg:aspect-auto" style="min-height:100%"></div>
+        <span class="absolute top-3 left-3 label text-[0.56rem] rounded px-2 py-0.5" style="background:#0C0C0E;color:var(--volt)">LOOK 01</span>
+        <span class="tile-cap absolute bottom-3 left-3 label text-[0.54rem] text-[#fff]/80">VOLT ARC HOODIE · STATIC LS</span>
+      </a>
+      <!-- wide -->
+      <a href="#lookbook" class="tile tile-fade rounded-xl frame col-span-2 lg:col-span-7">
+        <div class="grain ph-cool tile-img aspect-[16/10]"></div>
+        <span class="absolute top-3 left-3 label text-[0.56rem] rounded px-2 py-0.5" style="background:#0C0C0E;color:var(--volt)">LOOK 02</span>
+      </a>
+      <!-- detail / flat-lay -->
+      <a href="#lookbook" class="tile tile-fade rounded-xl frame lg:col-span-3">
+        <div class="grain ph-deep tile-img aspect-square"></div>
+        <span class="tile-cap absolute bottom-3 left-3 label text-[0.52rem] text-[#fff]/75">DETAIL — STITCH</span>
+      </a>
+      <!-- portrait -->
+      <a href="#lookbook" class="tile tile-fade rounded-xl frame lg:col-span-4">
+        <div class="grain ph-flat tile-img aspect-[5/7]"></div>
+        <span class="absolute top-3 left-3 label text-[0.56rem] rounded px-2 py-0.5" style="background:#0C0C0E;color:var(--volt)">LOOK 03</span>
+      </a>
+
+      <!-- second row -->
+      <a href="#lookbook" class="tile tile-fade rounded-xl frame col-span-2 lg:col-span-4">
+        <div class="grain ph-base tile-img aspect-[4/5]"></div>
+        <span class="absolute top-3 left-3 label text-[0.56rem] rounded px-2 py-0.5" style="background:#0C0C0E;color:var(--volt)">LOOK 04</span>
+      </a>
+      <a href="#lookbook" class="tile tile-fade rounded-xl frame lg:col-span-3">
+        <div class="grain ph-cool tile-img aspect-square"></div>
+        <span class="tile-cap absolute bottom-3 left-3 label text-[0.52rem] text-[#fff]/75">FLAT-LAY — CAP</span>
+      </a>
+      <a href="#lookbook" class="tile tile-fade rounded-xl frame lg:col-span-5">
+        <div class="grain ph-volt tile-img aspect-[16/10]"></div>
+        <span class="absolute top-3 left-3 label text-[0.56rem] rounded px-2 py-0.5" style="background:#0C0C0E;color:var(--volt)">LOOK 05</span>
+        <span class="tile-cap absolute bottom-3 left-3 label text-[0.54rem] text-[#fff]/80">OVERPASS JACKET · RELAY SHORTS</span>
+      </a>
+    </div>
+
+    <p class="mt-6 label text-[0.6rem] text-[var(--muted-2)]">SEASON CAPTION — FW "CROSSWIRE" · 8 LOOKS · MORNING LIGHT</p>
+  </div>
+</section>
+
+<!-- ============ 5. THE POINT OF VIEW ============ -->
+<section id="about" class="relative border-b hair">
+  <div class="wrap px-5 sm:px-8 py-16 sm:py-24">
+    <div class="grid lg:grid-cols-[0.42fr_0.58fr] gap-10 lg:gap-16">
+      <div>
+        <p class="label text-[0.66rem] text-[var(--volt)] mb-4">THE POINT OF VIEW</p>
+        <h2 class="display text-[clamp(2.4rem,6vw,4.6rem)]">
+          WE DON'T DO<br/><span class="text-[var(--volt)]">SEASONS.</span><br/><span class="halftone">WE DO FRIDAYS.</span>
+        </h2>
+      </div>
+      <div class="space-y-6 text-[var(--muted)] text-base sm:text-[1.05rem] leading-relaxed self-end max-w-[58ch]">
+        <p>
+          Bolt started in 2021 as a folding table outside a record store in Queens. One
+          design, forty tees, screen-printed in a friend's garage the night before. It sold
+          out before noon. We've never figured out how to make that feeling last longer than
+          a Friday, so we stopped trying.
+        </p>
+        <p>
+          Now we run on a fourteen-day cycle. Two weeks to design it, prototype it, print it,
+          shoot it — then it drops, and it's done. No carryover, no "core line," no warehouse
+          full of last year. The constraint is the point: it keeps the work sharp and it
+          keeps us honest about what's actually good.
+        </p>
+        <p>
+          We're not the cheapest tee you'll buy and we're not pretending to be heirloom
+          tailoring. We're heavyweight cotton, a strong graphic, a fair price, and a community
+          that shows up every other Friday at 10AM. That's the whole brand. It's enough.
+        </p>
+      </div>
+    </div>
+
+    <!-- inline metric strip -->
+    <div class="mt-14 grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="rounded-xl frame p-5" style="background:#121214">
+        <p class="display text-[clamp(1.8rem,4vw,2.6rem)] text-[var(--volt)] tnum">14</p>
+        <p class="label text-[0.56rem] text-[var(--muted)] mt-1">DROPS SHIPPED</p>
+      </div>
+      <div class="rounded-xl frame p-5" style="background:#121214">
+        <p class="display text-[clamp(1.8rem,4vw,2.6rem)] text-[var(--ink)] tnum">24,108</p>
+        <p class="label text-[0.56rem] text-[var(--muted)] mt-1">COMMUNITY MEMBERS</p>
+      </div>
+      <div class="rounded-xl frame p-5" style="background:#121214">
+        <p class="display text-[clamp(1.8rem,4vw,2.6rem)] text-[var(--ink)] tnum">11<span class="text-[var(--volt)]">min</span></p>
+        <p class="label text-[0.56rem] text-[var(--muted)] mt-1">AVG. SELL-THROUGH</p>
+      </div>
+      <div class="rounded-xl frame p-5" style="background:#121214">
+        <p class="display text-[clamp(1.8rem,4vw,2.6rem)] text-[var(--ink)] tnum">2021</p>
+        <p class="label text-[0.56rem] text-[var(--muted)] mt-1">FOLDING TABLE, QUEENS</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6. CRAFT / FABRIC / MAKE ============ -->
+<section class="relative mesh border-b hair">
+  <div class="relative z-10 wrap px-5 sm:px-8 py-16 sm:py-24">
+    <div class="flex flex-wrap items-end justify-between gap-6 mb-10">
+      <div>
+        <p class="label text-[0.66rem] text-[var(--volt)] mb-3">CRAFT — FABRIC &amp; MAKE</p>
+        <h2 class="display text-[clamp(2.4rem,6vw,4.8rem)] max-w-[13ch]">
+          HEAVY COTTON.<br/>HONEST MAKE.
+        </h2>
+      </div>
+      <p class="text-[var(--muted)] text-sm max-w-[36ch] leading-relaxed">
+        Streetwear-honest, not luxury-precious. Here's exactly what goes into a Bolt piece —
+        the weights, the print, the cut-and-sew.
+      </p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-3 sm:gap-5">
+      <article class="rounded-xl frame p-6 sm:p-7" style="background:linear-gradient(170deg,#141416,#0d0d0f)">
+        <div class="flex items-center gap-3 mb-5">
+          <span class="grid place-items-center w-9 h-9 rounded-lg frame-volt" style="background:#0C0C0E" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 5l6-3 6 3v6l-6 3-6-3V5z" stroke="var(--volt)" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          </span>
+          <p class="label text-[0.6rem] text-[var(--volt)]">THE COTTON</p>
+        </div>
+        <h3 class="display-800 text-xl mb-2">8.6–14oz, combed and ringspun.</h3>
+        <p class="text-[0.92rem] text-[var(--muted)] leading-relaxed">
+          Tees are 8.6oz combed cotton — heavy enough to hang straight off the shoulder, soft
+          enough to wear day one. Hoodies are a 14oz brushed fleece that breaks in over a
+          month and never goes thin at the cuff.
+        </p>
+      </article>
+
+      <article class="rounded-xl frame p-6 sm:p-7" style="background:linear-gradient(170deg,#141416,#0d0d0f)">
+        <div class="flex items-center gap-3 mb-5">
+          <span class="grid place-items-center w-9 h-9 rounded-lg frame-volt" style="background:#0C0C0E" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 13L13 3M6 3h7v7" stroke="var(--volt)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <p class="label text-[0.6rem] text-[var(--volt)]">THE PRINT</p>
+        </div>
+        <h3 class="display-800 text-xl mb-2">Water-based screen, hand-pulled.</h3>
+        <p class="text-[0.92rem] text-[var(--muted)] leading-relaxed">
+          Every graphic is screen-printed with water-based inks at a shop in Newark — no
+          plastisol, no heavy hand-feel. The print sits in the fabric, not on top of it, so
+          it cracks the right way and ages with the tee.
+        </p>
+      </article>
+
+      <article class="rounded-xl frame p-6 sm:p-7" style="background:linear-gradient(170deg,#141416,#0d0d0f)">
+        <div class="flex items-center gap-3 mb-5">
+          <span class="grid place-items-center w-9 h-9 rounded-lg frame-volt" style="background:#0C0C0E" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8h12M5 4l-3 4 3 4M11 4l3 4-3 4" stroke="var(--volt)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <p class="label text-[0.6rem] text-[var(--volt)]">THE CUT &amp; SEW</p>
+        </div>
+        <h3 class="display-800 text-xl mb-2">One built piece per drop.</h3>
+        <p class="text-[0.92rem] text-[var(--muted)] leading-relaxed">
+          The Overpass Jacket is fully cut-and-sew — ripstop nylon, taped seams, a storm flap
+          and a two-way zip. It's patterned from scratch, sampled three times, and made in a
+          run of two hundred. When it's gone, the pattern retires with it.
+        </p>
+      </article>
+    </div>
+
+    <!-- spec strip -->
+    <div class="mt-5 rounded-xl frame px-6 py-5 flex flex-wrap gap-x-10 gap-y-3 items-center" style="background:#0C0C0E">
+      <span class="label text-[0.56rem] text-[var(--muted-2)]">SPEC</span>
+      <span class="text-[0.84rem] text-[var(--muted)]"><span class="text-[var(--ink)] font-semibold tnum">8.6oz</span> tee body</span>
+      <span class="text-[0.84rem] text-[var(--muted)]"><span class="text-[var(--ink)] font-semibold tnum">14oz</span> fleece hoodie</span>
+      <span class="text-[0.84rem] text-[var(--muted)]"><span class="text-[var(--ink)] font-semibold">Water-based</span> ink</span>
+      <span class="text-[0.84rem] text-[var(--muted)]"><span class="text-[var(--ink)] font-semibold">Pre-shrunk</span>, washed</span>
+      <span class="text-[0.84rem] text-[var(--muted)]"><span class="text-[var(--ink)] font-semibold tnum">XS–XXL</span> full size run</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 7. FEATURED GARMENT ============ -->
+<section class="relative border-b hair">
+  <div class="wrap px-5 sm:px-8 py-16 sm:py-24">
+    <div class="grid lg:grid-cols-2 gap-8 lg:gap-14 items-center">
+      <!-- image -->
+      <figure class="grain ph-volt frame rounded-2xl aspect-[4/5] relative">
+        <div class="absolute inset-0 grid place-items-center">
+          <span class="display text-[clamp(3rem,12vw,9rem)] text-[#0C0C0E] opacity-[0.18] select-none">OVERPASS</span>
+        </div>
+        <figcaption class="absolute top-4 left-4 label text-[0.56rem] rounded px-2 py-0.5 frame-volt" style="background:#0C0C0E;color:var(--volt)">FEATURED — DROP 14</figcaption>
+      </figure>
+      <!-- copy -->
+      <div>
+        <p class="label text-[0.62rem] text-[var(--volt)] mb-4">THE CUT-AND-SEW PIECE</p>
+        <h2 class="display text-[clamp(2.4rem,5.6vw,4.4rem)] mb-5">
+          THE OVERPASS<br/><span class="halftone">JACKET.</span>
+        </h2>
+        <p class="text-[var(--muted)] text-base sm:text-[1.05rem] leading-relaxed mb-6 max-w-[52ch]">
+          The piece the whole season is built around. A boxy ripstop shell with a volt-taped
+          internal seam, a high storm collar, and pockets sized for a 7-inch sketchbook. It's
+          the only Drop 14 piece that took three months instead of two — and the only one
+          made in a run this small.
+        </p>
+        <dl class="grid grid-cols-2 gap-x-6 gap-y-4 mb-8 border-t hair pt-6">
+          <div>
+            <dt class="label text-[0.54rem] text-[var(--muted-2)]">FABRIC</dt>
+            <dd class="text-[0.92rem] mt-1">Ripstop nylon, 2.1oz</dd>
+          </div>
+          <div>
+            <dt class="label text-[0.54rem] text-[var(--muted-2)]">MAKE</dt>
+            <dd class="text-[0.92rem] mt-1">Cut-and-sew, taped seams</dd>
+          </div>
+          <div>
+            <dt class="label text-[0.54rem] text-[var(--muted-2)]">RUN SIZE</dt>
+            <dd class="text-[0.92rem] mt-1 tnum">200 units, no reprint</dd>
+          </div>
+          <div>
+            <dt class="label text-[0.54rem] text-[var(--muted-2)]">PRICE</dt>
+            <dd class="text-[0.92rem] mt-1 tnum text-[var(--volt)] font-semibold">$268</dd>
+          </div>
+        </dl>
+        <div class="flex flex-wrap gap-3">
+          <a href="#collection" class="btn btn-volt text-[0.92rem] px-6 py-3.5 rounded-lg">Add to drop reminder</a>
+          <a href="#lookbook" class="btn btn-ghost text-[0.92rem] px-6 py-3.5 rounded-lg">See it in the lookbook</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 8. THE CAMPAIGN / FILM ============ -->
+<section class="relative border-b hair">
+  <div class="grain ph-deep relative">
+    <div class="relative z-10 wrap px-5 sm:px-8 py-20 sm:py-32">
+      <p class="label text-[0.66rem] text-[var(--volt)] mb-5">THE CAMPAIGN FILM</p>
+      <h2 class="display text-[clamp(2.6rem,8vw,7rem)] max-w-[15ch]">
+        SIX MINUTES.<br/><span class="text-[var(--volt)]">ONE OVERPASS.</span> <span class="halftone">NO CUTS.</span>
+      </h2>
+      <p class="mt-7 text-[var(--muted)] text-base sm:text-lg leading-relaxed max-w-[54ch]">
+        We shot the "Crosswire" film as a single unbroken take at first light — twelve people,
+        one service road, the city waking up behind them. Watch it Friday alongside the drop.
+      </p>
+      <div class="mt-9 flex flex-wrap items-center gap-4">
+        <a href="#drop" class="btn btn-volt text-[0.95rem] px-6 py-3.5 rounded-lg">
+          <svg width="14" height="16" viewBox="0 0 14 16" fill="none" aria-hidden="true"><path d="M2 2l10 6-10 6V2z" fill="#0C0C0E"/></svg>
+          Watch Friday
+        </a>
+        <p class="label text-[0.58rem] text-[var(--muted-2)] max-w-[30ch] leading-relaxed" style="letter-spacing:0.14em">
+          A FILM BY DARIUS OKONKWO · CREATIVE DIRECTION MAYA TROST · SCORE BY THE 6AM CLUB
+        </p>
+      </div>
+    </div>
+    <!-- decorative film frame markers -->
+    <div class="absolute top-6 right-6 hidden sm:flex gap-1.5" aria-hidden="true">
+      <span class="w-2.5 h-2.5 rounded-sm" style="background:var(--volt)"></span>
+      <span class="w-2.5 h-2.5 rounded-sm frame"></span>
+      <span class="w-2.5 h-2.5 rounded-sm frame"></span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 9. STOCKISTS / AVAILABILITY ============ -->
+<section id="stockists" class="relative mesh border-b hair">
+  <div class="relative z-10 wrap px-5 sm:px-8 py-16 sm:py-24">
+    <div class="flex flex-wrap items-end justify-between gap-6 mb-9">
+      <div>
+        <p class="label text-[0.66rem] text-[var(--volt)] mb-3">STOCKISTS &amp; AVAILABILITY</p>
+        <h2 class="display text-[clamp(2.2rem,5.6vw,4.4rem)] max-w-[16ch]">
+          MOSTLY ONLINE.<br/><span class="halftone">SOMETIMES IN PERSON.</span>
+        </h2>
+      </div>
+      <p class="text-[var(--muted)] text-sm max-w-[34ch] leading-relaxed">
+        Drops go live on boltgoods.com first. A handful of boutiques carry leftover stock the
+        week after — if any survives.
+      </p>
+    </div>
+  </div>
+
+  <!-- stockist marquee -->
+  <div class="marquee-wrap relative border-y hair overflow-hidden py-7" style="background:#0C0C0E">
+    <div class="marquee marquee-slow" aria-hidden="true">
+      <div class="flex items-center gap-12 sm:gap-16 pr-12 sm:pr-16">
+        <span class="display-800 text-2xl sm:text-3xl text-[var(--muted)]">CONCRETE&nbsp;ROOM</span>
+        <span style="font-family:Georgia,serif;font-style:italic" class="text-2xl sm:text-3xl text-[var(--muted)]">Maison&nbsp;Verrier</span>
+        <span class="display-800 text-2xl sm:text-3xl text-[var(--muted)]">NORTHBOUND&nbsp;SUPPLY</span>
+        <span style="font-family:Georgia,serif" class="text-2xl sm:text-3xl text-[var(--muted)]">Otsu&nbsp;&amp;&nbsp;Sons</span>
+        <span class="display-800 text-2xl sm:text-3xl text-[var(--muted)]">FRAME&nbsp;36</span>
+        <span style="font-family:Georgia,serif;font-style:italic" class="text-2xl sm:text-3xl text-[var(--muted)]">Atelier&nbsp;Pivot</span>
+        <span class="display-800 text-2xl sm:text-3xl text-[var(--muted)]">RUNNER'S&nbsp;HIGH&nbsp;CO.</span>
+        <span style="font-family:Georgia,serif" class="text-2xl sm:text-3xl text-[var(--muted)]">The&nbsp;Holloway</span>
+      </div>
+      <div class="flex items-center gap-12 sm:gap-16 pr-12 sm:pr-16">
+        <span class="display-800 text-2xl sm:text-3xl text-[var(--muted)]">CONCRETE&nbsp;ROOM</span>
+        <span style="font-family:Georgia,serif;font-style:italic" class="text-2xl sm:text-3xl text-[var(--muted)]">Maison&nbsp;Verrier</span>
+        <span class="display-800 text-2xl sm:text-3xl text-[var(--muted)]">NORTHBOUND&nbsp;SUPPLY</span>
+        <span style="font-family:Georgia,serif" class="text-2xl sm:text-3xl text-[var(--muted)]">Otsu&nbsp;&amp;&nbsp;Sons</span>
+        <span class="display-800 text-2xl sm:text-3xl text-[var(--muted)]">FRAME&nbsp;36</span>
+        <span style="font-family:Georgia,serif;font-style:italic" class="text-2xl sm:text-3xl text-[var(--muted)]">Atelier&nbsp;Pivot</span>
+        <span class="display-800 text-2xl sm:text-3xl text-[var(--muted)]">RUNNER'S&nbsp;HIGH&nbsp;CO.</span>
+        <span style="font-family:Georgia,serif" class="text-2xl sm:text-3xl text-[var(--muted)]">The&nbsp;Holloway</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="relative z-10 wrap px-5 sm:px-8 py-12">
+    <div class="grid md:grid-cols-[1fr_auto] gap-8 items-center">
+      <div class="space-y-2">
+        <p class="text-[var(--ink)] text-[1.05rem] font-semibold">Find us in eight cities.</p>
+        <p class="text-[0.9rem] text-[var(--muted)] leading-relaxed max-w-[50ch]">
+          New York, Chicago, London, Berlin, Toronto, Tokyo, Melbourne and Mexico City carry
+          post-drop stock. Stockists never get early access — same as everyone else, the list
+          shops first.
+        </p>
+      </div>
+      <a href="#collection" class="btn btn-volt text-[0.92rem] px-6 py-3.5 rounded-lg">Shop the online store</a>
+    </div>
+
+    <!-- sizing / fit notes -->
+    <div class="mt-10 grid sm:grid-cols-3 gap-3">
+      <div class="rounded-xl frame p-5" style="background:#121214">
+        <p class="label text-[0.54rem] text-[var(--volt)] mb-2">FIT — TEES</p>
+        <p class="text-[0.86rem] text-[var(--muted)] leading-relaxed">Boxy, true to size. Size down for a slim fit; the 8.6oz body holds its shape either way.</p>
+      </div>
+      <div class="rounded-xl frame p-5" style="background:#121214">
+        <p class="label text-[0.54rem] text-[var(--volt)] mb-2">FIT — HOODIES</p>
+        <p class="text-[0.86rem] text-[var(--muted)] leading-relaxed">Generous through the body and sleeve. Take your normal size for an oversized look.</p>
+      </div>
+      <div class="rounded-xl frame p-5" style="background:#121214">
+        <p class="label text-[0.54rem] text-[var(--volt)] mb-2">FIT — OVERPASS JACKET</p>
+        <p class="text-[0.86rem] text-[var(--muted)] leading-relaxed">Roomy by design, built to layer. Full XS–XXL run with a measurements chart on each piece.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 10. COMMUNITY / NEWSLETTER ============ -->
+<section id="community" class="relative border-b hair">
+  <div class="wrap px-5 sm:px-8 py-16 sm:py-24">
+    <div class="grid lg:grid-cols-[0.55fr_0.45fr] gap-10 lg:gap-14 items-center">
+      <div>
+        <div class="flex items-center gap-3 mb-4">
+          <span class="pulse" aria-hidden="true"></span>
+          <p class="label text-[0.64rem] text-[var(--volt)]">THE COMMUNITY — DISCORD</p>
+        </div>
+        <h2 class="display text-[clamp(2.4rem,6vw,4.8rem)] mb-5">
+          <span class="tnum">24,108</span> PEOPLE<br/>WAITING ON<br/><span class="text-[var(--volt)]">FRIDAY.</span>
+        </h2>
+        <p class="text-[var(--muted)] text-base sm:text-[1.05rem] leading-relaxed mb-6 max-w-[52ch]">
+          The Bolt Discord is where the drop actually happens. Every other Thursday night we
+          post the full lookbook, sizing breakdowns, and the print files for the next day's
+          graphics. Friday at 9AM the early-access channel unlocks — the list shops a full
+          hour before the public.
+        </p>
+
+        <!-- ritual -->
+        <ul class="space-y-3 mb-8">
+          <li class="flex items-start gap-3 text-[0.92rem] text-[var(--muted)]">
+            <span class="mt-1.5 w-1.5 h-1.5 rounded-full" style="background:var(--volt)" aria-hidden="true"></span>
+            <span><span class="text-[var(--ink)] font-semibold">Thursday 8PM —</span> the next drop's lookbook posts in #the-reveal.</span>
+          </li>
+          <li class="flex items-start gap-3 text-[0.92rem] text-[var(--muted)]">
+            <span class="mt-1.5 w-1.5 h-1.5 rounded-full" style="background:var(--volt)" aria-hidden="true"></span>
+            <span><span class="text-[var(--ink)] font-semibold">Friday 9AM —</span> #early-access opens for the list — one hour head start.</span>
+          </li>
+          <li class="flex items-start gap-3 text-[0.92rem] text-[var(--muted)]">
+            <span class="mt-1.5 w-1.5 h-1.5 rounded-full" style="background:var(--volt)" aria-hidden="true"></span>
+            <span><span class="text-[var(--ink)] font-semibold">Friday 10AM —</span> public drop. #fit-pics fills up by lunch.</span>
+          </li>
+        </ul>
+
+        <div class="flex flex-wrap gap-3">
+          <a href="#community" class="btn btn-volt text-[0.92rem] px-6 py-3.5 rounded-lg">Join the Discord</a>
+          <a href="#community" class="btn btn-ghost text-[0.92rem] px-6 py-3.5 rounded-lg">Read the journal</a>
+        </div>
+      </div>
+
+      <!-- early access signup card -->
+      <div class="rounded-2xl frame-volt p-7 sm:p-8" style="background:linear-gradient(165deg,#16170d,#0d0d0a)">
+        <p class="label text-[0.6rem] text-[var(--volt)] mb-2">EARLY-ACCESS LIST</p>
+        <h3 class="display-800 text-2xl mb-3">Get on the list. Shop first.</h3>
+        <p class="text-[0.88rem] text-[var(--muted)] leading-relaxed mb-6">
+          One email every other Thursday — the lookbook, the drop time, and your early-access
+          link. No spam between drops, no password games. Just a head start.
+        </p>
+        <form class="space-y-3" onsubmit="return false">
+          <label class="block">
+            <span class="sr-only">Email address</span>
+            <input type="email" required placeholder="you@email.com"
+              class="w-full rounded-lg px-4 py-3 text-[0.92rem] text-[var(--ink)] placeholder:text-[var(--muted-2)]"
+              style="background:#0C0C0E;border:1px solid var(--hair-strong)" />
+          </label>
+          <button type="submit" class="btn btn-volt w-full text-[0.92rem] px-5 py-3 rounded-lg">Join the list for early access</button>
+        </form>
+        <div class="mt-6 pt-5 border-t hair flex items-center justify-between gap-4">
+          <div>
+            <p class="display text-2xl tnum text-[var(--volt)]">24,108</p>
+            <p class="label text-[0.52rem] text-[var(--muted-2)] mt-0.5">MEMBERS &amp; COUNTING</p>
+          </div>
+          <div class="text-right">
+            <p class="display text-2xl tnum text-[var(--ink)]">+612</p>
+            <p class="label text-[0.52rem] text-[var(--muted-2)] mt-0.5">SINCE DROP 13</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 11. FAQ ============ -->
+<section class="relative mesh border-b hair">
+  <div class="relative z-10 wrap px-5 sm:px-8 py-16 sm:py-24">
+    <div class="grid lg:grid-cols-[0.36fr_0.64fr] gap-10 lg:gap-16">
+      <div>
+        <p class="label text-[0.66rem] text-[var(--volt)] mb-4">FAQ</p>
+        <h2 class="display text-[clamp(2.4rem,5.6vw,4.4rem)]">
+          STRAIGHT<br/><span class="halftone">ANSWERS.</span>
+        </h2>
+        <p class="mt-5 text-[0.9rem] text-[var(--muted)] leading-relaxed max-w-[34ch]">
+          The five questions we get every drop week. Anything else — ask in the Discord.
+        </p>
+      </div>
+
+      <div class="border-t hair">
+        <details>
+          <summary class="py-6">
+            <span class="display-800 text-lg sm:text-xl pr-4">When's the next drop?</span>
+            <svg class="faq-plus" width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="var(--volt)" stroke-width="2" stroke-linecap="round"/></svg>
+          </summary>
+          <div class="faq-body">
+            <p class="pb-6 text-[0.95rem] text-[var(--muted)] leading-relaxed max-w-[60ch]">
+              Drop 14 — "Crosswire" — goes live this Friday at 10AM ET. After that we hold a
+              strict every-other-Friday cadence. The countdown at the top of this page is the
+              real one; the early-access window opens for the list 60 minutes earlier, at 9AM ET.
+            </p>
+          </div>
+        </details>
+        <details>
+          <summary class="py-6">
+            <span class="display-800 text-lg sm:text-xl pr-4">Why does everything sell out?</span>
+            <svg class="faq-plus" width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="var(--volt)" stroke-width="2" stroke-linecap="round"/></svg>
+          </summary>
+          <div class="faq-body">
+            <p class="pb-6 text-[0.95rem] text-[var(--muted)] leading-relaxed max-w-[60ch]">
+              Because we make small runs on purpose. A drop is whatever we can design, print
+              and ship in a two-week cycle — usually a few hundred units per piece, never more.
+              We'd rather sell through fully than carry dead stock into the next drop. Last
+              drop's average sell-through was eleven minutes.
+            </p>
+          </div>
+        </details>
+        <details>
+          <summary class="py-6">
+            <span class="display-800 text-lg sm:text-xl pr-4">Do pieces restock?</span>
+            <svg class="faq-plus" width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="var(--volt)" stroke-width="2" stroke-linecap="round"/></svg>
+          </summary>
+          <div class="faq-body">
+            <p class="pb-6 text-[0.95rem] text-[var(--muted)] leading-relaxed max-w-[60ch]">
+              No. Once a drop sells out, it's done — no reprints, no "back in stock" emails.
+              The graphic and, for the cut-and-sew piece, the pattern, retire with the run.
+              Occasionally a boutique stockist gets a small post-drop allocation; that's the
+              only second chance, and it's first-come.
+            </p>
+          </div>
+        </details>
+        <details>
+          <summary class="py-6">
+            <span class="display-800 text-lg sm:text-xl pr-4">How does early access work?</span>
+            <svg class="faq-plus" width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="var(--volt)" stroke-width="2" stroke-linecap="round"/></svg>
+          </summary>
+          <div class="faq-body">
+            <p class="pb-6 text-[0.95rem] text-[var(--muted)] leading-relaxed max-w-[60ch]">
+              Join the early-access list — the email signup on this page, or the Discord. Be
+              on it before Thursday midnight and you get an early-access link that unlocks the
+              full drop at 9AM ET, one hour before the public. No raffle, no bots, no paid
+              tier — being on the list is the whole mechanism.
+            </p>
+          </div>
+        </details>
+        <details>
+          <summary class="py-6">
+            <span class="display-800 text-lg sm:text-xl pr-4">What's the return policy on a drop?</span>
+            <svg class="faq-plus" width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="var(--volt)" stroke-width="2" stroke-linecap="round"/></svg>
+          </summary>
+          <div class="faq-body">
+            <p class="pb-6 text-[0.95rem] text-[var(--muted)] leading-relaxed max-w-[60ch]">
+              Unworn pieces can be exchanged for a different size within 14 days of delivery,
+              while that size is still in stock. Because runs are small we can't always swap,
+              so check the measurements chart first. Anything that arrives faulty is on us —
+              full refund or replacement, no questions.
+            </p>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 12. FINAL CTA ============ -->
+<section class="relative overflow-hidden">
+  <div class="grain ph-volt relative">
+    <div class="relative z-10 wrap px-5 sm:px-8 py-24 sm:py-36 text-center">
+      <p class="label text-[0.66rem] text-[#0C0C0E]/70 mb-6">DROP 14 · FW "CROSSWIRE"</p>
+      <h2 class="display text-[clamp(3rem,12vw,9rem)] text-[#0C0C0E] max-w-[14ch] mx-auto">
+        DON'T MISS<br/>THIS ONE.
+      </h2>
+      <p class="mt-7 text-[#0C0C0E]/70 text-base sm:text-lg leading-relaxed max-w-[46ch] mx-auto">
+        Twelve pieces, one cut-and-sew jacket, no reprint. It lands Friday at 10AM ET — and
+        the list shops at 9.
+      </p>
+      <div class="mt-9 flex flex-wrap items-center justify-center gap-3">
+        <a href="#collection" class="btn text-[1rem] px-7 py-4 rounded-[10px]"
+           style="background:#0C0C0E;color:var(--volt)">
+          Shop the collection
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h9M8 3l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#drop" class="btn text-[1rem] px-7 py-4 rounded-[10px]"
+           style="background:transparent;color:#0C0C0E;box-shadow:inset 0 0 0 1.5px rgba(12,12,14,0.4)">
+          Set a reminder
+        </a>
+      </div>
+      <p class="mt-8 label text-[0.6rem] text-[#0C0C0E]/55">
+        FRIDAY · 10AM ET · EARLY ACCESS 9AM FOR THE LIST
+      </p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ============ 13. FOOTER ============ -->
+<footer class="relative border-t hair" style="background:#0C0C0E">
+  <div class="wrap px-5 sm:px-8 py-14 sm:py-16">
+    <div class="grid md:grid-cols-[1.3fr_0.9fr_0.9fr_1.4fr] gap-10 md:gap-8">
+      <!-- brand -->
+      <div>
+        <a href="#top" class="flex items-center gap-2.5 mb-4" aria-label="Bolt — home">
+          <span aria-hidden="true" class="grid place-items-center w-8 h-8 rounded-[7px]" style="background:var(--volt)">
+            <svg width="14" height="16" viewBox="0 0 14 16" fill="none"><path d="M8.5 0L0 9.2h4.6L5.5 16 14 6.8H9.4L8.5 0z" fill="#0C0C0E"/></svg>
+          </span>
+          <span class="display-800 text-xl">BOLT</span>
+        </a>
+        <p class="text-[0.86rem] text-[var(--muted)] leading-relaxed max-w-[30ch]">
+          A streetwear label built on weekly drops. Heavyweight cotton, honest make, every
+          other Friday at 10AM ET.
+        </p>
+        <p class="mt-4 inline-flex items-center gap-2 label text-[0.56rem] text-[var(--volt)]">
+          <span class="pulse" aria-hidden="true"></span> DROP 14 LIVE THIS FRIDAY
+        </p>
+      </div>
+
+      <!-- shop -->
+      <nav aria-label="Shop">
+        <p class="label text-[0.56rem] text-[var(--muted-2)] mb-4">SHOP</p>
+        <ul class="space-y-2.5 text-[0.88rem] text-[var(--muted)]">
+          <li><a href="#collection" class="hover:text-[var(--volt)] transition-colors">The Collection</a></li>
+          <li><a href="#lookbook" class="hover:text-[var(--volt)] transition-colors">Lookbook</a></li>
+          <li><a href="#drop" class="hover:text-[var(--volt)] transition-colors">The Drop</a></li>
+          <li><a href="#stockists" class="hover:text-[var(--volt)] transition-colors">Stockists</a></li>
+        </ul>
+      </nav>
+
+      <!-- help -->
+      <nav aria-label="Help">
+        <p class="label text-[0.56rem] text-[var(--muted-2)] mb-4">HELP</p>
+        <ul class="space-y-2.5 text-[0.88rem] text-[var(--muted)]">
+          <li><a href="#about" class="hover:text-[var(--volt)] transition-colors">About Bolt</a></li>
+          <li><a href="#" class="hover:text-[var(--volt)] transition-colors">Sizing Guide</a></li>
+          <li><a href="#" class="hover:text-[var(--volt)] transition-colors">Care Guide</a></li>
+          <li><a href="#community" class="hover:text-[var(--volt)] transition-colors">Community</a></li>
+        </ul>
+      </nav>
+
+      <!-- newsletter -->
+      <div>
+        <p class="label text-[0.56rem] text-[var(--muted-2)] mb-4">EARLY-ACCESS LIST</p>
+        <p class="text-[0.86rem] text-[var(--muted)] leading-relaxed mb-4">
+          One email every other Thursday. The lookbook, the drop time, your early link.
+        </p>
+        <form class="flex gap-2" onsubmit="return false">
+          <label class="flex-1">
+            <span class="sr-only">Email address</span>
+            <input type="email" required placeholder="you@email.com"
+              class="w-full rounded-lg px-3.5 py-2.5 text-[0.86rem] text-[var(--ink)] placeholder:text-[var(--muted-2)]"
+              style="background:#141416;border:1px solid var(--hair-strong)" />
+          </label>
+          <button type="submit" class="btn btn-volt text-[0.82rem] px-4 py-2.5 rounded-lg">Join</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="mt-12 pt-7 border-t hair flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <p class="text-[0.78rem] text-[var(--muted-2)]">© 2026 Bolt Goods. All rights reserved. Made in NY &amp; NJ.</p>
+      <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-[0.78rem] text-[var(--muted-2)]">
+        <a href="#" class="hover:text-[var(--ink)] transition-colors">Sizing Guide</a>
+        <a href="#" class="hover:text-[var(--ink)] transition-colors">Care Guide</a>
+        <a href="#" class="hover:text-[var(--ink)] transition-colors">Shipping</a>
+        <a href="#" class="hover:text-[var(--ink)] transition-colors">Privacy</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

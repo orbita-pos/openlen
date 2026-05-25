@@ -1,0 +1,183 @@
+# /etc/caddy/Caddyfile — OpenLen production web tier.
+#
+# Three roles in one file:
+#
+#   1. Apex + www — reverse-proxy openlen.com / www.openlen.com to the
+#      Next.js app on 127.0.0.1:3000. Same role as the previous nginx
+#      apex block, with SSE-safe streaming and brotli/gzip encoding.
+#
+#   2. Wildcard *.openlen.com — one directory per subdomain under
+#      /var/www/openlen/<sub>/. Files served direct off disk (no Node
+#      hop). Mirrors the previous nginx wildcard block.
+#
+#   3. Custom domains — any hostname not matched above. On the first
+#      TLS handshake Caddy hits the `ask` endpoint below before issuing
+#      a Let's Encrypt cert; only verified rows in `customDomains` are
+#      allowed through. Requests are then rewritten to /served/<host>/<path>
+#      and proxied to the Next.js app, which reads from disk under the
+#      project's openlen.com subdomain.
+#
+# TLS strategy:
+#   - openlen.com + www.openlen.com → Caddy auto-issues via HTTP-01 ACME.
+#   - *.openlen.com (wildcard)     → load existing certbot cert from
+#                                    /etc/letsencrypt/live/openlen.com/.
+#                                    (No DNS-01 plugin needed; certbot
+#                                    keeps it refreshed on its own timer.)
+#   - custom domains               → on-demand HTTP-01 ACME, gated by
+#                                    GET /api/domains/lookup.
+#
+# Reload via `sudo systemctl reload caddy` (or `caddy reload` with the
+# same config path).
+
+{
+	email ops@openlen.com
+
+	# On-demand TLS for custom domains. Caddy hits this URL on every TLS
+	# handshake to an unknown hostname; only 2xx responses unlock cert
+	# issuance. Anything else (404 / connection refused) → handshake fails.
+	# Without this gate, anyone could DNS-point arbitrary hostnames at our
+	# IP and burn through Let's Encrypt rate limits on bogus issuance.
+	on_demand_tls {
+		ask http://127.0.0.1:3000/api/domains/lookup
+	}
+
+	admin localhost:2019
+}
+
+# ─── Apex + www ──────────────────────────────────────────────────────
+openlen.com, www.openlen.com {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	# Next.js build-time static — content-hashed by Next, immutable.
+	handle_path /_next/static/* {
+		root * /opt/openlen-app/.next/static
+		file_server
+		header Cache-Control "public, immutable, max-age=31536000"
+	}
+
+	# User-uploaded files — served direct off disk to skip Node.
+	handle_path /uploads/* {
+		root * /var/openlen/uploads
+		file_server
+		header Cache-Control "public, immutable, max-age=2592000"
+	}
+
+	# Everything else → Next.js. flush_interval -1 keeps SSE streams
+	# (/api/generate, /api/templates/ai-design) flowing token-by-token
+	# instead of being chunked into Caddy's buffer.
+	reverse_proxy 127.0.0.1:3000 {
+		flush_interval -1
+		transport http {
+			read_timeout 90s
+		}
+	}
+}
+
+# ─── Wildcard *.openlen.com (static files per subdomain) ─────────────
+*.openlen.com {
+	# Load the existing certbot-managed wildcard cert. The deploy hook
+	# at /etc/letsencrypt/renewal-hooks/deploy/reload-caddy.sh runs
+	# `systemctl reload caddy` after every certbot renewal so Caddy
+	# picks up the rotated key without dropping connections.
+	tls /etc/letsencrypt/live/openlen.com/fullchain.pem /etc/letsencrypt/live/openlen.com/privkey.pem
+
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+	}
+
+	# Cache rules — HTML short max-age + long s-maxage so the CF edge
+	# caches aggressively; assets are immutable for a month.
+	@html path *.html
+	header @html Cache-Control "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400"
+
+	@assets path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif
+	header @assets Cache-Control "public, immutable, max-age=2592000"
+
+	# Analytics beacons → Next.js, preserving CF-* headers for IP /
+	# country resolution at the app layer (request log is off here —
+	# the app handles its own aggregation).
+	handle /c/* {
+		reverse_proxy 127.0.0.1:3000 {
+			header_up CF-Connecting-IP {http.request.header.cf-connecting-ip}
+			header_up CF-IPCountry {http.request.header.cf-ipcountry}
+		}
+	}
+
+	# Lead-capture form submissions on published pages → Next.js.
+	handle /api/f/* {
+		reverse_proxy 127.0.0.1:3000
+	}
+
+	# Global user-uploads dir (matches the apex /uploads block — same
+	# path, same files, same ImagePicker source).
+	handle_path /uploads/* {
+		root * /var/openlen/uploads
+		file_server
+	}
+
+	# Per-subdomain published assets — Unsplash hotlinks cached at
+	# publish time, plus LocalFs upload migrations. Lives at
+	# <sub>/assets/, NOT under current/ (publishToDir writes them to
+	# the shared sibling dir so they survive release rotations).
+	@sub host_regexp sub ^([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)\.openlen\.com$
+	handle /assets/* {
+		root * /var/www/openlen/{re.sub.1}
+		file_server
+	}
+
+	# Everything else → the current release directory for the requesting
+	# subdomain. try_files mirrors nginx: exact path, then path/index.html,
+	# then root index.html as a last-resort fallback.
+	root * /var/www/openlen/{re.sub.1}/current
+	try_files {path} {path}/index.html /index.html
+	file_server
+}
+
+# ─── Custom domains — on-demand TLS, rewrite to /served/<host>/<path> ─
+# Catches every hostname not matched by the more-specific blocks above.
+# The on_demand_tls.ask gate (global config) ensures Caddy only attempts
+# to issue a cert when the hostname is a verified row in customDomains.
+https:// {
+	tls {
+		on_demand
+	}
+
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	# Pass-through paths — form submissions and analytics beacons keep
+	# their original URLs so the existing Next handlers (/api/f/[sub],
+	# /c/[projectId]) see them unchanged.
+	@passthrough path /api/* /c/*
+	handle @passthrough {
+		reverse_proxy 127.0.0.1:3000 {
+			header_up CF-Connecting-IP {http.request.header.cf-connecting-ip}
+			header_up CF-IPCountry {http.request.header.cf-ipcountry}
+		}
+	}
+
+	# Everything else → /served/<host><uri>. The Next route at that
+	# path resolves the host to a verified custom domain, looks up the
+	# owning project's openlen.com subdomain, and serves the file from
+	# /var/www/openlen/<sub>/current/ (or /assets/ for /assets/*).
+	rewrite * /served/{http.request.host}{uri}
+	reverse_proxy 127.0.0.1:3000
+}

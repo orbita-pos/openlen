@@ -13,8 +13,8 @@
 
 "use client";
 
-import { useEffect } from "react";
 import {
+  BarChart3,
   ChatIcon,
   FileText,
   Grid3,
@@ -23,24 +23,19 @@ import {
   Layers,
   PanelLeft,
   PanelRight,
-  Pencil,
-  Plus,
   Sparkles,
 } from "./icons";
 import type { Section } from "./mock-data";
 import { BriefPanel } from "./panels/brief-panel";
+import { InsightsPanel } from "./panels/insights-panel";
 import type { BriefFormState } from "@/components/workspace/types";
 import type { AIModel } from "@/lib/ai-provider";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { AiBriefPanel } from "./panels/ai-brief-panel";
 import {
   ChatPanel,
-  type DocumentMode,
   type ScopedSelection,
 } from "./panels/chat-panel";
-import { ContentPanel } from "./panels/content-panel";
-import { LayersPanel } from "./panels/layers-panel";
-import { LibraryPanel } from "./panels/library-panel";
 import { PagesPanel } from "./panels/pages-panel";
 import { PastePanel } from "./panels/paste-panel";
 import { SubmissionsPanel } from "./panels/submissions-panel";
@@ -49,16 +44,13 @@ import { VersionsPanel } from "./panels/versions-panel";
 import { IconBtn, Tooltip } from "./ui";
 
 import type { ComponentType } from "react";
-import type { NodeId } from "@/lib/doc/model";
 
 export type SidebarMode =
   | "chat"
-  | "content"
-  | "library"
-  | "layers"
   | "templates"
   | "pages"
   | "leads"
+  | "insights"
   | "versions"
   | "brief";
 
@@ -69,18 +61,12 @@ interface ModeTab {
   title: string;
 }
 
-// Stable empty-array default so a missing prop doesn't re-trigger render
-// dependencies in child panels.
-const EMPTY_IDS: never[] = [];
-
 const MODE_TABS: ModeTab[] = [
   { id: "chat", icon: ChatIcon, label: "Chat", title: "Chat with Orchestra" },
-  { id: "content", icon: Pencil, label: "Content", title: "Edit content" },
-  { id: "library", icon: Plus, label: "Library", title: "Add elements & sections" },
-  { id: "layers", icon: Layers, label: "Layers", title: "Layers" },
   { id: "templates", icon: Grid3, label: "Templates", title: "Start from a template" },
   { id: "pages", icon: FileText, label: "Pages", title: "Recent projects" },
   { id: "leads", icon: Inbox, label: "Leads", title: "Form submissions" },
+  { id: "insights", icon: BarChart3, label: "Insights", title: "Page analytics" },
   { id: "versions", icon: HistoryIcon, label: "Versions", title: "Version history" },
   { id: "brief", icon: Sparkles, label: "Brief", title: "Project brief (AI context)" },
 ];
@@ -170,17 +156,6 @@ interface LeftSidebarProps {
   /** Model choice (Kimi / Gemini) for generation — forwarded to AiBriefPanel. */
   aiModel?: AIModel;
   aiOnModelChange?: (m: AIModel) => void;
-  /** Canva-mode hook-up forwarded to ChatPanel — present ⇒ this project
-   *  has a Document, so chat send routes to the ops endpoint. */
-  documentMode?: DocumentMode;
-  /** Currently-selected model node ids — used by the Layers tab to highlight
-   *  + to set selection on tree click. Single id arrays for normal click;
-   *  multi-element arrays for shift-click. Omitted in non-Canva projects. */
-  modelSelectedIds?: NodeId[];
-  onModelSelect?: (ids: NodeId[]) => void;
-  /** Fires after a click-insert from the Library tab with the new node's
-   *  id. Parent uses it to scroll the iframe to the new element. */
-  onLibraryInserted?: (id: NodeId) => void;
 }
 
 export function LeftSidebar({
@@ -219,41 +194,24 @@ export function LeftSidebar({
   aiBriefState,
   aiOnGenerate,
   aiGenerating = false,
-  aiModel = "kimi",
+  aiModel = "gemini-pro",
   aiOnModelChange,
-  documentMode,
-  modelSelectedIds = EMPTY_IDS,
-  onModelSelect,
-  onLibraryInserted,
 }: LeftSidebarProps) {
   const isFlatProject = flatProjectId !== undefined;
-  const isCanvaMode = !!documentMode;
   const lockedSet = new Set(lockedTabs ?? []);
   const isLocked = (id: SidebarMode) => lockedSet.has(id);
   const activeMeta = MODE_TABS.find((t) => t.id === mode) ?? MODE_TABS[0];
 
-  // Tabs that don't apply to the current surface:
-  //   - Templates is an entry-flow surface only — once a project is open
-  //     there's nothing to commit to, so we drop it in editing mode.
-  //   - Content is the HTML-mode editing affordance card; in Canva-mode
-  //     the right inspector IS the content surface (section list + per-
-  //     element panels), so the tab is dead weight here.
-  //   - Layers + Library are Document-tree views — only meaningful when a
-  //     Document exists, so they show only in Canva-mode.
+  // Tab visibility rules:
+  // - Templates is an entry-flow surface only — once a project is open there's
+  //   nothing to commit to, so we drop it in editing mode.
+  // - Insights is editing-only — there's no project to read analytics for in
+  //   the entry flows (the project doesn't exist yet).
   const visibleTabs = MODE_TABS.filter((t) => {
     if (entryMode === "editing" && t.id === "templates") return false;
-    if (isCanvaMode && t.id === "content") return false;
-    if (!isCanvaMode && (t.id === "layers" || t.id === "library")) return false;
+    if (entryMode !== "editing" && t.id === "insights") return false;
     return true;
   });
-
-  // If the user lands here with a stale selection on a tab that is no longer
-  // visible (content in Canva-mode, layers/library in HTML-mode), redirect
-  // to chat so they don't see an orphaned panel with no tab highlighted.
-  useEffect(() => {
-    if (isCanvaMode && mode === "content") setMode("chat");
-    if (!isCanvaMode && (mode === "layers" || mode === "library")) setMode("chat");
-  }, [isCanvaMode, mode, setMode]);
 
   if (collapsed) {
     return (
@@ -376,34 +334,6 @@ export function LeftSidebar({
                 onAutofill={onAutofill}
                 pendingDraft={pendingDraft}
                 onPendingDraftConsumed={onPendingDraftConsumed}
-                documentMode={documentMode}
-              />
-            )}
-            {mode === "content" && (
-              <ContentPanel
-                sections={sections}
-                expanded={expanded}
-                setExpanded={setExpanded}
-                onUpdate={onUpdateSection}
-                flat={isFlatProject}
-                savingStatus={savingStatus}
-              />
-            )}
-            {mode === "library" && documentMode && (
-              <LibraryPanel
-                doc={documentMode.doc}
-                selectedIds={modelSelectedIds}
-                onSelect={onModelSelect ?? (() => {})}
-                onEdit={documentMode.applyEdit}
-                onAfterInsert={onLibraryInserted}
-              />
-            )}
-            {mode === "layers" && documentMode && (
-              <LayersPanel
-                doc={documentMode.doc}
-                selectedIds={modelSelectedIds}
-                onSelect={onModelSelect ?? (() => {})}
-                onEdit={documentMode.applyEdit}
               />
             )}
             {mode === "templates" && (
@@ -423,6 +353,9 @@ export function LeftSidebar({
             )}
             {mode === "leads" && (
               <SubmissionsPanel currentProjectId={currentProjectId} />
+            )}
+            {mode === "insights" && (
+              <InsightsPanel currentProjectId={currentProjectId} />
             )}
             {mode === "versions" && (
               <VersionsPanel

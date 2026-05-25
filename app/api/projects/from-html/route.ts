@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { createVersion } from "@/lib/projects/versions";
+import { normalizeBornCanonical } from "@/lib/normalize";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/projects/from-html
@@ -52,6 +53,10 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
+  // Born-canonical: pasted HTML enters on the same token contract as a
+  // generated page — radius / font / accent become controllable.
+  const finalHtml = normalizeBornCanonical(html);
+
   const title =
     (typeof body.title === "string" && body.title.trim()) ||
     extractTitle(html) ||
@@ -67,7 +72,7 @@ export async function POST(req: Request): Promise<Response> {
       thumbnailUrl: null,
       tags: ["paste"],
       status: "draft",
-      data: { html },
+      data: { html: finalHtml },
     });
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -79,7 +84,7 @@ export async function POST(req: Request): Promise<Response> {
   // can restore to if subsequent chats / inline edits ruin the page.
   await createVersion({
     projectId,
-    html,
+    html: finalHtml,
     label: "Pasted HTML",
     source: "initial",
   }).catch((err: unknown) => {

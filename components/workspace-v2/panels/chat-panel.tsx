@@ -25,7 +25,9 @@ import {
   X,
 } from "../icons";
 import { ReplaceAssetModal } from "../replace-asset-modal";
-import { StatusDot } from "../ui";
+import { ModelPicker, useAIModel } from "../model-picker";
+import type { StoredChatTurn } from "@/lib/projects/types";
+import type { AIModel } from "@/lib/ai-provider";
 
 export interface ScopedSelection {
   hint: string;
@@ -46,6 +48,15 @@ interface ChatPanelProps {
   flatProjectId?: string;
   flatProjectHtml?: string;
   onFlatHtmlUpdate?: (newHtml: string) => void;
+  /** Persisted transcript — seeds the chat so a reload / tab switch
+   *  restores the conversation. */
+  flatProjectChat?: StoredChatTurn[];
+  /** Fired after a turn is persisted — the parent refetches so its mirror
+   *  and other tabs (via BroadcastChannel) converge. */
+  onChatChange?: () => void;
+  /** Mirrors the chat's streaming state to the parent so the preview can
+   *  overlay the page-building loader while Kimi redesigns. */
+  onRedesigningChange?: (active: boolean) => void;
   /** True while the parent is still fetching `/api/projects/<id>` — render
    *  a skeleton so a brief flash of the empty/fallback state doesn't appear
    *  during reload. */
@@ -73,6 +84,9 @@ export function ChatPanel({
   flatProjectId,
   flatProjectHtml,
   onFlatHtmlUpdate,
+  flatProjectChat,
+  onChatChange,
+  onRedesigningChange,
   projectLoading = false,
   sectionSelectMode = false,
   onToggleSectionSelect,
@@ -85,9 +99,13 @@ export function ChatPanel({
   if (flatProjectId && onFlatHtmlUpdate) {
     return (
       <AIDesignChat
+        key={flatProjectId}
         projectId={flatProjectId}
         projectHtml={flatProjectHtml ?? ""}
         onLocalUpdate={onFlatHtmlUpdate}
+        initialChat={flatProjectChat}
+        onChatChange={onChatChange}
+        onRedesigningChange={onRedesigningChange}
         sectionSelectMode={sectionSelectMode}
         onToggleSectionSelect={onToggleSectionSelect}
         scopedSelection={scopedSelection}
@@ -152,6 +170,9 @@ type TurnStatus = "streaming" | "applied" | "error" | "reverted";
 interface DesignTurn {
   id: string;
   userText: string;
+  /** Image attached to this turn — rendered in the user bubble as proof
+   *  it was actually sent with the message. */
+  attachedImage?: AttachedImage;
   assistantReasoning: string;
   status: TurnStatus;
   errorText?: string;
@@ -184,6 +205,9 @@ function AIDesignChat({
   projectId,
   projectHtml,
   onLocalUpdate,
+  initialChat,
+  onChatChange,
+  onRedesigningChange,
   sectionSelectMode = false,
   onToggleSectionSelect,
   scopedSelection = null,
@@ -195,6 +219,9 @@ function AIDesignChat({
   projectId: string;
   projectHtml: string;
   onLocalUpdate: (newHtml: string) => void;
+  initialChat?: StoredChatTurn[];
+  onChatChange?: () => void;
+  onRedesigningChange?: (active: boolean) => void;
   sectionSelectMode?: boolean;
   onToggleSectionSelect?: (active: boolean) => void;
   scopedSelection?: ScopedSelection | null;
@@ -203,11 +230,17 @@ function AIDesignChat({
   pendingDraft?: string | null;
   onPendingDraftConsumed?: () => void;
 }) {
-  const [turns, setTurns] = useState<DesignTurn[]>([]);
+  // Seed from the persisted transcript so a reload / tab-switch remount
+  // restores the conversation. Restored turns carry no HTML snapshot — their
+  // inline Undo is hidden (the Versions tab covers older revisions).
+  const [turns, setTurns] = useState<DesignTurn[]>(() =>
+    (initialChat ?? []).map(restoreTurn),
+  );
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [attachedImage, setAttachedImage] = useState<AttachedImage | null>(null);
   const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [model, handleModelChange] = useAIModel();
 
   const taRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -217,6 +250,15 @@ function AIDesignChat({
 
   const turnsRef = useRef<DesignTurn[]>(turns);
   turnsRef.current = turns;
+
+  // Kept in a ref so the persist effect can call the latest callback without
+  // listing it as a dependency (which would re-run the effect — and re-POST —
+  // on every parent render).
+  const onChatChangeRef = useRef(onChatChange);
+  onChatChangeRef.current = onChatChange;
+
+  const onRedesigningChangeRef = useRef(onRedesigningChange);
+  onRedesigningChangeRef.current = onRedesigningChange;
 
   const abortRef = useRef<AbortController | null>(null);
 
@@ -242,6 +284,52 @@ function AIDesignChat({
       abortRef.current?.abort();
     };
   }, []);
+
+  // Mirror streaming state to the parent so the preview can overlay the
+  // page-building loader while Kimi redesigns. Cleanup forces it off if the
+  // chat unmounts mid-stream (a tab switch aborts the request).
+  useEffect(() => {
+    onRedesigningChangeRef.current?.(sending);
+    return () => onRedesigningChangeRef.current?.(false);
+  }, [sending]);
+
+  // Convergence — reconcile the server transcript into local turns. When
+  // another tab (or device) appends a turn, a refetch lands it in `initialChat`
+  // and we merge: server turns are the authority for settled history; a turn
+  // still streaming in THIS tab is local-only and kept. `initialChat` is read
+  // through a ref so the effect depends only on the content signature.
+  const initialChatRef = useRef(initialChat);
+  initialChatRef.current = initialChat;
+  const initialChatSig = (initialChat ?? [])
+    .map((s) => `${s.id}:${s.status}`)
+    .join("|");
+  const chatSeededRef = useRef(false);
+  useEffect(() => {
+    if (!chatSeededRef.current) {
+      // First run = the useState seed; nothing to reconcile.
+      chatSeededRef.current = true;
+      return;
+    }
+    const server = initialChatRef.current ?? [];
+    setTurns((prev) => {
+      const prevById = new Map(prev.map((t) => [t.id, t]));
+      const serverIds = new Set(server.map((s) => s.id));
+      // Server turns first (chronological, the authority). Keep the local
+      // DesignTurn where we have it — it carries preEditHtml for in-session
+      // Undo — but take status from the server (another tab may have undone
+      // it). Restore turns we've never seen.
+      const merged: DesignTurn[] = server.map((s) => {
+        const local = prevById.get(s.id);
+        return local ? { ...local, status: s.status } : restoreTurn(s);
+      });
+      // Local turns the server hasn't got yet — the in-flight streaming turn,
+      // or one whose append POST is still landing. Append after.
+      for (const t of prev) {
+        if (!serverIds.has(t.id)) merged.push(t);
+      }
+      return merged;
+    });
+  }, [initialChatSig]);
 
   // External draft push (post-swap "Update copy?" chip flow). Apply once,
   // focus the textarea so the user can edit or hit Send, then consume.
@@ -292,6 +380,24 @@ function AIDesignChat({
     );
   }, []);
 
+  // Append a settled turn to the server transcript (append-only log), then
+  // signal the parent — it refetches + BroadcastChannels other tabs into sync.
+  const persistTurn = useCallback(
+    async (turn: StoredChatTurn) => {
+      try {
+        await fetch(`/api/projects/${projectId}/chat`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(turn),
+        });
+        onChatChangeRef.current?.();
+      } catch {
+        /* soft — a missed append only costs this turn from the transcript */
+      }
+    },
+    [projectId],
+  );
+
   const send = useCallback(
     async (rawPrompt: string) => {
       const prompt = rawPrompt.trim();
@@ -307,6 +413,7 @@ function AIDesignChat({
       const newTurn: DesignTurn = {
         id: turnId,
         userText: prompt,
+        attachedImage: attachedImage ?? undefined,
         assistantReasoning: "",
         status: "streaming",
         preEditHtml,
@@ -331,6 +438,9 @@ function AIDesignChat({
         ]);
 
       const htmlBuf = { value: "" };
+      // Accumulated alongside the per-turn state so the final reasoning is in
+      // scope when we append the settled turn to the transcript.
+      let accumulatedReasoning = "";
       let lastFlushedLen = 0;
       let flushTimer: number | null = null;
       const flushHtml = () => {
@@ -379,6 +489,7 @@ function AIDesignChat({
             currentHtml: preEditHtml,
             prompt,
             history,
+            model,
             ...(turnScope ? { scope: turnScope } : {}),
             ...(turnImage ? { attachedImage: turnImage } : {}),
           }),
@@ -436,7 +547,10 @@ function AIDesignChat({
                 typeof (payload as { text?: unknown }).text === "string"
                   ? (payload as { text: string }).text
                   : "";
-              if (text) appendReasoning(turnId, text);
+              if (text) {
+                appendReasoning(turnId, text);
+                accumulatedReasoning += text;
+              }
             } else if (evName === "html_chunk") {
               const text =
                 payload &&
@@ -478,6 +592,7 @@ function AIDesignChat({
               const data = payload as { html?: string; reasoning?: string };
               if (typeof data.html === "string") finalHtml = data.html;
               if (typeof data.reasoning === "string") {
+                accumulatedReasoning = data.reasoning;
                 updateTurn(turnId, { assistantReasoning: data.reasoning });
               }
               break outer;
@@ -515,6 +630,15 @@ function AIDesignChat({
           postEditHtml: finalHtml,
           appliedAt: Date.now(),
         });
+        // Append the settled turn to the server transcript — append-only, so
+        // it's safe even with the same project open in another tab.
+        void persistTurn({
+          id: turnId,
+          userText: prompt,
+          attachedImage: turnImage ?? undefined,
+          assistantReasoning: accumulatedReasoning,
+          status: "applied",
+        });
       } catch (err) {
         clearFlush();
         if (abort.signal.aborted) {
@@ -536,7 +660,9 @@ function AIDesignChat({
     [
       appendReasoning,
       attachedImage,
+      model,
       onLocalUpdate,
+      persistTurn,
       projectId,
       scopedSelection,
       sending,
@@ -561,6 +687,9 @@ function AIDesignChat({
   const handleUndo = useCallback(
     async (turn: DesignTurn) => {
       if (turn.status !== "applied") return;
+      // Restored (pre-reload) turns carry no preEditHtml — their revisions
+      // are reachable via the Versions tab, not this inline Undo.
+      if (!turn.preEditHtml) return;
       onLocalUpdate(turn.preEditHtml);
       updateTurn(turn.id, { status: "reverted" });
       try {
@@ -571,6 +700,16 @@ function AIDesignChat({
         });
       } catch {
         /* iframe restored — DB sync failing is soft */
+      }
+      try {
+        await fetch(`/api/projects/${projectId}/chat`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ turnId: turn.id, status: "reverted" }),
+        });
+        onChatChangeRef.current?.();
+      } catch {
+        /* soft */
       }
     },
     [onLocalUpdate, projectId, updateTurn],
@@ -613,6 +752,8 @@ function AIDesignChat({
         onSubmit={() => void send(draft)}
         sending={sending}
         textareaRef={taRef}
+        model={model}
+        onModelChange={handleModelChange}
         sectionSelectMode={sectionSelectMode}
         onToggleSectionSelect={onToggleSectionSelect}
         scopedSelection={scopedSelection}
@@ -699,6 +840,19 @@ function TurnView({
         </span>
         <div className="min-w-0 max-w-[80%] text-right">
           <div className="inline-block rounded-2xl px-3 py-2 text-left bg-accent-soft text-accent border border-[color:var(--accent)]/30">
+            {turn.attachedImage && (
+              <div className="mb-1.5 flex items-center gap-1.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={turn.attachedImage.url}
+                  alt=""
+                  className="h-9 w-9 rounded object-cover ring-1 ring-[color:var(--accent)]/30"
+                />
+                <span className="text-[10px] fg-faint ui-small">
+                  Image sent
+                </span>
+              </div>
+            )}
             <div className="text-[12.5px] fg leading-relaxed whitespace-pre-wrap">
               {turn.userText}
             </div>
@@ -774,19 +928,24 @@ function TurnFooter({
     );
   }
   if (turn.status === "applied") {
+    // No preEditHtml = a turn restored from a previous session; the inline
+    // Undo can't revert it (the Versions tab does), so hide the button.
+    const canUndo = turn.preEditHtml.length > 0;
     return (
       <div
         className={`${marginClass} inline-flex items-center gap-2 rounded-md bg-app border bd px-1.5 py-0.5 text-[10.5px] fg-faint ui-small`}
       >
         <Wand size={10} className="text-[var(--accent)]" />
         <span>Applied · {relativeTime(turn.appliedAt ?? Date.now())}</span>
-        <button
-          type="button"
-          onClick={() => onUndo(turn)}
-          className="text-accent hover:underline"
-        >
-          Undo
-        </button>
+        {canUndo && (
+          <button
+            type="button"
+            onClick={() => onUndo(turn)}
+            className="text-accent hover:underline"
+          >
+            Undo
+          </button>
+        )}
       </div>
     );
   }
@@ -856,6 +1015,8 @@ function Composer({
   attachedImage = null,
   onAttachImage,
   onClearAttachedImage,
+  model,
+  onModelChange,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -870,6 +1031,8 @@ function Composer({
   attachedImage?: AttachedImage | null;
   onAttachImage?: () => void;
   onClearAttachedImage?: () => void;
+  model: AIModel;
+  onModelChange: (m: AIModel) => void;
 }) {
   return (
     <div className="shrink-0 px-3 pb-3">
@@ -949,42 +1112,47 @@ function Composer({
             >
               <ImageIcon size={13} />
             </button>
-            <button
-              type="button"
-              aria-label={
-                sectionSelectMode
-                  ? "Cancel selection mode (ESC)"
-                  : "Select a section to scope"
-              }
-              title={
-                sectionSelectMode
-                  ? "Click any section in the preview, or ESC to cancel"
-                  : "Scope your next message to one section"
-              }
-              onClick={() => onToggleSectionSelect?.(!sectionSelectMode)}
-              disabled={sending || !onToggleSectionSelect}
-              className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition disabled:opacity-40 ${
-                sectionSelectMode
-                  ? "bg-[var(--accent)] text-white shadow-coral"
-                  : "fg-faint hover:fg hover:bg-hover"
-              }`}
-            >
-              <Crosshair size={13} />
-            </button>
-            <button
-              type="button"
-              aria-label="Autofill with my info"
-              title="Autofill the template with your business info — upload a screenshot or type your data"
-              onClick={onAutofill}
-              disabled={sending || !onAutofill}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md fg-faint hover:fg hover:bg-hover transition disabled:opacity-40"
-            >
-              <Wand size={13} />
-            </button>
-            <span className="inline-flex items-center gap-1 h-7 px-1.5 text-[10px] fg-faint ui-small">
-              <StatusDot color="#10B981" pulse />
-              <span>Kimi K2.6</span>
-            </span>
+            {onToggleSectionSelect && (
+              <button
+                type="button"
+                aria-label={
+                  sectionSelectMode
+                    ? "Cancel selection mode (ESC)"
+                    : "Select a section to scope"
+                }
+                title={
+                  sectionSelectMode
+                    ? "Click any section in the preview, or ESC to cancel"
+                    : "Scope your next message to one section"
+                }
+                onClick={() => onToggleSectionSelect(!sectionSelectMode)}
+                disabled={sending}
+                className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition disabled:opacity-40 ${
+                  sectionSelectMode
+                    ? "bg-[var(--accent)] text-white shadow-coral"
+                    : "fg-faint hover:fg hover:bg-hover"
+                }`}
+              >
+                <Crosshair size={13} />
+              </button>
+            )}
+            {onAutofill && (
+              <button
+                type="button"
+                aria-label="Autofill with my info"
+                title="Autofill the template with your business info — upload a screenshot or type your data"
+                onClick={onAutofill}
+                disabled={sending}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md fg-faint hover:fg hover:bg-hover transition disabled:opacity-40"
+              >
+                <Wand size={13} />
+              </button>
+            )}
+            <ModelPicker
+              model={model}
+              onChange={onModelChange}
+              disabled={sending}
+            />
           </div>
           <button
             type="button"
@@ -1010,6 +1178,20 @@ function Composer({
       </div>
     </div>
   );
+}
+
+function restoreTurn(s: StoredChatTurn): DesignTurn {
+  return {
+    id: s.id,
+    userText: s.userText,
+    attachedImage: s.attachedImage,
+    assistantReasoning: s.assistantReasoning,
+    status: s.status,
+    errorText: s.errorText,
+    // No HTML snapshot persisted — empty preEditHtml hides the inline Undo.
+    preEditHtml: "",
+    appliedAt: s.appliedAt,
+  };
 }
 
 function formatChars(n: number): string {

@@ -63,6 +63,13 @@ export const ChevronUp = (p: IconProps) => (
   </Base>
 );
 
+export const Inbox = (p: IconProps) => (
+  <Base {...p}>
+    <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+    <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+  </Base>
+);
+
 export const Pencil = (p: IconProps) => (
   <Base {...p}>
     <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
@@ -370,5 +377,20 @@ export const Crosshair = (p: IconProps) => (
     <line x1="6" y1="12" x2="2" y2="12" />
     <line x1="12" y1="6" x2="12" y2="2" />
     <line x1="12" y1="22" x2="12" y2="18" />
+  </Base>
+);
+
+export const BarChart3 = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M3 3v18h18" />
+    <path d="M18 17V9" />
+    <path d="M13 17V5" />
+    <path d="M8 17v-3" />
+  </Base>
+);
+
+export const Activity = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.5.5 0 0 1-.96 0L9.24 2.18a.5.5 0 0 0-.96 0l-2.35 8.36A2 2 0 0 1 4 12H2" />
   </Base>
 );

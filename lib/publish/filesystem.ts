@@ -16,6 +16,9 @@ import sharp from "sharp";
 import { validateSubdomain } from "@/lib/subdomain/validate";
 import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
 import { consolidateUnsplashCredits } from "@/lib/publish/credits";
+import { wirePublishedForms } from "@/lib/publish/forms";
+import { injectAnalyticsSnippet } from "@/lib/analytics/snippet";
+import type { FormConfig } from "@/lib/projects/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Publish-to-disk primitives — versioned releases + `current` symlink.
@@ -85,6 +88,13 @@ export interface PublishParams {
    *  `/assets/<filename>` so nginx serves the asset directly off disk —
    *  no Node round-trip per image on the published page. */
   projectId?: string;
+  /** Per-form config from ProjectData.settings.forms, keyed by document-
+   *  order form index. Baked into the published forms by wirePublishedForms. */
+  formConfigs?: Record<string, FormConfig>;
+  /** Inject the analytics tracker snippet at publish time? Defaults to true.
+   *  Set to false when the project's settings.analyticsDisabled is true so
+   *  the user can opt out without losing the rest of publish-time HTML rewrites. */
+  analyticsEnabled?: boolean;
 }
 
 const ASSET_URL_RE_FOR =
@@ -372,6 +382,26 @@ export async function publishToDir(
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn("[publishToDir] unsplash migration failed; using hotlinks", err);
+  }
+
+  // Wire <form>s to the OpenLen submit endpoint + inject the inline-submit
+  // script. Done last so the action lands on the final asset-rewritten HTML.
+  // Soft-fail — a cheerio hiccup must never block a publish.
+  try {
+    migratedHtml = wirePublishedForms(migratedHtml, sub, params.formConfigs);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[publishToDir] form wiring failed; publishing without it", err);
+  }
+
+  // Inject the analytics tracker snippet (lib/analytics/snippet.ts). Done
+  // AFTER all other HTML rewrites so the snippet position is stable + the
+  // string-literal projectId in the snippet survives any later transforms.
+  // Skipped when: (a) no projectId (apex/dev publishes), or (b) the
+  // project's settings.analyticsDisabled is true (user opt-out).
+  const analyticsEnabled = params.analyticsEnabled ?? true;
+  if (params.projectId && analyticsEnabled) {
+    migratedHtml = injectAnalyticsSnippet(migratedHtml, params.projectId);
   }
 
   const sha = computeSha(migratedHtml);

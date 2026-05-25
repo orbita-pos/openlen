@@ -1,0 +1,1746 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visit the Marisol Coast — Forty Beaches, Two Seasons, 312 Sunny Days</title>
+<meta name="description" content="The official guide to the Marisol Coast: 190 miles of turquoise coves, hill towns, and tasting rooms, just 55 minutes from the capital. Plan your trip, find where to stay, and decide when to visit.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Inter:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          bg: "#F8FAF9",
+          ink: "#16201E",
+          sea: "#1B9E8A",
+          "sea-deep": "#157C6D",
+          coral: "#F0784A",
+          "coral-deep": "#D8602F",
+          surface: "#FFFFFF",
+          shell: "#EEF4F2",
+        },
+        fontFamily: {
+          display: ["'Bricolage Grotesque'", "system-ui", "sans-serif"],
+          body: ["Inter", "system-ui", "sans-serif"],
+          mono: ["'Geist Mono'", "ui-monospace", "monospace"],
+        },
+        borderRadius: {
+          xl2: "1.35rem",
+        },
+      },
+    },
+  };
+</script>
+<style>
+  :root {
+    --bg: #F8FAF9;
+    --text: #16201E;
+    --muted: rgba(22, 32, 30, 0.66);
+    --faint: rgba(22, 32, 30, 0.46);
+    --accent: #1B9E8A;
+    --accent-2: #F0784A;
+    --surface: #FFFFFF;
+    --line: rgba(22, 32, 30, 0.10);
+    --line-strong: rgba(22, 32, 30, 0.16);
+  }
+
+  * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: "Inter", system-ui, sans-serif;
+    font-weight: 400;
+    font-feature-settings: "ss01", "cv11";
+    font-optical-sizing: auto;
+    letter-spacing: 0.002em;
+    overflow-x: hidden;
+  }
+
+  ::selection { background: rgba(27, 158, 138, 0.22); color: var(--text); }
+
+  section[id] { scroll-margin-top: 88px; }
+
+  /* ---- type utilities ---- */
+  .display {
+    font-family: "Bricolage Grotesque", system-ui, sans-serif;
+    letter-spacing: -0.03em;
+  }
+  .display-tight { letter-spacing: -0.04em; }
+  .tracking-soft { letter-spacing: -0.018em; }
+  .mono { font-family: "Geist Mono", ui-monospace, monospace; }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .halftone { opacity: 0.45; }
+
+  .eyebrow {
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 0.66rem;
+    font-weight: 500;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  /* ---- ambient backgrounds ---- */
+  .ambient {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background:
+      radial-gradient(640px 480px at 82% -6%, rgba(27, 158, 138, 0.16), transparent 70%),
+      radial-gradient(560px 520px at 4% 10%, rgba(240, 120, 74, 0.13), transparent 72%),
+      radial-gradient(800px 640px at 94% 92%, rgba(27, 158, 138, 0.10), transparent 75%);
+  }
+  .dotgrid {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: radial-gradient(rgba(22, 32, 30, 0.055) 1px, transparent 1.4px);
+    background-size: 32px 32px;
+    mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+    opacity: 0.7;
+  }
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(66px);
+    opacity: 0.55;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ---- photo placeholders ---- */
+  .photo {
+    position: relative;
+    border-radius: var(--radius, 1.35rem);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+      inset 0 0 0 1px var(--line),
+      0 20px 46px -24px rgba(22, 32, 30, 0.34);
+    overflow: hidden;
+  }
+  .photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.16), rgba(22,32,30,0.07));
+    pointer-events: none;
+  }
+
+  /* destination gradients — turquoise coves, golden cliffs, hill towns, markets */
+  .grad-cove   { background: linear-gradient(160deg, #1B9E8A 0%, #59C1AE 36%, #BFE6DC 64%, #F2E7C8 100%); }
+  .grad-deep   { background: linear-gradient(150deg, #0E5F54 0%, #1B9E8A 40%, #8FD3C5 72%, #E9DFC0 100%); }
+  .grad-golden { background: linear-gradient(155deg, #F0784A 0%, #F4A26C 38%, #F1CFA0 66%, #E7E3CC 100%); }
+  .grad-cliff  { background: linear-gradient(150deg, #C9602F 0%, #E78F58 34%, #C9C0A2 64%, #7FB6AB 100%); }
+  .grad-town   { background: linear-gradient(160deg, #E89A5C 0%, #E4C49A 40%, #B6CBB6 70%, #6FAFA3 100%); }
+  .grad-market { background: linear-gradient(150deg, #1B9E8A 0%, #8AC9A0 32%, #E4C896 64%, #F0784A 100%); }
+  .grad-pale   { background: linear-gradient(165deg, #A9D7CD 0%, #D6E8E2 46%, #F0E7CF 100%); }
+  .grad-dawn   { background: linear-gradient(150deg, #2E7E72 0%, #6FB5AA 34%, #E2C9A4 68%, #F0784A 100%); }
+
+  /* ---- surface cards ---- */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+  }
+  .panel-soft {
+    background: rgba(255, 255, 255, 0.66);
+    border: 1px solid var(--line);
+    backdrop-filter: blur(8px);
+  }
+
+  .card-lift {
+    transition: transform 130ms ease, box-shadow 130ms ease, border-color 130ms ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 24px 48px -28px rgba(22, 32, 30, 0.34);
+    border-color: rgba(27, 158, 138, 0.34);
+  }
+
+  /* ---- buttons ---- */
+  .btn {
+    transition: transform 110ms ease, box-shadow 110ms ease, background-color 110ms ease, color 110ms ease, border-color 110ms ease;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn:active { transform: translateY(0); }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #F8FAF9;
+    box-shadow: 0 10px 24px -12px rgba(27, 158, 138, 0.68);
+  }
+  .btn-primary:hover {
+    background: #157C6D;
+    box-shadow: 0 16px 30px -14px rgba(27, 158, 138, 0.78);
+  }
+
+  .btn-coral {
+    background: var(--accent-2);
+    color: #FFFFFF;
+    box-shadow: 0 10px 24px -12px rgba(240, 120, 74, 0.62);
+  }
+  .btn-coral:hover {
+    background: #D8602F;
+    box-shadow: 0 16px 30px -14px rgba(240, 120, 74, 0.72);
+  }
+
+  .btn-ghost {
+    background: rgba(255, 255, 255, 0.74);
+    color: var(--text);
+    border: 1px solid var(--line-strong);
+  }
+  .btn-ghost:hover {
+    border-color: rgba(27, 158, 138, 0.44);
+    box-shadow: 0 12px 26px -18px rgba(22, 32, 30, 0.36);
+  }
+
+  /* ---- navlink underline sweep ---- */
+  .navlink {
+    position: relative;
+    transition: color 120ms ease;
+  }
+  .navlink::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 100%;
+    bottom: -3px;
+    height: 1.5px;
+    background: var(--accent);
+    transition: right 180ms ease;
+  }
+  .navlink:hover { color: var(--accent); }
+  .navlink:hover::after { right: 0; }
+
+  /* ---- pulse dot ---- */
+  .pulse-dot {
+    position: relative;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .pulse-dot::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    box-shadow: 0 0 0 0 rgba(27, 158, 138, 0.5);
+    animation: pulse 2.4s cubic-bezier(0.22, 0.7, 0.3, 1) infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(27, 158, 138, 0.5); }
+    70%  { box-shadow: 0 0 0 11px rgba(27, 158, 138, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(27, 158, 138, 0); }
+  }
+
+  /* ---- marquee ---- */
+  .marquee { overflow: hidden; }
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: slide 42s linear infinite;
+  }
+  .marquee:hover .marquee-track { animation-play-state: paused; }
+  @keyframes slide {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  /* ---- hero rise-in ---- */
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .rise { opacity: 0; animation: rise 0.9s cubic-bezier(0.22, 0.7, 0.3, 1) forwards; }
+  .rise-1 { animation-delay: 0.05s; }
+  .rise-2 { animation-delay: 0.16s; }
+  .rise-3 { animation-delay: 0.27s; }
+  .rise-4 { animation-delay: 0.38s; }
+  .rise-5 { animation-delay: 0.50s; }
+
+  /* ---- native details ---- */
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+  .faq-item { transition: border-color 130ms ease, background-color 130ms ease; }
+  .faq-item[open] { border-color: rgba(27, 158, 138, 0.32); background: rgba(255,255,255,0.92); }
+  .faq-chev { transition: transform 200ms ease; }
+  details[open] .faq-chev { transform: rotate(45deg); }
+
+  .hairrule {
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--line-strong) 22%, var(--line-strong) 78%, transparent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rise { animation: none; opacity: 1; }
+    .marquee-track { animation: none; }
+    .pulse-dot::before { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="ambient" aria-hidden="true"></div>
+<div class="dotgrid" aria-hidden="true"></div>
+
+<!-- ===== 1 · STICKY NAV ===== -->
+<header class="sticky top-0 z-50">
+  <div class="panel-soft border-x-0 border-t-0">
+    <nav class="mx-auto max-w-6xl px-5 sm:px-8 h-[62px] flex items-center justify-between">
+      <a href="#top" class="flex items-center gap-2.5 group" aria-label="Visit the Marisol Coast — home">
+        <!-- brand mark: a sun rising over two coastal headlands -->
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true" class="transition-transform duration-200 group-hover:-rotate-6">
+          <circle cx="18" cy="18" r="16.6" stroke="#1B9E8A" stroke-width="1.1" opacity="0.5"/>
+          <circle cx="18" cy="15" r="4.4" fill="#F0784A"/>
+          <path d="M18 7.4v-2.2M18 30.8v-2.2M25.6 15h2.2M8.2 15H6M23.4 9.6l1.6-1.6M11 9.6 9.4 8" stroke="#F0784A" stroke-width="1.2" stroke-linecap="round"/>
+          <path d="M5 24c3.2 0 4.6-4.2 8-4.2S20.6 24 24 24s4.6-4 7-4" stroke="#1B9E8A" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+        </svg>
+        <span class="display text-[15.5px] font-bold tracking-soft text-ink">Marisol <span class="text-sea">Coast</span></span>
+      </a>
+      <ul class="hidden md:flex items-center gap-7 text-[13px] font-medium text-ink/72">
+        <li><a href="#about" class="navlink">Things to do</a></li>
+        <li><a href="#stay" class="navlink">Where to stay</a></li>
+        <li><a href="#season" class="navlink">When to visit</a></li>
+        <li><a href="#getting-here" class="navlink">Plan</a></li>
+      </ul>
+      <a href="#plan" class="btn btn-primary text-[12.5px] font-semibold rounded-full px-4 py-2 tracking-soft">Plan your trip</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ===== 2 · HERO ===== -->
+<section id="hero" class="relative overflow-hidden pt-14 sm:pt-20 pb-16 sm:pb-20">
+  <div class="blob grad-pale" style="width:400px;height:400px;top:-110px;right:-80px;"></div>
+  <div class="blob grad-golden" style="width:320px;height:320px;bottom:-120px;left:-90px;opacity:0.34;"></div>
+
+  <div class="mx-auto max-w-6xl px-5 sm:px-8 relative">
+    <div class="max-w-4xl">
+      <div class="rise rise-1 inline-flex items-center gap-2.5 panel-soft rounded-full pl-2.5 pr-4 py-1.5 mb-7">
+        <span class="pulse-dot" aria-hidden="true"></span>
+        <span class="mono text-[11px] tracking-[0.16em] uppercase text-ink/72">Visit the Marisol Coast</span>
+      </div>
+
+      <h1 class="rise rise-2 display display-tight font-bold text-ink leading-[0.96] text-[clamp(2.9rem,8.4vw,6rem)]">
+        Forty beaches, two seasons,<br class="hidden sm:block">
+        <span class="halftone">one very easy decision.</span>
+      </h1>
+
+      <p class="rise rise-3 mt-7 max-w-xl text-[15.5px] sm:text-[16.5px] leading-[1.66] text-ink/72">
+        A 190-mile stretch of turquoise coves, hill towns, and tasting rooms — and the question of
+        when to come is <em class="not-italic halftone text-ink">the only hard part of the trip</em>.
+      </p>
+
+      <div class="rise rise-4 mt-8 flex flex-wrap items-center gap-3">
+        <a href="#plan" class="btn btn-primary rounded-full px-7 py-3 text-[13.5px] font-semibold tracking-soft">Plan your trip</a>
+        <a href="#stay" class="btn btn-ghost rounded-full px-7 py-3 text-[13.5px] font-semibold tracking-soft">Where to stay</a>
+      </div>
+    </div>
+
+    <!-- full-bleed coast "photo" -->
+    <div class="rise rise-5 mt-12 sm:mt-14 photo grad-cove" style="--radius:1.6rem;">
+      <div class="relative min-h-[280px] sm:min-h-[440px]">
+        <svg class="absolute inset-0 w-full h-full" viewBox="0 0 1200 460" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <!-- sun disc, golden hour -->
+          <circle cx="935" cy="120" r="62" fill="rgba(255,255,255,0.34)"/>
+          <circle cx="935" cy="120" r="40" fill="rgba(255,243,222,0.62)"/>
+          <!-- distant headlands -->
+          <path d="M0 250 C140 218 240 244 360 224 C470 206 540 246 660 232 C780 218 880 252 1010 230 C1110 214 1160 240 1200 232 L1200 460 L0 460 Z" fill="rgba(14,95,84,0.30)"/>
+          <!-- near coastline / cove -->
+          <path d="M0 322 C160 300 280 348 430 320 C560 296 650 350 800 332 C940 316 1050 358 1200 332 L1200 460 L0 460 Z" fill="rgba(14,95,84,0.42)"/>
+          <!-- wave / contour lines on the water -->
+          <path d="M60 188 q40 -12 80 0 t80 0 t80 0" stroke="rgba(255,255,255,0.5)" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+          <path d="M520 158 q34 -10 68 0 t68 0" stroke="rgba(255,255,255,0.42)" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+          <path d="M80 386 q60 -16 120 0 t120 0 t120 0 t120 0" stroke="rgba(255,255,255,0.4)" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+          <!-- a small sailboat -->
+          <g transform="translate(300,250)">
+            <path d="M0 26 L34 26 L28 38 L6 38 Z" fill="rgba(255,255,255,0.66)"/>
+            <path d="M17 24 L17 -2 L33 22 Z" fill="rgba(255,255,255,0.78)"/>
+            <path d="M15 24 L15 4 L2 22 Z" fill="rgba(255,255,255,0.56)"/>
+          </g>
+          <!-- palm silhouettes, lower right -->
+          <g transform="translate(1058,300)" stroke="rgba(14,95,84,0.55)" stroke-width="2.4" fill="none" stroke-linecap="round">
+            <path d="M0 90 C-4 50 -2 24 2 4"/>
+            <path d="M2 6 C-14 -2 -28 0 -38 12 M2 6 C-10 -8 -10 -22 -2 -34 M2 6 C16 -4 30 -2 40 10 M2 6 C12 -8 12 -24 6 -34"/>
+          </g>
+        </svg>
+        <div class="absolute bottom-4 left-4 sm:bottom-5 sm:left-5 panel-soft rounded-xl px-3.5 py-2 mono text-[11px] tracking-[0.12em] uppercase text-ink/76">
+          Cala Verde · Marisol Coast · 36.7&deg;N
+        </div>
+        <div class="absolute top-4 right-4 sm:top-5 sm:right-5 hidden sm:flex items-center gap-2 panel-soft rounded-full px-3.5 py-1.5">
+          <span class="pulse-dot" aria-hidden="true"></span>
+          <span class="mono text-[10.5px] tracking-[0.1em] uppercase text-ink/72">Today &middot; 24&deg;C &middot; clear</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- region-facts strip -->
+    <div class="mt-6 panel-soft rounded-xl2 px-5 sm:px-7 py-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 mono text-[11.5px] sm:text-[12.5px] tracking-[0.04em] text-ink/74 tnum">
+      <span><span class="text-sea font-medium">40+</span> beaches</span>
+      <span class="text-ink/24" aria-hidden="true">&middot;</span>
+      <span><span class="text-sea font-medium">2</span> seasons</span>
+      <span class="text-ink/24" aria-hidden="true">&middot;</span>
+      <span><span class="text-sea font-medium">312</span> sunny days</span>
+      <span class="text-ink/24" aria-hidden="true">&middot;</span>
+      <span><span class="text-sea font-medium">55 min</span> from the capital</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 3 · TRUST BAR ===== -->
+<section id="trust" class="relative py-14 sm:py-16">
+  <div class="absolute inset-0 -z-10 bg-white/55 border-y border-[color:var(--line)]"></div>
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <!-- metric row -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-y-8 gap-x-4">
+      <div class="text-center sm:text-left lg:border-r lg:border-[color:var(--line)] lg:pr-6">
+        <p class="display font-bold text-ink text-[clamp(2rem,4.6vw,2.9rem)] tracking-soft tnum">1.24M</p>
+        <p class="mt-1 text-[12.5px] text-ink/62 font-medium">Visitors welcomed a year</p>
+      </div>
+      <div class="text-center sm:text-left lg:border-r lg:border-[color:var(--line)] lg:px-6">
+        <p class="display font-bold text-ink text-[clamp(2rem,4.6vw,2.9rem)] tracking-soft tnum">40+</p>
+        <p class="mt-1 text-[12.5px] text-ink/62 font-medium">Named beaches &amp; coves</p>
+      </div>
+      <div class="text-center sm:text-left lg:border-r lg:border-[color:var(--line)] lg:px-6">
+        <p class="display font-bold text-ink text-[clamp(2rem,4.6vw,2.9rem)] tracking-soft tnum">190</p>
+        <p class="mt-1 text-[12.5px] text-ink/62 font-medium">Miles of open coastline</p>
+      </div>
+      <div class="text-center sm:text-left lg:pl-6">
+        <p class="display font-bold text-ink text-[clamp(2rem,4.6vw,2.9rem)] tracking-soft tnum">312</p>
+        <p class="mt-1 text-[12.5px] text-ink/62 font-medium">Average sunny days a year</p>
+      </div>
+    </div>
+
+    <div class="hairrule my-10"></div>
+
+    <p class="text-center mono text-[10.5px] tracking-[0.24em] uppercase text-ink/46 mb-6">As featured in</p>
+    <!-- press marquee -->
+    <div class="marquee">
+      <div class="marquee-track items-center">
+        <div class="flex items-center gap-12 sm:gap-16 pr-12 sm:pr-16 text-ink/52">
+          <span class="display text-[19px] font-semibold tracking-soft">Meridian</span>
+          <span class="font-serif italic text-[19px]" style="font-family:Georgia,serif;">The Passage</span>
+          <span class="mono text-[15px] tracking-[0.04em] uppercase">Off&middot;Season</span>
+          <span class="display text-[19px] font-semibold tracking-soft">Wander Quarterly</span>
+          <span class="font-serif text-[19px]" style="font-family:Georgia,serif;">Latitude Journal</span>
+          <span class="display text-[18px] font-bold uppercase tracking-[0.08em]">Northbound</span>
+          <span class="font-serif italic text-[19px]" style="font-family:Georgia,serif;">Coastlines</span>
+          <span class="mono text-[15px] tracking-[0.04em]">The Salt Review</span>
+        </div>
+        <div class="flex items-center gap-12 sm:gap-16 pr-12 sm:pr-16 text-ink/52" aria-hidden="true">
+          <span class="display text-[19px] font-semibold tracking-soft">Meridian</span>
+          <span class="font-serif italic text-[19px]" style="font-family:Georgia,serif;">The Passage</span>
+          <span class="mono text-[15px] tracking-[0.04em] uppercase">Off&middot;Season</span>
+          <span class="display text-[19px] font-semibold tracking-soft">Wander Quarterly</span>
+          <span class="font-serif text-[19px]" style="font-family:Georgia,serif;">Latitude Journal</span>
+          <span class="display text-[18px] font-bold uppercase tracking-[0.08em]">Northbound</span>
+          <span class="font-serif italic text-[19px]" style="font-family:Georgia,serif;">Coastlines</span>
+          <span class="mono text-[15px] tracking-[0.04em]">The Salt Review</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 4 · ABOUT THE MARISOL COAST ===== -->
+<section id="about" class="relative py-20 sm:py-28">
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="grid lg:grid-cols-[1fr_0.92fr] gap-12 lg:gap-16 items-start">
+      <!-- copy -->
+      <div>
+        <p class="eyebrow mb-4">About the coast</p>
+        <h2 class="display font-bold display-tight text-[clamp(2.1rem,5.2vw,3.4rem)] leading-[1.04] text-ink">
+          A working coast that learned to slow down.
+        </h2>
+        <div class="mt-6 space-y-5 text-[15px] sm:text-[15.5px] leading-[1.78] text-ink/74">
+          <p>
+            The Marisol Coast runs 190 miles between Cabo Sereno in the north and the river mouth at
+            Puerto Lina in the south — a ribbon of headlands, pine-backed coves, and nine hill towns
+            that have spent four centuries trading olives, salt, and sardines. The fishing fleets are
+            smaller now, but the harbours still smell of diesel and grilled fish at noon.
+          </p>
+          <p>
+            What changed is the pace. A coast road that once carried lorries now carries cyclists;
+            the old salt warehouses in Marisol town are tasting rooms and a maritime museum. There is
+            no resort strip and no high-rise — building above four storeys has been banned along the
+            whole coast since 1974. The result is a destination that feels found, not built.
+          </p>
+          <p>
+            Come for the water — it holds <span class="text-ink font-medium">22&ndash;24&deg;C from June
+            to October</span> and stays swimmable into November. Stay for everything inland: the
+            terraced vineyards above Vela, the Thursday market at Almira, the cliff path that links
+            eleven beaches end to end.
+          </p>
+        </div>
+
+        <!-- inline stat chips -->
+        <div class="mt-8 flex flex-wrap gap-2.5">
+          <span class="panel rounded-full px-3.5 py-1.5 mono text-[11.5px] text-ink/70 tnum"><span class="text-sea">9</span> hill towns</span>
+          <span class="panel rounded-full px-3.5 py-1.5 mono text-[11.5px] text-ink/70 tnum"><span class="text-sea">1</span> coast road, end to end</span>
+          <span class="panel rounded-full px-3.5 py-1.5 mono text-[11.5px] text-ink/70 tnum"><span class="text-sea">4</span> storeys, max — since 1974</span>
+        </div>
+      </div>
+
+      <!-- highlight photos -->
+      <div class="space-y-5">
+        <div class="photo grad-golden aspect-[16/10] flex items-end p-5">
+          <svg class="absolute inset-0 w-full h-full" viewBox="0 0 520 320" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <circle cx="410" cy="80" r="46" fill="rgba(255,247,228,0.55)"/>
+            <path d="M0 210 C90 188 150 224 240 206 C320 190 380 226 520 204 L520 320 L0 320 Z" fill="rgba(201,96,47,0.34)"/>
+            <path d="M0 256 C120 240 200 272 320 252 C420 236 480 268 520 252 L520 320 L0 320 Z" fill="rgba(160,62,30,0.4)"/>
+          </svg>
+          <span class="relative mono text-[10.5px] tracking-[0.12em] uppercase text-white/90 bg-black/22 rounded-md px-2.5 py-1">Golden-hour cliffs, Cabo Sereno</span>
+        </div>
+        <div class="grid grid-cols-2 gap-5">
+          <div class="photo grad-town aspect-[4/5] flex items-end p-4">
+            <svg class="absolute inset-0 w-full h-full" viewBox="0 0 260 320" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <g fill="rgba(22,32,30,0.20)">
+                <rect x="30" y="170" width="44" height="120" rx="3"/>
+                <rect x="86" y="140" width="50" height="150" rx="3"/>
+                <rect x="148" y="186" width="40" height="104" rx="3"/>
+                <rect x="198" y="158" width="44" height="132" rx="3"/>
+              </g>
+              <g fill="rgba(255,255,255,0.42)">
+                <rect x="40" y="186" width="10" height="12"/><rect x="56" y="186" width="10" height="12"/>
+                <rect x="98" y="158" width="11" height="13"/><rect x="116" y="158" width="11" height="13"/>
+                <rect x="210" y="176" width="10" height="12"/><rect x="226" y="176" width="10" height="12"/>
+              </g>
+            </svg>
+            <span class="relative mono text-[10px] tracking-[0.1em] uppercase text-white/90 bg-black/24 rounded px-2 py-0.5">Vela, old town</span>
+          </div>
+          <div class="photo grad-market aspect-[4/5] flex items-end p-4">
+            <svg class="absolute inset-0 w-full h-full" viewBox="0 0 260 320" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <g stroke="rgba(255,255,255,0.55)" stroke-width="2" fill="none">
+                <path d="M30 150 h60 M30 150 l8 -22 h44 l8 22"/>
+                <path d="M110 150 h60 M110 150 l8 -22 h44 l8 22"/>
+                <path d="M70 200 h60 M70 200 l8 -22 h44 l8 22"/>
+              </g>
+              <circle cx="58" cy="172" r="6" fill="rgba(240,120,74,0.7)"/>
+              <circle cx="138" cy="172" r="6" fill="rgba(255,255,255,0.6)"/>
+              <circle cx="98" cy="222" r="6" fill="rgba(240,120,74,0.7)"/>
+            </svg>
+            <span class="relative mono text-[10px] tracking-[0.1em] uppercase text-white/90 bg-black/24 rounded px-2 py-0.5">Almira market</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- stylized coast map -->
+    <div class="mt-14 sm:mt-16">
+      <div class="flex flex-wrap items-end justify-between gap-3 mb-5">
+        <div>
+          <p class="eyebrow mb-2">The coast, end to end</p>
+          <h3 class="display font-bold text-xl sm:text-2xl text-ink tracking-soft">Nine towns, north to south</h3>
+        </div>
+        <p class="mono text-[11px] text-ink/52 tracking-[0.08em]">A picture, not a map &mdash; not to scale</p>
+      </div>
+
+      <div class="photo grad-pale p-1.5" style="--radius:1.4rem;">
+        <div class="rounded-[1.2rem] bg-[#EAF2F0] relative overflow-hidden">
+          <svg id="coastmap" viewBox="0 0 1180 380" class="w-full h-auto" preserveAspectRatio="xMidYMid meet" aria-label="Stylized map of the Marisol Coast: a coastline running north to south with nine numbered towns and beaches">
+            <!-- sea fill -->
+            <path d="M0 0 H1180 V128 C1040 150 920 124 760 150 C620 172 500 130 360 156 C220 182 110 142 0 168 Z" fill="#CFE5E0"/>
+            <!-- sea ripples -->
+            <g stroke="#1B9E8A" stroke-width="1.1" fill="none" opacity="0.34" stroke-linecap="round">
+              <path d="M120 60 q22 -10 44 0 t44 0"/>
+              <path d="M520 48 q22 -10 44 0 t44 0"/>
+              <path d="M900 64 q22 -10 44 0 t44 0"/>
+              <path d="M260 104 q22 -10 44 0 t44 0"/>
+              <path d="M700 96 q22 -10 44 0 t44 0"/>
+            </g>
+            <!-- the coastline -->
+            <path id="coastline" stroke="#1B9E8A" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+            <!-- land tint below coastline -->
+            <path d="M0 168 C110 142 220 182 360 156 C500 130 620 172 760 150 C920 124 1040 150 1180 128 V380 H0 Z" fill="rgba(27,158,138,0.07)"/>
+            <!-- the coast road, dashed -->
+            <path id="coastroad" stroke="#16201E" stroke-width="2" fill="none" stroke-dasharray="2 6" stroke-linecap="round" opacity="0.55"/>
+            <text x="36" y="232" font-family="'Geist Mono',monospace" font-size="10" fill="#16201E" opacity="0.55" letter-spacing="1.5">COAST ROAD &middot; CR-1</text>
+            <!-- terraced vineyard hatching, inland -->
+            <g stroke="#F0784A" stroke-width="1" opacity="0.4">
+              <path d="M560 280 h120 M560 292 h120 M560 304 h120 M560 316 h120"/>
+            </g>
+            <text x="560" y="270" font-family="'Geist Mono',monospace" font-size="9" fill="#16201E" opacity="0.5" letter-spacing="1">VINEYARD TERRACES</text>
+            <!-- numbered town markers — placed by JS into #towns -->
+            <g id="towns"></g>
+            <!-- compass -->
+            <g transform="translate(1108,318)">
+              <circle r="17" fill="none" stroke="#16201E" stroke-width="1" opacity="0.4"/>
+              <path d="M0 -12 L4 0 L0 12 L-4 0 Z" fill="#1B9E8A"/>
+              <text x="-4" y="-21" font-family="'Geist Mono',monospace" font-size="9" fill="#16201E" opacity="0.6">N</text>
+            </g>
+          </svg>
+          <div class="absolute bottom-3 left-3 panel-soft rounded-lg px-3 py-1.5 mono text-[10px] tracking-[0.1em] uppercase text-ink/65">
+            Cabo Sereno &rarr; Puerto Lina &middot; 190 mi
+          </div>
+        </div>
+      </div>
+
+      <!-- map legend -->
+      <ul class="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-5 gap-y-2.5 text-[12px] text-ink/68">
+        <li class="flex items-center gap-2"><span class="mono text-[11px] text-sea tnum w-5">01</span> Cabo Sereno</li>
+        <li class="flex items-center gap-2"><span class="mono text-[11px] text-sea tnum w-5">02</span> Cala Verde</li>
+        <li class="flex items-center gap-2"><span class="mono text-[11px] text-sea tnum w-5">03</span> Almira</li>
+        <li class="flex items-center gap-2"><span class="mono text-[11px] text-sea tnum w-5">04</span> Vela</li>
+        <li class="flex items-center gap-2"><span class="mono text-[11px] text-sea tnum w-5">05</span> Marisol Town</li>
+        <li class="flex items-center gap-2"><span class="mono text-[11px] text-sea tnum w-5">06</span> Punta Olivo</li>
+        <li class="flex items-center gap-2"><span class="mono text-[11px] text-sea tnum w-5">07</span> San Telmo</li>
+        <li class="flex items-center gap-2"><span class="mono text-[11px] text-sea tnum w-5">08</span> Cala Brisa</li>
+        <li class="flex items-center gap-2"><span class="mono text-[11px] text-coral tnum w-5">09</span> Puerto Lina</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- full-bleed photo band -->
+<section id="band-1" class="relative">
+  <div class="photo grad-deep" style="--radius:0;">
+    <div class="relative min-h-[260px] sm:min-h-[360px] flex items-center">
+      <svg class="absolute inset-0 w-full h-full" viewBox="0 0 1400 380" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <circle cx="1120" cy="92" r="56" fill="rgba(255,255,255,0.22)"/>
+        <path d="M0 214 C180 188 320 224 520 202 C700 182 820 226 1040 204 C1200 188 1300 218 1400 206 L1400 380 L0 380 Z" fill="rgba(8,60,53,0.42)"/>
+        <path d="M0 286 C220 264 380 304 600 282 C820 262 980 302 1400 280 L1400 380 L0 380 Z" fill="rgba(8,60,53,0.55)"/>
+        <g stroke="rgba(255,255,255,0.4)" stroke-width="1.3" fill="none" stroke-linecap="round">
+          <path d="M80 150 q56 -16 112 0 t112 0 t112 0"/>
+          <path d="M740 132 q44 -12 88 0 t88 0"/>
+        </g>
+        <g transform="translate(420,200)">
+          <path d="M0 30 L40 30 L33 44 L7 44 Z" fill="rgba(255,255,255,0.6)"/>
+          <path d="M20 28 L20 -4 L38 26 Z" fill="rgba(255,255,255,0.72)"/>
+        </g>
+      </svg>
+      <div class="relative mx-auto max-w-6xl w-full px-5 sm:px-8">
+        <p class="display font-bold display-tight text-white text-[clamp(1.6rem,4vw,2.7rem)] leading-[1.08] max-w-2xl">
+          The water is warmest in <span class="halftone text-white">September</span> — and the crowds have gone home.
+        </p>
+        <p class="mt-3 mono text-[11.5px] tracking-[0.12em] uppercase text-white/72 tnum">Sea temp 24&deg;C &middot; Cala Brisa &middot; late September</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 5 · THINGS TO DO ===== -->
+<section id="things" class="relative py-20 sm:py-28">
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="max-w-2xl mb-12 sm:mb-14">
+      <p class="eyebrow mb-4">Things to do</p>
+      <h2 class="display font-bold display-tight text-[clamp(2.1rem,5.2vw,3.4rem)] leading-[1.04] text-ink">
+        Five ways to spend a Marisol day.
+      </h2>
+      <p class="mt-4 text-[15px] leading-[1.7] text-ink/70">
+        Sand in the morning, a tasting room by noon, a hill town for dinner. The coast is small
+        enough to do all three before sunset.
+      </p>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <!-- Beaches -->
+      <article class="card-lift panel rounded-xl2 overflow-hidden flex flex-col">
+        <div class="photo grad-cove h-44 rounded-none" style="box-shadow:none;border-radius:0;">
+          <svg class="absolute inset-0 w-full h-full" viewBox="0 0 420 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <path d="M0 118 C90 100 150 134 240 116 C320 100 380 130 420 118 L420 200 L0 200 Z" fill="rgba(14,95,84,0.34)"/>
+            <path d="M0 152 C120 138 200 166 320 148 L420 158 L420 200 L0 200 Z" fill="rgba(242,231,200,0.55)"/>
+            <path d="M40 70 q40 -12 80 0 t80 0" stroke="rgba(255,255,255,0.5)" stroke-width="1.3" fill="none"/>
+          </svg>
+        </div>
+        <div class="p-6 flex flex-col flex-1">
+          <div class="flex items-center justify-between">
+            <span class="mono text-[10px] tracking-[0.18em] uppercase text-sea">Beaches</span>
+            <span class="mono text-[12px] text-ink/70 tnum bg-shell rounded-full px-2.5 py-0.5">40+ beaches</span>
+          </div>
+          <h3 class="display font-semibold text-lg text-ink tracking-soft mt-2">Coves you can have to yourself</h3>
+          <p class="mt-2 text-[13px] leading-[1.62] text-ink/68 flex-1">
+            From the wide family sand at Cala Verde to hidden pebble coves you reach only by the cliff
+            path. Eleven of them link end to end on one walk.
+          </p>
+        </div>
+      </article>
+
+      <!-- Food & wine -->
+      <article class="card-lift panel rounded-xl2 overflow-hidden flex flex-col">
+        <div class="photo grad-market h-44 rounded-none" style="box-shadow:none;border-radius:0;">
+          <svg class="absolute inset-0 w-full h-full" viewBox="0 0 420 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <g stroke="rgba(255,255,255,0.5)" stroke-width="2" fill="none">
+              <path d="M70 130 v-44 M70 86 q24 -24 48 0 v44"/>
+              <path d="M250 130 v-44 M250 86 q24 -24 48 0 v44"/>
+            </g>
+            <circle cx="180" cy="96" r="9" fill="rgba(240,120,74,0.66)"/>
+            <circle cx="330" cy="120" r="9" fill="rgba(255,255,255,0.55)"/>
+          </svg>
+        </div>
+        <div class="p-6 flex flex-col flex-1">
+          <div class="flex items-center justify-between">
+            <span class="mono text-[10px] tracking-[0.18em] uppercase text-sea">Food &amp; wine</span>
+            <span class="mono text-[12px] text-ink/70 tnum bg-shell rounded-full px-2.5 py-0.5">60+ tasting rooms</span>
+          </div>
+          <h3 class="display font-semibold text-lg text-ink tracking-soft mt-2">Salt-cellar wine, harbour seafood</h3>
+          <p class="mt-2 text-[13px] leading-[1.62] text-ink/68 flex-1">
+            The terraced whites above Vela, grilled-that-morning fish on every harbour, and an olive
+            press in Punta Olivo that has run since 1881.
+          </p>
+        </div>
+      </article>
+
+      <!-- Hikes & nature -->
+      <article class="card-lift panel rounded-xl2 overflow-hidden flex flex-col">
+        <div class="photo grad-dawn h-44 rounded-none" style="box-shadow:none;border-radius:0;">
+          <svg class="absolute inset-0 w-full h-full" viewBox="0 0 420 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <path d="M0 150 L120 80 L200 130 L300 60 L420 140 L420 200 L0 200 Z" fill="rgba(14,95,84,0.36)"/>
+            <path d="M0 172 L140 120 L260 160 L420 110 L420 200 L0 200 Z" fill="rgba(14,95,84,0.5)"/>
+            <circle cx="338" cy="58" r="22" fill="rgba(255,247,228,0.5)"/>
+          </svg>
+        </div>
+        <div class="p-6 flex flex-col flex-1">
+          <div class="flex items-center justify-between">
+            <span class="mono text-[10px] tracking-[0.18em] uppercase text-sea">Hikes &amp; nature</span>
+            <span class="mono text-[12px] text-ink/70 tnum bg-shell rounded-full px-2.5 py-0.5">14 marked trails</span>
+          </div>
+          <h3 class="display font-semibold text-lg text-ink tracking-soft mt-2">A cliff path the length of the coast</h3>
+          <p class="mt-2 text-[13px] leading-[1.62] text-ink/68 flex-1">
+            The 47-mile Camino del Mar, plus pine reserves, a flamingo lagoon at Puerto Lina, and
+            dawn kayak routes through the sea caves.
+          </p>
+        </div>
+      </article>
+
+      <!-- Towns & villages -->
+      <article class="card-lift panel rounded-xl2 overflow-hidden flex flex-col">
+        <div class="photo grad-town h-44 rounded-none" style="box-shadow:none;border-radius:0;">
+          <svg class="absolute inset-0 w-full h-full" viewBox="0 0 420 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <g fill="rgba(22,32,30,0.20)">
+              <rect x="44" y="96" width="58" height="94" rx="3"/>
+              <rect x="116" y="70" width="66" height="120" rx="3"/>
+              <rect x="196" y="108" width="52" height="82" rx="3"/>
+              <rect x="262" y="84" width="60" height="106" rx="3"/>
+              <rect x="336" y="116" width="48" height="74" rx="3"/>
+            </g>
+            <g fill="rgba(255,255,255,0.42)">
+              <rect x="58" y="116" width="11" height="13"/><rect x="78" y="116" width="11" height="13"/>
+              <rect x="132" y="92" width="12" height="14"/><rect x="154" y="92" width="12" height="14"/>
+            </g>
+          </svg>
+        </div>
+        <div class="p-6 flex flex-col flex-1">
+          <div class="flex items-center justify-between">
+            <span class="mono text-[10px] tracking-[0.18em] uppercase text-sea">Towns &amp; villages</span>
+            <span class="mono text-[12px] text-ink/70 tnum bg-shell rounded-full px-2.5 py-0.5">9 hill towns</span>
+          </div>
+          <h3 class="display font-semibold text-lg text-ink tracking-soft mt-2">Whitewashed lanes, no cars</h3>
+          <p class="mt-2 text-[13px] leading-[1.62] text-ink/68 flex-1">
+            Vela and San Telmo cling to the hills above the water — stepped lanes, blue doors, a
+            square that fills for the evening paseo.
+          </p>
+        </div>
+      </article>
+
+      <!-- Culture & history -->
+      <article class="card-lift panel rounded-xl2 overflow-hidden flex flex-col sm:col-span-2 lg:col-span-1">
+        <div class="photo grad-cliff h-44 rounded-none" style="box-shadow:none;border-radius:0;">
+          <svg class="absolute inset-0 w-full h-full" viewBox="0 0 420 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <rect x="150" y="64" width="120" height="126" fill="rgba(22,32,30,0.22)"/>
+            <path d="M150 64 L210 26 L270 64 Z" fill="rgba(22,32,30,0.28)"/>
+            <rect x="186" y="110" width="48" height="80" rx="24" fill="rgba(255,247,228,0.45)"/>
+            <circle cx="210" cy="48" r="9" fill="rgba(255,255,255,0.5)"/>
+          </svg>
+        </div>
+        <div class="p-6 flex flex-col flex-1">
+          <div class="flex items-center justify-between">
+            <span class="mono text-[10px] tracking-[0.18em] uppercase text-sea">Culture &amp; history</span>
+            <span class="mono text-[12px] text-ink/70 tnum bg-shell rounded-full px-2.5 py-0.5">7 museums</span>
+          </div>
+          <h3 class="display font-semibold text-lg text-ink tracking-soft mt-2">Four centuries of salt and sail</h3>
+          <p class="mt-2 text-[13px] leading-[1.62] text-ink/68 flex-1">
+            The Maritime Museum in Marisol's old salt warehouse, a 16th-century watchtower line, and
+            a sardine festival every August in San Telmo.
+          </p>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 6 · WHERE TO STAY ===== -->
+<section id="stay" class="relative py-20 sm:py-28">
+  <div class="absolute inset-0 -z-10 bg-white/55 border-y border-[color:var(--line)]"></div>
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="max-w-2xl mb-12 sm:mb-14">
+      <p class="eyebrow mb-4">Where to stay</p>
+      <h2 class="display font-bold display-tight text-[clamp(2.1rem,5.2vw,3.4rem)] leading-[1.04] text-ink">
+        From a pitch on the sand to a headland suite.
+      </h2>
+      <p class="mt-4 text-[15px] leading-[1.7] text-ink/70">
+        There is no resort strip — just small, family-run places across every budget. Here is the
+        full range, north to south.
+      </p>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <!-- Campsite -->
+      <article class="card-lift panel rounded-xl2 overflow-hidden flex flex-col">
+        <div class="photo grad-dawn h-32 rounded-none" style="box-shadow:none;border-radius:0;">
+          <svg class="absolute inset-0 w-full h-full" viewBox="0 0 320 130" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <path d="M120 96 L150 44 L180 96 Z" fill="rgba(255,255,255,0.55)"/>
+            <path d="M150 44 L150 96" stroke="rgba(22,32,30,0.3)" stroke-width="1.4"/>
+            <path d="M0 100 C90 88 160 108 320 96 L320 130 L0 130 Z" fill="rgba(14,95,84,0.4)"/>
+          </svg>
+        </div>
+        <div class="p-5 flex flex-col flex-1">
+          <span class="mono text-[10px] tracking-[0.16em] uppercase text-sea">Beach campsites</span>
+          <h3 class="display font-semibold text-[17px] text-ink tracking-soft mt-1">Cala Verde Camping</h3>
+          <p class="mt-2 text-[12.5px] leading-[1.6] text-ink/68 flex-1">
+            Pitch a tent in the pines a sandal's walk from the water. Shaded, simple, and full of
+            families by July.
+          </p>
+          <div class="hairrule my-3"></div>
+          <p class="mono text-[12.5px] text-ink/70 tnum">from <span class="text-ink font-medium">$24</span>/night</p>
+        </div>
+      </article>
+
+      <!-- Guesthouse -->
+      <article class="card-lift panel rounded-xl2 overflow-hidden flex flex-col">
+        <div class="photo grad-town h-32 rounded-none" style="box-shadow:none;border-radius:0;">
+          <svg class="absolute inset-0 w-full h-full" viewBox="0 0 320 130" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <rect x="108" y="48" width="104" height="82" fill="rgba(22,32,30,0.22)"/>
+            <path d="M100 48 L160 18 L220 48 Z" fill="rgba(22,32,30,0.3)"/>
+            <rect x="146" y="84" width="28" height="46" rx="14" fill="rgba(255,247,228,0.5)"/>
+          </svg>
+        </div>
+        <div class="p-5 flex flex-col flex-1">
+          <span class="mono text-[10px] tracking-[0.16em] uppercase text-sea">Guesthouses</span>
+          <h3 class="display font-semibold text-[17px] text-ink tracking-soft mt-1">Casa Almira</h3>
+          <p class="mt-2 text-[12.5px] leading-[1.6] text-ink/68 flex-1">
+            Six rooms above a courtyard in old Vela. Breakfast is figs, bread, and the family's
+            own olive oil.
+          </p>
+          <div class="hairrule my-3"></div>
+          <p class="mono text-[12.5px] text-ink/70 tnum">from <span class="text-ink font-medium">$78</span>/night</p>
+        </div>
+      </article>
+
+      <!-- Boutique hotel -->
+      <article class="card-lift panel rounded-xl2 overflow-hidden flex flex-col">
+        <div class="photo grad-cove h-32 rounded-none" style="box-shadow:none;border-radius:0;">
+          <svg class="absolute inset-0 w-full h-full" viewBox="0 0 320 130" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <rect x="70" y="40" width="180" height="90" rx="4" fill="rgba(22,32,30,0.2)"/>
+            <g fill="rgba(255,255,255,0.42)">
+              <rect x="90" y="58" width="14" height="16"/><rect x="116" y="58" width="14" height="16"/>
+              <rect x="142" y="58" width="14" height="16"/><rect x="168" y="58" width="14" height="16"/>
+            </g>
+            <path d="M0 110 C100 100 180 116 320 104 L320 130 L0 130 Z" fill="rgba(14,95,84,0.36)"/>
+          </svg>
+        </div>
+        <div class="p-5 flex flex-col flex-1">
+          <span class="mono text-[10px] tracking-[0.16em] uppercase text-sea">Boutique hotels</span>
+          <h3 class="display font-semibold text-[17px] text-ink tracking-soft mt-1">The Salt House</h3>
+          <p class="mt-2 text-[12.5px] leading-[1.6] text-ink/68 flex-1">
+            A converted salt warehouse on Marisol harbour — lime-washed walls, a plunge pool, fourteen
+            quiet rooms.
+          </p>
+          <div class="hairrule my-3"></div>
+          <p class="mono text-[12.5px] text-ink/70 tnum">from <span class="text-ink font-medium">$165</span>/night</p>
+        </div>
+      </article>
+
+      <!-- Headland resort -->
+      <article class="card-lift panel rounded-xl2 overflow-hidden flex flex-col">
+        <div class="photo grad-golden h-32 rounded-none" style="box-shadow:none;border-radius:0;">
+          <svg class="absolute inset-0 w-full h-full" viewBox="0 0 320 130" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <circle cx="252" cy="40" r="26" fill="rgba(255,247,228,0.55)"/>
+            <rect x="58" y="64" width="150" height="66" rx="4" fill="rgba(201,96,47,0.32)"/>
+            <path d="M0 104 C90 94 170 112 320 98 L320 130 L0 130 Z" fill="rgba(160,62,30,0.42)"/>
+          </svg>
+        </div>
+        <div class="p-5 flex flex-col flex-1">
+          <span class="mono text-[10px] tracking-[0.16em] uppercase text-sea">Headland resorts</span>
+          <h3 class="display font-semibold text-[17px] text-ink tracking-soft mt-1">Mirador del Cabo</h3>
+          <p class="mt-2 text-[12.5px] leading-[1.6] text-ink/68 flex-1">
+            The coast's one true splurge — a cliff-top set of suites at Cabo Sereno, each with the
+            whole bay below.
+          </p>
+          <div class="hairrule my-3"></div>
+          <p class="mono text-[12.5px] text-ink/70 tnum">from <span class="text-ink font-medium">$320</span>/night</p>
+        </div>
+      </article>
+    </div>
+
+    <p class="mt-7 text-[13px] text-ink/58 flex items-center gap-2.5">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="shrink-0" aria-hidden="true"><circle cx="8" cy="8" r="6.5" stroke="#1B9E8A" stroke-width="1.2"/><path d="M8 5v3.4l2.2 1.4" stroke="#1B9E8A" stroke-width="1.3" stroke-linecap="round"/></svg>
+      Rates are low-season starting prices. Expect roughly +35% in July and August — and book ahead, as the small places fill first.
+    </p>
+  </div>
+</section>
+
+<!-- ===== 7 · WHEN TO VISIT ===== -->
+<section id="season" class="relative py-20 sm:py-28">
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="grid lg:grid-cols-[0.9fr_1.1fr] gap-12 lg:gap-14 items-start">
+      <div>
+        <p class="eyebrow mb-4">When to visit</p>
+        <h2 class="display font-bold display-tight text-[clamp(2.1rem,5.2vw,3.4rem)] leading-[1.04] text-ink">
+          Two seasons, and no truly bad month.
+        </h2>
+        <p class="mt-5 text-[15px] leading-[1.74] text-ink/74">
+          The Marisol Coast has a <span class="text-ink font-medium">dry season</span> (May&ndash;October:
+          warm, busy, swimmable) and a <span class="text-ink font-medium">green season</span>
+          (November&ndash;April: mild, quiet, the hills turn emerald). It almost never freezes and it
+          rarely pours.
+        </p>
+        <div class="mt-7 grid grid-cols-2 gap-4">
+          <div class="panel rounded-xl2 p-5">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-coral" aria-hidden="true"></span>
+              <span class="mono text-[10.5px] tracking-[0.14em] uppercase text-ink/64">Dry season</span>
+            </div>
+            <p class="display font-bold text-ink text-xl tracking-soft">May &ndash; Oct</p>
+            <p class="mt-1.5 text-[12.5px] leading-[1.55] text-ink/64">Beach weather, full ferries, festival calendar. Sea at 22&ndash;24&deg;C.</p>
+          </div>
+          <div class="panel rounded-xl2 p-5">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-sea" aria-hidden="true"></span>
+              <span class="mono text-[10.5px] tracking-[0.14em] uppercase text-ink/64">Green season</span>
+            </div>
+            <p class="display font-bold text-ink text-xl tracking-soft">Nov &ndash; Apr</p>
+            <p class="mt-1.5 text-[12.5px] leading-[1.55] text-ink/64">Mild walking weather, half-price rooms, the hills in flower.</p>
+          </div>
+        </div>
+        <p class="mt-5 text-[13px] text-ink/58 leading-[1.6]">
+          Our quiet favourite is the shoulder: <span class="text-ink font-medium">late September into
+          October</span> — the sea is at its warmest of the year, yet the August crowds have gone.
+        </p>
+      </div>
+
+      <!-- 12-month season bar -->
+      <div class="panel rounded-xl2 p-5 sm:p-7">
+        <div class="flex items-center justify-between mb-5">
+          <p class="mono text-[10.5px] tracking-[0.16em] uppercase text-ink/60">The year, month by month</p>
+          <div class="flex items-center gap-3 text-[10.5px] text-ink/56">
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-coral"></span>warm</span>
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-sea"></span>cool</span>
+          </div>
+        </div>
+
+        <!-- temperature bars -->
+        <div class="grid grid-cols-12 gap-1 sm:gap-1.5 items-end h-36">
+          <!-- Jan -->
+          <div class="flex flex-col items-center gap-1.5 group">
+            <span class="mono text-[9px] text-ink/52 tnum">15&deg;</span>
+            <div class="w-full rounded-md bg-sea/55 group-hover:bg-sea transition-colors" style="height:38%"></div>
+          </div>
+          <!-- Feb -->
+          <div class="flex flex-col items-center gap-1.5 group">
+            <span class="mono text-[9px] text-ink/52 tnum">15&deg;</span>
+            <div class="w-full rounded-md bg-sea/55 group-hover:bg-sea transition-colors" style="height:40%"></div>
+          </div>
+          <!-- Mar -->
+          <div class="flex flex-col items-center gap-1.5 group">
+            <span class="mono text-[9px] text-ink/52 tnum">17&deg;</span>
+            <div class="w-full rounded-md bg-sea/60 group-hover:bg-sea transition-colors" style="height:48%"></div>
+          </div>
+          <!-- Apr -->
+          <div class="flex flex-col items-center gap-1.5 group">
+            <span class="mono text-[9px] text-ink/52 tnum">19&deg;</span>
+            <div class="w-full rounded-md bg-sea/70 group-hover:bg-sea transition-colors" style="height:56%"></div>
+          </div>
+          <!-- May -->
+          <div class="flex flex-col items-center gap-1.5 group">
+            <span class="mono text-[9px] text-ink/52 tnum">22&deg;</span>
+            <div class="w-full rounded-md bg-coral/55 group-hover:bg-coral transition-colors" style="height:66%"></div>
+          </div>
+          <!-- Jun -->
+          <div class="flex flex-col items-center gap-1.5 group">
+            <span class="mono text-[9px] text-ink/52 tnum">25&deg;</span>
+            <div class="w-full rounded-md bg-coral/70 group-hover:bg-coral transition-colors" style="height:78%"></div>
+          </div>
+          <!-- Jul -->
+          <div class="flex flex-col items-center gap-1.5 group">
+            <span class="mono text-[9px] text-ink/52 tnum">29&deg;</span>
+            <div class="w-full rounded-md bg-coral group-hover:bg-coral-deep transition-colors" style="height:94%"></div>
+          </div>
+          <!-- Aug -->
+          <div class="flex flex-col items-center gap-1.5 group">
+            <span class="mono text-[9px] text-ink/52 tnum">30&deg;</span>
+            <div class="w-full rounded-md bg-coral group-hover:bg-coral-deep transition-colors" style="height:100%"></div>
+          </div>
+          <!-- Sep -->
+          <div class="flex flex-col items-center gap-1.5 group">
+            <span class="mono text-[9px] text-sea font-medium tnum">27&deg;</span>
+            <div class="w-full rounded-md bg-coral/80 ring-2 ring-sea ring-offset-1 ring-offset-white group-hover:bg-coral transition-colors" style="height:86%"></div>
+          </div>
+          <!-- Oct -->
+          <div class="flex flex-col items-center gap-1.5 group">
+            <span class="mono text-[9px] text-ink/52 tnum">23&deg;</span>
+            <div class="w-full rounded-md bg-coral/55 group-hover:bg-coral transition-colors" style="height:70%"></div>
+          </div>
+          <!-- Nov -->
+          <div class="flex flex-col items-center gap-1.5 group">
+            <span class="mono text-[9px] text-ink/52 tnum">19&deg;</span>
+            <div class="w-full rounded-md bg-sea/65 group-hover:bg-sea transition-colors" style="height:54%"></div>
+          </div>
+          <!-- Dec -->
+          <div class="flex flex-col items-center gap-1.5 group">
+            <span class="mono text-[9px] text-ink/52 tnum">16&deg;</span>
+            <div class="w-full rounded-md bg-sea/55 group-hover:bg-sea transition-colors" style="height:42%"></div>
+          </div>
+        </div>
+
+        <!-- month labels -->
+        <div class="grid grid-cols-12 gap-1 sm:gap-1.5 mt-2 mono text-[9.5px] text-ink/56 tnum text-center">
+          <span>J</span><span>F</span><span>M</span><span>A</span><span>M</span><span>J</span>
+          <span>J</span><span>A</span><span>S</span><span>O</span><span>N</span><span>D</span>
+        </div>
+
+        <div class="hairrule my-5"></div>
+
+        <!-- crowd row + best-for -->
+        <div class="space-y-3">
+          <div>
+            <p class="mono text-[10px] tracking-[0.14em] uppercase text-ink/56 mb-1.5">Crowds</p>
+            <div class="grid grid-cols-12 gap-1 sm:gap-1.5">
+              <span class="h-2 rounded-full bg-shell"></span><span class="h-2 rounded-full bg-shell"></span>
+              <span class="h-2 rounded-full bg-shell"></span><span class="h-2 rounded-full bg-sea/30"></span>
+              <span class="h-2 rounded-full bg-sea/45"></span><span class="h-2 rounded-full bg-coral/55"></span>
+              <span class="h-2 rounded-full bg-coral"></span><span class="h-2 rounded-full bg-coral"></span>
+              <span class="h-2 rounded-full bg-coral/55"></span><span class="h-2 rounded-full bg-sea/45"></span>
+              <span class="h-2 rounded-full bg-shell"></span><span class="h-2 rounded-full bg-shell"></span>
+            </div>
+          </div>
+          <ul class="grid sm:grid-cols-2 gap-x-5 gap-y-1.5 text-[12px] text-ink/66 pt-1">
+            <li class="flex gap-2"><span class="mono text-[10.5px] text-sea">Mar&ndash;Apr</span> wildflower hikes, empty beaches</li>
+            <li class="flex gap-2"><span class="mono text-[10.5px] text-coral">Jul&ndash;Aug</span> festivals, peak swimming, busy</li>
+            <li class="flex gap-2"><span class="mono text-[10.5px] text-sea">Sep&ndash;Oct</span> warmest sea, vineyard harvest</li>
+            <li class="flex gap-2"><span class="mono text-[10.5px] text-sea">Nov&ndash;Feb</span> quiet towns, green hills, low rates</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 8 · SUGGESTED ITINERARIES ===== -->
+<section id="itineraries" class="relative py-20 sm:py-28">
+  <div class="absolute inset-0 -z-10 bg-white/55 border-y border-[color:var(--line)]"></div>
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="max-w-2xl mb-12 sm:mb-14">
+      <p class="eyebrow mb-4">Suggested itineraries</p>
+      <h2 class="display font-bold display-tight text-[clamp(2.1rem,5.2vw,3.4rem)] leading-[1.04] text-ink">
+        Four three-day plans to steal.
+      </h2>
+      <p class="mt-4 text-[15px] leading-[1.7] text-ink/70">
+        Not a fixed tour — just routes that work. Mix them, reverse them, or stretch any one into a
+        slow week.
+      </p>
+    </div>
+
+    <div class="grid sm:grid-cols-2 gap-5">
+      <!-- Itinerary 1 -->
+      <article class="card-lift panel rounded-xl2 p-6 sm:p-7 flex flex-col">
+        <div class="flex items-center justify-between">
+          <span class="mono text-[10.5px] tracking-[0.16em] uppercase text-sea">Three days</span>
+          <span class="mono text-[11px] text-ink/56 tnum bg-shell rounded-full px-2.5 py-0.5">Cove-hopper</span>
+        </div>
+        <h3 class="display font-bold text-xl text-ink tracking-soft mt-2">Beaches &amp; seafood</h3>
+        <p class="mt-2 text-[13px] leading-[1.6] text-ink/66">For sun-first travellers who measure a day in swims.</p>
+        <ul class="mt-5 space-y-3.5">
+          <li class="flex gap-3.5">
+            <span class="mono text-[11px] text-sea tnum shrink-0 mt-0.5 w-9">Day 1</span>
+            <span class="text-[13px] leading-[1.55] text-ink/74">Cala Verde for the wide family sand; oysters and harbour fish in Marisol Town at dusk.</span>
+          </li>
+          <li class="flex gap-3.5">
+            <span class="mono text-[11px] text-sea tnum shrink-0 mt-0.5 w-9">Day 2</span>
+            <span class="text-[13px] leading-[1.55] text-ink/74">Walk the cliff path between five hidden coves; a long lunch at the Cala Brisa shack.</span>
+          </li>
+          <li class="flex gap-3.5">
+            <span class="mono text-[11px] text-sea tnum shrink-0 mt-0.5 w-9">Day 3</span>
+            <span class="text-[13px] leading-[1.55] text-ink/74">Dawn kayak through the sea caves at Punta Olivo; grilled sardines back on the sand.</span>
+          </li>
+        </ul>
+      </article>
+
+      <!-- Itinerary 2 -->
+      <article class="card-lift panel rounded-xl2 p-6 sm:p-7 flex flex-col">
+        <div class="flex items-center justify-between">
+          <span class="mono text-[10.5px] tracking-[0.16em] uppercase text-sea">Three days</span>
+          <span class="mono text-[11px] text-ink/56 tnum bg-shell rounded-full px-2.5 py-0.5">Inland</span>
+        </div>
+        <h3 class="display font-bold text-xl text-ink tracking-soft mt-2">The hill towns</h3>
+        <p class="mt-2 text-[13px] leading-[1.6] text-ink/66">For travellers who'd trade a beach for a vineyard.</p>
+        <ul class="mt-5 space-y-3.5">
+          <li class="flex gap-3.5">
+            <span class="mono text-[11px] text-sea tnum shrink-0 mt-0.5 w-9">Day 1</span>
+            <span class="text-[13px] leading-[1.55] text-ink/74">Lose an afternoon in Vela's stepped lanes; the evening paseo in the main square.</span>
+          </li>
+          <li class="flex gap-3.5">
+            <span class="mono text-[11px] text-sea tnum shrink-0 mt-0.5 w-9">Day 2</span>
+            <span class="text-[13px] leading-[1.55] text-ink/74">Tasting rooms on the terraced slopes above Vela; the 1881 olive press at Punta Olivo.</span>
+          </li>
+          <li class="flex gap-3.5">
+            <span class="mono text-[11px] text-sea tnum shrink-0 mt-0.5 w-9">Day 3</span>
+            <span class="text-[13px] leading-[1.55] text-ink/74">The Thursday market at Almira, then San Telmo for its blue doors and watchtower.</span>
+          </li>
+        </ul>
+      </article>
+
+      <!-- Itinerary 3 -->
+      <article class="card-lift panel rounded-xl2 p-6 sm:p-7 flex flex-col">
+        <div class="flex items-center justify-between">
+          <span class="mono text-[10.5px] tracking-[0.16em] uppercase text-sea">Three days</span>
+          <span class="mono text-[11px] text-ink/56 tnum bg-shell rounded-full px-2.5 py-0.5">Family</span>
+        </div>
+        <h3 class="display font-bold text-xl text-ink tracking-soft mt-2">With kids</h3>
+        <p class="mt-2 text-[13px] leading-[1.6] text-ink/66">Short drives, calm water, and an early dinner every night.</p>
+        <ul class="mt-5 space-y-3.5">
+          <li class="flex gap-3.5">
+            <span class="mono text-[11px] text-sea tnum shrink-0 mt-0.5 w-9">Day 1</span>
+            <span class="text-[13px] leading-[1.55] text-ink/74">The shallow, lifeguarded bay at Cala Verde; ice cream on the Marisol harbour wall.</span>
+          </li>
+          <li class="flex gap-3.5">
+            <span class="mono text-[11px] text-sea tnum shrink-0 mt-0.5 w-9">Day 2</span>
+            <span class="text-[13px] leading-[1.55] text-ink/74">The flamingo lagoon and boardwalk at Puerto Lina; a glass-bottom boat at noon.</span>
+          </li>
+          <li class="flex gap-3.5">
+            <span class="mono text-[11px] text-sea tnum shrink-0 mt-0.5 w-9">Day 3</span>
+            <span class="text-[13px] leading-[1.55] text-ink/74">The hands-on Maritime Museum, then rock pools at low tide below San Telmo.</span>
+          </li>
+        </ul>
+      </article>
+
+      <!-- Itinerary 4 -->
+      <article class="card-lift panel rounded-xl2 p-6 sm:p-7 flex flex-col">
+        <div class="flex items-center justify-between">
+          <span class="mono text-[10.5px] tracking-[0.16em] uppercase text-sea">Three days</span>
+          <span class="mono text-[11px] text-ink/56 tnum bg-shell rounded-full px-2.5 py-0.5">Green season</span>
+        </div>
+        <h3 class="display font-bold text-xl text-ink tracking-soft mt-2">Off-season &amp; quiet</h3>
+        <p class="mt-2 text-[13px] leading-[1.6] text-ink/66">For a November traveller who wants the coast empty.</p>
+        <ul class="mt-5 space-y-3.5">
+          <li class="flex gap-3.5">
+            <span class="mono text-[11px] text-sea tnum shrink-0 mt-0.5 w-9">Day 1</span>
+            <span class="text-[13px] leading-[1.55] text-ink/74">A long stretch of the Camino del Mar with the cliffs and the gulls to yourself.</span>
+          </li>
+          <li class="flex gap-3.5">
+            <span class="mono text-[11px] text-sea tnum shrink-0 mt-0.5 w-9">Day 2</span>
+            <span class="text-[13px] leading-[1.55] text-ink/74">Fireside lunch in a Vela courtyard; the museum and bookshops of a rainy Marisol.</span>
+          </li>
+          <li class="flex gap-3.5">
+            <span class="mono text-[11px] text-sea tnum shrink-0 mt-0.5 w-9">Day 3</span>
+            <span class="text-[13px] leading-[1.55] text-ink/74">Birdwatching at the Puerto Lina lagoon; a quiet harbour dinner as the boats come in.</span>
+          </li>
+        </ul>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 9 · GETTING HERE ===== -->
+<section id="getting-here" class="relative py-20 sm:py-28">
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="max-w-2xl mb-12 sm:mb-14">
+      <p class="eyebrow mb-4">Getting here</p>
+      <h2 class="display font-bold display-tight text-[clamp(2.1rem,5.2vw,3.4rem)] leading-[1.04] text-ink">
+        Closer than it looks on a map.
+      </h2>
+      <p class="mt-4 text-[15px] leading-[1.7] text-ink/70">
+        The coast feels remote — that's the appeal — but the capital, and its airport, are under an
+        hour from the first beach.
+      </p>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.05fr_0.95fr] gap-6 items-stretch">
+      <!-- routes panel -->
+      <div class="panel rounded-xl2 p-6 sm:p-8 flex flex-col">
+        <div class="space-y-6">
+          <!-- air -->
+          <div class="flex gap-4">
+            <div class="w-11 h-11 rounded-full grid place-items-center shrink-0" style="background:rgba(27,158,138,0.1);">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M2 12.5 17 7.5M17 7.5l-3.5-3M17 7.5l-1.5 4.5M7 10.2 5 13l-2 .4.6-2L4 9M9.5 9 11 6" stroke="#1B9E8A" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="flex-1">
+              <div class="flex items-baseline justify-between gap-3">
+                <h3 class="display font-semibold text-[17px] text-ink tracking-soft">By air</h3>
+                <span class="mono text-[12px] text-sea tnum">55 min drive</span>
+              </div>
+              <p class="mt-1.5 text-[13px] leading-[1.6] text-ink/68">
+                Fly into <span class="text-ink font-medium">Marisol&ndash;Sereno International (MSR)</span>,
+                the capital's airport. From arrivals it's a 55-minute drive on the coast road to the
+                first beach at Cala Verde; airport shuttles meet every flight.
+              </p>
+            </div>
+          </div>
+          <div class="hairrule"></div>
+          <!-- ferry -->
+          <div class="flex gap-4">
+            <div class="w-11 h-11 rounded-full grid place-items-center shrink-0" style="background:rgba(27,158,138,0.1);">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 12.5h14l-1.6 4H4.6L3 12.5Z" stroke="#1B9E8A" stroke-width="1.3" stroke-linejoin="round"/><path d="M5 12.5V8h10v4.5M10 8V4M7 16.5q1.5 1.5 3 0t3 0" stroke="#1B9E8A" stroke-width="1.3" stroke-linecap="round"/></svg>
+            </div>
+            <div class="flex-1">
+              <div class="flex items-baseline justify-between gap-3">
+                <h3 class="display font-semibold text-[17px] text-ink tracking-soft">By ferry</h3>
+                <span class="mono text-[12px] text-sea tnum">2 routes</span>
+              </div>
+              <p class="mt-1.5 text-[13px] leading-[1.6] text-ink/68">
+                A fast catamaran runs from the capital's port to Marisol Town in
+                <span class="mono text-ink tnum">1 h 10</span>, and a seasonal island ferry links
+                Puerto Lina to the Isla Brava reserve in <span class="mono text-ink tnum">40 min</span>.
+                Both carry foot passengers and bikes.
+              </p>
+            </div>
+          </div>
+          <div class="hairrule"></div>
+          <!-- drive -->
+          <div class="flex gap-4">
+            <div class="w-11 h-11 rounded-full grid place-items-center shrink-0" style="background:rgba(27,158,138,0.1);">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 13h14M4.5 13l1.3-5h8.4l1.3 5M6.5 8V5h7v3" stroke="#1B9E8A" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="15" r="1.4" stroke="#1B9E8A" stroke-width="1.2"/><circle cx="13.5" cy="15" r="1.4" stroke="#1B9E8A" stroke-width="1.2"/></svg>
+            </div>
+            <div class="flex-1">
+              <div class="flex items-baseline justify-between gap-3">
+                <h3 class="display font-semibold text-[17px] text-ink tracking-soft">By car</h3>
+                <span class="mono text-[12px] text-sea tnum">CR-1 coast road</span>
+              </div>
+              <p class="mt-1.5 text-[13px] leading-[1.6] text-ink/68">
+                The CR-1 traces all 190 miles of coastline. Capital to Cala Verde is
+                <span class="mono text-ink tnum">55 min</span>; end to end, Cabo Sereno to Puerto Lina,
+                is a scenic <span class="mono text-ink tnum">3 h 20</span> with plenty of reasons to stop.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- do I need a car -->
+        <div class="mt-7 rounded-xl p-4 flex gap-3" style="background:rgba(240,120,74,0.08);border:1px solid rgba(240,120,74,0.22);">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" class="shrink-0 mt-0.5" aria-hidden="true"><circle cx="9" cy="9" r="7.2" stroke="#D8602F" stroke-width="1.3"/><path d="M9 8v4M9 5.4v.1" stroke="#D8602F" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <p class="text-[12.5px] leading-[1.6] text-ink/74">
+            <span class="text-ink font-medium">Do I need a car?</span> For one or two towns, no — the
+            coast bus links all nine, and the ferries take bikes. To cove-hop freely or reach the
+            inland vineyards, a car earns its keep. There is no train.
+          </p>
+        </div>
+      </div>
+
+      <!-- arrivals diagram -->
+      <div class="photo grad-pale p-1.5" style="--radius:1.4rem;">
+        <div class="rounded-[1.2rem] bg-[#EAF2F0] h-full min-h-[300px] relative overflow-hidden p-2">
+          <svg viewBox="0 0 460 380" class="w-full h-full" preserveAspectRatio="xMidYMid meet" aria-label="A stylized arrivals diagram: airport, ferry port, and the capital all connecting along the coast road to the Marisol Coast">
+            <!-- coast road spine -->
+            <path d="M70 332 C150 320 150 220 230 200 C310 180 320 96 400 70" stroke="#16201E" stroke-width="2.4" fill="none" stroke-dasharray="2 7" stroke-linecap="round" opacity="0.55"/>
+            <!-- node: airport -->
+            <g transform="translate(70,332)">
+              <circle r="22" fill="#FFFFFF" stroke="#1B9E8A" stroke-width="1.6"/>
+              <path d="M-9 1 8 -4M8 -4 4 -8M8 -4 6 1M-2 -1-3 2-5 2.4-4 .4-5-1M2-2 3-4" stroke="#1B9E8A" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+            <text x="100" y="330" font-family="'Geist Mono',monospace" font-size="11" fill="#16201E" letter-spacing="0.5">MSR Airport</text>
+            <text x="100" y="345" font-family="'Geist Mono',monospace" font-size="9" fill="#1B9E8A">55 min to coast</text>
+            <!-- node: ferry port -->
+            <g transform="translate(230,200)">
+              <circle r="20" fill="#FFFFFF" stroke="#1B9E8A" stroke-width="1.6"/>
+              <path d="M-9 4h18l-2 5h-14l-2-5ZM-6 4V0h12v4M0 0v-5" stroke="#1B9E8A" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>
+            </g>
+            <text x="258" y="198" font-family="'Geist Mono',monospace" font-size="11" fill="#16201E" letter-spacing="0.5">Ferry port</text>
+            <text x="258" y="213" font-family="'Geist Mono',monospace" font-size="9" fill="#1B9E8A">1 h 10 catamaran</text>
+            <!-- node: capital -->
+            <g transform="translate(70,332)"></g>
+            <!-- node: the coast (destination) -->
+            <g transform="translate(400,70)">
+              <circle r="24" fill="#1B9E8A"/>
+              <circle r="9" fill="#F0784A"/>
+              <path d="M0 -16v-4M0 20v-4M16 0h4M-16 0h-4" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round"/>
+            </g>
+            <text x="330" y="44" font-family="'Geist Mono',monospace" font-size="11" fill="#16201E" letter-spacing="0.5">MARISOL COAST</text>
+            <!-- capital marker -->
+            <g transform="translate(150,300)">
+              <rect x="-12" y="-12" width="24" height="24" rx="3" fill="#FFFFFF" stroke="#16201E" stroke-width="1.4" opacity="0.7"/>
+              <path d="M-6 6V-2l6-5 6 5v8" stroke="#16201E" stroke-width="1.2" fill="none" opacity="0.7"/>
+            </g>
+            <text x="166" y="298" font-family="'Geist Mono',monospace" font-size="10" fill="#16201E" opacity="0.66">The capital</text>
+            <!-- ripples by the coast node -->
+            <g stroke="#1B9E8A" stroke-width="1" fill="none" opacity="0.4">
+              <path d="M340 110 q14 -8 28 0"/>
+              <path d="M352 128 q14 -8 28 0"/>
+            </g>
+          </svg>
+          <div class="absolute bottom-3 left-3 panel-soft rounded-lg px-3 py-1.5 mono text-[10px] tracking-[0.1em] uppercase text-ink/65">
+            Three ways in &mdash; all under 75 min
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- full-bleed photo band 2 -->
+<section id="band-2" class="relative">
+  <div class="photo grad-cliff" style="--radius:0;">
+    <div class="relative min-h-[240px] sm:min-h-[340px] flex items-center">
+      <svg class="absolute inset-0 w-full h-full" viewBox="0 0 1400 360" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <circle cx="240" cy="92" r="50" fill="rgba(255,247,228,0.5)"/>
+        <path d="M0 196 L260 96 L460 176 L720 80 L980 192 L1240 96 L1400 168 L1400 360 L0 360 Z" fill="rgba(160,62,30,0.34)"/>
+        <path d="M0 256 L300 176 L620 240 L960 170 L1280 248 L1400 214 L1400 360 L0 360 Z" fill="rgba(120,46,22,0.42)"/>
+        <g transform="translate(1180,250)" stroke="rgba(120,46,22,0.6)" stroke-width="2.6" fill="none" stroke-linecap="round">
+          <path d="M0 90 C-4 50 -2 24 2 4"/>
+          <path d="M2 6 C-16 -2 -30 0 -40 12 M2 6 C-12 -8 -12 -24 -4 -34 M2 6 C18 -4 32 -2 42 10 M2 6 C14 -8 14 -24 8 -34"/>
+        </g>
+      </svg>
+      <div class="relative mx-auto max-w-6xl w-full px-5 sm:px-8">
+        <p class="display font-bold display-tight text-white text-[clamp(1.6rem,4vw,2.7rem)] leading-[1.08] max-w-2xl">
+          Forty-seven miles of cliff path, and no two coves the same.
+        </p>
+        <p class="mt-3 mono text-[11.5px] tracking-[0.12em] uppercase text-white/72 tnum">Camino del Mar &middot; Cabo Sereno headlands</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 10 · REVIEWS ===== -->
+<section id="reviews" class="relative py-20 sm:py-28">
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="grid lg:grid-cols-[0.78fr_1.22fr] gap-12 lg:gap-14 items-start">
+      <!-- aggregate -->
+      <div class="lg:sticky lg:top-24">
+        <p class="eyebrow mb-4">Visitor reviews</p>
+        <h2 class="display font-bold display-tight text-[clamp(2rem,5vw,3rem)] leading-[1.05] text-ink">
+          People come back. Often.
+        </h2>
+        <div class="mt-7 panel rounded-xl2 p-6">
+          <div class="flex items-end gap-3">
+            <span class="display font-bold text-ink text-[3.4rem] leading-none tracking-soft tnum">4.8</span>
+            <div class="pb-1.5">
+              <div class="flex gap-0.5 text-coral" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z"/></svg>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z"/></svg>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z"/></svg>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z"/></svg>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z" fill="currentColor" fill-opacity="0.32"/><path d="M8 1v10.7L3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z" fill="currentColor"/></svg>
+              </div>
+              <p class="mt-1 text-[12px] text-ink/60">from <span class="mono tnum">18,402</span> visitor reviews</p>
+            </div>
+          </div>
+          <div class="hairrule my-5"></div>
+          <ul class="space-y-2.5">
+            <li class="flex items-center gap-3">
+              <span class="text-[12px] text-ink/60 w-20 shrink-0">Beaches</span>
+              <span class="flex-1 h-1.5 rounded-full bg-shell overflow-hidden"><span class="block h-full bg-sea rounded-full" style="width:97%"></span></span>
+              <span class="mono text-[11px] text-ink/64 tnum">4.9</span>
+            </li>
+            <li class="flex items-center gap-3">
+              <span class="text-[12px] text-ink/60 w-20 shrink-0">Food</span>
+              <span class="flex-1 h-1.5 rounded-full bg-shell overflow-hidden"><span class="block h-full bg-sea rounded-full" style="width:94%"></span></span>
+              <span class="mono text-[11px] text-ink/64 tnum">4.7</span>
+            </li>
+            <li class="flex items-center gap-3">
+              <span class="text-[12px] text-ink/60 w-20 shrink-0">Value</span>
+              <span class="flex-1 h-1.5 rounded-full bg-shell overflow-hidden"><span class="block h-full bg-sea rounded-full" style="width:90%"></span></span>
+              <span class="mono text-[11px] text-ink/64 tnum">4.5</span>
+            </li>
+            <li class="flex items-center gap-3">
+              <span class="text-[12px] text-ink/60 w-20 shrink-0">Getting around</span>
+              <span class="flex-1 h-1.5 rounded-full bg-shell overflow-hidden"><span class="block h-full bg-sea rounded-full" style="width:92%"></span></span>
+              <span class="mono text-[11px] text-ink/64 tnum">4.6</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- review cards -->
+      <div class="grid sm:grid-cols-2 gap-5">
+        <article class="card-lift panel rounded-xl2 p-6 flex flex-col">
+          <div class="flex gap-0.5 text-coral mb-3" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z"/></svg>
+          </div>
+          <p class="text-[14px] leading-[1.66] text-ink/78 flex-1">
+            "We swam every single morning before the towns even woke up. Cala Verde at 8am, no one
+            there but us and a fishing boat. We've already booked next September."
+          </p>
+          <div class="mt-5 flex items-center gap-3">
+            <span class="w-9 h-9 rounded-full grid place-items-center display font-semibold text-[13px] text-white shrink-0" style="background:linear-gradient(140deg,#1B9E8A,#157C6D);">EM</span>
+            <div>
+              <p class="text-[13px] font-semibold text-ink tracking-soft">Elena Marchetti</p>
+              <p class="mono text-[10.5px] text-ink/56 tnum">Casa Almira, Vela &middot; Sep 2025</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="card-lift panel rounded-xl2 p-6 flex flex-col">
+          <div class="flex gap-0.5 text-coral mb-3" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z"/></svg>
+          </div>
+          <p class="text-[14px] leading-[1.66] text-ink/78 flex-1">
+            "Did the whole coast by bus and ferry with two kids and a folding pram. Cheap, slow in the
+            best way, and the flamingo lagoon at Puerto Lina was the trip's surprise hit."
+          </p>
+          <div class="mt-5 flex items-center gap-3">
+            <span class="w-9 h-9 rounded-full grid place-items-center display font-semibold text-[13px] text-white shrink-0" style="background:linear-gradient(140deg,#F0784A,#D8602F);">JT</span>
+            <div>
+              <p class="text-[13px] font-semibold text-ink tracking-soft">Johanna &amp; Tom Briggs</p>
+              <p class="mono text-[10.5px] text-ink/56 tnum">Cala Verde Camping &middot; Jul 2025</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="card-lift panel rounded-xl2 p-6 flex flex-col">
+          <div class="flex gap-0.5 text-coral mb-3" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z" fill="currentColor" fill-opacity="0.32"/><path d="M8 1v10.7L3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z" fill="currentColor"/></svg>
+          </div>
+          <p class="text-[14px] leading-[1.66] text-ink/78 flex-1">
+            "Came in November expecting it shut. Got green hills, ten-euro lunches, and a cliff path
+            entirely to ourselves. Bring a jacket for the evenings and you'll be glad you came off-season."
+          </p>
+          <div class="mt-5 flex items-center gap-3">
+            <span class="w-9 h-9 rounded-full grid place-items-center display font-semibold text-[13px] text-white shrink-0" style="background:linear-gradient(140deg,#157C6D,#0E5F54);">DK</span>
+            <div>
+              <p class="text-[13px] font-semibold text-ink tracking-soft">David Kallio</p>
+              <p class="mono text-[10.5px] text-ink/56 tnum">The Salt House, Marisol &middot; Nov 2024</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="card-lift panel rounded-xl2 p-6 flex flex-col">
+          <div class="flex gap-0.5 text-coral mb-3" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l2 4.5 5 .5-3.7 3.3 1.1 4.9L8 11.7 3.6 14.2l1.1-4.9L1 6l5-.5L8 1Z"/></svg>
+          </div>
+          <p class="text-[14px] leading-[1.66] text-ink/78 flex-1">
+            "We spent three days just on the hill towns and the vineyards above Vela. The 1881 olive
+            press, the Thursday market at Almira — it felt like a coast that never sold itself out."
+          </p>
+          <div class="mt-5 flex items-center gap-3">
+            <span class="w-9 h-9 rounded-full grid place-items-center display font-semibold text-[13px] text-white shrink-0" style="background:linear-gradient(140deg,#1B9E8A,#157C6D);">AN</span>
+            <div>
+              <p class="text-[13px] font-semibold text-ink tracking-soft">Amara Nwosu</p>
+              <p class="mono text-[10.5px] text-ink/56 tnum">Mirador del Cabo &middot; May 2025</p>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 11 · FAQ ===== -->
+<section id="faq" class="relative py-20 sm:py-28">
+  <div class="absolute inset-0 -z-10 bg-white/55 border-y border-[color:var(--line)]"></div>
+  <div class="mx-auto max-w-3xl px-5 sm:px-8">
+    <div class="text-center mb-12">
+      <p class="eyebrow mb-4">Good to know</p>
+      <h2 class="display font-bold display-tight text-[clamp(2.1rem,5.2vw,3.4rem)] leading-[1.04] text-ink">
+        Questions before you book.
+      </h2>
+    </div>
+
+    <div class="space-y-3">
+      <details class="faq-item panel rounded-xl2 px-5 sm:px-6 py-1">
+        <summary class="flex items-center justify-between gap-4 py-4">
+          <span class="display font-semibold text-[16.5px] sm:text-lg text-ink tracking-soft">When is the best time to visit?</span>
+          <svg class="faq-chev shrink-0 text-sea" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </summary>
+        <p class="pb-5 text-[13.5px] leading-[1.74] text-ink/72">
+          There is honestly no bad month, but our quiet favourite is <span class="text-ink font-medium">late
+          September into October</span>. The sea hits its warmest of the year at 24&deg;C, the vineyard
+          harvest is on, and the August crowds have packed up. July and August are glorious but busy
+          and pricier; November to April is mild, green, and gentle on the wallet — perfect for walkers.
+        </p>
+      </details>
+
+      <details class="faq-item panel rounded-xl2 px-5 sm:px-6 py-1">
+        <summary class="flex items-center justify-between gap-4 py-4">
+          <span class="display font-semibold text-[16.5px] sm:text-lg text-ink tracking-soft">How do I get there?</span>
+          <svg class="faq-chev shrink-0 text-sea" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </summary>
+        <p class="pb-5 text-[13.5px] leading-[1.74] text-ink/72">
+          Fly into <span class="text-ink font-medium">Marisol&ndash;Sereno International (MSR)</span>,
+          the capital's airport — the first beach is a 55-minute drive on the coast road, with shuttles
+          meeting every flight. A fast catamaran also runs from the capital's port to Marisol Town in
+          <span class="mono tnum">1 h 10</span>. There is no train, but the CR-1 coast road and the
+          local bus connect all nine towns.
+        </p>
+      </details>
+
+      <details class="faq-item panel rounded-xl2 px-5 sm:px-6 py-1">
+        <summary class="flex items-center justify-between gap-4 py-4">
+          <span class="display font-semibold text-[16.5px] sm:text-lg text-ink tracking-soft">Do I need a car?</span>
+          <svg class="faq-chev shrink-0 text-sea" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </summary>
+        <p class="pb-5 text-[13.5px] leading-[1.74] text-ink/72">
+          Not necessarily. If you're basing yourself in one or two towns, the coast bus links all nine
+          and the ferries carry bikes, so you can manage car-free very happily. If you want to
+          <span class="text-ink font-medium">cove-hop freely</span> or drive up to the inland vineyards
+          and hill villages, a hire car earns its keep — pick one up at the airport. Parking in the old
+          towns is limited, so leave the car outside the walls.
+        </p>
+      </details>
+
+      <details class="faq-item panel rounded-xl2 px-5 sm:px-6 py-1">
+        <summary class="flex items-center justify-between gap-4 py-4">
+          <span class="display font-semibold text-[16.5px] sm:text-lg text-ink tracking-soft">Is it family-friendly?</span>
+          <svg class="faq-chev shrink-0 text-sea" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </summary>
+        <p class="pb-5 text-[13.5px] leading-[1.74] text-ink/72">
+          Wonderfully so. <span class="text-ink font-medium">Cala Verde</span> has a shallow,
+          lifeguarded bay made for small swimmers, and short drives between towns mean no
+          marathon car days. Kids tend to love the flamingo lagoon and glass-bottom boat at Puerto
+          Lina, the rock pools below San Telmo, and the hands-on Maritime Museum. Most guesthouses
+          serve an early dinner and many beach restaurants keep a kids' menu.
+        </p>
+      </details>
+
+      <details class="faq-item panel rounded-xl2 px-5 sm:px-6 py-1">
+        <summary class="flex items-center justify-between gap-4 py-4">
+          <span class="display font-semibold text-[16.5px] sm:text-lg text-ink tracking-soft">What's the local currency and language?</span>
+          <svg class="faq-chev shrink-0 text-sea" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </summary>
+        <p class="pb-5 text-[13.5px] leading-[1.74] text-ink/72">
+          The coast uses the <span class="text-ink font-medium">euro (&euro;)</span>, and cards are
+          accepted almost everywhere — though it's worth carrying a little cash for the markets and
+          the smallest village cafes. The local language is Marisolan, a soft coastal dialect, but
+          Spanish and English are widely spoken in any town that sees visitors. A "buenos días" and a
+          smile will carry you a long way.
+        </p>
+      </details>
+
+      <details class="faq-item panel rounded-xl2 px-5 sm:px-6 py-1">
+        <summary class="flex items-center justify-between gap-4 py-4">
+          <span class="display font-semibold text-[16.5px] sm:text-lg text-ink tracking-soft">Is it expensive?</span>
+          <svg class="faq-chev shrink-0 text-sea" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </summary>
+        <p class="pb-5 text-[13.5px] leading-[1.74] text-ink/72">
+          It's a mid-range destination with real room to choose. Beach campsites start at
+          <span class="mono tnum">$24</span> a night and a courtyard guesthouse from
+          <span class="mono tnum">$78</span>, while a harbour-side seafood lunch runs
+          <span class="mono tnum">$14&ndash;22</span>. Visit in the green season and rooms drop by
+          roughly a third. Splurges exist — the cliff-top suites at Cabo Sereno — but the coast was
+          built for honest, unfussy holidays, not for emptying your wallet.
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 12 · FINAL CTA ===== -->
+<section id="plan" class="relative py-24 sm:py-32 overflow-hidden">
+  <div class="blob grad-cove" style="width:380px;height:380px;top:-130px;right:-60px;opacity:0.4;"></div>
+  <div class="blob grad-golden" style="width:320px;height:320px;bottom:-130px;left:-70px;opacity:0.32;"></div>
+  <div class="mx-auto max-w-3xl px-5 sm:px-8 text-center relative">
+    <!-- brand mark, second appearance -->
+    <svg width="60" height="60" viewBox="0 0 36 36" fill="none" aria-hidden="true" class="mx-auto mb-7">
+      <circle cx="18" cy="18" r="16.6" stroke="#1B9E8A" stroke-width="1" opacity="0.55"/>
+      <circle cx="18" cy="15" r="4.4" fill="#F0784A"/>
+      <path d="M18 7.4v-2.2M18 30.8v-2.2M25.6 15h2.2M8.2 15H6M23.4 9.6l1.6-1.6M11 9.6 9.4 8" stroke="#F0784A" stroke-width="1.2" stroke-linecap="round"/>
+      <path d="M5 24c3.2 0 4.6-4.2 8-4.2S20.6 24 24 24s4.6-4 7-4" stroke="#1B9E8A" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+    </svg>
+
+    <p class="eyebrow mb-6">Your trip starts here</p>
+    <h2 class="display font-bold display-tight text-[clamp(2rem,5.4vw,3.3rem)] leading-[1.08] text-ink">
+      Start planning your trip to the Marisol Coast.
+    </h2>
+    <p class="mt-5 max-w-xl mx-auto text-[15px] leading-[1.7] text-ink/70">
+      Pick a season, pick a town, and let the coast do the rest. Our free trip planner pulls together
+      beaches, stays, and ferry times into one printable itinerary.
+    </p>
+
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a href="#hero" class="btn btn-coral rounded-full px-8 py-3.5 text-[14px] font-semibold tracking-soft">Plan your trip</a>
+      <a href="#stay" class="btn btn-ghost rounded-full px-8 py-3.5 text-[14px] font-semibold tracking-soft">Browse places to stay</a>
+    </div>
+
+    <!-- seasonal note -->
+    <div class="mt-9 inline-flex items-center gap-2.5 panel-soft rounded-full pl-2.5 pr-4 py-1.5">
+      <span class="pulse-dot" aria-hidden="true"></span>
+      <span class="mono text-[11px] tracking-[0.08em] text-ink/70 tnum">In season now &middot; sea 24&deg;C &middot; September is the coast's best-kept secret</span>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ===== 13 · FOOTER ===== -->
+<footer class="relative border-t border-[color:var(--line)] bg-white/55">
+  <div class="mx-auto max-w-6xl px-5 sm:px-8 py-14">
+    <div class="grid sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr] gap-9 sm:gap-8">
+      <!-- brand -->
+      <div>
+        <div class="flex items-center gap-2.5 mb-3">
+          <svg width="32" height="32" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+            <circle cx="18" cy="18" r="16.6" stroke="#1B9E8A" stroke-width="1.1" opacity="0.5"/>
+            <circle cx="18" cy="15" r="4.4" fill="#F0784A"/>
+            <path d="M18 7.4v-2.2M25.6 15h2.2M8.2 15H6" stroke="#F0784A" stroke-width="1.2" stroke-linecap="round"/>
+            <path d="M5 24c3.2 0 4.6-4.2 8-4.2S20.6 24 24 24s4.6-4 7-4" stroke="#1B9E8A" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+          </svg>
+          <span class="display text-lg font-bold tracking-soft text-ink">Marisol <span class="text-sea">Coast</span></span>
+        </div>
+        <p class="text-[13px] leading-[1.7] text-ink/62 max-w-xs">
+          The official visitor guide to the Marisol Coast — 190 miles of beaches, hill towns, and
+          tasting rooms, 55 minutes from the capital.
+        </p>
+        <!-- official tourism-board crest -->
+        <div class="mt-5 inline-flex items-center gap-3 panel rounded-xl px-3.5 py-2.5">
+          <svg width="30" height="34" viewBox="0 0 30 34" fill="none" aria-hidden="true">
+            <path d="M15 1.5 27.5 6v11c0 8.5-6 13.2-12.5 16C8.5 30.2 2.5 25.5 2.5 17V6L15 1.5Z" stroke="#1B9E8A" stroke-width="1.3" fill="rgba(27,158,138,0.06)"/>
+            <circle cx="15" cy="13" r="3.4" fill="#F0784A"/>
+            <path d="M8 22c2.4 0 3.4-3 6-3s3.6 3 6 3" stroke="#1B9E8A" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+            <path d="M15 6.4v-1.4M20.4 13h1.4M8.6 13H7.2" stroke="#F0784A" stroke-width="1" stroke-linecap="round"/>
+          </svg>
+          <div class="leading-tight">
+            <p class="mono text-[9px] tracking-[0.16em] uppercase text-ink/52">Official board</p>
+            <p class="display text-[12.5px] font-semibold text-ink tracking-soft">Marisol Coast Tourism</p>
+            <p class="mono text-[9px] text-ink/48 tnum">Est. 1974</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- things to do -->
+      <div>
+        <p class="mono text-[10px] tracking-[0.18em] uppercase text-ink/48 mb-3.5">Things to do</p>
+        <ul class="space-y-2 text-[13px] text-ink/66">
+          <li><a href="#things" class="navlink">Beaches &amp; coves</a></li>
+          <li><a href="#things" class="navlink">Food &amp; wine</a></li>
+          <li><a href="#things" class="navlink">Hikes &amp; nature</a></li>
+          <li><a href="#things" class="navlink">Towns &amp; villages</a></li>
+          <li><a href="#itineraries" class="navlink">Suggested itineraries</a></li>
+        </ul>
+      </div>
+
+      <!-- where to stay -->
+      <div>
+        <p class="mono text-[10px] tracking-[0.18em] uppercase text-ink/48 mb-3.5">Where to stay</p>
+        <ul class="space-y-2 text-[13px] text-ink/66">
+          <li><a href="#stay" class="navlink">Beach campsites</a></li>
+          <li><a href="#stay" class="navlink">Guesthouses</a></li>
+          <li><a href="#stay" class="navlink">Boutique hotels</a></li>
+          <li><a href="#stay" class="navlink">Headland resorts</a></li>
+          <li><a href="#season" class="navlink">When to visit</a></li>
+        </ul>
+      </div>
+
+      <!-- travel info + contact -->
+      <div>
+        <p class="mono text-[10px] tracking-[0.18em] uppercase text-ink/48 mb-3.5">Travel info</p>
+        <ul class="space-y-2 text-[13px] text-ink/66 mb-5">
+          <li><a href="#getting-here" class="navlink">Getting here</a></li>
+          <li><a href="#faq" class="navlink">Visitor FAQ</a></li>
+        </ul>
+        <p class="mono text-[10px] tracking-[0.18em] uppercase text-ink/48 mb-2">Contact</p>
+        <a href="mailto:hello@visitmarisol.coast" class="text-[13px] text-sea font-medium navlink break-words">hello@visitmarisol.coast</a>
+        <p class="mt-1.5 text-[12px] text-ink/56">Visitor centre, Marisol Town harbour</p>
+      </div>
+    </div>
+
+    <div class="hairrule my-9"></div>
+
+    <!-- sustainability pledge -->
+    <div class="rounded-xl2 panel-soft p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-3.5 mb-7">
+      <span class="w-9 h-9 rounded-full grid place-items-center shrink-0" style="background:rgba(27,158,138,0.1);">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 15c4-1.5 6-5 6-9 0-1-.1-2-.4-3-2 .4-3.6.4-5 0M9 15C5 13.5 3 10 3 6c0-1 .1-2 .4-3 2 .4 3.6.4 5 0M9 4.5V15" stroke="#1B9E8A" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <p class="text-[12.5px] leading-[1.6] text-ink/68">
+        <span class="text-ink font-medium">Travel the coast kindly.</span> We ask every visitor to
+        carry out what they carry in, take the bus or bike between towns where they can, and choose
+        the small, locally-owned places that keep these villages alive. The coast has stayed
+        beautiful because people looked after it — please help us keep it that way.
+      </p>
+    </div>
+
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 text-[11.5px] text-ink/48">
+      <p>&copy; 2026 Marisol Coast Tourism Board. An official regional visitor guide.</p>
+      <p class="mono tracking-[0.08em] tnum">36.7&deg;N &middot; 190 mi of coastline</p>
+    </div>
+  </div>
+</footer>
+
+<!-- ONE script: compute SVG geometry (coast map paths + numbered town markers) from data arrays -->
+<script>
+  (function () {
+    var map = document.getElementById("coastmap");
+    if (!map) return;
+
+    // build a smooth path through [x,y] waypoints using quadratic midpoints
+    function smoothPath(pts) {
+      var d = "M" + pts[0][0] + " " + pts[0][1];
+      for (var i = 1; i < pts.length - 1; i++) {
+        var mx = (pts[i][0] + pts[i + 1][0]) / 2;
+        var my = (pts[i][1] + pts[i + 1][1]) / 2;
+        d += " Q" + pts[i][0] + " " + pts[i][1] + " " + mx + " " + my;
+      }
+      var last = pts[pts.length - 1];
+      d += " L" + last[0] + " " + last[1];
+      return d;
+    }
+
+    // coastline waypoints, north (left) to south (right)
+    var coastPts = [
+      [0, 168], [150, 150], [300, 178], [470, 154],
+      [640, 176], [810, 150], [980, 174], [1180, 128]
+    ];
+    var coastline = document.getElementById("coastline");
+    if (coastline) coastline.setAttribute("d", smoothPath(coastPts));
+
+    // the coast road runs just inland of the coastline
+    var roadPts = coastPts.map(function (p) { return [p[0], p[1] + 34]; });
+    var road = document.getElementById("coastroad");
+    if (road) road.setAttribute("d", smoothPath(roadPts));
+
+    // nine numbered towns along the coast — [x, y, number, isLast]
+    var towns = [
+      [60, 196, "01", false],
+      [200, 178, "02", false],
+      [330, 206, "03", false],
+      [470, 182, "04", false],
+      [600, 204, "05", false],
+      [740, 180, "06", false],
+      [880, 202, "07", false],
+      [1010, 178, "08", false],
+      [1140, 158, "09", true]
+    ];
+    var SVGNS = "http://www.w3.org/2000/svg";
+    var group = document.getElementById("towns");
+    towns.forEach(function (t) {
+      var x = t[0], y = t[1], num = t[2], last = t[3];
+      var fill = last ? "#F0784A" : "#1B9E8A";
+      // stem from coastline down to marker
+      var stem = document.createElementNS(SVGNS, "line");
+      stem.setAttribute("x1", x); stem.setAttribute("y1", y - 18);
+      stem.setAttribute("x2", x); stem.setAttribute("y2", y);
+      stem.setAttribute("stroke", fill);
+      stem.setAttribute("stroke-width", "1.2");
+      stem.setAttribute("opacity", "0.55");
+      group.appendChild(stem);
+      // numbered dot
+      var dot = document.createElementNS(SVGNS, "circle");
+      dot.setAttribute("cx", x); dot.setAttribute("cy", y);
+      dot.setAttribute("r", "10.5");
+      dot.setAttribute("fill", fill);
+      group.appendChild(dot);
+      var label = document.createElementNS(SVGNS, "text");
+      label.setAttribute("x", x); label.setAttribute("y", y + 3.4);
+      label.setAttribute("text-anchor", "middle");
+      label.setAttribute("font-family", "'Geist Mono', monospace");
+      label.setAttribute("font-size", "9");
+      label.setAttribute("fill", "#FFFFFF");
+      label.textContent = num;
+      group.appendChild(label);
+    });
+  })();
+</script>
+
+</body>
+</html>

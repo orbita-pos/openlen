@@ -29,6 +29,13 @@
       "when": 1778914292224,
       "tag": "0003_rare_hellcat",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1779660005819,
+      "tag": "0004_smooth_smiling_tiger",
+      "breakpoints": true
     }
   ]
 }

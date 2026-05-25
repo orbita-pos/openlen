@@ -3,34 +3,33 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { ArrowUp, Globe, Lock, Paperclip, Sparkles } from "lucide-react";
+import {
+  ArrowUp,
+  Crosshair,
+  Image as ImageIcon,
+  Loader2,
+  Sparkles,
+  Wand2,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/cn";
+import { QUICK_PROMPTS } from "@/lib/quick-prompts";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Hero prompt input (v0 / Lovable style).
+// Hero prompt input — the homepage entry into AI generation. Mirrors the
+// /new-v2 AI brief panel: same quick-prompts, same composer affordances.
 //
-// Replaces the previous "Generate yours free / Star on GitHub" CTA pair with
-// a chat-style textarea. Submit routes to:
-//   - /new-v2?mode=ai&brief=<text>             when the user is already signed in
-//   - /register?next=/new-v2?mode=ai&brief=…   otherwise (sign in via the link inside)
-//
-// The brief is carried through register so the user lands in the workspace
-// with their idea pre-filled and just has to hit Generate.
+// Submit, when signed in, routes to /new-v2?mode=ai&brief=…&autostart=1 so the
+// build kicks off on arrival. When signed out, a dialog asks the user to sign
+// in first — the brief rides along via ?next= so nothing is lost.
 // ─────────────────────────────────────────────────────────────────────────────
-
-const SUGGESTED_PROMPTS = [
-  "SaaS for freelance invoicing",
-  "Designer portfolio in CDMX",
-  "Coffee subscription",
-  "Indie hacker conference",
-];
 
 export function HeroPromptInput() {
   const router = useRouter();
   const { status } = useSession();
   const [value, setValue] = useState("");
-  const [isPublic, setIsPublic] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-grow up to ~10 lines.
@@ -41,17 +40,20 @@ export function HeroPromptInput() {
     el.style.height = Math.min(el.scrollHeight, 240) + "px";
   }, [value]);
 
-  const canSend = value.trim().length > 0;
+  // Match the /new-v2 brief panel — a real brief needs a little substance.
+  const canSend = value.trim().length >= 10;
+
+  const target = `/new-v2?mode=ai&brief=${encodeURIComponent(
+    value.trim(),
+  )}&autostart=1`;
 
   const submit = () => {
-    if (!canSend || submitting) return;
-    setSubmitting(true);
-    const brief = value.trim();
-    const target = `/new-v2?mode=ai&brief=${encodeURIComponent(brief)}`;
+    if (!canSend || submitting || status === "loading") return;
     if (status === "authenticated") {
+      setSubmitting(true);
       router.push(target);
     } else {
-      router.push(`/register?next=${encodeURIComponent(target)}`);
+      setLoginOpen(true);
     }
   };
 
@@ -76,55 +78,57 @@ export function HeroPromptInput() {
               }
             }}
             rows={2}
-            placeholder="Ask OpenLen to build a landing page for…"
-            className="block w-full resize-none bg-transparent text-[15px] leading-relaxed text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none"
+            placeholder="A landing page for my SaaS that…"
+            maxLength={2000}
+            className="block w-full resize-none bg-transparent text-[15px] leading-relaxed text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-500 focus:outline-none"
             style={{ minHeight: 56 }}
           />
         </div>
 
         <div className="flex items-center justify-between gap-2 px-2.5 pb-2.5 pt-1">
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              disabled
-              title="Attachments — coming soon"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
-              aria-label="Attach a file (coming soon)"
-            >
-              <Paperclip size={15} />
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsPublic((p) => !p)}
-              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-900 transition text-[12.5px]"
-              title="Toggle visibility"
-            >
-              {isPublic ? <Globe size={13} /> : <Lock size={13} />}
-              <span className="hidden sm:inline">{isPublic ? "Public" : "Private"}</span>
-            </button>
-            <span className="hidden md:inline h-4 w-px bg-zinc-200 dark:bg-zinc-800 mx-1" />
-            <span className="hidden md:inline-flex items-center gap-1.5 h-8 px-2 rounded-lg text-[11.5px] font-medium text-zinc-500 dark:text-zinc-400">
+          <div className="flex items-center gap-0.5">
+            {/* Editing affordances — a preview of what unlocks once the page
+                exists, mirroring the /new-v2 brief panel. */}
+            {[
+              { Icon: ImageIcon, label: "Attach an image" },
+              { Icon: Crosshair, label: "Scope to a section" },
+              { Icon: Wand2, label: "Autofill with your info" },
+            ].map(({ Icon, label }) => (
+              <button
+                key={label}
+                type="button"
+                disabled
+                title={`${label} — available once your page exists`}
+                aria-label={`${label} (available after generation)`}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-300 dark:text-zinc-700 cursor-not-allowed"
+              >
+                <Icon size={15} />
+              </button>
+            ))}
+            <span className="ml-1 inline-flex items-center gap-1.5 h-8 px-1.5 text-[11.5px] font-medium text-zinc-500 dark:text-zinc-400">
               <span className="relative inline-flex h-1.5 w-1.5">
                 <span className="absolute inset-0 rounded-full bg-emerald-500 opacity-70 animate-ping" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
               </span>
-              OpenLen Orchestra · auto-routing
+              Gemini 2.5 Pro
             </span>
           </div>
 
           <button
             type="button"
             onClick={submit}
-            disabled={!canSend || submitting}
+            disabled={!canSend || submitting || status === "loading"}
             className={cn(
               "inline-flex items-center justify-center gap-1.5 h-9 rounded-lg text-[13px] font-medium transition",
               canSend
-                ? "px-3.5 bg-coral-500 text-white hover:bg-coral-600 active:bg-coral-700 btn-coral-shadow"
+                ? "px-3.5 bg-coral-500 text-white hover:bg-coral-600 active:bg-coral-700 btn-coral-shadow disabled:opacity-80"
                 : "w-9 bg-zinc-100 dark:bg-zinc-900 text-zinc-400 dark:text-zinc-600 cursor-not-allowed",
             )}
             aria-label="Generate"
           >
-            {canSend ? (
+            {submitting ? (
+              <Loader2 size={15} className="animate-spin" />
+            ) : canSend ? (
               <>
                 <Sparkles size={14} /> Generate
                 <kbd className="ml-0.5 hidden sm:inline-flex items-center px-1 rounded text-[10px] font-mono bg-white/20 text-white/90">
@@ -142,20 +146,100 @@ export function HeroPromptInput() {
         <span className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400 font-semibold mr-1">
           Try
         </span>
-        {SUGGESTED_PROMPTS.map((p) => (
+        {QUICK_PROMPTS.map((p) => (
           <button
-            key={p}
+            key={p.label}
             type="button"
             onClick={() => {
-              setValue(p);
+              setValue(p.prompt);
               taRef.current?.focus();
             }}
             className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[12px] text-zinc-700 dark:text-zinc-300 ring-1 ring-zinc-200 dark:ring-zinc-800 bg-white/70 dark:bg-zinc-950/70 backdrop-blur hover:bg-white dark:hover:bg-zinc-900 hover:ring-zinc-300 dark:hover:ring-zinc-700 transition"
           >
             <Sparkles size={10} className="text-coral-500" />
-            {p}
+            {p.label}
           </button>
         ))}
+      </div>
+
+      {loginOpen && (
+        <SignInDialog next={target} onClose={() => setLoginOpen(false)} />
+      )}
+    </div>
+  );
+}
+
+// Shown when a signed-out visitor hits Generate. The brief rides along in
+// `next` so they land back in the workspace, generating, after auth.
+function SignInDialog({
+  next,
+  onClose,
+}: {
+  next: string;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [onClose]);
+
+  const q = `?next=${encodeURIComponent(next)}`;
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="signin-dialog-title"
+    >
+      <div
+        className="absolute inset-0 bg-zinc-950/55 backdrop-blur-sm"
+        onClick={onClose}
+        aria-hidden
+      />
+      <div className="relative w-full max-w-sm rounded-2xl bg-white dark:bg-zinc-950 ring-1 ring-zinc-200 dark:ring-zinc-800 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.5)] p-6 text-center">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute right-3 top-3 inline-flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 dark:hover:text-zinc-200 dark:hover:bg-zinc-900 transition"
+        >
+          <X size={15} />
+        </button>
+        <div className="mx-auto mb-3.5 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-coral-500/10 text-coral-600 dark:text-coral-400">
+          <Sparkles size={20} />
+        </div>
+        <h2
+          id="signin-dialog-title"
+          className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100"
+        >
+          Sign in to generate
+        </h2>
+        <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+          You need an account to build your page — it&apos;s free. Your prompt
+          is saved, so you pick up right where you left off.
+        </p>
+        <div className="mt-5 flex flex-col gap-2">
+          <a
+            href={`/register${q}`}
+            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-coral-500 text-white text-[13.5px] font-medium hover:bg-coral-600 active:bg-coral-700 btn-coral-shadow transition"
+          >
+            <Sparkles size={14} /> Create free account
+          </a>
+          <a
+            href={`/login${q}`}
+            className="inline-flex h-10 items-center justify-center rounded-lg ring-1 ring-zinc-200 dark:ring-zinc-800 text-[13.5px] font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition"
+          >
+            Log in
+          </a>
+        </div>
       </div>
     </div>
   );

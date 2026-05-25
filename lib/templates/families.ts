@@ -24,7 +24,18 @@ export type TemplateFamily =
   | "education"
   | "creator"
   | "open-source"
-  | "music";
+  | "music"
+  | "gaming"
+  | "local-services"
+  | "nonprofit"
+  | "wellness"
+  | "web3"
+  | "hardware"
+  | "podcast"
+  | "wedding"
+  | "travel"
+  | "food-beverage"
+  | "fashion";
 
 export type TemplateMode = "dark" | "light" | "cream";
 export type TemplateStatus = "draft" | "published" | "archived";
@@ -137,5 +148,60 @@ export const TEMPLATE_FAMILY_META: Record<
     label: "Music / Release",
     tagline:
       "Album and EP release pages — giant album art, tracklist, streaming badges, tour dates, press quotes, merch.",
+  },
+  gaming: {
+    label: "Gaming",
+    tagline:
+      "Indie game launches and studio home pages — cinematic key art, trailers, platform badges, wishlist counters, press quotes.",
+  },
+  "local-services": {
+    label: "Local Services",
+    tagline:
+      "Home-service businesses — plumbers, landscapers, cleaners, electricians, contractors. Service area, free-quote CTA, before/after, star reviews.",
+  },
+  nonprofit: {
+    label: "Nonprofit",
+    tagline:
+      "Cause and fundraising pages — mission hero, impact metrics, a working donation widget, transparency badges, beneficiary stories.",
+  },
+  wellness: {
+    label: "Wellness / Fitness",
+    tagline:
+      "Brick-and-mortar studios — yoga, strength gyms, pilates, climbing, day spas. Class schedules, membership tiers, instructor bios, intro offers.",
+  },
+  web3: {
+    label: "Web3 / Crypto",
+    tagline:
+      "Onchain protocols — L2 chains, DeFi, NFT marketplaces, DAO tooling, wallets. Contract addresses, TVL metrics, connect-wallet UI, audit badges.",
+  },
+  hardware: {
+    label: "Hardware",
+    tagline:
+      "Connected-device companies — robots, smart-home hubs, wearables, energy systems, drones. 3D product shots, spec tables, companion app, buy CTA.",
+  },
+  podcast: {
+    label: "Podcast",
+    tagline:
+      "Podcast show home pages — cover art, episode list, host bios, listen-on badges, transcripts. For interview, narrative, and culture shows.",
+  },
+  wedding: {
+    label: "Wedding",
+    tagline:
+      "A couple's wedding website — names + date hero, the story, the day-of schedule, venue + travel, RSVP, and registry.",
+  },
+  travel: {
+    label: "Travel & Tourism",
+    tagline:
+      "Tour operators, trip planners, and destination marketing. Day-by-day itineraries, departure dates, route maps, booking CTA.",
+  },
+  "food-beverage": {
+    label: "Food & Beverage",
+    tagline:
+      "Consumer F&B brands — coffee, craft drinks, chocolate, pantry staples, snacks. Brand story, the product range, ingredients, where to buy.",
+  },
+  fashion: {
+    label: "Fashion & Apparel",
+    tagline:
+      "Fashion labels and seasonal collections — lookbooks, drops, the brand's point of view, fabric + craft, stockists. Image-forward.",
   },
 };

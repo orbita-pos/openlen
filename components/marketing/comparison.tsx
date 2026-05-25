@@ -14,48 +14,48 @@ interface Row {
   values: CellValue[];
 }
 
-const cols = ["Price", "Quality gates", "Open source", "Your code", "Self-host"];
+const cols = ["Price", "Your code", "Open source", "Self-host", "Analytics"];
 
 const rows: Row[] = [
   {
     name: "OpenLen",
     us: true,
     values: [
-      { type: "price", v: "$19/mo" },
-      { type: "yes", note: "6 gates" },
+      { type: "price", v: "Free (alpha)" },
+      { type: "yes", note: "HTML" },
+      { type: "yes", note: "AGPLv3" },
       { type: "yes" },
-      { type: "yes" },
-      { type: "yes" },
+      { type: "yes", note: "Built-in" },
     ],
   },
   {
     name: "Lovable",
     values: [
-      { type: "price", v: "$220/mo", strike: true },
+      { type: "price", v: "$25-220/mo" },
+      { type: "partial", v: "Export" },
       { type: "no" },
       { type: "no" },
-      { type: "partial", v: "Export only" },
       { type: "no" },
     ],
   },
   {
     name: "Framer",
     values: [
-      { type: "price", v: "$30/mo" },
+      { type: "price", v: "$30+/mo" },
       { type: "no" },
       { type: "no" },
       { type: "no" },
-      { type: "no" },
+      { type: "partial", v: "Basic" },
     ],
   },
   {
-    name: "v0",
+    name: "Linktree",
     values: [
-      { type: "price", v: "$20/mo" },
+      { type: "price", v: "$4-24/mo" },
       { type: "no" },
       { type: "no" },
-      { type: "yes" },
-      { type: "partial", v: "Vercel only" },
+      { type: "no" },
+      { type: "partial", v: "Paid tier" },
     ],
   },
 ];
@@ -191,8 +191,9 @@ export function Comparison() {
         </div>
 
         <p className="mt-4 text-xs text-zinc-500 dark:text-zinc-400">
-          * Lovable price reflects their published &ldquo;Scale&rdquo; tier including
-          generation credits. Comparisons based on public pricing at the time of writing.
+          Pricing reflects public plans as of May 2026. Linktree included because
+          our 30 link-in-bio creator templates target the same audience —
+          difference is you own the HTML and the subdomain.
         </p>
       </div>
     </section>

@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generated": "2026-05-22T21:08:04.395Z",
-  "count": 230,
+  "generated": "2026-05-25T07:08:18.215Z",
+  "count": 406,
   "images": [
     {
       "id": "01-warm-glassy",
@@ -3450,6 +3450,2646 @@
         "hero": "https://images.openlen.com/231-wildflower-meadow-1920.webp",
         "tablet": "https://images.openlen.com/231-wildflower-meadow-800.webp",
         "thumb": "https://images.openlen.com/231-wildflower-meadow-400.webp"
+      }
+    },
+    {
+      "id": "232-glass-office-tower",
+      "promptNum": 232,
+      "style": "architecture-editorial",
+      "family": [
+        "real-estate",
+        "saas"
+      ],
+      "alt": "Editorial architecture photograph of a modern glass office tower with a sleek curtain-wall facade",
+      "src": {
+        "hero": "https://images.openlen.com/232-glass-office-tower-1920.webp",
+        "tablet": "https://images.openlen.com/232-glass-office-tower-800.webp",
+        "thumb": "https://images.openlen.com/232-glass-office-tower-400.webp"
+      }
+    },
+    {
+      "id": "233-concrete-house",
+      "promptNum": 233,
+      "style": "architecture-editorial",
+      "family": [
+        "real-estate",
+        "portfolio"
+      ],
+      "alt": "Editorial architecture photograph of a minimalist concrete house with clean geometric volumes",
+      "src": {
+        "hero": "https://images.openlen.com/233-concrete-house-1920.webp",
+        "tablet": "https://images.openlen.com/233-concrete-house-800.webp",
+        "thumb": "https://images.openlen.com/233-concrete-house-400.webp"
+      }
+    },
+    {
+      "id": "234-villa-with-pool",
+      "promptNum": 234,
+      "style": "architecture-editorial",
+      "family": [
+        "real-estate",
+        "hospitality"
+      ],
+      "alt": "Editorial architecture photograph of a modern villa with glass walls and a turquoise pool",
+      "src": {
+        "hero": "https://images.openlen.com/234-villa-with-pool-1920.webp",
+        "tablet": "https://images.openlen.com/234-villa-with-pool-800.webp",
+        "thumb": "https://images.openlen.com/234-villa-with-pool-400.webp"
+      }
+    },
+    {
+      "id": "235-brutalist-facade",
+      "promptNum": 235,
+      "style": "architecture-editorial",
+      "family": [
+        "agency",
+        "editorial"
+      ],
+      "alt": "Editorial architecture photograph of a brutalist building facade in bold raw concrete",
+      "src": {
+        "hero": "https://images.openlen.com/235-brutalist-facade-1920.webp",
+        "tablet": "https://images.openlen.com/235-brutalist-facade-800.webp",
+        "thumb": "https://images.openlen.com/235-brutalist-facade-400.webp"
+      }
+    },
+    {
+      "id": "236-wood-cabin",
+      "promptNum": 236,
+      "style": "architecture-editorial",
+      "family": [
+        "hospitality",
+        "travel"
+      ],
+      "alt": "Editorial architecture photograph of a Scandinavian timber cabin set among trees",
+      "src": {
+        "hero": "https://images.openlen.com/236-wood-cabin-1920.webp",
+        "tablet": "https://images.openlen.com/236-wood-cabin-800.webp",
+        "thumb": "https://images.openlen.com/236-wood-cabin-400.webp"
+      }
+    },
+    {
+      "id": "237-glass-house-dusk",
+      "promptNum": 237,
+      "style": "architecture-editorial",
+      "family": [
+        "real-estate",
+        "editorial"
+      ],
+      "alt": "Editorial architecture photograph of a glass-walled modern home glowing warm at dusk",
+      "src": {
+        "hero": "https://images.openlen.com/237-glass-house-dusk-1920.webp",
+        "tablet": "https://images.openlen.com/237-glass-house-dusk-800.webp",
+        "thumb": "https://images.openlen.com/237-glass-house-dusk-400.webp"
+      }
+    },
+    {
+      "id": "238-highrise-skyline",
+      "promptNum": 238,
+      "style": "architecture-editorial",
+      "family": [
+        "real-estate",
+        "fintech"
+      ],
+      "alt": "Editorial architecture photograph of an urban high-rise skyline of modern glass towers",
+      "src": {
+        "hero": "https://images.openlen.com/238-highrise-skyline-1920.webp",
+        "tablet": "https://images.openlen.com/238-highrise-skyline-800.webp",
+        "thumb": "https://images.openlen.com/238-highrise-skyline-400.webp"
+      }
+    },
+    {
+      "id": "239-mid-century-house",
+      "promptNum": 239,
+      "style": "architecture-editorial",
+      "family": [
+        "real-estate",
+        "portfolio"
+      ],
+      "alt": "Editorial architecture photograph of a mid-century modern house with warm wood and glass",
+      "src": {
+        "hero": "https://images.openlen.com/239-mid-century-house-1920.webp",
+        "tablet": "https://images.openlen.com/239-mid-century-house-800.webp",
+        "thumb": "https://images.openlen.com/239-mid-century-house-400.webp"
+      }
+    },
+    {
+      "id": "240-contemporary-museum",
+      "promptNum": 240,
+      "style": "architecture-editorial",
+      "family": [
+        "editorial",
+        "agency"
+      ],
+      "alt": "Editorial architecture photograph of a curved contemporary museum with a sculptural facade",
+      "src": {
+        "hero": "https://images.openlen.com/240-contemporary-museum-1920.webp",
+        "tablet": "https://images.openlen.com/240-contemporary-museum-800.webp",
+        "thumb": "https://images.openlen.com/240-contemporary-museum-400.webp"
+      }
+    },
+    {
+      "id": "241-coastal-house",
+      "promptNum": 241,
+      "style": "architecture-editorial",
+      "family": [
+        "real-estate",
+        "hospitality"
+      ],
+      "alt": "Editorial architecture photograph of a coastal modern house with white volumes over the sea",
+      "src": {
+        "hero": "https://images.openlen.com/241-coastal-house-1920.webp",
+        "tablet": "https://images.openlen.com/241-coastal-house-800.webp",
+        "thumb": "https://images.openlen.com/241-coastal-house-400.webp"
+      }
+    },
+    {
+      "id": "242-apartment-block",
+      "promptNum": 242,
+      "style": "architecture-editorial",
+      "family": [
+        "real-estate",
+        "commerce"
+      ],
+      "alt": "Editorial architecture photograph of a contemporary apartment block with a rhythmic balcony facade",
+      "src": {
+        "hero": "https://images.openlen.com/242-apartment-block-1920.webp",
+        "tablet": "https://images.openlen.com/242-apartment-block-800.webp",
+        "thumb": "https://images.openlen.com/242-apartment-block-400.webp"
+      }
+    },
+    {
+      "id": "243-modern-barn-house",
+      "promptNum": 243,
+      "style": "architecture-editorial",
+      "family": [
+        "hospitality",
+        "travel"
+      ],
+      "alt": "Editorial architecture photograph of a modern barn-style house in dark cladding in open countryside",
+      "src": {
+        "hero": "https://images.openlen.com/243-modern-barn-house-1920.webp",
+        "tablet": "https://images.openlen.com/243-modern-barn-house-800.webp",
+        "thumb": "https://images.openlen.com/243-modern-barn-house-400.webp"
+      }
+    },
+    {
+      "id": "244-black-timber-house",
+      "promptNum": 244,
+      "style": "architecture-editorial",
+      "family": [
+        "real-estate",
+        "portfolio"
+      ],
+      "alt": "Editorial architecture photograph of a black timber modern house framed by greenery",
+      "src": {
+        "hero": "https://images.openlen.com/244-black-timber-house-1920.webp",
+        "tablet": "https://images.openlen.com/244-black-timber-house-800.webp",
+        "thumb": "https://images.openlen.com/244-black-timber-house-400.webp"
+      }
+    },
+    {
+      "id": "245-rooftop-garden-building",
+      "promptNum": 245,
+      "style": "architecture-editorial",
+      "family": [
+        "real-estate",
+        "climate"
+      ],
+      "alt": "Editorial architecture photograph of a modern building with cascading rooftop garden terraces",
+      "src": {
+        "hero": "https://images.openlen.com/245-rooftop-garden-building-1920.webp",
+        "tablet": "https://images.openlen.com/245-rooftop-garden-building-800.webp",
+        "thumb": "https://images.openlen.com/245-rooftop-garden-building-400.webp"
+      }
+    },
+    {
+      "id": "246-white-pavilion",
+      "promptNum": 246,
+      "style": "architecture-editorial",
+      "family": [
+        "agency",
+        "editorial"
+      ],
+      "alt": "Editorial architecture photograph of a minimalist white pavilion with slender columns",
+      "src": {
+        "hero": "https://images.openlen.com/246-white-pavilion-1920.webp",
+        "tablet": "https://images.openlen.com/246-white-pavilion-800.webp",
+        "thumb": "https://images.openlen.com/246-white-pavilion-400.webp"
+      }
+    },
+    {
+      "id": "247-townhouse-row",
+      "promptNum": 247,
+      "style": "architecture-editorial",
+      "family": [
+        "real-estate",
+        "local-services"
+      ],
+      "alt": "Editorial architecture photograph of a row of modern townhouses with warm varied facades",
+      "src": {
+        "hero": "https://images.openlen.com/247-townhouse-row-1920.webp",
+        "tablet": "https://images.openlen.com/247-townhouse-row-800.webp",
+        "thumb": "https://images.openlen.com/247-townhouse-row-400.webp"
+      }
+    },
+    {
+      "id": "248-converted-loft-building",
+      "promptNum": 248,
+      "style": "architecture-editorial",
+      "family": [
+        "agency",
+        "creator"
+      ],
+      "alt": "Editorial architecture photograph of a converted industrial loft building with exposed brick",
+      "src": {
+        "hero": "https://images.openlen.com/248-converted-loft-building-1920.webp",
+        "tablet": "https://images.openlen.com/248-converted-loft-building-800.webp",
+        "thumb": "https://images.openlen.com/248-converted-loft-building-400.webp"
+      }
+    },
+    {
+      "id": "249-desert-house",
+      "promptNum": 249,
+      "style": "architecture-editorial",
+      "family": [
+        "real-estate",
+        "travel"
+      ],
+      "alt": "Editorial architecture photograph of a desert modern house in earth tones blending into sand",
+      "src": {
+        "hero": "https://images.openlen.com/249-desert-house-1920.webp",
+        "tablet": "https://images.openlen.com/249-desert-house-800.webp",
+        "thumb": "https://images.openlen.com/249-desert-house-400.webp"
+      }
+    },
+    {
+      "id": "250-spiral-staircase",
+      "promptNum": 250,
+      "style": "architecture-editorial",
+      "family": [
+        "editorial",
+        "portfolio"
+      ],
+      "alt": "Editorial architecture photograph of a sculptural exterior spiral staircase against a clean facade",
+      "src": {
+        "hero": "https://images.openlen.com/250-spiral-staircase-1920.webp",
+        "tablet": "https://images.openlen.com/250-spiral-staircase-800.webp",
+        "thumb": "https://images.openlen.com/250-spiral-staircase-400.webp"
+      }
+    },
+    {
+      "id": "251-hotel-facade",
+      "promptNum": 251,
+      "style": "architecture-editorial",
+      "family": [
+        "hospitality",
+        "travel"
+      ],
+      "alt": "Editorial architecture photograph of a modern boutique hotel facade with a refined entrance",
+      "src": {
+        "hero": "https://images.openlen.com/251-hotel-facade-1920.webp",
+        "tablet": "https://images.openlen.com/251-hotel-facade-800.webp",
+        "thumb": "https://images.openlen.com/251-hotel-facade-400.webp"
+      }
+    },
+    {
+      "id": "252-suburban-home",
+      "promptNum": 252,
+      "style": "architecture-editorial",
+      "family": [
+        "real-estate",
+        "local-services"
+      ],
+      "alt": "Editorial architecture photograph of a suburban modern family home with a tidy front garden",
+      "src": {
+        "hero": "https://images.openlen.com/252-suburban-home-1920.webp",
+        "tablet": "https://images.openlen.com/252-suburban-home-800.webp",
+        "thumb": "https://images.openlen.com/252-suburban-home-400.webp"
+      }
+    },
+    {
+      "id": "253-cantilever-house",
+      "promptNum": 253,
+      "style": "architecture-editorial",
+      "family": [
+        "real-estate",
+        "editorial"
+      ],
+      "alt": "Editorial architecture photograph of a modern cantilever house projecting over a sloped landscape",
+      "src": {
+        "hero": "https://images.openlen.com/253-cantilever-house-1920.webp",
+        "tablet": "https://images.openlen.com/253-cantilever-house-800.webp",
+        "thumb": "https://images.openlen.com/253-cantilever-house-400.webp"
+      }
+    },
+    {
+      "id": "254-campus-building",
+      "promptNum": 254,
+      "style": "architecture-editorial",
+      "family": [
+        "education",
+        "editorial"
+      ],
+      "alt": "Editorial architecture photograph of a modern campus building with rhythmic glazing",
+      "src": {
+        "hero": "https://images.openlen.com/254-campus-building-1920.webp",
+        "tablet": "https://images.openlen.com/254-campus-building-800.webp",
+        "thumb": "https://images.openlen.com/254-campus-building-400.webp"
+      }
+    },
+    {
+      "id": "255-night-facade",
+      "promptNum": 255,
+      "style": "architecture-editorial",
+      "family": [
+        "real-estate",
+        "agency"
+      ],
+      "alt": "Editorial architecture photograph of a modern building facade lit warm at night",
+      "src": {
+        "hero": "https://images.openlen.com/255-night-facade-1920.webp",
+        "tablet": "https://images.openlen.com/255-night-facade-800.webp",
+        "thumb": "https://images.openlen.com/255-night-facade-400.webp"
+      }
+    },
+    {
+      "id": "256-typing-on-laptop",
+      "promptNum": 256,
+      "style": "lifestyle-editorial",
+      "family": [
+        "saas",
+        "agency"
+      ],
+      "alt": "Editorial lifestyle photograph of hands typing on a slim laptop with a notebook and mug beside",
+      "src": {
+        "hero": "https://images.openlen.com/256-typing-on-laptop-1920.webp",
+        "tablet": "https://images.openlen.com/256-typing-on-laptop-800.webp",
+        "thumb": "https://images.openlen.com/256-typing-on-laptop-400.webp"
+      }
+    },
+    {
+      "id": "257-holding-mug",
+      "promptNum": 257,
+      "style": "lifestyle-editorial",
+      "family": [
+        "hospitality",
+        "creator"
+      ],
+      "alt": "Editorial lifestyle photograph of a hand wrapped around a warm ceramic mug with soft steam",
+      "src": {
+        "hero": "https://images.openlen.com/257-holding-mug-1920.webp",
+        "tablet": "https://images.openlen.com/257-holding-mug-800.webp",
+        "thumb": "https://images.openlen.com/257-holding-mug-400.webp"
+      }
+    },
+    {
+      "id": "258-writing-notebook",
+      "promptNum": 258,
+      "style": "lifestyle-editorial",
+      "family": [
+        "education",
+        "creator"
+      ],
+      "alt": "Editorial lifestyle photograph of hands writing in an open notebook with a fine pen",
+      "src": {
+        "hero": "https://images.openlen.com/258-writing-notebook-1920.webp",
+        "tablet": "https://images.openlen.com/258-writing-notebook-800.webp",
+        "thumb": "https://images.openlen.com/258-writing-notebook-400.webp"
+      }
+    },
+    {
+      "id": "259-unlocking-phone",
+      "promptNum": 259,
+      "style": "lifestyle-editorial",
+      "family": [
+        "saas",
+        "fintech"
+      ],
+      "alt": "Editorial lifestyle photograph of a hand holding a modern smartphone with a softly glowing screen",
+      "src": {
+        "hero": "https://images.openlen.com/259-unlocking-phone-1920.webp",
+        "tablet": "https://images.openlen.com/259-unlocking-phone-800.webp",
+        "thumb": "https://images.openlen.com/259-unlocking-phone-400.webp"
+      }
+    },
+    {
+      "id": "260-holding-book",
+      "promptNum": 260,
+      "style": "lifestyle-editorial",
+      "family": [
+        "education",
+        "editorial"
+      ],
+      "alt": "Editorial lifestyle photograph of hands holding an open paperback book in a warm interior",
+      "src": {
+        "hero": "https://images.openlen.com/260-holding-book-1920.webp",
+        "tablet": "https://images.openlen.com/260-holding-book-800.webp",
+        "thumb": "https://images.openlen.com/260-holding-book-400.webp"
+      }
+    },
+    {
+      "id": "261-cradling-tea",
+      "promptNum": 261,
+      "style": "lifestyle-editorial",
+      "family": [
+        "wellness",
+        "hospitality"
+      ],
+      "alt": "Editorial lifestyle photograph of both hands cradling a glass cup of herbal tea",
+      "src": {
+        "hero": "https://images.openlen.com/261-cradling-tea-1920.webp",
+        "tablet": "https://images.openlen.com/261-cradling-tea-800.webp",
+        "thumb": "https://images.openlen.com/261-cradling-tea-400.webp"
+      }
+    },
+    {
+      "id": "262-card-payment",
+      "promptNum": 262,
+      "style": "lifestyle-editorial",
+      "family": [
+        "fintech",
+        "commerce"
+      ],
+      "alt": "Editorial lifestyle photograph of a hand tapping a credit card on a modern payment terminal",
+      "src": {
+        "hero": "https://images.openlen.com/262-card-payment-1920.webp",
+        "tablet": "https://images.openlen.com/262-card-payment-800.webp",
+        "thumb": "https://images.openlen.com/262-card-payment-400.webp"
+      }
+    },
+    {
+      "id": "263-wrapping-parcel",
+      "promptNum": 263,
+      "style": "lifestyle-editorial",
+      "family": [
+        "ecommerce",
+        "commerce"
+      ],
+      "alt": "Editorial lifestyle photograph of hands tying twine around a kraft-paper parcel",
+      "src": {
+        "hero": "https://images.openlen.com/263-wrapping-parcel-1920.webp",
+        "tablet": "https://images.openlen.com/263-wrapping-parcel-800.webp",
+        "thumb": "https://images.openlen.com/263-wrapping-parcel-400.webp"
+      }
+    },
+    {
+      "id": "264-holding-camera",
+      "promptNum": 264,
+      "style": "lifestyle-editorial",
+      "family": [
+        "creator",
+        "portfolio"
+      ],
+      "alt": "Editorial lifestyle photograph of hands holding a small mirrorless camera at chest height",
+      "src": {
+        "hero": "https://images.openlen.com/264-holding-camera-1920.webp",
+        "tablet": "https://images.openlen.com/264-holding-camera-800.webp",
+        "thumb": "https://images.openlen.com/264-holding-camera-400.webp"
+      }
+    },
+    {
+      "id": "265-sketching-tablet",
+      "promptNum": 265,
+      "style": "lifestyle-editorial",
+      "family": [
+        "creator",
+        "agency"
+      ],
+      "alt": "Editorial lifestyle photograph of a hand drawing on a digital tablet with a stylus",
+      "src": {
+        "hero": "https://images.openlen.com/265-sketching-tablet-1920.webp",
+        "tablet": "https://images.openlen.com/265-sketching-tablet-800.webp",
+        "thumb": "https://images.openlen.com/265-sketching-tablet-400.webp"
+      }
+    },
+    {
+      "id": "266-pouring-coffee",
+      "promptNum": 266,
+      "style": "lifestyle-editorial",
+      "family": [
+        "hospitality",
+        "food-beverage"
+      ],
+      "alt": "Editorial lifestyle photograph of a hand pouring water from a gooseneck kettle into a pour-over",
+      "src": {
+        "hero": "https://images.openlen.com/266-pouring-coffee-1920.webp",
+        "tablet": "https://images.openlen.com/266-pouring-coffee-800.webp",
+        "thumb": "https://images.openlen.com/266-pouring-coffee-400.webp"
+      }
+    },
+    {
+      "id": "267-tying-running-shoe",
+      "promptNum": 267,
+      "style": "lifestyle-editorial",
+      "family": [
+        "wellness",
+        "health-tech"
+      ],
+      "alt": "Editorial lifestyle photograph of hands tying the laces of a modern running shoe",
+      "src": {
+        "hero": "https://images.openlen.com/267-tying-running-shoe-1920.webp",
+        "tablet": "https://images.openlen.com/267-tying-running-shoe-800.webp",
+        "thumb": "https://images.openlen.com/267-tying-running-shoe-400.webp"
+      }
+    },
+    {
+      "id": "268-hand-out-window",
+      "promptNum": 268,
+      "style": "lifestyle-editorial",
+      "family": [
+        "travel",
+        "editorial"
+      ],
+      "alt": "Editorial lifestyle photograph of a hand resting out of a moving car window in golden light",
+      "src": {
+        "hero": "https://images.openlen.com/268-hand-out-window-1920.webp",
+        "tablet": "https://images.openlen.com/268-hand-out-window-800.webp",
+        "thumb": "https://images.openlen.com/268-hand-out-window-400.webp"
+      }
+    },
+    {
+      "id": "269-kneading-dough",
+      "promptNum": 269,
+      "style": "lifestyle-editorial",
+      "family": [
+        "hospitality",
+        "food-beverage"
+      ],
+      "alt": "Editorial lifestyle photograph of hands kneading soft bread dough on a floured wooden board",
+      "src": {
+        "hero": "https://images.openlen.com/269-kneading-dough-1920.webp",
+        "tablet": "https://images.openlen.com/269-kneading-dough-800.webp",
+        "thumb": "https://images.openlen.com/269-kneading-dough-400.webp"
+      }
+    },
+    {
+      "id": "270-holding-bouquet",
+      "promptNum": 270,
+      "style": "lifestyle-editorial",
+      "family": [
+        "event",
+        "wedding"
+      ],
+      "alt": "Editorial lifestyle photograph of hands holding a soft seasonal bouquet of flowers",
+      "src": {
+        "hero": "https://images.openlen.com/270-holding-bouquet-1920.webp",
+        "tablet": "https://images.openlen.com/270-holding-bouquet-800.webp",
+        "thumb": "https://images.openlen.com/270-holding-bouquet-400.webp"
+      }
+    },
+    {
+      "id": "271-walking-behind",
+      "promptNum": 271,
+      "style": "lifestyle-editorial",
+      "family": [
+        "travel",
+        "fashion"
+      ],
+      "alt": "Editorial lifestyle photograph of a figure from behind walking down a quiet sunlit street",
+      "src": {
+        "hero": "https://images.openlen.com/271-walking-behind-1920.webp",
+        "tablet": "https://images.openlen.com/271-walking-behind-800.webp",
+        "thumb": "https://images.openlen.com/271-walking-behind-400.webp"
+      }
+    },
+    {
+      "id": "273-holding-passport",
+      "promptNum": 273,
+      "style": "lifestyle-editorial",
+      "family": [
+        "travel",
+        "editorial"
+      ],
+      "alt": "Editorial lifestyle photograph of hands holding an open passport over a wooden table",
+      "src": {
+        "hero": "https://images.openlen.com/273-holding-passport-1920.webp",
+        "tablet": "https://images.openlen.com/273-holding-passport-800.webp",
+        "thumb": "https://images.openlen.com/273-holding-passport-400.webp"
+      }
+    },
+    {
+      "id": "274-hand-on-synth",
+      "promptNum": 274,
+      "style": "lifestyle-editorial",
+      "family": [
+        "music",
+        "podcast"
+      ],
+      "alt": "Editorial lifestyle photograph of a hand pressing a key on a small modern synthesizer",
+      "src": {
+        "hero": "https://images.openlen.com/274-hand-on-synth-1920.webp",
+        "tablet": "https://images.openlen.com/274-hand-on-synth-800.webp",
+        "thumb": "https://images.openlen.com/274-hand-on-synth-400.webp"
+      }
+    },
+    {
+      "id": "275-pottery-wheel",
+      "promptNum": 275,
+      "style": "lifestyle-editorial",
+      "family": [
+        "creator",
+        "portfolio"
+      ],
+      "alt": "Editorial lifestyle photograph of hands shaping wet clay on a spinning pottery wheel",
+      "src": {
+        "hero": "https://images.openlen.com/275-pottery-wheel-1920.webp",
+        "tablet": "https://images.openlen.com/275-pottery-wheel-800.webp",
+        "thumb": "https://images.openlen.com/275-pottery-wheel-400.webp"
+      }
+    },
+    {
+      "id": "276-ribbon-gift-box",
+      "promptNum": 276,
+      "style": "lifestyle-editorial",
+      "family": [
+        "ecommerce",
+        "event"
+      ],
+      "alt": "Editorial lifestyle photograph of hands tying a soft fabric ribbon on a paper gift box",
+      "src": {
+        "hero": "https://images.openlen.com/276-ribbon-gift-box-1920.webp",
+        "tablet": "https://images.openlen.com/276-ribbon-gift-box-800.webp",
+        "thumb": "https://images.openlen.com/276-ribbon-gift-box-400.webp"
+      }
+    },
+    {
+      "id": "277-washing-vegetables",
+      "promptNum": 277,
+      "style": "lifestyle-editorial",
+      "family": [
+        "wellness",
+        "food-beverage"
+      ],
+      "alt": "Editorial lifestyle photograph of hands rinsing fresh vegetables under a clean stream of water",
+      "src": {
+        "hero": "https://images.openlen.com/277-washing-vegetables-1920.webp",
+        "tablet": "https://images.openlen.com/277-washing-vegetables-800.webp",
+        "thumb": "https://images.openlen.com/277-washing-vegetables-400.webp"
+      }
+    },
+    {
+      "id": "278-paint-brush-canvas",
+      "promptNum": 278,
+      "style": "lifestyle-editorial",
+      "family": [
+        "creator",
+        "agency"
+      ],
+      "alt": "Editorial lifestyle photograph of a hand holding a paint brush poised over a canvas",
+      "src": {
+        "hero": "https://images.openlen.com/278-paint-brush-canvas-1920.webp",
+        "tablet": "https://images.openlen.com/278-paint-brush-canvas-800.webp",
+        "thumb": "https://images.openlen.com/278-paint-brush-canvas-400.webp"
+      }
+    },
+    {
+      "id": "279-holding-magazine",
+      "promptNum": 279,
+      "style": "lifestyle-editorial",
+      "family": [
+        "editorial",
+        "fashion"
+      ],
+      "alt": "Editorial lifestyle photograph of hands holding an open magazine in a cozy interior",
+      "src": {
+        "hero": "https://images.openlen.com/279-holding-magazine-1920.webp",
+        "tablet": "https://images.openlen.com/279-holding-magazine-800.webp",
+        "thumb": "https://images.openlen.com/279-holding-magazine-400.webp"
+      }
+    },
+    {
+      "id": "272-cradling-houseplant",
+      "promptNum": 272,
+      "style": "lifestyle-editorial",
+      "family": [
+        "wellness",
+        "climate"
+      ],
+      "alt": "Editorial lifestyle photograph of hands gently cradling a small potted houseplant",
+      "src": {
+        "hero": "https://images.openlen.com/272-cradling-houseplant-1920.webp",
+        "tablet": "https://images.openlen.com/272-cradling-houseplant-800.webp",
+        "thumb": "https://images.openlen.com/272-cradling-houseplant-400.webp"
+      }
+    },
+    {
+      "id": "280-mesh-coral",
+      "promptNum": 280,
+      "style": "gradient-bg",
+      "family": [
+        "agency",
+        "creator"
+      ],
+      "alt": "Abstract soft mesh gradient background with coral, peach and warm pink blobs",
+      "src": {
+        "hero": "https://images.openlen.com/280-mesh-coral-1920.webp",
+        "tablet": "https://images.openlen.com/280-mesh-coral-800.webp",
+        "thumb": "https://images.openlen.com/280-mesh-coral-400.webp"
+      }
+    },
+    {
+      "id": "281-mesh-blue-violet",
+      "promptNum": 281,
+      "style": "gradient-bg",
+      "family": [
+        "saas",
+        "fintech"
+      ],
+      "alt": "Abstract soft mesh gradient background with deep blue, indigo and soft violet",
+      "src": {
+        "hero": "https://images.openlen.com/281-mesh-blue-violet-1920.webp",
+        "tablet": "https://images.openlen.com/281-mesh-blue-violet-800.webp",
+        "thumb": "https://images.openlen.com/281-mesh-blue-violet-400.webp"
+      }
+    },
+    {
+      "id": "282-mesh-peach-cream",
+      "promptNum": 282,
+      "style": "gradient-bg",
+      "family": [
+        "wellness",
+        "hospitality"
+      ],
+      "alt": "Abstract soft mesh gradient background with warm peach, cream and pale apricot",
+      "src": {
+        "hero": "https://images.openlen.com/282-mesh-peach-cream-1920.webp",
+        "tablet": "https://images.openlen.com/282-mesh-peach-cream-800.webp",
+        "thumb": "https://images.openlen.com/282-mesh-peach-cream-400.webp"
+      }
+    },
+    {
+      "id": "283-mesh-mint-sage",
+      "promptNum": 283,
+      "style": "gradient-bg",
+      "family": [
+        "wellness",
+        "climate"
+      ],
+      "alt": "Abstract soft mesh gradient background with mint, soft sage and pale aqua",
+      "src": {
+        "hero": "https://images.openlen.com/283-mesh-mint-sage-1920.webp",
+        "tablet": "https://images.openlen.com/283-mesh-mint-sage-800.webp",
+        "thumb": "https://images.openlen.com/283-mesh-mint-sage-400.webp"
+      }
+    },
+    {
+      "id": "284-mesh-sunset",
+      "promptNum": 284,
+      "style": "gradient-bg",
+      "family": [
+        "travel",
+        "editorial"
+      ],
+      "alt": "Abstract soft mesh gradient background evoking a hazy sunset of orange, rose and twilight blue",
+      "src": {
+        "hero": "https://images.openlen.com/284-mesh-sunset-1920.webp",
+        "tablet": "https://images.openlen.com/284-mesh-sunset-800.webp",
+        "thumb": "https://images.openlen.com/284-mesh-sunset-400.webp"
+      }
+    },
+    {
+      "id": "285-mesh-sky",
+      "promptNum": 285,
+      "style": "gradient-bg",
+      "family": [
+        "travel",
+        "saas"
+      ],
+      "alt": "Abstract soft mesh gradient background of pale sky blues",
+      "src": {
+        "hero": "https://images.openlen.com/285-mesh-sky-1920.webp",
+        "tablet": "https://images.openlen.com/285-mesh-sky-800.webp",
+        "thumb": "https://images.openlen.com/285-mesh-sky-400.webp"
+      }
+    },
+    {
+      "id": "286-mesh-lavender",
+      "promptNum": 286,
+      "style": "gradient-bg",
+      "family": [
+        "wellness",
+        "event"
+      ],
+      "alt": "Abstract soft mesh gradient background with soft lavender, dusty pink and pale cream",
+      "src": {
+        "hero": "https://images.openlen.com/286-mesh-lavender-1920.webp",
+        "tablet": "https://images.openlen.com/286-mesh-lavender-800.webp",
+        "thumb": "https://images.openlen.com/286-mesh-lavender-400.webp"
+      }
+    },
+    {
+      "id": "287-mesh-golden-amber",
+      "promptNum": 287,
+      "style": "gradient-bg",
+      "family": [
+        "hospitality",
+        "editorial"
+      ],
+      "alt": "Abstract soft mesh gradient background with golden amber, honey and soft cream",
+      "src": {
+        "hero": "https://images.openlen.com/287-mesh-golden-amber-1920.webp",
+        "tablet": "https://images.openlen.com/287-mesh-golden-amber-800.webp",
+        "thumb": "https://images.openlen.com/287-mesh-golden-amber-400.webp"
+      }
+    },
+    {
+      "id": "288-grain-warm",
+      "promptNum": 288,
+      "style": "gradient-bg",
+      "family": [
+        "editorial",
+        "agency"
+      ],
+      "alt": "Abstract warm-toned film-grain background in cream and dusty peach",
+      "src": {
+        "hero": "https://images.openlen.com/288-grain-warm-1920.webp",
+        "tablet": "https://images.openlen.com/288-grain-warm-800.webp",
+        "thumb": "https://images.openlen.com/288-grain-warm-400.webp"
+      }
+    },
+    {
+      "id": "289-grain-cool",
+      "promptNum": 289,
+      "style": "gradient-bg",
+      "family": [
+        "saas",
+        "agency"
+      ],
+      "alt": "Abstract cool-toned film-grain background in pale grey-blue and cool stone",
+      "src": {
+        "hero": "https://images.openlen.com/289-grain-cool-1920.webp",
+        "tablet": "https://images.openlen.com/289-grain-cool-800.webp",
+        "thumb": "https://images.openlen.com/289-grain-cool-400.webp"
+      }
+    },
+    {
+      "id": "290-grain-neutral",
+      "promptNum": 290,
+      "style": "gradient-bg",
+      "family": [
+        "portfolio",
+        "technical-minimal"
+      ],
+      "alt": "Abstract neutral-toned film-grain background in warm beige and pale taupe",
+      "src": {
+        "hero": "https://images.openlen.com/290-grain-neutral-1920.webp",
+        "tablet": "https://images.openlen.com/290-grain-neutral-800.webp",
+        "thumb": "https://images.openlen.com/290-grain-neutral-400.webp"
+      }
+    },
+    {
+      "id": "291-grain-pastel",
+      "promptNum": 291,
+      "style": "gradient-bg",
+      "family": [
+        "creator",
+        "agency"
+      ],
+      "alt": "Abstract pastel-toned film-grain background in pale mint, soft peach and pale lilac",
+      "src": {
+        "hero": "https://images.openlen.com/291-grain-pastel-1920.webp",
+        "tablet": "https://images.openlen.com/291-grain-pastel-800.webp",
+        "thumb": "https://images.openlen.com/291-grain-pastel-400.webp"
+      }
+    },
+    {
+      "id": "292-paper-soft",
+      "promptNum": 292,
+      "style": "gradient-bg",
+      "family": [
+        "editorial",
+        "education"
+      ],
+      "alt": "Photoreal soft paper texture background with fine fibers",
+      "src": {
+        "hero": "https://images.openlen.com/292-paper-soft-1920.webp",
+        "tablet": "https://images.openlen.com/292-paper-soft-800.webp",
+        "thumb": "https://images.openlen.com/292-paper-soft-400.webp"
+      }
+    },
+    {
+      "id": "293-kraft-texture",
+      "promptNum": 293,
+      "style": "gradient-bg",
+      "family": [
+        "ecommerce",
+        "commerce"
+      ],
+      "alt": "Photoreal kraft-paper texture background with visible fiber and warm brown tone",
+      "src": {
+        "hero": "https://images.openlen.com/293-kraft-texture-1920.webp",
+        "tablet": "https://images.openlen.com/293-kraft-texture-800.webp",
+        "thumb": "https://images.openlen.com/293-kraft-texture-400.webp"
+      }
+    },
+    {
+      "id": "294-linen-texture",
+      "promptNum": 294,
+      "style": "gradient-bg",
+      "family": [
+        "hospitality",
+        "fashion"
+      ],
+      "alt": "Photoreal linen fabric texture background with fine natural threads",
+      "src": {
+        "hero": "https://images.openlen.com/294-linen-texture-1920.webp",
+        "tablet": "https://images.openlen.com/294-linen-texture-800.webp",
+        "thumb": "https://images.openlen.com/294-linen-texture-400.webp"
+      }
+    },
+    {
+      "id": "295-marble-white",
+      "promptNum": 295,
+      "style": "gradient-bg",
+      "family": [
+        "editorial",
+        "commerce"
+      ],
+      "alt": "Photoreal white marble texture background with soft grey veining",
+      "src": {
+        "hero": "https://images.openlen.com/295-marble-white-1920.webp",
+        "tablet": "https://images.openlen.com/295-marble-white-800.webp",
+        "thumb": "https://images.openlen.com/295-marble-white-400.webp"
+      }
+    },
+    {
+      "id": "296-frosted-glass",
+      "promptNum": 296,
+      "style": "gradient-bg",
+      "family": [
+        "saas",
+        "fintech"
+      ],
+      "alt": "Photoreal frosted glass background with diffused cool light shapes",
+      "src": {
+        "hero": "https://images.openlen.com/296-frosted-glass-1920.webp",
+        "tablet": "https://images.openlen.com/296-frosted-glass-800.webp",
+        "thumb": "https://images.openlen.com/296-frosted-glass-400.webp"
+      }
+    },
+    {
+      "id": "297-brushed-metal",
+      "promptNum": 297,
+      "style": "gradient-bg",
+      "family": [
+        "hardware",
+        "technical-minimal"
+      ],
+      "alt": "Photoreal brushed-metal texture background with fine linear brush marks",
+      "src": {
+        "hero": "https://images.openlen.com/297-brushed-metal-1920.webp",
+        "tablet": "https://images.openlen.com/297-brushed-metal-800.webp",
+        "thumb": "https://images.openlen.com/297-brushed-metal-400.webp"
+      }
+    },
+    {
+      "id": "298-suede-texture",
+      "promptNum": 298,
+      "style": "gradient-bg",
+      "family": [
+        "fashion",
+        "ecommerce"
+      ],
+      "alt": "Photoreal soft suede fabric texture background with warm taupe nap",
+      "src": {
+        "hero": "https://images.openlen.com/298-suede-texture-1920.webp",
+        "tablet": "https://images.openlen.com/298-suede-texture-800.webp",
+        "thumb": "https://images.openlen.com/298-suede-texture-400.webp"
+      }
+    },
+    {
+      "id": "299-silk-fabric",
+      "promptNum": 299,
+      "style": "gradient-bg",
+      "family": [
+        "fashion",
+        "wedding"
+      ],
+      "alt": "Photoreal soft silk fabric texture background in champagne tones",
+      "src": {
+        "hero": "https://images.openlen.com/299-silk-fabric-1920.webp",
+        "tablet": "https://images.openlen.com/299-silk-fabric-800.webp",
+        "thumb": "https://images.openlen.com/299-silk-fabric-400.webp"
+      }
+    },
+    {
+      "id": "300-holographic",
+      "promptNum": 300,
+      "style": "gradient-bg",
+      "family": [
+        "creator",
+        "gaming"
+      ],
+      "alt": "Abstract holographic gradient background with iridescent pink, cyan, lavender and gold",
+      "src": {
+        "hero": "https://images.openlen.com/300-holographic-1920.webp",
+        "tablet": "https://images.openlen.com/300-holographic-800.webp",
+        "thumb": "https://images.openlen.com/300-holographic-400.webp"
+      }
+    },
+    {
+      "id": "301-oil-water",
+      "promptNum": 301,
+      "style": "gradient-bg",
+      "family": [
+        "editorial",
+        "music"
+      ],
+      "alt": "Abstract oil-on-water background with swirling teal, magenta and gold ripples",
+      "src": {
+        "hero": "https://images.openlen.com/301-oil-water-1920.webp",
+        "tablet": "https://images.openlen.com/301-oil-water-800.webp",
+        "thumb": "https://images.openlen.com/301-oil-water-400.webp"
+      }
+    },
+    {
+      "id": "302-bokeh-blur",
+      "promptNum": 302,
+      "style": "gradient-bg",
+      "family": [
+        "event",
+        "editorial"
+      ],
+      "alt": "Abstract bokeh background with warm amber out-of-focus light circles on a warm dark gradient",
+      "src": {
+        "hero": "https://images.openlen.com/302-bokeh-blur-1920.webp",
+        "tablet": "https://images.openlen.com/302-bokeh-blur-800.webp",
+        "thumb": "https://images.openlen.com/302-bokeh-blur-400.webp"
+      }
+    },
+    {
+      "id": "303-light-leak",
+      "promptNum": 303,
+      "style": "gradient-bg",
+      "family": [
+        "editorial",
+        "music"
+      ],
+      "alt": "Abstract analog light-leak background with soft orange and pink flares on a muted wash",
+      "src": {
+        "hero": "https://images.openlen.com/303-light-leak-1920.webp",
+        "tablet": "https://images.openlen.com/303-light-leak-800.webp",
+        "thumb": "https://images.openlen.com/303-light-leak-400.webp"
+      }
+    },
+    {
+      "id": "304-golden-retriever",
+      "promptNum": 304,
+      "style": "pet-editorial",
+      "family": [
+        "local-services",
+        "ecommerce"
+      ],
+      "alt": "Editorial pet photograph of a golden retriever sitting in warm outdoor light",
+      "src": {
+        "hero": "https://images.openlen.com/304-golden-retriever-1920.webp",
+        "tablet": "https://images.openlen.com/304-golden-retriever-800.webp",
+        "thumb": "https://images.openlen.com/304-golden-retriever-400.webp"
+      }
+    },
+    {
+      "id": "305-sleeping-kitten",
+      "promptNum": 305,
+      "style": "pet-editorial",
+      "family": [
+        "wellness",
+        "creator"
+      ],
+      "alt": "Editorial pet photograph of a small kitten curled asleep on a soft blanket",
+      "src": {
+        "hero": "https://images.openlen.com/305-sleeping-kitten-1920.webp",
+        "tablet": "https://images.openlen.com/305-sleeping-kitten-800.webp",
+        "thumb": "https://images.openlen.com/305-sleeping-kitten-400.webp"
+      }
+    },
+    {
+      "id": "306-tabby-cat-window",
+      "promptNum": 306,
+      "style": "pet-editorial",
+      "family": [
+        "editorial",
+        "creator"
+      ],
+      "alt": "Editorial pet photograph of a tabby cat on a sunny windowsill looking outside",
+      "src": {
+        "hero": "https://images.openlen.com/306-tabby-cat-window-1920.webp",
+        "tablet": "https://images.openlen.com/306-tabby-cat-window-800.webp",
+        "thumb": "https://images.openlen.com/306-tabby-cat-window-400.webp"
+      }
+    },
+    {
+      "id": "307-lab-on-hike",
+      "promptNum": 307,
+      "style": "pet-editorial",
+      "family": [
+        "travel",
+        "wellness"
+      ],
+      "alt": "Editorial pet photograph of a black labrador pausing on a forest trail",
+      "src": {
+        "hero": "https://images.openlen.com/307-lab-on-hike-1920.webp",
+        "tablet": "https://images.openlen.com/307-lab-on-hike-800.webp",
+        "thumb": "https://images.openlen.com/307-lab-on-hike-400.webp"
+      }
+    },
+    {
+      "id": "308-puppy-in-basket",
+      "promptNum": 308,
+      "style": "pet-editorial",
+      "family": [
+        "local-services",
+        "ecommerce"
+      ],
+      "alt": "Editorial pet photograph of a small puppy resting inside a woven basket",
+      "src": {
+        "hero": "https://images.openlen.com/308-puppy-in-basket-1920.webp",
+        "tablet": "https://images.openlen.com/308-puppy-in-basket-800.webp",
+        "thumb": "https://images.openlen.com/308-puppy-in-basket-400.webp"
+      }
+    },
+    {
+      "id": "309-cat-with-toy",
+      "promptNum": 309,
+      "style": "pet-editorial",
+      "family": [
+        "local-services",
+        "ecommerce"
+      ],
+      "alt": "Editorial pet photograph of a young cat mid-pounce on a soft toy",
+      "src": {
+        "hero": "https://images.openlen.com/309-cat-with-toy-1920.webp",
+        "tablet": "https://images.openlen.com/309-cat-with-toy-800.webp",
+        "thumb": "https://images.openlen.com/309-cat-with-toy-400.webp"
+      }
+    },
+    {
+      "id": "310-dog-agility",
+      "promptNum": 310,
+      "style": "pet-editorial",
+      "family": [
+        "health-tech",
+        "local-services"
+      ],
+      "alt": "Editorial pet photograph of a healthy dog mid-stride on an agility course",
+      "src": {
+        "hero": "https://images.openlen.com/310-dog-agility-1920.webp",
+        "tablet": "https://images.openlen.com/310-dog-agility-800.webp",
+        "thumb": "https://images.openlen.com/310-dog-agility-400.webp"
+      }
+    },
+    {
+      "id": "311-kittens-cuddling",
+      "promptNum": 311,
+      "style": "pet-editorial",
+      "family": [
+        "creator",
+        "nonprofit"
+      ],
+      "alt": "Editorial pet photograph of two small kittens curled up together asleep",
+      "src": {
+        "hero": "https://images.openlen.com/311-kittens-cuddling-1920.webp",
+        "tablet": "https://images.openlen.com/311-kittens-cuddling-800.webp",
+        "thumb": "https://images.openlen.com/311-kittens-cuddling-400.webp"
+      }
+    },
+    {
+      "id": "312-collie-running",
+      "promptNum": 312,
+      "style": "pet-editorial",
+      "family": [
+        "travel",
+        "wellness"
+      ],
+      "alt": "Editorial pet photograph of a border collie running across a green field",
+      "src": {
+        "hero": "https://images.openlen.com/312-collie-running-1920.webp",
+        "tablet": "https://images.openlen.com/312-collie-running-800.webp",
+        "thumb": "https://images.openlen.com/312-collie-running-400.webp"
+      }
+    },
+    {
+      "id": "313-white-horse",
+      "promptNum": 313,
+      "style": "pet-editorial",
+      "family": [
+        "travel",
+        "hospitality"
+      ],
+      "alt": "Editorial animal photograph of a white horse standing calmly in a green pasture",
+      "src": {
+        "hero": "https://images.openlen.com/313-white-horse-1920.webp",
+        "tablet": "https://images.openlen.com/313-white-horse-800.webp",
+        "thumb": "https://images.openlen.com/313-white-horse-400.webp"
+      }
+    },
+    {
+      "id": "314-brown-horse",
+      "promptNum": 314,
+      "style": "pet-editorial",
+      "family": [
+        "travel",
+        "editorial"
+      ],
+      "alt": "Editorial animal photograph of a brown horse's head in warm close-up",
+      "src": {
+        "hero": "https://images.openlen.com/314-brown-horse-1920.webp",
+        "tablet": "https://images.openlen.com/314-brown-horse-800.webp",
+        "thumb": "https://images.openlen.com/314-brown-horse-400.webp"
+      }
+    },
+    {
+      "id": "315-fox-autumn",
+      "promptNum": 315,
+      "style": "pet-editorial",
+      "family": [
+        "climate",
+        "editorial"
+      ],
+      "alt": "Editorial wildlife photograph of a red fox alert among autumn ferns",
+      "src": {
+        "hero": "https://images.openlen.com/315-fox-autumn-1920.webp",
+        "tablet": "https://images.openlen.com/315-fox-autumn-800.webp",
+        "thumb": "https://images.openlen.com/315-fox-autumn-400.webp"
+      }
+    },
+    {
+      "id": "316-deer-mist",
+      "promptNum": 316,
+      "style": "pet-editorial",
+      "family": [
+        "climate",
+        "travel"
+      ],
+      "alt": "Editorial wildlife photograph of a deer in a misty morning meadow",
+      "src": {
+        "hero": "https://images.openlen.com/316-deer-mist-1920.webp",
+        "tablet": "https://images.openlen.com/316-deer-mist-800.webp",
+        "thumb": "https://images.openlen.com/316-deer-mist-400.webp"
+      }
+    },
+    {
+      "id": "317-rabbit-closeup",
+      "promptNum": 317,
+      "style": "pet-editorial",
+      "family": [
+        "local-services",
+        "nonprofit"
+      ],
+      "alt": "Editorial pet photograph of a small rabbit in soft natural surroundings",
+      "src": {
+        "hero": "https://images.openlen.com/317-rabbit-closeup-1920.webp",
+        "tablet": "https://images.openlen.com/317-rabbit-closeup-800.webp",
+        "thumb": "https://images.openlen.com/317-rabbit-closeup-400.webp"
+      }
+    },
+    {
+      "id": "318-hummingbird-flight",
+      "promptNum": 318,
+      "style": "pet-editorial",
+      "family": [
+        "climate",
+        "editorial"
+      ],
+      "alt": "Editorial wildlife photograph of a hummingbird hovering at a bright flower",
+      "src": {
+        "hero": "https://images.openlen.com/318-hummingbird-flight-1920.webp",
+        "tablet": "https://images.openlen.com/318-hummingbird-flight-800.webp",
+        "thumb": "https://images.openlen.com/318-hummingbird-flight-400.webp"
+      }
+    },
+    {
+      "id": "319-owl-on-branch",
+      "promptNum": 319,
+      "style": "pet-editorial",
+      "family": [
+        "editorial",
+        "climate"
+      ],
+      "alt": "Editorial wildlife photograph of an owl perched on a mossy branch in a forest",
+      "src": {
+        "hero": "https://images.openlen.com/319-owl-on-branch-1920.webp",
+        "tablet": "https://images.openlen.com/319-owl-on-branch-800.webp",
+        "thumb": "https://images.openlen.com/319-owl-on-branch-400.webp"
+      }
+    },
+    {
+      "id": "320-whale-tail",
+      "promptNum": 320,
+      "style": "pet-editorial",
+      "family": [
+        "climate",
+        "travel"
+      ],
+      "alt": "Editorial wildlife photograph of a whale tail rising above a calm ocean surface",
+      "src": {
+        "hero": "https://images.openlen.com/320-whale-tail-1920.webp",
+        "tablet": "https://images.openlen.com/320-whale-tail-800.webp",
+        "thumb": "https://images.openlen.com/320-whale-tail-400.webp"
+      }
+    },
+    {
+      "id": "321-sea-otter",
+      "promptNum": 321,
+      "style": "pet-editorial",
+      "family": [
+        "climate",
+        "nonprofit"
+      ],
+      "alt": "Editorial wildlife photograph of a sea otter floating on its back on calm water",
+      "src": {
+        "hero": "https://images.openlen.com/321-sea-otter-1920.webp",
+        "tablet": "https://images.openlen.com/321-sea-otter-800.webp",
+        "thumb": "https://images.openlen.com/321-sea-otter-400.webp"
+      }
+    },
+    {
+      "id": "322-sheep-in-meadow",
+      "promptNum": 322,
+      "style": "pet-editorial",
+      "family": [
+        "hospitality",
+        "food-beverage"
+      ],
+      "alt": "Editorial animal photograph of a sheep standing in a soft green meadow",
+      "src": {
+        "hero": "https://images.openlen.com/322-sheep-in-meadow-1920.webp",
+        "tablet": "https://images.openlen.com/322-sheep-in-meadow-800.webp",
+        "thumb": "https://images.openlen.com/322-sheep-in-meadow-400.webp"
+      }
+    },
+    {
+      "id": "323-bee-on-flower",
+      "promptNum": 323,
+      "style": "pet-editorial",
+      "family": [
+        "climate",
+        "food-beverage"
+      ],
+      "alt": "Editorial wildlife macro of a bee on a soft blooming flower",
+      "src": {
+        "hero": "https://images.openlen.com/323-bee-on-flower-1920.webp",
+        "tablet": "https://images.openlen.com/323-bee-on-flower-800.webp",
+        "thumb": "https://images.openlen.com/323-bee-on-flower-400.webp"
+      }
+    },
+    {
+      "id": "324-tropical-fish",
+      "promptNum": 324,
+      "style": "pet-editorial",
+      "family": [
+        "climate",
+        "travel"
+      ],
+      "alt": "Editorial wildlife photograph of a vivid tropical fish above colorful coral",
+      "src": {
+        "hero": "https://images.openlen.com/324-tropical-fish-1920.webp",
+        "tablet": "https://images.openlen.com/324-tropical-fish-800.webp",
+        "thumb": "https://images.openlen.com/324-tropical-fish-400.webp"
+      }
+    },
+    {
+      "id": "325-eagle-in-flight",
+      "promptNum": 325,
+      "style": "pet-editorial",
+      "family": [
+        "travel",
+        "editorial"
+      ],
+      "alt": "Editorial wildlife photograph of an eagle in mid-flight against soft mountains",
+      "src": {
+        "hero": "https://images.openlen.com/325-eagle-in-flight-1920.webp",
+        "tablet": "https://images.openlen.com/325-eagle-in-flight-800.webp",
+        "thumb": "https://images.openlen.com/325-eagle-in-flight-400.webp"
+      }
+    },
+    {
+      "id": "326-dog-paw-on-hand",
+      "promptNum": 326,
+      "style": "pet-editorial",
+      "family": [
+        "local-services",
+        "nonprofit"
+      ],
+      "alt": "Editorial pet photograph of a dog's paw resting gently on a human hand",
+      "src": {
+        "hero": "https://images.openlen.com/326-dog-paw-on-hand-1920.webp",
+        "tablet": "https://images.openlen.com/326-dog-paw-on-hand-800.webp",
+        "thumb": "https://images.openlen.com/326-dog-paw-on-hand-400.webp"
+      }
+    },
+    {
+      "id": "327-cat-window-portrait",
+      "promptNum": 327,
+      "style": "pet-editorial",
+      "family": [
+        "editorial",
+        "creator"
+      ],
+      "alt": "Editorial pet photograph of a cat in soft window light",
+      "src": {
+        "hero": "https://images.openlen.com/327-cat-window-portrait-1920.webp",
+        "tablet": "https://images.openlen.com/327-cat-window-portrait-800.webp",
+        "thumb": "https://images.openlen.com/327-cat-window-portrait-400.webp"
+      }
+    },
+    {
+      "id": "328-stream-interface",
+      "promptNum": 328,
+      "style": "creator-mockup",
+      "family": [
+        "creator",
+        "music"
+      ],
+      "alt": "Device mockup of a wide monitor showing a live-stream interface with chat panel",
+      "src": {
+        "hero": "https://images.openlen.com/328-stream-interface-1920.webp",
+        "tablet": "https://images.openlen.com/328-stream-interface-800.webp",
+        "thumb": "https://images.openlen.com/328-stream-interface-400.webp"
+      }
+    },
+    {
+      "id": "329-youtube-thumbnail-grid",
+      "promptNum": 329,
+      "style": "creator-mockup",
+      "family": [
+        "creator",
+        "editorial"
+      ],
+      "alt": "Device mockup of a tablet showing a grid of video thumbnails",
+      "src": {
+        "hero": "https://images.openlen.com/329-youtube-thumbnail-grid-1920.webp",
+        "tablet": "https://images.openlen.com/329-youtube-thumbnail-grid-800.webp",
+        "thumb": "https://images.openlen.com/329-youtube-thumbnail-grid-400.webp"
+      }
+    },
+    {
+      "id": "330-tiktok-feed",
+      "promptNum": 330,
+      "style": "creator-mockup",
+      "family": [
+        "creator",
+        "fashion"
+      ],
+      "alt": "Device mockup of a smartphone showing a vertical short-video feed",
+      "src": {
+        "hero": "https://images.openlen.com/330-tiktok-feed-1920.webp",
+        "tablet": "https://images.openlen.com/330-tiktok-feed-800.webp",
+        "thumb": "https://images.openlen.com/330-tiktok-feed-400.webp"
+      }
+    },
+    {
+      "id": "331-reels-feed",
+      "promptNum": 331,
+      "style": "creator-mockup",
+      "family": [
+        "creator",
+        "fashion"
+      ],
+      "alt": "Device mockup of a smartphone showing a vertical reels-style feed",
+      "src": {
+        "hero": "https://images.openlen.com/331-reels-feed-1920.webp",
+        "tablet": "https://images.openlen.com/331-reels-feed-800.webp",
+        "thumb": "https://images.openlen.com/331-reels-feed-400.webp"
+      }
+    },
+    {
+      "id": "332-podcast-app",
+      "promptNum": 332,
+      "style": "creator-mockup",
+      "family": [
+        "podcast",
+        "music"
+      ],
+      "alt": "Device mockup of a smartphone showing a podcast now-playing screen",
+      "src": {
+        "hero": "https://images.openlen.com/332-podcast-app-1920.webp",
+        "tablet": "https://images.openlen.com/332-podcast-app-800.webp",
+        "thumb": "https://images.openlen.com/332-podcast-app-400.webp"
+      }
+    },
+    {
+      "id": "333-video-editor",
+      "promptNum": 333,
+      "style": "creator-mockup",
+      "family": [
+        "creator",
+        "agency"
+      ],
+      "alt": "Device mockup of a laptop showing a video-editing timeline workspace",
+      "src": {
+        "hero": "https://images.openlen.com/333-video-editor-1920.webp",
+        "tablet": "https://images.openlen.com/333-video-editor-800.webp",
+        "thumb": "https://images.openlen.com/333-video-editor-400.webp"
+      }
+    },
+    {
+      "id": "334-streaming-software",
+      "promptNum": 334,
+      "style": "creator-mockup",
+      "family": [
+        "creator",
+        "gaming"
+      ],
+      "alt": "Device mockup of a wide monitor showing a streaming control interface",
+      "src": {
+        "hero": "https://images.openlen.com/334-streaming-software-1920.webp",
+        "tablet": "https://images.openlen.com/334-streaming-software-800.webp",
+        "thumb": "https://images.openlen.com/334-streaming-software-400.webp"
+      }
+    },
+    {
+      "id": "335-podcast-cover-design",
+      "promptNum": 335,
+      "style": "creator-mockup",
+      "family": [
+        "podcast",
+        "creator"
+      ],
+      "alt": "Device mockup of a tablet showing a podcast cover-art design canvas",
+      "src": {
+        "hero": "https://images.openlen.com/335-podcast-cover-design-1920.webp",
+        "tablet": "https://images.openlen.com/335-podcast-cover-design-800.webp",
+        "thumb": "https://images.openlen.com/335-podcast-cover-design-400.webp"
+      }
+    },
+    {
+      "id": "336-link-in-bio",
+      "promptNum": 336,
+      "style": "creator-mockup",
+      "family": [
+        "creator",
+        "portfolio"
+      ],
+      "alt": "Device mockup of a smartphone showing a clean link-in-bio page",
+      "src": {
+        "hero": "https://images.openlen.com/336-link-in-bio-1920.webp",
+        "tablet": "https://images.openlen.com/336-link-in-bio-800.webp",
+        "thumb": "https://images.openlen.com/336-link-in-bio-400.webp"
+      }
+    },
+    {
+      "id": "337-stream-analytics",
+      "promptNum": 337,
+      "style": "creator-mockup",
+      "family": [
+        "creator",
+        "saas"
+      ],
+      "alt": "Device mockup of a laptop showing a streamer analytics dashboard",
+      "src": {
+        "hero": "https://images.openlen.com/337-stream-analytics-1920.webp",
+        "tablet": "https://images.openlen.com/337-stream-analytics-800.webp",
+        "thumb": "https://images.openlen.com/337-stream-analytics-400.webp"
+      }
+    },
+    {
+      "id": "338-youtube-channel-page",
+      "promptNum": 338,
+      "style": "creator-mockup",
+      "family": [
+        "creator",
+        "editorial"
+      ],
+      "alt": "Device mockup of a laptop showing a clean creator channel page",
+      "src": {
+        "hero": "https://images.openlen.com/338-youtube-channel-page-1920.webp",
+        "tablet": "https://images.openlen.com/338-youtube-channel-page-800.webp",
+        "thumb": "https://images.openlen.com/338-youtube-channel-page-400.webp"
+      }
+    },
+    {
+      "id": "339-spotify-podcast-list",
+      "promptNum": 339,
+      "style": "creator-mockup",
+      "family": [
+        "podcast",
+        "music"
+      ],
+      "alt": "Device mockup of a smartphone showing a podcast-discovery list",
+      "src": {
+        "hero": "https://images.openlen.com/339-spotify-podcast-list-1920.webp",
+        "tablet": "https://images.openlen.com/339-spotify-podcast-list-800.webp",
+        "thumb": "https://images.openlen.com/339-spotify-podcast-list-400.webp"
+      }
+    },
+    {
+      "id": "340-creator-profile",
+      "promptNum": 340,
+      "style": "creator-mockup",
+      "family": [
+        "creator",
+        "portfolio"
+      ],
+      "alt": "Device mockup of a smartphone showing a clean creator profile page",
+      "src": {
+        "hero": "https://images.openlen.com/340-creator-profile-1920.webp",
+        "tablet": "https://images.openlen.com/340-creator-profile-800.webp",
+        "thumb": "https://images.openlen.com/340-creator-profile-400.webp"
+      }
+    },
+    {
+      "id": "341-color-grading",
+      "promptNum": 341,
+      "style": "creator-mockup",
+      "family": [
+        "creator",
+        "agency"
+      ],
+      "alt": "Device mockup of a wide monitor showing a video color-grading workspace",
+      "src": {
+        "hero": "https://images.openlen.com/341-color-grading-1920.webp",
+        "tablet": "https://images.openlen.com/341-color-grading-800.webp",
+        "thumb": "https://images.openlen.com/341-color-grading-400.webp"
+      }
+    },
+    {
+      "id": "342-newsletter-editor",
+      "promptNum": 342,
+      "style": "creator-mockup",
+      "family": [
+        "creator",
+        "editorial"
+      ],
+      "alt": "Device mockup of a laptop showing a clean newsletter writing interface",
+      "src": {
+        "hero": "https://images.openlen.com/342-newsletter-editor-1920.webp",
+        "tablet": "https://images.openlen.com/342-newsletter-editor-800.webp",
+        "thumb": "https://images.openlen.com/342-newsletter-editor-400.webp"
+      }
+    },
+    {
+      "id": "343-course-player",
+      "promptNum": 343,
+      "style": "creator-mockup",
+      "family": [
+        "creator",
+        "education"
+      ],
+      "alt": "Device mockup of a laptop showing a clean online course player",
+      "src": {
+        "hero": "https://images.openlen.com/343-course-player-1920.webp",
+        "tablet": "https://images.openlen.com/343-course-player-800.webp",
+        "thumb": "https://images.openlen.com/343-course-player-400.webp"
+      }
+    },
+    {
+      "id": "344-brand-sketches",
+      "promptNum": 344,
+      "style": "creator-mockup",
+      "family": [
+        "creator",
+        "agency"
+      ],
+      "alt": "Device mockup of a tablet showing a creator-brand design canvas",
+      "src": {
+        "hero": "https://images.openlen.com/344-brand-sketches-1920.webp",
+        "tablet": "https://images.openlen.com/344-brand-sketches-800.webp",
+        "thumb": "https://images.openlen.com/344-brand-sketches-400.webp"
+      }
+    },
+    {
+      "id": "345-gaming-stream-layout",
+      "promptNum": 345,
+      "style": "creator-mockup",
+      "family": [
+        "gaming",
+        "creator"
+      ],
+      "alt": "Device mockup of a wide monitor showing a gaming-stream layout",
+      "src": {
+        "hero": "https://images.openlen.com/345-gaming-stream-layout-1920.webp",
+        "tablet": "https://images.openlen.com/345-gaming-stream-layout-800.webp",
+        "thumb": "https://images.openlen.com/345-gaming-stream-layout-400.webp"
+      }
+    },
+    {
+      "id": "346-follower-milestone",
+      "promptNum": 346,
+      "style": "creator-mockup",
+      "family": [
+        "creator",
+        "music"
+      ],
+      "alt": "Device mockup of a smartphone showing a follower-milestone celebration screen",
+      "src": {
+        "hero": "https://images.openlen.com/346-follower-milestone-1920.webp",
+        "tablet": "https://images.openlen.com/346-follower-milestone-800.webp",
+        "thumb": "https://images.openlen.com/346-follower-milestone-400.webp"
+      }
+    },
+    {
+      "id": "347-thumbnail-design",
+      "promptNum": 347,
+      "style": "creator-mockup",
+      "family": [
+        "creator",
+        "editorial"
+      ],
+      "alt": "Device mockup of a tablet showing a video-thumbnail design canvas",
+      "src": {
+        "hero": "https://images.openlen.com/347-thumbnail-design-1920.webp",
+        "tablet": "https://images.openlen.com/347-thumbnail-design-800.webp",
+        "thumb": "https://images.openlen.com/347-thumbnail-design-400.webp"
+      }
+    },
+    {
+      "id": "348-merch-store",
+      "promptNum": 348,
+      "style": "creator-mockup",
+      "family": [
+        "creator",
+        "ecommerce"
+      ],
+      "alt": "Device mockup of a laptop showing a clean creator merch store",
+      "src": {
+        "hero": "https://images.openlen.com/348-merch-store-1920.webp",
+        "tablet": "https://images.openlen.com/348-merch-store-800.webp",
+        "thumb": "https://images.openlen.com/348-merch-store-400.webp"
+      }
+    },
+    {
+      "id": "349-membership-tiers",
+      "promptNum": 349,
+      "style": "creator-mockup",
+      "family": [
+        "creator",
+        "music"
+      ],
+      "alt": "Device mockup of a laptop showing a clean creator membership page with tiers",
+      "src": {
+        "hero": "https://images.openlen.com/349-membership-tiers-1920.webp",
+        "tablet": "https://images.openlen.com/349-membership-tiers-800.webp",
+        "thumb": "https://images.openlen.com/349-membership-tiers-400.webp"
+      }
+    },
+    {
+      "id": "350-multicam-recording",
+      "promptNum": 350,
+      "style": "creator-mockup",
+      "family": [
+        "creator",
+        "music"
+      ],
+      "alt": "Device mockup of a wide monitor showing a multi-camera recording interface",
+      "src": {
+        "hero": "https://images.openlen.com/350-multicam-recording-1920.webp",
+        "tablet": "https://images.openlen.com/350-multicam-recording-800.webp",
+        "thumb": "https://images.openlen.com/350-multicam-recording-400.webp"
+      }
+    },
+    {
+      "id": "351-reels-editor",
+      "promptNum": 351,
+      "style": "creator-mockup",
+      "family": [
+        "creator",
+        "agency"
+      ],
+      "alt": "Device mockup of a smartphone showing a vertical short-video editing interface",
+      "src": {
+        "hero": "https://images.openlen.com/351-reels-editor-1920.webp",
+        "tablet": "https://images.openlen.com/351-reels-editor-800.webp",
+        "thumb": "https://images.openlen.com/351-reels-editor-400.webp"
+      }
+    },
+    {
+      "id": "352-runner-urban",
+      "promptNum": 352,
+      "style": "sports-editorial",
+      "family": [
+        "wellness",
+        "health-tech"
+      ],
+      "alt": "Editorial sports photograph of a runner mid-stride down a sunlit city street",
+      "src": {
+        "hero": "https://images.openlen.com/352-runner-urban-1920.webp",
+        "tablet": "https://images.openlen.com/352-runner-urban-800.webp",
+        "thumb": "https://images.openlen.com/352-runner-urban-400.webp"
+      }
+    },
+    {
+      "id": "353-runner-trail",
+      "promptNum": 353,
+      "style": "sports-editorial",
+      "family": [
+        "travel",
+        "wellness"
+      ],
+      "alt": "Editorial sports photograph of a trail runner mid-stride along a forest path",
+      "src": {
+        "hero": "https://images.openlen.com/353-runner-trail-1920.webp",
+        "tablet": "https://images.openlen.com/353-runner-trail-800.webp",
+        "thumb": "https://images.openlen.com/353-runner-trail-400.webp"
+      }
+    },
+    {
+      "id": "354-runner-beach",
+      "promptNum": 354,
+      "style": "sports-editorial",
+      "family": [
+        "wellness",
+        "travel"
+      ],
+      "alt": "Editorial sports photograph of a runner mid-stride on a beach at sunrise",
+      "src": {
+        "hero": "https://images.openlen.com/354-runner-beach-1920.webp",
+        "tablet": "https://images.openlen.com/354-runner-beach-800.webp",
+        "thumb": "https://images.openlen.com/354-runner-beach-400.webp"
+      }
+    },
+    {
+      "id": "355-cyclist-road",
+      "promptNum": 355,
+      "style": "sports-editorial",
+      "family": [
+        "wellness",
+        "travel"
+      ],
+      "alt": "Editorial sports photograph of a road cyclist mid-ride on a quiet open road",
+      "src": {
+        "hero": "https://images.openlen.com/355-cyclist-road-1920.webp",
+        "tablet": "https://images.openlen.com/355-cyclist-road-800.webp",
+        "thumb": "https://images.openlen.com/355-cyclist-road-400.webp"
+      }
+    },
+    {
+      "id": "356-cyclist-mountain",
+      "promptNum": 356,
+      "style": "sports-editorial",
+      "family": [
+        "travel",
+        "wellness"
+      ],
+      "alt": "Editorial sports photograph of a mountain cyclist mid-descent on a rocky trail",
+      "src": {
+        "hero": "https://images.openlen.com/356-cyclist-mountain-1920.webp",
+        "tablet": "https://images.openlen.com/356-cyclist-mountain-800.webp",
+        "thumb": "https://images.openlen.com/356-cyclist-mountain-400.webp"
+      }
+    },
+    {
+      "id": "357-yoga-pose",
+      "promptNum": 357,
+      "style": "sports-editorial",
+      "family": [
+        "wellness",
+        "health-tech"
+      ],
+      "alt": "Editorial sports photograph of a person holding a balanced yoga pose on a mat",
+      "src": {
+        "hero": "https://images.openlen.com/357-yoga-pose-1920.webp",
+        "tablet": "https://images.openlen.com/357-yoga-pose-800.webp",
+        "thumb": "https://images.openlen.com/357-yoga-pose-400.webp"
+      }
+    },
+    {
+      "id": "358-yoga-flow",
+      "promptNum": 358,
+      "style": "sports-editorial",
+      "family": [
+        "wellness",
+        "hospitality"
+      ],
+      "alt": "Editorial sports photograph of a person in flowing motion between yoga poses",
+      "src": {
+        "hero": "https://images.openlen.com/358-yoga-flow-1920.webp",
+        "tablet": "https://images.openlen.com/358-yoga-flow-800.webp",
+        "thumb": "https://images.openlen.com/358-yoga-flow-400.webp"
+      }
+    },
+    {
+      "id": "359-pilates-mat",
+      "promptNum": 359,
+      "style": "sports-editorial",
+      "family": [
+        "wellness",
+        "health-tech"
+      ],
+      "alt": "Editorial sports photograph of a person on a pilates mat in a clean studio",
+      "src": {
+        "hero": "https://images.openlen.com/359-pilates-mat-1920.webp",
+        "tablet": "https://images.openlen.com/359-pilates-mat-800.webp",
+        "thumb": "https://images.openlen.com/359-pilates-mat-400.webp"
+      }
+    },
+    {
+      "id": "360-surfer-wave",
+      "promptNum": 360,
+      "style": "sports-editorial",
+      "family": [
+        "travel",
+        "wellness"
+      ],
+      "alt": "Editorial sports photograph of a surfer mid-turn on a clean wave",
+      "src": {
+        "hero": "https://images.openlen.com/360-surfer-wave-1920.webp",
+        "tablet": "https://images.openlen.com/360-surfer-wave-800.webp",
+        "thumb": "https://images.openlen.com/360-surfer-wave-400.webp"
+      }
+    },
+    {
+      "id": "361-surfer-paddling",
+      "promptNum": 361,
+      "style": "sports-editorial",
+      "family": [
+        "travel",
+        "hospitality"
+      ],
+      "alt": "Editorial sports photograph of a surfer paddling out on calm morning water",
+      "src": {
+        "hero": "https://images.openlen.com/361-surfer-paddling-1920.webp",
+        "tablet": "https://images.openlen.com/361-surfer-paddling-800.webp",
+        "thumb": "https://images.openlen.com/361-surfer-paddling-400.webp"
+      }
+    },
+    {
+      "id": "362-rock-climber",
+      "promptNum": 362,
+      "style": "sports-editorial",
+      "family": [
+        "travel",
+        "wellness"
+      ],
+      "alt": "Editorial sports photograph of a rock climber mid-reach on a rugged cliff face",
+      "src": {
+        "hero": "https://images.openlen.com/362-rock-climber-1920.webp",
+        "tablet": "https://images.openlen.com/362-rock-climber-800.webp",
+        "thumb": "https://images.openlen.com/362-rock-climber-400.webp"
+      }
+    },
+    {
+      "id": "363-indoor-climber",
+      "promptNum": 363,
+      "style": "sports-editorial",
+      "family": [
+        "wellness",
+        "health-tech"
+      ],
+      "alt": "Editorial sports photograph of an indoor climber mid-move on a bouldering wall",
+      "src": {
+        "hero": "https://images.openlen.com/363-indoor-climber-1920.webp",
+        "tablet": "https://images.openlen.com/363-indoor-climber-800.webp",
+        "thumb": "https://images.openlen.com/363-indoor-climber-400.webp"
+      }
+    },
+    {
+      "id": "364-swimmer-pool",
+      "promptNum": 364,
+      "style": "sports-editorial",
+      "family": [
+        "wellness",
+        "health-tech"
+      ],
+      "alt": "Editorial sports photograph of a swimmer mid-stroke in a clean pool",
+      "src": {
+        "hero": "https://images.openlen.com/364-swimmer-pool-1920.webp",
+        "tablet": "https://images.openlen.com/364-swimmer-pool-800.webp",
+        "thumb": "https://images.openlen.com/364-swimmer-pool-400.webp"
+      }
+    },
+    {
+      "id": "365-weightlifter",
+      "promptNum": 365,
+      "style": "sports-editorial",
+      "family": [
+        "wellness",
+        "health-tech"
+      ],
+      "alt": "Editorial sports photograph of a person lifting a barbell in a modern gym",
+      "src": {
+        "hero": "https://images.openlen.com/365-weightlifter-1920.webp",
+        "tablet": "https://images.openlen.com/365-weightlifter-800.webp",
+        "thumb": "https://images.openlen.com/365-weightlifter-400.webp"
+      }
+    },
+    {
+      "id": "366-treadmill",
+      "promptNum": 366,
+      "style": "sports-editorial",
+      "family": [
+        "wellness",
+        "health-tech"
+      ],
+      "alt": "Editorial sports photograph of legs mid-stride on a modern treadmill",
+      "src": {
+        "hero": "https://images.openlen.com/366-treadmill-1920.webp",
+        "tablet": "https://images.openlen.com/366-treadmill-800.webp",
+        "thumb": "https://images.openlen.com/366-treadmill-400.webp"
+      }
+    },
+    {
+      "id": "367-boxing-bag",
+      "promptNum": 367,
+      "style": "sports-editorial",
+      "family": [
+        "wellness",
+        "health-tech"
+      ],
+      "alt": "Editorial sports photograph of a person mid-punch on a heavy boxing bag",
+      "src": {
+        "hero": "https://images.openlen.com/367-boxing-bag-1920.webp",
+        "tablet": "https://images.openlen.com/367-boxing-bag-800.webp",
+        "thumb": "https://images.openlen.com/367-boxing-bag-400.webp"
+      }
+    },
+    {
+      "id": "368-martial-arts",
+      "promptNum": 368,
+      "style": "sports-editorial",
+      "family": [
+        "wellness",
+        "education"
+      ],
+      "alt": "Editorial sports photograph of a person mid-kick in a clean dojo",
+      "src": {
+        "hero": "https://images.openlen.com/368-martial-arts-1920.webp",
+        "tablet": "https://images.openlen.com/368-martial-arts-800.webp",
+        "thumb": "https://images.openlen.com/368-martial-arts-400.webp"
+      }
+    },
+    {
+      "id": "369-basketball-shot",
+      "promptNum": 369,
+      "style": "sports-editorial",
+      "family": [
+        "event",
+        "wellness"
+      ],
+      "alt": "Editorial sports photograph of a basketball shot mid-flight toward the hoop",
+      "src": {
+        "hero": "https://images.openlen.com/369-basketball-shot-1920.webp",
+        "tablet": "https://images.openlen.com/369-basketball-shot-800.webp",
+        "thumb": "https://images.openlen.com/369-basketball-shot-400.webp"
+      }
+    },
+    {
+      "id": "370-soccer-ball",
+      "promptNum": 370,
+      "style": "sports-editorial",
+      "family": [
+        "event",
+        "wellness"
+      ],
+      "alt": "Editorial sports photograph of a soccer ball mid-kick on a sunlit grass field",
+      "src": {
+        "hero": "https://images.openlen.com/370-soccer-ball-1920.webp",
+        "tablet": "https://images.openlen.com/370-soccer-ball-800.webp",
+        "thumb": "https://images.openlen.com/370-soccer-ball-400.webp"
+      }
+    },
+    {
+      "id": "371-paddleboard",
+      "promptNum": 371,
+      "style": "sports-editorial",
+      "family": [
+        "travel",
+        "hospitality"
+      ],
+      "alt": "Editorial sports photograph of a paddleboarder gliding across calm morning water",
+      "src": {
+        "hero": "https://images.openlen.com/371-paddleboard-1920.webp",
+        "tablet": "https://images.openlen.com/371-paddleboard-800.webp",
+        "thumb": "https://images.openlen.com/371-paddleboard-400.webp"
+      }
+    },
+    {
+      "id": "372-kayak-river",
+      "promptNum": 372,
+      "style": "sports-editorial",
+      "family": [
+        "travel",
+        "wellness"
+      ],
+      "alt": "Editorial sports photograph of a kayaker paddling down a clear river",
+      "src": {
+        "hero": "https://images.openlen.com/372-kayak-river-1920.webp",
+        "tablet": "https://images.openlen.com/372-kayak-river-800.webp",
+        "thumb": "https://images.openlen.com/372-kayak-river-400.webp"
+      }
+    },
+    {
+      "id": "373-skier",
+      "promptNum": 373,
+      "style": "sports-editorial",
+      "family": [
+        "travel",
+        "event"
+      ],
+      "alt": "Editorial sports photograph of a skier mid-turn down a snowy alpine slope",
+      "src": {
+        "hero": "https://images.openlen.com/373-skier-1920.webp",
+        "tablet": "https://images.openlen.com/373-skier-800.webp",
+        "thumb": "https://images.openlen.com/373-skier-400.webp"
+      }
+    },
+    {
+      "id": "374-snowboarder",
+      "promptNum": 374,
+      "style": "sports-editorial",
+      "family": [
+        "travel",
+        "event"
+      ],
+      "alt": "Editorial sports photograph of a snowboarder mid-carve down a snowy slope",
+      "src": {
+        "hero": "https://images.openlen.com/374-snowboarder-1920.webp",
+        "tablet": "https://images.openlen.com/374-snowboarder-800.webp",
+        "thumb": "https://images.openlen.com/374-snowboarder-400.webp"
+      }
+    },
+    {
+      "id": "375-skateboarder",
+      "promptNum": 375,
+      "style": "sports-editorial",
+      "family": [
+        "creator",
+        "wellness"
+      ],
+      "alt": "Editorial sports photograph of a skateboarder mid-trick on a sunlit urban plaza",
+      "src": {
+        "hero": "https://images.openlen.com/375-skateboarder-1920.webp",
+        "tablet": "https://images.openlen.com/375-skateboarder-800.webp",
+        "thumb": "https://images.openlen.com/375-skateboarder-400.webp"
+      }
+    },
+    {
+      "id": "376-lume-lemon-lime",
+      "promptNum": 376,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "food-beverage"
+      ],
+      "alt": "Product still-life of a LUME lemon-lime beverage can with a lime-green band and citrus splash",
+      "src": {
+        "hero": "https://images.openlen.com/376-lume-lemon-lime-1920.webp",
+        "tablet": "https://images.openlen.com/376-lume-lemon-lime-800.webp",
+        "thumb": "https://images.openlen.com/376-lume-lemon-lime-400.webp"
+      }
+    },
+    {
+      "id": "377-lume-berry-blast",
+      "promptNum": 377,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "food-beverage"
+      ],
+      "alt": "Product still-life of a LUME berry-blast beverage can with a magenta band and mixed berries",
+      "src": {
+        "hero": "https://images.openlen.com/377-lume-berry-blast-1920.webp",
+        "tablet": "https://images.openlen.com/377-lume-berry-blast-800.webp",
+        "thumb": "https://images.openlen.com/377-lume-berry-blast-400.webp"
+      }
+    },
+    {
+      "id": "378-lume-tropical-mango",
+      "promptNum": 378,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "food-beverage"
+      ],
+      "alt": "Product still-life of a LUME tropical-mango beverage can with an orange band and mango",
+      "src": {
+        "hero": "https://images.openlen.com/378-lume-tropical-mango-1920.webp",
+        "tablet": "https://images.openlen.com/378-lume-tropical-mango-800.webp",
+        "thumb": "https://images.openlen.com/378-lume-tropical-mango-400.webp"
+      }
+    },
+    {
+      "id": "379-lume-watermelon-crush",
+      "promptNum": 379,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "food-beverage"
+      ],
+      "alt": "Product still-life of a LUME watermelon-crush beverage can with a coral band and watermelon",
+      "src": {
+        "hero": "https://images.openlen.com/379-lume-watermelon-crush-1920.webp",
+        "tablet": "https://images.openlen.com/379-lume-watermelon-crush-800.webp",
+        "thumb": "https://images.openlen.com/379-lume-watermelon-crush-400.webp"
+      }
+    },
+    {
+      "id": "380-lume-blue-raspberry",
+      "promptNum": 380,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "food-beverage"
+      ],
+      "alt": "Product still-life of a LUME blue-raspberry beverage can with an electric-blue band",
+      "src": {
+        "hero": "https://images.openlen.com/380-lume-blue-raspberry-1920.webp",
+        "tablet": "https://images.openlen.com/380-lume-blue-raspberry-800.webp",
+        "thumb": "https://images.openlen.com/380-lume-blue-raspberry-400.webp"
+      }
+    },
+    {
+      "id": "381-lume-peach-mint",
+      "promptNum": 381,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "food-beverage"
+      ],
+      "alt": "Product still-life of a LUME peach-mint beverage can with a soft-peach band and mint",
+      "src": {
+        "hero": "https://images.openlen.com/381-lume-peach-mint-1920.webp",
+        "tablet": "https://images.openlen.com/381-lume-peach-mint-800.webp",
+        "thumb": "https://images.openlen.com/381-lume-peach-mint-400.webp"
+      }
+    },
+    {
+      "id": "382-lume-grape-storm",
+      "promptNum": 382,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "food-beverage"
+      ],
+      "alt": "Product still-life of a LUME grape-storm beverage can with a deep-purple band and grapes",
+      "src": {
+        "hero": "https://images.openlen.com/382-lume-grape-storm-1920.webp",
+        "tablet": "https://images.openlen.com/382-lume-grape-storm-800.webp",
+        "thumb": "https://images.openlen.com/382-lume-grape-storm-400.webp"
+      }
+    },
+    {
+      "id": "383-lume-citrus-spark",
+      "promptNum": 383,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "food-beverage"
+      ],
+      "alt": "Product still-life of a LUME citrus-spark beverage can with a golden-yellow band and citrus",
+      "src": {
+        "hero": "https://images.openlen.com/383-lume-citrus-spark-1920.webp",
+        "tablet": "https://images.openlen.com/383-lume-citrus-spark-800.webp",
+        "thumb": "https://images.openlen.com/383-lume-citrus-spark-400.webp"
+      }
+    },
+    {
+      "id": "376-lume-lemon-lime-nobg",
+      "promptNum": 376,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "food-beverage"
+      ],
+      "alt": "Transparent cutout of a LUME lemon-lime beverage can — no background",
+      "src": {
+        "hero": "https://images.openlen.com/376-lume-lemon-lime-nobg-1920.webp",
+        "tablet": "https://images.openlen.com/376-lume-lemon-lime-nobg-800.webp",
+        "thumb": "https://images.openlen.com/376-lume-lemon-lime-nobg-400.webp"
+      }
+    },
+    {
+      "id": "377-lume-berry-blast-nobg",
+      "promptNum": 377,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "food-beverage"
+      ],
+      "alt": "Transparent cutout of a LUME berry-blast beverage can — no background",
+      "src": {
+        "hero": "https://images.openlen.com/377-lume-berry-blast-nobg-1920.webp",
+        "tablet": "https://images.openlen.com/377-lume-berry-blast-nobg-800.webp",
+        "thumb": "https://images.openlen.com/377-lume-berry-blast-nobg-400.webp"
+      }
+    },
+    {
+      "id": "378-lume-tropical-mango-nobg",
+      "promptNum": 378,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "food-beverage"
+      ],
+      "alt": "Transparent cutout of a LUME tropical-mango beverage can — no background",
+      "src": {
+        "hero": "https://images.openlen.com/378-lume-tropical-mango-nobg-1920.webp",
+        "tablet": "https://images.openlen.com/378-lume-tropical-mango-nobg-800.webp",
+        "thumb": "https://images.openlen.com/378-lume-tropical-mango-nobg-400.webp"
+      }
+    },
+    {
+      "id": "379-lume-watermelon-crush-nobg",
+      "promptNum": 379,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "food-beverage"
+      ],
+      "alt": "Transparent cutout of a LUME watermelon-crush beverage can — no background",
+      "src": {
+        "hero": "https://images.openlen.com/379-lume-watermelon-crush-nobg-1920.webp",
+        "tablet": "https://images.openlen.com/379-lume-watermelon-crush-nobg-800.webp",
+        "thumb": "https://images.openlen.com/379-lume-watermelon-crush-nobg-400.webp"
+      }
+    },
+    {
+      "id": "380-lume-blue-raspberry-nobg",
+      "promptNum": 380,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "food-beverage"
+      ],
+      "alt": "Transparent cutout of a LUME blue-raspberry beverage can — no background",
+      "src": {
+        "hero": "https://images.openlen.com/380-lume-blue-raspberry-nobg-1920.webp",
+        "tablet": "https://images.openlen.com/380-lume-blue-raspberry-nobg-800.webp",
+        "thumb": "https://images.openlen.com/380-lume-blue-raspberry-nobg-400.webp"
+      }
+    },
+    {
+      "id": "381-lume-peach-mint-nobg",
+      "promptNum": 381,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "food-beverage"
+      ],
+      "alt": "Transparent cutout of a LUME peach-mint beverage can — no background",
+      "src": {
+        "hero": "https://images.openlen.com/381-lume-peach-mint-nobg-1920.webp",
+        "tablet": "https://images.openlen.com/381-lume-peach-mint-nobg-800.webp",
+        "thumb": "https://images.openlen.com/381-lume-peach-mint-nobg-400.webp"
+      }
+    },
+    {
+      "id": "382-lume-grape-storm-nobg",
+      "promptNum": 382,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "food-beverage"
+      ],
+      "alt": "Transparent cutout of a LUME grape-storm beverage can — no background",
+      "src": {
+        "hero": "https://images.openlen.com/382-lume-grape-storm-nobg-1920.webp",
+        "tablet": "https://images.openlen.com/382-lume-grape-storm-nobg-800.webp",
+        "thumb": "https://images.openlen.com/382-lume-grape-storm-nobg-400.webp"
+      }
+    },
+    {
+      "id": "383-lume-citrus-spark-nobg",
+      "promptNum": 383,
+      "style": "product-still-life",
+      "family": [
+        "ecommerce",
+        "food-beverage"
+      ],
+      "alt": "Transparent cutout of a LUME citrus-spark beverage can — no background",
+      "src": {
+        "hero": "https://images.openlen.com/383-lume-citrus-spark-nobg-1920.webp",
+        "tablet": "https://images.openlen.com/383-lume-citrus-spark-nobg-800.webp",
+        "thumb": "https://images.openlen.com/383-lume-citrus-spark-nobg-400.webp"
+      }
+    },
+    {
+      "id": "392-japan-sakura-tree",
+      "promptNum": 392,
+      "style": "nature-editorial",
+      "family": [
+        "travel",
+        "editorial"
+      ],
+      "alt": "Editorial nighttime photograph of a glowing sakura tree on a dark hillside with falling petals",
+      "src": {
+        "hero": "https://images.openlen.com/392-japan-sakura-tree-1920.webp",
+        "tablet": "https://images.openlen.com/392-japan-sakura-tree-800.webp",
+        "thumb": "https://images.openlen.com/392-japan-sakura-tree-400.webp"
+      }
+    },
+    {
+      "id": "393-japan-fuji-twilight",
+      "promptNum": 393,
+      "style": "nature-editorial",
+      "family": [
+        "travel",
+        "editorial"
+      ],
+      "alt": "Editorial nighttime photograph of Mt Fuji silhouette mirrored in a dark lake with neon-pink twilight clouds",
+      "src": {
+        "hero": "https://images.openlen.com/393-japan-fuji-twilight-1920.webp",
+        "tablet": "https://images.openlen.com/393-japan-fuji-twilight-800.webp",
+        "thumb": "https://images.openlen.com/393-japan-fuji-twilight-400.webp"
+      }
+    },
+    {
+      "id": "394-japan-bamboo-forest",
+      "promptNum": 394,
+      "style": "nature-editorial",
+      "family": [
+        "travel",
+        "wellness"
+      ],
+      "alt": "Editorial nighttime photograph of a Kyoto bamboo forest with a golden beam of light through mist",
+      "src": {
+        "hero": "https://images.openlen.com/394-japan-bamboo-forest-1920.webp",
+        "tablet": "https://images.openlen.com/394-japan-bamboo-forest-800.webp",
+        "thumb": "https://images.openlen.com/394-japan-bamboo-forest-400.webp"
+      }
+    },
+    {
+      "id": "395-japan-tokyo-alley",
+      "promptNum": 395,
+      "style": "architecture-editorial",
+      "family": [
+        "travel",
+        "editorial"
+      ],
+      "alt": "Editorial nighttime photograph of a Tokyo back-alley wet with rain reflecting magenta neon signs",
+      "src": {
+        "hero": "https://images.openlen.com/395-japan-tokyo-alley-1920.webp",
+        "tablet": "https://images.openlen.com/395-japan-tokyo-alley-800.webp",
+        "thumb": "https://images.openlen.com/395-japan-tokyo-alley-400.webp"
+      }
+    },
+    {
+      "id": "396-japan-onsen-night",
+      "promptNum": 396,
+      "style": "nature-editorial",
+      "family": [
+        "hospitality",
+        "wellness"
+      ],
+      "alt": "Editorial nighttime photograph of an outdoor onsen with rising steam and a stone lantern",
+      "src": {
+        "hero": "https://images.openlen.com/396-japan-onsen-night-1920.webp",
+        "tablet": "https://images.openlen.com/396-japan-onsen-night-800.webp",
+        "thumb": "https://images.openlen.com/396-japan-onsen-night-400.webp"
+      }
+    },
+    {
+      "id": "397-japan-torii-gate",
+      "promptNum": 397,
+      "style": "architecture-editorial",
+      "family": [
+        "travel",
+        "editorial"
+      ],
+      "alt": "Editorial nighttime photograph of a traditional Japanese torii gate with falling sakura petals",
+      "src": {
+        "hero": "https://images.openlen.com/397-japan-torii-gate-1920.webp",
+        "tablet": "https://images.openlen.com/397-japan-torii-gate-800.webp",
+        "thumb": "https://images.openlen.com/397-japan-torii-gate-400.webp"
+      }
+    },
+    {
+      "id": "398-japan-ryokan-interior",
+      "promptNum": 398,
+      "style": "interior-editorial",
+      "family": [
+        "hospitality",
+        "travel"
+      ],
+      "alt": "Editorial nighttime photograph of a ryokan interior with shoji doors, andon lantern and tea on tatami",
+      "src": {
+        "hero": "https://images.openlen.com/398-japan-ryokan-interior-1920.webp",
+        "tablet": "https://images.openlen.com/398-japan-ryokan-interior-800.webp",
+        "thumb": "https://images.openlen.com/398-japan-ryokan-interior-400.webp"
+      }
+    },
+    {
+      "id": "399-japan-zen-garden",
+      "promptNum": 399,
+      "style": "nature-editorial",
+      "family": [
+        "wellness",
+        "hospitality"
+      ],
+      "alt": "Editorial overhead photograph of a zen rock garden with glowing pink mist between mossy stones",
+      "src": {
+        "hero": "https://images.openlen.com/399-japan-zen-garden-1920.webp",
+        "tablet": "https://images.openlen.com/399-japan-zen-garden-800.webp",
+        "thumb": "https://images.openlen.com/399-japan-zen-garden-400.webp"
+      }
+    },
+    {
+      "id": "400-worldcup-striker",
+      "promptNum": 400,
+      "style": "sports-editorial",
+      "family": [
+        "event",
+        "creator"
+      ],
+      "alt": "Editorial illustration of a footballer mid-strike in a black-and-red jersey with celebratory papel picado and confetti",
+      "src": {
+        "hero": "https://images.openlen.com/400-worldcup-striker-1920.webp",
+        "tablet": "https://images.openlen.com/400-worldcup-striker-800.webp",
+        "thumb": "https://images.openlen.com/400-worldcup-striker-400.webp"
+      }
+    },
+    {
+      "id": "401-worldcup-celebration",
+      "promptNum": 401,
+      "style": "sports-editorial",
+      "family": [
+        "event",
+        "creator"
+      ],
+      "alt": "Editorial illustration of a footballer in a SIUUU celebration pose with red, yellow and blue color blocks and confetti",
+      "src": {
+        "hero": "https://images.openlen.com/401-worldcup-celebration-1920.webp",
+        "tablet": "https://images.openlen.com/401-worldcup-celebration-800.webp",
+        "thumb": "https://images.openlen.com/401-worldcup-celebration-400.webp"
+      }
+    },
+    {
+      "id": "402-worldcup-captain",
+      "promptNum": 402,
+      "style": "sports-editorial",
+      "family": [
+        "event",
+        "creator"
+      ],
+      "alt": "Editorial illustration of a captain footballer dribbling in a sky-blue striped jersey with green and white color blocks",
+      "src": {
+        "hero": "https://images.openlen.com/402-worldcup-captain-1920.webp",
+        "tablet": "https://images.openlen.com/402-worldcup-captain-800.webp",
+        "thumb": "https://images.openlen.com/402-worldcup-captain-400.webp"
+      }
+    },
+    {
+      "id": "403-worldcup-sprint",
+      "promptNum": 403,
+      "style": "sports-editorial",
+      "family": [
+        "event",
+        "creator"
+      ],
+      "alt": "Editorial illustration of a tall footballer at full sprint in a royal-blue 10 jersey with red speed lines",
+      "src": {
+        "hero": "https://images.openlen.com/403-worldcup-sprint-1920.webp",
+        "tablet": "https://images.openlen.com/403-worldcup-sprint-800.webp",
+        "thumb": "https://images.openlen.com/403-worldcup-sprint-400.webp"
+      }
+    },
+    {
+      "id": "404-worldcup-goalkeeper",
+      "promptNum": 404,
+      "style": "sports-editorial",
+      "family": [
+        "event",
+        "creator"
+      ],
+      "alt": "Editorial illustration of a goalkeeper in mid-air horizontal dive with green-yellow jersey on a red and white backdrop",
+      "src": {
+        "hero": "https://images.openlen.com/404-worldcup-goalkeeper-1920.webp",
+        "tablet": "https://images.openlen.com/404-worldcup-goalkeeper-800.webp",
+        "thumb": "https://images.openlen.com/404-worldcup-goalkeeper-400.webp"
+      }
+    },
+    {
+      "id": "405-worldcup-trophy",
+      "promptNum": 405,
+      "style": "product-still-life",
+      "family": [
+        "event",
+        "ecommerce"
+      ],
+      "alt": "Editorial illustration of a gold trophy with a soccer ball at its base on a red, green and white color-blocked background",
+      "src": {
+        "hero": "https://images.openlen.com/405-worldcup-trophy-1920.webp",
+        "tablet": "https://images.openlen.com/405-worldcup-trophy-800.webp",
+        "thumb": "https://images.openlen.com/405-worldcup-trophy-400.webp"
+      }
+    },
+    {
+      "id": "406-worldcup-stadium",
+      "promptNum": 406,
+      "style": "architecture-editorial",
+      "family": [
+        "event",
+        "travel"
+      ],
+      "alt": "Editorial illustration of a packed modern football stadium with impressionist crowd brush strokes and floating confetti",
+      "src": {
+        "hero": "https://images.openlen.com/406-worldcup-stadium-1920.webp",
+        "tablet": "https://images.openlen.com/406-worldcup-stadium-800.webp",
+        "thumb": "https://images.openlen.com/406-worldcup-stadium-400.webp"
+      }
+    },
+    {
+      "id": "407-worldcup-skyline",
+      "promptNum": 407,
+      "style": "architecture-editorial",
+      "family": [
+        "event",
+        "travel"
+      ],
+      "alt": "Editorial illustration of the NYC Manhattan skyline silhouette against a vibrant orange-red sunset with painterly clouds",
+      "src": {
+        "hero": "https://images.openlen.com/407-worldcup-skyline-1920.webp",
+        "tablet": "https://images.openlen.com/407-worldcup-skyline-800.webp",
+        "thumb": "https://images.openlen.com/407-worldcup-skyline-400.webp"
       }
     }
   ]

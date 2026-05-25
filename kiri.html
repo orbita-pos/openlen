@@ -1,0 +1,984 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Kiri — Private Journeys Through Japan</title>
+<meta name="description" content="Boutique Japan-travel concierge. Private itineraries through Japan — sakura week, Kyoto temples, winter onsen, Hokkaido wilderness. No groups. No tourist trails." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..500;1,9..144,300..400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg: #000000;
+  --bg-alt: #050505;
+  --bg-card: #0a0a0a;
+  --accent-pink: #E94B82;
+  --accent-orange: #FF7A45;
+  --text: #F5F1EA;
+  --muted: #8C8579;
+  --faint: #5C574F;
+  --hairline: rgba(255,255,255,0.06);
+  --hairline-strong: rgba(255,255,255,0.12);
+}
+* { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+html, body { background: var(--bg); color: var(--text); }
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-feature-settings: "ss01", "cv11";
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+::selection { background: var(--accent-pink); color: var(--text); }
+
+.font-display { font-family: 'Fraunces', Georgia, 'Times New Roman', serif; }
+.font-mono-x { font-family: 'JetBrains Mono', monospace; }
+.tabular { font-variant-numeric: tabular-nums; }
+.text-base-color { color: var(--text); }
+.text-muted { color: var(--muted); }
+.text-faint { color: var(--faint); }
+.text-pink { color: var(--accent-pink); }
+.text-orange { color: var(--accent-orange); }
+.bg-pink { background: var(--accent-pink); }
+.bg-card { background: var(--bg-card); }
+.bg-alt { background: var(--bg-alt); }
+
+.dot-grid {
+  background-image: radial-gradient(rgba(255,255,255,0.045) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+.hairline { border-color: var(--hairline); }
+.hairline-b { border-bottom: 1px solid var(--hairline); }
+.hairline-t { border-top: 1px solid var(--hairline); }
+
+.eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 0.14em;
+  color: var(--muted); text-transform: uppercase;
+  font-weight: 500;
+}
+.eyebrow-faint {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; letter-spacing: 0.18em;
+  color: var(--faint); text-transform: uppercase;
+}
+
+.serif-display {
+  font-family: 'Fraunces', Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.035em;
+  line-height: 0.95;
+  font-variation-settings: "SOFT" 50;
+}
+.serif-italic {
+  font-style: italic;
+  font-weight: 300;
+}
+
+.btn-pill {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.85rem 1.6rem; border-radius: 9999px;
+  background: var(--text); color: #0a0a0a;
+  font-weight: 500; font-size: 14px;
+  letter-spacing: -0.005em;
+  transition: all 220ms ease;
+  white-space: nowrap;
+  cursor: pointer; border: none;
+}
+.btn-pill:hover {
+  background: var(--accent-pink); color: var(--text);
+  box-shadow: 0 0 40px rgba(233, 75, 130, 0.45), 0 0 16px rgba(255, 122, 69, 0.25);
+}
+.btn-pill-sm { padding: 0.55rem 1.15rem; font-size: 13px; }
+.btn-outline {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.85rem 1.6rem; border-radius: 9999px;
+  background: transparent; color: var(--text);
+  border: 1px solid var(--hairline-strong);
+  font-weight: 500; font-size: 14px;
+  transition: all 220ms ease;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.btn-outline:hover {
+  border-color: var(--text);
+  background: rgba(245,241,234,0.04);
+}
+.btn-outline-sm { padding: 0.55rem 1.15rem; font-size: 13px; }
+
+.lift-card {
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+.lift-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(233, 75, 130, 0.32);
+  box-shadow: 0 8px 40px rgba(233, 75, 130, 0.08), 0 2px 12px rgba(255, 122, 69, 0.06);
+}
+
+details summary { list-style: none; cursor: pointer; }
+details summary::-webkit-details-marker { display: none; }
+.faq-plus { transition: transform 240ms ease, color 240ms ease; display: inline-block; }
+details[open] .faq-plus { transform: rotate(45deg); color: var(--accent-pink); }
+details[open] .faq-title { color: var(--text); }
+
+.input-underline {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--hairline-strong);
+  color: var(--text);
+  padding: 1rem 0;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  width: 100%;
+  outline: none;
+  transition: border-color 220ms ease;
+}
+.input-underline::placeholder { color: var(--faint); }
+.input-underline:focus { border-bottom-color: var(--accent-pink); }
+textarea.input-underline { resize: vertical; min-height: 110px; line-height: 1.55; padding-top: 0.5rem; }
+.field-label {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--faint);
+  text-transform: uppercase;
+}
+
+.bg-img { background-size: cover; background-position: center; background-repeat: no-repeat; }
+.fade-l { background: linear-gradient(to right, #000 0%, rgba(0,0,0,0.55) 32%, transparent 72%); }
+.fade-t { background: linear-gradient(to bottom, #000 0%, rgba(0,0,0,0.3) 35%, transparent 70%); }
+.fade-vignette { background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.4) 75%, #000 100%); }
+.banner-glow::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 100%, rgba(233, 75, 130, 0.22) 0%, transparent 65%),
+              radial-gradient(ellipse at 80% 20%, rgba(255, 122, 69, 0.14) 0%, transparent 55%);
+  pointer-events: none;
+  z-index: 1;
+}
+.aspect-banner { aspect-ratio: 21 / 9; }
+@media (max-width: 768px) {
+  .aspect-banner { aspect-ratio: 4 / 5; }
+  .serif-display { letter-spacing: -0.025em; }
+}
+
+.feature-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 44px;
+  color: var(--faint);
+  letter-spacing: -0.02em;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 1.75rem;
+}
+.feature-num::after {
+  content: '';
+  display: inline-block;
+  width: 44px;
+  height: 1px;
+  background: var(--hairline-strong);
+  margin-left: 0.85rem;
+}
+
+.icon-square {
+  width: 36px; height: 36px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 8px;
+  color: var(--accent-pink);
+  flex-shrink: 0;
+  background: rgba(233, 75, 130, 0.04);
+}
+.avatar-blur {
+  width: 44px; height: 44px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+.avatar-blur::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(0,0,0,0.35) 0%, transparent 65%);
+}
+
+.subtle-glow-pink { box-shadow: 0 0 60px rgba(233, 75, 130, 0.1); }
+.subtle-glow-orange { box-shadow: 0 0 60px rgba(255, 122, 69, 0.08); }
+
+.body-prose { color: var(--muted); line-height: 1.65; font-size: 15px; }
+.body-prose-lg { color: var(--muted); line-height: 1.65; font-size: 18px; }
+
+.stat-row {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--faint);
+  letter-spacing: 0.05em;
+  line-height: 1.7;
+}
+
+.social-ico {
+  width: 36px; height: 36px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--hairline);
+  border-radius: 9999px;
+  color: var(--muted);
+  transition: all 200ms ease;
+}
+.social-ico:hover { color: var(--accent-pink); border-color: var(--accent-pink); }
+
+.cinema-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px;
+}
+.cinema-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 2;
+}
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 1. STICKY NAV -->
+<!-- ════════════════════════════════════════════ -->
+<header class="sticky top-0 z-50 backdrop-blur-md bg-black/75 hairline-b">
+  <nav class="max-w-[1440px] mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
+    <a href="#" class="flex items-baseline gap-1">
+      <span class="font-display text-[26px] tracking-tight leading-none">KIRI</span>
+      <span class="font-mono-x text-[9px] text-faint translate-y-[-12px]">™</span>
+    </a>
+    <ul class="hidden lg:flex items-center gap-9 text-[14px] text-muted">
+      <li><a href="#journeys" class="hover:text-base-color transition-colors">Journeys</a></li>
+      <li><a href="#regions" class="hover:text-base-color transition-colors">Regions</a></li>
+      <li><a href="#stay" class="hover:text-base-color transition-colors">Stay</a></li>
+      <li><a href="#stories" class="hover:text-base-color transition-colors">Stories</a></li>
+      <li><a href="#contact" class="hover:text-base-color transition-colors">Contact</a></li>
+    </ul>
+    <div class="flex items-center gap-5">
+      <a href="#" class="hidden sm:inline text-[14px] text-muted hover:text-base-color transition-colors">Sign in</a>
+      <a href="#contact" class="btn-pill btn-pill-sm">Plan your trip</a>
+    </div>
+  </nav>
+</header>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 2. HERO -->
+<!-- ════════════════════════════════════════════ -->
+<section class="relative overflow-hidden dot-grid">
+  <div class="grid lg:grid-cols-[60%_40%]">
+    <div class="relative z-10 px-6 lg:px-16 py-20 lg:py-28 flex flex-col justify-center min-h-[580px] lg:min-h-[92vh]">
+      <p class="eyebrow mb-8">— Private Journeys Through Japan, Curated Since 2018</p>
+      <h1 class="serif-display text-[58px] sm:text-[80px] lg:text-[108px] xl:text-[124px] mb-10">
+        The Japan you<br/>
+        <span class="serif-italic">imagine,</span> made real.
+      </h1>
+      <p class="body-prose-lg max-w-[560px] mb-12">
+        We design private itineraries through Japan &mdash; from Kyoto's hidden temples to Hokkaido wilderness, from sakura week to deep winter onsen. No groups. No tourist trails.
+      </p>
+      <div class="flex flex-wrap items-center gap-4">
+        <a href="#contact" class="btn-pill">Plan your trip <span aria-hidden="true">→</span></a>
+        <a href="#journeys" class="btn-outline">See our journeys</a>
+      </div>
+    </div>
+    <div class="relative h-[480px] lg:h-auto lg:min-h-[92vh]">
+      <div class="absolute inset-0 bg-img" style="background-image: url('https://images.openlen.com/392-japan-sakura-tree-1920.webp')"></div>
+      <div class="absolute inset-y-0 left-0 w-32 lg:w-56 fade-l hidden lg:block"></div>
+      <div class="absolute inset-x-0 top-0 h-40 fade-t lg:hidden"></div>
+      <div class="absolute bottom-6 right-6 eyebrow-faint z-10">Maruyama Park · Kyoto · April</div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 3. STATS STRIP -->
+<!-- ════════════════════════════════════════════ -->
+<section class="hairline-t hairline-b">
+  <div class="max-w-[1440px] mx-auto grid grid-cols-2 lg:grid-cols-4">
+    <div class="px-6 lg:px-12 py-12 lg:py-20 lg:border-r lg:border-white/[0.06]">
+      <div class="font-display text-[54px] lg:text-[68px] tabular tracking-tight leading-none mb-3">12</div>
+      <div class="eyebrow">Regions / journeyed</div>
+    </div>
+    <div class="px-6 lg:px-12 py-12 lg:py-20 lg:border-r lg:border-white/[0.06]">
+      <div class="font-display text-[54px] lg:text-[68px] tabular tracking-tight leading-none mb-3">7</div>
+      <div class="eyebrow">Years / curating</div>
+    </div>
+    <div class="px-6 lg:px-12 py-12 lg:py-20 lg:border-r lg:border-white/[0.06] border-t border-white/[0.06] lg:border-t-0">
+      <div class="font-display text-[54px] lg:text-[68px] tabular tracking-tight leading-none mb-3">2,100<span class="text-pink">+</span></div>
+      <div class="eyebrow">Travelers / hosted</div>
+    </div>
+    <div class="px-6 lg:px-12 py-12 lg:py-20 border-t border-white/[0.06] lg:border-t-0">
+      <div class="font-display text-[54px] lg:text-[68px] tabular tracking-tight leading-none mb-3">5.0</div>
+      <div class="eyebrow">Rating / verified guests</div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 4. SIX EXPERIENCES — numbered features -->
+<!-- ════════════════════════════════════════════ -->
+<section id="journeys" class="py-24 lg:py-36">
+  <div class="max-w-[1440px] mx-auto px-6 lg:px-16">
+    <div class="text-center mb-20 lg:mb-28">
+      <p class="eyebrow mb-5">— What We Curate</p>
+      <h2 class="serif-display text-[44px] lg:text-[80px] max-w-4xl mx-auto">
+        Six experiences,<br/>
+        woven <span class="serif-italic">together.</span>
+      </h2>
+    </div>
+
+    <div class="space-y-28 lg:space-y-40">
+
+      <!-- 01 SAKURA SEASON — image right -->
+      <div class="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+        <div>
+          <div class="feature-num">01</div>
+          <h3 class="serif-display text-[36px] lg:text-[52px] mb-6 leading-[1.02]">
+            Sakura season.<br/>
+            <span class="serif-italic text-muted">Chasing cherry blossom waves.</span>
+          </h3>
+          <p class="body-prose-lg mb-8 max-w-[480px]">
+            Cherry blossom isn't a single weekend &mdash; it's a wave that climbs from Kyushu to Hokkaido over five weeks. We track the front in real time and reroute as it moves, so you land in petals, not in the days just past them.
+          </p>
+          <div class="hairline-t pt-6 flex items-baseline gap-4">
+            <span class="font-display text-[44px] tabular tracking-tight leading-none">5</span>
+            <span class="eyebrow">Weeks / late March – early May</span>
+          </div>
+        </div>
+        <div class="cinema-card aspect-[4/5] lg:aspect-[5/6] subtle-glow-pink">
+          <div class="absolute inset-0 bg-img" style="background-image: url('https://images.openlen.com/392-japan-sakura-tree-1920.webp')"></div>
+          <div class="absolute inset-0 fade-vignette opacity-50"></div>
+        </div>
+      </div>
+
+      <!-- 02 KYOTO TEMPLES — image left -->
+      <div class="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+        <div class="lg:order-2">
+          <div class="feature-num">02</div>
+          <h3 class="serif-display text-[36px] lg:text-[52px] mb-6 leading-[1.02]">
+            Kyoto temples.<br/>
+            <span class="serif-italic text-muted">Past the tourist trails.</span>
+          </h3>
+          <p class="body-prose-lg mb-8 max-w-[480px]">
+            Twenty-seven temples we know intimately &mdash; moss gardens at dawn before the busloads, abbots who'll receive your party for tea, sub-temples that don't open to the public except through introduction.
+          </p>
+          <div class="hairline-t pt-6 flex items-baseline gap-4">
+            <span class="font-display text-[44px] tabular tracking-tight leading-none">27</span>
+            <span class="eyebrow">Temples / hand-curated</span>
+          </div>
+        </div>
+        <div class="lg:order-1 cinema-card aspect-[4/5] lg:aspect-[5/6] subtle-glow-pink">
+          <div class="absolute inset-0 bg-img" style="background-image: url('https://images.openlen.com/394-japan-bamboo-forest-1920.webp')"></div>
+          <div class="absolute inset-0 fade-vignette opacity-50"></div>
+        </div>
+      </div>
+
+      <!-- 03 ONSEN WEEKENDS — image right -->
+      <div class="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+        <div>
+          <div class="feature-num">03</div>
+          <h3 class="serif-display text-[36px] lg:text-[52px] mb-6 leading-[1.02]">
+            Onsen weekends.<br/>
+            <span class="serif-italic text-muted">Winter steam, mountain ryokan.</span>
+          </h3>
+          <p class="body-prose-lg mb-8 max-w-[480px]">
+            Snow on cedar branches, an outdoor bath at minus four, a tatami room kept warm by a kotatsu. The ryokan we use are family-run &mdash; often a single building hidden in a valley. No marble, no conference traffic, no English signage.
+          </p>
+          <div class="hairline-t pt-6 flex items-baseline gap-4">
+            <span class="font-display text-[44px] tabular tracking-tight leading-none">12</span>
+            <span class="eyebrow">Ryokan / personally vetted</span>
+          </div>
+        </div>
+        <div class="cinema-card aspect-[4/5] lg:aspect-[5/6] subtle-glow-orange">
+          <div class="absolute inset-0 bg-img" style="background-image: url('https://images.openlen.com/396-japan-onsen-night-1920.webp')"></div>
+          <div class="absolute inset-0 fade-vignette opacity-50"></div>
+        </div>
+      </div>
+
+      <!-- 04 TOKYO NIGHTS — image left -->
+      <div class="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+        <div class="lg:order-2">
+          <div class="feature-num">04</div>
+          <h3 class="serif-display text-[36px] lg:text-[52px] mb-6 leading-[1.02]">
+            Tokyo nights.<br/>
+            <span class="serif-italic text-muted">Contemporary culture, izakaya, design.</span>
+          </h3>
+          <p class="body-prose-lg mb-8 max-w-[480px]">
+            The Tokyo most visitors never reach &mdash; a basement bar in Yoyogi that seats eleven, a designer's atelier in Daikanyama, a Shibuya record store run by a former NHK engineer. Forty-plus venues, all on our private list.
+          </p>
+          <div class="hairline-t pt-6 flex items-baseline gap-4">
+            <span class="font-display text-[44px] tabular tracking-tight leading-none">40<span class="text-pink">+</span></span>
+            <span class="eyebrow">Venues / private access</span>
+          </div>
+        </div>
+        <div class="lg:order-1 cinema-card aspect-[4/5] lg:aspect-[5/6] subtle-glow-pink">
+          <div class="absolute inset-0 bg-img" style="background-image: url('https://images.openlen.com/395-japan-tokyo-alley-1920.webp')"></div>
+          <div class="absolute inset-0 fade-vignette opacity-50"></div>
+        </div>
+      </div>
+
+      <!-- 05 WAGYU + OMAKASE — image right -->
+      <div class="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+        <div>
+          <div class="feature-num">05</div>
+          <h3 class="serif-display text-[36px] lg:text-[52px] mb-6 leading-[1.02]">
+            Wagyu &amp; omakase.<br/>
+            <span class="serif-italic text-muted">Japan through its food.</span>
+          </h3>
+          <p class="body-prose-lg mb-8 max-w-[480px]">
+            Eight omakase counters we hold standing relationships with &mdash; chefs whose tables don't take English-language reservations and don't appear on aggregators. From a six-seat sushi room in Ginza to a kaiseki master in rural Yamanashi.
+          </p>
+          <div class="hairline-t pt-6 flex items-baseline gap-4">
+            <span class="font-display text-[44px] tabular tracking-tight leading-none">8</span>
+            <span class="eyebrow">Omakase counters / by reservation only</span>
+          </div>
+        </div>
+        <div class="cinema-card aspect-[4/5] lg:aspect-[5/6] subtle-glow-orange">
+          <div class="absolute inset-0 bg-img" style="background-image: url('https://images.openlen.com/398-japan-ryokan-interior-1920.webp')"></div>
+          <div class="absolute inset-0 fade-vignette opacity-50"></div>
+        </div>
+      </div>
+
+      <!-- 06 HOKKAIDO ESCAPES — image left -->
+      <div class="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+        <div class="lg:order-2">
+          <div class="feature-num">06</div>
+          <h3 class="serif-display text-[36px] lg:text-[52px] mb-6 leading-[1.02]">
+            Hokkaido escapes.<br/>
+            <span class="serif-italic text-muted">Northern wilderness, lavender to snow.</span>
+          </h3>
+          <p class="body-prose-lg mb-8 max-w-[480px]">
+            Japan's wild north &mdash; Niseko powder in February, Furano lavender in July, the indigenous Ainu villages of Akan in early autumn. Two distinct seasons, two completely different country journeys.
+          </p>
+          <div class="hairline-t pt-6 flex items-baseline gap-4">
+            <span class="font-display text-[44px] tabular tracking-tight leading-none">2</span>
+            <span class="eyebrow">Seasons / summer + powder</span>
+          </div>
+        </div>
+        <div class="lg:order-1 cinema-card aspect-[4/5] lg:aspect-[5/6] subtle-glow-pink">
+          <div class="absolute inset-0 bg-img" style="background-image: url('https://images.openlen.com/399-japan-zen-garden-1920.webp')"></div>
+          <div class="absolute inset-0 fade-vignette opacity-50"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 5. FULL-BLEED BANNER — Mt Fuji -->
+<!-- ════════════════════════════════════════════ -->
+<section class="relative w-full overflow-hidden">
+  <div class="relative aspect-banner banner-glow">
+    <div class="absolute inset-0 bg-img" style="background-image: url('https://images.openlen.com/393-japan-fuji-twilight-1920.webp')"></div>
+    <div class="absolute inset-0 fade-vignette opacity-55"></div>
+    <div class="absolute inset-0 flex items-center justify-center px-6 z-10">
+      <p class="serif-display text-[32px] sm:text-[48px] lg:text-[56px] text-center max-w-4xl leading-[1.1]">
+        Some places you photograph.<br/>
+        <span class="serif-italic text-muted">Others you feel.</span>
+      </p>
+    </div>
+    <div class="absolute bottom-5 right-5 eyebrow-faint z-10">Mt. Fuji · Lake Kawaguchiko · March</div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 6. SIGNATURE JOURNEYS — 3 cards -->
+<!-- ════════════════════════════════════════════ -->
+<section id="regions" class="py-24 lg:py-36">
+  <div class="max-w-[1440px] mx-auto px-6 lg:px-16">
+    <div class="mb-16 lg:mb-20 flex items-end justify-between flex-wrap gap-8">
+      <div>
+        <p class="eyebrow mb-5">— Signature Journeys</p>
+        <h2 class="serif-display text-[44px] lg:text-[72px] max-w-2xl">
+          Three ways<br/>
+          to <span class="serif-italic">begin.</span>
+        </h2>
+      </div>
+      <a href="#" class="btn-outline">View all 18 journeys <span aria-hidden="true">→</span></a>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-6 lg:gap-8">
+
+      <!-- Journey 01: Kyoto + Hakone -->
+      <a href="#" class="group lift-card bg-card border border-white/[0.06] rounded-sm overflow-hidden flex flex-col">
+        <div class="relative aspect-[4/3] overflow-hidden">
+          <div class="absolute inset-0 bg-img transition-transform duration-700 group-hover:scale-[1.04]" style="background-image: url('https://images.openlen.com/397-japan-torii-gate-1920.webp')"></div>
+          <div class="absolute inset-0 fade-t opacity-30"></div>
+        </div>
+        <div class="p-7 lg:p-8 flex flex-col gap-5 flex-1">
+          <p class="eyebrow">Journey 01</p>
+          <h3 class="serif-display text-[26px] lg:text-[30px] leading-tight">The Kyoto + Hakone Loop</h3>
+          <p class="body-prose">
+            Kyoto temples to Hakone onsen, with a private viewing of Mt. Fuji from a wood-fired bath. Slow, contemplative, deeply traditional.
+          </p>
+          <div class="mt-auto hairline-t pt-5 stat-row tabular">
+            10 nights · April · 2 travelers<br/>
+            <span class="text-base-color">from $14,800 / person</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Journey 02: Sakura Across the Spine -->
+      <a href="#" class="group lift-card bg-card border border-white/[0.06] rounded-sm overflow-hidden flex flex-col">
+        <div class="relative aspect-[4/3] overflow-hidden">
+          <div class="absolute inset-0 bg-img transition-transform duration-700 group-hover:scale-[1.04]" style="background-image: url('https://images.openlen.com/398-japan-ryokan-interior-1920.webp')"></div>
+          <div class="absolute inset-0 fade-t opacity-30"></div>
+        </div>
+        <div class="p-7 lg:p-8 flex flex-col gap-5 flex-1">
+          <p class="eyebrow">Journey 02</p>
+          <h3 class="serif-display text-[26px] lg:text-[30px] leading-tight">Sakura Across the Spine</h3>
+          <p class="body-prose">
+            Cherry blossom chasing from Tokyo down through Kyoto and Hiroshima, calibrated to the bloom forecast week by week.
+          </p>
+          <div class="mt-auto hairline-t pt-5 stat-row tabular">
+            14 nights · late March · 2 travelers<br/>
+            <span class="text-base-color">from $19,400 / person</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Journey 03: Winter & Wagyu -->
+      <a href="#" class="group lift-card bg-card border border-white/[0.06] rounded-sm overflow-hidden flex flex-col">
+        <div class="relative aspect-[4/3] overflow-hidden">
+          <div class="absolute inset-0 bg-img transition-transform duration-700 group-hover:scale-[1.04]" style="background-image: url('https://images.openlen.com/396-japan-onsen-night-1920.webp')"></div>
+          <div class="absolute inset-0 fade-t opacity-30"></div>
+        </div>
+        <div class="p-7 lg:p-8 flex flex-col gap-5 flex-1">
+          <p class="eyebrow">Journey 03</p>
+          <h3 class="serif-display text-[26px] lg:text-[30px] leading-tight">Winter &amp; Wagyu</h3>
+          <p class="body-prose">
+            Tokyo culinary nights, Hakuba powder skiing, and a private Kobe wagyu omakase to close. For travelers who want both edges of Japan in one trip.
+          </p>
+          <div class="mt-auto hairline-t pt-5 stat-row tabular">
+            12 nights · January · 2 travelers<br/>
+            <span class="text-base-color">from $22,100 / person</span>
+          </div>
+        </div>
+      </a>
+
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 7. FULL-BLEED BANNER — Bamboo -->
+<!-- ════════════════════════════════════════════ -->
+<section class="relative w-full overflow-hidden">
+  <div class="relative aspect-banner banner-glow">
+    <div class="absolute inset-0 bg-img" style="background-image: url('https://images.openlen.com/394-japan-bamboo-forest-1920.webp')"></div>
+    <div class="absolute inset-0 fade-vignette opacity-60"></div>
+    <div class="absolute inset-0 flex flex-col items-center justify-center px-6 text-center z-10">
+      <p class="eyebrow mb-6">— Traveler, Berlin · 2026</p>
+      <p class="serif-display text-[28px] sm:text-[40px] lg:text-[52px] max-w-4xl leading-[1.15]">
+        &ldquo;We didn't see Japan.<br/>
+        Japan <span class="serif-italic">met us</span> where we were.&rdquo;
+      </p>
+    </div>
+    <div class="absolute bottom-5 right-5 eyebrow-faint z-10">Arashiyama · Kyoto · November</div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 8. WHAT'S INCLUDED — The Kiri Difference -->
+<!-- ════════════════════════════════════════════ -->
+<section id="stay" class="py-24 lg:py-36 bg-alt">
+  <div class="max-w-[1440px] mx-auto px-6 lg:px-16">
+    <div class="grid lg:grid-cols-2 gap-16 lg:gap-24">
+      <div>
+        <p class="eyebrow mb-5">— The Kiri Difference</p>
+        <h2 class="serif-display text-[44px] lg:text-[72px] mb-10">
+          Concierge,<br/>
+          <span class="serif-italic">not</span> a tour.
+        </h2>
+        <p class="body-prose-lg mb-6 max-w-[480px]">
+          A Kiri journey is built around one party. There are no other clients sharing a coach, no fixed start dates, no group dynamics to negotiate around. The itinerary follows your pace, your interests, your shifts in mood mid-trip.
+        </p>
+        <p class="body-prose mb-10 max-w-[480px]">
+          What follows is the full service envelope around every journey we run &mdash; handled before you leave home, and on-the-ground while you travel.
+        </p>
+        <a href="#contact" class="btn-pill">Start with a conversation <span aria-hidden="true">→</span></a>
+      </div>
+
+      <ul class="space-y-7">
+        <li class="flex gap-5 items-start hairline-b pb-7">
+          <span class="icon-square">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </span>
+          <div>
+            <h4 class="font-display text-[22px] mb-1.5 leading-tight">Private bilingual guide every day</h4>
+            <p class="body-prose">From the moment you land, a native Japanese guide fluent in your language travels with you. Not a meet-at-the-temple guide. A constant.</p>
+          </div>
+        </li>
+        <li class="flex gap-5 items-start hairline-b pb-7">
+          <span class="icon-square">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3z"/></svg>
+          </span>
+          <div>
+            <h4 class="font-display text-[22px] mb-1.5 leading-tight">Pre-booked private dining at top restaurants</h4>
+            <p class="body-prose">Counters that don't take outside reservations, kaiseki houses with a one-month wait &mdash; held for you, in your name, before you fly.</p>
+          </div>
+        </li>
+        <li class="flex gap-5 items-start hairline-b pb-7">
+          <span class="icon-square">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="16" rx="2"/><path d="M4 11h16"/><path d="M12 3v8"/><path d="m8 19-2 3"/><path d="m18 22-2-3"/><circle cx="8" cy="15" r=".5" fill="currentColor"/><circle cx="16" cy="15" r=".5" fill="currentColor"/></svg>
+          </span>
+          <div>
+            <h4 class="font-display text-[22px] mb-1.5 leading-tight">First-class JR Rail Pass + intra-Japan logistics</h4>
+            <p class="body-prose">Shinkansen Green Car seats, station transfers, private driver days where rail doesn't reach. Bags forwarded between ryokan so you never carry.</p>
+          </div>
+        </li>
+        <li class="flex gap-5 items-start hairline-b pb-7">
+          <span class="icon-square">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          </span>
+          <div>
+            <h4 class="font-display text-[22px] mb-1.5 leading-tight">On-call concierge throughout</h4>
+            <p class="body-prose">A direct WhatsApp line and voice number to your dedicated coordinator. Reachable in your time zone for the full duration of the trip.</p>
+          </div>
+        </li>
+        <li class="flex gap-5 items-start hairline-b pb-7">
+          <span class="icon-square">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+          </span>
+          <div>
+            <h4 class="font-display text-[22px] mb-1.5 leading-tight">Visa support if needed</h4>
+            <p class="body-prose">For travelers requiring a Japanese visa, we provide the letter of invitation, signed itinerary, and supporting documents your embassy requires.</p>
+          </div>
+        </li>
+        <li class="flex gap-5 items-start">
+          <span class="icon-square">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          </span>
+          <div>
+            <h4 class="font-display text-[22px] mb-1.5 leading-tight">Custom-printed travel journal</h4>
+            <p class="body-prose">Letterpress cover, your name, the full itinerary inside &mdash; with translated phrases, maps, and pages for your own notes. Mailed before departure.</p>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 9. TRAVELER STORIES -->
+<!-- ════════════════════════════════════════════ -->
+<section id="stories" class="py-24 lg:py-36">
+  <div class="max-w-[1440px] mx-auto px-6 lg:px-16">
+    <div class="text-center mb-16 lg:mb-20">
+      <p class="eyebrow mb-5">— Stories</p>
+      <h2 class="serif-display text-[44px] lg:text-[72px] max-w-3xl mx-auto">
+        What our travelers <span class="serif-italic">say.</span>
+      </h2>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-6 lg:gap-8">
+
+      <article class="bg-card border border-white/[0.06] rounded-sm p-8 lg:p-10 flex flex-col gap-8 lift-card">
+        <blockquote class="font-display text-[20px] lg:text-[22px] leading-[1.45] text-base-color italic font-light flex-1">
+          &ldquo;Five years searching the web, three trips booking it myself, and I still never found the ryokan I knew had to exist. Kiri sent me there on a Tuesday evening, mid-snowfall, and I cried into the kaiseki. It's the only place I want to go in March now.&rdquo;
+        </blockquote>
+        <div class="flex items-center gap-4 hairline-t pt-6">
+          <div class="avatar-blur" style="background: linear-gradient(135deg, #E94B82, #FF7A45);"></div>
+          <div>
+            <p class="text-base-color text-[14px] font-medium">Hana Aldridge</p>
+            <p class="font-mono-x text-[11px] text-faint uppercase tracking-wider mt-1">London · repeat traveler</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="bg-card border border-white/[0.06] rounded-sm p-8 lg:p-10 flex flex-col gap-8 lift-card">
+        <blockquote class="font-display text-[20px] lg:text-[22px] leading-[1.45] text-base-color italic font-light flex-1">
+          &ldquo;I have eaten through Tokyo with the standard apps. Then Kiri took us to a six-seat counter in Tsukiji that doesn't appear in any English-language source. The chef described, by name, the wagyu farmer in Hida he'd sourced that morning. It restored what I thought eating in Japan was supposed to feel like.&rdquo;
+        </blockquote>
+        <div class="flex items-center gap-4 hairline-t pt-6">
+          <div class="avatar-blur" style="background: linear-gradient(135deg, #FF7A45, #E94B82);"></div>
+          <div>
+            <p class="text-base-color text-[14px] font-medium">Tomás Vidal</p>
+            <p class="font-mono-x text-[11px] text-faint uppercase tracking-wider mt-1">São Paulo · second trip</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="bg-card border border-white/[0.06] rounded-sm p-8 lg:p-10 flex flex-col gap-8 lift-card">
+        <blockquote class="font-display text-[20px] lg:text-[22px] leading-[1.45] text-base-color italic font-light flex-1">
+          &ldquo;Two kids under ten, two adults who wanted a real trip and not a sanitized version of one. Kiri built twelve days that had a Ghibli museum morning, a private temple meditation, a hands-on udon lesson, and a wagyu omakase the same night for just my husband and me &mdash; with our guide babysitting upstairs. They listened.&rdquo;
+        </blockquote>
+        <div class="flex items-center gap-4 hairline-t pt-6">
+          <div class="avatar-blur" style="background: linear-gradient(135deg, #E94B82, #FF7A45 70%);"></div>
+          <div>
+            <p class="text-base-color text-[14px] font-medium">Margaux Ferreira</p>
+            <p class="font-mono-x text-[11px] text-faint uppercase tracking-wider mt-1">Brooklyn · family of four</p>
+          </div>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 10. FULL-BLEED BANNER — Tokyo Street -->
+<!-- ════════════════════════════════════════════ -->
+<section class="relative w-full overflow-hidden">
+  <div class="relative aspect-banner banner-glow">
+    <div class="absolute inset-0 bg-img" style="background-image: url('https://images.openlen.com/395-japan-tokyo-alley-1920.webp')"></div>
+    <div class="absolute inset-0 fade-vignette opacity-50"></div>
+    <div class="absolute inset-0 flex items-center justify-center px-6 z-10">
+      <p class="serif-display text-[32px] sm:text-[48px] lg:text-[56px] text-center max-w-5xl leading-[1.1]">
+        Tokyo never sleeps.<br/>
+        <span class="serif-italic text-muted">We know which corners to wake.</span>
+      </p>
+    </div>
+    <div class="absolute bottom-5 right-5 eyebrow-faint z-10">Golden Gai · Shinjuku · Midnight</div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 11. FAQ -->
+<!-- ════════════════════════════════════════════ -->
+<section class="py-24 lg:py-36">
+  <div class="max-w-[1440px] mx-auto px-6 lg:px-16">
+    <div class="grid lg:grid-cols-[1fr_1.4fr] gap-16 lg:gap-24">
+
+      <div>
+        <p class="eyebrow mb-5">— Questions</p>
+        <h2 class="serif-display text-[44px] lg:text-[64px] leading-[0.95] mb-10">
+          Yes, we have<br/>
+          answered <span class="serif-italic">that one.</span>
+        </h2>
+        <p class="body-prose max-w-[380px]">
+          Still curious about something? Drop the question into the contact form below &mdash; we'll answer within a day.
+        </p>
+      </div>
+
+      <div>
+
+        <details class="group hairline-b py-6">
+          <summary class="flex items-center justify-between gap-6">
+            <h3 class="faq-title font-display text-[20px] lg:text-[24px] text-base-color leading-snug">How is Kiri different from a regular agency?</h3>
+            <span class="faq-plus font-mono-x text-[22px] text-muted shrink-0">+</span>
+          </summary>
+          <p class="body-prose mt-5 max-w-[640px]">
+            Fully private, fully custom, no group tours ever. Every itinerary is built around one party. We don't run sample tours and we don't sell off the shelf. If you want a packaged Japan trip, there are excellent agencies for that &mdash; we're not them.
+          </p>
+        </details>
+
+        <details class="group hairline-b py-6">
+          <summary class="flex items-center justify-between gap-6">
+            <h3 class="faq-title font-display text-[20px] lg:text-[24px] text-base-color leading-snug">What's the typical trip budget?</h3>
+            <span class="faq-plus font-mono-x text-[22px] text-muted shrink-0">+</span>
+          </summary>
+          <p class="body-prose mt-5 max-w-[640px]">
+            From $14k to $30k per person for 10 to 14 nights, depending on season and choices. Hokkaido and sakura week sit at the upper end; off-peak Kyoto sits at the lower. We're not the cheapest option to see Japan. We're not trying to be.
+          </p>
+        </details>
+
+        <details class="group hairline-b py-6">
+          <summary class="flex items-center justify-between gap-6">
+            <h3 class="faq-title font-display text-[20px] lg:text-[24px] text-base-color leading-snug">When should I book?</h3>
+            <span class="faq-plus font-mono-x text-[22px] text-muted shrink-0">+</span>
+          </summary>
+          <p class="body-prose mt-5 max-w-[640px]">
+            Sakura season: 9 to 12 months ahead &mdash; the best ryokan along the bloom corridor are first to close out. Winter onsen weekends in Hakone or Hokkaido: 6 months. Off-peak Kyoto, Tokyo, summer Hokkaido: 3 to 4 months is comfortable.
+          </p>
+        </details>
+
+        <details class="group hairline-b py-6">
+          <summary class="flex items-center justify-between gap-6">
+            <h3 class="faq-title font-display text-[20px] lg:text-[24px] text-base-color leading-snug">Do you handle the visa?</h3>
+            <span class="faq-plus font-mono-x text-[22px] text-muted shrink-0">+</span>
+          </summary>
+          <p class="body-prose mt-5 max-w-[640px]">
+            Yes &mdash; for travelers requiring a Japanese visa, we support the application with a formal letter of invitation, a signed itinerary, hotel confirmations, and any other documentation your local embassy lists. We don't submit the application for you, but we make sure your file is complete.
+          </p>
+        </details>
+
+        <details class="group hairline-b py-6">
+          <summary class="flex items-center justify-between gap-6">
+            <h3 class="faq-title font-display text-[20px] lg:text-[24px] text-base-color leading-snug">What if plans change mid-trip?</h3>
+            <span class="faq-plus font-mono-x text-[22px] text-muted shrink-0">+</span>
+          </summary>
+          <p class="body-prose mt-5 max-w-[640px]">
+            Your private concierge handles rebooking, rerouting, and real-time changes. Weather closes a mountain pass and you'd rather extend Kyoto by a day &mdash; we move it. No change fees from us up to 48 hours before each leg. Vendor-side fees, where they apply, are passed through at cost.
+          </p>
+        </details>
+
+        <details class="group hairline-b py-6">
+          <summary class="flex items-center justify-between gap-6">
+            <h3 class="faq-title font-display text-[20px] lg:text-[24px] text-base-color leading-snug">Can you accommodate dietary needs?</h3>
+            <span class="faq-plus font-mono-x text-[22px] text-muted shrink-0">+</span>
+          </summary>
+          <p class="body-prose mt-5 max-w-[640px]">
+            Yes. Kosher, halal, vegan, severe allergies &mdash; we work directly with every restaurant in your itinerary in advance, and provide a translated card that explains your specifics in Japanese. Vegan kaiseki, in particular, takes long lead times; flag it as early as you can.
+          </p>
+        </details>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 12. CONTACT FORM -->
+<!-- ════════════════════════════════════════════ -->
+<section id="contact" class="py-24 lg:py-36 bg-alt relative overflow-hidden">
+  <div class="absolute inset-0 dot-grid opacity-50"></div>
+  <div class="max-w-[1100px] mx-auto px-6 lg:px-12 relative">
+
+    <div class="text-center mb-16 lg:mb-20">
+      <p class="eyebrow mb-5">— Plan Your Trip</p>
+      <h2 class="serif-display text-[44px] lg:text-[80px] mb-8">
+        Tell us what<br/>
+        you <span class="serif-italic">imagine.</span>
+      </h2>
+      <p class="body-prose-lg max-w-[580px] mx-auto">
+        Share the broad shape of your trip. We'll respond within 48 hours with a draft itinerary and a 30-minute discovery call.
+      </p>
+    </div>
+
+    <form class="max-w-3xl mx-auto" onsubmit="event.preventDefault();">
+
+      <div class="grid md:grid-cols-2 gap-x-10 gap-y-2 mb-2">
+        <div>
+          <label class="field-label" for="name">Your name</label>
+          <input class="input-underline" type="text" id="name" name="name" placeholder="Margaux Ferreira" autocomplete="name" required />
+        </div>
+        <div>
+          <label class="field-label" for="email">Email</label>
+          <input class="input-underline" type="email" id="email" name="email" placeholder="margaux@studio.com" autocomplete="email" required />
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-x-10 gap-y-2 mb-2">
+        <div>
+          <label class="field-label" for="dates">Travel dates</label>
+          <input class="input-underline" type="text" id="dates" name="dates" placeholder="Early April 2027, roughly 12 nights" />
+        </div>
+        <div>
+          <label class="field-label" for="travelers">Number of travelers</label>
+          <input class="input-underline" type="text" id="travelers" name="travelers" placeholder="2 adults, 2 children (8 + 11)" />
+        </div>
+      </div>
+
+      <div class="mb-12">
+        <label class="field-label" for="what">What draws you to Japan?</label>
+        <textarea class="input-underline" id="what" name="what" rows="4" placeholder="Cherry blossom for the second time; we want to do it properly this round. Loved Kyoto last trip, want to add Hokkaido."></textarea>
+      </div>
+
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 hairline-t pt-8">
+        <p class="font-mono-x text-[10px] text-faint uppercase tracking-[0.18em] leading-relaxed max-w-[360px]">
+          Replies within 48 hours.<br/>
+          No automated funnels. No spam ever.
+        </p>
+        <button type="submit" class="btn-pill w-full md:w-auto justify-center">
+          Send to concierge <span aria-hidden="true">→</span>
+        </button>
+      </div>
+
+    </form>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- 13. FOOTER -->
+<!-- ════════════════════════════════════════════ -->
+<footer class="bg-black hairline-t">
+  <div class="max-w-[1440px] mx-auto px-6 lg:px-16 py-20 lg:py-24">
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-12 lg:gap-10">
+
+      <div class="col-span-2 lg:col-span-2 max-w-md">
+        <a href="#" class="flex items-baseline gap-1 mb-6">
+          <span class="font-display text-[40px] tracking-tight leading-none">KIRI</span>
+          <span class="font-mono-x text-[10px] text-faint translate-y-[-18px]">™</span>
+        </a>
+        <p class="font-display text-[18px] text-muted mb-8 italic font-light leading-snug max-w-[320px]">
+          The Japan you imagine, made real.
+        </p>
+        <form class="flex items-center gap-2 max-w-sm" onsubmit="event.preventDefault();">
+          <input class="input-underline flex-1 py-3" type="email" placeholder="Your email" aria-label="Email for newsletter" />
+          <button type="submit" class="btn-pill btn-pill-sm shrink-0">Subscribe</button>
+        </form>
+        <p class="font-mono-x text-[10px] text-faint uppercase tracking-widest mt-4">
+          Monthly · seasonal forecasts, journey openings.
+        </p>
+      </div>
+
+      <div>
+        <p class="eyebrow mb-5">Journeys</p>
+        <ul class="space-y-3 text-[14px] text-muted">
+          <li><a href="#" class="hover:text-base-color transition-colors">Sakura season</a></li>
+          <li><a href="#" class="hover:text-base-color transition-colors">Winter onsen</a></li>
+          <li><a href="#" class="hover:text-base-color transition-colors">Hokkaido</a></li>
+          <li><a href="#" class="hover:text-base-color transition-colors">Custom</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <p class="eyebrow mb-5">Regions</p>
+        <ul class="space-y-3 text-[14px] text-muted">
+          <li><a href="#" class="hover:text-base-color transition-colors">Tokyo</a></li>
+          <li><a href="#" class="hover:text-base-color transition-colors">Kyoto</a></li>
+          <li><a href="#" class="hover:text-base-color transition-colors">Hakone</a></li>
+          <li><a href="#" class="hover:text-base-color transition-colors">Hokkaido</a></li>
+          <li><a href="#" class="hover:text-base-color transition-colors">Okinawa</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <p class="eyebrow mb-5">About</p>
+        <ul class="space-y-3 text-[14px] text-muted">
+          <li><a href="#" class="hover:text-base-color transition-colors">Our story</a></li>
+          <li><a href="#" class="hover:text-base-color transition-colors">The team</a></li>
+          <li><a href="#" class="hover:text-base-color transition-colors">Press</a></li>
+          <li><a href="#" class="hover:text-base-color transition-colors">Careers</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <p class="eyebrow mb-5">Legal</p>
+        <ul class="space-y-3 text-[14px] text-muted">
+          <li><a href="#" class="hover:text-base-color transition-colors">Terms</a></li>
+          <li><a href="#" class="hover:text-base-color transition-colors">Privacy</a></li>
+          <li><a href="#" class="hover:text-base-color transition-colors">Travel insurance</a></li>
+          <li><a href="#" class="hover:text-base-color transition-colors">Cancellation</a></li>
+        </ul>
+      </div>
+
+    </div>
+
+    <div class="hairline-t mt-16 pt-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+      <p class="font-mono-x text-[11px] text-faint uppercase tracking-[0.14em]">
+        © 2026 Kiri Concierge · Curated journeys through Japan
+      </p>
+      <div class="flex items-center gap-3">
+        <a href="#" aria-label="Instagram" class="social-ico">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+        </a>
+        <a href="#" aria-label="YouTube" class="social-ico">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/></svg>
+        </a>
+        <a href="#" aria-label="X" class="social-ico">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </a>
+        <a href="#" aria-label="Substack" class="social-ico">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="5" x2="20" y2="5"/><line x1="4" y1="10" x2="20" y2="10"/><path d="M4 15h16v6l-8-4-8 4v-6z"/></svg>
+        </a>
+      </div>
+    </div>
+
+  </div>
+</footer>
+
+</body>
+</html>

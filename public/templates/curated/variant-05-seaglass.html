@@ -1,0 +1,1247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ava &amp; Mateo — July 17, 2027 · Mendocino Coast</title>
+<meta name="description" content="Ava and Mateo are getting married on a bluff above the water on the Mendocino coast — Saturday, the seventeenth of July, two thousand twenty-seven. Schedule, travel, and RSVP.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          bg: "#F4F7F7",
+          ink: "#1B2A2E",
+          sea: "#3F7E94",
+          "sea-deep": "#2E5E70",
+          sand: "#D8B98A",
+          "sand-deep": "#C39F6E",
+          mist: "#E4EDED",
+          "mist-2": "#D6E4E5",
+        },
+        fontFamily: {
+          display: ["Spectral", "Georgia", "serif"],
+          body: ["Inter", "system-ui", "sans-serif"],
+          mono: ["'Space Mono'", "ui-monospace", "monospace"],
+        },
+        borderRadius: {
+          xl2: "1.25rem",
+        },
+      },
+    },
+  };
+</script>
+<style>
+  :root {
+    --bg: #F4F7F7;
+    --text: #1B2A2E;
+    --accent: #3F7E94;
+    --accent-2: #D8B98A;
+    --radius: 1.25rem;
+    --hairline: rgba(27, 42, 46, 0.08);
+    --hairline-strong: rgba(27, 42, 46, 0.14);
+  }
+
+  * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: "Inter", system-ui, sans-serif;
+    font-weight: 300;
+    letter-spacing: 0.005em;
+    overflow-x: hidden;
+  }
+
+  ::selection { background: rgba(63, 126, 148, 0.22); color: var(--text); }
+
+  .font-display { font-family: "Spectral", Georgia, serif; }
+  .font-mono { font-family: "Space Mono", ui-monospace, monospace; }
+
+  .tracking-display { letter-spacing: -0.035em; }
+  .tracking-display-tight { letter-spacing: -0.04em; }
+  .tracking-soft { letter-spacing: -0.02em; }
+
+  .tabnum { font-variant-numeric: tabular-nums; }
+
+  /* ambient background — soft coastal light */
+  .ambient {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background:
+      radial-gradient(620px 480px at 78% -4%, rgba(63, 126, 148, 0.14), transparent 70%),
+      radial-gradient(560px 520px at 6% 14%, rgba(216, 185, 138, 0.16), transparent 72%),
+      radial-gradient(780px 620px at 92% 88%, rgba(63, 126, 148, 0.10), transparent 75%);
+  }
+
+  /* faint dot grid */
+  .dotgrid {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: radial-gradient(rgba(27, 42, 46, 0.05) 1px, transparent 1.4px);
+    background-size: 32px 32px;
+    mask-image: linear-gradient(to bottom, transparent 0%, black 22%, black 78%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 22%, black 78%, transparent 100%);
+    opacity: 0.6;
+  }
+
+  /* blurred drifting blob */
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(64px);
+    opacity: 0.55;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* photo placeholder frames */
+  .photo {
+    position: relative;
+    border-radius: var(--radius);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.42),
+      inset 0 0 0 1px var(--hairline),
+      0 18px 44px -22px rgba(27, 42, 46, 0.34);
+    overflow: hidden;
+  }
+  .photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, rgba(255,255,255,0.16), rgba(27,42,46,0.05));
+    pointer-events: none;
+  }
+
+  .grad-tide  { background: linear-gradient(150deg, #3F7E94 0%, #7FA9B4 38%, #C7DCDC 64%, #E7D6B5 100%); }
+  .grad-sky   { background: linear-gradient(155deg, #5F95A6 0%, #A9C9CF 44%, #DCE9E5 78%, #EBDBBE 100%); }
+  .grad-sand  { background: linear-gradient(160deg, #6E9CA6 0%, #B7CFCB 40%, #E3D7BC 72%, #D8B98A 100%); }
+  .grad-low   { background: linear-gradient(140deg, #2E5E70 0%, #5C8E9C 36%, #B9D0CE 66%, #E9DABB 100%); }
+  .grad-pale  { background: linear-gradient(165deg, #AFCBCF 0%, #D7E5E2 46%, #EFE3C9 100%); }
+  .grad-deep  { background: linear-gradient(150deg, #244C5B 0%, #3F7E94 40%, #9DBFC4 72%, #D8B98A 100%); }
+
+  /* glass surface card */
+  .glass {
+    background: rgba(255, 255, 255, 0.62);
+    border: 1px solid var(--hairline);
+    backdrop-filter: blur(8px);
+  }
+
+  .card-lift {
+    transition: transform 130ms ease, box-shadow 130ms ease, border-color 130ms ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 22px 46px -26px rgba(27, 42, 46, 0.32);
+    border-color: rgba(63, 126, 148, 0.32);
+  }
+
+  .btn {
+    transition: transform 110ms ease, box-shadow 110ms ease, background-color 110ms ease, color 110ms ease, border-color 110ms ease;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn:active { transform: translateY(0); }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #F4F7F7;
+    box-shadow: 0 10px 24px -12px rgba(63, 126, 148, 0.7);
+  }
+  .btn-primary:hover {
+    background: #356c80;
+    box-shadow: 0 16px 30px -14px rgba(63, 126, 148, 0.78);
+  }
+
+  .btn-ghost {
+    background: rgba(255, 255, 255, 0.7);
+    color: var(--text);
+    border: 1px solid var(--hairline-strong);
+  }
+  .btn-ghost:hover {
+    border-color: rgba(63, 126, 148, 0.42);
+    box-shadow: 0 12px 26px -18px rgba(27, 42, 46, 0.36);
+  }
+
+  .navlink {
+    position: relative;
+    transition: color 120ms ease;
+  }
+  .navlink::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 100%;
+    bottom: -3px;
+    height: 1px;
+    background: var(--accent);
+    transition: right 180ms ease;
+  }
+  .navlink:hover { color: var(--accent); }
+  .navlink:hover::after { right: 0; }
+
+  /* hero fade-in on load */
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .rise { opacity: 0; animation: rise 0.9s cubic-bezier(0.22, 0.7, 0.3, 1) forwards; }
+  .rise-1 { animation-delay: 0.05s; }
+  .rise-2 { animation-delay: 0.18s; }
+  .rise-3 { animation-delay: 0.31s; }
+  .rise-4 { animation-delay: 0.44s; }
+  .rise-5 { animation-delay: 0.57s; }
+  @media (prefers-reduced-motion: reduce) {
+    .rise { animation: none; opacity: 1; }
+  }
+
+  /* pulse dot */
+  .pulse-dot { position: relative; }
+  .pulse-dot::before {
+    content: "";
+    position: absolute;
+    inset: -5px;
+    border-radius: 50%;
+    background: rgba(63, 126, 148, 0.34);
+    animation: pulse 2.6s ease-out infinite;
+  }
+  @keyframes pulse {
+    0%   { transform: scale(0.6); opacity: 0.8; }
+    70%  { transform: scale(1.7); opacity: 0; }
+    100% { opacity: 0; }
+  }
+
+  /* marquee */
+  .marquee { overflow: hidden; }
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: slide 38s linear infinite;
+  }
+  .marquee:hover .marquee-track { animation-play-state: paused; }
+  @keyframes slide {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  /* timeline node */
+  .tl-node {
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 0 0 6px var(--bg), 0 0 0 7px var(--hairline-strong);
+  }
+
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+  .faq-item { transition: border-color 130ms ease, background-color 130ms ease; }
+  .faq-item[open] { border-color: rgba(63, 126, 148, 0.32); background: rgba(255,255,255,0.72); }
+  .faq-chev { transition: transform 200ms ease; }
+  details[open] .faq-chev { transform: rotate(45deg); }
+
+  input, select, textarea { transition: border-color 120ms ease, box-shadow 120ms ease, background-color 120ms ease; }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(63, 126, 148, 0.14);
+  }
+
+  .radio-card { transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease; }
+  .radio-card:has(input:checked) {
+    border-color: var(--accent);
+    background: rgba(63, 126, 148, 0.08);
+    box-shadow: 0 0 0 3px rgba(63, 126, 148, 0.1);
+  }
+  .radio-card input { accent-color: var(--accent); }
+
+  .halftone span { opacity: 0.45; }
+
+  section { scroll-margin-top: 96px; }
+
+  .eyebrow {
+    font-family: "Space Mono", ui-monospace, monospace;
+    font-size: 0.66rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .hairrule {
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--hairline-strong) 22%, var(--hairline-strong) 78%, transparent);
+  }
+</style>
+</head>
+<body>
+
+<div class="ambient" aria-hidden="true"></div>
+<div class="dotgrid" aria-hidden="true"></div>
+
+<!-- =========================== 1 · STICKY NAV =========================== -->
+<header class="sticky top-0 z-50">
+  <div class="glass border-x-0 border-t-0">
+    <nav class="mx-auto max-w-6xl px-5 sm:px-8 h-[60px] flex items-center justify-between">
+      <a href="#top" class="flex items-center gap-2.5 group" aria-label="Ava and Mateo — home">
+        <!-- monogram: interlocking A & M inside a thin laurel ring -->
+        <svg width="38" height="38" viewBox="0 0 38 38" fill="none" aria-hidden="true" class="transition-transform duration-200 group-hover:-rotate-6">
+          <circle cx="19" cy="19" r="17.4" stroke="#3F7E94" stroke-width="1" opacity="0.5"/>
+          <path d="M6.5 19c2.1-3 2.1-7 0-10" stroke="#D8B98A" stroke-width="1.1" stroke-linecap="round"/>
+          <path d="M31.5 19c-2.1 3-2.1 7 0 10" stroke="#D8B98A" stroke-width="1.1" stroke-linecap="round"/>
+          <path d="M12.4 25.5 16.6 12h1.6l4.2 13.5" stroke="#1B2A2E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M14 21.3h6.6" stroke="#1B2A2E" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M19.4 25.5V12.6l3.8 7 3.8-7v12.9" stroke="#3F7E94" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.92"/>
+        </svg>
+        <span class="font-display text-[15px] font-medium tracking-soft text-ink">Ava <span class="text-sea">&amp;</span> Mateo</span>
+      </a>
+      <ul class="hidden md:flex items-center gap-7 text-[13px] font-normal text-ink/72">
+        <li><a href="#story" class="navlink">Story</a></li>
+        <li><a href="#schedule" class="navlink">Schedule</a></li>
+        <li><a href="#travel" class="navlink">Travel</a></li>
+        <li><a href="#rsvp" class="navlink">RSVP</a></li>
+        <li><a href="#registry" class="navlink">Registry</a></li>
+      </ul>
+      <a href="#rsvp" class="btn btn-primary text-[12.5px] font-medium rounded-full px-4 py-2 tracking-soft">RSVP</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- =========================== 2 · HERO =========================== -->
+<section class="relative overflow-hidden pt-14 sm:pt-20 pb-16 sm:pb-24">
+  <div class="blob grad-pale" style="width:380px;height:380px;top:-90px;right:-70px;"></div>
+  <div class="blob grad-sand" style="width:320px;height:320px;bottom:-110px;left:-90px;opacity:0.4;"></div>
+
+  <div class="mx-auto max-w-6xl px-5 sm:px-8 relative">
+    <div class="text-center">
+      <p class="rise rise-1 eyebrow mb-7">We're getting married</p>
+
+      <h1 class="rise rise-2 font-display font-medium tracking-display-tight text-ink leading-[0.92] text-[clamp(3.6rem,13.5vw,9.5rem)]">
+        Ava
+        <span class="block text-sea italic font-normal text-[clamp(2rem,7vw,4.6rem)] leading-none my-1 sm:my-2">&amp;</span>
+        Mateo
+      </h1>
+
+      <div class="rise rise-3 mt-9 flex flex-col items-center gap-3">
+        <p class="font-display text-[clamp(1.05rem,2.6vw,1.5rem)] text-ink/82 tracking-soft">
+          Saturday, the seventeenth of July, two thousand twenty-seven
+        </p>
+        <div class="flex items-center gap-3">
+          <span class="h-px w-8 bg-[color:var(--hairline-strong)]"></span>
+          <span class="font-mono text-[12.5px] sm:text-sm tracking-[0.16em] text-sea tabnum">07 · 17 · 2027</span>
+          <span class="h-px w-8 bg-[color:var(--hairline-strong)]"></span>
+        </div>
+        <p class="text-[13.5px] text-ink/64 font-normal tracking-soft mt-1">
+          A bluff above the water · Mendocino Coast, California
+        </p>
+      </div>
+
+      <div class="rise rise-4 mt-9 flex flex-wrap items-center justify-center gap-3">
+        <a href="#rsvp" class="btn btn-primary rounded-full px-7 py-3 text-[13.5px] font-medium tracking-soft">Reply to our invitation</a>
+        <a href="#story" class="btn btn-ghost rounded-full px-7 py-3 text-[13.5px] font-medium tracking-soft">Read our story</a>
+      </div>
+    </div>
+
+    <!-- hero photo + countdown -->
+    <div class="rise rise-5 mt-14 sm:mt-16 grid lg:grid-cols-[1.62fr_1fr] gap-5 sm:gap-6 items-stretch">
+      <div class="photo grad-tide min-h-[290px] sm:min-h-[420px] flex items-end p-6 sm:p-8">
+        <!-- gentle horizon + gull SVG sitting on the gradient -->
+        <svg class="absolute inset-0 w-full h-full" viewBox="0 0 800 420" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <path d="M0 250 Q200 234 400 250 T800 246" stroke="rgba(255,255,255,0.5)" stroke-width="1.2" fill="none"/>
+          <path d="M120 96c10-10 18-10 28 0 10-10 18-10 28 0" stroke="rgba(255,255,255,0.7)" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          <path d="M560 138c8-8 14-8 22 0 8-8 14-8 22 0" stroke="rgba(255,255,255,0.6)" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+          <circle cx="660" cy="78" r="34" fill="rgba(255,255,255,0.22)"/>
+        </svg>
+        <div class="relative glass rounded-xl px-4 py-2.5 text-[11px] font-mono tracking-[0.14em] text-ink/78 uppercase">
+          Mendocino · 38.31°N
+        </div>
+      </div>
+
+      <div class="glass rounded-xl2 p-7 sm:p-9 flex flex-col justify-center items-center text-center">
+        <p class="eyebrow mb-4">The countdown</p>
+        <p class="font-display font-medium tracking-display-tight text-ink leading-[0.86] text-[clamp(4.4rem,14vw,7rem)]">
+          142
+        </p>
+        <p class="font-display text-2xl text-sea italic -mt-1">days</p>
+        <div class="hairrule w-24 my-5"></div>
+        <p class="text-[13px] text-ink/64 font-normal leading-relaxed">
+          until we say <span class="font-display italic text-ink/82">I do</span> with our toes in the sand and the whole Pacific behind us.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- marquee divider -->
+<div class="marquee border-y border-[color:var(--hairline)] bg-white/40 py-3.5">
+  <div class="marquee-track">
+    <!-- repeated twice for seamless loop -->
+    <span class="flex items-center text-[12px] font-mono tracking-[0.2em] uppercase text-ink/55">
+      <span class="px-7">Low tide, golden hour</span><span class="text-sand">✦</span>
+      <span class="px-7">Barefoot on the bluff</span><span class="text-sand">✦</span>
+      <span class="px-7">Clambake &amp; bonfire</span><span class="text-sand">✦</span>
+      <span class="px-7">Bring a layer for the wind</span><span class="text-sand">✦</span>
+      <span class="px-7">07 · 17 · 2027</span><span class="text-sand">✦</span>
+    </span>
+    <span class="flex items-center text-[12px] font-mono tracking-[0.2em] uppercase text-ink/55" aria-hidden="true">
+      <span class="px-7">Low tide, golden hour</span><span class="text-sand">✦</span>
+      <span class="px-7">Barefoot on the bluff</span><span class="text-sand">✦</span>
+      <span class="px-7">Clambake &amp; bonfire</span><span class="text-sand">✦</span>
+      <span class="px-7">Bring a layer for the wind</span><span class="text-sand">✦</span>
+      <span class="px-7">07 · 17 · 2027</span><span class="text-sand">✦</span>
+    </span>
+  </div>
+</div>
+
+<!-- =========================== 3 · OUR STORY =========================== -->
+<section id="story" class="relative py-20 sm:py-28">
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="max-w-2xl">
+      <p class="eyebrow mb-4">Our story</p>
+      <h2 class="font-display font-medium tracking-display text-[clamp(2.1rem,5.2vw,3.4rem)] leading-[1.04] text-ink halftone">
+        How two bad surfers
+        <span>found their footing.</span>
+      </h2>
+    </div>
+
+    <div class="mt-12 sm:mt-14 grid lg:grid-cols-[1.1fr_0.9fr] gap-10 lg:gap-14 items-start">
+      <!-- passages -->
+      <div class="space-y-9">
+        <div>
+          <div class="flex items-center gap-3 mb-3">
+            <span class="font-mono text-[11px] tracking-[0.18em] text-sea">01</span>
+            <span class="h-px flex-1 bg-[color:var(--hairline)]"></span>
+            <span class="font-display italic text-[15px] text-ink/70">A cold morning at the cove</span>
+          </div>
+          <p class="text-[15px] sm:text-[15.5px] leading-[1.78] text-ink/78 font-normal">
+            We met in the lineup at a fog-grey cove south of town, both of us catching far more
+            whitewater than waves. Ava had a borrowed longboard and no idea what she was doing.
+            Mateo had owned a board for six years and somehow knew even less. We spent the morning
+            apologizing for nearly running each other over, and then split a thermos of bad coffee
+            on the rocks because neither of us wanted to leave first.
+          </p>
+        </div>
+        <div>
+          <div class="flex items-center gap-3 mb-3">
+            <span class="font-mono text-[11px] tracking-[0.18em] text-sea">02</span>
+            <span class="h-px flex-1 bg-[color:var(--hairline)]"></span>
+            <span class="font-display italic text-[15px] text-ink/70">Teaching each other things</span>
+          </div>
+          <p class="text-[15px] sm:text-[15.5px] leading-[1.78] text-ink/78 font-normal">
+            Three winters of dawn patrols later, we've taught each other a small, useful pile of
+            things. Mateo taught Ava how to read a swell chart and how to make a fire in the wind.
+            Ava taught Mateo how to actually pop up — and, eventually, how to slow down enough to
+            notice the seals watching us flail. We never did get good at surfing. We got very, very
+            good at being together near the water.
+          </p>
+        </div>
+        <div>
+          <div class="flex items-center gap-3 mb-3">
+            <span class="font-mono text-[11px] tracking-[0.18em] text-sea">03</span>
+            <span class="h-px flex-1 bg-[color:var(--hairline)]"></span>
+            <span class="font-display italic text-[15px] text-ink/70">The proposal, at low tide</span>
+          </div>
+          <p class="text-[15px] sm:text-[15.5px] leading-[1.78] text-ink/78 font-normal">
+            Last March, Mateo asked Ava to walk the beach at the lowest tide of the month — the kind
+            that opens up a wide, mirrored stretch of sand and a tide pool you can only reach twice
+            a year. He'd written the question in the wet sand below the high-water line, where it
+            would be gone by evening. Ava said yes before the sentence was finished. Then we sat in
+            the cold until the tide came back and quietly erased the whole thing.
+          </p>
+        </div>
+      </div>
+
+      <!-- photos + mini timeline -->
+      <div class="space-y-5">
+        <div class="grid grid-cols-2 gap-4">
+          <div class="photo grad-sky aspect-[3/4]"></div>
+          <div class="photo grad-sand aspect-[3/4] mt-7"></div>
+        </div>
+        <div class="photo grad-low aspect-[16/10]"></div>
+
+        <!-- small story timeline -->
+        <div class="glass rounded-xl2 p-6 mt-2">
+          <p class="eyebrow mb-5">A short history</p>
+          <ul class="space-y-4">
+            <li class="flex items-baseline gap-4">
+              <span class="font-mono text-[12px] text-sea tabnum shrink-0 w-12">2023</span>
+              <span class="text-[13.5px] text-ink/76 font-normal leading-snug">Two strangers collide in the whitewater at the cove.</span>
+            </li>
+            <li class="flex items-baseline gap-4">
+              <span class="font-mono text-[12px] text-sea tabnum shrink-0 w-12">2024</span>
+              <span class="text-[13.5px] text-ink/76 font-normal leading-snug">First road trip up the coast — they never stop driving north.</span>
+            </li>
+            <li class="flex items-baseline gap-4">
+              <span class="font-mono text-[12px] text-sea tabnum shrink-0 w-12">2025</span>
+              <span class="text-[13.5px] text-ink/76 font-normal leading-snug">A tiny rental near the headlands, one surfboard rack, two mugs.</span>
+            </li>
+            <li class="flex items-baseline gap-4">
+              <span class="font-mono text-[12px] text-sea tabnum shrink-0 w-12">2026</span>
+              <span class="text-[13.5px] text-ink/76 font-normal leading-snug">A question written in the sand at the lowest tide of March.</span>
+            </li>
+            <li class="flex items-baseline gap-4">
+              <span class="font-mono text-[12px] text-sand-deep tabnum shrink-0 w-12 font-bold">2027</span>
+              <span class="text-[13.5px] text-ink font-medium leading-snug">A wedding on the bluff — and you, right there with us.</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- botanical sprig divider -->
+<div class="mx-auto max-w-6xl px-5 sm:px-8">
+  <div class="flex items-center gap-5">
+    <span class="hairrule flex-1"></span>
+    <svg width="116" height="26" viewBox="0 0 116 26" fill="none" aria-hidden="true">
+      <path d="M58 4v18" stroke="#3F7E94" stroke-width="1" stroke-linecap="round"/>
+      <path d="M58 9c-6-1-10-3-13-7M58 9c6-1 10-3 13-7" stroke="#3F7E94" stroke-width="1" stroke-linecap="round"/>
+      <path d="M58 15c-7-1-12-3-16-8M58 15c7-1 12-3 16-8" stroke="#D8B98A" stroke-width="1" stroke-linecap="round"/>
+      <path d="M58 21c-5-1-9-3-12-6M58 21c5-1 9-3 12-6" stroke="#3F7E94" stroke-width="1" stroke-linecap="round" opacity="0.7"/>
+      <circle cx="58" cy="3" r="2" fill="#D8B98A"/>
+    </svg>
+    <span class="hairrule flex-1"></span>
+  </div>
+</div>
+
+<!-- =========================== 4 · WEDDING PARTY =========================== -->
+<section id="party" class="relative py-20 sm:py-28">
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="max-w-2xl mb-12 sm:mb-14">
+      <p class="eyebrow mb-4">The wedding party</p>
+      <h2 class="font-display font-medium tracking-display text-[clamp(2.1rem,5.2vw,3.4rem)] leading-[1.04] text-ink">
+        The people holding the umbrellas.
+      </h2>
+      <p class="mt-4 text-[15px] leading-[1.7] text-ink/70 font-normal">
+        A small crew of salt-stained friends and family who've talked us off ledges, lent us
+        wetsuits, and will absolutely be the first ones into the bonfire circle.
+      </p>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <!-- card -->
+      <article class="card-lift glass rounded-xl2 p-6 flex flex-col">
+        <div class="photo grad-sky aspect-square mb-5"></div>
+        <span class="font-mono text-[10.5px] tracking-[0.2em] uppercase text-sea">Maid of Honor</span>
+        <h3 class="font-display text-xl text-ink tracking-soft mt-1.5">Priya Raman</h3>
+        <p class="mt-2.5 text-[13px] leading-[1.65] text-ink/68 font-normal">
+          Ava's sister and lifelong co-conspirator. Will cry first, dance longest, and has the
+          emergency sewing kit.
+        </p>
+      </article>
+
+      <article class="card-lift glass rounded-xl2 p-6 flex flex-col">
+        <div class="photo grad-sand aspect-square mb-5"></div>
+        <span class="font-mono text-[10.5px] tracking-[0.2em] uppercase text-sea">Best Man</span>
+        <h3 class="font-display text-xl text-ink tracking-soft mt-1.5">Diego Salas</h3>
+        <p class="mt-2.5 text-[13px] leading-[1.65] text-ink/68 font-normal">
+          Mateo's brother and the one who taught them both to read a tide chart. Keeper of the
+          rings and the firewood.
+        </p>
+      </article>
+
+      <article class="card-lift glass rounded-xl2 p-6 flex flex-col">
+        <div class="photo grad-low aspect-square mb-5"></div>
+        <span class="font-mono text-[10.5px] tracking-[0.2em] uppercase text-sea">Bridesmaid</span>
+        <h3 class="font-display text-xl text-ink tracking-soft mt-1.5">Hannah Cole</h3>
+        <p class="mt-2.5 text-[13px] leading-[1.65] text-ink/68 font-normal">
+          College roommate turned dawn-patrol regular. Owns more wetsuits than any reasonable
+          person and shares them freely.
+        </p>
+      </article>
+
+      <article class="card-lift glass rounded-xl2 p-6 flex flex-col">
+        <div class="photo grad-tide aspect-square mb-5"></div>
+        <span class="font-mono text-[10.5px] tracking-[0.2em] uppercase text-sea">Groomsman</span>
+        <h3 class="font-display text-xl text-ink tracking-soft mt-1.5">Theo Nakamura</h3>
+        <p class="mt-2.5 text-[13px] leading-[1.65] text-ink/68 font-normal">
+          Mateo's oldest friend and the unofficial clambake chef. If something smells incredible
+          on the sand, it's Theo.
+        </p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- =========================== 5 · SCHEDULE =========================== -->
+<section id="schedule" class="relative py-20 sm:py-28">
+  <div class="absolute inset-0 -z-10 bg-white/45 border-y border-[color:var(--hairline)]"></div>
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="grid lg:grid-cols-[0.85fr_1.15fr] gap-12 lg:gap-16 items-start">
+      <div class="lg:sticky lg:top-24">
+        <p class="eyebrow mb-4">The day</p>
+        <h2 class="font-display font-medium tracking-display text-[clamp(2.1rem,5.2vw,3.4rem)] leading-[1.04] text-ink">
+          One long, golden evening on the coast.
+        </h2>
+        <p class="mt-4 text-[15px] leading-[1.74] text-ink/70 font-normal">
+          Everything happens within a short walk of the bluff. Come for the ceremony, stay for the
+          clambake, and don't leave before the bonfire.
+        </p>
+        <div class="mt-7 glass rounded-xl2 p-5 flex items-center gap-4">
+          <svg width="34" height="34" viewBox="0 0 34 34" fill="none" aria-hidden="true" class="shrink-0">
+            <circle cx="17" cy="17" r="13" stroke="#3F7E94" stroke-width="1.2"/>
+            <path d="M17 9v8l5 3" stroke="#3F7E94" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+          <p class="text-[13px] text-ink/72 font-normal leading-snug">
+            Doors &amp; bluff path open at <span class="font-mono text-ink tabnum">4:15 PM</span> — please
+            be seated by <span class="font-mono text-ink tabnum">4:50</span>.
+          </p>
+        </div>
+      </div>
+
+      <!-- vertical timeline -->
+      <ol class="relative pl-10">
+        <span class="absolute left-[15px] top-2 bottom-2 w-px bg-[color:var(--hairline-strong)]" aria-hidden="true"></span>
+
+        <li class="relative pb-10">
+          <span class="tl-node absolute -left-[39px] top-1 grid place-items-center w-7 h-7 rounded-full bg-sea text-bg">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M6.5 1 8 5h4L9 7.6 10 12 6.5 9.4 3 12l1-4.4L1 5h4L6.5 1Z" fill="currentColor"/></svg>
+          </span>
+          <div class="glass rounded-xl2 p-5 sm:p-6 card-lift">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <h3 class="font-display text-xl sm:text-2xl text-ink tracking-soft">Ceremony on the bluff</h3>
+              <span class="font-mono text-[13px] text-sea tabnum">5:00 PM</span>
+            </div>
+            <p class="mt-2 text-[13.5px] leading-[1.65] text-ink/70 font-normal">
+              We say our vows on the grassy bluff above the water — wind off the Pacific, the
+              headlands behind us. Twenty unhurried minutes, then it's done.
+            </p>
+            <p class="mt-3 text-[11.5px] font-mono tracking-[0.12em] uppercase text-ink/52">Bluff Lawn · Sea Meadow</p>
+          </div>
+        </li>
+
+        <li class="relative pb-10">
+          <span class="tl-node absolute -left-[39px] top-1 grid place-items-center w-7 h-7 rounded-full bg-sea text-bg">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M6.5 1.5v6m0 0c-2 0-3.5-1.3-3.5-3M6.5 7.5c2 0 3.5-1.3 3.5-3M4.3 11h4.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          </span>
+          <div class="glass rounded-xl2 p-5 sm:p-6 card-lift">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <h3 class="font-display text-xl sm:text-2xl text-ink tracking-soft">Cocktail hour</h3>
+              <span class="font-mono text-[13px] text-sea tabnum">5:30 PM</span>
+            </div>
+            <p class="mt-2 text-[13.5px] leading-[1.65] text-ink/70 font-normal">
+              Drift down to the terrace for sparkling wine, local oysters, and a chance to find
+              your people before dinner. Photos happen quietly nearby.
+            </p>
+            <p class="mt-3 text-[11.5px] font-mono tracking-[0.12em] uppercase text-ink/52">Headland Terrace</p>
+          </div>
+        </li>
+
+        <li class="relative pb-10">
+          <span class="tl-node absolute -left-[39px] top-1 grid place-items-center w-7 h-7 rounded-full bg-sea text-bg">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M2 6.5h9M3.5 6.5C3.5 4 5 2.5 6.5 2.5S9.5 4 9.5 6.5M5 9.5h3M6.5 9.5v1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          </span>
+          <div class="glass rounded-xl2 p-5 sm:p-6 card-lift">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <h3 class="font-display text-xl sm:text-2xl text-ink tracking-soft">Clambake dinner</h3>
+              <span class="font-mono text-[13px] text-sea tabnum">6:30 PM</span>
+            </div>
+            <p class="mt-2 text-[13.5px] leading-[1.65] text-ink/70 font-normal">
+              Long communal tables and a proper New England–style clambake — Dungeness crab, mussels,
+              corn, and potatoes pulled straight from the pit. Toasts encouraged.
+            </p>
+            <p class="mt-3 text-[11.5px] font-mono tracking-[0.12em] uppercase text-ink/52">Pavilion Tent</p>
+          </div>
+        </li>
+
+        <li class="relative">
+          <span class="tl-node absolute -left-[39px] top-1 grid place-items-center w-7 h-7 rounded-full bg-sand-deep text-bg">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M6.5 11c2-1.5 3-3.3 3-5 0-2-1.3-3.5-3-5-1.7 1.5-3 3-3 5 0 1.7 1 3.5 3 5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+          </span>
+          <div class="glass rounded-xl2 p-5 sm:p-6 card-lift">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <h3 class="font-display text-xl sm:text-2xl text-ink tracking-soft">Bonfire &amp; dancing on the sand</h3>
+              <span class="font-mono text-[13px] text-sand-deep tabnum">8:30 PM</span>
+            </div>
+            <p class="mt-2 text-[13.5px] leading-[1.65] text-ink/70 font-normal">
+              We move down to the beach as the sky goes pink. A bonfire, a barefoot dance floor,
+              s'mores, and the band until the last log burns down. Bring that warm layer.
+            </p>
+            <p class="mt-3 text-[11.5px] font-mono tracking-[0.12em] uppercase text-ink/52">Lower Beach · Cove Side</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- =========================== 6 · VENUE + TRAVEL =========================== -->
+<section id="travel" class="relative py-20 sm:py-28">
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="max-w-2xl mb-12 sm:mb-14">
+      <p class="eyebrow mb-4">Venue &amp; travel</p>
+      <h2 class="font-display font-medium tracking-display text-[clamp(2.1rem,5.2vw,3.4rem)] leading-[1.04] text-ink">
+        Getting to the edge of the map.
+      </h2>
+      <p class="mt-4 text-[15px] leading-[1.7] text-ink/70 font-normal">
+        We're marrying at <span class="text-ink font-medium">Sea Meadow Bluff</span>, a private
+        headland just north of Mendocino village. Here's everything you need to find it, sleep
+        nearby, and not stress about the drive.
+      </p>
+    </div>
+
+    <!-- venue + stylized map -->
+    <div class="grid lg:grid-cols-2 gap-6 mb-8">
+      <div class="glass rounded-xl2 p-7 sm:p-8 flex flex-col">
+        <span class="font-mono text-[10.5px] tracking-[0.2em] uppercase text-sea">The venue</span>
+        <h3 class="font-display text-2xl sm:text-3xl text-ink tracking-soft mt-2">Sea Meadow Bluff</h3>
+        <p class="mt-1 text-[13px] text-ink/60 font-normal">14200 Headlands Road, Mendocino, CA 95460</p>
+        <div class="hairrule my-5"></div>
+        <div class="space-y-4 text-[13.5px] leading-[1.6] text-ink/74 font-normal">
+          <p class="flex gap-3">
+            <svg width="17" height="17" viewBox="0 0 17 17" fill="none" class="shrink-0 mt-0.5" aria-hidden="true"><path d="M8.5 15s5-4.2 5-8.1A5 5 0 0 0 3.5 6.9C3.5 10.8 8.5 15 8.5 15Z" stroke="#3F7E94" stroke-width="1.2"/><circle cx="8.5" cy="6.9" r="1.8" stroke="#3F7E94" stroke-width="1.2"/></svg>
+            <span><span class="text-ink font-medium">Getting there.</span> From Highway 1, turn west onto Headlands Road and follow the hedgerow to the gravel lot. About 3 hours from the Bay Area, 2 from Santa Rosa.</span>
+          </p>
+          <p class="flex gap-3">
+            <svg width="17" height="17" viewBox="0 0 17 17" fill="none" class="shrink-0 mt-0.5" aria-hidden="true"><path d="M2.5 11.5h12M4 11.5l1-4.5h7l1 4.5M5.5 7V4.5h6V7" stroke="#3F7E94" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="5.5" cy="13" r="1.2" stroke="#3F7E94" stroke-width="1.1"/><circle cx="11.5" cy="13" r="1.2" stroke="#3F7E94" stroke-width="1.1"/></svg>
+            <span><span class="text-ink font-medium">Parking.</span> Free parking in the gravel lot off Headlands Road, with attendants from 4:00 PM. Carpooling is lovely — the lot is small.</span>
+          </p>
+          <p class="flex gap-3">
+            <svg width="17" height="17" viewBox="0 0 17 17" fill="none" class="shrink-0 mt-0.5" aria-hidden="true"><path d="M8.5 2v3M8.5 12v3M2 8.5h3M12 8.5h3M4.6 4.6 6.7 6.7M10.3 10.3l2.1 2.1M12.4 4.6 10.3 6.7M6.7 10.3 4.6 12.4" stroke="#3F7E94" stroke-width="1.1" stroke-linecap="round"/></svg>
+            <span><span class="text-ink font-medium">Out of town?</span> The Mendocino coast is genuinely far from everything — that's the charm. Give yourself a slow afternoon to arrive, and make a weekend of it. See "Things to do" below.</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- stylized SVG coastal map -->
+      <div class="photo grad-pale p-1.5">
+        <div class="rounded-[1.05rem] bg-[#EAF1F0] h-full min-h-[300px] relative overflow-hidden">
+          <svg id="coastmap" viewBox="0 0 460 360" class="w-full h-full" preserveAspectRatio="xMidYMid slice" aria-label="Stylized map of the Mendocino coast showing Highway 1, the coastline, the river, and Sea Meadow Bluff">
+            <!-- ocean fill -->
+            <path d="M0 0 L150 0 C140 70 120 150 150 240 C170 300 150 340 130 360 L0 360 Z" fill="#CBDFDF"/>
+            <!-- ocean ripples -->
+            <path d="M28 70 q14 -8 28 0 M28 112 q14 -8 28 0 M28 154 q14 -8 28 0 M40 210 q14 -8 28 0 M48 268 q14 -8 28 0" stroke="#3F7E94" stroke-width="1" fill="none" opacity="0.4" stroke-linecap="round"/>
+            <!-- coastline -->
+            <path d="M150 0 C140 70 120 150 150 240 C170 300 150 340 130 360" stroke="#3F7E94" stroke-width="1.6" fill="none"/>
+            <!-- the river meeting the sea -->
+            <path d="M150 232 C200 222 250 250 320 232 C370 220 410 240 460 226" stroke="#3F7E94" stroke-width="1.3" fill="none" opacity="0.7"/>
+            <text x="332" y="220" font-family="'Space Mono',monospace" font-size="9" fill="#3F7E94" opacity="0.75" letter-spacing="1">BIG RIVER</text>
+            <!-- Highway 1 — computed by JS into #hwy1 -->
+            <path id="hwy1" stroke="#1B2A2E" stroke-width="2" fill="none" stroke-dasharray="2 5" stroke-linecap="round"/>
+            <text x="206" y="44" font-family="'Space Mono',monospace" font-size="9" fill="#1B2A2E" letter-spacing="1.5">HWY 1</text>
+            <!-- a side road -->
+            <path d="M188 150 L150 132" stroke="#1B2A2E" stroke-width="1.4" fill="none" opacity="0.55" stroke-linecap="round"/>
+            <text x="194" y="148" font-family="'Space Mono',monospace" font-size="7.5" fill="#1B2A2E" opacity="0.6">HEADLANDS RD</text>
+            <!-- village block shapes -->
+            <rect x="244" y="262" width="20" height="16" rx="2" fill="#D8B98A" opacity="0.85"/>
+            <rect x="270" y="270" width="16" height="22" rx="2" fill="#D8B98A" opacity="0.7"/>
+            <rect x="250" y="284" width="22" height="14" rx="2" fill="#D8B98A" opacity="0.6"/>
+            <text x="244" y="316" font-family="'Space Mono',monospace" font-size="8.5" fill="#1B2A2E" opacity="0.7" letter-spacing="0.5">MENDOCINO</text>
+            <!-- trees -->
+            <g opacity="0.5" stroke="#3F7E94" stroke-width="1.1" fill="none">
+              <path d="M360 110 v-12 M354 104 l6 -8 6 8 M356 110 l4 -6 4 6"/>
+              <path d="M392 142 v-10 M387 137 l5 -7 5 7"/>
+              <path d="M340 300 v-10 M335 295 l5 -7 5 7"/>
+            </g>
+            <!-- location pin: Sea Meadow Bluff -->
+            <g>
+              <line x1="142" y1="118" x2="142" y2="100" stroke="#3F7E94" stroke-width="1"/>
+              <path d="M142 70 c-9 0-16 7-16 16 0 11 16 24 16 24 s16-13 16-24c0-9-7-16-16-16Z" fill="#3F7E94"/>
+              <circle cx="142" cy="86" r="5.4" fill="#F4F7F7"/>
+            </g>
+            <text x="98" y="58" font-family="'Space Mono',monospace" font-size="9" fill="#1B2A2E" letter-spacing="0.5">SEA MEADOW</text>
+            <text x="100" y="69" font-family="'Space Mono',monospace" font-size="9" fill="#1B2A2E" letter-spacing="0.5">BLUFF</text>
+            <!-- compass -->
+            <g transform="translate(420,316)">
+              <circle r="15" fill="none" stroke="#1B2A2E" stroke-width="1" opacity="0.4"/>
+              <path d="M0 -11 L3.5 0 L0 11 L-3.5 0 Z" fill="#3F7E94"/>
+              <text x="-3.5" y="-18" font-family="'Space Mono',monospace" font-size="8" fill="#1B2A2E" opacity="0.6">N</text>
+            </g>
+          </svg>
+          <div class="absolute bottom-3 left-3 glass rounded-lg px-3 py-1.5 text-[10px] font-mono tracking-[0.12em] uppercase text-ink/65">
+            Not to scale — just to vibe
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- hotel room blocks -->
+    <h3 class="font-display text-xl text-ink tracking-soft mb-1">Where to rest your head</h3>
+    <p class="text-[13.5px] text-ink/64 font-normal mb-6">
+      We've held room blocks at three coastal inns. Call directly and mention
+      <span class="font-mono text-sea text-[12.5px]">"Ava &amp; Mateo"</span> for the wedding rate — book by June 1.
+    </p>
+    <div class="grid sm:grid-cols-3 gap-5">
+      <article class="card-lift glass rounded-xl2 overflow-hidden flex flex-col">
+        <div class="photo grad-sky h-32 rounded-none" style="box-shadow:none;border-radius:0;"></div>
+        <div class="p-5 flex flex-col flex-1">
+          <span class="font-mono text-[10px] tracking-[0.18em] uppercase text-sea">Mendocino Village</span>
+          <h4 class="font-display text-lg text-ink tracking-soft mt-1">The Whitecap Inn</h4>
+          <p class="mt-2 text-[12.5px] leading-[1.6] text-ink/68 font-normal flex-1">
+            Walkable to the village, water-view rooms, and a fireplace in the lobby. A 10-minute drive to the bluff.
+          </p>
+          <p class="mt-3 text-[11.5px] font-mono text-ink/55 tabnum">From $225 / night</p>
+          <p class="mt-1 text-[11px] text-sand-deep font-normal">Block: mention the wedding</p>
+        </div>
+      </article>
+
+      <article class="card-lift glass rounded-xl2 overflow-hidden flex flex-col">
+        <div class="photo grad-sand h-32 rounded-none" style="box-shadow:none;border-radius:0;"></div>
+        <div class="p-5 flex flex-col flex-1">
+          <span class="font-mono text-[10px] tracking-[0.18em] uppercase text-sea">Little River</span>
+          <h4 class="font-display text-lg text-ink tracking-soft mt-1">Harbor House Lodge</h4>
+          <p class="mt-2 text-[12.5px] leading-[1.6] text-ink/68 font-normal flex-1">
+            Quiet cottages tucked into the cypress just south of the venue. Best breakfast on the coast.
+          </p>
+          <p class="mt-3 text-[11.5px] font-mono text-ink/55 tabnum">From $260 / night</p>
+          <p class="mt-1 text-[11px] text-sand-deep font-normal">Block: mention the wedding</p>
+        </div>
+      </article>
+
+      <article class="card-lift glass rounded-xl2 overflow-hidden flex flex-col">
+        <div class="photo grad-low h-32 rounded-none" style="box-shadow:none;border-radius:0;"></div>
+        <div class="p-5 flex flex-col flex-1">
+          <span class="font-mono text-[10px] tracking-[0.18em] uppercase text-sea">Fort Bragg</span>
+          <h4 class="font-display text-lg text-ink tracking-soft mt-1">The Surfside Motel</h4>
+          <p class="mt-2 text-[12.5px] leading-[1.6] text-ink/68 font-normal flex-1">
+            A friendly, budget-kind option 20 minutes north — clean, near Glass Beach, free parking.
+          </p>
+          <p class="mt-3 text-[11.5px] font-mono text-ink/55 tabnum">From $145 / night</p>
+          <p class="mt-1 text-[11px] text-sand-deep font-normal">Block: mention the wedding</p>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- =========================== 7 · THINGS TO DO =========================== -->
+<section id="explore" class="relative py-20 sm:py-28">
+  <div class="absolute inset-0 -z-10 bg-white/45 border-y border-[color:var(--hairline)]"></div>
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="max-w-2xl mb-12 sm:mb-14">
+      <p class="eyebrow mb-4">Things to do</p>
+      <h2 class="font-display font-medium tracking-display text-[clamp(2.1rem,5.2vw,3.4rem)] leading-[1.04] text-ink">
+        Make a weekend of the coast.
+      </h2>
+      <p class="mt-4 text-[15px] leading-[1.7] text-ink/70 font-normal">
+        You came all this way — stay a little longer. Here's where we send everyone we love.
+      </p>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <article class="card-lift glass rounded-xl2 p-6 flex flex-col">
+        <div class="w-11 h-11 rounded-full grid place-items-center mb-4" style="background:rgba(63,126,148,0.1);">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3c3 2 4.5 4.3 4.5 7 0 3.6-2 6-4.5 7-2.5-1-4.5-3.4-4.5-7C5.5 7.3 7 5 10 3Z" stroke="#3F7E94" stroke-width="1.3" stroke-linejoin="round"/><path d="M10 6v8" stroke="#3F7E94" stroke-width="1.3"/></svg>
+        </div>
+        <span class="font-mono text-[10px] tracking-[0.18em] uppercase text-sea">Seafood</span>
+        <h3 class="font-display text-lg text-ink tracking-soft mt-1.5">The Salt &amp; Skiff</h3>
+        <p class="mt-2 text-[12.5px] leading-[1.62] text-ink/68 font-normal">
+          A weathered little oyster house on the harbor. Get the chowder, the grilled rockfish, and
+          a seat by the window at sunset.
+        </p>
+      </article>
+
+      <article class="card-lift glass rounded-xl2 p-6 flex flex-col">
+        <div class="w-11 h-11 rounded-full grid place-items-center mb-4" style="background:rgba(63,126,148,0.1);">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M2 15h16M4 15l4-9 3 5 2-3 3 7" stroke="#3F7E94" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg>
+        </div>
+        <span class="font-mono text-[10px] tracking-[0.18em] uppercase text-sea">Outdoors</span>
+        <h3 class="font-display text-lg text-ink tracking-soft mt-1.5">Headlands Trail</h3>
+        <p class="mt-2 text-[12.5px] leading-[1.62] text-ink/68 font-normal">
+          An easy two-mile loop along the cliff edge — wildflowers, blowholes, and grey whales
+          offshore most mornings. Wear layers.
+        </p>
+      </article>
+
+      <article class="card-lift glass rounded-xl2 p-6 flex flex-col">
+        <div class="w-11 h-11 rounded-full grid place-items-center mb-4" style="background:rgba(63,126,148,0.1);">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 17h7v-1H5v1ZM5 16V8h7v8M12 9h2.5a2 2 0 0 1 0 4H12M7 5.5c0-1 1-1 1-2M9.5 5.5c0-1 1-1 1-2" stroke="#3F7E94" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <span class="font-mono text-[10px] tracking-[0.18em] uppercase text-sea">Coffee</span>
+        <h3 class="font-display text-lg text-ink tracking-soft mt-1.5">Foghorn Bakehouse</h3>
+        <p class="mt-2 text-[12.5px] leading-[1.62] text-ink/68 font-normal">
+          The morning headquarters in Mendocino village — flat whites, cardamom buns, and a sunny
+          bench out front. Opens at seven.
+        </p>
+      </article>
+
+      <article class="card-lift glass rounded-xl2 p-6 flex flex-col">
+        <div class="w-11 h-11 rounded-full grid place-items-center mb-4" style="background:rgba(63,126,148,0.1);">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 13c2 0 2-1.5 4-1.5S9 13 11 13s2-1.5 4-1.5 2 1.5 4 1.5M4 9.5c1.5-3 4.5-5 6-5s4.5 2 6 5" stroke="#3F7E94" stroke-width="1.3" stroke-linecap="round"/><circle cx="10" cy="8" r="1.4" stroke="#3F7E94" stroke-width="1.1"/></svg>
+        </div>
+        <span class="font-mono text-[10px] tracking-[0.18em] uppercase text-sea">Tide pools</span>
+        <h3 class="font-display text-lg text-ink tracking-soft mt-1.5">Glass Beach Pools</h3>
+        <p class="mt-2 text-[12.5px] leading-[1.62] text-ink/68 font-normal">
+          North in Fort Bragg — sea-tumbled glass on the sand and rich tide pools at low water.
+          Check the tide chart before you go.
+        </p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- =========================== 8 · RSVP =========================== -->
+<section id="rsvp" class="relative py-20 sm:py-28 overflow-hidden">
+  <div class="blob grad-pale" style="width:340px;height:340px;top:-80px;right:-80px;opacity:0.45;"></div>
+  <div class="mx-auto max-w-5xl px-5 sm:px-8 relative">
+    <div class="grid lg:grid-cols-[0.82fr_1.18fr] gap-10 lg:gap-12 items-start">
+      <div>
+        <p class="eyebrow mb-4">Reply</p>
+        <h2 class="font-display font-medium tracking-display text-[clamp(2.1rem,5.2vw,3.4rem)] leading-[1.04] text-ink">
+          Will you be on the bluff with us?
+        </h2>
+        <p class="mt-4 text-[15px] leading-[1.74] text-ink/70 font-normal">
+          One reply per invited guest, please. If your plans shift, just email us — we'd always
+          rather know.
+        </p>
+        <div class="mt-6 inline-flex items-center gap-3 glass rounded-full pl-3 pr-5 py-2.5">
+          <span class="pulse-dot inline-block w-2.5 h-2.5 rounded-full bg-sea"></span>
+          <span class="text-[12.5px] text-ink/74 font-normal">Kindly reply by <span class="font-medium text-ink">May 30, 2027</span></span>
+        </div>
+        <div class="hairrule my-7 max-w-xs"></div>
+        <p class="font-display italic text-[15px] text-ink/66 leading-relaxed max-w-xs">
+          "We promise good food, soft sand, and the best sunset the Pacific can manage."
+        </p>
+      </div>
+
+      <form action="#" class="glass rounded-xl2 p-6 sm:p-8 space-y-6">
+        <!-- full name -->
+        <div>
+          <label for="fullname" class="block text-[12px] font-mono tracking-[0.14em] uppercase text-ink/70 mb-2">Full name</label>
+          <input id="fullname" name="fullname" type="text" required placeholder="Your first and last name"
+            class="w-full rounded-xl border border-[color:var(--hairline-strong)] bg-white/80 px-4 py-3 text-[14px] text-ink placeholder:text-ink/35 font-normal">
+        </div>
+
+        <!-- attending -->
+        <fieldset>
+          <legend class="block text-[12px] font-mono tracking-[0.14em] uppercase text-ink/70 mb-2">Will you attend?</legend>
+          <div class="grid grid-cols-2 gap-3">
+            <label class="radio-card flex items-center gap-2.5 rounded-xl border border-[color:var(--hairline-strong)] bg-white/70 px-4 py-3 cursor-pointer">
+              <input type="radio" name="attending" value="yes" required class="w-4 h-4">
+              <span class="text-[13.5px] text-ink font-normal">Joyfully, yes</span>
+            </label>
+            <label class="radio-card flex items-center gap-2.5 rounded-xl border border-[color:var(--hairline-strong)] bg-white/70 px-4 py-3 cursor-pointer">
+              <input type="radio" name="attending" value="no" class="w-4 h-4">
+              <span class="text-[13.5px] text-ink font-normal">Sadly, no</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <!-- guests -->
+        <div>
+          <label for="guests" class="block text-[12px] font-mono tracking-[0.14em] uppercase text-ink/70 mb-2">Number of guests</label>
+          <select id="guests" name="guests"
+            class="w-full rounded-xl border border-[color:var(--hairline-strong)] bg-white/80 px-4 py-3 text-[14px] text-ink font-normal appearance-none"
+            style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2214%22 height=%2214%22 fill=%22none%22><path d=%22M3 5l4 4 4-4%22 stroke=%22%231B2A2E%22 stroke-width=%221.4%22 stroke-linecap=%22round%22/></svg>');background-repeat:no-repeat;background-position:right 1rem center;">
+            <option value="1">1 — just me</option>
+            <option value="2">2 — me and a plus-one</option>
+            <option value="3">3 guests</option>
+            <option value="4">4 or more (party of five? email us)</option>
+          </select>
+        </div>
+
+        <!-- meal choice -->
+        <div>
+          <label for="meal" class="block text-[12px] font-mono tracking-[0.14em] uppercase text-ink/70 mb-2">Clambake plate</label>
+          <select id="meal" name="meal"
+            class="w-full rounded-xl border border-[color:var(--hairline-strong)] bg-white/80 px-4 py-3 text-[14px] text-ink font-normal appearance-none"
+            style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2214%22 height=%2214%22 fill=%22none%22><path d=%22M3 5l4 4 4-4%22 stroke=%22%231B2A2E%22 stroke-width=%221.4%22 stroke-linecap=%22round%22/></svg>');background-repeat:no-repeat;background-position:right 1rem center;">
+            <option value="">Choose your plate…</option>
+            <option value="shellfire">The Shellfire — Dungeness crab, mussels &amp; corn from the pit</option>
+            <option value="harvest">The Coast Harvest — grilled vegetables &amp; herbed potatoes (vegan)</option>
+            <option value="grill">The Bluff Grill — herb-roasted chicken &amp; summer salad</option>
+          </select>
+          <p class="mt-2 text-[11.5px] text-ink/52 font-normal">Allergies or other needs? Add a note in your song request below and we'll sort it.</p>
+        </div>
+
+        <!-- song request -->
+        <div>
+          <label for="song" class="block text-[12px] font-mono tracking-[0.14em] uppercase text-ink/70 mb-2">Song request</label>
+          <input id="song" name="song" type="text" placeholder="The one that gets you onto the sand"
+            class="w-full rounded-xl border border-[color:var(--hairline-strong)] bg-white/80 px-4 py-3 text-[14px] text-ink placeholder:text-ink/35 font-normal">
+        </div>
+
+        <button type="submit" class="btn btn-primary w-full rounded-full py-3.5 text-[14px] font-medium tracking-soft">
+          Send our reply
+        </button>
+        <p class="text-center text-[11.5px] text-ink/50 font-normal">
+          Kindly reply by <span class="font-mono text-ink/70">05 · 30 · 2027</span>
+        </p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- =========================== 9 · REGISTRY =========================== -->
+<section id="registry" class="relative py-20 sm:py-28">
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="max-w-2xl mb-11">
+      <p class="eyebrow mb-4">Registry</p>
+      <h2 class="font-display font-medium tracking-display text-[clamp(2.1rem,5.2vw,3.4rem)] leading-[1.04] text-ink">
+        Your presence is the present.
+      </h2>
+      <p class="mt-4 text-[15px] leading-[1.74] text-ink/70 font-normal">
+        Truly — the trek to the coast is gift enough. But for those who've asked, we've put together
+        a few small ways to help. A contribution to any of these would mean the world.
+      </p>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <a href="#" class="card-lift glass rounded-xl2 p-6 flex flex-col group">
+        <div class="flex items-center justify-between mb-4">
+          <div class="w-11 h-11 rounded-full grid place-items-center" style="background:rgba(63,126,148,0.1);">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 7h12l-1 9H5L4 7ZM7 7V5.5a3 3 0 0 1 6 0V7" stroke="#3F7E94" stroke-width="1.3" stroke-linecap="round"/></svg>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="text-ink/35 group-hover:text-sea transition-colors" aria-hidden="true"><path d="M4 12 12 4M6 4h6v6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <span class="font-mono text-[10px] tracking-[0.18em] uppercase text-sea">Home store</span>
+        <h3 class="font-display text-xl text-ink tracking-soft mt-1.5">The Tidewater List</h3>
+        <p class="mt-2 text-[12.5px] leading-[1.62] text-ink/68 font-normal flex-1">
+          Pieces for the little cottage we're slowly making ours — linens, mugs, and one very good
+          cast-iron pan.
+        </p>
+        <span class="mt-4 text-[12px] font-medium text-sea">View the registry →</span>
+      </a>
+
+      <a href="#" class="card-lift glass rounded-xl2 p-6 flex flex-col group">
+        <div class="flex items-center justify-between mb-4">
+          <div class="w-11 h-11 rounded-full grid place-items-center" style="background:rgba(216,185,138,0.2);">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 16c2-1 3-2.5 3-5 0-3 2-5 4-5M17 16c-2-1-3-2.5-3-5 0-3-2-5-4-5M10 6V3" stroke="#C39F6E" stroke-width="1.3" stroke-linecap="round"/><path d="M7 11h6" stroke="#C39F6E" stroke-width="1.3" stroke-linecap="round"/></svg>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="text-ink/35 group-hover:text-sea transition-colors" aria-hidden="true"><path d="M4 12 12 4M6 4h6v6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <span class="font-mono text-[10px] tracking-[0.18em] uppercase text-sand-deep">Honeymoon fund</span>
+        <h3 class="font-display text-xl text-ink tracking-soft mt-1.5">The Slow Boat South</h3>
+        <p class="mt-2 text-[12.5px] leading-[1.62] text-ink/68 font-normal flex-1">
+          We're chasing warm water down the Baja coast. Help us toward a night's stay, a boat day,
+          or just better tacos.
+        </p>
+        <span class="mt-4 text-[12px] font-medium text-sea">Chip in →</span>
+      </a>
+
+      <a href="#" class="card-lift glass rounded-xl2 p-6 flex flex-col group">
+        <div class="flex items-center justify-between mb-4">
+          <div class="w-11 h-11 rounded-full grid place-items-center" style="background:rgba(63,126,148,0.1);">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 16s-6-3.8-6-8.2A3.8 3.8 0 0 1 10 5a3.8 3.8 0 0 1 6 2.8C16 12.2 10 16 10 16Z" stroke="#3F7E94" stroke-width="1.3" stroke-linejoin="round"/></svg>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="text-ink/35 group-hover:text-sea transition-colors" aria-hidden="true"><path d="M4 12 12 4M6 4h6v6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <span class="font-mono text-[10px] tracking-[0.18em] uppercase text-sea">In lieu of gifts</span>
+        <h3 class="font-display text-xl text-ink tracking-soft mt-1.5">Coastwater Alliance</h3>
+        <p class="mt-2 text-[12.5px] leading-[1.62] text-ink/68 font-normal flex-1">
+          A gift here protects the tide pools and headlands that brought us together. Our favorite
+          thing on this whole list.
+        </p>
+        <span class="mt-4 text-[12px] font-medium text-sea">Give to the coast →</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- hairline rule with diamond -->
+<div class="mx-auto max-w-6xl px-5 sm:px-8">
+  <div class="flex items-center gap-5">
+    <span class="hairrule flex-1"></span>
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 1l6 6-6 6-6-6 6-6Z" stroke="#3F7E94" stroke-width="1" fill="rgba(216,185,138,0.4)"/></svg>
+    <span class="hairrule flex-1"></span>
+  </div>
+</div>
+
+<!-- =========================== 10 · FAQ =========================== -->
+<section id="faq" class="relative py-20 sm:py-28">
+  <div class="mx-auto max-w-3xl px-5 sm:px-8">
+    <div class="text-center mb-12">
+      <p class="eyebrow mb-4">Good to know</p>
+      <h2 class="font-display font-medium tracking-display text-[clamp(2.1rem,5.2vw,3.4rem)] leading-[1.04] text-ink">
+        Questions, kindly answered.
+      </h2>
+    </div>
+
+    <div class="space-y-3">
+      <details class="faq-item glass rounded-xl2 px-5 sm:px-6 py-1">
+        <summary class="flex items-center justify-between gap-4 py-4">
+          <span class="font-display text-[17px] sm:text-lg text-ink tracking-soft">What should we wear?</span>
+          <svg class="faq-chev shrink-0 text-sea" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </summary>
+        <p class="pb-5 text-[13.5px] leading-[1.72] text-ink/72 font-normal">
+          Think <span class="text-ink font-medium">coastal cocktail</span> — breezy and a little dressy,
+          nothing stiff. Sundresses, linen suits, and soft colors feel right at home here. One real
+          piece of advice: bring a layer. The wind comes up off the water the moment the sun drops, so
+          a wrap, a jacket, or a great sweater will be your best friend by the bonfire.
+        </p>
+      </details>
+
+      <details class="faq-item glass rounded-xl2 px-5 sm:px-6 py-1">
+        <summary class="flex items-center justify-between gap-4 py-4">
+          <span class="font-display text-[17px] sm:text-lg text-ink tracking-soft">Are children welcome?</span>
+          <svg class="faq-chev shrink-0 text-sea" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </summary>
+        <p class="pb-5 text-[13.5px] leading-[1.72] text-ink/72 font-normal">
+          Yes — wholeheartedly. Kids are welcome, and there is no better place for them than a wide
+          beach at golden hour. We'll have a few quiet activities and an early s'mores station near the
+          bonfire. Just let us know who's coming on your RSVP so we can plan the right amount of food
+          and marshmallows.
+        </p>
+      </details>
+
+      <details class="faq-item glass rounded-xl2 px-5 sm:px-6 py-1">
+        <summary class="flex items-center justify-between gap-4 py-4">
+          <span class="font-display text-[17px] sm:text-lg text-ink tracking-soft">The ceremony is on sand — what about shoes?</span>
+          <svg class="faq-chev shrink-0 text-sea" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </summary>
+        <p class="pb-5 text-[13.5px] leading-[1.72] text-ink/72 font-normal">
+          The ceremony is on the bluff lawn, but the cocktail hour spills onto sand and the bonfire is
+          fully on the beach. <span class="text-ink font-medium">Heels will sink</span> — please leave the
+          stilettos at the inn. Flats, wedges, espadrilles, or simply going barefoot are all perfect.
+          We'll have a basket of shoe bags at the path so you can stash your footwear and feel the sand.
+        </p>
+      </details>
+
+      <details class="faq-item glass rounded-xl2 px-5 sm:px-6 py-1">
+        <summary class="flex items-center justify-between gap-4 py-4">
+          <span class="font-display text-[17px] sm:text-lg text-ink tracking-soft">Why does the timing matter so much?</span>
+          <svg class="faq-chev shrink-0 text-sea" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </summary>
+        <p class="pb-5 text-[13.5px] leading-[1.72] text-ink/72 font-normal">
+          We chose 5:00 PM to land the ceremony and dinner on a generous low tide, which is what opens up
+          the wide beach for the bonfire. The ocean keeps its own schedule and won't wait for stragglers,
+          so please <span class="text-ink font-medium">arrive on time</span> — gates open at 4:15 and seats
+          fill by 4:50. Build in extra minutes for the coast highway; it's beautiful and slow.
+        </p>
+      </details>
+
+      <details class="faq-item glass rounded-xl2 px-5 sm:px-6 py-1">
+        <summary class="flex items-center justify-between gap-4 py-4">
+          <span class="font-display text-[17px] sm:text-lg text-ink tracking-soft">Where should we stay?</span>
+          <svg class="faq-chev shrink-0 text-sea" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </summary>
+        <p class="pb-5 text-[13.5px] leading-[1.72] text-ink/72 font-normal">
+          <span class="text-ink font-medium">Mendocino village</span> is closest and most walkable,
+          <span class="text-ink font-medium">Little River</span> is quiet and just south of the venue, and
+          <span class="text-ink font-medium">Fort Bragg</span>, twenty minutes north, has more room and
+          better prices. We've held blocks at three inns across all three towns — see the Travel section
+          above, and book before June 1, as the coast fills up fast in July.
+        </p>
+      </details>
+
+      <details class="faq-item glass rounded-xl2 px-5 sm:px-6 py-1">
+        <summary class="flex items-center justify-between gap-4 py-4">
+          <span class="font-display text-[17px] sm:text-lg text-ink tracking-soft">Is the ceremony unplugged?</span>
+          <svg class="faq-chev shrink-0 text-sea" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </summary>
+        <p class="pb-5 text-[13.5px] leading-[1.72] text-ink/72 font-normal">
+          Yes, please. We're keeping the ceremony <span class="text-ink font-medium">fully unplugged</span> —
+          phones away, cameras down, just be with us on the bluff. Our photographer will catch every
+          moment beautifully, and we'll share the gallery afterward. Once the vows are done, snap away:
+          we'd love your photos from the clambake and the bonfire, tagged with our hashtag below.
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- =========================== 11 · CLOSING =========================== -->
+<section id="closing" class="relative py-24 sm:py-32 overflow-hidden">
+  <div class="blob grad-sand" style="width:360px;height:360px;bottom:-120px;left:50%;transform:translateX(-50%);opacity:0.4;"></div>
+  <div class="mx-auto max-w-3xl px-5 sm:px-8 text-center relative">
+    <!-- monogram, second appearance -->
+    <svg width="64" height="64" viewBox="0 0 38 38" fill="none" aria-hidden="true" class="mx-auto mb-7">
+      <circle cx="19" cy="19" r="17.4" stroke="#3F7E94" stroke-width="0.9" opacity="0.55"/>
+      <path d="M6.5 19c2.1-3 2.1-7 0-10" stroke="#D8B98A" stroke-width="1" stroke-linecap="round"/>
+      <path d="M31.5 19c-2.1 3-2.1 7 0 10" stroke="#D8B98A" stroke-width="1" stroke-linecap="round"/>
+      <path d="M12.4 25.5 16.6 12h1.6l4.2 13.5" stroke="#1B2A2E" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M14 21.3h6.6" stroke="#1B2A2E" stroke-width="1.4" stroke-linecap="round"/>
+      <path d="M19.4 25.5V12.6l3.8 7 3.8-7v12.9" stroke="#3F7E94" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.92"/>
+    </svg>
+
+    <p class="eyebrow mb-6">With salt and love</p>
+    <p class="font-display font-medium tracking-display text-[clamp(1.9rem,5vw,3.1rem)] leading-[1.12] text-ink">
+      Two bad surfers, one good life — and a stretch of California coast we'd like to share with you.
+    </p>
+    <div class="mx-auto hairrule w-24 my-8"></div>
+    <p class="font-display italic text-xl sm:text-2xl text-sea">
+      We can't wait to celebrate with you.
+    </p>
+    <p class="mt-6 font-display text-lg text-ink/74 tracking-soft">— Ava &amp; Mateo</p>
+    <p class="mt-1 font-mono text-[12px] tracking-[0.16em] text-ink/55 tabnum">07 · 17 · 2027</p>
+  </div>
+</section>
+
+</main>
+
+<!-- =========================== 12 · FOOTER =========================== -->
+<footer class="relative border-t border-[color:var(--hairline)] bg-white/50">
+  <div class="mx-auto max-w-6xl px-5 sm:px-8 py-14">
+    <div class="grid sm:grid-cols-[1.4fr_1fr_1fr] gap-9 sm:gap-8">
+      <div>
+        <div class="flex items-center gap-2.5 mb-3">
+          <svg width="32" height="32" viewBox="0 0 38 38" fill="none" aria-hidden="true">
+            <circle cx="19" cy="19" r="17.4" stroke="#3F7E94" stroke-width="1" opacity="0.5"/>
+            <path d="M12.4 25.5 16.6 12h1.6l4.2 13.5" stroke="#1B2A2E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M14 21.3h6.6" stroke="#1B2A2E" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M19.4 25.5V12.6l3.8 7 3.8-7v12.9" stroke="#3F7E94" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="font-display text-lg font-medium tracking-soft text-ink">Ava <span class="text-sea">&amp;</span> Mateo</span>
+        </div>
+        <p class="text-[13px] leading-[1.7] text-ink/64 font-normal max-w-xs">
+          Saturday, the seventeenth of July, two thousand twenty-seven · Sea Meadow Bluff, Mendocino
+          Coast, California.
+        </p>
+      </div>
+
+      <div>
+        <p class="font-mono text-[10.5px] tracking-[0.2em] uppercase text-ink/50 mb-3.5">Find your way</p>
+        <ul class="space-y-2 text-[13px] text-ink/68 font-normal">
+          <li><a href="#story" class="navlink">Our story</a></li>
+          <li><a href="#schedule" class="navlink">The schedule</a></li>
+          <li><a href="#travel" class="navlink">Venue &amp; travel</a></li>
+          <li><a href="#rsvp" class="navlink">RSVP</a></li>
+          <li><a href="#registry" class="navlink">Registry</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <p class="font-mono text-[10.5px] tracking-[0.2em] uppercase text-ink/50 mb-3.5">Questions?</p>
+        <p class="text-[13px] text-ink/64 font-normal mb-1">We're happy to help with anything.</p>
+        <a href="mailto:questions@avaandmateo.coast" class="text-[13.5px] text-sea font-medium navlink break-words">questions@avaandmateo.coast</a>
+        <div class="mt-5 inline-flex items-center gap-2 glass rounded-full px-3.5 py-2">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M2 5h9M2 8h9M5 2 4 11M9 2 8 11" stroke="#3F7E94" stroke-width="1.1" stroke-linecap="round"/></svg>
+          <span class="font-mono text-[11.5px] tracking-[0.06em] text-ink/74">#AvaAndMateoLowTide</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hairrule my-9"></div>
+
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 text-[11.5px] text-ink/48 font-normal">
+      <p>Made with salt air for our favorite people.</p>
+      <p class="font-mono tracking-[0.1em] tabnum">07 · 17 · 2027 — Mendocino, CA</p>
+    </div>
+  </div>
+</footer>
+
+<!-- ONE script: compute the Highway 1 SVG path from a data array of waypoints -->
+<script>
+  (function () {
+    var map = document.getElementById("coastmap");
+    if (!map) return;
+    // waypoints tracing Highway 1 down the coast — [x, y]
+    var pts = [
+      [228, 8], [218, 70], [212, 132], [222, 196],
+      [236, 252], [258, 300], [248, 352]
+    ];
+    // build a smooth path with quadratic midpoints
+    var d = "M" + pts[0][0] + " " + pts[0][1];
+    for (var i = 1; i < pts.length - 1; i++) {
+      var mx = (pts[i][0] + pts[i + 1][0]) / 2;
+      var my = (pts[i][1] + pts[i + 1][1]) / 2;
+      d += " Q" + pts[i][0] + " " + pts[i][1] + " " + mx + " " + my;
+    }
+    var last = pts[pts.length - 1];
+    d += " L" + last[0] + " " + last[1];
+    var hwy = document.getElementById("hwy1");
+    if (hwy) hwy.setAttribute("d", d);
+  })();
+</script>
+
+</body>
+</html>

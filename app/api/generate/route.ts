@@ -1,8 +1,16 @@
 import { auth } from "@/auth";
 import { createProject } from "@/lib/projects";
 import { createVersion } from "@/lib/projects/versions";
-import { getCreditState, debitCredits, estimateCredits } from "@/lib/credits";
+import {
+  getCreditState,
+  debitCredits,
+  estimateCredits,
+  creditsForUsage,
+  type TokenUsage,
+} from "@/lib/credits";
 import { DESIGN_GUIDANCE } from "@/lib/design-guidance";
+import { normalizeBornCanonical } from "@/lib/normalize";
+import { resolveAIProvider } from "@/lib/ai-provider";
 import {
   PLAN_LIMITS,
   checkAndConsume,
@@ -18,17 +26,25 @@ export const dynamic = "force-dynamic";
 //
 // Body: { brief: string }
 //
-// One Kimi K2.6 streaming call turns the brief into a complete HTML document —
-// the same model + design system as the Chat editor (/api/templates/ai-design),
-// just generating from scratch instead of editing. Server-Sent Events:
-//   event: reasoning_chunk { text }            — design reasoning, append-only
-//   event: html_chunk      { text }            — the HTML document, append-only
+// Two paths, both ending in a saved project. Server-Sent Events:
+//   event: reasoning_chunk { text }            — legacy: design reasoning
+//   event: html_chunk      { text }            — legacy: HTML document
+//   event: progress        { chars }           — server→client keepalive
 //   event: project_saved   { projectId, title} — terminal success
 //   event: error           { message }
 //
-// The model writes 1-3 sentences of reasoning, a literal ---HTML--- marker,
-// then the full document. We split on the marker as bytes arrive so the client
-// can show streaming reasoning, then a live preview of the page.
+// Legacy path (flag off): one Kimi K2.6 streaming call writes 1-3 sentences
+// of reasoning, a literal ---HTML--- marker, then the full HTML. We split
+// on the marker as bytes arrive so the client can show streaming reasoning
+// and then a live preview of the page.
+//
+// Model path (flag on — OPENLEN_DOC_MODEL=1): a single Gemini call with
+// response_format: json_schema enforces our recursive DocumentSpec at the
+// decoder level — valid JSON in the right shape, by construction.
+// Non-streaming; the SSE stream stays open only to keep the client alive
+// (via `progress` heartbeats) and to deliver project_saved / error.
+// Together+Kimi proved unreliable for the structured path at real-page
+// scale (~70KB, the decoder bails); Gemini honors the schema cleanly.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ENCODER = new TextEncoder();
@@ -54,7 +70,7 @@ NON-NEGOTIABLE CONSTRAINTS:
 - Include a descriptive <title> in <head> that names the product.
 - Tailwind CSS via CDN: <script src="https://cdn.tailwindcss.com"></script>
 - Google Fonts via <link> in <head>. Allowed families: Inter, Geist, Fraunces, Source Serif 4, Crimson Pro, JetBrains Mono.
-- All custom CSS inline in a <style> block in <head>. Use CSS custom properties on :root for design tokens (--accent, --accent-r as an RGB triplet, --bg, --fg, --font-display, --font-body, --radius). Reference them via var() throughout — never hardcode the same color in many places.
+- All custom CSS inline in a <style> block in <head>. Use CSS custom properties on :root for design tokens (--accent, --accent-r as an RGB triplet, --bg, --surface, --fg, --border, --font-display, --font-body, --radius). Reference them via var() throughout — never hardcode the same color in many places. Also emit a \`:root.dark { … }\` block that redefines --bg, --surface, --fg, --border and --accent with hand-designed dark-theme values (a real dark palette — not a mechanical inversion); every text and heading color MUST resolve from a var() token so the whole page flips cleanly.
 - NO React, NO Babel, NO JSX, NO <script type="text/babel">, NO window.X globals, NO import statements anywhere.
 - NO data-slot-path= attribute anywhere — that is a reserved editor-mode marker.
 - NO login / signup / "my account" / dashboard UI. Public marketing pages only.
@@ -84,6 +100,15 @@ export async function POST(req: Request): Promise<Response> {
   if (brief.length < 10 || brief.length > 4000) {
     return json({ error: "brief must be 10–4000 characters" }, 400);
   }
+  // eslint-disable-next-line no-console
+  console.log(`[generate] request — ${brief.length} chars`);
+
+  const modelParam =
+    body &&
+    typeof body === "object" &&
+    typeof (body as { model?: unknown }).model === "string"
+      ? (body as { model: string }).model
+      : undefined;
 
   const session = await auth();
   const userId = session?.user?.id ?? null;
@@ -127,9 +152,10 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  const apiKey = process.env.TOGETHER_API_KEY;
-  if (!apiKey) return json({ error: "TOGETHER_API_KEY missing" }, 500);
-
+  const PROVIDER = resolveAIProvider(modelParam);
+  if (!PROVIDER.key) {
+    return json({ error: `${PROVIDER.label} API key missing` }, 500);
+  }
   const messages = [
     { role: "system" as const, content: SYSTEM_PROMPT },
     { role: "user" as const, content: `BRIEF:\n${brief}` },
@@ -148,9 +174,14 @@ export async function POST(req: Request): Promise<Response> {
           closed = true;
         }
       };
+      let keepalive: ReturnType<typeof setInterval> | null = null;
       const closeStream = () => {
         if (closed) return;
         closed = true;
+        if (keepalive) {
+          clearInterval(keepalive);
+          keepalive = null;
+        }
         try {
           controller.close();
         } catch {
@@ -162,6 +193,14 @@ export async function POST(req: Request): Promise<Response> {
       let accumulatedHtml = "";
       let buffer = "";
       let mode: "reasoning" | "html" = "reasoning";
+      // Server-to-client keepalive — emit a progress event every 5s so the
+      // client watchdog stays reset even when Together is silent (or sending
+      // keepalive frames with no content of its own — the case where the
+      // per-delta ping never fires because handleDelta is never called).
+      // Cleared in closeStream on every exit path.
+      keepalive = setInterval(() => {
+        emit("progress", { chars: accumulatedHtml.length });
+      }, 5000);
 
       // While in reasoning mode, hold back the trailing (MARKER.length - 1)
       // characters in case they are the start of the marker. We only emit
@@ -208,6 +247,17 @@ export async function POST(req: Request): Promise<Response> {
         }
       };
 
+      // Stall guard. Together can return a 200 and then sit silent (a deep
+      // queue, an overloaded model). Aborting the fetch does NOT reliably
+      // unblock an already-idle body read — so each read is raced against a
+      // timeout and the result is decided in JS. Generous on purpose:
+      // Together is slow under load but usually DOES finish, so this only
+      // cuts a genuinely dead stream — 12 min of total silence. Stays under
+      // the client watchdog (lib/use-generation.ts) so this fires first.
+      const upstreamAbort = new AbortController();
+      const STALL_MS = 720_000;
+      let timedOut = false;
+
       try {
         // Credit gate — one credit is enough to start; the real cost is
         // metered + debited after the page is built (see below).
@@ -221,28 +271,37 @@ export async function POST(req: Request): Promise<Response> {
           return;
         }
 
+        // ─── Streaming HTML generation ───────────────────────────────────
+        // eslint-disable-next-line no-console
+        console.log(
+          `[generate] auth + quota + credits ok — calling ${PROVIDER.label}`,
+        );
         const upstream = await fetch(
-          "https://api.together.xyz/v1/chat/completions",
+          PROVIDER.url,
           {
             method: "POST",
             headers: {
               "content-type": "application/json",
-              authorization: `Bearer ${apiKey}`,
+              authorization: `Bearer ${PROVIDER.key}`,
             },
             body: JSON.stringify({
-              model: "moonshotai/Kimi-K2.6",
+              model: PROVIDER.model,
               messages,
               temperature: 0.8,
               max_tokens: 65_536,
               stream: true,
+              stream_options: { include_usage: true },
             }),
+            signal: upstreamAbort.signal,
           },
         );
+        // eslint-disable-next-line no-console
+        console.log(`[generate] ${PROVIDER.label} responded ${upstream.status}`);
 
         if (!upstream.ok || !upstream.body) {
           const text = await upstream.text().catch(() => "");
           emit("error", {
-            message: `Together API ${upstream.status}: ${text.slice(0, 200)}`,
+            message: `${PROVIDER.label} API ${upstream.status}: ${text.slice(0, 200)}`,
           });
           closeStream();
           return;
@@ -251,13 +310,37 @@ export async function POST(req: Request): Promise<Response> {
         const reader = upstream.body.getReader();
         const decoder = new TextDecoder();
         let sseBuf = "";
+        let loggedFirst = false;
         let upstreamDone = false;
         let finishReason: string | null = null;
+        let usage: TokenUsage | null = null;
+
+        // One read, or "STALL" if no bytes land within STALL_MS — whichever
+        // resolves first. A rejected read counts as a stall too.
+        type ReadOut = Awaited<ReturnType<typeof reader.read>> | "STALL";
+        const readOrStall = (): Promise<ReadOut> =>
+          new Promise<ReadOut>((resolve) => {
+            const t = setTimeout(() => resolve("STALL"), STALL_MS);
+            reader.read().then(
+              (r) => {
+                clearTimeout(t);
+                resolve(r);
+              },
+              () => {
+                clearTimeout(t);
+                resolve("STALL");
+              },
+            );
+          });
 
         while (!upstreamDone) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          sseBuf += decoder.decode(value, { stream: true });
+          const chunk = await readOrStall();
+          if (chunk === "STALL") {
+            timedOut = true;
+            break;
+          }
+          if (chunk.done) break;
+          sseBuf += decoder.decode(chunk.value, { stream: true });
           let nl: number;
           while ((nl = sseBuf.indexOf("\n\n")) >= 0) {
             const block = sseBuf.slice(0, nl);
@@ -275,13 +358,20 @@ export async function POST(req: Request): Promise<Response> {
                     delta?: { content?: string };
                     finish_reason?: string | null;
                   }>;
+                  usage?: TokenUsage | null;
                 };
+                if (parsed.usage) usage = parsed.usage;
                 const choice = parsed.choices?.[0];
                 if (typeof choice?.finish_reason === "string") {
                   finishReason = choice.finish_reason;
                 }
                 const content = choice?.delta?.content;
                 if (typeof content === "string" && content.length > 0) {
+                  if (!loggedFirst) {
+                    loggedFirst = true;
+                    // eslint-disable-next-line no-console
+                    console.log("[generate] streaming started");
+                  }
                   handleDelta(content);
                 }
               } catch {
@@ -290,6 +380,18 @@ export async function POST(req: Request): Promise<Response> {
             }
             if (upstreamDone) break;
           }
+        }
+
+        if (timedOut) {
+          upstreamAbort.abort();
+          // eslint-disable-next-line no-console
+          console.log("[generate] stalled — no tokens within timeout");
+          emit("error", {
+            message:
+              "El modelo no respondió a tiempo — Together puede estar saturado. Probá de nuevo en un momento.",
+          });
+          closeStream();
+          return;
         }
 
         if (mode === "reasoning") {
@@ -336,11 +438,22 @@ export async function POST(req: Request): Promise<Response> {
           return;
         }
 
+        // Born-canonical: make the page's corner radius, display font, and
+        // accent globally themeable. Deterministic, idempotent, invisible
+        // until a Theme control moves a token. The same chain runs at every
+        // ingestion point (from-template, from-html) — every project is born
+        // canonical, not only generated ones.
+        const finalHtml = normalizeBornCanonical(html);
+
         const title = extractTitle(html) ?? brief.slice(0, 60).trim();
 
         let projectId: string;
         try {
-          projectId = await createProject(userId, { html, brief, title });
+          projectId = await createProject(userId, {
+            html: finalHtml,
+            brief,
+            title,
+          });
         } catch (err) {
           // eslint-disable-next-line no-console
           console.error("[generate] createProject failed", err);
@@ -354,7 +467,7 @@ export async function POST(req: Request): Promise<Response> {
         // Seed the version history so the user has a v0 to restore to.
         await createVersion({
           projectId,
-          html,
+          html: finalHtml,
           label: `Generated: ${title}`,
           source: "initial",
         }).catch((err: unknown) => {
@@ -362,18 +475,31 @@ export async function POST(req: Request): Promise<Response> {
           console.error("[generate] initial version snapshot failed", err);
         });
 
-        // Debit credits — metered from the real input + output volume.
-        await debitCredits(
-          userId,
-          estimateCredits(
-            SYSTEM_PROMPT.length + brief.length,
-            accumulatedReasoning.length + html.length,
-          ),
+        // Debit credits — billed from the real token usage Together reports
+        // (stream_options.include_usage). Falls back to a char estimate only
+        // if that usage chunk never arrived.
+        const credits =
+          usage?.prompt_tokens != null && usage.completion_tokens != null
+            ? creditsForUsage(
+                usage.prompt_tokens,
+                usage.completion_tokens,
+                PROVIDER.rate,
+              )
+            : estimateCredits(
+                SYSTEM_PROMPT.length + brief.length,
+                accumulatedReasoning.length + html.length,
+                PROVIDER.rate,
+              );
+        // eslint-disable-next-line no-console
+        console.log(
+          `[generate] tokens — prompt: ${usage?.prompt_tokens ?? "?"}, completion: ${usage?.completion_tokens ?? "?"} → ${credits} credits`,
         );
+        await debitCredits(userId, credits);
 
         emit("project_saved", { projectId, title });
         closeStream();
       } catch (err) {
+        upstreamAbort.abort();
         // eslint-disable-next-line no-console
         console.error("[generate] stream failed", err);
         emit("error", {

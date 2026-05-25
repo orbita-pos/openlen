@@ -1,0 +1,979 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Larder — Single-estate olive oil & pantry staples, harvest-dated</title>
+<meta name="description" content="Larder makes single-estate extra-virgin olive oil and a tight range of pantry staples — harvest-dated, cold-pressed, one ingredient. The good stuff, for the cooking you actually do.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#F1ECDF;
+    --paper:#FBF8EF;
+    --olive:#6B7340;
+    --olive-deep:#545A30;
+    --terra:#C06A3E;
+    --ink:#221E14;
+    --hair:rgba(0,0,0,0.08);
+  }
+  *{ -webkit-font-smoothing:antialiased; }
+  html{ scroll-behavior:smooth; }
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    background:var(--cream);
+    color:var(--ink);
+    margin:0;
+  }
+  .display{ font-family:'Familjen Grotesk',sans-serif; letter-spacing:-0.03em; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  .halftone{ opacity:0.45; }
+  .hair{ border-color:var(--hair); }
+  .wrap{ max-width:1200px; margin-left:auto; margin-right:auto; }
+
+  /* dot grid + ambient */
+  .dotgrid{
+    background-image:radial-gradient(rgba(34,30,20,0.10) 1.1px, transparent 1.1px);
+    background-size:32px 32px;
+  }
+  .blob{ filter:blur(70px); border-radius:9999px; }
+
+  /* pulse dot */
+  .pulse-dot{ position:relative; width:9px; height:9px; border-radius:9999px; background:var(--olive); }
+  .pulse-dot::after{
+    content:""; position:absolute; inset:0; border-radius:9999px; background:var(--olive);
+    animation:pulse 2.4s ease-out infinite;
+  }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(107,115,64,0.45); opacity:1; }
+    70%{ box-shadow:0 0 0 13px rgba(107,115,64,0); opacity:0.6; }
+    100%{ box-shadow:0 0 0 0 rgba(107,115,64,0); opacity:1; }
+  }
+
+  /* marquee */
+  .marquee{ overflow:hidden; }
+  .marquee-track{
+    display:flex; width:max-content; gap:3.5rem;
+    animation:scroll 34s linear infinite;
+  }
+  .marquee:hover .marquee-track{ animation-play-state:paused; }
+  @keyframes scroll{
+    from{ transform:translateX(0); }
+    to{ transform:translateX(-50%); }
+  }
+
+  /* hover lift */
+  .lift{ transition:transform .12s ease, box-shadow .12s ease; }
+  .lift:hover{ transform:translateY(-3px); }
+  .btn-lift{ transition:transform .1s ease, box-shadow .1s ease, background-color .15s ease; }
+  .btn-lift:hover{ transform:translateY(-2px); }
+
+  /* package floats */
+  .float-a{ animation:floaty 7s ease-in-out infinite; }
+  .float-b{ animation:floaty 8.5s ease-in-out infinite; animation-delay:-2s; }
+  @keyframes floaty{
+    0%,100%{ transform:translateY(0); }
+    50%{ transform:translateY(-9px); }
+  }
+
+  .vessel-shadow{ filter:drop-shadow(0 22px 26px rgba(34,30,20,0.22)); }
+  .card-shadow{ box-shadow:0 1px 2px rgba(34,30,20,0.05), 0 14px 30px -18px rgba(34,30,20,0.30); }
+
+  details > summary{ list-style:none; cursor:pointer; }
+  details > summary::-webkit-details-marker{ display:none; }
+  details[open] .faq-plus{ transform:rotate(45deg); }
+  .faq-plus{ transition:transform .2s ease; }
+
+  @media (prefers-reduced-motion: reduce){
+    .marquee-track,.pulse-dot::after,.float-a,.float-b{ animation:none !important; }
+    html{ scroll-behavior:auto; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ 1. NAV ============ -->
+<header class="sticky top-0 z-50 border-b hair" style="background:rgba(241,236,223,0.92);backdrop-filter:blur(10px);">
+  <nav class="wrap px-5 sm:px-8 h-[72px] flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <span aria-hidden="true" class="grid place-items-center w-9 h-9 rounded-lg" style="background:var(--olive);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M12 3c0 4-4 5-4 9a4 4 0 0 0 8 0c0-4-4-5-4-9Z" fill="#FBF8EF"/>
+          <circle cx="12" cy="13.5" r="1.7" fill="#6B7340"/>
+        </svg>
+      </span>
+      <span class="display text-[22px] font-bold tracking-tight">Larder</span>
+    </a>
+    <div class="hidden md:flex items-center gap-8 text-[14px] font-medium" style="color:#4A4536;">
+      <a href="#shop" class="hover:text-[color:var(--ink)] transition-colors">Shop</a>
+      <a href="#range" class="hover:text-[color:var(--ink)] transition-colors">Our Range</a>
+      <a href="#story" class="hover:text-[color:var(--ink)] transition-colors">Story</a>
+      <a href="#stockists" class="hover:text-[color:var(--ink)] transition-colors">Stockists</a>
+    </div>
+    <a href="#shop" class="btn-lift inline-flex flex-col items-center justify-center rounded-full px-5 py-1.5 text-white text-[13.5px] font-semibold leading-tight"
+       style="background:var(--olive);box-shadow:0 8px 18px -8px rgba(107,115,64,0.7);">
+      <span>Shop the range</span>
+      <span class="text-[10px] font-medium opacity-80 tnum">Free shipping over $45</span>
+    </a>
+  </nav>
+</header>
+
+<main id="top">
+
+<!-- ============ 2. HERO ============ -->
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 dotgrid opacity-60" aria-hidden="true"></div>
+  <div class="blob absolute -top-24 -left-24 w-[420px] h-[420px] opacity-50" style="background:#9AA34A;" aria-hidden="true"></div>
+  <div class="blob absolute top-40 -right-28 w-[380px] h-[380px] opacity-40" style="background:#C06A3E;" aria-hidden="true"></div>
+
+  <div class="wrap relative px-5 sm:px-8 pt-16 sm:pt-24 pb-20 grid lg:grid-cols-[1.05fr_0.95fr] gap-14 items-center">
+    <div>
+      <span class="inline-flex items-center gap-2 rounded-full border hair bg-[color:var(--paper)] px-3.5 py-1.5 text-[12.5px] font-semibold" style="color:var(--olive-deep);">
+        <span class="pulse-dot"></span>
+        New harvest — the 2026 pressing is in
+      </span>
+      <h1 class="display font-bold mt-6 text-[clamp(2.6rem,6.6vw,4.6rem)] leading-[1.02]">
+        The good stuff,<br>
+        <span class="halftone">for the cooking you actually do.</span>
+      </h1>
+      <p class="mt-6 text-[17px] leading-relaxed max-w-[34rem]" style="color:#46412F;">
+        Single-estate extra-virgin olive oil and a tight little range of pantry staples — every tin stamped with the day it was pressed. No fillers, no mystery blends.
+      </p>
+      <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+        <a href="#shop" class="btn-lift inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-white text-[15px] font-semibold"
+           style="background:var(--olive);box-shadow:0 14px 28px -12px rgba(107,115,64,0.8);">
+          Shop the range
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h13M12 5l7 7-7 7" stroke="#FBF8EF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#sourcing" class="inline-flex items-center gap-1.5 text-[15px] font-semibold border-b-2 pb-0.5" style="color:var(--ink);border-color:var(--terra);">
+          How it's pressed
+        </a>
+      </div>
+      <div class="mt-9 flex flex-wrap gap-2.5">
+        <span class="rounded-full bg-[color:var(--paper)] border hair px-3 py-1 text-[12.5px] font-semibold" style="color:var(--olive-deep);">Single-estate</span>
+        <span class="rounded-full bg-[color:var(--paper)] border hair px-3 py-1 text-[12.5px] font-semibold" style="color:var(--olive-deep);">Harvest-dated</span>
+        <span class="rounded-full bg-[color:var(--paper)] border hair px-3 py-1 text-[12.5px] font-semibold" style="color:var(--olive-deep);">Cold-pressed</span>
+        <span class="rounded-full bg-[color:var(--paper)] border hair px-3 py-1 text-[12.5px] font-semibold" style="color:var(--olive-deep);">One ingredient</span>
+      </div>
+    </div>
+
+    <!-- HERO RENDER: the tin, front & centre -->
+    <div class="relative">
+      <div class="absolute left-1/2 -translate-x-1/2 bottom-4 w-[78%] h-12 rounded-[50%]" style="background:rgba(34,30,20,0.16);filter:blur(20px);" aria-hidden="true"></div>
+      <div class="relative mx-auto float-a vessel-shadow" style="width:230px;">
+        <!-- TIN -->
+        <svg viewBox="0 0 230 320" width="230" height="320" aria-label="Larder Everyday Extra-Virgin olive oil tin">
+          <!-- spout/cap -->
+          <rect x="148" y="6" width="34" height="22" rx="3" fill="#3F4527"/>
+          <rect x="152" y="0" width="26" height="10" rx="3" fill="#525A33"/>
+          <!-- body -->
+          <rect x="34" y="26" width="162" height="268" rx="9" fill="#6B7340"/>
+          <rect x="34" y="26" width="162" height="268" rx="9" fill="url(#tinG)"/>
+          <!-- top rim -->
+          <rect x="34" y="26" width="162" height="13" rx="6" fill="#7E8650"/>
+          <!-- side seam highlight -->
+          <rect x="49" y="39" width="6" height="248" rx="3" fill="#ffffff" opacity="0.14"/>
+          <rect x="176" y="39" width="7" height="248" rx="3" fill="#000000" opacity="0.13"/>
+          <!-- label -->
+          <rect x="52" y="92" width="126" height="150" rx="5" fill="#FBF8EF"/>
+          <text x="115" y="118" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="13" font-weight="700" fill="#6B7340" letter-spacing="3">LARDER</text>
+          <line x1="70" y1="128" x2="160" y2="128" stroke="#E4DCC4" stroke-width="1.5"/>
+          <text x="115" y="158" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="17" font-weight="700" fill="#221E14">Everyday</text>
+          <text x="115" y="178" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="17" font-weight="700" fill="#221E14">Extra-Virgin</text>
+          <text x="115" y="200" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" fill="#6F6850" letter-spacing="0.5">SINGLE-ESTATE · COLD-PRESSED</text>
+          <rect x="83" y="210" width="64" height="19" rx="9.5" fill="#C06A3E"/>
+          <text x="115" y="222.5" text-anchor="middle" font-family="Inter,sans-serif" font-size="8.5" font-weight="600" fill="#FBF8EF" letter-spacing="0.5">PRESSED 11·2025</text>
+          <text x="115" y="262" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" fill="#9C9577">500ml · 16.9 fl oz</text>
+          <defs>
+            <linearGradient id="tinG" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#ffffff" stop-opacity="0.16"/>
+              <stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/>
+              <stop offset="1" stop-color="#000000" stop-opacity="0.16"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <!-- floating spec chip -->
+      <div class="hidden sm:block absolute -right-2 top-10 bg-[color:var(--paper)] border hair rounded-xl px-3.5 py-2.5 card-shadow lift">
+        <p class="text-[11px] font-semibold uppercase tracking-wide" style="color:var(--terra);">Pressed</p>
+        <p class="display text-[15px] font-bold tnum">Nov 2025</p>
+      </div>
+      <div class="hidden sm:block absolute -left-3 bottom-24 bg-[color:var(--paper)] border hair rounded-xl px-3.5 py-2.5 card-shadow lift">
+        <p class="text-[11px] font-semibold uppercase tracking-wide" style="color:var(--olive-deep);">Estate</p>
+        <p class="display text-[15px] font-bold">Val di Serra</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3. PROOF BAR ============ -->
+<section class="border-y hair bg-[color:var(--paper)]">
+  <div class="wrap px-5 sm:px-8 py-7 flex flex-col lg:flex-row items-center gap-6 lg:gap-10">
+    <div class="flex items-center gap-3 shrink-0">
+      <div class="flex" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg>
+      </div>
+      <p class="text-[14px] font-medium" style="color:#46412F;">
+        <span class="display font-bold text-[color:var(--ink)] tnum">4.8</span> ·
+        <span class="tnum">6,540</span> kitchen reviews
+      </p>
+    </div>
+    <div class="hidden lg:block w-px h-9 bg-[color:var(--hair)]"></div>
+    <p class="text-[12px] font-semibold uppercase tracking-[0.14em] shrink-0" style="color:#8C8569;">As featured in</p>
+    <div class="marquee flex-1 w-full">
+      <div class="marquee-track items-center" style="opacity:0.72;">
+        <span class="display text-[19px] font-bold whitespace-nowrap">The Kitchen Folio</span>
+        <span class="text-[18px] italic whitespace-nowrap" style="font-family:Georgia,serif;">Pressed &amp; Poured</span>
+        <span class="text-[17px] font-semibold tracking-[0.18em] whitespace-nowrap">SAVOUR WEEKLY</span>
+        <span class="display text-[19px] font-bold whitespace-nowrap">Counter Culture</span>
+        <span class="text-[18px] italic whitespace-nowrap" style="font-family:Georgia,serif;">The Larder Note</span>
+        <span class="text-[17px] font-semibold tracking-[0.16em] whitespace-nowrap">GOOD HEARTH</span>
+        <span class="display text-[19px] font-bold whitespace-nowrap">Mortar &amp; Plate</span>
+        <!-- duplicate -->
+        <span class="display text-[19px] font-bold whitespace-nowrap" aria-hidden="true">The Kitchen Folio</span>
+        <span class="text-[18px] italic whitespace-nowrap" style="font-family:Georgia,serif;" aria-hidden="true">Pressed &amp; Poured</span>
+        <span class="text-[17px] font-semibold tracking-[0.18em] whitespace-nowrap" aria-hidden="true">SAVOUR WEEKLY</span>
+        <span class="display text-[19px] font-bold whitespace-nowrap" aria-hidden="true">Counter Culture</span>
+        <span class="text-[18px] italic whitespace-nowrap" style="font-family:Georgia,serif;" aria-hidden="true">The Larder Note</span>
+        <span class="text-[17px] font-semibold tracking-[0.16em] whitespace-nowrap" aria-hidden="true">GOOD HEARTH</span>
+        <span class="display text-[19px] font-bold whitespace-nowrap" aria-hidden="true">Mortar &amp; Plate</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4. THE RANGE ============ -->
+<section id="shop" class="scroll-mt-20">
+<section id="range" class="scroll-mt-20 relative">
+  <div class="wrap px-5 sm:px-8 py-20">
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-11">
+      <div>
+        <p class="text-[12px] font-semibold uppercase tracking-[0.16em]" style="color:var(--terra);">The whole range</p>
+        <h2 class="display font-bold text-[clamp(2rem,4.4vw,3rem)] leading-[1.05] mt-2">Six staples. That's the lot.</h2>
+      </div>
+      <p class="text-[14.5px] max-w-sm" style="color:#56503D;">We don't make forty things. We make six we'd put on our own shelf — and we keep them honest.</p>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
+      <!-- 1. Everyday Extra-Virgin — TIN -->
+      <article class="lift card-shadow rounded-2xl border hair overflow-hidden bg-[color:var(--paper)]">
+        <div class="h-52 grid place-items-center" style="background:linear-gradient(160deg,#7C854C,#5C6336);">
+          <svg viewBox="0 0 120 170" width="100" height="142" class="vessel-shadow" aria-label="Everyday Extra-Virgin tin">
+            <rect x="74" y="3" width="20" height="12" rx="2" fill="#3F4527"/>
+            <rect x="14" y="14" width="92" height="148" rx="6" fill="#6B7340"/>
+            <rect x="14" y="14" width="92" height="9" rx="4" fill="#7E8650"/>
+            <rect x="24" y="14" width="4" height="142" fill="#fff" opacity="0.14"/>
+            <rect x="95" y="14" width="5" height="142" fill="#000" opacity="0.13"/>
+            <rect x="28" y="56" width="64" height="80" rx="4" fill="#FBF8EF"/>
+            <text x="60" y="74" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="8" font-weight="700" fill="#6B7340" letter-spacing="2">LARDER</text>
+            <text x="60" y="96" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="9.5" font-weight="700" fill="#221E14">Everyday</text>
+            <text x="60" y="108" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="9.5" font-weight="700" fill="#221E14">Extra-Virgin</text>
+            <rect x="42" y="116" width="36" height="11" rx="5.5" fill="#C06A3E"/>
+            <text x="60" y="123.5" text-anchor="middle" font-family="Inter,sans-serif" font-size="5.5" font-weight="600" fill="#FBF8EF">PRESSED 11·25</text>
+          </svg>
+        </div>
+        <div class="p-5">
+          <div class="flex items-start justify-between gap-3">
+            <h3 class="display text-[18px] font-bold">Everyday Extra-Virgin</h3>
+            <span class="display text-[17px] font-bold tnum shrink-0">$22</span>
+          </div>
+          <p class="text-[13.5px] mt-1.5 leading-snug" style="color:#56503D;">Single-estate cooking oil, in the tin. Grassy, mellow, built for the pan. 500ml.</p>
+          <a href="#shop" class="mt-4 inline-flex w-full justify-center rounded-full border-2 py-2 text-[13.5px] font-semibold btn-lift" style="border-color:var(--olive);color:var(--olive-deep);">Add to basket</a>
+        </div>
+      </article>
+
+      <!-- 2. First-Press Finishing Oil — BOTTLE -->
+      <article class="lift card-shadow rounded-2xl border hair overflow-hidden bg-[color:var(--paper)]">
+        <div class="h-52 grid place-items-center" style="background:linear-gradient(160deg,#A8B055,#8A9340);">
+          <svg viewBox="0 0 90 175" width="74" height="144" class="vessel-shadow" aria-label="First-Press Finishing Oil bottle">
+            <rect x="38" y="2" width="14" height="13" rx="2" fill="#3F4527"/>
+            <rect x="40" y="14" width="10" height="26" fill="#5C6336"/>
+            <path d="M33 40 q-9 8 -9 26 v95 a8 8 0 0 0 8 8 h26 a8 8 0 0 0 8 -8 v-95 q0 -18 -9 -26 z" fill="#9AA34A"/>
+            <path d="M33 40 q-9 8 -9 26 v95 a8 8 0 0 0 8 8 h26 a8 8 0 0 0 8 -8 v-95 q0 -18 -9 -26 z" fill="url(#bg2)"/>
+            <rect x="29" y="86" width="32" height="62" rx="3" fill="#FBF8EF"/>
+            <text x="45" y="100" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="6.5" font-weight="700" fill="#6B7340" letter-spacing="1.4">LARDER</text>
+            <text x="45" y="116" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="7.6" font-weight="700" fill="#221E14">First-Press</text>
+            <text x="45" y="126" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="7.6" font-weight="700" fill="#221E14">Finishing</text>
+            <text x="45" y="140" text-anchor="middle" font-family="Inter,sans-serif" font-size="5" fill="#8C8569">250ml</text>
+            <defs><linearGradient id="bg2" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.22"/><stop offset="1" stop-color="#000" stop-opacity="0.14"/></linearGradient></defs>
+          </svg>
+        </div>
+        <div class="p-5">
+          <div class="flex items-start justify-between gap-3">
+            <h3 class="display text-[18px] font-bold">First-Press Finishing Oil</h3>
+            <span class="display text-[17px] font-bold tnum shrink-0">$26</span>
+          </div>
+          <p class="text-[13.5px] mt-1.5 leading-snug" style="color:#56503D;">A peppery, green first-press for the last drizzle, not the heat. 250ml.</p>
+          <a href="#shop" class="mt-4 inline-flex w-full justify-center rounded-full border-2 py-2 text-[13.5px] font-semibold btn-lift" style="border-color:var(--olive);color:var(--olive-deep);">Add to basket</a>
+        </div>
+      </article>
+
+      <!-- 3. Flaky Sea Salt — JAR -->
+      <article class="lift card-shadow rounded-2xl border hair overflow-hidden bg-[color:var(--paper)]">
+        <div class="h-52 grid place-items-center" style="background:linear-gradient(160deg,#E4DBC4,#CDC2A6);">
+          <svg viewBox="0 0 110 165" width="92" height="138" class="vessel-shadow" aria-label="Flaky Sea Salt jar">
+            <rect x="28" y="6" width="54" height="20" rx="4" fill="#3F4527"/>
+            <rect x="33" y="2" width="44" height="8" rx="3" fill="#525A33"/>
+            <path d="M22 26 h66 v118 a14 14 0 0 1 -14 14 h-38 a14 14 0 0 1 -14 -14 z" fill="#D9CFB8"/>
+            <path d="M22 26 h66 v118 a14 14 0 0 1 -14 14 h-38 a14 14 0 0 1 -14 -14 z" fill="url(#jg3)"/>
+            <rect x="32" y="60" width="46" height="68" rx="4" fill="#FBF8EF"/>
+            <text x="55" y="76" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="7" font-weight="700" fill="#6B7340" letter-spacing="1.6">LARDER</text>
+            <text x="55" y="94" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="9" font-weight="700" fill="#221E14">Flaky</text>
+            <text x="55" y="105" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="9" font-weight="700" fill="#221E14">Sea Salt</text>
+            <text x="55" y="119" text-anchor="middle" font-family="Inter,sans-serif" font-size="5" fill="#8C8569">PYRAMID FLAKE · 250g</text>
+            <defs><linearGradient id="jg3" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.3"/><stop offset="1" stop-color="#000" stop-opacity="0.1"/></linearGradient></defs>
+          </svg>
+        </div>
+        <div class="p-5">
+          <div class="flex items-start justify-between gap-3">
+            <h3 class="display text-[18px] font-bold">Flaky Sea Salt</h3>
+            <span class="display text-[17px] font-bold tnum shrink-0">$14</span>
+          </div>
+          <p class="text-[13.5px] mt-1.5 leading-snug" style="color:#56503D;">Crisp pyramid flakes that crush between your fingers. Finishes everything. 250g.</p>
+          <a href="#shop" class="mt-4 inline-flex w-full justify-center rounded-full border-2 py-2 text-[13.5px] font-semibold btn-lift" style="border-color:var(--olive);color:var(--olive-deep);">Add to basket</a>
+        </div>
+      </article>
+
+      <!-- 4. Aged Red Wine Vinegar — BOTTLE -->
+      <article class="lift card-shadow rounded-2xl border hair overflow-hidden bg-[color:var(--paper)]">
+        <div class="h-52 grid place-items-center" style="background:linear-gradient(160deg,#8E483F,#6A322B);">
+          <svg viewBox="0 0 84 178" width="70" height="148" class="vessel-shadow" aria-label="Aged Red Wine Vinegar bottle">
+            <rect x="35" y="2" width="14" height="14" rx="2" fill="#3F4527"/>
+            <rect x="34" y="15" width="16" height="30" rx="3" fill="#5C2C26"/>
+            <path d="M30 45 q-8 6 -8 22 v100 a8 8 0 0 0 8 8 h24 a8 8 0 0 0 8 -8 v-100 q0 -16 -8 -22 z" fill="#7C3B33"/>
+            <path d="M30 45 q-8 6 -8 22 v100 a8 8 0 0 0 8 8 h24 a8 8 0 0 0 8 -8 v-100 q0 -16 -8 -22 z" fill="url(#vg4)"/>
+            <rect x="26" y="92" width="32" height="64" rx="3" fill="#FBF8EF"/>
+            <text x="42" y="106" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="6.4" font-weight="700" fill="#7C3B33" letter-spacing="1.3">LARDER</text>
+            <text x="42" y="121" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="7.4" font-weight="700" fill="#221E14">Aged Red</text>
+            <text x="42" y="131" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="7.4" font-weight="700" fill="#221E14">Wine Vinegar</text>
+            <text x="42" y="146" text-anchor="middle" font-family="Inter,sans-serif" font-size="5" fill="#8C8569">375ml</text>
+            <defs><linearGradient id="vg4" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.2"/><stop offset="1" stop-color="#000" stop-opacity="0.18"/></linearGradient></defs>
+          </svg>
+        </div>
+        <div class="p-5">
+          <div class="flex items-start justify-between gap-3">
+            <h3 class="display text-[18px] font-bold">Aged Red Wine Vinegar</h3>
+            <span class="display text-[17px] font-bold tnum shrink-0">$18</span>
+          </div>
+          <p class="text-[13.5px] mt-1.5 leading-snug" style="color:#56503D;">Barrel-aged four years — round, not sharp. The backbone of a real vinaigrette. 375ml.</p>
+          <a href="#shop" class="mt-4 inline-flex w-full justify-center rounded-full border-2 py-2 text-[13.5px] font-semibold btn-lift" style="border-color:var(--olive);color:var(--olive-deep);">Add to basket</a>
+        </div>
+      </article>
+
+      <!-- 5. Golden Balsamic — BOTTLE -->
+      <article class="lift card-shadow rounded-2xl border hair overflow-hidden bg-[color:var(--paper)]">
+        <div class="h-52 grid place-items-center" style="background:linear-gradient(160deg,#E0AC52,#C2862E);">
+          <svg viewBox="0 0 84 178" width="70" height="148" class="vessel-shadow" aria-label="Golden Balsamic bottle">
+            <rect x="35" y="2" width="14" height="14" rx="2" fill="#3F4527"/>
+            <rect x="34" y="15" width="16" height="30" rx="3" fill="#A87523"/>
+            <path d="M30 45 q-8 6 -8 22 v100 a8 8 0 0 0 8 8 h24 a8 8 0 0 0 8 -8 v-100 q0 -16 -8 -22 z" fill="#D69A3C"/>
+            <path d="M30 45 q-8 6 -8 22 v100 a8 8 0 0 0 8 8 h24 a8 8 0 0 0 8 -8 v-100 q0 -16 -8 -22 z" fill="url(#bg5)"/>
+            <rect x="26" y="92" width="32" height="64" rx="3" fill="#FBF8EF"/>
+            <text x="42" y="106" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="6.4" font-weight="700" fill="#B07F2A" letter-spacing="1.3">LARDER</text>
+            <text x="42" y="122" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="8" font-weight="700" fill="#221E14">Golden</text>
+            <text x="42" y="132" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="8" font-weight="700" fill="#221E14">Balsamic</text>
+            <text x="42" y="146" text-anchor="middle" font-family="Inter,sans-serif" font-size="5" fill="#8C8569">250ml</text>
+            <defs><linearGradient id="bg5" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.28"/><stop offset="1" stop-color="#000" stop-opacity="0.13"/></linearGradient></defs>
+          </svg>
+        </div>
+        <div class="p-5">
+          <div class="flex items-start justify-between gap-3">
+            <h3 class="display text-[18px] font-bold">Golden Balsamic</h3>
+            <span class="display text-[17px] font-bold tnum shrink-0">$20</span>
+          </div>
+          <p class="text-[13.5px] mt-1.5 leading-snug" style="color:#56503D;">A pale, bright balsamic — sweet-tart without the dark stain. 250ml.</p>
+          <a href="#shop" class="mt-4 inline-flex w-full justify-center rounded-full border-2 py-2 text-[13.5px] font-semibold btn-lift" style="border-color:var(--olive);color:var(--olive-deep);">Add to basket</a>
+        </div>
+      </article>
+
+      <!-- 6. Sichuan Chili Crisp — JAR -->
+      <article class="lift card-shadow rounded-2xl border hair overflow-hidden bg-[color:var(--paper)]">
+        <div class="h-52 grid place-items-center" style="background:linear-gradient(160deg,#CE5D3F,#A53E26);">
+          <svg viewBox="0 0 110 165" width="92" height="138" class="vessel-shadow" aria-label="Sichuan Chili Crisp jar">
+            <rect x="28" y="6" width="54" height="20" rx="4" fill="#3F4527"/>
+            <rect x="33" y="2" width="44" height="8" rx="3" fill="#525A33"/>
+            <path d="M22 26 h66 v118 a14 14 0 0 1 -14 14 h-38 a14 14 0 0 1 -14 -14 z" fill="#C0492E"/>
+            <path d="M22 26 h66 v118 a14 14 0 0 1 -14 14 h-38 a14 14 0 0 1 -14 -14 z" fill="url(#cg6)"/>
+            <rect x="32" y="58" width="46" height="72" rx="4" fill="#FBF8EF"/>
+            <text x="55" y="74" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="7" font-weight="700" fill="#C0492E" letter-spacing="1.6">LARDER</text>
+            <text x="55" y="92" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="9" font-weight="700" fill="#221E14">Sichuan</text>
+            <text x="55" y="103" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="9" font-weight="700" fill="#221E14">Chili Crisp</text>
+            <text x="55" y="120" text-anchor="middle" font-family="Inter,sans-serif" font-size="5" fill="#8C8569">CRUNCHY · MEDIUM HEAT</text>
+            <defs><linearGradient id="cg6" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.22"/><stop offset="1" stop-color="#000" stop-opacity="0.16"/></linearGradient></defs>
+          </svg>
+        </div>
+        <div class="p-5">
+          <div class="flex items-start justify-between gap-3">
+            <h3 class="display text-[18px] font-bold">Sichuan Chili Crisp</h3>
+            <span class="display text-[17px] font-bold tnum shrink-0">$16</span>
+          </div>
+          <p class="text-[13.5px] mt-1.5 leading-snug" style="color:#56503D;">Crunchy, fragrant, a slow building heat. Goes on the fried egg, then everything else.</p>
+          <a href="#shop" class="mt-4 inline-flex w-full justify-center rounded-full border-2 py-2 text-[13.5px] font-semibold btn-lift" style="border-color:var(--olive);color:var(--olive-deep);">Add to basket</a>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+</section>
+
+<!-- ============ 5. BRAND STORY ============ -->
+<section id="story" class="scroll-mt-20 border-y hair bg-[color:var(--paper)] relative overflow-hidden">
+  <div class="blob absolute -bottom-32 -right-20 w-[360px] h-[360px] opacity-30" style="background:#9AA34A;" aria-hidden="true"></div>
+  <div class="wrap px-5 sm:px-8 py-20 grid lg:grid-cols-[0.85fr_1.15fr] gap-12 lg:gap-16 items-center relative">
+    <div>
+      <div class="relative mx-auto" style="max-width:300px;">
+        <div class="rounded-2xl border hair p-8" style="background:linear-gradient(155deg,#6B7340,#4C5230);">
+          <svg width="100%" viewBox="0 0 200 220" aria-label="Olive branch">
+            <path d="M100 210 V60" stroke="#FBF8EF" stroke-width="3" stroke-linecap="round"/>
+            <g fill="#C7CE8A">
+              <ellipse cx="68" cy="150" rx="26" ry="11" transform="rotate(-32 68 150)"/>
+              <ellipse cx="132" cy="124" rx="26" ry="11" transform="rotate(32 132 124)"/>
+              <ellipse cx="70" cy="100" rx="24" ry="10" transform="rotate(-30 70 100)"/>
+              <ellipse cx="128" cy="78" rx="24" ry="10" transform="rotate(30 128 78)"/>
+            </g>
+            <circle cx="100" cy="52" r="13" fill="#C06A3E"/>
+            <circle cx="118" cy="64" r="11" fill="#A8552F"/>
+            <circle cx="84" cy="66" r="10" fill="#A8552F"/>
+          </svg>
+          <p class="display text-[15px] font-bold text-[color:var(--cream)] mt-5 text-center">Val di Serra estate · est. 2019</p>
+        </div>
+        <div class="absolute -bottom-5 -left-5 bg-[color:var(--cream)] border hair rounded-xl px-4 py-3 card-shadow">
+          <p class="display text-[22px] font-bold tnum">14</p>
+          <p class="text-[11px] font-medium" style="color:#56503D;">months — how old<br>supermarket oil often is</p>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p class="text-[12px] font-semibold uppercase tracking-[0.16em]" style="color:var(--terra);">Why we started</p>
+      <h2 class="display font-bold text-[clamp(2rem,4.2vw,3rem)] leading-[1.06] mt-2">
+        We got tired of oil that was<br><span class="halftone">already old on the shelf.</span>
+      </h2>
+      <div class="mt-6 space-y-4 text-[15.5px] leading-relaxed" style="color:#46412F;">
+        <p>Larder started with a frustrating discovery. Most supermarket extra-virgin olive oil is pressed, shipped, blended, bottled, and warehoused — and by the time it reaches the shelf it can be fourteen months old. Olive oil isn't wine. It doesn't improve with age. It quietly fades.</p>
+        <p>So our founders, Marta and Olu, did the opposite. One single estate in Val di Serra. One pressing a year. Olives in the mill within four hours of leaving the tree. And — the part we're stubborn about — a real press date stamped on every tin, so you can see exactly how fresh it is before you buy.</p>
+        <p>The rest of the range followed the same rule: a thing worth making, or we don't make it. Six staples, honestly sourced, for the cooking you actually do on a Tuesday night.</p>
+      </div>
+      <div class="mt-7 flex items-center gap-3">
+        <div class="w-11 h-11 rounded-full grid place-items-center display font-bold text-[color:var(--cream)]" style="background:var(--terra);">MO</div>
+        <div>
+          <p class="text-[14px] font-semibold">Marta &amp; Olu</p>
+          <p class="text-[12.5px]" style="color:#7A745C;">Founders, Larder</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6. SOURCING / HOW IT'S MADE ============ -->
+<section id="sourcing" class="scroll-mt-20">
+  <div class="wrap px-5 sm:px-8 py-20">
+    <div class="text-center max-w-2xl mx-auto mb-12">
+      <p class="text-[12px] font-semibold uppercase tracking-[0.16em]" style="color:var(--terra);">From tree to tin</p>
+      <h2 class="display font-bold text-[clamp(2rem,4.2vw,3rem)] leading-[1.06] mt-2">Pressed within hours. Dated before it leaves.</h2>
+      <p class="mt-4 text-[15px]" style="color:#56503D;">Freshness in olive oil is a clock, not a vibe. Here's how we keep that clock short.</p>
+    </div>
+
+    <!-- 3 steps -->
+    <div class="grid md:grid-cols-3 gap-5 mb-14">
+      <div class="rounded-2xl border hair bg-[color:var(--paper)] p-6 card-shadow lift">
+        <div class="flex items-center gap-3 mb-3">
+          <span class="display text-[13px] font-bold w-8 h-8 rounded-lg grid place-items-center text-[color:var(--cream)] tnum" style="background:var(--olive);">01</span>
+          <h3 class="display text-[17px] font-bold">Picked at one estate</h3>
+        </div>
+        <p class="text-[14px] leading-relaxed" style="color:#56503D;">Every olive comes from Val di Serra — no co-op blending, no anonymous tanker oil. One terroir, one harvest window, picked just before full ripeness for that green, peppery edge.</p>
+      </div>
+      <div class="rounded-2xl border hair bg-[color:var(--paper)] p-6 card-shadow lift">
+        <div class="flex items-center gap-3 mb-3">
+          <span class="display text-[13px] font-bold w-8 h-8 rounded-lg grid place-items-center text-[color:var(--cream)] tnum" style="background:var(--olive);">02</span>
+          <h3 class="display text-[17px] font-bold">Cold-pressed in 4 hours</h3>
+        </div>
+        <p class="text-[14px] leading-relaxed" style="color:#56503D;">From branch to mill in under four hours, pressed below 27°C. No heat, no chemical extraction — the faster and cooler the press, the more flavour and polyphenols survive.</p>
+      </div>
+      <div class="rounded-2xl border hair bg-[color:var(--paper)] p-6 card-shadow lift">
+        <div class="flex items-center gap-3 mb-3">
+          <span class="display text-[13px] font-bold w-8 h-8 rounded-lg grid place-items-center text-[color:var(--cream)] tnum" style="background:var(--olive);">03</span>
+          <h3 class="display text-[17px] font-bold">Press date on the tin</h3>
+        </div>
+        <p class="text-[14px] leading-relaxed" style="color:#56503D;">A light-proof tin, never clear glass — and the exact month of pressing stamped on the front. You buy on freshness, not on a "best before" two years out.</p>
+      </div>
+    </div>
+
+    <!-- cooking vs finishing explainer -->
+    <div class="rounded-2xl border hair overflow-hidden card-shadow">
+      <div class="px-6 sm:px-8 py-5 border-b hair flex items-center gap-2.5" style="background:var(--paper);">
+        <span class="pulse-dot"></span>
+        <h3 class="display text-[18px] font-bold">A cooking oil vs. a finishing oil — know the difference</h3>
+      </div>
+      <div class="grid sm:grid-cols-2">
+        <div class="p-6 sm:p-8" style="background:rgba(107,115,64,0.07);">
+          <span class="inline-block rounded-full px-3 py-1 text-[12px] font-semibold text-[color:var(--cream)] mb-3" style="background:var(--olive);">For the heat</span>
+          <h4 class="display text-[19px] font-bold">Everyday Extra-Virgin</h4>
+          <p class="text-[14px] mt-2 leading-relaxed" style="color:#46412F;">Your workhorse. Mellow and balanced so it doesn't turn bitter in a hot pan. Use it to roast vegetables, fry an egg, sweat onions, build a sauce — anything with a flame under it.</p>
+          <ul class="mt-4 space-y-1.5 text-[13.5px]" style="color:#56503D;">
+            <li class="flex gap-2"><span style="color:var(--olive);">●</span> Roasting &amp; sautéing</li>
+            <li class="flex gap-2"><span style="color:var(--olive);">●</span> Smoke point around 200°C</li>
+            <li class="flex gap-2"><span style="color:var(--olive);">●</span> The one you reach for daily</li>
+          </ul>
+        </div>
+        <div class="p-6 sm:p-8" style="background:rgba(192,106,62,0.08);">
+          <span class="inline-block rounded-full px-3 py-1 text-[12px] font-semibold text-[color:var(--cream)] mb-3" style="background:var(--terra);">For the finish</span>
+          <h4 class="display text-[19px] font-bold">First-Press Finishing Oil</h4>
+          <p class="text-[14px] mt-2 leading-relaxed" style="color:#46412F;">Loud and green and a little peppery — too good to cook away. Add it raw, off the heat, right before serving, so all that first-press character lands on the plate.</p>
+          <ul class="mt-4 space-y-1.5 text-[13.5px]" style="color:#56503D;">
+            <li class="flex gap-2"><span style="color:var(--terra);">●</span> Drizzled over the finished dish</li>
+            <li class="flex gap-2"><span style="color:var(--terra);">●</span> Soups, burrata, grilled bread, beans</li>
+            <li class="flex gap-2"><span style="color:var(--terra);">●</span> Never heated — that's the point</li>
+          </ul>
+        </div>
+      </div>
+      <div class="px-6 sm:px-8 py-4 text-[13.5px] border-t hair" style="background:var(--paper);color:#56503D;">
+        <strong style="color:var(--ink);">Short version:</strong> cook with the tin, finish with the bottle. Most kitchens want one of each.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 7. BESTSELLER SPOTLIGHT ============ -->
+<section class="border-y hair relative overflow-hidden" style="background:linear-gradient(165deg,#5C6336,#454B2A);">
+  <div class="absolute inset-0 dotgrid opacity-10" aria-hidden="true"></div>
+  <div class="wrap px-5 sm:px-8 py-20 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center relative">
+    <!-- render -->
+    <div class="order-2 lg:order-1 relative">
+      <div class="absolute left-1/2 -translate-x-1/2 bottom-2 w-[70%] h-10 rounded-[50%]" style="background:rgba(0,0,0,0.32);filter:blur(20px);" aria-hidden="true"></div>
+      <div class="relative mx-auto float-b vessel-shadow" style="width:215px;">
+        <svg viewBox="0 0 230 320" width="215" height="298" aria-label="Everyday Extra-Virgin tin, large">
+          <rect x="148" y="6" width="34" height="22" rx="3" fill="#3F4527"/>
+          <rect x="152" y="0" width="26" height="10" rx="3" fill="#525A33"/>
+          <rect x="34" y="26" width="162" height="268" rx="9" fill="#6B7340"/>
+          <rect x="34" y="26" width="162" height="268" rx="9" fill="url(#tinG2)"/>
+          <rect x="34" y="26" width="162" height="13" rx="6" fill="#7E8650"/>
+          <rect x="49" y="39" width="6" height="248" rx="3" fill="#fff" opacity="0.14"/>
+          <rect x="176" y="39" width="7" height="248" rx="3" fill="#000" opacity="0.13"/>
+          <rect x="52" y="92" width="126" height="150" rx="5" fill="#FBF8EF"/>
+          <text x="115" y="118" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="13" font-weight="700" fill="#6B7340" letter-spacing="3">LARDER</text>
+          <line x1="70" y1="128" x2="160" y2="128" stroke="#E4DCC4" stroke-width="1.5"/>
+          <text x="115" y="158" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="17" font-weight="700" fill="#221E14">Everyday</text>
+          <text x="115" y="178" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="17" font-weight="700" fill="#221E14">Extra-Virgin</text>
+          <text x="115" y="200" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" fill="#6F6850" letter-spacing="0.5">SINGLE-ESTATE · COLD-PRESSED</text>
+          <rect x="83" y="210" width="64" height="19" rx="9.5" fill="#C06A3E"/>
+          <text x="115" y="222.5" text-anchor="middle" font-family="Inter,sans-serif" font-size="8.5" font-weight="600" fill="#FBF8EF" letter-spacing="0.5">PRESSED 11·2025</text>
+          <text x="115" y="262" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" fill="#9C9577">500ml · 16.9 fl oz</text>
+          <defs><linearGradient id="tinG2" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.16"/><stop offset="0.5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.16"/></linearGradient></defs>
+        </svg>
+      </div>
+    </div>
+    <!-- copy -->
+    <div class="order-1 lg:order-2 text-[color:var(--cream)]">
+      <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[12px] font-semibold" style="background:rgba(251,248,239,0.16);">★ Our bestseller</span>
+      <h2 class="display font-bold text-[clamp(2rem,4.2vw,3rem)] leading-[1.06] mt-4">Everyday Extra-Virgin</h2>
+      <p class="mt-4 text-[15.5px] leading-relaxed" style="color:rgba(251,248,239,0.82);">
+        The tin that started it all, and the one most of our customers reorder. A balanced, single-estate cooking oil with enough green character to taste — and a press date you can actually read.
+      </p>
+      <div class="mt-6 grid grid-cols-3 gap-3">
+        <div class="rounded-xl p-3.5" style="background:rgba(251,248,239,0.1);">
+          <p class="display text-[20px] font-bold tnum">Nov '25</p>
+          <p class="text-[11.5px]" style="color:rgba(251,248,239,0.7);">Harvest date</p>
+        </div>
+        <div class="rounded-xl p-3.5" style="background:rgba(251,248,239,0.1);">
+          <p class="display text-[20px] font-bold tnum">412 mg</p>
+          <p class="text-[11.5px]" style="color:rgba(251,248,239,0.7);">Polyphenols / kg</p>
+        </div>
+        <div class="rounded-xl p-3.5" style="background:rgba(251,248,239,0.1);">
+          <p class="display text-[20px] font-bold tnum">500ml</p>
+          <p class="text-[11.5px]" style="color:rgba(251,248,239,0.7);">Light-proof tin</p>
+        </div>
+      </div>
+      <div class="mt-6">
+        <p class="text-[12px] font-semibold uppercase tracking-[0.14em]" style="color:rgba(251,248,239,0.6);">Taste notes</p>
+        <div class="mt-2.5 flex flex-wrap gap-2">
+          <span class="rounded-full border px-3 py-1 text-[12.5px] font-medium" style="border-color:rgba(251,248,239,0.28);color:var(--cream);">Fresh-cut grass</span>
+          <span class="rounded-full border px-3 py-1 text-[12.5px] font-medium" style="border-color:rgba(251,248,239,0.28);color:var(--cream);">Green almond</span>
+          <span class="rounded-full border px-3 py-1 text-[12.5px] font-medium" style="border-color:rgba(251,248,239,0.28);color:var(--cream);">A peppery catch at the back</span>
+        </div>
+      </div>
+      <div class="mt-8 flex flex-wrap items-center gap-4">
+        <a href="#shop" class="btn-lift inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-semibold" style="background:var(--terra);color:#FBF8EF;box-shadow:0 14px 28px -12px rgba(0,0,0,0.55);">
+          Add the tin — $22
+        </a>
+        <span class="text-[13.5px]" style="color:rgba(251,248,239,0.72);">Reorder favourite · ★ <span class="tnum">4.9</span> from <span class="tnum">3,180</span> reviews</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 8. WAYS TO USE + STARTER BUNDLE ============ -->
+<section class="scroll-mt-20">
+  <div class="wrap px-5 sm:px-8 py-20">
+    <div class="mb-11">
+      <p class="text-[12px] font-semibold uppercase tracking-[0.16em]" style="color:var(--terra);">Put it to work</p>
+      <h2 class="display font-bold text-[clamp(2rem,4.2vw,3rem)] leading-[1.06] mt-2">Tuesday-night ways to use the lot</h2>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.2fr_1fr] gap-7">
+      <!-- pairings -->
+      <div class="grid sm:grid-cols-2 gap-5">
+        <div class="rounded-2xl border hair bg-[color:var(--paper)] p-6 card-shadow lift">
+          <div class="w-10 h-10 rounded-lg grid place-items-center mb-3" style="background:rgba(154,163,74,0.2);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3v18M5 9c0-3 3-5 7-5s7 2 7 5" stroke="#6B7340" stroke-width="2" stroke-linecap="round"/></svg>
+          </div>
+          <h3 class="display text-[16px] font-bold">Finishing oil over burrata</h3>
+          <p class="text-[13.5px] mt-1.5 leading-snug" style="color:#56503D;">A torn ball of burrata, flaky salt, a long pour of First-Press. Nothing else needed.</p>
+        </div>
+        <div class="rounded-2xl border hair bg-[color:var(--paper)] p-6 card-shadow lift">
+          <div class="w-10 h-10 rounded-lg grid place-items-center mb-3" style="background:rgba(192,73,46,0.18);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="#C0492E" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="#C0492E"/></svg>
+          </div>
+          <h3 class="display text-[16px] font-bold">Chili crisp on a fried egg</h3>
+          <p class="text-[13.5px] mt-1.5 leading-snug" style="color:#56503D;">Crispy-edged egg, a spoon of Sichuan Chili Crisp, eaten standing up. Breakfast solved.</p>
+        </div>
+        <div class="rounded-2xl border hair bg-[color:var(--paper)] p-6 card-shadow lift">
+          <div class="w-10 h-10 rounded-lg grid place-items-center mb-3" style="background:rgba(124,59,51,0.18);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 19l14-14M9 5H5v4M19 15v4h-4" stroke="#7C3B33" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <h3 class="display text-[16px] font-bold">A 30-second vinaigrette</h3>
+          <p class="text-[13.5px] mt-1.5 leading-snug" style="color:#56503D;">Three parts Everyday oil, one part Aged Red Wine Vinegar, salt, a jar, shake. Done.</p>
+        </div>
+        <div class="rounded-2xl border hair bg-[color:var(--paper)] p-6 card-shadow lift">
+          <div class="w-10 h-10 rounded-lg grid place-items-center mb-3" style="background:rgba(214,154,60,0.22);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 12h16M4 12c0-4 4-7 8-7s8 3 8 7M8 12v5M16 12v5" stroke="#C2862E" stroke-width="2" stroke-linecap="round"/></svg>
+          </div>
+          <h3 class="display text-[16px] font-bold">Golden balsamic on roast veg</h3>
+          <p class="text-[13.5px] mt-1.5 leading-snug" style="color:#56503D;">A splash over roasted carrots or squash in the last five minutes — sweet, bright, sticky.</p>
+        </div>
+      </div>
+
+      <!-- starter bundle -->
+      <div class="rounded-2xl border-2 p-7 card-shadow flex flex-col" style="border-color:var(--olive);background:var(--paper);">
+        <div class="flex items-center justify-between">
+          <span class="rounded-full px-3 py-1 text-[12px] font-semibold text-[color:var(--cream)]" style="background:var(--terra);">Best value</span>
+          <span class="text-[12.5px] font-semibold" style="color:var(--olive-deep);">Save $18</span>
+        </div>
+        <h3 class="display text-[24px] font-bold mt-4">The Starter Pantry</h3>
+        <p class="text-[14px] mt-1.5 leading-relaxed" style="color:#56503D;">All six staples, one box — the fastest way to swap out the tired stuff at the back of the cupboard.</p>
+        <ul class="mt-5 space-y-2 text-[14px]" style="color:#3A3526;">
+          <li class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5 9-11" stroke="#6B7340" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg> Everyday Extra-Virgin · 500ml tin</li>
+          <li class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5 9-11" stroke="#6B7340" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg> First-Press Finishing Oil · 250ml</li>
+          <li class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5 9-11" stroke="#6B7340" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg> Flaky Sea Salt · 250g jar</li>
+          <li class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5 9-11" stroke="#6B7340" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg> Aged Red Wine Vinegar · 375ml</li>
+          <li class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5 9-11" stroke="#6B7340" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg> Golden Balsamic · 250ml</li>
+          <li class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5 9-11" stroke="#6B7340" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg> Sichuan Chili Crisp · jar</li>
+        </ul>
+        <div class="mt-6 flex items-end gap-2.5">
+          <span class="display text-[34px] font-bold tnum">$98</span>
+          <span class="text-[15px] line-through tnum mb-1.5" style="color:#9C9577;">$116</span>
+        </div>
+        <a href="#shop" class="mt-4 btn-lift inline-flex justify-center rounded-full px-6 py-3.5 text-white text-[15px] font-semibold" style="background:var(--olive);box-shadow:0 14px 26px -12px rgba(107,115,64,0.8);">
+          Get the Starter Pantry
+        </a>
+        <p class="text-[12px] text-center mt-3" style="color:#7A745C;">One-off box · or subscribe &amp; refill the oils every 8 weeks</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 9. REVIEWS ============ -->
+<section class="border-y hair bg-[color:var(--paper)]">
+  <div class="wrap px-5 sm:px-8 py-20">
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-11">
+      <div>
+        <p class="text-[12px] font-semibold uppercase tracking-[0.16em]" style="color:var(--terra);">From the kitchen</p>
+        <h2 class="display font-bold text-[clamp(2rem,4.2vw,3rem)] leading-[1.06] mt-2">What cooks tell us</h2>
+      </div>
+      <div class="flex items-center gap-3 rounded-xl border hair px-4 py-3" style="background:var(--cream);">
+        <span class="display text-[30px] font-bold tnum">4.8</span>
+        <div>
+          <div class="flex" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg>
+          </div>
+          <p class="text-[12px] tnum" style="color:#7A745C;">6,540 verified reviews</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <figure class="rounded-2xl border hair bg-[color:var(--cream)] p-6 card-shadow lift">
+        <div class="flex gap-0.5 mb-3" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg>
+        </div>
+        <blockquote class="text-[14.5px] leading-relaxed" style="color:#3A3526;">"First time I've tasted the difference a press date makes. The Everyday tin is genuinely peppery — I used to think all olive oil tasted the same. It does not."</blockquote>
+        <figcaption class="mt-4 flex items-center gap-3">
+          <span class="w-9 h-9 rounded-full grid place-items-center text-[12px] font-semibold text-[color:var(--cream)]" style="background:var(--olive);">SK</span>
+          <span><span class="block text-[13.5px] font-semibold">Saoirse Keane</span><span class="block text-[12px]" style="color:#7A745C;">Everyday Extra-Virgin</span></span>
+        </figcaption>
+      </figure>
+
+      <figure class="rounded-2xl border hair bg-[color:var(--cream)] p-6 card-shadow lift">
+        <div class="flex gap-0.5 mb-3" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg>
+        </div>
+        <blockquote class="text-[14.5px] leading-relaxed" style="color:#3A3526;">"The chili crisp is dangerous. It's been three weeks and I've put it on eggs, rice, dumplings, and — don't judge me — buttered toast. Crunchy, fragrant, not stupidly hot."</blockquote>
+        <figcaption class="mt-4 flex items-center gap-3">
+          <span class="w-9 h-9 rounded-full grid place-items-center text-[12px] font-semibold text-[color:var(--cream)]" style="background:var(--terra);">DM</span>
+          <span><span class="block text-[13.5px] font-semibold">Diego Morales</span><span class="block text-[12px]" style="color:#7A745C;">Sichuan Chili Crisp</span></span>
+        </figcaption>
+      </figure>
+
+      <figure class="rounded-2xl border hair bg-[color:var(--cream)] p-6 card-shadow lift">
+        <div class="flex gap-0.5 mb-3" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg>
+        </div>
+        <blockquote class="text-[14.5px] leading-relaxed" style="color:#3A3526;">"Bought the Starter Pantry to replace a cupboard of half-empty bottles. The golden balsamic surprised me most — bright and sweet without staining everything brown."</blockquote>
+        <figcaption class="mt-4 flex items-center gap-3">
+          <span class="w-9 h-9 rounded-full grid place-items-center text-[12px] font-semibold text-[color:var(--cream)]" style="background:#C2862E;">PV</span>
+          <span><span class="block text-[13.5px] font-semibold">Priya Venkat</span><span class="block text-[12px]" style="color:#7A745C;">The Starter Pantry</span></span>
+        </figcaption>
+      </figure>
+
+      <figure class="rounded-2xl border hair bg-[color:var(--cream)] p-6 card-shadow lift md:col-span-2 lg:col-span-3">
+        <div class="grid lg:grid-cols-[auto_1fr] gap-5 items-center">
+          <div class="flex gap-0.5" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#C06A3E"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.3 6.9L12 18.6 5.5 21l1.3-6.9-5-4.8 6.9-.9z"/></svg>
+          </div>
+          <div>
+            <blockquote class="text-[15px] leading-relaxed" style="color:#3A3526;">"I cook most nights and I'm fussy about vinegar. The Aged Red Wine Vinegar is round and soft — none of that nose-stinging sharpness — and it's turned my weeknight vinaigrette into something I'd actually serve guests. Reordered twice already."</blockquote>
+            <figcaption class="mt-3 flex items-center gap-3">
+              <span class="w-9 h-9 rounded-full grid place-items-center text-[12px] font-semibold text-[color:var(--cream)]" style="background:#7C3B33;">JT</span>
+              <span><span class="text-[13.5px] font-semibold">Johan Theron</span> <span class="text-[12px]" style="color:#7A745C;">· Aged Red Wine Vinegar</span></span>
+            </figcaption>
+          </div>
+        </div>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 10. WHERE TO BUY ============ -->
+<section id="stockists" class="scroll-mt-20">
+  <div class="wrap px-5 sm:px-8 py-20">
+    <div class="grid lg:grid-cols-[1fr_1fr] gap-12 items-center">
+      <div>
+        <p class="text-[12px] font-semibold uppercase tracking-[0.16em]" style="color:var(--terra);">Where to buy</p>
+        <h2 class="display font-bold text-[clamp(2rem,4.2vw,3rem)] leading-[1.06] mt-2">Now on the shelf in 980 stores</h2>
+        <p class="mt-4 text-[15px] leading-relaxed" style="color:#56503D;">
+          Larder is stocked by good grocers, delis and food halls — and if your kitchen is far from any of them, we ship the whole range straight to your door.
+        </p>
+        <div class="mt-6 flex flex-wrap gap-2.5">
+          <span class="rounded-full border hair px-3.5 py-1.5 text-[13px] font-medium bg-[color:var(--paper)]" style="color:#46412F;">London</span>
+          <span class="rounded-full border hair px-3.5 py-1.5 text-[13px] font-medium bg-[color:var(--paper)]" style="color:#46412F;">Lisbon</span>
+          <span class="rounded-full border hair px-3.5 py-1.5 text-[13px] font-medium bg-[color:var(--paper)]" style="color:#46412F;">Copenhagen</span>
+          <span class="rounded-full border hair px-3.5 py-1.5 text-[13px] font-medium bg-[color:var(--paper)]" style="color:#46412F;">Melbourne</span>
+          <span class="rounded-full border hair px-3.5 py-1.5 text-[13px] font-medium bg-[color:var(--paper)]" style="color:#46412F;">Brooklyn</span>
+          <span class="rounded-full border hair px-3.5 py-1.5 text-[13px] font-medium bg-[color:var(--paper)]" style="color:#46412F;">+ 41 more cities</span>
+        </div>
+        <!-- store locator teaser (markup only) -->
+        <div class="mt-7">
+          <label for="loc" class="text-[13px] font-semibold" style="color:var(--olive-deep);">Find a store near you</label>
+          <div class="mt-2 flex flex-col sm:flex-row gap-2.5">
+            <input id="loc" type="text" placeholder="Postcode or city" class="flex-1 rounded-full border hair bg-[color:var(--paper)] px-5 py-3 text-[14px] outline-none" style="color:var(--ink);">
+            <button type="button" class="btn-lift rounded-full px-6 py-3 text-white text-[14px] font-semibold" style="background:var(--olive);">Find stockists</button>
+          </div>
+        </div>
+        <div class="mt-6">
+          <a href="#shop" class="inline-flex items-center gap-1.5 text-[14.5px] font-semibold border-b-2 pb-0.5" style="color:var(--ink);border-color:var(--terra);">
+            Or shop the full range online
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12h13M12 5l7 7-7 7" stroke="#221E14" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- stockist logo strip -->
+      <div class="rounded-2xl border hair p-7 card-shadow" style="background:var(--paper);">
+        <p class="text-[12px] font-semibold uppercase tracking-[0.14em] mb-5" style="color:#8C8569;">Stocked at</p>
+        <div class="grid grid-cols-2 gap-x-6 gap-y-5">
+          <div class="flex items-center gap-2.5">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="5" stroke="#6B7340" stroke-width="2"/><path d="M8 12h8" stroke="#6B7340" stroke-width="2" stroke-linecap="round"/></svg>
+            <span class="display text-[16px] font-bold">Greenfield Market</span>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#C06A3E" stroke-width="2"/></svg>
+            <span class="text-[16px] italic" style="font-family:Georgia,serif;">Mercato Bianco</span>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 3l9 16H3z" stroke="#6B7340" stroke-width="2" stroke-linejoin="round"/></svg>
+            <span class="display text-[16px] font-bold">Hearth &amp; Field</span>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M5 19V8l7-4 7 4v11" stroke="#C06A3E" stroke-width="2" stroke-linejoin="round"/></svg>
+            <span class="text-[15px] font-semibold tracking-[0.12em]">THE PROVISIONS CO.</span>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="9" r="5" stroke="#6B7340" stroke-width="2"/><circle cx="15" cy="15" r="5" stroke="#6B7340" stroke-width="2"/></svg>
+            <span class="display text-[16px] font-bold">Two Spoons Deli</span>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 20L20 4M4 4l16 16" stroke="#C06A3E" stroke-width="2" stroke-linecap="round"/></svg>
+            <span class="text-[16px] italic" style="font-family:Georgia,serif;">Larkspur Grocer</span>
+          </div>
+        </div>
+        <div class="mt-6 pt-5 border-t hair flex items-center gap-2.5">
+          <span class="pulse-dot"></span>
+          <p class="text-[13px]" style="color:#56503D;"><span class="display font-bold tnum" style="color:var(--ink);">23</span> new stockists added this season</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 11. FAQ ============ -->
+<section class="border-y hair bg-[color:var(--paper)]">
+  <div class="wrap px-5 sm:px-8 py-20">
+    <div class="grid lg:grid-cols-[0.8fr_1.2fr] gap-10 lg:gap-14">
+      <div>
+        <p class="text-[12px] font-semibold uppercase tracking-[0.16em]" style="color:var(--terra);">Good to know</p>
+        <h2 class="display font-bold text-[clamp(2rem,4.2vw,3rem)] leading-[1.06] mt-2">Questions, answered plainly</h2>
+        <p class="mt-4 text-[14.5px]" style="color:#56503D;">No jargon. If you've still got a question, the kitchen team reads every email.</p>
+      </div>
+      <div class="space-y-3">
+        <details class="group rounded-xl border hair bg-[color:var(--cream)] px-5 py-1 lift">
+          <summary class="flex items-center justify-between gap-4 py-4">
+            <span class="display text-[16px] font-bold">What's the harvest date — how fresh is it?</span>
+            <span class="faq-plus shrink-0 text-[22px] leading-none" style="color:var(--olive);">+</span>
+          </summary>
+          <p class="pb-4 text-[14px] leading-relaxed" style="color:#46412F;">The harvest date is the exact month the olives were pressed, stamped on the front of every tin and bottle — not a vague "best before". Our current Everyday Extra-Virgin is the November 2025 pressing. Olive oil is at its best in the first 12 to 18 months after pressing, so a real date lets you buy on freshness instead of guessing.</p>
+        </details>
+        <details class="group rounded-xl border hair bg-[color:var(--cream)] px-5 py-1 lift">
+          <summary class="flex items-center justify-between gap-4 py-4">
+            <span class="display text-[16px] font-bold">Cooking oil vs. finishing oil — which do I need?</span>
+            <span class="faq-plus shrink-0 text-[22px] leading-none" style="color:var(--olive);">+</span>
+          </summary>
+          <p class="pb-4 text-[14px] leading-relaxed" style="color:#46412F;">Most kitchens want both. Everyday Extra-Virgin is your cooking oil — balanced and heat-stable for roasting, frying and sautéing. First-Press Finishing Oil is louder and more peppery, meant to be drizzled raw over a finished dish so its character isn't cooked away. If you only buy one to start, make it the Everyday tin.</p>
+        </details>
+        <details class="group rounded-xl border hair bg-[color:var(--cream)] px-5 py-1 lift">
+          <summary class="flex items-center justify-between gap-4 py-4">
+            <span class="display text-[16px] font-bold">How do I store olive oil?</span>
+            <span class="faq-plus shrink-0 text-[22px] leading-none" style="color:var(--olive);">+</span>
+          </summary>
+          <p class="pb-4 text-[14px] leading-relaxed" style="color:#46412F;">Cool, dark, and sealed. Heat, light and air are what turn good oil rancid, which is exactly why we use a light-proof tin instead of clear glass. Keep it in a cupboard away from the stove — not on the windowsill or next to the hob — and use it within a few months of opening for the best flavour.</p>
+        </details>
+        <details class="group rounded-xl border hair bg-[color:var(--cream)] px-5 py-1 lift">
+          <summary class="flex items-center justify-between gap-4 py-4">
+            <span class="display text-[16px] font-bold">Is the tin recyclable?</span>
+            <span class="faq-plus shrink-0 text-[22px] leading-none" style="color:var(--olive);">+</span>
+          </summary>
+          <p class="pb-4 text-[14px] leading-relaxed" style="color:#46412F;">Yes — the tin is tinplate steel, one of the most widely recycled materials there is, and it's accepted in standard household recycling almost everywhere. Give it a quick rinse, pop the cap off, and it goes straight in. The bottles are glass and equally recyclable; our outer boxes are unbleached and curbside-recyclable too.</p>
+        </details>
+        <details class="group rounded-xl border hair bg-[color:var(--cream)] px-5 py-1 lift">
+          <summary class="flex items-center justify-between gap-4 py-4">
+            <span class="display text-[16px] font-bold">Do you do a starter bundle?</span>
+            <span class="faq-plus shrink-0 text-[22px] leading-none" style="color:var(--olive);">+</span>
+          </summary>
+          <p class="pb-4 text-[14px] leading-relaxed" style="color:#46412F;">We do — the Starter Pantry. It's all six staples in one box for $98 instead of $116, the easiest way to refresh a whole cupboard at once. You can buy it as a one-off, or subscribe and have the two oils automatically refilled every eight weeks so you never cook with a tired tin.</p>
+        </details>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 12. FINAL CTA ============ -->
+<section class="relative overflow-hidden" style="background:linear-gradient(160deg,#6B7340,#4A5030);">
+  <div class="absolute inset-0 dotgrid opacity-10" aria-hidden="true"></div>
+  <div class="blob absolute -top-20 right-10 w-[300px] h-[300px] opacity-30" style="background:#C06A3E;" aria-hidden="true"></div>
+  <div class="wrap px-5 sm:px-8 py-20 sm:py-24 text-center relative">
+    <span class="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold" style="background:rgba(251,248,239,0.16);color:var(--cream);">
+      <span class="pulse-dot" style="background:#FBF8EF;"></span>
+      The 2026 pressing is shipping now
+    </span>
+    <h2 class="display font-bold text-[color:var(--cream)] text-[clamp(2.2rem,5.2vw,3.7rem)] leading-[1.04] mt-5 max-w-3xl mx-auto">
+      Shop the range.<br><span style="opacity:0.5;">Cook the way you actually cook.</span>
+    </h2>
+    <p class="mt-5 text-[16px] max-w-xl mx-auto" style="color:rgba(251,248,239,0.82);">
+      Six honest staples, harvest-dated and single-estate. Swap out the tired stuff at the back of the cupboard.
+    </p>
+    <div class="mt-8 flex flex-col sm:flex-row justify-center items-center gap-4">
+      <a href="#shop" class="btn-lift inline-flex items-center gap-2 rounded-full px-8 py-4 text-[15.5px] font-semibold" style="background:var(--terra);color:#FBF8EF;box-shadow:0 16px 30px -12px rgba(0,0,0,0.6);">
+        Shop the range
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h13M12 5l7 7-7 7" stroke="#FBF8EF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <a href="#shop" class="inline-flex items-center text-[15px] font-semibold border-b-2 pb-0.5" style="color:var(--cream);border-color:rgba(251,248,239,0.55);">
+        Get the Starter Pantry — $98
+      </a>
+    </div>
+    <p class="mt-6 text-[13px]" style="color:rgba(251,248,239,0.68);">Free shipping over $45 · Ships within 2 working days · Harvest-dated, always</p>
+  </div>
+</section>
+
+<!-- ============ 13. FOOTER ============ -->
+<footer class="bg-[color:var(--cream)]">
+  <div class="wrap px-5 sm:px-8 py-16">
+    <div class="grid md:grid-cols-[1.4fr_1fr_1fr_1fr] gap-10 lg:gap-12">
+      <div>
+        <a href="#top" class="flex items-center gap-2.5">
+          <span aria-hidden="true" class="grid place-items-center w-9 h-9 rounded-lg" style="background:var(--olive);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M12 3c0 4-4 5-4 9a4 4 0 0 0 8 0c0-4-4-5-4-9Z" fill="#FBF8EF"/>
+              <circle cx="12" cy="13.5" r="1.7" fill="#6B7340"/>
+            </svg>
+          </span>
+          <span class="display text-[21px] font-bold">Larder</span>
+        </a>
+        <p class="mt-4 text-[14px] leading-relaxed max-w-xs" style="color:#56503D;">
+          Single-estate olive oil and a tight range of pantry staples — harvest-dated, cold-pressed, honestly sourced. The good stuff, for the cooking you actually do.
+        </p>
+        <!-- newsletter -->
+        <form class="mt-6" onsubmit="return false;">
+          <label for="news" class="text-[13px] font-semibold" style="color:var(--olive-deep);">Get harvest news + a recipe a month</label>
+          <div class="mt-2 flex gap-2">
+            <input id="news" type="email" placeholder="you@kitchen.com" class="flex-1 rounded-full border hair bg-[color:var(--paper)] px-4 py-2.5 text-[13.5px] outline-none" style="color:var(--ink);">
+            <button type="submit" class="btn-lift rounded-full px-5 py-2.5 text-white text-[13.5px] font-semibold shrink-0" style="background:var(--olive);">Sign up</button>
+          </div>
+        </form>
+      </div>
+
+      <div>
+        <p class="display text-[14px] font-bold mb-3.5">Shop</p>
+        <ul class="space-y-2.5 text-[13.5px]" style="color:#56503D;">
+          <li><a href="#range" class="hover:text-[color:var(--ink)] transition-colors">Everyday Extra-Virgin</a></li>
+          <li><a href="#range" class="hover:text-[color:var(--ink)] transition-colors">Finishing Oil</a></li>
+          <li><a href="#range" class="hover:text-[color:var(--ink)] transition-colors">Vinegars &amp; Balsamic</a></li>
+          <li><a href="#range" class="hover:text-[color:var(--ink)] transition-colors">Salt &amp; Chili Crisp</a></li>
+          <li><a href="#shop" class="hover:text-[color:var(--ink)] transition-colors">The Starter Pantry</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <p class="display text-[14px] font-bold mb-3.5">Our story</p>
+        <ul class="space-y-2.5 text-[13.5px]" style="color:#56503D;">
+          <li><a href="#story" class="hover:text-[color:var(--ink)] transition-colors">Why Larder</a></li>
+          <li><a href="#sourcing" class="hover:text-[color:var(--ink)] transition-colors">The estate &amp; the pressing</a></li>
+          <li><a href="#sourcing" class="hover:text-[color:var(--ink)] transition-colors">Cooking vs. finishing oil</a></li>
+          <li><a href="#stockists" class="hover:text-[color:var(--ink)] transition-colors">Stockists</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <p class="display text-[14px] font-bold mb-3.5">Help</p>
+        <ul class="space-y-2.5 text-[13.5px]" style="color:#56503D;">
+          <li><a href="#faq" class="hover:text-[color:var(--ink)] transition-colors">FAQ</a></li>
+          <li><a href="#stockists" class="hover:text-[color:var(--ink)] transition-colors">Shipping &amp; returns</a></li>
+          <li><a href="#footer" class="hover:text-[color:var(--ink)] transition-colors">Contact the kitchen</a></li>
+          <li><a href="#footer" class="hover:text-[color:var(--ink)] transition-colors">Allergens &amp; nutrition info</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="mt-12 pt-6 border-t hair flex flex-col sm:flex-row items-center justify-between gap-3">
+      <p class="text-[12.5px]" style="color:#7A745C;">© 2026 Larder Provisions Ltd. Pressed at Val di Serra. All rights reserved.</p>
+      <div class="flex items-center gap-5 text-[12.5px]" style="color:#7A745C;">
+        <a href="#footer" class="hover:text-[color:var(--ink)] transition-colors">Privacy</a>
+        <a href="#footer" class="hover:text-[color:var(--ink)] transition-colors">Terms</a>
+        <a href="#footer" class="hover:text-[color:var(--ink)] transition-colors">Allergens &amp; nutrition info</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</main>
+</body>
+</html>

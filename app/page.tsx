@@ -6,6 +6,13 @@ import { Pricing } from "@/components/marketing/pricing";
 import { FinalCta } from "@/components/marketing/final-cta";
 import { MarketingChrome } from "@/components/marketing/marketing-chrome";
 
+// Revalidate every 60s. The page reads template thumbnails + counts from
+// DB at build time — without ISR, generating new thumbnails via
+// `templates:thumbnails` wouldn't propagate to the homepage until the
+// next full deploy. 60s gives sub-minute freshness without making every
+// visitor pay the SSR cost.
+export const revalidate = 60;
+
 export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col">

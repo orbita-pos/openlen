@@ -1,0 +1,1272 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Frequency — Five shows on how technology actually gets built and sold</title>
+  <meta name="description" content="Frequency is an independent podcast network of five shows on how technology actually gets built and sold — engineering craft, go-to-market, infrastructure, product, and the money side. Hosted by people who've shipped." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20rx='8'%20fill='%230B0D12'/%3E%3Cg%20fill='%235B8CFF'%3E%3Crect%20x='6'%20y='13'%20width='3'%20height='6'%20rx='1.5'/%3E%3Crect%20x='11.5'%20y='9'%20width='3'%20height='14'%20rx='1.5'/%3E%3Crect%20x='17'%20y='6'%20width='3'%20height='20'%20rx='1.5'/%3E%3Crect%20x='22.5'%20y='11'%20width='3'%20height='10'%20rx='1.5'/%3E%3C/g%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['"Inter Tight"', 'system-ui', 'sans-serif'],
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            ink: '#0B0D12',
+            surface: '#11141C',
+            surface2: '#141822',
+            accent: '#5B8CFF',
+            primary: '#EEF1F6',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root {
+      --accent: #5B8CFF;
+      --wave-on: #5B8CFF;
+      --wave-off: rgba(238, 241, 246, 0.14);
+      --hairline: rgba(238, 241, 246, 0.08);
+      --hairline-strong: rgba(238, 241, 246, 0.12);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: #0B0D12;
+      color: #EEF1F6;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-feature-settings: "ss01", "cv11";
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .font-display {
+      font-family: 'Inter Tight', system-ui, sans-serif;
+    }
+
+    .tracking-display {
+      letter-spacing: -0.035em;
+    }
+
+    .tnum {
+      font-variant-numeric: tabular-nums;
+    }
+
+    ::selection {
+      background: rgba(91, 140, 255, 0.32);
+      color: #EEF1F6;
+    }
+
+    /* Ambient backgrounds */
+    .ambient-mesh {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .mesh-blob {
+      position: absolute;
+      border-radius: 9999px;
+      filter: blur(120px);
+      opacity: 0.5;
+    }
+
+    .dot-grid {
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(rgba(238, 241, 246, 0.05) 1px, transparent 1px);
+      background-size: 32px 32px;
+      mask-image: radial-gradient(ellipse 70% 60% at 50% 35%, #000 0%, transparent 80%);
+      -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 35%, #000 0%, transparent 80%);
+      pointer-events: none;
+    }
+
+    /* Half-tone trick */
+    .halftone-dim {
+      opacity: 0.45;
+    }
+
+    /* Pulse dot */
+    .pulse-dot {
+      position: relative;
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 9999px;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .pulse-dot::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 9999px;
+      background: var(--accent);
+      animation: pulse-ring 2.4s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+    }
+
+    @keyframes pulse-ring {
+      0% { box-shadow: 0 0 0 0 rgba(91, 140, 255, 0.55); }
+      70% { box-shadow: 0 0 0 11px rgba(91, 140, 255, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(91, 140, 255, 0); }
+    }
+
+    /* Marquee */
+    .marquee {
+      display: flex;
+      width: max-content;
+      animation: marquee-scroll 42s linear infinite;
+    }
+
+    .marquee:hover {
+      animation-play-state: paused;
+    }
+
+    @keyframes marquee-scroll {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+
+    .marquee-mask {
+      mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent);
+      -webkit-mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent);
+    }
+
+    /* Hover lift */
+    .lift {
+      transition: transform 110ms ease, box-shadow 110ms ease, border-color 110ms ease, background-color 110ms ease;
+    }
+
+    .lift:hover {
+      transform: translateY(-2px);
+    }
+
+    /* Cover art glow */
+    .cover-shadow {
+      box-shadow: 0 30px 60px -22px rgba(0, 0, 0, 0.8), 0 8px 22px -10px rgba(0, 0, 0, 0.6);
+    }
+
+    /* Equalizer micro-animation paused look — purely decorative static bars handled in markup */
+    .eq-bar {
+      transform-origin: bottom;
+    }
+
+    /* Player knob */
+    .scrub-knob {
+      box-shadow: 0 0 0 5px rgba(91, 140, 255, 0.16), 0 2px 8px rgba(0, 0, 0, 0.6);
+    }
+
+    /* Nav blur */
+    .nav-blur {
+      backdrop-filter: blur(14px) saturate(160%);
+      -webkit-backdrop-filter: blur(14px) saturate(160%);
+      background: rgba(11, 13, 18, 0.78);
+    }
+
+    /* Card surface */
+    .card {
+      background: linear-gradient(180deg, rgba(20, 24, 34, 0.9), rgba(17, 20, 28, 0.9));
+    }
+
+    .glow-line {
+      background: linear-gradient(90deg, transparent, rgba(91, 140, 255, 0.55), transparent);
+    }
+
+    details > summary { list-style: none; cursor: pointer; }
+    details > summary::-webkit-details-marker { display: none; }
+    details[open] .faq-icon { transform: rotate(45deg); }
+    .faq-icon { transition: transform 140ms ease; }
+
+    .focusable:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .marquee { animation: none; }
+      .pulse-dot::after { animation: none; }
+      html { scroll-behavior: auto; }
+    }
+  </style>
+</head>
+<body class="font-sans antialiased">
+
+  <!-- ============ 1. NAV ============ -->
+  <header class="sticky top-0 z-50 nav-blur border-b border-[var(--hairline)]">
+    <nav class="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
+      <a href="#top" class="flex items-center gap-2.5 focusable" aria-label="Frequency network home">
+        <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-surface2 ring-1 ring-[var(--hairline-strong)]">
+          <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true">
+            <g fill="#5B8CFF">
+              <rect x="6" y="13" width="3" height="6" rx="1.5"/>
+              <rect x="11.5" y="9" width="3" height="14" rx="1.5"/>
+              <rect x="17" y="6" width="3" height="20" rx="1.5"/>
+              <rect x="22.5" y="11" width="3" height="10" rx="1.5"/>
+            </g>
+          </svg>
+        </span>
+        <span class="font-display text-lg font-700 tracking-display">Frequency</span>
+      </a>
+
+      <div class="hidden items-center gap-7 md:flex">
+        <a href="#shows" class="text-sm font-500 text-primary/70 transition-colors hover:text-primary focusable">Shows &amp; Episodes</a>
+        <a href="#about" class="text-sm font-500 text-primary/70 transition-colors hover:text-primary focusable">About</a>
+        <a href="#hosts" class="text-sm font-500 text-primary/70 transition-colors hover:text-primary focusable">Hosts</a>
+        <a href="#newsletter" class="text-sm font-500 text-primary/70 transition-colors hover:text-primary focusable">Newsletter</a>
+      </div>
+
+      <a href="#subscribe" class="lift inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-600 text-ink shadow-[0_8px_24px_-8px_rgba(91,140,255,0.6)] hover:shadow-[0_10px_30px_-8px_rgba(91,140,255,0.75)] focusable">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M2 8a6 6 0 016-6M2 8a6 6 0 006 6M5 8a3 3 0 013-3M5 8a3 3 0 003 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          <circle cx="8" cy="8" r="1.4" fill="currentColor"/>
+        </svg>
+        Subscribe
+      </a>
+    </nav>
+  </header>
+
+  <main id="top">
+
+    <!-- ============ 2. HERO ============ -->
+    <section class="relative overflow-hidden border-b border-[var(--hairline)]">
+      <div class="ambient-mesh" aria-hidden="true">
+        <div class="mesh-blob" style="width:520px;height:520px;left:-140px;top:-160px;background:radial-gradient(circle,#5B8CFF,transparent 70%);"></div>
+        <div class="mesh-blob" style="width:440px;height:440px;right:-120px;top:40px;background:radial-gradient(circle,#7C5BFF,transparent 70%);opacity:0.32;"></div>
+        <div class="dot-grid"></div>
+      </div>
+
+      <div class="relative z-10 mx-auto max-w-7xl px-5 pb-20 pt-16 sm:px-8 sm:pb-24 sm:pt-20">
+        <!-- Eyebrow -->
+        <div class="mb-7 inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-surface/70 px-3 py-1.5">
+          <span class="pulse-dot"></span>
+          <span class="font-mono text-[11px] uppercase tracking-[0.18em] text-primary/65">Independent podcast network · Est. 2021</span>
+        </div>
+
+        <div class="grid items-start gap-12 lg:grid-cols-12 lg:gap-10">
+          <!-- Left: copy + player -->
+          <div class="lg:col-span-7">
+            <h1 class="font-display text-6xl font-700 leading-[0.95] tracking-display sm:text-7xl lg:text-[5.5rem]">
+              Frequency
+            </h1>
+            <p class="mt-6 max-w-xl text-lg leading-relaxed text-primary/85 sm:text-xl">
+              Five shows on how technology actually gets built and sold —
+              <span class="halftone-dim">hosted by people who've shipped.</span>
+            </p>
+
+            <!-- Listen-on badge row -->
+            <div class="mt-8">
+              <p class="mb-3 font-mono text-[11px] uppercase tracking-[0.16em] text-primary/45">Listen wherever you are</p>
+              <div class="flex flex-wrap gap-2.5">
+                <a href="#subscribe" aria-label="Listen on Apple Podcasts" class="lift focusable inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-surface/70 px-3.5 py-2 text-sm font-500 text-primary/80 hover:border-accent/50 hover:bg-accent/10 hover:text-primary">
+                  <svg width="17" height="17" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="8" stroke="currentColor" stroke-width="1.4" fill="none"/><circle cx="9" cy="11" r="2.1" fill="currentColor"/><path d="M9 9a3.6 3.6 0 013.6 3.6M9 6.6a6 6 0 016 6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/></svg>
+                  <span>Apple Podcasts</span>
+                </a>
+                <a href="#subscribe" aria-label="Listen on Spotify" class="lift focusable inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-surface/70 px-3.5 py-2 text-sm font-500 text-primary/80 hover:border-accent/50 hover:bg-accent/10 hover:text-primary">
+                  <svg width="17" height="17" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="8" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M5 7.4c2.6-.8 5.4-.5 7.6.9M5.6 10c2.1-.6 4.3-.4 6.1.7M6.2 12.3c1.6-.4 3.2-.3 4.6.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/></svg>
+                  <span>Spotify</span>
+                </a>
+                <a href="#subscribe" aria-label="Listen on Overcast" class="lift focusable inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-surface/70 px-3.5 py-2 text-sm font-500 text-primary/80 hover:border-accent/50 hover:bg-accent/10 hover:text-primary">
+                  <svg width="17" height="17" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="1.9" fill="currentColor"/><path d="M5.6 12.4a4.8 4.8 0 010-6.8M12.4 5.6a4.8 4.8 0 010 6.8M3.6 14.4a7.6 7.6 0 010-10.8M14.4 3.6a7.6 7.6 0 010 10.8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/></svg>
+                  <span>Overcast</span>
+                </a>
+                <a href="#subscribe" aria-label="Watch on YouTube" class="lift focusable inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-surface/70 px-3.5 py-2 text-sm font-500 text-primary/80 hover:border-accent/50 hover:bg-accent/10 hover:text-primary">
+                  <svg width="17" height="17" viewBox="0 0 18 18" aria-hidden="true"><rect x="1.5" y="4" width="15" height="10" rx="3" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M7.4 6.7v4.6l4-2.3-4-2.3z" fill="currentColor"/></svg>
+                  <span>YouTube</span>
+                </a>
+                <a href="#subscribe" aria-label="Listen on Pocket Casts" class="lift focusable inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-surface/70 px-3.5 py-2 text-sm font-500 text-primary/80 hover:border-accent/50 hover:bg-accent/10 hover:text-primary">
+                  <svg width="17" height="17" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="8" stroke="currentColor" stroke-width="1.4" fill="none"/><circle cx="9" cy="9" r="5" stroke="currentColor" stroke-width="1.2" fill="none" opacity="0.55"/><path d="M7.6 6.6v4.8l4-2.4-4-2.4z" fill="currentColor"/></svg>
+                  <span>Pocket Casts</span>
+                </a>
+                <a href="#subscribe" aria-label="Subscribe via RSS" class="lift focusable inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-surface/70 px-3.5 py-2 text-sm font-500 text-primary/80 hover:border-accent/50 hover:bg-accent/10 hover:text-primary">
+                  <svg width="17" height="17" viewBox="0 0 18 18" aria-hidden="true"><circle cx="4.4" cy="13.6" r="1.9" fill="currentColor"/><path d="M3 8a7 7 0 017 7M3 3.5A11.5 11.5 0 0114.5 15" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" fill="none"/></svg>
+                  <span>RSS</span>
+                </a>
+              </div>
+            </div>
+
+            <!-- Static player mockup -->
+            <div class="lift card mt-9 rounded-2xl border border-[var(--hairline-strong)] p-5 cover-shadow sm:p-6">
+              <div class="mb-4 flex items-center justify-between">
+                <span class="inline-flex items-center gap-2 rounded-full bg-accent/12 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
+                  <span class="h-1.5 w-1.5 rounded-full bg-accent"></span>
+                  Latest on the network
+                </span>
+                <span class="font-mono text-[11px] text-primary/45">Shipped · Engineering</span>
+              </div>
+
+              <div class="flex items-center gap-4">
+                <button type="button" aria-label="Play latest episode" class="lift group flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-accent text-ink shadow-[0_10px_28px_-8px_rgba(91,140,255,0.7)] focusable">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path d="M6 4.2v11.6a1 1 0 001.52.85l9.2-5.8a1 1 0 000-1.7l-9.2-5.8A1 1 0 006 4.2z"/>
+                  </svg>
+                </button>
+                <div class="min-w-0">
+                  <p class="truncate text-[15px] font-600 text-primary">The rewrite that paid for itself</p>
+                  <p class="mt-0.5 font-mono text-xs text-primary/55 tnum">EP 88 · 52:14 · Shipped</p>
+                </div>
+              </div>
+
+              <!-- Waveform -->
+              <div class="mt-5">
+                <svg data-waveform data-bars="76" data-played="0.34" class="h-14 w-full" preserveAspectRatio="none" aria-hidden="true"></svg>
+              </div>
+
+              <!-- Scrubber -->
+              <div class="mt-4">
+                <div class="relative h-1.5 w-full rounded-full bg-[var(--wave-off)]">
+                  <div class="absolute inset-y-0 left-0 rounded-full bg-accent" style="width:34%;"></div>
+                  <div class="scrub-knob absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-accent bg-ink" style="left:34%;"></div>
+                </div>
+                <div class="mt-2 flex justify-between font-mono text-[11px] text-primary/55 tnum">
+                  <span>17:42</span>
+                  <span>52:14</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Release cadence -->
+            <div class="mt-6 flex items-center gap-2.5">
+              <span class="pulse-dot"></span>
+              <p class="text-sm text-primary/60">A new episode somewhere on the network almost every weekday.</p>
+            </div>
+          </div>
+
+          <!-- Right: 5-cover grid -->
+          <div class="lg:col-span-5">
+            <p class="mb-3 font-mono text-[11px] uppercase tracking-[0.16em] text-primary/45">Five shows, five lanes</p>
+            <div class="grid grid-cols-2 gap-3.5 sm:gap-4">
+
+              <!-- Cover 1 — Shipped -->
+              <a href="#shows" class="lift group relative aspect-square overflow-hidden rounded-xl cover-shadow focusable" style="background:linear-gradient(150deg,#1B2A52,#3457C8 55%,#5B8CFF);" aria-label="Shipped — engineering craft">
+                <div class="absolute inset-0 opacity-[0.18]" style="background-image:radial-gradient(rgba(255,255,255,0.7) 1px,transparent 1px);background-size:14px 14px;"></div>
+                <svg class="absolute bottom-0 right-0 h-20 w-20 opacity-90" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+                  <g fill="rgba(255,255,255,0.85)">
+                    <rect x="8" y="46" width="6" height="22" rx="3"/>
+                    <rect x="20" y="32" width="6" height="36" rx="3"/>
+                    <rect x="32" y="40" width="6" height="28" rx="3"/>
+                    <rect x="44" y="20" width="6" height="48" rx="3"/>
+                    <rect x="56" y="36" width="6" height="32" rx="3"/>
+                  </g>
+                </svg>
+                <div class="absolute inset-0 flex flex-col justify-between p-3.5">
+                  <span class="font-mono text-[9px] uppercase tracking-[0.16em] text-white/70">No. 01</span>
+                  <span class="font-display text-xl font-700 leading-none tracking-display text-white">Shipped</span>
+                </div>
+              </a>
+
+              <!-- Cover 2 — Pipeline -->
+              <a href="#shows" class="lift group relative aspect-square overflow-hidden rounded-xl cover-shadow focusable" style="background:linear-gradient(150deg,#0E3B33,#108A5F 55%,#33D69B);" aria-label="Pipeline — startup go-to-market and sales">
+                <div class="absolute inset-0 opacity-[0.16]" style="background-image:radial-gradient(rgba(255,255,255,0.7) 1px,transparent 1px);background-size:14px 14px;"></div>
+                <svg class="absolute bottom-0 right-0 h-20 w-20 opacity-90" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+                  <g stroke="rgba(255,255,255,0.85)" stroke-width="5" stroke-linecap="round" fill="none">
+                    <path d="M10 60 L26 44 L42 52 L58 24 L70 14"/>
+                  </g>
+                  <circle cx="70" cy="14" r="6" fill="rgba(255,255,255,0.9)"/>
+                </svg>
+                <div class="absolute inset-0 flex flex-col justify-between p-3.5">
+                  <span class="font-mono text-[9px] uppercase tracking-[0.16em] text-white/70">No. 02</span>
+                  <span class="font-display text-xl font-700 leading-none tracking-display text-white">Pipeline</span>
+                </div>
+              </a>
+
+              <!-- Cover 3 — Loadbearing -->
+              <a href="#shows" class="lift group relative aspect-square overflow-hidden rounded-xl cover-shadow focusable" style="background:linear-gradient(150deg,#2A1840,#6A2FB0 55%,#A468FF);" aria-label="Loadbearing — infrastructure and scaling">
+                <div class="absolute inset-0 opacity-[0.16]" style="background-image:radial-gradient(rgba(255,255,255,0.7) 1px,transparent 1px);background-size:14px 14px;"></div>
+                <svg class="absolute bottom-0 right-0 h-20 w-20 opacity-90" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+                  <g fill="rgba(255,255,255,0.85)">
+                    <rect x="10" y="44" width="22" height="22" rx="3"/>
+                    <rect x="36" y="44" width="22" height="22" rx="3"/>
+                    <rect x="23" y="18" width="22" height="22" rx="3"/>
+                  </g>
+                </svg>
+                <div class="absolute inset-0 flex flex-col justify-between p-3.5">
+                  <span class="font-mono text-[9px] uppercase tracking-[0.16em] text-white/70">No. 03</span>
+                  <span class="font-display text-xl font-700 leading-none tracking-display text-white">Loadbearing</span>
+                </div>
+              </a>
+
+              <!-- Cover 4 — The Cut -->
+              <a href="#shows" class="lift group relative aspect-square overflow-hidden rounded-xl cover-shadow focusable" style="background:linear-gradient(150deg,#3A1430,#B0306C 55%,#FF6FA8);" aria-label="The Cut — product and design">
+                <div class="absolute inset-0 opacity-[0.16]" style="background-image:radial-gradient(rgba(255,255,255,0.7) 1px,transparent 1px);background-size:14px 14px;"></div>
+                <svg class="absolute bottom-0 right-0 h-20 w-20 opacity-90" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+                  <g fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="5">
+                    <circle cx="32" cy="44" r="16"/>
+                    <path d="M44 56 L70 14" stroke-linecap="round"/>
+                  </g>
+                </svg>
+                <div class="absolute inset-0 flex flex-col justify-between p-3.5">
+                  <span class="font-mono text-[9px] uppercase tracking-[0.16em] text-white/70">No. 04</span>
+                  <span class="font-display text-xl font-700 leading-none tracking-display text-white">The Cut</span>
+                </div>
+              </a>
+
+              <!-- Cover 5 — Burn Rate (spans 2 cols) -->
+              <a href="#shows" class="lift group relative col-span-2 aspect-[2/1] overflow-hidden rounded-xl cover-shadow focusable sm:aspect-[2.1/1]" style="background:linear-gradient(120deg,#3A2A08,#C9870E 55%,#FFC24B);" aria-label="Burn Rate — fundraising and finance">
+                <div class="absolute inset-0 opacity-[0.14]" style="background-image:radial-gradient(rgba(255,255,255,0.7) 1px,transparent 1px);background-size:14px 14px;"></div>
+                <svg class="absolute bottom-0 right-4 h-full w-32 opacity-90" viewBox="0 0 120 60" fill="none" aria-hidden="true" preserveAspectRatio="xMidYMax meet">
+                  <g fill="rgba(255,255,255,0.85)">
+                    <rect x="6" y="36" width="10" height="20" rx="2"/>
+                    <rect x="22" y="26" width="10" height="30" rx="2"/>
+                    <rect x="38" y="32" width="10" height="24" rx="2"/>
+                    <rect x="54" y="14" width="10" height="42" rx="2"/>
+                    <rect x="70" y="22" width="10" height="34" rx="2"/>
+                    <rect x="86" y="8" width="10" height="48" rx="2"/>
+                    <rect x="102" y="28" width="10" height="28" rx="2"/>
+                  </g>
+                </svg>
+                <div class="absolute inset-0 flex flex-col justify-between p-3.5">
+                  <span class="font-mono text-[9px] uppercase tracking-[0.16em] text-white/70">No. 05</span>
+                  <span class="font-display text-xl font-700 leading-none tracking-display text-white">Burn Rate</span>
+                </div>
+              </a>
+            </div>
+
+            <p class="mt-4 text-center font-mono text-[11px] text-primary/40">Tap any cover to meet the show</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 3. PROOF BAR ============ -->
+    <section class="border-b border-[var(--hairline)] bg-surface/40">
+      <div class="mx-auto max-w-7xl px-5 sm:px-8">
+        <!-- Metrics -->
+        <div class="grid grid-cols-2 gap-px overflow-hidden border-x border-[var(--hairline)] sm:grid-cols-4">
+          <div class="bg-ink px-5 py-7">
+            <p class="font-display text-3xl font-700 tracking-display tnum">5</p>
+            <p class="mt-1 text-sm text-primary/55">Shows on the network</p>
+          </div>
+          <div class="bg-ink px-5 py-7">
+            <p class="font-display text-3xl font-700 tracking-display tnum">1,408</p>
+            <p class="mt-1 text-sm text-primary/55">Episodes across the network</p>
+          </div>
+          <div class="bg-ink px-5 py-7">
+            <p class="font-display text-3xl font-700 tracking-display tnum">3.4M</p>
+            <p class="mt-1 text-sm text-primary/55">Monthly downloads</p>
+          </div>
+          <div class="bg-ink px-5 py-7">
+            <p class="font-display text-3xl font-700 tracking-display tnum">214,930</p>
+            <p class="mt-1 text-sm text-primary/55">Newsletter subscribers</p>
+          </div>
+        </div>
+
+        <!-- Press marquee -->
+        <div class="border-x border-t border-[var(--hairline)] py-6">
+          <p class="mb-4 text-center font-mono text-[11px] uppercase tracking-[0.16em] text-primary/40">As heard on</p>
+          <div class="marquee-mask overflow-hidden">
+            <div class="marquee items-center gap-12">
+              <!-- track A -->
+              <span class="font-display text-lg font-600 tracking-display text-primary/35">The Lattice Review</span>
+              <span class="text-primary/15">/</span>
+              <span class="font-display text-lg font-600 tracking-display text-primary/35">Northbound Quarterly</span>
+              <span class="text-primary/15">/</span>
+              <span class="font-display text-lg font-600 tracking-display text-primary/35">Margin &amp; Co.</span>
+              <span class="text-primary/15">/</span>
+              <span class="font-display text-lg font-600 tracking-display text-primary/35">Hammerwork Journal</span>
+              <span class="text-primary/15">/</span>
+              <span class="font-display text-lg font-600 tracking-display text-primary/35">The Standalone</span>
+              <span class="text-primary/15">/</span>
+              <span class="font-display text-lg font-600 tracking-display text-primary/35">Tideline Magazine</span>
+              <span class="text-primary/15">/</span>
+              <span class="font-display text-lg font-600 tracking-display text-primary/35">Common Ledger</span>
+              <span class="text-primary/15">/</span>
+              <span class="font-display text-lg font-600 tracking-display text-primary/35">Field Notes Weekly</span>
+              <span class="text-primary/15">/</span>
+              <!-- track B (duplicate for seamless loop) -->
+              <span class="font-display text-lg font-600 tracking-display text-primary/35" aria-hidden="true">The Lattice Review</span>
+              <span class="text-primary/15" aria-hidden="true">/</span>
+              <span class="font-display text-lg font-600 tracking-display text-primary/35" aria-hidden="true">Northbound Quarterly</span>
+              <span class="text-primary/15" aria-hidden="true">/</span>
+              <span class="font-display text-lg font-600 tracking-display text-primary/35" aria-hidden="true">Margin &amp; Co.</span>
+              <span class="text-primary/15" aria-hidden="true">/</span>
+              <span class="font-display text-lg font-600 tracking-display text-primary/35" aria-hidden="true">Hammerwork Journal</span>
+              <span class="text-primary/15" aria-hidden="true">/</span>
+              <span class="font-display text-lg font-600 tracking-display text-primary/35" aria-hidden="true">The Standalone</span>
+              <span class="text-primary/15" aria-hidden="true">/</span>
+              <span class="font-display text-lg font-600 tracking-display text-primary/35" aria-hidden="true">Tideline Magazine</span>
+              <span class="text-primary/15" aria-hidden="true">/</span>
+              <span class="font-display text-lg font-600 tracking-display text-primary/35" aria-hidden="true">Common Ledger</span>
+              <span class="text-primary/15" aria-hidden="true">/</span>
+              <span class="font-display text-lg font-600 tracking-display text-primary/35" aria-hidden="true">Field Notes Weekly</span>
+              <span class="text-primary/15" aria-hidden="true">/</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 4a. THE SHOWS ============ -->
+    <section id="shows" class="relative border-b border-[var(--hairline)]">
+      <div class="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-24">
+        <div class="mb-12 flex flex-wrap items-end justify-between gap-6">
+          <div>
+            <p class="mb-3 font-mono text-[11px] uppercase tracking-[0.18em] text-accent">The network</p>
+            <h2 class="font-display text-4xl font-700 tracking-display sm:text-5xl">
+              The shows
+            </h2>
+            <p class="mt-3 max-w-lg text-primary/60">Five distinct lanes. Pick one, or follow the combined feed and let it surprise you.</p>
+          </div>
+          <a href="#feed" class="lift inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-surface px-4 py-2 text-sm font-500 text-primary/80 hover:border-accent/40 hover:text-primary focusable">
+            See latest episodes
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+
+        <div class="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+
+          <!-- Show 1 -->
+          <article class="lift card group flex flex-col rounded-2xl border border-[var(--hairline-strong)] p-5 hover:border-accent/40">
+            <div class="relative aspect-[16/9] overflow-hidden rounded-xl" style="background:linear-gradient(150deg,#1B2A52,#3457C8 55%,#5B8CFF);">
+              <div class="absolute inset-0 opacity-[0.16]" style="background-image:radial-gradient(rgba(255,255,255,0.7) 1px,transparent 1px);background-size:14px 14px;"></div>
+              <svg class="absolute bottom-2 right-3 h-16 w-16 opacity-90" viewBox="0 0 80 80" aria-hidden="true">
+                <g fill="rgba(255,255,255,0.85)">
+                  <rect x="8" y="46" width="6" height="22" rx="3"/>
+                  <rect x="20" y="32" width="6" height="36" rx="3"/>
+                  <rect x="32" y="40" width="6" height="28" rx="3"/>
+                  <rect x="44" y="20" width="6" height="48" rx="3"/>
+                  <rect x="56" y="36" width="6" height="32" rx="3"/>
+                </g>
+              </svg>
+              <span class="absolute left-3 top-3 font-display text-lg font-700 tracking-display text-white">Shipped</span>
+            </div>
+            <div class="mt-4 flex items-center gap-2">
+              <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">Engineering craft</span>
+              <span class="font-mono text-[10px] text-primary/30 tnum">· 312 episodes</span>
+            </div>
+            <h3 class="mt-2 font-display text-xl font-600 tracking-display text-primary">Shipped</h3>
+            <p class="mt-2 flex-1 text-sm leading-relaxed text-primary/60">How real software gets out the door — code review culture, on-call, the rewrites that worked and the ones that didn't.</p>
+            <div class="mt-4 flex items-center justify-between border-t border-[var(--hairline)] pt-4">
+              <span class="text-xs text-primary/50">Hosted by Mara Ostrowski</span>
+              <a href="#feed" class="inline-flex items-center gap-1.5 text-sm font-500 text-accent hover:underline focusable">Listen <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+            </div>
+          </article>
+
+          <!-- Show 2 -->
+          <article class="lift card group flex flex-col rounded-2xl border border-[var(--hairline-strong)] p-5 hover:border-accent/40">
+            <div class="relative aspect-[16/9] overflow-hidden rounded-xl" style="background:linear-gradient(150deg,#0E3B33,#108A5F 55%,#33D69B);">
+              <div class="absolute inset-0 opacity-[0.14]" style="background-image:radial-gradient(rgba(255,255,255,0.7) 1px,transparent 1px);background-size:14px 14px;"></div>
+              <svg class="absolute bottom-2 right-3 h-16 w-16 opacity-90" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+                <g stroke="rgba(255,255,255,0.85)" stroke-width="5" stroke-linecap="round" fill="none">
+                  <path d="M10 60 L26 44 L42 52 L58 24 L70 14"/>
+                </g>
+                <circle cx="70" cy="14" r="6" fill="rgba(255,255,255,0.9)"/>
+              </svg>
+              <span class="absolute left-3 top-3 font-display text-lg font-700 tracking-display text-white">Pipeline</span>
+            </div>
+            <div class="mt-4 flex items-center gap-2">
+              <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">Go-to-market &amp; sales</span>
+              <span class="font-mono text-[10px] text-primary/30 tnum">· 287 episodes</span>
+            </div>
+            <h3 class="mt-2 font-display text-xl font-600 tracking-display text-primary">Pipeline</h3>
+            <p class="mt-2 flex-1 text-sm leading-relaxed text-primary/60">From first ten customers to a repeatable motion — pricing experiments, founder-led sales, and the demo that closes.</p>
+            <div class="mt-4 flex items-center justify-between border-t border-[var(--hairline)] pt-4">
+              <span class="text-xs text-primary/50">Hosted by Diego Salvatierra</span>
+              <a href="#feed" class="inline-flex items-center gap-1.5 text-sm font-500 text-accent hover:underline focusable">Listen <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+            </div>
+          </article>
+
+          <!-- Show 3 -->
+          <article class="lift card group flex flex-col rounded-2xl border border-[var(--hairline-strong)] p-5 hover:border-accent/40">
+            <div class="relative aspect-[16/9] overflow-hidden rounded-xl" style="background:linear-gradient(150deg,#2A1840,#6A2FB0 55%,#A468FF);">
+              <div class="absolute inset-0 opacity-[0.14]" style="background-image:radial-gradient(rgba(255,255,255,0.7) 1px,transparent 1px);background-size:14px 14px;"></div>
+              <svg class="absolute bottom-2 right-3 h-16 w-16 opacity-90" viewBox="0 0 80 80" aria-hidden="true">
+                <g fill="rgba(255,255,255,0.85)">
+                  <rect x="10" y="44" width="22" height="22" rx="3"/>
+                  <rect x="36" y="44" width="22" height="22" rx="3"/>
+                  <rect x="23" y="18" width="22" height="22" rx="3"/>
+                </g>
+              </svg>
+              <span class="absolute left-3 top-3 font-display text-lg font-700 tracking-display text-white">Loadbearing</span>
+            </div>
+            <div class="mt-4 flex items-center gap-2">
+              <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">Infrastructure &amp; scaling</span>
+              <span class="font-mono text-[10px] text-primary/30 tnum">· 261 episodes</span>
+            </div>
+            <h3 class="mt-2 font-display text-xl font-600 tracking-display text-primary">Loadbearing</h3>
+            <p class="mt-2 flex-1 text-sm leading-relaxed text-primary/60">What holds up at scale — capacity planning, the migration that took eighteen months, and postmortems with no blame.</p>
+            <div class="mt-4 flex items-center justify-between border-t border-[var(--hairline)] pt-4">
+              <span class="text-xs text-primary/50">Hosted by Priya Venkataraman</span>
+              <a href="#feed" class="inline-flex items-center gap-1.5 text-sm font-500 text-accent hover:underline focusable">Listen <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+            </div>
+          </article>
+
+          <!-- Show 4 -->
+          <article class="lift card group flex flex-col rounded-2xl border border-[var(--hairline-strong)] p-5 hover:border-accent/40">
+            <div class="relative aspect-[16/9] overflow-hidden rounded-xl" style="background:linear-gradient(150deg,#3A1430,#B0306C 55%,#FF6FA8);">
+              <div class="absolute inset-0 opacity-[0.14]" style="background-image:radial-gradient(rgba(255,255,255,0.7) 1px,transparent 1px);background-size:14px 14px;"></div>
+              <svg class="absolute bottom-2 right-3 h-16 w-16 opacity-90" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+                <g fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="5">
+                  <circle cx="32" cy="44" r="16"/>
+                  <path d="M44 56 L70 14" stroke-linecap="round"/>
+                </g>
+              </svg>
+              <span class="absolute left-3 top-3 font-display text-lg font-700 tracking-display text-white">The Cut</span>
+            </div>
+            <div class="mt-4 flex items-center gap-2">
+              <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">Product &amp; design</span>
+              <span class="font-mono text-[10px] text-primary/30 tnum">· 244 episodes</span>
+            </div>
+            <h3 class="mt-2 font-display text-xl font-600 tracking-display text-primary">The Cut</h3>
+            <p class="mt-2 flex-1 text-sm leading-relaxed text-primary/60">The decisions that don't ship — what got cut from the roadmap and why, taste, craft, and saying no on purpose.</p>
+            <div class="mt-4 flex items-center justify-between border-t border-[var(--hairline)] pt-4">
+              <span class="text-xs text-primary/50">Hosted by Linnea Hartmann</span>
+              <a href="#feed" class="inline-flex items-center gap-1.5 text-sm font-500 text-accent hover:underline focusable">Listen <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+            </div>
+          </article>
+
+          <!-- Show 5 -->
+          <article class="lift card group flex flex-col rounded-2xl border border-[var(--hairline-strong)] p-5 hover:border-accent/40">
+            <div class="relative aspect-[16/9] overflow-hidden rounded-xl" style="background:linear-gradient(150deg,#3A2A08,#C9870E 55%,#FFC24B);">
+              <div class="absolute inset-0 opacity-[0.13]" style="background-image:radial-gradient(rgba(255,255,255,0.7) 1px,transparent 1px);background-size:14px 14px;"></div>
+              <svg class="absolute bottom-2 right-3 h-16 w-20 opacity-90" viewBox="0 0 120 60" aria-hidden="true">
+                <g fill="rgba(255,255,255,0.85)">
+                  <rect x="6" y="36" width="10" height="20" rx="2"/>
+                  <rect x="22" y="26" width="10" height="30" rx="2"/>
+                  <rect x="38" y="32" width="10" height="24" rx="2"/>
+                  <rect x="54" y="14" width="10" height="42" rx="2"/>
+                  <rect x="70" y="22" width="10" height="34" rx="2"/>
+                  <rect x="86" y="8" width="10" height="48" rx="2"/>
+                  <rect x="102" y="28" width="10" height="28" rx="2"/>
+                </g>
+              </svg>
+              <span class="absolute left-3 top-3 font-display text-lg font-700 tracking-display text-white">Burn Rate</span>
+            </div>
+            <div class="mt-4 flex items-center gap-2">
+              <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">Fundraising &amp; finance</span>
+              <span class="font-mono text-[10px] text-primary/30 tnum">· 304 episodes</span>
+            </div>
+            <h3 class="mt-2 font-display text-xl font-600 tracking-display text-primary">Burn Rate</h3>
+            <p class="mt-2 flex-1 text-sm leading-relaxed text-primary/60">The money side, said plainly — term sheets, runway math, secondary sales, and the down round nobody wants to discuss.</p>
+            <div class="mt-4 flex items-center justify-between border-t border-[var(--hairline)] pt-4">
+              <span class="text-xs text-primary/50">Hosted by Tomás Beaufort</span>
+              <a href="#feed" class="inline-flex items-center gap-1.5 text-sm font-500 text-accent hover:underline focusable">Listen <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+            </div>
+          </article>
+
+          <!-- Combined feed teaser card -->
+          <article class="lift relative flex flex-col justify-between overflow-hidden rounded-2xl border border-accent/30 p-6" style="background:linear-gradient(160deg,rgba(91,140,255,0.16),rgba(91,140,255,0.04));">
+            <div class="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-accent/20 blur-3xl" aria-hidden="true"></div>
+            <div class="relative">
+              <span class="inline-flex items-center gap-2 rounded-full bg-accent/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
+                <span class="pulse-dot" style="width:6px;height:6px;"></span>
+                One feed, all five
+              </span>
+              <h3 class="mt-4 font-display text-2xl font-700 tracking-display text-primary">The combined feed</h3>
+              <p class="mt-2 text-sm leading-relaxed text-primary/65">Don't want to choose? Subscribe once and every new episode from all five shows lands in a single feed, in release order.</p>
+            </div>
+            <a href="#subscribe" class="lift relative mt-6 inline-flex w-fit items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-600 text-ink shadow-[0_8px_24px_-8px_rgba(91,140,255,0.6)] focusable">
+              Subscribe to everything
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 4b. LATEST ACROSS THE NETWORK ============ -->
+    <section id="feed" class="border-b border-[var(--hairline)] bg-surface/30">
+      <div class="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-24">
+        <div class="mb-10 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p class="mb-3 font-mono text-[11px] uppercase tracking-[0.18em] text-accent">Fresh this fortnight</p>
+            <h2 class="font-display text-4xl font-700 tracking-display sm:text-5xl">
+              Latest across <span class="halftone-dim">the network</span>
+            </h2>
+          </div>
+          <span class="font-mono text-xs text-primary/45 tnum">Updated 21 Feb 2026</span>
+        </div>
+
+        <div class="overflow-hidden rounded-2xl border border-[var(--hairline-strong)] card">
+
+          <!-- Episode row 1 -->
+          <article class="group flex flex-col gap-3 border-b border-[var(--hairline)] p-5 transition-colors hover:bg-white/[0.025] sm:flex-row sm:items-center sm:gap-5">
+            <div class="flex items-center gap-3 sm:w-44 sm:flex-shrink-0">
+              <span class="rounded-md border border-[var(--hairline-strong)] bg-ink px-2 py-1 font-mono text-[11px] font-500 tnum">EP 88</span>
+              <span class="rounded-md bg-accent/12 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-accent">Shipped</span>
+            </div>
+            <div class="min-w-0 flex-1">
+              <h3 class="text-[15px] font-600 text-primary">The rewrite that paid for itself</h3>
+              <p class="mt-0.5 truncate text-sm text-primary/55">Mara talks to an engineer who burned a quarter rebuilding the billing core — and how it cleared the next two years of roadmap.</p>
+            </div>
+            <div class="flex items-center justify-between gap-4 sm:justify-end">
+              <span class="font-mono text-[11px] text-primary/45 tnum">52:14 · 19 Feb</span>
+              <button type="button" aria-label="Play The rewrite that paid for itself" class="lift flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[var(--hairline-strong)] bg-surface text-primary/80 hover:border-accent/50 hover:bg-accent/10 hover:text-accent focusable">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5 3.5v9a.8.8 0 001.22.68l7-4.5a.8.8 0 000-1.36l-7-4.5A.8.8 0 005 3.5z"/></svg>
+              </button>
+            </div>
+          </article>
+
+          <!-- Episode row 2 -->
+          <article class="group flex flex-col gap-3 border-b border-[var(--hairline)] p-5 transition-colors hover:bg-white/[0.025] sm:flex-row sm:items-center sm:gap-5">
+            <div class="flex items-center gap-3 sm:w-44 sm:flex-shrink-0">
+              <span class="rounded-md border border-[var(--hairline-strong)] bg-ink px-2 py-1 font-mono text-[11px] font-500 tnum">EP 142</span>
+              <span class="rounded-md bg-emerald-400/12 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-emerald-300">Pipeline</span>
+            </div>
+            <div class="min-w-0 flex-1">
+              <h3 class="text-[15px] font-600 text-primary">Your first sales hire is a mistake</h3>
+              <p class="mt-0.5 truncate text-sm text-primary/55">Why founder-led selling should outlast your patience for it — and the three signals that say you're finally ready to hand it off.</p>
+            </div>
+            <div class="flex items-center justify-between gap-4 sm:justify-end">
+              <span class="font-mono text-[11px] text-primary/45 tnum">44:09 · 18 Feb</span>
+              <button type="button" aria-label="Play Your first sales hire is a mistake" class="lift flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[var(--hairline-strong)] bg-surface text-primary/80 hover:border-accent/50 hover:bg-accent/10 hover:text-accent focusable">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5 3.5v9a.8.8 0 001.22.68l7-4.5a.8.8 0 000-1.36l-7-4.5A.8.8 0 005 3.5z"/></svg>
+              </button>
+            </div>
+          </article>
+
+          <!-- Episode row 3 -->
+          <article class="group flex flex-col gap-3 border-b border-[var(--hairline)] p-5 transition-colors hover:bg-white/[0.025] sm:flex-row sm:items-center sm:gap-5">
+            <div class="flex items-center gap-3 sm:w-44 sm:flex-shrink-0">
+              <span class="rounded-md border border-[var(--hairline-strong)] bg-ink px-2 py-1 font-mono text-[11px] font-500 tnum">EP 119</span>
+              <span class="rounded-md bg-violet-400/12 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-violet-300">Loadbearing</span>
+            </div>
+            <div class="min-w-0 flex-1">
+              <h3 class="text-[15px] font-600 text-primary">A region went dark for nine minutes</h3>
+              <p class="mt-0.5 truncate text-sm text-primary/55">A blameless postmortem of a cascading failover — what the dashboards missed, and the one runbook line that saved it.</p>
+            </div>
+            <div class="flex items-center justify-between gap-4 sm:justify-end">
+              <span class="font-mono text-[11px] text-primary/45 tnum">58:37 · 17 Feb</span>
+              <button type="button" aria-label="Play A region went dark for nine minutes" class="lift flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[var(--hairline-strong)] bg-surface text-primary/80 hover:border-accent/50 hover:bg-accent/10 hover:text-accent focusable">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5 3.5v9a.8.8 0 001.22.68l7-4.5a.8.8 0 000-1.36l-7-4.5A.8.8 0 005 3.5z"/></svg>
+              </button>
+            </div>
+          </article>
+
+          <!-- Episode row 4 -->
+          <article class="group flex flex-col gap-3 border-b border-[var(--hairline)] p-5 transition-colors hover:bg-white/[0.025] sm:flex-row sm:items-center sm:gap-5">
+            <div class="flex items-center gap-3 sm:w-44 sm:flex-shrink-0">
+              <span class="rounded-md border border-[var(--hairline-strong)] bg-ink px-2 py-1 font-mono text-[11px] font-500 tnum">EP 96</span>
+              <span class="rounded-md bg-pink-400/12 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-pink-300">The Cut</span>
+            </div>
+            <div class="min-w-0 flex-1">
+              <h3 class="text-[15px] font-600 text-primary">We killed the feature on launch day</h3>
+              <p class="mt-0.5 truncate text-sm text-primary/55">Linnea on pulling a finished feature hours before release — how the team agreed, and why the next quarter thanked them.</p>
+            </div>
+            <div class="flex items-center justify-between gap-4 sm:justify-end">
+              <span class="font-mono text-[11px] text-primary/45 tnum">39:52 · 16 Feb</span>
+              <button type="button" aria-label="Play We killed the feature on launch day" class="lift flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[var(--hairline-strong)] bg-surface text-primary/80 hover:border-accent/50 hover:bg-accent/10 hover:text-accent focusable">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5 3.5v9a.8.8 0 001.22.68l7-4.5a.8.8 0 000-1.36l-7-4.5A.8.8 0 005 3.5z"/></svg>
+              </button>
+            </div>
+          </article>
+
+          <!-- Episode row 5 -->
+          <article class="group flex flex-col gap-3 border-b border-[var(--hairline)] p-5 transition-colors hover:bg-white/[0.025] sm:flex-row sm:items-center sm:gap-5">
+            <div class="flex items-center gap-3 sm:w-44 sm:flex-shrink-0">
+              <span class="rounded-md border border-[var(--hairline-strong)] bg-ink px-2 py-1 font-mono text-[11px] font-500 tnum">EP 161</span>
+              <span class="rounded-md bg-amber-400/12 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-amber-300">Burn Rate</span>
+            </div>
+            <div class="min-w-0 flex-1">
+              <h3 class="text-[15px] font-600 text-primary">Reading a term sheet line by line</h3>
+              <p class="mt-0.5 truncate text-sm text-primary/55">Tomás walks a first-time founder through a real Series A term sheet — liquidation prefs, pro rata, and where to actually push back.</p>
+            </div>
+            <div class="flex items-center justify-between gap-4 sm:justify-end">
+              <span class="font-mono text-[11px] text-primary/45 tnum">47:28 · 14 Feb</span>
+              <button type="button" aria-label="Play Reading a term sheet line by line" class="lift flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[var(--hairline-strong)] bg-surface text-primary/80 hover:border-accent/50 hover:bg-accent/10 hover:text-accent focusable">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5 3.5v9a.8.8 0 001.22.68l7-4.5a.8.8 0 000-1.36l-7-4.5A.8.8 0 005 3.5z"/></svg>
+              </button>
+            </div>
+          </article>
+
+          <!-- Episode row 6 -->
+          <article class="group flex flex-col gap-3 p-5 transition-colors hover:bg-white/[0.025] sm:flex-row sm:items-center sm:gap-5">
+            <div class="flex items-center gap-3 sm:w-44 sm:flex-shrink-0">
+              <span class="rounded-md border border-[var(--hairline-strong)] bg-ink px-2 py-1 font-mono text-[11px] font-500 tnum">EP 87</span>
+              <span class="rounded-md bg-accent/12 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-accent">Shipped</span>
+            </div>
+            <div class="min-w-0 flex-1">
+              <h3 class="text-[15px] font-600 text-primary">Tests nobody trusts</h3>
+              <p class="mt-0.5 truncate text-sm text-primary/55">The flaky suite that everyone re-runs until it's green — how one team paid down the trust debt without freezing the codebase.</p>
+            </div>
+            <div class="flex items-center justify-between gap-4 sm:justify-end">
+              <span class="font-mono text-[11px] text-primary/45 tnum">41:03 · 12 Feb</span>
+              <button type="button" aria-label="Play Tests nobody trusts" class="lift flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[var(--hairline-strong)] bg-surface text-primary/80 hover:border-accent/50 hover:bg-accent/10 hover:text-accent focusable">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5 3.5v9a.8.8 0 001.22.68l7-4.5a.8.8 0 000-1.36l-7-4.5A.8.8 0 005 3.5z"/></svg>
+              </button>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 5. ABOUT THE NETWORK ============ -->
+    <section id="about" class="relative overflow-hidden border-b border-[var(--hairline)]">
+      <div class="ambient-mesh" aria-hidden="true">
+        <div class="mesh-blob" style="width:400px;height:400px;left:-120px;bottom:-140px;background:radial-gradient(circle,#5B8CFF,transparent 70%);opacity:0.22;"></div>
+      </div>
+      <div class="relative z-10 mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-24">
+        <div class="grid gap-14 lg:grid-cols-12 lg:gap-12">
+          <div class="lg:col-span-7">
+            <p class="mb-3 font-mono text-[11px] uppercase tracking-[0.18em] text-accent">About Frequency</p>
+            <h2 class="font-display text-4xl font-700 leading-tight tracking-display sm:text-5xl">
+              We started with one show because the others didn't exist yet.
+            </h2>
+            <div class="mt-6 space-y-4 text-[15px] leading-relaxed text-primary/70">
+              <p>Frequency began in 2021 as a single weekly conversation between two engineers who were tired of conference talks that skipped the hard parts. The audience kept asking the same follow-up question — <span class="text-primary/90">how does this actually work outside the keynote?</span> — and the answer was always longer than one show could hold.</p>
+              <p>So we built four more. Each show has its own host, its own lane, and full editorial independence — Burn Rate never softens a take to keep Pipeline comfortable. What ties them together is a shared standard: every guest has shipped the thing they're describing, every number on the page is real, and nothing gets published until it would survive being quoted back to the people in the room.</p>
+              <p>We're independent, listener-funded, and have no plans to be acquired. The whole network is run by eleven people who would rather make five excellent shows than fifty forgettable ones.</p>
+            </div>
+          </div>
+
+          <!-- Start here -->
+          <div class="lg:col-span-5">
+            <div class="rounded-2xl border border-[var(--hairline-strong)] card p-6">
+              <div class="mb-5 flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1.5l1.9 4 4.4.5-3.3 3 .9 4.3L8 11.2 4.1 13.3l.9-4.3-3.3-3 4.4-.5L8 1.5z" stroke="#5B8CFF" stroke-width="1.3" stroke-linejoin="round"/></svg>
+                <h3 class="font-display text-lg font-600 tracking-display">Start here</h3>
+              </div>
+              <p class="mb-5 text-sm text-primary/55">New to the network? These three are the doorways our listeners recommend most.</p>
+
+              <ol class="space-y-3">
+                <li>
+                  <a href="#feed" class="lift group flex items-start gap-3 rounded-xl border border-[var(--hairline)] bg-ink/60 p-3.5 hover:border-accent/40 focusable">
+                    <span class="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-accent/12 font-mono text-xs font-500 text-accent tnum">01</span>
+                    <span class="min-w-0">
+                      <span class="block text-sm font-600 text-primary">The rewrite that paid for itself</span>
+                      <span class="mt-0.5 block font-mono text-[10px] uppercase tracking-[0.1em] text-primary/40">Shipped · EP 88 · 52:14</span>
+                    </span>
+                  </a>
+                </li>
+                <li>
+                  <a href="#feed" class="lift group flex items-start gap-3 rounded-xl border border-[var(--hairline)] bg-ink/60 p-3.5 hover:border-accent/40 focusable">
+                    <span class="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-accent/12 font-mono text-xs font-500 text-accent tnum">02</span>
+                    <span class="min-w-0">
+                      <span class="block text-sm font-600 text-primary">Your first sales hire is a mistake</span>
+                      <span class="mt-0.5 block font-mono text-[10px] uppercase tracking-[0.1em] text-primary/40">Pipeline · EP 142 · 44:09</span>
+                    </span>
+                  </a>
+                </li>
+                <li>
+                  <a href="#feed" class="lift group flex items-start gap-3 rounded-xl border border-[var(--hairline)] bg-ink/60 p-3.5 hover:border-accent/40 focusable">
+                    <span class="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-accent/12 font-mono text-xs font-500 text-accent tnum">03</span>
+                    <span class="min-w-0">
+                      <span class="block text-sm font-600 text-primary">Reading a term sheet line by line</span>
+                      <span class="mt-0.5 block font-mono text-[10px] uppercase tracking-[0.1em] text-primary/40">Burn Rate · EP 161 · 47:28</span>
+                    </span>
+                  </a>
+                </li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 6. HOSTS ============ -->
+    <section id="hosts" class="border-b border-[var(--hairline)] bg-surface/30">
+      <div class="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-24">
+        <div class="mb-12">
+          <p class="mb-3 font-mono text-[11px] uppercase tracking-[0.18em] text-accent">The people behind the mic</p>
+          <h2 class="font-display text-4xl font-700 tracking-display sm:text-5xl">Hosts</h2>
+          <p class="mt-3 max-w-lg text-primary/60">Eight hosts across five shows. Every one of them has built and sold the things they talk about.</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
+
+          <!-- Host 1 -->
+          <article class="lift card group rounded-2xl border border-[var(--hairline-strong)] p-5 text-center hover:border-accent/40">
+            <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full font-display text-lg font-700 text-white" style="background:linear-gradient(150deg,#3457C8,#5B8CFF);">MO</div>
+            <h3 class="mt-3.5 text-[15px] font-600 text-primary">Mara Ostrowski</h3>
+            <p class="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-accent">Host · Shipped</p>
+            <p class="mt-2 text-xs leading-relaxed text-primary/50">Twelve years writing backend systems; once on-call for a payments platform that never slept.</p>
+          </article>
+
+          <!-- Host 2 -->
+          <article class="lift card group rounded-2xl border border-[var(--hairline-strong)] p-5 text-center hover:border-accent/40">
+            <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full font-display text-lg font-700 text-white" style="background:linear-gradient(150deg,#108A5F,#33D69B);">DS</div>
+            <h3 class="mt-3.5 text-[15px] font-600 text-primary">Diego Salvatierra</h3>
+            <p class="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-accent">Host · Pipeline</p>
+            <p class="mt-2 text-xs leading-relaxed text-primary/50">Sold the first contracts at two startups before anyone else would pick up the phone.</p>
+          </article>
+
+          <!-- Host 3 -->
+          <article class="lift card group rounded-2xl border border-[var(--hairline-strong)] p-5 text-center hover:border-accent/40">
+            <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full font-display text-lg font-700 text-white" style="background:linear-gradient(150deg,#6A2FB0,#A468FF);">PV</div>
+            <h3 class="mt-3.5 text-[15px] font-600 text-primary">Priya Venkataraman</h3>
+            <p class="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-accent">Host · Loadbearing</p>
+            <p class="mt-2 text-xs leading-relaxed text-primary/50">Ran reliability for a service measured in billions of requests a day, and the migration off it.</p>
+          </article>
+
+          <!-- Host 4 -->
+          <article class="lift card group rounded-2xl border border-[var(--hairline-strong)] p-5 text-center hover:border-accent/40">
+            <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full font-display text-lg font-700 text-white" style="background:linear-gradient(150deg,#B0306C,#FF6FA8);">LH</div>
+            <h3 class="mt-3.5 text-[15px] font-600 text-primary">Linnea Hartmann</h3>
+            <p class="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-accent">Host · The Cut</p>
+            <p class="mt-2 text-xs leading-relaxed text-primary/50">A product lead who has shipped — and quietly killed — more features than she can count.</p>
+          </article>
+
+          <!-- Host 5 -->
+          <article class="lift card group rounded-2xl border border-[var(--hairline-strong)] p-5 text-center hover:border-accent/40">
+            <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full font-display text-lg font-700 text-white" style="background:linear-gradient(150deg,#C9870E,#FFC24B);">TB</div>
+            <h3 class="mt-3.5 text-[15px] font-600 text-primary">Tomás Beaufort</h3>
+            <p class="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-accent">Host · Burn Rate</p>
+            <p class="mt-2 text-xs leading-relaxed text-primary/50">Closed funding rounds from both sides of the table — first as a founder, then as a partner.</p>
+          </article>
+
+          <!-- Host 6 -->
+          <article class="lift card group rounded-2xl border border-[var(--hairline-strong)] p-5 text-center hover:border-accent/40">
+            <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full font-display text-lg font-700 text-white" style="background:linear-gradient(150deg,#2A4FB8,#7C9CFF);">AN</div>
+            <h3 class="mt-3.5 text-[15px] font-600 text-primary">Adaeze Nwosu</h3>
+            <p class="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-accent">Co-host · Shipped</p>
+            <p class="mt-2 text-xs leading-relaxed text-primary/50">Staff engineer who reviews more code in a week than most people write in a month.</p>
+          </article>
+
+          <!-- Host 7 -->
+          <article class="lift card group rounded-2xl border border-[var(--hairline-strong)] p-5 text-center hover:border-accent/40">
+            <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full font-display text-lg font-700 text-white" style="background:linear-gradient(150deg,#0E8A6A,#3BE0AC);">HK</div>
+            <h3 class="mt-3.5 text-[15px] font-600 text-primary">Henrik Sólyom</h3>
+            <p class="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-accent">Co-host · Pipeline</p>
+            <p class="mt-2 text-xs leading-relaxed text-primary/50">Built a revenue org from two reps to forty without ever losing the demo script.</p>
+          </article>
+
+          <!-- Host 8 -->
+          <article class="lift card group rounded-2xl border border-[var(--hairline-strong)] p-5 text-center hover:border-accent/40">
+            <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full font-display text-lg font-700 text-white" style="background:linear-gradient(150deg,#8A2FA0,#C77CFF);">RM</div>
+            <h3 class="mt-3.5 text-[15px] font-600 text-primary">Renata Maziarz</h3>
+            <p class="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-accent">Co-host · Loadbearing</p>
+            <p class="mt-2 text-xs leading-relaxed text-primary/50">Spent five years on capacity planning, and has the spreadsheets to prove every claim.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 7. PULL-QUOTE ============ -->
+    <section class="relative overflow-hidden border-b border-[var(--hairline)]">
+      <div class="ambient-mesh" aria-hidden="true">
+        <div class="dot-grid"></div>
+        <div class="mesh-blob" style="width:480px;height:480px;left:50%;top:50%;transform:translate(-50%,-50%);background:radial-gradient(circle,#5B8CFF,transparent 70%);opacity:0.16;"></div>
+      </div>
+      <div class="relative z-10 mx-auto max-w-4xl px-5 py-24 text-center sm:px-8 sm:py-28">
+        <svg class="mx-auto mb-8 h-9 w-9 text-accent" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
+          <path d="M6 18c0-6 4-10 9-11l1 3c-3 1-5 3-5 6h4v9H6v-7zm14 0c0-6 4-10 9-11l1 3c-3 1-5 3-5 6h4v9h-9v-7z"/>
+        </svg>
+        <blockquote class="font-display text-2xl font-600 leading-snug tracking-display text-primary sm:text-4xl">
+          "Most tech podcasts pick one altitude and stay there. Frequency is the rare network where the engineering show, the sales show and the finance show clearly talk to each other — you finish a week genuinely understanding how a company holds together."
+        </blockquote>
+        <figcaption class="mt-8 flex items-center justify-center gap-3">
+          <span class="flex h-10 w-10 items-center justify-center rounded-full font-display text-sm font-700 text-white" style="background:linear-gradient(150deg,#3457C8,#5B8CFF);">EC</span>
+          <span class="text-left">
+            <span class="block text-sm font-600 text-primary">Esther Caldwell</span>
+            <span class="block text-xs text-primary/55">Senior Editor, The Lattice Review</span>
+          </span>
+        </figcaption>
+      </div>
+    </section>
+
+    <!-- ============ 8. NEWSLETTER ============ -->
+    <section id="newsletter" class="border-b border-[var(--hairline)] bg-surface/30">
+      <div class="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-24">
+        <div class="relative overflow-hidden rounded-3xl border border-[var(--hairline-strong)] card p-8 sm:p-14">
+          <div class="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-accent/15 blur-3xl" aria-hidden="true"></div>
+          <div class="absolute -bottom-20 -left-10 h-44 w-44 rounded-full bg-violet-500/12 blur-3xl" aria-hidden="true"></div>
+
+          <div class="relative grid gap-10 lg:grid-cols-2 lg:items-center">
+            <div>
+              <span class="inline-flex items-center gap-2 rounded-full bg-accent/12 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="1.5" y="3" width="13" height="10" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M2 4l6 4.5L14 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                The Frequency Brief
+              </span>
+              <h2 class="mt-4 font-display text-3xl font-700 tracking-display sm:text-4xl">One email a week — the best episode from each show.</h2>
+              <p class="mt-3 text-[15px] leading-relaxed text-primary/65">Five picks, one short note on why each one is worth your commute. No promotions, no recaps you've already heard. Sent every Sunday at 8am.</p>
+            </div>
+
+            <div>
+              <form class="flex flex-col gap-3 sm:flex-row" onsubmit="return false">
+                <label for="news-email" class="sr-only">Email address</label>
+                <input id="news-email" type="email" inputmode="email" autocomplete="email" placeholder="you@company.com" class="focusable h-12 flex-1 rounded-xl border border-[var(--hairline-strong)] bg-ink px-4 text-sm text-primary placeholder:text-primary/35" />
+                <button type="submit" class="lift inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-accent px-5 text-sm font-600 text-ink shadow-[0_8px_24px_-8px_rgba(91,140,255,0.6)] hover:shadow-[0_10px_30px_-8px_rgba(91,140,255,0.75)] focusable">
+                  Get the brief
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+              </form>
+              <p class="mt-3 flex items-center gap-1.5 font-mono text-[11px] text-primary/40">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1.5l5 2v4c0 4-2.5 6.5-5 7.5C5.5 14 3 11.5 3 7.5v-4l5-2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+                214,930 readers · unsubscribe anytime · no third parties
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 9. JOIN THE NETWORK ============ -->
+    <section class="relative overflow-hidden border-b border-[var(--hairline)]">
+      <div class="ambient-mesh" aria-hidden="true">
+        <div class="mesh-blob" style="width:420px;height:420px;right:-120px;top:-100px;background:radial-gradient(circle,#7C5BFF,transparent 70%);opacity:0.22;"></div>
+      </div>
+      <div class="relative z-10 mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-24">
+        <div class="grid gap-10 lg:grid-cols-12 lg:items-center lg:gap-14">
+          <div class="lg:col-span-6">
+            <p class="mb-3 font-mono text-[11px] uppercase tracking-[0.18em] text-accent">For independent makers</p>
+            <h2 class="font-display text-4xl font-700 leading-tight tracking-display sm:text-5xl">Have a show that belongs on Frequency?</h2>
+            <p class="mt-5 text-[15px] leading-relaxed text-primary/70">We add one show to the network roughly every eighteen months — never more. If you make a sharp, well-produced show about how technology gets built or sold, and you'd rather keep your editorial voice than chase a chart, we want to hear it.</p>
+            <p class="mt-3 text-[15px] leading-relaxed text-primary/70">Joining means shared distribution, a cross-promotion slot in four other feeds, ad sales handled for you, and production support when you need a second pair of ears. You keep your name, your back catalog, and the final cut.</p>
+            <a href="#faq" class="lift mt-7 inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-surface px-5 py-2.5 text-sm font-500 text-primary/85 hover:border-accent/40 hover:text-primary focusable">
+              Read how pitching works
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+          </div>
+
+          <div class="lg:col-span-6">
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div class="card rounded-2xl border border-[var(--hairline-strong)] p-5">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4" stroke="#5B8CFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <p class="mt-3 font-display text-2xl font-700 tracking-display tnum">3.4M</p>
+                <p class="mt-1 text-sm text-primary/55">Monthly downloads you'd plug straight into.</p>
+              </div>
+              <div class="card rounded-2xl border border-[var(--hairline-strong)] p-5">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.4" stroke="#5B8CFF" stroke-width="1.8"/><path d="M5 20c0-3.6 3-6 7-6s7 2.4 7 6" stroke="#5B8CFF" stroke-width="1.8" stroke-linecap="round"/></svg>
+                <p class="mt-3 font-display text-2xl font-700 tracking-display tnum">11</p>
+                <p class="mt-1 text-sm text-primary/55">People on the network team supporting every show.</p>
+              </div>
+              <div class="card rounded-2xl border border-[var(--hairline-strong)] p-5">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5" stroke="#5B8CFF" stroke-width="1.8"/><path d="M3 9h18" stroke="#5B8CFF" stroke-width="1.8"/></svg>
+                <p class="mt-3 font-display text-2xl font-700 tracking-display tnum">4</p>
+                <p class="mt-1 text-sm text-primary/55">Sister feeds that cross-promote your launch.</p>
+              </div>
+              <div class="card rounded-2xl border border-[var(--hairline-strong)] p-5">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v6m0 0l-3-3m3 3l3-3M5 13v6h14v-6" stroke="#5B8CFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <p class="mt-3 font-display text-2xl font-700 tracking-display tnum">100%</p>
+                <p class="mt-1 text-sm text-primary/55">Editorial control stays with you. Always.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 10. FAQ ============ -->
+    <section id="faq" class="border-b border-[var(--hairline)] bg-surface/30">
+      <div class="mx-auto max-w-3xl px-5 py-20 sm:px-8 sm:py-24">
+        <div class="mb-12 text-center">
+          <p class="mb-3 font-mono text-[11px] uppercase tracking-[0.18em] text-accent">Good to know</p>
+          <h2 class="font-display text-4xl font-700 tracking-display sm:text-5xl">Frequently asked</h2>
+        </div>
+
+        <div class="divide-y divide-[var(--hairline)] overflow-hidden rounded-2xl border border-[var(--hairline-strong)] card">
+
+          <details class="group" open>
+            <summary class="flex items-center justify-between gap-4 p-5 hover:bg-white/[0.02]">
+              <span class="text-[15px] font-600 text-primary">Can I subscribe to just one show?</span>
+              <svg class="faq-icon h-4 w-4 flex-shrink-0 text-accent" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </summary>
+            <div class="px-5 pb-5 text-sm leading-relaxed text-primary/65">
+              Absolutely. Every show on Frequency has its own independent feed and its own page on Apple Podcasts, Spotify and everywhere else. Search the show name — Shipped, Pipeline, Loadbearing, The Cut or Burn Rate — and subscribe to that one alone. You'll never get episodes from a show you didn't ask for.
+            </div>
+          </details>
+
+          <details class="group">
+            <summary class="flex items-center justify-between gap-4 p-5 hover:bg-white/[0.02]">
+              <span class="text-[15px] font-600 text-primary">Is there a combined feed?</span>
+              <svg class="faq-icon h-4 w-4 flex-shrink-0 text-accent" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </summary>
+            <div class="px-5 pb-5 text-sm leading-relaxed text-primary/65">
+              Yes — it's called the All-Frequency feed, and it's the one we'd recommend if you're new. Subscribe once and every episode from all five shows arrives in a single timeline, in release order, roughly one new episode each weekday. You can find it under "Frequency: All Shows" on any podcast app, or grab the RSS link from the footer.
+            </div>
+          </details>
+
+          <details class="group">
+            <summary class="flex items-center justify-between gap-4 p-5 hover:bg-white/[0.02]">
+              <span class="text-[15px] font-600 text-primary">How do I advertise on the network?</span>
+              <svg class="faq-icon h-4 w-4 flex-shrink-0 text-accent" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </summary>
+            <div class="px-5 pb-5 text-sm leading-relaxed text-primary/65">
+              We sell host-read ads only — no programmatic insertions, no pre-roll you can't skip past. You can buy a single show or a network-wide run, and we'll match you to the shows whose audience actually fits. Write to <span class="text-accent">sponsors@frequency.fm</span> with your product and rough budget, and our two-person ad team will send a current rate card and the next open slots.
+            </div>
+          </details>
+
+          <details class="group">
+            <summary class="flex items-center justify-between gap-4 p-5 hover:bg-white/[0.02]">
+              <span class="text-[15px] font-600 text-primary">Do you do live shows?</span>
+              <svg class="faq-icon h-4 w-4 flex-shrink-0 text-accent" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </summary>
+            <div class="px-5 pb-5 text-sm leading-relaxed text-primary/65">
+              A few times a year. We run a live network night each spring where two or three shows record on stage in front of an audience, plus the occasional one-off tied to a conference. Tickets are announced first in The Frequency Brief, and recordings are published to each show's feed about a week later for anyone who couldn't make it.
+            </div>
+          </details>
+
+          <details class="group">
+            <summary class="flex items-center justify-between gap-4 p-5 hover:bg-white/[0.02]">
+              <span class="text-[15px] font-600 text-primary">How do I pitch my show to join?</span>
+              <svg class="faq-icon h-4 w-4 flex-shrink-0 text-accent" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </summary>
+            <div class="px-5 pb-5 text-sm leading-relaxed text-primary/65">
+              Send three things to <span class="text-accent">pitch@frequency.fm</span>: a link to your two strongest episodes, one paragraph on the lane your show owns, and your current download numbers. We read every pitch and reply within a month, even when the answer is no. We add about one show every eighteen months, so the bar is high — but a clear voice and real production care matter far more than size.
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 11. FINAL CTA ============ -->
+    <section id="subscribe" class="relative overflow-hidden border-b border-[var(--hairline)]">
+      <div class="ambient-mesh" aria-hidden="true">
+        <div class="dot-grid"></div>
+        <div class="mesh-blob" style="width:560px;height:560px;left:50%;top:30%;transform:translateX(-50%);background:radial-gradient(circle,#5B8CFF,transparent 70%);opacity:0.2;"></div>
+      </div>
+      <div class="relative z-10 mx-auto max-w-3xl px-5 py-24 text-center sm:px-8 sm:py-28">
+        <div class="mb-7 inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-surface/70 px-3 py-1.5">
+          <span class="pulse-dot"></span>
+          <span class="font-mono text-[11px] uppercase tracking-[0.16em] text-primary/65">A new episode almost every weekday</span>
+        </div>
+        <h2 class="font-display text-5xl font-700 leading-[0.98] tracking-display sm:text-6xl">
+          Five shows. <span class="halftone-dim">One subscribe.</span>
+        </h2>
+        <p class="mx-auto mt-5 max-w-lg text-lg text-primary/70">Follow the whole network in your podcast app and never miss the episode everyone's quoting on Monday.</p>
+
+        <div class="mt-9">
+          <div class="flex flex-wrap justify-center gap-2.5">
+            <a href="#subscribe" aria-label="Listen on Apple Podcasts" class="lift focusable inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-surface/70 px-3.5 py-2 text-sm font-500 text-primary/80 hover:border-accent/50 hover:bg-accent/10 hover:text-primary">
+              <svg width="17" height="17" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="8" stroke="currentColor" stroke-width="1.4" fill="none"/><circle cx="9" cy="11" r="2.1" fill="currentColor"/><path d="M9 9a3.6 3.6 0 013.6 3.6M9 6.6a6 6 0 016 6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/></svg>
+              <span>Apple Podcasts</span>
+            </a>
+            <a href="#subscribe" aria-label="Listen on Spotify" class="lift focusable inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-surface/70 px-3.5 py-2 text-sm font-500 text-primary/80 hover:border-accent/50 hover:bg-accent/10 hover:text-primary">
+              <svg width="17" height="17" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="8" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M5 7.4c2.6-.8 5.4-.5 7.6.9M5.6 10c2.1-.6 4.3-.4 6.1.7M6.2 12.3c1.6-.4 3.2-.3 4.6.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/></svg>
+              <span>Spotify</span>
+            </a>
+            <a href="#subscribe" aria-label="Listen on Overcast" class="lift focusable inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-surface/70 px-3.5 py-2 text-sm font-500 text-primary/80 hover:border-accent/50 hover:bg-accent/10 hover:text-primary">
+              <svg width="17" height="17" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="1.9" fill="currentColor"/><path d="M5.6 12.4a4.8 4.8 0 010-6.8M12.4 5.6a4.8 4.8 0 010 6.8M3.6 14.4a7.6 7.6 0 010-10.8M14.4 3.6a7.6 7.6 0 010 10.8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/></svg>
+              <span>Overcast</span>
+            </a>
+            <a href="#subscribe" aria-label="Watch on YouTube" class="lift focusable inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-surface/70 px-3.5 py-2 text-sm font-500 text-primary/80 hover:border-accent/50 hover:bg-accent/10 hover:text-primary">
+              <svg width="17" height="17" viewBox="0 0 18 18" aria-hidden="true"><rect x="1.5" y="4" width="15" height="10" rx="3" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M7.4 6.7v4.6l4-2.3-4-2.3z" fill="currentColor"/></svg>
+              <span>YouTube</span>
+            </a>
+            <a href="#subscribe" aria-label="Listen on Pocket Casts" class="lift focusable inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-surface/70 px-3.5 py-2 text-sm font-500 text-primary/80 hover:border-accent/50 hover:bg-accent/10 hover:text-primary">
+              <svg width="17" height="17" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="8" stroke="currentColor" stroke-width="1.4" fill="none"/><circle cx="9" cy="9" r="5" stroke="currentColor" stroke-width="1.2" fill="none" opacity="0.55"/><path d="M7.6 6.6v4.8l4-2.4-4-2.4z" fill="currentColor"/></svg>
+              <span>Pocket Casts</span>
+            </a>
+            <a href="#subscribe" aria-label="Subscribe via RSS" class="lift focusable inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-surface/70 px-3.5 py-2 text-sm font-500 text-primary/80 hover:border-accent/50 hover:bg-accent/10 hover:text-primary">
+              <svg width="17" height="17" viewBox="0 0 18 18" aria-hidden="true"><circle cx="4.4" cy="13.6" r="1.9" fill="currentColor"/><path d="M3 8a7 7 0 017 7M3 3.5A11.5 11.5 0 0114.5 15" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" fill="none"/></svg>
+              <span>RSS</span>
+            </a>
+          </div>
+        </div>
+
+        <a href="#newsletter" class="mt-8 inline-flex items-center gap-1.5 text-sm font-500 text-primary/55 hover:text-primary focusable">
+          Prefer email? Get the weekly brief instead
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============ 12. FOOTER ============ -->
+  <footer class="bg-ink">
+    <div class="mx-auto max-w-7xl px-5 py-16 sm:px-8">
+      <div class="grid gap-10 sm:grid-cols-2 lg:grid-cols-5 lg:gap-8">
+        <!-- Wordmark -->
+        <div class="lg:col-span-2">
+          <a href="#top" class="flex items-center gap-2.5 focusable" aria-label="Frequency network home">
+            <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-surface2 ring-1 ring-[var(--hairline-strong)]">
+              <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true">
+                <g fill="#5B8CFF">
+                  <rect x="6" y="13" width="3" height="6" rx="1.5"/>
+                  <rect x="11.5" y="9" width="3" height="14" rx="1.5"/>
+                  <rect x="17" y="6" width="3" height="20" rx="1.5"/>
+                  <rect x="22.5" y="11" width="3" height="10" rx="1.5"/>
+                </g>
+              </svg>
+            </span>
+            <span class="font-display text-lg font-700 tracking-display">Frequency</span>
+          </a>
+          <p class="mt-4 max-w-xs text-sm leading-relaxed text-primary/55">Five shows on how technology actually gets built and sold — hosted by people who've shipped.</p>
+          <a href="#subscribe" class="lift mt-5 inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-surface px-3.5 py-2 text-xs font-500 text-primary/80 hover:border-accent/40 hover:text-primary focusable">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="3.5" cy="12.5" r="2" fill="currentColor"/>
+              <path d="M3 7.5a5.5 5.5 0 015.5 5.5M3 3a10 10 0 0110 10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" fill="none"/>
+            </svg>
+            RSS · All-Frequency feed
+          </a>
+        </div>
+
+        <!-- Shows -->
+        <div>
+          <h3 class="font-mono text-[11px] uppercase tracking-[0.14em] text-primary/40">Shows</h3>
+          <ul class="mt-4 space-y-2.5 text-sm">
+            <li><a href="#shows" class="text-primary/65 transition-colors hover:text-accent focusable">Shipped</a></li>
+            <li><a href="#shows" class="text-primary/65 transition-colors hover:text-accent focusable">Pipeline</a></li>
+            <li><a href="#shows" class="text-primary/65 transition-colors hover:text-accent focusable">Loadbearing</a></li>
+            <li><a href="#shows" class="text-primary/65 transition-colors hover:text-accent focusable">The Cut</a></li>
+            <li><a href="#shows" class="text-primary/65 transition-colors hover:text-accent focusable">Burn Rate</a></li>
+          </ul>
+        </div>
+
+        <!-- About -->
+        <div>
+          <h3 class="font-mono text-[11px] uppercase tracking-[0.14em] text-primary/40">About</h3>
+          <ul class="mt-4 space-y-2.5 text-sm">
+            <li><a href="#about" class="text-primary/65 transition-colors hover:text-accent focusable">The network</a></li>
+            <li><a href="#hosts" class="text-primary/65 transition-colors hover:text-accent focusable">Hosts</a></li>
+            <li><a href="#faq" class="text-primary/65 transition-colors hover:text-accent focusable">Pitch a show</a></li>
+            <li><a href="#faq" class="text-primary/65 transition-colors hover:text-accent focusable">Advertise</a></li>
+            <li><a href="#newsletter" class="text-primary/65 transition-colors hover:text-accent focusable">The Brief</a></li>
+          </ul>
+        </div>
+
+        <!-- Follow + Contact -->
+        <div>
+          <h3 class="font-mono text-[11px] uppercase tracking-[0.14em] text-primary/40">Follow</h3>
+          <ul class="mt-4 space-y-2.5 text-sm">
+            <li><a href="#subscribe" class="text-primary/65 transition-colors hover:text-accent focusable">Apple Podcasts</a></li>
+            <li><a href="#subscribe" class="text-primary/65 transition-colors hover:text-accent focusable">Spotify</a></li>
+            <li><a href="#subscribe" class="text-primary/65 transition-colors hover:text-accent focusable">YouTube</a></li>
+          </ul>
+          <h3 class="mt-6 font-mono text-[11px] uppercase tracking-[0.14em] text-primary/40">Contact</h3>
+          <ul class="mt-4 space-y-2.5 text-sm">
+            <li><a href="#faq" class="text-primary/65 transition-colors hover:text-accent focusable">hello@frequency.fm</a></li>
+            <li><a href="#faq" class="text-primary/65 transition-colors hover:text-accent focusable">Press &amp; media</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="mt-14 flex flex-col gap-3 border-t border-[var(--hairline)] pt-7 sm:flex-row sm:items-center sm:justify-between">
+        <p class="font-mono text-xs text-primary/40 tnum">© 2026 Frequency Media. All rights reserved.</p>
+        <p class="text-xs text-primary/45">Frequency is an independent podcast network.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============ STATIC VISUALS — vanilla JS only ============ -->
+  <script>
+    // Waveform painter — static SVG bars from a procedural curve, no audio.
+    document.querySelectorAll('[data-waveform]').forEach(function (el) {
+      var n = +el.dataset.bars || 72,
+          bw = 3, gap = 3,
+          played = +el.dataset.played || 0.34,
+          H = 56, out = '';
+      for (var i = 0; i < n; i++) {
+        var t = i / n;
+        var h = (0.18 + 0.82 * Math.abs(
+          Math.sin(t * 8.7) * 0.55 +
+          Math.sin(t * 21.3) * 0.30 +
+          Math.sin(t * 41.1) * 0.15
+        )) * H;
+        var x = i * (bw + gap),
+            y = (H - h) / 2,
+            on = (i / n) < played;
+        out += '<rect x="' + x + '" y="' + y.toFixed(1) + '" width="' + bw +
+               '" height="' + h.toFixed(1) + '" rx="1.5" fill="' +
+               (on ? 'var(--wave-on)' : 'var(--wave-off)') + '"/>';
+      }
+      el.setAttribute('viewBox', '0 0 ' + (n * (bw + gap)) + ' ' + H);
+      el.setAttribute('preserveAspectRatio', 'none');
+      el.innerHTML = out;
+    });
+  </script>
+</body>
+</html>

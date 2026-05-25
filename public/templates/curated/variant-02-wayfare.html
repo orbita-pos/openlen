@@ -1,0 +1,1313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Wayfare — Bespoke travel design, built around how you want to feel.</title>
+<meta name="description" content="Wayfare is a bespoke trip-planning studio. We design private journeys from scratch — Kyoto in autumn, Patagonia, a Kenya safari — with private guides, every booking handled, and 24/7 on-trip support. 4,280 journeys designed since 2009, across 90+ destinations." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          bg: '#F4EFE6',
+          surface: '#FBF8F1',
+          deep: '#ECE5D6',
+          text: '#1E1A14',
+          accent: '#2E3A5C',
+          brass: '#B08A4A',
+        },
+        fontFamily: {
+          display: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+          body: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          mono: ['"Geist Mono"', 'ui-monospace', 'monospace'],
+        },
+      },
+    },
+  }
+</script>
+<style>
+  :root{
+    --bg:#F4EFE6;
+    --surface:#FBF8F1;
+    --deep:#ECE5D6;
+    --text:#1E1A14;
+    --muted:#5A5447;
+    --faint:#8C8475;
+    --accent:#2E3A5C;
+    --accent-2:#B08A4A;
+    --line:rgba(30,26,20,0.12);
+    --line-soft:rgba(30,26,20,0.07);
+  }
+  *{ -webkit-tap-highlight-color:transparent; }
+  html{ scroll-behavior:smooth; }
+  html,body{ background:var(--bg); color:var(--text); }
+  body{
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+    font-feature-settings:"ss01","cv11";
+    font-optical-sizing:auto;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    line-height:1.65;
+  }
+  section[id]{ scroll-margin-top:88px; }
+
+  .display{ font-family:'Cormorant Garamond',Georgia,serif; font-weight:600; letter-spacing:-0.03em; line-height:1.04; }
+  .display-tight{ letter-spacing:-0.04em; }
+  .serif{ font-family:'Cormorant Garamond',Georgia,serif; letter-spacing:-0.018em; }
+  .mono{ font-family:'Geist Mono',ui-monospace,Menlo,monospace; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  em.brass{ font-style:normal; color:var(--accent-2); }
+  .halftone{ opacity:0.45; }
+
+  /* eyebrow / kicker */
+  .kicker{
+    font-family:'Geist Mono',ui-monospace,monospace;
+    text-transform:uppercase;
+    letter-spacing:0.24em;
+    font-size:11px;
+    color:var(--faint);
+  }
+  .accent-line{ display:inline-block; width:24px; height:1px; background:var(--accent-2); vertical-align:middle; margin-right:11px; }
+  .rule{ border-color:var(--line); }
+  .rule-soft{ border-color:var(--line-soft); }
+  .hairline{ height:1px; background:var(--line); }
+
+  /* ambient backgrounds */
+  .dotgrid{
+    background-image:radial-gradient(rgba(30,26,20,0.06) 1px, transparent 1px);
+    background-size:32px 32px;
+    background-position:-8px -8px;
+  }
+  .mesh{
+    background-image:
+      radial-gradient(54% 46% at 12% 6%, rgba(46,58,92,0.13), transparent 64%),
+      radial-gradient(46% 42% at 92% 14%, rgba(176,138,74,0.16), transparent 70%),
+      radial-gradient(58% 56% at 78% 98%, rgba(46,58,92,0.09), transparent 72%);
+  }
+  .blob{ position:absolute; border-radius:50%; filter:blur(74px); opacity:0.5; pointer-events:none; }
+
+  /* pulse-dot — radial expanding box-shadow */
+  .pulse-dot{ position:relative; display:inline-block; width:7px; height:7px; border-radius:999px; background:var(--accent-2); box-shadow:0 0 0 0 rgba(176,138,74,0.55); animation:pulse 2.2s ease-out infinite; }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(176,138,74,0.5); }
+    70%{ box-shadow:0 0 0 9px rgba(176,138,74,0); }
+    100%{ box-shadow:0 0 0 0 rgba(176,138,74,0); }
+  }
+
+  /* framed gradient "photo" */
+  .photo{
+    position:relative;
+    border-radius:5px;
+    overflow:hidden;
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,0.30),
+      inset 0 0 0 1px rgba(30,26,20,0.10),
+      0 20px 44px -24px rgba(30,26,20,0.45);
+  }
+  .photo::after{
+    content:"";
+    position:absolute;
+    inset:9px;
+    border:1px solid rgba(255,255,255,0.28);
+    border-radius:2px;
+    pointer-events:none;
+  }
+  .grain{ background-image:radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px); background-size:5px 5px; }
+
+  /* hairline card */
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line-soft);
+    border-radius:5px;
+  }
+  .card-lift{ transition:transform 130ms ease, box-shadow 130ms ease, border-color 130ms ease; }
+  .card-lift:hover{ transform:translateY(-4px); box-shadow:0 24px 46px -28px rgba(30,26,20,0.42); border-color:var(--line); }
+
+  /* buttons */
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:0.5rem; transition:transform 110ms ease, box-shadow 110ms ease, background-color 110ms ease, color 110ms ease, border-color 110ms ease; }
+  .btn-solid{ background:var(--accent); color:#F4EFE6; box-shadow:0 12px 26px -16px rgba(46,58,92,0.9); }
+  .btn-solid:hover{ transform:translateY(-2px); box-shadow:0 18px 32px -16px rgba(46,58,92,1); }
+  .btn-ghost{ border:1px solid var(--line); color:var(--text); }
+  .btn-ghost:hover{ transform:translateY(-2px); background:var(--surface); box-shadow:0 14px 28px -20px rgba(30,26,20,0.55); }
+
+  /* nav link underline-sweep */
+  .navlink{ position:relative; transition:color 120ms ease; }
+  .navlink::after{ content:""; position:absolute; left:0; right:0; bottom:-3px; height:1px; background:var(--accent); transform:scaleX(0); transform-origin:right center; transition:transform 240ms cubic-bezier(.2,.7,.2,1); }
+  .navlink:hover{ color:var(--accent); }
+  .navlink:hover::after{ transform:scaleX(1); transform-origin:left center; }
+
+  /* marquee — duplicated content, seamless loop */
+  .marquee-mask{ -webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent); mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent); }
+  .marquee-track{ display:flex; width:max-content; align-items:center; animation:marquee 44s linear infinite; }
+  @keyframes marquee{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+
+  /* arrow nudge */
+  .nudge{ transition:transform 150ms ease; }
+  a:hover .nudge, .btn:hover .nudge{ transform:translateX(3px); }
+
+  /* native details / faq */
+  details>summary{ list-style:none; cursor:pointer; }
+  details>summary::-webkit-details-marker{ display:none; }
+  details[open] .faq-sign{ transform:rotate(45deg); }
+  .faq-sign{ transition:transform 200ms ease; }
+  details[open] summary .faq-q{ color:var(--accent); }
+
+  .num-ghost{ font-family:'Cormorant Garamond',Georgia,serif; font-weight:600; color:var(--line); line-height:1; }
+
+  @media (prefers-reduced-motion:reduce){
+    .marquee-track,.pulse-dot{ animation:none; }
+    .btn,.card-lift,.nudge{ transition:none; }
+  }
+  ::selection{ background:rgba(176,138,74,0.32); color:var(--text); }
+</style>
+</head>
+<body class="font-body antialiased min-h-screen">
+
+<!-- ===== 1 · STICKY NAV ===== -->
+<header class="sticky top-0 z-50 backdrop-blur-md border-b rule-soft" style="background:rgba(244,239,230,0.86);">
+  <nav class="mx-auto flex max-w-[1180px] items-center justify-between px-5 sm:px-8 h-[72px]" aria-label="Primary">
+    <a href="#top" class="flex items-center gap-3 group" aria-label="Wayfare — home">
+      <svg width="36" height="36" viewBox="0 0 40 40" fill="none" aria-hidden="true" class="transition-transform duration-200 group-hover:-translate-y-0.5">
+        <circle cx="20" cy="20" r="18.6" fill="#FBF8F1" stroke="#2E3A5C" stroke-width="1.1"/>
+        <circle cx="20" cy="20" r="14" fill="none" stroke="#2E3A5C" stroke-width="0.8" opacity="0.4"/>
+        <!-- compass star -->
+        <path d="M20 6 L22.6 17.4 L34 20 L22.6 22.6 L20 34 L17.4 22.6 L6 20 L17.4 17.4 Z" fill="#2E3A5C"/>
+        <path d="M20 11 L21.4 18.6 L29 20 L21.4 21.4 L20 29 L18.6 21.4 L11 20 L18.6 18.6 Z" fill="#B08A4A"/>
+        <circle cx="20" cy="20" r="2" fill="#FBF8F1"/>
+      </svg>
+      <span class="flex flex-col leading-none">
+        <span class="display text-[23px] font-semibold text-text">Wayfare</span>
+        <span class="mono text-[8.5px] tracking-[0.26em] uppercase text-text/45 mt-1">Bespoke travel design</span>
+      </span>
+    </a>
+
+    <div class="hidden md:flex items-center gap-8 text-[14.5px] text-text/75">
+      <a href="#how" class="navlink">How it works</a>
+      <a href="#journeys" class="navlink">Sample journeys</a>
+      <a href="#designers" class="navlink">Designers</a>
+      <a href="#about" class="navlink">About</a>
+    </div>
+
+    <a href="#plan" class="btn btn-solid rounded-full px-4.5 py-2 text-[13.5px] tracking-wide" style="padding-left:18px;padding-right:18px;">
+      Plan my trip
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" class="nudge"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </nav>
+</header>
+
+<main id="top">
+
+  <!-- ===== 2 · HERO ===== -->
+  <section class="relative overflow-hidden mesh">
+    <div class="absolute inset-0 dotgrid opacity-70 pointer-events-none"></div>
+    <div class="blob" style="background:#2E3A5C;width:320px;height:320px;top:-130px;left:-90px;opacity:0.28;"></div>
+    <div class="blob" style="background:#B08A4A;width:300px;height:300px;bottom:-140px;right:-80px;"></div>
+
+    <div class="relative mx-auto max-w-[1180px] px-5 sm:px-8 pt-16 sm:pt-24 pb-16 sm:pb-24">
+
+      <!-- tagline pill -->
+      <div class="inline-flex items-center gap-2.5 rounded-full border rule bg-surface pl-2.5 pr-4 py-1.5 mb-9">
+        <span class="pulse-dot"></span>
+        <span class="mono text-[11px] sm:text-[11.5px] tracking-[0.04em] text-muted">Bespoke travel design · since 2009</span>
+      </div>
+
+      <!-- half-tone display headline -->
+      <h1 class="display display-tight text-[clamp(3rem,9vw,7.4rem)] max-w-[16ch]">
+        Tell us how you want to feel.<br class="hidden sm:block" />
+        <em class="halftone">We design the rest.</em>
+      </h1>
+
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-9 md:gap-12 mt-10 md:mt-12 items-start">
+        <div class="md:col-span-6">
+          <p class="serif text-[20px] sm:text-[23px] leading-[1.5] text-text max-w-[44ch]">
+            Wayfare is a private travel studio. You tell us the feeling — slow, wild, unhurried, alive — and two of our designers build the whole journey from a blank page. <em class="brass">No two trips are ever the same.</em>
+          </p>
+
+          <div class="flex flex-col sm:flex-row gap-3 mt-8">
+            <a href="#plan" class="btn btn-solid rounded-full px-6 py-3.5 text-[15px] font-medium">
+              Plan my trip
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" class="nudge"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+            <a href="#journeys" class="btn btn-ghost rounded-full px-6 py-3.5 text-[15px] font-medium">
+              See sample journeys
+            </a>
+          </div>
+
+          <!-- "what bespoke includes" facts strip -->
+          <div class="mt-9 pt-7 border-t rule-soft">
+            <p class="kicker mb-3.5"><span class="accent-line"></span>Every Wayfare trip includes</p>
+            <p class="mono text-[12px] sm:text-[12.5px] leading-[2] text-muted">
+              private guides · 24/7 on-trip support<br class="sm:hidden" /><span class="hidden sm:inline"> · </span>every booking handled · fully financially protected
+            </p>
+          </div>
+        </div>
+
+        <!-- hero "photo" — Kyoto in autumn -->
+        <div class="md:col-span-6">
+          <div class="photo aspect-[4/3.1] w-full" style="background:
+              radial-gradient(120% 90% at 22% 12%, rgba(255,238,210,0.55) 0%, transparent 44%),
+              radial-gradient(90% 80% at 84% 20%, #E8B45A 0%, #C77A3A 42%, transparent 72%),
+              radial-gradient(130% 120% at 30% 112%, #6E3A2C 0%, #3A2422 48%, transparent 80%),
+              linear-gradient(168deg, #C9883C 0%, #A85838 50%, #5E3328 100%);">
+            <div class="absolute inset-0 grain opacity-50"></div>
+            <!-- sun -->
+            <div class="absolute" style="left:74%;top:15%;width:78px;height:78px;border-radius:999px;background:radial-gradient(circle,#FFF0CE 0%,#F0C064 58%,rgba(240,192,100,0) 100%);"></div>
+            <!-- distant mountain ridge -->
+            <svg viewBox="0 0 400 310" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+              <path d="M0 168 L62 120 L118 158 L182 104 L246 152 L312 112 L400 156 L400 310 L0 310 Z" fill="#7E4636" opacity="0.55"/>
+              <path d="M0 210 L78 168 L150 204 L226 162 L300 200 L372 170 L400 184 L400 310 L0 310 Z" fill="#5E3328" opacity="0.8"/>
+              <!-- contour lines on the foreground hill -->
+              <g stroke="#3A2422" stroke-width="1" opacity="0.3" fill="none">
+                <path d="M0 250 C90 232 200 264 320 246 C360 240 384 252 400 248"/>
+                <path d="M0 274 C100 258 210 286 330 268 C366 262 386 274 400 270"/>
+              </g>
+            </svg>
+            <!-- maple silhouettes + a torii -->
+            <svg viewBox="0 0 400 310" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+              <!-- torii gate -->
+              <g transform="translate(56,158)" fill="#2A1614">
+                <rect x="0" y="0" width="62" height="6"/>
+                <rect x="6" y="10" width="50" height="4"/>
+                <rect x="8" y="6" width="6" height="62"/>
+                <rect x="48" y="6" width="6" height="62"/>
+              </g>
+              <!-- autumn tree -->
+              <g transform="translate(296,150)">
+                <rect x="16" y="40" width="8" height="40" fill="#2A1614"/>
+                <circle cx="20" cy="30" r="26" fill="#D98A3A"/>
+                <circle cx="9" cy="38" r="11" fill="#E8B45A"/>
+                <circle cx="32" cy="24" r="9" fill="#C25E3A"/>
+              </g>
+            </svg>
+            <div class="absolute left-4 bottom-4 mono text-[10px] tracking-[0.1em] text-[#FBF8F1]" style="text-shadow:0 1px 5px rgba(0,0,0,0.6);">KYOTO · LATE NOVEMBER, FIRST LIGHT</div>
+          </div>
+          <p class="text-[13.5px] text-muted mt-3.5 leading-[1.55]">
+            A real Wayfare itinerary: a temple before the gates open, a tea house with no sign, a ryokan dinner served only to you. Designed, not booked.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 3 · TRUST BAR ===== -->
+  <section class="border-y rule-soft" style="background:var(--deep);">
+    <div class="mx-auto max-w-[1180px] px-5 sm:px-8 py-14 sm:py-16">
+      <!-- metric row -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-y-9">
+        <div class="lg:pr-8 lg:border-r rule-soft">
+          <div class="kicker mb-2.5">Journeys designed</div>
+          <div class="display tnum text-[clamp(2.6rem,5vw,3.6rem)] text-text">4,280</div>
+          <div class="mono text-[11px] text-faint mt-1">each one from a blank page</div>
+        </div>
+        <div class="lg:px-8 lg:border-r rule-soft">
+          <div class="kicker mb-2.5">Designing since</div>
+          <div class="display tnum text-[clamp(2.6rem,5vw,3.6rem)] text-text">2009</div>
+          <div class="mono text-[11px] text-faint mt-1">sixteen years, one studio</div>
+        </div>
+        <div class="lg:px-8 lg:border-r rule-soft">
+          <div class="kicker mb-2.5">Repeat clients</div>
+          <div class="display tnum text-[clamp(2.6rem,5vw,3.6rem)] text-text">71%</div>
+          <div class="mono text-[11px] text-faint mt-1">come back to design again</div>
+        </div>
+        <div class="lg:pl-8">
+          <div class="kicker mb-2.5">Destinations</div>
+          <div class="display tnum text-[clamp(2.6rem,5vw,3.6rem)] text-text">90+</div>
+          <div class="mono text-[11px] text-faint mt-1">on six continents, in depth</div>
+        </div>
+      </div>
+
+      <!-- press marquee -->
+      <div class="mt-14 pt-12 border-t rule-soft">
+        <p class="kicker mb-7 text-center"><span class="accent-line"></span>Recommended in<span class="accent-line" style="margin-left:11px;margin-right:0;"></span></p>
+        <div class="marquee-mask overflow-hidden">
+          <div class="marquee-track gap-12 text-text/55">
+            <span class="flex shrink-0 items-center gap-12">
+              <span class="display text-[28px] italic">Meridian</span>
+              <span class="text-[22px] tracking-tight" style="font-weight:600;">The Passage</span>
+              <span class="display text-[28px]">Off&#8209;Season</span>
+              <span class="mono text-[15px] tracking-[0.18em] uppercase">Wander&nbsp;Quarterly</span>
+              <span class="display text-[28px] italic">Latitude Journal</span>
+              <span class="text-[22px] tracking-[0.04em]" style="font-weight:500;">Northbound</span>
+              <span class="display text-[28px]">Compass &amp; Co</span>
+              <span class="text-[22px] tracking-tight" style="font-weight:600;">The Grand Tour</span>
+            </span>
+            <span class="flex shrink-0 items-center gap-12" aria-hidden="true">
+              <span class="display text-[28px] italic">Meridian</span>
+              <span class="text-[22px] tracking-tight" style="font-weight:600;">The Passage</span>
+              <span class="display text-[28px]">Off&#8209;Season</span>
+              <span class="mono text-[15px] tracking-[0.18em] uppercase">Wander&nbsp;Quarterly</span>
+              <span class="display text-[28px] italic">Latitude Journal</span>
+              <span class="text-[22px] tracking-[0.04em]" style="font-weight:500;">Northbound</span>
+              <span class="display text-[28px]">Compass &amp; Co</span>
+              <span class="text-[22px] tracking-tight" style="font-weight:600;">The Grand Tour</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 4 · OVERVIEW · THE BESPOKE PHILOSOPHY ===== -->
+  <section id="about" class="relative mx-auto max-w-[1180px] px-5 sm:px-8 py-20 sm:py-28">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14 items-start">
+      <div class="md:col-span-5">
+        <div class="kicker mb-5"><span class="accent-line"></span>The studio</div>
+        <h2 class="display display-tight text-[clamp(2.2rem,4.6vw,3.6rem)] max-w-[15ch]">
+          We don't sell trips. We <em class="brass">design</em> them.
+        </h2>
+      </div>
+      <div class="md:col-span-7">
+        <div class="serif text-[18px] sm:text-[19.5px] text-muted leading-[1.6] space-y-4 max-w-[58ch]">
+          <p>Most travel begins with a catalogue — a fixed route, a set of dates, a price. Wayfare begins with a conversation. We ask what a good day looks like to you, what you'd happily skip, who is coming, and how you want to feel when you finally stop moving. Then we build a journey that has never existed before.</p>
+          <p>Founded in 2009 by two designers who were tired of itineraries that felt borrowed, the studio has stayed deliberately small — never more than nine designers, each with one region they know down to the unmarked door. We don't chase volume. We design roughly three hundred journeys a year, and we'd rather turn a trip away than rush it.</p>
+          <p>Everything is handled. Permits, transfers, the guide who knows the chef, the room that catches the morning light. You arrive with one number to call and nothing to arrange — and the trip is yours alone, not a departure you happen to share.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- highlight photos -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-14">
+      <figure class="photo aspect-[4/5]" style="background:
+          radial-gradient(110% 80% at 30% 16%, rgba(214,228,236,0.7) 0%, transparent 46%),
+          radial-gradient(120% 110% at 60% 108%, #2C4A52 0%, #16282E 56%, transparent 82%),
+          linear-gradient(166deg, #8FB0C0 0%, #3E6470 52%, #1C3036 100%);">
+        <div class="absolute inset-0 grain opacity-50"></div>
+        <svg viewBox="0 0 240 300" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+          <path d="M0 150 L48 86 L92 138 L140 70 L188 132 L240 96 L240 300 L0 300 Z" fill="#1C3036" opacity="0.85"/>
+          <path d="M0 200 L60 162 L120 198 L180 158 L240 196 L240 300 L0 300 Z" fill="#0F1C20"/>
+          <g stroke="#E6EEF2" stroke-width="1.2" opacity="0.5"><path d="M40 96 L48 86 L56 96M132 80 L140 70 L148 80" fill="none"/></g>
+        </svg>
+        <figcaption class="absolute left-4 bottom-4 mono text-[10px] tracking-[0.1em] text-[#FBF8F1]" style="text-shadow:0 1px 4px rgba(0,0,0,0.6);">PATAGONIA · THE PAINE MASSIF</figcaption>
+      </figure>
+      <figure class="photo aspect-[4/5]" style="background:
+          radial-gradient(110% 80% at 70% 14%, rgba(255,234,196,0.6) 0%, transparent 46%),
+          radial-gradient(120% 110% at 36% 110%, #5E3A1E 0%, #2E1C10 56%, transparent 82%),
+          linear-gradient(168deg, #E8B45A 0%, #C2772E 50%, #6E3E1C 100%);">
+        <div class="absolute inset-0 grain opacity-50"></div>
+        <div class="absolute" style="left:64%;top:18%;width:60px;height:60px;border-radius:999px;background:radial-gradient(circle,#FFF0CE,#F0C064 60%,rgba(240,192,100,0));"></div>
+        <svg viewBox="0 0 240 300" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+          <path d="M0 196 C70 178 150 210 240 192 L240 300 L0 300 Z" fill="#6E3E1C"/>
+          <g transform="translate(150,150)" fill="#2E1C10">
+            <rect x="14" y="36" width="5" height="40"/>
+            <path d="M-6 36 Q16 -2 38 36 Z"/>
+          </g>
+          <g transform="translate(40,168)" fill="#2E1C10"><rect x="9" y="22" width="4" height="22"/><path d="M-2 22 Q11 0 24 22 Z"/></g>
+        </svg>
+        <figcaption class="absolute left-4 bottom-4 mono text-[10px] tracking-[0.1em] text-[#FBF8F1]" style="text-shadow:0 1px 4px rgba(0,0,0,0.6);">KENYA · THE MARA AT GOLDEN HOUR</figcaption>
+      </figure>
+      <figure class="photo aspect-[4/5]" style="background:
+          radial-gradient(110% 80% at 28% 16%, rgba(255,244,222,0.6) 0%, transparent 46%),
+          radial-gradient(120% 110% at 62% 110%, #1C3A4E 0%, #122734 56%, transparent 82%),
+          linear-gradient(166deg, #E2CA92 0%, #5E8A9A 54%, #1E3A4A 100%);">
+        <div class="absolute inset-0 grain opacity-50"></div>
+        <svg viewBox="0 0 240 300" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+          <path d="M0 188 C80 200 160 176 240 196 L240 300 L0 300 Z" fill="#1E3A4A" opacity="0.9"/>
+          <g transform="translate(56,118)">
+            <rect x="0" y="22" width="36" height="48" fill="#E8E0CC" opacity="0.92"/>
+            <rect x="44" y="36" width="26" height="34" fill="#DAD0B6" opacity="0.92"/>
+            <rect x="8" y="32" width="8" height="10" fill="#1E3A4A"/>
+            <rect x="22" y="32" width="8" height="10" fill="#1E3A4A"/>
+            <rect x="50" y="44" width="7" height="9" fill="#1E3A4A"/>
+          </g>
+        </svg>
+        <figcaption class="absolute left-4 bottom-4 mono text-[10px] tracking-[0.1em] text-[#FBF8F1]" style="text-shadow:0 1px 4px rgba(0,0,0,0.6);">AMALFI · A VILLA ABOVE THE WATER</figcaption>
+      </figure>
+    </div>
+
+    <!-- stylized route map -->
+    <div class="mt-14 card rounded-[5px] overflow-hidden">
+      <div class="flex items-center justify-between border-b rule-soft px-5 py-3.5">
+        <span class="kicker"><span class="accent-line"></span>Where we work</span>
+        <span class="mono text-[11px] text-accent">90+ destinations · six continents</span>
+      </div>
+      <div class="p-5 sm:p-8" style="background:linear-gradient(180deg,#FBF8F1 0%,#F4EFE6 100%);">
+        <svg viewBox="0 0 960 360" class="w-full" role="img" aria-label="Stylized abstract map of Wayfare destinations, drawn as an arc with numbered stops — not a geographic map">
+          <!-- faint latitude lines -->
+          <g stroke="var(--line-soft)" stroke-width="1">
+            <line x1="40" y1="90" x2="920" y2="90"/>
+            <line x1="40" y1="180" x2="920" y2="180"/>
+            <line x1="40" y1="270" x2="920" y2="270"/>
+          </g>
+          <!-- soft landmass blobs -->
+          <g fill="var(--deep)" opacity="0.9">
+            <path d="M70 150 q70 -60 160 -34 q60 18 40 84 q-30 70 -130 56 q-94 -14 -70 -106 Z"/>
+            <path d="M320 100 q90 -36 168 6 q54 30 18 96 q-44 70 -150 50 q-110 -22 -36 -152 Z"/>
+            <path d="M560 140 q80 -50 170 -16 q66 26 40 100 q-34 78 -150 62 q-110 -16 -60 -146 Z"/>
+            <path d="M770 110 q70 -28 130 12 q40 28 12 84 q-36 60 -116 44 q-86 -18 -26 -140 Z"/>
+          </g>
+          <!-- the route arc -->
+          <path id="routeArc" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="2 6" stroke-linecap="round"></path>
+          <!-- stop markers + labels -->
+          <g class="mono" font-size="11" fill="var(--text)">
+            <g transform="translate(150,168)">
+              <circle r="13" fill="#FBF8F1" stroke="var(--accent)" stroke-width="1.4"/>
+              <text text-anchor="middle" dy="3.6" fill="var(--accent)" font-weight="500">1</text>
+              <text x="0" y="32" text-anchor="middle">Patagonia</text>
+            </g>
+            <g transform="translate(340,128)">
+              <circle r="13" fill="#FBF8F1" stroke="var(--accent)" stroke-width="1.4"/>
+              <text text-anchor="middle" dy="3.6" fill="var(--accent)" font-weight="500">2</text>
+              <text x="0" y="32" text-anchor="middle">Iceland</text>
+            </g>
+            <g transform="translate(500,196)">
+              <circle r="13" fill="#FBF8F1" stroke="var(--accent)" stroke-width="1.4"/>
+              <text text-anchor="middle" dy="3.6" fill="var(--accent)" font-weight="500">3</text>
+              <text x="0" y="32" text-anchor="middle">Kenya</text>
+            </g>
+            <g transform="translate(640,120)">
+              <circle r="13" fill="#FBF8F1" stroke="var(--accent)" stroke-width="1.4"/>
+              <text text-anchor="middle" dy="3.6" fill="var(--accent)" font-weight="500">4</text>
+              <text x="0" y="32" text-anchor="middle">The Dolomites</text>
+            </g>
+            <g transform="translate(840,150)">
+              <circle r="14" fill="var(--accent)"/>
+              <text text-anchor="middle" dy="3.8" fill="#FBF8F1" font-weight="500">5</text>
+              <text x="0" y="33" text-anchor="middle" fill="var(--accent)" font-weight="500">Kyoto</text>
+            </g>
+          </g>
+          <!-- accent dots for "and more" -->
+          <g fill="var(--accent-2)">
+            <circle cx="240" cy="210" r="3"/>
+            <circle cx="420" cy="100" r="3"/>
+            <circle cx="560" cy="252" r="3"/>
+            <circle cx="700" cy="200" r="3"/>
+            <circle cx="780" cy="96" r="3"/>
+            <circle cx="120" cy="120" r="3"/>
+          </g>
+          <text x="480" y="338" text-anchor="middle" class="mono" font-size="11" fill="var(--faint)">An illustration, not a navigation map — every dot is a place a Wayfare designer knows in person.</text>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 5 · SAMPLE JOURNEYS + HOW IT WORKS ===== -->
+  <section id="journeys" class="relative overflow-hidden border-y rule-soft" style="background:var(--deep);">
+    <div class="blob" style="background:#B08A4A;width:280px;height:280px;top:-120px;right:-70px;opacity:0.4;"></div>
+    <div class="relative mx-auto max-w-[1180px] px-5 sm:px-8 py-20 sm:py-28">
+
+      <!-- (a) sample journeys -->
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-10">
+        <div class="max-w-[54ch]">
+          <div class="kicker mb-5"><span class="accent-line"></span>For inspiration only</div>
+          <h2 class="display display-tight text-[clamp(2.2rem,5vw,3.8rem)]">
+            Three journeys we loved <em class="brass">designing.</em>
+          </h2>
+        </div>
+        <p class="mono text-[11.5px] text-faint sm:text-right leading-relaxed max-w-[26ch]">
+          a catalogue this is not — every Wayfare trip is built from scratch for one set of travelers
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <!-- journey 1 — Japan in autumn -->
+        <article class="card card-lift rounded-[5px] overflow-hidden flex flex-col">
+          <div class="relative aspect-[5/4]" style="background:
+              radial-gradient(110% 80% at 24% 14%, rgba(255,240,212,0.55) 0%, transparent 44%),
+              radial-gradient(120% 110% at 64% 110%, #6E3A2C 0%, #3A2422 54%, transparent 82%),
+              linear-gradient(166deg, #D98A3A 0%, #B05838 52%, #5E3328 100%);">
+            <div class="absolute inset-0 grain opacity-50"></div>
+            <svg viewBox="0 0 320 256" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+              <path d="M0 150 L60 108 L120 144 L186 96 L246 140 L320 110 L320 256 L0 256 Z" fill="#5E3328" opacity="0.8"/>
+              <g transform="translate(228,116)"><rect x="13" y="32" width="6" height="34" fill="#2A1614"/><circle cx="16" cy="24" r="22" fill="#E8B45A"/><circle cx="6" cy="30" r="9" fill="#C25E3A"/></g>
+              <g transform="translate(48,134)" fill="#2A1614"><rect x="0" y="0" width="48" height="5"/><rect x="6" y="5" width="6" height="44"/><rect x="36" y="5" width="6" height="44"/></g>
+            </svg>
+            <span class="absolute right-3 top-3 mono text-[10px] uppercase tracking-[0.14em] text-white/85 bg-black/25 px-2 py-1 rounded-sm">Japan</span>
+          </div>
+          <div class="p-6 flex flex-col flex-1">
+            <h3 class="display text-[26px] font-semibold text-text">The Maple Light, Kyoto to Kanazawa</h3>
+            <p class="mt-2 text-[14.5px] text-muted leading-[1.6]">
+              Two weeks chasing the autumn colour north — temple gardens before the gates open, a ryokan in the alps, and dinners booked by someone who knows the chef.
+            </p>
+            <div class="mt-5 pt-4 border-t rule-soft flex items-end justify-between">
+              <div>
+                <div class="kicker mb-1">From</div>
+                <div class="mono tnum text-[18px] text-text">$14,800 <span class="text-faint text-[12px]">pp</span></div>
+              </div>
+              <div class="text-right">
+                <div class="kicker mb-1">Typical length</div>
+                <div class="mono tnum text-[15px] text-accent">13–15 days</div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- journey 2 — Patagonia -->
+        <article class="card card-lift rounded-[5px] overflow-hidden flex flex-col">
+          <div class="relative aspect-[5/4]" style="background:
+              radial-gradient(110% 80% at 30% 14%, rgba(214,228,236,0.7) 0%, transparent 46%),
+              radial-gradient(120% 110% at 60% 110%, #2C4A52 0%, #14262C 56%, transparent 82%),
+              linear-gradient(166deg, #9FC0CE 0%, #436A76 52%, #1A2E34 100%);">
+            <div class="absolute inset-0 grain opacity-50"></div>
+            <svg viewBox="0 0 320 256" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+              <path d="M0 138 L52 70 L96 124 L150 56 L204 120 L262 78 L320 116 L320 256 L0 256 Z" fill="#1A2E34" opacity="0.86"/>
+              <path d="M0 188 L70 150 L140 186 L210 146 L280 184 L320 168 L320 256 L0 256 Z" fill="#0E1A1E"/>
+              <g stroke="#E6EEF2" stroke-width="1.4" opacity="0.55" fill="none"><path d="M44 80 L52 70 L60 80M142 66 L150 56 L158 66"/></g>
+            </svg>
+            <span class="absolute right-3 top-3 mono text-[10px] uppercase tracking-[0.14em] text-white/85 bg-black/25 px-2 py-1 rounded-sm">Chile · Argentina</span>
+          </div>
+          <div class="p-6 flex flex-col flex-1">
+            <h3 class="display text-[26px] font-semibold text-text">Wild Ends, Across Patagonia</h3>
+            <p class="mt-2 text-[14.5px] text-muted leading-[1.6]">
+              Estancias, glacier crossings and the Paine circuit at a walking pace — a private guide who reads the weather, and a lodge waiting each night.
+            </p>
+            <div class="mt-5 pt-4 border-t rule-soft flex items-end justify-between">
+              <div>
+                <div class="kicker mb-1">From</div>
+                <div class="mono tnum text-[18px] text-text">$11,200 <span class="text-faint text-[12px]">pp</span></div>
+              </div>
+              <div class="text-right">
+                <div class="kicker mb-1">Typical length</div>
+                <div class="mono tnum text-[15px] text-accent">10–12 days</div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- journey 3 — Kenya safari -->
+        <article class="card card-lift rounded-[5px] overflow-hidden flex flex-col">
+          <div class="relative aspect-[5/4]" style="background:
+              radial-gradient(110% 80% at 70% 14%, rgba(255,236,200,0.6) 0%, transparent 46%),
+              radial-gradient(120% 110% at 34% 110%, #5E3A1E 0%, #2E1C10 56%, transparent 82%),
+              linear-gradient(168deg, #ECC066 0%, #C2772E 50%, #6E3E1C 100%);">
+            <div class="absolute inset-0 grain opacity-50"></div>
+            <div class="absolute" style="left:66%;top:16%;width:62px;height:62px;border-radius:999px;background:radial-gradient(circle,#FFF2D2,#F2C268 58%,rgba(242,194,104,0));"></div>
+            <svg viewBox="0 0 320 256" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+              <path d="M0 168 C70 152 150 184 240 166 L320 174 L320 256 L0 256 Z" fill="#6E3E1C"/>
+              <g transform="translate(190,118)" fill="#2E1C10"><rect x="15" y="34" width="5" height="40"/><path d="M-4 34 Q17 -2 38 34 Z"/></g>
+              <g transform="translate(54,142)" fill="#2E1C10"><rect x="9" y="22" width="4" height="22"/><path d="M-3 22 Q11 -1 25 22 Z"/></g>
+              <g fill="#2E1C10"><path d="M120 188 q4 -10 8 0 q4 6 8 0 q3 -8 6 0 v6 h-28 Z"/></g>
+            </svg>
+            <span class="absolute right-3 top-3 mono text-[10px] uppercase tracking-[0.14em] text-white/85 bg-black/25 px-2 py-1 rounded-sm">Kenya</span>
+          </div>
+          <div class="p-6 flex flex-col flex-1">
+            <h3 class="display text-[26px] font-semibold text-text">The Long Light, A Kenya Safari</h3>
+            <p class="mt-2 text-[14.5px] text-muted leading-[1.6]">
+              The Mara and a private conservancy off the map — a tented camp lit by lantern, a guide tracking on foot, and breakfast wherever the herd moves.
+            </p>
+            <div class="mt-5 pt-4 border-t rule-soft flex items-end justify-between">
+              <div>
+                <div class="kicker mb-1">From</div>
+                <div class="mono tnum text-[18px] text-text">$16,400 <span class="text-faint text-[12px]">pp</span></div>
+              </div>
+              <div class="text-right">
+                <div class="kicker mb-1">Typical length</div>
+                <div class="mono tnum text-[15px] text-accent">8–11 days</div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <p class="mt-6 text-[14px] text-muted italic serif text-[16px]">
+        Shown for inspiration; every Wayfare trip is built from scratch. Prices and lengths above are typical of what we have designed — yours will be its own.
+      </p>
+
+      <!-- (b) how it works -->
+      <div id="how" class="mt-20 sm:mt-28 pt-16 border-t rule scroll-mt-[88px]">
+        <div class="max-w-[54ch] mb-12">
+          <div class="kicker mb-5"><span class="accent-line"></span>How it works</div>
+          <h2 class="display display-tight text-[clamp(2.2rem,5vw,3.8rem)]">
+            Four conversations from idea to <em class="brass">departure.</em>
+          </h2>
+          <p class="serif text-[18px] text-muted mt-4 leading-[1.55]">
+            No portals to fill in, no forms. You speak to a designer, and the trip takes shape between you — usually over two to four weeks.
+          </p>
+        </div>
+
+        <div class="relative">
+          <!-- connecting line -->
+          <span class="hidden lg:block absolute left-0 right-0 top-[26px] h-px bg-line" aria-hidden="true"></span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
+            <!-- step 1 -->
+            <div class="relative">
+              <div class="flex items-center justify-center w-[52px] h-[52px] rounded-full bg-accent text-surface mono text-[15px] mb-5 relative z-10">01</div>
+              <h3 class="display text-[23px] font-semibold text-text">The first call</h3>
+              <p class="mt-2 text-[14.5px] text-muted leading-[1.6]">A relaxed hour — no cost, no commitment. We listen for the feeling you're after, who's traveling, and the rhythm you want.</p>
+              <div class="mono text-[11px] text-faint mt-3">~ 60 min · video or phone</div>
+            </div>
+            <!-- step 2 -->
+            <div class="relative">
+              <div class="flex items-center justify-center w-[52px] h-[52px] rounded-full bg-accent text-surface mono text-[15px] mb-5 relative z-10">02</div>
+              <h3 class="display text-[23px] font-semibold text-text">A designed proposal</h3>
+              <p class="mt-2 text-[14.5px] text-muted leading-[1.6]">Your designer returns with a complete journey — route, stays, guides, the days drawn out — and a clear, itemised budget.</p>
+              <div class="mono text-[11px] text-faint mt-3">~ 7–10 days later</div>
+            </div>
+            <!-- step 3 -->
+            <div class="relative">
+              <div class="flex items-center justify-center w-[52px] h-[52px] rounded-full bg-accent text-surface mono text-[15px] mb-5 relative z-10">03</div>
+              <h3 class="display text-[23px] font-semibold text-text">Refine it together</h3>
+              <p class="mt-2 text-[14.5px] text-muted leading-[1.6]">We revise as many times as it takes — swap a region, slow a week, raise or lower the budget — until the trip is unmistakably yours.</p>
+              <div class="mono text-[11px] text-faint mt-3">unlimited rounds</div>
+            </div>
+            <!-- step 4 -->
+            <div class="relative">
+              <div class="flex items-center justify-center w-[52px] h-[52px] rounded-full bg-brass text-surface mono text-[15px] mb-5 relative z-10">04</div>
+              <h3 class="display text-[23px] font-semibold text-text">Travel, fully supported</h3>
+              <p class="mt-2 text-[14.5px] text-muted leading-[1.6]">We book everything and hand you one number. A designer is reachable 24/7 for the length of the trip — wherever you are.</p>
+              <div class="mono text-[11px] text-faint mt-3">24/7 on-trip line</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 6 · WHAT EVERY JOURNEY INCLUDES ===== -->
+  <section id="includes" class="relative mx-auto max-w-[1180px] px-5 sm:px-8 py-20 sm:py-28">
+    <div class="max-w-[58ch]">
+      <div class="kicker mb-5"><span class="accent-line"></span>What you're paying for</div>
+      <h2 class="display display-tight text-[clamp(2.2rem,5vw,3.8rem)]">
+        What every Wayfare journey includes.
+      </h2>
+      <p class="serif text-[18px] text-muted mt-4 leading-[1.55]">
+        A short, honest list. We'd rather tell you plainly what we handle — and what stays your call — than bury it in fine print.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-12">
+      <!-- included -->
+      <div class="card rounded-[5px] p-7 sm:p-8">
+        <div class="flex items-center gap-3 mb-6">
+          <span class="inline-flex items-center justify-center w-9 h-9 rounded-full" style="background:rgba(46,58,92,0.1);">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.4l3.2 3.2L13 4.6" stroke="#2E3A5C" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <h3 class="display text-[26px] font-semibold text-text">Always included</h3>
+        </div>
+        <ul class="space-y-4">
+          <li class="flex gap-3.5">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" class="mt-1.5 shrink-0" aria-hidden="true"><path d="M3 8.4l3.2 3.2L13 4.6" stroke="#2E3A5C" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div><p class="font-medium text-[15px] text-text">A journey designed from scratch</p><p class="text-[13.5px] text-muted leading-[1.55]">Route, pacing and a day-by-day itinerary built around your brief — never a fixed template.</p></div>
+          </li>
+          <li class="flex gap-3.5">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" class="mt-1.5 shrink-0" aria-hidden="true"><path d="M3 8.4l3.2 3.2L13 4.6" stroke="#2E3A5C" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div><p class="font-medium text-[15px] text-text">Every booking handled for you</p><p class="text-[13.5px] text-muted leading-[1.55]">Hotels, transfers, trains, permits and reservations — confirmed, paid and assembled into one document.</p></div>
+          </li>
+          <li class="flex gap-3.5">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" class="mt-1.5 shrink-0" aria-hidden="true"><path d="M3 8.4l3.2 3.2L13 4.6" stroke="#2E3A5C" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div><p class="font-medium text-[15px] text-text">Private guides and drivers</p><p class="text-[13.5px] text-muted leading-[1.55]">Local experts we know personally — vetted, briefed on you, and yours alone for the day.</p></div>
+          </li>
+          <li class="flex gap-3.5">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" class="mt-1.5 shrink-0" aria-hidden="true"><path d="M3 8.4l3.2 3.2L13 4.6" stroke="#2E3A5C" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div><p class="font-medium text-[15px] text-text">24/7 on-trip support</p><p class="text-[13.5px] text-muted leading-[1.55]">One number, any time zone. A real designer answers — to re-route a delay or move a dinner.</p></div>
+          </li>
+          <li class="flex gap-3.5">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" class="mt-1.5 shrink-0" aria-hidden="true"><path d="M3 8.4l3.2 3.2L13 4.6" stroke="#2E3A5C" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div><p class="font-medium text-[15px] text-text">Full financial protection</p><p class="text-[13.5px] text-muted leading-[1.55]">Every payment is bonded and held in a protected client account — covered before, during and after.</p></div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- what stays your call -->
+      <div class="card rounded-[5px] p-7 sm:p-8" style="background:var(--bg);">
+        <div class="flex items-center gap-3 mb-6">
+          <span class="inline-flex items-center justify-center w-9 h-9 rounded-full" style="background:rgba(176,138,74,0.14);">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="5.6" stroke="#B08A4A" stroke-width="1.6"/><path d="M8 5.4v5.2" stroke="#B08A4A" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </span>
+          <h3 class="display text-[26px] font-semibold text-text">What stays your call</h3>
+        </div>
+        <ul class="space-y-4">
+          <li class="flex gap-3.5">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" class="mt-1.5 shrink-0" aria-hidden="true"><circle cx="8" cy="8" r="6" stroke="#B08A4A" stroke-width="1.5"/></svg>
+            <div><p class="font-medium text-[15px] text-text">International flights</p><p class="text-[13.5px] text-muted leading-[1.55]">We'll advise on routings and timing, and book them if you'd like — or you may use your own miles and book direct.</p></div>
+          </li>
+          <li class="flex gap-3.5">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" class="mt-1.5 shrink-0" aria-hidden="true"><circle cx="8" cy="8" r="6" stroke="#B08A4A" stroke-width="1.5"/></svg>
+            <div><p class="font-medium text-[15px] text-text">Travel insurance</p><p class="text-[13.5px] text-muted leading-[1.55]">Required for every traveler — we'll recommend a trusted broker, but you hold your own policy.</p></div>
+          </li>
+          <li class="flex gap-3.5">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" class="mt-1.5 shrink-0" aria-hidden="true"><circle cx="8" cy="8" r="6" stroke="#B08A4A" stroke-width="1.5"/></svg>
+            <div><p class="font-medium text-[15px] text-text">Visas and passports</p><p class="text-[13.5px] text-muted leading-[1.55]">We tell you exactly what each border needs and by when — the paperwork itself is yours to file.</p></div>
+          </li>
+          <li class="flex gap-3.5">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" class="mt-1.5 shrink-0" aria-hidden="true"><circle cx="8" cy="8" r="6" stroke="#B08A4A" stroke-width="1.5"/></svg>
+            <div><p class="font-medium text-[15px] text-text">Free days, kept free</p><p class="text-[13.5px] text-muted leading-[1.55]">We design in unscheduled mornings on purpose. What you do with them — a market, a long lunch, nothing at all — is yours.</p></div>
+          </li>
+          <li class="flex gap-3.5">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" class="mt-1.5 shrink-0" aria-hidden="true"><circle cx="8" cy="8" r="6" stroke="#B08A4A" stroke-width="1.5"/></svg>
+            <div><p class="font-medium text-[15px] text-text">Spending money</p><p class="text-[13.5px] text-muted leading-[1.55]">Shopping, tips and the odd unplanned splurge sit outside the budget — we'll give you a realistic daily figure to plan around.</p></div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 7 · WHERE WE'LL PUT YOU ===== -->
+  <section id="stay" class="relative overflow-hidden border-y rule-soft" style="background:var(--deep);">
+    <div class="relative mx-auto max-w-[1180px] px-5 sm:px-8 py-20 sm:py-28">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-10">
+        <div class="max-w-[54ch]">
+          <div class="kicker mb-5"><span class="accent-line"></span>The calibre of stays</div>
+          <h2 class="display display-tight text-[clamp(2.2rem,5vw,3.8rem)]">
+            Where we'll put you.
+          </h2>
+        </div>
+        <p class="mono text-[11.5px] text-faint sm:text-right leading-relaxed max-w-[28ch]">
+          representative of what we secure — your stays are chosen for your trip, not picked from this page
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <!-- ryokan -->
+        <article class="card card-lift rounded-[5px] overflow-hidden flex flex-col">
+          <div class="relative aspect-[4/3]" style="background:
+              radial-gradient(110% 80% at 26% 16%, rgba(255,238,210,0.5) 0%, transparent 46%),
+              linear-gradient(166deg, #C9883C 0%, #8A4E32 54%, #4E2C22 100%);">
+            <div class="absolute inset-0 grain opacity-50"></div>
+            <svg viewBox="0 0 280 210" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+              <path d="M0 120 C70 108 150 132 280 116 L280 210 L0 210 Z" fill="#4E2C22"/>
+              <g transform="translate(72,72)"><path d="M-12 28 L40 4 L92 28 Z" fill="#2A1614"/><rect x="2" y="28" width="76" height="38" fill="#E2CFA6" opacity="0.9"/><rect x="14" y="38" width="14" height="20" fill="#2A1614"/><rect x="36" y="38" width="14" height="20" fill="#2A1614"/></g>
+            </svg>
+          </div>
+          <div class="p-5 flex flex-col flex-1">
+            <span class="kicker mb-1.5">Kyoto, Japan</span>
+            <h3 class="display text-[22px] font-semibold text-text">A traditional ryokan</h3>
+            <p class="mt-1.5 text-[13.5px] text-muted leading-[1.55]">Tatami rooms, a private cedar bath, and a multi-course kaiseki dinner brought to you — seven keys, generations of the same family.</p>
+          </div>
+        </article>
+
+        <!-- patagonian lodge -->
+        <article class="card card-lift rounded-[5px] overflow-hidden flex flex-col">
+          <div class="relative aspect-[4/3]" style="background:
+              radial-gradient(110% 80% at 70% 16%, rgba(214,228,236,0.6) 0%, transparent 46%),
+              linear-gradient(166deg, #9FC0CE 0%, #436A76 54%, #1A2E34 100%);">
+            <div class="absolute inset-0 grain opacity-50"></div>
+            <svg viewBox="0 0 280 210" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+              <path d="M0 110 L54 56 L104 100 L160 50 L214 96 L280 60 L280 210 L0 210 Z" fill="#1A2E34" opacity="0.85"/>
+              <g transform="translate(86,116)"><rect x="0" y="0" width="96" height="46" fill="#2E4650"/><path d="M-8 0 L48 -22 L104 0 Z" fill="#16282E"/><rect x="14" y="14" width="16" height="22" fill="#E8B45A" opacity="0.85"/><rect x="40" y="14" width="16" height="22" fill="#E8B45A" opacity="0.7"/><rect x="66" y="14" width="16" height="22" fill="#E8B45A" opacity="0.85"/></g>
+            </svg>
+          </div>
+          <div class="p-5 flex flex-col flex-1">
+            <span class="kicker mb-1.5">Torres del Paine, Chile</span>
+            <h3 class="display text-[22px] font-semibold text-text">A glass-walled lodge</h3>
+            <p class="mt-1.5 text-[13.5px] text-muted leading-[1.55]">Floor-to-ceiling views of the massif, a wood fire, and guided walks that leave from the door each morning.</p>
+          </div>
+        </article>
+
+        <!-- tented camp -->
+        <article class="card card-lift rounded-[5px] overflow-hidden flex flex-col">
+          <div class="relative aspect-[4/3]" style="background:
+              radial-gradient(110% 80% at 68% 16%, rgba(255,236,200,0.55) 0%, transparent 46%),
+              linear-gradient(168deg, #ECC066 0%, #B06E2E 54%, #5E3618 100%);">
+            <div class="absolute inset-0 grain opacity-50"></div>
+            <div class="absolute" style="left:64%;top:14%;width:48px;height:48px;border-radius:999px;background:radial-gradient(circle,#FFF2D2,#F2C268 58%,rgba(242,194,104,0));"></div>
+            <svg viewBox="0 0 280 210" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+              <path d="M0 142 C70 130 150 154 280 138 L280 210 L0 210 Z" fill="#5E3618"/>
+              <g transform="translate(78,98)"><path d="M-10 50 Q60 -8 130 50 Z" fill="#E8DCC2" opacity="0.92"/><path d="M44 50 V20 Q60 8 76 20 V50 Z" fill="#3A2818"/></g>
+              <g transform="translate(40,120)" fill="#3A2818"><rect x="9" y="20" width="3" height="20"/><path d="M-2 20 Q11 0 24 20 Z"/></g>
+            </svg>
+          </div>
+          <div class="p-5 flex flex-col flex-1">
+            <span class="kicker mb-1.5">Maasai Mara, Kenya</span>
+            <h3 class="display text-[22px] font-semibold text-text">A private tented camp</h3>
+            <p class="mt-1.5 text-[13.5px] text-muted leading-[1.55]">Canvas suites lit by lantern, an open-sided mess tent, and a tracker who wakes you for the light — twelve guests at most.</p>
+          </div>
+        </article>
+
+        <!-- amalfi villa -->
+        <article class="card card-lift rounded-[5px] overflow-hidden flex flex-col">
+          <div class="relative aspect-[4/3]" style="background:
+              radial-gradient(110% 80% at 28% 16%, rgba(255,244,222,0.55) 0%, transparent 46%),
+              linear-gradient(166deg, #E2CA92 0%, #5E8A9A 54%, #1E3A4A 100%);">
+            <div class="absolute inset-0 grain opacity-50"></div>
+            <svg viewBox="0 0 280 210" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+              <path d="M0 132 C80 144 160 122 280 140 L280 210 L0 210 Z" fill="#1E3A4A" opacity="0.9"/>
+              <g transform="translate(70,80)"><rect x="0" y="20" width="62" height="56" fill="#EFE6CE" opacity="0.94"/><rect x="68" y="34" width="40" height="42" fill="#E0D4B6" opacity="0.94"/><rect x="12" y="32" width="12" height="16" fill="#1E3A4A"/><rect x="32" y="32" width="12" height="16" fill="#1E3A4A"/><rect x="78" y="44" width="10" height="14" fill="#1E3A4A"/></g>
+            </svg>
+          </div>
+          <div class="p-5 flex flex-col flex-1">
+            <span class="kicker mb-1.5">Amalfi Coast, Italy</span>
+            <h3 class="display text-[22px] font-semibold text-text">A villa above the sea</h3>
+            <p class="mt-1.5 text-[13.5px] text-muted leading-[1.55]">A terraced lemon garden, a private chef on call, and a path of worn steps down to a quiet swimming cove.</p>
+          </div>
+        </article>
+      </div>
+
+      <p class="mt-8 text-[14px] text-muted serif text-[16px] italic">
+        We hold relationships with more than three hundred properties worldwide — and when the right room isn't a hotel at all, we'll find you the house.
+      </p>
+    </div>
+  </section>
+
+  <!-- ===== 8 · YOUR TRAVEL DESIGNERS ===== -->
+  <section id="designers" class="relative mx-auto max-w-[1180px] px-5 sm:px-8 py-20 sm:py-28">
+    <div class="max-w-[56ch] mb-12">
+      <div class="kicker mb-5"><span class="accent-line"></span>The people who build it</div>
+      <h2 class="display display-tight text-[clamp(2.2rem,5vw,3.8rem)]">
+        Your travel designers.
+      </h2>
+      <p class="serif text-[18px] text-muted mt-4 leading-[1.55]">
+        Each Wayfare designer owns one region — not a brochure of it, the real thing: the back roads, the seasons, the people who answer when they call.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- designer 1 -->
+      <article class="card card-lift rounded-[5px] overflow-hidden">
+        <div class="relative h-56" style="background:linear-gradient(158deg,#C9883C 0%,#8A4E32 56%,#4E2C22 100%);">
+          <div class="absolute inset-0 grain opacity-45"></div>
+          <svg viewBox="0 0 320 224" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+            <circle cx="160" cy="118" r="40" fill="#2A1614" opacity="0.32"/>
+            <path d="M120 224c0-30 18-50 40-50s40 20 40 50Z" fill="#2A1614" opacity="0.32"/>
+          </svg>
+          <span class="absolute right-3 top-3 mono text-[10px] uppercase tracking-[0.14em] text-white/85 bg-black/25 px-2 py-1 rounded-sm">Japan &amp; Korea</span>
+        </div>
+        <div class="p-6">
+          <h3 class="display text-[25px] font-semibold text-text">Aya Tanaka</h3>
+          <p class="mono text-[11px] tracking-[0.1em] uppercase text-accent mt-1">Lead designer · Japan &amp; Korea</p>
+          <p class="mt-3 text-[14px] text-muted leading-[1.6]">Grew up between Kyoto and Kanazawa; spends three months a year walking new routes so the rest of us don't have to guess.</p>
+          <div class="mt-5 pt-4 border-t rule-soft grid grid-cols-2 gap-3">
+            <div><div class="kicker mb-1">Languages</div><div class="text-[13px] text-text">Japanese · English · Korean</div></div>
+            <div><div class="kicker mb-1">Designing since</div><div class="mono tnum text-[13px] text-text">2011</div></div>
+          </div>
+        </div>
+      </article>
+
+      <!-- designer 2 -->
+      <article class="card card-lift rounded-[5px] overflow-hidden">
+        <div class="relative h-56" style="background:linear-gradient(158deg,#9FC0CE 0%,#436A76 56%,#1A2E34 100%);">
+          <div class="absolute inset-0 grain opacity-45"></div>
+          <svg viewBox="0 0 320 224" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+            <circle cx="160" cy="118" r="40" fill="#0E1A1E" opacity="0.34"/>
+            <path d="M120 224c0-30 18-50 40-50s40 20 40 50Z" fill="#0E1A1E" opacity="0.34"/>
+          </svg>
+          <span class="absolute right-3 top-3 mono text-[10px] uppercase tracking-[0.14em] text-white/85 bg-black/25 px-2 py-1 rounded-sm">Patagonia &amp; the Andes</span>
+        </div>
+        <div class="p-6">
+          <h3 class="display text-[25px] font-semibold text-text">Mateo Reyes</h3>
+          <p class="mono text-[11px] tracking-[0.1em] uppercase text-accent mt-1">Lead designer · Patagonia &amp; the Andes</p>
+          <p class="mt-3 text-[14px] text-muted leading-[1.6]">A former mountain guide from Puerto Natales — he knows which estancia has the better horses and which pass clears first in spring.</p>
+          <div class="mt-5 pt-4 border-t rule-soft grid grid-cols-2 gap-3">
+            <div><div class="kicker mb-1">Languages</div><div class="text-[13px] text-text">Spanish · English · Portuguese</div></div>
+            <div><div class="kicker mb-1">Designing since</div><div class="mono tnum text-[13px] text-text">2013</div></div>
+          </div>
+        </div>
+      </article>
+
+      <!-- designer 3 -->
+      <article class="card card-lift rounded-[5px] overflow-hidden">
+        <div class="relative h-56" style="background:linear-gradient(158deg,#ECC066 0%,#B06E2E 56%,#5E3618 100%);">
+          <div class="absolute inset-0 grain opacity-45"></div>
+          <svg viewBox="0 0 320 224" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+            <circle cx="160" cy="118" r="40" fill="#3A2818" opacity="0.32"/>
+            <path d="M120 224c0-30 18-50 40-50s40 20 40 50Z" fill="#3A2818" opacity="0.32"/>
+          </svg>
+          <span class="absolute right-3 top-3 mono text-[10px] uppercase tracking-[0.14em] text-white/85 bg-black/25 px-2 py-1 rounded-sm">East Africa</span>
+        </div>
+        <div class="p-6">
+          <h3 class="display text-[25px] font-semibold text-text">Naomi Kariuki</h3>
+          <p class="mono text-[11px] tracking-[0.1em] uppercase text-accent mt-1">Lead designer · East Africa</p>
+          <p class="mt-3 text-[14px] text-muted leading-[1.6]">Nairobi-born, a decade in conservation before Wayfare — she places guests in camps that pay the communities they sit on.</p>
+          <div class="mt-5 pt-4 border-t rule-soft grid grid-cols-2 gap-3">
+            <div><div class="kicker mb-1">Languages</div><div class="text-[13px] text-text">Swahili · English · French</div></div>
+            <div><div class="kicker mb-1">Designing since</div><div class="mono tnum text-[13px] text-text">2015</div></div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ===== 9 · CLIENT PULL-QUOTE BAND ===== -->
+  <section class="relative overflow-hidden" style="background:var(--accent);">
+    <div class="absolute inset-0 dotgrid opacity-[0.1] pointer-events-none"></div>
+    <div class="absolute inset-0 pointer-events-none" style="background:radial-gradient(60% 70% at 50% 0%, rgba(176,138,74,0.32), transparent 70%);"></div>
+    <div class="relative mx-auto max-w-[1000px] px-5 sm:px-8 py-20 sm:py-28 text-center">
+      <svg width="34" height="28" viewBox="0 0 34 28" fill="none" aria-hidden="true" class="mx-auto" style="opacity:0.7;">
+        <path d="M13 28C5.5 28 1 22.4 1 14 1 5.8 6.6 0 14.6 0L14 5.6C9.6 6.4 7.2 9 7 13.4 11 12.8 14 15.6 14 19.8 14 24.2 11.2 28 7.2 28H13ZM33 28c-7.5 0-12-5.6-12-14C21 5.8 26.6 0 34.6 0L34 5.6c-4.4.8-6.8 3.4-7 7.8 4-.6 7 2.2 7 6.4 0 4.4-2.8 8.2-6.8 8.2H33Z" fill="#B08A4A"/>
+      </svg>
+      <blockquote class="mt-7 display text-[clamp(1.8rem,4.2vw,3.1rem)] italic leading-[1.18] text-[#F4EFE6] max-w-[20ch] mx-auto">
+        We asked for a trip that felt quiet. They gave us one we still talk about three years on.
+      </blockquote>
+      <figcaption class="mt-8 flex flex-col items-center gap-2">
+        <span class="display text-[20px] font-semibold text-[#F4EFE6]">Eleanor Hartley</span>
+        <span class="mono text-[11px] tracking-[0.16em] uppercase" style="color:#C8B488;">A month across Honshu &amp; Hokkaido · Spring 2023</span>
+      </figcaption>
+    </div>
+  </section>
+
+  <!-- ===== 10 · HOW PRICING WORKS ===== -->
+  <section id="pricing" class="relative mx-auto max-w-[1180px] px-5 sm:px-8 py-20 sm:py-28">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
+      <div class="lg:col-span-5">
+        <div class="kicker mb-5"><span class="accent-line"></span>The honest part</div>
+        <h2 class="display display-tight text-[clamp(2.2rem,4.6vw,3.6rem)] max-w-[14ch]">
+          How pricing <em class="brass">works.</em>
+        </h2>
+        <div class="serif text-[17.5px] text-muted leading-[1.6] space-y-4 mt-5 max-w-[46ch]">
+          <p>Bespoke has no fixed price because it has no fixed shape. What follows is a guide — the budgets our clients typically land on once a trip is fully designed, not a quote.</p>
+          <p>We charge a planning fee of <span class="mono text-text">$650</span>, taken at the first call. It covers the design itself — the research, the proposal, the unlimited rounds of refining. If you go on to travel with us, the fee is credited in full against your trip. If our proposal isn't right for you, it's the only thing you've spent.</p>
+          <p>To confirm a designed journey we ask for a <span class="mono text-text">25%</span> deposit; the balance is due sixty days before departure. Every payment is financially protected from the moment it leaves your account.</p>
+        </div>
+        <a href="#plan" class="btn btn-solid rounded-full px-6 py-3.5 text-[15px] font-medium mt-7">
+          Start with a call
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" class="nudge"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+      </div>
+
+      <!-- indicative budget panel -->
+      <div class="lg:col-span-7">
+        <div class="card rounded-[5px] overflow-hidden">
+          <div class="flex items-center justify-between border-b rule-soft px-5 sm:px-6 py-4">
+            <span class="kicker">Indicative budgets</span>
+            <span class="mono text-[11px] text-faint">excl. international flights · per trip</span>
+          </div>
+
+          <!-- row 1 -->
+          <div class="px-5 sm:px-6 py-5 border-b rule-soft sm:flex sm:items-start sm:justify-between gap-6">
+            <div class="sm:max-w-[24ch]">
+              <h3 class="display text-[23px] font-semibold text-text">A week, two travelers</h3>
+              <p class="text-[13.5px] text-muted mt-1 leading-[1.55]">One country, an unhurried pace — a honeymoon, an anniversary, a first trip together.</p>
+            </div>
+            <div class="mt-3 sm:mt-0 sm:text-right shrink-0">
+              <div class="mono tnum text-[19px] text-text">$9k – $22k</div>
+              <div class="mono text-[11px] text-faint mt-1">typical lead time · 8–12 weeks</div>
+            </div>
+          </div>
+
+          <!-- row 2 -->
+          <div class="px-5 sm:px-6 py-5 border-b rule-soft sm:flex sm:items-start sm:justify-between gap-6">
+            <div class="sm:max-w-[24ch]">
+              <h3 class="display text-[23px] font-semibold text-text">Two weeks, a family of four</h3>
+              <p class="text-[13.5px] text-muted mt-1 leading-[1.55]">Two or three regions, paced for younger travelers, with rooms and guides chosen for the group.</p>
+            </div>
+            <div class="mt-3 sm:mt-0 sm:text-right shrink-0">
+              <div class="mono tnum text-[19px] text-text">$28k – $60k</div>
+              <div class="mono text-[11px] text-faint mt-1">typical lead time · 12–20 weeks</div>
+            </div>
+          </div>
+
+          <!-- row 3 -->
+          <div class="px-5 sm:px-6 py-5 sm:flex sm:items-start sm:justify-between gap-6">
+            <div class="sm:max-w-[24ch]">
+              <h3 class="display text-[23px] font-semibold text-text">A multi-generational month</h3>
+              <p class="text-[13.5px] text-muted mt-1 leading-[1.55]">Several countries, eight to twelve travelers, private transport throughout — a milestone, taken slowly.</p>
+            </div>
+            <div class="mt-3 sm:mt-0 sm:text-right shrink-0">
+              <div class="mono tnum text-[19px] text-text">$90k – $240k</div>
+              <div class="mono text-[11px] text-faint mt-1">typical lead time · 6–10 months</div>
+            </div>
+          </div>
+
+          <div class="px-5 sm:px-6 py-4 border-t rule-soft" style="background:var(--bg);">
+            <p class="text-[12.5px] text-muted leading-[1.55]">
+              <span class="text-accent font-medium">A guide, not a quote.</span> Your designer gives you a precise, itemised budget with the proposal — and will happily build the same trip to a higher or lower figure.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 11 · REVIEWS ===== -->
+  <section id="reviews" class="relative overflow-hidden border-y rule-soft" style="background:var(--deep);">
+    <div class="relative mx-auto max-w-[1180px] px-5 sm:px-8 py-20 sm:py-28">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
+        <!-- aggregate -->
+        <div class="lg:col-span-4">
+          <div class="kicker mb-5"><span class="accent-line"></span>What travelers say</div>
+          <div class="flex items-end gap-3">
+            <span class="display tnum text-[clamp(3.4rem,7vw,5rem)] text-text leading-none">4.9</span>
+            <span class="display text-[24px] text-faint mb-1">/ 5.0</span>
+          </div>
+          <div class="flex items-center gap-1 mt-3" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="#B08A4A"><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z"/></svg>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="#B08A4A"><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z"/></svg>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="#B08A4A"><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z"/></svg>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="#B08A4A"><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z"/></svg>
+            <svg width="20" height="20" viewBox="0 0 20 20"><defs><linearGradient id="hs"><stop offset="90%" stop-color="#B08A4A"/><stop offset="90%" stop-color="#C9C0AC"/></linearGradient></defs><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z" fill="url(#hs)"/></svg>
+          </div>
+          <p class="text-[14px] text-muted mt-4 leading-[1.6] max-w-[34ch]">
+            Drawn from <span class="mono text-text">1,914</span> post-trip reviews, every one written by a traveler whose journey we designed.
+          </p>
+          <div class="mt-6 flex items-center gap-2.5">
+            <span class="pulse-dot"></span>
+            <span class="mono text-[11px] tracking-[0.06em] text-muted">94% would design with us again</span>
+          </div>
+        </div>
+
+        <!-- reviews grid -->
+        <div class="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <!-- review 1 -->
+          <figure class="card rounded-[5px] p-6">
+            <div class="flex items-center gap-1" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="#B08A4A"><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z"/></svg><svg width="14" height="14" viewBox="0 0 20 20" fill="#B08A4A"><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z"/></svg><svg width="14" height="14" viewBox="0 0 20 20" fill="#B08A4A"><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z"/></svg><svg width="14" height="14" viewBox="0 0 20 20" fill="#B08A4A"><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z"/></svg><svg width="14" height="14" viewBox="0 0 20 20" fill="#B08A4A"><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z"/></svg>
+            </div>
+            <blockquote class="mt-3.5 serif text-[18px] leading-[1.5] text-text">
+              &ldquo;Aya designed a fortnight in Japan around one sentence — that I wanted to feel unrushed. Every morning was open, every dinner was somewhere I'd never have found. The proposal arrived faster than I could second-guess it.&rdquo;
+            </blockquote>
+            <figcaption class="mt-4 pt-4 border-t rule-soft">
+              <p class="font-medium text-[14px] text-text">Priya Anand</p>
+              <p class="mono text-[11px] text-faint mt-0.5">Kyoto, the Nakasendo &amp; Kanazawa · Nov 2024</p>
+            </figcaption>
+          </figure>
+
+          <!-- review 2 -->
+          <figure class="card rounded-[5px] p-6">
+            <div class="flex items-center gap-1" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="#B08A4A"><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z"/></svg><svg width="14" height="14" viewBox="0 0 20 20" fill="#B08A4A"><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z"/></svg><svg width="14" height="14" viewBox="0 0 20 20" fill="#B08A4A"><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z"/></svg><svg width="14" height="14" viewBox="0 0 20 20" fill="#B08A4A"><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z"/></svg><svg width="14" height="14" viewBox="0 0 20 20" fill="#B08A4A"><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z"/></svg>
+            </div>
+            <blockquote class="mt-3.5 serif text-[18px] leading-[1.5] text-text">
+              &ldquo;Our flight into El Calafate was cancelled at midnight. I called the on-trip line half-asleep; by breakfast Mateo had re-routed two days and moved the lodge. We never lost an hour of the trip.&rdquo;
+            </blockquote>
+            <figcaption class="mt-4 pt-4 border-t rule-soft">
+              <p class="font-medium text-[14px] text-text">Daniel Okonkwo</p>
+              <p class="mono text-[11px] text-faint mt-0.5">Patagonia, end to end · Feb 2024</p>
+            </figcaption>
+          </figure>
+
+          <!-- review 3 -->
+          <figure class="card rounded-[5px] p-6">
+            <div class="flex items-center gap-1" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="#B08A4A"><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z"/></svg><svg width="14" height="14" viewBox="0 0 20 20" fill="#B08A4A"><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z"/></svg><svg width="14" height="14" viewBox="0 0 20 20" fill="#B08A4A"><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z"/></svg><svg width="14" height="14" viewBox="0 0 20 20" fill="#B08A4A"><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z"/></svg><svg width="14" height="14" viewBox="0 0 20 20" fill="#B08A4A"><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z"/></svg>
+            </div>
+            <blockquote class="mt-3.5 serif text-[18px] leading-[1.5] text-text">
+              &ldquo;We are eleven people across three generations and four diets. Naomi held all of it — a camp that worked for my father at eighty and my niece at nine. I have planned exactly nothing since.&rdquo;
+            </blockquote>
+            <figcaption class="mt-4 pt-4 border-t rule-soft">
+              <p class="font-medium text-[14px] text-text">Sofia Marchetti</p>
+              <p class="mono text-[11px] text-faint mt-0.5">Kenya &amp; Tanzania, a family safari · Aug 2023</p>
+            </figcaption>
+          </figure>
+
+          <!-- review 4 -->
+          <figure class="card rounded-[5px] p-6">
+            <div class="flex items-center gap-1" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="#B08A4A"><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z"/></svg><svg width="14" height="14" viewBox="0 0 20 20" fill="#B08A4A"><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z"/></svg><svg width="14" height="14" viewBox="0 0 20 20" fill="#B08A4A"><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z"/></svg><svg width="14" height="14" viewBox="0 0 20 20" fill="#B08A4A"><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z"/></svg><svg width="14" height="14" viewBox="0 0 20 20" fill="#B08A4A"><path d="M10 1l2.5 5.6 6.1.6-4.6 4 1.4 6L10 14.6 4.6 17.2l1.4-6L1.4 7.2l6.1-.6Z"/></svg>
+            </div>
+            <blockquote class="mt-3.5 serif text-[18px] leading-[1.5] text-text">
+              &ldquo;I came with a vague idea and a real fear of being sold a package. What I got back was a journey that read like it had been written for me — three rounds of changes, never once a sigh.&rdquo;
+            </blockquote>
+            <figcaption class="mt-4 pt-4 border-t rule-soft">
+              <p class="font-medium text-[14px] text-text">Henrik Lindqvist</p>
+              <p class="mono text-[11px] text-faint mt-0.5">The Dolomites &amp; the Amalfi Coast · Sep 2024</p>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 12 · FAQ ===== -->
+  <section id="faq" class="relative mx-auto max-w-[1180px] px-5 sm:px-8 py-20 sm:py-28">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
+      <div class="lg:col-span-4">
+        <div class="kicker mb-5"><span class="accent-line"></span>Before you ask</div>
+        <h2 class="display display-tight text-[clamp(2.2rem,4.6vw,3.6rem)] max-w-[12ch]">
+          Questions, answered <em class="brass">plainly.</em>
+        </h2>
+        <p class="serif text-[17px] text-muted mt-4 leading-[1.55] max-w-[36ch]">
+          Still wondering something? The first call is free, and there is no question too small for it.
+        </p>
+      </div>
+
+      <div class="lg:col-span-8">
+        <div class="border-t rule">
+          <!-- q1 -->
+          <details class="border-b rule group">
+            <summary class="flex items-start justify-between gap-6 py-6">
+              <span class="faq-q display text-[22px] sm:text-[24px] font-semibold text-text leading-snug transition-colors">How much does a trip typically cost?</span>
+              <span class="faq-sign shrink-0 mt-1.5 text-accent text-[22px] leading-none">+</span>
+            </summary>
+            <div class="pb-6 -mt-1 text-[15px] text-muted leading-[1.65] max-w-[62ch]">
+              <p>It depends entirely on the journey, but to give you real figures: a week for two travelers usually lands between <span class="mono text-text">$9,000</span> and <span class="mono text-text">$22,000</span>, and a two-week family trip between <span class="mono text-text">$28,000</span> and <span class="mono text-text">$60,000</span> — both excluding international flights. Larger or longer journeys scale from there. The honest answer is that we can design a wonderful trip across a wide range; tell your designer the budget you have in mind on the first call, and they'll build to it rather than around it.</p>
+            </div>
+          </details>
+          <!-- q2 -->
+          <details class="border-b rule group">
+            <summary class="flex items-start justify-between gap-6 py-6">
+              <span class="faq-q display text-[22px] sm:text-[24px] font-semibold text-text leading-snug transition-colors">How far ahead should I plan?</span>
+              <span class="faq-sign shrink-0 mt-1.5 text-accent text-[22px] leading-none">+</span>
+            </summary>
+            <div class="pb-6 -mt-1 text-[15px] text-muted leading-[1.65] max-w-[62ch]">
+              <p>For a one or two-week trip, three to five months is comfortable — enough time to design properly and to hold the rooms that matter. Multi-generational journeys and peak-season travel (the Mara migration, Japan in autumn, Patagonian summer) are better started six to ten months out, because the best camps and guides book early. That said, we have designed beautiful journeys on six weeks' notice; if your dates are close, call us anyway and we'll tell you honestly what's still possible.</p>
+            </div>
+          </details>
+          <!-- q3 -->
+          <details class="border-b rule group">
+            <summary class="flex items-start justify-between gap-6 py-6">
+              <span class="faq-q display text-[22px] sm:text-[24px] font-semibold text-text leading-snug transition-colors">What does the planning fee cover?</span>
+              <span class="faq-sign shrink-0 mt-1.5 text-accent text-[22px] leading-none">+</span>
+            </summary>
+            <div class="pb-6 -mt-1 text-[15px] text-muted leading-[1.65] max-w-[62ch]">
+              <p>The fee is <span class="mono text-text">$650</span>, paid at the first call, and it covers the design work itself: a dedicated designer, original research, a complete written proposal, and unlimited rounds of revision until the journey is right. It is not an extra on top of the trip — if you go on to travel with us, the full <span class="mono text-text">$650</span> is credited against your final balance. If our proposal isn't the trip for you, the fee is all you've spent, and you owe nothing further.</p>
+            </div>
+          </details>
+          <!-- q4 -->
+          <details class="border-b rule group">
+            <summary class="flex items-start justify-between gap-6 py-6">
+              <span class="faq-q display text-[22px] sm:text-[24px] font-semibold text-text leading-snug transition-colors">Can you handle a multi-generational group?</span>
+              <span class="faq-sign shrink-0 mt-1.5 text-accent text-[22px] leading-none">+</span>
+            </summary>
+            <div class="pb-6 -mt-1 text-[15px] text-muted leading-[1.65] max-w-[62ch]">
+              <p>It is some of our favourite work. Roughly a third of the journeys we design each year carry three generations or more — a milestone birthday, a reunion, a grandparent's last big adventure. We are practised at pacing a single trip for an eighty-year-old and an eight-year-old at once: ground-floor rooms beside the ones with bunk beds, gentle mornings, a guide briefed on who tires and who never sits still. Tell us who's coming, and we'll design around all of them.</p>
+            </div>
+          </details>
+          <!-- q5 -->
+          <details class="border-b rule group">
+            <summary class="flex items-start justify-between gap-6 py-6">
+              <span class="faq-q display text-[22px] sm:text-[24px] font-semibold text-text leading-snug transition-colors">What happens if something goes wrong mid-trip?</span>
+              <span class="faq-sign shrink-0 mt-1.5 text-accent text-[22px] leading-none">+</span>
+            </summary>
+            <div class="pb-6 -mt-1 text-[15px] text-muted leading-[1.65] max-w-[62ch]">
+              <p>You call one number, at any hour, and a Wayfare designer answers — not a call centre. A cancelled flight, a closed road, a change of heart about tomorrow: we handle it while you carry on. Behind that line, every booking is financially protected, so a supplier failure never becomes your problem or your cost. In sixteen years we have re-routed storms, weathered strikes and quietly fixed a great many small things — usually before our travelers noticed.</p>
+            </div>
+          </details>
+          <!-- q6 -->
+          <details class="border-b rule group">
+            <summary class="flex items-start justify-between gap-6 py-6">
+              <span class="faq-q display text-[22px] sm:text-[24px] font-semibold text-text leading-snug transition-colors">Do you book flights too?</span>
+              <span class="faq-sign shrink-0 mt-1.5 text-accent text-[22px] leading-none">+</span>
+            </summary>
+            <div class="pb-6 -mt-1 text-[15px] text-muted leading-[1.65] max-w-[62ch]">
+              <p>We can, and often do. For internal flights, trains and transfers within your journey, we always handle the booking — they're woven into the itinerary. For long-haul international flights, it's your choice: many clients prefer to use their own air miles or a corporate travel desk, so we leave those open and simply advise on the best routings and timing. Tell your designer which you'd like, and we'll arrange accordingly.</p>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 13 · FINAL CTA ===== -->
+  <section id="plan" class="relative overflow-hidden border-t rule-soft mesh">
+    <div class="absolute inset-0 dotgrid opacity-70 pointer-events-none"></div>
+    <div class="blob" style="background:#B08A4A;width:300px;height:300px;top:-130px;right:-70px;"></div>
+    <div class="blob" style="background:#2E3A5C;width:280px;height:280px;bottom:-140px;left:-80px;opacity:0.26;"></div>
+    <div class="relative mx-auto max-w-[1180px] px-5 sm:px-8 py-24 sm:py-32 text-center">
+      <div class="inline-flex items-center gap-2.5 rounded-full border rule bg-surface pl-2.5 pr-4 py-1.5 mb-8">
+        <span class="pulse-dot"></span>
+        <span class="mono text-[11px] tracking-[0.04em] text-muted">Designers taking new briefs for 2026 &amp; 2027</span>
+      </div>
+      <h2 class="display display-tight text-[clamp(2.4rem,6vw,5rem)] max-w-[16ch] mx-auto">
+        Tell us how you want to feel. <em class="halftone">We'll take it from there.</em>
+      </h2>
+      <p class="serif text-[19px] sm:text-[21px] text-muted mt-6 leading-[1.5] max-w-[52ch] mx-auto">
+        The first call is an unhurried hour, free, and asks nothing of you. Bring a feeling, a rough season, the people coming — we'll bring the journey.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center mt-9">
+        <a href="#plan" class="btn btn-solid rounded-full px-7 py-4 text-[15.5px] font-medium">
+          Plan my trip
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true" class="nudge"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#journeys" class="btn btn-ghost rounded-full px-7 py-4 text-[15.5px] font-medium">
+          See sample journeys
+        </a>
+      </div>
+      <p class="mono text-[11.5px] text-faint mt-7 tracking-[0.04em]">
+        no obligation · planning fee credited to your trip · fully financially protected
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<!-- ===== 14 · FOOTER ===== -->
+<footer class="relative" style="background:var(--accent);color:#D6D2C4;">
+  <div class="absolute inset-0 dotgrid opacity-[0.08] pointer-events-none"></div>
+  <div class="relative mx-auto max-w-[1180px] px-5 sm:px-8 pt-16 pb-10">
+    <div class="grid grid-cols-2 md:grid-cols-12 gap-10">
+      <!-- brand -->
+      <div class="col-span-2 md:col-span-4">
+        <a href="#top" class="flex items-center gap-3" aria-label="Wayfare — home">
+          <svg width="34" height="34" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+            <circle cx="20" cy="20" r="18.6" fill="none" stroke="#B08A4A" stroke-width="1.1"/>
+            <circle cx="20" cy="20" r="14" fill="none" stroke="#B08A4A" stroke-width="0.7" opacity="0.5"/>
+            <path d="M20 6 L22.6 17.4 L34 20 L22.6 22.6 L20 34 L17.4 22.6 L6 20 L17.4 17.4 Z" fill="#F4EFE6"/>
+            <path d="M20 11 L21.4 18.6 L29 20 L21.4 21.4 L20 29 L18.6 21.4 L11 20 L18.6 18.6 Z" fill="#B08A4A"/>
+          </svg>
+          <span class="display text-[24px] font-semibold text-[#F4EFE6]">Wayfare</span>
+        </a>
+        <p class="serif text-[17px] text-[#C8C3B3] mt-4 leading-[1.55] max-w-[34ch]">
+          A private travel studio. We design journeys from a blank page, around how you want to feel — and we have done since 2009.
+        </p>
+        <p class="mono text-[11px] tracking-[0.06em] mt-5" style="color:#9B967F;">Studios in Edinburgh, Lisbon &amp; Singapore</p>
+      </div>
+
+      <!-- col: studio -->
+      <div class="md:col-span-2 md:col-start-6">
+        <p class="mono text-[10.5px] tracking-[0.2em] uppercase mb-4" style="color:#9B967F;">Studio</p>
+        <ul class="space-y-2.5 text-[14px]">
+          <li><a href="#about" class="navlink text-[#D6D2C4] hover:text-[#F4EFE6]">About Wayfare</a></li>
+          <li><a href="#how" class="navlink text-[#D6D2C4] hover:text-[#F4EFE6]">How it works</a></li>
+          <li><a href="#designers" class="navlink text-[#D6D2C4] hover:text-[#F4EFE6]">Our designers</a></li>
+          <li><a href="#pricing" class="navlink text-[#D6D2C4] hover:text-[#F4EFE6]">How pricing works</a></li>
+        </ul>
+      </div>
+
+      <!-- col: explore -->
+      <div class="md:col-span-2">
+        <p class="mono text-[10.5px] tracking-[0.2em] uppercase mb-4" style="color:#9B967F;">Explore</p>
+        <ul class="space-y-2.5 text-[14px]">
+          <li><a href="#journeys" class="navlink text-[#D6D2C4] hover:text-[#F4EFE6]">Sample journeys</a></li>
+          <li><a href="#stay" class="navlink text-[#D6D2C4] hover:text-[#F4EFE6]">Where you'll stay</a></li>
+          <li><a href="#includes" class="navlink text-[#D6D2C4] hover:text-[#F4EFE6]">What's included</a></li>
+          <li><a href="#reviews" class="navlink text-[#D6D2C4] hover:text-[#F4EFE6]">Traveler reviews</a></li>
+        </ul>
+      </div>
+
+      <!-- col: contact -->
+      <div class="md:col-span-2">
+        <p class="mono text-[10.5px] tracking-[0.2em] uppercase mb-4" style="color:#9B967F;">Speak to us</p>
+        <ul class="space-y-2.5 text-[14px]">
+          <li><a href="#plan" class="navlink text-[#D6D2C4] hover:text-[#F4EFE6]">Start a journey</a></li>
+          <li><a href="#faq" class="navlink text-[#D6D2C4] hover:text-[#F4EFE6]">Questions</a></li>
+          <li><span class="mono text-[12.5px]" style="color:#C8C3B3;">+44 131 555 0190</span></li>
+          <li><span class="mono text-[12.5px]" style="color:#C8C3B3;">hello@wayfare.travel</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- financial protection badge -->
+    <div class="mt-14 flex flex-col sm:flex-row sm:items-center gap-5 py-6 border-y" style="border-color:rgba(176,138,74,0.28);">
+      <div class="flex items-center gap-4">
+        <span class="inline-flex items-center justify-center w-12 h-12 rounded-md shrink-0" style="background:rgba(244,239,230,0.06);border:1px solid rgba(176,138,74,0.4);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 2.5 4 6v6c0 5 3.4 8.4 8 9.5 4.6-1.1 8-4.5 8-9.5V6l-8-3.5Z" stroke="#B08A4A" stroke-width="1.4" stroke-linejoin="round"/>
+            <path d="M8.5 12.2l2.4 2.4 4.6-5" stroke="#B08A4A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <div>
+          <p class="text-[13.5px] font-medium text-[#F4EFE6]">Your money is financially protected</p>
+          <p class="mono text-[10.5px] tracking-[0.06em] mt-0.5" style="color:#9B967F;">ATOL 0000 · ABTA membership P0000 · bonded client account</p>
+        </div>
+      </div>
+      <p class="sm:ml-auto text-[12.5px] leading-[1.55] max-w-[40ch]" style="color:#A39E87;">
+        Every payment you make to Wayfare is held in a protected trust account — covered before, during and after your journey.
+      </p>
+    </div>
+
+    <!-- copyright + sustainability -->
+    <div class="mt-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <p class="mono text-[11px]" style="color:#9B967F;">© 2026 Wayfare Travel Studio Ltd · All rights reserved</p>
+      <p class="text-[12px] flex items-center gap-2" style="color:#A39E87;">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 12.5C3 11 1.5 7.5 2 2.5c5 0 8.5 1.5 10 5.5-2 .5-3.6 0-5-1" stroke="#B08A4A" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Every Wayfare journey is carbon-assessed, and its footprint offset through verified reforestation.
+      </p>
+    </div>
+  </div>
+</footer>
+
+<!-- single vanilla script — sets SVG path geometry from data arrays only -->
+<script>
+  (function () {
+    // route arc through the five numbered destination stops
+    var stops = [[150,168],[340,128],[500,196],[640,120],[840,150]];
+    var arc = document.getElementById('routeArc');
+    if (arc) {
+      var d = 'M' + stops[0][0] + ' ' + stops[0][1];
+      for (var i = 1; i < stops.length; i++) {
+        var p = stops[i - 1], c = stops[i];
+        var mx = (p[0] + c[0]) / 2;
+        var lift = 46; // curve control rises above the midpoint
+        d += ' Q' + mx + ' ' + (Math.min(p[1], c[1]) - lift) + ' ' + c[0] + ' ' + c[1];
+      }
+      arc.setAttribute('d', d);
+    }
+  })();
+</script>
+
+</body>
+</html>

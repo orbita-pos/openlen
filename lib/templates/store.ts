@@ -49,6 +49,13 @@ export interface TemplateRecord {
   contentHash: string;
   size: number;
   status: TemplateStatus;
+  /** Pre-rendered WebP thumbnail URL for gallery / homepage cards. Null
+   *  until `templates:thumbnails` has been run for this row. */
+  thumbnailUrl: string | null;
+  /** Hand-curated "top-tier" flag. When true, the template surfaces in the
+   *  dedicated Featured section at the top of /templates with an accent
+   *  badge on its card. Defaults to false. */
+  featured: boolean;
   createdAt: Date;
   updatedAt: Date;
   publishedAt: Date | null;
@@ -198,10 +205,24 @@ function rowToRecord(row: typeof schema.templates.$inferSelect): TemplateRecord 
     contentHash: row.contentHash,
     size: row.size,
     status: row.status as TemplateStatus,
+    thumbnailUrl: row.thumbnailUrl,
+    featured: row.featured,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     publishedAt: row.publishedAt,
   };
+}
+
+/** Persist the thumbnail URL for a template. Used by the thumbnail
+ *  generator script after uploading the WebP to storage. */
+export async function setTemplateThumbnail(
+  id: string,
+  thumbnailUrl: string,
+): Promise<void> {
+  await db
+    .update(schema.templates)
+    .set({ thumbnailUrl, updatedAt: new Date() })
+    .where(eq(schema.templates.id, id));
 }
 
 function sha256(s: string): string {

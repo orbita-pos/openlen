@@ -1,0 +1,1278 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hearsay — A reporter reopens a case the police closed in 1994</title>
+  <meta name="description" content="Hearsay is an eight-episode investigative podcast. A reporter reopens a case closed in 1994, working from documents, records, and interviews — with new evidence in every episode." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20rx='7'%20fill='%23141011'/%3E%3Crect%20x='8'%20y='10'%20width='16'%20height='13'%20rx='1.6'%20fill='%23ECE7E4'/%3E%3Crect%20x='8'%20y='8'%20width='9'%20height='4'%20rx='1.4'%20fill='%23ECE7E4'/%3E%3Crect%20x='11'%20y='14'%20width='7'%20height='1.8'%20rx='.9'%20fill='%23141011'/%3E%3Crect%20x='11'%20y='18'%20width='10'%20height='1.8'%20rx='.9'%20fill='%23141011'/%3E%3Cpath%20d='M6%2013L26%2021'%20stroke='%23C7443B'%20stroke-width='1.4'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: '#0C0A0A',
+            shell: '#141011',
+            paper: '#ECE7E4',
+            blood: '#C7443B',
+            manila: '#C9B589',
+          },
+          fontFamily: {
+            display: ['"Inter Tight"', 'system-ui', 'sans-serif'],
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root {
+      --wave-on: #C7443B;
+      --wave-off: rgba(236, 231, 228, 0.16);
+      --hair: rgba(236, 231, 228, 0.08);
+      --hair-strong: rgba(236, 231, 228, 0.12);
+    }
+
+    * { -webkit-font-smoothing: antialiased; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: #0C0A0A;
+      background-image: radial-gradient(120% 90% at 50% 38%, #141011 0%, #110D0E 46%, #0C0A0A 100%);
+      color: #ECE7E4;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-feature-settings: "ss01", "cv11";
+      letter-spacing: -0.006em;
+    }
+
+    ::selection {
+      background: rgba(199, 68, 59, 0.32);
+      color: #ECE7E4;
+    }
+
+    .font-display { letter-spacing: -0.03em; }
+    .tnum { font-variant-numeric: tabular-nums; }
+
+    /* ---- ambient textures ---- */
+    .dot-grid {
+      background-image: radial-gradient(rgba(236, 231, 228, 0.05) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+    .hair-rule {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--hair-strong) 18%, var(--hair-strong) 82%, transparent);
+    }
+    .mesh-blob {
+      position: absolute;
+      border-radius: 999px;
+      filter: blur(90px);
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    /* ---- half-tone ---- */
+    .halftone-dim { opacity: 0.45; }
+
+    /* ---- pulse dot ---- */
+    .pulse-dot {
+      position: relative;
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #C7443B;
+      flex: none;
+    }
+    .pulse-dot::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      box-shadow: 0 0 0 0 rgba(199, 68, 59, 0.55);
+      animation: pulse 2.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(199, 68, 59, 0.5); }
+      70%  { box-shadow: 0 0 0 9px rgba(199, 68, 59, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(199, 68, 59, 0); }
+    }
+
+    /* ---- marquee ---- */
+    .marquee {
+      display: flex;
+      width: max-content;
+      animation: scroll-left 44s linear infinite;
+    }
+    .marquee-wrap:hover .marquee { animation-play-state: paused; }
+    @keyframes scroll-left {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+
+    /* ---- cover art ---- */
+    .cover-shadow {
+      box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.5),
+        0 28px 60px -18px rgba(0, 0, 0, 0.78),
+        0 60px 120px -40px rgba(199, 68, 59, 0.12);
+    }
+    .cover-grain {
+      background-image:
+        radial-gradient(140% 110% at 22% 14%, #2A211D 0%, #1A1413 44%, #120D0D 100%);
+    }
+    .redaction {
+      background: #08070700;
+      background-color: #0A0908;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+    }
+
+    /* ---- lift on hover ---- */
+    .lift {
+      transition: transform 110ms ease, border-color 110ms ease, background-color 110ms ease, box-shadow 110ms ease;
+    }
+    .lift:hover { transform: translateY(-2px); }
+
+    .btn-blood {
+      background: #C7443B;
+      color: #150B0A;
+      transition: transform 110ms ease, background-color 110ms ease, box-shadow 110ms ease;
+    }
+    .btn-blood:hover {
+      transform: translateY(-2px);
+      background: #D2554C;
+      box-shadow: 0 10px 28px -10px rgba(199, 68, 59, 0.6);
+    }
+
+    .nav-link {
+      transition: color 110ms ease;
+      color: rgba(236, 231, 228, 0.62);
+    }
+    .nav-link:hover { color: #ECE7E4; }
+
+    /* ---- episode row ---- */
+    .ep-row {
+      transition: background-color 120ms ease;
+    }
+    .ep-row:hover { background-color: rgba(236, 231, 228, 0.025); }
+
+    /* ---- scrubber knob ---- */
+    .scrub-knob {
+      box-shadow: 0 0 0 4px rgba(199, 68, 59, 0.16), 0 2px 6px rgba(0, 0, 0, 0.5);
+    }
+
+    /* ---- focus ring ---- */
+    a:focus-visible, button:focus-visible, input:focus-visible {
+      outline: 2px solid rgba(199, 68, 59, 0.7);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+
+    /* ---- file tab notch ---- */
+    .file-tab {
+      clip-path: polygon(0 100%, 0 0, 62% 0, 70% 100%);
+    }
+
+    details > summary { list-style: none; cursor: pointer; }
+    details > summary::-webkit-details-marker { display: none; }
+    details[open] .faq-plus { transform: rotate(45deg); }
+    .faq-plus { transition: transform 140ms ease; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .marquee { animation: none; }
+      .pulse-dot::after { animation: none; }
+      html { scroll-behavior: auto; }
+    }
+  </style>
+</head>
+<body class="min-h-screen antialiased">
+
+  <!-- ============ 1 · NAV ============ -->
+  <header class="sticky top-0 z-50 border-b border-[var(--hair)] backdrop-blur-md bg-[#0C0A0A]/82">
+    <nav class="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5 sm:px-7" aria-label="Primary">
+      <a href="#top" class="flex items-center gap-2.5" aria-label="Hearsay — home">
+        <span class="grid h-8 w-8 place-items-center rounded-md bg-[#1C1614] ring-1 ring-[var(--hair-strong)]">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="3.6" y="7.4" width="16.8" height="12.4" rx="1.5" fill="#ECE7E4"/>
+            <path d="M3.6 8.9 V7.1 a1.5 1.5 0 0 1 1.5-1.5 H10 l1.7 2.2" fill="#ECE7E4"/>
+            <rect x="6.6" y="11" width="7.4" height="1.7" rx=".85" fill="#141011"/>
+            <rect x="6.6" y="14.6" width="10.6" height="1.7" rx=".85" fill="#141011"/>
+            <path d="M2 10.4 L22 18.1" stroke="#C7443B" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="font-display text-[19px] font-bold tracking-[-0.04em]">Hearsay</span>
+      </a>
+
+      <div class="hidden items-center gap-7 md:flex">
+        <a href="#episodes" class="nav-link text-[14px] font-medium">Episodes</a>
+        <a href="#about" class="nav-link text-[14px] font-medium">About</a>
+        <a href="#hosts" class="nav-link text-[14px] font-medium">Hosts</a>
+        <a href="#newsletter" class="nav-link text-[14px] font-medium">Newsletter</a>
+      </div>
+
+      <a href="#listen" class="btn-blood rounded-full px-4 py-2 text-[13px] font-semibold tracking-[-0.01em]">
+        Subscribe
+      </a>
+    </nav>
+  </header>
+
+  <main id="top">
+
+    <!-- ============ 2 · HERO ============ -->
+    <section class="relative overflow-hidden">
+      <div class="mesh-blob" style="width:520px;height:520px;background:#3A1512;top:-160px;left:-120px;"></div>
+      <div class="mesh-blob" style="width:440px;height:440px;background:#1E1714;bottom:-200px;right:-100px;opacity:0.6;"></div>
+      <div class="absolute inset-0 dot-grid opacity-60" aria-hidden="true"></div>
+      <div class="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[var(--hair-strong)] to-transparent" aria-hidden="true"></div>
+
+      <div class="relative mx-auto max-w-6xl px-5 pb-20 pt-14 sm:px-7 sm:pt-20">
+        <div class="grid items-center gap-12 lg:grid-cols-[1fr_minmax(0,420px)] lg:gap-14">
+
+          <!-- left: copy + player -->
+          <div>
+            <div class="mb-6 inline-flex items-center gap-2.5 rounded-full border border-[var(--hair-strong)] bg-[#16110F] px-3 py-1.5">
+              <span class="font-mono text-[10.5px] uppercase tracking-[0.2em] text-blood">Limited series</span>
+              <span class="h-3 w-px bg-[var(--hair-strong)]"></span>
+              <span class="font-mono text-[10.5px] uppercase tracking-[0.2em] text-paper/55 tnum">8 episodes</span>
+            </div>
+
+            <h1 class="font-display text-[58px] font-bold leading-[0.94] tracking-[-0.045em] sm:text-[78px] lg:text-[88px]">
+              Hearsay
+            </h1>
+
+            <p class="mt-5 max-w-xl text-[17px] leading-[1.62] text-paper/85 sm:text-[18.5px]">
+              A reporter reopens a case the police closed in 1994.
+              <span class="halftone-dim">Eight episodes. New evidence in every one.</span>
+            </p>
+
+            <p class="mt-4 max-w-xl font-mono text-[12px] leading-[1.7] text-paper/45">
+              Content note · Source-driven and handled with care. A fictional composite — see the FAQ below.
+            </p>
+
+            <!-- release line -->
+            <div class="mt-7 inline-flex items-center gap-2.5">
+              <span class="pulse-dot" aria-hidden="true"></span>
+              <span class="font-mono text-[12.5px] tracking-[0.01em] text-paper/72">
+                New episodes Thursdays · <span class="tnum">8</span> episodes
+              </span>
+            </div>
+
+            <!-- listen-on badge row (hero) -->
+            <div id="listen" class="mt-9">
+              <p class="mb-3 font-mono text-[10.5px] uppercase tracking-[0.22em] text-paper/40">Listen on</p>
+              <div class="flex flex-wrap gap-2.5">
+                <!-- Apple Podcasts -->
+                <a href="#listen" class="lift group flex items-center gap-2 rounded-lg border border-[var(--hair-strong)] bg-[#16110F] px-3.5 py-2 hover:border-paper/25 hover:bg-[#1C1614]" aria-label="Listen on Apple Podcasts">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" class="text-paper/80 group-hover:text-paper" aria-hidden="true">
+                    <rect x="2" y="2" width="20" height="20" rx="5.4" stroke="currentColor" stroke-width="1.6"/>
+                    <circle cx="12" cy="9.6" r="2.5" stroke="currentColor" stroke-width="1.6"/>
+                    <path d="M9 18c0-2.4 1.3-3.6 3-3.6S15 15.6 15 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                  </svg>
+                  <span class="text-[13px] font-medium text-paper/85 group-hover:text-paper">Apple Podcasts</span>
+                </a>
+                <!-- Spotify -->
+                <a href="#listen" class="lift group flex items-center gap-2 rounded-lg border border-[var(--hair-strong)] bg-[#16110F] px-3.5 py-2 hover:border-paper/25 hover:bg-[#1C1614]" aria-label="Listen on Spotify">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" class="text-paper/80 group-hover:text-paper" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/>
+                    <path d="M7.2 9.4c3.4-1 6.9-.7 9.6 1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                    <path d="M7.8 12.6c2.8-.8 5.6-.5 7.8.9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                    <path d="M8.5 15.6c2.1-.6 4.1-.4 5.8.7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                  </svg>
+                  <span class="text-[13px] font-medium text-paper/85 group-hover:text-paper">Spotify</span>
+                </a>
+                <!-- Overcast -->
+                <a href="#listen" class="lift group flex items-center gap-2 rounded-lg border border-[var(--hair-strong)] bg-[#16110F] px-3.5 py-2 hover:border-paper/25 hover:bg-[#1C1614]" aria-label="Listen on Overcast">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" class="text-paper/80 group-hover:text-paper" aria-hidden="true">
+                    <circle cx="12" cy="13" r="2.1" fill="currentColor"/>
+                    <path d="M8 9c-1 1.1-1.6 2.6-1.6 4.2M16 9c1 1.1 1.6 2.6 1.6 4.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                    <path d="M5.4 6.4c-1.7 1.8-2.7 4.3-2.7 7M18.6 6.4c1.7 1.8 2.7 4.3 2.7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                  </svg>
+                  <span class="text-[13px] font-medium text-paper/85 group-hover:text-paper">Overcast</span>
+                </a>
+                <!-- YouTube -->
+                <a href="#listen" class="lift group flex items-center gap-2 rounded-lg border border-[var(--hair-strong)] bg-[#16110F] px-3.5 py-2 hover:border-paper/25 hover:bg-[#1C1614]" aria-label="Listen on YouTube">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" class="text-paper/80 group-hover:text-paper" aria-hidden="true">
+                    <rect x="2.2" y="5.4" width="19.6" height="13.2" rx="3.6" stroke="currentColor" stroke-width="1.6"/>
+                    <path d="M10.4 9.4 15 12l-4.6 2.6V9.4Z" fill="currentColor"/>
+                  </svg>
+                  <span class="text-[13px] font-medium text-paper/85 group-hover:text-paper">YouTube</span>
+                </a>
+                <!-- Pocket Casts -->
+                <a href="#listen" class="lift group flex items-center gap-2 rounded-lg border border-[var(--hair-strong)] bg-[#16110F] px-3.5 py-2 hover:border-paper/25 hover:bg-[#1C1614]" aria-label="Listen on Pocket Casts">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" class="text-paper/80 group-hover:text-paper" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/>
+                    <circle cx="12" cy="12" r="6.1" stroke="currentColor" stroke-width="1.4" opacity="0.5"/>
+                    <path d="M10.4 9.2 14.6 12l-4.2 2.8V9.2Z" fill="currentColor"/>
+                  </svg>
+                  <span class="text-[13px] font-medium text-paper/85 group-hover:text-paper">Pocket Casts</span>
+                </a>
+                <!-- RSS -->
+                <a href="#listen" class="lift group flex items-center gap-2 rounded-lg border border-[var(--hair-strong)] bg-[#16110F] px-3.5 py-2 hover:border-paper/25 hover:bg-[#1C1614]" aria-label="Subscribe via RSS">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" class="text-paper/80 group-hover:text-paper" aria-hidden="true">
+                    <circle cx="6.4" cy="17.6" r="1.9" fill="currentColor"/>
+                    <path d="M5 11.4a8.6 8.6 0 0 1 8.6 8.6M5 6.2a13.8 13.8 0 0 1 13.8 13.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                  </svg>
+                  <span class="text-[13px] font-medium text-paper/85 group-hover:text-paper">RSS</span>
+                </a>
+              </div>
+            </div>
+
+            <!-- static player mockup -->
+            <div class="mt-9 rounded-2xl border border-[var(--hair-strong)] bg-gradient-to-b from-[#19130F] to-[#130E0D] p-5 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.85)]">
+              <div class="flex items-start gap-4">
+                <button class="lift grid h-12 w-12 flex-none place-items-center rounded-full bg-blood hover:bg-[#D2554C]" aria-label="Play the latest episode">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#150B0A" aria-hidden="true">
+                    <path d="M8 5.2 19 12 8 18.8V5.2Z"/>
+                  </svg>
+                </button>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2">
+                    <span class="rounded border border-[var(--hair-strong)] bg-[#0E0A09] px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-blood tnum">Latest</span>
+                    <span class="font-mono text-[11px] text-paper/45 tnum">EP 03 · 48:30</span>
+                  </div>
+                  <p class="mt-1.5 truncate font-display text-[15px] font-semibold tracking-[-0.02em] text-paper">
+                    The 911 call no one logged
+                  </p>
+                </div>
+              </div>
+
+              <!-- waveform -->
+              <div class="mt-4">
+                <svg data-waveform data-bars="74" data-played="0.34" class="h-12 w-full" preserveAspectRatio="none" aria-hidden="true"></svg>
+              </div>
+
+              <!-- scrubber -->
+              <div class="mt-3">
+                <div class="relative h-1.5 w-full rounded-full bg-[rgba(236,231,228,0.1)]">
+                  <div class="absolute inset-y-0 left-0 rounded-full bg-blood" style="width:34%"></div>
+                  <div class="scrub-knob absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 -translate-x-1/2 rounded-full bg-paper" style="left:34%"></div>
+                </div>
+                <div class="mt-2 flex items-center justify-between font-mono text-[11px] text-paper/45 tnum">
+                  <span>16:32</span>
+                  <span class="text-paper/30">/</span>
+                  <span>48:30</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- right: cover art tile -->
+          <div class="mx-auto w-full max-w-[420px] lg:mx-0">
+            <div class="cover-shadow cover-grain relative aspect-square w-full overflow-hidden rounded-[14px] ring-1 ring-[rgba(236,231,228,0.07)]">
+              <!-- inner texture -->
+              <div class="absolute inset-0" style="background-image:radial-gradient(rgba(0,0,0,0.4) 1px,transparent 1px);background-size:24px 24px;opacity:0.5;" aria-hidden="true"></div>
+
+              <!-- redacted case-file folder motif -->
+              <svg viewBox="0 0 360 360" class="absolute inset-0 h-full w-full" aria-hidden="true">
+                <defs>
+                  <linearGradient id="folder" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="#3A2E1F"/>
+                    <stop offset="1" stop-color="#2A2017"/>
+                  </linearGradient>
+                  <linearGradient id="folderTab" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="#473826"/>
+                    <stop offset="1" stop-color="#352A1D"/>
+                  </linearGradient>
+                </defs>
+                <!-- folder tab -->
+                <path d="M64 102 h78 l12 26 H64 Z" fill="url(#folderTab)"/>
+                <!-- folder body -->
+                <rect x="64" y="124" width="232" height="172" rx="6" fill="url(#folder)" stroke="#1C1510" stroke-width="2"/>
+                <!-- inner sheet -->
+                <rect x="86" y="142" width="188" height="136" rx="3" fill="#161311"/>
+                <!-- document text lines -->
+                <rect x="100" y="158" width="86" height="6" rx="3" fill="#3B3531"/>
+                <!-- redacted bars -->
+                <rect x="100" y="174" width="142" height="11" rx="1.5" fill="#0A0908"/>
+                <rect x="100" y="193" width="78" height="6" rx="3" fill="#3B3531"/>
+                <rect x="100" y="207" width="160" height="11" rx="1.5" fill="#0A0908"/>
+                <rect x="100" y="227" width="112" height="6" rx="3" fill="#3B3531"/>
+                <rect x="100" y="241" width="64" height="11" rx="1.5" fill="#0A0908"/>
+                <rect x="100" y="261" width="96" height="6" rx="3" fill="#3B3531"/>
+                <!-- thin red thread crossing -->
+                <path d="M40 96 C 150 150, 220 232, 322 312" stroke="#C7443B" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+                <circle cx="40" cy="96" r="3.4" fill="#C7443B"/>
+                <circle cx="322" cy="312" r="3.4" fill="#C7443B"/>
+                <!-- case stamp -->
+                <rect x="206" y="146" width="56" height="20" rx="2" fill="none" stroke="#C7443B" stroke-width="1.6" opacity="0.7" transform="rotate(-7 234 156)"/>
+              </svg>
+
+              <!-- cover lockup -->
+              <div class="absolute inset-x-0 bottom-0 p-6">
+                <div class="flex items-center gap-2">
+                  <span class="h-px w-7 bg-blood"></span>
+                  <span class="font-mono text-[10px] uppercase tracking-[0.28em] text-paper/55">Investigative · 8 parts</span>
+                </div>
+                <p class="mt-2 font-display text-[44px] font-bold leading-none tracking-[-0.05em] text-paper sm:text-[52px]">
+                  Hearsay
+                </p>
+                <p class="mt-2 font-mono text-[11px] tracking-[0.04em] text-paper/50">
+                  Case No. 94&ndash;0317 · reopened
+                </p>
+              </div>
+            </div>
+
+            <p class="mt-4 text-center font-mono text-[11px] tracking-[0.03em] text-paper/40 lg:text-left">
+              Hosted by Della Marchetti · A Field Notes Audio production
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 3 · PROOF BAR ============ -->
+    <section class="border-y border-[var(--hair)] bg-[#100C0B]">
+      <div class="mx-auto max-w-6xl px-5 sm:px-7">
+        <!-- metrics -->
+        <div class="grid grid-cols-2 divide-x divide-y divide-[var(--hair)] border-x border-[var(--hair)] sm:grid-cols-4 sm:divide-y-0">
+          <div class="px-5 py-7 sm:px-7">
+            <p class="font-display text-[32px] font-bold tracking-[-0.04em] text-paper tnum">8</p>
+            <p class="mt-1 font-mono text-[10.5px] uppercase tracking-[0.16em] text-paper/45">Episodes</p>
+          </div>
+          <div class="px-5 py-7 sm:px-7">
+            <p class="font-display text-[32px] font-bold tracking-[-0.04em] text-paper tnum">28.4M</p>
+            <p class="mt-1 font-mono text-[10.5px] uppercase tracking-[0.16em] text-paper/45">Downloads</p>
+          </div>
+          <div class="px-5 py-7 sm:px-7">
+            <p class="font-display text-[32px] font-bold tracking-[-0.04em] text-paper tnum">1,142</p>
+            <p class="mt-1 font-mono text-[10.5px] uppercase tracking-[0.16em] text-paper/45">Listener tips</p>
+          </div>
+          <div class="px-5 py-7 sm:px-7">
+            <p class="font-display text-[32px] font-bold tracking-[-0.04em] text-paper tnum">
+              4.8 <span class="font-mono text-[12px] font-normal text-paper/40">/ 5</span>
+            </p>
+            <p class="mt-1 font-mono text-[10.5px] uppercase tracking-[0.16em] text-paper/45">9,318 ratings</p>
+          </div>
+        </div>
+
+        <!-- press marquee -->
+        <div class="border-x border-t border-[var(--hair)] py-5">
+          <p class="mb-3 px-5 font-mono text-[10px] uppercase tracking-[0.24em] text-paper/35 sm:px-7">As heard on</p>
+          <div class="marquee-wrap relative overflow-hidden">
+            <div class="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-[#100C0B] to-transparent"></div>
+            <div class="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-[#100C0B] to-transparent"></div>
+            <div class="marquee">
+              <!-- track A -->
+              <div class="flex shrink-0 items-center">
+                <span class="px-7 font-display text-[16px] font-semibold tracking-[-0.02em] text-paper/45">The Atlantic Monthly</span>
+                <span class="text-paper/15">&bull;</span>
+                <span class="px-7 font-display text-[16px] font-semibold tracking-[-0.02em] text-paper/45">Columbia Journalism Review</span>
+                <span class="text-paper/15">&bull;</span>
+                <span class="px-7 font-display text-[16px] font-semibold tracking-[-0.02em] text-paper/45">The Marshall Ledger</span>
+                <span class="text-paper/15">&bull;</span>
+                <span class="px-7 font-display text-[16px] font-semibold tracking-[-0.02em] text-paper/45">Harper&rsquo;s</span>
+                <span class="text-paper/15">&bull;</span>
+                <span class="px-7 font-display text-[16px] font-semibold tracking-[-0.02em] text-paper/45">The Coastline Review</span>
+                <span class="text-paper/15">&bull;</span>
+                <span class="px-7 font-display text-[16px] font-semibold tracking-[-0.02em] text-paper/45">Longreads</span>
+                <span class="text-paper/15">&bull;</span>
+                <span class="px-7 font-display text-[16px] font-semibold tracking-[-0.02em] text-paper/45">Nieman Storyboard</span>
+                <span class="text-paper/15">&bull;</span>
+              </div>
+              <!-- track B (duplicate) -->
+              <div class="flex shrink-0 items-center" aria-hidden="true">
+                <span class="px-7 font-display text-[16px] font-semibold tracking-[-0.02em] text-paper/45">The Atlantic Monthly</span>
+                <span class="text-paper/15">&bull;</span>
+                <span class="px-7 font-display text-[16px] font-semibold tracking-[-0.02em] text-paper/45">Columbia Journalism Review</span>
+                <span class="text-paper/15">&bull;</span>
+                <span class="px-7 font-display text-[16px] font-semibold tracking-[-0.02em] text-paper/45">The Marshall Ledger</span>
+                <span class="text-paper/15">&bull;</span>
+                <span class="px-7 font-display text-[16px] font-semibold tracking-[-0.02em] text-paper/45">Harper&rsquo;s</span>
+                <span class="text-paper/15">&bull;</span>
+                <span class="px-7 font-display text-[16px] font-semibold tracking-[-0.02em] text-paper/45">The Coastline Review</span>
+                <span class="text-paper/15">&bull;</span>
+                <span class="px-7 font-display text-[16px] font-semibold tracking-[-0.02em] text-paper/45">Longreads</span>
+                <span class="text-paper/15">&bull;</span>
+                <span class="px-7 font-display text-[16px] font-semibold tracking-[-0.02em] text-paper/45">Nieman Storyboard</span>
+                <span class="text-paper/15">&bull;</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 4 · EPISODES ============ -->
+    <section id="episodes" class="relative">
+      <div class="mx-auto max-w-6xl px-5 py-20 sm:px-7 sm:py-24">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p class="font-mono text-[11px] uppercase tracking-[0.22em] text-blood">The series</p>
+            <h2 class="mt-2 font-display text-[36px] font-bold leading-[1.04] tracking-[-0.04em] sm:text-[44px]">
+              Eight episodes, <span class="halftone-dim">in order</span>
+            </h2>
+          </div>
+          <p class="max-w-xs font-mono text-[12px] leading-[1.7] text-paper/45">
+            A limited series. Released weekly — three are live, the rest are dated below.
+          </p>
+        </div>
+
+        <!-- episode list -->
+        <div class="mt-10 overflow-hidden rounded-2xl border border-[var(--hair-strong)] bg-[#120E0D]">
+
+          <!-- EP 01 -->
+          <article class="ep-row group flex items-center gap-4 border-b border-[var(--hair)] px-5 py-5 sm:gap-6 sm:px-7">
+            <span class="hidden flex-none rounded-md border border-[var(--hair-strong)] bg-[#0E0A09] px-2.5 py-1.5 font-mono text-[11px] tracking-[0.06em] text-paper/55 tnum sm:inline-block">EP 01</span>
+            <div class="min-w-0 flex-1">
+              <div class="mb-1 flex items-center gap-2 sm:hidden">
+                <span class="font-mono text-[10px] text-paper/45 tnum">EP 01</span>
+              </div>
+              <h3 class="truncate font-display text-[16.5px] font-semibold tracking-[-0.02em] text-paper">
+                The file marked closed
+              </h3>
+              <p class="mt-0.5 truncate text-[13.5px] text-paper/55">
+                A two-page report, a missing witness statement, and the question that started everything.
+              </p>
+            </div>
+            <span class="hidden flex-none font-mono text-[11.5px] text-paper/45 tnum md:block">42:08 &middot; Jan 9, 2026</span>
+            <button class="lift grid h-9 w-9 flex-none place-items-center rounded-full border border-[var(--hair-strong)] bg-[#0E0A09] hover:border-blood hover:bg-[#1C100E]" aria-label="Play Episode 1, The file marked closed">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="#ECE7E4" aria-hidden="true"><path d="M8 5.2 19 12 8 18.8V5.2Z"/></svg>
+            </button>
+          </article>
+
+          <!-- EP 02 -->
+          <article class="ep-row group flex items-center gap-4 border-b border-[var(--hair)] px-5 py-5 sm:gap-6 sm:px-7">
+            <span class="hidden flex-none rounded-md border border-[var(--hair-strong)] bg-[#0E0A09] px-2.5 py-1.5 font-mono text-[11px] tracking-[0.06em] text-paper/55 tnum sm:inline-block">EP 02</span>
+            <div class="min-w-0 flex-1">
+              <div class="mb-1 flex items-center gap-2 sm:hidden">
+                <span class="font-mono text-[10px] text-paper/45 tnum">EP 02</span>
+              </div>
+              <h3 class="truncate font-display text-[16.5px] font-semibold tracking-[-0.02em] text-paper">
+                What the timeline left out
+              </h3>
+              <p class="mt-0.5 truncate text-[13.5px] text-paper/55">
+                Comparing the official chronology against three sets of phone records.
+              </p>
+            </div>
+            <span class="hidden flex-none font-mono text-[11.5px] text-paper/45 tnum md:block">45:51 &middot; Jan 16, 2026</span>
+            <button class="lift grid h-9 w-9 flex-none place-items-center rounded-full border border-[var(--hair-strong)] bg-[#0E0A09] hover:border-blood hover:bg-[#1C100E]" aria-label="Play Episode 2, What the timeline left out">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="#ECE7E4" aria-hidden="true"><path d="M8 5.2 19 12 8 18.8V5.2Z"/></svg>
+            </button>
+          </article>
+
+          <!-- EP 03 — latest -->
+          <article class="ep-row group flex items-center gap-4 border-b border-[var(--hair)] bg-[rgba(199,68,59,0.05)] px-5 py-5 sm:gap-6 sm:px-7">
+            <span class="hidden flex-none rounded-md border border-blood/40 bg-[#1C100E] px-2.5 py-1.5 font-mono text-[11px] tracking-[0.06em] text-blood tnum sm:inline-block">EP 03</span>
+            <div class="min-w-0 flex-1">
+              <div class="mb-1 flex items-center gap-2">
+                <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-blood">Latest</span>
+                <span class="font-mono text-[10px] text-paper/45 tnum sm:hidden">EP 03</span>
+              </div>
+              <h3 class="truncate font-display text-[16.5px] font-semibold tracking-[-0.02em] text-paper">
+                The 911 call no one logged
+              </h3>
+              <p class="mt-0.5 truncate text-[13.5px] text-paper/60">
+                A dispatcher remembers a call that never made it into the record. We pull the tape.
+              </p>
+            </div>
+            <span class="hidden flex-none font-mono text-[11.5px] text-paper/55 tnum md:block">48:30 &middot; Jan 23, 2026</span>
+            <button class="lift grid h-9 w-9 flex-none place-items-center rounded-full bg-blood hover:bg-[#D2554C]" aria-label="Play Episode 3, The 911 call no one logged">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="#150B0A" aria-hidden="true"><path d="M8 5.2 19 12 8 18.8V5.2Z"/></svg>
+            </button>
+          </article>
+
+          <!-- EP 04 — upcoming -->
+          <article class="ep-row group flex items-center gap-4 border-b border-[var(--hair)] px-5 py-5 opacity-65 sm:gap-6 sm:px-7">
+            <span class="hidden flex-none rounded-md border border-[var(--hair-strong)] bg-[#0E0A09] px-2.5 py-1.5 font-mono text-[11px] tracking-[0.06em] text-paper/40 tnum sm:inline-block">EP 04</span>
+            <div class="min-w-0 flex-1">
+              <div class="mb-1 flex items-center gap-2 sm:hidden">
+                <span class="font-mono text-[10px] text-paper/40 tnum">EP 04</span>
+              </div>
+              <h3 class="truncate font-display text-[16.5px] font-semibold tracking-[-0.02em] text-paper/80">
+                The neighbor who kept a diary
+              </h3>
+              <p class="mt-0.5 truncate text-[13.5px] text-paper/40">
+                Twenty years of dated entries, and four lines about the night in question.
+              </p>
+            </div>
+            <span class="hidden flex-none font-mono text-[11.5px] uppercase tracking-[0.08em] text-paper/40 tnum md:block">Jan 30, 2026</span>
+            <span class="grid h-9 w-9 flex-none place-items-center rounded-full border border-[var(--hair)] bg-[#0E0A09]" aria-label="Episode 4 upcoming">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ECE7E4" stroke-opacity="0.4" stroke-width="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2" stroke-linecap="round"/>
+              </svg>
+            </span>
+          </article>
+
+          <!-- EP 05 — upcoming -->
+          <article class="ep-row group flex items-center gap-4 border-b border-[var(--hair)] px-5 py-5 opacity-65 sm:gap-6 sm:px-7">
+            <span class="hidden flex-none rounded-md border border-[var(--hair-strong)] bg-[#0E0A09] px-2.5 py-1.5 font-mono text-[11px] tracking-[0.06em] text-paper/40 tnum sm:inline-block">EP 05</span>
+            <div class="min-w-0 flex-1">
+              <div class="mb-1 flex items-center gap-2 sm:hidden">
+                <span class="font-mono text-[10px] text-paper/40 tnum">EP 05</span>
+              </div>
+              <h3 class="truncate font-display text-[16.5px] font-semibold tracking-[-0.02em] text-paper/80">
+                A receipt from the gas station on Route 6
+              </h3>
+              <p class="mt-0.5 truncate text-[13.5px] text-paper/40">
+                One time-stamped slip places a car eleven miles from where the report says it was.
+              </p>
+            </div>
+            <span class="hidden flex-none font-mono text-[11.5px] uppercase tracking-[0.08em] text-paper/40 tnum md:block">Feb 6, 2026</span>
+            <span class="grid h-9 w-9 flex-none place-items-center rounded-full border border-[var(--hair)] bg-[#0E0A09]" aria-label="Episode 5 upcoming">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ECE7E4" stroke-opacity="0.4" stroke-width="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2" stroke-linecap="round"/>
+              </svg>
+            </span>
+          </article>
+
+          <!-- EP 06 — upcoming -->
+          <article class="ep-row group flex items-center gap-4 border-b border-[var(--hair)] px-5 py-5 opacity-65 sm:gap-6 sm:px-7">
+            <span class="hidden flex-none rounded-md border border-[var(--hair-strong)] bg-[#0E0A09] px-2.5 py-1.5 font-mono text-[11px] tracking-[0.06em] text-paper/40 tnum sm:inline-block">EP 06</span>
+            <div class="min-w-0 flex-1">
+              <div class="mb-1 flex items-center gap-2 sm:hidden">
+                <span class="font-mono text-[10px] text-paper/40 tnum">EP 06</span>
+              </div>
+              <h3 class="truncate font-display text-[16.5px] font-semibold tracking-[-0.02em] text-paper/80">
+                The detective&rsquo;s last interview
+              </h3>
+              <p class="mt-0.5 truncate text-[13.5px] text-paper/40">
+                We reach the lead investigator, retired now, and ask the questions never asked in 1994.
+              </p>
+            </div>
+            <span class="hidden flex-none font-mono text-[11.5px] uppercase tracking-[0.08em] text-paper/40 tnum md:block">Feb 13, 2026</span>
+            <span class="grid h-9 w-9 flex-none place-items-center rounded-full border border-[var(--hair)] bg-[#0E0A09]" aria-label="Episode 6 upcoming">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ECE7E4" stroke-opacity="0.4" stroke-width="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2" stroke-linecap="round"/>
+              </svg>
+            </span>
+          </article>
+
+          <!-- EP 07 — upcoming -->
+          <article class="ep-row group flex items-center gap-4 border-b border-[var(--hair)] px-5 py-5 opacity-65 sm:gap-6 sm:px-7">
+            <span class="hidden flex-none rounded-md border border-[var(--hair-strong)] bg-[#0E0A09] px-2.5 py-1.5 font-mono text-[11px] tracking-[0.06em] text-paper/40 tnum sm:inline-block">EP 07</span>
+            <div class="min-w-0 flex-1">
+              <div class="mb-1 flex items-center gap-2 sm:hidden">
+                <span class="font-mono text-[10px] text-paper/40 tnum">EP 07</span>
+              </div>
+              <h3 class="truncate font-display text-[16.5px] font-semibold tracking-[-0.02em] text-paper/80">
+                What the lab can read now
+              </h3>
+              <p class="mt-0.5 truncate text-[13.5px] text-paper/40">
+                Evidence sealed for three decades goes to a modern forensic lab. We wait for the result.
+              </p>
+            </div>
+            <span class="hidden flex-none font-mono text-[11.5px] uppercase tracking-[0.08em] text-paper/40 tnum md:block">Feb 20, 2026</span>
+            <span class="grid h-9 w-9 flex-none place-items-center rounded-full border border-[var(--hair)] bg-[#0E0A09]" aria-label="Episode 7 upcoming">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ECE7E4" stroke-opacity="0.4" stroke-width="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2" stroke-linecap="round"/>
+              </svg>
+            </span>
+          </article>
+
+          <!-- EP 08 — upcoming, finale -->
+          <article class="ep-row group flex items-center gap-4 px-5 py-5 opacity-65 sm:gap-6 sm:px-7">
+            <span class="hidden flex-none rounded-md border border-[var(--hair-strong)] bg-[#0E0A09] px-2.5 py-1.5 font-mono text-[11px] tracking-[0.06em] text-paper/40 tnum sm:inline-block">EP 08</span>
+            <div class="min-w-0 flex-1">
+              <div class="mb-1 flex items-center gap-2">
+                <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-paper/45">Finale</span>
+                <span class="font-mono text-[10px] text-paper/40 tnum sm:hidden">EP 08</span>
+              </div>
+              <h3 class="truncate font-display text-[16.5px] font-semibold tracking-[-0.02em] text-paper/80">
+                Who gets to call a case closed
+              </h3>
+              <p class="mt-0.5 truncate text-[13.5px] text-paper/40">
+                What thirty years and eight episodes can — and cannot — settle. Where the file stands now.
+              </p>
+            </div>
+            <span class="hidden flex-none font-mono text-[11.5px] uppercase tracking-[0.08em] text-paper/40 tnum md:block">Feb 27, 2026</span>
+            <span class="grid h-9 w-9 flex-none place-items-center rounded-full border border-[var(--hair)] bg-[#0E0A09]" aria-label="Episode 8 upcoming">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ECE7E4" stroke-opacity="0.4" stroke-width="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2" stroke-linecap="round"/>
+              </svg>
+            </span>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 5 · ABOUT ============ -->
+    <section id="about" class="relative border-t border-[var(--hair)] bg-[#100C0B]">
+      <div class="absolute inset-0 dot-grid opacity-40" aria-hidden="true"></div>
+      <div class="relative mx-auto max-w-6xl px-5 py-20 sm:px-7 sm:py-24">
+        <div class="grid gap-12 lg:grid-cols-[1fr_minmax(0,360px)] lg:gap-16">
+
+          <div>
+            <p class="font-mono text-[11px] uppercase tracking-[0.22em] text-blood">About the show</p>
+            <h2 class="mt-2 max-w-xl font-display text-[34px] font-bold leading-[1.06] tracking-[-0.04em] sm:text-[42px]">
+              A case file, reopened with the work shown
+            </h2>
+
+            <div class="mt-6 max-w-2xl space-y-5 text-[15.5px] leading-[1.72] text-paper/72">
+              <p>
+                In March 1994, a small-county sheriff&rsquo;s office filed a two-page report and marked one case closed. No charges followed. The file was never reopened. Three decades later, a box of records arrived in our newsroom — and the report did not match the documents inside it.
+              </p>
+              <p>
+                <span class="text-paper">Hearsay</span> follows that mismatch. Each episode is built from primary sources: incident reports, dispatch logs, public-records requests, court filings, and on-the-record interviews with people who were there. Where a document is unclear, we say so. Where a memory cannot be corroborated, we label it as memory. Nothing on this show is dramatized.
+              </p>
+              <p>
+                Every claim in the series is footnoted on a public sources page, published alongside each episode. Listeners have sent <span class="tnum">1,142</span> tips so far; several reshaped the reporting. This is a limited series — eight episodes, then it ends. We would rather close honestly than stretch a story past what the record can hold.
+              </p>
+            </div>
+          </div>
+
+          <!-- start here trio -->
+          <aside class="rounded-2xl border border-[var(--hair-strong)] bg-[#150F0E] p-6">
+            <div class="flex items-center gap-2">
+              <span class="h-px w-6 bg-blood"></span>
+              <h3 class="font-mono text-[11px] uppercase tracking-[0.2em] text-paper/55">Start here</h3>
+            </div>
+            <p class="mt-2 text-[13px] leading-[1.6] text-paper/50">
+              New to a limited series? Begin at the top, then jump to the two turning points.
+            </p>
+
+            <ol class="mt-5 space-y-3">
+              <li>
+                <a href="#episodes" class="lift group flex items-start gap-3 rounded-xl border border-[var(--hair)] bg-[#0F0B0A] p-3.5 hover:border-paper/20 hover:bg-[#181210]">
+                  <span class="mt-0.5 flex-none rounded border border-[var(--hair-strong)] bg-[#0A0908] px-1.5 py-0.5 font-mono text-[10px] text-paper/55 tnum">EP 01</span>
+                  <span>
+                    <span class="block font-display text-[14px] font-semibold tracking-[-0.02em] text-paper">The file marked closed</span>
+                    <span class="mt-0.5 block text-[12.5px] leading-[1.5] text-paper/50">Where the contradiction begins.</span>
+                  </span>
+                </a>
+              </li>
+              <li>
+                <a href="#episodes" class="lift group flex items-start gap-3 rounded-xl border border-[var(--hair)] bg-[#0F0B0A] p-3.5 hover:border-paper/20 hover:bg-[#181210]">
+                  <span class="mt-0.5 flex-none rounded border border-[var(--hair-strong)] bg-[#0A0908] px-1.5 py-0.5 font-mono text-[10px] text-paper/55 tnum">EP 03</span>
+                  <span>
+                    <span class="block font-display text-[14px] font-semibold tracking-[-0.02em] text-paper">The 911 call no one logged</span>
+                    <span class="mt-0.5 block text-[12.5px] leading-[1.5] text-paper/50">The first piece of new evidence.</span>
+                  </span>
+                </a>
+              </li>
+              <li>
+                <a href="#episodes" class="lift group flex items-start gap-3 rounded-xl border border-[var(--hair)] bg-[#0F0B0A] p-3.5 hover:border-paper/20 hover:bg-[#181210]">
+                  <span class="mt-0.5 flex-none rounded border border-[var(--hair-strong)] bg-[#0A0908] px-1.5 py-0.5 font-mono text-[10px] text-paper/55 tnum">EP 06</span>
+                  <span>
+                    <span class="block font-display text-[14px] font-semibold tracking-[-0.02em] text-paper">The detective&rsquo;s last interview</span>
+                    <span class="mt-0.5 block text-[12.5px] leading-[1.5] text-paper/50">The investigator answers, at last.</span>
+                  </span>
+                </a>
+              </li>
+            </ol>
+          </aside>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 6 · HOSTS ============ -->
+    <section id="hosts" class="relative">
+      <div class="mx-auto max-w-6xl px-5 py-20 sm:px-7 sm:py-24">
+        <p class="font-mono text-[11px] uppercase tracking-[0.22em] text-blood">Who reports it</p>
+        <h2 class="mt-2 font-display text-[34px] font-bold leading-[1.06] tracking-[-0.04em] sm:text-[42px]">
+          The newsroom behind the file
+        </h2>
+
+        <div class="mt-10 grid gap-5 sm:grid-cols-2">
+
+          <!-- host: reporter -->
+          <article class="lift rounded-2xl border border-[var(--hair-strong)] bg-[#130F0D] p-6 hover:border-paper/18 hover:bg-[#171210]">
+            <div class="flex items-start gap-4">
+              <div class="grid h-16 w-16 flex-none place-items-center rounded-xl ring-1 ring-[var(--hair-strong)]"
+                   style="background:radial-gradient(120% 120% at 30% 25%, #5A2A24 0%, #2A1C18 70%);">
+                <span class="font-display text-[20px] font-bold tracking-[-0.03em] text-paper">DM</span>
+              </div>
+              <div class="min-w-0 pt-0.5">
+                <h3 class="font-display text-[18px] font-bold tracking-[-0.03em] text-paper">Della Marchetti</h3>
+                <p class="font-mono text-[11px] uppercase tracking-[0.14em] text-blood">Reporter &amp; host</p>
+              </div>
+            </div>
+            <p class="mt-4 text-[14px] leading-[1.66] text-paper/68">
+              An investigative reporter who spent eleven years on the courts and public-records beat at <span class="text-paper/85">The Marshall Ledger</span>. Her work on sealed case files has been cited in two state records-access rulings. She reads documents the way other people read novels.
+            </p>
+            <a href="#newsletter" class="lift mt-4 inline-flex items-center gap-1.5 text-[12.5px] font-medium text-paper/55 hover:text-paper">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M18.9 2H22l-7 8 8.2 12H16.5l-5-7.3L5.7 22H2.5l7.5-8.6L1.7 2h7l4.5 6.6L18.9 2Zm-1.1 18.1h1.7L7.3 3.8H5.5l12.3 16.3Z"/>
+              </svg>
+              <span class="font-mono tracking-[0.04em]">@dellareports</span>
+            </a>
+          </article>
+
+          <!-- host: producer -->
+          <article class="lift rounded-2xl border border-[var(--hair-strong)] bg-[#130F0D] p-6 hover:border-paper/18 hover:bg-[#171210]">
+            <div class="flex items-start gap-4">
+              <div class="grid h-16 w-16 flex-none place-items-center rounded-xl ring-1 ring-[var(--hair-strong)]"
+                   style="background:radial-gradient(120% 120% at 30% 25%, #3A3024 0%, #1F1A14 70%);">
+                <span class="font-display text-[20px] font-bold tracking-[-0.03em] text-paper">JO</span>
+              </div>
+              <div class="min-w-0 pt-0.5">
+                <h3 class="font-display text-[18px] font-bold tracking-[-0.03em] text-paper">Jonas Okonkwo</h3>
+                <p class="font-mono text-[11px] uppercase tracking-[0.14em] text-paper/45">Senior producer</p>
+              </div>
+            </div>
+            <p class="mt-4 text-[14px] leading-[1.66] text-paper/68">
+              A documentary producer and sound editor who builds each episode around the tape itself — dispatch audio, interview rooms, the texture of an archive. He runs the fact-check pass and keeps the sources page honest. Twelve years in public radio before this.
+            </p>
+            <a href="#newsletter" class="lift mt-4 inline-flex items-center gap-1.5 text-[12.5px] font-medium text-paper/55 hover:text-paper">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M18.9 2H22l-7 8 8.2 12H16.5l-5-7.3L5.7 22H2.5l7.5-8.6L1.7 2h7l4.5 6.6L18.9 2Zm-1.1 18.1h1.7L7.3 3.8H5.5l12.3 16.3Z"/>
+              </svg>
+              <span class="font-mono tracking-[0.04em]">@jonasonsound</span>
+            </a>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 7 · PULL QUOTE ============ -->
+    <section class="relative border-y border-[var(--hair)] bg-[#0F0B0A]">
+      <div class="mesh-blob" style="width:360px;height:360px;background:#341310;top:-120px;right:8%;opacity:0.4;"></div>
+      <div class="relative mx-auto max-w-4xl px-5 py-20 text-center sm:px-7 sm:py-28">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="#C7443B" class="mx-auto opacity-80" aria-hidden="true">
+          <path d="M9.5 5C6 6.4 4 9.3 4 13v6h7v-7H7.6c.2-2.4 1.3-3.9 3.4-4.8L9.5 5Zm10 0c-3.5 1.4-5.5 4.3-5.5 8v6h7v-7h-3.4c.2-2.4 1.3-3.9 3.4-4.8L19.5 5Z"/>
+        </svg>
+        <blockquote class="mt-7">
+          <p class="font-display text-[26px] font-semibold leading-[1.32] tracking-[-0.03em] text-paper sm:text-[34px]">
+            &ldquo;Hearsay is the rare true-crime series with the discipline of a newsroom. It never reaches past its evidence — and that restraint is exactly what makes it land.&rdquo;
+          </p>
+        </blockquote>
+        <figcaption class="mt-7 flex items-center justify-center gap-3">
+          <span class="h-px w-8 bg-[var(--hair-strong)]"></span>
+          <span class="text-[13px]">
+            <span class="font-medium text-paper">Priya Anand</span>
+            <span class="text-paper/45"> · Audio critic, Columbia Journalism Review</span>
+          </span>
+          <span class="h-px w-8 bg-[var(--hair-strong)]"></span>
+        </figcaption>
+      </div>
+    </section>
+
+    <!-- ============ 8 · NEWSLETTER ============ -->
+    <section id="newsletter" class="relative">
+      <div class="mx-auto max-w-6xl px-5 py-20 sm:px-7 sm:py-24">
+        <div class="overflow-hidden rounded-2xl border border-[var(--hair-strong)] bg-gradient-to-br from-[#1A1310] to-[#120E0D]">
+          <div class="grid gap-8 p-7 sm:p-10 lg:grid-cols-[1fr_minmax(0,420px)] lg:items-center lg:gap-12">
+
+            <div>
+              <p class="font-mono text-[11px] uppercase tracking-[0.22em] text-blood">The case notes</p>
+              <h2 class="mt-2 font-display text-[28px] font-bold leading-[1.1] tracking-[-0.035em] sm:text-[34px]">
+                Field notes between episodes
+              </h2>
+              <p class="mt-3 max-w-md text-[14.5px] leading-[1.66] text-paper/62">
+                A short letter the week of each release: what we found, what we could not confirm, and which document we are still chasing. No spoilers — and no advertising.
+              </p>
+            </div>
+
+            <form class="w-full" onsubmit="return false" aria-label="Subscribe to the Hearsay newsletter">
+              <label for="nl-email" class="mb-2 block font-mono text-[10.5px] uppercase tracking-[0.16em] text-paper/40">Email address</label>
+              <div class="flex flex-col gap-2.5 sm:flex-row">
+                <input
+                  id="nl-email"
+                  type="email"
+                  inputmode="email"
+                  placeholder="you@example.com"
+                  class="min-w-0 flex-1 rounded-lg border border-[var(--hair-strong)] bg-[#0D0A09] px-3.5 py-2.5 text-[14px] text-paper placeholder:text-paper/30 focus:border-blood/60"
+                />
+                <button type="submit" class="btn-blood whitespace-nowrap rounded-lg px-5 py-2.5 text-[13.5px] font-semibold">
+                  Get the notes
+                </button>
+              </div>
+              <p class="mt-2.5 font-mono text-[11px] leading-[1.6] text-paper/35">
+                Roughly eight letters, then the series ends. Unsubscribe any time.
+              </p>
+            </form>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 9 · CASE-FILES / EVIDENCE ARCHIVE ============ -->
+    <section class="relative border-t border-[var(--hair)] bg-[#100C0B]">
+      <div class="absolute inset-0 dot-grid opacity-35" aria-hidden="true"></div>
+      <div class="relative mx-auto max-w-6xl px-5 py-20 sm:px-7 sm:py-24">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p class="font-mono text-[11px] uppercase tracking-[0.22em] text-blood">The record</p>
+            <h2 class="mt-2 font-display text-[34px] font-bold leading-[1.06] tracking-[-0.04em] sm:text-[42px]">
+              Evidence archive
+            </h2>
+          </div>
+          <p class="max-w-sm font-mono text-[12px] leading-[1.7] text-paper/45">
+            Every document referenced on the show, published in full. Sourced, dated, and free to read.
+          </p>
+        </div>
+
+        <!-- file cards -->
+        <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+
+          <!-- doc 1 -->
+          <article class="lift rounded-xl border border-[var(--hair-strong)] bg-[#150F0E] hover:border-paper/18 hover:bg-[#191311]">
+            <div class="file-tab h-7 w-full rounded-t-xl bg-[#241B14]"></div>
+            <div class="p-5">
+              <div class="flex items-center justify-between">
+                <span class="font-mono text-[10px] uppercase tracking-[0.16em] text-paper/40">Exhibit A</span>
+                <span class="font-mono text-[10px] text-paper/35 tnum">1994</span>
+              </div>
+              <h3 class="mt-2 font-display text-[15.5px] font-semibold tracking-[-0.02em] text-paper">
+                The original incident report
+              </h3>
+              <!-- redaction lines -->
+              <div class="mt-3 space-y-2">
+                <div class="h-2 w-full rounded-sm bg-[#2A231D]"></div>
+                <div class="flex gap-2">
+                  <div class="redaction h-2.5 w-2/3 rounded-sm"></div>
+                  <div class="h-2.5 w-1/3 rounded-sm bg-[#2A231D]"></div>
+                </div>
+                <div class="h-2 w-4/5 rounded-sm bg-[#2A231D]"></div>
+              </div>
+              <p class="mt-3 text-[12.5px] leading-[1.55] text-paper/50">
+                Two pages, scanned. The document the case was closed on.
+              </p>
+            </div>
+          </article>
+
+          <!-- doc 2 -->
+          <article class="lift rounded-xl border border-[var(--hair-strong)] bg-[#150F0E] hover:border-paper/18 hover:bg-[#191311]">
+            <div class="file-tab h-7 w-full rounded-t-xl bg-[#241B14]"></div>
+            <div class="p-5">
+              <div class="flex items-center justify-between">
+                <span class="font-mono text-[10px] uppercase tracking-[0.16em] text-paper/40">Exhibit B</span>
+                <span class="font-mono text-[10px] text-paper/35 tnum">2025</span>
+              </div>
+              <h3 class="mt-2 font-display text-[15.5px] font-semibold tracking-[-0.02em] text-paper">
+                Dispatch log, records request
+              </h3>
+              <div class="mt-3 space-y-2">
+                <div class="flex gap-2">
+                  <div class="h-2.5 w-1/4 rounded-sm bg-[#2A231D]"></div>
+                  <div class="redaction h-2.5 w-1/2 rounded-sm"></div>
+                </div>
+                <div class="h-2 w-full rounded-sm bg-[#2A231D]"></div>
+                <div class="h-2 w-3/5 rounded-sm bg-[#2A231D]"></div>
+              </div>
+              <p class="mt-3 text-[12.5px] leading-[1.55] text-paper/50">
+                Released under a public-records request. Names withheld for safety.
+              </p>
+            </div>
+          </article>
+
+          <!-- doc 3 -->
+          <article class="lift rounded-xl border border-[var(--hair-strong)] bg-[#150F0E] hover:border-paper/18 hover:bg-[#191311]">
+            <div class="file-tab h-7 w-full rounded-t-xl bg-[#241B14]"></div>
+            <div class="p-5">
+              <div class="flex items-center justify-between">
+                <span class="font-mono text-[10px] uppercase tracking-[0.16em] text-paper/40">Exhibit C</span>
+                <span class="font-mono text-[10px] text-paper/35 tnum">2026</span>
+              </div>
+              <h3 class="mt-2 font-display text-[15.5px] font-semibold tracking-[-0.02em] text-paper">
+                Interview transcript, episode 3
+              </h3>
+              <div class="mt-3 space-y-2">
+                <div class="h-2 w-full rounded-sm bg-[#2A231D]"></div>
+                <div class="h-2 w-5/6 rounded-sm bg-[#2A231D]"></div>
+                <div class="flex gap-2">
+                  <div class="h-2.5 w-2/5 rounded-sm bg-[#2A231D]"></div>
+                  <div class="redaction h-2.5 w-2/5 rounded-sm"></div>
+                </div>
+              </div>
+              <p class="mt-3 text-[12.5px] leading-[1.55] text-paper/50">
+                Full transcript of the on-the-record dispatcher interview.
+              </p>
+            </div>
+          </article>
+
+        </div>
+
+        <!-- archive footer note -->
+        <div class="mt-8 flex flex-col items-start gap-4 rounded-xl border border-[var(--hair-strong)] bg-[#0F0B0A] p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex items-start gap-3">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C7443B" stroke-width="1.8" class="mt-0.5 flex-none" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v5" stroke-linecap="round"/>
+            </svg>
+            <p class="text-[13px] leading-[1.6] text-paper/60">
+              The archive grows with each episode. New documents post the same Thursday the episode airs.
+            </p>
+          </div>
+          <a href="#listen" class="lift inline-flex flex-none items-center gap-1.5 rounded-lg border border-[var(--hair-strong)] bg-[#150F0E] px-4 py-2 text-[12.5px] font-medium text-paper/85 hover:border-paper/22 hover:text-paper">
+            Open the full archive
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 10 · FAQ ============ -->
+    <section class="relative">
+      <div class="mx-auto max-w-3xl px-5 py-20 sm:px-7 sm:py-24">
+        <div class="text-center">
+          <p class="font-mono text-[11px] uppercase tracking-[0.22em] text-blood">Before you ask</p>
+          <h2 class="mt-2 font-display text-[34px] font-bold leading-[1.06] tracking-[-0.04em] sm:text-[42px]">
+            Questions, answered plainly
+          </h2>
+        </div>
+
+        <div class="mt-10 divide-y divide-[var(--hair)] overflow-hidden rounded-2xl border border-[var(--hair-strong)] bg-[#120E0D]">
+
+          <details class="group">
+            <summary class="flex items-center justify-between gap-4 px-5 py-5 sm:px-6">
+              <span class="font-display text-[16px] font-semibold tracking-[-0.02em] text-paper">Is this based on a real case?</span>
+              <svg class="faq-plus flex-none text-blood" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" stroke-linecap="round"/>
+              </svg>
+            </summary>
+            <div class="px-5 pb-5 sm:px-6">
+              <p class="text-[14px] leading-[1.7] text-paper/62">
+                No. Hearsay is a fictional composite. The case, the documents, the dates, and every person in the series are invented. It is built to mirror how real cold cases actually unfold — a closed file, a contradiction, a slow re-examination of the record — but no real person, family, or investigation is depicted, named, or implied. We chose a composite precisely so that telling this kind of story responsibly never comes at someone&rsquo;s expense.
+              </p>
+            </div>
+          </details>
+
+          <details class="group">
+            <summary class="flex items-center justify-between gap-4 px-5 py-5 sm:px-6">
+              <span class="font-display text-[16px] font-semibold tracking-[-0.02em] text-paper">How was the reporting verified?</span>
+              <svg class="faq-plus flex-none text-blood" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" stroke-linecap="round"/>
+              </svg>
+            </summary>
+            <div class="px-5 pb-5 sm:px-6">
+              <p class="text-[14px] leading-[1.7] text-paper/62">
+                Because the case is fictional, &ldquo;verification&rdquo; here means craft, not claim. Every episode is written against a self-consistent document set, fact-checked for internal logic by the producer, and reviewed so that procedure, terminology, and timelines reflect how investigations and records actually work. When the narrative is uncertain, the script says so out loud. We treat a fictional record with the same discipline a newsroom owes a real one.
+              </p>
+            </div>
+          </details>
+
+          <details class="group">
+            <summary class="flex items-center justify-between gap-4 px-5 py-5 sm:px-6">
+              <span class="font-display text-[16px] font-semibold tracking-[-0.02em] text-paper">Can I send a tip?</span>
+              <svg class="faq-plus flex-none text-blood" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" stroke-linecap="round"/>
+              </svg>
+            </summary>
+            <div class="px-5 pb-5 sm:px-6">
+              <p class="text-[14px] leading-[1.7] text-paper/62">
+                Yes — write to <span class="font-mono text-[13px] text-paper/80">tips@hearsaypod.show</span>. Since the case is a composite, tips here are listener notes: a document you think we mishandled, a procedural detail that rings false, a thread you want pulled in a later episode. We read every message and have folded more than a thousand into the series. We never publish a sender&rsquo;s name without explicit permission.
+              </p>
+            </div>
+          </details>
+
+          <details class="group">
+            <summary class="flex items-center justify-between gap-4 px-5 py-5 sm:px-6">
+              <span class="font-display text-[16px] font-semibold tracking-[-0.02em] text-paper">Will there be a season 2?</span>
+              <svg class="faq-plus flex-none text-blood" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" stroke-linecap="round"/>
+              </svg>
+            </summary>
+            <div class="px-5 pb-5 sm:px-6">
+              <p class="text-[14px] leading-[1.7] text-paper/62">
+                Hearsay is built as a closed, eight-episode series with a real ending — not an open-ended franchise. If the team takes on a new case, it would be a separate series with its own file, not a continuation of this one. Subscribe to the newsletter and you will hear first; we would rather announce a second story only when the reporting is ready to carry it.
+              </p>
+            </div>
+          </details>
+
+          <details class="group">
+            <summary class="flex items-center justify-between gap-4 px-5 py-5 sm:px-6">
+              <span class="font-display text-[16px] font-semibold tracking-[-0.02em] text-paper">Are there transcripts and a sources page?</span>
+              <svg class="faq-plus flex-none text-blood" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" stroke-linecap="round"/>
+              </svg>
+            </summary>
+            <div class="px-5 pb-5 sm:px-6">
+              <p class="text-[14px] leading-[1.7] text-paper/62">
+                Every episode ships with a full, readable transcript and a sources page that lays out the documents and reasoning behind each scene. Both post the same Thursday the episode airs and live in the evidence archive above. Transcripts are screen-reader friendly, and the sources page exists so any listener can check the show&rsquo;s work for themselves.
+              </p>
+            </div>
+          </details>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 11 · FINAL CTA ============ -->
+    <section class="relative overflow-hidden border-y border-[var(--hair)] bg-[#0F0B0A]">
+      <div class="mesh-blob" style="width:480px;height:480px;background:#3A1512;bottom:-220px;left:50%;transform:translateX(-50%);opacity:0.45;"></div>
+      <div class="absolute inset-0 dot-grid opacity-40" aria-hidden="true"></div>
+
+      <div class="relative mx-auto max-w-3xl px-5 py-20 text-center sm:px-7 sm:py-28">
+        <div class="inline-flex items-center gap-2.5">
+          <span class="pulse-dot" aria-hidden="true"></span>
+          <span class="font-mono text-[12px] tracking-[0.04em] text-paper/65">New episodes Thursdays</span>
+        </div>
+
+        <h2 class="mt-5 font-display text-[40px] font-bold leading-[1.04] tracking-[-0.045em] sm:text-[54px]">
+          Follow the file <span class="halftone-dim">to the last page</span>
+        </h2>
+        <p class="mx-auto mt-4 max-w-lg text-[15.5px] leading-[1.66] text-paper/62">
+          Eight episodes. New evidence in every one. Subscribe on your platform of choice and the next one finds you.
+        </p>
+
+        <a href="#listen" class="btn-blood mt-8 inline-flex items-center gap-2 rounded-full px-6 py-3 text-[14px] font-semibold">
+          Subscribe to Hearsay
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true">
+            <path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+
+        <!-- listen-on badge row (final) -->
+        <div class="mx-auto mt-10 max-w-2xl">
+          <div class="flex flex-wrap justify-center gap-2.5">
+            <a href="#listen" class="lift group flex items-center gap-2 rounded-lg border border-[var(--hair-strong)] bg-[#16110F] px-3.5 py-2 hover:border-paper/25 hover:bg-[#1C1614]" aria-label="Listen on Apple Podcasts">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" class="text-paper/80 group-hover:text-paper" aria-hidden="true">
+                <rect x="2" y="2" width="20" height="20" rx="5.4" stroke="currentColor" stroke-width="1.6"/>
+                <circle cx="12" cy="9.6" r="2.5" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M9 18c0-2.4 1.3-3.6 3-3.6S15 15.6 15 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              </svg>
+              <span class="text-[12.5px] font-medium text-paper/85 group-hover:text-paper">Apple Podcasts</span>
+            </a>
+            <a href="#listen" class="lift group flex items-center gap-2 rounded-lg border border-[var(--hair-strong)] bg-[#16110F] px-3.5 py-2 hover:border-paper/25 hover:bg-[#1C1614]" aria-label="Listen on Spotify">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" class="text-paper/80 group-hover:text-paper" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M7.2 9.4c3.4-1 6.9-.7 9.6 1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                <path d="M7.8 12.6c2.8-.8 5.6-.5 7.8.9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                <path d="M8.5 15.6c2.1-.6 4.1-.4 5.8.7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              </svg>
+              <span class="text-[12.5px] font-medium text-paper/85 group-hover:text-paper">Spotify</span>
+            </a>
+            <a href="#listen" class="lift group flex items-center gap-2 rounded-lg border border-[var(--hair-strong)] bg-[#16110F] px-3.5 py-2 hover:border-paper/25 hover:bg-[#1C1614]" aria-label="Listen on Overcast">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" class="text-paper/80 group-hover:text-paper" aria-hidden="true">
+                <circle cx="12" cy="13" r="2.1" fill="currentColor"/>
+                <path d="M8 9c-1 1.1-1.6 2.6-1.6 4.2M16 9c1 1.1 1.6 2.6 1.6 4.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                <path d="M5.4 6.4c-1.7 1.8-2.7 4.3-2.7 7M18.6 6.4c1.7 1.8 2.7 4.3 2.7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              </svg>
+              <span class="text-[12.5px] font-medium text-paper/85 group-hover:text-paper">Overcast</span>
+            </a>
+            <a href="#listen" class="lift group flex items-center gap-2 rounded-lg border border-[var(--hair-strong)] bg-[#16110F] px-3.5 py-2 hover:border-paper/25 hover:bg-[#1C1614]" aria-label="Listen on YouTube">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" class="text-paper/80 group-hover:text-paper" aria-hidden="true">
+                <rect x="2.2" y="5.4" width="19.6" height="13.2" rx="3.6" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M10.4 9.4 15 12l-4.6 2.6V9.4Z" fill="currentColor"/>
+              </svg>
+              <span class="text-[12.5px] font-medium text-paper/85 group-hover:text-paper">YouTube</span>
+            </a>
+            <a href="#listen" class="lift group flex items-center gap-2 rounded-lg border border-[var(--hair-strong)] bg-[#16110F] px-3.5 py-2 hover:border-paper/25 hover:bg-[#1C1614]" aria-label="Listen on Pocket Casts">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" class="text-paper/80 group-hover:text-paper" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/>
+                <circle cx="12" cy="12" r="6.1" stroke="currentColor" stroke-width="1.4" opacity="0.5"/>
+                <path d="M10.4 9.2 14.6 12l-4.2 2.8V9.2Z" fill="currentColor"/>
+              </svg>
+              <span class="text-[12.5px] font-medium text-paper/85 group-hover:text-paper">Pocket Casts</span>
+            </a>
+            <a href="#listen" class="lift group flex items-center gap-2 rounded-lg border border-[var(--hair-strong)] bg-[#16110F] px-3.5 py-2 hover:border-paper/25 hover:bg-[#1C1614]" aria-label="Subscribe via RSS">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" class="text-paper/80 group-hover:text-paper" aria-hidden="true">
+                <circle cx="6.4" cy="17.6" r="1.9" fill="currentColor"/>
+                <path d="M5 11.4a8.6 8.6 0 0 1 8.6 8.6M5 6.2a13.8 13.8 0 0 1 13.8 13.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+              </svg>
+              <span class="text-[12.5px] font-medium text-paper/85 group-hover:text-paper">RSS</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============ 12 · FOOTER ============ -->
+  <footer class="relative bg-[#0B0807]">
+    <div class="mx-auto max-w-6xl px-5 py-14 sm:px-7">
+      <div class="grid gap-10 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+
+        <!-- wordmark column -->
+        <div>
+          <a href="#top" class="flex items-center gap-2.5" aria-label="Hearsay — home">
+            <span class="grid h-8 w-8 place-items-center rounded-md bg-[#1C1614] ring-1 ring-[var(--hair-strong)]">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="3.6" y="7.4" width="16.8" height="12.4" rx="1.5" fill="#ECE7E4"/>
+                <path d="M3.6 8.9 V7.1 a1.5 1.5 0 0 1 1.5-1.5 H10 l1.7 2.2" fill="#ECE7E4"/>
+                <rect x="6.6" y="11" width="7.4" height="1.7" rx=".85" fill="#141011"/>
+                <rect x="6.6" y="14.6" width="10.6" height="1.7" rx=".85" fill="#141011"/>
+                <path d="M2 10.4 L22 18.1" stroke="#C7443B" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span class="font-display text-[19px] font-bold tracking-[-0.04em]">Hearsay</span>
+          </a>
+          <p class="mt-4 max-w-xs text-[13px] leading-[1.66] text-paper/45">
+            An eight-episode investigative series. A closed case, reopened — with the documents on the table.
+          </p>
+          <a href="#listen" class="lift mt-5 inline-flex items-center gap-2 rounded-lg border border-[var(--hair-strong)] bg-[#130F0D] px-3.5 py-2 hover:border-paper/22" aria-label="Subscribe via RSS feed">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="text-blood" aria-hidden="true">
+              <circle cx="6.4" cy="17.6" r="1.9" fill="currentColor"/>
+              <path d="M5 11.4a8.6 8.6 0 0 1 8.6 8.6M5 6.2a13.8 13.8 0 0 1 13.8 13.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+            </svg>
+            <span class="font-mono text-[12px] text-paper/70">RSS feed</span>
+          </a>
+        </div>
+
+        <!-- episodes -->
+        <nav aria-label="Episodes">
+          <h3 class="font-mono text-[10.5px] uppercase tracking-[0.18em] text-paper/35">Episodes</h3>
+          <ul class="mt-4 space-y-2.5 text-[13px]">
+            <li><a href="#episodes" class="nav-link">All eight episodes</a></li>
+            <li><a href="#episodes" class="nav-link">The latest episode</a></li>
+            <li><a href="#about" class="nav-link">Start here</a></li>
+            <li><a href="#newsletter" class="nav-link">Release schedule</a></li>
+          </ul>
+        </nav>
+
+        <!-- about -->
+        <nav aria-label="About">
+          <h3 class="font-mono text-[10.5px] uppercase tracking-[0.18em] text-paper/35">About</h3>
+          <ul class="mt-4 space-y-2.5 text-[13px]">
+            <li><a href="#about" class="nav-link">The case</a></li>
+            <li><a href="#hosts" class="nav-link">The newsroom</a></li>
+            <li><a href="#" class="nav-link">Sources page</a></li>
+            <li><a href="#" class="nav-link">Editorial standards</a></li>
+          </ul>
+        </nav>
+
+        <!-- follow + contact -->
+        <nav aria-label="Follow and contact">
+          <h3 class="font-mono text-[10.5px] uppercase tracking-[0.18em] text-paper/35">Follow</h3>
+          <ul class="mt-4 space-y-2.5 text-[13px]">
+            <li><a href="#listen" class="nav-link">Apple Podcasts</a></li>
+            <li><a href="#listen" class="nav-link">Spotify</a></li>
+            <li><a href="#newsletter" class="nav-link">Newsletter</a></li>
+            <li><a href="#" class="nav-link">tips@hearsaypod.show</a></li>
+          </ul>
+        </nav>
+
+      </div>
+
+      <div class="hair-rule my-9"></div>
+
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p class="font-mono text-[11.5px] text-paper/40 tnum">
+          &copy; 2026 Hearsay. All documents published under fair-use review.
+        </p>
+        <p class="font-mono text-[11.5px] text-paper/40">
+          Part of <span class="text-paper/65">Field Notes Audio</span> — investigative journalism, on tape.
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ONLY script: paints the static waveform bars -->
+  <script>
+    document.querySelectorAll('[data-waveform]').forEach(function (el) {
+      var n = +el.dataset.bars || 72,
+          bw = 3, gap = 3,
+          played = +el.dataset.played || 0.34,
+          H = 56, out = '';
+      for (var i = 0; i < n; i++) {
+        var t = i / n;
+        var h = (0.18 + 0.82 * Math.abs(
+          Math.sin(t * 8.7) * 0.55 +
+          Math.sin(t * 21.3) * 0.30 +
+          Math.sin(t * 41.1) * 0.15
+        )) * H;
+        var x = i * (bw + gap),
+            y = (H - h) / 2,
+            on = (i / n) < played;
+        out += '<rect x="' + x + '" y="' + y.toFixed(1) + '" width="' + bw +
+               '" height="' + h.toFixed(1) + '" rx="1.5" fill="' +
+               (on ? 'var(--wave-on)' : 'var(--wave-off)') + '"/>';
+      }
+      el.setAttribute('viewBox', '0 0 ' + (n * (bw + gap)) + ' ' + H);
+      el.innerHTML = out;
+    });
+  </script>
+
+</body>
+</html>

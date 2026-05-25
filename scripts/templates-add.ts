@@ -124,7 +124,7 @@ async function main() {
 
   console.log(`Uploading "${result.data.id}" (${result.data.html.length} bytes)...`);
   const record = await upsertTemplate(result.data);
-  console.log("Done.");
+  console.log("Uploaded.");
   console.log(`  id           : ${record.id}`);
   console.log(`  status       : ${record.status}`);
   console.log(`  contentHash  : ${record.contentHash}`);

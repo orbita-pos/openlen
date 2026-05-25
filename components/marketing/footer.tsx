@@ -21,13 +21,15 @@ export function Footer() {
               </span>
             </a>
             <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400 max-w-sm">
-              The open-source AI landing-page generator. Lovable quality, your code,
-              $19/month.
+              An open lens on your landing pages. AI-built, your HTML, your
+              subdomain — AGPLv3, no lock-in.
             </p>
             <div className="mt-5 flex items-center gap-2">
               <a
-                href="https://github.com"
-                aria-label="GitHub"
+                href="https://github.com/jesusbernalrj/inari-pages"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="OpenLen on GitHub"
                 className="inline-flex h-9 w-9 items-center justify-center rounded-md ring-1 ring-zinc-200 dark:ring-zinc-800 text-zinc-600 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition"
               >
                 <GithubIcon size={15} />
