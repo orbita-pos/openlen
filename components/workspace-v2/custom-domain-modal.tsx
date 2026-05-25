@@ -10,8 +10,10 @@ import {
   Loader2,
   Plus,
   RefreshCw,
+  Sparkles,
   Trash2,
   X,
+  Zap,
 } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -44,6 +46,15 @@ interface DomainRow {
   verifiedAt: string | null;
   verificationToken: string;
   createdAt: string;
+}
+
+/** Domain Connect availability for a single pending claim — populated
+ *  lazily when the modal lists/adds domains. `null` means "we asked and
+ *  the user's DNS provider isn't supported (or signing isn't configured)";
+ *  `undefined` means "haven't checked yet". */
+interface ConnectAvailability {
+  url: string;
+  providerName: string;
 }
 
 export interface CustomDomainModalProps {
@@ -90,9 +101,53 @@ export function CustomDomainModal({
     | { domain: string; dns: DnsInstructions }
     | null
   >(null);
+  // Per-domain Domain Connect availability cache. Key = domain, value =
+  // { url, providerName } when supported, null after a failed check.
+  const [connect, setConnect] = useState<
+    Record<string, ConnectAvailability | null>
+  >({});
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Probe the Domain Connect endpoint for a single host. Stores the result
+  // in `connect` regardless of outcome — null means "not supported", which
+  // is the most common case (most DNS providers aren't onboarded yet).
+  const probeConnect = useCallback(
+    async (domain: string) => {
+      try {
+        const res = await fetch(
+          `/api/projects/${projectId}/domains/${encodeURIComponent(domain)}/connect-url`,
+        );
+        if (!res.ok) {
+          setConnect((m) => ({ ...m, [domain]: null }));
+          return;
+        }
+        const body = (await res.json()) as {
+          ok?: boolean;
+          url?: string;
+          provider?: { name?: string };
+        };
+        if (body.ok && body.url) {
+          setConnect((m) => ({
+            ...m,
+            [domain]: {
+              url: body.url!,
+              providerName: body.provider?.name ?? "your DNS provider",
+            },
+          }));
+        } else {
+          setConnect((m) => ({ ...m, [domain]: null }));
+        }
+      } catch {
+        setConnect((m) => ({ ...m, [domain]: null }));
+      }
+    },
+    [projectId],
+  );
+
   // Pulls the current claim list. Called on mount + after every mutation.
+  // Also kicks off (in the background) a Domain Connect probe for any
+  // pending domain we haven't checked yet, so the "Connect with X" button
+  // can appear without the user having to wait.
   const refresh = useCallback(async () => {
     if (!projectId) return;
     setLoading(true);
@@ -105,12 +160,23 @@ export function CustomDomainModal({
       const data = (await res.json()) as { domains: DomainRow[] };
       setDomains(data.domains);
       setError(null);
+      // Fire-and-forget probes for unverified rows we haven't checked.
+      const toProbe = data.domains.filter((d) => !d.verified);
+      for (const d of toProbe) {
+        // Use functional setState reader pattern to dedupe — only probe
+        // when we have no recorded result yet for this domain.
+        setConnect((current) => {
+          if (current[d.domain] !== undefined) return current;
+          void probeConnect(d.domain);
+          return current;
+        });
+      }
     } catch {
       setError("Network error while loading domains.");
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, [projectId, probeConnect]);
 
   useEffect(() => {
     if (!open) return;
@@ -180,6 +246,10 @@ export function CustomDomainModal({
       setInput("");
       if (body.dns && body.domain) {
         setLastAddedDns({ domain: body.domain, dns: body.dns });
+        // Probe Domain Connect now so the Connect button appears in
+        // the same render as the manual DNS panel — avoids a "manual
+        // first, button appears 500ms later" flicker.
+        void probeConnect(body.domain);
       }
       await refresh();
     } catch {
@@ -343,6 +413,7 @@ export function CustomDomainModal({
               dns={lastAddedDns.dns}
               verifying={verifying === lastAddedDns.domain}
               onVerify={() => onVerify(lastAddedDns.domain)}
+              connect={connect[lastAddedDns.domain]}
             />
           )}
 
@@ -433,6 +504,7 @@ export function CustomDomainModal({
                         <DnsInstructionsBody
                           domain={d.domain}
                           token={d.verificationToken}
+                          connect={connect[d.domain]}
                         />
                       </details>
                     )}
@@ -452,11 +524,16 @@ function DnsInstructionsPanel({
   dns,
   verifying,
   onVerify,
+  connect,
 }: {
   domain: string;
   dns: DnsInstructions;
   verifying: boolean;
   onVerify: () => void;
+  /** When present, render the "Connect with X" one-click button above the
+   *  manual records. `undefined` = still probing; `null` = provider not
+   *  supported (manual is the only path). */
+  connect: ConnectAvailability | null | undefined;
 }) {
   return (
     <div className="rounded-lg ring-1 ring-[color:var(--accent)]/30 bg-[color:var(--accent)]/5 p-3.5">
@@ -466,8 +543,9 @@ function DnsInstructionsPanel({
             DNS setup for <span className="font-mono">{domain}</span>
           </div>
           <p className="text-[11px] fg-faint mt-0.5">
-            Add these two records at your DNS provider (Cloudflare, GoDaddy, etc.).
-            Most propagate within 1–5 minutes.
+            {connect
+              ? "One-click setup is available for your DNS provider."
+              : "Add these two records at your DNS provider (Cloudflare, GoDaddy, etc.). Most propagate within 1–5 minutes."}
           </p>
         </div>
         <button
@@ -484,6 +562,13 @@ function DnsInstructionsPanel({
           Verify
         </button>
       </div>
+      {connect && (
+        <ConnectButton
+          providerName={connect.providerName}
+          url={connect.url}
+          className="mb-2.5"
+        />
+      )}
       <DnsRecord
         kind={dns.cname ? "CNAME" : "A"}
         name={dns.cname ? dns.cname.name : dns.a.name}
@@ -503,9 +588,11 @@ function DnsInstructionsPanel({
 function DnsInstructionsBody({
   domain,
   token,
+  connect,
 }: {
   domain: string;
   token: string;
+  connect: ConnectAvailability | null | undefined;
 }) {
   // Mirrors the server-side dnsInstructions() function so the panel is
   // self-contained — we don't need to re-fetch the original POST response.
@@ -513,6 +600,9 @@ function DnsInstructionsBody({
   const isApex = domain.split(".").length === 2;
   return (
     <div className="mt-2 space-y-2">
+      {connect && (
+        <ConnectButton providerName={connect.providerName} url={connect.url} />
+      )}
       <DnsRecord
         kind={isApex ? "A" : "A"}
         name={domain}
@@ -526,6 +616,48 @@ function DnsInstructionsBody({
         purpose="Proves ownership"
       />
     </div>
+  );
+}
+
+/** Domain Connect one-click button. Opens the signed Apply URL in a new
+ *  tab so the user keeps their workspace context; when they come back,
+ *  the auto-poll in the modal picks up the now-verified state. */
+function ConnectButton({
+  providerName,
+  url,
+  className,
+}: {
+  providerName: string;
+  url: string;
+  className?: string;
+}) {
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer noopener"
+      className={`group flex items-center justify-between gap-2 w-full rounded-md ring-1 ring-[color:var(--accent)]/40 bg-[var(--accent)]/10 hover:bg-[var(--accent)]/15 px-3 py-2.5 transition ${
+        className ?? ""
+      }`}
+    >
+      <span className="flex items-center gap-2 min-w-0">
+        <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded bg-[var(--accent)] text-white">
+          <Zap size={12} />
+        </span>
+        <span className="min-w-0">
+          <span className="block text-[12.5px] font-semibold fg leading-tight">
+            One-click setup with {providerName}
+          </span>
+          <span className="block text-[10.5px] fg-faint leading-tight mt-0.5">
+            Skip copy-pasting — we&apos;ll add the DNS records for you.
+          </span>
+        </span>
+      </span>
+      <Sparkles
+        size={13}
+        className="shrink-0 text-[var(--accent)] group-hover:scale-110 transition"
+      />
+    </a>
   );
 }
 

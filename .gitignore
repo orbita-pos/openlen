@@ -84,3 +84,4 @@ public/openlen-images/*.webp
 /V3_AUDIT.md
 /INARI_DESIGN_ENGINE.md
 /docs/SHOW_HN_DRAFT.md
+*.tar.gz

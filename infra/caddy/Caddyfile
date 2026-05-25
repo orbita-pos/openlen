@@ -18,13 +18,14 @@
 #      project's openlen.com subdomain.
 #
 # TLS strategy:
-#   - openlen.com + www.openlen.com → Caddy auto-issues via HTTP-01 ACME.
-#   - *.openlen.com (wildcard)     → load existing certbot cert from
-#                                    /etc/letsencrypt/live/openlen.com/.
-#                                    (No DNS-01 plugin needed; certbot
-#                                    keeps it refreshed on its own timer.)
+#   - openlen.com + www.openlen.com → load existing certbot wildcard cert
+#                                    (single cert covers apex + *.openlen.com
+#                                    so Caddy doesn't need to issue its own).
+#   - *.openlen.com                → same certbot cert as above.
 #   - custom domains               → on-demand HTTP-01 ACME, gated by
-#                                    GET /api/domains/lookup.
+#                                    GET /api/domains/lookup. These hosts
+#                                    point straight at our IP (no CF in
+#                                    front), so HTTP-01 reaches Caddy.
 #
 # Reload via `sudo systemctl reload caddy` (or `caddy reload` with the
 # same config path).
@@ -46,6 +47,13 @@
 
 # ─── Apex + www ──────────────────────────────────────────────────────
 openlen.com, www.openlen.com {
+	# The existing certbot wildcard cert was issued for openlen.com AND
+	# *.openlen.com (single cert with both SANs). Caddy auto-issuing via
+	# HTTP-01 here would fail because Cloudflare proxies the apex —
+	# the ACME challenge never reaches our origin. So pin to the
+	# certbot-managed cert; the deploy hook reloads Caddy on renewal.
+	tls /etc/letsencrypt/live/openlen.com/fullchain.pem /etc/letsencrypt/live/openlen.com/privkey.pem
+
 	encode zstd gzip
 
 	header {
@@ -128,20 +136,28 @@ openlen.com, www.openlen.com {
 		file_server
 	}
 
+	# Extract the subdomain via Caddy's built-in `{labels.<n>}` placeholder
+	# (host labels indexed right-to-left). For chetitpasteles.openlen.com:
+	#   {labels.0} = "com"
+	#   {labels.1} = "openlen"
+	#   {labels.2} = "chetitpasteles"
+	# Avoids the named-matcher + regex capture dance — captures from named
+	# matchers only populate inside their `handle @name` block, so a
+	# top-level `root *` reference would resolve to an empty string.
+
 	# Per-subdomain published assets — Unsplash hotlinks cached at
 	# publish time, plus LocalFs upload migrations. Lives at
 	# <sub>/assets/, NOT under current/ (publishToDir writes them to
 	# the shared sibling dir so they survive release rotations).
-	@sub host_regexp sub ^([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)\.openlen\.com$
 	handle /assets/* {
-		root * /var/www/openlen/{re.sub.1}
+		root * /var/www/openlen/{labels.2}
 		file_server
 	}
 
 	# Everything else → the current release directory for the requesting
 	# subdomain. try_files mirrors nginx: exact path, then path/index.html,
 	# then root index.html as a last-resort fallback.
-	root * /var/www/openlen/{re.sub.1}/current
+	root * /var/www/openlen/{labels.2}/current
 	try_files {path} {path}/index.html /index.html
 	file_server
 }
