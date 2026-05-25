@@ -15,7 +15,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { signOut } from "next-auth/react";
-import { Redo2, Undo2 } from "lucide-react";
 import {
   ChevronDown,
   ChevronRight,
@@ -61,25 +60,11 @@ interface TopBarProps {
   /** Invoked after a successful rollback. Parent typically re-fetches
    *  the project so publishedAt + drift flag stay accurate. */
   onRolledBack?: () => void;
+  /** Open the custom-domain modal. Pass undefined to hide the entry
+   *  point (no project loaded). */
+  onCustomDomain?: () => void;
   dark: boolean;
   onToggleDark: () => void;
-  /** Canva-mode undo/redo. Undefined → not in Canva-mode, buttons hidden.
-   *  Defined → render the pair; the booleans drive the disabled state. */
-  canvasUndo?: () => void;
-  canvasRedo?: () => void;
-  canvasCanUndo?: boolean;
-  canvasCanRedo?: boolean;
-  /** Canva-mode breakpoint picker. List of available breakpoints + current
-   *  edit condition (null = base, or {kind:"breakpoint",bp}) + "agregar"
-   *  callback that pushes a new bp onto the doc. The chip strip derives
-   *  active-state from the condition; clicking a chip emits null (for
-   *  "base") or the bp condition. */
-  canvasBreakpoints?: Array<{ name: string; minWidth: number }>;
-  canvasEditCondition?: import("@/lib/doc/model").Condition | null;
-  canvasOnEditCondition?: (
-    c: import("@/lib/doc/model").Condition | null,
-  ) => void;
-  canvasOnAddBp?: (name: string, minWidth: number) => void;
 }
 
 export function TopBar({
@@ -91,22 +76,10 @@ export function TopBar({
   published,
   projectId,
   onRolledBack,
+  onCustomDomain,
   dark,
   onToggleDark,
-  canvasUndo,
-  canvasRedo,
-  canvasCanUndo = false,
-  canvasCanRedo = false,
-  canvasBreakpoints,
-  canvasEditCondition = null,
-  canvasOnEditCondition,
-  canvasOnAddBp,
 }: TopBarProps) {
-  // Active-state derives from the condition. Only a breakpoint condition
-  // counts here; state/mode conditions render no chip as active (the inspector
-  // owns those).
-  const activeBpName =
-    canvasEditCondition?.kind === "breakpoint" ? canvasEditCondition.bp : "base";
   const [deployOpen, setDeployOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -118,33 +91,12 @@ export function TopBar({
   // to "saved" and back to false 3s later, so the indicator disappears on
   // its own without parent involvement.
   const [showSaved, setShowSaved] = useState(false);
-  const [bpOpen, setBpOpen] = useState(false);
-  const [bpCustomName, setBpCustomName] = useState("");
-  const [bpCustomWidth, setBpCustomWidth] = useState("");
   const deployRef = useRef<HTMLDivElement>(null);
   const profRef = useRef<HTMLDivElement>(null);
-  const bpRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setDraft(projectName);
   }, [projectName]);
-
-  // Close the bp popover on click-outside / Esc.
-  useEffect(() => {
-    if (!bpOpen) return;
-    const onClick = (e: MouseEvent) => {
-      if (!bpRef.current?.contains(e.target as Node)) setBpOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setBpOpen(false);
-    };
-    document.addEventListener("mousedown", onClick);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onClick);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [bpOpen]);
 
   useEffect(() => {
     if (savingStatus === "saved") {
@@ -417,6 +369,34 @@ export function TopBar({
 
               <div className="border-t bd my-1" />
 
+              {/* Custom domain — real, working entry. Opens a modal that
+                  handles the claim + DNS challenge + Caddy-issued TLS. */}
+              {onCustomDomain && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeployOpen(false);
+                    onCustomDomain();
+                  }}
+                  className="flex items-center gap-3 w-full text-left px-2.5 py-2 rounded-md hover:bg-hover transition group"
+                >
+                  <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md ring-1 ring-[color:var(--accent)]/30 bg-[color:var(--accent)]/10 text-[var(--accent)]">
+                    <Globe size={13} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[13px] font-semibold tracking-tight fg">
+                      Custom domain
+                    </span>
+                    <span className="block text-[11px] fg-faint">
+                      Serve this page from your own hostname
+                    </span>
+                  </span>
+                  <ChevronRight size={12} className="fg-faint group-hover:text-[var(--accent)] transition" />
+                </button>
+              )}
+
+              <div className="border-t bd my-1" />
+
               {[
                 { label: "Deploy to Vercel", sub: "Coming soon" },
                 { label: "Push to GitHub", sub: "Coming soon" },
@@ -504,147 +484,6 @@ export function TopBar({
         </div>
 
         <span className="hidden md:inline-block h-5 w-px bg-[color:var(--border)] mx-1.5" />
-        {canvasBreakpoints && canvasOnEditCondition && (
-          <>
-            <div className="inline-flex items-center gap-0.5 rounded-md border bd bg-elev p-0.5">
-              {canvasBreakpoints.map((bp) => {
-                const active = bp.name === activeBpName;
-                return (
-                  <button
-                    key={bp.name}
-                    type="button"
-                    onClick={() =>
-                      canvasOnEditCondition(
-                        bp.name === "base"
-                          ? null
-                          : { kind: "breakpoint", bp: bp.name },
-                      )
-                    }
-                    title={`@ ${bp.name} · min-width ${bp.minWidth}px`}
-                    className={`h-6 px-2 text-[10.5px] font-medium rounded transition ui-small ${
-                      active
-                        ? "bg-[color:var(--accent)] text-white"
-                        : "fg-faint hover:fg"
-                    }`}
-                  >
-                    {bp.name}
-                  </button>
-                );
-              })}
-              {canvasOnAddBp && (
-                <div className="relative" ref={bpRef}>
-                  <button
-                    type="button"
-                    onClick={() => setBpOpen((o) => !o)}
-                    title="Agregar breakpoint"
-                    aria-label="Agregar breakpoint"
-                    className="h-6 w-6 inline-flex items-center justify-center rounded fg-faint hover:fg hover:bg-hover transition"
-                  >
-                    +
-                  </button>
-                  {bpOpen && (
-                    <div className="absolute left-0 mt-2 w-60 rounded-xl bg-elev border bd shadow-elev p-2 z-40 slide-down">
-                      <div className="px-1.5 pt-0.5 pb-1.5 text-[9.5px] uppercase tracking-[0.14em] fg-faint font-semibold">
-                        Preset
-                      </div>
-                      {[
-                        { name: "sm", minWidth: 480 },
-                        { name: "md", minWidth: 768 },
-                        { name: "lg", minWidth: 1024 },
-                        { name: "xl", minWidth: 1440 },
-                      ].map((p) => {
-                        const exists = canvasBreakpoints.some(
-                          (b) => b.name === p.name,
-                        );
-                        return (
-                          <button
-                            key={p.name}
-                            type="button"
-                            disabled={exists}
-                            onClick={() => {
-                              canvasOnAddBp(p.name, p.minWidth);
-                              setBpOpen(false);
-                            }}
-                            className="w-full flex items-center gap-2 h-7 px-2 rounded text-[11.5px] fg-muted hover:fg hover:bg-hover transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                          >
-                            <span className="font-mono fg">{p.name}</span>
-                            <span className="ml-auto fg-faint tabular text-[10.5px]">
-                              {p.minWidth}px
-                              {exists ? " · existe" : ""}
-                            </span>
-                          </button>
-                        );
-                      })}
-                      <div className="border-t bd my-2" />
-                      <div className="px-1.5 pb-1 text-[9.5px] uppercase tracking-[0.14em] fg-faint font-semibold">
-                        Custom
-                      </div>
-                      <div className="px-0.5 space-y-1.5">
-                        <input
-                          type="text"
-                          value={bpCustomName}
-                          onChange={(e) => setBpCustomName(e.target.value)}
-                          placeholder="Nombre (ej: 2xl)"
-                          className="w-full h-7 rounded-md bg-app border bd text-[11.5px] fg px-2 outline-none focus:border-[color:var(--accent)] placeholder:fg-faint"
-                        />
-                        <input
-                          type="number"
-                          value={bpCustomWidth}
-                          onChange={(e) => setBpCustomWidth(e.target.value)}
-                          placeholder="min-width (px)"
-                          className="w-full h-7 rounded-md bg-app border bd text-[11.5px] fg font-mono px-2 outline-none focus:border-[color:var(--accent)] placeholder:fg-faint"
-                        />
-                        <button
-                          type="button"
-                          disabled={
-                            !bpCustomName.trim() ||
-                            !bpCustomWidth ||
-                            canvasBreakpoints.some(
-                              (b) => b.name === bpCustomName.trim(),
-                            )
-                          }
-                          onClick={() => {
-                            const w = Number(bpCustomWidth);
-                            if (!Number.isFinite(w) || w < 0) return;
-                            canvasOnAddBp(bpCustomName.trim(), w);
-                            setBpCustomName("");
-                            setBpCustomWidth("");
-                            setBpOpen(false);
-                          }}
-                          className="w-full h-7 rounded-md bg-[color:var(--accent)] text-white text-[11px] font-medium hover:brightness-105 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          Agregar
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            <span className="hidden md:inline-block h-5 w-px bg-[color:var(--border)] mx-0.5" />
-          </>
-        )}
-        {canvasUndo && canvasRedo && (
-          <>
-            <IconBtn
-              label="Deshacer (⌘Z)"
-              size="sm"
-              disabled={!canvasCanUndo}
-              onClick={canvasUndo}
-            >
-              <Undo2 size={13} />
-            </IconBtn>
-            <IconBtn
-              label="Rehacer (⌘⇧Z)"
-              size="sm"
-              disabled={!canvasCanRedo}
-              onClick={canvasRedo}
-            >
-              <Redo2 size={13} />
-            </IconBtn>
-            <span className="hidden md:inline-block h-5 w-px bg-[color:var(--border)] mx-0.5" />
-          </>
-        )}
         <CreditPill />
         <IconBtn label={dark ? "Light mode" : "Dark mode"} onClick={onToggleDark}>
           {dark ? <Sun size={14} /> : <Moon size={14} />}

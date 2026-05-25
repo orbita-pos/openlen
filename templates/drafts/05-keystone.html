@@ -1,0 +1,1427 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Keystone — Design-Build Remodeling in the Boston Suburbs</title>
+<meta name="description" content="Keystone is a design-build general contractor for kitchens, baths, additions and whole-home remodels across the Boston suburbs. Fixed-bid proposals, in-house design and build, weekly updates. Licensed GC since 2008." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..600;1,9..144,400..600&family=Inter:wght@400;500;600&family=Geist+Mono:wght@400&display=swap" rel="stylesheet" />
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink: "#1E2229",
+          paper: "#F6F2EA",
+          slate: {
+            DEFAULT: "#3A4A63",
+            deep: "#2C3850",
+          },
+        },
+        fontFamily: {
+          display: ["Fraunces", "Georgia", "serif"],
+          sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+          mono: ["'Geist Mono'", "ui-monospace", "monospace"],
+        },
+        maxWidth: {
+          shell: "1200px",
+        },
+      },
+    },
+  };
+</script>
+
+<style>
+  html { scroll-behavior: smooth; }
+  body {
+    background: #F6F2EA;
+    color: #1E2229;
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .font-display { font-family: "Fraunces", Georgia, serif; }
+  .font-mono { font-family: "Geist Mono", ui-monospace, monospace; }
+
+  /* Display headings — tight tracking */
+  .display-tight { letter-spacing: -0.032em; }
+  .display-tighter { letter-spacing: -0.04em; }
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  /* Hairline borders for cream + slate mode */
+  .hairline { border-color: rgba(0, 0, 0, 0.08); }
+  .hairline-t { border-top: 1px solid rgba(0, 0, 0, 0.08); }
+  .hairline-b { border-bottom: 1px solid rgba(0, 0, 0, 0.08); }
+
+  /* Cream band tints */
+  .band-deep { background-color: #F0EADC; }
+  .band-slate { background-color: #ECEEF2; }
+
+  /* Ambient radial fade behind hero */
+  .hero-ambient {
+    background:
+      radial-gradient(820px 520px at 78% 8%, rgba(58, 74, 99, 0.13), transparent 62%),
+      radial-gradient(680px 480px at 12% 86%, rgba(58, 74, 99, 0.08), transparent 60%);
+  }
+
+  /* 32px dot-grid background */
+  .dot-grid {
+    background-image: radial-gradient(rgba(30, 34, 41, 0.10) 1.1px, transparent 1.1px);
+    background-size: 32px 32px;
+  }
+
+  /* Soft blurred ambient color blobs */
+  .blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(72px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Buttons — lift on hover */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    transition: transform 110ms ease, box-shadow 110ms ease, background-color 110ms ease, color 110ms ease;
+    will-change: transform;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn:active { transform: translateY(0); }
+
+  .btn-accent {
+    background-color: #3A4A63;
+    color: #F6F2EA;
+    box-shadow: 0 8px 22px -10px rgba(44, 56, 80, 0.55);
+  }
+  .btn-accent:hover {
+    background-color: #2C3850;
+    box-shadow: 0 14px 30px -10px rgba(44, 56, 80, 0.62);
+  }
+  .btn-ghost {
+    background-color: #ffffff;
+    color: #1E2229;
+    border: 1px solid rgba(0, 0, 0, 0.10);
+    box-shadow: 0 6px 16px -12px rgba(30, 34, 41, 0.4);
+  }
+  .btn-ghost:hover { box-shadow: 0 12px 24px -12px rgba(30, 34, 41, 0.42); }
+
+  /* Cards */
+  .card {
+    background-color: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+    box-shadow: 0 14px 36px -26px rgba(30, 34, 41, 0.35);
+    transition: transform 130ms ease, box-shadow 130ms ease, border-color 130ms ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 22px 46px -26px rgba(30, 34, 41, 0.4);
+    border-color: rgba(58, 74, 99, 0.28);
+  }
+
+  /* Trust / capacity pills */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1px solid rgba(0, 0, 0, 0.10);
+    border-radius: 9999px;
+    background-color: #ffffff;
+    font-size: 0.78rem;
+    line-height: 1;
+    padding: 0.5rem 0.78rem;
+  }
+
+  /* Live-feel pulse dot */
+  .pulse-dot {
+    position: relative;
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 9999px;
+    background-color: #4f7d52;
+  }
+  .pulse-dot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    box-shadow: 0 0 0 0 rgba(79, 125, 82, 0.55);
+    animation: pulse 2.4s ease-out infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(79, 125, 82, 0.5); }
+    70%  { box-shadow: 0 0 0 13px rgba(79, 125, 82, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(79, 125, 82, 0); }
+  }
+
+  /* Marquee — pure CSS infinite scroll */
+  .marquee {
+    display: flex;
+    width: max-content;
+    animation: marquee-scroll 38s linear infinite;
+  }
+  .marquee-track:hover .marquee { animation-play-state: paused; }
+  @keyframes marquee-scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  /* Half-tone headline treatment */
+  .accent-em {
+    font-style: italic;
+    color: #3A4A63;
+  }
+
+  /* FAQ accordion via <details> */
+  details.faq {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 14px;
+    background-color: #ffffff;
+    overflow: hidden;
+  }
+  details.faq + details.faq { margin-top: 0.85rem; }
+  details.faq summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.15rem 1.3rem;
+    font-weight: 500;
+    font-size: 1.02rem;
+  }
+  details.faq summary::-webkit-details-marker { display: none; }
+  details.faq summary .chev {
+    flex: none;
+    transition: transform 140ms ease;
+    color: #3A4A63;
+  }
+  details.faq[open] summary .chev { transform: rotate(45deg); }
+  details.faq .faq-body {
+    padding: 0 1.3rem 1.25rem;
+    color: rgba(30, 34, 41, 0.74);
+    line-height: 1.62;
+  }
+
+  /* Before/after divider */
+  .ba-grid {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .ba-grid > div:first-child {
+    border-right: 2px solid rgba(246, 242, 234, 0.92);
+  }
+
+  /* Photo placeholder texture */
+  .photo-texture {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    background-size: 26px 26px;
+  }
+
+  .link-underline {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-size: 0% 1px;
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    transition: background-size 140ms ease;
+  }
+  .link-underline:hover { background-size: 100% 1px; }
+
+  @media (max-width: 700px) {
+    .ba-grid > div:first-child { border-right-width: 2px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .marquee { animation: none; }
+    .pulse-dot::after { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+
+<body class="antialiased">
+
+<!-- ============ 1. THIN TOP BAR ============ -->
+<div class="bg-slate-deep text-paper text-[0.8rem]">
+  <div class="max-w-shell mx-auto px-5 sm:px-8">
+    <div class="flex items-center justify-between gap-3 py-2.5">
+      <div class="flex items-center gap-x-5 gap-y-1 flex-wrap">
+        <a href="tel:+15556178890" class="inline-flex items-center gap-1.5 font-medium hover:text-white transition-colors">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.94.36 1.86.7 2.74a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.34-1.34a2 2 0 0 1 2.11-.45c.88.34 1.8.57 2.74.7A2 2 0 0 1 22 16.92z"/>
+          </svg>
+          (555) 617-8890
+        </a>
+        <span class="hidden sm:inline-flex items-center gap-1.5 text-paper/75 font-mono text-[0.72rem]">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+          </svg>
+          Mon–Fri 8am–5pm / Consultations by appointment
+        </span>
+      </div>
+      <div class="flex items-center gap-x-4">
+        <span class="hidden md:inline-flex items-center gap-1.5 text-paper/75">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+          </svg>
+          Greater Boston suburbs, MA
+        </span>
+        <a href="#quote" class="inline-flex items-center rounded-full bg-paper text-slate-deep font-semibold text-[0.72rem] px-3 py-1 hover:bg-white transition-colors">
+          Get a quote
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 2. NAV ============ -->
+<header class="sticky top-0 z-40 bg-paper/92 backdrop-blur-md hairline-b">
+  <div class="max-w-shell mx-auto px-5 sm:px-8">
+    <div class="flex items-center justify-between gap-4 py-3.5">
+
+      <!-- logo -->
+      <a href="#top" class="flex items-center gap-2.5 shrink-0" aria-label="Keystone home">
+        <span class="grid place-items-center w-10 h-10 rounded-xl bg-slate text-paper shadow-sm">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M7 3h10l3 7-8 11L4 10z"/>
+            <path d="M4 10h16"/>
+            <path d="M12 3v18"/>
+          </svg>
+        </span>
+        <span class="flex flex-col leading-none">
+          <span class="font-display font-semibold text-[1.32rem] display-tight">Keystone</span>
+          <span class="text-[0.66rem] tracking-[0.18em] uppercase text-ink/55 mt-0.5">Design · Build</span>
+        </span>
+      </a>
+
+      <!-- links -->
+      <nav class="hidden lg:flex items-center gap-8 text-[0.92rem] font-medium text-ink/78">
+        <a href="#services" class="link-underline hover:text-ink transition-colors">Services</a>
+        <a href="#about" class="link-underline hover:text-ink transition-colors">About</a>
+        <a href="#reviews" class="link-underline hover:text-ink transition-colors">Reviews</a>
+        <a href="#contact" class="link-underline hover:text-ink transition-colors">Contact</a>
+      </nav>
+
+      <!-- right actions -->
+      <div class="flex items-center gap-2.5">
+        <a href="tel:+15556178890" class="btn btn-ghost rounded-full text-[0.86rem] px-3.5 py-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.94.36 1.86.7 2.74a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.34-1.34a2 2 0 0 1 2.11-.45c.88.34 1.8.57 2.74.7A2 2 0 0 1 22 16.92z"/>
+          </svg>
+          <span class="hidden sm:inline">(555) 617-8890</span>
+          <span class="sm:hidden">Call</span>
+        </a>
+        <a href="#quote" class="btn btn-accent rounded-full text-[0.86rem] px-4 py-2">
+          Free consultation
+        </a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ============ 3. HERO ============ -->
+<section class="relative overflow-hidden hero-ambient">
+  <div class="blob" style="width:320px;height:320px;background:rgba(58,74,99,0.16);top:-90px;right:8%;"></div>
+  <div class="blob" style="width:300px;height:300px;background:rgba(122,103,74,0.13);bottom:-120px;left:-60px;"></div>
+
+  <div class="max-w-shell mx-auto px-5 sm:px-8 relative z-10">
+    <div class="grid lg:grid-cols-[1.04fr_0.96fr] gap-12 lg:gap-14 items-center py-16 sm:py-20 lg:py-24">
+
+      <!-- copy -->
+      <div>
+        <span class="pill text-ink/70 font-mono text-[0.72rem]">
+          <span class="w-1.5 h-1.5 rounded-full bg-slate"></span>
+          Design-build / Licensed GC / Since 2008
+        </span>
+
+        <h1 class="font-display font-semibold text-[2.5rem] sm:text-[3.3rem] lg:text-[3.85rem] leading-[1.04] display-tighter mt-5 text-ink">
+          Renovations that finish<br class="hidden sm:block" />
+          <span class="accent-em">when we said they would.</span>
+        </h1>
+
+        <p class="mt-5 text-[1.06rem] sm:text-[1.14rem] text-ink/72 max-w-xl leading-relaxed">
+          In-house design and build under one roof, a fixed-bid proposal before a single wall comes down, and weekly progress updates — for kitchens, baths and additions across the Boston suburbs.
+        </p>
+
+        <div class="mt-7 flex flex-col sm:flex-row gap-3">
+          <a href="#quote" class="btn btn-accent rounded-xl text-[0.98rem] px-6 py-3.5">
+            Get a free consultation
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+            </svg>
+          </a>
+          <a href="tel:+15556178890" class="btn btn-ghost rounded-xl text-[0.98rem] px-6 py-3.5">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.94.36 1.86.7 2.74a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.34-1.34a2 2 0 0 1 2.11-.45c.88.34 1.8.57 2.74.7A2 2 0 0 1 22 16.92z"/>
+            </svg>
+            Call (555) 617-8890
+          </a>
+        </div>
+
+        <!-- trust badges -->
+        <div class="mt-7 flex flex-wrap gap-2.5">
+          <span class="pill text-ink/74">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3A4A63" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            Licensed &amp; Insured GC
+          </span>
+          <span class="pill text-ink/74">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3A4A63" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M10 21v-6h4v6"/>
+            </svg>
+            Family-owned since 2008
+          </span>
+          <span class="pill text-ink/74">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#E0A93C" stroke="#E0A93C" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/>
+            </svg>
+            <span class="tnum">4.9 · 214 reviews</span>
+          </span>
+          <span class="pill text-ink/74">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3A4A63" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/>
+            </svg>
+            Lead-Safe Certified
+          </span>
+        </div>
+      </div>
+
+      <!-- hero photo placeholder -->
+      <div class="relative">
+        <div class="absolute -inset-3 rounded-[26px] bg-slate/8 -z-10"></div>
+        <div role="img" aria-label="A finished, modern, light-filled kitchen remodel with white cabinetry, a slate-blue island and warm wood shelving"
+             class="photo-texture rounded-[20px] overflow-hidden shadow-[0_30px_70px_-32px_rgba(30,34,41,0.5)] aspect-[4/5] sm:aspect-[5/5] bg-gradient-to-br from-[#E8E0CF] via-[#C8C2B4] to-[#3A4A63] relative">
+          <div class="absolute inset-0 grid place-items-center">
+            <svg width="76" height="76" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.78)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 21V9l9-6 9 6v12"/><path d="M3 13h18"/><path d="M9 21v-5h6v5"/><path d="M7 9.5h.01M11 9.5h.01"/>
+            </svg>
+          </div>
+          <span class="absolute left-4 top-4 font-mono text-[0.66rem] tracking-wide text-white/85 bg-black/25 rounded-md px-2 py-1">
+            NEWTON · KITCHEN
+          </span>
+        </div>
+
+        <!-- floating capacity pill -->
+        <div class="absolute -bottom-5 left-1/2 -translate-x-1/2 sm:left-auto sm:right-5 sm:translate-x-0 bg-white rounded-full hairline border px-4 py-2.5 shadow-[0_16px_34px_-18px_rgba(30,34,41,0.5)] flex items-center gap-2.5 whitespace-nowrap">
+          <span class="pulse-dot"></span>
+          <span class="text-[0.82rem] font-medium text-ink/80">Now booking Q3 2026 projects</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ TRUST MARQUEE ============ -->
+<section class="hairline-y border-y bg-white/55 py-4 overflow-hidden">
+  <div class="marquee-track">
+    <div class="marquee">
+      <!-- strip A -->
+      <div class="flex items-center gap-10 pr-10 text-ink/55 text-[0.86rem] font-medium whitespace-nowrap">
+        <span class="inline-flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-slate"></span>Fixed-bid proposals</span>
+        <span class="inline-flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-slate"></span>In-house design &amp; build</span>
+        <span class="inline-flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-slate"></span>Weekly photo updates</span>
+        <span class="inline-flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-slate"></span>Licensed &amp; insured</span>
+        <span class="inline-flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-slate"></span>Lead-Safe Certified</span>
+        <span class="inline-flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-slate"></span>1-year workmanship warranty</span>
+        <span class="inline-flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-slate"></span>480+ projects since 2008</span>
+      </div>
+      <!-- strip A duplicate for seamless loop -->
+      <div class="flex items-center gap-10 pr-10 text-ink/55 text-[0.86rem] font-medium whitespace-nowrap" aria-hidden="true">
+        <span class="inline-flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-slate"></span>Fixed-bid proposals</span>
+        <span class="inline-flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-slate"></span>In-house design &amp; build</span>
+        <span class="inline-flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-slate"></span>Weekly photo updates</span>
+        <span class="inline-flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-slate"></span>Licensed &amp; insured</span>
+        <span class="inline-flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-slate"></span>Lead-Safe Certified</span>
+        <span class="inline-flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-slate"></span>1-year workmanship warranty</span>
+        <span class="inline-flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-slate"></span>480+ projects since 2008</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4. SERVICES GRID ============ -->
+<section id="services" class="py-20 sm:py-24">
+  <div class="max-w-shell mx-auto px-5 sm:px-8">
+    <div class="max-w-2xl">
+      <span class="font-mono text-[0.74rem] tracking-[0.16em] uppercase text-slate">What we build</span>
+      <h2 class="font-display font-semibold text-[2.1rem] sm:text-[2.6rem] leading-[1.08] display-tight mt-3 text-ink">
+        Six ways we remodel a home
+      </h2>
+      <p class="mt-4 text-ink/68 text-[1.04rem]">
+        Every project starts with a free consultation and a measured plan. We design it, price it as a fixed bid, then build it with our own crews.
+      </p>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-10">
+
+      <!-- Kitchen -->
+      <article class="card card-hover p-6">
+        <span class="grid place-items-center w-12 h-12 rounded-xl bg-slate/8 text-slate">
+          <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 3v6"/><path d="M7 14h4"/>
+          </svg>
+        </span>
+        <h3 class="font-display font-semibold text-[1.24rem] mt-4 text-ink display-tight">Kitchen remodels</h3>
+        <p class="mt-1.5 text-[0.95rem] text-ink/66">New layouts, cabinetry, counters and lighting — designed around how you actually cook.</p>
+        <span class="inline-flex items-center gap-1.5 mt-4 text-[0.78rem] font-mono text-slate bg-slate/8 rounded-full px-2.5 py-1">Typically $45k–$90k</span>
+      </article>
+
+      <!-- Bathroom -->
+      <article class="card card-hover p-6">
+        <span class="grid place-items-center w-12 h-12 rounded-xl bg-slate/8 text-slate">
+          <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 12V5a2 2 0 0 1 2-2h1a2 2 0 0 1 2 2"/><path d="M3 12h18v3a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/><path d="M6 19v2M18 19v2"/>
+          </svg>
+        </span>
+        <h3 class="font-display font-semibold text-[1.24rem] mt-4 text-ink display-tight">Bathroom remodels</h3>
+        <p class="mt-1.5 text-[0.95rem] text-ink/66">Curbless showers, tiled tubs and double vanities, waterproofed and built to last.</p>
+        <span class="inline-flex items-center gap-1.5 mt-4 text-[0.78rem] font-mono text-slate bg-slate/8 rounded-full px-2.5 py-1">Typically $22k–$40k</span>
+      </article>
+
+      <!-- Additions -->
+      <article class="card card-hover p-6">
+        <span class="grid place-items-center w-12 h-12 rounded-xl bg-slate/8 text-slate">
+          <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 21V11l7-5 7 5v10"/><path d="M14 21v-6h7v6"/><path d="M3 21h18"/><path d="M7 13h.01"/>
+          </svg>
+        </span>
+        <h3 class="font-display font-semibold text-[1.24rem] mt-4 text-ink display-tight">Additions</h3>
+        <p class="mt-1.5 text-[0.95rem] text-ink/66">Bump-outs, second stories and primary suites — framed to match the original house.</p>
+        <span class="inline-flex items-center gap-1.5 mt-4 text-[0.78rem] font-mono text-slate bg-slate/8 rounded-full px-2.5 py-1">Free consultation</span>
+      </article>
+
+      <!-- Basement -->
+      <article class="card card-hover p-6">
+        <span class="grid place-items-center w-12 h-12 rounded-xl bg-slate/8 text-slate">
+          <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 14h18"/><path d="M8 14v6"/><path d="M14 14v6"/>
+          </svg>
+        </span>
+        <h3 class="font-display font-semibold text-[1.24rem] mt-4 text-ink display-tight">Basement finishing</h3>
+        <p class="mt-1.5 text-[0.95rem] text-ink/66">Dry, insulated living space — family rooms, guest suites, gyms and home offices.</p>
+        <span class="inline-flex items-center gap-1.5 mt-4 text-[0.78rem] font-mono text-slate bg-slate/8 rounded-full px-2.5 py-1">Free consultation</span>
+      </article>
+
+      <!-- Whole-home -->
+      <article class="card card-hover p-6">
+        <span class="grid place-items-center w-12 h-12 rounded-xl bg-slate/8 text-slate">
+          <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-7h6v7"/><path d="M9 9h.01M15 9h.01"/>
+          </svg>
+        </span>
+        <h3 class="font-display font-semibold text-[1.24rem] mt-4 text-ink display-tight">Whole-home renovation</h3>
+        <p class="mt-1.5 text-[0.95rem] text-ink/66">A full reset — layout, systems and finishes — phased so the house stays livable.</p>
+        <span class="inline-flex items-center gap-1.5 mt-4 text-[0.78rem] font-mono text-slate bg-slate/8 rounded-full px-2.5 py-1">Free consultation</span>
+      </article>
+
+      <!-- Decks & exteriors -->
+      <article class="card card-hover p-6">
+        <span class="grid place-items-center w-12 h-12 rounded-xl bg-slate/8 text-slate">
+          <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 17h18"/><path d="M5 17V9l7-4 7 4v8"/><path d="M5 13h14"/><path d="M9 17v4M15 17v4"/>
+          </svg>
+        </span>
+        <h3 class="font-display font-semibold text-[1.24rem] mt-4 text-ink display-tight">Decks &amp; exteriors</h3>
+        <p class="mt-1.5 text-[0.95rem] text-ink/66">Composite and cedar decks, porches and siding — weather-detailed for New England.</p>
+        <span class="inline-flex items-center gap-1.5 mt-4 text-[0.78rem] font-mono text-slate bg-slate/8 rounded-full px-2.5 py-1">Free consultation</span>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5. WHY CHOOSE US ============ -->
+<section id="about" class="band-deep py-20 sm:py-24 hairline-y border-y">
+  <div class="max-w-shell mx-auto px-5 sm:px-8">
+    <div class="grid lg:grid-cols-[0.92fr_1.08fr] gap-12 items-start">
+
+      <div class="lg:sticky lg:top-28">
+        <span class="font-mono text-[0.74rem] tracking-[0.16em] uppercase text-slate">Why Keystone</span>
+        <h2 class="font-display font-semibold text-[2.1rem] sm:text-[2.6rem] leading-[1.08] display-tight mt-3 text-ink">
+          An architecture studio<br />that also swings hammers
+        </h2>
+        <p class="mt-4 text-ink/68 text-[1.04rem]">
+          We've run Keystone the same way since 2008: design and price the whole job up front, then build it with people who answer to us — not a rotating cast of subs we met last week.
+        </p>
+        <a href="#process" class="btn btn-ghost rounded-xl text-[0.92rem] px-5 py-3 mt-6">
+          See how a project runs
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+          </svg>
+        </a>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-5">
+        <article class="card p-6">
+          <span class="grid place-items-center w-11 h-11 rounded-xl bg-slate text-paper">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h4"/>
+            </svg>
+          </span>
+          <h3 class="font-display font-semibold text-[1.2rem] mt-4 text-ink display-tight">A fixed bid, not time-and-materials</h3>
+          <p class="mt-1.5 text-[0.94rem] text-ink/66">After design is done, you get one number for the whole job. No open-ended hourly meter ticking in your kitchen.</p>
+        </article>
+
+        <article class="card p-6">
+          <span class="grid place-items-center w-11 h-11 rounded-xl bg-slate text-paper">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 15-3.5-3.5L13 16"/>
+            </svg>
+          </span>
+          <h3 class="font-display font-semibold text-[1.2rem] mt-4 text-ink display-tight">Weekly progress updates with photos</h3>
+          <p class="mt-1.5 text-[0.94rem] text-ink/66">Every Friday you get a short note and a set of site photos — so you know exactly where things stand, even if you're traveling.</p>
+        </article>
+
+        <article class="card p-6">
+          <span class="grid place-items-center w-11 h-11 rounded-xl bg-slate text-paper">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01M9 13v.01M9 17v.01"/>
+            </svg>
+          </span>
+          <h3 class="font-display font-semibold text-[1.2rem] mt-4 text-ink display-tight">In-house design and build, one roof</h3>
+          <p class="mt-1.5 text-[0.94rem] text-ink/66">The designer who drew your kitchen sits across from the builder who frames it. No handoffs, no "the architect didn't tell us."</p>
+        </article>
+
+        <article class="card p-6">
+          <span class="grid place-items-center w-11 h-11 rounded-xl bg-slate text-paper">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+            </svg>
+          </span>
+          <h3 class="font-display font-semibold text-[1.2rem] mt-4 text-ink display-tight">On-time completion, on the calendar</h3>
+          <p class="mt-1.5 text-[0.94rem] text-ink/66">Your proposal lists a finish date and we plan backward from it. 94% of our projects since 2008 have wrapped on or before that date.</p>
+        </article>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6. BEFORE / AFTER ============ -->
+<section class="py-20 sm:py-24">
+  <div class="max-w-shell mx-auto px-5 sm:px-8">
+    <div class="max-w-2xl">
+      <span class="font-mono text-[0.74rem] tracking-[0.16em] uppercase text-slate">Before / after</span>
+      <h2 class="font-display font-semibold text-[2.1rem] sm:text-[2.6rem] leading-[1.08] display-tight mt-3 text-ink">
+        The same rooms, a few weeks later
+      </h2>
+      <p class="mt-4 text-ink/68 text-[1.04rem]">
+        Three recent projects from the neighborhood. Same footprint, same family — measured, designed and rebuilt by our crews.
+      </p>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-7 mt-10">
+
+      <!-- Pair 1: kitchen -->
+      <figure>
+        <div class="ba-grid rounded-[16px] overflow-hidden border hairline shadow-[0_18px_42px_-28px_rgba(30,34,41,0.45)] aspect-[16/10]">
+          <div role="img" aria-label="A dated kitchen with worn oak cabinets and dark laminate counters before the remodel"
+               class="relative photo-texture bg-gradient-to-br from-[#9A9082] via-[#7E766A] to-[#5C564D]">
+            <span class="absolute left-2.5 top-2.5 font-mono text-[0.62rem] tracking-wide text-white/90 bg-black/35 rounded px-1.5 py-0.5">Before</span>
+          </div>
+          <div role="img" aria-label="A modern kitchen with white shaker cabinets, a slate-blue island and quartz counters after the remodel"
+               class="relative photo-texture bg-gradient-to-br from-[#EFE8D8] via-[#C9C3B4] to-[#3A4A63]">
+            <span class="absolute right-2.5 top-2.5 font-mono text-[0.62rem] tracking-wide text-white/95 bg-slate/85 rounded px-1.5 py-0.5">After</span>
+          </div>
+        </div>
+        <figcaption class="mt-3 text-[0.92rem] text-ink/66">
+          <span class="font-medium text-ink">Dated kitchen → modern kitchen.</span> A 1980s galley in Brookline opened to the dining room, 6 weeks.
+        </figcaption>
+      </figure>
+
+      <!-- Pair 2: basement -->
+      <figure>
+        <div class="ba-grid rounded-[16px] overflow-hidden border hairline shadow-[0_18px_42px_-28px_rgba(30,34,41,0.45)] aspect-[16/10]">
+          <div role="img" aria-label="An unfinished basement with exposed joists, concrete floor and storage clutter before finishing"
+               class="relative photo-texture bg-gradient-to-br from-[#8E867B] via-[#6F685E] to-[#4E4942]">
+            <span class="absolute left-2.5 top-2.5 font-mono text-[0.62rem] tracking-wide text-white/90 bg-black/35 rounded px-1.5 py-0.5">Before</span>
+          </div>
+          <div role="img" aria-label="A finished basement living space with warm flooring, recessed lighting and a built-in media wall"
+               class="relative photo-texture bg-gradient-to-br from-[#E9E1D0] via-[#BFB9AB] to-[#3A4A63]">
+            <span class="absolute right-2.5 top-2.5 font-mono text-[0.62rem] tracking-wide text-white/95 bg-slate/85 rounded px-1.5 py-0.5">After</span>
+          </div>
+        </div>
+        <figcaption class="mt-3 text-[0.92rem] text-ink/66">
+          <span class="font-medium text-ink">Unfinished basement → finished living space.</span> A Lexington walk-out turned family room and guest suite.
+        </figcaption>
+      </figure>
+
+      <!-- Pair 3: bathroom -->
+      <figure>
+        <div class="ba-grid rounded-[16px] overflow-hidden border hairline shadow-[0_18px_42px_-28px_rgba(30,34,41,0.45)] aspect-[16/10]">
+          <div role="img" aria-label="A cramped bathroom with a small tub-shower and dated tile before the remodel"
+               class="relative photo-texture bg-gradient-to-br from-[#979082] via-[#787163] to-[#565049]">
+            <span class="absolute left-2.5 top-2.5 font-mono text-[0.62rem] tracking-wide text-white/90 bg-black/35 rounded px-1.5 py-0.5">Before</span>
+          </div>
+          <div role="img" aria-label="A spa-like bathroom with a curbless walk-in shower, double vanity and large-format tile after the remodel"
+               class="relative photo-texture bg-gradient-to-br from-[#EDE6D6] via-[#C4BEB0] to-[#3A4A63]">
+            <span class="absolute right-2.5 top-2.5 font-mono text-[0.62rem] tracking-wide text-white/95 bg-slate/85 rounded px-1.5 py-0.5">After</span>
+          </div>
+        </div>
+        <figcaption class="mt-3 text-[0.92rem] text-ink/66">
+          <span class="font-medium text-ink">Cramped bathroom → spa-like bathroom.</span> A Needham hall bath gained a curbless shower and a double vanity.
+        </figcaption>
+      </figure>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ 7. PROCESS — 5 STEPS ============ -->
+<section id="process" class="band-slate py-20 sm:py-24 hairline-y border-y relative overflow-hidden">
+  <div class="absolute inset-0 dot-grid opacity-70" aria-hidden="true"></div>
+  <div class="max-w-shell mx-auto px-5 sm:px-8 relative z-10">
+    <div class="max-w-2xl">
+      <span class="font-mono text-[0.74rem] tracking-[0.16em] uppercase text-slate">How a project runs</span>
+      <h2 class="font-display font-semibold text-[2.1rem] sm:text-[2.6rem] leading-[1.08] display-tight mt-3 text-ink">
+        Five steps, no surprises
+      </h2>
+      <p class="mt-4 text-ink/68 text-[1.04rem]">
+        From the first walkthrough to the final punch list, here's exactly how Keystone moves — and where you sign off.
+      </p>
+    </div>
+
+    <ol class="grid md:grid-cols-2 lg:grid-cols-5 gap-5 mt-10">
+
+      <li class="card p-6 flex flex-col">
+        <span class="font-mono text-[0.72rem] tracking-[0.12em] text-slate">STEP 01</span>
+        <span class="grid place-items-center w-11 h-11 rounded-xl bg-slate/8 text-slate mt-3">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+        </span>
+        <h3 class="font-display font-semibold text-[1.16rem] mt-3 text-ink display-tight">Consultation</h3>
+        <p class="mt-1.5 text-[0.91rem] text-ink/66">We visit, measure, and talk through what you want and a realistic budget — free, no obligation.</p>
+      </li>
+
+      <li class="card p-6 flex flex-col">
+        <span class="font-mono text-[0.72rem] tracking-[0.12em] text-slate">STEP 02</span>
+        <span class="grid place-items-center w-11 h-11 rounded-xl bg-slate/8 text-slate mt-3">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/>
+          </svg>
+        </span>
+        <h3 class="font-display font-semibold text-[1.16rem] mt-3 text-ink display-tight">Design &amp; fixed bid</h3>
+        <p class="mt-1.5 text-[0.91rem] text-ink/66">Our designers draw the space and select finishes. You approve, and we hand you one fixed-bid number.</p>
+      </li>
+
+      <li class="card p-6 flex flex-col">
+        <span class="font-mono text-[0.72rem] tracking-[0.12em] text-slate">STEP 03</span>
+        <span class="grid place-items-center w-11 h-11 rounded-xl bg-slate/8 text-slate mt-3">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="m9 15 2 2 4-4"/>
+          </svg>
+        </span>
+        <h3 class="font-display font-semibold text-[1.16rem] mt-3 text-ink display-tight">Permits</h3>
+        <p class="mt-1.5 text-[0.91rem] text-ink/66">We pull every permit and schedule every inspection with the town. It's all on us — you don't visit town hall.</p>
+      </li>
+
+      <li class="card p-6 flex flex-col">
+        <span class="font-mono text-[0.72rem] tracking-[0.12em] text-slate">STEP 04</span>
+        <span class="grid place-items-center w-11 h-11 rounded-xl bg-slate/8 text-slate mt-3">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m2 22 1-5 11-11 4 4-11 11z"/><path d="M14 6 18 2l4 4-4 4"/>
+          </svg>
+        </span>
+        <h3 class="font-display font-semibold text-[1.16rem] mt-3 text-ink display-tight">Build — weekly updates</h3>
+        <p class="mt-1.5 text-[0.91rem] text-ink/66">Our crews build to the plan. Every Friday you get a progress note and a fresh set of site photos.</p>
+      </li>
+
+      <li class="card p-6 flex flex-col">
+        <span class="font-mono text-[0.72rem] tracking-[0.12em] text-slate">STEP 05</span>
+        <span class="grid place-items-center w-11 h-11 rounded-xl bg-slate/8 text-slate mt-3">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+          </svg>
+        </span>
+        <h3 class="font-display font-semibold text-[1.16rem] mt-3 text-ink display-tight">Walkthrough &amp; warranty</h3>
+        <p class="mt-1.5 text-[0.91rem] text-ink/66">We walk every room together, finish the punch list, and hand you a 1-year workmanship warranty.</p>
+      </li>
+
+    </ol>
+  </div>
+</section>
+
+<!-- ============ STATS BAND ============ -->
+<section class="py-16 sm:py-20">
+  <div class="max-w-shell mx-auto px-5 sm:px-8">
+    <div class="card p-8 sm:p-10">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-6">
+        <div>
+          <div class="font-display font-semibold text-[2.5rem] leading-none display-tighter text-slate tnum">480+</div>
+          <div class="mt-2 text-[0.92rem] text-ink/66">Projects completed since 2008</div>
+        </div>
+        <div class="lg:border-l hairline lg:pl-6">
+          <div class="font-display font-semibold text-[2.5rem] leading-none display-tighter text-slate tnum">94%</div>
+          <div class="mt-2 text-[0.92rem] text-ink/66">On-time completion rate</div>
+        </div>
+        <div class="lg:border-l hairline lg:pl-6">
+          <div class="font-display font-semibold text-[2.5rem] leading-none display-tighter text-slate tnum">5–7 wks</div>
+          <div class="mt-2 text-[0.92rem] text-ink/66">Average kitchen-remodel timeline</div>
+        </div>
+        <div class="lg:border-l hairline lg:pl-6">
+          <div class="font-display font-semibold text-[2.5rem] leading-none display-tighter text-slate tnum">71%</div>
+          <div class="mt-2 text-[0.92rem] text-ink/66">Repeat &amp; referral business</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 8. REVIEWS ============ -->
+<section id="reviews" class="band-deep py-20 sm:py-24 hairline-y border-y">
+  <div class="max-w-shell mx-auto px-5 sm:px-8">
+    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+      <div class="max-w-2xl">
+        <span class="font-mono text-[0.74rem] tracking-[0.16em] uppercase text-slate">Reviews</span>
+        <h2 class="font-display font-semibold text-[2.1rem] sm:text-[2.6rem] leading-[1.08] display-tight mt-3 text-ink">
+          What the neighbors say
+        </h2>
+        <p class="mt-4 text-ink/68 text-[1.04rem]">
+          Bigger jobs, fewer reviews — and people tend to write at length when you've lived in their house for two months.
+        </p>
+      </div>
+      <div class="flex items-center gap-4">
+        <div class="text-right">
+          <div class="flex items-center justify-end gap-1.5">
+            <span class="flex" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+            </span>
+            <span class="font-display font-semibold text-[1.5rem] text-ink tnum">4.9</span>
+          </div>
+          <div class="font-mono text-[0.74rem] text-ink/60 mt-0.5 tnum">from 214 reviews</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- platform mention -->
+    <div class="flex flex-wrap items-center gap-2.5 mt-6">
+      <span class="pill text-ink/72">
+        <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="#4285F4" d="M22.5 12.2c0-.7-.06-1.4-.18-2.06H12v3.9h5.9a5.05 5.05 0 0 1-2.2 3.31v2.75h3.56c2.08-1.92 3.24-4.74 3.24-7.9z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.75c-.99.66-2.25 1.05-3.72 1.05-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.07H2.18a11 11 0 0 0 0 9.87z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.2 1.64l3.15-3.15A11 11 0 0 0 12 1a11 11 0 0 0-9.82 6.07l3.66 2.83C6.71 7.3 9.14 5.38 12 5.38z"/>
+        </svg>
+        <span class="tnum">Google · 4.9 (138)</span>
+      </span>
+      <span class="pill text-ink/72">
+        <span class="grid place-items-center w-3.5 h-3.5 rounded-[3px] bg-[#4DBC15] text-white font-bold text-[9px] leading-none">h</span>
+        <span class="tnum">Houzz · 4.9 (76)</span>
+      </span>
+      <span class="pill text-ink/72">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3A4A63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/>
+        </svg>
+        Verified homeowner reviews
+      </span>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-5 mt-8">
+
+      <!-- Review 1 -->
+      <article class="card p-6">
+        <div class="flex" aria-label="5 out of 5 stars">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+        </div>
+        <p class="mt-3 text-[0.97rem] text-ink/78 leading-[1.62]">
+          "We interviewed four contractors for our kitchen and Keystone was the only one who showed up with a real drawing and a real number. The fixed bid held — the only change order was the upgraded range we asked for ourselves. They finished two days early, and the Friday photo updates meant I never had to chase anyone for a status."
+        </p>
+        <footer class="mt-4 flex items-center gap-3 hairline-t pt-4">
+          <span class="grid place-items-center w-9 h-9 rounded-full bg-slate/12 text-slate font-display font-semibold text-[0.95rem]">PM</span>
+          <div>
+            <div class="text-[0.9rem] font-medium text-ink">Priya Menon</div>
+            <div class="text-[0.78rem] text-ink/55">Newton · Kitchen remodel</div>
+          </div>
+        </footer>
+      </article>
+
+      <!-- Review 2 -->
+      <article class="card p-6">
+        <div class="flex" aria-label="5 out of 5 stars">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+        </div>
+        <p class="mt-3 text-[0.97rem] text-ink/78 leading-[1.62]">
+          "Our 1920s house had no square corners and a basement full of surprises. When they opened a wall and found old knob-and-tube wiring, Keystone walked me through the options the same afternoon, priced it clearly, and kept the schedule on track. That kind of honesty is rare. The finished living space is now where the whole family ends up every evening."
+        </p>
+        <footer class="mt-4 flex items-center gap-3 hairline-t pt-4">
+          <span class="grid place-items-center w-9 h-9 rounded-full bg-slate/12 text-slate font-display font-semibold text-[0.95rem]">TF</span>
+          <div>
+            <div class="text-[0.9rem] font-medium text-ink">Tomás Ferreira</div>
+            <div class="text-[0.78rem] text-ink/55">Lexington · Basement finishing</div>
+          </div>
+        </footer>
+      </article>
+
+      <!-- Review 3 -->
+      <article class="card p-6">
+        <div class="flex" aria-label="5 out of 5 stars">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+        </div>
+        <p class="mt-3 text-[0.97rem] text-ink/78 leading-[1.62]">
+          "We added a primary suite over the garage and were nervous about living in the house during construction. Keystone sequenced the work so we only lost the use of one room at a time, sealed everything off cleanly, and the site was swept every single afternoon. Having the designer and the builder be the same company meant zero finger-pointing."
+        </p>
+        <footer class="mt-4 flex items-center gap-3 hairline-t pt-4">
+          <span class="grid place-items-center w-9 h-9 rounded-full bg-slate/12 text-slate font-display font-semibold text-[0.95rem]">HK</span>
+          <div>
+            <div class="text-[0.9rem] font-medium text-ink">Hannah Kowalski</div>
+            <div class="text-[0.78rem] text-ink/55">Belmont · Second-story addition</div>
+          </div>
+        </footer>
+      </article>
+
+      <!-- Review 4 -->
+      <article class="card p-6">
+        <div class="flex" aria-label="5 out of 5 stars">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+        </div>
+        <p class="mt-3 text-[0.97rem] text-ink/78 leading-[1.62]">
+          "Found Keystone on Houzz after seeing a bathroom they did two streets over. The proposal was the most detailed of any we received — line by line, you could see where the money went. They turned a cramped hall bath into a curbless spa shower, and a year later, when a grout line needed attention, they came back under warranty without a fuss."
+        </p>
+        <footer class="mt-4 flex items-center gap-3 hairline-t pt-4">
+          <span class="grid place-items-center w-9 h-9 rounded-full bg-slate/12 text-slate font-display font-semibold text-[0.95rem]">DO</span>
+          <div>
+            <div class="text-[0.9rem] font-medium text-ink">Daniel O'Sullivan</div>
+            <div class="text-[0.78rem] text-ink/55">Needham · Bathroom remodel</div>
+          </div>
+        </footer>
+      </article>
+
+      <!-- Review 5 -->
+      <article class="card p-6">
+        <div class="flex" aria-label="5 out of 5 stars">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+        </div>
+        <p class="mt-3 text-[0.97rem] text-ink/78 leading-[1.62]">
+          "A whole-home renovation is a big leap of faith. Keystone phased it so we kept a working kitchen and one bathroom the entire time. The weekly updates were genuinely reassuring — real photos, plain language, and a heads-up before anything noisy. They hit the finish date on the proposal almost to the day."
+        </p>
+        <footer class="mt-4 flex items-center gap-3 hairline-t pt-4">
+          <span class="grid place-items-center w-9 h-9 rounded-full bg-slate/12 text-slate font-display font-semibold text-[0.95rem]">MR</span>
+          <div>
+            <div class="text-[0.9rem] font-medium text-ink">Marisol Reyes</div>
+            <div class="text-[0.78rem] text-ink/55">Brookline · Whole-home renovation</div>
+          </div>
+        </footer>
+      </article>
+
+      <!-- Review 6 -->
+      <article class="card p-6">
+        <div class="flex" aria-label="5 out of 5 stars">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E0A93C" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+        </div>
+        <p class="mt-3 text-[0.97rem] text-ink/78 leading-[1.62]">
+          "We've now used Keystone twice — a deck in 2021 and a kitchen last spring. Both times the crew was the same faces, on time, tidy, and respectful of the fact that we both work from home. The second project is why I trust the first review I wrote: they were exactly as good the second time around."
+        </p>
+        <footer class="mt-4 flex items-center gap-3 hairline-t pt-4">
+          <span class="grid place-items-center w-9 h-9 rounded-full bg-slate/12 text-slate font-display font-semibold text-[0.95rem]">AC</span>
+          <div>
+            <div class="text-[0.9rem] font-medium text-ink">Andrew Chen</div>
+            <div class="text-[0.78rem] text-ink/55">Winchester · Kitchen &amp; deck</div>
+          </div>
+        </footer>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ 9. SERVICE AREA ============ -->
+<section class="py-20 sm:py-24">
+  <div class="max-w-shell mx-auto px-5 sm:px-8">
+    <div class="grid lg:grid-cols-[1.05fr_0.95fr] gap-12 items-center">
+
+      <div>
+        <span class="font-mono text-[0.74rem] tracking-[0.16em] uppercase text-slate">Service area</span>
+        <h2 class="font-display font-semibold text-[2.1rem] sm:text-[2.6rem] leading-[1.08] display-tight mt-3 text-ink">
+          Remodeling the Boston suburbs
+        </h2>
+        <p class="mt-4 text-ink/68 text-[1.04rem]">
+          We work a tight radius on purpose — close enough that our crews aren't commuting half the day, and we know each town's permitting office by name.
+        </p>
+
+        <ul class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-7">
+          <li class="pill text-ink/74 justify-center"><span class="w-1.5 h-1.5 rounded-full bg-slate"></span>Newton</li>
+          <li class="pill text-ink/74 justify-center"><span class="w-1.5 h-1.5 rounded-full bg-slate"></span>Brookline</li>
+          <li class="pill text-ink/74 justify-center"><span class="w-1.5 h-1.5 rounded-full bg-slate"></span>Lexington</li>
+          <li class="pill text-ink/74 justify-center"><span class="w-1.5 h-1.5 rounded-full bg-slate"></span>Arlington</li>
+          <li class="pill text-ink/74 justify-center"><span class="w-1.5 h-1.5 rounded-full bg-slate"></span>Belmont</li>
+          <li class="pill text-ink/74 justify-center"><span class="w-1.5 h-1.5 rounded-full bg-slate"></span>Winchester</li>
+          <li class="pill text-ink/74 justify-center"><span class="w-1.5 h-1.5 rounded-full bg-slate"></span>Needham</li>
+          <li class="pill text-ink/74 justify-center"><span class="w-1.5 h-1.5 rounded-full bg-slate"></span>Wellesley</li>
+        </ul>
+
+        <p class="mt-5 text-[0.9rem] text-ink/60">
+          Just outside these towns? Call us — if your project's a good fit, we'll often stretch the line a little.
+        </p>
+      </div>
+
+      <!-- hand-authored SVG region map -->
+      <div class="card p-5 sm:p-6">
+        <svg viewBox="0 0 460 380" class="w-full h-auto" role="img" aria-label="Map of Keystone's service area across the greater Boston suburbs, with pins on Newton, Brookline, Lexington, Arlington, Belmont, Winchester, Needham and Wellesley">
+          <defs>
+            <linearGradient id="regionFill" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#3A4A63" stop-opacity="0.12"/>
+              <stop offset="1" stop-color="#3A4A63" stop-opacity="0.05"/>
+            </linearGradient>
+          </defs>
+
+          <!-- soft region outline -->
+          <path d="M70 150 C 78 96, 150 58, 214 66 C 286 74, 350 60, 392 110 C 420 144, 410 214, 374 262 C 338 312, 268 338, 198 326 C 132 314, 84 290, 64 232 C 52 198, 60 178, 70 150 Z"
+                fill="url(#regionFill)" stroke="#3A4A63" stroke-opacity="0.4" stroke-width="1.5" stroke-dasharray="5 4"/>
+
+          <!-- faint inner roads -->
+          <path d="M120 130 C 190 150, 250 140, 340 175" fill="none" stroke="#3A4A63" stroke-opacity="0.16" stroke-width="1.4"/>
+          <path d="M150 250 C 210 220, 260 240, 330 230" fill="none" stroke="#3A4A63" stroke-opacity="0.16" stroke-width="1.4"/>
+          <path d="M210 80 C 220 160, 200 240, 220 320" fill="none" stroke="#3A4A63" stroke-opacity="0.16" stroke-width="1.4"/>
+
+          <!-- pins: circle + label -->
+          <!-- Winchester (top) -->
+          <g>
+            <circle cx="246" cy="104" r="6.5" fill="#3A4A63"/>
+            <circle cx="246" cy="104" r="11" fill="none" stroke="#3A4A63" stroke-opacity="0.3" stroke-width="1.4"/>
+            <text x="246" y="88" text-anchor="middle" font-family="Inter, sans-serif" font-size="12.5" font-weight="500" fill="#1E2229">Winchester</text>
+          </g>
+          <!-- Lexington -->
+          <g>
+            <circle cx="150" cy="140" r="6.5" fill="#3A4A63"/>
+            <circle cx="150" cy="140" r="11" fill="none" stroke="#3A4A63" stroke-opacity="0.3" stroke-width="1.4"/>
+            <text x="150" y="124" text-anchor="middle" font-family="Inter, sans-serif" font-size="12.5" font-weight="500" fill="#1E2229">Lexington</text>
+          </g>
+          <!-- Arlington -->
+          <g>
+            <circle cx="262" cy="166" r="6.5" fill="#3A4A63"/>
+            <circle cx="262" cy="166" r="11" fill="none" stroke="#3A4A63" stroke-opacity="0.3" stroke-width="1.4"/>
+            <text x="296" y="160" text-anchor="middle" font-family="Inter, sans-serif" font-size="12.5" font-weight="500" fill="#1E2229">Arlington</text>
+          </g>
+          <!-- Belmont -->
+          <g>
+            <circle cx="196" cy="200" r="6.5" fill="#3A4A63"/>
+            <circle cx="196" cy="200" r="11" fill="none" stroke="#3A4A63" stroke-opacity="0.3" stroke-width="1.4"/>
+            <text x="196" y="184" text-anchor="middle" font-family="Inter, sans-serif" font-size="12.5" font-weight="500" fill="#1E2229">Belmont</text>
+          </g>
+          <!-- Newton -->
+          <g>
+            <circle cx="156" cy="266" r="7" fill="#3A4A63"/>
+            <circle cx="156" cy="266" r="12" fill="none" stroke="#3A4A63" stroke-opacity="0.34" stroke-width="1.6"/>
+            <text x="156" y="293" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" font-weight="600" fill="#1E2229">Newton</text>
+          </g>
+          <!-- Brookline -->
+          <g>
+            <circle cx="278" cy="262" r="6.5" fill="#3A4A63"/>
+            <circle cx="278" cy="262" r="11" fill="none" stroke="#3A4A63" stroke-opacity="0.3" stroke-width="1.4"/>
+            <text x="278" y="289" text-anchor="middle" font-family="Inter, sans-serif" font-size="12.5" font-weight="500" fill="#1E2229">Brookline</text>
+          </g>
+          <!-- Needham -->
+          <g>
+            <circle cx="206" cy="306" r="6.5" fill="#3A4A63"/>
+            <circle cx="206" cy="306" r="11" fill="none" stroke="#3A4A63" stroke-opacity="0.3" stroke-width="1.4"/>
+            <text x="206" y="330" text-anchor="middle" font-family="Inter, sans-serif" font-size="12.5" font-weight="500" fill="#1E2229">Needham</text>
+          </g>
+          <!-- Wellesley -->
+          <g>
+            <circle cx="112" cy="296" r="6.5" fill="#3A4A63"/>
+            <circle cx="112" cy="296" r="11" fill="none" stroke="#3A4A63" stroke-opacity="0.3" stroke-width="1.4"/>
+            <text x="112" y="320" text-anchor="middle" font-family="Inter, sans-serif" font-size="12.5" font-weight="500" fill="#1E2229">Wellesley</text>
+          </g>
+
+          <!-- compass -->
+          <g transform="translate(404,330)">
+            <circle r="18" fill="#ffffff" stroke="#3A4A63" stroke-opacity="0.25" stroke-width="1.2"/>
+            <path d="M0 -11 L4 4 L0 0 L-4 4 Z" fill="#3A4A63"/>
+            <text x="0" y="-21" text-anchor="middle" font-family="'Geist Mono', monospace" font-size="9" fill="#3A4A63">N</text>
+          </g>
+        </svg>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ 10. GUARANTEE / PRICING BAND ============ -->
+<section class="bg-slate text-paper py-20 sm:py-24 relative overflow-hidden">
+  <div class="blob" style="width:340px;height:340px;background:rgba(246,242,234,0.10);top:-120px;left:-80px;"></div>
+  <div class="blob" style="width:300px;height:300px;background:rgba(246,242,234,0.08);bottom:-130px;right:-60px;"></div>
+
+  <div class="max-w-shell mx-auto px-5 sm:px-8 relative z-10">
+    <div class="max-w-2xl">
+      <span class="font-mono text-[0.74rem] tracking-[0.16em] uppercase text-paper/65">Pricing &amp; guarantee</span>
+      <h2 class="font-display font-semibold text-[2.1rem] sm:text-[2.6rem] leading-[1.08] display-tight mt-3">
+        Honest numbers, <span class="italic text-paper/55">stood behind</span>
+      </h2>
+      <p class="mt-4 text-paper/72 text-[1.04rem]">
+        We'd rather lose a job to a clear price than win one with a low guess. Here's how Keystone handles money — and what happens after the dust settles.
+      </p>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-10">
+
+      <div class="rounded-[16px] bg-paper/8 border border-paper/15 p-6">
+        <span class="grid place-items-center w-11 h-11 rounded-xl bg-paper/12">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#F6F2EA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+        </span>
+        <h3 class="font-display font-semibold text-[1.18rem] mt-4 display-tight">Free consultation</h3>
+        <p class="mt-1.5 text-[0.92rem] text-paper/70">An on-site visit, measurements and a frank budget conversation — no charge, no pressure.</p>
+      </div>
+
+      <div class="rounded-[16px] bg-paper/8 border border-paper/15 p-6">
+        <span class="grid place-items-center w-11 h-11 rounded-xl bg-paper/12">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#F6F2EA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h4"/>
+          </svg>
+        </span>
+        <h3 class="font-display font-semibold text-[1.18rem] mt-4 display-tight">A fixed-bid proposal</h3>
+        <p class="mt-1.5 text-[0.92rem] text-paper/70">Once design is approved, one number covers the whole job. Changes only happen if you ask for them.</p>
+      </div>
+
+      <div class="rounded-[16px] bg-paper/8 border border-paper/15 p-6">
+        <span class="grid place-items-center w-11 h-11 rounded-xl bg-paper/12">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#F6F2EA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+        </span>
+        <h3 class="font-display font-semibold text-[1.18rem] mt-4 display-tight">Real-world ranges</h3>
+        <p class="mt-1.5 text-[0.92rem] text-paper/70 tnum">Kitchens typically run $45k–$90k and baths $22k–$40k — so you can plan before we ever meet.</p>
+      </div>
+
+      <div class="rounded-[16px] bg-paper/8 border border-paper/15 p-6">
+        <span class="grid place-items-center w-11 h-11 rounded-xl bg-paper/12">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#F6F2EA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>
+          </svg>
+        </span>
+        <h3 class="font-display font-semibold text-[1.18rem] mt-4 display-tight">1-year warranty</h3>
+        <p class="mt-1.5 text-[0.92rem] text-paper/70">Every project is backed by a 1-year workmanship warranty. If our work needs attention, we come back.</p>
+      </div>
+
+    </div>
+
+    <div class="mt-9 flex flex-col sm:flex-row sm:items-center gap-4">
+      <a href="#quote" class="btn rounded-xl bg-paper text-slate-deep font-semibold text-[0.98rem] px-6 py-3.5 hover:bg-white">
+        Get a free consultation
+      </a>
+      <a href="tel:+15556178890" class="btn rounded-xl border border-paper/30 text-paper text-[0.98rem] px-6 py-3.5 hover:bg-paper/10">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.94.36 1.86.7 2.74a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.34-1.34a2 2 0 0 1 2.11-.45c.88.34 1.8.57 2.74.7A2 2 0 0 1 22 16.92z"/>
+        </svg>
+        Call (555) 617-8890
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section class="py-20 sm:py-24">
+  <div class="max-w-shell mx-auto px-5 sm:px-8">
+    <div class="grid lg:grid-cols-[0.82fr_1.18fr] gap-10 lg:gap-14">
+
+      <div>
+        <span class="font-mono text-[0.74rem] tracking-[0.16em] uppercase text-slate">Common questions</span>
+        <h2 class="font-display font-semibold text-[2.1rem] sm:text-[2.6rem] leading-[1.08] display-tight mt-3 text-ink">
+          The things homeowners ask first
+        </h2>
+        <p class="mt-4 text-ink/68 text-[1.04rem]">
+          Still wondering about something? A quick call clears most of it up — we're happy to talk before you commit to anything.
+        </p>
+        <a href="tel:+15556178890" class="btn btn-ghost rounded-xl text-[0.92rem] px-5 py-3 mt-6">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.94.36 1.86.7 2.74a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.34-1.34a2 2 0 0 1 2.11-.45c.88.34 1.8.57 2.74.7A2 2 0 0 1 22 16.92z"/>
+          </svg>
+          Call (555) 617-8890
+        </a>
+      </div>
+
+      <div>
+        <details class="faq" open>
+          <summary>
+            Is it a fixed bid or time-and-materials?
+            <span class="chev" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            </span>
+          </summary>
+          <div class="faq-body">
+            A fixed bid. Once the design is finished and you've approved the drawings and finishes, we hand you one price for the entire project. You won't see an hourly meter, and the only way the number moves is if you decide to add or change something — and even then, we price that change clearly before any work happens.
+          </div>
+        </details>
+
+        <details class="faq">
+          <summary>
+            Who handles permits and inspections?
+            <span class="chev" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            </span>
+          </summary>
+          <div class="faq-body">
+            We do — all of it. As a licensed construction supervisor, Keystone pulls every required permit and coordinates each inspection with your town's building department. We've worked in Newton, Brookline, Lexington and the rest for years, so we know each office's quirks. You never need to visit town hall or chase paperwork.
+          </div>
+        </details>
+
+        <details class="faq">
+          <summary>
+            Can we live in the house during the remodel?
+            <span class="chev" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            </span>
+          </summary>
+          <div class="faq-body">
+            For most kitchen, bath and addition projects, yes. We seal off the work zone with dust barriers, keep a clear path through the house, and sweep the site at the end of every day. We sequence whole-home renovations so you always keep a working kitchen and at least one bathroom. If a phase truly isn't livable, we'll tell you that honestly up front.
+          </div>
+        </details>
+
+        <details class="faq">
+          <summary>
+            What happens if you find something behind the wall?
+            <span class="chev" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            </span>
+          </summary>
+          <div class="faq-body">
+            Older homes hide things — outdated wiring, hidden water damage, a beam that isn't where the plans say. When we find something, we stop, show you exactly what it is with photos, and lay out the options and costs the same day. Nothing gets buried back in the wall, and no surprise charges appear on the final invoice. You decide how to proceed with full information.
+          </div>
+        </details>
+
+        <details class="faq">
+          <summary>
+            What does the 1-year warranty actually cover?
+            <span class="chev" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            </span>
+          </summary>
+          <div class="faq-body">
+            For one full year after your walkthrough, our workmanship is covered — settling cracks, a sticking door, a grout line that needs attention, trim that's shifted. If something we installed isn't performing the way it should, we come back and make it right at no cost. Manufacturer warranties on appliances and fixtures run separately, and we hand you all of that paperwork at closeout.
+          </div>
+        </details>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ 11. FINAL CTA + QUOTE FORM ============ -->
+<section id="quote" class="band-deep py-20 sm:py-24 hairline-t">
+  <div class="max-w-shell mx-auto px-5 sm:px-8">
+    <div class="grid lg:grid-cols-[1.02fr_0.98fr] gap-10 lg:gap-14 items-center">
+
+      <div>
+        <span class="pill text-ink/70 font-mono text-[0.72rem]">
+          <span class="pulse-dot"></span>
+          Now booking Q3 2026 projects
+        </span>
+        <h2 class="font-display font-semibold text-[2.2rem] sm:text-[2.8rem] leading-[1.06] display-tighter mt-5 text-ink">
+          Let's talk about your<br class="hidden sm:block" />
+          <span class="accent-em">home, room by room.</span>
+        </h2>
+        <p class="mt-4 text-ink/68 text-[1.06rem] max-w-lg">
+          Tell us a little about the project and we'll set up a free consultation. No hard sell — just a measured look and an honest conversation about what's possible.
+        </p>
+
+        <div class="mt-7 flex flex-col sm:flex-row gap-3">
+          <a href="tel:+15556178890" class="btn btn-accent rounded-xl text-[0.98rem] px-6 py-3.5">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.94.36 1.86.7 2.74a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.34-1.34a2 2 0 0 1 2.11-.45c.88.34 1.8.57 2.74.7A2 2 0 0 1 22 16.92z"/>
+            </svg>
+            Call (555) 617-8890
+          </a>
+          <span class="inline-flex items-center gap-2 text-[0.9rem] text-ink/60 font-mono">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+            </svg>
+            Mon–Fri 8am–5pm
+          </span>
+        </div>
+      </div>
+
+      <!-- non-functional quote form mockup -->
+      <div class="card p-6 sm:p-8">
+        <h3 class="font-display font-semibold text-[1.4rem] display-tight text-ink">Request a free consultation</h3>
+        <p class="mt-1 text-[0.9rem] text-ink/60">We reply within one business day.</p>
+
+        <div class="mt-6 space-y-4">
+          <div>
+            <label for="qf-name" class="block text-[0.82rem] font-medium text-ink/75 mb-1.5">Your name</label>
+            <input id="qf-name" type="text" autocomplete="name" placeholder="Jordan Alvarez"
+                   class="w-full rounded-xl border hairline bg-paper/60 px-3.5 py-2.5 text-[0.95rem] text-ink placeholder:text-ink/40 outline-none focus:border-slate focus:bg-white transition-colors" />
+          </div>
+          <div>
+            <label for="qf-phone" class="block text-[0.82rem] font-medium text-ink/75 mb-1.5">Phone</label>
+            <input id="qf-phone" type="tel" autocomplete="tel" placeholder="(555) 000-0000"
+                   class="w-full rounded-xl border hairline bg-paper/60 px-3.5 py-2.5 text-[0.95rem] text-ink placeholder:text-ink/40 outline-none focus:border-slate focus:bg-white transition-colors" />
+          </div>
+          <div>
+            <label for="qf-need" class="block text-[0.82rem] font-medium text-ink/75 mb-1.5">What do you need?</label>
+            <textarea id="qf-need" rows="4" placeholder="A kitchen remodel in Newton — opening up the wall to the dining room, new cabinets and an island. Hoping to start this fall."
+                      class="w-full rounded-xl border hairline bg-paper/60 px-3.5 py-2.5 text-[0.95rem] text-ink placeholder:text-ink/40 outline-none focus:border-slate focus:bg-white transition-colors resize-none"></textarea>
+          </div>
+          <button type="button" class="btn btn-accent rounded-xl w-full text-[0.98rem] px-6 py-3.5">
+            Request my free consultation
+          </button>
+          <p class="text-[0.78rem] text-ink/50 text-center">
+            Prefer to talk now? Call
+            <a href="tel:+15556178890" class="text-slate font-medium link-underline">(555) 617-8890</a>.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ============ 12. FOOTER ============ -->
+<footer id="contact" class="bg-slate-deep text-paper">
+  <div class="max-w-shell mx-auto px-5 sm:px-8 py-14">
+    <div class="grid sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr] gap-10">
+
+      <!-- brand + license -->
+      <div>
+        <div class="flex items-center gap-2.5">
+          <span class="grid place-items-center w-10 h-10 rounded-xl bg-paper/12 text-paper">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M7 3h10l3 7-8 11L4 10z"/><path d="M4 10h16"/><path d="M12 3v18"/>
+            </svg>
+          </span>
+          <span class="font-display font-semibold text-[1.32rem] display-tight">Keystone</span>
+        </div>
+        <p class="mt-4 text-[0.92rem] text-paper/65 max-w-sm leading-relaxed">
+          A family-owned design-build general contractor remodeling kitchens, baths, basements and additions across the Boston suburbs since 2008.
+        </p>
+        <div class="mt-5 space-y-1.5 font-mono text-[0.74rem] text-paper/55">
+          <div>MA Construction Supervisor License #CS-104872</div>
+          <div>Home Improvement Contractor #HIC-198340</div>
+        </div>
+        <!-- socials -->
+        <div class="mt-5 flex items-center gap-2.5">
+          <a href="#top" aria-label="Keystone on Instagram" class="grid place-items-center w-9 h-9 rounded-lg bg-paper/10 hover:bg-paper/20 transition-colors">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#F6F2EA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/>
+            </svg>
+          </a>
+          <a href="#top" aria-label="Keystone on Facebook" class="grid place-items-center w-9 h-9 rounded-lg bg-paper/10 hover:bg-paper/20 transition-colors">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#F6F2EA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+            </svg>
+          </a>
+          <a href="#top" aria-label="Keystone on Houzz" class="grid place-items-center w-9 h-9 rounded-lg bg-paper/10 hover:bg-paper/20 transition-colors">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#F6F2EA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 3v8l12 4v6"/><path d="M6 11l12-4"/>
+            </svg>
+          </a>
+          <a href="#top" aria-label="Keystone on Pinterest" class="grid place-items-center w-9 h-9 rounded-lg bg-paper/10 hover:bg-paper/20 transition-colors">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#F6F2EA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 3a9 9 0 0 0-3 17.5"/><path d="M9 20.5 12 9"/><path d="M9.5 12.5a3.5 3.5 0 1 0 6-3"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- contact -->
+      <div>
+        <h3 class="font-display font-semibold text-[1.05rem] display-tight">Contact</h3>
+        <ul class="mt-4 space-y-3 text-[0.9rem] text-paper/70">
+          <li class="flex items-start gap-2.5">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F6F2EA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0" aria-hidden="true">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+            <span>118 Mill Street, Suite 4<br />Newton, MA 02458</span>
+          </li>
+          <li>
+            <a href="tel:+15556178890" class="flex items-center gap-2.5 hover:text-paper transition-colors">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F6F2EA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" aria-hidden="true">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.94.36 1.86.7 2.74a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.34-1.34a2 2 0 0 1 2.11-.45c.88.34 1.8.57 2.74.7A2 2 0 0 1 22 16.92z"/>
+              </svg>
+              (555) 617-8890
+            </a>
+          </li>
+          <li class="flex items-start gap-2.5">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F6F2EA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+            </svg>
+            <span class="font-mono text-[0.78rem]">Mon–Fri 8am–5pm<br />Consultations by appointment</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- service area -->
+      <div>
+        <h3 class="font-display font-semibold text-[1.05rem] display-tight">Service area</h3>
+        <p class="mt-4 text-[0.86rem] text-paper/60">Greater Boston suburbs, MA</p>
+        <ul class="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-[0.88rem] text-paper/70">
+          <li>Newton</li>
+          <li>Brookline</li>
+          <li>Lexington</li>
+          <li>Arlington</li>
+          <li>Belmont</li>
+          <li>Winchester</li>
+          <li>Needham</li>
+          <li>Wellesley</li>
+        </ul>
+        <a href="#quote" class="btn rounded-lg bg-paper text-slate-deep font-semibold text-[0.84rem] px-4 py-2.5 mt-5">
+          Get a free quote
+        </a>
+      </div>
+
+    </div>
+
+    <div class="hairline-t mt-12 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[0.78rem] text-paper/50">
+      <span>© 2026 Keystone Design-Build LLC. All rights reserved.</span>
+      <span class="flex items-center gap-4">
+        <a href="#top" class="hover:text-paper/80 transition-colors">Privacy</a>
+        <a href="#top" class="hover:text-paper/80 transition-colors">Terms</a>
+        <a href="#top" class="hover:text-paper/80 transition-colors">Accessibility</a>
+      </span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

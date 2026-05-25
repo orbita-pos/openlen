@@ -1,0 +1,1235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maya &amp; Daniel — June 20, 2027 · Ashford House, Charleston</title>
+<meta name="description" content="Maya & Daniel are getting married on Saturday, the twentieth of June, two thousand twenty-seven, at Ashford House outside Charleston, South Carolina.">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          bg: '#F6F1E7',
+          ink: '#211C16',
+          magnolia: '#2F4A3A',
+          blush: '#D9A89C',
+          'bg-soft': '#FBF8F1',
+          'bg-deep': '#EFE8D8',
+        },
+        fontFamily: {
+          display: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+          body: ['"EB Garamond"', 'Georgia', 'serif'],
+          mono: ['"Space Mono"', 'ui-monospace', 'monospace'],
+        },
+        borderRadius: {
+          card: '4px',
+        },
+      },
+    },
+  }
+</script>
+
+<style>
+  :root {
+    --bg: #F6F1E7;
+    --bg-soft: #FBF8F1;
+    --bg-deep: #EFE8D8;
+    --text: #211C16;
+    --accent: #2F4A3A;
+    --accent-2: #D9A89C;
+    --radius: 4px;
+    --hairline: rgba(33, 28, 22, 0.12);
+    --hairline-soft: rgba(33, 28, 22, 0.08);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  section[id] { scroll-margin-top: 96px; }
+
+  .display { font-family: "Cormorant Garamond", Georgia, serif; letter-spacing: -0.03em; }
+  .display-tight { letter-spacing: -0.04em; }
+  .mono { font-family: "Space Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+  /* eyebrow / kicker label */
+  .kicker {
+    font-family: "Space Mono", ui-monospace, monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.26em;
+    font-size: 0.66rem;
+  }
+
+  /* ambient background — faint dot grid + warm radial fades */
+  .ambient {
+    background-image:
+      radial-gradient(circle at 18% 8%, rgba(217, 168, 156, 0.16), transparent 42%),
+      radial-gradient(circle at 86% 32%, rgba(47, 74, 58, 0.10), transparent 46%),
+      radial-gradient(rgba(33, 28, 22, 0.05) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 32px 32px;
+    background-position: 0 0, 0 0, 0 0;
+  }
+
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(70px);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  /* framed gradient "photo" — hairline inset + soft outer shadow */
+  .photo {
+    position: relative;
+    border-radius: var(--radius);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.32),
+      inset 0 0 0 1px rgba(33, 28, 22, 0.10),
+      0 18px 40px -20px rgba(33, 28, 22, 0.42);
+  }
+  .photo::after {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.30);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+
+  /* hairline card */
+  .card {
+    background: var(--bg-soft);
+    border: 1px solid var(--hairline-soft);
+    border-radius: var(--radius);
+    transition: transform 130ms ease, box-shadow 130ms ease, border-color 130ms ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 22px 44px -28px rgba(33, 28, 22, 0.40);
+    border-color: var(--hairline);
+  }
+
+  /* buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease, color 120ms ease;
+  }
+  .btn-solid {
+    background: var(--accent);
+    color: #F6F1E7;
+    box-shadow: 0 10px 24px -14px rgba(47, 74, 58, 0.85);
+  }
+  .btn-solid:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 30px -14px rgba(47, 74, 58, 0.95);
+  }
+  .btn-ghost {
+    border: 1px solid var(--hairline);
+    color: var(--text);
+  }
+  .btn-ghost:hover {
+    transform: translateY(-2px);
+    background: var(--bg-soft);
+    box-shadow: 0 12px 26px -18px rgba(33, 28, 22, 0.55);
+  }
+
+  .navlink {
+    position: relative;
+    transition: color 120ms ease;
+  }
+  .navlink::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0;
+    bottom: -3px;
+    height: 1px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 160ms ease;
+  }
+  .navlink:hover { color: var(--accent); }
+  .navlink:hover::after { transform: scaleX(1); }
+
+  /* half-tone headline — second clause dimmed */
+  .halftone { opacity: 0.45; }
+
+  /* gentle hero fade-in on load */
+  @keyframes riseIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .rise { animation: riseIn 900ms cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+  .rise-1 { animation-delay: 80ms; }
+  .rise-2 { animation-delay: 200ms; }
+  .rise-3 { animation-delay: 320ms; }
+  .rise-4 { animation-delay: 440ms; }
+  @media (prefers-reduced-motion: reduce) {
+    .rise { animation: none; }
+  }
+
+  /* slow pulse on the countdown dot */
+  @keyframes pulseDot {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.55); opacity: 0.35; }
+  }
+  .pulse-dot { animation: pulseDot 2.6s ease-in-out infinite; }
+
+  /* marquee for the names ribbon */
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marquee 38s linear infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .marquee-track { animation: none; }
+  }
+
+  /* timeline node */
+  .node-dot {
+    box-shadow: 0 0 0 6px var(--bg), 0 0 0 7px var(--hairline);
+  }
+
+  /* faq disclosure */
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+  details[open] .faq-chevron { transform: rotate(45deg); }
+  .faq-chevron { transition: transform 180ms ease; }
+
+  /* form fields */
+  .field {
+    background: var(--bg-soft);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius);
+    color: var(--text);
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+  }
+  .field:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(47, 74, 58, 0.14);
+  }
+  .field::placeholder { color: rgba(33, 28, 22, 0.40); }
+
+  .radio-tile {
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius);
+    background: var(--bg-soft);
+    transition: border-color 120ms ease, background-color 120ms ease, transform 100ms ease;
+    cursor: pointer;
+  }
+  .radio-tile:hover { transform: translateY(-1px); }
+  input[type="radio"]:checked + .radio-tile,
+  input[type="radio"]:checked + label .radio-tile {
+    border-color: var(--accent);
+    background: #fff;
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+
+  .hairline-rule {
+    height: 1px;
+    background: var(--hairline);
+  }
+
+  ::selection { background: rgba(217, 168, 156, 0.5); color: #211C16; }
+</style>
+</head>
+
+<body class="font-body antialiased">
+
+<!-- ============ 1 · STICKY NAV ============ -->
+<header class="sticky top-0 z-50 backdrop-blur-md" style="background:rgba(246,241,231,0.86);border-bottom:1px solid var(--hairline-soft);">
+  <nav class="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5 sm:px-8" aria-label="Primary">
+    <!-- monogram -->
+    <a href="#top" class="flex items-center gap-3 group" aria-label="Maya and Daniel — home">
+      <svg width="40" height="40" viewBox="0 0 48 48" fill="none" aria-hidden="true" class="transition-transform duration-200 group-hover:-translate-y-0.5">
+        <circle cx="24" cy="24" r="22.5" stroke="#2F4A3A" stroke-width="1" opacity="0.55"/>
+        <!-- laurel left -->
+        <path d="M11 33c2-5 2-11 0-16" stroke="#2F4A3A" stroke-width="1" stroke-linecap="round"/>
+        <path d="M11 30c-1.6-.4-2.8-1.4-3.4-3M11 26c-1.6-.4-2.8-1.4-3.4-3M11 22c-1.6-.4-2.8-1.4-3.4-3" stroke="#D9A89C" stroke-width="1" stroke-linecap="round"/>
+        <!-- laurel right -->
+        <path d="M37 33c-2-5-2-11 0-16" stroke="#2F4A3A" stroke-width="1" stroke-linecap="round"/>
+        <path d="M37 30c1.6-.4 2.8-1.4 3.4-3M37 26c1.6-.4 2.8-1.4 3.4-3M37 22c1.6-.4 2.8-1.4 3.4-3" stroke="#D9A89C" stroke-width="1" stroke-linecap="round"/>
+        <!-- interlocking M & D -->
+        <text x="24" y="30" text-anchor="middle" font-family="Cormorant Garamond, serif" font-size="19" font-weight="600" fill="#2F4A3A">M</text>
+      </svg>
+      <span class="hidden sm:flex flex-col leading-none">
+        <span class="display text-xl font-semibold text-ink">Maya &amp; Daniel</span>
+        <span class="mono text-[0.58rem] tracking-[0.22em] text-ink/55 uppercase mt-1">06 · 20 · 2027</span>
+      </span>
+    </a>
+
+    <!-- anchor links -->
+    <div class="hidden items-center gap-7 text-[0.95rem] md:flex">
+      <a href="#story" class="navlink">Story</a>
+      <a href="#schedule" class="navlink">Schedule</a>
+      <a href="#travel" class="navlink">Travel</a>
+      <a href="#rsvp" class="navlink">RSVP</a>
+      <a href="#registry" class="navlink">Registry</a>
+    </div>
+
+    <a href="#rsvp" class="btn btn-solid rounded-card px-4 py-2 text-[0.82rem] tracking-wide">
+      RSVP
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </nav>
+</header>
+
+<main id="top">
+
+  <!-- ============ 2 · HERO ============ -->
+  <section class="ambient relative overflow-hidden">
+    <div class="blob" style="background:#D9A89C;width:340px;height:340px;top:-120px;left:-90px;"></div>
+    <div class="blob" style="background:#2F4A3A;width:300px;height:300px;bottom:-130px;right:-80px;opacity:0.32;"></div>
+
+    <div class="relative mx-auto max-w-6xl px-5 pt-14 pb-20 sm:px-8 sm:pt-20 sm:pb-28">
+
+      <p class="kicker rise rise-1 text-magnolia text-center">Together with their families</p>
+
+      <p class="rise rise-1 mt-6 text-center display text-2xl sm:text-3xl text-ink/70 italic">We're getting married</p>
+
+      <!-- the names — the only h1 -->
+      <h1 class="rise rise-2 mt-3 text-center display display-tight font-semibold leading-[0.92] text-ink text-[clamp(3.4rem,15vw,9.5rem)]">
+        Maya
+        <span class="block text-magnolia italic text-[clamp(2.4rem,9vw,5.5rem)] my-1 sm:my-2">&amp;</span>
+        Daniel
+      </h1>
+
+      <!-- date — formal + mono -->
+      <div class="rise rise-3 mt-9 flex flex-col items-center gap-3">
+        <p class="display text-xl sm:text-2xl text-ink/85 text-center italic">
+          Saturday, the twentieth of June, two thousand twenty-seven
+        </p>
+        <div class="flex items-center gap-3">
+          <span class="h-px w-9 bg-ink/25"></span>
+          <span class="mono text-sm sm:text-base tracking-[0.18em] text-magnolia">06 · 20 · 2027</span>
+          <span class="h-px w-9 bg-ink/25"></span>
+        </div>
+        <p class="text-base sm:text-lg text-ink/70">
+          Ashford House &middot; Charleston, South Carolina
+        </p>
+      </div>
+
+      <!-- hero photo placeholder -->
+      <div class="rise rise-3 mt-12 photo h-[clamp(15rem,42vw,26rem)] w-full"
+           style="background-image:linear-gradient(135deg,#3A5645 0%,#587863 32%,#D9A89C 72%,#F0D7CE 100%);">
+        <div class="absolute inset-0 flex items-end justify-between p-6 sm:p-8">
+          <span class="mono text-[0.62rem] uppercase tracking-[0.2em] text-white/80">The Garden Terrace</span>
+          <!-- magnolia sprig overlay -->
+          <svg width="58" height="58" viewBox="0 0 60 60" fill="none" aria-hidden="true" class="opacity-80">
+            <path d="M30 50V20" stroke="white" stroke-width="1" stroke-linecap="round"/>
+            <path d="M30 30c-3-2-6-2-9 0M30 30c3-2 6-2 9 0M30 24c-3-2-6-2-9 0M30 24c3-2 6-2 9 0" stroke="white" stroke-width="1" stroke-linecap="round"/>
+            <ellipse cx="30" cy="15" rx="6" ry="8" stroke="white" stroke-width="1"/>
+            <ellipse cx="23" cy="19" rx="4.5" ry="6.5" stroke="white" stroke-width="1" transform="rotate(-38 23 19)"/>
+            <ellipse cx="37" cy="19" rx="4.5" ry="6.5" stroke="white" stroke-width="1" transform="rotate(38 37 19)"/>
+            <circle cx="30" cy="16" r="2" fill="white"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- countdown + quick facts -->
+      <div class="rise rise-4 mt-12 grid gap-px overflow-hidden rounded-card sm:grid-cols-3" style="border:1px solid var(--hairline);background:var(--hairline-soft);">
+        <div class="flex flex-col items-center gap-1 bg-bg-soft px-6 py-7 text-center">
+          <span class="kicker text-magnolia">The countdown</span>
+          <div class="flex items-baseline gap-2 mt-1">
+            <span class="display display-tight text-6xl sm:text-7xl font-semibold text-ink leading-none">142</span>
+            <span class="display text-2xl text-ink/60 italic">days</span>
+          </div>
+          <div class="mt-2 flex items-center gap-2">
+            <span class="pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-blush"></span>
+            <span class="mono text-[0.6rem] uppercase tracking-[0.18em] text-ink/55">until we say I do</span>
+          </div>
+        </div>
+        <div class="flex flex-col items-center justify-center gap-1.5 bg-bg-soft px-6 py-7 text-center">
+          <span class="kicker text-magnolia">The ceremony</span>
+          <span class="display text-2xl text-ink">4:30 in the afternoon</span>
+          <span class="text-ink/60 text-sm">In the estate garden</span>
+        </div>
+        <div class="flex flex-col items-center justify-center gap-1.5 bg-bg-soft px-6 py-7 text-center">
+          <span class="kicker text-magnolia">Attire</span>
+          <span class="display text-2xl text-ink">Black-tie optional</span>
+          <span class="text-ink/60 text-sm">A garden in June</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- names marquee ribbon -->
+    <div class="overflow-hidden border-y py-3" style="border-color:var(--hairline-soft);background:var(--bg-deep);">
+      <div class="marquee-track items-center gap-8">
+        <!-- repeated twice for a seamless loop -->
+        <span class="flex shrink-0 items-center gap-8 text-ink/45">
+          <span class="display text-xl italic">Maya &amp; Daniel</span><span class="text-blush">&#10022;</span>
+          <span class="mono text-xs uppercase tracking-[0.22em]">Charleston, SC</span><span class="text-blush">&#10022;</span>
+          <span class="display text-xl italic">June 20, 2027</span><span class="text-blush">&#10022;</span>
+          <span class="mono text-xs uppercase tracking-[0.22em]">Ashford House</span><span class="text-blush">&#10022;</span>
+          <span class="display text-xl italic">#TheAshfordVow</span><span class="text-blush">&#10022;</span>
+        </span>
+        <span class="flex shrink-0 items-center gap-8 text-ink/45" aria-hidden="true">
+          <span class="display text-xl italic">Maya &amp; Daniel</span><span class="text-blush">&#10022;</span>
+          <span class="mono text-xs uppercase tracking-[0.22em]">Charleston, SC</span><span class="text-blush">&#10022;</span>
+          <span class="display text-xl italic">June 20, 2027</span><span class="text-blush">&#10022;</span>
+          <span class="mono text-xs uppercase tracking-[0.22em]">Ashford House</span><span class="text-blush">&#10022;</span>
+          <span class="display text-xl italic">#TheAshfordVow</span><span class="text-blush">&#10022;</span>
+        </span>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ============ 3 · OUR STORY ============ -->
+  <section id="story" class="relative mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+    <!-- section header -->
+    <div class="flex flex-col items-center text-center">
+      <span class="kicker text-magnolia">Chapter One</span>
+      <h2 class="mt-3 display display-tight text-5xl sm:text-6xl font-semibold text-ink">
+        Our Story
+      </h2>
+      <!-- botanical sprig divider -->
+      <svg width="120" height="22" viewBox="0 0 120 22" fill="none" aria-hidden="true" class="mt-4">
+        <path d="M2 11h40M78 11h40" stroke="#211C16" stroke-width="1" opacity="0.25"/>
+        <path d="M60 4v14" stroke="#2F4A3A" stroke-width="1" stroke-linecap="round"/>
+        <path d="M60 9c-2.4-1.6-5-1.6-7.4 0M60 9c2.4-1.6 5-1.6 7.4 0M60 13c-2-1.4-4.4-1.4-6.4 0M60 13c2-1.4 4.4-1.4 6.4 0" stroke="#2F4A3A" stroke-width="1" stroke-linecap="round"/>
+        <circle cx="60" cy="5" r="2.4" fill="#D9A89C"/>
+      </svg>
+    </div>
+
+    <div class="mt-14 grid gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
+      <!-- prose passages -->
+      <div class="space-y-9">
+        <div>
+          <p class="kicker text-blush">Where it began</p>
+          <h3 class="mt-2 display text-3xl font-semibold text-ink">A wedding, of all places</h3>
+          <p class="mt-3 text-lg leading-relaxed text-ink/75">
+            We met at a friend's wedding in the spring of 2019 &mdash; seated, by some quiet act of fate, at the same table. Daniel asked Maya to dance before the band had quite finished tuning. She said yes, mostly to be polite. By the last song, neither of us wanted the night to end, and we have been finding our way back to each other ever since.
+          </p>
+        </div>
+
+        <div>
+          <p class="kicker text-blush">Eight good years</p>
+          <h3 class="mt-2 display text-3xl font-semibold text-ink">
+            The long, ordinary <span class="halftone italic">middle of it all</span>
+          </h3>
+          <p class="mt-3 text-lg leading-relaxed text-ink/75">
+            Eight years of small apartments and long drives, of a stubborn rescue dog named Biscuit, of learning each other's coffee orders by heart. We are not the same people who danced that night &mdash; we are better, and we are sure, and we are ready.
+          </p>
+        </div>
+
+        <div>
+          <p class="kicker text-blush">The proposal</p>
+          <h3 class="mt-2 display text-3xl font-semibold text-ink">Back where we'll begin</h3>
+          <p class="mt-3 text-lg leading-relaxed text-ink/75">
+            Last June, Daniel suggested a walk through the gardens at Ashford House &mdash; the very estate where we will marry. Beneath the old magnolia at the end of the long path, he knelt. Maya cried before he finished the question. We will say our vows within sight of that exact tree.
+          </p>
+        </div>
+
+        <!-- mini timeline -->
+        <div class="card rounded-card p-6">
+          <p class="kicker text-magnolia mb-4">A short chronology</p>
+          <ul class="space-y-3.5">
+            <li class="flex items-baseline gap-4">
+              <span class="mono text-sm text-blush w-12 shrink-0">2019</span>
+              <span class="text-ink/80">A friend's wedding &mdash; table eleven, the first dance.</span>
+            </li>
+            <li class="flex items-baseline gap-4">
+              <span class="mono text-sm text-blush w-12 shrink-0">2021</span>
+              <span class="text-ink/80">A first apartment, a second-hand sofa, and Biscuit.</span>
+            </li>
+            <li class="flex items-baseline gap-4">
+              <span class="mono text-sm text-blush w-12 shrink-0">2026</span>
+              <span class="text-ink/80">The proposal, under the magnolia at Ashford House.</span>
+            </li>
+            <li class="flex items-baseline gap-4">
+              <span class="mono text-sm text-magnolia w-12 shrink-0">2027</span>
+              <span class="text-ink font-medium">The wedding &mdash; June, in the garden.</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- photo stack -->
+      <div class="space-y-5">
+        <div class="photo h-72 w-full" style="background-image:linear-gradient(150deg,#2F4A3A 0%,#557560 45%,#C9C0AC 100%);">
+          <div class="absolute bottom-5 left-5">
+            <span class="mono text-[0.6rem] uppercase tracking-[0.2em] text-white/80">The first dance, 2019</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-5">
+          <div class="photo h-48 w-full" style="background-image:linear-gradient(160deg,#D9A89C 0%,#E7C6BC 50%,#F3E2D9 100%);">
+            <span class="absolute bottom-4 left-4 mono text-[0.55rem] uppercase tracking-[0.18em] text-white/85">Biscuit</span>
+          </div>
+          <div class="photo h-48 w-full" style="background-image:linear-gradient(160deg,#3A5645 0%,#6F8C77 60%,#D9A89C 100%);">
+            <span class="absolute bottom-4 left-4 mono text-[0.55rem] uppercase tracking-[0.18em] text-white/85">The garden</span>
+          </div>
+        </div>
+        <!-- pull quote -->
+        <figure class="card rounded-card p-7">
+          <svg width="26" height="22" viewBox="0 0 26 22" fill="none" aria-hidden="true" class="text-blush">
+            <path d="M10 22C4 22 1 17.6 1 11 1 4.6 5.4 0 11.6 0L11 4.4C7.6 5 5.8 7 5.6 10.4 8.8 10 11 12.2 11 15.6 11 19 8.8 22 5.6 22H10ZM25 22c-6 0-9-4.4-9-11C16 4.6 20.4 0 26.6 0L26 4.4c-3.4.6-5.2 2.6-5.4 6 3.2-.4 5.4 1.8 5.4 5.2 0 3.4-2.2 6.4-5.4 6.4H25Z" fill="currentColor"/>
+          </svg>
+          <blockquote class="mt-3 display text-2xl italic leading-snug text-ink">
+            &ldquo;We have known for years. The garden simply gave us the date.&rdquo;
+          </blockquote>
+          <figcaption class="mt-3 mono text-[0.62rem] uppercase tracking-[0.18em] text-ink/55">&mdash; Maya &amp; Daniel</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <div class="mx-auto max-w-6xl px-5 sm:px-8"><div class="hairline-rule"></div></div>
+
+
+  <!-- ============ 4 · THE WEDDING PARTY ============ -->
+  <section class="relative mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+    <div class="flex flex-col items-center text-center">
+      <span class="kicker text-magnolia">By our side</span>
+      <h2 class="mt-3 display display-tight text-5xl sm:text-6xl font-semibold text-ink">The Wedding Party</h2>
+      <p class="mt-4 max-w-xl text-lg text-ink/70">
+        The dearest people we know &mdash; the ones who have carried us here, and who will stand with us under the magnolia.
+      </p>
+    </div>
+
+    <div class="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <!-- party member card template -->
+      <article class="card card-lift rounded-card overflow-hidden">
+        <div class="h-52 w-full" style="background-image:linear-gradient(150deg,#D9A89C 0%,#E2BCB1 55%,#EFDDD4 100%);"></div>
+        <div class="p-6">
+          <span class="kicker text-blush">Maid of Honor</span>
+          <h3 class="mt-1.5 display text-2xl font-semibold text-ink">Eleanor Whitfield</h3>
+          <p class="mt-2 text-ink/70 leading-relaxed">Maya's older sister and lifelong steadying hand &mdash; the first call for every joy and every worry.</p>
+        </div>
+      </article>
+
+      <article class="card card-lift rounded-card overflow-hidden">
+        <div class="h-52 w-full" style="background-image:linear-gradient(150deg,#2F4A3A 0%,#557560 60%,#9FB3A6 100%);"></div>
+        <div class="p-6">
+          <span class="kicker text-blush">Best Man</span>
+          <h3 class="mt-1.5 display text-2xl font-semibold text-ink">Marcus Bell</h3>
+          <p class="mt-2 text-ink/70 leading-relaxed">Daniel's college roommate and unfailing co-conspirator since a draughty dorm in 2011.</p>
+        </div>
+      </article>
+
+      <article class="card card-lift rounded-card overflow-hidden">
+        <div class="h-52 w-full" style="background-image:linear-gradient(150deg,#587863 0%,#8FA897 55%,#D9A89C 100%);"></div>
+        <div class="p-6">
+          <span class="kicker text-blush">Bridesmaid</span>
+          <h3 class="mt-1.5 display text-2xl font-semibold text-ink">Priya Anand</h3>
+          <p class="mt-2 text-ink/70 leading-relaxed">Maya's roommate from her first Charleston apartment &mdash; and the friend who introduced the couple.</p>
+        </div>
+      </article>
+
+      <article class="card card-lift rounded-card overflow-hidden">
+        <div class="h-52 w-full" style="background-image:linear-gradient(150deg,#E7C6BC 0%,#D9A89C 55%,#B98E82 100%);"></div>
+        <div class="p-6">
+          <span class="kicker text-blush">Groomsman</span>
+          <h3 class="mt-1.5 display text-2xl font-semibold text-ink">James Okafor</h3>
+          <p class="mt-2 text-ink/70 leading-relaxed">Daniel's younger brother, best fishing partner, and the family's resident peacemaker.</p>
+        </div>
+      </article>
+
+      <article class="card card-lift rounded-card overflow-hidden">
+        <div class="h-52 w-full" style="background-image:linear-gradient(150deg,#6F8C77 0%,#A7BAAE 55%,#E2BCB1 100%);"></div>
+        <div class="p-6">
+          <span class="kicker text-blush">Bridesmaid</span>
+          <h3 class="mt-1.5 display text-2xl font-semibold text-ink">Clara Devereux</h3>
+          <p class="mt-2 text-ink/70 leading-relaxed">Maya's friend since the seventh grade and the keeper of every embarrassing story worth telling.</p>
+        </div>
+      </article>
+
+      <article class="card card-lift rounded-card overflow-hidden">
+        <div class="h-52 w-full" style="background-image:linear-gradient(150deg,#3A5645 0%,#587863 55%,#C9C0AC 100%);"></div>
+        <div class="p-6">
+          <span class="kicker text-blush">Groomsman</span>
+          <h3 class="mt-1.5 display text-2xl font-semibold text-ink">Theo Lindqvist</h3>
+          <p class="mt-2 text-ink/70 leading-relaxed">A friend of them both since that very wedding in 2019 &mdash; proof the night kept on giving.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+
+  <!-- ============ 5 · SCHEDULE / THE DAY ============ -->
+  <section id="schedule" class="relative overflow-hidden" style="background:var(--bg-deep);">
+    <div class="blob" style="background:#D9A89C;width:280px;height:280px;top:-110px;right:-70px;opacity:0.4;"></div>
+    <div class="relative mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+      <div class="flex flex-col items-center text-center">
+        <span class="kicker text-magnolia">Saturday, June the twentieth</span>
+        <h2 class="mt-3 display display-tight text-5xl sm:text-6xl font-semibold text-ink">The Day</h2>
+        <p class="mt-4 max-w-xl text-lg text-ink/70">
+          From the first vow to the last dance &mdash; how the evening will unfold at Ashford House.
+        </p>
+      </div>
+
+      <!-- vertical timeline -->
+      <ol class="relative mx-auto mt-14 max-w-2xl">
+        <!-- the line -->
+        <span class="absolute left-[19px] top-3 bottom-3 w-px bg-ink/15 sm:left-[27px]" aria-hidden="true"></span>
+
+        <li class="relative flex gap-6 pb-10 sm:gap-8">
+          <span class="node-dot relative z-10 mt-1.5 h-3.5 w-3.5 shrink-0 rounded-full bg-magnolia sm:ml-2"></span>
+          <div class="card rounded-card flex-1 p-6">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <span class="mono text-sm tracking-[0.14em] text-magnolia">4:30 PM</span>
+              <span class="mono text-[0.6rem] uppercase tracking-[0.16em] text-ink/45">The Estate Garden</span>
+            </div>
+            <h3 class="mt-1.5 display text-2xl font-semibold text-ink">The Ceremony</h3>
+            <p class="mt-1.5 text-ink/70">We exchange our vows beneath the magnolias on the south lawn. Please be seated by 4:15. The ceremony is unplugged &mdash; phones away, hearts open.</p>
+          </div>
+        </li>
+
+        <li class="relative flex gap-6 pb-10 sm:gap-8">
+          <span class="node-dot relative z-10 mt-1.5 h-3.5 w-3.5 shrink-0 rounded-full bg-blush sm:ml-2"></span>
+          <div class="card rounded-card flex-1 p-6">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <span class="mono text-sm tracking-[0.14em] text-magnolia">5:15 PM</span>
+              <span class="mono text-[0.6rem] uppercase tracking-[0.16em] text-ink/45">The Front Lawn</span>
+            </div>
+            <h3 class="mt-1.5 display text-2xl font-semibold text-ink">Cocktail Hour</h3>
+            <p class="mt-1.5 text-ink/70">Lowcountry hors d'oeuvres, garden cocktails, and a string trio on the lawn while we steal away for portraits.</p>
+          </div>
+        </li>
+
+        <li class="relative flex gap-6 pb-10 sm:gap-8">
+          <span class="node-dot relative z-10 mt-1.5 h-3.5 w-3.5 shrink-0 rounded-full bg-magnolia sm:ml-2"></span>
+          <div class="card rounded-card flex-1 p-6">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <span class="mono text-sm tracking-[0.14em] text-magnolia">6:45 PM</span>
+              <span class="mono text-[0.6rem] uppercase tracking-[0.16em] text-ink/45">The Orangery</span>
+            </div>
+            <h3 class="mt-1.5 display text-2xl font-semibold text-ink">Dinner &amp; Toasts</h3>
+            <p class="mt-1.5 text-ink/70">A seated supper in the glass orangery &mdash; three courses, candlelight, and a few words from those who know us best.</p>
+          </div>
+        </li>
+
+        <li class="relative flex gap-6 sm:gap-8">
+          <span class="node-dot relative z-10 mt-1.5 h-3.5 w-3.5 shrink-0 rounded-full bg-blush sm:ml-2"></span>
+          <div class="card rounded-card flex-1 p-6">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <span class="mono text-sm tracking-[0.14em] text-magnolia">8:30 PM &ndash; 12:00 AM</span>
+              <span class="mono text-[0.6rem] uppercase tracking-[0.16em] text-ink/45">The Orangery &amp; Terrace</span>
+            </div>
+            <h3 class="mt-1.5 display text-2xl font-semibold text-ink">Dancing</h3>
+            <p class="mt-1.5 text-ink/70">The band plays, the doors open to the terrace, and we dance until midnight. A late-night bite arrives around eleven.</p>
+          </div>
+        </li>
+      </ol>
+
+      <p class="mt-10 text-center text-ink/60 italic display text-xl">
+        Shuttles return to the hotels at midnight &mdash; do stay for the last song.
+      </p>
+    </div>
+  </section>
+
+
+  <!-- ============ 6 · VENUE + TRAVEL ============ -->
+  <section id="travel" class="relative mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+    <div class="flex flex-col items-center text-center">
+      <span class="kicker text-magnolia">Getting there</span>
+      <h2 class="mt-3 display display-tight text-5xl sm:text-6xl font-semibold text-ink">Venue &amp; Travel</h2>
+      <p class="mt-4 max-w-xl text-lg text-ink/70">
+        Everything you'll need to find us &mdash; and somewhere lovely to rest your head.
+      </p>
+    </div>
+
+    <!-- venue + map -->
+    <div class="mt-14 grid gap-8 lg:grid-cols-2">
+      <!-- venue card -->
+      <div class="card rounded-card p-8 flex flex-col">
+        <span class="kicker text-blush">The Venue</span>
+        <h3 class="mt-2 display text-4xl font-semibold text-ink">Ashford House</h3>
+        <p class="mt-3 text-lg leading-relaxed text-ink/75">
+          A historic Lowcountry estate set among live oaks and formal gardens, twenty minutes from downtown Charleston. The ceremony is on the south lawn; dinner and dancing in the estate's glass orangery.
+        </p>
+        <div class="mt-5 space-y-2.5 text-ink/75">
+          <p class="flex items-start gap-3">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="mt-1 shrink-0 text-magnolia" aria-hidden="true"><path d="M8 1.5c-2.8 0-5 2.2-5 5 0 3.6 5 8 5 8s5-4.4 5-8c0-2.8-2.2-5-5-5Z" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="6.5" r="1.6" stroke="currentColor" stroke-width="1.3"/></svg>
+            <span>1840 Ashford Lane, Johns Island, SC 29455</span>
+          </p>
+          <p class="flex items-start gap-3">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="mt-1 shrink-0 text-magnolia" aria-hidden="true"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3"/><path d="M8 4.5V8l2.4 1.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <span>Ceremony begins promptly at 4:30 PM &mdash; please arrive by 4:15.</span>
+          </p>
+          <p class="flex items-start gap-3">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="mt-1 shrink-0 text-magnolia" aria-hidden="true"><path d="M2.5 6.5 8 2.5l5.5 4M3.8 7.5v5.3h8.4V7.5" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+            <span>The reception flows to the orangery &mdash; an easy stroll across the lawn.</span>
+          </p>
+        </div>
+        <div class="mt-6 flex flex-wrap gap-3">
+          <a href="#schedule" class="btn btn-ghost rounded-card px-4 py-2 text-sm">See the schedule</a>
+          <a href="#rsvp" class="btn btn-solid rounded-card px-4 py-2 text-sm">RSVP now</a>
+        </div>
+      </div>
+
+      <!-- stylized SVG map -->
+      <div class="card rounded-card overflow-hidden">
+        <div class="flex items-center justify-between border-b px-5 py-3" style="border-color:var(--hairline-soft);">
+          <span class="mono text-[0.62rem] uppercase tracking-[0.18em] text-ink/55">Estate &amp; surroundings</span>
+          <span class="mono text-[0.62rem] uppercase tracking-[0.18em] text-magnolia">Johns Island, SC</span>
+        </div>
+        <div class="p-2" style="background:#EEEAD E;">
+          <svg viewBox="0 0 480 320" class="w-full" role="img" aria-label="Stylized map showing Ashford House relative to the Stono River and downtown Charleston">
+            <rect width="480" height="320" fill="#F2EEDF"/>
+            <!-- water / river -->
+            <path id="river" fill="#D7E0DA" stroke="none"></path>
+            <!-- marsh hatch -->
+            <path d="M20 250h60M30 264h60M20 278h70M40 292h60" stroke="#BFCBC0" stroke-width="2" stroke-linecap="round"/>
+            <!-- roads -->
+            <path id="road-main" stroke="#C7B79A" stroke-width="7" fill="none" stroke-linecap="round"></path>
+            <path id="road-2" stroke="#D6CBB2" stroke-width="4" fill="none" stroke-linecap="round"></path>
+            <path id="road-3" stroke="#D6CBB2" stroke-width="4" fill="none" stroke-linecap="round"></path>
+            <!-- estate grounds block -->
+            <rect x="296" y="70" width="116" height="92" rx="4" fill="#DBE3DC" stroke="#2F4A3A" stroke-width="1.4"/>
+            <!-- garden rows -->
+            <path d="M308 88v58M324 88v58M340 88v58" stroke="#9FB3A6" stroke-width="1.6"/>
+            <!-- orangery block -->
+            <rect x="356" y="92" width="44" height="30" rx="2" fill="#fff" stroke="#2F4A3A" stroke-width="1.2"/>
+            <!-- downtown blocks -->
+            <rect x="44" y="58" width="26" height="22" rx="2" fill="#E7DDC6" stroke="#C7B79A" stroke-width="1"/>
+            <rect x="78" y="50" width="22" height="30" rx="2" fill="#E7DDC6" stroke="#C7B79A" stroke-width="1"/>
+            <rect x="56" y="88" width="30" height="20" rx="2" fill="#E7DDC6" stroke="#C7B79A" stroke-width="1"/>
+            <!-- tree dots -->
+            <circle cx="180" cy="120" r="9" fill="#BBCBBF"/>
+            <circle cx="210" cy="150" r="7" fill="#BBCBBF"/>
+            <circle cx="160" cy="170" r="8" fill="#BBCBBF"/>
+            <circle cx="250" cy="110" r="6" fill="#BBCBBF"/>
+            <!-- downtown label -->
+            <circle cx="70" cy="120" r="3.5" fill="#2F4A3A"/>
+            <text x="82" y="124" font-family="Space Mono, monospace" font-size="11" fill="#211C16">Downtown Charleston</text>
+            <!-- location pin at the estate -->
+            <g transform="translate(354 36)">
+              <path d="M0 0c-9 0-16 7-16 16 0 11 16 26 16 26s16-15 16-26C16 7 9 0 0 0Z" fill="#2F4A3A"/>
+              <circle cx="0" cy="16" r="6" fill="#F6F1E7"/>
+              <circle cx="0" cy="16" r="2.6" fill="#D9A89C"/>
+            </g>
+            <text x="354" y="178" text-anchor="middle" font-family="Cormorant Garamond, serif" font-size="17" font-weight="600" fill="#2F4A3A">Ashford House</text>
+            <!-- compass -->
+            <g transform="translate(440 280)">
+              <circle r="16" fill="#F6F1E7" stroke="#2F4A3A" stroke-width="1"/>
+              <path d="M0 -10 4 4 0 0 -4 4Z" fill="#D9A89C"/>
+              <text y="-19" text-anchor="middle" font-family="Space Mono, monospace" font-size="8" fill="#211C16">N</text>
+            </g>
+            <!-- distance note -->
+            <text x="200" y="232" font-family="Space Mono, monospace" font-size="10" fill="#6F6552">~ 20 min from the historic district</text>
+          </svg>
+        </div>
+        <div class="border-t px-5 py-3" style="border-color:var(--hairline-soft);">
+          <p class="text-sm text-ink/65"><span class="text-magnolia font-medium">Not a navigation map.</span> Search &ldquo;Ashford House, Johns Island&rdquo; for live directions.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- hotel room blocks -->
+    <div class="mt-12">
+      <h3 class="display text-3xl font-semibold text-ink">Where to stay</h3>
+      <p class="mt-2 text-ink/70">We've reserved room blocks at three Charleston hotels. <span class="text-magnolia font-medium">Mention the Reyes &amp; Carter wedding</span> when you book to receive the group rate.</p>
+
+      <div class="mt-6 grid gap-6 md:grid-cols-3">
+        <article class="card card-lift rounded-card overflow-hidden">
+          <div class="h-32 w-full" style="background-image:linear-gradient(150deg,#2F4A3A 0%,#587863 100%);"></div>
+          <div class="p-6">
+            <div class="flex items-center justify-between">
+              <span class="kicker text-blush">Historic District</span>
+              <span class="mono text-[0.62rem] text-ink/45">~22 min</span>
+            </div>
+            <h4 class="mt-1.5 display text-2xl font-semibold text-ink">The Loxley Hotel</h4>
+            <p class="mt-2 text-sm text-ink/70 leading-relaxed">An elegant restored townhouse on Church Street, walkable to King Street's shops and supper.</p>
+            <p class="mt-3 mono text-[0.62rem] uppercase tracking-[0.14em] text-magnolia">Block code &mdash; mention the wedding</p>
+          </div>
+        </article>
+
+        <article class="card card-lift rounded-card overflow-hidden">
+          <div class="h-32 w-full" style="background-image:linear-gradient(150deg,#D9A89C 0%,#E7C6BC 100%);"></div>
+          <div class="p-6">
+            <div class="flex items-center justify-between">
+              <span class="kicker text-blush">Waterfront</span>
+              <span class="mono text-[0.62rem] text-ink/45">~25 min</span>
+            </div>
+            <h4 class="mt-1.5 display text-2xl font-semibold text-ink">Harborlight Inn</h4>
+            <p class="mt-2 text-sm text-ink/70 leading-relaxed">Bright harbor-view rooms by the Battery, with a courtyard pool for the warm June afternoons.</p>
+            <p class="mt-3 mono text-[0.62rem] uppercase tracking-[0.14em] text-magnolia">Block code &mdash; mention the wedding</p>
+          </div>
+        </article>
+
+        <article class="card card-lift rounded-card overflow-hidden">
+          <div class="h-32 w-full" style="background-image:linear-gradient(150deg,#587863 0%,#D9A89C 100%);"></div>
+          <div class="p-6">
+            <div class="flex items-center justify-between">
+              <span class="kicker text-blush">Johns Island</span>
+              <span class="mono text-[0.62rem] text-ink/45">~8 min</span>
+            </div>
+            <h4 class="mt-1.5 display text-2xl font-semibold text-ink">The Maybank Lodge</h4>
+            <p class="mt-2 text-sm text-ink/70 leading-relaxed">A relaxed island lodge nearest the venue &mdash; ideal if you'd rather not travel far after the dancing.</p>
+            <p class="mt-3 mono text-[0.62rem] uppercase tracking-[0.14em] text-magnolia">Block code &mdash; mention the wedding</p>
+          </div>
+        </article>
+      </div>
+    </div>
+
+    <!-- parking + out of town -->
+    <div class="mt-8 grid gap-6 sm:grid-cols-2">
+      <div class="card rounded-card p-6">
+        <div class="flex items-center gap-3">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" class="text-magnolia" aria-hidden="true"><rect x="3" y="9" width="18" height="9" rx="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M6 9 8 4h8l2 5M7 18v2.5M17 18v2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <h4 class="display text-2xl font-semibold text-ink">Parking &amp; shuttles</h4>
+        </div>
+        <p class="mt-3 text-ink/70 leading-relaxed">Complimentary valet parking is available at Ashford House. We also encourage the shuttles &mdash; they run from all three hotels beginning at 3:30 PM and return at midnight, so no one need worry about the drive.</p>
+      </div>
+      <div class="card rounded-card p-6">
+        <div class="flex items-center gap-3">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" class="text-magnolia" aria-hidden="true"><path d="M3 11 21 4l-4 17-5.5-5L8 19l-.5-5.5L3 11Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          <h4 class="display text-2xl font-semibold text-ink">Coming from out of town</h4>
+        </div>
+        <p class="mt-3 text-ink/70 leading-relaxed">Charleston International Airport (CHS) is roughly forty minutes from the venue. Make a weekend of it &mdash; June in the Lowcountry is warm and golden, and the city is at its very best. See <a href="#todo" class="text-magnolia underline decoration-blush/60 underline-offset-2">things to do</a> below.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="mx-auto max-w-6xl px-5 sm:px-8"><div class="hairline-rule"></div></div>
+
+
+  <!-- ============ 7 · THINGS TO DO ============ -->
+  <section id="todo" class="relative mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+    <div class="flex flex-col items-center text-center">
+      <span class="kicker text-magnolia">Make a weekend of it</span>
+      <h2 class="mt-3 display display-tight text-5xl sm:text-6xl font-semibold text-ink">Things to Do</h2>
+      <p class="mt-4 max-w-xl text-lg text-ink/70">
+        A few of our favorite corners of Charleston, for the guests lingering a little longer.
+      </p>
+    </div>
+
+    <div class="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <article class="card card-lift rounded-card overflow-hidden">
+        <div class="relative h-40 w-full" style="background-image:linear-gradient(150deg,#2F4A3A 0%,#6F8C77 100%);">
+          <span class="absolute right-3 top-3 mono text-[0.55rem] uppercase tracking-[0.14em] text-white/80 bg-black/20 px-2 py-1 rounded-sm">Dine</span>
+        </div>
+        <div class="p-5">
+          <h3 class="display text-2xl font-semibold text-ink">The Magnolia Larder</h3>
+          <p class="mt-1.5 text-sm text-ink/70 leading-relaxed">Lowcountry cooking on Wentworth Street &mdash; shrimp and grits worth the trip alone. Book ahead for dinner.</p>
+        </div>
+      </article>
+
+      <article class="card card-lift rounded-card overflow-hidden">
+        <div class="relative h-40 w-full" style="background-image:linear-gradient(150deg,#D9A89C 0%,#E7C6BC 100%);">
+          <span class="absolute right-3 top-3 mono text-[0.55rem] uppercase tracking-[0.14em] text-white/85 bg-black/15 px-2 py-1 rounded-sm">Walk</span>
+        </div>
+        <div class="p-5">
+          <h3 class="display text-2xl font-semibold text-ink">The Battery &amp; gardens</h3>
+          <p class="mt-1.5 text-sm text-ink/70 leading-relaxed">A self-guided walk past the historic district's antebellum homes and hidden walled gardens. Lovely in the morning.</p>
+        </div>
+      </article>
+
+      <article class="card card-lift rounded-card overflow-hidden">
+        <div class="relative h-40 w-full" style="background-image:linear-gradient(150deg,#587863 0%,#9FB3A6 100%);">
+          <span class="absolute right-3 top-3 mono text-[0.55rem] uppercase tracking-[0.14em] text-white/85 bg-black/15 px-2 py-1 rounded-sm">Outdoors</span>
+        </div>
+        <div class="p-5">
+          <h3 class="display text-2xl font-semibold text-ink">Folly Beach</h3>
+          <p class="mt-1.5 text-sm text-ink/70 leading-relaxed">Twenty minutes from Johns Island &mdash; a wide, easy stretch of sand for a slow Friday before the festivities.</p>
+        </div>
+      </article>
+
+      <article class="card card-lift rounded-card overflow-hidden">
+        <div class="relative h-40 w-full" style="background-image:linear-gradient(150deg,#E7C6BC 0%,#B98E82 100%);">
+          <span class="absolute right-3 top-3 mono text-[0.55rem] uppercase tracking-[0.14em] text-white/85 bg-black/15 px-2 py-1 rounded-sm">Coffee</span>
+        </div>
+        <div class="p-5">
+          <h3 class="display text-2xl font-semibold text-ink">Verdant Coffee Co.</h3>
+          <p class="mt-1.5 text-sm text-ink/70 leading-relaxed">Our standing Sunday spot on King Street &mdash; pour-overs, good light, and the best biscuits in the city.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+
+  <!-- ============ 8 · RSVP ============ -->
+  <section id="rsvp" class="relative overflow-hidden" style="background:var(--accent);color:#F6F1E7;">
+    <div class="blob" style="background:#D9A89C;width:320px;height:320px;top:-130px;left:-90px;opacity:0.35;"></div>
+    <div class="blob" style="background:#9FB3A6;width:280px;height:280px;bottom:-120px;right:-80px;opacity:0.25;"></div>
+
+    <div class="relative mx-auto max-w-3xl px-5 py-20 sm:px-8 sm:py-28">
+      <div class="flex flex-col items-center text-center">
+        <span class="kicker" style="color:#D9A89C;">Will you join us?</span>
+        <h2 class="mt-3 display display-tight text-5xl sm:text-6xl font-semibold">Reply &amp; RSVP</h2>
+        <p class="mt-4 max-w-lg text-lg text-white/75">
+          We would be so glad to have you. Kindly let us know below &mdash; one form per invited guest or couple.
+        </p>
+        <div class="mt-5 inline-flex items-center gap-2.5 rounded-full px-4 py-1.5" style="background:rgba(246,241,231,0.10);border:1px solid rgba(255,255,255,0.14);">
+          <span class="pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-blush"></span>
+          <span class="mono text-[0.66rem] uppercase tracking-[0.16em] text-white/85">Kindly reply by the first of May, 2027</span>
+        </div>
+      </div>
+
+      <!-- the form -->
+      <form action="#" class="mt-12 rounded-card p-7 sm:p-9" style="background:#F6F1E7;color:#211C16;box-shadow:0 30px 60px -30px rgba(0,0,0,0.5);">
+        <!-- full name -->
+        <div>
+          <label for="name" class="mono text-[0.66rem] uppercase tracking-[0.16em] text-magnolia">Full name <span class="text-blush">*</span></label>
+          <input id="name" name="name" type="text" required autocomplete="name"
+                 placeholder="e.g. Eleanor Whitfield"
+                 class="field mt-2 w-full px-4 py-3 text-base">
+        </div>
+
+        <div class="mt-5 grid gap-5 sm:grid-cols-2">
+          <!-- number of guests -->
+          <div>
+            <label for="guests" class="mono text-[0.66rem] uppercase tracking-[0.16em] text-magnolia">Number of guests <span class="text-blush">*</span></label>
+            <select id="guests" name="guests" required class="field mt-2 w-full px-4 py-3 text-base">
+              <option value="" disabled selected>Select a number</option>
+              <option value="1">1 &mdash; just me</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4+">4 or more</option>
+            </select>
+          </div>
+          <!-- meal choice -->
+          <div>
+            <label for="meal" class="mono text-[0.66rem] uppercase tracking-[0.16em] text-magnolia">Meal choice <span class="text-blush">*</span></label>
+            <select id="meal" name="meal" required class="field mt-2 w-full px-4 py-3 text-base">
+              <option value="" disabled selected>Select a course</option>
+              <option value="lowcountry-shrimp">Lowcountry shrimp &amp; stone-ground grits</option>
+              <option value="herb-chicken">Garden herb-roasted chicken</option>
+              <option value="orchard-tart">Vegetarian summer orchard tart</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- attending — radio -->
+        <fieldset class="mt-6">
+          <legend class="mono text-[0.66rem] uppercase tracking-[0.16em] text-magnolia">Will you be attending? <span class="text-blush">*</span></legend>
+          <div class="mt-2 grid grid-cols-2 gap-3">
+            <div>
+              <input type="radio" id="attend-yes" name="attending" value="yes" class="sr-only peer" required>
+              <label for="attend-yes" class="radio-tile flex items-center justify-center gap-2 px-4 py-3 text-base font-medium">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4" stroke="#2F4A3A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Joyfully accepts
+              </label>
+            </div>
+            <div>
+              <input type="radio" id="attend-no" name="attending" value="no" class="sr-only peer">
+              <label for="attend-no" class="radio-tile flex items-center justify-center gap-2 px-4 py-3 text-base font-medium">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="#211C16" stroke-width="1.6" stroke-linecap="round"/></svg>
+                Regretfully declines
+              </label>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- song request -->
+        <div class="mt-6">
+          <label for="song" class="mono text-[0.66rem] uppercase tracking-[0.16em] text-magnolia">A song to get you dancing</label>
+          <input id="song" name="song" type="text"
+                 placeholder="Song title &mdash; artist"
+                 class="field mt-2 w-full px-4 py-3 text-base">
+          <p class="mt-1.5 text-sm text-ink/55">Tell us the one that will pull you onto the floor &mdash; the band is taking notes.</p>
+        </div>
+
+        <!-- notes -->
+        <div class="mt-6">
+          <label for="notes" class="mono text-[0.66rem] uppercase tracking-[0.16em] text-magnolia">Anything else we should know?</label>
+          <textarea id="notes" name="notes" rows="3"
+                    placeholder="Dietary needs, accessibility, a note for the couple…"
+                    class="field mt-2 w-full px-4 py-3 text-base resize-y"></textarea>
+        </div>
+
+        <!-- submit -->
+        <button type="submit" class="btn btn-solid mt-7 w-full rounded-card px-6 py-3.5 text-base tracking-wide">
+          Send our reply
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <p class="mt-4 text-center text-sm text-ink/55">
+          Trouble with the form? Email us at
+          <a href="mailto:questions@mayaanddaniel.com" class="text-magnolia underline decoration-blush/60 underline-offset-2">questions@mayaanddaniel.com</a>.
+        </p>
+      </form>
+    </div>
+  </section>
+
+
+  <!-- ============ 9 · REGISTRY ============ -->
+  <section id="registry" class="relative mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+    <div class="flex flex-col items-center text-center">
+      <span class="kicker text-magnolia">Your presence is the gift</span>
+      <h2 class="mt-3 display display-tight text-5xl sm:text-6xl font-semibold text-ink">The Registry</h2>
+      <p class="mt-4 max-w-2xl text-lg text-ink/70">
+        Truly, the greatest gift is your company under the magnolias. For those who have asked, we've gathered a few thoughtful options &mdash; and we're grateful for every one.
+      </p>
+    </div>
+
+    <div class="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <article class="card card-lift rounded-card p-7 flex flex-col">
+        <div class="flex h-12 w-12 items-center justify-center rounded-card" style="background:rgba(47,74,58,0.10);">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" class="text-magnolia" aria-hidden="true"><path d="M4 8h16l-1.4 11.5a1.5 1.5 0 0 1-1.5 1.3H6.9a1.5 1.5 0 0 1-1.5-1.3L4 8Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8.5 8V6a3.5 3.5 0 1 1 7 0v2" stroke="currentColor" stroke-width="1.5"/></svg>
+        </div>
+        <span class="kicker text-blush mt-5">Home &amp; table</span>
+        <h3 class="mt-1.5 display text-2xl font-semibold text-ink">Hartley &amp; Hearth</h3>
+        <p class="mt-2 text-ink/70 leading-relaxed flex-1">Linens, ceramics, and the everyday pieces that will fill our first home together.</p>
+        <span class="mt-5 inline-flex items-center gap-2 text-magnolia font-medium">
+          View the registry
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </article>
+
+      <article class="card card-lift rounded-card p-7 flex flex-col">
+        <div class="flex h-12 w-12 items-center justify-center rounded-card" style="background:rgba(217,168,156,0.22);">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" class="text-magnolia" aria-hidden="true"><path d="M3 11 21 4l-4 17-5.5-5L8 19l-.5-5.5L3 11Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        </div>
+        <span class="kicker text-blush mt-5">The honeymoon</span>
+        <h3 class="mt-1.5 display text-2xl font-semibold text-ink">A honeymoon in Portugal</h3>
+        <p class="mt-2 text-ink/70 leading-relaxed flex-1">Help send us along the Douro Valley &mdash; a long-promised trip of vineyards and slow mornings.</p>
+        <span class="mt-5 inline-flex items-center gap-2 text-magnolia font-medium">
+          Contribute a memory
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </article>
+
+      <article class="card card-lift rounded-card p-7 flex flex-col">
+        <div class="flex h-12 w-12 items-center justify-center rounded-card" style="background:rgba(47,74,58,0.10);">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" class="text-magnolia" aria-hidden="true"><path d="M12 21s-7-4.5-7-10a4.5 4.5 0 0 1 8.5-2 4.5 4.5 0 0 1 8.5 2c0 5.5-7 10-10 10Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        </div>
+        <span class="kicker text-blush mt-5">Give back</span>
+        <h3 class="mt-1.5 display text-2xl font-semibold text-ink">Lowcountry Land Trust</h3>
+        <p class="mt-2 text-ink/70 leading-relaxed flex-1">In lieu of a gift, a donation to the trust that protects the marshes and oaks we love so dearly.</p>
+        <span class="mt-5 inline-flex items-center gap-2 text-magnolia font-medium">
+          Make a donation
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </article>
+    </div>
+
+    <p class="mt-8 text-center text-ink/60 italic display text-xl">
+      No matter the gift, your being there is what we'll remember.
+    </p>
+  </section>
+
+  <div class="mx-auto max-w-6xl px-5 sm:px-8"><div class="hairline-rule"></div></div>
+
+
+  <!-- ============ 10 · GALLERY ============ -->
+  <section class="relative mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-24">
+    <div class="flex flex-col items-center text-center">
+      <span class="kicker text-magnolia">A few of our favorites</span>
+      <h2 class="mt-3 display display-tight text-4xl sm:text-5xl font-semibold text-ink">Moments, So Far</h2>
+    </div>
+    <div class="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-5">
+      <div class="photo col-span-2 row-span-2 h-full min-h-[18rem]" style="background-image:linear-gradient(150deg,#2F4A3A 0%,#587863 50%,#D9A89C 100%);"></div>
+      <div class="photo h-36 sm:h-44" style="background-image:linear-gradient(160deg,#D9A89C 0%,#E7C6BC 100%);"></div>
+      <div class="photo h-36 sm:h-44" style="background-image:linear-gradient(160deg,#587863 0%,#9FB3A6 100%);"></div>
+      <div class="photo h-36 sm:h-44" style="background-image:linear-gradient(160deg,#3A5645 0%,#6F8C77 100%);"></div>
+      <div class="photo h-36 sm:h-44" style="background-image:linear-gradient(160deg,#E7C6BC 0%,#B98E82 100%);"></div>
+      <div class="photo col-span-2 h-36 sm:h-44" style="background-image:linear-gradient(120deg,#D9A89C 0%,#587863 100%);"></div>
+      <div class="photo h-36 sm:h-44" style="background-image:linear-gradient(160deg,#2F4A3A 0%,#557560 100%);"></div>
+      <div class="photo h-36 sm:h-44" style="background-image:linear-gradient(160deg,#C9C0AC 0%,#D9A89C 100%);"></div>
+    </div>
+    <p class="mt-6 text-center text-sm text-ink/55 italic">More to come &mdash; we cannot wait to add the twentieth of June to this collection.</p>
+  </section>
+
+  <div class="mx-auto max-w-6xl px-5 sm:px-8"><div class="hairline-rule"></div></div>
+
+
+  <!-- ============ 11 · FAQ ============ -->
+  <section class="relative mx-auto max-w-3xl px-5 py-20 sm:px-8 sm:py-28">
+    <div class="flex flex-col items-center text-center">
+      <span class="kicker text-magnolia">Good to know</span>
+      <h2 class="mt-3 display display-tight text-5xl sm:text-6xl font-semibold text-ink">Questions &amp; Answers</h2>
+      <p class="mt-4 max-w-lg text-lg text-ink/70">
+        A few details to help the day go gently. Anything we've missed &mdash; just ask.
+      </p>
+    </div>
+
+    <div class="mt-12 space-y-3">
+      <details class="card rounded-card px-6 py-5" open>
+        <summary class="flex items-center justify-between gap-4">
+          <span class="display text-2xl font-semibold text-ink">What is the dress code?</span>
+          <svg class="faq-chevron shrink-0 text-magnolia" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 3v12M3 9h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </summary>
+        <p class="mt-3 text-ink/75 leading-relaxed">Black-tie optional. We'd love to see you dressed up &mdash; floor-length gowns, cocktail dresses, or a dark suit are all perfect. The ceremony and cocktail hour are outdoors on grass, so a block heel may serve you better than a stiletto.</p>
+      </details>
+
+      <details class="card rounded-card px-6 py-5">
+        <summary class="flex items-center justify-between gap-4">
+          <span class="display text-2xl font-semibold text-ink">Are children invited?</span>
+          <svg class="faq-chevron shrink-0 text-magnolia" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 3v12M3 9h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </summary>
+        <p class="mt-3 text-ink/75 leading-relaxed">As much as we adore your little ones, we've planned an adults-only reception so every guest can relax and celebrate fully. We hope this gives parents a cherished evening off &mdash; and we're happy to suggest trusted local sitters if it helps.</p>
+      </details>
+
+      <details class="card rounded-card px-6 py-5">
+        <summary class="flex items-center justify-between gap-4">
+          <span class="display text-2xl font-semibold text-ink">The ceremony is outdoors &mdash; what if it rains?</span>
+          <svg class="faq-chevron shrink-0 text-magnolia" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 3v12M3 9h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </summary>
+        <p class="mt-3 text-ink/75 leading-relaxed">The ceremony will be held in the estate garden, weather permitting. Should June bring a Lowcountry shower, an elegant tented pavilion on the lawn is ready as our weather plan &mdash; the day will be just as lovely, simply with a roof.</p>
+      </details>
+
+      <details class="card rounded-card px-6 py-5">
+        <summary class="flex items-center justify-between gap-4">
+          <span class="display text-2xl font-semibold text-ink">When and where do the shuttles run?</span>
+          <svg class="faq-chevron shrink-0 text-magnolia" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 3v12M3 9h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </summary>
+        <p class="mt-3 text-ink/75 leading-relaxed">Complimentary shuttles run from all three hotel room blocks &mdash; The Loxley, Harborlight Inn, and The Maybank Lodge. They depart for Ashford House beginning at 3:30 PM and make the return trip to each hotel at midnight. We warmly encourage the shuttle so everyone can enjoy the evening worry-free.</p>
+      </details>
+
+      <details class="card rounded-card px-6 py-5">
+        <summary class="flex items-center justify-between gap-4">
+          <span class="display text-2xl font-semibold text-ink">Is the ceremony unplugged?</span>
+          <svg class="faq-chevron shrink-0 text-magnolia" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 3v12M3 9h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </summary>
+        <p class="mt-3 text-ink/75 leading-relaxed">Yes &mdash; we kindly ask that phones and cameras be put away during the ceremony. We've a wonderful photographer to capture every moment, and we'd love to look out and see your faces rather than screens. You're most welcome to photograph freely once the dancing begins.</p>
+      </details>
+
+      <details class="card rounded-card px-6 py-5">
+        <summary class="flex items-center justify-between gap-4">
+          <span class="display text-2xl font-semibold text-ink">By when should we RSVP?</span>
+          <svg class="faq-chevron shrink-0 text-magnolia" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 3v12M3 9h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </summary>
+        <p class="mt-3 text-ink/75 leading-relaxed">Please send your reply by the first of May, 2027, using the <a href="#rsvp" class="text-magnolia underline decoration-blush/60 underline-offset-2">RSVP form</a> above. It helps us share a final headcount and menu with Ashford House &mdash; and we simply cannot wait to know you'll be there.</p>
+      </details>
+    </div>
+  </section>
+
+
+  <!-- ============ 12 · CLOSING ============ -->
+  <section class="relative overflow-hidden" style="background:var(--bg-deep);">
+    <div class="blob" style="background:#D9A89C;width:300px;height:300px;top:-120px;right:-90px;opacity:0.4;"></div>
+    <div class="relative mx-auto max-w-3xl px-5 py-24 text-center sm:px-8 sm:py-32">
+      <!-- monogram again -->
+      <svg width="84" height="84" viewBox="0 0 96 96" fill="none" aria-hidden="true" class="mx-auto">
+        <circle cx="48" cy="48" r="45" stroke="#2F4A3A" stroke-width="1" opacity="0.5"/>
+        <circle cx="48" cy="48" r="39" stroke="#D9A89C" stroke-width="1" opacity="0.7"/>
+        <!-- laurel left -->
+        <path d="M24 66c4-10 4-22 0-32" stroke="#2F4A3A" stroke-width="1" stroke-linecap="round"/>
+        <path d="M24 60c-3-.8-5.4-2.6-6.6-5.6M24 52c-3-.8-5.4-2.6-6.6-5.6M24 44c-3-.8-5.4-2.6-6.6-5.6" stroke="#2F4A3A" stroke-width="1" stroke-linecap="round"/>
+        <!-- laurel right -->
+        <path d="M72 66c-4-10-4-22 0-32" stroke="#2F4A3A" stroke-width="1" stroke-linecap="round"/>
+        <path d="M72 60c3-.8 5.4-2.6 6.6-5.6M72 52c3-.8 5.4-2.6 6.6-5.6M72 44c3-.8 5.4-2.6 6.6-5.6" stroke="#2F4A3A" stroke-width="1" stroke-linecap="round"/>
+        <!-- interlocking initials -->
+        <text x="38" y="58" text-anchor="middle" font-family="Cormorant Garamond, serif" font-size="34" font-weight="600" fill="#2F4A3A">M</text>
+        <text x="50" y="64" text-anchor="middle" font-family="Cormorant Garamond, serif" font-size="34" font-weight="600" fill="#D9A89C">&amp;</text>
+        <text x="62" y="58" text-anchor="middle" font-family="Cormorant Garamond, serif" font-size="34" font-weight="600" fill="#2F4A3A">D</text>
+      </svg>
+
+      <p class="kicker text-magnolia mt-8">One last thing</p>
+      <p class="mt-5 display text-4xl sm:text-5xl font-semibold leading-[1.05] text-ink">
+        Eight years have brought us here.
+        <span class="halftone block italic">We'd be honored to share what's next with you.</span>
+      </p>
+
+      <!-- sprig divider -->
+      <svg width="120" height="22" viewBox="0 0 120 22" fill="none" aria-hidden="true" class="mx-auto mt-8">
+        <path d="M2 11h44M74 11h44" stroke="#211C16" stroke-width="1" opacity="0.25"/>
+        <path d="M60 3v16" stroke="#2F4A3A" stroke-width="1" stroke-linecap="round"/>
+        <ellipse cx="60" cy="6" rx="3.6" ry="5" stroke="#2F4A3A" stroke-width="1"/>
+        <path d="M60 12c-2.6-1.6-5.4-1.6-8 0M60 12c2.6-1.6 5.4-1.6 8 0M60 16c-2.2-1.4-4.6-1.4-6.8 0M60 16c2.2-1.4 4.6-1.4 6.8 0" stroke="#2F4A3A" stroke-width="1" stroke-linecap="round"/>
+      </svg>
+
+      <p class="mt-7 display text-2xl italic text-ink/70">We can't wait to celebrate with you.</p>
+      <p class="mt-1.5 mono text-sm tracking-[0.16em] text-magnolia">06 &middot; 20 &middot; 2027 &mdash; Ashford House</p>
+
+      <a href="#rsvp" class="btn btn-solid mt-9 rounded-card px-7 py-3.5 text-base tracking-wide">
+        RSVP for the twentieth of June
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </section>
+</main>
+
+
+<!-- ============ FOOTER ============ -->
+<footer class="relative" style="background:var(--accent);color:#F6F1E7;">
+  <div class="mx-auto max-w-6xl px-5 py-14 sm:px-8">
+    <div class="flex flex-col items-center gap-6 text-center sm:flex-row sm:justify-between sm:text-left">
+      <!-- names + date -->
+      <div>
+        <p class="display text-3xl font-semibold">Maya &amp; Daniel</p>
+        <p class="mt-1 display text-lg italic text-white/70">Saturday, the twentieth of June, two thousand twenty-seven</p>
+        <p class="mt-1 mono text-[0.66rem] uppercase tracking-[0.2em] text-blush">06 &middot; 20 &middot; 2027 &mdash; Charleston, South Carolina</p>
+      </div>
+
+      <!-- monogram + nav -->
+      <div class="flex flex-col items-center gap-4 sm:items-end">
+        <svg width="44" height="44" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+          <circle cx="24" cy="24" r="22.5" stroke="#D9A89C" stroke-width="1" opacity="0.65"/>
+          <text x="24" y="31" text-anchor="middle" font-family="Cormorant Garamond, serif" font-size="18" font-weight="600" fill="#F6F1E7">M&amp;D</text>
+        </svg>
+        <nav class="flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-white/80" aria-label="Footer">
+          <a href="#story" class="hover:text-white transition-colors">Story</a>
+          <a href="#schedule" class="hover:text-white transition-colors">Schedule</a>
+          <a href="#travel" class="hover:text-white transition-colors">Travel</a>
+          <a href="#rsvp" class="hover:text-white transition-colors">RSVP</a>
+          <a href="#registry" class="hover:text-white transition-colors">Registry</a>
+        </nav>
+      </div>
+    </div>
+
+    <div class="my-9 h-px w-full" style="background:rgba(255,255,255,0.10);"></div>
+
+    <div class="flex flex-col items-center gap-3 text-center sm:flex-row sm:justify-between sm:text-left">
+      <p class="text-sm text-white/65">
+        Questions? Write to us at
+        <a href="mailto:questions@mayaanddaniel.com" class="text-blush underline decoration-blush/40 underline-offset-2 hover:text-white transition-colors">questions@mayaanddaniel.com</a>
+      </p>
+      <p class="mono text-[0.7rem] uppercase tracking-[0.22em] text-blush">#TheAshfordVow</p>
+    </div>
+
+    <p class="mt-8 text-center text-xs text-white/40">With love, from Maya &amp; Daniel &mdash; made for our favorite people.</p>
+  </div>
+</footer>
+
+
+<!-- ONE script — computes SVG map path d= attributes from data arrays. Vanilla JS. -->
+<script>
+  (function () {
+    // turn an array of [x,y] points into an SVG path string
+    function poly(points, close) {
+      var d = points.map(function (p, i) {
+        return (i === 0 ? 'M' : 'L') + p[0] + ' ' + p[1];
+      }).join(' ');
+      return close ? d + ' Z' : d;
+    }
+
+    // the Stono River — a soft meandering ribbon along the lower-left of the map
+    var river = [
+      [0, 300], [70, 268], [120, 250], [150, 210], [130, 170],
+      [150, 130], [220, 110], [260, 70], [240, 30], [220, 0],
+      [320, 0], [330, 40], [300, 80], [320, 130], [300, 180],
+      [320, 240], [300, 320], [0, 320]
+    ];
+    var riverEl = document.getElementById('river');
+    if (riverEl) riverEl.setAttribute('d', poly(river, true));
+
+    // main approach road into the estate
+    var roadMain = [[0, 150], [110, 150], [180, 180], [260, 170], [320, 130], [354, 80]];
+    var rm = document.getElementById('road-main');
+    if (rm) rm.setAttribute('d', poly(roadMain, false));
+
+    // a couple of branching lanes
+    var road2 = [[110, 150], [120, 60], [70, 30]];
+    var r2 = document.getElementById('road-2');
+    if (r2) r2.setAttribute('d', poly(road2, false));
+
+    var road3 = [[260, 170], [300, 230], [380, 250]];
+    var r3 = document.getElementById('road-3');
+    if (r3) r3.setAttribute('d', poly(road3, false));
+  })();
+</script>
+
+</body>
+</html>

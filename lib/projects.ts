@@ -1,6 +1,6 @@
-import { and, desc, eq, isNotNull, ne, sql as sqlOp } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull, ne, sql as sqlOp } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import type { ProjectData } from "@/lib/projects/types";
+import type { ProjectData, StoredChatTurn } from "@/lib/projects/types";
 import { getUserPlan } from "@/lib/limits";
 import { subdomainLimitForPlan } from "@/lib/subdomain/limits";
 import { validateSubdomain } from "@/lib/subdomain/validate";
@@ -14,6 +14,8 @@ import {
 import { purgeSubdomain } from "@/lib/publish/cache-purge";
 import { backupReleaseToR2 } from "@/lib/publish/backup-r2";
 import { createVersion } from "@/lib/projects/versions";
+import { getChatMessages } from "@/lib/projects/chat";
+import { normalizeBornCanonical } from "@/lib/normalize";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Project persistence helpers.
@@ -47,6 +49,9 @@ export interface ProjectFull extends ProjectSummary {
    *  to every chat prompt by `/api/templates/ai-design`. */
   userBrief: string | null;
   data: ProjectData;
+  /** Persisted Chat-tab transcript — seeds the chat on load. Empty array
+   *  when the project has never been chatted (column NULL). */
+  chatHistory: StoredChatTurn[];
 }
 
 function publishBaseHost(): string {
@@ -78,7 +83,7 @@ function asStatus(raw: string): ProjectStatus {
 }
 
 export interface CreateProjectInput {
-  /** The full standalone HTML document. */
+  /** Publish-ready HTML — the project's source of truth. */
   html: string;
   /** The brief the page was generated from — stored on the `brief` column
    *  for the projects list and the Brief sidebar tab. */
@@ -173,8 +178,17 @@ export async function getProject(
     .limit(1);
   const row = rows[0];
   if (!row) return null;
+  const chatHistory = await getChatMessages(projectId);
   const derivedDeploy = deployUrlFor(row.subdomain);
-  const currentHtml = row.data?.html ?? "";
+  // Normalize on load — runs the born-canonical chain so legacy / pre-
+  // normalizer projects expose the Theme picker contract just like new ones.
+  // Idempotent: already-canonical projects get a near-no-op pass.
+  const rawHtml = row.data?.html ?? "";
+  const currentHtml = rawHtml ? normalizeBornCanonical(rawHtml) : "";
+  const data: ProjectData =
+    row.data && currentHtml !== rawHtml
+      ? { ...row.data, html: currentHtml }
+      : row.data;
   return {
     id: row.id,
     userId: row.userId,
@@ -194,7 +208,8 @@ export async function getProject(
     sectionCount: countSections(currentHtml),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
-    data: row.data,
+    data,
+    chatHistory,
   };
 }
 
@@ -453,6 +468,8 @@ export async function publishProject(
       subdomain: v.value,
       html,
       projectId: params.projectId,
+      formConfigs: project.data?.settings?.forms,
+      analyticsEnabled: !project.data?.settings?.analyticsDisabled,
     });
   } catch (err) {
     await db
@@ -702,6 +719,17 @@ export async function countUserSubdomains(userId: string): Promise<number> {
         isNotNull(schema.projects.subdomain),
       ),
     );
+  return rows[0]?.count ?? 0;
+}
+
+/** Count of projects created within the last `days` days. Powers the
+ *  "pages generated this week" stat on the marketing hero. */
+export async function countProjectsSince(days: number): Promise<number> {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const rows = await db
+    .select({ count: sqlOp<number>`count(*)::int` })
+    .from(schema.projects)
+    .where(gte(schema.projects.createdAt, since));
   return rows[0]?.count ?? 0;
 }
 

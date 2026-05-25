@@ -19,6 +19,13 @@ interface PageProps {
 // returns 404 BEFORE the page renders.
 export const dynamicParams = false;
 
+// Revalidate the static page every minute. Without this, editing a
+// template via `templates:add` (which changes its storageUrl content
+// hash) doesn't propagate to the detail page until the next full
+// deploy. With ISR, the next request after 60s triggers a background
+// regeneration that picks up the new DB row.
+export const revalidate = 60;
+
 export async function generateStaticParams() {
   const all = await listTemplates();
   return all.map((t) => ({ slug: t.id }));

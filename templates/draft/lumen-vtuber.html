@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lumen.vtuber — Cozy + horror + karaoke</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0D0716;
+    --bg-card: #1A1230;
+    --bg-card-hover: #221A3D;
+    --fg: #F7F0FF;
+    --fg-muted: #BCA7D3;
+    --fg-faint: #5E4F76;
+    --accent: #C77BFF;
+    --accent-rgb: 199, 123, 255;
+    --secondary: #B5F3F3;
+    --secondary-rgb: 181, 243, 243;
+    --border: rgba(255,255,255,0.06);
+  }
+  * { -webkit-font-smoothing: antialiased; }
+  html, body { background: var(--bg); }
+  body {
+    color: var(--fg);
+    font-family: 'Inter', system-ui, sans-serif;
+    background-image:
+      radial-gradient(at 18% 12%, rgba(var(--accent-rgb), 0.20), transparent 45%),
+      radial-gradient(at 82% 38%, rgba(var(--secondary-rgb), 0.13), transparent 50%),
+      radial-gradient(at 50% 95%, rgba(199,123,255,0.10), transparent 55%),
+      radial-gradient(circle at 1px 1px, rgba(255,255,255,0.030) 1px, transparent 0);
+    background-size: 100% 100%, 100% 100%, 100% 100%, 32px 32px;
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+  .font-display { font-family: 'Space Grotesk', sans-serif; letter-spacing: -0.03em; }
+  .font-mono { font-family: 'JetBrains Mono', monospace; }
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+
+  .pulse-dot {
+    position: relative; display: inline-block;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.7);
+    animation: pulse 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(var(--accent-rgb), 0); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0); }
+  }
+  .accent-ring {
+    box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent), 0 0 40px rgba(var(--accent-rgb), 0.55);
+    animation: ring-glow 3s ease-in-out infinite;
+  }
+  @keyframes ring-glow {
+    0%, 100% { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent), 0 0 40px rgba(var(--accent-rgb), 0.55); }
+    50% { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent), 0 0 56px rgba(var(--accent-rgb), 0.75); }
+  }
+
+  .link-row { transition: transform 120ms cubic-bezier(0.2, 0.6, 0.2, 1), border-color 120ms, background 120ms, box-shadow 120ms; }
+  .link-row:hover {
+    transform: translateY(-2px);
+    border-color: rgba(var(--accent-rgb), 0.55) !important;
+    background: var(--bg-card-hover);
+    box-shadow: 0 8px 28px -6px rgba(var(--accent-rgb), 0.35);
+  }
+  .link-row:hover .chev { transform: translateX(2px); color: var(--accent); }
+  .link-row .chev { transition: transform 120ms, color 120ms; }
+
+  .social-btn { transition: all 120ms ease; }
+  .social-btn:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
+
+  .featured-tile { box-shadow: 0 0 36px rgba(var(--accent-rgb), 0.22); transition: box-shadow 200ms ease, transform 200ms ease; }
+  .featured-tile:hover { box-shadow: 0 0 56px rgba(var(--accent-rgb), 0.40); transform: translateY(-2px); }
+
+  .star-drift { animation: drift 12s linear infinite; }
+  @keyframes drift { from { transform: translateY(0); } to { transform: translateY(-8px); } }
+
+  .name-grad {
+    background: linear-gradient(120deg, #FBE8FF 0%, #C77BFF 50%, #B5F3F3 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .ear-glow { filter: drop-shadow(0 0 6px rgba(199,123,255,0.7)); }
+  .live-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 8px; border-radius: 999px;
+    background: rgba(199,123,255,0.16);
+    border: 1px solid rgba(199,123,255,0.40);
+  }
+</style>
+</head>
+<body>
+
+<main class="mx-auto w-full max-w-[480px] px-5 py-8 sm:py-12 relative">
+
+  <!-- Status bar -->
+  <div class="flex items-center justify-between text-[10px] font-mono uppercase tracking-[0.18em] mb-8 gap-3">
+    <div class="flex items-center gap-2 min-w-0">
+      <span class="pulse-dot shrink-0"></span>
+      <span style="color: var(--fg-muted)">Debuted</span>
+      <span class="tabular-nums" style="color: var(--accent)">3mo ago</span>
+      <span style="color: var(--fg-faint)">·</span>
+      <span class="tabular-nums" style="color: var(--fg-muted)">184 streams</span>
+    </div>
+    <span class="tabular-nums shrink-0" style="color: var(--fg-faint)"><span class="tabular-nums">1,408</span> watching</span>
+  </div>
+
+  <!-- Header -->
+  <div class="flex flex-col items-center text-center mb-8">
+    <div class="relative mb-5">
+      <div class="w-28 h-28 rounded-full accent-ring overflow-hidden bg-[#1A1230] flex items-center justify-center">
+        <svg viewBox="0 0 112 112" class="w-full h-full">
+          <defs>
+            <radialGradient id="lu-body" cx="0.5" cy="0.45" r="0.6">
+              <stop offset="0" stop-color="#FBE8FF"/>
+              <stop offset="0.6" stop-color="#D69CFF"/>
+              <stop offset="1" stop-color="#7A4BB2"/>
+            </radialGradient>
+            <linearGradient id="lu-ears" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#E0B8FF"/>
+              <stop offset="1" stop-color="#8A4FC9"/>
+            </linearGradient>
+            <radialGradient id="lu-cheek" cx="0.5" cy="0.5" r="0.5">
+              <stop offset="0" stop-color="#FFB8E0" stop-opacity="0.7"/>
+              <stop offset="1" stop-color="#FFB8E0" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <rect width="112" height="112" fill="#17102A"/>
+          <!-- long left ear -->
+          <g class="ear-glow">
+            <path d="M 36 38 Q 28 16, 32 4 Q 38 14, 42 40 Z" fill="url(#lu-ears)"/>
+            <!-- long right ear -->
+            <path d="M 76 38 Q 84 16, 80 4 Q 74 14, 70 40 Z" fill="url(#lu-ears)"/>
+          </g>
+          <!-- round body -->
+          <ellipse cx="56" cy="68" rx="32" ry="30" fill="url(#lu-body)"/>
+          <!-- cheek blush -->
+          <ellipse cx="38" cy="74" rx="7" ry="4" fill="url(#lu-cheek)"/>
+          <ellipse cx="74" cy="74" rx="7" ry="4" fill="url(#lu-cheek)"/>
+          <!-- eyes (round sparkly) -->
+          <ellipse cx="46" cy="66" rx="3.5" ry="4.5" fill="#1A1230"/>
+          <ellipse cx="66" cy="66" rx="3.5" ry="4.5" fill="#1A1230"/>
+          <!-- sparkle dots in eyes -->
+          <circle cx="47.5" cy="63.5" r="1.2" fill="#FBE8FF"/>
+          <circle cx="67.5" cy="63.5" r="1.2" fill="#FBE8FF"/>
+          <circle cx="45" cy="68.5" r="0.5" fill="#FBE8FF"/>
+          <circle cx="65" cy="68.5" r="0.5" fill="#FBE8FF"/>
+          <!-- tiny smile -->
+          <path d="M 52 78 Q 56 81, 60 78" stroke="#5C2D8C" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <!-- floating sparkle -->
+          <g fill="#B5F3F3">
+            <path d="M 96 22 L 97 26 L 101 27 L 97 28 L 96 32 L 95 28 L 91 27 L 95 26 Z"/>
+            <path d="M 14 50 L 15 53 L 18 54 L 15 55 L 14 58 L 13 55 L 10 54 L 13 53 Z" opacity="0.85"/>
+            <path d="M 90 88 L 90.6 90.4 L 93 91 L 90.6 91.6 L 90 94 L 89.4 91.6 L 87 91 L 89.4 90.4 Z" opacity="0.7"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <h1 class="font-display name-grad text-[36px] leading-[1.0] font-bold mb-1">lumen<span style="color: var(--accent); -webkit-text-fill-color: var(--accent);">.</span>vtuber</h1>
+    <div class="font-mono text-[11px] tracking-wider" style="color: var(--fg-muted)">
+      @lumen · <span class="tabular-nums">62,408</span> followers · she/her
+    </div>
+    <p class="text-[14px] leading-[1.6] mt-4 max-w-[360px]" style="color: var(--fg-muted)">
+      Variety streamer. Cozy games, <span style="color: var(--fg)">horror nights (Tue)</span>, karaoke (Sun). Character by <span style="color: var(--secondary)">@holler.studio</span>. ENG / 日本語.
+    </p>
+  </div>
+
+  <!-- live pill row -->
+  <div class="flex items-center justify-center gap-2 mb-6">
+    <div class="live-pill">
+      <span class="pulse-dot" style="width: 6px; height: 6px;"></span>
+      <span class="font-mono text-[10px] uppercase tracking-[0.18em]" style="color: var(--accent)">Live now</span>
+      <span class="font-mono text-[10px] tabular-nums" style="color: var(--fg)">1,408</span>
+    </div>
+    <div class="font-mono text-[10px] uppercase tracking-[0.18em]" style="color: var(--fg-faint)">·</div>
+    <div class="font-mono text-[10px] uppercase tracking-[0.18em]" style="color: var(--fg-muted)">Stardew · 4h 12m</div>
+  </div>
+
+  <!-- Featured tile -->
+  <a href="#" class="featured-tile block rounded-2xl overflow-hidden mb-8 border" style="border-color: var(--border); background: var(--bg-card);">
+    <div class="relative aspect-video" style="background: radial-gradient(ellipse at 30% 40%, #3B1E5C 0%, #1A0F30 60%, #0D0716 100%);">
+      <!-- starfield -->
+      <svg class="absolute inset-0 w-full h-full" viewBox="0 0 400 225" preserveAspectRatio="none">
+        <g fill="#FBE8FF">
+          <circle cx="30" cy="40" r="1" opacity="0.9"/>
+          <circle cx="80" cy="20" r="0.8" opacity="0.7"/>
+          <circle cx="140" cy="60" r="1.2" opacity="0.9"/>
+          <circle cx="220" cy="30" r="0.6" opacity="0.6"/>
+          <circle cx="280" cy="80" r="1" opacity="0.85"/>
+          <circle cx="340" cy="40" r="0.9" opacity="0.7"/>
+          <circle cx="360" cy="110" r="0.7" opacity="0.65"/>
+          <circle cx="50" cy="120" r="1.1" opacity="0.8"/>
+          <circle cx="180" cy="160" r="0.8" opacity="0.7"/>
+          <circle cx="300" cy="180" r="1" opacity="0.85"/>
+          <circle cx="100" cy="190" r="0.7" opacity="0.6"/>
+        </g>
+        <!-- planets -->
+        <g class="star-drift">
+          <circle cx="290" cy="120" r="34" fill="#C77BFF" opacity="0.85"/>
+          <circle cx="285" cy="115" r="6" fill="#FBE8FF" opacity="0.40"/>
+          <circle cx="305" cy="130" r="3" fill="#7A4BB2" opacity="0.55"/>
+          <circle cx="90" cy="80" r="14" fill="#B5F3F3" opacity="0.75"/>
+        </g>
+        <!-- orbit ring -->
+        <ellipse cx="290" cy="120" rx="52" ry="14" fill="none" stroke="#C77BFF" stroke-width="0.8" opacity="0.55"/>
+      </svg>
+      <div class="absolute inset-0 flex items-center justify-center">
+        <div class="w-14 h-14 rounded-full flex items-center justify-center" style="background: rgba(199,123,255,0.95); box-shadow: 0 0 36px rgba(199,123,255,0.65);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#0D0716"><path d="M8 5v14l11-7z"/></svg>
+        </div>
+      </div>
+      <div class="absolute top-3 left-3 flex items-center gap-2 px-2 py-1 rounded-full font-mono text-[10px] uppercase tracking-[0.15em]" style="background: rgba(13,7,22,0.78); color: var(--secondary); border: 1px solid rgba(181,243,243,0.30);">
+        ✦ Endurance · One sitting
+      </div>
+      <div class="absolute bottom-3 right-3 font-mono text-[10px] tabular-nums" style="background: rgba(13,7,22,0.78); color: var(--fg); padding: 4px 8px; border-radius: 999px;">8:21:04</div>
+    </div>
+    <div class="p-4 flex items-start justify-between gap-3">
+      <div class="flex-1 min-w-0">
+        <div class="text-[14px] font-medium leading-[1.4] mb-1" style="color: var(--fg)">ENDURANCE: Outer Wilds, full game in one stream</div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.15em]" style="color: var(--fg-muted)"><span class="tabular-nums">94k</span> views · 8h 21m · spoiler-free clips below</div>
+      </div>
+      <span class="font-mono text-[10px] uppercase tracking-[0.18em] whitespace-nowrap" style="color: var(--accent)">VOD →</span>
+    </div>
+  </a>
+
+  <!-- Link stack -->
+  <div class="flex flex-col gap-2.5 mb-8">
+    <a href="#" class="link-row flex items-center gap-3 px-4 py-3.5 rounded-2xl border" style="background: var(--bg-card); border-color: rgba(199,123,255,0.32);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color: var(--accent)"><path d="M4 1l-3 4v15h5v4h3l4-4h4l6-6V1H4zm17 11l-4 4h-5l-3 3v-3H6V3h15v9zm-4-6h-2v6h2V6zm-5 0h-2v6h2V6z"/></svg>
+      <div class="flex-1 min-w-0">
+        <div class="text-[15px] font-medium" style="color: var(--fg)">Twitch</div>
+        <div class="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.15em] mt-0.5" style="color: var(--fg-muted)">
+          <span class="pulse-dot" style="width:6px;height:6px;"></span>
+          LIVE most days · 6PM PT
+        </div>
+      </div>
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-faint)"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+
+    <a href="#" class="link-row flex items-center gap-3 px-4 py-3.5 rounded-2xl border" style="background: var(--bg-card); border-color: var(--border);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color: var(--fg-muted)"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+      <div class="flex-1 min-w-0">
+        <div class="text-[15px] font-medium" style="color: var(--fg)">YouTube</div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.15em] mt-0.5" style="color: var(--fg-muted)">Clip channel + karaoke archive · weekly</div>
+      </div>
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-faint)"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+
+    <a href="#" class="link-row flex items-center gap-3 px-4 py-3.5 rounded-2xl border" style="background: var(--bg-card); border-color: rgba(181,243,243,0.25);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--secondary)"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2">
+          <span class="text-[15px] font-medium" style="color: var(--fg)">Throne wishlist</span>
+          <span class="font-mono text-[9px] px-1.5 py-0.5 rounded-full uppercase tracking-[0.12em]" style="background: rgba(181,243,243,0.16); color: var(--secondary)">Prop budget</span>
+        </div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.15em] mt-0.5" style="color: var(--fg-muted)">For Tuesday horror set design</div>
+      </div>
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-faint)"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+
+    <a href="#" class="link-row flex items-center gap-3 px-4 py-3.5 rounded-2xl border" style="background: var(--bg-card); border-color: var(--border);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-muted)"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <div class="flex-1 min-w-0">
+        <div class="text-[15px] font-medium" style="color: var(--fg)">Schedule</div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.15em] mt-0.5" style="color: var(--fg-muted)">Google Cal · cozy · horror · karaoke</div>
+      </div>
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-faint)"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+
+    <a href="#" class="link-row flex items-center gap-3 px-4 py-3.5 rounded-2xl border" style="background: var(--bg-card); border-color: var(--border);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color: var(--fg-muted)"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+      <div class="flex-1 min-w-0">
+        <div class="text-[15px] font-medium" style="color: var(--fg)">Discord</div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.15em] mt-0.5" style="color: var(--fg-muted)"><span class="tabular-nums">3,127</span> members · #fanart channel</div>
+      </div>
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-faint)"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+
+    <a href="#" class="link-row flex items-center gap-3 px-4 py-3.5 rounded-2xl border" style="background: var(--bg-card); border-color: var(--border);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="color: var(--fg-muted)"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      <div class="flex-1 min-w-0">
+        <div class="text-[15px] font-medium" style="color: var(--fg)">Twitter</div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.15em] mt-0.5" style="color: var(--fg-muted)">Daily art + cozy shitposts</div>
+      </div>
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-faint)"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+
+    <a href="#" class="link-row flex items-center gap-3 px-4 py-3.5 rounded-2xl border" style="background: var(--bg-card); border-color: rgba(199,123,255,0.22);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent)"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      <div class="flex-1 min-w-0">
+        <div class="text-[15px] font-medium" style="color: var(--fg)">Merch</div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.15em] mt-0.5" style="color: var(--fg-muted)">Plush · sticker pack · sleep tee</div>
+      </div>
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-faint)"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+
+    <a href="#" class="link-row flex items-center gap-3 px-4 py-3.5 rounded-2xl border" style="background: var(--bg-card); border-color: var(--border);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-muted)"><path d="M19 9c-5 7-11 7-16 0"/><circle cx="12" cy="13" r="1"/><circle cx="6" cy="11" r="1"/><circle cx="18" cy="11" r="1"/></svg>
+      <div class="flex-1 min-w-0">
+        <div class="text-[15px] font-medium" style="color: var(--fg)">Character art by @holler.studio</div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.15em] mt-0.5" style="color: var(--fg-muted)">Original design · credit linked</div>
+      </div>
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-faint)"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+  </div>
+
+  <!-- Social row -->
+  <div class="flex items-center justify-center gap-2 mb-10">
+    <a href="#" aria-label="Twitch" class="social-btn w-8 h-8 rounded-full border flex items-center justify-center" style="border-color: var(--border); color: var(--fg-muted);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M4 1l-3 4v15h5v4h3l4-4h4l6-6V1H4zm17 11l-4 4h-5l-3 3v-3H6V3h15v9zm-4-6h-2v6h2V6zm-5 0h-2v6h2V6z"/></svg>
+    </a>
+    <a href="#" aria-label="YouTube" class="social-btn w-8 h-8 rounded-full border flex items-center justify-center" style="border-color: var(--border); color: var(--fg-muted);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+    </a>
+    <a href="#" aria-label="Twitter" class="social-btn w-8 h-8 rounded-full border flex items-center justify-center" style="border-color: var(--border); color: var(--fg-muted);">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+    </a>
+    <a href="#" aria-label="TikTok" class="social-btn w-8 h-8 rounded-full border flex items-center justify-center" style="border-color: var(--border); color: var(--fg-muted);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5.8 20.1a6.34 6.34 0 0 0 10.86-4.43V8.39a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.84-.06z"/></svg>
+    </a>
+    <a href="#" aria-label="Discord" class="social-btn w-8 h-8 rounded-full border flex items-center justify-center" style="border-color: var(--border); color: var(--fg-muted);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+    </a>
+    <a href="#" aria-label="Throne" class="social-btn w-8 h-8 rounded-full border flex items-center justify-center" style="border-color: var(--border); color: var(--fg-muted);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="M5 20V9l-3-2 5-4 5 4 5-4 5 4-3 2v11"/><path d="M9 20v-6h6v6"/></svg>
+    </a>
+  </div>
+
+  <div class="text-center font-mono text-[10px] uppercase tracking-[0.18em]" style="color: rgba(247,240,255,0.30)">
+    © 2026 lumen · made with openlen
+  </div>
+
+</main>
+
+</body>
+</html>

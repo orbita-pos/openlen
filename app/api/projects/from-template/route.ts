@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { getTemplate, getTemplateHtml } from "@/lib/templates/store";
 import { createVersion } from "@/lib/projects/versions";
+import { normalizeBornCanonical } from "@/lib/normalize";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/projects/from-template
@@ -58,6 +59,11 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
+  // Clone the template's HTML through the born-canonical normalizer so the
+  // user's project enters with the same token contract as a generated page
+  // (radius / font / accent become editable in the inspector).
+  const finalHtml = normalizeBornCanonical(html);
+
   const projectId = crypto.randomUUID();
   try {
     await db.insert(schema.projects).values({
@@ -68,7 +74,7 @@ export async function POST(req: Request): Promise<Response> {
       thumbnailUrl: null,
       tags: [entry.id, "template", entry.family],
       status: "draft",
-      data: { html },
+      data: { html: finalHtml },
     });
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -80,7 +86,7 @@ export async function POST(req: Request): Promise<Response> {
   // user a "back to original" target if they chat the page into oblivion.
   await createVersion({
     projectId,
-    html,
+    html: finalHtml,
     label: `Initial: ${entry.name}`,
     source: "initial",
   }).catch((err: unknown) => {

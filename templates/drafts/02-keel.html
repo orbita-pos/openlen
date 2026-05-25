@@ -1,0 +1,1538 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Keel — Lend and borrow onchain</title>
+<meta name="description" content="Keel is an over-collateralized lending protocol. Supply assets to earn yield from borrowers, or borrow against collateral. Rates set algorithmically by utilization, interest accrues every block." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400..600&family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          base: "#0A0F0C",
+          panel: "#0F1714",
+          panel2: "#13201A",
+          ink: "#EAF4EF",
+          muted: "#84988C",
+          mint: "#34D399",
+        },
+        fontFamily: {
+          sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          mono: ['"Geist Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        },
+        maxWidth: {
+          shell: '1220px',
+        },
+      },
+    },
+  };
+</script>
+<style>
+  :root {
+    --base: #0A0F0C;
+    --panel: #0F1714;
+    --panel2: #13201A;
+    --ink: #EAF4EF;
+    --muted: #84988C;
+    --mint: #34D399;
+    --hair: rgba(255,255,255,0.08);
+    --hair-soft: rgba(255,255,255,0.06);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--base);
+    color: var(--ink);
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'ss01', 'cv11';
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: rgba(52,211,153,0.28);
+    color: #EAF4EF;
+  }
+
+  .font-display {
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    font-variation-settings: 'opsz' 32;
+  }
+
+  .mono { font-family: 'Geist Mono', ui-monospace, monospace; }
+
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  .eyebrow {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--mint);
+  }
+  .eyebrow-muted {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .halftone { opacity: 0.45; }
+
+  /* dot grid */
+  .dot-grid {
+    background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  /* hairlines */
+  .hair { border-color: var(--hair); }
+  .hair-soft { border-color: var(--hair-soft); }
+
+  /* faint panel cards */
+  .card-faint {
+    background: rgba(255,255,255,0.022);
+    border: 1px solid var(--hair-soft);
+  }
+
+  /* lift on hover */
+  .lift {
+    transition: transform 120ms ease, border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+  }
+  .lift:hover {
+    transform: translateY(-3px);
+    border-color: rgba(52,211,153,0.32);
+  }
+
+  /* pulse dot */
+  .pulse-dot {
+    position: relative;
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: var(--mint);
+    flex: none;
+  }
+  .pulse-dot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    animation: pulse 2.4s ease-out infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(52,211,153,0.5); }
+    70%  { box-shadow: 0 0 0 9px rgba(52,211,153,0); }
+    100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); }
+  }
+
+  /* marquee */
+  .marquee {
+    display: flex;
+    width: max-content;
+    animation: marquee 38s linear infinite;
+  }
+  .marquee-wrap:hover .marquee { animation-play-state: paused; }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  /* centerpiece surface — gradient border + inner highlight */
+  .surface {
+    background: linear-gradient(180deg, #13201A 0%, #0F1714 100%);
+    border: 1px solid rgba(255,255,255,0.10);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.06),
+      0 30px 80px -30px rgba(0,0,0,0.8);
+  }
+  .surface-glow {
+    box-shadow:
+      inset 0 1px 0 rgba(52,211,153,0.14),
+      0 40px 110px -40px rgba(52,211,153,0.18),
+      0 30px 80px -30px rgba(0,0,0,0.85);
+  }
+
+  /* primary cta */
+  .cta-primary {
+    background: var(--mint);
+    color: #06140D;
+    font-weight: 600;
+    transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+    box-shadow: 0 8px 24px -10px rgba(52,211,153,0.6), inset 0 1px 0 rgba(255,255,255,0.32);
+  }
+  .cta-primary:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.06);
+    box-shadow: 0 12px 30px -10px rgba(52,211,153,0.7), inset 0 1px 0 rgba(255,255,255,0.32);
+  }
+  .cta-ghost {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--hair);
+    color: var(--ink);
+    transition: transform 120ms ease, border-color 120ms ease, background-color 120ms ease;
+  }
+  .cta-ghost:hover {
+    transform: translateY(-2px);
+    border-color: rgba(52,211,153,0.4);
+    background: rgba(52,211,153,0.06);
+  }
+
+  /* mesh blobs */
+  .blob {
+    position: absolute;
+    border-radius: 999px;
+    filter: blur(120px);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  /* tab pill */
+  .seg {
+    transition: background-color 120ms ease, color 120ms ease;
+  }
+  .seg-active {
+    background: rgba(52,211,153,0.14);
+    color: var(--mint);
+  }
+
+  /* faq */
+  details {
+    border-bottom: 1px solid var(--hair-soft);
+  }
+  details summary {
+    list-style: none;
+    cursor: pointer;
+  }
+  details summary::-webkit-details-marker { display: none; }
+  details summary .chev {
+    transition: transform 150ms ease;
+  }
+  details[open] summary .chev {
+    transform: rotate(45deg);
+  }
+
+  /* address pill */
+  .addr-pill {
+    transition: border-color 120ms ease, background-color 120ms ease;
+  }
+  .addr-pill:hover {
+    border-color: rgba(52,211,153,0.36);
+    background: rgba(52,211,153,0.05);
+  }
+
+  /* nav link */
+  .nav-link {
+    color: var(--muted);
+    transition: color 120ms ease;
+  }
+  .nav-link:hover { color: var(--ink); }
+
+  /* health gauge arc */
+  .gauge-track { stroke: rgba(255,255,255,0.08); }
+
+  /* code block */
+  .code-line { white-space: pre; }
+  .tok-kw { color: #34D399; }
+  .tok-str { color: #9DD4C0; }
+  .tok-fn { color: #EAF4EF; }
+  .tok-com { color: #5B6E64; }
+  .tok-num { color: #C7E8DA; }
+  .tok-punc { color: #84988C; }
+
+  /* sparkline */
+  .spark { display: block; }
+
+  /* utility */
+  .shell { max-width: 1220px; margin-left: auto; margin-right: auto; }
+
+  /* focus visibility */
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid rgba(52,211,153,0.6);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  @media (max-width: 360px) {
+    .font-display { letter-spacing: -0.03em; }
+  }
+</style>
+</head>
+<body class="bg-base text-ink">
+
+<!-- ============ NAV ============ -->
+<header class="sticky top-0 z-50 border-b hair-soft bg-base/80 backdrop-blur-md">
+  <nav class="shell px-5 sm:px-8 h-16 flex items-center justify-between" aria-label="Primary">
+    <!-- logo -->
+    <a href="#top" class="flex items-center gap-2.5 shrink-0" aria-label="Keel home">
+      <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <rect width="32" height="32" rx="8" fill="#0F1714" stroke="#34D399" stroke-opacity="0.4"/>
+        <path d="M7 9 C 12 9, 13 22, 16 22 C 19 22, 20 9, 25 9" stroke="#34D399" stroke-width="2.2" stroke-linecap="round"/>
+        <line x1="7" y1="24" x2="25" y2="24" stroke="#34D399" stroke-width="2.2" stroke-linecap="round" stroke-opacity="0.55"/>
+      </svg>
+      <span class="font-display text-[19px] tracking-tight">Keel</span>
+    </a>
+
+    <!-- center links -->
+    <div class="hidden md:flex items-center gap-8 text-[14px]">
+      <a href="#how" class="nav-link">Docs</a>
+      <a href="#features" class="nav-link">Ecosystem</a>
+      <a href="#governance" class="nav-link">Governance</a>
+      <a href="#developers" class="nav-link">Blog</a>
+    </div>
+
+    <!-- right -->
+    <div class="flex items-center gap-2 sm:gap-3">
+      <a href="#developers" class="hidden sm:flex w-9 h-9 items-center justify-center rounded-lg border hair-soft text-muted hover:text-ink hover:border-mint/40 transition-colors" aria-label="Keel on GitHub">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.5v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.8 18.3 5.1 18.3 5.1c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .3.2.6.8.5 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5Z"/>
+        </svg>
+      </a>
+      <a href="#cta" class="cta-primary rounded-lg px-3.5 sm:px-4 py-2 text-[13.5px]">Launch app</a>
+    </div>
+  </nav>
+</header>
+
+<main id="top">
+
+<!-- ============ HERO ============ -->
+<section class="relative overflow-hidden">
+  <!-- ambient -->
+  <div class="absolute inset-0 dot-grid opacity-60" aria-hidden="true"></div>
+  <div class="absolute inset-0" aria-hidden="true" style="background: radial-gradient(680px 380px at 50% -4%, rgba(52,211,153,0.16), transparent 70%);"></div>
+  <div class="blob" style="width:420px;height:420px;background:#0d5e44;top:-120px;left:-90px;" aria-hidden="true"></div>
+  <div class="blob" style="width:380px;height:380px;background:#10312a;top:120px;right:-120px;" aria-hidden="true"></div>
+
+  <div class="shell px-5 sm:px-8 pt-20 sm:pt-28 pb-24 sm:pb-28 relative">
+    <!-- pill badge -->
+    <div class="flex justify-center mb-7">
+      <div class="inline-flex items-center gap-2 rounded-full border hair px-3.5 py-1.5 bg-white/[0.03]">
+        <span class="pulse-dot" aria-hidden="true"></span>
+        <span class="mono text-[12px] text-ink">Mainnet</span>
+        <span class="mono text-[12px] text-muted">·</span>
+        <span class="mono text-[12px] text-mint">v3 live</span>
+      </div>
+    </div>
+
+    <!-- headline -->
+    <h1 class="font-display text-center mx-auto max-w-[940px] text-[40px] leading-[1.05] sm:text-[64px] sm:leading-[1.03]">
+      Lend and borrow onchain.
+      <span class="block halftone">No counterparty, no paperwork.</span>
+    </h1>
+
+    <!-- sub -->
+    <p class="text-center mx-auto max-w-[640px] mt-6 text-[16px] sm:text-[17.5px] leading-relaxed text-muted">
+      Over-collateralized lending markets — supply assets to earn yield from borrowers, or borrow against collateral. Rates set algorithmically by utilization; interest accrues every block.
+    </p>
+
+    <!-- CTAs -->
+    <div class="flex flex-col sm:flex-row gap-3 justify-center mt-9">
+      <a href="#cta" class="cta-primary rounded-lg px-6 py-3 text-[15px] flex items-center justify-center gap-2">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M21 7H3a1 1 0 0 1-1-1 1 1 0 0 1 1-1h15.5" stroke="#06140D" stroke-width="2" stroke-linecap="round"/>
+          <rect x="2" y="6" width="20" height="13" rx="3" stroke="#06140D" stroke-width="2"/>
+          <circle cx="17" cy="12.5" r="1.6" fill="#06140D"/>
+        </svg>
+        Launch app
+      </a>
+      <a href="#developers" class="cta-ghost rounded-lg px-6 py-3 text-[15px] flex items-center justify-center gap-2">
+        Read the docs
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+    </div>
+
+    <!-- testnet pill -->
+    <div class="flex justify-center mt-5">
+      <span class="mono text-[11.5px] text-muted inline-flex items-center gap-1.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-muted/70"></span>
+        Sepolia testnet open for builders
+      </span>
+    </div>
+
+    <!-- stat row -->
+    <div class="mt-14 sm:mt-16 grid grid-cols-2 lg:grid-cols-4 gap-px rounded-2xl overflow-hidden border hair-soft bg-white/[0.04]">
+      <div class="bg-base/60 px-5 py-6">
+        <div class="eyebrow-muted mb-2">TVL</div>
+        <div class="font-display text-[26px] sm:text-[30px] tnum" id="hero-tvl">$2.4B</div>
+        <svg class="spark mt-2" width="92" height="22" viewBox="0 0 92 22" fill="none" aria-hidden="true">
+          <polyline points="0,17 13,15 26,16 39,11 52,12 65,7 78,8 92,3" stroke="#34D399" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="bg-base/60 px-5 py-6">
+        <div class="eyebrow-muted mb-2">Markets</div>
+        <div class="font-display text-[26px] sm:text-[30px] tnum">28 <span class="text-[15px] text-muted font-normal">assets</span></div>
+        <div class="mt-2.5 flex gap-1" aria-hidden="true">
+          <span class="w-1.5 h-1.5 rounded-full bg-mint/80"></span>
+          <span class="w-1.5 h-1.5 rounded-full bg-mint/60"></span>
+          <span class="w-1.5 h-1.5 rounded-full bg-mint/40"></span>
+          <span class="w-1.5 h-1.5 rounded-full bg-white/15"></span>
+          <span class="w-1.5 h-1.5 rounded-full bg-white/15"></span>
+        </div>
+      </div>
+      <div class="bg-base/60 px-5 py-6">
+        <div class="eyebrow-muted mb-2">Supply APY</div>
+        <div class="font-display text-[26px] sm:text-[30px] tnum">up to 8.42<span class="text-mint">%</span></div>
+        <div class="mono text-[11px] text-muted mt-2">variable · by utilization</div>
+      </div>
+      <div class="bg-base/60 px-5 py-6">
+        <div class="flex items-center gap-1.5 mb-2">
+          <span class="eyebrow-muted">Loans outstanding</span>
+        </div>
+        <div class="font-display text-[26px] sm:text-[30px] tnum">$840M</div>
+        <div class="mono text-[11px] text-muted mt-2 flex items-center gap-1.5">
+          <span class="pulse-dot" style="width:5px;height:5px;" aria-hidden="true"></span>
+          accruing per block
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TRUST BAR ============ -->
+<section class="border-y hair-soft bg-panel/40">
+  <div class="shell px-5 sm:px-8 py-12">
+    <div class="text-center mb-8">
+      <span class="mono text-[12.5px] text-muted">
+        Securing <span class="text-ink tnum">$2.4B</span> onchain across <span class="text-ink tnum">28</span> markets
+      </span>
+    </div>
+
+    <!-- marquee -->
+    <div class="marquee-wrap relative overflow-hidden" aria-label="Ecosystem partners">
+      <div class="pointer-events-none absolute left-0 top-0 bottom-0 w-20 z-10" style="background:linear-gradient(90deg,#0a0f0c,transparent);"></div>
+      <div class="pointer-events-none absolute right-0 top-0 bottom-0 w-20 z-10" style="background:linear-gradient(270deg,#0a0f0c,transparent);"></div>
+      <div class="marquee items-center gap-12">
+        <!-- track A -->
+        <span class="font-display text-[19px] text-muted/80 whitespace-nowrap">Linnea</span>
+        <span class="text-[19px] text-muted/80 whitespace-nowrap" style="font-family:Georgia,serif;">Forecast</span>
+        <span class="font-display text-[19px] text-muted/80 whitespace-nowrap">Glide</span>
+        <span class="text-[19px] text-muted/80 whitespace-nowrap" style="font-family:Georgia,serif;">Mercury</span>
+        <span class="font-display text-[19px] text-muted/80 whitespace-nowrap">Brightwave</span>
+        <span class="font-display text-[19px] text-muted/80 whitespace-nowrap">Nimbus</span>
+        <span class="text-[19px] text-muted/80 whitespace-nowrap" style="font-family:Georgia,serif;">Halcyon</span>
+        <span class="font-display text-[19px] text-muted/80 whitespace-nowrap">Tideline</span>
+        <span class="text-[19px] text-muted/80 whitespace-nowrap" style="font-family:Georgia,serif;">Lattice</span>
+        <!-- track B (duplicate) -->
+        <span class="font-display text-[19px] text-muted/80 whitespace-nowrap" aria-hidden="true">Linnea</span>
+        <span class="text-[19px] text-muted/80 whitespace-nowrap" style="font-family:Georgia,serif;" aria-hidden="true">Forecast</span>
+        <span class="font-display text-[19px] text-muted/80 whitespace-nowrap" aria-hidden="true">Glide</span>
+        <span class="text-[19px] text-muted/80 whitespace-nowrap" style="font-family:Georgia,serif;" aria-hidden="true">Mercury</span>
+        <span class="font-display text-[19px] text-muted/80 whitespace-nowrap" aria-hidden="true">Brightwave</span>
+        <span class="font-display text-[19px] text-muted/80 whitespace-nowrap" aria-hidden="true">Nimbus</span>
+        <span class="text-[19px] text-muted/80 whitespace-nowrap" style="font-family:Georgia,serif;" aria-hidden="true">Halcyon</span>
+        <span class="font-display text-[19px] text-muted/80 whitespace-nowrap" aria-hidden="true">Tideline</span>
+        <span class="text-[19px] text-muted/80 whitespace-nowrap" style="font-family:Georgia,serif;" aria-hidden="true">Lattice</span>
+      </div>
+    </div>
+
+    <!-- audit badges -->
+    <div class="flex flex-wrap justify-center gap-2.5 mt-9">
+      <span class="inline-flex items-center gap-1.5 mono text-[11.5px] text-muted border hair-soft rounded-md px-2.5 py-1.5 bg-white/[0.02]">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z" stroke="#34D399" stroke-width="2" stroke-linejoin="round"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Audited · OpenZeppelin
+      </span>
+      <span class="inline-flex items-center gap-1.5 mono text-[11.5px] text-muted border hair-soft rounded-md px-2.5 py-1.5 bg-white/[0.02]">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z" stroke="#34D399" stroke-width="2" stroke-linejoin="round"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Audited · Spearbit
+      </span>
+      <span class="inline-flex items-center gap-1.5 mono text-[11.5px] text-muted border hair-soft rounded-md px-2.5 py-1.5 bg-white/[0.02]">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="#34D399" stroke-width="2"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Immunefi bounty · up to $1M
+      </span>
+      <span class="inline-flex items-center gap-1.5 mono text-[11.5px] text-muted border hair-soft rounded-md px-2.5 py-1.5 bg-white/[0.02]">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="#34D399" stroke-width="2"/></svg>
+        Formally verified rate model
+      </span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CENTERPIECE — LEND/BORROW APP ============ -->
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0" aria-hidden="true" style="background: radial-gradient(620px 320px at 70% 30%, rgba(52,211,153,0.10), transparent 70%);"></div>
+  <div class="shell px-5 sm:px-8 py-24 sm:py-28 relative">
+    <div class="text-center mb-12">
+      <div class="eyebrow mb-3">The app</div>
+      <h2 class="font-display text-[30px] sm:text-[42px] leading-tight max-w-[680px] mx-auto">
+        One panel. <span class="halftone">Supply or borrow in two clicks.</span>
+      </h2>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.55fr_1fr] gap-6 items-start">
+
+      <!-- LEND/BORROW PANEL -->
+      <div class="surface surface-glow rounded-2xl overflow-hidden">
+        <!-- panel header -->
+        <div class="flex items-center justify-between px-5 sm:px-6 py-4 border-b hair-soft">
+          <div class="flex items-center gap-2.5">
+            <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+              <rect width="32" height="32" rx="8" fill="#0F1714" stroke="#34D399" stroke-opacity="0.4"/>
+              <path d="M7 9 C 12 9, 13 22, 16 22 C 19 22, 20 9, 25 9" stroke="#34D399" stroke-width="2.2" stroke-linecap="round"/>
+              <line x1="7" y1="24" x2="25" y2="24" stroke="#34D399" stroke-width="2.2" stroke-linecap="round" stroke-opacity="0.55"/>
+            </svg>
+            <span class="font-display text-[15px]">Keel Markets</span>
+          </div>
+          <!-- connected wallet chip -->
+          <div class="flex items-center gap-2 rounded-lg border hair-soft bg-white/[0.03] pl-1.5 pr-2.5 py-1.5">
+            <span class="w-5 h-5 rounded-md flex items-center justify-center" style="background:linear-gradient(135deg,#34D399,#0d5e44);">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 6h18v12H3z" stroke="#06140D" stroke-width="2.4"/><circle cx="16.5" cy="12" r="1.4" fill="#06140D"/></svg>
+            </span>
+            <span class="mono text-[11.5px] text-ink tnum">0x4f2a…a821</span>
+            <span class="pulse-dot" style="width:5px;height:5px;" aria-hidden="true"></span>
+          </div>
+        </div>
+
+        <!-- tabs -->
+        <div class="px-5 sm:px-6 pt-5">
+          <div class="inline-flex p-1 rounded-lg border hair-soft bg-base/60 text-[13px] mono">
+            <span class="seg seg-active rounded-md px-4 py-1.5">Supply</span>
+            <span class="seg rounded-md px-4 py-1.5 text-muted">Borrow</span>
+          </div>
+        </div>
+
+        <!-- SUPPLY VIEW -->
+        <div class="px-5 sm:px-6 pt-5 pb-6">
+          <!-- supply input row -->
+          <div class="rounded-xl border hair-soft bg-base/50 p-4">
+            <div class="flex items-center justify-between mb-2.5">
+              <span class="mono text-[11px] text-muted uppercase tracking-wider">You supply</span>
+              <span class="mono text-[11px] text-muted">Wallet · <span class="text-ink tnum">12,500.00</span></span>
+            </div>
+            <div class="flex items-center justify-between gap-3">
+              <div class="font-display text-[30px] sm:text-[34px] tnum text-ink">5,000.00</div>
+              <div class="flex items-center gap-2 rounded-lg border hair-soft bg-white/[0.03] px-2.5 py-1.5 shrink-0">
+                <span class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style="background:#2775CA;color:#fff;">U</span>
+                <span class="text-[13.5px] font-medium">USDC</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="#84988C" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+            </div>
+            <div class="flex items-center justify-between mt-2.5">
+              <span class="mono text-[11px] text-muted tnum">≈ $5,000.00</span>
+              <div class="flex gap-1.5">
+                <span class="mono text-[10px] text-muted border hair-soft rounded px-1.5 py-0.5">25%</span>
+                <span class="mono text-[10px] text-muted border hair-soft rounded px-1.5 py-0.5">50%</span>
+                <span class="mono text-[10px] text-mint border border-mint/30 bg-mint/10 rounded px-1.5 py-0.5">Max</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- supply summary -->
+          <div class="grid grid-cols-2 gap-px mt-4 rounded-xl overflow-hidden border hair-soft bg-white/[0.04]">
+            <div class="bg-panel px-4 py-3.5">
+              <div class="mono text-[10.5px] text-muted uppercase tracking-wider mb-1">Supply APY</div>
+              <div class="font-display text-[20px] text-mint tnum">4.18%</div>
+            </div>
+            <div class="bg-panel px-4 py-3.5">
+              <div class="mono text-[10.5px] text-muted uppercase tracking-wider mb-1">Pool utilization</div>
+              <div class="font-display text-[20px] text-ink tnum">71.4%</div>
+            </div>
+          </div>
+
+          <!-- APY sparkline -->
+          <div class="mt-4 rounded-xl border hair-soft bg-base/40 px-4 py-3">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="mono text-[10.5px] text-muted uppercase tracking-wider">USDC APY · 30d</span>
+              <span class="mono text-[10.5px] text-mint tnum">+0.34%</span>
+            </div>
+            <svg id="apy-spark" class="spark w-full" height="40" viewBox="0 0 320 40" preserveAspectRatio="none" fill="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="sparkfill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#34D399" stop-opacity="0.28"/>
+                  <stop offset="100%" stop-color="#34D399" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path id="apy-area" fill="url(#sparkfill)"></path>
+              <path id="apy-line" stroke="#34D399" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </div>
+
+          <!-- supply button -->
+          <button class="cta-primary w-full rounded-lg py-3 mt-4 text-[14.5px]">Supply USDC</button>
+          <p class="mono text-[10.5px] text-muted text-center mt-2.5">Est. gas <span class="text-ink">~0.0011 ETH</span> · interest accrues from the next block</p>
+
+          <!-- market rows -->
+          <div class="mt-5">
+            <div class="flex items-center justify-between mb-2 px-1">
+              <span class="mono text-[10.5px] text-muted uppercase tracking-wider">All markets</span>
+              <span class="mono text-[10.5px] text-muted uppercase tracking-wider">Supply APY</span>
+            </div>
+            <div class="rounded-xl border hair-soft overflow-hidden divide-y divide-white/[0.05]">
+              <!-- USDC -->
+              <div class="flex items-center justify-between px-4 py-3 bg-white/[0.02] hover:bg-mint/[0.04] transition-colors">
+                <div class="flex items-center gap-2.5">
+                  <span class="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold" style="background:#2775CA;color:#fff;">U</span>
+                  <div>
+                    <div class="text-[13px] font-medium">USDC</div>
+                    <div class="mono text-[10px] text-muted">USD Coin</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="mono text-[13.5px] text-mint tnum">4.18%</div>
+                  <div class="mono text-[10px] text-muted tnum">$612.4M supplied</div>
+                </div>
+              </div>
+              <!-- ETH -->
+              <div class="flex items-center justify-between px-4 py-3 bg-white/[0.02] hover:bg-mint/[0.04] transition-colors">
+                <div class="flex items-center gap-2.5">
+                  <span class="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold" style="background:#627EEA;color:#fff;">Ξ</span>
+                  <div>
+                    <div class="text-[13px] font-medium">ETH</div>
+                    <div class="mono text-[10px] text-muted">Ether</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="mono text-[13.5px] text-mint tnum">1.92%</div>
+                  <div class="mono text-[10px] text-muted tnum">$948.1M supplied</div>
+                </div>
+              </div>
+              <!-- wBTC -->
+              <div class="flex items-center justify-between px-4 py-3 bg-white/[0.02] hover:bg-mint/[0.04] transition-colors">
+                <div class="flex items-center gap-2.5">
+                  <span class="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold" style="background:#F09242;color:#fff;">฿</span>
+                  <div>
+                    <div class="text-[13px] font-medium">wBTC</div>
+                    <div class="mono text-[10px] text-muted">Wrapped Bitcoin</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="mono text-[13.5px] text-mint tnum">0.74%</div>
+                  <div class="mono text-[10px] text-muted tnum">$421.7M supplied</div>
+                </div>
+              </div>
+              <!-- DAI -->
+              <div class="flex items-center justify-between px-4 py-3 bg-white/[0.02] hover:bg-mint/[0.04] transition-colors">
+                <div class="flex items-center gap-2.5">
+                  <span class="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold" style="background:#F5AC37;color:#fff;">◈</span>
+                  <div>
+                    <div class="text-[13px] font-medium">DAI</div>
+                    <div class="mono text-[10px] text-muted">Dai Stablecoin</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="mono text-[13.5px] text-mint tnum">4.05%</div>
+                  <div class="mono text-[10px] text-muted tnum">$203.9M supplied</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div class="space-y-6">
+        <!-- BORROW CARD with health gauge -->
+        <div class="surface rounded-2xl overflow-hidden">
+          <div class="flex items-center justify-between px-5 py-4 border-b hair-soft">
+            <span class="font-display text-[14px]">Borrow position</span>
+            <span class="mono text-[10.5px] text-muted border hair-soft rounded px-2 py-1">Borrow tab</span>
+          </div>
+          <div class="px-5 py-5">
+            <!-- collateral -->
+            <div class="rounded-xl border hair-soft bg-base/50 p-3.5 mb-3">
+              <div class="mono text-[10px] text-muted uppercase tracking-wider mb-1.5">Collateral · ETH</div>
+              <div class="flex items-center justify-between">
+                <div class="font-display text-[22px] tnum">12.40</div>
+                <span class="mono text-[11px] text-muted tnum">≈ $41,168</span>
+              </div>
+            </div>
+            <!-- borrow -->
+            <div class="rounded-xl border hair-soft bg-base/50 p-3.5 mb-4">
+              <div class="mono text-[10px] text-muted uppercase tracking-wider mb-1.5">Borrowing · USDC</div>
+              <div class="flex items-center justify-between">
+                <div class="font-display text-[22px] tnum">18,000</div>
+                <span class="mono text-[11px] text-mint tnum">5.61% APY</span>
+              </div>
+            </div>
+
+            <!-- HEALTH FACTOR GAUGE -->
+            <div class="rounded-xl border hair-soft bg-base/40 p-4 mb-4">
+              <div class="flex items-center gap-4">
+                <div class="relative shrink-0">
+                  <svg width="86" height="86" viewBox="0 0 86 86" aria-hidden="true">
+                    <circle cx="43" cy="43" r="35" class="gauge-track" stroke-width="9" fill="none"/>
+                    <circle cx="43" cy="43" r="35" stroke="#34D399" stroke-width="9" fill="none"
+                      stroke-linecap="round"
+                      stroke-dasharray="219.9"
+                      stroke-dashoffset="74"
+                      transform="rotate(-90 43 43)"/>
+                  </svg>
+                  <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <span class="font-display text-[20px] text-mint tnum leading-none">1.84</span>
+                    <span class="mono text-[8.5px] text-muted mt-0.5">HEALTH</span>
+                  </div>
+                </div>
+                <div>
+                  <div class="inline-flex items-center gap-1.5 rounded-md bg-mint/12 border border-mint/25 px-2 py-1 mb-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-mint"></span>
+                    <span class="mono text-[10.5px] text-mint">Safe</span>
+                  </div>
+                  <p class="text-[12px] text-muted leading-snug">Liquidation occurs if health factor drops below <span class="mono text-ink">1.00</span>.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- borrow details -->
+            <div class="grid grid-cols-2 gap-px rounded-xl overflow-hidden border hair-soft bg-white/[0.04] mb-4">
+              <div class="bg-panel px-3.5 py-3">
+                <div class="mono text-[10px] text-muted uppercase tracking-wider mb-1">Liq. price</div>
+                <div class="mono text-[13.5px] text-ink tnum">$1,968.40</div>
+              </div>
+              <div class="bg-panel px-3.5 py-3">
+                <div class="mono text-[10px] text-muted uppercase tracking-wider mb-1">Max LTV</div>
+                <div class="mono text-[13.5px] text-ink tnum">82.5%</div>
+              </div>
+            </div>
+
+            <button class="cta-primary w-full rounded-lg py-2.5 text-[13.5px]">Borrow USDC</button>
+          </div>
+        </div>
+
+        <!-- CONNECT WALLET MODAL MOCKUP -->
+        <div class="surface rounded-2xl overflow-hidden">
+          <div class="flex items-center justify-between px-5 py-3.5 border-b hair-soft">
+            <span class="font-display text-[14px]">Connect a wallet</span>
+            <span class="w-6 h-6 rounded-md border hair-soft flex items-center justify-center text-muted" aria-hidden="true">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+            </span>
+          </div>
+          <div class="px-4 py-3.5 space-y-2">
+            <!-- MetaMask -->
+            <div class="flex items-center gap-3 rounded-lg border hair-soft bg-white/[0.02] px-3 py-2.5 lift cursor-pointer">
+              <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <path d="M27 5 18 11l1.7-4L27 5Z" fill="#E2761B"/><path d="M5 5l9 6-1.7-4L5 5Z" fill="#E4761B"/>
+                <path d="M23.5 21 21 25l5.3 1.5L27.8 21h-4.3ZM4.2 21l1.5 5.5L11 25l-2.5-4H4.2Z" fill="#E4761B"/>
+                <path d="M10.7 14.3 9.3 16.5l5.3.2-.2-5.7-3.7 3.3ZM21.3 14.3l-3.8-3.4-.1 5.8 5.3-.2-1.4-2.2ZM11 25l3.2-1.5-2.7-2.1L11 25ZM17.8 23.5 21 25l-.5-3.6-2.7 2.1Z" fill="#E4761B"/>
+              </svg>
+              <div class="flex-1">
+                <div class="text-[13px] font-medium">MetaMask</div>
+                <div class="mono text-[10px] text-muted">Browser extension</div>
+              </div>
+              <span class="mono text-[9.5px] text-mint border border-mint/25 bg-mint/10 rounded px-1.5 py-0.5">Detected</span>
+            </div>
+            <!-- Rainbow -->
+            <div class="flex items-center gap-3 rounded-lg border hair-soft bg-white/[0.02] px-3 py-2.5 lift cursor-pointer">
+              <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <rect width="32" height="32" rx="8" fill="#0F1714"/>
+                <path d="M6 24a14 14 0 0 1 14-14" stroke="#FF4000" stroke-width="3" fill="none" stroke-linecap="round"/>
+                <path d="M6 24a10 10 0 0 1 10-10" stroke="#FFB800" stroke-width="3" fill="none" stroke-linecap="round"/>
+                <path d="M6 24a6 6 0 0 1 6-6" stroke="#00AAFF" stroke-width="3" fill="none" stroke-linecap="round"/>
+              </svg>
+              <div class="flex-1">
+                <div class="text-[13px] font-medium">Rainbow</div>
+                <div class="mono text-[10px] text-muted">Mobile · QR connect</div>
+              </div>
+            </div>
+            <!-- Coinbase Wallet -->
+            <div class="flex items-center gap-3 rounded-lg border hair-soft bg-white/[0.02] px-3 py-2.5 lift cursor-pointer">
+              <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <rect width="32" height="32" rx="8" fill="#0052FF"/>
+                <circle cx="16" cy="16" r="9" fill="#fff"/>
+                <rect x="13" y="13" width="6" height="6" rx="1.4" fill="#0052FF"/>
+              </svg>
+              <div class="flex-1">
+                <div class="text-[13px] font-medium">Coinbase Wallet</div>
+                <div class="mono text-[10px] text-muted">Extension · mobile</div>
+              </div>
+            </div>
+            <!-- WalletConnect -->
+            <div class="flex items-center gap-3 rounded-lg border hair-soft bg-white/[0.02] px-3 py-2.5 lift cursor-pointer">
+              <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <rect width="32" height="32" rx="8" fill="#0F1714"/>
+                <path d="M10 14c3.3-3.3 8.7-3.3 12 0l.4.4-1.6 1.6-.4-.4c-2.3-2.3-6.1-2.3-8.4 0l-.5.5-1.6-1.6.5-.5Z" fill="#3B99FC"/>
+                <path d="M8.2 17.4 11 20.2l-1.6 1.6-1.4-1.4-1.4 1.4L5 20.2l2.6-2.8Z" fill="#3B99FC"/>
+              </svg>
+              <div class="flex-1">
+                <div class="text-[13px] font-medium">WalletConnect</div>
+                <div class="mono text-[10px] text-muted">300+ wallets</div>
+              </div>
+            </div>
+            <!-- Ledger -->
+            <div class="flex items-center gap-3 rounded-lg border hair-soft bg-white/[0.02] px-3 py-2.5 lift cursor-pointer">
+              <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <rect width="32" height="32" rx="8" fill="#0F1714"/>
+                <path d="M9 9h7v2.2H11.2V16H9V9ZM23 23h-7v-2.2h4.8V16H23v7ZM16 16h7v2.2h-7V16ZM9 16h2.2v7H9v-7Z" fill="#EAF4EF"/>
+              </svg>
+              <div class="flex-1">
+                <div class="text-[13px] font-medium">Ledger</div>
+                <div class="mono text-[10px] text-muted">Hardware wallet</div>
+              </div>
+            </div>
+          </div>
+          <div class="px-4 pb-4">
+            <p class="mono text-[10px] text-muted text-center leading-relaxed">Keel never holds your keys. Connecting only grants read access until you sign a transaction.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HOW IT WORKS ============ -->
+<section id="how" class="border-t hair-soft bg-panel/40">
+  <div class="shell px-5 sm:px-8 py-24 sm:py-28">
+    <div class="text-center mb-14">
+      <div class="eyebrow mb-3">How it works</div>
+      <h2 class="font-display text-[30px] sm:text-[42px] leading-tight max-w-[640px] mx-auto">
+        Supply, earn, borrow, repay — all onchain
+      </h2>
+      <p class="text-muted text-[15.5px] max-w-[560px] mx-auto mt-4">
+        Every step is a contract call. No intermediary takes custody; the pool contract holds the assets and the rate model sets the price.
+      </p>
+    </div>
+
+    <!-- flow -->
+    <div class="grid md:grid-cols-4 gap-4 relative">
+      <!-- connecting line (desktop) -->
+      <div class="hidden md:block absolute top-[40px] left-[12%] right-[12%] h-px" style="background:linear-gradient(90deg,transparent,rgba(52,211,153,0.35),rgba(52,211,153,0.35),transparent);" aria-hidden="true"></div>
+
+      <!-- step 1 -->
+      <div class="relative card-faint rounded-2xl p-5 lift">
+        <div class="flex items-center justify-between mb-4">
+          <span class="w-9 h-9 rounded-xl bg-mint/12 border border-mint/25 flex items-center justify-center font-display text-[15px] text-mint">1</span>
+          <span class="mono text-[10px] text-muted">→ KeelPool</span>
+        </div>
+        <h3 class="font-display text-[16px] mb-1.5">Supply an asset</h3>
+        <p class="text-[13px] text-muted leading-relaxed">Deposit USDC, ETH, or another listed asset into its pool. You receive a yield-bearing balance representing your share.</p>
+        <div class="mono text-[10px] text-mint mt-3 border-t hair-soft pt-2.5">supply(asset, amount)</div>
+      </div>
+
+      <!-- step 2 -->
+      <div class="relative card-faint rounded-2xl p-5 lift">
+        <div class="flex items-center justify-between mb-4">
+          <span class="w-9 h-9 rounded-xl bg-mint/12 border border-mint/25 flex items-center justify-center font-display text-[15px] text-mint">2</span>
+          <span class="mono text-[10px] text-muted">InterestRateModel</span>
+        </div>
+        <h3 class="font-display text-[16px] mb-1.5">It earns yield</h3>
+        <p class="text-[13px] text-muted leading-relaxed">Borrowers pay interest into the pool. The rate moves with utilization — more demand, higher yield to suppliers.</p>
+        <div class="mono text-[10px] text-mint mt-3 border-t hair-soft pt-2.5">rate = f(utilization)</div>
+      </div>
+
+      <!-- step 3 -->
+      <div class="relative card-faint rounded-2xl p-5 lift">
+        <div class="flex items-center justify-between mb-4">
+          <span class="w-9 h-9 rounded-xl bg-mint/12 border border-mint/25 flex items-center justify-center font-display text-[15px] text-mint">3</span>
+          <span class="mono text-[10px] text-muted">→ KeelPool</span>
+        </div>
+        <h3 class="font-display text-[16px] mb-1.5">Borrow against it</h3>
+        <p class="text-[13px] text-muted leading-relaxed">Use your supplied assets as collateral and borrow another asset, up to that market's loan-to-value limit.</p>
+        <div class="mono text-[10px] text-mint mt-3 border-t hair-soft pt-2.5">borrow(asset, amount)</div>
+      </div>
+
+      <!-- step 4 -->
+      <div class="relative card-faint rounded-2xl p-5 lift">
+        <div class="flex items-center justify-between mb-4">
+          <span class="w-9 h-9 rounded-xl bg-mint/12 border border-mint/25 flex items-center justify-center font-display text-[15px] text-mint">4</span>
+          <span class="mono text-[10px] text-muted">→ KeelPool</span>
+        </div>
+        <h3 class="font-display text-[16px] mb-1.5">Repay & withdraw</h3>
+        <p class="text-[13px] text-muted leading-relaxed">Repay anytime — interest accrues per block, never in fixed terms. Withdraw your supply whenever pool liquidity allows.</p>
+        <div class="mono text-[10px] text-mint mt-3 border-t hair-soft pt-2.5">repay() · withdraw()</div>
+      </div>
+    </div>
+
+    <!-- gas note -->
+    <div class="flex justify-center mt-8">
+      <span class="mono text-[11.5px] text-muted inline-flex items-center gap-2 border hair-soft rounded-lg px-3.5 py-2 bg-white/[0.02]">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 21h14M15 9h2a2 2 0 0 1 2 2v6a1.5 1.5 0 0 0 3 0V8l-3-3" stroke="#84988C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Typical action costs <span class="text-ink">~0.0008–0.0014 ETH</span> in gas · all calls are atomic and revert on failure
+      </span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FEATURES GRID ============ -->
+<section id="features" class="border-t hair-soft">
+  <div class="shell px-5 sm:px-8 py-24 sm:py-28">
+    <div class="mb-14 max-w-[640px]">
+      <div class="eyebrow mb-3">Protocol design</div>
+      <h2 class="font-display text-[30px] sm:text-[42px] leading-tight">
+        Built conservative, by construction
+      </h2>
+      <p class="text-muted text-[15.5px] mt-4">
+        Keel's safety properties are enforced in the contracts, not in policy. Six design choices keep markets solvent.
+      </p>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <!-- 1 -->
+      <div class="card-faint rounded-2xl p-6 lift">
+        <div class="w-11 h-11 rounded-xl bg-mint/10 border border-mint/20 flex items-center justify-center mb-4">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z" stroke="#34D399" stroke-width="2" stroke-linejoin="round"/></svg>
+        </div>
+        <h3 class="font-display text-[17px] mb-2">Over-collateralized only</h3>
+        <p class="text-[13.5px] text-muted leading-relaxed">Every loan is backed by more value than it draws. There is no unsecured credit and no whitelist — collateral is the only requirement.</p>
+      </div>
+      <!-- 2 -->
+      <div class="card-faint rounded-2xl p-6 lift">
+        <div class="w-11 h-11 rounded-xl bg-mint/10 border border-mint/20 flex items-center justify-center mb-4">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="#34D399" stroke-width="2"/><path d="M12 7v5l3.5 2" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3 class="font-display text-[17px] mb-2">Per-block interest accrual</h3>
+        <p class="text-[13.5px] text-muted leading-relaxed">Interest compounds every block — roughly every 12 seconds — so balances are always current. No fixed terms, no maturity dates.</p>
+      </div>
+      <!-- 3 -->
+      <div class="card-faint rounded-2xl p-6 lift">
+        <div class="w-11 h-11 rounded-xl bg-mint/10 border border-mint/20 flex items-center justify-center mb-4">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2" stroke="#34D399" stroke-width="2"/><rect x="13" y="13" width="8" height="8" rx="2" stroke="#34D399" stroke-width="2"/><path d="M11 7h2a2 2 0 0 1 2 2v2" stroke="#34D399" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <h3 class="font-display text-[17px] mb-2">Isolated risk markets</h3>
+        <p class="text-[13.5px] text-muted leading-relaxed">Each asset's exposure is ring-fenced. A failure or depeg in one market cannot drain liquidity from the others.</p>
+      </div>
+      <!-- 4 -->
+      <div class="card-faint rounded-2xl p-6 lift">
+        <div class="w-11 h-11 rounded-xl bg-mint/10 border border-mint/20 flex items-center justify-center mb-4">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z" stroke="#34D399" stroke-width="2" stroke-linejoin="round"/></svg>
+        </div>
+        <h3 class="font-display text-[17px] mb-2">Automated liquidation engine</h3>
+        <p class="text-[13.5px] text-muted leading-relaxed">When a position falls below its health threshold, liquidators repay debt for a fixed bonus — keeping every pool fully solvent.</p>
+      </div>
+      <!-- 5 -->
+      <div class="card-faint rounded-2xl p-6 lift">
+        <div class="w-11 h-11 rounded-xl bg-mint/10 border border-mint/20 flex items-center justify-center mb-4">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" stroke="#34D399" stroke-width="2"/><path d="M8 11V8a4 4 0 0 1 8 0" stroke="#34D399" stroke-width="2" stroke-linecap="round"/><path d="m9 16 2 2 4-4" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3 class="font-display text-[17px] mb-2">No lockups</h3>
+        <p class="text-[13.5px] text-muted leading-relaxed">Supplied assets are never frozen. Withdraw the moment pool liquidity allows — there is no notice period and no early-exit fee.</p>
+      </div>
+      <!-- 6 -->
+      <div class="card-faint rounded-2xl p-6 lift">
+        <div class="w-11 h-11 rounded-xl bg-mint/10 border border-mint/20 flex items-center justify-center mb-4">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2v6m0 8v6M2 12h6m8 0h6" stroke="#34D399" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="3.5" stroke="#34D399" stroke-width="2"/></svg>
+        </div>
+        <h3 class="font-display text-[17px] mb-2">Composable pools</h3>
+        <p class="text-[13.5px] text-muted leading-relaxed">Pools expose an ERC-4626-style interface. Other protocols can route through Keel without integration overhead or special permissions.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DEVELOPER SECTION ============ -->
+<section id="developers" class="border-t hair-soft bg-panel/40">
+  <div class="shell px-5 sm:px-8 py-24 sm:py-28">
+    <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+      <!-- copy -->
+      <div>
+        <div class="eyebrow mb-3">For developers</div>
+        <h2 class="font-display text-[30px] sm:text-[42px] leading-tight mb-4">
+          Integrate the pools
+        </h2>
+        <p class="text-muted text-[15.5px] leading-relaxed mb-6">
+          The TypeScript SDK wraps every pool action — supply, borrow, repay, and live rate reads — in a typed client. No ABI wrangling, no manual encoding.
+        </p>
+        <ul class="space-y-3 mb-8">
+          <li class="flex items-start gap-3 text-[14px] text-ink">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" class="mt-0.5 shrink-0" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="#34D399" stroke-width="2"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Typed bindings generated from verified contract ABIs</span>
+          </li>
+          <li class="flex items-start gap-3 text-[14px] text-ink">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" class="mt-0.5 shrink-0" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="#34D399" stroke-width="2"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Read APY, utilization, and health factor with one call</span>
+          </li>
+          <li class="flex items-start gap-3 text-[14px] text-ink">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" class="mt-0.5 shrink-0" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="#34D399" stroke-width="2"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Works with viem, ethers, and any EIP-1193 provider</span>
+          </li>
+        </ul>
+        <div class="flex flex-wrap gap-3">
+          <a href="#cta" class="cta-primary rounded-lg px-5 py-2.5 text-[14px]">Build on Keel</a>
+          <a href="#how" class="cta-ghost rounded-lg px-5 py-2.5 text-[14px] flex items-center gap-2">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 18c-4.5 1.3-4.5-2.5-6-3m12 6v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.3 4.3 0 0 0-.1-3.2s-1-.3-3.5 1.3a12 12 0 0 0-6 0C6.1 3.3 5 3.6 5 3.6a4.3 4.3 0 0 0-.1 3.2A4.6 4.6 0 0 0 3.5 10c0 4.6 2.7 5.7 5.5 6-.4.4-.5.9-.5 1.5V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            View on GitHub
+          </a>
+        </div>
+      </div>
+
+      <!-- code block -->
+      <div class="surface rounded-2xl overflow-hidden">
+        <!-- tab bar -->
+        <div class="flex items-center justify-between border-b hair-soft bg-base/50">
+          <div class="flex items-center">
+            <div class="flex items-center gap-2 px-4 py-3 border-r hair-soft bg-white/[0.03]">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3" fill="#34D399" fill-opacity="0.15" stroke="#34D399" stroke-width="1.6"/><path d="M8 16V9h2m4 7V9m-4 3.5h4" stroke="#34D399" stroke-width="1.6" stroke-linecap="round"/></svg>
+              <span class="mono text-[12px] text-ink">integrate.ts</span>
+            </div>
+            <span class="mono text-[12px] text-muted px-4 hidden sm:inline">README.md</span>
+          </div>
+          <button id="copy-code" class="flex items-center gap-1.5 mono text-[11px] text-muted hover:text-mint transition-colors px-4 py-3" aria-label="Copy code to clipboard">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <span id="copy-code-label">Copy</span>
+          </button>
+        </div>
+        <!-- code -->
+        <div class="px-5 py-4 overflow-x-auto bg-[#0b1310]">
+          <pre class="mono text-[12.5px] leading-[1.85]"><code id="code-body"><span class="code-line"><span class="tok-com">// install: npm i @keel/sdk</span></span>
+<span class="code-line"><span class="tok-kw">import</span> <span class="tok-punc">{</span> <span class="tok-fn">KeelClient</span> <span class="tok-punc">}</span> <span class="tok-kw">from</span> <span class="tok-str">'@keel/sdk'</span><span class="tok-punc">;</span></span>
+<span class="code-line"></span>
+<span class="code-line"><span class="tok-kw">const</span> keel <span class="tok-punc">=</span> <span class="tok-kw">new</span> <span class="tok-fn">KeelClient</span><span class="tok-punc">({</span></span>
+<span class="code-line">  chain<span class="tok-punc">:</span> <span class="tok-str">'mainnet'</span><span class="tok-punc">,</span></span>
+<span class="code-line">  rpcUrl<span class="tok-punc">:</span> process<span class="tok-punc">.</span>env<span class="tok-punc">.</span><span class="tok-fn">RPC_URL</span><span class="tok-punc">,</span></span>
+<span class="code-line"><span class="tok-punc">});</span></span>
+<span class="code-line"></span>
+<span class="code-line"><span class="tok-com">// open the USDC pool</span></span>
+<span class="code-line"><span class="tok-kw">const</span> pool <span class="tok-punc">=</span> <span class="tok-kw">await</span> keel<span class="tok-punc">.</span><span class="tok-fn">pool</span><span class="tok-punc">(</span><span class="tok-str">'USDC'</span><span class="tok-punc">);</span></span>
+<span class="code-line"></span>
+<span class="code-line"><span class="tok-com">// supply 5,000 USDC</span></span>
+<span class="code-line"><span class="tok-kw">await</span> pool<span class="tok-punc">.</span><span class="tok-fn">supply</span><span class="tok-punc">({</span> asset<span class="tok-punc">:</span> <span class="tok-str">'USDC'</span><span class="tok-punc">,</span> amount<span class="tok-punc">:</span> <span class="tok-num">5_000n</span> <span class="tok-punc">});</span></span>
+<span class="code-line"></span>
+<span class="code-line"><span class="tok-com">// borrow against ETH collateral</span></span>
+<span class="code-line"><span class="tok-kw">await</span> pool<span class="tok-punc">.</span><span class="tok-fn">borrow</span><span class="tok-punc">({</span> asset<span class="tok-punc">:</span> <span class="tok-str">'USDC'</span><span class="tok-punc">,</span> amount<span class="tok-punc">:</span> <span class="tok-num">1_800n</span> <span class="tok-punc">});</span></span>
+<span class="code-line"></span>
+<span class="code-line"><span class="tok-com">// read the live supply APY</span></span>
+<span class="code-line"><span class="tok-kw">const</span> apy <span class="tok-punc">=</span> <span class="tok-kw">await</span> pool<span class="tok-punc">.</span><span class="tok-fn">getApy</span><span class="tok-punc">();</span></span>
+<span class="code-line">console<span class="tok-punc">.</span><span class="tok-fn">log</span><span class="tok-punc">(</span>apy<span class="tok-punc">.</span>supply<span class="tok-punc">);</span> <span class="tok-com">// 0.0418</span></span></code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ONCHAIN STATS BANNER ============ -->
+<section class="border-y hair relative overflow-hidden" style="background:linear-gradient(180deg,#0d1410,#0b110e);">
+  <div class="absolute inset-0 dot-grid opacity-40" aria-hidden="true"></div>
+  <div class="shell px-5 sm:px-8 py-16 sm:py-20 relative">
+    <div class="text-center mb-10">
+      <span class="mono text-[11px] tracking-[0.18em] uppercase text-mint">Onchain · live</span>
+    </div>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-px rounded-2xl overflow-hidden border hair-soft bg-white/[0.05]">
+      <div class="bg-base/70 px-5 py-8 text-center">
+        <div class="font-display text-[32px] sm:text-[40px] tnum text-ink">$2.4B</div>
+        <div class="mono text-[11px] text-muted mt-2 uppercase tracking-wider">Total value locked</div>
+      </div>
+      <div class="bg-base/70 px-5 py-8 text-center">
+        <div class="font-display text-[32px] sm:text-[40px] tnum text-ink">$14.8B</div>
+        <div class="mono text-[11px] text-muted mt-2 uppercase tracking-wider">Cumulative volume</div>
+      </div>
+      <div class="bg-base/70 px-5 py-8 text-center">
+        <div class="font-display text-[32px] sm:text-[40px] tnum text-ink">408,212</div>
+        <div class="mono text-[11px] text-muted mt-2 uppercase tracking-wider">Lenders &amp; borrowers</div>
+      </div>
+      <div class="bg-base/70 px-5 py-8 text-center">
+        <div class="font-display text-[32px] sm:text-[40px] tnum text-ink">18,408</div>
+        <div class="mono text-[11px] text-muted mt-2 uppercase tracking-wider">Liquidations handled</div>
+      </div>
+    </div>
+    <div class="flex justify-center mt-7">
+      <span class="mono text-[11px] text-muted inline-flex items-center gap-2">
+        <span class="pulse-dot" style="width:5px;height:5px;" aria-hidden="true"></span>
+        Indexed at block <span class="text-ink tnum">21,840,662</span> · updates every block
+      </span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SECURITY ============ -->
+<section id="security" class="border-t hair-soft">
+  <div class="shell px-5 sm:px-8 py-24 sm:py-28">
+    <div class="grid lg:grid-cols-[1fr_1.1fr] gap-12 lg:gap-16">
+      <!-- left: copy + audits -->
+      <div>
+        <div class="eyebrow mb-3">Security</div>
+        <h2 class="font-display text-[30px] sm:text-[42px] leading-tight mb-4">
+          Reviewed line by line
+        </h2>
+        <p class="text-muted text-[15.5px] leading-relaxed mb-7">
+          Keel's contracts have been independently audited, the interest-rate model formally verified, and every deployment published onchain. Reports are public before any code reaches mainnet.
+        </p>
+
+        <!-- audit pills -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between card-faint rounded-xl px-4 py-3.5">
+            <div class="flex items-center gap-3">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z" stroke="#34D399" stroke-width="2" stroke-linejoin="round"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div>
+                <div class="text-[13.5px] font-medium">OpenZeppelin</div>
+                <div class="mono text-[10.5px] text-muted">Full protocol audit</div>
+              </div>
+            </div>
+            <span class="mono text-[11px] text-muted tnum">Feb 2026</span>
+          </div>
+          <div class="flex items-center justify-between card-faint rounded-xl px-4 py-3.5">
+            <div class="flex items-center gap-3">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z" stroke="#34D399" stroke-width="2" stroke-linejoin="round"/><path d="m8.5 12 2.5 2.5 4.5-5" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div>
+                <div class="text-[13.5px] font-medium">Spearbit</div>
+                <div class="mono text-[10.5px] text-muted">Liquidation engine audit</div>
+              </div>
+            </div>
+            <span class="mono text-[11px] text-muted tnum">Dec 2025</span>
+          </div>
+          <div class="flex items-center justify-between card-faint rounded-xl px-4 py-3.5">
+            <div class="flex items-center gap-3">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z" stroke="#34D399" stroke-width="2" stroke-linejoin="round"/></svg>
+              <div>
+                <div class="text-[13.5px] font-medium">Immunefi</div>
+                <div class="mono text-[10.5px] text-muted">Bug bounty · live</div>
+              </div>
+            </div>
+            <span class="mono text-[11px] text-mint tnum">up to $1M</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- right: detail cards -->
+      <div class="grid sm:grid-cols-2 gap-4 content-start">
+        <div class="card-faint rounded-2xl p-5">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" class="mb-3" aria-hidden="true"><path d="M9 11 7 9m0 0L5 7m2 2 5-5 5 5m-5 12V9" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="13" width="18" height="8" rx="2" stroke="#34D399" stroke-width="2"/></svg>
+          <h3 class="font-display text-[15px] mb-1.5">Formal verification</h3>
+          <p class="text-[12.5px] text-muted leading-relaxed">The interest-rate model is machine-checked: its solvency invariants hold for every possible utilization input.</p>
+        </div>
+        <div class="card-faint rounded-2xl p-5">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" class="mb-3" aria-hidden="true"><path d="m9 12 2 2 4-4" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12c0 5-3.5 7.5-9 9-5.5-1.5-9-4-9-9V6l9-3 9 3v6Z" stroke="#34D399" stroke-width="2" stroke-linejoin="round"/></svg>
+          <h3 class="font-display text-[15px] mb-1.5">Verified onchain</h3>
+          <p class="text-[12.5px] text-muted leading-relaxed">Every contract's source is verified on Etherscan. The bytecode you interact with matches the audited code.</p>
+        </div>
+        <div class="card-faint rounded-2xl p-5">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" class="mb-3" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" stroke="#34D399" stroke-width="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="#34D399" stroke-width="2" stroke-linecap="round"/></svg>
+          <h3 class="font-display text-[15px] mb-1.5">Non-custodial</h3>
+          <p class="text-[12.5px] text-muted leading-relaxed">No admin can move user funds. Assets sit in pool contracts; only the depositor's signature can withdraw them.</p>
+        </div>
+        <div class="card-faint rounded-2xl p-5">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" class="mb-3" aria-hidden="true"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <h3 class="font-display text-[15px] mb-1.5">Honest risk note</h3>
+          <p class="text-[12.5px] text-muted leading-relaxed">Deposits are not risk-free. Smart-contract bugs and the liquidation mechanism can both cause loss — assess the risk before supplying.</p>
+        </div>
+        <!-- contract verification line -->
+        <div class="sm:col-span-2 rounded-2xl border hair-soft bg-mint/[0.04] px-4 py-3.5 flex items-center justify-between gap-3 flex-wrap">
+          <span class="text-[12.5px] text-ink">Every contract verified onchain</span>
+          <button class="addr-pill inline-flex items-center gap-2 mono text-[11.5px] text-muted border hair-soft rounded-lg px-2.5 py-1.5 bg-base/50" data-copy="0x9a3f7c21d4Be0F61aA28d7c0e44B1f2a3C8e9D04" aria-label="Copy KeelGovernor address">
+            <span class="tnum">0x9a3f…9D04</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ GOVERNANCE ============ -->
+<section id="governance" class="border-t hair-soft bg-panel/40">
+  <div class="shell px-5 sm:px-8 py-24 sm:py-28">
+    <div class="grid lg:grid-cols-[1fr_1.05fr] gap-12 lg:gap-16 items-center">
+      <!-- left -->
+      <div>
+        <div class="eyebrow mb-3">Governance</div>
+        <h2 class="font-display text-[30px] sm:text-[42px] leading-tight mb-4">
+          Markets decided in the open
+        </h2>
+        <p class="text-muted text-[15.5px] leading-relaxed mb-5">
+          Which assets list, and the risk parameters attached to them, are decided by KEEL token holders. A proposal is discussed on the governance forum, then settled by an onchain vote.
+        </p>
+        <p class="text-muted text-[15.5px] leading-relaxed mb-7">
+          The KEEL token is the voting mechanism for these parameters and nothing more — it carries no claim on protocol revenue and is not a promise of return. Governance sets the rules; the contracts enforce them.
+        </p>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="rounded-xl border hair-soft bg-base/50 px-4 py-3">
+            <div class="mono text-[10.5px] text-muted uppercase tracking-wider mb-1">Loan-to-value</div>
+            <div class="text-[12.5px] text-ink">Per-asset borrow ceiling</div>
+          </div>
+          <div class="rounded-xl border hair-soft bg-base/50 px-4 py-3">
+            <div class="mono text-[10.5px] text-muted uppercase tracking-wider mb-1">Liq. threshold</div>
+            <div class="text-[12.5px] text-ink">Where positions become unsafe</div>
+          </div>
+          <div class="rounded-xl border hair-soft bg-base/50 px-4 py-3">
+            <div class="mono text-[10.5px] text-muted uppercase tracking-wider mb-1">Supply / borrow caps</div>
+            <div class="text-[12.5px] text-ink">Maximum market size</div>
+          </div>
+          <div class="rounded-xl border hair-soft bg-base/50 px-4 py-3">
+            <div class="mono text-[10.5px] text-muted uppercase tracking-wider mb-1">Rate curve</div>
+            <div class="text-[12.5px] text-ink">Utilization-to-APY shape</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- right: vote tally mockup -->
+      <div class="surface rounded-2xl overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b hair-soft">
+          <span class="mono text-[11px] text-muted">KIP-47 · Onchain proposal</span>
+          <span class="inline-flex items-center gap-1.5 mono text-[10.5px] text-mint border border-mint/25 bg-mint/10 rounded px-2 py-1">
+            <span class="pulse-dot" style="width:5px;height:5px;" aria-hidden="true"></span> Voting live
+          </span>
+        </div>
+        <div class="px-5 py-5">
+          <h3 class="font-display text-[16px] mb-1">List wstETH market — set LTV to 78%</h3>
+          <p class="text-[12.5px] text-muted leading-relaxed mb-5">Add a wstETH lending market with a 78% loan-to-value, an 82% liquidation threshold, and a $120M supply cap.</p>
+
+          <!-- tally bars -->
+          <div class="space-y-3.5">
+            <!-- for -->
+            <div>
+              <div class="flex justify-between mb-1.5">
+                <span class="mono text-[11px] text-ink">For</span>
+                <span class="mono text-[11px] text-mint tnum">81.6% · 12.4M KEEL</span>
+              </div>
+              <div class="h-2.5 rounded-full bg-white/[0.06] overflow-hidden">
+                <div class="h-full rounded-full" style="width:81.6%;background:linear-gradient(90deg,#34D399,#1f9d72);"></div>
+              </div>
+            </div>
+            <!-- against -->
+            <div>
+              <div class="flex justify-between mb-1.5">
+                <span class="mono text-[11px] text-ink">Against</span>
+                <span class="mono text-[11px] text-muted tnum">13.1% · 2.0M KEEL</span>
+              </div>
+              <div class="h-2.5 rounded-full bg-white/[0.06] overflow-hidden">
+                <div class="h-full rounded-full bg-white/25" style="width:13.1%;"></div>
+              </div>
+            </div>
+            <!-- abstain -->
+            <div>
+              <div class="flex justify-between mb-1.5">
+                <span class="mono text-[11px] text-ink">Abstain</span>
+                <span class="mono text-[11px] text-muted tnum">5.3% · 0.8M KEEL</span>
+              </div>
+              <div class="h-2.5 rounded-full bg-white/[0.06] overflow-hidden">
+                <div class="h-full rounded-full bg-white/12" style="width:5.3%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- meta -->
+          <div class="grid grid-cols-3 gap-px mt-5 rounded-xl overflow-hidden border hair-soft bg-white/[0.04]">
+            <div class="bg-panel px-3 py-2.5">
+              <div class="mono text-[9.5px] text-muted uppercase tracking-wide">Quorum</div>
+              <div class="mono text-[12px] text-mint tnum">Reached</div>
+            </div>
+            <div class="bg-panel px-3 py-2.5">
+              <div class="mono text-[9.5px] text-muted uppercase tracking-wide">Ends in</div>
+              <div class="mono text-[12px] text-ink tnum">2d 06h</div>
+            </div>
+            <div class="bg-panel px-3 py-2.5">
+              <div class="mono text-[9.5px] text-muted uppercase tracking-wide">Voters</div>
+              <div class="mono text-[12px] text-ink tnum">1,904</div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 mt-4">
+            <span class="mono text-[10px] text-muted">Executes via</span>
+            <span class="addr-pill inline-flex items-center gap-1.5 mono text-[10.5px] text-muted border hair-soft rounded-md px-2 py-1 bg-base/50" data-copy="0x9a3f7c21d4Be0F61aA28d7c0e44B1f2a3C8e9D04">
+              <span class="tnum">KeelGovernor 0x9a3f…9D04</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section id="faq" class="border-t hair-soft">
+  <div class="shell px-5 sm:px-8 py-24 sm:py-28">
+    <div class="text-center mb-12">
+      <div class="eyebrow mb-3">FAQ</div>
+      <h2 class="font-display text-[30px] sm:text-[42px] leading-tight">Questions, answered plainly</h2>
+    </div>
+
+    <div class="max-w-[760px] mx-auto border-t hair-soft">
+      <!-- 1 -->
+      <details>
+        <summary class="flex items-center justify-between gap-4 py-5">
+          <span class="font-display text-[16px] sm:text-[17px]">What's the risk — can I lose my deposit?</span>
+          <span class="chev shrink-0 w-7 h-7 rounded-lg border hair-soft flex items-center justify-center text-mint" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          </span>
+        </summary>
+        <p class="text-[14px] text-muted leading-relaxed pb-5 pr-10">
+          Yes — supplying to Keel is not risk-free. The two main risks are smart-contract risk (a bug in a contract, despite audits and formal verification) and mechanism risk (in extreme volatility, liquidations may not fully cover a position). Pools are isolated so a problem in one market does not spread, but you should only supply what you can afford to have at risk.
+        </p>
+      </details>
+      <!-- 2 -->
+      <details>
+        <summary class="flex items-center justify-between gap-4 py-5">
+          <span class="font-display text-[16px] sm:text-[17px]">How does liquidation work, and at what threshold?</span>
+          <span class="chev shrink-0 w-7 h-7 rounded-lg border hair-soft flex items-center justify-center text-mint" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          </span>
+        </summary>
+        <p class="text-[14px] text-muted leading-relaxed pb-5 pr-10">
+          Each position has a health factor — the ratio of collateral value (weighted by the liquidation threshold) to borrowed value. When it falls below 1.00, the position is eligible for liquidation. Anyone can act as a liquidator: they repay part of the debt and receive collateral plus a fixed bonus in return. This keeps the pool solvent. Liquidation thresholds are set per asset by governance — typically a few percent above the maximum borrow LTV.
+        </p>
+      </details>
+      <!-- 3 -->
+      <details>
+        <summary class="flex items-center justify-between gap-4 py-5">
+          <span class="font-display text-[16px] sm:text-[17px]">Are interest rates fixed or variable?</span>
+          <span class="chev shrink-0 w-7 h-7 rounded-lg border hair-soft flex items-center justify-center text-mint" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          </span>
+        </summary>
+        <p class="text-[14px] text-muted leading-relaxed pb-5 pr-10">
+          Variable. The InterestRateModel sets a rate from the pool's utilization — the share of supplied liquidity currently borrowed. As utilization rises, both the borrow rate and the supply yield increase, which draws in more suppliers and discourages further borrowing. Because it recalculates every block, the APY you see is a live reading, not a quoted term.
+        </p>
+      </details>
+      <!-- 4 -->
+      <details>
+        <summary class="flex items-center justify-between gap-4 py-5">
+          <span class="font-display text-[16px] sm:text-[17px]">Who can change the risk parameters?</span>
+          <span class="chev shrink-0 w-7 h-7 rounded-lg border hair-soft flex items-center justify-center text-mint" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          </span>
+        </summary>
+        <p class="text-[14px] text-muted leading-relaxed pb-5 pr-10">
+          Only KEEL token holders, through onchain governance. Changes to loan-to-value ratios, liquidation thresholds, supply and borrow caps, or the rate curve must pass a vote that meets quorum, then execute through the KeelGovernor contract. No individual or team can change a parameter unilaterally, and every executed change is recorded onchain.
+        </p>
+      </details>
+      <!-- 5 -->
+      <details>
+        <summary class="flex items-center justify-between gap-4 py-5">
+          <span class="font-display text-[16px] sm:text-[17px]">What audits has the protocol had?</span>
+          <span class="chev shrink-0 w-7 h-7 rounded-lg border hair-soft flex items-center justify-center text-mint" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          </span>
+        </summary>
+        <p class="text-[14px] text-muted leading-relaxed pb-5 pr-10">
+          The v3 contracts were audited by OpenZeppelin in February 2026 (full protocol scope) and by Spearbit in December 2025 (focused on the liquidation engine). The interest-rate model has also undergone formal verification. An Immunefi bug bounty of up to $1M runs continuously, and all audit reports are published in the documentation before code is deployed to mainnet.
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FINAL CTA ============ -->
+<section id="cta" class="border-t hair-soft relative overflow-hidden">
+  <div class="absolute inset-0 dot-grid opacity-50" aria-hidden="true"></div>
+  <div class="absolute inset-0" aria-hidden="true" style="background:radial-gradient(620px 320px at 50% 100%, rgba(52,211,153,0.16), transparent 70%);"></div>
+  <div class="blob" style="width:380px;height:380px;background:#0d5e44;bottom:-160px;left:50%;transform:translateX(-50%);" aria-hidden="true"></div>
+
+  <div class="shell px-5 sm:px-8 py-24 sm:py-32 relative text-center">
+    <div class="inline-flex items-center gap-2 rounded-full border hair px-3.5 py-1.5 bg-white/[0.03] mb-7">
+      <span class="pulse-dot" aria-hidden="true"></span>
+      <span class="mono text-[12px] text-ink">Mainnet</span>
+      <span class="mono text-[12px] text-muted">·</span>
+      <span class="mono text-[12px] text-mint">v3 live</span>
+    </div>
+    <h2 class="font-display text-[34px] sm:text-[52px] leading-[1.05] max-w-[760px] mx-auto">
+      Put your assets to work.
+      <span class="block halftone">Or borrow against them.</span>
+    </h2>
+    <p class="text-muted text-[16px] max-w-[540px] mx-auto mt-5">
+      Open a position in under a minute. Non-custodial, over-collateralized, and verifiable onchain.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-3 justify-center mt-9">
+      <a href="#top" class="cta-primary rounded-lg px-6 py-3 text-[15px] flex items-center justify-center gap-2">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2" y="6" width="20" height="13" rx="3" stroke="#06140D" stroke-width="2"/><circle cx="17" cy="12.5" r="1.6" fill="#06140D"/></svg>
+        Launch app
+      </a>
+      <a href="#developers" class="cta-ghost rounded-lg px-6 py-3 text-[15px]">Read the docs</a>
+    </div>
+
+    <!-- transparency line -->
+    <div class="flex flex-wrap items-center justify-center gap-2.5 mt-9">
+      <span class="mono text-[11px] text-muted">Every contract verified onchain</span>
+      <button class="addr-pill inline-flex items-center gap-2 mono text-[11px] text-muted border hair-soft rounded-lg px-2.5 py-1.5 bg-base/50" data-copy="0x7c4eA9b21F08d3aE60c5d7B19fA284e3c0D1b8A6" aria-label="Copy KeelPool address">
+        <span class="w-4 h-4 rounded flex items-center justify-center" style="background:rgba(52,211,153,0.14);">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m9 12 2 2 4-4" stroke="#34D399" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <span class="tnum">KeelPool 0x7c4e…b8A6</span>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer class="border-t hair bg-panel">
+  <div class="shell px-5 sm:px-8 py-16">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-10">
+      <!-- brand col -->
+      <div class="col-span-2 lg:col-span-1">
+        <a href="#top" class="flex items-center gap-2.5 mb-4" aria-label="Keel home">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <rect width="32" height="32" rx="8" fill="#0F1714" stroke="#34D399" stroke-opacity="0.4"/>
+            <path d="M7 9 C 12 9, 13 22, 16 22 C 19 22, 20 9, 25 9" stroke="#34D399" stroke-width="2.2" stroke-linecap="round"/>
+            <line x1="7" y1="24" x2="25" y2="24" stroke="#34D399" stroke-width="2.2" stroke-linecap="round" stroke-opacity="0.55"/>
+          </svg>
+          <span class="font-display text-[17px]">Keel</span>
+        </a>
+        <p class="text-[12.5px] text-muted leading-relaxed mb-4">Over-collateralized lending markets, settled onchain.</p>
+        <div class="flex items-center gap-2">
+          <a href="#developers" class="w-8 h-8 rounded-lg border hair-soft flex items-center justify-center text-muted hover:text-mint hover:border-mint/40 transition-colors" aria-label="Keel on GitHub">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.5v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .3.2.6.8.5 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5Z"/></svg>
+          </a>
+          <a href="#cta" class="w-8 h-8 rounded-lg border hair-soft flex items-center justify-center text-muted hover:text-mint hover:border-mint/40 transition-colors" aria-label="Keel on Discord">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.3 4.4A19.8 19.8 0 0 0 15.4 3l-.2.4a14.6 14.6 0 0 1 4.3 2.2 15.6 15.6 0 0 0-13-.1A14.6 14.6 0 0 1 10.8 3.3L10.6 3a19.8 19.8 0 0 0-4.9 1.4C2.6 9 1.8 13.4 2.2 17.8a19.9 19.9 0 0 0 6 3l.7-1.7a13 13 0 0 1-2-1l.5-.4a14.2 14.2 0 0 0 12.1 0l.5.4a13 13 0 0 1-2 1l.7 1.7a19.9 19.9 0 0 0 6-3c.5-5.1-.8-9.5-3.6-13.4ZM8.9 15.3c-1.2 0-2.1-1.1-2.1-2.4 0-1.3.9-2.4 2.1-2.4 1.2 0 2.2 1.1 2.1 2.4 0 1.3-.9 2.4-2.1 2.4Zm6.2 0c-1.2 0-2.1-1.1-2.1-2.4 0-1.3.9-2.4 2.1-2.4 1.2 0 2.2 1.1 2.1 2.4 0 1.3-.9 2.4-2.1 2.4Z"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- Protocol -->
+      <div>
+        <h4 class="mono text-[10.5px] uppercase tracking-[0.16em] text-muted mb-4">Protocol</h4>
+        <ul class="space-y-2.5 text-[13px]">
+          <li><a href="#how" class="nav-link">How it works</a></li>
+          <li><a href="#features" class="nav-link">Markets</a></li>
+          <li><a href="#security" class="nav-link">Security</a></li>
+          <li><a href="#cta" class="nav-link">Launch app</a></li>
+        </ul>
+      </div>
+      <!-- Developers -->
+      <div>
+        <h4 class="mono text-[10.5px] uppercase tracking-[0.16em] text-muted mb-4">Developers</h4>
+        <ul class="space-y-2.5 text-[13px]">
+          <li><a href="#developers" class="nav-link">Documentation</a></li>
+          <li><a href="#developers" class="nav-link">TypeScript SDK</a></li>
+          <li><a href="#developers" class="nav-link">Contract ABIs</a></li>
+          <li><a href="#developers" class="nav-link">GitHub</a></li>
+        </ul>
+      </div>
+      <!-- Governance -->
+      <div>
+        <h4 class="mono text-[10.5px] uppercase tracking-[0.16em] text-muted mb-4">Governance</h4>
+        <ul class="space-y-2.5 text-[13px]">
+          <li><a href="#governance" class="nav-link">Forum</a></li>
+          <li><a href="#governance" class="nav-link">Active proposals</a></li>
+          <li><a href="#governance" class="nav-link">KEEL token</a></li>
+          <li><a href="#governance" class="nav-link">Risk parameters</a></li>
+        </ul>
+      </div>
+      <!-- Ecosystem / Community -->
+      <div>
+        <h4 class="mono text-[10.5px] uppercase tracking-[0.16em] text-muted mb-4">Community</h4>
+        <ul class="space-y-2.5 text-[13px]">
+          <li><a href="#cta" class="nav-link">Discord</a></li>
+          <li><a href="#features" class="nav-link">Ecosystem</a></li>
+          <li><a href="#developers" class="nav-link">Blog</a></li>
+          <li><a href="#faq" class="nav-link">Brand kit</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- contract addresses -->
+    <div class="mt-12 pt-8 border-t hair-soft">
+      <h4 class="mono text-[10.5px] uppercase tracking-[0.16em] text-muted mb-4">Deployed contracts · Ethereum mainnet</h4>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="rounded-lg border hair-soft bg-base/50 px-3 py-2.5">
+          <div class="mono text-[10px] text-muted mb-1">KeelPool</div>
+          <div class="mono text-[10.5px] text-ink tnum break-all">0x7c4eA9b21F08d3aE60c5d7B19fA284e3c0D1b8A6</div>
+        </div>
+        <div class="rounded-lg border hair-soft bg-base/50 px-3 py-2.5">
+          <div class="mono text-[10px] text-muted mb-1">InterestRateModel</div>
+          <div class="mono text-[10.5px] text-ink tnum break-all">0x3eD18b5c907fA42aB10c6E2d49B0f73a8C1e5F92</div>
+        </div>
+        <div class="rounded-lg border hair-soft bg-base/50 px-3 py-2.5">
+          <div class="mono text-[10px] text-muted mb-1">LiquidationEngine</div>
+          <div class="mono text-[10.5px] text-ink tnum break-all">0xB05a2f7c83De14a906Cb1d5E47f0a82b3C9d6A40</div>
+        </div>
+        <div class="rounded-lg border hair-soft bg-base/50 px-3 py-2.5">
+          <div class="mono text-[10px] text-muted mb-1">KeelGovernor</div>
+          <div class="mono text-[10.5px] text-ink tnum break-all">0x9a3f7c21d4Be0F61aA28d7c0e44B1f2a3C8e9D04</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- fine print -->
+    <div class="mt-10 pt-6 border-t hair-soft flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p class="mono text-[11px] text-muted">© 2026 Keel Protocol · A decentralized, non-custodial lending protocol.</p>
+      <div class="flex items-center gap-5 mono text-[11px]">
+        <a href="#faq" class="nav-link">Terms</a>
+        <a href="#faq" class="nav-link">Privacy</a>
+        <span class="text-muted inline-flex items-center gap-1.5">
+          <span class="pulse-dot" style="width:5px;height:5px;" aria-hidden="true"></span>
+          All systems operational
+        </span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ============ VANILLA JS — SVG paths, count-up, copy ============ -->
+<script>
+(function () {
+  // --- (a) APY sparkline path computation ---
+  var apy = [4.02, 3.96, 4.11, 4.08, 4.21, 4.14, 4.27, 4.19, 4.33, 4.26, 4.30, 4.18, 4.24, 4.36, 4.18];
+  var W = 320, H = 40, pad = 4;
+  var line = document.getElementById('apy-line');
+  var area = document.getElementById('apy-area');
+  if (line && area) {
+    var min = Math.min.apply(null, apy), max = Math.max.apply(null, apy);
+    var span = (max - min) || 1;
+    var pts = apy.map(function (v, i) {
+      var x = pad + (i * (W - pad * 2)) / (apy.length - 1);
+      var y = pad + (H - pad * 2) * (1 - (v - min) / span);
+      return [x, y];
+    });
+    var d = pts.map(function (p, i) {
+      return (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ' ' + p[1].toFixed(1);
+    }).join(' ');
+    line.setAttribute('d', d);
+    area.setAttribute('d', d + ' L' + (W - pad).toFixed(1) + ' ' + (H - pad) + ' L' + pad + ' ' + (H - pad) + ' Z');
+  }
+
+  // --- (b) count-up on the hero TVL stat ---
+  var tvlEl = document.getElementById('hero-tvl');
+  if (tvlEl) {
+    var target = 2.4, dur = 1100, start = null;
+    function step(ts) {
+      if (!start) start = ts;
+      var p = Math.min((ts - start) / dur, 1);
+      var eased = 1 - Math.pow(1 - p, 3);
+      tvlEl.textContent = '$' + (target * eased).toFixed(1) + 'B';
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  // --- (c) copy-to-clipboard on address pills ---
+  function flashCopied(el) {
+    var prev = el.getAttribute('data-prev');
+    if (prev === null) {
+      var span = el.querySelector('span.tnum');
+      el.setAttribute('data-prev', span ? span.textContent : '');
+    }
+  }
+  document.querySelectorAll('[data-copy]').forEach(function (el) {
+    el.addEventListener('click', function () {
+      var addr = el.getAttribute('data-copy');
+      if (!addr) return;
+      var span = el.querySelector('span.tnum');
+      var done = function () {
+        if (!span) return;
+        var original = span.textContent;
+        span.textContent = 'Copied ✓';
+        setTimeout(function () { span.textContent = original; }, 1200);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(addr).then(done).catch(done);
+      } else {
+        done();
+      }
+    });
+  });
+
+  // --- copy on the code block ---
+  var copyBtn = document.getElementById('copy-code');
+  var codeBody = document.getElementById('code-body');
+  var copyLabel = document.getElementById('copy-code-label');
+  if (copyBtn && codeBody) {
+    copyBtn.addEventListener('click', function () {
+      var text = codeBody.innerText || codeBody.textContent || '';
+      var done = function () {
+        if (!copyLabel) return;
+        copyLabel.textContent = 'Copied';
+        setTimeout(function () { copyLabel.textContent = 'Copy'; }, 1200);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(done);
+      } else {
+        done();
+      }
+    });
+  }
+})();
+</script>
+
+</body>
+</html>

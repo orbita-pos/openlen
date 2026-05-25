@@ -1367,7 +1367,7 @@
       /* ---- Copy to clipboard ---- */
       document.querySelectorAll(".copy-btn").forEach(function (btn) {
         btn.addEventListener("click", function () {
-          var text = (btn.getAttribute("data-copy") || "").replace(/ /g, "\n");
+          var text = (btn.getAttribute("data-copy") || "").replace(/\u2029/g, "\n");
           var label = btn.querySelector(".copy-label");
           var icon = btn.querySelector(".copy-ic");
           var done = function () {

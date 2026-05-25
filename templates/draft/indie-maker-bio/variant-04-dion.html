@@ -1,0 +1,340 @@
+<!doctype html>
+<!-- Variant 04: dion park — Designer-developer, case-study heavy -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>dion park · selected work</title>
+<meta name="description" content="I design + build websites for people who care about typography. Toronto." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:ital,wght@1,600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --bg: #F0EBE0;
+    --paper: #F6F1E6;
+    --ink: #1D1916;
+    --ink-soft: #5C5347;
+    --ink-faint: #99907F;
+    --accent: #A4794A;
+    --accent-soft: rgba(164, 121, 74, 0.10);
+    --rule: rgba(29, 25, 22, 0.09);
+    --rule-soft: rgba(29, 25, 22, 0.05);
+  }
+  html, body { background: var(--bg); color: var(--ink); }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image: radial-gradient(circle, rgba(29,25,22,0.05) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  .display { letter-spacing: -0.028em; }
+  .tabnum { font-variant-numeric: tabular-nums; }
+  .serif-italic { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-weight: 600; }
+
+  .link-btn {
+    transition: transform 0.12s ease, border-color 0.12s ease, background-color 0.12s ease;
+  }
+  .link-btn:hover {
+    transform: translateY(-1px);
+    border-color: rgba(29,25,22,0.22);
+    background-color: rgba(29,25,22,0.022);
+  }
+  .link-btn:active { transform: translateY(0); }
+
+  .cta {
+    background: var(--ink);
+    color: #F0EBE0;
+    transition: transform 0.12s ease, background 0.12s ease;
+  }
+  .cta:hover { transform: translateY(-1px); background: #2C2520; }
+
+  .pulse {
+    position: relative;
+    border-radius: 9999px;
+    background: var(--accent);
+    width: 6px;
+    height: 6px;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .pulse::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: 0 0 0 0 rgba(164, 121, 74, 0.4);
+    animation: pulse-ring 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  .pulse-sm { width: 4px; height: 4px; }
+  @keyframes pulse-ring {
+    0%   { box-shadow: 0 0 0 0 rgba(164, 121, 74, 0.4); }
+    70%  { box-shadow: 0 0 0 7px rgba(164, 121, 74, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(164, 121, 74, 0); }
+  }
+
+  .mark {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    box-shadow: 0 1px 0 0 rgba(29,25,22,0.028), inset 0 0 0 1px rgba(255,255,255,0.5);
+  }
+
+  .tile {
+    background: linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 100%), var(--paper);
+    border: 1px solid var(--rule);
+    box-shadow: 0 1px 0 0 rgba(29,25,22,0.022);
+  }
+
+  .quiet-badge {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: 1px solid rgba(164, 121, 74, 0.18);
+  }
+
+  ::selection { background: rgba(164, 121, 74, 0.22); color: var(--ink); }
+
+  .ship-table { border-collapse: collapse; width: 100%; }
+  .ship-table td { padding: 0.6rem 0; border-top: 1px solid var(--rule-soft); vertical-align: middle; }
+  .ship-table tr:first-child td { border-top: 0; padding-top: 0.25rem; }
+  .ship-table .col-type { color: var(--ink-soft); }
+  .ship-table .col-status { width: 4rem; }
+  .ship-table .col-date { width: 4.2rem; text-align: right; }
+
+  .available-tag {
+    background: var(--accent);
+    color: #FFF;
+    letter-spacing: 0.06em;
+  }
+</style>
+</head>
+<body class="min-h-screen">
+  <main class="mx-auto w-full max-w-[480px] px-5 sm:px-6 pt-14 pb-16">
+
+    <div class="mono text-[10.5px] tabnum tracking-[0.14em] text-[color:var(--ink-faint)] uppercase mb-9 flex items-center gap-2">
+      <span class="pulse"></span>
+      <span>DESIGNER + DEV&nbsp;·&nbsp;11 LIVE SITES&nbsp;·&nbsp;TORONTO</span>
+    </div>
+
+    <header class="flex items-start gap-3.5 mb-3.5">
+      <div class="mark w-16 h-16 rounded-[10px] flex items-center justify-center shrink-0">
+        <span class="serif-italic text-[34px] leading-none" style="color: #A4794A;">&amp;</span>
+      </div>
+      <div class="pt-1 min-w-0">
+        <h1 class="display text-[28px] font-semibold leading-[1.05]">dion park</h1>
+        <div class="mono text-[12px] text-[color:var(--ink-soft)] mt-1">@dionpark&nbsp;·&nbsp;est. 2018</div>
+      </div>
+    </header>
+
+    <p class="text-[14.5px] leading-[1.55] text-[color:var(--ink-soft)] mb-8">
+      I design + build websites for people who care about <span class="serif-italic text-[color:var(--ink)]">typography</span>. Eleven sites live this year. Available for selected projects in Q3 2026.
+    </p>
+
+    <section class="tile rounded-xl p-5 mb-7">
+      <div class="flex items-center justify-between mb-2.5">
+        <div class="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--ink-faint)]">LATEST SHIPPED</div>
+        <div class="mono text-[10px] tabnum text-[color:var(--ink-faint)]">MAR 2026&nbsp;·&nbsp;14 WK</div>
+      </div>
+
+      <h2 class="display text-[20px] font-semibold leading-tight mb-1.5">verre <span class="serif-italic text-[14px] text-[color:var(--accent)] font-normal">— a typography studio</span></h2>
+      <p class="text-[13.5px] leading-[1.5] text-[color:var(--ink-soft)] mb-4">
+        Studio site for a Montreal foundry. Custom variable-font specimen viewer, hand-tuned animations, French + English.
+      </p>
+
+      <div class="grid grid-cols-4 gap-x-3 mono text-[12px] tabnum py-2.5"
+           style="border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);">
+        <div>
+          <div class="text-[color:var(--ink-faint)] text-[9.5px] uppercase tracking-[0.1em] mb-0.5">SHIPPED</div>
+          <div class="text-[color:var(--ink)] font-medium">Mar 26</div>
+        </div>
+        <div>
+          <div class="text-[color:var(--ink-faint)] text-[9.5px] uppercase tracking-[0.1em] mb-0.5">WEEKS</div>
+          <div class="text-[color:var(--ink)] font-medium">14</div>
+        </div>
+        <div>
+          <div class="text-[color:var(--ink-faint)] text-[9.5px] uppercase tracking-[0.1em] mb-0.5">COLLABS</div>
+          <div class="text-[color:var(--ink)] font-medium">4</div>
+        </div>
+        <div>
+          <div class="text-[color:var(--ink-faint)] text-[9.5px] uppercase tracking-[0.1em] mb-0.5">TYPE</div>
+          <div class="text-[color:var(--ink)] font-medium">foundry</div>
+        </div>
+      </div>
+
+      <div class="mt-4 mb-4">
+        <div class="flex items-center justify-between mono text-[9.5px] tabnum text-[color:var(--ink-faint)] uppercase tracking-[0.1em] mb-1.5">
+          <span>HOURS LOGGED&nbsp;·&nbsp;LAST 30 DAYS</span>
+          <span>128 H</span>
+        </div>
+        <svg class="sparkline w-full block" viewBox="0 0 240 48" preserveAspectRatio="none"
+             data-spark="[3,5,6,4,7,2,0,5,6,8,4,6,2,1,5,7,8,6,4,3,6,9,7,5,4,2,8,6,7,9]"></svg>
+      </div>
+
+      <a href="#" class="cta block text-center mono text-[12px] tabnum uppercase tracking-[0.12em] py-3 rounded-md font-medium">
+        View case study&nbsp;&nbsp;↗
+      </a>
+    </section>
+
+    <nav class="space-y-2 mb-9" aria-label="Links">
+
+      <a href="#" class="link-btn flex items-center justify-between gap-3 px-4 py-3.5 rounded-lg border" style="border-color: var(--rule)">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <span class="pulse shrink-0"></span>
+          <span class="text-[14px] font-medium shrink-0">Work</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-faint)] truncate">·&nbsp;11 case studies&nbsp;·&nbsp;2018–26</span>
+        </div>
+        <span class="text-[color:var(--ink-faint)] mono text-[12px] shrink-0">↗</span>
+      </a>
+
+      <a href="#" class="link-btn flex items-center justify-between gap-3 px-4 py-3.5 rounded-lg border" style="border-color: var(--rule)">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="shrink-0 opacity-55"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M9 4v17M16 14l2 2 3-3"/></svg>
+          <span class="text-[14px] font-medium shrink-0">Available</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-faint)] truncate">·&nbsp;Q3 2026&nbsp;onward</span>
+        </div>
+        <span class="mono text-[9.5px] tabnum available-tag px-1.5 py-0.5 rounded shrink-0 uppercase">2 SLOTS</span>
+      </a>
+
+      <a href="#" class="link-btn flex items-center justify-between gap-3 px-4 py-3.5 rounded-lg border" style="border-color: var(--rule)">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="shrink-0 opacity-55"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5V4.5A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          <span class="text-[14px] font-medium shrink-0">Writing</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-faint)] truncate">·&nbsp;14 essays on design + craft</span>
+        </div>
+        <span class="text-[color:var(--ink-faint)] mono text-[12px] shrink-0">↗</span>
+      </a>
+
+      <a href="#" class="link-btn flex items-center justify-between gap-3 px-4 py-3.5 rounded-lg border" style="border-color: var(--rule)">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="shrink-0 opacity-55"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="m3 7 9 6 9-6"/></svg>
+          <span class="text-[14px] font-medium shrink-0">Newsletter</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-faint)] truncate">·&nbsp;monthly&nbsp;·&nbsp;2,184 readers</span>
+        </div>
+        <span class="text-[color:var(--ink-faint)] mono text-[12px] shrink-0">↗</span>
+      </a>
+
+      <a href="#" class="link-btn flex items-center justify-between gap-3 px-4 py-3.5 rounded-lg border" style="border-color: var(--rule)">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="shrink-0 opacity-55"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/></svg>
+          <span class="text-[14px] font-medium shrink-0">Side projects</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-faint)] truncate">·&nbsp;3 small tools&nbsp;·&nbsp;all free</span>
+        </div>
+        <span class="text-[color:var(--ink-faint)] mono text-[12px] shrink-0">↗</span>
+      </a>
+
+      <a href="#" class="link-btn flex items-center justify-between gap-3 px-4 py-3.5 rounded-lg border" style="border-color: var(--rule)">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="shrink-0 opacity-65"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          <span class="text-[14px] font-medium shrink-0">Twitter</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-faint)] truncate">·&nbsp;process clips&nbsp;·&nbsp;type details</span>
+        </div>
+        <span class="text-[color:var(--ink-faint)] mono text-[12px] shrink-0">↗</span>
+      </a>
+
+      <a href="#" class="link-btn flex items-center justify-between gap-3 px-4 py-3.5 rounded-lg border" style="border-color: var(--rule)">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="shrink-0 opacity-55"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          <span class="text-[14px] font-medium shrink-0">Are.na</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-faint)] truncate">·&nbsp;references&nbsp;·&nbsp;47 channels</span>
+        </div>
+        <span class="text-[color:var(--ink-faint)] mono text-[12px] shrink-0">↗</span>
+      </a>
+
+      <a href="#" class="link-btn flex items-center justify-between gap-3 px-4 py-3.5 rounded-lg border" style="border-color: var(--rule)">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="shrink-0 opacity-55"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+          <span class="text-[14px] font-medium shrink-0">Talks</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-faint)] truncate">·&nbsp;4 in 2026&nbsp;·&nbsp;OFFF, Webflow Conf</span>
+        </div>
+        <span class="text-[color:var(--ink-faint)] mono text-[12px] shrink-0">↗</span>
+      </a>
+
+    </nav>
+
+    <section class="mb-8">
+      <div class="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--ink-faint)] mb-3 flex items-center justify-between">
+        <span>SELECTED&nbsp;·&nbsp;2025–26</span>
+        <span class="tabnum">4 OF 11</span>
+      </div>
+      <table class="ship-table mono text-[12px] tabnum">
+        <tbody>
+          <tr>
+            <td class="text-[color:var(--ink)] font-medium">verre</td>
+            <td class="col-status text-[color:var(--ink-soft)]">LIVE</td>
+            <td class="col-type">foundry</td>
+            <td class="col-date text-[color:var(--ink-faint)]">Mar 26</td>
+          </tr>
+          <tr>
+            <td class="text-[color:var(--ink)] font-medium">cantine</td>
+            <td class="col-status text-[color:var(--ink-soft)]">LIVE</td>
+            <td class="col-type">restaurant</td>
+            <td class="col-date text-[color:var(--ink-faint)]">Jan 26</td>
+          </tr>
+          <tr>
+            <td class="text-[color:var(--ink)] font-medium">lyriq</td>
+            <td class="col-status text-[color:var(--ink-soft)]">LIVE</td>
+            <td class="col-type">label</td>
+            <td class="col-date text-[color:var(--ink-faint)]">Nov 25</td>
+          </tr>
+          <tr>
+            <td class="text-[color:var(--ink)] font-medium">brulé</td>
+            <td class="col-status text-[color:var(--ink-soft)]">LIVE</td>
+            <td class="col-type">bakery</td>
+            <td class="col-date text-[color:var(--ink-faint)]">Sep 25</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <div class="flex items-center gap-5 mb-7" aria-label="Social">
+      <a href="#" aria-label="Twitter" class="text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] transition-colors">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      </a>
+      <a href="#" aria-label="Are.na" class="text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] transition-colors">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      </a>
+      <a href="#" aria-label="LinkedIn" class="text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] transition-colors">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.4 20.4h-3.6v-5.6c0-1.3 0-3-1.9-3s-2.1 1.5-2.1 2.9v5.7H9.2V9h3.5v1.6h.1c.5-.9 1.7-1.9 3.5-1.9 3.7 0 4.4 2.4 4.4 5.6zM5.4 7.4a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2zM7.2 20.4H3.6V9h3.6z"/></svg>
+      </a>
+      <a href="#" aria-label="Substack" class="text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] transition-colors">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M22.539 8.242H1.46V5.406h21.08v2.836zM1.46 10.812V24L12 18.11 22.54 24V10.812H1.46zM22.54 0H1.46v2.836h21.08V0z"/></svg>
+      </a>
+      <a href="#" aria-label="RSS" class="text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] transition-colors">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5.5" cy="18.5" r="2.5"/><path d="M2 8a14 14 0 0 1 14 14h-3A11 11 0 0 0 2 11V8z"/><path d="M2 2a20 20 0 0 1 20 20h-3A17 17 0 0 0 2 5V2z"/></svg>
+      </a>
+    </div>
+
+    <footer class="mono text-[10.5px] tracking-[0.06em] text-[color:var(--ink-faint)] pt-4" style="border-top: 1px solid var(--rule);">
+      Toronto&nbsp;·&nbsp;accepting projects for Q3 2026 onward
+    </footer>
+
+  </main>
+
+<script>
+(function(){
+  document.querySelectorAll('.sparkline').forEach(function(svg){
+    var data = JSON.parse(svg.dataset.spark);
+    var w = 240, h = 48, padX = 2, padTop = 4, padBot = 3;
+    var max = Math.max.apply(null, data), min = Math.min.apply(null, data);
+    var range = max - min || 1;
+    var sx = (w - padX*2) / (data.length - 1);
+    var pts = data.map(function(v, i){
+      var x = padX + i*sx;
+      var y = h - padBot - ((v - min) / range) * (h - padTop - padBot);
+      return [x, y];
+    });
+    var line = 'M' + pts.map(function(p){ return p[0].toFixed(2) + ',' + p[1].toFixed(2); }).join(' L');
+    var area = line + ' L' + (w-padX).toFixed(2) + ',' + (h-padBot).toFixed(2) + ' L' + padX.toFixed(2) + ',' + (h-padBot).toFixed(2) + ' Z';
+    var last = pts[pts.length - 1];
+    svg.innerHTML =
+      '<path d="' + area + '" fill="var(--accent)" opacity="0.10"/>' +
+      '<path d="' + line + '" stroke="var(--accent)" stroke-width="1.5" fill="none" stroke-linejoin="round" stroke-linecap="round"/>' +
+      '<circle cx="' + last[0].toFixed(2) + '" cy="' + last[1].toFixed(2) + '" r="2.4" fill="var(--accent)"/>' +
+      '<circle cx="' + last[0].toFixed(2) + '" cy="' + last[1].toFixed(2) + '" r="4.5" fill="var(--accent)" opacity="0.18"/>';
+  });
+})();
+</script>
+</body>
+</html>

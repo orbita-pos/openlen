@@ -1,0 +1,1391 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Plumbline — Residential Plumbing in Brooklyn, NY</title>
+<meta name="description" content="Plumbline is a family-owned residential plumbing company serving Brooklyn since 2009. Licensed master plumbers, flat-rate quotes, same-day service." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400&display=swap" rel="stylesheet" />
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          accent: "#1E5F9E",
+          accentdark: "#174B7E",
+          ink: "#14202B",
+          band: "#F4F7FB",
+        },
+        fontFamily: {
+          sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+          mono: ["'Geist Mono'", "ui-monospace", "monospace"],
+        },
+        maxWidth: {
+          shell: "1200px",
+        },
+      },
+    },
+  };
+</script>
+
+<style>
+  :root {
+    --accent: #1E5F9E;
+    --ink: #14202B;
+    --hair: rgba(0, 0, 0, 0.08);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.55;
+  }
+
+  /* Inter Display look — tight tracking + stylistic sets on headings */
+  .display {
+    font-weight: 700;
+    letter-spacing: -0.032em;
+    font-feature-settings: "ss01", "cv11";
+    line-height: 1.04;
+  }
+  .display-sm {
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    font-feature-settings: "ss01", "cv11";
+    line-height: 1.12;
+  }
+
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .hair {
+    border-color: var(--hair);
+  }
+
+  /* Half-tone headline emphasis */
+  .halftone {
+    color: var(--accent);
+  }
+
+  /* Ambient radial fade behind the hero */
+  .hero-ambient {
+    background:
+      radial-gradient(620px 480px at 78% 8%, rgba(30, 95, 158, 0.12), transparent 70%),
+      radial-gradient(540px 420px at 6% 92%, rgba(30, 95, 158, 0.08), transparent 72%);
+  }
+
+  /* 32px dot-grid background */
+  .dot-grid {
+    background-image: radial-gradient(rgba(30, 95, 158, 0.16) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  /* Soft blurred color blobs */
+  .blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(72px);
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  /* Live-feel pulse dot */
+  .pulse-dot {
+    position: relative;
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 9999px;
+    background: #1E5F9E;
+  }
+  .pulse-dot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: #1E5F9E;
+    animation: pulsering 2s ease-out infinite;
+  }
+  @keyframes pulsering {
+    0% {
+      box-shadow: 0 0 0 0 rgba(30, 95, 158, 0.5);
+      opacity: 0.9;
+    }
+    70% {
+      box-shadow: 0 0 0 13px rgba(30, 95, 158, 0);
+      opacity: 0;
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(30, 95, 158, 0);
+      opacity: 0;
+    }
+  }
+
+  /* Marquee — seamless infinite scroll */
+  .marquee {
+    overflow: hidden;
+  }
+  .marquee__track {
+    display: flex;
+    width: max-content;
+    animation: marquee 38s linear infinite;
+  }
+  .marquee:hover .marquee__track {
+    animation-play-state: paused;
+  }
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  /* Button lift */
+  .lift {
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
+  }
+  .lift:hover {
+    transform: translateY(-2px);
+  }
+
+  .card-shadow {
+    box-shadow: 0 1px 2px rgba(20, 32, 43, 0.04), 0 10px 28px rgba(20, 32, 43, 0.06);
+  }
+  .card-shadow-lg {
+    box-shadow: 0 2px 6px rgba(20, 32, 43, 0.05), 0 22px 48px rgba(20, 32, 43, 0.1);
+  }
+
+  .photo-texture {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.22) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  /* FAQ accordion via native details/summary */
+  details > summary {
+    list-style: none;
+    cursor: pointer;
+  }
+  details > summary::-webkit-details-marker {
+    display: none;
+  }
+  details summary .chev {
+    transition: transform 0.15s ease;
+  }
+  details[open] summary .chev {
+    transform: rotate(180deg);
+  }
+
+  .link-underline {
+    transition: color 0.12s ease;
+  }
+  .link-underline:hover {
+    color: var(--accent);
+  }
+</style>
+</head>
+
+<body class="bg-white text-ink antialiased">
+
+  <!-- ============================================================ -->
+  <!-- SECTION 1 — THIN TOP BAR                                      -->
+  <!-- ============================================================ -->
+  <div class="bg-accentdark text-white text-[13px]">
+    <div class="mx-auto max-w-shell px-4 sm:px-6">
+      <div class="flex flex-wrap items-center justify-between gap-x-5 gap-y-1.5 py-2">
+        <div class="flex flex-wrap items-center gap-x-5 gap-y-1">
+          <a href="tel:+15554082210" class="flex items-center gap-1.5 font-medium hover:text-white/80 transition-colors">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z" />
+            </svg>
+            <span>(555) 408-2210</span>
+          </a>
+          <span class="hidden sm:flex items-center gap-1.5 text-white/80">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
+            </svg>
+            <span class="font-mono text-[12px]">Mon-Sat 7am-8pm / 24/7 emergency line</span>
+          </span>
+        </div>
+        <div class="flex items-center gap-x-4 gap-y-1">
+          <span class="hidden md:flex items-center gap-1.5 text-white/80">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" />
+            </svg>
+            <span>Serving Brooklyn, NY</span>
+          </span>
+          <a href="#quote" class="rounded-full bg-white/15 hover:bg-white/25 transition-colors px-3 py-1 font-semibold text-white">
+            Get a quote
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 2 — NAV                                               -->
+  <!-- ============================================================ -->
+  <header class="sticky top-0 z-50 border-b hair bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+    <div class="mx-auto max-w-shell px-4 sm:px-6">
+      <div class="flex h-[72px] items-center justify-between gap-4">
+
+        <!-- Logo: inline-SVG mark + wordmark -->
+        <a href="#top" class="flex items-center gap-2.5 shrink-0" aria-label="Plumbline home">
+          <span class="grid h-10 w-10 place-items-center rounded-xl bg-accent text-white shadow-sm">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 2.5C12 2.5 6 9 6 14a6 6 0 0 0 12 0c0-5-6-11.5-6-11.5Z" />
+              <path d="M12 11v6" />
+              <circle cx="12" cy="20" r="1.4" fill="currentColor" stroke="none" />
+            </svg>
+          </span>
+          <span class="flex flex-col leading-none">
+            <span class="display-sm text-[20px] text-ink">Plumbline</span>
+            <span class="text-[11px] font-medium text-ink/55 tracking-wide">Brooklyn Plumbing</span>
+          </span>
+        </a>
+
+        <!-- Center links -->
+        <nav class="hidden lg:flex items-center gap-8 text-[15px] font-medium text-ink/75">
+          <a href="#services" class="link-underline">Services</a>
+          <a href="#about" class="link-underline">About</a>
+          <a href="#reviews" class="link-underline">Reviews</a>
+          <a href="#contact" class="link-underline">Contact</a>
+        </nav>
+
+        <!-- Right: phone pill + CTA -->
+        <div class="flex items-center gap-2.5">
+          <a href="tel:+15554082210" class="hidden sm:flex items-center gap-2 rounded-full border hair bg-white px-3.5 py-2 text-[14px] font-semibold text-ink lift card-shadow">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z" />
+            </svg>
+            <span>(555) 408-2210</span>
+          </a>
+          <a href="#quote" class="flex items-center gap-1.5 rounded-full bg-accent px-4 sm:px-5 py-2.5 text-[14px] font-semibold text-white lift hover:bg-accentdark card-shadow">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14Z" /><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+            </svg>
+            <span>Free quote</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+
+  <!-- ============================================================ -->
+  <!-- SECTION 3 — HERO                                              -->
+  <!-- ============================================================ -->
+  <section class="relative overflow-hidden hero-ambient">
+    <div class="blob h-72 w-72 bg-accent/25" style="top:-60px;right:-40px;"></div>
+    <div class="blob h-64 w-64 bg-[#7FB2D8]/35" style="bottom:-80px;left:-60px;"></div>
+
+    <div class="relative mx-auto max-w-shell px-4 sm:px-6 py-16 sm:py-20 lg:py-24">
+      <div class="grid items-center gap-12 lg:grid-cols-2 lg:gap-14">
+
+        <!-- Left column -->
+        <div>
+          <!-- Pill badge -->
+          <span class="inline-flex items-center gap-2 rounded-full border hair bg-white px-3.5 py-1.5 text-[13px] font-semibold text-ink/80 card-shadow">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m9 12 2 2 4-4" /><path d="M12 3 4 7v5c0 4.5 3.4 8.7 8 9.9 4.6-1.2 8-5.4 8-9.9V7l-8-4Z" />
+            </svg>
+            Licensed Master Plumber
+            <span class="h-1 w-1 rounded-full bg-ink/25"></span>
+            Same-day service
+          </span>
+
+          <!-- Display headline with half-tone emphasis -->
+          <h1 class="display mt-5 text-[40px] sm:text-[52px] lg:text-[58px] text-ink">
+            Plumbing done<br class="hidden sm:block" /> right <span class="halftone">the first time.</span>
+          </h1>
+
+          <!-- Sub-headline -->
+          <p class="mt-5 max-w-xl text-[17px] sm:text-[18px] text-ink/70">
+            Licensed master plumbers across Brooklyn — flat-rate quotes before any wrench turns, and same-day service for the leaks that can't wait.
+          </p>
+
+          <!-- Dual CTA -->
+          <div class="mt-7 flex flex-col sm:flex-row gap-3">
+            <a href="#quote" class="flex items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 text-[15px] font-semibold text-white lift hover:bg-accentdark card-shadow">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14Z" /><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+              </svg>
+              Get a free quote
+            </a>
+            <a href="tel:+15554082210" class="flex items-center justify-center gap-2 rounded-xl border hair bg-white px-6 py-3.5 text-[15px] font-semibold text-ink lift hover:border-accent/40 card-shadow">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z" />
+              </svg>
+              Call (555) 408-2210
+            </a>
+          </div>
+
+          <!-- Trust-badge row -->
+          <div class="mt-8 flex flex-wrap items-center gap-2.5">
+            <span class="inline-flex items-center gap-1.5 rounded-full border hair bg-white px-3 py-1.5 text-[12.5px] font-medium text-ink/75">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 3 4 7v5c0 4.5 3.4 8.7 8 9.9 4.6-1.2 8-5.4 8-9.9V7l-8-4Z" />
+              </svg>
+              Licensed &amp; Insured
+            </span>
+            <span class="inline-flex items-center gap-1.5 rounded-full border hair bg-white px-3 py-1.5 text-[12.5px] font-medium text-ink/75">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 21h18" /><path d="M5 21V8l7-5 7 5v13" /><path d="M9 21v-6h6v6" />
+              </svg>
+              Family-owned since 2009
+            </span>
+            <span class="inline-flex items-center gap-1.5 rounded-full border hair bg-white px-3 py-1.5 text-[12.5px] font-medium text-ink/75">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#F4B400" stroke="none" aria-hidden="true">
+                <path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z" />
+              </svg>
+              <span class="tnum">4.9 · 612 reviews</span>
+            </span>
+            <span class="inline-flex items-center gap-1.5 rounded-full border hair bg-white px-3 py-1.5 text-[12.5px] font-medium text-ink/75">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m9 12 2 2 4-4" /><circle cx="12" cy="12" r="9" />
+              </svg>
+              BBB A+
+            </span>
+          </div>
+        </div>
+
+        <!-- Right column — job/team photo placeholder -->
+        <div class="relative">
+          <div
+            class="relative aspect-[4/5] sm:aspect-[5/5] w-full overflow-hidden rounded-[18px] bg-gradient-to-br from-accent via-[#2C73B4] to-[#0F3A63] card-shadow-lg photo-texture"
+            role="img"
+            aria-label="A Plumbline master plumber working under a kitchen sink at a Brooklyn job site"
+          >
+            <div class="absolute inset-0 flex items-end p-6">
+              <div class="rounded-xl bg-white/95 px-4 py-3 backdrop-blur card-shadow">
+                <div class="flex items-center gap-2">
+                  <span class="pulse-dot"></span>
+                  <span class="text-[12.5px] font-semibold text-ink">Crew on a job in Carroll Gardens right now</span>
+                </div>
+              </div>
+            </div>
+            <!-- subject icon -->
+            <svg class="absolute left-1/2 top-[38%] -translate-x-1/2 -translate-y-1/2 opacity-25" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M14.7 6.3a5 5 0 0 0-6.4 6.4l-5.6 5.6a2 2 0 0 0 2.8 2.8l5.6-5.6a5 5 0 0 0 6.4-6.4l-2.7 2.7-2.1-2.1 2.7-2.7Z" />
+            </svg>
+          </div>
+
+          <!-- Floating stat chip -->
+          <div class="absolute -bottom-5 -left-3 sm:-left-6 rounded-2xl border hair bg-white px-4 py-3 card-shadow-lg">
+            <div class="flex items-center gap-3">
+              <span class="grid h-9 w-9 place-items-center rounded-lg bg-band text-accent">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z" />
+                </svg>
+              </span>
+              <div>
+                <p class="display-sm text-[19px] text-ink tnum">&lt; 90 min</p>
+                <p class="text-[12px] text-ink/55">avg emergency arrival</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Marquee trust strip -->
+    <div class="relative border-y hair bg-band">
+      <div class="marquee py-3.5">
+        <div class="marquee__track">
+          <!-- strip A -->
+          <div class="flex items-center gap-10 px-5 text-[13px] font-medium text-ink/55">
+            <span class="flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Licensed master plumbers</span>
+            <span aria-hidden="true">·</span>
+            <span class="flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Flat-rate quotes — no surprises</span>
+            <span aria-hidden="true">·</span>
+            <span class="flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>2-year workmanship warranty</span>
+            <span aria-hidden="true">·</span>
+            <span class="flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>No overtime charges, ever</span>
+            <span aria-hidden="true">·</span>
+            <span class="flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Same-day appointments</span>
+            <span aria-hidden="true">·</span>
+          </div>
+          <!-- strip A duplicate for seamless loop -->
+          <div class="flex items-center gap-10 px-5 text-[13px] font-medium text-ink/55" aria-hidden="true">
+            <span class="flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Licensed master plumbers</span>
+            <span>·</span>
+            <span class="flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Flat-rate quotes — no surprises</span>
+            <span>·</span>
+            <span class="flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>2-year workmanship warranty</span>
+            <span>·</span>
+            <span class="flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>No overtime charges, ever</span>
+            <span>·</span>
+            <span class="flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Same-day appointments</span>
+            <span>·</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 4 — SERVICES GRID                                     -->
+  <!-- ============================================================ -->
+  <section id="services" class="mx-auto max-w-shell px-4 sm:px-6 py-20 sm:py-24">
+    <div class="max-w-2xl">
+      <span class="text-[13px] font-semibold uppercase tracking-[0.14em] text-accent">What we fix</span>
+      <h2 class="display-sm mt-3 text-[30px] sm:text-[38px] text-ink">
+        Every pipe, drain and heater in the house
+      </h2>
+      <p class="mt-3 text-[17px] text-ink/65">
+        From a slow bathroom drain to a flooded basement at 2am — one Brooklyn crew handles all of it, and you get the price before we start.
+      </p>
+    </div>
+
+    <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+
+      <!-- Card 1 — Leak repair -->
+      <div class="group rounded-[16px] border hair bg-white p-5 lift card-shadow hover:border-accent/30">
+        <span class="grid h-11 w-11 place-items-center rounded-xl bg-band text-accent">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 3.5C12 3.5 7 9 7 13a5 5 0 0 0 10 0c0-4-5-9.5-5-9.5Z" /><path d="M12 18.5a3 3 0 0 1-3-3" />
+          </svg>
+        </span>
+        <h3 class="mt-4 text-[16.5px] font-semibold text-ink">Leak repair</h3>
+        <p class="mt-1.5 text-[14px] text-ink/60">Dripping joints, pinhole leaks and hidden wall leaks traced and sealed for good.</p>
+        <span class="mt-4 inline-block rounded-full bg-band px-2.5 py-1 text-[12px] font-semibold text-accent">Free estimate</span>
+      </div>
+
+      <!-- Card 2 — Drain cleaning -->
+      <div class="group rounded-[16px] border hair bg-white p-5 lift card-shadow hover:border-accent/30">
+        <span class="grid h-11 w-11 place-items-center rounded-xl bg-band text-accent">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 6h18" /><path d="M19 6v9a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V6" /><path d="M10 11v4M14 11v4" />
+          </svg>
+        </span>
+        <h3 class="mt-4 text-[16.5px] font-semibold text-ink">Drain cleaning</h3>
+        <p class="mt-1.5 text-[14px] text-ink/60">Kitchen, bath and floor drains snaked and hydro-jetted back to full flow.</p>
+        <span class="mt-4 inline-block rounded-full bg-band px-2.5 py-1 text-[12px] font-semibold text-accent tnum">from $129</span>
+      </div>
+
+      <!-- Card 3 — Water-heater install -->
+      <div class="group rounded-[16px] border hair bg-white p-5 lift card-shadow hover:border-accent/30">
+        <span class="grid h-11 w-11 place-items-center rounded-xl bg-band text-accent">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="6" y="3" width="12" height="18" rx="3" /><path d="M9 8h6M9 12h6" /><path d="M10 21v1M14 21v1" />
+          </svg>
+        </span>
+        <h3 class="mt-4 text-[16.5px] font-semibold text-ink">Water-heater install</h3>
+        <p class="mt-1.5 text-[14px] text-ink/60">Tank or tankless, sized to your household and installed to NYC code.</p>
+        <span class="mt-4 inline-block rounded-full bg-band px-2.5 py-1 text-[12px] font-semibold text-accent">Free estimate</span>
+      </div>
+
+      <!-- Card 4 — Repiping -->
+      <div class="group rounded-[16px] border hair bg-white p-5 lift card-shadow hover:border-accent/30">
+        <span class="grid h-11 w-11 place-items-center rounded-xl bg-band text-accent">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 7h9a3 3 0 0 1 3 3v4a3 3 0 0 0 3 3h1" /><path d="M4 4v6M20 14v6" /><circle cx="4" cy="13" r="2" />
+          </svg>
+        </span>
+        <h3 class="mt-4 text-[16.5px] font-semibold text-ink">Repiping</h3>
+        <p class="mt-1.5 text-[14px] text-ink/60">Worn galvanized lines swapped for copper or PEX, room by room or whole-home.</p>
+        <span class="mt-4 inline-block rounded-full bg-band px-2.5 py-1 text-[12px] font-semibold text-accent">Free estimate</span>
+      </div>
+
+      <!-- Card 5 — Fixture install -->
+      <div class="group rounded-[16px] border hair bg-white p-5 lift card-shadow hover:border-accent/30">
+        <span class="grid h-11 w-11 place-items-center rounded-xl bg-band text-accent">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 3v7a3 3 0 0 0 3 3 3 3 0 0 0 3-3" /><path d="M12 13v8" /><path d="M9 3h6" /><path d="M15 6h3a2 2 0 0 1 2 2v2" />
+          </svg>
+        </span>
+        <h3 class="mt-4 text-[16.5px] font-semibold text-ink">Fixture install</h3>
+        <p class="mt-1.5 text-[14px] text-ink/60">Faucets, toilets, sinks and shower valves set straight, sealed and leak-tested.</p>
+        <span class="mt-4 inline-block rounded-full bg-band px-2.5 py-1 text-[12px] font-semibold text-accent tnum">from $95</span>
+      </div>
+
+      <!-- Card 6 — 24/7 emergency burst-pipe -->
+      <div class="group rounded-[16px] border-2 border-accent/40 bg-accent/[0.04] p-5 lift card-shadow">
+        <span class="grid h-11 w-11 place-items-center rounded-xl bg-accent text-white">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 9v4M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+          </svg>
+        </span>
+        <h3 class="mt-4 flex items-center gap-2 text-[16.5px] font-semibold text-ink">
+          24/7 emergency
+          <span class="pulse-dot"></span>
+        </h3>
+        <p class="mt-1.5 text-[14px] text-ink/65">Burst pipe or no water? We answer the phone day or night and roll a truck fast.</p>
+        <span class="mt-4 inline-block rounded-full bg-accent px-2.5 py-1 text-[12px] font-semibold text-white">Call now</span>
+      </div>
+
+      <!-- Card 7 — Sump pumps -->
+      <div class="group rounded-[16px] border hair bg-white p-5 lift card-shadow hover:border-accent/30">
+        <span class="grid h-11 w-11 place-items-center rounded-xl bg-band text-accent">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 20h16" /><path d="M7 20v-6a5 5 0 0 1 10 0v6" /><path d="M12 9V3M9 6l3-3 3 3" />
+          </svg>
+        </span>
+        <h3 class="mt-4 text-[16.5px] font-semibold text-ink">Sump pumps</h3>
+        <p class="mt-1.5 text-[14px] text-ink/60">Basement pumps installed, tested and fitted with a battery backup that holds.</p>
+        <span class="mt-4 inline-block rounded-full bg-band px-2.5 py-1 text-[12px] font-semibold text-accent">Free estimate</span>
+      </div>
+
+      <!-- Card 8 — Sewer-line camera inspection -->
+      <div class="group rounded-[16px] border hair bg-white p-5 lift card-shadow hover:border-accent/30">
+        <span class="grid h-11 w-11 place-items-center rounded-xl bg-band text-accent">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3.5" /><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" />
+          </svg>
+        </span>
+        <h3 class="mt-4 text-[16.5px] font-semibold text-ink">Sewer-line camera</h3>
+        <p class="mt-1.5 text-[14px] text-ink/60">A camera down the main line shows roots, breaks and bellies — no guessing.</p>
+        <span class="mt-4 inline-block rounded-full bg-band px-2.5 py-1 text-[12px] font-semibold text-accent tnum">from $189</span>
+      </div>
+
+    </div>
+
+    <p class="mt-8 text-[14px] text-ink/55">
+      Don't see your problem listed? <a href="tel:+15554082210" class="font-semibold text-accent hover:underline">Call (555) 408-2210</a> — if it carries water, we work on it.
+    </p>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 5 — WHY CHOOSE US                                     -->
+  <!-- ============================================================ -->
+  <section id="about" class="border-y hair bg-band">
+    <div class="mx-auto max-w-shell px-4 sm:px-6 py-20 sm:py-24">
+      <div class="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-14">
+
+        <!-- Left intro -->
+        <div>
+          <span class="text-[13px] font-semibold uppercase tracking-[0.14em] text-accent">Why Plumbline</span>
+          <h2 class="display-sm mt-3 text-[30px] sm:text-[38px] text-ink">
+            The plumber your <span class="halftone">neighbor</span> already recommends
+          </h2>
+          <p class="mt-4 text-[17px] text-ink/65">
+            We're a family shop — three generations of plumbers, 16 years working the same Brooklyn blocks. No call centers, no upselling, no mystery line items. The person who quotes the job is the person who does it.
+          </p>
+          <div class="mt-6 flex items-center gap-3 rounded-2xl border hair bg-white p-4 card-shadow">
+            <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-accent text-white display-sm text-[15px]">DR</span>
+            <div>
+              <p class="text-[14.5px] font-semibold text-ink">Daniel Rivera</p>
+              <p class="text-[13px] text-ink/55">Owner &amp; Master Plumber — 2nd generation</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reason cards -->
+        <div class="grid gap-4 sm:grid-cols-2">
+
+          <div class="rounded-[16px] border hair bg-white p-5 card-shadow">
+            <div class="flex items-start gap-3">
+              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-band text-accent">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z" />
+                </svg>
+              </span>
+              <div>
+                <h3 class="text-[16px] font-semibold text-ink">Fast response</h3>
+                <p class="mt-1 text-[14px] text-ink/60">Emergency calls get a plumber at your door in <span class="font-semibold text-ink tnum">under 90 minutes</span> — most are sooner.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-[16px] border hair bg-white p-5 card-shadow">
+            <div class="flex items-start gap-3">
+              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-band text-accent">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 10h18M7 15h4" />
+                </svg>
+              </span>
+              <div>
+                <h3 class="text-[16px] font-semibold text-ink">Upfront flat-rate pricing</h3>
+                <p class="mt-1 text-[14px] text-ink/60">You approve a fixed price before work starts. The clock running long is our problem, not yours.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-[16px] border hair bg-white p-5 card-shadow">
+            <div class="flex items-start gap-3">
+              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-band text-accent">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 3 4 7v5c0 4.5 3.4 8.7 8 9.9 4.6-1.2 8-5.4 8-9.9V7l-8-4Z" /><path d="m9 12 2 2 4-4" />
+                </svg>
+              </span>
+              <div>
+                <h3 class="text-[16px] font-semibold text-ink">2-year workmanship warranty</h3>
+                <p class="mt-1 text-[14px] text-ink/60">Every install and repair is covered for two full years. If our work fails, we come back free.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-[16px] border hair bg-white p-5 card-shadow">
+            <div class="flex items-start gap-3">
+              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-band text-accent">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="m17 11 2 2 4-4" />
+                </svg>
+              </span>
+              <div>
+                <h3 class="text-[16px] font-semibold text-ink">Licensed master plumbers</h3>
+                <p class="mt-1 text-[14px] text-ink/60">Every tech holds NYC credentials and is background-checked, insured and bonded.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 6 — BEFORE / AFTER                                    -->
+  <!-- ============================================================ -->
+  <section class="mx-auto max-w-shell px-4 sm:px-6 py-20 sm:py-24">
+    <div class="max-w-2xl">
+      <span class="text-[13px] font-semibold uppercase tracking-[0.14em] text-accent">Real jobs</span>
+      <h2 class="display-sm mt-3 text-[30px] sm:text-[38px] text-ink">
+        See the work — before and after
+      </h2>
+      <p class="mt-3 text-[17px] text-ink/65">
+        A few jobs from Brooklyn basements and bathrooms this year. Same homes, cleaner plumbing.
+      </p>
+    </div>
+
+    <div class="mt-10 grid gap-7 lg:grid-cols-3">
+
+      <!-- Pair 1 — galvanized to copper -->
+      <figure class="rounded-[16px] border hair bg-white p-3 card-shadow">
+        <div class="grid grid-cols-2 overflow-hidden rounded-[12px]">
+          <div class="relative aspect-square bg-gradient-to-br from-[#8A6F52] via-[#6E5740] to-[#3E3024] photo-texture" role="img" aria-label="Corroded galvanized supply pipe before replacement">
+            <span class="absolute left-2 top-2 rounded-md bg-black/55 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white">Before</span>
+          </div>
+          <div class="relative aspect-square border-l-2 border-white bg-gradient-to-br from-accent via-[#2C73B4] to-[#0F3A63] photo-texture" role="img" aria-label="New copper supply line after replacement">
+            <span class="absolute right-2 top-2 rounded-md bg-white/90 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-accent">After</span>
+          </div>
+        </div>
+        <figcaption class="px-2 py-3">
+          <p class="text-[14.5px] font-semibold text-ink">Rusted galvanized → new copper</p>
+          <p class="mt-0.5 text-[13px] text-ink/55">Park Slope brownstone — full riser swapped in a single day.</p>
+        </figcaption>
+      </figure>
+
+      <!-- Pair 2 — clogged drain to clear flow -->
+      <figure class="rounded-[16px] border hair bg-white p-3 card-shadow">
+        <div class="grid grid-cols-2 overflow-hidden rounded-[12px]">
+          <div class="relative aspect-square bg-gradient-to-br from-[#4A4A3A] via-[#34342A] to-[#1C1C16] photo-texture" role="img" aria-label="Clogged grease-filled kitchen drain before cleaning">
+            <span class="absolute left-2 top-2 rounded-md bg-black/55 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white">Before</span>
+          </div>
+          <div class="relative aspect-square border-l-2 border-white bg-gradient-to-br from-[#3FA3D6] via-[#2C73B4] to-[#15598F] photo-texture" role="img" aria-label="Clear, free-flowing drain after hydro-jetting">
+            <span class="absolute right-2 top-2 rounded-md bg-white/90 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-accent">After</span>
+          </div>
+        </div>
+        <figcaption class="px-2 py-3">
+          <p class="text-[14.5px] font-semibold text-ink">Clogged drain → clear flow</p>
+          <p class="mt-0.5 text-[13px] text-ink/55">Fort Greene kitchen — years of grease hydro-jetted out.</p>
+        </figcaption>
+      </figure>
+
+      <!-- Pair 3 — old tank to tankless -->
+      <figure class="rounded-[16px] border hair bg-white p-3 card-shadow">
+        <div class="grid grid-cols-2 overflow-hidden rounded-[12px]">
+          <div class="relative aspect-square bg-gradient-to-br from-[#6B6B6B] via-[#4C4C4C] to-[#2A2A2A] photo-texture" role="img" aria-label="Old corroded tank water heater before replacement">
+            <span class="absolute left-2 top-2 rounded-md bg-black/55 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white">Before</span>
+          </div>
+          <div class="relative aspect-square border-l-2 border-white bg-gradient-to-br from-accent via-[#3079BD] to-[#103E68] photo-texture" role="img" aria-label="Compact wall-mounted tankless water heater after install">
+            <span class="absolute right-2 top-2 rounded-md bg-white/90 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-accent">After</span>
+          </div>
+        </div>
+        <figcaption class="px-2 py-3">
+          <p class="text-[14.5px] font-semibold text-ink">Old tank → tankless heater</p>
+          <p class="mt-0.5 text-[13px] text-ink/55">Bay Ridge basement — endless hot water, half the footprint.</p>
+        </figcaption>
+      </figure>
+
+    </div>
+
+    <!-- Urgency pill with pulse-dot -->
+    <div class="mt-10 flex justify-center">
+      <div class="inline-flex items-center gap-3 rounded-full border border-accent/30 bg-accent/[0.05] px-5 py-3">
+        <span class="pulse-dot"></span>
+        <span class="text-[14.5px] font-semibold text-ink">24/7 emergency line — burst pipe? We answer.</span>
+        <a href="tel:+15554082210" class="rounded-full bg-accent px-3.5 py-1.5 text-[13px] font-semibold text-white lift hover:bg-accentdark">Call now</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 7 — HOW IT WORKS                                      -->
+  <!-- ============================================================ -->
+  <section class="relative overflow-hidden border-y hair bg-band">
+    <div class="absolute inset-0 dot-grid opacity-60" aria-hidden="true"></div>
+    <div class="relative mx-auto max-w-shell px-4 sm:px-6 py-20 sm:py-24">
+      <div class="max-w-2xl">
+        <span class="text-[13px] font-semibold uppercase tracking-[0.14em] text-accent">How it works</span>
+        <h2 class="display-sm mt-3 text-[30px] sm:text-[38px] text-ink">
+          Three steps, no runaround
+        </h2>
+        <p class="mt-3 text-[17px] text-ink/65">
+          From the first call to a clean kitchen floor — here's exactly how a Plumbline visit goes.
+        </p>
+      </div>
+
+      <div class="mt-10 grid gap-5 md:grid-cols-3">
+
+        <!-- Step 01 -->
+        <div class="relative rounded-[16px] border hair bg-white p-6 card-shadow">
+          <span class="font-mono text-[12px] font-medium tracking-wide text-accent">STEP 01</span>
+          <span class="grid h-12 w-12 mt-3 place-items-center rounded-xl bg-band text-accent">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z" />
+            </svg>
+          </span>
+          <h3 class="mt-4 text-[17px] font-semibold text-ink">Call or book online</h3>
+          <p class="mt-1.5 text-[14px] text-ink/60">Tell us what's wrong and where you are. We give you a real arrival window, not a vague "sometime today".</p>
+        </div>
+
+        <!-- Step 02 -->
+        <div class="relative rounded-[16px] border hair bg-white p-6 card-shadow">
+          <span class="font-mono text-[12px] font-medium tracking-wide text-accent">STEP 02</span>
+          <span class="grid h-12 w-12 mt-3 place-items-center rounded-xl bg-band text-accent">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M11 4h10M11 12h10M11 20h10" /><path d="M4 4v4M2 6h4" /><path d="m2 18 2 2 4-4" />
+            </svg>
+          </span>
+          <h3 class="mt-4 text-[17px] font-semibold text-ink">We diagnose &amp; quote</h3>
+          <p class="mt-1.5 text-[14px] text-ink/60">A master plumber finds the real cause and hands you a written flat-rate quote. You decide before anything starts.</p>
+        </div>
+
+        <!-- Step 03 -->
+        <div class="relative rounded-[16px] border hair bg-white p-6 card-shadow">
+          <span class="font-mono text-[12px] font-medium tracking-wide text-accent">STEP 03</span>
+          <span class="grid h-12 w-12 mt-3 place-items-center rounded-xl bg-band text-accent">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+            </svg>
+          </span>
+          <h3 class="mt-4 text-[17px] font-semibold text-ink">Done, tested &amp; cleaned up</h3>
+          <p class="mt-1.5 text-[14px] text-ink/60">We finish the job, run the water to prove it, and leave your space cleaner than we found it.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 8 — REVIEWS                                           -->
+  <!-- ============================================================ -->
+  <section id="reviews" class="mx-auto max-w-shell px-4 sm:px-6 py-20 sm:py-24">
+
+    <!-- Aggregate header -->
+    <div class="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+      <div class="max-w-xl">
+        <span class="text-[13px] font-semibold uppercase tracking-[0.14em] text-accent">Reviews</span>
+        <h2 class="display-sm mt-3 text-[30px] sm:text-[38px] text-ink">
+          Brooklyn keeps calling us back
+        </h2>
+        <p class="mt-3 text-[17px] text-ink/65">
+          A 62% repeat-customer rate doesn't happen by accident. Here's what neighbors say after the truck pulls away.
+        </p>
+      </div>
+      <div class="shrink-0 rounded-[16px] border hair bg-band p-5 card-shadow">
+        <div class="flex items-center gap-1" aria-label="4.9 out of 5 stars">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+        </div>
+        <p class="mt-2 display-sm text-[26px] text-ink tnum">4.9 <span class="text-[15px] font-medium text-ink/55">/ 5</span></p>
+        <p class="font-mono text-[12.5px] text-ink/55">from 612 reviews</p>
+        <div class="mt-3 flex items-center gap-1.5 text-[13px] font-medium text-ink/70">
+          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="#4285F4" d="M22 12.2c0-.7-.06-1.4-.18-2.06H12v3.9h5.6a4.8 4.8 0 0 1-2.07 3.15v2.6h3.35C20.84 18 22 15.4 22 12.2Z"/>
+            <path fill="#34A853" d="M12 22c2.7 0 4.97-.9 6.62-2.43l-3.35-2.6c-.93.63-2.13 1-3.27 1a5.7 5.7 0 0 1-5.35-3.93H3.2v2.68A10 10 0 0 0 12 22Z"/>
+            <path fill="#FBBC05" d="M6.65 13.04a6 6 0 0 1 0-3.82V6.54H3.2a10 10 0 0 0 0 8.92l3.45-2.42Z"/>
+            <path fill="#EA4335" d="M12 6.78c1.47 0 2.79.5 3.83 1.5l2.87-2.87A10 10 0 0 0 3.2 6.54l3.45 2.68A5.7 5.7 0 0 1 12 6.78Z"/>
+          </svg>
+          Verified Google reviews
+        </div>
+      </div>
+    </div>
+
+    <!-- Review cards -->
+    <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+
+      <article class="rounded-[16px] border hair bg-white p-5 card-shadow">
+        <div class="flex items-center gap-1" aria-label="5 out of 5 stars">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+        </div>
+        <p class="mt-3 text-[14.5px] text-ink/75">"Pipe burst under the kitchen sink on a Sunday. Plumbline answered on the second ring and had someone here in 50 minutes. Honest, fast, and the price they quoted was the price I paid."</p>
+        <div class="mt-4 flex items-center gap-3 border-t hair pt-3">
+          <span class="grid h-9 w-9 place-items-center rounded-full bg-accent/10 text-accent display-sm text-[13px]">EM</span>
+          <div>
+            <p class="text-[13.5px] font-semibold text-ink">Elena Moreau</p>
+            <p class="text-[12px] text-ink/55">Park Slope · Burst-pipe emergency</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="rounded-[16px] border hair bg-white p-5 card-shadow">
+        <div class="flex items-center gap-1" aria-label="5 out of 5 stars">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+        </div>
+        <p class="mt-3 text-[14.5px] text-ink/75">"They replaced our ancient water heater with a tankless unit. Daniel walked me through the sizing, pulled the permit himself, and cleaned up so well I couldn't tell anyone had been in the basement."</p>
+        <div class="mt-4 flex items-center gap-3 border-t hair pt-3">
+          <span class="grid h-9 w-9 place-items-center rounded-full bg-accent/10 text-accent display-sm text-[13px]">KO</span>
+          <div>
+            <p class="text-[13.5px] font-semibold text-ink">Kwame Osei</p>
+            <p class="text-[12px] text-ink/55">Fort Greene · Tankless heater install</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="rounded-[16px] border hair bg-white p-5 card-shadow">
+        <div class="flex items-center gap-1" aria-label="5 out of 5 stars">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+        </div>
+        <p class="mt-3 text-[14.5px] text-ink/75">"Slow shower drain for months. Other plumbers wanted to 'open the wall'. Plumbline ran a camera, found a grease clog, and jetted it in under an hour. No drama, fair price."</p>
+        <div class="mt-4 flex items-center gap-3 border-t hair pt-3">
+          <span class="grid h-9 w-9 place-items-center rounded-full bg-accent/10 text-accent display-sm text-[13px]">PR</span>
+          <div>
+            <p class="text-[13.5px] font-semibold text-ink">Priya Raghavan</p>
+            <p class="text-[12px] text-ink/55">Bay Ridge · Drain cleaning</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="rounded-[16px] border hair bg-white p-5 card-shadow">
+        <div class="flex items-center gap-1" aria-label="5 out of 5 stars">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+        </div>
+        <p class="mt-3 text-[14.5px] text-ink/75">"Whole-home repipe on a 100-year-old house. They mapped every line, worked clean, and finished a day early. The flat-rate quote never moved — exactly what they promised."</p>
+        <div class="mt-4 flex items-center gap-3 border-t hair pt-3">
+          <span class="grid h-9 w-9 place-items-center rounded-full bg-accent/10 text-accent display-sm text-[13px]">TM</span>
+          <div>
+            <p class="text-[13.5px] font-semibold text-ink">Tomás Marín</p>
+            <p class="text-[12px] text-ink/55">Cobble Hill · Whole-home repiping</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="rounded-[16px] border hair bg-white p-5 card-shadow">
+        <div class="flex items-center gap-1" aria-label="5 out of 5 stars">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+        </div>
+        <p class="mt-3 text-[14.5px] text-ink/75">"Our sump pump died during a storm. They came out same evening, installed a new one with a battery backup, and stayed to watch it cycle twice. Real peace of mind."</p>
+        <div class="mt-4 flex items-center gap-3 border-t hair pt-3">
+          <span class="grid h-9 w-9 place-items-center rounded-full bg-accent/10 text-accent display-sm text-[13px]">HN</span>
+          <div>
+            <p class="text-[13.5px] font-semibold text-ink">Hana Nakamura</p>
+            <p class="text-[12px] text-ink/55">Windsor Terrace · Sump pump install</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="rounded-[16px] border hair bg-white p-5 card-shadow">
+        <div class="flex items-center gap-1" aria-label="5 out of 5 stars">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#F4B400" aria-hidden="true"><path d="M12 2 15 9l7.5.6-5.7 4.9 1.8 7.3L12 18l-6.6 3.8 1.8-7.3L1.5 9.6 9 9Z"/></svg>
+        </div>
+        <p class="mt-3 text-[14.5px] text-ink/75">"Third time I've used Plumbline in five years — new toilet, a faucet, and a leak under the tub. Same guy each time, always on time, never tries to sell me something I don't need."</p>
+        <div class="mt-4 flex items-center gap-3 border-t hair pt-3">
+          <span class="grid h-9 w-9 place-items-center rounded-full bg-accent/10 text-accent display-sm text-[13px]">DK</span>
+          <div>
+            <p class="text-[13.5px] font-semibold text-ink">David Kowalski</p>
+            <p class="text-[12px] text-ink/55">Prospect Heights · Fixture install</p>
+          </div>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 9 — SERVICE AREA                                      -->
+  <!-- ============================================================ -->
+  <section id="contact" class="border-y hair bg-band">
+    <div class="mx-auto max-w-shell px-4 sm:px-6 py-20 sm:py-24">
+      <div class="grid items-center gap-12 lg:grid-cols-2 lg:gap-14">
+
+        <!-- Region map -->
+        <div>
+          <div class="rounded-[18px] border hair bg-white p-5 sm:p-7 card-shadow-lg">
+            <svg viewBox="0 0 480 380" class="w-full" role="img" aria-label="Map of Brooklyn neighborhoods served by Plumbline, with pins on each service area">
+              <defs>
+                <linearGradient id="boroughFill" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#DCEAF6" />
+                  <stop offset="100%" stop-color="#C3DBEF" />
+                </linearGradient>
+              </defs>
+
+              <!-- soft borough outline -->
+              <path
+                d="M70 70 C 130 38, 220 44, 286 66 C 340 84, 392 110, 416 158 C 436 198, 424 248, 388 286 C 344 330, 270 350, 198 338 C 134 328, 78 296, 56 244 C 36 196, 40 118, 70 70 Z"
+                fill="url(#boroughFill)" stroke="#1E5F9E" stroke-width="2.5" stroke-linejoin="round" opacity="0.92"
+              />
+              <!-- faint internal divider lines -->
+              <path d="M150 80 C 170 150, 160 230, 130 300" fill="none" stroke="#1E5F9E" stroke-width="1.2" stroke-dasharray="4 5" opacity="0.35" />
+              <path d="M260 60 C 250 150, 270 250, 250 330" fill="none" stroke="#1E5F9E" stroke-width="1.2" stroke-dasharray="4 5" opacity="0.35" />
+              <path d="M70 180 C 180 200, 300 195, 410 175" fill="none" stroke="#1E5F9E" stroke-width="1.2" stroke-dasharray="4 5" opacity="0.35" />
+
+              <!-- Pin helper: dot + label -->
+              <!-- Park Slope -->
+              <g>
+                <circle cx="208" cy="148" r="6.5" fill="#1E5F9E" />
+                <circle cx="208" cy="148" r="11" fill="none" stroke="#1E5F9E" stroke-width="1.4" opacity="0.5" />
+                <text x="208" y="134" text-anchor="middle" font-family="Inter, sans-serif" font-size="11.5" font-weight="600" fill="#14202B">Park Slope</text>
+              </g>
+              <!-- Carroll Gardens -->
+              <g>
+                <circle cx="132" cy="170" r="6.5" fill="#1E5F9E" />
+                <circle cx="132" cy="170" r="11" fill="none" stroke="#1E5F9E" stroke-width="1.4" opacity="0.5" />
+                <text x="132" y="156" text-anchor="middle" font-family="Inter, sans-serif" font-size="11.5" font-weight="600" fill="#14202B">Carroll Gardens</text>
+              </g>
+              <!-- Fort Greene -->
+              <g>
+                <circle cx="246" cy="96" r="6.5" fill="#1E5F9E" />
+                <circle cx="246" cy="96" r="11" fill="none" stroke="#1E5F9E" stroke-width="1.4" opacity="0.5" />
+                <text x="246" y="82" text-anchor="middle" font-family="Inter, sans-serif" font-size="11.5" font-weight="600" fill="#14202B">Fort Greene</text>
+              </g>
+              <!-- Bay Ridge -->
+              <g>
+                <circle cx="118" cy="288" r="6.5" fill="#1E5F9E" />
+                <circle cx="118" cy="288" r="11" fill="none" stroke="#1E5F9E" stroke-width="1.4" opacity="0.5" />
+                <text x="118" y="312" text-anchor="middle" font-family="Inter, sans-serif" font-size="11.5" font-weight="600" fill="#14202B">Bay Ridge</text>
+              </g>
+              <!-- Cobble Hill -->
+              <g>
+                <circle cx="158" cy="124" r="6.5" fill="#1E5F9E" />
+                <circle cx="158" cy="124" r="11" fill="none" stroke="#1E5F9E" stroke-width="1.4" opacity="0.5" />
+                <text x="158" y="110" text-anchor="middle" font-family="Inter, sans-serif" font-size="11.5" font-weight="600" fill="#14202B">Cobble Hill</text>
+              </g>
+              <!-- Windsor Terrace -->
+              <g>
+                <circle cx="200" cy="240" r="6.5" fill="#1E5F9E" />
+                <circle cx="200" cy="240" r="11" fill="none" stroke="#1E5F9E" stroke-width="1.4" opacity="0.5" />
+                <text x="200" y="264" text-anchor="middle" font-family="Inter, sans-serif" font-size="11.5" font-weight="600" fill="#14202B">Windsor Terrace</text>
+              </g>
+              <!-- Prospect Heights -->
+              <g>
+                <circle cx="288" cy="156" r="6.5" fill="#1E5F9E" />
+                <circle cx="288" cy="156" r="11" fill="none" stroke="#1E5F9E" stroke-width="1.4" opacity="0.5" />
+                <text x="296" y="146" text-anchor="middle" font-family="Inter, sans-serif" font-size="11.5" font-weight="600" fill="#14202B">Prospect Heights</text>
+              </g>
+              <!-- Boerum Hill -->
+              <g>
+                <circle cx="196" cy="108" r="6.5" fill="#1E5F9E" />
+                <circle cx="196" cy="108" r="11" fill="none" stroke="#1E5F9E" stroke-width="1.4" opacity="0.5" />
+                <text x="196" y="94" text-anchor="middle" font-family="Inter, sans-serif" font-size="11.5" font-weight="600" fill="#14202B">Boerum Hill</text>
+              </g>
+              <!-- Gowanus -->
+              <g>
+                <circle cx="172" cy="190" r="6.5" fill="#1E5F9E" />
+                <circle cx="172" cy="190" r="11" fill="none" stroke="#1E5F9E" stroke-width="1.4" opacity="0.5" />
+                <text x="172" y="212" text-anchor="middle" font-family="Inter, sans-serif" font-size="11.5" font-weight="600" fill="#14202B">Gowanus</text>
+              </g>
+
+              <!-- map label -->
+              <text x="356" y="312" text-anchor="middle" font-family="'Geist Mono', monospace" font-size="11" fill="#1E5F9E" opacity="0.75">BROOKLYN, NY</text>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Neighborhood list -->
+        <div>
+          <span class="text-[13px] font-semibold uppercase tracking-[0.14em] text-accent">Service area</span>
+          <h2 class="display-sm mt-3 text-[30px] sm:text-[38px] text-ink">
+            We work all over Brooklyn
+          </h2>
+          <p class="mt-3 text-[17px] text-ink/65">
+            Plumbline trucks run these neighborhoods every day. If you're nearby and not listed, call — chances are we cover you too.
+          </p>
+
+          <ul class="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+            <li class="flex items-center gap-2 rounded-lg border hair bg-white px-3 py-2 text-[13.5px] font-medium text-ink/80 card-shadow">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+              Park Slope
+            </li>
+            <li class="flex items-center gap-2 rounded-lg border hair bg-white px-3 py-2 text-[13.5px] font-medium text-ink/80 card-shadow">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+              Carroll Gardens
+            </li>
+            <li class="flex items-center gap-2 rounded-lg border hair bg-white px-3 py-2 text-[13.5px] font-medium text-ink/80 card-shadow">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+              Fort Greene
+            </li>
+            <li class="flex items-center gap-2 rounded-lg border hair bg-white px-3 py-2 text-[13.5px] font-medium text-ink/80 card-shadow">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+              Bay Ridge
+            </li>
+            <li class="flex items-center gap-2 rounded-lg border hair bg-white px-3 py-2 text-[13.5px] font-medium text-ink/80 card-shadow">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+              Cobble Hill
+            </li>
+            <li class="flex items-center gap-2 rounded-lg border hair bg-white px-3 py-2 text-[13.5px] font-medium text-ink/80 card-shadow">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+              Windsor Terrace
+            </li>
+            <li class="flex items-center gap-2 rounded-lg border hair bg-white px-3 py-2 text-[13.5px] font-medium text-ink/80 card-shadow">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+              Prospect Heights
+            </li>
+            <li class="flex items-center gap-2 rounded-lg border hair bg-white px-3 py-2 text-[13.5px] font-medium text-ink/80 card-shadow">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+              Boerum Hill
+            </li>
+            <li class="flex items-center gap-2 rounded-lg border hair bg-white px-3 py-2 text-[13.5px] font-medium text-ink/80 card-shadow">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+              Gowanus
+            </li>
+          </ul>
+
+          <a href="tel:+15554082210" class="mt-6 inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-[14.5px] font-semibold text-white lift hover:bg-accentdark card-shadow">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z" />
+            </svg>
+            Check my address — (555) 408-2210
+          </a>
+        </div>
+
+      </div>
+
+      <!-- Stats band -->
+      <div class="mt-14 grid grid-cols-2 gap-4 rounded-[18px] border hair bg-white p-6 sm:p-8 lg:grid-cols-4 card-shadow">
+        <div class="text-center">
+          <p class="display text-[34px] sm:text-[40px] text-accent tnum">&lt;90<span class="text-[18px]">min</span></p>
+          <p class="mt-1 text-[13px] text-ink/55">Avg emergency arrival</p>
+        </div>
+        <div class="text-center sm:border-l hair">
+          <p class="display text-[34px] sm:text-[40px] text-accent tnum">3,408</p>
+          <p class="mt-1 text-[13px] text-ink/55">Jobs completed in 2025</p>
+        </div>
+        <div class="text-center lg:border-l hair">
+          <p class="display text-[34px] sm:text-[40px] text-accent tnum">62<span class="text-[18px]">%</span></p>
+          <p class="mt-1 text-[13px] text-ink/55">Repeat-customer rate</p>
+        </div>
+        <div class="text-center sm:border-l hair">
+          <p class="display text-[34px] sm:text-[40px] text-accent tnum">16</p>
+          <p class="mt-1 text-[13px] text-ink/55">Years in business</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 10 — GUARANTEE / PRICING + FAQ                        -->
+  <!-- ============================================================ -->
+  <section class="mx-auto max-w-shell px-4 sm:px-6 py-20 sm:py-24">
+
+    <!-- Guarantee band -->
+    <div class="relative overflow-hidden rounded-[20px] bg-gradient-to-br from-accent via-[#1F5E9C] to-[#103E68] p-7 sm:p-10 text-white card-shadow-lg">
+      <div class="blob h-56 w-56 bg-white/20" style="top:-50px;right:-30px;"></div>
+      <div class="relative">
+        <span class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[12.5px] font-semibold">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 7v5c0 4.5 3.4 8.7 8 9.9 4.6-1.2 8-5.4 8-9.9V7l-8-4Z"/></svg>
+          Our promise to you
+        </span>
+        <h2 class="display-sm mt-4 text-[28px] sm:text-[34px]">
+          Upfront flat-rate pricing. No overtime charges, <span class="text-white/55">ever.</span>
+        </h2>
+        <p class="mt-3 max-w-2xl text-[16px] text-white/80">
+          Plumbing should never come with a surprise. You see the full price before we touch a tool — and that price doesn't change because the job ran late or fell on a weekend.
+        </p>
+
+        <div class="mt-7 grid gap-4 sm:grid-cols-3">
+          <div class="rounded-[14px] bg-white/10 p-4 backdrop-blur">
+            <div class="flex items-center gap-2">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg>
+              <p class="text-[15px] font-semibold">Upfront flat-rate pricing</p>
+            </div>
+            <p class="mt-1.5 text-[13.5px] text-white/75">One fixed number, approved by you before work begins. No hourly meter.</p>
+          </div>
+          <div class="rounded-[14px] bg-white/10 p-4 backdrop-blur">
+            <div class="flex items-center gap-2">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 7v5c0 4.5 3.4 8.7 8 9.9 4.6-1.2 8-5.4 8-9.9V7l-8-4Z"/><path d="m9 12 2 2 4-4"/></svg>
+              <p class="text-[15px] font-semibold">2-year workmanship warranty</p>
+            </div>
+            <p class="mt-1.5 text-[13.5px] text-white/75">Every install and repair is backed for two years. It fails, we fix it free.</p>
+          </div>
+          <div class="rounded-[14px] bg-white/10 p-4 backdrop-blur">
+            <div class="flex items-center gap-2">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              <p class="text-[15px] font-semibold">No overtime charges</p>
+            </div>
+            <p class="mt-1.5 text-[13.5px] text-white/75">Nights, weekends, holidays — the rate stays the rate. We mean it.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FAQ -->
+    <div class="mt-16 grid gap-10 lg:grid-cols-[0.78fr_1.22fr] lg:gap-14">
+      <div>
+        <span class="text-[13px] font-semibold uppercase tracking-[0.14em] text-accent">FAQ</span>
+        <h2 class="display-sm mt-3 text-[30px] sm:text-[36px] text-ink">
+          Straight answers, before you call
+        </h2>
+        <p class="mt-3 text-[16px] text-ink/65">
+          The questions Brooklyn homeowners ask us most. Still unsure? We're happy to talk it through on the phone.
+        </p>
+        <a href="tel:+15554082210" class="mt-5 inline-flex items-center gap-2 text-[14.5px] font-semibold text-accent hover:underline">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+          Call (555) 408-2210
+        </a>
+      </div>
+
+      <div class="space-y-3">
+
+        <details class="group rounded-[14px] border hair bg-white px-5 card-shadow">
+          <summary class="flex items-center justify-between gap-4 py-4 text-[16px] font-semibold text-ink">
+            Do you charge for the estimate?
+            <svg class="chev shrink-0 text-accent" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </summary>
+          <p class="pb-5 text-[14.5px] text-ink/65">No. Estimates are free for standard residential work — we come out, look at the job, and give you a written flat-rate quote with zero obligation. The only exception is a sewer-line camera inspection, which is a diagnostic service priced from $189, and that fee is credited toward the repair if you book it with us.</p>
+        </details>
+
+        <details class="group rounded-[14px] border hair bg-white px-5 card-shadow">
+          <summary class="flex items-center justify-between gap-4 py-4 text-[16px] font-semibold text-ink">
+            Are you available nights and weekends?
+            <svg class="chev shrink-0 text-accent" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </summary>
+          <p class="pb-5 text-[14.5px] text-ink/65">Yes. Our regular hours are Mon-Sat, 7am to 8pm, and we keep a 24/7 emergency line open every night, Sunday and holiday for burst pipes, major leaks and no-water situations. A real plumber answers — not a machine — and best of all, there's no overtime surcharge for after-hours calls.</p>
+        </details>
+
+        <details class="group rounded-[14px] border hair bg-white px-5 card-shadow">
+          <summary class="flex items-center justify-between gap-4 py-4 text-[16px] font-semibold text-ink">
+            Is pricing by the hour or flat-rate?
+            <svg class="chev shrink-0 text-accent" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </summary>
+          <p class="pb-5 text-[14.5px] text-ink/65">Always flat-rate. We diagnose the problem first, then quote one fixed price for the whole job, parts and labor included. You approve that number before any work starts, and it doesn't move — if the job takes us longer than expected, that's on us, not you. No meter, no padded hours.</p>
+        </details>
+
+        <details class="group rounded-[14px] border hair bg-white px-5 card-shadow">
+          <summary class="flex items-center justify-between gap-4 py-4 text-[16px] font-semibold text-ink">
+            Do you pull the permit for water-heater work?
+            <svg class="chev shrink-0 text-accent" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </summary>
+          <p class="pb-5 text-[14.5px] text-ink/65">Yes. As a licensed master plumber, Plumbline pulls the required NYC permit for every water-heater install and schedules the inspection on your behalf. The permit cost is itemized in your flat-rate quote up front — no hidden fees. Skipping the permit can void your home insurance, so we never do.</p>
+        </details>
+
+        <details class="group rounded-[14px] border hair bg-white px-5 card-shadow">
+          <summary class="flex items-center justify-between gap-4 py-4 text-[16px] font-semibold text-ink">
+            What's the warranty difference between a repair and an install?
+            <svg class="chev shrink-0 text-accent" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </summary>
+          <p class="pb-5 text-[14.5px] text-ink/65">Both carry our 2-year workmanship warranty — if our labor fails within two years, we return and correct it at no charge. The difference is the parts: a new install (water heater, fixture, sump pump) also carries the manufacturer's product warranty, often 6 to 12 years, which we register for you. On a repair to existing equipment, we warranty our work, but we can't warranty aging parts we didn't supply.</p>
+        </details>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 11 — FINAL CTA + QUOTE FORM MOCKUP                    -->
+  <!-- ============================================================ -->
+  <section id="quote" class="relative overflow-hidden border-y hair bg-band">
+    <div class="absolute inset-0 dot-grid opacity-50" aria-hidden="true"></div>
+    <div class="blob h-64 w-64 bg-accent/20" style="top:-70px;left:-40px;"></div>
+
+    <div class="relative mx-auto max-w-shell px-4 sm:px-6 py-20 sm:py-24">
+      <div class="grid items-center gap-12 lg:grid-cols-2 lg:gap-14">
+
+        <!-- Closing copy -->
+        <div>
+          <span class="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-white px-3 py-1.5 text-[12.5px] font-semibold text-ink/80 card-shadow">
+            <span class="pulse-dot"></span>
+            Same-day slots open today
+          </span>
+          <h2 class="display mt-5 text-[34px] sm:text-[44px] text-ink">
+            Let's get your water<br class="hidden sm:block" /> running <span class="halftone">right.</span>
+          </h2>
+          <p class="mt-4 max-w-lg text-[17px] text-ink/65">
+            Send a few details or just call — a licensed master plumber will get back to you fast with a real flat-rate quote. No pressure, no call center.
+          </p>
+
+          <div class="mt-7 flex flex-col sm:flex-row gap-3">
+            <a href="tel:+15554082210" class="flex items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 text-[15px] font-semibold text-white lift hover:bg-accentdark card-shadow">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z" />
+              </svg>
+              Call (555) 408-2210
+            </a>
+            <div class="flex items-center gap-2 text-[14px] text-ink/60">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1E5F9E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              <span class="font-mono text-[12.5px]">Mon-Sat 7am-8pm / 24/7 emergency</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quote form mockup (non-functional) -->
+        <div class="rounded-[18px] border hair bg-white p-6 sm:p-7 card-shadow-lg">
+          <h3 class="text-[18px] font-semibold text-ink">Get a free quote</h3>
+          <p class="mt-1 text-[13.5px] text-ink/55">We typically reply within the hour during business hours.</p>
+
+          <div class="mt-5 space-y-4">
+            <div>
+              <label for="qf-name" class="text-[13px] font-semibold text-ink/80">Your name</label>
+              <input id="qf-name" type="text" placeholder="e.g. Maria Alvarez" autocomplete="name"
+                class="mt-1.5 w-full rounded-xl border hair bg-band px-3.5 py-2.5 text-[14.5px] text-ink placeholder:text-ink/35 focus:border-accent/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-accent/15" />
+            </div>
+            <div>
+              <label for="qf-phone" class="text-[13px] font-semibold text-ink/80">Phone number</label>
+              <input id="qf-phone" type="tel" placeholder="(555) 000-0000" autocomplete="tel"
+                class="mt-1.5 w-full rounded-xl border hair bg-band px-3.5 py-2.5 text-[14.5px] text-ink placeholder:text-ink/35 focus:border-accent/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-accent/15" />
+            </div>
+            <div>
+              <label for="qf-need" class="text-[13px] font-semibold text-ink/80">What do you need?</label>
+              <textarea id="qf-need" rows="3" placeholder="Tell us what's going on — a leak, a clog, a water heater, an emergency…"
+                class="mt-1.5 w-full resize-none rounded-xl border hair bg-band px-3.5 py-2.5 text-[14.5px] text-ink placeholder:text-ink/35 focus:border-accent/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-accent/15"></textarea>
+            </div>
+            <button type="button"
+              class="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3 text-[15px] font-semibold text-white lift hover:bg-accentdark card-shadow">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4Z" />
+              </svg>
+              Request my free quote
+            </button>
+            <p class="flex items-center justify-center gap-1.5 text-[12px] text-ink/45">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              Your details stay private — we never share or sell them.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  </main>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 12 — FOOTER                                           -->
+  <!-- ============================================================ -->
+  <footer class="bg-ink text-white">
+    <div class="mx-auto max-w-shell px-4 sm:px-6 py-14">
+      <div class="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+
+        <!-- Brand -->
+        <div class="lg:col-span-1">
+          <div class="flex items-center gap-2.5">
+            <span class="grid h-10 w-10 place-items-center rounded-xl bg-accent text-white">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 2.5C12 2.5 6 9 6 14a6 6 0 0 0 12 0c0-5-6-11.5-6-11.5Z" />
+                <path d="M12 11v6" />
+                <circle cx="12" cy="20" r="1.4" fill="currentColor" stroke="none" />
+              </svg>
+            </span>
+            <span class="display-sm text-[20px]">Plumbline</span>
+          </div>
+          <p class="mt-3 text-[14px] text-white/55">
+            Family-owned residential plumbing serving Brooklyn since 2009. Done right the first time.
+          </p>
+          <div class="mt-4 flex items-center gap-2.5">
+            <a href="#top" aria-label="Plumbline on Facebook" class="grid h-9 w-9 place-items-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 9h3V5h-3c-2.2 0-4 1.8-4 4v2H7v4h3v6h4v-6h3l1-4h-4V9c0-.6.4-1 1-1Z"/></svg>
+            </a>
+            <a href="#top" aria-label="Plumbline on Instagram" class="grid h-9 w-9 place-items-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none"/></svg>
+            </a>
+            <a href="#top" aria-label="Plumbline on Google" class="grid h-9 w-9 place-items-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.6 12.2c0-.7-.06-1.4-.18-2.06H12v3.9h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.34ZM12 22c2.7 0 4.97-.9 6.62-2.4l-3.2-2.5c-.9.6-2 1-3.42 1a5.9 5.9 0 0 1-5.5-4H3.2v2.5A10 10 0 0 0 12 22Zm-5.5-9.2a6 6 0 0 1 0-3.6V6.7H3.2a10 10 0 0 0 0 9l3.3-2.9Zm5.5-7.6c1.5 0 2.85.52 3.9 1.5l2.9-2.9A10 10 0 0 0 3.2 6.7l3.3 2.5A5.9 5.9 0 0 1 12 5.2Z"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Contact -->
+        <div>
+          <h3 class="text-[13px] font-semibold uppercase tracking-[0.12em] text-white/45">Contact</h3>
+          <ul class="mt-4 space-y-2.5 text-[14px] text-white/65">
+            <li>
+              <a href="tel:+15554082210" class="flex items-center gap-2 font-semibold text-white hover:text-accent transition-colors">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+                (555) 408-2210
+              </a>
+            </li>
+            <li class="flex items-start gap-2">
+              <svg class="mt-0.5 shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+              <span>418 Fourth Avenue<br />Brooklyn, NY 11215</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <svg class="mt-0.5 shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              <span class="font-mono text-[12.5px]">Mon-Sat 7am-8pm<br />24/7 emergency line</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Services -->
+        <div>
+          <h3 class="text-[13px] font-semibold uppercase tracking-[0.12em] text-white/45">Services</h3>
+          <ul class="mt-4 space-y-2 text-[14px] text-white/65">
+            <li><a href="#services" class="hover:text-white transition-colors">Leak repair</a></li>
+            <li><a href="#services" class="hover:text-white transition-colors">Drain cleaning</a></li>
+            <li><a href="#services" class="hover:text-white transition-colors">Water-heater install</a></li>
+            <li><a href="#services" class="hover:text-white transition-colors">Repiping</a></li>
+            <li><a href="#services" class="hover:text-white transition-colors">24/7 emergency burst-pipe</a></li>
+            <li><a href="#services" class="hover:text-white transition-colors">Sewer-line camera inspection</a></li>
+          </ul>
+        </div>
+
+        <!-- Service area -->
+        <div>
+          <h3 class="text-[13px] font-semibold uppercase tracking-[0.12em] text-white/45">Service area</h3>
+          <p class="mt-4 text-[14px] text-white/65">
+            Proudly serving Brooklyn, NY — Park Slope, Carroll Gardens, Fort Greene, Bay Ridge, Cobble Hill, Windsor Terrace, Prospect Heights, Boerum Hill and Gowanus.
+          </p>
+          <a href="#quote" class="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13.5px] font-semibold text-white lift hover:bg-accentdark">
+            Get a free quote
+          </a>
+        </div>
+
+      </div>
+
+      <!-- Bottom bar -->
+      <div class="mt-12 flex flex-col gap-3 border-t border-white/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <p class="text-[12.5px] text-white/45">
+          © 2026 Plumbline Plumbing. All rights reserved. Family-owned in Brooklyn since 2009.
+        </p>
+        <p class="flex items-center gap-2 text-[12.5px] text-white/55">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 7v5c0 4.5 3.4 8.7 8 9.9 4.6-1.2 8-5.4 8-9.9V7l-8-4Z"/></svg>
+          <span class="font-mono text-[11.5px]">NYC Licensed Master Plumber #02134</span>
+        </p>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

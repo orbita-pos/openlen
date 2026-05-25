@@ -10,23 +10,41 @@ import { TemplateCard, type TemplateCardData } from "./template-card";
 
 // Order in which families are listed on the marketing /templates page.
 // Keep aligned with the schema enum + add new families at the end.
+// Any family in the schema but missing from this list renders zero cards
+// in the family-grouped view (gallery filters by this list).
 const FAMILIES_ORDER: TemplateFamily[] = [
   "technical-minimal",
   "editorial",
-  "commerce",
-  "documentation",
   "saas",
   "ai-ml",
+  "documentation",
+  "open-source",
+  "commerce",
+  "ecommerce",
   "fintech",
   "health-tech",
+  "education",
+  "mobile-app",
   "portfolio",
+  "agency",
+  "creator",
+  "music",
+  "podcast",
+  "gaming",
   "pre-launch",
   "event",
-  "agency",
-  "real-estate",
+  "wedding",
+  "travel",
   "hospitality",
-  "ecommerce",
+  "food-beverage",
+  "fashion",
+  "real-estate",
+  "local-services",
+  "wellness",
+  "nonprofit",
   "climate",
+  "web3",
+  "hardware",
 ];
 
 interface TemplatesGalleryProps {
@@ -132,10 +150,46 @@ export function TemplatesGallery({ templates }: TemplatesGalleryProps) {
         ) : q ? (
           <FlatGrid templates={filtered} />
         ) : (
-          <FamilySections templates={templates} />
+          <>
+            <FeaturedSection templates={templates} />
+            <FamilySections
+              templates={templates.filter((t) => !t.featured)}
+            />
+          </>
         )}
       </div>
     </>
+  );
+}
+
+function FeaturedSection({ templates }: { templates: TemplateCardData[] }) {
+  const featured = templates.filter((t) => t.featured);
+  if (featured.length === 0) return null;
+  return (
+    <section className="mb-14">
+      <div className="mb-8 flex items-baseline justify-between gap-4 flex-wrap">
+        <div>
+          <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-coral-700 dark:text-coral-400">
+            <span className="text-coral-500">★</span> Top-tier showcases
+          </div>
+          <h2 className="mt-2 text-2xl sm:text-3xl font-semibold tracking-tight">
+            Featured templates
+          </h2>
+          <p className="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400 max-w-md">
+            Hand-built showcases with real photography — examples of what
+            your page can look like fully populated.
+          </p>
+        </div>
+        <span className="text-xs text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-medium">
+          {featured.length} curated
+        </span>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+        {featured.map((t) => (
+          <TemplateCard key={t.id} template={t} />
+        ))}
+      </div>
+    </section>
   );
 }
 

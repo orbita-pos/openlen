@@ -15,42 +15,25 @@ import {
   Sparkles,
   Wand,
 } from "../icons";
-import { StatusDot } from "../ui";
+import { ModelPicker } from "../model-picker";
 import type { BriefFormState } from "@/components/workspace/types";
-
-const QUICK_PROMPTS: { label: string; prompt: string }[] = [
-  {
-    label: "SaaS launch",
-    prompt:
-      "Landing page for FlowDeck, a Kanban tool for designers that uses AI to prioritize tasks. Features: AI prioritization, real-time sync, Slack integration. Pricing tiers: Free, Pro $29/mo, Team $99/mo.",
-  },
-  {
-    label: "Portfolio",
-    prompt:
-      "Personal portfolio for a freelance UI/UX designer based in Mexico City named Sofia. She specializes in fintech and SaaS. Wants to showcase 6 projects and have a contact section.",
-  },
-  {
-    label: "Coffee subscription",
-    prompt:
-      "Landing page for 'Volcánica', a single-origin coffee subscription from Mexican volcanoes. Hero: bag of coffee on volcanic stone. Subscription tiers: $19 monthly, $49 quarterly. Mission: support Mexican farmers.",
-  },
-  {
-    label: "Event",
-    prompt:
-      "Landing page for 'Solo Founder Summit 2026', a 1-day virtual conference for indie hackers. October 15. Speakers: Pieter Levels, Justin Welsh, Marc Lou. Tickets $99 early bird.",
-  },
-];
+import type { AIModel } from "@/lib/ai-provider";
+import { QUICK_PROMPTS } from "@/lib/quick-prompts";
 
 export interface AiBriefPanelProps {
   state: BriefFormState;
   onGenerate: () => void;
   generating: boolean;
+  model: AIModel;
+  onModelChange: (m: AIModel) => void;
 }
 
 export function AiBriefPanel({
   state,
   onGenerate,
   generating,
+  model,
+  onModelChange,
 }: AiBriefPanelProps) {
   const taRef = useRef<HTMLTextAreaElement>(null);
 
@@ -150,10 +133,11 @@ export function AiBriefPanel({
               >
                 <Wand size={13} />
               </button>
-              <span className="inline-flex items-center gap-1 h-7 px-1.5 text-[10px] fg-faint ui-small">
-                <StatusDot color="#10B981" pulse />
-                <span>Kimi K2.6</span>
-              </span>
+              <ModelPicker
+                model={model}
+                onChange={onModelChange}
+                disabled={generating}
+              />
             </div>
             <button
               type="button"

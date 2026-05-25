@@ -1,4 +1,11 @@
-import { Code, Heart, Shield, Unlock, Wallet, type LucideIcon } from "lucide-react";
+import {
+  BarChart3,
+  Code,
+  Heart,
+  LayoutGrid,
+  Unlock,
+  type LucideIcon,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface FeatureItem {
@@ -9,24 +16,24 @@ interface FeatureItem {
 
 const items: FeatureItem[] = [
   {
-    icon: Shield,
-    title: "6 quality gates before delivery",
-    body: "a11y · conversion · mobile · SEO · security · performance. No other AI page builder validates outputs. We do. 100% gates pass first-try on our public eval suite.",
+    icon: LayoutGrid,
+    title: "165 production templates",
+    body: "Hand-built marketing landings + 30 link-in-bio creator hubs (streamer, musician, photographer, indie maker). Pick one, customize in-iframe, publish to your subdomain.",
   },
   {
-    icon: Wallet,
-    title: "$0.13/gen real cost",
-    body: "Measured across 5 representative briefs (saas, portfolio, event, ecommerce, agency). Lovable lands at $1.50+/gen. The math leaves room for a $19/mo flat price with healthy margin.",
+    icon: BarChart3,
+    title: "Privacy-first analytics built in",
+    body: "Per-link click tracking, page visits, top referrers, country split — no cookies, no IP storage, no consent banner. GDPR-clear by design. Same model as Plausible, but yours.",
   },
   {
     icon: Code,
-    title: "Code you own — deploy anywhere",
-    body: "Pure HTML + Tailwind. Push to Vercel, Netlify, Cloudflare, GitHub Pages, your own server. No npm install on the output, no platform lock-in.",
+    title: "Your HTML, your subdomain",
+    body: "Pure HTML + Tailwind output. Publish to <you>.openlen.com instantly, or take the file and host anywhere — Vercel, Cloudflare, GitHub Pages, your own server. No runtime lock-in.",
   },
   {
     icon: Unlock,
-    title: "Open source (AGPL v3)",
-    body: "Fork it. Audit it. Self-host it. The generator, prompts, routing table, eval harness, and witness recordings all live in the repo.",
+    title: "Open source (AGPLv3)",
+    body: "Fork it. Audit it. Self-host the whole stack on a single Hetzner box. Generator, editor, publish pipeline, and analytics all live in the repo.",
   },
 ];
 

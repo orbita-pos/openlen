@@ -1,0 +1,1433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Selvage — Heritage Workwear & Selvedge Denim · AW27</title>
+<meta name="description" content="Selvage builds heritage workwear and selvedge denim woven on vintage shuttle looms. Raw 14oz jeans, chore coats, work shirts — made to last, mended for life. Buy it once." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper: #EDE6D8;
+    --paper-2: #E4DBC9;
+    --paper-3: #F3EEE2;
+    --ink: #211C14;
+    --ink-soft: #4A4234;
+    --ink-faint: #756B57;
+    --indigo: #2E3C5C;
+    --indigo-deep: #1C2540;
+    --indigo-bright: #3E5184;
+    --leather: #9A6B3E;
+    --leather-deep: #6E4A29;
+    --hair: rgba(33,28,20,0.10);
+    --hair-soft: rgba(33,28,20,0.07);
+  }
+
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  .font-slab { font-family: 'Zilla Slab', Georgia, serif; }
+
+  .display {
+    font-family: 'Zilla Slab', Georgia, serif;
+    letter-spacing: -0.018em;
+    line-height: 1.04;
+    font-weight: 600;
+  }
+
+  /* wide-tracked small-caps utility labels */
+  .label {
+    font-family: 'Inter', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: 0.625rem;
+    font-weight: 600;
+    color: var(--ink-faint);
+  }
+  .label-tan { color: var(--leather); }
+  .label-indigo { color: var(--indigo); }
+
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  /* ---- half-tone headline ---- */
+  .halftone { opacity: 0.45; }
+
+  /* ---- hairline rules ---- */
+  .hair-t { border-top: 1px solid var(--hair); }
+  .hair-b { border-bottom: 1px solid var(--hair); }
+  .hair-l { border-left: 1px solid var(--hair); }
+  .hair-r { border-right: 1px solid var(--hair); }
+  .hair-all { border: 1px solid var(--hair); }
+
+  /* ---- ambient backgrounds ---- */
+  .dot-grid {
+    background-image: radial-gradient(rgba(33,28,20,0.12) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .mesh {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(80px);
+    opacity: 0.55;
+    pointer-events: none;
+  }
+  .radial-fade {
+    background:
+      radial-gradient(60% 50% at 20% 0%, rgba(46,60,92,0.10), transparent 70%),
+      radial-gradient(50% 60% at 100% 100%, rgba(154,107,62,0.12), transparent 70%);
+  }
+
+  /* film grain overlay used inside placeholders */
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/></svg>");
+    opacity: 0.10;
+    mix-blend-mode: overlay;
+    pointer-events: none;
+  }
+  .grain-strong::after { opacity: 0.16; }
+
+  /* ---- image placeholder palettes ---- */
+  .ph { position: relative; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(33,28,20,0.10); }
+  .ph-frame { position: relative; overflow: hidden; }
+  .ph-frame::before {
+    content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+    box-shadow: inset 0 0 0 1px rgba(33,28,20,0.12);
+  }
+
+  /* deep indigo denim */
+  .denim {
+    background:
+      radial-gradient(70% 55% at 28% 22%, rgba(110,128,170,0.55), transparent 62%),
+      radial-gradient(80% 80% at 88% 96%, rgba(13,18,36,0.85), transparent 70%),
+      linear-gradient(155deg, #3a4a72 0%, #2c3a5b 38%, #1e2745 72%, #161d35 100%);
+  }
+  .denim-light {
+    background:
+      radial-gradient(65% 50% at 30% 18%, rgba(150,166,205,0.6), transparent 60%),
+      linear-gradient(160deg, #51618c 0%, #3c4c74 45%, #2d3a59 100%);
+  }
+  .denim-raw {
+    background:
+      radial-gradient(60% 45% at 70% 20%, rgba(86,104,148,0.5), transparent 65%),
+      radial-gradient(90% 90% at 10% 100%, rgba(11,15,30,0.9), transparent 72%),
+      linear-gradient(135deg, #2b3858 0%, #1d2643 60%, #12182e 100%);
+  }
+  /* worn leather / heritage tan */
+  .leatherph {
+    background:
+      radial-gradient(65% 50% at 26% 22%, rgba(196,150,98,0.6), transparent 62%),
+      radial-gradient(80% 80% at 90% 95%, rgba(70,46,24,0.78), transparent 70%),
+      linear-gradient(155deg, #b08049 0%, #8c5f37 42%, #6a4827 75%, #533619 100%);
+  }
+  /* warm tan / khaki / ecru workwear */
+  .khaki {
+    background:
+      radial-gradient(60% 48% at 32% 20%, rgba(226,212,178,0.7), transparent 62%),
+      radial-gradient(85% 80% at 92% 96%, rgba(120,100,68,0.6), transparent 72%),
+      linear-gradient(155deg, #cdbd96 0%, #b6a578 44%, #9c8c61 78%, #837349 100%);
+  }
+  .ecru {
+    background:
+      radial-gradient(58% 46% at 28% 18%, rgba(244,238,222,0.85), transparent 64%),
+      radial-gradient(80% 80% at 95% 100%, rgba(150,132,98,0.42), transparent 72%),
+      linear-gradient(160deg, #e6dcc1 0%, #d6c9a4 50%, #c2b287 100%);
+  }
+  /* mixed indigo+leather for campaign bands */
+  .campaign {
+    background:
+      radial-gradient(50% 60% at 14% 30%, rgba(110,128,170,0.55), transparent 60%),
+      radial-gradient(46% 70% at 86% 78%, rgba(154,107,62,0.55), transparent 62%),
+      radial-gradient(120% 120% at 50% 0%, rgba(243,238,226,0.16), transparent 60%),
+      linear-gradient(150deg, #232c47 0%, #2f3a58 40%, #3a3a4d 66%, #4a3b2c 100%);
+  }
+  .fade-strip {
+    background:
+      linear-gradient(90deg,
+        #11172d 0%, #1a2240 16%,
+        #283357 34%, #3a4a74 52%,
+        #5a6c97 68%, #8593b4 82%,
+        #b3bcd0 100%);
+  }
+
+  /* texture stripe for denim weave hint */
+  .weave::before {
+    content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+    background-image: repeating-linear-gradient(135deg, rgba(255,255,255,0.05) 0 1px, transparent 1px 4px);
+    opacity: 0.6;
+  }
+
+  /* selvedge edge accent line */
+  .selvedge-edge {
+    background: linear-gradient(180deg, transparent 0%, transparent 8%,
+      var(--leather) 8%, var(--leather) 11%,
+      transparent 11%, transparent 16%);
+  }
+
+  /* ---- pulse dot ---- */
+  .pulse-dot {
+    position: relative;
+    width: 8px; height: 8px;
+    border-radius: 9999px;
+    background: #4f7a4f;
+    flex: none;
+  }
+  .pulse-dot::after {
+    content: ""; position: absolute; inset: 0;
+    border-radius: 9999px;
+    animation: pulse 2.4s ease-out infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(79,122,79,0.55); }
+    70%  { box-shadow: 0 0 0 12px rgba(79,122,79,0); }
+    100% { box-shadow: 0 0 0 0 rgba(79,122,79,0); }
+  }
+
+  /* ---- marquee ---- */
+  .marquee { overflow: hidden; }
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: scroll-x 38s linear infinite;
+  }
+  .marquee:hover .marquee-track { animation-play-state: paused; }
+  @keyframes scroll-x {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  /* ---- buttons ---- */
+  .btn {
+    display: inline-flex; align-items: center; gap: 0.55rem;
+    font-weight: 600; font-size: 0.875rem;
+    padding: 0.85rem 1.6rem;
+    transition: transform 110ms ease, box-shadow 110ms ease, background-color 110ms ease, color 110ms ease;
+    will-change: transform;
+  }
+  .btn-primary {
+    background: var(--indigo);
+    color: #F3EEE2;
+    box-shadow: 0 2px 0 0 var(--indigo-deep);
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    background: var(--indigo-bright);
+    box-shadow: 0 8px 22px -8px rgba(28,37,64,0.6), 0 4px 0 0 var(--indigo-deep);
+  }
+  .btn-ink {
+    background: var(--ink);
+    color: var(--paper-3);
+    box-shadow: 0 2px 0 0 #000;
+  }
+  .btn-ink:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px -10px rgba(0,0,0,0.55), 0 4px 0 0 #000;
+  }
+  .btn-outline {
+    border: 1px solid var(--ink);
+    color: var(--ink);
+    background: transparent;
+  }
+  .btn-outline:hover {
+    transform: translateY(-2px);
+    background: var(--ink);
+    color: var(--paper-3);
+    box-shadow: 0 8px 20px -10px rgba(33,28,20,0.5);
+  }
+  .btn-tan {
+    background: var(--leather);
+    color: #F6EFE2;
+    box-shadow: 0 2px 0 0 var(--leather-deep);
+  }
+  .btn-tan:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 9px 22px -9px rgba(110,74,41,0.6), 0 4px 0 0 var(--leather-deep);
+  }
+
+  .link-u {
+    position: relative;
+    transition: color 120ms ease;
+  }
+  .link-u::after {
+    content: ""; position: absolute; left: 0; bottom: -3px;
+    width: 100%; height: 1px; background: currentColor;
+    transform: scaleX(0); transform-origin: right;
+    transition: transform 180ms ease;
+  }
+  .link-u:hover::after { transform: scaleX(1); transform-origin: left; }
+
+  /* card hover */
+  .piece-card .ph-frame img,
+  .piece-card .scaler,
+  .look-tile .scaler {
+    transition: transform 600ms cubic-bezier(.2,.7,.2,1);
+  }
+  .piece-card:hover .scaler,
+  .look-tile:hover .scaler { transform: scale(1.045); }
+  .piece-card .cap-fade {
+    opacity: 0; transform: translateY(6px);
+    transition: opacity 220ms ease, transform 220ms ease;
+  }
+  .piece-card:hover .cap-fade { opacity: 1; transform: translateY(0); }
+
+  /* season pill */
+  .pill {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    border: 1px solid var(--hair);
+    background: rgba(243,238,226,0.7);
+    padding: 0.32rem 0.7rem;
+    font-size: 0.625rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+
+  /* FAQ accordion (CSS-only) */
+  details.faq {
+    border-bottom: 1px solid var(--hair);
+  }
+  details.faq summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 1.4rem 0;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1.5rem;
+    transition: color 120ms ease;
+  }
+  details.faq summary::-webkit-details-marker { display: none; }
+  details.faq summary:hover { color: var(--indigo); }
+  details.faq .plus {
+    flex: none; width: 22px; height: 22px;
+    position: relative;
+    transition: transform 240ms ease;
+  }
+  details.faq .plus::before,
+  details.faq .plus::after {
+    content: ""; position: absolute; background: var(--ink);
+    transition: background 120ms ease;
+  }
+  details.faq .plus::before { left: 0; top: 50%; width: 100%; height: 1.5px; transform: translateY(-50%); }
+  details.faq .plus::after  { top: 0; left: 50%; height: 100%; width: 1.5px; transform: translateX(-50%); }
+  details.faq[open] .plus { transform: rotate(135deg); }
+  details.faq .faq-body {
+    padding: 0 0 1.5rem;
+    max-width: 60ch;
+    color: var(--ink-soft);
+  }
+
+  /* focus states */
+  a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visible {
+    outline: 2px solid var(--indigo);
+    outline-offset: 3px;
+    border-radius: 1px;
+  }
+
+  /* reveal-on-scroll (progressive; visible by default if JS off) */
+  .reveal { opacity: 0; transform: translateY(18px); }
+  .reveal.in { opacity: 1; transform: none; transition: opacity 700ms ease, transform 700ms cubic-bezier(.2,.7,.2,1); }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal, .reveal.in { opacity: 1; transform: none; transition: none; }
+    .marquee-track { animation: none; }
+    .pulse-dot::after { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+
+  ::selection { background: rgba(46,60,92,0.85); color: #F3EEE2; }
+
+  .container-x { max-width: 1240px; margin-left: auto; margin-right: auto; }
+</style>
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<header class="sticky top-0 z-50 hair-b" style="background: rgba(237,230,216,0.92); backdrop-filter: blur(10px);">
+  <div class="container-x px-5 sm:px-8">
+    <div class="flex items-center justify-between h-16">
+      <a href="#top" class="flex items-center gap-2.5 group" aria-label="Selvage — home">
+        <span class="inline-flex items-center justify-center w-8 h-8 hair-all" style="background: var(--indigo);">
+          <span class="font-slab font-bold text-[15px] leading-none" style="color:#F3EEE2;">S</span>
+        </span>
+        <span class="font-slab font-bold tracking-tight text-[18px]">SELVAGE</span>
+        <span class="hidden sm:inline label" style="margin-left:0.15rem;">Est. 1991 · Loomwork</span>
+      </a>
+
+      <nav class="hidden md:flex items-center gap-8" aria-label="Primary">
+        <a href="#collection" class="link-u text-[13.5px] font-medium tracking-tight">Shop</a>
+        <a href="#lookbook" class="link-u text-[13.5px] font-medium tracking-tight">Lookbook</a>
+        <a href="#pov" class="link-u text-[13.5px] font-medium tracking-tight">About</a>
+        <a href="#stockists" class="link-u text-[13.5px] font-medium tracking-tight">Stockists</a>
+      </nav>
+
+      <div class="flex items-center gap-4">
+        <span class="hidden sm:flex items-center gap-2 label">
+          <span class="pulse-dot" aria-hidden="true"></span>
+          AW27 In Stock
+        </span>
+        <a href="#collection" class="btn btn-ink text-[13px] py-2.5 px-4">Shop</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============ 1 · HERO ============ -->
+  <section class="relative overflow-hidden" aria-label="AW27 campaign">
+    <div class="mesh" style="width:520px;height:520px;background:rgba(46,60,92,0.5);top:-160px;left:-140px;"></div>
+    <div class="mesh" style="width:440px;height:440px;background:rgba(154,107,62,0.45);bottom:-180px;right:-120px;"></div>
+
+    <div class="container-x px-5 sm:px-8 pt-14 pb-10 lg:pt-20 lg:pb-16 relative">
+      <div class="grid lg:grid-cols-12 gap-10 lg:gap-12 items-end">
+
+        <div class="lg:col-span-5 reveal">
+          <div class="flex items-center gap-3 mb-7">
+            <span class="pill"><span style="color:var(--leather)">●</span> AW27 — No. 04</span>
+            <span class="label">The Loom Years</span>
+          </div>
+
+          <h1 class="display text-[3.1rem] sm:text-[4rem] lg:text-[4.4rem]">
+            Buy it once.<br />
+            <span class="halftone">Wear it for years.</span>
+          </h1>
+
+          <p class="mt-6 text-[1.0625rem] leading-relaxed max-w-[42ch]" style="color:var(--ink-soft);">
+            Heritage workwear and raw selvedge denim, woven slow on vintage shuttle looms. Built honest, cut roomy, mended for life — the opposite of disposable.
+          </p>
+
+          <div class="mt-8 flex flex-wrap items-center gap-3.5">
+            <a href="#collection" class="btn btn-primary">
+              Shop the collection
+              <span aria-hidden="true">→</span>
+            </a>
+            <a href="#craft" class="btn btn-outline">How it's made</a>
+          </div>
+
+          <dl class="mt-10 grid grid-cols-3 gap-5 max-w-md hair-t pt-7">
+            <div>
+              <dt class="label mb-1.5">Looms</dt>
+              <dd class="font-slab font-semibold text-[1.5rem] tnum">12</dd>
+              <dd class="text-[12px]" style="color:var(--ink-faint);">1950s shuttle</dd>
+            </div>
+            <div>
+              <dt class="label mb-1.5">Weights</dt>
+              <dd class="font-slab font-semibold text-[1.5rem] tnum">5</dd>
+              <dd class="text-[12px]" style="color:var(--ink-faint);">12.5 → 21oz</dd>
+            </div>
+            <div>
+              <dt class="label mb-1.5">Repairs / yr</dt>
+              <dd class="font-slab font-semibold text-[1.5rem] tnum">3,400+</dd>
+              <dd class="text-[12px]" style="color:var(--ink-faint);">mended free</dd>
+            </div>
+          </dl>
+        </div>
+
+        <!-- hero campaign image -->
+        <div class="lg:col-span-7 reveal">
+          <figure class="ph-frame grain grain-strong aspect-[4/5] sm:aspect-[16/11] weave campaign">
+            <div class="absolute inset-0 flex flex-col justify-between p-5 sm:p-7 z-[2]">
+              <div class="flex items-start justify-between">
+                <span class="label" style="color:rgba(243,238,226,0.85);">Selvage AW27 — Campaign</span>
+                <span class="label" style="color:rgba(243,238,226,0.7);">Fig. 04</span>
+              </div>
+              <div class="flex items-end justify-between gap-4">
+                <p class="font-slab text-[1.45rem] sm:text-[2rem] leading-tight" style="color:#F3EEE2;">
+                  Raw 14oz, photographed<br class="hidden sm:block" /> on the mill floor.
+                </p>
+                <span class="hidden sm:inline label text-right" style="color:rgba(243,238,226,0.7);">Okayama · JP</span>
+              </div>
+            </div>
+            <!-- abstract figure shapes -->
+            <div class="absolute -right-6 top-8 w-40 h-72 sm:w-56 sm:h-96 denim rotate-6 ph" style="border-radius: 60px 60px 14px 14px;"></div>
+            <div class="absolute left-10 bottom-0 w-32 h-56 sm:w-44 sm:h-72 leatherph ph" style="border-radius: 44px 44px 8px 8px;"></div>
+          </figure>
+          <figcaption class="mt-3 flex items-center justify-between">
+            <span class="label">Photography — Mira Hollanský</span>
+            <span class="label">Shot at Yamazaki Mill</span>
+          </figcaption>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- thin running marquee under hero -->
+  <div class="hair-t hair-b marquee py-3" style="background: var(--indigo);" aria-hidden="true">
+    <div class="marquee-track">
+      <div class="flex items-center gap-10 pr-10">
+        <span class="label" style="color:rgba(243,238,226,0.7);">SELVEDGE WOVEN ON SHUTTLE LOOMS</span><span style="color:var(--leather)">✦</span>
+        <span class="label" style="color:rgba(243,238,226,0.7);">RAW DENIM · NO SANDBLAST · NO SHORTCUTS</span><span style="color:var(--leather)">✦</span>
+        <span class="label" style="color:rgba(243,238,226,0.7);">LIFETIME MENDING ON EVERY PIECE</span><span style="color:var(--leather)">✦</span>
+        <span class="label" style="color:rgba(243,238,226,0.7);">A 38-PERSON MILL IN OKAYAMA</span><span style="color:var(--leather)">✦</span>
+      </div>
+      <div class="flex items-center gap-10 pr-10">
+        <span class="label" style="color:rgba(243,238,226,0.7);">SELVEDGE WOVEN ON SHUTTLE LOOMS</span><span style="color:var(--leather)">✦</span>
+        <span class="label" style="color:rgba(243,238,226,0.7);">RAW DENIM · NO SANDBLAST · NO SHORTCUTS</span><span style="color:var(--leather)">✦</span>
+        <span class="label" style="color:rgba(243,238,226,0.7);">LIFETIME MENDING ON EVERY PIECE</span><span style="color:var(--leather)">✦</span>
+        <span class="label" style="color:rgba(243,238,226,0.7);">A 38-PERSON MILL IN OKAYAMA</span><span style="color:var(--leather)">✦</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 2 · THE COLLECTION ============ -->
+  <section id="collection" class="relative py-20 lg:py-28">
+    <div class="container-x px-5 sm:px-8">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-12 reveal">
+        <div>
+          <span class="label label-tan">The Collection — AW27</span>
+          <h2 class="display text-[2.5rem] sm:text-[3.1rem] mt-3">
+            Eight pieces. <span class="halftone">Made to outlast you.</span>
+          </h2>
+        </div>
+        <p class="text-[15px] max-w-[34ch]" style="color:var(--ink-soft);">
+          Every cut starts as raw, undyed-edge selvedge off our own looms. Order true to size — it breaks in, it doesn't break down.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-10">
+
+        <!-- piece 1 -->
+        <article class="piece-card group reveal">
+          <div class="ph-frame grain aspect-[4/5] denim-raw weave">
+            <div class="scaler absolute inset-0 denim-raw"></div>
+            <div class="absolute top-3 left-3 z-[2]"><span class="label" style="color:rgba(243,238,226,0.8);">No. 01</span></div>
+            <div class="absolute bottom-3 left-3 right-3 z-[2] flex items-center justify-between">
+              <span class="label" style="color:rgba(243,238,226,0.85);">Raw · 14oz</span>
+              <span class="label cap-fade" style="color:var(--leather);">Indigo warp</span>
+            </div>
+          </div>
+          <div class="mt-3.5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="font-slab font-semibold text-[1.05rem]">The Loomwork 1991</h3>
+              <span class="font-medium text-[14px] tnum">$245</span>
+            </div>
+            <p class="text-[12.5px] mt-1" style="color:var(--ink-faint);">14oz selvedge — Toyoda G3 loom · slim-straight</p>
+          </div>
+        </article>
+
+        <!-- piece 2 -->
+        <article class="piece-card group reveal">
+          <div class="ph-frame grain aspect-[4/5] denim weave">
+            <div class="scaler absolute inset-0 denim"></div>
+            <div class="absolute top-3 left-3 z-[2]"><span class="label" style="color:rgba(243,238,226,0.8);">No. 02</span></div>
+            <div class="absolute bottom-3 left-3 right-3 z-[2] flex items-center justify-between">
+              <span class="label" style="color:rgba(243,238,226,0.85);">Raw · 12.5oz</span>
+              <span class="label cap-fade" style="color:var(--leather);">Soft hand</span>
+            </div>
+          </div>
+          <div class="mt-3.5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="font-slab font-semibold text-[1.05rem]">The Yardman</h3>
+              <span class="font-medium text-[14px] tnum">$198</span>
+            </div>
+            <p class="text-[12.5px] mt-1" style="color:var(--ink-faint);">12.5oz selvedge — Picanol L4 loom · relaxed taper</p>
+          </div>
+        </article>
+
+        <!-- piece 3 -->
+        <article class="piece-card group reveal">
+          <div class="ph-frame grain aspect-[4/5] denim-raw weave">
+            <div class="scaler absolute inset-0 denim-raw"></div>
+            <div class="absolute top-3 left-3 z-[2]"><span class="label" style="color:rgba(243,238,226,0.8);">No. 03</span></div>
+            <div class="absolute bottom-3 left-3 right-3 z-[2] flex items-center justify-between">
+              <span class="label" style="color:rgba(243,238,226,0.85);">Raw · 21oz</span>
+              <span class="label cap-fade" style="color:var(--leather);">Heavyweight</span>
+            </div>
+          </div>
+          <div class="mt-3.5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="font-slab font-semibold text-[1.05rem]">The Anvil 21</h3>
+              <span class="font-medium text-[14px] tnum">$268</span>
+            </div>
+            <p class="text-[12.5px] mt-1" style="color:var(--ink-faint);">21oz selvedge — Toyoda G3 loom · regular-straight</p>
+          </div>
+        </article>
+
+        <!-- piece 4 -->
+        <article class="piece-card group reveal">
+          <div class="ph-frame grain aspect-[4/5] khaki">
+            <div class="scaler absolute inset-0 khaki"></div>
+            <div class="absolute top-3 left-3 z-[2]"><span class="label" style="color:rgba(33,28,20,0.6);">No. 04</span></div>
+            <div class="absolute bottom-3 left-3 right-3 z-[2] flex items-center justify-between">
+              <span class="label" style="color:rgba(33,28,20,0.7);">Duck canvas</span>
+              <span class="label cap-fade" style="color:var(--leather-deep);">Triple-stitch</span>
+            </div>
+          </div>
+          <div class="mt-3.5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="font-slab font-semibold text-[1.05rem]">The Chore Coat</h3>
+              <span class="font-medium text-[14px] tnum">$225</span>
+            </div>
+            <p class="text-[12.5px] mt-1" style="color:var(--ink-faint);">12oz cotton duck — corozo buttons · boxy fit</p>
+          </div>
+        </article>
+
+        <!-- piece 5 -->
+        <article class="piece-card group reveal">
+          <div class="ph-frame grain aspect-[4/5] denim-light weave">
+            <div class="scaler absolute inset-0 denim-light"></div>
+            <div class="absolute top-3 left-3 z-[2]"><span class="label" style="color:rgba(243,238,226,0.8);">No. 05</span></div>
+            <div class="absolute bottom-3 left-3 right-3 z-[2] flex items-center justify-between">
+              <span class="label" style="color:rgba(243,238,226,0.85);">Indigo chambray</span>
+              <span class="label cap-fade" style="color:var(--leather);">Cat-eye buttons</span>
+            </div>
+          </div>
+          <div class="mt-3.5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="font-slab font-semibold text-[1.05rem]">The Mill Shirt</h3>
+              <span class="font-medium text-[14px] tnum">$168</span>
+            </div>
+            <p class="text-[12.5px] mt-1" style="color:var(--ink-faint);">6.5oz selvedge chambray — Sakamoto loom · work fit</p>
+          </div>
+        </article>
+
+        <!-- piece 6 -->
+        <article class="piece-card group reveal">
+          <div class="ph-frame grain aspect-[4/5] leatherph">
+            <div class="scaler absolute inset-0 leatherph"></div>
+            <div class="absolute top-3 left-3 z-[2]"><span class="label" style="color:rgba(243,238,226,0.78);">No. 06</span></div>
+            <div class="absolute bottom-3 left-3 right-3 z-[2] flex items-center justify-between">
+              <span class="label" style="color:rgba(243,238,226,0.85);">Vegetable-tan</span>
+              <span class="label cap-fade" style="color:#E8C99A;">Solid brass</span>
+            </div>
+          </div>
+          <div class="mt-3.5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="font-slab font-semibold text-[1.05rem]">The Belt No. 1</h3>
+              <span class="font-medium text-[14px] tnum">$96</span>
+            </div>
+            <p class="text-[12.5px] mt-1" style="color:var(--ink-faint);">5mm bridle leather — Walsall, England · brass roller</p>
+          </div>
+        </article>
+
+        <!-- piece 7 -->
+        <article class="piece-card group reveal">
+          <div class="ph-frame grain aspect-[4/5] ecru">
+            <div class="scaler absolute inset-0 ecru"></div>
+            <div class="absolute top-3 left-3 z-[2]"><span class="label" style="color:rgba(33,28,20,0.55);">No. 07</span></div>
+            <div class="absolute bottom-3 left-3 right-3 z-[2] flex items-center justify-between">
+              <span class="label" style="color:rgba(33,28,20,0.65);">Loopwheel cotton</span>
+              <span class="label cap-fade" style="color:var(--leather-deep);">Tubular knit</span>
+            </div>
+          </div>
+          <div class="mt-3.5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="font-slab font-semibold text-[1.05rem]">The Daily Tee</h3>
+              <span class="font-medium text-[14px] tnum">$54</span>
+            </div>
+            <p class="text-[12.5px] mt-1" style="color:var(--ink-faint);">8.2oz loopwheel cotton — slow-knit · seamless body</p>
+          </div>
+        </article>
+
+        <!-- piece 8 -->
+        <article class="piece-card group reveal">
+          <div class="ph-frame grain aspect-[4/5] denim weave">
+            <div class="scaler absolute inset-0 denim"></div>
+            <div class="absolute top-3 left-3 z-[2]"><span class="label" style="color:rgba(243,238,226,0.8);">No. 08</span></div>
+            <div class="absolute bottom-3 left-3 right-3 z-[2] flex items-center justify-between">
+              <span class="label" style="color:rgba(243,238,226,0.85);">Raw · 16oz</span>
+              <span class="label cap-fade" style="color:var(--leather);">Blanket-lined</span>
+            </div>
+          </div>
+          <div class="mt-3.5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="font-slab font-semibold text-[1.05rem]">The Type-III Jacket</h3>
+              <span class="font-medium text-[14px] tnum">$298</span>
+            </div>
+            <p class="text-[12.5px] mt-1" style="color:var(--ink-faint);">16oz selvedge — Toyoda G3 loom · trucker cut</p>
+          </div>
+        </article>
+
+      </div>
+
+      <div class="mt-12 hair-t pt-7 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 reveal">
+        <p class="text-[13.5px]" style="color:var(--ink-faint);">
+          Prices in USD. Raw pieces ship un-soaked — see sizing notes before ordering.
+        </p>
+        <a href="#stockists" class="link-u text-[13.5px] font-semibold" style="color:var(--indigo);">Find the full range in store →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3 · LOOKBOOK ============ -->
+  <section id="lookbook" class="relative py-20 lg:py-28 hair-t" style="background: var(--paper-2);">
+    <div class="container-x px-5 sm:px-8">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-12 reveal">
+        <div>
+          <span class="label label-indigo">Lookbook — AW27 · The Loom Years</span>
+          <h2 class="display text-[2.5rem] sm:text-[3.1rem] mt-3">Shot on the floor it was woven.</h2>
+        </div>
+        <span class="pill self-start sm:self-auto"><span style="color:var(--leather)">●</span> 09 frames · No. 04</span>
+      </div>
+
+      <!-- editorial mixed-crop grid -->
+      <div class="grid grid-cols-2 lg:grid-cols-12 gap-4 lg:gap-5">
+
+        <!-- tile A — tall -->
+        <figure class="look-tile lg:col-span-5 ph-frame grain aspect-[4/5] denim weave overflow-hidden">
+          <div class="scaler absolute inset-0 denim"></div>
+          <figcaption class="absolute bottom-0 left-0 right-0 p-4 z-[2] flex items-end justify-between">
+            <span class="label" style="color:rgba(243,238,226,0.9);">No. 01 — Raw 14oz, day one</span>
+            <span class="label" style="color:rgba(243,238,226,0.6);">Frame 01</span>
+          </figcaption>
+        </figure>
+
+        <!-- tile B — wide -->
+        <figure class="look-tile lg:col-span-7 ph-frame grain aspect-[16/10] campaign weave overflow-hidden">
+          <div class="scaler absolute inset-0 campaign"></div>
+          <figcaption class="absolute bottom-0 left-0 right-0 p-4 z-[2] flex items-end justify-between">
+            <span class="label" style="color:rgba(243,238,226,0.9);">No. 02 — Chore coat & the loom</span>
+            <span class="label" style="color:rgba(243,238,226,0.6);">Frame 02</span>
+          </figcaption>
+        </figure>
+
+        <!-- tile C — square -->
+        <figure class="look-tile lg:col-span-4 ph-frame grain aspect-square khaki overflow-hidden">
+          <div class="scaler absolute inset-0 khaki"></div>
+          <figcaption class="absolute bottom-0 left-0 right-0 p-4 z-[2] flex items-end justify-between">
+            <span class="label" style="color:rgba(33,28,20,0.72);">No. 03 — Duck canvas, flat</span>
+            <span class="label" style="color:rgba(33,28,20,0.5);">Frame 03</span>
+          </figcaption>
+        </figure>
+
+        <!-- tile D — wide leather -->
+        <figure class="look-tile lg:col-span-4 ph-frame grain aspect-square leatherph overflow-hidden">
+          <div class="scaler absolute inset-0 leatherph"></div>
+          <figcaption class="absolute bottom-0 left-0 right-0 p-4 z-[2] flex items-end justify-between">
+            <span class="label" style="color:rgba(243,238,226,0.9);">No. 04 — Bridle leather close</span>
+            <span class="label" style="color:rgba(243,238,226,0.6);">Frame 04</span>
+          </figcaption>
+        </figure>
+
+        <!-- tile E — fade close-up -->
+        <figure class="look-tile lg:col-span-4 ph-frame grain aspect-square fade-strip overflow-hidden">
+          <div class="scaler absolute inset-0 fade-strip"></div>
+          <figcaption class="absolute bottom-0 left-0 right-0 p-4 z-[2] flex items-end justify-between">
+            <span class="label" style="color:rgba(33,28,20,0.78);">No. 05 — Three-year fade detail</span>
+            <span class="label" style="color:rgba(33,28,20,0.55);">Frame 05</span>
+          </figcaption>
+        </figure>
+
+        <!-- tile F — tall denim raw -->
+        <figure class="look-tile lg:col-span-4 ph-frame grain aspect-[4/5] denim-raw weave overflow-hidden">
+          <div class="scaler absolute inset-0 denim-raw"></div>
+          <figcaption class="absolute bottom-0 left-0 right-0 p-4 z-[2] flex items-end justify-between">
+            <span class="label" style="color:rgba(243,238,226,0.9);">No. 06 — The Anvil, on figure</span>
+            <span class="label" style="color:rgba(243,238,226,0.6);">Frame 06</span>
+          </figcaption>
+        </figure>
+
+        <!-- tile G — wide ecru -->
+        <figure class="look-tile lg:col-span-8 ph-frame grain aspect-[16/10] ecru overflow-hidden">
+          <div class="scaler absolute inset-0 ecru"></div>
+          <figcaption class="absolute bottom-0 left-0 right-0 p-4 z-[2] flex items-end justify-between">
+            <span class="label" style="color:rgba(33,28,20,0.72);">No. 07 — Loopwheel tee, mill light</span>
+            <span class="label" style="color:rgba(33,28,20,0.5);">Frame 07</span>
+          </figcaption>
+        </figure>
+
+        <!-- tile H — square denim light -->
+        <figure class="look-tile lg:col-span-4 ph-frame grain aspect-[4/5] denim-light weave overflow-hidden">
+          <div class="scaler absolute inset-0 denim-light"></div>
+          <figcaption class="absolute bottom-0 left-0 right-0 p-4 z-[2] flex items-end justify-between">
+            <span class="label" style="color:rgba(243,238,226,0.9);">No. 08 — Chambray, broken-in</span>
+            <span class="label" style="color:rgba(243,238,226,0.6);">Frame 08</span>
+          </figcaption>
+        </figure>
+
+        <!-- tile I — wide campaign -->
+        <figure class="look-tile lg:col-span-8 ph-frame grain aspect-[16/10] campaign weave overflow-hidden">
+          <div class="scaler absolute inset-0 campaign"></div>
+          <figcaption class="absolute bottom-0 left-0 right-0 p-4 z-[2] flex items-end justify-between">
+            <span class="label" style="color:rgba(243,238,226,0.9);">No. 09 — Full kit, end of shift</span>
+            <span class="label" style="color:rgba(243,238,226,0.6);">Frame 09</span>
+          </figcaption>
+        </figure>
+
+      </div>
+
+      <p class="mt-8 text-[13px] text-center" style="color:var(--ink-faint);">
+        AW27 — The Loom Years · Photographed across two shifts at Yamazaki Mill, Okayama.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ 4 · THE POINT OF VIEW ============ -->
+  <section id="pov" class="relative py-20 lg:py-28 hair-t overflow-hidden">
+    <div class="absolute inset-0 dot-grid opacity-50" aria-hidden="true"></div>
+    <div class="container-x px-5 sm:px-8 relative">
+      <div class="grid lg:grid-cols-12 gap-10 lg:gap-16 items-start">
+
+        <div class="lg:col-span-4 reveal">
+          <span class="label label-tan">The Point of View</span>
+          <h2 class="display text-[2.4rem] sm:text-[2.9rem] mt-3">
+            We're against<br /><span class="halftone">the throwaway.</span>
+          </h2>
+          <div class="mt-7 ph-frame grain aspect-[4/5] leatherph weave">
+            <figcaption class="absolute bottom-0 left-0 right-0 p-4 z-[2]">
+              <span class="label" style="color:rgba(243,238,226,0.85);">The workbench — bar tacks & rivets</span>
+            </figcaption>
+          </div>
+        </div>
+
+        <div class="lg:col-span-8 reveal">
+          <div class="space-y-6 text-[1.0625rem] leading-relaxed" style="color:var(--ink-soft);">
+            <p class="font-slab text-[1.4rem] leading-snug" style="color:var(--ink);">
+              Selvage started in 1991 with one used shuttle loom, a roll of indigo yarn, and a stubborn idea: a pair of jeans should last a decade, not a season.
+            </p>
+            <p>
+              Most denim is now woven on wide projectile looms — fast, cheap, and edged with a serged hem that frays. We weave on narrow shuttle looms from the 1950s. They run a third of the speed and finish each yard with a clean, self-bound edge: the selvedge. It is slower, it costs more, and it is the honest way to make cloth that holds its shape after a thousand wears.
+            </p>
+            <p>
+              We don't chase trends or drop ten collections a year. We make a tight range, in real weights, and we make it well — triple-stitched seams, copper rivets at the stress points, corozo and brass instead of plastic. When a garment finally wears through, we'd rather repair it than sell you a replacement. That is the whole business, and it is a quieter one than fashion usually allows.
+            </p>
+          </div>
+
+          <div class="mt-9 grid sm:grid-cols-3 gap-px hair-all" style="background: var(--hair);">
+            <div class="bg-[var(--paper-3)] p-5">
+              <p class="label mb-2">Founded</p>
+              <p class="font-slab font-semibold text-[1.65rem] tnum">1991</p>
+              <p class="text-[12.5px] mt-1" style="color:var(--ink-faint);">Okayama, Japan</p>
+            </div>
+            <div class="bg-[var(--paper-3)] p-5">
+              <p class="label mb-2">The mill team</p>
+              <p class="font-slab font-semibold text-[1.65rem] tnum">38</p>
+              <p class="text-[12.5px] mt-1" style="color:var(--ink-faint);">weavers & menders</p>
+            </div>
+            <div class="bg-[var(--paper-3)] p-5">
+              <p class="label mb-2">Pieces per year</p>
+              <p class="font-slab font-semibold text-[1.65rem] tnum">~9,000</p>
+              <p class="text-[12.5px] mt-1" style="color:var(--ink-faint);">deliberately small</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 5 · CRAFT / FABRIC / MAKE ============ -->
+  <section id="craft" class="relative py-20 lg:py-28 hair-t" style="background: var(--indigo); color: #EDE6D8;">
+    <div class="absolute inset-0" aria-hidden="true" style="background:radial-gradient(70% 60% at 12% 0%, rgba(154,107,62,0.22), transparent 60%), radial-gradient(60% 60% at 100% 100%, rgba(110,128,170,0.3), transparent 65%);"></div>
+
+    <div class="container-x px-5 sm:px-8 relative">
+      <div class="max-w-2xl reveal">
+        <span class="label" style="color:rgba(232,201,154,0.95);">The Craft — Loom to Wear</span>
+        <h2 class="display text-[2.6rem] sm:text-[3.3rem] mt-3" style="color:#F3EEE2;">
+          A yard of selvedge<br /><span style="opacity:0.45;">takes its time.</span>
+        </h2>
+        <p class="mt-5 text-[1.0625rem] leading-relaxed" style="color:rgba(237,230,216,0.82);">
+          Everything we make begins as raw, rope-dyed selvedge denim — woven on vintage shuttle looms, finished hard, and shipped before a single wash touches it. Here is what that actually means.
+        </p>
+      </div>
+
+      <!-- weight / loom spec strip -->
+      <div class="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-px reveal" style="background: rgba(237,230,216,0.14);">
+        <div class="p-6" style="background: var(--indigo-deep);">
+          <p class="label" style="color:rgba(232,201,154,0.9);">Fabric</p>
+          <p class="font-slab font-semibold text-[1.35rem] mt-2" style="color:#F3EEE2;">Rope-dyed selvedge</p>
+          <p class="text-[13px] mt-1.5" style="color:rgba(237,230,216,0.6);">Indigo warp, natural weft — dipped, not surface-printed.</p>
+        </div>
+        <div class="p-6" style="background: var(--indigo-deep);">
+          <p class="label" style="color:rgba(232,201,154,0.9);">Weight</p>
+          <p class="font-slab font-semibold text-[1.35rem] mt-2 tnum" style="color:#F3EEE2;">12.5 – 21oz</p>
+          <p class="text-[13px] mt-1.5" style="color:rgba(237,230,216,0.6);">Five denim weights, each cut for a different season.</p>
+        </div>
+        <div class="p-6" style="background: var(--indigo-deep);">
+          <p class="label" style="color:rgba(232,201,154,0.9);">Loom</p>
+          <p class="font-slab font-semibold text-[1.35rem] mt-2" style="color:#F3EEE2;">Toyoda G3 shuttle</p>
+          <p class="text-[13px] mt-1.5" style="color:rgba(237,230,216,0.6);">1950s narrow looms — 32-inch cloth, true selvedge ID.</p>
+        </div>
+        <div class="p-6" style="background: var(--indigo-deep);">
+          <p class="label" style="color:rgba(232,201,154,0.9);">Finishing</p>
+          <p class="font-slab font-semibold text-[1.35rem] mt-2" style="color:#F3EEE2;">Raw, un-soaked</p>
+          <p class="text-[13px] mt-1.5" style="color:rgba(237,230,216,0.6);">No sandblast, no stonewash — the fade is yours to earn.</p>
+        </div>
+      </div>
+
+      <!-- raw vs washed -->
+      <div class="mt-12 grid lg:grid-cols-2 gap-5 reveal">
+        <div class="p-7 hair-all" style="border-color: rgba(237,230,216,0.16); background: rgba(28,37,64,0.5);">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="w-9 h-9 ph denim-raw" style="border-radius:6px;"></span>
+            <h3 class="font-slab font-semibold text-[1.3rem]" style="color:#F3EEE2;">Raw denim</h3>
+          </div>
+          <p class="text-[14.5px] leading-relaxed" style="color:rgba(237,230,216,0.78);">
+            Loomstate cloth, stiff as board, deep blue-black. It hasn't been washed, so it carries every bit of its indigo. Worn hard and washed rarely, raw denim fades exactly where <em>your</em> body bends it — and nowhere else. It is a longer road, and the more rewarding one.
+          </p>
+        </div>
+        <div class="p-7 hair-all" style="border-color: rgba(237,230,216,0.16); background: rgba(28,37,64,0.5);">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="w-9 h-9 ph denim-light" style="border-radius:6px;"></span>
+            <h3 class="font-slab font-semibold text-[1.3rem]" style="color:#F3EEE2;">One-wash</h3>
+          </div>
+          <p class="text-[14.5px] leading-relaxed" style="color:rgba(237,230,216,0.78);">
+            The same selvedge, given a single cold rinse so the cotton has already shrunk. It's softer in the hand from day one and sized true — no shrink to plan around. The fades still come, just a half-step gentler. The easy way in.
+          </p>
+        </div>
+      </div>
+
+      <p class="mt-8 text-[13.5px] reveal" style="color:rgba(237,230,216,0.6);">
+        Loom shed at Yamazaki Mill — 12 shuttle looms, run by hand-trained weavers · Average 14oz yardage: 3.2 yards / hour.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ 5b · MADE TO FADE ============ -->
+  <section class="relative py-20 lg:py-28 hair-t overflow-hidden">
+    <div class="mesh" style="width:420px;height:420px;background:rgba(46,60,92,0.35);top:-150px;right:-120px;"></div>
+    <div class="container-x px-5 sm:px-8 relative">
+
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-12 reveal">
+        <div>
+          <span class="label label-tan">Made to Fade</span>
+          <h2 class="display text-[2.5rem] sm:text-[3.2rem] mt-3">
+            Raw denim is a slow<br /><span class="halftone">portrait of the wearer.</span>
+          </h2>
+        </div>
+        <p class="text-[15px] max-w-[33ch]" style="color:var(--ink-soft);">
+          You don't buy the fades — you make them. Whiskers, honeycombs, the worn seat: a map of how you actually move.
+        </p>
+      </div>
+
+      <!-- fade journey strip -->
+      <div class="ph-frame grain aspect-[16/5] sm:aspect-[16/4] fade-strip mb-3 reveal weave">
+        <div class="absolute inset-0 z-[2] grid grid-cols-3">
+          <div class="hair-r flex items-end p-4" style="border-color: rgba(33,28,20,0.18);">
+            <span class="label" style="color:rgba(243,238,226,0.92);">Month 0 — Raw</span>
+          </div>
+          <div class="hair-r flex items-end p-4" style="border-color: rgba(33,28,20,0.18);">
+            <span class="label" style="color:rgba(33,28,20,0.78);">Month 8 — Broken-in</span>
+          </div>
+          <div class="flex items-end justify-end p-4">
+            <span class="label" style="color:rgba(33,28,20,0.78);">Year 3+ — Personal patina</span>
+          </div>
+        </div>
+      </div>
+      <p class="text-[12.5px] mb-12 reveal" style="color:var(--ink-faint);">The fade curve — a single pair of 14oz Loomwork 1991, photographed at three stages on the same wearer.</p>
+
+      <!-- three stage cards -->
+      <div class="grid md:grid-cols-3 gap-5 mb-14">
+        <article class="p-6 hair-all reveal" style="background: var(--paper-3);">
+          <span class="label label-indigo">Stage 01</span>
+          <h3 class="font-slab font-semibold text-[1.3rem] mt-2.5">Raw</h3>
+          <p class="text-[14px] leading-relaxed mt-2.5" style="color:var(--ink-soft);">
+            Stiff, dark, uniform. Wear them every day for the first six months and resist the wash — this is when the creases set. Indigo will rub onto pale shoes and sofas; that's the cloth, not a fault.
+          </p>
+        </article>
+        <article class="p-6 hair-all reveal" style="background: var(--paper-3);">
+          <span class="label label-indigo">Stage 02</span>
+          <h3 class="font-slab font-semibold text-[1.3rem] mt-2.5">Broken-in</h3>
+          <p class="text-[14px] leading-relaxed mt-2.5" style="color:var(--ink-soft);">
+            Around month eight the contrast arrives — <em>whiskers</em> at the hips, <em>honeycombs</em> behind the knees, a lighter seat. The denim has softened to your build and now moves like a second skin.
+          </p>
+        </article>
+        <article class="p-6 hair-all reveal" style="background: var(--paper-3);">
+          <span class="label label-indigo">Stage 03</span>
+          <h3 class="font-slab font-semibold text-[1.3rem] mt-2.5">Personal patina</h3>
+          <p class="text-[14px] leading-relaxed mt-2.5" style="color:var(--ink-soft);">
+            Past three years the fades are unmistakably yours — no two pairs alike. A wallet shadow, a worn cuff, a mended knee. This is the point of raw denim, and it cannot be bought off a shelf.
+          </p>
+        </article>
+      </div>
+
+      <!-- LIFETIME REPAIR / MENDING program -->
+      <div class="hair-all overflow-hidden reveal" style="background: var(--paper-3);">
+        <div class="grid lg:grid-cols-12">
+          <div class="lg:col-span-7 p-7 sm:p-10 hair-r" style="border-color: var(--hair);">
+            <div class="flex items-center gap-3 mb-4">
+              <span class="pulse-dot" aria-hidden="true"></span>
+              <span class="label label-tan">The Mending Program — Free, For Life</span>
+            </div>
+            <h3 class="display text-[2rem] sm:text-[2.4rem]">We'd rather fix it than sell you another.</h3>
+            <p class="mt-4 text-[15px] leading-relaxed" style="color:var(--ink-soft);">
+              Every Selvage piece comes with lifetime mending. Blow out a knee, fray a cuff, snap a button — send it back and our menders at the Okayama bench repair it, free, for as long as you own it. We darn with matched indigo thread, patch from the same loom run, and re-rivet stress points by hand. Most repairs ship back within three weeks.
+            </p>
+            <div class="mt-6 flex flex-wrap gap-3">
+              <a href="#stockists" class="btn btn-tan">Start a repair</a>
+              <a href="#faq" class="btn btn-outline">How mending works</a>
+            </div>
+          </div>
+          <div class="lg:col-span-5 p-7 sm:p-10 grid grid-cols-2 gap-6" style="background: var(--paper-2);">
+            <div>
+              <p class="label mb-1.5">Repairs / year</p>
+              <p class="font-slab font-semibold text-[1.9rem] tnum">3,400+</p>
+              <p class="text-[12px]" style="color:var(--ink-faint);">denim, coats & shirts</p>
+            </div>
+            <div>
+              <p class="label mb-1.5">Lifetime cost</p>
+              <p class="font-slab font-semibold text-[1.9rem] tnum">$0</p>
+              <p class="text-[12px]" style="color:var(--ink-faint);">you cover return post</p>
+            </div>
+            <div>
+              <p class="label mb-1.5">Avg turnaround</p>
+              <p class="font-slab font-semibold text-[1.9rem] tnum">3 wks</p>
+              <p class="text-[12px]" style="color:var(--ink-faint);">bench-mended by hand</p>
+            </div>
+            <div>
+              <p class="label mb-1.5">Oldest mended</p>
+              <p class="font-slab font-semibold text-[1.9rem] tnum">31 yrs</p>
+              <p class="text-[12px]" style="color:var(--ink-faint);">a 1993 chore coat</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ 6 · FEATURED GARMENT ============ -->
+  <section class="relative py-20 lg:py-28 hair-t" style="background: var(--paper-2);">
+    <div class="container-x px-5 sm:px-8">
+
+      <div class="text-center mb-12 reveal">
+        <span class="label label-tan">The Signature Jean</span>
+        <h2 class="display text-[2.6rem] sm:text-[3.3rem] mt-3">The Loomwork 1991</h2>
+      </div>
+
+      <!-- alternating row -->
+      <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+        <div class="reveal">
+          <figure class="ph-frame grain grain-strong aspect-[4/5] denim-raw weave">
+            <div class="absolute inset-0 flex flex-col justify-between p-5 sm:p-6 z-[2]">
+              <div class="flex items-center justify-between">
+                <span class="pill" style="background: rgba(243,238,226,0.92);">14oz · Raw selvedge</span>
+                <span class="label" style="color:rgba(243,238,226,0.7);">No. 01</span>
+              </div>
+              <p class="font-slab text-[1.6rem]" style="color:#F3EEE2;">$245 — the only jean we'd insist on.</p>
+            </div>
+            <div class="absolute right-5 top-1/2 -translate-y-1/2 selvedge-edge w-8 h-2/3 z-[2] hidden sm:block" aria-hidden="true"></div>
+          </figure>
+        </div>
+
+        <div class="reveal">
+          <p class="text-[1.0625rem] leading-relaxed" style="color:var(--ink-soft);">
+            The 1991 is our oldest pattern and our best — a mid-rise, slim-straight cut in 14oz rope-dyed selvedge off the Toyoda G3 looms. It is the jean we'd hand a first-time raw-denim buyer and the one our own weavers wear. Stiff at the start, honest forever.
+          </p>
+
+          <div class="mt-7">
+            <span class="label mb-3 block">The Fabric</span>
+            <ul class="space-y-2.5 text-[14.5px]">
+              <li class="flex items-baseline justify-between gap-4 hair-b pb-2.5">
+                <span style="color:var(--ink-soft);">Denim weight</span>
+                <span class="font-medium tnum">14oz</span>
+              </li>
+              <li class="flex items-baseline justify-between gap-4 hair-b pb-2.5">
+                <span style="color:var(--ink-soft);">Loom</span>
+                <span class="font-medium">Toyoda G3 shuttle, 1956</span>
+              </li>
+              <li class="flex items-baseline justify-between gap-4 hair-b pb-2.5">
+                <span style="color:var(--ink-soft);">Hardware</span>
+                <span class="font-medium">Copper rivets · brass shank button</span>
+              </li>
+              <li class="flex items-baseline justify-between gap-4 pb-1">
+                <span style="color:var(--ink-soft);">State</span>
+                <span class="font-medium">Raw — un-soaked, sized for shrink</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="mt-7">
+            <span class="label mb-3 block">Three fits</span>
+            <div class="grid sm:grid-cols-3 gap-3">
+              <div class="p-3.5 hair-all" style="background: var(--paper-3);">
+                <p class="font-slab font-semibold text-[1rem]">The Loom Slim</p>
+                <p class="text-[12px] mt-0.5" style="color:var(--ink-faint);">Slim-straight, mid-rise</p>
+              </div>
+              <div class="p-3.5 hair-all" style="background: var(--paper-3);">
+                <p class="font-slab font-semibold text-[1rem]">The Yard Regular</p>
+                <p class="text-[12px] mt-0.5" style="color:var(--ink-faint);">Straight, room at the thigh</p>
+              </div>
+              <div class="p-3.5 hair-all" style="background: var(--paper-3);">
+                <p class="font-slab font-semibold text-[1rem]">The Carpenter</p>
+                <p class="text-[12px] mt-0.5" style="color:var(--ink-faint);">Relaxed, hammer loop</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-7 p-4 hair-all" style="background: rgba(46,60,92,0.06);">
+            <span class="label label-indigo mb-1.5 block">The Fade Story</span>
+            <p class="text-[13.5px] leading-relaxed" style="color:var(--ink-soft);">
+              Worn five days a week and washed twice a year, a 1991 throws sharp whiskers and stacked honeycombs by month nine. By year three the indigo has dropped to a soft mid-blue with crisp high-contrast creases — the fade our long-time wearers send us photos of.
+            </p>
+          </div>
+
+          <div class="mt-7 flex flex-wrap items-center gap-3.5">
+            <a href="#collection" class="btn btn-primary">Shop the 1991 — $245</a>
+            <a href="#faq" class="btn btn-outline">Sizing & shrink guide</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 7 · THE CAMPAIGN / FILM ============ -->
+  <section class="relative py-20 lg:py-28 hair-t overflow-hidden">
+    <div class="container-x px-5 sm:px-8 relative">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 reveal">
+        <div>
+          <span class="label label-tan">The Campaign Film — AW27</span>
+          <h2 class="display text-[2.4rem] sm:text-[3.1rem] mt-3">Eight hours on the loom floor.</h2>
+        </div>
+        <span class="pill self-start sm:self-auto"><span class="pulse-dot" aria-hidden="true"></span> Film · 6 min 20 sec</span>
+      </div>
+    </div>
+
+    <!-- full-bleed campaign band -->
+    <div class="relative w-full reveal">
+      <figure class="ph-frame grain grain-strong campaign weave aspect-[16/9] sm:aspect-[21/9]">
+        <div class="absolute inset-0 z-[2] flex flex-col items-center justify-center text-center p-6">
+          <button class="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center transition-transform duration-150 hover:scale-110"
+                  style="background: rgba(243,238,226,0.95);" aria-label="Play the AW27 campaign film">
+            <span class="ml-1 block w-0 h-0" style="border-left: 18px solid var(--indigo); border-top: 12px solid transparent; border-bottom: 12px solid transparent;"></span>
+          </button>
+          <p class="font-slab text-[1.5rem] sm:text-[2.2rem] mt-6 max-w-xl" style="color:#F3EEE2;">
+            "The Loom Years" — a quiet film about cloth that takes its time.
+          </p>
+        </div>
+        <div class="absolute bottom-0 left-0 right-0 p-5 sm:p-7 z-[2] flex flex-wrap items-end justify-between gap-3">
+          <span class="label" style="color:rgba(243,238,226,0.78);">Selvage AW27 · Okayama, Japan</span>
+          <span class="label" style="color:rgba(243,238,226,0.78);">Runtime 06:20</span>
+        </div>
+      </figure>
+    </div>
+
+    <div class="container-x px-5 sm:px-8 relative">
+      <div class="mt-6 grid sm:grid-cols-3 gap-px hair-all reveal" style="background: var(--hair);">
+        <div class="bg-[var(--paper-3)] p-5">
+          <p class="label mb-1.5">Photography</p>
+          <p class="font-slab font-semibold text-[1.05rem]">Mira Hollanský</p>
+          <p class="text-[12px]" style="color:var(--ink-faint);">Studio Hollanský, Prague</p>
+        </div>
+        <div class="bg-[var(--paper-3)] p-5">
+          <p class="label mb-1.5">Creative direction</p>
+          <p class="font-slab font-semibold text-[1.05rem]">Jonas Tveit & Aiko Mori</p>
+          <p class="text-[12px]" style="color:var(--ink-faint);">Field Office, Copenhagen</p>
+        </div>
+        <div class="bg-[var(--paper-3)] p-5">
+          <p class="label mb-1.5">Film & sound</p>
+          <p class="font-slab font-semibold text-[1.05rem]">Rafael Okonkwo</p>
+          <p class="text-[12px]" style="color:var(--ink-faint);">scored by Lena Variš</p>
+        </div>
+      </div>
+      <p class="mt-5 text-[13px] reveal" style="color:var(--ink-faint);">
+        Shot entirely on-site at Yamazaki Mill over two working shifts — no studio, no styling team, our own weavers in their own jeans.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ 8 · STOCKISTS / AVAILABILITY ============ -->
+  <section id="stockists" class="relative py-20 lg:py-28 hair-t" style="background: var(--paper-2);">
+    <div class="container-x px-5 sm:px-8">
+      <div class="text-center max-w-xl mx-auto mb-10 reveal">
+        <span class="label label-indigo">Stockists & Availability</span>
+        <h2 class="display text-[2.5rem] sm:text-[3.1rem] mt-3">Find us at good general stores.</h2>
+        <p class="mt-4 text-[15px]" style="color:var(--ink-soft);">
+          Selvage is carried by a small list of independent workwear and denim shops. Or order the full range direct.
+        </p>
+      </div>
+    </div>
+
+    <!-- stockist marquee -->
+    <div class="hair-t hair-b py-7 marquee" aria-label="Stockists">
+      <div class="marquee-track">
+        <div class="flex items-center gap-12 sm:gap-16 pr-12 sm:pr-16">
+          <span class="font-slab font-semibold text-[1.4rem] tracking-tight" style="color:var(--ink-soft);">Brunel&nbsp;&amp;&nbsp;Hale</span>
+          <span class="font-medium text-[1.25rem] tracking-[0.06em] uppercase" style="color:var(--ink-soft);">Ironside Supply</span>
+          <span class="font-slab text-[1.4rem] italic" style="color:var(--ink-soft);">The Mercantile</span>
+          <span class="font-medium text-[1.25rem] tracking-[0.14em] uppercase" style="color:var(--ink-soft);">Workhorse&nbsp;Goods</span>
+          <span class="font-slab font-semibold text-[1.4rem] tracking-tight" style="color:var(--ink-soft);">Halvorsen&nbsp;Bros.</span>
+          <span class="font-medium text-[1.25rem] tracking-[0.06em]" style="color:var(--ink-soft);">Pike&nbsp;Street&nbsp;Dry&nbsp;Goods</span>
+          <span class="font-slab text-[1.4rem]" style="color:var(--ink-soft);">Tannery&nbsp;No.&nbsp;9</span>
+          <span class="font-medium text-[1.25rem] tracking-[0.16em] uppercase" style="color:var(--ink-soft);">Coopworth</span>
+        </div>
+        <div class="flex items-center gap-12 sm:gap-16 pr-12 sm:pr-16" aria-hidden="true">
+          <span class="font-slab font-semibold text-[1.4rem] tracking-tight" style="color:var(--ink-soft);">Brunel&nbsp;&amp;&nbsp;Hale</span>
+          <span class="font-medium text-[1.25rem] tracking-[0.06em] uppercase" style="color:var(--ink-soft);">Ironside Supply</span>
+          <span class="font-slab text-[1.4rem] italic" style="color:var(--ink-soft);">The Mercantile</span>
+          <span class="font-medium text-[1.25rem] tracking-[0.14em] uppercase" style="color:var(--ink-soft);">Workhorse&nbsp;Goods</span>
+          <span class="font-slab font-semibold text-[1.4rem] tracking-tight" style="color:var(--ink-soft);">Halvorsen&nbsp;Bros.</span>
+          <span class="font-medium text-[1.25rem] tracking-[0.06em]" style="color:var(--ink-soft);">Pike&nbsp;Street&nbsp;Dry&nbsp;Goods</span>
+          <span class="font-slab text-[1.4rem]" style="color:var(--ink-soft);">Tannery&nbsp;No.&nbsp;9</span>
+          <span class="font-medium text-[1.25rem] tracking-[0.16em] uppercase" style="color:var(--ink-soft);">Coopworth</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="container-x px-5 sm:px-8">
+      <div class="mt-12 grid lg:grid-cols-3 gap-5">
+        <!-- find us -->
+        <div class="p-7 hair-all reveal" style="background: var(--paper-3);">
+          <span class="label label-tan">Find us</span>
+          <h3 class="font-slab font-semibold text-[1.35rem] mt-2.5">Stocked in 9 countries</h3>
+          <p class="text-[14px] mt-2 leading-relaxed" style="color:var(--ink-soft);">
+            Forty-one independent shops across North America, Europe and Japan carry the AW27 range. Our workshop store in Okayama stocks every weight and runs the repair bench.
+          </p>
+          <a href="#footer" class="link-u inline-block mt-4 text-[13.5px] font-semibold" style="color:var(--indigo);">See the stockist map →</a>
+        </div>
+
+        <!-- order direct -->
+        <div class="p-7 reveal" style="background: var(--indigo); color:#EDE6D8;">
+          <span class="label" style="color:rgba(232,201,154,0.95);">Order direct</span>
+          <h3 class="font-slab font-semibold text-[1.35rem] mt-2.5" style="color:#F3EEE2;">The full range, shipped raw</h3>
+          <p class="text-[14px] mt-2 leading-relaxed" style="color:rgba(237,230,216,0.78);">
+            Every piece, every weight, every fit — direct from the mill. Free returns within 30 days on unworn raw denim.
+          </p>
+          <a href="#collection" class="btn btn-tan mt-4">Shop online →</a>
+        </div>
+
+        <!-- sizing / fit notes -->
+        <div class="p-7 hair-all reveal" style="background: var(--paper-3);">
+          <span class="label label-tan">Sizing & fit notes</span>
+          <ul class="mt-3 space-y-2.5 text-[13.5px]" style="color:var(--ink-soft);">
+            <li class="flex gap-2.5"><span style="color:var(--leather);">—</span> Raw denim shrinks ~3–5% in the first hot wash. Size up one waist if buying raw.</li>
+            <li class="flex gap-2.5"><span style="color:var(--leather);">—</span> One-wash pieces are pre-shrunk — take your true waist.</li>
+            <li class="flex gap-2.5"><span style="color:var(--leather);">—</span> Chore coats and the Type-III run boxy; size down for a trim fit.</li>
+            <li class="flex gap-2.5"><span style="color:var(--leather);">—</span> Free hemming on every pair of jeans, in-store or by post.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 9 · JOURNAL / NEWSLETTER ============ -->
+  <section class="relative py-20 lg:py-28 hair-t overflow-hidden">
+    <div class="absolute inset-0 dot-grid opacity-40" aria-hidden="true"></div>
+    <div class="container-x px-5 sm:px-8 relative">
+      <div class="grid lg:grid-cols-12 gap-10 lg:gap-12">
+
+        <!-- journal -->
+        <div class="lg:col-span-7 reveal">
+          <span class="label label-tan">The Journal</span>
+          <h2 class="display text-[2.3rem] sm:text-[2.8rem] mt-3">Notes from the loom shed.</h2>
+
+          <div class="mt-8 space-y-px hair-all" style="background: var(--hair);">
+            <a href="#journal" class="group flex items-center gap-5 p-5 bg-[var(--paper-3)] transition-colors duration-150 hover:bg-[var(--paper-2)]">
+              <div class="ph-frame grain w-20 h-20 flex-none denim-raw weave"></div>
+              <div class="min-w-0">
+                <span class="label">Field Note 18 · Jan 2027</span>
+                <h3 class="font-slab font-semibold text-[1.1rem] mt-1 group-hover:underline">Why we still won't sandblast a jean</h3>
+                <p class="text-[13px] mt-0.5 truncate" style="color:var(--ink-faint);">The shortcut that fakes a decade of wear — and the lungs it costs.</p>
+              </div>
+            </a>
+            <a href="#journal" class="group flex items-center gap-5 p-5 bg-[var(--paper-3)] transition-colors duration-150 hover:bg-[var(--paper-2)]">
+              <div class="ph-frame grain w-20 h-20 flex-none leatherph weave"></div>
+              <div class="min-w-0">
+                <span class="label">Field Note 17 · Dec 2026</span>
+                <h3 class="font-slab font-semibold text-[1.1rem] mt-1 group-hover:underline">A 31-year-old chore coat comes home to mend</h3>
+                <p class="text-[13px] mt-0.5 truncate" style="color:var(--ink-faint);">The oldest piece our bench has ever repaired, and what it taught us.</p>
+              </div>
+            </a>
+            <a href="#journal" class="group flex items-center gap-5 p-5 bg-[var(--paper-3)] transition-colors duration-150 hover:bg-[var(--paper-2)]">
+              <div class="ph-frame grain w-20 h-20 flex-none khaki weave"></div>
+              <div class="min-w-0">
+                <span class="label">Field Note 16 · Nov 2026</span>
+                <h3 class="font-slab font-semibold text-[1.1rem] mt-1 group-hover:underline">Reading a selvedge ID: what the colored thread means</h3>
+                <p class="text-[13px] mt-0.5 truncate" style="color:var(--ink-faint);">The line down the outseam is a signature — here's how to read ours.</p>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <!-- newsletter signup -->
+        <div class="lg:col-span-5 reveal">
+          <div class="p-7 sm:p-8 hair-all h-full flex flex-col justify-center" style="background: var(--leather); color:#F6EFE2;">
+            <span class="label" style="color:rgba(246,239,226,0.85);">The Mill Letter</span>
+            <h3 class="font-slab font-semibold text-[1.7rem] mt-2.5">Loom notes, fade photos, restocks.</h3>
+            <p class="text-[14px] mt-3 leading-relaxed" style="color:rgba(246,239,226,0.82);">
+              One unhurried letter a month — new weights as they come off the loom, reader fade submissions, and the occasional repair-bench story. No noise.
+            </p>
+            <form class="mt-6 flex flex-col sm:flex-row gap-2.5" onsubmit="return false;">
+              <label for="nl-1" class="sr-only">Email address</label>
+              <input id="nl-1" type="email" required placeholder="you@example.com"
+                     class="flex-1 px-4 py-3 text-[14px] text-[var(--ink)] placeholder:text-[#8a8270] bg-[var(--paper-3)] outline-none"
+                     style="border:1px solid rgba(33,28,20,0.2);" />
+              <button type="submit" class="btn btn-ink justify-center">Subscribe</button>
+            </form>
+            <p class="text-[12px] mt-3" style="color:rgba(246,239,226,0.7);">Unsubscribe any time. We never sell your address.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 10 · FAQ ============ -->
+  <section id="faq" class="relative py-20 lg:py-28 hair-t" style="background: var(--paper-2);">
+    <div class="container-x px-5 sm:px-8">
+      <div class="grid lg:grid-cols-12 gap-10 lg:gap-16">
+        <div class="lg:col-span-4 reveal">
+          <span class="label label-tan">Common Questions</span>
+          <h2 class="display text-[2.4rem] sm:text-[2.9rem] mt-3">
+            Raw denim,<br /><span class="halftone">answered plainly.</span>
+          </h2>
+          <p class="mt-5 text-[14.5px] leading-relaxed" style="color:var(--ink-soft);">
+            Still unsure? The Okayama workshop answers fit and fade questions by email within a working day.
+          </p>
+        </div>
+
+        <div class="lg:col-span-8 reveal">
+          <details class="faq">
+            <summary><span class="font-slab font-semibold text-[1.15rem]">Raw vs. washed denim — which should I buy?</span><span class="plus" aria-hidden="true"></span></summary>
+            <div class="faq-body text-[14.5px] leading-relaxed">
+              If you want the fades to be entirely your own, buy raw — it's stiff for a few weeks, then fades exactly where your body bends it. If you'd rather skip the break-in and have softness and true sizing from day one, buy one-wash: same selvedge, given a single rinse so it's pre-shrunk. Raw is the longer, more rewarding road; one-wash is the easy way in. There's no wrong answer — most of our wearers own both.
+            </div>
+          </details>
+          <details class="faq">
+            <summary><span class="font-slab font-semibold text-[1.15rem]">How do I size raw denim — will it shrink?</span><span class="plus" aria-hidden="true"></span></summary>
+            <div class="faq-body text-[14.5px] leading-relaxed">
+              Yes — raw, un-soaked denim shrinks roughly 3–5% in its first hot wash, mostly in the length and a little in the waist. Buy raw one waist size up from your true measurement and expect it to settle close after the first wash. If you'd rather not plan around shrink, our one-wash pieces are already pre-shrunk: take your true waist. Every product page lists both the raw and post-shrink measurements, and the workshop will talk you through a fit by email.
+            </div>
+          </details>
+          <details class="faq">
+            <summary><span class="font-slab font-semibold text-[1.15rem]">How do I care for and fade my jeans?</span><span class="plus" aria-hidden="true"></span></summary>
+            <div class="faq-body text-[14.5px] leading-relaxed">
+              Wear them hard and wash them rarely — that's the whole method. For raw denim, hold off on the first wash for four to six months so the creases set; after that, wash inside-out in cold water and hang to dry, roughly every two months of regular wear. Skip the dryer, which is hard on the cotton and the fades. Spot-clean small marks. Expect crisp whiskers and honeycombs by month nine and a personal patina by year three. Indigo will crock onto pale surfaces early on — that's normal.
+            </div>
+          </details>
+          <details class="faq">
+            <summary><span class="font-slab font-semibold text-[1.15rem]">Do you repair worn-in pieces?</span><span class="plus" aria-hidden="true"></span></summary>
+            <div class="faq-body text-[14.5px] leading-relaxed">
+              Always — and for free, for the life of the garment. Our lifetime mending program covers every Selvage piece: blown knees, frayed cuffs, snapped buttons, worn crotches. Send it to the Okayama bench (you cover return postage), and our menders darn with matched indigo thread, patch from the same loom run, and re-rivet by hand. Most repairs ship back within three weeks. We've mended pieces over thirty years old — repairing is the business, not an afterthought.
+            </div>
+          </details>
+          <details class="faq">
+            <summary><span class="font-slab font-semibold text-[1.15rem]">Where is it made?</span><span class="plus" aria-hidden="true"></span></summary>
+            <div class="faq-body text-[14.5px] leading-relaxed">
+              Everything is made in Okayama, Japan — the denim capital — at Yamazaki Mill, a 38-person workshop we've run since 1991. We weave the selvedge on twelve vintage Toyoda G3 shuttle looms from the 1950s, cut and sew on-site, and run the repair bench from the same building. Leather hardware is the one exception: our belt straps are bridle leather from Walsall, England. Nothing is outsourced to a faster, cheaper line — slow is the point.
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 11 · FINAL CTA ============ -->
+  <section class="relative py-24 lg:py-32 hair-t overflow-hidden" style="background: var(--indigo); color:#EDE6D8;">
+    <div class="absolute inset-0" aria-hidden="true" style="background:radial-gradient(60% 70% at 18% 10%, rgba(154,107,62,0.28), transparent 60%), radial-gradient(55% 65% at 90% 100%, rgba(110,128,170,0.34), transparent 62%);"></div>
+    <div class="absolute inset-0 dot-grid opacity-[0.12]" aria-hidden="true"></div>
+
+    <div class="container-x px-5 sm:px-8 relative text-center">
+      <span class="pill reveal" style="background: rgba(28,37,64,0.6); border-color: rgba(237,230,216,0.2); color:rgba(232,201,154,0.95);">
+        <span class="pulse-dot" aria-hidden="true"></span> AW27 — The Loom Years · In stock
+      </span>
+      <h2 class="display text-[2.9rem] sm:text-[4.2rem] mt-6 reveal" style="color:#F3EEE2;">
+        Own fewer things.<br /><span style="opacity:0.45;">Own them longer.</span>
+      </h2>
+      <p class="mt-5 text-[1.0625rem] max-w-[44ch] mx-auto reveal" style="color:rgba(237,230,216,0.8);">
+        Eight pieces of selvedge workwear, woven slow and mended for life. Start with the 1991 — the jean that started it.
+      </p>
+      <div class="mt-9 flex flex-wrap items-center justify-center gap-3.5 reveal">
+        <a href="#collection" class="btn btn-tan text-[15px] py-3.5 px-7">Shop the collection →</a>
+        <a href="#craft" class="btn btn-outline text-[15px] py-3.5 px-7" style="border-color: rgba(237,230,216,0.45); color:#F3EEE2;">Read the craft notes</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============ 12 · FOOTER ============ -->
+<footer id="footer" class="relative pt-16 pb-10 hair-t" style="background: var(--paper-3);">
+  <div class="container-x px-5 sm:px-8">
+    <div class="grid md:grid-cols-12 gap-10 lg:gap-12">
+
+      <div class="md:col-span-4">
+        <a href="#top" class="flex items-center gap-2.5" aria-label="Selvage — home">
+          <span class="inline-flex items-center justify-center w-8 h-8 hair-all" style="background: var(--indigo);">
+            <span class="font-slab font-bold text-[15px] leading-none" style="color:#F3EEE2;">S</span>
+          </span>
+          <span class="font-slab font-bold tracking-tight text-[18px]">SELVAGE</span>
+        </a>
+        <p class="mt-4 text-[14px] leading-relaxed max-w-[34ch]" style="color:var(--ink-soft);">
+          Heritage workwear and raw selvedge denim, woven on vintage shuttle looms in Okayama, Japan since 1991. Buy it once.
+        </p>
+        <div class="mt-5 flex items-center gap-2 label">
+          <span class="pulse-dot" aria-hidden="true"></span>
+          The repair bench is open
+        </div>
+      </div>
+
+      <div class="md:col-span-2">
+        <p class="label mb-4">Shop</p>
+        <ul class="space-y-2.5 text-[14px]">
+          <li><a href="#collection" class="link-u" style="color:var(--ink-soft);">All denim</a></li>
+          <li><a href="#collection" class="link-u" style="color:var(--ink-soft);">Chore coats</a></li>
+          <li><a href="#collection" class="link-u" style="color:var(--ink-soft);">Work shirts</a></li>
+          <li><a href="#collection" class="link-u" style="color:var(--ink-soft);">Tees & knits</a></li>
+        </ul>
+      </div>
+
+      <div class="md:col-span-2">
+        <p class="label mb-4">Studio</p>
+        <ul class="space-y-2.5 text-[14px]">
+          <li><a href="#lookbook" class="link-u" style="color:var(--ink-soft);">Lookbook</a></li>
+          <li><a href="#pov" class="link-u" style="color:var(--ink-soft);">About</a></li>
+          <li><a href="#craft" class="link-u" style="color:var(--ink-soft);">The craft</a></li>
+          <li><a href="#footer" class="link-u" style="color:var(--ink-soft);">Journal</a></li>
+        </ul>
+      </div>
+
+      <div class="md:col-span-4">
+        <p class="label mb-4">The Mill Letter</p>
+        <p class="text-[13.5px] mb-3" style="color:var(--ink-soft);">Loom notes and fade photos, once a month.</p>
+        <form class="flex flex-col sm:flex-row gap-2.5" onsubmit="return false;">
+          <label for="nl-2" class="sr-only">Email address</label>
+          <input id="nl-2" type="email" required placeholder="you@example.com"
+                 class="flex-1 px-4 py-2.5 text-[14px] bg-[var(--paper)] outline-none placeholder:text-[#8a8270]"
+                 style="border:1px solid var(--hair);" />
+          <button type="submit" class="btn btn-primary justify-center py-2.5">Sign up</button>
+        </form>
+        <div class="mt-5 flex flex-wrap gap-x-5 gap-y-2">
+          <a href="#faq" class="link-u text-[13px] font-medium" style="color:var(--indigo);">Help & FAQ</a>
+          <a href="#faq" class="link-u text-[13px] font-medium" style="color:var(--indigo);">Sizing guide</a>
+          <a href="#craft" class="link-u text-[13px] font-medium" style="color:var(--indigo);">Care guide</a>
+          <a href="#craft" class="link-u text-[13px] font-medium" style="color:var(--indigo);">Repairs & mending</a>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="mt-12 pt-6 hair-t flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p class="text-[12.5px]" style="color:var(--ink-faint);">© 1991–2027 Selvage Loomwork Co. — Okayama, Japan. All rights reserved.</p>
+      <div class="flex items-center gap-5 text-[12.5px]">
+        <a href="#footer" class="link-u" style="color:var(--ink-faint);">Stockist enquiries</a>
+        <a href="#footer" class="link-u" style="color:var(--ink-faint);">Terms</a>
+        <a href="#footer" class="link-u" style="color:var(--ink-faint);">Privacy</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Trivial enhancement only — scroll reveal. Page is fully usable with JS off.
+  (function () {
+    var els = document.querySelectorAll('.reveal');
+    if (!('IntersectionObserver' in window)) {
+      els.forEach(function (e) { e.classList.add('in'); });
+      return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('in');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+    els.forEach(function (e) { io.observe(e); });
+  })();
+</script>
+
+</body>
+</html>

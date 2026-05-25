@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>priya rose · @priyarose · The premium tier</title>
+<meta name="description" content="Writer, model, host of The Long Hour. Premium tiers for closer access.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #160810;
+    --accent: #B26B7E;
+    --accent-soft: #CB8B9C;
+    --cream: #F3EAEB;
+    --cream-faint: rgba(243, 234, 235, 0.62);
+    --cream-dim: rgba(243, 234, 235, 0.38);
+    --hairline: rgba(243, 234, 235, 0.07);
+    --hairline-accent: rgba(178, 107, 126, 0.24);
+  }
+  html, body { background: var(--bg); }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--cream);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+    -webkit-font-smoothing: antialiased;
+  }
+  .serif { font-family: 'Cormorant Garamond', serif; font-style: italic; letter-spacing: -0.015em; }
+  .serif-up { font-family: 'Cormorant Garamond', serif; font-weight: 500; letter-spacing: -0.012em; }
+  .mono { font-family: 'JetBrains Mono', monospace; font-feature-settings: "tnum"; letter-spacing: 0.06em; }
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  .bg-mesh {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(ellipse 85% 60% at 50% -8%, rgba(178, 107, 126, 0.12), transparent 62%),
+      radial-gradient(ellipse 80% 50% at 50% 110%, rgba(178, 107, 126, 0.08), transparent 65%),
+      radial-gradient(ellipse 40% 28% at 18% 30%, rgba(120, 60, 80, 0.06), transparent 70%),
+      radial-gradient(ellipse 40% 28% at 80% 70%, rgba(120, 60, 80, 0.05), transparent 70%);
+  }
+  .grain {
+    position: fixed; inset: 0; pointer-events: none; z-index: 1; opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='0.7'/%3E%3C/svg%3E");
+  }
+
+  .avatar-glow {
+    position: absolute; inset: -22px;
+    background: radial-gradient(circle, rgba(178, 107, 126, 0.34), transparent 65%);
+    filter: blur(22px); z-index: -1;
+  }
+  .avatar-ring {
+    background: conic-gradient(from 210deg, rgba(178, 107, 126, 0.6), rgba(178, 107, 126, 0.08) 35%, rgba(178, 107, 126, 0.6));
+    padding: 1.5px; border-radius: 9999px;
+  }
+  .avatar-inner {
+    width: 120px; height: 120px; border-radius: 9999px;
+    background:
+      radial-gradient(circle at 38% 30%, rgba(243, 234, 235, 0.74), transparent 42%),
+      radial-gradient(circle at 68% 70%, rgba(140, 65, 85, 0.65), transparent 52%),
+      linear-gradient(140deg, #5B2638 0%, #2A1019 55%, #170810 100%);
+    filter: saturate(0.95);
+  }
+
+  .pulse-dot { position: relative; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .pulse-dot::after {
+    content: ""; position: absolute; inset: -3px; border-radius: 50%;
+    background: var(--accent); opacity: 0.5; animation: pulse 2.2s ease-out infinite;
+  }
+  @keyframes pulse { 0%{transform:scale(1);opacity:0.5} 100%{transform:scale(2.6);opacity:0} }
+
+  .featured {
+    position: relative;
+    background: linear-gradient(180deg, rgba(178, 107, 126, 0.07), rgba(178, 107, 126, 0.015));
+    border: 1px solid rgba(178, 107, 126, 0.32);
+    border-radius: 20px;
+    box-shadow: inset 0 0 60px -12px rgba(178, 107, 126, 0.15);
+  }
+  .featured-glow {
+    position: absolute; inset: -36px -20px;
+    background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(178, 107, 126, 0.22), transparent 70%);
+    filter: blur(34px); z-index: -1; pointer-events: none;
+  }
+
+  .cta {
+    background: linear-gradient(180deg, #C7889A 0%, #9C5C70 100%);
+    color: #170810; font-weight: 600;
+    transition: transform 120ms ease, box-shadow 200ms ease, filter 120ms ease;
+    box-shadow: 0 4px 22px -6px rgba(178, 107, 126, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  }
+  .cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 32px -6px rgba(178, 107, 126, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    filter: brightness(1.04);
+  }
+
+  .link-btn {
+    position: relative; display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px; border-radius: 14px;
+    background: rgba(243, 234, 235, 0.025);
+    border: 1px solid var(--hairline);
+    transition: transform 120ms ease, background 120ms ease, border-color 120ms ease, box-shadow 220ms ease;
+    color: var(--cream);
+  }
+  .link-btn:hover {
+    transform: translateY(-1px);
+    background: rgba(178, 107, 126, 0.06);
+    border-color: var(--hairline-accent);
+    box-shadow: 0 8px 28px -10px rgba(178, 107, 126, 0.35);
+  }
+  .link-btn .arrow { opacity: 0.35; transition: transform 140ms ease, opacity 140ms ease; }
+  .link-btn:hover .arrow { transform: translateX(3px); opacity: 0.9; }
+
+  .link-icon {
+    width: 30px; height: 30px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(178, 107, 126, 0.10);
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .link-icon-primary {
+    background: linear-gradient(140deg, rgba(178, 107, 126, 0.26), rgba(178, 107, 126, 0.08));
+    color: var(--accent-soft);
+  }
+  .link-icon-vip {
+    background: linear-gradient(140deg, rgba(178, 107, 126, 0.34), rgba(178, 107, 126, 0.12));
+    color: var(--accent-soft);
+    box-shadow: inset 0 0 12px rgba(178, 107, 126, 0.2);
+  }
+
+  .check { width: 13px; height: 13px; flex-shrink: 0; color: var(--accent); }
+  .icon-btn {
+    width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+    border-radius: 9999px; color: var(--cream-faint);
+    transition: color 140ms ease, background 140ms ease, transform 140ms ease;
+  }
+  .icon-btn:hover { color: var(--accent); background: rgba(178, 107, 126, 0.08); transform: translateY(-1px); }
+
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--hairline), transparent);
+  }
+  .age-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 9px; border-radius: 9999px;
+    background: rgba(178, 107, 126, 0.10);
+    border: 1px solid rgba(178, 107, 126, 0.24);
+  }
+
+  /* tier badge inside featured */
+  .tier-list {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    margin-top: 4px;
+  }
+  .tier-mini {
+    border-radius: 12px;
+    border: 1px solid var(--hairline);
+    background: rgba(243, 234, 235, 0.02);
+    padding: 10px 12px;
+  }
+  .tier-mini.is-active {
+    border-color: rgba(178, 107, 126, 0.32);
+    background: rgba(178, 107, 126, 0.05);
+  }
+
+  @media (min-width: 481px) { .container-bio { max-width: 440px; } }
+</style>
+</head>
+<body class="antialiased">
+
+<div class="bg-mesh"></div>
+<div class="grain"></div>
+
+<main class="container-bio mx-auto px-6 pt-14 pb-12 relative z-10">
+
+  <!-- Eyebrow -->
+  <div class="flex items-center justify-center gap-2.5 mb-12">
+    <span class="pulse-dot"></span>
+    <p class="mono text-[10.5px] uppercase tabular" style="color: var(--cream-faint);">
+      premium &middot; 3 tiers &middot; 18+
+    </p>
+  </div>
+
+  <!-- Header -->
+  <header class="text-center mb-11">
+    <div class="relative inline-block mb-6">
+      <div class="avatar-glow"></div>
+      <div class="avatar-ring"><div class="avatar-inner"></div></div>
+    </div>
+    <h1 class="serif text-[40px] leading-[1.0] mb-1.5" style="color: var(--cream);">priya rose</h1>
+    <p class="text-[12.5px] tracking-wide mb-4" style="color: var(--cream-faint);">@priyarose &middot; London</p>
+    <p class="text-[14px] leading-[1.65] max-w-[360px] mx-auto" style="color: var(--cream-faint);">
+      Writer, model, host of the podcast <span class="serif text-[15.5px]" style="color: var(--accent-soft);">‘The Long Hour’</span>. Premium tiers for the people who want closer access.
+    </p>
+  </header>
+
+  <!-- Featured offer -->
+  <section class="relative mb-11">
+    <div class="featured-glow"></div>
+    <div class="featured p-6">
+      <div class="flex items-center justify-between mb-3.5">
+        <span class="mono text-[10px] uppercase tabular" style="color: var(--accent);">premium &middot; tier 02</span>
+        <div class="age-pill">
+          <span class="mono text-[9.5px] tabular" style="color: var(--accent-soft);">18+ verified</span>
+        </div>
+      </div>
+      <h2 class="serif text-[30px] leading-[1.0] mb-2" style="color: var(--cream);">The premium tier</h2>
+      <p class="text-[13.5px] leading-[1.65] mb-6" style="color: var(--cream-faint);">
+        Weekly intimate writing, voice notes on the week, and a long monthly video letter. The podcast included, two episodes ahead of public.
+      </p>
+
+      <ul class="space-y-2.5 mb-6">
+        <li class="flex items-start gap-3 text-[13px]" style="color: var(--cream);">
+          <svg class="check mt-[3px]" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,7.5 5.5,11 12,3.5"/></svg>
+          <span>Weekly writing &middot; <span class="mono text-[11.5px] tabular" style="color: var(--cream-faint);">~1,200 words, sundays</span></span>
+        </li>
+        <li class="flex items-start gap-3 text-[13px]" style="color: var(--cream);">
+          <svg class="check mt-[3px]" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,7.5 5.5,11 12,3.5"/></svg>
+          <span>Voice notes &middot; 8&ndash;12 min, twice a week</span>
+        </li>
+        <li class="flex items-start gap-3 text-[13px]" style="color: var(--cream);">
+          <svg class="check mt-[3px]" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,7.5 5.5,11 12,3.5"/></svg>
+          <span>Monthly video letter &middot; long-form &amp; unscripted</span>
+        </li>
+        <li class="flex items-start gap-3 text-[13px]" style="color: var(--cream);">
+          <svg class="check mt-[3px]" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,7.5 5.5,11 12,3.5"/></svg>
+          <span>The Long Hour &middot; two episodes early</span>
+        </li>
+      </ul>
+
+      <!-- mini tier ladder -->
+      <div class="tier-list mb-6">
+        <div class="tier-mini">
+          <div class="mono text-[9.5px] uppercase tabular mb-1" style="color: var(--cream-dim);">tier 01</div>
+          <div class="serif-up text-[16px] mb-0.5" style="color: var(--cream);">Reader</div>
+          <div class="mono text-[10.5px] tabular" style="color: var(--accent-soft);">$5 / month</div>
+        </div>
+        <div class="tier-mini is-active">
+          <div class="mono text-[9.5px] uppercase tabular mb-1" style="color: var(--accent);">tier 02 &middot; this</div>
+          <div class="serif-up text-[16px] mb-0.5" style="color: var(--cream);">Premium</div>
+          <div class="mono text-[10.5px] tabular" style="color: var(--accent-soft);">$14 / month</div>
+        </div>
+      </div>
+
+      <a href="#" class="cta flex items-center justify-center gap-2 py-3.5 rounded-xl text-[14px] w-full">
+        Join Premium &middot; $14/month
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5h8M7 3l3.5 3.5L7 10"/></svg>
+      </a>
+      <p class="text-center mt-3 text-[11.5px]" style="color: var(--cream-dim);">
+        verified 18+ at checkout &middot; cancel any time
+      </p>
+    </div>
+  </section>
+
+  <!-- Link stack -->
+  <section class="space-y-2.5 mb-11">
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon link-icon-primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-7-11a4 4 0 017-2.5A4 4 0 0119 10c0 6.5-7 11-7 11z"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Premium &middot; <span style="color: var(--accent-soft);">$14/month</span></div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">WRITING &middot; VOICE &middot; VIDEO LETTERS</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon link-icon-vip">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">VIP &middot; <span style="color: var(--accent-soft);">$48/month</span></div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">WAITLIST &middot; 84 ON LIST &middot; 40 SLOTS</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3M9 21h6"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">The Long Hour &middot; <span class="serif text-[15px]" style="color: var(--accent-soft);">podcast</span></div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">FREE &middot; 47 EPISODES &middot; FORTNIGHTLY</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.9" fill="currentColor"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Instagram &middot; daily</div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">@PRIYAROSE &middot; 184.6K</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4v10.5a3.5 3.5 0 11-3.5-3.5"/><path d="M14 4c.5 2.5 2.5 4 5 4"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">TikTok &middot; clips</div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">@PRIYAROSE &middot; 322.4K</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Newsletter &middot; free</div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">SUNDAYS &middot; A SHORT NOTE</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12l4 4v12H4z"/><path d="M16 4v4h4M8 12h8M8 15h6"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Press kit &middot; <span class="serif text-[15px]" style="color: var(--accent-soft);">PDF</span></div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">BIO &middot; HI-RES &middot; PUBLISHED CLIPS</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="mailto:agent@cubitt.co" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9 6 9-6M3 19h18V5H3z"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Business &middot; <span class="serif text-[15px]" style="color: var(--accent-soft);">Cubitt &amp; Co</span></div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">AGENT@CUBITT.CO</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+  </section>
+
+  <!-- Social proof microbar -->
+  <div class="flex items-center justify-center gap-5 mb-9">
+    <div class="text-center">
+      <div class="mono text-[14px] tabular" style="color: var(--accent-soft);">5,612</div>
+      <div class="text-[10px] italic mt-0.5" style="color: var(--cream-dim);">members</div>
+    </div>
+    <div class="w-px h-7" style="background: var(--hairline);"></div>
+    <div class="text-center">
+      <div class="mono text-[14px] tabular" style="color: var(--accent-soft);">52</div>
+      <div class="text-[10px] italic mt-0.5" style="color: var(--cream-dim);">countries</div>
+    </div>
+    <div class="w-px h-7" style="background: var(--hairline);"></div>
+    <div class="text-center">
+      <div class="mono text-[14px] tabular" style="color: var(--accent-soft);">4</div>
+      <div class="text-[10px] italic mt-0.5" style="color: var(--cream-dim);">years writing</div>
+    </div>
+  </div>
+
+  <div class="divider mb-7"></div>
+
+  <!-- Social row -->
+  <nav class="flex items-center justify-center gap-1.5 mb-8">
+    <a href="#" class="icon-btn" aria-label="Instagram"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.9" fill="currentColor"/></svg></a>
+    <a href="#" class="icon-btn" aria-label="TikTok"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4v10.5a3.5 3.5 0 11-3.5-3.5"/><path d="M14 4c.5 2.5 2.5 4 5 4"/></svg></a>
+    <a href="#" class="icon-btn" aria-label="Podcast"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3M9 21h6"/></svg></a>
+    <a href="#" class="icon-btn" aria-label="X / Twitter"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5l14 14M19 5L5 19"/></svg></a>
+    <a href="#" class="icon-btn" aria-label="Substack"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M22.539 8.242H1.46V5.406h21.08v2.836zM1.46 10.812V24L12 18.11 22.539 24V10.812H1.46zM22.539 0H1.46v2.836h21.08V0z"/></svg></a>
+    <a href="mailto:agent@cubitt.co" class="icon-btn" aria-label="Email"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></a>
+  </nav>
+
+  <!-- Footer -->
+  <footer class="text-center space-y-1.5">
+    <p class="mono text-[10px] uppercase tabular" style="color: var(--cream-faint);">
+      18+ &middot; all content posted on premium platforms
+    </p>
+    <p class="mono text-[10px] uppercase tabular" style="color: var(--cream-dim);">
+      Press &middot; <a href="mailto:agent@cubitt.co" class="hover:text-[--accent]" style="color: var(--cream-faint);">agent@cubitt.co</a> &middot; Cubitt &amp; Co
+    </p>
+    <p class="mono text-[10px] uppercase tabular" style="color: var(--cream-dim);">
+      London &middot; &copy; 2026 priya rose
+    </p>
+  </footer>
+
+</main>
+
+</body>
+</html>

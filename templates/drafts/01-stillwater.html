@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Stillwater — An hour that's actually yours.</title>
+<meta name="description" content="Stillwater is a converted-loft yoga studio on Cedar Hill — vinyasa, slow flow, restorative, and yin for every level, 47 classes a week. New students: two weeks of unlimited classes for $39." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#FAF5EC; --bg-2:#F2E7CF; --card:#FFFDF7; --panel:#F5EDDB;
+    --ink:#2A2118; --ink-2:#6E6353; --ink-3:#9C8F79;
+    --accent:#B5673E; --accent-2:#9A5230;
+    --rule:rgba(42,33,24,0.13); --rule-soft:rgba(42,33,24,0.07);
+  }
+  *{ -webkit-tap-highlight-color:transparent; }
+  html{ scroll-behavior:smooth; }
+  html,body{ background:var(--bg); color:var(--ink); }
+  body{ font-family:'Inter',ui-sans-serif,system-ui,sans-serif; font-feature-settings:"ss01","cv11"; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; line-height:1.6; }
+  section[id]{ scroll-margin-top:84px; }
+  .display{ font-family:'Fraunces','Georgia',serif; font-optical-sizing:auto; font-weight:500; font-style:italic; letter-spacing:-0.025em; line-height:1.05; }
+  .serif{ font-family:'Fraunces','Georgia',serif; font-optical-sizing:auto; font-weight:400; letter-spacing:-0.012em; }
+  .mono{ font-family:'Geist Mono',ui-monospace,Menlo,monospace; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  em.accent{ font-style:italic; color:var(--accent); }
+  .halftone{ opacity:0.46; }
+  .marker{ font-family:'Geist Mono',monospace; font-size:11px; letter-spacing:0.17em; text-transform:uppercase; color:var(--ink-3); }
+  .accent-line{ display:inline-block; width:24px; height:1px; background:var(--accent); vertical-align:middle; margin-right:10px; }
+  .rule{ border-color:var(--rule); }
+  .rule-soft{ border-color:var(--rule-soft); }
+  .dotgrid{ background-image:radial-gradient(var(--rule) 1px,transparent 1px); background-size:32px 32px; background-position:-8px -8px; }
+  .mesh{ background-image:
+      radial-gradient(58% 50% at 12% 8%, rgba(181,103,62,0.16), transparent 66%),
+      radial-gradient(50% 48% at 92% 4%, rgba(195,154,75,0.16), transparent 70%),
+      radial-gradient(60% 60% at 80% 98%, rgba(126,138,107,0.13), transparent 72%); }
+  .grain{ background-image:radial-gradient(rgba(42,33,24,0.05) 1px,transparent 1px); background-size:5px 5px; }
+  .pulse-dot{ position:relative; display:inline-block; width:7px; height:7px; border-radius:999px; background:var(--accent); box-shadow:0 0 0 0 rgba(181,103,62,0.5); animation:pulse 2.1s ease-out infinite; }
+  @keyframes pulse{ 0%{box-shadow:0 0 0 0 rgba(181,103,62,0.5)} 70%{box-shadow:0 0 0 9px rgba(181,103,62,0)} 100%{box-shadow:0 0 0 0 rgba(181,103,62,0)} }
+  .btn-primary{ transition:transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease; }
+  .btn-primary:hover{ transform:translateY(-1px); background-color:var(--accent-2); box-shadow:0 12px 26px -10px rgba(181,103,62,0.6); }
+  .btn-ghost{ transition:transform 120ms ease, border-color 120ms ease, background-color 120ms ease; }
+  .btn-ghost:hover{ transform:translateY(-1px); border-color:var(--accent); background-color:var(--card); }
+  .card-lift{ transition:transform 130ms ease, box-shadow 130ms ease, border-color 130ms ease; }
+  .card-lift:hover{ transform:translateY(-3px); box-shadow:0 22px 44px -26px rgba(42,33,24,0.4); border-color:var(--accent); }
+  .ul-link{ position:relative; }
+  .ul-link::after{ content:""; position:absolute; left:0; right:0; bottom:-3px; height:1px; background:currentColor; transform:scaleX(0); transform-origin:right center; transition:transform 260ms cubic-bezier(.2,.7,.2,1); }
+  .ul-link:hover::after{ transform:scaleX(1); transform-origin:left center; }
+  .scroll-x{ display:inline-block; transition:transform 150ms ease; }
+  a:hover .scroll-x{ transform:translateX(3px); }
+  .navbar{ backdrop-filter:blur(12px) saturate(150%); -webkit-backdrop-filter:blur(12px) saturate(150%); background:rgba(250,245,236,0.84); }
+  ::selection{ background:rgba(181,103,62,0.24); color:var(--ink); }
+  details>summary{ list-style:none; cursor:pointer; }
+  details>summary::-webkit-details-marker{ display:none; }
+  .acc-sign{ transition:transform 200ms ease; }
+  details[open] .acc-sign{ transform:rotate(45deg); }
+  .sched{ display:block; border:1px solid var(--rule-soft); border-left:3px solid var(--t); background:color-mix(in srgb, var(--t) 9%, var(--card)); border-radius:9px; padding:8px 9px; }
+  .sched .tm{ display:block; font-family:'Geist Mono',monospace; font-size:10.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; }
+  .sched .nm{ display:block; font-size:12.5px; font-weight:600; margin-top:1px; }
+  .sched .wh{ display:block; font-size:10.5px; color:var(--ink-2); margin-top:1px; }
+  .lg-pill{ display:inline-flex; align-items:center; gap:7px; font-family:'Geist Mono',monospace; font-size:11px; color:var(--ink-2); }
+  .lg-pill i{ width:9px; height:9px; border-radius:3px; display:inline-block; }
+  .blob-hero{ background:radial-gradient(120% 95% at 24% 14%,#FBEFD4 0%,transparent 48%),radial-gradient(95% 85% at 82% 22%,#E7B273 0%,#C98A52 44%,transparent 76%),linear-gradient(165deg,#EAD9B6 0%,#CC8F62 54%,#7E5238 100%); }
+  .blob-1{ background:radial-gradient(120% 100% at 28% 22%,#F6E6C4 0%,#D9A86E 52%,#9A6238 100%); }
+  .blob-2{ background:radial-gradient(120% 100% at 70% 26%,#EFE3CC 0%,#B79C76 52%,#6E5A40 100%); }
+  .blob-3{ background:radial-gradient(120% 100% at 32% 70%,#E4E6CE 0%,#9DA97E 50%,#5E6E48 100%); }
+  .blob-4{ background:radial-gradient(120% 100% at 64% 28%,#F4DEC9 0%,#C98F76 52%,#7E4E46 100%); }
+  .blob-5{ background:radial-gradient(120% 100% at 30% 30%,#E9DDD2 0%,#B79A8E 52%,#6E544A 100%); }
+  .blob-6{ background:radial-gradient(120% 100% at 70% 70%,#E6E0CA 0%,#A8A06E 50%,#6E6A42 100%); }
+  .av-1{ background:linear-gradient(150deg,#E7B273,#9A5230); }
+  .av-2{ background:linear-gradient(150deg,#A6B380,#5E6E48); }
+  .av-3{ background:linear-gradient(150deg,#C7A4BC,#6B4A55); }
+  .av-4{ background:linear-gradient(150deg,#9FB3B0,#4F6E68); }
+  @media (prefers-reduced-motion:reduce){ .pulse-dot{animation:none} }
+</style>
+</head>
+<body class="min-h-screen">
+
+<svg width="0" height="0" class="hidden" aria-hidden="true">
+  <symbol id="ck" viewBox="0 0 16 16"><path d="M3 8.5l3.2 3.2L13 4.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="pin" viewBox="0 0 16 16"><path d="M8 1.6c-3 0-5.2 2.3-5.2 5.2 0 3.7 5.2 7.6 5.2 7.6s5.2-3.9 5.2-7.6c0-2.9-2.2-5.2-5.2-5.2Z" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="6.7" r="1.9" fill="none" stroke="currentColor" stroke-width="1.4"/></symbol>
+  <symbol id="cl" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 4.3V8l2.7 1.7" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+  <symbol id="ig" viewBox="0 0 16 16"><rect x="2.2" y="2.2" width="11.6" height="11.6" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="11.5" cy="4.5" r="1" fill="currentColor"/></symbol>
+  <symbol id="ph" viewBox="0 0 16 16"><path d="M5.7 2.5c.5 0 .9.3 1 .8l.6 2.2c.1.4 0 .8-.3 1l-1.2 1c.8 1.7 2.1 3 3.8 3.8l1-1.2c.3-.3.7-.4 1-.3l2.2.6c.5.1.8.5.8 1v2.3c0 .6-.5 1.1-1.1 1C7.5 15.5 1.5 9.5 1.3 2.6c0-.6.4-1.1 1-1.1Z" fill="none" stroke="currentColor" stroke-width="1.3"/></symbol>
+</svg>
+
+<!-- ================= NAV ================= -->
+<header class="navbar fixed top-0 inset-x-0 z-50 border-b rule-soft">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 h-[68px] flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="27" height="27" viewBox="0 0 27 27" aria-hidden="true">
+        <circle cx="13.5" cy="13.5" r="12" fill="none" stroke="#B5673E" stroke-width="1.4"/>
+        <path d="M6 14a7.5 7.5 0 0 1 15 0" fill="none" stroke="#B5673E" stroke-width="1.4" stroke-linecap="round"/>
+        <path d="M9.4 14a4.1 4.1 0 0 1 8.2 0" fill="none" stroke="#B5673E" stroke-width="1.4" stroke-linecap="round"/>
+        <circle cx="13.5" cy="14" r="1.6" fill="#B5673E"/>
+      </svg>
+      <span class="display text-[22px]">Stillwater</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8 text-[14px] text-[color:var(--ink-2)]">
+      <a href="#classes" class="ul-link">Classes</a>
+      <a href="#schedule" class="ul-link">Schedule</a>
+      <a href="#membership" class="ul-link">Membership</a>
+      <a href="#about" class="ul-link">About</a>
+    </nav>
+    <a href="#start" class="btn-primary inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] text-[#FFF7EC] font-semibold text-[14px] px-4 py-2">Book a class</a>
+  </div>
+</header>
+
+<main>
+<!-- ================= HERO ================= -->
+<section id="top" class="relative overflow-hidden mesh pt-[68px]">
+  <div class="absolute inset-0 dotgrid opacity-60 pointer-events-none"></div>
+  <div class="relative max-w-[1200px] mx-auto px-5 sm:px-8 pt-14 sm:pt-20 pb-16 sm:pb-20">
+    <div class="grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
+      <div>
+        <div class="inline-flex items-center gap-2.5 rounded-full border rule bg-[color:var(--card)] pl-2.5 pr-3.5 py-1.5 mb-7">
+          <span class="pulse-dot"></span>
+          <span class="mono text-[11px] sm:text-[12px] tracking-[0.04em] text-[color:var(--ink-2)]">Vinyasa · restorative · yin — Cedar Hill</span>
+        </div>
+        <h1 class="display text-[clamp(42px,7.4vw,80px)] max-w-[12ch]">An hour that's <em class="accent">actually yours.</em></h1>
+        <p class="serif text-[19px] sm:text-[21px] leading-[1.5] text-[color:var(--ink)] max-w-[44ch] mt-6">
+          A converted-loft studio with south-facing windows, wood floors, and 47 classes a week — vinyasa, slow flow, restorative, and yin, for every level.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3 mt-8">
+          <a href="#start" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--accent)] text-[#FFF7EC] font-semibold px-6 py-3.5 text-[15px]">Book a class <span class="scroll-x">→</span></a>
+          <a href="#intro" class="btn-ghost inline-flex items-center justify-center gap-2 rounded-full border rule text-[color:var(--ink)] font-medium px-6 py-3.5 text-[15px]">Two weeks unlimited — $39</a>
+        </div>
+        <div class="flex items-center gap-2.5 mt-7">
+          <span class="pulse-dot"></span>
+          <span class="mono text-[11.5px] tracking-[0.03em] text-[color:var(--ink-2)] tnum">1,408 members · open 7 days · 9 years on Cedar Hill</span>
+        </div>
+      </div>
+      <div>
+        <div class="blob-hero rounded-[22px] border rule aspect-[4/3.4] sm:aspect-[4/3] w-full relative overflow-hidden">
+          <div class="absolute inset-0 grain opacity-50"></div>
+          <div class="absolute inset-0" style="background:radial-gradient(44% 36% at 80% 18%, rgba(255,247,224,0.66), transparent 62%)"></div>
+          <svg viewBox="0 0 240 220" class="absolute left-1/2 bottom-0 -translate-x-1/2 w-[64%]" aria-hidden="true">
+            <g fill="#2A2118" opacity="0.26">
+              <circle cx="120" cy="52" r="22"/>
+              <path d="M120 76c-30 0-44 26-48 60 30-10 66-10 96 0-4-34-18-60-48-60Z"/>
+              <path d="M70 138c-16 8-26 18-22 30 34-14 110-14 144 0 4-12-6-22-22-30-30 12-70 12-100 0Z"/>
+            </g>
+          </svg>
+          <div class="absolute left-4 bottom-4 right-4 sm:right-auto bg-[color:var(--card)] border rule rounded-xl px-3.5 py-2.5 flex items-center gap-3">
+            <span class="w-2.5 h-2.5 rounded-[3px]" style="background:#7E8A6B"></span>
+            <div>
+              <div class="mono text-[10px] tracking-[0.1em] text-[color:var(--ink-3)]">TODAY · 6:00 PM</div>
+              <div class="text-[13px] font-semibold leading-tight">Slow Flow with Dev</div>
+            </div>
+            <div class="ml-auto flex items-center gap-1.5 pl-3 border-l rule-soft">
+              <span class="pulse-dot" style="width:6px;height:6px"></span>
+              <span class="mono text-[10.5px] text-[color:var(--accent-2)]">4 left</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- stat band -->
+    <div class="mt-14 border-t rule pt-8 grid grid-cols-2 md:grid-cols-4 gap-y-8">
+      <div class="md:pr-8 md:border-r rule-soft">
+        <div class="marker mb-2.5">Members</div>
+        <div class="display not-italic text-[40px] sm:text-[48px] tnum" style="font-style:normal">1,408</div>
+        <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">practicing on Cedar Hill</div>
+      </div>
+      <div class="md:px-8 md:border-r rule-soft">
+        <div class="marker mb-2.5">Every week</div>
+        <div class="display text-[40px] sm:text-[48px] tnum" style="font-style:normal">47</div>
+        <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">classes on the schedule</div>
+      </div>
+      <div class="md:px-8 md:border-r rule-soft">
+        <div class="marker mb-2.5">Years open</div>
+        <div class="display text-[40px] sm:text-[48px] tnum" style="font-style:normal">9</div>
+        <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">same loft, same corner</div>
+      </div>
+      <div class="md:pl-8">
+        <div class="marker mb-2.5">Avg class</div>
+        <div class="display text-[40px] sm:text-[48px] tnum" style="font-style:normal">18</div>
+        <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">mats — never a crowd</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= INTRO OFFER ================= -->
+<section id="intro" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-12 sm:py-16">
+  <div class="rounded-[22px] border rule bg-[color:var(--panel)] overflow-hidden">
+    <div class="grid lg:grid-cols-[1.4fr_1fr]">
+      <div class="p-7 sm:p-11">
+        <div class="marker mb-4"><span class="accent-line"></span>New-student offer</div>
+        <h2 class="display text-[clamp(30px,4.2vw,46px)]">Two weeks of unlimited classes — <span class="mono not-italic tnum text-[color:var(--accent-2)]" style="font-style:normal">$39</span></h2>
+        <p class="text-[15px] text-[color:var(--ink-2)] mt-4 max-w-[52ch]">Every class, every style, fourteen days. No membership, no auto-renew — just two weeks to find the room and the teacher that fit. Most new students start with Slow Flow or the Beginner's Series.</p>
+        <a href="#start" class="btn-primary inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] text-[#FFF7EC] font-semibold px-6 py-3.5 text-[15px] mt-7">Claim the intro offer <span class="scroll-x">→</span></a>
+      </div>
+      <div class="border-t lg:border-t-0 lg:border-l rule bg-[color:var(--card)] p-7 sm:p-11 flex flex-col justify-center gap-4">
+        <div class="flex items-start gap-3"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg><span class="text-[14px]">Unlimited vinyasa, slow flow, restorative & yin</span></div>
+        <div class="flex items-start gap-3"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg><span class="text-[14px]">Mats, blocks, bolsters & blankets included</span></div>
+        <div class="flex items-start gap-3"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg><span class="text-[14px]">A short studio tour before your first class</span></div>
+        <p class="mono text-[10.5px] text-[color:var(--ink-3)] mt-1 leading-relaxed">One per person · activate on your first visit · no card on file</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CLASSES ================= -->
+<section id="classes" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+  <div class="max-w-[58ch] mb-11">
+    <div class="marker mb-5"><span class="accent-line"></span>The classes</div>
+    <h2 class="display text-[clamp(32px,4.6vw,54px)]">Seven ways to spend an hour.</h2>
+    <p class="text-[15px] text-[color:var(--ink-2)] mt-4">From a strong morning vinyasa to a candlelit wind-down — every class is all-levels, and every teacher will meet you where your body is today.</p>
+  </div>
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mb-4" style="background:#B5673E"></span>
+      <h3 class="display text-[21px]">Vinyasa Flow</h3>
+      <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">Moderate · 60 min</div>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-3">Breath-linked movement that builds heat — sun salutations, standing sequences, a strong, sweaty finish.</p>
+    </article>
+    <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mb-4" style="background:#7E8A6B"></span>
+      <h3 class="display text-[21px]">Slow Flow</h3>
+      <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">Gentle · 60 min</div>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-3">The same shapes as vinyasa, half the pace. Every pose held a few breaths longer. Where most beginners begin.</p>
+    </article>
+    <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mb-4" style="background:#5F8079"></span>
+      <h3 class="display text-[21px]">Restorative</h3>
+      <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">Gentle · 75 min</div>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-3">Four or five fully-supported poses, bolsters and blankets, nowhere to be. The studio's deepest rest.</p>
+    </article>
+    <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mb-4" style="background:#8A6E84"></span>
+      <h3 class="display text-[21px]">Yin</h3>
+      <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">Gentle · 75 min</div>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-3">Long-held floor poses — three to five minutes each — that open the hips, spine, and connective tissue.</p>
+    </article>
+    <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mb-4" style="background:#C39A4B"></span>
+      <h3 class="display text-[21px]">Prenatal</h3>
+      <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">Gentle · 60 min</div>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-3">A safe, strengthening practice for every trimester, taught by our RPYT-certified teachers.</p>
+    </article>
+    <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mb-4" style="background:#9A7B5A"></span>
+      <h3 class="display text-[21px]">Beginner's Series</h3>
+      <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">All levels · 4 weeks</div>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-3">A four-week arc that teaches the foundational poses, the breath, and the vocabulary from the ground up.</p>
+    </article>
+    <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mb-4" style="background:#6B4A55"></span>
+      <h3 class="display text-[21px]">Candlelit Evening</h3>
+      <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">Moderate · 60 min</div>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-3">A slow, warm flow by candlelight — the last class of the day, lights low, playlists quiet.</p>
+    </article>
+    <a href="#schedule" class="card-lift rounded-2xl border rule bg-[color:var(--panel)] p-6 flex flex-col justify-center">
+      <h3 class="display text-[21px]">See it on the grid</h3>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-2">All 47 classes, this week. <span class="text-[color:var(--accent-2)] font-medium">View the schedule <span class="scroll-x">→</span></span></p>
+    </a>
+  </div>
+</section>
+
+<!-- ================= SCHEDULE ================= -->
+<section id="schedule" class="relative">
+  <div class="absolute inset-0 dotgrid opacity-50 pointer-events-none"></div>
+  <div class="relative max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-8">
+      <div class="max-w-[46ch]">
+        <div class="marker mb-5"><span class="accent-line"></span>This week</div>
+        <h2 class="display text-[clamp(32px,4.6vw,54px)]">The weekly schedule.</h2>
+      </div>
+      <div class="flex flex-wrap gap-x-4 gap-y-2">
+        <span class="lg-pill"><i style="background:#B5673E"></i>Vinyasa</span>
+        <span class="lg-pill"><i style="background:#7E8A6B"></i>Slow flow</span>
+        <span class="lg-pill"><i style="background:#5F8079"></i>Restorative</span>
+        <span class="lg-pill"><i style="background:#8A6E84"></i>Yin</span>
+        <span class="lg-pill"><i style="background:#C39A4B"></i>Prenatal</span>
+        <span class="lg-pill"><i style="background:#9A7B5A"></i>Beginner's</span>
+        <span class="lg-pill"><i style="background:#6B4A55"></i>Candlelit</span>
+      </div>
+    </div>
+    <p class="mono text-[11px] text-[color:var(--ink-3)] mb-3 md:hidden">Swipe to see the full week →</p>
+    <div class="overflow-x-auto -mx-5 px-5 sm:mx-0 sm:px-0">
+      <div class="grid grid-cols-7 gap-2.5 min-w-[860px]">
+        <div>
+          <div class="flex items-center gap-2 mb-2.5"><span class="text-[13px] font-bold">Mon</span><span class="mono text-[9px] tracking-[0.1em] text-[#FFF7EC] bg-[color:var(--accent)] rounded px-1.5 py-0.5">TODAY</span></div>
+          <div class="space-y-2">
+            <div class="sched" style="--t:#7E8A6B"><span class="tm">6:30a</span><span class="nm">Slow Flow</span><span class="wh">Dev</span></div>
+            <div class="sched" style="--t:#B5673E"><span class="tm">9:00a</span><span class="nm">Vinyasa Flow</span><span class="wh">Mara</span></div>
+            <div class="sched" style="--t:#9A7B5A"><span class="tm">12:00p</span><span class="nm">Beginner's</span><span class="wh">Tomás</span></div>
+            <div class="sched" style="--t:#8A6E84"><span class="tm">4:30p</span><span class="nm">Yin</span><span class="wh">Hana</span></div>
+            <div class="sched" style="--t:#B5673E"><span class="tm">6:00p</span><span class="nm">Vinyasa Flow</span><span class="wh">Mara · <span class="pulse-dot" style="width:5px;height:5px"></span> 4 left</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="text-[13px] font-bold mb-2.5">Tue</div>
+          <div class="space-y-2">
+            <div class="sched" style="--t:#B5673E"><span class="tm">7:00a</span><span class="nm">Vinyasa Flow</span><span class="wh">Saoirse</span></div>
+            <div class="sched" style="--t:#5F8079"><span class="tm">9:30a</span><span class="nm">Restorative</span><span class="wh">Noor</span></div>
+            <div class="sched" style="--t:#7E8A6B"><span class="tm">12:00p</span><span class="nm">Slow Flow</span><span class="wh">Dev</span></div>
+            <div class="sched" style="--t:#C39A4B"><span class="tm">4:30p</span><span class="nm">Prenatal</span><span class="wh">Priya</span></div>
+            <div class="sched" style="--t:#8A6E84"><span class="tm">6:00p</span><span class="nm">Yin</span><span class="wh">Hana</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="text-[13px] font-bold mb-2.5">Wed</div>
+          <div class="space-y-2">
+            <div class="sched" style="--t:#7E8A6B"><span class="tm">6:30a</span><span class="nm">Slow Flow</span><span class="wh">Dev</span></div>
+            <div class="sched" style="--t:#B5673E"><span class="tm">9:00a</span><span class="nm">Vinyasa Flow</span><span class="wh">Mara</span></div>
+            <div class="sched" style="--t:#9A7B5A"><span class="tm">12:00p</span><span class="nm">Beginner's</span><span class="wh">Tomás</span></div>
+            <div class="sched" style="--t:#5F8079"><span class="tm">4:30p</span><span class="nm">Restorative</span><span class="wh">Noor</span></div>
+            <div class="sched" style="--t:#6B4A55"><span class="tm">7:30p</span><span class="nm">Candlelit</span><span class="wh">Jonah</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="text-[13px] font-bold mb-2.5">Thu</div>
+          <div class="space-y-2">
+            <div class="sched" style="--t:#B5673E"><span class="tm">7:00a</span><span class="nm">Vinyasa Flow</span><span class="wh">Mara</span></div>
+            <div class="sched" style="--t:#7E8A6B"><span class="tm">9:30a</span><span class="nm">Slow Flow</span><span class="wh">Dev</span></div>
+            <div class="sched" style="--t:#B5673E"><span class="tm">12:00p</span><span class="nm">Vinyasa Flow</span><span class="wh">Saoirse</span></div>
+            <div class="sched" style="--t:#C39A4B"><span class="tm">4:30p</span><span class="nm">Prenatal</span><span class="wh">Priya</span></div>
+            <div class="sched" style="--t:#8A6E84"><span class="tm">6:00p</span><span class="nm">Yin</span><span class="wh">Hana</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="text-[13px] font-bold mb-2.5">Fri</div>
+          <div class="space-y-2">
+            <div class="sched" style="--t:#B5673E"><span class="tm">6:30a</span><span class="nm">Vinyasa Flow</span><span class="wh">Mara</span></div>
+            <div class="sched" style="--t:#7E8A6B"><span class="tm">9:00a</span><span class="nm">Slow Flow</span><span class="wh">Dev</span></div>
+            <div class="sched" style="--t:#5F8079"><span class="tm">12:00p</span><span class="nm">Restorative</span><span class="wh">Noor</span></div>
+            <div class="sched" style="--t:#B5673E"><span class="tm">5:00p</span><span class="nm">Vinyasa Flow</span><span class="wh">Saoirse</span></div>
+            <div class="sched" style="--t:#6B4A55"><span class="tm">6:30p</span><span class="nm">Candlelit</span><span class="wh">Jonah</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="text-[13px] font-bold mb-2.5">Sat</div>
+          <div class="space-y-2">
+            <div class="sched" style="--t:#B5673E"><span class="tm">8:00a</span><span class="nm">Vinyasa Flow</span><span class="wh">Mara</span></div>
+            <div class="sched" style="--t:#9A7B5A"><span class="tm">9:30a</span><span class="nm">Beginner's</span><span class="wh">Tomás</span></div>
+            <div class="sched" style="--t:#7E8A6B"><span class="tm">11:00a</span><span class="nm">Slow Flow</span><span class="wh">Dev</span></div>
+            <div class="sched" style="--t:#8A6E84"><span class="tm">1:00p</span><span class="nm">Yin</span><span class="wh">Hana</span></div>
+            <div class="sched" style="--t:#5F8079"><span class="tm">4:00p</span><span class="nm">Restorative</span><span class="wh">Noor</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="text-[13px] font-bold mb-2.5">Sun</div>
+          <div class="space-y-2">
+            <div class="sched" style="--t:#7E8A6B"><span class="tm">8:30a</span><span class="nm">Slow Flow</span><span class="wh">Dev</span></div>
+            <div class="sched" style="--t:#B5673E"><span class="tm">10:00a</span><span class="nm">Vinyasa Flow</span><span class="wh">Saoirse</span></div>
+            <div class="sched" style="--t:#C39A4B"><span class="tm">12:00p</span><span class="nm">Prenatal</span><span class="wh">Priya</span></div>
+            <div class="sched" style="--t:#5F8079"><span class="tm">3:00p</span><span class="nm">Restorative</span><span class="wh">Noor</span></div>
+            <div class="sched" style="--t:#6B4A55"><span class="tm">5:00p</span><span class="nm">Candlelit</span><span class="wh">Jonah</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="mono text-[11px] text-[color:var(--ink-3)] mt-5">Schedule updates Sunday evenings · reserve a spot up to 14 days ahead in the Stillwater app.</p>
+  </div>
+</section>
+
+<!-- ================= THE SPACE ================= -->
+<section id="about" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+  <div class="max-w-[58ch] mb-11">
+    <div class="marker mb-5"><span class="accent-line"></span>The space</div>
+    <h2 class="display text-[clamp(32px,4.6vw,54px)]">A loft built for slowing down.</h2>
+    <p class="text-[15px] text-[color:var(--ink-2)] mt-4">Stillwater lives on the second floor of an old textile building — exposed beams, a wall of south-facing windows, and reclaimed maple underfoot. Shoes off at the door, phones in the cubbies, tea on whenever you arrive.</p>
+  </div>
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <figure class="blob-1 rounded-2xl border rule aspect-[4/3] relative overflow-hidden">
+      <div class="absolute inset-0 grain opacity-45"></div>
+      <figcaption class="absolute left-3.5 bottom-3.5 mono text-[10px] tracking-[0.08em] text-[#FFF7EC]" style="text-shadow:0 1px 4px rgba(0,0,0,.45)">THE MAIN ROOM · 24 MATS</figcaption>
+    </figure>
+    <figure class="blob-2 rounded-2xl border rule aspect-[4/3] relative overflow-hidden">
+      <div class="absolute inset-0 grain opacity-45"></div>
+      <figcaption class="absolute left-3.5 bottom-3.5 mono text-[10px] tracking-[0.08em] text-[#FFF7EC]" style="text-shadow:0 1px 4px rgba(0,0,0,.45)">THE ENTRY & TEA STATION</figcaption>
+    </figure>
+    <figure class="blob-3 rounded-2xl border rule aspect-[4/3] relative overflow-hidden">
+      <div class="absolute inset-0 grain opacity-45"></div>
+      <figcaption class="absolute left-3.5 bottom-3.5 mono text-[10px] tracking-[0.08em] text-[#FFF7EC]" style="text-shadow:0 1px 4px rgba(0,0,0,.45)">THE PROP LIBRARY</figcaption>
+    </figure>
+    <figure class="blob-4 rounded-2xl border rule aspect-[4/3] relative overflow-hidden">
+      <div class="absolute inset-0 grain opacity-45"></div>
+      <figcaption class="absolute left-3.5 bottom-3.5 mono text-[10px] tracking-[0.08em] text-[#FFF7EC]" style="text-shadow:0 1px 4px rgba(0,0,0,.45)">THE READING LOUNGE</figcaption>
+    </figure>
+    <figure class="blob-5 rounded-2xl border rule aspect-[4/3] relative overflow-hidden">
+      <div class="absolute inset-0 grain opacity-45"></div>
+      <figcaption class="absolute left-3.5 bottom-3.5 mono text-[10px] tracking-[0.08em] text-[#FFF7EC]" style="text-shadow:0 1px 4px rgba(0,0,0,.45)">CHANGING ROOMS & LOCKERS</figcaption>
+    </figure>
+    <figure class="blob-6 rounded-2xl border rule aspect-[4/3] relative overflow-hidden">
+      <div class="absolute inset-0 grain opacity-45"></div>
+      <figcaption class="absolute left-3.5 bottom-3.5 mono text-[10px] tracking-[0.08em] text-[#FFF7EC]" style="text-shadow:0 1px 4px rgba(0,0,0,.45)">THE GARDEN STEPS</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ================= INSTRUCTORS ================= -->
+<section class="bg-[color:var(--panel)] border-y rule">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+    <div class="max-w-[58ch] mb-11">
+      <div class="marker mb-5"><span class="accent-line"></span>The teachers</div>
+      <h2 class="display text-[clamp(32px,4.6vw,54px)]">Eight people who hold the room.</h2>
+      <p class="text-[15px] text-[color:var(--ink-2)] mt-4">Every Stillwater teacher is registered with the Yoga Alliance and has trained here for at least a year before leading a class of their own.</p>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-1 w-14 h-14 rounded-full flex items-center justify-center text-[#FFF7EC] display text-[18px] mb-4" style="font-style:normal">ME</div>
+        <h3 class="text-[15px] font-bold">Mara Ellison</h3>
+        <div class="text-[12.5px] text-[color:var(--accent-2)] font-medium mt-0.5">Founder · vinyasa & yin</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">Opened Stillwater in 2017 after a decade teaching across the city's studios.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">E-RYT 500 · YACEP</div>
+      </article>
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-2 w-14 h-14 rounded-full flex items-center justify-center text-[#FFF7EC] display text-[18px] mb-4" style="font-style:normal">DK</div>
+        <h3 class="text-[15px] font-bold">Dev Khanna</h3>
+        <div class="text-[12.5px] text-[color:var(--accent-2)] font-medium mt-0.5">Slow flow & restorative</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">Came to yoga through running injuries; teaches the gentlest hour in the building.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">RYT 500</div>
+      </article>
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-3 w-14 h-14 rounded-full flex items-center justify-center text-[#FFF7EC] display text-[18px] mb-4" style="font-style:normal">PA</div>
+        <h3 class="text-[15px] font-bold">Priya Anand</h3>
+        <div class="text-[12.5px] text-[color:var(--accent-2)] font-medium mt-0.5">Vinyasa & prenatal</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">Prenatal-certified; her Saturday flow has a months-long word-of-mouth following.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">RYT 500 · RPYT</div>
+      </article>
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-4 w-14 h-14 rounded-full flex items-center justify-center text-[#FFF7EC] display text-[18px] mb-4" style="font-style:normal">HS</div>
+        <h3 class="text-[15px] font-bold">Hana Suzuki</h3>
+        <div class="text-[12.5px] text-[color:var(--accent-2)] font-medium mt-0.5">Yin & meditation</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">Studied yin alongside Chinese-medicine theory; ends every class with ten minutes of stillness.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">RYT 300</div>
+      </article>
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-1 w-14 h-14 rounded-full flex items-center justify-center text-[#FFF7EC] display text-[18px] mb-4" style="font-style:normal">TR</div>
+        <h3 class="text-[15px] font-bold">Tomás Reyes</h3>
+        <div class="text-[12.5px] text-[color:var(--accent-2)] font-medium mt-0.5">Vinyasa & beginner's series</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">Teaches the four-week beginner's arc — patient, precise, no assumed vocabulary.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">RYT 200</div>
+      </article>
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-2 w-14 h-14 rounded-full flex items-center justify-center text-[#FFF7EC] display text-[18px] mb-4" style="font-style:normal">NH</div>
+        <h3 class="text-[15px] font-bold">Noor Haddad</h3>
+        <div class="text-[12.5px] text-[color:var(--accent-2)] font-medium mt-0.5">Restorative & breathwork</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">A former ICU nurse; her restorative classes are the studio's quietest hour.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">RYT 500</div>
+      </article>
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-3 w-14 h-14 rounded-full flex items-center justify-center text-[#FFF7EC] display text-[18px] mb-4" style="font-style:normal">JP</div>
+        <h3 class="text-[15px] font-bold">Jonah Pratt</h3>
+        <div class="text-[12.5px] text-[color:var(--accent-2)] font-medium mt-0.5">Candlelit & slow flow</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">Builds the evening playlists himself; the 7:30 candlelit class is his.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">RYT 200</div>
+      </article>
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-4 w-14 h-14 rounded-full flex items-center justify-center text-[#FFF7EC] display text-[18px] mb-4" style="font-style:normal">SB</div>
+        <h3 class="text-[15px] font-bold">Saoirse Boyle</h3>
+        <div class="text-[12.5px] text-[color:var(--accent-2)] font-medium mt-0.5">Vinyasa & mobility</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">A background in dance; sequences with an unusual sense of transition and flow.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">RYT 300</div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ================= MEMBERSHIP ================= -->
+<section id="membership" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+  <div class="max-w-[58ch] mb-11">
+    <div class="marker mb-5"><span class="accent-line"></span>Membership</div>
+    <h2 class="display text-[clamp(32px,4.6vw,54px)]">Three ways to practice.</h2>
+    <p class="text-[15px] text-[color:var(--ink-2)] mt-4">No contracts and no joining fees — ever. Start with a drop-in, settle into a pack, or go unlimited when the practice becomes part of your week.</p>
+  </div>
+  <div class="grid md:grid-cols-3 gap-5 items-start">
+    <article class="rounded-2xl border rule bg-[color:var(--card)] p-7">
+      <h3 class="display text-[24px]">Drop-In</h3>
+      <div class="mt-3 flex items-baseline gap-1.5"><span class="mono text-[40px] font-medium tnum">$26</span><span class="text-[13px] text-[color:var(--ink-3)]">/ class</span></div>
+      <p class="text-[13px] text-[color:var(--ink-2)] mt-2.5">One class, any style. For visitors and the occasional practice.</p>
+      <div class="border-t rule-soft my-5"></div>
+      <ul class="space-y-2.5 text-[13.5px]">
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Any class on the schedule</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Mats & props included</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Book up to 14 days out</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Never expires</li>
+      </ul>
+      <a href="#start" class="btn-ghost mt-7 inline-flex w-full items-center justify-center rounded-full border rule font-medium px-5 py-3 text-[14px]">Book a drop-in</a>
+    </article>
+    <article class="rounded-2xl border-2 bg-[color:var(--card)] p-7 relative md:-mt-3 shadow-[0_28px_56px_-30px_rgba(42,33,24,0.45)]" style="border-color:var(--accent)">
+      <div class="absolute -top-3 left-7 mono text-[10px] tracking-[0.12em] text-[#FFF7EC] bg-[color:var(--accent)] rounded-full px-3 py-1">MOST POPULAR</div>
+      <h3 class="display text-[24px]">Unlimited Monthly</h3>
+      <div class="mt-3 flex items-baseline gap-1.5"><span class="mono text-[40px] font-medium tnum">$169</span><span class="text-[13px] text-[color:var(--ink-3)]">/ month</span></div>
+      <p class="text-[13px] text-[color:var(--ink-2)] mt-2.5">Every class, every day — for the practice that's part of your week.</p>
+      <div class="border-t rule-soft my-5"></div>
+      <ul class="space-y-2.5 text-[13.5px]">
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Unlimited classes, 7 days a week</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Priority booking, 30 days out</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Two guest passes a month</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>One free freeze a year</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Cancel anytime</li>
+      </ul>
+      <a href="#start" class="btn-primary mt-7 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[color:var(--accent)] text-[#FFF7EC] font-semibold px-5 py-3 text-[14px]">Go unlimited <span class="scroll-x">→</span></a>
+    </article>
+    <article class="rounded-2xl border rule bg-[color:var(--card)] p-7">
+      <h3 class="display text-[24px]">10-Class Pack</h3>
+      <div class="mt-3 flex items-baseline gap-1.5"><span class="mono text-[40px] font-medium tnum">$210</span><span class="text-[13px] text-[color:var(--ink-3)]">$21 / class</span></div>
+      <p class="text-[13px] text-[color:var(--ink-2)] mt-2.5">Ten classes over six months. The flexible middle ground.</p>
+      <div class="border-t rule-soft my-5"></div>
+      <ul class="space-y-2.5 text-[13.5px]">
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>10 classes, any style</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Valid for 6 months</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Shareable with a partner</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Book up to 21 days out</li>
+      </ul>
+      <a href="#start" class="btn-ghost mt-7 inline-flex w-full items-center justify-center rounded-full border rule font-medium px-5 py-3 text-[14px]">Buy a pack</a>
+    </article>
+  </div>
+</section>
+
+<!-- ================= STORIES ================= -->
+<section class="bg-[color:var(--panel)] border-y rule">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+    <div class="max-w-[58ch] mb-11">
+      <div class="marker mb-5"><span class="accent-line"></span>Member stories</div>
+      <h2 class="display text-[clamp(32px,4.6vw,54px)]">Practiced here through <em class="halftone">every season.</em></h2>
+    </div>
+    <div class="grid md:grid-cols-3 gap-5">
+      <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7">
+        <svg width="26" height="20" viewBox="0 0 26 20" class="mb-4" aria-hidden="true"><path d="M0 20V11C0 4.5 3.7.6 10 0v4.4C6.8 5 5.4 6.8 5.3 10H10v10Zm16 0V11C16 4.5 19.7.6 26 0v4.4C22.8 5 21.4 6.8 21.3 10H26v10Z" fill="#B5673E" opacity="0.3"/></svg>
+        <blockquote class="serif text-[17px] leading-[1.5]">"I came in for the two-week trial after a move and never left. The Tuesday slow flow is the one hour I protect on my calendar."</blockquote>
+        <figcaption class="flex items-center gap-3 mt-6 pt-5 border-t rule-soft">
+          <div class="av-2 w-10 h-10 rounded-full flex items-center justify-center text-[#FFF7EC] text-[13px] font-bold">RV</div>
+          <div><div class="text-[13.5px] font-bold">Renata Voss</div><div class="mono text-[10.5px] text-[color:var(--ink-3)]">Member · 3 years</div></div>
+        </figcaption>
+      </figure>
+      <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7">
+        <svg width="26" height="20" viewBox="0 0 26 20" class="mb-4" aria-hidden="true"><path d="M0 20V11C0 4.5 3.7.6 10 0v4.4C6.8 5 5.4 6.8 5.3 10H10v10Zm16 0V11C16 4.5 19.7.6 26 0v4.4C22.8 5 21.4 6.8 21.3 10H26v10Z" fill="#B5673E" opacity="0.3"/></svg>
+        <blockquote class="serif text-[17px] leading-[1.5]">"I'd written off yoga as not-for-me. The beginner's series changed that — four weeks, nothing assumed, and suddenly I had a practice."</blockquote>
+        <figcaption class="flex items-center gap-3 mt-6 pt-5 border-t rule-soft">
+          <div class="av-1 w-10 h-10 rounded-full flex items-center justify-center text-[#FFF7EC] text-[13px] font-bold">EM</div>
+          <div><div class="text-[13.5px] font-bold">Eli Mwangi</div><div class="mono text-[10.5px] text-[color:var(--ink-3)]">Member · 14 months</div></div>
+        </figcaption>
+      </figure>
+      <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7">
+        <svg width="26" height="20" viewBox="0 0 26 20" class="mb-4" aria-hidden="true"><path d="M0 20V11C0 4.5 3.7.6 10 0v4.4C6.8 5 5.4 6.8 5.3 10H10v10Zm16 0V11C16 4.5 19.7.6 26 0v4.4C22.8 5 21.4 6.8 21.3 10H26v10Z" fill="#B5673E" opacity="0.3"/></svg>
+        <blockquote class="serif text-[17px] leading-[1.5]">"I practiced through both pregnancies here. Priya's prenatal class held me together. This studio has watched my family grow up."</blockquote>
+        <figcaption class="flex items-center gap-3 mt-6 pt-5 border-t rule-soft">
+          <div class="av-3 w-10 h-10 rounded-full flex items-center justify-center text-[#FFF7EC] text-[13px] font-bold">CL</div>
+          <div><div class="text-[13.5px] font-bold">Cora Lindqvist</div><div class="mono text-[10.5px] text-[color:var(--ink-3)]">Member · 6 years</div></div>
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ================= LOCATION ================= -->
+<section class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+  <div class="grid lg:grid-cols-2 gap-8 items-start">
+    <div>
+      <div class="marker mb-5"><span class="accent-line"></span>Find us</div>
+      <h2 class="display text-[clamp(32px,4.6vw,52px)] mb-6">Up the stairs on Cedar Hill.</h2>
+      <div class="blob-3 rounded-2xl border rule aspect-[16/10] relative overflow-hidden">
+        <div class="absolute inset-0 dotgrid opacity-50"></div>
+        <div class="absolute inset-0 grain opacity-40"></div>
+        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+          <span class="pulse-dot" style="width:13px;height:13px"></span>
+          <span class="mono text-[10px] mt-2 bg-[color:var(--card)] border rule rounded px-2 py-0.5">118 Larkspur Street</span>
+        </div>
+      </div>
+    </div>
+    <div class="grid sm:grid-cols-2 gap-4">
+      <div class="rounded-2xl border rule bg-[color:var(--card)] p-6 sm:col-span-2">
+        <div class="flex items-center gap-2 mb-3 text-[color:var(--accent)]"><svg class="w-4 h-4"><use href="#pin"/></svg><span class="text-[13px] font-bold text-[color:var(--ink)]">Studio</span></div>
+        <p class="text-[14px] text-[color:var(--ink-2)]">118 Larkspur Street, 2nd floor<br/>Cedar Hill · ring the bell at the green door</p>
+        <p class="text-[13px] text-[color:var(--ink-2)] mt-3">Street parking on Larkspur and a free lot behind the building after 9am. Two blocks from the Cedar Hill stop on the 9 and 14 bus lines.</p>
+      </div>
+      <div class="rounded-2xl border rule bg-[color:var(--card)] p-6">
+        <div class="flex items-center gap-2 mb-3 text-[color:var(--accent)]"><svg class="w-4 h-4"><use href="#cl"/></svg><span class="text-[13px] font-bold text-[color:var(--ink)]">Hours</span></div>
+        <table class="w-full mono text-[12px] tnum"><tbody>
+          <tr><td class="text-[color:var(--ink-2)] py-1">Mon–Fri</td><td class="text-right">6:00a–8:30p</td></tr>
+          <tr><td class="text-[color:var(--ink-2)] py-1">Saturday</td><td class="text-right">7:30a–5:00p</td></tr>
+          <tr><td class="text-[color:var(--ink-2)] py-1">Sunday</td><td class="text-right">8:00a–4:00p</td></tr>
+        </tbody></table>
+      </div>
+      <div class="rounded-2xl border rule bg-[color:var(--panel)] p-6">
+        <div class="text-[13px] font-bold mb-3">Your first class</div>
+        <p class="text-[13px] text-[color:var(--ink-2)]">Just bring yourself — mats, blocks, bolsters and blankets are here. Arrive ten minutes early so a teacher can show you around, and wear something you can move and breathe in.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FAQ ================= -->
+<section class="max-w-[820px] mx-auto px-5 sm:px-8 pb-16 sm:pb-24">
+  <div class="marker mb-5"><span class="accent-line"></span>Before you come</div>
+  <h2 class="display text-[clamp(30px,4vw,46px)] mb-8">Good questions, answered.</h2>
+  <div class="divide-y rule">
+    <details class="group py-2"><summary class="flex items-center justify-between gap-4 py-4"><span class="text-[15px] sm:text-[16px] font-semibold">I've never done yoga — which class do I start with?</span><span class="acc-sign text-[color:var(--accent)] text-[20px] leading-none">+</span></summary><p class="text-[14px] text-[color:var(--ink-2)] pb-4 max-w-[64ch]">Slow Flow or the four-week Beginner's Series. Both assume zero experience and zero vocabulary. Tell the teacher it's your first class and they'll keep a quiet eye on you the whole hour.</p></details>
+    <details class="group py-2"><summary class="flex items-center justify-between gap-4 py-4"><span class="text-[15px] sm:text-[16px] font-semibold">Do you provide mats?</span><span class="acc-sign text-[color:var(--accent)] text-[20px] leading-none">+</span></summary><p class="text-[14px] text-[color:var(--ink-2)] pb-4 max-w-[64ch]">Yes — mats, blocks, bolsters, blankets, and straps are all here and included in every class and membership. Bring your own mat if you prefer; most new students don't.</p></details>
+    <details class="group py-2"><summary class="flex items-center justify-between gap-4 py-4"><span class="text-[15px] sm:text-[16px] font-semibold">Can I freeze my membership?</span><span class="acc-sign text-[color:var(--accent)] text-[20px] leading-none">+</span></summary><p class="text-[14px] text-[color:var(--ink-2)] pb-4 max-w-[64ch]">Unlimited members get one free freeze a year, up to three months — for travel, injury, or a busy stretch. Email us and we'll pause your billing the same day.</p></details>
+    <details class="group py-2"><summary class="flex items-center justify-between gap-4 py-4"><span class="text-[15px] sm:text-[16px] font-semibold">Is the room heated?</span><span class="acc-sign text-[color:var(--accent)] text-[20px] leading-none">+</span></summary><p class="text-[14px] text-[color:var(--ink-2)] pb-4 max-w-[64ch]">Gently. The main room sits around 78°F — warm enough to move comfortably, never hot yoga. Restorative and yin classes run a touch warmer still.</p></details>
+    <details class="group py-2"><summary class="flex items-center justify-between gap-4 py-4"><span class="text-[15px] sm:text-[16px] font-semibold">Do you offer prenatal classes?</span><span class="acc-sign text-[color:var(--accent)] text-[20px] leading-none">+</span></summary><p class="text-[14px] text-[color:var(--ink-2)] pb-4 max-w-[64ch]">Yes — two dedicated prenatal classes a week, taught by RPYT-certified teachers, plus prenatal modifications offered in any all-levels class. Safe for every trimester.</p></details>
+  </div>
+</section>
+
+<!-- ================= FINAL CTA ================= -->
+<section id="start" class="max-w-[1200px] mx-auto px-5 sm:px-8 pb-16 sm:pb-24">
+  <div class="relative overflow-hidden rounded-[26px] border rule bg-[color:var(--ink)] text-[#FAF5EC] px-6 sm:px-14 py-14 sm:py-20 text-center">
+    <div class="absolute inset-0 opacity-90" style="background:radial-gradient(60% 80% at 22% 12%, rgba(181,103,62,0.55), transparent 62%),radial-gradient(54% 70% at 86% 92%, rgba(195,154,75,0.4), transparent 66%)"></div>
+    <div class="relative">
+      <h2 class="display text-[clamp(34px,5.4vw,64px)] max-w-[18ch] mx-auto">Your first class is on us.</h2>
+      <p class="text-[15px] sm:text-[16px] text-[#E7DDC9] mt-5 max-w-[52ch] mx-auto">Walk in for one free class, or start the two-week unlimited trial for $39. No app to download first, no commitment — just a mat with your name on it.</p>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center mt-9">
+        <a href="#intro" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--accent)] text-[#FFF7EC] font-semibold px-7 py-3.5 text-[15px]">Book your first class <span class="scroll-x">→</span></a>
+        <a href="#schedule" class="btn-ghost inline-flex items-center justify-center rounded-full border border-[rgba(255,255,255,0.25)] text-[#FAF5EC] font-medium px-7 py-3.5 text-[15px]">See the schedule</a>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ================= FOOTER ================= -->
+<footer class="border-t rule">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-14 grid sm:grid-cols-2 lg:grid-cols-4 gap-9">
+    <div>
+      <div class="flex items-center gap-2.5 mb-4">
+        <svg width="24" height="24" viewBox="0 0 27 27" aria-hidden="true"><circle cx="13.5" cy="13.5" r="12" fill="none" stroke="#B5673E" stroke-width="1.4"/><path d="M6 14a7.5 7.5 0 0 1 15 0" fill="none" stroke="#B5673E" stroke-width="1.4" stroke-linecap="round"/><path d="M9.4 14a4.1 4.1 0 0 1 8.2 0" fill="none" stroke="#B5673E" stroke-width="1.4" stroke-linecap="round"/><circle cx="13.5" cy="14" r="1.6" fill="#B5673E"/></svg>
+        <span class="display text-[20px]">Stillwater</span>
+      </div>
+      <p class="text-[13px] text-[color:var(--ink-2)] max-w-[30ch]">A neighborhood yoga studio. An hour that's actually yours.</p>
+    </div>
+    <div>
+      <div class="marker mb-4">Studio</div>
+      <p class="text-[13px] text-[color:var(--ink-2)] leading-relaxed">118 Larkspur Street, 2nd floor<br/>Cedar Hill</p>
+      <p class="mono text-[11.5px] text-[color:var(--ink-3)] mt-3 tnum">Mon–Fri 6:00a–8:30p<br/>Sat 7:30a–5:00p · Sun 8:00a–4:00p</p>
+    </div>
+    <div>
+      <div class="marker mb-4">Get in touch</div>
+      <a href="tel:+12075550148" class="flex items-center gap-2 text-[13px] text-[color:var(--ink-2)] mb-2.5"><svg class="w-3.5 h-3.5"><use href="#ph"/></svg>(207) 555-0148</a>
+      <a href="#top" class="flex items-center gap-2 text-[13px] text-[color:var(--ink-2)] mb-2.5"><svg class="w-3.5 h-3.5"><use href="#ig"/></svg>@stillwater.yoga</a>
+      <p class="text-[12px] text-[color:var(--ink-3)] mt-3">Reserve classes in the Stillwater app — iOS &amp; Android.</p>
+    </div>
+    <div>
+      <div class="marker mb-4">Explore</div>
+      <div class="flex flex-col gap-2.5 text-[13px] text-[color:var(--ink-2)]">
+        <a href="#classes" class="ul-link w-fit">Classes</a>
+        <a href="#schedule" class="ul-link w-fit">Schedule</a>
+        <a href="#membership" class="ul-link w-fit">Membership</a>
+        <a href="#about" class="ul-link w-fit">About the studio</a>
+      </div>
+    </div>
+  </div>
+  <div class="border-t rule-soft">
+    <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-6 flex flex-col sm:flex-row gap-2 justify-between">
+      <p class="mono text-[11px] text-[color:var(--ink-3)]">© 2026 Stillwater Yoga · Made on Cedar Hill</p>
+      <p class="mono text-[11px] text-[color:var(--ink-3)]">Vinyasa · Slow flow · Restorative · Yin</p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

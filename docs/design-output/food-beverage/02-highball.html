@@ -1,0 +1,906 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Highball — Craft Non-Alcoholic Sparkling Drinks with Real Botanicals</title>
+<meta name="description" content="Highball is a craft non-alcoholic sparkling drink — real cold-pressed botanicals, a touch of fruit, 5g of sugar and 35 calories. Five flavors. The drink you actually reach for at 6pm.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F7F9FA;
+    --lime:#5BC23A;
+    --grapefruit:#F0533F;
+    --ink:#15201A;
+    --hair:rgba(0,0,0,0.08);
+    --white:#FFFFFF;
+  }
+  *{ -webkit-tap-highlight-color: transparent; }
+  html{ scroll-behavior:smooth; }
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    font-weight:400;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  .display{
+    font-family:'Bricolage Grotesque','Inter',sans-serif;
+    font-weight:800;
+    letter-spacing:-0.035em;
+    line-height:1.02;
+  }
+  .display-tight{ letter-spacing:-0.025em; }
+  .nums{ font-variant-numeric:tabular-nums; }
+  .halftone{ opacity:0.45; }
+
+  /* ambient */
+  .dotgrid{
+    background-image:radial-gradient(rgba(21,32,26,0.10) 1px, transparent 1px);
+    background-size:32px 32px;
+  }
+  .blob{
+    position:absolute;
+    border-radius:9999px;
+    filter:blur(70px);
+    opacity:0.42;
+    pointer-events:none;
+    z-index:0;
+  }
+
+  /* pulse dot */
+  .pulse-dot{
+    position:relative;
+    width:9px;height:9px;
+    border-radius:9999px;
+    background:var(--lime);
+    flex:none;
+  }
+  .pulse-dot::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius:9999px;
+    background:var(--lime);
+    animation:pulse 2s ease-out infinite;
+  }
+  @keyframes pulse{
+    0%{ transform:scale(1); opacity:0.55; }
+    70%{ transform:scale(3.4); opacity:0; }
+    100%{ transform:scale(3.4); opacity:0; }
+  }
+
+  /* marquee */
+  .marquee{ overflow:hidden; -webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent); mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent); }
+  .marquee-track{
+    display:flex;
+    width:max-content;
+    animation:scroll 38s linear infinite;
+  }
+  .marquee:hover .marquee-track{ animation-play-state:paused; }
+  @keyframes scroll{
+    from{ transform:translateX(0); }
+    to{ transform:translateX(-50%); }
+  }
+
+  /* fizz on the hero can */
+  .fizz{
+    position:absolute;
+    border-radius:9999px;
+    background:rgba(255,255,255,0.85);
+    animation:rise 4.5s ease-in infinite;
+  }
+  @keyframes rise{
+    0%{ transform:translateY(8px) scale(0.6); opacity:0; }
+    25%{ opacity:0.9; }
+    100%{ transform:translateY(-46px) scale(1); opacity:0; }
+  }
+
+  /* lift interactions */
+  .lift{ transition:transform .12s ease, box-shadow .12s ease; }
+  .lift:hover{ transform:translateY(-3px); }
+  .btn{ transition:transform .1s ease, box-shadow .1s ease, background-color .12s ease; }
+  .btn:hover{ transform:translateY(-2px); }
+
+  /* can construction */
+  .can{
+    position:relative;
+    border-radius:18px 18px 12px 12px;
+    box-shadow:
+      inset 9px 0 18px -10px rgba(255,255,255,0.85),
+      inset -14px 0 26px -10px rgba(0,0,0,0.34),
+      0 22px 38px -16px rgba(21,32,26,0.42);
+  }
+  .can::before{ /* sheen */
+    content:"";
+    position:absolute;
+    left:24%;top:7%;
+    width:13%;height:86%;
+    border-radius:9999px;
+    background:linear-gradient(180deg,rgba(255,255,255,0.7),rgba(255,255,255,0.05));
+    opacity:0.7;
+  }
+  .can-rim{
+    position:absolute;
+    left:50%;top:-9px;
+    transform:translateX(-50%);
+    width:74%;height:18px;
+    border-radius:9999px;
+    background:linear-gradient(180deg,#e9edee,#aeb6b8 60%,#7f8789);
+    box-shadow:0 2px 3px rgba(0,0,0,0.22);
+  }
+  .can-rim::after{ /* pull tab */
+    content:"";
+    position:absolute;
+    left:50%;top:50%;
+    transform:translate(-50%,-50%);
+    width:36%;height:7px;
+    border-radius:9999px;
+    border:1.5px solid rgba(0,0,0,0.32);
+    background:linear-gradient(180deg,#d6dbdc,#9aa1a3);
+  }
+  .can-bubble{
+    position:absolute;
+    border-radius:9999px;
+    background:rgba(255,255,255,0.55);
+  }
+
+  details summary{ list-style:none; cursor:pointer; }
+  details summary::-webkit-details-marker{ display:none; }
+  details[open] .faq-plus{ transform:rotate(45deg); }
+  .faq-plus{ transition:transform .2s ease; }
+
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    border:1px solid var(--hair);
+    background:var(--white);
+    border-radius:9999px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .marquee-track{ animation:none; }
+    .pulse-dot::after{ animation:none; }
+    .fizz{ animation:none; opacity:0; }
+    html{ scroll-behavior:auto; }
+    .lift:hover,.btn:hover{ transform:none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ 1. NAV ============ -->
+<header class="sticky top-0 z-50 backdrop-blur-md bg-[#F7F9FA]/85 border-b" style="border-color:var(--hair)">
+  <nav class="mx-auto max-w-[1220px] px-5 sm:px-8 h-[68px] flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <span class="grid place-items-center w-9 h-9 rounded-xl" style="background:var(--lime)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="8" cy="9" r="4.4" fill="#fff"/>
+          <circle cx="16" cy="7" r="3" fill="#fff" fill-opacity="0.85"/>
+          <circle cx="15.2" cy="15" r="3.7" fill="#fff" fill-opacity="0.7"/>
+          <circle cx="8.5" cy="17" r="2.4" fill="#fff" fill-opacity="0.55"/>
+        </svg>
+      </span>
+      <span class="display text-[22px] tracking-[-0.04em]">Highball</span>
+    </a>
+    <div class="hidden md:flex items-center gap-8 text-[15px] font-medium text-[#15201A]/72">
+      <a href="#shop" class="hover:text-[#15201A] transition-colors">Shop</a>
+      <a href="#range" class="hover:text-[#15201A] transition-colors">Our Range</a>
+      <a href="#story" class="hover:text-[#15201A] transition-colors">Story</a>
+      <a href="#stockists" class="hover:text-[#15201A] transition-colors">Stockists</a>
+    </div>
+    <a href="#shop" class="btn flex items-center gap-2 rounded-full pl-4 pr-4 py-2 text-white font-semibold text-[14px]" style="background:var(--ink); box-shadow:0 8px 18px -8px rgba(21,32,26,0.5)">
+      Shop
+      <span class="hidden sm:inline text-[11px] font-medium text-white/55 nums">free ship over $35</span>
+    </a>
+  </nav>
+</header>
+
+<main id="top">
+
+<!-- ============ 2. HERO ============ -->
+<section class="relative overflow-hidden">
+  <div class="blob" style="width:380px;height:380px;background:var(--lime);top:-90px;left:-80px"></div>
+  <div class="blob" style="width:340px;height:340px;background:var(--grapefruit);bottom:-120px;right:-60px;opacity:0.32"></div>
+  <div class="absolute inset-0 dotgrid opacity-50" aria-hidden="true"></div>
+
+  <div class="relative mx-auto max-w-[1220px] px-5 sm:px-8 pt-14 pb-16 sm:pt-20 sm:pb-24 grid lg:grid-cols-[1.05fr_0.95fr] gap-12 lg:gap-8 items-center">
+    <div>
+      <span class="pill px-3.5 py-1.5 text-[13px] font-medium">
+        <span class="w-1.5 h-1.5 rounded-full" style="background:var(--grapefruit)"></span>
+        New — Hibiscus &amp; Plum
+      </span>
+      <h1 class="display mt-6 text-[42px] sm:text-[58px] lg:text-[68px]">
+        All the ritual of a good drink.
+        <em class="halftone not-italic block">None of the next morning.</em>
+      </h1>
+      <p class="mt-6 max-w-[440px] text-[17px] sm:text-[18px] leading-[1.6] text-[#15201A]/70">
+        A craft non-alcoholic soda built on cold-pressed botanicals and a touch of real fruit — 5g of sugar, 35 calories, zero proof.
+      </p>
+      <div class="mt-8 flex flex-wrap items-center gap-4">
+        <a href="#shop" class="btn rounded-full px-7 py-3.5 text-white font-semibold text-[15px]" style="background:var(--lime); box-shadow:0 14px 26px -10px rgba(91,194,58,0.65)">
+          Shop the range
+        </a>
+        <a href="#range" class="font-semibold text-[15px] text-[#15201A] flex items-center gap-1.5 group">
+          See all 5 flavors
+          <span class="transition-transform group-hover:translate-x-1">&rarr;</span>
+        </a>
+      </div>
+      <div class="mt-7 flex items-center gap-2 text-[13px] font-medium text-[#15201A]/60">
+        <span class="pulse-dot"></span>
+        In stock — ships today before 2pm
+      </div>
+    </div>
+
+    <!-- hero can render -->
+    <div class="relative flex justify-center">
+      <div class="absolute w-[230px] h-[230px] rounded-full" style="background:radial-gradient(circle,rgba(91,194,58,0.30),transparent 70%)"></div>
+      <!-- fizz -->
+      <span class="fizz" style="width:7px;height:7px;left:44%;bottom:62%"></span>
+      <span class="fizz" style="width:5px;height:5px;left:52%;bottom:58%;animation-delay:1.3s"></span>
+      <span class="fizz" style="width:9px;height:9px;left:60%;bottom:60%;animation-delay:2.4s"></span>
+      <span class="fizz" style="width:4px;height:4px;left:38%;bottom:55%;animation-delay:.7s"></span>
+
+      <div class="relative" style="transform:rotate(-7deg)">
+        <div class="can w-[152px] h-[330px]" style="background:linear-gradient(120deg,#5BC23A,#74d055 52%,#3f9c2a)">
+          <div class="can-rim"></div>
+          <div class="can-bubble" style="width:14px;height:14px;left:18px;top:88px"></div>
+          <div class="can-bubble" style="width:8px;height:8px;left:30px;top:130px"></div>
+          <div class="can-bubble" style="width:18px;height:18px;left:96px;top:210px;opacity:0.4"></div>
+          <!-- label -->
+          <div class="absolute left-1/2 -translate-x-1/2 top-[78px] w-[122px] rounded-[10px] bg-white/95 px-3 py-3.5 text-center" style="box-shadow:0 6px 14px -8px rgba(0,0,0,0.4)">
+            <div class="flex items-center justify-center gap-1">
+              <svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="10" r="5" fill="#5BC23A"/><circle cx="16" cy="8" r="3.4" fill="#5BC23A" fill-opacity="0.6"/></svg>
+              <span class="display text-[12px] tracking-[-0.04em]">Highball</span>
+            </div>
+            <div class="display text-[15px] mt-2 leading-[1.05]" style="color:#2f7a1f">Lime<br>&amp; Basil</div>
+            <div class="mt-2 h-px w-8 mx-auto" style="background:rgba(0,0,0,0.12)"></div>
+            <div class="text-[8px] font-semibold tracking-[0.08em] text-[#15201A]/55 mt-2 nums">12 FL OZ · 5g SUGAR</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3. PROOF BAR ============ -->
+<section class="border-y bg-white" style="border-color:var(--hair)">
+  <div class="mx-auto max-w-[1220px] px-5 sm:px-8 py-7 flex flex-col lg:flex-row items-center gap-6 lg:gap-10">
+    <div class="flex items-center gap-3 flex-none">
+      <div class="flex" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg>
+      </div>
+      <span class="text-[14px] font-semibold nums">★4.8</span>
+      <span class="text-[14px] text-[#15201A]/55 nums">11,284 reviews</span>
+    </div>
+    <div class="hidden lg:block w-px h-7" style="background:var(--hair)"></div>
+    <div class="flex-1 w-full">
+      <p class="text-[11px] font-semibold tracking-[0.14em] text-[#15201A]/40 mb-2 lg:hidden">AS FEATURED IN</p>
+      <div class="marquee">
+        <div class="marquee-track gap-9 items-center pr-9">
+          <span class="text-[#15201A]/45 text-[18px] font-semibold" style="font-family:Georgia,serif">The Larder Press</span>
+          <span class="text-[#15201A]/45 text-[16px] font-semibold tracking-[-0.02em]">Brimful Grocers</span>
+          <span class="text-[#15201A]/45 text-[18px] font-semibold italic" style="font-family:Georgia,serif">Sip &amp; Snack</span>
+          <span class="text-[#15201A]/45 text-[16px] font-semibold tracking-[0.04em] uppercase">Northfield Market</span>
+          <span class="text-[#15201A]/45 text-[18px] font-semibold" style="font-family:Georgia,serif">The Daily Pour</span>
+          <span class="text-[#15201A]/45 text-[16px] font-semibold tracking-[-0.02em]">Greenrow &amp; Co.</span>
+          <!-- duplicate -->
+          <span class="text-[#15201A]/45 text-[18px] font-semibold" style="font-family:Georgia,serif">The Larder Press</span>
+          <span class="text-[#15201A]/45 text-[16px] font-semibold tracking-[-0.02em]">Brimful Grocers</span>
+          <span class="text-[#15201A]/45 text-[18px] font-semibold italic" style="font-family:Georgia,serif">Sip &amp; Snack</span>
+          <span class="text-[#15201A]/45 text-[16px] font-semibold tracking-[0.04em] uppercase">Northfield Market</span>
+          <span class="text-[#15201A]/45 text-[18px] font-semibold" style="font-family:Georgia,serif">The Daily Pour</span>
+          <span class="text-[#15201A]/45 text-[16px] font-semibold tracking-[-0.02em]">Greenrow &amp; Co.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4. THE RANGE ============ -->
+<section id="range" class="relative">
+  <div class="mx-auto max-w-[1220px] px-5 sm:px-8 py-20 sm:py-24">
+    <div class="flex flex-wrap items-end justify-between gap-4 mb-12">
+      <div>
+        <p class="text-[12px] font-semibold tracking-[0.14em]" style="color:var(--lime)">THE RANGE</p>
+        <h2 class="display mt-2 text-[34px] sm:text-[44px]">Five flavors. One easy yes.</h2>
+      </div>
+      <p class="max-w-[330px] text-[15px] leading-[1.6] text-[#15201A]/65">Every can is built on cold-pressed botanicals and real fruit — pick your bittersweet, your herby, your floral.</p>
+    </div>
+
+    <div id="shop" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
+      <!-- SKU 1 — Grapefruit & Yuzu -->
+      <article class="lift rounded-2xl border bg-white p-7 flex flex-col" style="border-color:var(--hair)">
+        <div class="flex justify-center mb-6 pt-3">
+          <div class="can w-[88px] h-[200px]" style="background:linear-gradient(120deg,#F0533F,#f56b58 52%,#c93b2b)">
+            <div class="can-rim" style="height:11px;top:-6px"></div>
+            <div class="can-bubble" style="width:8px;height:8px;left:12px;top:54px"></div>
+            <div class="can-bubble" style="width:5px;height:5px;left:20px;top:88px"></div>
+            <div class="absolute left-1/2 -translate-x-1/2 top-[46px] w-[70px] rounded-md bg-white/95 px-1.5 py-2 text-center">
+              <span class="display text-[8px] tracking-[-0.04em] block">Highball</span>
+              <span class="display text-[10px] leading-[1.05] block mt-1" style="color:#c93b2b">Grapefruit<br>&amp; Yuzu</span>
+              <span class="text-[6px] font-semibold tracking-[0.06em] text-[#15201A]/50 nums block mt-1.5">12 FL OZ · 5g</span>
+            </div>
+          </div>
+        </div>
+        <h3 class="display text-[19px] tracking-[-0.03em]">Grapefruit &amp; Yuzu</h3>
+        <p class="mt-1.5 text-[14px] text-[#15201A]/62 leading-[1.55] flex-1">Bittersweet grapefruit, a sharp yuzu lift, a properly dry finish.</p>
+        <div class="mt-4 flex items-center justify-between">
+          <span class="text-[15px] font-semibold nums">$2.80 <span class="text-[12px] font-normal text-[#15201A]/45">/ single</span></span>
+          <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full" style="background:rgba(240,83,63,0.12);color:#c93b2b">Bestseller</span>
+        </div>
+      </article>
+
+      <!-- SKU 2 — Lime & Basil -->
+      <article class="lift rounded-2xl border bg-white p-7 flex flex-col" style="border-color:var(--hair)">
+        <div class="flex justify-center mb-6 pt-3">
+          <div class="can w-[88px] h-[200px]" style="background:linear-gradient(120deg,#5BC23A,#74d055 52%,#3f9c2a)">
+            <div class="can-rim" style="height:11px;top:-6px"></div>
+            <div class="can-bubble" style="width:8px;height:8px;left:12px;top:54px"></div>
+            <div class="can-bubble" style="width:5px;height:5px;left:20px;top:88px"></div>
+            <div class="absolute left-1/2 -translate-x-1/2 top-[46px] w-[70px] rounded-md bg-white/95 px-1.5 py-2 text-center">
+              <span class="display text-[8px] tracking-[-0.04em] block">Highball</span>
+              <span class="display text-[10px] leading-[1.05] block mt-1" style="color:#2f7a1f">Lime<br>&amp; Basil</span>
+              <span class="text-[6px] font-semibold tracking-[0.06em] text-[#15201A]/50 nums block mt-1.5">12 FL OZ · 5g</span>
+            </div>
+          </div>
+        </div>
+        <h3 class="display text-[19px] tracking-[-0.03em]">Lime &amp; Basil</h3>
+        <p class="mt-1.5 text-[14px] text-[#15201A]/62 leading-[1.55] flex-1">Fresh-squeezed lime, garden basil, crisp and clean to the last sip.</p>
+        <div class="mt-4 flex items-center justify-between">
+          <span class="text-[15px] font-semibold nums">$2.80 <span class="text-[12px] font-normal text-[#15201A]/45">/ single</span></span>
+        </div>
+      </article>
+
+      <!-- SKU 3 — Blackberry & Bay -->
+      <article class="lift rounded-2xl border bg-white p-7 flex flex-col" style="border-color:var(--hair)">
+        <div class="flex justify-center mb-6 pt-3">
+          <div class="can w-[88px] h-[200px]" style="background:linear-gradient(120deg,#7B4F9E,#8f63b1 52%,#5d3a7a)">
+            <div class="can-rim" style="height:11px;top:-6px"></div>
+            <div class="can-bubble" style="width:8px;height:8px;left:12px;top:54px"></div>
+            <div class="can-bubble" style="width:5px;height:5px;left:20px;top:88px"></div>
+            <div class="absolute left-1/2 -translate-x-1/2 top-[46px] w-[70px] rounded-md bg-white/95 px-1.5 py-2 text-center">
+              <span class="display text-[8px] tracking-[-0.04em] block">Highball</span>
+              <span class="display text-[10px] leading-[1.05] block mt-1" style="color:#5d3a7a">Blackberry<br>&amp; Bay</span>
+              <span class="text-[6px] font-semibold tracking-[0.06em] text-[#15201A]/50 nums block mt-1.5">12 FL OZ · 5g</span>
+            </div>
+          </div>
+        </div>
+        <h3 class="display text-[19px] tracking-[-0.03em]">Blackberry &amp; Bay</h3>
+        <p class="mt-1.5 text-[14px] text-[#15201A]/62 leading-[1.55] flex-1">Dark hedgerow blackberry with a savory, grown-up bay edge.</p>
+        <div class="mt-4 flex items-center justify-between">
+          <span class="text-[15px] font-semibold nums">$2.80 <span class="text-[12px] font-normal text-[#15201A]/45">/ single</span></span>
+        </div>
+      </article>
+
+      <!-- SKU 4 — Ginger & Pomelo -->
+      <article class="lift rounded-2xl border bg-white p-7 flex flex-col" style="border-color:var(--hair)">
+        <div class="flex justify-center mb-6 pt-3">
+          <div class="can w-[88px] h-[200px]" style="background:linear-gradient(120deg,#F0A937,#f4bb5b 52%,#cf8a1f)">
+            <div class="can-rim" style="height:11px;top:-6px"></div>
+            <div class="can-bubble" style="width:8px;height:8px;left:12px;top:54px"></div>
+            <div class="can-bubble" style="width:5px;height:5px;left:20px;top:88px"></div>
+            <div class="absolute left-1/2 -translate-x-1/2 top-[46px] w-[70px] rounded-md bg-white/95 px-1.5 py-2 text-center">
+              <span class="display text-[8px] tracking-[-0.04em] block">Highball</span>
+              <span class="display text-[10px] leading-[1.05] block mt-1" style="color:#a36c12">Ginger<br>&amp; Pomelo</span>
+              <span class="text-[6px] font-semibold tracking-[0.06em] text-[#15201A]/50 nums block mt-1.5">12 FL OZ · 5g</span>
+            </div>
+          </div>
+        </div>
+        <h3 class="display text-[19px] tracking-[-0.03em]">Ginger &amp; Pomelo</h3>
+        <p class="mt-1.5 text-[14px] text-[#15201A]/62 leading-[1.55] flex-1">Warm root ginger, juicy pomelo, a gentle heat that lingers nicely.</p>
+        <div class="mt-4 flex items-center justify-between">
+          <span class="text-[15px] font-semibold nums">$2.80 <span class="text-[12px] font-normal text-[#15201A]/45">/ single</span></span>
+        </div>
+      </article>
+
+      <!-- SKU 5 — Hibiscus & Plum -->
+      <article class="lift rounded-2xl border bg-white p-7 flex flex-col" style="border-color:var(--hair)">
+        <div class="flex justify-center mb-6 pt-3">
+          <div class="can w-[88px] h-[200px]" style="background:linear-gradient(120deg,#D63B7A,#e05891 52%,#b22a61)">
+            <div class="can-rim" style="height:11px;top:-6px"></div>
+            <div class="can-bubble" style="width:8px;height:8px;left:12px;top:54px"></div>
+            <div class="can-bubble" style="width:5px;height:5px;left:20px;top:88px"></div>
+            <div class="absolute left-1/2 -translate-x-1/2 top-[46px] w-[70px] rounded-md bg-white/95 px-1.5 py-2 text-center">
+              <span class="display text-[8px] tracking-[-0.04em] block">Highball</span>
+              <span class="display text-[10px] leading-[1.05] block mt-1" style="color:#b22a61">Hibiscus<br>&amp; Plum</span>
+              <span class="text-[6px] font-semibold tracking-[0.06em] text-[#15201A]/50 nums block mt-1.5">12 FL OZ · 5g</span>
+            </div>
+          </div>
+        </div>
+        <h3 class="display text-[19px] tracking-[-0.03em]">Hibiscus &amp; Plum</h3>
+        <p class="mt-1.5 text-[14px] text-[#15201A]/62 leading-[1.55] flex-1">Tart hibiscus and ripe plum, finished with a soft floral note.</p>
+        <div class="mt-4 flex items-center justify-between">
+          <span class="text-[15px] font-semibold nums">$2.80 <span class="text-[12px] font-normal text-[#15201A]/45">/ single</span></span>
+          <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full" style="background:rgba(214,59,122,0.12);color:#b22a61">New</span>
+        </div>
+      </article>
+
+      <!-- Pack CTA card -->
+      <article class="rounded-2xl p-7 flex flex-col justify-center text-white" style="background:linear-gradient(150deg,#15201A,#243329)">
+        <h3 class="display text-[22px] tracking-[-0.03em]">Buy by the pack</h3>
+        <p class="mt-2 text-[14px] text-white/65 leading-[1.55]">Mix any flavors. The case is the best value we sell.</p>
+        <div class="mt-5 space-y-2.5 text-[14px]">
+          <div class="flex items-center justify-between border-b border-white/12 pb-2.5">
+            <span class="text-white/80">Single can</span><span class="font-semibold nums">$2.80</span>
+          </div>
+          <div class="flex items-center justify-between border-b border-white/12 pb-2.5">
+            <span class="text-white/80">8-pack</span><span class="font-semibold nums">$21.00</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-white/80">24-pack case</span>
+            <span class="font-semibold nums" style="color:var(--lime)">$57.60</span>
+          </div>
+        </div>
+        <a href="#buy" class="btn mt-6 text-center rounded-full px-5 py-3 font-semibold text-[14px] text-[#15201A]" style="background:var(--lime)">Build a case</a>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5. BRAND STORY ============ -->
+<section id="story" class="relative border-y bg-white overflow-hidden" style="border-color:var(--hair)">
+  <div class="blob" style="width:300px;height:300px;background:var(--grapefruit);top:-100px;right:10%;opacity:0.18"></div>
+  <div class="relative mx-auto max-w-[1220px] px-5 sm:px-8 py-20 sm:py-24 grid lg:grid-cols-[0.9fr_1.1fr] gap-12 lg:gap-16 items-center">
+    <!-- founders visual -->
+    <div class="relative">
+      <div class="rounded-3xl p-8 sm:p-10" style="background:linear-gradient(150deg,#eef6ec,#fdeceb)">
+        <div class="flex items-end justify-center gap-3">
+          <div class="can w-[70px] h-[160px]" style="background:linear-gradient(120deg,#F0533F,#f56b58 52%,#c93b2b)"><div class="can-rim" style="height:9px;top:-5px"></div></div>
+          <div class="can w-[80px] h-[185px]" style="background:linear-gradient(120deg,#5BC23A,#74d055 52%,#3f9c2a)"><div class="can-rim" style="height:10px;top:-5px"></div></div>
+          <div class="can w-[70px] h-[160px]" style="background:linear-gradient(120deg,#D63B7A,#e05891 52%,#b22a61)"><div class="can-rim" style="height:9px;top:-5px"></div></div>
+        </div>
+        <div class="mt-7 flex items-center justify-center gap-3 text-[13px]">
+          <span class="pill px-3 py-1.5 font-medium">Est. 2021</span>
+          <span class="pill px-3 py-1.5 font-medium">Portland, OR</span>
+        </div>
+      </div>
+    </div>
+    <!-- copy -->
+    <div>
+      <p class="text-[12px] font-semibold tracking-[0.14em]" style="color:var(--grapefruit)">OUR STORY</p>
+      <h2 class="display mt-2 text-[32px] sm:text-[42px]">We were tired of the water-or-beer choice.</h2>
+      <div class="mt-6 space-y-4 text-[16px] leading-[1.7] text-[#15201A]/72">
+        <p>Highball started with two friends — Maya and Theo — at a backyard party in 2021, both nursing the same lukewarm sparkling water because nothing on the table felt like an actual <em class="not-italic font-semibold text-[#15201A]">drink</em>. The sodas were too sweet. The mocktails were a sad afterthought.</p>
+        <p>So they spent a year in a rented kitchen working with a botanist and a flavor house, pressing real fruit, steeping bittering botanicals, and tasting hundreds of versions until a can felt grown-up — bittersweet, dry, complex — without leaning on sugar to get there.</p>
+        <p>The one thing they refused to compromise on: it had to taste like something you'd choose, not something you'd settle for. Five grams of cane sugar, real botanicals you can name, and nothing you'd need to look up. That's the whole brief.</p>
+      </div>
+      <div class="mt-7 flex items-center gap-3">
+        <div class="display text-[26px]" style="color:var(--lime)">— Maya &amp; Theo</div>
+        <span class="text-[14px] text-[#15201A]/50">Co-founders</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6. WHAT'S IN IT / WHAT'S NOT ============ -->
+<section class="relative">
+  <div class="mx-auto max-w-[1220px] px-5 sm:px-8 py-20 sm:py-24">
+    <div class="text-center max-w-[640px] mx-auto mb-12">
+      <p class="text-[12px] font-semibold tracking-[0.14em]" style="color:var(--lime)">WHAT'S INSIDE</p>
+      <h2 class="display mt-2 text-[34px] sm:text-[44px]">Read the can. Then read ours.</h2>
+      <p class="mt-3 text-[16px] leading-[1.6] text-[#15201A]/65">No mystery ingredients, no chemistry-set sweeteners. If it's in the can, it's on this list.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-5">
+      <!-- whats in -->
+      <div class="rounded-2xl border bg-white p-7 sm:p-9" style="border-color:var(--hair)">
+        <h3 class="display text-[22px] flex items-center gap-2.5">
+          <span class="grid place-items-center w-8 h-8 rounded-full text-white" style="background:var(--lime)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M5 13l4 4 10-11"/></svg>
+          </span>
+          What's in it
+        </h3>
+        <ul class="mt-6 space-y-4 text-[15px]">
+          <li class="flex gap-3"><span class="mt-1.5 w-1.5 h-1.5 rounded-full flex-none" style="background:var(--lime)"></span><span><span class="font-semibold">Real cold-pressed botanicals</span> — steeped, not flavored: gentian root, hibiscus, fresh basil, bay.</span></li>
+          <li class="flex gap-3"><span class="mt-1.5 w-1.5 h-1.5 rounded-full flex-none" style="background:var(--lime)"></span><span><span class="font-semibold">A touch of real fruit</span> — pressed grapefruit, yuzu, plum and pomelo for body, not just color.</span></li>
+          <li class="flex gap-3"><span class="mt-1.5 w-1.5 h-1.5 rounded-full flex-none" style="background:var(--lime)"></span><span><span class="font-semibold">5g of cane sugar</span> — just enough to round the bitterness, nothing more.</span></li>
+          <li class="flex gap-3"><span class="mt-1.5 w-1.5 h-1.5 rounded-full flex-none" style="background:var(--lime)"></span><span><span class="font-semibold">35 calories</span> a can — light enough for the fourth one.</span></li>
+          <li class="flex gap-3"><span class="mt-1.5 w-1.5 h-1.5 rounded-full flex-none" style="background:var(--lime)"></span><span><span class="font-semibold">Triple-filtered sparkling water</span> — fine, persistent bubbles that don't go flat halfway.</span></li>
+        </ul>
+      </div>
+      <!-- whats not -->
+      <div class="rounded-2xl border p-7 sm:p-9" style="border-color:var(--hair);background:linear-gradient(160deg,#fdeceb,#f7f9fa)">
+        <h3 class="display text-[22px] flex items-center gap-2.5">
+          <span class="grid place-items-center w-8 h-8 rounded-full text-white" style="background:var(--grapefruit)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </span>
+          What's not
+        </h3>
+        <ul class="mt-6 space-y-4 text-[15px]">
+          <li class="flex gap-3"><span class="mt-0.5 text-[#F0533F] font-bold flex-none">✕</span><span><span class="font-semibold">Alcohol</span> — zero proof, full stop. Safe for the designated driver and the pregnant friend.</span></li>
+          <li class="flex gap-3"><span class="mt-0.5 text-[#F0533F] font-bold flex-none">✕</span><span><span class="font-semibold">High-fructose corn syrup</span> — never. Cane sugar or nothing.</span></li>
+          <li class="flex gap-3"><span class="mt-0.5 text-[#F0533F] font-bold flex-none">✕</span><span><span class="font-semibold">Sucralose or acesulfame-K</span> — no artificial sweeteners, no weird aftertaste.</span></li>
+          <li class="flex gap-3"><span class="mt-0.5 text-[#F0533F] font-bold flex-none">✕</span><span><span class="font-semibold">Vague "natural flavors"</span> you can't trace — every ingredient is named on the can.</span></li>
+          <li class="flex gap-3"><span class="mt-0.5 text-[#F0533F] font-bold flex-none">✕</span><span><span class="font-semibold">39g of sugar</span> — the amount in a regular cola. We use 5.</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ingredient pills -->
+    <div class="mt-9 flex flex-wrap justify-center gap-3">
+      <span class="pill px-4 py-2 text-[13px] font-semibold nums">5g sugar</span>
+      <span class="pill px-4 py-2 text-[13px] font-semibold nums">35 calories</span>
+      <span class="pill px-4 py-2 text-[13px] font-semibold">Non-alcoholic</span>
+      <span class="pill px-4 py-2 text-[13px] font-semibold">Real botanicals</span>
+      <span class="pill px-4 py-2 text-[13px] font-semibold">Vegan</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 7. BESTSELLER SPOTLIGHT ============ -->
+<section class="relative border-y overflow-hidden" style="border-color:var(--hair);background:linear-gradient(165deg,#fdeceb,#f7f9fa 60%)">
+  <div class="blob" style="width:300px;height:300px;background:var(--grapefruit);top:50%;left:-90px;opacity:0.3"></div>
+  <div class="relative mx-auto max-w-[1220px] px-5 sm:px-8 py-20 sm:py-24 grid lg:grid-cols-2 gap-12 lg:gap-10 items-center">
+    <!-- render -->
+    <div class="relative flex justify-center order-2 lg:order-1">
+      <div class="absolute w-[240px] h-[240px] rounded-full" style="background:radial-gradient(circle,rgba(240,83,63,0.32),transparent 70%)"></div>
+      <div class="relative flex items-end gap-5">
+        <div class="can w-[110px] h-[245px]" style="background:linear-gradient(120deg,#F0533F,#f56b58 52%,#c93b2b);transform:rotate(-6deg)">
+          <div class="can-rim"></div>
+          <div class="can-bubble" style="width:11px;height:11px;left:16px;top:70px"></div>
+          <div class="can-bubble" style="width:7px;height:7px;left:26px;top:110px"></div>
+          <div class="absolute left-1/2 -translate-x-1/2 top-[58px] w-[88px] rounded-lg bg-white/95 px-2 py-2.5 text-center">
+            <span class="display text-[9px] tracking-[-0.04em] block">Highball</span>
+            <span class="display text-[12px] leading-[1.05] block mt-1.5" style="color:#c93b2b">Grapefruit<br>&amp; Yuzu</span>
+            <span class="text-[6.5px] font-semibold tracking-[0.06em] text-[#15201A]/50 nums block mt-2">12 FL OZ · 5g SUGAR</span>
+          </div>
+        </div>
+        <div class="can w-[78px] h-[178px] opacity-90" style="background:linear-gradient(120deg,#F0533F,#f56b58 52%,#c93b2b);transform:rotate(7deg)">
+          <div class="can-rim" style="height:10px;top:-5px"></div>
+        </div>
+      </div>
+    </div>
+    <!-- copy -->
+    <div class="order-1 lg:order-2">
+      <span class="pill px-3 py-1.5 text-[12px] font-semibold" style="color:var(--grapefruit)">
+        <span class="w-1.5 h-1.5 rounded-full" style="background:var(--grapefruit)"></span>
+        #1 BESTSELLER
+      </span>
+      <h2 class="display mt-5 text-[32px] sm:text-[42px]">
+        Grapefruit &amp; Yuzu
+        <em class="halftone not-italic">the one everyone reorders.</em>
+      </h2>
+      <p class="mt-5 text-[16px] leading-[1.7] text-[#15201A]/72 max-w-[460px]">It opens bittersweet and bright, the yuzu cuts clean across the middle, and it finishes properly dry — no syrupy residue, no sugar crash. The can our customers buy by the case and never get bored of.</p>
+      <div class="mt-6 flex flex-wrap gap-2.5">
+        <span class="rounded-full px-3.5 py-1.5 text-[13px] font-semibold text-white" style="background:#c93b2b">Bittersweet</span>
+        <span class="rounded-full px-3.5 py-1.5 text-[13px] font-semibold text-white" style="background:#c93b2b">Yuzu lift</span>
+        <span class="rounded-full px-3.5 py-1.5 text-[13px] font-semibold text-white" style="background:#c93b2b">Dry finish</span>
+      </div>
+      <p class="mt-6 text-[14px] leading-[1.6] text-[#15201A]/60">
+        <span class="font-semibold text-[#15201A]">Botanicals:</span> pressed pink grapefruit, Japanese yuzu, gentian root, a whisper of sea salt.
+      </p>
+      <div class="mt-6 flex flex-wrap items-center gap-5">
+        <a href="#shop" class="btn rounded-full px-6 py-3 text-white font-semibold text-[15px]" style="background:var(--grapefruit);box-shadow:0 12px 24px -10px rgba(240,83,63,0.6)">Add to cart — $2.80</a>
+        <div class="flex items-center gap-2 text-[13px] text-[#15201A]/60">
+          <span class="font-semibold text-[#15201A] nums">5g sugar</span> · <span class="nums">35 cal</span> · zero proof
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 8. WAYS TO ENJOY ============ -->
+<section class="relative">
+  <div class="mx-auto max-w-[1220px] px-5 sm:px-8 py-20 sm:py-24">
+    <div class="text-center max-w-[600px] mx-auto mb-12">
+      <p class="text-[12px] font-semibold tracking-[0.14em]" style="color:var(--lime)">WAYS TO ENJOY</p>
+      <h2 class="display mt-2 text-[34px] sm:text-[44px]">However 6pm finds you.</h2>
+    </div>
+    <div class="grid md:grid-cols-3 gap-5">
+      <!-- card 1 -->
+      <article class="lift rounded-2xl border bg-white p-8" style="border-color:var(--hair)">
+        <div class="grid place-items-center w-12 h-12 rounded-xl mb-5" style="background:rgba(91,194,58,0.14)">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3f9c2a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12l-1.5 14a2 2 0 0 1-2 1.8H9.5a2 2 0 0 1-2-1.8z"/><path d="M7 9h10"/></svg>
+        </div>
+        <h3 class="display text-[20px]">Over ice, proper glass</h3>
+        <p class="mt-2 text-[14px] leading-[1.6] text-[#15201A]/65">Pour it tall over a fistful of ice, drop in a citrus twist, and treat yourself to the full ritual — glass and all. It earns it.</p>
+      </article>
+      <!-- card 2 -->
+      <article class="lift rounded-2xl border bg-white p-8" style="border-color:var(--hair)">
+        <div class="grid place-items-center w-12 h-12 rounded-xl mb-5" style="background:rgba(240,83,63,0.14)">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c93b2b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14l-7 8v7"/><path d="M9 19h6"/></svg>
+        </div>
+        <h3 class="display text-[20px]">Mocktail &amp; spritz mixer</h3>
+        <p class="mt-2 text-[14px] leading-[1.6] text-[#15201A]/65">Already bittersweet and balanced, so it builds a no-proof spritz on its own — or stretches a real one. Add a sprig of basil and you're done.</p>
+      </article>
+      <!-- card 3 -->
+      <article class="lift rounded-2xl border bg-white p-8" style="border-color:var(--hair)">
+        <div class="grid place-items-center w-12 h-12 rounded-xl mb-5" style="background:rgba(240,169,55,0.16)">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a36c12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        </div>
+        <h3 class="display text-[20px]">The 4pm desk reset</h3>
+        <p class="mt-2 text-[14px] leading-[1.6] text-[#15201A]/65">Crack one when the afternoon stalls — bright, dry and zero caffeine, so it wakes up your palate without wrecking your sleep.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 9. REVIEWS ============ -->
+<section class="relative border-y bg-white" style="border-color:var(--hair)">
+  <div class="mx-auto max-w-[1220px] px-5 sm:px-8 py-20 sm:py-24">
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-12">
+      <div>
+        <p class="text-[12px] font-semibold tracking-[0.14em]" style="color:var(--grapefruit)">REVIEWS</p>
+        <h2 class="display mt-2 text-[34px] sm:text-[44px]">11,284 people, one verdict.</h2>
+      </div>
+      <div class="flex items-center gap-3 rounded-2xl border px-5 py-3.5" style="border-color:var(--hair)">
+        <span class="display text-[32px]">4.8</span>
+        <div>
+          <div class="flex" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg>
+          </div>
+          <span class="text-[12px] text-[#15201A]/55 nums">based on 11,284 reviews</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <!-- review 1 -->
+      <figure class="rounded-2xl border p-6 flex flex-col" style="border-color:var(--hair)">
+        <div class="flex gap-0.5 mb-3" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg>
+        </div>
+        <blockquote class="text-[14px] leading-[1.6] text-[#15201A]/78 flex-1">"I quit drinking in January and the Grapefruit &amp; Yuzu is the first thing that feels like an actual reward at the end of the day. Not sweet, not boring."</blockquote>
+        <figcaption class="mt-4 pt-4 border-t flex items-center gap-3" style="border-color:var(--hair)">
+          <span class="grid place-items-center w-9 h-9 rounded-full text-white text-[13px] font-semibold" style="background:#F0533F">LM</span>
+          <span><span class="block text-[13px] font-semibold">Lena Marchetti</span><span class="block text-[12px] text-[#15201A]/50">Grapefruit &amp; Yuzu 8-pack</span></span>
+        </figcaption>
+      </figure>
+      <!-- review 2 -->
+      <figure class="rounded-2xl border p-6 flex flex-col" style="border-color:var(--hair)">
+        <div class="flex gap-0.5 mb-3" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg>
+        </div>
+        <blockquote class="text-[14px] leading-[1.6] text-[#15201A]/78 flex-1">"Served the Lime &amp; Basil at our wedding for the non-drinkers and people kept asking what cocktail it was. Genuinely the best NA soda I've found."</blockquote>
+        <figcaption class="mt-4 pt-4 border-t flex items-center gap-3" style="border-color:var(--hair)">
+          <span class="grid place-items-center w-9 h-9 rounded-full text-white text-[13px] font-semibold" style="background:#5BC23A">DO</span>
+          <span><span class="block text-[13px] font-semibold">Daniel Oyelaran</span><span class="block text-[12px] text-[#15201A]/50">Lime &amp; Basil 24-pack case</span></span>
+        </figcaption>
+      </figure>
+      <!-- review 3 -->
+      <figure class="rounded-2xl border p-6 flex flex-col" style="border-color:var(--hair)">
+        <div class="flex gap-0.5 mb-3" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg>
+        </div>
+        <blockquote class="text-[14px] leading-[1.6] text-[#15201A]/78 flex-1">"The Ginger &amp; Pomelo has a real kick — not the flat ginger taste you get elsewhere. I keep a case at my desk and it's my 4pm fix now."</blockquote>
+        <figcaption class="mt-4 pt-4 border-t flex items-center gap-3" style="border-color:var(--hair)">
+          <span class="grid place-items-center w-9 h-9 rounded-full text-white text-[13px] font-semibold" style="background:#F0A937">SK</span>
+          <span><span class="block text-[13px] font-semibold">Saanvi Kapoor</span><span class="block text-[12px] text-[#15201A]/50">Ginger &amp; Pomelo 8-pack</span></span>
+        </figcaption>
+      </figure>
+      <!-- review 4 -->
+      <figure class="rounded-2xl border p-6 flex flex-col" style="border-color:var(--hair)">
+        <div class="flex gap-0.5 mb-3" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#F0A937"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="#e3e6e7"><path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 18.6 5.9 21.8 7.1 15 2.1 10.2 9 9.3z"/></svg>
+        </div>
+        <blockquote class="text-[14px] leading-[1.6] text-[#15201A]/78 flex-1">"Blackberry &amp; Bay is the most unexpected soda I've ever had — savory and dark, almost wine-like. My partner finishes the case before I get any."</blockquote>
+        <figcaption class="mt-4 pt-4 border-t flex items-center gap-3" style="border-color:var(--hair)">
+          <span class="grid place-items-center w-9 h-9 rounded-full text-white text-[13px] font-semibold" style="background:#7B4F9E">TF</span>
+          <span><span class="block text-[13px] font-semibold">Tomás Ferreira</span><span class="block text-[12px] text-[#15201A]/50">Blackberry &amp; Bay 24-pack case</span></span>
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 10. WHERE TO BUY ============ -->
+<section id="stockists" class="relative overflow-hidden">
+  <div class="absolute inset-0 dotgrid opacity-40" aria-hidden="true"></div>
+  <div class="relative mx-auto max-w-[1220px] px-5 sm:px-8 py-20 sm:py-24">
+    <div class="text-center max-w-[620px] mx-auto mb-12">
+      <p class="text-[12px] font-semibold tracking-[0.14em]" style="color:var(--lime)">WHERE TO BUY</p>
+      <h2 class="display mt-2 text-[34px] sm:text-[44px]">Now chilling in 1,240 stores.</h2>
+      <p class="mt-3 text-[16px] leading-[1.6] text-[#15201A]/65">Find Highball in the fridge at these grocers — or skip the trip and order a case online.</p>
+    </div>
+
+    <!-- stockist strip -->
+    <div class="rounded-2xl border bg-white px-6 py-7 mb-9" style="border-color:var(--hair)">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-5 items-center justify-items-center">
+        <span class="text-[#15201A]/55 text-[16px] font-semibold" style="font-family:Georgia,serif">Brimful Grocers</span>
+        <span class="text-[#15201A]/55 text-[15px] font-semibold tracking-[0.05em] uppercase">Northfield Market</span>
+        <span class="text-[#15201A]/55 text-[16px] font-semibold tracking-[-0.02em]">Greenrow &amp; Co.</span>
+        <span class="text-[#15201A]/55 text-[16px] font-semibold italic" style="font-family:Georgia,serif">Pantry Lane</span>
+        <span class="text-[#15201A]/55 text-[15px] font-semibold tracking-[-0.02em]">FreshFold Co-op</span>
+        <span class="text-[#15201A]/55 text-[16px] font-semibold" style="font-family:Georgia,serif">The Corner Cellar</span>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.1fr_0.9fr] gap-5">
+      <!-- store locator teaser -->
+      <div class="rounded-2xl border bg-white p-7 sm:p-9" style="border-color:var(--hair)">
+        <h3 class="display text-[22px]">Find a store near you</h3>
+        <p class="mt-2 text-[14px] text-[#15201A]/62 leading-[1.6]">Pop in your zip code and we'll point you to the nearest fridge.</p>
+        <div class="mt-5 flex flex-col sm:flex-row gap-3">
+          <input type="text" inputmode="numeric" placeholder="Enter your zip code" aria-label="Zip code" class="flex-1 rounded-full border px-5 py-3 text-[15px] outline-none focus:ring-2 focus:ring-[#5BC23A]/40" style="border-color:var(--hair)">
+          <button type="button" class="btn rounded-full px-6 py-3 text-white font-semibold text-[14px]" style="background:var(--ink)">Find stores</button>
+        </div>
+        <div class="mt-6 flex flex-wrap gap-2">
+          <span class="text-[12px] text-[#15201A]/45 font-medium mr-1">Stocked in:</span>
+          <span class="text-[12px] font-semibold px-2.5 py-1 rounded-full" style="background:rgba(91,194,58,0.12);color:#3f9c2a">Portland</span>
+          <span class="text-[12px] font-semibold px-2.5 py-1 rounded-full" style="background:rgba(91,194,58,0.12);color:#3f9c2a">Seattle</span>
+          <span class="text-[12px] font-semibold px-2.5 py-1 rounded-full" style="background:rgba(91,194,58,0.12);color:#3f9c2a">San Francisco</span>
+          <span class="text-[12px] font-semibold px-2.5 py-1 rounded-full" style="background:rgba(91,194,58,0.12);color:#3f9c2a">Austin</span>
+          <span class="text-[12px] font-semibold px-2.5 py-1 rounded-full" style="background:rgba(91,194,58,0.12);color:#3f9c2a">Denver</span>
+          <span class="text-[12px] font-semibold px-2.5 py-1 rounded-full" style="background:rgba(91,194,58,0.12);color:#3f9c2a">Chicago</span>
+          <span class="text-[12px] font-semibold px-2.5 py-1 rounded-full" style="background:rgba(91,194,58,0.12);color:#3f9c2a">+ 1,234 more</span>
+        </div>
+      </div>
+      <!-- online shop CTA -->
+      <div id="buy" class="rounded-2xl p-7 sm:p-9 flex flex-col justify-center text-white" style="background:linear-gradient(150deg,#5BC23A,#3f9c2a)">
+        <div class="flex items-center gap-2 text-[12px] font-semibold mb-3">
+          <span class="pulse-dot" style="background:#fff"></span>
+          <span class="text-white">Ships today before 2pm</span>
+        </div>
+        <h3 class="display text-[26px] tracking-[-0.03em]">No store nearby? We deliver.</h3>
+        <p class="mt-2 text-[14px] text-white/80 leading-[1.6]">Order an 8-pack or a 24-pack case straight to your door. Free shipping over $35.</p>
+        <a href="#shop" class="btn mt-6 text-center rounded-full px-6 py-3.5 font-semibold text-[15px] text-[#15201A] bg-white">Shop online</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 11. FAQ ============ -->
+<section class="relative border-y bg-white" style="border-color:var(--hair)">
+  <div class="mx-auto max-w-[820px] px-5 sm:px-8 py-20 sm:py-24">
+    <div class="text-center mb-12">
+      <p class="text-[12px] font-semibold tracking-[0.14em]" style="color:var(--grapefruit)">FAQ</p>
+      <h2 class="display mt-2 text-[34px] sm:text-[44px]">The honest answers.</h2>
+    </div>
+    <div class="space-y-3">
+      <details class="group rounded-2xl border bg-white px-6 py-5" style="border-color:var(--hair)">
+        <summary class="flex items-center justify-between gap-4">
+          <span class="display text-[18px] tracking-[-0.02em]">Is it actually non-alcoholic?</span>
+          <span class="faq-plus grid place-items-center w-7 h-7 rounded-full flex-none text-white text-[18px] leading-none" style="background:var(--lime)">+</span>
+        </summary>
+        <p class="mt-3.5 text-[15px] leading-[1.65] text-[#15201A]/68">Completely. Highball contains 0.0% alcohol by volume — it's never fermented and there's no trace amount, unlike some "alcohol-removed" drinks. It's safe and intended for the designated driver, anyone pregnant, sober folks, and anyone who simply doesn't feel like drinking tonight.</p>
+      </details>
+      <details class="group rounded-2xl border bg-white px-6 py-5" style="border-color:var(--hair)">
+        <summary class="flex items-center justify-between gap-4">
+          <span class="display text-[18px] tracking-[-0.02em]">How much sugar is in it?</span>
+          <span class="faq-plus grid place-items-center w-7 h-7 rounded-full flex-none text-white text-[18px] leading-none" style="background:var(--lime)">+</span>
+        </summary>
+        <p class="mt-3.5 text-[15px] leading-[1.65] text-[#15201A]/68">Five grams of cane sugar per 12oz can, which works out to 35 calories. For comparison, a regular cola has around 39 grams. We use just enough sugar to round off the bitterness of the botanicals — and no artificial sweeteners like sucralose or acesulfame-K to fake the rest.</p>
+      </details>
+      <details class="group rounded-2xl border bg-white px-6 py-5" style="border-color:var(--hair)">
+        <summary class="flex items-center justify-between gap-4">
+          <span class="display text-[18px] tracking-[-0.02em]">What are the botanicals — is there caffeine?</span>
+          <span class="faq-plus grid place-items-center w-7 h-7 rounded-full flex-none text-white text-[18px] leading-none" style="background:var(--lime)">+</span>
+        </summary>
+        <p class="mt-3.5 text-[15px] leading-[1.65] text-[#15201A]/68">Real cold-pressed botanicals — things like gentian root, hibiscus, fresh basil and bay — steeped for flavor and a pleasant bitterness, plus a touch of pressed fruit. There is zero caffeine in any flavor. Every botanical and fruit is named on the can, so nothing is hiding behind "natural flavors."</p>
+      </details>
+      <details class="group rounded-2xl border bg-white px-6 py-5" style="border-color:var(--hair)">
+        <summary class="flex items-center justify-between gap-4">
+          <span class="display text-[18px] tracking-[-0.02em]">Is it sold by the case?</span>
+          <span class="faq-plus grid place-items-center w-7 h-7 rounded-full flex-none text-white text-[18px] leading-none" style="background:var(--lime)">+</span>
+        </summary>
+        <p class="mt-3.5 text-[15px] leading-[1.65] text-[#15201A]/68">Yes — three ways. Singles at $2.80, an 8-pack at $21.00, and a 24-pack case at $57.60, which is our best value per can. You can mix any flavors within a pack, so a case can be all Grapefruit &amp; Yuzu or one of everything. Orders over $35 ship free.</p>
+      </details>
+      <details class="group rounded-2xl border bg-white px-6 py-5" style="border-color:var(--hair)">
+        <summary class="flex items-center justify-between gap-4">
+          <span class="display text-[18px] tracking-[-0.02em]">Is the can recyclable?</span>
+          <span class="faq-plus grid place-items-center w-7 h-7 rounded-full flex-none text-white text-[18px] leading-none" style="background:var(--lime)">+</span>
+        </summary>
+        <p class="mt-3.5 text-[15px] leading-[1.65] text-[#15201A]/68">Fully. Our 12oz cans are 100% aluminum, infinitely recyclable, and made with a high share of recycled content. Just rinse and pop it in your curbside bin — no liner to peel, no mixed materials. Shipping cartons are recyclable corrugated cardboard too.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 12. FINAL CTA ============ -->
+<section class="relative overflow-hidden">
+  <div class="blob" style="width:340px;height:340px;background:var(--lime);bottom:-140px;left:8%"></div>
+  <div class="blob" style="width:300px;height:300px;background:var(--grapefruit);top:-130px;right:8%;opacity:0.3"></div>
+  <div class="relative mx-auto max-w-[1220px] px-5 sm:px-8 py-20 sm:py-28 text-center">
+    <div class="flex justify-center gap-2.5 mb-8" aria-hidden="true">
+      <div class="can w-[44px] h-[100px]" style="background:linear-gradient(120deg,#F0533F,#c93b2b)"><div class="can-rim" style="height:6px;top:-3px"></div></div>
+      <div class="can w-[44px] h-[100px]" style="background:linear-gradient(120deg,#5BC23A,#3f9c2a)"><div class="can-rim" style="height:6px;top:-3px"></div></div>
+      <div class="can w-[44px] h-[100px]" style="background:linear-gradient(120deg,#7B4F9E,#5d3a7a)"><div class="can-rim" style="height:6px;top:-3px"></div></div>
+      <div class="can w-[44px] h-[100px]" style="background:linear-gradient(120deg,#F0A937,#cf8a1f)"><div class="can-rim" style="height:6px;top:-3px"></div></div>
+      <div class="can w-[44px] h-[100px]" style="background:linear-gradient(120deg,#D63B7A,#b22a61)"><div class="can-rim" style="height:6px;top:-3px"></div></div>
+    </div>
+    <h2 class="display text-[38px] sm:text-[54px] max-w-[760px] mx-auto">
+      Shop the range.
+      <em class="halftone not-italic">Pour yourself something good.</em>
+    </h2>
+    <p class="mt-5 text-[17px] text-[#15201A]/65 max-w-[480px] mx-auto">Five flavors, zero proof, 5g of sugar. Start with the bestseller or grab a mixed case.</p>
+    <div class="mt-9 flex flex-wrap justify-center items-center gap-4">
+      <a href="#shop" class="btn rounded-full px-8 py-4 text-white font-semibold text-[16px]" style="background:var(--lime);box-shadow:0 16px 30px -12px rgba(91,194,58,0.7)">Shop the range</a>
+      <a href="#range" class="font-semibold text-[15px] text-[#15201A] flex items-center gap-1.5 group">Browse all flavors <span class="transition-transform group-hover:translate-x-1">&rarr;</span></a>
+    </div>
+    <p class="mt-6 text-[13px] font-medium text-[#15201A]/55 nums">Free shipping on orders over $35 · ships today before 2pm</p>
+  </div>
+</section>
+
+<!-- ============ 13. FOOTER ============ -->
+<footer class="border-t bg-white" style="border-color:var(--hair)">
+  <div class="mx-auto max-w-[1220px] px-5 sm:px-8 py-14">
+    <div class="grid gap-10 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1.2fr]">
+      <!-- brand + newsletter -->
+      <div>
+        <a href="#top" class="flex items-center gap-2.5">
+          <span class="grid place-items-center w-9 h-9 rounded-xl" style="background:var(--lime)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="8" cy="9" r="4.4" fill="#fff"/><circle cx="16" cy="7" r="3" fill="#fff" fill-opacity="0.85"/><circle cx="15.2" cy="15" r="3.7" fill="#fff" fill-opacity="0.7"/><circle cx="8.5" cy="17" r="2.4" fill="#fff" fill-opacity="0.55"/>
+            </svg>
+          </span>
+          <span class="display text-[22px] tracking-[-0.04em]">Highball</span>
+        </a>
+        <p class="mt-4 text-[14px] leading-[1.6] text-[#15201A]/60 max-w-[280px]">The craft non-alcoholic soda you actually reach for. Real botanicals, 5g of sugar, zero proof.</p>
+        <form class="mt-5" onsubmit="return false">
+          <label class="block text-[12px] font-semibold text-[#15201A]/55 mb-2">Get 10% off your first case</label>
+          <div class="flex gap-2">
+            <input type="email" placeholder="you@email.com" aria-label="Email address" class="flex-1 rounded-full border px-4 py-2.5 text-[14px] outline-none focus:ring-2 focus:ring-[#5BC23A]/40" style="border-color:var(--hair)">
+            <button type="submit" class="btn rounded-full px-5 py-2.5 text-white font-semibold text-[13px]" style="background:var(--ink)">Join</button>
+          </div>
+        </form>
+      </div>
+      <!-- shop -->
+      <div>
+        <h4 class="text-[12px] font-semibold tracking-[0.12em] text-[#15201A]/45 mb-4">SHOP</h4>
+        <ul class="space-y-2.5 text-[14px] text-[#15201A]/68">
+          <li><a href="#range" class="hover:text-[#15201A] transition-colors">All flavors</a></li>
+          <li><a href="#buy" class="hover:text-[#15201A] transition-colors">8-packs</a></li>
+          <li><a href="#buy" class="hover:text-[#15201A] transition-colors">24-pack cases</a></li>
+          <li><a href="#range" class="hover:text-[#15201A] transition-colors">Hibiscus &amp; Plum</a></li>
+        </ul>
+      </div>
+      <!-- our story -->
+      <div>
+        <h4 class="text-[12px] font-semibold tracking-[0.12em] text-[#15201A]/45 mb-4">OUR STORY</h4>
+        <ul class="space-y-2.5 text-[14px] text-[#15201A]/68">
+          <li><a href="#story" class="hover:text-[#15201A] transition-colors">About Highball</a></li>
+          <li><a href="#story" class="hover:text-[#15201A] transition-colors">The botanicals</a></li>
+          <li><a href="#story" class="hover:text-[#15201A] transition-colors">Sustainability</a></li>
+          <li><a href="#story" class="hover:text-[#15201A] transition-colors">Press</a></li>
+        </ul>
+      </div>
+      <!-- stockists -->
+      <div>
+        <h4 class="text-[12px] font-semibold tracking-[0.12em] text-[#15201A]/45 mb-4">STOCKISTS</h4>
+        <ul class="space-y-2.5 text-[14px] text-[#15201A]/68">
+          <li><a href="#stockists" class="hover:text-[#15201A] transition-colors">Find a store</a></li>
+          <li><a href="#stockists" class="hover:text-[#15201A] transition-colors">Stock Highball</a></li>
+          <li><a href="#stockists" class="hover:text-[#15201A] transition-colors">Wholesale</a></li>
+        </ul>
+      </div>
+      <!-- help -->
+      <div>
+        <h4 class="text-[12px] font-semibold tracking-[0.12em] text-[#15201A]/45 mb-4">HELP</h4>
+        <ul class="space-y-2.5 text-[14px] text-[#15201A]/68">
+          <li><a href="#faq" class="hover:text-[#15201A] transition-colors">FAQ</a></li>
+          <li><a href="#stockists" class="hover:text-[#15201A] transition-colors">Shipping &amp; returns</a></li>
+          <li><a href="#top" class="hover:text-[#15201A] transition-colors">Contact us</a></li>
+          <li><a href="#top" class="hover:text-[#15201A] transition-colors">Allergens &amp; nutrition info</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="mt-12 pt-7 border-t flex flex-col sm:flex-row items-center justify-between gap-4" style="border-color:var(--hair)">
+      <p class="text-[13px] text-[#15201A]/50 nums">© 2026 Highball Drinks Co. — Portland, OR. All rights reserved.</p>
+      <div class="flex items-center gap-5 text-[13px] text-[#15201A]/50">
+        <a href="#top" class="hover:text-[#15201A] transition-colors">Privacy</a>
+        <a href="#top" class="hover:text-[#15201A] transition-colors">Terms</a>
+        <a href="#top" class="hover:text-[#15201A] transition-colors">Accessibility</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</main>
+</body>
+</html>

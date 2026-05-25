@@ -20,6 +20,7 @@ import type {
   StoredChatTurn,
 } from "@/lib/projects/types";
 import { AutofillModal } from "@/components/workspace-v2/autofill-modal";
+import { CustomDomainModal } from "@/components/workspace-v2/custom-domain-modal";
 import { EmptyState } from "@/components/workspace-v2/empty-state";
 import { LeftSidebar, type SidebarMode } from "@/components/workspace-v2/left-sidebar";
 import { PreviewPlaceholder } from "@/components/workspace-v2/preview-placeholder";
@@ -39,26 +40,6 @@ import {
 import { StatusBar } from "@/components/workspace-v2/status-bar";
 import { TopBar } from "@/components/workspace-v2/top-bar";
 import { useDarkMode } from "@/lib/use-dark-mode";
-import type { Document as DocModel } from "@/lib/doc/model";
-import {
-  CanvaInspector,
-  ELEMENT_TEMPLATES,
-} from "@/components/workspace-v2/model/canva-inspector";
-import { SECTION_TEMPLATES } from "@/lib/section-templates";
-import { buildSubtree } from "@/lib/doc/build";
-import { useDocEditor } from "@/lib/use-doc-editor";
-import type { NodeId } from "@/lib/doc/model";
-import {
-  editAddBreakpoint,
-  editDuplicate,
-  editGroup,
-  editInsert,
-  editMove,
-  editRemove,
-  editSetProps,
-  editSetStyle,
-  editUngroup,
-} from "@/lib/doc/edits";
 
 // Outer shell exists so `useSearchParams()` in the inner component has a
 // Suspense boundary, matching the /new V1 pattern.
@@ -106,9 +87,6 @@ interface LoadedProject {
   /** Non-HTML project settings (Phase 2 form config). Loaded with the
    *  project; updated in place when the inspector edits a form. */
   settings: ProjectSettings | undefined;
-  /** Present ⇒ a model-backed project; the workspace mounts the model editor
-   *  instead of the legacy sidebar + HTML preview (docs/document-model.md §14). */
-  document?: DocModel;
 }
 
 // Strip every OpenLen editor-mode marker from an HTML document string.
@@ -175,7 +153,6 @@ type EntryMode = "choosing" | "ai" | "template" | "paste" | "editing";
 
 const ALL_TABS: SidebarMode[] = [
   "chat",
-  "content",
   "templates",
   "pages",
   "leads",
@@ -204,205 +181,14 @@ function NewV2Inner() {
 
   const [projectName, setProjectName] = useState("Pricing Page");
   const [mode, setMode] = useState<SidebarMode>(
-    entryMode === "template"
-      ? "templates"
-      : entryMode === "paste"
-        ? "content"
-        : "chat",
+    entryMode === "template" ? "templates" : "chat",
   );
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadedProject, setLoadedProject] = useState<LoadedProject | null>(null);
-  // Canva-mode editor state — null when the loaded project is not model-backed.
-  // Owned at the page level so the canvas (PreviewArea), the inspector
-  // (CanvaInspector), and the LeftSidebar Chat tab all dispatch against the
-  // same Document.
-  const docEditor = useDocEditor(
-    loadedProject?.document ?? null,
-    loadedProject?.id ?? null,
-  );
-  const [modelSelectedIds, setModelSelectedIds] = useState<NodeId[]>([]);
-  // Which layer the inspector edits into. `null` = base (unconditioned).
-  // `{kind:"breakpoint",bp}` → set via TopBar chip strip.
-  // `{kind:"state",state}` → set via the inspector's state picker row.
-  // Compound conditions (hover @ md) aren't surfaced in v1 — picking from one
-  // axis replaces the other. Reset on project change.
-  const [editCondition, setEditCondition] = useState<
-    import("@/lib/doc/model").Condition | null
-  >(null);
-  useEffect(() => {
-    setEditCondition(null);
-  }, [loadedProject?.id]);
-
-  // Center a freshly-inserted / freshly-relevant node in the iframe. Called
-  // after Library inserts (click or drop) so the user sees what landed.
-  const scrollIframeTo = useCallback((id: NodeId) => {
-    const w = iframeElRef.current?.contentWindow;
-    if (!w) return;
-    w.postMessage({ type: "openlen:model-scroll-to", id }, "*");
-  }, []);
-
-  // Drop from the Library rail (drag-and-drop). Looks up the template by
-  // kind+id, builds its subtree, and inserts at the resolved position from
-  // the iframe drop planner. Selection + scroll go to the new node so the
-  // user lands on what they just dropped.
-  const handleLibraryDrop = useCallback(
-    (
-      payload: { kind: "element" | "section"; id: string },
-      toParentId: NodeId,
-      toIndex: number,
-    ) => {
-      const doc = docEditor.state?.doc;
-      if (!doc) return;
-      const list =
-        payload.kind === "element" ? ELEMENT_TEMPLATES : SECTION_TEMPLATES;
-      const tpl = list.find((t) => t.id === payload.id);
-      if (!tpl) return;
-      const built = buildSubtree(tpl.spec);
-      if ("err" in built) return;
-      const op = editInsert(
-        doc,
-        toParentId,
-        toIndex,
-        built.ok.rootId,
-        built.ok.nodes,
-      );
-      if (!op) return;
-      docEditor.applyEdit([op]);
-      setModelSelectedIds([built.ok.rootId]);
-      // Defer one frame so the morph completes before we scrollIntoView.
-      requestAnimationFrame(() => scrollIframeTo(built.ok.rootId));
-    },
-    [docEditor, scrollIframeTo],
-  );
-
-  // Duplicate the current selection. Fires from the iframe's ⌘D handler
-  // (via PreviewArea's onModelDuplicate bridge) or from a window-level
-  // ⌘D when focus is outside the iframe.
-  const duplicateSelection = useCallback(() => {
-    const doc = docEditor.state?.doc;
-    if (!doc || modelSelectedIds.length === 0) return;
-    const r = editDuplicate(doc, modelSelectedIds);
-    if (!r) return;
-    docEditor.applyEdit(r.ops);
-    setModelSelectedIds(r.newIds);
-  }, [docEditor, modelSelectedIds]);
-
-  // Dispatch a context-menu / shortcut action against the current selection.
-  // Lives on page.tsx because it touches docEditor state + selection state.
-  const dispatchModelAction = useCallback(
-    (action: string) => {
-      const doc = docEditor.state?.doc;
-      if (!doc || modelSelectedIds.length === 0) return;
-      switch (action) {
-        case "duplicate": {
-          const r = editDuplicate(doc, modelSelectedIds);
-          if (!r) return;
-          docEditor.applyEdit(r.ops);
-          setModelSelectedIds(r.newIds);
-          return;
-        }
-        case "delete": {
-          const ops = modelSelectedIds
-            .map((id) => editRemove(doc, id))
-            .filter(Boolean) as ReturnType<typeof editRemove>[];
-          if (ops.length === 0) return;
-          docEditor.applyEdit(
-            ops as Parameters<typeof docEditor.applyEdit>[0],
-          );
-          setModelSelectedIds([]);
-          return;
-        }
-        case "group":
-        case "wrap": {
-          // wrap = group on a single id, same builder (relaxed to accept 1).
-          const ops = editGroup(doc, modelSelectedIds);
-          if (!ops || ops.length === 0) return;
-          docEditor.applyEdit(ops);
-          const first = ops[0];
-          if (first.t === "insert_node") setModelSelectedIds([first.rootId]);
-          return;
-        }
-        case "ungroup": {
-          if (modelSelectedIds.length !== 1) return;
-          const ops = editUngroup(doc, modelSelectedIds[0]);
-          if (!ops || ops.length === 0) return;
-          docEditor.applyEdit(ops);
-          setModelSelectedIds([]);
-          return;
-        }
-        case "moveUp":
-        case "moveDown": {
-          if (modelSelectedIds.length !== 1) return;
-          const id = modelSelectedIds[0];
-          const node = doc.nodes[id];
-          if (!node?.parentId) return;
-          const parent = doc.nodes[node.parentId];
-          if (!parent) return;
-          const idx = parent.childIds.indexOf(id);
-          if (idx < 0) return;
-          const delta = action === "moveUp" ? -1 : 1;
-          const newIdx = idx + delta;
-          if (newIdx < 0 || newIdx >= parent.childIds.length) return;
-          const op = editMove(doc, id, parent.id, newIdx);
-          if (op) docEditor.applyEdit([op]);
-          return;
-        }
-      }
-    },
-    [docEditor, modelSelectedIds],
-  );
-
-  // Delete the current selection (Del / Backspace from iframe or window).
-  const deleteSelection = useCallback(() => {
-    const doc = docEditor.state?.doc;
-    if (!doc || modelSelectedIds.length === 0) return;
-    const ops = modelSelectedIds
-      .map((id) => editRemove(doc, id))
-      .filter(Boolean) as ReturnType<typeof editRemove>[];
-    if (ops.length === 0) return;
-    docEditor.applyEdit(ops as Parameters<typeof docEditor.applyEdit>[0]);
-    setModelSelectedIds([]);
-  }, [docEditor, modelSelectedIds]);
-
-  // Window-level fallback for ⌘D + Del/Backspace + ⌘Z/⌘⇧Z — the iframe has
-  // its own listeners but only fire when focus is inside it. When the user
-  // clicks the inspector then hits one of these, the keydown lands here.
-  useEffect(() => {
-    if (!docEditor.state) return;
-    const onKey = (e: KeyboardEvent) => {
-      const t = e.target as HTMLElement | null;
-      if (t) {
-        const tag = t.tagName;
-        if (tag === "INPUT" || tag === "TEXTAREA" || t.isContentEditable) return;
-      }
-      if ((e.metaKey || e.ctrlKey) && (e.key === "z" || e.key === "Z")) {
-        e.preventDefault();
-        if (e.shiftKey) docEditor.redo();
-        else docEditor.undo();
-        return;
-      }
-      if (modelSelectedIds.length === 0) return;
-      if ((e.metaKey || e.ctrlKey) && (e.key === "d" || e.key === "D")) {
-        e.preventDefault();
-        duplicateSelection();
-        return;
-      }
-      if (e.key === "Delete" || e.key === "Backspace") {
-        e.preventDefault();
-        deleteSelection();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [
-    docEditor,
-    duplicateSelection,
-    deleteSelection,
-    modelSelectedIds.length,
-  ]);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [autofillModalOpen, setAutofillModalOpen] = useState(false);
+  const [customDomainOpen, setCustomDomainOpen] = useState(false);
 
   // Section-select coordination — iframe ↔ chat composer. The Chat panel
   // toggles `sectionSelectMode`; PreviewArea injects the selection script
@@ -578,21 +364,6 @@ function NewV2Inner() {
             description: typeof m.description === "string" ? m.description : "",
             ogImage: typeof m.ogImage === "string" ? m.ogImage : "",
             favicon: typeof m.favicon === "string" ? m.favicon : "",
-            radiusScale:
-              typeof m.radiusScale === "number" ? m.radiusScale : null,
-            typeScale:
-              typeof m.typeScale === "number" ? m.typeScale : null,
-            spaceScale:
-              typeof m.spaceScale === "number" ? m.spaceScale : null,
-            displayFont:
-              typeof m.displayFont === "string" ? m.displayFont : null,
-            accent: typeof m.accent === "string" ? m.accent : null,
-            bg: typeof m.bg === "string" ? m.bg : null,
-            surface: typeof m.surface === "string" ? m.surface : null,
-            fg: typeof m.fg === "string" ? m.fg : null,
-            border: typeof m.border === "string" ? m.border : null,
-            mode: m.mode === "dark" ? "dark" : "light",
-            hasDark: m.hasDark === true,
           });
         }
       }
@@ -654,7 +425,6 @@ function NewV2Inner() {
                 html?: string;
                 filledBlocks?: unknown[];
                 settings?: ProjectSettings;
-                document?: DocModel;
               };
             };
           }
@@ -678,7 +448,6 @@ function NewV2Inner() {
         userBrief: p.userBrief ?? "",
         chatHistory: p.chatHistory ?? [],
         settings: p.data?.settings,
-        document: p.data?.document,
       });
       setProjectName(p.title);
     },
@@ -736,14 +505,12 @@ function NewV2Inner() {
     : null;
 
   const onPublish = loadedProject ? () => setPublishModalOpen(true) : undefined;
-  // Editing mode = Content (pencil) tab is active on a loaded project.
-  // Gates ALL iframe affordances: drag handles, image/icon replace,
-  // and (for flat projects) inline-edit. Other tabs render the iframe
-  // clean — no hover outlines, no drag, no replace buttons.
+  // Editing surface = the right-side Edit toggle (was: the old left "Content"
+  // tab; consolidated into the inspector on the right). When on, gates ALL
+  // iframe affordances at once: drag handles, image/icon replace, inline
+  // text edit, AND element-inspect outlines. Off → iframe renders clean.
   const editingActive =
-    mode === "content" &&
-    entryMode === "editing" &&
-    !!loadedProject;
+    inspectMode && entryMode === "editing" && !!loadedProject;
   // Autofill is a flat-project feature (you fill a template's generic copy
   // with your business data). It doesn't apply to slot-based AI projects
   // which already have AI-generated content for each slot.
@@ -761,7 +528,7 @@ function NewV2Inner() {
     if (entryMode === "ai") return ALL_TABS.filter((t) => t !== "chat");
     if (entryMode === "template")
       return ALL_TABS.filter((t) => t !== "templates");
-    if (entryMode === "paste") return ALL_TABS.filter((t) => t !== "content");
+    if (entryMode === "paste") return [...ALL_TABS];
     return [];
   }, [entryMode]);
 
@@ -798,13 +565,10 @@ function NewV2Inner() {
     prevEntryModeRef.current = entryMode;
   }, [entryMode]);
 
-  // Inline editing is activated implicitly by the Content sidebar tab.
-  // Used to be gated on `isFlat` (flat = template-clone / paste) but the
-  // distinction is gone now — the same contentEditable + Reorder +
-  // Replace surface works for every project, AI-generated or not. The
-  // PATCH path (/api/projects/<id>/html) doesn't care about isFlat.
-  const editableInjection =
-    mode === "content" && entryMode === "editing" && !!loadedProject;
+  // Inline editing rides on the same right-side Edit toggle as the rest of
+  // the iframe affordances. Same contentEditable + Reorder + Replace surface
+  // works for every project, AI-generated or not.
+  const editableInjection = editingActive;
 
   // Save state surfaced to TopBar (chrome polish session renders the pill;
   // we just track it here so the contract is wired end-to-end).
@@ -815,10 +579,10 @@ function NewV2Inner() {
   const savedFlashRef = useRef<number | null>(null);
 
   // Listen for the iframe's `openlen:html-changed` messages whenever the
-  // user is in Content tab editing mode. Inline-edit, Reorder, and
-  // Replace all emit via this same contract; the scripts only inject
-  // when editingActive is true, so we only accept messages then.
-  const acceptsHtmlChanged = editingActive || inspectMode;
+  // user has the right-side Edit toggle on. Inline-edit, Reorder, Replace
+  // and inspect-mode property edits all emit via this same contract; the
+  // scripts only inject while editingActive is true.
+  const acceptsHtmlChanged = editingActive;
   useEffect(() => {
     if (!acceptsHtmlChanged || !loadedProject) return;
     const projectId = loadedProject.id;
@@ -920,11 +684,10 @@ function NewV2Inner() {
     prevLoadedIdRef.current = newId;
   }, [loadedProject?.id]);
 
-  // ⌘E toggles to/from the Content tab; Esc backs out of the active mode.
+  // ⌘E toggles the right-side Edit panel; Esc backs out of section-select.
   // The iframe-injected scripts have their own Esc handlers, but those only
   // fire when the iframe itself has focus — this covers the common case
-  // where the user activated a mode from the sidebar, so keyboard focus is
-  // on the parent document and the iframe never sees the keypress.
+  // where the user activated a mode from the parent doc.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (entryMode !== "editing" || !loadedProject) return;
@@ -932,20 +695,20 @@ function NewV2Inner() {
       if (t && /input|textarea/i.test(t.tagName)) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "e") {
         e.preventDefault();
-        setMode((prev) => (prev === "content" ? "chat" : "content"));
+        setInspectMode((m) => !m);
         return;
       }
       if (e.key === "Escape") {
-        // A modal owns Escape while it's open.
         if (publishModalOpen || autofillModalOpen || assetModal) return;
         if (sectionSelectMode) {
           e.preventDefault();
           setSectionSelectMode(false);
           return;
         }
-        if (mode === "content") {
+        if (inspectMode) {
           e.preventDefault();
-          setMode("chat");
+          setInspectMode(false);
+          setInspectSelection(null);
         }
       }
     };
@@ -954,7 +717,7 @@ function NewV2Inner() {
   }, [
     entryMode,
     loadedProject,
-    mode,
+    inspectMode,
     sectionSelectMode,
     publishModalOpen,
     autofillModalOpen,
@@ -1015,20 +778,85 @@ function NewV2Inner() {
     },
     [loadedProject?.id],
   );
-  // Page-level theme tokens (Tier 3) — e.g. the global corner-radius scale.
-  const applyTheme = useCallback((prop: string, value: string) => {
-    iframeElRef.current?.contentWindow?.postMessage(
-      { type: "openlen:apply-prop", scope: "theme", prop, value },
-      "*",
-    );
-  }, []);
-  // Apply a curated theme preset — a bundle of tokens — in one message.
-  const applyThemeBundle = useCallback((tokens: Record<string, string>) => {
-    iframeElRef.current?.contentWindow?.postMessage(
-      { type: "openlen:apply-prop", scope: "theme-bundle", tokens },
-      "*",
-    );
-  }, []);
+  // Send a test lead notification email to whichever address would receive
+  // the real one for this form. The button in the inspector's Form section
+  // calls this; we return the result so the button can render inline
+  // feedback. No optimistic update — the email is one-shot.
+  const sendTestFormEmail = useCallback(
+    async (
+      formIndex: number,
+    ): Promise<{ ok: boolean; sentTo?: string; message?: string }> => {
+      const projectId = loadedProject?.id;
+      if (!projectId) return { ok: false, message: "No project loaded." };
+      try {
+        const res = await fetch(
+          `/api/projects/${projectId}/forms/test-email`,
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ formIndex }),
+          },
+        );
+        const data = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          sentTo?: string;
+          message?: string;
+          reason?: string;
+        };
+        if (!res.ok || !data.ok) {
+          return {
+            ok: false,
+            message:
+              data.message ??
+              (data.reason === "no_destination"
+                ? "Set a notify email in this form (or your account) first."
+                : `Send failed (${res.status}).`),
+          };
+        }
+        return { ok: true, sentTo: data.sentTo };
+      } catch (err) {
+        return {
+          ok: false,
+          message: err instanceof Error ? err.message : "Network error.",
+        };
+      }
+    },
+    [loadedProject?.id],
+  );
+  // Analytics opt-out — sister of applyFormConfig; same /settings endpoint,
+  // different body shape. Optimistically updates loadedProject.settings so
+  // the Toggle reflects the change immediately; the server is the source of
+  // truth on the next publish.
+  const applyAnalyticsDisabled = useCallback(
+    (disabled: boolean) => {
+      const projectId = loadedProject?.id;
+      if (!projectId) return;
+      setLoadedProject((prev) =>
+        prev
+          ? {
+              ...prev,
+              settings: { ...prev.settings, analyticsDisabled: disabled },
+            }
+          : prev,
+      );
+      void fetch(`/api/projects/${projectId}/settings`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ analyticsDisabled: disabled }),
+      }).catch(() => {
+        // On failure roll the toggle back so UI matches server state.
+        setLoadedProject((prev) =>
+          prev
+            ? {
+                ...prev,
+                settings: { ...prev.settings, analyticsDisabled: !disabled },
+              }
+            : prev,
+        );
+      });
+    },
+    [loadedProject?.id],
+  );
   const toggleInspect = useCallback(() => {
     setInspectMode((m) => !m);
     setInspectSelection(null);
@@ -1043,7 +871,7 @@ function NewV2Inner() {
   };
   const handlePickPaste = () => {
     router.push("/new-v2?mode=paste");
-    setMode("content");
+    setMode("chat");
   };
 
   const handleUseTemplate = async () => {
@@ -1093,24 +921,11 @@ function NewV2Inner() {
             void refetchProject(loadedProject.id);
           }
         }}
+        onCustomDomain={
+          loadedProject ? () => setCustomDomainOpen(true) : undefined
+        }
         dark={dark}
         onToggleDark={toggleDark}
-        canvasUndo={docEditor.state ? docEditor.undo : undefined}
-        canvasRedo={docEditor.state ? docEditor.redo : undefined}
-        canvasCanUndo={docEditor.canUndo}
-        canvasCanRedo={docEditor.canRedo}
-        canvasBreakpoints={docEditor.state?.doc.breakpoints}
-        canvasEditCondition={editCondition}
-        canvasOnEditCondition={setEditCondition}
-        canvasOnAddBp={(name, minWidth) => {
-          const doc = docEditor.state?.doc;
-          if (!doc) return;
-          const op = editAddBreakpoint(doc, name, minWidth);
-          if (op) {
-            docEditor.applyEdit([op]);
-            setEditCondition({ kind: "breakpoint", bp: name });
-          }
-        }}
       />
       <div className="flex-1 min-h-0 flex">
         <LeftSidebar
@@ -1161,12 +976,7 @@ function NewV2Inner() {
             )
           }
           sectionSelectMode={sectionSelectMode}
-          onToggleSectionSelect={(active) => {
-            setSectionSelectMode(active);
-            if (!active) {
-              /* nothing else — user can cancel and re-engage */
-            }
-          }}
+          onToggleSectionSelect={(active) => setSectionSelectMode(active)}
           scopedSelection={scopedSelection}
           onClearScope={() => setScopedSelection(null)}
           onAutofill={onAutofill}
@@ -1177,20 +987,6 @@ function NewV2Inner() {
           aiGenerating={aiGenerating}
           aiModel={genModel}
           aiOnModelChange={setGenModel}
-          documentMode={
-            docEditor.state
-              ? {
-                  doc: docEditor.state.doc,
-                  applyEdit: docEditor.applyEdit,
-                  undo: docEditor.undo,
-                }
-              : undefined
-          }
-          modelSelectedIds={modelSelectedIds}
-          onModelSelect={setModelSelectedIds}
-          onLibraryInserted={(id) =>
-            requestAnimationFrame(() => scrollIframeTo(id))
-          }
         />
         {entryMode === "choosing" && (
           <EmptyState
@@ -1268,78 +1064,7 @@ function NewV2Inner() {
           <PreviewPlaceholder mode={entryMode} />
         )}
         {entryMode === "editing" &&
-          (loadedProject?.document && docEditor.state ? (
-            // Canva-mode: PreviewArea handles the canvas (device toggle,
-            // zoom, fit, grid, refresh, open-in-tab — all the toolbar
-            // features keep working) by compiling the Document on each
-            // render. CanvaInspector renders to the right of it,
-            // permanently visible since the inspector IS the editing
-            // surface for model projects.
-            <>
-              <PreviewArea
-                doc=""
-                modelDoc={docEditor.state.doc}
-                modelSelectedIds={modelSelectedIds}
-                onModelSelect={setModelSelectedIds}
-                onModelTextEdit={(id, text) => {
-                  const doc = docEditor.state?.doc;
-                  if (!doc) return;
-                  const node = doc.nodes[id];
-                  if (!node) return;
-                  const op = editSetProps(doc, id, {
-                    ...node.props,
-                    runs: [{ text }],
-                  });
-                  if (op) docEditor.applyEdit([op]);
-                }}
-                onModelReorder={(id, toParentId, toIndex) => {
-                  const doc = docEditor.state?.doc;
-                  if (!doc) return;
-                  const op = editMove(doc, id, toParentId, toIndex);
-                  if (op) docEditor.applyEdit([op]);
-                }}
-                onModelResize={(id, width, height) => {
-                  const doc = docEditor.state?.doc;
-                  if (!doc) return;
-                  const node = doc.nodes[id];
-                  if (!node) return;
-                  const op = editSetStyle(doc, id, null, {
-                    ...node.style.base,
-                    width,
-                    height,
-                  });
-                  if (op) docEditor.applyEdit([op]);
-                }}
-                onModelDuplicate={duplicateSelection}
-                onModelDelete={deleteSelection}
-                onModelAction={dispatchModelAction}
-                onModelUndo={(redo) => (redo ? docEditor.redo() : docEditor.undo())}
-                onLibraryDrop={handleLibraryDrop}
-                redesigning={chatRedesigning}
-                editableInjection={false}
-                sectionSelectMode={sectionSelectMode}
-                editingActive={false}
-                inspectMode={false}
-                onIframeRef={(el) => {
-                  iframeElRef.current = el;
-                }}
-                openInNewTabUrl={
-                  loadedProject.subdomain
-                    ? `https://${loadedProject.subdomain}.openlen.com`
-                    : `/api/projects/${loadedProject.id}/raw`
-                }
-              />
-              <CanvaInspector
-                doc={docEditor.state.doc}
-                selectedIds={modelSelectedIds}
-                onEdit={docEditor.applyEdit}
-                onSelect={setModelSelectedIds}
-                projectId={loadedProject.id}
-                editCondition={editCondition}
-                onEditCondition={setEditCondition}
-              />
-            </>
-          ) : loadedProject?.html ? (
+          (loadedProject?.html ? (
             <>
               <PreviewArea
                 doc={loadedProject.html}
@@ -1362,6 +1087,10 @@ function NewV2Inner() {
                 <PropertiesPanel
                   selection={inspectSelection}
                   pageMeta={pageMeta}
+                  html={loadedProject?.html}
+                  analyticsDisabled={
+                    loadedProject?.settings?.analyticsDisabled ?? false
+                  }
                   formConfig={
                     typeof inspectSelection?.formIndex === "number"
                       ? loadedProject?.settings?.forms?.[
@@ -1373,8 +1102,8 @@ function NewV2Inner() {
                   onApplyPageMeta={applyPageMeta}
                   onApplyFormConfig={applyFormConfig}
                   onApplyStyle={applyStyle}
-                  onApplyTheme={applyTheme}
-                  onApplyThemeBundle={applyThemeBundle}
+                  onToggleAnalytics={applyAnalyticsDisabled}
+                  onSendTestFormEmail={sendTestFormEmail}
                   onClearSelection={() => setInspectSelection(null)}
                   onClose={() => {
                     setInspectMode(false);
@@ -1394,6 +1123,13 @@ function NewV2Inner() {
           ))}
       </div>
       <StatusBar saving={saving} published={published} />
+      {loadedProject && (
+        <CustomDomainModal
+          open={customDomainOpen}
+          onClose={() => setCustomDomainOpen(false)}
+          projectId={loadedProject.id}
+        />
+      )}
       {loadedProject && (
         <PublishModal
           open={publishModalOpen}

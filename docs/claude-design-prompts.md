@@ -1,6 +1,6 @@
-# 30 landing pages via 6 prompts — claude.ai design briefs
+# 185 pages via 37 prompts — claude.ai design briefs
 
-Six prompts to paste into claude.ai (Opus 4.7) under your Max 20x subscription. Each prompt produces **5 distinct, production-quality landing pages** as separate `text/html` artifacts in a single conversation. Total: **30 landing pages** across 6 aesthetic families.
+Thirty-seven prompts to paste into claude.ai (Opus 4.7) under your Max 20x subscription. Each prompt produces **5 distinct, production-quality pages** as separate `text/html` artifacts in a single conversation. Total: **185 pages** across 37 aesthetic briefs (Prompts 1–32 are marketing landings; Prompts 33–37 are link-in-bio creator hubs).
 
 ## How to use
 
@@ -8,7 +8,7 @@ For each prompt below:
 
 1. Open claude.ai → New chat → Opus 4.7
 2. Paste the **Shared output constraints** block (immediately below). One paste per conversation.
-3. Paste **one of the six prompts**. claude.ai produces 5 artifacts.
+3. Paste **one of the prompts**. claude.ai produces 5 artifacts.
 4. Click each artifact's download icon → save as `.html`.
 5. Hand the HTML(s) over here (Claude Code) — I'll create projects + you publish via the Deploy dropdown.
 
@@ -2163,6 +2163,1597 @@ VARIANT 05: Cascade — Ambient electronic album (long-form pieces).
 - Merch: 2xLP gatefold ($48) / cassette ($14) / signed art print ($88) / album zine ($28).
 
 Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 22 — Gaming / Game Studio (5 pages, mostly dark modes)
+
+```
+Brief: Produce 5 landing pages for VIDEO GAMES and GAME STUDIOS — indie game launch pages and studio home pages. Annapurna Interactive / Devolver Digital / Supergiant (Hades) / a great Steam page level. The key art and trailer ARE the hero — everything orbits the game's world.
+
+SHARED AESTHETIC (all 5 variants):
+- Display: variant-specific — gaming leans loud (Inter Display 800-900) or characterful (a serif for narrative games).
+- Body: Inter 400-500.
+- Mono: Geist Mono 400 — version numbers, build dates, system requirements, catalog/edition labels.
+- Key art: GIANT gradient placeholder, cinematic, ambient bloom. Hero key art at 16:9 (full-bleed feel) or as a full-viewport background.
+- Platform badges: full-color SVG badges for Steam, Epic Games, PlayStation, Xbox, Nintendo Switch, App Store — a row in the hero CTA area.
+- Screenshot strip: 4-6 tiles at 16:9 in a horizontal scroll.
+- Trailer embed: large 16:9 placeholder with a play-button overlay + title + runtime.
+- More chroma + bloom than B2B; dark modes dominate.
+- Wishlist / pre-order CTA prominent and repeated.
+
+SHARED SECTION SKELETON (all 5 follow this):
+1. Nav: game or studio logo + 4 links (Game, Media, News, Studio) + accent CTA pill ("Wishlist on Steam" / "Pre-order").
+2. Hero: 70-100vh. Key art background or 2-col. Logo lockup + 1-line tagline + release-date pill ("Q3 2026 · Steam, PS5, Switch") + platform-badge row + primary CTA (Wishlist / Pre-order).
+3. Trailer: big 16:9 embed placeholder + play button + "Announce Trailer · 2:14".
+4. About the game: 2-3 paragraphs of premise/world + 3-4 "pillars" cards (e.g. Combat / Exploration / Story), each with an icon.
+5. Screenshot gallery: 6 tiles, varied crops.
+6. Features grid: 4-6 cards (mechanics, modes, co-op, accessibility).
+7. Community CTA band: Discord member count + wishlist count + "follow on Steam" + pulse-dot.
+8. Press quotes + awards: 4-6 quotes from fictional outlets (IGN, Eurogamer, Polygon, PC Gamer, Rock Paper Shotgun, The Guardian) + festival laurels ("Official Selection · IndieCade 2025").
+9. The studio: 2-paragraph studio story + a small team grid + prior titles.
+10. System requirements OR editions: a Minimum/Recommended spec table (mono) OR edition tiers (Standard / Deluxe / Collector's) with included-content checklists.
+11. Newsletter / final wishlist CTA.
+12. Footer: studio name + platform links + press-kit link + © + ESRB/PEGI rating placeholder.
+
+VISUAL FLOURISHES SPECIFIC TO GAMING:
+- Festival laurels: SVG laurel wreaths flanking an award name.
+- "Wishlisted" counter with a live-feel tabular number.
+- Cinematic key art with layered gradients for a parallax feel.
+- ESRB / PEGI rating badge SVG.
+- System-requirements table: mono, 2-col (Minimum / Recommended).
+- Edition comparison: tiered cards with included-content checklists.
+
+THE 5 VARIANTS — one text/html artifact per variant:
+
+VARIANT 01: Meadowlark — A cozy farming + life-sim game.
+- Mode: warm light → soft gold gradient. Bg radial #FBF6E8 → #F4E4C4. Accent: warm honey #E0A43C. Text #3A2E1A.
+- Display font: Fraunces 600 (storybook warmth).
+- Game pitch: "Build a farm, mend a town, find your people." Half-tone tagline: "A small life, <em>made by hand</em>."
+- Audience: cozy-game players (Stardew Valley, Animal Crossing fans), all ages, Switch + PC.
+- Release: "Q3 2026 · Steam, Nintendo Switch, iOS".
+- Pillars: Farm & forage through four seasons, Befriend 28 townsfolk, Restore the valley, A festival every month.
+- Wishlist count: "84,408 wishlisted on Steam".
+- Press: "Eurogamer — 'the warmest game of the year'", "Rock Paper Shotgun — 'I lost a weekend and don't regret it'", "Polygon — 'Stardew with a softer heart'".
+- Studio: "Foxglove Games — 4 people in Portland; their second title, after the puzzle game Cairn (2021)".
+- Editions: Standard ($24.99), Deluxe (+soundtrack + digital art book, $34.99).
+- FAQ: "Is there any combat, or is it purely cozy?", "How long is a full playthrough?", "Is there cross-save between Switch and PC?", "Single-player only, or co-op?", "Will there be post-launch content?".
+
+VARIANT 02: Sunder — A fast, brutal action-roguelike.
+- Mode: dark + ember. Bg #0B0708. Accent: molten orange #FF5A1F. Text #F4ECE6.
+- Display font: Inter Display 900, tight tracking.
+- Game pitch: "Die, learn, descend. The dungeon <em>remembers</em>."
+- Audience: hardcore roguelike players (Hades, Dead Cells, Returnal fans), PC + PS5 + Xbox.
+- Release: "Out now · Steam, PS5, Xbox Series X|S".
+- Pillars: 240+ weapon combinations, A dungeon that adapts to how you play, 38 boss encounters, Permadeath with permanent progression.
+- Sales counter: "148,408 copies sold in launch week".
+- Press: "IGN — '9/10 · the year's most satisfying combat'", "PC Gamer — '92 · it gets its hooks in fast'", "Eurogamer — 'Recommended'".
+- Studio: "Ironside Interactive — 9 people in Montréal; their debut commercial title after years of game-jam prototypes".
+- System requirements: a Minimum / Recommended spec table in mono.
+- FAQ: "How many runs does it take to 'finish' the game?", "Is there an easier difficulty?", "Is it Steam Deck verified?", "Is there couch co-op?", "What's the roadmap for post-launch content?".
+
+VARIANT 03: Foxglove — An indie game studio's home page.
+- Mode: dark editorial. Bg #101014. Accent: bright violet #A78BFA. Text #F2F0F6.
+- Display font: Inter Display 700.
+- This is a STUDIO page, not a single game: "A four-person studio making small games with <em>strange hearts</em>."
+- Audience: players following the studio, press, and potential publishers/collaborators.
+- Hero: studio wordmark + positioning line + "3 games shipped since 2021".
+- Replace "About the game" with "Our games" — 3 game cards (Cairn · 2021, Meadowlark · 2026, an unannounced project) + "How we work": 3 paragraphs of studio philosophy (small scope, no crunch, ship when ready).
+- Press: studio-level coverage — "GDC Spotlight — 'a studio to watch'" + festival laurels across their catalog.
+- Team grid: 4 cards (designer, two artists, audio + tools).
+- Final CTA: "Follow the studio" newsletter + Discord invite.
+- FAQ: "Are you hiring?", "Do you take publishing pitches?", "Where can press get assets?", "What engine do you build in?", "Will you port your older games to new platforms?".
+
+VARIANT 04: Overclock — A competitive online team shooter.
+- Mode: dark + neon cyan. Bg #06080C. Accent: electric cyan #22D3EE. Text #FFFFFF.
+- Display font: Inter Display 800, italic.
+- Game pitch: "5v5 tactical shooting at <em>240 frames a second</em>."
+- Audience: competitive FPS players (Valorant, CS2 fans), PC-first, esports-curious.
+- Release: "Free to play · Out now · PC".
+- Pillars: 18 agents with distinct kits, Sub-8ms tick servers, Ranked across 9 tiers, A map pool that rotates every season.
+- Live stats: "1.2M peak concurrent players · 4,408 ranked matches started every minute".
+- Press: "IGN — 'the most precise shooter since CS'", "Polygon — 'esports-ready out of the box'".
+- Esports band: "Overclock Masters 2026 · $1,400,000 prize pool · 14 regions".
+- Studio: "Ironside Interactive's live-service division — a team of 84".
+- Editions: Free to play + a seasonal Battle Pass ($9.99/season) — show what's cosmetic vs. gameplay (nothing pay-to-win).
+- FAQ: "Is it really free — what exactly is monetized?", "Is the anti-cheat kernel-level?", "What are the minimum specs to hit 240fps?", "Is a console version planned?", "How does rank decay work?".
+
+VARIANT 05: Cairn — A narrative puzzle-adventure.
+- Mode: cold dark slate. Bg #12161A. Accent: pale moss #9CAF88. Text #E6E9E4.
+- Display font: Source Serif 4 500 italic (contemplative).
+- Game pitch: "A quiet climb up a mountain that <em>doesn't want you there</em>."
+- Audience: narrative-puzzle players (Journey, Inside, Outer Wilds fans), all platforms.
+- Release: "Q4 2026 · Steam, PS5, Xbox, Switch".
+- Pillars: A wordless story told through the landscape, 40 hand-built environmental puzzles, One continuous shot — no loading screens, A score recorded by a live string quartet.
+- Wishlist count: "38,408 wishlisted".
+- Press: "The Guardian — 'a small masterpiece in the making'" + festival laurels: "Official Selection · IndieCade 2025", "Tribeca Games Spotlight 2026".
+- Studio: "Foxglove Games — their debut, the title the studio was built around; re-releasing alongside Meadowlark".
+- Editions: Standard ($19.99), Collector's (+vinyl soundtrack + art print, $59.99).
+- FAQ: "How long is the game?", "Is it accessible — can puzzles be skipped?", "Is there any dialogue or text?", "Are there content warnings?", "Will the soundtrack release separately?".
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 23 — Local Services / Home & Trades (5 pages, mostly light + warm modes)
+
+```
+Brief: Produce 5 landing pages for LOCAL HOME-SERVICE BUSINESSES — a plumber, a landscaper, a residential cleaning service, an electrician, a home-remodeling contractor. The kind of real, brick-and-mortar local business a self-hoster's customer actually runs. These are NOT SaaS products — they are a working business's marketing page. Think the best version of a local-business site: a clear service area, a phone number that's always one tap away, "get a free quote," before/after photos, star-rated reviews, and trust badges (licensed, bonded, insured, years in business). Friendly and trustworthy — never corporate.
+
+SHARED AESTHETIC (all 5 variants):
+- Display: Inter Display 600-700 OR a sturdy, approachable serif — warm, not techy.
+- Body: Inter 400-500, line-height 1.55.
+- Mono: Geist Mono 400 — rare; only for license numbers and hours.
+- Photo placeholders: warm gradient blobs simulating job-site, before/after, team, and truck photography.
+- A big, tappable phone number in the nav AND the hero — these businesses convert by phone.
+- Trust badges: "Licensed & Insured", "Family-owned since 2009", "★ 4.9 · 600+ reviews", "BBB A+" — small bordered pills.
+- The service area named everywhere ("Serving Park Slope, Carroll Gardens & all of Brooklyn").
+- Friendly rounded cards (14-18px radius), soft shadows.
+- The CTA is "Get a free quote" / "Book a visit" / "Call now" — never "Buy" or "Sign up".
+
+SHARED SECTION SKELETON (all 5 follow this):
+1. Thin top bar: phone number + hours + service area + a "Get a quote" pill.
+2. Nav: business logo + 4 links (Services, About, Reviews, Contact) + a loud accent "Free quote" CTA + phone.
+3. Hero: pill badge ("Family-owned · Licensed & Insured"), display headline (the problem or the benefit), sub 25 words, dual CTA ("Get a free quote" + "Call (555) 408-2210"), a trust-badge row, and a large job/team photo placeholder.
+4. Services grid: 4-8 service cards — icon + service name + 1-line + "free estimate" or "from $X".
+5. Why choose us: 3-4 reason cards (fast response, upfront pricing, a real warranty, licensed techs).
+6. Before / after: 3 pairs of side-by-side photo placeholders with captions.
+7. How it works: 3 steps (call or book → we visit & quote → job done right) with mono step labels.
+8. Reviews: aggregate "★ 4.9 from 612 reviews" + 4-6 review cards (name + neighborhood + stars + quote + job type) + a Google/Yelp logo mention.
+9. Service area: a simple SVG region map + a list of neighborhoods/towns served.
+10. Guarantee / pricing approach: a band on transparent pricing, the satisfaction guarantee, and warranty terms.
+11. Final CTA: "Need it fixed? Let's talk." + a quote-form mockup (name / phone / what you need — non-functional) + phone.
+12. Footer: business name + address + phone + hours + license # (mono) + service area + social.
+
+VISUAL FLOURISHES SPECIFIC TO LOCAL SERVICES:
+- The phone number styled as a click-to-call button, repeated through the page.
+- Before/after presented as two photo halves split by a divider line.
+- Star-rating rows with mono review counts.
+- Trust badges as bordered pills.
+- An urgency pill ("Same-day service" / "24/7 emergency") with a pulse-dot.
+- Service-area map: a simple SVG region outline with covered towns as pins.
+
+THE 5 VARIANTS — one text/html artifact per variant:
+
+VARIANT 01: Plumbline — A residential plumbing company.
+- Mode: clean light + blue. Bg #FFFFFF. Accent: deep water blue #1E5F9E. Text #14202B.
+- Display font: Inter Display 700.
+- Pitch: "Plumbing done right the <em>first time</em>."
+- Business: a family-owned plumbing company, 16 years in business, serving Brooklyn.
+- Hero: badge "Licensed Master Plumber · Same-day service" + a photo of a technician at a job.
+- Services: Leak repair, Drain cleaning, Water-heater install, Repiping, Fixture install, 24/7 emergency burst-pipe, Sump pumps, Sewer-line camera inspection.
+- Before/after: rusted pipe → new copper, clogged drain → clear flow, old tank → tankless heater.
+- Urgency: a "24/7 emergency line" pill with a pulse-dot.
+- Reviews: ★4.9 from 612, examples from Park Slope, Fort Greene, Bay Ridge.
+- Stats: Avg emergency arrival time (under 90 min), Jobs completed in 2025 (3,408), Repeat-customer rate (62%), Years in business (16).
+- Guarantee: "Upfront flat-rate pricing · 2-year workmanship warranty · no overtime charges, ever".
+- FAQ: "Do you charge for the estimate?", "Are you available nights and weekends?", "Is pricing by the hour or flat-rate?", "Do you pull the permit for water-heater work?", "What's the warranty difference between a repair and an install?".
+
+VARIANT 02: Thicket — A landscaping + lawn-care company.
+- Mode: warm light + green. Bg #FAF8F1. Accent: deep garden green #3F7A45. Text #1F2A1C.
+- Display font: Fraunces 600.
+- Pitch: "A yard you'll actually want to <em>sit in</em>."
+- Business: a design-build + maintenance landscaping company for town and suburban clients.
+- Hero: badge "Design · Build · Maintain · Since 2011" + a photo of a finished garden.
+- Services: Lawn-care plans, Garden design, Hardscaping & patios, Tree & shrub care, Seasonal cleanups, Irrigation, Mulch & beds, Winter snow removal.
+- A 4-card seasonal plan (spring cleanup, summer maintenance, fall leaf removal, winter snow).
+- Before/after: bare yard → planted garden, cracked concrete → bluestone patio, overgrown lot → cleared beds.
+- Reviews: ★4.8 from 388.
+- Stats: Yards maintained weekly (240), Design projects completed in 2025 (84), Crew members (14), Avg client tenure (4.2 years).
+- Pricing: "Maintenance plans from $180/mo · design-build projects quoted free after a site visit".
+- FAQ: "Do you do one-time cleanups or only ongoing plans?", "Who designs the planting — a real designer?", "Are you licensed and insured for tree work?", "Do you offer organic lawn treatments?", "What's the lead time for a patio build?".
+
+VARIANT 03: Brightwork — A residential cleaning service.
+- Mode: bright light + fresh. Bg #FCFCFA. Accent: clean teal #2BA39A. Text #16201F.
+- Display font: Inter Display 700.
+- Pitch: "Come home to a place that <em>feels lighter</em>."
+- Business: recurring and deep-clean home cleaning with vetted, employed cleaners.
+- Hero: badge "Vetted · Insured · Eco-friendly products" + a photo of a bright, clean room.
+- Services: Recurring cleaning (weekly / bi-weekly / monthly), Deep clean, Move-in / move-out, Post-renovation, Apartment & condo, Inside-fridge and inside-oven add-ons.
+- Why us: the same cleaner each visit, background-checked, flat per-home pricing, free reschedules.
+- Before/after: cluttered kitchen → spotless counters, dusty shelves → clean surfaces.
+- Reviews: ★4.9 from 1,408.
+- Stats: Homes cleaned monthly (2,408), Cleaners on the team (38, all W-2 employees — not contractors), Same-cleaner retention (84%), Avg first-clean rating (4.9/5).
+- Pricing: "Recurring from $119/visit · one-time deep clean from $249 · a transparent per-home quote in 60 seconds".
+- FAQ: "Will I get the same cleaner every time?", "Are your cleaners employees or contractors?", "What products do you use — are they safe for pets and kids?", "Do I need to be home during the clean?", "What isn't included in a standard clean?".
+
+VARIANT 04: Voltline — A residential + light-commercial electrician.
+- Mode: dark + amber (leaning into the trade). Bg #14130F. Accent: live-wire amber #F2A60C. Text #F4F0E6.
+- Display font: Inter Display 700.
+- Pitch: "Wiring you never have to <em>think about again</em>."
+- Business: a licensed electrical contractor — panels, EV chargers, lighting, troubleshooting.
+- Hero: badge "Licensed Electrical Contractor · #EC-44821" + a photo of a clean panel install.
+- Services: Panel upgrades, EV-charger install, Lighting & fixtures, Outlet & wiring, Troubleshooting, Whole-home surge protection, Generator hookup, Code corrections for a home sale.
+- Why us: licensed and bonded, a photo of every finished job, code-compliant work, upfront quotes.
+- Before/after: old fuse box → modern panel, tangled wiring → a clean run.
+- Urgency: "Same-week scheduling · emergency callout available".
+- Reviews: ★4.9 from 504.
+- Stats: Panels upgraded in 2025 (408), EV chargers installed (612), First-time inspection pass rate (100%), Years licensed (14).
+- Pricing: "Free quote on installs · $89 diagnostic visit, credited to the repair if you hire us".
+- FAQ: "Do you pull the permit and handle the inspection?", "What level of EV charger can you install?", "Is the diagnostic fee credited toward the work?", "Can you bring an old house up to code?", "Do you do panel upgrades for a solar install?".
+
+VARIANT 05: Keystone — A home-remodeling + general contractor.
+- Mode: warm cream + slate. Bg #F6F2EA. Accent: deep slate blue #3A4A63. Text #1E2229.
+- Display font: Fraunces 600, italic for emphasis.
+- Pitch: "Renovations that finish <em>when we said they would</em>."
+- Business: a design-build general contractor — kitchens, baths, additions, whole-home remodels.
+- Hero: badge "Design-build · Licensed GC · Since 2008" + a photo of a finished kitchen.
+- Services: Kitchen remodels, Bathroom remodels, Additions, Basement finishing, Whole-home renovation, Decks & exteriors.
+- Process: 5 steps — Consultation → Design & fixed bid → Permits → Build (weekly updates) → Walkthrough & 1-year warranty.
+- Before/after: dated kitchen → modern, unfinished basement → living space, cramped bath → spa-like.
+- Reviews: ★4.9 from 214 (fewer reviews, bigger jobs).
+- Stats: Projects completed since 2008 (480+), On-time completion rate (94%), Avg kitchen-remodel timeline (5-7 weeks), Repeat + referral business (71%).
+- Pricing: "Free consultation · a fixed-bid proposal after design · kitchens typically $45k-$90k, baths $22k-$40k".
+- FAQ: "Is it a fixed bid or time-and-materials?", "Who handles permits and inspections?", "Can we live in the house during the remodel?", "What happens if you find something behind the wall?", "What does the 1-year warranty actually cover?".
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 24 — Nonprofit / Cause / Fundraising (5 pages, mixed modes)
+
+```
+Brief: Produce 5 landing pages for NONPROFITS and CAUSE ORGANIZATIONS — conservation, literacy/education access, food security, animal rescue, civil-liberties advocacy. charity: water / Khan Academy / Feeding America / Best Friends / a serious legal-advocacy org level. The CTA is "Donate," not "Buy." Heavy on impact metrics, transparency (where the money actually goes), real-feeling beneficiary stories, and donor trust signals. The tone is hopeful and specific — never guilt-heavy, never cliché.
+
+SHARED AESTHETIC (all 5 variants):
+- Display: variant-specific — often a warm serif (Source Serif 4, Fraunces) for human weight, or a confident sans for advocacy.
+- Body: Inter 400-500, line-height 1.6 (warm, readable).
+- Mono: Geist Mono 400 — for impact figures, financial breakdowns, dates, EIN numbers.
+- Photo placeholders: warm, human-centered gradient blobs (people, places, fieldwork) — not clinical.
+- Impact metrics big, with tabular-nums.
+- The "Donate" CTA is the loudest element — sticky, accent, repeated. Preset amounts ($25 / $50 / $100 / custom).
+- Trust band: Charity Navigator 4-star, GuideStar/Candid Platinum, "87¢ of every dollar goes to programs", EIN number (mono).
+- Donation widget: amount chips + a one-time / monthly toggle + "Donate" — looks real, non-functional.
+
+SHARED SECTION SKELETON (all 5 follow this):
+1. Nav: org logo + 4 links (Our Work, Impact, Stories, About) + a loud "Donate" pill (no sign-in UI).
+2. Hero: pill badge (the mission line), display headline (with the half-tone trick), sub 25-30 words, dual CTA ("Donate" + "See our impact"), one concrete proof-point ("$2.4M raised · 148 projects funded"), large photo placeholder.
+3. The problem / why it matters: a 2-paragraph framing + 3 stat cards quantifying the problem.
+4. What we do: 3-4 program cards — icon + program name + 1-line + a metric.
+5. Impact section: a BIG 4-metric banner + a "where your money goes" breakdown (donut or stacked bar — programs vs. fundraising vs. admin, mono percentages).
+6. Beneficiary story spotlight: one named, real-feeling story with a photo placeholder + 2-3 paragraphs + the outcome.
+7. Donation widget centerpiece: amount chips that each NAME a concrete outcome + a one-time vs. monthly toggle + the Donate CTA + a progress-to-goal bar.
+8. Ways to give: monthly giving, employer match, legacy/planned giving, in-kind, volunteer.
+9. Transparency / financials: Charity Navigator + GuideStar badges + a link to the annual report + a clear program-spend ratio + EIN.
+10. Supporters / partners: foundation + corporate-partner logos + "joined by 28,408 donors".
+11. FAQ: 5 donor questions (tax-deductibility, where the money goes, monthly vs. one-time, restricting a gift, how impact is measured).
+12. Final CTA: "Be the reason this changes" + donate.
+13. Footer: org name + EIN + address + Charity Navigator + Privacy + contact + newsletter.
+
+VISUAL FLOURISHES SPECIFIC TO NONPROFIT:
+- Donation amount chips that each name a concrete outcome.
+- A "where your money goes" donut/stacked-bar with mono percentages.
+- A progress-to-goal bar ("$1.84M of $2.4M goal · 28,408 donors").
+- Charity Navigator / GuideStar badge SVGs.
+- A one-time / monthly toggle on the donation widget.
+- Impact metrics with tabular-nums and a small contextual sub-line.
+
+THE 5 VARIANTS — one text/html artifact per variant:
+
+VARIANT 01: Headwaters — A river + watershed conservation org.
+- Mode: light + river blue-green. Bg #F7FAF9. Accent: deep river teal #1F6F6A. Text #102524.
+- Display font: Source Serif 4 500.
+- Pitch: "Clean water starts <em>upstream</em>."
+- Mission: protect and restore river headwaters across the American West.
+- Hero: badge "Protecting 1.2M acres of watershed" + a photo of a river.
+- The problem: 3 stats — miles of degraded streams, communities downstream affected, % of headwater land still unprotected.
+- Programs: Land protection, Stream restoration, Water-quality monitoring, Community partnerships.
+- Impact: River miles restored (1,408), Acres permanently protected (1.2M), Volunteer monitoring days (28,408), Where money goes (84% programs · 9% fundraising · 7% admin).
+- Story: "The Pine Creek restoration — how 14 miles of a dead trout stream came back" — a named landowner + the outcome.
+- Donation chips: "$25 — a day of water testing", "$50 — 100 native streamside plants", "$100 — an acre toward permanent protection".
+- Transparency: Charity Navigator 4-star, GuideStar Platinum, EIN 84-4408821.
+- FAQ: "Is my donation tax-deductible?", "How much goes to programs vs. overhead?", "Can I restrict my gift to a specific river?", "How do you measure restoration success?", "Do you accept land donations?".
+
+VARIANT 02: Lantern — A childhood literacy nonprofit.
+- Mode: warm cream + gold. Bg #FBF6EA. Accent: warm lantern gold #D9933A. Text #2A2114.
+- Display font: Fraunces 600, italic for emphasis.
+- Pitch: "Every kid deserves a book they <em>can't put down</em>."
+- Mission: get books and reading support to kids in under-resourced schools.
+- Hero: badge "1.4M books delivered since 2016" + a photo of kids reading.
+- The problem: 3 stats — kids without a single book at home, the summer reading-loss gap, classrooms with no library.
+- Programs: Classroom libraries, Take-home book bundles, Volunteer reading tutors, Family literacy nights.
+- Impact: Books delivered (1.4M), Classroom libraries built (4,408), Kids reading at grade level after a year (+38pp), Money to programs (88%).
+- Story: a named teacher + a named 8-year-old who went from struggling to reading above grade level.
+- Donation chips: "$25 — 10 books for one child", "$50 — a take-home bundle for a family", "$100 — half a classroom library".
+- Transparency: Charity Navigator 4-star, GuideStar Platinum.
+- FAQ: "How do you choose which schools?", "Are the books new or used?", "Can I donate books instead of money?", "Is there a monthly giving option?", "How do you measure reading improvement?".
+
+VARIANT 03: Commontable — A food-security + community-meals org.
+- Mode: warm light + tomato. Bg #FCF7F1. Accent: warm tomato-red #C44A33. Text #241A14.
+- Display font: Inter Display 700 + serif accents.
+- Pitch: "No one in this town should go to bed <em>hungry</em>."
+- Mission: rescue surplus food and run community meals and pantries.
+- Hero: badge "2.8M meals served in 2025" + a photo of a community meal.
+- The problem: 3 stats — neighbors who are food-insecure, lbs of edible food wasted locally, kids on free lunch with no summer option.
+- Programs: Food rescue, Community pantries, Hot-meal sites, Summer kids' meals, A mobile market.
+- Impact: Meals served (2.8M), Pounds of food rescued (1.4M lbs), Pantry visits (148,408), Money to programs (91%).
+- Story: a named family + a named volunteer driver; the mobile market reaching a food desert.
+- Donation chips: "$25 — 75 rescued meals", "$50 — a week of groceries for a family", "$100 — a month of a kid's summer meals".
+- Transparency: Charity Navigator 4-star, Feeding America partner.
+- FAQ: "How can one dollar provide so many meals?", "Where does the food come from — is it safe?", "Can I volunteer instead of donating?", "Do you serve my neighborhood?", "Is my gift tax-deductible?".
+
+VARIANT 04: Refuge — An animal rescue + sanctuary.
+- Mode: warm light + sage. Bg #F7F6F0. Accent: soft sage green #6E9166. Text #1E2419.
+- Display font: Fraunces 600.
+- Pitch: "A second chance, <em>for the ones who ran out of them</em>."
+- Mission: rescue, rehabilitate, and rehome animals; lifelong sanctuary for the unadoptable.
+- Hero: badge "12,408 animals rehomed since 2009" + a photo of animals at the sanctuary.
+- The problem: 3 stats — animals surrendered to overcrowded shelters yearly, the euthanasia rate for treatable cases, sanctuary spots vs. need.
+- Programs: Rescue & intake, Medical rehabilitation, Foster network, Adoptions, Lifelong sanctuary.
+- Impact: Animals rehomed (12,408), Foster homes in the network (408), Medical cases treated in 2025 (1,408), Money to animal care (86%).
+- Story: a named dog — intake condition → rehabilitation → adopted; plus a sanctuary resident who will stay forever.
+- Donation chips: "$25 — a week of food for a rescue", "$50 — vaccines + microchip for one animal", "$100 — toward a surgery fund". Monthly "Sanctuary Circle" emphasized.
+- Transparency: Charity Navigator 4-star, GuideStar Platinum.
+- FAQ: "Are you a no-kill organization?", "Can I sponsor a specific animal?", "How do I become a foster?", "Where does my monthly gift go?", "Can I visit the sanctuary?".
+
+VARIANT 05: Bulwark — A civil-liberties + legal-advocacy organization.
+- Mode: dark + confident. Bg #0E1116. Accent: strong red #E23B3B. Text #F2F3F5.
+- Display font: Inter Display 800 (advocacy — bold, urgent).
+- Pitch: "Rights aren't self-enforcing. <em>Someone has to stand on them</em>."
+- Mission: impact litigation, policy advocacy, and rapid-response defense of civil liberties.
+- Hero: badge "148 cases litigated · 47 state legislatures tracked" + a photo of advocates or a courthouse.
+- The problem: 3 stats — rights-restricting bills introduced this session, people affected, communities without local legal defense.
+- Programs: Impact litigation, Legislative advocacy, Rapid-response legal defense, Know-your-rights education.
+- Impact: Cases won or favorably settled (108 of 148), People directly protected (2.4M), Bills defeated or amended (84), Money to legal & advocacy work (82%).
+- Story: a named plaintiff whose case set a precedent; a rapid-response win.
+- Donation chips: "$25 — an hour of legal research", "$50 — know-your-rights materials for a community", "$100 — toward filing the next case". Monthly "Defenders" program emphasized (predictable funding lets them take multi-year cases).
+- Transparency: Charity Navigator 4-star, financials linked, EIN.
+- FAQ: "Is my donation tax-deductible — are you a 501(c)(3) or (c)(4)?", "How do you pick which cases to take?", "What share goes to litigation vs. overhead?", "Why does monthly giving matter for legal work?", "Can I give anonymously?".
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 25 — Wellness / Fitness Studio (5 pages, mostly light + warm modes)
+
+```
+Brief: Produce 5 landing pages for physical WELLNESS and FITNESS BUSINESSES — a yoga studio, a strength gym, a pilates/barre studio, a climbing gym, a day spa. These are real brick-and-mortar studios, NOT fitness apps (an app would be the Cadence/Stride territory). CorePower / Barry's / a beautiful local yoga studio / a craft climbing gym level. Heavy on the class schedule, membership tiers, instructor bios, the space itself, and a first-class intro offer.
+
+SHARED AESTHETIC (all 5 variants):
+- Display: variant-specific — a calm serif for the yoga/spa variants, a bold sans for strength/climbing.
+- Body: Inter 400-500, line-height 1.6.
+- Mono: Geist Mono 400 — class times, the schedule grid, membership prices, instructor certifications.
+- Photo placeholders: warm gradient blobs simulating the space, classes in motion, and instructors.
+- The class schedule rendered as a weekly grid (days across, time slots down), color-coded by class type.
+- Membership tiers as cards; the new-client intro offer is prominent ("First class free" / "2 weeks for $39").
+- The booking CTA everywhere ("Book a class" / "Start your trial" / "Reserve a spot").
+- Generous whitespace — calm for yoga/spa, energetic for strength/climbing.
+
+SHARED SECTION SKELETON (all 5 follow this):
+1. Nav: studio logo + 4 links (Classes, Schedule, Membership, About) + accent CTA pill ("Book a class").
+2. Hero: pill badge (studio type + neighborhood), display headline, sub 25 words, dual CTA (book + the intro offer), a proof line ("2,408 members · open 7 days"), a large photo placeholder of the space.
+3. Intro-offer band: the new-client deal, big and clear.
+4. Classes / services grid: 4-8 cards — class or treatment name + intensity or duration + 1-line.
+5. Weekly schedule: a real-looking grid — days across, time slots down, class blocks color-coded by type, mono times, with a class-type legend.
+6. The space: 3-6 photo placeholders of the studio (the room, lockers, lounge, equipment).
+7. Instructors / practitioners: 4-8 cards — photo placeholder + name + specialty + a 1-line bio + certifications in mono.
+8. Membership / pricing: 2-3 tiers (drop-in / class pack / unlimited monthly) with a "Most popular" anchor pill on the middle tier.
+9. Member stories / testimonials: 3-4 cards — photo + name + how long a member + quote.
+10. Location + hours + getting started: address, an hours table (mono), parking/transit, "what to bring for your first class."
+11. Final CTA: "Your first class is on us" + book.
+12. Footer: studio name + address + hours + phone + Instagram + a class-booking-app mention.
+
+VISUAL FLOURISHES SPECIFIC TO WELLNESS STUDIOS:
+- The weekly schedule grid with color-coded class blocks + mono times.
+- Class-type legend pills.
+- A "spots left" indicator on a class ("4 spots left") with a pulse-dot.
+- An intro-offer banner with a deadline feel.
+- Instructor cards with certification badges (mono — "RYT-500", "CrossFit L3", "NASM-CPT").
+- Membership tier cards with a "Most popular" anchor pill on the middle tier.
+
+THE 5 VARIANTS — one text/html artifact per variant:
+
+VARIANT 01: Stillwater — A neighborhood yoga studio.
+- Mode: warm cream. Bg #FAF5EC. Accent: deep clay #B5673E. Text #2A2118.
+- Display font: Fraunces 500 italic.
+- Pitch: "An hour that's <em>actually yours</em>."
+- Studio: vinyasa + restorative + yin yoga, all levels, in a converted loft.
+- Intro offer: "Two weeks of unlimited classes — $39".
+- Classes: Vinyasa flow, Slow flow, Restorative, Yin, Prenatal, a 4-week Beginner's series, Candlelit evening.
+- Schedule: a 7-day grid, ~5 classes/day.
+- Instructors: 8 teachers — RYT-200 / RYT-500 certifications.
+- Membership: Drop-in ($26), 10-class pack ($210), Unlimited monthly ($169 — Most popular).
+- Member stories: 3 testimonials.
+- Stats: Members (1,408), Classes per week (47), Years open (9), Avg class size (18).
+- FAQ: "I've never done yoga — which class do I start with?", "Do you provide mats?", "Can I freeze my membership?", "Is the room heated?", "Do you offer prenatal classes?".
+
+VARIANT 02: Ironside — A strength + conditioning gym.
+- Mode: dark + steel. Bg #121316. Accent: blaze orange #FF6A2B. Text #F2F1EE.
+- Display font: Inter Display 800.
+- Pitch: "Get strong. <em>On purpose</em>."
+- Gym: barbell-focused strength training, small-group coaching, and open gym.
+- Intro offer: "Free intro session + movement assessment".
+- Classes: Foundations (beginner barbell), Strength small-group, Conditioning, Open gym, Olympic lifting, Powerlifting prep.
+- Schedule: a 7-day grid, early-morning through evening blocks.
+- Coaches: 6 — CrossFit L2/L3, NASM-CPT, USAW certifications.
+- Membership: 2x/week ($129/mo), Unlimited classes ($189/mo — Most popular), Open gym only ($79/mo).
+- Member stories: 3 — a first deadlift, a return from injury, a 50-year-old getting strong.
+- Stats: Members (612), Coached sessions per week (84), Avg member 3-month strength gain (+38% on main lifts), Coaches (6).
+- FAQ: "I've never touched a barbell — is this for me?", "What are class sizes — how much individual coaching?", "Is there a contract, or is it month-to-month?", "Do you have showers and parking?", "Can I do open gym on a class membership?".
+
+VARIANT 03: Poise — A pilates + barre boutique studio.
+- Mode: soft light + blush. Bg #FDF8F6. Accent: dusty rose #C77B86. Text #2A2024.
+- Display font: Fraunces 600.
+- Pitch: "Small movements. <em>Real change</em>."
+- Studio: reformer pilates + barre, boutique, small classes.
+- Intro offer: "Your first reformer class — free".
+- Classes: Reformer pilates, Barre, Mat pilates, Reformer + barre fusion, Prenatal / postnatal, Privates.
+- Schedule: a 7-day grid; capped class sizes shown (e.g. "8 reformers").
+- Instructors: 6 — comprehensively-certified pilates instructors + barre certifications.
+- Membership: Drop-in ($38), 8-class pack ($280), Unlimited monthly ($239 — Most popular).
+- Member stories: 3 testimonials.
+- Stats: Members (408), Reformers in the studio (8), Classes per week (52), Avg class size (8).
+- FAQ: "Pilates vs. barre — what's the difference?", "Do I need experience for the reformer?", "How early should I arrive for my first class?", "Do you offer postnatal classes?", "What should I wear — do I need grippy socks?".
+
+VARIANT 04: Crux — A bouldering + climbing gym.
+- Mode: dark + chalk. Bg #15171A. Accent: bright climbing-tape yellow #E4C320. Text #F3F3F0.
+- Display font: Inter Display 800.
+- Pitch: "Find the move you <em>didn't think you had</em>."
+- Gym: a bouldering-focused climbing gym + a fitness/training area + community.
+- Intro offer: "Day pass + gear rental — $20, first visit".
+- Offerings: Bouldering walls (regraded weekly), Intro-to-climbing class, Youth team, Yoga + training area, Community comp nights.
+- Schedule: less classes-heavy — show Intro-class times in a grid + "set days" (when new routes go up) + the comp calendar.
+- Staff/coaches: 5 — route-setters + coaches, with certifications.
+- Membership: Day pass ($24), Punch card (10 visits $190), Monthly unlimited ($95 — Most popular), Student ($75).
+- Member stories: 3 — a first V4, a parent climbing with a kid, a beginner-to-comp story.
+- Stats: Members (2,408), Boulder problems set (240, refreshed weekly), Wall area (14,408 sq ft), Route-setters (5).
+- FAQ: "I've never climbed — do I need a class first?", "What gear do I need to rent or buy?", "Is there a fitness area beyond climbing?", "How often do routes change?", "Is there a kids' program?".
+
+VARIANT 05: Solace — A day spa + thermal-bathing studio.
+- Mode: calm light + eucalyptus. Bg #F4F6F2. Accent: deep eucalyptus green #4C6B5A. Text #1F2722.
+- Display font: Source Serif 4 500 italic.
+- Pitch: "Step out of the day. <em>Even for an hour</em>."
+- Spa: massage + facials + a thermal-bathing circuit (sauna · steam · cold plunge).
+- Intro offer: "First-visit thermal circuit + 60-min massage — $129".
+- Services: Massage (deep tissue / Swedish / prenatal), Facials, the Thermal bathing circuit, Body treatments, Couples' rooms, Memberships.
+- Schedule: instead of a class grid — booking availability for the next 7 days (slots per service) + thermal-circuit session times.
+- Practitioners: 6 — licensed massage therapists + estheticians, with license numbers in mono.
+- Membership: Single visit (treatments à la carte), Monthly membership ($149/mo — one treatment + unlimited thermal circuit — Most popular), Thermal-only ($69/mo).
+- Member stories: 3 testimonials.
+- Stats: Treatments given in 2025 (28,408), Licensed therapists (12), Thermal-circuit capacity per session (24), Member retention (78%).
+- FAQ: "What is the thermal circuit, and how long does it take?", "Do I need to book, or can I walk in?", "What's included in the monthly membership?", "Can I book a couples' room?", "Are gratuities included?".
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 26 — Web3 / Crypto Protocol (5 pages, mostly dark modes)
+
+```
+Brief: Produce 5 landing pages for ONCHAIN / WEB3 PROTOCOLS — an Ethereum L2, a DeFi lending protocol, an onchain art marketplace, DAO governance tooling, a self-custody wallet. These are crypto-native, onchain products — NOT regulated fintech (that's the Reservoir/Conduit territory). base.org / Uniswap / Optimism / Safe / Rainbow level. Heavy on contract addresses, onchain metrics (TVL/volume), a "connect wallet" UI, gas/latency figures, audit badges, and SDK code. IMPORTANT: keep copy informational — describe the mechanism and the utility. NO "buy the token, price goes up" hype, no investment-return promises. This is a product page, not a token sale.
+
+SHARED AESTHETIC (all 5 variants):
+- Display: Inter Display 700, -0.04em — crisp and modern (a mono-display is fine for the dev-heavy variants).
+- Body: Inter 400-500.
+- Mono: Geist Mono — HEAVY: contract addresses, tx hashes, gas, token amounts, block numbers.
+- Tabular-nums on every onchain figure (TVL, APY, volume, addresses).
+- Dark modes dominate; a vivid single accent + the occasional gradient mesh.
+- Audit badges: small mono pills — "Audited by OpenZeppelin", "Audited by Trail of Bits", "Immunefi bounty: $2M".
+- The "Connect wallet" / "Launch app" button is the primary CTA, with wallet glyphs (MetaMask / Rainbow / Coinbase Wallet) as SVG.
+- Network pills: "Mainnet · live" with a pulse-dot, "Sepolia testnet".
+- An onchain-transparency note — "every contract verified on-chain" with a mono address.
+
+SHARED SECTION SKELETON (all 5 follow this):
+1. Nav: protocol logo + 4 links (Docs, Ecosystem, Governance, Blog) + a GitHub link + accent "Launch app" pill.
+2. Hero: pill badge (version + network — "Mainnet · v3 live"), display headline (half-tone trick), sub 25 words, dual CTA ("Launch app" + "Read the docs"), and a live onchain-stat row (TVL / volume / addresses).
+3. Trust bar: "Securing $X onchain" + ecosystem/integrator logos in a marquee + an audit-badge row.
+4. Centerpiece: a BIG product mockup — the app UI (swap/lend panel, mint flow, governance dashboard, wallet screen). Specific to the variant.
+5. How it works: a 3-4 step diagram of the onchain flow, with mono labels and contract hops.
+6. Features grid: 4-6 cards (non-custodial, gas-optimized, composable, multi-chain, etc.).
+7. Developer section: an SDK or contract code block (Solidity or TypeScript) + a "build on it" CTA.
+8. Onchain stats banner: 4 metrics (TVL, total volume, unique addresses, transactions) — mono, tabular.
+9. Security section: audits (firm names + dates), the bug bounty, contract verification, a "not your keys" note where relevant.
+10. Governance section (where relevant): how decisions are made, the governance forum, token utility — described as MECHANISM, not as an investment.
+11. FAQ: 5 sophisticated questions (custody, audits, gas costs, the decentralization roadmap, what happens if the team disappears).
+12. Final CTA: "Launch app" + docs.
+13. Footer: 5-col — Protocol / Developers / Governance / Ecosystem / Community + contract addresses (mono) + a Discord link.
+
+VISUAL FLOURISHES SPECIFIC TO WEB3:
+- Contract-address pills: mono, truncated in the middle (0x4f…a821) with a copy icon.
+- A "Connect wallet" modal mockup with 4-5 wallet options.
+- A live TVL counter with tabular-nums and a pulse-dot.
+- An audit-badge row in mono.
+- A network-status pill ("Mainnet · 1.2s block time").
+- An onchain-flow diagram with contract hops + gas labels.
+
+THE 5 VARIANTS — one text/html artifact per variant:
+
+VARIANT 01: Slipstream — An Ethereum L2 zk-rollup.
+- Mode: dark + blue. Bg #080A12. Accent: electric blue #4F7BFF. Text #F2F4FA.
+- Display font: Inter Display 700.
+- Pitch: "Ethereum security. <em>Cents per transaction</em>."
+- Network: a zk-rollup — "Mainnet live · v2".
+- Hero stat row: TVL ($1.48B), Avg tx cost ($0.004), Blocks (28.4M), Daily transactions (4.4M).
+- Centerpiece: a bridge UI mockup — moving ETH/USDC from Ethereum → Slipstream with the proof time + cost shown.
+- How it works: 4 steps — transactions batched → a zk-proof generated → posted to Ethereum → finalized.
+- Features: zk-proof finality, EVM-equivalent, 1.2s block time, $0.004 avg fee, native account abstraction, a decentralized-sequencer roadmap.
+- Dev section: "deploy a contract — the same Solidity, the same tooling" code snippet.
+- Stats banner: TVL, total transactions, unique addresses (8.4M), contracts deployed (148,408).
+- Security: audited by OpenZeppelin + Trail of Bits, a $2M Immunefi bounty, an escape-hatch for user funds.
+- Governance: the decentralization roadmap (sequencer → multi-prover → governance) — mechanism, not a token pitch.
+- FAQ: "How is this cheaper than Ethereum mainnet?", "What happens to my funds if the sequencer goes down?", "Is it EVM-equivalent — will my contracts just work?", "When does the sequencer decentralize?", "How long until a withdrawal to mainnet finalizes?".
+
+VARIANT 02: Keel — A DeFi lending + borrowing protocol.
+- Mode: dark + green. Bg #0A0F0C. Accent: mint green #34D399. Text #EAF4EF.
+- Display font: Inter Display 700.
+- Pitch: "Lend and borrow onchain. <em>No counterparty, no paperwork</em>."
+- Protocol: over-collateralized lending markets.
+- Hero stat row: TVL ($2.4B), Markets (28 assets), Avg supply APY (variable), Loans outstanding ($840M).
+- Centerpiece: the lend/borrow app panel — supply USDC at a live APY, borrow against ETH collateral, a health-factor gauge.
+- How it works: 4 steps — supply an asset → it earns yield from borrowers → borrow against your collateral → repay anytime, interest accrues per block.
+- Features: over-collateralized only, per-block interest, isolated risk markets, a liquidation engine, no lockups, composable pools other protocols build on.
+- Dev section: "integrate the pools" — a TypeScript SDK snippet.
+- Stats banner: TVL, cumulative volume ($14.8B), unique lenders + borrowers, liquidations handled.
+- Security: audits (OpenZeppelin, Spearbit), a bug bounty, formal verification of the interest-rate model, every contract verified onchain.
+- Governance: a governance forum sets which markets list and their risk parameters — described as mechanism.
+- FAQ: "What's the risk — can I lose my deposit?", "How does liquidation work, and at what threshold?", "Are interest rates fixed or variable?", "Who can change the risk parameters?", "What audits has the protocol had?".
+
+VARIANT 03: Plinth — An onchain marketplace for digital art.
+- Mode: dark editorial. Bg #0D0D10. Accent: warm gold #D8A848. Text #F4F2EC.
+- Display font: Source Serif 4 500 italic (gallery-grade).
+- Pitch: "A gallery for art that <em>lives onchain</em>."
+- Marketplace: a curated digital-art and generative-art marketplace.
+- Hero stat row: Artists (4,408), Works minted (148,408), Volume (in ETH), Collectors (28,408).
+- Centerpiece: an artwork detail page mockup — the piece (gradient placeholder), the artist, the edition (1 of 25), the price, a "Collect" button, and provenance/ownership history (a mono tx list).
+- How it works: 4 steps — an artist mints → the work is curated into a drop → a collector buys → resale royalties route back to the artist forever.
+- Features: enforced creator royalties, curated drops, onchain generative-art rendering, low-gas minting (on an L2), provenance you can verify, non-custodial.
+- Artist section: "apply to mint" + the minting flow.
+- Stats banner: artists, works, volume, royalties paid to artists.
+- Security: audited contracts, art stored on IPFS/Arweave (permanence), non-custodial.
+- Governance: a curation council + community curation.
+- FAQ: "Where is the actual artwork stored?", "Do artists really get royalties on resale?", "What are the fees to mint and to sell?", "What chain does it run on, and why?", "What happens to my collection if Plinth shuts down?".
+
+VARIANT 04: Quorum — DAO governance + treasury tooling.
+- Mode: dark + indigo. Bg #0B0B14. Accent: indigo #7C7CF0. Text #F0F0F6.
+- Display font: Inter Display 700.
+- Pitch: "Run your DAO like it <em>actually has a constitution</em>."
+- Product: governance + multisig treasury + proposal tooling for DAOs.
+- Hero stat row: DAOs using it (1,408), Treasury secured ($4.8B), Proposals executed (28,408), Voters (148,408).
+- Centerpiece: a governance dashboard mockup — active proposals, vote tallies, the treasury balance breakdown, a multisig transaction queue.
+- How it works: 4 steps — draft a proposal → an onchain vote (token or multisig) → a timelock → execution.
+- Features: onchain voting, a multisig treasury, timelocks, delegation, proposal simulation (preview the onchain effect before executing), Snapshot-compatible.
+- Dev section: "define a governance module" — a config snippet.
+- Stats banner: DAOs, treasury secured, proposals, the execution success rate.
+- Security: audited contracts, the timelock as a safety buffer, simulation that catches a malicious proposal, every action onchain and verifiable.
+- Governance: this IS governance tooling — explain delegation and quorum thresholds plainly.
+- FAQ: "Token-weighted or one-member-one-vote — which does it support?", "How does the timelock protect against a malicious proposal?", "Can we use it with our existing multisig?", "What does proposal simulation actually check?", "Is voting gas-free?".
+
+VARIANT 05: Holdfast — A self-custody crypto wallet.
+- Mode: dark + warm. Bg #100E0C. Accent: warm amber #F0A93C. Text #F4F0E8.
+- Display font: Inter Display 700.
+- Pitch: "Your keys. Your coins. <em>Finally, your peace of mind</em>."
+- Wallet: a self-custody multi-chain wallet (mobile + browser extension) with smart-account safety — social recovery instead of seed-phrase anxiety.
+- Hero: a phone + extension mockup — a portfolio view across chains, a "send" flow, the recovery setup.
+- Hero stat row: Wallets created (2.4M), Chains supported (28), Assets tracked, "Value self-custodied — we never hold it".
+- Centerpiece: the recovery model — a smart-account wallet with social recovery (guardians) instead of a 12-word seed phrase, shown as a clear diagram.
+- How it works: 4 steps — create in 30s, no seed phrase → set 3 guardians → use across chains → recover via guardians if you lose your device.
+- Features: a smart account (ERC-4337), social recovery, gas sponsorship, multi-chain, hardware-wallet support, transaction simulation (see what a tx does before signing), open-source.
+- Dev section: "integrate the wallet" — an SDK / connect-button snippet.
+- Stats banner: wallets, chains, transactions signed, phishing transactions blocked by simulation.
+- Security: open-source + audited, non-custodial (keys stay on-device), simulation that warns before a malicious approval, no seed phrase to phish.
+- FAQ: "If it's self-custody, what can you actually see?", "What happens if I lose my phone — how does social recovery work?", "Is there still a seed phrase?", "Which hardware wallets does it support?", "What chains are supported, and how are new ones added?".
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 27 — Hardware / Physical Tech Product (5 pages, mixed modes)
+
+```
+Brief: Produce 5 landing pages for HARDWARE and CONNECTED-DEVICE companies — a home robot, a smart-home hub, a wearable, a home-energy system, a prosumer drone. Apple / Rivian / DJI / Ecobee / Eight Sleep level. Industrial-design photography hero, spec tables, "what's in the box," a buy/pre-order CTA, the companion app, and warranty terms. These are engineered devices with specs, firmware, and an app — NOT a DTC consumable PDP (that's the E-commerce family).
+
+SHARED AESTHETIC (all 5 variants):
+- Display: Inter Display 600-700, -0.03em — clean product marketing.
+- Body: Inter 400-500.
+- Mono: Geist Mono 400 — model numbers, specs, dimensions, firmware versions, battery figures.
+- Tabular-nums for specs (240mm, 4.4 kg, 18 hr, 1080p).
+- Product-photography placeholders: clean studio gradients, the device at a slight 3D rotation (CSS transform: rotateY(-8deg) rotateX(4deg)), a soft shadow + an ambient glow.
+- Spec tables: mono, 2-col, hairline-divided rows.
+- A "what's in the box" flat-lay diagram.
+- A companion-app mockup (phone) shown alongside the hardware.
+- The Buy / Pre-order CTA prominent, with the price.
+
+SHARED SECTION SKELETON (all 5 follow this):
+1. Nav: product/brand logo + 4 links (Product, Specs, App, Support) + accent CTA pill ("Buy · $X" or "Pre-order").
+2. Hero: pill badge ("Now shipping" / "Pre-order · ships Nov 2026"), display headline (half-tone trick), sub 25 words, dual CTA (Buy + "Watch the film"), a big product photo placeholder at a 3D angle with a glow.
+3. Trust / proof bar: reviews or a press marquee ("★4.8 · 12,408 owners" or press wordmarks).
+4. Feature sections: 3 alternating big rows, each with a product-detail photo + h2 + paragraph + a small spec callout.
+5. The companion app: a phone mockup + what the app does (control, schedule, insights, firmware updates).
+6. Hardware tech-spec section: a full spec table (dimensions, weight, battery, connectivity, sensors, materials) in mono.
+7. "What's in the box": a flat-lay diagram of the included items.
+8. Use-case / lifestyle band: 3-4 cards showing the device in real scenarios.
+9. Stats / outcomes banner: 4 metrics (owners, what it saves or does, battery life, uptime).
+10. Pricing / editions: 1-3 buy options (Standard / Plus / a bundle) + a financing mention + warranty + the return window.
+11. Reviews + FAQ: an aggregate rating + 3-4 owner reviews; an FAQ of 5 hardware questions (warranty, app subscription, repair, compatibility, setup).
+12. Final CTA: "Buy · $X · free shipping · 30-day returns".
+13. Footer: brand + Product / Support / Company / Legal + warranty + recycling/sustainability + © + a regulatory note (an FCC ID placeholder, mono).
+
+VISUAL FLOURISHES SPECIFIC TO HARDWARE:
+- The device shown at a 3D tilt (rotateY/rotateX) with a soft shadow + a radial glow.
+- A spec table: mono, 2-col, hairline rows.
+- A "what's in the box" flat-lay with labeled items.
+- An exploded-view or callout diagram (lines pointing to components).
+- A companion-app phone mockup beside the hardware.
+- Battery / range / capacity shown as a labeled gauge or bar.
+- A press or award badge ("CES Innovation Award 2026").
+
+THE 5 VARIANTS — one text/html artifact per variant:
+
+VARIANT 01: Roam — An autonomous robotic lawn mower.
+- Mode: light + green. Bg #F6F8F3. Accent: deep grass green #3C7A3F. Text #18241A.
+- Display font: Inter Display 700.
+- Pitch: "The lawn mows itself. <em>You take the morning back</em>."
+- Audience: suburban homeowners with 0.1-0.75 acre lawns who would rather not mow.
+- Price / status: "$1,899 · now shipping · free delivery".
+- Hero: the robot on a lawn at a 3D angle, with a glow.
+- Features: wire-free RTK-GPS navigation (no boundary wire to bury), mulching blades, climbs 24° slopes, a rain sensor, theft tracking + a PIN lock.
+- App: set zones on a map, schedule, "mow now," see the mow history, firmware updates.
+- Specs: cutting width 22cm, max slope 24°, lawn size up to 0.75 acre, battery 5.0 Ah, charge time 65 min, IPX5, noise 58 dB, weight 11.2 kg.
+- In the box: the mower, a charging dock, the RTK antenna, 9 spare blades, a power cable.
+- Stats: Owners (84,408), Avg hours of mowing saved per season (38), Battery runtime per charge (90 min), Lawns mapped.
+- Pricing: Roam ($1,899), Roam Plus (larger battery + up to 1.0 acre, $2,399).
+- FAQ: "Do I need to bury a boundary wire?", "How does it handle slopes and obstacles?", "Is it safe around kids and pets?", "Is there an app subscription?", "What's the warranty, and how are repairs handled?".
+
+VARIANT 02: Lintel — A smart-home hub + controller.
+- Mode: dark + warm. Bg #14131A. Accent: warm coral #F2755A. Text #F2F0F4.
+- Display font: Inter Display 700.
+- Pitch: "Every smart device in your home, <em>finally in one place</em>."
+- Audience: people with a drawer of incompatible smart-home gadgets across ecosystems.
+- Price / status: "$199 · now shipping".
+- Hero: the hub (a small ceramic-looking object) at a 3D angle + a phone showing the app.
+- Features: a Matter controller + Thread border router, works across Apple Home / Google / Alexa, local-first (works without internet), an automations engine, a physical dial for the most-used scene.
+- App: rooms, devices, an automations builder, an energy view, a "leaving home" routine.
+- Specs: Thread border router, Matter controller, Wi-Fi 6, Bluetooth LE, 2.4/5GHz, dimensions, weight, local storage, power draw 2.4 W.
+- In the box: the hub, a USB-C power adapter, a wall mount, a quick-start card.
+- Stats: Homes (148,408), Device brands supported, Automations run daily, Avg setup time (12 min).
+- Pricing: Lintel ($199) — and a clear note: "the hub runs automations locally; there is no monthly fee".
+- FAQ: "Does it work with Apple Home and Google at the same time?", "What happens to my automations if the internet goes down?", "Is there a subscription?", "What are Matter and Thread — do I need new devices?", "How is my data handled — does it leave the house?".
+
+VARIANT 03: Loop — A health + sleep wearable band.
+- Mode: dark gradient. Bg radial #0A0A12 → #15131F. Accent: soft violet #9B8CFF. Text #F2F1F6.
+- Display font: Inter Display 700.
+- Pitch: "Know how you slept before you <em>open your eyes</em>."
+- Audience: adults who want sleep + recovery + activity tracking without a screen on their wrist.
+- Price / status: "$229 · ships in 2 weeks".
+- Hero: the band at a 3D angle + a phone showing the morning-readiness screen.
+- Features: sleep stages, HRV + resting HR, skin temperature, blood-oxygen, a daily readiness score, a 7-day battery, screenless (the app is the screen).
+- App: morning readiness, the sleep breakdown, trends, gentle nudges.
+- Specs: sensors (PPG, accelerometer, skin-temp, SpO₂), battery 7 days, charge time 45 min, water-resistant to 100 m, weight 8 g, band sizes.
+- In the box: the band, a charger, a sizing kit.
+- Stats: Owners (612,408), Avg nights tracked per owner, Battery life (7 days), App rating (4.7).
+- Pricing: Loop ($229 one-time) — the core app is free; an optional Loop+ membership ($6/mo) adds long-term trends and a daily coaching summary. State this honestly.
+- FAQ: "Is there a subscription, and what do I lose without it?", "How accurate is the sleep-stage tracking?", "How is my health data stored — is it ever sold?", "Can I wear it in the shower or swimming?", "Does it have a screen or notifications?".
+
+VARIANT 04: Sunhouse — A home solar + battery system.
+- Mode: light + warm sun. Bg #FBF7EE. Accent: warm solar amber #E6952A. Text #1F1A12.
+- Display font: Inter Display 700.
+- Pitch: "Your roof, <em>finally earning its keep</em>."
+- Audience: homeowners considering solar + storage, overwhelmed by quotes and jargon.
+- Price / status: "From $14,900 installed · free design + quote".
+- Hero: a house with panels + the battery unit in warm light; a phone showing the energy flow.
+- Features: high-efficiency panels, a home battery for backup + time-of-use savings, an energy app, blackout backup that switches over in under 20 ms, expandable battery stacks.
+- App: a live energy flow (solar → home → battery → grid), savings, a storm-prep "charge to full," backup history.
+- Specs: panel wattage, battery capacity 13.5 kWh (stackable to 40.5), the inverter, backup transfer time <20 ms, round-trip efficiency 90%, 12-year warranty.
+- "What's included": panels, the battery, the inverter, monitoring, install, permitting + utility interconnection.
+- Stats: Homes powered (28,408), Avg annual bill reduction, kWh stored, Avg blackout coverage in hours.
+- Pricing: a clear breakdown — the system from $14,900 installed, financing from a monthly figure, the federal tax-credit note, and "the quote is fixed after the design visit."
+- FAQ: "How much will this actually cut my bill?", "Does it keep the lights on in a blackout — for how long?", "Who handles the permits and the utility paperwork?", "Can I add more battery later?", "What's covered by the 12-year warranty?".
+
+VARIANT 05: Skylark — A prosumer mapping + inspection drone.
+- Mode: dark + sky. Bg #0A0E14. Accent: sky cyan #38BDF8. Text #EFF4F8.
+- Display font: Inter Display 700.
+- Pitch: "Survey-grade maps, <em>before lunch</em>."
+- Audience: surveyors, construction sites, agriculture, and inspection pros — not hobbyist filmmakers.
+- Price / status: "$2,449 · now shipping".
+- Hero: the drone at a 3D angle + a tablet showing a generated 3D site map.
+- Features: RTK centimeter-accuracy positioning, automated mapping flights, a 1-inch sensor, 38-min flight time, obstacle avoidance, swappable batteries, maps that process in the cloud or on-device.
+- App: plan an automated grid flight, live map stitching, 3D-model export, volume measurement for stockpiles.
+- Specs: sensor 1-inch 20 MP, RTK accuracy 1 cm, flight time 38 min, range, wind resistance, weight 1.1 kg, IP rating, batteries.
+- In the box: the drone, the controller, 3 batteries, a charging hub, 6 spare props, a case.
+- Stats: Units in the field (14,408), Acres mapped, Flight time per battery (38 min), Map accuracy (1 cm RTK).
+- Pricing: Skylark ($2,449), Skylark Survey Kit (+2 batteries + a rugged case + 1 year of cloud processing, $3,199).
+- FAQ: "Do I need a license to fly it commercially?", "How accurate are the maps — is it truly survey-grade?", "Is cloud processing required, or can it run offline?", "What's the obstacle-avoidance coverage?", "How are repairs and crash replacements handled?".
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 28 — Podcast / Show Pages (5 pages, mixed modes)
+
+```
+Brief: Produce 5 landing pages for PODCASTS — a long-form interview show, a serialized narrative-documentary podcast, a tech-and-business podcast network, a true-crime investigative show, and a weekly culture-and-comedy show. These are individual SHOW home pages — the page a new listener lands on. NPR / Radiotopia / Wondery / Pushkin / Maximum Fun level. Heavy on cover art, an episode list, a "listen on" badge row (Apple Podcasts, Spotify, Overcast, YouTube, Pocket Casts, RSS), host bios, and a recent-episodes feed. NOT a podcast-hosting SaaS product (that's the SaaS family) — this is one show's marketing page. Mock the audio player UI statically — NO real audio JS.
+
+SHARED AESTHETIC (all 5 variants):
+- Display: per-variant — a podcast brand can be serif or grotesk; pick to fit the genre.
+- Body: Inter 400-500 (or a serif per variant).
+- Mono: Geist Mono 400 — episode numbers, durations, release dates, season tags.
+- The cover art is the centerpiece: a SQUARE artwork tile — a gradient + a bold inline-SVG motif + the show title locked up inside it — shown with a soft shadow. It anchors the hero.
+- A "listen on" badge row: small pills, each with the platform glyph as inline SVG + the name (Apple Podcasts, Spotify, Overcast, YouTube, Pocket Casts, RSS).
+- A static audio-player mockup: a play button, a scrubber with a played/unplayed split + a knob, a procedural waveform strip (varying-height SVG bars), elapsed / total time in mono.
+- Episode rows: a number ("EP 142" in mono), the title, a one-line teaser, the duration, the date.
+
+SHARED SECTION SKELETON (all 5 follow this):
+1. Nav: the show wordmark + 4 links (Episodes, About, Hosts, Newsletter) + an accent "Subscribe" pill.
+2. Hero: the square cover art + the show title + a one-line premise + the listen-on badge row + a static player mockup cued to the latest episode + a "new episode every [day]" line with a pulse-dot.
+3. Proof bar: a metric row (episodes published, total downloads, avg rating) + a press marquee or an "as heard on" row.
+4. Latest / featured episodes: 4-6 episode rows or cards — number, title, teaser, duration, date, a mini play button.
+5. About the show: 2-3 paragraphs on the premise + a "start here" trio of recommended episodes for a new listener.
+6. Hosts: 1-3 host cards — an avatar (gradient + initials), a name, a one-line bio, a social link.
+7. A pull-quote: a listener review or a press quote, set large.
+8. Newsletter: an email signup tied to the show ("show notes + links, every episode").
+9. Seasons / back-catalog (where relevant): a season selector or an archive teaser.
+10. FAQ: 4-5 questions a listener or a prospective guest would ask (the release schedule, where to listen, transcripts, pitching a guest, ads/sponsorship).
+11. Final CTA: "Subscribe" + the listen-on badge row again.
+12. Footer: the show + Episodes / About / Follow / Contact + an RSS link + © + a "part of [network]" line where relevant.
+
+VISUAL FLOURISHES SPECIFIC TO PODCAST:
+- The square cover-art tile with a bold SVG motif + the title set inside it.
+- A procedural waveform strip — varying-height bars in SVG.
+- A scrubber with a played-portion fill + a knob.
+- Platform glyphs as inline SVG in the listen-on badges.
+- Episode-number pills in mono ("S3 · EP 142").
+- A pulse-dot on "new episode Thursdays".
+
+THE 5 VARIANTS — one text/html artifact per variant:
+
+VARIANT 01: Wavelength — A long-form interview podcast.
+- Mode: dark + warm. Bg #121013. Accent: warm amber #E8A33D. Text #F3F0EA.
+- Display: Fraunces 600 — a characterful, literary serif.
+- Premise: "Two-hour conversations with people who think for a living — scientists, founders, artists, and the occasional contrarian."
+- Cover-art motif: concentric arcs radiating like a waveform.
+- New episode: "every Tuesday."
+- Stats: Episodes (218), Total downloads (14.8M), Avg rating (4.9 · 24,408 ratings), Countries reached (148).
+- Episodes: guest-driven titles — "142 · The neuroscientist who maps boredom", "141 · A war reporter on telling the truth slowly".
+- Hosts: 1 — a curious, well-read interviewer.
+- Start here: 3 recommended deep-dive episodes.
+- FAQ: "How long are episodes, really?", "Where can I get transcripts?", "How do I pitch a guest?", "Are episodes edited or raw?", "Is there an ad-free version?".
+
+VARIANT 02: Spool — A serialized narrative-documentary podcast.
+- Mode: cream editorial. Bg #F4EFE4. Accent: deep oxblood #8C3A2E. Text #1E1813.
+- Display: Source Serif 4 600 — documentary-grade, cinematic.
+- Premise: "One story, told over a season. This year: a town, a missing archive, and forty years of silence."
+- Cover-art motif: an unspooling reel of tape — a single thread coming loose.
+- Structure: season-based — a prominent SEASON 3 banner, an episode list 1-8, a "previously on" feel.
+- New episode: "new chapters every Wednesday through the season."
+- Stats: Seasons (3), Episodes this season (8), Avg listeners per episode, Awards (a fictional documentary-podcast award).
+- Episodes: chapter-style — "Chapter 4 · The room with no windows".
+- Hosts: 1 narrator/reporter + a producer credit row.
+- A press quote set large (a magazine reviewing the season).
+- FAQ: "Do I need to start from episode 1?", "How many episodes are in a season?", "When does the next season drop?", "Are there transcripts and a sources list?", "Is it based on a true story?".
+
+VARIANT 03: Frequency — A tech-and-business podcast network.
+- Mode: dark + electric. Bg #0B0D12. Accent: electric blue #5B8CFF. Text #EEF1F6.
+- Display: Inter Display 700, -0.035em — modern, crisp.
+- Premise: "Five shows on how technology actually gets built and sold — hosted by people who've shipped." This is a NETWORK home page: it lists multiple shows.
+- Cover-art motif: a stacked-bars / equalizer mark — but show a GRID of 5 mini show covers rather than one big tile.
+- New episode: "a new episode somewhere on the network almost every weekday."
+- Stats: Shows (5), Episodes across the network (1,408), Monthly downloads (3.4M), Subscribers.
+- Section twist: instead of one episode list, "the shows" grid (5 cards) + a combined "latest across the network" feed.
+- Hosts: a row of 6-8 host avatars across the shows.
+- FAQ: "Can I subscribe to just one show?", "Is there a combined feed?", "How do I advertise on the network?", "Do you do live shows?", "How do I pitch my show to join?".
+
+VARIANT 04: Hearsay — A true-crime investigative podcast.
+- Mode: dark + moody. Bg radial #0C0A0A → #141011. Accent: muted blood-red #C7443B. Text #ECE7E4.
+- Display: Inter Display 700 — tense and restrained, NOT campy or tabloid.
+- Premise: "A reporter reopens a case the police closed in 1994. Eight episodes. New evidence in every one." Keep it serious and journalistic — no gore, no exploitation.
+- Cover-art motif: a redacted case-file folder with a thin red thread.
+- Tone note in the copy: investigative and sober — case timelines, documents, interviews — not sensational.
+- New episode: "Thursdays · 8 episodes."
+- Stats: Episodes (8), Downloads (28.4M), Tips received from listeners, Avg rating.
+- Episodes: "Episode 3 · The 911 call no one logged".
+- A "content note" line — handled responsibly, source-driven.
+- Hosts: 1 investigative reporter + a producer.
+- FAQ: "Is this based on a real case?" (a fictional composite — say so plainly), "How was the reporting verified?", "Can I send a tip?", "Will there be a season 2?", "Are there transcripts and a sources page?".
+
+VARIANT 05: Aside — A weekly culture-and-comedy show.
+- Mode: light + playful. Bg #FBF8F3. Accent: hot tangerine #F0612B. Text #1C1815.
+- Display: Bricolage Grotesque 700 — friendly, rounded, loud.
+- Premise: "Three friends, one hour, zero agenda — overthinking the internet, bad movies, and snacks since 2019."
+- Cover-art motif: a bold, goofy cluster of speech bubbles and shapes.
+- New episode: "every Friday."
+- Stats: Episodes (312), Downloads (8.4M), Avg rating (4.8), Live shows played (24).
+- Episodes: funny real-sounding titles — "287 · We ranked every cereal and lost two friendships".
+- Hosts: 3 host cards with playful one-line bios.
+- A community section — a Discord, listener voicemails, a merch teaser.
+- FAQ: "How explicit is the show?", "Can I send in a voicemail?", "Do you tour / do live shows?", "Where's the merch?", "How do I get a shout-out?".
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 29 — Wedding Websites (5 pages, mostly cream + light modes)
+
+```
+Brief: Produce 5 WEDDING WEBSITES — the single-page site a couple shares with their guests. Five couples, five aesthetics: a classic estate-garden wedding, a modern minimal city wedding, a botanical vineyard wedding, a moody candlelit autumn wedding, and an airy coastal wedding. Think the elevated end of Zola / The Knot / Squarespace wedding templates — a designed, bespoke feel. Heavy on the couple's names + the date, an "our story" section, the day-of schedule, venue + travel + accommodations, an RSVP form, and a registry. These are warm, personal, photo-led pages — NOT a wedding-vendor business (that would be Hospitality or Local Services).
+
+SHARED AESTHETIC (all 5 variants):
+- Display: per-variant — wedding sites lean serif and characterful; one variant goes clean sans.
+- Body: a readable serif or Inter, per variant.
+- The couple's two first names + the date are the hero. A two-initial monogram (inline SVG) is a recurring motif.
+- A countdown element ("142 days") — render the number statically, no live JS.
+- Photo placeholders: soft, warm gradients with a thin inset frame; portrait + landscape crops; a small gallery grid.
+- The date shown formally ("Saturday, the twentieth of June, two thousand twenty-seven") AND in mono ("06 · 20 · 2027").
+- An RSVP form — name, number of guests, meal choice, song request, attending yes/no — fully styled; it does NOT need a working backend.
+- Gentle motion only — soft fades, no aggressive animation.
+
+SHARED SECTION SKELETON (all 5 follow this):
+1. A slim anchor nav: the monogram + anchor links (Story, Schedule, Travel, RSVP, Registry).
+2. Hero: the two first names (huge), the date, the city/venue, a "we're getting married" line, a hero photo placeholder, the countdown.
+3. Our story: how they met → the proposal — 2-3 short passages, a couple of photos, a small timeline.
+4. The wedding party (where it fits): a few cards — name, role (Maid of Honor, Best Man), a one-line note.
+5. Schedule / the day: a timeline — ceremony, cocktail hour, dinner, dancing — times in mono, with locations.
+6. Venue + travel: the venue with a stylized map block, getting there, hotel room blocks, parking, an "out of town" note.
+7. Things to do: 3-4 cards for guests staying the weekend (a restaurant, a hike, a coffee spot).
+8. RSVP: the form, with a clear reply-by date.
+9. Registry: a short, tasteful note + 3-4 registry cards (a store, a honeymoon fund, a charity).
+10. FAQ: 5-6 real guest questions (dress code, kids, plus-ones, weather / indoor-outdoor, arrival time, an unplugged ceremony).
+11. A closing line + the monogram + a "can't wait to celebrate with you".
+12. Footer: the names, the date, an email for questions, the wedding hashtag.
+
+VISUAL FLOURISHES SPECIFIC TO WEDDING:
+- A two-initial monogram as inline SVG — interlocking letters or a small wreath.
+- A large countdown number set in the display face.
+- A day-of timeline — a vertical line with time nodes.
+- A stylized venue map block — an SVG abstraction, not a real map.
+- A small photo-gallery grid with mixed crops.
+- Decorative dividers — a thin botanical sprig, or a hairline rule with a centered dot.
+
+THE 5 VARIANTS — one text/html artifact per variant:
+
+VARIANT 01: Magnolia — Maya & Daniel · a classic estate-garden wedding.
+- Mode: cream + classic. Bg #F6F1E7. Accent: deep magnolia green #2F4A3A + a soft blush #D9A89C secondary. Text #211C16.
+- Display: Cormorant Garamond 600 — a timeless, high-contrast serif.
+- Where / when: a historic estate garden outside Charleston · "Saturday, June 20, 2027".
+- Tone: formal, gracious, timeless — black-tie optional.
+- Story beats: met at a friend's wedding, together eight years, proposed in the same garden.
+- Schedule: ceremony 4:30, cocktails on the lawn, dinner in the orangery, dancing to midnight.
+- FAQ: dress code (black-tie optional), kids (an adults-only reception), the ceremony is outdoors (a weather plan), shuttle times, an unplugged ceremony.
+
+VARIANT 02: Vow — Priya & Sam · a modern minimal city wedding.
+- Mode: light + minimal. Bg #FCFCFB. Accent: a confident ink black #161616 + one warm pop, saffron #E2A12D. Text #161616.
+- Display: a clean grotesk — Inter Display 700, very tight; generous whitespace.
+- Where / when: a loft event space in downtown Chicago · "10.03.2027".
+- Tone: design-forward, minimal, confident — "we kept it simple."
+- Story beats: matched on an app, a first date that ran six hours, proposed on an ordinary Tuesday.
+- Schedule: a tight evening — ceremony 6:00, dinner, a DJ.
+- FAQ: dress code (cocktail), the venue is one room (all indoors), transit + parking, the plus-one policy, the registry is mostly a honeymoon fund.
+
+VARIANT 03: Bower — Elena & Thomas · a botanical vineyard wedding.
+- Mode: light + botanical. Bg #F7F6F0. Accent: vineyard green #5A7350 + a dusty grape #7E5C74. Text #25241C.
+- Display: Fraunces 500 italic — soft, romantic, leafy.
+- Where / when: a family vineyard in the Willamette Valley · "Saturday, September 11, 2027".
+- Tone: romantic, garden-party, golden-hour — botanical dividers throughout.
+- Story beats: met working a harvest, long-distance for two years, proposed between the rows at sunset.
+- Schedule: ceremony among the vines 5:00, a long-table dinner, string lights, dancing under the old oak.
+- FAQ: dress code (garden formal — flat shoes for grass), kids welcome, mostly outdoors, the nearest towns + hotels, carpooling.
+
+VARIANT 04: Evermore — Noor & James · a moody candlelit autumn wedding.
+- Mode: dark + romantic. Bg #15110F. Accent: candle gold #C9A24B + a deep ember #9A3B2E. Text #F0E9DF.
+- Display: Cormorant Garamond 600 — dramatic, high-contrast on dark.
+- Where / when: a restored barn and manor library in the Hudson Valley · "Saturday, November 7, 2027".
+- Tone: intimate, candlelit, autumnal — warm low light, deep tones, a fireside feel.
+- Story beats: friends first for a decade, the slow realization, a winter proposal.
+- Schedule: an evening wedding — ceremony 5:30 at dusk, a candlelit dinner, a band, a late-night bonfire.
+- FAQ: dress code (formal, autumn layers — it gets cold), it's an indoor evening, kids (a note), hotel blocks, an end-of-night shuttle.
+
+VARIANT 05: Seaglass — Ava & Mateo · an airy coastal wedding.
+- Mode: light + coastal. Bg #F4F7F7. Accent: sea blue #3F7E94 + a warm sand #D8B98A. Text #1B2A2E.
+- Display: a light, airy serif — Spectral 500 or Cormorant 500.
+- Where / when: a bluff above the water on the Mendocino coast · "Saturday, July 17, 2027".
+- Tone: relaxed, sun-and-salt, barefoot-elegant — light and airy, lots of white space.
+- Story beats: met surfing badly, taught each other things, proposed on the beach at low tide.
+- Schedule: ceremony on the bluff 5:00, a clambake dinner, a bonfire and dancing on the sand.
+- FAQ: dress code (coastal cocktail — bring a layer for the wind), kids welcome, the ceremony is on sand (shoe advice), tides + timing, where to stay, an unplugged ceremony.
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 30 — Travel & Tourism (5 pages, mixed modes)
+
+```
+Brief: Produce 5 landing pages for TRAVEL businesses — a small-group adventure trekking operator, a bespoke luxury trip-planning agency, a regional destination-marketing site, a classic multi-day rail journey, and a surf-and-dive retreat operator. Much Better Adventures / Black Tomato / a "Visit [place]" tourism board / Belmond / a boutique retreat brand level. Heavy on destination photography, day-by-day itineraries, departure dates + trip prices, what's-included lists, small-group sizes, and a booking/enquiry CTA. These pages sell a TRIP or a DESTINATION — NOT a single hotel or restaurant (that's the Hospitality family).
+
+SHARED AESTHETIC (all 5 variants):
+- Display: per-variant — travel brands range from rugged grotesk to elegant serif.
+- Body: Inter 400-500 (or a serif per variant).
+- Mono: Geist Mono 400 — dates, trip lengths, distances, altitudes, prices, group sizes.
+- Big landscape photo placeholders: rich gradients evoking the destination (alpine, desert, ocean, vintage rail); full-bleed photo bands; a stacked gallery.
+- Itinerary blocks: "Day 1 / Day 2 …" with a route line, place names, and a one-line summary each.
+- A trip-facts strip: duration, group size, difficulty/grade, best season, price-from — in mono.
+- A departures table: dates, price, availability ("3 spots left", with a pulse-dot on the ones filling up).
+- A stylized route map — an SVG abstraction with numbered stops, not a real map.
+
+SHARED SECTION SKELETON (all 5 follow this):
+1. Nav: brand logo + 4 links (Trips/Destinations, Itinerary, Dates, About) + an accent CTA ("Book" / "Plan my trip" / "Enquire").
+2. Hero: a pill badge (a season or a tagline), display headline (half-tone trick), sub 25 words, a primary CTA, a full-bleed destination photo, the trip-facts strip beneath.
+3. Trust bar: a metric row (travelers hosted, years running, avg rating) + a press marquee or an "as featured in" row.
+4. The trip / destination overview: 2-3 paragraphs + 2-3 highlight photos + a stylized route map.
+5. Day-by-day itinerary: 6-10 day blocks, each with a number, a title, a 2-line description; a route line connecting them.
+6. What's included / not included: two columns — meals, guides, transfers, permits, gear vs. flights, insurance, tips.
+7. Where you'll stay: 3-4 cards (lodges, mountain huts, a sleeper cabin, a beach house).
+8. The guides / the team: 2-3 cards — name, a one-line bio, languages, years guiding.
+9. Departures + pricing: a dates table (date, price, availability) + what the price includes + a deposit note.
+10. Reviews: an aggregate rating + 3-4 traveler reviews, each with a trip + a date.
+11. FAQ: 5-6 real questions (the fitness/grade required, solo travelers, group size, what to pack, cancellation + insurance, visas/permits).
+12. Final CTA: "Book" / "Enquire" + the next departure date.
+13. Footer: brand + Trips / About / Travel info / Contact + a financial-protection (ATOL-style) badge placeholder + © + a sustainability note.
+
+VISUAL FLOURISHES SPECIFIC TO TRAVEL:
+- A stylized route map — an SVG line with numbered stops.
+- An itinerary timeline with day nodes.
+- A trip-facts strip in mono (12 days · max 12 people · moderate · from $X).
+- A departures table with availability pills + a pulse-dot on "filling up".
+- A "best time to go" mini calendar / a season bar.
+- Full-bleed destination photo bands.
+
+THE 5 VARIANTS — one text/html artifact per variant:
+
+VARIANT 01: Switchback — A small-group adventure trekking operator.
+- Mode: dark + alpine. Bg #0E1113. Accent: trail orange #EE6C2B. Text #EEF1F2.
+- Display: Inter Display 700, -0.035em — rugged, modern.
+- Pitch: "The Dolomites, the high way. <em>A bed and a hot dinner at every stop.</em>"
+- The hero trip: "The Dolomites High Route — 9 days, hut to hut." The brand runs many treks; this page sells this one, with a "more trips" teaser.
+- Trip facts: 9 days · max 12 people · moderate-to-hard · June–September · from $2,890.
+- Itinerary: 9 day blocks across alpine passes and mountain huts, with a summit day.
+- Stays: mountain refugios / huts.
+- Guides: 2 IFMGA-certified mountain guides.
+- Stats: Travelers hosted (38,408), Operating since (1994), Avg rating (4.9), Routes (60+).
+- FAQ: "How fit do I need to be?", "Do I need technical climbing experience?", "Is it okay to come solo?", "What gear do I bring vs. rent?", "What's the cancellation and insurance policy?", "How big are the groups?".
+
+VARIANT 02: Wayfare — A bespoke luxury trip-planning agency.
+- Mode: cream + editorial. Bg #F4EFE6. Accent: deep indigo #2E3A5C + a brass #B08A4A secondary. Text #1E1A14.
+- Display: Cormorant Garamond 600 — refined, quietly luxurious.
+- Pitch: "Tell us how you want to feel. <em>We design the rest.</em>"
+- The pitch in full: not a fixed itinerary — a bespoke service. Sample journeys are shown as inspiration, not a catalog.
+- Section twist: instead of a fixed day-by-day, show 3 "sample journeys" (Japan in autumn, Patagonia, a Kenya safari) as cards, plus a "how it works" 4-step (a call → a designed proposal → refine → travel with 24/7 support). The trip-facts strip becomes a "what bespoke includes" strip.
+- The team: travel designers, each with a region of expertise.
+- Stats: Journeys designed, Designing since (2009), Repeat clients (a high %), Destinations (90+).
+- A large client quote.
+- FAQ: "How much does a trip typically cost?", "How far ahead should I plan?", "What does the planning fee cover?", "Can you handle a multi-generational group?", "What happens if something goes wrong mid-trip?", "Do you book flights too?".
+
+VARIANT 03: Latitude — A regional destination-marketing site.
+- Mode: light + bright. Bg #F8FAF9. Accent: a vivid sea-teal #1B9E8A + a warm coral #F0784A secondary. Text #16201E.
+- Display: Bricolage Grotesque 700 — friendly, bright.
+- Pitch: "Forty beaches, two seasons, <em>one very easy decision.</em>"
+- The page: a tourism-board site for a fictional place — "Visit the Marisol Coast" (a fictional coastal region). It markets a DESTINATION, not one tour.
+- Section twist: no single itinerary — instead "things to do" categories (beaches, food, hikes, towns, culture) as a grid; a "where to stay" range (from camps to resorts); a seasonal "when to visit" bar; "getting here" (the airport, ferries); 3-4 suggested 3-day itineraries as cards.
+- Stats: Annual visitors, Beaches (40+), Miles of coastline, Avg sunny days a year.
+- Photo-forward — lots of full-bleed bands.
+- FAQ: "When is the best time to visit?", "How do I get there?", "Do I need a car?", "Is it family-friendly?", "What's the local currency and language?", "Is it expensive?".
+
+VARIANT 04: Overland — A classic multi-day rail journey.
+- Mode: warm + vintage. Bg #F3EBDD. Accent: deep forest green #2C4A35 + an oxblood #7E3A2C secondary. Text #211B12.
+- Display: Fraunces 600 — a characterful, heritage serif.
+- Pitch: "Four days to the mountains, <em>at the speed of a good book.</em>"
+- The trip: "The Highland Line — a 4-day sleeper journey from the coast to the mountains," aboard a restored vintage train.
+- Tone: romantic, slow travel, golden-age railway posters — vintage but not kitsch.
+- Itinerary: 4 day blocks, each a leg of the line — the stops, the scenery, the dinners; a route map along the rail line.
+- Stays: the train's sleeper cabins — a 3-tier comparison (Twin, Cabin Suite, Observation Suite).
+- Trip facts: 4 days · 3 nights onboard · 2 departures a week · April–October · from $3,400 per person.
+- Stats: Years running, Miles of track, Cabins (a small, intimate number), Avg rating.
+- FAQ: "What's a sleeper cabin actually like?", "Are all meals included?", "Can I get on and off at the stops?", "Is there a single-traveler option?", "What should I pack?", "Is there wifi and phone signal?" (lean into "mostly not — that's the point").
+
+VARIANT 05: Offshore — A surf-and-dive retreat operator.
+- Mode: dark + ocean. Bg #081318. Accent: a bright aqua #2BC4D4. Text #E9F4F5.
+- Display: Inter Display 700 — clean, energetic.
+- Pitch: "Surf twice a day. <em>The rest of the week is yours.</em>"
+- The trip: a week-long surf-and-dive retreat on a fictional tropical coast — 7 nights, twice-daily surf, an optional dive certification, a shared beach house.
+- Tone: energetic but laid-back — salt, sun, a small crew.
+- Itinerary: a 7-day rhythm — dawn surf, breakfast, free time, an afternoon session or dive, sunset — shown as a "typical day" + a week grid, looser than a trek itinerary.
+- Stays: a shared beach house — room types (a shared room, a private room, a cabana).
+- What's included: accommodation, all surf sessions, board use, breakfast + dinner, airport transfers; the dive certification is an add-on.
+- Trip facts: 7 nights · max 14 guests · all levels · year-round · from $1,690.
+- Stats: Retreats run, Guests hosted, Surf coaches, Avg rating (4.9).
+- FAQ: "I've never surfed — is that okay?", "Do I need to be a strong swimmer?", "Can non-surfers come along?", "What's the dive-certification add-on?", "Is it social, or can I keep to myself?", "What's the cancellation policy?".
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 31 — Food & Beverage Brand (5 pages, mostly light + warm modes)
+
+```
+Brief: Produce 5 landing pages for FOOD & BEVERAGE consumer brands — a specialty coffee brand, a craft non-alcoholic sparkling-drink brand, a premium chocolate maker, a pantry-staples brand (olive oil + condiments), and a better-for-you snack brand. Think the brand home page of Oatly / Olipop / Dandelion Chocolate / Graza / Magic Spoon — the page that carries the brand story and shows the whole range. Heavy on a strong brand voice, the product range (multiple SKUs), ingredient + sourcing stories, a "where to buy" / stockist section, and a shop CTA. This is a multi-product BRAND page — NOT a single-product DTC PDP (that's the E-commerce family) and NOT a café or restaurant (that's Hospitality).
+
+SHARED AESTHETIC (all 5 variants):
+- Display: per-variant — F&B brands lean into characterful type (a chunky grotesk, a warm serif, a retro face).
+- Body: Inter 400-500 (or a warm serif per variant).
+- A strong, confident brand color — F&B is allowed to be bright; pick a palette that reads like packaging.
+- Product placeholders: render the PACKAGE itself — a bag, a can, a bar, a bottle, a jar — as a CSS/SVG construction (a rounded shape, a label lockup, the brand mark, the flavor name) with a soft shadow. Show the RANGE: 3-6 products in a row, each in a different flavor color.
+- A range row where each SKU is its own color chip.
+- Ingredient callouts: short, honest, specific ("4 ingredients", "60% cacao, nothing else", "5g of sugar, all from fruit").
+- A "find us" / stockist feel — store wordmarks, a "now at" line.
+
+SHARED SECTION SKELETON (all 5 follow this):
+1. Nav: brand logo + 4 links (Shop, Our Range, Story, Stockists) + an accent "Shop" pill (with a price-from or "free shipping over $X").
+2. Hero: a pill badge ("New: [flavor]" or a brand tagline), display headline (half-tone trick), sub 25 words, a primary "Shop" CTA, and a hero product render — the package front and center, or a row of the range.
+3. Proof bar: reviews ("★4.8 · 9,408 reviews") + a press marquee ("as seen in") or stockist wordmarks.
+4. The range: a grid of 3-6 products — each render + name + a one-line description + a price; each in its flavor color.
+5. The brand story: 2-3 paragraphs — why the brand exists, the founder's reason, what they refused to compromise.
+6. Ingredients / how it's made: a sourcing or process section — 3-4 steps, or a "what's in it / what's not" comparison; honest and specific.
+7. A bestseller spotlight: one product, big — the detail, the taste notes, an alternating render/copy row.
+8. Ways to enjoy / a subscription: a usage section (recipes, pairings, a ritual) OR a subscribe-and-save block.
+9. Reviews: an aggregate rating + 3-4 customer reviews (a name + the product they bought).
+10. Where to buy: stockist logos / a store list + a store-locator teaser ("now in 1,200 stores") + an online-shop CTA.
+11. FAQ: 5 questions (ingredients/allergens, shipping + how it ships, shelf life, the packaging's sustainability, subscription terms).
+12. Final CTA: "Shop the range" + a free-shipping line.
+13. Footer: brand + Shop / Our story / Stockists / Help + a newsletter signup + © + an allergen / nutrition-info link placeholder.
+
+VISUAL FLOURISHES SPECIFIC TO FOOD & BEVERAGE:
+- The product package rendered in CSS/SVG — a bag / can / bar / bottle / jar with a label lockup.
+- A range row where each SKU has its own flavor color.
+- Ingredient pills — short and bold ("4 ingredients", "Gluten-free", "30% less sugar").
+- A "what's in it / what's not" two-column comparison.
+- Taste-note tags ("notes of cocoa, dried cherry, brown sugar").
+- A stockist logo strip.
+
+THE 5 VARIANTS — one text/html artifact per variant:
+
+VARIANT 01: Daybreak — A specialty coffee brand.
+- Mode: cream + warm. Bg #F3EBDD. Accent: deep roast brown #4A2E1E + a burnt-orange #D2622B pop. Text #1F1710.
+- Display: Fraunces 600 — a warm, characterful serif.
+- Pitch: "Coffee worth <em>waking up early for.</em>"
+- Product: whole-bean and ground coffee in bags — a range of 4 roasts (a bright single-origin, a balanced house blend, a dark roast, a decaf) + a subscription.
+- Render: a stand-up coffee bag with a one-way valve and a roast-name label, in 4 roast colors.
+- Story: a roaster who started in a garage, direct relationships with 6 farms, roasts to order.
+- Process: green sourcing → roast to order → ships within 48 hours of roasting; a roast-date stamp on every bag.
+- Spotlight: the house blend, with taste notes.
+- Subscription: subscribe-and-save — choose the grind and the cadence.
+- FAQ: "Whole bean or ground?", "How fresh is it — when was it roasted?", "How should I store it?", "Can I pause or skip a subscription?", "Do you ship internationally?".
+
+VARIANT 02: Highball — A craft non-alcoholic sparkling drink.
+- Mode: light + vivid. Bg #F7F9FA. Accent: an electric lime #5BC23A + a bright grapefruit #F0533F secondary. Text #15201A.
+- Display: Bricolage Grotesque 800 — bold, rounded, loud.
+- Pitch: "All the ritual of a good drink. <em>None of the next morning.</em>"
+- Product: cans of a craft sparkling drink — a "better soda" with real botanicals, a touch of fruit, low sugar. 5 flavors.
+- Render: a slim 12oz can in 5 punchy flavor colors, with a condensation / fizz feel.
+- Story: founders who wanted something to drink that wasn't water or alcohol; built a soda with 5g of sugar.
+- Ingredients: a "what's in it / what's not" — real botanicals, 5g sugar, no alcohol vs. no syrups, no sweeteners you can't pronounce.
+- Spotlight: the bestselling flavor.
+- Ways to enjoy: over ice, as a mocktail mixer, the 4pm pick-me-up.
+- FAQ: "Is it actually non-alcoholic?", "How much sugar is in it?", "What are the botanicals — is there caffeine?", "Is it sold by the case?", "Is the can recyclable?".
+
+VARIANT 03: Bittersweet — A premium chocolate maker.
+- Mode: dark + rich. Bg #16100D. Accent: gold #C99A4B + a deep cacao-red #7A2E22. Text #F1E8DD.
+- Display: Cormorant Garamond 600 — a high-contrast, gallery-grade serif.
+- Pitch: "Three ingredients. One origin. <em>Nothing to hide behind.</em>"
+- Product: bean-to-bar chocolate — single-origin bars and a couple with inclusions (sea salt, hazelnut). 6 bars, each a different origin / percentage.
+- Render: a chocolate bar in its wrapper — an elegant label with the origin, the % cacao, and a small map mark — in 6 origin colors.
+- Story: a maker who sources cacao directly, a small-batch stone grind, no vanilla or lecithin to mask anything.
+- Process: bean-to-bar — sourcing, roasting, a 3-day stone grind, tempering; tasting notes per origin.
+- Spotlight: the flagship 70% single-origin, with taste notes.
+- A gifting block — a tasting set of all 6 bars.
+- FAQ: "What does single-origin mean here?", "Is it dairy-free / vegan?", "How should I store and taste it?", "Do you ship in summer — will it melt?", "Where does the cacao come from?".
+
+VARIANT 04: Larder — A pantry-staples brand.
+- Mode: cream + earthy. Bg #F1ECDF. Accent: olive green #6B7340 + a terracotta #C06A3E secondary. Text #221E14.
+- Display: a confident grotesk with character — Inter Display 700, or a slab.
+- Pitch: "The good stuff, <em>for the cooking you actually do.</em>"
+- Product: everyday pantry staples done well — extra-virgin olive oil, a finishing oil, flaky salt, a couple of vinegars, a chili crisp. A small, tight range — 6 products.
+- Render: a tin of olive oil + bottles + a jar — clear, utilitarian-but-warm labels; 6 products.
+- Story: the founders were tired of olive oil that was old before it hit the shelf — a harvest date on every tin, single-estate.
+- Sourcing: a single-estate harvest, a press date stamped on the tin, "a cooking oil and a finishing oil — know the difference."
+- Spotlight: the everyday extra-virgin tin.
+- Ways to use: a few simple pairings + a "starter pantry" bundle.
+- FAQ: "What's the harvest date — how fresh is it?", "Cooking oil vs. finishing oil — which do I need?", "How do I store olive oil?", "Is the tin recyclable?", "Do you do a starter bundle?".
+
+VARIANT 05: Crumb — A better-for-you snack brand.
+- Mode: light + friendly. Bg #FBF8F1. Accent: a warm honey-gold #E9A12C + a berry #C8466E secondary. Text #1E1A14.
+- Display: Bricolage Grotesque 700 — rounded, friendly, approachable.
+- Pitch: "Snacks that read like a recipe, <em>not a chemistry set.</em>"
+- Product: better-for-you snacks — seeded crackers, granola, and a fruit-and-nut bar. A few SKUs across 3 lines.
+- Render: a snack bag / a box — bright, friendly labels — in flavor colors across the 3 lines.
+- Story: a parent who started reading labels and didn't like the homework; made snacks from ingredients you'd have at home.
+- Ingredients: a "you can pronounce all of it" angle — the short ingredient list shown literally; whole grains, real fruit, no seed-oil filler.
+- Spotlight: the bestselling cracker.
+- A "snack drawer" bundle / a lunchbox angle.
+- FAQ: "What are the allergens?", "Is it nut-free / gluten-free?" (be specific per line), "How much sugar?", "Is it kid-friendly?", "Do you offer a multi-pack or a subscription?".
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 32 — Fashion & Apparel (5 pages, mixed editorial modes)
+
+```
+Brief: Produce 5 landing pages for FASHION & APPAREL labels — a minimalist luxury ready-to-wear house, a streetwear drop-culture brand, a heritage workwear-and-denim label, a sustainable slow-fashion basics brand, and a bold contemporary designer label. The Row / Totême / Aimé Leon Dore / Carhartt WIP / Everlane / a runway designer's site level. Heavy on lookbook imagery, a current collection / a seasonal drop, the brand's point of view, fabric + craftsmanship detail, stockists, and a "shop the collection" CTA. This is a fashion BRAND / a collection page — NOT a single-product DTC PDP (that's the E-commerce family).
+
+SHARED AESTHETIC (all 5 variants):
+- Display: per-variant — fashion swings from austere grotesk to high-contrast serif; let the type carry the brand's point of view.
+- Body: Inter 400-500 (or an editorial serif per variant).
+- IMAGE-FORWARD — large image placeholders ARE the design: full-bleed lookbook bands, a campaign image, a lookbook GRID (an editorial spread of mixed crops — a model shot, a flat-lay, a fabric close-up). Refined gradients + a thin frame; treat negative space generously.
+- Minimal chrome: small type, wide letter-spacing on labels, lots of whitespace — the imagery leads.
+- A lookbook grid: 6-9 tiles of mixed aspect ratios, a few captioned with a look number ("Look 04").
+- Look / piece cards: an image, the piece name, the fabric, the price — restrained.
+- A "stockists" / "available at" section — store wordmarks, a "find a store" feel.
+
+SHARED SECTION SKELETON (all 5 follow this):
+1. Nav: the wordmark (the brand name set as the logo) + 4 links (Collection/Shop, Lookbook, About, Stockists) + a slim "Shop" link. Minimal.
+2. Hero: a full-bleed campaign image + the collection name / a season ("Autumn–Winter 2027") + a short line of intent + a "Shop the collection" CTA.
+3. The collection: a grid of 6-10 looks / pieces — image, name, fabric, price.
+4. Lookbook: an editorial spread — a mixed-crop grid of campaign imagery with look numbers and a season caption.
+5. The point of view: 2-3 paragraphs — what the brand believes, who it's for, what it refuses to do; a restrained, confident voice.
+6. Craft / fabric / make: a section on materials and construction — the mills, the fabrics, where it's made, the detail that matters; honest and specific.
+7. A featured garment: one piece, large — an alternating image/copy row with the fabric story and the fit.
+8. The campaign / a film: a wide image band — the season's campaign, with a photographer / creative-direction credit line.
+9. Stockists / availability: store wordmarks + a "find us" line + the online-shop CTA; sizing / fit notes.
+10. Journal / newsletter (where it fits): a short "journal" teaser or a signup ("first access to the next drop").
+11. FAQ: 5 questions (sizing + fit, fabric care, shipping + returns, restocks / the next drop, made-where / ethics).
+12. Final CTA: "Shop the collection" + a season line.
+13. Footer: the wordmark + Shop / Lookbook / About / Help + a newsletter signup + © + a sizing-guide and care-guide link placeholder.
+
+VISUAL FLOURISHES SPECIFIC TO FASHION:
+- A lookbook grid — mixed-aspect tiles, a few with "Look 0X" captions.
+- Full-bleed campaign image bands.
+- Wide-tracked small-caps labels (FABRIC, ORIGIN, SEASON).
+- Look / piece cards with the fabric + price set small and quiet.
+- A drop / season pill ("AW27", or "Drop 04 · Friday 10am").
+- A photographer / creative-direction credit line.
+
+THE 5 VARIANTS — one text/html artifact per variant:
+
+VARIANT 01: Drape — A minimalist luxury ready-to-wear house.
+- Mode: cream + austere. Bg #EFEBE3. Accent: a near-black ink #1A1815 — a minimal accent; the imagery carries the page. Text #1A1815.
+- Display: Cormorant Garamond 500, set quietly with generous tracking — quiet luxury.
+- The brand: a small ready-to-wear house — considered tailoring, fluid drape, a tight seasonless wardrobe. AW27 is a small collection.
+- Voice: restrained, almost austere — "we make fewer things, better, and we don't chase a season."
+- Collection: ~8 pieces — a coat, trousers, a knit, a shirt — in a muted palette.
+- Craft: Italian mills, full-canvas tailoring, a fabric-led approach.
+- Featured garment: "the coat" — one piece, a long fabric story.
+- FAQ: sizing / fit (it runs relaxed), fabric care (a lot of wool and silk), shipping + returns, "do you restock, or is it seasonless?" (seasonless), where it's made.
+
+VARIANT 02: Bolt — A streetwear drop-culture brand.
+- Mode: dark + electric. Bg #0C0C0E. Accent: a charged volt yellow #E8FF3A, used boldly. Text #F2F2F3.
+- Display: Inter Display 900 — loud, big, tight (or a heavy condensed face).
+- The brand: streetwear built on weekly drops — graphic tees, hoodies, caps, a cut-and-sew piece.
+- Voice: energetic, in-the-know, community-driven — drops sell out, the calendar matters.
+- Section twist: a prominent DROP section — "Drop 14 · Friday 10am ET" with a static countdown, a "set a reminder", and a past-drops archive grid; "join the list for early access."
+- Collection: the current drop — 6-8 pieces, with "sold out" tags on some.
+- Community: a Discord / a community of "X members"; the drop ritual.
+- FAQ: "When's the next drop?", "Why does everything sell out?", "Do pieces restock?", "How does early access work?", "What's the return policy on a drop?".
+
+VARIANT 03: Selvage — A heritage workwear-and-denim label.
+- Mode: warm + utilitarian. Bg #EDE6D8. Accent: indigo #2E3C5C + a worn-leather tan #9A6B3E secondary. Text #211C14.
+- Display: a sturdy slab or a workmanlike grotesk — characterful, honest.
+- The brand: heritage workwear — selvedge denim, chore coats, work shirts, made to age well. Built to last, not to trend.
+- Voice: plainspoken, durable, anti-disposable — "buy it once."
+- Craft: a deep fabric section — selvedge denim on vintage shuttle looms, the weight (in oz), the loom, raw vs. washed, how the denim fades to the wearer; a lifetime repair / mending program.
+- Collection: ~8 pieces — jeans (in a few weights), a chore coat, a work shirt, a tee.
+- Featured garment: the signature jean — the fabric, the fit options, the fade.
+- A "made to fade" angle + the repairs program.
+- FAQ: "Raw vs. washed denim — which should I buy?", "How do I size raw denim — will it shrink?", "How do I care for and fade my jeans?", "Do you repair worn-in pieces?", "Where is it made?".
+
+VARIANT 04: Flax — A sustainable slow-fashion basics brand.
+- Mode: light + natural. Bg #F6F4ED. Accent: a soft sage #7C8A6A + a warm clay #C2785A secondary. Text #211F18.
+- Display: a calm, soft grotesk — Inter Display 600 with generous spacing.
+- The brand: slow-fashion essentials — tees, a knit, trousers, a dress — in natural fibers (organic cotton, linen, responsible wool); a small, permanent, season-light range.
+- Voice: calm, transparent, anti-overconsumption — "a small wardrobe, made honestly."
+- Craft / transparency: a real transparency section — the fiber, the mill, the factory, and a per-piece impact note (a "true cost" line or a CO₂e / water figure per piece); a take-back / resale program.
+- Collection: ~8 timeless essentials in a natural palette.
+- Featured garment: the everyday tee — the cotton, the fit, "made to last 5+ years."
+- A care + repair + resale loop section.
+- FAQ: "What fibers do you use, and why?", "How do you define 'sustainable'?", "How should I care for it to make it last?", "Do you take pieces back?", "Where and by whom is it made?".
+
+VARIANT 05: Notch — A bold contemporary designer label.
+- Mode: dark + high-contrast. Bg #101013. Accent: a sharp magenta-red #E5294B. Text #F4F3F4.
+- Display: a dramatic display face — a high-contrast serif (Cormorant 600) or an editorial grotesk pushed huge — set very large, very tight.
+- The brand: a contemporary designer label with a clear runway point of view — sharp tailoring, an asymmetric cut, a confident silhouette. AW27 is a real collection with a statement.
+- Voice: bold, opinionated, art-directed — a designer with something to say.
+- Section twist: a prominent CAMPAIGN / FILM band (a big art-directed image, a photographer + stylist credit), and "the collection" presented as numbered LOOKS (Look 01–12), like a runway lineup.
+- Lookbook: a strong editorial spread — the show, the looks, the silhouette.
+- The point of view: the designer's statement for the season.
+- FAQ: sizing / fit (it's cut sharp — fit notes), fabric care, shipping + returns, "is the runway piece available, or made to order?", press / stockist enquiries.
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Link-in-bio briefs (Prompts 33–37)
+
+These 5 prompts produce **link-in-bio creator hubs** — single-screen pages with avatar + bio + vertical button stack — not marketing landings. They override the marketing-specific items in the Shared output constraints (no logo cloud, no pricing tiers, no FAQ, no testimonials, no bento grid). The per-prompt SECTION SKELETON below is the structural source of truth.
+
+All 5 prompts map to the existing `creator` template family. Register each variant via:
+
+```bash
+npm run templates:add -- <file.html> --id=<slug> --name="<Creator name>" --family=creator --accent=<#hex> --mode=<dark|light|cream> --pitch="<one-line vibe>" --description="<sentence>" --status=published
+```
+
+---
+
+## Prompt 33 — Streamer / Gaming Link Hub (5 dark-neon pages)
+
+```
+Brief: Produce 5 link-in-bio pages for streamers and gaming creators — the kind of single-page hub a Twitch / YouTube creator drops in their stream bio. Aesthetic: neon-soaked, CRT-inflected, kinetic. Each variant is ONE creator persona.
+
+SHARED AESTHETIC (all 5 variants):
+- Mode: dark. Background #08070C or #0D0716 with subtle radial fades.
+- Display: Space Grotesk 600-700 OR Anton 400, tight letter-spacing -0.03em.
+- Body: Inter 400-500.
+- Mono: JetBrains Mono 500 — for live timestamps, viewer counts, version tags.
+- One dominant neon accent per variant + a thin secondary accent for highlights.
+- 32px dot-grid background at 4% opacity OR very faint scan-line overlay (alternating 1px horizontal lines at 2% opacity).
+- "LIVE" indicator (when applicable): pulse-dot in the accent with a "LIVE · 2,484 watching" mono label.
+- Lift-on-hover for link buttons (translateY -2px + accent ring fade in over 120ms).
+
+SHARED SECTION SKELETON (link-in-bio format — mobile-first, vertical, centered):
+- Max content width 480px on desktop, centered. On mobile (≤640px), full width with 20px horizontal padding. Vertical flow only.
+1. Top status bar (12px tall): MONO uppercase eyebrow ("STREAMING NOW · DAY 47 OF SUMMER GAMES" or "OFFLINE · NEXT STREAM SAT 8PM PT") + dynamic timestamp. ONE row, the kinetic anchor.
+2. Header block: avatar (96px circular, accent ring with pulse on LIVE variants) + creator name (display, 32px, accent gradient or solid) + handle (mono, fg-faint, "@persona · 412k followers") + 2-line bio (Inter 400, 14px, specific + opinionated — what they do, what they're playing, voice).
+3. Featured content tile: 16:9 thumbnail card with play-icon overlay, title underneath (2 lines max), and a "WATCH ON YOUTUBE" / "VOD ON TWITCH" mono action. Shows latest VOD or upcoming match.
+4. Link stack: 6-9 vertical link buttons. Each row: small leading icon (12-14px) + label (15px medium) + trailing chevron-right or external-arrow. Card background (slightly lighter than page), 1px accent border at 25% opacity, full-width, rounded-xl. Lift-on-hover.
+5. Social row: 5-7 small (32px square, ghost button) icons in one horizontal row — Twitch, YouTube, Twitter/X, Discord, TikTok, GitHub, Steam, Bluesky as relevant. Pure inline SVG, no labels.
+6. Footer microline (centered, 10px mono, fg-faint at 40% opacity): "© 2026 PERSONA · made with openlen". One row.
+
+VISUAL FLOURISHES SPECIFIC TO STREAMER/GAMING:
+- Pulse-dot animations for "LIVE" indicators.
+- Optional: animated viewer-count flicker via CSS-only keyframes (last digit shifts every few seconds).
+- Glitch-shift on accent text hover: brief horizontal split at ±2px for 80ms (CSS @keyframes).
+- Heavy use of mono cells for stats: hours streamed, top game, current rank, ping, donation total.
+- Neon glow on featured tile + primary CTAs — box-shadow: 0 0 24px accentRGB at 35% alpha.
+
+THE 5 VARIANTS — produce one text/html artifact per variant in this conversation:
+
+VARIANT 01: phasewalk — Speedrunner, Hollow Knight + Celeste specialist.
+- Accent: acid-lime #C7F432. Secondary: hot-magenta #FF49C9 (rare highlight).
+- LIVE status: "STREAMING NOW · ATTEMPT 1,847 OF ANY%" + ticking timer.
+- Bio: "Speedrunning Hollow Knight Any% since 2022. 4:18 PB. Two-time GDQ. Coffee-fueled."
+- Featured: "VOD · 4:18.04 — New Any% world record (commentary)". 318k views, 2 weeks ago.
+- Link stack: Twitch · LIVE PB attempts, YouTube · 1.2M subs · WR explainers, Latest run · 4:18.04, Speedrun.com profile, Splits + setup (notion), Merch · phasewalk WR tee, Discord · 8,247 runners, Schedule · Tue/Thu/Sat 9PM PT.
+- Social row: Twitch, YouTube, Twitter, Discord, Speedrun.com, GitHub.
+
+VARIANT 02: ironscape.gg — Tactical FPS pro (Valorant/CS-style team IGL).
+- Accent: deep-orange #FF5527. Secondary: cyan #00E5FF (sparingly).
+- Status: "OFFLINE · NEXT MATCH SAT 18:00 CEST vs aviary".
+- Bio: "Pro IGL for Solstice. EMEA Stage 2 champion. Building habits, watching demos, drinking yerba mate."
+- Featured: "VOD · Grand Final vs aviary — 16-13, Lotus map review (45 min, English)".
+- Link stack: Twitch · post-match VODs + scrims, YouTube · review series, Team Solstice (official), Tip / Donate (Stream Elements), Schedule · Tue/Wed/Fri 19:00 CEST, Sponsor · Logitech G PRO, Tracker.gg · KD 1.34 / ADR 168, Discord · 4,118 in scrim queue.
+- Social row: Twitch, Twitter, Instagram, YouTube, Steam, Discord.
+
+VARIANT 03: holler.studio — Art streamer / illustrator (long-form drawing).
+- Accent: warm-coral #FF8463. Secondary: soft-teal #58E0C0.
+- Status: "PAINTING NOW · STAGE 3 — INKING · 412 watching". Less rigid than gaming variants.
+- Bio: "Illustrator. Stream long-form ink + watercolor commissions on Twitch. Slow + quiet + chatty. Working on a book."
+- Featured: "WIP · The Cartographer (commission) — 4hr stream, midway through inks".
+- Link stack: Twitch · live drawing M/W/F, Instagram · finished pieces, Commissions OPEN · queue 3/8, Print shop · new this week, The book · launch 2027, Subscriber Discord, Process timelapses · YouTube, Patreon · early access + brushes.
+- Social row: Twitch, Instagram, YouTube, Patreon, Twitter, Bluesky.
+
+VARIANT 04: oldworldco — Retro / arcade gaming creator (CRT + chiptune nights).
+- Accent: candy-cyan #2EFFD5. Secondary: vivid yellow #FFD400.
+- Heavy scan-line overlay. Pixel-art accents OK. Optional CRT vignette via radial-gradient.
+- Status: "OFFLINE · NEXT STREAM SAT 9PM — A-RANK MEGA MAN X".
+- Bio: "Retro gamer, arcade hunter, CRT enthusiast. Grinding A-rank Mega Man X. 600+ NES titles in archive."
+- Featured: "PILGRIMAGE — every Konami arcade cabinet in Akihabara, 2025 trip recap". Cinematic thumbnail.
+- Link stack: Twitch · weekend retro nights, YouTube · 320k subs · arcade docs, Cabinet collection · 47 machines, Mega Drive / Saturn JP archive (cart list), Discord · 6,200 retro heads, Streaming rig + CRT setup (notes), Merch · Phosphor shirt drop.
+- Social row: Twitch, YouTube, Twitter, Discord, Bluesky.
+
+VARIANT 05: lumen.vtuber — VTuber variety streamer with original character.
+- Accent: lavender-pink #C77BFF. Secondary: pale-aqua #B5F3F3.
+- Softer, more playful. Gradient mesh background OK instead of dot-grid. Avatar is a stylized cute creature (inline SVG, NOT generic anime).
+- Status: "DEBUTED 3 MONTHS AGO · 184 streams · 1.4k watching".
+- Bio: "Variety streamer. Cozy games, horror nights (Tuesdays), karaoke (Sundays). Character by holler.studio. ENG / 日本語."
+- Featured: "ENDURANCE: Outer Wilds, full game in one stream (8h21m)".
+- Link stack: Twitch · LIVE most days 6PM PT, YouTube · clips + karaoke archive, Throne wishlist · prop budget, Schedule (Google Cal), Discord · 3,127 members, Twitter · daily art / shitposts, Merch · plush + sticker pack, Character art by @holler.studio.
+- Social row: Twitch, YouTube, Twitter, TikTok, Discord, Throne.
+
+Produce all 5 as separate text/html artifacts. Each should feel like a real person — specific, opinionated, alive.
+```
+
+---
+
+## Prompt 34 — Musician / Producer Link Hub (5 dark-warm pages)
+
+```
+Brief: Produce 5 link-in-bio pages for musicians and producers — the link a band, DJ, or producer drops in Instagram bio + Spotify "about". Aesthetic: dark + warm, album-cover energy, music-first. Each variant is ONE artist persona with a clear genre point of view.
+
+SHARED AESTHETIC (all 5 variants):
+- Mode: dark warm. Backgrounds in deep burgundy / navy / charcoal-with-warmth — NOT cold pure black. Examples: #14080B, #0F0E1A, #1A1310.
+- Display: a dramatic display face — Fraunces (semi-italic OK) or Cormorant Garamond — set large, tight leading. Some variants use a sans (Inter, Anton) per persona below.
+- Body: Inter 400-500.
+- Mono: Geist Mono 500 — for catalog numbers, BPM, runtime.
+- Each variant has ONE warm-toned accent + cream/off-white text. NO neon. Think record-sleeve color theory.
+- Subtle grain overlay on background (CSS gradient noise or repeating dot pattern at 1% opacity).
+- Lift-on-hover for link buttons.
+
+SHARED SECTION SKELETON (mobile-first, vertical, centered, max 480px desktop):
+1. Eyebrow: MONO uppercase, single line — catalog number / release date / tour status ("CAT NO. WRL-014 · OUT FEB 28" or "EU TOUR · 2026 SPRING").
+2. Header block: square album art (96-128px, rounded-md, slight shadow) for solo / band photo OR custom inline-SVG mark for producers + artist name (display, 36-44px) + handle (@artist) + 2-line bio (specific genre, scene, what they're working on right now).
+3. Featured release tile: large album art (square, full-width-of-container, ~440px) + tracklist preview (3-5 tracks with runtimes in mono) + a row of streaming badges (Spotify, Apple Music, Bandcamp, SoundCloud, Tidal). Tracklist is just text — DO NOT mock a player UI.
+4. Link stack: 6-10 vertical buttons. Examples: "Listen on Spotify · 184k monthly", "Bandcamp · digital + vinyl", "Latest mix · Boiler Room set", "Tour dates · 14 shows", "Merch · new shirt drop", "Mailing list · early access", "Press kit · download", "Sync licensing · contact".
+5. Tour / shows strip (when applicable): 4-6 upcoming dates as a mono table — date · city · venue · status (SOLD OUT / TICKETS / FEW LEFT). Use real-feeling cities + venue names.
+6. Social row: 5-7 small icons — Spotify, Apple Music, Bandcamp, SoundCloud, Instagram, YouTube, TikTok, Twitter.
+7. Footer microline: catalog number + management contact ("BOOKING — agency@example") OR distributor line. One row, mono, fg-faint.
+
+VISUAL FLOURISHES SPECIFIC TO MUSICIAN:
+- Tracklist rendered in mono with hairline rules between tracks. Runtime right-aligned, tabular-nums.
+- Pulse-dot for "NOW PLAYING" or "TOUR ON SALE" indicators.
+- Subtle glow on the featured album art — box-shadow with the accent at low alpha.
+- For DJ / electronic variants: a horizontal BPM / key strip is OK ("128 BPM · F minor").
+
+THE 5 VARIANTS — produce one text/html artifact per variant:
+
+VARIANT 01: lantern hollow — Gothic-folk band (4-piece, indie label).
+- Accent: amber #E0A156. Bg #14080B (deep burgundy-black). Display: Fraunces 600 italic.
+- Eyebrow: "WRL-014 · LP OUT 28 FEB · PRE-ORDER OPEN".
+- Bio: "Four people, two guitars, harmonium, slow drums. Recorded in a cabin north of Halifax. New record February."
+- Featured: "WAYFARE / SECOND HOUSE — LP, 9 tracks, 41:08". Stream + pre-order vinyl badges.
+- Link stack: Pre-order LP (signed + clear vinyl), Listen on Spotify · 84k monthly, Bandcamp · pay-what-you-want demos, Tour 2026 · 11 shows, Mailing list · early demos, Press kit, Booking (US/EU), Merch · cabin tee.
+- Tour: 11 dates Halifax → Boston → NYC → London → Amsterdam → Berlin (mix of "SOLD OUT" + "TICKETS" + "FEW LEFT").
+
+VARIANT 02: matterhorn dj — Minimal techno DJ + label head.
+- Accent: cold-cream #F4ECD7. Bg #0E0E12. Display: Inter 700, very tight tracking.
+- Eyebrow: "MTH-022 · NEW 12" · 19 MARCH".
+- Bio: "DJ + label head, Matterhorn Records. Berlin / Tokyo. Minimal, deep, slow. Sets recorded in one take, no decks software."
+- Featured: "MTH022 — Halverson — 'NORTH FACE' EP, 4 tracks, 32:14" (with BPM/key per track).
+- Link stack: Boiler Room set · Berlin Atonal, Resident Advisor profile, Bandcamp · label catalog, Soundcloud · 184k followers, Booking (worldwide), Matterhorn Records, Press · DJ Mag interview, Spotify · monthly mix.
+- Tour: 6 dates Berlin → Tokyo → Tbilisi → Amsterdam, mostly SOLD OUT.
+
+VARIANT 03: kid mireille — Modern soul / R&B artist (solo, women-of-color voice).
+- Accent: rose-gold #D89B7C. Bg #1A1310 (warm chocolate). Display: Fraunces 500.
+- Eyebrow: "DEBUT EP · 'MEDIAN' · STREAMING EVERYWHERE".
+- Bio: "Singer, songwriter, sometimes producer. Brooklyn via Lyon. Soul that takes its time. Debut EP 'Median' out now."
+- Featured: "MEDIAN — EP, 6 tracks, 24:08". All streaming badges.
+- Link stack: Listen on Spotify · 412k monthly, Apple Music · editorial feature, Bandcamp · digital, Cover series on YouTube · 1.4M views, Instagram · process clips, Tour US 2026 · 12 dates, Press · NPR Tiny Desk, Mailing list · early demos.
+- Tour: 12 dates US east coast → Chicago → LA → Vancouver.
+
+VARIANT 04: tape diary — Lo-fi / jazz producer (solo bedroom producer).
+- Accent: pale-mustard #C9B47A. Bg #100D0A. Display: Crimson Pro 500.
+- Eyebrow: "TD-007 · TAPE OUT NOW · CASSETTE + DIGITAL".
+- Bio: "Lo-fi jazz, beats, late-night warm. Cassette label, instrument-of-the-week series. New tape every full moon."
+- Featured: "TD007 — 'LATE BLUE' — 11 tracks, 38:42, recorded on a 4-track in Aug 2025".
+- Link stack: Bandcamp · all tapes, Spotify · monthly listeners 92k, YouTube · 'instrument-of-the-week' series, Sample pack · free download, Mailing list · new tape alerts, Patreon · stems + sample chains, Merch · cassette + tote, Discord · 1,824 producers.
+
+VARIANT 05: anton kvass — Contemporary classical composer (post-minimal).
+- Accent: deep-ink #5B7C99 (cold but warm-toned). Bg #0F1014 (warm graphite). Display: Cormorant 500.
+- Eyebrow: "PREMIERE · NOV 2026 · BARBICAN, LONDON".
+- Bio: "Composer. Quartets, sextets, occasional larger works. Recorded by Quatuor Béla. Studied at the Conservatoire de Paris."
+- Featured: "STRING QUARTET No. 3 — premiered by Quatuor Béla, Lyon, March 2026 (32:14)" with a play-on-Spotify badge.
+- Link stack: Listen on Spotify, Apple Classical · curated, Score · purchase + perusal, Commissions · open through agent, Upcoming premieres · 4 in 2026, Press · Gramophone review, Booking (agent), Mailing list · score releases.
+- Tour: 4 upcoming premieres — Barbican London, Concertgebouw Amsterdam, Suntory Hall Tokyo, Walt Disney Concert Hall LA.
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 35 — Visual Artist / Photographer Link Hub (5 cream + light pages)
+
+```
+Brief: Produce 5 link-in-bio pages for visual artists, photographers, and illustrators — the link an artist shares in gallery bios + Instagram. Aesthetic: gallery whitespace, image-forward, quiet, refined. NO neon, NO bento, NO dark mode here. Each variant is ONE artist persona with a clear medium + practice.
+
+SHARED AESTHETIC (all 5 variants):
+- Mode: cream OR light (not pure white — softer paper tones: #F6F2EA, #F0EDE6, #FCFAF5).
+- Display: a refined serif — Fraunces 400-500 (some italic) OR Crimson Pro 400 OR Source Serif 4 400. Large, generous leading.
+- Body: Inter 400-500 OR Crimson Pro 400 for some.
+- Mono: JetBrains Mono 500, rarely used — only for catalog numbers, year ranges, gallery codes.
+- One subtle accent per variant — usually a tonal hue (sage, terracotta, slate) NOT vivid. Most contrast comes from typography + image.
+- Hairline borders rgba(0,0,0,0.08).
+- NO dot-grids, NO scan-lines, NO glow effects. Use whitespace as the structural device.
+
+SHARED SECTION SKELETON (mobile-first, vertical, centered, max 480px desktop):
+1. Eyebrow: small mono OR small caps serif — single line. ("WORKS · 2018–2026" or "REPRESENTED BY GAGOSIAN" or "SELECTED · 2024 SHORTLIST, PRIX PICTET").
+2. Header block: large square portrait or signature artwork (128-160px) — round OR square, NO ring. Artist name (display serif, 36-48px, possibly italic) + practice line (a quiet one-liner: "Photographer, Brooklyn"). 2-3 line bio (specific medium, where they work, current project — written in artist-statement voice, not marketing voice).
+3. Featured work tile: a single large image placeholder (gradient div as image, 4:5 or 1:1) + caption underneath in italics + small mono catalog line ("PL-2024-018 · gelatin silver print · ed. 7"). NO play button, NO CTA — it's just the work.
+4. Link stack: 5-8 vertical buttons, but quieter than other prompts. Hairline borders not filled cards. No icons OR very small (10px) line-only icons. Examples: "Portfolio / works", "Print store", "CV (PDF)", "Studio visits · by appointment", "Gallery representation", "Available works · contact", "Workshops · spring '26", "Press / interviews".
+5. Recent + upcoming (optional, when relevant): a 4-line vertical list in italics — "Selected · 2024 Aperture Portfolio Prize / Group show · MoMA PS1 · Mar 2026 / Solo · Gallery TBD · Oct 2026 / Book · second monograph, fall 2027".
+6. Social row: 3-5 small icons — Instagram, Bluesky, Are.na, Substack, Vimeo. Subtle, line-only.
+7. Footer microline: studio location + gallery contact OR copyright with edition info. Italic, fg-faint.
+
+VISUAL FLOURISHES SPECIFIC TO VISUAL ARTIST:
+- Italics used purposefully — for captions, gallery names, dates.
+- Hairline rules between sections (1px, rgba(0,0,0,0.08), 60-80% width centered).
+- ONE accent flourish max — e.g., a small drop-cap on the bio, or italic accent text in a single button label.
+- Image placeholders are subtle bg-gradient-to-br in muted tones, never bright.
+- Numbering: artworks numbered in mono ("01 / 12", "PL-2024-018").
+
+THE 5 VARIANTS — produce one text/html artifact per variant:
+
+VARIANT 01: clara mendes — Documentary photographer (long-form, B&W, social-realist).
+- Accent: warm-slate #6B6157. Bg #F4F0E8. Display: Fraunces 400 italic.
+- Eyebrow: "WORKS · 2016–2026 · SÃO PAULO + LISBON".
+- Bio: "Photographer. Long-form documentary, gelatin silver. Eight years on a single project about Brazilian agrarian workers."
+- Featured: "PL-2024-018 — Aurora, Mato Grosso (gelatin silver, ed. 7, framed 60×80cm)". Caption in italic.
+- Link stack: Portfolio · the agrarian project, Print store · editioned silver prints, CV (PDF), Galeria Vermelho · São Paulo, Galeria Pedro Cera · Lisbon, Press · Aperture interview, Studio visits · by appointment, Mailing list · new prints.
+- Recent + upcoming: "2024 Aperture Portfolio Prize finalist / Solo · Galeria Vermelho · Sept 2026 / Monograph · Mack, Spring 2027 / Workshop · Arles, July 2026".
+
+VARIANT 02: yuki abe — Fashion illustrator (editorial, monograph-style, Tokyo).
+- Accent: terracotta #B5694F. Bg #FBF6EE. Display: Crimson Pro 400.
+- Eyebrow: "ILLUSTRATION · EDITORIAL + COMMISSIONS".
+- Bio: "Illustrator working between Tokyo and Paris. Editorial work for Vogue Japan, The New York Times Style, Aesop."
+- Featured: "VOGUE JAPAN · Autumn issue 2025 — six-page editorial, ink on washi". Italic caption.
+- Link stack: Selected works · 2018–present, Editorial clients · Vogue / NYT / Aesop, Available prints · limited series, Commissions OPEN · queue 4/6, Process · Instagram, Workshop · Paris Mar 2026, Agent · Bryan Wolff Studio, Mailing list.
+- Social: Instagram, Are.na, Vimeo (timelapses), Substack.
+
+VARIANT 03: marian holst — Ceramic artist (vessels, slow practice, rural studio).
+- Accent: sage #8FA28A. Bg #F0EDE6. Display: Source Serif 4 400.
+- Eyebrow: "STUDIO · KENT · 2010–PRESENT".
+- Bio: "Ceramicist. Hand-built vessels from local clay, wood-fired. Two firings a year. Pieces go fast — small batch, no overstock."
+- Featured: "GROUP 14 — eleven vessels, autumn 2025 firing, ash glaze on local stoneware".
+- Link stack: Works · current available, Studio visits · spring + autumn open studios, Galleries · stocked at 3 spaces, Workshops · 6-week wheel intensive, Commissions · waitlist 2027, Press · Crafts Magazine, Mailing list · firing announcements.
+- Social: Instagram, Substack (the firing log).
+
+VARIANT 04: nikolai vetrov — Fine-art painter (oil, large-scale, quiet abstraction).
+- Accent: ink-blue #4A5C7A. Bg #F6F2EA. Display: Cormorant 500.
+- Eyebrow: "STUDIO · BROOKLYN · REPRESENTED BY VARDIK".
+- Bio: "Painter. Large-format oil on linen, abstract. Working on a 30-canvas cycle, two years in."
+- Featured: "FIELD 22 — oil on linen, 200×280cm, 2025 (the cycle 'Slow Light')".
+- Link stack: Selected works · 2014–2026, Vardik Gallery · Brooklyn, Studio visits · by appointment, Available works · contact gallery, Press · Artforum review, Monograph · Hatje Cantz 2024, CV (PDF), Mailing list · openings.
+- Recent + upcoming: "Solo · Vardik · March 2026 / Group · Aspen Art Museum · Summer 2026 / Monograph · revised edition 2027 / Residency · Civitella Ranieri · Sept 2026".
+
+VARIANT 05: aria delph — Graphic designer (identity, indie publications, type-led).
+- Accent: aubergine #5D3F5B. Bg #FCFAF5. Display: Fraunces 500.
+- Eyebrow: "STUDIO · TYPE + IDENTITY · 2019–PRESENT".
+- Bio: "Independent designer. Identity, publication design, occasional type. Selected clients: A24, MIT Media Lab, NTS Radio."
+- Featured: "NTS RADIO · 10-year rebrand, identity system (2024–25)". Italic caption.
+- Link stack: Selected work · 2019–present, Available for project work, Studio · solo + 2 collaborators, Recognition · ADC + D&AD, Type · two faces in progress, Workshop · Werkplaats Sept 2026, Newsletter · monthly + occasional, Contact.
+- Social: Instagram, Are.na, Read (Substack).
+
+Produce all 5 as separate text/html artifacts.
+```
+
+---
+
+## Prompt 36 — Premium Membership Creator Link Hub (5 dark-rose pages)
+
+```
+Brief: Produce 5 link-in-bio pages for premium membership creators — the link a lifestyle, fitness, travel, dance, or paid-content creator shares to drive subscribers to their gated platforms. Aesthetic: luxe, intimate, sophisticated. NOT tacky. Treated as a premium lifestyle brand. Rose-gold + deep burgundy on near-black. Each variant is ONE creator persona with a clear membership offer.
+
+SHARED AESTHETIC (all 5 variants):
+- Mode: dark + rich. Backgrounds in deep burgundy / aubergine / near-black-with-warmth — NOT cold black. Examples: #120A0E, #14070C, #1A0F12.
+- Display: an elegant serif — Cormorant Garamond 500 italic OR Fraunces 500. Large, slightly tracked.
+- Body: Inter 400-500 — generous leading.
+- Mono: JetBrains Mono 500 — rare, used for tier labels and member counts.
+- Each variant has a rose-gold / champagne / muted-pink accent. Cream off-white text. Soft glows.
+- Subtle radial gradient at the top + bottom of the page (accent at 6% alpha, fading to transparent).
+- Lift-on-hover for link buttons with a soft accent glow.
+
+SHARED SECTION SKELETON (mobile-first, vertical, centered, max 480px desktop):
+1. Eyebrow: MONO uppercase, single line — member count or tier ("4,182 MEMBERS · 3 TIERS" or "PRIVATE COMMUNITY · INVITE-FRIENDLY").
+2. Header block: avatar (96-128px, soft accent ring, slightly blurred backlight glow) OR a tasteful blurred-edge portrait. Creator name (display serif italic, 32-40px) + handle (@persona) + 2-line bio (intimate, voice-driven, specific about what they offer — NOT generic "lifestyle creator").
+3. Featured offer tile: the main paid offer — a large card with the tier name (display, 24px) + 1-line value prop + 3-4 bullet inclusions (small mono check rows) + member count + a primary CTA button ("Join · $12/month"). Soft accent glow.
+4. Link stack: 6-9 vertical buttons. Lead with the paid platforms (Patreon / OnlyFans / Substack / Fanhouse / Fansly equivalents — pick the relevant ones per persona) then the free funnel (Instagram, TikTok, YouTube). Examples: "Premium · monthly · $12", "Annual · $96 · 2 months free", "VIP tier · waitlist", "Latest post · members only", "Instagram · daily", "YouTube · weekly".
+5. Social proof microbar (optional): 3 inline stats in mono — members · countries · years online. Italic.
+6. Social row: 5-7 small icons — Instagram, TikTok, YouTube, Twitter, Telegram, Discord, Substack as relevant. Refined, line-only.
+7. Footer microline: business contact + management line + age-verification note when relevant ("18+ · for press: agent@example"). One row, mono, fg-faint.
+
+VISUAL FLOURISHES SPECIFIC TO PREMIUM MEMBERSHIP:
+- Soft accent glow on the featured tile + primary CTAs.
+- Italic display headings give an intimate, editorial register.
+- Subtle gradient mesh background (multiple radial-gradients layered at low alpha) gives depth.
+- NO emoji, NO crass language, NO "subscribe for exclusive content!!!" tone. Voice is poised + adult.
+- The featured-offer card uses a 1px hairline accent border at 30% alpha + a faint inner glow.
+- Member counts in tabular-nums mono.
+
+THE 5 VARIANTS — produce one text/html artifact per variant:
+
+VARIANT 01: maren — Lifestyle creator (daily vlogs + members-only weekly letters + Q&A).
+- Accent: rose-gold #D89B7C. Bg #14070C.
+- Eyebrow: "8,412 MEMBERS · WEEKLY LETTER + Q&A".
+- Bio: "Brooklyn. Writing about the practice of being a woman in her thirties. Daily on Instagram, depth on Substack."
+- Featured: "Substack — paid, $8/month — weekly letter + monthly Q&A + members-only Discord (3,847 members)".
+- Link stack: Substack · paid · $8/month, Annual · $84 · 2 months free, Latest letter · 'On waiting', Free posts · weekly preview, Instagram · daily, YouTube · long-form interviews, Discord · members only.
+
+VARIANT 02: lev k — Fitness coach (premium 8-week programs + form review).
+- Accent: champagne #C9A87C. Bg #100808.
+- Eyebrow: "412 ATHLETES · 3 PROGRAMS · WAITLIST OPEN".
+- Bio: "Strength coach. Pull-from-the-floor programming for intermediate lifters. Eight-week blocks, video form review."
+- Featured: "FOUNDATIONS — 8-week intermediate program, $148, video form review included. Next cohort: Mar 9."
+- Link stack: Foundations · $148, Advanced · $228 (waitlist), Form review only · $48/review, Free Sample week (email), YouTube · technique series, Instagram · daily, Newsletter · weekly, Press · Outside Magazine.
+
+VARIANT 03: theo wren — Travel creator (paid trip guides + members-only itineraries).
+- Accent: amber-gold #D4A658. Bg #14100A.
+- Eyebrow: "2,184 MEMBERS · 27 GUIDES · 11 COUNTRIES".
+- Bio: "Slow travel. Detailed city guides for people who skip the highlights. Member-only itineraries with everything I actually used."
+- Featured: "Membership — $12/month — full guide library + monthly new city + 1:1 trip help (2,184 members)".
+- Link stack: Membership · $12/month, Annual · $108 · 2 months free, Latest guide · Naples 7-day, Free preview · Lisbon excerpt, Instagram · daily, YouTube · trip recaps, Substack archive, Press · Condé Nast.
+
+VARIANT 04: noor lev — Dance + movement artist (online masterclasses + private studio).
+- Accent: dusty-rose #C18B92. Bg #160A0E.
+- Eyebrow: "1,847 STUDENTS · 4 MASTERCLASSES · INTENSIVE FEB".
+- Bio: "Contemporary dance artist. Trained Batsheva. Teach online masterclasses + a 6-week intensive twice a year. Currently choreographing for Berlin Festival."
+- Featured: "INTENSIVE — 6 weeks, 12 sessions live + recorded, $448. Next cohort starts Feb 28 (28 spots left of 80)."
+- Link stack: Intensive · Feb 28 · $448, Masterclass library · $18 each, Annual all-access · $228, Free intro class (email), Instagram · daily practice, YouTube · class recordings, Performances 2026 · 4 shows, Press · The Stage.
+
+VARIANT 05: priya rose — Premium content creator (Patreon / OnlyFans-equivalent style, treated with restraint).
+- Accent: deep-rose #B26B7E. Bg #160810.
+- Eyebrow: "PREMIUM · 3 TIERS · 18+".
+- Bio: "Writer, model, host of the podcast 'The Long Hour'. Premium tiers for the people who want closer access. London."
+- Featured: "Premium tier — $14/month — weekly intimate writing + voice notes + monthly video letters. The Long Hour podcast included."
+- Link stack: Premium · $14/month, VIP · $48/month · waitlist, The Long Hour podcast · free, Instagram · daily, TikTok · clips, Newsletter · free, Press kit, Business contact · agency.
+- Footer: "18+ · all content posted on premium platforms. For press: agent@example."
+
+Produce all 5 as separate text/html artifacts. Voice is poised, intimate, adult — NOT crass.
+```
+
+---
+
+## Prompt 37 — Indie Maker / Builder-in-Public Link Hub (5 cream + mono pages)
+
+```
+Brief: Produce 5 link-in-bio pages for indie makers, SaaS founders, and builders-in-public — the link an indie hacker drops in their Twitter / X bio + GitHub README. Aesthetic: warm cream paper + heavy monospace, terminal-warm hybrid. Specific, factual, ego-light. Each variant is ONE builder persona with multiple shipped projects + writing.
+
+SHARED AESTHETIC (all 5 variants):
+- Mode: cream (warm paper) for 4 variants, ONE dark-terminal variant for variety. Cream bg examples: #F6F2E8, #FBF6EC, #F0EBE0. Dark variant: #0A0907 with cream text.
+- Display: Inter 600-700 with tight tracking -0.025em — modern, builder voice. NOT serif (this isn't editorial — it's a working maker).
+- Body: Inter 400-500.
+- Mono: JetBrains Mono OR Geist Mono 500 — heavy use, for project metadata, tiny labels, sparkline annotations, commit-style entries.
+- One muted accent per variant — usually a single warm hue (warm-coral, terracotta, bronze, indigo, forest). Restraint over neon.
+- Subtle dot-grid at 24px, 3% opacity, in the accent OR neutral.
+- Lift-on-hover for link buttons.
+
+SHARED SECTION SKELETON (mobile-first, vertical, centered, max 480px desktop):
+1. Eyebrow: MONO uppercase, single line — current focus or shipping status ("SHIPPING · OPENLEN V1 · WK 18" or "INDIE · 4 PROJECTS LIVE · $4,128 MRR").
+2. Header block: small square mark (64px, rounded-md — either a wordmark OR a stylized initial) + name (Inter 600, 28-32px) + handle (@maker) + 2-line bio (specific: what they build, where they ship, current focus). Voice is matter-of-fact, no hype.
+3. "Now shipping" tile: the headline current project. A card with project name + 1-line pitch + 3-4 mono stats (MRR, users, version, stage) + small inline sparkline (commits over the last 30 days, computed in inline JS at render — accent stroke, 1.5px). Single CTA: "Visit" or "Try it".
+4. Link stack: 6-10 vertical buttons. Lead with shipped projects, then writing, then community. Examples: "openlen.com · landing-page builder · $1,400 MRR", "Newsletter · 2,184 readers · monthly", "Twitter · daily build logs", "GitHub · 142 repos · 4.8k stars", "Mailing list · ship updates".
+5. Shipped strip: a 4-6 line mono table — "PROJECT — STATUS — REVENUE — STARTED" rows. Examples: "openlen — LIVE — $1.4k MRR — Mar 2026", "captureflow — PAUSED — $214 MRR — Oct 2025", "graphd — SOLD — $14k exit — 2024".
+6. Social row: 5-7 small icons — Twitter/X, GitHub, Bluesky, LinkedIn, Substack, YouTube, RSS. Line-only.
+7. Footer microline: location + open-to ("Lima, PE · open to: consulting, advisory, angels"). One row, mono, fg-faint.
+
+VISUAL FLOURISHES SPECIFIC TO INDIE MAKER:
+- Inline sparkline SVG generated from a JS data array at end of body — accent stroke + cream fill. ~24 points over 30 days.
+- Mono tables with hairline rules, tabular-nums.
+- "$X MRR" / "$X ARR" / "X users" badges in mono, restrained.
+- Optional: a tiny "committed 14h ago" mono cell next to the GitHub link.
+- NO testimonial cards, NO pricing tiers, NO hero gradients with glow. The vibe is plain, well-typeset, factual.
+
+THE 5 VARIANTS — produce one text/html artifact per variant:
+
+VARIANT 01: jose @ openlen — SaaS founder shipping in public (the user's persona — make this one feel like the user could literally use it).
+- Accent: warm-coral #FF5527. Bg #FBF6EC. Mode: cream.
+- Eyebrow: "SHIPPING · OPENLEN V1 · WK 18 · LIMA → SELF-HOST".
+- Bio: "Solo. Building openlen — a landing-page builder that publishes to a real subdomain. Hetzner-hosted, no Vercel."
+- Now shipping: "openlen.com — landing-page builder with AI generation + visual editing. v1 in 6 weeks. Currently 12 alpha users." Stats: $0 MRR · 12 users · v0.4 · alpha. Sparkline: 30 days of commits.
+- Link stack: openlen.com · try it (alpha invite), Newsletter · monthly build log · 184 readers, Twitter · daily ship log, GitHub · 84 repos · 1.2k stars, Mailing list · v1 launch, Past projects · 3 shipped, Consulting · 1 day/week open.
+- Shipped: "openlen — ALPHA — $0 — May 2026 / inariwatch — LIVE — $84 MRR — Jan 2026 / [past project] — SUNSET — $0 — 2023".
+- Footer: "Lima, PE · open to: angel intros + design feedback".
+
+VARIANT 02: marie b — Indie hacker, 4 small SaaS products, lifestyle business.
+- Accent: terracotta #B5694F. Bg #F6F2E8. Mode: cream.
+- Eyebrow: "INDIE · 4 PROJECTS LIVE · $6,428 MRR · BCN".
+- Bio: "Indie maker. Small SaaS that solve specific problems. Solo, no funding, no employees, no pivots. Barcelona."
+- Now shipping: "scriptface.com — desktop screen recorder with AI captions. Mac-only, $14/mo, 312 users." Stats: $4,368 MRR · 312 users · v2.1.
+- Link stack: scriptface.com · main, kanrai.app · invoice generator · $1,184 MRR, ticktock.tools · meeting-cost timer · $612 MRR, draft.review · grammar API · $264 MRR, Twitter · build logs, Newsletter · 4,128 readers, RSS · blog feed.
+- Shipped: "scriptface — LIVE — $4.4k MRR — 2024 / kanrai — LIVE — $1.2k MRR — 2023 / ticktock — LIVE — $612 MRR — 2022 / draft — LIVE — $264 MRR — 2025".
+- Footer: "Barcelona, ES · open to: API customers + reseller deals".
+
+VARIANT 03: avery k — ML / AI engineer (research + tools + open source).
+- Accent: indigo #5E6AD2. Bg #0A0907. Mode: dark-terminal (the dark variant of this prompt).
+- Eyebrow: "RESEARCH · LLM EVAL · GRAPHQL FUZZER · SF".
+- Bio: "ML engineer. Open-source eval harnesses, weird agent experiments, occasional papers. Was at Anthropic / now independent."
+- Now shipping: "evalkit — open-source LLM eval harness with side-by-side judge mode. 4.2k stars in 8 weeks." Stats: 4,218 stars · v0.7 · 32 contrib · MIT. Sparkline of GitHub stars over 30 days.
+- Link stack: evalkit (GitHub) · 4.2k stars, gqfuzz · GraphQL fuzzer · 1.8k stars, Substack · 'Weekly Eval' · 8,247 readers, Twitter · daily research, Talks · 6 in 2026, Papers · NeurIPS '25, Office hours · Fridays, Consulting · 2 days/week.
+- Shipped: "evalkit — LIVE — 4.2k stars — Apr 2026 / gqfuzz — LIVE — 1.8k stars — 2025 / promptd — ARCHIVED — 412 stars — 2023".
+
+VARIANT 04: dion park — Designer-developer (case-study heavy, working sites + writing).
+- Accent: bronze #A4794A. Bg #F0EBE0. Mode: cream.
+- Eyebrow: "DESIGNER + DEV · 11 LIVE SITES · TORONTO".
+- Bio: "I design + build websites for people who care about typography. Eleven sites live this year. Available for selected projects in Q3 2026."
+- Now shipping: "verre — typography studio site for a Montreal foundry. Shipped March 2026." Stats: ship date · 14 weeks · 4 collaborators.
+- Link stack: Work · 11 case studies, Available for projects · Q3 2026, Writing · 14 essays on design + craft, Newsletter · 2,184 readers, Side projects · 3 tools, Twitter · process clips, Are.na · references, Talks · 4 in 2026.
+- Shipped: "verre — LIVE — Mar 2026 / cantine — LIVE — Jan 2026 / lyriq — LIVE — Nov 2025 / brulé — LIVE — Sep 2025".
+
+VARIANT 05: kit ren — Creator-engineer (newsletter + open source + small apps).
+- Accent: forest #4F7A52. Bg #F6F2E8. Mode: cream.
+- Eyebrow: "NEWSLETTER · 12,408 READERS · OPEN SOURCE · BERLIN".
+- Bio: "Write a weekly newsletter on small software, ship open-source tools when I find a problem worth solving. Currently working on a book."
+- Now shipping: "minus.tools — a hand-curated set of 24 small Mac apps under $14. Updated monthly." Stats: 24 apps · 12 reviewed/mo · v3.
+- Link stack: Newsletter · weekly · 12,408 readers, minus.tools · curated apps, jot · CLI scratchpad (GitHub · 8.4k stars), kindle-export · 412 stars, The book · 'small software' · spring 2027, Twitter · weekly digest, RSS, Sponsor · Carbon Ads (open).
+- Shipped: "minus.tools — LIVE — 24 apps — 2024 / jot — LIVE — 8.4k stars — 2023 / kindle-export — LIVE — 412 stars — 2025 / [the book] — DRAFT — 84% — 2024".
+
+Produce all 5 as separate text/html artifacts. Voice is matter-of-fact, factual, builder-quiet — no hype, no growth-hack language, real numbers.
 ```
 
 ---

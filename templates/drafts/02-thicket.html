@@ -1,0 +1,1241 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Thicket — Landscape design, build &amp; maintenance in Westchester County, NY</title>
+  <meta name="description" content="Thicket is a design-build and lawn-care company for Westchester County. A real landscape designer plans your planting; weekly crews keep it thriving. Family-owned since 2011." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..600;1,9..144,400..600&family=Inter:wght@400;500;600&family=Geist+Mono:wght@400&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cream: "#FAF8F1",
+            "cream-deep": "#F1EEE0",
+            sage: "#E7EBDF",
+            garden: "#3F7A45",
+            "garden-dark": "#2F5C34",
+            ink: "#1F2A1C",
+          },
+          fontFamily: {
+            display: ["Fraunces", "ui-serif", "Georgia", "serif"],
+            sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+            mono: ["'Geist Mono'", "ui-monospace", "monospace"],
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    html { scroll-behavior: smooth; }
+    body {
+      background-color: #FAF8F1;
+      color: #1F2A1C;
+      font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+    .font-display { font-family: "Fraunces", ui-serif, Georgia, serif; }
+    .font-mono-num { font-family: "Geist Mono", ui-monospace, monospace; }
+
+    .display-tight { letter-spacing: -0.03em; }
+    .display-tighter { letter-spacing: -0.04em; }
+    .tabular { font-variant-numeric: tabular-nums; }
+
+    .hairline { border-color: rgba(0,0,0,0.08); }
+
+    /* Ambient radial fade behind the hero */
+    .hero-radial {
+      background:
+        radial-gradient(560px 420px at 78% 22%, rgba(63,122,69,0.16), transparent 70%),
+        radial-gradient(640px 520px at 12% 88%, rgba(63,122,69,0.10), transparent 72%);
+    }
+
+    /* 32px dot-grid background */
+    .dot-grid {
+      background-image: radial-gradient(rgba(31,42,28,0.10) 1.4px, transparent 1.5px);
+      background-size: 32px 32px;
+      background-position: -8px -8px;
+    }
+
+    /* Soft blurred ambient color blobs */
+    .blob {
+      position: absolute;
+      border-radius: 9999px;
+      filter: blur(64px);
+      opacity: 0.55;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Live-feel pulse dot on the availability pill */
+    .pulse-dot {
+      position: relative;
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      border-radius: 9999px;
+      background: #3F7A45;
+      flex: none;
+    }
+    .pulse-dot::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 9999px;
+      background: #3F7A45;
+      animation: pulse-ring 2.4s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+    }
+    @keyframes pulse-ring {
+      0%   { box-shadow: 0 0 0 0 rgba(63,122,69,0.55); }
+      70%  { box-shadow: 0 0 0 11px rgba(63,122,69,0); }
+      100% { box-shadow: 0 0 0 0 rgba(63,122,69,0); }
+    }
+
+    /* Pure-CSS infinite marquee */
+    .marquee {
+      display: flex;
+      width: max-content;
+      animation: marquee-scroll 38s linear infinite;
+    }
+    .marquee-mask:hover .marquee { animation-play-state: paused; }
+    @keyframes marquee-scroll {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+
+    /* Buttons lift on hover */
+    .btn {
+      transition: transform 110ms ease, box-shadow 110ms ease, background-color 110ms ease, color 110ms ease;
+      will-change: transform;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn:active { transform: translateY(0); }
+
+    .card-lift { transition: transform 130ms ease, box-shadow 130ms ease, border-color 130ms ease; }
+    .card-lift:hover { transform: translateY(-3px); }
+
+    /* FAQ accordion (native details/summary) */
+    details > summary { list-style: none; cursor: pointer; }
+    details > summary::-webkit-details-marker { display: none; }
+    details[open] .faq-chevron { transform: rotate(45deg); }
+    .faq-chevron { transition: transform 140ms ease; }
+
+    /* Photo-placeholder texture overlay */
+    .photo-grain {
+      background-image:
+        radial-gradient(rgba(255,255,255,0.18) 1px, transparent 1.2px),
+        radial-gradient(rgba(0,0,0,0.05) 1px, transparent 1.2px);
+      background-size: 22px 22px, 30px 30px;
+      background-position: 0 0, 11px 11px;
+    }
+
+    .soft-shadow { box-shadow: 0 14px 34px -18px rgba(31,42,28,0.30); }
+    .soft-shadow-lg { box-shadow: 0 26px 58px -24px rgba(31,42,28,0.40); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .marquee { animation: none; }
+      .pulse-dot::after { animation: none; }
+      html { scroll-behavior: auto; }
+    }
+  </style>
+</head>
+<body class="font-sans antialiased">
+
+  <!-- ============================================================ -->
+  <!-- SECTION 1 — Thin top bar                                     -->
+  <!-- ============================================================ -->
+  <div class="bg-garden-dark text-cream/95 text-[13px]">
+    <div class="mx-auto max-w-[1200px] px-5 sm:px-6">
+      <div class="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 py-2 sm:justify-between">
+        <div class="flex flex-wrap items-center justify-center gap-x-5 gap-y-1">
+          <a href="tel:+15557304416" class="inline-flex items-center gap-1.5 font-medium hover:text-white">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/>
+            </svg>
+            (555) 730-4416
+          </a>
+          <span class="hidden items-center gap-1.5 sm:inline-flex">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+            </svg>
+            <span class="font-mono-num text-[12px]">Mon&ndash;Fri 7am&ndash;6pm / Sat 8am&ndash;2pm</span>
+          </span>
+        </div>
+        <div class="flex items-center gap-4">
+          <span class="inline-flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+            Serving Westchester County, NY
+          </span>
+          <a href="#quote" class="btn hidden rounded-full bg-cream/15 px-3 py-1 font-medium text-white ring-1 ring-white/25 hover:bg-cream/25 sm:inline-block">Get a quote</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 2 — Nav                                              -->
+  <!-- ============================================================ -->
+  <header class="sticky top-0 z-50 border-b hairline bg-cream/90 backdrop-blur-md">
+    <nav class="mx-auto flex max-w-[1200px] items-center justify-between gap-4 px-5 py-3 sm:px-6">
+      <!-- Logo: inline-SVG mark + wordmark -->
+      <a href="#top" class="flex items-center gap-2.5" aria-label="Thicket — home">
+        <span class="grid h-10 w-10 place-items-center rounded-xl bg-garden text-cream soft-shadow">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 22V12"/>
+            <path d="M12 12c0-3.3-2.5-6-5.5-6C6.5 9.4 9 12 12 12Z" fill="currentColor" fill-opacity="0.22"/>
+            <path d="M12 12c0-3.3 2.5-6 5.5-6C17.5 9.4 15 12 12 12Z" fill="currentColor" fill-opacity="0.22"/>
+            <path d="M12 8c0-3 2-5.5 4.5-5.5C16.5 5.4 14.5 8 12 8Z" fill="currentColor" fill-opacity="0.4"/>
+          </svg>
+        </span>
+        <span class="leading-tight">
+          <span class="font-display text-[22px] font-600 text-ink display-tight">Thicket</span>
+          <span class="block text-[11px] font-medium uppercase tracking-[0.16em] text-garden">Landscape co.</span>
+        </span>
+      </a>
+
+      <!-- Center links -->
+      <div class="hidden items-center gap-7 text-[15px] font-medium text-ink/80 lg:flex">
+        <a href="#services" class="hover:text-garden">Services</a>
+        <a href="#about" class="hover:text-garden">About</a>
+        <a href="#reviews" class="hover:text-garden">Reviews</a>
+        <a href="#contact" class="hover:text-garden">Contact</a>
+      </div>
+
+      <!-- Right: phone pill + accent CTA -->
+      <div class="flex items-center gap-2.5">
+        <a href="tel:+15557304416" class="btn hidden items-center gap-1.5 rounded-full border hairline bg-white px-3.5 py-2 text-[14px] font-semibold text-ink hover:border-garden/40 hover:text-garden sm:inline-flex">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/>
+          </svg>
+          <span class="font-mono-num text-[13px]">(555) 730-4416</span>
+        </a>
+        <a href="#quote" class="btn rounded-full bg-garden px-4 py-2 text-[14px] font-semibold text-cream shadow-[0_10px_24px_-10px_rgba(63,122,69,0.85)] hover:bg-garden-dark">
+          Free quote
+        </a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="top">
+
+  <!-- ============================================================ -->
+  <!-- SECTION 3 — Hero                                             -->
+  <!-- ============================================================ -->
+  <section class="relative overflow-hidden hero-radial">
+    <div class="blob bg-garden/30" style="width:340px;height:340px;top:-90px;right:-60px;"></div>
+    <div class="blob bg-garden/20" style="width:300px;height:300px;bottom:-120px;left:-80px;"></div>
+
+    <div class="relative z-10 mx-auto grid max-w-[1200px] items-center gap-12 px-5 py-16 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
+      <!-- Copy column -->
+      <div>
+        <span class="inline-flex items-center gap-2 rounded-full border hairline bg-white/70 px-3.5 py-1.5 text-[12.5px] font-semibold uppercase tracking-[0.13em] text-garden-dark">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+          Design / Build / Maintain / Since 2011
+        </span>
+
+        <h1 class="mt-5 font-display text-[44px] font-600 leading-[1.04] text-ink display-tighter sm:text-[58px] lg:text-[64px]">
+          A yard you&rsquo;ll<br class="hidden sm:block" /> actually want to
+          <span class="italic text-garden">sit in.</span>
+        </h1>
+
+        <p class="mt-5 max-w-[33rem] text-[17px] leading-[1.6] text-ink/72 sm:text-[18px]">
+          Our landscape designer, Mara Ellison, draws a planting plan you&rsquo;ll love &mdash; then weekly crews keep it sharp all season across the Westchester suburbs.
+        </p>
+
+        <!-- Dual CTA -->
+        <div class="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <a href="#quote" class="btn inline-flex items-center justify-center gap-2 rounded-full bg-garden px-6 py-3.5 text-[15.5px] font-semibold text-cream shadow-[0_14px_30px_-12px_rgba(63,122,69,0.9)] hover:bg-garden-dark">
+            Get a free quote
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 5 7 7-7 7"/></svg>
+          </a>
+          <a href="tel:+15557304416" class="btn inline-flex items-center justify-center gap-2 rounded-full border hairline bg-white px-6 py-3.5 text-[15.5px] font-semibold text-ink hover:border-garden/45 hover:text-garden">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.95" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/>
+            </svg>
+            Call (555) 730-4416
+          </a>
+        </div>
+
+        <!-- Trust-badge row -->
+        <div class="mt-8 flex flex-wrap gap-2.5">
+          <span class="inline-flex items-center gap-1.5 rounded-full border hairline bg-white/80 px-3 py-1.5 text-[12.5px] font-medium text-ink/80">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3F7A45" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
+            Licensed &amp; Insured
+          </span>
+          <span class="inline-flex items-center gap-1.5 rounded-full border hairline bg-white/80 px-3 py-1.5 text-[12.5px] font-medium text-ink/80">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3F7A45" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M10 21v-6h4v6"/></svg>
+            Family-owned since 2011
+          </span>
+          <span class="inline-flex items-center gap-1.5 rounded-full border hairline bg-white/80 px-3 py-1.5 text-[12.5px] font-medium text-ink/80">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <span class="tabular">4.8 &middot; 388 reviews</span>
+          </span>
+          <span class="inline-flex items-center gap-1.5 rounded-full border hairline bg-white/80 px-3 py-1.5 text-[12.5px] font-medium text-ink/80">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3F7A45" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v8"/><path d="m7 6 5-4 5 4"/><path d="M12 22a6 6 0 0 0 6-6c0-3-2-5-6-6-4 1-6 3-6 6a6 6 0 0 0 6 6Z"/></svg>
+            Certified arborist on staff
+          </span>
+        </div>
+      </div>
+
+      <!-- Hero photo placeholder -->
+      <div class="relative">
+        <div role="img" aria-label="A finished, lush backyard garden with mature plantings and a stone path"
+             class="photo-grain relative aspect-[4/5] w-full overflow-hidden rounded-[20px] bg-gradient-to-br from-garden via-garden-dark to-[#1c3a20] soft-shadow-lg">
+          <!-- decorative inline foliage -->
+          <svg class="absolute inset-0 h-full w-full opacity-90" viewBox="0 0 400 500" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <defs>
+              <linearGradient id="gSky" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#5a9a5f"/><stop offset="1" stop-color="#2f5c34"/>
+              </linearGradient>
+            </defs>
+            <rect width="400" height="500" fill="url(#gSky)"/>
+            <ellipse cx="320" cy="70" rx="60" ry="60" fill="#f4e9b8" opacity="0.45"/>
+            <path d="M0 360 Q120 320 240 350 T400 340 V500 H0 Z" fill="#244a28" opacity="0.85"/>
+            <path d="M0 410 Q140 380 280 408 T400 400 V500 H0 Z" fill="#1c3a20"/>
+            <path d="M60 360 l40 12 -40 -78 -40 78 Z" fill="#2f5c34" opacity="0.9"/>
+            <path d="M150 372 l50 14 -50 -96 -50 96 Z" fill="#244a28" opacity="0.95"/>
+            <circle cx="295" cy="330" r="36" fill="#3F7A45"/>
+            <circle cx="332" cy="348" r="26" fill="#2f5c34"/>
+            <path d="M120 460 q80 -20 160 0" stroke="#cdbf9a" stroke-width="14" fill="none" opacity="0.7"/>
+          </svg>
+          <!-- floating availability pill -->
+          <div class="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-cream/95 px-3 py-1.5 text-[12.5px] font-semibold text-ink soft-shadow">
+            <span class="pulse-dot"></span>
+            Now booking spring 2026 installs
+          </div>
+        </div>
+        <!-- stat chip overlapping -->
+        <div class="absolute -bottom-5 -left-4 hidden rounded-2xl border hairline bg-cream px-4 py-3 soft-shadow sm:block">
+          <div class="font-display text-[26px] font-600 text-garden tabular display-tight">240</div>
+          <div class="text-[12px] font-medium text-ink/65">yards mowed every week</div>
+        </div>
+        <div class="absolute -right-3 top-8 hidden rotate-3 rounded-2xl border hairline bg-cream px-4 py-3 soft-shadow sm:block">
+          <div class="font-display text-[26px] font-600 text-garden tabular display-tight">14</div>
+          <div class="text-[12px] font-medium text-ink/65">years in the suburbs</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Marquee trust strip -->
+    <div class="marquee-mask relative z-10 overflow-hidden border-y hairline bg-sage/70 py-3">
+      <div class="marquee">
+        <ul class="flex shrink-0 items-center gap-9 px-4 text-[13.5px] font-medium text-garden-dark">
+          <li class="flex items-center gap-2">Lawn-care plans</li>
+          <li aria-hidden="true">&bull;</li>
+          <li class="flex items-center gap-2">Native &amp; pollinator planting</li>
+          <li aria-hidden="true">&bull;</li>
+          <li class="flex items-center gap-2">Bluestone &amp; gravel patios</li>
+          <li aria-hidden="true">&bull;</li>
+          <li class="flex items-center gap-2">ISA-certified tree care</li>
+          <li aria-hidden="true">&bull;</li>
+          <li class="flex items-center gap-2">Organic lawn treatments</li>
+          <li aria-hidden="true">&bull;</li>
+          <li class="flex items-center gap-2">Seasonal cleanups</li>
+          <li aria-hidden="true">&bull;</li>
+        </ul>
+        <ul class="flex shrink-0 items-center gap-9 px-4 text-[13.5px] font-medium text-garden-dark" aria-hidden="true">
+          <li class="flex items-center gap-2">Lawn-care plans</li>
+          <li>&bull;</li>
+          <li class="flex items-center gap-2">Native &amp; pollinator planting</li>
+          <li>&bull;</li>
+          <li class="flex items-center gap-2">Bluestone &amp; gravel patios</li>
+          <li>&bull;</li>
+          <li class="flex items-center gap-2">ISA-certified tree care</li>
+          <li>&bull;</li>
+          <li class="flex items-center gap-2">Organic lawn treatments</li>
+          <li>&bull;</li>
+          <li class="flex items-center gap-2">Seasonal cleanups</li>
+          <li>&bull;</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 4 — Services grid                                    -->
+  <!-- ============================================================ -->
+  <section id="services" class="relative py-20 lg:py-28">
+    <div class="mx-auto max-w-[1200px] px-5 sm:px-6">
+      <div class="max-w-2xl">
+        <span class="text-[13px] font-semibold uppercase tracking-[0.16em] text-garden">What we do</span>
+        <h2 class="mt-2 font-display text-[34px] font-600 leading-[1.1] text-ink display-tight sm:text-[42px]">
+          Eight services, one crew that knows your yard
+        </h2>
+        <p class="mt-3 text-[16.5px] text-ink/70">
+          From a Tuesday mow to a full backyard rebuild &mdash; same designer, same foreman, same standard every visit.
+        </p>
+      </div>
+
+      <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+
+        <!-- Card 1 -->
+        <article class="card-lift rounded-[16px] border hairline bg-white p-5 soft-shadow hover:border-garden/35">
+          <span class="grid h-11 w-11 place-items-center rounded-xl bg-sage text-garden-dark">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M5 20c0-4 2-7 7-7s7 3 7 7"/><path d="M12 13V3"/><path d="M9 6h6"/></svg>
+          </span>
+          <h3 class="mt-3.5 font-display text-[19px] font-600 text-ink display-tight">Lawn-care plans</h3>
+          <p class="mt-1.5 text-[14px] leading-[1.55] text-ink/65">Weekly mow, edge and blow with a crew that shows up the same day each week.</p>
+          <span class="mt-3 inline-block rounded-full bg-garden/10 px-2.5 py-1 text-[12px] font-mono-num font-semibold text-garden">from $180/mo</span>
+        </article>
+
+        <!-- Card 2 -->
+        <article class="card-lift rounded-[16px] border hairline bg-white p-5 soft-shadow hover:border-garden/35">
+          <span class="grid h-11 w-11 place-items-center rounded-xl bg-sage text-garden-dark">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18"/><path d="M12 21V11"/><path d="M12 11c-3 0-5-2-5-5 3 0 5 2 5 5Z"/><path d="M12 8c0-3 2-5 5-5 0 3-2 5-5 5Z"/><circle cx="12" cy="14" r="1.5"/></svg>
+          </span>
+          <h3 class="mt-3.5 font-display text-[19px] font-600 text-ink display-tight">Garden design</h3>
+          <p class="mt-1.5 text-[14px] leading-[1.55] text-ink/65">A drawn planting plan from Mara &mdash; four-season color, sized for your light.</p>
+          <span class="mt-3 inline-block rounded-full bg-garden/10 px-2.5 py-1 text-[12px] font-mono-num font-semibold text-garden">Free estimate</span>
+        </article>
+
+        <!-- Card 3 -->
+        <article class="card-lift rounded-[16px] border hairline bg-white p-5 soft-shadow hover:border-garden/35">
+          <span class="grid h-11 w-11 place-items-center rounded-xl bg-sage text-garden-dark">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>
+          </span>
+          <h3 class="mt-3.5 font-display text-[19px] font-600 text-ink display-tight">Hardscaping &amp; patios</h3>
+          <p class="mt-1.5 text-[14px] leading-[1.55] text-ink/65">Bluestone, brick and gravel patios, steps and walls built to sit flat for decades.</p>
+          <span class="mt-3 inline-block rounded-full bg-garden/10 px-2.5 py-1 text-[12px] font-mono-num font-semibold text-garden">Free estimate</span>
+        </article>
+
+        <!-- Card 4 -->
+        <article class="card-lift rounded-[16px] border hairline bg-white p-5 soft-shadow hover:border-garden/35">
+          <span class="grid h-11 w-11 place-items-center rounded-xl bg-sage text-garden-dark">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22V12"/><path d="M12 12c-3.3 0-6-2.7-6-6 3.3 0 6 2.7 6 6Z"/><path d="M12 12c0-3.3 2.7-6 6-6 0 3.3-2.7 6-6 6Z"/><path d="M9 19h6"/></svg>
+          </span>
+          <h3 class="mt-3.5 font-display text-[19px] font-600 text-ink display-tight">Tree &amp; shrub care</h3>
+          <p class="mt-1.5 text-[14px] leading-[1.55] text-ink/65">Pruning, cabling and removals handled by our ISA-certified arborist.</p>
+          <span class="mt-3 inline-block rounded-full bg-garden/10 px-2.5 py-1 text-[12px] font-mono-num font-semibold text-garden">Free estimate</span>
+        </article>
+
+        <!-- Card 5 -->
+        <article class="card-lift rounded-[16px] border hairline bg-white p-5 soft-shadow hover:border-garden/35">
+          <span class="grid h-11 w-11 place-items-center rounded-xl bg-sage text-garden-dark">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 20A7 7 0 0 1 9.8 6.1C13 5 17 4 19 3c-1 2-2 6-3.1 9.2A7 7 0 0 1 11 20Z"/><path d="M4 21c1.5-3 3.5-5 6.5-7"/></svg>
+          </span>
+          <h3 class="mt-3.5 font-display text-[19px] font-600 text-ink display-tight">Seasonal cleanups</h3>
+          <p class="mt-1.5 text-[14px] leading-[1.55] text-ink/65">Spring wake-ups and fall clear-outs &mdash; beds cut back, edged and hauled away.</p>
+          <span class="mt-3 inline-block rounded-full bg-garden/10 px-2.5 py-1 text-[12px] font-mono-num font-semibold text-garden">from $295</span>
+        </article>
+
+        <!-- Card 6 -->
+        <article class="card-lift rounded-[16px] border hairline bg-white p-5 soft-shadow hover:border-garden/35">
+          <span class="grid h-11 w-11 place-items-center rounded-xl bg-sage text-garden-dark">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22a5 5 0 0 0 5-5c0-3-3-7-5-9-2 2-5 6-5 9a5 5 0 0 0 5 5Z"/><path d="M9.5 15.5h.01"/></svg>
+          </span>
+          <h3 class="mt-3.5 font-display text-[19px] font-600 text-ink display-tight">Irrigation</h3>
+          <p class="mt-1.5 text-[14px] leading-[1.55] text-ink/65">Smart-controller install, zone repairs and spring start-up / winter blow-out.</p>
+          <span class="mt-3 inline-block rounded-full bg-garden/10 px-2.5 py-1 text-[12px] font-mono-num font-semibold text-garden">from $140</span>
+        </article>
+
+        <!-- Card 7 -->
+        <article class="card-lift rounded-[16px] border hairline bg-white p-5 soft-shadow hover:border-garden/35">
+          <span class="grid h-11 w-11 place-items-center rounded-xl bg-sage text-garden-dark">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17h18"/><path d="M5 17c0-3 3-5 7-5s7 2 7 5"/><path d="M8 12c0-2 1.5-4 4-4s4 2 4 4"/><path d="M12 8V4"/></svg>
+          </span>
+          <h3 class="mt-3.5 font-display text-[19px] font-600 text-ink display-tight">Mulch &amp; beds</h3>
+          <p class="mt-1.5 text-[14px] leading-[1.55] text-ink/65">Crisp bed edging plus triple-shredded hardwood mulch, refreshed each season.</p>
+          <span class="mt-3 inline-block rounded-full bg-garden/10 px-2.5 py-1 text-[12px] font-mono-num font-semibold text-garden">from $420</span>
+        </article>
+
+        <!-- Card 8 -->
+        <article class="card-lift rounded-[16px] border hairline bg-white p-5 soft-shadow hover:border-garden/35">
+          <span class="grid h-11 w-11 place-items-center rounded-xl bg-sage text-garden-dark">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><path d="M3 12h18"/><path d="m6 6 12 12"/><path d="m18 6-12 12"/></svg>
+          </span>
+          <h3 class="mt-3.5 font-display text-[19px] font-600 text-ink display-tight">Winter snow removal</h3>
+          <p class="mt-1.5 text-[14px] leading-[1.55] text-ink/65">Driveway and walk clearing on a seasonal contract &mdash; cleared before 7am.</p>
+          <span class="mt-3 inline-block rounded-full bg-garden/10 px-2.5 py-1 text-[12px] font-mono-num font-semibold text-garden">from $55/visit</span>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- EXTRA SECTION — Seasonal plans (4 cards)                     -->
+  <!-- ============================================================ -->
+  <section class="relative overflow-hidden bg-cream-deep py-20 lg:py-24">
+    <div class="dot-grid pointer-events-none absolute inset-0 opacity-50"></div>
+    <div class="relative z-10 mx-auto max-w-[1200px] px-5 sm:px-6">
+      <div class="max-w-2xl">
+        <span class="text-[13px] font-semibold uppercase tracking-[0.16em] text-garden">Year-round care</span>
+        <h2 class="mt-2 font-display text-[32px] font-600 leading-[1.12] text-ink display-tight sm:text-[40px]">
+          One plan that follows the seasons
+        </h2>
+        <p class="mt-3 text-[16.5px] text-ink/70">
+          Sign on once and the right work happens at the right time &mdash; you never have to remember to call.
+        </p>
+      </div>
+
+      <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+
+        <article class="card-lift rounded-[16px] border hairline bg-white p-5 soft-shadow hover:border-garden/35">
+          <span class="text-[11.5px] font-mono-num font-semibold uppercase tracking-[0.14em] text-garden">Season &mdash; Spring</span>
+          <h3 class="mt-2 font-display text-[20px] font-600 text-ink display-tight">Spring cleanup</h3>
+          <p class="mt-1.5 text-[14px] leading-[1.55] text-ink/65">Beds cut back, lawn dethatched, first mow and fresh edges &mdash; the yard wakes up overnight.</p>
+        </article>
+
+        <article class="card-lift rounded-[16px] border hairline bg-white p-5 soft-shadow hover:border-garden/35">
+          <span class="text-[11.5px] font-mono-num font-semibold uppercase tracking-[0.14em] text-garden">Season &mdash; Summer</span>
+          <h3 class="mt-2 font-display text-[20px] font-600 text-ink display-tight">Summer maintenance</h3>
+          <p class="mt-1.5 text-[14px] leading-[1.55] text-ink/65">Weekly mowing, deadheading and watering checks so the garden stays full through July heat.</p>
+        </article>
+
+        <article class="card-lift rounded-[16px] border hairline bg-white p-5 soft-shadow hover:border-garden/35">
+          <span class="text-[11.5px] font-mono-num font-semibold uppercase tracking-[0.14em] text-garden">Season &mdash; Fall</span>
+          <h3 class="mt-2 font-display text-[20px] font-600 text-ink display-tight">Fall leaf removal</h3>
+          <p class="mt-1.5 text-[14px] leading-[1.55] text-ink/65">Repeat leaf clearing through November, beds put to bed and perennials cut back.</p>
+        </article>
+
+        <article class="card-lift rounded-[16px] border hairline bg-white p-5 soft-shadow hover:border-garden/35">
+          <span class="text-[11.5px] font-mono-num font-semibold uppercase tracking-[0.14em] text-garden">Season &mdash; Winter</span>
+          <h3 class="mt-2 font-display text-[20px] font-600 text-ink display-tight">Winter snow</h3>
+          <p class="mt-1.5 text-[14px] leading-[1.55] text-ink/65">Driveways and walks cleared on call after every snowfall, salted on icy mornings.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 5 — Why choose us                                    -->
+  <!-- ============================================================ -->
+  <section id="about" class="relative py-20 lg:py-28">
+    <div class="mx-auto max-w-[1200px] px-5 sm:px-6">
+      <div class="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+        <!-- Left: copy + photo -->
+        <div>
+          <span class="text-[13px] font-semibold uppercase tracking-[0.16em] text-garden">Why Thicket</span>
+          <h2 class="mt-2 font-display text-[34px] font-600 leading-[1.1] text-ink display-tight sm:text-[42px]">
+            A garden studio that also mows the lawn
+          </h2>
+          <p class="mt-3 max-w-md text-[16.5px] text-ink/70">
+            We started in 2011 with one truck and a push mower in Eastchester. Today fourteen of us tend Westchester yards &mdash; but the care per yard hasn&rsquo;t changed.
+          </p>
+          <div role="img" aria-label="Thicket crew and truck parked at a suburban job site"
+               class="photo-grain mt-6 aspect-[3/2] w-full overflow-hidden rounded-[18px] bg-gradient-to-br from-garden-dark via-garden to-[#7aa86f] soft-shadow">
+            <svg class="h-full w-full" viewBox="0 0 360 240" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <rect width="360" height="240" fill="#2f5c34"/>
+              <rect y="150" width="360" height="90" fill="#244a28"/>
+              <rect x="38" y="96" width="150" height="64" rx="8" fill="#cdbf9a"/>
+              <rect x="188" y="112" width="74" height="48" rx="6" fill="#3F7A45"/>
+              <circle cx="86" cy="170" r="18" fill="#1c3a20"/><circle cx="86" cy="170" r="7" fill="#cdbf9a"/>
+              <circle cx="222" cy="170" r="18" fill="#1c3a20"/><circle cx="222" cy="170" r="7" fill="#cdbf9a"/>
+              <path d="M280 160 l24 -70 24 70 Z" fill="#1c3a20"/>
+              <circle cx="312" cy="58" r="34" fill="#f4e9b8" opacity="0.5"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Right: reason cards -->
+        <div class="grid gap-5 sm:grid-cols-2">
+          <article class="card-lift rounded-[16px] border hairline bg-white p-6 soft-shadow hover:border-garden/35">
+            <span class="grid h-11 w-11 place-items-center rounded-xl bg-garden text-cream">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14.5 4-9 9-3.5-1L4 8l1 3 9-9Z"/><path d="M14 4h6v6"/><path d="M9 15l-5 5"/></svg>
+            </span>
+            <h3 class="mt-3.5 font-display text-[19px] font-600 text-ink display-tight">A real designer draws it</h3>
+            <p class="mt-1.5 text-[14.5px] leading-[1.55] text-ink/65">Mara Ellison plans every planting by hand &mdash; not a salesperson with a clipboard and a stock plant list.</p>
+          </article>
+
+          <article class="card-lift rounded-[16px] border hairline bg-white p-6 soft-shadow hover:border-garden/35">
+            <span class="grid h-11 w-11 place-items-center rounded-xl bg-garden text-cream">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 11 2 2 4-4"/></svg>
+            </span>
+            <h3 class="mt-3.5 font-display text-[19px] font-600 text-ink display-tight">Licensed for tree work</h3>
+            <p class="mt-1.5 text-[14.5px] leading-[1.55] text-ink/65">Fully insured with a certified arborist on the crew, so removals near the house are done right and on paper.</p>
+          </article>
+
+          <article class="card-lift rounded-[16px] border hairline bg-white p-6 soft-shadow hover:border-garden/35">
+            <span class="grid h-11 w-11 place-items-center rounded-xl bg-garden text-cream">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 20c4 0 7-3 7-9V5c-4 0-7 3-7 9v6Z"/><path d="M7 20c-3-2-4-5-4-9 3 0 4 2 4 5"/><path d="M14 14c2-1 3-3 3-6 2 1 2 3 1 5"/></svg>
+            </span>
+            <h3 class="mt-3.5 font-display text-[19px] font-600 text-ink display-tight">Organic lawn options</h3>
+            <p class="mt-1.5 text-[14.5px] leading-[1.55] text-ink/65">Compost-based and organic treatment programs &mdash; safe for kids, dogs and the bees in your beds.</p>
+          </article>
+
+          <article class="card-lift rounded-[16px] border hairline bg-white p-6 soft-shadow hover:border-garden/35">
+            <span class="grid h-11 w-11 place-items-center rounded-xl bg-garden text-cream">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            </span>
+            <h3 class="mt-3.5 font-display text-[19px] font-600 text-ink display-tight">Dependable weekly crews</h3>
+            <p class="mt-1.5 text-[14.5px] leading-[1.55] text-ink/65">Same foreman, same day every week. You&rsquo;ll learn their names &mdash; and they&rsquo;ll know your gate code.</p>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 6 — Before / after                                   -->
+  <!-- ============================================================ -->
+  <section class="relative bg-sage/55 py-20 lg:py-28">
+    <div class="mx-auto max-w-[1200px] px-5 sm:px-6">
+      <div class="max-w-2xl">
+        <span class="text-[13px] font-semibold uppercase tracking-[0.16em] text-garden">Real Westchester yards</span>
+        <h2 class="mt-2 font-display text-[34px] font-600 leading-[1.1] text-ink display-tight sm:text-[42px]">
+          Before, after, and a season later
+        </h2>
+        <p class="mt-3 text-[16.5px] text-ink/70">
+          Three projects from last year &mdash; same homeowners, same lots, photographed once we were done.
+        </p>
+      </div>
+
+      <div class="mt-10 grid gap-7 lg:grid-cols-3">
+
+        <!-- Pair 1 -->
+        <figure class="rounded-[18px] border hairline bg-white p-3 soft-shadow">
+          <div class="flex overflow-hidden rounded-[12px]">
+            <div role="img" aria-label="Bare patchy yard before planting" class="photo-grain relative aspect-square w-1/2 bg-gradient-to-br from-[#b8a98a] to-[#8d7c5e]">
+              <span class="absolute left-2 top-2 rounded-md bg-ink/75 px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-cream">Before</span>
+            </div>
+            <div class="w-px shrink-0 bg-ink/25"></div>
+            <div role="img" aria-label="Lush planted garden after Thicket installation" class="photo-grain relative aspect-square w-1/2 bg-gradient-to-br from-garden to-garden-dark">
+              <span class="absolute right-2 top-2 rounded-md bg-cream/90 px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-garden-dark">After</span>
+            </div>
+          </div>
+          <figcaption class="px-2 py-3 text-[14px] leading-snug text-ink/70">
+            <span class="font-semibold text-ink">Bare yard &rarr; planted garden.</span> A new-build lot in Scarsdale, given mixed borders and a shade bed.
+          </figcaption>
+        </figure>
+
+        <!-- Pair 2 -->
+        <figure class="rounded-[18px] border hairline bg-white p-3 soft-shadow">
+          <div class="flex overflow-hidden rounded-[12px]">
+            <div role="img" aria-label="Cracked concrete walkway before replacement" class="photo-grain relative aspect-square w-1/2 bg-gradient-to-br from-[#a9a39a] to-[#6f6a61]">
+              <span class="absolute left-2 top-2 rounded-md bg-ink/75 px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-cream">Before</span>
+            </div>
+            <div class="w-px shrink-0 bg-ink/25"></div>
+            <div role="img" aria-label="New bluestone patio after Thicket build" class="photo-grain relative aspect-square w-1/2 bg-gradient-to-br from-[#5f8a8f] to-garden-dark">
+              <span class="absolute right-2 top-2 rounded-md bg-cream/90 px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-garden-dark">After</span>
+            </div>
+          </div>
+          <figcaption class="px-2 py-3 text-[14px] leading-snug text-ink/70">
+            <span class="font-semibold text-ink">Cracked concrete walk &rarr; bluestone patio.</span> A Larchmont side yard turned into a sitting terrace.
+          </figcaption>
+        </figure>
+
+        <!-- Pair 3 -->
+        <figure class="rounded-[18px] border hairline bg-white p-3 soft-shadow">
+          <div class="flex overflow-hidden rounded-[12px]">
+            <div role="img" aria-label="Overgrown weedy lot before cleanup" class="photo-grain relative aspect-square w-1/2 bg-gradient-to-br from-[#8f9168] to-[#5b5d3e]">
+              <span class="absolute left-2 top-2 rounded-md bg-ink/75 px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-cream">Before</span>
+            </div>
+            <div class="w-px shrink-0 bg-ink/25"></div>
+            <div role="img" aria-label="Cleared and crisply edged garden beds after cleanup" class="photo-grain relative aspect-square w-1/2 bg-gradient-to-br from-garden to-[#7aa86f]">
+              <span class="absolute right-2 top-2 rounded-md bg-cream/90 px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-garden-dark">After</span>
+            </div>
+          </div>
+          <figcaption class="px-2 py-3 text-[14px] leading-snug text-ink/70">
+            <span class="font-semibold text-ink">Overgrown lot &rarr; cleared, edged beds.</span> A long-neglected Pelham backyard reclaimed in two visits.
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 7 — How it works                                     -->
+  <!-- ============================================================ -->
+  <section class="relative py-20 lg:py-28">
+    <div class="mx-auto max-w-[1200px] px-5 sm:px-6">
+      <div class="max-w-2xl">
+        <span class="text-[13px] font-semibold uppercase tracking-[0.16em] text-garden">How it works</span>
+        <h2 class="mt-2 font-display text-[34px] font-600 leading-[1.1] text-ink display-tight sm:text-[42px]">
+          From first call to a thriving yard
+        </h2>
+        <p class="mt-3 text-[16.5px] text-ink/70">
+          No pressure, no surprise invoices &mdash; just three honest steps.
+        </p>
+      </div>
+
+      <div class="mt-10 grid gap-6 md:grid-cols-3">
+
+        <article class="relative rounded-[18px] border hairline bg-white p-7 soft-shadow">
+          <span class="text-[12px] font-mono-num font-semibold uppercase tracking-[0.18em] text-garden">STEP 01</span>
+          <span class="mt-4 grid h-12 w-12 place-items-center rounded-xl bg-sage text-garden-dark">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="m9 16 2 2 4-4"/></svg>
+          </span>
+          <h3 class="mt-3.5 font-display text-[21px] font-600 text-ink display-tight">Book a site visit</h3>
+          <p class="mt-1.5 text-[14.5px] leading-[1.55] text-ink/65">Call or send the form. We come out, walk the property with you and listen to how you want to use the yard.</p>
+        </article>
+
+        <article class="relative rounded-[18px] border hairline bg-white p-7 soft-shadow">
+          <span class="text-[12px] font-mono-num font-semibold uppercase tracking-[0.18em] text-garden">STEP 02</span>
+          <span class="mt-4 grid h-12 w-12 place-items-center rounded-xl bg-sage text-garden-dark">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </span>
+          <h3 class="mt-3.5 font-display text-[21px] font-600 text-ink display-tight">We design it &amp; quote it free</h3>
+          <p class="mt-1.5 text-[14.5px] leading-[1.55] text-ink/65">Mara drafts the planting plan and we send a clear, itemized estimate &mdash; the design and the quote both cost nothing.</p>
+        </article>
+
+        <article class="relative rounded-[18px] border hairline bg-white p-7 soft-shadow">
+          <span class="text-[12px] font-mono-num font-semibold uppercase tracking-[0.18em] text-garden">STEP 03</span>
+          <span class="mt-4 grid h-12 w-12 place-items-center rounded-xl bg-sage text-garden-dark">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22V12"/><path d="M12 12c-3.3 0-6-2.7-6-6 3.3 0 6 2.7 6 6Z"/><path d="M12 12c0-3.3 2.7-6 6-6 0 3.3-2.7 6-6 6Z"/></svg>
+          </span>
+          <h3 class="mt-3.5 font-display text-[21px] font-600 text-ink display-tight">We build it &amp; keep it thriving</h3>
+          <p class="mt-1.5 text-[14.5px] leading-[1.55] text-ink/65">Our crew installs the yard, then a maintenance plan keeps it looking the way it did on day one.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- STATS BAND                                                   -->
+  <!-- ============================================================ -->
+  <section class="relative overflow-hidden bg-garden-dark py-16 text-cream lg:py-20">
+    <div class="blob bg-garden/50" style="width:280px;height:280px;top:-100px;left:20%;"></div>
+    <div class="relative z-10 mx-auto max-w-[1200px] px-5 sm:px-6">
+      <div class="grid gap-8 text-center sm:grid-cols-2 lg:grid-cols-4">
+        <div>
+          <div class="font-display text-[44px] font-600 leading-none tabular display-tighter">240</div>
+          <div class="mt-2 text-[14px] font-medium text-cream/70">Yards maintained weekly</div>
+        </div>
+        <div>
+          <div class="font-display text-[44px] font-600 leading-none tabular display-tighter">84</div>
+          <div class="mt-2 text-[14px] font-medium text-cream/70">Design projects completed in 2025</div>
+        </div>
+        <div>
+          <div class="font-display text-[44px] font-600 leading-none tabular display-tighter">14</div>
+          <div class="mt-2 text-[14px] font-medium text-cream/70">Crew members</div>
+        </div>
+        <div>
+          <div class="font-display text-[44px] font-600 leading-none tabular display-tighter">4.2<span class="text-[22px]"> yrs</span></div>
+          <div class="mt-2 text-[14px] font-medium text-cream/70">Average client tenure</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 8 — Reviews                                          -->
+  <!-- ============================================================ -->
+  <section id="reviews" class="relative py-20 lg:py-28">
+    <div class="mx-auto max-w-[1200px] px-5 sm:px-6">
+      <div class="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+        <div class="max-w-xl">
+          <span class="text-[13px] font-semibold uppercase tracking-[0.16em] text-garden">Reviews</span>
+          <h2 class="mt-2 font-display text-[34px] font-600 leading-[1.1] text-ink display-tight sm:text-[42px]">
+            What the neighbors <span class="italic text-garden/55">say about us</span>
+          </h2>
+        </div>
+        <!-- Aggregate header -->
+        <div class="flex items-center gap-3 rounded-[14px] border hairline bg-white px-4 py-3 soft-shadow">
+          <div class="text-left">
+            <div class="flex items-center gap-1.5">
+              <span class="font-display text-[28px] font-600 text-ink tabular display-tight">4.8</span>
+              <span class="flex" aria-label="4.8 out of 5 stars">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="halfStar"><stop offset="80%" stop-color="#3F7A45"/><stop offset="80%" stop-color="#d8d4c4"/></linearGradient></defs><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z" fill="url(#halfStar)"/></svg>
+              </span>
+            </div>
+            <div class="mt-0.5 flex items-center gap-1.5 text-[12.5px] text-ink/60">
+              <!-- Google mark (inline SVG, no external asset) -->
+              <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="#4285F4" d="M21.6 12.2c0-.7-.06-1.4-.18-2H12v3.8h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.3Z"/>
+                <path fill="#34A853" d="M12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1a6 6 0 0 1-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22Z"/>
+                <path fill="#FBBC05" d="M6.4 14a6 6 0 0 1 0-3.8V7.6H3.1a10 10 0 0 0 0 8.8L6.4 14Z"/>
+                <path fill="#EA4335" d="M12 5.9c1.5 0 2.8.5 3.9 1.5l2.9-2.9A10 10 0 0 0 3.1 7.6L6.4 10c.8-2.4 3-4.1 5.6-4.1Z"/>
+              </svg>
+              <span class="font-mono-num">388 Google reviews</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Review cards -->
+      <div class="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+
+        <!-- Review 1 -->
+        <article class="card-lift flex flex-col rounded-[16px] border hairline bg-white p-6 soft-shadow hover:border-garden/35">
+          <span class="flex gap-0.5" aria-label="5 out of 5 stars">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+          </span>
+          <p class="mt-3 grow text-[14.5px] leading-[1.6] text-ink/75">&ldquo;Mara redrew our whole front bed and it has bloomed nonstop since May. The crew is quiet, fast and always cleans up. Best money we&rsquo;ve spent on the house.&rdquo;</p>
+          <div class="mt-4 flex items-center gap-3 border-t hairline pt-3">
+            <span class="grid h-9 w-9 place-items-center rounded-full bg-sage font-display text-[15px] font-600 text-garden-dark">PD</span>
+            <div>
+              <div class="text-[14px] font-semibold text-ink">Priya Desai</div>
+              <div class="text-[12.5px] text-ink/55">Scarsdale &middot; Garden design</div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Review 2 -->
+        <article class="card-lift flex flex-col rounded-[16px] border hairline bg-white p-6 soft-shadow hover:border-garden/35">
+          <span class="flex gap-0.5" aria-label="5 out of 5 stars">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+          </span>
+          <p class="mt-3 grow text-[14.5px] leading-[1.6] text-ink/75">&ldquo;They built our bluestone patio in four days and it is dead flat &mdash; not one wobbly chair two summers on. Fair quote, no upcharges at the end.&rdquo;</p>
+          <div class="mt-4 flex items-center gap-3 border-t hairline pt-3">
+            <span class="grid h-9 w-9 place-items-center rounded-full bg-sage font-display text-[15px] font-600 text-garden-dark">TO</span>
+            <div>
+              <div class="text-[14px] font-semibold text-ink">Tomás O&rsquo;Brien</div>
+              <div class="text-[12.5px] text-ink/55">Larchmont &middot; Hardscaping</div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Review 3 -->
+        <article class="card-lift flex flex-col rounded-[16px] border hairline bg-white p-6 soft-shadow hover:border-garden/35">
+          <span class="flex gap-0.5" aria-label="4 out of 5 stars">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#d8d4c4" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+          </span>
+          <p class="mt-3 grow text-[14.5px] leading-[1.6] text-ink/75">&ldquo;Switched our lawn plan to Thicket after a bad year with another company. Grass came back thick and the organic program means the dog can roll in it. One rained-out reschedule, handled fine.&rdquo;</p>
+          <div class="mt-4 flex items-center gap-3 border-t hairline pt-3">
+            <span class="grid h-9 w-9 place-items-center rounded-full bg-sage font-display text-[15px] font-600 text-garden-dark">AK</span>
+            <div>
+              <div class="text-[14px] font-semibold text-ink">Anneke Visser</div>
+              <div class="text-[12.5px] text-ink/55">Rye &middot; Lawn-care plan</div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Review 4 -->
+        <article class="card-lift flex flex-col rounded-[16px] border hairline bg-white p-6 soft-shadow hover:border-garden/35">
+          <span class="flex gap-0.5" aria-label="5 out of 5 stars">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+          </span>
+          <p class="mt-3 grow text-[14.5px] leading-[1.6] text-ink/75">&ldquo;Their arborist took down a leaning maple right over our roof without a single broken shingle. Permits, insurance, cleanup &mdash; all sorted before I even asked.&rdquo;</p>
+          <div class="mt-4 flex items-center gap-3 border-t hairline pt-3">
+            <span class="grid h-9 w-9 place-items-center rounded-full bg-sage font-display text-[15px] font-600 text-garden-dark">MR</span>
+            <div>
+              <div class="text-[14px] font-semibold text-ink">Marcus Reilly</div>
+              <div class="text-[12.5px] text-ink/55">Bronxville &middot; Tree removal</div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Review 5 -->
+        <article class="card-lift flex flex-col rounded-[16px] border hairline bg-white p-6 soft-shadow hover:border-garden/35">
+          <span class="flex gap-0.5" aria-label="5 out of 5 stars">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+          </span>
+          <p class="mt-3 grow text-[14.5px] leading-[1.6] text-ink/75">&ldquo;Fall cleanups are flawless &mdash; they come back three times for leaves so I never see a brown lawn. Same two guys every year now, which I love.&rdquo;</p>
+          <div class="mt-4 flex items-center gap-3 border-t hairline pt-3">
+            <span class="grid h-9 w-9 place-items-center rounded-full bg-sage font-display text-[15px] font-600 text-garden-dark">SN</span>
+            <div>
+              <div class="text-[14px] font-semibold text-ink">Sofia Nakamura</div>
+              <div class="text-[12.5px] text-ink/55">Mamaroneck &middot; Seasonal cleanup</div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Review 6 -->
+        <article class="card-lift flex flex-col rounded-[16px] border hairline bg-white p-6 soft-shadow hover:border-garden/35">
+          <span class="flex gap-0.5" aria-label="5 out of 5 stars">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#3F7A45" aria-hidden="true"><path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7Z"/></svg>
+          </span>
+          <p class="mt-3 grow text-[14.5px] leading-[1.6] text-ink/75">&ldquo;We had a soggy corner that never drained. Thicket regraded it, set a dry creek bed and now it&rsquo;s the prettiest spot in the yard. Smart people.&rdquo;</p>
+          <div class="mt-4 flex items-center gap-3 border-t hairline pt-3">
+            <span class="grid h-9 w-9 place-items-center rounded-full bg-sage font-display text-[15px] font-600 text-garden-dark">EH</span>
+            <div>
+              <div class="text-[14px] font-semibold text-ink">Eleni Haddad</div>
+              <div class="text-[12.5px] text-ink/55">Hartsdale &middot; Drainage &amp; beds</div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 9 — Service area                                     -->
+  <!-- ============================================================ -->
+  <section class="relative overflow-hidden bg-cream-deep py-20 lg:py-28">
+    <div class="dot-grid pointer-events-none absolute inset-0 opacity-40"></div>
+    <div class="relative z-10 mx-auto max-w-[1200px] px-5 sm:px-6">
+      <div class="grid gap-12 lg:grid-cols-2 lg:items-center">
+        <!-- Region map -->
+        <div class="rounded-[18px] border hairline bg-white p-5 soft-shadow">
+          <svg viewBox="0 0 460 380" class="h-auto w-full" role="img" aria-label="Map of Westchester County, NY showing the eight towns Thicket serves">
+            <defs>
+              <linearGradient id="mapFill" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#E7EBDF"/><stop offset="1" stop-color="#cdd6c0"/>
+              </linearGradient>
+            </defs>
+            <!-- soft county outline -->
+            <path d="M70 40 C 130 25, 210 30, 280 55 C 340 75, 400 90, 405 150 C 410 215, 380 270, 340 310 C 300 345, 230 360, 175 340 C 120 320, 70 300, 55 245 C 42 195, 45 110, 70 40 Z"
+                  fill="url(#mapFill)" stroke="#3F7A45" stroke-width="2" stroke-opacity="0.55"/>
+            <!-- faint inner roads -->
+            <path d="M90 110 C 170 140, 250 150, 360 130" stroke="#3F7A45" stroke-width="1.5" stroke-opacity="0.18" fill="none" stroke-dasharray="5 6"/>
+            <path d="M120 250 C 200 220, 280 235, 360 220" stroke="#3F7A45" stroke-width="1.5" stroke-opacity="0.18" fill="none" stroke-dasharray="5 6"/>
+            <path d="M210 60 C 200 150, 215 250, 230 330" stroke="#3F7A45" stroke-width="1.5" stroke-opacity="0.18" fill="none" stroke-dasharray="5 6"/>
+
+            <!-- pins: circle + label -->
+            <g font-family="Inter, sans-serif" font-size="12.5" font-weight="600" fill="#1F2A1C">
+              <g><circle cx="138" cy="120" r="7" fill="#3F7A45"/><circle cx="138" cy="120" r="2.5" fill="#FAF8F1"/><text x="150" y="124">Hartsdale</text></g>
+              <g><circle cx="232" cy="96" r="7" fill="#3F7A45"/><circle cx="232" cy="96" r="2.5" fill="#FAF8F1"/><text x="244" y="100">Scarsdale</text></g>
+              <g><circle cx="320" cy="118" r="7" fill="#3F7A45"/><circle cx="320" cy="118" r="2.5" fill="#FAF8F1"/><text x="332" y="122">Rye</text></g>
+              <g><circle cx="150" cy="200" r="7" fill="#3F7A45"/><circle cx="150" cy="200" r="2.5" fill="#FAF8F1"/><text x="162" y="204">Bronxville</text></g>
+              <g><circle cx="118" cy="262" r="7" fill="#3F7A45"/><circle cx="118" cy="262" r="2.5" fill="#FAF8F1"/><text x="130" y="266">Pelham</text></g>
+              <g><circle cx="248" cy="220" r="7" fill="#3F7A45"/><circle cx="248" cy="220" r="2.5" fill="#FAF8F1"/><text x="260" y="224">Eastchester</text></g>
+              <g><circle cx="298" cy="250" r="7" fill="#3F7A45"/><circle cx="298" cy="250" r="2.5" fill="#FAF8F1"/><text x="310" y="254">Larchmont</text></g>
+              <g><circle cx="330" cy="300" r="7" fill="#3F7A45"/><circle cx="330" cy="300" r="2.5" fill="#FAF8F1"/><text x="342" y="304">Mamaroneck</text></g>
+            </g>
+            <text x="70" y="358" font-family="Geist Mono, monospace" font-size="11" fill="#3F7A45" fill-opacity="0.7">Westchester County, NY</text>
+          </svg>
+        </div>
+
+        <!-- Towns list -->
+        <div>
+          <span class="text-[13px] font-semibold uppercase tracking-[0.16em] text-garden">Service area</span>
+          <h2 class="mt-2 font-display text-[34px] font-600 leading-[1.1] text-ink display-tight sm:text-[42px]">
+            Eight Westchester towns, no travel fee
+          </h2>
+          <p class="mt-3 text-[16.5px] text-ink/70">
+            We keep our routes tight so crews spend the day on yards, not the parkway. Outside these towns? Call us &mdash; we&rsquo;ll be honest about it.
+          </p>
+
+          <ul class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-2">
+            <li class="flex items-center gap-2 rounded-[12px] border hairline bg-white px-3.5 py-2.5 text-[14.5px] font-medium text-ink soft-shadow">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3F7A45" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              Bronxville
+            </li>
+            <li class="flex items-center gap-2 rounded-[12px] border hairline bg-white px-3.5 py-2.5 text-[14.5px] font-medium text-ink soft-shadow">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3F7A45" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              Scarsdale
+            </li>
+            <li class="flex items-center gap-2 rounded-[12px] border hairline bg-white px-3.5 py-2.5 text-[14.5px] font-medium text-ink soft-shadow">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3F7A45" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              Rye
+            </li>
+            <li class="flex items-center gap-2 rounded-[12px] border hairline bg-white px-3.5 py-2.5 text-[14.5px] font-medium text-ink soft-shadow">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3F7A45" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              Larchmont
+            </li>
+            <li class="flex items-center gap-2 rounded-[12px] border hairline bg-white px-3.5 py-2.5 text-[14.5px] font-medium text-ink soft-shadow">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3F7A45" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              Pelham
+            </li>
+            <li class="flex items-center gap-2 rounded-[12px] border hairline bg-white px-3.5 py-2.5 text-[14.5px] font-medium text-ink soft-shadow">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3F7A45" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              Mamaroneck
+            </li>
+            <li class="flex items-center gap-2 rounded-[12px] border hairline bg-white px-3.5 py-2.5 text-[14.5px] font-medium text-ink soft-shadow">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3F7A45" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              Hartsdale
+            </li>
+            <li class="flex items-center gap-2 rounded-[12px] border hairline bg-white px-3.5 py-2.5 text-[14.5px] font-medium text-ink soft-shadow">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3F7A45" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              Eastchester
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 10 — Guarantee / pricing band                        -->
+  <!-- ============================================================ -->
+  <section class="relative overflow-hidden bg-garden py-20 text-cream lg:py-24">
+    <div class="blob bg-[#7aa86f]/60" style="width:320px;height:320px;top:-120px;right:8%;"></div>
+    <div class="relative z-10 mx-auto max-w-[1100px] px-5 sm:px-6">
+      <div class="max-w-2xl">
+        <span class="text-[13px] font-semibold uppercase tracking-[0.16em] text-cream/75">Honest pricing</span>
+        <h2 class="mt-2 font-display text-[32px] font-600 leading-[1.12] display-tight sm:text-[40px]">
+          Clear numbers, and a season-long promise
+        </h2>
+        <p class="mt-3 text-[16.5px] text-cream/80">
+          No vague &ldquo;starting at&rdquo; games. Here is exactly how Thicket charges &mdash; and what we stand behind.
+        </p>
+      </div>
+
+      <div class="mt-9 grid gap-5 sm:grid-cols-3">
+        <div class="rounded-[16px] bg-cream/10 p-6 ring-1 ring-cream/15">
+          <span class="grid h-11 w-11 place-items-center rounded-xl bg-cream/15">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </span>
+          <h3 class="mt-3.5 font-display text-[20px] font-600 display-tight">Maintenance plans</h3>
+          <p class="mt-1.5 text-[14px] leading-[1.55] text-cream/75">From <span class="font-mono-num font-semibold">$180/mo</span>, billed flat by the month &mdash; no per-visit surprises in your inbox.</p>
+        </div>
+        <div class="rounded-[16px] bg-cream/10 p-6 ring-1 ring-cream/15">
+          <span class="grid h-11 w-11 place-items-center rounded-xl bg-cream/15">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h4"/></svg>
+          </span>
+          <h3 class="mt-3.5 font-display text-[20px] font-600 display-tight">Design-build projects</h3>
+          <p class="mt-1.5 text-[14px] leading-[1.55] text-cream/75">Quoted free after a site visit &mdash; an itemized estimate you keep, with no obligation to book.</p>
+        </div>
+        <div class="rounded-[16px] bg-cream/10 p-6 ring-1 ring-cream/15">
+          <span class="grid h-11 w-11 place-items-center rounded-xl bg-cream/15">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 11 2 2 4-4"/></svg>
+          </span>
+          <h3 class="mt-3.5 font-display text-[20px] font-600 display-tight">Planting guarantee</h3>
+          <p class="mt-1.5 text-[14px] leading-[1.55] text-cream/75">Every plant we install is guaranteed one full season &mdash; if it doesn&rsquo;t take, we replace it on us.</p>
+        </div>
+      </div>
+
+      <div class="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2 text-[13.5px] text-cream/75">
+        <span class="inline-flex items-center gap-1.5"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-11"/></svg> Satisfaction-checked after every install</span>
+        <span class="inline-flex items-center gap-1.5"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-11"/></svg> Workmanship warrantied 2 years on hardscape</span>
+        <span class="inline-flex items-center gap-1.5"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-11"/></svg> Cancel a maintenance plan any time, no fee</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- FAQ                                                          -->
+  <!-- ============================================================ -->
+  <section class="relative py-20 lg:py-28">
+    <div class="mx-auto max-w-[820px] px-5 sm:px-6">
+      <div class="text-center">
+        <span class="text-[13px] font-semibold uppercase tracking-[0.16em] text-garden">Good questions</span>
+        <h2 class="mt-2 font-display text-[34px] font-600 leading-[1.1] text-ink display-tight sm:text-[42px]">
+          Things homeowners ask us
+        </h2>
+      </div>
+
+      <div class="mt-9 space-y-3">
+
+        <details class="group rounded-[14px] border hairline bg-white px-5 py-1 soft-shadow">
+          <summary class="flex items-center justify-between gap-4 py-4">
+            <span class="font-display text-[18px] font-600 text-ink display-tight">Do you do one-time cleanups or only ongoing plans?</span>
+            <span class="faq-chevron grid h-7 w-7 shrink-0 place-items-center rounded-full bg-sage text-garden-dark">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+            </span>
+          </summary>
+          <p class="pb-4 text-[15px] leading-[1.6] text-ink/70">Both. We&rsquo;ll happily handle a single spring or fall cleanup with no strings attached. Many homeowners try us with a one-time job and roll into a weekly plan after &mdash; but that&rsquo;s your call, never a requirement.</p>
+        </details>
+
+        <details class="group rounded-[14px] border hairline bg-white px-5 py-1 soft-shadow">
+          <summary class="flex items-center justify-between gap-4 py-4">
+            <span class="font-display text-[18px] font-600 text-ink display-tight">Who designs the planting &mdash; a real designer?</span>
+            <span class="faq-chevron grid h-7 w-7 shrink-0 place-items-center rounded-full bg-sage text-garden-dark">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+            </span>
+          </summary>
+          <p class="pb-4 text-[15px] leading-[1.6] text-ink/70">Yes &mdash; Mara Ellison, our staff landscape designer, draws every planting plan herself. She visits your property, checks the light and soil, and hand-draws a layout. You get a real plan, not a stock template a salesperson printed.</p>
+        </details>
+
+        <details class="group rounded-[14px] border hairline bg-white px-5 py-1 soft-shadow">
+          <summary class="flex items-center justify-between gap-4 py-4">
+            <span class="font-display text-[18px] font-600 text-ink display-tight">Are you licensed and insured for tree work?</span>
+            <span class="faq-chevron grid h-7 w-7 shrink-0 place-items-center rounded-full bg-sage text-garden-dark">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+            </span>
+          </summary>
+          <p class="pb-4 text-[15px] leading-[1.6] text-ink/70">Fully. Thicket carries general liability and workers&rsquo; comp, and tree work is done or supervised by our ISA-certified arborist. We&rsquo;ll send proof of insurance before any job &mdash; never let an uninsured crew near trees by your house.</p>
+        </details>
+
+        <details class="group rounded-[14px] border hairline bg-white px-5 py-1 soft-shadow">
+          <summary class="flex items-center justify-between gap-4 py-4">
+            <span class="font-display text-[18px] font-600 text-ink display-tight">Do you offer organic lawn treatments?</span>
+            <span class="faq-chevron grid h-7 w-7 shrink-0 place-items-center rounded-full bg-sage text-garden-dark">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+            </span>
+          </summary>
+          <p class="pb-4 text-[15px] leading-[1.6] text-ink/70">We do. Alongside our standard program we offer a fully organic, compost-and-microbe-based lawn treatment &mdash; safer for kids, pets and pollinators. It costs a little more and takes a season to hit its stride, and we&rsquo;ll be upfront about both.</p>
+        </details>
+
+        <details class="group rounded-[14px] border hairline bg-white px-5 py-1 soft-shadow">
+          <summary class="flex items-center justify-between gap-4 py-4">
+            <span class="font-display text-[18px] font-600 text-ink display-tight">What&rsquo;s the lead time for a patio build?</span>
+            <span class="faq-chevron grid h-7 w-7 shrink-0 place-items-center rounded-full bg-sage text-garden-dark">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+            </span>
+          </summary>
+          <p class="pb-4 text-[15px] leading-[1.6] text-ink/70">In peak season, plan on three to six weeks from a signed estimate to the first day on site, then four to eight working days to build, weather permitting. Book in winter and you&rsquo;ll usually get an earlier spring slot.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 11 — Final CTA + quote form mockup                   -->
+  <!-- ============================================================ -->
+  <section id="quote" class="relative overflow-hidden bg-sage/65 py-20 lg:py-28">
+    <div class="blob bg-garden/25" style="width:300px;height:300px;bottom:-130px;right:-60px;"></div>
+    <div class="relative z-10 mx-auto max-w-[1100px] px-5 sm:px-6">
+      <div class="grid gap-10 lg:grid-cols-[1fr_1.05fr] lg:items-center">
+        <!-- Closing copy -->
+        <div>
+          <span class="inline-flex items-center gap-2 rounded-full border hairline bg-white px-3.5 py-1.5 text-[12.5px] font-semibold text-garden-dark">
+            <span class="pulse-dot"></span>
+            Now booking spring 2026 installs
+          </span>
+          <h2 class="mt-4 font-display text-[36px] font-600 leading-[1.08] text-ink display-tighter sm:text-[46px]">
+            Let&rsquo;s give you a yard worth <span class="italic text-garden">sitting in.</span>
+          </h2>
+          <p class="mt-4 max-w-md text-[16.5px] text-ink/70">
+            Tell us a little about your yard and we&rsquo;ll set up a free site visit &mdash; usually within the same week. No pressure, no obligation.
+          </p>
+          <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <a href="tel:+15557304416" class="btn inline-flex items-center justify-center gap-2 rounded-full bg-garden px-6 py-3.5 text-[15.5px] font-semibold text-cream shadow-[0_14px_30px_-12px_rgba(63,122,69,0.9)] hover:bg-garden-dark">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.95" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/>
+              </svg>
+              Call (555) 730-4416
+            </a>
+            <span class="text-[13.5px] text-ink/60">or fill out the form &mdash;&gt;</span>
+          </div>
+        </div>
+
+        <!-- Quote form mockup (non-functional) -->
+        <div class="rounded-[18px] border hairline bg-white p-6 soft-shadow-lg sm:p-7">
+          <h3 class="font-display text-[22px] font-600 text-ink display-tight">Get a free quote</h3>
+          <p class="mt-1 text-[14px] text-ink/60">We reply within one business day, Mon&ndash;Sat.</p>
+
+          <div class="mt-5 space-y-4">
+            <div>
+              <label for="q-name" class="mb-1.5 block text-[13px] font-semibold text-ink">Your name</label>
+              <input id="q-name" type="text" placeholder="Jane Carter" autocomplete="name"
+                     class="w-full rounded-[11px] border hairline bg-cream/60 px-3.5 py-2.5 text-[14.5px] text-ink placeholder:text-ink/40 focus:border-garden focus:outline-none focus:ring-2 focus:ring-garden/25" />
+            </div>
+            <div>
+              <label for="q-phone" class="mb-1.5 block text-[13px] font-semibold text-ink">Phone number</label>
+              <input id="q-phone" type="tel" placeholder="(555) 000-0000" autocomplete="tel"
+                     class="w-full rounded-[11px] border hairline bg-cream/60 px-3.5 py-2.5 text-[14.5px] text-ink placeholder:text-ink/40 focus:border-garden focus:outline-none focus:ring-2 focus:ring-garden/25" />
+            </div>
+            <div>
+              <label for="q-town" class="mb-1.5 block text-[13px] font-semibold text-ink">Your town</label>
+              <select id="q-town"
+                      class="w-full rounded-[11px] border hairline bg-cream/60 px-3.5 py-2.5 text-[14.5px] text-ink focus:border-garden focus:outline-none focus:ring-2 focus:ring-garden/25">
+                <option>Bronxville</option>
+                <option>Scarsdale</option>
+                <option>Rye</option>
+                <option>Larchmont</option>
+                <option>Pelham</option>
+                <option>Mamaroneck</option>
+                <option>Hartsdale</option>
+                <option>Eastchester</option>
+              </select>
+            </div>
+            <div>
+              <label for="q-need" class="mb-1.5 block text-[13px] font-semibold text-ink">What do you need?</label>
+              <textarea id="q-need" rows="3" placeholder="e.g. weekly lawn care, a new patio, a garden redesign&hellip;"
+                        class="w-full rounded-[11px] border hairline bg-cream/60 px-3.5 py-2.5 text-[14.5px] text-ink placeholder:text-ink/40 focus:border-garden focus:outline-none focus:ring-2 focus:ring-garden/25"></textarea>
+            </div>
+            <button type="button"
+                    class="btn w-full rounded-full bg-garden px-5 py-3 text-[15px] font-semibold text-cream shadow-[0_14px_30px_-12px_rgba(63,122,69,0.9)] hover:bg-garden-dark">
+              Request my free quote
+            </button>
+            <p class="text-center text-[12px] text-ink/50">
+              Prefer to talk? Call <a href="tel:+15557304416" class="font-semibold text-garden underline-offset-2 hover:underline">(555) 730-4416</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  </main>
+
+  <!-- ============================================================ -->
+  <!-- SECTION 12 — Footer                                          -->
+  <!-- ============================================================ -->
+  <footer id="contact" class="bg-garden-dark text-cream">
+    <div class="mx-auto max-w-[1200px] px-5 py-14 sm:px-6">
+      <div class="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr]">
+        <!-- Brand -->
+        <div>
+          <div class="flex items-center gap-2.5">
+            <span class="grid h-10 w-10 place-items-center rounded-xl bg-cream/15">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 22V12"/>
+                <path d="M12 12c0-3.3-2.5-6-5.5-6C6.5 9.4 9 12 12 12Z" fill="currentColor" fill-opacity="0.3"/>
+                <path d="M12 12c0-3.3 2.5-6 5.5-6C17.5 9.4 15 12 12 12Z" fill="currentColor" fill-opacity="0.3"/>
+                <path d="M12 8c0-3 2-5.5 4.5-5.5C16.5 5.4 14.5 8 12 8Z" fill="currentColor" fill-opacity="0.5"/>
+              </svg>
+            </span>
+            <span class="font-display text-[22px] font-600 display-tight">Thicket</span>
+          </div>
+          <p class="mt-3 max-w-xs text-[14px] leading-[1.6] text-cream/70">
+            A design-build and maintenance landscaping company for town and suburban yards across Westchester County, NY. Family-owned since 2011.
+          </p>
+          <!-- social icons -->
+          <div class="mt-4 flex gap-2.5">
+            <a href="#top" aria-label="Thicket on Instagram" class="btn grid h-9 w-9 place-items-center rounded-full bg-cream/10 ring-1 ring-cream/15 hover:bg-cream/20">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor"/></svg>
+            </a>
+            <a href="#top" aria-label="Thicket on Facebook" class="btn grid h-9 w-9 place-items-center rounded-full bg-cream/10 ring-1 ring-cream/15 hover:bg-cream/20">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3Z"/></svg>
+            </a>
+            <a href="#top" aria-label="Thicket on YouTube" class="btn grid h-9 w-9 place-items-center rounded-full bg-cream/10 ring-1 ring-cream/15 hover:bg-cream/20">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 8.5a3 3 0 0 0-2.1-2.1C18 6 12 6 12 6s-6 0-7.9.4A3 3 0 0 0 2 8.5 31 31 0 0 0 2 12a31 31 0 0 0 .1 3.5 3 3 0 0 0 2.1 2.1C6 18 12 18 12 18s6 0 7.9-.4a3 3 0 0 0 2.1-2.1A31 31 0 0 0 22 12a31 31 0 0 0-.1-3.5Z"/><path d="m10 9 5 3-5 3Z" fill="currentColor"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Contact -->
+        <div>
+          <h3 class="text-[13px] font-semibold uppercase tracking-[0.14em] text-cream/55">Visit &amp; contact</h3>
+          <ul class="mt-3 space-y-2.5 text-[14px] text-cream/80">
+            <li class="flex items-start gap-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span>34 Garth Road, Yard &amp; Studio<br />Eastchester, NY 10709</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+              <a href="tel:+15557304416" class="font-mono-num text-[13.5px] hover:text-white">(555) 730-4416</a>
+            </li>
+            <li class="flex items-start gap-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              <span class="font-mono-num text-[13px]">Mon&ndash;Fri 7am&ndash;6pm<br />Sat 8am&ndash;2pm &middot; Sun closed</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Service area + links -->
+        <div>
+          <h3 class="text-[13px] font-semibold uppercase tracking-[0.14em] text-cream/55">Service area</h3>
+          <p class="mt-3 text-[14px] leading-[1.6] text-cream/80">
+            Bronxville, Scarsdale, Rye, Larchmont, Pelham, Mamaroneck, Hartsdale &amp; Eastchester &mdash; Westchester County, NY.
+          </p>
+          <ul class="mt-4 flex flex-wrap gap-x-5 gap-y-1.5 text-[14px] text-cream/80">
+            <li><a href="#services" class="hover:text-white">Services</a></li>
+            <li><a href="#about" class="hover:text-white">About</a></li>
+            <li><a href="#reviews" class="hover:text-white">Reviews</a></li>
+            <li><a href="#quote" class="hover:text-white">Free quote</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- License + copyright -->
+      <div class="mt-12 flex flex-col gap-3 border-t border-cream/15 pt-6 text-[12.5px] text-cream/55 sm:flex-row sm:items-center sm:justify-between">
+        <p class="font-mono-num leading-relaxed">
+          NY Pesticide Business Reg. #C2-44187 &nbsp;/&nbsp; ISA Certified Arborist #NY-7741A
+        </p>
+        <p>&copy; 2026 Thicket Landscape Co. &mdash; All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

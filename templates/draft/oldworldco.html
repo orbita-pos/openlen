@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>oldworldco — Retro · Arcade · CRT</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07080A;
+    --bg-card: #0E1112;
+    --bg-card-hover: #131818;
+    --fg: #E8FFF7;
+    --fg-muted: #7FA39A;
+    --fg-faint: #3D5650;
+    --accent: #2EFFD5;
+    --accent-rgb: 46, 255, 213;
+    --secondary: #FFD400;
+    --secondary-rgb: 255, 212, 0;
+    --border: rgba(255,255,255,0.06);
+  }
+  * { -webkit-font-smoothing: antialiased; }
+  html, body { background: var(--bg); }
+  body {
+    color: var(--fg);
+    font-family: 'Inter', system-ui, sans-serif;
+    background-image:
+      radial-gradient(ellipse at 50% 30%, rgba(var(--accent-rgb), 0.08), transparent 55%),
+      radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(0,0,0,0.55) 100%);
+    background-size: 100% 100%, 100% 100%;
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+  .font-display { font-family: 'Anton', 'Space Grotesk', sans-serif; letter-spacing: -0.01em; }
+  .font-display-sg { font-family: 'Space Grotesk', sans-serif; letter-spacing: -0.03em; }
+  .font-mono { font-family: 'JetBrains Mono', monospace; }
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+
+  /* Heavy CRT scanlines */
+  .scanlines {
+    pointer-events: none; position: fixed; inset: 0;
+    background:
+      repeating-linear-gradient(0deg, rgba(46,255,213,0.022) 0px, rgba(46,255,213,0.022) 1px, transparent 1px, transparent 2px),
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.18) 0px, rgba(0,0,0,0.18) 1px, transparent 1px, transparent 3px);
+    mix-blend-mode: multiply;
+    z-index: 100;
+  }
+  /* CRT static flicker */
+  .crt-overlay {
+    pointer-events: none; position: fixed; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.55) 100%);
+    z-index: 101;
+    animation: crt-flicker 4s steps(1) infinite;
+  }
+  @keyframes crt-flicker {
+    0%, 96%, 100% { opacity: 1; }
+    97% { opacity: 0.96; }
+    98% { opacity: 1; }
+  }
+
+  .accent-ring { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent), 0 0 36px rgba(var(--accent-rgb), 0.55); }
+
+  .link-row { transition: transform 120ms cubic-bezier(0.2, 0.6, 0.2, 1), border-color 120ms, background 120ms, box-shadow 120ms; }
+  .link-row:hover {
+    transform: translateY(-2px);
+    border-color: rgba(var(--accent-rgb), 0.60) !important;
+    background: var(--bg-card-hover);
+    box-shadow: 0 0 24px rgba(var(--accent-rgb), 0.30);
+  }
+  .link-row:hover .chev { transform: translateX(2px); color: var(--accent); }
+  .link-row .chev { transition: transform 120ms, color 120ms; }
+
+  .social-btn { transition: all 120ms ease; }
+  .social-btn:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
+
+  .featured-tile { box-shadow: 0 0 32px rgba(var(--accent-rgb), 0.30); transition: box-shadow 200ms ease, transform 200ms ease; }
+  .featured-tile:hover { box-shadow: 0 0 48px rgba(var(--accent-rgb), 0.45); transform: translateY(-2px); }
+
+  .name-glow { color: var(--accent); text-shadow: 0 0 12px rgba(46,255,213,0.65), 0 0 24px rgba(46,255,213,0.35); }
+
+  .ow-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 2px 6px; border: 1px solid var(--secondary);
+    color: var(--secondary); font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase;
+  }
+
+  .pixel-line { background-image: linear-gradient(90deg, var(--accent) 0 4px, transparent 4px 8px); background-size: 8px 1px; background-repeat: repeat-x; background-position: center; height: 1px; }
+</style>
+</head>
+<body>
+
+<div class="scanlines"></div>
+<div class="crt-overlay"></div>
+
+<main class="mx-auto w-full max-w-[480px] px-5 py-8 sm:py-12 relative" style="z-index: 1;">
+
+  <!-- Status bar -->
+  <div class="flex items-center justify-between text-[10px] font-mono uppercase tracking-[0.18em] mb-8 gap-3">
+    <div class="flex items-center gap-2 min-w-0">
+      <span class="w-2 h-2 rounded-full shrink-0" style="background: var(--fg-faint)"></span>
+      <span style="color: var(--fg-muted)">Offline</span>
+      <span style="color: var(--fg-faint)">·</span>
+      <span style="color: var(--fg-muted)">Next stream</span>
+      <span class="tabular-nums" style="color: var(--secondary)">Sat 9PM</span>
+    </div>
+    <span class="tabular-nums shrink-0" style="color: var(--fg-faint)" id="clock">21:47:08</span>
+  </div>
+
+  <!-- Header -->
+  <div class="flex flex-col items-center text-center mb-8">
+    <div class="relative mb-5">
+      <div class="w-24 h-24 rounded-full accent-ring overflow-hidden bg-[#0A0E0E] flex items-center justify-center">
+        <svg viewBox="0 0 96 96" class="w-full h-full">
+          <rect width="96" height="96" fill="#0A0E0E"/>
+          <!-- CRT TV silhouette -->
+          <rect x="16" y="22" width="64" height="48" rx="6" fill="none" stroke="#2EFFD5" stroke-width="2"/>
+          <rect x="22" y="28" width="52" height="36" rx="3" fill="#0A1F18"/>
+          <!-- phosphor "OW" -->
+          <text x="48" y="54" text-anchor="middle" font-family="Anton, sans-serif" font-size="20" fill="#2EFFD5">OW</text>
+          <!-- knobs -->
+          <circle cx="32" cy="76" r="3" fill="#FFD400"/>
+          <circle cx="64" cy="76" r="3" fill="#FFD400"/>
+          <!-- antenna -->
+          <line x1="36" y1="22" x2="28" y2="10" stroke="#2EFFD5" stroke-width="1.5"/>
+          <line x1="60" y1="22" x2="68" y2="10" stroke="#2EFFD5" stroke-width="1.5"/>
+          <!-- scanlines on screen -->
+          <line x1="22" y1="38" x2="74" y2="38" stroke="#2EFFD5" stroke-width="0.4" opacity="0.4"/>
+          <line x1="22" y1="46" x2="74" y2="46" stroke="#2EFFD5" stroke-width="0.4" opacity="0.4"/>
+          <line x1="22" y1="58" x2="74" y2="58" stroke="#2EFFD5" stroke-width="0.4" opacity="0.4"/>
+        </svg>
+      </div>
+    </div>
+
+    <h1 class="font-display text-[44px] leading-[0.95] tracking-tight mb-1 uppercase name-glow">oldworld<span style="color: var(--secondary); text-shadow: 0 0 12px rgba(255,212,0,0.65)">co</span></h1>
+    <div class="font-mono text-[11px] tracking-wider mt-1" style="color: var(--fg-muted)">
+      @oldworldco · <span class="tabular-nums">218,440</span> followers
+    </div>
+    <p class="text-[14px] leading-[1.55] mt-4 max-w-[340px]" style="color: var(--fg-muted)">
+      Retro gamer, arcade hunter, CRT enthusiast. Grinding <span style="color: var(--accent)">A-rank Mega Man X</span>. 600+ NES titles in archive.
+    </p>
+  </div>
+
+  <!-- archive stat strip -->
+  <div class="flex items-stretch justify-between gap-1.5 mb-6">
+    <div class="flex-1 rounded-sm p-2.5 text-center border" style="background: var(--bg-card); border-color: var(--border);">
+      <div class="font-mono text-[9px] uppercase tracking-[0.15em]" style="color: var(--fg-faint)">NES archive</div>
+      <div class="font-display text-[18px] tabular-nums mt-0.5" style="color: var(--accent)"><span class="font-display">617</span></div>
+    </div>
+    <div class="flex-1 rounded-sm p-2.5 text-center border" style="background: var(--bg-card); border-color: var(--border);">
+      <div class="font-mono text-[9px] uppercase tracking-[0.15em]" style="color: var(--fg-faint)">Cabinets</div>
+      <div class="font-display text-[18px] tabular-nums mt-0.5" style="color: var(--accent)"><span class="font-display">47</span></div>
+    </div>
+    <div class="flex-1 rounded-sm p-2.5 text-center border" style="background: var(--bg-card); border-color: var(--border);">
+      <div class="font-mono text-[9px] uppercase tracking-[0.15em]" style="color: var(--fg-faint)">CRTs</div>
+      <div class="font-display text-[18px] tabular-nums mt-0.5" style="color: var(--accent)"><span class="font-display">12</span></div>
+    </div>
+    <div class="flex-1 rounded-sm p-2.5 text-center border" style="background: var(--bg-card); border-color: rgba(255,212,0,0.30);">
+      <div class="font-mono text-[9px] uppercase tracking-[0.15em]" style="color: var(--fg-faint)">A-Rank</div>
+      <div class="font-display text-[18px] tabular-nums mt-0.5" style="color: var(--secondary)"><span class="font-display">23</span></div>
+    </div>
+  </div>
+
+  <!-- Featured tile -->
+  <a href="#" class="featured-tile block rounded-sm overflow-hidden mb-8 border" style="border-color: rgba(46,255,213,0.30); background: var(--bg-card);">
+    <div class="relative aspect-video" style="background: linear-gradient(135deg, #061a18 0%, #0a0f1a 50%, #07080A 100%);">
+      <!-- pixel arcade cabinets -->
+      <svg class="absolute inset-0 w-full h-full" viewBox="0 0 400 225" preserveAspectRatio="none">
+        <g>
+          <!-- cabinet 1 -->
+          <rect x="40" y="80" width="36" height="100" fill="#13201E" stroke="#2EFFD5" stroke-width="1"/>
+          <rect x="44" y="90" width="28" height="22" fill="#0E2820"/>
+          <rect x="44" y="90" width="28" height="22" fill="none" stroke="#FFD400" stroke-width="0.6"/>
+          <rect x="50" y="120" width="16" height="6" fill="#2EFFD5" opacity="0.4"/>
+          <!-- cabinet 2 -->
+          <rect x="92" y="70" width="36" height="110" fill="#13201E" stroke="#2EFFD5" stroke-width="1"/>
+          <rect x="96" y="82" width="28" height="26" fill="#0E2820"/>
+          <rect x="96" y="82" width="28" height="26" fill="none" stroke="#FFD400" stroke-width="0.6"/>
+          <rect x="102" y="118" width="16" height="6" fill="#2EFFD5" opacity="0.4"/>
+          <!-- cabinet 3 -->
+          <rect x="144" y="76" width="36" height="104" fill="#13201E" stroke="#2EFFD5" stroke-width="1"/>
+          <rect x="148" y="86" width="28" height="24" fill="#0E2820"/>
+          <rect x="148" y="86" width="28" height="24" fill="none" stroke="#FFD400" stroke-width="0.6"/>
+          <rect x="154" y="120" width="16" height="6" fill="#2EFFD5" opacity="0.4"/>
+          <!-- cabinet 4 -->
+          <rect x="196" y="68" width="36" height="112" fill="#13201E" stroke="#2EFFD5" stroke-width="1"/>
+          <rect x="200" y="80" width="28" height="28" fill="#0E2820"/>
+          <rect x="200" y="80" width="28" height="28" fill="none" stroke="#FFD400" stroke-width="0.6"/>
+          <rect x="206" y="118" width="16" height="6" fill="#2EFFD5" opacity="0.4"/>
+          <!-- cabinet 5 -->
+          <rect x="248" y="74" width="36" height="106" fill="#13201E" stroke="#2EFFD5" stroke-width="1"/>
+          <rect x="252" y="85" width="28" height="25" fill="#0E2820"/>
+          <rect x="252" y="85" width="28" height="25" fill="none" stroke="#FFD400" stroke-width="0.6"/>
+          <rect x="258" y="120" width="16" height="6" fill="#2EFFD5" opacity="0.4"/>
+          <!-- cabinet 6 -->
+          <rect x="300" y="78" width="36" height="102" fill="#13201E" stroke="#2EFFD5" stroke-width="1"/>
+          <rect x="304" y="88" width="28" height="24" fill="#0E2820"/>
+          <rect x="304" y="88" width="28" height="24" fill="none" stroke="#FFD400" stroke-width="0.6"/>
+          <rect x="310" y="120" width="16" height="6" fill="#2EFFD5" opacity="0.4"/>
+          <!-- floor -->
+          <line x1="0" y1="180" x2="400" y2="180" stroke="#2EFFD5" stroke-width="0.5" opacity="0.5"/>
+        </g>
+      </svg>
+      <div class="absolute inset-0 flex items-center justify-center">
+        <div class="w-14 h-14 rounded-full flex items-center justify-center" style="background: rgba(46,255,213,0.95); box-shadow: 0 0 36px rgba(46,255,213,0.6);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#07080A"><path d="M8 5v14l11-7z"/></svg>
+        </div>
+      </div>
+      <div class="absolute top-3 left-3 font-mono text-[10px] uppercase tracking-[0.18em] px-2 py-1" style="background: rgba(0,0,0,0.78); color: var(--secondary); border: 1px solid var(--secondary);">
+        AKIHABARA · 2025
+      </div>
+      <div class="absolute bottom-3 right-3 font-mono text-[10px] tabular-nums" style="background: rgba(0,0,0,0.78); color: var(--fg); padding: 4px 8px; border-radius: 2px;">38:12</div>
+    </div>
+    <div class="p-4 flex items-start justify-between gap-3">
+      <div class="flex-1 min-w-0">
+        <div class="text-[14px] font-medium leading-[1.35] mb-1" style="color: var(--fg)">PILGRIMAGE — every Konami arcade cabinet in Akihabara</div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.15em]" style="color: var(--fg-muted)"><span class="tabular-nums">498k</span> views · 2025 trip recap</div>
+      </div>
+      <span class="font-mono text-[10px] uppercase tracking-[0.18em] whitespace-nowrap" style="color: var(--accent)">Watch on YT →</span>
+    </div>
+  </a>
+
+  <div class="pixel-line mb-6"></div>
+
+  <!-- Link stack -->
+  <div class="flex flex-col gap-2.5 mb-8">
+    <a href="#" class="link-row flex items-center gap-3 px-4 py-3.5 rounded-sm border" style="background: var(--bg-card); border-color: rgba(46,255,213,0.25);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color: var(--accent)"><path d="M4 1l-3 4v15h5v4h3l4-4h4l6-6V1H4zm17 11l-4 4h-5l-3 3v-3H6V3h15v9zm-4-6h-2v6h2V6zm-5 0h-2v6h2V6z"/></svg>
+      <div class="flex-1 min-w-0">
+        <div class="text-[15px] font-medium" style="color: var(--fg)">Twitch</div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.15em] mt-0.5" style="color: var(--fg-muted)">Weekend retro nights · Fri / Sat</div>
+      </div>
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-faint)"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+
+    <a href="#" class="link-row flex items-center gap-3 px-4 py-3.5 rounded-sm border" style="background: var(--bg-card); border-color: var(--border);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color: var(--fg-muted)"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+      <div class="flex-1 min-w-0">
+        <div class="text-[15px] font-medium" style="color: var(--fg)">YouTube</div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.15em] mt-0.5" style="color: var(--fg-muted)"><span class="tabular-nums">320k</span> subs · arcade documentaries</div>
+      </div>
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-faint)"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+
+    <a href="#" class="link-row flex items-center gap-3 px-4 py-3.5 rounded-sm border" style="background: var(--bg-card); border-color: var(--border);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-muted)"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+      <div class="flex-1 min-w-0">
+        <div class="text-[15px] font-medium" style="color: var(--fg)">Cabinet collection</div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.15em] mt-0.5" style="color: var(--fg-muted)"><span class="tabular-nums">47</span> machines · cataloged + dated</div>
+      </div>
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-faint)"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+
+    <a href="#" class="link-row flex items-center gap-3 px-4 py-3.5 rounded-sm border" style="background: var(--bg-card); border-color: rgba(255,212,0,0.22);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--secondary)"><rect x="2" y="6" width="20" height="12" rx="2" ry="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="12" r="2"/></svg>
+      <div class="flex-1 min-w-0">
+        <div class="text-[15px] font-medium" style="color: var(--fg)">Mega Drive / Saturn JP archive</div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.15em] mt-0.5" style="color: var(--fg-muted)">Cart list · 284 titles · region-tagged</div>
+      </div>
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-faint)"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+
+    <a href="#" class="link-row flex items-center gap-3 px-4 py-3.5 rounded-sm border" style="background: var(--bg-card); border-color: var(--border);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color: var(--fg-muted)"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+      <div class="flex-1 min-w-0">
+        <div class="text-[15px] font-medium" style="color: var(--fg)">Discord</div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.15em] mt-0.5" style="color: var(--fg-muted)"><span class="tabular-nums">6,200</span> retro heads · #cab-repairs</div>
+      </div>
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-faint)"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+
+    <a href="#" class="link-row flex items-center gap-3 px-4 py-3.5 rounded-sm border" style="background: var(--bg-card); border-color: var(--border);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-muted)"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      <div class="flex-1 min-w-0">
+        <div class="text-[15px] font-medium" style="color: var(--fg)">Streaming rig + CRT setup</div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.15em] mt-0.5" style="color: var(--fg-muted)">Sony PVM 20M2MD · OSSC · OBS notes</div>
+      </div>
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-faint)"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+
+    <a href="#" class="link-row flex items-center gap-3 px-4 py-3.5 rounded-sm border" style="background: var(--bg-card); border-color: rgba(255,212,0,0.30);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--secondary)"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2">
+          <span class="text-[15px] font-medium" style="color: var(--fg)">Merch · Phosphor shirt</span>
+          <span class="ow-badge">DROP 04</span>
+        </div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.15em] mt-0.5" style="color: var(--fg-muted)">Glow-on-black · ships Friday</div>
+      </div>
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-faint)"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+  </div>
+
+  <!-- Social row -->
+  <div class="flex items-center justify-center gap-2 mb-10">
+    <a href="#" aria-label="Twitch" class="social-btn w-8 h-8 rounded-sm border flex items-center justify-center" style="border-color: var(--border); color: var(--fg-muted);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M4 1l-3 4v15h5v4h3l4-4h4l6-6V1H4zm17 11l-4 4h-5l-3 3v-3H6V3h15v9zm-4-6h-2v6h2V6zm-5 0h-2v6h2V6z"/></svg>
+    </a>
+    <a href="#" aria-label="YouTube" class="social-btn w-8 h-8 rounded-sm border flex items-center justify-center" style="border-color: var(--border); color: var(--fg-muted);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+    </a>
+    <a href="#" aria-label="Twitter" class="social-btn w-8 h-8 rounded-sm border flex items-center justify-center" style="border-color: var(--border); color: var(--fg-muted);">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+    </a>
+    <a href="#" aria-label="Discord" class="social-btn w-8 h-8 rounded-sm border flex items-center justify-center" style="border-color: var(--border); color: var(--fg-muted);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+    </a>
+    <a href="#" aria-label="Bluesky" class="social-btn w-8 h-8 rounded-sm border flex items-center justify-center" style="border-color: var(--border); color: var(--fg-muted);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 10.8C10.05 6.95 4.55 0.55 2.7 0.05c-2.65-.65-2.7 2.6-2.55 4.05.2 1.95.85 7.55 1.55 9.8 2.3 7.55 9.5 5.95 10.3 5.05.8.9 8 2.5 10.3-5.05.7-2.25 1.35-7.85 1.55-9.8.15-1.45.1-4.7-2.55-4.05C19.45.55 13.95 6.95 12 10.8z"/></svg>
+    </a>
+  </div>
+
+  <div class="text-center font-mono text-[10px] uppercase tracking-[0.18em]" style="color: rgba(232,255,247,0.30)">
+    © 2026 oldworldco · made with openlen
+  </div>
+
+</main>
+
+<script>
+  function tickClock() {
+    const d = new Date();
+    const el = document.getElementById('clock');
+    if (el) el.textContent = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+  }
+  tickClock(); setInterval(tickClock, 1000);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Drape — Autumn–Winter 2027</title>
+<meta name="description" content="Drape is a small ready-to-wear house. Considered tailoring, fluid drape, a seasonless wardrobe added to slowly. Autumn–Winter 2027." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #EFEBE3;
+    --ink: #1A1815;
+    --hair: rgba(26, 24, 21, 0.10);
+    --hair-soft: rgba(26, 24, 21, 0.06);
+    --mute: rgba(26, 24, 21, 0.56);
+    --mute-2: rgba(26, 24, 21, 0.40);
+  }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-weight: 400;
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  ::selection { background: var(--ink); color: var(--bg); }
+
+  .display {
+    font-family: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    line-height: 1.04;
+  }
+  .display-italic {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-style: italic;
+    font-weight: 500;
+  }
+
+  /* wide-tracked small-caps label */
+  .label {
+    font-family: 'Inter', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--mute);
+  }
+  .label-ink { color: var(--ink); }
+  .label-tight { letter-spacing: 0.18em; }
+
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  .hair { border-color: var(--hair); }
+  .hair-soft { border-color: var(--hair-soft); }
+
+  /* ---- ambient backgrounds ---- */
+  .dot-grid {
+    background-image: radial-gradient(rgba(26,24,21,0.10) 0.9px, transparent 0.9px);
+    background-size: 32px 32px;
+  }
+  .ambient-fade {
+    background:
+      radial-gradient(900px 520px at 78% 6%, rgba(26,24,21,0.045), transparent 70%),
+      radial-gradient(760px 600px at 6% 92%, rgba(26,24,21,0.04), transparent 72%);
+  }
+  .mesh-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(70px);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  /* ---- film-grain noise overlay (encoded SVG turbulence) ---- */
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.42'/></svg>");
+    mix-blend-mode: overlay;
+    opacity: 0.55;
+    z-index: 2;
+  }
+  .grain-soft::after { opacity: 0.34; }
+
+  /* ---- image placeholders: layered campaign-photography gradients ---- */
+  .ph { position: relative; overflow: hidden; isolation: isolate; }
+  .ph::before {
+    content: "";
+    position: absolute; inset: 0;
+    box-shadow: inset 0 0 0 1px rgba(26,24,21,0.12);
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  /* warm bone */
+  .ph-bone {
+    background:
+      radial-gradient(120% 90% at 26% 16%, rgba(255,255,255,0.62), transparent 56%),
+      radial-gradient(140% 130% at 88% 100%, rgba(120,108,92,0.42), transparent 60%),
+      linear-gradient(158deg, #E9E2D4 0%, #D8CDB9 44%, #BCAE96 100%);
+  }
+  /* stone */
+  .ph-stone {
+    background:
+      radial-gradient(110% 80% at 74% 12%, rgba(255,255,255,0.5), transparent 54%),
+      radial-gradient(130% 120% at 14% 96%, rgba(74,70,62,0.5), transparent 62%),
+      linear-gradient(168deg, #D3CCBE 0%, #B6AD9C 50%, #8C8474 100%);
+  }
+  /* taupe */
+  .ph-taupe {
+    background:
+      radial-gradient(120% 86% at 30% 20%, rgba(255,255,255,0.46), transparent 56%),
+      radial-gradient(150% 130% at 92% 96%, rgba(58,52,44,0.5), transparent 60%),
+      linear-gradient(150deg, #CDC2AF 0%, #A99C86 52%, #7E7361 100%);
+  }
+  /* charcoal */
+  .ph-charcoal {
+    background:
+      radial-gradient(120% 92% at 22% 14%, rgba(214,205,189,0.34), transparent 58%),
+      radial-gradient(140% 130% at 96% 104%, rgba(0,0,0,0.6), transparent 60%),
+      linear-gradient(160deg, #5B5346 0%, #3C372F 52%, #211F1A 100%);
+  }
+  /* ink */
+  .ph-ink {
+    background:
+      radial-gradient(120% 94% at 78% 10%, rgba(196,186,170,0.26), transparent 56%),
+      radial-gradient(150% 140% at 8% 108%, rgba(0,0,0,0.72), transparent 56%),
+      linear-gradient(168deg, #34302A 0%, #211E1A 50%, #141310 100%);
+  }
+  /* warm slate */
+  .ph-slate {
+    background:
+      radial-gradient(110% 84% at 68% 16%, rgba(255,255,255,0.4), transparent 54%),
+      radial-gradient(140% 124% at 10% 98%, rgba(48,44,38,0.5), transparent 62%),
+      linear-gradient(156deg, #C4BCAD 0%, #9C9384 48%, #6E6657 100%);
+  }
+  /* pale linen — lightest */
+  .ph-linen {
+    background:
+      radial-gradient(120% 90% at 32% 14%, rgba(255,255,255,0.74), transparent 60%),
+      radial-gradient(150% 140% at 92% 102%, rgba(150,138,120,0.34), transparent 62%),
+      linear-gradient(158deg, #F1ECE0 0%, #E2DACA 56%, #CDC2AC 100%);
+  }
+
+  /* hover scale within an overflow-hidden frame */
+  .img-zoom { transition: transform 1100ms cubic-bezier(0.16,1,0.3,1); transform: scale(1.001); }
+  .group:hover .img-zoom { transform: scale(1.045); }
+
+  /* caption fade-in */
+  .cap-fade { opacity: 0; transform: translateY(6px); transition: opacity 360ms ease, transform 360ms ease; }
+  .group:hover .cap-fade { opacity: 1; transform: translateY(0); }
+
+  /* ---- pulse dot ---- */
+  .pulse-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--ink);
+    box-shadow: 0 0 0 0 rgba(26,24,21,0.4);
+    animation: pulse 2400ms ease-out infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(26,24,21,0.36); }
+    70%  { box-shadow: 0 0 0 11px rgba(26,24,21,0); }
+    100% { box-shadow: 0 0 0 0 rgba(26,24,21,0); }
+  }
+
+  /* ---- marquee ---- */
+  .marquee { display: flex; width: max-content; animation: scroll 46s linear infinite; }
+  .marquee:hover { animation-play-state: paused; }
+  @keyframes scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  .marquee-mask {
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+            mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+  }
+
+  /* ---- buttons ---- */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.6rem;
+    transition: transform 120ms ease, background-color 120ms ease, color 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+    will-change: transform;
+  }
+  .btn-ink {
+    background: var(--ink); color: var(--bg);
+    box-shadow: 0 1px 0 rgba(26,24,21,0.2);
+  }
+  .btn-ink:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px -10px rgba(26,24,21,0.5);
+  }
+  .btn-line {
+    border: 1px solid var(--ink); color: var(--ink); background: transparent;
+  }
+  .btn-line:hover {
+    transform: translateY(-2px);
+    background: var(--ink); color: var(--bg);
+    box-shadow: 0 10px 22px -12px rgba(26,24,21,0.45);
+  }
+
+  /* underline-on-hover link */
+  .lnk { position: relative; transition: color 120ms ease; }
+  .lnk::after {
+    content: ""; position: absolute; left: 0; right: 100%; bottom: -3px;
+    height: 1px; background: currentColor;
+    transition: right 240ms cubic-bezier(0.16,1,0.3,1);
+  }
+  .lnk:hover::after { right: 0; }
+
+  /* ---- FAQ accordion (CSS-only) ---- */
+  details.faq { border-bottom: 1px solid var(--hair); }
+  details.faq summary {
+    list-style: none; cursor: pointer;
+    padding: 28px 0; display: flex; gap: 1.5rem;
+    align-items: baseline; justify-content: space-between;
+  }
+  details.faq summary::-webkit-details-marker { display: none; }
+  details.faq .sign {
+    flex: none; width: 16px; height: 16px; position: relative;
+    transition: transform 280ms cubic-bezier(0.16,1,0.3,1);
+  }
+  details.faq .sign::before,
+  details.faq .sign::after {
+    content: ""; position: absolute; background: var(--ink);
+    transition: opacity 200ms ease;
+  }
+  details.faq .sign::before { left: 0; right: 0; top: 7.5px; height: 1px; }
+  details.faq .sign::after  { top: 0; bottom: 0; left: 7.5px; width: 1px; }
+  details.faq[open] .sign { transform: rotate(135deg); }
+  details.faq .answer {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 420ms cubic-bezier(0.16,1,0.3,1), opacity 320ms ease, padding 420ms ease;
+  }
+  details.faq[open] .answer {
+    max-height: 360px;
+    opacity: 1;
+    padding-bottom: 30px;
+  }
+
+  /* focus ring */
+  a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visible {
+    outline: 1.5px solid var(--ink);
+    outline-offset: 3px;
+    border-radius: 1px;
+  }
+
+  /* reveal-on-load nicety */
+  .rise { opacity: 0; transform: translateY(14px); }
+  .rise.in { opacity: 1; transform: translateY(0); transition: opacity 760ms cubic-bezier(0.16,1,0.3,1), transform 760ms cubic-bezier(0.16,1,0.3,1); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .marquee { animation: none; }
+    .pulse-dot { animation: none; }
+    .img-zoom, .rise, .cap-fade { transition: none; }
+    .rise { opacity: 1; transform: none; }
+  }
+
+  /* thin scroll caption track for the lookbook ratios at small width */
+  .frame-thin { box-shadow: inset 0 0 0 1px rgba(26,24,21,0.14); }
+</style>
+</head>
+<body>
+
+<!-- ======================================================= 1. NAV ======================================================= -->
+<header class="sticky top-0 z-50">
+  <div class="backdrop-blur-md" style="background: rgba(239,235,227,0.86); border-bottom: 1px solid var(--hair);">
+    <nav class="mx-auto max-w-[1280px] px-5 sm:px-8 h-16 flex items-center justify-between" aria-label="Primary">
+      <a href="#top" class="display text-2xl tracking-[-0.01em] leading-none select-none" aria-label="Drape — home">
+        Drape<span class="align-top text-[0.6em] ml-[1px]">®</span>
+      </a>
+      <ul class="hidden md:flex items-center gap-9 label label-tight label-ink">
+        <li><a href="#collection" class="lnk">Collection</a></li>
+        <li><a href="#lookbook" class="lnk">Lookbook</a></li>
+        <li><a href="#about" class="lnk">About</a></li>
+        <li><a href="#stockists" class="lnk">Stockists</a></li>
+      </ul>
+      <div class="flex items-center gap-4">
+        <span class="hidden sm:inline-flex items-center gap-2 label label-tight">
+          <span class="pulse-dot" aria-hidden="true"></span>
+          AW27 live
+        </span>
+        <a href="#collection" class="btn btn-line text-[11px] tracking-[0.16em] uppercase font-medium px-4 py-2">Shop</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ======================================================= 2. HERO ======================================================= -->
+  <section class="relative" aria-label="Autumn–Winter 2027 campaign">
+    <div class="ambient-fade">
+      <div class="mx-auto max-w-[1280px] px-5 sm:px-8 pt-14 sm:pt-20 pb-6">
+        <div class="flex items-center justify-between gap-6 flex-wrap">
+          <p class="label label-ink">Autumn–Winter 2027</p>
+          <p class="label">A collection of twenty-two pieces</p>
+        </div>
+      </div>
+
+      <!-- full-bleed campaign image -->
+      <div class="relative w-full">
+        <div class="ph ph-taupe grain w-full h-[62vh] min-h-[440px] sm:h-[78vh] sm:min-h-[600px]">
+          <!-- soft figure suggestion -->
+          <div class="absolute inset-0 z-[1]" style="background:
+              radial-gradient(46% 64% at 50% 56%, rgba(20,18,15,0.30), transparent 64%),
+              linear-gradient(180deg, rgba(239,235,227,0.10) 0%, transparent 22%, transparent 70%, rgba(20,18,15,0.34) 100%);"></div>
+
+          <!-- overlaid hero copy -->
+          <div class="absolute inset-0 z-[4] flex flex-col justify-end">
+            <div class="mx-auto w-full max-w-[1280px] px-5 sm:px-8 pb-9 sm:pb-14">
+              <div class="max-w-[20ch]">
+                <span class="inline-flex items-center gap-2 label" style="color: rgba(239,235,227,0.78);">
+                  <span aria-hidden="true">—</span> The wardrobe, not the season
+                </span>
+              </div>
+              <h1 class="display mt-4 text-[clamp(2.9rem,9vw,7.2rem)]" style="color:#EFEBE3;">
+                Fewer things,<br />
+                <span style="opacity:0.45;">made better.</span>
+              </h1>
+              <div class="mt-6 flex flex-col sm:flex-row sm:items-end gap-5 sm:gap-10">
+                <p class="text-[14px] sm:text-[15px] leading-relaxed max-w-[42ch]" style="color: rgba(239,235,227,0.82);">
+                  A small house for considered tailoring and fluid drape — built from cloth first, cut to be lived in, and added to slowly rather than all at once.
+                </p>
+                <a href="#collection" class="btn text-[12px] tracking-[0.16em] uppercase font-medium px-7 py-3.5 shrink-0"
+                   style="background:#EFEBE3; color:#1A1815;"
+                   onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                  Shop the collection
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- photographer credit strip -->
+        <div class="mx-auto max-w-[1280px] px-5 sm:px-8">
+          <div class="flex items-center justify-between gap-4 py-3.5 flex-wrap" style="border-bottom:1px solid var(--hair);">
+            <p class="label label-tight">Campaign — photographed by Margaux Théron</p>
+            <p class="label">Look 01 · Bone</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- intent row -->
+      <div class="mx-auto max-w-[1280px] px-5 sm:px-8 py-12 sm:py-16">
+        <div class="grid md:grid-cols-12 gap-8 md:gap-6 items-start">
+          <p class="label md:col-span-3">House — est. 2019, London</p>
+          <p class="display md:col-span-7 text-[clamp(1.55rem,3.3vw,2.5rem)] leading-[1.18]">
+            We design a tight, seasonless wardrobe — pieces meant to outlast the year they were made in.
+          </p>
+          <div class="md:col-span-2 md:text-right">
+            <a href="#about" class="lnk label label-ink">Our point of view</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================= 3. THE COLLECTION ======================================================= -->
+  <section id="collection" class="relative">
+    <div class="mx-auto max-w-[1280px] px-5 sm:px-8 py-16 sm:py-24">
+      <div class="flex items-end justify-between gap-6 flex-wrap mb-10 sm:mb-14">
+        <div>
+          <p class="label">Section 01 — The collection</p>
+          <h2 class="display mt-3 text-[clamp(2rem,5vw,3.6rem)]">Autumn–Winter 2027</h2>
+        </div>
+        <p class="text-[13.5px] leading-relaxed max-w-[34ch]" style="color:var(--mute);">
+          Eight pieces from a wardrobe of twenty-two. A coat, trousers, a knit, a shirt — in stone, bone, slate and ink.
+        </p>
+      </div>
+
+      <!-- piece grid -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-12 sm:gap-y-16">
+
+        <!-- piece 1 -->
+        <article class="group">
+          <a href="#featured" class="block">
+            <div class="ph ph-charcoal grain-soft grain aspect-[4/5]">
+              <div class="img-zoom absolute inset-0"></div>
+            </div>
+            <div class="mt-3.5 flex items-baseline justify-between gap-3">
+              <h3 class="display text-[1.42rem] leading-none">The Coat</h3>
+              <span class="label tnum" style="color:var(--mute-2);">£1,290</span>
+            </div>
+            <p class="label mt-1.5">Double-faced wool · Ink</p>
+          </a>
+        </article>
+
+        <!-- piece 2 -->
+        <article class="group">
+          <a href="#featured" class="block">
+            <div class="ph ph-stone grain-soft grain aspect-[4/5]">
+              <div class="img-zoom absolute inset-0"></div>
+            </div>
+            <div class="mt-3.5 flex items-baseline justify-between gap-3">
+              <h3 class="display text-[1.42rem] leading-none">The Wide Trouser</h3>
+              <span class="label tnum" style="color:var(--mute-2);">£420</span>
+            </div>
+            <p class="label mt-1.5">Pleated wool flannel · Slate</p>
+          </a>
+        </article>
+
+        <!-- piece 3 -->
+        <article class="group">
+          <a href="#featured" class="block">
+            <div class="ph ph-linen grain-soft grain aspect-[4/5]">
+              <div class="img-zoom absolute inset-0"></div>
+            </div>
+            <div class="mt-3.5 flex items-baseline justify-between gap-3">
+              <h3 class="display text-[1.42rem] leading-none">The Drape Shirt</h3>
+              <span class="label tnum" style="color:var(--mute-2);">£295</span>
+            </div>
+            <p class="label mt-1.5">Washed silk · Bone</p>
+          </a>
+        </article>
+
+        <!-- piece 4 -->
+        <article class="group">
+          <a href="#featured" class="block">
+            <div class="ph ph-bone grain-soft grain aspect-[4/5]">
+              <div class="img-zoom absolute inset-0"></div>
+            </div>
+            <div class="mt-3.5 flex items-baseline justify-between gap-3">
+              <h3 class="display text-[1.42rem] leading-none">The Fine Knit</h3>
+              <span class="label tnum" style="color:var(--mute-2);">£340</span>
+            </div>
+            <p class="label mt-1.5">Italian merino · Oat</p>
+          </a>
+        </article>
+
+        <!-- piece 5 -->
+        <article class="group">
+          <a href="#featured" class="block">
+            <div class="ph ph-slate grain-soft grain aspect-[4/5]">
+              <div class="img-zoom absolute inset-0"></div>
+            </div>
+            <div class="mt-3.5 flex items-baseline justify-between gap-3">
+              <h3 class="display text-[1.42rem] leading-none">The Tailored Jacket</h3>
+              <span class="label tnum" style="color:var(--mute-2);">£980</span>
+            </div>
+            <p class="label mt-1.5">Full-canvas wool · Stone</p>
+          </a>
+        </article>
+
+        <!-- piece 6 -->
+        <article class="group">
+          <a href="#featured" class="block">
+            <div class="ph ph-taupe grain-soft grain aspect-[4/5]">
+              <div class="img-zoom absolute inset-0"></div>
+            </div>
+            <div class="mt-3.5 flex items-baseline justify-between gap-3">
+              <h3 class="display text-[1.42rem] leading-none">The Bias Skirt</h3>
+              <span class="label tnum" style="color:var(--mute-2);">£380</span>
+            </div>
+            <p class="label mt-1.5">Heavy crêpe · Charcoal</p>
+          </a>
+        </article>
+
+        <!-- piece 7 -->
+        <article class="group">
+          <a href="#featured" class="block">
+            <div class="ph ph-charcoal grain-soft grain aspect-[4/5]">
+              <div class="img-zoom absolute inset-0"></div>
+            </div>
+            <div class="mt-3.5 flex items-baseline justify-between gap-3">
+              <h3 class="display text-[1.42rem] leading-none">The Roll-Neck</h3>
+              <span class="label tnum" style="color:var(--mute-2);">£310</span>
+            </div>
+            <p class="label mt-1.5">Geelong lambswool · Ink</p>
+          </a>
+        </article>
+
+        <!-- piece 8 -->
+        <article class="group">
+          <a href="#featured" class="block">
+            <div class="ph ph-stone grain-soft grain aspect-[4/5]">
+              <div class="img-zoom absolute inset-0"></div>
+            </div>
+            <div class="mt-3.5 flex items-baseline justify-between gap-3">
+              <h3 class="display text-[1.42rem] leading-none">The Long Coat</h3>
+              <span class="label tnum" style="color:var(--mute-2);">£1,480</span>
+            </div>
+            <p class="label mt-1.5">Undyed alpaca · Natural</p>
+          </a>
+        </article>
+      </div>
+
+      <div class="mt-14 sm:mt-16 flex items-center justify-center">
+        <a href="#stockists" class="btn btn-line text-[12px] tracking-[0.16em] uppercase font-medium px-8 py-3.5">
+          View the full wardrobe
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================= 4. LOOKBOOK ======================================================= -->
+  <section id="lookbook" class="relative" style="border-top:1px solid var(--hair);">
+    <div class="dot-grid">
+      <div class="mx-auto max-w-[1280px] px-5 sm:px-8 py-16 sm:py-24" style="background: linear-gradient(180deg, rgba(239,235,227,0.65), rgba(239,235,227,0.9));">
+        <div class="flex items-end justify-between gap-6 flex-wrap mb-10 sm:mb-14">
+          <div>
+            <p class="label">Section 02 — Lookbook</p>
+            <h2 class="display mt-3 text-[clamp(2rem,5vw,3.6rem)]">The AW27 spread</h2>
+          </div>
+          <p class="label label-tight">Photographed in Lisbon — twelve looks</p>
+        </div>
+
+        <!-- editorial mixed-crop grid -->
+        <div class="grid grid-cols-2 md:grid-cols-12 gap-3.5 sm:gap-5 auto-rows-auto">
+
+          <!-- tall portrait -->
+          <figure class="group col-span-1 md:col-span-5">
+            <div class="ph ph-taupe grain aspect-[3/4]">
+              <div class="img-zoom absolute inset-0"></div>
+              <figcaption class="cap-fade absolute left-3 bottom-3 z-[4] label" style="color:rgba(239,235,227,0.9);">Look 02 — The Coat over wide trouser</figcaption>
+            </div>
+            <p class="label mt-2">Look 02</p>
+          </figure>
+
+          <!-- right column stacks -->
+          <div class="col-span-1 md:col-span-7 flex flex-col gap-3.5 sm:gap-5">
+            <figure class="group">
+              <div class="ph ph-charcoal grain aspect-[16/10]">
+                <div class="img-zoom absolute inset-0"></div>
+                <figcaption class="cap-fade absolute left-3 bottom-3 z-[4] label" style="color:rgba(239,235,227,0.9);">Fabric study — double-faced wool</figcaption>
+              </div>
+              <p class="label mt-2">Look 03</p>
+            </figure>
+            <div class="grid grid-cols-2 gap-3.5 sm:gap-5">
+              <figure class="group">
+                <div class="ph ph-linen grain aspect-square">
+                  <div class="img-zoom absolute inset-0"></div>
+                </div>
+                <p class="label mt-2">Flat-lay — silk shirt</p>
+              </figure>
+              <figure class="group">
+                <div class="ph ph-slate grain aspect-square">
+                  <div class="img-zoom absolute inset-0"></div>
+                  <figcaption class="cap-fade absolute left-3 bottom-3 z-[4] label" style="color:rgba(239,235,227,0.9);">Look 05</figcaption>
+                </div>
+                <p class="label mt-2">Look 05</p>
+              </figure>
+            </div>
+          </div>
+
+          <!-- wide landscape -->
+          <figure class="group col-span-2 md:col-span-7">
+            <div class="ph ph-bone grain aspect-[16/10]">
+              <div class="img-zoom absolute inset-0"></div>
+              <figcaption class="cap-fade absolute left-3 bottom-3 z-[4] label">Look 07 — the seasonless edit</figcaption>
+            </div>
+            <p class="label mt-2">Look 07</p>
+          </figure>
+
+          <!-- tall portrait -->
+          <figure class="group col-span-1 md:col-span-5">
+            <div class="ph ph-ink grain aspect-[5/7]">
+              <div class="img-zoom absolute inset-0"></div>
+              <figcaption class="cap-fade absolute left-3 bottom-3 z-[4] label" style="color:rgba(239,235,227,0.9);">Look 09 — roll-neck &amp; tailoring</figcaption>
+            </div>
+            <p class="label mt-2">Look 09</p>
+          </figure>
+
+          <!-- two squares -->
+          <figure class="group col-span-1 md:col-span-4">
+            <div class="ph ph-stone grain aspect-square">
+              <div class="img-zoom absolute inset-0"></div>
+            </div>
+            <p class="label mt-2">Detail — pleat &amp; fall</p>
+          </figure>
+          <figure class="group col-span-1 md:col-span-4">
+            <div class="ph ph-taupe grain aspect-square">
+              <div class="img-zoom absolute inset-0"></div>
+              <figcaption class="cap-fade absolute left-3 bottom-3 z-[4] label" style="color:rgba(239,235,227,0.9);">Look 11</figcaption>
+            </div>
+            <p class="label mt-2">Look 11</p>
+          </figure>
+          <figure class="group col-span-2 md:col-span-4">
+            <div class="ph ph-charcoal grain aspect-[4/5] md:aspect-square">
+              <div class="img-zoom absolute inset-0"></div>
+              <figcaption class="cap-fade absolute left-3 bottom-3 z-[4] label" style="color:rgba(239,235,227,0.9);">Look 12 — the long coat</figcaption>
+            </div>
+            <p class="label mt-2">Look 12</p>
+          </figure>
+        </div>
+
+        <div class="mt-12 flex items-center justify-between gap-4 flex-wrap">
+          <p class="label label-tight">Styled by Inès Vandermeer · Set, Lisbon</p>
+          <a href="#journal" class="lnk label label-ink">Read the lookbook notes</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================= 5. POINT OF VIEW ======================================================= -->
+  <section id="about" class="relative" style="border-top:1px solid var(--hair);">
+    <div class="mx-auto max-w-[1280px] px-5 sm:px-8 py-20 sm:py-28">
+      <div class="grid md:grid-cols-12 gap-10 md:gap-8">
+        <div class="md:col-span-4">
+          <p class="label">Section 03 — Point of view</p>
+          <h2 class="display mt-3 text-[clamp(2.1rem,4.6vw,3.4rem)] leading-[1.08]">
+            What we<br /><span class="display-italic">believe.</span>
+          </h2>
+          <div class="mt-8 flex items-center gap-3">
+            <span class="pulse-dot" aria-hidden="true"></span>
+            <span class="label label-tight">A house of twenty-two pieces</span>
+          </div>
+        </div>
+
+        <div class="md:col-span-8 md:pl-8" style="border-left:1px solid var(--hair);">
+          <div class="space-y-7 text-[15.5px] sm:text-[16.5px] leading-[1.72]" style="color:rgba(26,24,21,0.78);">
+            <p>
+              Drape is a small ready-to-wear house. We make a tight wardrobe of twenty-two pieces and we add to it slowly — a coat one season, a trouser the next. Nothing is designed to be replaced. A piece earns its place by being worn for a decade, not a year.
+            </p>
+            <p>
+              It is a wardrobe for someone who has stopped buying for the calendar. Tailoring that holds a line; cloth heavy enough to fall properly; a fit cut relaxed so the body, not the seam, decides how a garment moves. We work from the fabric outward — the cloth comes first, and the shape answers to it.
+            </p>
+            <p>
+              What we refuse: a spring drop and an autumn drop and a resort drop. Trims that date a coat to the year it was bought. Cloth chosen to hit a price rather than to last. We would rather make four things and stand behind them than make forty and hope.
+            </p>
+          </div>
+          <div class="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-y-7 gap-x-6">
+            <div>
+              <p class="display text-[2.3rem] leading-none tnum">22</p>
+              <p class="label mt-2">Pieces in the wardrobe</p>
+            </div>
+            <div>
+              <p class="display text-[2.3rem] leading-none tnum">2</p>
+              <p class="label mt-2">Additions a year</p>
+            </div>
+            <div>
+              <p class="display text-[2.3rem] leading-none tnum">3</p>
+              <p class="label mt-2">Mills, all in Italy</p>
+            </div>
+            <div>
+              <p class="display text-[2.3rem] leading-none tnum">2019</p>
+              <p class="label mt-2">House founded</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================= 6. CRAFT / FABRIC / MAKE ======================================================= -->
+  <section class="relative" style="border-top:1px solid var(--hair);">
+    <div class="ambient-fade">
+      <div class="mx-auto max-w-[1280px] px-5 sm:px-8 py-20 sm:py-28">
+        <div class="flex items-end justify-between gap-6 flex-wrap mb-12 sm:mb-16">
+          <div>
+            <p class="label">Section 04 — Craft &amp; make</p>
+            <h2 class="display mt-3 text-[clamp(2rem,5vw,3.6rem)]">
+              Cloth first, <span style="opacity:0.45;">then the cut.</span>
+            </h2>
+          </div>
+          <p class="text-[13.5px] leading-relaxed max-w-[36ch]" style="color:var(--mute);">
+            Every Drape garment begins on a mill floor in Italy and ends in a single atelier — full-canvas, hand-finished, slow.
+          </p>
+        </div>
+
+        <div class="grid md:grid-cols-12 gap-10 md:gap-8 items-start">
+          <!-- craft image -->
+          <div class="md:col-span-5 group">
+            <div class="ph ph-charcoal grain aspect-[4/5]">
+              <div class="img-zoom absolute inset-0"></div>
+              <div class="absolute left-4 bottom-4 z-[4]">
+                <p class="label" style="color:rgba(239,235,227,0.65);">Atelier</p>
+                <p class="display text-[1.5rem] leading-tight" style="color:#EFEBE3;">The canvas, set by hand</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- craft detail list -->
+          <div class="md:col-span-7">
+            <div class="grid sm:grid-cols-2 gap-x-8 gap-y-9">
+              <div>
+                <p class="label label-ink">The mills</p>
+                <p class="mt-2.5 text-[14.5px] leading-[1.7]" style="color:rgba(26,24,21,0.74);">
+                  We weave with three houses: <span class="text-[var(--ink)] font-medium">Lanificio Brunese</span> in Biella for tailoring cloth, <span class="text-[var(--ink)] font-medium">Tessitura Valmara</span> for crêpe and silk, and <span class="text-[var(--ink)] font-medium">Filatura Sondrio</span> for undyed alpaca and merino. All within a day of Milan.
+                </p>
+              </div>
+              <div>
+                <p class="label label-ink">The canvas</p>
+                <p class="mt-2.5 text-[14.5px] leading-[1.7]" style="color:rgba(26,24,21,0.74);">
+                  Coats and jackets are full-canvas — a floating horsehair-and-wool interlining, never fused. It is the slow way and the only way a chest stays clean and a lapel keeps its roll for years.
+                </p>
+              </div>
+              <div>
+                <p class="label label-ink">Hand-finishing</p>
+                <p class="mt-2.5 text-[14.5px] leading-[1.7]" style="color:rgba(26,24,21,0.74);">
+                  Pick-stitched edges, set-in sleeves eased by hand, buttonholes worked by a single finisher. Roughly fourteen hours of hand-work go into a tailored coat before it is pressed.
+                </p>
+              </div>
+              <div>
+                <p class="label label-ink">The atelier</p>
+                <p class="mt-2.5 text-[14.5px] leading-[1.7]" style="color:rgba(26,24,21,0.74);">
+                  Cutting and making happen in one small atelier outside Porto. A garment is made start to finish by one maker — not passed down a line — so it carries one hand, not ten.
+                </p>
+              </div>
+            </div>
+
+            <div class="mt-10 flex flex-wrap gap-x-8 gap-y-3">
+              <span class="label">Full-canvas tailoring</span>
+              <span class="label">Italian mill cloth</span>
+              <span class="label">One-maker construction</span>
+              <span class="label">Undyed where possible</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- fabric specimen strip -->
+        <div class="mt-14 grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
+          <figure class="group">
+            <div class="ph ph-ink grain aspect-[5/4]">
+              <div class="img-zoom absolute inset-0"></div>
+            </div>
+            <p class="label mt-2.5">Fabric — Double-faced wool, 680g</p>
+          </figure>
+          <figure class="group">
+            <div class="ph ph-linen grain aspect-[5/4]">
+              <div class="img-zoom absolute inset-0"></div>
+            </div>
+            <p class="label mt-2.5">Fabric — Washed silk, 19mm</p>
+          </figure>
+          <figure class="group">
+            <div class="ph ph-stone grain aspect-[5/4]">
+              <div class="img-zoom absolute inset-0"></div>
+            </div>
+            <p class="label mt-2.5">Fabric — Wool flannel, 340g</p>
+          </figure>
+          <figure class="group">
+            <div class="ph ph-bone grain aspect-[5/4]">
+              <div class="img-zoom absolute inset-0"></div>
+            </div>
+            <p class="label mt-2.5">Fabric — Undyed alpaca</p>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================= 7. FEATURED GARMENT — THE COAT ======================================================= -->
+  <section id="featured" class="relative" style="border-top:1px solid var(--hair);">
+    <div class="mx-auto max-w-[1280px] px-5 sm:px-8 py-20 sm:py-28">
+      <div class="grid md:grid-cols-12 gap-10 md:gap-12 items-center">
+
+        <!-- image -->
+        <div class="md:col-span-6 order-1 group">
+          <div class="ph ph-charcoal grain aspect-[4/5]">
+            <div class="img-zoom absolute inset-0"></div>
+            <div class="absolute left-4 top-4 z-[4]">
+              <span class="label" style="color:rgba(239,235,227,0.7);">AW27 · Look 01</span>
+            </div>
+            <div class="absolute left-4 bottom-4 z-[4]">
+              <p class="display text-[1.6rem] leading-none" style="color:#EFEBE3;">The Coat</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- copy -->
+        <div class="md:col-span-6 order-2">
+          <p class="label">Section 05 — Featured garment</p>
+          <h2 class="display mt-3 text-[clamp(2.4rem,5.4vw,4.2rem)] leading-[1.04]">
+            The Coat,<br /><span class="display-italic" style="opacity:0.5;">in full.</span>
+          </h2>
+
+          <div class="mt-7 space-y-5 text-[15px] leading-[1.74]" style="color:rgba(26,24,21,0.78);">
+            <p>
+              The cloth is a double-faced wool from Lanificio Brunese — two faces woven and bound without a lining, so the coat is one continuous piece of fabric inside and out. It weighs 680 grams to the metre: heavy enough to hang in a true vertical line, light enough to wear from October through to spring.
+            </p>
+            <p>
+              It is cut long and easy, with a dropped shoulder and a deep armhole, so it falls over a jacket without strain. The collar can stand or sit. There is no padding and no shoulder build — the drape comes from the weight of the cloth, not from structure. Two welt pockets, horn buttons, a single back vent.
+            </p>
+            <p>
+              The fit is relaxed by intent. Take your usual size for a clean line over knitwear; size down for a closer cut. It is made to be the last coat in the room you reach for, and the one still worth wearing in ten years.
+            </p>
+          </div>
+
+          <!-- spec table -->
+          <dl class="mt-9 grid grid-cols-2 gap-y-5 gap-x-6" style="border-top:1px solid var(--hair); padding-top:24px;">
+            <div><dt class="label">Fabric</dt><dd class="mt-1.5 text-[14px] font-medium">Double-faced wool · 680g</dd></div>
+            <div><dt class="label">Mill</dt><dd class="mt-1.5 text-[14px] font-medium">Lanificio Brunese, Biella</dd></div>
+            <div><dt class="label">Construction</dt><dd class="mt-1.5 text-[14px] font-medium">Unlined, bound seams</dd></div>
+            <div><dt class="label">Made in</dt><dd class="mt-1.5 text-[14px] font-medium">Porto, Portugal</dd></div>
+            <div><dt class="label">Colourways</dt><dd class="mt-1.5 text-[14px] font-medium">Ink · Stone · Camel</dd></div>
+            <div><dt class="label">Price</dt><dd class="mt-1.5 text-[14px] font-medium tnum">£1,290</dd></div>
+          </dl>
+
+          <div class="mt-9 flex flex-col sm:flex-row gap-3">
+            <a href="#stockists" class="btn btn-ink text-[12px] tracking-[0.16em] uppercase font-medium px-7 py-3.5">Shop the Coat</a>
+            <a href="#faq" class="btn btn-line text-[12px] tracking-[0.16em] uppercase font-medium px-7 py-3.5">Fit &amp; sizing</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================= 8. THE CAMPAIGN / FILM ======================================================= -->
+  <section class="relative" aria-label="The AW27 campaign film">
+    <div class="relative w-full" style="border-top:1px solid var(--hair);">
+      <div class="ph ph-ink grain w-full h-[60vh] min-h-[420px] sm:h-[74vh] sm:min-h-[560px]">
+        <div class="absolute inset-0 z-[1]" style="background:
+            radial-gradient(60% 70% at 50% 50%, rgba(20,18,15,0.0), rgba(20,18,15,0.42) 100%),
+            linear-gradient(180deg, rgba(20,18,15,0.32) 0%, transparent 30%, transparent 64%, rgba(20,18,15,0.5) 100%);"></div>
+
+        <div class="absolute inset-0 z-[4] flex flex-col">
+          <div class="mx-auto w-full max-w-[1280px] px-5 sm:px-8 pt-8 sm:pt-10 flex items-center justify-between gap-4">
+            <p class="label" style="color:rgba(239,235,227,0.7);">Section 06 — The campaign</p>
+            <span class="inline-flex items-center gap-2 label" style="color:rgba(239,235,227,0.7);">
+              <span class="pulse-dot" style="background:#EFEBE3;" aria-hidden="true"></span>
+              Film — 2:14
+            </span>
+          </div>
+
+          <div class="flex-1 flex items-center justify-center">
+            <button type="button" aria-label="Play the AW27 campaign film"
+              class="btn group" style="background:rgba(239,235,227,0.92); color:#1A1815; width:78px; height:78px; border-radius:50%;">
+              <svg width="20" height="22" viewBox="0 0 20 22" fill="currentColor" aria-hidden="true">
+                <path d="M0 1.6c0-1.2 1.3-2 2.4-1.4l15.8 9.4c1 .6 1 2.1 0 2.7L2.4 21.8C1.3 22.4 0 21.6 0 20.4V1.6Z"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="mx-auto w-full max-w-[1280px] px-5 sm:px-8 pb-8 sm:pb-12">
+            <h2 class="display text-[clamp(2.2rem,6vw,5rem)] max-w-[18ch]" style="color:#EFEBE3;">
+              A film about standing still.
+            </h2>
+            <div class="mt-5 flex flex-wrap gap-x-10 gap-y-2">
+              <p class="label" style="color:rgba(239,235,227,0.82);">Photography — Margaux Théron</p>
+              <p class="label" style="color:rgba(239,235,227,0.82);">Creative direction — Otto Lindqvist, Studio Hald</p>
+              <p class="label" style="color:rgba(239,235,227,0.82);">Set — Lisbon, March 2027</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================= 9. STOCKISTS / AVAILABILITY ======================================================= -->
+  <section id="stockists" class="relative" style="border-top:1px solid var(--hair);">
+    <div class="mx-auto max-w-[1280px] px-5 sm:px-8 pt-20 sm:pt-28 pb-10">
+      <div class="grid md:grid-cols-12 gap-8 md:gap-8 items-end mb-12">
+        <div class="md:col-span-7">
+          <p class="label">Section 07 — Stockists &amp; availability</p>
+          <h2 class="display mt-3 text-[clamp(2rem,5vw,3.6rem)]">Where to find Drape</h2>
+        </div>
+        <p class="md:col-span-5 text-[14px] leading-relaxed" style="color:var(--mute);">
+          Carried by a small number of considered boutiques and department stores. Everything is also available, with full size guidance, online.
+        </p>
+      </div>
+    </div>
+
+    <!-- marquee of stockists -->
+    <div class="marquee-mask py-7" style="border-top:1px solid var(--hair); border-bottom:1px solid var(--hair);">
+      <div class="marquee">
+        <ul class="flex items-center gap-12 sm:gap-16 pr-12 sm:pr-16" aria-label="Stockists">
+          <li class="display text-[1.7rem] sm:text-[2.1rem] whitespace-nowrap" style="color:rgba(26,24,21,0.62);">Marchetti &amp; Fils</li>
+          <li class="text-[1.05rem] sm:text-[1.25rem] tracking-[0.2em] uppercase font-medium whitespace-nowrap" style="color:rgba(26,24,21,0.5);">Holm Magasin</li>
+          <li class="display-italic text-[1.7rem] sm:text-[2.1rem] whitespace-nowrap" style="color:rgba(26,24,21,0.62);">The Linden Rooms</li>
+          <li class="text-[1.05rem] sm:text-[1.25rem] tracking-[0.18em] uppercase font-medium whitespace-nowrap" style="color:rgba(26,24,21,0.5);">Aoyama Form</li>
+          <li class="display text-[1.7rem] sm:text-[2.1rem] whitespace-nowrap" style="color:rgba(26,24,21,0.62);">Beaubourg Étage</li>
+          <li class="text-[1.05rem] sm:text-[1.25rem] tracking-[0.2em] uppercase font-medium whitespace-nowrap" style="color:rgba(26,24,21,0.5);">Wren &amp; Pell</li>
+          <li class="display-italic text-[1.7rem] sm:text-[2.1rem] whitespace-nowrap" style="color:rgba(26,24,21,0.62);">Casa Verde, Milano</li>
+          <li class="text-[1.05rem] sm:text-[1.25rem] tracking-[0.18em] uppercase font-medium whitespace-nowrap" style="color:rgba(26,24,21,0.5);">Nordlys Berlin</li>
+        </ul>
+        <!-- duplicate track for seamless loop -->
+        <ul class="flex items-center gap-12 sm:gap-16 pr-12 sm:pr-16" aria-hidden="true">
+          <li class="display text-[1.7rem] sm:text-[2.1rem] whitespace-nowrap" style="color:rgba(26,24,21,0.62);">Marchetti &amp; Fils</li>
+          <li class="text-[1.05rem] sm:text-[1.25rem] tracking-[0.2em] uppercase font-medium whitespace-nowrap" style="color:rgba(26,24,21,0.5);">Holm Magasin</li>
+          <li class="display-italic text-[1.7rem] sm:text-[2.1rem] whitespace-nowrap" style="color:rgba(26,24,21,0.62);">The Linden Rooms</li>
+          <li class="text-[1.05rem] sm:text-[1.25rem] tracking-[0.18em] uppercase font-medium whitespace-nowrap" style="color:rgba(26,24,21,0.5);">Aoyama Form</li>
+          <li class="display text-[1.7rem] sm:text-[2.1rem] whitespace-nowrap" style="color:rgba(26,24,21,0.62);">Beaubourg Étage</li>
+          <li class="text-[1.05rem] sm:text-[1.25rem] tracking-[0.2em] uppercase font-medium whitespace-nowrap" style="color:rgba(26,24,21,0.5);">Wren &amp; Pell</li>
+          <li class="display-italic text-[1.7rem] sm:text-[2.1rem] whitespace-nowrap" style="color:rgba(26,24,21,0.62);">Casa Verde, Milano</li>
+          <li class="text-[1.05rem] sm:text-[1.25rem] tracking-[0.18em] uppercase font-medium whitespace-nowrap" style="color:rgba(26,24,21,0.5);">Nordlys Berlin</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="mx-auto max-w-[1280px] px-5 sm:px-8 py-12 sm:py-16">
+      <div class="grid md:grid-cols-12 gap-10 md:gap-8 items-start">
+        <div class="md:col-span-5">
+          <p class="label label-ink">Find us</p>
+          <p class="mt-3 display text-[clamp(1.5rem,3vw,2.1rem)] leading-[1.18]">
+            Eight stockists across six cities — or order direct.
+          </p>
+          <a href="#collection" class="mt-6 btn btn-ink text-[12px] tracking-[0.16em] uppercase font-medium px-7 py-3.5">
+            Shop the collection
+          </a>
+        </div>
+        <div class="md:col-span-7 md:pl-8 grid sm:grid-cols-2 gap-y-8 gap-x-8" style="border-left:1px solid var(--hair);">
+          <div>
+            <p class="label label-ink">Sizing &amp; fit notes</p>
+            <p class="mt-2.5 text-[14px] leading-[1.7]" style="color:rgba(26,24,21,0.74);">
+              The wardrobe runs relaxed. For tailoring, take your usual size for an easy line over knitwear, or size down for a closer cut. Knitwear is true to size.
+            </p>
+          </div>
+          <div>
+            <p class="label label-ink">Pieces &amp; ranges</p>
+            <p class="mt-2.5 text-[14px] leading-[1.7]" style="color:rgba(26,24,21,0.74);">
+              Tailoring is offered in sizes 0–6; knitwear and shirting in XS–XL. Each piece carries a full set of garment measurements on its page.
+            </p>
+          </div>
+          <div>
+            <p class="label label-ink">Made-to-measure</p>
+            <p class="mt-2.5 text-[14px] leading-[1.7]" style="color:rgba(26,24,21,0.74);">
+              The Coat and the Tailored Jacket can be cut to measure through any stockist, with a four to six week lead time.
+            </p>
+          </div>
+          <div>
+            <p class="label label-ink">Care</p>
+            <p class="mt-2.5 text-[14px] leading-[1.7]" style="color:rgba(26,24,21,0.74);">
+              Every garment ships with a care card and a cloth bag. We repair Drape pieces for the life of the garment.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================= 10. JOURNAL / NEWSLETTER ======================================================= -->
+  <section id="journal" class="relative" style="border-top:1px solid var(--hair);">
+    <div class="dot-grid">
+      <div class="mx-auto max-w-[1280px] px-5 sm:px-8 py-20 sm:py-28" style="background: linear-gradient(180deg, rgba(239,235,227,0.7), rgba(239,235,227,0.92));">
+        <div class="flex items-end justify-between gap-6 flex-wrap mb-12">
+          <div>
+            <p class="label">Section 08 — The journal</p>
+            <h2 class="display mt-3 text-[clamp(2rem,5vw,3.6rem)]">Notes from the house</h2>
+          </div>
+          <a href="#journal" class="lnk label label-ink">All entries</a>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-6 sm:gap-7">
+          <article class="group">
+            <a href="#journal" class="block">
+              <div class="ph ph-stone grain aspect-[5/4]">
+                <div class="img-zoom absolute inset-0"></div>
+              </div>
+              <p class="label mt-3.5">Journal — Cloth · 04.27</p>
+              <h3 class="display text-[1.5rem] leading-[1.2] mt-1.5">On weight: why a coat should be heavy</h3>
+              <p class="mt-2 text-[13.5px] leading-relaxed" style="color:var(--mute);">A short defence of 680 grams, and the difference between a coat that hangs and a coat that merely covers.</p>
+            </a>
+          </article>
+          <article class="group">
+            <a href="#journal" class="block">
+              <div class="ph ph-taupe grain aspect-[5/4]">
+                <div class="img-zoom absolute inset-0"></div>
+              </div>
+              <p class="label mt-3.5">Journal — The mill · 03.27</p>
+              <h3 class="display text-[1.5rem] leading-[1.2] mt-1.5">A day at Lanificio Brunese</h3>
+              <p class="mt-2 text-[13.5px] leading-relaxed" style="color:var(--mute);">Inside the Biella mill where our tailoring cloth is woven — and why we have never moved the order elsewhere.</p>
+            </a>
+          </article>
+          <article class="group">
+            <a href="#journal" class="block">
+              <div class="ph ph-charcoal grain aspect-[5/4]">
+                <div class="img-zoom absolute inset-0"></div>
+              </div>
+              <p class="label mt-3.5">Journal — Wardrobe · 02.27</p>
+              <h3 class="display text-[1.5rem] leading-[1.2] mt-1.5">Twenty-two pieces, and why we stopped there</h3>
+              <p class="mt-2 text-[13.5px] leading-relaxed" style="color:var(--mute);">The case for a fixed wardrobe — a small set of garments that answers nearly every day, in nearly every season.</p>
+            </a>
+          </article>
+        </div>
+
+        <!-- newsletter -->
+        <div class="mt-14 sm:mt-16 rounded-[2px] p-7 sm:p-12" style="background:#1A1815;">
+          <div class="grid md:grid-cols-12 gap-8 items-center">
+            <div class="md:col-span-6">
+              <p class="label" style="color:rgba(239,235,227,0.6);">The Drape letter</p>
+              <h3 class="display mt-2.5 text-[clamp(1.7rem,3.4vw,2.6rem)]" style="color:#EFEBE3;">
+                A quiet letter, six times a year.
+              </h3>
+              <p class="mt-3 text-[13.5px] leading-relaxed" style="color:rgba(239,235,227,0.66);">
+                New pieces as they join the wardrobe, a note from the mill, and first sight of each campaign. No sales, no urgency.
+              </p>
+            </div>
+            <form class="md:col-span-6" onsubmit="return false;" aria-label="Newsletter signup">
+              <div class="flex flex-col sm:flex-row gap-3">
+                <label class="sr-only" for="nl-1">Email address</label>
+                <input id="nl-1" type="email" required placeholder="Email address"
+                  class="flex-1 bg-transparent text-[14px] px-4 py-3.5 rounded-[2px] placeholder:text-[rgba(239,235,227,0.42)]"
+                  style="color:#EFEBE3; border:1px solid rgba(239,235,227,0.26);" />
+                <button type="submit" class="btn text-[12px] tracking-[0.16em] uppercase font-medium px-7 py-3.5 rounded-[2px]"
+                  style="background:#EFEBE3; color:#1A1815;"
+                  onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                  Subscribe
+                </button>
+              </div>
+              <p class="mt-3 label" style="color:rgba(239,235,227,0.42);">Unsubscribe anytime · We never share your details</p>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================= 11. FAQ ======================================================= -->
+  <section id="faq" class="relative" style="border-top:1px solid var(--hair);">
+    <div class="mx-auto max-w-[1280px] px-5 sm:px-8 py-20 sm:py-28">
+      <div class="grid md:grid-cols-12 gap-10 md:gap-12">
+        <div class="md:col-span-4">
+          <p class="label">Section 09 — Questions</p>
+          <h2 class="display mt-3 text-[clamp(2.1rem,4.6vw,3.4rem)] leading-[1.08]">
+            Before you<br /><span class="display-italic">order.</span>
+          </h2>
+          <p class="mt-6 text-[13.5px] leading-relaxed" style="color:var(--mute);">
+            Anything else, write to the house at <span class="text-[var(--ink)]">studio@drape.example</span> — a person answers.
+          </p>
+        </div>
+
+        <div class="md:col-span-8">
+          <details class="faq">
+            <summary>
+              <span class="display text-[1.35rem] sm:text-[1.55rem] leading-tight">Sizing and fit — how does it run?</span>
+              <span class="sign" aria-hidden="true"></span>
+            </summary>
+            <div class="answer">
+              <p class="text-[14.5px] leading-[1.74] max-w-[62ch]" style="color:rgba(26,24,21,0.74);">
+                The wardrobe runs relaxed by design — these are pieces meant to drape, not to fit close. For tailoring, take your usual size for a clean, easy line over knitwear, or size down once for a closer cut. Knitwear and shirting are true to size. Every product page lists full garment measurements, and we are glad to talk a size through before you order.
+              </p>
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>
+              <span class="display text-[1.35rem] sm:text-[1.55rem] leading-tight">How do I care for the fabrics?</span>
+              <span class="sign" aria-hidden="true"></span>
+            </summary>
+            <div class="answer">
+              <p class="text-[14.5px] leading-[1.74] max-w-[62ch]" style="color:rgba(26,24,21,0.74);">
+                The collection is largely wool and silk, and both like to be left alone. Wool tailoring and knitwear need only airing and a soft brush between wears — dry-clean once or twice a season, no more. Washed silk can be hand-washed cool and dried flat in shade. Every garment ships with a care card specific to its cloth, and a cotton bag to rest it in.
+              </p>
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>
+              <span class="display text-[1.35rem] sm:text-[1.55rem] leading-tight">Shipping and returns</span>
+              <span class="sign" aria-hidden="true"></span>
+            </summary>
+            <div class="answer">
+              <p class="text-[14.5px] leading-[1.74] max-w-[62ch]" style="color:rgba(26,24,21,0.74);">
+                We ship worldwide. Within the UK and EU, delivery is two to four working days and is complimentary; elsewhere it is three to seven days, with any duties shown clearly at checkout. Unworn pieces can be returned within thirty days for a full refund, with returns free in the UK and EU. Made-to-measure orders are final, as they are cut to one person.
+              </p>
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>
+              <span class="display text-[1.35rem] sm:text-[1.55rem] leading-tight">Do you restock, or is it seasonless?</span>
+              <span class="sign" aria-hidden="true"></span>
+            </summary>
+            <div class="answer">
+              <p class="text-[14.5px] leading-[1.74] max-w-[62ch]" style="color:rgba(26,24,21,0.74);">
+                Seasonless. Drape is a permanent wardrobe of twenty-two pieces, not a sequence of drops — a garment stays in the collection year after year and is rewoven as stock runs low, so what you buy now will still be offered next winter. We add to the wardrobe slowly, two or three pieces a year, and we retire a piece only when we can no longer source its cloth.
+              </p>
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>
+              <span class="display text-[1.35rem] sm:text-[1.55rem] leading-tight">Where is Drape made?</span>
+              <span class="sign" aria-hidden="true"></span>
+            </summary>
+            <div class="answer">
+              <p class="text-[14.5px] leading-[1.74] max-w-[62ch]" style="color:rgba(26,24,21,0.74);">
+                The cloth is woven at three mills in Italy — Lanificio Brunese in Biella, Tessitura Valmara, and Filatura Sondrio. Cutting and making are done in a single small atelier outside Porto, in Portugal, where each garment is built start to finish by one maker. The house itself is based in London, where the collection is designed.
+              </p>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================= 12. FINAL CTA ======================================================= -->
+  <section class="relative" style="border-top:1px solid var(--hair);">
+    <div class="ambient-fade">
+      <div class="mx-auto max-w-[1280px] px-5 sm:px-8 py-24 sm:py-36 text-center">
+        <p class="label">Autumn–Winter 2027 — now available</p>
+        <h2 class="display mt-5 text-[clamp(2.8rem,9vw,7rem)] leading-[1.02]">
+          A wardrobe<br /><span style="opacity:0.45;">worth keeping.</span>
+        </h2>
+        <p class="mt-6 text-[14.5px] sm:text-[15.5px] leading-relaxed max-w-[48ch] mx-auto" style="color:var(--mute);">
+          Eight pieces of the AW27 collection, with the full wardrobe of twenty-two. Cut from Italian cloth, made by one hand, made to last.
+        </p>
+        <div class="mt-9 flex flex-col sm:flex-row gap-3 justify-center">
+          <a href="#collection" class="btn btn-ink text-[12px] tracking-[0.16em] uppercase font-medium px-9 py-4">Shop the collection</a>
+          <a href="#lookbook" class="btn btn-line text-[12px] tracking-[0.16em] uppercase font-medium px-9 py-4">View the lookbook</a>
+        </div>
+        <div class="mt-10 inline-flex items-center gap-2.5">
+          <span class="pulse-dot" aria-hidden="true"></span>
+          <span class="label label-tight">Twenty-two pieces · Seasonless · Added to slowly</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ======================================================= 13. FOOTER ======================================================= -->
+<footer class="relative" style="border-top:1px solid var(--hair); background:#1A1815; color:#EFEBE3;">
+  <div class="mx-auto max-w-[1280px] px-5 sm:px-8 pt-16 sm:pt-20 pb-10">
+    <div class="grid md:grid-cols-12 gap-12 md:gap-8">
+
+      <!-- wordmark + letter -->
+      <div class="md:col-span-5">
+        <a href="#top" class="display text-[2.6rem] leading-none tracking-[-0.01em]">
+          Drape<span class="align-top text-[0.55em] ml-[1px]">®</span>
+        </a>
+        <p class="mt-4 text-[13.5px] leading-relaxed max-w-[40ch]" style="color:rgba(239,235,227,0.6);">
+          A small ready-to-wear house. Considered tailoring, fluid drape, a seasonless wardrobe of twenty-two pieces — added to slowly.
+        </p>
+        <form class="mt-7 max-w-[400px]" onsubmit="return false;" aria-label="Footer newsletter signup">
+          <p class="label" style="color:rgba(239,235,227,0.5);">Join the Drape letter</p>
+          <div class="mt-3 flex gap-2">
+            <label class="sr-only" for="nl-2">Email address</label>
+            <input id="nl-2" type="email" required placeholder="Email address"
+              class="flex-1 bg-transparent text-[13.5px] px-3.5 py-3 rounded-[2px] placeholder:text-[rgba(239,235,227,0.4)]"
+              style="color:#EFEBE3; border:1px solid rgba(239,235,227,0.24);" />
+            <button type="submit" class="btn text-[11px] tracking-[0.14em] uppercase font-medium px-5 py-3 rounded-[2px]"
+              style="background:#EFEBE3; color:#1A1815;"
+              onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+              Join
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- link columns -->
+      <div class="md:col-span-7 grid grid-cols-2 sm:grid-cols-4 gap-8">
+        <div>
+          <p class="label" style="color:rgba(239,235,227,0.5);">Shop</p>
+          <ul class="mt-4 space-y-2.5 text-[13.5px]" style="color:rgba(239,235,227,0.78);">
+            <li><a href="#collection" class="lnk">The collection</a></li>
+            <li><a href="#featured" class="lnk">The Coat</a></li>
+            <li><a href="#collection" class="lnk">Tailoring</a></li>
+            <li><a href="#collection" class="lnk">Knitwear</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="label" style="color:rgba(239,235,227,0.5);">House</p>
+          <ul class="mt-4 space-y-2.5 text-[13.5px]" style="color:rgba(239,235,227,0.78);">
+            <li><a href="#lookbook" class="lnk">Lookbook</a></li>
+            <li><a href="#about" class="lnk">About</a></li>
+            <li><a href="#journal" class="lnk">Journal</a></li>
+            <li><a href="#stockists" class="lnk">Stockists</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="label" style="color:rgba(239,235,227,0.5);">Help</p>
+          <ul class="mt-4 space-y-2.5 text-[13.5px]" style="color:rgba(239,235,227,0.78);">
+            <li><a href="#faq" class="lnk">FAQ</a></li>
+            <li><a href="#stockists" class="lnk">Shipping &amp; returns</a></li>
+            <li><a href="#faq" class="lnk">Sizing guide</a></li>
+            <li><a href="#faq" class="lnk">Care guide</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="label" style="color:rgba(239,235,227,0.5);">Contact</p>
+          <ul class="mt-4 space-y-2.5 text-[13.5px]" style="color:rgba(239,235,227,0.78);">
+            <li><a href="#" class="lnk">studio@drape.example</a></li>
+            <li><a href="#" class="lnk">Instagram</a></li>
+            <li><a href="#" class="lnk">Made-to-measure</a></li>
+            <li><a href="#" class="lnk">Repairs</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- baseline -->
+    <div class="mt-14 pt-7 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between"
+         style="border-top:1px solid rgba(239,235,227,0.14);">
+      <p class="label" style="color:rgba(239,235,227,0.42);">© 2027 Drape. A London house. All rights reserved.</p>
+      <div class="flex flex-wrap gap-x-7 gap-y-2">
+        <a href="#faq" class="label lnk" style="color:rgba(239,235,227,0.6);">Sizing guide</a>
+        <a href="#faq" class="label lnk" style="color:rgba(239,235,227,0.6);">Care guide</a>
+        <a href="#" class="label lnk" style="color:rgba(239,235,227,0.6);">Privacy</a>
+        <a href="#" class="label lnk" style="color:rgba(239,235,227,0.6);">Terms</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Trivial enhancement only — reveal-on-scroll for sections. CSS-only fallback: .rise stays hidden, so guard it.
+  (function () {
+    var els = document.querySelectorAll('.rise');
+    if (!('IntersectionObserver' in window) || !els.length) {
+      els.forEach(function (el) { el.classList.add('in'); });
+      return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.12 });
+    els.forEach(function (el) { io.observe(el); });
+  })();
+</script>
+
+</body>
+</html>

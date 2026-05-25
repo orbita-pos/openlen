@@ -1,0 +1,1357 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sunhouse — Home solar + battery, one fixed quote</title>
+  <meta name="description" content="Sunhouse designs, permits, and installs rooftop solar plus a stackable home battery — for one fixed quote after a free design visit. From $14,900 installed, 12-year warranty, blackout backup in under 20 ms." />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg: #FBF7EE;
+      --bg-2: #F4ECDA;
+      --card: #FFFCF5;
+      --ink: #1F1A12;
+      --ink-2: #5C5444;
+      --ink-3: #9A9079;
+      --accent: #E6952A;
+      --accent-2: #C2761A;
+      --rule: rgba(0,0,0,0.08);
+      --rule-soft: rgba(0,0,0,0.045);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+      font-feature-settings: "ss01", "cv11";
+      font-optical-sizing: auto;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.55;
+      background: var(--bg);
+      color: var(--ink);
+      margin: 0;
+      overflow-x: hidden;
+    }
+
+    .display {
+      font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+      font-optical-sizing: auto;
+    }
+    .mono { font-family: 'Geist Mono', ui-monospace, Menlo, monospace; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .halftone { opacity: 0.45; font-style: normal; }
+
+    .dotgrid {
+      background-image: radial-gradient(rgba(31,26,18,0.10) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+    .mesh {
+      background-image:
+        radial-gradient(620px 420px at 12% 8%, rgba(230,149,42,0.22), transparent 70%),
+        radial-gradient(540px 460px at 88% 0%, rgba(230,149,42,0.16), transparent 72%),
+        radial-gradient(720px 540px at 70% 96%, rgba(194,118,26,0.12), transparent 70%);
+    }
+
+    .pulse-dot {
+      width: 8px; height: 8px; border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 0 rgba(230,149,42,0.55);
+      animation: pulse 1.9s ease-out infinite;
+      flex: none;
+    }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(230,149,42,0.55); }
+      70%  { box-shadow: 0 0 0 10px rgba(230,149,42,0); }
+      100% { box-shadow: 0 0 0 0 rgba(230,149,42,0); }
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border: 1px solid var(--accent-2);
+      transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      background: var(--accent-2);
+      box-shadow: 0 10px 24px -8px rgba(230,149,42,0.55);
+    }
+    .btn-ghost {
+      background: var(--card);
+      color: var(--ink);
+      border: 1px solid var(--rule);
+      transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+    }
+    .btn-ghost:hover {
+      transform: translateY(-1px);
+      border-color: rgba(230,149,42,0.5);
+      box-shadow: 0 8px 20px -10px rgba(31,26,18,0.25);
+    }
+
+    .card-lift {
+      transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+    }
+    .card-lift:hover {
+      transform: translateY(-2px);
+      border-color: rgba(230,149,42,0.4);
+      box-shadow: 0 16px 34px -18px rgba(31,26,18,0.32);
+    }
+
+    .ul-link { position: relative; }
+    .ul-link::after {
+      content: "";
+      position: absolute; left: 0; right: 0; bottom: -2px;
+      height: 1.5px; background: var(--accent);
+      transform: scaleX(0); transform-origin: right;
+      transition: transform 160ms ease;
+    }
+    .ul-link:hover::after { transform: scaleX(1); transform-origin: left; }
+
+    .marquee-mask {
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+      mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+      overflow: hidden;
+    }
+    .marquee {
+      width: max-content;
+      display: flex;
+      gap: 56px;
+      animation: marq 42s linear infinite;
+    }
+    @keyframes marq { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+    details > summary { list-style: none; cursor: pointer; }
+    details > summary::-webkit-details-marker { display: none; }
+    details[open] .faq-sign { transform: rotate(45deg); }
+    .faq-sign { transition: transform 180ms ease; }
+
+    .navbar {
+      position: fixed; top: 0; left: 0; right: 0;
+      backdrop-filter: blur(12px) saturate(150%);
+      -webkit-backdrop-filter: blur(12px) saturate(150%);
+      background: rgba(251,247,238,0.82);
+      border-bottom: 1px solid var(--rule);
+      z-index: 50;
+    }
+
+    .container-x { max-width: 1200px; margin: 0 auto; padding-left: 20px; padding-right: 20px; }
+    @media (min-width: 640px) { .container-x { padding-left: 32px; padding-right: 32px; } }
+
+    .hairline-row { border-top: 1px solid var(--rule); }
+    .hairline-row:first-child { border-top: 0; }
+
+    .tilt-stage {
+      transform: perspective(1100px) rotateY(-8deg) rotateX(4deg);
+    }
+    .glow-amber {
+      background: radial-gradient(closest-side, rgba(230,149,42,0.40), transparent 78%);
+      filter: blur(8px);
+    }
+    .panel-grad {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.7), rgba(255,255,255,0)),
+        linear-gradient(160deg, #FFF6E4 0%, #F3E4C4 60%, #E9D2A2 100%);
+    }
+
+    .reveal { animation: rise 620ms cubic-bezier(.2,.7,.2,1) both; }
+    @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+    ::selection { background: rgba(230,149,42,0.30); color: var(--ink); }
+
+    .eyebrow {
+      font-family: 'Geist Mono', ui-monospace, monospace;
+      font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--accent-2);
+    }
+    .chip {
+      border: 1px solid var(--rule);
+      background: var(--card);
+      border-radius: 999px;
+    }
+    a { text-decoration: none; color: inherit; }
+  </style>
+</head>
+<body>
+
+  <!-- ============ 1 · NAV ============ -->
+  <header class="navbar">
+    <nav class="container-x flex items-center justify-between" style="height:68px;">
+      <a href="#top" class="flex items-center gap-2.5" aria-label="Sunhouse home">
+        <svg width="30" height="30" viewBox="0 0 30 30" fill="none" aria-hidden="true">
+          <rect x="0.6" y="0.6" width="28.8" height="28.8" rx="8" fill="#FFFCF5" stroke="rgba(0,0,0,0.08)"/>
+          <path d="M15 6.5L24 13v0.5H6V13L15 6.5Z" fill="#E6952A"/>
+          <rect x="9" y="13.5" width="12" height="9.5" rx="1.2" fill="#1F1A12"/>
+          <line x1="13" y1="13.5" x2="13" y2="23" stroke="#FBF7EE" stroke-width="0.9"/>
+          <line x1="17" y1="13.5" x2="17" y2="23" stroke="#FBF7EE" stroke-width="0.9"/>
+          <line x1="9" y1="17.3" x2="21" y2="17.3" stroke="#FBF7EE" stroke-width="0.9"/>
+          <circle cx="15" cy="9.4" r="1.5" fill="#FFFCF5"/>
+        </svg>
+        <span class="display text-[19px]">Sunhouse</span>
+      </a>
+
+      <div class="hidden md:flex items-center gap-8 text-[14px]" style="color:var(--ink-2);">
+        <a href="#product" class="ul-link">Product</a>
+        <a href="#specs" class="ul-link">Specs</a>
+        <a href="#app" class="ul-link">App</a>
+        <a href="#support" class="ul-link">Support</a>
+      </div>
+
+      <a href="#quote" class="btn-primary rounded-full px-4 py-2 text-[13.5px] font-semibold">
+        Get a free quote
+      </a>
+    </nav>
+  </header>
+
+  <main id="top">
+
+    <!-- ============ 2 · HERO ============ -->
+    <section id="product" class="mesh dotgrid relative overflow-hidden">
+      <div class="container-x pt-[124px] pb-[88px] md:pt-[148px] md:pb-[120px]">
+        <div class="grid lg:grid-cols-[1.04fr_1fr] gap-12 lg:gap-10 items-center">
+
+          <div class="reveal">
+            <span class="chip inline-flex items-center gap-2 px-3 py-1.5 text-[12px] mono" style="color:var(--ink-2);">
+              <span class="pulse-dot"></span>
+              Free design + quote · no obligation
+            </span>
+
+            <h1 class="display mt-6 text-[40px] sm:text-[54px] lg:text-[62px]">
+              Your roof,<br />
+              <em class="halftone">finally earning its keep.</em>
+            </h1>
+
+            <p class="mt-5 text-[16.5px] sm:text-[18px] max-w-[34rem]" style="color:var(--ink-2);">
+              Sunhouse designs, permits, and installs rooftop solar plus a stackable home battery — for one fixed price, with the paperwork handled for you.
+            </p>
+
+            <div class="mt-8 flex flex-col sm:flex-row gap-3">
+              <a href="#quote" class="btn-primary rounded-full px-6 py-3.5 text-[15px] font-semibold text-center">
+                Get a free design + quote
+              </a>
+              <a href="#app" class="btn-ghost rounded-full px-6 py-3.5 text-[15px] font-semibold text-center inline-flex items-center justify-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                  <circle cx="7" cy="7" r="6.4" stroke="currentColor" stroke-width="1.2"/>
+                  <path d="M5.7 4.6L9.4 7l-3.7 2.4V4.6Z" fill="currentColor"/>
+                </svg>
+                Watch the film
+              </a>
+            </div>
+
+            <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px]" style="color:var(--ink-3);">
+              <span class="mono" style="color:var(--ink);">From $14,900 installed</span>
+              <span class="hidden sm:inline">·</span>
+              <span>free design + quote</span>
+              <span class="hidden sm:inline">·</span>
+              <span>12-year warranty</span>
+            </div>
+          </div>
+
+          <!-- Hero illustration: house + roof solar + wall battery + phone -->
+          <div class="reveal relative" style="animation-delay:90ms;">
+            <div class="absolute inset-0 -z-10 glow-amber" style="transform:scale(1.18);"></div>
+            <div class="tilt-stage panel-grad rounded-[26px] border p-7 sm:p-9" style="border-color:var(--rule); box-shadow: 0 36px 70px -34px rgba(31,26,18,0.45);">
+              <svg viewBox="0 0 420 320" class="w-full h-auto" role="img" aria-label="Stylized house with rooftop solar panels and a wall-mounted home battery, with a phone showing live energy flow.">
+                <defs>
+                  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="#FFF7E6"/>
+                    <stop offset="1" stop-color="#FBE9C6"/>
+                  </linearGradient>
+                  <linearGradient id="roof" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#2A2418"/>
+                    <stop offset="1" stop-color="#46402E"/>
+                  </linearGradient>
+                  <linearGradient id="pan" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#2C5B7A"/>
+                    <stop offset="1" stop-color="#16344A"/>
+                  </linearGradient>
+                </defs>
+
+                <!-- sun -->
+                <circle cx="350" cy="58" r="30" fill="#E6952A" opacity="0.92"/>
+                <g stroke="#E6952A" stroke-width="3" stroke-linecap="round" opacity="0.7">
+                  <line x1="350" y1="10" x2="350" y2="20"/>
+                  <line x1="392" y1="30" x2="385" y2="37"/>
+                  <line x1="308" y1="30" x2="315" y2="37"/>
+                  <line x1="400" y1="72" x2="390" y2="72"/>
+                </g>
+
+                <!-- house body -->
+                <rect x="58" y="158" width="208" height="128" rx="5" fill="#FFFDF7" stroke="#1F1A12" stroke-width="2"/>
+                <!-- roof -->
+                <path d="M44 162L162 92L280 162H44Z" fill="url(#roof)"/>
+                <!-- solar panels on roof -->
+                <g>
+                  <path d="M86 148L156 108V134L114 158L86 148Z" fill="url(#pan)" stroke="#0D2434" stroke-width="1.4"/>
+                  <path d="M168 108L238 148L210 158L168 134V108Z" fill="url(#pan)" stroke="#0D2434" stroke-width="1.4"/>
+                  <g stroke="#7FB4D2" stroke-width="0.9" opacity="0.7">
+                    <line x1="100" y1="139" x2="156" y2="116"/>
+                    <line x1="112" y1="146" x2="156" y2="124"/>
+                    <line x1="124" y1="123" x2="124" y2="151"/>
+                    <line x1="180" y1="116" x2="236" y2="139"/>
+                    <line x1="180" y1="124" x2="224" y2="146"/>
+                    <line x1="200" y1="123" x2="200" y2="151"/>
+                  </g>
+                </g>
+                <!-- door + window -->
+                <rect x="96" y="216" width="40" height="70" rx="2" fill="#E6952A"/>
+                <circle cx="127" cy="252" r="2.6" fill="#1F1A12"/>
+                <rect x="172" y="200" width="58" height="46" rx="3" fill="#FBE9C6" stroke="#1F1A12" stroke-width="2"/>
+                <line x1="201" y1="200" x2="201" y2="246" stroke="#1F1A12" stroke-width="1.6"/>
+                <line x1="172" y1="223" x2="230" y2="223" stroke="#1F1A12" stroke-width="1.6"/>
+
+                <!-- wall-mounted battery cabinet -->
+                <g>
+                  <rect x="288" y="186" width="66" height="100" rx="9" fill="#FFFDF7" stroke="#1F1A12" stroke-width="2"/>
+                  <rect x="298" y="198" width="46" height="42" rx="5" fill="#1F1A12"/>
+                  <rect x="305" y="206" width="32" height="6" rx="3" fill="#E6952A"/>
+                  <rect x="305" y="216" width="22" height="4" rx="2" fill="#5C5444"/>
+                  <circle cx="338" cy="256" r="6" fill="none" stroke="#E6952A" stroke-width="2"/>
+                  <path d="M338 251v10M333 256h10" stroke="#E6952A" stroke-width="2" stroke-linecap="round"/>
+                  <text x="321" y="278" font-family="Geist Mono, monospace" font-size="8" fill="#5C5444" text-anchor="middle">13.5 kWh</text>
+                </g>
+                <!-- conduit roof->battery -->
+                <path d="M256 162C272 168 280 176 290 188" stroke="#E6952A" stroke-width="2.4" fill="none" stroke-dasharray="4 4"/>
+
+                <!-- phone showing energy flow -->
+                <g transform="translate(20,196)">
+                  <rect x="0" y="0" width="74" height="116" rx="13" fill="#1F1A12"/>
+                  <rect x="4" y="4" width="66" height="108" rx="10" fill="#FFFCF5"/>
+                  <rect x="28" y="8" width="18" height="4" rx="2" fill="#1F1A12"/>
+                  <text x="37" y="26" font-family="Geist Mono, monospace" font-size="7" fill="#9A9079" text-anchor="middle">LIVE FLOW</text>
+                  <circle cx="20" cy="44" r="7" fill="#E6952A"/>
+                  <circle cx="54" cy="44" r="7" fill="#2C5B7A"/>
+                  <circle cx="20" cy="78" r="7" fill="#1F1A12"/>
+                  <circle cx="54" cy="78" r="7" fill="#5C5444"/>
+                  <path d="M27 44h20M20 51v20M54 51v20M27 78h20" stroke="#E6952A" stroke-width="1.6" fill="none" stroke-dasharray="3 2"/>
+                  <text x="37" y="104" font-family="Geist Mono, monospace" font-size="6.5" fill="#5C5444" text-anchor="middle">+ $4.10 today</text>
+                </g>
+              </svg>
+            </div>
+
+            <!-- floating spec tag -->
+            <div class="absolute -bottom-5 right-3 sm:right-6 chip flex items-center gap-2 px-3 py-2 mono text-[11.5px]" style="color:var(--ink); box-shadow:0 12px 26px -14px rgba(31,26,18,0.4);">
+              <span class="tnum" style="color:var(--accent-2);">&lt; 20 ms</span>
+              <span style="color:var(--ink-3);">blackout switchover</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 3 · TRUST / PROOF BAR ============ -->
+    <section class="border-y" style="border-color:var(--rule); background:var(--card);">
+      <div class="container-x py-7">
+        <div class="flex flex-col lg:flex-row items-center gap-6 lg:gap-10">
+
+          <div class="flex items-center gap-4 flex-none">
+            <div class="flex items-center gap-1.5">
+              <svg width="84" height="16" viewBox="0 0 84 16" aria-hidden="true">
+                <g fill="#E6952A">
+                  <path d="M8 0l2 4.6 5 .5-3.8 3.4 1.1 5L8 10.8 3.7 13.5l1.1-5L1 5.1l5-.5z"/>
+                  <path d="M25 0l2 4.6 5 .5-3.8 3.4 1.1 5L25 10.8l-4.3 2.7 1.1-5L18 5.1l5-.5z"/>
+                  <path d="M42 0l2 4.6 5 .5-3.8 3.4 1.1 5L42 10.8l-4.3 2.7 1.1-5L35 5.1l5-.5z"/>
+                  <path d="M59 0l2 4.6 5 .5-3.8 3.4 1.1 5L59 10.8l-4.3 2.7 1.1-5L52 5.1l5-.5z"/>
+                </g>
+                <path d="M76 0l2 4.6 5 .5-3.8 3.4 1.1 5L76 10.8V0z" fill="#E6952A"/>
+                <path d="M76 0v10.8l-4.3 2.7 1.1-5L69 5.1l5-.5z" fill="#E6952A" opacity="0.32"/>
+              </svg>
+              <span class="mono text-[14px] tnum" style="color:var(--ink);">4.8</span>
+            </div>
+            <span class="text-[14px]" style="color:var(--ink-2);">
+              <span class="mono tnum" style="color:var(--ink);">28,408</span> homes powered
+            </span>
+            <span class="chip px-2.5 py-1 mono text-[10.5px] flex items-center gap-1.5" style="color:var(--accent-2);">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
+                <path d="M5.5 1l1.3 2.6 2.9.4-2.1 2 .5 2.9-2.6-1.4-2.6 1.4.5-2.9-2.1-2 2.9-.4z" fill="#E6952A"/>
+              </svg>
+              CES Innovation Award 2026
+            </span>
+          </div>
+
+          <div class="marquee-mask flex-1 w-full">
+            <div class="marquee items-center" style="color:var(--ink-3);">
+              <span class="display text-[18px]" style="letter-spacing:-0.02em;">The Grid Review</span>
+              <span class="mono text-[15px] tracking-wide">HOMEWATT</span>
+              <span class="text-[18px]" style="font-family:Georgia,serif; font-style:italic;">Domestica</span>
+              <span class="display text-[18px]">Northlight</span>
+              <span class="mono text-[15px] tracking-wide">RENEW WEEKLY</span>
+              <span class="text-[18px]" style="font-family:Georgia,serif;">Hearth &amp; Volt</span>
+              <span class="display text-[18px]" style="letter-spacing:-0.02em;">CleanHome</span>
+              <span class="mono text-[15px] tracking-wide">CARBON DESK</span>
+              <!-- duplicate for seamless loop -->
+              <span class="display text-[18px]" style="letter-spacing:-0.02em;">The Grid Review</span>
+              <span class="mono text-[15px] tracking-wide">HOMEWATT</span>
+              <span class="text-[18px]" style="font-family:Georgia,serif; font-style:italic;">Domestica</span>
+              <span class="display text-[18px]">Northlight</span>
+              <span class="mono text-[15px] tracking-wide">RENEW WEEKLY</span>
+              <span class="text-[18px]" style="font-family:Georgia,serif;">Hearth &amp; Volt</span>
+              <span class="display text-[18px]" style="letter-spacing:-0.02em;">CleanHome</span>
+              <span class="mono text-[15px] tracking-wide">CARBON DESK</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 4 · FEATURE ROWS ============ -->
+    <section class="container-x py-[88px] md:py-[120px]">
+      <div class="max-w-[40rem]">
+        <span class="eyebrow">The system</span>
+        <h2 class="display mt-3 text-[32px] sm:text-[40px]">
+          Three parts. One install. <span class="halftone">No jargon.</span>
+        </h2>
+        <p class="mt-4 text-[16px]" style="color:var(--ink-2);">
+          A Sunhouse is panels, a battery, and an app that ties them together — sized to your roof and your bill, then installed by our own crews in a single visit.
+        </p>
+      </div>
+
+      <!-- Feature A — image LEFT -->
+      <div class="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center mt-16">
+        <div class="relative order-1">
+          <div class="absolute inset-0 -z-10 glow-amber" style="transform:scale(1.05);"></div>
+          <div class="panel-grad rounded-[22px] border p-7" style="border-color:var(--rule);">
+            <svg viewBox="0 0 380 250" class="w-full h-auto" role="img" aria-label="Close-up of a high-efficiency monocrystalline solar panel showing its cell grid.">
+              <defs>
+                <linearGradient id="cell" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#2C5B7A"/>
+                  <stop offset="1" stop-color="#102C40"/>
+                </linearGradient>
+              </defs>
+              <rect x="40" y="30" width="300" height="190" rx="8" fill="#1F1A12"/>
+              <rect x="48" y="38" width="284" height="174" rx="4" fill="url(#cell)"/>
+              <g stroke="#5E92B2" stroke-width="1" opacity="0.55">
+                <line x1="48" y1="81" x2="332" y2="81"/>
+                <line x1="48" y1="124" x2="332" y2="124"/>
+                <line x1="48" y1="167" x2="332" y2="167"/>
+                <line x1="119" y1="38" x2="119" y2="212"/>
+                <line x1="190" y1="38" x2="190" y2="212"/>
+                <line x1="261" y1="38" x2="261" y2="212"/>
+              </g>
+              <g stroke="#8FBED8" stroke-width="1.6" opacity="0.8">
+                <line x1="83" y1="38" x2="83" y2="212"/>
+                <line x1="154" y1="38" x2="154" y2="212"/>
+                <line x1="226" y1="38" x2="226" y2="212"/>
+                <line x1="297" y1="38" x2="297" y2="212"/>
+              </g>
+              <!-- sun glint -->
+              <path d="M64 52L120 96" stroke="#FFF6E4" stroke-width="3.5" stroke-linecap="round" opacity="0.55"/>
+              <circle cx="300" cy="58" r="14" fill="#E6952A" opacity="0.9"/>
+            </svg>
+          </div>
+        </div>
+        <div class="order-2">
+          <span class="eyebrow">01 · Panels</span>
+          <h3 class="display mt-3 text-[26px] sm:text-[31px]">Panels that earn their roof space</h3>
+          <p class="mt-4 text-[16px]" style="color:var(--ink-2);">
+            High-efficiency monocrystalline panels pull more power from every square metre — so a smaller, tidier array covers the same bill. We model your roof's pitch, shading, and orientation before a single panel is ordered.
+          </p>
+          <div class="mt-6 chip inline-flex flex-wrap gap-x-6 gap-y-2 px-4 py-3 mono text-[12.5px]" style="color:var(--ink-2);">
+            <span><span class="tnum" style="color:var(--ink);">440 W</span> per panel</span>
+            <span><span class="tnum" style="color:var(--ink);">22.3%</span> cell efficiency</span>
+            <span><span class="tnum" style="color:var(--ink);">25 yr</span> output guarantee</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feature B — image RIGHT -->
+      <div class="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center mt-20">
+        <div class="order-2 lg:order-1">
+          <span class="eyebrow">02 · Battery</span>
+          <h3 class="display mt-3 text-[26px] sm:text-[31px]">Power that stays when the grid doesn't</h3>
+          <p class="mt-4 text-[16px]" style="color:var(--ink-2);">
+            When the utility drops, the Sunhouse battery takes over in under 20 milliseconds — fast enough that your lights, fridge, and Wi-Fi never blink. Stored sun runs the house through the outage and recharges the next morning.
+          </p>
+          <div class="mt-6 chip inline-flex flex-wrap gap-x-6 gap-y-2 px-4 py-3 mono text-[12.5px]" style="color:var(--ink-2);">
+            <span><span class="tnum" style="color:var(--ink);">&lt; 20 ms</span> transfer</span>
+            <span><span class="tnum" style="color:var(--ink);">13.5 kWh</span> usable</span>
+            <span><span class="tnum" style="color:var(--ink);">90%</span> round-trip</span>
+          </div>
+        </div>
+        <div class="relative order-1 lg:order-2">
+          <div class="absolute inset-0 -z-10 glow-amber" style="transform:scale(1.05);"></div>
+          <div class="panel-grad rounded-[22px] border p-7" style="border-color:var(--rule);">
+            <svg viewBox="0 0 380 250" class="w-full h-auto" role="img" aria-label="Wall-mounted home battery cabinet powering a house during a grid outage.">
+              <rect x="118" y="34" width="144" height="182" rx="16" fill="#FFFDF7" stroke="#1F1A12" stroke-width="2.4"/>
+              <rect x="134" y="52" width="112" height="78" rx="9" fill="#1F1A12"/>
+              <rect x="148" y="68" width="74" height="9" rx="4.5" fill="#E6952A"/>
+              <rect x="148" y="84" width="50" height="6" rx="3" fill="#5C5444"/>
+              <rect x="148" y="97" width="62" height="6" rx="3" fill="#5C5444"/>
+              <!-- capacity bar -->
+              <rect x="134" y="148" width="112" height="14" rx="7" fill="#EFE3CC"/>
+              <rect x="134" y="148" width="86" height="14" rx="7" fill="#E6952A"/>
+              <text x="190" y="183" font-family="Geist Mono, monospace" font-size="10" fill="#5C5444" text-anchor="middle">77% · BACKUP READY</text>
+              <circle cx="190" cy="200" r="6" fill="none" stroke="#1F1A12" stroke-width="2"/>
+              <path d="M190 195v10M185 200h10" stroke="#1F1A12" stroke-width="2" stroke-linecap="round"/>
+              <!-- lightning to house -->
+              <path d="M262 110l52 8-22 6 30 14" stroke="#E6952A" stroke-width="2.6" fill="none" stroke-dasharray="5 4"/>
+              <path d="M40 96l14 0-8 14 18 0-22 30 6-22-14 0z" fill="#E6952A"/>
+              <text x="52" y="170" font-family="Geist Mono, monospace" font-size="9" fill="#9A9079" text-anchor="middle">GRID DOWN</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feature C — image LEFT — with exploded callout diagram -->
+      <div class="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center mt-20">
+        <div class="relative order-1">
+          <div class="absolute inset-0 -z-10 glow-amber" style="transform:scale(1.04);"></div>
+          <div class="panel-grad rounded-[22px] border p-7" style="border-color:var(--rule);">
+            <svg viewBox="0 0 400 280" class="w-full h-auto" role="img" aria-label="Exploded-view callout diagram of the four Sunhouse components: panels, hybrid inverter, battery, and monitoring gateway, connected by leader lines to their labels.">
+              <!-- leader lines -->
+              <g stroke="rgba(31,26,18,0.35)" stroke-width="1">
+                <line x1="150" y1="56" x2="252" y2="40"/>
+                <line x1="150" y1="120" x2="252" y2="108"/>
+                <line x1="150" y1="184" x2="252" y2="176"/>
+                <line x1="150" y1="240" x2="252" y2="244"/>
+              </g>
+              <!-- component 1: panels -->
+              <g transform="translate(70,38)">
+                <rect width="70" height="40" rx="3" fill="#16344A"/>
+                <g stroke="#7FB4D2" stroke-width="0.8" opacity="0.7">
+                  <line x1="23" y1="0" x2="23" y2="40"/><line x1="47" y1="0" x2="47" y2="40"/>
+                  <line x1="0" y1="20" x2="70" y2="20"/>
+                </g>
+              </g>
+              <!-- component 2: inverter -->
+              <g transform="translate(78,98)">
+                <rect width="54" height="46" rx="6" fill="#FFFDF7" stroke="#1F1A12" stroke-width="1.6"/>
+                <rect x="9" y="9" width="36" height="14" rx="3" fill="#E6952A"/>
+                <circle cx="16" cy="34" r="4" fill="#1F1A12"/>
+                <circle cx="38" cy="34" r="4" fill="none" stroke="#1F1A12" stroke-width="1.4"/>
+              </g>
+              <!-- component 3: battery -->
+              <g transform="translate(82,164)">
+                <rect width="46" height="56" rx="7" fill="#FFFDF7" stroke="#1F1A12" stroke-width="1.6"/>
+                <rect x="8" y="9" width="30" height="20" rx="3" fill="#1F1A12"/>
+                <rect x="8" y="36" width="30" height="6" rx="3" fill="#E6952A"/>
+              </g>
+              <!-- component 4: gateway -->
+              <g transform="translate(86,224)">
+                <rect width="38" height="30" rx="6" fill="#1F1A12"/>
+                <circle cx="19" cy="11" r="5" fill="none" stroke="#E6952A" stroke-width="1.6"/>
+                <circle cx="19" cy="11" r="2" fill="#E6952A"/>
+                <rect x="9" y="20" width="20" height="3" rx="1.5" fill="#5C5444"/>
+              </g>
+              <!-- labels -->
+              <g font-family="Geist Mono, monospace" font-size="10" fill="#1F1A12">
+                <text x="260" y="34">01 — Solar panels</text>
+                <text x="260" y="46" fill="#9A9079" font-size="8.5">440 W monocrystalline</text>
+                <text x="260" y="102">02 — Hybrid inverter</text>
+                <text x="260" y="114" fill="#9A9079" font-size="8.5">Helios H7 · 7.6 kW</text>
+                <text x="260" y="170">03 — Home battery</text>
+                <text x="260" y="182" fill="#9A9079" font-size="8.5">13.5 kWh · stackable</text>
+                <text x="260" y="238">04 — Monitoring gateway</text>
+                <text x="260" y="250" fill="#9A9079" font-size="8.5">Sunlink cellular hub</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+        <div class="order-2">
+          <span class="eyebrow">03 · Grow with it</span>
+          <h3 class="display mt-3 text-[26px] sm:text-[31px]">Start at 13.5 kWh, grow to 40.5</h3>
+          <p class="mt-4 text-[16px]" style="color:var(--ink-2);">
+            Begin with one battery and stack up to three as your needs change — an EV in the driveway, a heat pump, a longer outage you'd rather sleep through. The app shifts your usage into the cheapest hours automatically, so the system pays its own way.
+          </p>
+          <div class="mt-6 chip inline-flex flex-wrap gap-x-6 gap-y-2 px-4 py-3 mono text-[12.5px]" style="color:var(--ink-2);">
+            <span><span class="tnum" style="color:var(--ink);">13.5 → 40.5</span> kWh</span>
+            <span><span class="tnum" style="color:var(--ink);">3×</span> stackable</span>
+            <span>time-of-use shifting</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 5 · COMPANION APP ============ -->
+    <section id="app" class="border-y" style="border-color:var(--rule); background:var(--bg-2);">
+      <div class="container-x py-[88px] md:py-[116px]">
+        <div class="grid lg:grid-cols-[0.92fr_1.08fr] gap-12 lg:gap-16 items-center">
+
+          <!-- phone mockup with energy-flow app screen -->
+          <div class="relative flex justify-center">
+            <div class="absolute inset-0 -z-10 glow-amber" style="transform:scale(0.92);"></div>
+            <div class="relative" style="width:272px;">
+              <div class="rounded-[42px] border-[3px] p-3" style="border-color:var(--ink); background:#0E0B06; box-shadow:0 34px 60px -30px rgba(31,26,18,0.5);">
+                <div class="rounded-[32px] overflow-hidden" style="background:var(--card);">
+                  <!-- island -->
+                  <div class="relative pt-3">
+                    <div class="mx-auto rounded-full" style="width:78px; height:20px; background:var(--ink);"></div>
+                  </div>
+                  <!-- app header -->
+                  <div class="px-5 pt-4 pb-3 flex items-center justify-between">
+                    <div>
+                      <div class="mono text-[10px]" style="color:var(--ink-3);">SUNHOUSE</div>
+                      <div class="display text-[15px]">Live energy flow</div>
+                    </div>
+                    <span class="pulse-dot"></span>
+                  </div>
+                  <!-- energy-flow diagram -->
+                  <div class="px-4">
+                    <svg viewBox="0 0 232 200" class="w-full h-auto" role="img" aria-label="App energy-flow diagram: solar feeding the home and the battery, with the grid connected.">
+                      <!-- flow lines -->
+                      <g stroke="#E6952A" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-dasharray="6 5">
+                        <path d="M62 50H118"/>
+                        <path d="M62 150H118"/>
+                        <path d="M40 70V130"/>
+                        <path d="M140 70V130"/>
+                      </g>
+                      <!-- node: solar -->
+                      <g transform="translate(16,28)">
+                        <rect width="48" height="44" rx="11" fill="#FBE9C6" stroke="#E6952A" stroke-width="1.6"/>
+                        <circle cx="24" cy="20" r="9" fill="#E6952A"/>
+                        <text x="24" y="38" font-family="Geist Mono, monospace" font-size="7" fill="#5C5444" text-anchor="middle">SOLAR</text>
+                      </g>
+                      <!-- node: home -->
+                      <g transform="translate(116,28)">
+                        <rect width="48" height="44" rx="11" fill="#FFFCF5" stroke="#1F1A12" stroke-width="1.6"/>
+                        <path d="M14 24L24 15L34 24V32H14Z" fill="#1F1A12"/>
+                        <text x="24" y="38" font-family="Geist Mono, monospace" font-size="7" fill="#5C5444" text-anchor="middle">HOME</text>
+                      </g>
+                      <!-- node: battery -->
+                      <g transform="translate(16,128)">
+                        <rect width="48" height="44" rx="11" fill="#FFFCF5" stroke="#1F1A12" stroke-width="1.6"/>
+                        <rect x="14" y="12" width="20" height="14" rx="3" fill="#1F1A12"/>
+                        <rect x="34" y="16" width="3.5" height="6" rx="1.5" fill="#1F1A12"/>
+                        <text x="24" y="38" font-family="Geist Mono, monospace" font-size="6.5" fill="#5C5444" text-anchor="middle">BATTERY</text>
+                      </g>
+                      <!-- node: grid -->
+                      <g transform="translate(116,128)">
+                        <rect width="48" height="44" rx="11" fill="#FFFCF5" stroke="#1F1A12" stroke-width="1.6"/>
+                        <path d="M20 12l-4 9h6l-5 11" stroke="#5C5444" stroke-width="2" fill="none" stroke-linecap="round"/>
+                        <text x="24" y="38" font-family="Geist Mono, monospace" font-size="7.5" fill="#5C5444" text-anchor="middle">GRID</text>
+                      </g>
+                    </svg>
+                  </div>
+                  <!-- app footer stat -->
+                  <div class="px-5 pb-6 pt-1">
+                    <div class="rounded-xl px-4 py-3" style="background:var(--bg-2); border:1px solid var(--rule);">
+                      <div class="flex items-center justify-between">
+                        <span class="mono text-[10px]" style="color:var(--ink-3);">SAVED TODAY</span>
+                        <span class="mono text-[15px] tnum" style="color:var(--accent-2);">+ $4.10</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- app capabilities -->
+          <div>
+            <span class="eyebrow">The Sunhouse app</span>
+            <h2 class="display mt-3 text-[32px] sm:text-[40px]">
+              See every watt — <span class="halftone">and every dollar.</span>
+            </h2>
+            <p class="mt-4 text-[16px] max-w-[34rem]" style="color:var(--ink-2);">
+              The companion app turns your roof into something you can actually read. Open it to a live picture of where your power is going right now.
+            </p>
+
+            <div class="mt-8 grid sm:grid-cols-2 gap-4">
+              <div class="card-lift rounded-2xl border p-5" style="border-color:var(--rule); background:var(--card);">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:rgba(230,149,42,0.14);">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                    <path d="M9 1.5L4 9.5h4l-1 7 6-9h-4l1-6z" stroke="#C2761A" stroke-width="1.5" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <h4 class="display text-[16px] mt-3">Live energy flow</h4>
+                <p class="text-[13.5px] mt-1.5" style="color:var(--ink-2);">Watch sun move from roof to home to battery to grid, second by second.</p>
+              </div>
+
+              <div class="card-lift rounded-2xl border p-5" style="border-color:var(--rule); background:var(--card);">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:rgba(230,149,42,0.14);">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                    <path d="M9 2v14M5 12.5h3.2c1.2 0 2.3-.6 2.3-2s-1-2-2.3-2H7c-1.3 0-2.3-.5-2.3-2s1-2 2.3-2H12" stroke="#C2761A" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <h4 class="display text-[16px] mt-3">Savings, in dollars</h4>
+                <p class="text-[13.5px] mt-1.5" style="color:var(--ink-2);">Daily, monthly, and lifetime totals — what you've earned and what you've avoided.</p>
+              </div>
+
+              <div class="card-lift rounded-2xl border p-5" style="border-color:var(--rule); background:var(--card);">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:rgba(230,149,42,0.14);">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                    <path d="M9 1.5c2.5 2.5 5 4.8 5 8a5 5 0 11-10 0c0-3.2 2.5-5.5 5-8z" stroke="#C2761A" stroke-width="1.5" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <h4 class="display text-[16px] mt-3">Storm-prep charge</h4>
+                <p class="text-[13.5px] mt-1.5" style="color:var(--ink-2);">One tap before bad weather tops the battery to full, so you ride out the outage.</p>
+              </div>
+
+              <div class="card-lift rounded-2xl border p-5" style="border-color:var(--rule); background:var(--card);">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:rgba(230,149,42,0.14);">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                    <path d="M9 4.5v4.5l3 2" stroke="#C2761A" stroke-width="1.5" stroke-linecap="round"/>
+                    <circle cx="9" cy="9" r="6.5" stroke="#C2761A" stroke-width="1.5"/>
+                  </svg>
+                </div>
+                <h4 class="display text-[16px] mt-3">Backup history</h4>
+                <p class="text-[13.5px] mt-1.5" style="color:var(--ink-2);">Every outage logged — when the grid failed, how long, how much battery you used.</p>
+              </div>
+            </div>
+
+            <a href="#quote" class="ul-link inline-flex items-center gap-1.5 mt-7 text-[14px] font-semibold" style="color:var(--accent-2);">
+              See the app in your free design visit
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M2 7h9M7 3l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </a>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 6 · TECH SPECS ============ -->
+    <section id="specs" class="container-x py-[88px] md:py-[116px]">
+      <div class="grid lg:grid-cols-[0.8fr_1.2fr] gap-10 lg:gap-16">
+
+        <div>
+          <span class="eyebrow">Technical specification</span>
+          <h2 class="display mt-3 text-[32px] sm:text-[40px]">The numbers behind the house</h2>
+          <p class="mt-4 text-[16px]" style="color:var(--ink-2);">
+            Every Sunhouse install ships to the same standard. Final array size and battery count are set during your free design visit.
+          </p>
+          <div class="mt-6 chip inline-flex items-center gap-2.5 px-4 py-2.5 mono text-[12px]" style="color:var(--ink-2);">
+            <span style="color:var(--ink-3);">Model</span>
+            <span style="color:var(--ink);">SH-440 / H7</span>
+          </div>
+        </div>
+
+        <div class="grid sm:grid-cols-2 gap-x-10 gap-y-9">
+
+          <!-- block: panels -->
+          <div>
+            <div class="eyebrow pb-2.5 mb-1 border-b" style="border-color:var(--rule);">Solar panels</div>
+            <dl class="mono text-[13px]">
+              <div class="hairline-row flex justify-between py-2.5"><dt style="color:var(--ink-2);">Panel power</dt><dd class="tnum">440 W</dd></div>
+              <div class="hairline-row flex justify-between py-2.5"><dt style="color:var(--ink-2);">Cell type</dt><dd>Monocrystalline</dd></div>
+              <div class="hairline-row flex justify-between py-2.5"><dt style="color:var(--ink-2);">Cell efficiency</dt><dd class="tnum">22.3%</dd></div>
+              <div class="hairline-row flex justify-between py-2.5"><dt style="color:var(--ink-2);">Temp coefficient</dt><dd class="tnum">−0.29%/°C</dd></div>
+              <div class="hairline-row flex justify-between py-2.5"><dt style="color:var(--ink-2);">Output guarantee</dt><dd class="tnum">25 yr / 87%</dd></div>
+            </dl>
+          </div>
+
+          <!-- block: battery -->
+          <div>
+            <div class="eyebrow pb-2.5 mb-1 border-b" style="border-color:var(--rule);">Home battery</div>
+            <dl class="mono text-[13px]">
+              <div class="hairline-row flex justify-between py-2.5"><dt style="color:var(--ink-2);">Usable capacity</dt><dd class="tnum">13.5 kWh</dd></div>
+              <div class="hairline-row flex justify-between py-2.5"><dt style="color:var(--ink-2);">Stackable to</dt><dd class="tnum">40.5 kWh</dd></div>
+              <div class="hairline-row flex justify-between py-2.5"><dt style="color:var(--ink-2);">Chemistry</dt><dd>LiFePO₄</dd></div>
+              <div class="hairline-row flex justify-between py-2.5"><dt style="color:var(--ink-2);">Round-trip eff.</dt><dd class="tnum">90%</dd></div>
+              <div class="hairline-row flex justify-between py-2.5"><dt style="color:var(--ink-2);">Continuous output</dt><dd class="tnum">7.6 kW</dd></div>
+            </dl>
+          </div>
+
+          <!-- block: inverter + backup -->
+          <div>
+            <div class="eyebrow pb-2.5 mb-1 border-b" style="border-color:var(--rule);">Inverter &amp; backup</div>
+            <dl class="mono text-[13px]">
+              <div class="hairline-row flex justify-between py-2.5"><dt style="color:var(--ink-2);">Inverter</dt><dd>Helios H7</dd></div>
+              <div class="hairline-row flex justify-between py-2.5"><dt style="color:var(--ink-2);">Inverter rating</dt><dd class="tnum">7.6 kW hybrid</dd></div>
+              <div class="hairline-row flex justify-between py-2.5"><dt style="color:var(--ink-2);">Backup transfer</dt><dd class="tnum">&lt; 20 ms</dd></div>
+              <div class="hairline-row flex justify-between py-2.5"><dt style="color:var(--ink-2);">Backup type</dt><dd>Whole-home</dd></div>
+              <div class="hairline-row flex justify-between py-2.5"><dt style="color:var(--ink-2);">Enclosure</dt><dd class="tnum">IP65 outdoor</dd></div>
+            </dl>
+          </div>
+
+          <!-- block: connectivity + warranty -->
+          <div>
+            <div class="eyebrow pb-2.5 mb-1 border-b" style="border-color:var(--rule);">Connectivity &amp; warranty</div>
+            <dl class="mono text-[13px]">
+              <div class="hairline-row flex justify-between py-2.5"><dt style="color:var(--ink-2);">Gateway</dt><dd>Sunlink hub</dd></div>
+              <div class="hairline-row flex justify-between py-2.5"><dt style="color:var(--ink-2);">Connection</dt><dd>Wi-Fi + LTE</dd></div>
+              <div class="hairline-row flex justify-between py-2.5"><dt style="color:var(--ink-2);">App</dt><dd>iOS / Android</dd></div>
+              <div class="hairline-row flex justify-between py-2.5"><dt style="color:var(--ink-2);">System warranty</dt><dd class="tnum">12 years</dd></div>
+              <div class="hairline-row flex justify-between py-2.5"><dt style="color:var(--ink-2);">Monitoring</dt><dd>24/7 included</dd></div>
+            </dl>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 7 · WHAT'S INCLUDED ============ -->
+    <section class="border-y" style="border-color:var(--rule); background:var(--card);">
+      <div class="container-x py-[88px] md:py-[116px]">
+        <div class="max-w-[40rem]">
+          <span class="eyebrow">What's included</span>
+          <h2 class="display mt-3 text-[32px] sm:text-[40px]">
+            One install package. <span class="halftone">Nothing extra to chase.</span>
+          </h2>
+          <p class="mt-4 text-[16px]" style="color:var(--ink-2);">
+            Your fixed quote covers the hardware on your roof and the work to get it running — including the permits and the utility paperwork most homeowners dread.
+          </p>
+        </div>
+
+        <div class="mt-12 grid lg:grid-cols-[1fr_1fr] gap-12 lg:gap-16 items-center">
+
+          <!-- kit diagram -->
+          <div class="relative">
+            <div class="absolute inset-0 -z-10 glow-amber" style="transform:scale(0.96);"></div>
+            <div class="panel-grad rounded-[22px] border p-8" style="border-color:var(--rule);">
+              <svg viewBox="0 0 380 300" class="w-full h-auto" role="img" aria-label="Flat-lay kit diagram of the Sunhouse install package: solar panels, home battery, hybrid inverter, and monitoring gateway, each labeled.">
+                <!-- panels -->
+                <g transform="translate(34,40)">
+                  <rect width="120" height="74" rx="6" fill="#16344A" stroke="#0D2434" stroke-width="1.6"/>
+                  <g stroke="#7FB4D2" stroke-width="0.9" opacity="0.65">
+                    <line x1="40" y1="0" x2="40" y2="74"/><line x1="80" y1="0" x2="80" y2="74"/>
+                    <line x1="0" y1="37" x2="120" y2="37"/>
+                  </g>
+                  <text x="60" y="98" font-family="Geist Mono, monospace" font-size="9.5" fill="#1F1A12" text-anchor="middle">SOLAR PANELS ×N</text>
+                </g>
+                <!-- battery -->
+                <g transform="translate(226,30)">
+                  <rect width="84" height="120" rx="12" fill="#FFFDF7" stroke="#1F1A12" stroke-width="1.8"/>
+                  <rect x="14" y="16" width="56" height="40" rx="6" fill="#1F1A12"/>
+                  <rect x="22" y="26" width="36" height="7" rx="3.5" fill="#E6952A"/>
+                  <rect x="22" y="68" width="56" height="9" rx="4.5" fill="#EFE3CC"/>
+                  <rect x="22" y="68" width="40" height="9" rx="4.5" fill="#E6952A"/>
+                  <text x="42" y="134" font-family="Geist Mono, monospace" font-size="9.5" fill="#1F1A12" text-anchor="middle">HOME BATTERY</text>
+                </g>
+                <!-- inverter -->
+                <g transform="translate(40,176)">
+                  <rect width="98" height="74" rx="9" fill="#FFFDF7" stroke="#1F1A12" stroke-width="1.8"/>
+                  <rect x="14" y="14" width="70" height="22" rx="4" fill="#E6952A"/>
+                  <circle cx="26" cy="54" r="6" fill="#1F1A12"/>
+                  <circle cx="50" cy="54" r="6" fill="none" stroke="#1F1A12" stroke-width="1.6"/>
+                  <circle cx="74" cy="54" r="6" fill="none" stroke="#1F1A12" stroke-width="1.6"/>
+                  <text x="49" y="270" font-family="Geist Mono, monospace" font-size="9.5" fill="#1F1A12" text-anchor="middle">HYBRID INVERTER</text>
+                </g>
+                <!-- gateway -->
+                <g transform="translate(232,182)">
+                  <rect width="72" height="62" rx="9" fill="#1F1A12"/>
+                  <circle cx="36" cy="24" r="11" fill="none" stroke="#E6952A" stroke-width="2"/>
+                  <circle cx="36" cy="24" r="4" fill="#E6952A"/>
+                  <rect x="18" y="42" width="36" height="5" rx="2.5" fill="#5C5444"/>
+                  <text x="268" y="264" font-family="Geist Mono, monospace" font-size="9.5" fill="#1F1A12" text-anchor="middle">GATEWAY</text>
+                </g>
+              </svg>
+            </div>
+          </div>
+
+          <!-- checklist -->
+          <div>
+            <ul class="space-y-3.5">
+              <li class="flex gap-3.5">
+                <span class="flex-none w-6 h-6 rounded-full flex items-center justify-center mt-0.5" style="background:rgba(230,149,42,0.16);">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 6.3l2.4 2.4L9.6 3.6" stroke="#C2761A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+                <div>
+                  <span class="font-semibold text-[15px]">High-efficiency solar panels</span>
+                  <span class="block text-[13.5px]" style="color:var(--ink-2);">Sized to your roof and bill — typically 10–22 panels per home.</span>
+                </div>
+              </li>
+              <li class="flex gap-3.5">
+                <span class="flex-none w-6 h-6 rounded-full flex items-center justify-center mt-0.5" style="background:rgba(230,149,42,0.16);">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 6.3l2.4 2.4L9.6 3.6" stroke="#C2761A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+                <div>
+                  <span class="font-semibold text-[15px]">13.5 kWh home battery</span>
+                  <span class="block text-[13.5px]" style="color:var(--ink-2);">Wall-mounted, outdoor-rated, expandable to three units later.</span>
+                </div>
+              </li>
+              <li class="flex gap-3.5">
+                <span class="flex-none w-6 h-6 rounded-full flex items-center justify-center mt-0.5" style="background:rgba(230,149,42,0.16);">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 6.3l2.4 2.4L9.6 3.6" stroke="#C2761A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+                <div>
+                  <span class="font-semibold text-[15px]">Helios H7 hybrid inverter</span>
+                  <span class="block text-[13.5px]" style="color:var(--ink-2);">7.6 kW unit that ties panels, battery, and grid into one system.</span>
+                </div>
+              </li>
+              <li class="flex gap-3.5">
+                <span class="flex-none w-6 h-6 rounded-full flex items-center justify-center mt-0.5" style="background:rgba(230,149,42,0.16);">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 6.3l2.4 2.4L9.6 3.6" stroke="#C2761A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+                <div>
+                  <span class="font-semibold text-[15px]">Sunlink monitoring gateway</span>
+                  <span class="block text-[13.5px]" style="color:var(--ink-2);">Cellular hub that powers the app and our 24/7 fault watch.</span>
+                </div>
+              </li>
+              <li class="flex gap-3.5">
+                <span class="flex-none w-6 h-6 rounded-full flex items-center justify-center mt-0.5" style="background:rgba(230,149,42,0.16);">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 6.3l2.4 2.4L9.6 3.6" stroke="#C2761A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+                <div>
+                  <span class="font-semibold text-[15px]">Professional installation</span>
+                  <span class="block text-[13.5px]" style="color:var(--ink-2);">Mounting, wiring, and commissioning by Sunhouse crews — usually one day.</span>
+                </div>
+              </li>
+              <li class="flex gap-3.5">
+                <span class="flex-none w-6 h-6 rounded-full flex items-center justify-center mt-0.5" style="background:rgba(230,149,42,0.16);">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 6.3l2.4 2.4L9.6 3.6" stroke="#C2761A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+                <div>
+                  <span class="font-semibold text-[15px]">Permits &amp; utility interconnection</span>
+                  <span class="block text-[13.5px]" style="color:var(--ink-2);">We file the city permits and the utility paperwork — and see them through to approval.</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 8 · USE-CASE BAND ============ -->
+    <section class="container-x py-[88px] md:py-[116px]">
+      <div class="max-w-[40rem]">
+        <span class="eyebrow">In real homes</span>
+        <h2 class="display mt-3 text-[32px] sm:text-[40px]">A Sunhouse earns its keep four ways</h2>
+      </div>
+
+      <div class="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
+        <article class="card-lift rounded-2xl border p-6" style="border-color:var(--rule); background:var(--card);">
+          <div class="rounded-xl mb-5 flex items-center justify-center" style="height:120px; background:linear-gradient(160deg,#FFF6E4,#EAD3A6);">
+            <svg width="60" height="60" viewBox="0 0 60 60" fill="none" aria-hidden="true">
+              <circle cx="30" cy="22" r="11" fill="#E6952A"/>
+              <g stroke="#E6952A" stroke-width="2.4" stroke-linecap="round"><line x1="30" y1="3" x2="30" y2="9"/><line x1="48" y1="22" x2="54" y2="22"/><line x1="6" y1="22" x2="12" y2="22"/></g>
+              <path d="M14 44L30 33L46 44V52H14Z" fill="#1F1A12"/>
+            </svg>
+          </div>
+          <h3 class="display text-[17px]">Sunny weekday</h3>
+          <p class="text-[13.5px] mt-2" style="color:var(--ink-2);">The roof runs the house and tops the battery — the meter barely moves.</p>
+        </article>
+
+        <article class="card-lift rounded-2xl border p-6" style="border-color:var(--rule); background:var(--card);">
+          <div class="rounded-xl mb-5 flex items-center justify-center" style="height:120px; background:linear-gradient(160deg,#F3E4C4,#1F1A12);">
+            <svg width="60" height="60" viewBox="0 0 60 60" fill="none" aria-hidden="true">
+              <path d="M40 14a16 16 0 100 32 13 13 0 01-2-25 19 19 0 012-7z" fill="#FFF6E4"/>
+              <circle cx="22" cy="20" r="2.4" fill="#FFF6E4"/>
+              <circle cx="16" cy="34" r="1.8" fill="#FFF6E4"/>
+            </svg>
+          </div>
+          <h3 class="display text-[17px]">After dark</h3>
+          <p class="text-[13.5px] mt-2" style="color:var(--ink-2);">Stored sun powers evening cooking, laundry, and screens — not the grid.</p>
+        </article>
+
+        <article class="card-lift rounded-2xl border p-6" style="border-color:var(--rule); background:var(--card);">
+          <div class="rounded-xl mb-5 flex items-center justify-center" style="height:120px; background:linear-gradient(160deg,#FBE9C6,#C99A4C);">
+            <svg width="60" height="60" viewBox="0 0 60 60" fill="none" aria-hidden="true">
+              <path d="M20 8h12l-7 16h9L18 52l5-20h-9z" fill="#E6952A"/>
+              <path d="M40 18l-3 6h5l-7 12" stroke="#1F1A12" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h3 class="display text-[17px]">Grid outage</h3>
+          <p class="text-[13.5px] mt-2" style="color:var(--ink-2);">Switchover in under 20 ms keeps the fridge, lights, and Wi-Fi on.</p>
+        </article>
+
+        <article class="card-lift rounded-2xl border p-6" style="border-color:var(--rule); background:var(--card);">
+          <div class="rounded-xl mb-5 flex items-center justify-center" style="height:120px; background:linear-gradient(160deg,#FFF6E4,#D9BE84);">
+            <svg width="60" height="60" viewBox="0 0 60 60" fill="none" aria-hidden="true">
+              <rect x="14" y="20" width="32" height="22" rx="4" fill="#1F1A12"/>
+              <rect x="20" y="14" width="20" height="8" rx="2" fill="#E6952A"/>
+              <circle cx="22" cy="44" r="5" fill="#5C5444"/>
+              <circle cx="38" cy="44" r="5" fill="#5C5444"/>
+              <path d="M46 28h6v8h-6" stroke="#E6952A" stroke-width="2.4" fill="none"/>
+            </svg>
+          </div>
+          <h3 class="display text-[17px]">EV overnight</h3>
+          <p class="text-[13.5px] mt-2" style="color:var(--ink-2);">The app shifts the car onto cheap off-peak hours — and onto your own stored sun.</p>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ============ 9 · STATS BANNER ============ -->
+    <section class="border-y" style="border-color:var(--rule); background:var(--bg-2);">
+      <div class="container-x py-[72px] md:py-[88px]">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10">
+          <div>
+            <div class="display text-[40px] sm:text-[48px] tnum" style="color:var(--accent-2);">28,408</div>
+            <div class="mono text-[12px] mt-1.5" style="color:var(--ink-2);">HOMES POWERED</div>
+          </div>
+          <div>
+            <div class="display text-[40px] sm:text-[48px] tnum" style="color:var(--accent-2);">$1,884</div>
+            <div class="mono text-[12px] mt-1.5" style="color:var(--ink-2);">AVG ANNUAL BILL CUT</div>
+          </div>
+          <div>
+            <div class="display text-[40px] sm:text-[48px] tnum" style="color:var(--accent-2);">71.6M</div>
+            <div class="mono text-[12px] mt-1.5" style="color:var(--ink-2);">kWh STORED &amp; USED</div>
+          </div>
+          <div>
+            <div class="display text-[40px] sm:text-[48px] tnum" style="color:var(--accent-2);">14 hr</div>
+            <div class="mono text-[12px] mt-1.5" style="color:var(--ink-2);">AVG BLACKOUT COVERAGE</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 10 · PRICING + GAUGE ============ -->
+    <section class="container-x py-[88px] md:py-[116px]">
+      <div class="max-w-[40rem]">
+        <span class="eyebrow">Pricing</span>
+        <h2 class="display mt-3 text-[32px] sm:text-[40px]">
+          One quote. Fixed after the visit. <span class="halftone">No surprises.</span>
+        </h2>
+        <p class="mt-4 text-[16px]" style="color:var(--ink-2);">
+          Most solar pricing is a moving target. Sunhouse isn't — your free design visit produces a single number, and that number is the number.
+        </p>
+      </div>
+
+      <div class="mt-12 grid lg:grid-cols-[1.15fr_0.85fr] gap-8">
+
+        <!-- price breakdown card -->
+        <div class="rounded-3xl border p-7 sm:p-9" style="border-color:var(--rule); background:var(--card); box-shadow:0 22px 44px -26px rgba(31,26,18,0.3);">
+          <div class="flex items-center justify-between">
+            <span class="eyebrow">The Sunhouse system</span>
+            <span class="chip px-3 py-1 mono text-[11px]" style="color:var(--accent-2);">FIXED QUOTE</span>
+          </div>
+          <div class="flex items-end gap-2 mt-4">
+            <span class="display text-[52px] tnum">$14,900</span>
+            <span class="text-[15px] pb-2.5" style="color:var(--ink-2);">starting price, installed</span>
+          </div>
+          <p class="text-[14px] mt-1" style="color:var(--ink-3);">
+            Or financing from <span class="mono tnum" style="color:var(--ink);">$96/mo</span> — many homeowners find the monthly cost lands near their old utility bill.
+          </p>
+
+          <div class="mt-6 mono text-[13px]">
+            <div class="hairline-row flex justify-between py-3"><span style="color:var(--ink-2);">Solar panels + racking</span><span>Included</span></div>
+            <div class="hairline-row flex justify-between py-3"><span style="color:var(--ink-2);">13.5 kWh home battery</span><span>Included</span></div>
+            <div class="hairline-row flex justify-between py-3"><span style="color:var(--ink-2);">Helios H7 hybrid inverter</span><span>Included</span></div>
+            <div class="hairline-row flex justify-between py-3"><span style="color:var(--ink-2);">Installation + commissioning</span><span>Included</span></div>
+            <div class="hairline-row flex justify-between py-3"><span style="color:var(--ink-2);">Permits + utility interconnection</span><span>Included</span></div>
+            <div class="hairline-row flex justify-between py-3"><span style="color:var(--ink-2);">App + 24/7 monitoring</span><span>Included</span></div>
+            <div class="hairline-row flex justify-between py-3"><span style="color:var(--ink-2);">System warranty</span><span class="tnum">12 years</span></div>
+          </div>
+
+          <div class="mt-6 rounded-xl p-4" style="background:rgba(230,149,42,0.10); border:1px solid rgba(230,149,42,0.3);">
+            <p class="text-[13.5px]" style="color:var(--ink-2);">
+              <span class="font-semibold" style="color:var(--ink);">30% federal solar tax credit.</span>
+              Eligible homeowners can claim 30% of the system cost — on a $14,900 install that's roughly <span class="mono tnum" style="color:var(--accent-2);">$4,470</span> back. We'll walk you through it; your tax advisor confirms eligibility.
+            </p>
+          </div>
+
+          <a href="#quote" class="btn-primary rounded-full px-6 py-3.5 text-[15px] font-semibold text-center block mt-6">
+            Get your free design + quote
+          </a>
+          <p class="text-center text-[12.5px] mt-3" style="color:var(--ink-3);">
+            The quote is fixed after the free design visit — the price you're shown is the price you pay.
+          </p>
+        </div>
+
+        <!-- capacity gauge + savings bar -->
+        <div class="rounded-3xl border p-7 sm:p-9 flex flex-col" style="border-color:var(--rule); background:var(--bg-2);">
+          <span class="eyebrow">Battery capacity</span>
+          <h3 class="display text-[20px] mt-2">Start small, stack later</h3>
+
+          <!-- gauge -->
+          <div class="flex justify-center mt-5">
+            <svg viewBox="0 0 220 132" class="w-full max-w-[240px] h-auto" role="img" aria-label="Gauge showing 13.5 kWh of usable battery capacity, stackable up to 40.5 kWh.">
+              <path d="M20 120 A90 90 0 0 1 200 120" fill="none" stroke="#EFE3CC" stroke-width="18" stroke-linecap="round"/>
+              <path d="M20 120 A90 90 0 0 1 91 36" fill="none" stroke="#E6952A" stroke-width="18" stroke-linecap="round"/>
+              <line x1="110" y1="120" x2="71" y2="49" stroke="#1F1A12" stroke-width="3.4" stroke-linecap="round"/>
+              <circle cx="110" cy="120" r="7" fill="#1F1A12"/>
+              <text x="110" y="86" font-family="Inter, sans-serif" font-size="26" font-weight="700" fill="#1F1A12" text-anchor="middle" letter-spacing="-0.03em">13.5</text>
+              <text x="110" y="104" font-family="Geist Mono, monospace" font-size="9" fill="#9A9079" text-anchor="middle">kWh USABLE</text>
+              <text x="20" y="132" font-family="Geist Mono, monospace" font-size="8.5" fill="#9A9079">0</text>
+              <text x="186" y="132" font-family="Geist Mono, monospace" font-size="8.5" fill="#9A9079">40.5</text>
+            </svg>
+          </div>
+          <p class="text-[13px] mt-1 text-center" style="color:var(--ink-2);">
+            One battery covers most evenings. Stack a second or third for an EV, a heat pump, or a longer outage.
+          </p>
+
+          <!-- savings bar -->
+          <div class="mt-7">
+            <div class="flex items-center justify-between mb-2">
+              <span class="mono text-[11px]" style="color:var(--ink-2);">TYPICAL YEAR-ONE SAVINGS</span>
+              <span class="mono text-[12px] tnum" style="color:var(--accent-2);">$1,884</span>
+            </div>
+            <div class="rounded-full overflow-hidden" style="height:12px; background:#EFE3CC;">
+              <div class="h-full rounded-full" style="width:74%; background:linear-gradient(90deg,#E6952A,#C2761A);"></div>
+            </div>
+            <div class="flex justify-between mt-2 mono text-[10px]" style="color:var(--ink-3);">
+              <span>OLD GRID BILL</span>
+              <span>WITH SUNHOUSE</span>
+            </div>
+          </div>
+
+          <div class="mt-auto pt-7">
+            <div class="chip flex items-center gap-2.5 px-4 py-3 mono text-[11.5px]" style="color:var(--ink-2);">
+              <span class="pulse-dot"></span>
+              No 30-day return needed — the design visit is free and no-obligation.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============ 11 · REVIEWS + FAQ ============ -->
+    <section class="border-y" style="border-color:var(--rule); background:var(--card);">
+      <div class="container-x py-[88px] md:py-[116px]">
+
+        <!-- aggregate + reviews -->
+        <div class="grid lg:grid-cols-[0.7fr_1.3fr] gap-10 lg:gap-14">
+          <div>
+            <span class="eyebrow">Homeowner reviews</span>
+            <div class="flex items-end gap-3 mt-3">
+              <span class="display text-[52px] tnum">4.8</span>
+              <div class="pb-2.5">
+                <div class="flex gap-0.5">
+                  <svg width="92" height="16" viewBox="0 0 92 16" aria-hidden="true">
+                    <g fill="#E6952A">
+                      <path d="M8 0l2 4.6 5 .5-3.8 3.4 1.1 5L8 10.8 3.7 13.5l1.1-5L1 5.1l5-.5z"/>
+                      <path d="M27 0l2 4.6 5 .5-3.8 3.4 1.1 5L27 10.8l-4.3 2.7 1.1-5L20 5.1l5-.5z"/>
+                      <path d="M46 0l2 4.6 5 .5-3.8 3.4 1.1 5L46 10.8l-4.3 2.7 1.1-5L39 5.1l5-.5z"/>
+                      <path d="M65 0l2 4.6 5 .5-3.8 3.4 1.1 5L65 10.8l-4.3 2.7 1.1-5L58 5.1l5-.5z"/>
+                      <path d="M84 0l2 4.6 5 .5-3.8 3.4 1.1 5L84 10.8V0z"/>
+                    </g>
+                    <path d="M84 0v10.8l-4.3 2.7 1.1-5L77 5.1l5-.5z" fill="#E6952A" opacity="0.32"/>
+                  </svg>
+                </div>
+                <span class="text-[13px]" style="color:var(--ink-3);">from <span class="mono tnum" style="color:var(--ink);">6,217</span> verified installs</span>
+              </div>
+            </div>
+            <p class="text-[14px] mt-4" style="color:var(--ink-2);">
+              Scored after the first full billing cycle, so the rating reflects living with the system — not the sales call.
+            </p>
+          </div>
+
+          <div class="grid sm:grid-cols-2 gap-5">
+            <figure class="rounded-2xl border p-6" style="border-color:var(--rule); background:var(--bg-2);">
+              <div class="flex gap-0.5 mb-3" aria-label="5 out of 5">
+                <svg width="74" height="13" viewBox="0 0 74 13" fill="#E6952A" aria-hidden="true"><path d="M6.5 0l1.6 3.7 4 .4-3 2.7.9 4-3.5-2.2-3.5 2.2.9-4-3-2.7 4-.4z"/><path d="M21.5 0l1.6 3.7 4 .4-3 2.7.9 4-3.5-2.2-3.5 2.2.9-4-3-2.7 4-.4z"/><path d="M36.5 0l1.6 3.7 4 .4-3 2.7.9 4-3.5-2.2-3.5 2.2.9-4-3-2.7 4-.4z"/><path d="M51.5 0l1.6 3.7 4 .4-3 2.7.9 4-3.5-2.2-3.5 2.2.9-4-3-2.7 4-.4z"/><path d="M66.5 0l1.6 3.7 4 .4-3 2.7.9 4-3.5-2.2-3.5 2.2.9-4-3-2.7 4-.4z"/></svg>
+              </div>
+              <blockquote class="text-[14px]" style="color:var(--ink);">"The fixed quote sold me — three other installers kept revising their numbers. Our June bill came in at $11. The app makes it almost a hobby."</blockquote>
+              <figcaption class="mt-4 flex items-center gap-3">
+                <span class="w-9 h-9 rounded-full flex items-center justify-center mono text-[12px]" style="background:rgba(230,149,42,0.18); color:var(--accent-2);">ML</span>
+                <span class="text-[12.5px]"><span class="font-semibold block" style="color:var(--ink);">Marisol Lozano</span><span style="color:var(--ink-3);">Sacramento, CA · 9 months in</span></span>
+              </figcaption>
+            </figure>
+
+            <figure class="rounded-2xl border p-6" style="border-color:var(--rule); background:var(--bg-2);">
+              <div class="flex gap-0.5 mb-3" aria-label="5 out of 5">
+                <svg width="74" height="13" viewBox="0 0 74 13" fill="#E6952A" aria-hidden="true"><path d="M6.5 0l1.6 3.7 4 .4-3 2.7.9 4-3.5-2.2-3.5 2.2.9-4-3-2.7 4-.4z"/><path d="M21.5 0l1.6 3.7 4 .4-3 2.7.9 4-3.5-2.2-3.5 2.2.9-4-3-2.7 4-.4z"/><path d="M36.5 0l1.6 3.7 4 .4-3 2.7.9 4-3.5-2.2-3.5 2.2.9-4-3-2.7 4-.4z"/><path d="M51.5 0l1.6 3.7 4 .4-3 2.7.9 4-3.5-2.2-3.5 2.2.9-4-3-2.7 4-.4z"/><path d="M66.5 0l1.6 3.7 4 .4-3 2.7.9 4-3.5-2.2-3.5 2.2.9-4-3-2.7 4-.4z"/></svg>
+              </div>
+              <blockquote class="text-[14px]" style="color:var(--ink);">"An ice storm took the street out for eleven hours. We never noticed until a neighbour knocked. The switchover is genuinely instant."</blockquote>
+              <figcaption class="mt-4 flex items-center gap-3">
+                <span class="w-9 h-9 rounded-full flex items-center justify-center mono text-[12px]" style="background:rgba(230,149,42,0.18); color:var(--accent-2);">DK</span>
+                <span class="text-[12.5px]"><span class="font-semibold block" style="color:var(--ink);">Dmitri Køhler</span><span style="color:var(--ink-3);">Portland, OR · 1 year 4 months in</span></span>
+              </figcaption>
+            </figure>
+
+            <figure class="rounded-2xl border p-6" style="border-color:var(--rule); background:var(--bg-2);">
+              <div class="flex gap-0.5 mb-3" aria-label="5 out of 5">
+                <svg width="74" height="13" viewBox="0 0 74 13" fill="#E6952A" aria-hidden="true"><path d="M6.5 0l1.6 3.7 4 .4-3 2.7.9 4-3.5-2.2-3.5 2.2.9-4-3-2.7 4-.4z"/><path d="M21.5 0l1.6 3.7 4 .4-3 2.7.9 4-3.5-2.2-3.5 2.2.9-4-3-2.7 4-.4z"/><path d="M36.5 0l1.6 3.7 4 .4-3 2.7.9 4-3.5-2.2-3.5 2.2.9-4-3-2.7 4-.4z"/><path d="M51.5 0l1.6 3.7 4 .4-3 2.7.9 4-3.5-2.2-3.5 2.2.9-4-3-2.7 4-.4z"/><path d="M66.5 0l1.6 3.7 4 .4-3 2.7.9 4-3.5-2.2-3.5 2.2.9-4-3-2.7 4-.4z"/></svg>
+              </div>
+              <blockquote class="text-[14px]" style="color:var(--ink);">"I dreaded the permit side. Sunhouse filed everything and chased the utility for the meter swap. I signed two forms — that was it."</blockquote>
+              <figcaption class="mt-4 flex items-center gap-3">
+                <span class="w-9 h-9 rounded-full flex items-center justify-center mono text-[12px]" style="background:rgba(230,149,42,0.18); color:var(--accent-2);">AO</span>
+                <span class="text-[12.5px]"><span class="font-semibold block" style="color:var(--ink);">Amara Okonkwo</span><span style="color:var(--ink-3);">Austin, TX · 7 months in</span></span>
+              </figcaption>
+            </figure>
+
+            <figure class="rounded-2xl border p-6" style="border-color:var(--rule); background:var(--bg-2);">
+              <div class="flex gap-0.5 mb-3" aria-label="5 out of 5">
+                <svg width="74" height="13" viewBox="0 0 74 13" fill="#E6952A" aria-hidden="true"><path d="M6.5 0l1.6 3.7 4 .4-3 2.7.9 4-3.5-2.2-3.5 2.2.9-4-3-2.7 4-.4z"/><path d="M21.5 0l1.6 3.7 4 .4-3 2.7.9 4-3.5-2.2-3.5 2.2.9-4-3-2.7 4-.4z"/><path d="M36.5 0l1.6 3.7 4 .4-3 2.7.9 4-3.5-2.2-3.5 2.2.9-4-3-2.7 4-.4z"/><path d="M51.5 0l1.6 3.7 4 .4-3 2.7.9 4-3.5-2.2-3.5 2.2.9-4-3-2.7 4-.4z"/><path d="M66.5 0l1.6 3.7 4 .4-3 2.7.9 4-3.5-2.2-3.5 2.2.9-4-3-2.7 4-.4z"/></svg>
+              </div>
+              <blockquote class="text-[14px]" style="color:var(--ink);">"We started with one battery and added a second when we bought the EV. The app handled the rest — it charges the car on stored sun overnight."</blockquote>
+              <figcaption class="mt-4 flex items-center gap-3">
+                <span class="w-9 h-9 rounded-full flex items-center justify-center mono text-[12px]" style="background:rgba(230,149,42,0.18); color:var(--accent-2);">RP</span>
+                <span class="text-[12.5px]"><span class="font-semibold block" style="color:var(--ink);">Renata Pavlič</span><span style="color:var(--ink-3);">Denver, CO · 2 years in</span></span>
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <!-- FAQ -->
+        <div class="mt-16 grid lg:grid-cols-[0.5fr_1.5fr] gap-8 lg:gap-14">
+          <div>
+            <span class="eyebrow">Honest answers</span>
+            <h2 class="display mt-3 text-[28px] sm:text-[34px]">Before you book the visit</h2>
+            <p class="text-[14px] mt-3" style="color:var(--ink-2);">The questions homeowners actually ask us on the first call.</p>
+          </div>
+
+          <div class="divide-y" style="border-top:1px solid var(--rule); border-bottom:1px solid var(--rule);">
+            <details class="group">
+              <summary class="flex items-center justify-between gap-4 py-5">
+                <span class="display text-[17px]">How much will this actually cut my bill?</span>
+                <span class="faq-sign flex-none mono text-[20px]" style="color:var(--accent-2);">+</span>
+              </summary>
+              <p class="text-[14.5px] pb-5 max-w-[44rem]" style="color:var(--ink-2);">
+                It depends on your roof, your usage, and your utility's rates — which is exactly what the free design visit measures. Across our installs, homeowners see an average first-year reduction of $1,884, and many sunny-state homes cut 70–90% of their grid bill. Your design report shows a specific estimate for your address before you commit to anything.
+              </p>
+            </details>
+            <details class="group">
+              <summary class="flex items-center justify-between gap-4 py-5">
+                <span class="display text-[17px]">Does it keep the lights on in a blackout — for how long?</span>
+                <span class="faq-sign flex-none mono text-[20px]" style="color:var(--accent-2);">+</span>
+              </summary>
+              <p class="text-[14.5px] pb-5 max-w-[44rem]" style="color:var(--ink-2);">
+                Yes. When the grid drops, the battery takes over in under 20 milliseconds — fast enough that nothing in the house resets. A single 13.5 kWh battery covers an average home for around 14 hours of essentials, and through daylight the panels recharge it. Stack a second or third battery if you want to run more, or ride out longer outages without rationing.
+              </p>
+            </details>
+            <details class="group">
+              <summary class="flex items-center justify-between gap-4 py-5">
+                <span class="display text-[17px]">Who handles the permits and the utility paperwork?</span>
+                <span class="faq-sign flex-none mono text-[20px]" style="color:var(--accent-2);">+</span>
+              </summary>
+              <p class="text-[14.5px] pb-5 max-w-[44rem]" style="color:var(--ink-2);">
+                We do — it's part of the fixed quote, not an add-on. Sunhouse prepares and files the city building and electrical permits, and submits the utility interconnection application for your net-metering agreement and meter swap. We track each one through to approval and keep you posted in the app. In most cases you sign one or two forms and nothing else.
+              </p>
+            </details>
+            <details class="group">
+              <summary class="flex items-center justify-between gap-4 py-5">
+                <span class="display text-[17px]">Can I add more battery later?</span>
+                <span class="faq-sign flex-none mono text-[20px]" style="color:var(--accent-2);">+</span>
+              </summary>
+              <p class="text-[14.5px] pb-5 max-w-[44rem]" style="color:var(--ink-2);">
+                Yes — the system is built to grow. You can start with one 13.5 kWh battery and stack up to three units for a total of 40.5 kWh. The Helios H7 inverter and Sunlink gateway already support the full stack, so adding a battery later is a short visit, not a re-engineering job. Many homeowners expand when they buy an EV or add a heat pump.
+              </p>
+            </details>
+            <details class="group">
+              <summary class="flex items-center justify-between gap-4 py-5">
+                <span class="display text-[17px]">What's covered by the 12-year warranty?</span>
+                <span class="faq-sign flex-none mono text-[20px]" style="color:var(--accent-2);">+</span>
+              </summary>
+              <p class="text-[14.5px] pb-5 max-w-[44rem]" style="color:var(--ink-2);">
+                The 12-year system warranty covers the battery, the Helios H7 inverter, the Sunlink gateway, and the Sunhouse installation workmanship — including the roof penetrations we make. Panels carry a separate 25-year output guarantee, holding at least 87% of rated power at year 25. Our 24/7 monitoring usually flags a fault before you notice it, and warranty service is scheduled at no charge.
+              </p>
+            </details>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============ 12 · FINAL CTA ============ -->
+    <section id="quote" class="mesh dotgrid">
+      <div class="container-x py-[96px] md:py-[124px]">
+        <div class="rounded-[28px] border px-7 sm:px-14 py-14 text-center" style="border-color:var(--rule); background:linear-gradient(180deg,var(--card),var(--bg-2)); box-shadow:0 30px 60px -34px rgba(31,26,18,0.4);">
+          <span class="chip inline-flex items-center gap-2 px-3 py-1.5 mono text-[12px] mb-6" style="color:var(--ink-2);">
+            <span class="pulse-dot"></span>
+            Booking design visits this month
+          </span>
+          <h2 class="display text-[34px] sm:text-[46px] max-w-[24ch] mx-auto">
+            Find out what your roof is worth.
+          </h2>
+          <p class="mt-4 text-[16px] max-w-[40ch] mx-auto" style="color:var(--ink-2);">
+            A Sunhouse designer measures your roof, models your bill, and hands you one fixed number — with zero obligation to go ahead.
+          </p>
+          <div class="mt-8 flex flex-col sm:flex-row justify-center gap-3">
+            <a href="#quote" class="btn-primary rounded-full px-7 py-3.5 text-[15px] font-semibold">
+              Get a free design + quote
+            </a>
+            <a href="#app" class="btn-ghost rounded-full px-7 py-3.5 text-[15px] font-semibold inline-flex items-center justify-center gap-2">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <circle cx="7" cy="7" r="6.4" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M5.7 4.6L9.4 7l-3.7 2.4V4.6Z" fill="currentColor"/>
+              </svg>
+              Watch the film
+            </a>
+          </div>
+          <p class="mt-7 mono text-[12.5px]" style="color:var(--ink-3);">
+            Get your free design + quote · fixed price after the visit · 12-year warranty
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 13 · FOOTER ============ -->
+    <footer id="support" class="border-t" style="border-color:var(--rule); background:var(--bg-2);">
+      <div class="container-x py-16">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr] gap-10">
+
+          <div>
+            <a href="#top" class="flex items-center gap-2.5" aria-label="Sunhouse home">
+              <svg width="30" height="30" viewBox="0 0 30 30" fill="none" aria-hidden="true">
+                <rect x="0.6" y="0.6" width="28.8" height="28.8" rx="8" fill="#FFFCF5" stroke="rgba(0,0,0,0.08)"/>
+                <path d="M15 6.5L24 13v0.5H6V13L15 6.5Z" fill="#E6952A"/>
+                <rect x="9" y="13.5" width="12" height="9.5" rx="1.2" fill="#1F1A12"/>
+                <line x1="13" y1="13.5" x2="13" y2="23" stroke="#FBF7EE" stroke-width="0.9"/>
+                <line x1="17" y1="13.5" x2="17" y2="23" stroke="#FBF7EE" stroke-width="0.9"/>
+                <line x1="9" y1="17.3" x2="21" y2="17.3" stroke="#FBF7EE" stroke-width="0.9"/>
+                <circle cx="15" cy="9.4" r="1.5" fill="#FFFCF5"/>
+              </svg>
+              <span class="display text-[19px]">Sunhouse</span>
+            </a>
+            <p class="text-[13.5px] mt-4 max-w-[26rem]" style="color:var(--ink-2);">
+              Home solar and battery storage, designed and installed for one fixed quote. Built for homeowners who'd rather have a working roof than a stack of competing estimates.
+            </p>
+            <div class="mt-5 chip inline-flex items-center gap-2 px-3 py-1.5 mono text-[11px]" style="color:var(--accent-2);">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true"><path d="M5.5 1l1.3 2.6 2.9.4-2.1 2 .5 2.9-2.6-1.4-2.6 1.4.5-2.9-2.1-2 2.9-.4z" fill="#E6952A"/></svg>
+              CES Innovation Award 2026
+            </div>
+          </div>
+
+          <div>
+            <h4 class="mono text-[11px] tracking-widest mb-4" style="color:var(--ink-3);">PRODUCT</h4>
+            <ul class="space-y-2.5 text-[13.5px]" style="color:var(--ink-2);">
+              <li><a href="#product" class="ul-link">Solar panels</a></li>
+              <li><a href="#product" class="ul-link">Home battery</a></li>
+              <li><a href="#specs" class="ul-link">Technical specs</a></li>
+              <li><a href="#app" class="ul-link">The Sunhouse app</a></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 class="mono text-[11px] tracking-widest mb-4" style="color:var(--ink-3);">SUPPORT</h4>
+            <ul class="space-y-2.5 text-[13.5px]" style="color:var(--ink-2);">
+              <li><a href="#quote" class="ul-link">Book a design visit</a></li>
+              <li><a href="#support" class="ul-link">Help centre</a></li>
+              <li><a href="#support" class="ul-link">Warranty claims</a></li>
+              <li><a href="#support" class="ul-link">Contact a designer</a></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 class="mono text-[11px] tracking-widest mb-4" style="color:var(--ink-3);">COMPANY</h4>
+            <ul class="space-y-2.5 text-[13.5px]" style="color:var(--ink-2);">
+              <li><a href="#support" class="ul-link">About Sunhouse</a></li>
+              <li><a href="#support" class="ul-link">Installer careers</a></li>
+              <li><a href="#support" class="ul-link">Service areas</a></li>
+              <li><a href="#support" class="ul-link">Press kit</a></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 class="mono text-[11px] tracking-widest mb-4" style="color:var(--ink-3);">LEGAL</h4>
+            <ul class="space-y-2.5 text-[13.5px]" style="color:var(--ink-2);">
+              <li><a href="#support" class="ul-link">Warranty terms</a></li>
+              <li><a href="#support" class="ul-link">Privacy policy</a></li>
+              <li><a href="#support" class="ul-link">Financing disclosures</a></li>
+              <li><a href="#support" class="ul-link">Accessibility</a></li>
+            </ul>
+          </div>
+
+        </div>
+
+        <div class="mt-12 pt-7 border-t flex flex-col gap-2.5" style="border-color:var(--rule);">
+          <p class="text-[12.5px]" style="color:var(--ink-2);">
+            <span class="font-semibold" style="color:var(--ink);">12-year system warranty.</span>
+            Covers the battery, inverter, gateway, and installation workmanship; panels carry a separate 25-year output guarantee.
+          </p>
+          <p class="text-[12.5px] flex items-start gap-2" style="color:var(--ink-2);">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" class="mt-0.5 flex-none" aria-hidden="true">
+              <path d="M7 1.5l1.4 2.8M11.6 5.3L9 7.4M9.3 11.7L6.4 9.6M2 8.8l3.2-.6M4.5 2.3l1 3.1" stroke="#C2761A" stroke-width="1.3" stroke-linecap="round"/>
+            </svg>
+            Retired batteries and panels are collected free at end of life — over 96% of each Sunhouse system is recycled or repurposed.
+          </p>
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mt-2">
+            <p class="text-[12.5px]" style="color:var(--ink-3);">© 2026 Sunhouse Energy, Inc. All rights reserved.</p>
+            <p class="mono text-[11px]" style="color:var(--ink-3);">
+              Listed to UL 9540 · FCC ID: 2BJ-SH440H7 · Helios H7 hybrid inverter
+            </p>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+  </main>
+</body>
+</html>

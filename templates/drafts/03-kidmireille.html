@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>kid mireille — median (debut EP)</title>
+  <meta name="description" content="kid mireille — modern soul, brooklyn via lyon. debut EP 'median' streaming everywhere." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #1A1310;
+      --bg-deep: #0e0907;
+      --fg: #f3e7da;
+      --fg-faint: #a08c7c;
+      --fg-mute: #6e6055;
+      --accent: #D89B7C;
+      --accent-deep: #b97a5c;
+      --accent-bright: #ECBA9C;
+      --hair: rgba(243, 231, 218, 0.07);
+      --hair-strong: rgba(243, 231, 218, 0.15);
+    }
+    html, body { background: var(--bg); color: var(--fg); }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    .font-display { font-family: 'Fraunces', 'Cormorant Garamond', serif; }
+    .font-mono { font-family: 'Geist Mono', ui-monospace, monospace; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .display { letter-spacing: -0.022em; line-height: 0.98; }
+    .grain {
+      position: fixed; inset: 0; pointer-events: none; z-index: 50;
+      mix-blend-mode: overlay; opacity: 0.32;
+      background-image:
+        radial-gradient(rgba(255, 220, 200, 0.05) 1px, transparent 1px),
+        radial-gradient(rgba(0, 0, 0, 0.3) 1px, transparent 1px);
+      background-size: 3px 3px, 5px 5px;
+      background-position: 0 0, 1px 1px;
+    }
+    .scroll-fade {
+      background: linear-gradient(180deg, var(--bg) 0%, transparent 5%, transparent 95%, var(--bg) 100%);
+      pointer-events: none; position: fixed; inset: 0; z-index: 30;
+    }
+    .rose-glow {
+      box-shadow:
+        0 0 0 1px rgba(216, 155, 124, 0.18),
+        0 26px 80px -14px rgba(216, 155, 124, 0.28),
+        0 8px 28px -6px rgba(0, 0, 0, 0.65);
+    }
+    .pulse-wrap { position: relative; display: inline-flex; }
+    .pulse-wrap::before {
+      content: ''; position: absolute; inset: 0;
+      border-radius: 9999px;
+      background: var(--accent);
+      animation: pulse 1.8s ease-out infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.6; }
+      80% { transform: scale(2.6); opacity: 0; }
+      100% { opacity: 0; }
+    }
+    .lift { transition: transform 120ms ease, border-color 120ms ease, background 120ms ease, color 120ms ease; }
+    .lift:hover { transform: translateY(-1px); }
+    .link-btn {
+      background: rgba(243, 231, 218, 0.025);
+      border: 1px solid var(--hair);
+    }
+    .link-btn:hover {
+      background: rgba(216, 155, 124, 0.06);
+      border-color: rgba(216, 155, 124, 0.3);
+    }
+    .row { border-top: 1px solid var(--hair); }
+    .feature-card {
+      background:
+        radial-gradient(120% 80% at 50% 0%, rgba(216,155,124,0.07), transparent 60%),
+        rgba(243, 231, 218, 0.02);
+      border: 1px solid var(--hair);
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div class="grain" aria-hidden="true"></div>
+  <div class="scroll-fade" aria-hidden="true"></div>
+
+  <main class="relative z-10 mx-auto w-full max-w-[480px] px-5 pb-24 pt-10">
+
+    <!-- 1. Eyebrow -->
+    <div class="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 font-mono text-[10.5px] uppercase tracking-[0.18em]" style="color: var(--fg-faint);">
+      <span class="relative inline-flex h-1.5 w-1.5">
+        <span class="pulse-wrap inline-block h-1.5 w-1.5 rounded-full"></span>
+        <span class="absolute inset-0 inline-block h-1.5 w-1.5 rounded-full" style="background: var(--accent);"></span>
+      </span>
+      <span>DEBUT EP</span>
+      <span class="opacity-40">·</span>
+      <span class="font-display italic text-[12px]" style="color: var(--accent);">'Median'</span>
+      <span class="opacity-40">·</span>
+      <span>STREAMING NOW</span>
+    </div>
+
+    <!-- 2. Header block -->
+    <header class="mt-8 flex flex-col items-center text-center">
+      <!-- Monogram km in a soft sunset disc -->
+      <svg width="72" height="72" viewBox="0 0 72 72" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="disc03" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ECBA9C"/>
+            <stop offset="0.55" stop-color="#D89B7C"/>
+            <stop offset="1" stop-color="#7A4936"/>
+          </linearGradient>
+        </defs>
+        <circle cx="36" cy="36" r="32" fill="url(#disc03)" opacity="0.85"/>
+        <circle cx="36" cy="36" r="32" fill="none" stroke="#ECBA9C" stroke-width="0.5" stroke-opacity="0.4"/>
+        <!-- horizon line -->
+        <line x1="6" y1="36" x2="66" y2="36" stroke="#1A1310" stroke-width="1.2" stroke-opacity="0.55"/>
+        <!-- km in serif -->
+        <text x="36" y="46" text-anchor="middle" font-family="Fraunces" font-weight="500" font-size="22" fill="#1A1310">km</text>
+      </svg>
+      <h1 class="font-display display mt-5 text-[42px] font-medium">kid mireille</h1>
+      <div class="mt-2 font-mono text-[10px] uppercase tracking-[0.18em]" style="color: var(--fg-faint);">@kidmireille · brooklyn via lyon</div>
+      <p class="mt-5 max-w-[34ch] text-[13.5px] leading-[1.7]" style="color: var(--fg-faint);">
+        Singer, songwriter, sometimes producer. Brooklyn via Lyon. Soul that takes its time. Debut EP <em class="font-display not-italic" style="font-style:italic; color: var(--accent-bright);">Median</em> out now.
+      </p>
+
+      <!-- Stat strip -->
+      <div class="mt-6 grid w-full grid-cols-3 gap-2.5 text-center">
+        <div class="feature-card rounded-md px-2 py-3">
+          <div class="font-display text-[20px] font-medium tnum" style="color: var(--accent-bright);">412k</div>
+          <div class="mt-1 font-mono text-[8.5px] uppercase tracking-[0.16em]" style="color: var(--fg-mute);">Monthly</div>
+        </div>
+        <div class="feature-card rounded-md px-2 py-3">
+          <div class="font-display text-[20px] font-medium tnum" style="color: var(--accent-bright);">1.4M</div>
+          <div class="mt-1 font-mono text-[8.5px] uppercase tracking-[0.16em]" style="color: var(--fg-mute);">Cover views</div>
+        </div>
+        <div class="feature-card rounded-md px-2 py-3">
+          <div class="font-display text-[20px] font-medium tnum" style="color: var(--accent-bright);">12</div>
+          <div class="mt-1 font-mono text-[8.5px] uppercase tracking-[0.16em]" style="color: var(--fg-mute);">Tour dates</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- 3. Featured release tile -->
+    <section class="mt-12">
+      <div class="flex items-baseline justify-between font-mono text-[10px] uppercase tracking-[0.16em]" style="color: var(--fg-mute);">
+        <span>Featured release</span>
+        <span>OUT NOW</span>
+      </div>
+
+      <div class="mt-3 rose-glow overflow-hidden rounded-md">
+        <svg viewBox="0 0 440 440" width="100%" preserveAspectRatio="xMidYMid slice" aria-label="album art for median" class="block">
+          <defs>
+            <linearGradient id="sky03" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#2a1812"/>
+              <stop offset="0.45" stop-color="#5a382a"/>
+              <stop offset="0.5" stop-color="#7A4936"/>
+              <stop offset="1" stop-color="#1a0e08"/>
+            </linearGradient>
+            <radialGradient id="sun03" cx="0.5" cy="0.5" r="0.5">
+              <stop offset="0" stop-color="#ECBA9C"/>
+              <stop offset="0.6" stop-color="#D89B7C"/>
+              <stop offset="1" stop-color="#D89B7C" stop-opacity="0"/>
+            </radialGradient>
+            <linearGradient id="reflect03" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#D89B7C" stop-opacity="0.55"/>
+              <stop offset="1" stop-color="#D89B7C" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <rect width="440" height="440" fill="url(#sky03)"/>
+          <!-- horizon stripe -->
+          <line x1="0" y1="220" x2="440" y2="220" stroke="#ECBA9C" stroke-width="0.4" stroke-opacity="0.45"/>
+          <!-- sun half above, half below — median -->
+          <circle cx="220" cy="220" r="110" fill="url(#sun03)" opacity="0.95"/>
+          <!-- reflection ripples -->
+          <ellipse cx="220" cy="260" rx="140" ry="3" fill="url(#reflect03)"/>
+          <ellipse cx="220" cy="280" rx="120" ry="2" fill="url(#reflect03)" opacity="0.6"/>
+          <ellipse cx="220" cy="300" rx="90" ry="2" fill="url(#reflect03)" opacity="0.4"/>
+          <ellipse cx="220" cy="320" rx="60" ry="1.5" fill="url(#reflect03)" opacity="0.3"/>
+          <!-- film grain dots scattered -->
+          <g fill="#f3e7da" opacity="0.3">
+            <circle cx="60" cy="80" r="0.7"/><circle cx="120" cy="50" r="0.7"/><circle cx="180" cy="90" r="0.6"/>
+            <circle cx="290" cy="60" r="0.7"/><circle cx="350" cy="100" r="0.6"/><circle cx="400" cy="70" r="0.7"/>
+            <circle cx="80" cy="350" r="0.6"/><circle cx="160" cy="380" r="0.7"/><circle cx="260" cy="360" r="0.6"/>
+            <circle cx="340" cy="390" r="0.7"/><circle cx="400" cy="350" r="0.6"/>
+          </g>
+          <!-- title block -->
+          <g>
+            <text x="32" y="404" font-family="Fraunces" font-style="italic" font-size="36" font-weight="500" fill="#f3e7da">Median</text>
+            <text x="32" y="424" font-family="Geist Mono" font-size="9" letter-spacing="1.6" fill="#a08c7c">KID MIREILLE · EP · 2026</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="mt-5 flex items-baseline justify-between gap-3">
+        <div>
+          <div class="font-display text-[22px] font-medium leading-none" style="font-style:italic;">Median</div>
+          <div class="mt-2 font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">EP · 6 tracks · 24:08</div>
+        </div>
+        <div class="font-mono text-[10.5px] tnum" style="color: var(--accent);">OUT NOW</div>
+      </div>
+
+      <ol class="mt-5 font-mono text-[12px]" style="border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair);">
+        <li class="row flex items-center justify-between py-3" style="border-top: 0;">
+          <span class="flex items-center gap-3">
+            <span class="tnum w-5" style="color: var(--fg-mute);">01</span>
+            <span style="color: var(--accent-bright);">Median</span>
+            <span class="font-mono inline-flex items-center rounded-sm px-1.5 py-px text-[8.5px] tracking-[0.16em]" style="background: rgba(216,155,124,0.12); color: var(--accent);">TINY DESK</span>
+          </span>
+          <span class="tnum" style="color: var(--fg-faint);">3:48</span>
+        </li>
+        <li class="row flex items-center justify-between py-3">
+          <span class="flex items-center gap-3"><span class="tnum w-5" style="color: var(--fg-mute);">02</span><span>Lyon, July</span></span>
+          <span class="tnum" style="color: var(--fg-faint);">4:22</span>
+        </li>
+        <li class="row flex items-center justify-between py-3">
+          <span class="flex items-center gap-3"><span class="tnum w-5" style="color: var(--fg-mute);">03</span><span>Hold the Light</span></span>
+          <span class="tnum" style="color: var(--fg-faint);">3:54</span>
+        </li>
+        <li class="row flex items-center justify-between py-3">
+          <span class="flex items-center gap-3">
+            <span class="tnum w-5" style="color: var(--fg-mute);">04</span>
+            <span>Soft Forgiveness</span>
+            <span class="font-mono text-[8.5px] tracking-[0.14em]" style="color: var(--fg-mute);">feat. Iman</span>
+          </span>
+          <span class="tnum" style="color: var(--fg-faint);">4:14</span>
+        </li>
+        <li class="row flex items-center justify-between py-3">
+          <span class="flex items-center gap-3"><span class="tnum w-5" style="color: var(--fg-mute);">05</span><span>Mother Tongue</span></span>
+          <span class="tnum" style="color: var(--fg-faint);">4:02</span>
+        </li>
+        <li class="row flex items-center justify-between py-3">
+          <span class="flex items-center gap-3"><span class="tnum w-5" style="color: var(--fg-mute);">06</span><span>Slow Re-entry</span></span>
+          <span class="tnum" style="color: var(--fg-faint);">3:48</span>
+        </li>
+      </ol>
+
+      <div class="mt-4 grid grid-cols-2 gap-2 font-mono text-[10px] uppercase tracking-[0.14em]">
+        <a class="link-btn lift flex items-center justify-center gap-2 rounded-sm py-2.5" href="#">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0Zm3.5 11.4c-.2.3-.5.4-.8.2-2.1-1.3-4.8-1.6-7.9-.9-.4.1-.7-.2-.7-.5 0-.4.2-.7.5-.7 3.4-.8 6.4-.5 8.7 1 .4.2.4.6.2.9Zm.9-2.1c-.2.4-.6.5-1 .3-2.4-1.5-6-1.9-8.8-1-.4.1-.9-.1-1-.5-.1-.4.1-.9.5-1 3.2-1 7.2-.5 10 1.2.3.2.4.6.3 1Zm.1-2.2C9.7 5.4 4.9 5.2 2.2 6c-.5.2-1-.1-1.2-.6-.2-.5.1-1 .6-1.2C4.7 3.3 10 3.5 13.5 5.6c.4.3.6.9.3 1.3-.3.5-.9.6-1.3.3Z"/></svg>
+          Spotify
+        </a>
+        <a class="link-btn lift flex items-center justify-center gap-2 rounded-sm py-2.5" href="#">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="7.4" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5.8 4.4v6.4c-.4-.2-.9-.2-1.3 0-.7.2-1.1.9-.9 1.5.2.6 1 .8 1.7.5.5-.2.8-.6.8-1V6.7l3.5-.9v3.7c-.4-.2-.9-.2-1.3-.1-.7.2-1.1.9-.9 1.5.2.7 1 .9 1.7.6.5-.2.8-.7.8-1V4z"/></svg>
+          Apple Music
+        </a>
+        <a class="link-btn lift flex items-center justify-center gap-2 rounded-sm py-2.5" href="#">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="8" cy="8" r="7"/><path d="M3.5 6h9l-2 4h-9z" fill="currentColor"/></svg>
+          Bandcamp
+        </a>
+        <a class="link-btn lift flex items-center justify-center gap-2 rounded-sm py-2.5" href="#">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="7.4" fill="none" stroke="currentColor" stroke-width="0.8"/><path d="M5.4 5.6 L11 8 L5.4 10.4 Z"/></svg>
+          Tidal
+        </a>
+      </div>
+    </section>
+
+    <!-- 4. Link stack -->
+    <section class="mt-14">
+      <div class="font-mono text-[10px] uppercase tracking-[0.16em]" style="color: var(--fg-mute);">Listen · watch · follow</div>
+      <div class="mt-3 space-y-2.5">
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute);">01</span>
+            <span class="font-display text-[15.5px] font-medium" style="font-style: italic;">Listen on Spotify</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em] tnum" style="color: var(--fg-faint);">412k monthly</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute);">02</span>
+            <span class="font-display text-[15.5px] font-medium" style="font-style: italic;">Apple Music · editorial</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">Up Next</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute);">03</span>
+            <span class="font-display text-[15.5px] font-medium" style="font-style: italic;">Bandcamp · digital</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em] tnum" style="color: var(--fg-faint);">$7</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute);">04</span>
+            <span class="font-display text-[15.5px] font-medium" style="font-style: italic;">YouTube · cover series</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em] tnum" style="color: var(--fg-faint);">1.4M views</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute);">05</span>
+            <span class="font-display text-[15.5px] font-medium" style="font-style: italic;">Instagram — process clips</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em] tnum" style="color: var(--fg-faint);">82k</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute);">06</span>
+            <span class="font-display text-[15.5px] font-medium" style="font-style: italic;">US tour 2026</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">12 dates</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute);">07</span>
+            <span class="font-display text-[15.5px] font-medium" style="font-style: italic;">Press — NPR Tiny Desk</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">Feb 2026</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute);">08</span>
+            <span class="font-display text-[15.5px] font-medium" style="font-style: italic;">Mailing list — early demos</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">~monthly</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- 5. Tour strip -->
+    <section class="mt-14">
+      <div class="flex items-baseline justify-between font-mono text-[10px] uppercase tracking-[0.16em]" style="color: var(--fg-mute);">
+        <span>US tour — spring 2026</span>
+        <span>12 dates · Brooklyn → Vancouver</span>
+      </div>
+      <div class="mt-3 font-mono text-[11px]" style="border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair);">
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-3 tnum">15 APR</span>
+          <span class="col-span-3">Brooklyn</span>
+          <span class="col-span-4 truncate" style="color: var(--fg-faint);">Music Hall of Williamsburg</span>
+          <span class="col-span-2 text-right" style="color: var(--fg-mute);">SOLD OUT</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-3 tnum">17 APR</span>
+          <span class="col-span-3">Boston</span>
+          <span class="col-span-4 truncate" style="color: var(--fg-faint);">Royale</span>
+          <span class="col-span-2 text-right" style="color: var(--accent);">TICKETS</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-3 tnum">20 APR</span>
+          <span class="col-span-3">Philly</span>
+          <span class="col-span-4 truncate" style="color: var(--fg-faint);">Union Transfer</span>
+          <span class="col-span-2 text-right" style="color: var(--accent);">TICKETS</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-3 tnum">23 APR</span>
+          <span class="col-span-3">DC</span>
+          <span class="col-span-4 truncate" style="color: var(--fg-faint);">9:30 Club</span>
+          <span class="col-span-2 text-right" style="color: var(--accent);">FEW LEFT</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-3 tnum">26 APR</span>
+          <span class="col-span-3">Atlanta</span>
+          <span class="col-span-4 truncate" style="color: var(--fg-faint);">Variety Playhouse</span>
+          <span class="col-span-2 text-right" style="color: var(--accent);">TICKETS</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-3 tnum">29 APR</span>
+          <span class="col-span-3">Nashville</span>
+          <span class="col-span-4 truncate" style="color: var(--fg-faint);">Brooklyn Bowl</span>
+          <span class="col-span-2 text-right" style="color: var(--accent);">TICKETS</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-3 tnum">02 MAY</span>
+          <span class="col-span-3">Chicago</span>
+          <span class="col-span-4 truncate" style="color: var(--fg-faint);">Thalia Hall</span>
+          <span class="col-span-2 text-right" style="color: var(--fg-mute);">SOLD OUT</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-3 tnum">05 MAY</span>
+          <span class="col-span-3">Minneapolis</span>
+          <span class="col-span-4 truncate" style="color: var(--fg-faint);">First Avenue · 7th St</span>
+          <span class="col-span-2 text-right" style="color: var(--accent);">TICKETS</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-3 tnum">08 MAY</span>
+          <span class="col-span-3">Denver</span>
+          <span class="col-span-4 truncate" style="color: var(--fg-faint);">Bluebird Theater</span>
+          <span class="col-span-2 text-right" style="color: var(--accent);">TICKETS</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-3 tnum">12 MAY</span>
+          <span class="col-span-3">Portland</span>
+          <span class="col-span-4 truncate" style="color: var(--fg-faint);">Wonder Ballroom</span>
+          <span class="col-span-2 text-right" style="color: var(--accent);">TICKETS</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-3 tnum">14 MAY</span>
+          <span class="col-span-3">Seattle</span>
+          <span class="col-span-4 truncate" style="color: var(--fg-faint);">Neumos</span>
+          <span class="col-span-2 text-right" style="color: var(--accent);">TICKETS</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5">
+          <span class="col-span-3 tnum">17 MAY</span>
+          <span class="col-span-3">Vancouver</span>
+          <span class="col-span-4 truncate" style="color: var(--fg-faint);">Commodore Ballroom</span>
+          <span class="col-span-2 text-right" style="color: var(--accent);">TICKETS</span>
+        </div>
+      </div>
+      <div class="mt-2 text-right font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-mute);">
+        Support: yaya bey · sasha keable · mereba
+      </div>
+    </section>
+
+    <!-- 6. Social row -->
+    <section class="mt-14">
+      <div class="mx-auto flex max-w-[300px] items-center justify-between" style="color: var(--fg-faint);">
+        <a href="#" class="lift" aria-label="Spotify"><svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0Zm3.5 11.4c-.2.3-.5.4-.8.2-2.1-1.3-4.8-1.6-7.9-.9-.4.1-.7-.2-.7-.5 0-.4.2-.7.5-.7 3.4-.8 6.4-.5 8.7 1 .4.2.4.6.2.9Zm.9-2.1c-.2.4-.6.5-1 .3-2.4-1.5-6-1.9-8.8-1-.4.1-.9-.1-1-.5-.1-.4.1-.9.5-1 3.2-1 7.2-.5 10 1.2.3.2.4.6.3 1Zm.1-2.2C9.7 5.4 4.9 5.2 2.2 6c-.5.2-1-.1-1.2-.6-.2-.5.1-1 .6-1.2C4.7 3.3 10 3.5 13.5 5.6c.4.3.6.9.3 1.3-.3.5-.9.6-1.3.3Z"/></svg></a>
+        <a href="#" class="lift" aria-label="Apple Music"><svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="7.4" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5.8 4.4v6.4c-.4-.2-.9-.2-1.3 0-.7.2-1.1.9-.9 1.5.2.6 1 .8 1.7.5.5-.2.8-.6.8-1V6.7l3.5-.9v3.7c-.4-.2-.9-.2-1.3-.1-.7.2-1.1.9-.9 1.5.2.7 1 .9 1.7.6.5-.2.8-.7.8-1V4z"/></svg></a>
+        <a href="#" class="lift" aria-label="Bandcamp"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="8" cy="8" r="7"/><path d="M3.5 6h9l-2 4h-9z" fill="currentColor"/></svg></a>
+        <a href="#" class="lift" aria-label="YouTube"><svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M1 4.5c0-.8.6-1.4 1.4-1.5C4 2.8 6 2.7 8 2.7s4 .1 5.6.3c.8.1 1.4.7 1.4 1.5v6.9c0 .8-.6 1.4-1.4 1.5-1.6.2-3.6.3-5.6.3s-4-.1-5.6-.3C1.6 12.8 1 12.2 1 11.4z"/><polygon points="6.5,5.6 6.5,10.4 11,8" fill="#1A1310"/></svg></a>
+        <a href="#" class="lift" aria-label="Instagram"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="12" height="12" rx="3"/><circle cx="8" cy="8" r="2.6"/><circle cx="11.4" cy="4.6" r="0.6" fill="currentColor"/></svg></a>
+        <a href="#" class="lift" aria-label="TikTok"><svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M11 1.5v6.7a2.8 2.8 0 1 1-2.8-2.8V8a1 1 0 1 0 1 1V1.5h1.8z"/></svg></a>
+        <a href="#" class="lift" aria-label="Mailing list"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="3.5" width="13" height="9" rx="1"/><path d="m1.5 4.5 6.5 5 6.5-5"/></svg></a>
+      </div>
+    </section>
+
+    <!-- 7. Footer microline -->
+    <footer class="mt-14 text-center font-mono text-[10px] uppercase tracking-[0.18em]" style="color: var(--fg-mute);">
+      <div>Released via Slow Hand Records · 2026</div>
+      <div class="mt-1.5">Booking — booking@slowhand.co · Press — press@kidmireille.com</div>
+      <div class="mt-3 opacity-55">© 2026 kid mireille · brooklyn / lyon</div>
+    </footer>
+  </main>
+</body>
+</html>

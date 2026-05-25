@@ -6,6 +6,8 @@
 //
 // Usage: BASE=http://localhost:3000 node scripts/sanity-smoke.mjs
 
+export {}; // module scope — isolates this script's top-level `main()`
+
 const BASE = process.env.BASE || "http://localhost:3000";
 
 interface Check {

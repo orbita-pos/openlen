@@ -1,0 +1,335 @@
+<!doctype html>
+<!-- Variant 02: marie b — indie hacker, 4 small SaaS, lifestyle business -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>marie b · indie</title>
+<meta name="description" content="Indie maker. 4 small SaaS. Solo, no funding. Barcelona." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --bg: #F6F2E8;
+    --paper: #FBF8F0;
+    --ink: #1F1A14;
+    --ink-soft: #5C5043;
+    --ink-faint: #9A8D7C;
+    --accent: #B5694F;
+    --accent-soft: rgba(181, 105, 79, 0.10);
+    --rule: rgba(31, 26, 20, 0.085);
+    --rule-soft: rgba(31, 26, 20, 0.045);
+  }
+  html, body { background: var(--bg); color: var(--ink); }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image: radial-gradient(circle, rgba(31,26,20,0.045) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  .display { letter-spacing: -0.028em; }
+  .tabnum { font-variant-numeric: tabular-nums; }
+
+  .link-btn {
+    transition: transform 0.12s ease, border-color 0.12s ease, background-color 0.12s ease;
+  }
+  .link-btn:hover {
+    transform: translateY(-1px);
+    border-color: rgba(31,26,20,0.20);
+    background-color: rgba(31,26,20,0.022);
+  }
+  .link-btn:active { transform: translateY(0); }
+
+  .cta {
+    background: var(--ink);
+    color: #F6F2E8;
+    transition: transform 0.12s ease, background 0.12s ease;
+  }
+  .cta:hover { transform: translateY(-1px); background: #2D2620; }
+
+  .pulse {
+    position: relative;
+    border-radius: 9999px;
+    background: var(--accent);
+    width: 6px;
+    height: 6px;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .pulse::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: 0 0 0 0 rgba(181, 105, 79, 0.45);
+    animation: pulse-ring 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  .pulse-sm { width: 4px; height: 4px; }
+  @keyframes pulse-ring {
+    0%   { box-shadow: 0 0 0 0 rgba(181, 105, 79, 0.45); }
+    70%  { box-shadow: 0 0 0 7px rgba(181, 105, 79, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(181, 105, 79, 0); }
+  }
+
+  .mark {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    box-shadow: 0 1px 0 0 rgba(31,26,20,0.025), inset 0 0 0 1px rgba(255,255,255,0.5);
+  }
+
+  .tile {
+    background: linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 100%), var(--paper);
+    border: 1px solid var(--rule);
+    box-shadow: 0 1px 0 0 rgba(31,26,20,0.022);
+  }
+
+  .rev-badge {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: 1px solid rgba(181, 105, 79, 0.18);
+  }
+
+  ::selection { background: rgba(181, 105, 79, 0.22); color: var(--ink); }
+
+  .ship-table { border-collapse: collapse; width: 100%; }
+  .ship-table td { padding: 0.6rem 0; border-top: 1px solid var(--rule-soft); vertical-align: middle; }
+  .ship-table tr:first-child td { border-top: 0; padding-top: 0.25rem; }
+  .ship-table .col-status { width: 4rem; }
+  .ship-table .col-rev { width: 6.6rem; text-align: right; }
+  .ship-table .col-date { width: 3rem; text-align: right; }
+</style>
+</head>
+<body class="min-h-screen">
+  <main class="mx-auto w-full max-w-[480px] px-5 sm:px-6 pt-14 pb-16">
+
+    <div class="mono text-[10.5px] tabnum tracking-[0.14em] text-[color:var(--ink-faint)] uppercase mb-9 flex items-center gap-2">
+      <span class="pulse"></span>
+      <span>INDIE&nbsp;·&nbsp;4 PROJECTS LIVE&nbsp;·&nbsp;$6,428 MRR&nbsp;·&nbsp;BCN</span>
+    </div>
+
+    <header class="flex items-start gap-3.5 mb-3.5">
+      <div class="mark w-16 h-16 rounded-[10px] flex items-center justify-center shrink-0">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <rect x="3.5" y="3.5" width="11" height="11" rx="2" fill="#B5694F"/>
+          <rect x="17.5" y="3.5" width="11" height="11" rx="2" stroke="#B5694F" stroke-width="1.6"/>
+          <rect x="3.5" y="17.5" width="11" height="11" rx="2" stroke="#B5694F" stroke-width="1.6"/>
+          <rect x="17.5" y="17.5" width="11" height="11" rx="2" stroke="#B5694F" stroke-width="1.6"/>
+        </svg>
+      </div>
+      <div class="pt-1 min-w-0">
+        <h1 class="display text-[28px] font-semibold leading-[1.05]">marie b</h1>
+        <div class="mono text-[12px] text-[color:var(--ink-soft)] mt-1">@marieb&nbsp;·&nbsp;est. 2022</div>
+      </div>
+    </header>
+
+    <p class="text-[14.5px] leading-[1.55] text-[color:var(--ink-soft)] mb-8">
+      Indie maker. Small SaaS that solve specific problems. Solo, no funding, no employees, no pivots. Barcelona.
+    </p>
+
+    <section class="tile rounded-xl p-5 mb-7">
+      <div class="flex items-center justify-between mb-2.5">
+        <div class="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--ink-faint)]">NOW SHIPPING</div>
+        <div class="mono text-[10px] tabnum text-[color:var(--ink-faint)] flex items-center gap-1.5">
+          <span class="pulse pulse-sm"></span>
+          v2.1&nbsp;·&nbsp;MAC ONLY
+        </div>
+      </div>
+
+      <h2 class="display text-[20px] font-semibold leading-tight mb-1.5">scriptface.com</h2>
+      <p class="text-[13.5px] leading-[1.5] text-[color:var(--ink-soft)] mb-4">
+        Desktop screen recorder with AI captions. <span class="mono text-[12px]">$14/mo</span>, Mac-only, no team plans, no enterprise.
+      </p>
+
+      <div class="grid grid-cols-4 gap-x-3 mono text-[12px] tabnum py-2.5"
+           style="border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);">
+        <div>
+          <div class="text-[color:var(--ink-faint)] text-[9.5px] uppercase tracking-[0.1em] mb-0.5">MRR</div>
+          <div class="text-[color:var(--ink)] font-medium">$4,368</div>
+        </div>
+        <div>
+          <div class="text-[color:var(--ink-faint)] text-[9.5px] uppercase tracking-[0.1em] mb-0.5">USERS</div>
+          <div class="text-[color:var(--ink)] font-medium">312</div>
+        </div>
+        <div>
+          <div class="text-[color:var(--ink-faint)] text-[9.5px] uppercase tracking-[0.1em] mb-0.5">VER</div>
+          <div class="text-[color:var(--ink)] font-medium">2.1</div>
+        </div>
+        <div>
+          <div class="text-[color:var(--ink-faint)] text-[9.5px] uppercase tracking-[0.1em] mb-0.5">CHURN</div>
+          <div class="text-[color:var(--ink)] font-medium">2.4%</div>
+        </div>
+      </div>
+
+      <div class="mt-4 mb-4">
+        <div class="flex items-center justify-between mono text-[9.5px] tabnum text-[color:var(--ink-faint)] uppercase tracking-[0.1em] mb-1.5">
+          <span>SIGNUPS&nbsp;·&nbsp;LAST 30 DAYS</span>
+          <span>+84 NET</span>
+        </div>
+        <svg class="sparkline w-full block" viewBox="0 0 240 48" preserveAspectRatio="none"
+             data-spark="[6,4,7,5,8,6,9,7,5,8,11,7,9,6,10,12,8,11,9,7,10,13,11,9,12,10,14,11,13,15]"></svg>
+      </div>
+
+      <a href="https://scriptface.com" class="cta block text-center mono text-[12px] tabnum uppercase tracking-[0.12em] py-3 rounded-md font-medium">
+        Try scriptface · 14-day free&nbsp;&nbsp;↗
+      </a>
+    </section>
+
+    <nav class="space-y-2 mb-9" aria-label="Links">
+
+      <a href="#" class="link-btn flex items-center justify-between gap-3 px-4 py-3.5 rounded-lg border" style="border-color: var(--rule)">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <span class="pulse shrink-0"></span>
+          <span class="text-[14px] font-medium shrink-0">scriptface.com</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-faint)] truncate">·&nbsp;screen recorder</span>
+        </div>
+        <span class="mono text-[10px] tabnum rev-badge px-1.5 py-0.5 rounded shrink-0">$4.4k MRR</span>
+      </a>
+
+      <a href="#" class="link-btn flex items-center justify-between gap-3 px-4 py-3.5 rounded-lg border" style="border-color: var(--rule)">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="shrink-0 opacity-55"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6M7 17h4"/></svg>
+          <span class="text-[14px] font-medium shrink-0">kanrai.app</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-faint)] truncate">·&nbsp;invoice generator</span>
+        </div>
+        <span class="mono text-[10px] tabnum rev-badge px-1.5 py-0.5 rounded shrink-0">$1.2k MRR</span>
+      </a>
+
+      <a href="#" class="link-btn flex items-center justify-between gap-3 px-4 py-3.5 rounded-lg border" style="border-color: var(--rule)">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="shrink-0 opacity-55"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          <span class="text-[14px] font-medium shrink-0">ticktock.tools</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-faint)] truncate">·&nbsp;meeting-cost timer</span>
+        </div>
+        <span class="mono text-[10px] tabnum rev-badge px-1.5 py-0.5 rounded shrink-0">$612 MRR</span>
+      </a>
+
+      <a href="#" class="link-btn flex items-center justify-between gap-3 px-4 py-3.5 rounded-lg border" style="border-color: var(--rule)">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="shrink-0 opacity-55"><path d="M4 4h16v16H4z"/><path d="M9 9l6 6M15 9l-6 6"/></svg>
+          <span class="text-[14px] font-medium shrink-0">draft.review</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-faint)] truncate">·&nbsp;grammar API</span>
+        </div>
+        <span class="mono text-[10px] tabnum rev-badge px-1.5 py-0.5 rounded shrink-0">$264 MRR</span>
+      </a>
+
+      <a href="#" class="link-btn flex items-center justify-between gap-3 px-4 py-3.5 rounded-lg border" style="border-color: var(--rule)">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="shrink-0 opacity-65"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          <span class="text-[14px] font-medium shrink-0">Twitter</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-faint)] truncate">·&nbsp;build logs&nbsp;·&nbsp;weekly MRR</span>
+        </div>
+        <span class="text-[color:var(--ink-faint)] mono text-[12px] shrink-0">↗</span>
+      </a>
+
+      <a href="#" class="link-btn flex items-center justify-between gap-3 px-4 py-3.5 rounded-lg border" style="border-color: var(--rule)">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="shrink-0 opacity-55"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="m3 7 9 6 9-6"/></svg>
+          <span class="text-[14px] font-medium shrink-0">Newsletter</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-faint)] truncate">·&nbsp;monthly&nbsp;·&nbsp;4,128 readers</span>
+        </div>
+        <span class="text-[color:var(--ink-faint)] mono text-[12px] shrink-0">↗</span>
+      </a>
+
+      <a href="#" class="link-btn flex items-center justify-between gap-3 px-4 py-3.5 rounded-lg border" style="border-color: var(--rule)">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="shrink-0 opacity-55"><circle cx="5.5" cy="18.5" r="2.5"/><path d="M2 8a14 14 0 0 1 14 14h-3A11 11 0 0 0 2 11V8z"/><path d="M2 2a20 20 0 0 1 20 20h-3A17 17 0 0 0 2 5V2z"/></svg>
+          <span class="text-[14px] font-medium shrink-0">RSS</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-faint)] truncate">·&nbsp;blog feed</span>
+        </div>
+        <span class="text-[color:var(--ink-faint)] mono text-[12px] shrink-0">↗</span>
+      </a>
+
+    </nav>
+
+    <section class="mb-8">
+      <div class="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--ink-faint)] mb-3 flex items-center justify-between">
+        <span>SHIPPED</span>
+        <span class="tabnum">4 LIVE&nbsp;·&nbsp;$6,428 MRR</span>
+      </div>
+      <table class="ship-table mono text-[12px] tabnum">
+        <tbody>
+          <tr>
+            <td class="text-[color:var(--ink)] font-medium">scriptface</td>
+            <td class="col-status text-[color:var(--ink-soft)]">LIVE</td>
+            <td class="col-rev text-[color:var(--ink)]">$4,368&nbsp;MRR</td>
+            <td class="col-date text-[color:var(--ink-faint)]">'24</td>
+          </tr>
+          <tr>
+            <td class="text-[color:var(--ink)] font-medium">kanrai</td>
+            <td class="col-status text-[color:var(--ink-soft)]">LIVE</td>
+            <td class="col-rev text-[color:var(--ink)]">$1,184&nbsp;MRR</td>
+            <td class="col-date text-[color:var(--ink-faint)]">'23</td>
+          </tr>
+          <tr>
+            <td class="text-[color:var(--ink)] font-medium">ticktock</td>
+            <td class="col-status text-[color:var(--ink-soft)]">LIVE</td>
+            <td class="col-rev text-[color:var(--ink)]">$612&nbsp;MRR</td>
+            <td class="col-date text-[color:var(--ink-faint)]">'22</td>
+          </tr>
+          <tr>
+            <td class="text-[color:var(--ink)] font-medium">draft</td>
+            <td class="col-status text-[color:var(--ink-soft)]">LIVE</td>
+            <td class="col-rev text-[color:var(--ink)]">$264&nbsp;MRR</td>
+            <td class="col-date text-[color:var(--ink-faint)]">'25</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <div class="flex items-center gap-5 mb-7" aria-label="Social">
+      <a href="#" aria-label="Twitter" class="text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] transition-colors">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      </a>
+      <a href="#" aria-label="GitHub" class="text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] transition-colors">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.7-3.87-1.54-3.87-1.54-.52-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.26.73-1.55-2.56-.29-5.25-1.28-5.25-5.71 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.18 1.18.92-.26 1.91-.39 2.89-.39s1.97.13 2.89.39c2.21-1.49 3.18-1.18 3.18-1.18.63 1.58.23 2.75.11 3.04.74.81 1.19 1.84 1.19 3.1 0 4.44-2.7 5.42-5.27 5.7.41.36.78 1.07.78 2.16 0 1.56-.01 2.81-.01 3.19 0 .31.21.68.8.56C20.21 21.38 23.5 17.07 23.5 12 23.5 5.65 18.35.5 12 .5z"/></svg>
+      </a>
+      <a href="#" aria-label="Bluesky" class="text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] transition-colors">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M5.2 3.4c2.7 2 5.7 6.1 6.8 8.3 1.1-2.2 4.1-6.3 6.8-8.3 1.9-1.5 5.2-2.6 5.2 1.2 0 .8-.4 6.4-.7 7.3-.9 3.2-4.2 4-7.1 3.5 5.1.9 6.4 3.8 3.6 6.7-5.4 5.5-7.7-1.4-8.3-3.2-.1-.3-.2-.5-.2-.3 0-.2-.1 0-.2.3-.6 1.8-2.9 8.7-8.3 3.2-2.8-2.9-1.5-5.8 3.6-6.7-2.9.5-6.2-.3-7.1-3.5-.3-.9-.7-6.5-.7-7.3 0-3.8 3.3-2.7 5.2-1.2z"/></svg>
+      </a>
+      <a href="#" aria-label="LinkedIn" class="text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] transition-colors">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.4 20.4h-3.6v-5.6c0-1.3 0-3-1.9-3s-2.1 1.5-2.1 2.9v5.7H9.2V9h3.5v1.6h.1c.5-.9 1.7-1.9 3.5-1.9 3.7 0 4.4 2.4 4.4 5.6zM5.4 7.4a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2zM7.2 20.4H3.6V9h3.6z"/></svg>
+      </a>
+      <a href="#" aria-label="YouTube" class="text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] transition-colors">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.5a3 3 0 0 0-2.1-2.1C19.5 4 12 4 12 4s-7.5 0-9.4.4A3 3 0 0 0 .5 6.5C0 8.4 0 12 0 12s0 3.6.5 5.5a3 3 0 0 0 2.1 2.1c1.9.4 9.4.4 9.4.4s7.5 0 9.4-.4a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.5.5-5.5s0-3.6-.5-5.5zM9.6 15.6V8.4l6.3 3.6z"/></svg>
+      </a>
+      <a href="#" aria-label="RSS" class="text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] transition-colors">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5.5" cy="18.5" r="2.5"/><path d="M2 8a14 14 0 0 1 14 14h-3A11 11 0 0 0 2 11V8z"/><path d="M2 2a20 20 0 0 1 20 20h-3A17 17 0 0 0 2 5V2z"/></svg>
+      </a>
+    </div>
+
+    <footer class="mono text-[10.5px] tracking-[0.06em] text-[color:var(--ink-faint)] pt-4" style="border-top: 1px solid var(--rule);">
+      Barcelona&nbsp;·&nbsp;solo&nbsp;·&nbsp;no funding&nbsp;·&nbsp;not for sale
+    </footer>
+
+  </main>
+
+<script>
+(function(){
+  document.querySelectorAll('.sparkline').forEach(function(svg){
+    var data = JSON.parse(svg.dataset.spark);
+    var w = 240, h = 48, padX = 2, padTop = 4, padBot = 3;
+    var max = Math.max.apply(null, data), min = Math.min.apply(null, data);
+    var range = max - min || 1;
+    var sx = (w - padX*2) / (data.length - 1);
+    var pts = data.map(function(v, i){
+      var x = padX + i*sx;
+      var y = h - padBot - ((v - min) / range) * (h - padTop - padBot);
+      return [x, y];
+    });
+    var line = 'M' + pts.map(function(p){ return p[0].toFixed(2) + ',' + p[1].toFixed(2); }).join(' L');
+    var area = line + ' L' + (w-padX).toFixed(2) + ',' + (h-padBot).toFixed(2) + ' L' + padX.toFixed(2) + ',' + (h-padBot).toFixed(2) + ' Z';
+    var last = pts[pts.length - 1];
+    svg.innerHTML =
+      '<path d="' + area + '" fill="var(--accent)" opacity="0.10"/>' +
+      '<path d="' + line + '" stroke="var(--accent)" stroke-width="1.5" fill="none" stroke-linejoin="round" stroke-linecap="round"/>' +
+      '<circle cx="' + last[0].toFixed(2) + '" cy="' + last[1].toFixed(2) + '" r="2.4" fill="var(--accent)"/>' +
+      '<circle cx="' + last[0].toFixed(2) + '" cy="' + last[1].toFixed(2) + '" r="4.5" fill="var(--accent)" opacity="0.18"/>';
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>noor lev · @noorlev.movement · The 6-week intensive</title>
+<meta name="description" content="Contemporary dance artist. Online masterclasses + 6-week intensive twice a year.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #160A0E;
+    --accent: #C18B92;
+    --accent-soft: #D6A8AD;
+    --cream: #F4ECEA;
+    --cream-faint: rgba(244, 236, 234, 0.62);
+    --cream-dim: rgba(244, 236, 234, 0.38);
+    --hairline: rgba(244, 236, 234, 0.07);
+    --hairline-accent: rgba(193, 139, 146, 0.24);
+  }
+  html, body { background: var(--bg); }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--cream);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+    -webkit-font-smoothing: antialiased;
+  }
+  .serif { font-family: 'Cormorant Garamond', serif; font-style: italic; letter-spacing: -0.015em; }
+  .mono { font-family: 'JetBrains Mono', monospace; font-feature-settings: "tnum"; letter-spacing: 0.06em; }
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  .bg-mesh {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(ellipse 85% 60% at 50% -8%, rgba(193, 139, 146, 0.11), transparent 62%),
+      radial-gradient(ellipse 80% 50% at 50% 110%, rgba(193, 139, 146, 0.07), transparent 65%),
+      radial-gradient(ellipse 40% 28% at 18% 32%, rgba(150, 90, 100, 0.05), transparent 70%);
+  }
+  .grain {
+    position: fixed; inset: 0; pointer-events: none; z-index: 1; opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='0.7'/%3E%3C/svg%3E");
+  }
+
+  .avatar-glow {
+    position: absolute; inset: -22px;
+    background: radial-gradient(circle, rgba(193, 139, 146, 0.32), transparent 65%);
+    filter: blur(22px); z-index: -1;
+  }
+  .avatar-ring {
+    background: conic-gradient(from 210deg, rgba(193, 139, 146, 0.6), rgba(193, 139, 146, 0.08) 35%, rgba(193, 139, 146, 0.6));
+    padding: 1.5px; border-radius: 9999px;
+  }
+  .avatar-inner {
+    width: 112px; height: 112px; border-radius: 9999px;
+    background:
+      radial-gradient(circle at 38% 30%, rgba(244, 236, 234, 0.72), transparent 42%),
+      radial-gradient(circle at 70% 70%, rgba(140, 70, 85, 0.6), transparent 52%),
+      linear-gradient(140deg, #5E2C3A 0%, #2D141C 55%, #170A10 100%);
+    filter: saturate(0.95);
+  }
+
+  .pulse-dot { position: relative; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .pulse-dot::after {
+    content: ""; position: absolute; inset: -3px; border-radius: 50%;
+    background: var(--accent); opacity: 0.5; animation: pulse 2.2s ease-out infinite;
+  }
+  @keyframes pulse { 0%{transform:scale(1);opacity:0.5} 100%{transform:scale(2.6);opacity:0} }
+
+  .featured {
+    position: relative;
+    background: linear-gradient(180deg, rgba(193, 139, 146, 0.07), rgba(193, 139, 146, 0.015));
+    border: 1px solid rgba(193, 139, 146, 0.3);
+    border-radius: 20px;
+    box-shadow: inset 0 0 60px -12px rgba(193, 139, 146, 0.14);
+  }
+  .featured-glow {
+    position: absolute; inset: -36px -20px;
+    background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(193, 139, 146, 0.22), transparent 70%);
+    filter: blur(34px); z-index: -1; pointer-events: none;
+  }
+
+  .cta {
+    background: linear-gradient(180deg, #D6A0A6 0%, #B07A82 100%);
+    color: #170A10; font-weight: 600;
+    transition: transform 120ms ease, box-shadow 200ms ease, filter 120ms ease;
+    box-shadow: 0 4px 22px -6px rgba(193, 139, 146, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  }
+  .cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 32px -6px rgba(193, 139, 146, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    filter: brightness(1.04);
+  }
+
+  .link-btn {
+    position: relative; display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px; border-radius: 14px;
+    background: rgba(244, 236, 234, 0.025);
+    border: 1px solid var(--hairline);
+    transition: transform 120ms ease, background 120ms ease, border-color 120ms ease, box-shadow 220ms ease;
+    color: var(--cream);
+  }
+  .link-btn:hover {
+    transform: translateY(-1px);
+    background: rgba(193, 139, 146, 0.055);
+    border-color: var(--hairline-accent);
+    box-shadow: 0 8px 28px -10px rgba(193, 139, 146, 0.32);
+  }
+  .link-btn .arrow { opacity: 0.35; transition: transform 140ms ease, opacity 140ms ease; }
+  .link-btn:hover .arrow { transform: translateX(3px); opacity: 0.9; }
+
+  .link-icon {
+    width: 30px; height: 30px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(193, 139, 146, 0.10);
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .link-icon-primary {
+    background: linear-gradient(140deg, rgba(193, 139, 146, 0.24), rgba(193, 139, 146, 0.08));
+    color: var(--accent-soft);
+  }
+
+  .check { width: 13px; height: 13px; flex-shrink: 0; color: var(--accent); }
+  .icon-btn {
+    width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+    border-radius: 9999px; color: var(--cream-faint);
+    transition: color 140ms ease, background 140ms ease, transform 140ms ease;
+  }
+  .icon-btn:hover { color: var(--accent); background: rgba(193, 139, 146, 0.08); transform: translateY(-1px); }
+
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--hairline), transparent);
+  }
+
+  /* spots progress */
+  .spots-track {
+    width: 100%; height: 3px; border-radius: 9999px;
+    background: rgba(193, 139, 146, 0.12);
+    overflow: hidden;
+  }
+  .spots-fill {
+    height: 100%; width: 65%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-soft));
+    border-radius: 9999px;
+  }
+
+  @media (min-width: 481px) { .container-bio { max-width: 440px; } }
+</style>
+</head>
+<body class="antialiased">
+
+<div class="bg-mesh"></div>
+<div class="grain"></div>
+
+<main class="container-bio mx-auto px-6 pt-14 pb-12 relative z-10">
+
+  <!-- Eyebrow -->
+  <div class="flex items-center justify-center gap-2.5 mb-12">
+    <span class="pulse-dot"></span>
+    <p class="mono text-[10.5px] uppercase tabular" style="color: var(--cream-faint);">
+      1,847 students &middot; 4 masterclasses &middot; intensive feb
+    </p>
+  </div>
+
+  <!-- Header -->
+  <header class="text-center mb-11">
+    <div class="relative inline-block mb-6">
+      <div class="avatar-glow"></div>
+      <div class="avatar-ring"><div class="avatar-inner"></div></div>
+    </div>
+    <h1 class="serif text-[38px] leading-[1.02] mb-1.5" style="color: var(--cream);">noor lev</h1>
+    <p class="text-[12.5px] tracking-wide mb-4" style="color: var(--cream-faint);">@noorlev.movement</p>
+    <p class="text-[14px] leading-[1.65] max-w-[360px] mx-auto" style="color: var(--cream-faint);">
+      Contemporary dance artist. Trained Batsheva. I teach online masterclasses and a 6-week intensive twice a year. Currently choreographing for the Berlin Festival.
+    </p>
+  </header>
+
+  <!-- Featured offer -->
+  <section class="relative mb-11">
+    <div class="featured-glow"></div>
+    <div class="featured p-6">
+      <div class="flex items-center justify-between mb-3.5">
+        <span class="mono text-[10px] uppercase tabular" style="color: var(--accent);">cohort &middot; 6 weeks</span>
+        <div class="flex items-center gap-1.5">
+          <span class="pulse-dot" style="width:5px;height:5px"></span>
+          <span class="mono text-[10px] tabular" style="color: var(--accent-soft);">opens feb 28</span>
+        </div>
+      </div>
+      <h2 class="serif text-[30px] leading-[1.0] mb-2" style="color: var(--cream);">The Intensive</h2>
+      <p class="text-[13.5px] leading-[1.65] mb-6" style="color: var(--cream-faint);">
+        Six weeks of release-based contemporary &mdash; twelve live sessions plus recordings. Built for trained movers ready to refine, not for first-timers.
+      </p>
+
+      <ul class="space-y-2.5 mb-7">
+        <li class="flex items-start gap-3 text-[13px]" style="color: var(--cream);">
+          <svg class="check mt-[3px]" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,7.5 5.5,11 12,3.5"/></svg>
+          <span>12 live sessions &middot; <span class="mono text-[11.5px] tabular" style="color: var(--cream-faint);">tue &amp; thu, 90 min</span></span>
+        </li>
+        <li class="flex items-start gap-3 text-[13px]" style="color: var(--cream);">
+          <svg class="check mt-[3px]" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,7.5 5.5,11 12,3.5"/></svg>
+          <span>Full recordings &middot; rewatch any time</span>
+        </li>
+        <li class="flex items-start gap-3 text-[13px]" style="color: var(--cream);">
+          <svg class="check mt-[3px]" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,7.5 5.5,11 12,3.5"/></svg>
+          <span>Two written feedback rounds &middot; on your phrases</span>
+        </li>
+        <li class="flex items-start gap-3 text-[13px]" style="color: var(--cream);">
+          <svg class="check mt-[3px]" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,7.5 5.5,11 12,3.5"/></svg>
+          <span>Closed Discord &middot; <span class="mono text-[11.5px] tabular" style="color: var(--cream-faint);">cohort only, 12 weeks</span></span>
+        </li>
+      </ul>
+
+      <!-- spots -->
+      <div class="mb-5">
+        <div class="flex items-center justify-between mb-2">
+          <span class="mono text-[10px] uppercase tabular" style="color: var(--cream-faint);">spots taken</span>
+          <span class="mono text-[10px] tabular" style="color: var(--accent-soft);">52 / 80</span>
+        </div>
+        <div class="spots-track"><div class="spots-fill"></div></div>
+        <p class="text-[11px] mt-2" style="color: var(--cream-dim);">28 spots left &middot; closes feb 27 at midnight CET</p>
+      </div>
+
+      <a href="#" class="cta flex items-center justify-center gap-2 py-3.5 rounded-xl text-[14px] w-full">
+        Enroll &middot; $448
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5h8M7 3l3.5 3.5L7 10"/></svg>
+      </a>
+      <p class="text-center mt-3 text-[11.5px]" style="color: var(--cream-dim);">
+        payment in 3 &middot; $152 / month
+      </p>
+    </div>
+  </section>
+
+  <!-- Link stack -->
+  <section class="space-y-2.5 mb-11">
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon link-icon-primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Intensive &middot; <span class="serif text-[15px]" style="color: var(--accent-soft);">Feb 28</span></div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">$448 &middot; 28 SPOTS LEFT OF 80</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 4v16M16 4v16M3 9h18M3 14h18"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Masterclass library &middot; <span style="color: var(--accent-soft);">$18 each</span></div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">4 CLASSES &middot; 75&ndash;90 MIN</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Annual all-access &middot; <span style="color: var(--accent-soft);">$228</span></div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">LIBRARY + EVERY NEW CLASS</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Free intro class</div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">EMAIL ME &middot; ‘THE FLOOR AS A PARTNER’</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.9" fill="currentColor"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Instagram &middot; daily practice</div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">@NOORLEV.MOVEMENT &middot; 84.2K</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5.5" width="19" height="13" rx="3"/><path d="M10.5 9.5l4.5 2.5-4.5 2.5z" fill="currentColor"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">YouTube &middot; class recordings</div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">36 PUBLIC SESSIONS &middot; FREE</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Performances 2026 &middot; <span class="serif text-[15px]" style="color: var(--accent-soft);">4 shows</span></div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">BERLIN &middot; AMSTERDAM &middot; TEL AVIV &middot; NYC</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v16l-7-4-7 4z"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Press &middot; <span class="serif text-[15px]" style="color:var(--accent-soft)">The Stage</span></div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">‘A choreographer of stillness’ &middot; 2025</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+  </section>
+
+  <!-- Social proof microbar -->
+  <div class="flex items-center justify-center gap-5 mb-9">
+    <div class="text-center">
+      <div class="mono text-[14px] tabular" style="color: var(--accent-soft);">1,847</div>
+      <div class="text-[10px] italic mt-0.5" style="color: var(--cream-dim);">students</div>
+    </div>
+    <div class="w-px h-7" style="background: var(--hairline);"></div>
+    <div class="text-center">
+      <div class="mono text-[14px] tabular" style="color: var(--accent-soft);">34</div>
+      <div class="text-[10px] italic mt-0.5" style="color: var(--cream-dim);">countries</div>
+    </div>
+    <div class="w-px h-7" style="background: var(--hairline);"></div>
+    <div class="text-center">
+      <div class="mono text-[14px] tabular" style="color: var(--accent-soft);">4</div>
+      <div class="text-[10px] italic mt-0.5" style="color: var(--cream-dim);">years online</div>
+    </div>
+  </div>
+
+  <div class="divider mb-7"></div>
+
+  <!-- Social row -->
+  <nav class="flex items-center justify-center gap-1.5 mb-8">
+    <a href="#" class="icon-btn" aria-label="Instagram"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.9" fill="currentColor"/></svg></a>
+    <a href="#" class="icon-btn" aria-label="TikTok"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4v10.5a3.5 3.5 0 11-3.5-3.5"/><path d="M14 4c.5 2.5 2.5 4 5 4"/></svg></a>
+    <a href="#" class="icon-btn" aria-label="YouTube"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="3"/><path d="M10.5 9.5l4.5 2.5-4.5 2.5z" fill="currentColor" stroke="none"/></svg></a>
+    <a href="#" class="icon-btn" aria-label="Vimeo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M7 10c2-1.5 3 0 3 2.5s1.5 4 4 1.5 2.5-6 .5-6-3 2-3 2"/></svg></a>
+    <a href="#" class="icon-btn" aria-label="Discord"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14v8a2 2 0 01-2 2H7a2 2 0 01-2-2V8z"/><circle cx="9.5" cy="13" r="1" fill="currentColor"/><circle cx="14.5" cy="13" r="1" fill="currentColor"/></svg></a>
+    <a href="mailto:studio@noorlev.com" class="icon-btn" aria-label="Email"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></a>
+  </nav>
+
+  <!-- Footer -->
+  <footer class="text-center space-y-1.5">
+    <p class="mono text-[10px] uppercase tabular" style="color: var(--cream-dim);">
+      Studio &middot; <a href="mailto:studio@noorlev.com" class="hover:text-[--accent]" style="color: var(--cream-faint);">studio@noorlev.com</a>
+    </p>
+    <p class="mono text-[10px] uppercase tabular" style="color: var(--cream-dim);">
+      Booking &middot; Forum Artists &middot; booking@forum.eu
+    </p>
+  </footer>
+
+</main>
+
+</body>
+</html>

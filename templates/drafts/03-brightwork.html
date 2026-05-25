@@ -1,0 +1,1333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Brightwork — Home cleaning in Chicago, IL</title>
+<meta name="description" content="Recurring and deep-clean home cleaning in Chicago. The same vetted, background-checked W-2 cleaner every visit, eco-friendly products, flat per-home pricing." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400&display=swap" rel="stylesheet" />
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          paper: "#FCFCFA",
+          ink: "#16201F",
+          accent: "#2BA39A",
+          "accent-deep": "#1F8079",
+          mint: "#EAF6F4",
+          "mint-soft": "#F3FAF8",
+        },
+        fontFamily: {
+          sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+          mono: ["'Geist Mono'", "ui-monospace", "monospace"],
+        },
+        maxWidth: {
+          container: "1200px",
+        },
+        borderRadius: {
+          card: "16px",
+        },
+      },
+    },
+  };
+</script>
+
+<style>
+  :root {
+    --hair: rgba(0, 0, 0, 0.08);
+    --hair-strong: rgba(0, 0, 0, 0.12);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #FCFCFA;
+    color: #16201F;
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, .display {
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  .font-mono {
+    font-feature-settings: normal;
+  }
+
+  /* ---- Display headings ---- */
+  .display-xl {
+    letter-spacing: -0.038em;
+    line-height: 1.04;
+  }
+  .display-lg {
+    letter-spacing: -0.03em;
+    line-height: 1.08;
+  }
+  .display-md {
+    letter-spacing: -0.025em;
+    line-height: 1.15;
+  }
+
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- Hairlines ---- */
+  .hair {
+    border-color: var(--hair);
+  }
+  .hair-t { border-top: 1px solid var(--hair); }
+  .hair-b { border-bottom: 1px solid var(--hair); }
+
+  /* ---- Buttons ---- */
+  .btn {
+    transition: transform 110ms ease, box-shadow 110ms ease, background-color 110ms ease, border-color 110ms ease;
+    will-change: transform;
+  }
+  .btn:hover {
+    transform: translateY(-2px);
+  }
+  .btn:active {
+    transform: translateY(0);
+  }
+
+  .btn-accent {
+    background-color: #2BA39A;
+    color: #ffffff;
+    box-shadow: 0 6px 18px -6px rgba(43, 163, 154, 0.55);
+  }
+  .btn-accent:hover {
+    background-color: #2EAEA4;
+    box-shadow: 0 12px 26px -8px rgba(43, 163, 154, 0.6);
+  }
+
+  .btn-ghost {
+    background-color: #ffffff;
+    color: #16201F;
+    border: 1px solid var(--hair-strong);
+    box-shadow: 0 1px 2px rgba(16, 32, 31, 0.04);
+  }
+  .btn-ghost:hover {
+    border-color: rgba(43, 163, 154, 0.45);
+    box-shadow: 0 8px 20px -10px rgba(16, 32, 31, 0.18);
+  }
+
+  /* ---- Cards ---- */
+  .card {
+    background-color: #ffffff;
+    border: 1px solid var(--hair);
+    border-radius: 16px;
+    box-shadow: 0 1px 2px rgba(16, 32, 31, 0.03), 0 10px 30px -22px rgba(16, 32, 31, 0.22);
+  }
+  .card-hover {
+    transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-3px);
+    border-color: rgba(43, 163, 154, 0.32);
+    box-shadow: 0 1px 2px rgba(16, 32, 31, 0.04), 0 22px 44px -26px rgba(16, 32, 31, 0.3);
+  }
+
+  /* ---- Pulse dot ---- */
+  .pulse-dot {
+    position: relative;
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+    background-color: #2BA39A;
+  }
+  .pulse-dot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background-color: #2BA39A;
+    animation: pulse-ring 2.4s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+  }
+  @keyframes pulse-ring {
+    0% {
+      box-shadow: 0 0 0 0 rgba(43, 163, 154, 0.5);
+      opacity: 1;
+    }
+    70% {
+      box-shadow: 0 0 0 9px rgba(43, 163, 154, 0);
+      opacity: 0.4;
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(43, 163, 154, 0);
+      opacity: 1;
+    }
+  }
+
+  /* ---- Ambient backgrounds ---- */
+  .hero-glow {
+    background:
+      radial-gradient(620px 420px at 72% 18%, rgba(43, 163, 154, 0.14), transparent 70%),
+      radial-gradient(520px 380px at 12% 88%, rgba(43, 163, 154, 0.09), transparent 72%);
+  }
+
+  .dot-grid {
+    background-image: radial-gradient(rgba(16, 32, 31, 0.07) 1.1px, transparent 1.1px);
+    background-size: 32px 32px;
+  }
+
+  .blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(64px);
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  /* ---- Photo placeholders ---- */
+  .ph {
+    position: relative;
+    overflow: hidden;
+    border-radius: 16px;
+  }
+  .ph-room {
+    background: linear-gradient(135deg, #DCF1EE 0%, #BFE6E0 42%, #9FD7CF 100%);
+  }
+  .ph-warm {
+    background: linear-gradient(135deg, #F4EFE6 0%, #E7E0CF 100%);
+  }
+  .ph-before {
+    background: linear-gradient(135deg, #ECE6DA 0%, #D9CFBC 100%);
+  }
+  .ph-after {
+    background: linear-gradient(135deg, #DFF2EF 0%, #B5E1DA 100%);
+  }
+  .ph-sheen::before {
+    content: "";
+    position: absolute;
+    top: -40%;
+    left: -20%;
+    width: 60%;
+    height: 180%;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.42), transparent);
+    transform: rotate(8deg);
+  }
+
+  /* ---- Marquee ---- */
+  .marquee {
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+            mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marquee-scroll 38s linear infinite;
+  }
+  @keyframes marquee-scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  .marquee:hover .marquee-track {
+    animation-play-state: paused;
+  }
+
+  /* ---- FAQ accordion ---- */
+  details.faq {
+    border-bottom: 1px solid var(--hair);
+  }
+  details.faq summary {
+    list-style: none;
+    cursor: pointer;
+  }
+  details.faq summary::-webkit-details-marker {
+    display: none;
+  }
+  details.faq .chev {
+    transition: transform 160ms ease;
+  }
+  details.faq[open] .chev {
+    transform: rotate(45deg);
+  }
+
+  .link-underline {
+    transition: color 110ms ease;
+  }
+  .link-underline:hover {
+    color: #1F8079;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .marquee-track { animation: none; }
+    .pulse-dot::after { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ 1 · THIN TOP BAR ============ -->
+<div class="bg-ink text-white/85 text-[13px] hair-b border-white/10">
+  <div class="mx-auto max-w-container px-5 sm:px-8">
+    <div class="flex flex-wrap items-center justify-between gap-y-1.5 py-2">
+      <div class="flex flex-wrap items-center gap-x-5 gap-y-1">
+        <a href="tel:+15552269070" class="flex items-center gap-1.5 hover:text-white transition-colors">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/>
+          </svg>
+          <span class="font-medium">(555) 226-9070</span>
+        </a>
+        <span class="hidden sm:flex items-center gap-1.5">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+          </svg>
+          <span class="font-mono text-[12px]">Mon–Sat 8am–6pm</span>
+        </span>
+        <span class="hidden md:flex items-center gap-1.5">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
+          </svg>
+          <span>Serving Chicago, IL</span>
+        </span>
+      </div>
+      <a href="#quote" class="btn inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 px-3 py-1 text-[12.5px] font-semibold text-white border border-white/15">
+        Get a quote
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 2 · NAV ============ -->
+<header class="sticky top-0 z-40 bg-paper/90 backdrop-blur-md hair-b">
+  <div class="mx-auto max-w-container px-5 sm:px-8">
+    <nav class="flex items-center justify-between gap-4 py-3.5">
+      <!-- Logo -->
+      <a href="#top" class="flex items-center gap-2.5 shrink-0" aria-label="Brightwork home">
+        <span class="inline-flex h-9 w-9 items-center justify-center rounded-[11px] bg-accent shadow-[0_6px_16px_-6px_rgba(43,163,154,0.6)]">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>
+            <circle cx="12" cy="12" r="3.4" fill="#ffffff" stroke="none"/>
+          </svg>
+        </span>
+        <span class="flex flex-col leading-none">
+          <span class="text-[18px] font-bold tracking-[-0.03em]">Brightwork</span>
+          <span class="text-[11px] font-medium text-ink/45 tracking-[0.04em]">Home Cleaning · Chicago</span>
+        </span>
+      </a>
+
+      <!-- Links -->
+      <div class="hidden lg:flex items-center gap-7 text-[14.5px] font-medium text-ink/72">
+        <a href="#services" class="link-underline hover:text-ink">Services</a>
+        <a href="#about" class="link-underline hover:text-ink">About</a>
+        <a href="#reviews" class="link-underline hover:text-ink">Reviews</a>
+        <a href="#contact" class="link-underline hover:text-ink">Contact</a>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center gap-2.5">
+        <a href="tel:+15552269070" class="btn hidden sm:inline-flex items-center gap-2 rounded-full btn-ghost px-3.5 py-2 text-[14px] font-semibold">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/>
+          </svg>
+          <span class="tnum">(555) 226-9070</span>
+        </a>
+        <a href="#quote" class="btn inline-flex items-center gap-1.5 rounded-full btn-accent px-4 py-2 text-[14px] font-semibold">
+          Free quote
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ============ 3 · HERO ============ -->
+<section class="relative overflow-hidden hero-glow">
+  <div class="blob bg-accent/25 h-72 w-72 -top-16 right-10"></div>
+  <div class="blob bg-[#9FD7CF]/40 h-64 w-64 bottom-0 -left-20"></div>
+
+  <div class="relative mx-auto max-w-container px-5 sm:px-8 py-16 sm:py-20 lg:py-24">
+    <div class="grid lg:grid-cols-[1.05fr_0.95fr] gap-12 lg:gap-14 items-center">
+      <!-- Copy -->
+      <div>
+        <span class="inline-flex items-center gap-2 rounded-full border hair bg-white px-3 py-1.5 text-[12.5px] font-semibold text-ink/70">
+          <span class="pulse-dot"></span>
+          Vetted · Insured · Eco-friendly products
+        </span>
+
+        <h1 class="display-xl mt-5 text-[40px] sm:text-[54px] lg:text-[60px] font-bold">
+          Come home to a place<br class="hidden sm:block" />
+          that <em class="not-italic text-accent">feels lighter.</em>
+        </h1>
+
+        <p class="mt-5 max-w-xl text-[17px] sm:text-[18px] text-ink/68 leading-[1.6]">
+          The same trusted cleaner every visit — a background-checked W-2 employee, never a contractor. Eco-friendly products that are gentle on pets and kids, across Chicago, IL.
+        </p>
+
+        <div class="mt-7 flex flex-col sm:flex-row gap-3">
+          <a href="#quote" class="btn inline-flex items-center justify-center gap-2 rounded-full btn-accent px-6 py-3.5 text-[15.5px] font-semibold">
+            Get a free quote
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </a>
+          <a href="tel:+15552269070" class="btn inline-flex items-center justify-center gap-2 rounded-full btn-ghost px-6 py-3.5 text-[15.5px] font-semibold">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/>
+            </svg>
+            Call (555) 226-9070
+          </a>
+        </div>
+
+        <!-- Trust badges -->
+        <div class="mt-7 flex flex-wrap gap-2">
+          <span class="inline-flex items-center gap-1.5 rounded-full border hair bg-white px-2.5 py-1 text-[12.5px] font-medium text-ink/72">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
+            Bonded &amp; Insured
+          </span>
+          <span class="inline-flex items-center gap-1.5 rounded-full border hair bg-white px-2.5 py-1 text-[12.5px] font-medium text-ink/72">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+            Background-checked cleaners
+          </span>
+          <span class="inline-flex items-center gap-1.5 rounded-full border hair bg-white px-2.5 py-1 text-[12.5px] font-medium text-ink/72">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#F5A623" stroke="none" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+            <span class="tnum">4.9 · 1,408 reviews</span>
+          </span>
+          <span class="inline-flex items-center gap-1.5 rounded-full border hair bg-white px-2.5 py-1 text-[12.5px] font-medium text-ink/72">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>
+            Eco-friendly products
+          </span>
+        </div>
+      </div>
+
+      <!-- Photo placeholder -->
+      <div class="relative">
+        <div class="ph ph-room ph-sheen aspect-[4/5] sm:aspect-[5/5] shadow-[0_30px_60px_-30px_rgba(16,32,31,0.4)] border hair" role="img" aria-label="A bright, sunlit living room with freshly cleaned floors and tidy surfaces">
+          <div class="absolute inset-0 flex items-center justify-center">
+            <svg width="84" height="84" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/>
+            </svg>
+          </div>
+          <span class="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-white/85 backdrop-blur px-2.5 py-1 text-[11.5px] font-semibold text-ink/75">
+            <span class="pulse-dot"></span> Just cleaned
+          </span>
+        </div>
+        <!-- Floating rating card -->
+        <div class="absolute -bottom-6 -left-4 sm:-left-6 card px-4 py-3 flex items-center gap-3 w-[214px]">
+          <span class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-mint shrink-0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#F5A623" stroke="none" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+          </span>
+          <div class="leading-tight">
+            <div class="text-[15px] font-bold tnum">4.9 / 5 average</div>
+            <div class="text-[12px] text-ink/55 font-mono">from 1,408 reviews</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trust marquee -->
+  <div class="hair-t hair-b bg-mint-soft py-3.5">
+    <div class="marquee">
+      <div class="marquee-track">
+        <div class="flex shrink-0 items-center gap-10 pr-10 text-[13.5px] font-medium text-ink/55" aria-hidden="false">
+          <span class="flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Same cleaner every visit</span>
+          <span class="text-ink/20">•</span>
+          <span class="flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> W-2 employees, never contractors</span>
+          <span class="text-ink/20">•</span>
+          <span class="flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Background-checked &amp; insured</span>
+          <span class="text-ink/20">•</span>
+          <span class="flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Eco-friendly, pet-safe products</span>
+          <span class="text-ink/20">•</span>
+          <span class="flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Flat per-home pricing</span>
+          <span class="text-ink/20">•</span>
+          <span class="flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Re-clean free within 24 hours</span>
+          <span class="text-ink/20">•</span>
+        </div>
+        <!-- duplicate for seamless loop -->
+        <div class="flex shrink-0 items-center gap-10 pr-10 text-[13.5px] font-medium text-ink/55" aria-hidden="true">
+          <span class="flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Same cleaner every visit</span>
+          <span class="text-ink/20">•</span>
+          <span class="flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> W-2 employees, never contractors</span>
+          <span class="text-ink/20">•</span>
+          <span class="flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Background-checked &amp; insured</span>
+          <span class="text-ink/20">•</span>
+          <span class="flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Eco-friendly, pet-safe products</span>
+          <span class="text-ink/20">•</span>
+          <span class="flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Flat per-home pricing</span>
+          <span class="text-ink/20">•</span>
+          <span class="flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Re-clean free within 24 hours</span>
+          <span class="text-ink/20">•</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4 · SERVICES GRID ============ -->
+<section id="services" class="mx-auto max-w-container px-5 sm:px-8 py-20 sm:py-24">
+  <div class="max-w-2xl">
+    <span class="text-[12.5px] font-semibold uppercase tracking-[0.14em] text-accent">What we clean</span>
+    <h2 class="display-lg mt-3 text-[32px] sm:text-[40px] font-bold">
+      Cleanings for every kind of <span class="text-ink/45">home day.</span>
+    </h2>
+    <p class="mt-3 text-[16.5px] text-ink/65">
+      Pick the clean that fits the moment — a steady recurring rhythm, a top-to-bottom reset, or a hand-off after a move. Every job is flat-priced per home.
+    </p>
+  </div>
+
+  <div class="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+    <!-- Recurring -->
+    <article class="card card-hover p-6">
+      <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-mint">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M21 3v5h-5M3 21v-5h5"/></svg>
+      </span>
+      <h3 class="mt-4 text-[18px] font-bold tracking-[-0.02em]">Recurring cleaning</h3>
+      <p class="mt-1.5 text-[14.5px] text-ink/62 leading-[1.55]">A standing visit on a weekly, bi-weekly, or monthly cadence — same cleaner, same checklist, every time.</p>
+      <span class="mt-4 inline-flex items-center rounded-full bg-mint px-2.5 py-1 text-[12.5px] font-semibold text-accent-deep font-mono">from $119</span>
+    </article>
+    <!-- Deep clean -->
+    <article class="card card-hover p-6">
+      <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-mint">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 21 6-6M14 4l6 6M16 2l6 6-9 3-3 3-6-6 3-3Z"/><path d="m9 11 4 4"/></svg>
+      </span>
+      <h3 class="mt-4 text-[18px] font-bold tracking-[-0.02em]">Deep clean</h3>
+      <p class="mt-1.5 text-[14.5px] text-ink/62 leading-[1.55]">Baseboards, blinds, behind appliances, grout lines — the detailed reset that gets the corners a quick clean skips.</p>
+      <span class="mt-4 inline-flex items-center rounded-full bg-mint px-2.5 py-1 text-[12.5px] font-semibold text-accent-deep font-mono">from $249</span>
+    </article>
+    <!-- Move-in/out -->
+    <article class="card card-hover p-6">
+      <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-mint">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 16 3H8L3 8M3 8v11a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V8M3 8h18M10 12h4"/></svg>
+      </span>
+      <h3 class="mt-4 text-[18px] font-bold tracking-[-0.02em]">Move-in / move-out</h3>
+      <p class="mt-1.5 text-[14.5px] text-ink/62 leading-[1.55]">Empty-home detailing inside cabinets, drawers, and closets so you hand over — or pick up — keys to a spotless place.</p>
+      <span class="mt-4 inline-flex items-center rounded-full bg-mint px-2.5 py-1 text-[12.5px] font-semibold text-accent-deep font-mono">from $279</span>
+    </article>
+    <!-- Post-renovation -->
+    <article class="card card-hover p-6">
+      <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-mint">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14.5 5.5 4 4M3 21l3-8 9-9 5 5-9 9-8 3ZM18 2l4 4"/></svg>
+      </span>
+      <h3 class="mt-4 text-[18px] font-bold tracking-[-0.02em]">Post-renovation clean</h3>
+      <p class="mt-1.5 text-[14.5px] text-ink/62 leading-[1.55]">Fine construction dust off every surface, vent, and fixture — so a finished remodel actually feels finished.</p>
+      <span class="mt-4 inline-flex items-center rounded-full bg-mint px-2.5 py-1 text-[12.5px] font-semibold text-accent-deep font-mono">from $329</span>
+    </article>
+    <!-- Apartment & condo -->
+    <article class="card card-hover p-6">
+      <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-mint">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M10 7h.01M14 7h.01M10 11h.01M14 11h.01M10 15h.01M14 15h.01"/></svg>
+      </span>
+      <h3 class="mt-4 text-[18px] font-bold tracking-[-0.02em]">Apartment &amp; condo</h3>
+      <p class="mt-1.5 text-[14.5px] text-ink/62 leading-[1.55]">Right-sized cleans for studios, one-beds, and high-rise units — priced for the square footage, never overcharged.</p>
+      <span class="mt-4 inline-flex items-center rounded-full bg-mint px-2.5 py-1 text-[12.5px] font-semibold text-accent-deep font-mono">from $99</span>
+    </article>
+    <!-- Add-ons -->
+    <article class="card card-hover p-6">
+      <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-mint">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      </span>
+      <h3 class="mt-4 text-[18px] font-bold tracking-[-0.02em]">Add-ons</h3>
+      <p class="mt-1.5 text-[14.5px] text-ink/62 leading-[1.55]">Inside-fridge and inside-oven detailing, interior windows, and laundry — tack any of them onto a visit.</p>
+      <span class="mt-4 inline-flex items-center rounded-full bg-mint px-2.5 py-1 text-[12.5px] font-semibold text-accent-deep font-mono">from $29</span>
+    </article>
+  </div>
+
+  <p class="mt-7 text-[14px] text-ink/55">
+    Not sure which one you need? <a href="#quote" class="font-semibold text-accent link-underline">Get a 60-second per-home quote</a> and we'll recommend the right fit.
+  </p>
+</section>
+
+<!-- ============ 5 · WHY CHOOSE US ============ -->
+<section id="about" class="bg-mint-soft hair-t hair-b">
+  <div class="mx-auto max-w-container px-5 sm:px-8 py-20 sm:py-24">
+    <div class="grid lg:grid-cols-[0.92fr_1.08fr] gap-12 lg:gap-16 items-start">
+      <div>
+        <span class="text-[12.5px] font-semibold uppercase tracking-[0.14em] text-accent">Why Brightwork</span>
+        <h2 class="display-lg mt-3 text-[32px] sm:text-[40px] font-bold">
+          Letting someone into your home<br class="hidden sm:block" />
+          should feel <em class="not-italic text-accent">easy.</em>
+        </h2>
+        <p class="mt-4 text-[16.5px] text-ink/65 leading-[1.6]">
+          So we built Brightwork around one promise: you always know exactly who's coming, how they were vetted, and what you'll pay. No rotating strangers, no surprise line items.
+        </p>
+
+        <div class="mt-7 ph ph-room aspect-[16/10] border hair shadow-[0_24px_48px_-28px_rgba(16,32,31,0.32)]" role="img" aria-label="A Brightwork cleaner in uniform tidying a sunlit kitchen">
+          <div class="absolute inset-0 flex items-center justify-center">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M5.5 21a8 8 0 0 1 13 0"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-5">
+        <!-- Same cleaner -->
+        <article class="card p-6">
+          <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-mint">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m17 11 2 2 4-4"/></svg>
+          </span>
+          <h3 class="mt-4 text-[17px] font-bold tracking-[-0.02em]">The same cleaner every visit</h3>
+          <p class="mt-1.5 text-[14px] text-ink/62 leading-[1.55]">You're paired with one cleaner who learns your home — the cabinet that sticks, the rug that shouldn't get wet. Familiar, not a new face each week.</p>
+        </article>
+        <!-- W-2 employees -->
+        <article class="card p-6 ring-1 ring-accent/25">
+          <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-accent">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.95" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+          </span>
+          <h3 class="mt-4 text-[17px] font-bold tracking-[-0.02em]">Background-checked W-2 employees</h3>
+          <p class="mt-1.5 text-[14px] text-ink/62 leading-[1.55]">Every cleaner is hired, trained, and paid by Brightwork — never a contractor. Each passes a national background check before their first home.</p>
+        </article>
+        <!-- Flat pricing -->
+        <article class="card p-6">
+          <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-mint">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </span>
+          <h3 class="mt-4 text-[17px] font-bold tracking-[-0.02em]">Flat per-home pricing</h3>
+          <p class="mt-1.5 text-[14px] text-ink/62 leading-[1.55]">One quote for your home, locked in. We don't bill by the hour, so a slow day for us never turns into a bigger invoice for you.</p>
+        </article>
+        <!-- Free reschedules -->
+        <article class="card p-6">
+          <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-mint">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/></svg>
+          </span>
+          <h3 class="mt-4 text-[17px] font-bold tracking-[-0.02em]">Free reschedules</h3>
+          <p class="mt-1.5 text-[14px] text-ink/62 leading-[1.55]">Life happens. Move or skip a visit up to 24 hours ahead at no charge — no cancellation fee, no awkward conversation.</p>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6 · BEFORE / AFTER ============ -->
+<section class="mx-auto max-w-container px-5 sm:px-8 py-20 sm:py-24">
+  <div class="max-w-2xl">
+    <span class="text-[12.5px] font-semibold uppercase tracking-[0.14em] text-accent">The difference</span>
+    <h2 class="display-lg mt-3 text-[32px] sm:text-[40px] font-bold">See the room change.</h2>
+    <p class="mt-3 text-[16.5px] text-ink/65">Real Chicago homes, before and after a Brightwork visit. Slide your eye across the divider.</p>
+  </div>
+
+  <div class="mt-10 grid md:grid-cols-3 gap-6">
+    <!-- Pair 1 -->
+    <figure>
+      <div class="card overflow-hidden p-0">
+        <div class="grid grid-cols-2">
+          <div class="ph ph-before relative aspect-[4/5]" role="img" aria-label="A cluttered kitchen with dishes on the counters before cleaning">
+            <span class="absolute left-2.5 top-2.5 rounded-md bg-ink/72 px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-white">Before</span>
+          </div>
+          <div class="ph ph-after relative aspect-[4/5] border-l-2 border-white" role="img" aria-label="The same kitchen with spotless, clear counters after cleaning">
+            <span class="absolute right-2.5 top-2.5 rounded-md bg-accent px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-white">After</span>
+          </div>
+        </div>
+      </div>
+      <figcaption class="mt-3 px-1">
+        <p class="text-[15px] font-semibold">Cluttered kitchen → spotless counters</p>
+        <p class="text-[13.5px] text-ink/55">A weekday-evening sink pile, cleared and wiped down — Lakeview two-bed.</p>
+      </figcaption>
+    </figure>
+    <!-- Pair 2 -->
+    <figure>
+      <div class="card overflow-hidden p-0">
+        <div class="grid grid-cols-2">
+          <div class="ph ph-before relative aspect-[4/5]" role="img" aria-label="Dusty bookshelves with a film of dust before cleaning">
+            <span class="absolute left-2.5 top-2.5 rounded-md bg-ink/72 px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-white">Before</span>
+          </div>
+          <div class="ph ph-after relative aspect-[4/5] border-l-2 border-white" role="img" aria-label="The same shelves with clean, dust-free surfaces after cleaning">
+            <span class="absolute right-2.5 top-2.5 rounded-md bg-accent px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-white">After</span>
+          </div>
+        </div>
+      </div>
+      <figcaption class="mt-3 px-1">
+        <p class="text-[15px] font-semibold">Dusty shelves → clean surfaces</p>
+        <p class="text-[13.5px] text-ink/55">Every shelf hand-wiped, books reset square — Logan Square living room.</p>
+      </figcaption>
+    </figure>
+    <!-- Pair 3 -->
+    <figure>
+      <div class="card overflow-hidden p-0">
+        <div class="grid grid-cols-2">
+          <div class="ph ph-before relative aspect-[4/5]" role="img" aria-label="A messy bathroom with water spots before cleaning">
+            <span class="absolute left-2.5 top-2.5 rounded-md bg-ink/72 px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-white">Before</span>
+          </div>
+          <div class="ph ph-after relative aspect-[4/5] border-l-2 border-white" role="img" aria-label="The same bathroom sparkling clean with a polished mirror after cleaning">
+            <span class="absolute right-2.5 top-2.5 rounded-md bg-accent px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-white">After</span>
+          </div>
+        </div>
+      </div>
+      <figcaption class="mt-3 px-1">
+        <p class="text-[15px] font-semibold">Messy bathroom → sparkling bathroom</p>
+        <p class="text-[13.5px] text-ink/55">Tile, grout, glass and chrome polished streak-free — Wicker Park condo.</p>
+      </figcaption>
+    </figure>
+  </div>
+
+  <!-- Availability pill -->
+  <div class="mt-10 flex justify-center">
+    <span class="inline-flex items-center gap-2.5 rounded-full border hair bg-white px-4 py-2 text-[14px] font-semibold text-ink/75 shadow-[0_8px_24px_-16px_rgba(16,32,31,0.4)]">
+      <span class="pulse-dot"></span>
+      Next-week openings in Lincoln Park
+      <a href="#quote" class="text-accent link-underline">— grab one</a>
+    </span>
+  </div>
+</section>
+
+<!-- ============ 7 · HOW IT WORKS ============ -->
+<section class="relative bg-ink text-white overflow-hidden">
+  <div class="absolute inset-0 dot-grid opacity-[0.5]" aria-hidden="true" style="background-image: radial-gradient(rgba(255,255,255,0.07) 1.1px, transparent 1.1px);"></div>
+  <div class="blob bg-accent/30 h-72 w-72 -bottom-20 right-0"></div>
+
+  <div class="relative mx-auto max-w-container px-5 sm:px-8 py-20 sm:py-24">
+    <div class="max-w-2xl">
+      <span class="text-[12.5px] font-semibold uppercase tracking-[0.14em] text-accent">How it works</span>
+      <h2 class="display-lg mt-3 text-[32px] sm:text-[40px] font-bold">From quote to clean in three steps.</h2>
+      <p class="mt-3 text-[16.5px] text-white/65">No walkthroughs to schedule, no estimator visiting your home. Tell us about the place and we take it from there.</p>
+    </div>
+
+    <div class="mt-12 grid md:grid-cols-3 gap-6">
+      <!-- Step 1 -->
+      <div class="relative rounded-card border border-white/12 bg-white/[0.04] p-6">
+        <span class="font-mono text-[12.5px] tracking-[0.12em] text-accent">STEP 01</span>
+        <span class="absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/8 border border-white/12">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11H5a2 2 0 0 0-2 2v7M9 11h6M9 11V7M15 11h4a2 2 0 0 1 2 2v7M15 11V7M9 7h6V3H9Z"/></svg>
+        </span>
+        <h3 class="mt-3 text-[19px] font-bold tracking-[-0.02em]">Get a 60-second per-home quote</h3>
+        <p class="mt-2 text-[14.5px] text-white/62 leading-[1.6]">Answer a few questions — bedrooms, bathrooms, pets, how often. You get a flat per-home price on the spot, no callback required.</p>
+      </div>
+      <!-- Step 2 -->
+      <div class="relative rounded-card border border-white/12 bg-white/[0.04] p-6">
+        <span class="font-mono text-[12.5px] tracking-[0.12em] text-accent">STEP 02</span>
+        <span class="absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/8 border border-white/12">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13A4 4 0 0 1 16 11"/></svg>
+        </span>
+        <h3 class="mt-3 text-[19px] font-bold tracking-[-0.02em]">We match and schedule your cleaner</h3>
+        <p class="mt-2 text-[14.5px] text-white/62 leading-[1.6]">We pair you with one nearby W-2 cleaner and lock a recurring slot. You'll know their name and see them again next visit.</p>
+      </div>
+      <!-- Step 3 -->
+      <div class="relative rounded-card border border-accent/35 bg-accent/[0.12] p-6">
+        <span class="font-mono text-[12.5px] tracking-[0.12em] text-accent">STEP 03</span>
+        <span class="absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-accent">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-5h6v5"/><path d="m9.5 12.5 1.5 1.5 3-3" /></svg>
+        </span>
+        <h3 class="mt-3 text-[19px] font-bold tracking-[-0.02em]">Come home to a place that feels lighter</h3>
+        <p class="mt-2 text-[14.5px] text-white/72 leading-[1.6]">Walk in to clear counters, fresh floors, and that quiet exhale. Not happy with anything? We re-clean it free within 24 hours.</p>
+      </div>
+    </div>
+
+    <div class="mt-10">
+      <a href="#quote" class="btn inline-flex items-center gap-2 rounded-full btn-accent px-6 py-3.5 text-[15.5px] font-semibold">
+        Start your 60-second quote
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ STATS BAND ============ -->
+<section class="bg-mint hair-b">
+  <div class="mx-auto max-w-container px-5 sm:px-8 py-12 sm:py-14">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-y-8 gap-x-6">
+      <div class="text-center lg:text-left">
+        <div class="display-md text-[34px] sm:text-[40px] font-bold tnum text-accent-deep">2,408</div>
+        <p class="mt-1 text-[13.5px] font-medium text-ink/60">Homes cleaned every month</p>
+      </div>
+      <div class="text-center lg:text-left lg:border-l hair lg:pl-6">
+        <div class="display-md text-[34px] sm:text-[40px] font-bold tnum text-accent-deep">38</div>
+        <p class="mt-1 text-[13.5px] font-medium text-ink/60">Cleaners on the team — all W-2 employees, not contractors</p>
+      </div>
+      <div class="text-center lg:text-left lg:border-l hair lg:pl-6">
+        <div class="display-md text-[34px] sm:text-[40px] font-bold tnum text-accent-deep">84%</div>
+        <p class="mt-1 text-[13.5px] font-medium text-ink/60">Same-cleaner retention, visit to visit</p>
+      </div>
+      <div class="text-center lg:text-left lg:border-l hair lg:pl-6">
+        <div class="display-md text-[34px] sm:text-[40px] font-bold tnum text-accent-deep">4.9<span class="text-[22px] text-ink/40">/5</span></div>
+        <p class="mt-1 text-[13.5px] font-medium text-ink/60">Average rating on a first clean</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 8 · REVIEWS ============ -->
+<section id="reviews" class="mx-auto max-w-container px-5 sm:px-8 py-20 sm:py-24">
+  <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
+    <div class="max-w-xl">
+      <span class="text-[12.5px] font-semibold uppercase tracking-[0.14em] text-accent">Reviews</span>
+      <h2 class="display-lg mt-3 text-[32px] sm:text-[40px] font-bold">
+        <span class="inline-flex items-center gap-1.5 align-middle">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="#F5A623" stroke="none" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        </span>
+        <span class="tnum">4.9</span> from <span class="tnum">1,408</span> reviews
+      </h2>
+      <p class="mt-3 text-[16px] text-ink/65">Verified ratings from homeowners across Chicago neighborhoods.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="inline-flex items-center gap-2 rounded-full border hair bg-white px-3.5 py-2 text-[13px] font-semibold text-ink/70">
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.5 12.2c0-.7-.06-1.4-.18-2.05H12v3.9h5.9a5 5 0 0 1-2.2 3.3v2.7h3.55c2.08-1.92 3.25-4.75 3.25-7.85Z"/><path fill="#34A853" d="M12 23c2.95 0 5.43-.98 7.25-2.65l-3.55-2.7c-.98.66-2.24 1.05-3.7 1.05-2.85 0-5.27-1.92-6.13-4.5H2.2v2.8A11 11 0 0 0 12 23Z"/><path fill="#FBBC05" d="M5.87 14.2a6.6 6.6 0 0 1 0-4.2V7.2H2.2a11 11 0 0 0 0 9.8l3.67-2.8Z"/><path fill="#EA4335" d="M12 4.95c1.6 0 3.05.55 4.18 1.63l3.13-3.13A11 11 0 0 0 2.2 7.2l3.67 2.8C6.73 7.42 9.15 4.95 12 4.95Z"/></svg>
+        Google
+      </span>
+      <span class="inline-flex items-center gap-1.5 rounded-full border hair bg-white px-3.5 py-2 text-[13px] font-semibold text-[#D32323]">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#D32323" aria-hidden="true"><path d="M12.5 2.2c1 .3 1.5 1 1.5 2.1v8.1c0 .9-.6 1.4-1.4 1.1l-2.1-.8c-.8-.3-1-.9-.5-1.6l3-5.2Zm-4.3 7.6c.7.4.7 1.1 0 1.6l-3.8 2.7c-.7.5-1.4.1-1.5-.8l-.3-3.4c-.1-1 .6-1.6 1.5-1.2l4.1 1.1Zm.6 3.6c.7-.4 1.4 0 1.4.9l.1 4.6c0 1-.8 1.5-1.6 1L5.4 19c-.8-.5-.8-1.4-.1-1.9l3.5-3.7Zm5 .6c-.4-.7 0-1.4.9-1.4l4.6.3c1 0 1.4.9.8 1.7l-2.6 3c-.6.7-1.5.6-1.9-.2l-1.8-3.4Zm-1.6 1.3c.8-.3 1.5.3 1.4 1.1l-.5 4.5c-.1 1-1 1.3-1.7.7L8 19.6c-.8-.6-.6-1.5.2-1.8l4.4-2Z"/></svg>
+        Yelp
+      </span>
+    </div>
+  </div>
+
+  <div class="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+    <!-- Review 1 -->
+    <article class="card card-hover p-6 flex flex-col">
+      <div class="flex items-center gap-0.5 text-[#F5A623]" aria-label="5 out of 5 stars">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+      </div>
+      <p class="mt-3 text-[14.5px] text-ink/72 leading-[1.6] flex-1">"Same cleaner, Daniela, for eight months now. She knows our place better than we do and the kitchen always looks like a photo when I get home. Worth every dollar."</p>
+      <div class="mt-4 flex items-center gap-3 pt-4 hair-t">
+        <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-mint text-[13px] font-bold text-accent-deep">PM</span>
+        <div class="leading-tight">
+          <div class="text-[14px] font-semibold">Priya Menon</div>
+          <div class="text-[12.5px] text-ink/52">Lincoln Park · Recurring bi-weekly</div>
+        </div>
+      </div>
+    </article>
+    <!-- Review 2 -->
+    <article class="card card-hover p-6 flex flex-col">
+      <div class="flex items-center gap-0.5 text-[#F5A623]" aria-label="5 out of 5 stars">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+      </div>
+      <p class="mt-3 text-[14.5px] text-ink/72 leading-[1.6] flex-1">"Booked a move-out clean for our condo and the landlord refunded the full deposit. They got inside cabinets I'd completely forgotten about. Quote took two minutes."</p>
+      <div class="mt-4 flex items-center gap-3 pt-4 hair-t">
+        <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-mint text-[13px] font-bold text-accent-deep">TO</span>
+        <div class="leading-tight">
+          <div class="text-[14px] font-semibold">Tomás Okafor</div>
+          <div class="text-[12.5px] text-ink/52">Wicker Park · Move-out clean</div>
+        </div>
+      </div>
+    </article>
+    <!-- Review 3 -->
+    <article class="card card-hover p-6 flex flex-col">
+      <div class="flex items-center gap-0.5 text-[#F5A623]" aria-label="5 out of 5 stars">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+      </div>
+      <p class="mt-3 text-[14.5px] text-ink/72 leading-[1.6] flex-1">"We have two cats and I'm picky about products. Brightwork uses plant-based stuff with zero harsh smell — the apartment just smells like nothing, which is exactly right."</p>
+      <div class="mt-4 flex items-center gap-3 pt-4 hair-t">
+        <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-mint text-[13px] font-bold text-accent-deep">HK</span>
+        <div class="leading-tight">
+          <div class="text-[14px] font-semibold">Hannah Kowalski</div>
+          <div class="text-[12.5px] text-ink/52">Andersonville · Recurring weekly</div>
+        </div>
+      </div>
+    </article>
+    <!-- Review 4 -->
+    <article class="card card-hover p-6 flex flex-col">
+      <div class="flex items-center gap-0.5 text-[#F5A623]" aria-label="5 out of 5 stars">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+      </div>
+      <p class="mt-3 text-[14.5px] text-ink/72 leading-[1.6] flex-1">"After our kitchen remodel the dust was everywhere — vents, light fixtures, the works. The post-renovation crew handled all of it in one visit. Genuinely impressed."</p>
+      <div class="mt-4 flex items-center gap-3 pt-4 hair-t">
+        <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-mint text-[13px] font-bold text-accent-deep">MR</span>
+        <div class="leading-tight">
+          <div class="text-[14px] font-semibold">Marcus Reyes</div>
+          <div class="text-[12.5px] text-ink/52">Roscoe Village · Post-renovation clean</div>
+        </div>
+      </div>
+    </article>
+    <!-- Review 5 -->
+    <article class="card card-hover p-6 flex flex-col">
+      <div class="flex items-center gap-0.5 text-[#F5A623]" aria-label="5 out of 5 stars">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+      </div>
+      <p class="mt-3 text-[14.5px] text-ink/72 leading-[1.6] flex-1">"One time something got missed in the bathroom and I mentioned it — they sent someone back the next morning, no fuss, no charge. That's the part that earned my trust."</p>
+      <div class="mt-4 flex items-center gap-3 pt-4 hair-t">
+        <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-mint text-[13px] font-bold text-accent-deep">SN</span>
+        <div class="leading-tight">
+          <div class="text-[14px] font-semibold">Sofia Nilsson</div>
+          <div class="text-[12.5px] text-ink/52">Bucktown · Recurring monthly</div>
+        </div>
+      </div>
+    </article>
+    <!-- Review 6 -->
+    <article class="card card-hover p-6 flex flex-col">
+      <div class="flex items-center gap-0.5 text-[#F5A623]" aria-label="5 out of 5 stars">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.9l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95L12 2.5Z"/></svg>
+      </div>
+      <p class="mt-3 text-[14.5px] text-ink/72 leading-[1.6] flex-1">"I love that they're real employees, not gig workers. It means the same vetted person, every single time, and I never have to think about who's in my home. Huge relief."</p>
+      <div class="mt-4 flex items-center gap-3 pt-4 hair-t">
+        <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-mint text-[13px] font-bold text-accent-deep">AC</span>
+        <div class="leading-tight">
+          <div class="text-[14px] font-semibold">Aanya Chaudhary</div>
+          <div class="text-[12.5px] text-ink/52">North Center · Recurring bi-weekly</div>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ============ 9 · SERVICE AREA ============ -->
+<section class="bg-mint-soft hair-t hair-b">
+  <div class="mx-auto max-w-container px-5 sm:px-8 py-20 sm:py-24">
+    <div class="grid lg:grid-cols-[1fr_0.95fr] gap-12 lg:gap-16 items-center">
+      <div>
+        <span class="text-[12.5px] font-semibold uppercase tracking-[0.14em] text-accent">Service area</span>
+        <h2 class="display-lg mt-3 text-[32px] sm:text-[40px] font-bold">
+          We clean across <span class="text-ink/45">North Side Chicago.</span>
+        </h2>
+        <p class="mt-3 text-[16.5px] text-ink/65 leading-[1.6]">
+          Brightwork cleaners live in the neighborhoods they serve, so your visit starts on time and your route stays short. Eight neighborhoods, one team.
+        </p>
+
+        <ul class="mt-7 grid grid-cols-2 gap-x-6 gap-y-2.5">
+          <li class="flex items-center gap-2 text-[14.5px] font-medium text-ink/78">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.6"/></svg>
+            Lincoln Park
+          </li>
+          <li class="flex items-center gap-2 text-[14.5px] font-medium text-ink/78">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.6"/></svg>
+            Lakeview
+          </li>
+          <li class="flex items-center gap-2 text-[14.5px] font-medium text-ink/78">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.6"/></svg>
+            Logan Square
+          </li>
+          <li class="flex items-center gap-2 text-[14.5px] font-medium text-ink/78">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.6"/></svg>
+            Wicker Park
+          </li>
+          <li class="flex items-center gap-2 text-[14.5px] font-medium text-ink/78">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.6"/></svg>
+            Andersonville
+          </li>
+          <li class="flex items-center gap-2 text-[14.5px] font-medium text-ink/78">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.6"/></svg>
+            Roscoe Village
+          </li>
+          <li class="flex items-center gap-2 text-[14.5px] font-medium text-ink/78">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.6"/></svg>
+            Bucktown
+          </li>
+          <li class="flex items-center gap-2 text-[14.5px] font-medium text-ink/78">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.6"/></svg>
+            North Center
+          </li>
+        </ul>
+
+        <p class="mt-7 text-[14px] text-ink/55">
+          Just outside these lines? <a href="tel:+15552269070" class="font-semibold text-accent link-underline">Call (555) 226-9070</a> — we add nearby blocks often.
+        </p>
+      </div>
+
+      <!-- Region map SVG -->
+      <div class="card p-5 sm:p-6">
+        <svg viewBox="0 0 420 360" class="w-full h-auto" role="img" aria-label="Map of Brightwork's Chicago service area with pins on eight North Side neighborhoods">
+          <defs>
+            <linearGradient id="land" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#EAF6F4"/>
+              <stop offset="1" stop-color="#D6EDEA"/>
+            </linearGradient>
+          </defs>
+          <!-- water (lake) -->
+          <rect x="0" y="0" width="420" height="360" fill="#DCEFF1"/>
+          <!-- land mass -->
+          <path d="M0 0 H300 C312 40 296 84 308 126 C320 168 300 210 312 254 C322 296 304 332 296 360 H0 Z" fill="url(#land)" stroke="rgba(0,0,0,0.08)" stroke-width="1.5"/>
+          <!-- river hint -->
+          <path d="M150 0 C158 70 134 130 150 200 C162 258 142 312 154 360" fill="none" stroke="#BCDFDA" stroke-width="6" stroke-linecap="round" opacity="0.8"/>
+          <!-- main roads -->
+          <path d="M0 120 H300" stroke="rgba(0,0,0,0.07)" stroke-width="2.5"/>
+          <path d="M0 230 H312" stroke="rgba(0,0,0,0.07)" stroke-width="2.5"/>
+          <path d="M70 0 V360" stroke="rgba(0,0,0,0.06)" stroke-width="2.5"/>
+          <path d="M220 0 V360" stroke="rgba(0,0,0,0.06)" stroke-width="2.5"/>
+          <!-- lake label -->
+          <text x="356" y="186" font-family="Inter, sans-serif" font-size="11" fill="#7FB9B3" font-weight="600" text-anchor="middle" transform="rotate(90 356 186)">Lake Michigan</text>
+
+          <!-- Pins -->
+          <!-- Andersonville -->
+          <g>
+            <circle cx="232" cy="52" r="7" fill="#2BA39A" stroke="#fff" stroke-width="2.5"/>
+            <circle cx="232" cy="52" r="13" fill="none" stroke="#2BA39A" stroke-width="1" opacity="0.4"/>
+            <text x="232" y="36" font-family="Inter, sans-serif" font-size="11" fill="#16201F" font-weight="600" text-anchor="middle">Andersonville</text>
+          </g>
+          <!-- Lakeview -->
+          <g>
+            <circle cx="246" cy="118" r="7" fill="#2BA39A" stroke="#fff" stroke-width="2.5"/>
+            <circle cx="246" cy="118" r="13" fill="none" stroke="#2BA39A" stroke-width="1" opacity="0.4"/>
+            <text x="246" y="102" font-family="Inter, sans-serif" font-size="11" fill="#16201F" font-weight="600" text-anchor="middle">Lakeview</text>
+          </g>
+          <!-- North Center -->
+          <g>
+            <circle cx="148" cy="104" r="7" fill="#2BA39A" stroke="#fff" stroke-width="2.5"/>
+            <circle cx="148" cy="104" r="13" fill="none" stroke="#2BA39A" stroke-width="1" opacity="0.4"/>
+            <text x="148" y="88" font-family="Inter, sans-serif" font-size="11" fill="#16201F" font-weight="600" text-anchor="middle">North Center</text>
+          </g>
+          <!-- Roscoe Village -->
+          <g>
+            <circle cx="156" cy="158" r="7" fill="#2BA39A" stroke="#fff" stroke-width="2.5"/>
+            <circle cx="156" cy="158" r="13" fill="none" stroke="#2BA39A" stroke-width="1" opacity="0.4"/>
+            <text x="156" y="178" font-family="Inter, sans-serif" font-size="11" fill="#16201F" font-weight="600" text-anchor="middle">Roscoe Village</text>
+          </g>
+          <!-- Logan Square -->
+          <g>
+            <circle cx="82" cy="190" r="7" fill="#2BA39A" stroke="#fff" stroke-width="2.5"/>
+            <circle cx="82" cy="190" r="13" fill="none" stroke="#2BA39A" stroke-width="1" opacity="0.4"/>
+            <text x="82" y="174" font-family="Inter, sans-serif" font-size="11" fill="#16201F" font-weight="600" text-anchor="middle">Logan Square</text>
+          </g>
+          <!-- Lincoln Park -->
+          <g>
+            <circle cx="252" cy="216" r="7" fill="#2BA39A" stroke="#fff" stroke-width="2.5"/>
+            <circle cx="252" cy="216" r="13" fill="none" stroke="#2BA39A" stroke-width="1" opacity="0.4"/>
+            <text x="252" y="200" font-family="Inter, sans-serif" font-size="11" fill="#16201F" font-weight="600" text-anchor="middle">Lincoln Park</text>
+          </g>
+          <!-- Bucktown -->
+          <g>
+            <circle cx="124" cy="244" r="7" fill="#2BA39A" stroke="#fff" stroke-width="2.5"/>
+            <circle cx="124" cy="244" r="13" fill="none" stroke="#2BA39A" stroke-width="1" opacity="0.4"/>
+            <text x="124" y="264" font-family="Inter, sans-serif" font-size="11" fill="#16201F" font-weight="600" text-anchor="middle">Bucktown</text>
+          </g>
+          <!-- Wicker Park -->
+          <g>
+            <circle cx="114" cy="290" r="7" fill="#2BA39A" stroke="#fff" stroke-width="2.5"/>
+            <circle cx="114" cy="290" r="13" fill="none" stroke="#2BA39A" stroke-width="1" opacity="0.4"/>
+            <text x="114" y="310" font-family="Inter, sans-serif" font-size="11" fill="#16201F" font-weight="600" text-anchor="middle">Wicker Park</text>
+          </g>
+        </svg>
+        <p class="mt-3 text-center text-[12.5px] text-ink/50 font-mono">8 neighborhoods · North Side, Chicago IL</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 10 · GUARANTEE / PRICING ============ -->
+<section class="mx-auto max-w-container px-5 sm:px-8 py-20 sm:py-24">
+  <div class="rounded-[20px] border hair bg-ink text-white overflow-hidden relative">
+    <div class="blob bg-accent/30 h-64 w-64 -top-16 -right-12"></div>
+    <div class="relative grid lg:grid-cols-[1.1fr_0.9fr]">
+      <!-- left: copy -->
+      <div class="p-8 sm:p-11">
+        <span class="text-[12.5px] font-semibold uppercase tracking-[0.14em] text-accent">Pricing &amp; guarantee</span>
+        <h2 class="display-lg mt-3 text-[30px] sm:text-[38px] font-bold">
+          A clear price, and a clean you can <em class="not-italic text-accent">count on.</em>
+        </h2>
+        <p class="mt-4 text-[16px] text-white/65 leading-[1.6]">
+          No hourly meter, no surprise add-ons at the door. You get a transparent per-home quote in 60 seconds — and if a clean ever falls short, we make it right, fast.
+        </p>
+
+        <ul class="mt-7 space-y-3.5">
+          <li class="flex gap-3">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+            <span class="text-[14.5px] text-white/82"><strong class="font-semibold text-white">Transparent per-home quote</strong> — answer a few questions, see your flat price in 60 seconds.</span>
+          </li>
+          <li class="flex gap-3">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+            <span class="text-[14.5px] text-white/82"><strong class="font-semibold text-white">Satisfaction guarantee</strong> — if you're not happy, tell us within 24 hours.</span>
+          </li>
+          <li class="flex gap-3">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+            <span class="text-[14.5px] text-white/82"><strong class="font-semibold text-white">Free re-clean</strong> — we send a cleaner back to fix it, at no extra cost.</span>
+          </li>
+        </ul>
+
+        <div class="mt-8 flex flex-col sm:flex-row gap-3">
+          <a href="#quote" class="btn inline-flex items-center justify-center gap-2 rounded-full btn-accent px-6 py-3.5 text-[15px] font-semibold">
+            Get a free estimate
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </a>
+          <a href="tel:+15552269070" class="btn inline-flex items-center justify-center gap-2 rounded-full bg-white/10 hover:bg-white/15 border border-white/15 px-6 py-3.5 text-[15px] font-semibold text-white">
+            Call (555) 226-9070
+          </a>
+        </div>
+      </div>
+
+      <!-- right: price cards -->
+      <div class="bg-white/[0.04] border-t lg:border-t-0 lg:border-l border-white/10 p-8 sm:p-11 flex flex-col justify-center gap-4">
+        <div class="rounded-card border border-white/12 bg-white/[0.05] p-5">
+          <div class="text-[12px] font-mono uppercase tracking-[0.1em] text-accent">Recurring clean</div>
+          <div class="mt-1.5 flex items-baseline gap-1.5">
+            <span class="display-md text-[34px] font-bold tnum">$119</span>
+            <span class="text-[14px] text-white/55">/ visit</span>
+          </div>
+          <p class="mt-1 text-[13px] text-white/55">Weekly, bi-weekly, or monthly — same cleaner each time.</p>
+        </div>
+        <div class="rounded-card border border-accent/35 bg-accent/[0.12] p-5">
+          <div class="text-[12px] font-mono uppercase tracking-[0.1em] text-accent">One-time deep clean</div>
+          <div class="mt-1.5 flex items-baseline gap-1.5">
+            <span class="display-md text-[34px] font-bold tnum">$249</span>
+            <span class="text-[14px] text-white/55">starting</span>
+          </div>
+          <p class="mt-1 text-[13px] text-white/62">Top-to-bottom reset — baseboards, blinds, behind appliances.</p>
+        </div>
+        <div class="flex items-center gap-2.5 rounded-card border border-white/12 bg-white/[0.03] px-5 py-3.5">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" aria-hidden="true"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+          <p class="text-[13px] text-white/72"><strong class="text-white font-semibold">Not happy?</strong> We re-clean free within 24 hours.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div class="mt-16 grid lg:grid-cols-[0.5fr_1fr] gap-10 lg:gap-14">
+    <div>
+      <span class="text-[12.5px] font-semibold uppercase tracking-[0.14em] text-accent">Common questions</span>
+      <h2 class="display-md mt-3 text-[28px] sm:text-[32px] font-bold">Good things to know before you book.</h2>
+      <p class="mt-3 text-[15px] text-ink/60">Still unsure about something? <a href="tel:+15552269070" class="font-semibold text-accent link-underline">Call us</a> — a real person picks up.</p>
+    </div>
+    <div>
+      <details class="faq py-5" open>
+        <summary class="flex items-center justify-between gap-4">
+          <span class="text-[16.5px] font-semibold pr-2">Will I get the same cleaner every time?</span>
+          <span class="chev shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-full bg-mint text-accent-deep">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          </span>
+        </summary>
+        <p class="mt-3 text-[14.5px] text-ink/65 leading-[1.65]">Yes — that's the whole point of how we work. You're paired with one cleaner who keeps your recurring slot, so the same familiar person returns each visit. If they're ever out sick or on vacation, we tell you ahead of time and send a trained backup who's briefed on your home's notes.</p>
+      </details>
+      <details class="faq py-5">
+        <summary class="flex items-center justify-between gap-4">
+          <span class="text-[16.5px] font-semibold pr-2">Are your cleaners employees or contractors?</span>
+          <span class="chev shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-full bg-mint text-accent-deep">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          </span>
+        </summary>
+        <p class="mt-3 text-[14.5px] text-ink/65 leading-[1.65]">Every Brightwork cleaner is a W-2 employee — hired, trained, background-checked, and paid by us, never a gig contractor. It matters because employees are accountable to a company you can hold responsible, they're covered by our insurance, and they stick around — which is exactly why you keep the same person. We do not use independent contractors at all.</p>
+      </details>
+      <details class="faq py-5">
+        <summary class="flex items-center justify-between gap-4">
+          <span class="text-[16.5px] font-semibold pr-2">What products do you use — are they safe for pets and kids?</span>
+          <span class="chev shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-full bg-mint text-accent-deep">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          </span>
+        </summary>
+        <p class="mt-3 text-[14.5px] text-ink/65 leading-[1.65]">We clean with plant-based, eco-friendly products that are low-VOC and free of ammonia and bleach, so they're safe to use around pets and children with no harsh fumes left behind. If you'd rather we use a specific product you already own — or skip a particular scent — just leave it out and note it on your booking. We're happy to work with what you keep at home.</p>
+      </details>
+      <details class="faq py-5">
+        <summary class="flex items-center justify-between gap-4">
+          <span class="text-[16.5px] font-semibold pr-2">Do I need to be home during the clean?</span>
+          <span class="chev shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-full bg-mint text-accent-deep">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          </span>
+        </summary>
+        <p class="mt-3 text-[14.5px] text-ink/65 leading-[1.65]">Not at all — most clients are at work during their visit. You can leave a key, a lockbox code, or a building entry method on file, and your cleaner follows your access notes exactly. Many people like to be home for the first clean to do a quick walkthrough, then hand off access for every visit after that. Whatever you're comfortable with works.</p>
+      </details>
+      <details class="faq py-5">
+        <summary class="flex items-center justify-between gap-4">
+          <span class="text-[16.5px] font-semibold pr-2">What isn't included in a standard clean?</span>
+          <span class="chev shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-full bg-mint text-accent-deep">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          </span>
+        </summary>
+        <p class="mt-3 text-[14.5px] text-ink/65 leading-[1.65]">A standard recurring clean covers kitchens, bathrooms, floors, dusting, and tidying. It doesn't include inside-the-fridge or inside-the-oven detailing, interior windows, laundry, exterior work, or moving heavy furniture — those are optional add-ons you can attach to any visit. Anything that needs a ladder above two steps, pest cleanup, or biohazard work falls outside what we do; we'll tell you upfront if so.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 11 · FINAL CTA + QUOTE FORM ============ -->
+<section id="quote" class="bg-mint hair-t">
+  <div class="mx-auto max-w-container px-5 sm:px-8 py-20 sm:py-24">
+    <div class="grid lg:grid-cols-[1fr_0.92fr] gap-12 lg:gap-16 items-center">
+      <!-- left copy -->
+      <div>
+        <span class="inline-flex items-center gap-2 rounded-full border hair bg-white px-3 py-1.5 text-[12.5px] font-semibold text-ink/70">
+          <span class="pulse-dot"></span>
+          Next-week openings in Lincoln Park
+        </span>
+        <h2 class="display-lg mt-5 text-[34px] sm:text-[42px] font-bold">
+          Your home, a little <em class="not-italic text-accent">lighter</em> — starting this week.
+        </h2>
+        <p class="mt-4 text-[16.5px] text-ink/65 leading-[1.6]">
+          Tell us about your place and we'll send a flat per-home quote in 60 seconds. No walkthrough, no pressure, no hourly meter — just a clean home and a free morning.
+        </p>
+
+        <div class="mt-7 flex flex-col sm:flex-row sm:items-center gap-3">
+          <a href="tel:+15552269070" class="btn inline-flex items-center justify-center gap-2 rounded-full btn-accent px-6 py-3.5 text-[15.5px] font-semibold">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/>
+            </svg>
+            Call (555) 226-9070
+          </a>
+          <span class="text-[14px] text-ink/55 font-mono">Mon–Sat 8am–6pm · a real person answers</span>
+        </div>
+
+        <div class="mt-7 flex flex-wrap gap-2">
+          <span class="inline-flex items-center gap-1.5 rounded-full border hair bg-white px-2.5 py-1 text-[12px] font-medium text-ink/70">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+            No card required
+          </span>
+          <span class="inline-flex items-center gap-1.5 rounded-full border hair bg-white px-2.5 py-1 text-[12px] font-medium text-ink/70">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+            Flat per-home price
+          </span>
+          <span class="inline-flex items-center gap-1.5 rounded-full border hair bg-white px-2.5 py-1 text-[12px] font-medium text-ink/70">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+            Free reschedules
+          </span>
+        </div>
+      </div>
+
+      <!-- right: quote form mockup -->
+      <div class="card p-6 sm:p-8">
+        <div class="flex items-center gap-2.5">
+          <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-accent">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg>
+          </span>
+          <div class="leading-tight">
+            <h3 class="text-[18px] font-bold tracking-[-0.02em]">Get your free quote</h3>
+            <p class="text-[12.5px] text-ink/52 font-mono">Takes about 60 seconds</p>
+          </div>
+        </div>
+
+        <div class="mt-6 space-y-4">
+          <div>
+            <label for="q-name" class="block text-[13px] font-semibold text-ink/75 mb-1.5">Your name</label>
+            <input id="q-name" type="text" autocomplete="name" placeholder="e.g. Priya Menon"
+              class="w-full rounded-xl border hair bg-paper px-3.5 py-2.5 text-[14.5px] text-ink placeholder:text-ink/35 outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition" />
+          </div>
+          <div>
+            <label for="q-phone" class="block text-[13px] font-semibold text-ink/75 mb-1.5">Phone number</label>
+            <input id="q-phone" type="tel" autocomplete="tel" placeholder="(555) 000-0000"
+              class="w-full rounded-xl border hair bg-paper px-3.5 py-2.5 text-[14.5px] text-ink placeholder:text-ink/35 outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition" />
+          </div>
+          <div>
+            <label for="q-hood" class="block text-[13px] font-semibold text-ink/75 mb-1.5">Neighborhood</label>
+            <select id="q-hood"
+              class="w-full rounded-xl border hair bg-paper px-3.5 py-2.5 text-[14.5px] text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition">
+              <option>Lincoln Park</option>
+              <option>Lakeview</option>
+              <option>Logan Square</option>
+              <option>Wicker Park</option>
+              <option>Andersonville</option>
+              <option>Roscoe Village</option>
+              <option>Bucktown</option>
+              <option>North Center</option>
+            </select>
+          </div>
+          <div>
+            <label for="q-need" class="block text-[13px] font-semibold text-ink/75 mb-1.5">What do you need?</label>
+            <textarea id="q-need" rows="3" placeholder="e.g. Bi-weekly recurring clean for a 2-bed, 1-bath condo — we have a cat."
+              class="w-full rounded-xl border hair bg-paper px-3.5 py-2.5 text-[14.5px] text-ink placeholder:text-ink/35 outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition resize-none"></textarea>
+          </div>
+
+          <button type="button"
+            class="btn w-full inline-flex items-center justify-center gap-2 rounded-full btn-accent px-6 py-3.5 text-[15.5px] font-semibold">
+            Get my free quote
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </button>
+          <p class="text-center text-[12px] text-ink/48">
+            Prefer to talk? <a href="tel:+15552269070" class="font-semibold text-accent link-underline">Call (555) 226-9070</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ============ 12 · FOOTER ============ -->
+<footer id="contact" class="bg-ink text-white">
+  <div class="mx-auto max-w-container px-5 sm:px-8 py-14 sm:py-16">
+    <div class="grid sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr] gap-10 lg:gap-12">
+      <!-- brand col -->
+      <div>
+        <div class="flex items-center gap-2.5">
+          <span class="inline-flex h-9 w-9 items-center justify-center rounded-[11px] bg-accent">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>
+              <circle cx="12" cy="12" r="3.4" fill="#ffffff" stroke="none"/>
+            </svg>
+          </span>
+          <span class="text-[19px] font-bold tracking-[-0.03em]">Brightwork</span>
+        </div>
+        <p class="mt-3.5 max-w-sm text-[14px] text-white/60 leading-[1.6]">
+          Recurring and deep-clean home cleaning across Chicago's North Side — with vetted, employed cleaners and eco-friendly products. Come home to a place that feels lighter.
+        </p>
+        <!-- socials -->
+        <div class="mt-5 flex items-center gap-2.5">
+          <a href="#top" aria-label="Brightwork on Instagram" class="btn inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/5 hover:bg-white/12">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.5" cy="6.5" r="1.2" fill="#fff" stroke="none"/></svg>
+          </a>
+          <a href="#top" aria-label="Brightwork on Facebook" class="btn inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/5 hover:bg-white/12">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="#ffffff" stroke="none" aria-hidden="true"><path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.78-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12Z"/></svg>
+          </a>
+          <a href="#top" aria-label="Brightwork on Yelp" class="btn inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/5 hover:bg-white/12">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="#ffffff" stroke="none" aria-hidden="true"><path d="M12.5 2.2c1 .3 1.5 1 1.5 2.1v8.1c0 .9-.6 1.4-1.4 1.1l-2.1-.8c-.8-.3-1-.9-.5-1.6l3-5.2Zm-4.3 7.6c.7.4.7 1.1 0 1.6l-3.8 2.7c-.7.5-1.4.1-1.5-.8l-.3-3.4c-.1-1 .6-1.6 1.5-1.2l4.1 1.1Zm.6 3.6c.7-.4 1.4 0 1.4.9l.1 4.6c0 1-.8 1.5-1.6 1L5.4 19c-.8-.5-.8-1.4-.1-1.9l3.5-3.7Zm5 .6c-.4-.7 0-1.4.9-1.4l4.6.3c1 0 1.4.9.8 1.7l-2.6 3c-.6.7-1.5.6-1.9-.2l-1.8-3.4Zm-1.6 1.3c.8-.3 1.5.3 1.4 1.1l-.5 4.5c-.1 1-1 1.3-1.7.7L8 19.6c-.8-.6-.6-1.5.2-1.8l4.4-2Z"/></svg>
+          </a>
+          <a href="#top" aria-label="Brightwork on Google" class="btn inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/5 hover:bg-white/12">
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M22.5 12.2c0-.7-.06-1.4-.18-2.05H12v3.9h5.9a5 5 0 0 1-2.2 3.3v2.7h3.55c2.08-1.92 3.25-4.75 3.25-7.85Z" opacity="0.95"/><path fill="#fff" d="M12 23c2.95 0 5.43-.98 7.25-2.65l-3.55-2.7c-.98.66-2.24 1.05-3.7 1.05-2.85 0-5.27-1.92-6.13-4.5H2.2v2.8A11 11 0 0 0 12 23Z" opacity="0.7"/><path fill="#fff" d="M5.87 14.2a6.6 6.6 0 0 1 0-4.2V7.2H2.2a11 11 0 0 0 0 9.8l3.67-2.8Z" opacity="0.5"/><path fill="#fff" d="M12 4.95c1.6 0 3.05.55 4.18 1.63l3.13-3.13A11 11 0 0 0 2.2 7.2l3.67 2.8C6.73 7.42 9.15 4.95 12 4.95Z" opacity="0.85"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- contact col -->
+      <div>
+        <h3 class="text-[13px] font-semibold uppercase tracking-[0.12em] text-white/45">Contact</h3>
+        <ul class="mt-4 space-y-2.5 text-[14px] text-white/70">
+          <li>
+            <a href="tel:+15552269070" class="flex items-center gap-2.5 hover:text-white transition-colors">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+              <span class="font-semibold tnum">(555) 226-9070</span>
+            </a>
+          </li>
+          <li class="flex items-start gap-2.5">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.6"/></svg>
+            <span>2418 N Lincoln Ave, Suite 4<br />Chicago, IL 60614</span>
+          </li>
+          <li class="flex items-start gap-2.5">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2BA39A" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            <span class="font-mono text-[13px]">Mon–Sat 8am–6pm</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- links col -->
+      <div>
+        <h3 class="text-[13px] font-semibold uppercase tracking-[0.12em] text-white/45">Explore</h3>
+        <ul class="mt-4 space-y-2.5 text-[14px] text-white/70">
+          <li><a href="#services" class="hover:text-white transition-colors">Services</a></li>
+          <li><a href="#about" class="hover:text-white transition-colors">Why Brightwork</a></li>
+          <li><a href="#reviews" class="hover:text-white transition-colors">Reviews</a></li>
+          <li><a href="#quote" class="hover:text-white transition-colors">Get a free quote</a></li>
+        </ul>
+        <p class="mt-5 text-[13px] text-white/55">
+          Serving Lincoln Park, Lakeview, Logan Square, Wicker Park, Andersonville, Roscoe Village, Bucktown &amp; North Center.
+        </p>
+      </div>
+    </div>
+
+    <!-- bottom bar -->
+    <div class="mt-12 pt-6 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <p class="font-mono text-[12px] text-white/45 tracking-[0.01em]">
+        Bonded &amp; Insured · GL Policy #GL-7740932 · IL Business Reg. #BR-118402
+      </p>
+      <p class="text-[12.5px] text-white/45">
+        © 2026 Brightwork Home Cleaning · Chicago, IL
+      </p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

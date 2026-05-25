@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>theo wren · @theowren · The slow travel membership</title>
+<meta name="description" content="Slow travel. Detailed city guides for people who skip the highlights.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #14100A;
+    --accent: #D4A658;
+    --accent-soft: #E6BD78;
+    --cream: #F3ECDB;
+    --cream-faint: rgba(243, 236, 219, 0.62);
+    --cream-dim: rgba(243, 236, 219, 0.38);
+    --hairline: rgba(243, 236, 219, 0.07);
+    --hairline-accent: rgba(212, 166, 88, 0.24);
+  }
+  html, body { background: var(--bg); }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--cream);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+    -webkit-font-smoothing: antialiased;
+  }
+  .serif { font-family: 'Fraunces', serif; font-weight: 500; letter-spacing: -0.02em; font-variation-settings: "opsz" 144, "SOFT" 30; }
+  .serif-it { font-family: 'Fraunces', serif; font-weight: 500; font-style: italic; letter-spacing: -0.018em; }
+  .mono { font-family: 'JetBrains Mono', monospace; font-feature-settings: "tnum"; letter-spacing: 0.06em; }
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  .bg-mesh {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(ellipse 85% 60% at 50% -8%, rgba(212, 166, 88, 0.10), transparent 62%),
+      radial-gradient(ellipse 80% 50% at 50% 110%, rgba(212, 166, 88, 0.06), transparent 65%),
+      radial-gradient(ellipse 38% 28% at 80% 30%, rgba(178, 100, 60, 0.05), transparent 70%),
+      radial-gradient(ellipse 38% 28% at 20% 70%, rgba(120, 80, 50, 0.04), transparent 70%);
+  }
+  .grain {
+    position: fixed; inset: 0; pointer-events: none; z-index: 1; opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='0.7'/%3E%3C/svg%3E");
+  }
+
+  .avatar-glow {
+    position: absolute; inset: -22px;
+    background: radial-gradient(circle, rgba(212, 166, 88, 0.32), transparent 65%);
+    filter: blur(22px); z-index: -1;
+  }
+  .avatar-ring {
+    background: conic-gradient(from 195deg, rgba(212, 166, 88, 0.55), rgba(212, 166, 88, 0.08) 35%, rgba(212, 166, 88, 0.55));
+    padding: 1.5px; border-radius: 9999px;
+  }
+  .avatar-inner {
+    width: 112px; height: 112px; border-radius: 9999px;
+    background:
+      radial-gradient(circle at 38% 30%, rgba(243, 236, 219, 0.68), transparent 42%),
+      radial-gradient(circle at 68% 70%, rgba(178, 110, 50, 0.6), transparent 52%),
+      linear-gradient(140deg, #67411F 0%, #2E1E10 55%, #18110A 100%);
+    filter: saturate(0.95);
+  }
+
+  .pulse-dot { position: relative; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .pulse-dot::after {
+    content: ""; position: absolute; inset: -3px; border-radius: 50%;
+    background: var(--accent); opacity: 0.5; animation: pulse 2.2s ease-out infinite;
+  }
+  @keyframes pulse { 0%{transform:scale(1);opacity:0.5} 100%{transform:scale(2.6);opacity:0} }
+
+  .featured {
+    position: relative;
+    background: linear-gradient(180deg, rgba(212, 166, 88, 0.07), rgba(212, 166, 88, 0.015));
+    border: 1px solid rgba(212, 166, 88, 0.3);
+    border-radius: 20px;
+    box-shadow: inset 0 0 60px -12px rgba(212, 166, 88, 0.14);
+  }
+  .featured-glow {
+    position: absolute; inset: -36px -20px;
+    background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(212, 166, 88, 0.20), transparent 70%);
+    filter: blur(34px); z-index: -1; pointer-events: none;
+  }
+
+  .cta {
+    background: linear-gradient(180deg, #E2BB73 0%, #C29850 100%);
+    color: #18120A; font-weight: 600;
+    transition: transform 120ms ease, box-shadow 200ms ease, filter 120ms ease;
+    box-shadow: 0 4px 22px -6px rgba(212, 166, 88, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.20);
+  }
+  .cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 32px -6px rgba(212, 166, 88, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.24);
+    filter: brightness(1.04);
+  }
+
+  .link-btn {
+    position: relative; display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px; border-radius: 14px;
+    background: rgba(243, 236, 219, 0.025);
+    border: 1px solid var(--hairline);
+    transition: transform 120ms ease, background 120ms ease, border-color 120ms ease, box-shadow 220ms ease;
+    color: var(--cream);
+  }
+  .link-btn:hover {
+    transform: translateY(-1px);
+    background: rgba(212, 166, 88, 0.055);
+    border-color: var(--hairline-accent);
+    box-shadow: 0 8px 28px -10px rgba(212, 166, 88, 0.32);
+  }
+  .link-btn .arrow { opacity: 0.35; transition: transform 140ms ease, opacity 140ms ease; }
+  .link-btn:hover .arrow { transform: translateX(3px); opacity: 0.9; }
+
+  .link-icon {
+    width: 30px; height: 30px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(212, 166, 88, 0.10);
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .link-icon-primary {
+    background: linear-gradient(140deg, rgba(212, 166, 88, 0.24), rgba(212, 166, 88, 0.08));
+    color: var(--accent-soft);
+  }
+
+  .check { width: 13px; height: 13px; flex-shrink: 0; color: var(--accent); }
+  .icon-btn {
+    width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+    border-radius: 9999px; color: var(--cream-faint);
+    transition: color 140ms ease, background 140ms ease, transform 140ms ease;
+  }
+  .icon-btn:hover { color: var(--accent); background: rgba(212, 166, 88, 0.08); transform: translateY(-1px); }
+
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--hairline), transparent);
+  }
+  .now-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 9px; border-radius: 9999px;
+    background: rgba(212, 166, 88, 0.10);
+    border: 1px solid rgba(212, 166, 88, 0.24);
+  }
+  .city-row {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 5px;
+  }
+  .city-chip {
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.08em;
+    padding: 3px 7px; border-radius: 4px;
+    background: rgba(243, 236, 219, 0.04);
+    color: var(--cream-dim);
+    text-transform: uppercase;
+  }
+
+  @media (min-width: 481px) { .container-bio { max-width: 440px; } }
+</style>
+</head>
+<body class="antialiased">
+
+<div class="bg-mesh"></div>
+<div class="grain"></div>
+
+<main class="container-bio mx-auto px-6 pt-14 pb-12 relative z-10">
+
+  <!-- Eyebrow -->
+  <div class="flex items-center justify-center gap-2.5 mb-12">
+    <span class="pulse-dot"></span>
+    <p class="mono text-[10.5px] uppercase tabular" style="color: var(--cream-faint);">
+      2,184 members &middot; 27 guides &middot; 11 countries
+    </p>
+  </div>
+
+  <!-- Header -->
+  <header class="text-center mb-9">
+    <div class="relative inline-block mb-6">
+      <div class="avatar-glow"></div>
+      <div class="avatar-ring"><div class="avatar-inner"></div></div>
+    </div>
+    <h1 class="serif-it text-[38px] leading-[1.02] mb-1.5" style="color: var(--cream);">theo wren</h1>
+    <p class="text-[12.5px] tracking-wide mb-3" style="color: var(--cream-faint);">@theowren</p>
+
+    <div class="now-pill mb-4">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent);"><circle cx="12" cy="10" r="3"/><path d="M12 21s-7-6.5-7-12a7 7 0 0114 0c0 5.5-7 12-7 12z"/></svg>
+      <span class="mono text-[10px] uppercase tabular" style="color: var(--accent-soft);">currently in &middot; Lisbon</span>
+    </div>
+
+    <p class="text-[14px] leading-[1.65] max-w-[340px] mx-auto" style="color: var(--cream-faint);">
+      Slow travel. Detailed city guides for people who skip the highlights. Member-only itineraries with everything I actually used.
+    </p>
+  </header>
+
+  <!-- City chip row -->
+  <div class="city-row mb-10">
+    <span class="city-chip">Naples</span>
+    <span class="city-chip">Lisbon</span>
+    <span class="city-chip">Mexico City</span>
+    <span class="city-chip">Tbilisi</span>
+    <span class="city-chip">Hanoi</span>
+    <span class="city-chip">Marseille</span>
+    <span class="city-chip">+ 21 more</span>
+  </div>
+
+  <!-- Featured offer -->
+  <section class="relative mb-11">
+    <div class="featured-glow"></div>
+    <div class="featured p-6">
+      <div class="flex items-center justify-between mb-3.5">
+        <span class="mono text-[10px] uppercase tabular" style="color: var(--accent);">membership &middot; monthly</span>
+        <div class="flex items-center gap-1.5">
+          <span class="pulse-dot" style="width:5px;height:5px"></span>
+          <span class="mono text-[10px] tabular" style="color: var(--cream-dim);">2,184 reading</span>
+        </div>
+      </div>
+      <h2 class="serif text-[28px] leading-[1.05] mb-2" style="color: var(--cream);">The guide library</h2>
+      <p class="text-[13.5px] leading-[1.65] mb-6" style="color: var(--cream-faint);">
+        Full access to 27 city guides &mdash; a new one every month &mdash; and one short 1:1 trip-help call per quarter. Built for people who travel for two weeks, not two days.
+      </p>
+
+      <ul class="space-y-2.5 mb-7">
+        <li class="flex items-start gap-3 text-[13px]" style="color: var(--cream);">
+          <svg class="check mt-[3px]" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,7.5 5.5,11 12,3.5"/></svg>
+          <span>Full library &middot; <span class="mono text-[11.5px] tabular" style="color: var(--cream-faint);">27 guides, 11 countries</span></span>
+        </li>
+        <li class="flex items-start gap-3 text-[13px]" style="color: var(--cream);">
+          <svg class="check mt-[3px]" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,7.5 5.5,11 12,3.5"/></svg>
+          <span>New city every month &middot; member-voted</span>
+        </li>
+        <li class="flex items-start gap-3 text-[13px]" style="color: var(--cream);">
+          <svg class="check mt-[3px]" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,7.5 5.5,11 12,3.5"/></svg>
+          <span>One 20-min trip-help call &middot; per quarter</span>
+        </li>
+        <li class="flex items-start gap-3 text-[13px]" style="color: var(--cream);">
+          <svg class="check mt-[3px]" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,7.5 5.5,11 12,3.5"/></svg>
+          <span>Annotated Google Maps &middot; offline-ready</span>
+        </li>
+      </ul>
+
+      <a href="#" class="cta flex items-center justify-center gap-2 py-3.5 rounded-xl text-[14px] w-full">
+        Join &middot; $12/month
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5h8M7 3l3.5 3.5L7 10"/></svg>
+      </a>
+      <p class="text-center mt-3 text-[11.5px]" style="color: var(--cream-dim);">
+        or <a href="#" class="underline decoration-dotted underline-offset-2" style="color: var(--cream-faint);">$108/year</a> &middot; two months free
+      </p>
+    </div>
+  </section>
+
+  <!-- Link stack -->
+  <section class="space-y-2.5 mb-11">
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon link-icon-primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 21s-7-6.5-7-12a7 7 0 0114 0c0 5.5-7 12-7 12z"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Membership &middot; <span style="color: var(--accent-soft);">$12/month</span></div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">FULL LIBRARY &middot; UPDATED WEEKLY</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Annual &middot; $108</div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">TWO MONTHS FREE</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z"/><path d="M4 9h16M8 13h8M8 16h5"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Latest guide &middot; <span class="serif-it text-[15.5px]" style="color:var(--accent-soft)">Naples, 7 days</span></div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">FEB 19 &middot; 6,200 WORDS &middot; 48 PINS</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v6a8 8 0 11-16 0V4z"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Free preview &middot; Lisbon excerpt</div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">FIRST 2,400 WORDS, NO PAYWALL</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.9" fill="currentColor"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Instagram &middot; daily</div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">@THEOWREN &middot; 62.8K</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5.5" width="19" height="13" rx="3"/><path d="M10.5 9.5l4.5 2.5-4.5 2.5z" fill="currentColor"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">YouTube &middot; trip recaps</div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">23 EPISODES &middot; 18.4K SUBS</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M22.539 8.242H1.46V5.406h21.08v2.836zM1.46 10.812V24L12 18.11 22.539 24V10.812H1.46zM22.539 0H1.46v2.836h21.08V0z"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Substack archive</div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">94 LETTERS &middot; FREE TO READ</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v16l-7-4-7 4z"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Press &middot; <span class="serif-it text-[15.5px]" style="color:var(--accent-soft)">Condé Nast Traveler</span></div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">‘THE NEW SLOW TRAVELERS’ &middot; 2025</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+  </section>
+
+  <!-- Social proof microbar -->
+  <div class="flex items-center justify-center gap-5 mb-9">
+    <div class="text-center">
+      <div class="mono text-[14px] tabular" style="color: var(--accent-soft);">2,184</div>
+      <div class="text-[10px] italic mt-0.5" style="color: var(--cream-dim);">members</div>
+    </div>
+    <div class="w-px h-7" style="background: var(--hairline);"></div>
+    <div class="text-center">
+      <div class="mono text-[14px] tabular" style="color: var(--accent-soft);">11</div>
+      <div class="text-[10px] italic mt-0.5" style="color: var(--cream-dim);">countries</div>
+    </div>
+    <div class="w-px h-7" style="background: var(--hairline);"></div>
+    <div class="text-center">
+      <div class="mono text-[14px] tabular" style="color: var(--accent-soft);">5</div>
+      <div class="text-[10px] italic mt-0.5" style="color: var(--cream-dim);">years writing</div>
+    </div>
+  </div>
+
+  <div class="divider mb-7"></div>
+
+  <!-- Social row -->
+  <nav class="flex items-center justify-center gap-1.5 mb-8">
+    <a href="#" class="icon-btn" aria-label="Instagram"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.9" fill="currentColor"/></svg></a>
+    <a href="#" class="icon-btn" aria-label="TikTok"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4v10.5a3.5 3.5 0 11-3.5-3.5"/><path d="M14 4c.5 2.5 2.5 4 5 4"/></svg></a>
+    <a href="#" class="icon-btn" aria-label="YouTube"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="3"/><path d="M10.5 9.5l4.5 2.5-4.5 2.5z" fill="currentColor" stroke="none"/></svg></a>
+    <a href="#" class="icon-btn" aria-label="Substack"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M22.539 8.242H1.46V5.406h21.08v2.836zM1.46 10.812V24L12 18.11 22.539 24V10.812H1.46zM22.539 0H1.46v2.836h21.08V0z"/></svg></a>
+    <a href="#" class="icon-btn" aria-label="Telegram"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l17-7-3 16-5-4-3 3-1-5z"/></svg></a>
+    <a href="mailto:hello@theowren.travel" class="icon-btn" aria-label="Email"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></a>
+  </nav>
+
+  <!-- Footer -->
+  <footer class="text-center space-y-1.5">
+    <p class="mono text-[10px] uppercase tabular" style="color: var(--cream-dim);">
+      Press &middot; <a href="mailto:press@theowren.travel" class="hover:text-[--accent]" style="color: var(--cream-faint);">press@theowren.travel</a>
+    </p>
+    <p class="mono text-[10px] uppercase tabular" style="color: var(--cream-dim);">
+      Mgmt &middot; Range Bureau &middot; agent@rangebureau.com
+    </p>
+  </footer>
+
+</main>
+
+</body>
+</html>

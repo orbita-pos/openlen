@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Check, Sparkles, Terminal, Unlock } from "lucide-react";
+import { Check, Sparkles, Unlock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { GithubIcon } from "@/components/ui/brand-icons";
 
 export function FinalCta() {
   return (
@@ -44,24 +45,31 @@ export function FinalCta() {
                   <Sparkles size={16} /> Generate my page — free
                 </Button>
               </Link>
-              <Button
-                variant="outline"
-                size="lg"
-                className="!h-12 !px-6 text-[15px] !bg-transparent !text-white !ring-zinc-700 hover:!bg-zinc-900"
+              <a
+                href="https://github.com/jesusbernalrj/inari-pages"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="OpenLen on GitHub"
               >
-                <Terminal size={16} /> npx create-openlen-page
-              </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="!h-12 !px-6 text-[15px] !bg-transparent !text-white !ring-zinc-700 hover:!bg-zinc-900"
+                >
+                  <GithubIcon size={16} /> Clone on GitHub
+                </Button>
+              </a>
             </div>
             <div className="mt-5 text-xs text-zinc-500 flex flex-wrap items-center gap-4">
               <span className="flex items-center gap-1.5">
                 <Check size={12} className="text-emerald-400" /> No credit card
               </span>
               <span className="flex items-center gap-1.5">
-                <Check size={12} className="text-emerald-400" /> AGPL — yours forever
+                <Check size={12} className="text-emerald-400" /> AGPLv3 — yours forever
               </span>
               <span className="hidden sm:flex items-center gap-1.5">
-                <Check size={12} className="text-emerald-400" /> 47-second average
-                build
+                <Check size={12} className="text-emerald-400" /> Self-host on
+                a single box
               </span>
             </div>
           </div>

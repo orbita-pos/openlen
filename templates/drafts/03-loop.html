@@ -1,0 +1,1510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Loop — Know how you slept before you open your eyes</title>
+<meta name="description" content="Loop is a screenless sleep and recovery band. It tracks sleep stages, HRV, resting heart rate, skin temperature and blood-oxygen, and gives you one daily readiness score. Seven-day battery. $229, ships in 2 weeks." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+  :root {
+    --bg: #0A0A12;
+    --bg-2: #15131F;
+    --card: #16141F;
+    --card-2: #1C1A28;
+    --ink: #F2F1F6;
+    --ink-2: rgba(242, 241, 246, 0.66);
+    --ink-3: rgba(242, 241, 246, 0.40);
+    --accent: #9B8CFF;
+    --accent-2: #B4A7FF;
+    --rule: rgba(255, 255, 255, 0.06);
+    --rule-soft: rgba(255, 255, 255, 0.035);
+  }
+
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+  body {
+    background: radial-gradient(120% 90% at 50% 0%, #0A0A12 0%, #0C0B16 48%, #15131F 100%);
+    background-attachment: fixed;
+    color: var(--ink);
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: "ss01", "cv11";
+    font-optical-sizing: auto;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .display {
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    font-optical-sizing: auto;
+  }
+
+  .mono { font-family: 'Geist Mono', ui-monospace, Menlo, monospace; }
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  .halftone { opacity: 0.45; font-style: normal; }
+
+  .ink-2 { color: var(--ink-2); }
+  .ink-3 { color: var(--ink-3); }
+  .accent { color: var(--accent); }
+
+  /* ---- Ambient backgrounds ---- */
+  .dotgrid {
+    background-image: radial-gradient(rgba(242, 241, 246, 0.055) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .mesh {
+    background:
+      radial-gradient(640px 420px at 78% 12%, rgba(155, 140, 255, 0.20), transparent 70%),
+      radial-gradient(560px 480px at 8% 84%, rgba(155, 140, 255, 0.10), transparent 72%),
+      radial-gradient(420px 380px at 52% 50%, rgba(123, 110, 220, 0.07), transparent 75%);
+  }
+  .blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(95px);
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  /* ---- Pulse dot ---- */
+  .pulse-dot {
+    position: relative;
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 9999px;
+    background: var(--accent);
+    flex: none;
+  }
+  .pulse-dot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: var(--accent);
+    animation: pulse 1.9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(155, 140, 255, 0.55); }
+    70%  { box-shadow: 0 0 0 10px rgba(155, 140, 255, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(155, 140, 255, 0); }
+  }
+
+  /* ---- Marquee ---- */
+  .marquee-mask {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent);
+    mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent);
+  }
+  .marquee {
+    display: flex;
+    width: max-content;
+    animation: marq 40s linear infinite;
+  }
+  .marquee-mask:hover .marquee { animation-play-state: paused; }
+  @keyframes marq {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  /* ---- Buttons ---- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+  }
+  .btn:active { transform: translateY(0); }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #100E1C;
+    box-shadow: 0 8px 24px -10px rgba(155, 140, 255, 0.7);
+  }
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    background: var(--accent-2);
+    box-shadow: 0 13px 30px -10px rgba(155, 140, 255, 0.85);
+  }
+  .btn-ghost {
+    background: rgba(255, 255, 255, 0.035);
+    color: var(--ink);
+    border: 1px solid rgba(255, 255, 255, 0.11);
+  }
+  .btn-ghost:hover {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(155, 140, 255, 0.42);
+    box-shadow: 0 10px 26px -14px rgba(155, 140, 255, 0.6);
+  }
+
+  /* ---- Cards ---- */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: 16px;
+  }
+  .card-lift {
+    transition: transform 130ms ease, border-color 130ms ease, box-shadow 130ms ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-2px);
+    border-color: rgba(155, 140, 255, 0.28);
+    box-shadow: 0 18px 40px -24px rgba(155, 140, 255, 0.45);
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.42rem;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .icon-tile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(155, 140, 255, 0.11);
+    border: 1px solid rgba(155, 140, 255, 0.22);
+    color: var(--accent);
+    flex: none;
+  }
+
+  /* ---- Underline-wipe link ---- */
+  .ul-link {
+    position: relative;
+    transition: color 120ms ease;
+  }
+  .ul-link::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -2px;
+    height: 1.5px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 180ms ease;
+  }
+  .ul-link:hover { color: var(--accent); }
+  .ul-link:hover::after { transform: scaleX(1); transform-origin: left; }
+
+  .nav-link {
+    position: relative;
+    transition: color 120ms ease;
+  }
+  .nav-link:hover { color: var(--accent); }
+
+  /* ---- FAQ accordion ---- */
+  details.faq { border-bottom: 1px solid var(--rule); }
+  details.faq summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.35rem 0;
+  }
+  details.faq summary::-webkit-details-marker { display: none; }
+  details.faq summary .plus {
+    transition: transform 200ms ease;
+    color: var(--accent);
+    flex: none;
+  }
+  details.faq[open] summary .plus { transform: rotate(45deg); }
+
+  /* ---- Navbar ---- */
+  .navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    background: rgba(10, 10, 18, 0.72);
+    backdrop-filter: blur(12px) saturate(150%);
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .device-tilt {
+    transform: perspective(1100px) rotateY(-8deg) rotateX(4deg);
+  }
+
+  ::selection { background: rgba(155, 140, 255, 0.32); color: #fff; }
+
+  .focus-ring:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .marquee { animation: none; }
+    .pulse-dot::after { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     SECTION 1 — NAV (fixed)
+============================================================ -->
+<header class="navbar">
+  <div class="mx-auto max-w-[1200px] px-5 sm:px-8">
+    <div class="flex h-[68px] items-center justify-between gap-4">
+
+      <!-- Brand -->
+      <a href="#top" class="focus-ring flex items-center gap-2.5">
+        <span class="inline-flex h-9 w-9 items-center justify-center rounded-[10px]" style="background:rgba(155,140,255,0.12);border:1px solid rgba(155,140,255,0.26)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="7.4" stroke="#9B8CFF" stroke-width="2.4"/>
+            <circle cx="12" cy="12" r="2.5" fill="#9B8CFF"/>
+          </svg>
+        </span>
+        <span class="display text-[20px] text-[color:var(--ink)]" style="letter-spacing:-0.04em">Loop</span>
+      </a>
+
+      <!-- Links -->
+      <nav class="hidden md:flex items-center gap-8 text-[14px] font-medium text-[color:var(--ink-2)]">
+        <a href="#product" class="nav-link focus-ring">Product</a>
+        <a href="#specs" class="nav-link focus-ring">Specs</a>
+        <a href="#app" class="nav-link focus-ring">App</a>
+        <a href="#support" class="nav-link focus-ring">Support</a>
+      </nav>
+
+      <!-- CTA pill -->
+      <a href="#pricing" class="btn btn-primary focus-ring px-4 py-2 text-[13.5px]">
+        Buy <span class="opacity-50">·</span> <span class="tnum">$229</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ============================================================
+     SECTION 2 — HERO
+============================================================ -->
+<section class="relative overflow-hidden mesh dotgrid border-b border-[color:var(--rule)]">
+  <div class="blob h-80 w-80" style="top:-70px;right:6%;background:rgba(155,140,255,0.30)"></div>
+  <div class="mx-auto max-w-[1200px] px-5 sm:px-8 pt-[124px] pb-20 sm:pb-24 lg:pb-28">
+    <div class="grid items-center gap-12 lg:grid-cols-[1.04fr_0.96fr]">
+
+      <!-- Copy -->
+      <div>
+        <span class="pill px-3 py-1.5 text-[12.5px] font-medium text-[color:var(--ink)]">
+          <span class="pulse-dot"></span>
+          Ships in 2 weeks
+          <span class="mono text-[11px] accent">· LP-1</span>
+        </span>
+
+        <h1 class="display mt-6 text-[40px] sm:text-[54px] lg:text-[62px] text-[color:var(--ink)]">
+          Know how you slept before you
+          <em class="halftone">open your eyes.</em>
+        </h1>
+
+        <p class="mt-5 max-w-xl text-[17px] sm:text-[18px] leading-[1.6] text-[color:var(--ink-2)]">
+          Loop is a screenless band that reads your sleep, recovery and heart through the night, then hands you one clear readiness score the moment you wake.
+        </p>
+
+        <!-- Dual CTA -->
+        <div class="mt-7 flex flex-col sm:flex-row gap-3">
+          <a href="#pricing" class="btn btn-primary focus-ring px-6 py-3.5 text-[15px]">
+            Buy <span class="opacity-50">·</span> <span class="tnum">$229</span>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </a>
+          <a href="#product" class="btn btn-ghost focus-ring px-6 py-3.5 text-[15px]">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5-11-6.5Z"/></svg>
+            Watch the film
+          </a>
+        </div>
+
+        <!-- Inline reassurance -->
+        <div class="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2 text-[12.5px] text-[color:var(--ink-3)]">
+          <span class="inline-flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B8CFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m20 6-11 11-5-5"/></svg>
+            Free shipping
+          </span>
+          <span class="inline-flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B8CFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.4 2.6L3 8"/><path d="M3 3v5h5"/></svg>
+            30-day returns
+          </span>
+          <span class="inline-flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B8CFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            2-year warranty
+          </span>
+        </div>
+      </div>
+
+      <!-- Hero device + phone -->
+      <div class="relative">
+        <!-- ambient glow -->
+        <div class="absolute inset-0 -z-0" style="background:radial-gradient(330px 300px at 58% 42%, rgba(155,140,255,0.34), transparent 72%)"></div>
+
+        <!-- studio panel -->
+        <div role="img" aria-label="The Loop sleep band on a studio gradient, shown beside a phone displaying its morning readiness score"
+             class="relative aspect-[5/5] overflow-hidden rounded-[20px] border border-[color:var(--rule)]"
+             style="background:linear-gradient(150deg,#241F3C 0%,#16142100 40%,#1A1730 78%,#2A2350 100%);box-shadow:0 36px 80px -34px rgba(0,0,0,0.85)">
+          <div class="absolute inset-0" style="background:radial-gradient(300px 220px at 64% 34%, rgba(155,140,255,0.30), transparent 74%)"></div>
+
+          <!-- The band illustration, tilted -->
+          <div class="device-tilt absolute left-[6%] top-[14%] w-[58%]">
+            <svg viewBox="0 0 260 320" fill="none" aria-hidden="true" class="w-full">
+              <!-- soft shadow -->
+              <ellipse cx="132" cy="296" rx="92" ry="17" fill="rgba(0,0,0,0.5)"/>
+              <!-- band outer ring -->
+              <path d="M130 36
+                       C 196 36 236 96 236 168
+                       C 236 240 196 290 130 290
+                       C 64 290 24 240 24 168
+                       C 24 96 64 36 130 36 Z"
+                    stroke="url(#bandStroke)" stroke-width="26" fill="none" stroke-linecap="round"/>
+              <!-- band inner ring (hollow) -->
+              <path d="M130 74
+                       C 178 74 200 118 200 168
+                       C 200 218 178 252 130 252
+                       C 82 252 60 218 60 168
+                       C 60 118 82 74 130 74 Z"
+                    stroke="rgba(255,255,255,0.05)" stroke-width="1.5" fill="#0C0B16"/>
+              <!-- inner-face sensor array (discreet) -->
+              <g opacity="0.95">
+                <circle cx="130" cy="248" r="9" fill="#0E0C18" stroke="rgba(155,140,255,0.55)" stroke-width="1.6"/>
+                <circle cx="130" cy="248" r="3.6" fill="#9B8CFF"/>
+                <circle cx="108" cy="244" r="5.4" fill="#0E0C18" stroke="rgba(155,140,255,0.42)" stroke-width="1.3"/>
+                <circle cx="108" cy="244" r="2" fill="#B4A7FF"/>
+                <circle cx="152" cy="244" r="5.4" fill="#0E0C18" stroke="rgba(155,140,255,0.42)" stroke-width="1.3"/>
+                <circle cx="152" cy="244" r="2" fill="#B4A7FF"/>
+                <rect x="119" y="262" width="22" height="6" rx="3" fill="#0E0C18" stroke="rgba(155,140,255,0.30)" stroke-width="1"/>
+              </g>
+              <!-- low-profile clasp -->
+              <rect x="112" y="22" width="36" height="22" rx="7" fill="#1C1A28" stroke="rgba(155,140,255,0.40)" stroke-width="1.6"/>
+              <rect x="120" y="29" width="20" height="3" rx="1.5" fill="rgba(155,140,255,0.55)"/>
+              <!-- accent sheen on band -->
+              <path d="M78 70 C 100 52 150 50 184 72"
+                    stroke="rgba(255,255,255,0.30)" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.7"/>
+              <defs>
+                <linearGradient id="bandStroke" x1="24" y1="36" x2="236" y2="290" gradientUnits="userSpaceOnUse">
+                  <stop offset="0" stop-color="#3B3556"/>
+                  <stop offset="0.5" stop-color="#2A2740"/>
+                  <stop offset="1" stop-color="#1B1930"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+
+          <!-- Phone with morning readiness screen -->
+          <div class="absolute right-[5%] bottom-[7%] w-[40%]">
+            <svg viewBox="0 0 200 410" fill="none" aria-hidden="true" class="w-full" style="filter:drop-shadow(0 24px 36px rgba(0,0,0,0.55))">
+              <!-- phone body -->
+              <rect x="6" y="6" width="188" height="398" rx="34" fill="#0D0B17" stroke="rgba(255,255,255,0.10)" stroke-width="2"/>
+              <rect x="14" y="14" width="172" height="382" rx="27" fill="#100E1C"/>
+              <!-- island -->
+              <rect x="78" y="24" width="44" height="13" rx="6.5" fill="#06050C"/>
+              <!-- header -->
+              <text x="28" y="68" fill="#9B8CFF" font-family="Geist Mono,monospace" font-size="9" letter-spacing="1.5">GOOD MORNING</text>
+              <text x="28" y="86" fill="#F2F1F6" font-family="Inter,sans-serif" font-size="15" font-weight="700">Tuesday</text>
+              <!-- readiness ring -->
+              <circle cx="100" cy="174" r="56" stroke="rgba(255,255,255,0.07)" stroke-width="12" fill="none"/>
+              <circle cx="100" cy="174" r="56" stroke="#9B8CFF" stroke-width="12" fill="none"
+                      stroke-linecap="round" stroke-dasharray="351.8"
+                      stroke-dashoffset="63" transform="rotate(-90 100 174)"/>
+              <text x="100" y="178" fill="#F2F1F6" font-family="Inter,sans-serif" font-size="38" font-weight="700" text-anchor="middle">82</text>
+              <text x="100" y="198" fill="rgba(242,241,246,0.5)" font-family="Geist Mono,monospace" font-size="8" letter-spacing="1.5" text-anchor="middle">READY</text>
+              <!-- metric rows -->
+              <g font-family="Inter,sans-serif" font-size="9">
+                <rect x="24" y="256" width="152" height="34" rx="9" fill="#1A1828"/>
+                <circle cx="42" cy="273" r="9" fill="rgba(155,140,255,0.16)"/>
+                <path d="M38 273l3 3 5-6" stroke="#9B8CFF" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+                <text x="58" y="270" fill="rgba(242,241,246,0.62)" font-size="8">Sleep</text>
+                <text x="58" y="282" fill="#F2F1F6" font-weight="600">7h 24m</text>
+                <text x="160" y="277" fill="#9B8CFF" font-size="9" font-weight="600" text-anchor="end">Good</text>
+
+                <rect x="24" y="296" width="152" height="34" rx="9" fill="#1A1828"/>
+                <circle cx="42" cy="313" r="9" fill="rgba(155,140,255,0.16)"/>
+                <path d="M37 314l3-5 2 3 2-4 2 6" stroke="#9B8CFF" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <text x="58" y="310" fill="rgba(242,241,246,0.62)" font-size="8">HRV</text>
+                <text x="58" y="322" fill="#F2F1F6" font-weight="600">61 ms</text>
+                <text x="160" y="317" fill="#9B8CFF" font-size="9" font-weight="600" text-anchor="end">+4</text>
+
+                <rect x="24" y="336" width="152" height="34" rx="9" fill="#1A1828"/>
+                <circle cx="42" cy="353" r="9" fill="rgba(155,140,255,0.16)"/>
+                <path d="M37 353c1.4-2.4 3.6-2.4 5 0s3.6 2.4 5 0" stroke="#9B8CFF" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                <text x="58" y="350" fill="rgba(242,241,246,0.62)" font-size="8">Resting HR</text>
+                <text x="58" y="362" fill="#F2F1F6" font-weight="600">52 bpm</text>
+                <text x="160" y="357" fill="rgba(242,241,246,0.5)" font-size="9" text-anchor="end">avg</text>
+              </g>
+            </svg>
+          </div>
+
+          <!-- caption chip -->
+          <div class="absolute top-3.5 left-3.5 flex items-center gap-2 rounded-xl border border-[color:var(--rule)] px-3 py-2" style="background:rgba(10,10,18,0.78);backdrop-filter:blur(6px)">
+            <span class="pulse-dot"></span>
+            <span class="text-[11.5px] font-medium text-[color:var(--ink)]">Tracking · night 4</span>
+          </div>
+        </div>
+
+        <!-- floating award badge -->
+        <div class="absolute -left-3 -bottom-4 sm:-left-6 flex items-center gap-2.5 rounded-xl border border-[color:var(--rule)] px-3.5 py-2.5" style="background:var(--card-2);box-shadow:0 16px 34px -18px rgba(0,0,0,0.8)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9B8CFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="6"/><path d="m8.2 13-1.7 8L12 17.8 17.5 21l-1.7-8"/></svg>
+          <span class="text-[11.5px] font-semibold leading-tight text-[color:var(--ink)]">CES Innovation<br><span class="mono text-[10px] ink-3">Award · 2026</span></span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SECTION 3 — TRUST / PROOF BAR
+============================================================ -->
+<section class="border-b border-[color:var(--rule)] py-8" style="background:rgba(8,8,15,0.6)">
+  <div class="mx-auto max-w-[1200px] px-5 sm:px-8">
+    <div class="flex flex-col sm:flex-row sm:items-center gap-5 sm:gap-8">
+      <div class="flex items-center gap-3 shrink-0">
+        <span class="flex items-center gap-0.5" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#9B8CFF" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#9B8CFF" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#9B8CFF" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#9B8CFF" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#9B8CFF" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+        </span>
+        <span class="text-[13.5px] text-[color:var(--ink-2)]"><span class="mono tnum font-semibold text-[color:var(--ink)]">4.7</span> · <span class="tnum">612,408</span> owners</span>
+      </div>
+
+      <div class="hidden sm:block h-5 w-px bg-[color:var(--rule)]"></div>
+
+      <!-- press marquee -->
+      <div class="marquee-mask overflow-hidden flex-1">
+        <div class="marquee">
+          <div class="flex shrink-0 items-center gap-9 pr-9 text-[14px] text-[color:var(--ink-3)]">
+            <span class="font-semibold" style="font-family:Georgia,serif">The Atlantic Health</span>
+            <span class="font-medium tracking-tight">WIRED</span>
+            <span class="font-semibold" style="font-family:Georgia,serif">Restorative</span>
+            <span class="font-medium tracking-tight">SleepLab Review</span>
+            <span class="font-semibold" style="font-family:Georgia,serif">Outside</span>
+            <span class="font-medium tracking-tight">The Quantified</span>
+            <span class="font-semibold" style="font-family:Georgia,serif">Recovery Weekly</span>
+            <span class="font-medium tracking-tight">GearNorth</span>
+          </div>
+          <div class="flex shrink-0 items-center gap-9 pr-9 text-[14px] text-[color:var(--ink-3)]" aria-hidden="true">
+            <span class="font-semibold" style="font-family:Georgia,serif">The Atlantic Health</span>
+            <span class="font-medium tracking-tight">WIRED</span>
+            <span class="font-semibold" style="font-family:Georgia,serif">Restorative</span>
+            <span class="font-medium tracking-tight">SleepLab Review</span>
+            <span class="font-semibold" style="font-family:Georgia,serif">Outside</span>
+            <span class="font-medium tracking-tight">The Quantified</span>
+            <span class="font-semibold" style="font-family:Georgia,serif">Recovery Weekly</span>
+            <span class="font-medium tracking-tight">GearNorth</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SECTION 4 — FEATURE ROWS (3, alternating)
+============================================================ -->
+<section id="product" class="border-b border-[color:var(--rule)]">
+  <div class="mx-auto max-w-[1200px] px-5 sm:px-8 pt-20 sm:pt-24 pb-4">
+    <div class="max-w-2xl">
+      <span class="mono text-[11px] uppercase tracking-[0.16em] accent">What Loop reads</span>
+      <h2 class="display mt-3 text-[30px] sm:text-[40px] text-[color:var(--ink)]">
+        Five signals, one band, all night.
+      </h2>
+      <p class="mt-3 text-[16px] text-[color:var(--ink-2)]">
+        No screen to glance at, no buzzing on your wrist. Loop measures while you sleep and saves the talking for the morning.
+      </p>
+    </div>
+  </div>
+
+  <!-- Row A — image LEFT -->
+  <div class="mx-auto max-w-[1200px] px-5 sm:px-8 py-14 sm:py-16">
+    <div class="grid items-center gap-10 lg:grid-cols-2">
+      <!-- visual -->
+      <div class="relative order-1">
+        <div class="absolute inset-0" style="background:radial-gradient(280px 220px at 50% 50%, rgba(155,140,255,0.18), transparent 72%)"></div>
+        <div class="relative card p-6 sm:p-8 overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="mono text-[10.5px] uppercase tracking-[0.14em] ink-3">Night view</span>
+            <span class="pill px-2.5 py-1 mono text-[10px] accent">23:10 → 06:34</span>
+          </div>
+          <!-- hypnogram -->
+          <svg viewBox="0 0 480 180" class="mt-5 w-full" fill="none" aria-hidden="true">
+            <g stroke="rgba(255,255,255,0.05)" stroke-width="1">
+              <line x1="0" y1="34" x2="480" y2="34"/>
+              <line x1="0" y1="76" x2="480" y2="76"/>
+              <line x1="0" y1="118" x2="480" y2="118"/>
+              <line x1="0" y1="160" x2="480" y2="160"/>
+            </g>
+            <g font-family="Geist Mono,monospace" font-size="8.5" fill="rgba(242,241,246,0.4)">
+              <text x="0" y="30">AWAKE</text>
+              <text x="0" y="72">REM</text>
+              <text x="0" y="114">LIGHT</text>
+              <text x="0" y="156">DEEP</text>
+            </g>
+            <path d="M52 34 L80 34 L80 118 L132 118 L132 160 L188 160 L188 118 L236 118 L236 76 L286 76 L286 118 L330 118 L330 160 L372 160 L372 118 L420 118 L420 76 L460 76"
+                  stroke="#9B8CFF" stroke-width="2.6" stroke-linejoin="round" fill="none"/>
+            <path d="M52 34 L80 34 L80 118 L132 118 L132 160 L188 160 L188 118 L236 118 L236 76 L286 76 L286 118 L330 118 L330 160 L372 160 L372 118 L420 118 L420 76 L460 76 L460 178 L52 178 Z"
+                  fill="url(#hypFill)" opacity="0.5"/>
+            <defs>
+              <linearGradient id="hypFill" x1="0" y1="34" x2="0" y2="178" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#9B8CFF" stop-opacity="0.34"/>
+                <stop offset="1" stop-color="#9B8CFF" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="mt-5 grid grid-cols-4 gap-2.5">
+            <div class="rounded-lg border border-[color:var(--rule)] px-2.5 py-2" style="background:var(--bg-2)">
+              <div class="mono text-[9px] uppercase ink-3">Deep</div>
+              <div class="mono tnum text-[14px] font-semibold accent">1h 12m</div>
+            </div>
+            <div class="rounded-lg border border-[color:var(--rule)] px-2.5 py-2" style="background:var(--bg-2)">
+              <div class="mono text-[9px] uppercase ink-3">REM</div>
+              <div class="mono tnum text-[14px] font-semibold accent">1h 38m</div>
+            </div>
+            <div class="rounded-lg border border-[color:var(--rule)] px-2.5 py-2" style="background:var(--bg-2)">
+              <div class="mono text-[9px] uppercase ink-3">Light</div>
+              <div class="mono tnum text-[14px] font-semibold accent">4h 09m</div>
+            </div>
+            <div class="rounded-lg border border-[color:var(--rule)] px-2.5 py-2" style="background:var(--bg-2)">
+              <div class="mono text-[9px] uppercase ink-3">Awake</div>
+              <div class="mono tnum text-[14px] font-semibold accent">25m</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- copy -->
+      <div class="order-2">
+        <span class="mono text-[11px] uppercase tracking-[0.14em] accent">01 — Your night, mapped</span>
+        <h3 class="display mt-3 text-[26px] sm:text-[32px] text-[color:var(--ink)]">
+          Every stage of the night, drawn out clearly.
+        </h3>
+        <p class="mt-4 text-[16px] leading-[1.62] text-[color:var(--ink-2)]">
+          Loop tracks sleep stages, heart-rate variability, resting heart rate, skin temperature and blood-oxygen from a sensor array that sits flat against the inside of your wrist. In the morning you get the whole night as one honest picture — not a vague rating.
+        </p>
+        <div class="mt-6 rounded-xl border border-[color:var(--rule)] p-4" style="background:var(--card)">
+          <div class="mono text-[10px] uppercase tracking-[0.12em] ink-3">Measured each night</div>
+          <div class="mt-2.5 flex flex-wrap gap-x-5 gap-y-1.5 text-[13px] text-[color:var(--ink-2)]">
+            <span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full" style="background:var(--accent)"></span>Sleep stages</span>
+            <span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full" style="background:var(--accent)"></span>HRV</span>
+            <span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full" style="background:var(--accent)"></span>Resting HR</span>
+            <span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full" style="background:var(--accent)"></span>Skin temp</span>
+            <span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full" style="background:var(--accent)"></span>Blood-oxygen</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row B — image RIGHT -->
+  <div class="border-t border-[color:var(--rule)]">
+    <div class="mx-auto max-w-[1200px] px-5 sm:px-8 py-14 sm:py-16">
+      <div class="grid items-center gap-10 lg:grid-cols-2">
+        <!-- copy -->
+        <div class="order-2 lg:order-1">
+          <span class="mono text-[11px] uppercase tracking-[0.14em] accent">02 — A score by the time you wake</span>
+          <h3 class="display mt-3 text-[26px] sm:text-[32px] text-[color:var(--ink)]">
+            One readiness number, not a spreadsheet.
+          </h3>
+          <p class="mt-4 text-[16px] leading-[1.62] text-[color:var(--ink-2)]">
+            Loop folds your HRV, skin temperature and blood-oxygen into a single daily readiness score from 0 to 100. It tells you, in one glance, whether to push hard today or take it easy — and it explains the why in plain language underneath.
+          </p>
+          <p class="mt-3 text-[14px] leading-[1.6] text-[color:var(--ink-3)]">
+            The score is personal. Loop learns your baseline over the first two weeks, so an 82 means 82 <span class="italic">for you</span>.
+          </p>
+        </div>
+        <!-- visual: readiness ring gauge -->
+        <div class="order-1 lg:order-2 relative">
+          <div class="absolute inset-0" style="background:radial-gradient(280px 220px at 50% 50%, rgba(155,140,255,0.20), transparent 72%)"></div>
+          <div class="relative card p-6 sm:p-8 flex flex-col items-center">
+            <span class="mono text-[10.5px] uppercase tracking-[0.14em] ink-3 self-start">Today · readiness</span>
+            <svg viewBox="0 0 240 240" class="mt-3 w-[220px] h-[220px]" fill="none" aria-hidden="true">
+              <circle cx="120" cy="120" r="92" stroke="rgba(255,255,255,0.06)" stroke-width="16" fill="none"/>
+              <!-- arc: 82% of a 270deg sweep -->
+              <circle cx="120" cy="120" r="92" stroke="url(#ringGrad)" stroke-width="16" fill="none"
+                      stroke-linecap="round"
+                      stroke-dasharray="433.5 578"
+                      stroke-dashoffset="80"
+                      transform="rotate(135 120 120)"/>
+              <text x="120" y="116" fill="#F2F1F6" font-family="Inter,sans-serif" font-size="58" font-weight="700" text-anchor="middle" letter-spacing="-2">82</text>
+              <text x="120" y="142" fill="#9B8CFF" font-family="Geist Mono,monospace" font-size="11" letter-spacing="2.5" text-anchor="middle">READY</text>
+              <text x="120" y="162" fill="rgba(242,241,246,0.42)" font-family="Inter,sans-serif" font-size="11" text-anchor="middle">recovered &amp; primed</text>
+              <defs>
+                <linearGradient id="ringGrad" x1="28" y1="120" x2="212" y2="120" gradientUnits="userSpaceOnUse">
+                  <stop offset="0" stop-color="#6E5FD6"/>
+                  <stop offset="1" stop-color="#B4A7FF"/>
+                </linearGradient>
+              </defs>
+            </svg>
+            <div class="mt-2 grid grid-cols-3 gap-2.5 w-full">
+              <div class="rounded-lg border border-[color:var(--rule)] px-2 py-2 text-center" style="background:var(--bg-2)">
+                <div class="mono text-[9px] uppercase ink-3">HRV</div>
+                <div class="mono tnum text-[13px] font-semibold text-[color:var(--ink)]">61 ms</div>
+              </div>
+              <div class="rounded-lg border border-[color:var(--rule)] px-2 py-2 text-center" style="background:var(--bg-2)">
+                <div class="mono text-[9px] uppercase ink-3">Skin temp</div>
+                <div class="mono tnum text-[13px] font-semibold text-[color:var(--ink)]">-0.1°</div>
+              </div>
+              <div class="rounded-lg border border-[color:var(--rule)] px-2 py-2 text-center" style="background:var(--bg-2)">
+                <div class="mono text-[9px] uppercase ink-3">SpO₂</div>
+                <div class="mono tnum text-[13px] font-semibold text-[color:var(--ink)]">97%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row C — image LEFT, with EXPLODED / CALLOUT diagram -->
+  <div class="border-t border-[color:var(--rule)]">
+    <div class="mx-auto max-w-[1200px] px-5 sm:px-8 py-14 sm:py-16">
+      <div class="grid items-center gap-10 lg:grid-cols-2">
+        <!-- visual: callout diagram -->
+        <div class="order-1 relative">
+          <div class="absolute inset-0" style="background:radial-gradient(300px 240px at 50% 50%, rgba(155,140,255,0.18), transparent 72%)"></div>
+          <div class="relative card p-6 sm:p-8 overflow-hidden">
+            <div class="flex items-center justify-between">
+              <span class="mono text-[10.5px] uppercase tracking-[0.14em] ink-3">Inside the band</span>
+              <span class="pill px-2.5 py-1 mono text-[10px] accent">5 components</span>
+            </div>
+            <!-- exploded callout: device with thin leader lines -->
+            <svg viewBox="0 0 460 320" class="mt-4 w-full" fill="none" aria-hidden="true">
+              <!-- band cross-section -->
+              <rect x="170" y="96" width="120" height="128" rx="22" fill="#15131F" stroke="rgba(255,255,255,0.10)" stroke-width="2"/>
+              <rect x="184" y="110" width="92" height="100" rx="14" fill="#0E0C18" stroke="rgba(155,140,255,0.18)" stroke-width="1.4"/>
+              <!-- internal modules -->
+              <circle cx="208" cy="140" r="9" fill="#9B8CFF" opacity="0.9"/>
+              <circle cx="252" cy="140" r="9" fill="#9B8CFF" opacity="0.55"/>
+              <rect x="198" y="160" width="26" height="18" rx="4" fill="rgba(155,140,255,0.5)"/>
+              <circle cx="252" cy="172" r="10" fill="rgba(155,140,255,0.7)"/>
+              <rect x="196" y="186" width="68" height="14" rx="6" fill="rgba(155,140,255,0.25)" stroke="rgba(155,140,255,0.55)" stroke-width="1.2"/>
+
+              <!-- leader lines + labels -->
+              <g stroke="rgba(155,140,255,0.55)" stroke-width="1.3">
+                <path d="M208 140 L96 60" fill="none"/>
+                <path d="M252 140 L364 60" fill="none"/>
+                <path d="M211 169 L96 200" fill="none"/>
+                <path d="M252 172 L364 200" fill="none"/>
+                <path d="M230 193 L230 286" fill="none"/>
+              </g>
+              <g fill="rgba(155,140,255,0.9)">
+                <circle cx="208" cy="140" r="2.6"/>
+                <circle cx="252" cy="140" r="2.6"/>
+                <circle cx="211" cy="169" r="2.6"/>
+                <circle cx="252" cy="172" r="2.6"/>
+                <circle cx="230" cy="193" r="2.6"/>
+              </g>
+              <g font-family="Geist Mono,monospace" font-size="9.5">
+                <text x="40" y="50" fill="#9B8CFF">PPG OPTICAL</text>
+                <text x="40" y="62" fill="rgba(242,241,246,0.45)">heart-rate array</text>
+                <text x="300" y="50" fill="#9B8CFF">ACCELEROMETER</text>
+                <text x="300" y="62" fill="rgba(242,241,246,0.45)">motion · 3-axis</text>
+                <text x="40" y="206" fill="#9B8CFF">SKIN-TEMP</text>
+                <text x="40" y="218" fill="rgba(242,241,246,0.45)">thermistor</text>
+                <text x="300" y="206" fill="#9B8CFF">SpO₂ SENSOR</text>
+                <text x="300" y="218" fill="rgba(242,241,246,0.45)">blood-oxygen</text>
+                <text x="184" y="302" fill="#9B8CFF">BATTERY · 7-DAY CELL</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+        <!-- copy + battery gauge -->
+        <div class="order-2">
+          <span class="mono text-[11px] uppercase tracking-[0.14em] accent">03 — Seven days, no screen</span>
+          <h3 class="display mt-3 text-[26px] sm:text-[32px] text-[color:var(--ink)]">
+            Charge it on a Sunday. Forget about it.
+          </h3>
+          <p class="mt-4 text-[16px] leading-[1.62] text-[color:var(--ink-2)]">
+            With no display to power, Loop runs a full week on a charge — so it's on your wrist for the nights that actually matter. Five sensors sit inside an 8-gram band you stop noticing by day two. The app is the screen; the band just listens.
+          </p>
+          <!-- battery gauge -->
+          <div class="mt-6 rounded-xl border border-[color:var(--rule)] p-4" style="background:var(--card)">
+            <div class="flex items-center justify-between">
+              <span class="mono text-[10px] uppercase tracking-[0.12em] ink-3">Battery life</span>
+              <span class="mono tnum text-[13px] font-semibold accent">7 days · 45-min charge</span>
+            </div>
+            <div class="mt-3 h-2.5 w-full rounded-full overflow-hidden" style="background:rgba(255,255,255,0.07)">
+              <div class="h-full rounded-full" style="width:100%;background:linear-gradient(90deg,#6E5FD6,#B4A7FF)"></div>
+            </div>
+            <div class="mt-2 flex justify-between mono text-[9.5px] ink-3 tnum">
+              <span>Day 1</span><span>Day 3</span><span>Day 5</span><span>Day 7</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SECTION 5 — COMPANION APP
+============================================================ -->
+<section id="app" class="border-b border-[color:var(--rule)] dotgrid">
+  <div class="mx-auto max-w-[1200px] px-5 sm:px-8 py-20 sm:py-24">
+    <div class="grid items-center gap-12 lg:grid-cols-[0.92fr_1.08fr]">
+
+      <!-- phone mockup -->
+      <div class="relative flex justify-center order-1">
+        <div class="absolute inset-0" style="background:radial-gradient(280px 320px at 50% 45%, rgba(155,140,255,0.22), transparent 72%)"></div>
+        <div class="relative" style="filter:drop-shadow(0 32px 50px rgba(0,0,0,0.6))">
+          <svg viewBox="0 0 280 560" class="w-[250px] sm:w-[280px]" fill="none" aria-hidden="true">
+            <!-- phone body -->
+            <rect x="6" y="6" width="268" height="548" rx="44" fill="#0C0B17" stroke="rgba(255,255,255,0.11)" stroke-width="2.5"/>
+            <rect x="15" y="15" width="250" height="530" rx="36" fill="#100E1C"/>
+            <!-- island -->
+            <rect x="108" y="30" width="64" height="17" rx="8.5" fill="#06050C"/>
+            <!-- screen content -->
+            <text x="34" y="84" fill="#9B8CFF" font-family="Geist Mono,monospace" font-size="10" letter-spacing="1.6">YOUR MORNING</text>
+            <text x="34" y="106" fill="#F2F1F6" font-family="Inter,sans-serif" font-size="19" font-weight="700">Readiness</text>
+
+            <!-- readiness ring -->
+            <circle cx="140" cy="208" r="66" stroke="rgba(255,255,255,0.07)" stroke-width="14" fill="none"/>
+            <circle cx="140" cy="208" r="66" stroke="url(#appRing)" stroke-width="14" fill="none"
+                    stroke-linecap="round" stroke-dasharray="414.7" stroke-dashoffset="75"
+                    transform="rotate(-90 140 208)"/>
+            <text x="140" y="214" fill="#F2F1F6" font-family="Inter,sans-serif" font-size="46" font-weight="700" text-anchor="middle" letter-spacing="-1.5">82</text>
+            <text x="140" y="236" fill="#9B8CFF" font-family="Geist Mono,monospace" font-size="9" letter-spacing="2.2" text-anchor="middle">READY TO GO</text>
+
+            <!-- sleep-stage mini graph -->
+            <rect x="34" y="296" width="212" height="92" rx="14" fill="#1A1828"/>
+            <text x="48" y="320" fill="rgba(242,241,246,0.6)" font-family="Inter,sans-serif" font-size="10" font-weight="600">Sleep stages</text>
+            <text x="232" y="320" fill="#9B8CFF" font-family="Geist Mono,monospace" font-size="9" text-anchor="end">7h 24m</text>
+            <path d="M50 372 L72 372 L72 350 L104 350 L104 332 L132 332 L132 350 L168 350 L168 372 L196 372 L196 350 L230 350"
+                  stroke="#9B8CFF" stroke-width="2.4" fill="none" stroke-linejoin="round"/>
+            <path d="M50 372 L72 372 L72 350 L104 350 L104 332 L132 332 L132 350 L168 350 L168 372 L196 372 L196 350 L230 350 L230 380 L50 380 Z"
+                  fill="#9B8CFF" opacity="0.16"/>
+
+            <!-- trend rows -->
+            <rect x="34" y="404" width="102" height="66" rx="13" fill="#1A1828"/>
+            <text x="48" y="426" fill="rgba(242,241,246,0.55)" font-family="Inter,sans-serif" font-size="9">7-day HRV</text>
+            <text x="48" y="448" fill="#F2F1F6" font-family="Inter,sans-serif" font-size="17" font-weight="700">↑ 6%</text>
+            <path d="M48 462 L60 458 L72 460 L84 452 L96 454 L108 446 L120 448" stroke="#9B8CFF" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+            <rect x="144" y="404" width="102" height="66" rx="13" fill="#1A1828"/>
+            <text x="158" y="426" fill="rgba(242,241,246,0.55)" font-family="Inter,sans-serif" font-size="9">Resting HR</text>
+            <text x="158" y="448" fill="#F2F1F6" font-family="Inter,sans-serif" font-size="17" font-weight="700">52 bpm</text>
+            <path d="M158 460c2-3 5-3 7 0s5 3 7 0 5-3 7 0 5 3 7 0 5-3 7 0" stroke="#9B8CFF" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+
+            <!-- nudge bar -->
+            <rect x="34" y="486" width="212" height="40" rx="13" fill="rgba(155,140,255,0.12)" stroke="rgba(155,140,255,0.3)" stroke-width="1"/>
+            <circle cx="56" cy="506" r="9" fill="rgba(155,140,255,0.22)"/>
+            <path d="M56 501v6m0 3v0" stroke="#9B8CFF" stroke-width="2" stroke-linecap="round"/>
+            <text x="74" y="510" fill="rgba(242,241,246,0.8)" font-family="Inter,sans-serif" font-size="9.5">Wind-down nudge — 22:30 tonight</text>
+
+            <defs>
+              <linearGradient id="appRing" x1="74" y1="208" x2="206" y2="208" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#6E5FD6"/>
+                <stop offset="1" stop-color="#B4A7FF"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+      </div>
+
+      <!-- app capabilities -->
+      <div class="order-2">
+        <span class="mono text-[11px] uppercase tracking-[0.16em] accent">The Loop app</span>
+        <h2 class="display mt-3 text-[30px] sm:text-[40px] text-[color:var(--ink)]">
+          The screen lives in your pocket, not on your wrist.
+        </h2>
+        <p class="mt-4 text-[16px] leading-[1.6] text-[color:var(--ink-2)]">
+          Everything Loop measures shows up in a calm, fast app for iOS and Android. Open it once over coffee — that's the whole interaction.
+        </p>
+
+        <div class="mt-7 grid gap-3.5 sm:grid-cols-2">
+          <div class="card card-lift p-4.5 p-5">
+            <span class="icon-tile">
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            </span>
+            <h3 class="mt-3.5 text-[15.5px] font-semibold text-[color:var(--ink)]">Morning readiness</h3>
+            <p class="mt-1.5 text-[13px] leading-[1.55] text-[color:var(--ink-2)]">Your score and a one-line read on the day, ready before your feet hit the floor.</p>
+          </div>
+          <div class="card card-lift p-5">
+            <span class="icon-tile">
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l5-6 4 3 5-8 4 5"/><path d="M3 21h18"/></svg>
+            </span>
+            <h3 class="mt-3.5 text-[15.5px] font-semibold text-[color:var(--ink)]">Sleep breakdown</h3>
+            <p class="mt-1.5 text-[13px] leading-[1.55] text-[color:var(--ink-2)]">A full hypnogram of deep, REM and light sleep, with the times you stirred.</p>
+          </div>
+          <div class="card card-lift p-5">
+            <span class="icon-tile">
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+            </span>
+            <h3 class="mt-3.5 text-[15.5px] font-semibold text-[color:var(--ink)]">Trends over time</h3>
+            <p class="mt-1.5 text-[13px] leading-[1.55] text-[color:var(--ink-2)]">Watch HRV, resting heart rate and sleep debt move across weeks and seasons.</p>
+          </div>
+          <div class="card card-lift p-5">
+            <span class="icon-tile">
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6c0 2 1 3.5 2 4.5V17h8v-3.5c1-1 2-2.5 2-4.5a6 6 0 0 0-6-6Z"/><path d="M9 21h6"/></svg>
+            </span>
+            <h3 class="mt-3.5 text-[15.5px] font-semibold text-[color:var(--ink)]">Gentle nudges</h3>
+            <p class="mt-1.5 text-[13px] leading-[1.55] text-[color:var(--ink-2)]">A quiet wind-down reminder tuned to your readiness — never an alert that shames you.</p>
+          </div>
+          <div class="card card-lift p-5 sm:col-span-2">
+            <span class="icon-tile">
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+            </span>
+            <h3 class="mt-3.5 text-[15.5px] font-semibold text-[color:var(--ink)]">Export &amp; share with a clinician</h3>
+            <p class="mt-1.5 text-[13px] leading-[1.55] text-[color:var(--ink-2)]">Generate a clean PDF of any date range to bring to a doctor or sleep specialist — your data, on your terms.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SECTION 6 — TECH SPECS
+============================================================ -->
+<section id="specs" class="border-b border-[color:var(--rule)]">
+  <div class="mx-auto max-w-[1200px] px-5 sm:px-8 py-20 sm:py-24">
+    <div class="max-w-2xl">
+      <span class="mono text-[11px] uppercase tracking-[0.16em] accent">Hardware</span>
+      <h2 class="display mt-3 text-[30px] sm:text-[40px] text-[color:var(--ink)]">
+        The full spec sheet.
+      </h2>
+      <p class="mt-3 text-[16px] text-[color:var(--ink-2)]">
+        Loop LP-1, running firmware v2.4. Every figure measured, none rounded for marketing.
+      </p>
+    </div>
+
+    <div class="mt-11 grid gap-5 lg:grid-cols-3">
+
+      <!-- Sensors -->
+      <div class="card overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-[color:var(--rule)] flex items-center gap-2.5" style="background:var(--card-2)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9B8CFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/></svg>
+          <span class="mono text-[11px] uppercase tracking-[0.13em] text-[color:var(--ink)]">Sensors</span>
+        </div>
+        <dl class="mono text-[12.5px]">
+          <div class="flex justify-between gap-3 px-5 py-3 border-b border-[color:var(--rule)]"><dt class="ink-3">Heart rate</dt><dd class="text-right text-[color:var(--ink)]">PPG optical, green + IR</dd></div>
+          <div class="flex justify-between gap-3 px-5 py-3 border-b border-[color:var(--rule)]"><dt class="ink-3">Motion</dt><dd class="text-right text-[color:var(--ink)]">3-axis accelerometer</dd></div>
+          <div class="flex justify-between gap-3 px-5 py-3 border-b border-[color:var(--rule)]"><dt class="ink-3">Temperature</dt><dd class="text-right text-[color:var(--ink)]">Skin-temp thermistor</dd></div>
+          <div class="flex justify-between gap-3 px-5 py-3 border-b border-[color:var(--rule)]"><dt class="ink-3">Blood-oxygen</dt><dd class="text-right text-[color:var(--ink)]">SpO₂ red/IR sensor</dd></div>
+          <div class="flex justify-between gap-3 px-5 py-3"><dt class="ink-3">Sample rate</dt><dd class="text-right text-[color:var(--ink)] tnum">25 Hz nightly</dd></div>
+        </dl>
+      </div>
+
+      <!-- Power -->
+      <div class="card overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-[color:var(--rule)] flex items-center gap-2.5" style="background:var(--card-2)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9B8CFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2"/><path d="M7 12h6"/></svg>
+          <span class="mono text-[11px] uppercase tracking-[0.13em] text-[color:var(--ink)]">Power</span>
+        </div>
+        <dl class="mono text-[12.5px]">
+          <div class="flex justify-between gap-3 px-5 py-3 border-b border-[color:var(--rule)]"><dt class="ink-3">Battery life</dt><dd class="text-right text-[color:var(--ink)] tnum">7 days typical</dd></div>
+          <div class="flex justify-between gap-3 px-5 py-3 border-b border-[color:var(--rule)]"><dt class="ink-3">Charge time</dt><dd class="text-right text-[color:var(--ink)] tnum">45 min, 0–100%</dd></div>
+          <div class="flex justify-between gap-3 px-5 py-3 border-b border-[color:var(--rule)]"><dt class="ink-3">Cell</dt><dd class="text-right text-[color:var(--ink)] tnum">22 mAh Li-poly</dd></div>
+          <div class="flex justify-between gap-3 px-5 py-3 border-b border-[color:var(--rule)]"><dt class="ink-3">Charger</dt><dd class="text-right text-[color:var(--ink)]">Magnetic pogo dock</dd></div>
+          <div class="flex justify-between gap-3 px-5 py-3"><dt class="ink-3">Standby</dt><dd class="text-right text-[color:var(--ink)] tnum">40 days, idle</dd></div>
+        </dl>
+      </div>
+
+      <!-- Build -->
+      <div class="card overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-[color:var(--rule)] flex items-center gap-2.5" style="background:var(--card-2)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9B8CFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6l-8-4Z"/></svg>
+          <span class="mono text-[11px] uppercase tracking-[0.13em] text-[color:var(--ink)]">Build &amp; fit</span>
+        </div>
+        <dl class="mono text-[12.5px]">
+          <div class="flex justify-between gap-3 px-5 py-3 border-b border-[color:var(--rule)]"><dt class="ink-3">Weight</dt><dd class="text-right text-[color:var(--ink)] tnum">8 g</dd></div>
+          <div class="flex justify-between gap-3 px-5 py-3 border-b border-[color:var(--rule)]"><dt class="ink-3">Band sizes</dt><dd class="text-right text-[color:var(--ink)]">S / M / L</dd></div>
+          <div class="flex justify-between gap-3 px-5 py-3 border-b border-[color:var(--rule)]"><dt class="ink-3">Water resist.</dt><dd class="text-right text-[color:var(--ink)] tnum">100 m / 10 ATM</dd></div>
+          <div class="flex justify-between gap-3 px-5 py-3 border-b border-[color:var(--rule)]"><dt class="ink-3">Shell</dt><dd class="text-right text-[color:var(--ink)]">Titanium + medical TPU</dd></div>
+          <div class="flex justify-between gap-3 px-5 py-3"><dt class="ink-3">Profile</dt><dd class="text-right text-[color:var(--ink)] tnum">4.2 mm thick</dd></div>
+        </dl>
+      </div>
+    </div>
+
+    <!-- system row -->
+    <div class="mt-5 card overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-[color:var(--rule)] flex items-center gap-2.5" style="background:var(--card-2)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9B8CFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>
+        <span class="mono text-[11px] uppercase tracking-[0.13em] text-[color:var(--ink)]">Connectivity &amp; system</span>
+      </div>
+      <dl class="mono text-[12.5px] grid sm:grid-cols-2">
+        <div class="flex justify-between gap-3 px-5 py-3 border-b border-[color:var(--rule)]"><dt class="ink-3">Model number</dt><dd class="text-right text-[color:var(--ink)]">LP-1</dd></div>
+        <div class="flex justify-between gap-3 px-5 py-3 border-b border-[color:var(--rule)]"><dt class="ink-3">Firmware</dt><dd class="text-right text-[color:var(--ink)] tnum">v2.4.1</dd></div>
+        <div class="flex justify-between gap-3 px-5 py-3 border-b border-[color:var(--rule)] sm:border-b-0"><dt class="ink-3">Wireless</dt><dd class="text-right text-[color:var(--ink)]">Bluetooth LE 5.3</dd></div>
+        <div class="flex justify-between gap-3 px-5 py-3"><dt class="ink-3">App support</dt><dd class="text-right text-[color:var(--ink)]">iOS 16+ / Android 11+</dd></div>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SECTION 7 — WHAT'S IN THE BOX
+============================================================ -->
+<section class="border-b border-[color:var(--rule)] dotgrid">
+  <div class="mx-auto max-w-[1200px] px-5 sm:px-8 py-20 sm:py-24">
+    <div class="max-w-2xl">
+      <span class="mono text-[11px] uppercase tracking-[0.16em] accent">In the box</span>
+      <h2 class="display mt-3 text-[30px] sm:text-[40px] text-[color:var(--ink)]">
+        Everything you need, nothing you don't.
+      </h2>
+      <p class="mt-3 text-[16px] text-[color:var(--ink-2)]">
+        Three items. Find your size, charge it once, and you're tracking your first night.
+      </p>
+    </div>
+
+    <!-- flat-lay diagram -->
+    <div class="mt-11 grid gap-5 sm:grid-cols-3">
+      <!-- band -->
+      <figure class="card card-lift p-6 flex flex-col items-center text-center">
+        <div class="relative flex h-40 w-full items-center justify-center rounded-xl" style="background:radial-gradient(160px 120px at 50% 50%, rgba(155,140,255,0.16), transparent 72%)">
+          <svg width="120" height="120" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+            <path d="M60 16 C 92 16 110 44 110 60 C 110 76 92 104 60 104 C 28 104 10 76 10 60 C 10 44 28 16 60 16 Z"
+                  stroke="#3B3556" stroke-width="14" fill="none"/>
+            <path d="M60 32 C 82 32 92 50 92 60 C 92 70 82 88 60 88 C 38 88 28 70 28 60 C 28 50 38 32 60 32 Z"
+                  stroke="rgba(255,255,255,0.05)" stroke-width="1.4" fill="#0C0B16"/>
+            <rect x="50" y="9" width="20" height="13" rx="4" fill="#1C1A28" stroke="rgba(155,140,255,0.4)" stroke-width="1.3"/>
+            <circle cx="60" cy="84" r="4.5" fill="#9B8CFF"/>
+          </svg>
+        </div>
+        <figcaption class="mt-4">
+          <div class="mono text-[10px] uppercase tracking-[0.13em] accent">01</div>
+          <div class="mt-1 text-[15px] font-semibold text-[color:var(--ink)]">Loop band</div>
+          <p class="mt-1 text-[12.5px] text-[color:var(--ink-2)]">The 8 g screenless band, ready in medium.</p>
+        </figcaption>
+      </figure>
+
+      <!-- charger -->
+      <figure class="card card-lift p-6 flex flex-col items-center text-center">
+        <div class="relative flex h-40 w-full items-center justify-center rounded-xl" style="background:radial-gradient(160px 120px at 50% 50%, rgba(155,140,255,0.16), transparent 72%)">
+          <svg width="130" height="120" viewBox="0 0 130 120" fill="none" aria-hidden="true">
+            <ellipse cx="65" cy="68" rx="42" ry="20" fill="#15131F" stroke="rgba(255,255,255,0.1)" stroke-width="2"/>
+            <ellipse cx="65" cy="62" rx="42" ry="20" fill="#1C1A28" stroke="rgba(255,255,255,0.1)" stroke-width="2"/>
+            <ellipse cx="65" cy="60" rx="26" ry="12" fill="#0C0B16"/>
+            <circle cx="56" cy="58" r="2.6" fill="#9B8CFF"/>
+            <circle cx="74" cy="58" r="2.6" fill="#9B8CFF"/>
+            <path d="M65 78 Q65 96 95 100" stroke="#3B3556" stroke-width="4" fill="none" stroke-linecap="round"/>
+            <rect x="92" y="96" width="14" height="9" rx="2.5" fill="#1C1A28" stroke="rgba(155,140,255,0.35)" stroke-width="1.2"/>
+          </svg>
+        </div>
+        <figcaption class="mt-4">
+          <div class="mono text-[10px] uppercase tracking-[0.13em] accent">02</div>
+          <div class="mt-1 text-[15px] font-semibold text-[color:var(--ink)]">Magnetic charger</div>
+          <p class="mt-1 text-[12.5px] text-[color:var(--ink-2)]">USB-C pogo dock — full charge in 45 minutes.</p>
+        </figcaption>
+      </figure>
+
+      <!-- sizing kit -->
+      <figure class="card card-lift p-6 flex flex-col items-center text-center">
+        <div class="relative flex h-40 w-full items-center justify-center rounded-xl" style="background:radial-gradient(160px 120px at 50% 50%, rgba(155,140,255,0.16), transparent 72%)">
+          <svg width="140" height="120" viewBox="0 0 140 120" fill="none" aria-hidden="true">
+            <circle cx="40" cy="48" r="22" stroke="#3B3556" stroke-width="9" fill="none"/>
+            <circle cx="76" cy="68" r="27" stroke="#4A4368" stroke-width="9" fill="none"/>
+            <circle cx="108" cy="44" r="18" stroke="#2F2A47" stroke-width="9" fill="none"/>
+            <text x="40" y="52" fill="#9B8CFF" font-family="Geist Mono,monospace" font-size="10" text-anchor="middle">S</text>
+            <text x="76" y="73" fill="#9B8CFF" font-family="Geist Mono,monospace" font-size="11" text-anchor="middle">M</text>
+            <text x="108" y="48" fill="#9B8CFF" font-family="Geist Mono,monospace" font-size="9" text-anchor="middle">L</text>
+          </svg>
+        </div>
+        <figcaption class="mt-4">
+          <div class="mono text-[10px] uppercase tracking-[0.13em] accent">03</div>
+          <div class="mt-1 text-[15px] font-semibold text-[color:var(--ink)]">Sizing kit</div>
+          <p class="mt-1 text-[12.5px] text-[color:var(--ink-2)]">Try S, M and L before your band ships — swap free.</p>
+        </figcaption>
+      </figure>
+    </div>
+    <p class="mt-6 mono text-[11px] ink-3">Box also includes a quick-start card and the 2-year warranty leaflet.</p>
+  </div>
+</section>
+
+<!-- ============================================================
+     SECTION 8 — USE-CASE BAND
+============================================================ -->
+<section class="border-b border-[color:var(--rule)]">
+  <div class="mx-auto max-w-[1200px] px-5 sm:px-8 py-20 sm:py-24">
+    <div class="max-w-2xl">
+      <span class="mono text-[11px] uppercase tracking-[0.16em] accent">Worn for</span>
+      <h2 class="display mt-3 text-[30px] sm:text-[40px] text-[color:var(--ink)]">
+        It earns its keep on ordinary nights.
+      </h2>
+      <p class="mt-3 text-[16px] text-[color:var(--ink-2)]">
+        Loop isn't a gadget for athletes only — it's for anyone curious about why some mornings feel different.
+      </p>
+    </div>
+
+    <div class="mt-11 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+
+      <article class="card card-lift overflow-hidden">
+        <div class="h-36" style="background:linear-gradient(150deg,#2A2350,#16142100 60%,#1A1730)"></div>
+        <div class="p-5">
+          <span class="icon-tile">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36A6 6 0 0 1 12.36 3.1 9 9 0 0 0 12 3Z"/></svg>
+          </span>
+          <h3 class="mt-3.5 text-[15.5px] font-semibold text-[color:var(--ink)]">The restless sleeper</h3>
+          <p class="mt-1.5 text-[13px] leading-[1.55] text-[color:var(--ink-2)]">See exactly when the night fell apart, and which habits move the needle.</p>
+        </div>
+      </article>
+
+      <article class="card card-lift overflow-hidden">
+        <div class="h-36" style="background:linear-gradient(150deg,#1F1B3A,#16142100 60%,#2C2658)"></div>
+        <div class="p-5">
+          <span class="icon-tile">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4v6a6 6 0 0 0 12 0V4"/><path d="M6 20h12"/><path d="M9 4h6"/></svg>
+          </span>
+          <h3 class="mt-3.5 text-[15.5px] font-semibold text-[color:var(--ink)]">The hard trainer</h3>
+          <p class="mt-1.5 text-[13px] leading-[1.55] text-[color:var(--ink-2)]">Read recovery before a session and know when a rest day will pay off.</p>
+        </div>
+      </article>
+
+      <article class="card card-lift overflow-hidden">
+        <div class="h-36" style="background:linear-gradient(150deg,#2D2654,#16142100 60%,#1B1834)"></div>
+        <div class="p-5">
+          <span class="icon-tile">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h4l2 8 4-16 3 10 2-4h3"/></svg>
+          </span>
+          <h3 class="mt-3.5 text-[15.5px] font-semibold text-[color:var(--ink)]">The shift worker</h3>
+          <p class="mt-1.5 text-[13px] leading-[1.55] text-[color:var(--ink-2)]">Track sleep that lands at odd hours — Loop scores the day, not the calendar.</p>
+        </div>
+      </article>
+
+      <article class="card card-lift overflow-hidden">
+        <div class="h-36" style="background:linear-gradient(150deg,#211D40,#16142100 60%,#322B62)"></div>
+        <div class="p-5">
+          <span class="icon-tile">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M5.5 21a7 7 0 0 1 13 0"/></svg>
+          </span>
+          <h3 class="mt-3.5 text-[15.5px] font-semibold text-[color:var(--ink)]">The new parent</h3>
+          <p class="mt-1.5 text-[13px] leading-[1.55] text-[color:var(--ink-2)]">Fragmented sleep, honestly measured — proof of the nights that weren't yours.</p>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SECTION 9 — STATS BANNER
+============================================================ -->
+<section class="border-b border-[color:var(--rule)]" style="background:linear-gradient(180deg,rgba(155,140,255,0.06),transparent)">
+  <div class="mx-auto max-w-[1200px] px-5 sm:px-8 py-16 sm:py-20">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-y-9 gap-x-6">
+      <div class="text-center sm:text-left">
+        <div class="display tnum text-[40px] sm:text-[48px] text-[color:var(--ink)]">612,408</div>
+        <div class="mt-1 text-[13px] text-[color:var(--ink-2)]">Loops on wrists worldwide</div>
+      </div>
+      <div class="text-center sm:text-left lg:border-l lg:border-[color:var(--rule)] lg:pl-6">
+        <div class="display tnum text-[40px] sm:text-[48px] accent">287</div>
+        <div class="mt-1 text-[13px] text-[color:var(--ink-2)]">Avg nights tracked per owner</div>
+      </div>
+      <div class="text-center sm:text-left lg:border-l lg:border-[color:var(--rule)] lg:pl-6">
+        <div class="display tnum text-[40px] sm:text-[48px] text-[color:var(--ink)]">7 days</div>
+        <div class="mt-1 text-[13px] text-[color:var(--ink-2)]">Battery on a single charge</div>
+      </div>
+      <div class="text-center sm:text-left lg:border-l lg:border-[color:var(--rule)] lg:pl-6">
+        <div class="display tnum text-[40px] sm:text-[48px] accent">4.7</div>
+        <div class="mt-1 text-[13px] text-[color:var(--ink-2)]">App Store &amp; Play rating</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SECTION 10 — PRICING / EDITIONS
+============================================================ -->
+<section id="pricing" class="border-b border-[color:var(--rule)] dotgrid">
+  <div class="mx-auto max-w-[1200px] px-5 sm:px-8 py-20 sm:py-24">
+    <div class="max-w-2xl">
+      <span class="mono text-[11px] uppercase tracking-[0.16em] accent">Pricing</span>
+      <h2 class="display mt-3 text-[30px] sm:text-[40px] text-[color:var(--ink)]">
+        One price. No surprise paywall.
+      </h2>
+      <p class="mt-3 text-[16px] text-[color:var(--ink-2)]">
+        Buy the band once. The core app — readiness, sleep stages, every daily metric — is free, forever, with no account games.
+      </p>
+    </div>
+
+    <div class="mt-11 grid gap-5 lg:grid-cols-2">
+
+      <!-- Loop — main -->
+      <div class="card relative overflow-hidden" style="border-color:rgba(155,140,255,0.4)">
+        <div class="absolute right-5 top-5">
+          <span class="pill px-2.5 py-1 mono text-[10px] accent">Ships in 2 weeks</span>
+        </div>
+        <div class="p-7">
+          <h3 class="text-[17px] font-semibold text-[color:var(--ink)]">Loop band</h3>
+          <p class="mt-1 text-[13.5px] text-[color:var(--ink-2)]">The hardware, the sizing kit, the charger, and the full core app.</p>
+          <div class="mt-5 flex items-end gap-2">
+            <span class="display tnum text-[46px] text-[color:var(--ink)]">$229</span>
+            <span class="mb-2 text-[13px] text-[color:var(--ink-2)]">one-time · no subscription required</span>
+          </div>
+          <a href="#final" class="btn btn-primary focus-ring mt-5 w-full px-5 py-3.5 text-[15px]">
+            Buy Loop <span class="opacity-50">·</span> <span class="tnum">$229</span>
+          </a>
+          <div class="mt-3 text-center mono text-[11px] ink-3">or <span class="tnum">$19.08/mo</span> for 12 months — 0% APR financing</div>
+          <ul class="mt-6 space-y-2.5 text-[13.5px] text-[color:var(--ink-2)]">
+            <li class="flex gap-2.5"><svg class="mt-0.5 flex-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9B8CFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m20 6-11 11-5-5"/></svg>Daily readiness score, free forever</li>
+            <li class="flex gap-2.5"><svg class="mt-0.5 flex-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9B8CFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m20 6-11 11-5-5"/></svg>Full sleep-stage breakdown &amp; all metrics</li>
+            <li class="flex gap-2.5"><svg class="mt-0.5 flex-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9B8CFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m20 6-11 11-5-5"/></svg>Free shipping &amp; a 30-day return window</li>
+            <li class="flex gap-2.5"><svg class="mt-0.5 flex-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9B8CFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m20 6-11 11-5-5"/></svg>2-year limited hardware warranty</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Loop+ — optional -->
+      <div class="card overflow-hidden">
+        <div class="p-7">
+          <div class="flex items-center gap-2">
+            <h3 class="text-[17px] font-semibold text-[color:var(--ink)]">Loop+ membership</h3>
+            <span class="pill px-2.5 py-0.5 text-[10.5px] text-[color:var(--ink-2)]">optional</span>
+          </div>
+          <p class="mt-1 text-[13.5px] text-[color:var(--ink-2)]">An add-on for people who want the long view. Skip it and Loop still works completely.</p>
+          <div class="mt-5 flex items-end gap-2">
+            <span class="display tnum text-[46px] text-[color:var(--ink)]">$6</span>
+            <span class="mb-2 text-[13px] text-[color:var(--ink-2)]">/ month · cancel anytime</span>
+          </div>
+          <a href="#final" class="btn btn-ghost focus-ring mt-5 w-full px-5 py-3.5 text-[15px]">Add Loop+ later</a>
+          <div class="mt-3 text-center mono text-[11px] ink-3">decide after you've worn it — not at checkout</div>
+          <ul class="mt-6 space-y-2.5 text-[13.5px] text-[color:var(--ink-2)]">
+            <li class="flex gap-2.5"><svg class="mt-0.5 flex-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9B8CFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M3 12h18"/></svg>Unlimited long-horizon trend history</li>
+            <li class="flex gap-2.5"><svg class="mt-0.5 flex-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9B8CFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M3 12h18"/></svg>A written daily coaching summary</li>
+          </ul>
+          <div class="mt-6 rounded-xl border border-[color:var(--rule)] p-4" style="background:var(--card-2)">
+            <p class="text-[12.5px] leading-[1.6] text-[color:var(--ink-2)]">
+              <span class="font-semibold text-[color:var(--ink)]">In plain terms:</span> the band and the core app — your readiness score, sleep stages and every daily metric — work fully and forever without Loop+. The membership only adds the long-term trend archive and the written coaching summary. No nagging, no locked screens, no dark patterns.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="mt-6 mono text-[11px] ink-3 text-center">Financing through Affirm, subject to eligibility · Loop+ billed separately · prices in USD</p>
+  </div>
+</section>
+
+<!-- ============================================================
+     SECTION 11 — REVIEWS + FAQ
+============================================================ -->
+<section class="border-b border-[color:var(--rule)]">
+  <div class="mx-auto max-w-[1200px] px-5 sm:px-8 py-20 sm:py-24">
+
+    <!-- aggregate rating -->
+    <div class="grid gap-10 lg:grid-cols-[0.78fr_1.22fr] lg:items-start">
+      <div>
+        <span class="mono text-[11px] uppercase tracking-[0.16em] accent">Owner reviews</span>
+        <h2 class="display mt-3 text-[30px] sm:text-[40px] text-[color:var(--ink)]">
+          Loved by long sleepers and light ones.
+        </h2>
+        <div class="mt-6 card p-6">
+          <div class="flex items-end gap-3">
+            <div class="display tnum text-[52px] leading-none text-[color:var(--ink)]">4.7</div>
+            <div class="pb-1">
+              <div class="flex gap-0.5" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="#9B8CFF" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="#9B8CFF" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="#9B8CFF" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="#9B8CFF" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9B8CFF" stroke-width="1.6" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+              </div>
+              <div class="mt-1 text-[12px] text-[color:var(--ink-2)] tnum">from 41,902 verified owners</div>
+            </div>
+          </div>
+          <!-- distribution -->
+          <div class="mt-5 space-y-1.5">
+            <div class="flex items-center gap-2.5 text-[11px]"><span class="mono ink-3 w-4 tnum">5</span><span class="h-1.5 flex-1 rounded-full" style="background:rgba(255,255,255,0.07)"><span class="block h-full rounded-full" style="width:78%;background:var(--accent)"></span></span><span class="mono ink-3 tnum w-8 text-right">78%</span></div>
+            <div class="flex items-center gap-2.5 text-[11px]"><span class="mono ink-3 w-4 tnum">4</span><span class="h-1.5 flex-1 rounded-full" style="background:rgba(255,255,255,0.07)"><span class="block h-full rounded-full" style="width:15%;background:var(--accent)"></span></span><span class="mono ink-3 tnum w-8 text-right">15%</span></div>
+            <div class="flex items-center gap-2.5 text-[11px]"><span class="mono ink-3 w-4 tnum">3</span><span class="h-1.5 flex-1 rounded-full" style="background:rgba(255,255,255,0.07)"><span class="block h-full rounded-full" style="width:4%;background:var(--accent)"></span></span><span class="mono ink-3 tnum w-8 text-right">4%</span></div>
+            <div class="flex items-center gap-2.5 text-[11px]"><span class="mono ink-3 w-4 tnum">2</span><span class="h-1.5 flex-1 rounded-full" style="background:rgba(255,255,255,0.07)"><span class="block h-full rounded-full" style="width:2%;background:var(--accent)"></span></span><span class="mono ink-3 tnum w-8 text-right">2%</span></div>
+            <div class="flex items-center gap-2.5 text-[11px]"><span class="mono ink-3 w-4 tnum">1</span><span class="h-1.5 flex-1 rounded-full" style="background:rgba(255,255,255,0.07)"><span class="block h-full rounded-full" style="width:1%;background:var(--accent)"></span></span><span class="mono ink-3 tnum w-8 text-right">1%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- review cards -->
+      <div class="grid gap-4 sm:grid-cols-2">
+        <article class="card p-5">
+          <div class="flex gap-0.5" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#9B8CFF"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#9B8CFF"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#9B8CFF"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#9B8CFF"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#9B8CFF"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          </div>
+          <p class="mt-3 text-[13.5px] leading-[1.6] text-[color:var(--ink)]">"I stopped checking my wrist all day and started understanding my mornings. The readiness score is the first health number I've actually changed my behaviour around."</p>
+          <div class="mt-4 flex items-center gap-2.5">
+            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full mono text-[12px] font-semibold" style="background:rgba(155,140,255,0.16);color:var(--accent)">PR</span>
+            <div>
+              <div class="text-[12.5px] font-semibold text-[color:var(--ink)]">Priya Raghunathan</div>
+              <div class="mono text-[10px] ink-3">Bengaluru · product designer · owned 9 months</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card p-5">
+          <div class="flex gap-0.5" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#9B8CFF"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#9B8CFF"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#9B8CFF"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#9B8CFF"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#9B8CFF"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          </div>
+          <p class="mt-3 text-[13.5px] leading-[1.6] text-[color:var(--ink)]">"Seven days of battery is the whole thing for me. My old watch was always dead on the one night I forgot to charge it. Loop just stays on."</p>
+          <div class="mt-4 flex items-center gap-2.5">
+            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full mono text-[12px] font-semibold" style="background:rgba(155,140,255,0.16);color:var(--accent)">MO</span>
+            <div>
+              <div class="text-[12.5px] font-semibold text-[color:var(--ink)]">Mathias Ø. Lund</div>
+              <div class="mono text-[10px] ink-3">Aarhus · marathon runner · owned 1 year</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card p-5">
+          <div class="flex gap-0.5" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#9B8CFF"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#9B8CFF"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#9B8CFF"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#9B8CFF"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9B8CFF" stroke-width="1.6"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          </div>
+          <p class="mt-3 text-[13.5px] leading-[1.6] text-[color:var(--ink)]">"As a night-shift nurse my sleep is a mess, but Loop scores the day I actually slept. Finally a tracker that doesn't assume everyone sleeps at 11pm."</p>
+          <div class="mt-4 flex items-center gap-2.5">
+            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full mono text-[12px] font-semibold" style="background:rgba(155,140,255,0.16);color:var(--accent)">CN</span>
+            <div>
+              <div class="text-[12.5px] font-semibold text-[color:var(--ink)]">Chiamaka Nwosu</div>
+              <div class="mono text-[10px] ink-3">Manchester · ICU nurse · owned 7 months</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card p-5">
+          <div class="flex gap-0.5" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#9B8CFF"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#9B8CFF"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#9B8CFF"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#9B8CFF"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#9B8CFF"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          </div>
+          <p class="mt-3 text-[13.5px] leading-[1.6] text-[color:var(--ink)]">"I wear it in the pool every morning and it's never missed a beat. Eight grams — I genuinely forget it's there until the app says good morning."</p>
+          <div class="mt-4 flex items-center gap-2.5">
+            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full mono text-[12px] font-semibold" style="background:rgba(155,140,255,0.16);color:var(--accent)">TA</span>
+            <div>
+              <div class="text-[12.5px] font-semibold text-[color:var(--ink)]">Tomás Alarcón</div>
+              <div class="mono text-[10px] ink-3">Valparaíso · swim coach · owned 5 months</div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+
+    <!-- FAQ -->
+    <div class="mt-16 grid gap-10 lg:grid-cols-[0.5fr_1fr]">
+      <div>
+        <span class="mono text-[11px] uppercase tracking-[0.16em] accent">Before you buy</span>
+        <h3 class="display mt-3 text-[26px] sm:text-[30px] text-[color:var(--ink)]">
+          The honest answers.
+        </h3>
+        <p class="mt-3 text-[14px] text-[color:var(--ink-2)]">Five questions we get most. No marketing dodge.</p>
+      </div>
+
+      <div>
+        <details class="faq" open>
+          <summary>
+            <span class="text-[15.5px] font-semibold text-[color:var(--ink)]">Is there a subscription, and what do I lose without it?</span>
+            <svg class="plus" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          </summary>
+          <p class="pb-5 -mt-1 text-[14px] leading-[1.65] text-[color:var(--ink-2)]">
+            No subscription is required, and nothing core is locked behind one. Your $229 buys the band and the full core app — the daily readiness score, the complete sleep-stage breakdown, HRV, resting heart rate, skin temperature and blood-oxygen — and that works forever. Loop+ is a purely optional $6/month add-on that layers on the long-term trend archive and a written daily coaching summary. If you never subscribe, you lose exactly those two things and nothing else.
+          </p>
+        </details>
+        <details class="faq">
+          <summary>
+            <span class="text-[15.5px] font-semibold text-[color:var(--ink)]">How accurate is the sleep-stage tracking?</span>
+            <svg class="plus" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          </summary>
+          <p class="pb-5 -mt-1 text-[14px] leading-[1.65] text-[color:var(--ink-2)]">
+            Loop's four-stage staging (deep, REM, light, awake) was validated against clinical polysomnography in a 318-night study and reached 87% epoch-by-epoch agreement — strong for a wrist wearable, though no consumer device matches a sleep lab exactly. It uses the PPG optical array, the accelerometer and skin temperature together, which is far more reliable than motion alone. For diagnosing a sleep disorder, a clinical study is still the right tool, and the app can export a clean report to bring to one.
+          </p>
+        </details>
+        <details class="faq">
+          <summary>
+            <span class="text-[15.5px] font-semibold text-[color:var(--ink)]">How is my health data stored — is it ever sold?</span>
+            <svg class="plus" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          </summary>
+          <p class="pb-5 -mt-1 text-[14px] leading-[1.65] text-[color:var(--ink-2)]">
+            Your data is yours. It is encrypted in transit and at rest, and it is never sold, never rented, and never shared with advertisers or data brokers — that is a written commitment, not a setting you have to find. You can export everything as a PDF or CSV at any time, and deleting your account permanently erases your records from our servers within 30 days. We make money from selling the band, not from your sleep.
+          </p>
+        </details>
+        <details class="faq">
+          <summary>
+            <span class="text-[15.5px] font-semibold text-[color:var(--ink)]">Can I wear it in the shower or swimming?</span>
+            <svg class="plus" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          </summary>
+          <p class="pb-5 -mt-1 text-[14px] leading-[1.65] text-[color:var(--ink-2)]">
+            Yes to both. Loop is water-resistant to 100 metres (10 ATM), so showers, pools and open-water swims are all fine — there is nothing to take off. The titanium-and-TPU shell has no charging ports exposed to water; it charges by magnetic contact on the dock. We'd only steer you clear of scuba diving at depth and high-pressure jets, which fall outside the 10 ATM rating.
+          </p>
+        </details>
+        <details class="faq">
+          <summary>
+            <span class="text-[15.5px] font-semibold text-[color:var(--ink)]">Does it have a screen or notifications?</span>
+            <svg class="plus" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          </summary>
+          <p class="pb-5 -mt-1 text-[14px] leading-[1.65] text-[color:var(--ink-2)]">
+            No — and that is the point. Loop has no display and pushes no texts, calls or app alerts to your wrist. The band only senses; the app on your phone is the screen. The single nudge it can send is an optional, gentle wind-down reminder tuned to your readiness, and you can switch even that off. It is built so you check in once a day, not all day.
+          </p>
+        </details>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SECTION 12 — FINAL CTA
+============================================================ -->
+<section id="final" class="relative overflow-hidden mesh dotgrid border-b border-[color:var(--rule)]">
+  <div class="blob h-72 w-72" style="bottom:-60px;left:10%;background:rgba(155,140,255,0.28)"></div>
+  <div class="mx-auto max-w-[1200px] px-5 sm:px-8 py-20 sm:py-28 text-center relative">
+    <span class="pill px-3 py-1.5 text-[12.5px] font-medium text-[color:var(--ink)]">
+      <span class="pulse-dot"></span>
+      Ships in 2 weeks
+    </span>
+    <h2 class="display mx-auto mt-6 max-w-3xl text-[34px] sm:text-[48px] text-[color:var(--ink)]">
+      Wake up tomorrow already knowing.
+    </h2>
+    <p class="mx-auto mt-4 max-w-xl text-[16px] sm:text-[17px] text-[color:var(--ink-2)]">
+      A screenless band that reads your night and hands you one clear number — the moment you open your eyes.
+    </p>
+    <div class="mt-8 flex flex-col sm:flex-row justify-center gap-3">
+      <a href="#pricing" class="btn btn-primary focus-ring px-7 py-4 text-[15.5px]">
+        Buy Loop <span class="opacity-50">·</span> <span class="tnum">$229</span> <span class="opacity-50">·</span> free shipping <span class="opacity-50">·</span> 30-day returns
+      </a>
+    </div>
+    <div class="mt-5 mono text-[11.5px] ink-3">From <span class="tnum">$19.08/mo</span> at 0% APR · 2-year warranty · model LP-1</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SECTION 13 — FOOTER
+============================================================ -->
+<footer id="support" style="background:rgba(8,8,15,0.7)">
+  <div class="mx-auto max-w-[1200px] px-5 sm:px-8 py-14 sm:py-16">
+    <div class="grid gap-10 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
+
+      <!-- brand -->
+      <div>
+        <a href="#top" class="flex items-center gap-2.5">
+          <span class="inline-flex h-9 w-9 items-center justify-center rounded-[10px]" style="background:rgba(155,140,255,0.12);border:1px solid rgba(155,140,255,0.26)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="7.4" stroke="#9B8CFF" stroke-width="2.4"/>
+              <circle cx="12" cy="12" r="2.5" fill="#9B8CFF"/>
+            </svg>
+          </span>
+          <span class="display text-[20px] text-[color:var(--ink)]" style="letter-spacing:-0.04em">Loop</span>
+        </a>
+        <p class="mt-4 max-w-xs text-[13px] leading-[1.6] text-[color:var(--ink-2)]">
+          A screenless sleep and recovery band. Know how you slept before you open your eyes.
+        </p>
+        <div class="mt-4 flex gap-2.5">
+          <a href="#top" aria-label="Loop on X" class="focus-ring inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--rule)] text-[color:var(--ink-2)] hover:text-[color:var(--accent)] transition-colors">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.9 2H22l-7.6 8.7L23 22h-6.5l-5-6.6L5.7 22H2.5l8.1-9.3L1.5 2h6.7l4.6 6.1L18.9 2Zm-1.1 18h1.7L7.3 3.8H5.5L17.8 20Z"/></svg>
+          </a>
+          <a href="#top" aria-label="Loop on Instagram" class="focus-ring inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--rule)] text-[color:var(--ink-2)] hover:text-[color:var(--accent)] transition-colors">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="3.6"/><circle cx="17.4" cy="6.6" r="1.1" fill="currentColor"/></svg>
+          </a>
+          <a href="#top" aria-label="Loop on YouTube" class="focus-ring inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--rule)] text-[color:var(--ink-2)] hover:text-[color:var(--accent)] transition-colors">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22 8.2a2.8 2.8 0 0 0-2-2C18.3 5.8 12 5.8 12 5.8s-6.3 0-8 .4a2.8 2.8 0 0 0-2 2A29 29 0 0 0 1.7 12 29 29 0 0 0 2 15.8a2.8 2.8 0 0 0 2 2c1.7.4 8 .4 8 .4s6.3 0 8-.4a2.8 2.8 0 0 0 2-2 29 29 0 0 0 .3-3.8 29 29 0 0 0-.3-3.8ZM10 15.1V8.9l5.2 3.1-5.2 3.1Z"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- Product -->
+      <div>
+        <div class="mono text-[10.5px] uppercase tracking-[0.14em] ink-3">Product</div>
+        <ul class="mt-3.5 space-y-2.5 text-[13px] text-[color:var(--ink-2)]">
+          <li><a href="#product" class="ul-link focus-ring">Overview</a></li>
+          <li><a href="#specs" class="ul-link focus-ring">Tech specs</a></li>
+          <li><a href="#app" class="ul-link focus-ring">The Loop app</a></li>
+          <li><a href="#pricing" class="ul-link focus-ring">Pricing</a></li>
+          <li><a href="#pricing" class="ul-link focus-ring">Loop+ membership</a></li>
+        </ul>
+      </div>
+
+      <!-- Support -->
+      <div>
+        <div class="mono text-[10.5px] uppercase tracking-[0.14em] ink-3">Support</div>
+        <ul class="mt-3.5 space-y-2.5 text-[13px] text-[color:var(--ink-2)]">
+          <li><a href="#support" class="ul-link focus-ring">Help center</a></li>
+          <li><a href="#support" class="ul-link focus-ring">Sizing &amp; fit guide</a></li>
+          <li><a href="#support" class="ul-link focus-ring">Order status</a></li>
+          <li><a href="#support" class="ul-link focus-ring">Warranty claims</a></li>
+          <li><a href="#support" class="ul-link focus-ring">Contact us</a></li>
+        </ul>
+      </div>
+
+      <!-- Company -->
+      <div>
+        <div class="mono text-[10.5px] uppercase tracking-[0.14em] ink-3">Company</div>
+        <ul class="mt-3.5 space-y-2.5 text-[13px] text-[color:var(--ink-2)]">
+          <li><a href="#top" class="ul-link focus-ring">About Loop</a></li>
+          <li><a href="#top" class="ul-link focus-ring">Our sleep science</a></li>
+          <li><a href="#top" class="ul-link focus-ring">Press kit</a></li>
+          <li><a href="#top" class="ul-link focus-ring">Careers</a></li>
+        </ul>
+      </div>
+
+      <!-- Legal -->
+      <div>
+        <div class="mono text-[10.5px] uppercase tracking-[0.14em] ink-3">Legal</div>
+        <ul class="mt-3.5 space-y-2.5 text-[13px] text-[color:var(--ink-2)]">
+          <li><a href="#support" class="ul-link focus-ring">Privacy policy</a></li>
+          <li><a href="#support" class="ul-link focus-ring">Data &amp; security</a></li>
+          <li><a href="#support" class="ul-link focus-ring">Terms of sale</a></li>
+          <li><a href="#support" class="ul-link focus-ring">Accessibility</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- sustainability + warranty -->
+    <div class="mt-12 grid gap-3 sm:grid-cols-2 text-[12px] text-[color:var(--ink-2)]">
+      <p class="flex items-start gap-2">
+        <svg class="mt-0.5 flex-none" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9B8CFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+        Every Loop is covered by a 2-year limited hardware warranty and a 30-day, no-questions return window from delivery.
+      </p>
+      <p class="flex items-start gap-2">
+        <svg class="mt-0.5 flex-none" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9B8CFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 9 9"/><path d="M12 12 8 7M3 12h4M17 12h4"/><path d="M12 21a9 9 0 0 1-9-9"/></svg>
+        Loop ships carbon-neutral in plastic-free packaging — send any old band back and we recycle it free.
+      </p>
+    </div>
+
+    <div class="mt-10 border-t border-[color:var(--rule)] pt-6 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+      <p class="text-[12px] text-[color:var(--ink-3)]">© 2026 Loop Health Devices, Inc. All rights reserved.</p>
+      <p class="mono text-[10.5px] text-[color:var(--ink-3)]">
+        Model LP-1 · FCC ID <span class="tnum">2BFLP-LP1</span> · Contains FCC ID 2AC7Z-BLE53 · IC: 12345A-LP1
+      </p>
+    </div>
+    <p class="mt-4 text-[11px] leading-[1.6] text-[color:var(--ink-3)]">
+      This device complies with Part 15 of the FCC Rules. Operation is subject to the condition that this device does not cause harmful interference. Loop is a wellness product and is not a medical device; it is not intended to diagnose, treat, cure or prevent any disease. Consult a clinician for medical concerns.
+    </p>
+  </div>
+</footer>
+
+</main>
+
+</body>
+</html>

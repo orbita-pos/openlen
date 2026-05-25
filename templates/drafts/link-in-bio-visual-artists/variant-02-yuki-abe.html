@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FBF6EE">
+<title>Yuki Abe — Illustration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --paper: #FBF6EE;
+    --ink: #2A1F18;
+    --muted: #6E5B4E;
+    --accent: #B5694F;
+    --faint: rgba(42,31,24,0.45);
+    --border: rgba(42,31,24,0.08);
+  }
+  html, body { background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; }
+  body { font-family: 'Inter', sans-serif; }
+  .display { font-family: 'Crimson Pro', serif; font-weight: 400; letter-spacing: -0.025em; }
+  .display-it { font-family: 'Crimson Pro', serif; font-style: italic; font-weight: 400; letter-spacing: -0.025em; }
+  .serif-it { font-family: 'Crimson Pro', serif; font-style: italic; font-weight: 400; }
+  .serif-it-med { font-family: 'Crimson Pro', serif; font-style: italic; font-weight: 500; }
+  .mono { font-family: 'JetBrains Mono', monospace; font-weight: 500; font-feature-settings: 'tnum'; }
+  .rule { width: 64px; margin: 0 auto; height: 1px; background: var(--border); }
+  .eyebrow { font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 10.5px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--muted); font-feature-settings: 'tnum'; }
+  .text-muted { color: var(--muted); }
+  .text-faint { color: var(--faint); }
+  .text-ink { color: var(--ink); }
+  .text-accent { color: var(--accent); }
+  .link-row { display: flex; align-items: baseline; justify-content: center; width: 100%; padding: 18px 4px; text-align: center; border-bottom: 1px solid var(--border); transition: background-color 120ms ease; gap: 12px; }
+  .link-row:hover { background-color: rgba(42,31,24,0.022); }
+  .link-row .label { font-family: 'Inter', sans-serif; font-weight: 500; font-size: 14px; color: var(--ink); }
+  .link-row .sub { font-family: 'Crimson Pro', serif; font-style: italic; font-weight: 400; font-size: 15px; color: var(--muted); }
+  .link-row.accent .label { color: var(--accent); font-style: italic; font-family: 'Crimson Pro', serif; font-weight: 500; font-size: 16px; letter-spacing: -0.005em; }
+  .link-row.accent .sub { color: var(--accent); font-style: italic; font-weight: 400; }
+  .portrait { background:
+    radial-gradient(circle at 35% 28%, #f4d9b4 0%, transparent 55%),
+    radial-gradient(circle at 70% 75%, rgba(181,105,79,0.55), transparent 55%),
+    linear-gradient(155deg, #d49b78 0%, #b5694f 45%, #7a4232 100%); }
+  .featured { background:
+    radial-gradient(circle at 25% 22%, rgba(255,237,213,0.7), transparent 55%),
+    radial-gradient(circle at 78% 72%, rgba(181,105,79,0.55), transparent 50%),
+    linear-gradient(160deg, #f0dabd 0%, #d09875 35%, #a55c40 70%, #6b3a2a 100%); }
+  ::selection { background: rgba(181,105,79,0.2); }
+  a { color: inherit; text-decoration: none; }
+</style>
+</head>
+<body>
+  <main class="mx-auto w-full" style="max-width: 480px;">
+
+    <div class="pt-14 px-6 text-center">
+      <span class="eyebrow">Illustration · Editorial + Commissions</span>
+    </div>
+
+    <section class="pt-10 px-6 text-center">
+      <div class="portrait mx-auto" style="width: 152px; height: 152px;"></div>
+      <h1 class="mt-9 display" style="font-size: clamp(42px, 12vw, 54px); line-height: 1.0;">Yuki Abe</h1>
+      <p class="mt-3 serif-it text-muted" style="font-size: 17.5px;">Editorial illustration · ink + sumi on washi</p>
+      <p class="mt-6 mx-auto" style="max-width: 360px; font-size: 14.5px; line-height: 1.72;">Working between Tokyo and Paris. Editorial commissions for <span class="serif-it-med text-ink">Vogue Japan</span>, <span class="serif-it-med text-ink">The New York Times Style</span>, and <span class="serif-it-med text-ink">Aesop</span>.</p>
+    </section>
+
+    <div class="my-14 rule"></div>
+
+    <section class="px-6">
+      <div class="featured mx-auto" style="aspect-ratio: 4 / 5; width: 100%;"></div>
+      <div class="text-center mt-6">
+        <p class="serif-it-med" style="font-size: 19px;">Autumn issue · 2025</p>
+        <p class="mt-1 serif-it text-muted" style="font-size: 14px;">six-page editorial · ink on washi · pp. 142—148</p>
+        <p class="mt-4 eyebrow text-faint">Vogue Japan · AW—25</p>
+      </div>
+    </section>
+
+    <div class="my-14 rule"></div>
+
+    <nav class="px-6">
+      <div style="border-top: 1px solid var(--border);">
+        <a class="link-row" href="#"><span class="label">Selected works</span><span class="sub">2018–present</span></a>
+        <a class="link-row" href="#"><span class="label">Editorial clients</span><span class="sub">Vogue · NYT · Aesop · The Gentlewoman</span></a>
+        <a class="link-row" href="#"><span class="label">Available prints</span><span class="sub">limited series of 12, signed</span></a>
+        <a class="link-row accent" href="#"><span class="label">Commissions open</span><span class="sub">queue 4 of 6 · Q2 2026</span></a>
+        <a class="link-row" href="#"><span class="label">Process</span><span class="sub">Instagram · slow timelapses</span></a>
+        <a class="link-row" href="#"><span class="label">Workshop</span><span class="sub">Paris · ink on washi · March 2026</span></a>
+        <a class="link-row" href="#"><span class="label">Agent</span><span class="sub">Bryan Wolff Studio · worldwide</span></a>
+        <a class="link-row" href="#"><span class="label">Mailing list</span><span class="sub">seasonal, four a year</span></a>
+      </div>
+    </nav>
+
+    <div class="my-14 rule"></div>
+
+    <div class="px-6 flex justify-center" style="gap: 28px;">
+      <a href="#" aria-label="Instagram" class="text-muted hover:text-ink transition-colors">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.65" fill="currentColor"/></svg>
+      </a>
+      <a href="#" aria-label="Are.na" class="text-muted hover:text-ink transition-colors">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/></svg>
+      </a>
+      <a href="#" aria-label="Vimeo" class="text-muted hover:text-ink transition-colors">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8c1-2 3-3 4-3 2 0 2 2 3 6 1 3 1 5 3 5 2 0 5-4 6-7s-1-5-3-5-3 1-5 3"/></svg>
+      </a>
+      <a href="#" aria-label="Substack" class="text-muted hover:text-ink transition-colors">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M4 10h16M4 15h16v6l-8-4-8 4v-6z"/></svg>
+      </a>
+    </div>
+
+    <footer class="px-6 pt-14 pb-16 text-center">
+      <p class="text-faint serif-it" style="font-size: 13px;">Studio · Tokyo + Paris · 6-chōme Aoyama, Minato</p>
+      <p class="mt-1 text-faint serif-it" style="font-size: 13px;">yuki@bryan-wolff.com · © Yuki Abe 2026</p>
+    </footer>
+
+  </main>
+</body>
+</html>

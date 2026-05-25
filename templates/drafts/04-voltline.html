@@ -1,0 +1,1296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Voltline — Licensed Electrical Contractor in Austin, TX</title>
+<meta name="description" content="Voltline is a licensed, bonded electrical contractor in Austin, TX. Panel upgrades, EV chargers, lighting and troubleshooting — code-compliant work, a photo of every finished job." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400&display=swap" rel="stylesheet" />
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink: '#14130F',
+          panel: '#1C1A15',
+          panel2: '#211E18',
+          amber: '#F2A60C',
+          paper: '#F4F0E6',
+        },
+        fontFamily: {
+          sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          mono: ['"Geist Mono"', 'ui-monospace', 'monospace'],
+        },
+        maxWidth: {
+          shell: '1200px',
+        },
+      },
+    },
+  };
+</script>
+
+<style>
+  :root {
+    --hairline: rgba(255, 255, 255, 0.06);
+    --hairline-strong: rgba(255, 255, 255, 0.10);
+  }
+
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+  body {
+    background-color: #14130F;
+    color: #F4F0E6;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: 'ss01', 'cv11';
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, h4 {
+    letter-spacing: -0.03em;
+    font-weight: 700;
+    font-feature-settings: 'ss01', 'cv11';
+  }
+  .tracking-display { letter-spacing: -0.035em; }
+  .tracking-tightish { letter-spacing: -0.025em; }
+
+  .font-mono { font-family: 'Geist Mono', ui-monospace, monospace; }
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  .hairline { border-color: var(--hairline); }
+
+  /* ---- Half-tone headline treatment ---- */
+  .halftone { color: rgba(244, 240, 230, 0.42); }
+  .lit { color: #F2A60C; }
+
+  /* ---- Ambient backgrounds ---- */
+  .hero-glow {
+    background:
+      radial-gradient(620px 380px at 72% 18%, rgba(242, 166, 12, 0.20), transparent 70%),
+      radial-gradient(540px 460px at 12% 86%, rgba(242, 166, 12, 0.07), transparent 72%);
+  }
+  .dot-grid {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(90px);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  /* ---- Pulse dot ---- */
+  .pulse-dot {
+    position: relative;
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+    background: #F2A60C;
+    flex: none;
+  }
+  .pulse-dot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: #F2A60C;
+    animation: pulse-ring 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  @keyframes pulse-ring {
+    0%   { box-shadow: 0 0 0 0 rgba(242, 166, 12, 0.55); }
+    70%  { box-shadow: 0 0 0 11px rgba(242, 166, 12, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(242, 166, 12, 0); }
+  }
+
+  /* ---- Marquee ---- */
+  .marquee {
+    display: flex;
+    width: max-content;
+    animation: marquee-scroll 38s linear infinite;
+  }
+  .marquee-track:hover .marquee { animation-play-state: paused; }
+  @keyframes marquee-scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  /* ---- Buttons ---- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 11px;
+    font-weight: 600;
+    transition: transform 110ms ease, background-color 110ms ease, box-shadow 110ms ease, border-color 110ms ease;
+    white-space: nowrap;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn:active { transform: translateY(0); }
+
+  .btn-amber {
+    background: #F2A60C;
+    color: #14130F;
+    box-shadow: 0 8px 22px -10px rgba(242, 166, 12, 0.7);
+  }
+  .btn-amber:hover {
+    background: #ffb723;
+    box-shadow: 0 12px 28px -10px rgba(242, 166, 12, 0.85);
+  }
+  .btn-ghost {
+    background: rgba(255, 255, 255, 0.03);
+    color: #F4F0E6;
+    border: 1px solid var(--hairline-strong);
+  }
+  .btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(242, 166, 12, 0.4);
+  }
+
+  .card {
+    background: #1C1A15;
+    border: 1px solid var(--hairline);
+    border-radius: 16px;
+    transition: transform 130ms ease, border-color 130ms ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-3px);
+    border-color: rgba(242, 166, 12, 0.28);
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1px solid var(--hairline-strong);
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.025);
+  }
+
+  .icon-tile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: rgba(242, 166, 12, 0.10);
+    border: 1px solid rgba(242, 166, 12, 0.22);
+    color: #F2A60C;
+    flex: none;
+  }
+
+  /* ---- FAQ accordion ---- */
+  details.faq {
+    border-bottom: 1px solid var(--hairline);
+  }
+  details.faq summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.4rem 0;
+  }
+  details.faq summary::-webkit-details-marker { display: none; }
+  details.faq summary .chev {
+    transition: transform 180ms ease;
+    color: #F2A60C;
+    flex: none;
+  }
+  details.faq[open] summary .chev { transform: rotate(45deg); }
+
+  /* ---- Before/After divider ---- */
+  .ba-pair {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    overflow: hidden;
+    border-radius: 14px;
+    border: 1px solid var(--hairline);
+  }
+  .ba-pair::after {
+    content: "";
+    position: absolute;
+    top: 8%;
+    bottom: 8%;
+    left: 50%;
+    width: 2px;
+    transform: translateX(-50%);
+    background: linear-gradient(to bottom, transparent, rgba(242, 166, 12, 0.85), transparent);
+    z-index: 2;
+  }
+  .ba-tag {
+    position: absolute;
+    top: 10px;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(20, 19, 15, 0.78);
+    border: 1px solid var(--hairline-strong);
+    z-index: 3;
+  }
+
+  .focus-amber:focus-visible {
+    outline: 2px solid #F2A60C;
+    outline-offset: 2px;
+  }
+
+  .input {
+    width: 100%;
+    background: #14130F;
+    border: 1px solid var(--hairline-strong);
+    border-radius: 11px;
+    color: #F4F0E6;
+    padding: 0.8rem 0.95rem;
+    font-size: 0.95rem;
+    transition: border-color 110ms ease;
+  }
+  .input::placeholder { color: rgba(244, 240, 230, 0.38); }
+  .input:focus { outline: none; border-color: rgba(242, 166, 12, 0.55); }
+
+  .nav-link {
+    position: relative;
+    transition: color 110ms ease;
+  }
+  .nav-link:hover { color: #F2A60C; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .marquee { animation: none; }
+    .pulse-dot::after { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     SECTION 1 — THIN TOP BAR
+============================================================ -->
+<div class="border-b hairline bg-[#100F0C]">
+  <div class="mx-auto max-w-shell px-5 sm:px-6">
+    <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-1.5 py-2 text-[12.5px] text-paper/70">
+      <div class="flex flex-wrap items-center gap-x-5 gap-y-1">
+        <a href="tel:+15555123344" class="focus-amber inline-flex items-center gap-1.5 font-medium text-paper hover:text-amber transition-colors">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+          (555) 512-3344
+        </a>
+        <span class="hidden sm:inline-flex items-center gap-1.5">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          <span class="font-mono text-[11px] text-paper/60">Mon–Fri 7am–6pm / Emergency callout available</span>
+        </span>
+        <span class="hidden md:inline-flex items-center gap-1.5">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          Serving Austin, TX
+        </span>
+      </div>
+      <a href="#quote" class="focus-amber pill px-3 py-1 text-[12px] font-semibold text-amber hover:bg-amber/10 transition-colors">
+        Get a quote
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SECTION 2 — NAV
+============================================================ -->
+<header class="sticky top-0 z-50 border-b hairline bg-[#14130F]/92 backdrop-blur">
+  <div class="mx-auto max-w-shell px-5 sm:px-6">
+    <div class="flex h-16 items-center justify-between gap-4">
+
+      <!-- Logo -->
+      <a href="#top" class="focus-amber flex items-center gap-2.5">
+        <span class="inline-flex h-9 w-9 items-center justify-center rounded-[10px] bg-amber/12 border border-amber/25">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" fill="#F2A60C" stroke="#F2A60C" stroke-width="1.3" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="text-[19px] font-bold tracking-tightish text-paper">Voltline</span>
+      </a>
+
+      <!-- Links -->
+      <nav class="hidden md:flex items-center gap-7 text-[14px] font-medium text-paper/75">
+        <a href="#services" class="nav-link focus-amber">Services</a>
+        <a href="#about" class="nav-link focus-amber">About</a>
+        <a href="#reviews" class="nav-link focus-amber">Reviews</a>
+        <a href="#contact" class="nav-link focus-amber">Contact</a>
+      </nav>
+
+      <!-- CTAs -->
+      <div class="flex items-center gap-2.5">
+        <a href="tel:+15555123344" class="btn btn-ghost focus-amber px-3.5 py-2 text-[13.5px]">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+          <span class="hidden lg:inline">(555) 512-3344</span>
+          <span class="lg:hidden">Call</span>
+        </a>
+        <a href="#quote" class="btn btn-amber focus-amber px-4 py-2 text-[13.5px]">Free quote</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ============================================================
+     SECTION 3 — HERO
+============================================================ -->
+<section class="relative overflow-hidden hero-glow border-b hairline">
+  <div class="blob h-72 w-72 bg-amber/25" style="top:-60px;right:8%"></div>
+  <div class="mx-auto max-w-shell px-5 sm:px-6 py-20 sm:py-24 lg:py-28">
+    <div class="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
+
+      <!-- Copy -->
+      <div>
+        <span class="pill px-3 py-1.5 text-[12.5px] font-medium text-paper/85">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+          Licensed Electrical Contractor
+          <span class="font-mono text-[11px] text-amber">#EC-44821</span>
+        </span>
+
+        <h1 class="mt-6 text-[40px] leading-[1.04] sm:text-[54px] lg:text-[60px] tracking-display text-paper">
+          Wiring you never have to
+          <span class="lit">think about</span>
+          <span class="halftone">again.</span>
+        </h1>
+
+        <p class="mt-5 max-w-xl text-[17px] sm:text-[18px] leading-[1.6] text-paper/72">
+          Licensed and bonded electricians serving Austin, TX. Code-compliant work, inspection-ready every time — and a photo of every finished job, sent before we pack up.
+        </p>
+
+        <!-- Dual CTA -->
+        <div class="mt-7 flex flex-col sm:flex-row gap-3">
+          <a href="#quote" class="btn btn-amber focus-amber px-6 py-3.5 text-[15px]">
+            Get a free quote
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </a>
+          <a href="tel:+15555123344" class="btn btn-ghost focus-amber px-6 py-3.5 text-[15px]">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+            Call (555) 512-3344
+          </a>
+        </div>
+
+        <!-- Trust badges -->
+        <div class="mt-8 flex flex-wrap gap-2.5">
+          <span class="pill px-3 py-1.5 text-[12.5px] text-paper/80">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
+            Licensed &amp; Bonded
+          </span>
+          <span class="pill px-3 py-1.5 text-[12.5px] text-paper/80">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/></svg>
+            <span class="font-mono text-[11px]">TECL #EC-44821</span>
+          </span>
+          <span class="pill px-3 py-1.5 text-[12.5px] text-paper/80">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" stroke="#F2A60C" stroke-width="1" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+            <span class="tnum">4.9 · 504 reviews</span>
+          </span>
+          <span class="pill px-3 py-1.5 text-[12.5px] text-paper/80">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 12 2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+            BBB A+
+          </span>
+        </div>
+      </div>
+
+      <!-- Hero photo placeholder -->
+      <div class="relative">
+        <div role="img" aria-label="A clean, freshly installed electrical panel with neatly labeled breakers"
+             class="relative aspect-[4/5] sm:aspect-[5/5] overflow-hidden rounded-[18px] border hairline bg-gradient-to-br from-[#2a2519] via-[#1b1813] to-[#3a2c0e] shadow-[0_30px_70px_-30px_rgba(0,0,0,0.8)]">
+          <div class="absolute inset-0" style="background:radial-gradient(360px 240px at 70% 30%, rgba(242,166,12,0.30), transparent 72%)"></div>
+          <!-- panel illustration -->
+          <svg class="absolute inset-0 m-auto" width="58%" viewBox="0 0 200 280" fill="none" aria-hidden="true">
+            <rect x="34" y="20" width="132" height="240" rx="9" fill="#14130F" stroke="rgba(255,255,255,0.10)" stroke-width="2"/>
+            <rect x="46" y="34" width="108" height="36" rx="5" fill="#211E18" stroke="rgba(242,166,12,0.30)" stroke-width="1.5"/>
+            <circle cx="62" cy="52" r="6" fill="#F2A60C"/>
+            <rect x="76" y="48" width="62" height="3.5" rx="1.75" fill="rgba(244,240,230,0.30)"/>
+            <rect x="76" y="56" width="44" height="3" rx="1.5" fill="rgba(244,240,230,0.16)"/>
+            <g>
+              <rect x="50" y="84" width="44" height="13" rx="3" fill="#211E18" stroke="rgba(255,255,255,0.09)"/>
+              <rect x="106" y="84" width="44" height="13" rx="3" fill="#211E18" stroke="rgba(255,255,255,0.09)"/>
+              <rect x="50" y="103" width="44" height="13" rx="3" fill="#211E18" stroke="rgba(255,255,255,0.09)"/>
+              <rect x="106" y="103" width="44" height="13" rx="3" fill="#211E18" stroke="rgba(255,255,255,0.09)"/>
+              <rect x="50" y="122" width="44" height="13" rx="3" fill="#211E18" stroke="rgba(255,255,255,0.09)"/>
+              <rect x="106" y="122" width="44" height="13" rx="3" fill="#211E18" stroke="rgba(255,255,255,0.09)"/>
+              <rect x="50" y="141" width="44" height="13" rx="3" fill="#211E18" stroke="rgba(255,255,255,0.09)"/>
+              <rect x="106" y="141" width="44" height="13" rx="3" fill="#211E18" stroke="rgba(255,255,255,0.09)"/>
+              <rect x="50" y="160" width="44" height="13" rx="3" fill="#211E18" stroke="rgba(255,255,255,0.09)"/>
+              <rect x="106" y="160" width="44" height="13" rx="3" fill="#211E18" stroke="rgba(255,255,255,0.09)"/>
+              <rect x="50" y="179" width="44" height="13" rx="3" fill="#211E18" stroke="rgba(255,255,255,0.09)"/>
+              <rect x="106" y="179" width="44" height="13" rx="3" fill="#211E18" stroke="rgba(255,255,255,0.09)"/>
+            </g>
+            <rect x="58" y="86.5" width="9" height="8" rx="2" fill="#F2A60C"/>
+            <rect x="114" y="105.5" width="9" height="8" rx="2" fill="#F2A60C"/>
+            <rect x="58" y="143.5" width="9" height="8" rx="2" fill="#F2A60C"/>
+            <rect x="114" y="181.5" width="9" height="8" rx="2" fill="#F2A60C"/>
+            <rect x="50" y="208" width="100" height="40" rx="5" fill="#211E18" stroke="rgba(255,255,255,0.08)"/>
+            <rect x="58" y="218" width="84" height="4" rx="2" fill="rgba(244,240,230,0.14)"/>
+            <rect x="58" y="228" width="58" height="4" rx="2" fill="rgba(244,240,230,0.10)"/>
+            <rect x="58" y="238" width="70" height="4" rx="2" fill="rgba(244,240,230,0.10)"/>
+          </svg>
+          <!-- caption chip -->
+          <div class="absolute bottom-3.5 left-3.5 right-3.5 flex items-center justify-between rounded-xl border hairline bg-[#100F0C]/85 px-3.5 py-2.5 backdrop-blur">
+            <span class="text-[12.5px] font-medium text-paper/85">200A panel upgrade · Mueller</span>
+            <span class="font-mono text-[10.5px] text-amber">FINISHED · PHOTO SENT</span>
+          </div>
+        </div>
+        <!-- floating pass badge -->
+        <div class="absolute -left-3 -top-3 sm:-left-5 hidden xs:flex items-center gap-2 rounded-xl border hairline bg-panel px-3 py-2 shadow-lg">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 12 2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+          <span class="text-[12px] font-semibold text-paper">Passed inspection<br><span class="font-mono text-[10px] text-paper/55 tnum">first try</span></span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     TRUST MARQUEE
+============================================================ -->
+<section class="border-b hairline bg-[#100F0C] py-4 overflow-hidden">
+  <div class="marquee-track">
+    <div class="marquee">
+      <!-- strip x2 for seamless loop -->
+      <div class="flex shrink-0 items-center gap-10 pr-10 text-[13px] text-paper/55 font-medium" aria-hidden="false">
+        <span class="inline-flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>Code-compliant, inspection-ready work</span>
+        <span class="text-paper/20">/</span>
+        <span class="inline-flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>Licensed &amp; bonded · TECL #EC-44821</span>
+        <span class="text-paper/20">/</span>
+        <span class="inline-flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg><span class="tnum">4.9 average · 504 Google reviews</span></span>
+        <span class="text-paper/20">/</span>
+        <span class="inline-flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M3 12h18M3 6h18M3 18h18"/></svg>A photo of every finished job</span>
+        <span class="text-paper/20">/</span>
+        <span class="inline-flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>14 years licensed in Austin</span>
+        <span class="text-paper/20">/</span>
+      </div>
+      <div class="flex shrink-0 items-center gap-10 pr-10 text-[13px] text-paper/55 font-medium" aria-hidden="true">
+        <span class="inline-flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>Code-compliant, inspection-ready work</span>
+        <span class="text-paper/20">/</span>
+        <span class="inline-flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>Licensed &amp; bonded · TECL #EC-44821</span>
+        <span class="text-paper/20">/</span>
+        <span class="inline-flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg><span class="tnum">4.9 average · 504 Google reviews</span></span>
+        <span class="text-paper/20">/</span>
+        <span class="inline-flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M3 12h18M3 6h18M3 18h18"/></svg>A photo of every finished job</span>
+        <span class="text-paper/20">/</span>
+        <span class="inline-flex items-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>14 years licensed in Austin</span>
+        <span class="text-paper/20">/</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SECTION 4 — SERVICES GRID
+============================================================ -->
+<section id="services" class="border-b hairline py-20 sm:py-24">
+  <div class="mx-auto max-w-shell px-5 sm:px-6">
+    <div class="max-w-2xl">
+      <span class="font-mono text-[11px] uppercase tracking-[0.16em] text-amber">What we do</span>
+      <h2 class="mt-3 text-[30px] sm:text-[38px] tracking-display text-paper">
+        Residential and light-commercial, done by the book.
+      </h2>
+      <p class="mt-3 text-[16px] text-paper/65">
+        Eight of the jobs Austin homeowners call us for most — every one quoted in writing before a single wire moves.
+      </p>
+    </div>
+
+    <div class="mt-11 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+
+      <!-- Card 1 -->
+      <article class="card card-hover p-5">
+        <span class="icon-tile">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/><path d="m15 17 2 2 3-3"/></svg>
+        </span>
+        <h3 class="mt-4 text-[16.5px] font-semibold text-paper">Panel upgrades</h3>
+        <p class="mt-1.5 text-[13.5px] leading-[1.55] text-paper/62">Swap a tired 100A box for a labeled 200A panel that keeps up with a modern house.</p>
+        <span class="mt-4 inline-flex pill px-2.5 py-1 font-mono text-[10.5px] text-amber">from $1,850</span>
+      </article>
+
+      <!-- Card 2 -->
+      <article class="card card-hover p-5">
+        <span class="icon-tile">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 11h14v8a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-8Z"/><path d="M9 11V6a3 3 0 0 1 6 0v5"/><path d="m11 15 2-2v3l2-2"/></svg>
+        </span>
+        <h3 class="mt-4 text-[16.5px] font-semibold text-paper">EV-charger install</h3>
+        <p class="mt-1.5 text-[13.5px] leading-[1.55] text-paper/62">Level 2 charging in the garage or carport, sized to your panel and your car.</p>
+        <span class="mt-4 inline-flex pill px-2.5 py-1 font-mono text-[10.5px] text-amber">from $640</span>
+      </article>
+
+      <!-- Card 3 -->
+      <article class="card card-hover p-5">
+        <span class="icon-tile">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.6.6 1 1.5 1 2.5h6c0-1 .4-1.9 1-2.5A6 6 0 0 0 12 3Z"/></svg>
+        </span>
+        <h3 class="mt-4 text-[16.5px] font-semibold text-paper">Lighting &amp; fixtures</h3>
+        <p class="mt-1.5 text-[13.5px] leading-[1.55] text-paper/62">Recessed cans, pendants, dimmers and under-cabinet runs, hung straight and wired clean.</p>
+        <span class="mt-4 inline-flex pill px-2.5 py-1 font-mono text-[10.5px] text-amber">Free estimate</span>
+      </article>
+
+      <!-- Card 4 -->
+      <article class="card card-hover p-5">
+        <span class="icon-tile">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9.5" cy="10" r="1.4"/><circle cx="14.5" cy="10" r="1.4"/><path d="M9 15h6"/></svg>
+        </span>
+        <h3 class="mt-4 text-[16.5px] font-semibold text-paper">Outlet &amp; wiring</h3>
+        <p class="mt-1.5 text-[13.5px] leading-[1.55] text-paper/62">New circuits, GFCI outlets and tamper-resistant receptacles where you actually need them.</p>
+        <span class="mt-4 inline-flex pill px-2.5 py-1 font-mono text-[10.5px] text-amber">from $145</span>
+      </article>
+
+      <!-- Card 5 -->
+      <article class="card card-hover p-5">
+        <span class="icon-tile">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 3 5 14h5l-1 7 6-11h-5l1-7Z"/><path d="M19 4v4M21 6h-4"/></svg>
+        </span>
+        <h3 class="mt-4 text-[16.5px] font-semibold text-paper">Troubleshooting</h3>
+        <p class="mt-1.5 text-[13.5px] leading-[1.55] text-paper/62">Dead outlets, tripping breakers, flickering lights — we find the actual cause, not a guess.</p>
+        <span class="mt-4 inline-flex pill px-2.5 py-1 font-mono text-[10.5px] text-amber">$89 diagnostic</span>
+      </article>
+
+      <!-- Card 6 -->
+      <article class="card card-hover p-5">
+        <span class="icon-tile">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6l-8-4Z"/><path d="m13 7-3 6h3l-1 5"/></svg>
+        </span>
+        <h3 class="mt-4 text-[16.5px] font-semibold text-paper">Whole-home surge protection</h3>
+        <p class="mt-1.5 text-[13.5px] leading-[1.55] text-paper/62">A panel-mounted surge device that guards electronics from grid spikes and storms.</p>
+        <span class="mt-4 inline-flex pill px-2.5 py-1 font-mono text-[10.5px] text-amber">from $320</span>
+      </article>
+
+      <!-- Card 7 -->
+      <article class="card card-hover p-5">
+        <span class="icon-tile">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="11" rx="2"/><path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/><path d="M12 12v3M10.5 13.5h3"/></svg>
+        </span>
+        <h3 class="mt-4 text-[16.5px] font-semibold text-paper">Generator hookup</h3>
+        <p class="mt-1.5 text-[13.5px] leading-[1.55] text-paper/62">Transfer switch and inlet so a portable or standby unit keeps the lights on safely.</p>
+        <span class="mt-4 inline-flex pill px-2.5 py-1 font-mono text-[10.5px] text-amber">Free estimate</span>
+      </article>
+
+      <!-- Card 8 -->
+      <article class="card card-hover p-5">
+        <span class="icon-tile">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V8l9-5 9 5v13"/><path d="M3 21h18"/><path d="m9.5 13 1.8 1.8 3.2-3.6"/></svg>
+        </span>
+        <h3 class="mt-4 text-[16.5px] font-semibold text-paper">Code corrections for a home sale</h3>
+        <p class="mt-1.5 text-[13.5px] leading-[1.55] text-paper/62">Inspection callouts fixed fast, with paperwork your buyer's agent will accept.</p>
+        <span class="mt-4 inline-flex pill px-2.5 py-1 font-mono text-[10.5px] text-amber">Free estimate</span>
+      </article>
+
+    </div>
+
+    <div class="mt-9 flex flex-wrap items-center gap-x-3 gap-y-2 text-[13.5px] text-paper/60">
+      <span>Not sure which one you need?</span>
+      <a href="#quote" class="font-semibold text-amber hover:underline focus-amber">Tell us what's going on →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SECTION 5 — WHY CHOOSE US
+============================================================ -->
+<section id="about" class="relative border-b hairline py-20 sm:py-24 overflow-hidden">
+  <div class="blob h-64 w-64 bg-amber/14" style="bottom:-40px;left:4%"></div>
+  <div class="mx-auto max-w-shell px-5 sm:px-6">
+    <div class="grid gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
+
+      <!-- Left intro -->
+      <div>
+        <span class="font-mono text-[11px] uppercase tracking-[0.16em] text-amber">Why Voltline</span>
+        <h2 class="mt-3 text-[30px] sm:text-[38px] tracking-display text-paper">
+          The electrician you call once
+          <span class="halftone">and keep.</span>
+        </h2>
+        <p class="mt-4 text-[16px] leading-[1.6] text-paper/65">
+          Voltline has been a licensed electrical contractor in Austin for 14 years. We're a small crew, we answer our own phone, and we treat your panel the way we'd treat our own — labeled, tidy, and ready for the inspector.
+        </p>
+        <div class="mt-6 flex flex-wrap gap-2.5">
+          <span class="pill px-3 py-1.5 text-[12.5px] text-paper/80">
+            <span class="font-mono text-[11px] text-amber tnum">14 yrs</span> licensed
+          </span>
+          <span class="pill px-3 py-1.5 text-[12.5px] text-paper/80">
+            <span class="font-mono text-[11px] text-amber tnum">100%</span> first-time inspection pass
+          </span>
+        </div>
+      </div>
+
+      <!-- Reason cards -->
+      <div class="grid gap-4 sm:grid-cols-2">
+        <article class="card p-5">
+          <span class="icon-tile">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+          </span>
+          <h3 class="mt-4 text-[16.5px] font-semibold text-paper">Licensed &amp; bonded</h3>
+          <p class="mt-1.5 text-[13.5px] leading-[1.55] text-paper/62">A current Texas master license and a contractor bond — both posted, both verifiable before we start.</p>
+        </article>
+        <article class="card p-5">
+          <span class="icon-tile">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3.4"/><path d="M8 5 9 3h6l1 2"/></svg>
+          </span>
+          <h3 class="mt-4 text-[16.5px] font-semibold text-paper">A photo of every finished job</h3>
+          <p class="mt-1.5 text-[13.5px] leading-[1.55] text-paper/62">Before we leave, you get clear photos of the finished work — handy for records, resale and your own peace of mind.</p>
+        </article>
+        <article class="card p-5">
+          <span class="icon-tile">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="m9 14 2 2 4-4"/></svg>
+          </span>
+          <h3 class="mt-4 text-[16.5px] font-semibold text-paper">Code-compliant, inspection-ready</h3>
+          <p class="mt-1.5 text-[13.5px] leading-[1.55] text-paper/62">Work is done to current NEC and Austin code, so it passes the first time — no callbacks, no reschedule.</p>
+        </article>
+        <article class="card p-5">
+          <span class="icon-tile">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v5H4z"/><path d="M4 13h10v7H4z"/><path d="M18 13h2v7h-2z"/><path d="M17 9v4"/></svg>
+          </span>
+          <h3 class="mt-4 text-[16.5px] font-semibold text-paper">Upfront written quotes</h3>
+          <p class="mt-1.5 text-[13.5px] leading-[1.55] text-paper/62">An itemized written quote on-site before any work begins. The price you approve is the price you pay.</p>
+        </article>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SECTION 6 — BEFORE / AFTER
+============================================================ -->
+<section class="relative border-b hairline dot-grid py-20 sm:py-24">
+  <div class="mx-auto max-w-shell px-5 sm:px-6">
+    <div class="max-w-2xl">
+      <span class="font-mono text-[11px] uppercase tracking-[0.16em] text-amber">Before &amp; after</span>
+      <h2 class="mt-3 text-[30px] sm:text-[38px] tracking-display text-paper">
+        The difference a licensed crew makes.
+      </h2>
+      <p class="mt-3 text-[16px] text-paper/65">
+        Real jobs from Austin homes — same panels, same walls, fixed right.
+      </p>
+    </div>
+
+    <div class="mt-11 grid gap-7 lg:grid-cols-3">
+
+      <!-- Pair 1 -->
+      <figure>
+        <div class="ba-pair">
+          <span class="ba-tag left-2.5 text-paper/65">Before</span>
+          <span class="ba-tag" style="right:0.625rem" >After</span>
+          <div role="img" aria-label="An old ceramic-fuse box, rusted and unlabeled" class="aspect-[4/3] bg-gradient-to-br from-[#2a241a] via-[#211d16] to-[#15130f]"></div>
+          <div role="img" aria-label="A modern 200-amp panel with every breaker clearly labeled" class="aspect-[4/3] bg-gradient-to-br from-[#3a2c0e] via-[#2a2415] to-[#1c1813]"></div>
+        </div>
+        <figcaption class="mt-3 text-[13.5px] text-paper/62">
+          <span class="font-semibold text-paper">Old fuse box → modern labeled panel.</span> A 1962 Hyde Park bungalow brought to 200A.
+        </figcaption>
+      </figure>
+
+      <!-- Pair 2 -->
+      <figure>
+        <div class="ba-pair">
+          <span class="ba-tag left-2.5 text-paper/65">Before</span>
+          <span class="ba-tag" style="right:0.625rem">After</span>
+          <div role="img" aria-label="A tangled bundle of unsecured wiring in an attic" class="aspect-[4/3] bg-gradient-to-br from-[#28231a] via-[#201c15] to-[#15130f]"></div>
+          <div role="img" aria-label="A clean, stapled and labeled wiring run along a joist" class="aspect-[4/3] bg-gradient-to-br from-[#3a2c0e] via-[#2a2415] to-[#1c1813]"></div>
+        </div>
+        <figcaption class="mt-3 text-[13.5px] text-paper/62">
+          <span class="font-semibold text-paper">Tangled wiring → a clean labeled run.</span> An attic rewire in Travis Heights, stapled to code.
+        </figcaption>
+      </figure>
+
+      <!-- Pair 3 -->
+      <figure>
+        <div class="ba-pair">
+          <span class="ba-tag left-2.5 text-paper/65">Before</span>
+          <span class="ba-tag" style="right:0.625rem">After</span>
+          <div role="img" aria-label="A dim room lit by a single dated ceiling fixture" class="aspect-[4/3] bg-gradient-to-br from-[#26221a] via-[#1f1b15] to-[#15130f]"></div>
+          <div role="img" aria-label="The same room brightly lit with recessed LED lighting" class="aspect-[4/3] bg-gradient-to-br from-[#4a3712] via-[#322713] to-[#1c1813]"></div>
+        </div>
+        <figcaption class="mt-3 text-[13.5px] text-paper/62">
+          <span class="font-semibold text-paper">Dim, dated fixtures → bright modern lighting.</span> Recessed LEDs and dimmers in a Clarksville kitchen.
+        </figcaption>
+      </figure>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SECTION 7 — HOW IT WORKS
+============================================================ -->
+<section class="border-b hairline py-20 sm:py-24">
+  <div class="mx-auto max-w-shell px-5 sm:px-6">
+    <div class="flex flex-wrap items-end justify-between gap-5">
+      <div class="max-w-xl">
+        <span class="font-mono text-[11px] uppercase tracking-[0.16em] text-amber">How it works</span>
+        <h2 class="mt-3 text-[30px] sm:text-[38px] tracking-display text-paper">
+          Three steps. No surprises.
+        </h2>
+      </div>
+      <!-- Urgency pill -->
+      <span class="pill px-3.5 py-2 text-[13px] font-medium text-paper/85">
+        <span class="pulse-dot" aria-hidden="true"></span>
+        Same-week scheduling / emergency callout available
+      </span>
+    </div>
+
+    <div class="mt-11 grid gap-4 md:grid-cols-3">
+
+      <!-- Step 1 -->
+      <article class="card p-6">
+        <div class="flex items-center justify-between">
+          <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-amber">STEP 01</span>
+          <span class="icon-tile h-10 w-10">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+          </span>
+        </div>
+        <h3 class="mt-4 text-[18px] font-semibold text-paper">Call or book</h3>
+        <p class="mt-1.5 text-[14px] leading-[1.55] text-paper/62">Tell us what's going on by phone or the quote form. We'll book a visit — often the same week.</p>
+      </article>
+
+      <!-- Step 2 -->
+      <article class="card p-6">
+        <div class="flex items-center justify-between">
+          <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-amber">STEP 02</span>
+          <span class="icon-tile h-10 w-10">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h4"/></svg>
+          </span>
+        </div>
+        <h3 class="mt-4 text-[18px] font-semibold text-paper">We quote on-site, in writing</h3>
+        <p class="mt-1.5 text-[14px] leading-[1.55] text-paper/62">An electrician inspects the work and hands you an itemized written quote — line by line, no pressure.</p>
+      </article>
+
+      <!-- Step 3 -->
+      <article class="card p-6">
+        <div class="flex items-center justify-between">
+          <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-amber">STEP 03</span>
+          <span class="icon-tile h-10 w-10">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m8.5 12 2.4 2.4 4.6-4.8"/></svg>
+          </span>
+        </div>
+        <h3 class="mt-4 text-[18px] font-semibold text-paper">Installed, inspected, and done right</h3>
+        <p class="mt-1.5 text-[14px] leading-[1.55] text-paper/62">We do the work to code, pull the permit, meet the inspector, and send you photos of the finished job.</p>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SECTION 8 — REVIEWS
+============================================================ -->
+<section id="reviews" class="relative border-b hairline py-20 sm:py-24">
+  <div class="blob h-72 w-72 bg-amber/12" style="top:-30px;right:2%"></div>
+  <div class="mx-auto max-w-shell px-5 sm:px-6">
+
+    <!-- Aggregate header -->
+    <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+      <div class="max-w-xl">
+        <span class="font-mono text-[11px] uppercase tracking-[0.16em] text-amber">Reviews</span>
+        <h2 class="mt-3 text-[30px] sm:text-[38px] tracking-display text-paper">
+          Austin homeowners,
+          <span class="halftone">in their words.</span>
+        </h2>
+      </div>
+      <div class="card flex items-center gap-4 px-5 py-4">
+        <div class="text-[34px] font-bold leading-none text-paper tnum">4.9</div>
+        <div>
+          <div class="flex gap-0.5" aria-label="4.9 out of 5 stars">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          </div>
+          <p class="mt-1 text-[12.5px] text-paper/60">
+            from <span class="font-mono text-[11px] text-paper/80 tnum">504</span> verified
+            <span class="inline-flex items-center gap-1">
+              <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.5 12.2c0-.7-.06-1.4-.18-2.06H12v3.9h5.9a5 5 0 0 1-2.18 3.3v2.7h3.52c2.06-1.9 3.26-4.7 3.26-7.84Z"/><path fill="#34A853" d="M12 23c2.94 0 5.4-.97 7.2-2.63l-3.52-2.73c-.98.66-2.23 1.05-3.68 1.05-2.83 0-5.23-1.91-6.09-4.48H2.28v2.81A10.99 10.99 0 0 0 12 23Z"/><path fill="#FBBC05" d="M5.91 14.21A6.6 6.6 0 0 1 5.56 12c0-.77.13-1.52.35-2.21V6.98H2.28A11 11 0 0 0 1 12c0 1.78.43 3.46 1.28 4.99l3.63-2.78Z"/><path fill="#EA4335" d="M12 5.32c1.6 0 3.03.55 4.16 1.62l3.12-3.12C17.4 2.06 14.94 1 12 1A10.99 10.99 0 0 0 2.28 6.98l3.63 2.81C6.77 7.23 9.17 5.32 12 5.32Z"/></svg>
+              Google reviews
+            </span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Review cards -->
+    <div class="mt-11 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+
+      <article class="card p-5">
+        <div class="flex gap-0.5" aria-label="5 out of 5 stars">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+        </div>
+        <p class="mt-3 text-[14px] leading-[1.6] text-paper/80">"Our 1950s panel was a real hazard. Voltline quoted it on the spot, did the 200A upgrade in a day, and it passed inspection without a single note. Clean work."</p>
+        <div class="mt-4 flex items-center gap-3 border-t hairline pt-3.5">
+          <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-amber/15 text-[12px] font-semibold text-amber">RM</span>
+          <div>
+            <p class="text-[13px] font-semibold text-paper">Renata Marques</p>
+            <p class="text-[11.5px] text-paper/55">Hyde Park · Panel upgrade</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="card p-5">
+        <div class="flex gap-0.5" aria-label="5 out of 5 stars">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+        </div>
+        <p class="mt-3 text-[14px] leading-[1.6] text-paper/80">"Got a Level 2 charger put in for our EV6. They checked the panel first, told me exactly what it'd cost, and the run looks like it came with the house. No upsell."</p>
+        <div class="mt-4 flex items-center gap-3 border-t hairline pt-3.5">
+          <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-amber/15 text-[12px] font-semibold text-amber">DC</span>
+          <div>
+            <p class="text-[13px] font-semibold text-paper">Daniel Cho</p>
+            <p class="text-[11.5px] text-paper/55">Mueller · EV-charger install</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="card p-5">
+        <div class="flex gap-0.5" aria-label="5 out of 5 stars">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+        </div>
+        <p class="mt-3 text-[14px] leading-[1.6] text-paper/80">"Half our outlets stopped working the night before guests arrived. They came out the next morning, traced it to one bad receptacle, and fixed it. Lifesavers."</p>
+        <div class="mt-4 flex items-center gap-3 border-t hairline pt-3.5">
+          <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-amber/15 text-[12px] font-semibold text-amber">PA</span>
+          <div>
+            <p class="text-[13px] font-semibold text-paper">Priya Anand</p>
+            <p class="text-[11.5px] text-paper/55">Cherrywood · Troubleshooting</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="card p-5">
+        <div class="flex gap-0.5" aria-label="5 out of 5 stars">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+        </div>
+        <p class="mt-3 text-[14px] leading-[1.6] text-paper/80">"We needed code corrections to close on our house sale. Voltline knocked out the inspector's list in two visits and gave us paperwork the buyer's agent accepted instantly."</p>
+        <div class="mt-4 flex items-center gap-3 border-t hairline pt-3.5">
+          <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-amber/15 text-[12px] font-semibold text-amber">TO</span>
+          <div>
+            <p class="text-[13px] font-semibold text-paper">Tomás Okafor</p>
+            <p class="text-[11.5px] text-paper/55">Allandale · Code corrections</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="card p-5">
+        <div class="flex gap-0.5" aria-label="5 out of 5 stars">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+        </div>
+        <p class="mt-3 text-[14px] leading-[1.6] text-paper/80">"Recessed lighting and dimmers through the whole first floor. They were tidy, on time, and the photos they sent afterward went straight into our home file."</p>
+        <div class="mt-4 flex items-center gap-3 border-t hairline pt-3.5">
+          <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-amber/15 text-[12px] font-semibold text-amber">SK</span>
+          <div>
+            <p class="text-[13px] font-semibold text-paper">Sofia Keller</p>
+            <p class="text-[11.5px] text-paper/55">Travis Heights · Lighting &amp; fixtures</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="card p-5">
+        <div class="flex gap-0.5" aria-label="5 out of 5 stars">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F2A60C" aria-hidden="true"><path d="M12 2.5l2.9 6.05 6.6.83-4.85 4.55 1.25 6.57L12 18.4l-5.9 2.7 1.25-6.57L2.5 9.38l6.6-.83L12 2.5Z"/></svg>
+        </div>
+        <p class="mt-3 text-[14px] leading-[1.6] text-paper/80">"Added a transfer switch so our portable generator is safe to use in an outage. They explained every step, and the quote never moved a dollar. Honest crew."</p>
+        <div class="mt-4 flex items-center gap-3 border-t hairline pt-3.5">
+          <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-amber/15 text-[12px] font-semibold text-amber">MO</span>
+          <div>
+            <p class="text-[13px] font-semibold text-paper">Marcus Obrien</p>
+            <p class="text-[11.5px] text-paper/55">Bouldin Creek · Generator hookup</p>
+          </div>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     STATS BAND
+============================================================ -->
+<section class="border-b hairline bg-[#100F0C] py-14">
+  <div class="mx-auto max-w-shell px-5 sm:px-6">
+    <div class="grid grid-cols-2 gap-y-9 sm:gap-6 lg:grid-cols-4">
+      <div class="text-center sm:border-r hairline last:border-0">
+        <div class="text-[40px] font-bold leading-none text-amber tnum">408</div>
+        <p class="mt-2 text-[13px] text-paper/60">Panels upgraded in 2025</p>
+      </div>
+      <div class="text-center sm:border-r hairline last:border-0">
+        <div class="text-[40px] font-bold leading-none text-amber tnum">612</div>
+        <p class="mt-2 text-[13px] text-paper/60">EV chargers installed</p>
+      </div>
+      <div class="text-center sm:border-r hairline last:border-0">
+        <div class="text-[40px] font-bold leading-none text-amber tnum">100%</div>
+        <p class="mt-2 text-[13px] text-paper/60">First-time inspection pass rate</p>
+      </div>
+      <div class="text-center">
+        <div class="text-[40px] font-bold leading-none text-amber tnum">14</div>
+        <p class="mt-2 text-[13px] text-paper/60">Years licensed</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SECTION 9 — SERVICE AREA
+============================================================ -->
+<section class="border-b hairline py-20 sm:py-24">
+  <div class="mx-auto max-w-shell px-5 sm:px-6">
+    <div class="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+
+      <!-- Map -->
+      <div class="card p-5 sm:p-7">
+        <div class="mb-4 flex items-center justify-between">
+          <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-amber">Service area · Austin, TX</span>
+          <span class="pill px-2.5 py-1 text-[11px] text-paper/65">
+            <span class="pulse-dot" aria-hidden="true"></span> 8 neighborhoods
+          </span>
+        </div>
+        <div role="img" aria-label="A simplified map of central Austin with pins marking the eight neighborhoods Voltline serves" class="overflow-hidden rounded-[12px] bg-gradient-to-br from-[#1a1812] to-[#100f0c] border hairline">
+          <svg viewBox="0 0 520 360" class="w-full" fill="none" aria-hidden="true">
+            <!-- soft city outline -->
+            <path d="M70 120 C70 80 130 56 200 54 C300 50 370 70 430 96 C470 114 472 170 450 220 C432 262 380 300 300 312 C220 324 140 308 96 268 C66 240 70 168 70 120 Z"
+                  fill="rgba(242,166,12,0.05)" stroke="rgba(242,166,12,0.30)" stroke-width="1.6"/>
+            <!-- river -->
+            <path d="M84 232 C160 214 240 250 320 224 C380 204 430 214 462 200" stroke="rgba(244,240,230,0.16)" stroke-width="6" stroke-linecap="round"/>
+            <!-- grid roads -->
+            <g stroke="rgba(255,255,255,0.05)" stroke-width="1">
+              <path d="M150 60 V310"/><path d="M250 54 V314"/><path d="M350 62 V300"/>
+              <path d="M80 140 H460"/><path d="M76 200 H466"/>
+            </g>
+
+            <!-- pins -->
+            <!-- Mueller -->
+            <g><circle cx="350" cy="118" r="6.5" fill="#F2A60C"/><circle cx="350" cy="118" r="11" fill="none" stroke="rgba(242,166,12,0.35)" stroke-width="1.4"/><text x="350" y="100" fill="#F4F0E6" font-size="12" font-family="Inter, sans-serif" font-weight="600" text-anchor="middle">Mueller</text></g>
+            <!-- Hyde Park -->
+            <g><circle cx="232" cy="104" r="6.5" fill="#F2A60C"/><circle cx="232" cy="104" r="11" fill="none" stroke="rgba(242,166,12,0.35)" stroke-width="1.4"/><text x="232" y="86" fill="#F4F0E6" font-size="12" font-family="Inter, sans-serif" font-weight="600" text-anchor="middle">Hyde Park</text></g>
+            <!-- Crestview -->
+            <g><circle cx="156" cy="118" r="6.5" fill="#F2A60C"/><circle cx="156" cy="118" r="11" fill="none" stroke="rgba(242,166,12,0.35)" stroke-width="1.4"/><text x="156" y="100" fill="#F4F0E6" font-size="12" font-family="Inter, sans-serif" font-weight="600" text-anchor="middle">Crestview</text></g>
+            <!-- Allandale -->
+            <g><circle cx="128" cy="170" r="6.5" fill="#F2A60C"/><circle cx="128" cy="170" r="11" fill="none" stroke="rgba(242,166,12,0.35)" stroke-width="1.4"/><text x="128" y="192" fill="#F4F0E6" font-size="12" font-family="Inter, sans-serif" font-weight="600" text-anchor="middle">Allandale</text></g>
+            <!-- Cherrywood -->
+            <g><circle cx="318" cy="172" r="6.5" fill="#F2A60C"/><circle cx="318" cy="172" r="11" fill="none" stroke="rgba(242,166,12,0.35)" stroke-width="1.4"/><text x="318" y="158" fill="#F4F0E6" font-size="12" font-family="Inter, sans-serif" font-weight="600" text-anchor="middle">Cherrywood</text></g>
+            <!-- Clarksville -->
+            <g><circle cx="190" cy="200" r="6.5" fill="#F2A60C"/><circle cx="190" cy="200" r="11" fill="none" stroke="rgba(242,166,12,0.35)" stroke-width="1.4"/><text x="190" y="186" fill="#F4F0E6" font-size="12" font-family="Inter, sans-serif" font-weight="600" text-anchor="middle">Clarksville</text></g>
+            <!-- Bouldin Creek -->
+            <g><circle cx="246" cy="262" r="6.5" fill="#F2A60C"/><circle cx="246" cy="262" r="11" fill="none" stroke="rgba(242,166,12,0.35)" stroke-width="1.4"/><text x="246" y="284" fill="#F4F0E6" font-size="12" font-family="Inter, sans-serif" font-weight="600" text-anchor="middle">Bouldin Creek</text></g>
+            <!-- Travis Heights -->
+            <g><circle cx="332" cy="256" r="6.5" fill="#F2A60C"/><circle cx="332" cy="256" r="11" fill="none" stroke="rgba(242,166,12,0.35)" stroke-width="1.4"/><text x="332" y="278" fill="#F4F0E6" font-size="12" font-family="Inter, sans-serif" font-weight="600" text-anchor="middle">Travis Heights</text></g>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Neighborhood list -->
+      <div>
+        <span class="font-mono text-[11px] uppercase tracking-[0.16em] text-amber">Where we work</span>
+        <h2 class="mt-3 text-[30px] sm:text-[36px] tracking-display text-paper">
+          Proudly wiring central Austin.
+        </h2>
+        <p class="mt-3 text-[15.5px] leading-[1.6] text-paper/65">
+          We keep our service area tight on purpose — it means shorter drives, faster scheduling, and a crew that knows the local permitting office by name.
+        </p>
+        <ul class="mt-6 grid grid-cols-2 gap-2.5">
+          <li class="pill px-3 py-2 text-[13px] text-paper/82"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.6"/></svg>Mueller</li>
+          <li class="pill px-3 py-2 text-[13px] text-paper/82"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.6"/></svg>Hyde Park</li>
+          <li class="pill px-3 py-2 text-[13px] text-paper/82"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.6"/></svg>Travis Heights</li>
+          <li class="pill px-3 py-2 text-[13px] text-paper/82"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.6"/></svg>Clarksville</li>
+          <li class="pill px-3 py-2 text-[13px] text-paper/82"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.6"/></svg>Cherrywood</li>
+          <li class="pill px-3 py-2 text-[13px] text-paper/82"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.6"/></svg>Allandale</li>
+          <li class="pill px-3 py-2 text-[13px] text-paper/82"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.6"/></svg>Bouldin Creek</li>
+          <li class="pill px-3 py-2 text-[13px] text-paper/82"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.6"/></svg>Crestview</li>
+        </ul>
+        <p class="mt-5 text-[13px] text-paper/55">
+          Just outside these lines? <a href="tel:+15555123344" class="font-semibold text-amber hover:underline focus-amber">Call (555) 512-3344</a> — we'll let you know honestly.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SECTION 10 — GUARANTEE / PRICING APPROACH
+============================================================ -->
+<section class="relative border-b hairline overflow-hidden py-20 sm:py-24">
+  <div class="hero-glow absolute inset-0"></div>
+  <div class="mx-auto max-w-shell px-5 sm:px-6 relative">
+    <div class="card p-7 sm:p-10">
+      <div class="grid gap-9 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+        <div>
+          <span class="font-mono text-[11px] uppercase tracking-[0.16em] text-amber">Our pricing promise</span>
+          <h2 class="mt-3 text-[28px] sm:text-[34px] tracking-display text-paper">
+            Honest numbers, written down,
+            <span class="lit">before we start.</span>
+          </h2>
+          <p class="mt-4 text-[15.5px] leading-[1.6] text-paper/65">
+            No vague hourly guesses, no padding the bill once the wall's open. You see the full price first, you approve it, and that's what you pay.
+          </p>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="#quote" class="btn btn-amber focus-amber px-5 py-3 text-[14.5px]">Get a free quote</a>
+            <a href="tel:+15555123344" class="btn btn-ghost focus-amber px-5 py-3 text-[14.5px]">Call (555) 512-3344</a>
+          </div>
+        </div>
+
+        <div class="grid gap-3.5 sm:grid-cols-3">
+          <div class="rounded-[13px] border hairline bg-[#14130F] p-4">
+            <span class="icon-tile h-10 w-10">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 13h6"/></svg>
+            </span>
+            <h3 class="mt-3 text-[14.5px] font-semibold text-paper">Free quote on installs</h3>
+            <p class="mt-1 text-[12.5px] leading-[1.5] text-paper/60">Panels, EV chargers, lighting and more — quoted on-site at no charge.</p>
+          </div>
+          <div class="rounded-[13px] border hairline bg-[#14130F] p-4">
+            <span class="icon-tile h-10 w-10">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            </span>
+            <h3 class="mt-3 text-[14.5px] font-semibold text-paper"><span class="font-mono text-[13px] text-amber tnum">$89</span> diagnostic visit</h3>
+            <p class="mt-1 text-[12.5px] leading-[1.5] text-paper/60">Credited straight to the repair if you hire us — so the diagnosis is effectively free.</p>
+          </div>
+          <div class="rounded-[13px] border hairline bg-[#14130F] p-4">
+            <span class="icon-tile h-10 w-10">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+            </span>
+            <h3 class="mt-3 text-[14.5px] font-semibold text-paper">Code-compliant work</h3>
+            <p class="mt-1 text-[12.5px] leading-[1.5] text-paper/60">Every job done to current code and left inspection-ready — guaranteed.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     FAQ
+============================================================ -->
+<section class="border-b hairline py-20 sm:py-24">
+  <div class="mx-auto max-w-shell px-5 sm:px-6">
+    <div class="grid gap-10 lg:grid-cols-[0.8fr_1.2fr]">
+      <div>
+        <span class="font-mono text-[11px] uppercase tracking-[0.16em] text-amber">FAQ</span>
+        <h2 class="mt-3 text-[30px] sm:text-[36px] tracking-display text-paper">
+          Questions homeowners ask us.
+        </h2>
+        <p class="mt-3 text-[15px] leading-[1.6] text-paper/62">
+          Still wondering about something? <a href="tel:+15555123344" class="font-semibold text-amber hover:underline focus-amber">Call (555) 512-3344</a> and an electrician will pick up.
+        </p>
+      </div>
+
+      <div>
+        <details class="faq" open>
+          <summary>
+            <span class="text-[16px] font-semibold text-paper">Do you pull the permit and handle the inspection?</span>
+            <svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          </summary>
+          <p class="pb-5 -mt-1 text-[14.5px] leading-[1.6] text-paper/68">Yes. For permitted work we pull the electrical permit with the City of Austin, schedule the inspection, and meet the inspector on-site ourselves. You don't have to coordinate anything — and our first-time pass rate is 100%.</p>
+        </details>
+
+        <details class="faq">
+          <summary>
+            <span class="text-[16px] font-semibold text-paper">What level of EV charger can you install?</span>
+            <svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          </summary>
+          <p class="pb-5 -mt-1 text-[14.5px] leading-[1.6] text-paper/68">We install Level 2 (240V) chargers — the standard for home charging — including hardwired units and NEMA 14-50 outlets. We check your panel capacity first and size the circuit to your vehicle, so it charges at full speed without overloading anything.</p>
+        </details>
+
+        <details class="faq">
+          <summary>
+            <span class="text-[16px] font-semibold text-paper">Is the diagnostic fee credited toward the work?</span>
+            <svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          </summary>
+          <p class="pb-5 -mt-1 text-[14.5px] leading-[1.6] text-paper/68">Yes. The $89 diagnostic visit covers an electrician's time to find the actual problem and write up a fix. If you hire us to do that repair, the full $89 comes straight off the invoice — so the diagnosis effectively costs you nothing.</p>
+        </details>
+
+        <details class="faq">
+          <summary>
+            <span class="text-[16px] font-semibold text-paper">Can you bring an old house up to code?</span>
+            <svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          </summary>
+          <p class="pb-5 -mt-1 text-[14.5px] leading-[1.6] text-paper/68">Absolutely — it's a lot of what we do in central Austin's older neighborhoods. Knob-and-tube, ungrounded outlets, undersized panels, missing GFCI protection: we assess what's there, prioritize the safety items, and bring it to current code in stages that fit your budget.</p>
+        </details>
+
+        <details class="faq">
+          <summary>
+            <span class="text-[16px] font-semibold text-paper">Do you do panel upgrades for a solar install?</span>
+            <svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          </summary>
+          <p class="pb-5 -mt-1 text-[14.5px] leading-[1.6] text-paper/68">We do. Many solar installers need the main panel upgraded or a dedicated backfeed breaker added before they can interconnect. We coordinate with your solar company, do the panel work to code, and make sure it's inspection-ready for the PV tie-in.</p>
+        </details>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SECTION 11 — FINAL CTA + QUOTE FORM
+============================================================ -->
+<section id="quote" class="relative overflow-hidden py-20 sm:py-24">
+  <div class="hero-glow absolute inset-0"></div>
+  <div class="blob h-72 w-72 bg-amber/20" style="bottom:-60px;right:6%"></div>
+  <div class="mx-auto max-w-shell px-5 sm:px-6 relative">
+    <div class="grid gap-10 lg:grid-cols-2 lg:items-center">
+
+      <!-- Closing copy -->
+      <div>
+        <span class="pill px-3 py-1.5 text-[12.5px] font-medium text-paper/85">
+          <span class="pulse-dot" aria-hidden="true"></span>
+          Booking same-week visits now
+        </span>
+        <h2 class="mt-5 text-[32px] sm:text-[42px] tracking-display text-paper">
+          Let's get it
+          <span class="halftone">wired right.</span>
+        </h2>
+        <p class="mt-4 max-w-md text-[16px] leading-[1.6] text-paper/68">
+          Tell us what's going on and we'll be in touch with a no-pressure quote. Prefer to talk it through? Call us — a real electrician answers.
+        </p>
+        <div class="mt-6">
+          <a href="tel:+15555123344" id="contact" class="btn btn-amber focus-amber px-6 py-3.5 text-[15.5px]">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+            Call (555) 512-3344
+          </a>
+        </div>
+        <div class="mt-6 flex flex-wrap gap-2.5">
+          <span class="pill px-3 py-1.5 text-[12px] text-paper/70"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>Licensed &amp; bonded</span>
+          <span class="pill px-3 py-1.5 text-[12px] text-paper/70"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg>Free quote on installs</span>
+        </div>
+      </div>
+
+      <!-- Quote form mockup -->
+      <div class="card p-6 sm:p-7">
+        <h3 class="text-[18px] font-semibold text-paper">Get a free quote</h3>
+        <p class="mt-1 text-[13px] text-paper/55">We'll reply within one business day.</p>
+
+        <div class="mt-5 space-y-4">
+          <div>
+            <label for="q-name" class="mb-1.5 block text-[12.5px] font-medium text-paper/70">Your name</label>
+            <input id="q-name" name="name" type="text" class="input focus-amber" placeholder="Jordan Alvarez" autocomplete="name" />
+          </div>
+          <div>
+            <label for="q-phone" class="mb-1.5 block text-[12.5px] font-medium text-paper/70">Phone number</label>
+            <input id="q-phone" name="phone" type="tel" class="input focus-amber" placeholder="(555) 000-0000" autocomplete="tel" />
+          </div>
+          <div>
+            <label for="q-need" class="mb-1.5 block text-[12.5px] font-medium text-paper/70">What do you need?</label>
+            <textarea id="q-need" name="need" rows="4" class="input focus-amber resize-none" placeholder="e.g. 200A panel upgrade in Hyde Park, or a Level 2 EV charger in the garage…"></textarea>
+          </div>
+          <button type="button" class="btn btn-amber focus-amber w-full py-3.5 text-[15px]">
+            Request my free quote
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </button>
+          <p class="text-center text-[11.5px] text-paper/45">
+            No obligation. Your details stay with Voltline — we never sell them.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ============================================================
+     SECTION 12 — FOOTER
+============================================================ -->
+<footer class="border-t hairline bg-[#100F0C]">
+  <div class="mx-auto max-w-shell px-5 sm:px-6 py-14">
+    <div class="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr]">
+
+      <!-- Brand -->
+      <div>
+        <div class="flex items-center gap-2.5">
+          <span class="inline-flex h-9 w-9 items-center justify-center rounded-[10px] bg-amber/12 border border-amber/25">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" fill="#F2A60C" stroke="#F2A60C" stroke-width="1.3" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="text-[19px] font-bold tracking-tightish text-paper">Voltline</span>
+        </div>
+        <p class="mt-4 max-w-xs text-[13.5px] leading-[1.6] text-paper/58">
+          A licensed electrical contractor serving central Austin — residential and light-commercial. Panels, EV chargers, lighting and troubleshooting, done by the book.
+        </p>
+        <p class="mt-4 font-mono text-[11.5px] text-paper/55">
+          TECL Licensed Electrical Contractor #EC-44821
+        </p>
+      </div>
+
+      <!-- Contact -->
+      <div>
+        <h4 class="text-[12.5px] font-semibold uppercase tracking-[0.13em] text-paper/45">Contact</h4>
+        <ul class="mt-4 space-y-2.5 text-[13.5px] text-paper/68">
+          <li>
+            <a href="tel:+15555123344" class="focus-amber inline-flex items-center gap-2 font-medium text-paper hover:text-amber transition-colors">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+              (555) 512-3344
+            </a>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span>2140 E&nbsp;38½ St, Suite&nbsp;C<br>Austin, TX&nbsp;78722</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F2A60C" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            <span class="font-mono text-[11.5px] text-paper/60">Mon–Fri 7am–6pm<br>Emergency callout available</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Service area + social -->
+      <div>
+        <h4 class="text-[12.5px] font-semibold uppercase tracking-[0.13em] text-paper/45">Service area</h4>
+        <p class="mt-4 text-[13.5px] leading-[1.6] text-paper/68">
+          Mueller, Hyde Park, Travis Heights, Clarksville, Cherrywood, Allandale, Bouldin Creek &amp; Crestview — Austin, TX.
+        </p>
+        <div class="mt-5 flex gap-2.5">
+          <a href="#top" aria-label="Voltline on Facebook" class="focus-amber inline-flex h-9 w-9 items-center justify-center rounded-[10px] border hairline text-paper/65 hover:text-amber hover:border-amber/40 transition-colors">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 9h3l.5-3.5H14V3.7c0-1 .3-1.7 1.8-1.7H17.6V-1.2C17.3-1.3 16-.4 14.5-.4c-3 0-4.5 1.8-4.5 4.5V5.5H7V9h3v12h4V9Z" transform="translate(0,2)"/></svg>
+          </a>
+          <a href="#top" aria-label="Voltline on Instagram" class="focus-amber inline-flex h-9 w-9 items-center justify-center rounded-[10px] border hairline text-paper/65 hover:text-amber hover:border-amber/40 transition-colors">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none"/></svg>
+          </a>
+          <a href="#top" aria-label="Voltline on Google" class="focus-amber inline-flex h-9 w-9 items-center justify-center rounded-[10px] border hairline text-paper/65 hover:text-amber hover:border-amber/40 transition-colors">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.6 12.2c0-.7-.06-1.3-.17-1.95H12v3.7h5.4a4.6 4.6 0 0 1-2 3v2.5h3.24c1.9-1.75 3-4.34 3-7.25Z"/><path d="M12 22c2.7 0 4.97-.9 6.63-2.43l-3.24-2.5c-.9.6-2.05.96-3.39.96-2.6 0-4.8-1.76-5.6-4.12H3.07v2.58A10 10 0 0 0 12 22Z"/><path d="M6.4 13.9a6 6 0 0 1 0-3.8V7.52H3.07a10 10 0 0 0 0 8.96L6.4 13.9Z"/><path d="M12 5.98c1.47 0 2.79.5 3.83 1.5l2.87-2.87A10 10 0 0 0 3.07 7.52L6.4 10.1C7.2 7.74 9.4 5.98 12 5.98Z"/></svg>
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="mt-11 flex flex-col gap-3 border-t hairline pt-6 sm:flex-row sm:items-center sm:justify-between">
+      <p class="text-[12px] text-paper/45">© 2026 Voltline Electric LLC. All rights reserved.</p>
+      <p class="text-[12px] text-paper/45">
+        Licensed &amp; bonded · <span class="font-mono text-[11px]">TECL #EC-44821</span> · Austin, TX
+      </p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,1332 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Flax — A small wardrobe, made honestly</title>
+  <meta name="description" content="Flax is a slow-fashion essentials brand. A small, permanent range of tees, knits and trousers in organic cotton, linen and responsible wool — made honestly, priced transparently." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #F6F4ED;
+      --ink: #211F18;
+      --ink-soft: #5A574B;
+      --ink-faint: #8C8978;
+      --sage: #7C8A6A;
+      --sage-deep: #5F6E50;
+      --clay: #C2785A;
+      --clay-deep: #A85F42;
+      --paper: #FBFAF4;
+      --hair: rgba(33,31,24,0.09);
+      --hair-strong: rgba(33,31,24,0.16);
+    }
+
+    * { -webkit-font-smoothing: antialiased; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-feature-settings: "ss01", "cv11";
+      letter-spacing: -0.005em;
+    }
+
+    ::selection { background: var(--sage); color: var(--paper); }
+
+    .display {
+      font-weight: 600;
+      letter-spacing: 0.005em;
+      line-height: 1.04;
+    }
+
+    .display-loose {
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      line-height: 1.08;
+    }
+
+    .label {
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      font-weight: 500;
+      font-size: 0.6875rem;
+    }
+
+    .label-wide {
+      text-transform: uppercase;
+      letter-spacing: 0.24em;
+      font-weight: 500;
+      font-size: 0.625rem;
+    }
+
+    .tnum { font-variant-numeric: tabular-nums; }
+
+    .halftone { color: var(--ink); }
+    .halftone .dim { opacity: 0.45; }
+
+    /* ---- Ambient backgrounds ---- */
+    .dot-grid {
+      background-image: radial-gradient(rgba(33,31,24,0.10) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+
+    .mesh-soft {
+      position: absolute;
+      border-radius: 999px;
+      filter: blur(80px);
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .fade-top {
+      background: linear-gradient(180deg, rgba(246,244,237,0) 0%, var(--bg) 92%);
+    }
+
+    /* ---- Film grain texture (SVG noise data-URI) ---- */
+    .grain::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.07;
+      mix-blend-mode: multiply;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    .grain-strong::after { opacity: 0.11; }
+
+    /* ---- Image placeholders — layered campaign gradients ---- */
+    .ph {
+      position: relative;
+      overflow: hidden;
+      box-shadow: inset 0 0 0 1px rgba(33,31,24,0.09);
+      isolation: isolate;
+    }
+    .ph > .ph-layer {
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+    }
+
+    .ph-oat {
+      background:
+        radial-gradient(120% 80% at 28% 18%, rgba(255,253,246,0.92) 0%, rgba(255,253,246,0) 55%),
+        radial-gradient(90% 70% at 82% 96%, rgba(177,168,143,0.55) 0%, rgba(177,168,143,0) 60%),
+        linear-gradient(158deg, #E9E3D2 0%, #D8CFB6 48%, #C8BD9E 100%);
+    }
+    .ph-flax {
+      background:
+        radial-gradient(110% 75% at 78% 14%, rgba(255,254,249,0.9) 0%, rgba(255,254,249,0) 52%),
+        radial-gradient(95% 80% at 14% 100%, rgba(150,138,108,0.5) 0%, rgba(150,138,108,0) 58%),
+        linear-gradient(150deg, #EFE9D8 0%, #DDD3B7 52%, #CBBE99 100%);
+    }
+    .ph-sage {
+      background:
+        radial-gradient(115% 80% at 24% 16%, rgba(241,243,234,0.88) 0%, rgba(241,243,234,0) 55%),
+        radial-gradient(100% 75% at 86% 94%, rgba(78,90,60,0.55) 0%, rgba(78,90,60,0) 60%),
+        linear-gradient(160deg, #C4CBB2 0%, #A3AE89 50%, #828F69 100%);
+    }
+    .ph-clay {
+      background:
+        radial-gradient(110% 78% at 80% 18%, rgba(255,250,243,0.86) 0%, rgba(255,250,243,0) 54%),
+        radial-gradient(95% 78% at 16% 96%, rgba(132,72,46,0.5) 0%, rgba(132,72,46,0) 60%),
+        linear-gradient(152deg, #E2C2AE 0%, #CF9C82 52%, #BC7E60 100%);
+    }
+    .ph-slate {
+      background:
+        radial-gradient(115% 80% at 26% 14%, rgba(238,238,235,0.82) 0%, rgba(238,238,235,0) 56%),
+        radial-gradient(100% 76% at 84% 98%, rgba(40,42,40,0.55) 0%, rgba(40,42,40,0) 60%),
+        linear-gradient(158deg, #9DA09A 0%, #7E817B 52%, #62655F 100%);
+    }
+    .ph-undyed {
+      background:
+        radial-gradient(120% 82% at 30% 16%, rgba(255,255,251,0.94) 0%, rgba(255,255,251,0) 56%),
+        radial-gradient(92% 74% at 84% 96%, rgba(196,189,168,0.5) 0%, rgba(196,189,168,0) 60%),
+        linear-gradient(156deg, #F2EEE1 0%, #E6E0CD 50%, #D9D1B9 100%);
+    }
+    .ph-dusk {
+      background:
+        radial-gradient(120% 80% at 74% 12%, rgba(255,251,244,0.78) 0%, rgba(255,251,244,0) 50%),
+        radial-gradient(110% 90% at 18% 104%, rgba(95,110,80,0.6) 0%, rgba(95,110,80,0) 58%),
+        linear-gradient(168deg, #D7CFB8 0%, #B9B498 42%, #8C9572 78%, #6E7A56 100%);
+    }
+
+    /* ---- Hover scale within frame ---- */
+    .frame-img { transition: transform 700ms cubic-bezier(0.2,0.7,0.2,1); }
+    .frame:hover .frame-img { transform: scale(1.045); }
+
+    .cap-fade { opacity: 0; transform: translateY(6px); transition: all 320ms ease; }
+    .frame:hover .cap-fade { opacity: 1; transform: translateY(0); }
+
+    /* ---- Buttons ---- */
+    .btn {
+      transition: transform 110ms ease, background-color 110ms ease, box-shadow 110ms ease, color 110ms ease;
+      will-change: transform;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn:active { transform: translateY(0); }
+
+    .btn-solid {
+      background: var(--ink);
+      color: var(--paper);
+      box-shadow: 0 1px 0 rgba(33,31,24,0.2);
+    }
+    .btn-solid:hover {
+      background: #000;
+      box-shadow: 0 8px 22px -8px rgba(33,31,24,0.5);
+    }
+
+    .btn-sage {
+      background: var(--sage);
+      color: var(--paper);
+    }
+    .btn-sage:hover {
+      background: var(--sage-deep);
+      box-shadow: 0 8px 22px -8px rgba(95,110,80,0.6);
+    }
+
+    .btn-outline {
+      border: 1px solid var(--hair-strong);
+      color: var(--ink);
+      background: transparent;
+    }
+    .btn-outline:hover {
+      border-color: var(--ink);
+      box-shadow: 0 6px 18px -8px rgba(33,31,24,0.35);
+      background: rgba(33,31,24,0.02);
+    }
+
+    /* ---- Pulse dot ---- */
+    .pulse-dot {
+      position: relative;
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--sage);
+      flex: none;
+    }
+    .pulse-dot::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      background: var(--sage);
+      animation: pulse 2400ms ease-out infinite;
+    }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(124,138,106,0.55); }
+      70%  { box-shadow: 0 0 0 11px rgba(124,138,106,0); }
+      100% { box-shadow: 0 0 0 0 rgba(124,138,106,0); }
+    }
+
+    /* ---- Marquee ---- */
+    .marquee {
+      display: flex;
+      width: max-content;
+      animation: scroll 42s linear infinite;
+    }
+    .marquee:hover { animation-play-state: paused; }
+    @keyframes scroll {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+    .marquee-mask {
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+      mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    }
+
+    /* ---- Accordion (CSS-only details) ---- */
+    details {
+      border-bottom: 1px solid var(--hair);
+    }
+    details summary {
+      list-style: none;
+      cursor: pointer;
+      transition: color 140ms ease;
+    }
+    details summary::-webkit-details-marker { display: none; }
+    details summary:hover { color: var(--sage-deep); }
+    .acc-icon { transition: transform 240ms cubic-bezier(0.2,0.7,0.2,1); }
+    details[open] .acc-icon { transform: rotate(45deg); }
+    .acc-body {
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      transition: max-height 360ms ease, opacity 280ms ease, padding 320ms ease;
+    }
+    details[open] .acc-body {
+      max-height: 480px;
+      opacity: 1;
+    }
+
+    /* ---- Stacked impact bar ---- */
+    .cost-bar { display: flex; height: 8px; border-radius: 999px; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(33,31,24,0.06); }
+    .cost-seg { height: 100%; }
+
+    /* ---- Focus states ---- */
+    a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visible {
+      outline: 2px solid var(--sage-deep);
+      outline-offset: 3px;
+      border-radius: 3px;
+    }
+
+    /* ---- Reveal on load ---- */
+    .rise {
+      opacity: 0;
+      transform: translateY(14px);
+      animation: rise 900ms cubic-bezier(0.2,0.7,0.2,1) forwards;
+    }
+    @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+    .d1 { animation-delay: 80ms; }
+    .d2 { animation-delay: 180ms; }
+    .d3 { animation-delay: 300ms; }
+    .d4 { animation-delay: 440ms; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+      html { scroll-behavior: auto; }
+    }
+
+    .hair-t { border-top: 1px solid var(--hair); }
+    .hair-b { border-bottom: 1px solid var(--hair); }
+    .hair-l { border-left: 1px solid var(--hair); }
+    .hair-y { border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); }
+  </style>
+</head>
+<body class="antialiased">
+
+  <!-- ================= NAV ================= -->
+  <header class="sticky top-0 z-50 bg-[#F6F4ED]/88 backdrop-blur-md hair-b">
+    <nav class="mx-auto flex max-w-[1280px] items-center justify-between px-5 py-4 sm:px-8" aria-label="Primary">
+      <a href="#top" class="flex items-center gap-2.5" aria-label="Flax — home">
+        <span aria-hidden="true" class="flex h-7 w-7 items-center justify-center rounded-full" style="background:var(--sage);">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FBFAF4" stroke-width="1.9" stroke-linecap="round">
+            <path d="M12 21V8" />
+            <path d="M12 11c0-3 2-5 5-5 0 3-2 5-5 5Z" fill="#FBFAF4" stroke="none"/>
+            <path d="M12 14c0-3-2-5-5-5 0 3 2 5 5 5Z" fill="#FBFAF4" stroke="none"/>
+          </svg>
+        </span>
+        <span class="display text-[1.15rem]" style="letter-spacing:0.04em;">Flax</span>
+      </a>
+      <div class="hidden items-center gap-9 md:flex">
+        <a href="#collection" class="label text-[var(--ink-soft)] transition-colors hover:text-[var(--ink)]">Shop</a>
+        <a href="#lookbook" class="label text-[var(--ink-soft)] transition-colors hover:text-[var(--ink)]">Lookbook</a>
+        <a href="#pov" class="label text-[var(--ink-soft)] transition-colors hover:text-[var(--ink)]">About</a>
+        <a href="#stockists" class="label text-[var(--ink-soft)] transition-colors hover:text-[var(--ink)]">Stockists</a>
+      </div>
+      <a href="#collection" class="btn btn-outline rounded-full px-5 py-2 label">Shop</a>
+    </nav>
+  </header>
+
+  <main id="top">
+
+    <!-- ================= 1 · HERO ================= -->
+    <section class="relative overflow-hidden">
+      <div class="mesh-soft" style="width:520px;height:520px;background:var(--sage);top:-180px;left:-160px;"></div>
+      <div class="mesh-soft" style="width:440px;height:440px;background:var(--clay);bottom:-220px;right:-140px;opacity:0.32;"></div>
+
+      <div class="mx-auto max-w-[1280px] px-5 pb-14 pt-12 sm:px-8 sm:pt-16 lg:pb-20">
+        <div class="grid items-center gap-10 lg:grid-cols-[1.04fr_1fr] lg:gap-14">
+          <!-- copy -->
+          <div class="rise d1">
+            <div class="mb-6 flex items-center gap-3">
+              <span class="label-wide rounded-full px-3 py-1.5" style="background:rgba(124,138,106,0.14);color:var(--sage-deep);">The 2027 Range</span>
+              <span class="inline-flex items-center gap-2 label-wide text-[var(--ink-faint)]">
+                <span class="pulse-dot"></span> Made to order &amp; in stock
+              </span>
+            </div>
+
+            <h1 class="display halftone text-[2.6rem] leading-[1.05] sm:text-[3.5rem] lg:text-[4.05rem]">
+              A small wardrobe,<br />
+              <span class="dim">made honestly.</span>
+            </h1>
+
+            <p class="mt-6 max-w-[34rem] text-[1.0625rem] leading-[1.7] text-[var(--ink-soft)]">
+              Flax is eight permanent essentials — tees, a knit, trousers, a dress — cut from organic cotton, European flax linen and responsibly clipped wool. No drops, no seasons to chase. Pieces you buy once and keep for years.
+            </p>
+
+            <div class="mt-8 flex flex-wrap items-center gap-3">
+              <a href="#collection" class="btn btn-solid rounded-full px-7 py-3.5 text-[0.9rem] font-medium">Shop the collection</a>
+              <a href="#transparency" class="btn btn-outline rounded-full px-7 py-3.5 text-[0.9rem] font-medium">See the true cost</a>
+            </div>
+
+            <dl class="mt-10 grid max-w-[30rem] grid-cols-3 gap-5 border-t border-[var(--hair)] pt-6">
+              <div>
+                <dd class="display tnum text-[1.5rem]">8</dd>
+                <dt class="label-wide mt-1 text-[var(--ink-faint)]">Pieces, total</dt>
+              </div>
+              <div>
+                <dd class="display tnum text-[1.5rem]">5+</dd>
+                <dt class="label-wide mt-1 text-[var(--ink-faint)]">Years per garment</dt>
+              </div>
+              <div>
+                <dd class="display tnum text-[1.5rem]">100%</dd>
+                <dt class="label-wide mt-1 text-[var(--ink-faint)]">Natural fibers</dt>
+              </div>
+            </dl>
+          </div>
+
+          <!-- hero campaign image -->
+          <div class="rise d2">
+            <figure class="ph ph-flax grain-strong grain aspect-[4/5] rounded-[3px]">
+              <div class="absolute inset-0 grid grid-cols-2">
+                <div class="ph ph-oat grain border-r border-[rgba(33,31,24,0.08)]"></div>
+                <div class="ph ph-sage grain"></div>
+              </div>
+              <div class="absolute inset-x-0 bottom-0 flex items-end justify-between p-5">
+                <figcaption class="label-wide rounded-full bg-[#FBFAF4]/85 px-3 py-1.5 text-[var(--ink)] backdrop-blur-sm">
+                  The 2027 Range — Look 01
+                </figcaption>
+                <span class="label-wide rounded-full bg-[var(--ink)]/82 px-3 py-1.5 text-[var(--paper)]">Organic cotton</span>
+              </div>
+            </figure>
+            <p class="mt-3 flex items-center justify-between px-1">
+              <span class="label-wide text-[var(--ink-faint)]">Campaign — shot on film, Provence</span>
+              <span class="label-wide text-[var(--ink-faint)]">No retouching</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= MARQUEE STRIP (intro) ================= -->
+    <section aria-label="What we stand for" class="hair-y bg-[var(--paper)] py-3.5">
+      <div class="marquee-mask overflow-hidden">
+        <div class="marquee">
+          <ul class="flex shrink-0 items-center" aria-hidden="false">
+            <li class="label-wide flex items-center gap-3 px-7 text-[var(--ink-soft)]"><span class="h-1 w-1 rounded-full" style="background:var(--clay)"></span>Organic &amp; natural fibers only</li>
+            <li class="label-wide flex items-center gap-3 px-7 text-[var(--ink-soft)]"><span class="h-1 w-1 rounded-full" style="background:var(--sage)"></span>Every cost published</li>
+            <li class="label-wide flex items-center gap-3 px-7 text-[var(--ink-soft)]"><span class="h-1 w-1 rounded-full" style="background:var(--clay)"></span>One small permanent range</li>
+            <li class="label-wide flex items-center gap-3 px-7 text-[var(--ink-soft)]"><span class="h-1 w-1 rounded-full" style="background:var(--sage)"></span>Free repairs, for life</li>
+            <li class="label-wide flex items-center gap-3 px-7 text-[var(--ink-soft)]"><span class="h-1 w-1 rounded-full" style="background:var(--clay)"></span>Take-back &amp; resale loop</li>
+            <li class="label-wide flex items-center gap-3 px-7 text-[var(--ink-soft)]"><span class="h-1 w-1 rounded-full" style="background:var(--sage)"></span>Made in Portugal &amp; Lithuania</li>
+          </ul>
+          <ul class="flex shrink-0 items-center" aria-hidden="true">
+            <li class="label-wide flex items-center gap-3 px-7 text-[var(--ink-soft)]"><span class="h-1 w-1 rounded-full" style="background:var(--clay)"></span>Organic &amp; natural fibers only</li>
+            <li class="label-wide flex items-center gap-3 px-7 text-[var(--ink-soft)]"><span class="h-1 w-1 rounded-full" style="background:var(--sage)"></span>Every cost published</li>
+            <li class="label-wide flex items-center gap-3 px-7 text-[var(--ink-soft)]"><span class="h-1 w-1 rounded-full" style="background:var(--clay)"></span>One small permanent range</li>
+            <li class="label-wide flex items-center gap-3 px-7 text-[var(--ink-soft)]"><span class="h-1 w-1 rounded-full" style="background:var(--sage)"></span>Free repairs, for life</li>
+            <li class="label-wide flex items-center gap-3 px-7 text-[var(--ink-soft)]"><span class="h-1 w-1 rounded-full" style="background:var(--clay)"></span>Take-back &amp; resale loop</li>
+            <li class="label-wide flex items-center gap-3 px-7 text-[var(--ink-soft)]"><span class="h-1 w-1 rounded-full" style="background:var(--sage)"></span>Made in Portugal &amp; Lithuania</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 2 · FULL-BLEED LOOKBOOK BAND ================= -->
+    <section aria-label="Campaign band" class="relative">
+      <div class="ph ph-dusk grain-strong grain h-[44vh] min-h-[320px] sm:h-[58vh]">
+        <div class="absolute inset-0 grid grid-cols-2 sm:grid-cols-4">
+          <div class="ph ph-oat grain hidden border-r border-[rgba(33,31,24,0.07)] sm:block"></div>
+          <div class="ph ph-undyed grain border-r border-[rgba(33,31,24,0.07)]"></div>
+          <div class="ph ph-sage grain border-r border-[rgba(33,31,24,0.07)]"></div>
+          <div class="ph ph-clay grain"></div>
+        </div>
+        <div class="absolute inset-0 flex items-center justify-center px-6">
+          <div class="text-center">
+            <p class="label-wide text-[var(--ink-soft)]">Spring — Provence, on 35mm</p>
+            <p class="display mt-3 text-[1.7rem] leading-tight text-[var(--ink)] sm:text-[2.4rem]">
+              We don't follow seasons.<br />
+              <span class="opacity-45">We just make better basics.</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 3 · THE COLLECTION ================= -->
+    <section id="collection" class="mx-auto max-w-[1280px] px-5 py-20 sm:px-8 lg:py-28">
+      <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p class="label-wide text-[var(--sage-deep)]">The Range</p>
+          <h2 class="display mt-3 text-[2.1rem] leading-tight sm:text-[2.7rem]">Eight pieces. That's the whole shop.</h2>
+        </div>
+        <p class="max-w-[24rem] text-[0.95rem] leading-[1.65] text-[var(--ink-soft)]">
+          Each one stays in the range year-round. We restock — we don't redesign. Prices reflect the cost to make a piece well, plus a flat, honest margin.
+        </p>
+      </div>
+
+      <div class="mt-12 grid grid-cols-2 gap-x-5 gap-y-12 sm:gap-x-7 lg:grid-cols-4">
+
+        <!-- piece 1 -->
+        <article class="group">
+          <a href="#collection" class="frame ph ph-undyed grain block aspect-[4/5] rounded-[3px]">
+            <div class="frame-img absolute inset-0 ph ph-undyed"></div>
+            <span class="cap-fade absolute bottom-3 left-3 label-wide rounded-full bg-[#FBFAF4]/88 px-2.5 py-1 text-[var(--ink)]">In 4 tones</span>
+          </a>
+          <div class="mt-3.5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="text-[0.95rem] font-medium">The Everyday Tee</h3>
+              <span class="tnum text-[0.95rem] font-medium">$48</span>
+            </div>
+            <p class="label-wide mt-1.5 text-[var(--ink-faint)]">220 gsm organic cotton</p>
+          </div>
+        </article>
+
+        <!-- piece 2 -->
+        <article class="group">
+          <a href="#collection" class="frame ph ph-flax grain block aspect-[4/5] rounded-[3px]">
+            <div class="frame-img absolute inset-0 ph ph-flax"></div>
+            <span class="cap-fade absolute bottom-3 left-3 label-wide rounded-full bg-[#FBFAF4]/88 px-2.5 py-1 text-[var(--ink)]">Garment-washed</span>
+          </a>
+          <div class="mt-3.5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="text-[0.95rem] font-medium">The Linen Shirt</h3>
+              <span class="tnum text-[0.95rem] font-medium">$128</span>
+            </div>
+            <p class="label-wide mt-1.5 text-[var(--ink-faint)]">European flax linen</p>
+          </div>
+        </article>
+
+        <!-- piece 3 -->
+        <article class="group">
+          <a href="#collection" class="frame ph ph-sage grain block aspect-[4/5] rounded-[3px]">
+            <div class="frame-img absolute inset-0 ph ph-sage"></div>
+            <span class="cap-fade absolute bottom-3 left-3 label-wide rounded-full bg-[#FBFAF4]/88 px-2.5 py-1 text-[var(--ink)]">7-gauge knit</span>
+          </a>
+          <div class="mt-3.5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="text-[0.95rem] font-medium">The Crew Knit</h3>
+              <span class="tnum text-[0.95rem] font-medium">$185</span>
+            </div>
+            <p class="label-wide mt-1.5 text-[var(--ink-faint)]">Responsible merino wool</p>
+          </div>
+        </article>
+
+        <!-- piece 4 -->
+        <article class="group">
+          <a href="#collection" class="frame ph ph-oat grain block aspect-[4/5] rounded-[3px]">
+            <div class="frame-img absolute inset-0 ph ph-oat"></div>
+            <span class="cap-fade absolute bottom-3 left-3 label-wide rounded-full bg-[#FBFAF4]/88 px-2.5 py-1 text-[var(--ink)]">Straight leg</span>
+          </a>
+          <div class="mt-3.5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="text-[0.95rem] font-medium">The Wide Trouser</h3>
+              <span class="tnum text-[0.95rem] font-medium">$148</span>
+            </div>
+            <p class="label-wide mt-1.5 text-[var(--ink-faint)]">Organic cotton twill</p>
+          </div>
+        </article>
+
+        <!-- piece 5 -->
+        <article class="group">
+          <a href="#collection" class="frame ph ph-clay grain block aspect-[4/5] rounded-[3px]">
+            <div class="frame-img absolute inset-0 ph ph-clay"></div>
+            <span class="cap-fade absolute bottom-3 left-3 label-wide rounded-full bg-[#FBFAF4]/88 px-2.5 py-1 text-[var(--ink)]">Falls mid-calf</span>
+          </a>
+          <div class="mt-3.5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="text-[0.95rem] font-medium">The Slip Dress</h3>
+              <span class="tnum text-[0.95rem] font-medium">$165</span>
+            </div>
+            <p class="label-wide mt-1.5 text-[var(--ink-faint)]">Washed flax linen</p>
+          </div>
+        </article>
+
+        <!-- piece 6 -->
+        <article class="group">
+          <a href="#collection" class="frame ph ph-undyed grain block aspect-[4/5] rounded-[3px]">
+            <div class="frame-img absolute inset-0 ph ph-undyed"></div>
+            <span class="cap-fade absolute bottom-3 left-3 label-wide rounded-full bg-[#FBFAF4]/88 px-2.5 py-1 text-[var(--ink)]">Boxy fit</span>
+          </a>
+          <div class="mt-3.5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="text-[0.95rem] font-medium">The Heavy Tee</h3>
+              <span class="tnum text-[0.95rem] font-medium">$62</span>
+            </div>
+            <p class="label-wide mt-1.5 text-[var(--ink-faint)]">280 gsm organic cotton</p>
+          </div>
+        </article>
+
+        <!-- piece 7 -->
+        <article class="group">
+          <a href="#collection" class="frame ph ph-slate grain block aspect-[4/5] rounded-[3px]">
+            <div class="frame-img absolute inset-0 ph ph-slate"></div>
+            <span class="cap-fade absolute bottom-3 left-3 label-wide rounded-full bg-[#FBFAF4]/88 px-2.5 py-1 text-[var(--ink)]">Drawstring</span>
+          </a>
+          <div class="mt-3.5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="text-[0.95rem] font-medium">The Easy Pant</h3>
+              <span class="tnum text-[0.95rem] font-medium">$95</span>
+            </div>
+            <p class="label-wide mt-1.5 text-[var(--ink-faint)]">Hemp &amp; organic cotton</p>
+          </div>
+        </article>
+
+        <!-- piece 8 -->
+        <article class="group">
+          <a href="#collection" class="frame ph ph-flax grain block aspect-[4/5] rounded-[3px]">
+            <div class="frame-img absolute inset-0 ph ph-flax"></div>
+            <span class="cap-fade absolute bottom-3 left-3 label-wide rounded-full bg-[#FBFAF4]/88 px-2.5 py-1 text-[var(--ink)]">Unlined</span>
+          </a>
+          <div class="mt-3.5">
+            <div class="flex items-baseline justify-between gap-3">
+              <h3 class="text-[0.95rem] font-medium">The Overshirt</h3>
+              <span class="tnum text-[0.95rem] font-medium">$172</span>
+            </div>
+            <p class="label-wide mt-1.5 text-[var(--ink-faint)]">Brushed organic cotton</p>
+          </div>
+        </article>
+
+      </div>
+
+      <div class="mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-[var(--hair)] pt-6">
+        <p class="text-[0.875rem] text-[var(--ink-soft)]">
+          Every piece runs sizes XXS&ndash;XXL. Unsure of fit? Read the <a href="#stockists" class="underline decoration-[var(--hair-strong)] underline-offset-4 hover:decoration-[var(--ink)]">sizing &amp; fit notes</a>.
+        </p>
+        <a href="#collection" class="btn btn-sage rounded-full px-6 py-3 text-[0.875rem] font-medium">Shop all eight</a>
+      </div>
+    </section>
+
+    <!-- ================= 4 · LOOKBOOK ================= -->
+    <section id="lookbook" class="relative bg-[var(--paper)] hair-y">
+      <div class="dot-grid absolute inset-0 opacity-40"></div>
+      <div class="relative mx-auto max-w-[1280px] px-5 py-20 sm:px-8 lg:py-28">
+        <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p class="label-wide text-[var(--sage-deep)]">Lookbook — The 2027 Range</p>
+            <h2 class="display mt-3 text-[2.1rem] leading-tight sm:text-[2.7rem]">
+              Eleven looks,<br class="hidden sm:block" />
+              <span class="opacity-45">one quiet wardrobe.</span>
+            </h2>
+          </div>
+          <p class="max-w-[22rem] text-[0.95rem] leading-[1.65] text-[var(--ink-soft)]">
+            Shot over two days near Arles &mdash; flat-lays on linen, fabric close-ups, and the pieces worn the way we wear them.
+          </p>
+        </div>
+
+        <!-- editorial mixed-crop grid -->
+        <div class="mt-12 grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-12">
+
+          <figure class="frame ph ph-flax grain block aspect-[4/5] rounded-[3px] lg:col-span-5 lg:row-span-2 lg:aspect-auto">
+            <div class="frame-img absolute inset-0 ph ph-flax"></div>
+            <figcaption class="absolute left-4 top-4 label-wide rounded-full bg-[#FBFAF4]/85 px-2.5 py-1 text-[var(--ink)]">Look 02 — Linen Shirt</figcaption>
+          </figure>
+
+          <figure class="frame ph ph-sage grain block aspect-square rounded-[3px] lg:col-span-4">
+            <div class="frame-img absolute inset-0 ph ph-sage"></div>
+            <figcaption class="cap-fade absolute left-4 bottom-4 label-wide rounded-full bg-[#FBFAF4]/85 px-2.5 py-1 text-[var(--ink)]">Merino, 7-gauge</figcaption>
+          </figure>
+
+          <figure class="frame ph ph-undyed grain block aspect-[4/5] rounded-[3px] lg:col-span-3 lg:row-span-2 lg:aspect-auto">
+            <div class="frame-img absolute inset-0 ph ph-undyed"></div>
+            <figcaption class="absolute left-4 top-4 label-wide rounded-full bg-[#FBFAF4]/85 px-2.5 py-1 text-[var(--ink)]">Look 05</figcaption>
+          </figure>
+
+          <figure class="frame ph ph-clay grain block aspect-[16/10] rounded-[3px] lg:col-span-4">
+            <div class="frame-img absolute inset-0 ph ph-clay"></div>
+            <figcaption class="cap-fade absolute left-4 bottom-4 label-wide rounded-full bg-[#FBFAF4]/85 px-2.5 py-1 text-[var(--ink)]">Flat-lay — clay tones</figcaption>
+          </figure>
+
+          <figure class="frame ph ph-oat grain block aspect-[4/5] rounded-[3px] lg:col-span-4">
+            <div class="frame-img absolute inset-0 ph ph-oat"></div>
+            <figcaption class="absolute left-4 top-4 label-wide rounded-full bg-[#FBFAF4]/85 px-2.5 py-1 text-[var(--ink)]">Look 07 — Wide Trouser</figcaption>
+          </figure>
+
+          <figure class="frame ph ph-slate grain block aspect-square rounded-[3px] lg:col-span-3">
+            <div class="frame-img absolute inset-0 ph ph-slate"></div>
+            <figcaption class="cap-fade absolute left-4 bottom-4 label-wide rounded-full bg-[#FBFAF4]/85 px-2.5 py-1 text-[var(--ink)]">Fabric — close-up</figcaption>
+          </figure>
+
+          <figure class="frame ph ph-dusk grain block aspect-[16/10] rounded-[3px] lg:col-span-9">
+            <div class="frame-img absolute inset-0 ph ph-dusk"></div>
+            <figcaption class="absolute left-4 top-4 label-wide rounded-full bg-[#FBFAF4]/85 px-2.5 py-1 text-[var(--ink)]">Look 11 — The full range, worn</figcaption>
+          </figure>
+
+          <figure class="frame ph ph-sage grain block aspect-square rounded-[3px] lg:col-span-3">
+            <div class="frame-img absolute inset-0 ph ph-sage"></div>
+            <figcaption class="cap-fade absolute left-4 bottom-4 label-wide rounded-full bg-[#FBFAF4]/85 px-2.5 py-1 text-[var(--ink)]">Look 09 — Slip Dress</figcaption>
+          </figure>
+
+        </div>
+
+        <div class="mt-9 flex items-center justify-between">
+          <p class="label-wide text-[var(--ink-faint)]">Provence — Spring, 35mm film</p>
+          <a href="#lookbook" class="group inline-flex items-center gap-2 label text-[var(--ink)]">
+            View full lookbook
+            <span aria-hidden="true" class="transition-transform group-hover:translate-x-1">&rarr;</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 5 · POINT OF VIEW ================= -->
+    <section id="pov" class="mx-auto max-w-[1280px] px-5 py-20 sm:px-8 lg:py-28">
+      <div class="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
+        <div>
+          <p class="label-wide text-[var(--sage-deep)]">Our point of view</p>
+          <h2 class="display mt-3 text-[2rem] leading-tight sm:text-[2.5rem]">
+            Buy less.<br />
+            <span class="opacity-45">Keep it longer.</span>
+          </h2>
+          <figure class="ph ph-sage grain mt-9 aspect-[5/7] rounded-[3px]">
+            <figcaption class="absolute inset-x-0 bottom-0 p-4 label-wide text-[var(--ink)]">
+              <span class="rounded-full bg-[#FBFAF4]/85 px-2.5 py-1">The studio — Porto</span>
+            </figcaption>
+          </figure>
+        </div>
+
+        <div class="space-y-6 self-center text-[1.05rem] leading-[1.78] text-[var(--ink-soft)]">
+          <p>
+            The fashion industry makes more than 100 billion garments a year, and a large share is worn fewer than ten times before it's thrown away. We started Flax because we didn't want to add to that pile. So we did the opposite of a fashion brand: we made the range as small as we honestly could.
+          </p>
+          <p>
+            Eight pieces. They don't expire in March. There's no autumn collection coming to make this one look tired. A Flax tee bought today is the same tee we'll sell in three years &mdash; same pattern, same mill, same price logic. When something wears out, we'd rather repair it than sell you a replacement.
+          </p>
+          <p>
+            We're not going to tell you a t-shirt will save the planet. It won't. The most sustainable garment is the one already in your wardrobe. What we can promise is honesty: the real fiber, the real factory, the real cost &mdash; printed plainly so you can decide for yourself. A small wardrobe, made honestly. That's the whole idea.
+          </p>
+          <div class="flex items-center gap-4 border-t border-[var(--hair)] pt-6">
+            <span aria-hidden="true" class="ph ph-clay grain h-11 w-11 rounded-full"></span>
+            <div>
+              <p class="text-[0.9rem] font-medium text-[var(--ink)]">Marit Halvorsen &amp; Tomás Ferreira</p>
+              <p class="label-wide mt-0.5 text-[var(--ink-faint)]">Founders, Flax</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 6 · CRAFT / TRANSPARENCY ================= -->
+    <section id="transparency" class="relative bg-[var(--ink)] text-[var(--paper)]">
+      <div class="mesh-soft" style="width:480px;height:480px;background:var(--sage);top:-160px;right:-120px;opacity:0.22;"></div>
+      <div class="relative mx-auto max-w-[1280px] px-5 py-20 sm:px-8 lg:py-28">
+
+        <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p class="label-wide" style="color:#A3AE89;">Radical transparency</p>
+            <h2 class="display mt-3 text-[2.1rem] leading-tight text-[var(--paper)] sm:text-[2.7rem]">
+              Nothing to hide.<br />
+              <span class="opacity-45">So we hide nothing.</span>
+            </h2>
+          </div>
+          <p class="max-w-[24rem] text-[0.95rem] leading-[1.65]" style="color:rgba(251,250,244,0.62);">
+            Three things decide whether a garment is honest: the fiber, the mill that spins it, the factory that sews it. Here are ours, by name.
+          </p>
+        </div>
+
+        <!-- fiber / mill / factory -->
+        <div class="mt-12 grid gap-px overflow-hidden rounded-[3px] sm:grid-cols-3" style="background:rgba(251,250,244,0.1);">
+          <div class="bg-[var(--ink)] p-7">
+            <p class="label-wide" style="color:#A3AE89;">01 — Fiber</p>
+            <h3 class="display mt-3 text-[1.3rem] text-[var(--paper)]">Organic cotton &amp; flax linen</h3>
+            <p class="mt-3 text-[0.9rem] leading-[1.65]" style="color:rgba(251,250,244,0.6);">
+              GOTS-certified organic cotton grown without synthetic pesticides, and European flax linen from rain-fed fields in Normandy &mdash; a crop that needs almost no irrigation.
+            </p>
+          </div>
+          <div class="bg-[var(--ink)] p-7">
+            <p class="label-wide" style="color:#A3AE89;">02 — Mill</p>
+            <h3 class="display mt-3 text-[1.3rem] text-[var(--paper)]">Tessitura Bracco, Biella</h3>
+            <p class="mt-3 text-[0.9rem] leading-[1.65]" style="color:rgba(251,250,244,0.6);">
+              A family-run mill in northern Italy, spinning and weaving for us since 2021. Its dye-house runs a closed-loop water system &mdash; treated and re-used, not discharged.
+            </p>
+          </div>
+          <div class="bg-[var(--ink)] p-7">
+            <p class="label-wide" style="color:#A3AE89;">03 — Factory</p>
+            <h3 class="display mt-3 text-[1.3rem] text-[var(--paper)]">Atelier Costa, Guimar&atilde;es</h3>
+            <p class="mt-3 text-[0.9rem] leading-[1.65]" style="color:rgba(251,250,244,0.6);">
+              A 64-worker factory in northern Portugal. Living wages, a 35-hour week, and we publish our audit. We visit four times a year.
+            </p>
+          </div>
+        </div>
+
+        <!-- per-piece impact + true cost -->
+        <div class="mt-7 grid gap-7 lg:grid-cols-2">
+
+          <!-- impact figures -->
+          <div class="rounded-[3px] border border-[rgba(251,250,244,0.14)] p-7">
+            <p class="label-wide" style="color:#A3AE89;">Per-piece impact — The Everyday Tee</p>
+            <div class="mt-6 grid grid-cols-2 gap-6">
+              <div>
+                <p class="display tnum text-[2rem] text-[var(--paper)]">2.1<span class="ml-1 text-[0.95rem] font-medium" style="color:rgba(251,250,244,0.55);">kg</span></p>
+                <p class="label-wide mt-1" style="color:rgba(251,250,244,0.55);">CO2e — cradle to door</p>
+              </div>
+              <div>
+                <p class="display tnum text-[2rem] text-[var(--paper)]">480<span class="ml-1 text-[0.95rem] font-medium" style="color:rgba(251,250,244,0.55);">L</span></p>
+                <p class="label-wide mt-1" style="color:rgba(251,250,244,0.55);">Water — full lifecycle</p>
+              </div>
+              <div>
+                <p class="display tnum text-[2rem] text-[var(--paper)]">0<span class="ml-1 text-[0.95rem] font-medium" style="color:rgba(251,250,244,0.55);">g</span></p>
+                <p class="label-wide mt-1" style="color:rgba(251,250,244,0.55);">Plastic in the garment</p>
+              </div>
+              <div>
+                <p class="display tnum text-[2rem] text-[var(--paper)]">94<span class="ml-1 text-[0.95rem] font-medium" style="color:rgba(251,250,244,0.55);">%</span></p>
+                <p class="label-wide mt-1" style="color:rgba(251,250,244,0.55);">Shipped by sea, not air</p>
+              </div>
+            </div>
+            <p class="mt-6 border-t border-[rgba(251,250,244,0.12)] pt-4 text-[0.8rem] leading-[1.6]" style="color:rgba(251,250,244,0.5);">
+              Figures are an average per tee, measured by an independent lifecycle assessment in 2026. A conventional cotton tee of this weight is typically 2.5&times; the water and 3&times; the CO2e.
+            </p>
+          </div>
+
+          <!-- true cost breakdown -->
+          <div class="rounded-[3px] border border-[rgba(251,250,244,0.14)] p-7">
+            <p class="label-wide" style="color:#A3AE89;">The true cost — The Everyday Tee</p>
+            <p class="mt-4 display tnum text-[1.6rem] text-[var(--paper)]">
+              $48.00 <span class="text-[0.85rem] font-medium" style="color:rgba(251,250,244,0.55);">retail</span>
+            </p>
+
+            <div class="mt-5">
+              <div class="cost-bar">
+                <div class="cost-seg" style="width:33%;background:#7C8A6A;"></div>
+                <div class="cost-seg" style="width:27%;background:#C2785A;"></div>
+                <div class="cost-seg" style="width:9%;background:#9DA09A;"></div>
+                <div class="cost-seg" style="width:7%;background:#5A574B;"></div>
+                <div class="cost-seg" style="width:24%;background:#D9D1B9;"></div>
+              </div>
+              <dl class="mt-5 divide-y divide-[rgba(251,250,244,0.1)] text-[0.85rem]">
+                <div class="flex items-center justify-between py-2">
+                  <dt class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-sm" style="background:#7C8A6A"></span>Materials &amp; fabric</dt>
+                  <dd class="tnum" style="color:rgba(251,250,244,0.85);">$15.84</dd>
+                </div>
+                <div class="flex items-center justify-between py-2">
+                  <dt class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-sm" style="background:#C2785A"></span>Labour &amp; sewing</dt>
+                  <dd class="tnum" style="color:rgba(251,250,244,0.85);">$12.96</dd>
+                </div>
+                <div class="flex items-center justify-between py-2">
+                  <dt class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-sm" style="background:#9DA09A"></span>Transport &amp; duties</dt>
+                  <dd class="tnum" style="color:rgba(251,250,244,0.85);">$4.32</dd>
+                </div>
+                <div class="flex items-center justify-between py-2">
+                  <dt class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-sm" style="background:#5A574B"></span>Repairs reserve</dt>
+                  <dd class="tnum" style="color:rgba(251,250,244,0.85);">$3.36</dd>
+                </div>
+                <div class="flex items-center justify-between py-2">
+                  <dt class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-sm" style="background:#D9D1B9"></span>Flax margin</dt>
+                  <dd class="tnum" style="color:rgba(251,250,244,0.85);">$11.52</dd>
+                </div>
+              </dl>
+            </div>
+            <p class="mt-4 border-t border-[rgba(251,250,244,0.12)] pt-4 text-[0.8rem] leading-[1.6]" style="color:rgba(251,250,244,0.5);">
+              A traditional retailer would mark this tee up 5&ndash;8&times;. We hold a flat 24% &mdash; enough to keep the lights on and fund free repairs, nothing more.
+            </p>
+          </div>
+        </div>
+
+        <!-- take-back / resale -->
+        <div class="mt-7 grid items-center gap-7 rounded-[3px] border border-[rgba(251,250,244,0.14)] p-7 lg:grid-cols-[1fr_auto] lg:p-9">
+          <div>
+            <p class="label-wide" style="color:#A3AE89;">Take-back &amp; resale</p>
+            <h3 class="display mt-3 text-[1.5rem] text-[var(--paper)] sm:text-[1.8rem]">Send it back when you're done with it.</h3>
+            <p class="mt-3 max-w-[42rem] text-[0.92rem] leading-[1.7]" style="color:rgba(251,250,244,0.62);">
+              Any Flax piece, any age. Mail it in with our prepaid label. We launder and mend what can be re-sold on <span class="text-[var(--paper)]">Flax Renewed</span>, and we fibre-recycle the rest with our partner in Prato. You get store credit either way &mdash; <span class="tnum text-[var(--paper)]">20%</span> of the original price.
+            </p>
+          </div>
+          <a href="#loop" class="btn btn-sage shrink-0 rounded-full px-6 py-3.5 text-[0.875rem] font-medium">How the loop works</a>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= 7 · FEATURED GARMENT ================= -->
+    <section class="mx-auto max-w-[1280px] px-5 py-20 sm:px-8 lg:py-28">
+      <div class="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+        <!-- image -->
+        <figure class="frame ph ph-undyed grain order-1 aspect-[5/6] rounded-[3px] lg:order-none">
+          <div class="frame-img absolute inset-0 ph ph-undyed"></div>
+          <figcaption class="absolute inset-x-0 bottom-0 flex items-center justify-between p-5">
+            <span class="label-wide rounded-full bg-[#FBFAF4]/85 px-3 py-1.5 text-[var(--ink)]">The Everyday Tee</span>
+            <span class="label-wide rounded-full bg-[var(--ink)]/82 px-3 py-1.5 text-[var(--paper)] tnum">$48</span>
+          </figcaption>
+        </figure>
+
+        <!-- copy -->
+        <div>
+          <p class="label-wide text-[var(--sage-deep)]">The piece we're proudest of</p>
+          <h2 class="display mt-3 text-[2.1rem] leading-tight sm:text-[2.6rem]">
+            The Everyday Tee, built to outlast the trend cycle.
+          </h2>
+          <p class="mt-5 text-[1.0125rem] leading-[1.75] text-[var(--ink-soft)]">
+            A 220&nbsp;gsm single-jersey knit in long-staple organic cotton, garment-washed so it arrives soft and won't shrink on you. Twin-needle hems, a taped shoulder seam that holds its shape, and a ribbed collar knitted in one piece so it never w-aves out. The fit is true &mdash; not cropped, not boxy, just clean.
+          </p>
+
+          <dl class="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 border-y border-[var(--hair)] py-6">
+            <div>
+              <dt class="label-wide text-[var(--ink-faint)]">Fiber</dt>
+              <dd class="mt-1 text-[0.92rem] font-medium">Long-staple organic cotton</dd>
+            </div>
+            <div>
+              <dt class="label-wide text-[var(--ink-faint)]">Weight &amp; knit</dt>
+              <dd class="mt-1 text-[0.92rem] font-medium tnum">220 gsm single jersey</dd>
+            </div>
+            <div>
+              <dt class="label-wide text-[var(--ink-faint)]">Fit</dt>
+              <dd class="mt-1 text-[0.92rem] font-medium">True — regular, mid-weight</dd>
+            </div>
+            <div>
+              <dt class="label-wide text-[var(--ink-faint)]">Tones</dt>
+              <dd class="mt-1 text-[0.92rem] font-medium">Undyed, Oat, Sage, Slate</dd>
+            </div>
+          </dl>
+
+          <div class="mt-6 flex items-start gap-3 rounded-[3px] p-4" style="background:rgba(124,138,106,0.1);">
+            <span aria-hidden="true" class="mt-0.5 flex h-6 w-6 flex-none items-center justify-center rounded-full" style="background:var(--sage);">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FBFAF4" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            </span>
+            <p class="text-[0.9rem] leading-[1.6] text-[var(--ink-soft)]">
+              <span class="font-medium text-[var(--ink)]">Made to last 5+ years.</span> The heavier 220&nbsp;gsm knit resists thinning at the shoulders, the seams are double-stitched where stress lands, and if a hem ever goes, we'll re-sew it free. We'd rather mend this tee than sell you another.
+            </p>
+          </div>
+
+          <div class="mt-7 flex flex-wrap items-center gap-3">
+            <a href="#collection" class="btn btn-solid rounded-full px-7 py-3.5 text-[0.9rem] font-medium">Shop the Everyday Tee</a>
+            <a href="#faq" class="btn btn-outline rounded-full px-7 py-3.5 text-[0.9rem] font-medium">How to care for it</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 8 · CAMPAIGN / FILM ================= -->
+    <section aria-label="The campaign film" class="relative">
+      <div class="ph ph-dusk grain-strong grain h-[52vh] min-h-[360px] sm:h-[66vh]">
+        <div class="absolute inset-0 grid grid-rows-2 sm:grid-cols-3 sm:grid-rows-1">
+          <div class="ph ph-sage grain border-b border-[rgba(33,31,24,0.07)] sm:border-b-0 sm:border-r"></div>
+          <div class="ph ph-undyed grain sm:border-r sm:border-[rgba(33,31,24,0.07)]"></div>
+          <div class="ph ph-clay grain hidden sm:block"></div>
+        </div>
+        <div class="absolute inset-0 fade-top"></div>
+        <div class="absolute inset-x-0 bottom-0 mx-auto max-w-[1280px] px-5 pb-9 sm:px-8 sm:pb-12">
+          <div class="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <span class="inline-flex items-center gap-2 label-wide text-[var(--ink-soft)]">
+                <span class="pulse-dot"></span> The 2027 campaign film
+              </span>
+              <h2 class="display mt-3 max-w-[20rem] text-[1.9rem] leading-[1.1] text-[var(--ink)] sm:text-[2.4rem]">
+                Slow Cloth.<br />
+                <span class="opacity-45">A short film, no dialogue.</span>
+              </h2>
+            </div>
+
+            <div class="rounded-[3px] border border-[var(--hair)] bg-[#FBFAF4]/82 p-5 backdrop-blur-sm sm:max-w-[20rem]">
+              <p class="label-wide text-[var(--ink-faint)]">Credits</p>
+              <ul class="mt-3 space-y-2 text-[0.85rem] text-[var(--ink-soft)]">
+                <li><span class="font-medium text-[var(--ink)]">Photography</span> &mdash; Aurélie Vandenberghe</li>
+                <li><span class="font-medium text-[var(--ink)]">Creative direction</span> &mdash; Studio Mánuka, Lisbon</li>
+                <li><span class="font-medium text-[var(--ink)]">Fabric partner</span> &mdash; Tessitura Bracco, Biella</li>
+                <li><span class="font-medium text-[var(--ink)]">Location</span> &mdash; near Arles, Provence</li>
+              </ul>
+              <a href="#campaign" class="btn btn-solid mt-4 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[0.825rem] font-medium">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="#FBFAF4" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+                Watch — 2:14
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 9 · STOCKISTS ================= -->
+    <section id="stockists" class="mx-auto max-w-[1280px] px-5 py-20 sm:px-8 lg:py-28">
+      <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p class="label-wide text-[var(--sage-deep)]">Stockists &amp; availability</p>
+          <h2 class="display mt-3 text-[2.1rem] leading-tight sm:text-[2.7rem]">Find us, or shop direct.</h2>
+        </div>
+        <p class="max-w-[24rem] text-[0.95rem] leading-[1.65] text-[var(--ink-soft)]">
+          Flax is carried by a small, deliberate group of conscious-living stores across Europe and North America. The full range is always online.
+        </p>
+      </div>
+
+      <!-- marquee of stockist wordmarks -->
+      <div class="marquee-mask mt-12 overflow-hidden border-y border-[var(--hair)] py-7">
+        <div class="marquee">
+          <ul class="flex shrink-0 items-center">
+            <li class="px-9"><span class="text-[1.35rem] font-medium tracking-tight text-[var(--ink-soft)]">Marled &amp; Sundry</span></li>
+            <li class="px-9"><span class="text-[1.35rem] tracking-tight text-[var(--ink-soft)]" style="font-family:Georgia,serif;font-style:italic;">Quietude</span></li>
+            <li class="px-9"><span class="text-[1.35rem] font-semibold tracking-[0.06em] text-[var(--ink-soft)]">FOLK&middot;HOUSE</span></li>
+            <li class="px-9"><span class="text-[1.35rem] tracking-tight text-[var(--ink-soft)]" style="font-family:Georgia,serif;">The Linen Room</span></li>
+            <li class="px-9"><span class="text-[1.35rem] font-medium tracking-tight text-[var(--ink-soft)]">Apartamento Goods</span></li>
+            <li class="px-9"><span class="text-[1.35rem] tracking-[0.04em] text-[var(--ink-soft)]" style="font-family:Georgia,serif;">Maison Verde</span></li>
+            <li class="px-9"><span class="text-[1.35rem] font-semibold tracking-tight text-[var(--ink-soft)]">Northlight Supply</span></li>
+            <li class="px-9"><span class="text-[1.35rem] tracking-tight text-[var(--ink-soft)]" style="font-family:Georgia,serif;font-style:italic;">Still &amp; Co.</span></li>
+          </ul>
+          <ul class="flex shrink-0 items-center" aria-hidden="true">
+            <li class="px-9"><span class="text-[1.35rem] font-medium tracking-tight text-[var(--ink-soft)]">Marled &amp; Sundry</span></li>
+            <li class="px-9"><span class="text-[1.35rem] tracking-tight text-[var(--ink-soft)]" style="font-family:Georgia,serif;font-style:italic;">Quietude</span></li>
+            <li class="px-9"><span class="text-[1.35rem] font-semibold tracking-[0.06em] text-[var(--ink-soft)]">FOLK&middot;HOUSE</span></li>
+            <li class="px-9"><span class="text-[1.35rem] tracking-tight text-[var(--ink-soft)]" style="font-family:Georgia,serif;">The Linen Room</span></li>
+            <li class="px-9"><span class="text-[1.35rem] font-medium tracking-tight text-[var(--ink-soft)]">Apartamento Goods</span></li>
+            <li class="px-9"><span class="text-[1.35rem] tracking-[0.04em] text-[var(--ink-soft)]" style="font-family:Georgia,serif;">Maison Verde</span></li>
+            <li class="px-9"><span class="text-[1.35rem] font-semibold tracking-tight text-[var(--ink-soft)]">Northlight Supply</span></li>
+            <li class="px-9"><span class="text-[1.35rem] tracking-tight text-[var(--ink-soft)]" style="font-family:Georgia,serif;font-style:italic;">Still &amp; Co.</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="mt-12 grid gap-7 lg:grid-cols-[1.1fr_1fr]">
+        <!-- find us -->
+        <div class="rounded-[3px] border border-[var(--hair)] bg-[var(--paper)] p-7">
+          <p class="label-wide text-[var(--ink-faint)]">Find us in person</p>
+          <p class="mt-3 text-[1rem] leading-[1.7] text-[var(--ink-soft)]">
+            Eleven stores in seven countries carry the range. Our own studio shop in Porto is open Thursday to Saturday &mdash; come try a fit, see the fabric in daylight, and meet the team.
+          </p>
+          <div class="mt-5 flex flex-wrap items-center gap-3">
+            <a href="#stockists" class="btn btn-outline rounded-full px-5 py-2.5 text-[0.85rem] font-medium">Stockist map</a>
+            <a href="#collection" class="btn btn-sage rounded-full px-5 py-2.5 text-[0.85rem] font-medium">Shop online</a>
+          </div>
+        </div>
+
+        <!-- sizing / fit notes -->
+        <div class="rounded-[3px] border border-[var(--hair)] p-7">
+          <p class="label-wide text-[var(--ink-faint)]">Sizing &amp; fit notes</p>
+          <ul class="mt-3 space-y-3 text-[0.9rem] leading-[1.6] text-[var(--ink-soft)]">
+            <li class="flex gap-3">
+              <span aria-hidden="true" class="mt-1.5 h-1.5 w-1.5 flex-none rounded-full" style="background:var(--sage)"></span>
+              Tees and the knit fit true to size &mdash; take your usual.
+            </li>
+            <li class="flex gap-3">
+              <span aria-hidden="true" class="mt-1.5 h-1.5 w-1.5 flex-none rounded-full" style="background:var(--sage)"></span>
+              Trousers run a touch relaxed; size down if you're between sizes.
+            </li>
+            <li class="flex gap-3">
+              <span aria-hidden="true" class="mt-1.5 h-1.5 w-1.5 flex-none rounded-full" style="background:var(--sage)"></span>
+              Linen softens and relaxes about half a size with wear and washing.
+            </li>
+            <li class="flex gap-3">
+              <span aria-hidden="true" class="mt-1.5 h-1.5 w-1.5 flex-none rounded-full" style="background:var(--sage)"></span>
+              Every piece runs XXS&ndash;XXL. Free exchanges within 30 days.
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 10A · CARE + REPAIR + RESALE LOOP ================= -->
+    <section id="loop" class="relative bg-[var(--paper)] hair-y">
+      <div class="dot-grid absolute inset-0 opacity-35"></div>
+      <div class="relative mx-auto max-w-[1280px] px-5 py-20 sm:px-8 lg:py-28">
+        <div class="text-center">
+          <p class="label-wide text-[var(--sage-deep)]">The Flax loop</p>
+          <h2 class="display mt-3 text-[2.1rem] leading-tight sm:text-[2.7rem]">
+            Wear it. Care for it. Repair it.<br />
+            <span class="opacity-45">Then send it back.</span>
+          </h2>
+          <p class="mx-auto mt-4 max-w-[36rem] text-[0.975rem] leading-[1.7] text-[var(--ink-soft)]">
+            A garment shouldn't end in landfill. We designed Flax as a loop &mdash; four steps that keep a piece in use, and out of the bin, for as long as possible.
+          </p>
+        </div>
+
+        <ol class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <!-- step 1 -->
+          <li class="rounded-[3px] border border-[var(--hair)] bg-[#F6F4ED] p-6">
+            <div class="flex items-center justify-between">
+              <span class="label-wide text-[var(--ink-faint)]">Step 01</span>
+              <span aria-hidden="true" class="flex h-9 w-9 items-center justify-center rounded-full" style="background:rgba(124,138,106,0.16);color:var(--sage-deep);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l4-4 5 3 5-3 4 4-3 4v9H6v-9L3 7Z"/></svg>
+              </span>
+            </div>
+            <h3 class="display mt-4 text-[1.15rem]">Wear</h3>
+            <p class="mt-2 text-[0.875rem] leading-[1.6] text-[var(--ink-soft)]">
+              Buy one piece, wear it hard. Our target is 200+ wears per garment &mdash; the point where a tee genuinely earns its footprint.
+            </p>
+          </li>
+          <!-- step 2 -->
+          <li class="rounded-[3px] border border-[var(--hair)] bg-[#F6F4ED] p-6">
+            <div class="flex items-center justify-between">
+              <span class="label-wide text-[var(--ink-faint)]">Step 02</span>
+              <span aria-hidden="true" class="flex h-9 w-9 items-center justify-center rounded-full" style="background:rgba(124,138,106,0.16);color:var(--sage-deep);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M21 3v5h-5M3 21v-5h5"/></svg>
+              </span>
+            </div>
+            <h3 class="display mt-4 text-[1.15rem]">Care</h3>
+            <p class="mt-2 text-[0.875rem] leading-[1.6] text-[var(--ink-soft)]">
+              Cold wash, line dry, wash less. Every order ships with a care card; most of a garment's footprint is in how it's laundered.
+            </p>
+          </li>
+          <!-- step 3 -->
+          <li class="rounded-[3px] border border-[var(--hair)] bg-[#F6F4ED] p-6">
+            <div class="flex items-center justify-between">
+              <span class="label-wide text-[var(--ink-faint)]">Step 03</span>
+              <span aria-hidden="true" class="flex h-9 w-9 items-center justify-center rounded-full" style="background:rgba(194,120,90,0.18);color:var(--clay-deep);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6M3 21l4-1 11-11-3-3L4 17l-1 4Z"/><path d="M9 9l3 3"/></svg>
+              </span>
+            </div>
+            <h3 class="display mt-4 text-[1.15rem]">Repair</h3>
+            <p class="mt-2 text-[0.875rem] leading-[1.6] text-[var(--ink-soft)]">
+              A loose hem, a popped seam, a small hole &mdash; mail it to us. We mend Flax pieces free, for the life of the garment.
+            </p>
+          </li>
+          <!-- step 4 -->
+          <li class="rounded-[3px] border border-[var(--hair)] bg-[#F6F4ED] p-6">
+            <div class="flex items-center justify-between">
+              <span class="label-wide text-[var(--ink-faint)]">Step 04</span>
+              <span aria-hidden="true" class="flex h-9 w-9 items-center justify-center rounded-full" style="background:rgba(194,120,90,0.18);color:var(--clay-deep);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-6 9 6v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z"/><path d="M9 22V12h6v10"/></svg>
+              </span>
+            </div>
+            <h3 class="display mt-4 text-[1.15rem]">Return</h3>
+            <p class="mt-2 text-[0.875rem] leading-[1.6] text-[var(--ink-soft)]">
+              Done with it? Send it back. We re-sell it on Flax Renewed or fibre-recycle it &mdash; and you get 20% back in store credit.
+            </p>
+          </li>
+        </ol>
+
+        <div class="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 border-t border-[var(--hair)] pt-8 text-center">
+          <p class="label-wide text-[var(--ink-faint)]"><span class="tnum text-[var(--ink)]">3,140</span> garments repaired in 2026</p>
+          <p class="label-wide text-[var(--ink-faint)]"><span class="tnum text-[var(--ink)]">1,890</span> pieces resold on Flax Renewed</p>
+          <p class="label-wide text-[var(--ink-faint)]"><span class="tnum text-[var(--ink)]">0</span> garments sent to landfill by us</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 10B · JOURNAL / NEWSLETTER ================= -->
+    <section id="journal" class="mx-auto max-w-[1280px] px-5 py-20 sm:px-8 lg:py-28">
+      <div class="grid gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
+        <!-- journal -->
+        <div>
+          <div class="flex items-end justify-between">
+            <div>
+              <p class="label-wide text-[var(--sage-deep)]">The Journal</p>
+              <h2 class="display mt-3 text-[1.9rem] leading-tight sm:text-[2.3rem]">Notes from the studio.</h2>
+            </div>
+            <a href="#journal" class="hidden label text-[var(--ink)] sm:inline-flex sm:items-center sm:gap-2 group">
+              All notes <span aria-hidden="true" class="transition-transform group-hover:translate-x-1">&rarr;</span>
+            </a>
+          </div>
+
+          <div class="mt-8 space-y-5">
+            <a href="#journal" class="frame group flex items-center gap-5 rounded-[3px] border border-[var(--hair)] p-3 transition-colors hover:border-[var(--hair-strong)]">
+              <span class="ph ph-flax grain h-24 w-24 flex-none rounded-[2px] sm:h-28 sm:w-28">
+                <span class="frame-img absolute inset-0 ph ph-flax"></span>
+              </span>
+              <span class="min-w-0">
+                <span class="label-wide text-[var(--ink-faint)]">Fiber — 6 min read</span>
+                <span class="mt-1.5 block text-[1.05rem] font-medium leading-snug">Why we chose Normandy flax over conventional cotton</span>
+                <span class="mt-1 block text-[0.85rem] text-[var(--ink-soft)]">A rain-fed crop, almost no irrigation, and what that means for a shirt.</span>
+              </span>
+            </a>
+            <a href="#journal" class="frame group flex items-center gap-5 rounded-[3px] border border-[var(--hair)] p-3 transition-colors hover:border-[var(--hair-strong)]">
+              <span class="ph ph-sage grain h-24 w-24 flex-none rounded-[2px] sm:h-28 sm:w-28">
+                <span class="frame-img absolute inset-0 ph ph-sage"></span>
+              </span>
+              <span class="min-w-0">
+                <span class="label-wide text-[var(--ink-faint)]">Repair — 4 min read</span>
+                <span class="mt-1.5 block text-[1.05rem] font-medium leading-snug">A visible-mending guide for your worn-in tee</span>
+                <span class="mt-1 block text-[0.85rem] text-[var(--ink-soft)]">Sashiko stitches, where to place them, and why a patch isn't a flaw.</span>
+              </span>
+            </a>
+            <a href="#journal" class="frame group flex items-center gap-5 rounded-[3px] border border-[var(--hair)] p-3 transition-colors hover:border-[var(--hair-strong)]">
+              <span class="ph ph-clay grain h-24 w-24 flex-none rounded-[2px] sm:h-28 sm:w-28">
+                <span class="frame-img absolute inset-0 ph ph-clay"></span>
+              </span>
+              <span class="min-w-0">
+                <span class="label-wide text-[var(--ink-faint)]">Factory — 8 min read</span>
+                <span class="mt-1.5 block text-[1.05rem] font-medium leading-snug">A day at Atelier Costa in Guimar&atilde;es</span>
+                <span class="mt-1 block text-[0.85rem] text-[var(--ink-soft)]">The 64 people who sew every Flax garment, and how they're paid.</span>
+              </span>
+            </a>
+          </div>
+        </div>
+
+        <!-- newsletter -->
+        <aside class="self-start rounded-[3px] border border-[var(--hair)] bg-[var(--ink)] p-8 text-[var(--paper)]">
+          <span class="inline-flex items-center gap-2 label-wide" style="color:#A3AE89;">
+            <span class="pulse-dot"></span> The slow list
+          </span>
+          <h3 class="display mt-4 text-[1.6rem] text-[var(--paper)]">
+            One letter a month.<br />
+            <span class="opacity-45">No drops, no urgency.</span>
+          </h3>
+          <p class="mt-3 text-[0.9rem] leading-[1.65]" style="color:rgba(251,250,244,0.62);">
+            Restock dates, repair tips, an honest look behind a new piece. We email roughly twelve times a year &mdash; never to manufacture FOMO.
+          </p>
+          <form class="mt-6" onsubmit="return false">
+            <label for="news-email" class="sr-only">Email address</label>
+            <div class="flex flex-col gap-2.5 sm:flex-row">
+              <input id="news-email" type="email" required placeholder="you@example.com"
+                class="w-full rounded-full border border-[rgba(251,250,244,0.2)] bg-[rgba(251,250,244,0.06)] px-4 py-3 text-[0.9rem] text-[var(--paper)] placeholder:text-[rgba(251,250,244,0.4)]" />
+              <button type="submit" class="btn btn-sage shrink-0 rounded-full px-6 py-3 text-[0.85rem] font-medium">Join</button>
+            </div>
+            <p class="mt-3 text-[0.75rem]" style="color:rgba(251,250,244,0.42);">Unsubscribe in one click. We never share your address.</p>
+          </form>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ================= 11 · FAQ ================= -->
+    <section id="faq" class="relative bg-[var(--paper)] hair-y">
+      <div class="relative mx-auto max-w-[1280px] px-5 py-20 sm:px-8 lg:py-28">
+        <div class="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+          <div>
+            <p class="label-wide text-[var(--sage-deep)]">Questions, answered plainly</p>
+            <h2 class="display mt-3 text-[2.1rem] leading-tight sm:text-[2.6rem]">
+              The honest<br />
+              <span class="opacity-45">answers.</span>
+            </h2>
+            <p class="mt-5 text-[0.95rem] leading-[1.7] text-[var(--ink-soft)]">
+              No marketing spin. If you have a question we haven't covered, write to <a href="#footer" class="underline decoration-[var(--hair-strong)] underline-offset-4 hover:decoration-[var(--ink)]">hello@flax.studio</a> &mdash; a person replies.
+            </p>
+          </div>
+
+          <div>
+            <details>
+              <summary class="flex items-center justify-between gap-4 py-5">
+                <span class="text-[1.075rem] font-medium">What fibers do you use, and why?</span>
+                <span aria-hidden="true" class="acc-icon flex h-7 w-7 flex-none items-center justify-center rounded-full border border-[var(--hair-strong)] text-[1.1rem] leading-none">+</span>
+              </summary>
+              <div class="acc-body">
+                <p class="pb-5 pr-9 text-[0.9375rem] leading-[1.72] text-[var(--ink-soft)]">
+                  Three, all natural: GOTS-certified organic cotton, European flax linen, and responsibly clipped merino wool &mdash; with a little hemp blended into the Easy Pant. We avoid synthetics entirely. Polyester and nylon are plastic; they shed microfibres in the wash and don't biodegrade, which makes our take-back loop impossible to close. Natural fibers cost more and crease more, but they last, they're repairable, and at end of life they can be fibre-recycled or composted.
+                </p>
+              </div>
+            </details>
+            <details>
+              <summary class="flex items-center justify-between gap-4 py-5">
+                <span class="text-[1.075rem] font-medium">How do you define "sustainable"?</span>
+                <span aria-hidden="true" class="acc-icon flex h-7 w-7 flex-none items-center justify-center rounded-full border border-[var(--hair-strong)] text-[1.1rem] leading-none">+</span>
+              </summary>
+              <div class="acc-body">
+                <p class="pb-5 pr-9 text-[0.9375rem] leading-[1.72] text-[var(--ink-soft)]">
+                  Honestly, we're cautious with the word &mdash; no garment is truly sustainable. We use it to mean something specific and measurable: a small permanent range so we overproduce less, natural fibers, a published lifecycle assessment for every piece, fair wages we can show you, and a loop that keeps garments out of landfill. We'd rather give you the real CO2e and water figures and let you judge than hide behind a vague green claim.
+                </p>
+              </div>
+            </details>
+            <details>
+              <summary class="flex items-center justify-between gap-4 py-5">
+                <span class="text-[1.075rem] font-medium">How should I care for it to make it last?</span>
+                <span aria-hidden="true" class="acc-icon flex h-7 w-7 flex-none items-center justify-center rounded-full border border-[var(--hair-strong)] text-[1.1rem] leading-none">+</span>
+              </summary>
+              <div class="acc-body">
+                <p class="pb-5 pr-9 text-[0.9375rem] leading-[1.72] text-[var(--ink-soft)]">
+                  Wash cold, wash less, and skip the dryer. A cold cycle uses far less energy and is gentler on natural fibers; line drying keeps the knit from thinning and stops linen from going stiff. Turn tees inside out, use a mild detergent, and don't over-fill the drum. Wool usually only needs an airing, not a wash. Every order ships with a care card per fiber &mdash; follow it and a Flax piece should easily see five years and beyond.
+                </p>
+              </div>
+            </details>
+            <details>
+              <summary class="flex items-center justify-between gap-4 py-5">
+                <span class="text-[1.075rem] font-medium">Do you take pieces back?</span>
+                <span aria-hidden="true" class="acc-icon flex h-7 w-7 flex-none items-center justify-center rounded-full border border-[var(--hair-strong)] text-[1.1rem] leading-none">+</span>
+              </summary>
+              <div class="acc-body">
+                <p class="pb-5 pr-9 text-[0.9375rem] leading-[1.72] text-[var(--ink-soft)]">
+                  Yes &mdash; any Flax piece, at any age, in any condition. Request a prepaid label and mail it in. Pieces still wearable are laundered, mended and resold on Flax Renewed; pieces past saving go to our fibre-recycling partner in Prato, Italy. Either way you get 20% of the original price back as store credit. Nothing we take back goes to landfill. It's the same loop on our Craft page &mdash; the fourth step.
+                </p>
+              </div>
+            </details>
+            <details>
+              <summary class="flex items-center justify-between gap-4 py-5">
+                <span class="text-[1.075rem] font-medium">Where and by whom is it made?</span>
+                <span aria-hidden="true" class="acc-icon flex h-7 w-7 flex-none items-center justify-center rounded-full border border-[var(--hair-strong)] text-[1.1rem] leading-none">+</span>
+              </summary>
+              <div class="acc-body">
+                <p class="pb-5 pr-9 text-[0.9375rem] leading-[1.72] text-[var(--ink-soft)]">
+                  Fabric is spun and woven at Tessitura Bracco, a family-run mill in Biella, Italy, with a closed-loop dye-house. Garments are then cut and sewn at Atelier Costa in Guimar&atilde;es, northern Portugal &mdash; 64 people, a 35-hour week, living wages, and a third-party social audit we publish in full. We visit the factory four times a year. Knitwear is finished by a 12-person workshop in Vilnius, Lithuania.
+                </p>
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 12 · FINAL CTA ================= -->
+    <section class="relative overflow-hidden">
+      <div class="mesh-soft" style="width:460px;height:460px;background:var(--sage);bottom:-220px;left:8%;opacity:0.4;"></div>
+      <div class="mesh-soft" style="width:380px;height:380px;background:var(--clay);top:-200px;right:6%;opacity:0.3;"></div>
+      <div class="relative mx-auto max-w-[1280px] px-5 py-24 text-center sm:px-8 lg:py-32">
+        <span class="inline-flex items-center gap-2 label-wide text-[var(--ink-faint)]">
+          <span class="pulse-dot"></span> The 2027 Range — in stock now
+        </span>
+        <h2 class="display halftone mx-auto mt-5 max-w-[20rem] text-[2.5rem] leading-[1.06] sm:max-w-[34rem] sm:text-[3.4rem]">
+          Eight pieces.<br />
+          <span class="dim">A wardrobe that lasts.</span>
+        </h2>
+        <p class="mx-auto mt-5 max-w-[34rem] text-[1.0125rem] leading-[1.7] text-[var(--ink-soft)]">
+          Start with the Everyday Tee, or take the whole small range. Bought once, repaired free, taken back at the end &mdash; the way clothes used to work.
+        </p>
+        <div class="mt-9 flex flex-wrap items-center justify-center gap-3">
+          <a href="#collection" class="btn btn-solid rounded-full px-8 py-4 text-[0.95rem] font-medium">Shop the collection</a>
+          <a href="#transparency" class="btn btn-outline rounded-full px-8 py-4 text-[0.95rem] font-medium">Read the true cost</a>
+        </div>
+        <p class="mt-7 label-wide text-[var(--ink-faint)]">Free EU shipping over $120 &middot; 30-day exchanges &middot; Repairs for life</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= 13 · FOOTER ================= -->
+  <footer id="footer" class="bg-[var(--ink)] text-[var(--paper)]">
+    <div class="mx-auto max-w-[1280px] px-5 py-16 sm:px-8">
+      <div class="grid gap-12 lg:grid-cols-[1.3fr_1fr_1fr_1.4fr]">
+        <!-- brand -->
+        <div>
+          <a href="#top" class="flex items-center gap-2.5" aria-label="Flax — home">
+            <span aria-hidden="true" class="flex h-7 w-7 items-center justify-center rounded-full" style="background:var(--sage);">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FBFAF4" stroke-width="1.9" stroke-linecap="round">
+                <path d="M12 21V8" />
+                <path d="M12 11c0-3 2-5 5-5 0 3-2 5-5 5Z" fill="#FBFAF4" stroke="none"/>
+                <path d="M12 14c0-3-2-5-5-5 0 3 2 5 5 5Z" fill="#FBFAF4" stroke="none"/>
+              </svg>
+            </span>
+            <span class="display text-[1.15rem] text-[var(--paper)]" style="letter-spacing:0.04em;">Flax</span>
+          </a>
+          <p class="mt-4 max-w-[20rem] text-[0.875rem] leading-[1.65]" style="color:rgba(251,250,244,0.55);">
+            A small wardrobe, made honestly. Eight permanent essentials in organic cotton, linen and responsible wool &mdash; made in Portugal &amp; Lithuania.
+          </p>
+          <div class="mt-5 flex items-center gap-2 label-wide" style="color:rgba(251,250,244,0.5);">
+            <span class="pulse-dot"></span> Studio shop open Thu&ndash;Sat, Porto
+          </div>
+        </div>
+
+        <!-- shop -->
+        <nav aria-label="Shop">
+          <p class="label-wide" style="color:#A3AE89;">Shop</p>
+          <ul class="mt-4 space-y-2.5 text-[0.875rem]" style="color:rgba(251,250,244,0.62);">
+            <li><a href="#collection" class="transition-colors hover:text-[var(--paper)]">The Everyday Tee</a></li>
+            <li><a href="#collection" class="transition-colors hover:text-[var(--paper)]">The Linen Shirt</a></li>
+            <li><a href="#collection" class="transition-colors hover:text-[var(--paper)]">The Crew Knit</a></li>
+            <li><a href="#collection" class="transition-colors hover:text-[var(--paper)]">The full range</a></li>
+            <li><a href="#loop" class="transition-colors hover:text-[var(--paper)]">Flax Renewed</a></li>
+          </ul>
+        </nav>
+
+        <!-- explore + help -->
+        <nav aria-label="Explore and help">
+          <p class="label-wide" style="color:#A3AE89;">Explore &amp; Help</p>
+          <ul class="mt-4 space-y-2.5 text-[0.875rem]" style="color:rgba(251,250,244,0.62);">
+            <li><a href="#lookbook" class="transition-colors hover:text-[var(--paper)]">Lookbook</a></li>
+            <li><a href="#pov" class="transition-colors hover:text-[var(--paper)]">About</a></li>
+            <li><a href="#transparency" class="transition-colors hover:text-[var(--paper)]">Transparency</a></li>
+            <li><a href="#journal" class="transition-colors hover:text-[var(--paper)]">The Journal</a></li>
+            <li><a href="#faq" class="transition-colors hover:text-[var(--paper)]">Help &amp; FAQ</a></li>
+            <li><a href="#footer" class="transition-colors hover:text-[var(--paper)]">Sizing guide</a></li>
+            <li><a href="#faq" class="transition-colors hover:text-[var(--paper)]">Care guide</a></li>
+          </ul>
+        </nav>
+
+        <!-- newsletter -->
+        <div>
+          <p class="label-wide" style="color:#A3AE89;">The slow list</p>
+          <p class="mt-4 text-[0.875rem] leading-[1.6]" style="color:rgba(251,250,244,0.62);">
+            One honest letter a month &mdash; restocks, repair tips, fiber notes.
+          </p>
+          <form class="mt-4" onsubmit="return false">
+            <label for="footer-email" class="sr-only">Email address</label>
+            <div class="flex flex-col gap-2.5 sm:flex-row">
+              <input id="footer-email" type="email" required placeholder="you@example.com"
+                class="w-full rounded-full border border-[rgba(251,250,244,0.2)] bg-[rgba(251,250,244,0.06)] px-4 py-2.5 text-[0.85rem] text-[var(--paper)] placeholder:text-[rgba(251,250,244,0.4)]" />
+              <button type="submit" class="btn btn-sage shrink-0 rounded-full px-5 py-2.5 text-[0.8rem] font-medium">Join</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="mt-14 flex flex-col gap-4 border-t border-[rgba(251,250,244,0.12)] pt-7 sm:flex-row sm:items-center sm:justify-between">
+        <p class="text-[0.8rem]" style="color:rgba(251,250,244,0.45);">© 2027 Flax Studio Lda. — Porto, Portugal. All rights reserved.</p>
+        <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-[0.8rem]" style="color:rgba(251,250,244,0.5);">
+          <a href="#footer" class="transition-colors hover:text-[var(--paper)]">Sizing guide</a>
+          <a href="#faq" class="transition-colors hover:text-[var(--paper)]">Care guide</a>
+          <a href="#footer" class="transition-colors hover:text-[var(--paper)]">Privacy</a>
+          <a href="#footer" class="transition-colors hover:text-[var(--paper)]">Terms</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

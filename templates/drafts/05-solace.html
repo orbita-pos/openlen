@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Solace — Step out of the day.</title>
+<meta name="description" content="Solace is a day spa and thermal-bathing studio on Cypress Walk — massage, facials, and a sauna-steam-cold-plunge circuit. First visit: the thermal circuit and a 60-minute massage for $129." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400;1,8..60,500;1,8..60,600&family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#F4F6F2; --bg-2:#E8ECE5; --card:#FFFFFF; --panel:#EDF1EA;
+    --ink:#1F2722; --ink-2:#5E6B62; --ink-3:#93A096;
+    --accent:#4C6B5A; --accent-2:#3C5749;
+    --rule:rgba(31,39,34,0.12); --rule-soft:rgba(31,39,34,0.06);
+  }
+  *{ -webkit-tap-highlight-color:transparent; }
+  html{ scroll-behavior:smooth; }
+  html,body{ background:var(--bg); color:var(--ink); }
+  body{ font-family:'Inter',ui-sans-serif,system-ui,sans-serif; font-feature-settings:"ss01","cv11"; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; line-height:1.6; }
+  section[id]{ scroll-margin-top:84px; }
+  .display{ font-family:'Source Serif 4','Georgia',serif; font-optical-sizing:auto; font-weight:500; font-style:italic; letter-spacing:-0.02em; line-height:1.07; }
+  .serif{ font-family:'Source Serif 4','Georgia',serif; font-optical-sizing:auto; font-weight:400; letter-spacing:-0.008em; }
+  .mono{ font-family:'Geist Mono',ui-monospace,Menlo,monospace; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  em.accent{ font-style:italic; color:var(--accent); }
+  .halftone{ opacity:0.45; }
+  .marker{ font-family:'Geist Mono',monospace; font-size:11px; letter-spacing:0.17em; text-transform:uppercase; color:var(--ink-3); }
+  .accent-line{ display:inline-block; width:24px; height:1px; background:var(--accent); vertical-align:middle; margin-right:10px; }
+  .rule{ border-color:var(--rule); }
+  .rule-soft{ border-color:var(--rule-soft); }
+  .dotgrid{ background-image:radial-gradient(var(--rule) 1px,transparent 1px); background-size:32px 32px; background-position:-8px -8px; }
+  .mesh{ background-image:
+      radial-gradient(58% 50% at 12% 8%, rgba(76,107,90,0.15), transparent 66%),
+      radial-gradient(50% 48% at 92% 4%, rgba(62,126,142,0.12), transparent 70%),
+      radial-gradient(60% 60% at 80% 98%, rgba(190,154,94,0.11), transparent 72%); }
+  .grain{ background-image:radial-gradient(rgba(31,39,34,0.045) 1px,transparent 1px); background-size:5px 5px; }
+  .pulse-dot{ position:relative; display:inline-block; width:7px; height:7px; border-radius:999px; background:var(--accent); box-shadow:0 0 0 0 rgba(76,107,90,0.5); animation:pulse 2.2s ease-out infinite; }
+  @keyframes pulse{ 0%{box-shadow:0 0 0 0 rgba(76,107,90,0.5)} 70%{box-shadow:0 0 0 9px rgba(76,107,90,0)} 100%{box-shadow:0 0 0 0 rgba(76,107,90,0)} }
+  .btn-primary{ transition:transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease; }
+  .btn-primary:hover{ transform:translateY(-1px); background-color:var(--accent-2); box-shadow:0 12px 26px -10px rgba(76,107,90,0.5); }
+  .btn-ghost{ transition:transform 120ms ease, border-color 120ms ease, background-color 120ms ease; }
+  .btn-ghost:hover{ transform:translateY(-1px); border-color:var(--accent); }
+  .card-lift{ transition:transform 130ms ease, box-shadow 130ms ease, border-color 130ms ease; }
+  .card-lift:hover{ transform:translateY(-3px); box-shadow:0 22px 44px -26px rgba(31,39,34,0.26); border-color:var(--accent); }
+  .ul-link{ position:relative; }
+  .ul-link::after{ content:""; position:absolute; left:0; right:0; bottom:-3px; height:1px; background:currentColor; transform:scaleX(0); transform-origin:right center; transition:transform 260ms cubic-bezier(.2,.7,.2,1); }
+  .ul-link:hover::after{ transform:scaleX(1); transform-origin:left center; }
+  .scroll-x{ display:inline-block; transition:transform 150ms ease; }
+  a:hover .scroll-x{ transform:translateX(3px); }
+  .navbar{ backdrop-filter:blur(12px) saturate(150%); -webkit-backdrop-filter:blur(12px) saturate(150%); background:rgba(244,246,242,0.85); }
+  ::selection{ background:rgba(76,107,90,0.22); color:var(--ink); }
+  details>summary{ list-style:none; cursor:pointer; }
+  details>summary::-webkit-details-marker{ display:none; }
+  .acc-sign{ transition:transform 200ms ease; }
+  details[open] .acc-sign{ transform:rotate(45deg); }
+  .slot{ display:flex; align-items:center; gap:6px; border:1px solid var(--rule-soft); border-radius:7px; padding:5px 8px; background:var(--card); }
+  .slot i{ width:6px; height:6px; border-radius:999px; flex:none; }
+  .lg-pill{ display:inline-flex; align-items:center; gap:7px; font-family:'Geist Mono',monospace; font-size:11px; color:var(--ink-2); }
+  .lg-pill i{ width:9px; height:9px; border-radius:3px; display:inline-block; }
+  .blob-hero{ background:radial-gradient(120% 95% at 26% 16%,#E9F0E7 0%,transparent 50%),radial-gradient(95% 85% at 80% 24%,#94B0A0 0%,#4C6B5A 46%,transparent 78%),linear-gradient(165deg,#D6E2D6 0%,#7E9A88 56%,#3A5247 100%); }
+  .blob-1{ background:radial-gradient(120% 100% at 28% 22%,#DCE8E6 0%,#88AAA8 52%,#42605E 100%); }
+  .blob-2{ background:radial-gradient(120% 100% at 70% 26%,#E6EADF 0%,#9CAE92 52%,#566048 100%); }
+  .blob-3{ background:radial-gradient(120% 100% at 32% 70%,#E2EAE2 0%,#8FAE9A 50%,#46604F 100%); }
+  .blob-4{ background:radial-gradient(120% 100% at 64% 28%,#ECE6DC 0%,#C2A878 52%,#7A6240 100%); }
+  .blob-5{ background:radial-gradient(120% 100% at 30% 30%,#DDE7E9 0%,#8AAAB2 52%,#46666E 100%); }
+  .blob-6{ background:radial-gradient(120% 100% at 70% 70%,#E7E3E6 0%,#A892A0 50%,#62525C 100%); }
+  .av-1{ background:linear-gradient(150deg,#8FAE9A,#3C5749); }
+  .av-2{ background:linear-gradient(150deg,#CDB387,#8A6E3E); }
+  .av-3{ background:linear-gradient(150deg,#7FA6B0,#3E6470); }
+  .av-4{ background:linear-gradient(150deg,#A98EA0,#6E5560); }
+  @media (prefers-reduced-motion:reduce){ .pulse-dot{animation:none} }
+</style>
+</head>
+<body class="min-h-screen">
+
+<svg width="0" height="0" class="hidden" aria-hidden="true">
+  <symbol id="ck" viewBox="0 0 16 16"><path d="M3 8.5l3.2 3.2L13 4.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="pin" viewBox="0 0 16 16"><path d="M8 1.6c-3 0-5.2 2.3-5.2 5.2 0 3.7 5.2 7.6 5.2 7.6s5.2-3.9 5.2-7.6c0-2.9-2.2-5.2-5.2-5.2Z" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="6.7" r="1.9" fill="none" stroke="currentColor" stroke-width="1.4"/></symbol>
+  <symbol id="cl" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 4.3V8l2.7 1.7" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+  <symbol id="ig" viewBox="0 0 16 16"><rect x="2.2" y="2.2" width="11.6" height="11.6" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="11.5" cy="4.5" r="1" fill="currentColor"/></symbol>
+  <symbol id="ph" viewBox="0 0 16 16"><path d="M5.7 2.5c.5 0 .9.3 1 .8l.6 2.2c.1.4 0 .8-.3 1l-1.2 1c.8 1.7 2.1 3 3.8 3.8l1-1.2c.3-.3.7-.4 1-.3l2.2.6c.5.1.8.5.8 1v2.3c0 .6-.5 1.1-1.1 1C7.5 15.5 1.5 9.5 1.3 2.6c0-.6.4-1.1 1-1.1Z" fill="none" stroke="currentColor" stroke-width="1.3"/></symbol>
+</svg>
+
+<!-- ================= NAV ================= -->
+<header class="navbar fixed top-0 inset-x-0 z-50 border-b rule-soft">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 h-[68px] flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="27" height="27" viewBox="0 0 27 27" aria-hidden="true">
+        <path d="M4.5 23.5 V13 a9 9 0 0 1 18 0 V23.5" fill="none" stroke="#4C6B5A" stroke-width="1.6" stroke-linecap="round"/>
+        <circle cx="13.5" cy="14.5" r="2.4" fill="#4C6B5A"/>
+        <path d="M13.5 12.1 V8" stroke="#4C6B5A" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      <span class="display text-[23px]">Solace</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8 text-[14px] text-[color:var(--ink-2)]">
+      <a href="#classes" class="ul-link">Services</a>
+      <a href="#schedule" class="ul-link">Availability</a>
+      <a href="#membership" class="ul-link">Membership</a>
+      <a href="#about" class="ul-link">About</a>
+    </nav>
+    <a href="#start" class="btn-primary inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] text-white font-semibold text-[14px] px-4 py-2">Book a visit</a>
+  </div>
+</header>
+
+<main>
+<!-- ================= HERO ================= -->
+<section id="top" class="relative overflow-hidden mesh pt-[68px]">
+  <div class="absolute inset-0 dotgrid opacity-55 pointer-events-none"></div>
+  <div class="relative max-w-[1200px] mx-auto px-5 sm:px-8 pt-14 sm:pt-20 pb-16 sm:pb-20">
+    <div class="grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
+      <div>
+        <div class="inline-flex items-center gap-2.5 rounded-full border rule bg-[color:var(--card)] pl-2.5 pr-3.5 py-1.5 mb-7">
+          <span class="pulse-dot"></span>
+          <span class="mono text-[11px] sm:text-[12px] tracking-[0.04em] text-[color:var(--ink-2)]">Massage · facials · thermal bathing — Cypress Walk</span>
+        </div>
+        <h1 class="display text-[clamp(42px,7.2vw,80px)] max-w-[13ch]">Step out of the day. <span class="halftone">Even for an hour.</span></h1>
+        <p class="serif text-[19px] sm:text-[21px] leading-[1.5] text-[color:var(--ink)] max-w-[44ch] mt-6">
+          A day spa for massage, facials, and a sauna-steam-cold-plunge thermal circuit — ninety unhurried minutes that reset the week.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3 mt-8">
+          <a href="#start" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--accent)] text-white font-semibold px-6 py-3.5 text-[15px]">Book a visit <span class="scroll-x">→</span></a>
+          <a href="#intro" class="btn-ghost inline-flex items-center justify-center gap-2 rounded-full border rule text-[color:var(--ink)] font-medium px-6 py-3.5 text-[15px]">First visit — $129</a>
+        </div>
+        <div class="flex items-center gap-2.5 mt-7">
+          <span class="pulse-dot"></span>
+          <span class="mono text-[11.5px] tracking-[0.03em] text-[color:var(--ink-2)] tnum">28,408 treatments in 2025 · 12 licensed therapists · open 7 days</span>
+        </div>
+      </div>
+      <div>
+        <div class="blob-hero rounded-[22px] border rule aspect-[4/3.4] sm:aspect-[4/3] w-full relative overflow-hidden">
+          <div class="absolute inset-0 grain opacity-45"></div>
+          <div class="absolute inset-0" style="background:radial-gradient(42% 36% at 78% 18%, rgba(244,248,242,0.6), transparent 62%)"></div>
+          <svg viewBox="0 0 240 220" class="absolute inset-0 w-full h-full" aria-hidden="true">
+            <g fill="none" stroke="#F4F6F2" opacity="0.34" stroke-width="3.4" stroke-linecap="round">
+              <path d="M150 44c-9 9 9 18 0 27"/>
+              <path d="M174 34c-9 9 9 18 0 27"/>
+            </g>
+            <g fill="#1F2722" opacity="0.2">
+              <circle cx="58" cy="120" r="16"/>
+              <path d="M72 130c22-5 78-3 120 6 14 3 22 8 22 13 0 5-8 8-22 8-48 0-100 0-128-6-9-2-13-6-13-12 0-8 9-13 40-19Z"/>
+            </g>
+            <line x1="30" y1="176" x2="222" y2="162" stroke="#1F2722" opacity="0.18" stroke-width="4.5" stroke-linecap="round"/>
+          </svg>
+          <div class="absolute left-4 bottom-4 right-4 sm:right-auto bg-[color:var(--card)] border rule rounded-xl px-3.5 py-2.5 flex items-center gap-3">
+            <span class="w-2.5 h-2.5 rounded-[3px]" style="background:#3E7E8E"></span>
+            <div>
+              <div class="mono text-[10px] tracking-[0.1em] text-[color:var(--ink-3)]">TODAY · 2:00 PM</div>
+              <div class="text-[13px] font-semibold leading-tight">Thermal circuit session</div>
+            </div>
+            <div class="ml-auto flex items-center gap-1.5 pl-3 border-l rule-soft">
+              <span class="pulse-dot" style="width:6px;height:6px"></span>
+              <span class="mono text-[10.5px] text-[color:var(--accent-2)]">6 left</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mt-14 border-t rule pt-8 grid grid-cols-2 md:grid-cols-4 gap-y-8">
+      <div class="md:pr-8 md:border-r rule-soft">
+        <div class="marker mb-2.5">In 2025</div>
+        <div class="display text-[40px] sm:text-[48px] tnum" style="font-style:normal">28,408</div>
+        <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">treatments given</div>
+      </div>
+      <div class="md:px-8 md:border-r rule-soft">
+        <div class="marker mb-2.5">Therapists</div>
+        <div class="display text-[40px] sm:text-[48px] tnum" style="font-style:normal">12</div>
+        <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">licensed &amp; on staff</div>
+      </div>
+      <div class="md:px-8 md:border-r rule-soft">
+        <div class="marker mb-2.5">Circuit</div>
+        <div class="display text-[40px] sm:text-[48px] tnum" style="font-style:normal">24</div>
+        <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">guests per session, max</div>
+      </div>
+      <div class="md:pl-8">
+        <div class="marker mb-2.5">Retention</div>
+        <div class="display text-[40px] sm:text-[48px] tnum" style="font-style:normal">78%</div>
+        <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">of members, year over year</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= INTRO OFFER ================= -->
+<section id="intro" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-12 sm:py-16">
+  <div class="rounded-[22px] border rule bg-[color:var(--panel)] overflow-hidden">
+    <div class="grid lg:grid-cols-[1.4fr_1fr]">
+      <div class="p-7 sm:p-11">
+        <div class="marker mb-4"><span class="accent-line"></span>Your first visit</div>
+        <h2 class="display text-[clamp(28px,4vw,44px)]">The thermal circuit + a 60-minute massage — <span class="mono not-italic tnum text-[color:var(--accent-2)]" style="font-style:normal">$129</span></h2>
+        <p class="text-[15px] text-[color:var(--ink-2)] mt-4 max-w-[52ch]">The full introduction: the sauna-steam-plunge circuit, then an unhurried hour on the table. Around $60 off the usual price — for first-time guests, so you can feel the whole place at once.</p>
+        <a href="#start" class="btn-primary inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] text-white font-semibold px-6 py-3.5 text-[15px] mt-7">Book your first visit <span class="scroll-x">→</span></a>
+      </div>
+      <div class="border-t lg:border-t-0 lg:border-l rule bg-[color:var(--card)] p-7 sm:p-11 flex flex-col justify-center gap-4">
+        <div class="flex items-start gap-3"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg><span class="text-[14px]">A 90-minute thermal-circuit session</span></div>
+        <div class="flex items-start gap-3"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg><span class="text-[14px]">A 60-minute massage, your choice of style</span></div>
+        <div class="flex items-start gap-3"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg><span class="text-[14px]">Robe, slippers, towels &amp; the lounge — all included</span></div>
+        <p class="mono text-[10.5px] text-[color:var(--ink-3)] mt-1 leading-relaxed">New guests · one per person · book by appointment</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SERVICES ================= -->
+<section id="classes" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+  <div class="max-w-[58ch] mb-11">
+    <div class="marker mb-5"><span class="accent-line"></span>The services</div>
+    <h2 class="display text-[clamp(32px,4.6vw,54px)]">Six ways to feel better.</h2>
+    <p class="text-[15px] text-[color:var(--ink-2)] mt-4">Hands-on treatment and the thermal circuit, on their own or together. Most guests pair a massage with a circuit and call it the best two hours of their week.</p>
+  </div>
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mb-4" style="background:#4C6B5A"></span>
+      <h3 class="display text-[22px]">Massage</h3>
+      <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">50 / 80 min</div>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-3">Deep tissue, Swedish, and prenatal massage — pressure matched to what your body asks for.</p>
+    </article>
+    <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mb-4" style="background:#BE9A5E"></span>
+      <h3 class="display text-[22px]">Facials</h3>
+      <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">50 / 75 min</div>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-3">Results-focused facials read to your skin that day — hydration, clarity, or a calm reset.</p>
+    </article>
+    <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mb-4" style="background:#3E7E8E"></span>
+      <h3 class="display text-[22px]">The Thermal Circuit</h3>
+      <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">90 min · self-paced</div>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-3">Cycle the cedar sauna, eucalyptus steam room, and cold plunge — the heart of every visit.</p>
+    </article>
+    <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mb-4" style="background:#A9745C"></span>
+      <h3 class="display text-[22px]">Body Treatments</h3>
+      <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">60 / 80 min</div>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-3">Salt scrubs, mud wraps, and the dry-brush ritual — for skin that's been through a winter.</p>
+    </article>
+    <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mb-4" style="background:#7A6478"></span>
+      <h3 class="display text-[22px]">Couples' Rooms</h3>
+      <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">80 min</div>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-3">Two tables, one quiet room — massage side by side, then the thermal circuit together.</p>
+    </article>
+    <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mb-4" style="background:#4C6B5A"></span>
+      <h3 class="display text-[22px]">Memberships</h3>
+      <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">monthly</div>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-3">One treatment a month plus unlimited circuit access — for making this a habit, not an occasion.</p>
+    </article>
+  </div>
+</section>
+
+<!-- ================= AVAILABILITY ================= -->
+<section id="schedule" class="relative bg-[color:var(--panel)] border-y rule">
+  <div class="absolute inset-0 dotgrid opacity-50 pointer-events-none"></div>
+  <div class="relative max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-8">
+      <div class="max-w-[46ch]">
+        <div class="marker mb-5"><span class="accent-line"></span>Availability</div>
+        <h2 class="display text-[clamp(32px,4.6vw,54px)]">The next seven days.</h2>
+      </div>
+      <div class="flex flex-wrap gap-x-4 gap-y-2">
+        <span class="lg-pill"><i style="background:#4C6B5A"></i>Massage</span>
+        <span class="lg-pill"><i style="background:#BE9A5E"></i>Facial</span>
+        <span class="lg-pill"><i style="background:#A9745C"></i>Body treatment</span>
+        <span class="lg-pill"><i style="background:#7A6478"></i>Couples'</span>
+        <span class="lg-pill"><i style="background:#3E7E8E"></i>Thermal</span>
+      </div>
+    </div>
+    <p class="mono text-[11px] text-[color:var(--ink-3)] mb-3 md:hidden">Swipe to see the full week →</p>
+    <div class="overflow-x-auto -mx-5 px-5 sm:mx-0 sm:px-0 mb-5">
+      <div class="grid grid-cols-7 gap-2.5 min-w-[820px]">
+        <div>
+          <div class="flex items-center gap-2 mb-2.5"><span class="text-[13px] font-bold">Wed</span><span class="mono text-[9px] tracking-[0.1em] text-white bg-[color:var(--accent)] rounded px-1.5 py-0.5">TODAY</span></div>
+          <div class="space-y-1.5">
+            <span class="slot"><i style="background:#4C6B5A"></i><span class="mono text-[10.5px] tnum">10:00a</span></span>
+            <span class="slot"><i style="background:#BE9A5E"></i><span class="mono text-[10.5px] tnum">1:30p</span></span>
+            <span class="slot"><i style="background:#4C6B5A"></i><span class="mono text-[10.5px] tnum">3:00p</span></span>
+            <span class="slot"><i style="background:#A9745C"></i><span class="mono text-[10.5px] tnum">5:00p</span></span>
+          </div>
+        </div>
+        <div>
+          <div class="text-[13px] font-bold mb-2.5">Thu</div>
+          <div class="space-y-1.5">
+            <span class="slot"><i style="background:#4C6B5A"></i><span class="mono text-[10.5px] tnum">9:30a</span></span>
+            <span class="slot"><i style="background:#BE9A5E"></i><span class="mono text-[10.5px] tnum">11:00a</span></span>
+            <span class="slot"><i style="background:#4C6B5A"></i><span class="mono text-[10.5px] tnum">2:00p</span></span>
+            <span class="slot"><i style="background:#7A6478"></i><span class="mono text-[10.5px] tnum">4:30p</span></span>
+          </div>
+        </div>
+        <div>
+          <div class="text-[13px] font-bold mb-2.5">Fri</div>
+          <div class="space-y-1.5">
+            <span class="slot"><i style="background:#BE9A5E"></i><span class="mono text-[10.5px] tnum">9:00a</span></span>
+            <span class="slot"><i style="background:#4C6B5A"></i><span class="mono text-[10.5px] tnum">12:00p</span></span>
+            <span class="slot"><i style="background:#4C6B5A"></i><span class="mono text-[10.5px] tnum">3:30p</span></span>
+            <span class="slot"><i style="background:#A9745C"></i><span class="mono text-[10.5px] tnum">6:00p</span></span>
+          </div>
+        </div>
+        <div>
+          <div class="text-[13px] font-bold mb-2.5">Sat</div>
+          <div class="space-y-1.5">
+            <span class="slot"><i style="background:#4C6B5A"></i><span class="mono text-[10.5px] tnum">8:30a</span></span>
+            <span class="slot"><i style="background:#BE9A5E"></i><span class="mono text-[10.5px] tnum">10:00a</span></span>
+            <span class="slot"><i style="background:#4C6B5A"></i><span class="mono text-[10.5px] tnum">11:30a</span></span>
+            <span class="slot"><i style="background:#7A6478"></i><span class="mono text-[10.5px] tnum">2:30p</span></span>
+          </div>
+        </div>
+        <div>
+          <div class="text-[13px] font-bold mb-2.5">Sun</div>
+          <div class="space-y-1.5">
+            <span class="slot"><i style="background:#4C6B5A"></i><span class="mono text-[10.5px] tnum">9:30a</span></span>
+            <span class="slot"><i style="background:#A9745C"></i><span class="mono text-[10.5px] tnum">12:30p</span></span>
+            <span class="slot"><i style="background:#BE9A5E"></i><span class="mono text-[10.5px] tnum">3:00p</span></span>
+            <span class="slot"><i style="background:#4C6B5A"></i><span class="mono text-[10.5px] tnum">4:30p</span></span>
+          </div>
+        </div>
+        <div>
+          <div class="text-[13px] font-bold mb-2.5">Mon</div>
+          <div class="space-y-1.5">
+            <span class="slot"><i style="background:#4C6B5A"></i><span class="mono text-[10.5px] tnum">10:00a</span></span>
+            <span class="slot"><i style="background:#BE9A5E"></i><span class="mono text-[10.5px] tnum">1:00p</span></span>
+            <span class="slot"><i style="background:#4C6B5A"></i><span class="mono text-[10.5px] tnum">3:30p</span></span>
+            <span class="slot"><i style="background:#4C6B5A"></i><span class="mono text-[10.5px] tnum">5:30p</span></span>
+          </div>
+        </div>
+        <div>
+          <div class="text-[13px] font-bold mb-2.5">Tue</div>
+          <div class="space-y-1.5">
+            <span class="slot"><i style="background:#BE9A5E"></i><span class="mono text-[10.5px] tnum">9:00a</span></span>
+            <span class="slot"><i style="background:#4C6B5A"></i><span class="mono text-[10.5px] tnum">11:30a</span></span>
+            <span class="slot"><i style="background:#A9745C"></i><span class="mono text-[10.5px] tnum">2:00p</span></span>
+            <span class="slot"><i style="background:#4C6B5A"></i><span class="mono text-[10.5px] tnum">4:00p</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="rounded-2xl border rule bg-[color:var(--card)] p-5 sm:p-6">
+      <div class="flex items-center gap-2 mb-1"><span class="w-2.5 h-2.5 rounded-[3px]" style="background:#3E7E8E"></span><span class="text-[13px] font-bold">Thermal circuit — daily session times</span></div>
+      <p class="mono text-[11px] text-[color:var(--ink-3)] mb-4">90-minute self-paced sessions · sauna · steam · cold plunge · up to 24 guests</p>
+      <div class="grid grid-cols-4 sm:grid-cols-7 gap-2">
+        <div class="mono text-[11.5px] tnum text-center rounded-md py-2" style="background:color-mix(in srgb,#3E7E8E 12%,var(--card));color:#3E7E8E">9:00a</div>
+        <div class="mono text-[11.5px] tnum text-center rounded-md py-2" style="background:color-mix(in srgb,#3E7E8E 12%,var(--card));color:#3E7E8E">10:30a</div>
+        <div class="mono text-[11.5px] tnum text-center rounded-md py-2" style="background:color-mix(in srgb,#3E7E8E 12%,var(--card));color:#3E7E8E">12:00p</div>
+        <div class="mono text-[11.5px] tnum text-center rounded-md py-2" style="background:color-mix(in srgb,#3E7E8E 12%,var(--card));color:#3E7E8E">1:30p</div>
+        <div class="mono text-[11.5px] tnum text-center rounded-md py-2" style="background:color-mix(in srgb,#3E7E8E 12%,var(--card));color:#3E7E8E">3:00p</div>
+        <div class="mono text-[11.5px] tnum text-center rounded-md py-2" style="background:color-mix(in srgb,#3E7E8E 12%,var(--card));color:#3E7E8E">4:30p</div>
+        <div class="mono text-[11.5px] tnum text-center rounded-md py-2" style="background:color-mix(in srgb,#3E7E8E 12%,var(--card));color:#3E7E8E">6:00p</div>
+      </div>
+    </div>
+    <p class="mono text-[11px] text-[color:var(--ink-3)] mt-5">Live availability and real-time openings are in the Solace app · we recommend booking 2–3 days ahead.</p>
+  </div>
+</section>
+
+<!-- ================= THE SPACE ================= -->
+<section id="about" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+  <div class="max-w-[58ch] mb-11">
+    <div class="marker mb-5"><span class="accent-line"></span>The spa</div>
+    <h2 class="display text-[clamp(32px,4.6vw,54px)]">A quiet place to come undone.</h2>
+    <p class="text-[15px] text-[color:var(--ink-2)] mt-4">Solace sits behind a cypress hedge on a side street — eight treatment rooms, a cedar-and-stone thermal circuit, and a garden cold plunge. Phones stay in the lockers; the lounge is kept silent on purpose.</p>
+  </div>
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <figure class="blob-1 rounded-2xl border rule aspect-[4/3] relative overflow-hidden">
+      <div class="absolute inset-0 grain opacity-45"></div>
+      <figcaption class="absolute left-3.5 bottom-3.5 mono text-[10px] tracking-[0.08em] text-white" style="text-shadow:0 1px 4px rgba(0,0,0,.45)">THE THERMAL CIRCUIT</figcaption>
+    </figure>
+    <figure class="blob-2 rounded-2xl border rule aspect-[4/3] relative overflow-hidden">
+      <div class="absolute inset-0 grain opacity-45"></div>
+      <figcaption class="absolute left-3.5 bottom-3.5 mono text-[10px] tracking-[0.08em] text-white" style="text-shadow:0 1px 4px rgba(0,0,0,.45)">TREATMENT ROOMS · 8</figcaption>
+    </figure>
+    <figure class="blob-3 rounded-2xl border rule aspect-[4/3] relative overflow-hidden">
+      <div class="absolute inset-0 grain opacity-45"></div>
+      <figcaption class="absolute left-3.5 bottom-3.5 mono text-[10px] tracking-[0.08em] text-white" style="text-shadow:0 1px 4px rgba(0,0,0,.45)">THE RELAXATION LOUNGE</figcaption>
+    </figure>
+    <figure class="blob-6 rounded-2xl border rule aspect-[4/3] relative overflow-hidden">
+      <div class="absolute inset-0 grain opacity-45"></div>
+      <figcaption class="absolute left-3.5 bottom-3.5 mono text-[10px] tracking-[0.08em] text-white" style="text-shadow:0 1px 4px rgba(0,0,0,.45)">THE COUPLES' SUITE</figcaption>
+    </figure>
+    <figure class="blob-5 rounded-2xl border rule aspect-[4/3] relative overflow-hidden">
+      <div class="absolute inset-0 grain opacity-45"></div>
+      <figcaption class="absolute left-3.5 bottom-3.5 mono text-[10px] tracking-[0.08em] text-white" style="text-shadow:0 1px 4px rgba(0,0,0,.45)">THE GARDEN COLD PLUNGE</figcaption>
+    </figure>
+    <figure class="blob-4 rounded-2xl border rule aspect-[4/3] relative overflow-hidden">
+      <div class="absolute inset-0 grain opacity-45"></div>
+      <figcaption class="absolute left-3.5 bottom-3.5 mono text-[10px] tracking-[0.08em] text-white" style="text-shadow:0 1px 4px rgba(0,0,0,.45)">CHANGING ROOMS &amp; SHOWERS</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ================= PRACTITIONERS ================= -->
+<section class="bg-[color:var(--panel)] border-y rule">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+    <div class="max-w-[58ch] mb-11">
+      <div class="marker mb-5"><span class="accent-line"></span>The practitioners</div>
+      <h2 class="display text-[clamp(32px,4.6vw,54px)]">Hands you can trust.</h2>
+      <p class="text-[15px] text-[color:var(--ink-2)] mt-4">Every massage therapist and esthetician at Solace is state-licensed and chosen as much for their calm as their craft.</p>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-1 w-14 h-14 rounded-full flex items-center justify-center text-white display text-[17px] mb-4" style="font-style:normal">LW</div>
+        <h3 class="text-[15px] font-bold">Lena Whitfield</h3>
+        <div class="text-[12.5px] text-[color:var(--accent-2)] font-medium mt-0.5">Founder · massage therapist</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">Twenty years on the table; opened Solace to build the spa she wanted to work in.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">LMT #44-1180</div>
+      </article>
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-2 w-14 h-14 rounded-full flex items-center justify-center text-white display text-[17px] mb-4" style="font-style:normal">HE</div>
+        <h3 class="text-[15px] font-bold">Hugo Esparza</h3>
+        <div class="text-[12.5px] text-[color:var(--accent-2)] font-medium mt-0.5">Deep tissue &amp; sports massage</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">The therapist members book when something is genuinely wrong.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">LMT #44-2071</div>
+      </article>
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-3 w-14 h-14 rounded-full flex items-center justify-center text-white display text-[17px] mb-4" style="font-style:normal">CB</div>
+        <h3 class="text-[15px] font-bold">Camille Boucher</h3>
+        <div class="text-[12.5px] text-[color:var(--accent-2)] font-medium mt-0.5">Esthetician · facials</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">Reads skin like a diagnostician; trained in lymphatic and clinical facials.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">Esthetics Lic. #E-3344</div>
+      </article>
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-4 w-14 h-14 rounded-full flex items-center justify-center text-white display text-[17px] mb-4" style="font-style:normal">AT</div>
+        <h3 class="text-[15px] font-bold">Aiko Tanaka</h3>
+        <div class="text-[12.5px] text-[color:var(--accent-2)] font-medium mt-0.5">Prenatal &amp; Swedish massage</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">Prenatal-certified; gentle, precise, and deeply reassuring.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">LMT #44-1925 · Prenatal</div>
+      </article>
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-1 w-14 h-14 rounded-full flex items-center justify-center text-white display text-[17px] mb-4" style="font-style:normal">MB</div>
+        <h3 class="text-[15px] font-bold">Marcus Bell</h3>
+        <div class="text-[12.5px] text-[color:var(--accent-2)] font-medium mt-0.5">Body treatments &amp; thermal</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">Designed the thermal-circuit ritual and the studio's dry-brush treatment.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">LMT #44-2588</div>
+      </article>
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-3 w-14 h-14 rounded-full flex items-center justify-center text-white display text-[17px] mb-4" style="font-style:normal">RS</div>
+        <h3 class="text-[15px] font-bold">Renée Sauvage</h3>
+        <div class="text-[12.5px] text-[color:var(--accent-2)] font-medium mt-0.5">Esthetician · clinical facials</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">Specializes in sensitive and reactive skin — calm hands, calmer room.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">Esthetics Lic. #E-2902</div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ================= MEMBERSHIP ================= -->
+<section id="membership" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+  <div class="max-w-[58ch] mb-11">
+    <div class="marker mb-5"><span class="accent-line"></span>Membership</div>
+    <h2 class="display text-[clamp(32px,4.6vw,54px)]">Three ways to belong.</h2>
+    <p class="text-[15px] text-[color:var(--ink-2)] mt-4">Come when you need to and pay as you go, or make Solace a monthly routine. Memberships are month to month — pause or cancel anytime.</p>
+  </div>
+  <div class="grid md:grid-cols-3 gap-5 items-start">
+    <article class="rounded-2xl border rule bg-[color:var(--card)] p-7">
+      <h3 class="display text-[24px]">Single Visit</h3>
+      <div class="mt-3"><span class="display text-[32px]" style="font-style:normal">À la carte</span></div>
+      <p class="text-[13px] text-[color:var(--ink-2)] mt-2.5">No membership — book treatments as you want them, at standard pricing.</p>
+      <div class="border-t rule-soft my-5"></div>
+      <ul class="space-y-2.5 text-[13.5px]">
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Massage from $115</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Facials from $105</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Thermal circuit $45</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>No commitment, book any time</li>
+      </ul>
+      <a href="#start" class="btn-ghost mt-7 inline-flex w-full items-center justify-center rounded-full border rule font-medium px-5 py-3 text-[14px]">Book a treatment</a>
+    </article>
+    <article class="rounded-2xl border-2 bg-[color:var(--card)] p-7 relative md:-mt-3 shadow-[0_28px_56px_-30px_rgba(31,39,34,0.28)]" style="border-color:var(--accent)">
+      <div class="absolute -top-3 left-7 mono text-[10px] tracking-[0.12em] text-white bg-[color:var(--accent)] rounded-full px-3 py-1">MOST POPULAR</div>
+      <h3 class="display text-[24px]">Monthly Membership</h3>
+      <div class="mt-3 flex items-baseline gap-1.5"><span class="mono text-[40px] font-medium tnum">$149</span><span class="text-[13px] text-[color:var(--ink-3)]">/ month</span></div>
+      <p class="text-[13px] text-[color:var(--ink-2)] mt-2.5">One 60-minute treatment monthly, plus unlimited thermal circuit.</p>
+      <div class="border-t rule-soft my-5"></div>
+      <ul class="space-y-2.5 text-[13.5px]">
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>One 60-min massage or facial</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Unlimited thermal circuit</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Treatments roll over up to 3 months</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>15% off extra services &amp; retail</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Bring a guest at member rates</li>
+      </ul>
+      <a href="#start" class="btn-primary mt-7 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[color:var(--accent)] text-white font-semibold px-5 py-3 text-[14px]">Become a member <span class="scroll-x">→</span></a>
+    </article>
+    <article class="rounded-2xl border rule bg-[color:var(--card)] p-7">
+      <h3 class="display text-[24px]">Thermal-Only</h3>
+      <div class="mt-3 flex items-baseline gap-1.5"><span class="mono text-[40px] font-medium tnum">$69</span><span class="text-[13px] text-[color:var(--ink-3)]">/ month</span></div>
+      <p class="text-[13px] text-[color:var(--ink-2)] mt-2.5">Unlimited sauna, steam, and cold plunge — the circuit, as often as you like.</p>
+      <div class="border-t rule-soft my-5"></div>
+      <ul class="space-y-2.5 text-[13.5px]">
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Unlimited thermal circuit, 7 days</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Robe, slippers &amp; towels included</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Relaxation lounge access</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>10% off treatments &amp; retail</li>
+      </ul>
+      <a href="#start" class="btn-ghost mt-7 inline-flex w-full items-center justify-center rounded-full border rule font-medium px-5 py-3 text-[14px]">Choose Thermal-Only</a>
+    </article>
+  </div>
+</section>
+
+<!-- ================= STORIES ================= -->
+<section class="bg-[color:var(--panel)] border-y rule">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+    <div class="max-w-[58ch] mb-11">
+      <div class="marker mb-5"><span class="accent-line"></span>Member stories</div>
+      <h2 class="display text-[clamp(32px,4.6vw,54px)]">The hour they protect.</h2>
+    </div>
+    <div class="grid md:grid-cols-3 gap-5">
+      <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7">
+        <svg width="26" height="20" viewBox="0 0 26 20" class="mb-4" aria-hidden="true"><path d="M0 20V11C0 4.5 3.7.6 10 0v4.4C6.8 5 5.4 6.8 5.3 10H10v10Zm16 0V11C16 4.5 19.7.6 26 0v4.4C22.8 5 21.4 6.8 21.3 10H26v10Z" fill="#4C6B5A" opacity="0.34"/></svg>
+        <blockquote class="serif text-[17px] leading-[1.5]">"I started coming for the massage and stayed for the cold plunge — which I'd have told you I'd hate. Now it's the part of my week I won't move."</blockquote>
+        <figcaption class="flex items-center gap-3 mt-6 pt-5 border-t rule-soft">
+          <div class="av-1 w-10 h-10 rounded-full flex items-center justify-center text-white text-[13px] font-bold">AO</div>
+          <div><div class="text-[13.5px] font-bold">Adaeze Obi</div><div class="mono text-[10.5px] text-[color:var(--ink-3)]">Member · 2 years</div></div>
+        </figcaption>
+      </figure>
+      <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7">
+        <svg width="26" height="20" viewBox="0 0 26 20" class="mb-4" aria-hidden="true"><path d="M0 20V11C0 4.5 3.7.6 10 0v4.4C6.8 5 5.4 6.8 5.3 10H10v10Zm16 0V11C16 4.5 19.7.6 26 0v4.4C22.8 5 21.4 6.8 21.3 10H26v10Z" fill="#4C6B5A" opacity="0.34"/></svg>
+        <blockquote class="serif text-[17px] leading-[1.5]">"My job lives in my shoulders. A standing monthly massage with Hugo is the cheapest insurance I've ever bought."</blockquote>
+        <figcaption class="flex items-center gap-3 mt-6 pt-5 border-t rule-soft">
+          <div class="av-3 w-10 h-10 rounded-full flex items-center justify-center text-white text-[13px] font-bold">TL</div>
+          <div><div class="text-[13.5px] font-bold">Theo Lindgren</div><div class="mono text-[10.5px] text-[color:var(--ink-3)]">Member · 14 months</div></div>
+        </figcaption>
+      </figure>
+      <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7">
+        <svg width="26" height="20" viewBox="0 0 26 20" class="mb-4" aria-hidden="true"><path d="M0 20V11C0 4.5 3.7.6 10 0v4.4C6.8 5 5.4 6.8 5.3 10H10v10Zm16 0V11C16 4.5 19.7.6 26 0v4.4C22.8 5 21.4 6.8 21.3 10H26v10Z" fill="#4C6B5A" opacity="0.34"/></svg>
+        <blockquote class="serif text-[17px] leading-[1.5]">"I came in exhausted in my second trimester. Aiko's prenatal massage was the first hour in months that was only about me."</blockquote>
+        <figcaption class="flex items-center gap-3 mt-6 pt-5 border-t rule-soft">
+          <div class="av-4 w-10 h-10 rounded-full flex items-center justify-center text-white text-[13px] font-bold">MV</div>
+          <div><div class="text-[13.5px] font-bold">Marisol Vega</div><div class="mono text-[10.5px] text-[color:var(--ink-3)]">Member · 3 years</div></div>
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ================= LOCATION ================= -->
+<section class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+  <div class="grid lg:grid-cols-2 gap-8 items-start">
+    <div>
+      <div class="marker mb-5"><span class="accent-line"></span>Find us</div>
+      <h2 class="display text-[clamp(32px,4.6vw,52px)] mb-6">Behind the cypress hedge.</h2>
+      <div class="blob-3 rounded-2xl border rule aspect-[16/10] relative overflow-hidden">
+        <div class="absolute inset-0 dotgrid opacity-50"></div>
+        <div class="absolute inset-0 grain opacity-40"></div>
+        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+          <span class="pulse-dot" style="width:13px;height:13px"></span>
+          <span class="mono text-[10px] mt-2 bg-[color:var(--card)] border rule rounded px-2 py-0.5">7 Cypress Walk</span>
+        </div>
+      </div>
+    </div>
+    <div class="grid sm:grid-cols-2 gap-4">
+      <div class="rounded-2xl border rule bg-[color:var(--card)] p-6 sm:col-span-2">
+        <div class="flex items-center gap-2 mb-3 text-[color:var(--accent)]"><svg class="w-4 h-4"><use href="#pin"/></svg><span class="text-[13px] font-bold text-[color:var(--ink)]">The spa</span></div>
+        <p class="text-[14px] text-[color:var(--ink-2)]">7 Cypress Walk<br/>The garden gate, end of the lane</p>
+        <p class="text-[13px] text-[color:var(--ink-2)] mt-3">Free parking behind the building off Cypress Walk, with a quiet drop-off at the door. A short walk from the Garden District trolley stop.</p>
+      </div>
+      <div class="rounded-2xl border rule bg-[color:var(--card)] p-6">
+        <div class="flex items-center gap-2 mb-3 text-[color:var(--accent)]"><svg class="w-4 h-4"><use href="#cl"/></svg><span class="text-[13px] font-bold text-[color:var(--ink)]">Hours</span></div>
+        <table class="w-full mono text-[12px] tnum"><tbody>
+          <tr><td class="text-[color:var(--ink-2)] py-1">Mon–Thu</td><td class="text-right">9:00a–8:00p</td></tr>
+          <tr><td class="text-[color:var(--ink-2)] py-1">Friday</td><td class="text-right">9:00a–9:00p</td></tr>
+          <tr><td class="text-[color:var(--ink-2)] py-1">Saturday</td><td class="text-right">8:00a–9:00p</td></tr>
+          <tr><td class="text-[color:var(--ink-2)] py-1">Sunday</td><td class="text-right">9:00a–7:00p</td></tr>
+        </tbody></table>
+      </div>
+      <div class="rounded-2xl border rule bg-[color:var(--panel)] p-6">
+        <div class="text-[13px] font-bold mb-3">Your first visit</div>
+        <p class="text-[13px] text-[color:var(--ink-2)]">Robes, slippers, towels, and circuit amenities are provided. Arrive thirty minutes early to change and begin the circuit unhurried. Leave your phone in the locker — the lounge is a quiet space.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FAQ ================= -->
+<section class="max-w-[820px] mx-auto px-5 sm:px-8 pb-16 sm:pb-24">
+  <div class="marker mb-5"><span class="accent-line"></span>Before you come</div>
+  <h2 class="display text-[clamp(30px,4vw,46px)] mb-8">Good questions, answered.</h2>
+  <div class="divide-y rule">
+    <details class="group py-2"><summary class="flex items-center justify-between gap-4 py-4"><span class="text-[15px] sm:text-[16px] font-semibold">What is the thermal circuit, and how long does it take?</span><span class="acc-sign text-[color:var(--accent)] text-[20px] leading-none">+</span></summary><p class="text-[14px] text-[color:var(--ink-2)] pb-4 max-w-[64ch]">It's a self-paced cycle of cedar sauna, eucalyptus steam room, and cold plunge, with rest between rounds. Most guests do two or three rounds over 60 to 90 minutes. It pairs beautifully before any treatment.</p></details>
+    <details class="group py-2"><summary class="flex items-center justify-between gap-4 py-4"><span class="text-[15px] sm:text-[16px] font-semibold">Do I need to book, or can I walk in?</span><span class="acc-sign text-[color:var(--accent)] text-[20px] leading-none">+</span></summary><p class="text-[14px] text-[color:var(--ink-2)] pb-4 max-w-[64ch]">We strongly recommend booking — treatment rooms and thermal-circuit sessions both have limited capacity. Walk-ins are welcome when there's space, but weekends and evenings fill days ahead.</p></details>
+    <details class="group py-2"><summary class="flex items-center justify-between gap-4 py-4"><span class="text-[15px] sm:text-[16px] font-semibold">What's included in the monthly membership?</span><span class="acc-sign text-[color:var(--accent)] text-[20px] leading-none">+</span></summary><p class="text-[14px] text-[color:var(--ink-2)] pb-4 max-w-[64ch]">One 60-minute treatment each month — massage or facial — plus unlimited thermal-circuit access, member pricing on anything extra, and rollover of unused treatments for up to three months.</p></details>
+    <details class="group py-2"><summary class="flex items-center justify-between gap-4 py-4"><span class="text-[15px] sm:text-[16px] font-semibold">Can I book a couples' room?</span><span class="acc-sign text-[color:var(--accent)] text-[20px] leading-none">+</span></summary><p class="text-[14px] text-[color:var(--ink-2)] pb-4 max-w-[64ch]">Yes — our couples' suite fits two massage tables and has a private soak. Book it for two 80-minute massages; the thermal circuit afterward is included for both guests.</p></details>
+    <details class="group py-2"><summary class="flex items-center justify-between gap-4 py-4"><span class="text-[15px] sm:text-[16px] font-semibold">Are gratuities included?</span><span class="acc-sign text-[color:var(--accent)] text-[20px] leading-none">+</span></summary><p class="text-[14px] text-[color:var(--ink-2)] pb-4 max-w-[64ch]">Gratuity is never expected and never added automatically. If a treatment moved you and you'd like to tip, the front desk makes it easy — but your membership and prices already cover everything.</p></details>
+  </div>
+</section>
+
+<!-- ================= FINAL CTA ================= -->
+<section id="start" class="max-w-[1200px] mx-auto px-5 sm:px-8 pb-16 sm:pb-24">
+  <div class="relative overflow-hidden rounded-[26px] border rule bg-[color:var(--ink)] text-[#F4F6F2] px-6 sm:px-14 py-14 sm:py-20 text-center">
+    <div class="absolute inset-0 opacity-90" style="background:radial-gradient(60% 80% at 22% 12%, rgba(76,107,90,0.6), transparent 62%),radial-gradient(54% 70% at 86% 92%, rgba(62,126,142,0.42), transparent 66%)"></div>
+    <div class="relative">
+      <h2 class="display text-[clamp(34px,5.4vw,64px)] max-w-[16ch] mx-auto">Step out of the day.</h2>
+      <p class="text-[15px] sm:text-[16px] text-[#D6E0D8] mt-5 max-w-[52ch] mx-auto">Book your first visit — the thermal circuit and a 60-minute massage for $129. Ninety minutes that belong to no one but you.</p>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center mt-9">
+        <a href="#intro" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--accent)] text-white font-semibold px-7 py-3.5 text-[15px]">Book your first visit <span class="scroll-x">→</span></a>
+        <a href="#schedule" class="btn-ghost inline-flex items-center justify-center rounded-full border border-[rgba(255,255,255,0.25)] text-[#F4F6F2] font-medium px-7 py-3.5 text-[15px]">See availability</a>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ================= FOOTER ================= -->
+<footer class="border-t rule">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-14 grid sm:grid-cols-2 lg:grid-cols-4 gap-9">
+    <div>
+      <div class="flex items-center gap-2.5 mb-4">
+        <svg width="24" height="24" viewBox="0 0 27 27" aria-hidden="true"><path d="M4.5 23.5 V13 a9 9 0 0 1 18 0 V23.5" fill="none" stroke="#4C6B5A" stroke-width="1.6" stroke-linecap="round"/><circle cx="13.5" cy="14.5" r="2.4" fill="#4C6B5A"/><path d="M13.5 12.1 V8" stroke="#4C6B5A" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span class="display text-[21px]">Solace</span>
+      </div>
+      <p class="text-[13px] text-[color:var(--ink-2)] max-w-[30ch]">A day spa &amp; thermal-bathing studio. Step out of the day.</p>
+    </div>
+    <div>
+      <div class="marker mb-4">The spa</div>
+      <p class="text-[13px] text-[color:var(--ink-2)] leading-relaxed">7 Cypress Walk<br/>Garden District</p>
+      <p class="mono text-[11.5px] text-[color:var(--ink-3)] mt-3 tnum">Mon–Thu 9:00a–8:00p · Fri 9:00a–9:00p<br/>Sat 8:00a–9:00p · Sun 9:00a–7:00p</p>
+    </div>
+    <div>
+      <div class="marker mb-4">Get in touch</div>
+      <a href="tel:+18055550137" class="flex items-center gap-2 text-[13px] text-[color:var(--ink-2)] mb-2.5"><svg class="w-3.5 h-3.5"><use href="#ph"/></svg>(805) 555-0137</a>
+      <a href="#top" class="flex items-center gap-2 text-[13px] text-[color:var(--ink-2)] mb-2.5"><svg class="w-3.5 h-3.5"><use href="#ig"/></svg>@solace.spa</a>
+      <p class="text-[12px] text-[color:var(--ink-3)] mt-3">Book treatments in the Solace app — iOS &amp; Android.</p>
+    </div>
+    <div>
+      <div class="marker mb-4">Explore</div>
+      <div class="flex flex-col gap-2.5 text-[13px] text-[color:var(--ink-2)]">
+        <a href="#classes" class="ul-link w-fit">Services</a>
+        <a href="#schedule" class="ul-link w-fit">Availability</a>
+        <a href="#membership" class="ul-link w-fit">Membership</a>
+        <a href="#about" class="ul-link w-fit">About the spa</a>
+      </div>
+    </div>
+  </div>
+  <div class="border-t rule-soft">
+    <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-6 flex flex-col sm:flex-row gap-2 justify-between">
+      <p class="mono text-[11px] text-[color:var(--ink-3)]">© 2026 Solace Day Spa &amp; Thermal Bathing</p>
+      <p class="mono text-[11px] text-[color:var(--ink-3)]">Massage · Facials · Thermal circuit</p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

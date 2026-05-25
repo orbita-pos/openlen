@@ -1,0 +1,1260 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Skylark — Survey-grade mapping &amp; inspection drone</title>
+  <meta name="description" content="Skylark is a prosumer mapping and inspection drone with 1 cm RTK accuracy, a 1-inch 20 MP sensor, and 38-minute flights. Plan an automated grid, fly it once, and get a survey-grade 3D model before lunch. Now shipping at $2,449." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --bg:#0A0E14;
+      --bg-2:#0D131C;
+      --card:#10171F;
+      --ink:#EFF4F8;
+      --ink-2:#9BAAB8;
+      --ink-3:#5C6B79;
+      --accent:#38BDF8;
+      --accent-2:#0EA5E9;
+      --rule:rgba(255,255,255,0.06);
+      --rule-soft:rgba(255,255,255,0.035);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0}
+    body{
+      font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+      font-feature-settings:"ss01","cv11";
+      font-optical-sizing:auto;
+      -webkit-font-smoothing:antialiased;
+      line-height:1.55;
+      background:var(--bg);
+      color:var(--ink);
+      overflow-x:hidden;
+    }
+    .display{
+      font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+      font-weight:700;
+      letter-spacing:-0.03em;
+      line-height:1.05;
+      font-optical-sizing:auto;
+    }
+    .mono{font-family:'Geist Mono',ui-monospace,Menlo,monospace}
+    .tnum{font-variant-numeric:tabular-nums}
+    .halftone{opacity:0.45;font-style:normal}
+    .container{max-width:1200px;margin:0 auto;padding-left:20px;padding-right:20px}
+    @media (min-width:640px){.container{padding-left:32px;padding-right:32px}}
+    .dotgrid{
+      background-image:radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px);
+      background-size:32px 32px;
+    }
+    .mesh{
+      background:
+        radial-gradient(620px 420px at 16% 12%, rgba(56,189,248,0.16), transparent 70%),
+        radial-gradient(560px 460px at 88% 4%, rgba(14,165,233,0.13), transparent 72%),
+        radial-gradient(720px 520px at 70% 88%, rgba(56,189,248,0.07), transparent 75%);
+    }
+    .pulse-dot{
+      width:7px;height:7px;border-radius:999px;background:var(--accent);
+      box-shadow:0 0 0 0 rgba(56,189,248,0.55);
+      animation:pulse 1.9s ease-out infinite;
+      flex:none;
+    }
+    @keyframes pulse{
+      0%{box-shadow:0 0 0 0 rgba(56,189,248,0.55)}
+      70%{box-shadow:0 0 0 9px rgba(56,189,248,0)}
+      100%{box-shadow:0 0 0 0 rgba(56,189,248,0)}
+    }
+    .btn-primary{
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;
+      background:var(--accent);color:#04121C;font-weight:600;
+      border-radius:11px;padding:13px 22px;border:1px solid var(--accent);
+      transition:transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+      cursor:pointer;text-decoration:none;
+    }
+    .btn-primary:hover{
+      transform:translateY(-1px);
+      background:var(--accent-2);
+      box-shadow:0 10px 28px -10px rgba(56,189,248,0.55);
+    }
+    .btn-ghost{
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;
+      background:transparent;color:var(--ink);font-weight:550;
+      border-radius:11px;padding:13px 22px;border:1px solid var(--rule);
+      transition:transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease, background 120ms ease;
+      cursor:pointer;text-decoration:none;
+    }
+    .btn-ghost:hover{
+      transform:translateY(-1px);
+      border-color:rgba(56,189,248,0.45);
+      background:rgba(56,189,248,0.05);
+      box-shadow:0 8px 22px -12px rgba(0,0,0,0.7);
+    }
+    .card-lift{
+      transition:transform 130ms ease, box-shadow 130ms ease, border-color 130ms ease;
+    }
+    .card-lift:hover{
+      transform:translateY(-2px);
+      border-color:rgba(56,189,248,0.28);
+      box-shadow:0 18px 40px -22px rgba(0,0,0,0.85);
+    }
+    .ul-link{position:relative;text-decoration:none;color:inherit}
+    .ul-link::after{
+      content:"";position:absolute;left:0;right:0;bottom:-2px;height:1px;
+      background:var(--accent);transform:scaleX(0);transform-origin:right;
+      transition:transform 150ms ease;
+    }
+    .ul-link:hover::after{transform:scaleX(1);transform-origin:left}
+    .marquee-mask{
+      -webkit-mask-image:linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+      mask-image:linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+      overflow:hidden;
+    }
+    .marquee{
+      width:max-content;display:flex;align-items:center;gap:56px;
+      animation:marq 40s linear infinite;
+    }
+    @keyframes marq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+    details>summary{list-style:none;cursor:pointer}
+    details>summary::-webkit-details-marker{display:none}
+    details .chev{transition:transform 160ms ease}
+    details[open] .chev{transform:rotate(45deg)}
+    .navbar{
+      position:fixed;top:0;left:0;right:0;z-index:50;
+      backdrop-filter:blur(12px) saturate(150%);
+      -webkit-backdrop-filter:blur(12px) saturate(150%);
+      background:rgba(10,14,20,0.72);
+      border-bottom:1px solid var(--rule);
+    }
+    ::selection{background:rgba(56,189,248,0.32);color:#fff}
+    .hairline{border-color:var(--rule)}
+    .device-tilt{transform:perspective(1100px) rotateY(-8deg) rotateX(4deg)}
+    .tablet-tilt{transform:perspective(1100px) rotateY(9deg) rotateX(3deg)}
+    .glow-accent{
+      background:radial-gradient(closest-side, rgba(56,189,248,0.4), transparent 78%);
+      filter:blur(8px);
+    }
+    .spec-row{border-bottom:1px solid var(--rule)}
+    .spec-row:last-child{border-bottom:none}
+    .grad-panel{
+      background:
+        radial-gradient(120% 90% at 30% 12%, rgba(56,189,248,0.14), transparent 60%),
+        linear-gradient(170deg, #111B26 0%, #0A0F16 70%);
+    }
+    a{color:inherit}
+    .eyebrow{
+      font-size:11px;letter-spacing:0.16em;text-transform:uppercase;
+      color:var(--accent);font-weight:600;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============ 1. NAV ============ -->
+  <header class="navbar">
+    <div class="container flex items-center justify-between" style="height:68px">
+      <a href="#top" class="flex items-center gap-2.5" aria-label="Skylark home">
+        <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <rect x="1" y="1" width="30" height="30" rx="8" fill="#0E1822" stroke="rgba(56,189,248,0.4)"/>
+          <path d="M16 7l5.5 14h-3.2L16 14.6 13.7 21h-3.2L16 7z" fill="#38BDF8"/>
+          <circle cx="16" cy="24" r="1.8" fill="#38BDF8"/>
+        </svg>
+        <span class="display text-[17px] tracking-tight">Skylark</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-8 text-sm" style="color:var(--ink-2)">
+        <a href="#product" class="ul-link">Product</a>
+        <a href="#specs" class="ul-link">Specs</a>
+        <a href="#app" class="ul-link">App</a>
+        <a href="#support" class="ul-link">Support</a>
+      </nav>
+      <a href="#pricing" class="btn-primary text-sm" style="padding:9px 16px">
+        Buy <span class="mono tnum">· $2,449</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- ============ 2. HERO ============ -->
+  <section id="top" class="mesh">
+    <div class="dotgrid">
+      <div class="container" style="padding-top:140px;padding-bottom:96px">
+        <div class="grid lg:grid-cols-2 gap-14 items-center">
+
+          <div>
+            <div class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 mb-7"
+                 style="border:1px solid var(--rule);background:rgba(56,189,248,0.06)">
+              <span class="pulse-dot"></span>
+              <span class="mono text-[12px]" style="color:var(--ink-2);letter-spacing:0.04em">Now shipping</span>
+            </div>
+
+            <h1 class="display" style="font-size:clamp(2.5rem,6vw,4.25rem)">
+              Survey-grade maps,<br /><em class="halftone">before lunch.</em>
+            </h1>
+
+            <p class="mt-6 text-[17px] max-w-[30rem]" style="color:var(--ink-2)">
+              Skylark plans an automated grid flight, holds 1 cm RTK accuracy without ground control points, and turns a 38-minute flight into a measurable 3D model.
+            </p>
+
+            <div class="mt-8 flex flex-wrap items-center gap-3">
+              <a href="#pricing" class="btn-primary">
+                Buy <span class="mono tnum">· $2,449</span>
+              </a>
+              <a href="#product" class="btn-ghost">
+                <svg width="13" height="13" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                  <path d="M3 2l7 4-7 4V2z" fill="currentColor"/>
+                </svg>
+                Watch the film
+              </a>
+            </div>
+
+            <div class="mt-9 flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px]" style="color:var(--ink-3)">
+              <span class="flex items-center gap-1.5">
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 7.5l3 3 5-6.5" stroke="#38BDF8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Free shipping
+              </span>
+              <span class="flex items-center gap-1.5">
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 7.5l3 3 5-6.5" stroke="#38BDF8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                30-day returns
+              </span>
+              <span class="flex items-center gap-1.5">
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 7.5l3 3 5-6.5" stroke="#38BDF8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                2-year warranty
+              </span>
+            </div>
+          </div>
+
+          <!-- Device + tablet stage -->
+          <div class="relative">
+            <div class="absolute inset-0 -z-10 glow-accent" style="margin:8% 12%"></div>
+            <div class="grad-panel rounded-3xl p-7 sm:p-10" style="border:1px solid var(--rule)">
+
+              <!-- Drone illustration -->
+              <div class="device-tilt">
+                <svg viewBox="0 0 360 240" width="100%" fill="none" aria-label="Skylark mapping drone" role="img">
+                  <defs>
+                    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="#28333F"/>
+                      <stop offset="1" stop-color="#161E27"/>
+                    </linearGradient>
+                    <linearGradient id="arm" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0" stop-color="#222C36"/>
+                      <stop offset="1" stop-color="#141B23"/>
+                    </linearGradient>
+                    <radialGradient id="lens" cx="0.4" cy="0.35" r="0.8">
+                      <stop offset="0" stop-color="#5BC8FA"/>
+                      <stop offset="0.6" stop-color="#0E2A3C"/>
+                      <stop offset="1" stop-color="#06121B"/>
+                    </radialGradient>
+                  </defs>
+                  <!-- shadow -->
+                  <ellipse cx="180" cy="216" rx="118" ry="14" fill="#000" opacity="0.45"/>
+                  <!-- arms -->
+                  <rect x="44" y="92" width="118" height="11" rx="5.5" fill="url(#arm)" transform="rotate(-20 103 97)"/>
+                  <rect x="198" y="92" width="118" height="11" rx="5.5" fill="url(#arm)" transform="rotate(20 257 97)"/>
+                  <rect x="44" y="120" width="118" height="11" rx="5.5" fill="url(#arm)" transform="rotate(20 103 125)"/>
+                  <rect x="198" y="120" width="118" height="11" rx="5.5" fill="url(#arm)" transform="rotate(-20 257 125)"/>
+                  <!-- motors + props -->
+                  <g stroke="#3A4753" stroke-width="2">
+                    <circle cx="42" cy="74" r="9" fill="#1B232C"/>
+                    <ellipse cx="42" cy="74" rx="44" ry="6" fill="rgba(56,189,248,0.1)" stroke="rgba(56,189,248,0.3)"/>
+                    <circle cx="318" cy="74" r="9" fill="#1B232C"/>
+                    <ellipse cx="318" cy="74" rx="44" ry="6" fill="rgba(56,189,248,0.1)" stroke="rgba(56,189,248,0.3)"/>
+                    <circle cx="42" cy="150" r="9" fill="#1B232C"/>
+                    <ellipse cx="42" cy="150" rx="44" ry="6" fill="rgba(56,189,248,0.1)" stroke="rgba(56,189,248,0.3)"/>
+                    <circle cx="318" cy="150" r="9" fill="#1B232C"/>
+                    <ellipse cx="318" cy="150" rx="44" ry="6" fill="rgba(56,189,248,0.1)" stroke="rgba(56,189,248,0.3)"/>
+                  </g>
+                  <!-- landing gear -->
+                  <path d="M132 150 L120 192 M228 150 L240 192" stroke="#2C3742" stroke-width="6" stroke-linecap="round"/>
+                  <rect x="104" y="190" width="40" height="7" rx="3.5" fill="#2C3742"/>
+                  <rect x="216" y="190" width="40" height="7" rx="3.5" fill="#2C3742"/>
+                  <!-- central body -->
+                  <rect x="118" y="84" width="124" height="58" rx="16" fill="url(#body)" stroke="#3B4854" stroke-width="1.5"/>
+                  <rect x="134" y="96" width="92" height="14" rx="7" fill="#0C141C"/>
+                  <circle cx="151" cy="103" r="3" fill="#38BDF8"/>
+                  <circle cx="166" cy="103" r="3" fill="#1F2A34"/>
+                  <!-- RTK antenna -->
+                  <rect x="174" y="68" width="12" height="20" rx="3" fill="#1C2530" stroke="#38BDF8" stroke-width="1"/>
+                  <!-- gimbal + 1-inch sensor -->
+                  <rect x="158" y="140" width="44" height="22" rx="9" fill="#1A222B" stroke="#3B4854" stroke-width="1.5"/>
+                  <circle cx="180" cy="167" r="17" fill="#10181F" stroke="#3B4854" stroke-width="2"/>
+                  <circle cx="180" cy="167" r="11.5" fill="url(#lens)"/>
+                  <circle cx="176" cy="163" r="3.4" fill="#BEE9FB" opacity="0.85"/>
+                  <!-- obstacle sensors -->
+                  <circle cx="124" cy="138" r="3" fill="#0C141C" stroke="#38BDF8" stroke-width="1"/>
+                  <circle cx="236" cy="138" r="3" fill="#0C141C" stroke="#38BDF8" stroke-width="1"/>
+                </svg>
+              </div>
+
+              <!-- tablet with 3D site map -->
+              <div class="tablet-tilt mt-3 ml-auto" style="width:62%;max-width:230px">
+                <div class="rounded-2xl p-2.5" style="background:#1A222B;border:1px solid var(--rule);box-shadow:0 24px 44px -22px #000">
+                  <div class="rounded-xl overflow-hidden" style="background:#070C12">
+                    <svg viewBox="0 0 220 150" width="100%" aria-label="Generated 3D site map" role="img">
+                      <rect width="220" height="150" fill="#070C12"/>
+                      <!-- contour terrain wireframe -->
+                      <g stroke="rgba(56,189,248,0.55)" stroke-width="1" fill="none">
+                        <path d="M10 110 L60 86 L110 96 L160 72 L210 88"/>
+                        <path d="M10 122 L60 100 L110 110 L160 86 L210 102"/>
+                        <path d="M10 134 L60 114 L110 124 L160 100 L210 116"/>
+                        <path d="M10 110 L10 134 M60 86 L60 114 M110 96 L110 124 M160 72 L160 100 M210 88 L210 116"/>
+                      </g>
+                      <g stroke="rgba(56,189,248,0.22)" stroke-width="1" fill="none">
+                        <path d="M10 96 L60 72 L110 82 L160 58 L210 74"/>
+                        <path d="M10 82 L60 58 L110 68 L160 44 L210 60"/>
+                      </g>
+                      <!-- mapped polygon highlight -->
+                      <path d="M60 86 L110 96 L110 110 L60 100 Z" fill="rgba(56,189,248,0.16)"/>
+                      <circle cx="160" cy="72" r="3" fill="#38BDF8"/>
+                      <text x="14" y="22" class="mono" font-size="9" fill="#38BDF8">SITE 04 · 3D MODEL</text>
+                      <text x="14" y="36" class="mono" font-size="8" fill="#5C6B79">RTK · 1.0 cm</text>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3. TRUST / PROOF BAR ============ -->
+  <section style="border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);background:var(--bg-2)">
+    <div class="container py-7">
+      <div class="flex flex-col lg:flex-row items-center gap-6 lg:gap-10">
+        <div class="flex items-center gap-3 flex-none">
+          <span class="text-[15px]" style="color:var(--accent)">★★★★★</span>
+          <span class="text-[14px]" style="color:var(--ink-2)">
+            <span class="mono tnum" style="color:var(--ink)">4.8</span> ·
+            <span class="mono tnum" style="color:var(--ink)">14,408</span> units in the field
+          </span>
+        </div>
+        <div class="hidden lg:block w-px h-7" style="background:var(--rule)"></div>
+        <div class="marquee-mask flex-1 w-full">
+          <div class="marquee">
+            <span class="mono text-[13px]" style="color:var(--ink-3)">GEOSPATIAL WEEKLY</span>
+            <span class="text-[15px] italic" style="color:var(--ink-3);font-family:Georgia,serif">Survey Review</span>
+            <span class="mono text-[13px]" style="color:var(--ink-3)">SITEWORKS&nbsp;DAILY</span>
+            <span class="text-[15px]" style="color:var(--ink-3);font-weight:700;letter-spacing:-0.02em">AeroMap</span>
+            <span class="text-[15px] italic" style="color:var(--ink-3);font-family:Georgia,serif">Precision Ag Journal</span>
+            <span class="mono text-[13px]" style="color:var(--ink-3)">INSPECT&nbsp;/&nbsp;NDT</span>
+            <span class="text-[15px]" style="color:var(--ink-3);font-weight:700;letter-spacing:-0.02em">Earthworks Today</span>
+            <span class="text-[15px] italic" style="color:var(--ink-3);font-family:Georgia,serif">Cartographer</span>
+            <!-- duplicate for seamless loop -->
+            <span class="mono text-[13px]" style="color:var(--ink-3)">GEOSPATIAL WEEKLY</span>
+            <span class="text-[15px] italic" style="color:var(--ink-3);font-family:Georgia,serif">Survey Review</span>
+            <span class="mono text-[13px]" style="color:var(--ink-3)">SITEWORKS&nbsp;DAILY</span>
+            <span class="text-[15px]" style="color:var(--ink-3);font-weight:700;letter-spacing:-0.02em">AeroMap</span>
+            <span class="text-[15px] italic" style="color:var(--ink-3);font-family:Georgia,serif">Precision Ag Journal</span>
+            <span class="mono text-[13px]" style="color:var(--ink-3)">INSPECT&nbsp;/&nbsp;NDT</span>
+            <span class="text-[15px]" style="color:var(--ink-3);font-weight:700;letter-spacing:-0.02em">Earthworks Today</span>
+            <span class="text-[15px] italic" style="color:var(--ink-3);font-family:Georgia,serif">Cartographer</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 flex-none rounded-lg px-3 py-1.5"
+             style="border:1px solid rgba(56,189,248,0.25);background:rgba(56,189,248,0.05)">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M8 1l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 14.8 4.3 12.8l.7-4.3-3.1-3 4.3-.6L8 1z" fill="#38BDF8"/>
+          </svg>
+          <span class="mono text-[11px]" style="color:var(--ink);letter-spacing:0.03em">CES Innovation Award 2026</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 4. FEATURE SECTIONS ============ -->
+  <section id="product" class="container" style="padding-top:112px;padding-bottom:32px">
+    <p class="eyebrow">Why surveyors choose Skylark</p>
+    <h2 class="display mt-3" style="font-size:clamp(1.9rem,3.6vw,2.6rem);max-width:34rem">
+      Built for measurable work, not montage reels.
+    </h2>
+
+    <!-- Feature row A — image LEFT -->
+    <div class="grid lg:grid-cols-2 gap-12 items-center mt-16">
+      <div class="relative order-1">
+        <div class="absolute inset-0 -z-10 glow-accent" style="margin:14% 18%"></div>
+        <div class="grad-panel rounded-2xl p-8 sm:p-12" style="border:1px solid var(--rule)">
+          <svg viewBox="0 0 320 220" width="100%" aria-label="RTK positioning accuracy diagram" role="img">
+            <rect width="320" height="220" rx="12" fill="#0A0F16"/>
+            <!-- satellites -->
+            <g fill="#38BDF8">
+              <circle cx="48" cy="34" r="4"/><circle cx="160" cy="22" r="4"/><circle cx="272" cy="40" r="4"/>
+            </g>
+            <g stroke="rgba(56,189,248,0.35)" stroke-width="1" stroke-dasharray="3 3">
+              <line x1="48" y1="34" x2="160" y2="120"/>
+              <line x1="160" y1="22" x2="160" y2="120"/>
+              <line x1="272" y1="40" x2="160" y2="120"/>
+            </g>
+            <!-- ground -->
+            <line x1="20" y1="170" x2="300" y2="170" stroke="#2C3742" stroke-width="1.5"/>
+            <!-- target rings -->
+            <circle cx="160" cy="170" r="38" fill="none" stroke="rgba(56,189,248,0.18)"/>
+            <circle cx="160" cy="170" r="22" fill="none" stroke="rgba(56,189,248,0.3)"/>
+            <circle cx="160" cy="170" r="6" fill="#38BDF8"/>
+            <!-- drone at hover -->
+            <rect x="146" y="112" width="28" height="13" rx="5" fill="#28333F" stroke="#3B4854"/>
+            <line x1="132" y1="118" x2="188" y2="118" stroke="rgba(56,189,248,0.4)" stroke-width="1.5"/>
+            <text x="190" y="170" class="mono" font-size="11" fill="#38BDF8">1.0 cm</text>
+            <text x="20" y="200" class="mono" font-size="9" fill="#5C6B79">RTK FIXED · NO GCPs REQUIRED</text>
+          </svg>
+        </div>
+      </div>
+      <div class="order-2">
+        <p class="eyebrow">RTK positioning</p>
+        <h3 class="display mt-3" style="font-size:clamp(1.5rem,2.6vw,1.95rem)">
+          Centimeter accuracy, no ground control points.
+        </h3>
+        <p class="mt-4 text-[16px]" style="color:var(--ink-2)">
+          Skylark's onboard RTK module locks to your base station or an NTRIP network and geotags every frame to 1 cm. Skip the hours of painting and surveying control targets — the drone is the control.
+        </p>
+        <div class="mt-6 inline-flex flex-col gap-2 rounded-xl p-4" style="border:1px solid var(--rule);background:var(--card)">
+          <span class="mono text-[11px]" style="color:var(--ink-3)">HORIZONTAL / VERTICAL ACCURACY</span>
+          <span class="mono tnum text-[15px]" style="color:var(--accent)">1.0 cm + 1 ppm</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature row B — image RIGHT, with exploded/callout diagram -->
+    <div class="grid lg:grid-cols-2 gap-12 items-center mt-20 lg:mt-28">
+      <div class="order-2 lg:order-1">
+        <p class="eyebrow">Automated flight</p>
+        <h3 class="display mt-3" style="font-size:clamp(1.5rem,2.6vw,1.95rem)">
+          Plan it once, and it flies itself.
+        </h3>
+        <p class="mt-4 text-[16px]" style="color:var(--ink-2)">
+          Draw a boundary in the app and Skylark generates an overlapping grid mission, then executes it autonomously — terrain-following, obstacle-aware, and back on the pad with battery to spare. A 1-inch 20 MP sensor captures the detail; 38 minutes of flight covers the site.
+        </p>
+        <div class="mt-6 grid grid-cols-3 gap-3">
+          <div class="rounded-xl p-3 text-center" style="border:1px solid var(--rule);background:var(--card)">
+            <div class="mono tnum text-[15px]" style="color:var(--accent)">20 MP</div>
+            <div class="mono text-[10px] mt-1" style="color:var(--ink-3)">1-INCH SENSOR</div>
+          </div>
+          <div class="rounded-xl p-3 text-center" style="border:1px solid var(--rule);background:var(--card)">
+            <div class="mono tnum text-[15px]" style="color:var(--accent)">38 min</div>
+            <div class="mono text-[10px] mt-1" style="color:var(--ink-3)">FLIGHT TIME</div>
+          </div>
+          <div class="rounded-xl p-3 text-center" style="border:1px solid var(--rule);background:var(--card)">
+            <div class="mono tnum text-[15px]" style="color:var(--accent)">6-way</div>
+            <div class="mono text-[10px] mt-1" style="color:var(--ink-3)">OBSTACLE SENSE</div>
+          </div>
+        </div>
+      </div>
+      <div class="relative order-1 lg:order-2">
+        <div class="absolute inset-0 -z-10 glow-accent" style="margin:16% 20%"></div>
+        <div class="grad-panel rounded-2xl p-8 sm:p-10" style="border:1px solid var(--rule)">
+          <!-- Exploded / callout diagram -->
+          <svg viewBox="0 0 360 280" width="100%" aria-label="Exploded callout diagram of Skylark components" role="img">
+            <!-- core drone body -->
+            <rect x="138" y="118" width="84" height="44" rx="13" fill="#28333F" stroke="#3B4854" stroke-width="1.5"/>
+            <circle cx="180" cy="140" r="6" fill="#0C141C"/>
+            <!-- leader lines + labels -->
+            <g stroke="rgba(56,189,248,0.45)" stroke-width="1">
+              <line x1="180" y1="118" x2="180" y2="56"/>
+              <line x1="138" y1="125" x2="58" y2="92"/>
+              <line x1="222" y1="125" x2="302" y2="92"/>
+              <line x1="148" y1="162" x2="78" y2="216"/>
+              <line x1="212" y1="162" x2="290" y2="216"/>
+            </g>
+            <g fill="#38BDF8">
+              <circle cx="180" cy="118" r="2.6"/><circle cx="138" cy="125" r="2.6"/>
+              <circle cx="222" cy="125" r="2.6"/><circle cx="148" cy="162" r="2.6"/>
+              <circle cx="212" cy="162" r="2.6"/>
+            </g>
+            <!-- component icons -->
+            <rect x="166" y="36" width="28" height="20" rx="4" fill="#1C2530" stroke="#38BDF8" stroke-width="1"/>
+            <rect x="34" y="74" width="24" height="18" rx="4" fill="#1C2530" stroke="#38BDF8" stroke-width="1"/>
+            <circle cx="302" cy="82" r="11" fill="#1C2530" stroke="#38BDF8" stroke-width="1"/>
+            <rect x="58" y="206" width="22" height="14" rx="3" fill="#1C2530" stroke="#38BDF8" stroke-width="1"/>
+            <circle cx="290" cy="216" r="9" fill="#1C2530" stroke="#38BDF8" stroke-width="1"/>
+            <!-- labels -->
+            <text x="200" y="32" class="mono" font-size="9" fill="#9BAAB8">RTK MODULE</text>
+            <text x="6"  y="106" class="mono" font-size="9" fill="#9BAAB8">1-INCH GIMBAL</text>
+            <text x="270" y="108" class="mono" font-size="9" fill="#9BAAB8">PROPS / MOTORS</text>
+            <text x="44"  y="234" class="mono" font-size="9" fill="#9BAAB8">SWAP BATTERY</text>
+            <text x="252" y="240" class="mono" font-size="9" fill="#9BAAB8">OBSTACLE SENSORS</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature row C — image LEFT -->
+    <div class="grid lg:grid-cols-2 gap-12 items-center mt-20 lg:mt-28">
+      <div class="relative order-1">
+        <div class="absolute inset-0 -z-10 glow-accent" style="margin:14% 18%"></div>
+        <div class="grad-panel rounded-2xl p-8 sm:p-12" style="border:1px solid var(--rule)">
+          <svg viewBox="0 0 320 220" width="100%" aria-label="Flight to 3D model and stockpile volume" role="img">
+            <rect width="320" height="220" rx="12" fill="#0A0F16"/>
+            <!-- stockpile mesh -->
+            <g stroke="rgba(56,189,248,0.5)" stroke-width="1" fill="none">
+              <path d="M40 170 L110 110 L180 170 Z"/>
+              <path d="M62 170 L110 124 L158 170"/>
+              <path d="M84 170 L110 142 L136 170"/>
+              <path d="M40 170 L180 170"/>
+            </g>
+            <path d="M40 170 L110 110 L180 170 Z" fill="rgba(56,189,248,0.1)"/>
+            <text x="74" y="190" class="mono" font-size="10" fill="#38BDF8">8,420 m³</text>
+            <!-- arrow -->
+            <line x1="200" y1="120" x2="236" y2="120" stroke="#5C6B79" stroke-width="1.5"/>
+            <path d="M236 120 l-6 -4 v8 z" fill="#5C6B79"/>
+            <!-- model card -->
+            <rect x="244" y="74" width="60" height="92" rx="8" fill="#10181F" stroke="#3B4854"/>
+            <path d="M256 140 L274 116 L292 140 Z" fill="rgba(56,189,248,0.3)" stroke="#38BDF8" stroke-width="1"/>
+            <text x="252" y="98" class="mono" font-size="8" fill="#5C6B79">3D MODEL</text>
+            <text x="20" y="208" class="mono" font-size="9" fill="#5C6B79">CLOUD OR ON-DEVICE PROCESSING</text>
+          </svg>
+        </div>
+      </div>
+      <div class="order-2">
+        <p class="eyebrow">Processing</p>
+        <h3 class="display mt-3" style="font-size:clamp(1.5rem,2.6vw,1.95rem)">
+          From flight to 3D model — same afternoon.
+        </h3>
+        <p class="mt-4 text-[16px]" style="color:var(--ink-2)">
+          Maps stitch in Skylark Cloud, or run entirely on-device when the site has no signal. Pull orthomosaics, point clouds, and contour lines — then drop a boundary to read stockpile volume to the cubic meter.
+        </p>
+        <div class="mt-6 inline-flex flex-col gap-2 rounded-xl p-4" style="border:1px solid var(--rule);background:var(--card)">
+          <span class="mono text-[11px]" style="color:var(--ink-3)">EXPORTS</span>
+          <span class="mono text-[14px]" style="color:var(--accent)">.LAS · GeoTIFF · .OBJ · DXF</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 5. COMPANION APP ============ -->
+  <section id="app" style="background:var(--bg-2);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)">
+    <div class="container" style="padding-top:104px;padding-bottom:104px">
+      <div class="grid lg:grid-cols-2 gap-14 items-center">
+
+        <div class="relative">
+          <div class="absolute inset-0 -z-10 glow-accent" style="margin:12% 16%"></div>
+          <!-- tablet mockup -->
+          <div class="tablet-tilt mx-auto" style="max-width:430px">
+            <div class="rounded-[26px] p-3.5" style="background:#1A222B;border:1px solid var(--rule);box-shadow:0 36px 60px -28px #000">
+              <div class="rounded-[18px] overflow-hidden" style="background:#070C12;border:1px solid var(--rule)">
+                <svg viewBox="0 0 420 280" width="100%" aria-label="Skylark app: flight grid over a stitched map" role="img">
+                  <rect width="420" height="280" fill="#070C12"/>
+                  <!-- header -->
+                  <rect x="0" y="0" width="420" height="34" fill="#0C141C"/>
+                  <circle cx="20" cy="17" r="4" fill="#38BDF8"/>
+                  <text x="34" y="21" class="mono" font-size="10" fill="#EFF4F8">MISSION · QUARRY NORTH</text>
+                  <text x="320" y="21" class="mono" font-size="10" fill="#38BDF8">GRID READY</text>
+                  <!-- stitched map background -->
+                  <rect x="14" y="46" width="392" height="218" rx="8" fill="#0B1119"/>
+                  <g opacity="0.55">
+                    <rect x="14" y="46" width="392" height="218" fill="url(#mapgrad)"/>
+                  </g>
+                  <defs>
+                    <linearGradient id="mapgrad" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0" stop-color="#13202B"/>
+                      <stop offset="1" stop-color="#0A1018"/>
+                    </linearGradient>
+                  </defs>
+                  <!-- contour lines on map -->
+                  <g stroke="rgba(91,200,250,0.22)" stroke-width="1" fill="none">
+                    <path d="M30 200 q80 -40 160 -10 t200 -20"/>
+                    <path d="M30 220 q80 -40 160 -10 t200 -20"/>
+                    <path d="M30 240 q80 -40 160 -10 t200 -20"/>
+                  </g>
+                  <!-- flight grid path -->
+                  <g id="gridPath" stroke="#38BDF8" stroke-width="1.6" fill="none" stroke-linecap="round"></g>
+                  <!-- waypoint dots -->
+                  <g id="gridDots" fill="#38BDF8"></g>
+                  <!-- boundary polygon -->
+                  <path d="M40 70 L380 64 L388 246 L48 252 Z" fill="none" stroke="rgba(56,189,248,0.45)" stroke-width="1.5" stroke-dasharray="5 4"/>
+                  <!-- drone marker -->
+                  <circle id="droneMark" cx="60" cy="86" r="5" fill="#fff" stroke="#38BDF8" stroke-width="2"/>
+                  <!-- footer stat -->
+                  <rect x="14" y="234" width="120" height="22" rx="5" fill="rgba(8,12,18,0.85)"/>
+                  <text x="24" y="249" class="mono" font-size="9" fill="#9BAAB8">ETA 11 MIN · 124 SHOTS</text>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p class="eyebrow">Skylark app · iOS &amp; Android</p>
+          <h2 class="display mt-3" style="font-size:clamp(1.8rem,3.2vw,2.4rem)">
+            The whole job lives on one tablet.
+          </h2>
+          <p class="mt-4 text-[16px]" style="color:var(--ink-2)">
+            Scope, fly, and deliver from the field. The app drives the mission and watches the data come together in real time.
+          </p>
+          <ul class="mt-8 space-y-5">
+            <li class="flex gap-4">
+              <span class="flex-none rounded-lg p-2.5" style="background:rgba(56,189,248,0.1);border:1px solid var(--rule)">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="3" y="3" width="14" height="14" rx="2" stroke="#38BDF8" stroke-width="1.6"/><path d="M3 8h14M8 3v14" stroke="#38BDF8" stroke-width="1.2"/></svg>
+              </span>
+              <div>
+                <h4 class="font-600 text-[15px]">Automated grid planning</h4>
+                <p class="text-[14px] mt-0.5" style="color:var(--ink-2)">Trace a boundary, set overlap and GSD, and the app builds a flight in seconds.</p>
+              </div>
+            </li>
+            <li class="flex gap-4">
+              <span class="flex-none rounded-lg p-2.5" style="background:rgba(56,189,248,0.1);border:1px solid var(--rule)">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 14l4-5 4 3 5-7 2 3" stroke="#38BDF8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <div>
+                <h4 class="font-600 text-[15px]">Live map stitching</h4>
+                <p class="text-[14px] mt-0.5" style="color:var(--ink-2)">Watch the orthomosaic assemble tile-by-tile while the drone is still airborne.</p>
+              </div>
+            </li>
+            <li class="flex gap-4">
+              <span class="flex-none rounded-lg p-2.5" style="background:rgba(56,189,248,0.1);border:1px solid var(--rule)">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2l7 4v8l-7 4-7-4V6l7-4z" stroke="#38BDF8" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 6l7 4 7-4M10 10v8" stroke="#38BDF8" stroke-width="1.2"/></svg>
+              </span>
+              <div>
+                <h4 class="font-600 text-[15px]">3D-model export</h4>
+                <p class="text-[14px] mt-0.5" style="color:var(--ink-2)">Push point clouds and textured meshes straight to your GIS or CAD pipeline.</p>
+              </div>
+            </li>
+            <li class="flex gap-4">
+              <span class="flex-none rounded-lg p-2.5" style="background:rgba(56,189,248,0.1);border:1px solid var(--rule)">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 16V4M8 16V9M13 16v-5M18 16V7" stroke="#38BDF8" stroke-width="1.8" stroke-linecap="round"/></svg>
+              </span>
+              <div>
+                <h4 class="font-600 text-[15px]">Stockpile volume measurement</h4>
+                <p class="text-[14px] mt-0.5" style="color:var(--ink-2)">Tap a pile to get cut-and-fill volumes with a defensible base-plane report.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 6. TECH SPECS ============ -->
+  <section id="specs" class="container" style="padding-top:104px;padding-bottom:96px">
+    <div class="max-w-2xl">
+      <p class="eyebrow">Technical specification</p>
+      <h2 class="display mt-3" style="font-size:clamp(1.9rem,3.6vw,2.6rem)">
+        Every figure that ends up in your report.
+      </h2>
+      <p class="mt-4 text-[16px]" style="color:var(--ink-2)">
+        Model SKL-200 · firmware v3.4.1. Specs verified at sea level, 15&nbsp;°C, no wind.
+      </p>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-x-14 gap-y-12 mt-12">
+
+      <!-- Imaging & positioning -->
+      <div>
+        <h3 class="mono text-[12px] mb-3 pb-2" style="color:var(--accent);border-bottom:1px solid var(--rule);letter-spacing:0.08em">IMAGING &amp; POSITIONING</h3>
+        <dl class="text-[14px]">
+          <div class="spec-row flex justify-between py-3"><dt style="color:var(--ink-2)">Sensor</dt><dd class="mono tnum">1-inch CMOS · 20 MP</dd></div>
+          <div class="spec-row flex justify-between py-3"><dt style="color:var(--ink-2)">Lens</dt><dd class="mono tnum">24 mm equiv · f/2.8–11</dd></div>
+          <div class="spec-row flex justify-between py-3"><dt style="color:var(--ink-2)">Mechanical shutter</dt><dd class="mono tnum">1/2000 s</dd></div>
+          <div class="spec-row flex justify-between py-3"><dt style="color:var(--ink-2)">Gimbal</dt><dd class="mono tnum">3-axis stabilized</dd></div>
+          <div class="spec-row flex justify-between py-3"><dt style="color:var(--ink-2)">RTK accuracy</dt><dd class="mono tnum" style="color:var(--accent)">1.0 cm + 1 ppm</dd></div>
+          <div class="spec-row flex justify-between py-3"><dt style="color:var(--ink-2)">Positioning</dt><dd class="mono tnum">GPS · GLONASS · Galileo · BeiDou</dd></div>
+        </dl>
+      </div>
+
+      <!-- Flight performance -->
+      <div>
+        <h3 class="mono text-[12px] mb-3 pb-2" style="color:var(--accent);border-bottom:1px solid var(--rule);letter-spacing:0.08em">FLIGHT PERFORMANCE</h3>
+        <dl class="text-[14px]">
+          <div class="spec-row flex justify-between py-3"><dt style="color:var(--ink-2)">Flight time</dt><dd class="mono tnum" style="color:var(--accent)">38 min</dd></div>
+          <div class="spec-row flex justify-between py-3"><dt style="color:var(--ink-2)">Transmission range</dt><dd class="mono tnum">8 km (FCC)</dd></div>
+          <div class="spec-row flex justify-between py-3"><dt style="color:var(--ink-2)">Max speed</dt><dd class="mono tnum">18 m/s</dd></div>
+          <div class="spec-row flex justify-between py-3"><dt style="color:var(--ink-2)">Wind resistance</dt><dd class="mono tnum">12 m/s</dd></div>
+          <div class="spec-row flex justify-between py-3"><dt style="color:var(--ink-2)">Service ceiling</dt><dd class="mono tnum">5,000 m</dd></div>
+          <div class="spec-row flex justify-between py-3"><dt style="color:var(--ink-2)">Obstacle sensing</dt><dd class="mono tnum">6-direction · binocular</dd></div>
+        </dl>
+      </div>
+
+      <!-- Airframe -->
+      <div>
+        <h3 class="mono text-[12px] mb-3 pb-2" style="color:var(--accent);border-bottom:1px solid var(--rule);letter-spacing:0.08em">AIRFRAME</h3>
+        <dl class="text-[14px]">
+          <div class="spec-row flex justify-between py-3"><dt style="color:var(--ink-2)">Takeoff weight</dt><dd class="mono tnum">1.1 kg</dd></div>
+          <div class="spec-row flex justify-between py-3"><dt style="color:var(--ink-2)">Dimensions (folded)</dt><dd class="mono tnum">218 × 142 × 84 mm</dd></div>
+          <div class="spec-row flex justify-between py-3"><dt style="color:var(--ink-2)">Dimensions (unfolded)</dt><dd class="mono tnum">358 × 312 × 108 mm</dd></div>
+          <div class="spec-row flex justify-between py-3"><dt style="color:var(--ink-2)">Materials</dt><dd class="mono tnum">Magnesium frame · carbon arms</dd></div>
+          <div class="spec-row flex justify-between py-3"><dt style="color:var(--ink-2)">Ingress rating</dt><dd class="mono tnum">IP43</dd></div>
+          <div class="spec-row flex justify-between py-3"><dt style="color:var(--ink-2)">Operating temp</dt><dd class="mono tnum">−10 °C to 45 °C</dd></div>
+        </dl>
+      </div>
+
+      <!-- Power -->
+      <div>
+        <h3 class="mono text-[12px] mb-3 pb-2" style="color:var(--accent);border-bottom:1px solid var(--rule);letter-spacing:0.08em">POWER &amp; STORAGE</h3>
+        <dl class="text-[14px]">
+          <div class="spec-row flex justify-between py-3"><dt style="color:var(--ink-2)">Battery</dt><dd class="mono tnum">Swappable · 5,880 mAh</dd></div>
+          <div class="spec-row flex justify-between py-3"><dt style="color:var(--ink-2)">Charge time (hub)</dt><dd class="mono tnum">52 min per pack</dd></div>
+          <div class="spec-row flex justify-between py-3"><dt style="color:var(--ink-2)">Battery cycles</dt><dd class="mono tnum">400 to 80% capacity</dd></div>
+          <div class="spec-row flex justify-between py-3"><dt style="color:var(--ink-2)">Onboard storage</dt><dd class="mono tnum">128 GB + microSD</dd></div>
+          <div class="spec-row flex justify-between py-3"><dt style="color:var(--ink-2)">Controller battery</dt><dd class="mono tnum">6 h continuous</dd></div>
+          <div class="spec-row flex justify-between py-3"><dt style="color:var(--ink-2)">Firmware</dt><dd class="mono tnum">v3.4.1</dd></div>
+        </dl>
+      </div>
+
+    </div>
+
+    <!-- flight-time gauge + accuracy callout -->
+    <div class="grid sm:grid-cols-2 gap-6 mt-14">
+      <div class="rounded-2xl p-7" style="border:1px solid var(--rule);background:var(--card)">
+        <div class="flex items-center justify-between mb-5">
+          <span class="mono text-[12px]" style="color:var(--ink-3);letter-spacing:0.06em">FLIGHT TIME PER BATTERY</span>
+          <span class="mono tnum text-[15px]" style="color:var(--accent)">38 min</span>
+        </div>
+        <svg viewBox="0 0 280 140" width="100%" aria-label="38-minute flight time gauge" role="img">
+          <path d="M24 124 A116 116 0 0 1 256 124" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="14" stroke-linecap="round"/>
+          <path id="gaugeArc" d="M24 124 A116 116 0 0 1 256 124" fill="none" stroke="#38BDF8" stroke-width="14" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
+          <text x="140" y="108" text-anchor="middle" class="mono tnum display" font-size="34" fill="#EFF4F8">38</text>
+          <text x="140" y="128" text-anchor="middle" class="mono" font-size="11" fill="#5C6B79">MINUTES</text>
+        </svg>
+        <p class="text-[13px] mt-2" style="color:var(--ink-3)">Enough to map roughly 60 hectares at 2 cm GSD in a single charge.</p>
+      </div>
+      <div class="rounded-2xl p-7 flex flex-col justify-center" style="border:1px solid rgba(56,189,248,0.25);background:linear-gradient(160deg,rgba(56,189,248,0.07),transparent)">
+        <span class="mono text-[12px]" style="color:var(--ink-3);letter-spacing:0.06em">RTK MAP ACCURACY</span>
+        <div class="display tnum mt-3" style="font-size:clamp(3rem,7vw,4.5rem);color:var(--accent)">1&thinsp;cm</div>
+        <p class="text-[14px] mt-2" style="color:var(--ink-2)">
+          Absolute accuracy with an RTK fix and no ground control points — verified against survey-grade checkpoints across 312 test flights.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 7. WHAT'S IN THE BOX ============ -->
+  <section style="background:var(--bg-2);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)">
+    <div class="container" style="padding-top:96px;padding-bottom:96px">
+      <p class="eyebrow">In the box</p>
+      <h2 class="display mt-3" style="font-size:clamp(1.8rem,3.2vw,2.4rem)">
+        Open the case, fly the same day.
+      </h2>
+
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-12">
+        <!-- drone -->
+        <div class="card-lift rounded-xl p-5 flex flex-col items-center text-center" style="border:1px solid var(--rule);background:var(--card)">
+          <svg width="56" height="44" viewBox="0 0 80 60" fill="none" aria-hidden="true">
+            <rect x="28" y="22" width="24" height="16" rx="5" fill="#28333F" stroke="#3B4854"/>
+            <line x1="8" y1="16" x2="34" y2="26" stroke="#2C3742" stroke-width="3"/>
+            <line x1="72" y1="16" x2="46" y2="26" stroke="#2C3742" stroke-width="3"/>
+            <line x1="8" y1="44" x2="34" y2="34" stroke="#2C3742" stroke-width="3"/>
+            <line x1="72" y1="44" x2="46" y2="34" stroke="#2C3742" stroke-width="3"/>
+            <ellipse cx="8" cy="16" rx="9" ry="2.5" fill="rgba(56,189,248,0.3)"/>
+            <ellipse cx="72" cy="16" rx="9" ry="2.5" fill="rgba(56,189,248,0.3)"/>
+            <ellipse cx="8" cy="44" rx="9" ry="2.5" fill="rgba(56,189,248,0.3)"/>
+            <ellipse cx="72" cy="44" rx="9" ry="2.5" fill="rgba(56,189,248,0.3)"/>
+            <circle cx="40" cy="42" r="5" fill="#10181F" stroke="#38BDF8" stroke-width="1.2"/>
+          </svg>
+          <span class="mt-3 mono text-[11px]" style="color:var(--ink-2)">SKYLARK DRONE</span>
+          <span class="mono tnum text-[10px] mt-0.5" style="color:var(--ink-3)">× 1</span>
+        </div>
+        <!-- controller -->
+        <div class="card-lift rounded-xl p-5 flex flex-col items-center text-center" style="border:1px solid var(--rule);background:var(--card)">
+          <svg width="56" height="44" viewBox="0 0 80 60" fill="none" aria-hidden="true">
+            <rect x="14" y="20" width="52" height="26" rx="6" fill="#28333F" stroke="#3B4854"/>
+            <rect x="22" y="26" width="36" height="14" rx="2" fill="#0C141C"/>
+            <circle cx="24" cy="18" r="4" fill="#1C2530" stroke="#3B4854"/>
+            <circle cx="56" cy="18" r="4" fill="#1C2530" stroke="#3B4854"/>
+          </svg>
+          <span class="mt-3 mono text-[11px]" style="color:var(--ink-2)">CONTROLLER</span>
+          <span class="mono tnum text-[10px] mt-0.5" style="color:var(--ink-3)">× 1</span>
+        </div>
+        <!-- batteries -->
+        <div class="card-lift rounded-xl p-5 flex flex-col items-center text-center" style="border:1px solid var(--rule);background:var(--card)">
+          <svg width="56" height="44" viewBox="0 0 80 60" fill="none" aria-hidden="true">
+            <rect x="20" y="14" width="28" height="34" rx="4" fill="#28333F" stroke="#3B4854"/>
+            <rect x="36" y="20" width="28" height="34" rx="4" fill="#222C36" stroke="#3B4854"/>
+            <rect x="44" y="26" width="10" height="3" fill="#38BDF8"/>
+          </svg>
+          <span class="mt-3 mono text-[11px]" style="color:var(--ink-2)">BATTERIES</span>
+          <span class="mono tnum text-[10px] mt-0.5" style="color:var(--ink-3)">× 3</span>
+        </div>
+        <!-- charging hub -->
+        <div class="card-lift rounded-xl p-5 flex flex-col items-center text-center" style="border:1px solid var(--rule);background:var(--card)">
+          <svg width="56" height="44" viewBox="0 0 80 60" fill="none" aria-hidden="true">
+            <rect x="16" y="24" width="48" height="22" rx="5" fill="#28333F" stroke="#3B4854"/>
+            <rect x="24" y="14" width="8" height="12" rx="2" fill="#222C36" stroke="#3B4854"/>
+            <rect x="36" y="14" width="8" height="12" rx="2" fill="#222C36" stroke="#3B4854"/>
+            <rect x="48" y="14" width="8" height="12" rx="2" fill="#222C36" stroke="#3B4854"/>
+            <circle cx="40" cy="35" r="2.5" fill="#38BDF8"/>
+          </svg>
+          <span class="mt-3 mono text-[11px]" style="color:var(--ink-2)">CHARGING HUB</span>
+          <span class="mono tnum text-[10px] mt-0.5" style="color:var(--ink-3)">× 1</span>
+        </div>
+        <!-- spare props -->
+        <div class="card-lift rounded-xl p-5 flex flex-col items-center text-center" style="border:1px solid var(--rule);background:var(--card)">
+          <svg width="56" height="44" viewBox="0 0 80 60" fill="none" aria-hidden="true">
+            <g stroke="#3B4854" stroke-width="1.5" fill="#222C36">
+              <ellipse cx="26" cy="22" rx="14" ry="3.5"/>
+              <ellipse cx="54" cy="22" rx="14" ry="3.5"/>
+              <ellipse cx="26" cy="38" rx="14" ry="3.5"/>
+              <ellipse cx="54" cy="38" rx="14" ry="3.5"/>
+            </g>
+          </svg>
+          <span class="mt-3 mono text-[11px]" style="color:var(--ink-2)">SPARE PROPS</span>
+          <span class="mono tnum text-[10px] mt-0.5" style="color:var(--ink-3)">× 6</span>
+        </div>
+        <!-- rugged case -->
+        <div class="card-lift rounded-xl p-5 flex flex-col items-center text-center" style="border:1px solid var(--rule);background:var(--card)">
+          <svg width="56" height="44" viewBox="0 0 80 60" fill="none" aria-hidden="true">
+            <rect x="14" y="20" width="52" height="28" rx="5" fill="#28333F" stroke="#3B4854"/>
+            <rect x="32" y="14" width="16" height="8" rx="3" fill="#222C36" stroke="#3B4854"/>
+            <line x1="14" y1="32" x2="66" y2="32" stroke="#3B4854" stroke-width="1.5"/>
+            <rect x="36" y="29" width="8" height="6" rx="1.5" fill="#1C2530" stroke="#3B4854"/>
+          </svg>
+          <span class="mt-3 mono text-[11px]" style="color:var(--ink-2)">RUGGED CASE</span>
+          <span class="mono tnum text-[10px] mt-0.5" style="color:var(--ink-3)">× 1</span>
+        </div>
+      </div>
+      <p class="mono text-[12px] mt-7" style="color:var(--ink-3)">
+        — Also included: USB-C charging cable, RTK base-station quick-mount, and the printed safety &amp; registration card.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ 8. USE-CASE / LIFESTYLE BAND ============ -->
+  <section class="container" style="padding-top:104px;padding-bottom:96px">
+    <p class="eyebrow">In the field</p>
+    <h2 class="display mt-3" style="font-size:clamp(1.8rem,3.2vw,2.4rem);max-width:32rem">
+      One drone, four jobs it does every week.
+    </h2>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-12">
+      <div class="card-lift rounded-2xl overflow-hidden" style="border:1px solid var(--rule);background:var(--card)">
+        <div class="h-36" style="background:radial-gradient(120% 100% at 20% 10%,rgba(56,189,248,0.22),transparent 60%),linear-gradient(160deg,#16242F,#0B121A)">
+          <svg viewBox="0 0 220 120" width="100%" height="100%" aria-hidden="true">
+            <line x1="20" y1="100" x2="200" y2="100" stroke="#2C3742" stroke-width="1.5"/>
+            <path d="M30 100 L70 60 L110 100" stroke="rgba(56,189,248,0.5)" stroke-width="1.5" fill="none"/>
+            <path d="M120 100 L160 70 L200 100" stroke="rgba(56,189,248,0.5)" stroke-width="1.5" fill="none"/>
+            <rect x="100" y="34" width="20" height="9" rx="3" fill="#28333F" stroke="#3B4854"/>
+          </svg>
+        </div>
+        <div class="p-5">
+          <h3 class="font-600 text-[15px]">Topographic survey</h3>
+          <p class="text-[13px] mt-1.5" style="color:var(--ink-2)">Boundary, corridor, and as-built surveys delivered the same day as the flight.</p>
+        </div>
+      </div>
+      <div class="card-lift rounded-2xl overflow-hidden" style="border:1px solid var(--rule);background:var(--card)">
+        <div class="h-36" style="background:radial-gradient(120% 100% at 20% 10%,rgba(56,189,248,0.22),transparent 60%),linear-gradient(160deg,#16242F,#0B121A)">
+          <svg viewBox="0 0 220 120" width="100%" height="100%" aria-hidden="true">
+            <rect x="40" y="64" width="44" height="36" fill="#222C36" stroke="#3B4854"/>
+            <rect x="96" y="48" width="34" height="52" fill="#28333F" stroke="#3B4854"/>
+            <rect x="142" y="72" width="40" height="28" fill="#222C36" stroke="#3B4854"/>
+            <rect x="104" y="30" width="20" height="9" rx="3" fill="#28333F" stroke="#3B4854"/>
+            <path d="M114 39 L114 48" stroke="rgba(56,189,248,0.5)" stroke-dasharray="2 2"/>
+          </svg>
+        </div>
+        <div class="p-5">
+          <h3 class="font-600 text-[15px]">Construction progress</h3>
+          <p class="text-[13px] mt-1.5" style="color:var(--ink-2)">Weekly site captures to track earthwork against the design model.</p>
+        </div>
+      </div>
+      <div class="card-lift rounded-2xl overflow-hidden" style="border:1px solid var(--rule);background:var(--card)">
+        <div class="h-36" style="background:radial-gradient(120% 100% at 20% 10%,rgba(56,189,248,0.22),transparent 60%),linear-gradient(160deg,#16242F,#0B121A)">
+          <svg viewBox="0 0 220 120" width="100%" height="100%" aria-hidden="true">
+            <g stroke="rgba(56,189,248,0.4)" stroke-width="1">
+              <line x1="30" y1="50" x2="190" y2="50"/><line x1="30" y1="74" x2="190" y2="74"/><line x1="30" y1="98" x2="190" y2="98"/>
+            </g>
+            <g fill="rgba(56,189,248,0.18)">
+              <circle cx="60" cy="50" r="9"/><circle cx="110" cy="74" r="9"/><circle cx="150" cy="50" r="9"/>
+            </g>
+            <rect x="100" y="22" width="20" height="9" rx="3" fill="#28333F" stroke="#3B4854"/>
+          </svg>
+        </div>
+        <div class="p-5">
+          <h3 class="font-600 text-[15px]">Crop health scouting</h3>
+          <p class="text-[13px] mt-1.5" style="color:var(--ink-2)">Map field zones, flag stress early, and target inputs row by row.</p>
+        </div>
+      </div>
+      <div class="card-lift rounded-2xl overflow-hidden" style="border:1px solid var(--rule);background:var(--card)">
+        <div class="h-36" style="background:radial-gradient(120% 100% at 20% 10%,rgba(56,189,248,0.22),transparent 60%),linear-gradient(160deg,#16242F,#0B121A)">
+          <svg viewBox="0 0 220 120" width="100%" height="100%" aria-hidden="true">
+            <path d="M70 104 L70 30 M150 104 L150 30 M70 44 L150 32 M70 64 L150 52 M70 84 L150 72" stroke="#2C3742" stroke-width="2" fill="none"/>
+            <rect x="160" y="40" width="20" height="9" rx="3" fill="#28333F" stroke="#3B4854"/>
+            <circle cx="150" cy="52" r="7" fill="none" stroke="rgba(56,189,248,0.6)" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div class="p-5">
+          <h3 class="font-600 text-[15px]">Asset inspection</h3>
+          <p class="text-[13px] mt-1.5" style="color:var(--ink-2)">Close-range capture of towers, roofs, and bridges without rope access.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 9. STATS BANNER ============ -->
+  <section style="background:linear-gradient(160deg,#0E1A24,#0A0E14);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)">
+    <div class="container" style="padding-top:72px;padding-bottom:72px">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-y-10 gap-x-6">
+        <div class="text-center lg:text-left lg:px-2">
+          <div class="display tnum" style="font-size:clamp(2.2rem,4.5vw,3.1rem);color:var(--accent)">14,408</div>
+          <div class="mono text-[11px] mt-2" style="color:var(--ink-3);letter-spacing:0.05em">UNITS IN THE FIELD</div>
+        </div>
+        <div class="text-center lg:text-left lg:px-2 lg:border-l" style="border-color:var(--rule)">
+          <div class="display tnum" style="font-size:clamp(2.2rem,4.5vw,3.1rem);color:var(--accent)">4,210,880</div>
+          <div class="mono text-[11px] mt-2" style="color:var(--ink-3);letter-spacing:0.05em">ACRES MAPPED</div>
+        </div>
+        <div class="text-center lg:text-left lg:px-2 lg:border-l" style="border-color:var(--rule)">
+          <div class="display tnum" style="font-size:clamp(2.2rem,4.5vw,3.1rem);color:var(--accent)">38 min</div>
+          <div class="mono text-[11px] mt-2" style="color:var(--ink-3);letter-spacing:0.05em">FLIGHT TIME / BATTERY</div>
+        </div>
+        <div class="text-center lg:text-left lg:px-2 lg:border-l" style="border-color:var(--rule)">
+          <div class="display tnum" style="font-size:clamp(2.2rem,4.5vw,3.1rem);color:var(--accent)">1 cm</div>
+          <div class="mono text-[11px] mt-2" style="color:var(--ink-3);letter-spacing:0.05em">MAP ACCURACY · RTK</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 10. PRICING ============ -->
+  <section id="pricing" class="container" style="padding-top:104px;padding-bottom:96px">
+    <div class="text-center max-w-2xl mx-auto">
+      <p class="eyebrow">Editions</p>
+      <h2 class="display mt-3" style="font-size:clamp(1.9rem,3.6vw,2.6rem)">
+        Pick a kit. Both ship with the same drone.
+      </h2>
+      <p class="mt-4 text-[16px]" style="color:var(--ink-2)">
+        Free shipping, a 30-day return window, and a 2-year limited warranty on every order.
+      </p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6 mt-12 max-w-4xl mx-auto">
+
+      <!-- Skylark -->
+      <div class="card-lift rounded-2xl p-8" style="border:1px solid var(--rule);background:var(--card)">
+        <div class="flex items-baseline justify-between">
+          <h3 class="display text-[20px]">Skylark</h3>
+          <span class="mono text-[11px] px-2 py-1 rounded" style="background:rgba(255,255,255,0.04);color:var(--ink-3)">SKL-200</span>
+        </div>
+        <div class="mt-4 flex items-baseline gap-1">
+          <span class="display tnum" style="font-size:2.6rem">$2,449</span>
+        </div>
+        <p class="text-[13px] mt-1" style="color:var(--ink-3)">or $204/mo for 12 months at 0% APR</p>
+        <a href="#top" class="btn-ghost w-full mt-6">Buy Skylark</a>
+        <ul class="mt-7 space-y-3 text-[14px]" style="color:var(--ink-2)">
+          <li class="flex gap-2.5"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" class="flex-none mt-0.5" aria-hidden="true"><path d="M3 8.5l3 3 6-7.5" stroke="#38BDF8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Skylark drone + controller</li>
+          <li class="flex gap-2.5"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" class="flex-none mt-0.5" aria-hidden="true"><path d="M3 8.5l3 3 6-7.5" stroke="#38BDF8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>3 swappable batteries + charging hub</li>
+          <li class="flex gap-2.5"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" class="flex-none mt-0.5" aria-hidden="true"><path d="M3 8.5l3 3 6-7.5" stroke="#38BDF8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>6 spare props + rugged case</li>
+          <li class="flex gap-2.5"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" class="flex-none mt-0.5" aria-hidden="true"><path d="M3 8.5l3 3 6-7.5" stroke="#38BDF8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Skylark app · on-device processing</li>
+        </ul>
+      </div>
+
+      <!-- Skylark Survey Kit -->
+      <div class="card-lift rounded-2xl p-8 relative" style="border:1px solid rgba(56,189,248,0.4);background:linear-gradient(165deg,rgba(56,189,248,0.08),var(--card) 55%)">
+        <span class="absolute -top-3 left-8 mono text-[10px] px-2.5 py-1 rounded-full" style="background:var(--accent);color:#04121C;letter-spacing:0.04em">MOST POPULAR</span>
+        <div class="flex items-baseline justify-between">
+          <h3 class="display text-[20px]">Skylark Survey Kit</h3>
+          <span class="mono text-[11px] px-2 py-1 rounded" style="background:rgba(56,189,248,0.12);color:var(--accent)">SKL-200-SK</span>
+        </div>
+        <div class="mt-4 flex items-baseline gap-1">
+          <span class="display tnum" style="font-size:2.6rem">$3,199</span>
+        </div>
+        <p class="text-[13px] mt-1" style="color:var(--ink-3)">or $267/mo for 12 months at 0% APR</p>
+        <a href="#top" class="btn-primary w-full mt-6">Buy Survey Kit</a>
+        <ul class="mt-7 space-y-3 text-[14px]" style="color:var(--ink-2)">
+          <li class="flex gap-2.5"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" class="flex-none mt-0.5" aria-hidden="true"><path d="M3 8.5l3 3 6-7.5" stroke="#38BDF8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Everything in Skylark</li>
+          <li class="flex gap-2.5"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" class="flex-none mt-0.5" aria-hidden="true"><path d="M3 8.5l3 3 6-7.5" stroke="#38BDF8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span><strong style="color:var(--ink)">2 extra batteries</strong> — 5 total, all-day flying</span></li>
+          <li class="flex gap-2.5"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" class="flex-none mt-0.5" aria-hidden="true"><path d="M3 8.5l3 3 6-7.5" stroke="#38BDF8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span><strong style="color:var(--ink)">Upgraded rugged transport case</strong></span></li>
+          <li class="flex gap-2.5"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" class="flex-none mt-0.5" aria-hidden="true"><path d="M3 8.5l3 3 6-7.5" stroke="#38BDF8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span><strong style="color:var(--ink)">1 year of Skylark Cloud</strong> processing</span></li>
+        </ul>
+      </div>
+
+    </div>
+
+    <div class="grid sm:grid-cols-3 gap-4 mt-8 max-w-4xl mx-auto">
+      <div class="rounded-xl p-4 flex items-start gap-3" style="border:1px solid var(--rule);background:var(--card)">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" class="flex-none mt-0.5" aria-hidden="true"><rect x="3" y="6" width="14" height="9" rx="2" stroke="#38BDF8" stroke-width="1.5"/><path d="M3 9h14" stroke="#38BDF8" stroke-width="1.5"/></svg>
+        <div><div class="text-[13px] font-600">0% financing</div><div class="text-[12px]" style="color:var(--ink-3)">12 months, approved at checkout.</div></div>
+      </div>
+      <div class="rounded-xl p-4 flex items-start gap-3" style="border:1px solid var(--rule);background:var(--card)">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" class="flex-none mt-0.5" aria-hidden="true"><path d="M10 2l6 3v5c0 5-3 7-6 8-3-1-6-3-6-8V5l6-3z" stroke="#38BDF8" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        <div><div class="text-[13px] font-600">2-year warranty</div><div class="text-[12px]" style="color:var(--ink-3)">Covers defects in parts and workmanship.</div></div>
+      </div>
+      <div class="rounded-xl p-4 flex items-start gap-3" style="border:1px solid var(--rule);background:var(--card)">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" class="flex-none mt-0.5" aria-hidden="true"><path d="M4 10a6 6 0 016-6c2.5 0 4 1.4 5 3M16 4v3h-3M16 10a6 6 0 01-6 6c-2.5 0-4-1.4-5-3M4 16v-3h3" stroke="#38BDF8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div><div class="text-[13px] font-600">Crash replacement</div><div class="text-[12px]" style="color:var(--ink-3)">Flat-rate repair or swap within 5 business days.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 11. REVIEWS + FAQ ============ -->
+  <section style="background:var(--bg-2);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)">
+    <div class="container" style="padding-top:104px;padding-bottom:104px">
+
+      <div class="grid lg:grid-cols-3 gap-12">
+
+        <!-- aggregate + reviews -->
+        <div class="lg:col-span-2">
+          <p class="eyebrow">Owner reviews</p>
+          <div class="flex items-center gap-4 mt-3">
+            <span class="display tnum" style="font-size:2.6rem">4.8</span>
+            <div>
+              <div style="color:var(--accent);font-size:15px">★★★★★</div>
+              <div class="text-[13px]" style="color:var(--ink-3)">from <span class="mono tnum">2,914</span> verified owners</div>
+            </div>
+          </div>
+
+          <div class="grid sm:grid-cols-2 gap-4 mt-8">
+            <div class="rounded-2xl p-6" style="border:1px solid var(--rule);background:var(--card)">
+              <div style="color:var(--accent);font-size:13px">★★★★★</div>
+              <p class="text-[14px] mt-3" style="color:var(--ink-2)">
+                "I retired our two sets of GCPs the week it arrived. A 40-hectare boundary survey now takes one flight and an afternoon of processing — checkpoints come back inside 1.4 cm every time."
+              </p>
+              <div class="mt-4 flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full flex-none" style="background:linear-gradient(135deg,#38BDF8,#0EA5E9)"></div>
+                <div>
+                  <div class="text-[13px] font-600">Marta Eriksson</div>
+                  <div class="mono text-[11px]" style="color:var(--ink-3)">Licensed surveyor, Nordvik Geomatik · 9 months</div>
+                </div>
+              </div>
+            </div>
+            <div class="rounded-2xl p-6" style="border:1px solid var(--rule);background:var(--card)">
+              <div style="color:var(--accent);font-size:13px">★★★★★</div>
+              <p class="text-[14px] mt-3" style="color:var(--ink-2)">
+                "We fly the haul roads and benches every Friday. The stockpile volumes line up with our truck counts within 2%, so finance finally trusts the drone numbers."
+              </p>
+              <div class="mt-4 flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full flex-none" style="background:linear-gradient(135deg,#0EA5E9,#38BDF8)"></div>
+                <div>
+                  <div class="text-[13px] font-600">Daniel Okafor</div>
+                  <div class="mono text-[11px]" style="color:var(--ink-3)">Site engineer, Cresta Aggregates · 1 year</div>
+                </div>
+              </div>
+            </div>
+            <div class="rounded-2xl p-6" style="border:1px solid var(--rule);background:var(--card)">
+              <div style="color:var(--accent);font-size:13px">★★★★★</div>
+              <p class="text-[14px] mt-3" style="color:var(--ink-2)">
+                "Coverage maps over 1,200 acres of orchard used to mean a long morning. Now I draw the boundary, swap two batteries, and have zone data before the irrigation crew starts."
+              </p>
+              <div class="mt-4 flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full flex-none" style="background:linear-gradient(135deg,#38BDF8,#7DD3FC)"></div>
+                <div>
+                  <div class="text-[13px] font-600">Priya Raghavan</div>
+                  <div class="mono text-[11px]" style="color:var(--ink-3)">Agronomy lead, Greenfurrow Farms · 7 months</div>
+                </div>
+              </div>
+            </div>
+            <div class="rounded-2xl p-6" style="border:1px solid var(--rule);background:var(--card)">
+              <div style="color:var(--accent);font-size:14px">★★★★<span style="color:var(--ink-3)">★</span></div>
+              <p class="text-[14px] mt-3" style="color:var(--ink-2)">
+                "We inspect transmission towers without renting a lift. The obstacle sensing keeps it honest near the conductors, and on-device processing means I never wait on a cell signal in the valley."
+              </p>
+              <div class="mt-4 flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full flex-none" style="background:linear-gradient(135deg,#0EA5E9,#38BDF8)"></div>
+                <div>
+                  <div class="text-[13px] font-600">Tomás Beltrán</div>
+                  <div class="mono text-[11px]" style="color:var(--ink-3)">Inspection contractor, Andes NDT Group · 5 months</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FAQ -->
+        <div>
+          <p class="eyebrow">Questions</p>
+          <h3 class="display mt-3 mb-5" style="font-size:1.5rem">Before you buy</h3>
+          <div class="space-y-3">
+
+            <details class="rounded-xl px-5 py-1" style="border:1px solid var(--rule);background:var(--card)">
+              <summary class="flex items-center justify-between gap-3 py-4 text-[14px] font-600">
+                Do I need a license to fly it commercially?
+                <span class="chev flex-none" style="color:var(--accent)">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </span>
+              </summary>
+              <p class="pb-4 text-[13px]" style="color:var(--ink-2)">
+                Yes — commercial drone operation requires a remote-pilot certificate in most countries (a Part 107 certificate in the US, an A2 or GVC in the EU). Skylark itself sits in the sub-25 kg class, so it does not need special airframe certification. You are responsible for registering the aircraft and respecting local airspace rules.
+              </p>
+            </details>
+
+            <details class="rounded-xl px-5 py-1" style="border:1px solid var(--rule);background:var(--card)">
+              <summary class="flex items-center justify-between gap-3 py-4 text-[14px] font-600">
+                How accurate are the maps — is it truly survey-grade?
+                <span class="chev flex-none" style="color:var(--accent)">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </span>
+              </summary>
+              <p class="pb-4 text-[13px]" style="color:var(--ink-2)">
+                With an RTK fix Skylark holds 1 cm horizontal and vertical absolute accuracy, plus 1 ppm for distance from the base. Across 312 verification flights it matched survey-grade checkpoints with no ground control points placed. For legally binding cadastral work we still recommend a handful of independent checkpoints — best practice, not a limitation of the drone.
+              </p>
+            </details>
+
+            <details class="rounded-xl px-5 py-1" style="border:1px solid var(--rule);background:var(--card)">
+              <summary class="flex items-center justify-between gap-3 py-4 text-[14px] font-600">
+                Is cloud processing required, or can it run offline?
+                <span class="chev flex-none" style="color:var(--accent)">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </span>
+              </summary>
+              <p class="pb-4 text-[13px]" style="color:var(--ink-2)">
+                Cloud is optional. The Skylark app processes orthomosaics, point clouds, and volumes entirely on-device, which matters on remote sites with no signal. Skylark Cloud is faster for very large datasets and adds team sharing and version history — the Survey Kit includes a year of it, and it is a paid add-on otherwise.
+              </p>
+            </details>
+
+            <details class="rounded-xl px-5 py-1" style="border:1px solid var(--rule);background:var(--card)">
+              <summary class="flex items-center justify-between gap-3 py-4 text-[14px] font-600">
+                What's the obstacle-avoidance coverage?
+                <span class="chev flex-none" style="color:var(--accent)">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </span>
+              </summary>
+              <p class="pb-4 text-[13px]" style="color:var(--ink-2)">
+                Six-direction binocular vision covers forward, backward, left, right, up, and down, detecting obstacles out to roughly 30 m. During automated missions Skylark will slow, route around, or hold position rather than push through. Vision systems struggle with thin wires and in low light, so keep visual line of sight and plan conservative altitudes near infrastructure.
+              </p>
+            </details>
+
+            <details class="rounded-xl px-5 py-1" style="border:1px solid var(--rule);background:var(--card)">
+              <summary class="flex items-center justify-between gap-3 py-4 text-[14px] font-600">
+                How are repairs and crash replacements handled?
+                <span class="chev flex-none" style="color:var(--accent)">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </span>
+              </summary>
+              <p class="pb-4 text-[13px]" style="color:var(--ink-2)">
+                The 2-year warranty covers manufacturing defects. Accidental damage is handled through Skylark Care: a flat repair fee, or a replacement airframe shipped within five business days while we assess yours. Send the flight log with your claim — it speeds diagnosis, and props and landing gear are inexpensive consumables you can swap yourself.
+              </p>
+            </details>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 12. FINAL CTA ============ -->
+  <section class="mesh">
+    <div class="dotgrid">
+      <div class="container text-center" style="padding-top:104px;padding-bottom:104px">
+        <div class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 mb-6"
+             style="border:1px solid var(--rule);background:rgba(56,189,248,0.06)">
+          <span class="pulse-dot"></span>
+          <span class="mono text-[12px]" style="color:var(--ink-2)">Now shipping · ships in 2 business days</span>
+        </div>
+        <h2 class="display mx-auto" style="font-size:clamp(2rem,4.5vw,3.2rem);max-width:24rem">
+          Map the site this morning.
+        </h2>
+        <p class="mt-5 text-[16px] mx-auto max-w-md" style="color:var(--ink-2)">
+          Trade ground control points and second visits for one 38-minute flight and a model that holds up to a surveyor's checkpoints.
+        </p>
+        <div class="mt-8 flex justify-center">
+          <a href="#top" class="btn-primary text-[15px]" style="padding:15px 28px">
+            Buy Skylark <span class="mono tnum">· $2,449</span>
+          </a>
+        </div>
+        <p class="mono text-[12px] mt-5" style="color:var(--ink-3)">
+          Free shipping · 30-day returns · 2-year warranty
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 13. FOOTER ============ -->
+  <footer id="support" style="background:var(--bg);border-top:1px solid var(--rule)">
+    <div class="container" style="padding-top:64px;padding-bottom:40px">
+      <div class="grid md:grid-cols-5 gap-10">
+
+        <div class="md:col-span-2">
+          <a href="#top" class="flex items-center gap-2.5">
+            <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+              <rect x="1" y="1" width="30" height="30" rx="8" fill="#0E1822" stroke="rgba(56,189,248,0.4)"/>
+              <path d="M16 7l5.5 14h-3.2L16 14.6 13.7 21h-3.2L16 7z" fill="#38BDF8"/>
+              <circle cx="16" cy="24" r="1.8" fill="#38BDF8"/>
+            </svg>
+            <span class="display text-[17px]">Skylark</span>
+          </a>
+          <p class="text-[13px] mt-4 max-w-xs" style="color:var(--ink-3)">
+            Survey-grade mapping and inspection drones for the people who have to stand behind the numbers.
+          </p>
+          <div class="flex items-center gap-2 mt-5">
+            <span class="pulse-dot"></span>
+            <span class="mono text-[11px]" style="color:var(--ink-2)">All systems shipping</span>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="mono text-[11px] mb-4" style="color:var(--ink-3);letter-spacing:0.1em">PRODUCT</h4>
+          <ul class="space-y-2.5 text-[13px]" style="color:var(--ink-2)">
+            <li><a href="#product" class="ul-link">Overview</a></li>
+            <li><a href="#specs" class="ul-link">Specifications</a></li>
+            <li><a href="#app" class="ul-link">Skylark app</a></li>
+            <li><a href="#pricing" class="ul-link">Editions &amp; pricing</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="mono text-[11px] mb-4" style="color:var(--ink-3);letter-spacing:0.1em">SUPPORT</h4>
+          <ul class="space-y-2.5 text-[13px]" style="color:var(--ink-2)">
+            <li><a href="#support" class="ul-link">Help center</a></li>
+            <li><a href="#support" class="ul-link">Firmware updates</a></li>
+            <li><a href="#support" class="ul-link">Skylark Care &amp; repairs</a></li>
+            <li><a href="#support" class="ul-link">Pilot training</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="mono text-[11px] mb-4" style="color:var(--ink-3);letter-spacing:0.1em">COMPANY</h4>
+          <ul class="space-y-2.5 text-[13px]" style="color:var(--ink-2)">
+            <li><a href="#support" class="ul-link">About Skylark</a></li>
+            <li><a href="#support" class="ul-link">Newsroom</a></li>
+            <li><a href="#support" class="ul-link">Careers</a></li>
+            <li><a href="#support" class="ul-link">Contact sales</a></li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="mt-12 pt-7" style="border-top:1px solid var(--rule)">
+        <div class="grid md:grid-cols-2 gap-4 text-[12px]" style="color:var(--ink-3)">
+          <div class="space-y-1.5">
+            <p>2-year limited warranty on every Skylark. Skylark Care covers accidental damage.</p>
+            <p>Airframe and packaging are recyclable — return any unit through the Skylark take-back program at end of life.</p>
+          </div>
+          <div class="md:text-right space-y-1.5">
+            <p class="flex md:justify-end gap-4">
+              <a href="#support" class="ul-link">Privacy</a>
+              <a href="#support" class="ul-link">Terms</a>
+              <a href="#support" class="ul-link">Airspace &amp; safety</a>
+            </p>
+            <p class="mono">FCC ID: 2AXYZ-SKL200 · Contains FCC ID: 2AXYZ-RTK21</p>
+            <p>© 2026 Skylark Aerial Systems. All rights reserved.</p>
+          </div>
+        </div>
+        <p class="mono text-[11px] mt-5" style="color:var(--ink-3);line-height:1.7">
+          This device complies with Part 15 of the FCC Rules. Operation is subject to the condition that this device does not cause harmful interference. Operators are responsible for compliance with local aviation regulations.
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ONLY permitted JS: draws procedural SVG visualizations (flight grid + gauge arc) -->
+  <script>
+    (function () {
+      // App flight-grid path — boustrophedon survey lines + waypoint dots
+      var path = document.getElementById('gridPath');
+      var dots = document.getElementById('gridDots');
+      if (path && dots) {
+        var rows = [96, 124, 152, 180, 212];
+        var xL = 60, xR = 366, d = '', i;
+        for (i = 0; i < rows.length; i++) {
+          var y = rows[i];
+          var a = (i % 2 === 0) ? xL : xR;
+          var b = (i % 2 === 0) ? xR : xL;
+          d += (i === 0 ? 'M' : 'L') + a + ' ' + y + ' L' + b + ' ' + y + ' ';
+          dots.innerHTML += '<circle cx="' + a + '" cy="' + y + '" r="2.4"/>';
+          dots.innerHTML += '<circle cx="' + b + '" cy="' + y + '" r="2.4"/>';
+        }
+        path.setAttribute('d', d.trim());
+      }
+
+      // Flight-time gauge — fill arc to 38 / 42-min nominal scale
+      var arc = document.getElementById('gaugeArc');
+      if (arc) {
+        var pct = 38 / 42; // 90%
+        arc.setAttribute('stroke-dashoffset', String(100 - pct * 100));
+      }
+    })();
+  </script>
+
+</body>
+</html>

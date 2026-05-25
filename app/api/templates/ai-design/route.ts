@@ -3,8 +3,15 @@ import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import type { ProjectData } from "@/lib/projects/types";
 import { createVersion } from "@/lib/projects/versions";
-import { getCreditState, debitCredits, estimateCredits } from "@/lib/credits";
+import {
+  getCreditState,
+  debitCredits,
+  estimateCredits,
+  creditsForUsage,
+  type TokenUsage,
+} from "@/lib/credits";
 import { DESIGN_GUIDANCE } from "@/lib/design-guidance";
+import { resolveAIProvider } from "@/lib/ai-provider";
 import {
   applyOps,
   buildScopedView,
@@ -14,6 +21,7 @@ import {
   tagWithOpIds,
   type ScopedView,
 } from "@/lib/html-ops";
+import { normalizeBornCanonical } from "@/lib/normalize";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/templates/ai-design — conversational AI page redesign.
@@ -56,11 +64,11 @@ NON-NEGOTIABLE CONSTRAINTS:
 - Output a COMPLETE, self-contained HTML document: starts with <!doctype html>, ends with </html>.
 - Tailwind CSS via CDN: <script src="https://cdn.tailwindcss.com"></script>
 - Google Fonts via <link> in <head>. Allowed families: Inter, Geist, Fraunces, Source Serif 4, Crimson Pro, JetBrains Mono.
-- All custom CSS inline in a <style> block in <head>. Use CSS custom properties on :root for design tokens (--accent, --accent-r as RGB triplet, --bg, --fg, --font-display, --font-body, --radius). Reference via var() throughout — DO NOT hardcode the same color in 47 places, use the var.
+- All custom CSS inline in a <style> block in <head>. Use CSS custom properties on :root for design tokens (--accent, --accent-r as RGB triplet, --bg, --surface, --fg, --border, --font-display, --font-body, --radius). Reference via var() throughout — DO NOT hardcode the same color in 47 places, use the var. Also emit a \`:root.dark { … }\` block with hand-designed dark-theme values for --bg, --surface, --fg, --border and --accent; every text color MUST be a var() token so the page flips cleanly.
 - NO React, NO Babel, NO JSX, NO <script type="text/babel">, NO window.X globals, NO import statements anywhere.
 - NO data-slot-path= attribute anywhere — that's an editor-mode marker, reserved.
 - NO login / signup / "my account" / dashboard UI. Public marketing pages only.
-- Inline SVG for logos / icons / illustrations. Do NOT invent external image URLs — for hero / product imagery with no real asset, use a <div> with bg-gradient-to-br as a tasteful placeholder. EXCEPTION: when a "USER ATTACHED IMAGE" block appears in the user message, that URL is real and user-provided — use it verbatim as an <img src> (or CSS background-image). Never placeholder a user-attached image.
+- Images: when a "USER ATTACHED IMAGE" block appears in the user message, that URL is REAL — use it verbatim as an <img src> (or CSS background-image), and never placeholder a user-attached image. With no attached image, do NOT invent image URLs — use a simple <div> with bg-gradient-to-br as a placeholder. NEVER embed an image as a data: URI, and NEVER hand-build a detailed SVG mockup posing as an image (it is slow, expensive, and not what the user wants) — a placeholder is only a plain gradient <div>. Inline SVG is for icons and small decorative marks only.
 - Mobile-responsive at 360px minimum width.
 
 CONVERSATIONAL TONE for your reasoning text:
@@ -190,7 +198,7 @@ function buildUserMessage(args: {
       ? `\nAlt text: ${args.attachedImage.alt}`
       : "";
     imageBlock = `USER ATTACHED IMAGE: ${args.attachedImage.url}${altLine}
-This is a REAL image URL the user explicitly provided — use it VERBATIM as the src of an <img> tag (or as a CSS background-image). This OVERRIDES the "no external image URLs" constraint: that rule only forbids INVENTING urls; this one is real. Do NOT create a placeholder <div>, and do NOT tell the user to "replace the div later" — insert the actual <img> with this exact src now.
+This is a REAL image URL the user explicitly provided — use it VERBATIM as the src of an <img> tag (or as a CSS background-image). This OVERRIDES the "no external image URLs" constraint: that rule only forbids INVENTING urls; this one is real. Do NOT create a placeholder <div>, and do NOT tell the user to "replace the div later" — insert the actual <img> with this exact src now. If the page already has a placeholder for this image (a gradient <div>, an empty bordered box), REPLACE that whole element with the <img> — do NOT nest the <img> inside it, or the placeholder's padding / background will frame the image. The image fills its slot edge-to-edge unless a frame is clearly part of the design.
 If the request specifies a position ("right", "background", "above", "as the hero"), honor it precisely. Otherwise, place it where it makes the most sense — typically an <img> with object-cover at the slot's aspect ratio, or a CSS background-image when the user implies a backdrop. Always include alt text (use the user's alt if provided; otherwise infer from the image + surrounding copy). When inserting into a previously text-only section, restructure the layout (2-column, hero with bg, etc.) so the image feels intentional rather than tacked on.
 
 `;
@@ -234,6 +242,8 @@ interface AiDesignBody {
   currentHtml?: string;
   prompt?: string;
   history?: HistoryTurn[];
+  /** "kimi" (default) or "gemini" — the model the Chat panel picked. */
+  model?: string;
   /** When set, the user has scoped this turn to a single element of the
    *  current HTML. Kimi is instructed to modify ONLY that element. */
   scope?: ScopeBody;
@@ -310,19 +320,32 @@ export async function POST(req: Request): Promise<Response> {
         : "";
     if (url.length > 0 && url.length <= ATTACHED_URL_MAX) {
       try {
-        const parsed = new URL(url);
+        // Resolve against the request origin so a root-relative URL (e.g.
+        // /openlen-images/x.webp from the curated gallery) becomes a usable
+        // absolute URL instead of being dropped.
+        const parsed = new URL(url, req.url);
         if (parsed.protocol === "http:" || parsed.protocol === "https:") {
           const alt =
             typeof body.attachedImage.alt === "string"
               ? body.attachedImage.alt.trim().slice(0, ATTACHED_ALT_MAX)
               : "";
-          attachedImage = alt ? { url, alt } : { url };
+          attachedImage = alt
+            ? { url: parsed.href, alt }
+            : { url: parsed.href };
         }
       } catch {
         /* leave attachedImage null */
       }
     }
   }
+
+  // eslint-disable-next-line no-console
+  console.log(
+    "[ai-design] attachedImage — client sent:",
+    body.attachedImage?.url ?? "(none)",
+    "| accepted:",
+    attachedImage?.url ?? "(none)",
+  );
 
   const userId = session.user.id;
 
@@ -339,8 +362,12 @@ export async function POST(req: Request): Promise<Response> {
   const existing = rows[0];
   if (!existing) return errorJson(404, "project not found");
 
-  const apiKey = process.env.TOGETHER_API_KEY;
-  if (!apiKey) return errorJson(500, "TOGETHER_API_KEY missing");
+  // Model choice — the Chat panel picks Kimi (Together) or Gemini; both
+  // speak the OpenAI-compatible streaming API (see lib/ai-provider).
+  const PROVIDER = resolveAIProvider(body.model);
+  if (!PROVIDER.key) {
+    return errorJson(500, `${PROVIDER.label} API key missing`);
+  }
 
   // Project Brief — persistent user-controlled context from the Brief sidebar
   // tab. Prepended to the turn's user message so Kimi sees it as part of the
@@ -418,7 +445,7 @@ export async function POST(req: Request): Promise<Response> {
   console.log(
     `[ai-design] prompt size: ${userMessageContent.length} chars, ~${Math.round(
       estimatedTokens / 1000,
-    )}K tokens${scopedView ? " (scoped)" : ""}`,
+    )}K tokens${scopedView ? " (scoped)" : ""}${attachedImage ? " +image" : ""}`,
   );
 
   const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
@@ -515,15 +542,15 @@ export async function POST(req: Request): Promise<Response> {
         }
 
         const upstream = await fetch(
-          "https://api.together.xyz/v1/chat/completions",
+          PROVIDER.url,
           {
             method: "POST",
             headers: {
               "content-type": "application/json",
-              authorization: `Bearer ${apiKey}`,
+              authorization: `Bearer ${PROVIDER.key}`,
             },
             body: JSON.stringify({
-              model: "moonshotai/Kimi-K2.6",
+              model: PROVIDER.model,
               messages,
               temperature: 0.8,
               // Structural rebuilds (add nav/footer/sections) on dense
@@ -534,14 +561,19 @@ export async function POST(req: Request): Promise<Response> {
               // in the system prompt that discourages bloat.
               max_tokens: 65_536,
               stream: true,
+              stream_options: { include_usage: true },
             }),
+            // Hard ceiling — abort a genuinely stalled upstream. Set well
+            // above a normal slow run (a real chat edit can take ~3 min) so
+            // it only catches true hangs, not slow-but-working responses.
+            signal: AbortSignal.timeout(360_000),
           },
         );
 
         if (!upstream.ok || !upstream.body) {
           const text = await upstream.text().catch(() => "");
           emit("error", {
-            message: `Together API ${upstream.status}: ${text.slice(0, 200)}`,
+            message: `${PROVIDER.label} API ${upstream.status}: ${text.slice(0, 200)}`,
           });
           closeStream();
           return;
@@ -557,6 +589,7 @@ export async function POST(req: Request): Promise<Response> {
         // error message can tell the user it was a hard cap, not bad
         // HTML, and steer them to use Select for structural changes.
         let finishReason: string | null = null;
+        let usage: TokenUsage | null = null;
 
         while (!upstreamDone) {
           const { done, value } = await reader.read();
@@ -579,7 +612,9 @@ export async function POST(req: Request): Promise<Response> {
                     delta?: { content?: string };
                     finish_reason?: string | null;
                   }>;
+                  usage?: TokenUsage | null;
                 };
+                if (parsed.usage) usage = parsed.usage;
                 const choice = parsed.choices?.[0];
                 if (typeof choice?.finish_reason === "string") {
                   finishReason = choice.finish_reason;
@@ -727,6 +762,11 @@ export async function POST(req: Request): Promise<Response> {
           }
         }
 
+        // Born-canonical: a Mode B rewrite — or ops that hit the token
+        // blocks — can drop the data-ol-* contract. Re-run the chain so the
+        // page stays themeable. Idempotent: a no-op when the markers survived.
+        trimmedHtml = normalizeBornCanonical(trimmedHtml);
+
         const reasoning = accumulatedReasoning.trim();
         const now = new Date();
 
@@ -769,14 +809,26 @@ export async function POST(req: Request): Promise<Response> {
           console.error("[ai-design] version snapshot failed", err);
         });
 
-        // Debit credits — metered from the real input + output volume.
-        await debitCredits(
-          userId,
-          estimateCredits(
-            SYSTEM_PROMPT.length + userMessageContent.length,
-            accumulatedReasoning.length + accumulatedHtml.length,
-          ),
+        // Debit credits — billed from the real token usage Together reports
+        // (stream_options.include_usage). Falls back to a char estimate only
+        // if that usage chunk never arrived.
+        const credits =
+          usage?.prompt_tokens != null && usage.completion_tokens != null
+            ? creditsForUsage(
+                usage.prompt_tokens,
+                usage.completion_tokens,
+                PROVIDER.rate,
+              )
+            : estimateCredits(
+                SYSTEM_PROMPT.length + userMessageContent.length,
+                accumulatedReasoning.length + accumulatedHtml.length,
+                PROVIDER.rate,
+              );
+        // eslint-disable-next-line no-console
+        console.log(
+          `[ai-design] tokens — prompt: ${usage?.prompt_tokens ?? "?"}, completion: ${usage?.completion_tokens ?? "?"} → ${credits} credits`,
         );
+        await debitCredits(userId, credits);
 
         emit("done", {
           reasoning,
@@ -789,8 +841,16 @@ export async function POST(req: Request): Promise<Response> {
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error("[ai-design] stream failed", err);
+        const timedOut =
+          !!err &&
+          typeof err === "object" &&
+          (err as { name?: unknown }).name === "TimeoutError";
         emit("error", {
-          message: err instanceof Error ? err.message : "Unknown error",
+          message: timedOut
+            ? "The model took too long (over 6 minutes) and was stopped. Try a smaller / more scoped change (🎯 Select), or try again."
+            : err instanceof Error
+              ? err.message
+              : "Unknown error",
         });
         closeStream();
       }

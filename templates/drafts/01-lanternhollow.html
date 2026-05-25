@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>lantern hollow — wayfare / second house</title>
+  <meta name="description" content="lantern hollow — gothic-folk from Halifax. New LP 'Wayfare / Second House' out 28 February 2026." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #14080B;
+      --bg-deep: #0a0406;
+      --fg: #f1e7d8;
+      --fg-faint: #8a7969;
+      --fg-mute: #5f5246;
+      --accent: #E0A156;
+      --accent-deep: #b97e3c;
+      --accent-bright: #F4C28A;
+      --hair: rgba(241, 231, 216, 0.07);
+      --hair-strong: rgba(241, 231, 216, 0.13);
+    }
+    html, body { background: var(--bg); color: var(--fg); }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    .font-display { font-family: 'Fraunces', 'Cormorant Garamond', serif; }
+    .font-mono { font-family: 'Geist Mono', ui-monospace, monospace; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .display { letter-spacing: -0.025em; line-height: 0.98; }
+    .grain {
+      position: fixed; inset: 0; pointer-events: none; z-index: 50;
+      mix-blend-mode: overlay; opacity: 0.35;
+      background-image:
+        radial-gradient(rgba(255, 230, 200, 0.05) 1px, transparent 1px),
+        radial-gradient(rgba(0, 0, 0, 0.3) 1px, transparent 1px);
+      background-size: 3px 3px, 5px 5px;
+      background-position: 0 0, 1px 1px;
+    }
+    .ember-glow {
+      box-shadow:
+        0 0 0 1px rgba(224, 161, 86, 0.16),
+        0 22px 70px -12px rgba(224, 161, 86, 0.24),
+        0 8px 26px -6px rgba(0, 0, 0, 0.7);
+    }
+    .pulse-wrap { position: relative; display: inline-flex; }
+    .pulse-wrap::before {
+      content: '';
+      position: absolute; inset: 0;
+      border-radius: 9999px;
+      background: var(--accent);
+      animation: pulse 1.8s ease-out infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.65; }
+      80% { transform: scale(2.6); opacity: 0; }
+      100% { opacity: 0; }
+    }
+    .lift {
+      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease, color 120ms ease;
+    }
+    .lift:hover { transform: translateY(-1px); }
+    .link-btn {
+      background: rgba(241, 231, 216, 0.025);
+      border: 1px solid var(--hair);
+    }
+    .link-btn:hover {
+      background: rgba(224, 161, 86, 0.05);
+      border-color: rgba(224, 161, 86, 0.32);
+    }
+    .flame { animation: flicker 3.4s ease-in-out infinite; transform-origin: center bottom; }
+    @keyframes flicker {
+      0%, 100% { transform: scaleY(1) translateX(0); opacity: 1; }
+      32% { transform: scaleY(0.94) translateX(-0.5px); opacity: 0.86; }
+      64% { transform: scaleY(1.05) translateX(0.4px); opacity: 0.97; }
+    }
+    .glow-text {
+      text-shadow: 0 0 22px rgba(224, 161, 86, 0.28);
+    }
+    .scroll-fade {
+      background: linear-gradient(180deg, var(--bg) 0%, transparent 5%, transparent 95%, var(--bg) 100%);
+      pointer-events: none; position: fixed; inset: 0; z-index: 30;
+    }
+    .row { border-top: 1px solid var(--hair); }
+    .hair { background: var(--hair); height: 1px; width: 100%; }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div class="grain" aria-hidden="true"></div>
+  <div class="scroll-fade" aria-hidden="true"></div>
+
+  <main class="relative z-10 mx-auto w-full max-w-[480px] px-5 pb-24 pt-10">
+
+    <!-- 1. Eyebrow -->
+    <div class="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 font-mono text-[10.5px] uppercase tracking-[0.18em]" style="color: var(--fg-faint);">
+      <span class="relative inline-flex h-1.5 w-1.5">
+        <span class="pulse-wrap inline-block h-1.5 w-1.5 rounded-full"></span>
+        <span class="absolute inset-0 inline-block h-1.5 w-1.5 rounded-full" style="background: var(--accent);"></span>
+      </span>
+      <span>WRL-014</span>
+      <span class="opacity-40">·</span>
+      <span>LP OUT 28 FEB</span>
+      <span class="opacity-40">·</span>
+      <span style="color: var(--accent);">PRE-ORDER OPEN</span>
+    </div>
+
+    <!-- 2. Header block -->
+    <header class="mt-8 flex flex-col items-center text-center">
+      <svg width="62" height="84" viewBox="0 0 58 78" fill="none" aria-hidden="true">
+        <path d="M22 4 Q29 0 36 4" stroke="#E0A156" stroke-width="1" fill="none" stroke-linecap="round" />
+        <line x1="29" y1="3" x2="29" y2="10" stroke="#E0A156" stroke-width="1" />
+        <path d="M16 10 L42 10 L40 16 L18 16 Z" fill="#E0A156" opacity="0.78" />
+        <rect x="19" y="16" width="20" height="38" fill="none" stroke="#E0A156" stroke-width="0.9" stroke-opacity="0.5" />
+        <line x1="19" y1="16" x2="39" y2="16" stroke="#E0A156" stroke-width="0.8" stroke-opacity="0.3" />
+        <ellipse cx="29" cy="40" rx="8" ry="14" fill="#E0A156" opacity="0.18" />
+        <ellipse cx="29" cy="36" rx="12" ry="6" fill="#E0A156" opacity="0.08" />
+        <g class="flame">
+          <path d="M29 28 C32 32 33.5 36.5 31 40 C30 42 28 42 27 40 C25 36.5 26.5 32 29 28 Z" fill="#E0A156" />
+          <path d="M29 32 C30 34 30 36 29.5 38 C29 38.6 28.5 38.4 28.5 37.4 C28.4 36 28.6 34 29 32 Z" fill="#FBE6BC" opacity="0.92" />
+          <ellipse cx="29" cy="40" rx="2" ry="0.7" fill="#FBE6BC" opacity="0.5" />
+        </g>
+        <path d="M16 54 L42 54 L40 60 L18 60 Z" fill="#E0A156" opacity="0.78" />
+        <line x1="14" y1="60" x2="44" y2="60" stroke="#E0A156" stroke-width="0.9" stroke-opacity="0.5" />
+        <line x1="29" y1="60" x2="29" y2="74" stroke="#E0A156" stroke-width="0.6" stroke-opacity="0.4" />
+        <circle cx="29" cy="74" r="1.2" fill="#E0A156" opacity="0.6" />
+      </svg>
+      <h1 class="font-display display mt-4 text-[44px] font-semibold italic glow-text">lantern hollow</h1>
+      <div class="mt-2 font-mono text-[10.5px] uppercase tracking-[0.18em]" style="color: var(--fg-faint);">@lanternhollow · halifax, ns</div>
+      <p class="mt-5 max-w-[34ch] text-[13.5px] leading-[1.7]" style="color: var(--fg-faint);">
+        Four people, two guitars, harmonium, slow drums. Recorded in a cabin north of Halifax. New record February.
+      </p>
+    </header>
+
+    <!-- 3. Featured release tile -->
+    <section class="mt-12">
+      <div class="flex items-baseline justify-between font-mono text-[10px] uppercase tracking-[0.16em]" style="color: var(--fg-mute);">
+        <span>Featured release</span>
+        <span>WRL-014</span>
+      </div>
+
+      <div class="mt-3 ember-glow overflow-hidden rounded-md">
+        <svg viewBox="0 0 440 440" width="100%" preserveAspectRatio="xMidYMid slice" aria-label="album art for wayfare / second house" class="block">
+          <defs>
+            <linearGradient id="sky01" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#26121A"/>
+              <stop offset="0.55" stop-color="#1a0c10"/>
+              <stop offset="1" stop-color="#08040A"/>
+            </linearGradient>
+            <radialGradient id="lampglow01" cx="0.5" cy="0.5" r="0.5">
+              <stop offset="0" stop-color="#E0A156" stop-opacity="0.55"/>
+              <stop offset="0.55" stop-color="#E0A156" stop-opacity="0.1"/>
+              <stop offset="1" stop-color="#E0A156" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <rect width="440" height="440" fill="url(#sky01)"/>
+          <!-- distant tree silhouettes -->
+          <g fill="#08040A" opacity="0.92">
+            <polygon points="0,300 18,278 36,290 56,260 76,290 96,272 124,302 150,278 178,308 204,282 230,310 256,288 282,308 308,284 332,308 360,278 384,302 408,284 440,302 440,440 0,440"/>
+          </g>
+          <!-- ground snow line -->
+          <rect x="0" y="380" width="440" height="60" fill="#100709" opacity="0.7"/>
+          <!-- cabin -->
+          <g>
+            <polygon points="140,232 220,168 300,232 300,362 140,362" fill="#0a0507"/>
+            <polygon points="140,232 220,168 300,232" fill="none" stroke="#1a0d11" stroke-width="0.8"/>
+            <rect x="262" y="190" width="14" height="42" fill="#0a0507"/>
+            <rect x="263" y="184" width="12" height="8" fill="#0a0507"/>
+            <!-- chimney smoke wisp -->
+            <path d="M267 184 Q263 170 270 156 Q277 144 271 132" stroke="#3a2820" stroke-width="1.2" fill="none" opacity="0.4"/>
+            <!-- window (the lantern light) -->
+            <circle cx="220" cy="278" r="80" fill="url(#lampglow01)"/>
+            <rect x="200" y="258" width="40" height="48" fill="#E0A156" opacity="0.88"/>
+            <line x1="220" y1="258" x2="220" y2="306" stroke="#1a0d11" stroke-width="1"/>
+            <line x1="200" y1="282" x2="240" y2="282" stroke="#1a0d11" stroke-width="1"/>
+            <!-- door -->
+            <rect x="166" y="296" width="22" height="66" fill="#1a0d11"/>
+            <circle cx="184" cy="328" r="0.8" fill="#E0A156"/>
+            <!-- second window small -->
+            <rect x="252" y="282" width="20" height="22" fill="#E0A156" opacity="0.18"/>
+            <line x1="262" y1="282" x2="262" y2="304" stroke="#1a0d11" stroke-width="0.5"/>
+          </g>
+          <!-- snow flakes -->
+          <g fill="#f1e7d8" opacity="0.42">
+            <circle cx="40" cy="80" r="1"/><circle cx="90" cy="40" r="1"/><circle cx="130" cy="120" r="1"/>
+            <circle cx="200" cy="60" r="1"/><circle cx="280" cy="100" r="1"/><circle cx="330" cy="50" r="1"/>
+            <circle cx="380" cy="120" r="1"/><circle cx="60" cy="180" r="1"/><circle cx="110" cy="220" r="1"/>
+            <circle cx="350" cy="160" r="1"/><circle cx="400" cy="190" r="1"/><circle cx="20" cy="240" r="1"/>
+            <circle cx="380" cy="240" r="1"/><circle cx="160" cy="80" r="0.7"/><circle cx="240" cy="140" r="0.7"/>
+            <circle cx="70" cy="120" r="0.7"/><circle cx="300" cy="200" r="0.7"/><circle cx="420" cy="80" r="0.7"/>
+            <circle cx="50" cy="320" r="0.7"/><circle cx="120" cy="350" r="0.7"/><circle cx="380" cy="340" r="0.7"/>
+          </g>
+          <!-- title block -->
+          <g>
+            <text x="32" y="406" font-family="Fraunces" font-size="22" font-style="italic" font-weight="600" fill="#f1e7d8">wayfare / second house</text>
+            <text x="32" y="424" font-family="Geist Mono" font-size="9" letter-spacing="1.6" fill="#8a7969">LANTERN HOLLOW · WRL-014 · 2026</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="mt-5 flex items-baseline justify-between gap-3">
+        <div>
+          <div class="font-display text-[21px] font-semibold italic leading-none">Wayfare / Second House</div>
+          <div class="mt-2 font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">LP · 9 tracks · 41:08</div>
+        </div>
+        <div class="font-mono text-[10.5px] tnum" style="color: var(--accent);">28.02.26</div>
+      </div>
+
+      <ol class="mt-5 font-mono text-[12px]" style="border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair);">
+        <li class="row flex items-center justify-between py-2.5" style="border-top: 0;">
+          <span class="flex items-center gap-3"><span class="tnum w-5" style="color: var(--fg-mute);">01</span><span>Second House</span></span>
+          <span class="tnum" style="color: var(--fg-faint);">4:18</span>
+        </li>
+        <li class="row flex items-center justify-between py-2.5">
+          <span class="flex items-center gap-3"><span class="tnum w-5" style="color: var(--fg-mute);">02</span><span>Cabin Light</span></span>
+          <span class="tnum" style="color: var(--fg-faint);">3:42</span>
+        </li>
+        <li class="row flex items-center justify-between py-2.5">
+          <span class="flex items-center gap-3"><span class="tnum w-5" style="color: var(--fg-mute);">03</span><span>Marrow</span></span>
+          <span class="tnum" style="color: var(--fg-faint);">5:11</span>
+        </li>
+        <li class="row flex items-center justify-between py-2.5">
+          <span class="flex items-center gap-3"><span class="tnum w-5" style="color: var(--fg-mute);">04</span><span>Halifax in February</span></span>
+          <span class="tnum" style="color: var(--fg-faint);">4:36</span>
+        </li>
+        <li class="row flex items-center justify-between py-2.5">
+          <span class="flex items-center gap-3">
+            <span class="tnum w-5" style="color: var(--fg-mute);">05</span>
+            <span style="color: var(--accent-bright);">Wayfare</span>
+            <span class="font-mono inline-flex items-center rounded-sm px-1.5 py-px text-[8.5px] tracking-[0.16em]" style="background: rgba(224,161,86,0.1); color: var(--accent);">SINGLE</span>
+          </span>
+          <span class="tnum" style="color: var(--fg-faint);">6:08</span>
+        </li>
+        <li class="row flex items-center justify-between py-2.5">
+          <span class="flex items-center gap-3"><span class="tnum w-5" style="color: var(--fg-mute);">06</span><span>Two Storms</span></span>
+          <span class="tnum" style="color: var(--fg-faint);">4:22</span>
+        </li>
+        <li class="row flex items-center justify-between py-2.5">
+          <span class="flex items-center gap-3"><span class="tnum w-5" style="color: var(--fg-mute);">07</span><span>The Harmonium Hymn</span></span>
+          <span class="tnum" style="color: var(--fg-faint);">3:14</span>
+        </li>
+        <li class="row flex items-center justify-between py-2.5">
+          <span class="flex items-center gap-3"><span class="tnum w-5" style="color: var(--fg-mute);">08</span><span>Cradle Song</span></span>
+          <span class="tnum" style="color: var(--fg-faint);">4:48</span>
+        </li>
+        <li class="row flex items-center justify-between py-2.5">
+          <span class="flex items-center gap-3"><span class="tnum w-5" style="color: var(--fg-mute);">09</span><span>Aurora (for Carrie)</span></span>
+          <span class="tnum" style="color: var(--fg-faint);">4:49</span>
+        </li>
+      </ol>
+
+      <div class="mt-4 grid grid-cols-2 gap-2 font-mono text-[10px] uppercase tracking-[0.14em]">
+        <a class="link-btn lift flex items-center justify-center gap-2 rounded-sm py-2.5" href="#">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0Zm3.5 11.4c-.2.3-.5.4-.8.2-2.1-1.3-4.8-1.6-7.9-.9-.4.1-.7-.2-.7-.5 0-.4.2-.7.5-.7 3.4-.8 6.4-.5 8.7 1 .4.2.4.6.2.9Zm.9-2.1c-.2.4-.6.5-1 .3-2.4-1.5-6-1.9-8.8-1-.4.1-.9-.1-1-.5-.1-.4.1-.9.5-1 3.2-1 7.2-.5 10 1.2.3.2.4.6.3 1Zm.1-2.2C9.7 5.4 4.9 5.2 2.2 6c-.5.2-1-.1-1.2-.6-.2-.5.1-1 .6-1.2C4.7 3.3 10 3.5 13.5 5.6c.4.3.6.9.3 1.3-.3.5-.9.6-1.3.3Z"/></svg>
+          Spotify
+        </a>
+        <a class="link-btn lift flex items-center justify-center gap-2 rounded-sm py-2.5" href="#">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="8" cy="8" r="7.4" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5.8 4.4v6.4c-.4-.2-.9-.2-1.3 0-.7.2-1.1.9-.9 1.5.2.6 1 .8 1.7.5.5-.2.8-.6.8-1V6.7l3.5-.9v3.7c-.4-.2-.9-.2-1.3-.1-.7.2-1.1.9-.9 1.5.2.7 1 .9 1.7.6.5-.2.8-.7.8-1V4z"/></svg>
+          Apple Music
+        </a>
+        <a class="link-btn lift flex items-center justify-center gap-2 rounded-sm py-2.5" href="#">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><circle cx="8" cy="8" r="7"/><path d="M3.5 6h9l-2 4h-9z" fill="currentColor"/></svg>
+          Bandcamp
+        </a>
+        <a class="link-btn lift flex items-center justify-center gap-2 rounded-sm py-2.5" href="#">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2 9.5C2 7.6 3.4 6 5.2 5.7c.3-1.7 1.8-3 3.6-3 1.8 0 3.3 1.3 3.6 3 1.5.2 2.6 1.5 2.6 3 0 1.7-1.3 3-3 3H5C3.3 11.7 2 10.4 2 9.5Z"/></svg>
+          SoundCloud
+        </a>
+      </div>
+
+      <a href="#" class="lift mt-3 flex items-center justify-between gap-3 rounded-sm border px-4 py-3.5"
+         style="background: rgba(224,161,86,0.07); border-color: rgba(224,161,86,0.32); color: var(--accent-bright);">
+        <span class="flex items-center gap-3">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">
+            <circle cx="8" cy="8" r="7"/><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r="0.5" fill="currentColor"/>
+          </svg>
+          <span class="font-display italic text-[15px]">Pre-order the vinyl</span>
+        </span>
+        <span class="font-mono text-[10px] uppercase tracking-[0.14em]">Signed · clear →</span>
+      </a>
+    </section>
+
+    <!-- 4. Link stack -->
+    <section class="mt-14">
+      <div class="font-mono text-[10px] uppercase tracking-[0.16em]" style="color: var(--fg-mute);">Listen · follow · buy</div>
+      <div class="mt-3 space-y-2.5">
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute);">01</span>
+            <span class="font-display text-[15.5px] italic">Listen on Spotify</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em] tnum" style="color: var(--fg-faint);">84k monthly</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute);">02</span>
+            <span class="font-display text-[15.5px] italic">Bandcamp · cabin demos</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">PWYW</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute);">03</span>
+            <span class="font-display text-[15.5px] italic">Tour 2026 — spring</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">11 shows</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute);">04</span>
+            <span class="font-display text-[15.5px] italic">Mailing list · early demos</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">~2× / month</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute);">05</span>
+            <span class="font-display text-[15.5px] italic">Press kit (EPK)</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">PDF · 2.4 MB</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute);">06</span>
+            <span class="font-display text-[15.5px] italic">Booking</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">US · EU</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute);">07</span>
+            <span class="font-display text-[15.5px] italic">Cabin tee</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em] tnum" style="color: var(--fg-faint);">$28</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute);">08</span>
+            <span class="font-display text-[15.5px] italic">YouTube · live at the cabin</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em] tnum" style="color: var(--fg-faint);">8 sessions</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- 5. Tour strip -->
+    <section class="mt-14">
+      <div class="flex items-baseline justify-between font-mono text-[10px] uppercase tracking-[0.16em]" style="color: var(--fg-mute);">
+        <span>Tour 2026 — spring</span>
+        <span>11 shows · Halifax → Paris</span>
+      </div>
+      <div class="mt-3 font-mono text-[11px]" style="border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair);">
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-3 tnum">28 FEB</span>
+          <span class="col-span-3">Halifax</span>
+          <span class="col-span-4 truncate" style="color: var(--fg-faint);">The Carleton</span>
+          <span class="col-span-2 text-right" style="color: var(--fg-mute);">SOLD OUT</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-3 tnum">02 MAR</span>
+          <span class="col-span-3">Boston</span>
+          <span class="col-span-4 truncate" style="color: var(--fg-faint);">Brighton Music Hall</span>
+          <span class="col-span-2 text-right" style="color: var(--accent);">TICKETS</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-3 tnum">05 MAR</span>
+          <span class="col-span-3">New York</span>
+          <span class="col-span-4 truncate" style="color: var(--fg-faint);">Bowery Ballroom</span>
+          <span class="col-span-2 text-right" style="color: var(--accent);">FEW LEFT</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-3 tnum">07 MAR</span>
+          <span class="col-span-3">Philly</span>
+          <span class="col-span-4 truncate" style="color: var(--fg-faint);">Johnny Brenda's</span>
+          <span class="col-span-2 text-right" style="color: var(--accent);">TICKETS</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-3 tnum">09 MAR</span>
+          <span class="col-span-3">Toronto</span>
+          <span class="col-span-4 truncate" style="color: var(--fg-faint);">The Mod Club</span>
+          <span class="col-span-2 text-right" style="color: var(--accent);">TICKETS</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-3 tnum">14 MAR</span>
+          <span class="col-span-3">Montréal</span>
+          <span class="col-span-4 truncate" style="color: var(--fg-faint);">La Sala Rossa</span>
+          <span class="col-span-2 text-right" style="color: var(--fg-mute);">SOLD OUT</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-3 tnum">02 APR</span>
+          <span class="col-span-3">London</span>
+          <span class="col-span-4 truncate" style="color: var(--fg-faint);">Union Chapel</span>
+          <span class="col-span-2 text-right" style="color: var(--fg-mute);">SOLD OUT</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-3 tnum">04 APR</span>
+          <span class="col-span-3">Manchester</span>
+          <span class="col-span-4 truncate" style="color: var(--fg-faint);">Deaf Institute</span>
+          <span class="col-span-2 text-right" style="color: var(--accent);">TICKETS</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-3 tnum">07 APR</span>
+          <span class="col-span-3">Amsterdam</span>
+          <span class="col-span-4 truncate" style="color: var(--fg-faint);">Paradiso Tolhuistuin</span>
+          <span class="col-span-2 text-right" style="color: var(--accent);">FEW LEFT</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-3 tnum">10 APR</span>
+          <span class="col-span-3">Berlin</span>
+          <span class="col-span-4 truncate" style="color: var(--fg-faint);">Privatclub</span>
+          <span class="col-span-2 text-right" style="color: var(--accent);">TICKETS</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5">
+          <span class="col-span-3 tnum">13 APR</span>
+          <span class="col-span-3">Paris</span>
+          <span class="col-span-4 truncate" style="color: var(--fg-faint);">Café de la Danse</span>
+          <span class="col-span-2 text-right" style="color: var(--accent);">TICKETS</span>
+        </div>
+      </div>
+      <div class="mt-2 text-right font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-mute);">
+        US shows w/ Cassandra Jenkins · EU shows w/ Adrianne Lenker
+      </div>
+    </section>
+
+    <!-- 6. Social row -->
+    <section class="mt-14">
+      <div class="mx-auto flex max-w-[300px] items-center justify-between" style="color: var(--fg-faint);">
+        <a href="#" class="lift" aria-label="Spotify">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0Zm3.5 11.4c-.2.3-.5.4-.8.2-2.1-1.3-4.8-1.6-7.9-.9-.4.1-.7-.2-.7-.5 0-.4.2-.7.5-.7 3.4-.8 6.4-.5 8.7 1 .4.2.4.6.2.9Zm.9-2.1c-.2.4-.6.5-1 .3-2.4-1.5-6-1.9-8.8-1-.4.1-.9-.1-1-.5-.1-.4.1-.9.5-1 3.2-1 7.2-.5 10 1.2.3.2.4.6.3 1Zm.1-2.2C9.7 5.4 4.9 5.2 2.2 6c-.5.2-1-.1-1.2-.6-.2-.5.1-1 .6-1.2C4.7 3.3 10 3.5 13.5 5.6c.4.3.6.9.3 1.3-.3.5-.9.6-1.3.3Z"/></svg>
+        </a>
+        <a href="#" class="lift" aria-label="Apple Music">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="7.4" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5.8 4.4v6.4c-.4-.2-.9-.2-1.3 0-.7.2-1.1.9-.9 1.5.2.6 1 .8 1.7.5.5-.2.8-.6.8-1V6.7l3.5-.9v3.7c-.4-.2-.9-.2-1.3-.1-.7.2-1.1.9-.9 1.5.2.7 1 .9 1.7.6.5-.2.8-.7.8-1V4z"/></svg>
+        </a>
+        <a href="#" class="lift" aria-label="Bandcamp">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="8" cy="8" r="7"/><path d="M3.5 6h9l-2 4h-9z" fill="currentColor"/></svg>
+        </a>
+        <a href="#" class="lift" aria-label="SoundCloud">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M2 10c0-1.7 1.4-3 3-3 .3 0 .6.1.9.2.4-1.8 2-3.2 4-3.2 2.2 0 4 1.7 4.1 3.9 1.2.2 2.1 1.2 2.1 2.5 0 1.4-1.1 2.5-2.5 2.5H5c-1.7 0-3-1.3-3-2.9Z"/></svg>
+        </a>
+        <a href="#" class="lift" aria-label="Instagram">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="12" height="12" rx="3"/><circle cx="8" cy="8" r="2.6"/><circle cx="11.4" cy="4.6" r="0.6" fill="currentColor"/></svg>
+        </a>
+        <a href="#" class="lift" aria-label="YouTube">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M1 4.5c0-.8.6-1.4 1.4-1.5C4 2.8 6 2.7 8 2.7s4 .1 5.6.3c.8.1 1.4.7 1.4 1.5v6.9c0 .8-.6 1.4-1.4 1.5-1.6.2-3.6.3-5.6.3s-4-.1-5.6-.3C1.6 12.8 1 12.2 1 11.4z"/><polygon points="6.5,5.6 6.5,10.4 11,8" fill="#14080B"/></svg>
+        </a>
+        <a href="#" class="lift" aria-label="Mailing list">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="3.5" width="13" height="9" rx="1"/><path d="m1.5 4.5 6.5 5 6.5-5"/></svg>
+        </a>
+      </div>
+    </section>
+
+    <!-- 7. Footer microline -->
+    <footer class="mt-14 text-center font-mono text-[10px] uppercase tracking-[0.18em]" style="color: var(--fg-mute);">
+      <div>Whaleroad Records · WRL-014 · 2026</div>
+      <div class="mt-1.5">Booking — booking@whaleroad.co · Press — press@whaleroad.co</div>
+      <div class="mt-3 opacity-55">© 2026 lantern hollow · made in halifax, ns</div>
+    </footer>
+  </main>
+</body>
+</html>

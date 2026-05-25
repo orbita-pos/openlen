@@ -53,8 +53,19 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: [
-    // Run middleware on everything except Next internals and static assets.
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|webp|gif|ico|css|js|map)$).*)",
-  ],
+  // Scope middleware to ONLY the routes it needs to act on:
+  //   - /new (legacy redirect to /new-v2)
+  //   - /new-v2/* and /projects/* (auth gate)
+  //
+  // Marketing routes (/, /templates/*, /blog/*, /pricing) intentionally
+  // bypass middleware. Without this scoping, `auth()` runs on every page
+  // and injects `Set-Cookie: __Host-authjs.csrf-token` into the response,
+  // which Cloudflare treats as user-specific and refuses to cache (cf-
+  // cache-status: BYPASS). With the matcher narrowed, anonymous responses
+  // for /  carry no Set-Cookie and CF can cache them at the edge.
+  //
+  // Auth pages (/login, /register) call `auth()` directly inside their
+  // server components when they need the session — they're not cached
+  // anyway, so the cookie is fine there.
+  matcher: ["/new", "/new/:path*", "/new-v2/:path*", "/projects/:path*"],
 };

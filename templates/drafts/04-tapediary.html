@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>tape diary — late blue (TD007)</title>
+  <meta name="description" content="tape diary — lo-fi jazz, beats, late-night warm. Cassette label. New tape every full moon." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #100D0A;
+      --bg-deep: #06050300;
+      --fg: #ece2c8;
+      --fg-faint: #968874;
+      --fg-mute: #5d544747;
+      --fg-mute-solid: #5d5447;
+      --accent: #C9B47A;
+      --accent-deep: #a3915c;
+      --accent-bright: #E0CB91;
+      --hair: rgba(236, 226, 200, 0.07);
+      --hair-strong: rgba(236, 226, 200, 0.14);
+    }
+    html, body { background: var(--bg); color: var(--fg); }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    .font-display { font-family: 'Crimson Pro', 'Cormorant Garamond', serif; }
+    .font-mono { font-family: 'Geist Mono', ui-monospace, monospace; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .display { letter-spacing: -0.018em; line-height: 1.0; }
+    .grain {
+      position: fixed; inset: 0; pointer-events: none; z-index: 50;
+      mix-blend-mode: overlay; opacity: 0.4;
+      background-image:
+        radial-gradient(rgba(236, 226, 200, 0.05) 1px, transparent 1px),
+        radial-gradient(rgba(0, 0, 0, 0.4) 1px, transparent 1px);
+      background-size: 3px 3px, 5px 5px;
+      background-position: 0 0, 1px 1px;
+    }
+    .scroll-fade {
+      background: linear-gradient(180deg, var(--bg) 0%, transparent 5%, transparent 95%, var(--bg) 100%);
+      pointer-events: none; position: fixed; inset: 0; z-index: 30;
+    }
+    .mustard-glow {
+      box-shadow:
+        0 0 0 1px rgba(201, 180, 122, 0.16),
+        0 22px 70px -14px rgba(201, 180, 122, 0.22),
+        0 8px 26px -6px rgba(0, 0, 0, 0.7);
+    }
+    .pulse-wrap { position: relative; display: inline-flex; }
+    .pulse-wrap::before {
+      content: ''; position: absolute; inset: 0;
+      border-radius: 9999px;
+      background: var(--accent);
+      animation: pulse 2s ease-out infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.55; }
+      80% { transform: scale(2.6); opacity: 0; }
+      100% { opacity: 0; }
+    }
+    .lift { transition: transform 120ms ease, border-color 120ms ease, background 120ms ease, color 120ms ease; }
+    .lift:hover { transform: translateY(-1px); }
+    .link-btn {
+      background: rgba(236, 226, 200, 0.025);
+      border: 1px solid var(--hair);
+    }
+    .link-btn:hover {
+      background: rgba(201, 180, 122, 0.06);
+      border-color: rgba(201, 180, 122, 0.3);
+    }
+    .row { border-top: 1px solid var(--hair); }
+    .spool { animation: spin 14s linear infinite; transform-origin: center; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .ribbon-noise {
+      background-image: linear-gradient(90deg, rgba(201,180,122,0.04) 1px, transparent 1px);
+      background-size: 4px 100%;
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div class="grain" aria-hidden="true"></div>
+  <div class="scroll-fade" aria-hidden="true"></div>
+
+  <main class="relative z-10 mx-auto w-full max-w-[480px] px-5 pb-24 pt-10">
+
+    <!-- 1. Eyebrow -->
+    <div class="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 font-mono text-[10.5px] uppercase tracking-[0.18em]" style="color: var(--fg-faint);">
+      <span class="relative inline-flex h-1.5 w-1.5">
+        <span class="pulse-wrap inline-block h-1.5 w-1.5 rounded-full"></span>
+        <span class="absolute inset-0 inline-block h-1.5 w-1.5 rounded-full" style="background: var(--accent);"></span>
+      </span>
+      <span>TD-007</span>
+      <span class="opacity-40">·</span>
+      <span>TAPE OUT NOW</span>
+      <span class="opacity-40">·</span>
+      <span style="color: var(--accent);">CASSETTE + DIGITAL</span>
+    </div>
+
+    <!-- 2. Header block -->
+    <header class="mt-8 flex flex-col items-center text-center">
+      <!-- A small cassette mark -->
+      <svg width="68" height="50" viewBox="0 0 68 50" fill="none" aria-hidden="true">
+        <rect x="2" y="2" width="64" height="46" rx="3" fill="none" stroke="#C9B47A" stroke-width="1"/>
+        <rect x="2" y="2" width="64" height="14" fill="#C9B47A" opacity="0.18"/>
+        <text x="34" y="12" text-anchor="middle" font-family="Geist Mono" font-size="6" letter-spacing="1.2" fill="#C9B47A">TAPE DIARY · TD</text>
+        <!-- two spools -->
+        <g class="spool" style="transform-origin: 18px 30px;">
+          <circle cx="18" cy="30" r="6" fill="none" stroke="#C9B47A" stroke-width="0.7"/>
+          <circle cx="18" cy="30" r="2.4" fill="#C9B47A"/>
+          <line x1="18" y1="24" x2="18" y2="36" stroke="#C9B47A" stroke-width="0.5"/>
+          <line x1="12" y1="30" x2="24" y2="30" stroke="#C9B47A" stroke-width="0.5"/>
+        </g>
+        <g class="spool" style="transform-origin: 50px 30px; animation-direction: reverse;">
+          <circle cx="50" cy="30" r="6" fill="none" stroke="#C9B47A" stroke-width="0.7"/>
+          <circle cx="50" cy="30" r="2.4" fill="#C9B47A"/>
+          <line x1="50" y1="24" x2="50" y2="36" stroke="#C9B47A" stroke-width="0.5"/>
+          <line x1="44" y1="30" x2="56" y2="30" stroke="#C9B47A" stroke-width="0.5"/>
+        </g>
+        <!-- tape ribbon -->
+        <line x1="24" y1="30" x2="44" y2="30" stroke="#C9B47A" stroke-width="0.7" stroke-opacity="0.7"/>
+        <!-- bottom window holes -->
+        <rect x="22" y="42" width="4" height="3" fill="none" stroke="#C9B47A" stroke-width="0.5"/>
+        <rect x="42" y="42" width="4" height="3" fill="none" stroke="#C9B47A" stroke-width="0.5"/>
+      </svg>
+      <h1 class="font-display display mt-5 text-[42px] font-medium" style="font-style: italic;">tape diary</h1>
+      <div class="mt-2 font-mono text-[10px] uppercase tracking-[0.18em]" style="color: var(--fg-faint);">@tape.diary · bedroom label · est. 2024</div>
+      <p class="mt-5 max-w-[34ch] text-[13.5px] leading-[1.7]" style="color: var(--fg-faint);">
+        Lo-fi jazz, beats, late-night warm. Cassette label, instrument-of-the-week series. New tape every full moon.
+      </p>
+
+      <!-- Moon-phase row — "every full moon" -->
+      <div class="mt-6 flex w-full items-center justify-between gap-2">
+        <div class="flex flex-col items-center gap-1.5">
+          <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="none" stroke="#5d5447" stroke-width="0.8"/></svg>
+          <span class="font-mono text-[8px] uppercase tracking-[0.14em]" style="color: var(--fg-mute-solid);">TD-004</span>
+        </div>
+        <div class="flex flex-col items-center gap-1.5">
+          <svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 2a7 7 0 1 1 0 14V2z" fill="#5d5447" opacity="0.4"/><circle cx="9" cy="9" r="7" fill="none" stroke="#5d5447" stroke-width="0.6"/></svg>
+          <span class="font-mono text-[8px] uppercase tracking-[0.14em]" style="color: var(--fg-mute-solid);">TD-005</span>
+        </div>
+        <div class="flex flex-col items-center gap-1.5">
+          <svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 2a7 7 0 1 1 0 14V2z" fill="#968874" opacity="0.7"/><circle cx="9" cy="9" r="7" fill="none" stroke="#968874" stroke-width="0.6"/></svg>
+          <span class="font-mono text-[8px] uppercase tracking-[0.14em]" style="color: var(--fg-mute-solid);">TD-006</span>
+        </div>
+        <div class="flex flex-col items-center gap-1.5">
+          <svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="9" fill="#C9B47A"/><circle cx="11" cy="11" r="9" fill="none" stroke="#E0CB91" stroke-width="0.6"/></svg>
+          <span class="font-mono text-[8px] uppercase tracking-[0.14em]" style="color: var(--accent);">TD-007 ↑</span>
+        </div>
+        <div class="flex flex-col items-center gap-1.5">
+          <svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 2a7 7 0 1 0 0 14V2z" fill="#5d5447" opacity="0.7"/><circle cx="9" cy="9" r="7" fill="none" stroke="#5d5447" stroke-width="0.6"/></svg>
+          <span class="font-mono text-[8px] uppercase tracking-[0.14em]" style="color: var(--fg-mute-solid);">TD-008</span>
+        </div>
+        <div class="flex flex-col items-center gap-1.5">
+          <svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 2a7 7 0 1 0 0 14V2z" fill="#5d5447" opacity="0.4"/><circle cx="9" cy="9" r="7" fill="none" stroke="#5d5447" stroke-width="0.6"/></svg>
+          <span class="font-mono text-[8px] uppercase tracking-[0.14em]" style="color: var(--fg-mute-solid);">TD-009</span>
+        </div>
+        <div class="flex flex-col items-center gap-1.5">
+          <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="none" stroke="#5d5447" stroke-width="0.8" stroke-dasharray="2 2"/></svg>
+          <span class="font-mono text-[8px] uppercase tracking-[0.14em]" style="color: var(--fg-mute-solid);">TD-010</span>
+        </div>
+      </div>
+      <div class="mt-2.5 font-mono text-[9px] uppercase tracking-[0.18em]" style="color: var(--fg-mute-solid);">
+        every full moon · est. 26 may 2024
+      </div>
+    </header>
+
+    <!-- 3. Featured release tile — a cassette portrait -->
+    <section class="mt-12">
+      <div class="flex items-baseline justify-between font-mono text-[10px] uppercase tracking-[0.16em]" style="color: var(--fg-mute-solid);">
+        <span>Featured release</span>
+        <span>TD-007</span>
+      </div>
+
+      <div class="mt-3 mustard-glow overflow-hidden rounded-md">
+        <svg viewBox="0 0 440 440" width="100%" preserveAspectRatio="xMidYMid slice" aria-label="cassette art for late blue" class="block">
+          <defs>
+            <linearGradient id="bg04" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#1c1610"/>
+              <stop offset="1" stop-color="#0a0805"/>
+            </linearGradient>
+            <linearGradient id="cassette04" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#E0CB91"/>
+              <stop offset="0.4" stop-color="#C9B47A"/>
+              <stop offset="1" stop-color="#a3915c"/>
+            </linearGradient>
+            <linearGradient id="label04" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#f4ead0"/>
+              <stop offset="1" stop-color="#dac79a"/>
+            </linearGradient>
+          </defs>
+          <rect width="440" height="440" fill="url(#bg04)"/>
+          <!-- the cassette -->
+          <g transform="translate(48, 110)">
+            <!-- shell -->
+            <rect x="0" y="0" width="344" height="220" rx="6" fill="url(#cassette04)"/>
+            <rect x="0" y="0" width="344" height="220" rx="6" fill="none" stroke="#7a6b40" stroke-width="0.7"/>
+            <!-- top label -->
+            <rect x="14" y="14" width="316" height="78" fill="url(#label04)"/>
+            <line x1="14" y1="56" x2="330" y2="56" stroke="#7a6b40" stroke-width="0.5" stroke-opacity="0.45"/>
+            <text x="30" y="38" font-family="Crimson Pro" font-size="22" font-style="italic" font-weight="600" fill="#3a2e18">Late Blue</text>
+            <text x="30" y="76" font-family="Geist Mono" font-size="9" letter-spacing="1.4" fill="#5a4928">TAPE DIARY · TD-007 · 11 / 38:42</text>
+            <text x="240" y="38" font-family="Geist Mono" font-size="8" letter-spacing="1.2" fill="#7a6b40">SIDE A</text>
+            <!-- spool window area -->
+            <rect x="14" y="100" width="316" height="100" fill="#0a0805"/>
+            <!-- two spools -->
+            <g transform="translate(96, 150)">
+              <circle r="38" fill="none" stroke="#C9B47A" stroke-width="0.7" stroke-opacity="0.6"/>
+              <circle r="16" fill="#C9B47A"/>
+              <circle r="16" fill="none" stroke="#0a0805" stroke-width="0.8"/>
+              <g stroke="#0a0805" stroke-width="0.8">
+                <line x1="-16" y1="0" x2="16" y2="0"/>
+                <line x1="0" y1="-16" x2="0" y2="16"/>
+                <line x1="-11" y1="-11" x2="11" y2="11"/>
+                <line x1="-11" y1="11" x2="11" y2="-11"/>
+              </g>
+            </g>
+            <g transform="translate(248, 150)">
+              <circle r="38" fill="none" stroke="#C9B47A" stroke-width="0.7" stroke-opacity="0.6"/>
+              <circle r="22" fill="#C9B47A" opacity="0.9"/>
+              <circle r="16" fill="#C9B47A"/>
+              <circle r="16" fill="none" stroke="#0a0805" stroke-width="0.8"/>
+              <g stroke="#0a0805" stroke-width="0.8">
+                <line x1="-16" y1="0" x2="16" y2="0"/>
+                <line x1="0" y1="-16" x2="0" y2="16"/>
+              </g>
+            </g>
+            <!-- tape between spools -->
+            <line x1="116" y1="150" x2="226" y2="150" stroke="#3a2e18" stroke-width="1.5"/>
+            <line x1="116" y1="148" x2="226" y2="148" stroke="#5a4928" stroke-width="0.5"/>
+            <!-- bottom holes -->
+            <rect x="90" y="204" width="14" height="8" rx="1" fill="#0a0805"/>
+            <rect x="240" y="204" width="14" height="8" rx="1" fill="#0a0805"/>
+          </g>
+          <!-- title floating below -->
+          <g>
+            <text x="32" y="406" font-family="Crimson Pro" font-style="italic" font-size="22" font-weight="600" fill="#ece2c8">late blue</text>
+            <text x="32" y="424" font-family="Geist Mono" font-size="9" letter-spacing="1.5" fill="#968874">TAPE DIARY · TD-007 · AUG 2025</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="mt-5 flex items-baseline justify-between gap-3">
+        <div>
+          <div class="font-display text-[22px] font-medium leading-none" style="font-style: italic;">late blue</div>
+          <div class="mt-2 font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">11 tracks · 38:42 · 4-track / aug 2025</div>
+        </div>
+        <div class="font-mono text-[10.5px] tnum" style="color: var(--accent);">TD-007</div>
+      </div>
+
+      <ol class="mt-5 font-mono text-[12px]" style="border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair);">
+        <li class="row flex items-center justify-between py-2.5" style="border-top: 0;">
+          <span class="flex items-center gap-3">
+            <span class="tnum w-7" style="color: var(--fg-mute-solid);">A1</span>
+            <span style="color: var(--accent-bright);">late blue</span>
+          </span>
+          <span class="tnum" style="color: var(--fg-faint);">4:12</span>
+        </li>
+        <li class="row flex items-center justify-between py-2.5">
+          <span class="flex items-center gap-3"><span class="tnum w-7" style="color: var(--fg-mute-solid);">A2</span><span>cassette breath</span></span>
+          <span class="tnum" style="color: var(--fg-faint);">2:48</span>
+        </li>
+        <li class="row flex items-center justify-between py-2.5">
+          <span class="flex items-center gap-3"><span class="tnum w-7" style="color: var(--fg-mute-solid);">A3</span><span>piano in another room</span></span>
+          <span class="tnum" style="color: var(--fg-faint);">3:54</span>
+        </li>
+        <li class="row flex items-center justify-between py-2.5">
+          <span class="flex items-center gap-3"><span class="tnum w-7" style="color: var(--fg-mute-solid);">A4</span><span>found tape</span></span>
+          <span class="tnum" style="color: var(--fg-faint);">1:58</span>
+        </li>
+        <li class="row flex items-center justify-between py-2.5">
+          <span class="flex items-center gap-3"><span class="tnum w-7" style="color: var(--fg-mute-solid);">A5</span><span>august, the 4-track</span></span>
+          <span class="tnum" style="color: var(--fg-faint);">4:22</span>
+        </li>
+        <li class="row flex items-center justify-between py-2.5">
+          <span class="flex items-center gap-3"><span class="tnum w-7" style="color: var(--fg-mute-solid);">A6</span><span>interlude (rain)</span></span>
+          <span class="tnum" style="color: var(--fg-faint);">1:32</span>
+        </li>
+        <li class="row flex items-center justify-between py-2.5" style="border-top: 1px solid var(--hair-strong);">
+          <span class="flex items-center gap-3"><span class="tnum w-7" style="color: var(--fg-mute-solid);">B1</span><span>nina in a window</span></span>
+          <span class="tnum" style="color: var(--fg-faint);">4:18</span>
+        </li>
+        <li class="row flex items-center justify-between py-2.5">
+          <span class="flex items-center gap-3"><span class="tnum w-7" style="color: var(--fg-mute-solid);">B2</span><span>drum machine asleep</span></span>
+          <span class="tnum" style="color: var(--fg-faint);">3:14</span>
+        </li>
+        <li class="row flex items-center justify-between py-2.5">
+          <span class="flex items-center gap-3"><span class="tnum w-7" style="color: var(--fg-mute-solid);">B3</span><span>cigarette break</span></span>
+          <span class="tnum" style="color: var(--fg-faint);">2:46</span>
+        </li>
+        <li class="row flex items-center justify-between py-2.5">
+          <span class="flex items-center gap-3"><span class="tnum w-7" style="color: var(--fg-mute-solid);">B4</span><span>late blue (reprise)</span></span>
+          <span class="tnum" style="color: var(--fg-faint);">3:18</span>
+        </li>
+        <li class="row flex items-center justify-between py-2.5">
+          <span class="flex items-center gap-3"><span class="tnum w-7" style="color: var(--fg-mute-solid);">B5</span><span>side b closer</span></span>
+          <span class="tnum" style="color: var(--fg-faint);">6:20</span>
+        </li>
+      </ol>
+
+      <div class="mt-4 grid grid-cols-2 gap-2 font-mono text-[10px] uppercase tracking-[0.14em]">
+        <a class="link-btn lift flex items-center justify-center gap-2 rounded-sm py-2.5" href="#">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="8" cy="8" r="7"/><path d="M3.5 6h9l-2 4h-9z" fill="currentColor"/></svg>
+          Bandcamp
+        </a>
+        <a class="link-btn lift flex items-center justify-center gap-2 rounded-sm py-2.5" href="#">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0Zm3.5 11.4c-.2.3-.5.4-.8.2-2.1-1.3-4.8-1.6-7.9-.9-.4.1-.7-.2-.7-.5 0-.4.2-.7.5-.7 3.4-.8 6.4-.5 8.7 1 .4.2.4.6.2.9Zm.9-2.1c-.2.4-.6.5-1 .3-2.4-1.5-6-1.9-8.8-1-.4.1-.9-.1-1-.5-.1-.4.1-.9.5-1 3.2-1 7.2-.5 10 1.2.3.2.4.6.3 1Z"/></svg>
+          Spotify
+        </a>
+        <a class="link-btn lift flex items-center justify-center gap-2 rounded-sm py-2.5" href="#">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M2 10c0-1.7 1.4-3 3-3 .3 0 .6.1.9.2.4-1.8 2-3.2 4-3.2 2.2 0 4 1.7 4.1 3.9 1.2.2 2.1 1.2 2.1 2.5 0 1.4-1.1 2.5-2.5 2.5H5c-1.7 0-3-1.3-3-2.9Z"/></svg>
+          SoundCloud
+        </a>
+        <a class="link-btn lift flex items-center justify-center gap-2 rounded-sm py-2.5" href="#">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="7.4" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5.8 4.4v6.4c-.4-.2-.9-.2-1.3 0-.7.2-1.1.9-.9 1.5.2.6 1 .8 1.7.5.5-.2.8-.6.8-1V6.7l3.5-.9v3.7c-.4-.2-.9-.2-1.3-.1-.7.2-1.1.9-.9 1.5.2.7 1 .9 1.7.6.5-.2.8-.7.8-1V4z"/></svg>
+          Apple Music
+        </a>
+      </div>
+
+      <a href="#" class="lift mt-3 flex items-center justify-between gap-3 rounded-sm border px-4 py-3.5"
+         style="background: rgba(201, 180, 122, 0.07); border-color: rgba(201, 180, 122, 0.3); color: var(--accent-bright);">
+        <span class="flex items-center gap-3">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2">
+            <rect x="1" y="3" width="14" height="10" rx="1.5"/>
+            <circle cx="5" cy="9" r="1.2"/>
+            <circle cx="11" cy="9" r="1.2"/>
+            <line x1="6.2" y1="9" x2="9.8" y2="9"/>
+          </svg>
+          <span class="font-display italic text-[15.5px]">Order the cassette — $14</span>
+        </span>
+        <span class="font-mono text-[10px] uppercase tracking-[0.14em] tnum">208 / 300 →</span>
+      </a>
+    </section>
+
+    <!-- 4. Link stack -->
+    <section class="mt-14">
+      <div class="font-mono text-[10px] uppercase tracking-[0.16em]" style="color: var(--fg-mute-solid);">Listen · learn · join</div>
+      <div class="mt-3 space-y-2.5">
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute-solid);">01</span>
+            <span class="font-display text-[15.5px] font-medium" style="font-style: italic;">Bandcamp — all tapes</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em] tnum" style="color: var(--fg-faint);">TD001 → 007</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute-solid);">02</span>
+            <span class="font-display text-[15.5px] font-medium" style="font-style: italic;">Spotify</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em] tnum" style="color: var(--fg-faint);">92k monthly</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute-solid);">03</span>
+            <span class="font-display text-[15.5px] font-medium" style="font-style: italic;">YouTube — instrument-of-the-week</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em] tnum" style="color: var(--fg-faint);">42 eps</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute-solid);">04</span>
+            <span class="font-display text-[15.5px] font-medium" style="font-style: italic;">Sample pack — free download</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em] tnum" style="color: var(--fg-faint);">128 hits / 142 MB</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute-solid);">05</span>
+            <span class="font-display text-[15.5px] font-medium" style="font-style: italic;">Patreon — stems + sample chains</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em] tnum" style="color: var(--fg-faint);">$5 / mo</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute-solid);">06</span>
+            <span class="font-display text-[15.5px] font-medium" style="font-style: italic;">Mailing list — new tape alerts</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">~monthly</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute-solid);">07</span>
+            <span class="font-display text-[15.5px] font-medium" style="font-style: italic;">Merch — cassette + tote</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em] tnum" style="color: var(--fg-faint);">$14 / $22</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute-solid);">08</span>
+            <span class="font-display text-[15.5px] font-medium" style="font-style: italic;">Discord — producer hang</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em] tnum" style="color: var(--fg-faint);">1,824 prods</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- 5. Tape archive (replacing tour) -->
+    <section class="mt-14">
+      <div class="flex items-baseline justify-between font-mono text-[10px] uppercase tracking-[0.16em]" style="color: var(--fg-mute-solid);">
+        <span>Tape archive</span>
+        <span>7 tapes · 4:32:14 total</span>
+      </div>
+      <div class="mt-3 font-mono text-[11px]" style="border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair);">
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-2 tnum">TD001</span>
+          <span class="col-span-5 truncate">first tape, mostly mistakes</span>
+          <span class="col-span-3 tnum" style="color: var(--fg-faint);">may 2024</span>
+          <span class="col-span-2 text-right tnum" style="color: var(--fg-mute-solid);">29:14</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-2 tnum">TD002</span>
+          <span class="col-span-5 truncate">soft rotation</span>
+          <span class="col-span-3 tnum" style="color: var(--fg-faint);">aug 2024</span>
+          <span class="col-span-2 text-right tnum" style="color: var(--fg-mute-solid);">34:08</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-2 tnum">TD003</span>
+          <span class="col-span-5 truncate">brooklyn winter book</span>
+          <span class="col-span-3 tnum" style="color: var(--fg-faint);">dec 2024</span>
+          <span class="col-span-2 text-right tnum" style="color: var(--fg-mute-solid);">42:36</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-2 tnum">TD004</span>
+          <span class="col-span-5 truncate">small piano studies</span>
+          <span class="col-span-3 tnum" style="color: var(--fg-faint);">mar 2025</span>
+          <span class="col-span-2 text-right tnum" style="color: var(--fg-mute-solid);">28:52</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-2 tnum">TD005</span>
+          <span class="col-span-5 truncate">field, then a chord</span>
+          <span class="col-span-3 tnum" style="color: var(--fg-faint);">jun 2025</span>
+          <span class="col-span-2 text-right tnum" style="color: var(--fg-mute-solid);">36:14</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5" style="border-bottom: 1px solid var(--hair);">
+          <span class="col-span-2 tnum">TD006</span>
+          <span class="col-span-5 truncate">borrowed instruments vol. ii</span>
+          <span class="col-span-3 tnum" style="color: var(--fg-faint);">aug 2025</span>
+          <span class="col-span-2 text-right tnum" style="color: var(--fg-mute-solid);">38:28</span>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-2 py-2.5">
+          <span class="col-span-2 tnum" style="color: var(--accent);">TD007</span>
+          <span class="col-span-5 truncate" style="color: var(--accent-bright);">late blue</span>
+          <span class="col-span-3 tnum" style="color: var(--fg-faint);">oct 2025</span>
+          <span class="col-span-2 text-right tnum" style="color: var(--accent);">38:42</span>
+        </div>
+      </div>
+      <div class="mt-2 text-right font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-mute-solid);">
+        TD-008 — next full moon · 14 nov 2025
+      </div>
+    </section>
+
+    <!-- 6. Social row -->
+    <section class="mt-14">
+      <div class="mx-auto flex max-w-[300px] items-center justify-between" style="color: var(--fg-faint);">
+        <a href="#" class="lift" aria-label="Bandcamp"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="8" cy="8" r="7"/><path d="M3.5 6h9l-2 4h-9z" fill="currentColor"/></svg></a>
+        <a href="#" class="lift" aria-label="Spotify"><svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0Zm3.5 11.4c-.2.3-.5.4-.8.2-2.1-1.3-4.8-1.6-7.9-.9-.4.1-.7-.2-.7-.5 0-.4.2-.7.5-.7 3.4-.8 6.4-.5 8.7 1 .4.2.4.6.2.9Zm.9-2.1c-.2.4-.6.5-1 .3-2.4-1.5-6-1.9-8.8-1-.4.1-.9-.1-1-.5-.1-.4.1-.9.5-1 3.2-1 7.2-.5 10 1.2.3.2.4.6.3 1Zm.1-2.2C9.7 5.4 4.9 5.2 2.2 6c-.5.2-1-.1-1.2-.6-.2-.5.1-1 .6-1.2C4.7 3.3 10 3.5 13.5 5.6c.4.3.6.9.3 1.3-.3.5-.9.6-1.3.3Z"/></svg></a>
+        <a href="#" class="lift" aria-label="SoundCloud"><svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M2 10c0-1.7 1.4-3 3-3 .3 0 .6.1.9.2.4-1.8 2-3.2 4-3.2 2.2 0 4 1.7 4.1 3.9 1.2.2 2.1 1.2 2.1 2.5 0 1.4-1.1 2.5-2.5 2.5H5c-1.7 0-3-1.3-3-2.9Z"/></svg></a>
+        <a href="#" class="lift" aria-label="YouTube"><svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M1 4.5c0-.8.6-1.4 1.4-1.5C4 2.8 6 2.7 8 2.7s4 .1 5.6.3c.8.1 1.4.7 1.4 1.5v6.9c0 .8-.6 1.4-1.4 1.5-1.6.2-3.6.3-5.6.3s-4-.1-5.6-.3C1.6 12.8 1 12.2 1 11.4z"/><polygon points="6.5,5.6 6.5,10.4 11,8" fill="#100D0A"/></svg></a>
+        <a href="#" class="lift" aria-label="Instagram"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="12" height="12" rx="3"/><circle cx="8" cy="8" r="2.6"/><circle cx="11.4" cy="4.6" r="0.6" fill="currentColor"/></svg></a>
+        <a href="#" class="lift" aria-label="Discord"><svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M3 4c0-.5.3-.8.8-1C4.6 2.7 6 2.5 8 2.5s3.4.2 4.2.5c.5.2.8.5.8 1v6c0 .5-.3.8-.8 1l-1.2-1c-.4.3-.9.5-1.5.6l.2.8c-.6.1-1.2.1-1.7.1s-1.1 0-1.7-.1l.2-.8c-.6-.1-1.1-.3-1.5-.6l-1.2 1c-.5-.2-.8-.5-.8-1z"/><circle cx="6" cy="7" r="1" fill="#100D0A"/><circle cx="10" cy="7" r="1" fill="#100D0A"/></svg></a>
+        <a href="#" class="lift" aria-label="Mailing list"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="3.5" width="13" height="9" rx="1"/><path d="m1.5 4.5 6.5 5 6.5-5"/></svg></a>
+      </div>
+    </section>
+
+    <!-- 7. Footer microline -->
+    <footer class="mt-14 text-center font-mono text-[10px] uppercase tracking-[0.18em]" style="color: var(--fg-mute-solid);">
+      <div>Tape Diary · self-released · distributed by Bandcamp + Burning Shed</div>
+      <div class="mt-1.5">Hello@tapediary.fm · No bookings · No remixes</div>
+      <div class="mt-3 opacity-55">© 2026 tape diary · made on a tascam 414</div>
+    </footer>
+  </main>
+</body>
+</html>

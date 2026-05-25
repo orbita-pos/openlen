@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Poise — Small movements. Real change.</title>
+<meta name="description" content="Poise is a boutique reformer pilates and barre studio on Bishop's Row — eight machines, small classes, comprehensively-certified instructors. New clients: your first reformer class is free." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,600&family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#FDF8F6; --bg-2:#F6E9E6; --card:#FFFFFF; --panel:#FBF1EF;
+    --ink:#2A2024; --ink-2:#756A6E; --ink-3:#A99DA1;
+    --accent:#C77B86; --accent-2:#B16470;
+    --rule:rgba(42,32,36,0.12); --rule-soft:rgba(42,32,36,0.06);
+  }
+  *{ -webkit-tap-highlight-color:transparent; }
+  html{ scroll-behavior:smooth; }
+  html,body{ background:var(--bg); color:var(--ink); }
+  body{ font-family:'Inter',ui-sans-serif,system-ui,sans-serif; font-feature-settings:"ss01","cv11"; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; line-height:1.6; }
+  section[id]{ scroll-margin-top:84px; }
+  .display{ font-family:'Fraunces','Georgia',serif; font-optical-sizing:auto; font-weight:600; letter-spacing:-0.025em; line-height:1.05; }
+  .serif{ font-family:'Fraunces','Georgia',serif; font-optical-sizing:auto; font-weight:400; letter-spacing:-0.012em; }
+  .mono{ font-family:'Geist Mono',ui-monospace,Menlo,monospace; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  em.accent{ font-style:italic; color:var(--accent); }
+  .halftone{ opacity:0.46; font-style:italic; }
+  .marker{ font-family:'Geist Mono',monospace; font-size:11px; letter-spacing:0.17em; text-transform:uppercase; color:var(--ink-3); }
+  .accent-line{ display:inline-block; width:24px; height:1px; background:var(--accent); vertical-align:middle; margin-right:10px; }
+  .rule{ border-color:var(--rule); }
+  .rule-soft{ border-color:var(--rule-soft); }
+  .dotgrid{ background-image:radial-gradient(var(--rule) 1px,transparent 1px); background-size:32px 32px; background-position:-8px -8px; }
+  .mesh{ background-image:
+      radial-gradient(58% 50% at 12% 8%, rgba(199,123,134,0.16), transparent 66%),
+      radial-gradient(50% 48% at 92% 4%, rgba(156,124,158,0.14), transparent 70%),
+      radial-gradient(60% 60% at 80% 98%, rgba(140,155,130,0.11), transparent 72%); }
+  .grain{ background-image:radial-gradient(rgba(42,32,36,0.045) 1px,transparent 1px); background-size:5px 5px; }
+  .pulse-dot{ position:relative; display:inline-block; width:7px; height:7px; border-radius:999px; background:var(--accent); box-shadow:0 0 0 0 rgba(199,123,134,0.5); animation:pulse 2.1s ease-out infinite; }
+  @keyframes pulse{ 0%{box-shadow:0 0 0 0 rgba(199,123,134,0.5)} 70%{box-shadow:0 0 0 9px rgba(199,123,134,0)} 100%{box-shadow:0 0 0 0 rgba(199,123,134,0)} }
+  .btn-primary{ transition:transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease; }
+  .btn-primary:hover{ transform:translateY(-1px); background-color:var(--accent-2); box-shadow:0 12px 26px -10px rgba(199,123,134,0.55); }
+  .btn-ghost{ transition:transform 120ms ease, border-color 120ms ease, background-color 120ms ease; }
+  .btn-ghost:hover{ transform:translateY(-1px); border-color:var(--accent); }
+  .card-lift{ transition:transform 130ms ease, box-shadow 130ms ease, border-color 130ms ease; }
+  .card-lift:hover{ transform:translateY(-3px); box-shadow:0 22px 44px -26px rgba(42,32,36,0.3); border-color:var(--accent); }
+  .ul-link{ position:relative; }
+  .ul-link::after{ content:""; position:absolute; left:0; right:0; bottom:-3px; height:1px; background:currentColor; transform:scaleX(0); transform-origin:right center; transition:transform 260ms cubic-bezier(.2,.7,.2,1); }
+  .ul-link:hover::after{ transform:scaleX(1); transform-origin:left center; }
+  .scroll-x{ display:inline-block; transition:transform 150ms ease; }
+  a:hover .scroll-x{ transform:translateX(3px); }
+  .navbar{ backdrop-filter:blur(12px) saturate(150%); -webkit-backdrop-filter:blur(12px) saturate(150%); background:rgba(253,248,246,0.85); }
+  ::selection{ background:rgba(199,123,134,0.26); color:var(--ink); }
+  details>summary{ list-style:none; cursor:pointer; }
+  details>summary::-webkit-details-marker{ display:none; }
+  .acc-sign{ transition:transform 200ms ease; }
+  details[open] .acc-sign{ transform:rotate(45deg); }
+  .sched{ display:block; border:1px solid var(--rule-soft); border-left:3px solid var(--t); background:color-mix(in srgb, var(--t) 9%, var(--card)); border-radius:9px; padding:8px 9px; }
+  .sched .tm{ display:block; font-family:'Geist Mono',monospace; font-size:10.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; }
+  .sched .nm{ display:block; font-size:12.5px; font-weight:600; margin-top:1px; }
+  .sched .wh{ display:block; font-size:10.5px; color:var(--ink-2); margin-top:1px; }
+  .lg-pill{ display:inline-flex; align-items:center; gap:7px; font-family:'Geist Mono',monospace; font-size:11px; color:var(--ink-2); }
+  .lg-pill i{ width:9px; height:9px; border-radius:3px; display:inline-block; }
+  .blob-hero{ background:radial-gradient(120% 95% at 26% 16%,#FDEBE6 0%,transparent 50%),radial-gradient(95% 85% at 80% 24%,#E2A6AE 0%,#C77B86 44%,transparent 76%),linear-gradient(165deg,#F1D9D2 0%,#C98E96 56%,#7E5560 100%); }
+  .blob-1{ background:radial-gradient(120% 100% at 28% 22%,#F6E2DC 0%,#D9A0A8 52%,#9A6068 100%); }
+  .blob-2{ background:radial-gradient(120% 100% at 70% 26%,#EFE2EC 0%,#B9A0BE 52%,#6E5868 100%); }
+  .blob-3{ background:radial-gradient(120% 100% at 32% 70%,#E8EADD 0%,#A9B596 50%,#62704E 100%); }
+  .blob-4{ background:radial-gradient(120% 100% at 64% 28%,#F3E0D6 0%,#CC9E86 52%,#7E5546 100%); }
+  .blob-5{ background:radial-gradient(120% 100% at 30% 30%,#E9E2E6 0%,#B7A2AC 52%,#6E5860 100%); }
+  .av-1{ background:linear-gradient(150deg,#D49AA2,#9A5560); }
+  .av-2{ background:linear-gradient(150deg,#B49EBE,#5E4860); }
+  .av-3{ background:linear-gradient(150deg,#A6B596,#5E6E48); }
+  .av-4{ background:linear-gradient(150deg,#9DB3BE,#52707E); }
+  @media (prefers-reduced-motion:reduce){ .pulse-dot{animation:none} }
+</style>
+</head>
+<body class="min-h-screen">
+
+<svg width="0" height="0" class="hidden" aria-hidden="true">
+  <symbol id="ck" viewBox="0 0 16 16"><path d="M3 8.5l3.2 3.2L13 4.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="pin" viewBox="0 0 16 16"><path d="M8 1.6c-3 0-5.2 2.3-5.2 5.2 0 3.7 5.2 7.6 5.2 7.6s5.2-3.9 5.2-7.6c0-2.9-2.2-5.2-5.2-5.2Z" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="6.7" r="1.9" fill="none" stroke="currentColor" stroke-width="1.4"/></symbol>
+  <symbol id="cl" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 4.3V8l2.7 1.7" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+  <symbol id="ig" viewBox="0 0 16 16"><rect x="2.2" y="2.2" width="11.6" height="11.6" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="11.5" cy="4.5" r="1" fill="currentColor"/></symbol>
+  <symbol id="ph" viewBox="0 0 16 16"><path d="M5.7 2.5c.5 0 .9.3 1 .8l.6 2.2c.1.4 0 .8-.3 1l-1.2 1c.8 1.7 2.1 3 3.8 3.8l1-1.2c.3-.3.7-.4 1-.3l2.2.6c.5.1.8.5.8 1v2.3c0 .6-.5 1.1-1.1 1C7.5 15.5 1.5 9.5 1.3 2.6c0-.6.4-1.1 1-1.1Z" fill="none" stroke="currentColor" stroke-width="1.3"/></symbol>
+</svg>
+
+<!-- ================= NAV ================= -->
+<header class="navbar fixed top-0 inset-x-0 z-50 border-b rule-soft">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 h-[68px] flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="27" height="27" viewBox="0 0 27 27" aria-hidden="true">
+        <ellipse cx="13.5" cy="13.5" rx="7" ry="12" fill="none" stroke="#C77B86" stroke-width="1.5"/>
+        <ellipse cx="13.5" cy="13.5" rx="12" ry="7" fill="none" stroke="#C77B86" stroke-width="1.5"/>
+        <circle cx="13.5" cy="13.5" r="2" fill="#C77B86"/>
+      </svg>
+      <span class="display text-[22px]">Poise</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8 text-[14px] text-[color:var(--ink-2)]">
+      <a href="#classes" class="ul-link">Classes</a>
+      <a href="#schedule" class="ul-link">Schedule</a>
+      <a href="#membership" class="ul-link">Membership</a>
+      <a href="#about" class="ul-link">About</a>
+    </nav>
+    <a href="#start" class="btn-primary inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] text-white font-semibold text-[14px] px-4 py-2">Book a class</a>
+  </div>
+</header>
+
+<main>
+<!-- ================= HERO ================= -->
+<section id="top" class="relative overflow-hidden mesh pt-[68px]">
+  <div class="absolute inset-0 dotgrid opacity-60 pointer-events-none"></div>
+  <div class="relative max-w-[1200px] mx-auto px-5 sm:px-8 pt-14 sm:pt-20 pb-16 sm:pb-20">
+    <div class="grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
+      <div>
+        <div class="inline-flex items-center gap-2.5 rounded-full border rule bg-[color:var(--card)] pl-2.5 pr-3.5 py-1.5 mb-7">
+          <span class="pulse-dot"></span>
+          <span class="mono text-[11px] sm:text-[12px] tracking-[0.04em] text-[color:var(--ink-2)]">Reformer pilates &amp; barre — Bishop's Row</span>
+        </div>
+        <h1 class="display text-[clamp(42px,7.4vw,80px)] max-w-[12ch]">Small movements. <em class="accent">Real change.</em></h1>
+        <p class="serif text-[19px] sm:text-[21px] leading-[1.5] text-[color:var(--ink)] max-w-[44ch] mt-6">
+          A boutique studio of eight reformers and small classes, where precise, low-impact work builds strength you can feel in a month.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3 mt-8">
+          <a href="#start" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--accent)] text-white font-semibold px-6 py-3.5 text-[15px]">Book a class <span class="scroll-x">→</span></a>
+          <a href="#intro" class="btn-ghost inline-flex items-center justify-center gap-2 rounded-full border rule text-[color:var(--ink)] font-medium px-6 py-3.5 text-[15px]">First reformer class — free</a>
+        </div>
+        <div class="flex items-center gap-2.5 mt-7">
+          <span class="pulse-dot"></span>
+          <span class="mono text-[11.5px] tracking-[0.03em] text-[color:var(--ink-2)] tnum">408 members · 8 reformers · 52 classes a week</span>
+        </div>
+      </div>
+      <div>
+        <div class="blob-hero rounded-[22px] border rule aspect-[4/3.4] sm:aspect-[4/3] w-full relative overflow-hidden">
+          <div class="absolute inset-0 grain opacity-45"></div>
+          <div class="absolute inset-0" style="background:radial-gradient(42% 36% at 78% 18%, rgba(255,244,240,0.62), transparent 62%)"></div>
+          <svg viewBox="0 0 240 230" class="absolute left-1/2 bottom-0 -translate-x-1/2 w-[52%]" aria-hidden="true">
+            <g fill="#2A2024" opacity="0.24">
+              <circle cx="120" cy="40" r="17"/>
+              <path d="M120 58c-9 0-15 7-15 20l-3 64c0 6 4 10 9 10s9-4 9-10c0 6 4 10 9 10s9-4 9-10l-3-64c0-13-6-20-15-20Z"/>
+              <path d="M114 78c-22-6-40-20-46-36-3 4-2 9 2 13 10 13 28 24 44 29Zm12 0c22-6 40-20 46-36 3 4 2 9-2 13-10 13-28 24-44 29Z"/>
+            </g>
+          </svg>
+          <div class="absolute left-4 bottom-4 right-4 sm:right-auto bg-[color:var(--card)] border rule rounded-xl px-3.5 py-2.5 flex items-center gap-3">
+            <span class="w-2.5 h-2.5 rounded-[3px]" style="background:#C77B86"></span>
+            <div>
+              <div class="mono text-[10px] tracking-[0.1em] text-[color:var(--ink-3)]">TODAY · 9:15 AM</div>
+              <div class="text-[13px] font-semibold leading-tight">Reformer with Camille</div>
+            </div>
+            <div class="ml-auto flex items-center gap-1.5 pl-3 border-l rule-soft">
+              <span class="pulse-dot" style="width:6px;height:6px"></span>
+              <span class="mono text-[10.5px] text-[color:var(--accent-2)]">2 left</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mt-14 border-t rule pt-8 grid grid-cols-2 md:grid-cols-4 gap-y-8">
+      <div class="md:pr-8 md:border-r rule-soft">
+        <div class="marker mb-2.5">Members</div>
+        <div class="display text-[40px] sm:text-[48px] tnum">408</div>
+        <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">practicing on Bishop's Row</div>
+      </div>
+      <div class="md:px-8 md:border-r rule-soft">
+        <div class="marker mb-2.5">Reformers</div>
+        <div class="display text-[40px] sm:text-[48px] tnum">8</div>
+        <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">one machine per person</div>
+      </div>
+      <div class="md:px-8 md:border-r rule-soft">
+        <div class="marker mb-2.5">Per week</div>
+        <div class="display text-[40px] sm:text-[48px] tnum">52</div>
+        <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">classes on the schedule</div>
+      </div>
+      <div class="md:pl-8">
+        <div class="marker mb-2.5">Avg class</div>
+        <div class="display text-[40px] sm:text-[48px] tnum">8</div>
+        <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">small, by design</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= INTRO OFFER ================= -->
+<section id="intro" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-12 sm:py-16">
+  <div class="rounded-[22px] border rule bg-[color:var(--panel)] overflow-hidden">
+    <div class="grid lg:grid-cols-[1.4fr_1fr]">
+      <div class="p-7 sm:p-11">
+        <div class="marker mb-4"><span class="accent-line"></span>New-client offer</div>
+        <h2 class="display text-[clamp(30px,4.2vw,46px)]">Your first reformer class — <em class="accent">free.</em></h2>
+        <p class="text-[15px] text-[color:var(--ink-2)] mt-4 max-w-[52ch]">One full reformer class, on us — no membership required. The best way to understand pilates is to feel it once, with an instructor setting your springs and watching your form.</p>
+        <a href="#start" class="btn-primary inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] text-white font-semibold px-6 py-3.5 text-[15px] mt-7">Book your free class <span class="scroll-x">→</span></a>
+      </div>
+      <div class="border-t lg:border-t-0 lg:border-l rule bg-[color:var(--card)] p-7 sm:p-11 flex flex-col justify-center gap-4">
+        <div class="flex items-start gap-3"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg><span class="text-[14px]">A full 50-minute reformer class</span></div>
+        <div class="flex items-start gap-3"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg><span class="text-[14px]">A 15-minute orientation before you begin</span></div>
+        <div class="flex items-start gap-3"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg><span class="text-[14px]">Grippy socks to borrow if you need them</span></div>
+        <p class="mono text-[10.5px] text-[color:var(--ink-3)] mt-1 leading-relaxed">New clients · one per person · reformer or barre</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CLASSES ================= -->
+<section id="classes" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+  <div class="max-w-[58ch] mb-11">
+    <div class="marker mb-5"><span class="accent-line"></span>The classes</div>
+    <h2 class="display text-[clamp(32px,4.6vw,54px)]">Six formats, one philosophy.</h2>
+    <p class="text-[15px] text-[color:var(--ink-2)] mt-4">Every class is low-impact and precise — small, controlled movement that builds deep strength without the wear and tear.</p>
+  </div>
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mb-4" style="background:#C77B86"></span>
+      <h3 class="display text-[21px]">Reformer Pilates</h3>
+      <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">Low-impact · 50 min</div>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-3">Spring-loaded resistance through a full-body sequence — the studio's signature class.</p>
+    </article>
+    <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mb-4" style="background:#9C7C9E"></span>
+      <h3 class="display text-[21px]">Barre</h3>
+      <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">Low-impact · 50 min</div>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-3">Small, precise pulses at the barre — thighs, seat, and core, set to music.</p>
+    </article>
+    <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mb-4" style="background:#8C9B82"></span>
+      <h3 class="display text-[21px]">Mat Pilates</h3>
+      <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">Low-impact · 45 min</div>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-3">Classical pilates on the mat — the same principles, no machine, deep core work.</p>
+    </article>
+    <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mb-4" style="background:#CC8E6E"></span>
+      <h3 class="display text-[21px]">Reformer + Barre Fusion</h3>
+      <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">Moderate · 55 min</div>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-3">Half the class on the reformer, half at the barre — strength and burn in one session.</p>
+    </article>
+    <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mb-4" style="background:#88A1B0"></span>
+      <h3 class="display text-[21px]">Prenatal &amp; Postnatal</h3>
+      <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">Gentle · 50 min</div>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-3">Reformer work adapted by trimester and for recovery, taught by certified instructors.</p>
+    </article>
+    <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mb-4" style="background:#6E5560"></span>
+      <h3 class="display text-[21px]">Privates</h3>
+      <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">All levels · 50 min</div>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-3">One-on-one on the reformer — for beginners, specific goals, or working around an injury.</p>
+    </article>
+  </div>
+</section>
+
+<!-- ================= SCHEDULE ================= -->
+<section id="schedule" class="relative bg-[color:var(--panel)] border-y rule">
+  <div class="absolute inset-0 dotgrid opacity-50 pointer-events-none"></div>
+  <div class="relative max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-8">
+      <div class="max-w-[46ch]">
+        <div class="marker mb-5"><span class="accent-line"></span>This week</div>
+        <h2 class="display text-[clamp(32px,4.6vw,54px)]">The weekly schedule.</h2>
+      </div>
+      <div class="flex flex-wrap gap-x-4 gap-y-2">
+        <span class="lg-pill"><i style="background:#C77B86"></i>Reformer</span>
+        <span class="lg-pill"><i style="background:#9C7C9E"></i>Barre</span>
+        <span class="lg-pill"><i style="background:#8C9B82"></i>Mat</span>
+        <span class="lg-pill"><i style="background:#CC8E6E"></i>Fusion</span>
+        <span class="lg-pill"><i style="background:#88A1B0"></i>Prenatal</span>
+        <span class="lg-pill"><i style="background:#6E5560"></i>Privates</span>
+      </div>
+    </div>
+    <p class="mono text-[11px] text-[color:var(--ink-3)] mb-3 md:hidden">Swipe to see the full week →</p>
+    <div class="overflow-x-auto -mx-5 px-5 sm:mx-0 sm:px-0">
+      <div class="grid grid-cols-7 gap-2.5 min-w-[880px]">
+        <div>
+          <div class="flex items-center gap-2 mb-2.5"><span class="text-[13px] font-bold">Mon</span><span class="mono text-[9px] tracking-[0.1em] text-white bg-[color:var(--accent)] rounded px-1.5 py-0.5">TODAY</span></div>
+          <div class="space-y-2">
+            <div class="sched" style="--t:#C77B86"><span class="tm">6:30a</span><span class="nm">Reformer</span><span class="wh">Camille · cap 8</span></div>
+            <div class="sched" style="--t:#9C7C9E"><span class="tm">9:15a</span><span class="nm">Barre</span><span class="wh">Beatrix · cap 12</span></div>
+            <div class="sched" style="--t:#8C9B82"><span class="tm">12:00p</span><span class="nm">Mat</span><span class="wh">Tovah · cap 14</span></div>
+            <div class="sched" style="--t:#C77B86"><span class="tm">5:30p</span><span class="nm">Reformer</span><span class="wh">Delphine · cap 8</span></div>
+            <div class="sched" style="--t:#CC8E6E"><span class="tm">6:45p</span><span class="nm">Fusion</span><span class="wh">Beatrix · cap 8</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="text-[13px] font-bold mb-2.5">Tue</div>
+          <div class="space-y-2">
+            <div class="sched" style="--t:#C77B86"><span class="tm">7:00a</span><span class="nm">Reformer</span><span class="wh">Mireille · cap 8</span></div>
+            <div class="sched" style="--t:#C77B86"><span class="tm">9:15a</span><span class="nm">Reformer</span><span class="wh">Camille · <span class="pulse-dot" style="width:5px;height:5px"></span> 2 left</span></div>
+            <div class="sched" style="--t:#9C7C9E"><span class="tm">12:00p</span><span class="nm">Barre</span><span class="wh">Delphine · cap 12</span></div>
+            <div class="sched" style="--t:#88A1B0"><span class="tm">5:30p</span><span class="nm">Prenatal</span><span class="wh">Ingrid · cap 6</span></div>
+            <div class="sched" style="--t:#C77B86"><span class="tm">6:45p</span><span class="nm">Reformer</span><span class="wh">Camille · cap 8</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="text-[13px] font-bold mb-2.5">Wed</div>
+          <div class="space-y-2">
+            <div class="sched" style="--t:#9C7C9E"><span class="tm">6:30a</span><span class="nm">Barre</span><span class="wh">Beatrix · cap 12</span></div>
+            <div class="sched" style="--t:#C77B86"><span class="tm">9:15a</span><span class="nm">Reformer</span><span class="wh">Camille · cap 8</span></div>
+            <div class="sched" style="--t:#8C9B82"><span class="tm">12:00p</span><span class="nm">Mat</span><span class="wh">Tovah · cap 14</span></div>
+            <div class="sched" style="--t:#C77B86"><span class="tm">5:30p</span><span class="nm">Reformer</span><span class="wh">Mireille · cap 8</span></div>
+            <div class="sched" style="--t:#9C7C9E"><span class="tm">6:45p</span><span class="nm">Barre</span><span class="wh">Delphine · cap 12</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="text-[13px] font-bold mb-2.5">Thu</div>
+          <div class="space-y-2">
+            <div class="sched" style="--t:#C77B86"><span class="tm">7:00a</span><span class="nm">Reformer</span><span class="wh">Camille · cap 8</span></div>
+            <div class="sched" style="--t:#CC8E6E"><span class="tm">9:15a</span><span class="nm">Fusion</span><span class="wh">Beatrix · cap 8</span></div>
+            <div class="sched" style="--t:#C77B86"><span class="tm">12:00p</span><span class="nm">Reformer</span><span class="wh">Mireille · cap 8</span></div>
+            <div class="sched" style="--t:#88A1B0"><span class="tm">5:30p</span><span class="nm">Prenatal</span><span class="wh">Ingrid · cap 6</span></div>
+            <div class="sched" style="--t:#C77B86"><span class="tm">6:45p</span><span class="nm">Reformer</span><span class="wh">Delphine · cap 8</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="text-[13px] font-bold mb-2.5">Fri</div>
+          <div class="space-y-2">
+            <div class="sched" style="--t:#C77B86"><span class="tm">6:30a</span><span class="nm">Reformer</span><span class="wh">Camille · cap 8</span></div>
+            <div class="sched" style="--t:#9C7C9E"><span class="tm">9:15a</span><span class="nm">Barre</span><span class="wh">Beatrix · cap 12</span></div>
+            <div class="sched" style="--t:#8C9B82"><span class="tm">12:00p</span><span class="nm">Mat</span><span class="wh">Tovah · cap 14</span></div>
+            <div class="sched" style="--t:#C77B86"><span class="tm">4:30p</span><span class="nm">Reformer</span><span class="wh">Mireille · cap 8</span></div>
+            <div class="sched" style="--t:#CC8E6E"><span class="tm">5:45p</span><span class="nm">Fusion</span><span class="wh">Delphine · cap 8</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="text-[13px] font-bold mb-2.5">Sat</div>
+          <div class="space-y-2">
+            <div class="sched" style="--t:#C77B86"><span class="tm">8:00a</span><span class="nm">Reformer</span><span class="wh">Camille · cap 8</span></div>
+            <div class="sched" style="--t:#9C7C9E"><span class="tm">9:15a</span><span class="nm">Barre</span><span class="wh">Beatrix · cap 12</span></div>
+            <div class="sched" style="--t:#C77B86"><span class="tm">10:30a</span><span class="nm">Reformer</span><span class="wh">Delphine · cap 8</span></div>
+            <div class="sched" style="--t:#CC8E6E"><span class="tm">12:00p</span><span class="nm">Fusion</span><span class="wh">Beatrix · cap 8</span></div>
+            <div class="sched" style="--t:#8C9B82"><span class="tm">1:15p</span><span class="nm">Mat</span><span class="wh">Tovah · cap 14</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="text-[13px] font-bold mb-2.5">Sun</div>
+          <div class="space-y-2">
+            <div class="sched" style="--t:#C77B86"><span class="tm">8:30a</span><span class="nm">Reformer</span><span class="wh">Mireille · cap 8</span></div>
+            <div class="sched" style="--t:#9C7C9E"><span class="tm">9:45a</span><span class="nm">Barre</span><span class="wh">Delphine · cap 12</span></div>
+            <div class="sched" style="--t:#C77B86"><span class="tm">11:00a</span><span class="nm">Reformer</span><span class="wh">Camille · cap 8</span></div>
+            <div class="sched" style="--t:#88A1B0"><span class="tm">12:15p</span><span class="nm">Prenatal</span><span class="wh">Ingrid · cap 6</span></div>
+            <div class="sched" style="--t:#6E5560"><span class="tm">2:00p</span><span class="nm">Privates</span><span class="wh">Mireille · 1:1</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="mono text-[11px] text-[color:var(--ink-3)] mt-5">Every reformer class is capped at 8 — one machine each · reserve a spot up to 14 days out in the Poise app.</p>
+  </div>
+</section>
+
+<!-- ================= THE SPACE ================= -->
+<section id="about" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+  <div class="max-w-[58ch] mb-11">
+    <div class="marker mb-5"><span class="accent-line"></span>The studio</div>
+    <h2 class="display text-[clamp(32px,4.6vw,54px)]">Eight machines, <em class="halftone">north light.</em></h2>
+    <p class="text-[15px] text-[color:var(--ink-2)] mt-4">Poise is a single, considered room on Bishop's Row — eight reformers, a mirrored barre studio, and tall windows that face north so the light stays even all day. Small on purpose; it's why your instructor knows your spring settings.</p>
+  </div>
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <figure class="blob-1 rounded-2xl border rule aspect-[4/3] lg:col-span-2 lg:aspect-[2.06/1] relative overflow-hidden">
+      <div class="absolute inset-0 grain opacity-45"></div>
+      <figcaption class="absolute left-3.5 bottom-3.5 mono text-[10px] tracking-[0.08em] text-white" style="text-shadow:0 1px 4px rgba(0,0,0,.45)">THE REFORMER ROOM · 8 MACHINES</figcaption>
+    </figure>
+    <figure class="blob-2 rounded-2xl border rule aspect-[4/3] relative overflow-hidden">
+      <div class="absolute inset-0 grain opacity-45"></div>
+      <figcaption class="absolute left-3.5 bottom-3.5 mono text-[10px] tracking-[0.08em] text-white" style="text-shadow:0 1px 4px rgba(0,0,0,.45)">THE BARRE STUDIO</figcaption>
+    </figure>
+    <figure class="blob-3 rounded-2xl border rule aspect-[4/3] relative overflow-hidden">
+      <div class="absolute inset-0 grain opacity-45"></div>
+      <figcaption class="absolute left-3.5 bottom-3.5 mono text-[10px] tracking-[0.08em] text-white" style="text-shadow:0 1px 4px rgba(0,0,0,.45)">THE RETAIL NOOK</figcaption>
+    </figure>
+    <figure class="blob-4 rounded-2xl border rule aspect-[4/3] relative overflow-hidden">
+      <div class="absolute inset-0 grain opacity-45"></div>
+      <figcaption class="absolute left-3.5 bottom-3.5 mono text-[10px] tracking-[0.08em] text-white" style="text-shadow:0 1px 4px rgba(0,0,0,.45)">THE TEA LOUNGE</figcaption>
+    </figure>
+    <figure class="blob-5 rounded-2xl border rule aspect-[4/3] relative overflow-hidden">
+      <div class="absolute inset-0 grain opacity-45"></div>
+      <figcaption class="absolute left-3.5 bottom-3.5 mono text-[10px] tracking-[0.08em] text-white" style="text-shadow:0 1px 4px rgba(0,0,0,.45)">CHANGING ROOMS &amp; SHOWERS</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ================= INSTRUCTORS ================= -->
+<section class="bg-[color:var(--panel)] border-y rule">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+    <div class="max-w-[58ch] mb-11">
+      <div class="marker mb-5"><span class="accent-line"></span>The instructors</div>
+      <h2 class="display text-[clamp(32px,4.6vw,54px)]">Six instructors who know your body.</h2>
+      <p class="text-[15px] text-[color:var(--ink-2)] mt-4">Every Poise instructor is comprehensively certified — hundreds of training hours, not a weekend course — and teaches the same small rooms week after week.</p>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-1 w-14 h-14 rounded-full flex items-center justify-center text-white display text-[17px] mb-4">CF</div>
+        <h3 class="text-[15px] font-bold">Camille Fontaine</h3>
+        <div class="text-[12.5px] text-[color:var(--accent-2)] font-medium mt-0.5">Founder · reformer &amp; classical</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">Comprehensively certified after 600 hours; opened Poise on Bishop's Row in 2019.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">BASI 600-hr · Barre</div>
+      </article>
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-2 w-14 h-14 rounded-full flex items-center justify-center text-white display text-[17px] mb-4">IS</div>
+        <h3 class="text-[15px] font-bold">Ingrid Sandoval</h3>
+        <div class="text-[12.5px] text-[color:var(--accent-2)] font-medium mt-0.5">Reformer &amp; prenatal</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">Pre- and postnatal certified; teaches the studio's gentlest reformer classes.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">Polestar 450-hr · Pre/Postnatal</div>
+      </article>
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-3 w-14 h-14 rounded-full flex items-center justify-center text-white display text-[17px] mb-4">BL</div>
+        <h3 class="text-[15px] font-bold">Beatrix Lowe</h3>
+        <div class="text-[12.5px] text-[color:var(--accent-2)] font-medium mt-0.5">Barre &amp; fusion</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">A former company dancer; her barre class is the one people get addicted to.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">Barre Intensive · BASI Mat</div>
+      </article>
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-4 w-14 h-14 rounded-full flex items-center justify-center text-white display text-[17px] mb-4">MP</div>
+        <h3 class="text-[15px] font-bold">Mireille Park</h3>
+        <div class="text-[12.5px] text-[color:var(--accent-2)] font-medium mt-0.5">Reformer &amp; privates</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">Specializes in injury-aware programming and focused one-on-one work.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">STOTT 500-hr · Special Pops</div>
+      </article>
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-1 w-14 h-14 rounded-full flex items-center justify-center text-white display text-[17px] mb-4">TA</div>
+        <h3 class="text-[15px] font-bold">Tovah Adler</h3>
+        <div class="text-[12.5px] text-[color:var(--accent-2)] font-medium mt-0.5">Mat &amp; reformer</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">Teaches the classical mat repertoire with unusual precision and patience.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">Romana's · Classical 600-hr</div>
+      </article>
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-2 w-14 h-14 rounded-full flex items-center justify-center text-white display text-[17px] mb-4">DO</div>
+        <h3 class="text-[15px] font-bold">Delphine Okafor</h3>
+        <div class="text-[12.5px] text-[color:var(--accent-2)] font-medium mt-0.5">Barre &amp; reformer</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">Brings musicality and momentum — her 6pm classes are the first to fill.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">BASI 600-hr · Barre</div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ================= MEMBERSHIP ================= -->
+<section id="membership" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+  <div class="max-w-[58ch] mb-11">
+    <div class="marker mb-5"><span class="accent-line"></span>Membership</div>
+    <h2 class="display text-[clamp(32px,4.6vw,54px)]">Three ways to commit.</h2>
+    <p class="text-[15px] text-[color:var(--ink-2)] mt-4">No joining fee, ever. Drop in to try a format, settle into a class pack, or go unlimited when twice a week becomes the plan.</p>
+  </div>
+  <div class="grid md:grid-cols-3 gap-5 items-start">
+    <article class="rounded-2xl border rule bg-[color:var(--card)] p-7">
+      <h3 class="display text-[24px]">Drop-In</h3>
+      <div class="mt-3 flex items-baseline gap-1.5"><span class="mono text-[40px] font-medium tnum">$38</span><span class="text-[13px] text-[color:var(--ink-3)]">/ class</span></div>
+      <p class="text-[13px] text-[color:var(--ink-2)] mt-2.5">One class, reformer or barre. For visiting or trying a new format.</p>
+      <div class="border-t rule-soft my-5"></div>
+      <ul class="space-y-2.5 text-[13.5px]">
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Any reformer or barre class</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Grippy socks available</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Book up to 10 days out</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Never expires</li>
+      </ul>
+      <a href="#start" class="btn-ghost mt-7 inline-flex w-full items-center justify-center rounded-full border rule font-medium px-5 py-3 text-[14px]">Book a drop-in</a>
+    </article>
+    <article class="rounded-2xl border-2 bg-[color:var(--card)] p-7 relative md:-mt-3 shadow-[0_28px_56px_-30px_rgba(42,32,36,0.32)]" style="border-color:var(--accent)">
+      <div class="absolute -top-3 left-7 mono text-[10px] tracking-[0.12em] text-white bg-[color:var(--accent)] rounded-full px-3 py-1">MOST POPULAR</div>
+      <h3 class="display text-[24px]">Unlimited Monthly</h3>
+      <div class="mt-3 flex items-baseline gap-1.5"><span class="mono text-[40px] font-medium tnum">$239</span><span class="text-[13px] text-[color:var(--ink-3)]">/ month</span></div>
+      <p class="text-[13px] text-[color:var(--ink-2)] mt-2.5">Every class, every format — the way pilates actually changes things.</p>
+      <div class="border-t rule-soft my-5"></div>
+      <ul class="space-y-2.5 text-[13.5px]">
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Unlimited reformer &amp; barre</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Priority booking, 21 days out</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>15% off privates &amp; retail</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>One free freeze a year</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Cancel anytime</li>
+      </ul>
+      <a href="#start" class="btn-primary mt-7 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[color:var(--accent)] text-white font-semibold px-5 py-3 text-[14px]">Go unlimited <span class="scroll-x">→</span></a>
+    </article>
+    <article class="rounded-2xl border rule bg-[color:var(--card)] p-7">
+      <h3 class="display text-[24px]">8-Class Pack</h3>
+      <div class="mt-3 flex items-baseline gap-1.5"><span class="mono text-[40px] font-medium tnum">$280</span><span class="text-[13px] text-[color:var(--ink-3)]">$35 / class</span></div>
+      <p class="text-[13px] text-[color:var(--ink-2)] mt-2.5">Eight classes over three months — a steady twice-a-week rhythm.</p>
+      <div class="border-t rule-soft my-5"></div>
+      <ul class="space-y-2.5 text-[13.5px]">
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>8 classes, any format</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Valid for 3 months</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Book up to 14 days out</li>
+        <li class="flex gap-2.5"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>One free guest class</li>
+      </ul>
+      <a href="#start" class="btn-ghost mt-7 inline-flex w-full items-center justify-center rounded-full border rule font-medium px-5 py-3 text-[14px]">Buy a pack</a>
+    </article>
+  </div>
+</section>
+
+<!-- ================= STORIES ================= -->
+<section class="bg-[color:var(--panel)] border-y rule">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+    <div class="max-w-[58ch] mb-11">
+      <div class="marker mb-5"><span class="accent-line"></span>Member stories</div>
+      <h2 class="display text-[clamp(32px,4.6vw,54px)]">What a month does.</h2>
+    </div>
+    <div class="grid md:grid-cols-3 gap-5">
+      <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7">
+        <svg width="26" height="20" viewBox="0 0 26 20" class="mb-4" aria-hidden="true"><path d="M0 20V11C0 4.5 3.7.6 10 0v4.4C6.8 5 5.4 6.8 5.3 10H10v10Zm16 0V11C16 4.5 19.7.6 26 0v4.4C22.8 5 21.4 6.8 21.3 10H26v10Z" fill="#C77B86" opacity="0.36"/></svg>
+        <blockquote class="serif text-[17px] leading-[1.5]">"Three months in, my back stopped being the thing I think about every morning. I came for the aesthetics and stayed for that."</blockquote>
+        <figcaption class="flex items-center gap-3 mt-6 pt-5 border-t rule-soft">
+          <div class="av-2 w-10 h-10 rounded-full flex items-center justify-center text-white text-[13px] font-bold">YS</div>
+          <div><div class="text-[13.5px] font-bold">Yara Solberg</div><div class="mono text-[10.5px] text-[color:var(--ink-3)]">Member · 2 years</div></div>
+        </figcaption>
+      </figure>
+      <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7">
+        <svg width="26" height="20" viewBox="0 0 26 20" class="mb-4" aria-hidden="true"><path d="M0 20V11C0 4.5 3.7.6 10 0v4.4C6.8 5 5.4 6.8 5.3 10H10v10Zm16 0V11C16 4.5 19.7.6 26 0v4.4C22.8 5 21.4 6.8 21.3 10H26v10Z" fill="#C77B86" opacity="0.36"/></svg>
+        <blockquote class="serif text-[17px] leading-[1.5]">"I did prenatal reformer through my third trimester and postnatal classes after. Ingrid knew exactly what my body could and couldn't do each week."</blockquote>
+        <figcaption class="flex items-center gap-3 mt-6 pt-5 border-t rule-soft">
+          <div class="av-1 w-10 h-10 rounded-full flex items-center justify-center text-white text-[13px] font-bold">NB</div>
+          <div><div class="text-[13.5px] font-bold">Naomi Bridges</div><div class="mono text-[10.5px] text-[color:var(--ink-3)]">Member · 16 months</div></div>
+        </figcaption>
+      </figure>
+      <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7">
+        <svg width="26" height="20" viewBox="0 0 26 20" class="mb-4" aria-hidden="true"><path d="M0 20V11C0 4.5 3.7.6 10 0v4.4C6.8 5 5.4 6.8 5.3 10H10v10Zm16 0V11C16 4.5 19.7.6 26 0v4.4C22.8 5 21.4 6.8 21.3 10H26v10Z" fill="#C77B86" opacity="0.36"/></svg>
+        <blockquote class="serif text-[17px] leading-[1.5]">"I've tried every boutique studio in the city. Poise is the only one where the instructor remembers my name, my injury, and my spring settings."</blockquote>
+        <figcaption class="flex items-center gap-3 mt-6 pt-5 border-t rule-soft">
+          <div class="av-3 w-10 h-10 rounded-full flex items-center justify-center text-white text-[13px] font-bold">EC</div>
+          <div><div class="text-[13.5px] font-bold">Esme Caldwell</div><div class="mono text-[10.5px] text-[color:var(--ink-3)]">Member · 4 years</div></div>
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ================= LOCATION ================= -->
+<section class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+  <div class="grid lg:grid-cols-2 gap-8 items-start">
+    <div>
+      <div class="marker mb-5"><span class="accent-line"></span>Find us</div>
+      <h2 class="display text-[clamp(32px,4.6vw,52px)] mb-6">Studio C on Bishop's Row.</h2>
+      <div class="blob-2 rounded-2xl border rule aspect-[16/10] relative overflow-hidden">
+        <div class="absolute inset-0 dotgrid opacity-50"></div>
+        <div class="absolute inset-0 grain opacity-40"></div>
+        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+          <span class="pulse-dot" style="width:13px;height:13px"></span>
+          <span class="mono text-[10px] mt-2 bg-[color:var(--card)] border rule rounded px-2 py-0.5">9 Bishop's Row</span>
+        </div>
+      </div>
+    </div>
+    <div class="grid sm:grid-cols-2 gap-4">
+      <div class="rounded-2xl border rule bg-[color:var(--card)] p-6 sm:col-span-2">
+        <div class="flex items-center gap-2 mb-3 text-[color:var(--accent)]"><svg class="w-4 h-4"><use href="#pin"/></svg><span class="text-[13px] font-bold text-[color:var(--ink)]">Studio</span></div>
+        <p class="text-[14px] text-[color:var(--ink-2)]">9 Bishop's Row, Studio C<br/>Ground floor, the courtyard entrance</p>
+        <p class="text-[13px] text-[color:var(--ink-2)] mt-3">Metered parking along Bishop's Row and a pay lot on Magnolia Street. A five-minute walk from the Bishop's Row light-rail stop.</p>
+      </div>
+      <div class="rounded-2xl border rule bg-[color:var(--card)] p-6">
+        <div class="flex items-center gap-2 mb-3 text-[color:var(--accent)]"><svg class="w-4 h-4"><use href="#cl"/></svg><span class="text-[13px] font-bold text-[color:var(--ink)]">Hours</span></div>
+        <table class="w-full mono text-[12px] tnum"><tbody>
+          <tr><td class="text-[color:var(--ink-2)] py-1">Mon–Fri</td><td class="text-right">6:30a–8:00p</td></tr>
+          <tr><td class="text-[color:var(--ink-2)] py-1">Saturday</td><td class="text-right">8:00a–3:00p</td></tr>
+          <tr><td class="text-[color:var(--ink-2)] py-1">Sunday</td><td class="text-right">9:00a–2:00p</td></tr>
+        </tbody></table>
+      </div>
+      <div class="rounded-2xl border rule bg-[color:var(--panel)] p-6">
+        <div class="text-[13px] font-bold mb-3">Your first class</div>
+        <p class="text-[13px] text-[color:var(--ink-2)]">Grippy socks are required on the reformer — bring a pair or buy one here for $18. Wear fitted clothing, and arrive fifteen minutes early for a quick reformer orientation.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FAQ ================= -->
+<section class="max-w-[820px] mx-auto px-5 sm:px-8 pb-16 sm:pb-24">
+  <div class="marker mb-5"><span class="accent-line"></span>Before you come</div>
+  <h2 class="display text-[clamp(30px,4vw,46px)] mb-8">Good questions, answered.</h2>
+  <div class="divide-y rule">
+    <details class="group py-2"><summary class="flex items-center justify-between gap-4 py-4"><span class="text-[15px] sm:text-[16px] font-semibold">Pilates vs. barre — what's the difference?</span><span class="acc-sign text-[color:var(--accent)] text-[20px] leading-none">+</span></summary><p class="text-[14px] text-[color:var(--ink-2)] pb-4 max-w-[64ch]">Pilates builds strength through spring resistance and controlled, full-range movement on the reformer. Barre uses small, repetitive pulses and your own bodyweight at the barre. Pilates emphasizes core and alignment; barre emphasizes muscular endurance. Most members do both.</p></details>
+    <details class="group py-2"><summary class="flex items-center justify-between gap-4 py-4"><span class="text-[15px] sm:text-[16px] font-semibold">Do I need experience for the reformer?</span><span class="acc-sign text-[color:var(--accent)] text-[20px] leading-none">+</span></summary><p class="text-[14px] text-[color:var(--ink-2)] pb-4 max-w-[64ch]">None at all. Every first-timer gets a fifteen-minute orientation before class, and instructors set your springs and check your form throughout. Reformer pilates is genuinely beginner-friendly.</p></details>
+    <details class="group py-2"><summary class="flex items-center justify-between gap-4 py-4"><span class="text-[15px] sm:text-[16px] font-semibold">How early should I arrive for my first class?</span><span class="acc-sign text-[color:var(--accent)] text-[20px] leading-none">+</span></summary><p class="text-[14px] text-[color:var(--ink-2)] pb-4 max-w-[64ch]">Fifteen minutes. That gives us time to set up your reformer, walk you through the carriage and straps, and answer questions before the class begins.</p></details>
+    <details class="group py-2"><summary class="flex items-center justify-between gap-4 py-4"><span class="text-[15px] sm:text-[16px] font-semibold">Do you offer postnatal classes?</span><span class="acc-sign text-[color:var(--accent)] text-[20px] leading-none">+</span></summary><p class="text-[14px] text-[color:var(--ink-2)] pb-4 max-w-[64ch]">Yes — dedicated prenatal and postnatal reformer classes, taught by certified instructors. Postnatal work focuses on core and pelvic-floor recovery, and we ask for clearance from your provider first.</p></details>
+    <details class="group py-2"><summary class="flex items-center justify-between gap-4 py-4"><span class="text-[15px] sm:text-[16px] font-semibold">What should I wear — do I need grippy socks?</span><span class="acc-sign text-[color:var(--accent)] text-[20px] leading-none">+</span></summary><p class="text-[14px] text-[color:var(--ink-2)] pb-4 max-w-[64ch]">Grippy socks are required on the reformer for safety. Bring a pair or buy one at the studio for $18. Otherwise, fitted, stretchy clothing — nothing baggy that could catch in the springs.</p></details>
+  </div>
+</section>
+
+<!-- ================= FINAL CTA ================= -->
+<section id="start" class="max-w-[1200px] mx-auto px-5 sm:px-8 pb-16 sm:pb-24">
+  <div class="relative overflow-hidden rounded-[26px] border rule bg-[color:var(--ink)] text-[#FDF8F6] px-6 sm:px-14 py-14 sm:py-20 text-center">
+    <div class="absolute inset-0 opacity-90" style="background:radial-gradient(60% 80% at 22% 12%, rgba(199,123,134,0.52), transparent 62%),radial-gradient(54% 70% at 86% 92%, rgba(156,124,158,0.4), transparent 66%)"></div>
+    <div class="relative">
+      <h2 class="display text-[clamp(34px,5.4vw,64px)] max-w-[18ch] mx-auto">Your first class is free.</h2>
+      <p class="text-[15px] sm:text-[16px] text-[#E7D7D4] mt-5 max-w-[52ch] mx-auto">Book a complimentary reformer or barre class — no membership, no pressure. Feel what fifty focused minutes does, then decide.</p>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center mt-9">
+        <a href="#intro" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--accent)] text-white font-semibold px-7 py-3.5 text-[15px]">Book your free class <span class="scroll-x">→</span></a>
+        <a href="#schedule" class="btn-ghost inline-flex items-center justify-center rounded-full border border-[rgba(255,255,255,0.25)] text-[#FDF8F6] font-medium px-7 py-3.5 text-[15px]">See the schedule</a>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ================= FOOTER ================= -->
+<footer class="border-t rule">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-14 grid sm:grid-cols-2 lg:grid-cols-4 gap-9">
+    <div>
+      <div class="flex items-center gap-2.5 mb-4">
+        <svg width="24" height="24" viewBox="0 0 27 27" aria-hidden="true"><ellipse cx="13.5" cy="13.5" rx="7" ry="12" fill="none" stroke="#C77B86" stroke-width="1.5"/><ellipse cx="13.5" cy="13.5" rx="12" ry="7" fill="none" stroke="#C77B86" stroke-width="1.5"/><circle cx="13.5" cy="13.5" r="2" fill="#C77B86"/></svg>
+        <span class="display text-[20px]">Poise</span>
+      </div>
+      <p class="text-[13px] text-[color:var(--ink-2)] max-w-[30ch]">A boutique pilates &amp; barre studio. Small movements, real change.</p>
+    </div>
+    <div>
+      <div class="marker mb-4">Studio</div>
+      <p class="text-[13px] text-[color:var(--ink-2)] leading-relaxed">9 Bishop's Row, Studio C<br/>Courtyard entrance</p>
+      <p class="mono text-[11.5px] text-[color:var(--ink-3)] mt-3 tnum">Mon–Fri 6:30a–8:00p<br/>Sat 8:00a–3:00p · Sun 9:00a–2:00p</p>
+    </div>
+    <div>
+      <div class="marker mb-4">Get in touch</div>
+      <a href="tel:+14155550162" class="flex items-center gap-2 text-[13px] text-[color:var(--ink-2)] mb-2.5"><svg class="w-3.5 h-3.5"><use href="#ph"/></svg>(415) 555-0162</a>
+      <a href="#top" class="flex items-center gap-2 text-[13px] text-[color:var(--ink-2)] mb-2.5"><svg class="w-3.5 h-3.5"><use href="#ig"/></svg>@poise.studio</a>
+      <p class="text-[12px] text-[color:var(--ink-3)] mt-3">Reserve in the Poise app — iOS &amp; Android.</p>
+    </div>
+    <div>
+      <div class="marker mb-4">Explore</div>
+      <div class="flex flex-col gap-2.5 text-[13px] text-[color:var(--ink-2)]">
+        <a href="#classes" class="ul-link w-fit">Classes</a>
+        <a href="#schedule" class="ul-link w-fit">Schedule</a>
+        <a href="#membership" class="ul-link w-fit">Membership</a>
+        <a href="#about" class="ul-link w-fit">About the studio</a>
+      </div>
+    </div>
+  </div>
+  <div class="border-t rule-soft">
+    <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-6 flex flex-col sm:flex-row gap-2 justify-between">
+      <p class="mono text-[11px] text-[color:var(--ink-3)]">© 2026 Poise Pilates &amp; Barre</p>
+      <p class="mono text-[11px] text-[color:var(--ink-3)]">Reformer · Barre · Mat · Fusion</p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

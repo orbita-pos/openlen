@@ -15,16 +15,16 @@ OpenLen is a landing-page builder. Users describe a page (or pick a template, or
 | `app/api/generate/` | POST — free-form AI generation: one Kimi K2.6 streaming call (system prompt from `lib/design-guidance.ts`) → a complete HTML document, saved as a new project. |
 | `app/api/templates/ai-design/` | POST — conversational page editing (the Chat tab). Same Kimi K2.6 engine as `generate`, but editing an existing page; Mode A ops / Mode B full rewrite. |
 | `components/workspace-v2/` | V2 workspace UI — TopBar, LeftSidebar (tabbed panel), PreviewArea, panels for each mode. |
-| `components/templates/_registry.ts` | The 15 (eventually 30) curated templates registry. Adding a new template = one entry here + one `.html` file. |
+| `lib/templates/` | Template store — `store.ts` (server: list/get/upsert against DB + R2), `families.ts` (client-safe family types/metadata), `admin-schemas.ts` (Zod). Templates are DB-backed; add via `npm run templates:add`. |
 | `lib/design-guidance.ts` | `DESIGN_GUIDANCE` — the distilled design system fed into both AI surfaces (`generate` + `ai-design`). |
 | `lib/publish/filesystem.ts` | `publishToDir` — atomic write to `/var/www/openlen/<sub>/index.html`. |
 | `infra/` | Hetzner deploy stack — nginx wildcard config, systemd unit, deploy.sh, bootstrap. |
-| `public/templates/curated/` | The 15 curated landing HTMLs served directly to the workspace's template gallery. |
-| `docs/claude-design-prompts.md` | 6 prompts for claude.ai Opus 4.7 that generate 5 templates each. |
+| `templates/starter/` | In-repo starter pack — 3 template HTMLs + `manifest.ts`, seeded into DB/storage by `npm run templates:seed`. The full gallery is DB-backed (see Template gallery section). |
+| `docs/claude-design-prompts.md` | Design-brief prompts for claude.ai Opus 4.7 — each produces 5 template HTMLs (32 prompts as of 2026-05-21). |
 
 ## Architecture invariants — do not break
 
-1. **Templates are HTML files, not React components**. The 15 in `public/templates/curated/` are pure HTML (Tailwind CDN + Google Fonts inline). Do NOT port them to TSX — we tried, the user rejected it. Adding more = drop `.html` + register entry.
+1. **Templates are HTML files, not React components**. Each template is pure HTML (Tailwind CDN + Google Fonts inline) — its body lives in object storage, its metadata in Postgres. Do NOT port them to TSX — we tried, the user rejected it. Add a new one with `npm run templates:add` (see the Template gallery section); never by dropping files in the repo or editing a registry.
 2. **Templates never claim subdomains**. Only user projects do, at publish time. `mirror.html` is inspiration; `<myco>.openlen.com` is what a user gets after cloning Mirror + clicking Deploy.
 3. **Published output is static HTML**. `project.data.html` → `/var/www/openlen/<sub>/index.html` → nginx serves direct from disk. No React runtime, no Node hop on the user's published page. Tailwind via CDN is OK.
 4. **`publishToDir` rejects HTML containing `data-slot-path=`** — a reserved editor-mode marker. The `from-html`, `from-template`, and `ai-design` paths reject it too (defense in depth) — it must never reach disk or the DB.
@@ -58,33 +58,36 @@ bash infra/scripts/deploy.sh  # build locally + rsync to Hetzner + systemctl res
 - **Don't add features without confirming**. The phrase "deja de inventar" has come up. Match what was asked; if scope grows, ask first.
 - **Always run `tsc --noEmit` before saying "done"**. The user takes "compila limpio" as a real signal.
 
-## Template gallery scaling roadmap
+## Template gallery — DB-backed (since 2026-05-18)
 
-**Curated stays in repo. Community is additive — never a replacement.**
+Curated templates are **not individual files in the repo**, and there is **no `components/templates/_registry.ts`** (that file was deleted). The gallery is database-backed:
 
-The ~50 curated templates (Mirror, Anchor, Foundry, Counter, … and whatever else lands by PR) live as `.html` files in `public/templates/curated/` + entries in `components/templates/_registry.ts`. They ship with `git clone`, they survive deploys without a DB seed, and they're the "out of the box" gallery a self-hoster sees on first boot. Do NOT propose moving curated templates to the database — the user has explicitly chosen the in-repo path to keep the OSS self-host story simple and to keep template design under PR review. Curated grows via PR ("a contributor writes a beautiful Vercel-style page, owner reviews, merges"). Community contributions, if/when that feature ships, layer ON TOP of curated via the DB schema below.
+- **Metadata** in Postgres — the `templates` table (`id` = slug = PK; name/family/accent/pitch/description/mode/status + storage fields).
+- **HTML bodies** in object storage — R2 in prod (public via `templates.openlen.com`), a local FS fallback in dev (`public/template-objects/`, gitignored). Object path: `templates/<id>-<contentHash>.html`.
+- **Server store**: `lib/templates/store.ts` — `listTemplates`, `getTemplate`, `upsertTemplate`, `getTemplateHtml`, `archiveTemplate`.
+- **Client-safe types**: `lib/templates/families.ts` — `TemplateFamily` union + `TEMPLATE_FAMILY_META` (zero node imports, safe to import from client components).
+- **Zod schemas**: `lib/templates/admin-schemas.ts` — shared by the admin API routes and the CLIs.
+- **Public API**: `GET /api/templates`, `GET /api/templates/[id]`. The `/new-v2` gallery reads through these (`components/workspace-v2/use-templates.ts`).
+- **In-repo starter pack**: `templates/starter/` — 3 HTMLs (mirror, manuscript, counter) + `manifest.ts`, uploaded by `npm run templates:seed` so a fresh clone boots with a non-empty gallery.
 
-Current state: 15-30 templates live as a static `TEMPLATES` array in `components/templates/_registry.ts` + matching `.html` files in `public/templates/curated/`. `TemplatePreviewFrame` lazy-mounts each card's iframe via IntersectionObserver, so the in-memory list scales further than the visible viewport. Don't add infinite scroll or DB-backed templates "just in case" — both are real features tied to specific triggers below.
+**Adding a template** — run the CLI, never touch the repo:
 
-**Trigger 1 — Scanning feels slow** (~30+ templates, when scrolling the sidebar to find the right one becomes annoying):
-- Add a search bar at the top of `TemplatesPanel` — client-side filter over `TEMPLATES` by name/pitch/tags. ~1 hour. No backend changes.
+```bash
+npm run templates:add -- <file.html> --id=<slug> --name="<Name>" --family=<slug> \
+  --accent=#RRGGBB --mode=<dark|light|cream> --pitch="<hook>" --description="<sentence>" --status=published
+```
 
-**Trigger 2 — Open user contributions** (when community-submitted templates become a planned feature):
-- New table `community_templates` in Postgres: `id`, `ownerUserId`, `title`, `family`, `html`, `status` (`draft` | `pending_review` | `approved` | `rejected`), `createdAt`, `approvedAt`. Drizzle schema goes in `lib/db/schema.ts`.
-- New endpoint `GET /api/templates?cursor=<id>&limit=N&family=<f>&q=<search>` — cursor-based pagination, only returns `status = approved`.
-- New endpoint `POST /api/templates/submit` for users to submit their own; `POST /api/templates/<id>/approve` for moderation.
-- `TemplatesPanel` reads via a `useTemplates({ source: "all" })` hook that internally concatenates `[...CURATED, ...await fetchCommunity({ cursor })]`. Infinite scroll lives on the community half only — curated is always fully loaded (it's a small in-memory array). Cards don't care which source they came from.
-- The curated set in `_registry.ts` stays the canonical "official" gallery, **not migrated to DB**. Each self-host instance decides whether to enable the community endpoint at all — a minimalist self-host can ship with curated only and never touch the community table.
-- Optional `tier: "free" | "pro"` field on `TemplateEntry` to gate certain curated designs behind a paywall (still in-repo, just rendered as locked in the UI for non-pro users). Premium curated stays in repo for the OSS+freemium model.
+It validates against `admin-schemas.ts` (rejects `data-slot-path=`), uploads the HTML to storage, and upserts the DB row. Do NOT drop `.html` files into `public/templates/curated/` and do NOT create a `_registry.ts` — neither registers anything; the gallery never sees them. Other CLIs: `templates:republish` (re-upload HTML after edits/renames), `templates:count` (verify DB + storage state).
 
-**What stays in DB regardless** (orthogonal to where templates live):
-- `template_clone_events` for analytics (which templates get cloned, when, by whom). Logged in `from-template` route handler — no need to move the templates themselves to DB to get usage data.
+**Adding a new family** — add the slug to BOTH the `FAMILY` z.enum in `lib/templates/admin-schemas.ts` AND the `TemplateFamily` union + `TEMPLATE_FAMILY_META` in `lib/templates/families.ts`. The DB `family` column is plain `text`, so no migration.
 
-**Out of scope for both triggers**: AI moderation of submitted HTMLs, fraud detection, abuse reports, take-down flow. Those land if/when the gallery is publicly open.
+**Design briefs** for new templates live in `docs/claude-design-prompts.md` — prompts run in claude.ai (Opus 4.7), each producing 5 landing-page HTMLs that are then registered via `templates:add`.
 
-**Design surface philosophy.** Customization of a project's design happens exclusively in the **Chat tab** (`components/workspace-v2/panels/chat-panel.tsx`). It routes to the `AIDesignChat` sub-component which talks to `/api/templates/ai-design` (Kimi K2.6 streaming SSE). No swatches, no font dropdowns, no vibes, no variations, no manual controls of any kind. Kimi receives the full current HTML + the user's request and streams back a complete new page (reasoning text + new HTML). The AI has full creative freedom — token tweaks, section rewrites, full restructuring are all in scope per request. The Content tab is a separate surface — direct in-iframe text editing, section reorder, and asset replace — not design controls.
+Community-submitted templates (a moderated `community_templates` table layered on top of curated) remain a possible future feature — not built, don't build it speculatively.
 
-Architecturally: don't add manual controls back. Don't introduce "quick presets" or vibe cards. Don't add a parallel design-controls panel. The user explicitly rejected those after we shipped a token-diff prototype — that approach treated AI as a glorified color picker and was the wrong tier of ambition for the 2026 positioning. Chat is the surface. If users want shortcuts, the chat has quick-prompt chips that fill the input.
+**Design surface philosophy.** Customization happens in three places — the **Chat tab** for open-ended AI restyle, the **Content tab** for direct in-iframe text editing + section reorder + asset replace, and the inspector (`components/workspace-v2/panels/properties-panel.tsx`) for per-element properties + global theme controls (radius/font/accent). The Chat tab talks to `/api/templates/ai-design` (streaming SSE). AI generation defaults to Gemini 2.5 Pro for code-gen speed; Kimi K2.6 stays as an explicit alternative via the model picker.
+
+**The Canva-mode pivot was rolled back on 2026-05-24** — see [[canva-mode-decision]] memory for the full reasoning. Short version: the document-model engine (`lib/doc/*`) and the structured Canva inspector worked in principle but the conversion of polished HTML templates lost too much visual fidelity (animations, custom CSS, brand SVGs all stripped). User prefers the HTML visual quality. Everything related (`lib/doc/`, `components/workspace-v2/model/`, scripts/templates-convert-*, ai-edit endpoint, document-mode flag) was removed. The born-canonical normalizer (`lib/normalize.ts`) is the only ingestion path now — `from-html` + `from-template` + `generate` all produce plain HTML projects. **Do not propose Canva-mode revival without explicit user request.**
 
 ## Other context worth knowing
 

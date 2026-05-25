@@ -1,0 +1,1572 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Quorum — Governance, treasury, and proposal tooling for DAOs</title>
+<meta name="description" content="Quorum brings DAO governance, a multisig treasury, and proposal tooling into one place. Draft proposals, vote onchain, simulate the effect, and execute through a timelock." />
+
+<!-- Tailwind Play CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Google Fonts: Inter (Display) + Geist Mono -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400..600&family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          base:   "#0B0B14",
+          panel:  "#11111E",
+          panel2: "#15152A",
+          accent: "#7C7CF0",
+          ink:    "#F0F0F6",
+          muted:  "#8C8CA0",
+        },
+        fontFamily: {
+          sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          mono: ['Geist Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        },
+        maxWidth: {
+          container: '1220px',
+        },
+      },
+    },
+  };
+</script>
+
+<style>
+  :root {
+    --base: #0B0B14;
+    --panel: #11111E;
+    --panel2: #15152A;
+    --accent: #7C7CF0;
+    --ink: #F0F0F6;
+    --muted: #8C8CA0;
+    --hair: rgba(255,255,255,0.08);
+    --hair-soft: rgba(255,255,255,0.06);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background-color: var(--base);
+    color: var(--ink);
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: 'ss01', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: rgba(124,124,240,0.32);
+    color: #ffffff;
+  }
+
+  .font-mono { font-family: 'Geist Mono', ui-monospace, monospace; }
+
+  /* Display headings — Inter at high optical size */
+  .display {
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    font-variation-settings: 'opsz' 32;
+    line-height: 1.04;
+  }
+  .display-sm {
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    font-variation-settings: 'opsz' 32;
+    line-height: 1.1;
+  }
+
+  /* tabular figures everywhere onchain numbers appear */
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  /* Half-tone headline */
+  .halftone { opacity: 0.45; }
+
+  /* Eyebrow label */
+  .eyebrow {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .eyebrow-muted { color: var(--muted); }
+
+  /* Hairline helpers */
+  .hair    { border-color: rgba(255,255,255,0.08); }
+  .hair-soft { border-color: rgba(255,255,255,0.06); }
+
+  /* Faint panels */
+  .panel-faint  { background: rgba(255,255,255,0.02); }
+  .panel-faint2 { background: rgba(255,255,255,0.035); }
+
+  /* Pulse dot */
+  .pulse-dot {
+    position: relative;
+    width: 8px; height: 8px;
+    border-radius: 9999px;
+    background: var(--accent);
+    flex: none;
+  }
+  .pulse-dot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    box-shadow: 0 0 0 0 rgba(124,124,240,0.55);
+    animation: pulse 2.4s ease-out infinite;
+  }
+  .pulse-dot.green { background: #45D483; }
+  .pulse-dot.green::after { animation-name: pulse-green; }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(124,124,240,0.5); }
+    70%  { box-shadow: 0 0 0 9px rgba(124,124,240,0); }
+    100% { box-shadow: 0 0 0 0 rgba(124,124,240,0); }
+  }
+  @keyframes pulse-green {
+    0%   { box-shadow: 0 0 0 0 rgba(69,212,131,0.5); }
+    70%  { box-shadow: 0 0 0 9px rgba(69,212,131,0); }
+    100% { box-shadow: 0 0 0 0 rgba(69,212,131,0); }
+  }
+
+  /* Marquee */
+  .marquee {
+    display: flex;
+    width: max-content;
+    animation: marquee 38s linear infinite;
+  }
+  .marquee:hover { animation-play-state: paused; }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  .marquee-mask {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+            mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+  }
+
+  /* Dot grid background */
+  .dot-grid {
+    background-image: radial-gradient(rgba(255,255,255,0.055) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  /* Ambient blobs */
+  .blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Hover lift */
+  .lift { transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease, background-color 120ms ease; }
+  .lift:hover { transform: translateY(-3px); }
+
+  /* Buttons */
+  .btn-accent {
+    background: var(--accent);
+    color: #0B0B14;
+    font-weight: 600;
+    border-radius: 9px;
+    transition: transform 110ms ease, box-shadow 110ms ease, filter 110ms ease;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 8px 24px -10px rgba(124,124,240,0.7);
+  }
+  .btn-accent:hover { transform: translateY(-2px); filter: brightness(1.07); }
+  .btn-ghost {
+    background: rgba(255,255,255,0.04);
+    color: var(--ink);
+    border: 1px solid rgba(255,255,255,0.1);
+    font-weight: 500;
+    border-radius: 9px;
+    transition: transform 110ms ease, background-color 110ms ease, border-color 110ms ease;
+  }
+  .btn-ghost:hover { transform: translateY(-2px); background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.16); }
+
+  /* Centerpiece surface — gradient border so it reads as a real surface */
+  .surface {
+    position: relative;
+    background: linear-gradient(180deg, #15152A 0%, #101020 100%);
+    border-radius: 18px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.06) inset,
+      0 40px 90px -40px rgba(0,0,0,0.8),
+      0 0 0 1px rgba(255,255,255,0.05);
+  }
+  .surface-glow {
+    position: absolute;
+    inset: -1px;
+    border-radius: 19px;
+    padding: 1px;
+    background: linear-gradient(160deg, rgba(124,124,240,0.55), rgba(124,124,240,0.05) 38%, rgba(255,255,255,0.04));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* Card */
+  .card {
+    background: rgba(255,255,255,0.022);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 14px;
+  }
+  .card:hover { border-color: rgba(255,255,255,0.13); background: rgba(255,255,255,0.035); }
+
+  /* Audit pill */
+  .audit-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    padding: 5px 11px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.025);
+    color: var(--muted);
+  }
+
+  /* Address pill */
+  .addr-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.03);
+    color: var(--ink);
+    transition: background-color 110ms ease, border-color 110ms ease;
+  }
+  .addr-pill:hover { background: rgba(255,255,255,0.055); border-color: rgba(124,124,240,0.4); }
+  .copy-btn { display: inline-flex; color: var(--muted); transition: color 110ms ease; }
+  .copy-btn:hover { color: var(--accent); }
+  .copy-btn.copied { color: #45D483; }
+
+  /* Vote tally bar */
+  .tally-track {
+    height: 8px;
+    border-radius: 9999px;
+    background: rgba(255,255,255,0.06);
+    overflow: hidden;
+    display: flex;
+  }
+  .tally-for { background: linear-gradient(90deg, #7C7CF0, #9C9CF8); }
+  .tally-against { background: rgba(255,255,255,0.14); }
+
+  /* Code block */
+  .code-tab {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 12px;
+  }
+  .tok-key   { color: #9C9CF8; }
+  .tok-str   { color: #7BD9A6; }
+  .tok-num   { color: #E0A35E; }
+  .tok-com   { color: #5B5B70; }
+  .tok-fn    { color: #C6C6F4; }
+  .tok-punc  { color: #6C6C84; }
+
+  /* FAQ details */
+  details.faq {
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+  details.faq summary {
+    list-style: none;
+    cursor: pointer;
+  }
+  details.faq summary::-webkit-details-marker { display: none; }
+  details.faq .chev {
+    transition: transform 160ms ease;
+  }
+  details.faq[open] .chev { transform: rotate(45deg); }
+
+  /* Nav backdrop */
+  .nav-blur {
+    background: rgba(11,11,20,0.72);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  /* Mobile menu */
+  #mobileMenu { display: none; }
+  #mobileMenu.open { display: block; }
+
+  /* Step connector */
+  .step-line {
+    background: linear-gradient(90deg, rgba(124,124,240,0.5), rgba(124,124,240,0.12));
+  }
+
+  /* Sparkline container */
+  .spark { display: block; }
+
+  /* Wallet row */
+  .wallet-row {
+    transition: background-color 110ms ease, border-color 110ms ease, transform 110ms ease;
+  }
+  .wallet-row:hover {
+    background: rgba(255,255,255,0.045);
+    border-color: rgba(124,124,240,0.4);
+    transform: translateY(-1px);
+  }
+
+  /* Focus visibility */
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid rgba(124,124,240,0.7);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<header class="sticky top-0 z-50 nav-blur border-b hair">
+  <nav class="max-w-container mx-auto px-5 sm:px-6 h-16 flex items-center justify-between" aria-label="Primary">
+    <!-- Logo -->
+    <a href="#top" class="flex items-center gap-2.5 shrink-0" aria-label="Quorum home">
+      <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <circle cx="16" cy="16" r="14.5" stroke="#7C7CF0" stroke-width="1.4" opacity="0.55"/>
+        <circle cx="16" cy="3.6" r="2.5" fill="#7C7CF0"/>
+        <circle cx="26.7" cy="9.8" r="2.5" fill="#7C7CF0" opacity="0.78"/>
+        <circle cx="26.7" cy="22.2" r="2.5" fill="#7C7CF0" opacity="0.58"/>
+        <circle cx="16" cy="28.4" r="2.5" fill="#7C7CF0" opacity="0.45"/>
+        <circle cx="5.3" cy="22.2" r="2.5" fill="#7C7CF0" opacity="0.58"/>
+        <circle cx="5.3" cy="9.8" r="2.5" fill="#7C7CF0" opacity="0.78"/>
+        <path d="M11.4 16.2l3.1 3.1 6.3-6.6" stroke="#F0F0F6" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="text-[17px] font-semibold tracking-tight">Quorum</span>
+    </a>
+
+    <!-- Desktop links -->
+    <div class="hidden md:flex items-center gap-1 text-sm text-muted">
+      <a href="#how" class="px-3 py-2 rounded-lg hover:text-ink transition-colors">Docs</a>
+      <a href="#ecosystem" class="px-3 py-2 rounded-lg hover:text-ink transition-colors">Ecosystem</a>
+      <a href="#governance" class="px-3 py-2 rounded-lg hover:text-ink transition-colors">Governance</a>
+      <a href="#faq" class="px-3 py-2 rounded-lg hover:text-ink transition-colors">Blog</a>
+    </div>
+
+    <!-- Right actions -->
+    <div class="flex items-center gap-2">
+      <a href="#developers" class="hidden sm:inline-flex items-center justify-center w-9 h-9 rounded-lg text-muted hover:text-ink hover:bg-white/5 transition-colors" aria-label="Quorum on GitHub">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.34-5.47-5.95 0-1.31.47-2.39 1.24-3.23-.13-.3-.54-1.53.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.65.24 2.88.12 3.18.77.84 1.23 1.92 1.23 3.23 0 4.62-2.81 5.64-5.49 5.94.43.37.81 1.1.81 2.22v3.29c0 .32.21.7.82.58A12.01 12.01 0 0 0 24 12.5C24 5.87 18.63.5 12 .5Z"/>
+        </svg>
+      </a>
+      <a href="#cta" class="hidden sm:inline-flex items-center btn-accent text-sm px-4 py-2">Launch app</a>
+      <!-- Mobile hamburger -->
+      <button id="menuBtn" class="md:hidden inline-flex items-center justify-center w-9 h-9 rounded-lg text-ink hover:bg-white/5 transition-colors" aria-label="Open menu" aria-expanded="false">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <line x1="3" y1="7" x2="21" y2="7"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="17" x2="21" y2="17"/>
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Mobile menu -->
+  <div id="mobileMenu" class="md:hidden border-t hair px-5 py-4 bg-base">
+    <div class="flex flex-col gap-1 text-sm">
+      <a href="#how" class="px-2 py-2.5 rounded-lg text-muted hover:text-ink hover:bg-white/5">Docs</a>
+      <a href="#ecosystem" class="px-2 py-2.5 rounded-lg text-muted hover:text-ink hover:bg-white/5">Ecosystem</a>
+      <a href="#governance" class="px-2 py-2.5 rounded-lg text-muted hover:text-ink hover:bg-white/5">Governance</a>
+      <a href="#faq" class="px-2 py-2.5 rounded-lg text-muted hover:text-ink hover:bg-white/5">Blog</a>
+      <a href="#developers" class="px-2 py-2.5 rounded-lg text-muted hover:text-ink hover:bg-white/5">GitHub</a>
+      <a href="#cta" class="mt-2 inline-flex items-center justify-center btn-accent text-sm px-4 py-2.5">Launch app</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============ HERO ============ -->
+  <section class="relative overflow-hidden">
+    <!-- ambient -->
+    <div class="absolute inset-0 dot-grid opacity-70" aria-hidden="true"></div>
+    <div class="absolute inset-x-0 top-0 h-[620px]" aria-hidden="true"
+         style="background: radial-gradient(620px 360px at 50% 6%, rgba(124,124,240,0.20), transparent 70%);"></div>
+    <div class="blob" style="width:420px;height:420px;background:rgba(124,124,240,0.22);top:-120px;left:-80px;" aria-hidden="true"></div>
+    <div class="blob" style="width:380px;height:380px;background:rgba(124,124,240,0.13);top:60px;right:-120px;" aria-hidden="true"></div>
+
+    <div class="relative max-w-container mx-auto px-5 sm:px-6 pt-20 pb-24 sm:pt-28 sm:pb-28 text-center">
+      <!-- pill badge -->
+      <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border hair panel-faint2 mb-7">
+        <span class="pulse-dot green" aria-hidden="true"></span>
+        <span class="font-mono text-[11px] tracking-wider text-ink">MAINNET</span>
+        <span class="font-mono text-[11px] tracking-wider text-muted">·</span>
+        <span class="font-mono text-[11px] tracking-wider text-muted">v2 LIVE</span>
+      </div>
+
+      <!-- headline w/ half-tone -->
+      <h1 class="display text-4xl sm:text-6xl lg:text-[68px] max-w-4xl mx-auto">
+        Run your DAO like it
+        <span class="halftone block sm:inline">actually has a constitution.</span>
+      </h1>
+
+      <p class="mt-6 text-base sm:text-lg text-muted max-w-2xl mx-auto leading-relaxed">
+        Governance, a multisig treasury, and proposal tooling in one place — draft, vote onchain,
+        simulate the effect, and execute through a timelock.
+      </p>
+
+      <!-- dual CTA -->
+      <div class="mt-9 flex flex-col sm:flex-row items-center justify-center gap-3">
+        <a href="#cta" class="btn-accent w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-[15px]">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="2" y="6" width="20" height="13" rx="2.5"/><path d="M16 12h2"/><path d="M2 9h13"/>
+          </svg>
+          Launch app
+        </a>
+        <a href="#how" class="btn-ghost w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-[15px]">
+          Read the docs
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5 12h14"/><path d="M13 6l6 6-6 6"/>
+          </svg>
+        </a>
+      </div>
+
+      <!-- live onchain-stat row -->
+      <div class="mt-14 grid grid-cols-2 lg:grid-cols-4 gap-px rounded-2xl overflow-hidden border hair max-w-4xl mx-auto panel-faint">
+        <div class="p-5 sm:p-6 bg-base/40">
+          <div class="flex items-center justify-center gap-2 text-[11px] font-mono uppercase tracking-wider text-muted mb-2">
+            <span class="pulse-dot" aria-hidden="true"></span> DAOs using it
+          </div>
+          <div class="display-sm text-2xl sm:text-3xl tnum" data-countup="1408">1,408</div>
+        </div>
+        <div class="p-5 sm:p-6 bg-base/40">
+          <div class="text-[11px] font-mono uppercase tracking-wider text-muted mb-2">Treasury secured</div>
+          <div class="display-sm text-2xl sm:text-3xl tnum text-accent">$4.8B</div>
+        </div>
+        <div class="p-5 sm:p-6 bg-base/40">
+          <div class="text-[11px] font-mono uppercase tracking-wider text-muted mb-2">Proposals executed</div>
+          <div class="display-sm text-2xl sm:text-3xl tnum" data-countup="28408">28,408</div>
+        </div>
+        <div class="p-5 sm:p-6 bg-base/40">
+          <div class="text-[11px] font-mono uppercase tracking-wider text-muted mb-2 flex items-center justify-center gap-2">
+            Voters
+            <!-- tiny sparkline -->
+            <svg class="spark" width="40" height="14" viewBox="0 0 40 14" fill="none" aria-hidden="true">
+              <polyline points="0,11 7,9 13,10 19,6 25,7 31,3 40,2" stroke="#7C7CF0" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="display-sm text-2xl sm:text-3xl tnum" data-countup="148408">148,408</div>
+        </div>
+      </div>
+
+      <!-- transparency line -->
+      <div class="mt-7 flex flex-wrap items-center justify-center gap-3 text-xs text-muted">
+        <span>Every contract verified onchain</span>
+        <button class="addr-pill" data-copy="0x4f2a7be3c1d09a6e85f4127cabd9034e771aa821" aria-label="Copy QuorumGovernor address">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          0x4f2a...a821
+          <span class="copy-btn" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+          </span>
+        </button>
+        <span class="audit-pill"><span class="pulse-dot" style="width:6px;height:6px" aria-hidden="true"></span>Sepolia testnet</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TRUST BAR ============ -->
+  <section id="ecosystem" class="relative border-y hair-soft panel-faint">
+    <div class="max-w-container mx-auto px-5 sm:px-6 py-14">
+      <p class="text-center text-sm text-muted mb-8">
+        Securing <span class="text-ink font-medium tnum">$4.8B</span> onchain across DAO treasuries
+      </p>
+
+      <!-- marquee -->
+      <div class="marquee-mask overflow-hidden">
+        <div class="marquee items-center gap-12">
+          <!-- track A -->
+          <div class="flex items-center gap-12 pr-12 text-muted/80">
+            <svg width="116" height="22" viewBox="0 0 116 22" fill="currentColor" aria-label="Linnea"><text x="0" y="16" font-family="Inter" font-weight="700" font-size="16" letter-spacing="-0.02em">Linnea</text></svg>
+            <svg width="124" height="22" viewBox="0 0 124 22" fill="currentColor" aria-label="Forecast"><text x="0" y="16" font-family="Georgia, serif" font-style="italic" font-size="17">Forecast</text></svg>
+            <svg width="86" height="22" viewBox="0 0 86 22" fill="currentColor" aria-label="Glide"><text x="0" y="16" font-family="Inter" font-weight="600" font-size="16" letter-spacing="0.04em">GLIDE</text></svg>
+            <svg width="112" height="22" viewBox="0 0 112 22" fill="currentColor" aria-label="Vantage"><text x="0" y="16" font-family="Georgia, serif" font-size="17">Vantage</text></svg>
+            <svg width="118" height="22" viewBox="0 0 118 22" fill="currentColor" aria-label="Mercury"><text x="0" y="16" font-family="Inter" font-weight="700" font-size="16" letter-spacing="-0.02em">Mercury</text></svg>
+            <svg width="132" height="22" viewBox="0 0 132 22" fill="currentColor" aria-label="Brightwave"><text x="0" y="16" font-family="Inter" font-weight="500" font-size="16">Brightwave</text></svg>
+            <svg width="98" height="22" viewBox="0 0 98 22" fill="currentColor" aria-label="Nimbus"><text x="0" y="16" font-family="Georgia, serif" font-style="italic" font-size="17">Nimbus</text></svg>
+            <svg width="92" height="22" viewBox="0 0 92 22" fill="currentColor" aria-label="Halcyon"><text x="0" y="16" font-family="Inter" font-weight="600" font-size="16" letter-spacing="0.03em">Halcyon</text></svg>
+            <svg width="106" height="22" viewBox="0 0 106 22" fill="currentColor" aria-label="Tideline"><text x="0" y="16" font-family="Inter" font-weight="700" font-size="16" letter-spacing="-0.02em">Tideline</text></svg>
+          </div>
+          <!-- track B (duplicate) -->
+          <div class="flex items-center gap-12 pr-12 text-muted/80" aria-hidden="true">
+            <svg width="116" height="22" viewBox="0 0 116 22" fill="currentColor"><text x="0" y="16" font-family="Inter" font-weight="700" font-size="16" letter-spacing="-0.02em">Linnea</text></svg>
+            <svg width="124" height="22" viewBox="0 0 124 22" fill="currentColor"><text x="0" y="16" font-family="Georgia, serif" font-style="italic" font-size="17">Forecast</text></svg>
+            <svg width="86" height="22" viewBox="0 0 86 22" fill="currentColor"><text x="0" y="16" font-family="Inter" font-weight="600" font-size="16" letter-spacing="0.04em">GLIDE</text></svg>
+            <svg width="112" height="22" viewBox="0 0 112 22" fill="currentColor"><text x="0" y="16" font-family="Georgia, serif" font-size="17">Vantage</text></svg>
+            <svg width="118" height="22" viewBox="0 0 118 22" fill="currentColor"><text x="0" y="16" font-family="Inter" font-weight="700" font-size="16" letter-spacing="-0.02em">Mercury</text></svg>
+            <svg width="132" height="22" viewBox="0 0 132 22" fill="currentColor"><text x="0" y="16" font-family="Inter" font-weight="500" font-size="16">Brightwave</text></svg>
+            <svg width="98" height="22" viewBox="0 0 98 22" fill="currentColor"><text x="0" y="16" font-family="Georgia, serif" font-style="italic" font-size="17">Nimbus</text></svg>
+            <svg width="92" height="22" viewBox="0 0 92 22" fill="currentColor"><text x="0" y="16" font-family="Inter" font-weight="600" font-size="16" letter-spacing="0.03em">Halcyon</text></svg>
+            <svg width="106" height="22" viewBox="0 0 106 22" fill="currentColor"><text x="0" y="16" font-family="Inter" font-weight="700" font-size="16" letter-spacing="-0.02em">Tideline</text></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- audit badges -->
+      <div class="mt-9 flex flex-wrap items-center justify-center gap-2.5">
+        <span class="audit-pill">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="2" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/><path d="M8.5 12l2.4 2.4 4.6-4.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          OpenZeppelin
+        </span>
+        <span class="audit-pill">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="2" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/><path d="M8.5 12l2.4 2.4 4.6-4.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          ChainSecurity
+        </span>
+        <span class="audit-pill">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#45D483" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Immunefi bounty
+        </span>
+        <span class="audit-pill">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#45D483" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Verified onchain
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CENTERPIECE — GOVERNANCE DASHBOARD ============ -->
+  <section class="relative overflow-hidden">
+    <div class="blob" style="width:520px;height:520px;background:rgba(124,124,240,0.12);top:120px;left:50%;transform:translateX(-50%);" aria-hidden="true"></div>
+    <div class="relative max-w-container mx-auto px-5 sm:px-6 pt-24 pb-24">
+      <div class="text-center max-w-2xl mx-auto mb-12">
+        <span class="eyebrow">The console</span>
+        <h2 class="display text-3xl sm:text-5xl mt-3">One dashboard for every onchain decision.</h2>
+        <p class="mt-4 text-muted">Active proposals, the treasury, and the multisig queue — the full picture your DAO operates from, every figure pulled live from chain.</p>
+      </div>
+
+      <!-- Surface -->
+      <div class="surface mx-auto max-w-5xl">
+        <div class="surface-glow" aria-hidden="true"></div>
+
+        <!-- app top bar -->
+        <div class="relative flex items-center justify-between gap-3 px-4 sm:px-6 py-3.5 border-b hair">
+          <div class="flex items-center gap-2.5">
+            <svg width="20" height="20" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+              <circle cx="16" cy="16" r="14.5" stroke="#7C7CF0" stroke-width="1.4" opacity="0.5"/>
+              <path d="M11.4 16.2l3.1 3.1 6.3-6.6" stroke="#F0F0F6" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="text-sm font-semibold">Brightwave DAO</span>
+            <span class="hidden sm:inline-flex items-center gap-1.5 font-mono text-[10px] text-muted border hair rounded-md px-2 py-1">
+              <span class="pulse-dot green" style="width:6px;height:6px" aria-hidden="true"></span> MAINNET
+            </span>
+          </div>
+          <!-- connected wallet chip -->
+          <div class="flex items-center gap-2 font-mono text-[11px] border hair rounded-lg px-2.5 py-1.5 panel-faint2">
+            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 8l9-5 9 5v8l-9 5-9-5z" fill="#7C7CF0" opacity="0.85"/>
+            </svg>
+            <span class="text-ink">0x91c4...3f0a</span>
+            <span class="w-1.5 h-1.5 rounded-full bg-[#45D483]" aria-hidden="true"></span>
+          </div>
+        </div>
+
+        <!-- app grid -->
+        <div class="relative grid lg:grid-cols-3 gap-px bg-white/[0.05]">
+
+          <!-- ZONE A — ACTIVE PROPOSALS -->
+          <div class="lg:col-span-2 bg-[#101020] p-4 sm:p-5">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-[13px] font-mono uppercase tracking-wider text-muted">Active proposals</h3>
+              <span class="font-mono text-[11px] text-accent">3 open</span>
+            </div>
+
+            <div class="space-y-3">
+              <!-- proposal 1 -->
+              <div class="card lift p-4">
+                <div class="flex items-start justify-between gap-3 mb-3">
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="font-mono text-[10px] text-muted">QIP-142</span>
+                      <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-[#7C7CF0]/15 text-accent">Quorum met</span>
+                    </div>
+                    <p class="text-sm font-medium mt-1">Allocate 240k USDC to the Q3 grants round</p>
+                  </div>
+                  <span class="font-mono text-[10px] text-muted whitespace-nowrap">1d 6h left</span>
+                </div>
+                <div class="tally-track mb-2">
+                  <div class="tally-for" style="width:68.4%"></div>
+                  <div class="tally-against" style="width:31.6%"></div>
+                </div>
+                <div class="flex items-center justify-between font-mono text-[11px]">
+                  <span class="text-accent tnum">For 68.4%</span>
+                  <span class="text-muted tnum">Against 31.6%</span>
+                </div>
+              </div>
+
+              <!-- proposal 2 -->
+              <div class="card lift p-4">
+                <div class="flex items-start justify-between gap-3 mb-3">
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="font-mono text-[10px] text-muted">QIP-143</span>
+                      <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-[#E0A35E]/15 text-[#E0A35E]">Quorum pending</span>
+                    </div>
+                    <p class="text-sm font-medium mt-1">Upgrade the staking module to v3.2</p>
+                  </div>
+                  <span class="font-mono text-[10px] text-muted whitespace-nowrap">2d 18h left</span>
+                </div>
+                <div class="tally-track mb-2">
+                  <div class="tally-for" style="width:54.1%"></div>
+                  <div class="tally-against" style="width:45.9%"></div>
+                </div>
+                <div class="flex items-center justify-between font-mono text-[11px]">
+                  <span class="text-accent tnum">For 54.1%</span>
+                  <span class="text-muted tnum">Against 45.9%</span>
+                </div>
+              </div>
+
+              <!-- proposal 3 -->
+              <div class="card lift p-4">
+                <div class="flex items-start justify-between gap-3 mb-3">
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="font-mono text-[10px] text-muted">QIP-144</span>
+                      <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-[#7C7CF0]/15 text-accent">Quorum met</span>
+                    </div>
+                    <p class="text-sm font-medium mt-1">Add Coast as a delegate steward for ecosystem grants</p>
+                  </div>
+                  <span class="font-mono text-[10px] text-muted whitespace-nowrap">9h left</span>
+                </div>
+                <div class="tally-track mb-2">
+                  <div class="tally-for" style="width:81.7%"></div>
+                  <div class="tally-against" style="width:18.3%"></div>
+                </div>
+                <div class="flex items-center justify-between font-mono text-[11px]">
+                  <span class="text-accent tnum">For 81.7%</span>
+                  <span class="text-muted tnum">Against 18.3%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ZONE B + C column -->
+          <div class="bg-[#101020] p-4 sm:p-5 flex flex-col gap-5">
+            <!-- TREASURY -->
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="text-[13px] font-mono uppercase tracking-wider text-muted">Treasury</h3>
+                <span class="font-mono text-[12px] text-ink tnum">$84.4M</span>
+              </div>
+              <div class="space-y-2">
+                <div class="flex items-center justify-between border hair-soft rounded-lg px-3 py-2.5 panel-faint">
+                  <div class="flex items-center gap-2.5">
+                    <span class="w-6 h-6 rounded-full grid place-items-center text-[10px] font-mono" style="background:rgba(124,124,240,0.16);color:#9C9CF8">Ξ</span>
+                    <div>
+                      <div class="text-[12px] font-medium">ETH</div>
+                      <div class="font-mono text-[10px] text-muted tnum">9,420.18</div>
+                    </div>
+                  </div>
+                  <span class="font-mono text-[12px] tnum">$34.2M</span>
+                </div>
+                <div class="flex items-center justify-between border hair-soft rounded-lg px-3 py-2.5 panel-faint">
+                  <div class="flex items-center gap-2.5">
+                    <span class="w-6 h-6 rounded-full grid place-items-center text-[10px] font-mono" style="background:rgba(69,140,212,0.16);color:#5BA8E0">$</span>
+                    <div>
+                      <div class="text-[12px] font-medium">USDC</div>
+                      <div class="font-mono text-[10px] text-muted tnum">26,140,000</div>
+                    </div>
+                  </div>
+                  <span class="font-mono text-[12px] tnum">$26.1M</span>
+                </div>
+                <div class="flex items-center justify-between border hair-soft rounded-lg px-3 py-2.5 panel-faint">
+                  <div class="flex items-center gap-2.5">
+                    <span class="w-6 h-6 rounded-full grid place-items-center text-[10px] font-mono" style="background:rgba(124,124,240,0.16);color:#9C9CF8">st</span>
+                    <div>
+                      <div class="text-[12px] font-medium">stETH</div>
+                      <div class="font-mono text-[10px] text-muted tnum">3,880.44</div>
+                    </div>
+                  </div>
+                  <span class="font-mono text-[12px] tnum">$14.0M</span>
+                </div>
+                <div class="flex items-center justify-between border hair-soft rounded-lg px-3 py-2.5 panel-faint">
+                  <div class="flex items-center gap-2.5">
+                    <span class="w-6 h-6 rounded-full grid place-items-center text-[10px] font-mono" style="background:rgba(69,212,131,0.16);color:#45D483">BW</span>
+                    <div>
+                      <div class="text-[12px] font-medium">BWAVE</div>
+                      <div class="font-mono text-[10px] text-muted tnum">8,200,000</div>
+                    </div>
+                  </div>
+                  <span class="font-mono text-[12px] tnum">$10.1M</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- MULTISIG TX QUEUE -->
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="text-[13px] font-mono uppercase tracking-wider text-muted">Multisig queue</h3>
+                <span class="font-mono text-[11px] text-muted">2 pending</span>
+              </div>
+              <div class="space-y-2">
+                <div class="border hair-soft rounded-lg px-3 py-2.5 panel-faint">
+                  <div class="flex items-center justify-between">
+                    <span class="font-mono text-[11px] text-ink">Transfer · 240k USDC</span>
+                    <span class="font-mono text-[10px] text-[#E0A35E]">3 of 5 signed</span>
+                  </div>
+                  <div class="flex items-center gap-1.5 mt-2">
+                    <span class="w-5 h-1.5 rounded-full bg-[#7C7CF0]"></span>
+                    <span class="w-5 h-1.5 rounded-full bg-[#7C7CF0]"></span>
+                    <span class="w-5 h-1.5 rounded-full bg-[#7C7CF0]"></span>
+                    <span class="w-5 h-1.5 rounded-full bg-white/12"></span>
+                    <span class="w-5 h-1.5 rounded-full bg-white/12"></span>
+                  </div>
+                </div>
+                <div class="border hair-soft rounded-lg px-3 py-2.5 panel-faint">
+                  <div class="flex items-center justify-between">
+                    <span class="font-mono text-[11px] text-ink">Upgrade · StakingModule</span>
+                    <span class="font-mono text-[10px] text-accent">5 of 5 signed</span>
+                  </div>
+                  <div class="flex items-center gap-1.5 mt-2">
+                    <span class="w-5 h-1.5 rounded-full bg-[#7C7CF0]"></span>
+                    <span class="w-5 h-1.5 rounded-full bg-[#7C7CF0]"></span>
+                    <span class="w-5 h-1.5 rounded-full bg-[#7C7CF0]"></span>
+                    <span class="w-5 h-1.5 rounded-full bg-[#7C7CF0]"></span>
+                    <span class="w-5 h-1.5 rounded-full bg-[#7C7CF0]"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HOW IT WORKS ============ -->
+  <section id="how" class="relative border-y hair-soft panel-faint">
+    <div class="max-w-container mx-auto px-5 sm:px-6 py-24">
+      <div class="text-center max-w-2xl mx-auto mb-14">
+        <span class="eyebrow">The flow</span>
+        <h2 class="display text-3xl sm:text-5xl mt-3">From a draft to onchain execution.</h2>
+        <p class="mt-4 text-muted">Four steps, three contracts. Every hop is verifiable, and the timelock gives your community a window to react before anything moves.</p>
+      </div>
+
+      <!-- contract hop strip -->
+      <div class="flex flex-wrap items-center justify-center gap-2 mb-12 font-mono text-[11px]">
+        <span class="px-2.5 py-1.5 rounded-lg border hair panel-faint2 text-accent">QuorumGovernor</span>
+        <svg width="18" height="12" viewBox="0 0 18 12" fill="none" aria-hidden="true"><path d="M1 6h14M11 1.5L16.5 6 11 10.5" stroke="#5B5B70" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="px-2.5 py-1.5 rounded-lg border hair panel-faint2 text-accent">QuorumTimelock</span>
+        <svg width="18" height="12" viewBox="0 0 18 12" fill="none" aria-hidden="true"><path d="M1 6h14M11 1.5L16.5 6 11 10.5" stroke="#5B5B70" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="px-2.5 py-1.5 rounded-lg border hair panel-faint2 text-accent">TreasuryModule</span>
+      </div>
+
+      <!-- steps -->
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <!-- step 1 -->
+        <div class="card lift p-5 relative">
+          <div class="flex items-center justify-between mb-4">
+            <span class="w-9 h-9 rounded-xl grid place-items-center font-mono text-sm text-accent" style="background:rgba(124,124,240,0.14)">01</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="1.8" aria-hidden="true"><path d="M4 4h11l5 5v11H4z"/><path d="M15 4v5h5"/><path d="M8 13h8M8 17h5"/></svg>
+          </div>
+          <h3 class="text-base font-semibold mb-1.5">Draft a proposal</h3>
+          <p class="text-sm text-muted leading-relaxed">Write the proposal, attach the exact calldata, and submit. Anyone over the proposal threshold can open one.</p>
+          <div class="mt-4 font-mono text-[10px] text-muted">gas ≈ 0.0021 ETH · QuorumGovernor.propose()</div>
+        </div>
+        <!-- step 2 -->
+        <div class="card lift p-5">
+          <div class="flex items-center justify-between mb-4">
+            <span class="w-9 h-9 rounded-xl grid place-items-center font-mono text-sm text-accent" style="background:rgba(124,124,240,0.14)">02</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="1.8" aria-hidden="true"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+          </div>
+          <h3 class="text-base font-semibold mb-1.5">Vote onchain</h3>
+          <p class="text-sm text-muted leading-relaxed">Token-weighted or multisig — voters cast onchain. The vote passes only if it clears the quorum threshold.</p>
+          <div class="mt-4 font-mono text-[10px] text-muted">gas ≈ 0.0009 ETH · castVote()</div>
+        </div>
+        <!-- step 3 -->
+        <div class="card lift p-5">
+          <div class="flex items-center justify-between mb-4">
+            <span class="w-9 h-9 rounded-xl grid place-items-center font-mono text-sm text-accent" style="background:rgba(124,124,240,0.14)">03</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M12 1h0M9 1h6"/></svg>
+          </div>
+          <h3 class="text-base font-semibold mb-1.5">Timelock delay</h3>
+          <p class="text-sm text-muted leading-relaxed">A passed proposal is queued in the timelock. The delay is a safety buffer before any state change lands.</p>
+          <div class="mt-4 font-mono text-[10px] text-muted">delay 48h · QuorumTimelock.queue()</div>
+        </div>
+        <!-- step 4 -->
+        <div class="card lift p-5">
+          <div class="flex items-center justify-between mb-4">
+            <span class="w-9 h-9 rounded-xl grid place-items-center font-mono text-sm text-accent" style="background:rgba(124,124,240,0.14)">04</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="1.8" aria-hidden="true"><path d="M5 12l5 5L20 6"/></svg>
+          </div>
+          <h3 class="text-base font-semibold mb-1.5">Execute</h3>
+          <p class="text-sm text-muted leading-relaxed">After the delay, anyone can execute. The treasury action runs exactly as written — no off-script edits.</p>
+          <div class="mt-4 font-mono text-[10px] text-muted">gas ≈ 0.0034 ETH · TreasuryModule.execute()</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FEATURES GRID ============ -->
+  <section class="relative">
+    <div class="max-w-container mx-auto px-5 sm:px-6 py-24">
+      <div class="text-center max-w-2xl mx-auto mb-14">
+        <span class="eyebrow">Capabilities</span>
+        <h2 class="display text-3xl sm:text-5xl mt-3">Everything a DAO needs to govern itself.</h2>
+        <p class="mt-4 text-muted">Voting, treasury, and the safeguards between a passed vote and a moved dollar — built as composable onchain modules.</p>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- onchain voting -->
+        <div class="card lift p-6">
+          <div class="w-11 h-11 rounded-xl grid place-items-center mb-4" style="background:rgba(124,124,240,0.13)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="1.8" aria-hidden="true"><path d="M9 12l2 2 4-4"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg>
+          </div>
+          <h3 class="text-lg font-semibold mb-2">Onchain voting</h3>
+          <p class="text-sm text-muted leading-relaxed">Every ballot is recorded on chain and tallied by the Governor contract. Results are public, auditable, and impossible to quietly revise.</p>
+        </div>
+        <!-- multisig treasury -->
+        <div class="card lift p-6">
+          <div class="w-11 h-11 rounded-xl grid place-items-center mb-4" style="background:rgba(124,124,240,0.13)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="1.8" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18M8 15h4"/></svg>
+          </div>
+          <h3 class="text-lg font-semibold mb-2">Multisig treasury</h3>
+          <p class="text-sm text-muted leading-relaxed">Hold ETH, stablecoins, and your token in a threshold multisig. Every outflow needs the configured number of signatures before it clears.</p>
+        </div>
+        <!-- timelocks -->
+        <div class="card lift p-6">
+          <div class="w-11 h-11 rounded-xl grid place-items-center mb-4" style="background:rgba(124,124,240,0.13)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/></svg>
+          </div>
+          <h3 class="text-lg font-semibold mb-2">Timelocks</h3>
+          <p class="text-sm text-muted leading-relaxed">A configurable delay sits between a passed vote and its execution — a window for the community to inspect, contest, or exit before anything moves.</p>
+        </div>
+        <!-- delegation -->
+        <div class="card lift p-6">
+          <div class="w-11 h-11 rounded-xl grid place-items-center mb-4" style="background:rgba(124,124,240,0.13)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="1.8" aria-hidden="true"><circle cx="8" cy="8" r="3.2"/><circle cx="17" cy="15" r="3.2"/><path d="M10.5 10l4 3"/></svg>
+          </div>
+          <h3 class="text-lg font-semibold mb-2">Delegation</h3>
+          <p class="text-sm text-muted leading-relaxed">Assign your voting power to a delegate who votes on your behalf. Delegation is onchain, revocable any time, and never transfers your tokens.</p>
+        </div>
+        <!-- proposal simulation -->
+        <div class="card lift p-6">
+          <div class="w-11 h-11 rounded-xl grid place-items-center mb-4" style="background:rgba(124,124,240,0.13)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="1.8" aria-hidden="true"><path d="M3 12s3.5-7 9-7 9 7 9 7-3.5 7-9 7-9-7-9-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          </div>
+          <h3 class="text-lg font-semibold mb-2">Proposal simulation</h3>
+          <p class="text-sm text-muted leading-relaxed">Run a proposal against a fork of mainnet before it executes. See the exact balance changes, storage writes, and reverts it would produce.</p>
+        </div>
+        <!-- snapshot compatible -->
+        <div class="card lift p-6">
+          <div class="w-11 h-11 rounded-xl grid place-items-center mb-4" style="background:rgba(124,124,240,0.13)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="1.8" aria-hidden="true"><path d="M12 3v6l5-3M12 21v-6l-5 3M3 8l5 3-5 3M21 8l-5 3 5 3"/></svg>
+          </div>
+          <h3 class="text-lg font-semibold mb-2">Snapshot-compatible</h3>
+          <p class="text-sm text-muted leading-relaxed">Import an existing offchain Snapshot space and keep your strategies. Run gasless temperature checks, then bind the result to onchain execution.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DEVELOPER SECTION ============ -->
+  <section id="developers" class="relative border-y hair-soft panel-faint overflow-hidden">
+    <div class="blob" style="width:340px;height:340px;background:rgba(124,124,240,0.12);bottom:-80px;left:-60px;" aria-hidden="true"></div>
+    <div class="relative max-w-container mx-auto px-5 sm:px-6 py-24">
+      <div class="grid lg:grid-cols-2 gap-12 items-center">
+        <!-- copy -->
+        <div>
+          <span class="eyebrow">For developers</span>
+          <h2 class="display text-3xl sm:text-5xl mt-3">Define a governance module.</h2>
+          <p class="mt-4 text-muted leading-relaxed">
+            Configure your DAO as code — the voting strategy, quorum and proposal thresholds, the timelock duration, and the treasury it controls.
+            Deploy it once and Quorum wires the Governor, Timelock, and Treasury contracts for you.
+          </p>
+          <ul class="mt-6 space-y-3 text-sm">
+            <li class="flex items-start gap-3">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="2.2" class="mt-0.5 shrink-0" aria-hidden="true"><path d="M5 12l5 5L20 6"/></svg>
+              <span class="text-muted">Three voting strategies — token-weighted, multisig, one-member-one-vote.</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="2.2" class="mt-0.5 shrink-0" aria-hidden="true"><path d="M5 12l5 5L20 6"/></svg>
+              <span class="text-muted">TypeScript SDK, a Hardhat plugin, and a CLI for CI deploys.</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="2.2" class="mt-0.5 shrink-0" aria-hidden="true"><path d="M5 12l5 5L20 6"/></svg>
+              <span class="text-muted">Open-source contracts, audited and verified on Etherscan.</span>
+            </li>
+          </ul>
+          <a href="#cta" class="mt-8 btn-accent inline-flex items-center gap-2 px-5 py-2.5 text-sm">
+            Set up your DAO
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+          </a>
+        </div>
+
+        <!-- code block -->
+        <div class="surface overflow-hidden">
+          <div class="surface-glow" aria-hidden="true"></div>
+          <!-- filename tab row -->
+          <div class="relative flex items-center justify-between border-b hair px-3 py-2.5">
+            <div class="flex items-center gap-1.5">
+              <span class="flex items-center gap-2 code-tab px-3 py-1.5 rounded-md bg-white/[0.05] text-ink">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="2" aria-hidden="true"><path d="M4 4h11l5 5v11H4z"/><path d="M15 4v5h5"/></svg>
+                quorum.config.ts
+              </span>
+              <span class="code-tab px-3 py-1.5 rounded-md text-muted">treasury.ts</span>
+            </div>
+            <button class="copy-btn" data-copy-code aria-label="Copy code snippet">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+            </button>
+          </div>
+          <!-- code body -->
+          <pre class="relative overflow-x-auto p-4 sm:p-5 text-[12.5px] leading-[1.7] font-mono"><code><span class="tok-com">// Governance module for Brightwave DAO</span>
+<span class="tok-key">import</span> <span class="tok-punc">{</span> <span class="tok-fn">defineModule</span> <span class="tok-punc">}</span> <span class="tok-key">from</span> <span class="tok-str">"@quorum/sdk"</span><span class="tok-punc">;</span>
+
+<span class="tok-key">export default</span> <span class="tok-fn">defineModule</span><span class="tok-punc">({</span>
+  <span class="tok-key">name</span><span class="tok-punc">:</span> <span class="tok-str">"Brightwave DAO"</span><span class="tok-punc">,</span>
+  <span class="tok-key">votingStrategy</span><span class="tok-punc">:</span> <span class="tok-str">"token-weighted"</span><span class="tok-punc">,</span>  <span class="tok-com">// | "multisig" | "one-member-one-vote"</span>
+  <span class="tok-key">token</span><span class="tok-punc">:</span> <span class="tok-str">"0x8d12...c4e1"</span><span class="tok-punc">,</span>
+  <span class="tok-key">quorum</span><span class="tok-punc">:</span> <span class="tok-punc">{</span>
+    <span class="tok-key">threshold</span><span class="tok-punc">:</span> <span class="tok-str">"4%"</span><span class="tok-punc">,</span>            <span class="tok-com">// min participation to count</span>
+    <span class="tok-key">proposalThreshold</span><span class="tok-punc">:</span> <span class="tok-num">50_000n</span><span class="tok-punc">,</span>  <span class="tok-com">// tokens to open a proposal</span>
+  <span class="tok-punc">},</span>
+  <span class="tok-key">timelock</span><span class="tok-punc">:</span> <span class="tok-punc">{</span>
+    <span class="tok-key">delay</span><span class="tok-punc">:</span> <span class="tok-str">"48h"</span><span class="tok-punc">,</span>             <span class="tok-com">// buffer before execution</span>
+  <span class="tok-punc">},</span>
+  <span class="tok-key">treasury</span><span class="tok-punc">:</span> <span class="tok-str">"0x7be3...9034"</span><span class="tok-punc">,</span>
+  <span class="tok-key">simulate</span><span class="tok-punc">:</span> <span class="tok-num">true</span><span class="tok-punc">,</span>              <span class="tok-com">// fork-test every proposal</span>
+<span class="tok-punc">});</span></code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ONCHAIN STATS BANNER ============ -->
+  <section class="relative">
+    <div class="max-w-container mx-auto px-5 sm:px-6 py-20">
+      <div class="surface p-8 sm:p-12">
+        <div class="surface-glow" aria-hidden="true"></div>
+        <div class="relative">
+          <div class="text-center mb-10">
+            <span class="eyebrow">Onchain, as of block 21,408,442</span>
+            <h2 class="display-sm text-2xl sm:text-3xl mt-3">Numbers the chain can prove.</h2>
+          </div>
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-6">
+            <div class="text-center">
+              <div class="display text-3xl sm:text-5xl tnum" data-countup="1408">1,408</div>
+              <div class="mt-2 text-xs sm:text-sm text-muted">DAOs running on Quorum</div>
+            </div>
+            <div class="text-center">
+              <div class="display text-3xl sm:text-5xl tnum text-accent">$4.8B</div>
+              <div class="mt-2 text-xs sm:text-sm text-muted">Treasury secured</div>
+            </div>
+            <div class="text-center">
+              <div class="display text-3xl sm:text-5xl tnum" data-countup="28408">28,408</div>
+              <div class="mt-2 text-xs sm:text-sm text-muted">Proposals executed</div>
+            </div>
+            <div class="text-center">
+              <div class="display text-3xl sm:text-5xl tnum text-accent">99.4%</div>
+              <div class="mt-2 text-xs sm:text-sm text-muted">Execution success rate</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECURITY ============ -->
+  <section class="relative border-y hair-soft panel-faint">
+    <div class="max-w-container mx-auto px-5 sm:px-6 py-24">
+      <div class="grid lg:grid-cols-2 gap-12">
+        <!-- copy -->
+        <div>
+          <span class="eyebrow">Security</span>
+          <h2 class="display text-3xl sm:text-5xl mt-3">A treasury is only as safe as the path to spending it.</h2>
+          <p class="mt-4 text-muted leading-relaxed">
+            Quorum's contracts are audited, the timelock buys your community reaction time, and proposal simulation
+            catches a malicious payload before it ever reaches the treasury. Nothing executes off-chain or out of sight.
+          </p>
+
+          <!-- audit pills -->
+          <div class="mt-7 flex flex-wrap gap-2.5">
+            <span class="audit-pill">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="2" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/><path d="M8.5 12l2.4 2.4 4.6-4.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              OpenZeppelin · Mar 2026
+            </span>
+            <span class="audit-pill">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="2" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/><path d="M8.5 12l2.4 2.4 4.6-4.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              ChainSecurity · Jan 2026
+            </span>
+            <span class="audit-pill">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#45D483" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16h0" stroke-linecap="round"/></svg>
+              Immunefi · up to $1,000,000
+            </span>
+          </div>
+
+          <!-- contract verification -->
+          <div class="mt-6 border hair rounded-xl p-4 panel-faint2">
+            <div class="flex items-center gap-2 text-xs text-muted mb-2.5">
+              <span class="pulse-dot green" style="width:6px;height:6px" aria-hidden="true"></span>
+              All core contracts verified on Etherscan
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button class="addr-pill" data-copy="0x4f2a7be3c1d09a6e85f4127cabd9034e771aa821" aria-label="Copy QuorumGovernor address">
+                Governor · 0x4f2a...a821
+                <span class="copy-btn" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>
+              </button>
+              <button class="addr-pill" data-copy="0xa31de70b9c4f228e6510fa4dd2c8b9034e771fa6" aria-label="Copy QuorumTimelock address">
+                Timelock · 0xa31d...1fa6
+                <span class="copy-btn" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- security cards -->
+        <div class="space-y-4">
+          <div class="card lift p-5">
+            <div class="flex items-start gap-3.5">
+              <span class="w-10 h-10 rounded-xl grid place-items-center shrink-0" style="background:rgba(124,124,240,0.13)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/></svg>
+              </span>
+              <div>
+                <h3 class="font-semibold mb-1">The timelock is a reaction window</h3>
+                <p class="text-sm text-muted leading-relaxed">A passed proposal waits in the timelock before it can run. During that delay the community can audit the calldata, rally opposition, or move funds to safety.</p>
+              </div>
+            </div>
+          </div>
+          <div class="card lift p-5">
+            <div class="flex items-start gap-3.5">
+              <span class="w-10 h-10 rounded-xl grid place-items-center shrink-0" style="background:rgba(124,124,240,0.13)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="1.8" aria-hidden="true"><path d="M3 12s3.5-7 9-7 9 7 9 7-3.5 7-9 7-9-7-9-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              </span>
+              <div>
+                <h3 class="font-semibold mb-1">Simulation catches malicious proposals</h3>
+                <p class="text-sm text-muted leading-relaxed">Every proposal is replayed against a mainnet fork. If it drains the treasury, grants a hidden role, or self-destructs a contract, the simulation surfaces it before a single vote is cast.</p>
+              </div>
+            </div>
+          </div>
+          <div class="card lift p-5">
+            <div class="flex items-start gap-3.5">
+              <span class="w-10 h-10 rounded-xl grid place-items-center shrink-0" style="background:rgba(124,124,240,0.13)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="1.8" aria-hidden="true"><path d="M9 12l2 2 4-4"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg>
+              </span>
+              <div>
+                <h3 class="font-semibold mb-1">Every action is onchain and verifiable</h3>
+                <p class="text-sm text-muted leading-relaxed">There is no admin backdoor and no off-chain executor. Proposals, votes, queued actions, and executions are all transactions you can inspect on a block explorer.</p>
+              </div>
+            </div>
+          </div>
+          <div class="card lift p-5">
+            <div class="flex items-start gap-3.5">
+              <span class="w-10 h-10 rounded-xl grid place-items-center shrink-0" style="background:rgba(124,124,240,0.13)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="1.8" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18M8 15h4"/></svg>
+              </span>
+              <div>
+                <h3 class="font-semibold mb-1">Non-custodial by design</h3>
+                <p class="text-sm text-muted leading-relaxed">Quorum never holds your funds or your keys. The treasury multisig is owned entirely by your DAO; we ship the contracts and the interface, nothing more.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ GOVERNANCE ============ -->
+  <section id="governance" class="relative">
+    <div class="max-w-container mx-auto px-5 sm:px-6 py-24">
+      <div class="text-center max-w-2xl mx-auto mb-14">
+        <span class="eyebrow">How governance works</span>
+        <h2 class="display text-3xl sm:text-5xl mt-3">Pick the rules. The contracts enforce them.</h2>
+        <p class="mt-4 text-muted">Quorum is governance tooling — it doesn't decide for you. You choose a voting model and the thresholds; the Governor contract applies them to every proposal, identically.</p>
+      </div>
+
+      <!-- voting models -->
+      <div class="grid md:grid-cols-3 gap-5 mb-6">
+        <div class="card lift p-6">
+          <div class="font-mono text-[11px] text-accent mb-3">MODEL 01</div>
+          <h3 class="text-lg font-semibold mb-2">Token-weighted</h3>
+          <p class="text-sm text-muted leading-relaxed">One token, one vote. Voting power scales with the governance tokens an address holds or has delegated to it. Best for open protocols where stake reflects exposure.</p>
+        </div>
+        <div class="card lift p-6">
+          <div class="font-mono text-[11px] text-accent mb-3">MODEL 02</div>
+          <h3 class="text-lg font-semibold mb-2">One-member-one-vote</h3>
+          <p class="text-sm text-muted leading-relaxed">Every recognized member counts equally, regardless of token balance. Backed by an onchain membership registry — fitting for cooperatives, guilds, and grant collectives.</p>
+        </div>
+        <div class="card lift p-6">
+          <div class="font-mono text-[11px] text-accent mb-3">MODEL 03</div>
+          <h3 class="text-lg font-semibold mb-2">Multisig</h3>
+          <p class="text-sm text-muted leading-relaxed">A fixed set of signers approves proposals by threshold — say 5 of 9. Fast and accountable, suited to smaller teams or an operational subcommittee.</p>
+        </div>
+      </div>
+
+      <!-- quorum + delegation explainer -->
+      <div class="grid md:grid-cols-2 gap-5">
+        <div class="card p-6 sm:p-8">
+          <div class="flex items-center gap-2.5 mb-3">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+            <h3 class="text-lg font-semibold">Quorum thresholds</h3>
+          </div>
+          <p class="text-sm text-muted leading-relaxed">
+            A quorum is the minimum participation a vote needs to be valid. If your DAO sets quorum at 4% and only 3% of voting
+            power turns out, the proposal fails even with unanimous support — it simply did not reach enough of the community to count.
+            It is the guard against a tiny, unrepresentative group steering the whole DAO.
+          </p>
+          <!-- mini quorum gauge -->
+          <div class="mt-5">
+            <div class="flex items-center justify-between font-mono text-[11px] mb-1.5">
+              <span class="text-muted">Turnout this proposal</span>
+              <span class="text-accent tnum">6.2% / 4.0% required</span>
+            </div>
+            <div class="tally-track">
+              <div class="tally-for" style="width:62%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card p-6 sm:p-8">
+          <div class="flex items-center gap-2.5 mb-3">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C7CF0" stroke-width="1.8" aria-hidden="true"><circle cx="8" cy="8" r="3.2"/><circle cx="17" cy="15" r="3.2"/><path d="M10.5 10l4 3"/></svg>
+            <h3 class="text-lg font-semibold">Delegation</h3>
+          </div>
+          <p class="text-sm text-muted leading-relaxed">
+            Most token holders won't read every proposal. Delegation lets them assign their voting power to someone who will —
+            a researcher, a working group, a trusted contributor. The delegate votes with that combined weight, the assignment
+            is recorded onchain, and the holder can revoke or re-point it at any block. Tokens never leave the holder's wallet.
+          </p>
+          <div class="mt-5 flex items-center gap-3 font-mono text-[11px]">
+            <span class="addr-pill" data-copy="0xc4e189d2b6510fa4dd2c8b9034e771fa6a31de70" aria-label="Copy delegate address">
+              delegate → 0xc4e1...de70
+              <span class="copy-btn" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>
+            </span>
+            <span class="text-muted tnum">142,800 votes</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FAQ ============ -->
+  <section id="faq" class="relative border-y hair-soft panel-faint">
+    <div class="max-w-container mx-auto px-5 sm:px-6 py-24">
+      <div class="grid lg:grid-cols-[0.8fr_1.2fr] gap-12">
+        <div>
+          <span class="eyebrow">FAQ</span>
+          <h2 class="display text-3xl sm:text-5xl mt-3">Questions, answered.</h2>
+          <p class="mt-4 text-muted">Still unsure how a piece fits together? The docs go deeper, and the contracts are open for you to read.</p>
+          <a href="#how" class="mt-6 btn-ghost inline-flex items-center gap-2 px-4 py-2.5 text-sm">
+            Read the docs
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+          </a>
+        </div>
+
+        <div>
+          <details class="faq py-5" open>
+            <summary class="flex items-center justify-between gap-4">
+              <span class="text-base font-medium">Token-weighted or one-member-one-vote — which does it support?</span>
+              <span class="chev shrink-0 text-accent text-xl leading-none" aria-hidden="true">+</span>
+            </summary>
+            <p class="mt-3 text-sm text-muted leading-relaxed">
+              Both, plus multisig. You choose the voting strategy when you define your governance module. Token-weighted scales
+              power with token holdings, one-member-one-vote gives every registered member equal say, and multisig hands approval
+              to a fixed signer set. The strategy is a parameter on the Governor contract, so you can also run different DAOs with
+              different models from the same Quorum deployment.
+            </p>
+          </details>
+          <details class="faq py-5">
+            <summary class="flex items-center justify-between gap-4">
+              <span class="text-base font-medium">How does the timelock protect against a malicious proposal?</span>
+              <span class="chev shrink-0 text-accent text-xl leading-none" aria-hidden="true">+</span>
+            </summary>
+            <p class="mt-3 text-sm text-muted leading-relaxed">
+              A proposal that passes a vote is not executed immediately — it is queued in the timelock for a delay you configure,
+              commonly 24 to 72 hours. During that window the proposal's exact calldata is public and unchangeable. If it turns out
+              to be hostile, the community has time to organize against it, and members who disagree can withdraw their funds before
+              it lands. The timelock cannot stop a proposal on its own, but it removes the element of surprise that most attacks rely on.
+            </p>
+          </details>
+          <details class="faq py-5">
+            <summary class="flex items-center justify-between gap-4">
+              <span class="text-base font-medium">Can we use it with our existing multisig?</span>
+              <span class="chev shrink-0 text-accent text-xl leading-none" aria-hidden="true">+</span>
+            </summary>
+            <p class="mt-3 text-sm text-muted leading-relaxed">
+              Yes. Quorum's TreasuryModule is Safe-compatible, so you can point governance at a multisig you already operate instead
+              of deploying a fresh one. Passed proposals are queued as transactions in that multisig, and your existing signers
+              approve them as usual. You keep your current setup and signer keys — Quorum simply adds the proposal, voting, and
+              timelock layer on top.
+            </p>
+          </details>
+          <details class="faq py-5">
+            <summary class="flex items-center justify-between gap-4">
+              <span class="text-base font-medium">What does proposal simulation actually check?</span>
+              <span class="chev shrink-0 text-accent text-xl leading-none" aria-hidden="true">+</span>
+            </summary>
+            <p class="mt-3 text-sm text-muted leading-relaxed">
+              Simulation forks mainnet at the current block and executes the proposal's calldata exactly as it would run after the
+              timelock. It reports every token balance change, contract storage write, emitted event, and any revert. That makes
+              hidden effects visible — a transfer larger than stated, a quietly granted admin role, or a call that would simply fail.
+              Voters see the real consequences before they vote, not a description of intent.
+            </p>
+          </details>
+          <details class="faq py-5">
+            <summary class="flex items-center justify-between gap-4">
+              <span class="text-base font-medium">Is voting gas-free?</span>
+              <span class="chev shrink-0 text-accent text-xl leading-none" aria-hidden="true">+</span>
+            </summary>
+            <p class="mt-3 text-sm text-muted leading-relaxed">
+              It depends on the layer. Offchain Snapshot-style voting is gasless — voters sign a message rather than send a
+              transaction, so a temperature check costs nothing. Onchain steps do cost gas: casting a binding onchain vote, queuing
+              a passed proposal, and executing it are all real transactions. Many DAOs run gasless Snapshot votes for sentiment, then
+              put only the final, binding decision onchain to keep costs down without giving up verifiable execution.
+            </p>
+          </details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CONNECT WALLET MODAL MOCKUP ============ -->
+  <section class="relative overflow-hidden">
+    <div class="blob" style="width:400px;height:400px;background:rgba(124,124,240,0.12);top:40px;right:-100px;" aria-hidden="true"></div>
+    <div class="relative max-w-container mx-auto px-5 sm:px-6 py-24">
+      <div class="grid lg:grid-cols-2 gap-12 items-center">
+        <div>
+          <span class="eyebrow">Connect &amp; go</span>
+          <h2 class="display text-3xl sm:text-5xl mt-3">Bring the wallet your DAO already uses.</h2>
+          <p class="mt-4 text-muted leading-relaxed">
+            Quorum works with every major wallet and never asks for a seed phrase or a custodial account. Connect, and you see
+            the proposals you can vote on and the treasury you help govern — read-only until you choose to sign.
+          </p>
+          <div class="mt-7 flex flex-wrap items-center gap-2.5">
+            <span class="audit-pill"><span class="pulse-dot green" style="width:6px;height:6px" aria-hidden="true"></span>Mainnet · live</span>
+            <span class="audit-pill"><span class="pulse-dot" style="width:6px;height:6px" aria-hidden="true"></span>Sepolia testnet</span>
+          </div>
+        </div>
+
+        <!-- modal mockup -->
+        <div class="surface max-w-sm mx-auto w-full">
+          <div class="surface-glow" aria-hidden="true"></div>
+          <div class="relative p-5">
+            <div class="flex items-center justify-between mb-1">
+              <h3 class="text-base font-semibold">Connect a wallet</h3>
+              <span class="w-7 h-7 rounded-lg grid place-items-center text-muted border hair-soft" aria-hidden="true">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg>
+              </span>
+            </div>
+            <p class="text-xs text-muted mb-4">Choose how you'd like to connect to Quorum.</p>
+
+            <div class="space-y-2">
+              <!-- MetaMask -->
+              <div class="wallet-row flex items-center gap-3 border hair rounded-xl px-3.5 py-3 panel-faint cursor-default">
+                <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+                  <path d="M28 4L18 11l2-5z" fill="#E2761B"/><path d="M4 4l10 7-2-5z" fill="#E4761B"/>
+                  <path d="M24 22l-3 4 6 2 2-6z" fill="#E4761B"/><path d="M3 22l2 6 6-2-3-4z" fill="#E4761B"/>
+                  <path d="M11 15l-2 3 6 .2-.2-6.4z" fill="#765D2F"/><path d="M21 15l-4-3.3-.1 6.5 6-.2z" fill="#765D2F"/>
+                  <path d="M11 26l4-2-3-2.5z" fill="#C0AD9E"/><path d="M17 24l4 2-1-4.5z" fill="#C0AD9E"/>
+                </svg>
+                <div class="flex-1">
+                  <div class="text-sm font-medium">MetaMask</div>
+                  <div class="font-mono text-[10px] text-muted">Browser extension</div>
+                </div>
+                <span class="font-mono text-[10px] text-[#45D483]">Detected</span>
+              </div>
+              <!-- Rainbow -->
+              <div class="wallet-row flex items-center gap-3 border hair rounded-xl px-3.5 py-3 panel-faint cursor-default">
+                <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+                  <rect width="32" height="32" rx="8" fill="#0B0B14"/>
+                  <path d="M6 24a14 14 0 0 1 14-14" stroke="#FF6B6B" stroke-width="3" fill="none" stroke-linecap="round"/>
+                  <path d="M6 24a10 10 0 0 1 10-10" stroke="#FFB84D" stroke-width="3" fill="none" stroke-linecap="round"/>
+                  <path d="M6 24a6 6 0 0 1 6-6" stroke="#7C7CF0" stroke-width="3" fill="none" stroke-linecap="round"/>
+                </svg>
+                <div class="flex-1">
+                  <div class="text-sm font-medium">Rainbow</div>
+                  <div class="font-mono text-[10px] text-muted">Mobile wallet</div>
+                </div>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5B5B70" stroke-width="2.4" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+              </div>
+              <!-- Coinbase Wallet -->
+              <div class="wallet-row flex items-center gap-3 border hair rounded-xl px-3.5 py-3 panel-faint cursor-default">
+                <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+                  <rect width="32" height="32" rx="8" fill="#1652F0"/>
+                  <circle cx="16" cy="16" r="9" fill="#fff"/>
+                  <rect x="13" y="13" width="6" height="6" rx="1.4" fill="#1652F0"/>
+                </svg>
+                <div class="flex-1">
+                  <div class="text-sm font-medium">Coinbase Wallet</div>
+                  <div class="font-mono text-[10px] text-muted">Extension &amp; mobile</div>
+                </div>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5B5B70" stroke-width="2.4" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+              </div>
+              <!-- WalletConnect -->
+              <div class="wallet-row flex items-center gap-3 border hair rounded-xl px-3.5 py-3 panel-faint cursor-default">
+                <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+                  <rect width="32" height="32" rx="8" fill="#3B99FC"/>
+                  <path d="M9 13c4-3.8 10-3.8 14 0l.5.5-1.9 1.9-.4-.4c-2.8-2.6-7-2.6-9.8 0l-.4.4L9 13.5z" fill="#fff"/>
+                </svg>
+                <div class="flex-1">
+                  <div class="text-sm font-medium">WalletConnect</div>
+                  <div class="font-mono text-[10px] text-muted">Scan with any wallet</div>
+                </div>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5B5B70" stroke-width="2.4" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+              </div>
+              <!-- Ledger -->
+              <div class="wallet-row flex items-center gap-3 border hair rounded-xl px-3.5 py-3 panel-faint cursor-default">
+                <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+                  <rect width="32" height="32" rx="8" fill="#0B0B14" stroke="#2A2A3E"/>
+                  <path d="M9 9h7v2.2H11.2V20H9zm14 14h-7v-2.2h4.8V12H23z" fill="#fff"/>
+                </svg>
+                <div class="flex-1">
+                  <div class="text-sm font-medium">Ledger</div>
+                  <div class="font-mono text-[10px] text-muted">Hardware wallet</div>
+                </div>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5B5B70" stroke-width="2.4" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+              </div>
+            </div>
+
+            <div class="mt-4 flex items-center gap-2 font-mono text-[10px] text-muted">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+              Non-custodial · Quorum never sees your keys
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FINAL CTA ============ -->
+  <section id="cta" class="relative overflow-hidden">
+    <div class="absolute inset-0 dot-grid opacity-60" aria-hidden="true"></div>
+    <div class="absolute inset-0" aria-hidden="true"
+         style="background: radial-gradient(540px 320px at 50% 50%, rgba(124,124,240,0.20), transparent 72%);"></div>
+    <div class="relative max-w-container mx-auto px-5 sm:px-6 py-28 text-center">
+      <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border hair panel-faint2 mb-7">
+        <span class="pulse-dot green" aria-hidden="true"></span>
+        <span class="font-mono text-[11px] tracking-wider text-ink">MAINNET · v2 LIVE</span>
+      </div>
+      <h2 class="display text-3xl sm:text-5xl lg:text-[56px] max-w-3xl mx-auto">
+        Give your DAO a process
+        <span class="halftone block sm:inline">it can actually trust.</span>
+      </h2>
+      <p class="mt-5 text-muted max-w-xl mx-auto">
+        Deploy governance, a multisig treasury, and proposal tooling in an afternoon — and let the contracts keep everyone honest.
+      </p>
+      <div class="mt-9 flex flex-col sm:flex-row items-center justify-center gap-3">
+        <a href="#top" class="btn-accent w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-[15px]">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="13" rx="2.5"/><path d="M16 12h2"/><path d="M2 9h13"/></svg>
+          Launch app
+        </a>
+        <a href="#how" class="btn-ghost w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-[15px]">Read the docs</a>
+      </div>
+      <div class="mt-8 flex flex-wrap items-center justify-center gap-3 text-xs text-muted">
+        <span>Every contract verified onchain</span>
+        <button class="addr-pill" data-copy="0x4f2a7be3c1d09a6e85f4127cabd9034e771aa821" aria-label="Copy QuorumGovernor address">
+          0x4f2a...a821
+          <span class="copy-btn" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer class="relative border-t hair panel-faint">
+  <div class="max-w-container mx-auto px-5 sm:px-6 py-16">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
+      <!-- brand -->
+      <div class="col-span-2 lg:col-span-1">
+        <a href="#top" class="flex items-center gap-2.5 mb-4" aria-label="Quorum home">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <circle cx="16" cy="16" r="14.5" stroke="#7C7CF0" stroke-width="1.4" opacity="0.55"/>
+            <circle cx="16" cy="3.6" r="2.5" fill="#7C7CF0"/>
+            <circle cx="26.7" cy="9.8" r="2.5" fill="#7C7CF0" opacity="0.78"/>
+            <circle cx="26.7" cy="22.2" r="2.5" fill="#7C7CF0" opacity="0.58"/>
+            <circle cx="16" cy="28.4" r="2.5" fill="#7C7CF0" opacity="0.45"/>
+            <circle cx="5.3" cy="22.2" r="2.5" fill="#7C7CF0" opacity="0.58"/>
+            <circle cx="5.3" cy="9.8" r="2.5" fill="#7C7CF0" opacity="0.78"/>
+            <path d="M11.4 16.2l3.1 3.1 6.3-6.6" stroke="#F0F0F6" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="text-[16px] font-semibold tracking-tight">Quorum</span>
+        </a>
+        <p class="text-sm text-muted leading-relaxed">Governance, treasury, and proposal tooling for DAOs that want a process the chain can prove.</p>
+        <div class="mt-4 flex items-center gap-2">
+          <a href="#cta" class="w-9 h-9 rounded-lg grid place-items-center border hair-soft text-muted hover:text-ink hover:bg-white/5 transition-colors" aria-label="Quorum on GitHub">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.34-5.47-5.95 0-1.31.47-2.39 1.24-3.23-.13-.3-.54-1.53.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.65.24 2.88.12 3.18.77.84 1.23 1.92 1.23 3.23 0 4.62-2.81 5.64-5.49 5.94.43.37.81 1.1.81 2.22v3.29c0 .32.21.7.82.58A12.01 12.01 0 0 0 24 12.5C24 5.87 18.63.5 12 .5Z"/></svg>
+          </a>
+          <a href="#cta" class="w-9 h-9 rounded-lg grid place-items-center border hair-soft text-muted hover:text-ink hover:bg-white/5 transition-colors" aria-label="Quorum on Discord">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.3 4.4A19.8 19.8 0 0 0 15.5 3l-.24.5a18 18 0 0 1 4.3 1.3 13.2 13.2 0 0 0-15.1 0A18 18 0 0 1 8.8 3.5L8.5 3a19.8 19.8 0 0 0-4.8 1.4C.67 8.9-.15 13.3.25 17.6a19.9 19.9 0 0 0 6 3 14.3 14.3 0 0 0 1.3-2.1 12.9 12.9 0 0 1-2-1c.17-.12.33-.25.49-.37a14.2 14.2 0 0 0 12 0c.16.13.32.25.49.37a12.9 12.9 0 0 1-2 1 14.3 14.3 0 0 0 1.3 2.1 19.9 19.9 0 0 0 6-3c.47-5-.82-9.4-3.5-13.2ZM8.02 15c-1.18 0-2.15-1.08-2.15-2.4S6.82 10.2 8.02 10.2s2.16 1.08 2.15 2.4c0 1.32-.96 2.4-2.15 2.4Zm7.96 0c-1.18 0-2.15-1.08-2.15-2.4s.95-2.4 2.15-2.4 2.16 1.08 2.15 2.4c0 1.32-.95 2.4-2.15 2.4Z"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- Protocol -->
+      <nav aria-label="Protocol">
+        <h4 class="font-mono text-[11px] uppercase tracking-wider text-muted mb-3.5">Protocol</h4>
+        <ul class="space-y-2.5 text-sm">
+          <li><a href="#how" class="text-muted hover:text-ink transition-colors">How it works</a></li>
+          <li><a href="#governance" class="text-muted hover:text-ink transition-colors">Voting models</a></li>
+          <li><a href="#cta" class="text-muted hover:text-ink transition-colors">Treasury</a></li>
+          <li><a href="#cta" class="text-muted hover:text-ink transition-colors">Timelocks</a></li>
+          <li><a href="#cta" class="text-muted hover:text-ink transition-colors">Changelog</a></li>
+        </ul>
+      </nav>
+
+      <!-- Developers -->
+      <nav aria-label="Developers">
+        <h4 class="font-mono text-[11px] uppercase tracking-wider text-muted mb-3.5">Developers</h4>
+        <ul class="space-y-2.5 text-sm">
+          <li><a href="#developers" class="text-muted hover:text-ink transition-colors">Documentation</a></li>
+          <li><a href="#developers" class="text-muted hover:text-ink transition-colors">TypeScript SDK</a></li>
+          <li><a href="#developers" class="text-muted hover:text-ink transition-colors">Hardhat plugin</a></li>
+          <li><a href="#developers" class="text-muted hover:text-ink transition-colors">Contracts</a></li>
+          <li><a href="#developers" class="text-muted hover:text-ink transition-colors">API reference</a></li>
+        </ul>
+      </nav>
+
+      <!-- Governance -->
+      <nav aria-label="Governance">
+        <h4 class="font-mono text-[11px] uppercase tracking-wider text-muted mb-3.5">Governance</h4>
+        <ul class="space-y-2.5 text-sm">
+          <li><a href="#governance" class="text-muted hover:text-ink transition-colors">Active proposals</a></li>
+          <li><a href="#governance" class="text-muted hover:text-ink transition-colors">Delegates</a></li>
+          <li><a href="#governance" class="text-muted hover:text-ink transition-colors">Quorum thresholds</a></li>
+          <li><a href="#faq" class="text-muted hover:text-ink transition-colors">Snapshot import</a></li>
+          <li><a href="#governance" class="text-muted hover:text-ink transition-colors">Forum</a></li>
+        </ul>
+      </nav>
+
+      <!-- Ecosystem / Community -->
+      <nav aria-label="Ecosystem and community">
+        <h4 class="font-mono text-[11px] uppercase tracking-wider text-muted mb-3.5">Ecosystem</h4>
+        <ul class="space-y-2.5 text-sm">
+          <li><a href="#ecosystem" class="text-muted hover:text-ink transition-colors">DAOs on Quorum</a></li>
+          <li><a href="#cta" class="text-muted hover:text-ink transition-colors">Integrations</a></li>
+          <li><a href="#cta" class="text-muted hover:text-ink transition-colors">Discord</a></li>
+          <li><a href="#cta" class="text-muted hover:text-ink transition-colors">Brand assets</a></li>
+          <li><a href="#cta" class="text-muted hover:text-ink transition-colors">Status</a></li>
+        </ul>
+      </nav>
+    </div>
+
+    <!-- contract addresses -->
+    <div class="mt-12 pt-8 border-t hair-soft">
+      <div class="flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider text-muted mb-3">
+        <span class="pulse-dot green" style="width:6px;height:6px" aria-hidden="true"></span>
+        Verified contracts · Ethereum mainnet
+      </div>
+      <div class="grid sm:grid-cols-3 gap-2.5">
+        <button class="addr-pill justify-between w-full" data-copy="0x4f2a7be3c1d09a6e85f4127cabd9034e771aa821" aria-label="Copy QuorumGovernor address">
+          <span class="text-muted">QuorumGovernor</span>
+          <span class="flex items-center gap-1.5">0x4f2a7be3...771aa821
+            <span class="copy-btn" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>
+          </span>
+        </button>
+        <button class="addr-pill justify-between w-full" data-copy="0xa31de70b9c4f228e6510fa4dd2c8b9034e771fa6" aria-label="Copy QuorumTimelock address">
+          <span class="text-muted">QuorumTimelock</span>
+          <span class="flex items-center gap-1.5">0xa31de70b...034e771fa6
+            <span class="copy-btn" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>
+          </span>
+        </button>
+        <button class="addr-pill justify-between w-full" data-copy="0xc4e189d2b6510fa4dd2c8b9034e771fa6a31de70" aria-label="Copy TreasuryModule address">
+          <span class="text-muted">TreasuryModule</span>
+          <span class="flex items-center gap-1.5">0xc4e189d2...fa6a31de70
+            <span class="copy-btn" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <!-- fine print -->
+    <div class="mt-10 pt-6 border-t hair-soft flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p class="text-xs text-muted">© 2026 Quorum Labs. Open-source under MIT. Quorum is governance software — it does not custody funds or provide financial advice.</p>
+      <div class="flex items-center gap-5 text-xs text-muted">
+        <a href="#cta" class="hover:text-ink transition-colors">Privacy</a>
+        <a href="#cta" class="hover:text-ink transition-colors">Terms</a>
+        <a href="#cta" class="hover:text-ink transition-colors">Security</a>
+        <span class="font-mono">v2.4.1</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ============ MINIMAL VANILLA JS ============ -->
+<script>
+  (function () {
+    // (a) defensive mobile menu toggle
+    var menuBtn = document.getElementById('menuBtn');
+    var mobileMenu = document.getElementById('mobileMenu');
+    if (menuBtn && mobileMenu) {
+      menuBtn.addEventListener('click', function () {
+        var open = mobileMenu.classList.toggle('open');
+        menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      mobileMenu.querySelectorAll('a').forEach(function (a) {
+        a.addEventListener('click', function () {
+          mobileMenu.classList.remove('open');
+          menuBtn.setAttribute('aria-expanded', 'false');
+        });
+      });
+    }
+
+    // (b) copy-to-clipboard on address pills
+    function wireCopy(el, text) {
+      el.addEventListener('click', function () {
+        if (!navigator.clipboard) return;
+        navigator.clipboard.writeText(text).then(function () {
+          var marker = el.querySelector('.copy-btn');
+          if (!marker) return;
+          marker.classList.add('copied');
+          setTimeout(function () { marker.classList.remove('copied'); }, 1400);
+        }).catch(function () {});
+      });
+    }
+    document.querySelectorAll('[data-copy]').forEach(function (el) {
+      wireCopy(el, el.getAttribute('data-copy'));
+    });
+    var codeBtn = document.querySelector('[data-copy-code]');
+    if (codeBtn) {
+      var pre = codeBtn.closest('.surface') ? codeBtn.closest('.surface').querySelector('pre') : null;
+      codeBtn.addEventListener('click', function () {
+        if (!pre || !navigator.clipboard) return;
+        navigator.clipboard.writeText(pre.innerText).then(function () {
+          codeBtn.classList.add('copied');
+          setTimeout(function () { codeBtn.classList.remove('copied'); }, 1400);
+        }).catch(function () {});
+      });
+    }
+
+    // (c) count-up on stat numbers — runs once when visible
+    function formatNum(n) { return n.toLocaleString('en-US'); }
+    function countUp(el) {
+      var target = parseInt(el.getAttribute('data-countup'), 10);
+      if (isNaN(target)) return;
+      var dur = 1300, start = null;
+      function tick(ts) {
+        if (start === null) start = ts;
+        var p = Math.min((ts - start) / dur, 1);
+        var eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = formatNum(Math.floor(eased * target));
+        if (p < 1) requestAnimationFrame(tick);
+        else el.textContent = formatNum(target);
+      }
+      requestAnimationFrame(tick);
+    }
+    var counters = document.querySelectorAll('[data-countup]');
+    if ('IntersectionObserver' in window && counters.length) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            countUp(entry.target);
+            io.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.5 });
+      counters.forEach(function (c) { io.observe(c); });
+    }
+  })();
+</script>
+
+</body>
+</html>

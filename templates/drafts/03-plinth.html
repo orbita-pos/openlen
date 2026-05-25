@@ -1,0 +1,1400 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Plinth — A gallery for art that lives onchain</title>
+<meta name="description" content="A curated marketplace for digital and generative art. Works minted onchain, creator royalties enforced by the contract, provenance anyone can verify." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400..600&family=Inter:opsz,wght@14..32,400..700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..600;1,8..60,400..600&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink: "#0D0D10",
+          panel: "#15151A",
+          cream: "#F4F2EC",
+          muted: "#9A968C",
+          gold: "#D8A848",
+        },
+        fontFamily: {
+          sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+          mono: ["Geist Mono", "ui-monospace", "SFMono-Regular", "monospace"],
+          serif: ["Source Serif 4", "ui-serif", "Georgia", "serif"],
+        },
+        maxWidth: {
+          shell: "1220px",
+        },
+      },
+    },
+  };
+</script>
+<style>
+  :root {
+    --ink: #0D0D10;
+    --panel: #15151A;
+    --cream: #F4F2EC;
+    --muted: #9A968C;
+    --gold: #D8A848;
+    --hair: rgba(216, 168, 72, 0.14);
+    --hair-soft: rgba(244, 242, 236, 0.07);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--ink);
+    color: var(--cream);
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 400;
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: rgba(216, 168, 72, 0.28);
+    color: #fff;
+  }
+
+  .font-serif-i {
+    font-family: "Source Serif 4", ui-serif, Georgia, serif;
+    font-style: italic;
+    font-weight: 500;
+  }
+
+  .num {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  .eyebrow {
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+
+  .halftone {
+    color: rgba(244, 242, 236, 0.45);
+  }
+
+  /* dot grid background */
+  .dot-grid {
+    background-image: radial-gradient(rgba(244, 242, 236, 0.05) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  /* ambient mesh blobs */
+  .blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(120px);
+    opacity: 0.5;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* hairline helpers */
+  .hair {
+    border-color: var(--hair-soft);
+  }
+  .hair-gold {
+    border-color: var(--hair);
+  }
+
+  /* card surfaces */
+  .panel-faint {
+    background: rgba(244, 242, 236, 0.025);
+    border: 1px solid var(--hair-soft);
+  }
+
+  /* pulse dot */
+  .pulse-dot {
+    position: relative;
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 9999px;
+    background: var(--gold);
+  }
+  .pulse-dot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    box-shadow: 0 0 0 0 rgba(216, 168, 72, 0.6);
+    animation: pulse 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  @keyframes pulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(216, 168, 72, 0.55);
+    }
+    70% {
+      box-shadow: 0 0 0 11px rgba(216, 168, 72, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(216, 168, 72, 0);
+    }
+  }
+  .pulse-dot.green {
+    background: #6fcf97;
+  }
+  .pulse-dot.green::after {
+    animation-name: pulse-green;
+  }
+  @keyframes pulse-green {
+    0% {
+      box-shadow: 0 0 0 0 rgba(111, 207, 151, 0.5);
+    }
+    70% {
+      box-shadow: 0 0 0 10px rgba(111, 207, 151, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(111, 207, 151, 0);
+    }
+  }
+
+  /* marquee */
+  .marquee {
+    display: flex;
+    width: max-content;
+    animation: scroll 38s linear infinite;
+  }
+  .marquee:hover {
+    animation-play-state: paused;
+  }
+  @keyframes scroll {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  .marquee-mask {
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  }
+
+  /* lift on hover */
+  .lift {
+    transition: transform 120ms ease, border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+  }
+  .lift:hover {
+    transform: translateY(-3px);
+  }
+
+  /* primary CTA */
+  .btn-gold {
+    background: linear-gradient(180deg, #E5B85C, #D8A848);
+    color: #1A1408;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset, 0 8px 24px -10px rgba(216, 168, 72, 0.55);
+    transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+  }
+  .btn-gold:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.05);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.3) inset, 0 12px 30px -10px rgba(216, 168, 72, 0.7);
+  }
+
+  .btn-ghost {
+    border: 1px solid var(--hair);
+    color: var(--cream);
+    transition: transform 120ms ease, background-color 120ms ease, border-color 120ms ease;
+  }
+  .btn-ghost:hover {
+    transform: translateY(-2px);
+    background: rgba(244, 242, 236, 0.04);
+    border-color: rgba(216, 168, 72, 0.32);
+  }
+
+  /* centerpiece surface */
+  .centerpiece {
+    background: linear-gradient(180deg, rgba(244, 242, 236, 0.045), rgba(244, 242, 236, 0.015));
+    border: 1px solid rgba(216, 168, 72, 0.18);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 40px 80px -40px rgba(0, 0, 0, 0.8);
+  }
+
+  /* generative artwork placeholders */
+  .art-a {
+    background:
+      radial-gradient(120% 90% at 18% 12%, rgba(216, 168, 72, 0.85), transparent 55%),
+      radial-gradient(90% 120% at 88% 78%, rgba(120, 86, 196, 0.7), transparent 58%),
+      radial-gradient(140% 140% at 70% 18%, rgba(229, 120, 86, 0.55), transparent 50%),
+      conic-gradient(from 210deg at 50% 60%, #1a1426, #2a1f10, #3a2510, #1a1426);
+  }
+  .art-b {
+    background:
+      radial-gradient(100% 100% at 80% 20%, rgba(111, 175, 207, 0.75), transparent 55%),
+      radial-gradient(120% 100% at 12% 88%, rgba(216, 168, 72, 0.6), transparent 55%),
+      conic-gradient(from 40deg at 40% 40%, #10171f, #1f2a16, #2a2010, #10171f);
+  }
+  .art-c {
+    background:
+      radial-gradient(110% 110% at 22% 78%, rgba(196, 86, 132, 0.8), transparent 55%),
+      radial-gradient(120% 90% at 86% 22%, rgba(216, 168, 72, 0.62), transparent 52%),
+      conic-gradient(from 300deg at 60% 50%, #1f1018, #2a1410, #181020, #1f1018);
+  }
+  .art-d {
+    background:
+      radial-gradient(120% 100% at 70% 80%, rgba(86, 158, 134, 0.78), transparent 55%),
+      radial-gradient(100% 120% at 20% 14%, rgba(216, 168, 72, 0.55), transparent 55%),
+      conic-gradient(from 130deg at 45% 55%, #10191a, #1a2310, #221a10, #10191a);
+  }
+  .art-grain {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.08) 0.6px, transparent 0.6px);
+    background-size: 6px 6px;
+  }
+
+  /* tx pill / address pill */
+  .pill-mono {
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  details > summary {
+    list-style: none;
+    cursor: pointer;
+  }
+  details > summary::-webkit-details-marker {
+    display: none;
+  }
+  details[open] .faq-plus {
+    transform: rotate(45deg);
+  }
+  .faq-plus {
+    transition: transform 160ms ease;
+  }
+
+  /* nav link */
+  .nav-link {
+    color: var(--muted);
+    transition: color 120ms ease;
+  }
+  .nav-link:hover {
+    color: var(--cream);
+  }
+
+  /* step connectors */
+  .step-line {
+    background: linear-gradient(90deg, rgba(216, 168, 72, 0.4), rgba(216, 168, 72, 0.08));
+  }
+
+  .copy-ok {
+    color: #6fcf97 !important;
+  }
+
+  /* mobile menu */
+  #mobileMenu {
+    transition: opacity 160ms ease;
+  }
+</style>
+</head>
+<body class="antialiased">
+
+<!-- ============ NAV ============ -->
+<header class="sticky top-0 z-50 border-b hair" style="background: rgba(13,13,16,0.82); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);">
+  <div class="mx-auto max-w-shell px-5 sm:px-8">
+    <nav class="flex h-[68px] items-center justify-between" aria-label="Primary">
+      <!-- logo -->
+      <a href="#top" class="flex items-center gap-2.5" aria-label="Plinth home">
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+          <rect x="6.5" y="3.5" width="13" height="9" rx="1.4" stroke="#D8A848" stroke-width="1.6"/>
+          <path d="M9 12.5h8M5 18.5h16M3.5 22.5h19" stroke="#D8A848" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M11 18.5v-6M15 18.5v-6" stroke="#D8A848" stroke-width="1.4" stroke-linecap="round" opacity="0.55"/>
+        </svg>
+        <span class="font-serif-i text-[21px] tracking-tight text-cream">Plinth</span>
+      </a>
+
+      <!-- desktop links -->
+      <div class="hidden items-center gap-7 md:flex">
+        <a href="#how" class="nav-link text-[14px]">Docs</a>
+        <a href="#features" class="nav-link text-[14px]">Ecosystem</a>
+        <a href="#curation" class="nav-link text-[14px]">Governance</a>
+        <a href="#faq" class="nav-link text-[14px]">Blog</a>
+        <a href="#top" class="nav-link" aria-label="Plinth on GitHub">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5.99.11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.25 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.83.58A12.01 12.01 0 0 0 24 12.5C24 5.87 18.63.5 12 .5Z"/>
+          </svg>
+        </a>
+        <a href="#cta" class="btn-gold rounded-[9px] px-4 py-2 text-[13.5px] font-semibold">Launch app</a>
+      </div>
+
+      <!-- mobile toggle -->
+      <button id="menuBtn" class="md:hidden flex h-9 w-9 items-center justify-center rounded-[8px] border hair-gold text-cream" aria-label="Open menu" aria-expanded="false">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path d="M3 6h18M3 12h18M3 18h18" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </nav>
+  </div>
+
+  <!-- mobile menu -->
+  <div id="mobileMenu" class="hidden md:hidden border-t hair px-5 pb-5 pt-3" style="background: rgba(13,13,16,0.97);">
+    <div class="flex flex-col gap-1">
+      <a href="#how" class="nav-link rounded-[8px] px-3 py-2.5 text-[15px]">Docs</a>
+      <a href="#features" class="nav-link rounded-[8px] px-3 py-2.5 text-[15px]">Ecosystem</a>
+      <a href="#curation" class="nav-link rounded-[8px] px-3 py-2.5 text-[15px]">Governance</a>
+      <a href="#faq" class="nav-link rounded-[8px] px-3 py-2.5 text-[15px]">Blog</a>
+      <a href="#cta" class="btn-gold mt-2 rounded-[9px] px-4 py-2.5 text-center text-[14px] font-semibold">Launch app</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============ HERO ============ -->
+  <section class="relative overflow-hidden">
+    <div class="dot-grid absolute inset-0 opacity-60" aria-hidden="true"></div>
+    <div class="blob" style="width:520px;height:520px;background:rgba(216,168,72,0.16);top:-160px;left:50%;transform:translateX(-50%);" aria-hidden="true"></div>
+    <div class="blob" style="width:380px;height:380px;background:rgba(120,86,196,0.14);top:120px;right:-120px;" aria-hidden="true"></div>
+    <div class="absolute inset-x-0 top-0 h-px" style="background:linear-gradient(90deg,transparent,rgba(216,168,72,0.4),transparent);" aria-hidden="true"></div>
+
+    <div class="relative z-10 mx-auto max-w-shell px-5 sm:px-8 pt-20 pb-24 sm:pt-28 sm:pb-32 text-center">
+      <!-- pill badge -->
+      <div class="mb-9 inline-flex items-center gap-2.5 rounded-full border hair-gold px-3.5 py-1.5" style="background:rgba(244,242,236,0.025);">
+        <span class="pulse-dot green" aria-hidden="true"></span>
+        <span class="pill-mono text-[11.5px] tracking-[0.16em] uppercase text-cream">Mainnet · live</span>
+        <span class="h-3 w-px bg-[rgba(244,242,236,0.14)]"></span>
+        <span class="pill-mono text-[11.5px] tracking-[0.05em] text-muted">Low-gas minting on L2</span>
+      </div>
+
+      <!-- headline -->
+      <h1 class="mx-auto max-w-[15ch] font-serif-i text-[44px] leading-[1.06] tracking-[-0.01em] sm:text-[68px] sm:leading-[1.04]">
+        A gallery for art that<br class="hidden sm:block" />
+        <span class="halftone"> lives onchain.</span>
+      </h1>
+
+      <!-- sub -->
+      <p class="mx-auto mt-7 max-w-[58ch] text-[16px] leading-[1.65] text-muted sm:text-[18px]">
+        A curated marketplace for digital and generative art — works minted onchain, creator royalties enforced by the contract, provenance anyone can verify.
+      </p>
+
+      <!-- CTAs -->
+      <div class="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <a href="#cta" class="btn-gold w-full rounded-[10px] px-6 py-3 text-[15px] font-semibold sm:w-auto">Explore the gallery</a>
+        <a href="#how" class="btn-ghost w-full rounded-[10px] px-6 py-3 text-[15px] font-medium sm:w-auto">How it works</a>
+      </div>
+
+      <!-- onchain stat row -->
+      <div class="mx-auto mt-16 grid max-w-[760px] grid-cols-2 gap-px overflow-hidden rounded-[14px] border hair sm:grid-cols-4" style="background:var(--hair-soft);">
+        <div class="bg-ink px-5 py-6">
+          <div class="num font-serif-i text-[28px] text-cream sm:text-[32px]">4,408</div>
+          <div class="pill-mono mt-1 text-[11px] uppercase tracking-[0.14em] text-muted">Artists</div>
+        </div>
+        <div class="bg-ink px-5 py-6">
+          <div class="num font-serif-i text-[28px] text-cream sm:text-[32px]">148,408</div>
+          <div class="pill-mono mt-1 text-[11px] uppercase tracking-[0.14em] text-muted">Works minted</div>
+        </div>
+        <div class="bg-ink px-5 py-6">
+          <div class="num font-serif-i text-[28px] text-gold sm:text-[32px]">84,408 <span class="text-[15px] text-muted">ETH</span></div>
+          <div class="pill-mono mt-1 text-[11px] uppercase tracking-[0.14em] text-muted">Volume</div>
+        </div>
+        <div class="bg-ink px-5 py-6">
+          <div class="num font-serif-i text-[28px] text-cream sm:text-[32px]">28,408</div>
+          <div class="pill-mono mt-1 text-[11px] uppercase tracking-[0.14em] text-muted">Collectors</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TRUST BAR ============ -->
+  <section class="border-y hair" style="background:rgba(244,242,236,0.018);">
+    <div class="mx-auto max-w-shell px-5 sm:px-8 py-14">
+      <p class="text-center text-[13.5px] text-muted">
+        Securing <span class="num font-medium text-cream">84,408 ETH</span> of art onchain — held in collectors' own wallets, never by Plinth.
+      </p>
+
+      <!-- marquee -->
+      <div class="marquee-mask mt-9 overflow-hidden">
+        <div class="marquee items-center gap-12">
+          <!-- track 1 -->
+          <span class="font-serif-i text-[19px] text-muted/80 whitespace-nowrap">Linnea Gallery</span>
+          <span class="text-[18px] font-semibold tracking-tight text-muted/80 whitespace-nowrap">FORECAST</span>
+          <span class="font-serif-i text-[19px] text-muted/80 whitespace-nowrap">Halcyon Studio</span>
+          <span class="text-[18px] font-semibold tracking-[0.18em] text-muted/80 whitespace-nowrap">VANTAGE</span>
+          <span class="font-serif-i text-[19px] text-muted/80 whitespace-nowrap">Foundry &amp; Co</span>
+          <span class="text-[18px] font-semibold tracking-tight text-muted/80 whitespace-nowrap">Brightwave</span>
+          <span class="font-serif-i text-[19px] text-muted/80 whitespace-nowrap">Tideline</span>
+          <span class="text-[18px] font-semibold tracking-[0.14em] text-muted/80 whitespace-nowrap">ATRIUM</span>
+          <span class="font-serif-i text-[19px] text-muted/80 whitespace-nowrap">Sundial</span>
+          <!-- track 2 (duplicate) -->
+          <span class="font-serif-i text-[19px] text-muted/80 whitespace-nowrap" aria-hidden="true">Linnea Gallery</span>
+          <span class="text-[18px] font-semibold tracking-tight text-muted/80 whitespace-nowrap" aria-hidden="true">FORECAST</span>
+          <span class="font-serif-i text-[19px] text-muted/80 whitespace-nowrap" aria-hidden="true">Halcyon Studio</span>
+          <span class="text-[18px] font-semibold tracking-[0.18em] text-muted/80 whitespace-nowrap" aria-hidden="true">VANTAGE</span>
+          <span class="font-serif-i text-[19px] text-muted/80 whitespace-nowrap" aria-hidden="true">Foundry &amp; Co</span>
+          <span class="text-[18px] font-semibold tracking-tight text-muted/80 whitespace-nowrap" aria-hidden="true">Brightwave</span>
+          <span class="font-serif-i text-[19px] text-muted/80 whitespace-nowrap" aria-hidden="true">Tideline</span>
+          <span class="text-[18px] font-semibold tracking-[0.14em] text-muted/80 whitespace-nowrap" aria-hidden="true">ATRIUM</span>
+          <span class="font-serif-i text-[19px] text-muted/80 whitespace-nowrap" aria-hidden="true">Sundial</span>
+        </div>
+      </div>
+
+      <!-- audit badges -->
+      <div class="mt-9 flex flex-wrap items-center justify-center gap-2.5">
+        <span class="inline-flex items-center gap-1.5 rounded-full border hair-gold px-3 py-1.5">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#D8A848" stroke-width="2" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z"/><path d="m9 12 2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="pill-mono text-[11px] text-muted">Audited · OpenZeppelin</span>
+        </span>
+        <span class="inline-flex items-center gap-1.5 rounded-full border hair-gold px-3 py-1.5">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#D8A848" stroke-width="2" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z"/><path d="m9 12 2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="pill-mono text-[11px] text-muted">Audited · Spearbit</span>
+        </span>
+        <span class="inline-flex items-center gap-1.5 rounded-full border hair-gold px-3 py-1.5">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#D8A848" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="pill-mono text-[11px] text-muted">Contracts verified onchain</span>
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CENTERPIECE — ARTWORK DETAIL PAGE ============ -->
+  <section class="relative overflow-hidden">
+    <div class="blob" style="width:440px;height:440px;background:rgba(120,86,196,0.12);bottom:-120px;left:-120px;" aria-hidden="true"></div>
+    <div class="relative z-10 mx-auto max-w-shell px-5 sm:px-8 py-24 sm:py-32">
+      <div class="mb-12 text-center">
+        <span class="eyebrow">The gallery</span>
+        <h2 class="mx-auto mt-3 max-w-[20ch] font-serif-i text-[32px] leading-[1.12] sm:text-[44px]">
+          Every work, a page of its own.
+        </h2>
+        <p class="mx-auto mt-4 max-w-[54ch] text-[15.5px] leading-relaxed text-muted">
+          Title, artist, edition, price — and a complete provenance record, every owner since the mint, written onchain.
+        </p>
+      </div>
+
+      <!-- artwork detail card -->
+      <div class="centerpiece mx-auto max-w-[1080px] rounded-[18px] p-3.5 sm:p-5">
+        <div class="grid gap-5 lg:grid-cols-[1.05fr_1fr]">
+
+          <!-- LEFT: artwork -->
+          <div class="flex flex-col gap-3">
+            <div class="relative aspect-square overflow-hidden rounded-[13px] art-a">
+              <div class="art-grain absolute inset-0 opacity-60" aria-hidden="true"></div>
+              <!-- procedural overlay strokes -->
+              <svg class="absolute inset-0 h-full w-full" viewBox="0 0 400 400" fill="none" aria-hidden="true">
+                <circle cx="200" cy="210" r="118" stroke="rgba(244,242,236,0.32)" stroke-width="1"/>
+                <circle cx="200" cy="210" r="78" stroke="rgba(244,242,236,0.22)" stroke-width="1"/>
+                <path d="M40 300 Q140 120 240 250 T380 150" stroke="rgba(13,13,16,0.45)" stroke-width="2" fill="none"/>
+                <path d="M30 120 Q160 280 300 90" stroke="rgba(244,242,236,0.3)" stroke-width="1.4" fill="none"/>
+              </svg>
+              <div class="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1" style="background:rgba(13,13,16,0.6);backdrop-filter:blur(6px);">
+                <span class="pulse-dot" aria-hidden="true"></span>
+                <span class="pill-mono text-[10px] uppercase tracking-[0.14em] text-cream">Onchain generative</span>
+              </div>
+            </div>
+            <!-- thumbnail strip -->
+            <div class="grid grid-cols-4 gap-3">
+              <div class="aspect-square rounded-[9px] art-b"></div>
+              <div class="aspect-square rounded-[9px] art-c"></div>
+              <div class="aspect-square rounded-[9px] art-d"></div>
+              <div class="flex aspect-square items-center justify-center rounded-[9px] border hair-gold panel-faint">
+                <span class="pill-mono text-[11px] text-muted">+21</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: details -->
+          <div class="flex flex-col rounded-[13px] border hair p-5 sm:p-6" style="background:rgba(13,13,16,0.55);">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="pill-mono text-[11px] uppercase tracking-[0.16em] text-gold">Drop 014 · Tidal Fields</p>
+                <h3 class="mt-1.5 font-serif-i text-[27px] leading-tight text-cream">Meridian No. 7</h3>
+              </div>
+              <button class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border hair-gold text-muted lift hover:text-gold" aria-label="Add to watchlist">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s-7-4.35-9.5-8.5C.8 9.4 2.4 5.5 6 5.5c2.2 0 3.6 1.3 4.5 2.7C11.4 6.8 12.8 5.5 15 5.5c3.6 0 5.2 3.9 3.5 7C19 16.65 12 21 12 21Z"/></svg>
+              </button>
+            </div>
+
+            <!-- artist -->
+            <div class="mt-4 flex items-center gap-2.5 border-y hair py-3.5">
+              <div class="flex h-8 w-8 items-center justify-center rounded-full" style="background:conic-gradient(from 90deg,#D8A848,#7856C4,#E57856,#D8A848);" aria-hidden="true">
+                <span class="font-serif-i text-[12px] text-[#1a1408]">IC</span>
+              </div>
+              <div>
+                <p class="text-[13.5px] font-medium text-cream">Ines Calderon</p>
+                <p class="pill-mono text-[10.5px] text-muted">Verified artist · 38 works</p>
+              </div>
+              <span class="ml-auto inline-flex items-center gap-1 rounded-full border hair-gold px-2 py-0.5">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="#D8A848" aria-hidden="true"><path d="m12 2 2.4 6.9H22l-6 4.4 2.3 7L12 16l-6.3 4.3 2.3-7-6-4.4h7.6L12 2Z"/></svg>
+                <span class="pill-mono text-[9.5px] text-muted">Curated</span>
+              </span>
+            </div>
+
+            <!-- edition + price -->
+            <div class="mt-4 grid grid-cols-2 gap-3">
+              <div class="rounded-[10px] panel-faint p-3">
+                <p class="pill-mono text-[10px] uppercase tracking-[0.13em] text-muted">Edition</p>
+                <p class="num mt-1 font-serif-i text-[18px] text-cream">1 <span class="text-muted">of</span> 25</p>
+              </div>
+              <div class="rounded-[10px] panel-faint p-3">
+                <p class="pill-mono text-[10px] uppercase tracking-[0.13em] text-muted">Current price</p>
+                <p class="num mt-1 font-serif-i text-[18px] text-gold">0.84 ETH</p>
+                <p class="num pill-mono text-[10px] text-muted">≈ $2,847 USD</p>
+              </div>
+            </div>
+
+            <!-- collect button -->
+            <a href="#cta" class="btn-gold mt-4 flex items-center justify-center gap-2 rounded-[10px] px-5 py-3 text-[14.5px] font-semibold">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1408" stroke-width="2" aria-hidden="true"><path d="M3 7h18v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M8 7V5a4 4 0 0 1 8 0v2" stroke-linecap="round"/></svg>
+              Collect this work
+            </a>
+            <button class="mt-2.5 flex items-center justify-center gap-2 rounded-[10px] border hair-gold px-5 py-2.5 text-[13px] text-muted lift hover:text-cream" aria-label="Connect a wallet to collect">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2" y="6" width="20" height="13" rx="2.5"/><path d="M2 10h20M16 14h2" stroke-linecap="round"/></svg>
+              Connect wallet to collect
+            </button>
+
+            <!-- provenance -->
+            <div class="mt-5">
+              <div class="flex items-center justify-between">
+                <p class="pill-mono text-[10.5px] uppercase tracking-[0.16em] text-gold">Provenance · onchain</p>
+                <a href="#how" class="pill-mono text-[10.5px] text-muted underline decoration-dotted underline-offset-2 hover:text-cream">View contract</a>
+              </div>
+              <div class="mt-2.5 space-y-1.5">
+                <!-- row -->
+                <div class="flex items-center gap-2.5 rounded-[8px] panel-faint px-3 py-2">
+                  <span class="flex h-5 w-5 items-center justify-center rounded-[5px]" style="background:rgba(216,168,72,0.16);" aria-hidden="true">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#D8A848" stroke-width="2.4"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+                  </span>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-[12px] text-cream">Minted</p>
+                    <p class="num pill-mono text-[10px] text-muted">by 0x6c1d…f0a2 · 14 Jan 2026</p>
+                  </div>
+                  <span class="num pill-mono shrink-0 text-[10px] text-muted">tx 0x9af3…12c8</span>
+                </div>
+                <div class="flex items-center gap-2.5 rounded-[8px] panel-faint px-3 py-2">
+                  <span class="flex h-5 w-5 items-center justify-center rounded-[5px]" style="background:rgba(244,242,236,0.06);" aria-hidden="true">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9A968C" stroke-width="2.2"><path d="M4 7h16M4 12h16M4 17h10" stroke-linecap="round"/></svg>
+                  </span>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-[12px] text-cream">Listed <span class="num text-muted">· 0.50 ETH</span></p>
+                    <p class="num pill-mono text-[10px] text-muted">by 0x6c1d…f0a2 · 18 Jan 2026</p>
+                  </div>
+                  <span class="num pill-mono shrink-0 text-[10px] text-muted">tx 0x44e1…77ab</span>
+                </div>
+                <div class="flex items-center gap-2.5 rounded-[8px] panel-faint px-3 py-2">
+                  <span class="flex h-5 w-5 items-center justify-center rounded-[5px]" style="background:rgba(111,207,151,0.12);" aria-hidden="true">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#6fcf97" stroke-width="2.4"><path d="m20 6-11 11-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </span>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-[12px] text-cream">Sold <span class="num text-muted">· 0.61 ETH</span></p>
+                    <p class="num pill-mono text-[10px] text-muted">to 0xab90…3d14 · 02 Feb 2026</p>
+                  </div>
+                  <span class="num pill-mono shrink-0 text-[10px] text-muted">tx 0x1f7c…d0e5</span>
+                </div>
+                <div class="flex items-center gap-2.5 rounded-[8px] panel-faint px-3 py-2">
+                  <span class="flex h-5 w-5 items-center justify-center rounded-[5px]" style="background:rgba(111,207,151,0.12);" aria-hidden="true">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#6fcf97" stroke-width="2.4"><path d="m20 6-11 11-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </span>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-[12px] text-cream">Sold <span class="num text-muted">· 0.84 ETH</span></p>
+                    <p class="num pill-mono text-[10px] text-muted">to 0x4f2a…a821 · 09 May 2026</p>
+                  </div>
+                  <span class="num pill-mono shrink-0 text-[10px] text-muted">tx 0xc308…b6f9</span>
+                </div>
+              </div>
+              <p class="num pill-mono mt-2.5 text-[10px] text-muted">
+                Royalty routed to artist on last sale: <span class="text-gold">0.0588 ETH (7%)</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HOW IT WORKS ============ -->
+  <section id="how" class="border-y hair" style="background:rgba(244,242,236,0.018);">
+    <div class="mx-auto max-w-shell px-5 sm:px-8 py-24 sm:py-32">
+      <div class="max-w-[44ch]">
+        <span class="eyebrow">How it works</span>
+        <h2 class="mt-3 font-serif-i text-[32px] leading-[1.12] sm:text-[44px]">
+          From the studio to the wallet.
+        </h2>
+        <p class="mt-4 text-[15.5px] leading-relaxed text-muted">
+          Four contract hops, each one public. The artist keeps a stake in the work for as long as it changes hands.
+        </p>
+      </div>
+
+      <!-- steps -->
+      <div class="mt-14 grid gap-px overflow-hidden rounded-[14px] border hair md:grid-cols-4" style="background:var(--hair-soft);">
+        <!-- step 1 -->
+        <div class="relative bg-ink p-6">
+          <div class="hidden md:block absolute right-0 top-1/2 h-px w-6 step-line" aria-hidden="true"></div>
+          <div class="flex items-center justify-between">
+            <span class="flex h-9 w-9 items-center justify-center rounded-[9px] border hair-gold panel-faint">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#D8A848" stroke-width="1.8" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <span class="num pill-mono text-[11px] text-muted">01</span>
+          </div>
+          <h3 class="mt-4 text-[16px] font-semibold text-cream">Artist mints onchain</h3>
+          <p class="mt-2 text-[13.5px] leading-relaxed text-muted">
+            A verified artist mints a work to the marketplace contract. The token, its metadata, and a royalty rule are set in one transaction.
+          </p>
+          <p class="pill-mono mt-3 text-[10.5px] text-gold">→ PlinthMinter.mint()</p>
+        </div>
+        <!-- step 2 -->
+        <div class="relative bg-ink p-6">
+          <div class="hidden md:block absolute right-0 top-1/2 h-px w-6 step-line" aria-hidden="true"></div>
+          <div class="flex items-center justify-between">
+            <span class="flex h-9 w-9 items-center justify-center rounded-[9px] border hair-gold panel-faint">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#D8A848" stroke-width="1.8" aria-hidden="true"><path d="m12 2 2.4 6.9H22l-6 4.4 2.3 7L12 16l-6.3 4.3 2.3-7-6-4.4h7.6L12 2Z" stroke-linejoin="round"/></svg>
+            </span>
+            <span class="num pill-mono text-[11px] text-muted">02</span>
+          </div>
+          <h3 class="mt-4 text-[16px] font-semibold text-cream">Curated into a drop</h3>
+          <p class="mt-2 text-[13.5px] leading-relaxed text-muted">
+            The curation council groups the work into a themed drop, given a window and a page in the gallery. Nothing about the token changes.
+          </p>
+          <p class="pill-mono mt-3 text-[10.5px] text-gold">→ PlinthMarket.list()</p>
+        </div>
+        <!-- step 3 -->
+        <div class="relative bg-ink p-6">
+          <div class="hidden md:block absolute right-0 top-1/2 h-px w-6 step-line" aria-hidden="true"></div>
+          <div class="flex items-center justify-between">
+            <span class="flex h-9 w-9 items-center justify-center rounded-[9px] border hair-gold panel-faint">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#D8A848" stroke-width="1.8" aria-hidden="true"><path d="M3 7h18v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M8 7V5a4 4 0 0 1 8 0v2" stroke-linecap="round"/></svg>
+            </span>
+            <span class="num pill-mono text-[11px] text-muted">03</span>
+          </div>
+          <h3 class="mt-4 text-[16px] font-semibold text-cream">A collector buys</h3>
+          <p class="mt-2 text-[13.5px] leading-relaxed text-muted">
+            The buyer pays in one transaction. The work transfers straight to their wallet — Plinth never holds custody at any point.
+          </p>
+          <p class="pill-mono mt-3 text-[10.5px] text-gold">→ PlinthMarket.buy()</p>
+        </div>
+        <!-- step 4 -->
+        <div class="relative bg-ink p-6">
+          <div class="flex items-center justify-between">
+            <span class="flex h-9 w-9 items-center justify-center rounded-[9px] border hair-gold panel-faint">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#D8A848" stroke-width="1.8" aria-hidden="true"><path d="M17 1v6h-6M3.5 11a8.5 8.5 0 0 1 14-6.3L21 8M7 23v-6h6M20.5 13a8.5 8.5 0 0 1-14 6.3L3 16" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <span class="num pill-mono text-[11px] text-muted">04</span>
+          </div>
+          <h3 class="mt-4 text-[16px] font-semibold text-cream">Royalties, forever</h3>
+          <p class="mt-2 text-[13.5px] leading-relaxed text-muted">
+            On every resale, <span class="num text-cream">7%</span> routes back to the artist — enforced by the contract, not a policy that can be skipped.
+          </p>
+          <p class="pill-mono mt-3 text-[10.5px] text-gold">→ RoyaltyRouter.split()</p>
+        </div>
+      </div>
+
+      <!-- low gas note -->
+      <div class="mt-6 flex flex-col items-start justify-between gap-3 rounded-[12px] border hair-gold panel-faint px-5 py-4 sm:flex-row sm:items-center">
+        <p class="text-[13.5px] text-muted">
+          <span class="font-medium text-cream">Built on an L2.</span> Minting and collecting settle for cents in gas, not the tens of dollars a base-layer mint would cost.
+        </p>
+        <span class="num pill-mono inline-flex items-center gap-1.5 rounded-full border hair-gold px-3 py-1 text-[11px] text-gold">
+          <span class="pulse-dot green" aria-hidden="true"></span> avg. gas ≈ $0.014
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FEATURES GRID ============ -->
+  <section id="features" class="relative overflow-hidden">
+    <div class="dot-grid absolute inset-0 opacity-40" aria-hidden="true"></div>
+    <div class="relative z-10 mx-auto max-w-shell px-5 sm:px-8 py-24 sm:py-32">
+      <div class="mb-14 max-w-[46ch]">
+        <span class="eyebrow">What makes it Plinth</span>
+        <h2 class="mt-3 font-serif-i text-[32px] leading-[1.12] sm:text-[44px]">
+          A marketplace built like a contract, not a policy.
+        </h2>
+      </div>
+
+      <div class="grid gap-px overflow-hidden rounded-[14px] border hair sm:grid-cols-2 lg:grid-cols-3" style="background:var(--hair-soft);">
+        <!-- card 1 -->
+        <div class="lift bg-ink p-7 hover:bg-[rgba(244,242,236,0.022)]">
+          <span class="flex h-10 w-10 items-center justify-center rounded-[10px] border hair-gold panel-faint">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#D8A848" stroke-width="1.7" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z"/><path d="m9 12 2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <h3 class="mt-4 font-serif-i text-[19px] text-cream">Enforced creator royalties</h3>
+          <p class="mt-2 text-[13.5px] leading-relaxed text-muted">
+            The 7% royalty is written into the work's contract. It applies on every resale, on Plinth or anywhere else that honours the standard — not a setting a buyer can bypass.
+          </p>
+        </div>
+        <!-- card 2 -->
+        <div class="lift bg-ink p-7 hover:bg-[rgba(244,242,236,0.022)]">
+          <span class="flex h-10 w-10 items-center justify-center rounded-[10px] border hair-gold panel-faint">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#D8A848" stroke-width="1.7" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v5M16 4v5" stroke-linecap="round"/></svg>
+          </span>
+          <h3 class="mt-4 font-serif-i text-[19px] text-cream">Curated drops</h3>
+          <p class="mt-2 text-[13.5px] leading-relaxed text-muted">
+            Works are gathered into themed drops with a defined window. A curation council reviews every submission so the gallery stays considered, not a firehose.
+          </p>
+        </div>
+        <!-- card 3 -->
+        <div class="lift bg-ink p-7 hover:bg-[rgba(244,242,236,0.022)]">
+          <span class="flex h-10 w-10 items-center justify-center rounded-[10px] border hair-gold panel-faint">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#D8A848" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2" stroke-linecap="round"/></svg>
+          </span>
+          <h3 class="mt-4 font-serif-i text-[19px] text-cream">Onchain generative rendering</h3>
+          <p class="mt-2 text-[13.5px] leading-relaxed text-muted">
+            For generative works, the image is produced by the contract from a seed — not a file uploaded after the fact. The code that draws the art is part of the token itself.
+          </p>
+        </div>
+        <!-- card 4 -->
+        <div class="lift bg-ink p-7 hover:bg-[rgba(244,242,236,0.022)]">
+          <span class="flex h-10 w-10 items-center justify-center rounded-[10px] border hair-gold panel-faint">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#D8A848" stroke-width="1.7" aria-hidden="true"><path d="m13 2-9 12h7l-1 8 9-12h-7l1-8Z" stroke-linejoin="round"/></svg>
+          </span>
+          <h3 class="mt-4 font-serif-i text-[19px] text-cream">Low-gas minting</h3>
+          <p class="mt-2 text-[13.5px] leading-relaxed text-muted">
+            Plinth settles on an L2 rollup. Minting a work or collecting one costs cents, so editions and experiments don't carry a base-layer gas tax.
+          </p>
+        </div>
+        <!-- card 5 -->
+        <div class="lift bg-ink p-7 hover:bg-[rgba(244,242,236,0.022)]">
+          <span class="flex h-10 w-10 items-center justify-center rounded-[10px] border hair-gold panel-faint">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#D8A848" stroke-width="1.7" aria-hidden="true"><path d="M4 4h16v5H4zM4 13h10v7H4zM18 13h2v7h-2z"/><path d="M8 6.5h2M8 16h3" stroke-linecap="round"/></svg>
+          </span>
+          <h3 class="mt-4 font-serif-i text-[19px] text-cream">Provenance you can verify</h3>
+          <p class="mt-2 text-[13.5px] leading-relaxed text-muted">
+            Every owner a work has had is recorded onchain — mint, listing, each sale. The history on the artwork page is read straight from the chain, not a database we keep.
+          </p>
+        </div>
+        <!-- card 6 -->
+        <div class="lift bg-ink p-7 hover:bg-[rgba(244,242,236,0.022)]">
+          <span class="flex h-10 w-10 items-center justify-center rounded-[10px] border hair-gold panel-faint">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#D8A848" stroke-width="1.7" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke-linecap="round"/><circle cx="12" cy="16.5" r="1.6"/></svg>
+          </span>
+          <h3 class="mt-4 font-serif-i text-[19px] text-cream">Non-custodial</h3>
+          <p class="mt-2 text-[13.5px] leading-relaxed text-muted">
+            A work you collect lands in your own wallet and stays there. Plinth is an interface to the contracts — it never takes custody of art or funds.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECTION 7 — ARTIST / APPLY TO MINT ============ -->
+  <section class="border-y hair" style="background:rgba(244,242,236,0.018);">
+    <div class="mx-auto max-w-shell px-5 sm:px-8 py-24 sm:py-32">
+      <div class="grid gap-14 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
+        <!-- left copy -->
+        <div>
+          <span class="eyebrow">For artists</span>
+          <h2 class="mt-3 font-serif-i text-[32px] leading-[1.12] sm:text-[44px]">
+            Apply to mint.
+          </h2>
+          <p class="mt-4 max-w-[46ch] text-[15.5px] leading-relaxed text-muted">
+            Plinth is curated, so artists join by application. Once you're in, your work is minted under your own contract and your royalty travels with it for every future sale.
+          </p>
+          <ul class="mt-6 space-y-3">
+            <li class="flex items-start gap-2.5">
+              <svg class="mt-0.5 shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D8A848" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span class="text-[13.5px] text-muted">You set the edition size and royalty rate before minting.</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+              <svg class="mt-0.5 shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D8A848" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span class="text-[13.5px] text-muted">No listing fee — Plinth takes a flat 2.5% only when a work sells.</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+              <svg class="mt-0.5 shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D8A848" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span class="text-[13.5px] text-muted">Files are pinned to IPFS and Arweave on your behalf at mint time.</span>
+            </li>
+          </ul>
+          <a href="#cta" class="btn-gold mt-8 inline-flex items-center gap-2 rounded-[10px] px-5 py-3 text-[14.5px] font-semibold">
+            Apply to mint
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1408" stroke-width="2.2" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+
+        <!-- right: minting flow steps -->
+        <div class="rounded-[16px] border hair-gold panel-faint p-5 sm:p-7">
+          <p class="pill-mono text-[10.5px] uppercase tracking-[0.16em] text-gold">The minting flow</p>
+          <div class="mt-5 space-y-3">
+            <!-- flow step -->
+            <div class="flex items-start gap-4 rounded-[12px] border hair p-4" style="background:rgba(13,13,16,0.5);">
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style="background:rgba(216,168,72,0.14);">
+                <span class="num font-serif-i text-[15px] text-gold">1</span>
+              </span>
+              <div>
+                <h3 class="text-[15px] font-semibold text-cream">Apply with a portfolio</h3>
+                <p class="mt-1 text-[13px] leading-relaxed text-muted">Share past work and a short note on your practice. No collection needs to exist yet.</p>
+              </div>
+            </div>
+            <div class="ml-[18px] h-4 w-px" style="background:linear-gradient(180deg,rgba(216,168,72,0.4),rgba(216,168,72,0.08));" aria-hidden="true"></div>
+            <div class="flex items-start gap-4 rounded-[12px] border hair p-4" style="background:rgba(13,13,16,0.5);">
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style="background:rgba(216,168,72,0.14);">
+                <span class="num font-serif-i text-[15px] text-gold">2</span>
+              </span>
+              <div>
+                <h3 class="text-[15px] font-semibold text-cream">Curation review</h3>
+                <p class="mt-1 text-[13px] leading-relaxed text-muted">The council reviews submissions on a rolling two-week cycle and replies either way.</p>
+              </div>
+            </div>
+            <div class="ml-[18px] h-4 w-px" style="background:linear-gradient(180deg,rgba(216,168,72,0.4),rgba(216,168,72,0.08));" aria-hidden="true"></div>
+            <div class="flex items-start gap-4 rounded-[12px] border hair p-4" style="background:rgba(13,13,16,0.5);">
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style="background:rgba(216,168,72,0.14);">
+                <span class="num font-serif-i text-[15px] text-gold">3</span>
+              </span>
+              <div>
+                <h3 class="text-[15px] font-semibold text-cream">Mint your work</h3>
+                <p class="mt-1 text-[13px] leading-relaxed text-muted">Set the edition and royalty, then mint onchain from a wallet you control.</p>
+              </div>
+            </div>
+            <div class="ml-[18px] h-4 w-px" style="background:linear-gradient(180deg,rgba(216,168,72,0.4),rgba(216,168,72,0.08));" aria-hidden="true"></div>
+            <div class="flex items-start gap-4 rounded-[12px] border hair-gold p-4" style="background:rgba(216,168,72,0.06);">
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full btn-gold">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1408" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <div>
+                <h3 class="text-[15px] font-semibold text-cream">Join a drop</h3>
+                <p class="mt-1 text-[13px] leading-relaxed text-muted">Your work is placed into a themed drop and given its own page in the gallery.</p>
+              </div>
+            </div>
+          </div>
+          <!-- mini quote -->
+          <figure class="mt-6 rounded-[12px] border hair p-4" style="background:rgba(13,13,16,0.5);">
+            <blockquote class="font-serif-i text-[14.5px] leading-relaxed text-cream">
+              “The royalty just being part of the contract changed how I price work. I don't have to chase a marketplace's policy — it follows the piece.”
+            </blockquote>
+            <figcaption class="mt-3 flex items-center gap-2.5">
+              <span class="flex h-7 w-7 items-center justify-center rounded-full" style="background:conic-gradient(from 30deg,#7856C4,#D8A848,#569E86,#7856C4);" aria-hidden="true">
+                <span class="font-serif-i text-[10px] text-[#1a1408]">DO</span>
+              </span>
+              <span class="text-[12px] text-muted"><span class="text-cream">Daniel Okafor</span> · generative artist</span>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ONCHAIN STATS BANNER ============ -->
+  <section class="relative overflow-hidden border-y hair-gold" style="background:linear-gradient(180deg,rgba(216,168,72,0.05),rgba(13,13,16,0));">
+    <div class="blob" style="width:380px;height:380px;background:rgba(216,168,72,0.12);top:-140px;left:50%;transform:translateX(-50%);" aria-hidden="true"></div>
+    <div class="relative z-10 mx-auto max-w-shell px-5 sm:px-8 py-20">
+      <div class="mb-10 text-center">
+        <span class="eyebrow">Onchain · live</span>
+        <h2 class="mt-3 font-serif-i text-[26px] sm:text-[32px]">The gallery, in numbers.</h2>
+      </div>
+      <div class="grid grid-cols-2 gap-8 sm:gap-6 md:grid-cols-4">
+        <div class="text-center">
+          <div class="num font-serif-i text-[40px] leading-none text-cream sm:text-[52px]" data-countup data-target="4408">0</div>
+          <div class="pill-mono mt-2.5 text-[11px] uppercase tracking-[0.14em] text-muted">Artists</div>
+        </div>
+        <div class="text-center">
+          <div class="num font-serif-i text-[40px] leading-none text-cream sm:text-[52px]" data-countup data-target="148408">0</div>
+          <div class="pill-mono mt-2.5 text-[11px] uppercase tracking-[0.14em] text-muted">Works minted</div>
+        </div>
+        <div class="text-center">
+          <div class="num font-serif-i text-[40px] leading-none text-gold sm:text-[52px]"><span data-countup data-target="84408">0</span> <span class="text-[20px] text-muted">ETH</span></div>
+          <div class="pill-mono mt-2.5 text-[11px] uppercase tracking-[0.14em] text-muted">Volume</div>
+        </div>
+        <div class="text-center">
+          <div class="num font-serif-i text-[40px] leading-none text-gold sm:text-[52px]"><span data-countup data-target="6144">0</span> <span class="text-[20px] text-muted">ETH</span></div>
+          <div class="pill-mono mt-2.5 text-[11px] uppercase tracking-[0.14em] text-muted">Royalties paid to artists</div>
+        </div>
+      </div>
+      <p class="num pill-mono mt-10 text-center text-[11px] text-muted">
+        Read live from PlinthMarket · block <span class="text-cream">21,448,082</span> · updated 14s ago
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ SECURITY ============ -->
+  <section class="relative overflow-hidden">
+    <div class="dot-grid absolute inset-0 opacity-40" aria-hidden="true"></div>
+    <div class="relative z-10 mx-auto max-w-shell px-5 sm:px-8 py-24 sm:py-32">
+      <div class="grid gap-12 lg:grid-cols-[0.95fr_1.05fr]">
+        <!-- left copy -->
+        <div>
+          <span class="eyebrow">Security &amp; permanence</span>
+          <h2 class="mt-3 font-serif-i text-[32px] leading-[1.12] sm:text-[44px]">
+            The art outlasts the interface.
+          </h2>
+          <p class="mt-4 max-w-[48ch] text-[15.5px] leading-relaxed text-muted">
+            Plinth's contracts are audited and verified. The artwork itself is stored on two independent networks, so the files persist whether or not this website does.
+          </p>
+
+          <!-- audit pills -->
+          <div class="mt-7 flex flex-wrap gap-2.5">
+            <span class="inline-flex items-center gap-2 rounded-[9px] border hair-gold panel-faint px-3.5 py-2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D8A848" stroke-width="2" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z"/><path d="m9 12 2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span class="pill-mono text-[11.5px] text-cream">OpenZeppelin</span>
+              <span class="num pill-mono text-[10px] text-muted">Mar 2026</span>
+            </span>
+            <span class="inline-flex items-center gap-2 rounded-[9px] border hair-gold panel-faint px-3.5 py-2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D8A848" stroke-width="2" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z"/><path d="m9 12 2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span class="pill-mono text-[11.5px] text-cream">Spearbit</span>
+              <span class="num pill-mono text-[10px] text-muted">Apr 2026</span>
+            </span>
+          </div>
+
+          <!-- transparency line -->
+          <div class="mt-6 flex flex-col gap-2.5 rounded-[12px] border hair panel-faint p-4">
+            <p class="text-[13px] text-muted">Every contract verified onchain — read the source yourself.</p>
+            <button class="copy-pill group flex w-fit items-center gap-2 rounded-[8px] border hair-gold bg-[rgba(13,13,16,0.6)] px-3 py-1.5" data-copy="0x9C4ad21f80b3D2c5e9b71F86Aa047d2C8e10a4F2" aria-label="Copy PlinthMarket contract address">
+              <span class="num pill-mono text-[11.5px] text-cream">PlinthMarket · 0x9C4a…a4F2</span>
+              <svg class="copy-ico text-muted group-hover:text-gold" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8" /></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- right: storage cards -->
+        <div class="space-y-4">
+          <div class="lift rounded-[14px] border hair panel-faint p-6">
+            <div class="flex items-center gap-3">
+              <span class="flex h-10 w-10 items-center justify-center rounded-[10px] border hair-gold" style="background:rgba(216,168,72,0.08);">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#D8A848" stroke-width="1.7" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z" stroke-linejoin="round"/><path d="M12 22V12M3 7l9 5 9-5" stroke-linejoin="round"/></svg>
+              </span>
+              <div>
+                <h3 class="text-[16px] font-semibold text-cream">Stored on IPFS</h3>
+                <p class="pill-mono text-[10.5px] text-muted">Content-addressed · pinned by 6 nodes</p>
+              </div>
+            </div>
+            <p class="mt-3.5 text-[13.5px] leading-relaxed text-muted">
+              Each work's image and metadata are addressed by their content hash. The hash is stored in the token, so the file can never be silently swapped for another.
+            </p>
+          </div>
+          <div class="lift rounded-[14px] border hair panel-faint p-6">
+            <div class="flex items-center gap-3">
+              <span class="flex h-10 w-10 items-center justify-center rounded-[10px] border hair-gold" style="background:rgba(216,168,72,0.08);">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#D8A848" stroke-width="1.7" aria-hidden="true"><path d="M4 7v10c0 2 3.6 3 8 3s8-1 8-3V7" /><ellipse cx="12" cy="7" rx="8" ry="3"/><path d="M4 12c0 2 3.6 3 8 3s8-1 8-3" /></svg>
+              </span>
+              <div>
+                <h3 class="text-[16px] font-semibold text-cream">Mirrored to Arweave</h3>
+                <p class="pill-mono text-[10.5px] text-muted">Permanent · pay-once storage</p>
+              </div>
+            </div>
+            <p class="mt-3.5 text-[13.5px] leading-relaxed text-muted">
+              The same files are also written to Arweave, a network designed for permanent storage. They remain retrievable independently of Plinth, IPFS pinning, or any single host.
+            </p>
+          </div>
+          <div class="lift rounded-[14px] border hair panel-faint p-6">
+            <div class="flex items-center gap-3">
+              <span class="flex h-10 w-10 items-center justify-center rounded-[10px] border hair-gold" style="background:rgba(216,168,72,0.08);">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#D8A848" stroke-width="1.7" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke-linecap="round"/></svg>
+              </span>
+              <div>
+                <h3 class="text-[16px] font-semibold text-cream">Non-custodial by design</h3>
+                <p class="pill-mono text-[10.5px] text-muted">Your keys · your work</p>
+              </div>
+            </div>
+            <p class="mt-3.5 text-[13.5px] leading-relaxed text-muted">
+              A collected work sits in the buyer's wallet and a sale's proceeds go straight to the seller. Plinth's contracts hold neither — there is no Plinth account to be locked out of.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECTION 10 — CURATION & GOVERNANCE ============ -->
+  <section id="curation" class="border-y hair" style="background:rgba(244,242,236,0.018);">
+    <div class="mx-auto max-w-shell px-5 sm:px-8 py-24 sm:py-32">
+      <div class="mb-14 max-w-[48ch]">
+        <span class="eyebrow">Curation &amp; governance</span>
+        <h2 class="mt-3 font-serif-i text-[32px] leading-[1.12] sm:text-[44px]">
+          How a work earns its place.
+        </h2>
+        <p class="mt-4 text-[15.5px] leading-relaxed text-muted">
+          Plinth is curated rather than open-listing. Two paths put work in front of collectors — a standing council, and the community itself.
+        </p>
+      </div>
+
+      <div class="grid gap-5 lg:grid-cols-2">
+        <!-- curation council -->
+        <div class="rounded-[16px] border hair-gold panel-faint p-7">
+          <div class="flex items-center justify-between">
+            <h3 class="font-serif-i text-[22px] text-cream">The curation council</h3>
+            <span class="pill-mono text-[10.5px] uppercase tracking-[0.14em] text-gold">9 curators</span>
+          </div>
+          <p class="mt-3 text-[13.5px] leading-relaxed text-muted">
+            Nine practising curators and artists review every submission on a rolling two-week cycle. They assess craft, originality, and fit for an upcoming drop — and they publish notes on what was selected.
+          </p>
+          <!-- council avatars -->
+          <div class="mt-5 flex items-center">
+            <span class="flex h-9 w-9 items-center justify-center rounded-full ring-2 ring-[#15151A]" style="background:conic-gradient(from 20deg,#D8A848,#7856C4,#D8A848);" aria-hidden="true"><span class="font-serif-i text-[11px] text-[#1a1408]">PA</span></span>
+            <span class="-ml-2.5 flex h-9 w-9 items-center justify-center rounded-full ring-2 ring-[#15151A]" style="background:conic-gradient(from 120deg,#569E86,#D8A848,#569E86);" aria-hidden="true"><span class="font-serif-i text-[11px] text-[#1a1408]">MT</span></span>
+            <span class="-ml-2.5 flex h-9 w-9 items-center justify-center rounded-full ring-2 ring-[#15151A]" style="background:conic-gradient(from 220deg,#C45684,#D8A848,#C45684);" aria-hidden="true"><span class="font-serif-i text-[11px] text-[#1a1408]">HS</span></span>
+            <span class="-ml-2.5 flex h-9 w-9 items-center justify-center rounded-full ring-2 ring-[#15151A]" style="background:conic-gradient(from 320deg,#6FAFCF,#D8A848,#6FAFCF);" aria-hidden="true"><span class="font-serif-i text-[11px] text-[#1a1408]">YA</span></span>
+            <span class="-ml-2.5 flex h-9 w-9 items-center justify-center rounded-full border hair-gold bg-[rgba(13,13,16,0.7)] ring-2 ring-[#15151A]" aria-hidden="true"><span class="num pill-mono text-[10px] text-muted">+5</span></span>
+          </div>
+          <div class="mt-5 space-y-2 border-t hair pt-4">
+            <div class="flex items-center justify-between">
+              <span class="text-[12.5px] text-muted">Submissions this cycle</span>
+              <span class="num pill-mono text-[12.5px] text-cream">312</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-[12.5px] text-muted">Selected into Drop 015</span>
+              <span class="num pill-mono text-[12.5px] text-gold">41</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-[12.5px] text-muted">Median response time</span>
+              <span class="num pill-mono text-[12.5px] text-cream">6 days</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- community curation -->
+        <div class="rounded-[16px] border hair-gold panel-faint p-7">
+          <div class="flex items-center justify-between">
+            <h3 class="font-serif-i text-[22px] text-cream">Community curation</h3>
+            <span class="pill-mono text-[10.5px] uppercase tracking-[0.14em] text-gold">Open to all</span>
+          </div>
+          <p class="mt-3 text-[13.5px] leading-relaxed text-muted">
+            Any collector can surface a work to the council's queue and signal support for it. Works that gather broad community backing skip straight to a curator's desk for review — a way for the gallery to notice what the council might miss.
+          </p>
+          <!-- community surfaced list -->
+          <div class="mt-5 space-y-2.5">
+            <div class="flex items-center gap-3 rounded-[10px] border hair px-3.5 py-2.5" style="background:rgba(13,13,16,0.5);">
+              <div class="h-8 w-8 shrink-0 rounded-[7px] art-b" aria-hidden="true"></div>
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-[12.5px] text-cream">Static Bloom — Mei Lin Toh</p>
+                <p class="pill-mono text-[10px] text-muted">Surfaced by community</p>
+              </div>
+              <span class="num pill-mono shrink-0 text-[11.5px] text-gold">↑ 1,204</span>
+            </div>
+            <div class="flex items-center gap-3 rounded-[10px] border hair px-3.5 py-2.5" style="background:rgba(13,13,16,0.5);">
+              <div class="h-8 w-8 shrink-0 rounded-[7px] art-c" aria-hidden="true"></div>
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-[12.5px] text-cream">Quiet Frequency — Felix Brandt</p>
+                <p class="pill-mono text-[10px] text-muted">In curator review</p>
+              </div>
+              <span class="num pill-mono shrink-0 text-[11.5px] text-gold">↑ 988</span>
+            </div>
+            <div class="flex items-center gap-3 rounded-[10px] border hair px-3.5 py-2.5" style="background:rgba(13,13,16,0.5);">
+              <div class="h-8 w-8 shrink-0 rounded-[7px] art-d" aria-hidden="true"></div>
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-[12.5px] text-cream">Drift Study 09 — Sofia Rezende</p>
+                <p class="pill-mono text-[10px] text-muted">Surfaced by community</p>
+              </div>
+              <span class="num pill-mono shrink-0 text-[11.5px] text-gold">↑ 743</span>
+            </div>
+          </div>
+          <p class="mt-4 text-[12px] leading-relaxed text-muted">
+            Curation decisions and council membership are reviewed publicly each quarter. This is a process, not a token — there is nothing to buy to take part.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FAQ ============ -->
+  <section id="faq" class="relative overflow-hidden">
+    <div class="relative z-10 mx-auto max-w-shell px-5 sm:px-8 py-24 sm:py-32">
+      <div class="grid gap-12 lg:grid-cols-[0.8fr_1.2fr]">
+        <div>
+          <span class="eyebrow">Questions</span>
+          <h2 class="mt-3 font-serif-i text-[32px] leading-[1.12] sm:text-[44px]">
+            Asked &amp; answered.
+          </h2>
+          <p class="mt-4 max-w-[36ch] text-[14.5px] leading-relaxed text-muted">
+            The things collectors and artists ask before their first mint. More in the docs.
+          </p>
+        </div>
+
+        <div class="divide-y divide-[rgba(244,242,236,0.07)] border-y hair">
+          <!-- q1 -->
+          <details class="group py-5">
+            <summary class="flex items-start justify-between gap-4">
+              <span class="text-[16px] font-medium text-cream">Where is the actual artwork stored?</span>
+              <svg class="faq-plus mt-1 shrink-0 text-gold" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+            </summary>
+            <p class="mt-3 max-w-[62ch] text-[14px] leading-relaxed text-muted">
+              The image and metadata for every work are stored on IPFS, where they're addressed by a content hash, and mirrored to Arweave for permanence. The token onchain holds that hash. For onchain generative works, the rendering code lives in the contract itself, so the art can be regenerated from the chain alone.
+            </p>
+          </details>
+          <!-- q2 -->
+          <details class="group py-5">
+            <summary class="flex items-start justify-between gap-4">
+              <span class="text-[16px] font-medium text-cream">Do artists really get royalties on resale?</span>
+              <svg class="faq-plus mt-1 shrink-0 text-gold" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+            </summary>
+            <p class="mt-3 max-w-[62ch] text-[14px] leading-relaxed text-muted">
+              Yes. The royalty — set by the artist, 7% by default — is encoded in the work's contract through the RoyaltyRouter. On Plinth, every resale routes that share to the artist automatically before the sale settles. Other venues that honour the on-chain royalty standard pay it too; it is a property of the token, not a Plinth setting.
+            </p>
+          </details>
+          <!-- q3 -->
+          <details class="group py-5">
+            <summary class="flex items-start justify-between gap-4">
+              <span class="text-[16px] font-medium text-cream">What are the fees to mint and to sell?</span>
+              <svg class="faq-plus mt-1 shrink-0 text-gold" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+            </summary>
+            <p class="mt-3 max-w-[62ch] text-[14px] leading-relaxed text-muted">
+              Minting is free of any Plinth fee — you pay only L2 gas, which averages around $0.014 per transaction. When a work sells, Plinth takes a flat 2.5% of the sale price. There is no listing fee and no subscription. The artist's royalty is separate from, and additional to, the Plinth fee.
+            </p>
+          </details>
+          <!-- q4 -->
+          <details class="group py-5">
+            <summary class="flex items-start justify-between gap-4">
+              <span class="text-[16px] font-medium text-cream">What chain does it run on, and why?</span>
+              <svg class="faq-plus mt-1 shrink-0 text-gold" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+            </summary>
+            <p class="mt-3 max-w-[62ch] text-[14px] leading-relaxed text-muted">
+              Plinth settles on an Ethereum L2 rollup. The rollup inherits Ethereum's security while keeping gas low — minting an edition or collecting a work costs cents rather than the tens of dollars a base-layer mint can run. That keeps the cost of putting art onchain small enough that it doesn't shape what artists make.
+            </p>
+          </details>
+          <!-- q5 -->
+          <details class="group py-5">
+            <summary class="flex items-start justify-between gap-4">
+              <span class="text-[16px] font-medium text-cream">What happens to my collection if Plinth shuts down?</span>
+              <svg class="faq-plus mt-1 shrink-0 text-gold" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+            </summary>
+            <p class="mt-3 max-w-[62ch] text-[14px] leading-relaxed text-muted">
+              Your collection is unaffected. The works are tokens onchain, held by your own wallet, and their files live on IPFS and Arweave independently of this website. Plinth is only an interface to the contracts — if it disappeared, you would still own every work and could view, transfer, or sell it through the contracts or any other compatible marketplace.
+            </p>
+          </details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FINAL CTA ============ -->
+  <section id="cta" class="relative overflow-hidden border-t hair-gold">
+    <div class="dot-grid absolute inset-0 opacity-50" aria-hidden="true"></div>
+    <div class="blob" style="width:480px;height:480px;background:rgba(216,168,72,0.16);top:-180px;left:50%;transform:translateX(-50%);" aria-hidden="true"></div>
+    <div class="relative z-10 mx-auto max-w-shell px-5 sm:px-8 py-24 sm:py-32 text-center">
+      <div class="mb-7 inline-flex items-center gap-2.5 rounded-full border hair-gold px-3.5 py-1.5" style="background:rgba(244,242,236,0.025);">
+        <span class="pulse-dot green" aria-hidden="true"></span>
+        <span class="pill-mono text-[11px] uppercase tracking-[0.16em] text-cream">Mainnet · live</span>
+        <span class="h-3 w-px bg-[rgba(244,242,236,0.14)]"></span>
+        <span class="num pill-mono text-[11px] text-muted">Every contract verified onchain</span>
+      </div>
+      <h2 class="mx-auto max-w-[18ch] font-serif-i text-[36px] leading-[1.08] sm:text-[54px]">
+        Begin a collection that<br class="hidden sm:block" />
+        <span class="halftone">you actually hold.</span>
+      </h2>
+      <p class="mx-auto mt-6 max-w-[52ch] text-[15.5px] leading-relaxed text-muted">
+        Browse curated drops, collect a work straight to your wallet, or apply to mint your own. No account — connect a wallet and you're in.
+      </p>
+
+      <!-- wallet connect mockup -->
+      <div class="mx-auto mt-12 max-w-[420px] rounded-[16px] border hair-gold p-5 text-left" style="background:rgba(21,21,26,0.9);box-shadow:0 30px 70px -30px rgba(0,0,0,0.8);">
+        <div class="flex items-center justify-between">
+          <p class="font-serif-i text-[16px] text-cream">Connect a wallet</p>
+          <button class="flex h-6 w-6 items-center justify-center rounded-[6px] border hair text-muted" aria-label="Close connect dialog">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <p class="mt-1 text-[12px] text-muted">Plinth never holds your keys or your art.</p>
+        <div class="mt-4 space-y-2">
+          <!-- metamask -->
+          <button class="lift flex w-full items-center gap-3 rounded-[10px] border hair panel-faint px-3.5 py-2.5 hover:border-[rgba(216,168,72,0.4)]" aria-label="Connect with MetaMask">
+            <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M27 4 18 11l1.7-4L27 4Z" fill="#E2761B"/><path d="M5 4l9 7-1.7-4L5 4Z" fill="#E4761B"/><path d="m23 21-2.5 4 5.4 1.5L27.4 21H23ZM4.6 21l1.5 5.5L11.5 25 9 21H4.6Z" fill="#E4761B"/><path d="M11.2 14.5 9.7 16.8l5.3.24-.18-5.7-3.62 3.16ZM20.8 14.5l-3.67-3.23-.12 5.77 5.3-.24-1.51-2.3ZM11.5 25l3.2-1.55-2.76-2.16L11.5 25ZM17.3 23.45 20.5 25l-.45-3.7-2.75 2.15Z" fill="#E4761B"/><path d="m20.5 25-3.2-1.55.26 2.1-.03.9 2.97-1.45ZM11.5 25l2.97 1.45-.02-.9.24-2.1L11.5 25Z" fill="#D7C1B3"/><path d="m14.5 19.9-2.66-.78 1.88-.86.78 1.64ZM17.5 19.9l.78-1.64 1.89.86-2.67.78Z" fill="#233447"/><path d="m11.5 25 .47-4-3.07.12L11.5 25ZM20.03 21l.47 4 2.6-3.88-3.07-.12ZM22.3 16.8l-5.3.24.49 2.86.78-1.64 1.89.86 2.14-2.32ZM11.84 19.12l1.88-.86.78 1.64.5-2.86-5.3-.24 2.14 2.32Z" fill="#CD6116"/><path d="m9.7 16.8 2.22 4.33-.08-2.01L9.7 16.8ZM20.17 19.12l-.09 2.01 2.22-4.33-2.13 2.32ZM15 17.04l-.5 2.86.62 3.2.14-4.22-.26-1.84ZM17 17.04l-.25 1.83.13 4.23.62-3.2L17 17.04Z" fill="#E4751F"/><path d="m17.5 19.9-.62 3.2.45.31 2.75-2.15.09-2.01L17.5 19.9ZM11.84 19.12l.08 2.01 2.76 2.16.44-.31-.62-3.2-2.66-.66Z" fill="#F6851B"/></svg>
+            <span class="text-[14px] font-medium text-cream">MetaMask</span>
+            <span class="ml-auto pill-mono text-[10px] text-muted">Detected</span>
+          </button>
+          <!-- rainbow -->
+          <button class="lift flex w-full items-center gap-3 rounded-[10px] border hair panel-faint px-3.5 py-2.5 hover:border-[rgba(216,168,72,0.4)]" aria-label="Connect with Rainbow">
+            <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#174299"/><path d="M5 11a16 16 0 0 1 16 16h4A20 20 0 0 0 5 7v4Z" fill="#FF4000"/><path d="M5 17a10 10 0 0 1 10 10h4A14 14 0 0 0 5 13v4Z" fill="#FFB800"/><path d="M5 23a4 4 0 0 1 4 4h4a8 8 0 0 0-8-8v4Z" fill="#00AAFF"/></svg>
+            <span class="text-[14px] font-medium text-cream">Rainbow</span>
+          </button>
+          <!-- coinbase wallet -->
+          <button class="lift flex w-full items-center gap-3 rounded-[10px] border hair panel-faint px-3.5 py-2.5 hover:border-[rgba(216,168,72,0.4)]" aria-label="Connect with Coinbase Wallet">
+            <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#0052FF"/><circle cx="16" cy="16" r="9" fill="#fff"/><rect x="12.5" y="12.5" width="7" height="7" rx="1.6" fill="#0052FF"/></svg>
+            <span class="text-[14px] font-medium text-cream">Coinbase Wallet</span>
+          </button>
+          <!-- walletconnect -->
+          <button class="lift flex w-full items-center gap-3 rounded-[10px] border hair panel-faint px-3.5 py-2.5 hover:border-[rgba(216,168,72,0.4)]" aria-label="Connect with WalletConnect">
+            <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#3B99FC"/><path d="M10 13.5a8.5 8.5 0 0 1 12 0l.7.7-1.4 1.4-.7-.7a6.5 6.5 0 0 0-9.2 0l-.7.7L9.3 14.2l.7-.7Zm-2.8 2.8 1.7 1.7 6.6-6.6h1.0l6.6 6.6 1.7-1.7-7.8-7.8h-2.0l-7.8 7.8Z" fill="#fff"/></svg>
+            <span class="text-[14px] font-medium text-cream">WalletConnect</span>
+          </button>
+          <!-- ledger -->
+          <button class="lift flex w-full items-center gap-3 rounded-[10px] border hair panel-faint px-3.5 py-2.5 hover:border-[rgba(216,168,72,0.4)]" aria-label="Connect with Ledger">
+            <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#000"/><path d="M8 8h7v2.5H10.5V15H8V8Zm16 16h-7v-2.5h4.5V17H24v7ZM8 24v-7h2.5v4.5H15V24H8Zm16-16v7h-2.5v-4.5H17V8h7Z" fill="#fff"/></svg>
+            <span class="text-[14px] font-medium text-cream">Ledger</span>
+          </button>
+        </div>
+        <p class="mt-3.5 text-center text-[11px] text-muted">
+          By connecting you agree to the <span class="text-cream underline decoration-dotted underline-offset-2">Terms</span>.
+        </p>
+      </div>
+
+      <div class="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <a href="#top" class="btn-gold w-full rounded-[10px] px-6 py-3 text-[15px] font-semibold sm:w-auto">Explore the gallery</a>
+        <a href="#features" class="btn-ghost w-full rounded-[10px] px-6 py-3 text-[15px] font-medium sm:w-auto">Apply to mint</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer class="border-t hair" style="background:#0B0B0E;">
+  <div class="mx-auto max-w-shell px-5 sm:px-8 py-16">
+    <div class="grid gap-10 md:grid-cols-2 lg:grid-cols-6">
+      <!-- brand col -->
+      <div class="lg:col-span-1">
+        <a href="#top" class="flex items-center gap-2.5" aria-label="Plinth home">
+          <svg width="24" height="24" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+            <rect x="6.5" y="3.5" width="13" height="9" rx="1.4" stroke="#D8A848" stroke-width="1.6"/>
+            <path d="M9 12.5h8M5 18.5h16M3.5 22.5h19" stroke="#D8A848" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M11 18.5v-6M15 18.5v-6" stroke="#D8A848" stroke-width="1.4" stroke-linecap="round" opacity="0.55"/>
+          </svg>
+          <span class="font-serif-i text-[19px] text-cream">Plinth</span>
+        </a>
+        <p class="mt-3 max-w-[24ch] text-[12.5px] leading-relaxed text-muted">
+          A curated marketplace for art that lives onchain.
+        </p>
+        <div class="mt-4 flex items-center gap-2">
+          <a href="#top" class="flex h-8 w-8 items-center justify-center rounded-[8px] border hair text-muted lift hover:text-gold" aria-label="Plinth on GitHub">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5.99.11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.25 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.83.58A12.01 12.01 0 0 0 24 12.5C24 5.87 18.63.5 12 .5Z"/></svg>
+          </a>
+          <a href="#top" class="flex h-8 w-8 items-center justify-center rounded-[8px] border hair text-muted lift hover:text-gold" aria-label="Plinth on Discord">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 4.4A19 19 0 0 0 15.3 3l-.24.5a14 14 0 0 1 4.1 1.3 13 13 0 0 0-13-.06A14 14 0 0 1 9.3 3.5L9 3a19 19 0 0 0-4.7 1.4C1.4 9.1.6 13.6 1 18a19 19 0 0 0 5.8 3l1.2-2c-1-.4-1.9-.9-2.8-1.5l.6-.5a13.5 13.5 0 0 0 11.6 0l.6.5c-.9.6-1.8 1.1-2.8 1.5l1.2 2c2.1-.7 4-1.7 5.8-3 .5-5.1-.8-9.6-3.2-13.6ZM8.4 15.3c-1.1 0-2.1-1-2.1-2.3 0-1.2 1-2.3 2.1-2.3 1.2 0 2.1 1 2.1 2.3 0 1.2-.9 2.3-2.1 2.3Zm7.2 0c-1.1 0-2-1-2-2.3 0-1.2.9-2.3 2-2.3 1.2 0 2.1 1 2.1 2.3 0 1.2-.9 2.3-2.1 2.3Z"/></svg>
+          </a>
+          <a href="#top" class="flex h-8 w-8 items-center justify-center rounded-[8px] border hair text-muted lift hover:text-gold" aria-label="Plinth on X">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.2 2h3.3l-7.2 8.3L23 22h-6.6l-5.2-6.8L5.2 22H1.9l7.7-8.8L1 2h6.8l4.7 6.2L18.2 2Zm-1.2 18h1.8L7.1 3.9H5.2L17 20Z"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- protocol -->
+      <div>
+        <h3 class="pill-mono text-[10.5px] uppercase tracking-[0.16em] text-gold">Protocol</h3>
+        <ul class="mt-4 space-y-2.5">
+          <li><a href="#how" class="nav-link text-[13px]">How it works</a></li>
+          <li><a href="#features" class="nav-link text-[13px]">Features</a></li>
+          <li><a href="#curation" class="nav-link text-[13px]">Curation</a></li>
+          <li><a href="#cta" class="nav-link text-[13px]">Royalties</a></li>
+        </ul>
+      </div>
+      <!-- developers -->
+      <div>
+        <h3 class="pill-mono text-[10.5px] uppercase tracking-[0.16em] text-gold">Developers</h3>
+        <ul class="mt-4 space-y-2.5">
+          <li><a href="#how" class="nav-link text-[13px]">Documentation</a></li>
+          <li><a href="#how" class="nav-link text-[13px]">Contracts</a></li>
+          <li><a href="#how" class="nav-link text-[13px]">Royalty standard</a></li>
+          <li><a href="#how" class="nav-link text-[13px]">Audits</a></li>
+        </ul>
+      </div>
+      <!-- governance -->
+      <div>
+        <h3 class="pill-mono text-[10.5px] uppercase tracking-[0.16em] text-gold">Governance</h3>
+        <ul class="mt-4 space-y-2.5">
+          <li><a href="#curation" class="nav-link text-[13px]">Curation council</a></li>
+          <li><a href="#curation" class="nav-link text-[13px]">Community curation</a></li>
+          <li><a href="#curation" class="nav-link text-[13px]">Quarterly reviews</a></li>
+          <li><a href="#faq" class="nav-link text-[13px]">Proposals</a></li>
+        </ul>
+      </div>
+      <!-- ecosystem + community -->
+      <div>
+        <h3 class="pill-mono text-[10.5px] uppercase tracking-[0.16em] text-gold">Ecosystem</h3>
+        <ul class="mt-4 space-y-2.5">
+          <li><a href="#cta" class="nav-link text-[13px]">Apply to mint</a></li>
+          <li><a href="#top" class="nav-link text-[13px]">Drops</a></li>
+          <li><a href="#top" class="nav-link text-[13px]">Artists</a></li>
+          <li><a href="#top" class="nav-link text-[13px]">Discord</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- contract addresses -->
+    <div class="mt-12 grid gap-3 rounded-[12px] border hair panel-faint p-5 sm:grid-cols-3">
+      <div>
+        <p class="pill-mono text-[10px] uppercase tracking-[0.14em] text-muted">PlinthMarket</p>
+        <p class="num pill-mono mt-1 break-all text-[11px] text-cream">0x9C4ad21f80b3D2c5e9b71F86Aa047d2C8e10a4F2</p>
+      </div>
+      <div>
+        <p class="pill-mono text-[10px] uppercase tracking-[0.14em] text-muted">PlinthMinter</p>
+        <p class="num pill-mono mt-1 break-all text-[11px] text-cream">0x3E71a90Cf24b8d05176aB3e9D2c0418fA7b6c351</p>
+      </div>
+      <div>
+        <p class="pill-mono text-[10px] uppercase tracking-[0.14em] text-muted">RoyaltyRouter</p>
+        <p class="num pill-mono mt-1 break-all text-[11px] text-cream">0xC18f4e72Ab0d935168cE21a7F40b9d6e3A82f0d4</p>
+      </div>
+    </div>
+
+    <!-- fine print -->
+    <div class="mt-8 flex flex-col items-center justify-between gap-4 border-t hair pt-7 sm:flex-row">
+      <p class="pill-mono text-[11px] text-muted">© 2026 Plinth Labs · A non-custodial onchain art marketplace.</p>
+      <div class="flex items-center gap-5">
+        <a href="#top" class="nav-link pill-mono text-[11px]">Terms</a>
+        <a href="#top" class="nav-link pill-mono text-[11px]">Privacy</a>
+        <span class="num pill-mono inline-flex items-center gap-1.5 text-[11px] text-muted">
+          <span class="pulse-dot green" aria-hidden="true"></span> Mainnet · live
+        </span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ============ JS — count-up + copy-to-clipboard ============ -->
+<script>
+  (function () {
+    "use strict";
+
+    /* count-up on stat numbers when the banner scrolls into view */
+    var counters = document.querySelectorAll("[data-countup]");
+    if (counters.length && "IntersectionObserver" in window) {
+      var ran = false;
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting || ran) return;
+          ran = true;
+          counters.forEach(function (el) {
+            var target = parseInt(el.getAttribute("data-target"), 10) || 0;
+            var start = null;
+            var dur = 1500;
+            function tick(ts) {
+              if (start === null) start = ts;
+              var p = Math.min((ts - start) / dur, 1);
+              var eased = 1 - Math.pow(1 - p, 3);
+              el.textContent = Math.floor(eased * target).toLocaleString("en-US");
+              if (p < 1) requestAnimationFrame(tick);
+              else el.textContent = target.toLocaleString("en-US");
+            }
+            requestAnimationFrame(tick);
+          });
+        });
+      }, { threshold: 0.4 });
+      var banner = counters[0].closest("section");
+      if (banner) io.observe(banner);
+    }
+
+    /* copy-to-clipboard on address pills */
+    var copyEls = document.querySelectorAll(".copy-pill");
+    copyEls.forEach(function (el) {
+      el.addEventListener("click", function () {
+        var addr = el.getAttribute("data-copy");
+        if (!addr) return;
+        var ico = el.querySelector(".copy-ico");
+        function flash() {
+          if (!ico) return;
+          ico.classList.add("copy-ok");
+          ico.innerHTML = '<path d="m20 6-11 11-5-5" stroke-linecap="round" stroke-linejoin="round"/>';
+          setTimeout(function () {
+            ico.classList.remove("copy-ok");
+            ico.innerHTML = '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/>';
+          }, 1600);
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(addr).then(flash).catch(function () {});
+        }
+      });
+    });
+
+    /* mobile menu toggle */
+    var menuBtn = document.getElementById("menuBtn");
+    var mobileMenu = document.getElementById("mobileMenu");
+    if (menuBtn && mobileMenu) {
+      menuBtn.addEventListener("click", function () {
+        var open = mobileMenu.classList.toggle("hidden");
+        menuBtn.setAttribute("aria-expanded", String(!open));
+      });
+      mobileMenu.querySelectorAll("a").forEach(function (link) {
+        link.addEventListener("click", function () {
+          mobileMenu.classList.add("hidden");
+          menuBtn.setAttribute("aria-expanded", "false");
+        });
+      });
+    }
+  })();
+</script>
+
+</body>
+</html>

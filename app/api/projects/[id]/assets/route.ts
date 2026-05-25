@@ -121,9 +121,18 @@ export async function POST(
   try {
     const storage = getAssetStorage();
     const meta = await storage.put(id, finalBuffer, finalExt, finalMime);
+    // storage.put can return a RELATIVE url (LocalFs without
+    // OPENLEN_APP_BASE_URL). A relative url breaks on the published
+    // subdomain AND is silently dropped by the chat's attached-image flow
+    // (its `new URL()` check can't parse a relative string). Resolve to an
+    // absolute url against the request origin so it's always usable.
+    const url = /^https?:\/\//i.test(meta.url)
+      ? meta.url
+      : new URL(meta.url, req.url).href;
     return json(
       {
         ...meta,
+        url,
         originalBytes: buffer.length,
       },
       200,

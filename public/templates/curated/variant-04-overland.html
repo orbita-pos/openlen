@@ -1,0 +1,1585 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Overland — The Highland Line · a 4-day sleeper journey, coast to mountains</title>
+  <meta name="description" content="The Highland Line is a 4-day, 3-night heritage sleeper journey from the coast to the mountains aboard a restored 1968 train. 318 miles of track, 22 cabins, two departures a week, April through October. From $3,400 per person." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    :root{
+      --bg:#F3EBDD;
+      --surface:#FBF6EA;
+      --surface-2:#EFE4CF;
+      --text:#211B12;
+      --muted:#5E5440;
+      --faint:#8C8068;
+      --accent:#2C4A35;
+      --accent-deep:#21392A;
+      --accent-2:#7E3A2C;
+      --accent-2-deep:#632C20;
+      --line:rgba(33,27,18,0.12);
+      --line-soft:rgba(33,27,18,0.07);
+      --gold:#B8893A;
+    }
+    *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    html{ scroll-behavior:smooth; }
+    html,body{ background:var(--bg); color:var(--text); }
+    body{
+      font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+      font-feature-settings:"ss01","cv11";
+      font-optical-sizing:auto;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      text-rendering:optimizeLegibility;
+      line-height:1.6;
+    }
+    section[id]{ scroll-margin-top:88px; }
+
+    .display{ font-family:'Fraunces','Georgia',serif; font-optical-sizing:auto; font-weight:600; letter-spacing:-0.032em; line-height:1.04; }
+    .serif{ font-family:'Fraunces','Georgia',serif; font-optical-sizing:auto; letter-spacing:-0.012em; }
+    .mono{ font-family:'Geist Mono',ui-monospace,Menlo,monospace; }
+    .tnum{ font-variant-numeric:tabular-nums; }
+    .halftone{ opacity:0.45; }
+    em.ink{ font-style:normal; color:var(--accent-2); }
+    em.green{ font-style:normal; color:var(--accent); }
+
+    .kicker{
+      font-family:'Geist Mono',ui-monospace,monospace;
+      font-size:11px; letter-spacing:0.2em; text-transform:uppercase;
+      color:var(--faint);
+    }
+    .accent-line{ display:inline-block; width:26px; height:1px; background:var(--accent-2); vertical-align:middle; margin-right:11px; }
+
+    .rule{ border-color:var(--line); }
+    .rule-soft{ border-color:var(--line-soft); }
+
+    /* ambient backgrounds */
+    .dotgrid{
+      background-image:radial-gradient(rgba(33,27,18,0.10) 1px, transparent 1px);
+      background-size:32px 32px;
+      background-position:-8px -8px;
+    }
+    .mesh{
+      background-image:
+        radial-gradient(56% 48% at 12% 8%, rgba(44,74,53,0.16), transparent 66%),
+        radial-gradient(50% 44% at 92% 4%, rgba(126,58,44,0.13), transparent 70%),
+        radial-gradient(60% 58% at 80% 98%, rgba(184,137,58,0.12), transparent 72%);
+    }
+    .grain{ background-image:radial-gradient(rgba(33,27,18,0.05) 1px, transparent 1px); background-size:5px 5px; }
+
+    /* pulse dot */
+    .pulse-dot{
+      position:relative; display:inline-block; width:7px; height:7px; border-radius:999px;
+      background:var(--accent-2);
+      box-shadow:0 0 0 0 rgba(126,58,44,0.5);
+      animation:pulse 2s ease-out infinite;
+    }
+    @keyframes pulse{
+      0%{ box-shadow:0 0 0 0 rgba(126,58,44,0.5); }
+      70%{ box-shadow:0 0 0 9px rgba(126,58,44,0); }
+      100%{ box-shadow:0 0 0 0 rgba(126,58,44,0); }
+    }
+
+    /* marquee */
+    .marquee-mask{ -webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent); mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent); }
+    .marquee-track{ display:flex; gap:54px; width:max-content; align-items:center; animation:marq 44s linear infinite; }
+    @keyframes marq{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+
+    /* buttons */
+    .btn-primary{
+      background:var(--accent); color:#F3EBDD;
+      transition:transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+    }
+    .btn-primary:hover{ transform:translateY(-2px); background-color:var(--accent-deep); box-shadow:0 14px 30px -12px rgba(44,74,53,0.7); }
+    .btn-primary:active{ transform:translateY(0); }
+    .btn-ghost{
+      border:1px solid var(--line); color:var(--text); background:var(--surface);
+      transition:transform 120ms ease, border-color 120ms ease, background-color 120ms ease;
+    }
+    .btn-ghost:hover{ transform:translateY(-2px); border-color:rgba(33,27,18,0.34); background:var(--surface-2); }
+    .btn-ghost:active{ transform:translateY(0); }
+    .btn-oxblood{
+      background:var(--accent-2); color:#F3EBDD;
+      transition:transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+    }
+    .btn-oxblood:hover{ transform:translateY(-2px); background-color:var(--accent-2-deep); box-shadow:0 14px 30px -12px rgba(126,58,44,0.66); }
+
+    /* card lift */
+    .card-lift{ transition:transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease; }
+    .card-lift:hover{ transform:translateY(-3px); box-shadow:0 22px 42px -24px rgba(33,27,18,0.46); border-color:rgba(33,27,18,0.24); }
+
+    /* navlink underline-sweep */
+    .navlink{ position:relative; }
+    .navlink::after{
+      content:""; position:absolute; left:0; right:0; bottom:-4px; height:1px;
+      background:currentColor; transform:scaleX(0); transform-origin:right center;
+      transition:transform 260ms cubic-bezier(.2,.7,.2,1);
+    }
+    .navlink:hover::after{ transform:scaleX(1); transform-origin:left center; }
+
+    .nav{ backdrop-filter:blur(12px) saturate(150%); -webkit-backdrop-filter:blur(12px) saturate(150%); background:rgba(243,235,221,0.84); }
+    .arrow{ transition:transform 150ms ease; }
+    a:hover .arrow, button:hover .arrow{ transform:translateX(3px); }
+
+    /* native details */
+    details>summary{ list-style:none; cursor:pointer; }
+    details>summary::-webkit-details-marker{ display:none; }
+    details[open] .acc-sign{ transform:rotate(45deg); }
+    .acc-sign{ transition:transform 200ms ease; }
+
+    /* ticket-stub perforation */
+    .ticket{ position:relative; background:var(--surface); border:1px solid var(--line); }
+    .perf{
+      position:absolute; top:0; bottom:0; width:2px;
+      background-image:linear-gradient(var(--bg) 50%, transparent 50%);
+      background-size:2px 11px;
+    }
+    .notch{
+      position:absolute; width:18px; height:18px; border-radius:999px;
+      background:var(--bg); border:1px solid var(--line);
+    }
+
+    /* "photo" placeholder frame */
+    .photo{ position:relative; overflow:hidden; box-shadow:inset 0 0 0 1px rgba(255,247,228,0.16); }
+    .photo-frame{ position:absolute; inset:7px; border:1px solid rgba(255,247,228,0.22); pointer-events:none; border-radius:3px; }
+    .photo-grain{ position:absolute; inset:0; opacity:0.5; pointer-events:none; background-image:radial-gradient(rgba(255,247,228,0.06) 0.6px, transparent 0.7px); background-size:4px 4px; }
+
+    /* destination gradients — layered, evocative */
+    .ph-coast{ background:
+        radial-gradient(120% 78% at 24% 14%, rgba(248,236,206,0.92) 0%, transparent 44%),
+        radial-gradient(100% 76% at 80% 22%, #E7C98E 0%, #C99A52 42%, transparent 74%),
+        linear-gradient(168deg, #BBC8C0 0%, #8FA7A2 38%, #C29E6E 70%, #7E5E40 100%); }
+    .ph-dining{ background:
+        radial-gradient(110% 90% at 70% 26%, rgba(255,238,200,0.62) 0%, transparent 52%),
+        radial-gradient(120% 110% at 30% 110%, #5A2E22 0%, #3A1E16 48%, transparent 80%),
+        linear-gradient(160deg, #8E5A36 0%, #6E3E26 44%, #3A241A 100%); }
+    .ph-cabin{ background:
+        radial-gradient(110% 80% at 26% 18%, rgba(248,236,206,0.78) 0%, transparent 50%),
+        linear-gradient(158deg, #C4B594 0%, #9A8458 42%, #5E4E34 78%, #3A3022 100%); }
+    .ph-window{ background:
+        radial-gradient(120% 84% at 60% 16%, rgba(245,232,200,0.74) 0%, transparent 48%),
+        radial-gradient(120% 108% at 36% 108%, #3A5440 0%, #243828 50%, transparent 80%),
+        linear-gradient(166deg, #9FB6AB 0%, #7E9A8E 42%, #4C6852 100%); }
+    .ph-moor{ background:
+        radial-gradient(120% 80% at 70% 14%, rgba(250,236,200,0.88) 0%, transparent 46%),
+        linear-gradient(166deg, #D9C189 0%, #C29A4E 40%, #8E6E36 72%, #5A4422 100%); }
+    .ph-mountain{ background:
+        radial-gradient(110% 70% at 30% 16%, rgba(236,224,212,0.7) 0%, transparent 48%),
+        linear-gradient(168deg, #B7A9C0 0%, #8A8298 36%, #5E5E72 66%, #3A3A4C 100%); }
+    .ph-valley{ background:
+        radial-gradient(120% 84% at 26% 18%, rgba(248,236,206,0.84) 0%, transparent 48%),
+        linear-gradient(166deg, #BFCDA4 0%, #97AB6E 40%, #6E8650 72%, #46583A 100%); }
+    .ph-train{ background:
+        radial-gradient(120% 84% at 70% 20%, rgba(245,232,200,0.72) 0%, transparent 48%),
+        linear-gradient(166deg, #C7A878 0%, #9E7A48 40%, #6E5232 74%, #3E2E1E 100%); }
+    .ph-dusk{ background:
+        radial-gradient(110% 88% at 64% 22%, #F4C77E 0%, #C9885A 42%, transparent 72%),
+        linear-gradient(166deg, #8E6E7E 0%, #5C4A5E 46%, #2E2638 100%); }
+
+    ::selection{ background:rgba(44,74,53,0.26); color:var(--text); }
+
+    @media (prefers-reduced-motion:reduce){
+      .marquee-track{ animation:none; }
+      .pulse-dot{ animation:none; }
+      .btn-primary,.btn-ghost,.btn-oxblood,.card-lift,.arrow{ transition:none; }
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+
+<!-- ===== 1 · STICKY NAV ===== -->
+<header class="nav fixed top-0 inset-x-0 z-50 border-b rule-soft">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 h-[70px] flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-3" aria-label="Overland — home">
+      <!-- vintage rail crest -->
+      <svg width="34" height="34" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <circle cx="20" cy="20" r="18.6" fill="#FBF6EA" stroke="#211B12" stroke-width="1.3"/>
+        <circle cx="20" cy="20" r="15" fill="none" stroke="#2C4A35" stroke-width="0.9"/>
+        <path d="M20 8 L20 32" stroke="#211B12" stroke-width="0.8" opacity="0.35"/>
+        <!-- winged-wheel motif -->
+        <circle cx="20" cy="21.5" r="5.4" fill="none" stroke="#2C4A35" stroke-width="1.4"/>
+        <circle cx="20" cy="21.5" r="1.5" fill="#7E3A2C"/>
+        <path d="M20 16.1V27M16.2 17.7l7.6 7.6M15.5 21.5h9M16.2 25.3l7.6-7.6" stroke="#2C4A35" stroke-width="1"/>
+        <path d="M14.6 14.2c-3.4.3-5.6 1.7-6.8 3.6 2.2.5 4.3.2 6.4-1M25.4 14.2c3.4.3 5.6 1.7 6.8 3.6-2.2.5-4.3.2-6.4-1" fill="#7E3A2C" stroke="#211B12" stroke-width="0.7" stroke-linejoin="round"/>
+      </svg>
+      <span class="display text-[22px] tracking-tight">Overland</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8 text-[14px] text-[color:var(--muted)]">
+      <a href="#journey" class="navlink">The Journey</a>
+      <a href="#route" class="navlink">The Route</a>
+      <a href="#cabins" class="navlink">Cabins</a>
+      <a href="#dates" class="navlink">Dates</a>
+    </nav>
+    <a href="#dates" class="btn-primary inline-flex items-center gap-2 rounded-full font-semibold text-[14px] px-4 py-2">
+      Reserve a cabin
+    </a>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ===== 2 · HERO ===== -->
+<section class="relative overflow-hidden mesh pt-[70px]">
+  <div class="absolute inset-0 dotgrid opacity-[0.55] pointer-events-none"></div>
+  <!-- art-deco sun-ray motif, top-right -->
+  <svg class="absolute -top-10 right-[-40px] sm:right-6 w-[260px] h-[260px] opacity-[0.5] pointer-events-none" viewBox="0 0 200 200" aria-hidden="true">
+    <g stroke="#B8893A" stroke-width="1.1" fill="none">
+      <circle cx="100" cy="100" r="34"/>
+      <circle cx="100" cy="100" r="22"/>
+    </g>
+    <g stroke="#7E3A2C" stroke-width="1.4" stroke-linecap="round">
+      <path d="M100 8V44M100 156V192M8 100H44M156 100H192M35 35l25 25M165 35l-25 25M35 165l25-25M165 165l-25-25"/>
+    </g>
+    <g stroke="#B8893A" stroke-width="1" stroke-linecap="round" opacity="0.8">
+      <path d="M68 16l14 30M132 16l-14 30M16 68l30 14M184 68l-30 14M16 132l30-14M184 132l-30-14M68 184l14-30M132 184l-14-30"/>
+    </g>
+  </svg>
+
+  <div class="relative max-w-[1200px] mx-auto px-5 sm:px-8 pt-14 sm:pt-20 pb-14 sm:pb-20">
+    <!-- pill badge -->
+    <div class="inline-flex items-center gap-2.5 rounded-full border rule bg-[color:var(--surface)] pl-2.5 pr-3.5 py-1.5 mb-8">
+      <span class="pulse-dot"></span>
+      <span class="mono text-[11px] sm:text-[12px] tracking-[0.04em] text-[color:var(--muted)]">The Highland Line · running since 1968</span>
+    </div>
+
+    <h1 class="display text-[clamp(46px,8.4vw,108px)] max-w-[14ch]">
+      Four days to the mountains,<br class="hidden sm:block"/>
+      <em class="halftone">at the speed of a good book.</em>
+    </h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-9 md:gap-12 mt-10 md:mt-14">
+      <div class="md:col-span-6">
+        <p class="serif text-[19px] sm:text-[21px] leading-[1.55] text-[color:var(--text)] max-w-[44ch]">
+          A restored 1968 sleeper train from the grey coast to the blue mountains — three nights of dining cars, moorland windows, and nowhere you have to be.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3 mt-8">
+          <a href="#dates" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full font-semibold px-6 py-3.5 text-[15px]">
+            Reserve a cabin <span class="arrow">→</span>
+          </a>
+          <a href="#route" class="btn-ghost inline-flex items-center justify-center gap-2 rounded-full font-medium px-6 py-3.5 text-[15px]">
+            See the route
+          </a>
+        </div>
+        <div class="flex items-center gap-5 mt-7">
+          <div class="flex -space-x-2">
+            <span class="size-8 rounded-full border-2 border-[color:var(--bg)]" style="background:linear-gradient(140deg,#C99A52,#7E5E40)"></span>
+            <span class="size-8 rounded-full border-2 border-[color:var(--bg)]" style="background:linear-gradient(140deg,#97AB6E,#46583A)"></span>
+            <span class="size-8 rounded-full border-2 border-[color:var(--bg)]" style="background:linear-gradient(140deg,#8A8298,#3A3A4C)"></span>
+          </div>
+          <p class="text-[13px] text-[color:var(--muted)] leading-[1.5]">
+            <span class="mono tnum text-[color:var(--text)]">4.9</span> from <span class="mono tnum text-[color:var(--text)]">2,140</span> travelers since 1968
+          </p>
+        </div>
+      </div>
+
+      <!-- full-bleed destination "photo" -->
+      <div class="md:col-span-6">
+        <div class="photo ph-coast rounded-[20px] border rule aspect-[4/3] w-full">
+          <div class="photo-grain"></div>
+          <div class="photo-frame"></div>
+          <!-- misty coast at dawn -->
+          <div class="absolute inset-0" style="background:radial-gradient(50% 42% at 78% 20%, rgba(255,247,224,0.6), transparent 64%)"></div>
+          <!-- sun disc -->
+          <div class="absolute" style="left:74%; top:16%; width:60px; height:60px; border-radius:999px; background:radial-gradient(circle,#FFF4D6 0%, #F0C97E 56%, rgba(240,201,126,0) 100%)"></div>
+          <svg viewBox="0 0 400 300" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+            <!-- distant headland -->
+            <path d="M0 156 C70 142 130 168 200 152 C270 138 330 162 400 150 L400 200 L0 200 Z" fill="#7E8E86" opacity="0.7"/>
+            <!-- mid coastline -->
+            <path d="M0 196 C90 178 170 210 250 190 C320 174 360 200 400 188 L400 300 L0 300 Z" fill="#6E5E44" opacity="0.85"/>
+            <!-- foreground sea / sand -->
+            <path d="M0 248 C100 234 200 262 300 244 C350 236 380 252 400 246 L400 300 L0 300 Z" fill="#3E2E20"/>
+            <!-- telegraph poles -->
+            <g stroke="#211B12" stroke-width="1.4" opacity="0.55">
+              <path d="M70 250 V214M70 222h-9M70 222h9M70 230h-7M70 230h7"/>
+              <path d="M150 256 V222M150 230h-8M150 230h8"/>
+              <path d="M250 252 V220M250 228h-7M250 228h7"/>
+            </g>
+            <!-- wire -->
+            <path d="M70 214 Q110 224 150 222 Q200 220 250 220" fill="none" stroke="#211B12" stroke-width="0.9" opacity="0.4"/>
+            <!-- gulls -->
+            <g stroke="#FBF6EA" stroke-width="1.4" fill="none" opacity="0.7">
+              <path d="M120 96 q7 -6 14 0 q7 -6 14 0"/>
+              <path d="M180 78 q5 -4 10 0 q5 -4 10 0"/>
+            </g>
+          </svg>
+          <div class="absolute left-4 bottom-4 mono text-[10px] tracking-[0.08em] text-[#FBF6EA]" style="text-shadow:0 1px 4px rgba(0,0,0,0.55)">DEPARTURE — SALTMARSH HALT, DAWN</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- trip-facts strip -->
+    <div class="mt-12 md:mt-16 border-t rule pt-7">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-y-7">
+        <div class="lg:pr-6 lg:border-r rule-soft">
+          <div class="kicker mb-2">Duration</div>
+          <div class="mono tnum text-[20px] sm:text-[22px] text-[color:var(--text)]">4 days</div>
+        </div>
+        <div class="lg:px-6 lg:border-r rule-soft">
+          <div class="kicker mb-2">Onboard</div>
+          <div class="mono tnum text-[20px] sm:text-[22px] text-[color:var(--text)]">3 nights</div>
+        </div>
+        <div class="lg:px-6 lg:border-r rule-soft">
+          <div class="kicker mb-2">Departures</div>
+          <div class="mono tnum text-[20px] sm:text-[22px] text-[color:var(--text)]">2 a week</div>
+        </div>
+        <div class="lg:px-6 lg:border-r rule-soft">
+          <div class="kicker mb-2">Best season</div>
+          <div class="mono tnum text-[20px] sm:text-[22px] text-[color:var(--text)]">Apr–Oct</div>
+        </div>
+        <div class="lg:pl-6">
+          <div class="kicker mb-2">Price from</div>
+          <div class="mono tnum text-[20px] sm:text-[22px] text-[color:var(--accent-2)]">$3,400 pp</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 3 · TRUST BAR ===== -->
+<section class="border-y rule-soft bg-[color:var(--surface-2)]">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-12 sm:py-14">
+    <!-- metric row -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-y-8 mb-11">
+      <div class="md:pr-8 md:border-r rule-soft">
+        <div class="kicker mb-2.5">Running since</div>
+        <div class="display text-[40px] sm:text-[50px] tnum">1968</div>
+        <div class="mono text-[11px] text-[color:var(--faint)] mt-1">fifty-eight unbroken seasons</div>
+      </div>
+      <div class="md:px-8 md:border-r rule-soft">
+        <div class="kicker mb-2.5">Miles of track</div>
+        <div class="display text-[40px] sm:text-[50px] tnum">318</div>
+        <div class="mono text-[11px] text-[color:var(--faint)] mt-1">coast to summit, one line</div>
+      </div>
+      <div class="md:px-8 md:border-r rule-soft">
+        <div class="kicker mb-2.5">Cabins aboard</div>
+        <div class="display text-[40px] sm:text-[50px] tnum">22</div>
+        <div class="mono text-[11px] text-[color:var(--faint)] mt-1">never a crowded carriage</div>
+      </div>
+      <div class="md:pl-8">
+        <div class="kicker mb-2.5">Average rating</div>
+        <div class="display text-[40px] sm:text-[50px] tnum">4.9</div>
+        <div class="mono text-[11px] text-[color:var(--faint)] mt-1">across 2,140 logbook entries</div>
+      </div>
+    </div>
+
+    <!-- press marquee -->
+    <div class="kicker mb-6"><span class="accent-line"></span>As featured in the slow-travel press</div>
+    <div class="marquee-mask overflow-hidden">
+      <div class="marquee-track text-[color:var(--muted)]">
+        <span class="serif italic text-[25px]">Meridian</span>
+        <span class="text-[24px] tracking-tight" style="font-weight:600">The Passage</span>
+        <span class="mono text-[18px] tracking-[0.16em]">OFF&middot;SEASON</span>
+        <span class="serif text-[25px]">Wander Quarterly</span>
+        <span class="text-[24px] tracking-tight" style="font-weight:500">The Pullman Review</span>
+        <span class="serif italic text-[25px]">Northbound</span>
+        <span class="text-[23px] tracking-[0.04em]" style="font-weight:600">Compass &amp; Co</span>
+        <span class="serif text-[24px]">Slow Travel Journal</span>
+        <span aria-hidden="true" class="serif italic text-[25px]">Meridian</span>
+        <span aria-hidden="true" class="text-[24px] tracking-tight" style="font-weight:600">The Passage</span>
+        <span aria-hidden="true" class="mono text-[18px] tracking-[0.16em]">OFF&middot;SEASON</span>
+        <span aria-hidden="true" class="serif text-[25px]">Wander Quarterly</span>
+        <span aria-hidden="true" class="text-[24px] tracking-tight" style="font-weight:500">The Pullman Review</span>
+        <span aria-hidden="true" class="serif italic text-[25px]">Northbound</span>
+        <span aria-hidden="true" class="text-[23px] tracking-[0.04em]" style="font-weight:600">Compass &amp; Co</span>
+        <span aria-hidden="true" class="serif text-[24px]">Slow Travel Journal</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 4 · THE JOURNEY OVERVIEW ===== -->
+<section id="journey" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14 items-start">
+    <div class="md:col-span-5">
+      <div class="kicker mb-5"><span class="accent-line"></span>The journey</div>
+      <h2 class="display text-[clamp(32px,4.6vw,56px)] max-w-[15ch]">
+        The going is the <em class="green">getting there.</em>
+      </h2>
+    </div>
+    <div class="md:col-span-7">
+      <div class="serif text-[17px] sm:text-[18px] text-[color:var(--muted)] leading-[1.62] space-y-4 max-w-[58ch]">
+        <p>The Highland Line was laid in stages between 1889 and 1911 to carry slate, wool, and post inland from the harbour. The last freight ran in 1967. A year later a handful of railway people bought eleven carriages at scrap price, restored them by hand, and ran the first passenger sleeper of the modern line — and we have run it, twice a week, every April to October since.</p>
+        <p>Nothing about this train is in a hurry. The carriages are the originals — brass fittings, marquetry panelling, deep-buttoned banquettes, windows that drop on a leather strap. The dining car still plates dinner on the company china. You are not crossing distance so much as spending it: four unhurried days, three quiet nights, the country unscrolling at the pace it was built for.</p>
+        <p>You board on the coast at dawn and step down four days later in the mountains. In between: a river valley at golden hour, a moor that goes on for an hour at the window, two formal dinners, and the particular contentment of having somewhere to be that is also nowhere at all.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- highlight "photos" -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-12">
+    <!-- the dining car -->
+    <figure class="card-lift rounded-2xl border rule overflow-hidden bg-[color:var(--surface)]">
+      <div class="photo ph-dining aspect-[4/3]">
+        <div class="photo-grain"></div>
+        <div class="photo-frame"></div>
+        <svg viewBox="0 0 320 240" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+          <!-- warm window glow -->
+          <rect x="34" y="40" width="64" height="46" rx="3" fill="#F4C77E" opacity="0.7"/>
+          <rect x="222" y="40" width="64" height="46" rx="3" fill="#F4C77E" opacity="0.7"/>
+          <!-- table -->
+          <rect x="96" y="150" width="128" height="58" rx="2" fill="#F2E2BE" stroke="#211B12" stroke-width="1.3"/>
+          <!-- table lamp -->
+          <path d="M150 150v-22h20v22" fill="none" stroke="#211B12" stroke-width="1.2"/>
+          <ellipse cx="160" cy="118" rx="18" ry="10" fill="#E7B24E" stroke="#211B12" stroke-width="1.2"/>
+          <circle cx="160" cy="124" r="11" fill="#FFF0CC" opacity="0.85"/>
+          <!-- chairs -->
+          <rect x="74" y="158" width="20" height="42" rx="2" fill="#5A2E22" stroke="#211B12" stroke-width="1.1"/>
+          <rect x="226" y="158" width="20" height="42" rx="2" fill="#5A2E22" stroke="#211B12" stroke-width="1.1"/>
+        </svg>
+      </div>
+      <figcaption class="px-3.5 py-2.5 flex items-center justify-between">
+        <span class="text-[13px] font-medium text-[color:var(--text)]">The dining car</span>
+        <span class="mono text-[10px] text-[color:var(--faint)]">CAR No.4</span>
+      </figcaption>
+    </figure>
+    <!-- a cabin -->
+    <figure class="card-lift rounded-2xl border rule overflow-hidden bg-[color:var(--surface)]">
+      <div class="photo ph-cabin aspect-[4/3]">
+        <div class="photo-grain"></div>
+        <div class="photo-frame"></div>
+        <svg viewBox="0 0 320 240" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+          <!-- panelling -->
+          <g stroke="#211B12" stroke-width="0.9" opacity="0.28">
+            <path d="M0 60H320M0 120H320M0 180H320"/>
+          </g>
+          <!-- berth -->
+          <rect x="44" y="138" width="232" height="40" rx="3" fill="#9A8458" stroke="#211B12" stroke-width="1.3"/>
+          <rect x="44" y="118" width="232" height="22" rx="3" fill="#C4B594" stroke="#211B12" stroke-width="1.2"/>
+          <!-- pillow -->
+          <rect x="54" y="122" width="50" height="16" rx="4" fill="#F2E2BE" stroke="#211B12" stroke-width="1"/>
+          <!-- window -->
+          <rect x="92" y="46" width="136" height="56" rx="4" fill="#BBC8C0" stroke="#211B12" stroke-width="1.3"/>
+          <path d="M92 86 C130 78 190 90 228 80 L228 102 L92 102 Z" fill="#7E9A8E"/>
+          <!-- reading lamp -->
+          <circle cx="252" cy="74" r="9" fill="#E7B24E" stroke="#211B12" stroke-width="1.1"/>
+        </svg>
+      </div>
+      <figcaption class="px-3.5 py-2.5 flex items-center justify-between">
+        <span class="text-[13px] font-medium text-[color:var(--text)]">A Twin cabin</span>
+        <span class="mono text-[10px] text-[color:var(--faint)]">SLEEPER</span>
+      </figcaption>
+    </figure>
+    <!-- a window view -->
+    <figure class="card-lift rounded-2xl border rule overflow-hidden bg-[color:var(--surface)]">
+      <div class="photo ph-window aspect-[4/3]">
+        <div class="photo-grain"></div>
+        <div class="photo-frame"></div>
+        <svg viewBox="0 0 320 240" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+          <!-- window frame -->
+          <rect x="30" y="30" width="260" height="180" rx="5" fill="none" stroke="#211B12" stroke-width="2.4" opacity="0.7"/>
+          <!-- moorland hills through glass -->
+          <path d="M30 150 C90 130 150 162 210 142 C250 130 280 150 290 144 L290 210 L30 210 Z" fill="#6E8650"/>
+          <path d="M30 176 C100 160 180 190 260 172 L290 178 L290 210 L30 210 Z" fill="#46583A"/>
+          <circle cx="232" cy="74" r="20" fill="#F4D88E" opacity="0.9"/>
+        </svg>
+      </div>
+      <figcaption class="px-3.5 py-2.5 flex items-center justify-between">
+        <span class="text-[13px] font-medium text-[color:var(--text)]">Hour three, at the window</span>
+        <span class="mono text-[10px] text-[color:var(--faint)]">DAY 2</span>
+      </figcaption>
+    </figure>
+  </div>
+
+  <!-- ── STYLIZED RAIL ROUTE MAP ── -->
+  <div class="mt-12 rounded-[20px] border rule bg-[color:var(--surface)] overflow-hidden">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b rule-soft px-5 sm:px-7 py-4">
+      <div class="kicker"><span class="accent-line"></span>The Highland Line · coast to mountains</div>
+      <div class="mono text-[11px] text-[color:var(--faint)] tnum">318 MILES · 7 STATIONS · GAUGE 4&prime; 8&frac12;&Prime;</div>
+    </div>
+    <div class="relative px-3 sm:px-7 py-9 sm:py-12" style="background:linear-gradient(168deg,#EFE4CF,#E6D8BD)">
+      <div class="absolute inset-0 dotgrid opacity-40 pointer-events-none"></div>
+      <svg viewBox="0 0 1080 280" class="relative block w-full" role="img" aria-label="Stylized route map of the Highland Line, seven numbered stations from the coast to the mountains">
+        <!-- sleeper-tie hatching beneath the line -->
+        <g stroke="#211B12" stroke-width="6" opacity="0.16">
+          <path d="M70 196 70 158M118 196 118 158M166 196 166 158M214 196 214 158M262 196 262 158M310 196 310 158M358 196 358 158M406 196 406 158M454 196 454 158M502 196 502 158M550 196 550 158M598 196 598 158M646 196 646 158M694 196 694 158M742 196 742 158M790 196 790 158M838 196 838 158M886 196 886 158M934 196 934 158M982 196 982 158"/>
+        </g>
+        <!-- twin running rails -->
+        <path d="M60 168 H1020" fill="none" stroke="#211B12" stroke-width="2" opacity="0.55"/>
+        <path d="M60 186 H1020" fill="none" stroke="#211B12" stroke-width="2" opacity="0.55"/>
+        <!-- the route line -->
+        <path d="M60 177 H1020" fill="none" stroke="#2C4A35" stroke-width="3.2"/>
+
+        <!-- terrain silhouettes above the line -->
+        <!-- coast -->
+        <path d="M60 138 q40 -10 80 4 q40 14 80 0 L220 138 Z" fill="#8FA7A2" opacity="0.55"/>
+        <!-- river valley -->
+        <path d="M320 138 q50 -22 100 -8 q50 14 100 -4 L520 138 Z" fill="#97AB6E" opacity="0.55"/>
+        <!-- moor -->
+        <path d="M560 138 q60 -8 120 -2 q40 4 80 6 L760 138 Z" fill="#C29A4E" opacity="0.5"/>
+        <!-- mountains -->
+        <path d="M820 138 l44 -78 l40 56 l34 -44 l46 66 L1020 138 Z" fill="#8A8298" opacity="0.6"/>
+        <path d="M880 138 l38 -58 l36 58 Z" fill="#5E5E72" opacity="0.7"/>
+
+        <!-- a tiny train silhouette on the line -->
+        <g transform="translate(150 152)">
+          <rect x="0" y="0" width="40" height="18" rx="3" fill="#7E3A2C" stroke="#211B12" stroke-width="1.2"/>
+          <rect x="40" y="3" width="22" height="15" rx="2" fill="#211B12"/>
+          <circle cx="10" cy="20" r="3.4" fill="#211B12"/>
+          <circle cx="30" cy="20" r="3.4" fill="#211B12"/>
+          <circle cx="52" cy="20" r="3" fill="#211B12"/>
+          <path d="M44 0 v-8 h5 v8" fill="#211B12"/>
+        </g>
+
+        <!-- stations -->
+        <g class="station" data-x="60" data-label="Saltmarsh Halt" data-mile="000" data-cap="The coast"></g>
+        <g class="station" data-x="220" data-label="Harbour End" data-mile="041" data-cap="Quay &amp; estuary"></g>
+        <g class="station" data-x="400" data-label="Briarford" data-mile="112" data-cap="River valley"></g>
+        <g class="station" data-x="560" data-label="Wych Cross" data-mile="178" data-cap="Moor gateway"></g>
+        <g class="station" data-x="720" data-label="Ravensgill" data-mile="241" data-cap="High moor"></g>
+        <g class="station" data-x="880" data-label="Glas Tarn" data-mile="289" data-cap="Lochside"></g>
+        <g class="station" data-x="1020" data-label="Càrn Mòr" data-mile="318" data-cap="The summit"></g>
+      </svg>
+      <div class="relative flex flex-wrap items-center gap-x-6 gap-y-2 mt-5 mono text-[11px] text-[color:var(--muted)]">
+        <span class="inline-flex items-center gap-2"><span class="inline-block w-3.5 h-[3px]" style="background:var(--accent)"></span>The line</span>
+        <span class="inline-flex items-center gap-2"><span class="inline-block size-2.5 rounded-full border-2" style="border-color:var(--accent-2);background:var(--surface)"></span>Numbered station</span>
+        <span class="inline-flex items-center gap-2"><span class="inline-block size-2.5 rounded-sm" style="background:var(--accent-2)"></span>Boarding &amp; alighting point</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 5 · DAY-BY-DAY ITINERARY ===== -->
+<section class="border-y rule-soft bg-[color:var(--surface-2)]">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="max-w-[58ch]">
+      <div class="kicker mb-5"><span class="accent-line"></span>Day by day</div>
+      <h2 class="display text-[clamp(32px,4.8vw,58px)]">
+        Four legs, four dinners, <em class="ink">one line.</em>
+      </h2>
+      <p class="serif text-[18px] text-[color:var(--muted)] mt-5 leading-[1.55]">
+        The Highland Line climbs 318 miles in four legs — coast, valley, moor, mountain. Each day ends where the next begins, and each evening at a table set with the company silver.
+      </p>
+    </div>
+
+    <!-- day blocks on a connecting rail line -->
+    <div class="relative mt-14 pl-9 sm:pl-14">
+      <!-- vertical connecting line with sleeper hatching -->
+      <div class="absolute top-2 bottom-2 left-[14px] sm:left-[22px] w-[3px]" style="background:var(--accent)"></div>
+      <div class="absolute top-2 bottom-2 left-[6px] sm:left-[14px] w-[19px] pointer-events-none" style="background-image:repeating-linear-gradient(180deg, rgba(33,27,18,0.22) 0 5px, transparent 5px 16px)"></div>
+
+      <!-- DAY 1 -->
+      <article class="relative pb-12">
+        <span class="absolute -left-[34px] sm:-left-[42px] top-1 grid place-items-center size-[26px] rounded-full bg-[color:var(--accent-2)] border-2" style="border-color:var(--bg);box-shadow:0 0 0 4px var(--surface-2)">
+          <span class="mono text-[11px] font-medium text-[#F3EBDD]">1</span>
+        </span>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start">
+          <div class="lg:col-span-8">
+            <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <h3 class="display text-[26px] sm:text-[30px]">The coast &amp; the harbour</h3>
+              <span class="mono text-[12px] text-[color:var(--faint)]">Saltmarsh Halt → Briarford</span>
+            </div>
+            <p class="text-[15px] text-[color:var(--muted)] mt-2 leading-[1.6] max-w-[58ch]">
+              Board at first light on the salt-grey coast and run the estuary line south past the old quay at Harbour End. By afternoon the sea is behind you and the carriages are climbing into the first soft folds of the river country.
+            </p>
+            <p class="text-[14px] text-[color:var(--muted)] mt-3 leading-[1.6]">
+              <span class="serif italic text-[color:var(--accent-2)]">Dinner —</span> a welcome supper of estuary mussels, hogget, and a damson tart, as the light goes off the water.
+            </p>
+          </div>
+          <div class="lg:col-span-4 ticket rounded-xl px-4 py-3.5">
+            <div class="kicker mb-2.5">Leg 1</div>
+            <div class="flex items-center justify-between text-[13px]">
+              <span class="text-[color:var(--muted)]">Distance</span>
+              <span class="mono tnum text-[color:var(--text)]">112 mi</span>
+            </div>
+            <div class="flex items-center justify-between text-[13px] mt-1.5">
+              <span class="text-[color:var(--muted)]">Running time</span>
+              <span class="mono tnum text-[color:var(--text)]">6h 20m</span>
+            </div>
+            <div class="flex items-center justify-between text-[13px] mt-1.5">
+              <span class="text-[color:var(--muted)]">Scenery</span>
+              <span class="mono text-[color:var(--text)]">Coast</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- DAY 2 -->
+      <article class="relative pb-12">
+        <span class="absolute -left-[34px] sm:-left-[42px] top-1 grid place-items-center size-[26px] rounded-full bg-[color:var(--accent-2)] border-2" style="border-color:var(--bg);box-shadow:0 0 0 4px var(--surface-2)">
+          <span class="mono text-[11px] font-medium text-[#F3EBDD]">2</span>
+        </span>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start">
+          <div class="lg:col-span-8">
+            <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <h3 class="display text-[26px] sm:text-[30px]">The river valley</h3>
+              <span class="mono text-[12px] text-[color:var(--faint)]">Briarford → Wych Cross</span>
+            </div>
+            <p class="text-[15px] text-[color:var(--muted)] mt-2 leading-[1.6] max-w-[58ch]">
+              The slowest, greenest leg. The line follows the river the whole way — eleven viaducts, a beech gorge, water meadows full of light. We pause an hour at Briarford for those who'd like to walk the old packhorse bridge.
+            </p>
+            <p class="text-[14px] text-[color:var(--muted)] mt-3 leading-[1.6]">
+              <span class="serif italic text-[color:var(--accent-2)]">Dinner —</span> the formal evening: river trout, a saddle of venison, and the dining car's pressed-apple parfait.
+            </p>
+          </div>
+          <div class="lg:col-span-4 ticket rounded-xl px-4 py-3.5">
+            <div class="kicker mb-2.5">Leg 2</div>
+            <div class="flex items-center justify-between text-[13px]">
+              <span class="text-[color:var(--muted)]">Distance</span>
+              <span class="mono tnum text-[color:var(--text)]">66 mi</span>
+            </div>
+            <div class="flex items-center justify-between text-[13px] mt-1.5">
+              <span class="text-[color:var(--muted)]">Running time</span>
+              <span class="mono tnum text-[color:var(--text)]">5h 05m</span>
+            </div>
+            <div class="flex items-center justify-between text-[13px] mt-1.5">
+              <span class="text-[color:var(--muted)]">Scenery</span>
+              <span class="mono text-[color:var(--text)]">River valley</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- DAY 3 -->
+      <article class="relative pb-12">
+        <span class="absolute -left-[34px] sm:-left-[42px] top-1 grid place-items-center size-[26px] rounded-full bg-[color:var(--accent-2)] border-2" style="border-color:var(--bg);box-shadow:0 0 0 4px var(--surface-2)">
+          <span class="mono text-[11px] font-medium text-[#F3EBDD]">3</span>
+        </span>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start">
+          <div class="lg:col-span-8">
+            <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <h3 class="display text-[26px] sm:text-[30px]">The high moor</h3>
+              <span class="mono text-[12px] text-[color:var(--faint)]">Wych Cross → Glas Tarn</span>
+            </div>
+            <p class="text-[15px] text-[color:var(--muted)] mt-2 leading-[1.6] max-w-[58ch]">
+              The line breaks the tree line at Wych Cross and crosses open moor for the better part of a day — heather, drystone, weather you can watch arrive from miles off. Tea is taken in the observation car as Ravensgill summit comes up.
+            </p>
+            <p class="text-[14px] text-[color:var(--muted)] mt-3 leading-[1.6]">
+              <span class="serif italic text-[color:var(--accent-2)]">Dinner —</span> a moorland table: smoked trout, slow-roast mutton, heather honey and oatcakes by the lochside.
+            </p>
+          </div>
+          <div class="lg:col-span-4 ticket rounded-xl px-4 py-3.5">
+            <div class="kicker mb-2.5">Leg 3</div>
+            <div class="flex items-center justify-between text-[13px]">
+              <span class="text-[color:var(--muted)]">Distance</span>
+              <span class="mono tnum text-[color:var(--text)]">111 mi</span>
+            </div>
+            <div class="flex items-center justify-between text-[13px] mt-1.5">
+              <span class="text-[color:var(--muted)]">Running time</span>
+              <span class="mono tnum text-[color:var(--text)]">7h 10m</span>
+            </div>
+            <div class="flex items-center justify-between text-[13px] mt-1.5">
+              <span class="text-[color:var(--muted)]">Scenery</span>
+              <span class="mono text-[color:var(--text)]">Open moor</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- DAY 4 -->
+      <article class="relative">
+        <span class="absolute -left-[34px] sm:-left-[42px] top-1 grid place-items-center size-[26px] rounded-full bg-[color:var(--accent)] border-2" style="border-color:var(--bg);box-shadow:0 0 0 4px var(--surface-2)">
+          <span class="mono text-[11px] font-medium text-[#F3EBDD]">4</span>
+        </span>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start">
+          <div class="lg:col-span-8">
+            <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <h3 class="display text-[26px] sm:text-[30px]">The mountains</h3>
+              <span class="mono text-[12px] text-[color:var(--faint)]">Glas Tarn → Càrn Mòr</span>
+            </div>
+            <p class="text-[15px] text-[color:var(--muted)] mt-2 leading-[1.6] max-w-[58ch]">
+              The final climb. The line lifts 1,400 feet in under forty miles — switchbacks, a horseshoe curve, the blue ranges stacking up ahead. Breakfast is served as the train works the grade, and you step down at Càrn Mòr by early afternoon.
+            </p>
+            <p class="text-[14px] text-[color:var(--muted)] mt-3 leading-[1.6]">
+              <span class="serif italic text-[color:var(--accent)]">Lunch —</span> a parting plate at the summit halt: a hot game pie, mountain cheeses, and a last pot of the dining-car tea.
+            </p>
+          </div>
+          <div class="lg:col-span-4 ticket rounded-xl px-4 py-3.5">
+            <div class="kicker mb-2.5">Leg 4</div>
+            <div class="flex items-center justify-between text-[13px]">
+              <span class="text-[color:var(--muted)]">Distance</span>
+              <span class="mono tnum text-[color:var(--text)]">29 mi</span>
+            </div>
+            <div class="flex items-center justify-between text-[13px] mt-1.5">
+              <span class="text-[color:var(--muted)]">Running time</span>
+              <span class="mono tnum text-[color:var(--text)]">3h 40m</span>
+            </div>
+            <div class="flex items-center justify-between text-[13px] mt-1.5">
+              <span class="text-[color:var(--muted)]">Scenery</span>
+              <span class="mono text-[color:var(--text)]">Mountains</span>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 6 · WHAT'S INCLUDED ===== -->
+<section class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="max-w-[56ch]">
+    <div class="kicker mb-5"><span class="accent-line"></span>The fare</div>
+    <h2 class="display text-[clamp(32px,4.6vw,56px)]">
+      What the ticket carries — and what it doesn't.
+    </h2>
+    <p class="serif text-[18px] text-[color:var(--muted)] mt-5 leading-[1.55]">
+      One fare covers the whole four days end to end. We keep the list of what it doesn't cover short, and honest.
+    </p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-12">
+    <!-- included -->
+    <div class="rounded-2xl border rule bg-[color:var(--surface)] p-7 sm:p-8">
+      <div class="flex items-center gap-2.5 mb-6">
+        <span class="grid place-items-center size-7 rounded-full" style="background:var(--accent)">
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 7.4 L6 10 L11 4" fill="none" stroke="#F3EBDD" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <h3 class="serif text-[20px] font-semibold">Included in your fare</h3>
+      </div>
+      <ul class="space-y-3.5">
+        <li class="flex gap-3 text-[15px] text-[color:var(--muted)]">
+          <span class="mt-2 size-1.5 rounded-full shrink-0" style="background:var(--accent)"></span>
+          <span>Three nights in your chosen sleeper cabin, made up nightly by your steward.</span>
+        </li>
+        <li class="flex gap-3 text-[15px] text-[color:var(--muted)]">
+          <span class="mt-2 size-1.5 rounded-full shrink-0" style="background:var(--accent)"></span>
+          <span>All meals aboard — three dining-car dinners, four breakfasts, daily afternoon tea.</span>
+        </li>
+        <li class="flex gap-3 text-[15px] text-[color:var(--muted)]">
+          <span class="mt-2 size-1.5 rounded-full shrink-0" style="background:var(--accent)"></span>
+          <span>House wines, ales and spirits with dinner; tea, coffee and the bar all day.</span>
+        </li>
+        <li class="flex gap-3 text-[15px] text-[color:var(--muted)]">
+          <span class="mt-2 size-1.5 rounded-full shrink-0" style="background:var(--accent)"></span>
+          <span>Guided walks at Briarford and Ravensgill, led by the line's resident naturalist.</span>
+        </li>
+        <li class="flex gap-3 text-[15px] text-[color:var(--muted)]">
+          <span class="mt-2 size-1.5 rounded-full shrink-0" style="background:var(--accent)"></span>
+          <span>Use of the observation car, the library carriage, and all gratuities to crew.</span>
+        </li>
+        <li class="flex gap-3 text-[15px] text-[color:var(--muted)]">
+          <span class="mt-2 size-1.5 rounded-full shrink-0" style="background:var(--accent)"></span>
+          <span>Porterage of luggage at Saltmarsh Halt and Càrn Mòr.</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- not included -->
+    <div class="rounded-2xl border rule bg-[color:var(--surface-2)] p-7 sm:p-8">
+      <div class="flex items-center gap-2.5 mb-6">
+        <span class="grid place-items-center size-7 rounded-full border" style="border-color:var(--accent-2)">
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M4 4 L10 10 M10 4 L4 10" stroke="#7E3A2C" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </span>
+        <h3 class="serif text-[20px] font-semibold">Not included</h3>
+      </div>
+      <ul class="space-y-3.5">
+        <li class="flex gap-3 text-[15px] text-[color:var(--muted)]">
+          <span class="mt-2 size-1.5 rounded-full shrink-0" style="background:var(--accent-2)"></span>
+          <span>Travel to Saltmarsh Halt and onward from Càrn Mòr — our office is glad to advise.</span>
+        </li>
+        <li class="flex gap-3 text-[15px] text-[color:var(--muted)]">
+          <span class="mt-2 size-1.5 rounded-full shrink-0" style="background:var(--accent-2)"></span>
+          <span>The night before departure — we suggest a coastal inn near the Halt.</span>
+        </li>
+        <li class="flex gap-3 text-[15px] text-[color:var(--muted)]">
+          <span class="mt-2 size-1.5 rounded-full shrink-0" style="background:var(--accent-2)"></span>
+          <span>Champagne, vintage bottles and the reserve cellar list (a small supplement).</span>
+        </li>
+        <li class="flex gap-3 text-[15px] text-[color:var(--muted)]">
+          <span class="mt-2 size-1.5 rounded-full shrink-0" style="background:var(--accent-2)"></span>
+          <span>Travel insurance, which we ask every traveler to hold before boarding.</span>
+        </li>
+        <li class="flex gap-3 text-[15px] text-[color:var(--muted)]">
+          <span class="mt-2 size-1.5 rounded-full shrink-0" style="background:var(--accent-2)"></span>
+          <span>Personal items from the gift carriage and the company's bound route maps.</span>
+        </li>
+        <li class="flex gap-3 text-[15px] text-[color:var(--muted)]">
+          <span class="mt-2 size-1.5 rounded-full shrink-0" style="background:var(--accent-2)"></span>
+          <span>A second helping of moorland air. That part is regrettably free.</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 7 · WHERE YOU'LL STAY — THE CABINS ===== -->
+<section id="cabins" class="border-y rule-soft bg-[color:var(--surface-2)]">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-12">
+      <div class="max-w-[52ch]">
+        <div class="kicker mb-5"><span class="accent-line"></span>Where you'll sleep</div>
+        <h2 class="display text-[clamp(32px,4.8vw,58px)]">
+          Twenty-two cabins. <em class="ink">Three ways to wake up.</em>
+        </h2>
+      </div>
+      <p class="mono text-[12px] text-[color:var(--faint)] sm:text-right leading-relaxed">
+        all cabins en-suite<br/>restored 1968 carriages
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <!-- TWIN -->
+      <div class="card-lift rounded-2xl border rule bg-[color:var(--surface)] overflow-hidden flex flex-col">
+        <div class="photo ph-cabin aspect-[16/10]">
+          <div class="photo-grain"></div>
+          <div class="photo-frame"></div>
+          <svg viewBox="0 0 360 225" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+            <rect x="44" y="40" width="120" height="52" rx="4" fill="#BBC8C0" stroke="#211B12" stroke-width="1.3"/>
+            <path d="M44 76 q30 -8 60 0 q30 8 60 -2 L164 92 L44 92 Z" fill="#7E9A8E"/>
+            <rect x="40" y="150" width="280" height="34" rx="3" fill="#9A8458" stroke="#211B12" stroke-width="1.2"/>
+            <rect x="40" y="134" width="280" height="18" rx="3" fill="#C4B594" stroke="#211B12" stroke-width="1.1"/>
+          </svg>
+          <span class="absolute top-3 left-3 mono text-[10px] tracking-[0.08em] bg-[#211B12]/80 text-[#F3EBDD] rounded-full px-2.5 py-1">TIER 01</span>
+        </div>
+        <div class="p-6 sm:p-7 flex flex-col flex-1">
+          <h3 class="display text-[24px]">The Twin</h3>
+          <p class="text-[14px] text-[color:var(--muted)] mt-2 leading-[1.6]">
+            The original sleeper berth, snug and beautifully made — the way the line has run since 1968. Best value, and a favourite of returning travelers.
+          </p>
+          <dl class="mt-5 space-y-2.5 text-[13px] border-t rule-soft pt-5">
+            <div class="flex justify-between gap-3">
+              <dt class="text-[color:var(--faint)]">Beds</dt>
+              <dd class="mono text-[color:var(--text)]">2 lower berths</dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="text-[color:var(--faint)]">Cabin size</dt>
+              <dd class="mono tnum text-[color:var(--text)]">38 sq ft</dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="text-[color:var(--faint)]">Window</dt>
+              <dd class="mono text-[color:var(--text)]">One, drop-sash</dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="text-[color:var(--faint)]">En-suite</dt>
+              <dd class="mono text-[color:var(--text)]">Shower &amp; basin</dd>
+            </div>
+          </dl>
+          <p class="text-[13px] text-[color:var(--muted)] mt-5 leading-[1.55]">
+            Marquetry panelling, a reading lamp at each berth, fresh linen turned down nightly, and a fold-away writing shelf below the window.
+          </p>
+          <div class="mt-auto pt-6">
+            <div class="flex items-baseline gap-1.5">
+              <span class="mono tnum text-[26px] text-[color:var(--text)]">$3,400</span>
+              <span class="mono text-[12px] text-[color:var(--faint)]">from / pp</span>
+            </div>
+            <a href="#dates" class="btn-ghost mt-3.5 w-full inline-flex items-center justify-center gap-2 rounded-full font-medium px-5 py-3 text-[14px]">
+              Choose the Twin <span class="arrow">→</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- CABIN SUITE -->
+      <div class="card-lift rounded-2xl border bg-[color:var(--surface)] overflow-hidden flex flex-col" style="border-color:var(--accent)">
+        <div class="photo ph-dining aspect-[16/10]">
+          <div class="photo-grain"></div>
+          <div class="photo-frame"></div>
+          <svg viewBox="0 0 360 225" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+            <rect x="44" y="36" width="150" height="58" rx="4" fill="#F4C77E" stroke="#211B12" stroke-width="1.3" opacity="0.85"/>
+            <rect x="40" y="150" width="200" height="36" rx="3" fill="#9A8458" stroke="#211B12" stroke-width="1.2"/>
+            <rect x="40" y="132" width="200" height="20" rx="3" fill="#C4B594" stroke="#211B12" stroke-width="1.1"/>
+            <rect x="256" y="120" width="64" height="66" rx="3" fill="#5A2E22" stroke="#211B12" stroke-width="1.2"/>
+            <circle cx="288" cy="150" r="13" fill="#E7B24E" stroke="#211B12" stroke-width="1.1"/>
+          </svg>
+          <span class="absolute top-3 left-3 mono text-[10px] tracking-[0.08em] text-[#F3EBDD] rounded-full px-2.5 py-1" style="background:var(--accent)">TIER 02 · MOST CHOSEN</span>
+        </div>
+        <div class="p-6 sm:p-7 flex flex-col flex-1">
+          <h3 class="display text-[24px]">The Cabin Suite</h3>
+          <p class="text-[14px] text-[color:var(--muted)] mt-2 leading-[1.6]">
+            A daytime sitting room that a steward converts to a double bedroom each night — the room two-thirds of our travelers book, and the easy choice for a couple.
+          </p>
+          <dl class="mt-5 space-y-2.5 text-[13px] border-t rule-soft pt-5">
+            <div class="flex justify-between gap-3">
+              <dt class="text-[color:var(--faint)]">Beds</dt>
+              <dd class="mono text-[color:var(--text)]">1 double, convertible</dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="text-[color:var(--faint)]">Cabin size</dt>
+              <dd class="mono tnum text-[color:var(--text)]">62 sq ft</dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="text-[color:var(--faint)]">Window</dt>
+              <dd class="mono text-[color:var(--text)]">Two, picture</dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="text-[color:var(--faint)]">En-suite</dt>
+              <dd class="mono text-[color:var(--text)]">Shower, basin, WC</dd>
+            </div>
+          </dl>
+          <p class="text-[13px] text-[color:var(--muted)] mt-5 leading-[1.55]">
+            Two armchairs and a folding table for breakfast in the cabin, a brass-framed mirror, a private wardrobe, and morning coffee brought to your door.
+          </p>
+          <div class="mt-auto pt-6">
+            <div class="flex items-baseline gap-1.5">
+              <span class="mono tnum text-[26px] text-[color:var(--text)]">$4,600</span>
+              <span class="mono text-[12px] text-[color:var(--faint)]">from / pp</span>
+            </div>
+            <a href="#dates" class="btn-primary mt-3.5 w-full inline-flex items-center justify-center gap-2 rounded-full font-semibold px-5 py-3 text-[14px]">
+              Choose the Suite <span class="arrow">→</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- OBSERVATION SUITE -->
+      <div class="card-lift rounded-2xl border rule bg-[color:var(--surface)] overflow-hidden flex flex-col">
+        <div class="photo ph-mountain aspect-[16/10]">
+          <div class="photo-grain"></div>
+          <div class="photo-frame"></div>
+          <svg viewBox="0 0 360 225" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+            <!-- wraparound window with mountains -->
+            <rect x="30" y="30" width="300" height="96" rx="5" fill="#B7A9C0" stroke="#211B12" stroke-width="1.4"/>
+            <path d="M30 110 l60 -52 l50 40 l44 -30 l60 50 L344 126 L30 126 Z" fill="#5E5E72"/>
+            <path d="M30 76 v50 M120 30 v96 M220 30 v96 M330 76 v50" stroke="#211B12" stroke-width="1.1" opacity="0.5"/>
+            <rect x="40" y="158" width="240" height="34" rx="3" fill="#9A8458" stroke="#211B12" stroke-width="1.2"/>
+            <rect x="40" y="142" width="240" height="18" rx="3" fill="#C4B594" stroke="#211B12" stroke-width="1.1"/>
+          </svg>
+          <span class="absolute top-3 left-3 mono text-[10px] tracking-[0.08em] rounded-full px-2.5 py-1" style="background:var(--accent-2);color:#F3EBDD">TIER 03 · TWO ONLY</span>
+        </div>
+        <div class="p-6 sm:p-7 flex flex-col flex-1">
+          <h3 class="display text-[24px]">The Observation Suite</h3>
+          <p class="text-[14px] text-[color:var(--muted)] mt-2 leading-[1.6]">
+            The two end cabins of the rear carriage, with a private curved bay window over the receding track. Only two exist on the train; they are usually first to go.
+          </p>
+          <dl class="mt-5 space-y-2.5 text-[13px] border-t rule-soft pt-5">
+            <div class="flex justify-between gap-3">
+              <dt class="text-[color:var(--faint)]">Beds</dt>
+              <dd class="mono text-[color:var(--text)]">1 double, fixed</dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="text-[color:var(--faint)]">Cabin size</dt>
+              <dd class="mono tnum text-[color:var(--text)]">94 sq ft</dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="text-[color:var(--faint)]">Window</dt>
+              <dd class="mono text-[color:var(--text)]">Curved rear bay</dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="text-[color:var(--faint)]">En-suite</dt>
+              <dd class="mono text-[color:var(--text)]">Full marble bath</dd>
+            </div>
+          </dl>
+          <p class="text-[13px] text-[color:var(--muted)] mt-5 leading-[1.55]">
+            A private daybed in the bay, a decanter set, a writing desk, the company's library shelf restocked each trip, and your steward on call by bell.
+          </p>
+          <div class="mt-auto pt-6">
+            <div class="flex items-baseline gap-1.5">
+              <span class="mono tnum text-[26px] text-[color:var(--text)]">$6,800</span>
+              <span class="mono text-[12px] text-[color:var(--faint)]">from / pp</span>
+            </div>
+            <a href="#dates" class="btn-ghost mt-3.5 w-full inline-flex items-center justify-center gap-2 rounded-full font-medium px-5 py-3 text-[14px]">
+              Choose the Observation <span class="arrow">→</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 8 · THE CREW ===== -->
+<section class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14 items-start">
+    <div class="md:col-span-5">
+      <div class="kicker mb-5"><span class="accent-line"></span>Aboard with you</div>
+      <h2 class="display text-[clamp(32px,4.6vw,56px)] max-w-[14ch]">
+        A crew of <em class="green">nine.</em> Most of them, lifers.
+      </h2>
+      <p class="serif text-[17px] text-[color:var(--muted)] mt-5 leading-[1.6] max-w-[42ch]">
+        The Highland Line is run by people who have given it decades. Three of them you will come to know by name.
+      </p>
+    </div>
+    <div class="md:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <!-- crew 1 -->
+      <div class="card-lift rounded-2xl border rule bg-[color:var(--surface)] overflow-hidden">
+        <div class="photo ph-train aspect-[4/5]">
+          <div class="photo-grain"></div>
+          <div class="photo-frame"></div>
+          <svg viewBox="0 0 200 250" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+            <circle cx="100" cy="96" r="44" fill="#6E5232" opacity="0.7"/>
+            <path d="M40 250 C40 188 64 158 100 158 C136 158 160 188 160 250 Z" fill="#3E2E1E" opacity="0.8"/>
+            <path d="M70 86 a30 16 0 0 1 60 0 Z" fill="#211B12"/>
+            <rect x="68" y="84" width="64" height="9" rx="3" fill="#211B12"/>
+          </svg>
+        </div>
+        <div class="p-5">
+          <div class="kicker text-[10px] mb-1.5" style="color:var(--accent-2)">Train manager</div>
+          <h3 class="serif text-[19px] font-semibold">Eleanor Cray</h3>
+          <p class="text-[13px] text-[color:var(--muted)] mt-2 leading-[1.55]">
+            Runs the train end to end and knows every passing loop by heart. Joined as a steward at twenty.
+          </p>
+          <p class="mono text-[11px] text-[color:var(--faint)] mt-3 tnum">31 years aboard</p>
+        </div>
+      </div>
+      <!-- crew 2 -->
+      <div class="card-lift rounded-2xl border rule bg-[color:var(--surface)] overflow-hidden">
+        <div class="photo ph-dining aspect-[4/5]">
+          <div class="photo-grain"></div>
+          <div class="photo-frame"></div>
+          <svg viewBox="0 0 200 250" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+            <circle cx="100" cy="96" r="44" fill="#8E5A36" opacity="0.7"/>
+            <path d="M40 250 C40 188 64 158 100 158 C136 158 160 188 160 250 Z" fill="#5A2E22" opacity="0.85"/>
+            <path d="M74 70 q26 -24 52 0 l-4 18 l-44 0 Z" fill="#F2E2BE" stroke="#211B12" stroke-width="1.2"/>
+          </svg>
+        </div>
+        <div class="p-5">
+          <div class="kicker text-[10px] mb-1.5" style="color:var(--accent-2)">Head chef</div>
+          <h3 class="serif text-[19px] font-semibold">Tomás Bramwell</h3>
+          <p class="text-[13px] text-[color:var(--muted)] mt-2 leading-[1.55]">
+            Cooks four dinners a week from a galley the size of a cabin, sourcing from farms along the line.
+          </p>
+          <p class="mono text-[11px] text-[color:var(--faint)] mt-3 tnum">14 years aboard</p>
+        </div>
+      </div>
+      <!-- crew 3 -->
+      <div class="card-lift rounded-2xl border rule bg-[color:var(--surface)] overflow-hidden">
+        <div class="photo ph-cabin aspect-[4/5]">
+          <div class="photo-grain"></div>
+          <div class="photo-frame"></div>
+          <svg viewBox="0 0 200 250" preserveAspectRatio="none" class="absolute inset-0 w-full h-full" aria-hidden="true">
+            <circle cx="100" cy="96" r="44" fill="#9A8458" opacity="0.7"/>
+            <path d="M40 250 C40 188 64 158 100 158 C136 158 160 188 160 250 Z" fill="#5E4E34" opacity="0.85"/>
+            <rect x="76" y="118" width="48" height="14" rx="3" fill="#2C4A35"/>
+          </svg>
+        </div>
+        <div class="p-5">
+          <div class="kicker text-[10px] mb-1.5" style="color:var(--accent-2)">Cabin steward</div>
+          <h3 class="serif text-[19px] font-semibold">Marisol Vance</h3>
+          <p class="text-[13px] text-[color:var(--muted)] mt-2 leading-[1.55]">
+            Looks after the sleeper carriages — turndown, morning coffee, and remembering how you take your tea.
+          </p>
+          <p class="mono text-[11px] text-[color:var(--faint)] mt-3 tnum">9 years aboard</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 9 · DEPARTURES + PRICING ===== -->
+<section id="dates" class="border-y rule-soft bg-[color:var(--surface-2)]">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-12">
+      <div class="max-w-[52ch]">
+        <div class="kicker mb-5"><span class="accent-line"></span>Departures &amp; pricing</div>
+        <h2 class="display text-[clamp(32px,4.8vw,58px)]">
+          The 2027 timetable.
+        </h2>
+        <p class="serif text-[18px] text-[color:var(--muted)] mt-5 leading-[1.55]">
+          The Highland Line runs twice a week, April through October — Tuesdays and Saturdays from Saltmarsh Halt. Prices are per person, Twin cabin, two sharing.
+        </p>
+      </div>
+      <div class="inline-flex items-center gap-2.5 rounded-full border rule bg-[color:var(--surface)] px-3.5 py-2">
+        <span class="pulse-dot"></span>
+        <span class="mono text-[11px] tracking-[0.04em] text-[color:var(--muted)]">3 departures filling fast</span>
+      </div>
+    </div>
+
+    <!-- ticket-stub departures table -->
+    <div class="ticket rounded-2xl overflow-hidden">
+      <!-- perforation stripe down the date column -->
+      <div class="perf hidden sm:block" style="left:170px"></div>
+      <div class="notch hidden sm:block" style="left:161px;top:-9px"></div>
+      <div class="notch hidden sm:block" style="left:161px;bottom:-9px"></div>
+
+      <!-- header row -->
+      <div class="grid grid-cols-[1fr_1fr_1fr] sm:grid-cols-[170px_1fr_1fr_1fr_auto] gap-x-3 px-5 sm:px-7 py-3.5 border-b rule bg-[color:var(--surface-2)]">
+        <div class="kicker">Departs</div>
+        <div class="kicker hidden sm:block">Season</div>
+        <div class="kicker">From / pp</div>
+        <div class="kicker">Availability</div>
+        <div class="kicker hidden sm:block text-right">&nbsp;</div>
+      </div>
+
+      <!-- row -->
+      <div class="grid grid-cols-[1fr_1fr_1fr] sm:grid-cols-[170px_1fr_1fr_1fr_auto] gap-x-3 items-center px-5 sm:px-7 py-4 border-b rule-soft">
+        <div>
+          <div class="mono tnum text-[15px] text-[color:var(--text)]">Apr 13</div>
+          <div class="mono text-[11px] text-[color:var(--faint)]">TUE · 2027</div>
+        </div>
+        <div class="hidden sm:block text-[14px] text-[color:var(--muted)]">Early spring</div>
+        <div class="mono tnum text-[15px] text-[color:var(--text)]">$3,400</div>
+        <div class="flex items-center gap-2 text-[13px] text-[color:var(--muted)]"><span class="size-2 rounded-full" style="background:var(--accent)"></span>Open</div>
+        <div class="hidden sm:block text-right"><a href="#final" class="navlink text-[13px] font-medium text-[color:var(--accent-2)]">Reserve</a></div>
+      </div>
+      <!-- row -->
+      <div class="grid grid-cols-[1fr_1fr_1fr] sm:grid-cols-[170px_1fr_1fr_1fr_auto] gap-x-3 items-center px-5 sm:px-7 py-4 border-b rule-soft">
+        <div>
+          <div class="mono tnum text-[15px] text-[color:var(--text)]">May 04</div>
+          <div class="mono text-[11px] text-[color:var(--faint)]">TUE · 2027</div>
+        </div>
+        <div class="hidden sm:block text-[14px] text-[color:var(--muted)]">Late spring</div>
+        <div class="mono tnum text-[15px] text-[color:var(--text)]">$3,600</div>
+        <div class="flex items-center gap-2 text-[13px] text-[color:var(--accent-2)]"><span class="pulse-dot"></span>4 cabins left</div>
+        <div class="hidden sm:block text-right"><a href="#final" class="navlink text-[13px] font-medium text-[color:var(--accent-2)]">Reserve</a></div>
+      </div>
+      <!-- row -->
+      <div class="grid grid-cols-[1fr_1fr_1fr] sm:grid-cols-[170px_1fr_1fr_1fr_auto] gap-x-3 items-center px-5 sm:px-7 py-4 border-b rule-soft">
+        <div>
+          <div class="mono tnum text-[15px] text-[color:var(--text)]">Jun 12</div>
+          <div class="mono text-[11px] text-[color:var(--faint)]">SAT · 2027</div>
+        </div>
+        <div class="hidden sm:block text-[14px] text-[color:var(--muted)]">Midsummer</div>
+        <div class="mono tnum text-[15px] text-[color:var(--text)]">$4,100</div>
+        <div class="flex items-center gap-2 text-[13px] text-[color:var(--accent-2)]"><span class="pulse-dot"></span>2 cabins left</div>
+        <div class="hidden sm:block text-right"><a href="#final" class="navlink text-[13px] font-medium text-[color:var(--accent-2)]">Reserve</a></div>
+      </div>
+      <!-- row -->
+      <div class="grid grid-cols-[1fr_1fr_1fr] sm:grid-cols-[170px_1fr_1fr_1fr_auto] gap-x-3 items-center px-5 sm:px-7 py-4 border-b rule-soft">
+        <div>
+          <div class="mono tnum text-[15px] text-[color:var(--text)]">Jul 17</div>
+          <div class="mono text-[11px] text-[color:var(--faint)]">SAT · 2027</div>
+        </div>
+        <div class="hidden sm:block text-[14px] text-[color:var(--muted)]">High summer</div>
+        <div class="mono tnum text-[15px] text-[color:var(--text)]">$4,100</div>
+        <div class="flex items-center gap-2 text-[13px] text-[color:var(--faint)]"><span class="size-2 rounded-full border" style="border-color:var(--faint)"></span>Waitlist only</div>
+        <div class="hidden sm:block text-right"><a href="#final" class="navlink text-[13px] font-medium text-[color:var(--muted)]">Join waitlist</a></div>
+      </div>
+      <!-- row -->
+      <div class="grid grid-cols-[1fr_1fr_1fr] sm:grid-cols-[170px_1fr_1fr_1fr_auto] gap-x-3 items-center px-5 sm:px-7 py-4 border-b rule-soft">
+        <div>
+          <div class="mono tnum text-[15px] text-[color:var(--text)]">Sep 07</div>
+          <div class="mono text-[11px] text-[color:var(--faint)]">TUE · 2027</div>
+        </div>
+        <div class="hidden sm:block text-[14px] text-[color:var(--muted)]">Early autumn</div>
+        <div class="mono tnum text-[15px] text-[color:var(--text)]">$3,900</div>
+        <div class="flex items-center gap-2 text-[13px] text-[color:var(--accent-2)]"><span class="pulse-dot"></span>5 cabins left</div>
+        <div class="hidden sm:block text-right"><a href="#final" class="navlink text-[13px] font-medium text-[color:var(--accent-2)]">Reserve</a></div>
+      </div>
+      <!-- row -->
+      <div class="grid grid-cols-[1fr_1fr_1fr] sm:grid-cols-[170px_1fr_1fr_1fr_auto] gap-x-3 items-center px-5 sm:px-7 py-4">
+        <div>
+          <div class="mono tnum text-[15px] text-[color:var(--text)]">Oct 19</div>
+          <div class="mono text-[11px] text-[color:var(--faint)]">TUE · 2027</div>
+        </div>
+        <div class="hidden sm:block text-[14px] text-[color:var(--muted)]">Last of the season</div>
+        <div class="mono tnum text-[15px] text-[color:var(--text)]">$3,500</div>
+        <div class="flex items-center gap-2 text-[13px] text-[color:var(--muted)]"><span class="size-2 rounded-full" style="background:var(--accent)"></span>Open</div>
+        <div class="hidden sm:block text-right"><a href="#final" class="navlink text-[13px] font-medium text-[color:var(--accent-2)]">Reserve</a></div>
+      </div>
+    </div>
+
+    <!-- fare card + deposit -->
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-5 mt-6">
+      <div class="md:col-span-7 rounded-2xl border rule bg-[color:var(--surface)] p-7 sm:p-8">
+        <h3 class="serif text-[19px] font-semibold">Every fare includes</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2.5 mt-4 text-[14px] text-[color:var(--muted)]">
+          <div class="flex gap-2.5"><span class="mt-2 size-1.5 rounded-full shrink-0" style="background:var(--accent)"></span>Three nights' cabin accommodation</div>
+          <div class="flex gap-2.5"><span class="mt-2 size-1.5 rounded-full shrink-0" style="background:var(--accent)"></span>All meals &amp; afternoon tea aboard</div>
+          <div class="flex gap-2.5"><span class="mt-2 size-1.5 rounded-full shrink-0" style="background:var(--accent)"></span>House drinks with dinner</div>
+          <div class="flex gap-2.5"><span class="mt-2 size-1.5 rounded-full shrink-0" style="background:var(--accent)"></span>Two guided lineside walks</div>
+          <div class="flex gap-2.5"><span class="mt-2 size-1.5 rounded-full shrink-0" style="background:var(--accent)"></span>Crew gratuities &amp; porterage</div>
+          <div class="flex gap-2.5"><span class="mt-2 size-1.5 rounded-full shrink-0" style="background:var(--accent)"></span>The bound company route map</div>
+        </div>
+      </div>
+      <!-- deposit ticket -->
+      <div class="md:col-span-5 ticket rounded-2xl p-7 sm:p-8 relative">
+        <div class="notch hidden md:block" style="left:-9px;top:50%;margin-top:-9px"></div>
+        <div class="kicker mb-3">The deposit</div>
+        <p class="text-[14px] text-[color:var(--muted)] leading-[1.6]">
+          A cabin is held with a deposit of <span class="mono tnum text-[color:var(--text)]">$600</span> per person. The balance falls due <span class="mono tnum text-[color:var(--text)]">60</span> days before departure.
+        </p>
+        <p class="text-[13px] text-[color:var(--faint)] mt-3 leading-[1.55]">
+          Cancel more than 90 days out and the deposit transfers, in full, to any 2027 or 2028 departure.
+        </p>
+        <a href="#final" class="btn-oxblood mt-5 w-full inline-flex items-center justify-center gap-2 rounded-full font-semibold px-5 py-3 text-[14px]">
+          Reserve with deposit <span class="arrow">→</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 10 · REVIEWS ===== -->
+<section class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14">
+    <!-- aggregate -->
+    <div class="md:col-span-4">
+      <div class="kicker mb-5"><span class="accent-line"></span>The logbook</div>
+      <h2 class="display text-[clamp(30px,4vw,48px)]">
+        Read the carriage logbook.
+      </h2>
+      <div class="mt-7 rounded-2xl border rule bg-[color:var(--surface)] p-6">
+        <div class="flex items-end gap-3">
+          <span class="display text-[58px] tnum leading-none">4.9</span>
+          <div class="pb-1.5">
+            <div class="flex gap-0.5 text-[color:var(--gold)]" aria-hidden="true">
+              <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+            </div>
+            <div class="mono text-[11px] text-[color:var(--faint)] mt-1">out of 5</div>
+          </div>
+        </div>
+        <p class="text-[13px] text-[color:var(--muted)] mt-4 leading-[1.55] border-t rule-soft pt-4">
+          From <span class="mono tnum text-[color:var(--text)]">2,140</span> hand-written entries in the observation-car logbook since 1968. <span class="mono tnum text-[color:var(--text)]">96%</span> of travelers say they would ride the line again.
+        </p>
+      </div>
+    </div>
+
+    <!-- reviews -->
+    <div class="md:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <!-- r1 -->
+      <figure class="card-lift rounded-2xl border rule bg-[color:var(--surface)] p-6 flex flex-col">
+        <div class="flex gap-0.5 text-[color:var(--gold)] text-[13px]" aria-hidden="true">★★★★★</div>
+        <blockquote class="serif text-[16px] text-[color:var(--text)] mt-3.5 leading-[1.55] flex-1">
+          "We did the moorland leg in low cloud and it was the most peaceful day of our year. By the second dinner the steward knew our names and our drinks. You stop checking your phone because there is simply nothing it can do."
+        </blockquote>
+        <figcaption class="mt-5 pt-4 border-t rule-soft">
+          <div class="text-[14px] font-medium text-[color:var(--text)]">Hendrik &amp; Saoirse Møller</div>
+          <div class="mono text-[11px] text-[color:var(--faint)] mt-0.5">The Highland Line · May 2026</div>
+        </figcaption>
+      </figure>
+      <!-- r2 -->
+      <figure class="card-lift rounded-2xl border rule bg-[color:var(--surface)] p-6 flex flex-col">
+        <div class="flex gap-0.5 text-[color:var(--gold)] text-[13px]" aria-hidden="true">★★★★★</div>
+        <blockquote class="serif text-[16px] text-[color:var(--text)] mt-3.5 leading-[1.55] flex-1">
+          "I travelled alone in a Twin and never once felt it. The dining car seats solo travelers together, and I climbed down at Càrn Mòr with three new friends and a notebook full of birds."
+        </blockquote>
+        <figcaption class="mt-5 pt-4 border-t rule-soft">
+          <div class="text-[14px] font-medium text-[color:var(--text)]">Priya Anand</div>
+          <div class="mono text-[11px] text-[color:var(--faint)] mt-0.5">The Highland Line · September 2025</div>
+        </figcaption>
+      </figure>
+      <!-- r3 -->
+      <figure class="card-lift rounded-2xl border rule bg-[color:var(--surface)] p-6 flex flex-col">
+        <div class="flex gap-0.5 text-[color:var(--gold)] text-[13px]" aria-hidden="true">★★★★★</div>
+        <blockquote class="serif text-[16px] text-[color:var(--text)] mt-3.5 leading-[1.55] flex-1">
+          "We booked the Observation Suite for our fortieth anniversary. Watching the track unspool from that curved rear window, a decanter to hand — it is the single best thing we have ever spent money on."
+        </blockquote>
+        <figcaption class="mt-5 pt-4 border-t rule-soft">
+          <div class="text-[14px] font-medium text-[color:var(--text)]">James &amp; Coralie Whitfield</div>
+          <div class="mono text-[11px] text-[color:var(--faint)] mt-0.5">The Highland Line · June 2025</div>
+        </figcaption>
+      </figure>
+      <!-- r4 -->
+      <figure class="card-lift rounded-2xl border rule bg-[color:var(--surface)] p-6 flex flex-col">
+        <div class="flex gap-0.5 text-[color:var(--gold)] text-[13px]" aria-hidden="true">★★★★☆</div>
+        <blockquote class="serif text-[16px] text-[color:var(--text)] mt-3.5 leading-[1.55] flex-1">
+          "Four days felt indulgent before we boarded and far too short by Càrn Mòr. The Twin cabin is genuinely snug — pack light — but the chef's venison and a moor going by the window made every inch worth it."
+        </blockquote>
+        <figcaption class="mt-5 pt-4 border-t rule-soft">
+          <div class="text-[14px] font-medium text-[color:var(--text)]">Tobias Reyes</div>
+          <div class="mono text-[11px] text-[color:var(--faint)] mt-0.5">The Highland Line · October 2025</div>
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 11 · FAQ ===== -->
+<section id="faq" class="border-y rule-soft bg-[color:var(--surface-2)]">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14">
+      <div class="md:col-span-4">
+        <div class="kicker mb-5"><span class="accent-line"></span>Before you board</div>
+        <h2 class="display text-[clamp(30px,4vw,48px)]">
+          The questions we're <em class="ink">asked most.</em>
+        </h2>
+        <p class="text-[15px] text-[color:var(--muted)] mt-5 leading-[1.6]">
+          Anything else, the booking office answers a real telephone, Monday to Saturday.
+        </p>
+      </div>
+
+      <div class="md:col-span-8">
+        <!-- q1 -->
+        <details class="faq border-b rule" open>
+          <summary class="flex items-center justify-between gap-6 py-5">
+            <span class="serif text-[18px] sm:text-[19px] font-semibold text-[color:var(--text)]">What's a sleeper cabin actually like?</span>
+            <span class="acc-sign shrink-0 text-[color:var(--accent-2)] text-[20px] leading-none">+</span>
+          </summary>
+          <p class="text-[15px] text-[color:var(--muted)] leading-[1.65] pb-5 max-w-[62ch]">
+            Compact, and beautifully so. A Twin gives you two made-up berths, a drop-sash window, a reading lamp at each pillow, and an en-suite with a real shower — restored to the 1968 originals, brass and marquetry and all. A Cabin Suite adds a daytime sitting room your steward converts to a double each night. Think of a well-found ship's cabin rather than a hotel room: everything has its place, and the window does the rest.
+          </p>
+        </details>
+        <!-- q2 -->
+        <details class="faq border-b rule">
+          <summary class="flex items-center justify-between gap-6 py-5">
+            <span class="serif text-[18px] sm:text-[19px] font-semibold text-[color:var(--text)]">Are all meals included?</span>
+            <span class="acc-sign shrink-0 text-[color:var(--accent-2)] text-[20px] leading-none">+</span>
+          </summary>
+          <p class="text-[15px] text-[color:var(--muted)] leading-[1.65] pb-5 max-w-[62ch]">
+            Yes — every meal aboard is in your fare. That's three dining-car dinners, four breakfasts, and afternoon tea each day, all cooked fresh in the galley by our head chef from farms along the line. House wines, ales and spirits are included with dinner; tea, coffee and the bar are open all day. Only champagne and the reserve cellar list carry a small supplement.
+          </p>
+        </details>
+        <!-- q3 -->
+        <details class="faq border-b rule">
+          <summary class="flex items-center justify-between gap-6 py-5">
+            <span class="serif text-[18px] sm:text-[19px] font-semibold text-[color:var(--text)]">Can I get on and off at the stops?</span>
+            <span class="acc-sign shrink-0 text-[color:var(--accent-2)] text-[20px] leading-none">+</span>
+          </summary>
+          <p class="text-[15px] text-[color:var(--muted)] leading-[1.65] pb-5 max-w-[62ch]">
+            At the scheduled pauses, yes — and we hope you will. The train stops for an hour at Briarford for the packhorse-bridge walk, and again at Ravensgill on the high moor, both with a guided option led by the line's naturalist. Between those, the train runs straight through; the Highland Line is one continuous journey rather than a hop-on service, so your cabin is yours from Saltmarsh Halt to Càrn Mòr.
+          </p>
+        </details>
+        <!-- q4 -->
+        <details class="faq border-b rule">
+          <summary class="flex items-center justify-between gap-6 py-5">
+            <span class="serif text-[18px] sm:text-[19px] font-semibold text-[color:var(--text)]">Is there a single-traveler option?</span>
+            <span class="acc-sign shrink-0 text-[color:var(--accent-2)] text-[20px] leading-none">+</span>
+          </summary>
+          <p class="text-[15px] text-[color:var(--muted)] leading-[1.65] pb-5 max-w-[62ch]">
+            There is, and solo travelers are very welcome — a good third of every departure travels alone. A Twin cabin can be booked for sole occupancy at a supplement of 60%, rather than the usual double of the fare. The dining car seats solo guests together at a shared table, which is how most of our solo travelers end the trip with company they didn't board with.
+          </p>
+        </details>
+        <!-- q5 -->
+        <details class="faq border-b rule">
+          <summary class="flex items-center justify-between gap-6 py-5">
+            <span class="serif text-[18px] sm:text-[19px] font-semibold text-[color:var(--text)]">What should I pack?</span>
+            <span class="acc-sign shrink-0 text-[color:var(--accent-2)] text-[20px] leading-none">+</span>
+          </summary>
+          <p class="text-[15px] text-[color:var(--muted)] leading-[1.65] pb-5 max-w-[62ch]">
+            Less than you think — cabins are snug, so a soft holdall beats a hard case. Bring layers for the moorland walks, sturdy shoes, and something a little smarter for the two formal dinners (no black tie; a jacket or a nice dress is plenty). The weather climbs from coast to mountain, so a waterproof earns its place. And a book — though the library carriage will lend you one if you forget.
+          </p>
+        </details>
+        <!-- q6 -->
+        <details class="faq border-b rule">
+          <summary class="flex items-center justify-between gap-6 py-5">
+            <span class="serif text-[18px] sm:text-[19px] font-semibold text-[color:var(--text)]">Is there wifi and phone signal?</span>
+            <span class="acc-sign shrink-0 text-[color:var(--accent-2)] text-[20px] leading-none">+</span>
+          </summary>
+          <p class="text-[15px] text-[color:var(--muted)] leading-[1.65] pb-5 max-w-[62ch]">
+            Mostly not — and, honestly, that's the point. Signal comes and goes near the coast and the towns, then drops away entirely for most of the river valley and the high moor. There is no onboard wifi by design. We'll happily pass an urgent message at any station stop, but the Highland Line is built to be the four days a year you are genuinely, properly unreachable. Travelers tell us it's the part they remember longest.
+          </p>
+        </details>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 12 · FINAL CTA ===== -->
+<section id="final" class="relative overflow-hidden" style="background:var(--accent)">
+  <div class="absolute inset-0 pointer-events-none" style="background:radial-gradient(58% 64% at 50% 0%, rgba(184,137,58,0.34), transparent 72%)"></div>
+  <div class="absolute inset-0 dotgrid opacity-[0.12] pointer-events-none"></div>
+  <!-- art-deco sun-ray, faint -->
+  <svg class="absolute -bottom-24 -left-16 w-[280px] h-[280px] opacity-[0.16] pointer-events-none" viewBox="0 0 200 200" aria-hidden="true">
+    <g stroke="#F3EBDD" stroke-width="1.2" stroke-linecap="round">
+      <path d="M100 20V70M100 130V180M20 100H70M130 100H180M44 44l30 30M156 44l-30 30M44 156l30-30M156 156l-30-30"/>
+    </g>
+    <circle cx="100" cy="100" r="26" fill="none" stroke="#F3EBDD" stroke-width="1.2"/>
+  </svg>
+
+  <div class="relative max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+      <div class="lg:col-span-7">
+        <div class="inline-flex items-center gap-2.5 rounded-full border px-4 py-1.5 mb-7" style="border-color:rgba(243,235,221,0.22)">
+          <span class="pulse-dot" style="background:#E7B24E"></span>
+          <span class="mono text-[11px] tracking-[0.06em]" style="color:#E4D9BF">Next departure · Apr 13, 2027</span>
+        </div>
+        <h2 class="display text-[clamp(32px,4.8vw,60px)] max-w-[15ch]" style="color:#F6EFDF">
+          The mountains have waited <em class="halftone">since 1968.</em>
+        </h2>
+        <p class="serif text-[17px] sm:text-[18px] mt-5 leading-[1.6] max-w-[48ch]" style="color:#D8CEB4">
+          Twenty-two cabins, two departures a week, one line from the coast to the summit. Hold yours with a $600 deposit — the rest can wait sixty unhurried days.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3 mt-8">
+          <a href="#dates" class="inline-flex items-center justify-center gap-2 rounded-full font-semibold px-6 py-3.5 text-[15px] btn-oxblood">
+            Reserve a cabin <span class="arrow">→</span>
+          </a>
+          <a href="#journey" class="inline-flex items-center justify-center gap-2 rounded-full font-medium px-6 py-3.5 text-[15px]" style="border:1px solid rgba(243,235,221,0.28);color:#F6EFDF;transition:background-color 120ms ease,transform 120ms ease" onmouseover="this.style.background='rgba(243,235,221,0.08)'" onmouseout="this.style.background='transparent'">
+            Speak to the booking office
+          </a>
+        </div>
+      </div>
+      <div class="lg:col-span-5">
+        <div class="ticket rounded-2xl p-7 relative" style="background:#FBF6EA">
+          <div class="notch hidden lg:block" style="left:-9px;top:50%;margin-top:-9px"></div>
+          <div class="flex items-center justify-between border-b rule-soft pb-3.5">
+            <div class="kicker">Boarding pass</div>
+            <div class="mono text-[11px] text-[color:var(--faint)]">HL · 2027</div>
+          </div>
+          <div class="grid grid-cols-2 gap-y-4 gap-x-4 mt-4">
+            <div>
+              <div class="mono text-[10px] text-[color:var(--faint)] tracking-[0.1em]">FROM</div>
+              <div class="serif text-[17px] font-semibold mt-0.5">Saltmarsh Halt</div>
+            </div>
+            <div>
+              <div class="mono text-[10px] text-[color:var(--faint)] tracking-[0.1em]">TO</div>
+              <div class="serif text-[17px] font-semibold mt-0.5">Càrn Mòr</div>
+            </div>
+            <div>
+              <div class="mono text-[10px] text-[color:var(--faint)] tracking-[0.1em]">JOURNEY</div>
+              <div class="mono tnum text-[15px] mt-0.5 text-[color:var(--text)]">4 days · 318 mi</div>
+            </div>
+            <div>
+              <div class="mono text-[10px] text-[color:var(--faint)] tracking-[0.1em]">DEPOSIT</div>
+              <div class="mono tnum text-[15px] mt-0.5 text-[color:var(--accent-2)]">$600 pp</div>
+            </div>
+          </div>
+          <div class="border-t border-dashed rule mt-5 pt-4 flex items-center justify-between">
+            <div class="mono text-[11px] text-[color:var(--faint)]">FARE FROM</div>
+            <div class="mono tnum text-[20px] text-[color:var(--text)]">$3,400</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ===== 13 · FOOTER ===== -->
+<footer class="bg-[color:var(--bg)]">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-20">
+    <div class="grid grid-cols-2 md:grid-cols-12 gap-10">
+      <!-- brand -->
+      <div class="col-span-2 md:col-span-4">
+        <a href="#top" class="flex items-center gap-3" aria-label="Overland — home">
+          <svg width="32" height="32" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+            <circle cx="20" cy="20" r="18.6" fill="#FBF6EA" stroke="#211B12" stroke-width="1.3"/>
+            <circle cx="20" cy="20" r="15" fill="none" stroke="#2C4A35" stroke-width="0.9"/>
+            <circle cx="20" cy="21.5" r="5.4" fill="none" stroke="#2C4A35" stroke-width="1.4"/>
+            <circle cx="20" cy="21.5" r="1.5" fill="#7E3A2C"/>
+            <path d="M20 16.1V27M16.2 17.7l7.6 7.6M15.5 21.5h9M16.2 25.3l7.6-7.6" stroke="#2C4A35" stroke-width="1"/>
+            <path d="M14.6 14.2c-3.4.3-5.6 1.7-6.8 3.6 2.2.5 4.3.2 6.4-1M25.4 14.2c3.4.3 5.6 1.7 6.8 3.6-2.2.5-4.3.2-6.4-1" fill="#7E3A2C" stroke="#211B12" stroke-width="0.7" stroke-linejoin="round"/>
+          </svg>
+          <span class="display text-[21px] tracking-tight">Overland</span>
+        </a>
+        <p class="serif text-[15px] text-[color:var(--muted)] mt-4 leading-[1.6] max-w-[34ch]">
+          Heritage rail journeys since 1968. The Highland Line runs the coast-to-mountain sleeper, twice a week, April to October.
+        </p>
+        <div class="mono text-[12px] text-[color:var(--faint)] mt-5 leading-relaxed">
+          The Booking Office, 4 Quay Parade<br/>Saltmarsh Halt · Open Mon–Sat
+        </div>
+      </div>
+
+      <!-- columns -->
+      <div class="md:col-span-2">
+        <div class="kicker mb-4">The journey</div>
+        <ul class="space-y-2.5 text-[14px] text-[color:var(--muted)]">
+          <li><a href="#journey" class="navlink">Overview</a></li>
+          <li><a href="#route" class="navlink">The route map</a></li>
+          <li><a href="#cabins" class="navlink">Sleeper cabins</a></li>
+          <li><a href="#dates" class="navlink">Itinerary</a></li>
+        </ul>
+      </div>
+      <div class="md:col-span-2">
+        <div class="kicker mb-4">Booking</div>
+        <ul class="space-y-2.5 text-[14px] text-[color:var(--muted)]">
+          <li><a href="#dates" class="navlink">2027 departures</a></li>
+          <li><a href="#dates" class="navlink">Fares &amp; deposit</a></li>
+          <li><a href="#faq" class="navlink">Solo travelers</a></li>
+          <li><a href="#faq" class="navlink">Common questions</a></li>
+        </ul>
+      </div>
+      <div class="md:col-span-2">
+        <div class="kicker mb-4">The company</div>
+        <ul class="space-y-2.5 text-[14px] text-[color:var(--muted)]">
+          <li><a href="#journey" class="navlink">Our history</a></li>
+          <li><a href="#crew" class="navlink">The crew</a></li>
+          <li><a href="#reviews" class="navlink">The logbook</a></li>
+          <li><a href="#final" class="navlink">Contact</a></li>
+        </ul>
+      </div>
+
+      <!-- financial protection badge -->
+      <div class="col-span-2 md:col-span-2">
+        <div class="kicker mb-4">Protected</div>
+        <div class="rounded-xl border rule bg-[color:var(--surface)] p-4">
+          <div class="flex items-center gap-2.5">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 2 4 5v6c0 5 3.4 9 8 11 4.6-2 8-6 8-11V5l-8-3Z" fill="none" stroke="#2C4A35" stroke-width="1.5" stroke-linejoin="round"/>
+              <path d="M8.6 12 11 14.4 15.6 9.6" stroke="#7E3A2C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="mono text-[12px] font-medium text-[color:var(--text)] tracking-[0.04em]">RTP&nbsp;7714</span>
+          </div>
+          <p class="text-[11px] text-[color:var(--faint)] mt-2.5 leading-[1.5]">
+            Every booking is financially protected under the Rail Travel Protection scheme. Your money is held safe to departure.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- bottom bar -->
+    <div class="mt-14 pt-7 border-t rule flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div class="mono text-[12px] text-[color:var(--faint)]">
+        © 1968–2027 Overland Heritage Rail Co. All rights reserved.
+      </div>
+      <div class="flex items-center gap-2 text-[12px] text-[color:var(--muted)]">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M8 1.5C5 4 3.5 6.5 3.5 9.5a4.5 4.5 0 0 0 9 0C12.5 6.5 11 4 8 1.5Z" fill="none" stroke="#2C4A35" stroke-width="1.2"/>
+          <path d="M8 14V8" stroke="#2C4A35" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+        <span>Steam-free since 1968 — the Highland Line runs on hydro-electric traction.</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- single trailing script: places station markers on the route map from data attributes -->
+<script>
+  (function () {
+    var stations = document.querySelectorAll('#journey svg .station');
+    var SVGNS = 'http://www.w3.org/2000/svg';
+    stations.forEach(function (g, i) {
+      var x = parseFloat(g.getAttribute('data-x'));
+      var label = g.getAttribute('data-label');
+      var mile = g.getAttribute('data-mile');
+      var cap = g.getAttribute('data-cap');
+      var isEnd = (i === 0 || i === stations.length - 1);
+
+      // tick from the rail line up to the marker
+      var tick = document.createElementNS(SVGNS, 'line');
+      tick.setAttribute('x1', x); tick.setAttribute('y1', 177);
+      tick.setAttribute('x2', x); tick.setAttribute('y2', 138);
+      tick.setAttribute('stroke', '#211B12'); tick.setAttribute('stroke-width', '1.4');
+      tick.setAttribute('opacity', '0.4');
+      g.appendChild(tick);
+
+      // station marker — square for boarding/alighting ends, ring otherwise
+      if (isEnd) {
+        var sq = document.createElementNS(SVGNS, 'rect');
+        sq.setAttribute('x', x - 7); sq.setAttribute('y', 124);
+        sq.setAttribute('width', 14); sq.setAttribute('height', 14);
+        sq.setAttribute('rx', 2);
+        sq.setAttribute('fill', '#7E3A2C');
+        sq.setAttribute('stroke', '#211B12'); sq.setAttribute('stroke-width', '1.2');
+        g.appendChild(sq);
+      } else {
+        var ring = document.createElementNS(SVGNS, 'circle');
+        ring.setAttribute('cx', x); ring.setAttribute('cy', 131);
+        ring.setAttribute('r', 6.4);
+        ring.setAttribute('fill', '#FBF6EA');
+        ring.setAttribute('stroke', '#7E3A2C'); ring.setAttribute('stroke-width', '2.2');
+        g.appendChild(ring);
+      }
+
+      // station number
+      var num = document.createElementNS(SVGNS, 'text');
+      num.setAttribute('x', x); num.setAttribute('y', isEnd ? 134.5 : 134.2);
+      num.setAttribute('text-anchor', 'middle');
+      num.setAttribute('font-family', 'Geist Mono, monospace');
+      num.setAttribute('font-size', '8.5');
+      num.setAttribute('fill', isEnd ? '#F3EBDD' : '#7E3A2C');
+      num.textContent = (i + 1);
+      g.appendChild(num);
+
+      // station name
+      var name = document.createElementNS(SVGNS, 'text');
+      name.setAttribute('x', x); name.setAttribute('y', 224);
+      name.setAttribute('text-anchor', 'middle');
+      name.setAttribute('font-family', 'Fraunces, Georgia, serif');
+      name.setAttribute('font-size', '15');
+      name.setAttribute('font-weight', '600');
+      name.setAttribute('fill', '#211B12');
+      name.textContent = label;
+      g.appendChild(name);
+
+      // caption
+      var capt = document.createElementNS(SVGNS, 'text');
+      capt.setAttribute('x', x); capt.setAttribute('y', 240);
+      capt.setAttribute('text-anchor', 'middle');
+      capt.setAttribute('font-family', 'Inter, sans-serif');
+      capt.setAttribute('font-size', '11');
+      capt.setAttribute('fill', '#5E5440');
+      capt.textContent = cap;
+      g.appendChild(capt);
+
+      // milepost
+      var mp = document.createElementNS(SVGNS, 'text');
+      mp.setAttribute('x', x); mp.setAttribute('y', 258);
+      mp.setAttribute('text-anchor', 'middle');
+      mp.setAttribute('font-family', 'Geist Mono, monospace');
+      mp.setAttribute('font-size', '9.5');
+      mp.setAttribute('fill', '#8C8068');
+      mp.textContent = 'MP ' + mile;
+      g.appendChild(mp);
+    });
+  })();
+</script>
+
+</body>
+</html>

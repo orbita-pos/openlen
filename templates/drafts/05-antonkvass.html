@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>anton kvass — composer · post-minimal</title>
+  <meta name="description" content="Anton Kvass, composer. Quartets, sextets, occasional larger works. Recorded by Quatuor Béla." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0F1014;
+      --bg-deep: #07080a;
+      --fg: #e9ecf0;
+      --fg-faint: #8a92a0;
+      --fg-mute: #535b69;
+      --accent: #5B7C99;
+      --accent-deep: #3f5b73;
+      --accent-bright: #8AA8C4;
+      --hair: rgba(233, 236, 240, 0.06);
+      --hair-strong: rgba(233, 236, 240, 0.13);
+    }
+    html, body { background: var(--bg); color: var(--fg); }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    .font-display { font-family: 'Cormorant Garamond', 'Fraunces', serif; }
+    .font-mono { font-family: 'Geist Mono', ui-monospace, monospace; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .display { letter-spacing: -0.005em; line-height: 1.02; }
+    .roman { font-variant-numeric: oldstyle-nums; }
+    .grain {
+      position: fixed; inset: 0; pointer-events: none; z-index: 50;
+      mix-blend-mode: overlay; opacity: 0.28;
+      background-image:
+        radial-gradient(rgba(233, 236, 240, 0.04) 1px, transparent 1px),
+        radial-gradient(rgba(0, 0, 0, 0.3) 1px, transparent 1px);
+      background-size: 3px 3px, 5px 5px;
+      background-position: 0 0, 1px 1px;
+    }
+    .scroll-fade {
+      background: linear-gradient(180deg, var(--bg) 0%, transparent 5%, transparent 95%, var(--bg) 100%);
+      pointer-events: none; position: fixed; inset: 0; z-index: 30;
+    }
+    .ink-glow {
+      box-shadow:
+        0 0 0 1px rgba(91, 124, 153, 0.18),
+        0 22px 70px -12px rgba(91, 124, 153, 0.22),
+        0 8px 26px -6px rgba(0, 0, 0, 0.7);
+    }
+    .pulse-wrap { position: relative; display: inline-flex; }
+    .pulse-wrap::before {
+      content: ''; position: absolute; inset: 0;
+      border-radius: 9999px;
+      background: var(--accent);
+      animation: pulse 2.2s ease-out infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.55; }
+      80% { transform: scale(2.6); opacity: 0; }
+      100% { opacity: 0; }
+    }
+    .lift { transition: transform 120ms ease, border-color 120ms ease, background 120ms ease, color 120ms ease; }
+    .lift:hover { transform: translateY(-1px); }
+    .link-btn {
+      background: rgba(233, 236, 240, 0.018);
+      border: 1px solid var(--hair);
+    }
+    .link-btn:hover {
+      background: rgba(91, 124, 153, 0.05);
+      border-color: rgba(91, 124, 153, 0.32);
+    }
+    .row { border-top: 1px solid var(--hair); }
+    .frame {
+      border: 1px solid var(--hair-strong);
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div class="grain" aria-hidden="true"></div>
+  <div class="scroll-fade" aria-hidden="true"></div>
+
+  <main class="relative z-10 mx-auto w-full max-w-[480px] px-5 pb-24 pt-10">
+
+    <!-- 1. Eyebrow -->
+    <div class="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 font-mono text-[10.5px] uppercase tracking-[0.18em]" style="color: var(--fg-faint);">
+      <span class="relative inline-flex h-1.5 w-1.5">
+        <span class="pulse-wrap inline-block h-1.5 w-1.5 rounded-full"></span>
+        <span class="absolute inset-0 inline-block h-1.5 w-1.5 rounded-full" style="background: var(--accent);"></span>
+      </span>
+      <span>PREMIERE</span>
+      <span class="opacity-40">·</span>
+      <span>NOV 2026</span>
+      <span class="opacity-40">·</span>
+      <span style="color: var(--accent-bright);">BARBICAN, LONDON</span>
+    </div>
+
+    <!-- 2. Header block -->
+    <header class="mt-8 flex flex-col items-center text-center">
+      <!-- An "AK" monogram inside an inked frame, with a hint of staff lines below -->
+      <svg width="84" height="84" viewBox="0 0 84 84" fill="none" aria-hidden="true">
+        <rect x="6" y="6" width="72" height="72" fill="none" stroke="#5B7C99" stroke-width="0.7" stroke-opacity="0.5"/>
+        <rect x="10" y="10" width="64" height="64" fill="none" stroke="#5B7C99" stroke-width="0.4" stroke-opacity="0.25"/>
+        <!-- 5-line staff faint -->
+        <g stroke="#5B7C99" stroke-width="0.4" stroke-opacity="0.25">
+          <line x1="14" y1="58" x2="70" y2="58"/>
+          <line x1="14" y1="62" x2="70" y2="62"/>
+          <line x1="14" y1="66" x2="70" y2="66"/>
+          <line x1="14" y1="70" x2="70" y2="70"/>
+        </g>
+        <!-- AK monogram -->
+        <text x="42" y="50" text-anchor="middle" font-family="Cormorant Garamond" font-weight="500" font-size="32" fill="#8AA8C4">AK</text>
+      </svg>
+      <h1 class="font-display display mt-5 text-[44px] font-medium">Anton Kvass</h1>
+      <div class="mt-2 font-mono text-[10px] uppercase tracking-[0.18em]" style="color: var(--fg-faint);">composer · paris / berlin · b. 1989</div>
+      <p class="mt-5 max-w-[36ch] text-[13.5px] leading-[1.7]" style="color: var(--fg-faint);">
+        Composer. Quartets, sextets, occasional larger works. Recorded by Quatuor Béla. Studied at the Conservatoire de Paris.
+      </p>
+
+      <!-- Stat strip (catalog) -->
+      <div class="mt-6 grid w-full grid-cols-4 gap-0 frame">
+        <div class="flex flex-col items-center px-2 py-3" style="border-right: 1px solid var(--hair-strong);">
+          <div class="font-display text-[18px] font-medium tnum">Op. 14</div>
+          <div class="mt-1 font-mono text-[8.5px] uppercase tracking-[0.16em]" style="color: var(--fg-mute);">Catalog</div>
+        </div>
+        <div class="flex flex-col items-center px-2 py-3" style="border-right: 1px solid var(--hair-strong);">
+          <div class="font-display text-[18px] font-medium tnum">3</div>
+          <div class="mt-1 font-mono text-[8.5px] uppercase tracking-[0.16em]" style="color: var(--fg-mute);">Recordings</div>
+        </div>
+        <div class="flex flex-col items-center px-2 py-3" style="border-right: 1px solid var(--hair-strong);">
+          <div class="font-display text-[18px] font-medium tnum">4</div>
+          <div class="mt-1 font-mono text-[8.5px] uppercase tracking-[0.16em]" style="color: var(--fg-mute);">2026 Premieres</div>
+        </div>
+        <div class="flex flex-col items-center px-2 py-3">
+          <div class="font-display text-[18px] font-medium tnum">8</div>
+          <div class="mt-1 font-mono text-[8.5px] uppercase tracking-[0.16em]" style="color: var(--fg-mute);">Commissions</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- 3. Featured release tile -->
+    <section class="mt-12">
+      <div class="flex items-baseline justify-between font-mono text-[10px] uppercase tracking-[0.16em]" style="color: var(--fg-mute);">
+        <span>Featured recording</span>
+        <span>Op. 12 — No. 3</span>
+      </div>
+
+      <div class="mt-3 ink-glow overflow-hidden">
+        <svg viewBox="0 0 440 440" width="100%" preserveAspectRatio="xMidYMid slice" aria-label="cover for string quartet no. 3" class="block">
+          <defs>
+            <linearGradient id="bg05" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#161821"/>
+              <stop offset="1" stop-color="#08090b"/>
+            </linearGradient>
+          </defs>
+          <rect width="440" height="440" fill="url(#bg05)"/>
+          <!-- frame -->
+          <rect x="20" y="20" width="400" height="400" fill="none" stroke="#5B7C99" stroke-width="0.6" stroke-opacity="0.5"/>
+          <rect x="28" y="28" width="384" height="384" fill="none" stroke="#5B7C99" stroke-width="0.3" stroke-opacity="0.25"/>
+          <!-- Roman numeral III in the center, large -->
+          <text x="220" y="244" text-anchor="middle" font-family="Cormorant Garamond" font-weight="500" font-size="180" fill="#5B7C99" fill-opacity="0.85">III</text>
+          <!-- staff lines below -->
+          <g stroke="#5B7C99" stroke-width="0.4" stroke-opacity="0.45">
+            <line x1="60" y1="290" x2="380" y2="290"/>
+            <line x1="60" y1="298" x2="380" y2="298"/>
+            <line x1="60" y1="306" x2="380" y2="306"/>
+            <line x1="60" y1="314" x2="380" y2="314"/>
+            <line x1="60" y1="322" x2="380" y2="322"/>
+          </g>
+          <!-- bar lines -->
+          <g stroke="#5B7C99" stroke-width="0.5" stroke-opacity="0.7">
+            <line x1="60" y1="288" x2="60" y2="324"/>
+            <line x1="140" y1="288" x2="140" y2="324"/>
+            <line x1="220" y1="288" x2="220" y2="324"/>
+            <line x1="300" y1="288" x2="300" y2="324"/>
+            <line x1="380" y1="288" x2="380" y2="324"/>
+            <line x1="378" y1="288" x2="378" y2="324" stroke-width="1.2"/>
+          </g>
+          <!-- A few simple note glyphs -->
+          <g fill="#8AA8C4">
+            <ellipse cx="80" cy="306" rx="3.5" ry="2.3" transform="rotate(-20 80 306)"/>
+            <line x1="83" y1="305" x2="83" y2="288" stroke="#8AA8C4" stroke-width="0.7"/>
+            <ellipse cx="160" cy="302" rx="3.5" ry="2.3" transform="rotate(-20 160 302)"/>
+            <line x1="163" y1="301" x2="163" y2="284" stroke="#8AA8C4" stroke-width="0.7"/>
+            <ellipse cx="240" cy="310" rx="3.5" ry="2.3" transform="rotate(-20 240 310)"/>
+            <line x1="243" y1="309" x2="243" y2="292" stroke="#8AA8C4" stroke-width="0.7"/>
+            <ellipse cx="320" cy="298" rx="3.5" ry="2.3" transform="rotate(-20 320 298)"/>
+            <line x1="323" y1="297" x2="323" y2="280" stroke="#8AA8C4" stroke-width="0.7"/>
+          </g>
+          <!-- title block -->
+          <g>
+            <text x="60" y="380" font-family="Cormorant Garamond" font-style="italic" font-size="22" font-weight="500" fill="#e9ecf0">String Quartet</text>
+            <text x="60" y="402" font-family="Cormorant Garamond" font-size="13" font-weight="500" fill="#8AA8C4">No. III — pour Quatuor Béla</text>
+            <text x="60" y="416" font-family="Geist Mono" font-size="8" letter-spacing="1.4" fill="#535b69">ANTON KVASS · Op. 12 · 32:14</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="mt-5 flex items-baseline justify-between gap-3">
+        <div>
+          <div class="font-display text-[22px] font-medium leading-none">String Quartet No. III</div>
+          <div class="mt-2 font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">Op. 12 · 4 movements · 32:14</div>
+        </div>
+        <div class="font-mono text-[10.5px] tnum" style="color: var(--accent);">2026</div>
+      </div>
+
+      <div class="mt-2 text-[12.5px] italic" style="color: var(--fg-faint); font-family: 'Cormorant Garamond', serif;">
+        Performed by <span style="color: var(--accent-bright); font-weight: 500;">Quatuor Béla</span>. Recorded at La Courroie, Avignon. Engineered by Hugues Deschaux.
+      </div>
+
+      <ol class="mt-5 font-mono text-[12px]" style="border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair);">
+        <li class="row grid grid-cols-12 items-center gap-2 py-3" style="border-top: 0;">
+          <span class="col-span-1 font-display text-[14px] font-medium" style="color: var(--fg-mute);">I.</span>
+          <span class="col-span-8 font-display italic text-[14px]" style="color: var(--fg);">Lent et étrange</span>
+          <span class="col-span-3 text-right tnum" style="color: var(--fg-faint);">8:12</span>
+        </li>
+        <li class="row grid grid-cols-12 items-center gap-2 py-3">
+          <span class="col-span-1 font-display text-[14px] font-medium" style="color: var(--fg-mute);">II.</span>
+          <span class="col-span-8 font-display italic text-[14px]" style="color: var(--fg);">Comme une marche</span>
+          <span class="col-span-3 text-right tnum" style="color: var(--fg-faint);">9:24</span>
+        </li>
+        <li class="row grid grid-cols-12 items-center gap-2 py-3">
+          <span class="col-span-1 font-display text-[14px] font-medium" style="color: var(--fg-mute);">III.</span>
+          <span class="col-span-8 font-display italic text-[14px]" style="color: var(--fg);">Très calme, presque immobile</span>
+          <span class="col-span-3 text-right tnum" style="color: var(--fg-faint);">7:42</span>
+        </li>
+        <li class="row grid grid-cols-12 items-center gap-2 py-3">
+          <span class="col-span-1 font-display text-[14px] font-medium" style="color: var(--fg-mute);">IV.</span>
+          <span class="col-span-8 font-display italic text-[14px]" style="color: var(--fg);">Final — en cercles</span>
+          <span class="col-span-3 text-right tnum" style="color: var(--fg-faint);">6:56</span>
+        </li>
+      </ol>
+
+      <div class="mt-4 grid grid-cols-2 gap-2 font-mono text-[10px] uppercase tracking-[0.14em]">
+        <a class="link-btn lift flex items-center justify-center gap-2 rounded-sm py-2.5" href="#">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0Zm3.5 11.4c-.2.3-.5.4-.8.2-2.1-1.3-4.8-1.6-7.9-.9-.4.1-.7-.2-.7-.5 0-.4.2-.7.5-.7 3.4-.8 6.4-.5 8.7 1 .4.2.4.6.2.9Zm.9-2.1c-.2.4-.6.5-1 .3-2.4-1.5-6-1.9-8.8-1-.4.1-.9-.1-1-.5-.1-.4.1-.9.5-1 3.2-1 7.2-.5 10 1.2.3.2.4.6.3 1Z"/></svg>
+          Spotify
+        </a>
+        <a class="link-btn lift flex items-center justify-center gap-2 rounded-sm py-2.5" href="#">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="8" cy="8" r="7"/><line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/></svg>
+          Apple Classical
+        </a>
+        <a class="link-btn lift flex items-center justify-center gap-2 rounded-sm py-2.5" href="#">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="8" cy="8" r="7.4"/><path d="M5.4 5.6 L11 8 L5.4 10.4 Z"/></svg>
+          Idagio
+        </a>
+        <a class="link-btn lift flex items-center justify-center gap-2 rounded-sm py-2.5" href="#">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="12" height="12"/><line x1="4" y1="5" x2="12" y2="5"/><line x1="4" y1="8" x2="12" y2="8"/><line x1="4" y1="11" x2="9" y2="11"/></svg>
+          Score (PDF)
+        </a>
+      </div>
+
+      <a href="#" class="lift mt-3 flex items-center justify-between gap-3 border px-4 py-3.5"
+         style="background: rgba(91, 124, 153, 0.06); border-color: rgba(91, 124, 153, 0.32); color: var(--accent-bright);">
+        <span class="flex items-center gap-3">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2">
+            <rect x="2" y="2" width="12" height="12"/><line x1="4" y1="5" x2="12" y2="5"/><line x1="4" y1="8" x2="12" y2="8"/><line x1="4" y1="11" x2="9" y2="11"/>
+          </svg>
+          <span class="font-display italic text-[15.5px] font-medium">Score — purchase + perusal</span>
+        </span>
+        <span class="font-mono text-[10px] uppercase tracking-[0.14em]">€38 · PDF →</span>
+      </a>
+    </section>
+
+    <!-- 4. Link stack -->
+    <section class="mt-14">
+      <div class="font-mono text-[10px] uppercase tracking-[0.16em]" style="color: var(--fg-mute);">Listen · score · enquire</div>
+      <div class="mt-3 space-y-2.5">
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute);">I.</span>
+            <span class="font-display text-[16px] font-medium">Listen on Spotify</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em] tnum" style="color: var(--fg-faint);">14k monthly</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute);">II.</span>
+            <span class="font-display text-[16px] font-medium">Apple Classical — curated</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">Editor's Choice</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute);">III.</span>
+            <span class="font-display text-[16px] font-medium">Score — purchase + perusal</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em] tnum" style="color: var(--fg-faint);">PDF · €38</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute);">IV.</span>
+            <span class="font-display text-[16px] font-medium">Commissions — open through agent</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">via Plurabelle</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute);">V.</span>
+            <span class="font-display text-[16px] font-medium">Upcoming premieres</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em] tnum" style="color: var(--fg-faint);">4 in 2026 / 27</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute);">VI.</span>
+            <span class="font-display text-[16px] font-medium">Press — Gramophone review</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">Apr 2026</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute);">VII.</span>
+            <span class="font-display text-[16px] font-medium">Booking (agent)</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">EU · US · JP</span>
+        </a>
+        <a href="#" class="lift link-btn flex items-center justify-between rounded-sm px-4 py-3.5">
+          <span class="flex items-center gap-3">
+            <span class="font-mono text-[10px] tracking-[0.14em]" style="color: var(--fg-mute);">VIII.</span>
+            <span class="font-display text-[16px] font-medium">Mailing list — score releases</span>
+          </span>
+          <span class="font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">~quarterly</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- 5. Premieres (tour equivalent) -->
+    <section class="mt-14">
+      <div class="flex items-baseline justify-between font-mono text-[10px] uppercase tracking-[0.16em]" style="color: var(--fg-mute);">
+        <span>Premieres — 2026 / 2027</span>
+        <span>4 dates</span>
+      </div>
+
+      <div class="mt-3 space-y-3">
+        <article class="frame rounded-sm p-4">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="font-mono text-[10px] uppercase tracking-[0.16em] tnum" style="color: var(--accent);">12 NOV 2026 · 19:30</div>
+              <div class="mt-2 font-display text-[18px] font-medium leading-tight" style="font-style: italic;">String Quartet No. IV</div>
+              <div class="mt-1 font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">Op. 14 · world premiere</div>
+            </div>
+            <div class="text-right font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--accent-bright);">TICKETS</div>
+          </div>
+          <div class="mt-3 hair" style="height: 1px; background: var(--hair);"></div>
+          <div class="mt-3 flex items-baseline justify-between font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">
+            <span>Barbican Centre · London</span>
+            <span>Quatuor Béla</span>
+          </div>
+        </article>
+
+        <article class="frame rounded-sm p-4">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="font-mono text-[10px] uppercase tracking-[0.16em] tnum" style="color: var(--accent);">08 FEB 2027 · 20:15</div>
+              <div class="mt-2 font-display text-[18px] font-medium leading-tight" style="font-style: italic;">Sextet for strings</div>
+              <div class="mt-1 font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">Op. 15 · Dutch premiere</div>
+            </div>
+            <div class="text-right font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--accent-bright);">TICKETS</div>
+          </div>
+          <div class="mt-3 hair" style="height: 1px; background: var(--hair);"></div>
+          <div class="mt-3 flex items-baseline justify-between font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">
+            <span>Concertgebouw · Amsterdam</span>
+            <span>Asko|Schönberg</span>
+          </div>
+        </article>
+
+        <article class="frame rounded-sm p-4">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="font-mono text-[10px] uppercase tracking-[0.16em] tnum" style="color: var(--accent);">22 MAY 2027 · 19:00</div>
+              <div class="mt-2 font-display text-[18px] font-medium leading-tight" style="font-style: italic;">Piano Trio</div>
+              <div class="mt-1 font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">Op. 16 · Asian premiere</div>
+            </div>
+            <div class="text-right font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--accent);">ON SALE 18 NOV</div>
+          </div>
+          <div class="mt-3 hair" style="height: 1px; background: var(--hair);"></div>
+          <div class="mt-3 flex items-baseline justify-between font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">
+            <span>Suntory Hall · Tokyo</span>
+            <span>Trio Atanassov</span>
+          </div>
+        </article>
+
+        <article class="frame rounded-sm p-4">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="font-mono text-[10px] uppercase tracking-[0.16em] tnum" style="color: var(--accent);">30 SEP 2027 · 20:00</div>
+              <div class="mt-2 font-display text-[18px] font-medium leading-tight" style="font-style: italic;">Chamber Symphony "Foundry"</div>
+              <div class="mt-1 font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">Op. 17 · US premiere · LA Phil commission</div>
+            </div>
+            <div class="text-right font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--accent);">ON SALE 04 MAY</div>
+          </div>
+          <div class="mt-3 hair" style="height: 1px; background: var(--hair);"></div>
+          <div class="mt-3 flex items-baseline justify-between font-mono text-[10px] uppercase tracking-[0.14em]" style="color: var(--fg-faint);">
+            <span>Walt Disney Concert Hall · Los Angeles</span>
+            <span>LA Phil New Music Group</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- 6. Social row -->
+    <section class="mt-14">
+      <div class="mx-auto flex max-w-[260px] items-center justify-between" style="color: var(--fg-faint);">
+        <a href="#" class="lift" aria-label="Spotify"><svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0Zm3.5 11.4c-.2.3-.5.4-.8.2-2.1-1.3-4.8-1.6-7.9-.9-.4.1-.7-.2-.7-.5 0-.4.2-.7.5-.7 3.4-.8 6.4-.5 8.7 1 .4.2.4.6.2.9Zm.9-2.1c-.2.4-.6.5-1 .3-2.4-1.5-6-1.9-8.8-1-.4.1-.9-.1-1-.5-.1-.4.1-.9.5-1 3.2-1 7.2-.5 10 1.2.3.2.4.6.3 1Zm.1-2.2C9.7 5.4 4.9 5.2 2.2 6c-.5.2-1-.1-1.2-.6-.2-.5.1-1 .6-1.2C4.7 3.3 10 3.5 13.5 5.6c.4.3.6.9.3 1.3-.3.5-.9.6-1.3.3Z"/></svg></a>
+        <a href="#" class="lift" aria-label="Apple Classical"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="8" cy="8" r="7"/><line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/></svg></a>
+        <a href="#" class="lift" aria-label="Idagio"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="8" cy="8" r="7"/><circle cx="8" cy="8" r="2.5" fill="currentColor"/></svg></a>
+        <a href="#" class="lift" aria-label="YouTube"><svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M1 4.5c0-.8.6-1.4 1.4-1.5C4 2.8 6 2.7 8 2.7s4 .1 5.6.3c.8.1 1.4.7 1.4 1.5v6.9c0 .8-.6 1.4-1.4 1.5-1.6.2-3.6.3-5.6.3s-4-.1-5.6-.3C1.6 12.8 1 12.2 1 11.4z"/><polygon points="6.5,5.6 6.5,10.4 11,8" fill="#0F1014"/></svg></a>
+        <a href="#" class="lift" aria-label="Instagram"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="12" height="12" rx="3"/><circle cx="8" cy="8" r="2.6"/><circle cx="11.4" cy="4.6" r="0.6" fill="currentColor"/></svg></a>
+        <a href="#" class="lift" aria-label="Mailing list"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="3.5" width="13" height="9" rx="1"/><path d="m1.5 4.5 6.5 5 6.5-5"/></svg></a>
+      </div>
+    </section>
+
+    <!-- 7. Footer microline -->
+    <footer class="mt-14 text-center font-mono text-[10px] uppercase tracking-[0.18em]" style="color: var(--fg-mute);">
+      <div>Scores published by Éditions Plurabelle · Op. 1 → Op. 17</div>
+      <div class="mt-1.5">Agent — Hélène Vidor · agency@plurabelle-music.com · +33 1 42 ▢▢ ▢▢ ▢▢</div>
+      <div class="mt-3 opacity-55">© 2026 anton kvass · paris / berlin</div>
+    </footer>
+  </main>
+</body>
+</html>

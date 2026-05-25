@@ -11,21 +11,21 @@ import type { TemplateCardData } from "@/components/marketing/template-card";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Templates de landing pages curados | OpenLen",
+  title: "Templates | OpenLen",
   description:
-    "Templates de landing pages diseñadas a mano para SaaS, devtools, ecommerce, restaurantes, blogs editoriales. HTML estático, optimizado, listo para publicar en tu subdominio openlen.com.",
+    "Hand-built landing page templates for SaaS, devtools, ecommerce, restaurants, editorial brands, creators, and more. Static HTML, optimized, ready to publish to your openlen.com subdomain.",
   openGraph: {
-    title: "Templates de landing pages | OpenLen",
+    title: "Templates | OpenLen",
     description:
-      "Templates curadas, listas para llenar con tu info y publicar.",
+      "Hand-built templates ready to fill with your info and publish.",
     type: "website",
     url: "https://openlen.com/templates",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Templates de landing pages | OpenLen",
+    title: "Templates | OpenLen",
     description:
-      "Templates curadas para SaaS, ecommerce, restaurantes, blogs.",
+      "Hand-built templates for SaaS, ecommerce, creators, and more.",
   },
   alternates: {
     canonical: "https://openlen.com/templates",
@@ -35,8 +35,9 @@ export const metadata: Metadata = {
 export default async function TemplatesPage() {
   const all = await listTemplates();
   // Slim the DB rows down to what the gallery cards need — keeps the
-  // serialized props payload sent to the client small (60 templates ×
-  // ~7 fields vs ~13 fields).
+  // serialized props payload sent to the client small. thumbnailUrl is
+  // critical: without it, every card falls back to a live iframe, which
+  // ships ~300KB of Tailwind CDN per card (165 cards = 50MB+ per page).
   const cards: TemplateCardData[] = all.map((t) => ({
     id: t.id,
     name: t.name,
@@ -44,6 +45,8 @@ export default async function TemplatesPage() {
     accent: t.accent,
     pitch: t.pitch,
     storageUrl: t.storageUrl,
+    thumbnailUrl: t.thumbnailUrl,
+    featured: t.featured,
   }));
 
   return (
@@ -57,13 +60,14 @@ export default async function TemplatesPage() {
                 <span className="absolute inline-flex h-full w-full rounded-full bg-coral-500 opacity-75 animate-ping" />
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-coral-500" />
               </span>
-              {all.length} TEMPLATES CURADAS
+              {all.length} HAND-BUILT TEMPLATES
             </div>
             <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight max-w-3xl">
-              Landing pages diseñadas a mano. Listas para hacerlas tuyas.
+              Landing pages built by hand. Ready to make yours.
             </h1>
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400 max-w-2xl">
-              HTML estático, optimizado. Pickeá una, llenala con tu info, deployá a tu subdominio en un click.
+              Static HTML, optimized. Pick one, fill it with your info, deploy
+              to your subdomain in one click.
             </p>
           </div>
         </section>

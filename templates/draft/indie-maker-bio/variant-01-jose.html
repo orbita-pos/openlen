@@ -1,0 +1,319 @@
+<!doctype html>
+<!-- Variant 01: jose @ openlen -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>jose · openlen</title>
+<meta name="description" content="Solo. Building openlen — a landing-page builder. Lima, PE." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --bg: #FBF6EC;
+    --paper: #FFFAF0;
+    --ink: #1A1612;
+    --ink-soft: #5C544A;
+    --ink-faint: #9A9183;
+    --accent: #FF5527;
+    --accent-soft: rgba(255, 85, 39, 0.10);
+    --rule: rgba(26, 22, 18, 0.085);
+    --rule-soft: rgba(26, 22, 18, 0.045);
+  }
+  html, body { background: var(--bg); color: var(--ink); }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image: radial-gradient(circle, rgba(26,22,18,0.05) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-position: 0 0;
+  }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  .display { letter-spacing: -0.028em; }
+  .tabnum { font-variant-numeric: tabular-nums; }
+
+  .link-btn {
+    transition: transform 0.12s ease, border-color 0.12s ease, background-color 0.12s ease;
+  }
+  .link-btn:hover {
+    transform: translateY(-1px);
+    border-color: rgba(26,22,18,0.20);
+    background-color: rgba(26,22,18,0.025);
+  }
+  .link-btn:active { transform: translateY(0); }
+
+  .cta {
+    background: var(--ink);
+    color: #FBF6EC;
+    transition: transform 0.12s ease, background 0.12s ease;
+  }
+  .cta:hover { transform: translateY(-1px); background: #2A2620; }
+  .cta:active { transform: translateY(0); }
+
+  .pulse {
+    position: relative;
+    border-radius: 9999px;
+    background: var(--accent);
+    width: 6px;
+    height: 6px;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .pulse::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: 0 0 0 0 rgba(255, 85, 39, 0.45);
+    animation: pulse-ring 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  .pulse-sm { width: 4px; height: 4px; }
+  @keyframes pulse-ring {
+    0%   { box-shadow: 0 0 0 0 rgba(255, 85, 39, 0.45); }
+    70%  { box-shadow: 0 0 0 7px rgba(255, 85, 39, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 85, 39, 0); }
+  }
+
+  .mark {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    box-shadow: 0 1px 0 0 rgba(26,22,18,0.025), inset 0 0 0 1px rgba(255,255,255,0.5);
+  }
+
+  .tile {
+    background: linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 100%), var(--paper);
+    border: 1px solid var(--rule);
+    box-shadow: 0 1px 0 0 rgba(26,22,18,0.025);
+  }
+
+  ::selection { background: rgba(255,85,39,0.22); color: var(--ink); }
+
+  .ship-table { border-collapse: collapse; width: 100%; }
+  .ship-table td { padding: 0.6rem 0; border-top: 1px solid var(--rule-soft); vertical-align: middle; }
+  .ship-table tr:first-child td { border-top: 0; padding-top: 0.25rem; }
+  .ship-table .col-status { width: 5.3rem; }
+  .ship-table .col-rev { width: 5.4rem; text-align: right; }
+  .ship-table .col-date { width: 4.4rem; text-align: right; }
+</style>
+</head>
+<body class="min-h-screen">
+  <main class="mx-auto w-full max-w-[480px] px-5 sm:px-6 pt-14 pb-16">
+
+    <div class="mono text-[10.5px] tabnum tracking-[0.14em] text-[color:var(--ink-faint)] uppercase mb-9 flex items-center gap-2">
+      <span class="pulse"></span>
+      <span>SHIPPING&nbsp;·&nbsp;OPENLEN V1&nbsp;·&nbsp;WK 18&nbsp;·&nbsp;LIMA → SELF-HOST</span>
+    </div>
+
+    <header class="flex items-start gap-3.5 mb-3.5">
+      <div class="mark w-16 h-16 rounded-[10px] flex items-center justify-center shrink-0">
+        <svg width="34" height="34" viewBox="0 0 34 34" fill="none" aria-hidden="true">
+          <circle cx="17" cy="17" r="10.4" stroke="#FF5527" stroke-width="2.4"/>
+          <circle cx="17" cy="17" r="3.4" fill="#FF5527"/>
+        </svg>
+      </div>
+      <div class="pt-1 min-w-0">
+        <h1 class="display text-[28px] font-semibold leading-[1.05]">jose</h1>
+        <div class="mono text-[12px] text-[color:var(--ink-soft)] mt-1">@jose&nbsp;·&nbsp;openlen.com</div>
+      </div>
+    </header>
+
+    <p class="text-[14.5px] leading-[1.55] text-[color:var(--ink-soft)] mb-8">
+      Solo. Building <span class="text-[color:var(--ink)] font-medium">openlen</span> — a landing-page builder that publishes to a real subdomain. Hetzner-hosted, no Vercel.
+    </p>
+
+    <section class="tile rounded-xl p-5 mb-7">
+      <div class="flex items-center justify-between mb-2.5">
+        <div class="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--ink-faint)]">NOW SHIPPING</div>
+        <div class="mono text-[10px] tabnum text-[color:var(--ink-faint)] flex items-center gap-1.5">
+          <span class="pulse pulse-sm"></span>
+          v0.4&nbsp;·&nbsp;ALPHA
+        </div>
+      </div>
+
+      <h2 class="display text-[20px] font-semibold leading-tight mb-1.5">openlen.com</h2>
+      <p class="text-[13.5px] leading-[1.5] text-[color:var(--ink-soft)] mb-4">
+        Landing-page builder with AI generation + visual editing. Publishes to <span class="mono text-[12px]">&lt;sub&gt;.openlen.com</span>. v1 in 6 weeks.
+      </p>
+
+      <div class="grid grid-cols-4 gap-x-3 mono text-[12px] tabnum py-2.5"
+           style="border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);">
+        <div>
+          <div class="text-[color:var(--ink-faint)] text-[9.5px] uppercase tracking-[0.1em] mb-0.5">MRR</div>
+          <div class="text-[color:var(--ink)] font-medium">$0</div>
+        </div>
+        <div>
+          <div class="text-[color:var(--ink-faint)] text-[9.5px] uppercase tracking-[0.1em] mb-0.5">USERS</div>
+          <div class="text-[color:var(--ink)] font-medium">12</div>
+        </div>
+        <div>
+          <div class="text-[color:var(--ink-faint)] text-[9.5px] uppercase tracking-[0.1em] mb-0.5">VER</div>
+          <div class="text-[color:var(--ink)] font-medium">0.4</div>
+        </div>
+        <div>
+          <div class="text-[color:var(--ink-faint)] text-[9.5px] uppercase tracking-[0.1em] mb-0.5">STAGE</div>
+          <div class="text-[color:var(--ink)] font-medium">alpha</div>
+        </div>
+      </div>
+
+      <div class="mt-4 mb-4">
+        <div class="flex items-center justify-between mono text-[9.5px] tabnum text-[color:var(--ink-faint)] uppercase tracking-[0.1em] mb-1.5">
+          <span>COMMITS&nbsp;·&nbsp;LAST 30 DAYS</span>
+          <span>247 TOTAL</span>
+        </div>
+        <svg class="sparkline w-full block" viewBox="0 0 240 48" preserveAspectRatio="none"
+             data-spark="[2,4,3,6,5,8,4,7,9,6,10,8,11,13,9,12,15,11,14,12,16,18,13,17,19,15,18,21,17,20]"></svg>
+      </div>
+
+      <a href="https://openlen.com" class="cta block text-center mono text-[12px] tabnum uppercase tracking-[0.12em] py-3 rounded-md font-medium">
+        Visit openlen.com&nbsp;&nbsp;↗
+      </a>
+    </section>
+
+    <nav class="space-y-2 mb-9" aria-label="Links">
+
+      <a href="https://openlen.com" class="link-btn flex items-center justify-between gap-3 px-4 py-3.5 rounded-lg border" style="border-color: var(--rule)">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <span class="pulse shrink-0"></span>
+          <span class="text-[14px] font-medium shrink-0">openlen.com</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-faint)] truncate">·&nbsp;try it (alpha invite)</span>
+        </div>
+        <span class="text-[color:var(--ink-faint)] mono text-[12px] shrink-0">↗</span>
+      </a>
+
+      <a href="#" class="link-btn flex items-center justify-between gap-3 px-4 py-3.5 rounded-lg border" style="border-color: var(--rule)">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="shrink-0 opacity-55"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="m3 7 9 6 9-6"/></svg>
+          <span class="text-[14px] font-medium shrink-0">Newsletter</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-faint)] truncate">·&nbsp;monthly build log&nbsp;·&nbsp;184 readers</span>
+        </div>
+        <span class="text-[color:var(--ink-faint)] mono text-[12px] shrink-0">↗</span>
+      </a>
+
+      <a href="#" class="link-btn flex items-center justify-between gap-3 px-4 py-3.5 rounded-lg border" style="border-color: var(--rule)">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="shrink-0 opacity-65"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          <span class="text-[14px] font-medium shrink-0">Twitter / X</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-faint)] truncate">·&nbsp;daily ship log</span>
+        </div>
+        <span class="text-[color:var(--ink-faint)] mono text-[12px] shrink-0">↗</span>
+      </a>
+
+      <a href="#" class="link-btn flex items-center justify-between gap-3 px-4 py-3.5 rounded-lg border" style="border-color: var(--rule)">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="shrink-0 opacity-65"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.7-3.87-1.54-3.87-1.54-.52-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.26.73-1.55-2.56-.29-5.25-1.28-5.25-5.71 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.18 1.18.92-.26 1.91-.39 2.89-.39s1.97.13 2.89.39c2.21-1.49 3.18-1.18 3.18-1.18.63 1.58.23 2.75.11 3.04.74.81 1.19 1.84 1.19 3.1 0 4.44-2.7 5.42-5.27 5.7.41.36.78 1.07.78 2.16 0 1.56-.01 2.81-.01 3.19 0 .31.21.68.8.56C20.21 21.38 23.5 17.07 23.5 12 23.5 5.65 18.35.5 12 .5z"/></svg>
+          <span class="text-[14px] font-medium shrink-0">GitHub</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-faint)] truncate">·&nbsp;84 repos&nbsp;·&nbsp;1.2k stars&nbsp;·&nbsp;14h ago</span>
+        </div>
+        <span class="text-[color:var(--ink-faint)] mono text-[12px] shrink-0">↗</span>
+      </a>
+
+      <a href="#" class="link-btn flex items-center justify-between gap-3 px-4 py-3.5 rounded-lg border" style="border-color: var(--rule)">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="shrink-0 opacity-55"><path d="M16 11h.01M12 11h.01M8 11h.01M21 12c0 4.418-4.03 8-9 8a9.9 9.9 0 0 1-4.06-.853L3 20l1.27-3.81A7.51 7.51 0 0 1 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+          <span class="text-[14px] font-medium shrink-0">Waitlist</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-faint)] truncate">·&nbsp;v1 launch&nbsp;·&nbsp;484 signups</span>
+        </div>
+        <span class="text-[color:var(--ink-faint)] mono text-[12px] shrink-0">↗</span>
+      </a>
+
+      <a href="#" class="link-btn flex items-center justify-between gap-3 px-4 py-3.5 rounded-lg border" style="border-color: var(--rule)">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="shrink-0 opacity-55"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/></svg>
+          <span class="text-[14px] font-medium shrink-0">Past projects</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-faint)] truncate">·&nbsp;3 shipped&nbsp;·&nbsp;1 active</span>
+        </div>
+        <span class="text-[color:var(--ink-faint)] mono text-[12px] shrink-0">↗</span>
+      </a>
+
+      <a href="#" class="link-btn flex items-center justify-between gap-3 px-4 py-3.5 rounded-lg border" style="border-color: var(--rule)">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="shrink-0 opacity-55"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          <span class="text-[14px] font-medium shrink-0">Consulting</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-faint)] truncate">·&nbsp;1 day/week open&nbsp;·&nbsp;Q3 2026</span>
+        </div>
+        <span class="text-[color:var(--ink-faint)] mono text-[12px] shrink-0">↗</span>
+      </a>
+
+    </nav>
+
+    <section class="mb-8">
+      <div class="mono text-[10px] tracking-[0.14em] uppercase text-[color:var(--ink-faint)] mb-3 flex items-center justify-between">
+        <span>SHIPPED</span>
+        <span class="tabnum">3 PROJECTS&nbsp;·&nbsp;SINCE 2023</span>
+      </div>
+      <table class="ship-table mono text-[12px] tabnum">
+        <tbody>
+          <tr>
+            <td class="text-[color:var(--ink)] font-medium">openlen</td>
+            <td class="col-status">
+              <span class="inline-flex items-center gap-1.5" style="color: var(--accent)"><span class="pulse pulse-sm"></span>ALPHA</span>
+            </td>
+            <td class="col-rev text-[color:var(--ink-soft)]">$0</td>
+            <td class="col-date text-[color:var(--ink-faint)]">May 26</td>
+          </tr>
+          <tr>
+            <td class="text-[color:var(--ink)] font-medium">inariwatch</td>
+            <td class="col-status text-[color:var(--ink-soft)]">LIVE</td>
+            <td class="col-rev text-[color:var(--ink-soft)]">$84&nbsp;MRR</td>
+            <td class="col-date text-[color:var(--ink-faint)]">Jan 26</td>
+          </tr>
+          <tr>
+            <td class="text-[color:var(--ink-soft)] opacity-70" style="text-decoration: line-through; text-decoration-thickness: 1px; text-decoration-color: rgba(26,22,18,0.4);">stackmail</td>
+            <td class="col-status text-[color:var(--ink-faint)]">SUNSET</td>
+            <td class="col-rev text-[color:var(--ink-faint)]">$0</td>
+            <td class="col-date text-[color:var(--ink-faint)]">2023</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <div class="flex items-center gap-5 mb-7" aria-label="Social">
+      <a href="#" aria-label="Twitter" class="text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] transition-colors">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      </a>
+      <a href="#" aria-label="GitHub" class="text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] transition-colors">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.7-3.87-1.54-3.87-1.54-.52-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.26.73-1.55-2.56-.29-5.25-1.28-5.25-5.71 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.18 1.18.92-.26 1.91-.39 2.89-.39s1.97.13 2.89.39c2.21-1.49 3.18-1.18 3.18-1.18.63 1.58.23 2.75.11 3.04.74.81 1.19 1.84 1.19 3.1 0 4.44-2.7 5.42-5.27 5.7.41.36.78 1.07.78 2.16 0 1.56-.01 2.81-.01 3.19 0 .31.21.68.8.56C20.21 21.38 23.5 17.07 23.5 12 23.5 5.65 18.35.5 12 .5z"/></svg>
+      </a>
+      <a href="#" aria-label="Substack" class="text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] transition-colors">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M22.539 8.242H1.46V5.406h21.08v2.836zM1.46 10.812V24L12 18.11 22.54 24V10.812H1.46zM22.54 0H1.46v2.836h21.08V0z"/></svg>
+      </a>
+      <a href="#" aria-label="RSS" class="text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] transition-colors">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5.5" cy="18.5" r="2.5"/><path d="M2 8a14 14 0 0 1 14 14h-3A11 11 0 0 0 2 11V8z"/><path d="M2 2a20 20 0 0 1 20 20h-3A17 17 0 0 0 2 5V2z"/></svg>
+      </a>
+    </div>
+
+    <footer class="mono text-[10.5px] tracking-[0.06em] text-[color:var(--ink-faint)] pt-4" style="border-top: 1px solid var(--rule);">
+      Lima, PE&nbsp;·&nbsp;open to: angel intros + design feedback
+    </footer>
+
+  </main>
+
+<script>
+(function(){
+  document.querySelectorAll('.sparkline').forEach(function(svg){
+    var data = JSON.parse(svg.dataset.spark);
+    var w = 240, h = 48, padX = 2, padTop = 4, padBot = 3;
+    var max = Math.max.apply(null, data), min = Math.min.apply(null, data);
+    var range = max - min || 1;
+    var sx = (w - padX*2) / (data.length - 1);
+    var pts = data.map(function(v, i){
+      var x = padX + i*sx;
+      var y = h - padBot - ((v - min) / range) * (h - padTop - padBot);
+      return [x, y];
+    });
+    var line = 'M' + pts.map(function(p){ return p[0].toFixed(2) + ',' + p[1].toFixed(2); }).join(' L');
+    var area = line + ' L' + (w-padX).toFixed(2) + ',' + (h-padBot).toFixed(2) + ' L' + padX.toFixed(2) + ',' + (h-padBot).toFixed(2) + ' Z';
+    var last = pts[pts.length - 1];
+    svg.innerHTML =
+      '<path d="' + area + '" fill="var(--accent)" opacity="0.10"/>' +
+      '<path d="' + line + '" stroke="var(--accent)" stroke-width="1.5" fill="none" stroke-linejoin="round" stroke-linecap="round"/>' +
+      '<circle cx="' + last[0].toFixed(2) + '" cy="' + last[1].toFixed(2) + '" r="2.4" fill="var(--accent)"/>' +
+      '<circle cx="' + last[0].toFixed(2) + '" cy="' + last[1].toFixed(2) + '" r="4.5" fill="var(--accent)" opacity="0.18"/>';
+  });
+})();
+</script>
+</body>
+</html>

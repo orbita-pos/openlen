@@ -71,6 +71,13 @@ export class R2Storage implements StorageAdapter {
         Key: key,
         ContentType: contentType,
         Body: body,
+        // Both buckets we use (templates + uploads) store content-addressed
+        // files — the filename includes a sha256 prefix, so the bytes at
+        // any given URL never change. 1 year + immutable lets the CDN edge
+        // cache aggressively and lets the browser skip revalidation
+        // entirely. Re-uploads create a new URL via a new hash, no purge
+        // needed.
+        CacheControl: "public, max-age=31536000, immutable",
       }),
     );
     const publicBase = this.opts.publicUrlBase.replace(/\/+$/, "");

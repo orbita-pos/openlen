@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>holler.studio — Illustrator + live painting</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0D0716;
+    --bg-card: #1A1326;
+    --bg-card-hover: #221A30;
+    --fg: #F7F0EA;
+    --fg-muted: #B7A7B0;
+    --fg-faint: #645566;
+    --accent: #FF8463;
+    --accent-rgb: 255, 132, 99;
+    --secondary: #58E0C0;
+    --secondary-rgb: 88, 224, 192;
+    --border: rgba(255,255,255,0.06);
+  }
+  * { -webkit-font-smoothing: antialiased; }
+  html, body { background: var(--bg); }
+  body {
+    color: var(--fg);
+    font-family: 'Inter', system-ui, sans-serif;
+    background-image:
+      radial-gradient(at 30% 5%, rgba(var(--accent-rgb), 0.13), transparent 50%),
+      radial-gradient(at 80% 85%, rgba(var(--secondary-rgb), 0.08), transparent 55%),
+      radial-gradient(circle at 1px 1px, rgba(255,255,255,0.035) 1px, transparent 0);
+    background-size: 100% 100%, 100% 100%, 32px 32px;
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+  .font-display { font-family: 'Space Grotesk', sans-serif; letter-spacing: -0.03em; }
+  .font-mono { font-family: 'JetBrains Mono', monospace; }
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+
+  .pulse-dot {
+    position: relative; display: inline-block;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.7);
+    animation: pulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(var(--accent-rgb), 0); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0); }
+  }
+  .accent-ring {
+    box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent), 0 0 32px rgba(var(--accent-rgb), 0.42);
+    animation: ring-breathe 3.6s ease-in-out infinite;
+  }
+  @keyframes ring-breathe {
+    0%, 100% { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent), 0 0 32px rgba(var(--accent-rgb), 0.42); }
+    50% { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent), 0 0 48px rgba(var(--accent-rgb), 0.62); }
+  }
+
+  .link-row { transition: transform 120ms cubic-bezier(0.2, 0.6, 0.2, 1), border-color 120ms, background 120ms, box-shadow 120ms; }
+  .link-row:hover {
+    transform: translateY(-2px);
+    border-color: rgba(var(--accent-rgb), 0.45) !important;
+    background: var(--bg-card-hover);
+    box-shadow: 0 8px 24px -8px rgba(var(--accent-rgb), 0.25);
+  }
+  .link-row:hover .chev { transform: translateX(2px); color: var(--accent); }
+  .link-row .chev { transition: transform 120ms, color 120ms; }
+
+  .social-btn { transition: all 120ms ease; }
+  .social-btn:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
+
+  .featured-tile { box-shadow: 0 0 36px rgba(var(--accent-rgb), 0.18); transition: box-shadow 200ms ease, transform 200ms ease; }
+  .featured-tile:hover { box-shadow: 0 0 50px rgba(var(--accent-rgb), 0.30); transform: translateY(-2px); }
+
+  /* paper-grain feel via tiny noise via subtle gradient */
+  .paper-glow { background: linear-gradient(180deg, rgba(255,132,99,0.07), rgba(255,132,99,0.01)); border: 1px solid rgba(255,132,99,0.18); }
+
+  .queue-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+</style>
+</head>
+<body>
+
+<main class="mx-auto w-full max-w-[480px] px-5 py-8 sm:py-12 relative">
+
+  <!-- Status bar -->
+  <div class="flex items-center justify-between text-[10px] font-mono uppercase tracking-[0.18em] mb-8 gap-3">
+    <div class="flex items-center gap-2 min-w-0">
+      <span class="pulse-dot shrink-0"></span>
+      <span style="color: var(--fg-muted)">Painting · Stage 3</span>
+      <span style="color: var(--fg-faint)">·</span>
+      <span style="color: var(--accent)">Inking</span>
+    </div>
+    <span class="tabular-nums shrink-0" style="color: var(--fg-faint)">412 watching</span>
+  </div>
+
+  <!-- Header -->
+  <div class="flex flex-col items-center text-center mb-8">
+    <div class="relative mb-5">
+      <div class="w-24 h-24 rounded-full accent-ring overflow-hidden bg-[#1A1326] flex items-center justify-center">
+        <svg viewBox="0 0 96 96" class="w-full h-full">
+          <defs>
+            <linearGradient id="h-grad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#FFB18C"/>
+              <stop offset="1" stop-color="#E6553A"/>
+            </linearGradient>
+            <linearGradient id="h-teal" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#58E0C0"/>
+              <stop offset="1" stop-color="#2A9D80"/>
+            </linearGradient>
+          </defs>
+          <rect width="96" height="96" fill="#150E20"/>
+          <!-- brushstroke arc -->
+          <path d="M 18 64 Q 32 28, 64 32 T 82 58" stroke="url(#h-grad)" stroke-width="11" stroke-linecap="round" fill="none"/>
+          <!-- drip -->
+          <circle cx="80" cy="68" r="4" fill="url(#h-grad)"/>
+          <circle cx="82" cy="78" r="2" fill="url(#h-grad)" opacity="0.7"/>
+          <!-- teal accent dot -->
+          <circle cx="26" cy="30" r="3" fill="url(#h-teal)"/>
+          <circle cx="22" cy="38" r="1.5" fill="#58E0C0" opacity="0.6"/>
+        </svg>
+      </div>
+    </div>
+
+    <h1 class="font-display text-[34px] leading-[1.05] font-bold mb-1" style="color: var(--fg)">holler<span style="color: var(--accent)">.</span>studio</h1>
+    <div class="font-mono text-[11px] tracking-wider" style="color: var(--fg-muted)">
+      @holler · <span class="tabular-nums">87,420</span> followers
+    </div>
+    <p class="text-[14px] leading-[1.6] mt-4 max-w-[340px]" style="color: var(--fg-muted)">
+      Illustrator. Stream long-form ink + watercolor commissions on Twitch. Slow + quiet + chatty. Working on a book.
+    </p>
+  </div>
+
+  <!-- Commission queue panel -->
+  <div class="paper-glow rounded-xl p-4 mb-6 flex items-center justify-between">
+    <div>
+      <div class="text-[10px] font-mono uppercase tracking-[0.18em] mb-1.5" style="color: var(--accent)">Commission queue</div>
+      <div class="flex items-center gap-1.5">
+        <span class="queue-dot" style="background: var(--accent)"></span>
+        <span class="queue-dot" style="background: var(--accent)"></span>
+        <span class="queue-dot" style="background: var(--accent)"></span>
+        <span class="queue-dot" style="background: rgba(255,132,99,0.20)"></span>
+        <span class="queue-dot" style="background: rgba(255,132,99,0.20)"></span>
+        <span class="queue-dot" style="background: rgba(255,132,99,0.20)"></span>
+        <span class="queue-dot" style="background: rgba(255,132,99,0.20)"></span>
+        <span class="queue-dot" style="background: rgba(255,132,99,0.20)"></span>
+      </div>
+    </div>
+    <div class="text-right">
+      <div class="font-mono text-[11px] tabular-nums font-semibold" style="color: var(--fg)">3 / 8</div>
+      <div class="font-mono text-[10px] uppercase tracking-[0.15em] mt-0.5" style="color: var(--secondary)">Open · 5 slots</div>
+    </div>
+  </div>
+
+  <!-- Featured tile -->
+  <a href="#" class="featured-tile block rounded-xl overflow-hidden mb-8 border" style="border-color: var(--border); background: var(--bg-card);">
+    <div class="relative aspect-video" style="background: linear-gradient(135deg, #2a1410 0%, #1a0e1f 60%, #0D0716 100%);">
+      <!-- sketchy map illustration -->
+      <svg class="absolute inset-0 w-full h-full" viewBox="0 0 400 225" preserveAspectRatio="none">
+        <g opacity="0.55">
+          <path d="M 60 60 Q 120 30, 180 80 T 340 70" stroke="#FF8463" stroke-width="1.5" fill="none"/>
+          <path d="M 50 130 Q 130 110, 200 140 T 360 130" stroke="#FF8463" stroke-width="1.2" fill="none" opacity="0.7"/>
+          <path d="M 80 175 Q 160 150, 220 180 T 320 170" stroke="#FF8463" stroke-width="1" fill="none" opacity="0.5"/>
+          <!-- compass-like rose -->
+          <g transform="translate(310, 165)">
+            <circle r="14" fill="none" stroke="#58E0C0" stroke-width="0.8" opacity="0.7"/>
+            <path d="M 0 -14 L 3 0 L 0 14 L -3 0 Z" fill="#58E0C0" opacity="0.7"/>
+          </g>
+          <!-- small landmark dots -->
+          <circle cx="125" cy="55" r="2.5" fill="#FF8463"/>
+          <circle cx="220" cy="100" r="2.5" fill="#FF8463"/>
+          <circle cx="280" cy="135" r="2.5" fill="#FF8463"/>
+        </g>
+      </svg>
+      <div class="absolute inset-0 flex items-center justify-center">
+        <div class="w-14 h-14 rounded-full flex items-center justify-center" style="background: rgba(255,132,99,0.95); box-shadow: 0 0 32px rgba(255,132,99,0.55);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#1A1326"><path d="M8 5v14l11-7z"/></svg>
+        </div>
+      </div>
+      <div class="absolute top-3 left-3 flex items-center gap-2 px-2 py-1 rounded font-mono text-[10px] uppercase tracking-[0.15em]" style="background: rgba(13,7,22,0.78); color: var(--accent);">
+        <span class="pulse-dot" style="width:5px;height:5px;"></span>WIP · Hour 2 of 4
+      </div>
+      <div class="absolute bottom-3 right-3 font-mono text-[10px] tabular-nums" style="background: rgba(13,7,22,0.78); color: var(--fg); padding: 4px 8px; border-radius: 4px;">02:14:08</div>
+    </div>
+    <div class="p-4 flex items-start justify-between gap-3">
+      <div class="flex-1 min-w-0">
+        <div class="text-[14px] font-medium leading-[1.4] mb-1" style="color: var(--fg)">WIP · The Cartographer (commission) — midway through inks</div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.15em]" style="color: var(--fg-muted)">4hr stream · ink on cold-press</div>
+      </div>
+      <span class="font-mono text-[10px] uppercase tracking-[0.18em] whitespace-nowrap" style="color: var(--accent)">Watch live →</span>
+    </div>
+  </a>
+
+  <!-- Link stack -->
+  <div class="flex flex-col gap-2.5 mb-8">
+    <a href="#" class="link-row flex items-center gap-3 px-4 py-3.5 rounded-xl border" style="background: var(--bg-card); border-color: rgba(255,132,99,0.30);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color: var(--accent)"><path d="M4 1l-3 4v15h5v4h3l4-4h4l6-6V1H4zm17 11l-4 4h-5l-3 3v-3H6V3h15v9zm-4-6h-2v6h2V6zm-5 0h-2v6h2V6z"/></svg>
+      <div class="flex-1 min-w-0">
+        <div class="text-[15px] font-medium" style="color: var(--fg)">Twitch</div>
+        <div class="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.15em] mt-0.5" style="color: var(--fg-muted)">
+          <span class="pulse-dot" style="width:6px;height:6px;"></span>
+          Live drawing · Mon / Wed / Fri
+        </div>
+      </div>
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-faint)"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+
+    <a href="#" class="link-row flex items-center gap-3 px-4 py-3.5 rounded-xl border" style="background: var(--bg-card); border-color: var(--border);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-muted)"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+      <div class="flex-1 min-w-0">
+        <div class="text-[15px] font-medium" style="color: var(--fg)">Instagram</div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.15em] mt-0.5" style="color: var(--fg-muted)">Finished pieces · monthly drop</div>
+      </div>
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-faint)"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+
+    <a href="#" class="link-row flex items-center gap-3 px-4 py-3.5 rounded-xl border" style="background: var(--bg-card); border-color: rgba(88,224,192,0.25);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--secondary)"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2">
+          <span class="text-[15px] font-medium" style="color: var(--fg)">Commissions</span>
+          <span class="font-mono text-[9px] px-1.5 py-0.5 rounded uppercase tracking-[0.15em]" style="background: rgba(88,224,192,0.16); color: var(--secondary)">OPEN</span>
+        </div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.15em] mt-0.5" style="color: var(--fg-muted)">Queue <span class="tabular-nums" style="color: var(--fg)">3 / 8</span> · ink + watercolor</div>
+      </div>
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-faint)"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+
+    <a href="#" class="link-row flex items-center gap-3 px-4 py-3.5 rounded-xl border" style="background: var(--bg-card); border-color: var(--border);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-muted)"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+      <div class="flex-1 min-w-0">
+        <div class="text-[15px] font-medium" style="color: var(--fg)">Print shop</div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.15em] mt-0.5" style="color: var(--fg-muted)">3 new pieces · A3 giclée</div>
+      </div>
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-faint)"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+
+    <a href="#" class="link-row flex items-center gap-3 px-4 py-3.5 rounded-xl border" style="background: var(--bg-card); border-color: var(--border);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-muted)"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <div class="flex-1 min-w-0">
+        <div class="text-[15px] font-medium" style="color: var(--fg)">The book</div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.15em] mt-0.5" style="color: var(--fg-muted)">Launch 2027 · 42 / 96 plates done</div>
+      </div>
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-faint)"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+
+    <a href="#" class="link-row flex items-center gap-3 px-4 py-3.5 rounded-xl border" style="background: var(--bg-card); border-color: var(--border);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color: var(--fg-muted)"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+      <div class="flex-1 min-w-0">
+        <div class="text-[15px] font-medium" style="color: var(--fg)">Subscriber Discord</div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.15em] mt-0.5" style="color: var(--fg-muted)">Crit Sundays · process channel</div>
+      </div>
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-faint)"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+
+    <a href="#" class="link-row flex items-center gap-3 px-4 py-3.5 rounded-xl border" style="background: var(--bg-card); border-color: var(--border);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-muted)"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+      <div class="flex-1 min-w-0">
+        <div class="text-[15px] font-medium" style="color: var(--fg)">Process timelapses</div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.15em] mt-0.5" style="color: var(--fg-muted)">YouTube · 4-min cuts of each piece</div>
+      </div>
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-faint)"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+
+    <a href="#" class="link-row flex items-center gap-3 px-4 py-3.5 rounded-xl border" style="background: var(--bg-card); border-color: var(--border);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color: var(--fg-muted)"><path d="M14.82 2.41c3.96 0 7.18 3.24 7.18 7.21 0 5.32-3.8 9.68-9 13.38-5.2-3.7-9-8.06-9-13.38 0-3.97 3.22-7.21 7.18-7.21 1.5 0 2.84.36 4.04 1.04 1.2-.68 2.54-1.04 4.04-1.04zm0 2c-1.13 0-2.18.28-3.05.83l-.99.62-.99-.62c-.87-.55-1.92-.83-3.05-.83-2.85 0-5.18 2.34-5.18 5.21 0 3.59 2.59 7.13 7.22 10.78 4.63-3.65 7.22-7.19 7.22-10.78 0-2.87-2.33-5.21-5.18-5.21z"/></svg>
+      <div class="flex-1 min-w-0">
+        <div class="text-[15px] font-medium" style="color: var(--fg)">Patreon</div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.15em] mt-0.5" style="color: var(--fg-muted)">Early access · brush packs · refs</div>
+      </div>
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-faint)"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+  </div>
+
+  <!-- Social row -->
+  <div class="flex items-center justify-center gap-2 mb-10">
+    <a href="#" aria-label="Twitch" class="social-btn w-8 h-8 rounded-md border flex items-center justify-center" style="border-color: var(--border); color: var(--fg-muted);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M4 1l-3 4v15h5v4h3l4-4h4l6-6V1H4zm17 11l-4 4h-5l-3 3v-3H6V3h15v9zm-4-6h-2v6h2V6zm-5 0h-2v6h2V6z"/></svg>
+    </a>
+    <a href="#" aria-label="Instagram" class="social-btn w-8 h-8 rounded-md border flex items-center justify-center" style="border-color: var(--border); color: var(--fg-muted);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+    </a>
+    <a href="#" aria-label="YouTube" class="social-btn w-8 h-8 rounded-md border flex items-center justify-center" style="border-color: var(--border); color: var(--fg-muted);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+    </a>
+    <a href="#" aria-label="Patreon" class="social-btn w-8 h-8 rounded-md border flex items-center justify-center" style="border-color: var(--border); color: var(--fg-muted);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.385 3.04c-4.054 0-7.348 3.294-7.348 7.348 0 4.041 3.294 7.31 7.348 7.31 4.041 0 7.31-3.269 7.31-7.31 0-4.054-3.269-7.348-7.31-7.348zM1.347 21.231V3.04h3.611v18.191H1.347z"/></svg>
+    </a>
+    <a href="#" aria-label="Twitter" class="social-btn w-8 h-8 rounded-md border flex items-center justify-center" style="border-color: var(--border); color: var(--fg-muted);">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+    </a>
+    <a href="#" aria-label="Bluesky" class="social-btn w-8 h-8 rounded-md border flex items-center justify-center" style="border-color: var(--border); color: var(--fg-muted);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 10.8C10.05 6.95 4.55 0.55 2.7 0.05c-2.65-.65-2.7 2.6-2.55 4.05.2 1.95.85 7.55 1.55 9.8 2.3 7.55 9.5 5.95 10.3 5.05.8.9 8 2.5 10.3-5.05.7-2.25 1.35-7.85 1.55-9.8.15-1.45.1-4.7-2.55-4.05C19.45.55 13.95 6.95 12 10.8z"/></svg>
+    </a>
+  </div>
+
+  <div class="text-center font-mono text-[10px] uppercase tracking-[0.18em]" style="color: rgba(247,240,234,0.30)">
+    © 2026 holler · made with openlen
+  </div>
+
+</main>
+
+</body>
+</html>

@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>lev k. · @levk.strength · Foundations program</title>
+<meta name="description" content="Strength coach. Pull-from-the-floor programming for intermediate lifters.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #100808;
+    --accent: #C9A87C;
+    --accent-soft: #DCC096;
+    --cream: #F2EAD9;
+    --cream-faint: rgba(242, 234, 217, 0.62);
+    --cream-dim: rgba(242, 234, 217, 0.38);
+    --hairline: rgba(242, 234, 217, 0.07);
+    --hairline-accent: rgba(201, 168, 124, 0.22);
+  }
+  html, body { background: var(--bg); }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--cream);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+    -webkit-font-smoothing: antialiased;
+  }
+  .serif { font-family: 'Fraunces', serif; font-weight: 500; letter-spacing: -0.022em; font-variation-settings: "opsz" 144; }
+  .mono { font-family: 'JetBrains Mono', monospace; font-feature-settings: "tnum"; letter-spacing: 0.06em; }
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  .bg-mesh {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(ellipse 90% 60% at 50% -8%, rgba(201, 168, 124, 0.10), transparent 62%),
+      radial-gradient(ellipse 80% 50% at 50% 110%, rgba(201, 168, 124, 0.06), transparent 65%),
+      radial-gradient(ellipse 40% 28% at 78% 38%, rgba(150, 90, 60, 0.05), transparent 70%);
+  }
+  .grain {
+    position: fixed; inset: 0; pointer-events: none; z-index: 1; opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='0.7'/%3E%3C/svg%3E");
+  }
+
+  .avatar-glow {
+    position: absolute; inset: -22px;
+    background: radial-gradient(circle, rgba(201, 168, 124, 0.30), transparent 65%);
+    filter: blur(22px); z-index: -1;
+  }
+  .avatar-ring {
+    background: conic-gradient(from 200deg, rgba(201, 168, 124, 0.55), rgba(201, 168, 124, 0.08) 35%, rgba(201, 168, 124, 0.55));
+    padding: 1.5px; border-radius: 9999px;
+  }
+  .avatar-inner {
+    width: 112px; height: 112px; border-radius: 9999px;
+    background:
+      radial-gradient(circle at 40% 30%, rgba(242, 234, 217, 0.70), transparent 40%),
+      radial-gradient(circle at 70% 75%, rgba(122, 70, 42, 0.6), transparent 52%),
+      linear-gradient(140deg, #5A3220 0%, #2C1812 55%, #150A08 100%);
+    filter: saturate(0.95);
+  }
+
+  .pulse-dot { position: relative; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .pulse-dot::after {
+    content: ""; position: absolute; inset: -3px; border-radius: 50%;
+    background: var(--accent); opacity: 0.5; animation: pulse 2.2s ease-out infinite;
+  }
+  @keyframes pulse { 0%{transform:scale(1);opacity:0.5} 100%{transform:scale(2.6);opacity:0} }
+
+  .featured {
+    position: relative;
+    background: linear-gradient(180deg, rgba(201, 168, 124, 0.07), rgba(201, 168, 124, 0.015));
+    border: 1px solid rgba(201, 168, 124, 0.3);
+    border-radius: 20px;
+    box-shadow: inset 0 0 60px -12px rgba(201, 168, 124, 0.14);
+  }
+  .featured-glow {
+    position: absolute; inset: -36px -20px;
+    background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(201, 168, 124, 0.18), transparent 70%);
+    filter: blur(34px); z-index: -1; pointer-events: none;
+  }
+
+  .cta {
+    background: linear-gradient(180deg, #D8BD93 0%, #B89570 100%);
+    color: #150C08; font-weight: 600;
+    transition: transform 120ms ease, box-shadow 200ms ease, filter 120ms ease;
+    box-shadow: 0 4px 22px -6px rgba(201, 168, 124, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  }
+  .cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 32px -6px rgba(201, 168, 124, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    filter: brightness(1.04);
+  }
+
+  .link-btn {
+    position: relative; display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px; border-radius: 14px;
+    background: rgba(242, 234, 217, 0.025);
+    border: 1px solid var(--hairline);
+    transition: transform 120ms ease, background 120ms ease, border-color 120ms ease, box-shadow 220ms ease;
+    color: var(--cream);
+  }
+  .link-btn:hover {
+    transform: translateY(-1px);
+    background: rgba(201, 168, 124, 0.055);
+    border-color: var(--hairline-accent);
+    box-shadow: 0 8px 28px -10px rgba(201, 168, 124, 0.30);
+  }
+  .link-btn .arrow { opacity: 0.35; transition: transform 140ms ease, opacity 140ms ease; }
+  .link-btn:hover .arrow { transform: translateX(3px); opacity: 0.9; }
+  .link-btn.is-waitlist { opacity: 0.85; }
+
+  .link-icon {
+    width: 30px; height: 30px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(201, 168, 124, 0.10);
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .link-icon-primary {
+    background: linear-gradient(140deg, rgba(201, 168, 124, 0.22), rgba(201, 168, 124, 0.08));
+    color: var(--accent-soft);
+  }
+
+  .check { width: 13px; height: 13px; flex-shrink: 0; color: var(--accent); }
+  .icon-btn {
+    width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+    border-radius: 9999px; color: var(--cream-faint);
+    transition: color 140ms ease, background 140ms ease, transform 140ms ease;
+  }
+  .icon-btn:hover { color: var(--accent); background: rgba(201, 168, 124, 0.08); transform: translateY(-1px); }
+
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--hairline), transparent);
+  }
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 8px; border-radius: 9999px;
+    background: rgba(201, 168, 124, 0.10);
+    border: 1px solid rgba(201, 168, 124, 0.22);
+  }
+
+  @media (min-width: 481px) { .container-bio { max-width: 440px; } }
+</style>
+</head>
+<body class="antialiased">
+
+<div class="bg-mesh"></div>
+<div class="grain"></div>
+
+<main class="container-bio mx-auto px-6 pt-14 pb-12 relative z-10">
+
+  <!-- Eyebrow -->
+  <div class="flex items-center justify-center gap-2.5 mb-12">
+    <span class="pulse-dot"></span>
+    <p class="mono text-[10.5px] uppercase tabular" style="color: var(--cream-faint);">
+      412 athletes &middot; 3 programs &middot; waitlist open
+    </p>
+  </div>
+
+  <!-- Header -->
+  <header class="text-center mb-11">
+    <div class="relative inline-block mb-6">
+      <div class="avatar-glow"></div>
+      <div class="avatar-ring"><div class="avatar-inner"></div></div>
+    </div>
+    <h1 class="serif text-[36px] leading-[1.02] mb-1.5" style="color: var(--cream);">lev k.</h1>
+    <p class="text-[12.5px] tracking-wide mb-4" style="color: var(--cream-faint);">@levk.strength</p>
+    <p class="text-[14px] leading-[1.65] max-w-[340px] mx-auto" style="color: var(--cream-faint);">
+      Strength coach. Pull-from-the-floor programming for intermediate lifters. Eight-week blocks, video form review.
+    </p>
+  </header>
+
+  <!-- Featured offer -->
+  <section class="relative mb-11">
+    <div class="featured-glow"></div>
+    <div class="featured p-6">
+      <div class="flex items-center justify-between mb-3.5">
+        <span class="mono text-[10px] uppercase tabular" style="color: var(--accent);">flagship &middot; 8 weeks</span>
+        <div class="badge">
+          <span class="pulse-dot" style="width:5px;height:5px"></span>
+          <span class="mono text-[10px] tabular" style="color: var(--accent-soft);">next cohort mar 9</span>
+        </div>
+      </div>
+      <h2 class="serif text-[28px] leading-[1.05] mb-2" style="color: var(--cream);">Foundations</h2>
+      <p class="text-[13.5px] leading-[1.65] mb-6" style="color: var(--cream-faint);">
+        An eight-week intermediate block built around the deadlift, the front squat, and the strict press. For lifters past the novice phase.
+      </p>
+
+      <ul class="space-y-2.5 mb-7">
+        <li class="flex items-start gap-3 text-[13px]" style="color: var(--cream);">
+          <svg class="check mt-[3px]" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,7.5 5.5,11 12,3.5"/></svg>
+          <span>56 sessions &middot; <span class="mono text-[11.5px] tabular" style="color: var(--cream-faint);">4-day split, ~75 min</span></span>
+        </li>
+        <li class="flex items-start gap-3 text-[13px]" style="color: var(--cream);">
+          <svg class="check mt-[3px]" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,7.5 5.5,11 12,3.5"/></svg>
+          <span>Two video form reviews &middot; I watch your lifts</span>
+        </li>
+        <li class="flex items-start gap-3 text-[13px]" style="color: var(--cream);">
+          <svg class="check mt-[3px]" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,7.5 5.5,11 12,3.5"/></svg>
+          <span>Cohort &middot; <span class="mono text-[11.5px] tabular" style="color: var(--cream-faint);">~40 lifters, mar &ndash; may</span></span>
+        </li>
+        <li class="flex items-start gap-3 text-[13px]" style="color: var(--cream);">
+          <svg class="check mt-[3px]" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,7.5 5.5,11 12,3.5"/></svg>
+          <span>Lifetime access to the programming PDFs</span>
+        </li>
+      </ul>
+
+      <a href="#" class="cta flex items-center justify-center gap-2 py-3.5 rounded-xl text-[14px] w-full">
+        Enroll &middot; $148
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5h8M7 3l3.5 3.5L7 10"/></svg>
+      </a>
+      <p class="text-center mt-3 text-[11.5px]" style="color: var(--cream-dim);">
+        <span class="mono tabular">28 / 40</span> spots taken &middot; closes mar 8
+      </p>
+    </div>
+  </section>
+
+  <!-- Link stack -->
+  <section class="space-y-2.5 mb-11">
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon link-icon-primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="12" r="3"/><path d="M9 12h6"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Foundations &middot; <span style="color: var(--accent-soft);">$148</span></div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">8-WK COHORT &middot; MAR 9</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn is-waitlist">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Advanced &middot; <span style="color: var(--accent-soft);">$228</span></div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">WAITLIST &middot; OPENS APR 14</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="13" rx="2"/><path d="M10 9l5 3-5 3z" fill="currentColor"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Form review &middot; <span style="color: var(--accent-soft);">$48</span></div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">SEND ONE VIDEO, I REPLY IN 48H</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v6a8 8 0 11-16 0V4z"/><path d="M9 4v2M15 4v2"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Free sample week</div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">EMAIL &middot; 7 SESSIONS, NO CARD</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5.5" width="19" height="13" rx="3"/><path d="M10.5 9.5l4.5 2.5-4.5 2.5z" fill="currentColor"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">YouTube &middot; technique series</div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">94 VIDEOS &middot; 38.6K SUBS</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.9" fill="currentColor"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Instagram &middot; daily lifts</div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">@LEVK.STRENGTH &middot; 22.4K</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Newsletter &middot; weekly</div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">PROGRAMMING NOTES &middot; FRIDAYS</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+    <a href="#" class="link-btn">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="link-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v16l-7-4-7 4z"/></svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] truncate" style="color: var(--cream);">Press &middot; <span class="serif text-[15px]" style="color:var(--accent-soft)">Outside Magazine</span></div>
+          <div class="mono text-[10.5px] tabular mt-0.5" style="color: var(--cream-dim);">‘The case for slow lifts’ &middot; 2025</div>
+        </div>
+      </div>
+      <svg class="arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5"/></svg>
+    </a>
+
+  </section>
+
+  <!-- Social proof microbar -->
+  <div class="flex items-center justify-center gap-5 mb-9">
+    <div class="text-center">
+      <div class="mono text-[14px] tabular" style="color: var(--accent-soft);">412</div>
+      <div class="text-[10px] italic mt-0.5" style="color: var(--cream-dim);">athletes</div>
+    </div>
+    <div class="w-px h-7" style="background: var(--hairline);"></div>
+    <div class="text-center">
+      <div class="mono text-[14px] tabular" style="color: var(--accent-soft);">19</div>
+      <div class="text-[10px] italic mt-0.5" style="color: var(--cream-dim);">countries</div>
+    </div>
+    <div class="w-px h-7" style="background: var(--hairline);"></div>
+    <div class="text-center">
+      <div class="mono text-[14px] tabular" style="color: var(--accent-soft);">6</div>
+      <div class="text-[10px] italic mt-0.5" style="color: var(--cream-dim);">years coaching</div>
+    </div>
+  </div>
+
+  <div class="divider mb-7"></div>
+
+  <!-- Social row -->
+  <nav class="flex items-center justify-center gap-1.5 mb-8">
+    <a href="#" class="icon-btn" aria-label="Instagram"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.9" fill="currentColor"/></svg></a>
+    <a href="#" class="icon-btn" aria-label="YouTube"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="3"/><path d="M10.5 9.5l4.5 2.5-4.5 2.5z" fill="currentColor" stroke="none"/></svg></a>
+    <a href="#" class="icon-btn" aria-label="TikTok"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4v10.5a3.5 3.5 0 11-3.5-3.5"/><path d="M14 4c.5 2.5 2.5 4 5 4"/></svg></a>
+    <a href="#" class="icon-btn" aria-label="X / Twitter"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5l14 14M19 5L5 19"/></svg></a>
+    <a href="mailto:lev@levk.coach" class="icon-btn" aria-label="Email"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></a>
+  </nav>
+
+  <!-- Footer -->
+  <footer class="text-center space-y-1.5">
+    <p class="mono text-[10px] uppercase tabular" style="color: var(--cream-dim);">
+      Coaching &middot; <a href="mailto:lev@levk.coach" class="hover:text-[--accent]" style="color: var(--cream-faint);">lev@levk.coach</a>
+    </p>
+    <p class="mono text-[10px] uppercase tabular" style="color: var(--cream-dim);">
+      Berlin &middot; programming since 2019
+    </p>
+  </footer>
+
+</main>
+
+</body>
+</html>

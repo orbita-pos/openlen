@@ -1,0 +1,28 @@
+[Unit]
+Description=OpenLen — daily analytics rollup + 90d retention
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=openlen-deploy
+Group=www-data
+
+# Same env layout as openlen-app.service — the .env.local lives in
+# /etc/openlen/app.env (640 root:openlen-deploy) and is read by tsx via
+# --env-file.
+WorkingDirectory=/opt/openlen-app
+EnvironmentFile=/etc/openlen/app.env
+
+ExecStart=/usr/bin/npm run analytics:rollup
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=openlen-rollup
+
+# Same defensive posture as the backup service. Needs DB network access
+# but no filesystem writes outside its own logs.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only

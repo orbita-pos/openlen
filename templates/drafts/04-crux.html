@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Crux — Find the move you didn't think you had.</title>
+<meta name="description" content="Crux is a 14,000-square-foot bouldering gym in the Rail Yard — 240 problems reset weekly, a full training area, and a real climbing community. First visit: a day pass and gear rental for $20." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#15171A; --bg-2:#0F1113; --card:#1D2024; --panel:#23262B;
+    --ink:#F3F3F0; --ink-2:#A0A2A5; --ink-3:#74767A;
+    --accent:#E4C320; --accent-2:#F0D24A;
+    --rule:rgba(255,255,255,0.10); --rule-soft:rgba(255,255,255,0.055);
+  }
+  *{ -webkit-tap-highlight-color:transparent; }
+  html{ scroll-behavior:smooth; }
+  html,body{ background:var(--bg); color:var(--ink); }
+  body{ font-family:'Inter',ui-sans-serif,system-ui,sans-serif; font-feature-settings:"ss01","cv11"; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; line-height:1.6; }
+  section[id]{ scroll-margin-top:84px; }
+  .display{ font-family:'Inter',sans-serif; font-weight:800; letter-spacing:-0.035em; line-height:1.03; }
+  .mono{ font-family:'Geist Mono',ui-monospace,Menlo,monospace; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  em.accent{ font-style:normal; color:var(--accent); }
+  .halftone{ opacity:0.4; }
+  .marker{ font-family:'Geist Mono',monospace; font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:var(--ink-3); }
+  .accent-line{ display:inline-block; width:24px; height:2px; background:var(--accent); vertical-align:middle; margin-right:10px; }
+  .rule{ border-color:var(--rule); }
+  .rule-soft{ border-color:var(--rule-soft); }
+  .dotgrid{ background-image:radial-gradient(rgba(255,255,255,0.08) 1px,transparent 1px); background-size:32px 32px; background-position:-8px -8px; }
+  .mesh{ background-image:
+      radial-gradient(54% 48% at 86% 4%, rgba(228,195,32,0.16), transparent 64%),
+      radial-gradient(50% 46% at 6% 14%, rgba(70,183,168,0.12), transparent 68%),
+      radial-gradient(60% 60% at 72% 100%, rgba(228,195,32,0.10), transparent 72%); }
+  .grain{ background-image:radial-gradient(rgba(255,255,255,0.05) 1px,transparent 1px); background-size:5px 5px; }
+  .pulse-dot{ position:relative; display:inline-block; width:7px; height:7px; border-radius:999px; background:var(--accent); box-shadow:0 0 0 0 rgba(228,195,32,0.55); animation:pulse 1.8s ease-out infinite; }
+  @keyframes pulse{ 0%{box-shadow:0 0 0 0 rgba(228,195,32,0.55)} 70%{box-shadow:0 0 0 9px rgba(228,195,32,0)} 100%{box-shadow:0 0 0 0 rgba(228,195,32,0)} }
+  .btn-primary{ transition:transform 110ms ease, background-color 110ms ease, box-shadow 110ms ease; }
+  .btn-primary:hover{ transform:translateY(-1px); background-color:var(--accent-2); box-shadow:0 14px 30px -10px rgba(228,195,32,0.5); }
+  .btn-ghost{ transition:transform 110ms ease, border-color 110ms ease, background-color 110ms ease; }
+  .btn-ghost:hover{ transform:translateY(-1px); border-color:var(--accent); background-color:var(--panel); }
+  .card-lift{ transition:transform 130ms ease, box-shadow 130ms ease, border-color 130ms ease; }
+  .card-lift:hover{ transform:translateY(-3px); box-shadow:0 24px 48px -28px rgba(0,0,0,0.8); border-color:var(--accent); }
+  .ul-link{ position:relative; }
+  .ul-link::after{ content:""; position:absolute; left:0; right:0; bottom:-3px; height:1px; background:currentColor; transform:scaleX(0); transform-origin:right center; transition:transform 240ms cubic-bezier(.2,.7,.2,1); }
+  .ul-link:hover::after{ transform:scaleX(1); transform-origin:left center; }
+  .scroll-x{ display:inline-block; transition:transform 150ms ease; }
+  a:hover .scroll-x{ transform:translateX(3px); }
+  .navbar{ backdrop-filter:blur(12px) saturate(140%); -webkit-backdrop-filter:blur(12px) saturate(140%); background:rgba(21,23,26,0.82); }
+  ::selection{ background:rgba(228,195,32,0.3); color:#15171A; }
+  .marquee-mask{ -webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent); mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent); }
+  .marquee{ display:flex; gap:38px; width:max-content; align-items:center; animation:marq 32s linear infinite; }
+  @keyframes marq{ from{transform:translateX(0)} to{transform:translateX(-50%)} }
+  details>summary{ list-style:none; cursor:pointer; }
+  details>summary::-webkit-details-marker{ display:none; }
+  .acc-sign{ transition:transform 200ms ease; }
+  details[open] .acc-sign{ transform:rotate(45deg); }
+  .lg-pill{ display:inline-flex; align-items:center; gap:7px; font-family:'Geist Mono',monospace; font-size:11px; color:var(--ink-2); }
+  .lg-pill i{ width:9px; height:9px; border-radius:3px; display:inline-block; }
+  .blob-hero{ background:radial-gradient(110% 92% at 78% 14%,rgba(228,195,32,0.42) 0%,transparent 56%),radial-gradient(95% 85% at 16% 94%,rgba(70,90,104,0.5) 0%,transparent 62%),linear-gradient(158deg,#2E3035 0%,#1A1C20 58%,#0C0D0F 100%); }
+  .blob-1{ background:radial-gradient(120% 100% at 26% 22%,#3A3C42 0%,#1E2024 55%,#0E0F11 100%); }
+  .blob-2{ background:radial-gradient(120% 100% at 72% 24%,rgba(228,195,32,0.32) 0%,#26282D 50%,#101113 100%); }
+  .blob-3{ background:radial-gradient(120% 100% at 30% 72%,rgba(70,183,168,0.3) 0%,#23252A 52%,#101113 100%); }
+  .blob-4{ background:radial-gradient(120% 100% at 66% 30%,#36383E 0%,#1C1E22 54%,#0D0E10 100%); }
+  .blob-5{ background:radial-gradient(120% 100% at 30% 32%,rgba(240,145,60,0.26) 0%,#2A2C31 52%,#101113 100%); }
+  .blob-6{ background:radial-gradient(120% 100% at 68% 70%,rgba(224,89,139,0.24) 0%,#26282D 52%,#101113 100%); }
+  .av-1{ background:linear-gradient(150deg,#F0D24A,#8A6E10); }
+  .av-2{ background:linear-gradient(150deg,#F0913C,#7A3E10); }
+  .av-3{ background:linear-gradient(150deg,#46B7A8,#1E5249); }
+  .av-4{ background:linear-gradient(150deg,#E0598B,#6E2444); }
+  @media (prefers-reduced-motion:reduce){ .pulse-dot{animation:none} .marquee{animation:none} }
+</style>
+</head>
+<body class="min-h-screen">
+
+<svg width="0" height="0" class="hidden" aria-hidden="true">
+  <symbol id="ck" viewBox="0 0 16 16"><path d="M3 8.5l3.2 3.2L13 4.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="pin" viewBox="0 0 16 16"><path d="M8 1.6c-3 0-5.2 2.3-5.2 5.2 0 3.7 5.2 7.6 5.2 7.6s5.2-3.9 5.2-7.6c0-2.9-2.2-5.2-5.2-5.2Z" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="6.7" r="1.9" fill="none" stroke="currentColor" stroke-width="1.4"/></symbol>
+  <symbol id="cl" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 4.3V8l2.7 1.7" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+  <symbol id="ig" viewBox="0 0 16 16"><rect x="2.2" y="2.2" width="11.6" height="11.6" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="11.5" cy="4.5" r="1" fill="currentColor"/></symbol>
+  <symbol id="ph" viewBox="0 0 16 16"><path d="M5.7 2.5c.5 0 .9.3 1 .8l.6 2.2c.1.4 0 .8-.3 1l-1.2 1c.8 1.7 2.1 3 3.8 3.8l1-1.2c.3-.3.7-.4 1-.3l2.2.6c.5.1.8.5.8 1v2.3c0 .6-.5 1.1-1.1 1C7.5 15.5 1.5 9.5 1.3 2.6c0-.6.4-1.1 1-1.1Z" fill="none" stroke="currentColor" stroke-width="1.3"/></symbol>
+</svg>
+
+<!-- ================= NAV ================= -->
+<header class="navbar fixed top-0 inset-x-0 z-50 border-b rule-soft">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 h-[68px] flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="27" height="27" viewBox="0 0 27 27" aria-hidden="true">
+        <path d="M2.5 22.5 13.5 3 24.5 22.5" fill="none" stroke="#E4C320" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/>
+        <path d="M8 22.5 13.5 12 19 22.5 Z" fill="#E4C320"/>
+      </svg>
+      <span class="display text-[20px] tracking-tight">CRUX</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8 text-[14px] text-[color:var(--ink-2)]">
+      <a href="#classes" class="ul-link">Climbing</a>
+      <a href="#schedule" class="ul-link">What's on</a>
+      <a href="#membership" class="ul-link">Membership</a>
+      <a href="#about" class="ul-link">About</a>
+    </nav>
+    <a href="#start" class="btn-primary inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] text-[#15171A] font-bold text-[14px] px-4 py-2">Plan a visit</a>
+  </div>
+</header>
+
+<main>
+<!-- ================= HERO ================= -->
+<section id="top" class="relative overflow-hidden mesh pt-[68px]">
+  <div class="absolute inset-0 dotgrid opacity-70 pointer-events-none"></div>
+  <div class="relative max-w-[1200px] mx-auto px-5 sm:px-8 pt-14 sm:pt-20 pb-16 sm:pb-20">
+    <div class="grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
+      <div>
+        <div class="inline-flex items-center gap-2.5 rounded-full border rule bg-[color:var(--card)] pl-2.5 pr-3.5 py-1.5 mb-7">
+          <span class="pulse-dot"></span>
+          <span class="mono text-[11px] sm:text-[12px] tracking-[0.04em] text-[color:var(--ink-2)]">Bouldering &amp; community — the Rail Yard</span>
+        </div>
+        <h1 class="display text-[clamp(42px,7vw,82px)] max-w-[13ch]">Find the move you <em class="accent">didn't think you had.</em></h1>
+        <p class="text-[16px] sm:text-[17px] text-[color:var(--ink-2)] max-w-[46ch] mt-6">A 14,000-square-foot bouldering gym with 240 problems reset every week, a full training area, and a community that started climbing exactly where you are.</p>
+        <div class="flex flex-col sm:flex-row gap-3 mt-8">
+          <a href="#start" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--accent)] text-[#15171A] font-bold px-6 py-3.5 text-[15px]">Start your trial <span class="scroll-x">→</span></a>
+          <a href="#intro" class="btn-ghost inline-flex items-center justify-center gap-2 rounded-full border rule text-[color:var(--ink)] font-medium px-6 py-3.5 text-[15px]">Day pass + gear — $20</a>
+        </div>
+        <div class="flex items-center gap-2.5 mt-7">
+          <span class="pulse-dot"></span>
+          <span class="mono text-[11.5px] tracking-[0.03em] text-[color:var(--ink-2)] tnum">2,408 members · 240 problems set · open 7 days</span>
+        </div>
+      </div>
+      <div>
+        <div class="blob-hero rounded-[22px] border rule aspect-[4/3.4] sm:aspect-[4/3] w-full relative overflow-hidden">
+          <div class="absolute inset-0 grain opacity-70"></div>
+          <svg viewBox="0 0 240 230" class="absolute inset-0 w-full h-full" aria-hidden="true">
+            <g fill="#E4C320" opacity="0.5">
+              <circle cx="58" cy="48" r="7"/><rect x="170" y="40" width="15" height="11" rx="4"/>
+              <circle cx="196" cy="118" r="8"/><rect x="44" y="150" width="13" height="13" rx="4"/>
+              <circle cx="120" cy="200" r="6"/><rect x="150" y="178" width="12" height="10" rx="3"/>
+            </g>
+            <g fill="#F3F3F0" opacity="0.22">
+              <circle cx="132" cy="62" r="17"/>
+              <path d="M132 80c-15 0-22 12-23 30l-2 44h50l-2-44c-1-18-8-30-23-30Z"/>
+              <path d="M118 92 64 52c-5 5-4 11 2 15l46 34Z"/>
+              <path d="M150 96l40 26c5-4 5-10 0-14l-34-24Z"/>
+              <rect x="106" y="150" width="15" height="50" rx="7" transform="rotate(-14 113 175)"/>
+              <rect x="138" y="148" width="15" height="46" rx="7" transform="rotate(20 145 171)"/>
+            </g>
+          </svg>
+          <div class="absolute left-4 bottom-4 right-4 sm:right-auto bg-[color:var(--card)] border rule rounded-xl px-3.5 py-2.5 flex items-center gap-3">
+            <span class="w-2.5 h-2.5 rounded-[3px]" style="background:#E4C320"></span>
+            <div>
+              <div class="mono text-[10px] tracking-[0.1em] text-[color:var(--ink-3)]">TODAY · 6:30 PM</div>
+              <div class="text-[13px] font-bold leading-tight">Intro to Climbing</div>
+            </div>
+            <div class="ml-auto flex items-center gap-1.5 pl-3 border-l rule-soft">
+              <span class="pulse-dot" style="width:6px;height:6px"></span>
+              <span class="mono text-[10.5px] text-[color:var(--accent)]">5 left</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mt-14 border-t rule pt-8 grid grid-cols-2 md:grid-cols-4 gap-y-8">
+      <div class="md:pr-8 md:border-r rule-soft">
+        <div class="marker mb-2.5">Members</div>
+        <div class="display text-[40px] sm:text-[48px] tnum">2,408</div>
+        <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">climbing in the Rail Yard</div>
+      </div>
+      <div class="md:px-8 md:border-r rule-soft">
+        <div class="marker mb-2.5">Problems</div>
+        <div class="display text-[40px] sm:text-[48px] tnum">240</div>
+        <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">set, refreshed weekly</div>
+      </div>
+      <div class="md:px-8 md:border-r rule-soft">
+        <div class="marker mb-2.5">Wall area</div>
+        <div class="display text-[40px] sm:text-[48px] tnum">14,408</div>
+        <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">square feet of climbing</div>
+      </div>
+      <div class="md:pl-8">
+        <div class="marker mb-2.5">Setters</div>
+        <div class="display text-[40px] sm:text-[48px] tnum">5</div>
+        <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1">building new problems</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= MARQUEE ================= -->
+<section class="border-y rule-soft bg-[color:var(--bg-2)] py-9">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8">
+    <div class="marker mb-6"><span class="accent-line"></span>Always something new on the wall</div>
+    <div class="marquee-mask overflow-hidden">
+      <div class="marquee text-[color:var(--ink)]">
+        <span class="display text-[22px]">V0</span><span class="text-[color:var(--accent)]">✦</span>
+        <span class="display text-[22px]">new set Friday</span><span class="text-[color:var(--accent)]">✦</span>
+        <span class="display text-[22px]">V3</span><span class="text-[color:var(--accent)]">✦</span>
+        <span class="display text-[22px]">comp night</span><span class="text-[color:var(--accent)]">✦</span>
+        <span class="display text-[22px]">V5</span><span class="text-[color:var(--accent)]">✦</span>
+        <span class="display text-[22px]">first send</span><span class="text-[color:var(--accent)]">✦</span>
+        <span class="display text-[22px]">V7</span><span class="text-[color:var(--accent)]">✦</span>
+        <span class="display text-[22px]">240 problems</span><span class="text-[color:var(--accent)]">✦</span>
+        <span aria-hidden="true" class="display text-[22px]">V0</span><span aria-hidden="true" class="text-[color:var(--accent)]">✦</span>
+        <span aria-hidden="true" class="display text-[22px]">new set Friday</span><span aria-hidden="true" class="text-[color:var(--accent)]">✦</span>
+        <span aria-hidden="true" class="display text-[22px]">V3</span><span aria-hidden="true" class="text-[color:var(--accent)]">✦</span>
+        <span aria-hidden="true" class="display text-[22px]">comp night</span><span aria-hidden="true" class="text-[color:var(--accent)]">✦</span>
+        <span aria-hidden="true" class="display text-[22px]">V5</span><span aria-hidden="true" class="text-[color:var(--accent)]">✦</span>
+        <span aria-hidden="true" class="display text-[22px]">first send</span><span aria-hidden="true" class="text-[color:var(--accent)]">✦</span>
+        <span aria-hidden="true" class="display text-[22px]">V7</span><span aria-hidden="true" class="text-[color:var(--accent)]">✦</span>
+        <span aria-hidden="true" class="display text-[22px]">240 problems</span><span aria-hidden="true" class="text-[color:var(--accent)]">✦</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= INTRO OFFER ================= -->
+<section id="intro" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-12 sm:py-16">
+  <div class="rounded-[22px] border-2 overflow-hidden" style="border-color:var(--accent)">
+    <div class="grid lg:grid-cols-[1.4fr_1fr]">
+      <div class="p-7 sm:p-11 bg-[color:var(--card)]">
+        <div class="marker mb-4"><span class="accent-line"></span>First time? Twenty bucks.</div>
+        <h2 class="display text-[clamp(28px,4vw,44px)]">Day pass + full gear rental — <em class="accent">$20.</em></h2>
+        <p class="text-[15px] text-[color:var(--ink-2)] mt-4 max-w-[52ch]">Your first visit: a day pass, climbing shoes, and a chalk bag for twenty dollars. Walk in any time we're open — no booking, no experience, no plan, no partner required.</p>
+        <a href="#start" class="btn-primary inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] text-[#15171A] font-bold px-6 py-3.5 text-[15px] mt-7">Plan your first visit <span class="scroll-x">→</span></a>
+      </div>
+      <div class="border-t lg:border-t-0 lg:border-l rule bg-[color:var(--panel)] p-7 sm:p-11 flex flex-col justify-center gap-4">
+        <div class="flex items-start gap-3"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg><span class="text-[14px]">A full-day pass to all 240 problems</span></div>
+        <div class="flex items-start gap-3"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg><span class="text-[14px]">Climbing shoes &amp; a chalk bag, included</span></div>
+        <div class="flex items-start gap-3"><svg class="w-4 h-4 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg><span class="text-[14px]">A free orientation on falling &amp; the basics</span></div>
+        <p class="mono text-[10.5px] text-[color:var(--ink-3)] mt-1 leading-relaxed">First visit only · walk in, no reservation · ages 14+ on their own</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= OFFERINGS ================= -->
+<section id="classes" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+  <div class="max-w-[58ch] mb-11">
+    <div class="marker mb-5"><span class="accent-line"></span>What's here</div>
+    <h2 class="display text-[clamp(34px,5vw,58px)]">More than a wall.</h2>
+    <p class="text-[15px] text-[color:var(--ink-2)] mt-4">Bouldering is the heart of it — but Crux is a training space, a youth program, and the room where half your weekends end up.</p>
+  </div>
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mb-4" style="background:#E4C320"></span>
+      <h3 class="display text-[20px]">Bouldering Walls</h3>
+      <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">All levels · regraded weekly</div>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-3">Forty feet of wall, V0 through V10, with a fresh set going up every Friday.</p>
+    </article>
+    <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mb-4" style="background:#E4C320"></span>
+      <h3 class="display text-[20px]">Intro to Climbing</h3>
+      <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">Beginner · 45 min</div>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-3">A staff-led first session: how to fall, how to read a wall, how the grading works.</p>
+    </article>
+    <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mb-4" style="background:#F0913C"></span>
+      <h3 class="display text-[20px]">Youth Team</h3>
+      <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">Ages 7–17 · seasons</div>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-3">Coached, progression-based climbing for kids — recreational squads through competitive team.</p>
+    </article>
+    <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mb-4" style="background:#46B7A8"></span>
+      <h3 class="display text-[20px]">Yoga &amp; Training Area</h3>
+      <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">All members · daily</div>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-3">Hangboards, a campus board, free weights, rings — plus three yoga classes a week.</p>
+    </article>
+    <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <span class="inline-block w-2.5 h-2.5 rounded-[3px] mb-4" style="background:#E0598B"></span>
+      <h3 class="display text-[20px]">Community Comp Nights</h3>
+      <div class="mono text-[11px] text-[color:var(--ink-3)] mt-1.5">All levels · monthly</div>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-3">A low-stakes, high-energy monthly comp — climb, cheer, and stay for the pizza.</p>
+    </article>
+    <a href="#schedule" class="card-lift rounded-2xl border rule bg-[color:var(--panel)] p-6 flex flex-col justify-center">
+      <h3 class="display text-[20px]">When does it all happen?</h3>
+      <p class="text-[13.5px] text-[color:var(--ink-2)] mt-2">Intro times, set days, and the comp calendar. <span class="text-[color:var(--accent)] font-medium">See what's on <span class="scroll-x">→</span></span></p>
+    </a>
+  </div>
+</section>
+
+<!-- ================= SCHEDULE / WHAT'S ON ================= -->
+<section id="schedule" class="relative bg-[color:var(--bg-2)] border-y rule">
+  <div class="absolute inset-0 dotgrid opacity-50 pointer-events-none"></div>
+  <div class="relative max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-8">
+      <div class="max-w-[44ch]">
+        <div class="marker mb-5"><span class="accent-line"></span>What's on</div>
+        <h2 class="display text-[clamp(34px,5vw,58px)]">Climb whenever — start here.</h2>
+      </div>
+      <div class="flex flex-wrap gap-x-4 gap-y-2">
+        <span class="lg-pill"><i style="background:#E4C320"></i>Intro class</span>
+        <span class="lg-pill"><i style="background:#5BC46A"></i>Set day</span>
+        <span class="lg-pill"><i style="background:#E0598B"></i>Comp night</span>
+        <span class="lg-pill"><i style="background:#46B7A8"></i>Member yoga</span>
+        <span class="lg-pill"><i style="background:#F0913C"></i>Youth</span>
+      </div>
+    </div>
+
+    <!-- intro sessions strip -->
+    <div class="rounded-2xl border rule bg-[color:var(--card)] p-5 sm:p-6 mb-5">
+      <div class="text-[13px] font-bold mb-1">Intro to Climbing — this week</div>
+      <p class="mono text-[11px] text-[color:var(--ink-3)] mb-4">45-minute staff-led first session · included free with your $20 first visit</p>
+      <div class="grid grid-cols-7 gap-2">
+        <div class="text-center"><div class="text-[12px] font-bold mb-1.5">Mon</div><div class="mono text-[11px] tnum rounded-md py-1.5" style="background:color-mix(in srgb,#E4C320 16%,var(--card));color:#E4C320">6:30p</div></div>
+        <div class="text-center"><div class="text-[12px] font-bold mb-1.5">Tue</div><div class="mono text-[11px] tnum rounded-md py-1.5" style="background:color-mix(in srgb,#E4C320 16%,var(--card));color:#E4C320">6:30p</div></div>
+        <div class="text-center"><div class="text-[12px] font-bold mb-1.5">Wed</div><div class="mono text-[11px] tnum rounded-md py-1.5" style="background:color-mix(in srgb,#E4C320 16%,var(--card));color:#E4C320">6:30p</div></div>
+        <div class="text-center"><div class="text-[12px] font-bold mb-1.5">Thu</div><div class="mono text-[11px] tnum rounded-md py-1.5" style="background:color-mix(in srgb,#E4C320 16%,var(--card));color:#E4C320">6:30p</div></div>
+        <div class="text-center"><div class="text-[12px] font-bold mb-1.5">Fri</div><div class="mono text-[11px] tnum rounded-md py-1.5" style="background:color-mix(in srgb,#E4C320 16%,var(--card));color:#E4C320">5:30p</div></div>
+        <div class="text-center"><div class="text-[12px] font-bold mb-1.5">Sat</div><div class="space-y-1.5"><div class="mono text-[11px] tnum rounded-md py-1.5" style="background:color-mix(in srgb,#E4C320 16%,var(--card));color:#E4C320">11:00a</div><div class="mono text-[11px] tnum rounded-md py-1.5" style="background:color-mix(in srgb,#E4C320 16%,var(--card));color:#E4C320">2:00p</div></div></div>
+        <div class="text-center"><div class="text-[12px] font-bold mb-1.5">Sun</div><div class="space-y-1.5"><div class="mono text-[11px] tnum rounded-md py-1.5" style="background:color-mix(in srgb,#E4C320 16%,var(--card));color:#E4C320">11:00a</div><div class="mono text-[11px] tnum rounded-md py-1.5" style="background:color-mix(in srgb,#E4C320 16%,var(--card));color:#E4C320">2:00p</div></div></div>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-5">
+      <!-- set schedule -->
+      <div class="rounded-2xl border-2 p-5 sm:p-6" style="border-color:rgba(91,196,106,0.5)">
+        <div class="flex items-center gap-2 mb-1"><span class="w-2.5 h-2.5 rounded-[3px]" style="background:#5BC46A"></span><span class="text-[13px] font-bold">New problems every Friday</span></div>
+        <p class="text-[13px] text-[color:var(--ink-2)] mt-2 mb-4">Two zones reset each week — all 240 problems turn over about once a month. There's always something you haven't tried.</p>
+        <div class="grid grid-cols-2 gap-2.5">
+          <div class="rounded-lg border rule-soft p-3" style="background:color-mix(in srgb,#5BC46A 8%,var(--card))"><div class="mono text-[10px] text-[color:var(--ink-3)] tracking-[0.1em]">WEEK 1</div><div class="text-[12.5px] font-semibold mt-1">The Cave + The Slab</div></div>
+          <div class="rounded-lg border rule-soft p-3" style="background:color-mix(in srgb,#5BC46A 8%,var(--card))"><div class="mono text-[10px] text-[color:var(--ink-3)] tracking-[0.1em]">WEEK 2</div><div class="text-[12.5px] font-semibold mt-1">The Boulder Field</div></div>
+          <div class="rounded-lg border rule-soft p-3" style="background:color-mix(in srgb,#5BC46A 8%,var(--card))"><div class="mono text-[10px] text-[color:var(--ink-3)] tracking-[0.1em]">WEEK 3</div><div class="text-[12.5px] font-semibold mt-1">Overhangs + Cave</div></div>
+          <div class="rounded-lg border rule-soft p-3" style="background:color-mix(in srgb,#5BC46A 8%,var(--card))"><div class="mono text-[10px] text-[color:var(--ink-3)] tracking-[0.1em]">WEEK 4</div><div class="text-[12.5px] font-semibold mt-1">The Slab + Training</div></div>
+        </div>
+      </div>
+      <!-- month calendar -->
+      <div class="rounded-2xl border rule bg-[color:var(--card)] p-5 sm:p-6">
+        <div class="text-[13px] font-bold mb-4">On the calendar this month</div>
+        <div class="space-y-3">
+          <div class="flex items-center gap-3">
+            <div class="mono text-[10px] tnum text-center shrink-0 rounded-md border rule-soft px-2 py-1 leading-tight">FRI<br/><span class="text-[13px] text-[color:var(--ink)]">22</span></div>
+            <div class="flex-1"><div class="text-[13px] font-semibold">Community Comp Night</div><div class="mono text-[10.5px] text-[color:var(--ink-3)]">7:00p · all levels · pizza after</div></div>
+            <span class="w-2.5 h-2.5 rounded-[3px] shrink-0" style="background:#E0598B"></span>
+          </div>
+          <div class="flex items-center gap-3 border-t rule-soft pt-3">
+            <div class="mono text-[10px] tnum text-center shrink-0 rounded-md border rule-soft px-2 py-1 leading-tight">SAT<br/><span class="text-[13px] text-[color:var(--ink)]">09</span></div>
+            <div class="flex-1"><div class="text-[13px] font-semibold">Youth Team Tryouts</div><div class="mono text-[10.5px] text-[color:var(--ink-3)]">10:00a · ages 7–17</div></div>
+            <span class="w-2.5 h-2.5 rounded-[3px] shrink-0" style="background:#F0913C"></span>
+          </div>
+          <div class="flex items-center gap-3 border-t rule-soft pt-3">
+            <div class="mono text-[10px] tnum text-center shrink-0 rounded-md border rule-soft px-2 py-1 leading-tight">THU<br/><span class="text-[13px] text-[color:var(--ink)]">14</span></div>
+            <div class="flex-1"><div class="text-[13px] font-semibold">Setters' Q&amp;A + Beer</div><div class="mono text-[10.5px] text-[color:var(--ink-3)]">8:00p · meet the crew</div></div>
+            <span class="w-2.5 h-2.5 rounded-[3px] shrink-0" style="background:#E4C320"></span>
+          </div>
+          <div class="flex items-center gap-3 border-t rule-soft pt-3">
+            <div class="mono text-[10px] tnum text-center shrink-0 rounded-md border rule-soft px-2 py-1 leading-tight">SUN<br/><span class="text-[13px] text-[color:var(--ink)]">all</span></div>
+            <div class="flex-1"><div class="text-[13px] font-semibold">Member Yoga</div><div class="mono text-[10.5px] text-[color:var(--ink-3)]">9:00a · every Sunday · free</div></div>
+            <span class="w-2.5 h-2.5 rounded-[3px] shrink-0" style="background:#46B7A8"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="mono text-[11px] text-[color:var(--ink-3)] mt-5">Set days, comp registration, and youth-team seasons all live in the Crux app.</p>
+  </div>
+</section>
+
+<!-- ================= THE SPACE ================= -->
+<section id="about" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+  <div class="max-w-[58ch] mb-11">
+    <div class="marker mb-5"><span class="accent-line"></span>The gym</div>
+    <h2 class="display text-[clamp(34px,5vw,58px)]">Fourteen thousand square feet.</h2>
+    <p class="text-[15px] text-[color:var(--ink-2)] mt-4">A converted rail depot — exposed trusses, forty-foot walls at every angle, and pads thick enough that falling is part of the fun. The hardest problems and the friendliest crowd you'll find.</p>
+  </div>
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <figure class="blob-2 rounded-2xl border rule aspect-[4/3] relative overflow-hidden">
+      <div class="absolute inset-0 grain opacity-60"></div>
+      <figcaption class="absolute left-3.5 bottom-3.5 mono text-[10px] tracking-[0.08em] text-[#F3F3F0]" style="text-shadow:0 1px 4px rgba(0,0,0,.6)">THE BOULDER FIELD</figcaption>
+    </figure>
+    <figure class="blob-1 rounded-2xl border rule aspect-[4/3] relative overflow-hidden">
+      <div class="absolute inset-0 grain opacity-60"></div>
+      <figcaption class="absolute left-3.5 bottom-3.5 mono text-[10px] tracking-[0.08em] text-[#F3F3F0]" style="text-shadow:0 1px 4px rgba(0,0,0,.6)">THE CAVE · V6+ OVERHANGS</figcaption>
+    </figure>
+    <figure class="blob-4 rounded-2xl border rule aspect-[4/3] relative overflow-hidden">
+      <div class="absolute inset-0 grain opacity-60"></div>
+      <figcaption class="absolute left-3.5 bottom-3.5 mono text-[10px] tracking-[0.08em] text-[#F3F3F0]" style="text-shadow:0 1px 4px rgba(0,0,0,.6)">THE SLAB · WHERE YOU START</figcaption>
+    </figure>
+    <figure class="blob-3 rounded-2xl border rule aspect-[4/3] relative overflow-hidden">
+      <div class="absolute inset-0 grain opacity-60"></div>
+      <figcaption class="absolute left-3.5 bottom-3.5 mono text-[10px] tracking-[0.08em] text-[#F3F3F0]" style="text-shadow:0 1px 4px rgba(0,0,0,.6)">THE TRAINING ZONE</figcaption>
+    </figure>
+    <figure class="blob-5 rounded-2xl border rule aspect-[4/3] relative overflow-hidden">
+      <div class="absolute inset-0 grain opacity-60"></div>
+      <figcaption class="absolute left-3.5 bottom-3.5 mono text-[10px] tracking-[0.08em] text-[#F3F3F0]" style="text-shadow:0 1px 4px rgba(0,0,0,.6)">THE YOGA &amp; STRETCH LOFT</figcaption>
+    </figure>
+    <figure class="blob-6 rounded-2xl border rule aspect-[4/3] relative overflow-hidden">
+      <div class="absolute inset-0 grain opacity-60"></div>
+      <figcaption class="absolute left-3.5 bottom-3.5 mono text-[10px] tracking-[0.08em] text-[#F3F3F0]" style="text-shadow:0 1px 4px rgba(0,0,0,.6)">THE HANGOUT &amp; CAFÉ</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ================= STAFF ================= -->
+<section class="bg-[color:var(--bg-2)] border-y rule">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+    <div class="max-w-[58ch] mb-11">
+      <div class="marker mb-5"><span class="accent-line"></span>The crew</div>
+      <h2 class="display text-[clamp(34px,5vw,58px)]">Setters and coaches.</h2>
+      <p class="text-[15px] text-[color:var(--ink-2)] mt-4">The people who build the problems, run the programs, and remember your project from last week.</p>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-1 w-14 h-14 rounded-full flex items-center justify-center text-[#15171A] display text-[17px] mb-4">TM</div>
+        <h3 class="text-[15px] font-bold">Theo Marchetti</h3>
+        <div class="text-[12.5px] text-[color:var(--accent)] font-medium mt-0.5">Head route-setter</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">Sets the Friday problems; climbed V12 outdoors and refuses to make easy climbs boring.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">USAC L3 Setter</div>
+      </article>
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-4 w-14 h-14 rounded-full flex items-center justify-center text-white display text-[17px] mb-4">WC</div>
+        <h3 class="text-[15px] font-bold">Wren Calloway</h3>
+        <div class="text-[12.5px] text-[color:var(--accent)] font-medium mt-0.5">Setter &amp; comp director</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">Designs the comp-night problems and the qualifier rounds — fair, fun, and sneaky.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">USAC L2 Setter · CPR</div>
+      </article>
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-2 w-14 h-14 rounded-full flex items-center justify-center text-[#15171A] display text-[17px] mb-4">MD</div>
+        <h3 class="text-[15px] font-bold">Mateo Duarte</h3>
+        <div class="text-[12.5px] text-[color:var(--accent)] font-medium mt-0.5">Youth team head coach</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">Coaches the competitive youth squad; took eleven kids to regionals last season.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">USAC Coach L2</div>
+      </article>
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-1 w-14 h-14 rounded-full flex items-center justify-center text-[#15171A] display text-[17px] mb-4">AB</div>
+        <h3 class="text-[15px] font-bold">Asha Bright</h3>
+        <div class="text-[12.5px] text-[color:var(--accent)] font-medium mt-0.5">Intro program &amp; instruction</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">Has taught 1,200+ people their first day on the wall — patient with every one.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">Climbing Wall Instructor</div>
+      </article>
+      <article class="card-lift rounded-2xl border rule bg-[color:var(--card)] p-5">
+        <div class="av-3 w-14 h-14 rounded-full flex items-center justify-center text-white display text-[17px] mb-4">GL</div>
+        <h3 class="text-[15px] font-bold">Greta Lindholm</h3>
+        <div class="text-[12.5px] text-[color:var(--accent)] font-medium mt-0.5">Training &amp; movement coach</div>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">Runs the training area and the movement clinics; an ex-collegiate gymnast.</p>
+        <div class="mono text-[10px] text-[color:var(--ink-3)] mt-3 border-t rule-soft pt-2.5">NASM-CPT · CWI</div>
+      </article>
+      <a href="#start" class="card-lift rounded-2xl border rule bg-[color:var(--panel)] p-5 flex flex-col justify-center">
+        <h3 class="display text-[18px]">Want to set or coach?</h3>
+        <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2">We hire climbers we'd want to climb with. <span class="text-[color:var(--accent)] font-medium">Say hello <span class="scroll-x">→</span></span></p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ================= MEMBERSHIP ================= -->
+<section id="membership" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+  <div class="max-w-[58ch] mb-11">
+    <div class="marker mb-5"><span class="accent-line"></span>Membership</div>
+    <h2 class="display text-[clamp(34px,5vw,58px)]">Climb your way.</h2>
+    <p class="text-[15px] text-[color:var(--ink-2)] mt-4">From a single visit to climbing every day. Everything is month to month — no contracts, no joining fee.</p>
+  </div>
+  <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+    <article class="rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <h3 class="display text-[20px]">Day Pass</h3>
+      <div class="mt-3 flex items-baseline gap-1.5"><span class="mono text-[34px] font-medium tnum">$24</span><span class="text-[12px] text-[color:var(--ink-3)]">/ visit</span></div>
+      <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">One day on the walls — gear rental $8.</p>
+      <div class="border-t rule-soft my-4"></div>
+      <ul class="space-y-2 text-[12.5px]">
+        <li class="flex gap-2"><svg class="w-3.5 h-3.5 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Full gym access for the day</li>
+        <li class="flex gap-2"><svg class="w-3.5 h-3.5 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>All 240 boulder problems</li>
+        <li class="flex gap-2"><svg class="w-3.5 h-3.5 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Training area included</li>
+        <li class="flex gap-2"><svg class="w-3.5 h-3.5 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>No booking needed</li>
+      </ul>
+      <a href="#start" class="btn-ghost mt-6 inline-flex w-full items-center justify-center rounded-full border rule font-medium px-4 py-2.5 text-[13.5px]">Get a day pass</a>
+    </article>
+    <article class="rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <h3 class="display text-[20px]">Punch Card</h3>
+      <div class="mt-3 flex items-baseline gap-1.5"><span class="mono text-[34px] font-medium tnum">$190</span><span class="text-[12px] text-[color:var(--ink-3)]">10 · $19 ea</span></div>
+      <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">Ten visits, no expiry — come when you come.</p>
+      <div class="border-t rule-soft my-4"></div>
+      <ul class="space-y-2 text-[12.5px]">
+        <li class="flex gap-2"><svg class="w-3.5 h-3.5 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>10 day-visits, never expire</li>
+        <li class="flex gap-2"><svg class="w-3.5 h-3.5 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Shareable with friends</li>
+        <li class="flex gap-2"><svg class="w-3.5 h-3.5 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Training area included</li>
+        <li class="flex gap-2"><svg class="w-3.5 h-3.5 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>$6 gear rental</li>
+      </ul>
+      <a href="#start" class="btn-ghost mt-6 inline-flex w-full items-center justify-center rounded-full border rule font-medium px-4 py-2.5 text-[13.5px]">Buy a punch card</a>
+    </article>
+    <article class="rounded-2xl border-2 bg-[color:var(--card)] p-6 relative shadow-[0_30px_60px_-30px_rgba(228,195,32,0.4)]" style="border-color:var(--accent)">
+      <div class="absolute -top-3 left-6 mono text-[10px] tracking-[0.12em] text-[#15171A] bg-[color:var(--accent)] rounded-full px-3 py-1">MOST POPULAR</div>
+      <h3 class="display text-[20px]">Monthly Unlimited</h3>
+      <div class="mt-3 flex items-baseline gap-1.5"><span class="mono text-[34px] font-medium tnum">$95</span><span class="text-[12px] text-[color:var(--ink-3)]">/ month</span></div>
+      <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">Climb every day — for more than twice a week.</p>
+      <div class="border-t rule-soft my-4"></div>
+      <ul class="space-y-2 text-[12.5px]">
+        <li class="flex gap-2"><svg class="w-3.5 h-3.5 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Unlimited climbing, 7 days</li>
+        <li class="flex gap-2"><svg class="w-3.5 h-3.5 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>All yoga &amp; training classes</li>
+        <li class="flex gap-2"><svg class="w-3.5 h-3.5 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Two guest passes a month</li>
+        <li class="flex gap-2"><svg class="w-3.5 h-3.5 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>20% off gear &amp; coaching</li>
+      </ul>
+      <a href="#start" class="btn-primary mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[color:var(--accent)] text-[#15171A] font-bold px-4 py-2.5 text-[13.5px]">Go unlimited <span class="scroll-x">→</span></a>
+    </article>
+    <article class="rounded-2xl border rule bg-[color:var(--card)] p-6">
+      <h3 class="display text-[20px]">Student</h3>
+      <div class="mt-3 flex items-baseline gap-1.5"><span class="mono text-[34px] font-medium tnum">$75</span><span class="text-[12px] text-[color:var(--ink-3)]">/ month</span></div>
+      <p class="text-[12.5px] text-[color:var(--ink-2)] mt-2.5">Unlimited climbing, a little kinder on the budget.</p>
+      <div class="border-t rule-soft my-4"></div>
+      <ul class="space-y-2 text-[12.5px]">
+        <li class="flex gap-2"><svg class="w-3.5 h-3.5 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Everything in Monthly Unlimited</li>
+        <li class="flex gap-2"><svg class="w-3.5 h-3.5 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Valid student ID required</li>
+        <li class="flex gap-2"><svg class="w-3.5 h-3.5 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Month to month</li>
+        <li class="flex gap-2"><svg class="w-3.5 h-3.5 mt-0.5 text-[color:var(--accent)] shrink-0"><use href="#ck"/></svg>Summer freeze available</li>
+      </ul>
+      <a href="#start" class="btn-ghost mt-6 inline-flex w-full items-center justify-center rounded-full border rule font-medium px-4 py-2.5 text-[13.5px]">Choose Student</a>
+    </article>
+  </div>
+</section>
+
+<!-- ================= STORIES ================= -->
+<section class="bg-[color:var(--bg-2)] border-y rule">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+    <div class="max-w-[58ch] mb-11">
+      <div class="marker mb-5"><span class="accent-line"></span>Member stories</div>
+      <h2 class="display text-[clamp(34px,5vw,58px)]">Everyone here started <em class="halftone">on the slab.</em></h2>
+    </div>
+    <div class="grid md:grid-cols-3 gap-5">
+      <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7">
+        <svg width="26" height="20" viewBox="0 0 26 20" class="mb-4" aria-hidden="true"><path d="M0 20V11C0 4.5 3.7.6 10 0v4.4C6.8 5 5.4 6.8 5.3 10H10v10Zm16 0V11C16 4.5 19.7.6 26 0v4.4C22.8 5 21.4 6.8 21.3 10H26v10Z" fill="#E4C320" opacity="0.5"/></svg>
+        <blockquote class="text-[16px] leading-[1.55]">"I projected one V4 for six weeks. The night I finally stuck it, half the gym I'd never met was cheering. That doesn't happen at a regular gym."</blockquote>
+        <figcaption class="flex items-center gap-3 mt-6 pt-5 border-t rule-soft">
+          <div class="av-1 w-10 h-10 rounded-full flex items-center justify-center text-[#15171A] text-[13px] font-bold">DP</div>
+          <div><div class="text-[13.5px] font-bold">Devon Park</div><div class="mono text-[10.5px] text-[color:var(--ink-3)]">Member · 18 months</div></div>
+        </figcaption>
+      </figure>
+      <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7">
+        <svg width="26" height="20" viewBox="0 0 26 20" class="mb-4" aria-hidden="true"><path d="M0 20V11C0 4.5 3.7.6 10 0v4.4C6.8 5 5.4 6.8 5.3 10H10v10Zm16 0V11C16 4.5 19.7.6 26 0v4.4C22.8 5 21.4 6.8 21.3 10H26v10Z" fill="#E4C320" opacity="0.5"/></svg>
+        <blockquote class="text-[16px] leading-[1.55]">"My daughter joined the youth team and I started climbing so I wasn't just watching. Now Saturday morning is the two of us on the slab. Best accident."</blockquote>
+        <figcaption class="flex items-center gap-3 mt-6 pt-5 border-t rule-soft">
+          <div class="av-3 w-10 h-10 rounded-full flex items-center justify-center text-white text-[13px] font-bold">LR</div>
+          <div><div class="text-[13.5px] font-bold">Lucia Romano</div><div class="mono text-[10.5px] text-[color:var(--ink-3)]">Member · 2 years</div></div>
+        </figcaption>
+      </figure>
+      <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7">
+        <svg width="26" height="20" viewBox="0 0 26 20" class="mb-4" aria-hidden="true"><path d="M0 20V11C0 4.5 3.7.6 10 0v4.4C6.8 5 5.4 6.8 5.3 10H10v10Zm16 0V11C16 4.5 19.7.6 26 0v4.4C22.8 5 21.4 6.8 21.3 10H26v10Z" fill="#E4C320" opacity="0.5"/></svg>
+        <blockquote class="text-[16px] leading-[1.55]">"I walked in having never climbed, terrified of heights. Last month I placed in my division at comp night. The wall doesn't care where you started."</blockquote>
+        <figcaption class="flex items-center gap-3 mt-6 pt-5 border-t rule-soft">
+          <div class="av-4 w-10 h-10 rounded-full flex items-center justify-center text-white text-[13px] font-bold">FA</div>
+          <div><div class="text-[13.5px] font-bold">Femi Adeyemi</div><div class="mono text-[10.5px] text-[color:var(--ink-3)]">Member · 3 years</div></div>
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ================= LOCATION ================= -->
+<section class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+  <div class="grid lg:grid-cols-2 gap-8 items-start">
+    <div>
+      <div class="marker mb-5"><span class="accent-line"></span>Find us</div>
+      <h2 class="display text-[clamp(32px,4.6vw,52px)] mb-6">The old depot, Rail Yard.</h2>
+      <div class="blob-1 rounded-2xl border rule aspect-[16/10] relative overflow-hidden">
+        <div class="absolute inset-0 dotgrid opacity-60"></div>
+        <div class="absolute inset-0 grain opacity-50"></div>
+        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+          <span class="pulse-dot" style="width:13px;height:13px"></span>
+          <span class="mono text-[10px] mt-2 bg-[color:var(--card)] border rule rounded px-2 py-0.5">40 Depot Street</span>
+        </div>
+      </div>
+    </div>
+    <div class="grid sm:grid-cols-2 gap-4">
+      <div class="rounded-2xl border rule bg-[color:var(--card)] p-6 sm:col-span-2">
+        <div class="flex items-center gap-2 mb-3 text-[color:var(--accent)]"><svg class="w-4 h-4"><use href="#pin"/></svg><span class="text-[13px] font-bold text-[color:var(--ink)]">The gym</span></div>
+        <p class="text-[14px] text-[color:var(--ink-2)]">40 Depot Street, the Rail Yard<br/>The big roll-up door — you'll hear it before you see it</p>
+        <p class="text-[13px] text-[color:var(--ink-2)] mt-3">A free gravel lot off Depot Street and plenty of bike parking just inside the door. Two blocks from the Rail Yard streetcar stop.</p>
+      </div>
+      <div class="rounded-2xl border rule bg-[color:var(--card)] p-6">
+        <div class="flex items-center gap-2 mb-3 text-[color:var(--accent)]"><svg class="w-4 h-4"><use href="#cl"/></svg><span class="text-[13px] font-bold text-[color:var(--ink)]">Hours</span></div>
+        <table class="w-full mono text-[12px] tnum"><tbody>
+          <tr><td class="text-[color:var(--ink-2)] py-1">Mon–Fri</td><td class="text-right">6:00a–11:00p</td></tr>
+          <tr><td class="text-[color:var(--ink-2)] py-1">Saturday</td><td class="text-right">8:00a–10:00p</td></tr>
+          <tr><td class="text-[color:var(--ink-2)] py-1">Sunday</td><td class="text-right">8:00a–9:00p</td></tr>
+        </tbody></table>
+      </div>
+      <div class="rounded-2xl border rule bg-[color:var(--panel)] p-6">
+        <div class="text-[13px] font-bold mb-3">Your first visit</div>
+        <p class="text-[13px] text-[color:var(--ink-2)]">Athletic clothes and socks. Shoes and chalk rent here for $8 — free with the first-visit deal. No class or partner needed; staff cover the basics when you arrive.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FAQ ================= -->
+<section class="max-w-[820px] mx-auto px-5 sm:px-8 pb-16 sm:pb-24">
+  <div class="marker mb-5"><span class="accent-line"></span>Before you climb</div>
+  <h2 class="display text-[clamp(30px,4.4vw,48px)] mb-8">First-timer questions.</h2>
+  <div class="divide-y rule">
+    <details class="group py-2"><summary class="flex items-center justify-between gap-4 py-4"><span class="text-[15px] sm:text-[16px] font-semibold">I've never climbed — do I need a class first?</span><span class="acc-sign text-[color:var(--accent)] text-[20px] leading-none">+</span></summary><p class="text-[14px] text-[color:var(--ink-2)] pb-4 max-w-[64ch]">No. Bouldering is climbing close to the ground over thick pads — no ropes, no partner, no certification. Walk in and staff will cover falling and the basics. The free Intro to Climbing session is there if you want more structure.</p></details>
+    <details class="group py-2"><summary class="flex items-center justify-between gap-4 py-4"><span class="text-[15px] sm:text-[16px] font-semibold">What gear do I need to rent or buy?</span><span class="acc-sign text-[color:var(--accent)] text-[20px] leading-none">+</span></summary><p class="text-[14px] text-[color:var(--ink-2)] pb-4 max-w-[64ch]">Just climbing shoes and chalk — both rent for $8 together, or free on your first-visit deal. Most climbers buy their own shoes within a month or two; we sell them, and members get 20% off.</p></details>
+    <details class="group py-2"><summary class="flex items-center justify-between gap-4 py-4"><span class="text-[15px] sm:text-[16px] font-semibold">Is there a fitness area beyond climbing?</span><span class="acc-sign text-[color:var(--accent)] text-[20px] leading-none">+</span></summary><p class="text-[14px] text-[color:var(--ink-2)] pb-4 max-w-[64ch]">Yes — a full training zone with hangboards, a campus board, rings, and free weights, plus three yoga classes a week. All of it is included with a monthly membership.</p></details>
+    <details class="group py-2"><summary class="flex items-center justify-between gap-4 py-4"><span class="text-[15px] sm:text-[16px] font-semibold">How often do routes change?</span><span class="acc-sign text-[color:var(--accent)] text-[20px] leading-none">+</span></summary><p class="text-[14px] text-[color:var(--ink-2)] pb-4 max-w-[64ch]">Constantly. Our five setters put up fresh problems every Friday, rotating two zones a week — so the whole gym, all 240 problems, turns over about once a month.</p></details>
+    <details class="group py-2"><summary class="flex items-center justify-between gap-4 py-4"><span class="text-[15px] sm:text-[16px] font-semibold">Is there a kids' program?</span><span class="acc-sign text-[color:var(--accent)] text-[20px] leading-none">+</span></summary><p class="text-[14px] text-[color:var(--ink-2)] pb-4 max-w-[64ch]">Yes — a coached Youth Team for ages 7 to 17, from recreational squads to a competitive team, plus open climbing for families. Kids under 14 climb with a supervising adult.</p></details>
+  </div>
+</section>
+
+<!-- ================= FINAL CTA ================= -->
+<section id="start" class="max-w-[1200px] mx-auto px-5 sm:px-8 pb-16 sm:pb-24">
+  <div class="relative overflow-hidden rounded-[26px] border rule bg-[color:var(--card)] px-6 sm:px-14 py-14 sm:py-20 text-center">
+    <div class="absolute inset-0" style="background:radial-gradient(58% 78% at 18% 8%, rgba(228,195,32,0.34), transparent 60%),radial-gradient(54% 70% at 88% 96%, rgba(70,183,168,0.2), transparent 64%)"></div>
+    <div class="absolute inset-0 dotgrid opacity-40"></div>
+    <div class="relative">
+      <h2 class="display text-[clamp(36px,5.6vw,68px)] max-w-[15ch] mx-auto">Your first move is twenty dollars.</h2>
+      <p class="text-[15px] sm:text-[16px] text-[color:var(--ink-2)] mt-5 max-w-[52ch] mx-auto">Day pass, shoes, and chalk for $20 — walk in any time we're open. No experience, no partner, no plan. Just chalk up.</p>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center mt-9">
+        <a href="#intro" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--accent)] text-[#15171A] font-bold px-7 py-3.5 text-[15px]">Plan your first visit <span class="scroll-x">→</span></a>
+        <a href="#schedule" class="btn-ghost inline-flex items-center justify-center rounded-full border rule text-[color:var(--ink)] font-medium px-7 py-3.5 text-[15px]">See what's on</a>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ================= FOOTER ================= -->
+<footer class="border-t rule">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-14 grid sm:grid-cols-2 lg:grid-cols-4 gap-9">
+    <div>
+      <div class="flex items-center gap-2.5 mb-4">
+        <svg width="24" height="24" viewBox="0 0 27 27" aria-hidden="true"><path d="M2.5 22.5 13.5 3 24.5 22.5" fill="none" stroke="#E4C320" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/><path d="M8 22.5 13.5 12 19 22.5 Z" fill="#E4C320"/></svg>
+        <span class="display text-[18px]">CRUX</span>
+      </div>
+      <p class="text-[13px] text-[color:var(--ink-2)] max-w-[30ch]">A bouldering &amp; community climbing gym. Find the move you didn't think you had.</p>
+    </div>
+    <div>
+      <div class="marker mb-4">The gym</div>
+      <p class="text-[13px] text-[color:var(--ink-2)] leading-relaxed">40 Depot Street<br/>the Rail Yard</p>
+      <p class="mono text-[11.5px] text-[color:var(--ink-3)] mt-3 tnum">Mon–Fri 6:00a–11:00p<br/>Sat 8:00a–10:00p · Sun 8:00a–9:00p</p>
+    </div>
+    <div>
+      <div class="marker mb-4">Get in touch</div>
+      <a href="tel:+15035550191" class="flex items-center gap-2 text-[13px] text-[color:var(--ink-2)] mb-2.5"><svg class="w-3.5 h-3.5"><use href="#ph"/></svg>(503) 555-0191</a>
+      <a href="#top" class="flex items-center gap-2 text-[13px] text-[color:var(--ink-2)] mb-2.5"><svg class="w-3.5 h-3.5"><use href="#ig"/></svg>@cruxclimbing</a>
+      <p class="text-[12px] text-[color:var(--ink-3)] mt-3">Check the set &amp; comp calendar in the Crux app — iOS &amp; Android.</p>
+    </div>
+    <div>
+      <div class="marker mb-4">Explore</div>
+      <div class="flex flex-col gap-2.5 text-[13px] text-[color:var(--ink-2)]">
+        <a href="#classes" class="ul-link w-fit">Climbing</a>
+        <a href="#schedule" class="ul-link w-fit">What's on</a>
+        <a href="#membership" class="ul-link w-fit">Membership</a>
+        <a href="#about" class="ul-link w-fit">About the gym</a>
+      </div>
+    </div>
+  </div>
+  <div class="border-t rule-soft">
+    <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-6 flex flex-col sm:flex-row gap-2 justify-between">
+      <p class="mono text-[11px] text-[color:var(--ink-3)]">© 2026 Crux Climbing</p>
+      <p class="mono text-[11px] text-[color:var(--ink-3)]">Bouldering · Training · Youth team · Community</p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

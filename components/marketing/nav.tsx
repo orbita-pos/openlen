@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Moon, Star, Sun } from "lucide-react";
+import { ArrowRight, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GithubIcon } from "@/components/ui/brand-icons";
 import { cn } from "@/lib/cn";
@@ -57,15 +57,14 @@ export function Nav({ dark, onToggleDark }: NavProps) {
             </a>
           ))}
           <a
-            href="https://github.com"
+            href="https://github.com/jesusbernalrj/inari-pages"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="OpenLen on GitHub"
             className="ml-1 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
           >
             <GithubIcon size={14} />
             <span>GitHub</span>
-            <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-zinc-100 dark:bg-zinc-900 px-2 py-0.5 text-[11px] font-medium tabular-nums">
-              <Star size={10} className="text-amber-500" />
-              2.4k
-            </span>
           </a>
         </nav>
 

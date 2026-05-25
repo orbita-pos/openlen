@@ -1,0 +1,1085 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aside — Three friends, one hour, zero agenda</title>
+  <meta name="description" content="Aside is a weekly culture-and-comedy podcast. Three friends overthinking the internet, bad movies, and snacks since 2019. New episode every Friday." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23F0612B'/%3E%3Cpath d='M9 8h11a5 5 0 0 1 5 5v3a5 5 0 0 1-5 5h-4l-4 4v-4H9a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3z' fill='%23FBF8F3'/%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            paper: '#FBF8F3',
+            ink: '#1C1815',
+            tangerine: '#F0612B',
+            tangerinedeep: '#D44E1E',
+            sun: '#FFCE52',
+            sky: '#8FC7E8',
+            mint: '#A6D8B9',
+          },
+          fontFamily: {
+            display: ['"Bricolage Grotesque"', 'system-ui', 'sans-serif'],
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root {
+      --wave-on: #F0612B;
+      --wave-off: rgba(28, 24, 21, 0.16);
+      --hair: rgba(28, 24, 21, 0.10);
+    }
+    * { -webkit-font-smoothing: antialiased; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-feature-settings: "ss01", "cv11";
+      background-color: #FBF8F3;
+      color: #1C1815;
+    }
+    .font-display { font-family: 'Bricolage Grotesque', system-ui, sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .tracking-display { letter-spacing: -0.03em; }
+    .tracking-display-tight { letter-spacing: -0.04em; }
+    .halftone { opacity: 0.45; }
+
+    /* Pulse dot */
+    .pulse-dot {
+      position: relative;
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      border-radius: 9999px;
+      background: #F0612B;
+      flex: none;
+    }
+    .pulse-dot::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 9999px;
+      background: #F0612B;
+      animation: pulsering 2.4s ease-out infinite;
+    }
+    @keyframes pulsering {
+      0%   { transform: scale(1); opacity: 0.55; }
+      70%  { transform: scale(3.4); opacity: 0; }
+      100% { transform: scale(3.4); opacity: 0; }
+    }
+
+    /* Marquee */
+    .marquee {
+      display: flex;
+      width: max-content;
+      animation: scrollx 38s linear infinite;
+    }
+    .marquee-track:hover .marquee { animation-play-state: paused; }
+    @keyframes scrollx {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+
+    /* Dot grid */
+    .dotgrid {
+      background-image: radial-gradient(rgba(28,24,21,0.10) 1.4px, transparent 1.4px);
+      background-size: 32px 32px;
+    }
+
+    /* Ambient blobs */
+    .blob {
+      position: absolute;
+      border-radius: 9999px;
+      filter: blur(70px);
+      opacity: 0.55;
+      pointer-events: none;
+    }
+
+    /* Cover art */
+    .cover-shadow {
+      box-shadow: 0 40px 70px -28px rgba(208, 78, 30, 0.55), 0 18px 32px -20px rgba(28, 24, 21, 0.4);
+    }
+    .cover-gradient {
+      background:
+        radial-gradient(120% 90% at 18% 12%, #FFCE52 0%, transparent 55%),
+        radial-gradient(120% 100% at 88% 92%, #D44E1E 0%, transparent 60%),
+        linear-gradient(150deg, #F0612B 0%, #F0612B 45%, #E2521F 100%);
+    }
+
+    /* Hover lift for pills/buttons */
+    .lift { transition: transform 110ms ease, box-shadow 110ms ease, background-color 110ms ease, border-color 110ms ease; }
+    .lift:hover { transform: translateY(-2px); }
+
+    .badge-pill {
+      transition: transform 110ms ease, box-shadow 110ms ease, background-color 110ms ease, border-color 110ms ease;
+    }
+    .badge-pill:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 22px -12px rgba(28, 24, 21, 0.32);
+      border-color: rgba(240, 97, 43, 0.55);
+      background-color: #fff;
+    }
+
+    .ep-row { transition: background-color 120ms ease; }
+    .ep-row:hover { background-color: rgba(240, 97, 43, 0.05); }
+
+    .mini-play { transition: transform 120ms ease, background-color 120ms ease, color 120ms ease; }
+    .mini-play:hover { transform: scale(1.08); background-color: #F0612B; color: #FBF8F3; }
+
+    .squiggle-underline {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='10' viewBox='0 0 80 10'%3E%3Cpath d='M2 6 Q 12 1 22 6 T 42 6 T 62 6 T 82 6' fill='none' stroke='%23F0612B' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: repeat-x;
+      background-position: 0 100%;
+      background-size: 80px 10px;
+      padding-bottom: 8px;
+    }
+
+    .card-tilt { transition: transform 160ms ease, box-shadow 160ms ease; }
+    .card-tilt:hover { transform: translateY(-4px) rotate(-0.6deg); box-shadow: 0 24px 40px -26px rgba(28,24,21,0.4); }
+
+    .faq-item summary { list-style: none; cursor: pointer; }
+    .faq-item summary::-webkit-details-marker { display: none; }
+    .faq-item .chev { transition: transform 160ms ease; }
+    .faq-item[open] .chev { transform: rotate(45deg); }
+
+    .play-cta {
+      transition: transform 120ms ease, box-shadow 120ms ease;
+    }
+    .play-cta:hover { transform: scale(1.05); box-shadow: 0 16px 30px -14px rgba(208,78,30,0.7); }
+
+    ::selection { background: #FFCE52; color: #1C1815; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .marquee { animation: none; }
+      .pulse-dot::after { animation: none; }
+      html { scroll-behavior: auto; }
+    }
+  </style>
+</head>
+<body class="bg-paper text-ink antialiased">
+
+  <!-- ============ 1. NAV ============ -->
+  <header class="sticky top-0 z-50 border-b border-[var(--hair)] bg-paper/85 backdrop-blur-md">
+    <nav class="mx-auto flex h-16 max-w-6xl items-center justify-between px-5" aria-label="Primary">
+      <a href="#top" class="flex items-center gap-2.5">
+        <span class="grid h-8 w-8 place-items-center rounded-[10px] bg-tangerine">
+          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" aria-hidden="true">
+            <path d="M5 4h10a4 4 0 0 1 4 4v3a4 4 0 0 1-4 4h-3.5L8 18.5V15H5a2.5 2.5 0 0 1-2.5-2.5v-6A2.5 2.5 0 0 1 5 4z" fill="#FBF8F3"/>
+          </svg>
+        </span>
+        <span class="font-display text-[1.35rem] font-extrabold tracking-display-tight">Aside</span>
+      </a>
+      <div class="hidden items-center gap-7 md:flex">
+        <a href="#episodes" class="text-sm font-medium text-ink/70 transition-colors hover:text-ink">Episodes</a>
+        <a href="#about" class="text-sm font-medium text-ink/70 transition-colors hover:text-ink">About</a>
+        <a href="#hosts" class="text-sm font-medium text-ink/70 transition-colors hover:text-ink">Hosts</a>
+        <a href="#newsletter" class="text-sm font-medium text-ink/70 transition-colors hover:text-ink">Newsletter</a>
+      </div>
+      <a href="#listen" class="badge-pill inline-flex items-center gap-2 rounded-full bg-tangerine px-4 py-2 text-sm font-semibold text-paper">
+        <span class="pulse-dot" style="background:#FBF8F3;width:7px;height:7px;"></span>
+        Subscribe
+      </a>
+    </nav>
+  </header>
+
+  <main id="top">
+
+    <!-- ============ 2. HERO ============ -->
+    <section class="relative overflow-hidden">
+      <div class="dotgrid absolute inset-0 opacity-60" aria-hidden="true"></div>
+      <div class="blob h-72 w-72 bg-sun -left-10 top-10" aria-hidden="true"></div>
+      <div class="blob h-80 w-80 bg-sky right-0 top-40" aria-hidden="true"></div>
+      <div class="blob h-64 w-64 bg-mint left-1/3 bottom-0" aria-hidden="true"></div>
+
+      <div class="relative mx-auto grid max-w-6xl gap-12 px-5 pb-20 pt-16 md:pt-24 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10 lg:pb-28">
+
+        <!-- Left: copy + player -->
+        <div class="flex flex-col">
+          <div class="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--hair)] bg-white/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-ink/65">
+            <svg viewBox="0 0 16 16" class="h-3.5 w-3.5 text-tangerine" fill="currentColor" aria-hidden="true">
+              <circle cx="8" cy="8" r="3"/>
+              <path d="M8 1.5a6.5 6.5 0 0 0-4.6 11.1l1.1-1.1A5 5 0 1 1 8 13a5 5 0 0 1-3.5-1.4l-1.1 1.1A6.5 6.5 0 1 0 8 1.5z"/>
+            </svg>
+            A culture &amp; comedy podcast
+          </div>
+
+          <h1 class="mt-6 font-display text-[3.6rem] font-extrabold leading-[0.95] tracking-display-tight sm:text-[4.6rem] lg:text-[5.2rem]">
+            Aside
+          </h1>
+
+          <p class="mt-5 max-w-md text-lg leading-relaxed text-ink/85">
+            Three friends, one hour, zero agenda —
+            <span class="halftone">overthinking the internet, bad movies, and snacks since 2019.</span>
+          </p>
+
+          <!-- Listen-on badge row (1 of 2) -->
+          <div id="listen" class="mt-7">
+            <p class="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-ink/50">Listen wherever you already are</p>
+            <div class="flex flex-wrap gap-2.5">
+              <!-- Apple Podcasts -->
+              <a href="#listen" class="badge-pill inline-flex items-center gap-2 rounded-full border border-[var(--hair)] bg-white/55 px-3.5 py-2 text-sm font-medium" aria-label="Listen on Apple Podcasts">
+                <svg viewBox="0 0 24 24" class="h-4 w-4 text-ink" fill="none" aria-hidden="true">
+                  <rect x="2" y="2" width="20" height="20" rx="6" stroke="currentColor" stroke-width="1.7"/>
+                  <circle cx="12" cy="9.4" r="2.1" fill="currentColor"/>
+                  <path d="M12 13.2c-1.7 0-3 1-3 2.3 0 1.1.6 3 1.2 3.6.3.3 1.1.4 1.8.4s1.5-.1 1.8-.4c.6-.6 1.2-2.5 1.2-3.6 0-1.3-1.3-2.3-3-2.3z" fill="currentColor"/>
+                </svg>
+                Apple Podcasts
+              </a>
+              <!-- Spotify -->
+              <a href="#listen" class="badge-pill inline-flex items-center gap-2 rounded-full border border-[var(--hair)] bg-white/55 px-3.5 py-2 text-sm font-medium" aria-label="Listen on Spotify">
+                <svg viewBox="0 0 24 24" class="h-4 w-4 text-ink" fill="none" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.7"/>
+                  <path d="M7 9.6c3-1 7-.8 10 1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                  <path d="M7.6 13c2.4-.8 5.6-.6 8 .9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                  <path d="M8.3 16.2c1.9-.6 4.3-.5 6.2.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                </svg>
+                Spotify
+              </a>
+              <!-- Overcast -->
+              <a href="#listen" class="badge-pill inline-flex items-center gap-2 rounded-full border border-[var(--hair)] bg-white/55 px-3.5 py-2 text-sm font-medium" aria-label="Listen on Overcast">
+                <svg viewBox="0 0 24 24" class="h-4 w-4 text-ink" fill="none" aria-hidden="true">
+                  <circle cx="12" cy="13" r="2.3" fill="currentColor"/>
+                  <path d="M8.4 9.4a5 5 0 0 0 0 7.2M15.6 9.4a5 5 0 0 1 0 7.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                  <path d="M5.8 6.8a8.6 8.6 0 0 0 0 12.4M18.2 6.8a8.6 8.6 0 0 1 0 12.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                </svg>
+                Overcast
+              </a>
+              <!-- YouTube -->
+              <a href="#listen" class="badge-pill inline-flex items-center gap-2 rounded-full border border-[var(--hair)] bg-white/55 px-3.5 py-2 text-sm font-medium" aria-label="Watch on YouTube">
+                <svg viewBox="0 0 24 24" class="h-4 w-4 text-ink" fill="none" aria-hidden="true">
+                  <rect x="2.5" y="5.5" width="19" height="13" rx="4" stroke="currentColor" stroke-width="1.7"/>
+                  <path d="M10.5 9.2v5.6l5-2.8-5-2.8z" fill="currentColor"/>
+                </svg>
+                YouTube
+              </a>
+              <!-- Pocket Casts -->
+              <a href="#listen" class="badge-pill inline-flex items-center gap-2 rounded-full border border-[var(--hair)] bg-white/55 px-3.5 py-2 text-sm font-medium" aria-label="Listen on Pocket Casts">
+                <svg viewBox="0 0 24 24" class="h-4 w-4 text-ink" fill="none" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.7"/>
+                  <path d="M10 8.4v7.2l6-3.6-6-3.6z" fill="currentColor"/>
+                </svg>
+                Pocket Casts
+              </a>
+              <!-- RSS -->
+              <a href="#footer" class="badge-pill inline-flex items-center gap-2 rounded-full border border-[var(--hair)] bg-white/55 px-3.5 py-2 text-sm font-medium" aria-label="Subscribe via RSS">
+                <svg viewBox="0 0 24 24" class="h-4 w-4 text-ink" fill="none" aria-hidden="true">
+                  <circle cx="6.5" cy="17.5" r="2.1" fill="currentColor"/>
+                  <path d="M5 11a8 8 0 0 1 8 8M5 5.5A13.5 13.5 0 0 1 18.5 19" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+                </svg>
+                RSS
+              </a>
+            </div>
+          </div>
+
+          <!-- Static audio-player mockup -->
+          <div class="mt-8 rounded-3xl border border-[var(--hair)] bg-white p-5 shadow-[0_24px_44px_-32px_rgba(28,24,21,0.5)]">
+            <div class="flex items-center gap-4">
+              <button class="play-cta grid h-14 w-14 flex-none place-items-center rounded-full bg-tangerine text-paper" aria-label="Play the latest episode">
+                <svg viewBox="0 0 24 24" class="ml-0.5 h-6 w-6" fill="currentColor" aria-hidden="true">
+                  <path d="M8 5.5v13l11-6.5L8 5.5z"/>
+                </svg>
+              </button>
+              <div class="min-w-0">
+                <p class="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-tangerine">Latest episode</p>
+                <p class="truncate font-display text-lg font-bold tracking-display">We ranked every cereal and lost two friendships</p>
+                <p class="font-mono text-xs tnum text-ink/55">EP 312 · 1:04:30</p>
+              </div>
+            </div>
+
+            <!-- Waveform -->
+            <div class="mt-4">
+              <svg data-waveform data-bars="76" data-played="0.34" class="h-14 w-full" preserveAspectRatio="none" aria-hidden="true"></svg>
+            </div>
+
+            <!-- Scrubber -->
+            <div class="mt-3">
+              <div class="relative h-1.5 w-full rounded-full bg-ink/12">
+                <div class="absolute inset-y-0 left-0 rounded-full bg-tangerine" style="width:34%"></div>
+                <div class="absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border-2 border-white bg-tangerine shadow" style="left:calc(34% - 7px)"></div>
+              </div>
+              <div class="mt-2 flex justify-between font-mono text-xs tnum text-ink/55">
+                <span>21:54</span>
+                <span>1:04:30</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Release line -->
+          <p class="mt-5 flex items-center gap-2.5 text-sm font-medium text-ink/70">
+            <span class="pulse-dot" aria-hidden="true"></span>
+            New episode every <span class="font-semibold text-ink">Friday.</span>
+          </p>
+        </div>
+
+        <!-- Right: cover art tile -->
+        <div class="flex items-start justify-center lg:justify-end">
+          <div class="cover-gradient cover-shadow relative aspect-square w-full max-w-[420px] overflow-hidden rounded-[2rem]">
+            <!-- Goofy speech-bubble + shapes motif -->
+            <svg viewBox="0 0 420 420" class="absolute inset-0 h-full w-full" fill="none" aria-hidden="true">
+              <!-- big bubble -->
+              <path d="M52 70h188a40 40 0 0 1 40 40v74a40 40 0 0 1-40 40h-44l-40 40v-40H52a30 30 0 0 1-30-30V100a30 30 0 0 1 30-30z" fill="#FFCE52"/>
+              <!-- small bubble -->
+              <path d="M268 196h86a26 26 0 0 1 26 26v40a26 26 0 0 1-26 26h-12l-22 24v-24h-26a20 20 0 0 1-20-20v-46a26 26 0 0 1 26-26z" fill="#8FC7E8"/>
+              <!-- mint bubble bottom-left -->
+              <path d="M44 296h96a24 24 0 0 1 24 24v28a24 24 0 0 1-24 24H88l-26 24v-24H44a20 20 0 0 1-20-20v-32a24 24 0 0 1 20-24z" fill="#A6D8B9"/>
+              <!-- dots -->
+              <circle cx="332" cy="92" r="22" fill="#FBF8F3"/>
+              <circle cx="378" cy="138" r="11" fill="#FBF8F3" opacity="0.85"/>
+              <circle cx="92" cy="372" r="9" fill="#FBF8F3" opacity="0.7"/>
+              <!-- star -->
+              <path d="M300 318l9 22 23 3-17 16 4 23-19-12-19 12 4-23-17-16 23-3 9-22z" fill="#FBF8F3"/>
+              <!-- squiggle -->
+              <path d="M212 248c14-12 28 12 42 0s28-12 42 0" stroke="#FBF8F3" stroke-width="7" stroke-linecap="round"/>
+              <!-- bubble dots inside big bubble -->
+              <circle cx="92" cy="146" r="9" fill="#1C1815"/>
+              <circle cx="124" cy="146" r="9" fill="#1C1815"/>
+              <circle cx="156" cy="146" r="9" fill="#1C1815"/>
+            </svg>
+            <!-- Title lockup inside tile -->
+            <div class="absolute inset-0 flex flex-col justify-end p-7">
+              <p class="font-mono text-[0.66rem] font-medium uppercase tracking-[0.32em] text-paper/80">Culture · Comedy · Weekly</p>
+              <p class="mt-1 font-display text-[5.2rem] font-extrabold leading-[0.82] tracking-display-tight text-paper drop-shadow-[0_4px_0_rgba(28,24,21,0.25)]">
+                Aside
+              </p>
+              <p class="mt-2 font-display text-sm font-semibold text-paper/90">Brodie · Priya · Marcus — since 2019</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============ 3. PROOF BAR ============ -->
+    <section class="border-y border-[var(--hair)] bg-white">
+      <div class="mx-auto max-w-6xl px-5 py-10">
+        <div class="grid grid-cols-2 gap-6 sm:grid-cols-4">
+          <div>
+            <p class="font-display text-3xl font-extrabold tnum tracking-display sm:text-4xl">312</p>
+            <p class="mt-1 text-sm text-ink/60">Episodes &amp; counting</p>
+          </div>
+          <div>
+            <p class="font-display text-3xl font-extrabold tnum tracking-display sm:text-4xl">8.4M</p>
+            <p class="mt-1 text-sm text-ink/60">Downloads a month</p>
+          </div>
+          <div>
+            <p class="font-display text-3xl font-extrabold tnum tracking-display sm:text-4xl">4.8<span class="text-tangerine">★</span></p>
+            <p class="mt-1 text-sm text-ink/60">Average rating</p>
+          </div>
+          <div>
+            <p class="font-display text-3xl font-extrabold tnum tracking-display sm:text-4xl">24</p>
+            <p class="mt-1 text-sm text-ink/60">Live shows played</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Press marquee -->
+      <div class="border-t border-[var(--hair)] py-5">
+        <p class="mb-3 text-center text-xs font-semibold uppercase tracking-[0.18em] text-ink/45">As heard on</p>
+        <div class="marquee-track relative overflow-hidden">
+          <div class="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-paper to-transparent"></div>
+          <div class="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-paper to-transparent"></div>
+          <div class="marquee">
+            <ul class="flex items-center gap-12 pr-12 font-display text-lg font-bold text-ink/45">
+              <li>The Margin Weekly</li>
+              <li class="text-tangerine/55">·</li>
+              <li>Spillway Magazine</li>
+              <li class="text-tangerine/55">·</li>
+              <li>The Loudmouth Post</li>
+              <li class="text-tangerine/55">·</li>
+              <li>Static &amp; Noise</li>
+              <li class="text-tangerine/55">·</li>
+              <li>Coriander Culture</li>
+              <li class="text-tangerine/55">·</li>
+              <li>The Daily Digress</li>
+              <li class="text-tangerine/55">·</li>
+              <li>Overheard Quarterly</li>
+              <li class="text-tangerine/55">·</li>
+            </ul>
+            <ul class="flex items-center gap-12 pr-12 font-display text-lg font-bold text-ink/45" aria-hidden="true">
+              <li>The Margin Weekly</li>
+              <li class="text-tangerine/55">·</li>
+              <li>Spillway Magazine</li>
+              <li class="text-tangerine/55">·</li>
+              <li>The Loudmouth Post</li>
+              <li class="text-tangerine/55">·</li>
+              <li>Static &amp; Noise</li>
+              <li class="text-tangerine/55">·</li>
+              <li>Coriander Culture</li>
+              <li class="text-tangerine/55">·</li>
+              <li>The Daily Digress</li>
+              <li class="text-tangerine/55">·</li>
+              <li>Overheard Quarterly</li>
+              <li class="text-tangerine/55">·</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 4. LATEST / FEATURED EPISODES ============ -->
+    <section id="episodes" class="relative mx-auto max-w-6xl px-5 py-20 lg:py-28">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-tangerine">Fresh from the studio</p>
+          <h2 class="mt-2 font-display text-4xl font-extrabold tracking-display-tight sm:text-5xl">Latest episodes</h2>
+        </div>
+        <a href="#footer" class="lift inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-ink/70 hover:text-tangerine">
+          Browse all 312
+          <svg viewBox="0 0 16 16" class="h-3.5 w-3.5" fill="none" aria-hidden="true">
+            <path d="M3 8h9M8.5 3.5 13 8l-4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+      </div>
+
+      <ul class="mt-10 overflow-hidden rounded-3xl border border-[var(--hair)] bg-white">
+        <!-- Row -->
+        <li class="ep-row flex items-center gap-4 border-b border-[var(--hair)] px-5 py-5 sm:px-7">
+          <span class="hidden h-9 flex-none items-center rounded-full bg-tangerine/10 px-3 font-mono text-xs font-medium tnum text-tangerinedeep sm:inline-flex">EP 312</span>
+          <div class="min-w-0 flex-1">
+            <p class="font-mono text-[0.66rem] font-medium tnum text-tangerinedeep sm:hidden">EP 312</p>
+            <p class="font-display text-lg font-bold leading-snug tracking-display">We ranked every cereal and lost two friendships</p>
+            <p class="mt-0.5 truncate text-sm text-ink/60">A breakfast bracket that started friendly and ended with Marcus leaving the room.</p>
+          </div>
+          <div class="hidden flex-none text-right md:block">
+            <p class="font-mono text-xs tnum text-ink/55">1:04:30</p>
+            <p class="font-mono text-[0.66rem] tnum text-ink/40">Feb 13, 2026</p>
+          </div>
+          <button class="mini-play grid h-10 w-10 flex-none place-items-center rounded-full border border-[var(--hair)] bg-paper text-ink" aria-label="Play episode 312">
+            <svg viewBox="0 0 24 24" class="ml-0.5 h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5L8 5.5z"/></svg>
+          </button>
+        </li>
+        <!-- Row -->
+        <li class="ep-row flex items-center gap-4 border-b border-[var(--hair)] px-5 py-5 sm:px-7">
+          <span class="hidden h-9 flex-none items-center rounded-full bg-tangerine/10 px-3 font-mono text-xs font-medium tnum text-tangerinedeep sm:inline-flex">EP 311</span>
+          <div class="min-w-0 flex-1">
+            <p class="font-mono text-[0.66rem] font-medium tnum text-tangerinedeep sm:hidden">EP 311</p>
+            <p class="font-display text-lg font-bold leading-snug tracking-display">Priya watched a 2-hour movie about a sandwich</p>
+            <p class="mt-0.5 truncate text-sm text-ink/60">She has notes. She has so many notes. The sandwich was, allegedly, fine.</p>
+          </div>
+          <div class="hidden flex-none text-right md:block">
+            <p class="font-mono text-xs tnum text-ink/55">58:12</p>
+            <p class="font-mono text-[0.66rem] tnum text-ink/40">Feb 6, 2026</p>
+          </div>
+          <button class="mini-play grid h-10 w-10 flex-none place-items-center rounded-full border border-[var(--hair)] bg-paper text-ink" aria-label="Play episode 311">
+            <svg viewBox="0 0 24 24" class="ml-0.5 h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5L8 5.5z"/></svg>
+          </button>
+        </li>
+        <!-- Row -->
+        <li class="ep-row flex items-center gap-4 border-b border-[var(--hair)] px-5 py-5 sm:px-7">
+          <span class="hidden h-9 flex-none items-center rounded-full bg-tangerine/10 px-3 font-mono text-xs font-medium tnum text-tangerinedeep sm:inline-flex">EP 310</span>
+          <div class="min-w-0 flex-1">
+            <p class="font-mono text-[0.66rem] font-medium tnum text-tangerinedeep sm:hidden">EP 310</p>
+            <p class="font-display text-lg font-bold leading-snug tracking-display">Is a hot dog a sandwich? (Year six of this fight)</p>
+            <p class="mt-0.5 truncate text-sm text-ink/60">We promised to never do this episode again. We are people of weak character.</p>
+          </div>
+          <div class="hidden flex-none text-right md:block">
+            <p class="font-mono text-xs tnum text-ink/55">1:11:48</p>
+            <p class="font-mono text-[0.66rem] tnum text-ink/40">Jan 30, 2026</p>
+          </div>
+          <button class="mini-play grid h-10 w-10 flex-none place-items-center rounded-full border border-[var(--hair)] bg-paper text-ink" aria-label="Play episode 310">
+            <svg viewBox="0 0 24 24" class="ml-0.5 h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5L8 5.5z"/></svg>
+          </button>
+        </li>
+        <!-- Row -->
+        <li class="ep-row flex items-center gap-4 border-b border-[var(--hair)] px-5 py-5 sm:px-7">
+          <span class="hidden h-9 flex-none items-center rounded-full bg-tangerine/10 px-3 font-mono text-xs font-medium tnum text-tangerinedeep sm:inline-flex">EP 309</span>
+          <div class="min-w-0 flex-1">
+            <p class="font-mono text-[0.66rem] font-medium tnum text-tangerinedeep sm:hidden">EP 309</p>
+            <p class="font-display text-lg font-bold leading-snug tracking-display">Brodie tried to explain crypto and we all aged</p>
+            <p class="mt-0.5 truncate text-sm text-ink/60">Forty minutes in, nobody knew less. A genuine achievement, honestly.</p>
+          </div>
+          <div class="hidden flex-none text-right md:block">
+            <p class="font-mono text-xs tnum text-ink/55">1:19:05</p>
+            <p class="font-mono text-[0.66rem] tnum text-ink/40">Jan 23, 2026</p>
+          </div>
+          <button class="mini-play grid h-10 w-10 flex-none place-items-center rounded-full border border-[var(--hair)] bg-paper text-ink" aria-label="Play episode 309">
+            <svg viewBox="0 0 24 24" class="ml-0.5 h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5L8 5.5z"/></svg>
+          </button>
+        </li>
+        <!-- Row -->
+        <li class="ep-row flex items-center gap-4 border-b border-[var(--hair)] px-5 py-5 sm:px-7">
+          <span class="hidden h-9 flex-none items-center rounded-full bg-tangerine/10 px-3 font-mono text-xs font-medium tnum text-tangerinedeep sm:inline-flex">EP 308</span>
+          <div class="min-w-0 flex-1">
+            <p class="font-mono text-[0.66rem] font-medium tnum text-tangerinedeep sm:hidden">EP 308</p>
+            <p class="font-display text-lg font-bold leading-snug tracking-display">We let a horoscope make every decision for a week</p>
+            <p class="mt-0.5 truncate text-sm text-ink/60">Mercury was, by all accounts, doing something. Priya missed a flight.</p>
+          </div>
+          <div class="hidden flex-none text-right md:block">
+            <p class="font-mono text-xs tnum text-ink/55">56:40</p>
+            <p class="font-mono text-[0.66rem] tnum text-ink/40">Jan 16, 2026</p>
+          </div>
+          <button class="mini-play grid h-10 w-10 flex-none place-items-center rounded-full border border-[var(--hair)] bg-paper text-ink" aria-label="Play episode 308">
+            <svg viewBox="0 0 24 24" class="ml-0.5 h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5L8 5.5z"/></svg>
+          </button>
+        </li>
+        <!-- Row -->
+        <li class="ep-row flex items-center gap-4 px-5 py-5 sm:px-7">
+          <span class="hidden h-9 flex-none items-center rounded-full bg-tangerine/10 px-3 font-mono text-xs font-medium tnum text-tangerinedeep sm:inline-flex">EP 307</span>
+          <div class="min-w-0 flex-1">
+            <p class="font-mono text-[0.66rem] font-medium tnum text-tangerinedeep sm:hidden">EP 307</p>
+            <p class="font-display text-lg font-bold leading-snug tracking-display">An entire hour about the gas station near Marcus's house</p>
+            <p class="mt-0.5 truncate text-sm text-ink/60">It has a surprisingly good taquito situation. We refuse to elaborate further. Listen.</p>
+          </div>
+          <div class="hidden flex-none text-right md:block">
+            <p class="font-mono text-xs tnum text-ink/55">1:02:17</p>
+            <p class="font-mono text-[0.66rem] tnum text-ink/40">Jan 9, 2026</p>
+          </div>
+          <button class="mini-play grid h-10 w-10 flex-none place-items-center rounded-full border border-[var(--hair)] bg-paper text-ink" aria-label="Play episode 307">
+            <svg viewBox="0 0 24 24" class="ml-0.5 h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5L8 5.5z"/></svg>
+          </button>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ============ 5. ABOUT THE SHOW ============ -->
+    <section id="about" class="relative overflow-hidden border-y border-[var(--hair)] bg-white">
+      <div class="blob h-64 w-64 bg-sun -right-12 top-0" aria-hidden="true"></div>
+      <div class="relative mx-auto grid max-w-6xl gap-12 px-5 py-20 lg:grid-cols-[1fr_1fr] lg:py-28">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-tangerine">What even is this</p>
+          <h2 class="mt-2 font-display text-4xl font-extrabold tracking-display-tight sm:text-5xl">
+            <span class="squiggle-underline">About the show</span>
+          </h2>
+          <div class="mt-7 space-y-5 text-[1.05rem] leading-relaxed text-ink/80">
+            <p>
+              <span class="font-semibold text-ink">Aside</span> started in 2019 in Priya's apartment, on a microphone Brodie bought "for streaming" and never used for streaming. The pitch was simple: three friends, one hour a week, and absolutely no plan. That is still the entire pitch. We have not improved.
+            </p>
+            <p>
+              Every Friday we get on mic and follow a conversation wherever it wants to go — a thread we found at 2am, a movie that should not be two hours long, a snack one of us is being weird about. There are running bits. There is a recurring segment where Marcus reads his Notes app aloud. There is, occasionally, a point.
+            </p>
+            <p>
+              It is a hangout you can put on while you do the dishes. Six years in, the dishes are very clean and we have somehow recorded 312 of these. Thank you for being weird with us.
+            </p>
+          </div>
+        </div>
+
+        <!-- Start here trio -->
+        <div class="rounded-3xl border border-[var(--hair)] bg-paper p-7">
+          <div class="flex items-center gap-2">
+            <span class="grid h-7 w-7 place-items-center rounded-lg bg-tangerine text-paper">
+              <svg viewBox="0 0 16 16" class="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M8 1l2 4.5 5 .5-3.7 3.3L12.5 15 8 12.3 3.5 15l1.2-5.7L1 6l5-.5L8 1z"/></svg>
+            </span>
+            <h3 class="font-display text-xl font-bold tracking-display">New here? Start with these</h3>
+          </div>
+          <p class="mt-2 text-sm text-ink/60">A friendly on-ramp into six years of nonsense.</p>
+
+          <ul class="mt-5 space-y-3">
+            <li>
+              <a href="#episodes" class="ep-row flex items-center gap-3 rounded-2xl border border-[var(--hair)] bg-white p-3.5">
+                <span class="grid h-9 w-9 flex-none place-items-center rounded-xl bg-sun font-mono text-[0.7rem] font-medium tnum text-ink">204</span>
+                <div class="min-w-0">
+                  <p class="truncate font-display text-sm font-bold tracking-display">The complete, unhinged history of the office mug</p>
+                  <p class="font-mono text-[0.66rem] tnum text-ink/50">1:08:22 · the lore episode</p>
+                </div>
+              </a>
+            </li>
+            <li>
+              <a href="#episodes" class="ep-row flex items-center gap-3 rounded-2xl border border-[var(--hair)] bg-white p-3.5">
+                <span class="grid h-9 w-9 flex-none place-items-center rounded-xl bg-sky font-mono text-[0.7rem] font-medium tnum text-ink">155</span>
+                <div class="min-w-0">
+                  <p class="truncate font-display text-sm font-bold tracking-display">We reviewed every airport we have ever cried in</p>
+                  <p class="font-mono text-[0.66rem] tnum text-ink/50">59:41 · classic format</p>
+                </div>
+              </a>
+            </li>
+            <li>
+              <a href="#episodes" class="ep-row flex items-center gap-3 rounded-2xl border border-[var(--hair)] bg-white p-3.5">
+                <span class="grid h-9 w-9 flex-none place-items-center rounded-xl bg-mint font-mono text-[0.7rem] font-medium tnum text-ink">263</span>
+                <div class="min-w-0">
+                  <p class="truncate font-display text-sm font-bold tracking-display">Brodie defends a hill that should not be a hill</p>
+                  <p class="font-mono text-[0.66rem] tnum text-ink/50">1:14:09 · peak Brodie</p>
+                </div>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 6. HOSTS ============ -->
+    <section id="hosts" class="mx-auto max-w-6xl px-5 py-20 lg:py-28">
+      <div class="text-center">
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-tangerine">The three friends</p>
+        <h2 class="mt-2 font-display text-4xl font-extrabold tracking-display-tight sm:text-5xl">Your hosts</h2>
+        <p class="mx-auto mt-3 max-w-md text-ink/65">Three distinct flavors of being slightly wrong about everything.</p>
+      </div>
+
+      <div class="mt-12 grid gap-6 sm:grid-cols-3">
+        <!-- Host 1 -->
+        <article class="card-tilt rounded-3xl border border-[var(--hair)] bg-white p-6">
+          <div class="grid h-20 w-20 place-items-center rounded-2xl font-display text-2xl font-extrabold text-paper" style="background:linear-gradient(135deg,#F0612B,#D44E1E);">BK</div>
+          <h3 class="mt-4 font-display text-xl font-bold tracking-display">Brodie Keane</h3>
+          <p class="font-mono text-[0.7rem] uppercase tracking-[0.14em] text-tangerinedeep">Chief overthinker</p>
+          <p class="mt-2.5 text-sm leading-relaxed text-ink/70">
+            Will argue any position with total confidence and zero preparation. Owns the microphone. Has never read the show notes.
+          </p>
+          <a href="#newsletter" class="lift mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-ink/70 hover:text-tangerine">
+            <svg viewBox="0 0 16 16" class="h-3.5 w-3.5" fill="currentColor" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5 8h6M8 5l3 3-3 3" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            @brodie.talks
+          </a>
+        </article>
+        <!-- Host 2 -->
+        <article class="card-tilt rounded-3xl border border-[var(--hair)] bg-white p-6">
+          <div class="grid h-20 w-20 place-items-center rounded-2xl font-display text-2xl font-extrabold text-ink" style="background:linear-gradient(135deg,#8FC7E8,#A6D8B9);">PR</div>
+          <h3 class="mt-4 font-display text-xl font-bold tracking-display">Priya Rao</h3>
+          <p class="font-mono text-[0.7rem] uppercase tracking-[0.14em] text-tangerinedeep">Resident film critic</p>
+          <p class="mt-2.5 text-sm leading-relaxed text-ink/70">
+            Watches the bad movie so you do not have to, then watches it again because she is not finished being mad about it.
+          </p>
+          <a href="#newsletter" class="lift mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-ink/70 hover:text-tangerine">
+            <svg viewBox="0 0 16 16" class="h-3.5 w-3.5" fill="currentColor" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5 8h6M8 5l3 3-3 3" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            @priya.has.notes
+          </a>
+        </article>
+        <!-- Host 3 -->
+        <article class="card-tilt rounded-3xl border border-[var(--hair)] bg-white p-6">
+          <div class="grid h-20 w-20 place-items-center rounded-2xl font-display text-2xl font-extrabold text-ink" style="background:linear-gradient(135deg,#FFCE52,#F0612B);">MV</div>
+          <h3 class="mt-4 font-display text-xl font-bold tracking-display">Marcus Vela</h3>
+          <p class="font-mono text-[0.7rem] uppercase tracking-[0.14em] text-tangerinedeep">Keeper of the Notes app</p>
+          <p class="mt-2.5 text-sm leading-relaxed text-ink/70">
+            Quiet for forty minutes, then says one thing that derails the entire episode. Knows a gas station you should hear about.
+          </p>
+          <a href="#newsletter" class="lift mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-ink/70 hover:text-tangerine">
+            <svg viewBox="0 0 16 16" class="h-3.5 w-3.5" fill="currentColor" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5 8h6M8 5l3 3-3 3" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            @marcus.notes.app
+          </a>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============ 7. PULL-QUOTE ============ -->
+    <section class="relative overflow-hidden bg-tangerine">
+      <div class="dotgrid absolute inset-0 opacity-[0.18]" aria-hidden="true" style="background-image:radial-gradient(rgba(255,255,255,0.6) 1.4px,transparent 1.4px);"></div>
+      <div class="relative mx-auto max-w-4xl px-5 py-20 text-center lg:py-28">
+        <svg viewBox="0 0 48 48" class="mx-auto h-10 w-10 text-paper/70" fill="currentColor" aria-hidden="true">
+          <path d="M14 10C8 13 5 19 5 27v11h13V27h-7c0-5 2-9 7-11l-4-6zm22 0c-6 3-9 9-9 17v11h13V27h-7c0-5 2-9 7-11l-4-6z"/>
+        </svg>
+        <blockquote class="mt-6 font-display text-3xl font-extrabold leading-[1.12] tracking-display-tight text-paper sm:text-[2.6rem]">
+          "I put this on to fold one load of laundry and finished the entire episode standing in front of a closed dryer. No regrets. Just three friends and me, motionless."
+        </blockquote>
+        <figcaption class="mt-7 flex items-center justify-center gap-3">
+          <span class="grid h-10 w-10 place-items-center rounded-full bg-paper/20 font-display text-sm font-bold text-paper">DT</span>
+          <span class="text-left">
+            <span class="block font-semibold text-paper">Dani Thurmond</span>
+            <span class="block text-sm text-paper/75">Listener since EP 41 · ★★★★★ review</span>
+          </span>
+        </figcaption>
+      </div>
+    </section>
+
+    <!-- ============ 8. NEWSLETTER ============ -->
+    <section id="newsletter" class="relative mx-auto max-w-6xl px-5 py-20 lg:py-28">
+      <div class="relative overflow-hidden rounded-[2rem] border border-[var(--hair)] bg-white p-8 sm:p-12">
+        <div class="blob h-56 w-56 bg-sky -right-10 -top-10" aria-hidden="true"></div>
+        <div class="blob h-48 w-48 bg-sun -bottom-12 left-1/4" aria-hidden="true"></div>
+        <div class="relative grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-tangerine">The Aside newsletter</p>
+            <h2 class="mt-2 font-display text-4xl font-extrabold tracking-display-tight sm:text-[2.8rem]">
+              The group chat, but slightly more organized.
+            </h2>
+            <p class="mt-4 max-w-md text-ink/70">
+              Friday mornings: the new episode, the bits that did not make the cut, one snack recommendation, and whatever link broke our brains that week. No spam. We can barely send this much.
+            </p>
+            <form class="mt-6 flex flex-col gap-3 sm:flex-row" onsubmit="return false">
+              <label for="nl-email" class="sr-only">Email address</label>
+              <input id="nl-email" type="email" required placeholder="you@somewhere.com"
+                class="w-full rounded-full border border-[var(--hair)] bg-paper px-5 py-3 text-sm text-ink placeholder:text-ink/40 focus:border-tangerine focus:outline-none focus:ring-2 focus:ring-tangerine/25" />
+              <button type="submit" class="badge-pill inline-flex flex-none items-center justify-center gap-2 rounded-full bg-tangerine px-6 py-3 text-sm font-semibold text-paper">
+                Join the chat
+                <svg viewBox="0 0 16 16" class="h-3.5 w-3.5" fill="none" aria-hidden="true"><path d="M3 8h9M8.5 3.5 13 8l-4.5 4.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </form>
+            <p class="mt-3 font-mono text-[0.7rem] tnum text-ink/45">Joined by 41,200 people who also stand in front of dryers.</p>
+          </div>
+          <!-- Decorative envelope card -->
+          <div class="hidden justify-end lg:flex">
+            <div class="relative w-64 rotate-2">
+              <div class="rounded-2xl border border-[var(--hair)] bg-paper p-5 shadow-[0_24px_44px_-30px_rgba(28,24,21,0.5)]">
+                <div class="flex items-center gap-2">
+                  <span class="grid h-8 w-8 place-items-center rounded-lg bg-tangerine text-paper">
+                    <svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" aria-hidden="true"><rect x="2" y="4" width="16" height="12" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M3 6l7 5 7-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </span>
+                  <span class="font-display text-sm font-bold tracking-display">Friday Aside</span>
+                </div>
+                <div class="mt-4 space-y-2">
+                  <div class="h-2.5 w-3/4 rounded-full bg-ink/10"></div>
+                  <div class="h-2.5 w-full rounded-full bg-ink/10"></div>
+                  <div class="h-2.5 w-5/6 rounded-full bg-ink/10"></div>
+                </div>
+                <div class="mt-4 rounded-xl bg-sun/60 p-3">
+                  <p class="font-mono text-[0.62rem] uppercase tracking-[0.12em] text-ink/60">Snack of the week</p>
+                  <p class="font-display text-sm font-bold tracking-display">Frozen grapes (controversial)</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 9. COMMUNITY ============ -->
+    <section id="community" class="relative overflow-hidden border-y border-[var(--hair)] bg-white">
+      <div class="relative mx-auto max-w-6xl px-5 py-20 lg:py-28">
+        <div class="text-center">
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-tangerine">Come hang out</p>
+          <h2 class="mt-2 font-display text-4xl font-extrabold tracking-display-tight sm:text-5xl">The Aside crowd</h2>
+          <p class="mx-auto mt-3 max-w-lg text-ink/65">Six years of inside jokes and an alarming amount of cereal opinions. Pull up a chair.</p>
+        </div>
+
+        <div class="mt-12 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <!-- Discord block -->
+          <div class="card-tilt flex flex-col justify-between rounded-3xl border border-[var(--hair)] p-7" style="background:linear-gradient(150deg,#8FC7E8,#A6D8B9);">
+            <div>
+              <div class="flex items-center gap-3">
+                <span class="grid h-12 w-12 place-items-center rounded-xl bg-ink text-paper">
+                  <svg viewBox="0 0 24 24" class="h-6 w-6" fill="currentColor" aria-hidden="true">
+                    <path d="M19 5.5A16 16 0 0 0 15 4l-.4.8a13 13 0 0 0-5.2 0L9 4a16 16 0 0 0-4 1.5C2.5 9 1.8 12.6 2 16.2A16 16 0 0 0 7 18.5l.9-1.4a9 9 0 0 1-1.6-.8l.4-.3a11.4 11.4 0 0 0 10.6 0l.4.3a9 9 0 0 1-1.6.8l.9 1.4a16 16 0 0 0 5-2.3c.3-4.2-.6-7.8-2.9-10.7zM9 14c-.8 0-1.5-.8-1.5-1.7S8.2 10.6 9 10.6s1.5.8 1.5 1.7S9.8 14 9 14zm6 0c-.8 0-1.5-.8-1.5-1.7s.7-1.7 1.5-1.7 1.5.8 1.5 1.7S15.8 14 15 14z"/>
+                  </svg>
+                </span>
+                <div>
+                  <h3 class="font-display text-2xl font-extrabold tracking-display text-ink">The Aside Discord</h3>
+                  <p class="font-mono text-xs tnum text-ink/65">9,840 members · 14 channels · zero rules that matter</p>
+                </div>
+              </div>
+              <p class="mt-4 text-ink/75">
+                Live episode threads on Fridays, a #snack-court for settling food crimes, fan-made bracket polls, and a #marcus-notes-app channel that has fully taken on a life of its own.
+              </p>
+            </div>
+            <a href="#listen" class="badge-pill mt-6 inline-flex w-fit items-center gap-2 rounded-full bg-ink px-5 py-3 text-sm font-semibold text-paper">
+              Grab an invite
+              <svg viewBox="0 0 16 16" class="h-3.5 w-3.5" fill="none" aria-hidden="true"><path d="M3 8h9M8.5 3.5 13 8l-4.5 4.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+          </div>
+
+          <!-- Voicemails -->
+          <div class="rounded-3xl border border-[var(--hair)] bg-paper p-7">
+            <div class="flex items-center gap-3">
+              <span class="grid h-12 w-12 place-items-center rounded-xl bg-tangerine text-paper">
+                <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" aria-hidden="true">
+                  <path d="M5 11a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zm14 0a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM7.5 13.5h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+              </span>
+              <div>
+                <h3 class="font-display text-2xl font-extrabold tracking-display">Leave us a voicemail</h3>
+                <p class="font-mono text-xs tnum text-tangerinedeep">+1 (555) 0199-ASIDE</p>
+              </div>
+            </div>
+            <p class="mt-3 text-sm text-ink/70">Sixty seconds. A question, a confession, a wildly incorrect take. The best ones open the show.</p>
+
+            <ul class="mt-5 space-y-3">
+              <li class="flex items-start gap-3 rounded-2xl border border-[var(--hair)] bg-white p-3.5">
+                <span class="grid h-8 w-8 flex-none place-items-center rounded-full bg-tangerine/12 text-tangerinedeep">
+                  <svg viewBox="0 0 24 24" class="ml-0.5 h-3.5 w-3.5" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5L8 5.5z"/></svg>
+                </span>
+                <div class="min-w-0">
+                  <p class="text-sm text-ink/80">"Hi, it's Renata, I just want it on record that a hot dog IS a sandwich and your show has caused a rift in my marriage."</p>
+                  <p class="mt-1 font-mono text-[0.62rem] tnum text-ink/45">0:47 · played on EP 310</p>
+                </div>
+              </li>
+              <li class="flex items-start gap-3 rounded-2xl border border-[var(--hair)] bg-white p-3.5">
+                <span class="grid h-8 w-8 flex-none place-items-center rounded-full bg-tangerine/12 text-tangerinedeep">
+                  <svg viewBox="0 0 24 24" class="ml-0.5 h-3.5 w-3.5" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5L8 5.5z"/></svg>
+                </span>
+                <div class="min-w-0">
+                  <p class="text-sm text-ink/80">"You said the gas station taquitos were a six. They are an eight. I drove there. I am calling from the parking lot."</p>
+                  <p class="mt-1 font-mono text-[0.62rem] tnum text-ink/45">0:33 · played on EP 308</p>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Merch teaser -->
+        <div class="mt-10">
+          <div class="flex items-end justify-between">
+            <h3 class="font-display text-2xl font-extrabold tracking-display">Wear the nonsense</h3>
+            <a href="#footer" class="lift hidden items-center gap-1.5 text-sm font-semibold text-ink/70 hover:text-tangerine sm:inline-flex">
+              Visit the shop
+              <svg viewBox="0 0 16 16" class="h-3.5 w-3.5" fill="none" aria-hidden="true"><path d="M3 8h9M8.5 3.5 13 8l-4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+          </div>
+          <div class="mt-5 grid gap-5 sm:grid-cols-3">
+            <!-- Mug -->
+            <article class="card-tilt overflow-hidden rounded-3xl border border-[var(--hair)] bg-paper">
+              <div class="relative grid h-44 place-items-center" style="background:linear-gradient(140deg,#FFCE52,#F0612B);">
+                <svg viewBox="0 0 120 120" class="h-28 w-28" fill="none" aria-hidden="true">
+                  <rect x="30" y="40" width="48" height="48" rx="10" fill="#FBF8F3"/>
+                  <path d="M78 52h10a10 10 0 0 1 0 20H78" stroke="#FBF8F3" stroke-width="6"/>
+                  <path d="M44 30c0 6-6 6-6 12M58 30c0 6-6 6-6 12" stroke="#FBF8F3" stroke-width="5" stroke-linecap="round"/>
+                  <circle cx="54" cy="64" r="6" fill="#F0612B"/>
+                </svg>
+              </div>
+              <div class="flex items-center justify-between p-4">
+                <div>
+                  <p class="font-display text-base font-bold tracking-display">The Office Mug™ mug</p>
+                  <p class="font-mono text-[0.66rem] tnum text-ink/50">11oz · the lore, ceramic</p>
+                </div>
+                <span class="font-mono text-sm font-medium tnum text-tangerinedeep">$18</span>
+              </div>
+            </article>
+            <!-- Tee -->
+            <article class="card-tilt overflow-hidden rounded-3xl border border-[var(--hair)] bg-paper">
+              <div class="relative grid h-44 place-items-center" style="background:linear-gradient(140deg,#8FC7E8,#A6D8B9);">
+                <svg viewBox="0 0 120 120" class="h-28 w-28" fill="none" aria-hidden="true">
+                  <path d="M44 30l-18 10 8 16 10-5v34h32V51l10 5 8-16-18-10-6 8h-20l-6-8z" fill="#FBF8F3"/>
+                  <path d="M50 62h20M50 72h14" stroke="#1C1815" stroke-width="4" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="flex items-center justify-between p-4">
+                <div>
+                  <p class="font-display text-base font-bold tracking-display">"Zero Agenda" tee</p>
+                  <p class="font-mono text-[0.66rem] tnum text-ink/50">soft cotton · XS–3XL</p>
+                </div>
+                <span class="font-mono text-sm font-medium tnum text-tangerinedeep">$28</span>
+              </div>
+            </article>
+            <!-- Tote -->
+            <article class="card-tilt overflow-hidden rounded-3xl border border-[var(--hair)] bg-paper">
+              <div class="relative grid h-44 place-items-center" style="background:linear-gradient(140deg,#A6D8B9,#FFCE52);">
+                <svg viewBox="0 0 120 120" class="h-28 w-28" fill="none" aria-hidden="true">
+                  <path d="M38 44h44v44H38z" fill="#FBF8F3"/>
+                  <path d="M48 44v-6a12 12 0 0 1 24 0v6" stroke="#FBF8F3" stroke-width="6" stroke-linecap="round"/>
+                  <path d="M52 64c4 6 12 6 16 0" stroke="#F0612B" stroke-width="5" stroke-linecap="round"/>
+                  <circle cx="53" cy="56" r="3" fill="#1C1815"/>
+                  <circle cx="67" cy="56" r="3" fill="#1C1815"/>
+                </svg>
+              </div>
+              <div class="flex items-center justify-between p-4">
+                <div>
+                  <p class="font-display text-base font-bold tracking-display">Snack-carrying tote</p>
+                  <p class="font-mono text-[0.66rem] tnum text-ink/50">canvas · holds many grapes</p>
+                </div>
+                <span class="font-mono text-sm font-medium tnum text-tangerinedeep">$22</span>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 10. FAQ ============ -->
+    <section class="mx-auto max-w-3xl px-5 py-20 lg:py-28">
+      <div class="text-center">
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-tangerine">Reasonable questions</p>
+        <h2 class="mt-2 font-display text-4xl font-extrabold tracking-display-tight sm:text-5xl">Before you hit play</h2>
+      </div>
+
+      <div class="mt-10 space-y-3">
+        <details class="faq-item rounded-2xl border border-[var(--hair)] bg-white px-5 py-4" open>
+          <summary class="flex items-center justify-between gap-4">
+            <span class="font-display text-lg font-bold tracking-display">How explicit is the show?</span>
+            <svg class="chev h-5 w-5 flex-none text-tangerine" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </summary>
+          <p class="mt-3 text-[0.97rem] leading-relaxed text-ink/72">
+            We are marked explicit, mostly for the occasional swear when a movie is genuinely insulting or a cereal ranking gets heated. There is no shock-value material — it is a hangout, not a dare. If you would not mind your friends talking the way friends talk, you will be completely fine. Roughly PG-13, with feeling.
+          </p>
+        </details>
+
+        <details class="faq-item rounded-2xl border border-[var(--hair)] bg-white px-5 py-4">
+          <summary class="flex items-center justify-between gap-4">
+            <span class="font-display text-lg font-bold tracking-display">Can I send in a voicemail?</span>
+            <svg class="chev h-5 w-5 flex-none text-tangerine" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </summary>
+          <p class="mt-3 text-[0.97rem] leading-relaxed text-ink/72">
+            Please do. Call +1 (555) 0199-ASIDE and leave us up to a minute — a question, a strong opinion, a story you cannot tell anyone in your real life. We listen to every single one. The best land in the cold open of a Friday episode, and yes, we will absolutely say your name on mic if you let us.
+          </p>
+        </details>
+
+        <details class="faq-item rounded-2xl border border-[var(--hair)] bg-white px-5 py-4">
+          <summary class="flex items-center justify-between gap-4">
+            <span class="font-display text-lg font-bold tracking-display">Do you tour / do live shows?</span>
+            <svg class="chev h-5 w-5 flex-none text-tangerine" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </summary>
+          <p class="mt-3 text-[0.97rem] leading-relaxed text-ink/72">
+            We do — 24 live shows and counting, usually a short run each spring and fall. Live episodes are the same format, just louder and with a crowd weighing in on the cereal bracket in real time. Tour dates go to the newsletter and Discord first, always. If a city wants us, the voicemail line is also a perfectly good way to ask.
+          </p>
+        </details>
+
+        <details class="faq-item rounded-2xl border border-[var(--hair)] bg-white px-5 py-4">
+          <summary class="flex items-center justify-between gap-4">
+            <span class="font-display text-lg font-bold tracking-display">Where's the merch?</span>
+            <svg class="chev h-5 w-5 flex-none text-tangerine" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </summary>
+          <p class="mt-3 text-[0.97rem] leading-relaxed text-ink/72">
+            The shop link lives in the footer and in every newsletter. Right now it is the Office Mug mug, the "Zero Agenda" tee, and the snack tote — small batches, restocked when we remember. New drops are tied to running bits, so if an episode goes viral, expect something dumb and wearable about it within a month.
+          </p>
+        </details>
+
+        <details class="faq-item rounded-2xl border border-[var(--hair)] bg-white px-5 py-4">
+          <summary class="flex items-center justify-between gap-4">
+            <span class="font-display text-lg font-bold tracking-display">How do I get a shout-out?</span>
+            <svg class="chev h-5 w-5 flex-none text-tangerine" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </summary>
+          <p class="mt-3 text-[0.97rem] leading-relaxed text-ink/72">
+            Easiest route: leave a great voicemail or post in the Discord — both get read on air constantly. We also shout out new newsletter subscribers in batches and anyone who sends a genuinely unhinged snack recommendation. You do not need to pay for it, you just need to be a little bit interesting. We will do the rest.
+          </p>
+        </details>
+      </div>
+    </section>
+
+    <!-- ============ 11. FINAL CTA ============ -->
+    <section class="relative overflow-hidden">
+      <div class="dotgrid absolute inset-0 opacity-55" aria-hidden="true"></div>
+      <div class="blob h-72 w-72 bg-sun left-0 top-0" aria-hidden="true"></div>
+      <div class="blob h-72 w-72 bg-mint right-0 bottom-0" aria-hidden="true"></div>
+      <div class="relative mx-auto max-w-4xl px-5 py-20 text-center lg:py-28">
+        <div class="mx-auto mb-7 grid h-16 w-16 place-items-center rounded-2xl bg-tangerine text-paper shadow-[0_18px_34px_-16px_rgba(208,78,30,0.7)]">
+          <svg viewBox="0 0 24 24" class="h-8 w-8" fill="none" aria-hidden="true">
+            <path d="M5 4h11a4 4 0 0 1 4 4v4a4 4 0 0 1-4 4h-4l-4 4v-4H5a2.5 2.5 0 0 1-2.5-2.5v-7A2.5 2.5 0 0 1 5 4z" fill="#FBF8F3"/>
+          </svg>
+        </div>
+        <h2 class="font-display text-4xl font-extrabold leading-[1.02] tracking-display-tight sm:text-[3.4rem]">
+          One hour. <span class="halftone">Every Friday.</span> Zero agenda.
+        </h2>
+        <p class="mx-auto mt-4 max-w-md text-ink/70">
+          Hit subscribe in whatever app you already have open. New episode lands Friday, like clockwork, like a snack you forgot you bought.
+        </p>
+
+        <!-- Listen-on badge row (2 of 2) -->
+        <div class="mt-8 flex flex-wrap justify-center gap-2.5">
+          <a href="#listen" class="badge-pill inline-flex items-center gap-2 rounded-full border border-[var(--hair)] bg-white px-3.5 py-2 text-sm font-medium" aria-label="Listen on Apple Podcasts">
+            <svg viewBox="0 0 24 24" class="h-4 w-4 text-ink" fill="none" aria-hidden="true">
+              <rect x="2" y="2" width="20" height="20" rx="6" stroke="currentColor" stroke-width="1.7"/>
+              <circle cx="12" cy="9.4" r="2.1" fill="currentColor"/>
+              <path d="M12 13.2c-1.7 0-3 1-3 2.3 0 1.1.6 3 1.2 3.6.3.3 1.1.4 1.8.4s1.5-.1 1.8-.4c.6-.6 1.2-2.5 1.2-3.6 0-1.3-1.3-2.3-3-2.3z" fill="currentColor"/>
+            </svg>
+            Apple Podcasts
+          </a>
+          <a href="#listen" class="badge-pill inline-flex items-center gap-2 rounded-full border border-[var(--hair)] bg-white px-3.5 py-2 text-sm font-medium" aria-label="Listen on Spotify">
+            <svg viewBox="0 0 24 24" class="h-4 w-4 text-ink" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.7"/>
+              <path d="M7 9.6c3-1 7-.8 10 1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+              <path d="M7.6 13c2.4-.8 5.6-.6 8 .9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+              <path d="M8.3 16.2c1.9-.6 4.3-.5 6.2.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+            </svg>
+            Spotify
+          </a>
+          <a href="#listen" class="badge-pill inline-flex items-center gap-2 rounded-full border border-[var(--hair)] bg-white px-3.5 py-2 text-sm font-medium" aria-label="Listen on Overcast">
+            <svg viewBox="0 0 24 24" class="h-4 w-4 text-ink" fill="none" aria-hidden="true">
+              <circle cx="12" cy="13" r="2.3" fill="currentColor"/>
+              <path d="M8.4 9.4a5 5 0 0 0 0 7.2M15.6 9.4a5 5 0 0 1 0 7.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+              <path d="M5.8 6.8a8.6 8.6 0 0 0 0 12.4M18.2 6.8a8.6 8.6 0 0 1 0 12.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+            </svg>
+            Overcast
+          </a>
+          <a href="#listen" class="badge-pill inline-flex items-center gap-2 rounded-full border border-[var(--hair)] bg-white px-3.5 py-2 text-sm font-medium" aria-label="Watch on YouTube">
+            <svg viewBox="0 0 24 24" class="h-4 w-4 text-ink" fill="none" aria-hidden="true">
+              <rect x="2.5" y="5.5" width="19" height="13" rx="4" stroke="currentColor" stroke-width="1.7"/>
+              <path d="M10.5 9.2v5.6l5-2.8-5-2.8z" fill="currentColor"/>
+            </svg>
+            YouTube
+          </a>
+          <a href="#listen" class="badge-pill inline-flex items-center gap-2 rounded-full border border-[var(--hair)] bg-white px-3.5 py-2 text-sm font-medium" aria-label="Listen on Pocket Casts">
+            <svg viewBox="0 0 24 24" class="h-4 w-4 text-ink" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.7"/>
+              <path d="M10 8.4v7.2l6-3.6-6-3.6z" fill="currentColor"/>
+            </svg>
+            Pocket Casts
+          </a>
+          <a href="#footer" class="badge-pill inline-flex items-center gap-2 rounded-full border border-[var(--hair)] bg-white px-3.5 py-2 text-sm font-medium" aria-label="Subscribe via RSS">
+            <svg viewBox="0 0 24 24" class="h-4 w-4 text-ink" fill="none" aria-hidden="true">
+              <circle cx="6.5" cy="17.5" r="2.1" fill="currentColor"/>
+              <path d="M5 11a8 8 0 0 1 8 8M5 5.5A13.5 13.5 0 0 1 18.5 19" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+            </svg>
+            RSS
+          </a>
+        </div>
+
+        <p class="mt-7 flex items-center justify-center gap-2.5 text-sm font-medium text-ink/65">
+          <span class="pulse-dot" aria-hidden="true"></span>
+          Next episode drops Friday — 312 of these and we are not stopping.
+        </p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============ 12. FOOTER ============ -->
+  <footer id="footer" class="border-t border-[var(--hair)] bg-white">
+    <div class="mx-auto max-w-6xl px-5 py-14">
+      <div class="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
+        <div class="lg:col-span-2">
+          <a href="#top" class="flex items-center gap-2.5">
+            <span class="grid h-8 w-8 place-items-center rounded-[10px] bg-tangerine">
+              <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" aria-hidden="true">
+                <path d="M5 4h10a4 4 0 0 1 4 4v3a4 4 0 0 1-4 4h-3.5L8 18.5V15H5a2.5 2.5 0 0 1-2.5-2.5v-6A2.5 2.5 0 0 1 5 4z" fill="#FBF8F3"/>
+              </svg>
+            </span>
+            <span class="font-display text-[1.35rem] font-extrabold tracking-display-tight">Aside</span>
+          </a>
+          <p class="mt-3 max-w-xs text-sm text-ink/60">
+            Three friends, one hour, zero agenda. Overthinking the internet, bad movies, and snacks since 2019.
+          </p>
+          <a href="#listen" class="badge-pill mt-5 inline-flex w-fit items-center gap-2 rounded-full border border-[var(--hair)] bg-paper px-3.5 py-2 text-sm font-medium" aria-label="Subscribe via RSS">
+            <svg viewBox="0 0 24 24" class="h-4 w-4 text-tangerine" fill="none" aria-hidden="true">
+              <circle cx="6.5" cy="17.5" r="2.1" fill="currentColor"/>
+              <path d="M5 11a8 8 0 0 1 8 8M5 5.5A13.5 13.5 0 0 1 18.5 19" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+            </svg>
+            RSS feed
+          </a>
+        </div>
+
+        <div>
+          <h3 class="font-display text-sm font-bold uppercase tracking-[0.12em] text-ink/55">Episodes</h3>
+          <ul class="mt-3 space-y-2 text-sm text-ink/65">
+            <li><a href="#episodes" class="transition-colors hover:text-tangerine">Latest</a></li>
+            <li><a href="#episodes" class="transition-colors hover:text-tangerine">Full archive</a></li>
+            <li><a href="#about" class="transition-colors hover:text-tangerine">Start here</a></li>
+            <li><a href="#episodes" class="transition-colors hover:text-tangerine">Live shows</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="font-display text-sm font-bold uppercase tracking-[0.12em] text-ink/55">About</h3>
+          <ul class="mt-3 space-y-2 text-sm text-ink/65">
+            <li><a href="#about" class="transition-colors hover:text-tangerine">The show</a></li>
+            <li><a href="#hosts" class="transition-colors hover:text-tangerine">The hosts</a></li>
+            <li><a href="#newsletter" class="transition-colors hover:text-tangerine">Newsletter</a></li>
+            <li><a href="#footer" class="transition-colors hover:text-tangerine">Shop</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="font-display text-sm font-bold uppercase tracking-[0.12em] text-ink/55">Follow &amp; Contact</h3>
+          <ul class="mt-3 space-y-2 text-sm text-ink/65">
+            <li><a href="#listen" class="transition-colors hover:text-tangerine">Discord</a></li>
+            <li><a href="#listen" class="transition-colors hover:text-tangerine">Instagram</a></li>
+            <li><a href="#community" class="transition-colors hover:text-tangerine">Voicemail line</a></li>
+            <li><a href="#newsletter" class="transition-colors hover:text-tangerine">hello@asidepod.show</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="mt-12 flex flex-col items-start justify-between gap-3 border-t border-[var(--hair)] pt-6 sm:flex-row sm:items-center">
+        <p class="font-mono text-xs tnum text-ink/45">© 2026 Aside. Recorded mostly in Priya's apartment.</p>
+        <p class="text-xs text-ink/45">Part of the <span class="font-semibold text-ink/65">Loud Tangerine Collective</span> — an independent comedy podcast co-op.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ONLY allowed JS: paints the static waveform SVGs -->
+  <script>
+    document.querySelectorAll('[data-waveform]').forEach(function (el) {
+      var n = +el.dataset.bars || 72, bw = 3, gap = 3, played = +el.dataset.played || 0.34, H = 56, out = '';
+      for (var i = 0; i < n; i++) {
+        var t = i / n;
+        var h = (0.18 + 0.82 * Math.abs(Math.sin(t * 8.7) * 0.55 + Math.sin(t * 21.3) * 0.30 + Math.sin(t * 41.1) * 0.15)) * H;
+        var x = i * (bw + gap), y = (H - h) / 2, on = (i / n) < played;
+        out += '<rect x="' + x + '" y="' + y.toFixed(1) + '" width="' + bw + '" height="' + h.toFixed(1) + '" rx="1.5" fill="' + (on ? 'var(--wave-on)' : 'var(--wave-off)') + '"/>';
+      }
+      el.setAttribute('viewBox', '0 0 ' + (n * (bw + gap)) + ' ' + H);
+      el.innerHTML = out;
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,746 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Commontable — No one in this town should go to bed hungry</title>
+<meta name="description" content="Commontable rescues surplus food and runs community meals and pantries. 2.8M meals served and 1.4M lbs of food rescued in 2025.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23C44A33'/%3E%3Cpath d='M8 16h16a8 8 0 0 1-16 0Z' fill='%23FCF7F1'/%3E%3Cpath d='M13 11c0-2 1.4-2 1.4-4M18.6 11c0-2 1.4-2 1.4-4' stroke='%23FCF7F1' stroke-width='1.8' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,500;0,8..60,600;1,8..60,500;1,8..60,600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: { extend: {
+    colors: {
+      shell: '#FCF7F1', ink: '#241A14', accent: '#C44A33',
+      'accent-dk': '#9A3522', 'accent-tint': '#F5E2DA', muted: '#6B5A4E', card: '#FFFDFA'
+    },
+    fontFamily: {
+      sans: ['Inter','ui-sans-serif','system-ui','sans-serif'],
+      serif: ['"Source Serif 4"','Georgia','serif'],
+      mono: ['"Geist Mono"','ui-monospace','SFMono-Regular','Menlo','monospace']
+    }
+  } }
+}
+</script>
+<style>
+  :root{ --accent:#C44A33; --accent-dk:#9A3522; --ink:#241A14; --line:rgba(36,26,20,.12); --line-2:rgba(36,26,20,.08); }
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  body{ font-feature-settings:'ss01' 1,'cv11' 1; line-height:1.6; -webkit-font-smoothing:antialiased; }
+  [id]{ scroll-margin-top:90px; }
+  ::selection{ background:#C44A33; color:#fff; }
+  .display{ font-family:'Inter',sans-serif; font-weight:800; letter-spacing:-.035em; line-height:1.04; }
+  .serif{ font-family:'Source Serif 4',Georgia,serif; font-weight:500; font-style:italic; letter-spacing:-.012em; }
+  .mono{ font-family:'Geist Mono',ui-monospace,monospace; font-variant-numeric:tabular-nums; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  .lift{ transition:transform .12s ease, box-shadow .12s ease, background-color .12s ease, border-color .12s ease; }
+  .lift:hover{ transform:translateY(-2px); }
+  .lift:active{ transform:translateY(0) scale(.99); }
+  .dotgrid{ background-image:radial-gradient(rgba(36,26,20,.11) 1px,transparent 1px); background-size:32px 32px; }
+  .blob{ position:absolute; border-radius:50%; filter:blur(72px); opacity:.55; pointer-events:none; }
+  .pulse{ position:relative; }
+  .pulse::after{ content:""; position:absolute; inset:-4px; border-radius:50%; background:var(--accent); opacity:.5; animation:pulse 2.4s ease-out infinite; }
+  @keyframes pulse{ 0%{ transform:scale(.7); opacity:.5; } 70%,100%{ transform:scale(2.4); opacity:0; } }
+  .marquee{ display:flex; gap:3rem; width:max-content; animation:marquee 38s linear infinite; }
+  .marquee-wrap:hover .marquee{ animation-play-state:paused; }
+  @keyframes marquee{ to{ transform:translateX(-50%); } }
+  .reveal{ opacity:0; transform:translateY(16px); transition:opacity .7s cubic-bezier(.2,.6,.2,1), transform .7s cubic-bezier(.2,.6,.2,1); }
+  .reveal.in{ opacity:1; transform:none; }
+  .donut-seg{ stroke-dasharray:0 100; transition:stroke-dasharray 1.1s cubic-bezier(.3,.7,.2,1); transform:rotate(-90deg); transform-origin:center; }
+  .barfill{ width:0; transition:width 1.5s cubic-bezier(.3,.7,.2,1); }
+  .spark-line,.spark-area{ transition:opacity .8s ease .3s; opacity:0; }
+  .in .spark-line,.in .spark-area{ opacity:1; }
+  details summary{ list-style:none; cursor:pointer; }
+  details summary::-webkit-details-marker{ display:none; }
+  details[open] .faq-x{ transform:rotate(45deg); }
+  .faq-x{ transition:transform .2s ease; }
+  .floatbtn{ opacity:0; transform:translateY(10px); pointer-events:none; transition:opacity .25s ease, transform .25s ease; }
+  .floatbtn.show{ opacity:1; transform:none; pointer-events:auto; }
+  a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{ outline:2px solid var(--accent); outline-offset:3px; border-radius:6px; }
+  @media (prefers-reduced-motion:reduce){
+    *{ animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; }
+    html{ scroll-behavior:auto; }
+    .reveal{ opacity:1; transform:none; }
+  }
+</style>
+</head>
+<body class="bg-shell text-ink font-sans">
+
+<!-- ░░ NAV ░░ -->
+<header id="nav" class="sticky top-0 z-50 border-b border-[color:var(--line-2)] bg-shell/85 backdrop-blur-md transition-shadow">
+  <nav class="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5 sm:px-8">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#C44A33"/><path d="M8 16h16a8 8 0 0 1-16 0Z" fill="#FCF7F1"/><path d="M13 11c0-2 1.4-2 1.4-4M18.6 11c0-2 1.4-2 1.4-4" stroke="#FCF7F1" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>
+      <span class="text-xl font-extrabold tracking-tight">Commontable</span>
+    </a>
+    <div class="hidden items-center gap-8 md:flex">
+      <a href="#about" class="text-sm font-medium text-muted hover:text-ink">Our Work</a>
+      <a href="#impact" class="text-sm font-medium text-muted hover:text-ink">Impact</a>
+      <a href="#stories" class="text-sm font-medium text-muted hover:text-ink">Stories</a>
+      <a href="#transparency" class="text-sm font-medium text-muted hover:text-ink">About</a>
+    </div>
+    <a href="#give" class="lift inline-flex items-center gap-1.5 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_20px_-8px_rgba(196,74,51,.7)] hover:bg-accent-dk">
+      Donate
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </nav>
+</header>
+
+<main id="top">
+
+<!-- ░░ 1 · HERO ░░ -->
+<section class="relative overflow-hidden">
+  <div class="blob" style="width:420px;height:420px;background:radial-gradient(circle,#E89A6E,transparent 70%);top:-150px;right:-70px;"></div>
+  <div class="blob" style="width:360px;height:360px;background:radial-gradient(circle,#EBCBB6,transparent 70%);bottom:-180px;left:-120px;opacity:.65;"></div>
+  <div class="dotgrid absolute inset-0 opacity-60" aria-hidden="true"></div>
+  <div class="relative mx-auto grid max-w-6xl items-center gap-12 px-5 py-16 sm:px-8 sm:py-24 lg:grid-cols-[1.05fr_.95fr] lg:py-28">
+    <div>
+      <span class="inline-flex items-center gap-2 rounded-full border border-[color:var(--line)] bg-card px-3.5 py-1.5 text-xs font-medium text-muted">
+        <span class="pulse inline-block h-1.5 w-1.5 rounded-full bg-accent"></span>
+        2.8M meals served in 2025
+      </span>
+      <h1 class="display mt-6 text-5xl sm:text-6xl lg:text-[4.3rem]">
+        No one in this town should go to bed <span class="serif font-semibold text-accent">hungry.</span>
+      </h1>
+      <p class="mt-6 max-w-md text-lg text-muted">
+        Commontable rescues good food before it's thrown away and turns it into meals, pantries, and a place at the table — for the 1 in 9 of our neighbors who don't have enough.
+      </p>
+      <div class="mt-8 flex flex-wrap items-center gap-3">
+        <a href="#give" class="lift inline-flex items-center gap-2 rounded-full bg-accent px-7 py-3.5 text-base font-semibold text-white shadow-[0_12px_28px_-10px_rgba(196,74,51,.8)] hover:bg-accent-dk">
+          Donate
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+        </a>
+        <a href="#impact" class="lift inline-flex items-center gap-2 rounded-full border border-[color:var(--line)] bg-card px-7 py-3.5 text-base font-semibold text-ink hover:border-accent">
+          See our impact
+        </a>
+      </div>
+      <p class="mono mt-7 text-sm text-muted">
+        <span class="font-medium text-ink">2.8M</span> meals served · <span class="font-medium text-ink">1.4M lbs</span> of food rescued in 2025
+      </p>
+    </div>
+
+    <div class="relative">
+      <div class="relative aspect-[4/5] overflow-hidden rounded-3xl border border-[color:var(--line)] shadow-[0_30px_60px_-30px_rgba(36,26,20,.4)]" role="img" aria-label="Illustration of neighbors sharing a meal at a long communal table">
+        <div class="absolute inset-0" style="background:linear-gradient(165deg,#F6D9B6 0%,#E89A6E 44%,#C44A33 82%,#9A3522 100%);"></div>
+        <svg class="absolute inset-0 h-full w-full" viewBox="0 0 400 500" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <circle cx="310" cy="96" r="120" fill="#FBE6CC" opacity=".5"/>
+          <g fill="#5C2A1A" opacity=".88">
+            <circle cx="90" cy="206" r="30"/><circle cx="200" cy="186" r="32"/><circle cx="310" cy="206" r="30"/>
+            <path d="M52 290c0-22 17-38 38-38s38 16 38 38v40H52Z"/>
+            <path d="M160 270c0-23 18-40 40-40s40 17 40 40v40h-80Z"/>
+            <path d="M272 290c0-22 17-38 38-38s38 16 38 38v40h-76Z"/>
+          </g>
+          <rect x="34" y="332" width="332" height="30" rx="6" fill="#FCF7F1"/>
+          <rect x="60" y="362" width="20" height="100" fill="#FCF7F1" opacity=".75"/>
+          <rect x="320" y="362" width="20" height="100" fill="#FCF7F1" opacity=".75"/>
+          <g fill="#E89A6E"><circle cx="110" cy="347" r="9"/><circle cx="200" cy="347" r="9"/><circle cx="290" cy="347" r="9"/></g>
+        </svg>
+        <div class="absolute left-4 top-4 rounded-full bg-black/35 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">Thursday supper · Eastside meal site</div>
+      </div>
+      <div class="absolute -bottom-6 -left-4 flex items-center gap-3 rounded-2xl border border-[color:var(--line)] bg-card p-3.5 pr-5 shadow-[0_18px_40px_-18px_rgba(36,26,20,.45)] sm:-left-8">
+        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-tint text-accent-dk">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M6 14h12a6 6 0 0 1-12 0Z" stroke-linejoin="round"/><path d="M10 8c0-2 1.5-2 1.5-4M14 8c0-2 1.5-2 1.5-4" stroke-linecap="round"/></svg>
+        </span>
+        <div>
+          <div class="mono text-xl font-medium leading-none">$1 = 3 meals</div>
+          <div class="text-xs text-muted">what a gift buys through food rescue</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ TRUST BAND ░░ -->
+<section class="border-y border-[color:var(--line-2)] bg-card">
+  <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-8 gap-y-3 px-5 py-4 text-sm sm:px-8">
+    <span class="flex items-center gap-1.5">
+      <span class="flex gap-0.5 text-accent" aria-label="Charity Navigator four-star rating">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1Z"/></svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1Z"/></svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1Z"/></svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1Z"/></svg>
+      </span>
+      <span class="font-medium">Charity Navigator</span>
+    </span>
+    <span class="hidden h-4 w-px bg-[color:var(--line)] sm:block"></span>
+    <span class="font-medium">Feeding America partner</span>
+    <span class="hidden h-4 w-px bg-[color:var(--line)] sm:block"></span>
+    <span class="text-muted"><span class="mono font-medium text-ink">91¢</span> of every dollar funds programs</span>
+    <span class="hidden h-4 w-px bg-[color:var(--line)] sm:block"></span>
+    <span class="text-muted">EIN <span class="mono text-ink">83-2914408</span></span>
+  </div>
+</section>
+
+<!-- ░░ 3 · THE PROBLEM ░░ -->
+<section id="about" class="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+  <div class="grid gap-12 lg:grid-cols-[1fr_1fr]">
+    <div class="reveal">
+      <p class="mono text-xs font-medium uppercase tracking-[.18em] text-accent">Why it matters</p>
+      <h2 class="display mt-3 text-4xl sm:text-5xl">
+        The problem was never a shortage of food.<br><span class="opacity-[.45]">It's a shortage of getting it to the right table.</span>
+      </h2>
+    </div>
+    <div class="reveal space-y-4 text-muted">
+      <p>Every day, our county throws away enough good food to feed every hungry neighbor twice over. Grocers toss what won't sell by Friday. Farms leave crops in the field. Restaurants scrape full trays into the bin. None of it is spoiled — it's just inconvenient.</p>
+      <p>Meanwhile, a parent two miles away is skipping dinner so their kids can eat. Hunger here isn't a supply problem; it's a logistics problem. Commontable exists to close that gap — to move good food the short distance from "wasted" to "dinner."</p>
+    </div>
+  </div>
+  <div class="mt-12 grid gap-5 sm:grid-cols-3">
+    <div class="reveal rounded-2xl border border-[color:var(--line)] bg-card p-6">
+      <div class="mono text-4xl font-medium text-accent">48,408</div>
+      <div class="mt-2 font-semibold">neighbors are food-insecure</div>
+      <p class="mt-1 text-sm text-muted">One in nine people in our county don't reliably know where the next meal comes from.</p>
+    </div>
+    <div class="reveal rounded-2xl border border-[color:var(--line)] bg-card p-6" data-delay="90">
+      <div class="mono text-4xl font-medium text-accent">108M lbs</div>
+      <div class="mt-2 font-semibold">of edible food wasted locally</div>
+      <p class="mt-1 text-sm text-muted">Sent to county landfills every year — still good, just past a sell-by date or a shift change.</p>
+    </div>
+    <div class="reveal rounded-2xl border border-[color:var(--line)] bg-card p-6" data-delay="180">
+      <div class="mono text-4xl font-medium text-accent">14,800</div>
+      <div class="mt-2 font-semibold">kids lose lunch each summer</div>
+      <p class="mt-1 text-sm text-muted">Children on free school lunch with no summer meal program within reach when cafeterias close.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ 4 · WHAT WE DO ░░ -->
+<section id="programs" class="border-y border-[color:var(--line-2)] bg-card">
+  <div class="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+    <div class="reveal max-w-2xl">
+      <p class="mono text-xs font-medium uppercase tracking-[.18em] text-accent">What we do</p>
+      <h2 class="display mt-3 text-4xl sm:text-5xl">Five programs, one short trip from waste to plate.</h2>
+      <p class="mt-4 text-muted">Each one moves food a little further down the line — out of a dumpster, onto a shelf, into a hot meal, to a kid in July.</p>
+    </div>
+    <div class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="reveal flex flex-col rounded-2xl border border-[color:var(--line)] bg-shell p-6">
+        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-tint text-accent-dk">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 7h11v9H2zM13 10h5l3 3v3h-8z" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="2"/><circle cx="17.5" cy="18" r="2"/></svg>
+        </span>
+        <h3 class="mt-4 text-xl font-semibold">Food rescue</h3>
+        <p class="mt-1.5 flex-1 text-sm text-muted">Daily pickups from 240 grocers, farms, and restaurants — before good food becomes waste.</p>
+        <div class="mono mt-4 text-sm font-medium text-ink">1.4M lbs rescued / yr</div>
+      </div>
+      <div class="reveal flex flex-col rounded-2xl border border-[color:var(--line)] bg-shell p-6" data-delay="70">
+        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-tint text-accent-dk">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 8h16v12H4zM4 8l2-4h12l2 4" stroke-linejoin="round"/><path d="M10 12h4" stroke-linecap="round"/></svg>
+        </span>
+        <h3 class="mt-4 text-xl font-semibold">Community pantries</h3>
+        <p class="mt-1.5 flex-1 text-sm text-muted">Twelve neighborhood pantries where anyone can shop with dignity — no paperwork, no questions.</p>
+        <div class="mono mt-4 text-sm font-medium text-ink">148,408 visits / yr</div>
+      </div>
+      <div class="reveal flex flex-col rounded-2xl border border-[color:var(--line)] bg-shell p-6" data-delay="140">
+        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-tint text-accent-dk">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 14h14a7 7 0 0 1-14 0Z" stroke-linejoin="round"/><path d="M9 8c0-2 1.4-2 1.4-4M14 8c0-2 1.4-2 1.4-4M3 21h18" stroke-linecap="round"/></svg>
+        </span>
+        <h3 class="mt-4 text-xl font-semibold">Hot-meal sites</h3>
+        <p class="mt-1.5 flex-1 text-sm text-muted">Free, sit-down dinners six nights a week at churches, schools, and shelters across town.</p>
+        <div class="mono mt-4 text-sm font-medium text-ink">312K meals / yr</div>
+      </div>
+      <div class="reveal flex flex-col rounded-2xl border border-[color:var(--line)] bg-shell p-6" data-delay="70">
+        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-tint text-accent-dk">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2" stroke-linecap="round"/></svg>
+        </span>
+        <h3 class="mt-4 text-xl font-semibold">Summer kids' meals</h3>
+        <p class="mt-1.5 flex-1 text-sm text-muted">Breakfast and lunch all summer, at parks and libraries, for when school cafeterias close.</p>
+        <div class="mono mt-4 text-sm font-medium text-ink">88,000 meals / summer</div>
+      </div>
+      <div class="reveal flex flex-col rounded-2xl border border-[color:var(--line)] bg-shell p-6" data-delay="140">
+        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-tint text-accent-dk">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 6h12v9H3zM15 9h4l2 3v3h-6z" stroke-linejoin="round"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+        </span>
+        <h3 class="mt-4 text-xl font-semibold">The mobile market</h3>
+        <p class="mt-1.5 flex-1 text-sm text-muted">A grocery store on wheels reaching four neighborhoods with no supermarket of their own.</p>
+        <div class="mono mt-4 text-sm font-medium text-ink">4 food deserts reached</div>
+      </div>
+      <div class="reveal flex flex-col justify-center rounded-2xl border border-accent bg-accent-tint p-6" data-delay="210">
+        <h3 class="text-xl font-semibold text-accent-dk">All of it runs on donors.</h3>
+        <p class="mt-1.5 text-sm text-ink/70">There's no government contract behind these trucks. Neighbors fund them.</p>
+        <a href="#give" class="mt-3 inline-block text-sm font-semibold text-accent-dk hover:underline">Fund a program →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ 5 · IMPACT ░░ -->
+<section id="impact" class="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+  <div class="reveal max-w-2xl">
+    <p class="mono text-xs font-medium uppercase tracking-[.18em] text-accent">Impact</p>
+    <h2 class="display mt-3 text-4xl sm:text-5xl">A year, counted in plates.</h2>
+  </div>
+
+  <div class="reveal mt-10 grid gap-px overflow-hidden rounded-3xl border border-[#2A1C13] bg-[#2A1C13] sm:grid-cols-2 lg:grid-cols-4">
+    <div class="bg-[#2A1C13] p-7">
+      <div class="mono text-4xl font-medium text-white sm:text-5xl">2.8M</div>
+      <div class="mt-2 font-semibold text-white">Meals served</div>
+      <p class="mt-1 text-sm text-[#C99B86]">Across pantries, meal sites, and summer programs in 2025.</p>
+    </div>
+    <div class="bg-[#2A1C13] p-7">
+      <div class="mono text-4xl font-medium text-white sm:text-5xl">1.4M lbs</div>
+      <div class="mt-2 font-semibold text-white">Food rescued</div>
+      <p class="mt-1 text-sm text-[#C99B86]">Diverted from landfills onto pantry shelves and dinner tables.</p>
+    </div>
+    <div class="bg-[#2A1C13] p-7">
+      <div class="mono text-4xl font-medium text-white sm:text-5xl">148,408</div>
+      <div class="mt-2 font-semibold text-white">Pantry visits</div>
+      <p class="mt-1 text-sm text-[#C99B86]">Households who shopped a Commontable pantry this year.</p>
+    </div>
+    <div class="bg-[#2A1C13] p-7">
+      <div class="mono text-4xl font-medium text-white sm:text-5xl">240</div>
+      <div class="mt-2 font-semibold text-white">Sourcing partners</div>
+      <p class="mt-1 text-sm text-[#C99B86]">Grocers, farms, and restaurants donating surplus daily.</p>
+    </div>
+  </div>
+
+  <div class="mt-5 grid gap-5 lg:grid-cols-2">
+    <div class="reveal rounded-3xl border border-[color:var(--line)] bg-card p-7">
+      <h3 class="font-semibold">Where your money goes</h3>
+      <p class="mt-1 text-sm text-muted">Fiscal year 2025, independently audited.</p>
+      <div class="mt-5 flex items-center gap-7">
+        <div class="relative shrink-0">
+          <svg width="148" height="148" viewBox="0 0 42 42" aria-hidden="true">
+            <circle cx="21" cy="21" r="15.915" fill="none" stroke="#F5E2DA" stroke-width="5"/>
+            <circle class="donut-seg" cx="21" cy="21" r="15.915" fill="none" stroke="#C44A33" stroke-width="5" stroke-linecap="round" data-pct="91"></circle>
+            <circle class="donut-seg" cx="21" cy="21" r="15.915" fill="none" stroke="#D89279" stroke-width="5" data-pct="5"></circle>
+            <circle class="donut-seg" cx="21" cy="21" r="15.915" fill="none" stroke="#EBC9BD" stroke-width="5" data-pct="4"></circle>
+          </svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <span class="mono text-2xl font-medium leading-none">91¢</span>
+            <span class="text-[10px] text-muted">to programs</span>
+          </div>
+        </div>
+        <ul class="flex-1 space-y-3 text-sm">
+          <li class="flex items-center justify-between gap-3"><span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-accent"></span>Food &amp; meal programs</span><span class="mono font-medium">91%</span></li>
+          <li class="flex items-center justify-between gap-3"><span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full" style="background:#D89279"></span>Fundraising</span><span class="mono font-medium">5%</span></li>
+          <li class="flex items-center justify-between gap-3"><span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full" style="background:#EBC9BD"></span>Administration</span><span class="mono font-medium">4%</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="reveal rounded-3xl border border-[color:var(--line)] bg-card p-7" data-delay="100">
+      <h3 class="font-semibold">Meals served per year</h3>
+      <p class="mt-1 text-sm text-muted">2016 → 2025, as demand and food rescue both grew.</p>
+      <svg class="mt-6 w-full" viewBox="0 0 280 96" data-spark="380,560,820,1100,1450,1780,2050,2380,2610,2800" aria-hidden="true">
+        <path class="spark-area" fill="url(#cg)" d=""></path>
+        <path class="spark-line" fill="none" stroke="#C44A33" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d=""></path>
+        <circle class="spark-dot" r="3.5" fill="#C44A33" stroke="#fff" stroke-width="2"></circle>
+        <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C44A33" stop-opacity=".22"/><stop offset="1" stop-color="#C44A33" stop-opacity="0"/></linearGradient></defs>
+      </svg>
+      <div class="mono mt-2 flex justify-between text-xs text-muted"><span>2016</span><span class="font-medium text-ink">2.8M meals · 2025</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ 6 · STORY ░░ -->
+<section id="stories" class="border-y border-[color:var(--line-2)] bg-card">
+  <div class="mx-auto grid max-w-6xl gap-12 px-5 py-20 sm:px-8 sm:py-28 lg:grid-cols-[.92fr_1.08fr] lg:items-center">
+    <div class="reveal relative">
+      <div class="relative aspect-[4/5] overflow-hidden rounded-3xl border border-[color:var(--line)]" role="img" aria-label="Illustration of the mobile market van serving a neighborhood">
+        <div class="absolute inset-0" style="background:linear-gradient(160deg,#F6D9B6 0%,#E68A5C 50%,#9A3522 100%);"></div>
+        <svg class="absolute inset-0 h-full w-full" viewBox="0 0 400 500" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <circle cx="300" cy="110" r="140" fill="#FBE6CC" opacity=".45"/>
+          <rect x="60" y="230" width="220" height="120" rx="14" fill="#FCF7F1"/>
+          <rect x="280" y="262" width="70" height="88" rx="12" fill="#FCF7F1"/>
+          <circle cx="120" cy="362" r="22" fill="#3A1F12"/><circle cx="300" cy="362" r="22" fill="#3A1F12"/>
+          <rect x="84" y="252" width="60" height="44" rx="6" fill="#E68A5C"/>
+          <g fill="#5C2A1A"><circle cx="200" cy="402" r="20"/><path d="M170 470c0-17 13-30 30-30s30 13 30 30v30h-60Z"/></g>
+        </svg>
+        <div class="absolute left-4 top-4 rounded-full bg-black/35 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">Mobile market · Eastside, Thursdays</div>
+      </div>
+    </div>
+    <div class="reveal" data-delay="100">
+      <p class="mono text-xs font-medium uppercase tracking-[.18em] text-accent">A neighborhood story</p>
+      <h2 class="display mt-3 text-3xl sm:text-4xl">The Thursday the grocery store came to Eastside.</h2>
+      <div class="mt-5 space-y-4 text-muted">
+        <p>The nearest supermarket to the Okafor family is a 40-minute bus ride, each way, with three kids and the week's groceries. So for two years, Daniel Okafor did what a lot of Eastside parents do: he shopped the corner store, paid more for less, and made it stretch.</p>
+        <p>Then Commontable's mobile market — a converted box truck stocked like a small produce aisle — started parking on their block every Thursday at four. Theresa Lindqvist, a retired teacher who's volunteered the route since it launched, knows the regulars by name and saves the good tomatoes.</p>
+        <p>"It's not charity, the way they run it," Daniel says. "It's a store. My kids pick the apples. That matters more than people think."</p>
+      </div>
+      <blockquote class="mt-6 border-l-2 border-accent pl-4 text-lg italic text-ink">
+        "I used to plan my whole week around one bus trip. Now Thursday is just — Thursday."
+        <footer class="mt-2 text-sm not-italic text-muted">— Daniel Okafor, Eastside resident</footer>
+      </blockquote>
+      <div class="mono mt-6 inline-flex items-center gap-2 rounded-xl bg-accent-tint px-4 py-2.5 text-sm font-medium text-accent-dk">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Outcome — Eastside now has a grocery stop every week: 1,408 households shop the route each month.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ 7 · DONATION WIDGET ░░ -->
+<section id="give" class="relative overflow-hidden bg-accent-tint">
+  <div class="dotgrid absolute inset-0 opacity-50" aria-hidden="true"></div>
+  <div class="relative mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+    <div class="grid gap-10 lg:grid-cols-[1fr_minmax(360px,460px)] lg:items-center">
+      <div class="reveal">
+        <p class="mono text-xs font-medium uppercase tracking-[.18em] text-accent">Donate</p>
+        <h2 class="display mt-3 text-4xl sm:text-5xl">Your gift, measured in meals.</h2>
+        <p class="mt-4 max-w-md text-muted">Because we rescue food instead of buying it, a dollar here goes a long way. Pick a gift — we'll tell you exactly how far.</p>
+        <dl class="mt-7 space-y-3 text-sm">
+          <div class="flex gap-3"><dt class="mono shrink-0 font-medium text-accent-dk">$25</dt><dd class="text-muted">covers 75 rescued meals — produce, protein, and pantry staples.</dd></div>
+          <div class="flex gap-3"><dt class="mono shrink-0 font-medium text-accent-dk">$50</dt><dd class="text-muted">stocks a full week of groceries for a family of four.</dd></div>
+          <div class="flex gap-3"><dt class="mono shrink-0 font-medium text-accent-dk">$100</dt><dd class="text-muted">feeds one child every day of the summer break.</dd></div>
+        </dl>
+      </div>
+
+      <div class="reveal rounded-3xl border border-[color:var(--line)] bg-card p-6 shadow-[0_30px_60px_-30px_rgba(36,26,20,.4)] sm:p-7" data-delay="100">
+        <div class="flex items-center justify-between">
+          <h3 class="text-2xl font-extrabold tracking-tight">Give today</h3>
+          <span class="flex items-center gap-1.5 text-xs text-muted"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Secure</span>
+        </div>
+        <div class="mt-4 grid grid-cols-2 gap-1 rounded-full bg-shell p-1" role="group" aria-label="Gift frequency">
+          <button type="button" class="freq-btn rounded-full py-2 text-sm font-semibold transition" data-freq="once" aria-pressed="true">One-time</button>
+          <button type="button" class="freq-btn rounded-full py-2 text-sm font-semibold text-muted transition" data-freq="monthly" aria-pressed="false">Monthly</button>
+        </div>
+        <div class="mt-4 grid grid-cols-2 gap-2.5">
+          <button type="button" class="amt-btn lift rounded-xl border border-[color:var(--line)] p-3 text-left" data-amt="25">
+            <span class="mono block text-lg font-medium">$25</span>
+            <span class="block text-xs text-muted">75 rescued meals</span>
+          </button>
+          <button type="button" class="amt-btn lift rounded-xl border border-[color:var(--line)] p-3 text-left" data-amt="50">
+            <span class="mono block text-lg font-medium">$50</span>
+            <span class="block text-xs text-muted">a family's week of groceries</span>
+          </button>
+          <button type="button" class="amt-btn lift rounded-xl border border-[color:var(--line)] p-3 text-left" data-amt="100">
+            <span class="mono block text-lg font-medium">$100</span>
+            <span class="block text-xs text-muted">a kid's summer of meals</span>
+          </button>
+          <label class="amt-custom flex items-center gap-1 rounded-xl border border-[color:var(--line)] px-3">
+            <span class="mono text-muted">$</span>
+            <input type="number" min="1" inputmode="numeric" placeholder="Other" class="mono w-full bg-transparent py-3 text-lg font-medium outline-none placeholder:text-sm placeholder:font-normal placeholder:text-muted">
+          </label>
+        </div>
+        <button type="button" class="donate-btn lift mt-4 w-full rounded-full bg-accent py-4 text-base font-semibold text-white shadow-[0_14px_30px_-12px_rgba(196,74,51,.85)] hover:bg-accent-dk">
+          Donate $50
+        </button>
+        <p class="mt-3 text-center text-xs text-muted">Tax-deductible · cancel a monthly gift anytime · no fees taken from your gift</p>
+        <div class="mt-5 border-t border-[color:var(--line-2)] pt-4">
+          <div class="mono flex items-baseline justify-between text-sm">
+            <span class="font-medium">$2.10M</span>
+            <span class="text-muted">of $2.8M goal</span>
+          </div>
+          <div class="mt-2 h-2.5 overflow-hidden rounded-full bg-shell">
+            <div class="barfill h-full rounded-full bg-accent" data-fill="75"></div>
+          </div>
+          <p class="mt-2 text-xs text-muted">Fall Pantry Drive · <span class="mono">16,408</span> donors so far</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ 8 · WAYS TO GIVE ░░ -->
+<section class="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+  <div class="reveal max-w-2xl">
+    <p class="mono text-xs font-medium uppercase tracking-[.18em] text-accent">Ways to give</p>
+    <h2 class="display mt-3 text-4xl sm:text-5xl">More ways to set the table.</h2>
+  </div>
+  <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <div class="reveal rounded-2xl border border-[color:var(--line)] bg-card p-6">
+      <h3 class="text-xl font-semibold">The Standing Table</h3>
+      <p class="mt-1.5 text-sm text-muted">A monthly gift is the dependable budget our trucks, fridges, and pantries actually run on.</p>
+      <a href="#give" class="mt-3 inline-block text-sm font-semibold text-accent-dk hover:underline">Start monthly →</a>
+    </div>
+    <div class="reveal rounded-2xl border border-[color:var(--line)] bg-card p-6" data-delay="70">
+      <h3 class="text-xl font-semibold">Employer matching</h3>
+      <p class="mt-1.5 text-sm text-muted">Many employers match gifts to hunger-relief nonprofits. Two minutes can double your meals.</p>
+      <a href="#give" class="mt-3 inline-block text-sm font-semibold text-accent-dk hover:underline">Check your employer →</a>
+    </div>
+    <div class="reveal rounded-2xl border border-[color:var(--line)] bg-card p-6" data-delay="140">
+      <h3 class="text-xl font-semibold">Legacy giving</h3>
+      <p class="mt-1.5 text-sm text-muted">Name Commontable in your will and keep your neighborhood fed for decades to come.</p>
+      <a href="#transparency" class="mt-3 inline-block text-sm font-semibold text-accent-dk hover:underline">Plan a gift →</a>
+    </div>
+    <div class="reveal rounded-2xl border border-[color:var(--line)] bg-card p-6" data-delay="70">
+      <h3 class="text-xl font-semibold">Donate food</h3>
+      <p class="mt-1.5 text-sm text-muted">Run a grocer, farm, or restaurant? Become a rescue partner — we'll handle pickup and logistics.</p>
+      <a href="#transparency" class="mt-3 inline-block text-sm font-semibold text-accent-dk hover:underline">Partner with us →</a>
+    </div>
+    <div class="reveal rounded-2xl border border-[color:var(--line)] bg-card p-6" data-delay="140">
+      <h3 class="text-xl font-semibold">Volunteer a shift</h3>
+      <p class="mt-1.5 text-sm text-muted">Drive a route, sort a pantry, serve a supper. Shifts run mornings, evenings, and weekends.</p>
+      <a href="#transparency" class="mt-3 inline-block text-sm font-semibold text-accent-dk hover:underline">Find a shift →</a>
+    </div>
+    <div class="reveal flex flex-col justify-center rounded-2xl border border-accent bg-accent-tint p-6" data-delay="210">
+      <h3 class="text-xl font-semibold text-accent-dk">Not sure where to start?</h3>
+      <p class="mt-1.5 text-sm text-ink/70">A one-time gift today puts food on tables this week.</p>
+      <a href="#give" class="mt-3 inline-block text-sm font-semibold text-accent-dk hover:underline">Donate now →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ 9 · TRANSPARENCY ░░ -->
+<section id="transparency" class="border-y border-[color:var(--line-2)] bg-card">
+  <div class="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+    <div class="grid gap-12 lg:grid-cols-[1.1fr_.9fr] lg:items-center">
+      <div class="reveal">
+        <p class="mono text-xs font-medium uppercase tracking-[.18em] text-accent">Transparency</p>
+        <h2 class="display mt-3 text-4xl sm:text-5xl">Where your money goes, in the open.</h2>
+        <p class="mt-4 text-muted">Commontable is a 501(c)(3) nonprofit and a member of the Feeding America network. Our finances are independently audited every year, and the full record is public.</p>
+        <div class="mt-7 grid gap-4 sm:grid-cols-3">
+          <div><div class="mono text-3xl font-medium text-accent">91¢</div><div class="text-sm text-muted">of every dollar to food &amp; meal programs</div></div>
+          <div><div class="mono text-3xl font-medium text-accent">5¢</div><div class="text-sm text-muted">to fundraising</div></div>
+          <div><div class="mono text-3xl font-medium text-accent">4¢</div><div class="text-sm text-muted">to administration</div></div>
+        </div>
+        <div class="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+          <a href="#" class="font-semibold text-accent-dk hover:underline">2025 Annual Report (PDF)</a>
+          <a href="#" class="font-semibold text-accent-dk hover:underline">IRS Form 990</a>
+          <a href="#" class="font-semibold text-accent-dk hover:underline">Audited financials</a>
+        </div>
+        <p class="mono mt-4 text-sm text-muted">EIN <span class="text-ink">83-2914408</span></p>
+      </div>
+      <div class="reveal flex justify-center gap-5 sm:gap-8" data-delay="100">
+        <svg width="118" height="118" viewBox="0 0 120 120" aria-label="Charity Navigator four-star rating seal">
+          <circle cx="60" cy="60" r="58" fill="#FCF7F1" stroke="#C44A33" stroke-width="2"/>
+          <circle cx="60" cy="60" r="49" fill="none" stroke="#C44A33" stroke-width="1" opacity=".35"/>
+          <g fill="#C44A33"><path d="m38 44 2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8Z"/><path d="m60 40 2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8Z"/><path d="m82 44 2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8Z"/><path d="m49 64 2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8Z"/><path d="m71 64 2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8Z"/></g>
+          <text x="60" y="92" text-anchor="middle" font-family="Geist Mono,monospace" font-size="9" font-weight="500" fill="#5C2A1A" letter-spacing="1">FOUR-STAR</text>
+          <text x="60" y="103" text-anchor="middle" font-family="Inter,sans-serif" font-size="6.5" fill="#6B5A4E" letter-spacing=".5">CHARITY NAVIGATOR</text>
+        </svg>
+        <svg width="118" height="118" viewBox="0 0 120 120" aria-label="Feeding America partner food bank seal">
+          <circle cx="60" cy="60" r="58" fill="#2A1C13"/>
+          <circle cx="60" cy="60" r="49" fill="none" stroke="#C99B86" stroke-width="1" opacity=".5"/>
+          <path d="M60 36c-9 9-13 16-13 24a13 13 0 0 0 26 0c0-6-3-11-7-16 0 5-2.6 8-6 9 .5-6 .5-11 0-17Z" fill="#E68A5C"/>
+          <text x="60" y="92" text-anchor="middle" font-family="Geist Mono,monospace" font-size="8.5" font-weight="500" fill="#fff" letter-spacing="1">PARTNER</text>
+          <text x="60" y="103" text-anchor="middle" font-family="Inter,sans-serif" font-size="6" fill="#C99B86" letter-spacing=".5">FEEDING AMERICA NETWORK</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ 10 · SUPPORTERS ░░ -->
+<section class="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
+  <p class="reveal text-center text-sm text-muted">Stocked by grocers, foundations, and <span class="font-semibold text-ink">24,408 neighbors &amp; donors</span></p>
+  <div class="marquee-wrap reveal mt-8 overflow-hidden" style="-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);" data-delay="80">
+    <div class="marquee items-center text-muted">
+      <span class="text-xl font-extrabold tracking-tight">Forecast Foods</span>
+      <span class="serif text-xl">Coast Markets</span>
+      <span class="text-xl font-semibold">Vantage Foundation</span>
+      <span class="serif text-xl">Mercury Grocers</span>
+      <span class="text-xl font-semibold tracking-tight">Northwind Farms</span>
+      <span class="text-xl font-medium">Atrium Bank</span>
+      <span class="serif text-xl">Brightwave</span>
+      <span class="text-xl font-extrabold tracking-tight" aria-hidden="true">Forecast Foods</span>
+      <span class="serif text-xl" aria-hidden="true">Coast Markets</span>
+      <span class="text-xl font-semibold" aria-hidden="true">Vantage Foundation</span>
+      <span class="serif text-xl" aria-hidden="true">Mercury Grocers</span>
+      <span class="text-xl font-semibold tracking-tight" aria-hidden="true">Northwind Farms</span>
+      <span class="text-xl font-medium" aria-hidden="true">Atrium Bank</span>
+      <span class="serif text-xl" aria-hidden="true">Brightwave</span>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ 11 · FAQ ░░ -->
+<section class="border-t border-[color:var(--line-2)] bg-card">
+  <div class="mx-auto max-w-3xl px-5 py-20 sm:px-8 sm:py-28">
+    <div class="reveal text-center">
+      <p class="mono text-xs font-medium uppercase tracking-[.18em] text-accent">FAQ</p>
+      <h2 class="display mt-3 text-4xl sm:text-5xl">Questions donors ask.</h2>
+    </div>
+    <div class="reveal mt-10 divide-y divide-[color:var(--line-2)] border-y border-[color:var(--line-2)]">
+      <details class="group py-4">
+        <summary class="flex items-center justify-between gap-4 font-semibold">How can one dollar provide so many meals?<svg class="faq-x shrink-0 text-accent-dk" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg></summary>
+        <p class="mt-2 text-muted">Because we rescue food rather than buy it. The food itself is donated by grocers, farms, and restaurants — your dollar pays for the trucks, fuel, refrigeration, and staff that move it. That leverage is how $25 turns into 75 meals: you're funding the logistics, not the groceries.</p>
+      </details>
+      <details class="group py-4">
+        <summary class="flex items-center justify-between gap-4 font-semibold">Where does the food come from — is it safe?<svg class="faq-x shrink-0 text-accent-dk" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg></summary>
+        <p class="mt-2 text-muted">It comes from 240 grocers, farms, and restaurants — surplus that's perfectly good but won't sell in time. Every item is inspected on intake, temperature-logged in our cold chain, and handled by staff certified in food safety. We follow the same standards as a commercial kitchen, and nothing past safe use ever leaves our doors.</p>
+      </details>
+      <details class="group py-4">
+        <summary class="flex items-center justify-between gap-4 font-semibold">Can I volunteer instead of donating?<svg class="faq-x shrink-0 text-accent-dk" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg></summary>
+        <p class="mt-2 text-muted">Absolutely — volunteers run our pantries, drive rescue routes, and serve hot meals, and we'd welcome you. Shifts are as short as two hours. Many supporters do both: volunteer for a morning, then set up a small monthly gift to cover the fuel for the route they drove.</p>
+      </details>
+      <details class="group py-4">
+        <summary class="flex items-center justify-between gap-4 font-semibold">Do you serve my neighborhood?<svg class="faq-x shrink-0 text-accent-dk" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg></summary>
+        <p class="mt-2 text-muted">We run twelve pantries, six hot-meal sites, and a four-stop mobile market across the county — and we publish the full schedule with addresses and hours. If there's a gap near you, tell us: new sites open where neighbors and volunteers ask for them.</p>
+      </details>
+      <details class="group py-4">
+        <summary class="flex items-center justify-between gap-4 font-semibold">Is my gift tax-deductible?<svg class="faq-x shrink-0 text-accent-dk" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg></summary>
+        <p class="mt-2 text-muted">Yes. Commontable is a registered 501(c)(3) nonprofit (EIN 83-2914408), so gifts are fully tax-deductible in the U.S. to the extent allowed by law. A receipt lands in your inbox immediately, and we send a year-end summary every January.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ 12 · FINAL CTA ░░ -->
+<section class="relative overflow-hidden bg-[#2A1C13] text-white">
+  <div class="blob" style="width:480px;height:480px;background:radial-gradient(circle,#9A3522,transparent 70%);top:-200px;left:50%;transform:translateX(-50%);opacity:.85;"></div>
+  <div class="relative mx-auto max-w-3xl px-5 py-20 text-center sm:px-8 sm:py-28">
+    <h2 class="reveal display text-4xl sm:text-6xl">Be the reason there's a plate<br>set for <span class="serif font-semibold text-accent">everyone.</span></h2>
+    <p class="reveal mx-auto mt-5 max-w-xl text-lg text-[#C99B86]" data-delay="80">The food is already here. Your gift is what carries it the last mile — to a pantry shelf, a hot-meal line, a kid's summer.</p>
+    <div class="reveal mt-8 flex flex-wrap justify-center gap-3" data-delay="140">
+      <a href="#give" class="lift inline-flex items-center gap-2 rounded-full bg-accent px-8 py-4 text-base font-semibold text-white hover:bg-accent-dk">
+        Donate now
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <a href="#impact" class="lift inline-flex items-center gap-2 rounded-full border border-white/25 px-8 py-4 text-base font-semibold text-white hover:bg-white/10">See our impact</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ░░ 13 · FOOTER ░░ -->
+<footer class="bg-shell">
+  <div class="mx-auto max-w-6xl px-5 py-16 sm:px-8">
+    <div class="grid gap-10 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+      <div>
+        <a href="#top" class="flex items-center gap-2.5">
+          <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#C44A33"/><path d="M8 16h16a8 8 0 0 1-16 0Z" fill="#FCF7F1"/><path d="M13 11c0-2 1.4-2 1.4-4M18.6 11c0-2 1.4-2 1.4-4" stroke="#FCF7F1" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>
+          <span class="text-lg font-extrabold tracking-tight">Commontable</span>
+        </a>
+        <p class="mt-3 max-w-xs text-sm text-muted">Rescuing surplus food and running community meals and pantries, so no neighbor goes without.</p>
+        <form class="mt-5 flex max-w-xs gap-2" onsubmit="return false">
+          <input type="email" required placeholder="Your email" aria-label="Email address" class="w-full rounded-full border border-[color:var(--line)] bg-card px-4 py-2.5 text-sm outline-none placeholder:text-muted">
+          <button type="submit" class="lift shrink-0 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-white hover:bg-accent-dk">Subscribe</button>
+        </form>
+        <p class="mt-2 text-xs text-muted">The Table — what we served and who we reached, monthly.</p>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold">Our Work</h3>
+        <ul class="mt-3 space-y-2 text-sm text-muted">
+          <li><a href="#programs" class="hover:text-ink">Food rescue</a></li>
+          <li><a href="#programs" class="hover:text-ink">Community pantries</a></li>
+          <li><a href="#programs" class="hover:text-ink">Mobile market</a></li>
+          <li><a href="#impact" class="hover:text-ink">Impact reports</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold">Get involved</h3>
+        <ul class="mt-3 space-y-2 text-sm text-muted">
+          <li><a href="#give" class="hover:text-ink">Donate</a></li>
+          <li><a href="#give" class="hover:text-ink">Give monthly</a></li>
+          <li><a href="#" class="hover:text-ink">Volunteer</a></li>
+          <li><a href="#" class="hover:text-ink">Become a food partner</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold">Organization</h3>
+        <ul class="mt-3 space-y-2 text-sm text-muted">
+          <li><a href="#transparency" class="hover:text-ink">Financials</a></li>
+          <li><a href="#" class="hover:text-ink">Annual report</a></li>
+          <li><a href="#" class="hover:text-ink">Find a site</a></li>
+          <li><a href="#" class="hover:text-ink">Contact us</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="mt-12 flex flex-col gap-3 border-t border-[color:var(--line-2)] pt-6 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
+      <p>© 2026 Commontable · EIN <span class="mono">83-2914408</span> · 1408 Market Street, Dayton, OH 45402</p>
+      <div class="flex gap-5">
+        <a href="#" class="hover:text-ink">Charity Navigator</a>
+        <a href="#" class="hover:text-ink">Privacy</a>
+        <a href="#" class="hover:text-ink">Contact</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<a href="#give" class="floatbtn lift fixed bottom-5 right-5 z-50 inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3.5 text-sm font-semibold text-white shadow-[0_16px_36px_-12px_rgba(196,74,51,.9)] hover:bg-accent-dk">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M19 14c1.5-1.5 3-3.3 3-5.5A4.5 4.5 0 0 0 12 5.6 4.5 4.5 0 0 0 2 8.5C2 12 6 15 12 20c2.5-2 4.5-3.8 6-5.2Z" stroke-linejoin="round"/></svg>
+  Donate
+</a>
+
+<script>
+(function(){
+  var mq = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  var io = new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(e.isIntersecting){
+        var el = e.target, d = +el.dataset.delay || 0;
+        setTimeout(function(){ el.classList.add('in'); }, mq ? 0 : d);
+        io.unobserve(el);
+      }
+    });
+  }, { threshold:.14 });
+  document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+
+  var dio = new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(!e.isIntersecting) return;
+      var segs = e.target.querySelectorAll('.donut-seg'), cum = 0;
+      segs.forEach(function(s,i){
+        var p = +s.dataset.pct;
+        s.style.strokeDashoffset = (-cum);
+        s.style.transitionDelay = (i*.16)+'s';
+        setTimeout(function(){ s.style.strokeDasharray = p+' '+(100-p); }, 60);
+        cum += p;
+      });
+      dio.unobserve(e.target);
+    });
+  }, { threshold:.4 });
+  document.querySelectorAll('svg').forEach(function(s){ if(s.querySelector('.donut-seg')) dio.observe(s); });
+
+  document.querySelectorAll('[data-spark]').forEach(function(svg){
+    var data = svg.dataset.spark.split(',').map(Number);
+    var W=280,H=96,pad=8, n=data.length, mn=Math.min.apply(0,data), mx=Math.max.apply(0,data);
+    var pts = data.map(function(v,i){
+      var x = pad + i/(n-1)*(W-pad*2);
+      var y = H-pad - (v-mn)/(mx-mn||1)*(H-pad*2-6);
+      return [x,y];
+    });
+    var line = pts.map(function(p,i){ return (i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1); }).join(' ');
+    svg.querySelector('.spark-line').setAttribute('d', line);
+    svg.querySelector('.spark-area').setAttribute('d', line+' L'+pts[n-1][0].toFixed(1)+' '+(H-pad)+' L'+pts[0][0].toFixed(1)+' '+(H-pad)+' Z');
+    var dot = svg.querySelector('.spark-dot');
+    dot.setAttribute('cx', pts[n-1][0].toFixed(1)); dot.setAttribute('cy', pts[n-1][1].toFixed(1));
+  });
+
+  var pio = new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(!e.isIntersecting) return;
+      e.target.style.width = e.target.dataset.fill + '%';
+      pio.unobserve(e.target);
+    });
+  }, { threshold:.5 });
+  document.querySelectorAll('.barfill').forEach(function(b){ pio.observe(b); });
+
+  var freq='once', amount=50;
+  var freqBtns=document.querySelectorAll('.freq-btn'), amtBtns=document.querySelectorAll('.amt-btn');
+  var customInput=document.querySelector('.amt-custom input'), donateBtn=document.querySelector('.donate-btn');
+  function fmt(){
+    if(!amount || amount<1){ donateBtn.textContent='Donate'; return; }
+    donateBtn.textContent = 'Donate $'+(+amount).toLocaleString() + (freq==='monthly'?' / month':'');
+  }
+  function selectAmt(btn){
+    amtBtns.forEach(function(b){ b.style.borderColor=''; b.style.background=''; b.style.boxShadow=''; });
+    if(btn){ btn.style.borderColor='#C44A33'; btn.style.background='#F5E2DA'; btn.style.boxShadow='0 0 0 1px #C44A33 inset'; }
+  }
+  amtBtns.forEach(function(b){
+    b.addEventListener('click', function(){ amount=+b.dataset.amt; customInput.value=''; selectAmt(b); fmt(); });
+  });
+  customInput.addEventListener('input', function(){ amount=+customInput.value; selectAmt(null); fmt(); });
+  freqBtns.forEach(function(b){
+    b.addEventListener('click', function(){
+      freq=b.dataset.freq;
+      freqBtns.forEach(function(x){
+        var on = x===b;
+        x.setAttribute('aria-pressed', on);
+        x.style.background = on ? '#FFFDFA' : '';
+        x.style.color = on ? '#241A14' : '';
+        x.style.boxShadow = on ? '0 1px 3px rgba(36,26,20,.14)' : '';
+        x.classList.toggle('text-muted', !on);
+      });
+      fmt();
+    });
+  });
+  (function(){ var d=document.querySelector('.amt-btn[data-amt="50"]'); if(d) selectAmt(d); })();
+  freqBtns[0].style.background='#FFFDFA'; freqBtns[0].style.boxShadow='0 1px 3px rgba(36,26,20,.14)';
+  fmt();
+
+  var nav=document.getElementById('nav'), fb=document.querySelector('.floatbtn');
+  function onScroll(){
+    var y=window.scrollY;
+    nav.style.boxShadow = y>8 ? '0 1px 0 rgba(36,26,20,.06), 0 8px 24px -16px rgba(36,26,20,.3)' : 'none';
+    fb.classList.toggle('show', y>680);
+  }
+  onScroll(); window.addEventListener('scroll', onScroll, { passive:true });
+})();
+</script>
+</body>
+</html>

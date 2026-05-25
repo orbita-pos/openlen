@@ -1,0 +1,1214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Daybreak Coffee — Roasted to Order, Shipped in 48 Hours</title>
+<meta name="description" content="Daybreak is a small-batch specialty coffee roaster. Four roasts and a Swiss-water decaf, sourced direct from six farms, roasted to order and roast-dated by hand. Ships within 48 hours." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #F3EBDD;
+    --surface: #FBF6EC;
+    --ink: #1F1710;
+    --roast: #4A2E1E;
+    --pop: #D2622B;
+    --hair: rgba(0,0,0,0.08);
+  }
+  * { -webkit-font-smoothing: antialiased; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif;
+    overflow-x: hidden;
+  }
+  .font-display {
+    font-family: 'Fraunces', Georgia, serif;
+    font-optical-sizing: auto;
+  }
+  .display-xl {
+    font-variation-settings: "opsz" 144;
+    letter-spacing: -0.035em;
+    line-height: 0.98;
+  }
+  .display-lg {
+    font-variation-settings: "opsz" 96;
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+  }
+  .display-md {
+    font-variation-settings: "opsz" 60;
+    letter-spacing: -0.025em;
+  }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .halftone { opacity: 0.45; }
+
+  /* hairline helpers */
+  .hair { border-color: var(--hair); }
+
+  /* ambient backgrounds */
+  .dot-grid {
+    background-image: radial-gradient(rgba(74,46,30,0.10) 1.1px, transparent 1.1px);
+    background-size: 32px 32px;
+  }
+  .radial-warm {
+    background:
+      radial-gradient(60% 50% at 50% 0%, rgba(210,98,43,0.16) 0%, transparent 70%),
+      radial-gradient(40% 40% at 85% 30%, rgba(224,163,60,0.18) 0%, transparent 75%);
+  }
+  .blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(70px);
+    opacity: 0.5;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* pulse dot */
+  .pulse-dot {
+    position: relative;
+    width: 9px; height: 9px;
+    border-radius: 9999px;
+    background: var(--pop);
+    flex: none;
+  }
+  .pulse-dot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: var(--pop);
+    animation: pulsed 2.4s ease-out infinite;
+  }
+  @keyframes pulsed {
+    0%   { transform: scale(1); opacity: 0.55; }
+    70%  { transform: scale(3.4); opacity: 0; }
+    100% { transform: scale(3.4); opacity: 0; }
+  }
+
+  /* marquee */
+  .marquee { overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent); mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent); }
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: scroll-x 38s linear infinite;
+  }
+  .marquee:hover .marquee-track { animation-play-state: paused; }
+  @keyframes scroll-x {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  /* lift interactions */
+  .lift { transition: transform 130ms ease, box-shadow 130ms ease; }
+  .lift:hover { transform: translateY(-4px); }
+  .lift-sm { transition: transform 110ms ease, box-shadow 110ms ease; }
+  .lift-sm:hover { transform: translateY(-2px); }
+
+  /* coffee bag construction */
+  .bag {
+    position: relative;
+    width: 168px;
+    height: 232px;
+    filter: drop-shadow(0 22px 28px rgba(31,23,16,0.30));
+  }
+  .bag-crimp {
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 122px;
+    height: 22px;
+    border-radius: 4px;
+    background:
+      repeating-linear-gradient(90deg, rgba(0,0,0,0.16) 0 3px, rgba(255,255,255,0.10) 3px 7px);
+    z-index: 3;
+  }
+  .bag-body {
+    position: absolute;
+    top: 15px; left: 0; right: 0; bottom: 0;
+    border-radius: 14px 14px 16px 16px;
+    overflow: hidden;
+  }
+  .bag-body::before {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0; left: 0;
+    width: 34%;
+    background: linear-gradient(90deg, rgba(255,255,255,0.22), rgba(255,255,255,0));
+  }
+  .bag-body::after {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0; right: 0;
+    width: 26%;
+    background: linear-gradient(270deg, rgba(0,0,0,0.26), rgba(0,0,0,0));
+  }
+  .bag-valve {
+    position: absolute;
+    top: 30px; left: 50%;
+    transform: translateX(-50%);
+    width: 30px; height: 30px;
+    border-radius: 9999px;
+    background: radial-gradient(circle at 38% 34%, #2a2118, #0c0907);
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.25), 0 1px 2px rgba(0,0,0,0.4);
+    z-index: 4;
+  }
+  .bag-valve::after {
+    content: "";
+    position: absolute;
+    inset: 9px;
+    border-radius: 9999px;
+    border: 1.5px solid rgba(255,255,255,0.30);
+  }
+  .bag-label {
+    position: absolute;
+    left: 12px; right: 12px;
+    bottom: 16px;
+    border-radius: 8px;
+    padding: 12px 11px 11px;
+    z-index: 4;
+    text-align: center;
+  }
+
+  /* faq */
+  details.faq {
+    border-bottom: 1px solid var(--hair);
+  }
+  details.faq summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 22px 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  details.faq summary::-webkit-details-marker { display: none; }
+  details.faq .chev {
+    flex: none;
+    transition: transform 200ms ease;
+    color: var(--pop);
+  }
+  details.faq[open] .chev { transform: rotate(45deg); }
+  details.faq .faq-body {
+    padding: 0 4px 24px;
+    max-width: 660px;
+    color: rgba(31,23,16,0.74);
+    line-height: 1.65;
+  }
+
+  /* nav */
+  .nav-link { position: relative; }
+  .nav-link::after {
+    content: "";
+    position: absolute;
+    left: 0; bottom: -4px;
+    width: 0; height: 1.5px;
+    background: var(--pop);
+    transition: width 160ms ease;
+  }
+  .nav-link:hover::after { width: 100%; }
+
+  .steam {
+    transform-origin: center bottom;
+    animation: steam 3.6s ease-in-out infinite;
+  }
+  .steam.s2 { animation-delay: 1.2s; }
+  .steam.s3 { animation-delay: 2.3s; }
+  @keyframes steam {
+    0%,100% { opacity: 0.15; transform: translateY(2px) scaleY(0.92); }
+    50%     { opacity: 0.55; transform: translateY(-3px) scaleY(1.06); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .marquee-track { animation: none !important; }
+    .pulse-dot::after { animation: none !important; }
+    .steam { animation: none !important; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ 1. NAV ============ -->
+<header class="sticky top-0 z-50 border-b hair" style="background:rgba(243,235,221,0.86);backdrop-filter:blur(10px);">
+  <nav class="mx-auto flex max-w-[1220px] items-center justify-between gap-6 px-5 py-3.5 lg:px-8">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="34" height="34" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <path d="M5 27a15 15 0 0 1 30 0" stroke="#D2622B" stroke-width="3" stroke-linecap="round"/>
+        <path d="M20 4v6M7 11l3.5 3.5M33 11l-3.5 3.5M2 21h5M33 21h5" stroke="#D2622B" stroke-width="2.6" stroke-linecap="round"/>
+        <path d="M3 33h34" stroke="#4A2E1E" stroke-width="2.8" stroke-linecap="round"/>
+      </svg>
+      <span class="font-display text-[22px] font-semibold tracking-[-0.02em]" style="color:var(--roast);">Daybreak</span>
+    </a>
+
+    <div class="hidden items-center gap-8 text-[14px] font-medium md:flex" style="color:rgba(31,23,16,0.78);">
+      <a href="#range" class="nav-link">Shop</a>
+      <a href="#range" class="nav-link">Our Range</a>
+      <a href="#story" class="nav-link">Story</a>
+      <a href="#stockists" class="nav-link">Stockists</a>
+    </div>
+
+    <a href="#range" class="group flex items-center gap-2.5 rounded-full px-4 py-2 text-[13.5px] font-semibold text-white lift-sm" style="background:var(--roast);box-shadow:0 6px 16px rgba(74,46,30,0.28);">
+      <span>Shop</span>
+      <span class="hidden h-3.5 w-px sm:block" style="background:rgba(255,255,255,0.28);"></span>
+      <span class="hidden text-[12px] font-medium sm:inline" style="color:rgba(255,255,255,0.72);">Free shipping over $40</span>
+    </a>
+  </nav>
+</header>
+
+<main id="top">
+
+<!-- ============ 2. HERO ============ -->
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 radial-warm"></div>
+  <div class="absolute inset-0 dot-grid" style="opacity:0.5;"></div>
+  <div class="blob" style="width:340px;height:340px;background:#D2622B;top:-90px;left:-80px;"></div>
+  <div class="blob" style="width:300px;height:300px;background:#E0A33C;bottom:-110px;right:-60px;opacity:0.4;"></div>
+
+  <div class="relative mx-auto grid max-w-[1220px] items-center gap-12 px-5 pb-20 pt-16 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:pb-28 lg:pt-24">
+    <div>
+      <div class="inline-flex items-center gap-2.5 rounded-full border hair bg-[var(--surface)] py-1.5 pl-2 pr-3.5 text-[12.5px] font-medium">
+        <span class="rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white" style="background:var(--pop);">New</span>
+        <span style="color:rgba(31,23,16,0.72);">Sidra Lot single-origin — just landed</span>
+      </div>
+
+      <h1 class="font-display display-xl mt-6 text-[clamp(2.9rem,7vw,5.1rem)] font-semibold" style="color:var(--roast);">
+        Coffee worth <em class="not-italic halftone">waking up early for.</em>
+      </h1>
+
+      <p class="mt-6 max-w-[30rem] text-[17px] leading-relaxed" style="color:rgba(31,23,16,0.74);">
+        Roasted the morning it ships, never sooner. Four single-origin and blend roasts, sourced direct from six farms we know by name.
+      </p>
+
+      <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
+        <a href="#range" class="inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-semibold text-white lift" style="background:var(--pop);box-shadow:0 12px 26px rgba(210,98,43,0.36);">
+          Shop the range
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#process" class="group inline-flex items-center gap-2 text-[15px] font-semibold" style="color:var(--roast);">
+          How we roast
+          <span class="transition-transform group-hover:translate-x-0.5">↓</span>
+        </a>
+      </div>
+
+      <div class="mt-10 flex flex-wrap items-center gap-x-7 gap-y-3 text-[13px]" style="color:rgba(31,23,16,0.62);">
+        <span class="flex items-center gap-2">
+          <span class="pulse-dot"></span>
+          <span class="font-semibold" style="color:var(--ink);">Roasting today</span>
+        </span>
+        <span class="flex items-center gap-1.5">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+          <span class="tnum font-semibold" style="color:var(--ink);">4.9</span>
+          <span class="tnum">· 7,612 reviews</span>
+        </span>
+        <span>Ships in 48h</span>
+      </div>
+    </div>
+
+    <!-- hero product render -->
+    <div class="relative flex items-end justify-center gap-3 sm:gap-5">
+      <!-- steam -->
+      <svg class="absolute -top-2 left-1/2 -translate-x-1/2" width="120" height="70" viewBox="0 0 120 70" fill="none" aria-hidden="true">
+        <path class="steam" d="M40 64c-6-10 6-14 0-24s6-14 0-24" stroke="rgba(74,46,30,0.5)" stroke-width="3" stroke-linecap="round"/>
+        <path class="steam s2" d="M62 64c-6-10 6-14 0-24s6-14 0-24" stroke="rgba(74,46,30,0.5)" stroke-width="3" stroke-linecap="round"/>
+        <path class="steam s3" d="M84 64c-6-10 6-14 0-24s6-14 0-24" stroke="rgba(74,46,30,0.5)" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+
+      <!-- back bag -->
+      <div class="bag mb-6 hidden scale-90 sm:block" style="--ph:#6E8270;">
+        <div class="bag-crimp"></div>
+        <div class="bag-body" style="background:linear-gradient(160deg,#7d9182,#5a6e60);">
+          <div class="bag-valve"></div>
+          <div class="bag-label" style="background:#FBF6EC;border:1px solid rgba(0,0,0,0.08);">
+            <div class="font-display text-[12px] font-semibold tracking-[-0.01em]" style="color:#4A2E1E;">Daybreak</div>
+            <div class="my-1 h-px" style="background:rgba(0,0,0,0.1);"></div>
+            <div class="font-display text-[14px] font-semibold" style="color:#3a4a3f;">Off the Clock</div>
+            <div class="text-[8.5px] font-semibold uppercase tracking-[0.14em]" style="color:#6e8270;">Swiss-water decaf</div>
+            <div class="tnum mt-1.5 text-[8px]" style="color:rgba(31,23,16,0.5);">12oz / 340g</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- front hero bag -->
+      <div class="bag" style="width:200px;height:278px;">
+        <div class="bag-crimp" style="width:148px;height:26px;"></div>
+        <div class="bag-body" style="background:linear-gradient(158deg,#df7a3c,#b14e1f);border-radius:16px 16px 18px 18px;">
+          <div class="bag-valve" style="top:36px;width:34px;height:34px;"></div>
+          <div class="bag-label" style="background:#FBF6EC;border:1px solid rgba(0,0,0,0.09);left:14px;right:14px;bottom:18px;padding:14px 12px 13px;">
+            <div class="flex items-center justify-center gap-1.5">
+              <svg width="12" height="12" viewBox="0 0 40 40" fill="none"><path d="M5 27a15 15 0 0 1 30 0" stroke="#D2622B" stroke-width="4" stroke-linecap="round"/><path d="M20 7v3M3 33h34" stroke="#D2622B" stroke-width="3.4" stroke-linecap="round"/></svg>
+              <span class="font-display text-[13px] font-semibold tracking-[-0.01em]" style="color:#4A2E1E;">Daybreak</span>
+            </div>
+            <div class="my-2 h-px" style="background:rgba(0,0,0,0.1);"></div>
+            <div class="font-display text-[20px] font-semibold leading-none" style="color:#4A2E1E;">House &amp; Home</div>
+            <div class="mt-1.5 text-[9.5px] font-bold uppercase tracking-[0.16em]" style="color:#D2622B;">Medium roast · House blend</div>
+            <div class="mt-2.5 flex items-center justify-center gap-2 text-[8.5px]" style="color:rgba(31,23,16,0.55);">
+              <span class="tnum">12oz / 340g</span>
+              <span>·</span>
+              <span>Whole bean</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3. PROOF BAR ============ -->
+<section class="border-y hair bg-[var(--surface)]">
+  <div class="mx-auto max-w-[1220px] px-5 py-8 lg:px-8">
+    <div class="flex flex-col items-center gap-6 lg:flex-row lg:justify-between">
+      <div class="flex items-center gap-3">
+        <div class="flex gap-0.5">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+        </div>
+        <p class="text-[14px]" style="color:rgba(31,23,16,0.7);">
+          <span class="tnum font-bold" style="color:var(--ink);">4.9</span> from
+          <span class="tnum font-bold" style="color:var(--ink);">7,612</span> verified reviews
+        </p>
+      </div>
+
+      <div class="flex w-full items-center gap-5 lg:max-w-[640px]">
+        <span class="hidden whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.18em] lg:block" style="color:rgba(31,23,16,0.42);">As featured in</span>
+        <div class="marquee flex-1">
+          <div class="marquee-track gap-10 pr-10">
+            <span class="font-display text-[19px] font-semibold tracking-tight" style="color:rgba(31,23,16,0.55);">The Brew Journal</span>
+            <span class="text-[18px] font-bold uppercase tracking-[0.12em]" style="color:rgba(31,23,16,0.5);">SAVORY</span>
+            <span class="font-display text-[19px] italic" style="color:rgba(31,23,16,0.55);">Kettle &amp; Co.</span>
+            <span class="text-[17px] font-semibold" style="color:rgba(31,23,16,0.5);">Roast Weekly</span>
+            <span class="font-display text-[20px] font-semibold" style="color:rgba(31,23,16,0.55);">Pour Quarterly</span>
+            <span class="text-[16px] font-bold uppercase tracking-[0.2em]" style="color:rgba(31,23,16,0.5);">GRIND</span>
+            <span class="font-display text-[19px] font-semibold tracking-tight" style="color:rgba(31,23,16,0.55);">Counter Culture Mag</span>
+            <!-- duplicate -->
+            <span class="font-display text-[19px] font-semibold tracking-tight" style="color:rgba(31,23,16,0.55);" aria-hidden="true">The Brew Journal</span>
+            <span class="text-[18px] font-bold uppercase tracking-[0.12em]" style="color:rgba(31,23,16,0.5);" aria-hidden="true">SAVORY</span>
+            <span class="font-display text-[19px] italic" style="color:rgba(31,23,16,0.55);" aria-hidden="true">Kettle &amp; Co.</span>
+            <span class="text-[17px] font-semibold" style="color:rgba(31,23,16,0.5);" aria-hidden="true">Roast Weekly</span>
+            <span class="font-display text-[20px] font-semibold" style="color:rgba(31,23,16,0.55);" aria-hidden="true">Pour Quarterly</span>
+            <span class="text-[16px] font-bold uppercase tracking-[0.2em]" style="color:rgba(31,23,16,0.5);" aria-hidden="true">GRIND</span>
+            <span class="font-display text-[19px] font-semibold tracking-tight" style="color:rgba(31,23,16,0.55);" aria-hidden="true">Counter Culture Mag</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4. THE RANGE ============ -->
+<section id="range" class="relative mx-auto max-w-[1220px] px-5 py-20 lg:px-8 lg:py-28">
+  <div class="flex flex-col items-end justify-between gap-5 sm:flex-row">
+    <div>
+      <span class="text-[12px] font-bold uppercase tracking-[0.2em]" style="color:var(--pop);">Our Range</span>
+      <h2 class="font-display display-md mt-2 text-[clamp(2rem,4vw,2.9rem)] font-semibold" style="color:var(--roast);">
+        Four roasts. One that's<br class="hidden sm:block" /> already your favorite.
+      </h2>
+    </div>
+    <p class="max-w-[19rem] text-[14.5px] leading-relaxed" style="color:rgba(31,23,16,0.62);">
+      Sold as 12oz bags, whole bean or ground to your brew method. Every bag hand-stamped with its roast date.
+    </p>
+  </div>
+
+  <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+
+    <!-- Morning Glory -->
+    <article class="group flex flex-col rounded-2xl border hair bg-[var(--surface)] p-6 lift" style="box-shadow:0 1px 0 rgba(0,0,0,0.03);" onmouseover="this.style.boxShadow='0 18px 36px rgba(31,23,16,0.14)'" onmouseout="this.style.boxShadow='0 1px 0 rgba(0,0,0,0.03)'">
+      <div class="flex items-center justify-center rounded-xl py-7" style="background:linear-gradient(160deg,#fbf0d8,#f1e2bf);">
+        <div class="bag" style="width:118px;height:166px;">
+          <div class="bag-crimp" style="width:88px;height:17px;"></div>
+          <div class="bag-body" style="background:linear-gradient(158deg,#ecb554,#cf8d28);">
+            <div class="bag-valve" style="top:21px;width:21px;height:21px;"></div>
+            <div class="bag-label" style="background:#FBF6EC;border:1px solid rgba(0,0,0,0.08);left:9px;right:9px;bottom:11px;padding:8px 6px;">
+              <div class="font-display text-[8px] font-semibold" style="color:#4A2E1E;">Daybreak</div>
+              <div class="my-1 h-px" style="background:rgba(0,0,0,0.1);"></div>
+              <div class="font-display text-[10.5px] font-semibold leading-tight" style="color:#4A2E1E;">Morning Glory</div>
+              <div class="text-[6px] font-bold uppercase tracking-[0.1em]" style="color:#cf8d28;">Light roast</div>
+              <div class="tnum mt-1 text-[5.5px]" style="color:rgba(31,23,16,0.5);">12oz / 340g</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h3 class="font-display mt-5 text-[19px] font-semibold" style="color:var(--roast);">Morning Glory</h3>
+      <p class="mt-1 text-[12.5px] leading-relaxed" style="color:rgba(31,23,16,0.62);">Bright Ethiopian single-origin — jasmine, stone fruit, bergamot.</p>
+      <div class="mt-3 flex flex-wrap gap-1.5">
+        <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold" style="background:#f5e4bc;color:#9a6913;">Light roast</span>
+        <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold" style="background:#f5e4bc;color:#9a6913;">Single-origin</span>
+      </div>
+      <div class="mt-auto flex items-center justify-between pt-5">
+        <span class="tnum font-display text-[20px] font-semibold" style="color:var(--ink);">$21</span>
+        <a href="#range" class="rounded-full border hair px-3.5 py-1.5 text-[12.5px] font-semibold lift-sm" style="color:var(--roast);">Add to cart</a>
+      </div>
+    </article>
+
+    <!-- House & Home -->
+    <article class="group relative flex flex-col rounded-2xl border-2 bg-[var(--surface)] p-6 lift" style="border-color:var(--pop);box-shadow:0 1px 0 rgba(0,0,0,0.03);" onmouseover="this.style.boxShadow='0 18px 36px rgba(210,98,43,0.2)'" onmouseout="this.style.boxShadow='0 1px 0 rgba(0,0,0,0.03)'">
+      <span class="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white" style="background:var(--pop);">Bestseller</span>
+      <div class="flex items-center justify-center rounded-xl py-7" style="background:linear-gradient(160deg,#f8ddca,#eec3a5);">
+        <div class="bag" style="width:118px;height:166px;">
+          <div class="bag-crimp" style="width:88px;height:17px;"></div>
+          <div class="bag-body" style="background:linear-gradient(158deg,#df7a3c,#b14e1f);">
+            <div class="bag-valve" style="top:21px;width:21px;height:21px;"></div>
+            <div class="bag-label" style="background:#FBF6EC;border:1px solid rgba(0,0,0,0.08);left:9px;right:9px;bottom:11px;padding:8px 6px;">
+              <div class="font-display text-[8px] font-semibold" style="color:#4A2E1E;">Daybreak</div>
+              <div class="my-1 h-px" style="background:rgba(0,0,0,0.1);"></div>
+              <div class="font-display text-[10.5px] font-semibold leading-tight" style="color:#4A2E1E;">House &amp; Home</div>
+              <div class="text-[6px] font-bold uppercase tracking-[0.1em]" style="color:#D2622B;">Medium roast</div>
+              <div class="tnum mt-1 text-[5.5px]" style="color:rgba(31,23,16,0.5);">12oz / 340g</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h3 class="font-display mt-5 text-[19px] font-semibold" style="color:var(--roast);">House &amp; Home</h3>
+      <p class="mt-1 text-[12.5px] leading-relaxed" style="color:rgba(31,23,16,0.62);">Our balanced everyday blend — cocoa, toasted almond, baking spice.</p>
+      <div class="mt-3 flex flex-wrap gap-1.5">
+        <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold" style="background:#f6dcc8;color:#a8481c;">Medium roast</span>
+        <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold" style="background:#f6dcc8;color:#a8481c;">House blend</span>
+      </div>
+      <div class="mt-auto flex items-center justify-between pt-5">
+        <span class="tnum font-display text-[20px] font-semibold" style="color:var(--ink);">$19</span>
+        <a href="#range" class="rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold text-white lift-sm" style="background:var(--pop);">Add to cart</a>
+      </div>
+    </article>
+
+    <!-- Last Light -->
+    <article class="group flex flex-col rounded-2xl border hair bg-[var(--surface)] p-6 lift" style="box-shadow:0 1px 0 rgba(0,0,0,0.03);" onmouseover="this.style.boxShadow='0 18px 36px rgba(31,23,16,0.16)'" onmouseout="this.style.boxShadow='0 1px 0 rgba(0,0,0,0.03)'">
+      <div class="flex items-center justify-center rounded-xl py-7" style="background:linear-gradient(160deg,#e6dcc8,#cdbf9e);">
+        <div class="bag" style="width:118px;height:166px;">
+          <div class="bag-crimp" style="width:88px;height:17px;"></div>
+          <div class="bag-body" style="background:linear-gradient(158deg,#3a261a,#1c110b);">
+            <div class="bag-valve" style="top:21px;width:21px;height:21px;"></div>
+            <div class="bag-label" style="background:#FBF6EC;border:1px solid rgba(0,0,0,0.08);left:9px;right:9px;bottom:11px;padding:8px 6px;">
+              <div class="font-display text-[8px] font-semibold" style="color:#4A2E1E;">Daybreak</div>
+              <div class="my-1 h-px" style="background:rgba(0,0,0,0.1);"></div>
+              <div class="font-display text-[10.5px] font-semibold leading-tight" style="color:#4A2E1E;">Last Light</div>
+              <div class="text-[6px] font-bold uppercase tracking-[0.1em]" style="color:#7a5038;">Dark roast</div>
+              <div class="tnum mt-1 text-[5.5px]" style="color:rgba(31,23,16,0.5);">12oz / 340g</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h3 class="font-display mt-5 text-[19px] font-semibold" style="color:var(--roast);">Last Light</h3>
+      <p class="mt-1 text-[12.5px] leading-relaxed" style="color:rgba(31,23,16,0.62);">A bold, low-and-slow dark roast — dark chocolate, molasses, smoke.</p>
+      <div class="mt-3 flex flex-wrap gap-1.5">
+        <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold" style="background:#e3d8c2;color:#5a3c28;">Dark roast</span>
+        <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold" style="background:#e3d8c2;color:#5a3c28;">Full body</span>
+      </div>
+      <div class="mt-auto flex items-center justify-between pt-5">
+        <span class="tnum font-display text-[20px] font-semibold" style="color:var(--ink);">$20</span>
+        <a href="#range" class="rounded-full border hair px-3.5 py-1.5 text-[12.5px] font-semibold lift-sm" style="color:var(--roast);">Add to cart</a>
+      </div>
+    </article>
+
+    <!-- Off the Clock -->
+    <article class="group flex flex-col rounded-2xl border hair bg-[var(--surface)] p-6 lift" style="box-shadow:0 1px 0 rgba(0,0,0,0.03);" onmouseover="this.style.boxShadow='0 18px 36px rgba(31,23,16,0.14)'" onmouseout="this.style.boxShadow='0 1px 0 rgba(0,0,0,0.03)'">
+      <div class="flex items-center justify-center rounded-xl py-7" style="background:linear-gradient(160deg,#e3e8de,#cbd5c5);">
+        <div class="bag" style="width:118px;height:166px;">
+          <div class="bag-crimp" style="width:88px;height:17px;"></div>
+          <div class="bag-body" style="background:linear-gradient(158deg,#7d9182,#5a6e60);">
+            <div class="bag-valve" style="top:21px;width:21px;height:21px;"></div>
+            <div class="bag-label" style="background:#FBF6EC;border:1px solid rgba(0,0,0,0.08);left:9px;right:9px;bottom:11px;padding:8px 6px;">
+              <div class="font-display text-[8px] font-semibold" style="color:#4A2E1E;">Daybreak</div>
+              <div class="my-1 h-px" style="background:rgba(0,0,0,0.1);"></div>
+              <div class="font-display text-[10.5px] font-semibold leading-tight" style="color:#3a4a3f;">Off the Clock</div>
+              <div class="text-[6px] font-bold uppercase tracking-[0.1em]" style="color:#6e8270;">Decaf</div>
+              <div class="tnum mt-1 text-[5.5px]" style="color:rgba(31,23,16,0.5);">12oz / 340g</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h3 class="font-display mt-5 text-[19px] font-semibold" style="color:var(--roast);">Off the Clock</h3>
+      <p class="mt-1 text-[12.5px] leading-relaxed" style="color:rgba(31,23,16,0.62);">Swiss-water decaf, no shortcuts — caramel, hazelnut, soft cherry.</p>
+      <div class="mt-3 flex flex-wrap gap-1.5">
+        <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold" style="background:#d9e2d4;color:#46594c;">Decaf</span>
+        <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold" style="background:#d9e2d4;color:#46594c;">Swiss-water</span>
+      </div>
+      <div class="mt-auto flex items-center justify-between pt-5">
+        <span class="tnum font-display text-[20px] font-semibold" style="color:var(--ink);">$22</span>
+        <a href="#range" class="rounded-full border hair px-3.5 py-1.5 text-[12.5px] font-semibold lift-sm" style="color:var(--roast);">Add to cart</a>
+      </div>
+    </article>
+  </div>
+
+  <!-- subscription banner inside range -->
+  <div class="mt-8 flex flex-col items-center justify-between gap-5 rounded-2xl border hair px-7 py-6 sm:flex-row" style="background:linear-gradient(110deg,#4A2E1E,#3a2417);">
+    <div class="flex items-center gap-4">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" class="flex-none"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 4v5h-5" stroke="#E0A33C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div>
+        <p class="font-display text-[18px] font-semibold text-white">Never run out — subscribe &amp; save 15%</p>
+        <p class="text-[13px]" style="color:rgba(255,255,255,0.62);">Pick your grind and cadence. Skip, pause, or cancel anytime.</p>
+      </div>
+    </div>
+    <a href="#subscribe" class="whitespace-nowrap rounded-full px-6 py-3 text-[14px] font-semibold lift-sm" style="background:var(--pop);color:#fff;">Start a subscription</a>
+  </div>
+</section>
+
+<!-- ============ 5. BRAND STORY ============ -->
+<section id="story" class="border-y hair bg-[var(--surface)]">
+  <div class="mx-auto grid max-w-[1220px] items-center gap-14 px-5 py-20 lg:grid-cols-2 lg:px-8 lg:py-28">
+    <div class="relative">
+      <!-- garage / roaster illustration -->
+      <div class="relative overflow-hidden rounded-2xl border hair" style="background:linear-gradient(165deg,#e8d8bd,#d8c19c);aspect-ratio:4/3.4;">
+        <div class="absolute inset-0 dot-grid" style="opacity:0.4;"></div>
+        <!-- sample roaster drum -->
+        <svg class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" width="240" height="200" viewBox="0 0 240 200" fill="none">
+          <ellipse cx="120" cy="178" rx="92" ry="13" fill="rgba(31,23,16,0.14)"/>
+          <rect x="46" y="58" width="148" height="88" rx="14" fill="#4A2E1E"/>
+          <circle cx="120" cy="102" r="32" fill="#1c110b"/>
+          <circle cx="120" cy="102" r="32" fill="none" stroke="#D2622B" stroke-width="3"/>
+          <circle cx="120" cy="102" r="6" fill="#D2622B"/>
+          <rect x="120" y="146" width="9" height="26" fill="#4A2E1E"/>
+          <rect x="96" y="170" width="58" height="9" rx="4" fill="#4A2E1E"/>
+          <path d="M70 58V40a10 10 0 0 1 10-10h22" stroke="#4A2E1E" stroke-width="6" stroke-linecap="round"/>
+          <circle cx="104" cy="30" r="9" fill="#D2622B"/>
+          <path class="steam" d="M150 52c-4-8 4-11 0-19" stroke="rgba(74,46,30,0.55)" stroke-width="3.5" stroke-linecap="round"/>
+          <path class="steam s2" d="M166 52c-4-8 4-11 0-19" stroke="rgba(74,46,30,0.55)" stroke-width="3.5" stroke-linecap="round"/>
+          <!-- scattered beans -->
+          <ellipse cx="60" cy="172" rx="7" ry="4.5" fill="#3a261a" transform="rotate(-20 60 172)"/>
+          <ellipse cx="78" cy="180" rx="7" ry="4.5" fill="#2a1a12" transform="rotate(25 78 180)"/>
+          <ellipse cx="178" cy="176" rx="7" ry="4.5" fill="#3a261a" transform="rotate(15 178 176)"/>
+        </svg>
+        <span class="absolute bottom-4 left-4 rounded-full bg-[var(--surface)] px-3 py-1.5 text-[11px] font-semibold" style="color:var(--roast);">Our first 1kg sample roaster — still in the shop</span>
+      </div>
+      <div class="absolute -bottom-5 -right-4 hidden rounded-xl border hair bg-[var(--bg)] px-5 py-3 shadow-lg sm:block">
+        <p class="tnum font-display text-[26px] font-semibold leading-none" style="color:var(--pop);">6</p>
+        <p class="text-[11px] font-medium" style="color:rgba(31,23,16,0.6);">farms, direct relationships</p>
+      </div>
+    </div>
+
+    <div>
+      <span class="text-[12px] font-bold uppercase tracking-[0.2em]" style="color:var(--pop);">Our Story</span>
+      <h2 class="font-display display-md mt-2 text-[clamp(1.9rem,3.6vw,2.7rem)] font-semibold" style="color:var(--roast);">
+        It started in a one-car garage.
+      </h2>
+      <div class="mt-5 space-y-4 text-[15.5px] leading-relaxed" style="color:rgba(31,23,16,0.74);">
+        <p>
+          In 2016, our founder Marisol Reyes bought a secondhand 1kg sample roaster and wedged it into the garage between a lawnmower and a stack of bicycle tires. She roasted on weekends, gave bags to neighbors, and waited for honest feedback. Most of it was honest.
+        </p>
+        <p>
+          What kept us going wasn't the equipment — it was the coffee itself, and the people who grow it. Over eight years we've built direct relationships with <strong>six farms</strong> across Ethiopia, Colombia, and Guatemala, visiting each at harvest and paying well above the commodity price. We know the producers by name, and they know what we're after.
+        </p>
+        <p>
+          One thing we refused to compromise: <strong>nothing sits on a shelf.</strong> We roast every order the day it ships — never a warehouse, never a guess at freshness. The garage is now a proper roastery, but the rule that started there hasn't moved an inch.
+        </p>
+      </div>
+      <div class="mt-7 flex items-center gap-3">
+        <div class="flex h-11 w-11 items-center justify-center rounded-full font-display text-[15px] font-semibold text-white" style="background:var(--roast);">MR</div>
+        <div>
+          <p class="text-[14px] font-semibold" style="color:var(--ink);">Marisol Reyes</p>
+          <p class="text-[12.5px]" style="color:rgba(31,23,16,0.58);">Founder &amp; head roaster</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6. HOW IT'S MADE / PROCESS ============ -->
+<section id="process" class="relative mx-auto max-w-[1220px] px-5 py-20 lg:px-8 lg:py-28">
+  <div class="absolute inset-x-0 top-10 -z-10 mx-auto h-64 max-w-3xl radial-warm"></div>
+  <div class="text-center">
+    <span class="text-[12px] font-bold uppercase tracking-[0.2em]" style="color:var(--pop);">How it's made</span>
+    <h2 class="font-display display-md mx-auto mt-2 max-w-[20rem] text-[clamp(2rem,4vw,2.9rem)] font-semibold" style="color:var(--roast);">
+      From green coffee to your door in days.
+    </h2>
+    <p class="mx-auto mt-4 max-w-[34rem] text-[15px] leading-relaxed" style="color:rgba(31,23,16,0.65);">
+      No middle warehouse, no mystery dates. Here's exactly what happens between the harvest and your first cup.
+    </p>
+  </div>
+
+  <div class="mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+    <!-- step 1 -->
+    <div class="relative rounded-2xl border hair bg-[var(--surface)] p-7 lift-sm">
+      <span class="tnum font-display text-[14px] font-semibold" style="color:var(--pop);">01</span>
+      <div class="mt-3 flex h-12 w-12 items-center justify-center rounded-xl" style="background:#f3e4cb;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 21c4-4 7-7.5 7-12a7 7 0 0 0-14 0c0 4.5 3 8 7 12Z" stroke="#4A2E1E" stroke-width="1.9"/><circle cx="12" cy="9" r="2.6" stroke="#D2622B" stroke-width="1.9"/></svg>
+      </div>
+      <h3 class="font-display mt-4 text-[17px] font-semibold" style="color:var(--roast);">Sourced direct</h3>
+      <p class="mt-2 text-[13.5px] leading-relaxed" style="color:rgba(31,23,16,0.64);">Green coffee bought straight from six farms we visit every harvest — no brokers, no commodity lots.</p>
+    </div>
+    <!-- step 2 -->
+    <div class="relative rounded-2xl border hair bg-[var(--surface)] p-7 lift-sm">
+      <span class="tnum font-display text-[14px] font-semibold" style="color:var(--pop);">02</span>
+      <div class="mt-3 flex h-12 w-12 items-center justify-center rounded-xl" style="background:#f3e4cb;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 18h16M5 18v-5a7 7 0 0 1 14 0v5" stroke="#4A2E1E" stroke-width="1.9" stroke-linecap="round"/><path d="M9 8c-1-2 1-3 0-5M14 8c-1-2 1-3 0-5" stroke="#D2622B" stroke-width="1.9" stroke-linecap="round"/></svg>
+      </div>
+      <h3 class="font-display mt-4 text-[17px] font-semibold" style="color:var(--roast);">Roasted to order</h3>
+      <p class="mt-2 text-[13.5px] leading-relaxed" style="color:rgba(31,23,16,0.64);">Small batches on a 15kg drum — each profile dialed by hand, roasted only after your order lands.</p>
+    </div>
+    <!-- step 3 -->
+    <div class="relative rounded-2xl border hair bg-[var(--surface)] p-7 lift-sm">
+      <span class="tnum font-display text-[14px] font-semibold" style="color:var(--pop);">03</span>
+      <div class="mt-3 flex h-12 w-12 items-center justify-center rounded-xl" style="background:#f3e4cb;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="6" y="4" width="12" height="16" rx="2.5" stroke="#4A2E1E" stroke-width="1.9"/><circle cx="12" cy="11" r="2.4" stroke="#D2622B" stroke-width="1.9"/></svg>
+      </div>
+      <h3 class="font-display mt-4 text-[17px] font-semibold" style="color:var(--roast);">Rested &amp; valve-bagged</h3>
+      <p class="mt-2 text-[13.5px] leading-relaxed" style="color:rgba(31,23,16,0.64);">Beans rest to settle, then go into a one-way-valve bag that lets CO₂ out and keeps oxygen from getting in.</p>
+    </div>
+    <!-- step 4 -->
+    <div class="relative rounded-2xl border-2 p-7 lift-sm" style="border-color:var(--pop);background:#fff3e9;">
+      <span class="tnum font-display text-[14px] font-semibold" style="color:var(--pop);">04</span>
+      <div class="mt-3 flex h-12 w-12 items-center justify-center rounded-xl" style="background:var(--pop);">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M3 7h13l5 5v5h-3M3 17V7M3 17h11M9 17a2.5 2.5 0 1 0 5 0M17 17a2.5 2.5 0 1 0 5 0" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h3 class="font-display mt-4 text-[17px] font-semibold" style="color:var(--roast);">Shipped in 48 hours</h3>
+      <p class="mt-2 text-[13.5px] leading-relaxed" style="color:rgba(31,23,16,0.64);">Every bag leaves within 48 hours of roasting, with the roast date hand-stamped on the front.</p>
+    </div>
+  </div>
+
+  <!-- roast-date stamp callout -->
+  <div class="mt-8 flex flex-col items-center gap-7 rounded-2xl border hair bg-[var(--surface)] px-7 py-8 sm:flex-row sm:px-10">
+    <!-- stamp visual -->
+    <div class="flex-none">
+      <div class="relative flex h-32 w-32 rotate-[-8deg] items-center justify-center rounded-lg" style="border:3px dashed #D2622B;background:#fff;">
+        <div class="text-center">
+          <p class="text-[8.5px] font-bold uppercase tracking-[0.18em]" style="color:var(--pop);">Roasted on</p>
+          <p class="tnum font-display text-[19px] font-semibold leading-tight" style="color:var(--roast);">MAY 21</p>
+          <p class="tnum text-[8.5px] font-semibold" style="color:rgba(31,23,16,0.5);">2026 · BATCH 0418</p>
+          <div class="mx-auto mt-1.5 h-px w-14" style="background:rgba(0,0,0,0.15);"></div>
+          <p class="text-[7px] font-medium uppercase tracking-[0.14em]" style="color:rgba(31,23,16,0.45);">Daybreak Roastery</p>
+        </div>
+      </div>
+    </div>
+    <div>
+      <h3 class="font-display text-[21px] font-semibold" style="color:var(--roast);">The roast date is on the bag, not hidden in a code.</h3>
+      <p class="mt-2 max-w-[40rem] text-[14px] leading-relaxed" style="color:rgba(31,23,16,0.66);">
+        Other roasters print a cryptic lot number. We hand-stamp the actual day your coffee was roasted, right on the front of the bag — so you always know exactly how fresh your cup is. Coffee tastes best within four weeks of that date; we make sure you get all four.
+      </p>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <span class="rounded-full border hair px-3 py-1 text-[11.5px] font-semibold" style="color:var(--roast);">Roasted to order</span>
+        <span class="rounded-full border hair px-3 py-1 text-[11.5px] font-semibold" style="color:var(--roast);">Direct trade · 6 farms</span>
+        <span class="rounded-full border hair px-3 py-1 text-[11.5px] font-semibold" style="color:var(--roast);">Roast-dated</span>
+        <span class="rounded-full border hair px-3 py-1 text-[11.5px] font-semibold" style="color:var(--roast);">Ships in 48h</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 7. BESTSELLER SPOTLIGHT ============ -->
+<section class="relative overflow-hidden border-y hair" style="background:linear-gradient(150deg,#4A2E1E,#34200f);">
+  <div class="blob" style="width:320px;height:320px;background:#D2622B;top:-100px;right:-80px;opacity:0.4;"></div>
+  <div class="mx-auto grid max-w-[1220px] items-center gap-12 px-5 py-20 lg:grid-cols-2 lg:px-8 lg:py-28">
+    <!-- render -->
+    <div class="relative flex justify-center">
+      <div class="absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full" style="background:radial-gradient(circle,rgba(224,163,60,0.32),transparent 70%);"></div>
+      <div class="bag relative" style="width:228px;height:316px;">
+        <div class="bag-crimp" style="width:166px;height:30px;"></div>
+        <div class="bag-body" style="background:linear-gradient(158deg,#df7a3c,#a8481c);border-radius:18px 18px 20px 20px;">
+          <div class="bag-valve" style="top:42px;width:40px;height:40px;"></div>
+          <div class="bag-label" style="background:#FBF6EC;border:1px solid rgba(0,0,0,0.09);left:16px;right:16px;bottom:20px;padding:17px 14px 15px;">
+            <div class="flex items-center justify-center gap-1.5">
+              <svg width="14" height="14" viewBox="0 0 40 40" fill="none"><path d="M5 27a15 15 0 0 1 30 0" stroke="#D2622B" stroke-width="4" stroke-linecap="round"/><path d="M20 7v3M3 33h34" stroke="#D2622B" stroke-width="3.4" stroke-linecap="round"/></svg>
+              <span class="font-display text-[14px] font-semibold tracking-[-0.01em]" style="color:#4A2E1E;">Daybreak</span>
+            </div>
+            <div class="my-2.5 h-px" style="background:rgba(0,0,0,0.1);"></div>
+            <div class="font-display text-[24px] font-semibold leading-none" style="color:#4A2E1E;">House &amp; Home</div>
+            <div class="mt-2 text-[10px] font-bold uppercase tracking-[0.16em]" style="color:#D2622B;">Medium roast · House blend</div>
+            <div class="mt-3 flex items-center justify-center gap-2 text-[9px]" style="color:rgba(31,23,16,0.55);">
+              <span class="tnum">12oz / 340g</span><span>·</span><span>Whole bean</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- copy -->
+    <div>
+      <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide" style="background:rgba(224,163,60,0.18);color:#E0A33C;">
+        ★ Bestseller — 1 in 3 orders
+      </span>
+      <h2 class="font-display display-md mt-4 text-[clamp(2rem,3.8vw,2.8rem)] font-semibold text-white">
+        The blend that runs <em class="not-italic" style="opacity:0.5;">a thousand mornings.</em>
+      </h2>
+      <p class="mt-4 max-w-[34rem] text-[15.5px] leading-relaxed" style="color:rgba(255,255,255,0.72);">
+        Two-thirds washed Colombian for body, one-third natural Ethiopian for lift. We built House &amp; Home to be the cup you don't have to think about — forgiving to brew, and just as good on day one as day fourteen.
+      </p>
+
+      <div class="mt-6 flex flex-wrap gap-2">
+        <span class="rounded-full border px-3 py-1.5 text-[12px] font-semibold" style="border-color:rgba(255,255,255,0.2);color:#fff;">Notes of cocoa</span>
+        <span class="rounded-full border px-3 py-1.5 text-[12px] font-semibold" style="border-color:rgba(255,255,255,0.2);color:#fff;">Toasted almond</span>
+        <span class="rounded-full border px-3 py-1.5 text-[12px] font-semibold" style="border-color:rgba(255,255,255,0.2);color:#fff;">Baking spice</span>
+      </div>
+
+      <div class="mt-7 grid max-w-md grid-cols-2 gap-4">
+        <div class="rounded-xl border p-4" style="border-color:rgba(255,255,255,0.14);background:rgba(255,255,255,0.04);">
+          <p class="text-[11px] font-semibold uppercase tracking-wide" style="color:rgba(255,255,255,0.5);">Body</p>
+          <div class="mt-2 flex gap-1">
+            <span class="h-1.5 flex-1 rounded-full" style="background:#E0A33C;"></span>
+            <span class="h-1.5 flex-1 rounded-full" style="background:#E0A33C;"></span>
+            <span class="h-1.5 flex-1 rounded-full" style="background:#E0A33C;"></span>
+            <span class="h-1.5 flex-1 rounded-full" style="background:#E0A33C;"></span>
+            <span class="h-1.5 flex-1 rounded-full" style="background:rgba(255,255,255,0.14);"></span>
+          </div>
+          <p class="mt-2 text-[12px]" style="color:rgba(255,255,255,0.66);">Full, rounded</p>
+        </div>
+        <div class="rounded-xl border p-4" style="border-color:rgba(255,255,255,0.14);background:rgba(255,255,255,0.04);">
+          <p class="text-[11px] font-semibold uppercase tracking-wide" style="color:rgba(255,255,255,0.5);">Acidity</p>
+          <div class="mt-2 flex gap-1">
+            <span class="h-1.5 flex-1 rounded-full" style="background:#E0A33C;"></span>
+            <span class="h-1.5 flex-1 rounded-full" style="background:#E0A33C;"></span>
+            <span class="h-1.5 flex-1 rounded-full" style="background:rgba(255,255,255,0.14);"></span>
+            <span class="h-1.5 flex-1 rounded-full" style="background:rgba(255,255,255,0.14);"></span>
+            <span class="h-1.5 flex-1 rounded-full" style="background:rgba(255,255,255,0.14);"></span>
+          </div>
+          <p class="mt-2 text-[12px]" style="color:rgba(255,255,255,0.66);">Gentle, balanced</p>
+        </div>
+      </div>
+
+      <div class="mt-7 flex flex-wrap items-center gap-5">
+        <a href="#range" class="inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-semibold lift" style="background:var(--pop);color:#fff;box-shadow:0 12px 26px rgba(210,98,43,0.4);">
+          Shop House &amp; Home — <span class="tnum">$19</span>
+        </a>
+        <span class="text-[13.5px]" style="color:rgba(255,255,255,0.6);">Great black, or with milk.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 8. SUBSCRIBE & SAVE ============ -->
+<section id="subscribe" class="mx-auto max-w-[1220px] px-5 py-20 lg:px-8 lg:py-28">
+  <div class="grid items-center gap-12 lg:grid-cols-[0.92fr_1.08fr]">
+    <div>
+      <span class="text-[12px] font-bold uppercase tracking-[0.2em]" style="color:var(--pop);">Subscribe &amp; Save</span>
+      <h2 class="font-display display-md mt-2 text-[clamp(2rem,3.8vw,2.8rem)] font-semibold" style="color:var(--roast);">
+        Fresh coffee, on your schedule.
+      </h2>
+      <p class="mt-4 max-w-[32rem] text-[15.5px] leading-relaxed" style="color:rgba(31,23,16,0.7);">
+        Pick a roast, tell us how you brew, and choose how often. Each delivery is roasted to order the day it ships — so a subscription bag is just as fresh as a one-off. Save 15% and never pay for shipping.
+      </p>
+      <ul class="mt-6 space-y-3">
+        <li class="flex items-start gap-3 text-[14.5px]" style="color:rgba(31,23,16,0.78);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="mt-0.5 flex-none"><circle cx="12" cy="12" r="10" fill="#D2622B"/><path d="M8 12.5l2.5 2.5L16 9" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span><strong>15% off every bag</strong> — automatically, for as long as you stay subscribed.</span>
+        </li>
+        <li class="flex items-start gap-3 text-[14.5px]" style="color:rgba(31,23,16,0.78);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="mt-0.5 flex-none"><circle cx="12" cy="12" r="10" fill="#D2622B"/><path d="M8 12.5l2.5 2.5L16 9" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span><strong>Free shipping</strong> on every subscription order, no minimum.</span>
+        </li>
+        <li class="flex items-start gap-3 text-[14.5px]" style="color:rgba(31,23,16,0.78);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="mt-0.5 flex-none"><circle cx="12" cy="12" r="10" fill="#D2622B"/><path d="M8 12.5l2.5 2.5L16 9" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span><strong>Skip, pause, or swap roasts</strong> anytime — manage it all in two clicks.</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- builder card -->
+    <div class="rounded-2xl border hair bg-[var(--surface)] p-7 sm:p-8" style="box-shadow:0 18px 40px rgba(31,23,16,0.1);">
+      <div class="flex items-center justify-between">
+        <p class="font-display text-[18px] font-semibold" style="color:var(--roast);">Build your subscription</p>
+        <span class="rounded-full px-2.5 py-1 text-[11px] font-bold text-white" style="background:var(--pop);">Save 15%</span>
+      </div>
+
+      <div class="mt-6">
+        <p class="text-[12px] font-bold uppercase tracking-[0.14em]" style="color:rgba(31,23,16,0.5);">1 · Choose your grind</p>
+        <div class="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+          <button type="button" class="rounded-xl border-2 px-3 py-2.5 text-[12.5px] font-semibold lift-sm" style="border-color:var(--pop);background:#fff3e9;color:var(--roast);">Whole bean</button>
+          <button type="button" class="rounded-xl border hair px-3 py-2.5 text-[12.5px] font-semibold lift-sm" style="color:rgba(31,23,16,0.7);">Espresso</button>
+          <button type="button" class="rounded-xl border hair px-3 py-2.5 text-[12.5px] font-semibold lift-sm" style="color:rgba(31,23,16,0.7);">Pour-over</button>
+          <button type="button" class="rounded-xl border hair px-3 py-2.5 text-[12.5px] font-semibold lift-sm" style="color:rgba(31,23,16,0.7);">French press</button>
+        </div>
+      </div>
+
+      <div class="mt-6">
+        <p class="text-[12px] font-bold uppercase tracking-[0.14em]" style="color:rgba(31,23,16,0.5);">2 · How often</p>
+        <div class="mt-3 grid grid-cols-3 gap-2.5">
+          <button type="button" class="rounded-xl border hair px-3 py-3 text-center lift-sm">
+            <span class="tnum block font-display text-[18px] font-semibold" style="color:var(--roast);">1 wk</span>
+            <span class="text-[11px]" style="color:rgba(31,23,16,0.55);">Heavy pour</span>
+          </button>
+          <button type="button" class="rounded-xl border-2 px-3 py-3 text-center lift-sm" style="border-color:var(--pop);background:#fff3e9;">
+            <span class="tnum block font-display text-[18px] font-semibold" style="color:var(--roast);">2 wks</span>
+            <span class="text-[11px] font-semibold" style="color:var(--pop);">Most popular</span>
+          </button>
+          <button type="button" class="rounded-xl border hair px-3 py-3 text-center lift-sm">
+            <span class="tnum block font-display text-[18px] font-semibold" style="color:var(--roast);">4 wks</span>
+            <span class="text-[11px]" style="color:rgba(31,23,16,0.55);">Casual</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-between rounded-xl px-4 py-3.5" style="background:#f3e4cb;">
+        <div>
+          <p class="text-[12px]" style="color:rgba(31,23,16,0.6);">House &amp; Home, every 2 weeks</p>
+          <p class="text-[12px]" style="color:rgba(31,23,16,0.6);"><span class="tnum line-through">$19.00</span> <span class="tnum font-bold" style="color:var(--roast);">$16.15</span> / bag</p>
+        </div>
+        <p class="tnum font-display text-[15px] font-semibold" style="color:var(--pop);">−15%</p>
+      </div>
+
+      <a href="#range" class="mt-5 flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-[15px] font-semibold text-white lift-sm" style="background:var(--roast);">
+        Start subscription
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <p class="mt-3 text-center text-[12px]" style="color:rgba(31,23,16,0.5);">Free shipping · Cancel anytime · No commitment</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 9. REVIEWS ============ -->
+<section class="border-y hair bg-[var(--surface)]">
+  <div class="mx-auto max-w-[1220px] px-5 py-20 lg:px-8 lg:py-28">
+    <div class="flex flex-col items-end justify-between gap-6 sm:flex-row">
+      <div>
+        <span class="text-[12px] font-bold uppercase tracking-[0.2em]" style="color:var(--pop);">Reviews</span>
+        <h2 class="font-display display-md mt-2 text-[clamp(2rem,3.8vw,2.7rem)] font-semibold" style="color:var(--roast);">
+          7,612 mornings, reviewed.
+        </h2>
+      </div>
+      <div class="flex items-center gap-4 rounded-2xl border hair bg-[var(--bg)] px-5 py-4">
+        <p class="tnum font-display text-[42px] font-semibold leading-none" style="color:var(--pop);">4.9</p>
+        <div>
+          <div class="flex gap-0.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+          </div>
+          <p class="tnum mt-1 text-[12px]" style="color:rgba(31,23,16,0.58);">96% would order again</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <!-- review 1 -->
+      <figure class="flex flex-col rounded-2xl border hair bg-[var(--bg)] p-6 lift-sm">
+        <div class="flex gap-0.5">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+        </div>
+        <blockquote class="mt-3 flex-1 text-[14px] leading-relaxed" style="color:rgba(31,23,16,0.78);">
+          "The roast date stamped on the bag said three days ago. You can taste it — Morning Glory bloomed like crazy in my V60. Genuinely the brightest coffee I've had at home."
+        </blockquote>
+        <figcaption class="mt-4 flex items-center gap-2.5 border-t hair pt-4">
+          <div class="flex h-9 w-9 items-center justify-center rounded-full text-[12px] font-semibold text-white" style="background:#E0A33C;">AK</div>
+          <div>
+            <p class="text-[13px] font-semibold" style="color:var(--ink);">Anneke Koster</p>
+            <p class="text-[11.5px]" style="color:rgba(31,23,16,0.55);">Bought Morning Glory</p>
+          </div>
+        </figcaption>
+      </figure>
+
+      <!-- review 2 -->
+      <figure class="flex flex-col rounded-2xl border hair bg-[var(--bg)] p-6 lift-sm">
+        <div class="flex gap-0.5">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+        </div>
+        <blockquote class="mt-3 flex-1 text-[14px] leading-relaxed" style="color:rgba(31,23,16,0.78);">
+          "House &amp; Home has been my subscription for eight months. It's the one bag the whole family agrees on — my partner takes it black, I take it with oat milk. Never a bad cup."
+        </blockquote>
+        <figcaption class="mt-4 flex items-center gap-2.5 border-t hair pt-4">
+          <div class="flex h-9 w-9 items-center justify-center rounded-full text-[12px] font-semibold text-white" style="background:#D2622B;">DM</div>
+          <div>
+            <p class="text-[13px] font-semibold" style="color:var(--ink);">Diego Marchetti</p>
+            <p class="text-[11.5px]" style="color:rgba(31,23,16,0.55);">Subscribes to House &amp; Home</p>
+          </div>
+        </figcaption>
+      </figure>
+
+      <!-- review 3 -->
+      <figure class="flex flex-col rounded-2xl border hair bg-[var(--bg)] p-6 lift-sm">
+        <div class="flex gap-0.5">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+        </div>
+        <blockquote class="mt-3 flex-1 text-[14px] leading-relaxed" style="color:rgba(31,23,16,0.78);">
+          "I usually find decaf flat and papery. Off the Clock actually tastes like coffee — caramel and a little cherry. My evening cup finally isn't a compromise."
+        </blockquote>
+        <figcaption class="mt-4 flex items-center gap-2.5 border-t hair pt-4">
+          <div class="flex h-9 w-9 items-center justify-center rounded-full text-[12px] font-semibold text-white" style="background:#6E8270;">PN</div>
+          <div>
+            <p class="text-[13px] font-semibold" style="color:var(--ink);">Priya Nair</p>
+            <p class="text-[11.5px]" style="color:rgba(31,23,16,0.55);">Bought Off the Clock</p>
+          </div>
+        </figcaption>
+      </figure>
+
+      <!-- review 4 -->
+      <figure class="flex flex-col rounded-2xl border hair bg-[var(--bg)] p-6 lift-sm">
+        <div class="flex gap-0.5">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#D2622B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5 20.5l1.4-6.8L1.3 9l6.9-.7z"/></svg>
+        </div>
+        <blockquote class="mt-3 flex-1 text-[14px] leading-relaxed" style="color:rgba(31,23,16,0.78);">
+          "Last Light is a proper dark roast that didn't go bitter or ashy. Rich, a bit of molasses, perfect for my morning espresso. Order to door in three days, every time."
+        </blockquote>
+        <figcaption class="mt-4 flex items-center gap-2.5 border-t hair pt-4">
+          <div class="flex h-9 w-9 items-center justify-center rounded-full text-[12px] font-semibold text-white" style="background:#2A1A12;">TO</div>
+          <div>
+            <p class="text-[13px] font-semibold" style="color:var(--ink);">Tomás Okafor</p>
+            <p class="text-[11.5px]" style="color:rgba(31,23,16,0.55);">Bought Last Light</p>
+          </div>
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 10. WHERE TO BUY ============ -->
+<section id="stockists" class="mx-auto max-w-[1220px] px-5 py-20 lg:px-8 lg:py-28">
+  <div class="text-center">
+    <span class="text-[12px] font-bold uppercase tracking-[0.2em]" style="color:var(--pop);">Where to buy</span>
+    <h2 class="font-display display-md mx-auto mt-2 max-w-[24rem] text-[clamp(2rem,4vw,2.9rem)] font-semibold" style="color:var(--roast);">
+      Now on the shelf in 1,240 stores.
+    </h2>
+    <p class="mx-auto mt-4 max-w-[34rem] text-[15px] leading-relaxed" style="color:rgba(31,23,16,0.65);">
+      Order online for next-day roasting, or find a stocked Daybreak bag at an independent grocer and café near you.
+    </p>
+  </div>
+
+  <!-- stockist wordmark strip -->
+  <div class="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+    <div class="flex items-center justify-center rounded-xl border hair bg-[var(--surface)] py-6 lift-sm">
+      <span class="font-display text-[16px] font-semibold tracking-tight" style="color:rgba(31,23,16,0.62);">Hearth&nbsp;Market</span>
+    </div>
+    <div class="flex items-center justify-center rounded-xl border hair bg-[var(--surface)] py-6 lift-sm">
+      <span class="text-[14px] font-bold uppercase tracking-[0.16em]" style="color:rgba(31,23,16,0.55);">PANTRY&nbsp;CO</span>
+    </div>
+    <div class="flex items-center justify-center rounded-xl border hair bg-[var(--surface)] py-6 lift-sm">
+      <span class="font-display text-[16px] italic" style="color:rgba(31,23,16,0.6);">Greenfield&nbsp;Grocer</span>
+    </div>
+    <div class="flex items-center justify-center rounded-xl border hair bg-[var(--surface)] py-6 lift-sm">
+      <span class="text-[14px] font-semibold" style="color:rgba(31,23,16,0.55);">The&nbsp;Daily&nbsp;Loaf</span>
+    </div>
+    <div class="flex items-center justify-center rounded-xl border hair bg-[var(--surface)] py-6 lift-sm">
+      <span class="font-display text-[16px] font-semibold tracking-tight" style="color:rgba(31,23,16,0.62);">Wildoak&nbsp;Foods</span>
+    </div>
+    <div class="flex items-center justify-center rounded-xl border hair bg-[var(--surface)] py-6 lift-sm">
+      <span class="text-[14px] font-bold uppercase tracking-[0.14em]" style="color:rgba(31,23,16,0.55);">CORNER&nbsp;&amp;&nbsp;CO</span>
+    </div>
+  </div>
+
+  <!-- store locator teaser -->
+  <div class="mt-8 grid items-center gap-8 rounded-2xl border hair p-7 sm:p-10 lg:grid-cols-[1.1fr_0.9fr]" style="background:linear-gradient(135deg,#fbf6ec,#f1e6cf);">
+    <div>
+      <h3 class="font-display text-[22px] font-semibold" style="color:var(--roast);">Find a store near you</h3>
+      <p class="mt-2 max-w-[32rem] text-[14px] leading-relaxed" style="color:rgba(31,23,16,0.66);">
+        We're stocked in independent grocers and cafés across Portland, Austin, Chicago, Brooklyn, Seattle, and Denver — with more shelves added every month.
+      </p>
+      <div class="mt-5 flex flex-col gap-3 sm:flex-row">
+        <div class="flex flex-1 items-center gap-2 rounded-full border hair bg-[var(--surface)] px-4 py-3">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 21c4-4 7-7.5 7-12a7 7 0 0 0-14 0c0 4.5 3 8 7 12Z" stroke="#9a8a78" stroke-width="1.9"/><circle cx="12" cy="9" r="2.4" stroke="#9a8a78" stroke-width="1.9"/></svg>
+          <input type="text" placeholder="Enter your ZIP or city" class="w-full bg-transparent text-[14px] outline-none" style="color:var(--ink);" />
+        </div>
+        <button type="button" class="rounded-full px-6 py-3 text-[14px] font-semibold text-white lift-sm" style="background:var(--roast);">Search stores</button>
+      </div>
+      <p class="mt-3 text-[12px]" style="color:rgba(31,23,16,0.5);">Can't find one? Order online — roasted to order, shipped in 48 hours.</p>
+    </div>
+
+    <!-- simple map-ish illustration -->
+    <div class="relative overflow-hidden rounded-xl border hair" style="background:#ece0c8;aspect-ratio:4/3;">
+      <div class="absolute inset-0 dot-grid" style="opacity:0.5;"></div>
+      <svg class="absolute inset-0 h-full w-full" viewBox="0 0 200 150" fill="none" preserveAspectRatio="xMidYMid slice">
+        <path d="M-5 70 Q50 50 100 78 T210 65" stroke="rgba(74,46,30,0.2)" stroke-width="2"/>
+        <path d="M-5 110 Q60 95 120 115 T210 100" stroke="rgba(74,46,30,0.2)" stroke-width="2"/>
+        <path d="M40 -5 Q55 60 45 155" stroke="rgba(74,46,30,0.16)" stroke-width="2"/>
+        <path d="M130 -5 Q120 70 140 155" stroke="rgba(74,46,30,0.16)" stroke-width="2"/>
+        <g>
+          <circle cx="55" cy="60" r="5" fill="#D2622B"/>
+          <circle cx="55" cy="60" r="11" fill="none" stroke="#D2622B" stroke-width="1.5" opacity="0.4"/>
+          <circle cx="118" cy="92" r="5" fill="#D2622B"/>
+          <circle cx="150" cy="48" r="5" fill="#D2622B"/>
+          <circle cx="88" cy="115" r="5" fill="#D2622B"/>
+          <circle cx="160" cy="110" r="5" fill="#D2622B"/>
+        </g>
+      </svg>
+      <span class="absolute bottom-3 left-3 rounded-full bg-[var(--surface)] px-3 py-1 text-[11px] font-semibold tnum" style="color:var(--roast);">1,240 stockists &amp; counting</span>
+    </div>
+  </div>
+
+  <div class="mt-8 flex justify-center">
+    <a href="#range" class="inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-semibold text-white lift" style="background:var(--pop);box-shadow:0 12px 26px rgba(210,98,43,0.32);">
+      Shop online instead
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </div>
+</section>
+
+<!-- ============ 11. FAQ ============ -->
+<section class="border-y hair bg-[var(--surface)]">
+  <div class="mx-auto grid max-w-[1220px] gap-12 px-5 py-20 lg:grid-cols-[0.78fr_1.22fr] lg:px-8 lg:py-28">
+    <div>
+      <span class="text-[12px] font-bold uppercase tracking-[0.2em]" style="color:var(--pop);">FAQ</span>
+      <h2 class="font-display display-md mt-2 text-[clamp(1.9rem,3.6vw,2.6rem)] font-semibold" style="color:var(--roast);">
+        Good questions, honest answers.
+      </h2>
+      <p class="mt-4 max-w-[20rem] text-[14.5px] leading-relaxed" style="color:rgba(31,23,16,0.64);">
+        Still wondering about something? Email the roastery at hello@daybreakcoffee.com — a real person answers.
+      </p>
+    </div>
+
+    <div>
+      <details class="faq" open>
+        <summary>
+          <span class="font-display text-[18px] font-semibold" style="color:var(--roast);">Whole bean or ground?</span>
+          <svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+        </summary>
+        <div class="faq-body">
+          Whole bean, always, if you can. Coffee starts losing aroma within minutes of grinding, so a burr grinder at home is the single biggest upgrade to your cup. That said, we'll grind any bag for free at checkout — choose espresso, pour-over, or French press, and we'll dial it to the right coarseness for your method.
+        </div>
+      </details>
+      <details class="faq">
+        <summary>
+          <span class="font-display text-[18px] font-semibold" style="color:var(--roast);">How fresh is it — when was it roasted?</span>
+          <svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+        </summary>
+        <div class="faq-body">
+          Every order is roasted to order — we don't roast until you've bought. Your bag ships within 48 hours of roasting, and the exact roast date is hand-stamped on the front, not buried in a lot code. For the best flavor, brew within four weeks of that date; the coffee will keep well past it, just at its peak in that first month.
+        </div>
+      </details>
+      <details class="faq">
+        <summary>
+          <span class="font-display text-[18px] font-semibold" style="color:var(--roast);">How should I store it?</span>
+          <svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+        </summary>
+        <div class="faq-body">
+          Keep the bag sealed somewhere cool, dark, and dry — a cupboard is perfect. The one-way valve lets roasting gases escape while keeping oxygen out, so the bag itself is good storage. Skip the fridge and freezer: they introduce moisture and odors. Just buy what you'll drink in about a month and store it on the counter.
+        </div>
+      </details>
+      <details class="faq">
+        <summary>
+          <span class="font-display text-[18px] font-semibold" style="color:var(--roast);">Can I pause or skip a subscription?</span>
+          <svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+        </summary>
+        <div class="faq-body">
+          Anytime, in two clicks, no email required. From your subscription page you can skip the next delivery, pause for as long as you like, change your roast or grind, adjust the cadence, or cancel outright. There's no contract and no fee — if your shelf is still full, just push the date.
+        </div>
+      </details>
+      <details class="faq">
+        <summary>
+          <span class="font-display text-[18px] font-semibold" style="color:var(--roast);">Do you ship internationally?</span>
+          <svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+        </summary>
+        <div class="faq-body">
+          Yes — we ship to Canada, the UK, the EU, and Australia, with rates calculated at checkout. International parcels still leave within 48 hours of roasting, though customs can add a few days in transit. Domestic US orders over $40 ship free; subscriptions ship free everywhere we deliver.
+        </div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 12. FINAL CTA ============ -->
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 radial-warm"></div>
+  <div class="absolute inset-0 dot-grid" style="opacity:0.45;"></div>
+  <div class="blob" style="width:300px;height:300px;background:#E0A33C;top:-120px;left:8%;opacity:0.4;"></div>
+  <div class="blob" style="width:300px;height:300px;background:#D2622B;bottom:-130px;right:6%;"></div>
+
+  <div class="relative mx-auto max-w-[1220px] px-5 py-24 text-center lg:px-8 lg:py-32">
+    <span class="inline-flex items-center gap-2 rounded-full border hair bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] font-medium">
+      <span class="pulse-dot"></span>
+      <span style="color:rgba(31,23,16,0.7);">Roasting today — order before 2pm</span>
+    </span>
+    <h2 class="font-display display-lg mx-auto mt-6 max-w-[26rem] text-[clamp(2.4rem,5.5vw,4rem)] font-semibold" style="color:var(--roast);">
+      Shop the range. Wake up to <em class="not-italic halftone">better coffee.</em>
+    </h2>
+    <p class="mx-auto mt-5 max-w-[32rem] text-[16px] leading-relaxed" style="color:rgba(31,23,16,0.7);">
+      Four roasts, all roasted the day they ship. Start with a single bag or build a subscription and save 15%.
+    </p>
+    <div class="mt-9 flex flex-wrap items-center justify-center gap-x-6 gap-y-4">
+      <a href="#range" class="inline-flex items-center gap-2 rounded-full px-8 py-4 text-[16px] font-semibold text-white lift" style="background:var(--pop);box-shadow:0 14px 30px rgba(210,98,43,0.4);">
+        Shop the range
+        <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <a href="#subscribe" class="text-[15px] font-semibold" style="color:var(--roast);">Build a subscription →</a>
+    </div>
+    <p class="mt-6 text-[13px]" style="color:rgba(31,23,16,0.55);">Free shipping on US orders over <span class="tnum">$40</span> · Roast-dated · Ships in 48 hours</p>
+  </div>
+</section>
+
+</main>
+
+<!-- ============ 13. FOOTER ============ -->
+<footer class="border-t hair" style="background:#34200f;">
+  <div class="mx-auto max-w-[1220px] px-5 py-16 lg:px-8">
+    <div class="grid gap-12 lg:grid-cols-[1.4fr_0.6fr_0.6fr_0.6fr]">
+      <!-- brand + newsletter -->
+      <div>
+        <a href="#top" class="flex items-center gap-2.5">
+          <svg width="32" height="32" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+            <path d="M5 27a15 15 0 0 1 30 0" stroke="#D2622B" stroke-width="3" stroke-linecap="round"/>
+            <path d="M20 4v6M7 11l3.5 3.5M33 11l-3.5 3.5M2 21h5M33 21h5" stroke="#D2622B" stroke-width="2.6" stroke-linecap="round"/>
+            <path d="M3 33h34" stroke="#E0A33C" stroke-width="2.8" stroke-linecap="round"/>
+          </svg>
+          <span class="font-display text-[21px] font-semibold tracking-[-0.02em] text-white">Daybreak</span>
+        </a>
+        <p class="mt-4 max-w-[22rem] text-[14px] leading-relaxed" style="color:rgba(255,255,255,0.6);">
+          A small-batch coffee roaster sourcing direct from six farms, roasting every order the day it ships.
+        </p>
+        <form class="mt-6 max-w-[22rem]" onsubmit="return false">
+          <label for="nl" class="text-[12px] font-bold uppercase tracking-[0.14em]" style="color:rgba(255,255,255,0.5);">Get the roast schedule + 10% off</label>
+          <div class="mt-2.5 flex gap-2">
+            <input id="nl" type="email" placeholder="you@email.com" class="w-full rounded-full border px-4 py-2.5 text-[13.5px] outline-none" style="background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.16);color:#fff;" />
+            <button type="submit" class="whitespace-nowrap rounded-full px-5 py-2.5 text-[13.5px] font-semibold text-white lift-sm" style="background:var(--pop);">Join</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- shop -->
+      <div>
+        <p class="text-[12px] font-bold uppercase tracking-[0.16em]" style="color:rgba(255,255,255,0.42);">Shop</p>
+        <ul class="mt-4 space-y-2.5 text-[14px]">
+          <li><a href="#range" class="transition-colors hover:text-white" style="color:rgba(255,255,255,0.66);">Morning Glory</a></li>
+          <li><a href="#range" class="transition-colors hover:text-white" style="color:rgba(255,255,255,0.66);">House &amp; Home</a></li>
+          <li><a href="#range" class="transition-colors hover:text-white" style="color:rgba(255,255,255,0.66);">Last Light</a></li>
+          <li><a href="#range" class="transition-colors hover:text-white" style="color:rgba(255,255,255,0.66);">Off the Clock</a></li>
+          <li><a href="#subscribe" class="transition-colors hover:text-white" style="color:rgba(255,255,255,0.66);">Subscriptions</a></li>
+        </ul>
+      </div>
+
+      <!-- our story -->
+      <div>
+        <p class="text-[12px] font-bold uppercase tracking-[0.16em]" style="color:rgba(255,255,255,0.42);">Our story</p>
+        <ul class="mt-4 space-y-2.5 text-[14px]">
+          <li><a href="#story" class="transition-colors hover:text-white" style="color:rgba(255,255,255,0.66);">About Daybreak</a></li>
+          <li><a href="#process" class="transition-colors hover:text-white" style="color:rgba(255,255,255,0.66);">How we roast</a></li>
+          <li><a href="#process" class="transition-colors hover:text-white" style="color:rgba(255,255,255,0.66);">Our six farms</a></li>
+          <li><a href="#stockists" class="transition-colors hover:text-white" style="color:rgba(255,255,255,0.66);">Stockists</a></li>
+        </ul>
+      </div>
+
+      <!-- help -->
+      <div>
+        <p class="text-[12px] font-bold uppercase tracking-[0.16em]" style="color:rgba(255,255,255,0.42);">Help</p>
+        <ul class="mt-4 space-y-2.5 text-[14px]">
+          <li><a href="#faq" class="transition-colors hover:text-white" style="color:rgba(255,255,255,0.66);">FAQ</a></li>
+          <li><a href="#stockists" class="transition-colors hover:text-white" style="color:rgba(255,255,255,0.66);">Shipping &amp; returns</a></li>
+          <li><a href="#" class="transition-colors hover:text-white" style="color:rgba(255,255,255,0.66);">Allergens &amp; nutrition info</a></li>
+          <li><a href="#" class="transition-colors hover:text-white" style="color:rgba(255,255,255,0.66);">Contact the roastery</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="mt-14 flex flex-col items-center justify-between gap-4 border-t pt-7 sm:flex-row" style="border-color:rgba(255,255,255,0.1);">
+      <p class="text-[12.5px]" style="color:rgba(255,255,255,0.45);">© 2026 Daybreak Coffee Roasters. Roasted in Portland, Oregon.</p>
+      <div class="flex items-center gap-5 text-[12.5px]" style="color:rgba(255,255,255,0.45);">
+        <a href="#" class="transition-colors hover:text-white">Privacy</a>
+        <a href="#" class="transition-colors hover:text-white">Terms</a>
+        <a href="#" class="transition-colors hover:text-white">Allergens &amp; nutrition info</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

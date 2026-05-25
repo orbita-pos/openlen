@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F4F0E8">
+<title>Clara Mendes — Photographer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400;1,9..144,500&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --paper: #F4F0E8;
+    --ink: #1A1614;
+    --muted: #6B6157;
+    --accent: #6B6157;
+    --faint: rgba(26,22,20,0.45);
+    --border: rgba(26,22,20,0.08);
+  }
+  html, body { background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; }
+  body { font-family: 'Inter', sans-serif; font-feature-settings: 'ss01', 'cv11'; }
+  .display-it { font-family: 'Fraunces', serif; font-style: italic; font-weight: 400; letter-spacing: -0.035em; font-variation-settings: 'opsz' 96, 'SOFT' 50; }
+  .serif-it { font-family: 'Fraunces', serif; font-style: italic; font-weight: 400; }
+  .serif-it-med { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; }
+  .mono { font-family: 'JetBrains Mono', monospace; font-weight: 500; font-feature-settings: 'tnum'; }
+  .rule { width: 64px; margin: 0 auto; height: 1px; background: var(--border); }
+  .eyebrow { font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 10.5px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--muted); font-feature-settings: 'tnum'; }
+  .text-muted { color: var(--muted); }
+  .text-faint { color: var(--faint); }
+  .text-accent { color: var(--accent); }
+  .link-row { display: flex; align-items: baseline; justify-content: center; width: 100%; padding: 18px 4px; text-align: center; border-bottom: 1px solid var(--border); transition: background-color 120ms ease; gap: 12px; }
+  .link-row:hover { background-color: rgba(26,22,20,0.025); }
+  .link-row .label { font-family: 'Inter', sans-serif; font-weight: 500; font-size: 14px; color: var(--ink); letter-spacing: 0.005em; }
+  .link-row .sub { font-family: 'Fraunces', serif; font-style: italic; font-weight: 400; font-size: 14.5px; color: var(--muted); }
+  .drop-cap::first-letter { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: 58px; line-height: 0.85; float: left; padding-right: 9px; padding-top: 5px; color: var(--ink); }
+  .portrait { background:
+    radial-gradient(circle at 35% 30%, #c0b9af 0%, transparent 55%),
+    linear-gradient(155deg, #2c2826 0%, #5d544a 35%, #8b8278 65%, #c0b9af 100%); }
+  .featured { background:
+    radial-gradient(circle at 25% 25%, rgba(220,215,205,0.18), transparent 55%),
+    radial-gradient(circle at 75% 80%, rgba(20,18,16,0.55), transparent 50%),
+    linear-gradient(170deg, #1f1c1a 0%, #3a3530 25%, #5d544a 55%, #8b8278 100%); }
+  ::selection { background: rgba(107,97,87,0.2); }
+  a { color: inherit; text-decoration: none; }
+</style>
+</head>
+<body>
+  <main class="mx-auto w-full" style="max-width: 480px;">
+
+    <div class="pt-14 px-6 text-center">
+      <span class="eyebrow">Works · 2016—2026 · São Paulo + Lisbon</span>
+    </div>
+
+    <section class="pt-10 px-6 text-center">
+      <div class="portrait mx-auto" style="width: 152px; height: 152px;"></div>
+      <h1 class="mt-9 display-it" style="font-size: clamp(40px, 11.5vw, 50px); line-height: 1.0;">Clara Mendes</h1>
+      <p class="mt-4 serif-it text-muted" style="font-size: 17px;">Photographer · long-form documentary · gelatin silver</p>
+      <div class="mt-7 mx-auto" style="max-width: 380px;">
+        <p class="drop-cap text-ink" style="font-size: 14.5px; line-height: 1.78; text-align: left;">Eight years on a single project about Brazilian agrarian workers. Long-form documentary; everything shot on Tri-X, printed in the studio in São Paulo.</p>
+      </div>
+    </section>
+
+    <div class="my-14 rule"></div>
+
+    <section class="px-6">
+      <div class="featured mx-auto" style="aspect-ratio: 4 / 5; width: 100%;"></div>
+      <div class="text-center mt-6">
+        <p class="serif-it-med" style="font-size: 18px; letter-spacing: -0.01em;">Aurora, Mato Grosso</p>
+        <p class="mt-1 serif-it text-muted" style="font-size: 13.5px;">gelatin silver · ed. 7 · framed 60 × 80 cm</p>
+        <p class="mt-4 eyebrow text-faint">PL—2024—018</p>
+      </div>
+    </section>
+
+    <div class="my-14 rule"></div>
+
+    <nav class="px-6">
+      <div style="border-top: 1px solid var(--border);">
+        <a class="link-row" href="#"><span class="label">Portfolio</span><span class="sub">the agrarian project, 2016—now</span></a>
+        <a class="link-row" href="#"><span class="label">Print store</span><span class="sub">editioned silver prints</span></a>
+        <a class="link-row" href="#"><span class="label">CV</span><span class="sub">PDF · 2026 edition</span></a>
+        <a class="link-row" href="#"><span class="label">Galeria Vermelho</span><span class="sub">São Paulo · representation</span></a>
+        <a class="link-row" href="#"><span class="label">Galeria Pedro Cera</span><span class="sub">Lisbon · representation</span></a>
+        <a class="link-row" href="#"><span class="label">Press</span><span class="sub">Aperture interview, 2025</span></a>
+        <a class="link-row" href="#"><span class="label">Studio visits</span><span class="sub">by appointment</span></a>
+        <a class="link-row" href="#"><span class="label">Mailing list</span><span class="sub">new prints, twice a year</span></a>
+      </div>
+    </nav>
+
+    <div class="my-14 rule"></div>
+
+    <section class="px-6 text-center">
+      <p class="eyebrow text-muted">Recent + upcoming</p>
+      <div class="mt-6 space-y-2.5">
+        <p class="serif-it-med" style="font-size: 15.5px;">Aperture Portfolio Prize · finalist · 2024</p>
+        <p class="serif-it-med" style="font-size: 15.5px;">Solo · Galeria Vermelho · September 2026</p>
+        <p class="serif-it-med" style="font-size: 15.5px;">Monograph · Mack · Spring 2027</p>
+        <p class="serif-it-med" style="font-size: 15.5px;">Workshop · Arles · July 2026</p>
+      </div>
+    </section>
+
+    <div class="my-14 rule"></div>
+
+    <div class="px-6 flex justify-center" style="gap: 28px;">
+      <a href="#" aria-label="Instagram" class="text-muted hover:text-ink transition-colors">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.65" fill="currentColor"/></svg>
+      </a>
+      <a href="#" aria-label="Are.na" class="text-muted hover:text-ink transition-colors">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/></svg>
+      </a>
+      <a href="#" aria-label="Substack" class="text-muted hover:text-ink transition-colors">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M4 10h16M4 15h16v6l-8-4-8 4v-6z"/></svg>
+      </a>
+      <a href="#" aria-label="Vimeo" class="text-muted hover:text-ink transition-colors">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8c1-2 3-3 4-3 2 0 2 2 3 6 1 3 1 5 3 5 2 0 5-4 6-7s-1-5-3-5-3 1-5 3"/></svg>
+      </a>
+    </div>
+
+    <footer class="px-6 pt-14 pb-16 text-center">
+      <p class="text-faint serif-it" style="font-size: 13px;">Studio · São Paulo · Rua Augusta 1418 · by appointment</p>
+      <p class="mt-1 text-faint serif-it" style="font-size: 13px;">contact via Galeria Vermelho · © Clara Mendes 2026</p>
+    </footer>
+
+  </main>
+</body>
+</html>

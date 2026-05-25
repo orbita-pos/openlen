@@ -1,0 +1,739 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bulwark — Rights aren't self-enforcing</title>
+<meta name="description" content="Bulwark is a civil-liberties organization: impact litigation, legislative advocacy, and rapid-response legal defense. 148 cases litigated, 2.4M people protected.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23E23B3B'/%3E%3Cpath d='M16 6 24 9v6c0 6-4 9.5-8 11-4-1.5-8-5-8-11V9Z' fill='%230E1116'/%3E%3Crect x='15' y='11' width='2' height='10' fill='%23E23B3B'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: { extend: {
+    colors: {
+      void: '#0E1116', band: '#14171D', card: '#1A1E27', ink: '#F2F3F5',
+      accent: '#E23B3B', 'accent-dk': '#BE2E2E', muted: '#8B94A1'
+    },
+    fontFamily: {
+      sans: ['Inter','ui-sans-serif','system-ui','sans-serif'],
+      mono: ['"Geist Mono"','ui-monospace','SFMono-Regular','Menlo','monospace']
+    }
+  } }
+}
+</script>
+<style>
+  :root{ --accent:#E23B3B; --accent-dk:#BE2E2E; --line:rgba(255,255,255,.10); --line-2:rgba(255,255,255,.055); }
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  body{ font-feature-settings:'ss01' 1,'cv11' 1; line-height:1.6; -webkit-font-smoothing:antialiased; }
+  [id]{ scroll-margin-top:90px; }
+  ::selection{ background:#E23B3B; color:#fff; }
+  .display{ font-family:'Inter',sans-serif; font-weight:800; letter-spacing:-.035em; line-height:1.03; }
+  .mono{ font-family:'Geist Mono',ui-monospace,monospace; font-variant-numeric:tabular-nums; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  .lift{ transition:transform .12s ease, box-shadow .12s ease, background-color .12s ease, border-color .12s ease; }
+  .lift:hover{ transform:translateY(-2px); }
+  .lift:active{ transform:translateY(0) scale(.99); }
+  .dotgrid{ background-image:radial-gradient(rgba(255,255,255,.055) 1px,transparent 1px); background-size:32px 32px; }
+  .blob{ position:absolute; border-radius:50%; filter:blur(76px); opacity:.5; pointer-events:none; }
+  .pulse{ position:relative; }
+  .pulse::after{ content:""; position:absolute; inset:-4px; border-radius:50%; background:var(--accent); opacity:.55; animation:pulse 2.4s ease-out infinite; }
+  @keyframes pulse{ 0%{ transform:scale(.7); opacity:.55; } 70%,100%{ transform:scale(2.4); opacity:0; } }
+  .marquee{ display:flex; gap:3rem; width:max-content; animation:marquee 38s linear infinite; }
+  .marquee-wrap:hover .marquee{ animation-play-state:paused; }
+  @keyframes marquee{ to{ transform:translateX(-50%); } }
+  .reveal{ opacity:0; transform:translateY(16px); transition:opacity .7s cubic-bezier(.2,.6,.2,1), transform .7s cubic-bezier(.2,.6,.2,1); }
+  .reveal.in{ opacity:1; transform:none; }
+  .donut-seg{ stroke-dasharray:0 100; transition:stroke-dasharray 1.1s cubic-bezier(.3,.7,.2,1); transform:rotate(-90deg); transform-origin:center; }
+  .barfill{ width:0; transition:width 1.5s cubic-bezier(.3,.7,.2,1); }
+  .spark-line,.spark-area{ transition:opacity .8s ease .3s; opacity:0; }
+  .in .spark-line,.in .spark-area{ opacity:1; }
+  details summary{ list-style:none; cursor:pointer; }
+  details summary::-webkit-details-marker{ display:none; }
+  details[open] .faq-x{ transform:rotate(45deg); }
+  .faq-x{ transition:transform .2s ease; }
+  .floatbtn{ opacity:0; transform:translateY(10px); pointer-events:none; transition:opacity .25s ease, transform .25s ease; }
+  .floatbtn.show{ opacity:1; transform:none; pointer-events:auto; }
+  a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{ outline:2px solid var(--accent); outline-offset:3px; border-radius:6px; }
+  @media (prefers-reduced-motion:reduce){
+    *{ animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; }
+    html{ scroll-behavior:auto; }
+    .reveal{ opacity:1; transform:none; }
+  }
+</style>
+</head>
+<body class="bg-void text-ink font-sans">
+
+<!-- ░░ NAV ░░ -->
+<header id="nav" class="sticky top-0 z-50 border-b border-[color:var(--line-2)] bg-void/85 backdrop-blur-md transition-shadow">
+  <nav class="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5 sm:px-8">
+    <a href="#top" class="flex items-center gap-2.5">
+      <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#E23B3B"/><path d="M16 6 24 9v6c0 6-4 9.5-8 11-4-1.5-8-5-8-11V9Z" fill="#0E1116"/><rect x="15" y="11" width="2" height="10" fill="#E23B3B"/></svg>
+      <span class="text-xl font-extrabold tracking-tight">Bulwark</span>
+    </a>
+    <div class="hidden items-center gap-8 md:flex">
+      <a href="#about" class="text-sm font-medium text-muted hover:text-ink">Our Work</a>
+      <a href="#impact" class="text-sm font-medium text-muted hover:text-ink">Impact</a>
+      <a href="#stories" class="text-sm font-medium text-muted hover:text-ink">Stories</a>
+      <a href="#transparency" class="text-sm font-medium text-muted hover:text-ink">About</a>
+    </div>
+    <a href="#give" class="lift inline-flex items-center gap-1.5 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_22px_-8px_rgba(226,59,59,.8)] hover:bg-accent-dk">
+      Donate
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </nav>
+</header>
+
+<main id="top">
+
+<!-- ░░ 1 · HERO ░░ -->
+<section class="relative overflow-hidden">
+  <div class="blob" style="width:460px;height:460px;background:radial-gradient(circle,#E23B3B,transparent 70%);top:-180px;right:-100px;opacity:.4;"></div>
+  <div class="blob" style="width:380px;height:380px;background:radial-gradient(circle,#3A2B5C,transparent 70%);bottom:-200px;left:-130px;opacity:.55;"></div>
+  <div class="dotgrid absolute inset-0 opacity-60" aria-hidden="true"></div>
+  <div class="relative mx-auto grid max-w-6xl items-center gap-12 px-5 py-16 sm:px-8 sm:py-24 lg:grid-cols-[1.05fr_.95fr] lg:py-28">
+    <div>
+      <span class="inline-flex items-center gap-2 rounded-full border border-[color:var(--line)] bg-card px-3.5 py-1.5 text-xs font-medium text-muted">
+        <span class="pulse inline-block h-1.5 w-1.5 rounded-full bg-accent"></span>
+        148 cases litigated · 47 statehouses tracked
+      </span>
+      <h1 class="display mt-6 text-4xl sm:text-5xl lg:text-[3.85rem]">
+        Rights aren't self-enforcing.<br>Someone has to <span class="text-accent">stand on them.</span>
+      </h1>
+      <p class="mt-6 max-w-lg text-lg text-muted">
+        Bulwark litigates the cases that set precedent, tracks every bill in 47 statehouses, and shows up — fast — when someone's constitutional rights are on the line.
+      </p>
+      <div class="mt-8 flex flex-wrap items-center gap-3">
+        <a href="#give" class="lift inline-flex items-center gap-2 rounded-full bg-accent px-7 py-3.5 text-base font-semibold text-white shadow-[0_12px_30px_-10px_rgba(226,59,59,.9)] hover:bg-accent-dk">
+          Donate
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+        </a>
+        <a href="#impact" class="lift inline-flex items-center gap-2 rounded-full border border-[color:var(--line)] bg-card px-7 py-3.5 text-base font-semibold text-ink hover:border-accent">
+          See our impact
+        </a>
+      </div>
+      <p class="mono mt-7 text-sm text-muted">
+        <span class="font-medium text-ink">148</span> cases litigated · <span class="font-medium text-ink">108</span> won or favorably settled
+      </p>
+    </div>
+
+    <div class="relative">
+      <div class="relative aspect-[4/5] overflow-hidden rounded-3xl border border-[color:var(--line)] shadow-[0_30px_70px_-30px_rgba(0,0,0,.8)]" role="img" aria-label="Illustration of a courthouse colonnade at dusk">
+        <div class="absolute inset-0" style="background:linear-gradient(165deg,#3A2024 0%,#241826 42%,#171922 72%,#0E1116 100%);"></div>
+        <svg class="absolute inset-0 h-full w-full" viewBox="0 0 400 500" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <circle cx="200" cy="150" r="150" fill="#E23B3B" opacity=".14"/>
+          <path d="M40 150 200 64 360 150Z" fill="#0B0D11"/>
+          <path d="M40 150 200 64 360 150Z" fill="none" stroke="#E23B3B" stroke-width="2" opacity=".4"/>
+          <rect x="40" y="150" width="320" height="28" fill="#10131A"/>
+          <g fill="#0B0D11">
+            <rect x="62" y="178" width="34" height="234"/><rect x="128" y="178" width="34" height="234"/>
+            <rect x="194" y="178" width="34" height="234"/><rect x="260" y="178" width="34" height="234"/>
+            <rect x="326" y="178" width="12" height="234"/>
+          </g>
+          <g fill="#E23B3B" opacity=".5"><rect x="62" y="178" width="3" height="234"/><rect x="128" y="178" width="3" height="234"/><rect x="194" y="178" width="3" height="234"/><rect x="260" y="178" width="3" height="234"/></g>
+          <rect x="34" y="412" width="332" height="16" fill="#10131A"/>
+          <rect x="22" y="428" width="356" height="18" fill="#0B0D11"/>
+          <rect x="10" y="446" width="380" height="54" fill="#070A0D"/>
+        </svg>
+        <div class="absolute left-4 top-4 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">State Supreme Court · oral arguments, 2025</div>
+      </div>
+      <div class="absolute -bottom-6 -left-4 flex items-center gap-3 rounded-2xl border border-[color:var(--line)] bg-card p-3.5 pr-5 shadow-[0_18px_44px_-16px_rgba(0,0,0,.85)] sm:-left-8">
+        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/15 text-accent">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M12 3v18M5 7h14M7 7l-3 7h6ZM17 7l-3 7h6ZM4 14a3 3 0 0 0 6 0M14 14a3 3 0 0 0 6 0M8 21h8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <div>
+          <div class="mono text-xl font-medium leading-none">72 hrs</div>
+          <div class="text-xs text-muted">to a filed motion when rights are violated</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ TRUST BAND ░░ -->
+<section class="border-y border-[color:var(--line-2)] bg-band">
+  <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-8 gap-y-3 px-5 py-4 text-sm sm:px-8">
+    <span class="flex items-center gap-1.5">
+      <span class="flex gap-0.5 text-accent" aria-label="Charity Navigator four-star rating">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1Z"/></svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1Z"/></svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1Z"/></svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1Z"/></svg>
+      </span>
+      <span class="font-medium">Charity Navigator</span>
+    </span>
+    <span class="hidden h-4 w-px bg-[color:var(--line)] sm:block"></span>
+    <span class="font-medium">Candid Platinum Transparency</span>
+    <span class="hidden h-4 w-px bg-[color:var(--line)] sm:block"></span>
+    <span class="text-muted"><span class="mono font-medium text-ink">82¢</span> of every dollar funds legal &amp; advocacy work</span>
+    <span class="hidden h-4 w-px bg-[color:var(--line)] sm:block"></span>
+    <span class="text-muted">EIN <span class="mono text-ink">52-1644088</span></span>
+  </div>
+</section>
+
+<!-- ░░ 3 · THE PROBLEM ░░ -->
+<section id="about" class="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+  <div class="grid gap-12 lg:grid-cols-[1fr_1fr]">
+    <div class="reveal">
+      <p class="mono text-xs font-medium uppercase tracking-[.18em] text-accent">Why it matters</p>
+      <h2 class="display mt-3 text-4xl sm:text-5xl">
+        On paper, the rights are guaranteed.<br><span class="opacity-[.5]">In practice, someone has to go to court and prove it.</span>
+      </h2>
+    </div>
+    <div class="reveal space-y-4 text-muted">
+      <p>A constitutional right is only as real as the ability to enforce it. When a law crosses a line, nothing changes automatically — someone has to bring a case, argue it, and win. That work is slow, expensive, and adversarial by design.</p>
+      <p>Most people facing a rights violation can't afford that fight, and in much of the country there's no civil-rights organization within driving distance to take it for them. Meanwhile, rights-restricting legislation moves faster every session. Bulwark exists to close that gap — to be the side that shows up.</p>
+    </div>
+  </div>
+  <div class="mt-12 grid gap-5 sm:grid-cols-3">
+    <div class="reveal rounded-2xl border border-[color:var(--line)] bg-card p-6">
+      <div class="mono text-4xl font-medium text-accent">1,408</div>
+      <div class="mt-2 font-semibold">rights-restricting bills</div>
+      <p class="mt-1 text-sm text-muted">Introduced across statehouses this session — the most Bulwark has tracked in a single year.</p>
+    </div>
+    <div class="reveal rounded-2xl border border-[color:var(--line)] bg-card p-6" data-delay="90">
+      <div class="mono text-4xl font-medium text-accent">31M</div>
+      <div class="mt-2 font-semibold">people in their path</div>
+      <p class="mt-1 text-sm text-muted">Residents living under at least one law Bulwark is currently challenging in court.</p>
+    </div>
+    <div class="reveal rounded-2xl border border-[color:var(--line)] bg-card p-6" data-delay="180">
+      <div class="mono text-4xl font-medium text-accent">1 in 4</div>
+      <div class="mt-2 font-semibold">counties without local defense</div>
+      <p class="mt-1 text-sm text-muted">U.S. counties with no civil-rights legal organization within 100 miles to take a case.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ 4 · WHAT WE DO ░░ -->
+<section id="programs" class="border-y border-[color:var(--line-2)] bg-band">
+  <div class="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+    <div class="reveal max-w-2xl">
+      <p class="mono text-xs font-medium uppercase tracking-[.18em] text-accent">What we do</p>
+      <h2 class="display mt-3 text-4xl sm:text-5xl">Four ways we stand on a right.</h2>
+      <p class="mt-4 text-muted">From the courtroom to the statehouse to a printed know-your-rights card — the same goal at every scale.</p>
+    </div>
+    <div class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="reveal flex flex-col rounded-2xl border border-[color:var(--line)] bg-void p-6">
+        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/15 text-accent">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v18M6 7h12M8 7l-3 6h6ZM16 7l-3 6h6ZM5 13a3 3 0 0 0 6 0M13 13a3 3 0 0 0 6 0M8 21h8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <h3 class="mt-4 text-xl font-semibold tracking-tight">Impact litigation</h3>
+        <p class="mt-1.5 flex-1 text-sm text-muted">Test cases chosen to set precedent that protects far beyond a single plaintiff.</p>
+        <div class="mono mt-4 text-sm font-medium text-ink">148 cases litigated</div>
+      </div>
+      <div class="reveal flex flex-col rounded-2xl border border-[color:var(--line)] bg-void p-6" data-delay="80">
+        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/15 text-accent">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 21h18M5 21V10M19 21V10M9 21v-7h6v7M4 10h16L12 4Z" stroke-linejoin="round"/></svg>
+        </span>
+        <h3 class="mt-4 text-xl font-semibold tracking-tight">Legislative advocacy</h3>
+        <p class="mt-1.5 flex-1 text-sm text-muted">Tracking, testifying, and amending — in 47 statehouses, every session.</p>
+        <div class="mono mt-4 text-sm font-medium text-ink">84 bills defeated or amended</div>
+      </div>
+      <div class="reveal flex flex-col rounded-2xl border border-[color:var(--line)] bg-void p-6" data-delay="160">
+        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/15 text-accent">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6Z" stroke-linejoin="round"/></svg>
+        </span>
+        <h3 class="mt-4 text-xl font-semibold tracking-tight">Rapid-response defense</h3>
+        <p class="mt-1.5 flex-1 text-sm text-muted">Lawyers filing within 72 hours when rights are violated in real time.</p>
+        <div class="mono mt-4 text-sm font-medium text-ink">212 emergency filings</div>
+      </div>
+      <div class="reveal flex flex-col rounded-2xl border border-[color:var(--line)] bg-void p-6" data-delay="240">
+        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/15 text-accent">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 5a3 3 0 0 1 3-3h6v18H6a3 3 0 0 0-3 3ZM21 5a3 3 0 0 0-3-3h-6v18h6a3 3 0 0 1 3 3Z" stroke-linejoin="round"/></svg>
+        </span>
+        <h3 class="mt-4 text-xl font-semibold tracking-tight">Know-your-rights</h3>
+        <p class="mt-1.5 flex-1 text-sm text-muted">Plain-language materials and trainings so people can name a violation when it happens.</p>
+        <div class="mono mt-4 text-sm font-medium text-ink">1.1M materials distributed</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ 5 · IMPACT ░░ -->
+<section id="impact" class="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+  <div class="reveal max-w-2xl">
+    <p class="mono text-xs font-medium uppercase tracking-[.18em] text-accent">Impact</p>
+    <h2 class="display mt-3 text-4xl sm:text-5xl">What standing up actually wins.</h2>
+  </div>
+
+  <div class="reveal mt-10 grid gap-px overflow-hidden rounded-3xl border border-[color:var(--line)] bg-[color:var(--line-2)] sm:grid-cols-2 lg:grid-cols-4">
+    <div class="bg-card p-7">
+      <div class="mono text-4xl font-medium text-white sm:text-5xl">108<span class="text-2xl text-muted">/148</span></div>
+      <div class="mt-2 font-semibold text-white">Cases won or settled</div>
+      <p class="mt-1 text-sm text-muted">Favorable outcomes across all litigation to date.</p>
+    </div>
+    <div class="bg-card p-7">
+      <div class="mono text-4xl font-medium text-white sm:text-5xl">2.4M</div>
+      <div class="mt-2 font-semibold text-white">People directly protected</div>
+      <p class="mt-1 text-sm text-muted">Covered by a right Bulwark won or defended in court.</p>
+    </div>
+    <div class="bg-card p-7">
+      <div class="mono text-4xl font-medium text-white sm:text-5xl">84</div>
+      <div class="mt-2 font-semibold text-white">Bills defeated or amended</div>
+      <p class="mt-1 text-sm text-muted">Rights-restricting legislation stopped or narrowed.</p>
+    </div>
+    <div class="bg-card p-7">
+      <div class="mono text-4xl font-medium text-white sm:text-5xl">47</div>
+      <div class="mt-2 font-semibold text-white">Statehouses tracked</div>
+      <p class="mt-1 text-sm text-muted">Every bill, every session, monitored in real time.</p>
+    </div>
+  </div>
+
+  <div class="mt-5 grid gap-5 lg:grid-cols-2">
+    <div class="reveal rounded-3xl border border-[color:var(--line)] bg-card p-7">
+      <h3 class="font-semibold">Where your money goes</h3>
+      <p class="mt-1 text-sm text-muted">Bulwark Foundation, fiscal year 2025, independently audited.</p>
+      <div class="mt-5 flex items-center gap-7">
+        <div class="relative shrink-0">
+          <svg width="148" height="148" viewBox="0 0 42 42" aria-hidden="true">
+            <circle cx="21" cy="21" r="15.915" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="5"/>
+            <circle class="donut-seg" cx="21" cy="21" r="15.915" fill="none" stroke="#E23B3B" stroke-width="5" stroke-linecap="round" data-pct="82"></circle>
+            <circle class="donut-seg" cx="21" cy="21" r="15.915" fill="none" stroke="#A14A4C" stroke-width="5" data-pct="10"></circle>
+            <circle class="donut-seg" cx="21" cy="21" r="15.915" fill="none" stroke="#454B57" stroke-width="5" data-pct="8"></circle>
+          </svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <span class="mono text-2xl font-medium leading-none text-white">82¢</span>
+            <span class="text-[10px] text-muted">to the work</span>
+          </div>
+        </div>
+        <ul class="flex-1 space-y-3 text-sm">
+          <li class="flex items-center justify-between gap-3"><span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-accent"></span>Legal &amp; advocacy work</span><span class="mono font-medium">82%</span></li>
+          <li class="flex items-center justify-between gap-3"><span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full" style="background:#A14A4C"></span>Fundraising</span><span class="mono font-medium">10%</span></li>
+          <li class="flex items-center justify-between gap-3"><span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full" style="background:#454B57"></span>Administration</span><span class="mono font-medium">8%</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="reveal rounded-3xl border border-[color:var(--line)] bg-card p-7" data-delay="100">
+      <h3 class="font-semibold">Cases litigated, cumulative</h3>
+      <p class="mt-1 text-sm text-muted">2016 → 2025 — every docketed case, win or lose.</p>
+      <svg class="mt-6 w-full" viewBox="0 0 280 96" data-spark="28,44,60,74,88,102,116,128,138,148" aria-hidden="true">
+        <path class="spark-area" fill="url(#bg5)" d=""></path>
+        <path class="spark-line" fill="none" stroke="#E23B3B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d=""></path>
+        <circle class="spark-dot" r="3.5" fill="#E23B3B" stroke="#1A1E27" stroke-width="2"></circle>
+        <defs><linearGradient id="bg5" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E23B3B" stop-opacity=".3"/><stop offset="1" stop-color="#E23B3B" stop-opacity="0"/></linearGradient></defs>
+      </svg>
+      <div class="mono mt-2 flex justify-between text-xs text-muted"><span>2016</span><span class="font-medium text-ink">148 cases · 2025</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ 6 · STORY ░░ -->
+<section id="stories" class="border-y border-[color:var(--line-2)] bg-band">
+  <div class="mx-auto grid max-w-6xl gap-12 px-5 py-20 sm:px-8 sm:py-28 lg:grid-cols-[.92fr_1.08fr] lg:items-center">
+    <div class="reveal relative">
+      <div class="relative aspect-[4/5] overflow-hidden rounded-3xl border border-[color:var(--line)]" role="img" aria-label="Illustration of a courthouse interior with light through tall windows">
+        <div class="absolute inset-0" style="background:linear-gradient(160deg,#2E1A20 0%,#1E1A24 52%,#0E1116 100%);"></div>
+        <svg class="absolute inset-0 h-full w-full" viewBox="0 0 400 500" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <circle cx="210" cy="170" r="160" fill="#E23B3B" opacity=".13"/>
+          <rect x="70" y="80" width="80" height="220" rx="40" fill="#E23B3B" opacity=".2"/>
+          <rect x="250" y="80" width="80" height="220" rx="40" fill="#E23B3B" opacity=".2"/>
+          <rect x="120" y="320" width="160" height="120" fill="#0B0D11"/>
+          <rect x="100" y="306" width="200" height="18" fill="#10131A"/>
+          <path d="M200 250 195 274 205 274Z" fill="#E23B3B" opacity=".7"/>
+          <circle cx="200" cy="248" r="6" fill="#E23B3B" opacity=".7"/>
+          <rect x="150" y="360" width="100" height="6" rx="3" fill="#E23B3B" opacity=".5"/>
+        </svg>
+        <div class="absolute left-4 top-4 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">Reyes v. Hartman County · decided 2025</div>
+      </div>
+    </div>
+    <div class="reveal" data-delay="100">
+      <p class="mono text-xs font-medium uppercase tracking-[.18em] text-accent">A case that held</p>
+      <h2 class="display mt-3 text-3xl sm:text-4xl">Dolores Reyes waited 19 days for a hearing. Now no one will.</h2>
+      <div class="mt-5 space-y-4 text-muted">
+        <p>Dolores Reyes, a night-shift nurse, was arrested on a misdemeanor and held in county jail for nineteen days before anyone set a bail hearing. She lost her job in the first week. There was no rule being broken — there was simply no rule requiring the county to move faster.</p>
+        <p>Bulwark took her case as impact litigation: the goal was never just to free one client, but to win a standard. Reyes v. Hartman County established that anyone held in the state must receive a bail hearing within 48 hours — a precedent that now reaches every jail in the state, not just the one that held her.</p>
+        <p>That's the pattern. The same month, when a city tried to charge organizers a $14,000 "security fee" for a permitted rally, Bulwark's rapid-response team filed within 48 hours. The fee was blocked before the rally's date.</p>
+      </div>
+      <blockquote class="mt-6 border-l-2 border-accent pl-4 text-lg italic text-ink">
+        "They told me my case would help people I'd never meet. I didn't really believe it until the ruling came down."
+        <footer class="mt-2 text-sm not-italic text-muted">— Dolores Reyes, plaintiff, Reyes v. Hartman County</footer>
+      </blockquote>
+      <div class="mono mt-6 inline-flex items-start gap-2 rounded-xl bg-accent/12 px-4 py-2.5 text-sm font-medium text-accent">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="mt-0.5 shrink-0" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Outcome — the ruling guarantees a 48-hour bail hearing for an estimated 240,000 people held each year.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ 7 · DONATION WIDGET ░░ -->
+<section id="give" class="relative overflow-hidden bg-void">
+  <div class="blob" style="width:420px;height:420px;background:radial-gradient(circle,#E23B3B,transparent 70%);top:-160px;right:-60px;opacity:.32;"></div>
+  <div class="dotgrid absolute inset-0 opacity-60" aria-hidden="true"></div>
+  <div class="relative mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+    <div class="grid gap-10 lg:grid-cols-[1fr_minmax(360px,460px)] lg:items-center">
+      <div class="reveal">
+        <p class="mono text-xs font-medium uppercase tracking-[.18em] text-accent">Donate</p>
+        <h2 class="display mt-3 text-4xl sm:text-5xl">Fund the side that shows up.</h2>
+        <p class="mt-4 max-w-md text-muted">Litigation is a long game. A gift today funds the research, the filings, and the years a precedent-setting case can take. Join the <strong class="font-semibold text-ink">Defenders</strong> — monthly support — and you fund the cases we couldn't otherwise risk.</p>
+        <dl class="mt-7 space-y-3 text-sm">
+          <div class="flex gap-3"><dt class="mono shrink-0 font-medium text-accent">$25</dt><dd class="text-muted">an hour of legal research on an active case.</dd></div>
+          <div class="flex gap-3"><dt class="mono shrink-0 font-medium text-accent">$50</dt><dd class="text-muted">know-your-rights materials for an entire community.</dd></div>
+          <div class="flex gap-3"><dt class="mono shrink-0 font-medium text-accent">$100</dt><dd class="text-muted">toward the filing and docket costs of the next case.</dd></div>
+        </dl>
+      </div>
+
+      <div class="reveal rounded-3xl border border-[color:var(--line)] bg-card p-6 shadow-[0_30px_70px_-30px_rgba(0,0,0,.9)] sm:p-7" data-delay="100">
+        <div class="flex items-center justify-between">
+          <h3 class="text-2xl font-extrabold tracking-tight">Give today</h3>
+          <span class="flex items-center gap-1.5 text-xs text-muted"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Secure</span>
+        </div>
+        <div class="mt-4 grid grid-cols-2 gap-1 rounded-full bg-void p-1" role="group" aria-label="Gift frequency">
+          <button type="button" class="freq-btn rounded-full py-2 text-sm font-semibold transition" data-freq="once" aria-pressed="true">One-time</button>
+          <button type="button" class="freq-btn rounded-full py-2 text-sm font-semibold text-muted transition" data-freq="monthly" aria-pressed="false">Monthly</button>
+        </div>
+        <p class="mt-2 text-center text-xs text-muted">Monthly gifts join the <span class="font-semibold text-accent">Defenders</span> — predictable funding for multi-year cases.</p>
+        <div class="mt-3 grid grid-cols-2 gap-2.5">
+          <button type="button" class="amt-btn lift rounded-xl border border-[color:var(--line)] p-3 text-left" data-amt="25">
+            <span class="mono block text-lg font-medium">$25</span>
+            <span class="block text-xs text-muted">an hour of legal research</span>
+          </button>
+          <button type="button" class="amt-btn lift rounded-xl border border-[color:var(--line)] p-3 text-left" data-amt="50">
+            <span class="mono block text-lg font-medium">$50</span>
+            <span class="block text-xs text-muted">know-your-rights materials</span>
+          </button>
+          <button type="button" class="amt-btn lift rounded-xl border border-[color:var(--line)] p-3 text-left" data-amt="100">
+            <span class="mono block text-lg font-medium">$100</span>
+            <span class="block text-xs text-muted">toward the next filing</span>
+          </button>
+          <label class="amt-custom flex items-center gap-1 rounded-xl border border-[color:var(--line)] px-3">
+            <span class="mono text-muted">$</span>
+            <input type="number" min="1" inputmode="numeric" placeholder="Other" class="mono w-full bg-transparent py-3 text-lg font-medium outline-none placeholder:text-sm placeholder:font-normal placeholder:text-muted">
+          </label>
+        </div>
+        <button type="button" class="donate-btn lift mt-4 w-full rounded-full bg-accent py-4 text-base font-semibold text-white shadow-[0_14px_34px_-12px_rgba(226,59,59,.95)] hover:bg-accent-dk">
+          Donate $50
+        </button>
+        <p class="mt-3 text-center text-xs text-muted">Gifts here support the Bulwark Foundation, a 501(c)(3) — fully tax-deductible.</p>
+        <div class="mt-5 border-t border-[color:var(--line-2)] pt-4">
+          <div class="mono flex items-baseline justify-between text-sm">
+            <span class="font-medium">$3.10M</span>
+            <span class="text-muted">of $4.00M goal</span>
+          </div>
+          <div class="mt-2 h-2.5 overflow-hidden rounded-full bg-void">
+            <div class="barfill h-full rounded-full bg-accent" data-fill="77.5"></div>
+          </div>
+          <p class="mt-2 text-xs text-muted">2026 Litigation Fund · <span class="mono">21,408</span> donors so far</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ 8 · WAYS TO GIVE ░░ -->
+<section class="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+  <div class="reveal max-w-2xl">
+    <p class="mono text-xs font-medium uppercase tracking-[.18em] text-accent">Ways to give</p>
+    <h2 class="display mt-3 text-4xl sm:text-5xl">More ways to back the docket.</h2>
+  </div>
+  <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <div class="reveal rounded-2xl border-2 border-accent bg-card p-6">
+      <span class="mono text-xs font-medium uppercase tracking-wider text-accent">Most needed</span>
+      <h3 class="mt-1 text-xl font-semibold tracking-tight">The Defenders</h3>
+      <p class="mt-1.5 text-sm text-muted">Monthly giving is what lets us commit to multi-year cases — funding we can count on, case after case.</p>
+      <a href="#give" class="mt-3 inline-block text-sm font-semibold text-accent hover:underline">Become a Defender →</a>
+    </div>
+    <div class="reveal rounded-2xl border border-[color:var(--line)] bg-card p-6" data-delay="70">
+      <h3 class="text-xl font-semibold tracking-tight">Employer matching</h3>
+      <p class="mt-1.5 text-sm text-muted">Many employers match charitable gifts dollar-for-dollar. Two minutes can double yours.</p>
+      <a href="#give" class="mt-3 inline-block text-sm font-semibold text-accent hover:underline">Check your employer →</a>
+    </div>
+    <div class="reveal rounded-2xl border border-[color:var(--line)] bg-card p-6" data-delay="140">
+      <h3 class="text-xl font-semibold tracking-tight">Legacy giving</h3>
+      <p class="mt-1.5 text-sm text-muted">Name the Bulwark Foundation in your will and fund the cases of the next decade.</p>
+      <a href="#transparency" class="mt-3 inline-block text-sm font-semibold text-accent hover:underline">Plan a gift →</a>
+    </div>
+    <div class="reveal rounded-2xl border border-[color:var(--line)] bg-card p-6" data-delay="70">
+      <h3 class="text-xl font-semibold tracking-tight">Stock &amp; DAF gifts</h3>
+      <p class="mt-1.5 text-sm text-muted">Give appreciated stock or recommend a grant from your donor-advised fund — often the most tax-efficient way to give.</p>
+      <a href="#transparency" class="mt-3 inline-block text-sm font-semibold text-accent hover:underline">Get transfer details →</a>
+    </div>
+    <div class="reveal rounded-2xl border border-[color:var(--line)] bg-card p-6" data-delay="140">
+      <h3 class="text-xl font-semibold tracking-tight">Pro-bono network</h3>
+      <p class="mt-1.5 text-sm text-muted">Licensed attorney? Join the 1,408-lawyer pro-bono network that extends our reach into every state.</p>
+      <a href="#transparency" class="mt-3 inline-block text-sm font-semibold text-accent hover:underline">Join the network →</a>
+    </div>
+    <div class="reveal flex flex-col justify-center rounded-2xl border border-accent bg-accent/10 p-6" data-delay="210">
+      <h3 class="text-xl font-semibold tracking-tight">Not sure where to start?</h3>
+      <p class="mt-1.5 text-sm text-muted">A gift today goes straight to the case that's being briefed right now.</p>
+      <a href="#give" class="mt-3 inline-block text-sm font-semibold text-accent hover:underline">Donate now →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ 9 · TRANSPARENCY ░░ -->
+<section id="transparency" class="border-y border-[color:var(--line-2)] bg-band">
+  <div class="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+    <div class="grid gap-12 lg:grid-cols-[1.1fr_.9fr] lg:items-center">
+      <div class="reveal">
+        <p class="mono text-xs font-medium uppercase tracking-[.18em] text-accent">Transparency</p>
+        <h2 class="display mt-3 text-4xl sm:text-5xl">Where your money goes, in the open.</h2>
+        <p class="mt-4 text-muted">Bulwark operates two entities: the <strong class="font-semibold text-ink">Bulwark Foundation</strong>, a 501(c)(3) funding litigation and education, and <strong class="font-semibold text-ink">Bulwark Action</strong>, a 501(c)(4) for lobbying. Both are independently audited; the figures below are the Foundation's.</p>
+        <div class="mt-7 grid gap-4 sm:grid-cols-3">
+          <div><div class="mono text-3xl font-medium text-accent">82¢</div><div class="text-sm text-muted">of every dollar to legal &amp; advocacy work</div></div>
+          <div><div class="mono text-3xl font-medium text-accent">10¢</div><div class="text-sm text-muted">to fundraising</div></div>
+          <div><div class="mono text-3xl font-medium text-accent">8¢</div><div class="text-sm text-muted">to administration</div></div>
+        </div>
+        <div class="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+          <a href="#" class="font-semibold text-accent hover:underline">2025 Annual Report (PDF)</a>
+          <a href="#" class="font-semibold text-accent hover:underline">IRS Form 990</a>
+          <a href="#" class="font-semibold text-accent hover:underline">Audited financials</a>
+        </div>
+        <p class="mono mt-4 text-sm text-muted">Bulwark Foundation · EIN <span class="text-ink">52-1644088</span></p>
+      </div>
+      <div class="reveal flex justify-center gap-5 sm:gap-8" data-delay="100">
+        <svg width="118" height="118" viewBox="0 0 120 120" aria-label="Charity Navigator four-star rating seal">
+          <circle cx="60" cy="60" r="58" fill="#14171D" stroke="#E23B3B" stroke-width="2"/>
+          <circle cx="60" cy="60" r="49" fill="none" stroke="#E23B3B" stroke-width="1" opacity=".4"/>
+          <g fill="#E23B3B"><path d="m38 44 2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8Z"/><path d="m60 40 2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8Z"/><path d="m82 44 2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8Z"/><path d="m49 64 2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8Z"/><path d="m71 64 2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8Z"/></g>
+          <text x="60" y="92" text-anchor="middle" font-family="Geist Mono,monospace" font-size="9" font-weight="500" fill="#F2F3F5" letter-spacing="1">FOUR-STAR</text>
+          <text x="60" y="103" text-anchor="middle" font-family="Inter,sans-serif" font-size="6.5" fill="#8B94A1" letter-spacing=".5">CHARITY NAVIGATOR</text>
+        </svg>
+        <svg width="118" height="118" viewBox="0 0 120 120" aria-label="Candid Platinum Transparency seal">
+          <circle cx="60" cy="60" r="58" fill="#0B0D11" stroke="#454B57" stroke-width="1.5"/>
+          <circle cx="60" cy="60" r="49" fill="none" stroke="#454B57" stroke-width="1" opacity=".7"/>
+          <path d="M60 33 73 41 73 57 60 78 47 57 47 41Z" fill="none" stroke="#E23B3B" stroke-width="2"/>
+          <path d="m52 54 6 6 12-13" fill="none" stroke="#F2F3F5" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <text x="60" y="94" text-anchor="middle" font-family="Geist Mono,monospace" font-size="9" font-weight="500" fill="#F2F3F5" letter-spacing="1.5">PLATINUM</text>
+          <text x="60" y="104" text-anchor="middle" font-family="Inter,sans-serif" font-size="6" fill="#8B94A1" letter-spacing=".5">CANDID · TRANSPARENCY 2026</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ 10 · SUPPORTERS ░░ -->
+<section class="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
+  <p class="reveal text-center text-sm text-muted">Backed by foundations, a 1,408-lawyer pro-bono network, and <span class="font-semibold text-ink">31,408 donors</span></p>
+  <div class="marquee-wrap reveal mt-8 overflow-hidden" style="-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);" data-delay="80">
+    <div class="marquee items-center text-muted">
+      <span class="text-xl font-extrabold tracking-tight">The Greer Foundation</span>
+      <span class="text-xl font-medium">Vantage</span>
+      <span class="text-xl font-semibold tracking-tight">Mercury</span>
+      <span class="text-xl font-medium">Foundry &amp; Co.</span>
+      <span class="text-xl font-semibold">Brightwave Fund</span>
+      <span class="text-xl font-medium tracking-tight">Northwind</span>
+      <span class="text-xl font-semibold lowercase">atrium</span>
+      <span class="text-xl font-extrabold tracking-tight" aria-hidden="true">The Greer Foundation</span>
+      <span class="text-xl font-medium" aria-hidden="true">Vantage</span>
+      <span class="text-xl font-semibold tracking-tight" aria-hidden="true">Mercury</span>
+      <span class="text-xl font-medium" aria-hidden="true">Foundry &amp; Co.</span>
+      <span class="text-xl font-semibold" aria-hidden="true">Brightwave Fund</span>
+      <span class="text-xl font-medium tracking-tight" aria-hidden="true">Northwind</span>
+      <span class="text-xl font-semibold lowercase" aria-hidden="true">atrium</span>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ 11 · FAQ ░░ -->
+<section class="border-t border-[color:var(--line-2)] bg-band">
+  <div class="mx-auto max-w-3xl px-5 py-20 sm:px-8 sm:py-28">
+    <div class="reveal text-center">
+      <p class="mono text-xs font-medium uppercase tracking-[.18em] text-accent">FAQ</p>
+      <h2 class="display mt-3 text-4xl sm:text-5xl">Questions donors ask.</h2>
+    </div>
+    <div class="reveal mt-10 divide-y divide-[color:var(--line-2)] border-y border-[color:var(--line-2)]">
+      <details class="group py-4">
+        <summary class="flex items-center justify-between gap-4 font-semibold">Is my donation tax-deductible — are you a 501(c)(3) or (c)(4)?<svg class="faq-x shrink-0 text-accent" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg></summary>
+        <p class="mt-2 text-muted">Both — and it matters which you give to. The Bulwark Foundation is a 501(c)(3): it funds litigation and education, and gifts to it are fully tax-deductible. Bulwark Action is a 501(c)(4): it lobbies on legislation, and gifts to it are not deductible. Our donation form gives to the Foundation by default; if you want to support direct lobbying, you can choose Action explicitly.</p>
+      </details>
+      <details class="group py-4">
+        <summary class="flex items-center justify-between gap-4 font-semibold">How do you pick which cases to take?<svg class="faq-x shrink-0 text-accent" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg></summary>
+        <p class="mt-2 text-muted">A case-review committee weighs three things: how clear the rights violation is, how far a favorable ruling would reach beyond the individual plaintiff, and whether anyone else is positioned to take it. We deliberately prioritize cases in legal deserts and ones likely to set precedent — a single well-chosen case can protect millions, which is the whole point of impact litigation.</p>
+      </details>
+      <details class="group py-4">
+        <summary class="flex items-center justify-between gap-4 font-semibold">What share goes to litigation vs. overhead?<svg class="faq-x shrink-0 text-accent" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg></summary>
+        <p class="mt-2 text-muted">In fiscal year 2025, 82¢ of every dollar funded legal and advocacy work, 10¢ went to fundraising, and 8¢ to administration. We hold a slightly higher fundraising ratio than some charities on purpose — recurring-donor acquisition is what makes multi-year litigation possible — and we publish the audited numbers so you can judge for yourself.</p>
+      </details>
+      <details class="group py-4">
+        <summary class="flex items-center justify-between gap-4 font-semibold">Why does monthly giving matter for legal work?<svg class="faq-x shrink-0 text-accent" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg></summary>
+        <p class="mt-2 text-muted">A precedent-setting case can take three to five years. We can only commit to one if we know the funding will still be there in year four. Monthly Defenders give us that certainty — predictable revenue lets us take the long, hard cases instead of only the ones that resolve before the money runs out.</p>
+      </details>
+      <details class="group py-4">
+        <summary class="flex items-center justify-between gap-4 font-semibold">Can I give anonymously?<svg class="faq-x shrink-0 text-accent" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg></summary>
+        <p class="mt-2 text-muted">Yes. You can opt out of all public donor recognition at checkout, and we never sell, trade, or share donor information. For gifts where privacy is a particular concern, our development team can also accept contributions through a donor-advised fund or with limited internal visibility — just ask.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ 12 · FINAL CTA ░░ -->
+<section class="relative overflow-hidden bg-accent text-white">
+  <div class="blob" style="width:520px;height:520px;background:radial-gradient(circle,#FF6A5A,transparent 70%);top:-220px;left:50%;transform:translateX(-50%);opacity:.5;"></div>
+  <div class="relative mx-auto max-w-3xl px-5 py-20 text-center sm:px-8 sm:py-28">
+    <h2 class="reveal display text-4xl sm:text-6xl">Be the reason the next<br>case gets filed.</h2>
+    <p class="reveal mx-auto mt-5 max-w-xl text-lg text-white/80" data-delay="80">Somewhere right now, a right is being tested and no one has stood up for it yet. Your gift decides whether someone does.</p>
+    <div class="reveal mt-8 flex flex-wrap justify-center gap-3" data-delay="140">
+      <a href="#give" class="lift inline-flex items-center gap-2 rounded-full bg-white px-8 py-4 text-base font-semibold text-accent-dk hover:bg-white/90">
+        Donate now
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <a href="#impact" class="lift inline-flex items-center gap-2 rounded-full border border-white/35 px-8 py-4 text-base font-semibold text-white hover:bg-white/10">See our impact</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ░░ 13 · FOOTER ░░ -->
+<footer class="bg-[#0B0D11]">
+  <div class="mx-auto max-w-6xl px-5 py-16 sm:px-8">
+    <div class="grid gap-10 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+      <div>
+        <a href="#top" class="flex items-center gap-2.5">
+          <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#E23B3B"/><path d="M16 6 24 9v6c0 6-4 9.5-8 11-4-1.5-8-5-8-11V9Z" fill="#0B0D11"/><rect x="15" y="11" width="2" height="10" fill="#E23B3B"/></svg>
+          <span class="text-lg font-extrabold tracking-tight">Bulwark</span>
+        </a>
+        <p class="mt-3 max-w-xs text-sm text-muted">Impact litigation, legislative advocacy, and rapid-response defense of civil liberties.</p>
+        <form class="mt-5 flex max-w-xs gap-2" onsubmit="return false">
+          <input type="email" required placeholder="Your email" aria-label="Email address" class="w-full rounded-full border border-[color:var(--line)] bg-card px-4 py-2.5 text-sm outline-none placeholder:text-muted">
+          <button type="submit" class="lift shrink-0 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-white hover:bg-accent-dk">Subscribe</button>
+        </form>
+        <p class="mt-2 text-xs text-muted">The Docket — case news and legislative tracking, biweekly.</p>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold">Our Work</h3>
+        <ul class="mt-3 space-y-2 text-sm text-muted">
+          <li><a href="#programs" class="hover:text-ink">Impact litigation</a></li>
+          <li><a href="#programs" class="hover:text-ink">Legislative advocacy</a></li>
+          <li><a href="#programs" class="hover:text-ink">Rapid response</a></li>
+          <li><a href="#impact" class="hover:text-ink">Impact reports</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold">Get involved</h3>
+        <ul class="mt-3 space-y-2 text-sm text-muted">
+          <li><a href="#give" class="hover:text-ink">Donate</a></li>
+          <li><a href="#give" class="hover:text-ink">Become a Defender</a></li>
+          <li><a href="#" class="hover:text-ink">Pro-bono network</a></li>
+          <li><a href="#" class="hover:text-ink">Know your rights</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold">Organization</h3>
+        <ul class="mt-3 space-y-2 text-sm text-muted">
+          <li><a href="#transparency" class="hover:text-ink">Financials</a></li>
+          <li><a href="#" class="hover:text-ink">Annual report</a></li>
+          <li><a href="#" class="hover:text-ink">Press</a></li>
+          <li><a href="#" class="hover:text-ink">Contact us</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="mt-12 flex flex-col gap-3 border-t border-[color:var(--line-2)] pt-6 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
+      <p>© 2026 Bulwark Foundation · EIN <span class="mono">52-1644088</span> · 1408 Constitution Ave NW, Suite 600, Washington, DC 20005</p>
+      <div class="flex gap-5">
+        <a href="#" class="hover:text-ink">Charity Navigator</a>
+        <a href="#" class="hover:text-ink">Privacy</a>
+        <a href="#" class="hover:text-ink">Contact</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<a href="#give" class="floatbtn lift fixed bottom-5 right-5 z-50 inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3.5 text-sm font-semibold text-white shadow-[0_16px_40px_-12px_rgba(226,59,59,1)] hover:bg-accent-dk">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M19 14c1.5-1.5 3-3.3 3-5.5A4.5 4.5 0 0 0 12 5.6 4.5 4.5 0 0 0 2 8.5C2 12 6 15 12 20c2.5-2 4.5-3.8 6-5.2Z" stroke-linejoin="round"/></svg>
+  Donate
+</a>
+
+<script>
+(function(){
+  var mq = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  var io = new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(e.isIntersecting){
+        var el = e.target, d = +el.dataset.delay || 0;
+        setTimeout(function(){ el.classList.add('in'); }, mq ? 0 : d);
+        io.unobserve(el);
+      }
+    });
+  }, { threshold:.14 });
+  document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+
+  var dio = new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(!e.isIntersecting) return;
+      var segs = e.target.querySelectorAll('.donut-seg'), cum = 0;
+      segs.forEach(function(s,i){
+        var p = +s.dataset.pct;
+        s.style.strokeDashoffset = (-cum);
+        s.style.transitionDelay = (i*.16)+'s';
+        setTimeout(function(){ s.style.strokeDasharray = p+' '+(100-p); }, 60);
+        cum += p;
+      });
+      dio.unobserve(e.target);
+    });
+  }, { threshold:.4 });
+  document.querySelectorAll('svg').forEach(function(s){ if(s.querySelector('.donut-seg')) dio.observe(s); });
+
+  document.querySelectorAll('[data-spark]').forEach(function(svg){
+    var data = svg.dataset.spark.split(',').map(Number);
+    var W=280,H=96,pad=8, n=data.length, mn=Math.min.apply(0,data), mx=Math.max.apply(0,data);
+    var pts = data.map(function(v,i){
+      var x = pad + i/(n-1)*(W-pad*2);
+      var y = H-pad - (v-mn)/(mx-mn||1)*(H-pad*2-6);
+      return [x,y];
+    });
+    var line = pts.map(function(p,i){ return (i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1); }).join(' ');
+    svg.querySelector('.spark-line').setAttribute('d', line);
+    svg.querySelector('.spark-area').setAttribute('d', line+' L'+pts[n-1][0].toFixed(1)+' '+(H-pad)+' L'+pts[0][0].toFixed(1)+' '+(H-pad)+' Z');
+    var dot = svg.querySelector('.spark-dot');
+    dot.setAttribute('cx', pts[n-1][0].toFixed(1)); dot.setAttribute('cy', pts[n-1][1].toFixed(1));
+  });
+
+  var pio = new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(!e.isIntersecting) return;
+      e.target.style.width = e.target.dataset.fill + '%';
+      pio.unobserve(e.target);
+    });
+  }, { threshold:.5 });
+  document.querySelectorAll('.barfill').forEach(function(b){ pio.observe(b); });
+
+  var freq='once', amount=50;
+  var freqBtns=document.querySelectorAll('.freq-btn'), amtBtns=document.querySelectorAll('.amt-btn');
+  var customInput=document.querySelector('.amt-custom input'), donateBtn=document.querySelector('.donate-btn');
+  function fmt(){
+    if(!amount || amount<1){ donateBtn.textContent='Donate'; return; }
+    donateBtn.textContent = 'Donate $'+(+amount).toLocaleString() + (freq==='monthly'?' / month':'');
+  }
+  function selectAmt(btn){
+    amtBtns.forEach(function(b){ b.style.borderColor=''; b.style.background=''; b.style.boxShadow=''; });
+    if(btn){ btn.style.borderColor='#E23B3B'; btn.style.background='rgba(226,59,59,.12)'; btn.style.boxShadow='0 0 0 1px #E23B3B inset'; }
+  }
+  amtBtns.forEach(function(b){
+    b.addEventListener('click', function(){ amount=+b.dataset.amt; customInput.value=''; selectAmt(b); fmt(); });
+  });
+  customInput.addEventListener('input', function(){ amount=+customInput.value; selectAmt(null); fmt(); });
+  freqBtns.forEach(function(b){
+    b.addEventListener('click', function(){
+      freq=b.dataset.freq;
+      freqBtns.forEach(function(x){
+        var on = x===b;
+        x.setAttribute('aria-pressed', on);
+        x.style.background = on ? '#1A1E27' : '';
+        x.style.color = on ? '#F2F3F5' : '';
+        x.style.boxShadow = on ? '0 1px 3px rgba(0,0,0,.5)' : '';
+        x.classList.toggle('text-muted', !on);
+      });
+      fmt();
+    });
+  });
+  (function(){ var d=document.querySelector('.amt-btn[data-amt="50"]'); if(d) selectAmt(d); })();
+  freqBtns[0].style.background='#1A1E27'; freqBtns[0].style.boxShadow='0 1px 3px rgba(0,0,0,.5)';
+  fmt();
+
+  var nav=document.getElementById('nav'), fb=document.querySelector('.floatbtn');
+  function onScroll(){
+    var y=window.scrollY;
+    nav.style.boxShadow = y>8 ? '0 1px 0 rgba(255,255,255,.04), 0 10px 30px -16px rgba(0,0,0,.8)' : 'none';
+    fb.classList.toggle('show', y>680);
+  }
+  onScroll(); window.addEventListener('scroll', onScroll, { passive:true });
+})();
+</script>
+</body>
+</html>

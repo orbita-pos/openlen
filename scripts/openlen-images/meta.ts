@@ -1,11 +1,11 @@
 // Source-of-truth metadata for the "Imagenes by OpenLen" set.
 //
-// 230 entries, paired by index with the PNGs in Downloads/img-chatgpt sorted by
+// 406 entries, paired by index with the PNGs in Downloads/img-chatgpt sorted by
 // file mtime (= generation order = prompt order). Prompt #19 (brutalist
-// concrete) was skipped during generation, so promptNum runs 1..231 with a gap
-// at 19 — 230 images total. Entries are stored in mtime order, which usually
-// matches promptNum order — except a prompt regenerated late (e.g. #170), which
-// is listed in its mtime position within its batch, not by promptNum.
+// concrete) was skipped during generation, so promptNum runs 1..407 with a gap
+// at 19 — 406 images total. Entries are stored in mtime order, which usually
+// matches promptNum order — except prompts regenerated late (#170, #272), which
+// are listed in their mtime position within their batch, not by promptNum.
 //
 // `family` values reference TemplateFamily slugs in lib/templates/families.ts
 // so the image picker can filter by the active template's family directly.
@@ -23,7 +23,13 @@ export type ImageStyle =
   | "product-still-life"
   | "food-editorial"
   | "interior-editorial"
-  | "nature-editorial";
+  | "nature-editorial"
+  | "architecture-editorial"
+  | "lifestyle-editorial"
+  | "gradient-bg"
+  | "pet-editorial"
+  | "creator-mockup"
+  | "sports-editorial";
 
 export interface ImageMeta {
   promptNum: number;
@@ -286,9 +292,219 @@ export const IMAGE_META: ImageMeta[] = [
   { promptNum: 229, slug: "palm-oasis",           style: "nature-editorial",        family: ["travel", "hospitality"],         alt: "Editorial landscape photograph of a desert palm grove oasis around still water" },
   { promptNum: 230, slug: "glacier-landscape",    style: "nature-editorial",        family: ["climate", "travel"],             alt: "Editorial landscape photograph of a glacier landscape with pale blue ice and a meltwater lagoon" },
   { promptNum: 231, slug: "wildflower-meadow",    style: "nature-editorial",        family: ["wellness", "climate"],           alt: "Editorial landscape photograph of an alpine wildflower meadow with mountains behind" },
+  // 2026-05-22 batch — 24 architecture-editorial photographs (modern buildings,
+  // houses, facades); photoreal exteriors, no people. Generated in prompt order,
+  // so mtime order = promptNum order 232..255.
+  { promptNum: 232, slug: "glass-office-tower",     style: "architecture-editorial",    family: ["real-estate", "saas"],            alt: "Editorial architecture photograph of a modern glass office tower with a sleek curtain-wall facade" },
+  { promptNum: 233, slug: "concrete-house",         style: "architecture-editorial",    family: ["real-estate", "portfolio"],       alt: "Editorial architecture photograph of a minimalist concrete house with clean geometric volumes" },
+  { promptNum: 234, slug: "villa-with-pool",        style: "architecture-editorial",    family: ["real-estate", "hospitality"],     alt: "Editorial architecture photograph of a modern villa with glass walls and a turquoise pool" },
+  { promptNum: 235, slug: "brutalist-facade",       style: "architecture-editorial",    family: ["agency", "editorial"],            alt: "Editorial architecture photograph of a brutalist building facade in bold raw concrete" },
+  { promptNum: 236, slug: "wood-cabin",             style: "architecture-editorial",    family: ["hospitality", "travel"],          alt: "Editorial architecture photograph of a Scandinavian timber cabin set among trees" },
+  { promptNum: 237, slug: "glass-house-dusk",       style: "architecture-editorial",    family: ["real-estate", "editorial"],       alt: "Editorial architecture photograph of a glass-walled modern home glowing warm at dusk" },
+  { promptNum: 238, slug: "highrise-skyline",       style: "architecture-editorial",    family: ["real-estate", "fintech"],         alt: "Editorial architecture photograph of an urban high-rise skyline of modern glass towers" },
+  { promptNum: 239, slug: "mid-century-house",      style: "architecture-editorial",    family: ["real-estate", "portfolio"],       alt: "Editorial architecture photograph of a mid-century modern house with warm wood and glass" },
+  { promptNum: 240, slug: "contemporary-museum",    style: "architecture-editorial",    family: ["editorial", "agency"],            alt: "Editorial architecture photograph of a curved contemporary museum with a sculptural facade" },
+  { promptNum: 241, slug: "coastal-house",          style: "architecture-editorial",    family: ["real-estate", "hospitality"],     alt: "Editorial architecture photograph of a coastal modern house with white volumes over the sea" },
+  { promptNum: 242, slug: "apartment-block",        style: "architecture-editorial",    family: ["real-estate", "commerce"],        alt: "Editorial architecture photograph of a contemporary apartment block with a rhythmic balcony facade" },
+  { promptNum: 243, slug: "modern-barn-house",      style: "architecture-editorial",    family: ["hospitality", "travel"],          alt: "Editorial architecture photograph of a modern barn-style house in dark cladding in open countryside" },
+  { promptNum: 244, slug: "black-timber-house",     style: "architecture-editorial",    family: ["real-estate", "portfolio"],       alt: "Editorial architecture photograph of a black timber modern house framed by greenery" },
+  { promptNum: 245, slug: "rooftop-garden-building",style: "architecture-editorial",    family: ["real-estate", "climate"],         alt: "Editorial architecture photograph of a modern building with cascading rooftop garden terraces" },
+  { promptNum: 246, slug: "white-pavilion",         style: "architecture-editorial",    family: ["agency", "editorial"],            alt: "Editorial architecture photograph of a minimalist white pavilion with slender columns" },
+  { promptNum: 247, slug: "townhouse-row",          style: "architecture-editorial",    family: ["real-estate", "local-services"],  alt: "Editorial architecture photograph of a row of modern townhouses with warm varied facades" },
+  { promptNum: 248, slug: "converted-loft-building",style: "architecture-editorial",    family: ["agency", "creator"],              alt: "Editorial architecture photograph of a converted industrial loft building with exposed brick" },
+  { promptNum: 249, slug: "desert-house",           style: "architecture-editorial",    family: ["real-estate", "travel"],          alt: "Editorial architecture photograph of a desert modern house in earth tones blending into sand" },
+  { promptNum: 250, slug: "spiral-staircase",       style: "architecture-editorial",    family: ["editorial", "portfolio"],         alt: "Editorial architecture photograph of a sculptural exterior spiral staircase against a clean facade" },
+  { promptNum: 251, slug: "hotel-facade",           style: "architecture-editorial",    family: ["hospitality", "travel"],          alt: "Editorial architecture photograph of a modern boutique hotel facade with a refined entrance" },
+  { promptNum: 252, slug: "suburban-home",          style: "architecture-editorial",    family: ["real-estate", "local-services"],  alt: "Editorial architecture photograph of a suburban modern family home with a tidy front garden" },
+  { promptNum: 253, slug: "cantilever-house",       style: "architecture-editorial",    family: ["real-estate", "editorial"],       alt: "Editorial architecture photograph of a modern cantilever house projecting over a sloped landscape" },
+  { promptNum: 254, slug: "campus-building",        style: "architecture-editorial",    family: ["education", "editorial"],         alt: "Editorial architecture photograph of a modern campus building with rhythmic glazing" },
+  { promptNum: 255, slug: "night-facade",           style: "architecture-editorial",    family: ["real-estate", "agency"],          alt: "Editorial architecture photograph of a modern building facade lit warm at night" },
+  // 2026-05-23 batch — 24 lifestyle-editorial photographs (hands + objects, partial
+  // body, no faces); first style with humans beyond fashion/clay. Listed in mtime
+  // order: #272 (cradling-houseplant) was regenerated late, so it sorts last.
+  { promptNum: 256, slug: "typing-on-laptop",       style: "lifestyle-editorial",      family: ["saas", "agency"],                 alt: "Editorial lifestyle photograph of hands typing on a slim laptop with a notebook and mug beside" },
+  { promptNum: 257, slug: "holding-mug",            style: "lifestyle-editorial",      family: ["hospitality", "creator"],         alt: "Editorial lifestyle photograph of a hand wrapped around a warm ceramic mug with soft steam" },
+  { promptNum: 258, slug: "writing-notebook",       style: "lifestyle-editorial",      family: ["education", "creator"],           alt: "Editorial lifestyle photograph of hands writing in an open notebook with a fine pen" },
+  { promptNum: 259, slug: "unlocking-phone",        style: "lifestyle-editorial",      family: ["saas", "fintech"],                alt: "Editorial lifestyle photograph of a hand holding a modern smartphone with a softly glowing screen" },
+  { promptNum: 260, slug: "holding-book",           style: "lifestyle-editorial",      family: ["education", "editorial"],         alt: "Editorial lifestyle photograph of hands holding an open paperback book in a warm interior" },
+  { promptNum: 261, slug: "cradling-tea",           style: "lifestyle-editorial",      family: ["wellness", "hospitality"],        alt: "Editorial lifestyle photograph of both hands cradling a glass cup of herbal tea" },
+  { promptNum: 262, slug: "card-payment",           style: "lifestyle-editorial",      family: ["fintech", "commerce"],            alt: "Editorial lifestyle photograph of a hand tapping a credit card on a modern payment terminal" },
+  { promptNum: 263, slug: "wrapping-parcel",        style: "lifestyle-editorial",      family: ["ecommerce", "commerce"],          alt: "Editorial lifestyle photograph of hands tying twine around a kraft-paper parcel" },
+  { promptNum: 264, slug: "holding-camera",         style: "lifestyle-editorial",      family: ["creator", "portfolio"],           alt: "Editorial lifestyle photograph of hands holding a small mirrorless camera at chest height" },
+  { promptNum: 265, slug: "sketching-tablet",       style: "lifestyle-editorial",      family: ["creator", "agency"],              alt: "Editorial lifestyle photograph of a hand drawing on a digital tablet with a stylus" },
+  { promptNum: 266, slug: "pouring-coffee",         style: "lifestyle-editorial",      family: ["hospitality", "food-beverage"],   alt: "Editorial lifestyle photograph of a hand pouring water from a gooseneck kettle into a pour-over" },
+  { promptNum: 267, slug: "tying-running-shoe",     style: "lifestyle-editorial",      family: ["wellness", "health-tech"],        alt: "Editorial lifestyle photograph of hands tying the laces of a modern running shoe" },
+  { promptNum: 268, slug: "hand-out-window",        style: "lifestyle-editorial",      family: ["travel", "editorial"],            alt: "Editorial lifestyle photograph of a hand resting out of a moving car window in golden light" },
+  { promptNum: 269, slug: "kneading-dough",         style: "lifestyle-editorial",      family: ["hospitality", "food-beverage"],   alt: "Editorial lifestyle photograph of hands kneading soft bread dough on a floured wooden board" },
+  { promptNum: 270, slug: "holding-bouquet",        style: "lifestyle-editorial",      family: ["event", "wedding"],               alt: "Editorial lifestyle photograph of hands holding a soft seasonal bouquet of flowers" },
+  { promptNum: 271, slug: "walking-behind",         style: "lifestyle-editorial",      family: ["travel", "fashion"],              alt: "Editorial lifestyle photograph of a figure from behind walking down a quiet sunlit street" },
+  { promptNum: 273, slug: "holding-passport",       style: "lifestyle-editorial",      family: ["travel", "editorial"],            alt: "Editorial lifestyle photograph of hands holding an open passport over a wooden table" },
+  { promptNum: 274, slug: "hand-on-synth",          style: "lifestyle-editorial",      family: ["music", "podcast"],               alt: "Editorial lifestyle photograph of a hand pressing a key on a small modern synthesizer" },
+  { promptNum: 275, slug: "pottery-wheel",          style: "lifestyle-editorial",      family: ["creator", "portfolio"],           alt: "Editorial lifestyle photograph of hands shaping wet clay on a spinning pottery wheel" },
+  { promptNum: 276, slug: "ribbon-gift-box",        style: "lifestyle-editorial",      family: ["ecommerce", "event"],             alt: "Editorial lifestyle photograph of hands tying a soft fabric ribbon on a paper gift box" },
+  { promptNum: 277, slug: "washing-vegetables",     style: "lifestyle-editorial",      family: ["wellness", "food-beverage"],      alt: "Editorial lifestyle photograph of hands rinsing fresh vegetables under a clean stream of water" },
+  { promptNum: 278, slug: "paint-brush-canvas",     style: "lifestyle-editorial",      family: ["creator", "agency"],              alt: "Editorial lifestyle photograph of a hand holding a paint brush poised over a canvas" },
+  { promptNum: 279, slug: "holding-magazine",       style: "lifestyle-editorial",      family: ["editorial", "fashion"],           alt: "Editorial lifestyle photograph of hands holding an open magazine in a cozy interior" },
+  { promptNum: 272, slug: "cradling-houseplant",    style: "lifestyle-editorial",      family: ["wellness", "climate"],            alt: "Editorial lifestyle photograph of hands gently cradling a small potted houseplant" },
+  // 2026-05-23 batch — 24 gradient-bg full-bleed backgrounds (mesh gradients, film
+  // grain, material textures, iridescent). NOT heroes — full-frame section bgs,
+  // no subject. Generated in prompt order, so mtime order = promptNum 280..303.
+  { promptNum: 280, slug: "mesh-coral",             style: "gradient-bg",              family: ["agency", "creator"],              alt: "Abstract soft mesh gradient background with coral, peach and warm pink blobs" },
+  { promptNum: 281, slug: "mesh-blue-violet",       style: "gradient-bg",              family: ["saas", "fintech"],                alt: "Abstract soft mesh gradient background with deep blue, indigo and soft violet" },
+  { promptNum: 282, slug: "mesh-peach-cream",       style: "gradient-bg",              family: ["wellness", "hospitality"],        alt: "Abstract soft mesh gradient background with warm peach, cream and pale apricot" },
+  { promptNum: 283, slug: "mesh-mint-sage",         style: "gradient-bg",              family: ["wellness", "climate"],            alt: "Abstract soft mesh gradient background with mint, soft sage and pale aqua" },
+  { promptNum: 284, slug: "mesh-sunset",            style: "gradient-bg",              family: ["travel", "editorial"],            alt: "Abstract soft mesh gradient background evoking a hazy sunset of orange, rose and twilight blue" },
+  { promptNum: 285, slug: "mesh-sky",               style: "gradient-bg",              family: ["travel", "saas"],                 alt: "Abstract soft mesh gradient background of pale sky blues" },
+  { promptNum: 286, slug: "mesh-lavender",          style: "gradient-bg",              family: ["wellness", "event"],              alt: "Abstract soft mesh gradient background with soft lavender, dusty pink and pale cream" },
+  { promptNum: 287, slug: "mesh-golden-amber",      style: "gradient-bg",              family: ["hospitality", "editorial"],       alt: "Abstract soft mesh gradient background with golden amber, honey and soft cream" },
+  { promptNum: 288, slug: "grain-warm",             style: "gradient-bg",              family: ["editorial", "agency"],            alt: "Abstract warm-toned film-grain background in cream and dusty peach" },
+  { promptNum: 289, slug: "grain-cool",             style: "gradient-bg",              family: ["saas", "agency"],                 alt: "Abstract cool-toned film-grain background in pale grey-blue and cool stone" },
+  { promptNum: 290, slug: "grain-neutral",          style: "gradient-bg",              family: ["portfolio", "technical-minimal"], alt: "Abstract neutral-toned film-grain background in warm beige and pale taupe" },
+  { promptNum: 291, slug: "grain-pastel",           style: "gradient-bg",              family: ["creator", "agency"],              alt: "Abstract pastel-toned film-grain background in pale mint, soft peach and pale lilac" },
+  { promptNum: 292, slug: "paper-soft",             style: "gradient-bg",              family: ["editorial", "education"],         alt: "Photoreal soft paper texture background with fine fibers" },
+  { promptNum: 293, slug: "kraft-texture",          style: "gradient-bg",              family: ["ecommerce", "commerce"],          alt: "Photoreal kraft-paper texture background with visible fiber and warm brown tone" },
+  { promptNum: 294, slug: "linen-texture",          style: "gradient-bg",              family: ["hospitality", "fashion"],         alt: "Photoreal linen fabric texture background with fine natural threads" },
+  { promptNum: 295, slug: "marble-white",           style: "gradient-bg",              family: ["editorial", "commerce"],          alt: "Photoreal white marble texture background with soft grey veining" },
+  { promptNum: 296, slug: "frosted-glass",          style: "gradient-bg",              family: ["saas", "fintech"],                alt: "Photoreal frosted glass background with diffused cool light shapes" },
+  { promptNum: 297, slug: "brushed-metal",          style: "gradient-bg",              family: ["hardware", "technical-minimal"],  alt: "Photoreal brushed-metal texture background with fine linear brush marks" },
+  { promptNum: 298, slug: "suede-texture",          style: "gradient-bg",              family: ["fashion", "ecommerce"],           alt: "Photoreal soft suede fabric texture background with warm taupe nap" },
+  { promptNum: 299, slug: "silk-fabric",            style: "gradient-bg",              family: ["fashion", "wedding"],             alt: "Photoreal soft silk fabric texture background in champagne tones" },
+  { promptNum: 300, slug: "holographic",            style: "gradient-bg",              family: ["creator", "gaming"],              alt: "Abstract holographic gradient background with iridescent pink, cyan, lavender and gold" },
+  { promptNum: 301, slug: "oil-water",              style: "gradient-bg",              family: ["editorial", "music"],             alt: "Abstract oil-on-water background with swirling teal, magenta and gold ripples" },
+  { promptNum: 302, slug: "bokeh-blur",             style: "gradient-bg",              family: ["event", "editorial"],             alt: "Abstract bokeh background with warm amber out-of-focus light circles on a warm dark gradient" },
+  { promptNum: 303, slug: "light-leak",             style: "gradient-bg",              family: ["editorial", "music"],             alt: "Abstract analog light-leak background with soft orange and pink flares on a muted wash" },
+  // 2026-05-23 batch — 24 pet-editorial photographs (dogs/cats/horses/wildlife);
+  // photoreal close-up, no human faces. Generated in prompt order, so mtime
+  // order = promptNum 304..327.
+  { promptNum: 304, slug: "golden-retriever",       style: "pet-editorial",            family: ["local-services", "ecommerce"],    alt: "Editorial pet photograph of a golden retriever sitting in warm outdoor light" },
+  { promptNum: 305, slug: "sleeping-kitten",        style: "pet-editorial",            family: ["wellness", "creator"],            alt: "Editorial pet photograph of a small kitten curled asleep on a soft blanket" },
+  { promptNum: 306, slug: "tabby-cat-window",       style: "pet-editorial",            family: ["editorial", "creator"],           alt: "Editorial pet photograph of a tabby cat on a sunny windowsill looking outside" },
+  { promptNum: 307, slug: "lab-on-hike",            style: "pet-editorial",            family: ["travel", "wellness"],             alt: "Editorial pet photograph of a black labrador pausing on a forest trail" },
+  { promptNum: 308, slug: "puppy-in-basket",        style: "pet-editorial",            family: ["local-services", "ecommerce"],    alt: "Editorial pet photograph of a small puppy resting inside a woven basket" },
+  { promptNum: 309, slug: "cat-with-toy",           style: "pet-editorial",            family: ["local-services", "ecommerce"],    alt: "Editorial pet photograph of a young cat mid-pounce on a soft toy" },
+  { promptNum: 310, slug: "dog-agility",            style: "pet-editorial",            family: ["health-tech", "local-services"],  alt: "Editorial pet photograph of a healthy dog mid-stride on an agility course" },
+  { promptNum: 311, slug: "kittens-cuddling",       style: "pet-editorial",            family: ["creator", "nonprofit"],           alt: "Editorial pet photograph of two small kittens curled up together asleep" },
+  { promptNum: 312, slug: "collie-running",         style: "pet-editorial",            family: ["travel", "wellness"],             alt: "Editorial pet photograph of a border collie running across a green field" },
+  { promptNum: 313, slug: "white-horse",            style: "pet-editorial",            family: ["travel", "hospitality"],          alt: "Editorial animal photograph of a white horse standing calmly in a green pasture" },
+  { promptNum: 314, slug: "brown-horse",            style: "pet-editorial",            family: ["travel", "editorial"],            alt: "Editorial animal photograph of a brown horse's head in warm close-up" },
+  { promptNum: 315, slug: "fox-autumn",             style: "pet-editorial",            family: ["climate", "editorial"],           alt: "Editorial wildlife photograph of a red fox alert among autumn ferns" },
+  { promptNum: 316, slug: "deer-mist",              style: "pet-editorial",            family: ["climate", "travel"],              alt: "Editorial wildlife photograph of a deer in a misty morning meadow" },
+  { promptNum: 317, slug: "rabbit-closeup",         style: "pet-editorial",            family: ["local-services", "nonprofit"],    alt: "Editorial pet photograph of a small rabbit in soft natural surroundings" },
+  { promptNum: 318, slug: "hummingbird-flight",     style: "pet-editorial",            family: ["climate", "editorial"],           alt: "Editorial wildlife photograph of a hummingbird hovering at a bright flower" },
+  { promptNum: 319, slug: "owl-on-branch",          style: "pet-editorial",            family: ["editorial", "climate"],           alt: "Editorial wildlife photograph of an owl perched on a mossy branch in a forest" },
+  { promptNum: 320, slug: "whale-tail",             style: "pet-editorial",            family: ["climate", "travel"],              alt: "Editorial wildlife photograph of a whale tail rising above a calm ocean surface" },
+  { promptNum: 321, slug: "sea-otter",              style: "pet-editorial",            family: ["climate", "nonprofit"],           alt: "Editorial wildlife photograph of a sea otter floating on its back on calm water" },
+  { promptNum: 322, slug: "sheep-in-meadow",        style: "pet-editorial",            family: ["hospitality", "food-beverage"],   alt: "Editorial animal photograph of a sheep standing in a soft green meadow" },
+  { promptNum: 323, slug: "bee-on-flower",          style: "pet-editorial",            family: ["climate", "food-beverage"],       alt: "Editorial wildlife macro of a bee on a soft blooming flower" },
+  { promptNum: 324, slug: "tropical-fish",          style: "pet-editorial",            family: ["climate", "travel"],              alt: "Editorial wildlife photograph of a vivid tropical fish above colorful coral" },
+  { promptNum: 325, slug: "eagle-in-flight",        style: "pet-editorial",            family: ["travel", "editorial"],            alt: "Editorial wildlife photograph of an eagle in mid-flight against soft mountains" },
+  { promptNum: 326, slug: "dog-paw-on-hand",        style: "pet-editorial",            family: ["local-services", "nonprofit"],    alt: "Editorial pet photograph of a dog's paw resting gently on a human hand" },
+  { promptNum: 327, slug: "cat-window-portrait",    style: "pet-editorial",            family: ["editorial", "creator"],           alt: "Editorial pet photograph of a cat in soft window light" },
+  // 2026-05-24 batch — 24 creator-mockup device renders (streamer/podcast/creator
+  // content shown on monitors/laptops/tablets/phones); parallel to device-mockup
+  // but content-focused for creator templates. Generated in prompt order, so
+  // mtime order = promptNum 328..351.
+  { promptNum: 328, slug: "stream-interface",       style: "creator-mockup",           family: ["creator", "music"],               alt: "Device mockup of a wide monitor showing a live-stream interface with chat panel" },
+  { promptNum: 329, slug: "youtube-thumbnail-grid", style: "creator-mockup",           family: ["creator", "editorial"],           alt: "Device mockup of a tablet showing a grid of video thumbnails" },
+  { promptNum: 330, slug: "tiktok-feed",            style: "creator-mockup",           family: ["creator", "fashion"],             alt: "Device mockup of a smartphone showing a vertical short-video feed" },
+  { promptNum: 331, slug: "reels-feed",             style: "creator-mockup",           family: ["creator", "fashion"],             alt: "Device mockup of a smartphone showing a vertical reels-style feed" },
+  { promptNum: 332, slug: "podcast-app",            style: "creator-mockup",           family: ["podcast", "music"],               alt: "Device mockup of a smartphone showing a podcast now-playing screen" },
+  { promptNum: 333, slug: "video-editor",           style: "creator-mockup",           family: ["creator", "agency"],              alt: "Device mockup of a laptop showing a video-editing timeline workspace" },
+  { promptNum: 334, slug: "streaming-software",     style: "creator-mockup",           family: ["creator", "gaming"],              alt: "Device mockup of a wide monitor showing a streaming control interface" },
+  { promptNum: 335, slug: "podcast-cover-design",   style: "creator-mockup",           family: ["podcast", "creator"],             alt: "Device mockup of a tablet showing a podcast cover-art design canvas" },
+  { promptNum: 336, slug: "link-in-bio",            style: "creator-mockup",           family: ["creator", "portfolio"],           alt: "Device mockup of a smartphone showing a clean link-in-bio page" },
+  { promptNum: 337, slug: "stream-analytics",       style: "creator-mockup",           family: ["creator", "saas"],                alt: "Device mockup of a laptop showing a streamer analytics dashboard" },
+  { promptNum: 338, slug: "youtube-channel-page",   style: "creator-mockup",           family: ["creator", "editorial"],           alt: "Device mockup of a laptop showing a clean creator channel page" },
+  { promptNum: 339, slug: "spotify-podcast-list",   style: "creator-mockup",           family: ["podcast", "music"],               alt: "Device mockup of a smartphone showing a podcast-discovery list" },
+  { promptNum: 340, slug: "creator-profile",        style: "creator-mockup",           family: ["creator", "portfolio"],           alt: "Device mockup of a smartphone showing a clean creator profile page" },
+  { promptNum: 341, slug: "color-grading",          style: "creator-mockup",           family: ["creator", "agency"],              alt: "Device mockup of a wide monitor showing a video color-grading workspace" },
+  { promptNum: 342, slug: "newsletter-editor",      style: "creator-mockup",           family: ["creator", "editorial"],           alt: "Device mockup of a laptop showing a clean newsletter writing interface" },
+  { promptNum: 343, slug: "course-player",          style: "creator-mockup",           family: ["creator", "education"],           alt: "Device mockup of a laptop showing a clean online course player" },
+  { promptNum: 344, slug: "brand-sketches",         style: "creator-mockup",           family: ["creator", "agency"],              alt: "Device mockup of a tablet showing a creator-brand design canvas" },
+  { promptNum: 345, slug: "gaming-stream-layout",   style: "creator-mockup",           family: ["gaming", "creator"],              alt: "Device mockup of a wide monitor showing a gaming-stream layout" },
+  { promptNum: 346, slug: "follower-milestone",     style: "creator-mockup",           family: ["creator", "music"],               alt: "Device mockup of a smartphone showing a follower-milestone celebration screen" },
+  { promptNum: 347, slug: "thumbnail-design",       style: "creator-mockup",           family: ["creator", "editorial"],           alt: "Device mockup of a tablet showing a video-thumbnail design canvas" },
+  { promptNum: 348, slug: "merch-store",            style: "creator-mockup",           family: ["creator", "ecommerce"],           alt: "Device mockup of a laptop showing a clean creator merch store" },
+  { promptNum: 349, slug: "membership-tiers",       style: "creator-mockup",           family: ["creator", "music"],               alt: "Device mockup of a laptop showing a clean creator membership page with tiers" },
+  { promptNum: 350, slug: "multicam-recording",     style: "creator-mockup",           family: ["creator", "music"],               alt: "Device mockup of a wide monitor showing a multi-camera recording interface" },
+  { promptNum: 351, slug: "reels-editor",           style: "creator-mockup",           family: ["creator", "agency"],              alt: "Device mockup of a smartphone showing a vertical short-video editing interface" },
+  // 2026-05-24 batch — 24 sports-editorial photographs (running/cycling/yoga/surf/
+  // climb/swim/gym/combat/team/water/winter/skate); photoreal with motion blur,
+  // partial body, no faces. First style with energy/movement (rest are calm).
+  // Generated in prompt order, so mtime order = promptNum 352..375.
+  { promptNum: 352, slug: "runner-urban",           style: "sports-editorial",         family: ["wellness", "health-tech"],        alt: "Editorial sports photograph of a runner mid-stride down a sunlit city street" },
+  { promptNum: 353, slug: "runner-trail",           style: "sports-editorial",         family: ["travel", "wellness"],             alt: "Editorial sports photograph of a trail runner mid-stride along a forest path" },
+  { promptNum: 354, slug: "runner-beach",           style: "sports-editorial",         family: ["wellness", "travel"],             alt: "Editorial sports photograph of a runner mid-stride on a beach at sunrise" },
+  { promptNum: 355, slug: "cyclist-road",           style: "sports-editorial",         family: ["wellness", "travel"],             alt: "Editorial sports photograph of a road cyclist mid-ride on a quiet open road" },
+  { promptNum: 356, slug: "cyclist-mountain",       style: "sports-editorial",         family: ["travel", "wellness"],             alt: "Editorial sports photograph of a mountain cyclist mid-descent on a rocky trail" },
+  { promptNum: 357, slug: "yoga-pose",              style: "sports-editorial",         family: ["wellness", "health-tech"],        alt: "Editorial sports photograph of a person holding a balanced yoga pose on a mat" },
+  { promptNum: 358, slug: "yoga-flow",              style: "sports-editorial",         family: ["wellness", "hospitality"],        alt: "Editorial sports photograph of a person in flowing motion between yoga poses" },
+  { promptNum: 359, slug: "pilates-mat",            style: "sports-editorial",         family: ["wellness", "health-tech"],        alt: "Editorial sports photograph of a person on a pilates mat in a clean studio" },
+  { promptNum: 360, slug: "surfer-wave",            style: "sports-editorial",         family: ["travel", "wellness"],             alt: "Editorial sports photograph of a surfer mid-turn on a clean wave" },
+  { promptNum: 361, slug: "surfer-paddling",        style: "sports-editorial",         family: ["travel", "hospitality"],          alt: "Editorial sports photograph of a surfer paddling out on calm morning water" },
+  { promptNum: 362, slug: "rock-climber",           style: "sports-editorial",         family: ["travel", "wellness"],             alt: "Editorial sports photograph of a rock climber mid-reach on a rugged cliff face" },
+  { promptNum: 363, slug: "indoor-climber",         style: "sports-editorial",         family: ["wellness", "health-tech"],        alt: "Editorial sports photograph of an indoor climber mid-move on a bouldering wall" },
+  { promptNum: 364, slug: "swimmer-pool",           style: "sports-editorial",         family: ["wellness", "health-tech"],        alt: "Editorial sports photograph of a swimmer mid-stroke in a clean pool" },
+  { promptNum: 365, slug: "weightlifter",           style: "sports-editorial",         family: ["wellness", "health-tech"],        alt: "Editorial sports photograph of a person lifting a barbell in a modern gym" },
+  { promptNum: 366, slug: "treadmill",              style: "sports-editorial",         family: ["wellness", "health-tech"],        alt: "Editorial sports photograph of legs mid-stride on a modern treadmill" },
+  { promptNum: 367, slug: "boxing-bag",             style: "sports-editorial",         family: ["wellness", "health-tech"],        alt: "Editorial sports photograph of a person mid-punch on a heavy boxing bag" },
+  { promptNum: 368, slug: "martial-arts",           style: "sports-editorial",         family: ["wellness", "education"],          alt: "Editorial sports photograph of a person mid-kick in a clean dojo" },
+  { promptNum: 369, slug: "basketball-shot",        style: "sports-editorial",         family: ["event", "wellness"],              alt: "Editorial sports photograph of a basketball shot mid-flight toward the hoop" },
+  { promptNum: 370, slug: "soccer-ball",            style: "sports-editorial",         family: ["event", "wellness"],              alt: "Editorial sports photograph of a soccer ball mid-kick on a sunlit grass field" },
+  { promptNum: 371, slug: "paddleboard",            style: "sports-editorial",         family: ["travel", "hospitality"],          alt: "Editorial sports photograph of a paddleboarder gliding across calm morning water" },
+  { promptNum: 372, slug: "kayak-river",            style: "sports-editorial",         family: ["travel", "wellness"],             alt: "Editorial sports photograph of a kayaker paddling down a clear river" },
+  { promptNum: 373, slug: "skier",                  style: "sports-editorial",         family: ["travel", "event"],                alt: "Editorial sports photograph of a skier mid-turn down a snowy alpine slope" },
+  { promptNum: 374, slug: "snowboarder",            style: "sports-editorial",         family: ["travel", "event"],                alt: "Editorial sports photograph of a snowboarder mid-carve down a snowy slope" },
+  { promptNum: 375, slug: "skateboarder",           style: "sports-editorial",         family: ["creator", "wellness"],            alt: "Editorial sports photograph of a skateboarder mid-trick on a sunlit urban plaza" },
+  // 2026-05-24 LUME drop — 8 branded beverage cans (one per flavor); filed under
+  // product-still-life so they ride the Products filter chip. Branded one-off,
+  // breaks the "unbranded" convention of the style on purpose at user's request.
+  { promptNum: 376, slug: "lume-lemon-lime",        style: "product-still-life",       family: ["ecommerce", "food-beverage"],     alt: "Product still-life of a LUME lemon-lime beverage can with a lime-green band and citrus splash" },
+  { promptNum: 377, slug: "lume-berry-blast",       style: "product-still-life",       family: ["ecommerce", "food-beverage"],     alt: "Product still-life of a LUME berry-blast beverage can with a magenta band and mixed berries" },
+  { promptNum: 378, slug: "lume-tropical-mango",    style: "product-still-life",       family: ["ecommerce", "food-beverage"],     alt: "Product still-life of a LUME tropical-mango beverage can with an orange band and mango" },
+  { promptNum: 379, slug: "lume-watermelon-crush",  style: "product-still-life",       family: ["ecommerce", "food-beverage"],     alt: "Product still-life of a LUME watermelon-crush beverage can with a coral band and watermelon" },
+  { promptNum: 380, slug: "lume-blue-raspberry",    style: "product-still-life",       family: ["ecommerce", "food-beverage"],     alt: "Product still-life of a LUME blue-raspberry beverage can with an electric-blue band" },
+  { promptNum: 381, slug: "lume-peach-mint",        style: "product-still-life",       family: ["ecommerce", "food-beverage"],     alt: "Product still-life of a LUME peach-mint beverage can with a soft-peach band and mint" },
+  { promptNum: 382, slug: "lume-grape-storm",       style: "product-still-life",       family: ["ecommerce", "food-beverage"],     alt: "Product still-life of a LUME grape-storm beverage can with a deep-purple band and grapes" },
+  { promptNum: 383, slug: "lume-citrus-spark",      style: "product-still-life",       family: ["ecommerce", "food-beverage"],     alt: "Product still-life of a LUME citrus-spark beverage can with a golden-yellow band and citrus" },
+  // Transparent cutouts of the 8 LUME cans — background removed in Canva. Share promptNums 376-383 with the with-bg originals (only the `-nobg` slug suffix differs); the R2 keys are `<promptNum>-<slug>-<width>.webp`.
+  { promptNum: 376, slug: "lume-lemon-lime-nobg",       style: "product-still-life",       family: ["ecommerce", "food-beverage"],     alt: "Transparent cutout of a LUME lemon-lime beverage can — no background" },
+  { promptNum: 377, slug: "lume-berry-blast-nobg",      style: "product-still-life",       family: ["ecommerce", "food-beverage"],     alt: "Transparent cutout of a LUME berry-blast beverage can — no background" },
+  { promptNum: 378, slug: "lume-tropical-mango-nobg",   style: "product-still-life",       family: ["ecommerce", "food-beverage"],     alt: "Transparent cutout of a LUME tropical-mango beverage can — no background" },
+  { promptNum: 379, slug: "lume-watermelon-crush-nobg", style: "product-still-life",       family: ["ecommerce", "food-beverage"],     alt: "Transparent cutout of a LUME watermelon-crush beverage can — no background" },
+  { promptNum: 380, slug: "lume-blue-raspberry-nobg",   style: "product-still-life",       family: ["ecommerce", "food-beverage"],     alt: "Transparent cutout of a LUME blue-raspberry beverage can — no background" },
+  { promptNum: 381, slug: "lume-peach-mint-nobg",       style: "product-still-life",       family: ["ecommerce", "food-beverage"],     alt: "Transparent cutout of a LUME peach-mint beverage can — no background" },
+  { promptNum: 382, slug: "lume-grape-storm-nobg",      style: "product-still-life",       family: ["ecommerce", "food-beverage"],     alt: "Transparent cutout of a LUME grape-storm beverage can — no background" },
+  { promptNum: 383, slug: "lume-citrus-spark-nobg",     style: "product-still-life",       family: ["ecommerce", "food-beverage"],     alt: "Transparent cutout of a LUME citrus-spark beverage can — no background" },
+  // 2026-05-24 Japan-dark editorial drop — 8 cinematic night-scene assets for a
+  // Japan-themed template (sakura/Fuji/bamboo/Tokyo alley/onsen/torii/ryokan/zen).
+  // Themed subset distributed across nature/architecture/interior styles by scene;
+  // slug prefix `japan-` keeps the set findable. Source aspect ratios mixed
+  // (square + landscape) — non-uniform in the picker grid by nature of the brief.
+  { promptNum: 392, slug: "japan-sakura-tree",      style: "nature-editorial",         family: ["travel", "editorial"],            alt: "Editorial nighttime photograph of a glowing sakura tree on a dark hillside with falling petals" },
+  { promptNum: 393, slug: "japan-fuji-twilight",    style: "nature-editorial",         family: ["travel", "editorial"],            alt: "Editorial nighttime photograph of Mt Fuji silhouette mirrored in a dark lake with neon-pink twilight clouds" },
+  { promptNum: 394, slug: "japan-bamboo-forest",    style: "nature-editorial",         family: ["travel", "wellness"],             alt: "Editorial nighttime photograph of a Kyoto bamboo forest with a golden beam of light through mist" },
+  { promptNum: 395, slug: "japan-tokyo-alley",      style: "architecture-editorial",   family: ["travel", "editorial"],            alt: "Editorial nighttime photograph of a Tokyo back-alley wet with rain reflecting magenta neon signs" },
+  { promptNum: 396, slug: "japan-onsen-night",      style: "nature-editorial",         family: ["hospitality", "wellness"],        alt: "Editorial nighttime photograph of an outdoor onsen with rising steam and a stone lantern" },
+  { promptNum: 397, slug: "japan-torii-gate",       style: "architecture-editorial",   family: ["travel", "editorial"],            alt: "Editorial nighttime photograph of a traditional Japanese torii gate with falling sakura petals" },
+  { promptNum: 398, slug: "japan-ryokan-interior",  style: "interior-editorial",       family: ["hospitality", "travel"],          alt: "Editorial nighttime photograph of a ryokan interior with shoji doors, andon lantern and tea on tatami" },
+  { promptNum: 399, slug: "japan-zen-garden",       style: "nature-editorial",         family: ["wellness", "hospitality"],        alt: "Editorial overhead photograph of a zen rock garden with glowing pink mist between mossy stones" },
+  // 2026-05-25 World Cup 2026 editorial drop — 8 stylized illustration assets
+  // for a WC2026 template (footballers/trophy/stadium/host-city skyline). Themed
+  // subset distributed by scene; slug prefix `worldcup-` keeps the set findable.
+  // Illustrated mural style, NOT photoreal — breaks the convention of host styles
+  // on purpose at user's request.
+  { promptNum: 400, slug: "worldcup-striker",       style: "sports-editorial",         family: ["event", "creator"],               alt: "Editorial illustration of a footballer mid-strike in a black-and-red jersey with celebratory papel picado and confetti" },
+  { promptNum: 401, slug: "worldcup-celebration",   style: "sports-editorial",         family: ["event", "creator"],               alt: "Editorial illustration of a footballer in a SIUUU celebration pose with red, yellow and blue color blocks and confetti" },
+  { promptNum: 402, slug: "worldcup-captain",       style: "sports-editorial",         family: ["event", "creator"],               alt: "Editorial illustration of a captain footballer dribbling in a sky-blue striped jersey with green and white color blocks" },
+  { promptNum: 403, slug: "worldcup-sprint",        style: "sports-editorial",         family: ["event", "creator"],               alt: "Editorial illustration of a tall footballer at full sprint in a royal-blue 10 jersey with red speed lines" },
+  { promptNum: 404, slug: "worldcup-goalkeeper",    style: "sports-editorial",         family: ["event", "creator"],               alt: "Editorial illustration of a goalkeeper in mid-air horizontal dive with green-yellow jersey on a red and white backdrop" },
+  { promptNum: 405, slug: "worldcup-trophy",        style: "product-still-life",       family: ["event", "ecommerce"],             alt: "Editorial illustration of a gold trophy with a soccer ball at its base on a red, green and white color-blocked background" },
+  { promptNum: 406, slug: "worldcup-stadium",       style: "architecture-editorial",   family: ["event", "travel"],                alt: "Editorial illustration of a packed modern football stadium with impressionist crowd brush strokes and floating confetti" },
+  { promptNum: 407, slug: "worldcup-skyline",       style: "architecture-editorial",   family: ["event", "travel"],                alt: "Editorial illustration of the NYC Manhattan skyline silhouette against a vibrant orange-red sunset with painterly clouds" },
 ];
 
 // Sanity: catch a future drift between this list and what process.ts expects.
-if (IMAGE_META.length !== 230) {
-  throw new Error(`IMAGE_META must have 230 entries (got ${IMAGE_META.length})`);
+if (IMAGE_META.length !== 406) {
+  throw new Error(`IMAGE_META must have 406 entries (got ${IMAGE_META.length})`);
 }

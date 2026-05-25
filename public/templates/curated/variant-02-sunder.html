@@ -1,0 +1,1109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sunder — A fast, brutal action-roguelike.</title>
+<meta name="description" content="Sunder is a fast, brutal action-roguelike. Die, learn, descend a dungeon that remembers how you play. 240+ weapon combinations, 38 boss encounters, permadeath with permanent progression. Out now on Steam, PS5, and Xbox Series X|S." />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          sunder: '#0B0708',
+          molten: '#FF5A1F',
+          bone: '#F4ECE6',
+        },
+        fontFamily: {
+          sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          mono: ['Geist Mono', 'ui-monospace', 'Menlo', 'monospace'],
+        },
+      },
+    },
+  };
+</script>
+<style>
+  :root{
+    --bg:#0B0708;
+    --bg-2:#100B0C;
+    --bg-3:#15100F;
+    --card:#120D0D;
+    --ink:#F4ECE6;
+    --ink-2:#A39A93;
+    --ink-3:#6E655F;
+    --molten:#FF5A1F;
+    --molten-2:#FF7A45;
+    --molten-deep:#C23A0E;
+    --rule:rgba(255,255,255,0.06);
+    --rule-2:rgba(255,255,255,0.11);
+    --rule-molten:rgba(255,90,31,0.34);
+    --surface:rgba(255,255,255,0.025);
+  }
+  *{ -webkit-tap-highlight-color:transparent; }
+  html{ scroll-behavior:smooth; }
+  html,body{ background:var(--bg); color:var(--ink); }
+  body{
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+    font-feature-settings:"ss01","cv11";
+    font-optical-sizing:auto;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    line-height:1.55;
+  }
+  .display{ font-weight:900; letter-spacing:-0.04em; line-height:0.98; }
+  .display-tight{ font-weight:900; letter-spacing:-0.032em; line-height:1.06; }
+  .mono{ font-family:'Geist Mono',ui-monospace,Menlo,monospace; }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  em.accent{ font-style:normal; color:var(--molten); }
+
+  /* the half-tone trick — hero tagline's <em> only: dimmed, no accent, no italic */
+  .halftone{ opacity:0.45; font-style:normal; }
+
+  .marker{ font-family:'Geist Mono',monospace; font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:var(--ink-3); }
+  .accent-bar{ display:inline-block; width:22px; height:1px; background:var(--molten); vertical-align:middle; margin-right:9px; }
+  .rule{ border-color:var(--rule); }
+  .rule-2{ border-color:var(--rule-2); }
+  .rule-molten{ border-color:var(--rule-molten); }
+
+  /* 32px radial dot grid */
+  .dotgrid{
+    background-image:radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size:32px 32px;
+    background-position:-8px -8px;
+  }
+
+  /* layered mesh blobs — ember bloom */
+  .mesh-hero{
+    background-image:
+      radial-gradient(54% 44% at 50% 6%, rgba(255,90,31,0.22), transparent 70%),
+      radial-gradient(42% 40% at 90% 22%, rgba(255,90,31,0.10), transparent 72%),
+      radial-gradient(40% 38% at 4% 48%, rgba(194,58,14,0.12), transparent 74%),
+      radial-gradient(60% 50% at 50% 108%, rgba(255,90,31,0.10), transparent 70%);
+  }
+  .mesh-soft{
+    background-image:
+      radial-gradient(42% 50% at 86% 0%, rgba(255,90,31,0.09), transparent 70%),
+      radial-gradient(40% 46% at 6% 100%, rgba(255,90,31,0.06), transparent 72%);
+  }
+  .mesh-ember{
+    background-image:
+      radial-gradient(60% 60% at 50% 0%, rgba(255,90,31,0.30), transparent 70%);
+  }
+
+  /* key-art placeholder — deep cinematic gradient stack */
+  .keyart{
+    background:
+      radial-gradient(70% 58% at 26% 18%, rgba(255,142,77,0.55) 0%, transparent 56%),
+      radial-gradient(64% 70% at 80% 30%, rgba(255,90,31,0.50) 0%, transparent 58%),
+      radial-gradient(90% 80% at 50% 116%, rgba(120,24,6,0.85) 0%, transparent 64%),
+      linear-gradient(168deg, #2A0F08 0%, #160A0A 44%, #0B0708 100%);
+  }
+  .keyart-deep{
+    background:
+      radial-gradient(60% 70% at 22% 24%, rgba(255,122,69,0.45) 0%, transparent 58%),
+      radial-gradient(70% 80% at 84% 78%, rgba(194,58,14,0.55) 0%, transparent 60%),
+      linear-gradient(150deg, #1E0B07 0%, #100A0A 60%, #0B0708 100%);
+  }
+
+  /* gradient placeholder blobs for screenshots / avatars */
+  .blob-a{ background:radial-gradient(120% 110% at 28% 22%, #FFB07A 0%, #FF6A2E 38%, #C23A0E 66%, #3A1206 100%); }
+  .blob-b{ background:radial-gradient(120% 110% at 72% 28%, #FF9A5C 0%, #E04E1E 48%, #4A1408 100%); }
+  .blob-c{ background:radial-gradient(120% 110% at 36% 70%, #F2A878 0%, #B85A2E 50%, #2E1308 100%); }
+  .blob-d{ background:radial-gradient(120% 110% at 64% 32%, #FFBE92 0%, #C65A2A 52%, #3A1A0C 100%); }
+  .blob-e{ background:radial-gradient(120% 110% at 20% 80%, #FF8E5A 0%, #A8400F 54%, #220E06 100%); }
+  .blob-f{ background:radial-gradient(120% 110% at 80% 18%, #FFA86E 0%, #D24A18 50%, #2A1006 100%); }
+
+  /* pulse dot — live / community indicator */
+  .pulse-dot{ position:relative; display:inline-block; width:7px; height:7px; border-radius:999px; background:var(--molten); box-shadow:0 0 0 0 rgba(255,90,31,0.6); animation:pulse 2.1s ease-out infinite; }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(255,90,31,0.55); }
+    70%{ box-shadow:0 0 0 9px rgba(255,90,31,0); }
+    100%{ box-shadow:0 0 0 0 rgba(255,90,31,0); }
+  }
+
+  /* marquee */
+  .marquee-mask{ -webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent); mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent); }
+  .marquee{ display:flex; gap:56px; width:max-content; align-items:center; animation:marq 36s linear infinite; }
+  .marquee-wrap:hover .marquee{ animation-play-state:paused; }
+  @keyframes marq{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+
+  /* buttons */
+  .btn-primary{ background:linear-gradient(180deg, #FF7A40, #FF5A1F); color:#1A0A04; border:1px solid rgba(255,90,31,0.55); transition:transform 120ms ease, box-shadow 120ms ease; }
+  .btn-primary:hover{ transform:translateY(-1px); box-shadow:0 14px 32px -14px rgba(255,90,31,0.72), 0 0 0 1px rgba(255,90,31,0.42); }
+  .btn-ghost{ background:var(--surface); border:1px solid var(--rule-2); color:var(--ink); transition:transform 120ms ease, border-color 120ms ease, background-color 120ms ease; }
+  .btn-ghost:hover{ transform:translateY(-1px); border-color:var(--rule-molten); background-color:rgba(255,255,255,0.05); }
+
+  /* card lift */
+  .card-lift{ transition:transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease; }
+  .card-lift:hover{ transform:translateY(-2px); border-color:var(--rule-molten); box-shadow:0 22px 46px -30px rgba(255,90,31,0.6); background-color:rgba(255,255,255,0.035); }
+
+  /* underline-on-hover link */
+  .ul-link{ position:relative; }
+  .ul-link::after{ content:""; position:absolute; left:0; right:0; bottom:-3px; height:1px; background:currentColor; transform:scaleX(0); transform-origin:right center; transition:transform 260ms cubic-bezier(.2,.7,.2,1); }
+  .ul-link:hover::after{ transform:scaleX(1); transform-origin:left center; }
+
+  .scroll-x{ transition:transform 130ms ease; }
+  a:hover .scroll-x, button:hover .scroll-x{ transform:translateX(3px); }
+
+  /* play button on the trailer */
+  .play-btn{ transition:transform 150ms ease, box-shadow 150ms ease; }
+  .play-group:hover .play-btn{ transform:scale(1.06); box-shadow:0 0 0 10px rgba(255,90,31,0.12), 0 18px 40px -16px rgba(255,90,31,0.7); }
+
+  /* accordion */
+  details>summary{ list-style:none; cursor:pointer; }
+  details>summary::-webkit-details-marker{ display:none; }
+  details[open] .acc-sign{ transform:rotate(45deg); }
+  .acc-sign{ transition:transform 180ms ease; }
+
+  /* navbar blur */
+  .navbar{ backdrop-filter:blur(12px) saturate(150%); -webkit-backdrop-filter:blur(12px) saturate(150%); background:rgba(11,7,8,0.82); }
+
+  ::selection{ background:rgba(255,90,31,0.3); color:#fff; }
+  ::-webkit-scrollbar{ width:10px; height:10px; }
+  ::-webkit-scrollbar-track{ background:var(--bg); }
+  ::-webkit-scrollbar-thumb{ background:#221A18; border-radius:8px; border:2px solid var(--bg); }
+  ::-webkit-scrollbar-thumb:hover{ background:#2E2422; }
+
+  .shot{ transition:transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
+  .shot:hover{ transform:translateY(-3px) scale(1.012); border-color:var(--rule-molten); box-shadow:0 24px 50px -30px rgba(255,90,31,0.6); }
+
+  @media (prefers-reduced-motion:reduce){
+    .pulse-dot, .marquee{ animation:none; }
+    html{ scroll-behavior:auto; }
+  }
+</style>
+</head>
+<body class="min-h-screen antialiased">
+
+<!-- ambient fixed backdrop -->
+<div aria-hidden="true" class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+  <div class="absolute left-1/2 top-[-200px] h-[480px] w-[820px] -translate-x-1/2 rounded-full bg-molten opacity-[0.11] blur-[160px]"></div>
+  <div class="absolute right-[-180px] top-[560px] h-[420px] w-[420px] rounded-full bg-molten opacity-[0.06] blur-[160px]"></div>
+  <div class="absolute left-[-160px] bottom-[120px] h-[380px] w-[380px] rounded-full bg-molten opacity-[0.05] blur-[160px]"></div>
+</div>
+
+<!-- ===== 1 · NAV ===== -->
+<header class="navbar fixed top-0 inset-x-0 z-50 border-b rule">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 h-[64px] flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5" aria-label="Sunder home">
+      <span class="grid h-8 w-8 place-items-center rounded-lg" style="background:radial-gradient(120% 120% at 30% 24%, #3A1408, #160A0A); box-shadow:inset 0 0 0 1px rgba(255,90,31,0.36);">
+        <!-- Sunder mark — a cleaved blade/rift -->
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <path d="M9 1.4 13.7 9 9 16.6 4.3 9 9 1.4Z" fill="none" stroke="#FF5A1F" stroke-width="1.3"/>
+          <path d="M9 1.4 9 16.6" stroke="#FF5A1F" stroke-width="1.3"/>
+          <path d="M6.6 5.3 9 9 6 12.7" stroke="#FF5A1F" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="9" cy="9" r="1.4" fill="#FF5A1F"/>
+        </svg>
+      </span>
+      <span class="display-tight text-[18px] text-bone">SUNDER</span>
+    </a>
+
+    <nav class="hidden md:flex items-center gap-8 text-[14px] text-[color:var(--ink-2)]">
+      <a href="#about" class="ul-link hover:text-bone">Game</a>
+      <a href="#media" class="ul-link hover:text-bone">Media</a>
+      <a href="#community" class="ul-link hover:text-bone">News</a>
+      <a href="#studio" class="ul-link hover:text-bone">Studio</a>
+    </nav>
+
+    <a href="#buy" class="btn-primary inline-flex items-center gap-2 rounded-full font-bold text-[13.5px] px-4 py-2">
+      Buy now — $24.99
+    </a>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ===== 2 · HERO ===== -->
+<section class="relative overflow-hidden mesh-hero pt-[64px]">
+  <div class="absolute inset-0 dotgrid opacity-60 pointer-events-none"></div>
+
+  <!-- giant key-art band -->
+  <div class="relative max-w-[1200px] mx-auto px-5 sm:px-8 pt-12 sm:pt-16">
+    <div class="keyart relative w-full rounded-2xl border rule-2 overflow-hidden aspect-[16/10] sm:aspect-[16/8]">
+      <!-- parallax depth strokes -->
+      <div class="absolute inset-0 pointer-events-none" style="background:radial-gradient(80% 70% at 50% 130%, rgba(0,0,0,0.7), transparent 62%);"></div>
+      <svg class="absolute inset-0 w-full h-full opacity-[0.5]" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <g stroke="rgba(255,90,31,0.32)" fill="none" stroke-width="1.1">
+          <path d="M-40 470 L300 250 L560 360 L820 180 L1240 330"/>
+          <path d="M-40 560 L240 380 L520 470 L760 300 L1240 440" stroke="rgba(255,142,77,0.20)"/>
+        </g>
+        <g fill="rgba(11,7,8,0.92)">
+          <path d="M0 600 L0 430 L160 360 L320 470 L470 380 L640 510 L820 400 L1010 520 L1200 430 L1200 600 Z"/>
+        </g>
+        <g fill="rgba(11,7,8,0.7)">
+          <path d="M0 600 L0 510 L210 450 L420 540 L640 470 L880 560 L1100 500 L1200 540 L1200 600 Z"/>
+        </g>
+        <!-- ember sparks -->
+        <g fill="#FF7A45">
+          <circle cx="248" cy="210" r="2.4" opacity="0.9"/>
+          <circle cx="690" cy="150" r="1.8" opacity="0.7"/>
+          <circle cx="940" cy="240" r="2.6" opacity="0.8"/>
+          <circle cx="430" cy="300" r="1.6" opacity="0.6"/>
+          <circle cx="1080" cy="190" r="2.0" opacity="0.7"/>
+        </g>
+      </svg>
+      <!-- logo lockup over the key art -->
+      <div class="absolute inset-0 flex flex-col items-center justify-center text-center px-5">
+        <div class="inline-flex items-center gap-2.5 rounded-full border rule-molten bg-[rgba(11,7,8,0.6)] backdrop-blur pl-2.5 pr-3.5 py-1.5 mb-6 sm:mb-8">
+          <span class="pulse-dot"></span>
+          <span class="mono text-[10.5px] sm:text-[11px] tracking-[0.06em] text-bone">Out now · Steam, PS5, Xbox Series X|S</span>
+        </div>
+        <h1 class="display text-[clamp(52px,12vw,148px)] text-bone leading-[0.92]">SUNDER</h1>
+        <div class="mono text-[11px] sm:text-[13px] tracking-[0.32em] text-[color:var(--ink-2)] mt-3 sm:mt-4">A BRUTAL ACTION-ROGUELIKE</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- hero copy block -->
+  <div class="relative max-w-[1200px] mx-auto px-5 sm:px-8 pt-12 sm:pt-16 pb-16 sm:pb-24">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-start">
+      <div class="md:col-span-7">
+        <h2 class="display-tight text-[clamp(34px,5.4vw,62px)] text-bone max-w-[16ch]">
+          Die, learn, descend.<br class="hidden sm:block"/>
+          The dungeon <em class="halftone">remembers</em>.
+        </h2>
+        <p class="text-[16px] sm:text-[18px] text-[color:var(--ink-2)] leading-[1.62] mt-6 max-w-[52ch]">
+          A fast, vicious roguelike where every death rewrites the descent. The dungeon studies the way you fight — then builds itself to break the habit. Land the perfect parry. Chain a 240-hit combo. Lose it all. Go again sharper.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3 mt-8">
+          <a href="#buy" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full font-bold px-6 py-3.5 text-[15px]">
+            Buy now — $24.99 <span class="scroll-x">→</span>
+          </a>
+          <a href="#trailer" class="btn-ghost inline-flex items-center justify-center gap-2 rounded-full font-medium px-6 py-3.5 text-[15px]">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M3 1.8 11 6.5 3 11.2 Z" fill="currentColor"/></svg>
+            Watch the trailer
+          </a>
+        </div>
+        <!-- platform badges -->
+        <div class="flex flex-wrap items-center gap-2.5 mt-7">
+          <!-- Steam -->
+          <div class="inline-flex items-center gap-2 rounded-lg border rule-2 bg-[var(--surface)] px-3 py-2">
+            <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="11" fill="#16202D"/>
+              <circle cx="12" cy="12" r="11" fill="none" stroke="rgba(255,255,255,0.12)"/>
+              <circle cx="15.7" cy="8.3" r="3.5" fill="none" stroke="#C7D5E0" stroke-width="1.5"/>
+              <circle cx="7.6" cy="14.6" r="2.7" fill="#C7D5E0"/>
+              <path d="M5 14.5 12.4 8.5" stroke="#C7D5E0" stroke-width="1.4"/>
+            </svg>
+            <span class="text-[12.5px] font-medium text-bone">Steam</span>
+          </div>
+          <!-- PlayStation -->
+          <div class="inline-flex items-center gap-2 rounded-lg border rule-2 bg-[var(--surface)] px-3 py-2">
+            <svg width="22" height="17" viewBox="0 0 30 22" aria-hidden="true">
+              <path d="M11.2 2.2c2.6.5 5.6 1.5 7.3 2.6 1.9 1.2 2.2 2.9.6 3.9-1.4.9-3.5 1-5.4.3V4.6c0-.9-.2-1.6-1-1.8-.6-.1-1.2.1-1.5.5V18l-3.8-1.2V1c1.1.2 2.4.5 3.8 1.2Z" fill="#0070D1"/>
+              <path d="M19.6 14.4c1.6-.6 3.7-.7 5.5-.2 1.7.5 1.9 1.4.5 2.1-1.5.8-4.1 1.4-6.4 2.1l-4.2 1.3v-2.1l4.2-1.4c.4-.1.7-.3.4-.4-.3-.2-1 0-1.4.1l-3.2 1.1v-2.1l4.6-1.5Z" fill="#0070D1"/>
+              <path d="M2.7 14.7c-1.8.5-2.5 1.5-1.4 2.4 1.4 1.1 4.4 1.9 4.4 1.9l3.6 1.2v-2.2l-3.2-1.1c-.4-.1-.6-.4-.2-.6.3-.1.9-.1 1.3 0l2.1.7v-2l-1.5-.4c-1.6-.4-3.5-.4-4.9 0Z" fill="#0070D1"/>
+            </svg>
+            <span class="text-[12.5px] font-medium text-bone">PS5</span>
+          </div>
+          <!-- Xbox -->
+          <div class="inline-flex items-center gap-2 rounded-lg border rule-2 bg-[var(--surface)] px-3 py-2">
+            <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="11" fill="#107C10"/>
+              <path d="M12 6.5c-2 1.6-5.8 6.4-6.3 9.4C4.8 14.6 4.4 13 4.4 12c0-2 .8-3.9 2.1-5.3C8.4 4.8 10.4 5.4 12 6.5Z" fill="#fff"/>
+              <path d="M12 6.5c2-1.1 4-1.7 5.5-.2 1.3 1.4 2.1 3.3 2.1 5.7 0 1-.4 2.6-1.3 3.9-.5-3-4.3-7.8-6.3-9.4Z" fill="#fff"/>
+              <path d="M12 8.2c1.7 1.6 5 6 5.6 8.4A7.55 7.55 0 0 1 12 19.5a7.55 7.55 0 0 1-5.6-2.9C7 14.2 10.3 9.8 12 8.2Z" fill="#fff"/>
+            </svg>
+            <span class="text-[12.5px] font-medium text-bone">Xbox Series X|S</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- hero side card -->
+      <div class="md:col-span-5">
+        <div class="rounded-2xl border rule bg-[color:var(--card)] p-6 sm:p-7">
+          <div class="marker mb-5"><span class="accent-bar"></span>Launch standing</div>
+          <div class="grid grid-cols-2 gap-y-7 gap-x-5">
+            <div>
+              <div class="display tnum text-[34px] text-bone">9<span class="text-[color:var(--ink-3)] text-[18px]"> / 10</span></div>
+              <div class="mono text-[10.5px] text-[color:var(--ink-3)] mt-1.5">IGN review score</div>
+            </div>
+            <div>
+              <div class="display tnum text-[34px] text-bone">96<span class="text-[color:var(--ink-3)] text-[18px]">%</span></div>
+              <div class="mono text-[10.5px] text-[color:var(--ink-3)] mt-1.5">Steam · Overwhelmingly Positive</div>
+            </div>
+            <div>
+              <div class="display tnum text-[34px] text-bone">38</div>
+              <div class="mono text-[10.5px] text-[color:var(--ink-3)] mt-1.5">hand-built boss encounters</div>
+            </div>
+            <div>
+              <div class="display tnum text-[34px] text-bone">240<span class="text-[color:var(--ink-3)] text-[18px]">+</span></div>
+              <div class="mono text-[10.5px] text-[color:var(--ink-3)] mt-1.5">weapon combinations</div>
+            </div>
+          </div>
+          <div class="mt-6 pt-5 border-t rule-soft text-[12px] text-[color:var(--ink-3)] mono" style="border-color:var(--rule)">
+            v1.0.4 · build 2026.05.14 · 14 languages
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 3 · TRAILER ===== -->
+<section id="trailer" class="border-y rule mesh-soft">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-9">
+      <div>
+        <div class="marker mb-4"><span class="accent-bar"></span>Watch</div>
+        <h2 class="display-tight text-[clamp(28px,4vw,46px)] text-bone">See it move.</h2>
+      </div>
+      <div class="mono text-[12px] text-[color:var(--ink-3)] sm:text-right">
+        captured on PS5 · no commentary<br/>1440p · uncut combat
+      </div>
+    </div>
+
+    <div class="play-group relative w-full rounded-2xl border rule-2 overflow-hidden aspect-video keyart-deep cursor-pointer">
+      <div class="absolute inset-0 dotgrid opacity-30"></div>
+      <div class="absolute inset-0" style="background:radial-gradient(60% 60% at 50% 50%, transparent 30%, rgba(11,7,8,0.55) 100%);"></div>
+      <!-- play button -->
+      <div class="absolute inset-0 grid place-items-center">
+        <div class="play-btn grid place-items-center h-[78px] w-[78px] sm:h-[92px] sm:w-[92px] rounded-full" style="background:linear-gradient(180deg,#FF7A40,#FF5A1F); box-shadow:0 14px 36px -12px rgba(255,90,31,0.65);">
+          <svg width="30" height="30" viewBox="0 0 30 30" fill="none" aria-hidden="true">
+            <path d="M11 7 23 15 11 23 Z" fill="#1A0A04"/>
+          </svg>
+        </div>
+      </div>
+      <!-- trailer label -->
+      <div class="absolute left-4 sm:left-6 bottom-4 sm:bottom-6 flex items-center gap-3">
+        <span class="mono text-[10.5px] sm:text-[11px] tracking-[0.12em] uppercase rounded-md border rule-molten bg-[rgba(11,7,8,0.7)] backdrop-blur px-2.5 py-1.5 text-bone">
+          Launch Trailer · 2:14
+        </span>
+        <span class="mono text-[11px] text-[color:var(--ink-2)] hidden sm:inline">"The Dungeon Remembers" — 4K</span>
+      </div>
+      <div class="absolute right-4 sm:right-6 top-4 sm:top-6">
+        <span class="mono text-[10px] tracking-[0.14em] uppercase rounded-md border rule bg-[rgba(11,7,8,0.6)] px-2 py-1 text-[color:var(--ink-3)]">HD</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 4 · ABOUT THE GAME ===== -->
+<section id="about" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14">
+    <div class="md:col-span-5">
+      <div class="marker mb-5"><span class="accent-bar"></span>The game</div>
+      <h2 class="display-tight text-[clamp(30px,4.4vw,52px)] text-bone max-w-[16ch]">
+        A dungeon that <em class="accent">fights back</em>.
+      </h2>
+    </div>
+    <div class="md:col-span-7">
+      <div class="text-[16px] sm:text-[17px] text-[color:var(--ink-2)] leading-[1.65] space-y-4">
+        <p>The Vault beneath Cinderhold has no bottom that anyone has come back to describe. It is not a place so much as an appetite — twelve shifting strata of bone-iron corridors, collapsed shrines, and arenas slick with the runs that ended there. You go down because the thing at the bottom took something, and going down is the only direction the Vault permits.</p>
+        <p>Sunder is built on one cruel, generous idea: <span class="text-bone">the dungeon learns you</span>. Lean on a single weapon and its rooms start spawning the enemies that punish it. Dodge instead of parry and the floor fills with foes you can only out-time. Death is not a reset — it is a lesson the Vault files away, and the next descent is a counter-argument to the run that just killed you.</p>
+        <p>Every weapon you find stays found. Every boss you fell to becomes a door you can now walk through. You will lose a hundred runs. Each one makes the hundred-and-first faster, meaner, and entirely yours.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- pillars -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px mt-14 bg-[color:var(--rule)] border rule rounded-2xl overflow-hidden">
+    <!-- pillar 1 -->
+    <div class="bg-[color:var(--card)] p-7 card-lift">
+      <div class="grid place-items-center h-11 w-11 rounded-xl mb-5" style="background:rgba(255,90,31,0.10); box-shadow:inset 0 0 0 1px var(--rule-molten);">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M14.5 3 21 9.5 9 21.5 3 21l-.5-6L14.5 3Z" stroke="#FF5A1F" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M11.5 6 18 12.5" stroke="#FF5A1F" stroke-width="1.5"/>
+          <path d="M5 16.5 7.5 19" stroke="#FF5A1F" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h3 class="display-tight text-[18px] text-bone">240+ weapon combinations</h3>
+      <p class="text-[14px] text-[color:var(--ink-2)] mt-2.5 leading-[1.55]">
+        Pair any of 28 core arms with rune-mods that rewrite how they swing. Build a frost-greatsword that detonates on the third hit, or a throwing-knife loop that never lets a boss breathe.
+      </p>
+    </div>
+    <!-- pillar 2 -->
+    <div class="bg-[color:var(--card)] p-7 card-lift">
+      <div class="grid place-items-center h-11 w-11 rounded-xl mb-5" style="background:rgba(255,90,31,0.10); box-shadow:inset 0 0 0 1px var(--rule-molten);">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" stroke="#FF5A1F" stroke-width="1.5"/>
+          <path d="M12 3v6m0 6v6m9-9h-6M9 12H3" stroke="#FF5A1F" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="12" cy="12" r="2.4" fill="#FF5A1F"/>
+        </svg>
+      </div>
+      <h3 class="display-tight text-[18px] text-bone">A dungeon that adapts</h3>
+      <p class="text-[14px] text-[color:var(--ink-2)] mt-2.5 leading-[1.55]">
+        The Vault profiles your last six runs and reshapes spawns, hazards, and room layouts to attack the habit you lean on hardest. No two descents read the same.
+      </p>
+    </div>
+    <!-- pillar 3 -->
+    <div class="bg-[color:var(--card)] p-7 card-lift">
+      <div class="grid place-items-center h-11 w-11 rounded-xl mb-5" style="background:rgba(255,90,31,0.10); box-shadow:inset 0 0 0 1px var(--rule-molten);">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 2.5 4 6v6c0 5 3.4 8.2 8 9.5 4.6-1.3 8-4.5 8-9.5V6l-8-3.5Z" stroke="#FF5A1F" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M9 11.5 11.3 14 15.3 9" stroke="#FF5A1F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h3 class="display-tight text-[18px] text-bone">38 boss encounters</h3>
+      <p class="text-[14px] text-[color:var(--ink-2)] mt-2.5 leading-[1.55]">
+        Each stratum is sealed by hand-authored bosses with multi-phase movesets — the Ash Choir, the Warden of Locks, the bottom-floor thing nobody names. Beat one and it becomes a shortcut, forever.
+      </p>
+    </div>
+    <!-- pillar 4 -->
+    <div class="bg-[color:var(--card)] p-7 card-lift">
+      <div class="grid place-items-center h-11 w-11 rounded-xl mb-5" style="background:rgba(255,90,31,0.10); box-shadow:inset 0 0 0 1px var(--rule-molten);">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M5 21V8a7 7 0 0 1 14 0v13" stroke="#FF5A1F" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M3 21h18" stroke="#FF5A1F" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M9.5 21v-5a2.5 2.5 0 0 1 5 0v5" stroke="#FF5A1F" stroke-width="1.5"/>
+          <path d="M12 1v3" stroke="#FF5A1F" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h3 class="display-tight text-[18px] text-bone">Permadeath, permanent progress</h3>
+      <p class="text-[14px] text-[color:var(--ink-2)] mt-2.5 leading-[1.55]">
+        Runs end clean — no take-backs. But unlocked weapons, opened shortcuts, and codex lore all carry over. You never lose ground; you only ever sharpen.
+      </p>
+    </div>
+  </div>
+
+  <!-- procedural boss-kill progression sparkline -->
+  <div class="mt-4 rounded-2xl border rule bg-[color:var(--card)] p-6 sm:p-8">
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-5">
+      <div>
+        <div class="mono text-[11px] tracking-[0.14em] uppercase text-[color:var(--ink-3)]">Bosses felled — first 19 runs</div>
+        <div class="text-[14px] text-[color:var(--ink-2)] mt-1.5 max-w-[44ch]">A typical descent log. The curve is the whole pitch: every wipe is a step down.</div>
+      </div>
+      <div class="flex items-baseline gap-2">
+        <span class="display tnum text-[38px] text-molten leading-none">38</span>
+        <span class="mono text-[11px] text-[color:var(--ink-3)]">/ 38 cleared</span>
+      </div>
+    </div>
+    <svg viewBox="0 0 640 130" class="w-full h-auto" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#FF5A1F" stop-opacity="0.32"/>
+          <stop offset="1" stop-color="#FF5A1F" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <g stroke="rgba(255,255,255,0.05)" stroke-width="1">
+        <line x1="6" y1="32" x2="634" y2="32"/>
+        <line x1="6" y1="65" x2="634" y2="65"/>
+        <line x1="6" y1="98" x2="634" y2="98"/>
+      </g>
+      <path id="sparkArea" d="" fill="url(#sparkFill)"/>
+      <path id="sparkPath" d="" fill="none" stroke="#FF5A1F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <g id="sparkDots"></g>
+    </svg>
+    <div class="flex justify-between mono text-[10px] text-[color:var(--ink-3)] mt-2">
+      <span>RUN 01</span><span>RUN 10</span><span>RUN 19</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 5 · SCREENSHOT GALLERY ===== -->
+<section id="media" class="border-y rule bg-[color:var(--bg-2)]">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
+      <div class="max-w-[44ch]">
+        <div class="marker mb-5"><span class="accent-bar"></span>Screenshots</div>
+        <h2 class="display-tight text-[clamp(28px,4vw,46px)] text-bone">Twelve strata of the Vault.</h2>
+      </div>
+      <div class="mono text-[12px] text-[color:var(--ink-3)] sm:text-right">
+        in-engine · 60fps gameplay<br/>no bullshots, no touch-ups
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <!-- shot 1 -->
+      <figure class="shot blob-a relative rounded-xl border rule-2 overflow-hidden aspect-video">
+        <div class="absolute inset-0" style="background:radial-gradient(120% 80% at 50% 130%, rgba(0,0,0,0.7), transparent 60%);"></div>
+        <figcaption class="absolute left-3 bottom-3 mono text-[10.5px] tracking-[0.08em] text-bone bg-[rgba(11,7,8,0.6)] backdrop-blur px-2 py-1 rounded">STRATUM 02 — THE ASH GALLERIES</figcaption>
+      </figure>
+      <!-- shot 2 -->
+      <figure class="shot blob-b relative rounded-xl border rule-2 overflow-hidden aspect-video">
+        <div class="absolute inset-0" style="background:radial-gradient(120% 80% at 30% 120%, rgba(0,0,0,0.65), transparent 60%);"></div>
+        <figcaption class="absolute left-3 bottom-3 mono text-[10.5px] tracking-[0.08em] text-bone bg-[rgba(11,7,8,0.6)] backdrop-blur px-2 py-1 rounded">BOSS — THE WARDEN OF LOCKS</figcaption>
+      </figure>
+      <!-- shot 3 -->
+      <figure class="shot blob-c relative rounded-xl border rule-2 overflow-hidden aspect-video">
+        <div class="absolute inset-0" style="background:radial-gradient(120% 80% at 70% 120%, rgba(0,0,0,0.65), transparent 60%);"></div>
+        <figcaption class="absolute left-3 bottom-3 mono text-[10.5px] tracking-[0.08em] text-bone bg-[rgba(11,7,8,0.6)] backdrop-blur px-2 py-1 rounded">RUNE-FORGE — WEAPON CRAFTING</figcaption>
+      </figure>
+      <!-- shot 4 -->
+      <figure class="shot blob-d relative rounded-xl border rule-2 overflow-hidden aspect-video sm:col-span-2">
+        <div class="absolute inset-0" style="background:radial-gradient(120% 80% at 50% 130%, rgba(0,0,0,0.7), transparent 58%);"></div>
+        <figcaption class="absolute left-3 bottom-3 mono text-[10.5px] tracking-[0.08em] text-bone bg-[rgba(11,7,8,0.6)] backdrop-blur px-2 py-1 rounded">STRATUM 07 — THE DROWNED SHRINE · 240-HIT CHAIN</figcaption>
+      </figure>
+      <!-- shot 5 -->
+      <figure class="shot blob-e relative rounded-xl border rule-2 overflow-hidden aspect-video">
+        <div class="absolute inset-0" style="background:radial-gradient(120% 80% at 40% 120%, rgba(0,0,0,0.65), transparent 60%);"></div>
+        <figcaption class="absolute left-3 bottom-3 mono text-[10.5px] tracking-[0.08em] text-bone bg-[rgba(11,7,8,0.6)] backdrop-blur px-2 py-1 rounded">THE ASH CHOIR — PHASE THREE</figcaption>
+      </figure>
+      <!-- shot 6 -->
+      <figure class="shot blob-f relative rounded-xl border rule-2 overflow-hidden aspect-video">
+        <div class="absolute inset-0" style="background:radial-gradient(120% 80% at 60% 120%, rgba(0,0,0,0.65), transparent 60%);"></div>
+        <figcaption class="absolute left-3 bottom-3 mono text-[10.5px] tracking-[0.08em] text-bone bg-[rgba(11,7,8,0.6)] backdrop-blur px-2 py-1 rounded">CINDERHOLD — THE HUB</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 6 · FEATURES GRID ===== -->
+<section class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="max-w-[52ch] mb-12">
+    <div class="marker mb-5"><span class="accent-bar"></span>What's in the box</div>
+    <h2 class="display-tight text-[clamp(28px,4vw,48px)] text-bone">
+      Built for the run after the run after this one.
+    </h2>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[color:var(--rule)] border rule rounded-2xl overflow-hidden">
+    <div class="bg-[color:var(--card)] p-7 card-lift">
+      <div class="mono text-[11px] text-[color:var(--molten)] mb-3">01 / COMBAT</div>
+      <h3 class="display-tight text-[17px] text-bone">Frame-tight melee</h3>
+      <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.55]">Cancel windows, directional parries, and an air-dash that resets on a clean hit. Every weapon has its own rhythm to internalise.</p>
+    </div>
+    <div class="bg-[color:var(--card)] p-7 card-lift">
+      <div class="mono text-[11px] text-[color:var(--molten)] mb-3">02 / SYSTEMS</div>
+      <h3 class="display-tight text-[17px] text-bone">Rune-mod synergies</h3>
+      <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.55]">Stack four rune slots into broken, beautiful builds. A curated build-encyclopedia in-game tracks every combination you discover.</p>
+    </div>
+    <div class="bg-[color:var(--card)] p-7 card-lift">
+      <div class="mono text-[11px] text-[color:var(--molten)] mb-3">03 / SCORING</div>
+      <h3 class="display-tight text-[17px] text-bone">Daily Descent</h3>
+      <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.55]">One seed, one shot, global leaderboard. A fresh Vault layout every day at 00:00 UTC — and a ghost replay of the world's best run.</p>
+    </div>
+    <div class="bg-[color:var(--card)] p-7 card-lift">
+      <div class="mono text-[11px] text-[color:var(--molten)] mb-3">04 / WORLD</div>
+      <h3 class="display-tight text-[17px] text-bone">A codex worth reading</h3>
+      <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.55]">317 lore entries unlock as you descend — environmental storytelling that never once stops you to deliver a cutscene.</p>
+    </div>
+    <div class="bg-[color:var(--card)] p-7 card-lift">
+      <div class="mono text-[11px] text-[color:var(--molten)] mb-3">05 / ACCESS</div>
+      <h3 class="display-tight text-[17px] text-bone">Generous assists</h3>
+      <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.55]">Granular sliders for enemy speed, damage taken, parry windows, and aim assist — tune the challenge without ever turning it off.</p>
+    </div>
+    <div class="bg-[color:var(--card)] p-7 card-lift">
+      <div class="mono text-[11px] text-[color:var(--molten)] mb-3">06 / SOUND</div>
+      <h3 class="display-tight text-[17px] text-bone">An adaptive score</h3>
+      <p class="text-[14px] text-[color:var(--ink-2)] mt-2 leading-[1.55]">A 41-track industrial-doom soundtrack that layers in with your combo counter and drops out the instant you whiff. Composed by Reya Vance.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 7 · COMMUNITY CTA BAND ===== -->
+<section id="community" class="relative overflow-hidden border-y rule mesh-ember">
+  <div class="absolute inset-0 dotgrid opacity-30 pointer-events-none"></div>
+  <div class="relative max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+      <div class="lg:col-span-6">
+        <div class="inline-flex items-center gap-2.5 rounded-full border rule-molten bg-[var(--surface)] pl-2.5 pr-3.5 py-1.5 mb-6">
+          <span class="pulse-dot"></span>
+          <span class="mono text-[11px] tracking-[0.06em] text-[color:var(--ink-2)]">3,104 players in the Vault right now</span>
+        </div>
+        <h2 class="display-tight text-[clamp(30px,4.6vw,54px)] text-bone max-w-[15ch]">
+          The descent is better with company.
+        </h2>
+        <p class="text-[16px] text-[color:var(--ink-2)] leading-[1.62] mt-5 max-w-[46ch]">
+          Trade builds, compare Daily Descent ghosts, and argue about the bottom floor with a community that has been theory-crafting Sunder since the first beta.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3 mt-8">
+          <a href="#buy" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full font-bold px-6 py-3.5 text-[15px]">
+            Buy now — $24.99 <span class="scroll-x">→</span>
+          </a>
+          <a href="#buy" class="btn-ghost inline-flex items-center justify-center gap-2 rounded-full font-medium px-6 py-3.5 text-[15px]">
+            <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="15.7" cy="8.3" r="3.3" fill="none" stroke="currentColor" stroke-width="1.6"/>
+              <circle cx="7.6" cy="14.6" r="2.6" fill="currentColor"/>
+              <path d="M5.2 14.5 12.6 8.5" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+            Follow on Steam
+          </a>
+        </div>
+      </div>
+
+      <div class="lg:col-span-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- copies sold counter -->
+          <div class="rounded-2xl border rule-molten bg-[color:var(--card)] p-7 sm:col-span-2">
+            <div class="marker mb-3">Launch week</div>
+            <div class="display tnum text-[clamp(44px,7vw,76px)] text-bone leading-none" data-count="148408">0</div>
+            <p class="text-[14px] text-[color:var(--ink-2)] mt-2.5 leading-[1.5]">copies sold in the first seven days — a 9-person studio's debut commercial title.</p>
+          </div>
+          <!-- discord -->
+          <div class="rounded-2xl border rule bg-[color:var(--card)] p-6 card-lift">
+            <div class="flex items-center gap-2 mb-3">
+              <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M19.3 5.6A17 17 0 0 0 15 4.3l-.2.4a15.6 15.6 0 0 1 3.7 1.2 13.4 13.4 0 0 0-11-.1A15 15 0 0 1 11.2 4.7L11 4.3A17 17 0 0 0 6.7 5.6 17.6 17.6 0 0 0 3.7 17a17.2 17.2 0 0 0 5.2 2.6l.6-1a11 11 0 0 1-1.8-.9l.4-.3a12.3 12.3 0 0 0 10.4 0l.4.3a11 11 0 0 1-1.8.9l.6 1A17.2 17.2 0 0 0 22.3 17a17.5 17.5 0 0 0-3-11.4ZM9.4 14.5c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1Zm5.2 0c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1Z" fill="#FF5A1F"/>
+              </svg>
+              <span class="mono text-[10.5px] tracking-[0.12em] uppercase text-[color:var(--ink-3)]">Discord</span>
+            </div>
+            <div class="display tnum text-[34px] text-bone" data-count="61240">0</div>
+            <p class="text-[13px] text-[color:var(--ink-2)] mt-1.5">members in the community server</p>
+          </div>
+          <!-- wishlists / followers -->
+          <div class="rounded-2xl border rule bg-[color:var(--card)] p-6 card-lift">
+            <div class="flex items-center gap-2 mb-3">
+              <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="15.7" cy="8.3" r="3.3" fill="none" stroke="#FF5A1F" stroke-width="1.6"/>
+                <circle cx="7.6" cy="14.6" r="2.6" fill="#FF5A1F"/>
+                <path d="M5.2 14.5 12.6 8.5" stroke="#FF5A1F" stroke-width="1.5"/>
+              </svg>
+              <span class="mono text-[10.5px] tracking-[0.12em] uppercase text-[color:var(--ink-3)]">Steam</span>
+            </div>
+            <div class="display tnum text-[34px] text-bone" data-count="9871">0</div>
+            <p class="text-[13px] text-[color:var(--ink-2)] mt-1.5">user reviews · 96% positive</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 8 · PRESS + AWARDS ===== -->
+<section class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="max-w-[48ch] mb-12">
+    <div class="marker mb-5"><span class="accent-bar"></span>The reception</div>
+    <h2 class="display-tight text-[clamp(28px,4vw,48px)] text-bone">It gets its hooks in fast.</h2>
+  </div>
+
+  <!-- pull quotes -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7 card-lift">
+      <div class="display tnum text-[44px] text-molten leading-none">9<span class="text-[color:var(--ink-3)] text-[22px]">/10</span></div>
+      <blockquote class="text-[16px] text-bone leading-[1.55] mt-4">"The year's most satisfying combat — Sunder turns dying into the best part of the game."</blockquote>
+      <figcaption class="mono text-[11px] text-[color:var(--ink-3)] mt-5 pt-4 border-t rule">IGN</figcaption>
+    </figure>
+    <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7 card-lift">
+      <div class="display tnum text-[44px] text-molten leading-none">92<span class="text-[color:var(--ink-3)] text-[22px]">/100</span></div>
+      <blockquote class="text-[16px] text-bone leading-[1.55] mt-4">"It gets its hooks in fast and does not let go. The adaptive dungeon is the real deal."</blockquote>
+      <figcaption class="mono text-[11px] text-[color:var(--ink-3)] mt-5 pt-4 border-t rule">PC Gamer</figcaption>
+    </figure>
+    <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7 card-lift">
+      <div class="mono text-[13px] tracking-[0.14em] uppercase text-molten">Recommended</div>
+      <blockquote class="text-[16px] text-bone leading-[1.55] mt-4">"A debut with the confidence of a tenth game. Ironside have made something genuinely cruel and genuinely kind."</blockquote>
+      <figcaption class="mono text-[11px] text-[color:var(--ink-3)] mt-5 pt-4 border-t rule">Eurogamer</figcaption>
+    </figure>
+    <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7 card-lift">
+      <div class="display tnum text-[44px] text-molten leading-none">5<span class="text-[color:var(--ink-3)] text-[22px]">/5</span></div>
+      <blockquote class="text-[16px] text-bone leading-[1.55] mt-4">"The rare roguelike where the run that kills you teaches you exactly how to win the next one."</blockquote>
+      <figcaption class="mono text-[11px] text-[color:var(--ink-3)] mt-5 pt-4 border-t rule">Destructoid</figcaption>
+    </figure>
+    <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7 card-lift">
+      <div class="mono text-[13px] tracking-[0.14em] uppercase text-molten">Essential</div>
+      <blockquote class="text-[16px] text-bone leading-[1.55] mt-4">"Hades fans, Dead Cells lifers — clear your week. The Daily Descent alone has eaten ours."</blockquote>
+      <figcaption class="mono text-[11px] text-[color:var(--ink-3)] mt-5 pt-4 border-t rule">Rock Paper Shotgun</figcaption>
+    </figure>
+    <figure class="rounded-2xl border rule bg-[color:var(--card)] p-7 card-lift">
+      <div class="display tnum text-[44px] text-molten leading-none">4.5<span class="text-[color:var(--ink-3)] text-[22px]">/5</span></div>
+      <blockquote class="text-[16px] text-bone leading-[1.55] mt-4">"Brutal in the way you want it to be — fair, fast, and ferociously well-tuned. A debut to watch."</blockquote>
+      <figcaption class="mono text-[11px] text-[color:var(--ink-3)] mt-5 pt-4 border-t rule">GameSpot</figcaption>
+    </figure>
+  </div>
+
+  <!-- festival laurels -->
+  <div class="mt-12 border rule rounded-2xl bg-[color:var(--bg-2)] py-9 px-5 sm:px-8">
+    <div class="marker text-center mb-8">Festival recognition</div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-8">
+      <!-- laurel 1 -->
+      <div class="flex items-center justify-center gap-3 text-bone">
+        <svg width="34" height="46" viewBox="0 0 34 46" fill="none" aria-hidden="true">
+          <path d="M30 4c-7 2-12 8-13 17-1 9 2 16 8 21M30 11c-5 2-8 6-9 12M30 19c-4 1-6 4-7 8" stroke="#FF5A1F" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <div class="text-center">
+          <div class="mono text-[10px] tracking-[0.16em] uppercase text-[color:var(--ink-3)]">Selection</div>
+          <div class="display-tight text-[14px] mt-1">Day of the Devs<br/>2026</div>
+        </div>
+        <svg width="34" height="46" viewBox="0 0 34 46" fill="none" aria-hidden="true" style="transform:scaleX(-1)">
+          <path d="M30 4c-7 2-12 8-13 17-1 9 2 16 8 21M30 11c-5 2-8 6-9 12M30 19c-4 1-6 4-7 8" stroke="#FF5A1F" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <!-- laurel 2 -->
+      <div class="flex items-center justify-center gap-3 text-bone">
+        <svg width="34" height="46" viewBox="0 0 34 46" fill="none" aria-hidden="true">
+          <path d="M30 4c-7 2-12 8-13 17-1 9 2 16 8 21M30 11c-5 2-8 6-9 12M30 19c-4 1-6 4-7 8" stroke="#FF5A1F" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <div class="text-center">
+          <div class="mono text-[10px] tracking-[0.16em] uppercase text-[color:var(--ink-3)]">Nominee</div>
+          <div class="display-tight text-[14px] mt-1">The Game Awards<br/>Best Debut Indie</div>
+        </div>
+        <svg width="34" height="46" viewBox="0 0 34 46" fill="none" aria-hidden="true" style="transform:scaleX(-1)">
+          <path d="M30 4c-7 2-12 8-13 17-1 9 2 16 8 21M30 11c-5 2-8 6-9 12M30 19c-4 1-6 4-7 8" stroke="#FF5A1F" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <!-- laurel 3 -->
+      <div class="flex items-center justify-center gap-3 text-bone">
+        <svg width="34" height="46" viewBox="0 0 34 46" fill="none" aria-hidden="true">
+          <path d="M30 4c-7 2-12 8-13 17-1 9 2 16 8 21M30 11c-5 2-8 6-9 12M30 19c-4 1-6 4-7 8" stroke="#FF5A1F" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <div class="text-center">
+          <div class="mono text-[10px] tracking-[0.16em] uppercase text-[color:var(--ink-3)]">Official Selection</div>
+          <div class="display-tight text-[14px] mt-1">IGF Grand Prize<br/>Finalist</div>
+        </div>
+        <svg width="34" height="46" viewBox="0 0 34 46" fill="none" aria-hidden="true" style="transform:scaleX(-1)">
+          <path d="M30 4c-7 2-12 8-13 17-1 9 2 16 8 21M30 11c-5 2-8 6-9 12M30 19c-4 1-6 4-7 8" stroke="#FF5A1F" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- press marquee -->
+  <div class="mt-10 marquee-mask marquee-wrap overflow-hidden">
+    <div class="marquee text-[color:var(--ink-3)]">
+      <span class="display-tight text-[20px]">IGN</span>
+      <span class="mono text-[16px] tracking-[0.12em]">PC GAMER</span>
+      <span class="display-tight text-[20px]">Eurogamer</span>
+      <span class="text-[19px] font-bold tracking-tight">Destructoid</span>
+      <span class="mono text-[15px] tracking-[0.14em]">RPS</span>
+      <span class="display-tight text-[20px]">GameSpot</span>
+      <span class="text-[19px] font-bold tracking-tight">Polygon</span>
+      <span class="mono text-[15px] tracking-[0.12em]">KOTAKU</span>
+      <span aria-hidden="true" class="display-tight text-[20px]">IGN</span>
+      <span aria-hidden="true" class="mono text-[16px] tracking-[0.12em]">PC GAMER</span>
+      <span aria-hidden="true" class="display-tight text-[20px]">Eurogamer</span>
+      <span aria-hidden="true" class="text-[19px] font-bold tracking-tight">Destructoid</span>
+      <span aria-hidden="true" class="mono text-[15px] tracking-[0.14em]">RPS</span>
+      <span aria-hidden="true" class="display-tight text-[20px]">GameSpot</span>
+      <span aria-hidden="true" class="text-[19px] font-bold tracking-tight">Polygon</span>
+      <span aria-hidden="true" class="mono text-[15px] tracking-[0.12em]">KOTAKU</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 9 · THE STUDIO ===== -->
+<section id="studio" class="border-y rule bg-[color:var(--bg-2)]">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14 items-start">
+      <div class="md:col-span-5">
+        <div class="marker mb-5"><span class="accent-bar"></span>The studio</div>
+        <h2 class="display-tight text-[clamp(28px,4.2vw,48px)] text-bone max-w-[15ch]">
+          Nine people. One <em class="accent">basement</em>. Montréal.
+        </h2>
+        <div class="text-[16px] text-[color:var(--ink-2)] leading-[1.65] mt-6 space-y-4">
+          <p>Ironside Interactive is nine people in a converted Mile End loft who spent six years making game-jam prototypes that nobody asked for. Sunder is the one they couldn't stop making — a 48-hour jam build from 2020 that quietly refused to die.</p>
+          <p>It is their first commercial release. Everything in it — the adaptive Vault, the 41-track score, all 38 bosses — was built by a team small enough to fit around one long table, who playtested every boss against each other until somebody cried, and then shipped it anyway.</p>
+        </div>
+        <div class="mt-6 inline-flex items-center gap-2.5 rounded-lg border rule bg-[var(--surface)] px-3.5 py-2.5">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2v20M2 12h20" stroke="#FF5A1F" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <span class="mono text-[11px] text-[color:var(--ink-2)]">From game jams to launch · est. 2019</span>
+        </div>
+      </div>
+
+      <div class="md:col-span-7">
+        <!-- team grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div class="rounded-xl border rule bg-[color:var(--card)] p-4 card-lift">
+            <div class="blob-a h-12 w-12 rounded-full border rule-2"></div>
+            <div class="display-tight text-[14px] text-bone mt-3">Mara Feld</div>
+            <div class="mono text-[10.5px] text-[color:var(--ink-3)] mt-0.5">Creative Director</div>
+          </div>
+          <div class="rounded-xl border rule bg-[color:var(--card)] p-4 card-lift">
+            <div class="blob-b h-12 w-12 rounded-full border rule-2"></div>
+            <div class="display-tight text-[14px] text-bone mt-3">Theo Brandt</div>
+            <div class="mono text-[10.5px] text-[color:var(--ink-3)] mt-0.5">Lead Combat Design</div>
+          </div>
+          <div class="rounded-xl border rule bg-[color:var(--card)] p-4 card-lift">
+            <div class="blob-c h-12 w-12 rounded-full border rule-2"></div>
+            <div class="display-tight text-[14px] text-bone mt-3">Reya Vance</div>
+            <div class="mono text-[10.5px] text-[color:var(--ink-3)] mt-0.5">Composer · Audio</div>
+          </div>
+          <div class="rounded-xl border rule bg-[color:var(--card)] p-4 card-lift">
+            <div class="blob-d h-12 w-12 rounded-full border rule-2"></div>
+            <div class="display-tight text-[14px] text-bone mt-3">Anika Roy</div>
+            <div class="mono text-[10.5px] text-[color:var(--ink-3)] mt-0.5">Engine &amp; Tools</div>
+          </div>
+          <div class="rounded-xl border rule bg-[color:var(--card)] p-4 card-lift">
+            <div class="blob-e h-12 w-12 rounded-full border rule-2"></div>
+            <div class="display-tight text-[14px] text-bone mt-3">Luc Tremblay</div>
+            <div class="mono text-[10.5px] text-[color:var(--ink-3)] mt-0.5">Environment Art</div>
+          </div>
+          <div class="rounded-xl border rule bg-[color:var(--card)] p-4 card-lift">
+            <div class="grid place-items-center h-12 w-12 rounded-full border rule-2 bg-[var(--surface)]">
+              <span class="display tnum text-[15px] text-molten">+4</span>
+            </div>
+            <div class="display-tight text-[14px] text-bone mt-3">The rest</div>
+            <div class="mono text-[10.5px] text-[color:var(--ink-3)] mt-0.5">Animation, QA, production</div>
+          </div>
+        </div>
+
+        <!-- prior work -->
+        <div class="mt-5 rounded-2xl border rule bg-[color:var(--card)] p-6">
+          <div class="mono text-[11px] tracking-[0.14em] uppercase text-[color:var(--ink-3)] mb-4">Prior work — the jam years</div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-px bg-[color:var(--rule)] rounded-xl overflow-hidden">
+            <div class="bg-[color:var(--bg-2)] p-4">
+              <div class="display-tight text-[14px] text-bone">Hollowpoint</div>
+              <p class="text-[12.5px] text-[color:var(--ink-2)] mt-1 leading-[1.5]">Ludum Dare 46 — ranked 4th overall.</p>
+            </div>
+            <div class="bg-[color:var(--bg-2)] p-4">
+              <div class="display-tight text-[14px] text-bone">Saltbreaker</div>
+              <p class="text-[12.5px] text-[color:var(--ink-2)] mt-1 leading-[1.5]">GMTK Jam 2021 — top 1% in design.</p>
+            </div>
+            <div class="bg-[color:var(--bg-2)] p-4">
+              <div class="display-tight text-[14px] text-bone">Ninefold</div>
+              <p class="text-[12.5px] text-[color:var(--ink-2)] mt-1 leading-[1.5]">7DRL 2022 — the Sunder prototype.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 10 · SYSTEM REQUIREMENTS ===== -->
+<section class="max-w-[1200px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
+    <div class="max-w-[44ch]">
+      <div class="marker mb-5"><span class="accent-bar"></span>Specs</div>
+      <h2 class="display-tight text-[clamp(28px,4vw,46px)] text-bone">Will it run.</h2>
+    </div>
+    <div class="mono text-[12px] text-[color:var(--ink-3)] sm:text-right">
+      PC build 2026.05.14 · ~6.4 GB<br/>also on PS5 &amp; Xbox Series X|S
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-px bg-[color:var(--rule)] border rule rounded-2xl overflow-hidden">
+    <!-- minimum -->
+    <div class="bg-[color:var(--card)] p-7 sm:p-9">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="display-tight text-[18px] text-bone">Minimum</h3>
+        <span class="mono text-[10.5px] tracking-[0.12em] uppercase text-[color:var(--ink-3)] rounded-md border rule px-2 py-1">1080p · 30 fps</span>
+      </div>
+      <dl class="mono text-[12.5px] divide-y divide-[color:var(--rule)]">
+        <div class="grid grid-cols-3 gap-3 py-3">
+          <dt class="text-[color:var(--ink-3)] uppercase tracking-[0.06em]">OS</dt>
+          <dd class="col-span-2 text-[color:var(--ink-2)]">Windows 10 64-bit (build 19045)</dd>
+        </div>
+        <div class="grid grid-cols-3 gap-3 py-3">
+          <dt class="text-[color:var(--ink-3)] uppercase tracking-[0.06em]">Processor</dt>
+          <dd class="col-span-2 text-[color:var(--ink-2)]">Intel Core i5-6600 / AMD Ryzen 3 1300X</dd>
+        </div>
+        <div class="grid grid-cols-3 gap-3 py-3">
+          <dt class="text-[color:var(--ink-3)] uppercase tracking-[0.06em]">Memory</dt>
+          <dd class="col-span-2 text-[color:var(--ink-2)]">8 GB RAM</dd>
+        </div>
+        <div class="grid grid-cols-3 gap-3 py-3">
+          <dt class="text-[color:var(--ink-3)] uppercase tracking-[0.06em]">Graphics</dt>
+          <dd class="col-span-2 text-[color:var(--ink-2)]">NVIDIA GTX 1050 Ti 4 GB / AMD RX 570</dd>
+        </div>
+        <div class="grid grid-cols-3 gap-3 py-3">
+          <dt class="text-[color:var(--ink-3)] uppercase tracking-[0.06em]">DirectX</dt>
+          <dd class="col-span-2 text-[color:var(--ink-2)]">Version 11</dd>
+        </div>
+        <div class="grid grid-cols-3 gap-3 py-3">
+          <dt class="text-[color:var(--ink-3)] uppercase tracking-[0.06em]">Storage</dt>
+          <dd class="col-span-2 text-[color:var(--ink-2)]">6.4 GB available · HDD acceptable</dd>
+        </div>
+      </dl>
+    </div>
+    <!-- recommended -->
+    <div class="bg-[color:var(--card)] p-7 sm:p-9">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="display-tight text-[18px] text-bone">Recommended</h3>
+        <span class="mono text-[10.5px] tracking-[0.12em] uppercase text-[#1A0A04] rounded-md px-2 py-1" style="background:linear-gradient(180deg,#FF7A40,#FF5A1F);">1440p · 120 fps</span>
+      </div>
+      <dl class="mono text-[12.5px] divide-y divide-[color:var(--rule)]">
+        <div class="grid grid-cols-3 gap-3 py-3">
+          <dt class="text-[color:var(--ink-3)] uppercase tracking-[0.06em]">OS</dt>
+          <dd class="col-span-2 text-bone">Windows 11 64-bit (build 22631)</dd>
+        </div>
+        <div class="grid grid-cols-3 gap-3 py-3">
+          <dt class="text-[color:var(--ink-3)] uppercase tracking-[0.06em]">Processor</dt>
+          <dd class="col-span-2 text-bone">Intel Core i7-10700K / AMD Ryzen 5 5600X</dd>
+        </div>
+        <div class="grid grid-cols-3 gap-3 py-3">
+          <dt class="text-[color:var(--ink-3)] uppercase tracking-[0.06em]">Memory</dt>
+          <dd class="col-span-2 text-bone">16 GB RAM</dd>
+        </div>
+        <div class="grid grid-cols-3 gap-3 py-3">
+          <dt class="text-[color:var(--ink-3)] uppercase tracking-[0.06em]">Graphics</dt>
+          <dd class="col-span-2 text-bone">NVIDIA RTX 3060 8 GB / AMD RX 6700 XT</dd>
+        </div>
+        <div class="grid grid-cols-3 gap-3 py-3">
+          <dt class="text-[color:var(--ink-3)] uppercase tracking-[0.06em]">DirectX</dt>
+          <dd class="col-span-2 text-bone">Version 12</dd>
+        </div>
+        <div class="grid grid-cols-3 gap-3 py-3">
+          <dt class="text-[color:var(--ink-3)] uppercase tracking-[0.06em]">Storage</dt>
+          <dd class="col-span-2 text-bone">6.4 GB available · SSD required</dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+  <p class="mono text-[11.5px] text-[color:var(--ink-3)] mt-5 leading-[1.6]">
+    Console — runs at a locked 60 fps in Performance mode on PS5 and Xbox Series X, 30 fps on Series S. Steam Deck verified · ~3h40m battery at the 40W profile. DualSense haptics and adaptive triggers fully supported.
+  </p>
+</section>
+
+<!-- ===== 11 · NEWSLETTER / FINAL CTA ===== -->
+<section id="buy" class="relative overflow-hidden border-y rule mesh-ember">
+  <div class="absolute inset-0 dotgrid opacity-25 pointer-events-none"></div>
+  <div class="relative max-w-[920px] mx-auto px-5 sm:px-8 py-24 sm:py-32 text-center">
+    <div class="inline-flex items-center gap-2.5 rounded-full border rule-molten bg-[var(--surface)] px-4 py-1.5 mb-8">
+      <span class="pulse-dot"></span>
+      <span class="mono text-[11px] tracking-[0.06em] text-[color:var(--ink-2)]">Out now · 96% positive on Steam</span>
+    </div>
+    <h2 class="display text-[clamp(38px,7.4vw,92px)] text-bone leading-[0.96]">
+      The Vault is open.<br/>
+      <span class="halftone">Go down.</span>
+    </h2>
+    <p class="text-[17px] text-[color:var(--ink-2)] mt-6 max-w-[46ch] mx-auto leading-[1.62]">
+      $24.99 on Steam, PlayStation 5, and Xbox Series X|S. No season pass, no microtransactions — the whole descent, one price.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-3 justify-center mt-9">
+      <a href="#buy" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full font-bold px-8 py-4 text-[16px]">
+        Add to cart — $24.99 <span class="scroll-x">→</span>
+      </a>
+      <a href="#trailer" class="btn-ghost inline-flex items-center justify-center gap-2 rounded-full font-medium px-8 py-4 text-[16px]">
+        Watch the trailer
+      </a>
+    </div>
+
+    <!-- newsletter -->
+    <div class="mt-12 pt-10 border-t rule max-w-[480px] mx-auto">
+      <div class="mono text-[11px] tracking-[0.14em] uppercase text-[color:var(--ink-3)] mb-4">Patch notes &amp; the post-launch roadmap, in your inbox</div>
+      <form class="flex flex-col sm:flex-row gap-2.5" onsubmit="return false;">
+        <input type="email" required placeholder="you@example.com" aria-label="Email address"
+          class="flex-1 rounded-full border rule-2 bg-[var(--surface)] px-4 py-3 text-[14px] text-bone placeholder:text-[color:var(--ink-3)] outline-none focus:border-[color:var(--rule-molten)]" />
+        <button type="submit" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full font-bold px-5 py-3 text-[14px] whitespace-nowrap">
+          Get patch notes <span class="scroll-x">→</span>
+        </button>
+      </form>
+      <p class="mono text-[10.5px] text-[color:var(--ink-3)] mt-3">No spam. Roughly one mail per content drop. Unsubscribe any time.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 12 · FOOTER ===== -->
+<footer class="bg-[color:var(--bg-2)] border-t rule">
+  <div class="max-w-[1200px] mx-auto px-5 sm:px-8 py-14">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-10">
+      <div class="md:col-span-5">
+        <a href="#top" class="flex items-center gap-2.5">
+          <span class="grid h-8 w-8 place-items-center rounded-lg" style="background:radial-gradient(120% 120% at 30% 24%, #3A1408, #160A0A); box-shadow:inset 0 0 0 1px rgba(255,90,31,0.36);">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <path d="M9 1.4 13.7 9 9 16.6 4.3 9 9 1.4Z" fill="none" stroke="#FF5A1F" stroke-width="1.3"/>
+              <path d="M9 1.4 9 16.6" stroke="#FF5A1F" stroke-width="1.3"/>
+              <path d="M6.6 5.3 9 9 6 12.7" stroke="#FF5A1F" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="9" cy="9" r="1.4" fill="#FF5A1F"/>
+            </svg>
+          </span>
+          <span class="display-tight text-[18px] text-bone">SUNDER</span>
+        </a>
+        <p class="text-[14px] text-[color:var(--ink-2)] mt-4 max-w-[36ch] leading-[1.55]">
+          A fast, brutal action-roguelike from Ironside Interactive. Die, learn, descend.
+        </p>
+        <!-- ESRB rating badge -->
+        <div class="mt-6 inline-flex items-stretch rounded-md overflow-hidden border rule-2">
+          <div class="grid place-items-center bg-[#0A0A0A] px-3.5 py-2">
+            <span class="display tnum text-[26px] text-bone leading-none">M</span>
+          </div>
+          <div class="flex flex-col justify-center bg-[var(--surface)] px-3 py-1.5">
+            <span class="mono text-[9.5px] tracking-[0.1em] text-[color:var(--ink-2)] uppercase">ESRB · Mature 17+</span>
+            <span class="mono text-[9px] text-[color:var(--ink-3)] uppercase">Blood · Intense Violence</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="md:col-span-7 grid grid-cols-2 sm:grid-cols-3 gap-8">
+        <div>
+          <div class="mono text-[10.5px] tracking-[0.14em] uppercase text-[color:var(--ink-3)] mb-3.5">Platforms</div>
+          <ul class="space-y-2.5 text-[13.5px] text-[color:var(--ink-2)]">
+            <li><a href="#buy" class="ul-link hover:text-bone">Steam</a></li>
+            <li><a href="#buy" class="ul-link hover:text-bone">PlayStation 5</a></li>
+            <li><a href="#buy" class="ul-link hover:text-bone">Xbox Series X|S</a></li>
+            <li><a href="#buy" class="ul-link hover:text-bone">Steam Deck</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="mono text-[10.5px] tracking-[0.14em] uppercase text-[color:var(--ink-3)] mb-3.5">Game</div>
+          <ul class="space-y-2.5 text-[13.5px] text-[color:var(--ink-2)]">
+            <li><a href="#about" class="ul-link hover:text-bone">About</a></li>
+            <li><a href="#media" class="ul-link hover:text-bone">Screenshots</a></li>
+            <li><a href="#trailer" class="ul-link hover:text-bone">Trailer</a></li>
+            <li><a href="#community" class="ul-link hover:text-bone">Community</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="mono text-[10.5px] tracking-[0.14em] uppercase text-[color:var(--ink-3)] mb-3.5">Studio</div>
+          <ul class="space-y-2.5 text-[13.5px] text-[color:var(--ink-2)]">
+            <li><a href="#studio" class="ul-link hover:text-bone">Ironside Interactive</a></li>
+            <li><a href="#studio" class="ul-link hover:text-bone">Press kit</a></li>
+            <li><a href="#community" class="ul-link hover:text-bone">Discord</a></li>
+            <li><a href="#buy" class="ul-link hover:text-bone">Support</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-12 pt-7 border-t rule flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="mono text-[11px] text-[color:var(--ink-3)]">© 2026 Ironside Interactive Inc. · Montréal, QC</div>
+      <div class="flex items-center gap-5 text-[12px] text-[color:var(--ink-3)]">
+        <a href="#" class="ul-link hover:text-[color:var(--ink-2)]">Privacy</a>
+        <a href="#" class="ul-link hover:text-[color:var(--ink-2)]">Terms</a>
+        <a href="#studio" class="ul-link hover:text-[color:var(--ink-2)]">presskit@ironside.gg</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</main>
+
+<!-- procedural SVG sparkline + tabular counter animation -->
+<script>
+  (function(){
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+    /* ---- animated tabular counters ---- */
+    function fmt(n){ return n.toLocaleString('en-US'); }
+    function runCounter(el){
+      var target = parseInt(el.getAttribute('data-count'), 10) || 0;
+      if(reduce){ el.textContent = fmt(target); return; }
+      var dur = 1500, t0 = null;
+      function step(ts){
+        if(!t0) t0 = ts;
+        var p = Math.min((ts - t0) / dur, 1);
+        var eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = fmt(Math.round(target * eased));
+        if(p < 1) requestAnimationFrame(step);
+        else el.textContent = fmt(target);
+      }
+      requestAnimationFrame(step);
+    }
+    var counters = document.querySelectorAll('[data-count]');
+    if('IntersectionObserver' in window){
+      var io = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          if(e.isIntersecting){ runCounter(e.target); io.unobserve(e.target); }
+        });
+      }, { threshold: 0.4 });
+      counters.forEach(function(el){ io.observe(el); });
+    } else {
+      counters.forEach(runCounter);
+    }
+
+    /* ---- procedural boss-kill sparkline ---- */
+    var spark = document.getElementById('sparkPath');
+    var sparkArea = document.getElementById('sparkArea');
+    if(spark && sparkArea){
+      var data = [3, 5, 4, 8, 7, 11, 9, 14, 12, 17, 16, 21, 24, 22, 27, 31, 29, 34, 38];
+      var W = 640, H = 130, pad = 6;
+      var max = Math.max.apply(null, data), min = Math.min.apply(null, data);
+      var pts = data.map(function(v, i){
+        var x = pad + i * ((W - pad * 2) / (data.length - 1));
+        var y = H - pad - ((v - min) / (max - min)) * (H - pad * 2);
+        return [x, y];
+      });
+      var d = pts.map(function(p, i){ return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
+      spark.setAttribute('d', d);
+      sparkArea.setAttribute('d', d + ' L' + pts[pts.length-1][0].toFixed(1) + ' ' + H + ' L' + pts[0][0].toFixed(1) + ' ' + H + ' Z');
+      // dots on each datapoint
+      var g = document.getElementById('sparkDots');
+      if(g){
+        pts.forEach(function(p){
+          var c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+          c.setAttribute('cx', p[0].toFixed(1));
+          c.setAttribute('cy', p[1].toFixed(1));
+          c.setAttribute('r', '2');
+          c.setAttribute('fill', '#FF5A1F');
+          g.appendChild(c);
+        });
+      }
+    }
+  })();
+</script>
+</body>
+</html>

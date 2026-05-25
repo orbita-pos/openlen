@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FCFAF5">
+<title>Aria Delph — Designer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --paper: #FCFAF5;
+    --ink: #1E1A1E;
+    --muted: #5B505A;
+    --accent: #5D3F5B;
+    --faint: rgba(30,26,30,0.45);
+    --border: rgba(30,26,30,0.08);
+  }
+  html, body { background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; }
+  body { font-family: 'Inter', sans-serif; }
+  .display { font-family: 'Fraunces', serif; font-weight: 500; letter-spacing: -0.03em; font-variation-settings: 'opsz' 96, 'SOFT' 50; }
+  .serif-it { font-family: 'Fraunces', serif; font-style: italic; font-weight: 400; }
+  .serif-it-med { font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; }
+  .mono { font-family: 'JetBrains Mono', monospace; font-weight: 500; font-feature-settings: 'tnum'; }
+  .rule { width: 64px; margin: 0 auto; height: 1px; background: var(--border); }
+  .eyebrow { font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 10.5px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--muted); font-feature-settings: 'tnum'; }
+  .text-muted { color: var(--muted); }
+  .text-faint { color: var(--faint); }
+  .text-ink { color: var(--ink); }
+  .text-accent { color: var(--accent); }
+  .link-row { display: flex; align-items: baseline; justify-content: center; width: 100%; padding: 18px 4px; text-align: center; border-bottom: 1px solid var(--border); transition: background-color 120ms ease; gap: 12px; }
+  .link-row:hover { background-color: rgba(30,26,30,0.022); }
+  .link-row .label { font-family: 'Inter', sans-serif; font-weight: 500; font-size: 14px; color: var(--ink); }
+  .link-row .sub { font-family: 'Fraunces', serif; font-style: italic; font-weight: 400; font-size: 14.5px; color: var(--muted); }
+  .link-row.accent .label { color: var(--accent); font-style: italic; font-family: 'Fraunces', serif; font-weight: 500; font-size: 16px; letter-spacing: -0.005em; }
+  .link-row.accent .sub { color: var(--accent); font-style: italic; font-weight: 400; }
+  .portrait { background:
+    radial-gradient(circle at 32% 28%, #e0c8de 0%, transparent 55%),
+    radial-gradient(circle at 70% 72%, rgba(93,63,91,0.55), transparent 55%),
+    linear-gradient(155deg, #d2b4cf 0%, #936c91 45%, #4a3149 100%); }
+  .featured-wrap { position: relative; overflow: hidden; aspect-ratio: 1 / 1; width: 100%; background:
+    radial-gradient(circle at 28% 26%, rgba(247,234,243,0.65), transparent 58%),
+    radial-gradient(circle at 76% 76%, rgba(93,63,91,0.6), transparent 55%),
+    linear-gradient(162deg, #ead8e6 0%, #b491b0 45%, #5d3f5b 100%); }
+  .featured-mark { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: 'Fraunces', serif; font-style: italic; font-weight: 500; font-size: clamp(96px, 30vw, 150px); color: rgba(252,250,245,0.16); letter-spacing: -0.07em; line-height: 0.85; user-select: none; pointer-events: none; }
+  ::selection { background: rgba(93,63,91,0.22); }
+  a { color: inherit; text-decoration: none; }
+</style>
+</head>
+<body>
+  <main class="mx-auto w-full" style="max-width: 480px;">
+
+    <div class="pt-14 px-6 text-center">
+      <span class="eyebrow">Studio · Type + Identity · 2019–present</span>
+    </div>
+
+    <section class="pt-10 px-6 text-center">
+      <div class="portrait mx-auto" style="width: 152px; height: 152px;"></div>
+      <h1 class="mt-9 display" style="font-size: clamp(42px, 11.5vw, 52px); line-height: 1.0;">Aria Delph</h1>
+      <p class="mt-3 serif-it text-muted" style="font-size: 17.5px;">Identity · publication · occasional type</p>
+      <p class="mt-6 mx-auto" style="max-width: 380px; font-size: 14.5px; line-height: 1.72;">Independent designer. Identity, publication design, and occasional type. Selected clients <span class="serif-it-med text-ink">A24</span>, <span class="serif-it-med text-ink">MIT Media Lab</span>, and <span class="serif-it-med text-ink">NTS Radio</span>.</p>
+    </section>
+
+    <div class="my-14 rule"></div>
+
+    <section class="px-6">
+      <div class="featured-wrap mx-auto">
+        <span class="featured-mark">NTS</span>
+      </div>
+      <div class="text-center mt-6">
+        <p class="serif-it-med" style="font-size: 19px;">NTS Radio · 10-year rebrand</p>
+        <p class="mt-1 serif-it text-muted" style="font-size: 14.5px;">identity system · 2024–25 · in collaboration</p>
+        <p class="mt-4 eyebrow text-faint">NTS · 10YR · ID—25</p>
+      </div>
+    </section>
+
+    <div class="my-14 rule"></div>
+
+    <nav class="px-6">
+      <div style="border-top: 1px solid var(--border);">
+        <a class="link-row" href="#"><span class="label">Selected work</span><span class="sub">2019–present</span></a>
+        <a class="link-row accent" href="#"><span class="label">Available for project work</span><span class="sub">Q3 2026 onward</span></a>
+        <a class="link-row" href="#"><span class="label">Studio</span><span class="sub">solo + two collaborators</span></a>
+        <a class="link-row" href="#"><span class="label">Recognition</span><span class="sub">ADC + D&AD · 2023–25</span></a>
+        <a class="link-row" href="#"><span class="label">Type</span><span class="sub">two faces in progress</span></a>
+        <a class="link-row" href="#"><span class="label">Workshop</span><span class="sub">Werkplaats Typografie · Sept 2026</span></a>
+        <a class="link-row" href="#"><span class="label">Newsletter</span><span class="sub">monthly + occasional</span></a>
+        <a class="link-row" href="#"><span class="label">Contact</span><span class="sub">hello@ariadelph.studio</span></a>
+      </div>
+    </nav>
+
+    <div class="my-14 rule"></div>
+
+    <div class="px-6 flex justify-center" style="gap: 28px;">
+      <a href="#" aria-label="Instagram" class="text-muted hover:text-ink transition-colors">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.65" fill="currentColor"/></svg>
+      </a>
+      <a href="#" aria-label="Are.na" class="text-muted hover:text-ink transition-colors">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/></svg>
+      </a>
+      <a href="#" aria-label="Read · Substack" class="text-muted hover:text-ink transition-colors">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M4 10h16M4 15h16v6l-8-4-8 4v-6z"/></svg>
+      </a>
+    </div>
+
+    <footer class="px-6 pt-14 pb-16 text-center">
+      <p class="text-faint serif-it" style="font-size: 13px;">Studio · Amsterdam + remote · Da Costakade 158</p>
+      <p class="mt-1 text-faint serif-it" style="font-size: 13px;">hello@ariadelph.studio · © Aria Delph 2026</p>
+    </footer>
+
+  </main>
+</body>
+</html>

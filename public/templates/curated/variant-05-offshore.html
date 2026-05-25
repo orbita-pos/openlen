@@ -1,0 +1,1549 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Offshore — A surf &amp; dive retreat on the Marola coast · 7 nights, all levels</title>
+<meta name="description" content="A week-long surf-and-dive retreat on the Marola coast — twice-daily surf, an optional open-water dive course, and a shared beach house for fourteen. Year-round departures, every Saturday, from $1,690.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          bg: "#081318",
+          ink: "#E9F4F5",
+          aqua: "#2BC4D4",
+          "aqua-deep": "#1C8E9B",
+          surf: "#F2C66B",
+          surface: "#0E2027",
+          "surface-2": "#13282F",
+        },
+        fontFamily: {
+          display: ["Inter", "system-ui", "sans-serif"],
+          body: ["Inter", "system-ui", "sans-serif"],
+          mono: ["'Geist Mono'", "ui-monospace", "monospace"],
+        },
+        borderRadius: {
+          xl2: "1.35rem",
+        },
+      },
+    },
+  };
+</script>
+<style>
+  :root {
+    --bg: #081318;
+    --text: #E9F4F5;
+    --muted: rgba(233, 244, 245, 0.66);
+    --faint: rgba(233, 244, 245, 0.40);
+    --accent: #2BC4D4;
+    --accent-2: #F2C66B;
+    --line: rgba(233, 244, 245, 0.08);
+    --line-strong: rgba(233, 244, 245, 0.14);
+    --surface: #0E2027;
+    --radius: 1.35rem;
+  }
+
+  * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: "Inter", system-ui, sans-serif;
+    font-weight: 400;
+    font-feature-settings: "ss01", "cv11";
+    font-optical-sizing: auto;
+    letter-spacing: 0.004em;
+    overflow-x: hidden;
+  }
+
+  ::selection { background: rgba(43, 196, 212, 0.30); color: #FFFFFF; }
+
+  section[id] { scroll-margin-top: 88px; }
+
+  .display { font-family: "Inter", system-ui, sans-serif; font-optical-sizing: auto; letter-spacing: -0.035em; }
+  .display-tight { letter-spacing: -0.042em; }
+  .soft { letter-spacing: -0.02em; }
+  .mono { font-family: "Geist Mono", ui-monospace, monospace; }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .halftone { opacity: 0.45; }
+
+  .eyebrow {
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 0.66rem;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  /* ambient — deep-ocean glow */
+  .ambient {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background:
+      radial-gradient(680px 520px at 82% -6%, rgba(43, 196, 212, 0.16), transparent 70%),
+      radial-gradient(560px 540px at 4% 18%, rgba(43, 196, 212, 0.08), transparent 72%),
+      radial-gradient(820px 640px at 94% 96%, rgba(242, 198, 107, 0.07), transparent 76%);
+  }
+
+  /* faint dot grid */
+  .dotgrid {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: radial-gradient(rgba(233, 244, 245, 0.05) 1px, transparent 1.5px);
+    background-size: 32px 32px;
+    mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+    opacity: 0.7;
+  }
+
+  /* blurred mesh blob */
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(72px);
+    opacity: 0.5;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* photo placeholder frame */
+  .photo {
+    position: relative;
+    border-radius: var(--radius);
+    box-shadow:
+      inset 0 0 0 1px rgba(233, 244, 245, 0.10),
+      0 26px 56px -30px rgba(0, 0, 0, 0.8);
+    overflow: hidden;
+  }
+  .photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(8, 19, 24, 0.30));
+    pointer-events: none;
+  }
+
+  /* rich ocean gradients for the photo stand-ins */
+  .grad-dawn   { background: linear-gradient(178deg, #F2C66B 0%, #E08A6E 22%, #9C5C8C 46%, #3D5E86 70%, #15323F 100%); }
+  .grad-reef   { background: linear-gradient(170deg, #2BC4D4 0%, #1C8E9B 34%, #15616F 62%, #0C3540 100%); }
+  .grad-deep   { background: linear-gradient(165deg, #1C8E9B 0%, #16566B 38%, #0E3340 70%, #081822 100%); }
+  .grad-sunset { background: linear-gradient(180deg, #F2C66B 0%, #E78A5C 28%, #B65A6E 52%, #5C4A7C 76%, #1E3144 100%); }
+  .grad-lagoon { background: linear-gradient(160deg, #5FE0E0 0%, #2BC4D4 32%, #1C8E9B 60%, #14515F 100%); }
+  .grad-night  { background: linear-gradient(168deg, #1A4654 0%, #123440 40%, #0C2530 70%, #081318 100%); }
+
+  .card-lift {
+    transition: transform 130ms ease, box-shadow 130ms ease, border-color 130ms ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 28px 56px -32px rgba(0, 0, 0, 0.9);
+    border-color: rgba(43, 196, 212, 0.34);
+  }
+
+  .surface-card {
+    background: linear-gradient(180deg, rgba(19, 40, 47, 0.92), rgba(14, 32, 39, 0.92));
+    border: 1px solid var(--line);
+  }
+
+  .btn {
+    transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn:active { transform: translateY(0); }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #042027;
+    box-shadow: 0 12px 28px -12px rgba(43, 196, 212, 0.7);
+  }
+  .btn-primary:hover {
+    background: #45D2E0;
+    box-shadow: 0 18px 36px -14px rgba(43, 196, 212, 0.85);
+  }
+
+  .btn-ghost {
+    background: rgba(233, 244, 245, 0.04);
+    color: var(--text);
+    border: 1px solid var(--line-strong);
+  }
+  .btn-ghost:hover {
+    border-color: rgba(43, 196, 212, 0.46);
+    background: rgba(43, 196, 212, 0.08);
+  }
+
+  .navlink {
+    position: relative;
+    transition: color 120ms ease;
+  }
+  .navlink::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 100%;
+    bottom: -4px;
+    height: 1px;
+    background: var(--accent);
+    transition: right 180ms ease;
+  }
+  .navlink:hover { color: var(--accent); }
+  .navlink:hover::after { right: 0; }
+
+  /* hero rise-in */
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .rise { opacity: 0; animation: rise 0.9s cubic-bezier(0.22, 0.7, 0.3, 1) forwards; }
+  .rise-1 { animation-delay: 0.05s; }
+  .rise-2 { animation-delay: 0.16s; }
+  .rise-3 { animation-delay: 0.27s; }
+  .rise-4 { animation-delay: 0.38s; }
+  .rise-5 { animation-delay: 0.50s; }
+
+  /* pulse dot — radial expanding box-shadow */
+  .pulse-dot {
+    position: relative;
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent-2);
+  }
+  .pulse-dot::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    box-shadow: 0 0 0 0 rgba(242, 198, 107, 0.55);
+    animation: pulse 2.4s ease-out infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(242, 198, 107, 0.55); }
+    70%  { box-shadow: 0 0 0 11px rgba(242, 198, 107, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(242, 198, 107, 0); }
+  }
+
+  /* marquee */
+  .marquee { overflow: hidden; }
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: slide 40s linear infinite;
+  }
+  .marquee:hover .marquee-track { animation-play-state: paused; }
+  @keyframes slide {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  /* timeline node */
+  .tl-node {
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 0 0 6px var(--bg), 0 0 0 7px var(--line-strong);
+  }
+
+  /* native details */
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+  .faq-item { transition: border-color 130ms ease, background-color 130ms ease; }
+  .faq-item[open] { border-color: rgba(43, 196, 212, 0.32); }
+  .faq-chev { transition: transform 200ms ease; }
+  details[open] .faq-chev { transform: rotate(45deg); }
+
+  .hairrule {
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--line-strong) 22%, var(--line-strong) 78%, transparent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rise { animation: none; opacity: 1; }
+    .pulse-dot::before { animation: none; }
+    .marquee-track { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<div class="ambient" aria-hidden="true"></div>
+<div class="dotgrid" aria-hidden="true"></div>
+
+<!-- ===== 1 · STICKY NAV ===== -->
+<header class="sticky top-0 z-50">
+  <div class="border-b border-[color:var(--line)]" style="background:rgba(8,19,24,0.78);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);">
+    <nav class="mx-auto max-w-6xl px-5 sm:px-8 h-[64px] flex items-center justify-between">
+      <a href="#top" class="flex items-center gap-2.5 group" aria-label="Offshore — home">
+        <!-- brand mark: a peeling wave curl inside a thin ring -->
+        <svg width="38" height="38" viewBox="0 0 38 38" fill="none" aria-hidden="true" class="transition-transform duration-200 group-hover:-rotate-6">
+          <circle cx="19" cy="19" r="17.3" stroke="#2BC4D4" stroke-width="1" opacity="0.5"/>
+          <path d="M8 24c0-7 5.5-12 12-12 4 0 6.5 2 6.5 2-2-.4-5 .3-7.6 2.8C15.6 22 14 26 9.5 27c-1-1-1.5-2-1.5-3Z" fill="#2BC4D4"/>
+          <path d="M11 27c5-1 7-5 10-8 1.4-1.3 3-2.2 4.4-2.6" stroke="#081318" stroke-width="1.1" stroke-linecap="round" opacity="0.55"/>
+          <path d="M8 27.5q8 2.5 22-1" stroke="#F2C66B" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
+        </svg>
+        <span class="display text-[16px] font-bold soft text-ink">Offshore</span>
+      </a>
+      <ul class="hidden md:flex items-center gap-7 text-[13px] font-normal text-ink/70">
+        <li><a href="#retreat" class="navlink">The retreat</a></li>
+        <li><a href="#day" class="navlink">A typical day</a></li>
+        <li><a href="#dates" class="navlink">Dates</a></li>
+        <li><a href="#crew" class="navlink">The crew</a></li>
+      </ul>
+      <a href="#dates" class="btn btn-primary text-[12.5px] font-semibold rounded-full px-4 py-2 soft">Book a week</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ===== 2 · HERO ===== -->
+<section id="hero" class="relative overflow-hidden pt-14 sm:pt-20 pb-16 sm:pb-20">
+  <div class="blob grad-reef" style="width:420px;height:420px;top:-120px;right:-90px;"></div>
+  <div class="blob grad-sunset" style="width:340px;height:340px;bottom:-130px;left:-100px;opacity:0.32;"></div>
+
+  <div class="mx-auto max-w-6xl px-5 sm:px-8 relative">
+    <div class="max-w-3xl">
+      <span class="rise rise-1 inline-flex items-center gap-2 rounded-full border border-[color:var(--line-strong)] px-3.5 py-1.5 text-[11.5px] font-medium soft text-ink/78" style="background:rgba(43,196,212,0.07);">
+        <span class="pulse-dot"></span>
+        Year-round retreats · all levels
+      </span>
+
+      <h1 class="rise rise-2 mt-7 display display-tight font-bold text-ink leading-[0.96] text-[clamp(2.9rem,8.4vw,5.7rem)]">
+        Surf twice a day.
+        <span class="block halftone">The rest of the<br class="hidden sm:block"> week is yours.</span>
+      </h1>
+
+      <p class="rise rise-3 mt-7 text-[15.5px] sm:text-[16.5px] leading-[1.62] text-ink/72 max-w-xl">
+        Seven nights on the Marola coast — dawn and afternoon sessions in warm water, an optional dive
+        course, and <em class="not-italic halftone">whatever you want to do with the hours in between.</em>
+      </p>
+
+      <div class="rise rise-4 mt-8 flex flex-wrap items-center gap-3">
+        <a href="#dates" class="btn btn-primary rounded-full px-7 py-3 text-[14px] font-semibold soft">Book a week</a>
+        <a href="#day" class="btn btn-ghost rounded-full px-7 py-3 text-[14px] font-medium soft">See a typical day</a>
+      </div>
+    </div>
+
+    <!-- full-bleed destination "photo" -->
+    <div class="rise rise-5 mt-12 sm:mt-14 photo grad-dawn min-h-[300px] sm:min-h-[440px] flex items-end">
+      <!-- dawn lineup: horizon, sun disc, peeling wave, a paddling longboarder -->
+      <svg class="absolute inset-0 w-full h-full" viewBox="0 0 1200 480" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <circle cx="880" cy="138" r="58" fill="rgba(255,255,255,0.32)"/>
+        <circle cx="880" cy="138" r="92" fill="rgba(255,255,255,0.12)"/>
+        <path d="M0 250 Q300 234 600 248 T1200 244" stroke="rgba(255,255,255,0.42)" stroke-width="1.4" fill="none"/>
+        <path d="M0 286 Q320 270 640 286 T1200 280" stroke="rgba(255,255,255,0.22)" stroke-width="1.2" fill="none"/>
+        <!-- the peeling wave -->
+        <path d="M0 408 C160 360 300 332 440 360 C520 376 540 322 470 312 C402 304 360 352 300 384 C220 426 110 444 0 444 Z" fill="rgba(255,255,255,0.18)"/>
+        <path d="M40 416 C190 372 320 346 446 372" stroke="rgba(255,255,255,0.5)" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <!-- spray -->
+        <circle cx="470" cy="318" r="3" fill="rgba(255,255,255,0.55)"/>
+        <circle cx="486" cy="328" r="2.2" fill="rgba(255,255,255,0.4)"/>
+        <circle cx="458" cy="332" r="1.8" fill="rgba(255,255,255,0.4)"/>
+        <!-- distant headland -->
+        <path d="M980 252 Q1060 224 1140 248 L1200 252 L1200 300 L980 300 Z" fill="rgba(8,19,24,0.28)"/>
+        <!-- paddling surfer on a longboard -->
+        <g transform="translate(700,372)">
+          <ellipse cx="0" cy="14" rx="58" ry="9" fill="rgba(8,19,24,0.34)"/>
+          <path d="M-54 12 Q0 2 54 12 Q0 22 -54 12 Z" fill="rgba(8,19,24,0.55)"/>
+          <circle cx="6" cy="2" r="7" fill="rgba(8,19,24,0.62)"/>
+          <path d="M-2 6 q-14 -6 -24 2 M14 6 q14 -6 24 2" stroke="rgba(8,19,24,0.62)" stroke-width="4.5" stroke-linecap="round"/>
+        </g>
+      </svg>
+      <div class="relative m-5 sm:m-6 rounded-xl px-4 py-2.5 text-[11px] mono tracking-[0.14em] uppercase text-ink/82" style="background:rgba(8,19,24,0.55);border:1px solid var(--line-strong);backdrop-filter:blur(6px);">
+        Dawn lineup · Punta Verde · 06:12
+      </div>
+    </div>
+
+    <!-- trip-facts strip -->
+    <div class="mt-5 surface-card rounded-xl2 px-5 sm:px-7 py-4">
+      <ul class="flex flex-wrap items-center justify-center sm:justify-between gap-x-5 gap-y-3 text-center">
+        <li class="flex flex-col items-center sm:items-start">
+          <span class="mono tnum text-[15px] text-ink font-medium">7 nights</span>
+          <span class="text-[10.5px] mono uppercase tracking-[0.16em] text-ink/45 mt-0.5">Stay</span>
+        </li>
+        <li class="hidden sm:block w-px h-8 bg-[color:var(--line)]"></li>
+        <li class="flex flex-col items-center sm:items-start">
+          <span class="mono tnum text-[15px] text-ink font-medium">max 14 guests</span>
+          <span class="text-[10.5px] mono uppercase tracking-[0.16em] text-ink/45 mt-0.5">Group</span>
+        </li>
+        <li class="hidden sm:block w-px h-8 bg-[color:var(--line)]"></li>
+        <li class="flex flex-col items-center sm:items-start">
+          <span class="mono text-[15px] text-ink font-medium">all levels</span>
+          <span class="text-[10.5px] mono uppercase tracking-[0.16em] text-ink/45 mt-0.5">Skill</span>
+        </li>
+        <li class="hidden sm:block w-px h-8 bg-[color:var(--line)]"></li>
+        <li class="flex flex-col items-center sm:items-start">
+          <span class="mono text-[15px] text-ink font-medium">year-round</span>
+          <span class="text-[10.5px] mono uppercase tracking-[0.16em] text-ink/45 mt-0.5">Season</span>
+        </li>
+        <li class="hidden sm:block w-px h-8 bg-[color:var(--line)]"></li>
+        <li class="flex flex-col items-center sm:items-start">
+          <span class="mono tnum text-[15px] text-aqua font-semibold">from $1,690</span>
+          <span class="text-[10.5px] mono uppercase tracking-[0.16em] text-ink/45 mt-0.5">Price</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 3 · TRUST BAR ===== -->
+<section id="trust" class="relative py-14 sm:py-16 border-y border-[color:var(--line)]" style="background:rgba(14,32,39,0.5);">
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <!-- metric row -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-y-8 gap-x-4">
+      <div class="text-center">
+        <p class="mono tnum text-[clamp(1.9rem,5vw,2.7rem)] font-semibold text-ink leading-none">486</p>
+        <p class="mt-2 text-[12px] text-ink/55 font-normal">Retreats run since 2016</p>
+      </div>
+      <div class="text-center">
+        <p class="mono tnum text-[clamp(1.9rem,5vw,2.7rem)] font-semibold text-ink leading-none">6,140</p>
+        <p class="mt-2 text-[12px] text-ink/55 font-normal">Guests hosted on the coast</p>
+      </div>
+      <div class="text-center">
+        <p class="mono tnum text-[clamp(1.9rem,5vw,2.7rem)] font-semibold text-ink leading-none">9</p>
+        <p class="mt-2 text-[12px] text-ink/55 font-normal">Surf coaches on the crew</p>
+      </div>
+      <div class="text-center">
+        <p class="mono tnum text-[clamp(1.9rem,5vw,2.7rem)] font-semibold text-aqua leading-none">4.9</p>
+        <p class="mt-2 text-[12px] text-ink/55 font-normal">Average rating · 1,204 reviews</p>
+      </div>
+    </div>
+
+    <div class="hairrule my-10"></div>
+
+    <p class="text-center eyebrow mb-5">As featured in</p>
+    <!-- press marquee -->
+    <div class="marquee" style="mask-image:linear-gradient(to right,transparent,black 9%,black 91%,transparent);-webkit-mask-image:linear-gradient(to right,transparent,black 9%,black 91%,transparent);">
+      <div class="marquee-track items-center text-ink/45">
+        <span class="px-7 text-[17px] font-bold soft" style="font-family:Georgia,serif;">Meridian</span>
+        <span class="px-7 text-[15px] mono uppercase tracking-[0.18em]">The&nbsp;Passage</span>
+        <span class="px-7 text-[18px] font-semibold italic" style="font-family:Georgia,serif;">Swell&nbsp;Journal</span>
+        <span class="px-7 text-[14px] font-bold uppercase tracking-[0.22em]">Off-Season</span>
+        <span class="px-7 text-[17px] font-medium soft" style="font-family:Georgia,serif;">Wander&nbsp;Quarterly</span>
+        <span class="px-7 text-[15px] mono tracking-[0.14em]">NORTHBOUND</span>
+        <span class="px-7 text-[18px] font-bold italic soft" style="font-family:Georgia,serif;">Saltwater</span>
+        <span class="px-7 text-[14px] font-semibold uppercase tracking-[0.2em]">The&nbsp;Lineup</span>
+        <!-- duplicate for seamless loop -->
+        <span class="px-7 text-[17px] font-bold soft" style="font-family:Georgia,serif;" aria-hidden="true">Meridian</span>
+        <span class="px-7 text-[15px] mono uppercase tracking-[0.18em]" aria-hidden="true">The&nbsp;Passage</span>
+        <span class="px-7 text-[18px] font-semibold italic" style="font-family:Georgia,serif;" aria-hidden="true">Swell&nbsp;Journal</span>
+        <span class="px-7 text-[14px] font-bold uppercase tracking-[0.22em]" aria-hidden="true">Off-Season</span>
+        <span class="px-7 text-[17px] font-medium soft" style="font-family:Georgia,serif;" aria-hidden="true">Wander&nbsp;Quarterly</span>
+        <span class="px-7 text-[15px] mono tracking-[0.14em]" aria-hidden="true">NORTHBOUND</span>
+        <span class="px-7 text-[18px] font-bold italic soft" style="font-family:Georgia,serif;" aria-hidden="true">Saltwater</span>
+        <span class="px-7 text-[14px] font-semibold uppercase tracking-[0.2em]" aria-hidden="true">The&nbsp;Lineup</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 4 · THE RETREAT OVERVIEW ===== -->
+<section id="retreat" class="relative py-20 sm:py-28">
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="max-w-2xl">
+      <p class="eyebrow mb-4">The retreat</p>
+      <h2 class="display display-tight font-bold text-[clamp(2.1rem,5.4vw,3.5rem)] leading-[1.04] text-ink">
+        One coast, one crew, one
+        <span class="halftone">unhurried week.</span>
+      </h2>
+    </div>
+
+    <div class="mt-12 sm:mt-14 grid lg:grid-cols-[1.05fr_0.95fr] gap-10 lg:gap-14 items-start">
+      <!-- passages -->
+      <div class="space-y-7">
+        <p class="text-[15px] sm:text-[15.5px] leading-[1.78] text-ink/76 font-normal">
+          The Marola coast is a forty-minute drive from the nearest airport and a world away from
+          anything that feels like a schedule. There is one sand road, a scatter of fishing pangas,
+          and a long, forgiving point break called <span class="text-ink font-medium">Punta Verde</span>
+          that peels for a good hundred metres on the right swell. It is the rare wave that a total
+          beginner and a twenty-year veteran can both love on the same morning.
+        </p>
+        <p class="text-[15px] sm:text-[15.5px] leading-[1.78] text-ink/76 font-normal">
+          Just south, the reef drops into clear, bath-warm water — twenty-six degrees most of the year,
+          ten to eighteen metres of visibility, and turtles that genuinely do not care that you are
+          there. It is where our optional dive course runs, and where half of you will discover that
+          the week had a second sport in it all along.
+        </p>
+        <p class="text-[15px] sm:text-[15.5px] leading-[1.78] text-ink/76 font-normal">
+          The house is the third thing. A low, open beach house for fourteen, a few steps above the
+          sand, with hammocks, a long shared table, and a deck that faces directly into the sunset.
+          The rhythm of the week is simple — surf in the cool of the morning, eat well, do as little
+          or as much as you like through the heat of the day, paddle out again or dive, then watch
+          the light go from the deck. We have run it 486 times. It works.
+        </p>
+
+        <!-- best time to go panel -->
+        <div class="surface-card rounded-xl2 p-6 mt-2">
+          <div class="flex items-center gap-3 mb-4">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true" class="shrink-0">
+              <circle cx="11" cy="11" r="4.4" stroke="#F2C66B" stroke-width="1.4"/>
+              <path d="M11 1.5v2.6M11 17.9v2.6M1.5 11h2.6M17.9 11h2.6M4.2 4.2l1.9 1.9M15.9 15.9l1.9 1.9M17.8 4.2l-1.9 1.9M6.1 15.9l-1.9 1.9" stroke="#F2C66B" stroke-width="1.3" stroke-linecap="round"/>
+            </svg>
+            <h3 class="display text-lg text-ink soft font-semibold">Best time to go</h3>
+          </div>
+          <p class="text-[13.5px] leading-[1.7] text-ink/68 font-normal">
+            Honestly — any week. The point works year-round. <span class="text-ink font-medium">May to
+            September</span> brings a bigger, longer-period winter swell and head-high days for the more
+            confident; <span class="text-ink font-medium">November to March</span> is mellow, sunny and
+            chest-high — the friendliest window for a first-timer. The water never gets cold.
+          </p>
+          <div class="hairrule my-5"></div>
+          <p class="text-[10.5px] mono uppercase tracking-[0.16em] text-ink/45 mb-3">Water temperature by month</p>
+          <div class="grid grid-cols-6 gap-1.5">
+            <div class="text-center"><span class="block text-[9.5px] mono text-ink/45">JAN</span><span class="block mono tnum text-[12px] text-aqua font-medium">27°</span></div>
+            <div class="text-center"><span class="block text-[9.5px] mono text-ink/45">FEB</span><span class="block mono tnum text-[12px] text-aqua font-medium">27°</span></div>
+            <div class="text-center"><span class="block text-[9.5px] mono text-ink/45">MAR</span><span class="block mono tnum text-[12px] text-aqua font-medium">27°</span></div>
+            <div class="text-center"><span class="block text-[9.5px] mono text-ink/45">APR</span><span class="block mono tnum text-[12px] text-aqua font-medium">27°</span></div>
+            <div class="text-center"><span class="block text-[9.5px] mono text-ink/45">MAY</span><span class="block mono tnum text-[12px] text-aqua font-medium">26°</span></div>
+            <div class="text-center"><span class="block text-[9.5px] mono text-ink/45">JUN</span><span class="block mono tnum text-[12px] text-aqua font-medium">25°</span></div>
+            <div class="text-center"><span class="block text-[9.5px] mono text-ink/45">JUL</span><span class="block mono tnum text-[12px] text-aqua font-medium">25°</span></div>
+            <div class="text-center"><span class="block text-[9.5px] mono text-ink/45">AUG</span><span class="block mono tnum text-[12px] text-aqua font-medium">25°</span></div>
+            <div class="text-center"><span class="block text-[9.5px] mono text-ink/45">SEP</span><span class="block mono tnum text-[12px] text-aqua font-medium">26°</span></div>
+            <div class="text-center"><span class="block text-[9.5px] mono text-ink/45">OCT</span><span class="block mono tnum text-[12px] text-aqua font-medium">26°</span></div>
+            <div class="text-center"><span class="block text-[9.5px] mono text-ink/45">NOV</span><span class="block mono tnum text-[12px] text-aqua font-medium">27°</span></div>
+            <div class="text-center"><span class="block text-[9.5px] mono text-ink/45">DEC</span><span class="block mono tnum text-[12px] text-aqua font-medium">27°</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- highlight photos -->
+      <div class="space-y-5">
+        <div class="photo grad-dawn aspect-[16/10] flex items-end">
+          <svg class="absolute inset-0 w-full h-full" viewBox="0 0 480 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <circle cx="372" cy="78" r="30" fill="rgba(255,255,255,0.3)"/>
+            <path d="M0 168 Q120 156 240 168 T480 162" stroke="rgba(255,255,255,0.4)" stroke-width="1.2" fill="none"/>
+            <path d="M0 230 C90 204 170 192 250 210 C300 222 314 184 264 178 C214 172 180 206 130 230 C84 252 40 256 0 256 Z" fill="rgba(255,255,255,0.16)"/>
+            <path d="M20 236 q110 -34 230 -16" stroke="rgba(255,255,255,0.46)" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          </svg>
+          <span class="relative m-3.5 mono text-[10px] tracking-[0.14em] uppercase text-ink/80 rounded-md px-2.5 py-1" style="background:rgba(8,19,24,0.5);">The break at dawn</span>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="photo grad-sunset aspect-[3/4] flex items-end">
+            <svg class="absolute inset-0 w-full h-full" viewBox="0 0 220 290" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <!-- beach house silhouette -->
+              <path d="M30 200 L110 156 L190 200 L190 224 L30 224 Z" fill="rgba(8,19,24,0.5)"/>
+              <rect x="62" y="200" width="16" height="24" fill="rgba(242,198,107,0.5)"/>
+              <rect x="138" y="200" width="16" height="24" fill="rgba(242,198,107,0.5)"/>
+              <path d="M30 224 h160" stroke="rgba(8,19,24,0.6)" stroke-width="3"/>
+              <path d="M44 178 v-22 M50 156 q-6 -8 -2 -16 M50 156 q6 -8 12 -10" stroke="rgba(8,19,24,0.45)" stroke-width="2.2" stroke-linecap="round"/>
+              <circle cx="170" cy="58" r="22" fill="rgba(255,255,255,0.3)"/>
+            </svg>
+            <span class="relative m-3 mono text-[9.5px] tracking-[0.12em] uppercase text-ink/80 rounded px-2 py-0.5" style="background:rgba(8,19,24,0.5);">The house</span>
+          </div>
+          <div class="photo grad-reef aspect-[3/4] mt-7 flex items-end">
+            <svg class="absolute inset-0 w-full h-full" viewBox="0 0 220 290" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <!-- reef + turtle -->
+              <path d="M0 230 q40 -30 80 -10 q30 14 70 -6 q40 -20 80 4 v82 H0 Z" fill="rgba(8,19,24,0.32)"/>
+              <path d="M40 210 v-26 M40 196 q-8 -6 -10 -16 M40 196 q8 -6 14 -10" stroke="rgba(95,224,224,0.5)" stroke-width="2" stroke-linecap="round"/>
+              <path d="M168 218 v-22 M168 206 q-7 -5 -9 -13 M168 206 q7 -5 12 -8" stroke="rgba(95,224,224,0.45)" stroke-width="1.8" stroke-linecap="round"/>
+              <g transform="translate(112,108)">
+                <ellipse cx="0" cy="0" rx="20" ry="14" fill="rgba(255,255,255,0.28)"/>
+                <ellipse cx="22" cy="-2" rx="6" ry="5" fill="rgba(255,255,255,0.28)"/>
+                <path d="M-14 -10 l-12 -8 M-14 10 l-12 8 M12 -10 l10 -10 M12 10 l10 10" stroke="rgba(255,255,255,0.28)" stroke-width="4" stroke-linecap="round"/>
+              </g>
+            </svg>
+            <span class="relative m-3 mono text-[9.5px] tracking-[0.12em] uppercase text-ink/80 rounded px-2 py-0.5" style="background:rgba(8,19,24,0.5);">The reef</span>
+          </div>
+        </div>
+
+        <!-- stylized coast / breaks map -->
+        <div class="photo grad-night p-1.5">
+          <div class="rounded-[1.05rem] h-full min-h-[300px] relative overflow-hidden" style="background:linear-gradient(165deg,#0C2730,#081822);">
+            <svg viewBox="0 0 460 380" class="w-full h-full" preserveAspectRatio="xMidYMid slice" aria-label="Stylized map of the Marola coast with numbered surf spots and dive sites — not to scale">
+              <!-- ocean fill -->
+              <rect width="460" height="380" fill="#0A1F27"/>
+              <!-- ripples -->
+              <path d="M40 60 q16 -8 32 0 M40 110 q16 -8 32 0 M260 70 q16 -8 32 0 M340 130 q16 -8 32 0 M70 300 q16 -8 32 0 M300 320 q16 -8 32 0" stroke="rgba(43,196,212,0.28)" stroke-width="1" fill="none" stroke-linecap="round"/>
+              <!-- the land mass / coastline -->
+              <path d="M460 30 C360 50 320 130 340 210 C354 270 320 330 360 380 L460 380 Z" fill="#10303A"/>
+              <path d="M460 30 C360 50 320 130 340 210 C354 270 320 330 360 380" stroke="#2BC4D4" stroke-width="1.6" fill="none" opacity="0.85"/>
+              <!-- the sand road -->
+              <path d="M396 64 C372 130 360 200 374 270 C384 320 366 350 388 380" stroke="#F2C66B" stroke-width="1.5" fill="none" stroke-dasharray="2 5" opacity="0.7"/>
+              <text x="404" y="120" font-family="'Geist Mono',monospace" font-size="8" fill="#F2C66B" opacity="0.7" letter-spacing="1">SAND RD</text>
+              <!-- palms -->
+              <g opacity="0.55" stroke="#2BC4D4" stroke-width="1.1" fill="none" stroke-linecap="round">
+                <path d="M372 158 v-13 M366 150 q-6 -7 -2 -13 M366 150 q6 -6 12 -8"/>
+                <path d="M388 250 v-12 M383 243 q-5 -6 -2 -12 M383 243 q5 -5 11 -7"/>
+                <path d="M356 330 v-12 M351 323 q-5 -6 -2 -11 M351 323 q5 -5 10 -7"/>
+              </g>
+              <!-- the beach house -->
+              <rect x="356" y="206" width="22" height="14" rx="2" fill="#F2C66B" opacity="0.85"/>
+              <text x="300" y="216" font-family="'Geist Mono',monospace" font-size="8" fill="#E9F4F5" opacity="0.65" letter-spacing="0.5">BEACH HOUSE</text>
+              <!-- surf spot 1 -->
+              <g><circle cx="150" cy="96" r="11" fill="#2BC4D4"/><text x="150" y="100" font-family="'Geist Mono',monospace" font-size="11" font-weight="600" fill="#042027" text-anchor="middle">1</text></g>
+              <text x="64" y="100" font-family="'Geist Mono',monospace" font-size="8.5" fill="#E9F4F5" opacity="0.7">PUNTA VERDE</text>
+              <!-- surf spot 2 -->
+              <g><circle cx="206" cy="172" r="11" fill="#2BC4D4"/><text x="206" y="176" font-family="'Geist Mono',monospace" font-size="11" font-weight="600" fill="#042027" text-anchor="middle">2</text></g>
+              <text x="120" y="176" font-family="'Geist Mono',monospace" font-size="8.5" fill="#E9F4F5" opacity="0.7">THE INSIDE</text>
+              <!-- surf spot 3 -->
+              <g><circle cx="172" cy="262" r="11" fill="#2BC4D4"/><text x="172" y="266" font-family="'Geist Mono',monospace" font-size="11" font-weight="600" fill="#042027" text-anchor="middle">3</text></g>
+              <text x="92" y="266" font-family="'Geist Mono',monospace" font-size="8.5" fill="#E9F4F5" opacity="0.7">LOS PERROS</text>
+              <!-- dive site A -->
+              <g><rect x="232" y="288" width="22" height="22" rx="5" fill="#F2C66B"/><text x="243" y="304" font-family="'Geist Mono',monospace" font-size="11" font-weight="600" fill="#042027" text-anchor="middle">A</text></g>
+              <text x="150" y="304" font-family="'Geist Mono',monospace" font-size="8.5" fill="#F2C66B" opacity="0.85">CORAL SHELF</text>
+              <!-- dive site B -->
+              <g><rect x="276" y="346" width="22" height="22" rx="5" fill="#F2C66B"/><text x="287" y="362" font-family="'Geist Mono',monospace" font-size="11" font-weight="600" fill="#042027" text-anchor="middle">B</text></g>
+              <text x="186" y="362" font-family="'Geist Mono',monospace" font-size="8.5" fill="#F2C66B" opacity="0.85">THE PINNACLE</text>
+              <!-- compass -->
+              <g transform="translate(40,344)">
+                <circle r="15" fill="none" stroke="#E9F4F5" stroke-width="1" opacity="0.35"/>
+                <path d="M0 -11 L3.5 0 L0 11 L-3.5 0 Z" fill="#2BC4D4"/>
+                <text x="-3.5" y="-19" font-family="'Geist Mono',monospace" font-size="8" fill="#E9F4F5" opacity="0.5">N</text>
+              </g>
+            </svg>
+            <div class="absolute top-3 right-3 flex flex-col gap-1.5">
+              <span class="flex items-center gap-1.5 mono text-[9px] tracking-[0.1em] uppercase text-ink/70 rounded px-2 py-1" style="background:rgba(8,19,24,0.6);"><span class="w-2 h-2 rounded-full bg-aqua"></span>Surf spot</span>
+              <span class="flex items-center gap-1.5 mono text-[9px] tracking-[0.1em] uppercase text-ink/70 rounded px-2 py-1" style="background:rgba(8,19,24,0.6);"><span class="w-2 h-2 rounded-[3px] bg-surf"></span>Dive site</span>
+            </div>
+            <div class="absolute bottom-3 left-3 mono text-[10px] tracking-[0.12em] uppercase text-ink/55 rounded px-2.5 py-1" style="background:rgba(8,19,24,0.6);">
+              Marola coast — not to scale
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 5 · A TYPICAL DAY + YOUR WEEK ===== -->
+<section id="day" class="relative py-20 sm:py-28 border-y border-[color:var(--line)]" style="background:rgba(14,32,39,0.5);">
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="max-w-2xl mb-12 sm:mb-14">
+      <p class="eyebrow mb-4">A typical day</p>
+      <h2 class="display display-tight font-bold text-[clamp(2.1rem,5.4vw,3.5rem)] leading-[1.04] text-ink">
+        Two sessions, three meals,
+        <span class="halftone">and a wide-open middle.</span>
+      </h2>
+      <p class="mt-4 text-[15px] leading-[1.7] text-ink/70 font-normal">
+        Nothing on this page is a rule. It is the shape most days take — surf when the wind is gentle,
+        rest when the sun is high, and gather on the deck when it drops.
+      </p>
+    </div>
+
+    <div class="grid lg:grid-cols-[0.92fr_1.08fr] gap-12 lg:gap-14 items-start">
+      <!-- (a) vertical timeline -->
+      <ol class="relative pl-10">
+        <span class="absolute left-[15px] top-2 bottom-2 w-px bg-[color:var(--line-strong)]" aria-hidden="true"></span>
+
+        <li class="relative pb-8">
+          <span class="tl-node absolute -left-[39px] top-1 grid place-items-center w-7 h-7 rounded-full bg-aqua text-[#042027]">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M6.5 8.5a2.6 2.6 0 1 0 0-5.2 2.6 2.6 0 0 0 0 5.2ZM6.5 1v1.3M6.5 10.7V12M1 6.5h1.3M10.7 6.5H12M2.6 2.6l.9.9M9.5 9.5l.9.9M10.4 2.6l-.9.9M3.5 9.5l-.9.9" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+          </span>
+          <div class="surface-card rounded-xl2 p-5 card-lift">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <h3 class="display text-lg text-ink soft font-semibold">Dawn surf</h3>
+              <span class="mono tnum text-[13px] text-aqua">06:00</span>
+            </div>
+            <p class="mt-1.5 text-[13px] leading-[1.62] text-ink/68 font-normal">
+              Out the door with the light. Glassy water, the lightest wind of the day, and the
+              friendliest version of the point. Fruit and coffee on the sand first.
+            </p>
+          </div>
+        </li>
+
+        <li class="relative pb-8">
+          <span class="tl-node absolute -left-[39px] top-1 grid place-items-center w-7 h-7 rounded-full bg-aqua text-[#042027]">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M2 7h6.5a2 2 0 0 1 0 4H2M2 7c0-2 1.5-3.5 3.5-3.5S9 5 9 7M4 2v1M6.5 1.7v1.3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+          </span>
+          <div class="surface-card rounded-xl2 p-5 card-lift">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <h3 class="display text-lg text-ink soft font-semibold">Breakfast on the deck</h3>
+              <span class="mono tnum text-[13px] text-aqua">08:30</span>
+            </div>
+            <p class="mt-1.5 text-[13px] leading-[1.62] text-ink/68 font-normal">
+              A long, slow table — eggs, fresh fruit, good bread, more coffee. The session gets
+              recounted wave by wave, generously.
+            </p>
+          </div>
+        </li>
+
+        <li class="relative pb-8">
+          <span class="tl-node absolute -left-[39px] top-1 grid place-items-center w-7 h-7 rounded-full bg-aqua text-[#042027]">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M2 9c2.5 0 2.5-2 5-2s2.5 2 5 2M3.5 5.5C3.5 3 5 1.5 6.5 1.5M9.5 5.5C9.5 3 8 1.5 6.5 1.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+          </span>
+          <div class="surface-card rounded-xl2 p-5 card-lift">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <h3 class="display text-lg text-ink soft font-semibold">Free time</h3>
+              <span class="mono tnum text-[13px] text-aqua">10:00</span>
+            </div>
+            <p class="mt-1.5 text-[13px] leading-[1.62] text-ink/68 font-normal">
+              The heat of the day is yours. A hammock and a book, a walk to the village, a long lunch,
+              a nap. There is genuinely nothing you have to do.
+            </p>
+          </div>
+        </li>
+
+        <li class="relative pb-8">
+          <span class="tl-node absolute -left-[39px] top-1 grid place-items-center w-7 h-7 rounded-full bg-aqua text-[#042027]">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M6.5 1.5c2.5 2 3.7 4 3.7 6.2 0 2.9-1.6 4.8-3.7 5.6-2.1-.8-3.7-2.7-3.7-5.6C2.8 5.5 4 3.5 6.5 1.5Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>
+          </span>
+          <div class="surface-card rounded-xl2 p-5 card-lift">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <h3 class="display text-lg text-ink soft font-semibold">Afternoon session or a dive</h3>
+              <span class="mono tnum text-[13px] text-aqua">15:30</span>
+            </div>
+            <p class="mt-1.5 text-[13px] leading-[1.62] text-ink/68 font-normal">
+              When the wind drops, choose your second water of the day — another surf with video
+              analysis after, or a reef dive if you are on the course.
+            </p>
+          </div>
+        </li>
+
+        <li class="relative">
+          <span class="tl-node absolute -left-[39px] top-1 grid place-items-center w-7 h-7 rounded-full bg-surf text-[#042027]">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M6.5 2.5v3M1.5 8.5h10M3 8.5c0-2 1.5-3 3.5-3s3.5 1 3.5 3M4.3 11h4.4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+          </span>
+          <div class="surface-card rounded-xl2 p-5 card-lift">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <h3 class="display text-lg text-ink soft font-semibold">Sunset &amp; dinner on the deck</h3>
+              <span class="mono tnum text-[13px] text-surf">18:15</span>
+            </div>
+            <p class="mt-1.5 text-[13px] leading-[1.62] text-ink/68 font-normal">
+              The whole house faces the light. Cold drinks, a home-cooked dinner at the long table,
+              and the sky doing its nightly best. No one rushes off.
+            </p>
+          </div>
+        </li>
+      </ol>
+
+      <!-- (b) your week — 7-day grid -->
+      <div>
+        <div class="flex items-center gap-3 mb-5">
+          <h3 class="display text-xl text-ink soft font-semibold">Your week</h3>
+          <span class="h-px flex-1 bg-[color:var(--line)]"></span>
+          <span class="mono text-[11px] tracking-[0.14em] text-ink/45 uppercase">Sat → Sat</span>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-3.5">
+          <article class="surface-card rounded-xl2 p-5">
+            <div class="flex items-center justify-between mb-2">
+              <span class="mono text-[11px] tracking-[0.14em] uppercase text-aqua">Day 1 · Sat</span>
+              <span class="w-7 h-7 rounded-full grid place-items-center" style="background:rgba(43,196,212,0.1);"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M6.5 11.5s4-3 4-6a4 4 0 0 0-8 0c0 3 4 6 4 6Z" stroke="#2BC4D4" stroke-width="1.2"/><circle cx="6.5" cy="5.5" r="1.5" stroke="#2BC4D4" stroke-width="1.1"/></svg></span>
+            </div>
+            <h4 class="display text-[15px] text-ink soft font-semibold">Arrival &amp; settle in</h4>
+            <p class="mt-1.5 text-[12.5px] leading-[1.58] text-ink/64 font-normal">
+              Airport pickup, rooms, a board fitting on the sand, and a welcome dinner on the deck.
+            </p>
+          </article>
+
+          <article class="surface-card rounded-xl2 p-5">
+            <div class="flex items-center justify-between mb-2">
+              <span class="mono text-[11px] tracking-[0.14em] uppercase text-aqua">Day 2 · Sun</span>
+              <span class="w-7 h-7 rounded-full grid place-items-center" style="background:rgba(43,196,212,0.1);"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M1 9c2 0 2-1.5 4-1.5S10 9 12 9M2.5 5.5C2.5 3 4 1.5 5.5 1.5" stroke="#2BC4D4" stroke-width="1.2" stroke-linecap="round"/></svg></span>
+            </div>
+            <h4 class="display text-[15px] text-ink soft font-semibold">First surf days begin</h4>
+            <p class="mt-1.5 text-[12.5px] leading-[1.58] text-ink/64 font-normal">
+              Dawn and afternoon sessions, levelled by ability. Pop-up basics or coaching for the rest.
+            </p>
+          </article>
+
+          <article class="surface-card rounded-xl2 p-5">
+            <div class="flex items-center justify-between mb-2">
+              <span class="mono text-[11px] tracking-[0.14em] uppercase text-aqua">Day 3 · Mon</span>
+              <span class="w-7 h-7 rounded-full grid place-items-center" style="background:rgba(43,196,212,0.1);"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M1 9c2 0 2-1.5 4-1.5S10 9 12 9M2.5 5.5C2.5 3 4 1.5 5.5 1.5" stroke="#2BC4D4" stroke-width="1.2" stroke-linecap="round"/></svg></span>
+            </div>
+            <h4 class="display text-[15px] text-ink soft font-semibold">Surf &amp; video analysis</h4>
+            <p class="mt-1.5 text-[12.5px] leading-[1.58] text-ink/64 font-normal">
+              Two sessions, then footage from the water reviewed over dinner. Small fixes, big change.
+            </p>
+          </article>
+
+          <article class="surface-card rounded-xl2 p-5">
+            <div class="flex items-center justify-between mb-2">
+              <span class="mono text-[11px] tracking-[0.14em] uppercase text-surf">Day 4 · Tue</span>
+              <span class="w-7 h-7 rounded-full grid place-items-center" style="background:rgba(242,198,107,0.12);"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M6.5 1.5c2.2 1.8 3.4 3.7 3.4 5.7 0 2.6-1.5 4.4-3.4 5.1-1.9-.7-3.4-2.5-3.4-5.1 0-2 1.2-3.9 3.4-5.7Z" stroke="#F2C66B" stroke-width="1.2" stroke-linejoin="round"/></svg></span>
+            </div>
+            <h4 class="display text-[15px] text-ink soft font-semibold">Dive day</h4>
+            <p class="mt-1.5 text-[12.5px] leading-[1.58] text-ink/64 font-normal">
+              Course divers head to the reef; everyone else gets a free morning and an extra surf.
+            </p>
+          </article>
+
+          <article class="surface-card rounded-xl2 p-5">
+            <div class="flex items-center justify-between mb-2">
+              <span class="mono text-[11px] tracking-[0.14em] uppercase text-aqua">Day 5 · Wed</span>
+              <span class="w-7 h-7 rounded-full grid place-items-center" style="background:rgba(43,196,212,0.1);"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M1 9c2 0 2-1.5 4-1.5S10 9 12 9M2.5 5.5C2.5 3 4 1.5 5.5 1.5" stroke="#2BC4D4" stroke-width="1.2" stroke-linecap="round"/></svg></span>
+            </div>
+            <h4 class="display text-[15px] text-ink soft font-semibold">Surf at the next break over</h4>
+            <p class="mt-1.5 text-[12.5px] leading-[1.58] text-ink/64 font-normal">
+              A short drive to Los Perros for a change of wave, then back for sunset on the deck.
+            </p>
+          </article>
+
+          <article class="surface-card rounded-xl2 p-5">
+            <div class="flex items-center justify-between mb-2">
+              <span class="mono text-[11px] tracking-[0.14em] uppercase text-surf">Day 6 · Thu</span>
+              <span class="w-7 h-7 rounded-full grid place-items-center" style="background:rgba(242,198,107,0.12);"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M2 11h9M3.5 11V5.5h6V11M5 5.5C5 3.5 6.5 2.5 6.5 2.5S8 3.5 8 5.5" stroke="#F2C66B" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </div>
+            <h4 class="display text-[15px] text-ink soft font-semibold">Free / explore day</h4>
+            <p class="mt-1.5 text-[12.5px] leading-[1.58] text-ink/64 font-normal">
+              Dawn surf, then a wide-open day — a boat trip, the market town, or simply the hammock.
+            </p>
+          </article>
+
+          <article class="surface-card rounded-xl2 p-5 sm:col-span-2" style="border-color:rgba(43,196,212,0.22);">
+            <div class="flex items-center justify-between mb-2">
+              <span class="mono text-[11px] tracking-[0.14em] uppercase text-surf">Day 7 · Sat</span>
+              <span class="w-7 h-7 rounded-full grid place-items-center" style="background:rgba(242,198,107,0.12);"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M2 6.5h9M7 2.5l4 4-4 4" stroke="#F2C66B" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </div>
+            <h4 class="display text-[15px] text-ink soft font-semibold">A last dawn surf &amp; departure</h4>
+            <p class="mt-1.5 text-[12.5px] leading-[1.58] text-ink/64 font-normal">
+              One more paddle-out for anyone who wants it, a slow breakfast, and transfers back to the
+              airport. Most people are already plotting a return.
+            </p>
+          </article>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 6 · WHAT'S INCLUDED ===== -->
+<section id="included" class="relative py-20 sm:py-28">
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="max-w-2xl mb-12 sm:mb-14">
+      <p class="eyebrow mb-4">What's included</p>
+      <h2 class="display display-tight font-bold text-[clamp(2.1rem,5.4vw,3.5rem)] leading-[1.04] text-ink">
+        One price, almost everything.
+      </h2>
+      <p class="mt-4 text-[15px] leading-[1.7] text-ink/70 font-normal">
+        The week price covers your bed, your board, your coaching, and most of your meals. Here is the
+        honest, complete picture — including the short list of what it does not cover.
+      </p>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.25fr_0.75fr] gap-6">
+      <!-- included grid -->
+      <div class="grid sm:grid-cols-2 gap-3.5">
+        <div class="surface-card rounded-xl2 p-5 flex gap-3.5">
+          <span class="shrink-0 w-9 h-9 rounded-lg grid place-items-center" style="background:rgba(43,196,212,0.12);"><svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true"><path d="M2.5 14.5h12M4 14.5V7l4.5-3.5L13 7v7.5M7 14.5v-4h3v4" stroke="#2BC4D4" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <div>
+            <h3 class="text-[14px] text-ink font-semibold soft">Accommodation</h3>
+            <p class="mt-1 text-[12.5px] leading-[1.55] text-ink/64 font-normal">Seven nights in the shared beach house — your room type, your choice.</p>
+          </div>
+        </div>
+        <div class="surface-card rounded-xl2 p-5 flex gap-3.5">
+          <span class="shrink-0 w-9 h-9 rounded-lg grid place-items-center" style="background:rgba(43,196,212,0.12);"><svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true"><path d="M1.5 11.5c3 0 3-2 6-2s3 2 6 2M3 7C3 3.8 5.5 1.5 8.5 1.5M14 7C14 3.8 11.5 1.5 8.5 1.5" stroke="#2BC4D4" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+          <div>
+            <h3 class="text-[14px] text-ink font-semibold soft">All surf sessions</h3>
+            <p class="mt-1 text-[12.5px] leading-[1.55] text-ink/64 font-normal">Twice-daily guided sessions, every day of the week, levelled by ability.</p>
+          </div>
+        </div>
+        <div class="surface-card rounded-xl2 p-5 flex gap-3.5">
+          <span class="shrink-0 w-9 h-9 rounded-lg grid place-items-center" style="background:rgba(43,196,212,0.12);"><svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true"><path d="M8.5 2c2.6 2.2 4 4.4 4 6.8 0 3.1-1.9 5.2-4 6-2.1-.8-4-2.9-4-6C4.5 6.4 5.9 4.2 8.5 2Z" stroke="#2BC4D4" stroke-width="1.3" stroke-linejoin="round"/><path d="M8.5 5.5v6" stroke="#2BC4D4" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+          <div>
+            <h3 class="text-[14px] text-ink font-semibold soft">Board &amp; wetsuit use</h3>
+            <p class="mt-1 text-[12.5px] leading-[1.55] text-ink/64 font-normal">A full quiver to borrow — softtops to performance shapes — plus rash vests.</p>
+          </div>
+        </div>
+        <div class="surface-card rounded-xl2 p-5 flex gap-3.5">
+          <span class="shrink-0 w-9 h-9 rounded-lg grid place-items-center" style="background:rgba(43,196,212,0.12);"><svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true"><path d="M3 9h7.5a2.3 2.3 0 0 1 0 4.6H3M3 9c0-2.4 1.7-4 4-4s4 1.6 4 4M5 3v1.4M7.5 2.7v1.7M13 13.6h1.5" stroke="#2BC4D4" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+          <div>
+            <h3 class="text-[14px] text-ink font-semibold soft">Breakfast + dinner daily</h3>
+            <p class="mt-1 text-[12.5px] leading-[1.55] text-ink/64 font-normal">Home-cooked meals at the long table, every morning and every evening.</p>
+          </div>
+        </div>
+        <div class="surface-card rounded-xl2 p-5 flex gap-3.5">
+          <span class="shrink-0 w-9 h-9 rounded-lg grid place-items-center" style="background:rgba(43,196,212,0.12);"><svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true"><path d="M2 12.5h13M4 12.5l1-5h7l1 5M5.5 7.5V5h6v2.5" stroke="#2BC4D4" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="5.5" cy="14" r="1.1" stroke="#2BC4D4" stroke-width="1.1"/><circle cx="11.5" cy="14" r="1.1" stroke="#2BC4D4" stroke-width="1.1"/></svg></span>
+          <div>
+            <h3 class="text-[14px] text-ink font-semibold soft">Airport transfers</h3>
+            <p class="mt-1 text-[12.5px] leading-[1.55] text-ink/64 font-normal">Round-trip pickup from Marola airport on arrival and departure Saturdays.</p>
+          </div>
+        </div>
+        <div class="surface-card rounded-xl2 p-5 flex gap-3.5">
+          <span class="shrink-0 w-9 h-9 rounded-lg grid place-items-center" style="background:rgba(43,196,212,0.12);"><svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true"><rect x="2" y="4.5" width="13" height="8" rx="1.5" stroke="#2BC4D4" stroke-width="1.3"/><path d="M7 7l3 1.5L7 10V7Z" fill="#2BC4D4"/></svg></span>
+          <div>
+            <h3 class="text-[14px] text-ink font-semibold soft">Coaching &amp; video analysis</h3>
+            <p class="mt-1 text-[12.5px] leading-[1.55] text-ink/64 font-normal">Water filming and a relaxed dinnertime review — see what to change, fast.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- optional add-on callout + not included -->
+      <div class="space-y-4">
+        <div class="rounded-xl2 p-6" style="background:linear-gradient(165deg,rgba(43,196,212,0.14),rgba(242,198,107,0.08));border:1px solid rgba(43,196,212,0.32);">
+          <span class="inline-flex items-center gap-2 mono text-[10px] tracking-[0.18em] uppercase text-aqua mb-3">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M6.5 1.5v10M1.5 6.5h10" stroke="#2BC4D4" stroke-width="1.6" stroke-linecap="round"/></svg>
+            Optional add-on
+          </span>
+          <div class="flex items-start justify-between gap-3">
+            <h3 class="display text-xl text-ink soft font-bold">Open-water dive course</h3>
+            <span class="mono tnum text-[15px] text-aqua font-semibold whitespace-nowrap">+$340</span>
+          </div>
+          <p class="mt-2.5 text-[13px] leading-[1.66] text-ink/72 font-normal">
+            A four-day PADI-style open-water certification, run on the reef by our resident instructor.
+            Confined-water skills, four open-water dives at the Coral Shelf and the Pinnacle, all gear
+            and the digital certification card included. No experience needed — just a basic swim.
+          </p>
+          <p class="mt-3 text-[11.5px] mono text-ink/55">Add it at checkout · finish certified for life</p>
+        </div>
+
+        <div class="surface-card rounded-xl2 p-6">
+          <h3 class="text-[13px] mono uppercase tracking-[0.16em] text-ink/55 mb-3.5">Not included</h3>
+          <ul class="space-y-2.5">
+            <li class="flex items-center gap-2.5 text-[13px] text-ink/68 font-normal">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" class="shrink-0" aria-hidden="true"><path d="M3 3l7 7M10 3l-7 7" stroke="rgba(233,244,245,0.4)" stroke-width="1.4" stroke-linecap="round"/></svg>
+              Flights to and from Marola airport
+            </li>
+            <li class="flex items-center gap-2.5 text-[13px] text-ink/68 font-normal">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" class="shrink-0" aria-hidden="true"><path d="M3 3l7 7M10 3l-7 7" stroke="rgba(233,244,245,0.4)" stroke-width="1.4" stroke-linecap="round"/></svg>
+              Lunches (the village is a short, cheap walk)
+            </li>
+            <li class="flex items-center gap-2.5 text-[13px] text-ink/68 font-normal">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" class="shrink-0" aria-hidden="true"><path d="M3 3l7 7M10 3l-7 7" stroke="rgba(233,244,245,0.4)" stroke-width="1.4" stroke-linecap="round"/></svg>
+              Travel insurance (required to join)
+            </li>
+            <li class="flex items-center gap-2.5 text-[13px] text-ink/68 font-normal">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" class="shrink-0" aria-hidden="true"><path d="M3 3l7 7M10 3l-7 7" stroke="rgba(233,244,245,0.4)" stroke-width="1.4" stroke-linecap="round"/></svg>
+              Alcohol &amp; bar tabs
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- full-bleed photo band -->
+<div class="photo grad-lagoon mx-auto max-w-6xl rounded-xl2 h-44 sm:h-56 my-2 flex items-center justify-center relative" style="margin-left:1.25rem;margin-right:1.25rem;">
+  <svg class="absolute inset-0 w-full h-full" viewBox="0 0 1200 224" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <path d="M0 120 Q300 104 600 118 T1200 114" stroke="rgba(255,255,255,0.34)" stroke-width="1.2" fill="none"/>
+    <path d="M0 156 Q280 142 560 156 T1200 150" stroke="rgba(255,255,255,0.2)" stroke-width="1.1" fill="none"/>
+    <!-- palm silhouettes -->
+    <g stroke="rgba(8,19,24,0.4)" stroke-width="3.5" fill="none" stroke-linecap="round">
+      <path d="M120 200 v-66 M120 142 q-20 -20 -8 -42 M120 142 q20 -18 40 -14 M120 142 q-24 0 -38 18 M120 142 q24 2 36 22"/>
+      <path d="M1066 200 v-58 M1066 148 q-18 -18 -8 -38 M1066 148 q18 -16 36 -12 M1066 148 q-22 0 -34 16"/>
+    </g>
+    <circle cx="600" cy="62" r="34" fill="rgba(255,255,255,0.26)"/>
+  </svg>
+  <span class="relative mono text-[10.5px] tracking-[0.16em] uppercase text-ink/85 rounded-md px-3 py-1.5" style="background:rgba(8,19,24,0.45);">The lagoon at low tide · Marola coast</span>
+</div>
+
+<!-- ===== 7 · WHERE YOU'LL STAY ===== -->
+<section id="stay" class="relative py-20 sm:py-28">
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="max-w-2xl mb-12 sm:mb-14">
+      <p class="eyebrow mb-4">Where you'll stay</p>
+      <h2 class="display display-tight font-bold text-[clamp(2.1rem,5.4vw,3.5rem)] leading-[1.04] text-ink">
+        A shared beach house, steps from the sand.
+      </h2>
+      <p class="mt-4 text-[15px] leading-[1.7] text-ink/70 font-normal">
+        One low, open house for the whole group — shared deck, shared table, shared hammocks. You only
+        choose how private your own bed is. Every room shares the same sunset.
+      </p>
+    </div>
+
+    <div class="grid sm:grid-cols-3 gap-5">
+      <!-- shared room -->
+      <article class="card-lift surface-card rounded-xl2 overflow-hidden flex flex-col">
+        <div class="photo grad-reef h-40 rounded-none flex items-end" style="box-shadow:none;border-radius:0;">
+          <svg class="absolute inset-0 w-full h-full" viewBox="0 0 320 160" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <path d="M0 110 q80 -20 160 0 t160 0" stroke="rgba(255,255,255,0.3)" stroke-width="1.2" fill="none"/>
+            <rect x="36" y="86" width="56" height="22" rx="4" fill="rgba(8,19,24,0.3)"/>
+            <rect x="36" y="58" width="56" height="22" rx="4" fill="rgba(8,19,24,0.3)"/>
+            <rect x="228" y="86" width="56" height="22" rx="4" fill="rgba(8,19,24,0.3)"/>
+            <rect x="228" y="58" width="56" height="22" rx="4" fill="rgba(8,19,24,0.3)"/>
+          </svg>
+        </div>
+        <div class="p-6 flex flex-col flex-1">
+          <span class="mono text-[10px] tracking-[0.18em] uppercase text-aqua">Best value</span>
+          <h3 class="display text-xl text-ink soft font-bold mt-1.5">Shared room</h3>
+          <p class="mt-2 text-[12.5px] leading-[1.62] text-ink/66 font-normal flex-1">
+            A bunk in a bright, four-bed room with a ceiling fan, shared bathroom, lockable storage,
+            and a window to the garden. The friendliest way to land in a new lineup with new people.
+          </p>
+          <div class="hairrule my-4"></div>
+          <ul class="space-y-1.5 text-[11.5px] text-ink/60 font-normal mb-4">
+            <li class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-aqua"></span>1 bunk · 4-bed shared room</li>
+            <li class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-aqua"></span>Ceiling fan · shared bath</li>
+            <li class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-aqua"></span>Lockable storage for valuables</li>
+          </ul>
+          <p class="mono tnum text-[15px] text-ink font-semibold">from $1,690 <span class="text-[11px] text-ink/45 font-normal">/ week</span></p>
+        </div>
+      </article>
+
+      <!-- private room -->
+      <article class="card-lift surface-card rounded-xl2 overflow-hidden flex flex-col" style="border-color:rgba(43,196,212,0.3);">
+        <div class="photo grad-deep h-40 rounded-none flex items-end" style="box-shadow:none;border-radius:0;">
+          <svg class="absolute inset-0 w-full h-full" viewBox="0 0 320 160" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <path d="M0 104 q80 -18 160 0 t160 0" stroke="rgba(255,255,255,0.28)" stroke-width="1.2" fill="none"/>
+            <rect x="108" y="74" width="104" height="34" rx="5" fill="rgba(8,19,24,0.32)"/>
+            <rect x="120" y="60" width="36" height="16" rx="3" fill="rgba(8,19,24,0.32)"/>
+            <rect x="164" y="60" width="36" height="16" rx="3" fill="rgba(8,19,24,0.32)"/>
+          </svg>
+          <span class="relative m-2.5 mono text-[9px] tracking-[0.12em] uppercase text-[#042027] rounded px-2 py-0.5 bg-aqua font-semibold">Most chosen</span>
+        </div>
+        <div class="p-6 flex flex-col flex-1">
+          <span class="mono text-[10px] tracking-[0.18em] uppercase text-aqua">A door of your own</span>
+          <h3 class="display text-xl text-ink soft font-bold mt-1.5">Private room</h3>
+          <p class="mt-2 text-[12.5px] leading-[1.62] text-ink/66 font-normal flex-1">
+            A private double or twin with an ensuite bathroom, a fan, and a quiet corner of the house.
+            Sociable when you want it, a closed door when you don't — the balance most guests want.
+          </p>
+          <div class="hairrule my-4"></div>
+          <ul class="space-y-1.5 text-[11.5px] text-ink/60 font-normal mb-4">
+            <li class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-aqua"></span>Private double or twin beds</li>
+            <li class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-aqua"></span>Ensuite bathroom · ceiling fan</li>
+            <li class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-aqua"></span>Garden-side, away from the deck</li>
+          </ul>
+          <p class="mono tnum text-[15px] text-ink font-semibold">from $2,190 <span class="text-[11px] text-ink/45 font-normal">/ week</span></p>
+        </div>
+      </article>
+
+      <!-- beachfront cabana -->
+      <article class="card-lift surface-card rounded-xl2 overflow-hidden flex flex-col">
+        <div class="photo grad-sunset h-40 rounded-none flex items-end" style="box-shadow:none;border-radius:0;">
+          <svg class="absolute inset-0 w-full h-full" viewBox="0 0 320 160" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <circle cx="244" cy="44" r="22" fill="rgba(255,255,255,0.3)"/>
+            <path d="M0 112 q80 -16 160 0 t160 0" stroke="rgba(255,255,255,0.3)" stroke-width="1.2" fill="none"/>
+            <path d="M70 108 L150 70 L230 108 Z" fill="rgba(8,19,24,0.34)"/>
+            <rect x="118" y="92" width="64" height="16" fill="rgba(8,19,24,0.34)"/>
+            <path d="M44 100 v-26 M44 84 q-8 -8 -4 -16 M44 84 q8 -7 16 -5" stroke="rgba(8,19,24,0.34)" stroke-width="2.4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="p-6 flex flex-col flex-1">
+          <span class="mono text-[10px] tracking-[0.18em] uppercase text-surf">The splurge</span>
+          <h3 class="display text-xl text-ink soft font-bold mt-1.5">Beachfront cabana</h3>
+          <p class="mt-2 text-[12.5px] leading-[1.62] text-ink/66 font-normal flex-1">
+            A standalone cabana at the edge of the sand — a king bed, an outdoor shower, a private
+            hammock porch, and the sound of the point all night. You will hear the dawn surf before
+            your alarm.
+          </p>
+          <div class="hairrule my-4"></div>
+          <ul class="space-y-1.5 text-[11.5px] text-ink/60 font-normal mb-4">
+            <li class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-surf"></span>Standalone · king bed</li>
+            <li class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-surf"></span>Outdoor shower · private porch</li>
+            <li class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-surf"></span>Steps from the water's edge</li>
+          </ul>
+          <p class="mono tnum text-[15px] text-ink font-semibold">from $2,840 <span class="text-[11px] text-ink/45 font-normal">/ week</span></p>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 8 · THE CREW ===== -->
+<section id="crew" class="relative py-20 sm:py-28 border-y border-[color:var(--line)]" style="background:rgba(14,32,39,0.5);">
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="max-w-2xl mb-12 sm:mb-14">
+      <p class="eyebrow mb-4">The crew</p>
+      <h2 class="display display-tight font-bold text-[clamp(2.1rem,5.4vw,3.5rem)] leading-[1.04] text-ink">
+        Local, patient, in the water with you.
+      </h2>
+      <p class="mt-4 text-[15px] leading-[1.7] text-ink/70 font-normal">
+        A small permanent crew who know every shifting sandbar on this point and have taught more
+        first waves than they can count. You will know them all by name within a day.
+      </p>
+    </div>
+
+    <div class="grid sm:grid-cols-3 gap-5">
+      <article class="card-lift surface-card rounded-xl2 p-6 flex flex-col">
+        <div class="photo grad-reef aspect-square mb-5 flex items-end justify-center">
+          <svg viewBox="0 0 200 200" class="w-full h-full" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <circle cx="100" cy="78" r="34" fill="rgba(8,19,24,0.34)"/>
+            <path d="M48 200 c0-40 24-62 52-62s52 22 52 62" fill="rgba(8,19,24,0.34)"/>
+            <path d="M16 150 q84 -22 168 0" stroke="rgba(255,255,255,0.28)" stroke-width="1.4" fill="none"/>
+          </svg>
+        </div>
+        <span class="mono text-[10px] tracking-[0.18em] uppercase text-aqua">Head surf coach</span>
+        <h3 class="display text-xl text-ink soft font-bold mt-1.5">Camila Reyes</h3>
+        <p class="mt-2 text-[12.5px] leading-[1.62] text-ink/66 font-normal flex-1">
+          Grew up two coves north of the point and could read this swell before she could drive.
+          Endlessly calm with nervous first-timers.
+        </p>
+        <div class="hairrule my-4"></div>
+        <dl class="grid grid-cols-2 gap-y-2 text-[11.5px]">
+          <dt class="text-ink/45">Coaching</dt><dd class="mono tnum text-ink/80 text-right">14 years</dd>
+          <dt class="text-ink/45">Languages</dt><dd class="text-ink/80 text-right">ES · EN · PT</dd>
+          <dt class="text-ink/45">Home break</dt><dd class="text-ink/80 text-right">Punta Verde</dd>
+        </dl>
+      </article>
+
+      <article class="card-lift surface-card rounded-xl2 p-6 flex flex-col">
+        <div class="photo grad-sunset aspect-square mb-5 flex items-end justify-center">
+          <svg viewBox="0 0 200 200" class="w-full h-full" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <circle cx="100" cy="78" r="34" fill="rgba(8,19,24,0.34)"/>
+            <path d="M48 200 c0-40 24-62 52-62s52 22 52 62" fill="rgba(8,19,24,0.34)"/>
+            <circle cx="158" cy="44" r="18" fill="rgba(255,255,255,0.26)"/>
+          </svg>
+        </div>
+        <span class="mono text-[10px] tracking-[0.18em] uppercase text-aqua">Surf coach</span>
+        <h3 class="display text-xl text-ink soft font-bold mt-1.5">Theo Lindqvist</h3>
+        <p class="mt-2 text-[12.5px] leading-[1.62] text-ink/66 font-normal flex-1">
+          Came for one week eleven years ago and never quite left. Runs the video sessions and a very
+          dry, very patient line in encouragement.
+        </p>
+        <div class="hairrule my-4"></div>
+        <dl class="grid grid-cols-2 gap-y-2 text-[11.5px]">
+          <dt class="text-ink/45">Coaching</dt><dd class="mono tnum text-ink/80 text-right">11 years</dd>
+          <dt class="text-ink/45">Languages</dt><dd class="text-ink/80 text-right">EN · SV · ES</dd>
+          <dt class="text-ink/45">Home break</dt><dd class="text-ink/80 text-right">The Inside</dd>
+        </dl>
+      </article>
+
+      <article class="card-lift surface-card rounded-xl2 p-6 flex flex-col">
+        <div class="photo grad-deep aspect-square mb-5 flex items-end justify-center">
+          <svg viewBox="0 0 200 200" class="w-full h-full" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <circle cx="100" cy="78" r="34" fill="rgba(8,19,24,0.34)"/>
+            <path d="M48 200 c0-40 24-62 52-62s52 22 52 62" fill="rgba(8,19,24,0.34)"/>
+            <path d="M70 30 q30 -16 60 0" stroke="rgba(95,224,224,0.4)" stroke-width="2" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="mono text-[10px] tracking-[0.18em] uppercase text-surf">Dive instructor</span>
+        <h3 class="display text-xl text-ink soft font-bold mt-1.5">Marcus Adeyemi</h3>
+        <p class="mt-2 text-[12.5px] leading-[1.62] text-ink/66 font-normal flex-1">
+          A PADI-style master instructor who knows every crack of the Coral Shelf. Has certified well
+          over four hundred first-time divers on this reef.
+        </p>
+        <div class="hairrule my-4"></div>
+        <dl class="grid grid-cols-2 gap-y-2 text-[11.5px]">
+          <dt class="text-ink/45">Instructing</dt><dd class="mono tnum text-ink/80 text-right">16 years</dd>
+          <dt class="text-ink/45">Languages</dt><dd class="text-ink/80 text-right">EN · FR · ES</dd>
+          <dt class="text-ink/45">Home reef</dt><dd class="text-ink/80 text-right">Coral Shelf</dd>
+        </dl>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 9 · DEPARTURES + PRICING ===== -->
+<section id="dates" class="relative py-20 sm:py-28">
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="max-w-2xl mb-12 sm:mb-14">
+      <p class="eyebrow mb-4">Departures &amp; pricing</p>
+      <h2 class="display display-tight font-bold text-[clamp(2.1rem,5.4vw,3.5rem)] leading-[1.04] text-ink">
+        A new week starts every Saturday.
+      </h2>
+      <p class="mt-4 text-[15px] leading-[1.7] text-ink/70 font-normal">
+        Retreats run year-round — every week is Saturday to Saturday. Prices are per person for the
+        shared room; private rooms and the cabana add to the rate. Here are the next weeks open.
+      </p>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.4fr_0.6fr] gap-6">
+      <!-- departures table -->
+      <div class="surface-card rounded-xl2 overflow-hidden">
+        <div class="grid grid-cols-[1.4fr_0.9fr_1.1fr] px-5 sm:px-6 py-3.5 border-b border-[color:var(--line)] text-[10.5px] mono uppercase tracking-[0.16em] text-ink/45">
+          <span>Week starts</span>
+          <span class="text-right sm:text-left">From</span>
+          <span class="text-right">Availability</span>
+        </div>
+
+        <div class="grid grid-cols-[1.4fr_0.9fr_1.1fr] items-center px-5 sm:px-6 py-4 border-b border-[color:var(--line)]">
+          <div><span class="mono tnum text-[14px] text-ink">Sat · Jun 07</span><span class="block text-[11px] text-ink/45">2026 · winter swell</span></div>
+          <span class="mono tnum text-[13.5px] text-ink text-right sm:text-left">$1,690</span>
+          <span class="flex items-center justify-end gap-2 text-[12px] text-surf font-medium"><span class="pulse-dot"></span>2 beds left</span>
+        </div>
+
+        <div class="grid grid-cols-[1.4fr_0.9fr_1.1fr] items-center px-5 sm:px-6 py-4 border-b border-[color:var(--line)]">
+          <div><span class="mono tnum text-[14px] text-ink">Sat · Jun 14</span><span class="block text-[11px] text-ink/45">2026 · winter swell</span></div>
+          <span class="mono tnum text-[13.5px] text-ink text-right sm:text-left">$1,690</span>
+          <span class="flex items-center justify-end gap-2 text-[12px] text-surf font-medium"><span class="pulse-dot"></span>5 beds left</span>
+        </div>
+
+        <div class="grid grid-cols-[1.4fr_0.9fr_1.1fr] items-center px-5 sm:px-6 py-4 border-b border-[color:var(--line)]">
+          <div><span class="mono tnum text-[14px] text-ink">Sat · Jun 21</span><span class="block text-[11px] text-ink/45">2026 · winter swell</span></div>
+          <span class="mono tnum text-[13.5px] text-ink text-right sm:text-left">$1,790</span>
+          <span class="flex items-center justify-end gap-2 text-[12px] text-aqua/80 font-medium"><span class="w-2 h-2 rounded-full" style="background:rgba(43,196,212,0.6);"></span>Open</span>
+        </div>
+
+        <div class="grid grid-cols-[1.4fr_0.9fr_1.1fr] items-center px-5 sm:px-6 py-4 border-b border-[color:var(--line)]">
+          <div><span class="mono tnum text-[14px] text-ink">Sat · Jun 28</span><span class="block text-[11px] text-ink/45">2026 · winter swell</span></div>
+          <span class="mono tnum text-[13.5px] text-ink text-right sm:text-left">$1,790</span>
+          <span class="flex items-center justify-end gap-2 text-[12px] text-surf font-medium"><span class="pulse-dot"></span>3 beds left</span>
+        </div>
+
+        <div class="grid grid-cols-[1.4fr_0.9fr_1.1fr] items-center px-5 sm:px-6 py-4 border-b border-[color:var(--line)]">
+          <div><span class="mono tnum text-[14px] text-ink">Sat · Jul 05</span><span class="block text-[11px] text-ink/45">2026 · winter swell</span></div>
+          <span class="mono tnum text-[13.5px] text-ink text-right sm:text-left">$1,890</span>
+          <span class="flex items-center justify-end gap-2 text-[12px] text-aqua/80 font-medium"><span class="w-2 h-2 rounded-full" style="background:rgba(43,196,212,0.6);"></span>Open</span>
+        </div>
+
+        <div class="grid grid-cols-[1.4fr_0.9fr_1.1fr] items-center px-5 sm:px-6 py-4 border-b border-[color:var(--line)]">
+          <div><span class="mono tnum text-[14px] text-ink/50">Sat · Jul 12</span><span class="block text-[11px] text-ink/35">2026 · winter swell</span></div>
+          <span class="mono tnum text-[13.5px] text-ink/45 text-right sm:text-left">$1,890</span>
+          <span class="flex items-center justify-end gap-2 text-[12px] text-ink/40 font-medium"><span class="w-2 h-2 rounded-full bg-ink/25"></span>Waitlist</span>
+        </div>
+
+        <div class="grid grid-cols-[1.4fr_0.9fr_1.1fr] items-center px-5 sm:px-6 py-4">
+          <div><span class="mono tnum text-[14px] text-ink">Sat · Jul 19</span><span class="block text-[11px] text-ink/45">2026 · winter swell</span></div>
+          <span class="mono tnum text-[13.5px] text-ink text-right sm:text-left">$1,890</span>
+          <span class="flex items-center justify-end gap-2 text-[12px] text-aqua/80 font-medium"><span class="w-2 h-2 rounded-full" style="background:rgba(43,196,212,0.6);"></span>Open</span>
+        </div>
+      </div>
+
+      <!-- what the price includes + deposit -->
+      <div class="space-y-4">
+        <div class="surface-card rounded-xl2 p-6">
+          <h3 class="display text-lg text-ink soft font-bold mb-3.5">The week price covers</h3>
+          <ul class="space-y-2.5 text-[12.5px] text-ink/70 font-normal">
+            <li class="flex items-start gap-2.5"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" class="shrink-0 mt-0.5" aria-hidden="true"><path d="M2.5 7.5 6 11l5.5-8" stroke="#2BC4D4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>7 nights in the beach house</li>
+            <li class="flex items-start gap-2.5"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" class="shrink-0 mt-0.5" aria-hidden="true"><path d="M2.5 7.5 6 11l5.5-8" stroke="#2BC4D4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>All twice-daily surf sessions</li>
+            <li class="flex items-start gap-2.5"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" class="shrink-0 mt-0.5" aria-hidden="true"><path d="M2.5 7.5 6 11l5.5-8" stroke="#2BC4D4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Board, wetsuit &amp; coaching</li>
+            <li class="flex items-start gap-2.5"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" class="shrink-0 mt-0.5" aria-hidden="true"><path d="M2.5 7.5 6 11l5.5-8" stroke="#2BC4D4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Breakfast + dinner daily</li>
+            <li class="flex items-start gap-2.5"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" class="shrink-0 mt-0.5" aria-hidden="true"><path d="M2.5 7.5 6 11l5.5-8" stroke="#2BC4D4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Round-trip airport transfers</li>
+          </ul>
+          <div class="hairrule my-4"></div>
+          <p class="text-[11.5px] leading-[1.6] text-ink/55 font-normal">
+            The dive course is a separate <span class="mono text-aqua">+$340</span> add-on. Private rooms
+            and the cabana add to the per-person rate above.
+          </p>
+        </div>
+
+        <div class="rounded-xl2 p-6" style="background:rgba(43,196,212,0.08);border:1px solid rgba(43,196,212,0.24);">
+          <div class="flex items-center gap-2.5 mb-2">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.4" stroke="#2BC4D4" stroke-width="1.3"/><path d="M8 4.5V8l2.4 1.5" stroke="#2BC4D4" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <h3 class="text-[13px] mono uppercase tracking-[0.14em] text-aqua">Deposit</h3>
+          </div>
+          <p class="text-[12.5px] leading-[1.66] text-ink/72 font-normal">
+            A <span class="mono tnum text-ink font-medium">$300</span> deposit holds your bed. The
+            balance is due <span class="text-ink font-medium">eight weeks</span> before your Saturday —
+            we will send one friendly reminder, never a chase.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 10 · REVIEWS ===== -->
+<section id="reviews" class="relative py-20 sm:py-28 border-y border-[color:var(--line)]" style="background:rgba(14,32,39,0.5);">
+  <div class="mx-auto max-w-6xl px-5 sm:px-8">
+    <div class="grid lg:grid-cols-[0.85fr_1.15fr] gap-10 lg:gap-14 items-start">
+      <!-- aggregate -->
+      <div class="lg:sticky lg:top-24">
+        <p class="eyebrow mb-4">Reviews</p>
+        <h2 class="display display-tight font-bold text-[clamp(2.1rem,5.4vw,3.4rem)] leading-[1.04] text-ink">
+          Most people book the next one before they fly home.
+        </h2>
+        <div class="mt-7 surface-card rounded-xl2 p-6">
+          <div class="flex items-end gap-3">
+            <span class="mono tnum text-[3.4rem] leading-none font-semibold text-ink">4.9</span>
+            <div class="pb-1.5">
+              <div class="flex gap-0.5 text-surf" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+              </div>
+              <p class="mt-1.5 text-[12px] text-ink/55 font-normal">Average across <span class="mono tnum text-ink/75">1,204</span> reviews</p>
+            </div>
+          </div>
+          <div class="hairrule my-5"></div>
+          <ul class="space-y-2.5 text-[12px]">
+            <li class="flex items-center justify-between"><span class="text-ink/60">Coaching quality</span><span class="mono tnum text-aqua">4.9</span></li>
+            <li class="flex items-center justify-between"><span class="text-ink/60">The beach house</span><span class="mono tnum text-aqua">4.8</span></li>
+            <li class="flex items-center justify-between"><span class="text-ink/60">Food</span><span class="mono tnum text-aqua">4.9</span></li>
+            <li class="flex items-center justify-between"><span class="text-ink/60">Welcoming to beginners</span><span class="mono tnum text-aqua">5.0</span></li>
+          </ul>
+        </div>
+        <p class="mt-5 text-[12.5px] leading-[1.66] text-ink/55 font-normal">
+          A genuine <span class="mono tnum text-ink/75">61%</span> of guests have done the retreat more
+          than once. We are quietly very proud of that number.
+        </p>
+      </div>
+
+      <!-- review cards -->
+      <div class="grid sm:grid-cols-2 gap-4">
+        <article class="surface-card rounded-xl2 p-6 card-lift flex flex-col">
+          <div class="flex gap-0.5 text-surf mb-3" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+          </div>
+          <p class="text-[13.5px] leading-[1.7] text-ink/78 font-normal flex-1">
+            "I had never stood on a board in my life. By Thursday I rode an open face all the way to the
+            inside and the whole deck cheered. Camila never once made me feel slow."
+          </p>
+          <div class="hairrule my-4"></div>
+          <div class="flex items-center gap-3">
+            <span class="w-9 h-9 rounded-full grid place-items-center mono text-[12px] font-semibold text-[#042027] bg-aqua">HM</span>
+            <div>
+              <p class="text-[13px] text-ink font-medium soft">Hannah Mercer</p>
+              <p class="text-[11px] mono text-ink/50">Beginner week · Mar 2026</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="surface-card rounded-xl2 p-6 card-lift flex flex-col">
+          <div class="flex gap-0.5 text-surf mb-3" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+          </div>
+          <p class="text-[13.5px] leading-[1.7] text-ink/78 font-normal flex-1">
+            "Came as a confident surfer, left also a certified diver. The afternoon swap between a
+            session and the reef is the smartest thing this retreat does. Marcus is a brilliant teacher."
+          </p>
+          <div class="hairrule my-4"></div>
+          <div class="flex items-center gap-3">
+            <span class="w-9 h-9 rounded-full grid place-items-center mono text-[12px] font-semibold text-[#042027] bg-surf">DK</span>
+            <div>
+              <p class="text-[13px] text-ink font-medium soft">Daniel Okafor</p>
+              <p class="text-[11px] mono text-ink/50">Surf &amp; dive week · Jan 2026</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="surface-card rounded-xl2 p-6 card-lift flex flex-col">
+          <div class="flex gap-0.5 text-surf mb-3" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+          </div>
+          <p class="text-[13.5px] leading-[1.7] text-ink/78 font-normal flex-1">
+            "I came alone and a little nervous about that. By the second dinner it felt like a house of
+            old friends. The free afternoons meant I never felt over-scheduled or stuck in a group."
+          </p>
+          <div class="hairrule my-4"></div>
+          <div class="flex items-center gap-3">
+            <span class="w-9 h-9 rounded-full grid place-items-center mono text-[12px] font-semibold text-[#042027] bg-aqua">ST</span>
+            <div>
+              <p class="text-[13px] text-ink font-medium soft">Sofia Tanaka</p>
+              <p class="text-[11px] mono text-ink/50">Solo traveller · Nov 2025</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="surface-card rounded-xl2 p-6 card-lift flex flex-col">
+          <div class="flex gap-0.5 text-surf mb-3" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 15 15" fill="currentColor"><path d="M7.5 1l1.8 4.2 4.5.4-3.4 3 1 4.4L7.5 10.6 3.6 13l1-4.4-3.4-3 4.5-.4L7.5 1Z"/></svg>
+          </div>
+          <p class="text-[13.5px] leading-[1.7] text-ink/78 font-normal flex-1">
+            "We came as four friends, two of whom don't surf at all. They hiked, read, and dove while we
+            paddled out — and we all met for sunset every night. A rare trip that genuinely suits everyone."
+          </p>
+          <div class="hairrule my-4"></div>
+          <div class="flex items-center gap-3">
+            <span class="w-9 h-9 rounded-full grid place-items-center mono text-[12px] font-semibold text-[#042027] bg-surf">LB</span>
+            <div>
+              <p class="text-[13px] text-ink font-medium soft">Liam Brennan</p>
+              <p class="text-[11px] mono text-ink/50">Friends' week · Sep 2025</p>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 11 · FAQ ===== -->
+<section id="faq" class="relative py-20 sm:py-28">
+  <div class="mx-auto max-w-3xl px-5 sm:px-8">
+    <div class="text-center mb-12">
+      <p class="eyebrow mb-4">Good to know</p>
+      <h2 class="display display-tight font-bold text-[clamp(2.1rem,5.4vw,3.4rem)] leading-[1.04] text-ink">
+        The questions everyone asks first.
+      </h2>
+    </div>
+
+    <div class="space-y-3">
+      <details class="faq-item surface-card rounded-xl2 px-5 sm:px-6">
+        <summary class="flex items-center justify-between gap-4 py-4.5" style="padding-top:1.1rem;padding-bottom:1.1rem;">
+          <span class="display text-[16px] sm:text-[17px] text-ink soft font-semibold">I've never surfed — is that okay?</span>
+          <svg class="faq-chev shrink-0 text-aqua" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </summary>
+        <p class="pb-5 text-[13.5px] leading-[1.74] text-ink/70 font-normal">
+          More than okay — beginners are our favourite people to host. Roughly half of every week has
+          never stood on a board before, and the point at Punta Verde is a slow, soft, forgiving wave
+          built for exactly that. You will start in the whitewater on a soft-top with a coach beside you,
+          and we promise an honest ride down a real wave by mid-week.
+        </p>
+      </details>
+
+      <details class="faq-item surface-card rounded-xl2 px-5 sm:px-6">
+        <summary class="flex items-center justify-between gap-4" style="padding-top:1.1rem;padding-bottom:1.1rem;">
+          <span class="display text-[16px] sm:text-[17px] text-ink soft font-semibold">Do I need to be a strong swimmer?</span>
+          <svg class="faq-chev shrink-0 text-aqua" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </summary>
+        <p class="pb-5 text-[13.5px] leading-[1.74] text-ink/70 font-normal">
+          You need to be comfortable and unpanicked in water over your head — not a competitive swimmer.
+          For surfing you are leashed to a buoyant board the whole time, and beginner sessions stay in
+          chest-deep water. The dive course does ask for a basic open-water swim and a short float, both
+          assessed gently on day one. If you are unsure, email us and we will talk it through honestly.
+        </p>
+      </details>
+
+      <details class="faq-item surface-card rounded-xl2 px-5 sm:px-6">
+        <summary class="flex items-center justify-between gap-4" style="padding-top:1.1rem;padding-bottom:1.1rem;">
+          <span class="display text-[16px] sm:text-[17px] text-ink soft font-semibold">Can non-surfers come along?</span>
+          <svg class="faq-chev shrink-0 text-aqua" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </summary>
+        <p class="pb-5 text-[13.5px] leading-[1.74] text-ink/70 font-normal">
+          Absolutely, and many do — partners, friends, and people who simply want a quiet week by warm
+          water. Non-surfers pay the same room rate and get the house, the meals, the transfers, and the
+          deck; they just skip the sessions. There are reef snorkels, coast walks, hammocks, the village,
+          and the dive course to fill the days. The week is built so a mixed group never has to split up.
+        </p>
+      </details>
+
+      <details class="faq-item surface-card rounded-xl2 px-5 sm:px-6">
+        <summary class="flex items-center justify-between gap-4" style="padding-top:1.1rem;padding-bottom:1.1rem;">
+          <span class="display text-[16px] sm:text-[17px] text-ink soft font-semibold">What's the dive-certification add-on?</span>
+          <svg class="faq-chev shrink-0 text-aqua" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </summary>
+        <p class="pb-5 text-[13.5px] leading-[1.74] text-ink/70 font-normal">
+          It is an optional <span class="mono text-aqua">+$340</span> open-water diver certification —
+          a full PADI-style course run over four afternoons of your week by our resident instructor,
+          Marcus. It covers theory, confined-water skills, and four open-water dives on the Coral Shelf
+          and the Pinnacle, with all gear included. You finish with a certification valid for life,
+          worldwide. Add it when you book, or decide once you arrive if there is space.
+        </p>
+      </details>
+
+      <details class="faq-item surface-card rounded-xl2 px-5 sm:px-6">
+        <summary class="flex items-center justify-between gap-4" style="padding-top:1.1rem;padding-bottom:1.1rem;">
+          <span class="display text-[16px] sm:text-[17px] text-ink soft font-semibold">Is it social, or can I keep to myself?</span>
+          <svg class="faq-chev shrink-0 text-aqua" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </summary>
+        <p class="pb-5 text-[13.5px] leading-[1.74] text-ink/70 font-normal">
+          Both, by design. The shared meals and the surf sessions give the week an easy, built-in social
+          rhythm, and most people leave with a group chat that long outlives the trip. But the long free
+          afternoons are genuinely free — and a private room or the cabana gives you a door to close.
+          Plenty of guests come solo specifically for that balance. No forced fun, ever.
+        </p>
+      </details>
+
+      <details class="faq-item surface-card rounded-xl2 px-5 sm:px-6">
+        <summary class="flex items-center justify-between gap-4" style="padding-top:1.1rem;padding-bottom:1.1rem;">
+          <span class="display text-[16px] sm:text-[17px] text-ink soft font-semibold">What's the cancellation policy?</span>
+          <svg class="faq-chev shrink-0 text-aqua" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </summary>
+        <p class="pb-5 text-[13.5px] leading-[1.74] text-ink/70 font-normal">
+          Cancel more than <span class="text-ink font-medium">eight weeks</span> before your Saturday and
+          you get a full refund minus the <span class="mono tnum">$300</span> deposit. Between eight and
+          two weeks out, the deposit and half the balance are refundable. Inside two weeks the booking is
+          non-refundable, though you may transfer your place to another person or another week at no cost.
+          Travel insurance is required to join — it covers the rest, and we are glad to point you to a good policy.
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 12 · FINAL CTA ===== -->
+<section id="book" class="relative py-24 sm:py-32 overflow-hidden">
+  <div class="blob grad-reef" style="width:420px;height:420px;top:-140px;left:50%;transform:translateX(-50%);opacity:0.34;"></div>
+  <div class="mx-auto max-w-3xl px-5 sm:px-8 text-center relative">
+    <!-- brand mark, second appearance -->
+    <svg width="58" height="58" viewBox="0 0 38 38" fill="none" aria-hidden="true" class="mx-auto mb-7">
+      <circle cx="19" cy="19" r="17.3" stroke="#2BC4D4" stroke-width="0.9" opacity="0.55"/>
+      <path d="M8 24c0-7 5.5-12 12-12 4 0 6.5 2 6.5 2-2-.4-5 .3-7.6 2.8C15.6 22 14 26 9.5 27c-1-1-1.5-2-1.5-3Z" fill="#2BC4D4"/>
+      <path d="M8 27.5q8 2.5 22-1" stroke="#F2C66B" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
+    </svg>
+
+    <p class="eyebrow mb-6">Find your week</p>
+    <h2 class="display display-tight font-bold text-[clamp(2rem,5.4vw,3.4rem)] leading-[1.08] text-ink">
+      Warm water, a good board, and a deck full of new friends.
+    </h2>
+    <p class="mt-5 text-[15px] leading-[1.7] text-ink/70 font-normal max-w-xl mx-auto">
+      Hold a bed with a <span class="mono tnum text-ink">$300</span> deposit. Beginners genuinely
+      welcome — half the house has never surfed before.
+    </p>
+
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a href="#dates" class="btn btn-primary rounded-full px-8 py-3.5 text-[14px] font-semibold soft">Book a week</a>
+      <a href="#day" class="btn btn-ghost rounded-full px-8 py-3.5 text-[14px] font-medium soft">See a typical day</a>
+    </div>
+
+    <div class="mt-8 inline-flex items-center gap-3 surface-card rounded-full pl-3 pr-5 py-2.5">
+      <span class="pulse-dot"></span>
+      <span class="text-[12.5px] text-ink/72 font-normal">Next week starts <span class="mono tnum text-ink font-medium">Sat · Jun 07, 2026</span> — 2 beds left</span>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ===== 13 · FOOTER ===== -->
+<footer class="relative border-t border-[color:var(--line)]" style="background:rgba(14,32,39,0.6);">
+  <div class="mx-auto max-w-6xl px-5 sm:px-8 py-14">
+    <div class="grid sm:grid-cols-[1.5fr_1fr_1fr_1fr] gap-9 sm:gap-8">
+      <div>
+        <div class="flex items-center gap-2.5 mb-3">
+          <svg width="32" height="32" viewBox="0 0 38 38" fill="none" aria-hidden="true">
+            <circle cx="19" cy="19" r="17.3" stroke="#2BC4D4" stroke-width="1" opacity="0.5"/>
+            <path d="M8 24c0-7 5.5-12 12-12 4 0 6.5 2 6.5 2-2-.4-5 .3-7.6 2.8C15.6 22 14 26 9.5 27c-1-1-1.5-2-1.5-3Z" fill="#2BC4D4"/>
+            <path d="M8 27.5q8 2.5 22-1" stroke="#F2C66B" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
+          </svg>
+          <span class="display text-lg font-bold soft text-ink">Offshore</span>
+        </div>
+        <p class="text-[13px] leading-[1.7] text-ink/58 font-normal max-w-xs">
+          A week-long surf-and-dive retreat on the Marola coast. Seven nights, twice-daily surf, an
+          optional dive course, and a shared beach house for fourteen.
+        </p>
+        <div class="mt-5 inline-flex items-center gap-2 surface-card rounded-full px-3.5 py-2">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M6.5 11.5s4-3 4-6a4 4 0 0 0-8 0c0 3 4 6 4 6Z" stroke="#2BC4D4" stroke-width="1.1"/><circle cx="6.5" cy="5.5" r="1.4" stroke="#2BC4D4" stroke-width="1"/></svg>
+          <span class="mono text-[11px] tracking-[0.08em] text-ink/65">Marola coast · 40 min from MRA airport</span>
+        </div>
+      </div>
+
+      <div>
+        <p class="mono text-[10.5px] tracking-[0.2em] uppercase text-ink/45 mb-3.5">The retreat</p>
+        <ul class="space-y-2 text-[13px] text-ink/62 font-normal">
+          <li><a href="#retreat" class="navlink">The retreat</a></li>
+          <li><a href="#day" class="navlink">A typical day</a></li>
+          <li><a href="#included" class="navlink">What's included</a></li>
+          <li><a href="#stay" class="navlink">Where you'll stay</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <p class="mono text-[10.5px] tracking-[0.2em] uppercase text-ink/45 mb-3.5">Plan a trip</p>
+        <ul class="space-y-2 text-[13px] text-ink/62 font-normal">
+          <li><a href="#dates" class="navlink">Departures &amp; pricing</a></li>
+          <li><a href="#crew" class="navlink">The crew</a></li>
+          <li><a href="#reviews" class="navlink">Reviews</a></li>
+          <li><a href="#faq" class="navlink">FAQ</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <p class="mono text-[10.5px] tracking-[0.2em] uppercase text-ink/45 mb-3.5">Talk to us</p>
+        <p class="text-[13px] text-ink/58 font-normal mb-1">Real humans, quick replies.</p>
+        <a href="mailto:hello@offshore.surf" class="text-[13.5px] text-aqua font-medium navlink break-words">hello@offshore.surf</a>
+        <!-- financial-protection badge placeholder -->
+        <div class="mt-5 flex items-center gap-2.5 surface-card rounded-xl px-3.5 py-2.5" style="border-color:rgba(43,196,212,0.2);">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true" class="shrink-0">
+            <path d="M11 1.5 19 4.5v6c0 5.2-3.4 8.9-8 10.5C6.4 19.4 3 15.7 3 10.5v-6L11 1.5Z" stroke="#2BC4D4" stroke-width="1.3" stroke-linejoin="round"/>
+            <path d="M7.5 11 10 13.5 14.5 8" stroke="#2BC4D4" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div>
+            <p class="mono text-[10px] tracking-[0.12em] uppercase text-ink/75">Financially protected</p>
+            <p class="text-[10.5px] text-ink/45 font-normal">Marola Travel Trust · MTT-4471</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hairrule my-9"></div>
+
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 text-[11.5px] text-ink/45 font-normal">
+      <p>© 2026 Offshore Retreats. Salt, sun, and a small crew since 2016.</p>
+      <p class="text-center sm:text-right">We run a one-panga reef cleanup every Friday and plant mangroves with every booking.</p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

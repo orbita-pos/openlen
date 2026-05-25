@@ -23,22 +23,26 @@ export const CREDITS_BY_PLAN: Record<Plan, number> = {
   pro: 1000,
 };
 
-/** Flat charge for an autofill / style-match run (Gemini read + Kimi fill).
- *  Cheap + occasional, so it isn't token-metered like generate / chat. */
+/** Flat charge for an autofill / style-match run. Cheap + occasional, so it
+ *  isn't token-metered like generate / chat. */
 export const AUTOFILL_CREDIT_COST = 5;
 
 /** One credit = this much raw model cost, in USD. */
 const USD_PER_CREDIT = 0.01;
 
-/** Rough chars-per-token, for estimating token volume from text length. */
-const CHARS_PER_TOKEN = 3.5;
+/** Rough chars-per-token (code/HTML is dense). Only used by the
+ *  estimateCredits fallback — the real path counts exact tokens. */
+const CHARS_PER_TOKEN = 3;
 
-// Model pricing in USD per 1M tokens. VERIFY against the providers' pricing
-// pages — the credit charge is computed straight from these. Calibration:
-// a from-scratch page generation should land near 14 credits (~$0.14).
+// Real provider pricing in USD per 1M tokens. Credits are billed from the
+// EXACT token usage the provider reports (creditsForUsage), so these are
+// honest per-token prices — verify them against the providers' pricing pages.
+// The /generate and /ai-design routes log the real token counts per call:
+// if a known-cost run doesn't line up, adjust the numbers here.
+// Gemini 2.5 pricing per 1M tokens (verify against ai.google.dev/pricing).
 const RATES = {
-  kimi: { input: 0.6, output: 2.5 },
-  gemini: { input: 1.25, output: 5.0 },
+  "gemini-pro": { input: 1.25, output: 10 },
+  "gemini-flash": { input: 0.3, output: 2.5 },
 } as const;
 
 const REFILL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -99,19 +103,40 @@ export async function debitCredits(
     .where(eq(schema.users.id, userId));
 }
 
+/** Token usage as reported by an OpenAI-compatible streaming API. */
+export interface TokenUsage {
+  prompt_tokens?: number;
+  completion_tokens?: number;
+}
+
 /**
- * Credit charge for a token-metered call, estimated from input + output text
- * length (chars → tokens → cost → credits). Rounded up, minimum 1.
+ * Exact credit charge from the token usage the provider reports — no
+ * chars→tokens estimation. This is the real billing path. Rounded up, min 1.
+ */
+export function creditsForUsage(
+  promptTokens: number,
+  completionTokens: number,
+  model: keyof typeof RATES = "gemini-pro",
+): number {
+  const rate = RATES[model];
+  const usd =
+    (promptTokens * rate.input + completionTokens * rate.output) / 1_000_000;
+  return Math.max(1, Math.ceil(usd / USD_PER_CREDIT));
+}
+
+/**
+ * Fallback charge for when the provider omits a usage report — estimates
+ * token counts from text length, then prices them via creditsForUsage. With
+ * stream usage enabled this should rarely run.
  */
 export function estimateCredits(
   inputChars: number,
   outputChars: number,
-  model: keyof typeof RATES = "kimi",
+  model: keyof typeof RATES = "gemini-pro",
 ): number {
-  const rate = RATES[model];
-  const inputTokens = inputChars / CHARS_PER_TOKEN;
-  const outputTokens = outputChars / CHARS_PER_TOKEN;
-  const usd =
-    (inputTokens * rate.input + outputTokens * rate.output) / 1_000_000;
-  return Math.max(1, Math.ceil(usd / USD_PER_CREDIT));
+  return creditsForUsage(
+    Math.round(inputChars / CHARS_PER_TOKEN),
+    Math.round(outputChars / CHARS_PER_TOKEN),
+    model,
+  );
 }

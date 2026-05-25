@@ -1,0 +1,1353 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Elena &amp; Thomas — September 11, 2027 · Willamette Valley</title>
+  <meta name="description" content="Elena & Thomas are getting married among the vines at a family vineyard in the Willamette Valley, Oregon — Saturday, September 11, 2027. RSVP, schedule, and travel details inside." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,400;1,9..144,500;1,9..144,600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg: "#F7F6F0",
+            ink: "#25241C",
+            vine: "#5A7350",
+            grape: "#7E5C74",
+            cream: "#FCFBF6",
+          },
+          fontFamily: {
+            display: ['Fraunces', 'serif'],
+            body: ['Newsreader', 'serif'],
+            mono: ['"Space Mono"', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    :root {
+      --bg: #F7F6F0;
+      --text: #25241C;
+      --accent: #5A7350;        /* vineyard green */
+      --accent-2: #7E5C74;      /* dusty grape */
+      --radius: 18px;
+      --hairline: rgba(0, 0, 0, 0.08);
+      --cream: #FCFBF6;
+      --vine-soft: rgba(90, 115, 80, 0.10);
+      --grape-soft: rgba(126, 92, 116, 0.10);
+    }
+
+    * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Newsreader', serif;
+      font-size: 18px;
+      line-height: 1.65;
+      letter-spacing: 0.002em;
+      overflow-x: hidden;
+    }
+
+    /* ---- ambient background ---- */
+    .ambient {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background:
+        radial-gradient(620px 460px at 8% 2%, rgba(90, 115, 80, 0.13), transparent 70%),
+        radial-gradient(680px 520px at 96% 14%, rgba(126, 92, 116, 0.12), transparent 72%),
+        radial-gradient(560px 520px at 80% 96%, rgba(199, 154, 78, 0.12), transparent 72%);
+    }
+    .dotgrid {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      opacity: 0.4;
+      background-image: radial-gradient(rgba(37, 36, 28, 0.10) 1px, transparent 1px);
+      background-size: 32px 32px;
+      -webkit-mask-image: linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent);
+              mask-image: linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent);
+    }
+
+    /* ---- type ---- */
+    .display {
+      font-family: 'Fraunces', serif;
+      font-style: italic;
+      font-weight: 500;
+      letter-spacing: -0.03em;
+      line-height: 1.04;
+    }
+    .display-tight { letter-spacing: -0.04em; }
+    .mono {
+      font-family: 'Space Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+    .eyebrow {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.34em;
+      text-transform: uppercase;
+    }
+    .body-serif { font-family: 'Newsreader', serif; }
+    .halftone { opacity: 0.45; }
+
+    /* ---- photo placeholders: framed warm gradients ---- */
+    .photo {
+      position: relative;
+      border-radius: var(--radius);
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.34),
+        inset 0 0 0 1px rgba(0, 0, 0, 0.06),
+        0 18px 44px -22px rgba(37, 36, 28, 0.40);
+      overflow: hidden;
+    }
+    .photo::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(120% 90% at 80% 8%, rgba(255, 255, 255, 0.40), transparent 56%);
+      pointer-events: none;
+    }
+    .ph-vines    { background: linear-gradient(140deg, #6f8a5e 0%, #899e6a 38%, #c9b27a 78%, #e4cf94 100%); }
+    .ph-sunset   { background: linear-gradient(150deg, #b8895f 0%, #d6a467 30%, #e7c98a 62%, #f0dcae 100%); }
+    .ph-couple   { background: linear-gradient(135deg, #7e5c74 0%, #9a7488 34%, #c79b86 70%, #e7c98a 100%); }
+    .ph-meadow   { background: linear-gradient(160deg, #5a7350 0%, #8aa06d 44%, #cdbd84 88%); }
+    .ph-table    { background: linear-gradient(145deg, #c79a4e 0%, #ddb878 36%, #efdcb0 72%, #f7eccb 100%); }
+    .ph-oak      { background: linear-gradient(150deg, #4f6549 0%, #7b8e62 40%, #b9a874 80%, #ddcd97 100%); }
+    .ph-grape    { background: linear-gradient(140deg, #6b4e63 0%, #8e6c84 40%, #b394a3 74%, #d8c2cf 100%); }
+    .ph-barrel   { background: linear-gradient(150deg, #9a6f44 0%, #bb9059 40%, #d9bc86 78%, #efdcb6 100%); }
+    .ph-hill     { background: linear-gradient(165deg, #6a8a5d 0%, #9bb077 46%, #d6c98c 90%); }
+    .ph-portrait { background: linear-gradient(150deg, #8a6a80 0%, #b08f9e 42%, #d7b58f 82%, #ecd6a8 100%); }
+
+    .photo-grain::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      opacity: 0.5;
+      pointer-events: none;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.5) 0.6px, transparent 0.6px);
+      background-size: 8px 8px;
+    }
+
+    /* ---- hairline framed cards ---- */
+    .card {
+      background: var(--cream);
+      border: 1px solid var(--hairline);
+      border-radius: var(--radius);
+    }
+    .card-lift {
+      transition: transform 130ms ease, box-shadow 130ms ease, border-color 130ms ease;
+    }
+    .card-lift:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 22px 40px -26px rgba(37, 36, 28, 0.45);
+      border-color: rgba(90, 115, 80, 0.32);
+    }
+
+    /* ---- buttons ---- */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      border-radius: 999px;
+      transition: transform 110ms ease, box-shadow 110ms ease, background-color 110ms ease, color 110ms ease;
+    }
+    .btn-solid {
+      background: var(--accent);
+      color: var(--cream);
+      box-shadow: 0 12px 26px -14px rgba(90, 115, 80, 0.75);
+    }
+    .btn-solid:hover {
+      transform: translateY(-2px);
+      background: #4d6444;
+      box-shadow: 0 16px 30px -14px rgba(90, 115, 80, 0.85);
+    }
+    .btn-ghost {
+      border: 1px solid var(--hairline);
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.5);
+    }
+    .btn-ghost:hover {
+      transform: translateY(-2px);
+      border-color: rgba(90, 115, 80, 0.4);
+      box-shadow: 0 14px 26px -18px rgba(37, 36, 28, 0.5);
+    }
+
+    .navlink {
+      position: relative;
+      transition: color 120ms ease;
+    }
+    .navlink::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: -3px;
+      height: 1px;
+      width: 0;
+      background: var(--accent);
+      transition: width 160ms ease;
+    }
+    .navlink:hover { color: var(--accent); }
+    .navlink:hover::after { width: 100%; }
+
+    section { scroll-margin-top: 92px; }
+
+    /* ---- hero fade-in ---- */
+    @keyframes riseIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .rise { animation: riseIn 0.9s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+    .rise-1 { animation-delay: 0.05s; }
+    .rise-2 { animation-delay: 0.18s; }
+    .rise-3 { animation-delay: 0.32s; }
+    .rise-4 { animation-delay: 0.46s; }
+    .rise-5 { animation-delay: 0.60s; }
+
+    @keyframes swayLeaf {
+      0%, 100% { transform: rotate(-2deg); }
+      50%      { transform: rotate(2.5deg); }
+    }
+    .sway { animation: swayLeaf 7s ease-in-out infinite; transform-origin: bottom center; }
+
+    /* ---- pulse dot ---- */
+    .pulse-dot {
+      position: relative;
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--accent);
+    }
+    .pulse-dot::after {
+      content: "";
+      position: absolute;
+      inset: -5px;
+      border-radius: 999px;
+      border: 1px solid var(--accent);
+      animation: pulseRing 2.4s ease-out infinite;
+    }
+    @keyframes pulseRing {
+      0%   { opacity: 0.7; transform: scale(0.5); }
+      80%, 100% { opacity: 0; transform: scale(1.4); }
+    }
+
+    /* ---- marquee ---- */
+    .marquee {
+      display: flex;
+      gap: 2.2rem;
+      width: max-content;
+      animation: drift 36s linear infinite;
+    }
+    @keyframes drift {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+    .marquee-wrap:hover .marquee { animation-play-state: paused; }
+
+    /* ---- timeline ---- */
+    .tl-line {
+      position: absolute;
+      left: 13px;
+      top: 6px;
+      bottom: 6px;
+      width: 2px;
+      background: linear-gradient(180deg, rgba(90,115,80,0.1), rgba(90,115,80,0.55) 14%, rgba(126,92,116,0.55) 86%, rgba(126,92,116,0.1));
+      border-radius: 2px;
+    }
+    .tl-node {
+      position: relative;
+      z-index: 1;
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      background: var(--cream);
+      border: 2px solid var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: none;
+    }
+    .tl-node-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--accent);
+    }
+
+    /* ---- faq ---- */
+    details.faq {
+      border-bottom: 1px solid var(--hairline);
+    }
+    details.faq summary {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1.3rem 0;
+    }
+    details.faq summary::-webkit-details-marker { display: none; }
+    details.faq .chev {
+      transition: transform 200ms ease;
+      color: var(--accent);
+      flex: none;
+    }
+    details.faq[open] .chev { transform: rotate(45deg); }
+    details.faq .faq-body {
+      padding: 0 2.4rem 1.5rem 0;
+      color: rgba(37, 36, 28, 0.78);
+    }
+
+    .frame-vine {
+      border: 1px solid var(--hairline);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.45);
+    }
+
+    input::placeholder, textarea::placeholder { color: rgba(37, 36, 28, 0.4); }
+    .field {
+      width: 100%;
+      background: var(--cream);
+      border: 1px solid var(--hairline);
+      border-radius: 12px;
+      padding: 0.78rem 0.95rem;
+      font-family: 'Newsreader', serif;
+      font-size: 16px;
+      color: var(--text);
+      transition: border-color 120ms ease, box-shadow 120ms ease;
+    }
+    .field:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(90, 115, 80, 0.16);
+    }
+    .radio-card {
+      cursor: pointer;
+      transition: border-color 120ms ease, background-color 120ms ease;
+    }
+    .radio-card:has(input:checked) {
+      border-color: var(--accent);
+      background: var(--vine-soft);
+    }
+    .radio-card:has(input:focus-visible) {
+      box-shadow: 0 0 0 3px rgba(90, 115, 80, 0.16);
+    }
+
+    ::selection { background: rgba(126, 92, 116, 0.24); }
+
+    @media (max-width: 640px) {
+      body { font-size: 17px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient" aria-hidden="true"></div>
+  <div class="dotgrid" aria-hidden="true"></div>
+
+  <!-- ============ 1 · STICKY NAV ============ -->
+  <header class="sticky top-0 z-50">
+    <div class="backdrop-blur-md" style="background: rgba(247, 246, 240, 0.86); border-bottom: 1px solid var(--hairline);">
+      <nav class="max-w-6xl mx-auto px-5 sm:px-8 h-[68px] flex items-center justify-between">
+        <a href="#top" class="flex items-center gap-2.5 group" aria-label="Elena and Thomas — home">
+          <!-- Monogram E&T inside a laurel wreath -->
+          <svg width="40" height="40" viewBox="0 0 48 48" fill="none" aria-hidden="true" class="transition-transform group-hover:-rotate-3">
+            <path d="M24 4c-7 3-11 9-11 18s4 17 11 22" stroke="#5A7350" stroke-width="1.4" stroke-linecap="round"/>
+            <path d="M24 4c7 3 11 9 11 18s-4 17-11 22" stroke="#5A7350" stroke-width="1.4" stroke-linecap="round"/>
+            <path d="M14.5 14c-2-.4-3.6.3-4.6 2 1.8.7 3.5.4 4.6-2Z" fill="#5A7350" opacity="0.85"/>
+            <path d="M12.6 22c-2-.2-3.5.7-4.3 2.5 1.9.5 3.5 0 4.3-2.5Z" fill="#5A7350" opacity="0.85"/>
+            <path d="M14.8 30.5c-1.9.1-3.2 1.2-3.7 3.1 1.9.2 3.3-.6 3.7-3.1Z" fill="#5A7350" opacity="0.85"/>
+            <path d="M33.5 14c2-.4 3.6.3 4.6 2-1.8.7-3.5.4-4.6-2Z" fill="#7E5C74" opacity="0.85"/>
+            <path d="M35.4 22c2-.2 3.5.7 4.3 2.5-1.9.5-3.5 0-4.3-2.5Z" fill="#7E5C74" opacity="0.85"/>
+            <path d="M33.2 30.5c1.9.1 3.2 1.2 3.7 3.1-1.9.2-3.3-.6-3.7-3.1Z" fill="#7E5C74" opacity="0.85"/>
+            <text x="17.6" y="29.4" font-family="Fraunces, serif" font-style="italic" font-weight="600" font-size="14" fill="#25241C">E</text>
+            <text x="25.4" y="29.4" font-family="Fraunces, serif" font-style="italic" font-weight="600" font-size="14" fill="#25241C">T</text>
+            <path d="M22.6 23.5c1 1 2.8 1 3.8 0" stroke="#7E5C74" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          <span class="display text-[19px] leading-none pt-0.5">Elena <span class="not-italic text-grape">&amp;</span> Thomas</span>
+        </a>
+
+        <div class="hidden md:flex items-center gap-7 text-[15px]">
+          <a href="#story" class="navlink">Story</a>
+          <a href="#schedule" class="navlink">Schedule</a>
+          <a href="#travel" class="navlink">Travel</a>
+          <a href="#rsvp" class="navlink">RSVP</a>
+          <a href="#registry" class="navlink">Registry</a>
+        </div>
+
+        <a href="#rsvp" class="btn btn-solid text-[14px] px-4 py-2">
+          <span class="pulse-dot" aria-hidden="true"></span>
+          RSVP
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+
+    <!-- ============ 2 · HERO ============ -->
+    <section class="relative pt-16 sm:pt-24 pb-12 sm:pb-16 px-5 sm:px-8">
+      <div class="max-w-6xl mx-auto">
+
+        <div class="flex justify-center mb-7 rise rise-1">
+          <span class="eyebrow inline-flex items-center gap-2.5 text-vine">
+            <svg width="34" height="8" viewBox="0 0 34 8" fill="none" aria-hidden="true">
+              <path d="M0 4h12" stroke="#5A7350" stroke-width="1"/>
+              <path d="M17 1c-1.6 1-2.4 2-2.4 3s.8 2 2.4 3c1.6-1 2.4-2 2.4-3s-.8-2-2.4-3Z" fill="#5A7350"/>
+              <path d="M22 4h12" stroke="#5A7350" stroke-width="1"/>
+            </svg>
+            We're getting married
+            <svg width="34" height="8" viewBox="0 0 34 8" fill="none" aria-hidden="true">
+              <path d="M0 4h12" stroke="#5A7350" stroke-width="1"/>
+              <path d="M17 1c-1.6 1-2.4 2-2.4 3s.8 2 2.4 3c1.6-1 2.4-2 2.4-3s-.8-2-2.4-3Z" fill="#5A7350"/>
+              <path d="M22 4h12" stroke="#5A7350" stroke-width="1"/>
+            </svg>
+          </span>
+        </div>
+
+        <h1 class="rise rise-2 display display-tight text-center text-[clamp(3.6rem,13vw,9.5rem)] text-ink">
+          Elena
+          <span class="block text-[clamp(2rem,6vw,4rem)] not-italic font-body font-normal text-grape my-1 sm:my-2">&amp;</span>
+          Thomas
+        </h1>
+
+        <div class="rise rise-3 mt-7 flex flex-col items-center gap-3 text-center">
+          <p class="body-serif italic text-[clamp(1.05rem,2.4vw,1.4rem)] text-ink/80">
+            Saturday, the eleventh of September, two thousand twenty-seven
+          </p>
+          <div class="flex items-center gap-3 text-vine">
+            <span class="h-px w-8" style="background: var(--hairline);"></span>
+            <span class="mono text-[15px] sm:text-[16px] tracking-[0.18em]">09 · 11 · 2027</span>
+            <span class="h-px w-8" style="background: var(--hairline);"></span>
+          </div>
+          <p class="eyebrow text-ink/60 mt-1">Hawthorn Row Vineyard · Willamette Valley, Oregon</p>
+        </div>
+
+        <!-- hero photo -->
+        <div class="rise rise-4 mt-10 sm:mt-12">
+          <div class="photo photo-grain ph-sunset h-[300px] sm:h-[440px] lg:h-[520px]">
+            <!-- soft vineyard horizon illustration -->
+            <svg class="absolute inset-0 w-full h-full" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <g opacity="0.5" stroke="#ffffff" stroke-width="2" fill="none">
+                <path d="M0 360 Q300 320 600 348 T1200 336"/>
+                <path d="M0 410 Q300 372 600 398 T1200 388"/>
+                <path d="M0 458 Q300 424 600 446 T1200 438"/>
+              </g>
+              <g opacity="0.34" stroke="#ffffff" stroke-width="1.4">
+                <line x1="120" y1="300" x2="100" y2="500"/><line x1="260" y1="300" x2="248" y2="500"/>
+                <line x1="400" y1="300" x2="396" y2="500"/><line x1="540" y1="304" x2="540" y2="500"/>
+                <line x1="680" y1="304" x2="688" y2="500"/><line x1="820" y1="300" x2="836" y2="500"/>
+                <line x1="960" y1="298" x2="980" y2="500"/><line x1="1100" y1="296" x2="1124" y2="500"/>
+              </g>
+              <circle cx="930" cy="150" r="62" fill="#ffffff" opacity="0.42"/>
+              <circle cx="930" cy="150" r="92" fill="#ffffff" opacity="0.16"/>
+            </svg>
+            <div class="absolute inset-0 flex items-end justify-center pb-6 sm:pb-8">
+              <span class="mono text-[10px] sm:text-[11px] tracking-[0.28em] uppercase text-white/90 bg-ink/25 backdrop-blur-sm rounded-full px-4 py-1.5">
+                Among the vines at golden hour
+              </span>
+            </div>
+            <!-- swaying corner leaf -->
+            <svg class="sway absolute top-5 left-5 w-14 h-14 opacity-70" viewBox="0 0 60 60" fill="none" aria-hidden="true">
+              <path d="M30 56C16 48 8 36 8 20 24 22 36 32 42 48" stroke="#ffffff" stroke-width="1.6" fill="none"/>
+              <path d="M30 56C16 48 8 36 8 20 24 22 36 32 42 48" fill="#ffffff" opacity="0.18"/>
+              <path d="M14 26h12M18 36h14M24 46h12" stroke="#ffffff" stroke-width="1.2"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- countdown -->
+        <div class="rise rise-5 mt-10 sm:mt-12 flex flex-col items-center">
+          <div class="frame-vine px-8 sm:px-12 py-7 text-center">
+            <p class="eyebrow text-vine mb-2">The countdown</p>
+            <p class="display text-[clamp(3rem,11vw,6.2rem)] text-ink leading-none">
+              <span class="mono not-italic font-normal text-[0.62em] align-baseline text-grape">142</span>
+              <span class="ml-1">days</span>
+            </p>
+            <p class="body-serif text-ink/65 text-[15px] mt-2">until we say "I do" beneath the Oregon sky</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- marquee divider -->
+    <div class="marquee-wrap overflow-hidden py-5 border-y" style="border-color: var(--hairline); background: rgba(252,251,246,0.6);">
+      <div class="marquee eyebrow text-ink/55">
+        <span class="flex items-center gap-2.5">Harvest season <svg width="9" height="9" viewBox="0 0 9 9" aria-hidden="true"><circle cx="4.5" cy="4.5" r="2.4" fill="#5A7350"/></svg></span>
+        <span class="flex items-center gap-2.5">A vineyard wedding <svg width="9" height="9" viewBox="0 0 9 9" aria-hidden="true"><circle cx="4.5" cy="4.5" r="2.4" fill="#7E5C74"/></svg></span>
+        <span class="flex items-center gap-2.5">String lights &amp; long tables <svg width="9" height="9" viewBox="0 0 9 9" aria-hidden="true"><circle cx="4.5" cy="4.5" r="2.4" fill="#5A7350"/></svg></span>
+        <span class="flex items-center gap-2.5">Dancing under the old oak <svg width="9" height="9" viewBox="0 0 9 9" aria-hidden="true"><circle cx="4.5" cy="4.5" r="2.4" fill="#7E5C74"/></svg></span>
+        <span class="flex items-center gap-2.5">Willamette Valley, Oregon <svg width="9" height="9" viewBox="0 0 9 9" aria-hidden="true"><circle cx="4.5" cy="4.5" r="2.4" fill="#5A7350"/></svg></span>
+        <!-- duplicate for seamless loop -->
+        <span class="flex items-center gap-2.5">Harvest season <svg width="9" height="9" viewBox="0 0 9 9" aria-hidden="true"><circle cx="4.5" cy="4.5" r="2.4" fill="#5A7350"/></svg></span>
+        <span class="flex items-center gap-2.5">A vineyard wedding <svg width="9" height="9" viewBox="0 0 9 9" aria-hidden="true"><circle cx="4.5" cy="4.5" r="2.4" fill="#7E5C74"/></svg></span>
+        <span class="flex items-center gap-2.5">String lights &amp; long tables <svg width="9" height="9" viewBox="0 0 9 9" aria-hidden="true"><circle cx="4.5" cy="4.5" r="2.4" fill="#5A7350"/></svg></span>
+        <span class="flex items-center gap-2.5">Dancing under the old oak <svg width="9" height="9" viewBox="0 0 9 9" aria-hidden="true"><circle cx="4.5" cy="4.5" r="2.4" fill="#7E5C74"/></svg></span>
+        <span class="flex items-center gap-2.5">Willamette Valley, Oregon <svg width="9" height="9" viewBox="0 0 9 9" aria-hidden="true"><circle cx="4.5" cy="4.5" r="2.4" fill="#5A7350"/></svg></span>
+      </div>
+    </div>
+
+    <!-- ============ 3 · OUR STORY ============ -->
+    <section id="story" class="px-5 sm:px-8 py-20 sm:py-28">
+      <div class="max-w-6xl mx-auto">
+
+        <div class="text-center max-w-2xl mx-auto mb-14 sm:mb-16">
+          <p class="eyebrow text-vine mb-3">Our story</p>
+          <h2 class="display text-[clamp(2.4rem,6vw,4rem)] text-ink">
+            From the rows <span class="halftone">to forever</span>
+          </h2>
+          <!-- botanical sprig divider -->
+          <div class="flex justify-center mt-6" aria-hidden="true">
+            <svg width="120" height="22" viewBox="0 0 120 22" fill="none">
+              <path d="M2 11h44" stroke="#5A7350" stroke-width="1"/>
+              <path d="M74 11h44" stroke="#5A7350" stroke-width="1"/>
+              <path d="M52 11c-2-3-2-6 0-9 2 3 2 6 0 9Z" fill="#5A7350"/>
+              <path d="M68 11c2-3 2-6 0-9-2 3-2 6 0 9Z" fill="#7E5C74"/>
+              <circle cx="60" cy="11" r="3" fill="none" stroke="#7E5C74" stroke-width="1.1"/>
+              <path d="M52 13c-2 3-2 6 0 9 2-3 2-6 0-9Z" fill="#5A7350" opacity="0.6"/>
+              <path d="M68 13c2 3 2 6 0 9-2-3-2-6 0-9Z" fill="#7E5C74" opacity="0.6"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
+          <!-- photos -->
+          <div class="grid grid-cols-2 gap-4">
+            <div class="photo photo-grain ph-meadow h-52 sm:h-64"></div>
+            <div class="photo photo-grain ph-couple h-52 sm:h-64 mt-8"></div>
+            <div class="photo photo-grain ph-grape h-40 sm:h-48 -mt-4"></div>
+            <div class="photo photo-grain ph-vines h-40 sm:h-48 mt-4"></div>
+          </div>
+
+          <!-- passages -->
+          <div class="space-y-7">
+            <div>
+              <p class="eyebrow text-grape mb-2">How we met</p>
+              <p class="body-serif text-[1.06rem] text-ink/85 leading-relaxed">
+                We met during a September crush, both of us volunteering for harvest at a small Dundee Hills
+                vineyard. Elena was sorting fruit; Thomas was hauling bins and pretending he knew what he was
+                doing. By the third day we were trading sandwiches at lunch, and by the last we were the only
+                two still talking long after the press had stopped.
+              </p>
+            </div>
+            <div>
+              <p class="eyebrow text-grape mb-2">Two years, two cities</p>
+              <p class="body-serif text-[1.06rem] text-ink/85 leading-relaxed">
+                Then came two years of long distance — her in Portland, him in San Francisco — measured out in
+                airport pickups, shared playlists, and Sunday phone calls that ran until the wine ran out. We
+                learned that the valley always felt like the place we were both heading back to.
+              </p>
+            </div>
+            <div>
+              <p class="eyebrow text-grape mb-2">The proposal</p>
+              <p class="body-serif text-[1.06rem] text-ink/85 leading-relaxed">
+                Last October, Thomas asked Elena to walk the rows at sunset "to check on the vines." Between
+                two trellises, with the hills going gold and a heron lifting off the river, he got down on one
+                knee. She said yes before he'd quite finished the question.
+              </p>
+            </div>
+
+            <!-- mini timeline -->
+            <div class="frame-vine p-5 mt-4">
+              <p class="eyebrow text-vine mb-4">A short history</p>
+              <ul class="space-y-3.5">
+                <li class="flex items-baseline gap-3.5">
+                  <span class="mono text-[13px] text-grape w-12 flex-none">2022</span>
+                  <span class="body-serif text-[15px] text-ink/85">A harvest in the Dundee Hills — and a first hello.</span>
+                </li>
+                <li class="flex items-baseline gap-3.5">
+                  <span class="mono text-[13px] text-grape w-12 flex-none">2023</span>
+                  <span class="body-serif text-[15px] text-ink/85">Two cities, countless miles, one steady answer.</span>
+                </li>
+                <li class="flex items-baseline gap-3.5">
+                  <span class="mono text-[13px] text-grape w-12 flex-none">2025</span>
+                  <span class="body-serif text-[15px] text-ink/85">A sunset between the rows — and a ring.</span>
+                </li>
+                <li class="flex items-baseline gap-3.5">
+                  <span class="mono text-[13px] text-grape w-12 flex-none">2027</span>
+                  <span class="body-serif text-[15px] text-ink/85">We marry where it all began.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 4 · WEDDING PARTY ============ -->
+    <section class="px-5 sm:px-8 py-20 sm:py-24" style="background: rgba(90,115,80,0.05); border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline);">
+      <div class="max-w-6xl mx-auto">
+
+        <div class="text-center max-w-2xl mx-auto mb-12 sm:mb-14">
+          <p class="eyebrow text-vine mb-3">By our side</p>
+          <h2 class="display text-[clamp(2.4rem,6vw,4rem)] text-ink">The wedding party</h2>
+          <p class="body-serif text-ink/70 mt-3">The dearest people we know — the ones who'll stand with us beneath the vines.</p>
+        </div>
+
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <!-- card -->
+          <article class="card card-lift p-5">
+            <div class="photo photo-grain ph-portrait h-48 mb-4"></div>
+            <p class="eyebrow text-grape mb-1">Maid of Honor</p>
+            <h3 class="display text-2xl text-ink">Margaret Cole</h3>
+            <p class="body-serif text-[15px] text-ink/72 mt-1.5">Elena's sister and lifelong co-conspirator — keeper of every secret since the second grade.</p>
+          </article>
+
+          <article class="card card-lift p-5">
+            <div class="photo photo-grain ph-vines h-48 mb-4"></div>
+            <p class="eyebrow text-grape mb-1">Best Man</p>
+            <h3 class="display text-2xl text-ink">Daniel Reyes</h3>
+            <p class="body-serif text-[15px] text-ink/72 mt-1.5">Thomas's oldest friend from college, the one who introduced him to wine in the first place.</p>
+          </article>
+
+          <article class="card card-lift p-5">
+            <div class="photo photo-grain ph-grape h-48 mb-4"></div>
+            <p class="eyebrow text-grape mb-1">Bridesmaid</p>
+            <h3 class="display text-2xl text-ink">Priya Anand</h3>
+            <p class="body-serif text-[15px] text-ink/72 mt-1.5">Elena's roommate through every Portland apartment — and the calmest person at any gathering.</p>
+          </article>
+
+          <article class="card card-lift p-5">
+            <div class="photo photo-grain ph-meadow h-48 mb-4"></div>
+            <p class="eyebrow text-grape mb-1">Groomsman</p>
+            <h3 class="display text-2xl text-ink">Owen Brennan</h3>
+            <p class="body-serif text-[15px] text-ink/72 mt-1.5">Thomas's younger brother, official toast-giver, and the only one allowed to tell the old stories.</p>
+          </article>
+
+          <article class="card card-lift p-5">
+            <div class="photo photo-grain ph-couple h-48 mb-4"></div>
+            <p class="eyebrow text-grape mb-1">Bridesmaid</p>
+            <h3 class="display text-2xl text-ink">Hannah Whitfield</h3>
+            <p class="body-serif text-[15px] text-ink/72 mt-1.5">A friend from that very first harvest — proof that the vineyard gives lasting things.</p>
+          </article>
+
+          <article class="card card-lift p-5">
+            <div class="photo photo-grain ph-barrel h-48 mb-4"></div>
+            <p class="eyebrow text-grape mb-1">Groomsman</p>
+            <h3 class="display text-2xl text-ink">Marcus Lin</h3>
+            <p class="body-serif text-[15px] text-ink/72 mt-1.5">The friend who flew in for every long-distance birthday — now flying in for the best one.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 5 · SCHEDULE ============ -->
+    <section id="schedule" class="px-5 sm:px-8 py-20 sm:py-28">
+      <div class="max-w-5xl mx-auto">
+
+        <div class="text-center max-w-2xl mx-auto mb-14 sm:mb-16">
+          <p class="eyebrow text-vine mb-3">The day</p>
+          <h2 class="display text-[clamp(2.4rem,6vw,4rem)] text-ink">Saturday, September 11</h2>
+          <p class="body-serif text-ink/70 mt-3">
+            An afternoon that drifts into a golden evening. Come early, stay late, and follow the lanterns.
+          </p>
+          <div class="flex justify-center mt-6" aria-hidden="true">
+            <svg width="92" height="20" viewBox="0 0 92 20" fill="none">
+              <path d="M2 10h32M58 10h32" stroke="#5A7350" stroke-width="1"/>
+              <path d="M46 2c-3 3-3 5 0 8 3-3 3-5 0-8ZM46 10c-3 3-3 5 0 8 3-3 3-5 0-8Z" fill="#5A7350"/>
+              <circle cx="46" cy="10" r="2" fill="#7E5C74"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="relative pl-2 sm:pl-4 max-w-2xl mx-auto">
+          <div class="tl-line" aria-hidden="true"></div>
+
+          <!-- node -->
+          <div class="relative flex gap-5 sm:gap-6 pb-9">
+            <div class="tl-node" aria-hidden="true"><span class="tl-node-dot"></span></div>
+            <div class="card card-lift p-5 flex-1">
+              <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 class="display text-2xl text-ink">Arrival &amp; welcome</h3>
+                <span class="mono text-[14px] text-grape">4:15 PM</span>
+              </div>
+              <p class="body-serif text-[15px] text-ink/72 mt-1.5">
+                Park, find a glass of estate rosé, and wander the garden path to your seat.
+              </p>
+              <p class="eyebrow text-vine/80 mt-2.5">Hawthorn Row Vineyard · garden lawn</p>
+            </div>
+          </div>
+
+          <div class="relative flex gap-5 sm:gap-6 pb-9">
+            <div class="tl-node" aria-hidden="true"><span class="tl-node-dot"></span></div>
+            <div class="card card-lift p-5 flex-1">
+              <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 class="display text-2xl text-ink">Ceremony among the vines</h3>
+                <span class="mono text-[14px] text-grape">5:00 PM</span>
+              </div>
+              <p class="body-serif text-[15px] text-ink/72 mt-1.5">
+                We exchange our vows at the end of the oldest Pinot block, the valley spread out behind us.
+              </p>
+              <p class="eyebrow text-vine/80 mt-2.5">The trellis arch · north vineyard rows</p>
+            </div>
+          </div>
+
+          <div class="relative flex gap-5 sm:gap-6 pb-9">
+            <div class="tl-node" aria-hidden="true"><span class="tl-node-dot"></span></div>
+            <div class="card card-lift p-5 flex-1">
+              <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 class="display text-2xl text-ink">Cocktail hour</h3>
+                <span class="mono text-[14px] text-grape">5:30 PM</span>
+              </div>
+              <p class="body-serif text-[15px] text-ink/72 mt-1.5">
+                Wine-country bites, valley vintages, and lawn games while we steal away for photographs.
+              </p>
+              <p class="eyebrow text-vine/80 mt-2.5">The barrel terrace</p>
+            </div>
+          </div>
+
+          <div class="relative flex gap-5 sm:gap-6 pb-9">
+            <div class="tl-node" aria-hidden="true"><span class="tl-node-dot"></span></div>
+            <div class="card card-lift p-5 flex-1">
+              <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 class="display text-2xl text-ink">Long-table dinner</h3>
+                <span class="mono text-[14px] text-grape">6:30 PM</span>
+              </div>
+              <p class="body-serif text-[15px] text-ink/72 mt-1.5">
+                A family-style harvest dinner at one long table beneath the string lights — toasts encouraged.
+              </p>
+              <p class="eyebrow text-vine/80 mt-2.5">The garden pavilion</p>
+            </div>
+          </div>
+
+          <div class="relative flex gap-5 sm:gap-6">
+            <div class="tl-node" aria-hidden="true"><span class="tl-node-dot"></span></div>
+            <div class="card card-lift p-5 flex-1">
+              <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 class="display text-2xl text-ink">Dancing under the old oak</h3>
+                <span class="mono text-[14px] text-grape">8:30 PM</span>
+              </div>
+              <p class="body-serif text-[15px] text-ink/72 mt-1.5">
+                The band starts, the lanterns glow, and we dance on the lawn beneath the two-hundred-year-old
+                oak until the last song. Late-night cider and warm blankets provided.
+              </p>
+              <p class="eyebrow text-vine/80 mt-2.5">The oak lawn · until 11:00 PM</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 6 · VENUE + TRAVEL ============ -->
+    <section id="travel" class="px-5 sm:px-8 py-20 sm:py-28" style="background: rgba(126,92,116,0.05); border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline);">
+      <div class="max-w-6xl mx-auto">
+
+        <div class="text-center max-w-2xl mx-auto mb-14 sm:mb-16">
+          <p class="eyebrow text-vine mb-3">Venue &amp; travel</p>
+          <h2 class="display text-[clamp(2.4rem,6vw,4rem)] text-ink">Finding your way to us</h2>
+          <p class="body-serif text-ink/70 mt-3">
+            Tucked into the hills outside Newberg — about forty minutes southwest of Portland.
+          </p>
+        </div>
+
+        <!-- venue + map -->
+        <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-stretch mb-14">
+          <div class="card p-7 flex flex-col justify-center">
+            <p class="eyebrow text-grape mb-2">The venue</p>
+            <h3 class="display text-3xl sm:text-4xl text-ink">Hawthorn Row Vineyard</h3>
+            <p class="body-serif text-ink/80 mt-3 leading-relaxed">
+              A family-run estate on the western edge of the Willamette Valley, planted four decades ago by
+              Elena's grandparents. Forty acres of Pinot Noir, a hand-built garden pavilion, and the old oak
+              the whole family has gathered under for generations.
+            </p>
+            <div class="mt-5 space-y-2 text-[15px]">
+              <p class="flex items-start gap-2.5">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="mt-1 flex-none" aria-hidden="true"><path d="M8 1.5c-2.8 0-5 2.1-5 4.8C3 9.5 8 14.5 8 14.5s5-5 5-8.2c0-2.7-2.2-4.8-5-4.8Z" stroke="#5A7350" stroke-width="1.3"/><circle cx="8" cy="6.2" r="1.7" fill="#5A7350"/></svg>
+                <span class="body-serif text-ink/80">14820 Hawthorn Row Lane, Newberg, Oregon 97132</span>
+              </p>
+              <p class="flex items-start gap-2.5">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="mt-1 flex-none" aria-hidden="true"><circle cx="8" cy="8" r="6.3" stroke="#5A7350" stroke-width="1.3"/><path d="M8 4.4V8l2.6 1.7" stroke="#5A7350" stroke-width="1.3" stroke-linecap="round"/></svg>
+                <span class="body-serif text-ink/80">~40 minutes from Portland International Airport (PDX)</span>
+              </p>
+            </div>
+          </div>
+
+          <!-- STYLIZED SVG MAP -->
+          <div class="card p-4">
+            <div class="rounded-[12px] overflow-hidden h-full min-h-[300px]" style="background: linear-gradient(160deg,#eef0e6,#f6f4ec);">
+              <svg viewBox="0 0 480 360" class="w-full h-full" role="img" aria-label="Stylized map of Hawthorn Row Vineyard near Newberg, Oregon">
+                <!-- river -->
+                <path d="M-10 70 C90 96 150 60 230 96 C320 138 360 96 500 132" fill="none" stroke="#7E5C74" stroke-width="9" stroke-linecap="round" opacity="0.32"/>
+                <path d="M-10 70 C90 96 150 60 230 96 C320 138 360 96 500 132" fill="none" stroke="#7E5C74" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+                <text x="40" y="60" class="mono" font-size="9" fill="#7E5C74" opacity="0.85">WILLAMETTE RIVER</text>
+
+                <!-- roads -->
+                <path d="M0 260 H480" fill="none" stroke="#25241C" stroke-width="2.4" opacity="0.5"/>
+                <path d="M0 268 H480" fill="none" stroke="#25241C" stroke-width="0.8" stroke-dasharray="6 7" opacity="0.5"/>
+                <text x="14" y="252" class="mono" font-size="9" fill="#25241C" opacity="0.6">HWY 99W</text>
+
+                <path d="M150 360 V150 C150 120 188 110 220 110 H360" fill="none" stroke="#25241C" stroke-width="1.8" opacity="0.42"/>
+                <path d="M340 360 C340 280 300 250 250 230" fill="none" stroke="#25241C" stroke-width="1.6" opacity="0.4"/>
+
+                <!-- vineyard blocks -->
+                <g opacity="0.9">
+                  <rect x="270" y="150" width="120" height="56" rx="6" fill="#5A7350" opacity="0.16" stroke="#5A7350" stroke-width="1.1"/>
+                  <line x1="284" y1="152" x2="284" y2="204" stroke="#5A7350" stroke-width="0.8" opacity="0.6"/>
+                  <line x1="300" y1="152" x2="300" y2="204" stroke="#5A7350" stroke-width="0.8" opacity="0.6"/>
+                  <line x1="316" y1="152" x2="316" y2="204" stroke="#5A7350" stroke-width="0.8" opacity="0.6"/>
+                  <line x1="332" y1="152" x2="332" y2="204" stroke="#5A7350" stroke-width="0.8" opacity="0.6"/>
+                  <line x1="348" y1="152" x2="348" y2="204" stroke="#5A7350" stroke-width="0.8" opacity="0.6"/>
+                  <line x1="364" y1="152" x2="364" y2="204" stroke="#5A7350" stroke-width="0.8" opacity="0.6"/>
+                  <line x1="380" y1="152" x2="380" y2="204" stroke="#5A7350" stroke-width="0.8" opacity="0.6"/>
+                </g>
+                <rect x="60" y="200" width="74" height="48" rx="6" fill="#5A7350" opacity="0.1" stroke="#5A7350" stroke-width="1"/>
+                <rect x="62" y="118" width="58" height="40" rx="6" fill="#7E5C74" opacity="0.1" stroke="#7E5C74" stroke-width="1"/>
+
+                <!-- hills -->
+                <path d="M380 250 q26 -34 52 0 z" fill="#5A7350" opacity="0.14"/>
+                <path d="M414 254 q24 -28 48 0 z" fill="#5A7350" opacity="0.1"/>
+
+                <!-- the oak -->
+                <g transform="translate(244,210)">
+                  <line x1="0" y1="0" x2="0" y2="18" stroke="#25241C" stroke-width="2" opacity="0.55"/>
+                  <circle cx="0" cy="-6" r="13" fill="#5A7350" opacity="0.28"/>
+                  <circle cx="-7" cy="-2" r="8" fill="#5A7350" opacity="0.24"/>
+                  <circle cx="8" cy="-3" r="9" fill="#5A7350" opacity="0.24"/>
+                </g>
+                <text x="244" y="248" text-anchor="middle" class="mono" font-size="8" fill="#5A7350">THE OLD OAK</text>
+
+                <!-- location pin -->
+                <g transform="translate(330,178)">
+                  <path d="M0 -34c-9.4 0-17 7.2-17 16.2C-17 -6 0 14 0 14s17-20 17-31.8C17 -26.8 9.4 -34 0 -34Z" fill="#FCFBF6" stroke="#7E5C74" stroke-width="2"/>
+                  <circle cx="0" cy="-18" r="6.4" fill="#7E5C74"/>
+                </g>
+                <g transform="translate(330,206)">
+                  <ellipse cx="0" cy="0" rx="9" ry="2.6" fill="#25241C" opacity="0.16"/>
+                </g>
+                <rect x="284" y="120" width="148" height="26" rx="13" fill="#FCFBF6" stroke="#7E5C74" stroke-width="1"/>
+                <text x="358" y="137" text-anchor="middle" class="mono" font-size="9.5" fill="#25241C" letter-spacing="0.6">HAWTHORN ROW VINEYARD</text>
+
+                <!-- town markers -->
+                <g>
+                  <circle cx="96" cy="296" r="4" fill="#25241C" opacity="0.6"/>
+                  <text x="106" y="300" class="mono" font-size="9" fill="#25241C" opacity="0.7">NEWBERG</text>
+                  <circle cx="244" cy="312" r="4" fill="#25241C" opacity="0.6"/>
+                  <text x="254" y="316" class="mono" font-size="9" fill="#25241C" opacity="0.7">DUNDEE</text>
+                </g>
+
+                <!-- compass -->
+                <g transform="translate(440,300)" opacity="0.7">
+                  <circle r="15" fill="none" stroke="#5A7350" stroke-width="1"/>
+                  <path d="M0 -11 L4 2 L0 -1 L-4 2 Z" fill="#5A7350"/>
+                  <text x="0" y="-18" text-anchor="middle" class="mono" font-size="8" fill="#5A7350">N</text>
+                </g>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- getting there + parking + out of town -->
+        <div class="grid sm:grid-cols-3 gap-5 mb-12">
+          <div class="card card-lift p-5">
+            <svg width="26" height="26" viewBox="0 0 26 26" fill="none" class="mb-3" aria-hidden="true"><path d="M5 17h16M7 17l1.6-7h8.8L19 17M9 10V6h8v4" stroke="#5A7350" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="19.5" r="2" stroke="#5A7350" stroke-width="1.4"/><circle cx="17" cy="19.5" r="2" stroke="#5A7350" stroke-width="1.4"/></svg>
+            <h3 class="display text-xl text-ink">Getting there</h3>
+            <p class="body-serif text-[15px] text-ink/72 mt-1.5">
+              From Portland, take 99W south through Newberg, then follow Hawthorn Row Lane up the hill. The
+              last half-mile is a gravel drive — take it slowly and watch for the lantern markers.
+            </p>
+          </div>
+          <div class="card card-lift p-5">
+            <svg width="26" height="26" viewBox="0 0 26 26" fill="none" class="mb-3" aria-hidden="true"><rect x="5" y="5" width="16" height="16" rx="3" stroke="#5A7350" stroke-width="1.4"/><path d="M10 17V9h4.2a2.6 2.6 0 0 1 0 5.2H10" stroke="#5A7350" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <h3 class="display text-xl text-ink">Parking</h3>
+            <p class="body-serif text-[15px] text-ink/72 mt-1.5">
+              Free parking is available in the meadow lot, with attendants to guide you. Cars may be left
+              overnight and collected the next morning — please do drive safely.
+            </p>
+          </div>
+          <div class="card card-lift p-5">
+            <svg width="26" height="26" viewBox="0 0 26 26" fill="none" class="mb-3" aria-hidden="true"><path d="M13 3c4.5 0 8 4.2 8 9.4C21 18 13 23 13 23S5 18 5 12.4C5 7.2 8.5 3 13 3Z" stroke="#5A7350" stroke-width="1.4"/><circle cx="13" cy="11.5" r="3" stroke="#5A7350" stroke-width="1.4"/></svg>
+            <h3 class="display text-xl text-ink">Out-of-town guests</h3>
+            <p class="body-serif text-[15px] text-ink/72 mt-1.5">
+              We'd love for you to make a weekend of it. The nearest towns — Newberg, Dundee, and McMinnville —
+              are full of tasting rooms, inns, and quiet country roads worth exploring.
+            </p>
+          </div>
+        </div>
+
+        <!-- hotel room blocks -->
+        <div>
+          <div class="flex items-center gap-4 mb-6">
+            <h3 class="display text-2xl text-ink">Where to stay</h3>
+            <span class="h-px flex-1" style="background: var(--hairline);"></span>
+            <span class="eyebrow text-vine">Room blocks held</span>
+          </div>
+          <div class="grid sm:grid-cols-3 gap-5">
+            <article class="card card-lift p-5">
+              <div class="photo photo-grain ph-hill h-36 mb-4"></div>
+              <h4 class="display text-xl text-ink">The Allison Inn</h4>
+              <p class="eyebrow text-grape mt-1">Newberg · ~10 min</p>
+              <p class="body-serif text-[15px] text-ink/72 mt-2">
+                A serene wine-country retreat with a garden spa. The closest stay to the vineyard.
+              </p>
+              <p class="body-serif text-[13.5px] text-vine mt-3 italic">Mention the Walsh–Hayes wedding for our room block rate.</p>
+            </article>
+            <article class="card card-lift p-5">
+              <div class="photo photo-grain ph-vines h-36 mb-4"></div>
+              <h4 class="display text-xl text-ink">The Dundee Lodge</h4>
+              <p class="eyebrow text-grape mt-1">Dundee · ~15 min</p>
+              <p class="body-serif text-[15px] text-ink/72 mt-2">
+                A cozy boutique lodge on Highway 99W, steps from the valley's best tasting rooms.
+              </p>
+              <p class="body-serif text-[13.5px] text-vine mt-3 italic">Mention the Walsh–Hayes wedding for our room block rate.</p>
+            </article>
+            <article class="card card-lift p-5">
+              <div class="photo photo-grain ph-barrel h-36 mb-4"></div>
+              <h4 class="display text-xl text-ink">Hotel Oregon</h4>
+              <p class="eyebrow text-grape mt-1">McMinnville · ~25 min</p>
+              <p class="body-serif text-[15px] text-ink/72 mt-2">
+                A charming historic hotel on McMinnville's walkable Third Street, with a rooftop bar.
+              </p>
+              <p class="body-serif text-[13.5px] text-vine mt-3 italic">Mention the Walsh–Hayes wedding for our room block rate.</p>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 7 · THINGS TO DO ============ -->
+    <section class="px-5 sm:px-8 py-20 sm:py-28">
+      <div class="max-w-6xl mx-auto">
+
+        <div class="text-center max-w-2xl mx-auto mb-12 sm:mb-14">
+          <p class="eyebrow text-vine mb-3">Make a weekend of it</p>
+          <h2 class="display text-[clamp(2.4rem,6vw,4rem)] text-ink">Things to do nearby</h2>
+          <p class="body-serif text-ink/70 mt-3">
+            A few of our own favorites for the guests lingering in the valley a little longer.
+          </p>
+        </div>
+
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <article class="card card-lift p-5">
+            <div class="photo photo-grain ph-grape h-40 mb-4"></div>
+            <p class="eyebrow text-grape mb-1">Tasting room</p>
+            <h3 class="display text-xl text-ink">Cellar Lark</h3>
+            <p class="body-serif text-[15px] text-ink/72 mt-1.5">
+              Our neighbors one ridge over — a small-production Pinot house with a sun-warmed patio and an
+              open door for our guests.
+            </p>
+          </article>
+          <article class="card card-lift p-5">
+            <div class="photo photo-grain ph-hill h-40 mb-4"></div>
+            <p class="eyebrow text-grape mb-1">Outdoors</p>
+            <h3 class="display text-xl text-ink">Chehalem Ridge Trail</h3>
+            <p class="body-serif text-[15px] text-ink/72 mt-1.5">
+              An easy three-mile loop through oak savanna with long views over the valley — best in the cool
+              of the morning.
+            </p>
+          </article>
+          <article class="card card-lift p-5">
+            <div class="photo photo-grain ph-sunset h-40 mb-4"></div>
+            <p class="eyebrow text-grape mb-1">Scenic drive</p>
+            <h3 class="display text-xl text-ink">The Worden Hill Loop</h3>
+            <p class="body-serif text-[15px] text-ink/72 mt-1.5">
+              A slow, winding drive through the Dundee Hills past hillside vineyards and roadside fruit
+              stands — windows down, no rush.
+            </p>
+          </article>
+          <article class="card card-lift p-5">
+            <div class="photo photo-grain ph-table h-40 mb-4"></div>
+            <p class="eyebrow text-grape mb-1">Coffee &amp; pastry</p>
+            <h3 class="display text-xl text-ink">Maple &amp; Rye Bakehouse</h3>
+            <p class="body-serif text-[15px] text-ink/72 mt-1.5">
+              A beloved McMinnville bakery on Third Street — go early for the hazelnut morning buns and a
+              proper cup of coffee.
+            </p>
+          </article>
+        </div>
+
+        <!-- small gallery grid -->
+        <div class="mt-14">
+          <div class="flex items-center gap-4 mb-6">
+            <span class="eyebrow text-vine">A glimpse of the valley</span>
+            <span class="h-px flex-1" style="background: var(--hairline);"></span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <div class="photo photo-grain ph-vines h-40 sm:h-52 sm:row-span-2 sm:h-auto"></div>
+            <div class="photo photo-grain ph-couple h-40 sm:h-44"></div>
+            <div class="photo photo-grain ph-oak h-40 sm:h-44"></div>
+            <div class="photo photo-grain ph-sunset h-40 sm:h-52 sm:row-span-2 sm:h-auto"></div>
+            <div class="photo photo-grain ph-barrel h-40 sm:h-44 sm:col-span-2"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 8 · RSVP ============ -->
+    <section id="rsvp" class="px-5 sm:px-8 py-20 sm:py-28" style="background: rgba(90,115,80,0.06); border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline);">
+      <div class="max-w-3xl mx-auto">
+
+        <div class="text-center mb-10 sm:mb-12">
+          <!-- grape cluster motif -->
+          <div class="flex justify-center mb-4" aria-hidden="true">
+            <svg width="42" height="48" viewBox="0 0 42 48" fill="none">
+              <path d="M21 6c0-3 2-5 5-5" stroke="#5A7350" stroke-width="1.4" stroke-linecap="round"/>
+              <path d="M28 4c4-2 8 0 9 4-4 2-8 1-9-4Z" fill="#5A7350"/>
+              <path d="M22 6c-4-2-8 0-9 4 4 2 8 1 9-4Z" fill="#5A7350" opacity="0.7"/>
+              <circle cx="21" cy="16" r="5" fill="#7E5C74" opacity="0.85"/>
+              <circle cx="14" cy="22" r="5" fill="#7E5C74" opacity="0.7"/>
+              <circle cx="28" cy="22" r="5" fill="#7E5C74" opacity="0.7"/>
+              <circle cx="21" cy="28" r="5" fill="#7E5C74" opacity="0.92"/>
+              <circle cx="15" cy="33" r="4.4" fill="#7E5C74" opacity="0.78"/>
+              <circle cx="27" cy="33" r="4.4" fill="#7E5C74" opacity="0.78"/>
+              <circle cx="21" cy="39" r="4" fill="#7E5C74"/>
+            </svg>
+          </div>
+          <p class="eyebrow text-vine mb-3">Will you join us?</p>
+          <h2 class="display text-[clamp(2.4rem,6vw,4rem)] text-ink">RSVP</h2>
+          <p class="body-serif text-ink/72 mt-3">
+            We can hardly wait to celebrate with you. Please let us know below — one card per guest.
+          </p>
+          <p class="mono text-[13px] text-grape mt-4 inline-flex items-center gap-2 frame-vine px-4 py-2">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><circle cx="6.5" cy="6.5" r="5.6" stroke="#7E5C74" stroke-width="1.2"/><path d="M6.5 3.4V6.5l2 1.3" stroke="#7E5C74" stroke-width="1.2" stroke-linecap="round"/></svg>
+            Kindly reply by Saturday, July 31, 2027
+          </p>
+        </div>
+
+        <form action="#" class="card p-6 sm:p-8 space-y-6">
+          <!-- full name -->
+          <div>
+            <label for="rsvp-name" class="eyebrow text-ink/70 block mb-2">Full name</label>
+            <input id="rsvp-name" name="name" type="text" autocomplete="name" required class="field" placeholder="First and last name" />
+          </div>
+
+          <!-- attending -->
+          <fieldset>
+            <legend class="eyebrow text-ink/70 mb-2.5">Will you be attending?</legend>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="radio-card card flex items-center gap-2.5 px-4 py-3">
+                <input type="radio" name="attending" value="yes" class="accent-[#5A7350]" required />
+                <span class="body-serif text-[15px]">Joyfully accepts</span>
+              </label>
+              <label class="radio-card card flex items-center gap-2.5 px-4 py-3">
+                <input type="radio" name="attending" value="no" class="accent-[#5A7350]" />
+                <span class="body-serif text-[15px]">Regretfully declines</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <!-- guests + meal -->
+          <div class="grid sm:grid-cols-2 gap-5">
+            <div>
+              <label for="rsvp-guests" class="eyebrow text-ink/70 block mb-2">Number of guests</label>
+              <select id="rsvp-guests" name="guests" class="field">
+                <option value="1">1 — just me</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4 or more</option>
+              </select>
+            </div>
+            <div>
+              <label for="rsvp-meal" class="eyebrow text-ink/70 block mb-2">Meal preference</label>
+              <select id="rsvp-meal" name="meal" class="field">
+                <option value="" disabled selected>Choose a dish</option>
+                <option value="hazelnut-chicken">Hazelnut-crusted chicken</option>
+                <option value="autumn-squash">Roasted autumn squash (vegetarian)</option>
+                <option value="herb-salmon">Herb-grilled Columbia salmon</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- song request -->
+          <div>
+            <label for="rsvp-song" class="eyebrow text-ink/70 block mb-2">A song to get you on the dance floor</label>
+            <input id="rsvp-song" name="song" type="text" class="field" placeholder="Artist — title" />
+          </div>
+
+          <!-- note -->
+          <div>
+            <label for="rsvp-note" class="eyebrow text-ink/70 block mb-2">Anything we should know? <span class="normal-case tracking-normal text-ink/45">(dietary needs, a kind word)</span></label>
+            <textarea id="rsvp-note" name="note" rows="3" class="field resize-none" placeholder="We'd love to hear from you"></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-solid w-full justify-center py-3.5 text-[15px]">
+            Send our reply
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.5 8h11M9 3.5 13.5 8 9 12.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <p class="body-serif text-[13px] text-ink/50 text-center">
+            Questions? Write to us any time at <a href="mailto:hello@elenaandthomas.com" class="text-vine underline underline-offset-2">hello@elenaandthomas.com</a>.
+          </p>
+        </form>
+      </div>
+    </section>
+
+    <!-- ============ 9 · REGISTRY ============ -->
+    <section id="registry" class="px-5 sm:px-8 py-20 sm:py-28">
+      <div class="max-w-5xl mx-auto">
+
+        <div class="text-center max-w-2xl mx-auto mb-12 sm:mb-14">
+          <p class="eyebrow text-vine mb-3">If you'd like to give</p>
+          <h2 class="display text-[clamp(2.4rem,6vw,4rem)] text-ink">Registry</h2>
+          <p class="body-serif text-ink/72 mt-3">
+            Your presence in the valley is the truest gift — truly. But for those who've asked, here are a
+            few thoughtful places to look.
+          </p>
+        </div>
+
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <article class="card card-lift p-6 text-center">
+            <div class="mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4" style="background: var(--vine-soft);">
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M4 8h14l-1.2 9.4a1.6 1.6 0 0 1-1.6 1.4H6.8a1.6 1.6 0 0 1-1.6-1.4L4 8Z" stroke="#5A7350" stroke-width="1.4"/><path d="M7.6 8V6a3.4 3.4 0 0 1 6.8 0v2" stroke="#5A7350" stroke-width="1.4" stroke-linecap="round"/></svg>
+            </div>
+            <h3 class="display text-xl text-ink">The Home Table</h3>
+            <p class="body-serif text-[15px] text-ink/72 mt-1.5">
+              Linens, stoneware, and the small everyday things for the kitchen we're building together.
+            </p>
+            <a href="#" class="btn btn-ghost mt-4 px-5 py-2 text-[14px]">View registry</a>
+          </article>
+
+          <article class="card card-lift p-6 text-center">
+            <div class="mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4" style="background: var(--grape-soft);">
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M3 16c0-4 3.6-7 8-7s8 3 8 7" stroke="#7E5C74" stroke-width="1.4"/><path d="M11 9V4M11 4l5 2.4M11 4 6 6.4" stroke="#7E5C74" stroke-width="1.4" stroke-linecap="round"/><circle cx="11" cy="16" r="1.6" fill="#7E5C74"/></svg>
+            </div>
+            <h3 class="display text-xl text-ink">Honeymoon Fund</h3>
+            <p class="body-serif text-[15px] text-ink/72 mt-1.5">
+              A contribution toward two slow weeks in Tuscany — vineyards of a different kind.
+            </p>
+            <a href="#" class="btn btn-ghost mt-4 px-5 py-2 text-[14px]">Contribute</a>
+          </article>
+
+          <article class="card card-lift p-6 text-center">
+            <div class="mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4" style="background: var(--vine-soft);">
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M11 18S3.5 13 3.5 7.8C3.5 5.1 5.6 3 8.2 3 9.8 3 11 4 11 4s1.2-1 2.8-1C16.4 3 18.5 5.1 18.5 7.8 18.5 13 11 18 11 18Z" stroke="#5A7350" stroke-width="1.4"/></svg>
+            </div>
+            <h3 class="display text-xl text-ink">Friends of the Valley</h3>
+            <p class="body-serif text-[15px] text-ink/72 mt-1.5">
+              A gift in your name to a land trust protecting Willamette Valley farmland and oak habitat.
+            </p>
+            <a href="#" class="btn btn-ghost mt-4 px-5 py-2 text-[14px]">Donate</a>
+          </article>
+
+          <article class="card card-lift p-6 text-center sm:col-span-2 lg:col-span-3">
+            <div class="flex flex-col sm:flex-row items-center gap-5 text-left">
+              <div class="w-12 h-12 rounded-full flex items-center justify-center flex-none" style="background: var(--grape-soft);">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M11 4c-2 1.6-3 3.2-3 5s1 3.4 3 5c2-1.6 3-3.2 3-5s-1-3.4-3-5Z" fill="#7E5C74"/><path d="M11 14v4M7 18h8" stroke="#7E5C74" stroke-width="1.4" stroke-linecap="round"/></svg>
+              </div>
+              <div class="flex-1">
+                <h3 class="display text-xl text-ink">The Cellar Club</h3>
+                <p class="body-serif text-[15px] text-ink/72 mt-1">
+                  Help us lay down a few cases of Willamette Valley Pinot to open on each anniversary — a bottle
+                  of 2027 for our first, and on through the years.
+                </p>
+              </div>
+              <a href="#" class="btn btn-ghost px-5 py-2 text-[14px] flex-none">Add a bottle</a>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 10 · FAQ ============ -->
+    <section class="px-5 sm:px-8 py-20 sm:py-28" style="background: rgba(126,92,116,0.05); border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline);">
+      <div class="max-w-3xl mx-auto">
+
+        <div class="text-center mb-12 sm:mb-14">
+          <p class="eyebrow text-vine mb-3">Good to know</p>
+          <h2 class="display text-[clamp(2.4rem,6vw,4rem)] text-ink">Questions &amp; answers</h2>
+          <p class="body-serif text-ink/72 mt-3">A few things guests often ask. Anything else — just write to us.</p>
+        </div>
+
+        <div class="card px-6 sm:px-8 py-2">
+          <details class="faq" open>
+            <summary>
+              <span class="display text-xl text-ink">What should we wear?</span>
+              <svg class="chev" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 3.5v11M3.5 9h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            </summary>
+            <p class="faq-body body-serif">
+              Garden formal. Think soft suits, flowing dresses, and warm fabrics for an Oregon evening. The
+              ceremony, dinner, and dancing all take place on grass and gravel, so we warmly recommend flat
+              shoes or block heels — your feet will thank you under the oak.
+            </p>
+          </details>
+
+          <details class="faq">
+            <summary>
+              <span class="display text-xl text-ink">Are children welcome?</span>
+              <svg class="chev" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 3.5v11M3.5 9h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            </summary>
+            <p class="faq-body body-serif">
+              Absolutely — little ones are welcome and we'd love to see them. The vineyard is a wonderful
+              place for children to roam, with lawn games and plenty of space. Just note the day is mostly
+              outdoors, so dress them for the grass and a cool evening.
+            </p>
+          </details>
+
+          <details class="faq">
+            <summary>
+              <span class="display text-xl text-ink">Will the wedding be indoors or outdoors?</span>
+              <svg class="chev" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 3.5v11M3.5 9h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            </summary>
+            <p class="faq-body body-serif">
+              The day is almost entirely outdoors — the ceremony among the vines, dinner under the garden
+              pavilion, and dancing on the oak lawn. September evenings in the valley can turn cool after
+              sunset, so bring a light layer. We'll have blankets and heaters on hand, and a covered pavilion
+              should the weather surprise us.
+            </p>
+          </details>
+
+          <details class="faq">
+            <summary>
+              <span class="display text-xl text-ink">Where should we stay?</span>
+              <svg class="chev" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 3.5v11M3.5 9h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            </summary>
+            <p class="faq-body body-serif">
+              The nearest towns are Newberg, Dundee, and McMinnville, all a short drive from the vineyard.
+              We've held room blocks at The Allison Inn in Newberg, The Dundee Lodge, and Hotel Oregon in
+              McMinnville — see the Travel section above for details and our block rate.
+            </p>
+          </details>
+
+          <details class="faq">
+            <summary>
+              <span class="display text-xl text-ink">How should we get to and from the venue?</span>
+              <svg class="chev" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 3.5v11M3.5 9h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            </summary>
+            <p class="faq-body body-serif">
+              The vineyard sits up a quiet country road, so carpooling is encouraged — it's kinder to the
+              gravel drive and far more fun. If you'd like a ride or have a seat to offer, let us know in your
+              RSVP note and we'll happily help connect guests staying nearby.
+            </p>
+          </details>
+
+          <details class="faq">
+            <summary>
+              <span class="display text-xl text-ink">What time should we arrive?</span>
+              <svg class="chev" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 3.5v11M3.5 9h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            </summary>
+            <p class="faq-body body-serif">
+              Please plan to arrive by 4:30 PM so there's time to park, find a glass of estate rosé, and walk
+              the garden path to your seat. The ceremony begins promptly at 5:00 PM among the vines.
+            </p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 11 · CLOSING ============ -->
+    <section class="px-5 sm:px-8 py-24 sm:py-32 text-center">
+      <div class="max-w-2xl mx-auto">
+        <!-- vine sprig top -->
+        <div class="flex justify-center mb-8" aria-hidden="true">
+          <svg width="60" height="50" viewBox="0 0 60 50" fill="none">
+            <path d="M30 50V14" stroke="#5A7350" stroke-width="1.4" stroke-linecap="round"/>
+            <path d="M30 22c-7-1-11-5-12-12 7 1 11 5 12 12Z" fill="#5A7350" opacity="0.8"/>
+            <path d="M30 22c7-1 11-5 12-12-7 1-11 5-12 12Z" fill="#7E5C74" opacity="0.8"/>
+            <path d="M30 34c-6-1-9-4-10-10 6 1 9 4 10 10Z" fill="#5A7350" opacity="0.6"/>
+            <path d="M30 34c6-1 9-4 10-10-6 1-9 4-10 10Z" fill="#7E5C74" opacity="0.6"/>
+            <circle cx="30" cy="10" r="3.6" fill="none" stroke="#5A7350" stroke-width="1.3"/>
+          </svg>
+        </div>
+
+        <p class="eyebrow text-vine mb-4">With love &amp; gratitude</p>
+        <p class="display text-[clamp(1.8rem,5vw,3rem)] text-ink leading-tight">
+          We found each other among the vines —
+          <span class="halftone">and we'd love nothing more than to begin here, with you.</span>
+        </p>
+
+        <!-- monogram repeat -->
+        <div class="flex justify-center my-9" aria-hidden="true">
+          <svg width="64" height="64" viewBox="0 0 48 48" fill="none">
+            <path d="M24 4c-7 3-11 9-11 18s4 17 11 22" stroke="#5A7350" stroke-width="1.4" stroke-linecap="round"/>
+            <path d="M24 4c7 3 11 9 11 18s-4 17-11 22" stroke="#5A7350" stroke-width="1.4" stroke-linecap="round"/>
+            <path d="M14.5 14c-2-.4-3.6.3-4.6 2 1.8.7 3.5.4 4.6-2Z" fill="#5A7350" opacity="0.85"/>
+            <path d="M12.6 22c-2-.2-3.5.7-4.3 2.5 1.9.5 3.5 0 4.3-2.5Z" fill="#5A7350" opacity="0.85"/>
+            <path d="M14.8 30.5c-1.9.1-3.2 1.2-3.7 3.1 1.9.2 3.3-.6 3.7-3.1Z" fill="#5A7350" opacity="0.85"/>
+            <path d="M33.5 14c2-.4 3.6.3 4.6 2-1.8.7-3.5.4-4.6-2Z" fill="#7E5C74" opacity="0.85"/>
+            <path d="M35.4 22c2-.2 3.5.7 4.3 2.5-1.9.5-3.5 0-4.3-2.5Z" fill="#7E5C74" opacity="0.85"/>
+            <path d="M33.2 30.5c1.9.1 3.2 1.2 3.7 3.1-1.9.2-3.3-.6-3.7-3.1Z" fill="#7E5C74" opacity="0.85"/>
+            <text x="17.6" y="29.4" font-family="Fraunces, serif" font-style="italic" font-weight="600" font-size="14" fill="#25241C">E</text>
+            <text x="25.4" y="29.4" font-family="Fraunces, serif" font-style="italic" font-weight="600" font-size="14" fill="#25241C">T</text>
+            <path d="M22.6 23.5c1 1 2.8 1 3.8 0" stroke="#7E5C74" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+        </div>
+
+        <p class="display italic text-2xl sm:text-3xl text-grape">Can't wait to celebrate with you.</p>
+        <p class="mono text-[13px] text-ink/55 mt-4 tracking-[0.16em]">09 · 11 · 2027 — WILLAMETTE VALLEY</p>
+
+        <a href="#rsvp" class="btn btn-solid mt-8 px-7 py-3 text-[15px]">
+          Send your RSVP
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.5 8h11M9 3.5 13.5 8 9 12.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ 12 · FOOTER ============ -->
+  <footer class="px-5 sm:px-8 pt-14 pb-10" style="background: #2c2b22; color: #e9e7da;">
+    <div class="max-w-6xl mx-auto" style="color: #e9e7da;">
+      <div class="grid sm:grid-cols-3 gap-8 sm:gap-6 items-start">
+        <!-- names + monogram -->
+        <div>
+          <div class="flex items-center gap-2.5 mb-3">
+            <svg width="34" height="34" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+              <path d="M24 4c-7 3-11 9-11 18s4 17 11 22" stroke="#9bb08c" stroke-width="1.4" stroke-linecap="round"/>
+              <path d="M24 4c7 3 11 9 11 18s-4 17-11 22" stroke="#9bb08c" stroke-width="1.4" stroke-linecap="round"/>
+              <path d="M14.5 14c-2-.4-3.6.3-4.6 2 1.8.7 3.5.4 4.6-2Z" fill="#9bb08c"/>
+              <path d="M12.6 22c-2-.2-3.5.7-4.3 2.5 1.9.5 3.5 0 4.3-2.5Z" fill="#9bb08c"/>
+              <path d="M33.5 14c2-.4 3.6.3 4.6 2-1.8.7-3.5.4-4.6-2Z" fill="#b79bad"/>
+              <path d="M35.4 22c2-.2 3.5.7 4.3 2.5-1.9.5-3.5 0-4.3-2.5Z" fill="#b79bad"/>
+              <text x="17.6" y="29.4" font-family="Fraunces, serif" font-style="italic" font-weight="600" font-size="14" fill="#f3f1e6">E</text>
+              <text x="25.4" y="29.4" font-family="Fraunces, serif" font-style="italic" font-weight="600" font-size="14" fill="#f3f1e6">T</text>
+            </svg>
+            <span class="display text-xl">Elena &amp; Thomas</span>
+          </div>
+          <p class="body-serif text-[14px] text-[#c9c7b8] leading-relaxed">
+            Saturday, the eleventh of September, two thousand twenty-seven · Hawthorn Row Vineyard, Willamette
+            Valley, Oregon.
+          </p>
+          <p class="mono text-[12px] text-[#9bb08c] mt-2 tracking-[0.16em]">09 · 11 · 2027</p>
+        </div>
+
+        <!-- quick links -->
+        <div class="sm:text-center">
+          <p class="eyebrow text-[#9bb08c] mb-3">On this page</p>
+          <ul class="space-y-2 text-[14px]">
+            <li><a href="#story" class="text-[#c9c7b8] hover:text-white transition-colors">Our Story</a></li>
+            <li><a href="#schedule" class="text-[#c9c7b8] hover:text-white transition-colors">Schedule</a></li>
+            <li><a href="#travel" class="text-[#c9c7b8] hover:text-white transition-colors">Venue &amp; Travel</a></li>
+            <li><a href="#rsvp" class="text-[#c9c7b8] hover:text-white transition-colors">RSVP</a></li>
+            <li><a href="#registry" class="text-[#c9c7b8] hover:text-white transition-colors">Registry</a></li>
+          </ul>
+        </div>
+
+        <!-- questions + hashtag -->
+        <div class="sm:text-right">
+          <p class="eyebrow text-[#9bb08c] mb-3">Questions?</p>
+          <a href="mailto:questions@elenaandthomas.com" class="body-serif text-[15px] text-[#e9e7da] hover:text-white transition-colors underline underline-offset-2">
+            questions@elenaandthomas.com
+          </a>
+          <p class="body-serif text-[14px] text-[#c9c7b8] mt-3">Share your photos with us all weekend:</p>
+          <p class="display italic text-xl text-[#b79bad] mt-1">#AmongTheVines</p>
+        </div>
+      </div>
+
+      <!-- footer divider -->
+      <div class="flex items-center gap-4 mt-10 mb-5">
+        <span class="h-px flex-1" style="background: rgba(255,255,255,0.10);"></span>
+        <svg width="40" height="14" viewBox="0 0 40 14" fill="none" aria-hidden="true">
+          <path d="M2 7h13M25 7h13" stroke="#9bb08c" stroke-width="1"/>
+          <path d="M20 1c-2 2.4-2 4.6 0 6 2-1.4 2-3.6 0-6ZM20 7c-2 2.4-2 4.6 0 6 2-1.4 2-3.6 0-6Z" fill="#9bb08c"/>
+        </svg>
+        <span class="h-px flex-1" style="background: rgba(255,255,255,0.10);"></span>
+      </div>
+
+      <p class="text-center body-serif text-[13px] text-[#9b9a8c]">
+        With love, from the valley · Elena &amp; Thomas, 2027
+      </p>
+    </div>
+  </footer>
+</body>
+</html>
