@@ -19,6 +19,7 @@
     "templates:bootstrap-thumbnail-column": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/bootstrap-thumbnail-column.ts",
     "templates:bootstrap-featured-column": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/bootstrap-featured-column.ts",
     "domains:bootstrap": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/bootstrap-custom-domains.ts",
+    "domain-connect:keygen": "tsx --tsconfig tsconfig.eval.json scripts/domain-connect/generate-key.ts",
     "openlen-images:process": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/openlen-images/process.ts",
     "lume:remove-bg": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/openlen-images/remove-bg-lume.ts",
     "reset-quota": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/reset-quota.ts",
