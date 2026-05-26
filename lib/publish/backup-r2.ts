@@ -48,12 +48,15 @@ function loadClient(): Promise<{
     }
     let sdk: AwsSdkModule;
     try {
-      const specifier = "@aws-sdk/client-s3";
-      sdk = (await import(/* @vite-ignore */ specifier)) as AwsSdkModule;
-    } catch {
+      // Static-string dynamic import so Next.js's webpack pass traces the
+      // module into the standalone bundle (matches lib/storage/r2.ts).
+      sdk = (await import("@aws-sdk/client-s3")) as unknown as AwsSdkModule;
+    } catch (err) {
       // eslint-disable-next-line no-console
       console.warn(
-        "[backup-r2] @aws-sdk/client-s3 not installed — per-publish backup disabled.",
+        `[backup-r2] @aws-sdk/client-s3 load failed — per-publish backup disabled: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
       );
       return null;
     }
