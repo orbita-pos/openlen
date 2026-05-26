@@ -1,0 +1,48 @@
+# openlen-edge.service — STUB (not installed in F2 Session 1)
+#
+# This unit is shipped so reviewers can see the target deployment shape.
+# Installation happens in Session 7 (blue-green migration) once routing,
+# proxying, custom domains, and ACME are wired and verified locally.
+#
+# Until then: NEVER `systemctl enable` this on prod. The current Hetzner
+# box still runs nginx + Caddy + the Node /served route.
+
+[Unit]
+Description=OpenLen edge proxy (Rust)
+Documentation=https://github.com/jesusbernalrj/inari-pages/tree/master/crates/edge
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=openlen
+Group=openlen
+
+# Bind privileged ports (80/443) without running as root.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+
+# Environment defaults come from /etc/openlen/edge.env (created in Session 7).
+EnvironmentFile=-/etc/openlen/edge.env
+Environment=RUST_LOG=info,openlen_edge=info
+Environment=OPENLEN_EDGE_BIND=0.0.0.0:443
+Environment=OPENLEN_EDGE_CERT=/etc/letsencrypt/live/openlen.com/fullchain.pem
+Environment=OPENLEN_EDGE_KEY=/etc/letsencrypt/live/openlen.com/privkey.pem
+Environment=OPENLEN_EDGE_PUBLISH_ROOT=/var/www/openlen
+
+ExecStart=/usr/local/bin/openlen-edge
+Restart=on-failure
+RestartSec=2
+
+# Hardening
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ReadWritePaths=
+ReadOnlyPaths=/var/www/openlen /etc/letsencrypt
+# Session 9 adds an ACME cache dir, e.g. /var/lib/openlen-edge/acme.
+
+[Install]
+WantedBy=multi-user.target
