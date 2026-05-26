@@ -47,15 +47,19 @@ fn publish_cfg() -> Cfg {
     cfg.minify_css = true;
     // JS minify intentionally off (see file-level note).
     cfg.minify_js = false;
-    // We DO want closing tags omitted where HTML5 allows it — that's
-    // where most of the byte savings on flow content (<li>, <p>, <td>)
-    // come from. minify-html's default is keep_closing_tags=false which
-    // matches what we want; setting it explicitly makes the intent
-    // legible at the call site.
-    cfg.keep_closing_tags = false;
-    // Likewise: omit `<html>` and `<head>` opening tags when they have
-    // no attributes. HTML5 spec compliant; saves ~13 bytes per doc.
-    cfg.keep_html_and_head_opening_tags = false;
+    // KEEP closing tags. minify-html v0.16's optional-closing-tag
+    // omission is NOT idempotent on real-world HTML: in mirror.html a
+    // `</p></details>` chain has `</p>` kept on pass 1 and dropped on
+    // pass 2, because the omission heuristic looks at surrounding bytes
+    // and pass 1's whitespace strip changes what pass 2 sees. Since the
+    // contract (matching sanitize and normalize) demands idempotence,
+    // we trade the few-byte savings for stability.
+    cfg.keep_closing_tags = true;
+    // Same idempotence reasoning applies to <html> / <head> opening
+    // tag omission: minify-html removes them based on attribute
+    // presence + content cursor position, which can also flip between
+    // passes when whitespace decisions cascade.
+    cfg.keep_html_and_head_opening_tags = true;
     // Strip comments. Templates ship without functional comments — and
     // the sanitize pass already drops anything dangerous. The
     // `keep_ssi_comments` flag stays off (we don't have SSI in our
@@ -63,11 +67,27 @@ fn publish_cfg() -> Cfg {
     cfg.keep_comments = false;
     cfg.keep_ssi_comments = false;
     cfg.keep_input_type_text_attr = false;
-    // Stay on the spec-compliant side — see file-level note.
+    // Spec-permissive but browser-safe. These three flags push us past
+    // the 20% reduction line on the starter pack while staying parseable
+    // by every browser we ship to (every option marked "still parsed
+    // correctly by almost all browsers" in the Cfg docstring):
+    //   - allow_optimal_entities: collapse entity references where
+    //     equivalent (`&amp;` → `&` in safe positions). Small but free.
+    //   - allow_removing_spaces_between_attributes: drop redundant
+    //     interstitial whitespace between attribute tokens.
+    //   - minify_doctype: emit `<!doctypehtml>` instead of `<!doctype
+    //     html>`. ~6 bytes per doc.
+    cfg.allow_optimal_entities = true;
+    cfg.allow_removing_spaces_between_attributes = true;
+    cfg.minify_doctype = true;
+    // The one flag we still keep off: aggressive unquoting of values
+    // that contain spec-prohibited chars (parens, brackets). Tailwind
+    // arbitrary-value classes like `bg-[rgba(15,15,15,0.72)]` rely on
+    // quoted attrs — flipping this risks the kind of cross-browser
+    // regression we'd discover way later. The spec-compliant unquote
+    // path (default behavior) is already firing for safe values
+    // (`charset=utf-8`, `lang=en`).
     cfg.allow_noncompliant_unquoted_attribute_values = false;
-    cfg.allow_optimal_entities = false;
-    cfg.allow_removing_spaces_between_attributes = false;
-    cfg.minify_doctype = false;
     cfg.remove_bangs = false;
     cfg.remove_processing_instructions = false;
     // We don't use template syntax inline; let any `{{`, `<%`, etc.
