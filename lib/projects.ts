@@ -16,6 +16,7 @@ import { backupReleaseToR2 } from "@/lib/publish/backup-r2";
 import { createVersion } from "@/lib/projects/versions";
 import { getChatMessages } from "@/lib/projects/chat";
 import { normalizeBornCanonical } from "@/lib/normalize";
+import { resolveProjectLogo } from "@/lib/branding/resolve-project-logo";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Project persistence helpers.
@@ -34,6 +35,9 @@ export interface ProjectSummary {
   tags: string[];
   deployUrl: string | null;
   thumbnailUrl: string | null;
+  /** Per-project favicon / brand mark. Null when the user hasn't set one
+   *  and no <link rel="icon"> was auto-extracted from the HTML at publish. */
+  logoUrl: string | null;
   subdomain: string | null;
   publishedAt: Date | null;
   hasUnpublishedChanges: boolean;
@@ -125,6 +129,7 @@ export async function listProjects(userId: string): Promise<ProjectSummary[]> {
       tags: schema.projects.tags,
       deployUrl: schema.projects.deployUrl,
       thumbnailUrl: schema.projects.thumbnailUrl,
+      logoUrl: schema.projects.logoUrl,
       subdomain: schema.projects.subdomain,
       publishedAt: schema.projects.publishedAt,
       publishedHtml: schema.projects.publishedHtml,
@@ -149,6 +154,7 @@ export async function listProjects(userId: string): Promise<ProjectSummary[]> {
       tags: row.tags,
       deployUrl: derivedDeploy ?? row.deployUrl,
       thumbnailUrl: row.thumbnailUrl,
+      logoUrl: row.logoUrl,
       subdomain: row.subdomain,
       publishedAt: row.publishedAt,
       hasUnpublishedChanges:
@@ -199,6 +205,7 @@ export async function getProject(
     brief: row.brief,
     userBrief: row.userBrief ?? null,
     thumbnailUrl: row.thumbnailUrl,
+    logoUrl: row.logoUrl,
     subdomain: row.subdomain,
     publishedAt: row.publishedAt,
     hasUnpublishedChanges:
@@ -287,6 +294,34 @@ export async function setProjectStatus(
 }
 
 const USER_BRIEF_MAX = 4000;
+const LOGO_URL_MAX = 2000;
+
+/** Persist the per-project logo URL. Pass null to clear it.
+ *  Acceptable: an absolute http(s) URL (uploaded asset, paste-URL, default
+ *  data URL) — validation is the caller's responsibility. */
+export async function setProjectLogoUrl(
+  projectId: string,
+  userId: string,
+  logoUrl: string | null,
+): Promise<boolean> {
+  const value =
+    logoUrl === null
+      ? null
+      : logoUrl.length > LOGO_URL_MAX
+        ? logoUrl.slice(0, LOGO_URL_MAX)
+        : logoUrl;
+  const result = await db
+    .update(schema.projects)
+    .set({ logoUrl: value, updatedAt: new Date() })
+    .where(
+      and(
+        eq(schema.projects.id, projectId),
+        eq(schema.projects.userId, userId),
+      ),
+    )
+    .returning({ id: schema.projects.id });
+  return result.length > 0;
+}
 
 /** Persist the user-controlled project brief — the text that gets injected
  *  into every Chat tab prompt. Empty string clears it (stored as NULL). */
@@ -390,6 +425,7 @@ export async function publishProject(
       userId: schema.projects.userId,
       data: schema.projects.data,
       subdomain: schema.projects.subdomain,
+      logoUrl: schema.projects.logoUrl,
     })
     .from(schema.projects)
     .where(
@@ -471,6 +507,22 @@ export async function publishProject(
   //   - The Caddy wildcard would serve a stale `current/` symlink (from
   //     a prior publish of the same sub) even after our DB rollback,
   //     so the dir cleanup must run as well.
+  // Resolve effective logo URL: explicit DB value wins, else auto-extract
+  // from the HTML at publish time. Failures soft-fail to no logo injection.
+  let effectiveLogoUrl: string | null = project.logoUrl;
+  try {
+    effectiveLogoUrl = await resolveProjectLogo({
+      projectId: params.projectId,
+      userId: params.userId,
+      currentLogoUrl: project.logoUrl,
+      html,
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[publish] logo resolution failed; publishing without it", err);
+    effectiveLogoUrl = project.logoUrl;
+  }
+
   let publishResult: { sha: string; html: string; written: boolean };
   try {
     publishResult = await publishToDir({
@@ -479,6 +531,7 @@ export async function publishProject(
       projectId: params.projectId,
       formConfigs: project.data?.settings?.forms,
       analyticsEnabled: !project.data?.settings?.analyticsDisabled,
+      logoUrl: effectiveLogoUrl,
     });
   } catch (err) {
     // Roll back DB. We loudly log rollback failures instead of silently

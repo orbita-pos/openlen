@@ -118,6 +118,14 @@ export const projects = pgTable(
     // Hero image URL pulled out of `data` for cheap thumbnail rendering
     // without having to deserialize the whole JSONB on listing pages.
     thumbnailUrl: text("thumbnailUrl"),
+    // Per-project favicon / brand mark. Auto-extracted from the HTML's
+    // <link rel="icon"> at first publish (data: URIs get uploaded to R2)
+    // and overridable from the Inspector panel. Used as the favicon on
+    // the published page, the badge in /projects cards, the 16x16 icon
+    // beside the project name in the TopBar, and the fallback og:image.
+    // Null = no logo set; UI surfaces fall back to a coral-circle SVG
+    // with the project's initial letter (lib/branding/default-logo.ts).
+    logoUrl: text("logoUrl"),
     data: jsonb("data").$type<ProjectData>().notNull(),
     // Per-project AI context — user-controlled instructions that get
     // prepended to every Chat tab prompt sent to Kimi K2.6. Equivalent to

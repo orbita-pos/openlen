@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { AppHeader } from "@/components/app/app-header";
 import { cn } from "@/lib/cn";
+import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
 import type { ProjectStatus, ProjectSummary } from "@/lib/projects";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -750,6 +751,36 @@ function StatusPill({ status }: { status: ProjectStatus }) {
   );
 }
 
+function ProjectLogoBadge({
+  logoUrl,
+  title,
+  className,
+  size = "md",
+}: {
+  logoUrl: string | null;
+  title: string;
+  className?: string;
+  size?: "sm" | "md";
+}) {
+  const px = size === "sm" ? "h-5 w-5" : "h-6 w-6";
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center justify-center rounded-md ring-1 ring-zinc-200 dark:ring-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur shadow-sm overflow-hidden",
+        px,
+        className,
+      )}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={logoUrl || defaultLogoDataUrl(title)}
+        alt=""
+        className="w-full h-full object-contain"
+      />
+    </span>
+  );
+}
+
 function Tag({ children }: { children: React.ReactNode }) {
   return (
     <span className="inline-flex items-center rounded-md bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 px-1.5 py-0.5 text-[10.5px] font-medium ring-1 ring-inset ring-zinc-200/60 dark:ring-zinc-800">
@@ -869,6 +900,12 @@ function ProjectCard({
             <Sparkles size={32} />
           </div>
         )}
+
+        <ProjectLogoBadge
+          logoUrl={project.logoUrl}
+          title={project.title}
+          className="absolute bottom-2 left-2 z-10"
+        />
 
         <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1.5 p-2 opacity-0 group-hover:opacity-100 transition pointer-events-none">
           <span className="pointer-events-auto inline-flex items-center gap-1 h-8 px-3 rounded-md bg-zinc-900/95 dark:bg-white/95 text-white dark:text-zinc-900 text-[12px] font-medium shadow-lg backdrop-blur">
@@ -1006,6 +1043,12 @@ function ProjectRow({
             <Sparkles size={14} />
           </div>
         )}
+        <ProjectLogoBadge
+          logoUrl={project.logoUrl}
+          title={project.title}
+          className="absolute -bottom-1 -right-1 z-10"
+          size="sm"
+        />
       </div>
 
       <div className="min-w-0 flex-1">
