@@ -21,4 +21,8 @@ kuchikiki = "0.8"
 napi-build = "2"
 
 [dev-dependencies]
-# Criterion comes in at Sem 5 for benches; round-trip uses built-in #[test].
+criterion = { version = "0.5", default-features = false, features = ["cargo_bench_support"] }
+
+[[bench]]
+name = "ops"
+harness = false
