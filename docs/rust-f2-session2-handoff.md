@@ -17,8 +17,8 @@ The session prompt said *"F2 Session 1 ya está en master"*. It is **not** — `
 ## Commits on this branch
 
 ```
-<pending>  docs(rust): F2 session-2 handoff — Sem 3-4 routing shipped
-2fd0b9f    feat(rust/edge): F2 Sem 3-4 — wildcard subdomain routing + try-files + cache + redirect + conn cap
+f907917  docs(rust): F2 session-2 handoff — Sem 3-4 routing shipped
+2fd0b9f  feat(rust/edge): F2 Sem 3-4 — wildcard subdomain routing + try-files + cache + redirect + conn cap
 ```
 
 Forked off `rust/f2-edge-proxy @ 779fdaf`. They do not touch `crates/html-engine/` — the parallel F1 Session 3 (sanitize) on `rust/f1-session3-sanitize` is unaffected.
