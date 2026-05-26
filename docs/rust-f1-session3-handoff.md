@@ -3,12 +3,12 @@
 Branch: `rust/f1-session3-sanitize` (off `rust/f1-session2-normalize`'s tip `f16f035`, 6 commits, **not** pushed, no PR).
 
 ```
-<commit hash>  docs(rust): F1 session-3 handoff
-<commit hash>  test(rust): sanitize FFI smoke test (13 cases over the napi boundary)
-<commit hash>  test(rust): adversarial 1000-doc + OWASP XSS + byte-equal/idempotence
-<commit hash>  feat(rust): sanitize_for_publish chain + napi export
-<commit hash>  feat(rust): sanitize/{scripts,handlers,urls,elements} — port of TS XSS sanitizer
-<commit hash>  feat(rust): sanitize/slot_path — single gate, entity-aware data-slot-path detection
+c61739d  docs(rust): F1 session-3 handoff — Sem 7 sanitize + slot_path gate shipped
+1201ff3  test(rust): sanitize FFI smoke test — 13 cases over the napi boundary
+def3a00  test(rust): adversarial 1000-doc + OWASP XSS + byte-equal/idempotence
+70dbfc4  feat(rust): sanitize_for_publish chain + napi export
+921267f  feat(rust): sanitize/{scripts,handlers,urls,elements} — port of TS XSS sanitizer
+6cc5402  feat(rust): sanitize/slot_path — single gate for editor marker
 ```
 
 > Branching note. The plan-of-record assumed Session 2 had been merged to `master`; it hadn't (S2's 10 commits still live on `rust/f1-session2-normalize`). I branched off S2 directly. When you eventually land S2 + S3, the merge order is `master → S2 → S3` — `S3` needs S2's normalize chain present in the tree.
