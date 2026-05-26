@@ -1,0 +1,726 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Counter — A POS that thinks like a barista.</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#FAF6F0;
+    --paper:#FFFCF7;
+    --ink:#1F1B16;
+    --ink-2:#4A4137;
+    --ink-3:#857B6E;
+    --accent:var(--ol-accent);
+    --accent-2:#A8552D;
+    --line:rgba(31,27,22,0.10);
+    --line-soft:rgba(31,27,22,0.06);
+  }
+  html,body{background:var(--bg);color:var(--ink);}
+  body{font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-feature-settings:"ss01","cv11","tnum";-webkit-font-smoothing:antialiased;}
+  .font-display{font-family:"Inter",ui-sans-serif,system-ui,sans-serif;letter-spacing:-0.03em;font-weight:600;}
+  .font-mono{font-family:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-feature-settings:"tnum";}
+  .tabular{font-variant-numeric:tabular-nums;}
+  .hairline{border:1px solid var(--line);}
+  .hairline-soft{border:1px solid var(--line-soft);}
+  .dot-grid{background-image:radial-gradient(rgba(31,27,22,0.08) 1px,transparent 1px);background-size:24px 24px;}
+  .paper{background:var(--paper);background-image:radial-gradient(rgba(31,27,22,0.04) 1px,transparent 1px);background-size:6px 6px;}
+  .lift{transition:transform 100ms ease,box-shadow 100ms ease,background-color 100ms ease;}
+  .lift:hover{transform:translateY(-1px);}
+  .btn-primary{background:var(--accent);color:#fff;box-shadow:0 1px 0 rgba(255,255,255,.25) inset,0 2px 8px rgba(var(--ol-accent-r), .25);}
+  .btn-primary:hover{background:var(--accent-2);box-shadow:0 1px 0 rgba(255,255,255,.25) inset,0 6px 16px rgba(var(--ol-accent-r), .30);}
+  .btn-ghost{background:transparent;color:var(--ink);}
+  .btn-ghost:hover{background:rgba(31,27,22,0.05);}
+  .ambient{background:
+    radial-gradient(60% 40% at 80% 0%,rgba(var(--ol-accent-r), 0.18),transparent 70%),
+    radial-gradient(40% 30% at 0% 20%,rgba(var(--ol-accent-r), 0.10),transparent 70%);
+  }
+  @keyframes pulse-dot{
+    0%{box-shadow:0 0 0 0 rgba(50,160,90,.55);}
+    70%{box-shadow:0 0 0 9px rgba(50,160,90,0);}
+    100%{box-shadow:0 0 0 0 rgba(50,160,90,0);}
+  }
+  .pulse-dot{display:inline-block;width:8px;height:8px;border-radius:9999px;background:#2EA76B;animation:pulse-dot 1.8s infinite;}
+  @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  .marquee-track{display:flex;width:max-content;animation:marquee 38s linear infinite;}
+  .tilt{transform:perspective(1400px) rotateY(-8deg) rotateX(4deg);}
+  .tilt-soft{transform:perspective(1600px) rotateY(-5deg) rotateX(3deg);}
+  .shadow-card{box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 1px 2px rgba(31,27,22,.04),0 8px 24px -8px rgba(31,27,22,.10);}
+  .shadow-hw{box-shadow:0 2px 0 rgba(255,255,255,.5) inset,0 30px 50px -20px rgba(31,27,22,.25),0 10px 20px -10px rgba(31,27,22,.15);}
+  .ring-ink{box-shadow:inset 0 0 0 1px var(--line);}
+  .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:9999px;padding:4px 10px;font-size: calc(12px * var(--ol-text-scale));background:rgba(255,255,255,.6);}
+  .receipt{background:#FCF7EE;background-image:linear-gradient(180deg,rgba(31,27,22,.02),transparent 30%),repeating-linear-gradient(0deg,rgba(31,27,22,.025) 0 1px,transparent 1px 6px);}
+  .saw-top{
+    background:
+      radial-gradient(circle at 6px 0px, transparent 5px, #FCF7EE 5.5px);
+    background-size:12px 6px;
+    background-repeat:repeat-x;
+  }
+  .saw-bot{
+    background:
+      radial-gradient(circle at 6px 6px, transparent 5px, #FCF7EE 5.5px);
+    background-size:12px 6px;
+    background-repeat:repeat-x;
+  }
+  .arrow-flow{stroke-dasharray:4 4;animation:dash 2s linear infinite;}
+  @keyframes dash{to{stroke-dashoffset:-16;}}
+  .num-display{font-family:"Inter";letter-spacing:-0.03em;font-weight:600;font-variant-numeric:tabular-nums;}
+  select::-ms-expand{display:none}
+</style>
+<script data-ol-radius>(function(){var w=window;w.tailwind=w.tailwind||{};var c=w.tailwind.config||{};var t=c.theme||{};var e=t.extend||{};e.borderRadius=Object.assign({},e.borderRadius,{sm:'var(--ol-r-sm)',DEFAULT:'var(--ol-r)',md:'var(--ol-r-md)',lg:'var(--ol-r-lg)',xl:'var(--ol-r-xl)','2xl':'var(--ol-r-2xl)','3xl':'var(--ol-r-3xl)'});w.tailwind.config=Object.assign({},c,{theme:Object.assign({},t,{extend:Object.assign({},e)})});})();</script><style data-ol-radius>:root{--ol-r-scale:1;--ol-r-sm:calc(0.125rem*var(--ol-r-scale));--ol-r:calc(0.25rem*var(--ol-r-scale));--ol-r-md:calc(0.375rem*var(--ol-r-scale));--ol-r-lg:calc(0.5rem*var(--ol-r-scale));--ol-r-xl:calc(0.75rem*var(--ol-r-scale));--ol-r-2xl:calc(1rem*var(--ol-r-scale));--ol-r-3xl:calc(1.5rem*var(--ol-r-scale));}</style><script data-ol-space>(function(){var w=window;w.tailwind=w.tailwind||{};var c=w.tailwind.config||{};var t=c.theme||{};var e=t.extend||{};var m={'0':'var(--ol-space-0)','px':'var(--ol-space-px)','0.5':'var(--ol-space-0_5)','1':'var(--ol-space-1)','1.5':'var(--ol-space-1_5)','2':'var(--ol-space-2)','2.5':'var(--ol-space-2_5)','3':'var(--ol-space-3)','3.5':'var(--ol-space-3_5)','4':'var(--ol-space-4)','5':'var(--ol-space-5)','6':'var(--ol-space-6)','7':'var(--ol-space-7)','8':'var(--ol-space-8)','9':'var(--ol-space-9)','10':'var(--ol-space-10)','11':'var(--ol-space-11)','12':'var(--ol-space-12)','14':'var(--ol-space-14)','16':'var(--ol-space-16)','20':'var(--ol-space-20)','24':'var(--ol-space-24)','28':'var(--ol-space-28)','32':'var(--ol-space-32)','36':'var(--ol-space-36)','40':'var(--ol-space-40)','44':'var(--ol-space-44)','48':'var(--ol-space-48)','52':'var(--ol-space-52)','56':'var(--ol-space-56)','60':'var(--ol-space-60)','64':'var(--ol-space-64)','72':'var(--ol-space-72)','80':'var(--ol-space-80)','96':'var(--ol-space-96)'};e.padding=Object.assign({},e.padding,m);e.margin=Object.assign({},e.margin,m);e.gap=Object.assign({},e.gap,m);w.tailwind.config=Object.assign({},c,{theme:Object.assign({},t,{extend:Object.assign({},e)})});})();</script><style data-ol-space>:root{--ol-space-scale:1;--ol-space-0:calc(0px*var(--ol-space-scale));--ol-space-px:calc(1px*var(--ol-space-scale));--ol-space-0_5:calc(0.125rem*var(--ol-space-scale));--ol-space-1:calc(0.25rem*var(--ol-space-scale));--ol-space-1_5:calc(0.375rem*var(--ol-space-scale));--ol-space-2:calc(0.5rem*var(--ol-space-scale));--ol-space-2_5:calc(0.625rem*var(--ol-space-scale));--ol-space-3:calc(0.75rem*var(--ol-space-scale));--ol-space-3_5:calc(0.875rem*var(--ol-space-scale));--ol-space-4:calc(1rem*var(--ol-space-scale));--ol-space-5:calc(1.25rem*var(--ol-space-scale));--ol-space-6:calc(1.5rem*var(--ol-space-scale));--ol-space-7:calc(1.75rem*var(--ol-space-scale));--ol-space-8:calc(2rem*var(--ol-space-scale));--ol-space-9:calc(2.25rem*var(--ol-space-scale));--ol-space-10:calc(2.5rem*var(--ol-space-scale));--ol-space-11:calc(2.75rem*var(--ol-space-scale));--ol-space-12:calc(3rem*var(--ol-space-scale));--ol-space-14:calc(3.5rem*var(--ol-space-scale));--ol-space-16:calc(4rem*var(--ol-space-scale));--ol-space-20:calc(5rem*var(--ol-space-scale));--ol-space-24:calc(6rem*var(--ol-space-scale));--ol-space-28:calc(7rem*var(--ol-space-scale));--ol-space-32:calc(8rem*var(--ol-space-scale));--ol-space-36:calc(9rem*var(--ol-space-scale));--ol-space-40:calc(10rem*var(--ol-space-scale));--ol-space-44:calc(11rem*var(--ol-space-scale));--ol-space-48:calc(12rem*var(--ol-space-scale));--ol-space-52:calc(13rem*var(--ol-space-scale));--ol-space-56:calc(14rem*var(--ol-space-scale));--ol-space-60:calc(15rem*var(--ol-space-scale));--ol-space-64:calc(16rem*var(--ol-space-scale));--ol-space-72:calc(18rem*var(--ol-space-scale));--ol-space-80:calc(20rem*var(--ol-space-scale));--ol-space-96:calc(24rem*var(--ol-space-scale));}</style><script data-ol-type>(function(){var w=window;w.tailwind=w.tailwind||{};var c=w.tailwind.config||{};var t=c.theme||{};var e=t.extend||{};e.fontSize=Object.assign({},e.fontSize,{'xs':['var(--ol-text-xs)','var(--ol-lh-xs)'],'sm':['var(--ol-text-sm)','var(--ol-lh-sm)'],'base':['var(--ol-text-base)','var(--ol-lh-base)'],'lg':['var(--ol-text-lg)','var(--ol-lh-lg)'],'xl':['var(--ol-text-xl)','var(--ol-lh-xl)'],'2xl':['var(--ol-text-2xl)','var(--ol-lh-2xl)'],'3xl':['var(--ol-text-3xl)','var(--ol-lh-3xl)'],'4xl':['var(--ol-text-4xl)','var(--ol-lh-4xl)'],'5xl':['var(--ol-text-5xl)','var(--ol-lh-5xl)'],'6xl':['var(--ol-text-6xl)','var(--ol-lh-6xl)'],'7xl':['var(--ol-text-7xl)','var(--ol-lh-7xl)'],'8xl':['var(--ol-text-8xl)','var(--ol-lh-8xl)'],'9xl':['var(--ol-text-9xl)','var(--ol-lh-9xl)']});w.tailwind.config=Object.assign({},c,{theme:Object.assign({},t,{extend:Object.assign({},e)})});})();</script><style data-ol-type>:root{--ol-text-scale:1;--ol-text-xs:calc(0.75rem*var(--ol-text-scale));--ol-lh-xs:calc(1rem*var(--ol-text-scale));--ol-text-sm:calc(0.875rem*var(--ol-text-scale));--ol-lh-sm:calc(1.25rem*var(--ol-text-scale));--ol-text-base:calc(1rem*var(--ol-text-scale));--ol-lh-base:calc(1.5rem*var(--ol-text-scale));--ol-text-lg:calc(1.125rem*var(--ol-text-scale));--ol-lh-lg:calc(1.75rem*var(--ol-text-scale));--ol-text-xl:calc(1.25rem*var(--ol-text-scale));--ol-lh-xl:calc(1.75rem*var(--ol-text-scale));--ol-text-2xl:calc(1.5rem*var(--ol-text-scale));--ol-lh-2xl:calc(2rem*var(--ol-text-scale));--ol-text-3xl:calc(1.875rem*var(--ol-text-scale));--ol-lh-3xl:calc(2.25rem*var(--ol-text-scale));--ol-text-4xl:calc(2.25rem*var(--ol-text-scale));--ol-lh-4xl:calc(2.5rem*var(--ol-text-scale));--ol-text-5xl:calc(3rem*var(--ol-text-scale));--ol-lh-5xl:calc(1*var(--ol-text-scale));--ol-text-6xl:calc(3.75rem*var(--ol-text-scale));--ol-lh-6xl:calc(1*var(--ol-text-scale));--ol-text-7xl:calc(4.5rem*var(--ol-text-scale));--ol-lh-7xl:calc(1*var(--ol-text-scale));--ol-text-8xl:calc(6rem*var(--ol-text-scale));--ol-lh-8xl:calc(1*var(--ol-text-scale));--ol-text-9xl:calc(8rem*var(--ol-text-scale));--ol-lh-9xl:calc(1*var(--ol-text-scale));}</style><style data-ol-accent>:root{--ol-accent:#c66b3d;--ol-accent-r:198,107,61;}</style></head>
+<body class="min-h-screen">
+
+<!-- NAV -->
+<header class="sticky top-0 z-40 backdrop-blur bg-[rgba(250,246,240,0.82)] border-b border-[var(--line-soft)]">
+  <div class="max-w-[1200px] mx-auto px-5 lg:px-8 h-16 flex items-center justify-between">
+    <a href="#" class="flex items-center gap-2">
+      <svg width="22" height="22" viewBox="0 0 22 22"><rect x="1" y="1" width="20" height="20" rx="6" fill="#1F1B16"/><path d="M6 14c0-3.3 2.7-6 6-6h2v3h-2a3 3 0 1 0 0 6h2v3h-2c-3.3 0-6-2.7-6-6Z" fill="#C66B3D"/></svg>
+      <span class="font-display text-[17px]">Counter</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-7 text-[14px] text-[var(--ink-2)]">
+      <a href="#features" class="hover:text-[var(--ink)]">Features</a>
+      <a href="#hardware" class="hover:text-[var(--ink)]">Hardware</a>
+      <a href="#pricing" class="hover:text-[var(--ink)]">Pricing</a>
+      <a href="#stories" class="hover:text-[var(--ink)]">Stories</a>
+    </nav>
+    <div class="flex items-center gap-3">
+      <a href="#" class="hidden sm:inline text-[14px] text-[var(--ink-2)] hover:text-[var(--ink)]">Talk to a barista</a>
+      <a href="#" class="lift btn-primary rounded-full px-4 py-2 text-[14px] font-medium">Order a kit</a>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="relative overflow-hidden ambient">
+  <div class="max-w-[1200px] mx-auto px-5 lg:px-8 pt-14 pb-20 lg:pt-20 lg:pb-28 grid lg:grid-cols-12 gap-10 items-center">
+    <div class="lg:col-span-6">
+      <span class="chip"><span class="pulse-dot"></span><span class="text-[var(--ink-2)]">Now serving 1,402 shops · v4.2 just shipped</span></span>
+      <h1 class="font-display text-[44px] sm:text-[56px] lg:text-[68px] leading-[1.02] mt-5">
+        The POS that thinks like a barista, <span class="opacity-45">not an accountant.</span>
+      </h1>
+      <p class="mt-5 text-[17px] leading-[1.55] text-[var(--ink-2)] max-w-[540px]">
+        Counter rings up a 4-modifier oat latte in 8 seconds, splits tip-out by hours worked, and prints to your existing Star TSP143 — no proprietary hardware lock-in.
+      </p>
+      <div class="mt-7 flex flex-wrap items-center gap-3">
+        <a href="#" class="lift btn-primary rounded-full px-5 py-3 text-[15px] font-medium">Start a 30-day trial</a>
+        <a href="#" class="lift btn-ghost hairline rounded-full px-5 py-3 text-[15px] font-medium">See a live shop demo →</a>
+      </div>
+      <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px] text-[var(--ink-3)]">
+        <span class="flex items-center gap-2"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 7l3.2 3.2L12 3.5" stroke="#2EA76B" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Works offline for up to 72 hours</span>
+        <span class="flex items-center gap-2"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 7l3.2 3.2L12 3.5" stroke="#2EA76B" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>2.4% flat — no monthly card fee</span>
+        <span class="flex items-center gap-2"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 7l3.2 3.2L12 3.5" stroke="#2EA76B" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Ships in 3 business days</span>
+      </div>
+    </div>
+
+    <!-- Hero hardware mockup -->
+    <div class="lg:col-span-6 relative">
+      <div class="relative mx-auto" style="max-width:560px;">
+        <!-- Tablet POS -->
+        <div class="tilt-soft shadow-hw rounded-[28px] bg-[#0F0D0A] p-3 hairline">
+          <div class="rounded-[20px] bg-[#FFFCF7] hairline-soft overflow-hidden">
+            <!-- App chrome -->
+            <div class="flex items-center justify-between px-4 py-3 border-b border-[var(--line-soft)]">
+              <div class="flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full bg-[color:var(--ol-accent)]"></div>
+                <span class="font-display text-[13px]">Sun Cafe · Bay Ridge</span>
+              </div>
+              <div class="flex items-center gap-2 text-[11px] text-[var(--ink-3)] font-mono">
+                <span class="pulse-dot" style="width:6px;height:6px"></span> ONLINE · 7:42 AM
+              </div>
+            </div>
+            <div class="grid grid-cols-5">
+              <!-- Menu -->
+              <div class="col-span-3 p-4 border-r border-[var(--line-soft)]">
+                <div class="flex gap-2 mb-3 text-[11px]">
+                  <span class="px-2 py-1 rounded-full bg-[var(--ink)] text-white">Espresso</span>
+                  <span class="px-2 py-1 rounded-full hairline-soft">Drip</span>
+                  <span class="px-2 py-1 rounded-full hairline-soft">Pastry</span>
+                  <span class="px-2 py-1 rounded-full hairline-soft">Retail</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                  <!-- 6 product tiles -->
+                  <!-- tile -->
+                  <div class="rounded-xl hairline-soft p-3 bg-white">
+                    <div class="h-10 w-10 rounded-lg bg-gradient-to-br from-[#E9CBA9] to-[color:var(--ol-accent)] mb-2"></div>
+                    <div class="text-[11px] font-medium leading-tight">Oat Latte</div>
+                    <div class="text-[10px] text-[var(--ink-3)] font-mono">$5.50</div>
+                  </div>
+                  <div class="rounded-xl hairline-soft p-3 bg-white">
+                    <div class="h-10 w-10 rounded-lg bg-gradient-to-br from-[#D3A57E] to-[#7A3A1E] mb-2"></div>
+                    <div class="text-[11px] font-medium leading-tight">Dbl Espresso</div>
+                    <div class="text-[10px] text-[var(--ink-3)] font-mono">$3.75</div>
+                  </div>
+                  <div class="rounded-xl hairline-soft p-3 bg-white">
+                    <div class="h-10 w-10 rounded-lg bg-gradient-to-br from-[#F1D7B2] to-[#B07A40] mb-2"></div>
+                    <div class="text-[11px] font-medium leading-tight">Cortado</div>
+                    <div class="text-[10px] text-[var(--ink-3)] font-mono">$4.25</div>
+                  </div>
+                  <div class="rounded-xl hairline-soft p-3 bg-white">
+                    <div class="h-10 w-10 rounded-lg bg-gradient-to-br from-[#EFD9B2] to-[#9A6A2D] mb-2"></div>
+                    <div class="text-[11px] font-medium leading-tight">Cappuccino</div>
+                    <div class="text-[10px] text-[var(--ink-3)] font-mono">$4.75</div>
+                  </div>
+                  <div class="rounded-xl hairline-soft p-3 bg-white">
+                    <div class="h-10 w-10 rounded-lg bg-gradient-to-br from-[#F3E0C0] to-[color:var(--ol-accent)] mb-2"></div>
+                    <div class="text-[11px] font-medium leading-tight">Croissant</div>
+                    <div class="text-[10px] text-[var(--ink-3)] font-mono">$4.25</div>
+                  </div>
+                  <div class="rounded-xl hairline-soft p-3 bg-white">
+                    <div class="h-10 w-10 rounded-lg bg-gradient-to-br from-[#E7BE8A] to-[#5A3A1E] mb-2"></div>
+                    <div class="text-[11px] font-medium leading-tight">Cold Brew</div>
+                    <div class="text-[10px] text-[var(--ink-3)] font-mono">$5.00</div>
+                  </div>
+                </div>
+              </div>
+              <!-- Cart -->
+              <div class="col-span-2 p-4 bg-[#FBF4E8]">
+                <div class="text-[11px] text-[var(--ink-3)] font-mono mb-2">ORDER #0418 · For here</div>
+                <div class="space-y-2 text-[12px]">
+                  <div class="flex justify-between"><span>Oat milk latte<br><span class="text-[10px] text-[var(--ink-3)]">+ extra shot</span></span><span class="font-mono tabular">$5.50</span></div>
+                  <div class="flex justify-between"><span>Dbl espresso</span><span class="font-mono tabular">$3.75</span></div>
+                  <div class="flex justify-between"><span>Croissant</span><span class="font-mono tabular">$4.25</span></div>
+                </div>
+                <div class="border-t border-dashed border-[var(--line)] my-3"></div>
+                <div class="flex justify-between text-[12px]"><span class="text-[var(--ink-3)]">Subtotal</span><span class="font-mono">$13.50</span></div>
+                <div class="flex justify-between text-[12px]"><span class="text-[var(--ink-3)]">Tax</span><span class="font-mono">$1.20</span></div>
+                <div class="flex justify-between font-display text-[16px] mt-1"><span>Total</span><span class="tabular">$14.70</span></div>
+                <button class="w-full mt-3 btn-primary rounded-xl py-2.5 text-[13px] font-medium">Charge $14.70</button>
+                <div class="flex gap-1 mt-2">
+                  <span class="flex-1 text-center text-[10px] py-1 rounded-md hairline-soft bg-white">Card</span>
+                  <span class="flex-1 text-center text-[10px] py-1 rounded-md hairline-soft bg-white">Cash</span>
+                  <span class="flex-1 text-center text-[10px] py-1 rounded-md hairline-soft bg-white">Tab</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Receipt printer + receipt -->
+        <div class="absolute -right-4 sm:-right-10 -bottom-6 w-[180px] hidden sm:block">
+          <div class="receipt rounded-md shadow-card hairline-soft p-3 -mb-2 relative z-10 font-mono text-[10px]">
+            <div class="saw-top h-1.5 -mx-3 -mt-3"></div>
+            <div class="text-center font-display text-[12px] mt-1">SUN CAFE</div>
+            <div class="text-center text-[9px] text-[var(--ink-3)]">5th Ave · Bay Ridge</div>
+            <div class="border-t border-dashed border-[var(--line)] my-2"></div>
+            <div class="flex justify-between"><span>1 × Oat Latte</span><span>5.50</span></div>
+            <div class="flex justify-between"><span>1 × Dbl Esp</span><span>3.75</span></div>
+            <div class="flex justify-between"><span>1 × Crsnt</span><span>4.25</span></div>
+            <div class="border-t border-dashed border-[var(--line)] my-2"></div>
+            <div class="flex justify-between"><span>SUBTOTAL</span><span>13.50</span></div>
+            <div class="flex justify-between"><span>TAX</span><span>1.20</span></div>
+            <div class="flex justify-between font-bold"><span>TOTAL</span><span>14.70</span></div>
+            <div class="text-center text-[9px] mt-2 text-[var(--ink-3)]">04·18·26  07:42  #0418</div>
+            <div class="saw-bot h-1.5 -mx-3 -mb-3 mt-1"></div>
+          </div>
+          <div class="bg-[#1F1B16] h-9 rounded-b-xl shadow-hw flex items-center justify-between px-3">
+            <span class="text-[9px] font-mono text-[color:var(--ol-accent)]">STAR TSP143</span>
+            <span class="w-1.5 h-1.5 rounded-full bg-[#2EA76B] animate-pulse"></span>
+          </div>
+        </div>
+
+        <!-- Card reader -->
+        <div class="absolute -left-2 sm:-left-8 -bottom-2 w-[100px] hidden sm:block">
+          <div class="tilt rounded-2xl bg-[#1F1B16] p-3 shadow-hw">
+            <div class="rounded-md bg-[#0A0807] h-10 flex items-center justify-center text-[color:var(--ol-accent)] font-mono text-[10px]">$14.70</div>
+            <div class="grid grid-cols-3 gap-1 mt-2">
+              <div class="h-3 rounded-sm bg-[#3A332B]"></div><div class="h-3 rounded-sm bg-[#3A332B]"></div><div class="h-3 rounded-sm bg-[#3A332B]"></div>
+              <div class="h-3 rounded-sm bg-[#3A332B]"></div><div class="h-3 rounded-sm bg-[#3A332B]"></div><div class="h-3 rounded-sm bg-[#3A332B]"></div>
+            </div>
+            <div class="text-center text-[8px] font-mono text-[#857B6E] mt-1">TAP · INSERT</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST BAR -->
+<section class="border-y border-[var(--line-soft)] bg-[rgba(255,255,255,0.5)]">
+  <div class="max-w-[1200px] mx-auto px-5 lg:px-8 py-8 grid lg:grid-cols-12 gap-6 items-center">
+    <div class="lg:col-span-3">
+      <div class="font-mono text-[11px] tracking-widest text-[var(--ink-3)]">USED AT 8,408 LOCATIONS</div>
+      <div class="font-display text-[20px] mt-1">From Brooklyn bodegas to Bay Area roasters.</div>
+    </div>
+    <div class="lg:col-span-9 overflow-hidden relative" style="mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)">
+      <div class="marquee-track gap-12 items-center text-[var(--ink-2)]">
+        <span class="font-display text-[22px] shrink-0">Linnea</span>
+        <span class="shrink-0" style="font-family:'Inter',serif;font-style:italic;font-weight:500;font-size:22px">Forecast</span>
+        <span class="font-display text-[22px] shrink-0 tracking-tight">GLIDE</span>
+        <span class="shrink-0 font-mono text-[20px]">vantage/</span>
+        <span class="font-display text-[22px] shrink-0">Brightwave</span>
+        <span class="shrink-0" style="font-family:'Inter',serif;font-weight:600;font-size:22px;letter-spacing:-0.02em">Halcyon</span>
+        <span class="font-display text-[22px] shrink-0">Northwind</span>
+        <span class="font-display text-[22px] shrink-0 lowercase">atrium</span>
+        <!-- duplicate for seamless -->
+        <span class="font-display text-[22px] shrink-0">Linnea</span>
+        <span class="shrink-0" style="font-family:'Inter',serif;font-style:italic;font-weight:500;font-size:22px">Forecast</span>
+        <span class="font-display text-[22px] shrink-0 tracking-tight">GLIDE</span>
+        <span class="shrink-0 font-mono text-[20px]">vantage/</span>
+        <span class="font-display text-[22px] shrink-0">Brightwave</span>
+        <span class="shrink-0" style="font-family:'Inter',serif;font-weight:600;font-size:22px;letter-spacing:-0.02em">Halcyon</span>
+        <span class="font-display text-[22px] shrink-0">Northwind</span>
+        <span class="font-display text-[22px] shrink-0 lowercase">atrium</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features" class="py-24 lg:py-28">
+  <div class="max-w-[1200px] mx-auto px-5 lg:px-8">
+    <div class="max-w-[680px]">
+      <div class="font-mono text-[11px] tracking-widest text-[var(--accent)]">WHAT'S INSIDE</div>
+      <h2 class="font-display text-[36px] sm:text-[44px] leading-[1.05] mt-3">Built around the morning rush, <span class="opacity-45">not the spreadsheet.</span></h2>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-5 mt-12">
+      <!-- f1 -->
+      <div class="rounded-2xl bg-white hairline-soft p-6 shadow-card lift">
+        <div class="w-10 h-10 rounded-xl bg-[#F4E4D2] flex items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 4h10l-1.4 9.2A2 2 0 0 1 11.6 15H8.4a2 2 0 0 1-2-1.8L5 4Z" stroke="#C66B3D" stroke-width="1.6"/><path d="M7 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" stroke="#C66B3D" stroke-width="1.6"/></svg>
+        </div>
+        <h3 class="font-display text-[20px] mt-4">Modifier-first order entry</h3>
+        <p class="text-[14.5px] leading-[1.55] text-[var(--ink-2)] mt-2">Tap the drink, swipe the modifier shelf. Oat, extra shot, half-decaf, half-caf — average rung-up time across 1,402 shops is 8.1 seconds.</p>
+        <ul class="mt-4 space-y-2 text-[13px] text-[var(--ink-2)]">
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#2EA76B" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Drag-to-reorder menu without leaving service</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#2EA76B" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Photo-less mode for crowded screens</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#2EA76B" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Name-the-drink tab handoff to the bar</li>
+        </ul>
+      </div>
+
+      <!-- f2 -->
+      <div class="rounded-2xl bg-white hairline-soft p-6 shadow-card lift">
+        <div class="w-10 h-10 rounded-xl bg-[#F4E4D2] flex items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="6.5" stroke="#C66B3D" stroke-width="1.6"/><path d="M10 6v4l2.5 2" stroke="#C66B3D" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </div>
+        <h3 class="font-display text-[20px] mt-4">Offline-first. Always.</h3>
+        <p class="text-[14.5px] leading-[1.55] text-[var(--ink-2)] mt-2">When the Spectrum line goes down at 7:14am, Counter keeps ringing, queues 72 hours of charges, and reconciles cleanly the moment wifi returns.</p>
+        <ul class="mt-4 space-y-2 text-[13px] text-[var(--ink-2)]">
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#2EA76B" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Local SQLite ledger, encrypted at rest</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#2EA76B" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Offline tap-to-pay via EMV cache</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#2EA76B" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Auto-retry with idempotency keys</li>
+        </ul>
+      </div>
+
+      <!-- f3 -->
+      <div class="rounded-2xl bg-white hairline-soft p-6 shadow-card lift">
+        <div class="w-10 h-10 rounded-xl bg-[#F4E4D2] flex items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 16V8m4 8V5m4 11V10m4 6V7" stroke="#C66B3D" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </div>
+        <h3 class="font-display text-[20px] mt-4">Tips that split themselves</h3>
+        <p class="text-[14.5px] leading-[1.55] text-[var(--ink-2)] mt-2">Pool by hours worked, by role, or by station. Counter calculates tip-outs at close, pushes to Gusto on Sunday — no Excel, no whiteboard math.</p>
+        <ul class="mt-4 space-y-2 text-[13px] text-[var(--ink-2)]">
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#2EA76B" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Bar / kitchen / counter weights you control</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#2EA76B" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Auto-export to Gusto, ADP, Justworks</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-0.5 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#2EA76B" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Staff sees their split in the team app</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HARDWARE SHOWCASE (centerpiece) -->
+<section id="hardware" class="py-24 lg:py-28 border-y border-[var(--line-soft)] bg-[rgba(255,255,255,0.4)] dot-grid">
+  <div class="max-w-[1200px] mx-auto px-5 lg:px-8">
+    <div class="flex items-end justify-between flex-wrap gap-4">
+      <div class="max-w-[640px]">
+        <div class="font-mono text-[11px] tracking-widest text-[var(--accent)]">THE COUNTER KIT</div>
+        <h2 class="font-display text-[36px] sm:text-[44px] leading-[1.05] mt-3">Four pieces. <span class="opacity-45">One quiet shop floor.</span></h2>
+        <p class="text-[var(--ink-2)] mt-4 max-w-[520px] text-[15.5px] leading-[1.6]">Every Counter kit ships pre-paired. Plug them in, sign in once, and the tablet, KDS, printer, and reader find each other on your local Wi-Fi in under 90 seconds.</p>
+      </div>
+      <div class="chip"><span class="pulse-dot"></span>Latency between devices: 18ms avg on shop wifi</div>
+    </div>
+
+    <!-- Flat-lay diagram -->
+    <div class="mt-14 relative rounded-3xl bg-[var(--paper)] hairline-soft p-6 sm:p-10 shadow-card overflow-hidden">
+      <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 1000 520" preserveAspectRatio="none">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#C66B3D"/>
+          </marker>
+        </defs>
+        <path class="arrow-flow" d="M280,180 C 360,180 380,160 460,160" stroke="#C66B3D" stroke-width="1.6" fill="none" marker-end="url(#ar)"/>
+        <path class="arrow-flow" d="M540,160 C 620,160 660,260 740,260" stroke="#C66B3D" stroke-width="1.6" fill="none" marker-end="url(#ar)"/>
+        <path class="arrow-flow" d="M460,200 C 380,260 320,300 240,360" stroke="#C66B3D" stroke-width="1.6" fill="none" marker-end="url(#ar)"/>
+        <path class="arrow-flow" d="M540,200 C 620,260 660,380 720,400" stroke="#C66B3D" stroke-width="1.6" fill="none" marker-end="url(#ar)"/>
+      </svg>
+
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-6 relative">
+        <!-- Card reader -->
+        <div class="md:col-span-3 flex flex-col items-center text-center">
+          <div class="tilt rounded-2xl bg-[#1F1B16] p-3 shadow-hw w-[120px]">
+            <div class="rounded-md bg-[#0A0807] h-12 flex items-center justify-center text-[color:var(--ol-accent)] font-mono text-[11px]">$14.70</div>
+            <div class="grid grid-cols-3 gap-1 mt-2">
+              <div class="h-3 rounded-sm bg-[#3A332B]"></div><div class="h-3 rounded-sm bg-[#3A332B]"></div><div class="h-3 rounded-sm bg-[#3A332B]"></div>
+              <div class="h-3 rounded-sm bg-[#3A332B]"></div><div class="h-3 rounded-sm bg-[#3A332B]"></div><div class="h-3 rounded-sm bg-[#3A332B]"></div>
+              <div class="h-3 rounded-sm bg-[#3A332B]"></div><div class="h-3 rounded-sm bg-[#3A332B]"></div><div class="h-3 rounded-sm bg-[#3A332B]"></div>
+            </div>
+          </div>
+          <div class="mt-5 font-display text-[15px]">CR-1 Reader</div>
+          <div class="font-mono text-[11px] text-[var(--ink-3)]">$89 · tap / chip / swipe</div>
+        </div>
+        <!-- Tablet (center) -->
+        <div class="md:col-span-6 flex flex-col items-center text-center relative z-10">
+          <div class="tilt-soft rounded-2xl bg-[#1F1B16] p-3 shadow-hw w-full max-w-[360px]">
+            <div class="rounded-xl bg-[#FFFCF7] p-3">
+              <div class="flex items-center justify-between text-[10px] font-mono text-[var(--ink-3)] mb-2">
+                <span>COUNTER · v4.2</span><span class="flex items-center gap-1"><span class="pulse-dot" style="width:5px;height:5px"></span>LIVE</span>
+              </div>
+              <div class="grid grid-cols-4 gap-1.5">
+                <div class="aspect-square rounded-md bg-gradient-to-br from-[#E9CBA9] to-[color:var(--ol-accent)]"></div>
+                <div class="aspect-square rounded-md bg-gradient-to-br from-[#D3A57E] to-[#7A3A1E]"></div>
+                <div class="aspect-square rounded-md bg-gradient-to-br from-[#F1D7B2] to-[#B07A40]"></div>
+                <div class="aspect-square rounded-md bg-gradient-to-br from-[#EFD9B2] to-[#9A6A2D]"></div>
+                <div class="aspect-square rounded-md bg-gradient-to-br from-[#F3E0C0] to-[color:var(--ol-accent)]"></div>
+                <div class="aspect-square rounded-md bg-gradient-to-br from-[#E7BE8A] to-[#5A3A1E]"></div>
+                <div class="aspect-square rounded-md bg-gradient-to-br from-[#DDB37C] to-[#7A4422]"></div>
+                <div class="aspect-square rounded-md bg-gradient-to-br from-[#ECCEA0] to-[#A8552D]"></div>
+              </div>
+              <div class="mt-2 h-6 rounded-md bg-[var(--accent)] text-white text-[10px] font-medium flex items-center justify-center">Charge $14.70</div>
+            </div>
+          </div>
+          <div class="mt-5 font-display text-[15px]">T-10 Counter Tablet</div>
+          <div class="font-mono text-[11px] text-[var(--ink-3)]">10.2" / ARM64 / 12h battery</div>
+        </div>
+        <!-- KDS + printer (right column stacked) -->
+        <div class="md:col-span-3 flex flex-col items-center text-center gap-8">
+          <div>
+            <div class="tilt rounded-lg bg-[#1F1B16] p-2 shadow-hw w-[150px]">
+              <div class="rounded bg-[#0F1A12] p-2 font-mono text-[9px] text-[#7AE5A1] leading-tight text-left">
+                <div>#0418 · 07:42</div>
+                <div>1× Oat Latte +shot</div>
+                <div>1× Dbl Esp</div>
+                <div>1× Crsnt</div>
+                <div class="text-[#FFC780]">[bar · 02:14]</div>
+              </div>
+            </div>
+            <div class="mt-3 font-display text-[14px]">KDS-7 Kitchen Display</div>
+            <div class="font-mono text-[11px] text-[var(--ink-3)]">$249 · bump-bar ready</div>
+          </div>
+          <div>
+            <div class="receipt rounded-md shadow-card hairline-soft w-[110px] mx-auto font-mono text-[9px] p-2 relative">
+              <div class="saw-top h-1 -mx-2 -mt-2"></div>
+              <div class="text-center font-display text-[10px] mt-1">SUN CAFE</div>
+              <div class="border-t border-dashed border-[var(--line)] my-1.5"></div>
+              <div class="flex justify-between"><span>Latte</span><span>5.50</span></div>
+              <div class="flex justify-between"><span>Esp</span><span>3.75</span></div>
+              <div class="flex justify-between"><span>Crsnt</span><span>4.25</span></div>
+              <div class="border-t border-dashed border-[var(--line)] my-1.5"></div>
+              <div class="flex justify-between font-bold"><span>TOTAL</span><span>14.70</span></div>
+              <div class="saw-bot h-1 -mx-2 -mb-2 mt-1"></div>
+            </div>
+            <div class="mt-3 font-display text-[14px]">P-3 Receipt Printer</div>
+            <div class="font-mono text-[11px] text-[var(--ink-3)]">$149 · USB / Ethernet</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-10 grid sm:grid-cols-3 gap-3 text-[12px] font-mono text-[var(--ink-3)] border-t border-[var(--line-soft)] pt-6">
+        <div>FLOW · ORDER → KDS → BAR</div>
+        <div>FLOW · CHARGE → READER → BANK (T+1)</div>
+        <div>FLOW · CLOSE → REPORTS → INBOX 9PM</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS BANNER -->
+<section class="py-20">
+  <div class="max-w-[1200px] mx-auto px-5 lg:px-8">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="rounded-2xl bg-white hairline-soft p-6 shadow-card">
+        <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)]">AVG DAILY ORDERS / SHOP</div>
+        <div class="num-display text-[44px] mt-2 tabular">408</div>
+        <div class="text-[12px] text-[var(--ink-2)] mt-1">across 1,402 active locations</div>
+      </div>
+      <div class="rounded-2xl bg-white hairline-soft p-6 shadow-card">
+        <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)]">AVG TICKET SIZE</div>
+        <div class="num-display text-[44px] mt-2 tabular">$14.20</div>
+        <div class="text-[12px] text-[var(--ink-2)] mt-1">+$1.40 vs. switchers' previous POS</div>
+      </div>
+      <div class="rounded-2xl bg-[var(--ink)] text-white p-6 shadow-card">
+        <div class="font-mono text-[10px] tracking-widest text-[#E0BDA5]">TIME TO RING UP AN ORDER</div>
+        <div class="num-display text-[44px] mt-2 tabular">8.1<span class="text-[20px] text-[#E0BDA5]"> sec</span></div>
+        <div class="text-[12px] text-[#C9BFB1] mt-1">median, 4-modifier oat latte, p50</div>
+      </div>
+      <div class="rounded-2xl bg-white hairline-soft p-6 shadow-card">
+        <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)]">SHOPS SWITCHED IN 2025</div>
+        <div class="num-display text-[44px] mt-2 tabular">1,402</div>
+        <div class="text-[12px] text-[var(--ink-2)] mt-1">62% from Square, 24% from Toast</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="py-24 lg:py-28">
+  <div class="max-w-[1200px] mx-auto px-5 lg:px-8">
+    <div class="max-w-[680px]">
+      <div class="font-mono text-[11px] tracking-widest text-[var(--accent)]">PRICING</div>
+      <h2 class="font-display text-[36px] sm:text-[44px] leading-[1.05] mt-3">Flat monthly. <span class="opacity-45">No per-transaction surcharge.</span></h2>
+      <p class="text-[var(--ink-2)] mt-4 text-[15.5px]">2.4% card processing on all plans — no platform fee stacked on top. Hardware is yours after 12 months on the kit option.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-5 mt-12">
+      <!-- Solo -->
+      <div class="rounded-2xl bg-white hairline-soft p-8 shadow-card">
+        <div class="flex items-center justify-between">
+          <div class="font-display text-[22px]">Solo</div>
+          <span class="chip">1 location</span>
+        </div>
+        <div class="mt-4 flex items-baseline gap-1">
+          <span class="num-display text-[44px] tabular">$49</span>
+          <span class="text-[var(--ink-3)] text-[14px]">/mo</span>
+        </div>
+        <div class="text-[13px] text-[var(--ink-2)]">+ Counter Kit lease at $39/mo · yours after 12 mo</div>
+        <a href="#" class="lift block text-center btn-ghost hairline rounded-full mt-6 py-2.5 font-medium text-[14px]">Start trial</a>
+        <ul class="mt-6 space-y-2.5 text-[14px]">
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#2EA76B" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>T-10 tablet, CR-1 reader, P-3 printer</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#2EA76B" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>2.4% flat card processing</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#2EA76B" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Tip-pool calculator + Gusto export</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#2EA76B" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>72-hour offline mode</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#2EA76B" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Email + chat support, M–Sat 6am–8pm</li>
+        </ul>
+      </div>
+
+      <!-- Multi -->
+      <div class="relative rounded-2xl bg-[var(--ink)] text-white p-8 shadow-card overflow-hidden">
+        <div class="absolute -right-12 -top-12 w-40 h-40 rounded-full" style="background:radial-gradient(circle,rgba(var(--ol-accent-r), .6),transparent 70%);"></div>
+        <div class="flex items-center justify-between relative">
+          <div class="font-display text-[22px]">Multi</div>
+          <span class="chip" style="background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.16);color:#E0BDA5">2+ locations</span>
+        </div>
+        <div class="mt-4 flex items-baseline gap-1">
+          <span class="num-display text-[44px] tabular">$129</span>
+          <span class="text-[#C9BFB1] text-[14px]">/mo · per location</span>
+        </div>
+        <div class="text-[13px] text-[#C9BFB1]">Hardware kit option: $0 down, $59/mo/location</div>
+        <a href="#" class="lift block text-center btn-primary rounded-full mt-6 py-2.5 font-medium text-[14px]">Book onboarding call</a>
+        <ul class="mt-6 space-y-2.5 text-[14px] text-[#E6DED1]">
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#C66B3D" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Everything in Solo, every location</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#C66B3D" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Central menu push to all stores in ≤4s</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#C66B3D" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Cross-shop reporting + per-shop P&amp;L</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#C66B3D" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Staff scheduling + clock-in across stores</li>
+          <li class="flex gap-2"><svg width="14" height="14" viewBox="0 0 14 14" class="mt-1 shrink-0"><path d="M2 7l3.2 3.2L12 3.5" stroke="#C66B3D" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Dedicated onboarding lead for 60 days</li>
+        </ul>
+      </div>
+    </div>
+    <p class="mt-6 text-center text-[12.5px] text-[var(--ink-3)]">Bring-your-own-hardware? Knock $20/mo off either plan. We support Star, Epson, Stripe Terminal M2, BBPOS WisePOS E.</p>
+  </div>
+</section>
+
+<!-- CUSTOMER STORY -->
+<section id="stories" class="py-24 lg:py-28 border-y border-[var(--line-soft)] bg-[rgba(255,255,255,0.4)]">
+  <div class="max-w-[1200px] mx-auto px-5 lg:px-8 grid lg:grid-cols-12 gap-10 items-center">
+    <div class="lg:col-span-5">
+      <div class="chip"><span class="pulse-dot"></span>Customer story · 03·22·2026</div>
+      <h2 class="font-display text-[32px] sm:text-[40px] leading-[1.05] mt-4">Sun Cafe cut their morning rush <span class="opacity-45">by 38% in one quarter.</span></h2>
+      <div class="mt-5 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[color:var(--ol-accent)] to-[#5A3A1E]"></div>
+        <div>
+          <div class="font-display text-[15px]">Priya Anand</div>
+          <div class="text-[12px] text-[var(--ink-3)]">Co-owner · Sun Cafe · Brooklyn, NY · 3 locations</div>
+        </div>
+      </div>
+    </div>
+    <div class="lg:col-span-7">
+      <blockquote class="font-display text-[20px] sm:text-[22px] leading-[1.45]">
+        "Before Counter we'd lose 11 minutes off the 8 AM rush every Tuesday — that's the Park Slope school crowd, our biggest day-part. The receipt printer would jam, the iPad would reboot, somebody's tip-out wouldn't add up. Six months in, our Tuesday line is 38% shorter and I haven't touched a spreadsheet."
+      </blockquote>
+      <p class="mt-5 text-[15px] text-[var(--ink-2)] leading-[1.6]">
+        "What I didn't expect: the tip-pool transparency. Every barista sees the math in their app on Sunday morning. We've stopped having those Monday-morning arguments about who got what."
+      </p>
+      <div class="grid grid-cols-3 gap-3 mt-7">
+        <div class="rounded-xl bg-white hairline-soft p-4">
+          <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)]">CHECKOUT SPEED</div>
+          <div class="num-display text-[24px] tabular text-[var(--accent)] mt-1">+34%</div>
+        </div>
+        <div class="rounded-xl bg-white hairline-soft p-4">
+          <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)]">INVENTORY SHRINK</div>
+          <div class="num-display text-[24px] tabular text-[var(--accent)] mt-1">−18%</div>
+        </div>
+        <div class="rounded-xl bg-white hairline-soft p-4">
+          <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)]">TIP RATE</div>
+          <div class="num-display text-[24px] tabular text-[var(--accent)] mt-1">21.4%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INTEGRATIONS -->
+<section class="py-20">
+  <div class="max-w-[1200px] mx-auto px-5 lg:px-8">
+    <div class="flex items-end justify-between flex-wrap gap-4">
+      <div>
+        <div class="font-mono text-[11px] tracking-widest text-[var(--accent)]">INTEGRATIONS</div>
+        <h2 class="font-display text-[28px] sm:text-[34px] leading-[1.1] mt-2">Plays nicely with the tools you already pay for.</h2>
+      </div>
+      <a href="#" class="text-[14px] text-[var(--ink-2)] underline-offset-4 hover:underline">Browse all 47 integrations →</a>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 mt-8">
+      <!-- 12 integration tiles -->
+      <div class="rounded-xl bg-white hairline-soft p-4 flex items-center gap-3 lift">
+        <div class="w-7 h-7 rounded-md bg-[#2EBD59]"></div><span class="text-[13px]">QuickBooks</span>
+      </div>
+      <div class="rounded-xl bg-white hairline-soft p-4 flex items-center gap-3 lift">
+        <div class="w-7 h-7 rounded-md bg-[#F36F21]"></div><span class="text-[13px]">Gusto</span>
+      </div>
+      <div class="rounded-xl bg-white hairline-soft p-4 flex items-center gap-3 lift">
+        <div class="w-7 h-7 rounded-md bg-[#FF3B30]"></div><span class="text-[13px]">DoorDash</span>
+      </div>
+      <div class="rounded-xl bg-white hairline-soft p-4 flex items-center gap-3 lift">
+        <div class="w-7 h-7 rounded-md bg-[#02B156]"></div><span class="text-[13px]">Uber Eats</span>
+      </div>
+      <div class="rounded-xl bg-white hairline-soft p-4 flex items-center gap-3 lift">
+        <div class="w-7 h-7 rounded-md bg-[#5C4DB1]"></div><span class="text-[13px]">Mailchimp</span>
+      </div>
+      <div class="rounded-xl bg-white hairline-soft p-4 flex items-center gap-3 lift">
+        <div class="w-7 h-7 rounded-md bg-[#0066FF]"></div><span class="text-[13px]">Stripe</span>
+      </div>
+      <div class="rounded-xl bg-white hairline-soft p-4 flex items-center gap-3 lift">
+        <div class="w-7 h-7 rounded-md bg-[#1F1B16]"></div><span class="text-[13px]">Shopify</span>
+      </div>
+      <div class="rounded-xl bg-white hairline-soft p-4 flex items-center gap-3 lift">
+        <div class="w-7 h-7 rounded-md bg-[#FF7A59]"></div><span class="text-[13px]">Xero</span>
+      </div>
+      <div class="rounded-xl bg-white hairline-soft p-4 flex items-center gap-3 lift">
+        <div class="w-7 h-7 rounded-md bg-[#8B5CF6]"></div><span class="text-[13px]">7shifts</span>
+      </div>
+      <div class="rounded-xl bg-white hairline-soft p-4 flex items-center gap-3 lift">
+        <div class="w-7 h-7 rounded-md bg-[#0EA5E9]"></div><span class="text-[13px]">ChowNow</span>
+      </div>
+      <div class="rounded-xl bg-white hairline-soft p-4 flex items-center gap-3 lift">
+        <div class="w-7 h-7 rounded-md bg-[#EA580C]"></div><span class="text-[13px]">Toast Online</span>
+      </div>
+      <div class="rounded-xl bg-white hairline-soft p-4 flex items-center gap-3 lift">
+        <div class="w-7 h-7 rounded-md bg-[#1F1B16]"></div><span class="text-[13px]">Square Online</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="py-24 lg:py-28 border-t border-[var(--line-soft)]">
+  <div class="max-w-[1000px] mx-auto px-5 lg:px-8">
+    <div class="text-center">
+      <div class="font-mono text-[11px] tracking-widest text-[var(--accent)]">FREQUENTLY ASKED</div>
+      <h2 class="font-display text-[36px] sm:text-[44px] leading-[1.05] mt-3">Questions our shop owners ask <span class="opacity-45">before signing.</span></h2>
+    </div>
+
+    <div class="mt-12 divide-y divide-[var(--line-soft)] hairline-soft rounded-2xl bg-white shadow-card">
+      <details class="group p-6 open:bg-[rgba(198,107,61,0.04)]" open>
+        <summary class="cursor-pointer flex items-start justify-between gap-6 list-none">
+          <span class="font-display text-[17px]">Does it work offline if my wifi drops mid-rush?</span>
+          <span class="text-[var(--ink-3)] group-open:rotate-45 transition">+</span>
+        </summary>
+        <p class="mt-3 text-[14.5px] text-[var(--ink-2)] leading-[1.6]">Yes — Counter is offline-first by design. Every charge writes to a local encrypted SQLite ledger on the tablet first, then syncs to our backend. We've measured 72 hours of full operation off-grid in a Brooklyn power test (Aug 2025). Tap-to-pay continues working via cached EMV scripts; we settle automatically once you're back online, with idempotency keys preventing double-charges.</p>
+      </details>
+      <details class="group p-6">
+        <summary class="cursor-pointer flex items-start justify-between gap-6 list-none">
+          <span class="font-display text-[17px]">How do tips and tip-out splits work between bar, kitchen, and counter?</span>
+          <span class="text-[var(--ink-3)] group-open:rotate-45 transition">+</span>
+        </summary>
+        <p class="mt-3 text-[14.5px] text-[var(--ink-2)] leading-[1.6]">You set weights per role (e.g. counter 1.0, bar 0.8, kitchen 0.4) and split policy per shop. At close, Counter calculates each person's share by hours worked × role weight, shows the math line-by-line, and pushes a payroll file to Gusto/ADP/Justworks on Sunday. Staff sees their own line in the Counter Team app, signed off by managers.</p>
+      </details>
+      <details class="group p-6">
+        <summary class="cursor-pointer flex items-start justify-between gap-6 list-none">
+          <span class="font-display text-[17px]">Can I integrate Square Online or Toast Online for delivery?</span>
+          <span class="text-[var(--ink-3)] group-open:rotate-45 transition">+</span>
+        </summary>
+        <p class="mt-3 text-[14.5px] text-[var(--ink-2)] leading-[1.6]">Yes, both — plus ChowNow, DoorDash Drive, and Uber Eats. Orders route straight to KDS with the right channel tag (we mark Toast Online tickets in orange so your bar knows what's a pickup). Menu sync is bi-directional: edit in Counter, see it on Square Online within 12 seconds.</p>
+      </details>
+      <details class="group p-6">
+        <summary class="cursor-pointer flex items-start justify-between gap-6 list-none">
+          <span class="font-display text-[17px]">What's the cost of the card reader — is it included?</span>
+          <span class="text-[var(--ink-3)] group-open:rotate-45 transition">+</span>
+        </summary>
+        <p class="mt-3 text-[14.5px] text-[var(--ink-2)] leading-[1.6]">The CR-1 reader is $89 outright, or included in the kit lease ($39/mo, yours after 12 months). Tap, chip, and swipe all included; no per-tap surcharge. Solo plan gets one, Multi includes one per location with extras at $79.</p>
+      </details>
+      <details class="group p-6">
+        <summary class="cursor-pointer flex items-start justify-between gap-6 list-none">
+          <span class="font-display text-[17px]">Do I have to buy proprietary hardware to run Counter?</span>
+          <span class="text-[var(--ink-3)] group-open:rotate-45 transition">+</span>
+        </summary>
+        <p class="mt-3 text-[14.5px] text-[var(--ink-2)] leading-[1.6]">No. Counter runs on any iPad (10th gen+) or Android tablet (Android 12+). We support Star TSP143/mC-Print3, Epson TM-m30, and any EMV reader on Stripe Terminal — BBPOS WisePOS E, M2, S700. Bring-your-own-hardware saves you $20/mo.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="px-5 lg:px-8 pb-20">
+  <div class="max-w-[1200px] mx-auto rounded-3xl p-10 sm:p-16 relative overflow-hidden shadow-card" style="background:linear-gradient(135deg,var(--ol-accent) 0%,#A8552D 60%,#7A3A1E 100%);">
+    <div class="absolute inset-0 opacity-30" style="background:radial-gradient(40% 60% at 90% 10%,rgba(255,255,255,.4),transparent 60%),radial-gradient(40% 60% at 0% 100%,rgba(0,0,0,.3),transparent 60%);"></div>
+    <div class="relative grid lg:grid-cols-12 gap-8 items-center">
+      <div class="lg:col-span-8">
+        <div class="font-mono text-[11px] tracking-widest text-[#FBE5D2]">START POURING</div>
+        <h2 class="font-display text-white text-[36px] sm:text-[48px] leading-[1.05] mt-3">Ring up your first oat latte <span class="opacity-60">in 14 days.</span></h2>
+        <p class="text-[#FBE5D2] mt-3 max-w-[540px] text-[15.5px]">We'll ship a Counter Kit, port your menu, and have a real human on your bar for opening day. If you don't love it after 30 days, we'll pay return shipping.</p>
+      </div>
+      <div class="lg:col-span-4 flex lg:justify-end gap-3 flex-wrap">
+        <a href="#" class="lift bg-white text-[var(--ink)] rounded-full px-5 py-3 text-[15px] font-medium">Order a Counter Kit</a>
+        <a href="#" class="lift rounded-full px-5 py-3 text-[15px] font-medium text-white" style="border:1px solid rgba(255,255,255,.35)">Talk to a barista</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="border-t border-[var(--line-soft)] bg-[rgba(255,255,255,0.4)]">
+  <div class="max-w-[1200px] mx-auto px-5 lg:px-8 py-14 grid grid-cols-2 sm:grid-cols-5 gap-8 text-[13px]">
+    <div class="col-span-2 sm:col-span-1">
+      <div class="flex items-center gap-2">
+        <svg width="22" height="22" viewBox="0 0 22 22"><rect x="1" y="1" width="20" height="20" rx="6" fill="#1F1B16"/><path d="M6 14c0-3.3 2.7-6 6-6h2v3h-2a3 3 0 1 0 0 6h2v3h-2c-3.3 0-6-2.7-6-6Z" fill="#C66B3D"/></svg>
+        <span class="font-display text-[16px]">Counter</span>
+      </div>
+      <p class="mt-3 text-[12.5px] text-[var(--ink-3)] leading-[1.55] max-w-[200px]">A POS for the people pulling the shots, not the people pulling the numbers.</p>
+    </div>
+    <div>
+      <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)] mb-3">PRODUCT</div>
+      <ul class="space-y-2 text-[var(--ink-2)]">
+        <li><a href="#" class="hover:text-[var(--ink)]">Order Entry</a></li>
+        <li><a href="#" class="hover:text-[var(--ink)]">Inventory</a></li>
+        <li><a href="#" class="hover:text-[var(--ink)]">Tips &amp; Payroll</a></li>
+        <li><a href="#" class="hover:text-[var(--ink)]">Loyalty</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)] mb-3">HARDWARE</div>
+      <ul class="space-y-2 text-[var(--ink-2)]">
+        <li><a href="#" class="hover:text-[var(--ink)]">T-10 Tablet</a></li>
+        <li><a href="#" class="hover:text-[var(--ink)]">CR-1 Reader</a></li>
+        <li><a href="#" class="hover:text-[var(--ink)]">P-3 Printer</a></li>
+        <li><a href="#" class="hover:text-[var(--ink)]">KDS-7 Display</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)] mb-3">INTEGRATIONS</div>
+      <ul class="space-y-2 text-[var(--ink-2)]">
+        <li><a href="#" class="hover:text-[var(--ink)]">QuickBooks</a></li>
+        <li><a href="#" class="hover:text-[var(--ink)]">Gusto</a></li>
+        <li><a href="#" class="hover:text-[var(--ink)]">DoorDash</a></li>
+        <li><a href="#" class="hover:text-[var(--ink)]">All 47 →</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="font-mono text-[10px] tracking-widest text-[var(--ink-3)] mb-3">COMPANY</div>
+      <ul class="space-y-2 text-[var(--ink-2)]">
+        <li><a href="#" class="hover:text-[var(--ink)]">Story</a></li>
+        <li><a href="#" class="hover:text-[var(--ink)]">Customers</a></li>
+        <li><a href="#" class="hover:text-[var(--ink)]">Careers · 6</a></li>
+        <li><a href="#" class="hover:text-[var(--ink)]">Field Guide</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="max-w-[1200px] mx-auto px-5 lg:px-8 py-6 border-t border-[var(--line-soft)] flex items-center justify-between text-[12px] text-[var(--ink-3)] font-mono flex-wrap gap-3">
+    <span>© 2026 Counter POS, Inc. · Made in Brooklyn, NY</span>
+    <span>Status · all systems normal · 99.99% uptime · 90d</span>
+  </div>
+</footer>
+</body>
+</html>
