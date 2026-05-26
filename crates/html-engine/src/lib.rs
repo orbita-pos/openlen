@@ -4,6 +4,7 @@
 extern crate napi_derive;
 
 pub mod error;
+pub mod normalize;
 pub mod ops;
 pub mod parser;
 
