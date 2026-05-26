@@ -16,7 +16,7 @@ pub fn round_trip(html: String) -> Result<String> {
     parser::round_trip(&html).map_err(Into::into)
 }
 
-#[napi(object)]
+#[napi(object, js_name = "TaggedHtmlResult")]
 pub struct JsTaggedHtmlResult {
     pub tagged_html: String,
     pub tagged_count: u32,
@@ -36,7 +36,7 @@ pub fn strip_op_ids(html: String) -> String {
     stripper::strip_op_ids(&html)
 }
 
-#[napi(object)]
+#[napi(object, js_name = "Op")]
 pub struct JsOp {
     #[napi(js_name = "type")]
     pub op_type: String,
@@ -44,7 +44,7 @@ pub struct JsOp {
     pub new_html: Option<String>,
 }
 
-#[napi(object)]
+#[napi(object, js_name = "ParseResult")]
 pub struct JsParseResult {
     pub ops: Vec<JsOp>,
     pub errors: Vec<String>,
@@ -67,7 +67,7 @@ pub fn parse_ops(raw_html: String) -> JsParseResult {
     }
 }
 
-#[napi(object)]
+#[napi(object, js_name = "ApplyError")]
 pub struct JsApplyError {
     pub op_index: u32,
     #[napi(js_name = "op")]
@@ -76,7 +76,7 @@ pub struct JsApplyError {
     pub reason: String,
 }
 
-#[napi(object)]
+#[napi(object, js_name = "ApplyResult")]
 pub struct JsApplyResult {
     pub html: Option<String>,
     pub errors: Vec<JsApplyError>,
@@ -131,7 +131,7 @@ pub fn resolve_op_id_by_path(tagged_html: String, path: String) -> Option<String
     resolver::resolve_op_id_by_path(&tagged_html, &path)
 }
 
-#[napi(object)]
+#[napi(object, js_name = "ScopedView")]
 pub struct JsScopedView {
     pub scoped_html: String,
     pub container_op_id: String,
