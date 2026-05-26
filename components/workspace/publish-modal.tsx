@@ -41,6 +41,11 @@ export interface PublishModalProps {
   onClose: () => void;
   project: PublishModalProject;
   onSuccess: (subdomain: string | null) => void;
+  /** Optional escape hatch — when present, the modal shows an "Or use my
+   *  own domain" link that closes this modal and opens the Custom Domain
+   *  flow. Keeps the *.openlen.com path discoverable without making it
+   *  feel mandatory for users who already have their own domain. */
+  onOpenCustomDomain?: () => void;
 }
 
 type CheckState =
@@ -64,6 +69,7 @@ export function PublishModal({
   onClose,
   project,
   onSuccess,
+  onOpenCustomDomain,
 }: PublishModalProps) {
   const [value, setValue] = useState(project.subdomain ?? "");
   const [check, setCheck] = useState<CheckState>({ kind: "idle" });
@@ -391,6 +397,25 @@ export function PublishModal({
               ))}
           </div>
           <div className="flex items-center gap-2">
+            {/* Escape hatch — when the user has their own domain ready,
+                they shouldn't have to think about choosing a *.openlen.com
+                slug. Clicking this routes straight to the Custom Domain
+                flow, which auto-publishes to an internal slug behind the
+                scenes. Hidden once a subdomain is claimed (the modal is
+                in "manage" mode at that point). */}
+            {onOpenCustomDomain && !isPublished && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenCustomDomain();
+                }}
+                className="mr-auto inline-flex items-center gap-1 h-8 px-2 rounded-md text-[12px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-coral-600 dark:hover:text-coral-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+              >
+                Or use my own domain
+                <span aria-hidden>→</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={onClose}

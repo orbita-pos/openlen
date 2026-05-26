@@ -1150,6 +1150,7 @@ function NewV2Inner() {
         <PublishModal
           open={publishModalOpen}
           onClose={() => setPublishModalOpen(false)}
+          onOpenCustomDomain={() => setCustomDomainOpen(true)}
           project={{
             id: loadedProject.id,
             subdomain: loadedProject.subdomain,
