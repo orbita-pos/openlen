@@ -17,6 +17,11 @@ pub fn round_trip(html: String) -> Result<String> {
     parser::round_trip(&html).map_err(Into::into)
 }
 
+#[napi]
+pub fn normalize_born_canonical(html: String) -> String {
+    normalize::normalize_born_canonical(&html)
+}
+
 #[napi(object, js_name = "TaggedHtmlResult")]
 pub struct JsTaggedHtmlResult {
     pub tagged_html: String,
