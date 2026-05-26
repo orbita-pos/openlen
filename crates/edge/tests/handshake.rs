@@ -1,5 +1,5 @@
 use std::net::SocketAddr;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use rcgen::{generate_simple_self_signed, CertifiedKey};
@@ -8,6 +8,8 @@ use tokio::sync::oneshot;
 use tokio::time::timeout;
 
 use openlen_edge::{bind, load_wildcard, EdgeConfig};
+
+const FIXTURE_ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/publish-root");
 
 struct Harness {
     addr: SocketAddr,
@@ -35,6 +37,7 @@ async fn spawn_edge() -> Harness {
         .bind("127.0.0.1:0".parse().unwrap())
         .cert_path(cert_path.clone())
         .key_path(key_path.clone())
+        .publish_root(PathBuf::from(FIXTURE_ROOT))
         .build()
         .expect("build config");
 
@@ -91,19 +94,26 @@ fn client_h2() -> reqwest::Client {
 async fn handshake_succeeds_and_returns_200() {
     let h = spawn_edge().await;
     let url = format!("https://{}/", h.addr);
-    let resp = timeout(Duration::from_secs(5), client_h1().get(&url).send())
-        .await
-        .expect("did not time out")
-        .expect("request ok");
+    let resp = timeout(
+        Duration::from_secs(5),
+        client_h1()
+            .get(&url)
+            .header("host", "demo.openlen.com")
+            .send(),
+    )
+    .await
+    .expect("did not time out")
+    .expect("request ok");
     assert_eq!(resp.status(), 200, "status was {}", resp.status());
 }
 
 #[tokio::test]
-async fn body_announces_edge_alive() {
+async fn body_serves_subdomain_index() {
     let h = spawn_edge().await;
     let url = format!("https://{}/", h.addr);
     let body = client_h1()
         .get(&url)
+        .header("host", "demo.openlen.com")
         .send()
         .await
         .unwrap()
@@ -111,18 +121,20 @@ async fn body_announces_edge_alive() {
         .await
         .unwrap();
     assert!(
-        body.contains("OpenLen edge alive"),
-        "body did not include marker: {body:?}"
+        body.contains("demo home"),
+        "body did not include fixture marker: {body:?}"
     );
 }
 
 #[tokio::test]
-async fn body_echoes_host_header() {
+async fn host_header_routes_to_subdomain() {
     let h = spawn_edge().await;
     let url = format!("https://{}/", h.addr);
+
+    // demo.openlen.com → fixture exists → 200 with demo content
     let body = client_h1()
         .get(&url)
-        .header("host", "example.openlen.com")
+        .header("host", "demo.openlen.com")
         .send()
         .await
         .unwrap()
@@ -130,9 +142,18 @@ async fn body_echoes_host_header() {
         .await
         .unwrap();
     assert!(
-        body.contains("example.openlen.com"),
-        "host header not reflected: {body:?}"
+        body.contains("demo home"),
+        "host did not route to demo: {body:?}"
     );
+
+    // ghost.openlen.com → no fixture → 404 (different body, proving host changed routing)
+    let resp = client_h1()
+        .get(&url)
+        .header("host", "ghost.openlen.com")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 404);
 }
 
 #[tokio::test]

@@ -24,9 +24,13 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 anyhow = "1"
 thiserror = "1"
 serde = { version = "1", features = ["derive"] }
+regex = "1"
+mime_guess = "2"
+percent-encoding = "2"
+once_cell = "1"
 
 [dev-dependencies]
 rcgen = "0.13"
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-manual-roots", "http2"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "http2"] }
 tempfile = "3"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
