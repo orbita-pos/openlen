@@ -18,6 +18,7 @@ import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
 import { consolidateUnsplashCredits } from "@/lib/publish/credits";
 import { wirePublishedForms } from "@/lib/publish/forms";
 import { injectAnalyticsSnippet } from "@/lib/analytics/snippet";
+import { injectLogoIntoHtml } from "@/lib/branding/inject-logo";
 import type { FormConfig } from "@/lib/projects/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -95,6 +96,11 @@ export interface PublishParams {
    *  Set to false when the project's settings.analyticsDisabled is true so
    *  the user can opt out without losing the rest of publish-time HTML rewrites. */
   analyticsEnabled?: boolean;
+  /** Per-project favicon / brand mark URL. When provided, publishToDir
+   *  rewrites any existing <link rel="icon"> to point at it AND adds an
+   *  og:image meta if the document doesn't already declare one. Null /
+   *  undefined leaves the HTML's existing head untouched. */
+  logoUrl?: string | null;
 }
 
 const ASSET_URL_RE_FOR =
@@ -392,6 +398,22 @@ export async function publishToDir(
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn("[publishToDir] form wiring failed; publishing without it", err);
+  }
+
+  // Inject the per-project logo (favicon + fallback og:image) BEFORE the
+  // analytics snippet so the resulting <head> ordering ends with the
+  // tracker, not the brand assets — matches how every other publish-time
+  // injector layers in. Soft-fail.
+  if (params.logoUrl) {
+    try {
+      migratedHtml = injectLogoIntoHtml({
+        html: migratedHtml,
+        logoUrl: params.logoUrl,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] logo injection failed; publishing without it", err);
+    }
   }
 
   // Inject the analytics tracker snippet (lib/analytics/snippet.ts). Done

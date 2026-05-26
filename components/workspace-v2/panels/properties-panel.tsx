@@ -12,9 +12,10 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormConfig } from "@/lib/projects/types";
 import { checkSeo, type SeoIssue, type SeoFixField } from "@/lib/seo-check";
+import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
 import {
   ColorField,
   RadiusField,
@@ -78,6 +79,15 @@ interface PropertiesPanelProps {
    *  snippet (ProjectData.settings.analyticsDisabled). The toggle in
    *  the Privacy section reflects + flips this. */
   analyticsDisabled?: boolean;
+  /** Project ID — required for the Logo section (upload endpoint scopes
+   *  by generationId). Omit on entry-mode panels with no real project. */
+  projectId?: string;
+  /** Project title — drives the "auto-generate" initial-letter logo. */
+  projectTitle?: string;
+  /** Current per-project logo URL (the projects.logoUrl column). Null
+   *  when none is set; the Logo section then offers upload / paste /
+   *  generate paths to populate it. */
+  logoUrl?: string | null;
   onApplyElementProp: (path: string, name: string, value: string | null) => void;
   onApplyPageMeta: (field: keyof PageMeta, value: string) => void;
   onApplyFormConfig: (formIndex: number, patch: Partial<FormConfig>) => void;
@@ -87,6 +97,9 @@ interface PropertiesPanelProps {
   /** Persist the analytics opt-out toggle. Omit to hide the Privacy
    *  section (e.g., on projects that can't be published yet). */
   onToggleAnalytics?: (disabled: boolean) => void;
+  /** Persist the per-project logo. Pass null to clear it. Omit to hide
+   *  the Logo section (entry-mode panels). */
+  onApplyLogoUrl?: (logoUrl: string | null) => void;
   /** Fire a test lead notification email to whichever address would
    *  receive the real one for this form. Resolves with the result so
    *  the FormView can render inline feedback. Omit to hide the button. */
@@ -105,11 +118,15 @@ export function PropertiesPanel({
   formConfig,
   html,
   analyticsDisabled,
+  projectId,
+  projectTitle,
+  logoUrl,
   onApplyElementProp,
   onApplyPageMeta,
   onApplyFormConfig,
   onApplyStyle,
   onToggleAnalytics,
+  onApplyLogoUrl,
   onSendTestFormEmail,
   onClearSelection,
   onClose,
@@ -148,8 +165,12 @@ export function PropertiesPanel({
             pageMeta={pageMeta}
             html={html}
             analyticsDisabled={analyticsDisabled}
+            projectId={projectId}
+            projectTitle={projectTitle}
+            logoUrl={logoUrl}
             onApply={onApplyPageMeta}
             onToggleAnalytics={onToggleAnalytics}
+            onApplyLogoUrl={onApplyLogoUrl}
           />
         )}
       </div>
@@ -385,14 +406,22 @@ function PageView({
   pageMeta,
   html,
   analyticsDisabled,
+  projectId,
+  projectTitle,
+  logoUrl,
   onApply,
   onToggleAnalytics,
+  onApplyLogoUrl,
 }: {
   pageMeta: PageMeta | null;
   html?: string;
   analyticsDisabled?: boolean;
+  projectId?: string;
+  projectTitle?: string;
+  logoUrl?: string | null;
   onApply: (field: keyof PageMeta, value: string) => void;
   onToggleAnalytics?: (disabled: boolean) => void;
+  onApplyLogoUrl?: (logoUrl: string | null) => void;
 }) {
   // Recompute the SEO report on every HTML change. Cheap (DOMParser on
   // ~50-100KB), no debouncing needed — the parent only updates html when
@@ -409,6 +438,14 @@ function PageView({
   return (
     <div className="fade-in">
       {report && <SeoHealthSection report={report} />}
+      {onApplyLogoUrl && (
+        <LogoSection
+          projectId={projectId}
+          projectTitle={projectTitle ?? ""}
+          logoUrl={logoUrl ?? null}
+          onApply={onApplyLogoUrl}
+        />
+      )}
       <Section label="Page" icon={<Globe size={11} />}>
         <TextField
           label="Title"
@@ -557,6 +594,211 @@ function ScoreRing({
         {score}
       </text>
     </svg>
+  );
+}
+
+// Logo — the per-project favicon / brand mark. Three input modes
+// (upload / paste / auto-generate) feed a single onApply callback that
+// PATCHes /api/projects/[id] with the resolved URL. Live preview at 64x64.
+function LogoSection({
+  projectId,
+  projectTitle,
+  logoUrl,
+  onApply,
+}: {
+  projectId?: string;
+  projectTitle: string;
+  logoUrl: string | null;
+  onApply: (logoUrl: string | null) => void;
+}) {
+  const [mode, setMode] = useState<"upload" | "url" | "auto">("upload");
+  const [urlDraft, setUrlDraft] = useState(
+    logoUrl && !logoUrl.startsWith("data:") ? logoUrl : "",
+  );
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (logoUrl && !logoUrl.startsWith("data:")) setUrlDraft(logoUrl);
+  }, [logoUrl]);
+
+  const preview = logoUrl || defaultLogoDataUrl(projectTitle || "Page");
+
+  const onUploadClick = () => fileInputRef.current?.click();
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file
+    if (!file) return;
+    if (!projectId) {
+      setError("Save the project before uploading a logo.");
+      return;
+    }
+    setError(null);
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("generationId", projectId);
+      const res = await fetch("/api/upload", { method: "POST", body: form });
+      const data = (await res.json().catch(() => null)) as {
+        url?: string;
+        error?: string;
+      } | null;
+      if (!res.ok || !data?.url) {
+        setError(data?.error ?? `Upload failed (${res.status})`);
+        return;
+      }
+      onApply(data.url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const onPasteCommit = () => {
+    const v = urlDraft.trim();
+    if (!v) return;
+    if (!/^https?:\/\//i.test(v)) {
+      setError("Use a full https:// URL.");
+      return;
+    }
+    setError(null);
+    onApply(v);
+  };
+
+  const onAutoGenerate = () => {
+    setError(null);
+    onApply(defaultLogoDataUrl(projectTitle || "Page"));
+  };
+
+  return (
+    <Section label="Logo" icon={<ImageIcon size={11} />}>
+      <div className="flex items-center gap-2.5">
+        <span className="shrink-0 h-16 w-16 rounded-lg overflow-hidden bg-elev border bd flex items-center justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={preview}
+            alt="Project logo preview"
+            className="w-full h-full object-contain"
+          />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="text-[11.5px] fg leading-snug">
+            {logoUrl ? "Custom logo" : "Default — initial letter"}
+          </div>
+          <div className="text-[10.5px] fg-faint leading-snug truncate">
+            {logoUrl
+              ? logoUrl.startsWith("data:")
+                ? "Inline SVG"
+                : new URL(logoUrl, "https://x").pathname.split("/").pop() ||
+                  logoUrl
+              : "Used as favicon, card badge, OG fallback."}
+          </div>
+        </div>
+      </div>
+
+      <div className="inline-flex items-center gap-0.5 rounded-md bg-elev border bd p-0.5 text-[10.5px]">
+        {(["upload", "url", "auto"] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => {
+              setMode(m);
+              setError(null);
+            }}
+            className={`h-6 px-2 rounded transition ${
+              mode === m
+                ? "bg-app fg shadow-sm"
+                : "fg-muted hover:fg"
+            }`}
+          >
+            {m === "upload" ? "Upload" : m === "url" ? "Paste URL" : "Auto"}
+          </button>
+        ))}
+      </div>
+
+      {mode === "upload" && (
+        <div className="flex flex-col gap-1.5">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/svg+xml,image/x-icon"
+            onChange={onFileChange}
+            className="hidden"
+          />
+          <button
+            type="button"
+            disabled={uploading || !projectId}
+            onClick={onUploadClick}
+            className="w-full inline-flex items-center justify-center gap-1.5 h-7 rounded-md border bd bg-app fg-muted hover:fg hover:bg-hover transition text-[11px] disabled:opacity-50"
+          >
+            {uploading ? "Uploading…" : "Choose image"}
+          </button>
+          <p className="text-[10.5px] fg-faint leading-relaxed">
+            PNG / SVG / WebP. Square images render best.
+          </p>
+        </div>
+      )}
+
+      {mode === "url" && (
+        <div className="flex flex-col gap-1.5">
+          <input
+            type="url"
+            value={urlDraft}
+            placeholder="https://yourdomain.com/logo.png"
+            onChange={(e) => setUrlDraft(e.target.value)}
+            onBlur={onPasteCommit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
+            className="w-full bg-app border bd rounded-md px-2 py-1.5 text-[11px] font-mono fg focus:border-[color:var(--accent)] focus:outline-none placeholder:fg-faint"
+          />
+          <p className="text-[10.5px] fg-faint leading-relaxed">
+            Use the full https:// URL of a hosted image.
+          </p>
+        </div>
+      )}
+
+      {mode === "auto" && (
+        <div className="flex flex-col gap-1.5">
+          <button
+            type="button"
+            onClick={onAutoGenerate}
+            className="w-full inline-flex items-center justify-center gap-1.5 h-7 rounded-md border bd bg-app fg-muted hover:fg hover:bg-hover transition text-[11px]"
+          >
+            Generate from title
+          </button>
+          <p className="text-[10.5px] fg-faint leading-relaxed">
+            Coral disc with the first letter of &quot;{projectTitle || "Page"}
+            &quot;.
+          </p>
+        </div>
+      )}
+
+      {error && (
+        <p className="text-[10.5px] text-red-600 dark:text-red-400 leading-relaxed">
+          {error}
+        </p>
+      )}
+
+      {logoUrl && (
+        <button
+          type="button"
+          onClick={() => {
+            setUrlDraft("");
+            setError(null);
+            onApply(null);
+          }}
+          className="self-start text-[10.5px] fg-faint hover:fg underline-offset-2 hover:underline transition"
+        >
+          Clear logo
+        </button>
+      )}
+    </Section>
   );
 }
 

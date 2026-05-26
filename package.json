@@ -19,6 +19,7 @@
     "templates:bootstrap-thumbnail-column": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/bootstrap-thumbnail-column.ts",
     "templates:bootstrap-featured-column": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/bootstrap-featured-column.ts",
     "domains:bootstrap": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/bootstrap-custom-domains.ts",
+    "logo:bootstrap": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/bootstrap-logo-column.ts",
     "domain-connect:keygen": "tsx --tsconfig tsconfig.eval.json scripts/domain-connect/generate-key.ts",
     "deploy:prod": "powershell -ExecutionPolicy Bypass -File infra/scripts/deploy.ps1",
     "users:set-plan": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/users/set-plan.ts",

@@ -65,6 +65,9 @@ interface LoadedProject {
   subdomain: string | null;
   publishedAt: Date | null;
   hasUnpublishedChanges: boolean;
+  /** Per-project favicon / brand mark URL. Null when not set; consumers
+   *  (TopBar, list cards, favicon injection) fall back to the coral default. */
+  logoUrl: string | null;
   /** The rendered HTML stored at project.data.html — what we feed the
    *  preview iframe AND what `publishProject` writes to disk on Deploy.
    *  Empty string for projects whose orchestrator never set it (legacy
@@ -418,6 +421,7 @@ function NewV2Inner() {
               subdomain: string | null;
               publishedAt: string | null;
               hasUnpublishedChanges: boolean;
+              logoUrl?: string | null;
               tags?: string[];
               userBrief?: string | null;
               chatHistory?: StoredChatTurn[];
@@ -443,6 +447,7 @@ function NewV2Inner() {
         subdomain: p.subdomain,
         publishedAt: p.publishedAt ? new Date(p.publishedAt) : null,
         hasUnpublishedChanges: p.hasUnpublishedChanges,
+        logoUrl: p.logoUrl ?? null,
         html,
         isFlat: filledCount === 0,
         userBrief: p.userBrief ?? "",
@@ -827,6 +832,34 @@ function NewV2Inner() {
   // different body shape. Optimistically updates loadedProject.settings so
   // the Toggle reflects the change immediately; the server is the source of
   // truth on the next publish.
+  // Persist a new logoUrl (or null to clear) to the project row. Optimistic
+  // — reflects in the TopBar / inspector preview immediately; rolls back on
+  // a server error so the UI never diverges from the DB.
+  const applyLogoUrl = useCallback(
+    (next: string | null) => {
+      const projectId = loadedProject?.id;
+      if (!projectId) return;
+      const prevLogoUrl = loadedProject?.logoUrl ?? null;
+      setLoadedProject((prev) =>
+        prev ? { ...prev, logoUrl: next } : prev,
+      );
+      void fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ logoUrl: next }),
+      })
+        .then((r) => {
+          if (!r.ok) throw new Error(`PATCH failed (${r.status})`);
+        })
+        .catch(() => {
+          setLoadedProject((p) =>
+            p ? { ...p, logoUrl: prevLogoUrl } : p,
+          );
+        });
+    },
+    [loadedProject?.id, loadedProject?.logoUrl],
+  );
+
   const applyAnalyticsDisabled = useCallback(
     (disabled: boolean) => {
       const projectId = loadedProject?.id;
@@ -911,6 +944,7 @@ function NewV2Inner() {
       <TopBar
         projectName={projectName}
         onRename={setProjectName}
+        projectLogoUrl={loadedProject?.logoUrl ?? null}
         projectLoading={!!projectParam && !loadedProject}
         savingStatus={savingStatus}
         onPublish={onPublish}
@@ -1091,6 +1125,9 @@ function NewV2Inner() {
                   analyticsDisabled={
                     loadedProject?.settings?.analyticsDisabled ?? false
                   }
+                  projectId={loadedProject?.id}
+                  projectTitle={loadedProject?.title}
+                  logoUrl={loadedProject?.logoUrl ?? null}
                   formConfig={
                     typeof inspectSelection?.formIndex === "number"
                       ? loadedProject?.settings?.forms?.[
@@ -1103,6 +1140,7 @@ function NewV2Inner() {
                   onApplyFormConfig={applyFormConfig}
                   onApplyStyle={applyStyle}
                   onToggleAnalytics={applyAnalyticsDisabled}
+                  onApplyLogoUrl={loadedProject ? applyLogoUrl : undefined}
                   onSendTestFormEmail={sendTestFormEmail}
                   onClearSelection={() => setInspectSelection(null)}
                   onClose={() => {

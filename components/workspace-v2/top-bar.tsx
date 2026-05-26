@@ -30,6 +30,7 @@ import {
 import { IconBtn, StatusDot } from "./ui";
 import { CreditPill } from "@/components/app/credit-pill";
 import { OpenLenMark } from "@/components/openlen-logo";
+import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
 
 interface ReleaseEntry {
   sha: string;
@@ -40,6 +41,9 @@ interface ReleaseEntry {
 interface TopBarProps {
   projectName: string;
   onRename: (name: string) => void;
+  /** Per-project favicon shown as a 16x16 icon next to the project name.
+   *  Null = fall back to the coral initial-letter mark. */
+  projectLogoUrl?: string | null;
   /** True while the parent is fetching `/api/projects/<id>`. The project
    *  name slot shows "Loading…" until the real title resolves, so the
    *  workspace stops flashing the mock "Pricing Page" placeholder. */
@@ -70,6 +74,7 @@ interface TopBarProps {
 export function TopBar({
   projectName,
   onRename,
+  projectLogoUrl,
   projectLoading = false,
   savingStatus = null,
   onPublish,
@@ -256,9 +261,17 @@ export function TopBar({
                   Loading…
                 </span>
               ) : (
-                <span className="text-[13px] font-medium fg truncate">
-                  {projectName}
-                </span>
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={projectLogoUrl || defaultLogoDataUrl(projectName)}
+                    alt=""
+                    className="h-4 w-4 shrink-0 rounded object-contain"
+                  />
+                  <span className="text-[13px] font-medium fg truncate">
+                    {projectName}
+                  </span>
+                </>
               )}
             </>
           )}

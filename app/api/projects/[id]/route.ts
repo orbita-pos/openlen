@@ -4,6 +4,7 @@ import {
   deleteProject,
   getProject,
   renameProject,
+  setProjectLogoUrl,
   setProjectStatus,
   setProjectUserBrief,
 } from "@/lib/projects";
@@ -32,12 +33,26 @@ const PatchSchema = z.object({
   // userBrief is the persistent AI context the user writes in the Brief
   // sidebar tab. Empty string clears it (stored as NULL).
   userBrief: z.string().max(4000).optional(),
+  // logoUrl is the project's favicon / brand mark. Null clears it; a string
+  // sets it. Validated as http(s) URL or data: URI so the inspector can't
+  // smuggle in javascript: or file: schemes that the published HTML would
+  // happily honor.
+  logoUrl: z
+    .union([
+      z.string().refine(
+        (s) => /^(?:https?:|data:image\/)/i.test(s),
+        { message: "logoUrl must be an http(s) URL or data:image/… URI" },
+      ),
+      z.null(),
+    ])
+    .optional(),
 }).refine(
   (v) =>
     v.title !== undefined ||
     v.status !== undefined ||
-    v.userBrief !== undefined,
-  { message: "Provide at least one of: title, status, userBrief" },
+    v.userBrief !== undefined ||
+    v.logoUrl !== undefined,
+  { message: "Provide at least one of: title, status, userBrief, logoUrl" },
 );
 
 export async function PATCH(
@@ -75,6 +90,15 @@ export async function PATCH(
       id,
       session.user.id,
       parsed.data.userBrief,
+    );
+    if (!ok) return json({ error: "not_found" }, 404);
+    touched = true;
+  }
+  if (parsed.data.logoUrl !== undefined) {
+    const ok = await setProjectLogoUrl(
+      id,
+      session.user.id,
+      parsed.data.logoUrl,
     );
     if (!ok) return json({ error: "not_found" }, 404);
     touched = true;
