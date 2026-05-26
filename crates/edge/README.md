@@ -14,8 +14,8 @@ Today `*.openlen.com` is fast (nginx → disk, ~5 ms p99) but custom domains hop
 
 | Session | Scope | State |
 |---|---|---|
-| F2 S1 (this) | axum bootstrap + static-wildcard TLS on `:3443` | active |
-| F2 S2 | wildcard subdomain → disk + cache headers | pending |
+| F2 S1 | axum bootstrap + static-wildcard TLS on `:3443` | done |
+| F2 S2 (this) | wildcard subdomain → disk + cache headers + HTTP→HTTPS + conn cap | done |
 | F2 S3 | proxy to Node `:3000` for dynamic routes | pending |
 | F2 S4 | custom domain serving + LRU + singleflight | pending |
 | F2 S5 | ACME on-demand (`instant-acme`) | pending |
@@ -46,9 +46,11 @@ The dev cert is self-signed so `curl` needs `--insecure` (or `--cacert dev-certs
 | Var | Default | Purpose |
 |---|---|---|
 | `OPENLEN_EDGE_BIND` | `0.0.0.0:443` | TLS listener address |
+| `OPENLEN_EDGE_BIND_HTTP` | `0.0.0.0:80` (set `off` to disable) | Plaintext HTTP listener that 301-redirects to HTTPS |
 | `OPENLEN_EDGE_CERT` | `/etc/letsencrypt/live/openlen.com/fullchain.pem` | Wildcard cert chain (PEM) |
 | `OPENLEN_EDGE_KEY` | `/etc/letsencrypt/live/openlen.com/privkey.pem` | Wildcard private key (PEM) |
-| `OPENLEN_EDGE_PUBLISH_ROOT` | `/var/www/openlen` | Where `publishToDir` writes `<sub>/index.html` |
+| `OPENLEN_EDGE_PUBLISH_ROOT` | `/var/www/openlen` | Resolved as `<root>/<sub>/current/<path>` for each `*.openlen.com` request |
+| `OPENLEN_EDGE_MAX_INFLIGHT` | `4096` | Semaphore cap on concurrent in-flight TLS connections; over-cap accepts are dropped |
 | `RUST_LOG` | — | Standard tracing filter, e.g. `info,openlen_edge=debug` |
 
 Future sessions add `DATABASE_URL`, `OPENLEN_EDGE_UPSTREAM`, `OPENLEN_EDGE_ACME_DIR`, etc.

@@ -1,10 +1,13 @@
 pub mod config;
+pub mod files;
 pub mod observability;
+pub mod routing;
 pub mod server;
 pub mod tls;
 
 pub use config::{EdgeConfig, EdgeConfigBuilder};
-pub use server::{bind, router, BoundServer, SERVER_HEADER_VALUE, VERSION};
+pub use routing::{extract_subdomain, run_http_redirect};
+pub use server::{bind, router, AppState, BoundServer, SERVER_HEADER_VALUE, VERSION};
 pub use tls::{load_wildcard, WildcardCertError};
 
 use std::sync::Once;
