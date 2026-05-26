@@ -7,6 +7,7 @@ pub mod error;
 pub mod normalize;
 pub mod ops;
 pub mod parser;
+pub mod sanitize;
 
 use napi::Result;
 
@@ -20,6 +21,42 @@ pub fn round_trip(html: String) -> Result<String> {
 #[napi]
 pub fn normalize_born_canonical(html: String) -> String {
     normalize::normalize_born_canonical(&html)
+}
+
+#[napi(object, js_name = "SanitizeRemovedCounts")]
+pub struct JsSanitizeRemovedCounts {
+    pub scripts: u32,
+    pub event_handlers: u32,
+    pub dangerous_urls: u32,
+    pub iframes: u32,
+    pub meta_refresh: u32,
+}
+
+#[napi(object, js_name = "SanitizeResult")]
+pub struct JsSanitizeResult {
+    /// Sanitized HTML when the slot-path gate passes; absent on a slot-path
+    /// detection. Callers MUST treat absence as a publish-block.
+    pub html: Option<String>,
+    /// Position-tagged reasons when the gate fires. Empty on success.
+    pub errors: Vec<String>,
+    /// Counts of silently-stripped XSS-shaped content (telemetry only).
+    pub removed: JsSanitizeRemovedCounts,
+}
+
+#[napi]
+pub fn sanitize_for_publish(html: String) -> JsSanitizeResult {
+    let r = sanitize::sanitize_for_publish(&html);
+    JsSanitizeResult {
+        html: r.html,
+        errors: r.errors,
+        removed: JsSanitizeRemovedCounts {
+            scripts: r.removed.scripts,
+            event_handlers: r.removed.event_handlers,
+            dangerous_urls: r.removed.dangerous_urls,
+            iframes: r.removed.iframes,
+            meta_refresh: r.removed.meta_refresh,
+        },
+    }
 }
 
 #[napi(object, js_name = "TaggedHtmlResult")]
