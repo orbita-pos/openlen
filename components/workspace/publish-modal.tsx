@@ -235,17 +235,19 @@ export function PublishModal({
   const fullUrl = `https://${previewSub}.${BASE_HOST}`;
   const canPublish = check.kind === "available" && !submitting;
   const isPublished = project.subdomain !== null;
-  const wouldRepublish =
-    isPublished && isCurrent && project.hasUnpublishedChanges;
   const wouldChangeName =
     isPublished && !isCurrent && check.kind === "available";
 
-  // Action button label — three modes per spec.
+  // Action button label — three modes per spec. We always show "Re-publish"
+  // when the user is on their current subdomain (even if hasUnpublishedChanges
+  // is false), because other publish-time inputs (logo, form config, analytics
+  // toggle) can change without touching the HTML and the user still needs a
+  // way to push them live. Publish is content-addressed on disk so a no-op
+  // re-publish is essentially free.
   let primaryLabel: string;
   if (submitting === "publishing") primaryLabel = "Publishing…";
   else if (wouldChangeName) primaryLabel = "Move to new subdomain";
-  else if (wouldRepublish) primaryLabel = "Re-publish";
-  else if (isPublished && isCurrent) primaryLabel = "Up to date";
+  else if (isPublished && isCurrent) primaryLabel = "Re-publish";
   else primaryLabel = "Publish";
 
   return (
@@ -427,14 +429,10 @@ export function PublishModal({
             <button
               type="button"
               onClick={() => void doPublish()}
-              disabled={
-                !canPublish ||
-                (isPublished && isCurrent && !project.hasUnpublishedChanges)
-              }
+              disabled={!canPublish}
               className={cn(
                 "inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-[12px] font-medium transition",
-                canPublish &&
-                  !(isPublished && isCurrent && !project.hasUnpublishedChanges)
+                canPublish
                   ? "bg-coral-500 text-white hover:bg-coral-600 active:bg-coral-700 btn-coral-shadow"
                   : "bg-zinc-200 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed",
               )}
