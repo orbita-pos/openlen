@@ -14,7 +14,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import {
   ChevronDown,
   ChevronRight,
@@ -80,6 +80,26 @@ export function TopBar({
   dark,
   onToggleDark,
 }: TopBarProps) {
+  const { data: session } = useSession();
+  const userName = session?.user?.name ?? "";
+  const userEmail = session?.user?.email ?? "";
+  const userImage = session?.user?.image ?? null;
+  // First-letter avatar fallback when Google didn't return a profile image
+  // (or we want a uniform monogram). Pulls from name first, falls back to
+  // the local-part of the email so newly-signed users without a name still
+  // get a sensible initial.
+  const avatarLetter = (
+    (userName || userEmail.split("@")[0] || "?").trim().charAt(0) || "?"
+  ).toUpperCase();
+  // Short display name for the dropdown header. Trim a long Google "Family"
+  // to first name + first letter of last to keep it on one line.
+  const displayName = (() => {
+    const n = userName.trim();
+    if (!n) return userEmail || "Account";
+    const parts = n.split(/\s+/);
+    if (parts.length === 1) return parts[0];
+    return `${parts[0]} ${parts[parts.length - 1].charAt(0).toUpperCase()}.`;
+  })();
   const [deployOpen, setDeployOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -492,19 +512,38 @@ export function TopBar({
           <button
             type="button"
             onClick={() => setProfileOpen((o) => !o)}
-            className="relative inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#FF7E55] to-[#C72E10] text-white text-[11.5px] font-semibold ring-1 ring-white/30 hover:brightness-110 transition"
+            className="relative inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#FF7E55] to-[#C72E10] text-white text-[11.5px] font-semibold ring-1 ring-white/30 hover:brightness-110 transition overflow-hidden"
+            aria-label={displayName}
           >
-            J
+            {userImage ? (
+              // Google profile photo — eslint-disable-next-line because we
+              // don't want next/image's domain-allowlist friction here.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={userImage}
+                alt=""
+                width={32}
+                height={32}
+                referrerPolicy="no-referrer"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              avatarLetter
+            )}
             <span
               className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-[color:var(--bg)]"
               aria-hidden
             />
           </button>
           {profileOpen && (
-            <div className="absolute right-0 mt-2 w-52 rounded-xl bg-elev border bd shadow-elev p-1 z-40 slide-down">
+            <div className="absolute right-0 mt-2 w-56 rounded-xl bg-elev border bd shadow-elev p-1 z-40 slide-down">
               <div className="px-2.5 py-2 border-b bd">
-                <div className="text-[12.5px] font-medium fg">Jesus B.</div>
-                <div className="text-[11px] fg-faint">jose12cheti12@gmail.com</div>
+                <div className="text-[12.5px] font-medium fg truncate">
+                  {displayName}
+                </div>
+                <div className="text-[11px] fg-faint truncate">
+                  {userEmail || "—"}
+                </div>
               </div>
               <a
                 href="/projects"

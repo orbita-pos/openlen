@@ -61,6 +61,14 @@ export interface CustomDomainModalProps {
   open: boolean;
   onClose: () => void;
   projectId: string;
+  /** Current `*.openlen.com` slug claimed by this project. When null we
+   *  auto-publish to a derived slug (`p-<projectId8>`) on modal open so
+   *  the user never has to think about subdomain choice — Vercel-style. */
+  projectSubdomain: string | null;
+  /** Notify the parent that we just auto-published. The parent typically
+   *  re-fetches the project so the TopBar Live pill + publish state stay
+   *  in sync without a hard refresh. */
+  onAutoPublished?: (subdomain: string) => void;
 }
 
 // Mirrors the server validator — same regex, same suffix denylist. Catches
@@ -88,6 +96,8 @@ export function CustomDomainModal({
   open,
   onClose,
   projectId,
+  projectSubdomain,
+  onAutoPublished,
 }: CustomDomainModalProps) {
   const [domains, setDomains] = useState<DomainRow[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -97,6 +107,14 @@ export function CustomDomainModal({
   const [verifying, setVerifying] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Track whether the modal is currently performing the silent first-time
+  // publish for a fresh (never-deployed) project. Gates the claim UI so the
+  // user doesn't see an "Add domain" form before the project actually has
+  // somewhere to route to.
+  const [autoPublishing, setAutoPublishing] = useState(false);
+  const [autoPublishedSub, setAutoPublishedSub] = useState<string | null>(
+    projectSubdomain,
+  );
   const [lastAddedDns, setLastAddedDns] = useState<
     | { domain: string; dns: DnsInstructions }
     | null
@@ -159,7 +177,10 @@ export function CustomDomainModal({
       }
       const data = (await res.json()) as { domains: DomainRow[] };
       setDomains(data.domains);
-      setError(null);
+      // Note: we intentionally do NOT clear `error` here. Errors from
+      // verify / add / remove should stay visible until the user takes
+      // another action — clearing them in the background refresh causes
+      // the "flash and disappear" UX bug.
       // Fire-and-forget probes for unverified rows we haven't checked.
       const toProbe = data.domains.filter((d) => !d.verified);
       for (const d of toProbe) {
@@ -178,16 +199,79 @@ export function CustomDomainModal({
     }
   }, [projectId, probeConnect]);
 
+  // Silent first-publish — when the modal opens on a project that has no
+  // *.openlen.com subdomain yet, claim an auto-derived slug first. The
+  // user never sees the subdomain choice; their custom domain becomes
+  // the canonical URL. Mirrors the Vercel/Netlify pattern (auto subdomain
+  // exists behind the scenes; the user only sees their custom domain).
   useEffect(() => {
     if (!open) return;
     setInput("");
     setAddError(null);
     setError(null);
     setLastAddedDns(null);
-    void refresh();
-    // Focus the input next tick so it lands after the modal mounts.
+
+    const ensurePublished = async () => {
+      if (autoPublishedSub) return;
+      setAutoPublishing(true);
+      const autoSub = `p-${projectId.slice(0, 8)}`;
+      try {
+        const res = await fetch(`/api/projects/${projectId}/publish`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ subdomain: autoSub }),
+        });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => ({}))) as {
+            error?: string;
+            message?: string;
+            limit?: number;
+          };
+          if (body.error === "taken") {
+            // Almost impossible — projectId is a UUID — but degrade
+            // gracefully: append a random suffix and retry once.
+            const fallback = `${autoSub}-${Math.random().toString(36).slice(2, 5)}`;
+            const retry = await fetch(`/api/projects/${projectId}/publish`, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ subdomain: fallback }),
+            });
+            if (retry.ok) {
+              setAutoPublishedSub(fallback);
+              onAutoPublished?.(fallback);
+              return;
+            }
+          }
+          // Map API error codes to actionable copy. Generic fallback only
+          // for truly unknown failures.
+          const friendly =
+            body.error === "limit_reached"
+              ? `You already have ${body.limit ?? 1} published project on your plan. Unpublish another project, or upgrade to Pro for more subdomains.`
+              : body.error === "not_found"
+                ? "Project not found. Try reloading the page."
+                : body.error === "invalid"
+                  ? "Could not generate a valid internal subdomain. Use Publish manually."
+                  : body.error === "reserved"
+                    ? "Internal subdomain conflicts with a reserved name. Use Publish manually."
+                    : body.message ||
+                      `Could not auto-publish (${body.error ?? "unknown error"}). Use Publish manually first.`;
+          setError(friendly);
+          return;
+        }
+        setAutoPublishedSub(autoSub);
+        onAutoPublished?.(autoSub);
+      } catch {
+        setError("Network error while preparing the project.");
+      } finally {
+        setAutoPublishing(false);
+      }
+    };
+
+    void ensurePublished().then(() => {
+      void refresh();
+    });
     setTimeout(() => inputRef.current?.focus(), 30);
-  }, [open, refresh]);
+  }, [open, projectId, autoPublishedSub, onAutoPublished, refresh]);
 
   // Auto-poll verification every 30s while there's at least one pending row.
   // Clears immediately on close to avoid wasting requests on a hidden modal.
@@ -361,6 +445,23 @@ export function CustomDomainModal({
             </div>
           )}
 
+          {/* Silent first-publish indicator — surfaces only the FIRST time
+              the modal opens on a never-deployed project. Mirrors what
+              Vercel/Netlify do behind the scenes: assign an internal
+              subdomain so the custom domain has something to alias. */}
+          {autoPublishing && (
+            <div className="flex items-center gap-2.5 rounded-md ring-1 ring-[color:var(--accent)]/30 bg-[color:var(--accent)]/5 px-3 py-2.5">
+              <Loader2 size={14} className="animate-spin text-[var(--accent)]" />
+              <div className="text-[12px] fg">
+                Preparing your project…
+                <span className="block text-[11px] fg-faint mt-0.5">
+                  Setting up the hosting target so your custom domain has
+                  something to point at.
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Add a domain */}
           <div>
             <label className="block text-[11.5px] font-medium fg mb-1.5">
@@ -383,7 +484,7 @@ export function CustomDomainModal({
               <button
                 type="button"
                 onClick={onAdd}
-                disabled={adding || !input.trim()}
+                disabled={adding || autoPublishing || !input.trim()}
                 className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-md bg-[var(--accent)] text-white text-[12.5px] font-medium hover:brightness-105 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {adding ? (
@@ -672,6 +773,13 @@ function DnsRecord({
   value: string;
   purpose: string;
 }) {
+  // A + CNAME records on Cloudflare must be "DNS only" (gray cloud), not
+  // proxied (orange cloud). The proxy strips Let's Encrypt's HTTP-01 ACME
+  // challenge so Caddy can never issue a TLS cert, and on top of that
+  // forces all traffic through CF's edge (we lose the direct origin
+  // benefits we wanted in the first place). TXT records aren't proxied
+  // anyway, so this hint shows only on A/CNAME rows.
+  const needsDnsOnly = kind === "A" || kind === "CNAME";
   const [copied, setCopied] = useState<"name" | "value" | null>(null);
   const copy = async (which: "name" | "value", text: string) => {
     try {
@@ -714,6 +822,15 @@ function DnsRecord({
           {copied === "value" ? "✓" : <Copy size={9} />}
         </button>
       </div>
+      {needsDnsOnly && (
+        <div className="mt-1.5 flex items-center gap-1.5 text-[10.5px] text-amber-700 dark:text-amber-300">
+          <AlertCircle size={10} className="shrink-0" />
+          <span>
+            On Cloudflare, set <strong>Proxy status: DNS only</strong> (gray
+            cloud). Orange-cloud proxying blocks TLS cert issuance.
+          </span>
+        </div>
+      )}
     </div>
   );
 }

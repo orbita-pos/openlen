@@ -50,6 +50,7 @@ export function TemplateCard({
 }: TemplateCardProps) {
   const wrapperRef = useRef<HTMLAnchorElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
   const [mounted, setMounted] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [scale, setScale] = useState(0);
@@ -60,6 +61,20 @@ export function TemplateCard({
   // skipped entirely — the <img> handles its own lazy-loading via the
   // native `loading="lazy"` attribute.
   const hasThumbnail = Boolean(template.thumbnailUrl);
+
+  // Cached-image race: when the browser already has the thumbnail in HTTP
+  // cache (typical after a back-nav from /templates), the <img> can finish
+  // loading BEFORE React attaches its onLoad handler. The event fires into
+  // the void → `loaded` stays false → opacity 0 → permanent shimmer on a
+  // perfectly-cached image. Re-checking `img.complete` after mount catches
+  // that race and flips `loaded` manually.
+  useEffect(() => {
+    if (!hasThumbnail) return;
+    const img = imgRef.current;
+    if (img && img.complete && img.naturalWidth > 0) {
+      setLoaded(true);
+    }
+  }, [hasThumbnail]);
 
   useEffect(() => {
     if (hasThumbnail) return; // iframe machinery is unused when img path is active
@@ -155,6 +170,7 @@ export function TemplateCard({
         {hasThumbnail ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
+            ref={imgRef}
             src={template.thumbnailUrl ?? ""}
             alt={`${template.name} template preview`}
             width={nativeWidth}

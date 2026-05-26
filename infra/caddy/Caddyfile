@@ -166,7 +166,12 @@ openlen.com, www.openlen.com {
 # Catches every hostname not matched by the more-specific blocks above.
 # The on_demand_tls.ask gate (global config) ensures Caddy only attempts
 # to issue a cert when the hostname is a verified row in customDomains.
-https:// {
+# `:443` is Caddy's canonical "any host on HTTPS" catch-all; earlier we
+# used `https://` here but Caddy treats it as scheme-only and the auto-
+# HTTPS subsystem refused to attach the on-demand TLS handler in the
+# right order, so TLS handshakes against unknown SNI returned "internal
+# error" without logging.
+:443 {
 	tls {
 		on_demand
 	}
@@ -190,10 +195,24 @@ https:// {
 		}
 	}
 
+	# Root path requires a special rewrite. `{uri}` for "/" expands to
+	# "/", so the naive `rewrite * /served/{host}{uri}` produces
+	# `/served/<host>/` — Next's trailingSlash=false default then 308-
+	# redirects to `/served/<host>` (no slash), which the browser
+	# follows, leaking the internal path into the URL bar. Splitting
+	# the root case out avoids the round-trip entirely.
+	@root path /
+	handle @root {
+		rewrite * /served/{http.request.host}
+		reverse_proxy 127.0.0.1:3000
+	}
+
 	# Everything else → /served/<host><uri>. The Next route at that
 	# path resolves the host to a verified custom domain, looks up the
 	# owning project's openlen.com subdomain, and serves the file from
 	# /var/www/openlen/<sub>/current/ (or /assets/ for /assets/*).
-	rewrite * /served/{http.request.host}{uri}
-	reverse_proxy 127.0.0.1:3000
+	handle {
+		rewrite * /served/{http.request.host}{uri}
+		reverse_proxy 127.0.0.1:3000
+	}
 }

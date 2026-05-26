@@ -190,14 +190,26 @@ export async function verifyDomain(params: {
     records = await dnsPromises.resolveTxt(challengeHost);
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code ?? "UNKNOWN";
-    if (code === "ENOTFOUND" || code === "ENODATA") {
+    // Treat every DNS failure as "TXT not yet present" except for an
+    // outright resolver bug (where the resolver itself is broken). This
+    // is the user-friendly default — most of the time the TXT just isn't
+    // propagated yet, and a generic "DNS error" message confuses them.
+    // Node's resolver on Windows/Linux can return ENOTFOUND, ENODATA,
+    // EREFUSED, ENXDOMAIN, or even unmapped codes depending on the OS
+    // and which upstream server answered — collapse them all here.
+    const transientErrors = new Set(["ESERVFAIL", "ETIMEOUT", "EAI_AGAIN"]);
+    if (transientErrors.has(code)) {
       return {
         ok: false,
-        reason: "txt-missing",
-        detail: `no TXT record at ${challengeHost}`,
+        reason: "dns-error",
+        detail: `${code}: DNS resolver returned an error. Try again in a moment.`,
       };
     }
-    return { ok: false, reason: "dns-error", detail: `${code}: DNS lookup failed` };
+    return {
+      ok: false,
+      reason: "txt-missing",
+      detail: `No TXT record at ${challengeHost} yet (${code}). Make sure you added it at your DNS provider and waited for propagation (~1–5 min).`,
+    };
   }
 
   // Each record is an array of strings (TXT records can be split into multiple

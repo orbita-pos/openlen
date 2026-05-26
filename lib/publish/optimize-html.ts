@@ -32,6 +32,16 @@ export interface OptimizeResult {
 export async function optimizeHtmlForProduction(
   html: string,
 ): Promise<OptimizeResult> {
+  // Dev-mode skip: Next.js webpack on Windows mangles tailwindcss's
+  // internal asset paths (preflight.css resolves to a phantom `C:\ROOT\…`
+  // prefix), so the publish flow crashes. The Tailwind bake matters only
+  // for prod Lighthouse — leave the CDN <script> intact when developing
+  // locally; standalone prod builds (next start / systemd unit) resolve
+  // the package correctly and the bake still happens there.
+  if (process.env.NODE_ENV !== "production") {
+    return { html, baked: false, cssBytes: 0 };
+  }
+
   const $ = cheerio.load(html);
 
   // Match any tailwind CDN URL (cdn.tailwindcss.com, with or without
@@ -45,7 +55,25 @@ export async function optimizeHtmlForProduction(
     return { html, baked: false, cssBytes: 0 };
   }
 
-  const css = await generateTailwindCss(html);
+  // The Tailwind bake is a Lighthouse-score optimization — not load-
+  // bearing for functionality. Next.js's standalone tracer sometimes
+  // misses tailwindcss's bundled assets (preflight.css under
+  // `node_modules/tailwindcss/lib/css/`), which throws ENOENT inside
+  // the PostCSS pipeline at publish time. When that happens, fall back
+  // to the unoptimized HTML: the page still works via the CDN <script>;
+  // it just doesn't get the inline-CSS perf win. Better that than a
+  // broken publish.
+  let css: string;
+  try {
+    css = await generateTailwindCss(html);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[optimize-html] Tailwind bake failed; serving unoptimized HTML:",
+      err instanceof Error ? err.message : err,
+    );
+    return { html, baked: false, cssBytes: 0 };
+  }
   cdnScript.replaceWith(
     `<style data-tw-baked>\n${css}\n</style>`,
   );

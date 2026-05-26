@@ -20,6 +20,8 @@
     "templates:bootstrap-featured-column": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/bootstrap-featured-column.ts",
     "domains:bootstrap": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/bootstrap-custom-domains.ts",
     "domain-connect:keygen": "tsx --tsconfig tsconfig.eval.json scripts/domain-connect/generate-key.ts",
+    "deploy:prod": "powershell -ExecutionPolicy Bypass -File infra/scripts/deploy.ps1",
+    "users:set-plan": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/users/set-plan.ts",
     "openlen-images:process": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/openlen-images/process.ts",
     "lume:remove-bg": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/openlen-images/remove-bg-lume.ts",
     "reset-quota": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/reset-quota.ts",
