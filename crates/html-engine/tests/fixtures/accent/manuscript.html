@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Manuscript — Where readers actually read.</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;1,8..60,400;1,8..60,500&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#FAFAF9;
+    --paper:#F4F1EB;
+    --ink:#1A1714;
+    --ink-2:#5C544B;
+    --ink-3:#8E867B;
+    --accent:var(--ol-accent);
+    --rule:rgba(26,23,20,0.10);
+    --rule-soft:rgba(26,23,20,0.06);
+  }
+  html,body{background:var(--bg);color:var(--ink);}
+  body{
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+    font-feature-settings:"ss01","cv11";
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  .serif{font-family: var(--ol-font-display),Georgia,serif;font-optical-sizing:auto;letter-spacing:-0.016em;}
+  .display{font-family: var(--ol-font-display),Georgia,serif;font-optical-sizing:auto;line-height:0.94;letter-spacing:-0.028em;}
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace;}
+  em.editorial{font-style:italic;color:var(--accent);font-feature-settings:"ss01";font-weight:500;}
+  .tnum{font-variant-numeric:tabular-nums;}
+  .accent-line{display:inline-block;width:28px;height:1px;background:currentColor;opacity:0.4;vertical-align:middle;margin-right:10px;transform:translateY(-3px);}
+  .section-marker{font-family:'JetBrains Mono',monospace;font-size: calc(11px * var(--ol-text-scale));letter-spacing:0.18em;text-transform:uppercase;color:var(--ink-2);}
+  .dropcap::first-letter{
+    font-family: var(--ol-font-display),Georgia,serif;
+    float:left;font-size: calc(4.5em * var(--ol-text-scale));line-height:0.85;padding:0.06em 0.12em 0 0;font-weight:400;color:var(--accent);font-style:italic;
+  }
+  .ul-link{position:relative;display:inline-block;}
+  .ul-link::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:1px;background:currentColor;transform:scaleX(0);transform-origin:right center;transition:transform 280ms cubic-bezier(.2,.7,.2,1);}
+  .ul-link:hover::after{transform:scaleX(1);transform-origin:left center;}
+  .mesh{
+    background-image:
+      radial-gradient(60% 50% at 18% 18%, rgba(var(--ol-accent-r), 0.08), transparent 65%),
+      radial-gradient(45% 40% at 90% 12%, rgba(var(--ol-accent-r), 0.05), transparent 70%),
+      radial-gradient(50% 45% at 78% 84%, rgba(var(--ol-accent-r), 0.045), transparent 70%);
+  }
+  .papergrid{
+    background-image:
+      linear-gradient(rgba(26,23,20,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(26,23,20,0.04) 1px, transparent 1px);
+    background-size:32px 32px;
+  }
+  .pulse-dot{position:relative;display:inline-block;width:7px;height:7px;border-radius:999px;background:var(--accent);box-shadow:0 0 0 0 rgba(var(--ol-accent-r), 0.55);animation:pulse 1.8s ease-out infinite;}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(var(--ol-accent-r), 0.5);}
+    70%{box-shadow:0 0 0 9px rgba(var(--ol-accent-r), 0);}
+    100%{box-shadow:0 0 0 0 rgba(var(--ol-accent-r), 0);}
+  }
+  .btn-primary{transition:transform 120ms ease, background 120ms ease;}
+  .btn-primary:hover{transform:translateY(-1px);background:#9D5A2C;}
+  .btn-ghost{transition:transform 120ms ease, border-color 120ms ease;}
+  .btn-ghost:hover{transform:translateY(-1px);border-color:rgba(26,23,20,0.35);}
+  .marquee{display:flex;gap:64px;animation:marq 38s linear infinite;width:max-content;align-items:center;}
+  @keyframes marq{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+  .marquee-mask{mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);}
+  .hairline{border-color:var(--rule);}
+  details > summary{list-style:none;cursor:pointer;}
+  details > summary::-webkit-details-marker{display:none;}
+  details[open] .faq-plus{transform:rotate(45deg);}
+  .faq-plus{transition:transform 200ms ease;}
+  .tabbar{backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);background:rgba(250,250,249,0.7);}
+  ::selection{background:rgba(var(--ol-accent-r), 0.22);color:var(--ink);}
+  .scroll-arrow{transition:transform 160ms ease;}
+  a:hover .scroll-arrow{transform:translateX(3px);}
+  /* serrated edge / paper folio */
+  .deckle{
+    --c:var(--rule);
+    background:
+      linear-gradient(45deg,transparent 50%,var(--c) 50%) top left/8px 8px repeat-x,
+      linear-gradient(-45deg,transparent 50%,var(--c) 50%) top left/8px 8px repeat-x;
+    height:4px;
+  }
+</style>
+<script data-ol-radius>(function(){var w=window;w.tailwind=w.tailwind||{};var c=w.tailwind.config||{};var t=c.theme||{};var e=t.extend||{};e.borderRadius=Object.assign({},e.borderRadius,{sm:'var(--ol-r-sm)',DEFAULT:'var(--ol-r)',md:'var(--ol-r-md)',lg:'var(--ol-r-lg)',xl:'var(--ol-r-xl)','2xl':'var(--ol-r-2xl)','3xl':'var(--ol-r-3xl)'});w.tailwind.config=Object.assign({},c,{theme:Object.assign({},t,{extend:Object.assign({},e)})});})();</script><style data-ol-radius>:root{--ol-r-scale:1;--ol-r-sm:calc(0.125rem*var(--ol-r-scale));--ol-r:calc(0.25rem*var(--ol-r-scale));--ol-r-md:calc(0.375rem*var(--ol-r-scale));--ol-r-lg:calc(0.5rem*var(--ol-r-scale));--ol-r-xl:calc(0.75rem*var(--ol-r-scale));--ol-r-2xl:calc(1rem*var(--ol-r-scale));--ol-r-3xl:calc(1.5rem*var(--ol-r-scale));}</style><script data-ol-space>(function(){var w=window;w.tailwind=w.tailwind||{};var c=w.tailwind.config||{};var t=c.theme||{};var e=t.extend||{};var m={'0':'var(--ol-space-0)','px':'var(--ol-space-px)','0.5':'var(--ol-space-0_5)','1':'var(--ol-space-1)','1.5':'var(--ol-space-1_5)','2':'var(--ol-space-2)','2.5':'var(--ol-space-2_5)','3':'var(--ol-space-3)','3.5':'var(--ol-space-3_5)','4':'var(--ol-space-4)','5':'var(--ol-space-5)','6':'var(--ol-space-6)','7':'var(--ol-space-7)','8':'var(--ol-space-8)','9':'var(--ol-space-9)','10':'var(--ol-space-10)','11':'var(--ol-space-11)','12':'var(--ol-space-12)','14':'var(--ol-space-14)','16':'var(--ol-space-16)','20':'var(--ol-space-20)','24':'var(--ol-space-24)','28':'var(--ol-space-28)','32':'var(--ol-space-32)','36':'var(--ol-space-36)','40':'var(--ol-space-40)','44':'var(--ol-space-44)','48':'var(--ol-space-48)','52':'var(--ol-space-52)','56':'var(--ol-space-56)','60':'var(--ol-space-60)','64':'var(--ol-space-64)','72':'var(--ol-space-72)','80':'var(--ol-space-80)','96':'var(--ol-space-96)'};e.padding=Object.assign({},e.padding,m);e.margin=Object.assign({},e.margin,m);e.gap=Object.assign({},e.gap,m);w.tailwind.config=Object.assign({},c,{theme:Object.assign({},t,{extend:Object.assign({},e)})});})();</script><style data-ol-space>:root{--ol-space-scale:1;--ol-space-0:calc(0px*var(--ol-space-scale));--ol-space-px:calc(1px*var(--ol-space-scale));--ol-space-0_5:calc(0.125rem*var(--ol-space-scale));--ol-space-1:calc(0.25rem*var(--ol-space-scale));--ol-space-1_5:calc(0.375rem*var(--ol-space-scale));--ol-space-2:calc(0.5rem*var(--ol-space-scale));--ol-space-2_5:calc(0.625rem*var(--ol-space-scale));--ol-space-3:calc(0.75rem*var(--ol-space-scale));--ol-space-3_5:calc(0.875rem*var(--ol-space-scale));--ol-space-4:calc(1rem*var(--ol-space-scale));--ol-space-5:calc(1.25rem*var(--ol-space-scale));--ol-space-6:calc(1.5rem*var(--ol-space-scale));--ol-space-7:calc(1.75rem*var(--ol-space-scale));--ol-space-8:calc(2rem*var(--ol-space-scale));--ol-space-9:calc(2.25rem*var(--ol-space-scale));--ol-space-10:calc(2.5rem*var(--ol-space-scale));--ol-space-11:calc(2.75rem*var(--ol-space-scale));--ol-space-12:calc(3rem*var(--ol-space-scale));--ol-space-14:calc(3.5rem*var(--ol-space-scale));--ol-space-16:calc(4rem*var(--ol-space-scale));--ol-space-20:calc(5rem*var(--ol-space-scale));--ol-space-24:calc(6rem*var(--ol-space-scale));--ol-space-28:calc(7rem*var(--ol-space-scale));--ol-space-32:calc(8rem*var(--ol-space-scale));--ol-space-36:calc(9rem*var(--ol-space-scale));--ol-space-40:calc(10rem*var(--ol-space-scale));--ol-space-44:calc(11rem*var(--ol-space-scale));--ol-space-48:calc(12rem*var(--ol-space-scale));--ol-space-52:calc(13rem*var(--ol-space-scale));--ol-space-56:calc(14rem*var(--ol-space-scale));--ol-space-60:calc(15rem*var(--ol-space-scale));--ol-space-64:calc(16rem*var(--ol-space-scale));--ol-space-72:calc(18rem*var(--ol-space-scale));--ol-space-80:calc(20rem*var(--ol-space-scale));--ol-space-96:calc(24rem*var(--ol-space-scale));}</style><script data-ol-type>(function(){var w=window;w.tailwind=w.tailwind||{};var c=w.tailwind.config||{};var t=c.theme||{};var e=t.extend||{};e.fontSize=Object.assign({},e.fontSize,{'xs':['var(--ol-text-xs)','var(--ol-lh-xs)'],'sm':['var(--ol-text-sm)','var(--ol-lh-sm)'],'base':['var(--ol-text-base)','var(--ol-lh-base)'],'lg':['var(--ol-text-lg)','var(--ol-lh-lg)'],'xl':['var(--ol-text-xl)','var(--ol-lh-xl)'],'2xl':['var(--ol-text-2xl)','var(--ol-lh-2xl)'],'3xl':['var(--ol-text-3xl)','var(--ol-lh-3xl)'],'4xl':['var(--ol-text-4xl)','var(--ol-lh-4xl)'],'5xl':['var(--ol-text-5xl)','var(--ol-lh-5xl)'],'6xl':['var(--ol-text-6xl)','var(--ol-lh-6xl)'],'7xl':['var(--ol-text-7xl)','var(--ol-lh-7xl)'],'8xl':['var(--ol-text-8xl)','var(--ol-lh-8xl)'],'9xl':['var(--ol-text-9xl)','var(--ol-lh-9xl)']});w.tailwind.config=Object.assign({},c,{theme:Object.assign({},t,{extend:Object.assign({},e)})});})();</script><style data-ol-type>:root{--ol-text-scale:1;--ol-text-xs:calc(0.75rem*var(--ol-text-scale));--ol-lh-xs:calc(1rem*var(--ol-text-scale));--ol-text-sm:calc(0.875rem*var(--ol-text-scale));--ol-lh-sm:calc(1.25rem*var(--ol-text-scale));--ol-text-base:calc(1rem*var(--ol-text-scale));--ol-lh-base:calc(1.5rem*var(--ol-text-scale));--ol-text-lg:calc(1.125rem*var(--ol-text-scale));--ol-lh-lg:calc(1.75rem*var(--ol-text-scale));--ol-text-xl:calc(1.25rem*var(--ol-text-scale));--ol-lh-xl:calc(1.75rem*var(--ol-text-scale));--ol-text-2xl:calc(1.5rem*var(--ol-text-scale));--ol-lh-2xl:calc(2rem*var(--ol-text-scale));--ol-text-3xl:calc(1.875rem*var(--ol-text-scale));--ol-lh-3xl:calc(2.25rem*var(--ol-text-scale));--ol-text-4xl:calc(2.25rem*var(--ol-text-scale));--ol-lh-4xl:calc(2.5rem*var(--ol-text-scale));--ol-text-5xl:calc(3rem*var(--ol-text-scale));--ol-lh-5xl:calc(1*var(--ol-text-scale));--ol-text-6xl:calc(3.75rem*var(--ol-text-scale));--ol-lh-6xl:calc(1*var(--ol-text-scale));--ol-text-7xl:calc(4.5rem*var(--ol-text-scale));--ol-lh-7xl:calc(1*var(--ol-text-scale));--ol-text-8xl:calc(6rem*var(--ol-text-scale));--ol-lh-8xl:calc(1*var(--ol-text-scale));--ol-text-9xl:calc(8rem*var(--ol-text-scale));--ol-lh-9xl:calc(1*var(--ol-text-scale));}</style><link data-ol-font rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist:wght@400;500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Outfit:wght@400;500;600;700&amp;family=Space+Grotesk:wght@400;500;600;700&amp;family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&amp;family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&amp;family=Crimson+Pro:wght@400;500;600;700&amp;family=Playfair+Display:wght@400;500;600;700&amp;family=DM+Serif+Display&amp;family=Instrument+Serif&amp;display=swap"><style data-ol-font>:root{--ol-font-display:'Source Serif 4',serif;}</style><style data-ol-accent>:root{--ol-accent:#b36a3a;--ol-accent-r:179,106,58;}</style></head>
+<body class="min-h-screen">
+
+<!-- ============ TABBAR ============ -->
+<div class="fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-[680px] w-[calc(100%-32px)]">
+  <div class="tabbar border hairline rounded-full pl-5 pr-2 py-2 flex items-center gap-5 text-[13px]">
+    <div class="flex items-center gap-2">
+      <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="6" stroke="#1A1714" stroke-width="1.2" fill="none"/><path d="M4 9c0-2 6-2 6 0" stroke="#B36A3A" stroke-width="1.2" fill="none"/></svg>
+      <span class="serif text-[15px]">Manuscript</span>
+    </div>
+    <span class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--ink-3)] hidden sm:inline">§ Vol III</span>
+    <nav class="ml-auto flex items-center gap-4 text-[color:var(--ink-2)]">
+      <a href="#craft" class="ul-link hidden sm:inline">Craft</a>
+      <a href="#pricing" class="ul-link hidden sm:inline">Pricing</a>
+      <a href="#writers" class="ul-link hidden md:inline">Writers</a>
+      <a href="#start" class="btn-primary inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] text-[#FAFAF9] font-medium px-3.5 py-1.5">Start writing</a>
+    </nav>
+  </div>
+</div>
+
+<!-- ============ HERO ============ -->
+<section class="relative overflow-hidden mesh">
+  <div class="absolute inset-0 papergrid opacity-70 pointer-events-none"></div>
+  <div class="relative max-w-[1200px] mx-auto px-6 md:px-10 pt-28 md:pt-36 pb-16 md:pb-24">
+
+    <header class="flex items-center justify-between mb-20 md:mb-28">
+      <div class="flex items-center gap-2.5">
+        <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="9.4" stroke="#1A1714" stroke-width="1.3" fill="none"/><path d="M6 14c0-3 10-3 10 0" stroke="#B36A3A" stroke-width="1.3" fill="none"/></svg>
+        <span class="serif text-xl">Manuscript</span>
+        <span class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--ink-3)] ml-2 hidden sm:inline">Vol. III · 2026</span>
+      </div>
+      <nav class="hidden md:flex items-center gap-7 text-sm text-[color:var(--ink-2)]">
+        <a href="#craft" class="ul-link">Craft</a>
+        <a href="#pricing" class="ul-link">Pricing</a>
+        <a href="#writers" class="ul-link">Writers</a>
+        <a href="#faq" class="ul-link">Questions</a>
+        <a href="#start" class="btn-primary inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] text-[#FAFAF9] font-medium px-4 py-2">Start writing →</a>
+      </nav>
+      <a href="#start" class="md:hidden btn-primary rounded-full bg-[color:var(--accent)] text-[#FAFAF9] font-medium px-3.5 py-1.5 text-sm">Start</a>
+    </header>
+
+    <div class="flex items-center gap-3 mb-9">
+      <span class="pulse-dot"></span>
+      <span class="section-marker"><span class="accent-line"></span>§ 01 · A quiet home for serious writing</span>
+    </div>
+
+    <h1 class="display text-[clamp(52px,8.8vw,136px)] max-w-[13ch] font-normal">
+      Where readers <br class="hidden sm:block"/>actually <em class="editorial">read.</em>
+    </h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 mt-14 md:mt-20">
+      <div class="md:col-span-7 max-w-[58ch]">
+        <p class="serif text-[19px] md:text-[20px] leading-[1.55] opacity-95">
+          A newsletter platform without growth hacks, recommendation engines, or a feed. Just an editor that gets out of your way, an audience you actually own, and a reading experience built for the kind of pieces that take six drafts to get right.
+        </p>
+      </div>
+      <div class="md:col-span-5 flex md:flex-col gap-3 md:gap-4 md:items-end">
+        <a href="#start" class="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--accent)] text-[#FAFAF9] font-medium px-5 py-3 text-[15px]">Start a publication →</a>
+        <a href="#craft" class="btn-ghost inline-flex items-center justify-center gap-2 rounded-full border hairline text-[color:var(--ink)] font-medium px-5 py-3 text-[15px]">See a sample issue</a>
+        <a href="#letter" class="serif italic text-[color:var(--ink-2)] text-[15px] mt-1 ul-link hidden md:inline-flex items-center gap-2">A letter to our writers <span class="scroll-arrow">→</span></a>
+      </div>
+    </div>
+
+    <!-- metric strip -->
+    <div class="mt-20 md:mt-28 border-t hairline pt-8">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-y-8 md:gap-y-0">
+        <div class="md:pr-8 md:border-r hairline">
+          <div class="section-marker mb-3"><span class="accent-line"></span>Writers on platform</div>
+          <div class="display text-[44px] md:text-[56px] tnum">1,402</div>
+          <div class="mono text-[11px] tracking-[0.08em] uppercase text-[color:var(--ink-3)] mt-1">Hand-reviewed applications</div>
+        </div>
+        <div class="md:px-8 md:border-r hairline">
+          <div class="section-marker mb-3"><span class="accent-line"></span>Aggregate revenue</div>
+          <div class="display text-[44px] md:text-[56px] tnum">$1.2M</div>
+          <div class="mono text-[11px] tracking-[0.08em] uppercase text-[color:var(--ink-3)] mt-1">Paid to writers, last 12 mo.</div>
+        </div>
+        <div class="md:px-8 md:border-r hairline">
+          <div class="section-marker mb-3"><span class="accent-line"></span>Median issue</div>
+          <div class="display text-[44px] md:text-[56px] tnum">1,800<span class="text-[color:var(--ink-3)] text-[24px] md:text-[28px] ml-1">w</span></div>
+          <div class="mono text-[11px] tracking-[0.08em] uppercase text-[color:var(--ink-3)] mt-1">Twice the industry average</div>
+        </div>
+        <div class="md:pl-8">
+          <div class="section-marker mb-3"><span class="accent-line"></span>Open rate (avg.)</div>
+          <div class="display text-[44px] md:text-[56px] tnum">62<span class="text-[color:var(--ink-3)] text-[28px] md:text-[34px] ml-0.5">%</span></div>
+          <div class="mono text-[11px] tracking-[0.08em] uppercase text-[color:var(--ink-3)] mt-1">P50 across last 90 days</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LOGO CLOUD ============ -->
+<section class="border-t hairline py-12 md:py-14">
+  <div class="max-w-[1200px] mx-auto px-6 md:px-10">
+    <div class="section-marker mb-7"><span class="accent-line"></span>Home to writers whose names you'll know</div>
+    <div class="marquee-mask overflow-hidden">
+      <div class="marquee text-[color:var(--ink-2)]">
+        <span class="serif italic text-[26px]">Halcyon Review</span>
+        <span class="text-[26px] tracking-tight" style="font-family:Inter;font-weight:500">forecast.</span>
+        <span class="serif text-[26px]">The Quartermast</span>
+        <span class="text-[26px] tracking-[0.18em] mono">NIMBUS</span>
+        <span class="serif italic text-[26px]">Coast &amp; Country</span>
+        <span class="text-[26px] tracking-tight" style="font-family:Inter">Northwind</span>
+        <span class="serif text-[26px]">Brightwave</span>
+        <span class="text-[26px] tracking-[0.06em]" style="font-family:Inter;font-weight:500">atrium</span>
+        <span class="serif italic text-[26px]">Mercury Notes</span>
+        <span class="serif text-[26px]">Linnea Letters</span>
+        <!-- dup -->
+        <span class="serif italic text-[26px]">Halcyon Review</span>
+        <span class="text-[26px] tracking-tight" style="font-family:Inter;font-weight:500">forecast.</span>
+        <span class="serif text-[26px]">The Quartermast</span>
+        <span class="text-[26px] tracking-[0.18em] mono">NIMBUS</span>
+        <span class="serif italic text-[26px]">Coast &amp; Country</span>
+        <span class="text-[26px] tracking-tight" style="font-family:Inter">Northwind</span>
+        <span class="serif text-[26px]">Brightwave</span>
+        <span class="text-[26px] tracking-[0.06em]" style="font-family:Inter;font-weight:500">atrium</span>
+        <span class="serif italic text-[26px]">Mercury Notes</span>
+        <span class="serif text-[26px]">Linnea Letters</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PULL QUOTE ============ -->
+<section id="letter" class="border-y hairline" style="background:var(--paper);">
+  <div class="max-w-[1100px] mx-auto px-6 md:px-10 py-24 md:py-32">
+    <div class="section-marker mb-10"><span class="accent-line"></span>§ 02 · A letter to our writers</div>
+    <blockquote class="display text-[clamp(40px,5.6vw,88px)] max-w-[26ch]">
+      “A newsletter is a private channel between one writer and a few hundred readers. Treat it with that <em class="editorial">respect.</em>”
+    </blockquote>
+    <div class="mt-12 flex items-center gap-4">
+      <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[color:var(--ol-accent)] to-[#6E3E1F]"></div>
+      <div>
+        <div class="serif text-[15px]">— Eleanor Wren, founder</div>
+        <div class="mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-3)] mt-1">Brooklyn, NY · drafted spring 2024</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FEATURES — alternating prose ============ -->
+<section id="craft" class="max-w-[1200px] mx-auto px-6 md:px-10 py-24 md:py-32">
+  <div class="section-marker mb-16"><span class="accent-line"></span>§ 03 · The tools, briefly</div>
+
+  <!-- Editor -->
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-16 items-start mb-24 md:mb-32">
+    <div class="md:col-span-7">
+      <h2 class="serif text-[34px] md:text-[44px] leading-[1.05] tracking-[-0.02em] mb-6 max-w-[18ch]">An editor that disappears.</h2>
+      <p class="serif text-[18px] leading-[1.6] opacity-95 max-w-[58ch] dropcap">
+        Source Serif at 19 pixels. A 64-character measure. No toolbar floating in your face. Markdown if you want it, keyboard shortcuts if you need them, and an autosave that ships every 14 seconds. We don't show word counts unless you ask. We don't suggest titles. We don't run grammar checks. You're not writing tweets.
+      </p>
+      <p class="text-[15px] leading-[1.7] text-[color:var(--ink-2)] mt-6 max-w-[58ch]">
+        Drafts are versioned forever. Revert any paragraph to its state on any date. Export the whole archive as a single, valid EPUB whenever you like.
+      </p>
+    </div>
+    <aside class="md:col-span-5 border hairline rounded-md p-7 bg-white shadow-[0_1px_0_rgba(26,23,20,0.04)]">
+      <div class="flex items-center justify-between mb-5">
+        <div class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--ink-3)]">DRAFT · ISSUE 028</div>
+        <div class="mono text-[10px] tracking-[0.08em] uppercase text-[color:var(--ink-3)]">SAVED 14s ago</div>
+      </div>
+      <div class="serif text-[22px] leading-[1.15] tracking-[-0.012em] mb-4">On second drafts, and the people who never see them.</div>
+      <div class="serif text-[15.5px] leading-[1.65] text-[color:var(--ink)] opacity-90 space-y-3">
+        <p><span class="serif italic text-[36px] float-left leading-[0.85] pr-2 pt-1 text-[color:var(--accent)]">F</span>or seven years I refused to publish anything I hadn't rewritten at least four times. Then I started working a job that didn't have time for it.</p>
+        <p class="text-[color:var(--ink-2)]">What I learned, in those years, was that most readers can tell the difference between a third and a fifth draft. They just don't have the vocabulary to say so.</p>
+      </div>
+      <div class="mt-5 pt-4 border-t hairline flex items-center justify-between text-[11px]">
+        <span class="mono text-[color:var(--ink-3)] tracking-[0.08em] uppercase">1,422 words · v.14</span>
+        <span class="mono text-[color:var(--accent)] tracking-[0.08em] uppercase">⌘ + ⇧ + P</span>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Subscribers -->
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-16 items-start mb-24 md:mb-32">
+    <aside class="md:col-span-5 md:order-1 order-2 border hairline rounded-md p-7 bg-white">
+      <div class="flex items-center justify-between mb-6">
+        <div class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--ink-3)]">Subscribers · this quarter</div>
+        <div class="flex items-center gap-2 mono text-[10px] uppercase text-[color:var(--accent)]"><span class="pulse-dot" style="width:6px;height:6px;"></span> Live</div>
+      </div>
+      <div class="display text-[44px] tnum">2,184</div>
+      <div class="mono text-[11px] tracking-[0.08em] uppercase text-[color:var(--ink-3)] mb-6">+182 in 14 days · churn 0.6%</div>
+      <!-- minimal chart -->
+      <svg viewBox="0 0 280 80" class="w-full h-20">
+        <defs>
+          <linearGradient id="ms-area" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#B36A3A" stop-opacity="0.18"/>
+            <stop offset="100%" stop-color="#B36A3A" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path d="M0 60 L20 55 L40 58 L60 50 L80 52 L100 44 L120 46 L140 38 L160 40 L180 30 L200 34 L220 26 L240 22 L260 18 L280 12 L280 80 L0 80 Z" fill="url(#ms-area)"/>
+        <path d="M0 60 L20 55 L40 58 L60 50 L80 52 L100 44 L120 46 L140 38 L160 40 L180 30 L200 34 L220 26 L240 22 L260 18 L280 12" stroke="#B36A3A" stroke-width="1.4" fill="none"/>
+      </svg>
+      <div class="mt-6 grid grid-cols-3 gap-3 text-[11px]">
+        <div class="border hairline rounded-sm p-3"><div class="mono uppercase tracking-[0.1em] text-[color:var(--ink-3)] mb-1">Open</div><div class="serif text-[20px] tnum">64%</div></div>
+        <div class="border hairline rounded-sm p-3"><div class="mono uppercase tracking-[0.1em] text-[color:var(--ink-3)] mb-1">Reply</div><div class="serif text-[20px] tnum">9.2%</div></div>
+        <div class="border hairline rounded-sm p-3"><div class="mono uppercase tracking-[0.1em] text-[color:var(--ink-3)] mb-1">Unsub.</div><div class="serif text-[20px] tnum">0.6%</div></div>
+      </div>
+    </aside>
+    <div class="md:col-span-7 md:order-2 order-1">
+      <h2 class="serif text-[34px] md:text-[44px] leading-[1.05] tracking-[-0.02em] mb-6 max-w-[18ch]">Numbers, when you actually want them.</h2>
+      <p class="serif text-[18px] leading-[1.6] opacity-95 max-w-[58ch]">
+        Open rate, reply rate, churn. That's the dashboard. No engagement scores, no virality multipliers, no notifications when someone leaves. You can dig into a city map of your readers if you want — it's behind two clicks. The default is a single page that takes 14 seconds to scan.
+      </p>
+      <p class="text-[15px] leading-[1.7] text-[color:var(--ink-2)] mt-6 max-w-[58ch]">
+        Import from Substack, beehiiv, Ghost, or Mailchimp with one CSV. We re-verify every address on the way in, so you don't ship your first issue into a graveyard.
+      </p>
+    </div>
+  </div>
+
+  <!-- Ownership -->
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-16 items-start">
+    <div class="md:col-span-7">
+      <h2 class="serif text-[34px] md:text-[44px] leading-[1.05] tracking-[-0.02em] mb-6 max-w-[18ch]">Your list is yours. We mean it.</h2>
+      <p class="serif text-[18px] leading-[1.6] opacity-95 max-w-[58ch]">
+        Export the full subscriber list at any time — with timestamps, source, and verified status — as a CSV you can carry to any other tool tomorrow. No "data portability tier." No locked features for paying customers. The migration is one button. We've had 38 writers leave for other platforms; we kept their referrals on file as a courtesy.
+      </p>
+      <p class="text-[15px] leading-[1.7] text-[color:var(--ink-2)] mt-6 max-w-[58ch]">
+        Custom domains on every plan. We host the DNS. You hold the contract.
+      </p>
+    </div>
+    <aside class="md:col-span-5 border hairline rounded-md p-7 bg-white">
+      <div class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--ink-3)] mb-5">Export · subscribers.csv</div>
+      <div class="font-mono text-[12px] leading-[1.7] text-[color:var(--ink-2)] bg-[color:var(--paper)] rounded-sm border hairline p-4 overflow-hidden">
+        <div><span class="text-[color:var(--accent)]">email</span>,<span class="text-[color:var(--accent)]">joined</span>,<span class="text-[color:var(--accent)]">source</span>,<span class="text-[color:var(--accent)]">verified</span></div>
+        <div>p.anand@…,2024-04-12,import,true</div>
+        <div>marcus@…,2024-04-14,referral,true</div>
+        <div>hana.s@…,2024-05-02,direct,true</div>
+        <div>yusuf@…,2024-05-09,referral,true</div>
+        <div>ines.c@…,2024-06-21,direct,true</div>
+        <div class="text-[color:var(--ink-3)]">… 1,397 more rows</div>
+      </div>
+      <div class="mt-5 flex items-center justify-between">
+        <span class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--ink-3)]">1,402 rows · 184 KB</span>
+        <a class="ul-link serif italic text-[14px] text-[color:var(--accent)]">Download CSV</a>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- ============ COMPARISON SPLIT ============ -->
+<section class="border-t hairline" style="background:var(--paper);">
+  <div class="max-w-[1200px] mx-auto px-6 md:px-10 py-24 md:py-32">
+    <div class="section-marker mb-6"><span class="accent-line"></span>§ 04 · A quiet comparison</div>
+    <h2 class="display text-[44px] md:text-[64px] max-w-[18ch] mb-14">What Manuscript <em class="editorial">isn't.</em></h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-px bg-[color:var(--rule)] border hairline rounded-md overflow-hidden">
+      <div class="bg-[color:var(--bg)] p-8 md:p-10">
+        <div class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--ink-3)] mb-5">The other platforms</div>
+        <ul class="space-y-5 text-[15.5px] leading-[1.6]">
+          <li class="flex gap-3 text-[color:var(--ink-2)]"><span class="mt-[3px] text-[color:var(--ink-3)]">—</span><span>A feed that competes with your audience for their attention.</span></li>
+          <li class="flex gap-3 text-[color:var(--ink-2)]"><span class="mt-[3px] text-[color:var(--ink-3)]">—</span><span>Growth coaching, retention nudges, and "what your peers are doing."</span></li>
+          <li class="flex gap-3 text-[color:var(--ink-2)]"><span class="mt-[3px] text-[color:var(--ink-3)]">—</span><span>Recommendation engines that pair your readers with a hundred other writers.</span></li>
+          <li class="flex gap-3 text-[color:var(--ink-2)]"><span class="mt-[3px] text-[color:var(--ink-3)]">—</span><span>10% platform cuts that quietly compound.</span></li>
+          <li class="flex gap-3 text-[color:var(--ink-2)]"><span class="mt-[3px] text-[color:var(--ink-3)]">—</span><span>Apps with notifications you didn't ask for.</span></li>
+        </ul>
+      </div>
+      <div class="bg-[color:var(--bg)] p-8 md:p-10">
+        <div class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--accent)] mb-5">Manuscript</div>
+        <ul class="space-y-5 text-[15.5px] leading-[1.6]">
+          <li class="flex gap-3"><span class="mt-[3px] text-[color:var(--accent)]">§</span><span>No feed. Email and your archive page — that's the surface.</span></li>
+          <li class="flex gap-3"><span class="mt-[3px] text-[color:var(--accent)]">§</span><span>No nudges. No growth team will email you about your churn.</span></li>
+          <li class="flex gap-3"><span class="mt-[3px] text-[color:var(--accent)]">§</span><span>No recommendations. Your readers come back for <em>you.</em></span></li>
+          <li class="flex gap-3"><span class="mt-[3px] text-[color:var(--accent)]">§</span><span>Flat monthly fee. You keep every cent your readers pay.</span></li>
+          <li class="flex gap-3"><span class="mt-[3px] text-[color:var(--accent)]">§</span><span>Email and a web archive. We never built an app on purpose.</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PRICING ============ -->
+<section id="pricing" class="max-w-[1200px] mx-auto px-6 md:px-10 py-24 md:py-32">
+  <div class="section-marker mb-6"><span class="accent-line"></span>§ 05 · Two plans, paid monthly</div>
+  <h2 class="display text-[44px] md:text-[72px] max-w-[16ch] mb-4">Curated. <em class="editorial">Not tiered.</em></h2>
+  <p class="serif text-[18px] text-[color:var(--ink-2)] max-w-[56ch] mb-16">Both plans include custom domains, unlimited issues, full export, and a hand-written welcome from our editor. No 10% cut on paid subscriptions, ever.</p>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-px bg-[color:var(--rule)] border hairline rounded-md overflow-hidden">
+    <!-- Solo -->
+    <div class="bg-[color:var(--bg)] p-8 md:p-12 flex flex-col">
+      <div class="flex items-baseline justify-between mb-8">
+        <h3 class="serif text-[34px] tracking-[-0.02em]">Solo</h3>
+        <span class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--ink-3)]">§ A</span>
+      </div>
+      <div class="flex items-baseline gap-2 mb-2">
+        <span class="display text-[68px] tnum">$12</span>
+        <span class="serif italic text-[18px] text-[color:var(--ink-2)]">/ month</span>
+      </div>
+      <p class="text-[14px] text-[color:var(--ink-2)] mb-10">For the writer with a list under one thousand. Everything you need, nothing you don't.</p>
+      <ul class="space-y-3.5 text-[14.5px] mb-12">
+        <li class="flex gap-3"><span class="text-[color:var(--accent)]">§</span><span>Up to 1,000 subscribers</span></li>
+        <li class="flex gap-3"><span class="text-[color:var(--accent)]">§</span><span>Unlimited issues, drafts, and archives</span></li>
+        <li class="flex gap-3"><span class="text-[color:var(--accent)]">§</span><span>One custom domain</span></li>
+        <li class="flex gap-3"><span class="text-[color:var(--accent)]">§</span><span>Paid subscriptions, 0% platform fee</span></li>
+      </ul>
+      <a href="#" class="ul-link serif italic text-[17px] mt-auto inline-flex items-center gap-2">Begin with Solo <span class="scroll-arrow">→</span></a>
+    </div>
+    <!-- Studio -->
+    <div class="bg-white p-8 md:p-12 flex flex-col relative">
+      <div class="absolute top-6 right-6 mono text-[10px] tracking-[0.18em] uppercase px-2 py-1 border border-[color:var(--accent)] text-[color:var(--accent)] rounded-sm">Recommended</div>
+      <div class="flex items-baseline justify-between mb-8">
+        <h3 class="serif text-[34px] tracking-[-0.02em]">Studio</h3>
+        <span class="mono text-[10px] tracking-[0.18em] uppercase text-[color:var(--ink-3)]">§ B</span>
+      </div>
+      <div class="flex items-baseline gap-2 mb-2">
+        <span class="display text-[68px] tnum">$39</span>
+        <span class="serif italic text-[18px] text-[color:var(--ink-2)]">/ month</span>
+      </div>
+      <p class="text-[14px] text-[color:var(--ink-2)] mb-10">When the list is serious enough that the platform fee starts to bite. Removes every cap.</p>
+      <ul class="space-y-3.5 text-[14.5px] mb-12">
+        <li class="flex gap-3"><span class="text-[color:var(--accent)]">§</span><span>Unlimited subscribers</span></li>
+        <li class="flex gap-3"><span class="text-[color:var(--accent)]">§</span><span>Up to four custom domains</span></li>
+        <li class="flex gap-3"><span class="text-[color:var(--accent)]">§</span><span>Co-writer access for up to three editors</span></li>
+        <li class="flex gap-3"><span class="text-[color:var(--accent)]">§</span><span>A handwritten welcome from our editor</span></li>
+      </ul>
+      <a href="#" class="ul-link serif italic text-[17px] text-[color:var(--accent)] mt-auto inline-flex items-center gap-2">Begin with Studio <span class="scroll-arrow">→</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TESTIMONIALS ============ -->
+<section id="writers" class="border-t hairline" style="background:var(--paper);">
+  <div class="max-w-[1200px] mx-auto px-6 md:px-10 py-24 md:py-32">
+    <div class="section-marker mb-12"><span class="accent-line"></span>§ 06 · From the writers</div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16">
+      <figure class="border-t hairline pt-10">
+        <blockquote class="serif italic text-[26px] md:text-[30px] leading-[1.25] tracking-[-0.01em]">
+          “I moved 4,208 subscribers off Substack in an afternoon. My open rate climbed 18 points the same week — same list, <em class="editorial">different posture.</em>”
+        </blockquote>
+        <figcaption class="mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-2)] mt-8">— Priya Anand · Writes “Slow Atlas”</figcaption>
+      </figure>
+      <figure class="border-t hairline pt-10">
+        <blockquote class="serif italic text-[26px] md:text-[30px] leading-[1.25] tracking-[-0.01em]">
+          “No feed, no notifications, no nudges. I forget Manuscript exists between issues, which is <em class="editorial">exactly the point.</em>”
+        </blockquote>
+        <figcaption class="mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-2)] mt-8">— Hana Suzuki · Writes “The Long Shore”</figcaption>
+      </figure>
+      <figure class="border-t hairline pt-10">
+        <blockquote class="serif italic text-[26px] md:text-[30px] leading-[1.25] tracking-[-0.01em]">
+          “The editor feels like a typewriter that remembers everything. <em class="editorial">First tool</em> that's let me write at length again.”
+        </blockquote>
+        <figcaption class="mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-2)] mt-8">— Ines Calderón · Writes “Field Notes”</figcaption>
+      </figure>
+      <figure class="border-t hairline pt-10">
+        <blockquote class="serif italic text-[26px] md:text-[30px] leading-[1.25] tracking-[-0.01em]">
+          “I cancelled three other subscriptions to pay $39. The platform fee math alone made it back in <em class="editorial">eleven days.</em>”
+        </blockquote>
+        <figcaption class="mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-2)] mt-8">— Marcus Tobin · Writes “Forecast Letters”</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section id="faq" class="max-w-[1100px] mx-auto px-6 md:px-10 py-24 md:py-32">
+  <div class="section-marker mb-10"><span class="accent-line"></span>§ 07 · A few questions</div>
+  <h2 class="display text-[40px] md:text-[60px] mb-16 max-w-[20ch]">Things sensible people ask <em class="editorial">before signing up.</em></h2>
+
+  <div class="divide-y divide-[color:var(--rule)] border-y hairline">
+    <details class="group py-7" open>
+      <summary class="flex items-start gap-8 md:gap-12">
+        <span class="mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-3)] mt-2 tnum w-20 shrink-0">§ FAQ.01</span>
+        <h3 class="serif text-[22px] md:text-[26px] tracking-[-0.01em] flex-1">How do migrations from Substack actually work — paid subscriptions and all?</h3>
+        <span class="faq-plus serif text-[28px] text-[color:var(--ink-3)] leading-none">+</span>
+      </summary>
+      <p class="mt-5 ml-0 md:ml-32 max-w-[60ch] text-[15px] leading-[1.7] text-[color:var(--ink-2)]">We pull your subscriber list and your paying customers via the Substack export. Stripe customers transfer with payment methods intact — no one has to re-enter a card. The full migration averages 38 minutes; the longest on record was three hours.</p>
+    </details>
+    <details class="group py-7">
+      <summary class="flex items-start gap-8 md:gap-12">
+        <span class="mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-3)] mt-2 tnum w-20 shrink-0">§ FAQ.02</span>
+        <h3 class="serif text-[22px] md:text-[26px] tracking-[-0.01em] flex-1">Why no app? My readers ask, and I'd like to be able to point them somewhere.</h3>
+        <span class="faq-plus serif text-[28px] text-[color:var(--ink-3)] leading-none">+</span>
+      </summary>
+      <p class="mt-5 ml-0 md:ml-32 max-w-[60ch] text-[15px] leading-[1.7] text-[color:var(--ink-2)]">An app introduces a feed; a feed pits writers against one another for attention. We decided that trade-off wasn't worth it. The reading experience on web and email is the same — Source Serif, 64-character measure, no chrome.</p>
+    </details>
+    <details class="group py-7">
+      <summary class="flex items-start gap-8 md:gap-12">
+        <span class="mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-3)] mt-2 tnum w-20 shrink-0">§ FAQ.03</span>
+        <h3 class="serif text-[22px] md:text-[26px] tracking-[-0.01em] flex-1">What does deliverability look like at 50,000+ subscribers?</h3>
+        <span class="faq-plus serif text-[28px] text-[color:var(--ink-3)] leading-none">+</span>
+      </summary>
+      <p class="mt-5 ml-0 md:ml-32 max-w-[60ch] text-[15px] leading-[1.7] text-[color:var(--ink-2)]">We send from dedicated IP pools warmed per publication. Median inbox placement across Gmail, Outlook, Fastmail, and iCloud is 98.4% on lists over 50K. SPF, DKIM, DMARC, and BIMI are configured on every custom domain at setup — there's nothing for you to copy-paste.</p>
+    </details>
+    <details class="group py-7">
+      <summary class="flex items-start gap-8 md:gap-12">
+        <span class="mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-3)] mt-2 tnum w-20 shrink-0">§ FAQ.04</span>
+        <h3 class="serif text-[22px] md:text-[26px] tracking-[-0.01em] flex-1">Can I keep my existing domain and brand without a "powered by" line?</h3>
+        <span class="faq-plus serif text-[28px] text-[color:var(--ink-3)] leading-none">+</span>
+      </summary>
+      <p class="mt-5 ml-0 md:ml-32 max-w-[60ch] text-[15px] leading-[1.7] text-[color:var(--ink-2)]">Yes. No "powered by" badge on either plan. Your domain, your design tokens (we expose 28 CSS variables), your name on the masthead. We don't put our logo in your reader's inbox.</p>
+    </details>
+    <details class="group py-7">
+      <summary class="flex items-start gap-8 md:gap-12">
+        <span class="mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-3)] mt-2 tnum w-20 shrink-0">§ FAQ.05</span>
+        <h3 class="serif text-[22px] md:text-[26px] tracking-[-0.01em] flex-1">What happens to my archive and subscribers if Manuscript ever shuts down?</h3>
+        <span class="faq-plus serif text-[28px] text-[color:var(--ink-3)] leading-none">+</span>
+      </summary>
+      <p class="mt-5 ml-0 md:ml-32 max-w-[60ch] text-[15px] leading-[1.7] text-[color:var(--ink-2)]">A 90-day sunset commitment is written into our terms. You'd receive a full export — subscribers, issues as standards-compliant HTML and EPUB, paid customers as a Stripe portable bundle — plus six months of email forwarding on your custom domain at no cost.</p>
+    </details>
+  </div>
+</section>
+
+<!-- ============ FINAL CTA ============ -->
+<section id="start" class="border-t hairline">
+  <div class="max-w-[1200px] mx-auto px-6 md:px-10 py-28 md:py-40 text-center">
+    <div class="section-marker mb-8 inline-flex"><span class="accent-line"></span>§ 08 · A small invitation</div>
+    <h2 class="display text-[clamp(48px,8vw,112px)] max-w-[20ch] mx-auto">Write the issue that took you <em class="editorial">six drafts to get right.</em></h2>
+    <p class="serif text-[18px] md:text-[20px] text-[color:var(--ink-2)] max-w-[58ch] mx-auto mt-8">14-day trial, no card. Migrate from your current platform in one afternoon. Our editor reviews every new publication personally — usually within 18 hours.</p>
+    <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+      <a href="#" class="btn-primary inline-flex items-center gap-2 rounded-full bg-[color:var(--accent)] text-[#FAFAF9] font-medium px-6 py-3.5 text-[15px]">Begin your publication →</a>
+      <a href="#" class="ul-link serif italic text-[17px] inline-flex items-center gap-2">Or read a sample issue first <span class="scroll-arrow">→</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="border-t hairline" style="background:var(--paper);">
+  <div class="max-w-[1200px] mx-auto px-6 md:px-10 py-16">
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div class="flex items-center gap-2.5">
+        <svg width="18" height="18" viewBox="0 0 22 22"><circle cx="11" cy="11" r="9.4" stroke="#1A1714" stroke-width="1.3" fill="none"/><path d="M6 14c0-3 10-3 10 0" stroke="#B36A3A" stroke-width="1.3" fill="none"/></svg>
+        <span class="serif text-lg">Manuscript</span>
+        <span class="serif italic text-[14px] text-[color:var(--ink-2)] ml-3">Made in Brooklyn &amp; Lisbon.</span>
+      </div>
+      <div class="mono text-[11px] tracking-[0.18em] uppercase text-[color:var(--ink-3)]">© MMXXVI Manuscript Press · Vol. III · No. 04</div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

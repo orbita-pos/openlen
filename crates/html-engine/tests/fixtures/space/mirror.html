@@ -1,0 +1,876 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mirror — Runtime guardrails for LLM applications</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0F0F0F;
+    --bg-2: #131313;
+    --hair: rgba(255,255,255,0.06);
+    --hair-2: rgba(255,255,255,0.10);
+    --fg: #EDEDED;
+    --fg-dim: rgba(255,255,255,0.62);
+    --fg-faint: rgba(255,255,255,0.40);
+    --accent: #3ECF8E;
+    --accent-r: 62,207,142;
+    --amber: #F5B86B;
+    --rose: #F47373;
+  }
+  html, body { background: var(--bg); color: var(--fg); }
+  body {
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: "ss01","cv11";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .mono { font-family: 'Geist Mono', ui-monospace, monospace; }
+  .display { letter-spacing: -0.035em; line-height: 0.98; font-weight: 600; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .hairline { border-color: var(--hair); }
+  .hairline-2 { border-color: var(--hair-2); }
+  .dot-grid {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-position: -1px -1px;
+  }
+  .radial-fade-accent {
+    background: radial-gradient(60% 50% at 50% 0%, rgba(var(--accent-r), 0.10), transparent 70%);
+  }
+  .radial-fade-soft {
+    background: radial-gradient(50% 60% at 50% 0%, rgba(var(--accent-r), 0.06), transparent 70%);
+  }
+  @keyframes pulse-dot {
+    0% { box-shadow: 0 0 0 0 rgba(var(--accent-r), 0.55); }
+    70% { box-shadow: 0 0 0 8px rgba(var(--accent-r), 0); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--accent-r), 0); }
+  }
+  .pulse-dot {
+    width: 6px; height: 6px; border-radius: 999px;
+    background: var(--accent);
+    animation: pulse-dot 1.8s infinite;
+  }
+  .pulse-dot-amber { background: var(--amber); animation: pulse-dot 1.8s infinite;
+    box-shadow: 0 0 0 0 rgba(245,184,107,0.55); }
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .marquee-track { animation: marquee 38s linear infinite; }
+  .lift { transition: transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease, border-color 120ms ease; }
+  .lift:hover { transform: translateY(-1px); }
+  .btn-primary {
+    background: var(--accent);
+    color: #062614;
+    font-weight: 600;
+  }
+  .btn-primary:hover { background: #4FE19E; box-shadow: 0 6px 24px -8px rgba(var(--accent-r), 0.5); }
+  .accent { color: var(--accent); }
+  .ring-accent { box-shadow: 0 0 0 1px rgba(var(--accent-r), 0.55), 0 12px 40px -16px rgba(var(--accent-r), 0.3); }
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+  details[open] .faq-plus { transform: rotate(45deg); }
+  .faq-plus { transition: transform 150ms ease; color: var(--accent); }
+  .blink::after {
+    content: "▍"; color: var(--accent); margin-left: 2px;
+    animation: blink 1s steps(2) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+  .row-hover:hover { background: rgba(255,255,255,0.025); }
+  .scrollbar-thin::-webkit-scrollbar { display: none; }
+  .half-tone { color: var(--fg-faint); }
+  /* sparkline */
+  .grid-bg-soft {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .check {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 14px; height: 14px; border-radius: 999px;
+    background: rgba(var(--accent-r), 0.14); color: var(--accent);
+    flex: 0 0 14px;
+  }
+  .dot-divider {
+    background-image: linear-gradient(to right, rgba(255,255,255,0.16) 33%, rgba(255,255,255,0) 0%);
+    background-position: top;
+    background-size: 6px 1px;
+    background-repeat: repeat-x;
+    height: 1px;
+  }
+  .bento-tile { background: linear-gradient(180deg, rgba(255,255,255,0.014), rgba(255,255,255,0)); }
+  .seg-active { background: rgba(255,255,255,0.06); color: var(--fg); }
+  .seg { color: var(--fg-dim); }
+  .yaml-key { color: #C3E8D2; }
+  .yaml-str { color: #E9C58E; }
+  .yaml-num { color: #9EC1F5; }
+  .yaml-cmt { color: rgba(255,255,255,0.32); }
+  .severity-h { background: rgba(244,115,115,0.16); color: #F8A1A1; }
+  .severity-m { background: rgba(245,184,107,0.16); color: #F5C892; }
+  .severity-l { background: rgba(62,207,142,0.14); color: var(--accent); }
+</style>
+<script data-ol-radius>(function(){var w=window;w.tailwind=w.tailwind||{};var c=w.tailwind.config||{};var t=c.theme||{};var e=t.extend||{};e.borderRadius=Object.assign({},e.borderRadius,{sm:'var(--ol-r-sm)',DEFAULT:'var(--ol-r)',md:'var(--ol-r-md)',lg:'var(--ol-r-lg)',xl:'var(--ol-r-xl)','2xl':'var(--ol-r-2xl)','3xl':'var(--ol-r-3xl)'});w.tailwind.config=Object.assign({},c,{theme:Object.assign({},t,{extend:Object.assign({},e)})});})();</script><style data-ol-radius>:root{--ol-r-scale:1;--ol-r-sm:calc(0.125rem*var(--ol-r-scale));--ol-r:calc(0.25rem*var(--ol-r-scale));--ol-r-md:calc(0.375rem*var(--ol-r-scale));--ol-r-lg:calc(0.5rem*var(--ol-r-scale));--ol-r-xl:calc(0.75rem*var(--ol-r-scale));--ol-r-2xl:calc(1rem*var(--ol-r-scale));--ol-r-3xl:calc(1.5rem*var(--ol-r-scale));}</style><script data-ol-space>(function(){var w=window;w.tailwind=w.tailwind||{};var c=w.tailwind.config||{};var t=c.theme||{};var e=t.extend||{};var m={'0':'var(--ol-space-0)','px':'var(--ol-space-px)','0.5':'var(--ol-space-0_5)','1':'var(--ol-space-1)','1.5':'var(--ol-space-1_5)','2':'var(--ol-space-2)','2.5':'var(--ol-space-2_5)','3':'var(--ol-space-3)','3.5':'var(--ol-space-3_5)','4':'var(--ol-space-4)','5':'var(--ol-space-5)','6':'var(--ol-space-6)','7':'var(--ol-space-7)','8':'var(--ol-space-8)','9':'var(--ol-space-9)','10':'var(--ol-space-10)','11':'var(--ol-space-11)','12':'var(--ol-space-12)','14':'var(--ol-space-14)','16':'var(--ol-space-16)','20':'var(--ol-space-20)','24':'var(--ol-space-24)','28':'var(--ol-space-28)','32':'var(--ol-space-32)','36':'var(--ol-space-36)','40':'var(--ol-space-40)','44':'var(--ol-space-44)','48':'var(--ol-space-48)','52':'var(--ol-space-52)','56':'var(--ol-space-56)','60':'var(--ol-space-60)','64':'var(--ol-space-64)','72':'var(--ol-space-72)','80':'var(--ol-space-80)','96':'var(--ol-space-96)'};e.padding=Object.assign({},e.padding,m);e.margin=Object.assign({},e.margin,m);e.gap=Object.assign({},e.gap,m);w.tailwind.config=Object.assign({},c,{theme:Object.assign({},t,{extend:Object.assign({},e)})});})();</script><style data-ol-space>:root{--ol-space-scale:1;--ol-space-0:calc(0px*var(--ol-space-scale));--ol-space-px:calc(1px*var(--ol-space-scale));--ol-space-0_5:calc(0.125rem*var(--ol-space-scale));--ol-space-1:calc(0.25rem*var(--ol-space-scale));--ol-space-1_5:calc(0.375rem*var(--ol-space-scale));--ol-space-2:calc(0.5rem*var(--ol-space-scale));--ol-space-2_5:calc(0.625rem*var(--ol-space-scale));--ol-space-3:calc(0.75rem*var(--ol-space-scale));--ol-space-3_5:calc(0.875rem*var(--ol-space-scale));--ol-space-4:calc(1rem*var(--ol-space-scale));--ol-space-5:calc(1.25rem*var(--ol-space-scale));--ol-space-6:calc(1.5rem*var(--ol-space-scale));--ol-space-7:calc(1.75rem*var(--ol-space-scale));--ol-space-8:calc(2rem*var(--ol-space-scale));--ol-space-9:calc(2.25rem*var(--ol-space-scale));--ol-space-10:calc(2.5rem*var(--ol-space-scale));--ol-space-11:calc(2.75rem*var(--ol-space-scale));--ol-space-12:calc(3rem*var(--ol-space-scale));--ol-space-14:calc(3.5rem*var(--ol-space-scale));--ol-space-16:calc(4rem*var(--ol-space-scale));--ol-space-20:calc(5rem*var(--ol-space-scale));--ol-space-24:calc(6rem*var(--ol-space-scale));--ol-space-28:calc(7rem*var(--ol-space-scale));--ol-space-32:calc(8rem*var(--ol-space-scale));--ol-space-36:calc(9rem*var(--ol-space-scale));--ol-space-40:calc(10rem*var(--ol-space-scale));--ol-space-44:calc(11rem*var(--ol-space-scale));--ol-space-48:calc(12rem*var(--ol-space-scale));--ol-space-52:calc(13rem*var(--ol-space-scale));--ol-space-56:calc(14rem*var(--ol-space-scale));--ol-space-60:calc(15rem*var(--ol-space-scale));--ol-space-64:calc(16rem*var(--ol-space-scale));--ol-space-72:calc(18rem*var(--ol-space-scale));--ol-space-80:calc(20rem*var(--ol-space-scale));--ol-space-96:calc(24rem*var(--ol-space-scale));}</style></head>
+<body class="min-h-screen">
+
+<!-- NAV -->
+<header class="sticky top-0 z-40 backdrop-blur-md bg-[rgba(15,15,15,0.72)] border-b hairline">
+  <div class="max-w-[1240px] mx-auto px-6 h-14 flex items-center justify-between">
+    <a href="#" class="flex items-center gap-2.5">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="10.5" stroke="#EDEDED" stroke-width="1.25"/>
+        <circle cx="12" cy="12" r="6.5" stroke="#3ECF8E" stroke-width="1.25"/>
+        <circle cx="12" cy="12" r="2.4" fill="#3ECF8E"/>
+      </svg>
+      <span class="text-[15px] font-semibold tracking-tight">Mirror</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-7 text-[13.5px] text-[color:var(--fg-dim)]">
+      <a class="hover:text-white lift" href="#">Product</a>
+      <a class="hover:text-white lift" href="#">Docs</a>
+      <a class="hover:text-white lift" href="#">Changelog</a>
+      <a class="hover:text-white lift" href="#pricing">Pricing</a>
+    </nav>
+    <div class="flex items-center gap-4">
+      <a href="#" class="text-[13.5px] text-[color:var(--fg-dim)] hover:text-white hidden sm:inline">Sign in</a>
+      <a href="#" class="btn-primary lift rounded-full pl-3.5 pr-2.5 h-8 inline-flex items-center gap-1 text-[13px]">
+        Start guarding free
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 dot-grid opacity-90 pointer-events-none"></div>
+  <div class="absolute inset-x-0 top-0 h-[640px] radial-fade-accent pointer-events-none"></div>
+  <div class="relative max-w-[1240px] mx-auto px-6 pt-20 pb-14">
+    <div class="flex flex-col items-center text-center max-w-3xl mx-auto">
+      <div class="mono text-[11px] tracking-wider uppercase text-[color:var(--fg-dim)] inline-flex items-center gap-2 border hairline rounded-full pl-2 pr-3 py-1 bg-[rgba(255,255,255,0.02)]">
+        <span class="pulse-dot"></span>
+        v2.4 · OpenTelemetry-native
+      </div>
+      <h1 class="display text-[56px] sm:text-[72px] md:text-[88px] mt-6">
+        Catch your AI <span class="half-tone">breaking the rules</span> before your users do.
+      </h1>
+      <p class="mt-6 max-w-xl text-[15.5px] text-[color:var(--fg-dim)] leading-relaxed">
+        Mirror runs policy evaluations in 4ms at the edge of your agent — redacting PII, blocking tool abuse, and routing flagged conversations to human review without touching your inference path.
+      </p>
+      <div class="mt-8 flex items-center gap-3 flex-wrap justify-center">
+        <a href="#" class="btn-primary lift rounded-full px-4 h-10 inline-flex items-center gap-1.5 text-[14px]">
+          Start guarding free
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#" class="lift rounded-full px-4 h-10 inline-flex items-center text-[14px] border hairline-2 hover:bg-white/[0.04]">
+          Read the docs
+        </a>
+      </div>
+      <div class="mt-6 mono text-[12.5px] text-[color:var(--fg-faint)]">
+        <span class="text-[color:var(--fg-dim)]">$</span> npm i mirror-sdk
+      </div>
+    </div>
+
+    <!-- Hero tiles -->
+    <div class="mt-14 grid grid-cols-1 lg:grid-cols-[1.35fr_1fr] gap-4">
+      <!-- BIG product mockup: live policy timeline -->
+      <div class="rounded-2xl border hairline bg-[var(--bg-2)] overflow-hidden">
+        <div class="flex items-center justify-between px-4 h-10 border-b hairline">
+          <div class="flex items-center gap-2 mono text-[11.5px] text-[color:var(--fg-dim)]">
+            <span class="w-2 h-2 rounded-full bg-[#F47373]/70"></span>
+            <span class="w-2 h-2 rounded-full bg-[#F5B86B]/70"></span>
+            <span class="w-2 h-2 rounded-full bg-[#3ECF8E]/70"></span>
+            <span class="ml-2">mirror › session a8f3c2 · live</span>
+          </div>
+          <div class="mono text-[11px] text-[color:var(--fg-faint)] flex items-center gap-2">
+            <span class="pulse-dot"></span> streaming
+          </div>
+        </div>
+        <div class="grid grid-cols-[110px_120px_1fr_70px] px-4 py-2 mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)] border-b hairline">
+          <div>time</div><div>policy</div><div>verdict</div><div class="text-right">lat.</div>
+        </div>
+        <div class="mono text-[12.5px] divide-y" style="--tw-divide-opacity:1">
+          <div class="grid grid-cols-[110px_120px_1fr_70px] items-center px-4 py-2.5 row-hover">
+            <div class="text-[color:var(--fg-faint)]">14:02:11.402</div>
+            <div class="text-[color:var(--fg-dim)]">pii_redact</div>
+            <div class="flex items-center gap-2">
+              <span class="px-1.5 py-0.5 rounded severity-l text-[10px] tracking-wider">PASS</span>
+              <span class="text-[color:var(--fg-dim)]">2 emails, 1 phone redacted from prompt</span>
+            </div>
+            <div class="text-right text-[color:var(--fg-dim)] tabular">4ms</div>
+          </div>
+          <div class="grid grid-cols-[110px_120px_1fr_70px] items-center px-4 py-2.5 row-hover hairline">
+            <div class="text-[color:var(--fg-faint)]">14:02:11.418</div>
+            <div class="text-[color:var(--fg-dim)]">tool_allowlist</div>
+            <div class="flex items-center gap-2">
+              <span class="px-1.5 py-0.5 rounded severity-l text-[10px] tracking-wider">PASS</span>
+              <span class="text-[color:var(--fg-dim)]">tool=stripe.refund matched policy v12</span>
+            </div>
+            <div class="text-right text-[color:var(--fg-dim)] tabular">1ms</div>
+          </div>
+          <div class="grid grid-cols-[110px_120px_1fr_70px] items-center px-4 py-2.5 row-hover hairline" style="background:rgba(245,184,107,0.04)">
+            <div class="text-[color:var(--fg-faint)]">14:02:11.602</div>
+            <div class="text-[color:var(--fg-dim)]">jailbreak_detect</div>
+            <div class="flex items-center gap-2">
+              <span class="px-1.5 py-0.5 rounded text-[10px] tracking-wider" style="background:rgba(245,184,107,0.18);color:#F5C892">RETRY</span>
+              <span class="text-[color:var(--fg-dim)]">prompt regenerated · score=0.68</span>
+            </div>
+            <div class="text-right text-[color:var(--fg-dim)] tabular">12ms</div>
+          </div>
+          <div class="grid grid-cols-[110px_120px_1fr_70px] items-center px-4 py-2.5 row-hover hairline" style="background:rgba(244,115,115,0.05)">
+            <div class="text-[color:var(--fg-faint)]">14:02:12.041</div>
+            <div class="text-[color:var(--fg-dim)]">toxicity</div>
+            <div class="flex items-center gap-2">
+              <span class="px-1.5 py-0.5 rounded severity-h text-[10px] tracking-wider">BLOCK</span>
+              <span class="text-[color:var(--fg-dim)]">confidence=0.94 · routed to review queue</span>
+            </div>
+            <div class="text-right text-[color:var(--fg-dim)] tabular">8ms</div>
+          </div>
+          <div class="grid grid-cols-[110px_120px_1fr_70px] items-center px-4 py-2.5 row-hover hairline">
+            <div class="text-[color:var(--fg-faint)]">14:02:12.220</div>
+            <div class="text-[color:var(--fg-dim)]">output_schema</div>
+            <div class="flex items-center gap-2">
+              <span class="px-1.5 py-0.5 rounded severity-l text-[10px] tracking-wider">PASS</span>
+              <span class="text-[color:var(--fg-dim)]">json valid · 3 keys, 0 unknown</span>
+            </div>
+            <div class="text-right text-[color:var(--fg-dim)] tabular">2ms</div>
+          </div>
+          <div class="grid grid-cols-[110px_120px_1fr_70px] items-center px-4 py-2.5 row-hover hairline">
+            <div class="text-[color:var(--fg-faint)]">14:02:12.398</div>
+            <div class="text-[color:var(--fg-dim)]">pii_redact</div>
+            <div class="flex items-center gap-2">
+              <span class="px-1.5 py-0.5 rounded severity-l text-[10px] tracking-wider">PASS</span>
+              <span class="text-[color:var(--fg-dim)]">response clean<span class="blink"></span></span>
+            </div>
+            <div class="text-right text-[color:var(--fg-dim)] tabular">3ms</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats card -->
+      <div class="rounded-2xl border hairline bg-[var(--bg-2)] p-5 flex flex-col">
+        <div class="flex items-center justify-between">
+          <div class="mono text-[11px] uppercase tracking-wider text-[color:var(--fg-faint)]">Last 24h · prod-us-east</div>
+          <div class="mono text-[11px] text-[color:var(--accent)] flex items-center gap-1.5"><span class="pulse-dot"></span>live</div>
+        </div>
+        <div class="grid grid-cols-2 gap-px mt-5 bg-[var(--hair)] rounded-xl overflow-hidden border hairline">
+          <div class="bg-[var(--bg-2)] p-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Sessions guarded</div>
+            <div class="display text-3xl mt-2 tabular">1,284,402</div>
+            <div class="mono text-[11px] mt-1 text-[color:var(--accent)] tabular">+12.4% vs Tue</div>
+          </div>
+          <div class="bg-[var(--bg-2)] p-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Policy violations</div>
+            <div class="display text-3xl mt-2 tabular">3,061</div>
+            <div class="mono text-[11px] mt-1 text-[#F5C892] tabular">+2.8% vs Tue</div>
+          </div>
+          <div class="bg-[var(--bg-2)] p-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">P95 eval latency</div>
+            <div class="display text-3xl mt-2 tabular">11.8<span class="text-base text-[color:var(--fg-dim)]"> ms</span></div>
+            <div class="mono text-[11px] mt-1 text-[color:var(--accent)] tabular">−1.4ms vs Tue</div>
+          </div>
+          <div class="bg-[var(--bg-2)] p-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">False positive rate</div>
+            <div class="display text-3xl mt-2 tabular">0.42<span class="text-base text-[color:var(--fg-dim)]"> %</span></div>
+            <div class="mono text-[11px] mt-1 text-[color:var(--accent)] tabular">−0.18pp vs Tue</div>
+          </div>
+        </div>
+        <!-- mini sparkline -->
+        <div class="mt-5">
+          <div class="flex items-center justify-between mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">
+            <span>Evaluations / min</span>
+            <span class="tabular text-[color:var(--fg-dim)]">peak 18,402</span>
+          </div>
+          <svg viewBox="0 0 280 70" class="w-full h-[70px] mt-2" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="sparkA" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#3ECF8E" stop-opacity="0.25"/>
+                <stop offset="100%" stop-color="#3ECF8E" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <path id="spark1-area" fill="url(#sparkA)"></path>
+            <path id="spark1-line" fill="none" stroke="#3ECF8E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        </div>
+        <div class="mt-auto pt-5 mono text-[11.5px] text-[color:var(--fg-faint)] flex items-center justify-between">
+          <span>region: us-east-1 / eu-west-1</span>
+          <span class="text-[color:var(--fg-dim)]">99.992% SLA</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LOGO CLOUD -->
+<section class="border-y hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-9">
+    <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)] text-center">Guarding agents in production at</div>
+    <div class="overflow-hidden mt-6 [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]">
+      <div class="marquee-track flex gap-14 w-max items-center text-[color:var(--fg-dim)]">
+        <span class="text-2xl font-serif italic">Linnea</span>
+        <span class="text-2xl font-semibold tracking-tight">FORECAST</span>
+        <span class="text-2xl font-light tracking-[0.18em]">GLIDE</span>
+        <span class="text-2xl font-serif">Mercury</span>
+        <span class="text-2xl font-semibold italic">Brightwave</span>
+        <span class="text-2xl font-mono tracking-tight">nimbus.</span>
+        <span class="text-2xl font-bold tracking-tighter">Coast/</span>
+        <span class="text-2xl font-serif italic">Vantage</span>
+        <!-- duplicate -->
+        <span class="text-2xl font-serif italic">Linnea</span>
+        <span class="text-2xl font-semibold tracking-tight">FORECAST</span>
+        <span class="text-2xl font-light tracking-[0.18em]">GLIDE</span>
+        <span class="text-2xl font-serif">Mercury</span>
+        <span class="text-2xl font-semibold italic">Brightwave</span>
+        <span class="text-2xl font-mono tracking-tight">nimbus.</span>
+        <span class="text-2xl font-bold tracking-tighter">Coast/</span>
+        <span class="text-2xl font-serif italic">Vantage</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BENTO -->
+<section class="relative">
+  <div class="max-w-[1240px] mx-auto px-6 py-24">
+    <div class="max-w-2xl">
+      <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent)]">Capabilities</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Every guardrail your safety team would have <span class="half-tone">written by hand.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4 max-w-xl">A rules engine, a redaction layer, and a violation feed — wired together with the same trace context as your spans. Drop in the SDK, ship policies as code.</p>
+    </div>
+
+    <div class="mt-12 grid grid-cols-12 grid-rows-[auto_auto] gap-4">
+      <!-- Big tile: Rule editor -->
+      <div class="col-span-12 lg:col-span-7 lg:row-span-2 bento-tile rounded-2xl border hairline p-6 overflow-hidden">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 4h9l5 5v11a0 0 0 0 1 0 0H6a0 0 0 0 1 0 0V4z" stroke="#3ECF8E" stroke-width="1.4"/><path d="M14 4v6h6" stroke="#3ECF8E" stroke-width="1.4"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Policy as code</div>
+        </div>
+        <h3 class="display text-2xl mt-4">Rules you can review in a PR.</h3>
+        <p class="text-[color:var(--fg-dim)] mt-2 text-sm leading-relaxed">YAML or TypeScript. Versioned with your code, evaluated at inference time. Branch policies per environment.</p>
+        <div class="mt-5 rounded-xl border hairline bg-black/40 overflow-hidden">
+          <div class="flex items-center justify-between border-b hairline px-3 h-8 mono text-[11px] text-[color:var(--fg-faint)]">
+            <span>policies/billing-agent.yaml</span>
+            <span class="text-[color:var(--accent)]">v12 · prod</span>
+          </div>
+          <pre class="mono text-[12.5px] leading-[1.65] p-4 overflow-x-auto"><span class="yaml-cmt"># refund-agent guardrails</span>
+<span class="yaml-key">name</span>: <span class="yaml-str">refund-agent</span>
+<span class="yaml-key">version</span>: <span class="yaml-num">12</span>
+<span class="yaml-key">on</span>:
+  <span class="yaml-key">prompt</span>:
+    - <span class="yaml-key">pii_redact</span>: { <span class="yaml-key">entities</span>: [email, phone, ssn] }
+    - <span class="yaml-key">jailbreak_detect</span>: { <span class="yaml-key">action</span>: <span class="yaml-str">retry</span>, <span class="yaml-key">max</span>: <span class="yaml-num">2</span> }
+  <span class="yaml-key">tool_call</span>:
+    - <span class="yaml-key">allowlist</span>: [stripe.refund, crm.note]
+    - <span class="yaml-key">rate_limit</span>: { <span class="yaml-key">stripe.refund</span>: <span class="yaml-str">6/min</span> }
+  <span class="yaml-key">response</span>:
+    - <span class="yaml-key">toxicity</span>: { <span class="yaml-key">threshold</span>: <span class="yaml-num">0.85</span>, <span class="yaml-key">action</span>: <span class="yaml-str">block</span> }
+    - <span class="yaml-key">schema</span>: <span class="yaml-str">./schemas/refund.json</span>
+<span class="yaml-key">on_block</span>: <span class="yaml-str">route_to: review-queue</span>
+</pre>
+        </div>
+      </div>
+
+      <!-- Violation feed -->
+      <div class="col-span-12 md:col-span-6 lg:col-span-5 bento-tile rounded-2xl border hairline p-6">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 6h12M4 12h16M4 18h8" stroke="#3ECF8E" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Live feed</div>
+        </div>
+        <h3 class="display text-2xl mt-4">Watch policy violations as they fire.</h3>
+        <p class="text-[color:var(--fg-dim)] mt-2 text-sm leading-relaxed">Severity, agent, policy, and the redacted span — one click to the full conversation.</p>
+        <div class="mt-5 space-y-2 mono text-[12px]">
+          <div class="flex items-center gap-3 p-2 rounded-lg border hairline">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#F47373]"></span>
+            <span class="text-[color:var(--fg-faint)] tabular">14:02:12</span>
+            <span class="px-1.5 py-0.5 rounded severity-h text-[10px] tracking-wider">BLOCK</span>
+            <span class="truncate text-[color:var(--fg-dim)]">refund-agent · toxicity 0.94</span>
+          </div>
+          <div class="flex items-center gap-3 p-2 rounded-lg border hairline">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#F5B86B]"></span>
+            <span class="text-[color:var(--fg-faint)] tabular">14:01:58</span>
+            <span class="px-1.5 py-0.5 rounded text-[10px] tracking-wider" style="background:rgba(245,184,107,0.18);color:#F5C892">RETRY</span>
+            <span class="truncate text-[color:var(--fg-dim)]">support · jailbreak 0.68</span>
+          </div>
+          <div class="flex items-center gap-3 p-2 rounded-lg border hairline">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#F47373]"></span>
+            <span class="text-[color:var(--fg-faint)] tabular">14:01:41</span>
+            <span class="px-1.5 py-0.5 rounded severity-h text-[10px] tracking-wider">BLOCK</span>
+            <span class="truncate text-[color:var(--fg-dim)]">onboarding · schema invalid</span>
+          </div>
+          <div class="flex items-center gap-3 p-2 rounded-lg border hairline">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#3ECF8E]"></span>
+            <span class="text-[color:var(--fg-faint)] tabular">14:01:22</span>
+            <span class="px-1.5 py-0.5 rounded severity-l text-[10px] tracking-wider">FIXED</span>
+            <span class="truncate text-[color:var(--fg-dim)]">refund-agent · v11 → v12</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Redaction diff -->
+      <div class="col-span-12 md:col-span-6 lg:col-span-5 bento-tile rounded-2xl border hairline p-6">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 12h7M13 12h7" stroke="#3ECF8E" stroke-width="1.5" stroke-linecap="round"/><circle cx="11" cy="12" r="0.8" fill="#3ECF8E"/><circle cx="13" cy="12" r="0.8" fill="#3ECF8E"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Redaction diff</div>
+        </div>
+        <h3 class="display text-2xl mt-4">PII never leaves your VPC.</h3>
+        <p class="text-[color:var(--fg-dim)] mt-2 text-sm leading-relaxed">Tokens replaced before the model sees them; re-hydrated only in your audit log.</p>
+        <div class="mt-5 rounded-xl border hairline overflow-hidden mono text-[12px]">
+          <div class="px-3 py-2 border-b hairline bg-[rgba(244,115,115,0.05)]">
+            <span class="text-[#F8A1A1]">−</span> <span class="text-[color:var(--fg-dim)]">Customer Priya Anand (priya@linnea.io, 415-555-0142) wants…</span>
+          </div>
+          <div class="px-3 py-2 bg-[rgba(62,207,142,0.05)]">
+            <span class="text-[color:var(--accent)]">+</span> <span class="text-[color:var(--fg-dim)]">Customer &lt;PERSON_01&gt; (&lt;EMAIL_01&gt;, &lt;PHONE_01&gt;) wants…</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SDK snippet -->
+      <div class="col-span-12 md:col-span-5 lg:col-span-3 bento-tile rounded-2xl border hairline p-6">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 8l-4 4 4 4M15 8l4 4-4 4" stroke="#3ECF8E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">SDK</div>
+        </div>
+        <h3 class="display text-xl mt-4">One import.</h3>
+        <pre class="mono text-[11.5px] leading-relaxed mt-3 p-3 rounded-lg border hairline bg-black/40 overflow-x-auto"><span class="yaml-cmt">// 4 lines, OpenAI-compatible</span>
+<span class="yaml-key">import</span> { guardrail } <span class="yaml-key">from</span> <span class="yaml-str">"mirror-sdk"</span>;
+<span class="yaml-key">const</span> mirror = guardrail({ <span class="yaml-key">policy</span>: <span class="yaml-str">"refund"</span> });
+<span class="yaml-key">await</span> mirror.wrap(openai.chat.create);</pre>
+      </div>
+
+      <!-- Templates -->
+      <div class="col-span-12 md:col-span-7 lg:col-span-4 bento-tile rounded-2xl border hairline p-6">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="7" height="7" rx="1" stroke="#3ECF8E" stroke-width="1.4"/><rect x="13" y="4" width="7" height="7" rx="1" stroke="#3ECF8E" stroke-width="1.4"/><rect x="4" y="13" width="7" height="7" rx="1" stroke="#3ECF8E" stroke-width="1.4"/><rect x="13" y="13" width="7" height="7" rx="1" stroke="#3ECF8E" stroke-width="1.4"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Template gallery</div>
+        </div>
+        <h3 class="display text-xl mt-4">Start from 28 audited templates.</h3>
+        <div class="mt-4 grid grid-cols-2 gap-2 mono text-[11.5px]">
+          <div class="border hairline rounded-lg px-3 py-2.5">
+            <div class="text-[color:var(--fg-dim)]">support-agent</div>
+            <div class="text-[color:var(--fg-faint)] text-[10.5px] mt-0.5">6 rules · GDPR</div>
+          </div>
+          <div class="border hairline rounded-lg px-3 py-2.5">
+            <div class="text-[color:var(--fg-dim)]">healthcare-q&amp;a</div>
+            <div class="text-[color:var(--fg-faint)] text-[10.5px] mt-0.5">11 rules · HIPAA</div>
+          </div>
+          <div class="border hairline rounded-lg px-3 py-2.5">
+            <div class="text-[color:var(--fg-dim)]">coding-copilot</div>
+            <div class="text-[color:var(--fg-faint)] text-[10.5px] mt-0.5">4 rules · OSS</div>
+          </div>
+          <div class="border hairline rounded-lg px-3 py-2.5">
+            <div class="text-[color:var(--fg-dim)]">finance-advisor</div>
+            <div class="text-[color:var(--fg-faint)] text-[10.5px] mt-0.5">9 rules · FINRA</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alert routing -->
+      <div class="col-span-12 md:col-span-12 lg:col-span-5 bento-tile rounded-2xl border hairline p-6">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg border hairline flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 4v3M12 17v3M4 12h3M17 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2" stroke="#3ECF8E" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </div>
+          <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Routing</div>
+        </div>
+        <h3 class="display text-xl mt-4">Page the on-call. Skip the noise.</h3>
+        <p class="text-[color:var(--fg-dim)] mt-2 text-sm leading-relaxed">Dedup violations by policy + agent + 5-minute window. Route high-severity to PagerDuty, the rest to a Slack channel — or your incident pipeline of choice.</p>
+        <div class="mt-4 flex flex-wrap gap-2 mono text-[11px]">
+          <span class="border hairline rounded-full px-2.5 py-1 text-[color:var(--fg-dim)]">PagerDuty</span>
+          <span class="border hairline rounded-full px-2.5 py-1 text-[color:var(--fg-dim)]">Slack</span>
+          <span class="border hairline rounded-full px-2.5 py-1 text-[color:var(--fg-dim)]">Opsgenie</span>
+          <span class="border hairline rounded-full px-2.5 py-1 text-[color:var(--fg-dim)]">Webhook</span>
+          <span class="border hairline rounded-full px-2.5 py-1 text-[color:var(--fg-dim)]">Linear</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BIG ALTERNATING FEATURE -->
+<section class="border-t hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-24 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+    <!-- Dashboard mockup -->
+    <div class="rounded-2xl border hairline bg-[var(--bg-2)] overflow-hidden">
+      <div class="flex items-center gap-1 px-3 h-10 border-b hairline">
+        <button class="seg seg-active rounded-md px-3 py-1 mono text-[12px]">Policies</button>
+        <button class="seg rounded-md px-3 py-1 mono text-[12px]">Violations</button>
+        <button class="seg rounded-md px-3 py-1 mono text-[12px]">Audit</button>
+        <button class="seg rounded-md px-3 py-1 mono text-[12px]">Sources</button>
+        <div class="ml-auto mono text-[11px] text-[color:var(--fg-faint)]">last 30d</div>
+      </div>
+      <div class="grid grid-cols-3 gap-px bg-[var(--hair)]">
+        <div class="bg-[var(--bg-2)] p-4">
+          <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">False positive rate</div>
+          <div class="display text-2xl mt-1 tabular">0.42%</div>
+          <div class="mono text-[11px] text-[color:var(--accent)] tabular">↘ −0.31pp / 30d</div>
+        </div>
+        <div class="bg-[var(--bg-2)] p-4">
+          <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Mean eval latency</div>
+          <div class="display text-2xl mt-1 tabular">4.1 ms</div>
+          <div class="mono text-[11px] text-[color:var(--accent)] tabular">↘ −0.8ms / 30d</div>
+        </div>
+        <div class="bg-[var(--bg-2)] p-4">
+          <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Policies in prod</div>
+          <div class="display text-2xl mt-1 tabular">38</div>
+          <div class="mono text-[11px] text-[color:var(--fg-dim)] tabular">12 teams</div>
+        </div>
+      </div>
+      <div class="p-5">
+        <div class="flex items-center justify-between mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">
+          <span>False positives / day</span>
+          <div class="flex items-center gap-3">
+            <span class="flex items-center gap-1.5"><span class="w-2 h-px bg-white/30"></span>baseline</span>
+            <span class="flex items-center gap-1.5"><span class="w-2 h-px bg-[#3ECF8E]"></span>current</span>
+          </div>
+        </div>
+        <svg viewBox="0 0 520 180" class="w-full h-[180px] mt-3" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="evalGrad" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stop-color="#3ECF8E" stop-opacity="0.22"/>
+              <stop offset="100%" stop-color="#3ECF8E" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <!-- gridlines -->
+          <g stroke="rgba(255,255,255,0.05)" stroke-dasharray="3 4">
+            <line x1="0" y1="36" x2="520" y2="36"/>
+            <line x1="0" y1="80" x2="520" y2="80"/>
+            <line x1="0" y1="124" x2="520" y2="124"/>
+          </g>
+          <path id="eval-base" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="1.2" stroke-dasharray="4 4"></path>
+          <path id="eval-area" fill="url(#evalGrad)"></path>
+          <path id="eval-line" fill="none" stroke="#3ECF8E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Right text -->
+    <div>
+      <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent)]">Eval-as-policy</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Promote evals to <span class="half-tone">production guardrails.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4 leading-relaxed">Mirror reuses your offline eval suite as runtime policies. The same prompt → response → grade loop you ran in CI now runs on every live request — with rollouts, kill-switches, and gradual exposure.</p>
+      <ul class="mt-6 space-y-3 text-[15px]">
+        <li class="flex gap-3 items-start"><span class="check mt-1.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Roll a policy out to 5% → 50% → 100% of traffic; revert in one click.</span></li>
+        <li class="flex gap-3 items-start"><span class="check mt-1.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Shadow mode: evaluate without acting, compare against current baseline.</span></li>
+        <li class="flex gap-3 items-start"><span class="check mt-1.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Every verdict is a signed span — replay any session against a new policy version.</span></li>
+        <li class="flex gap-3 items-start"><span class="check mt-1.5"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Native OpenTelemetry — your existing Datadog / Grafana tap-ins still work.</span></li>
+      </ul>
+      <a href="#" class="inline-flex items-center gap-1 mt-7 accent text-[14px] lift">Read the eval-as-policy guide <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="border-t hairline relative">
+  <div class="absolute inset-x-0 top-0 h-[300px] radial-fade-soft pointer-events-none"></div>
+  <div class="relative max-w-[1240px] mx-auto px-6 py-24">
+    <div class="text-center max-w-2xl mx-auto">
+      <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent)]">Pricing</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Pay for evaluations. <span class="half-tone">Not seats.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4">A guardrail evaluation is one rule running against one inference. Bundles roll over. No per-seat tax on your safety team.</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-12">
+      <!-- Sandbox -->
+      <div class="rounded-2xl border hairline p-7 bg-[var(--bg-2)] flex flex-col">
+        <div class="flex items-baseline justify-between">
+          <h3 class="text-lg font-semibold">Sandbox</h3>
+          <span class="mono text-[11px] text-[color:var(--fg-faint)]">free forever</span>
+        </div>
+        <div class="display text-5xl mt-5 tabular">$0</div>
+        <div class="mono text-[11.5px] text-[color:var(--fg-faint)] mt-1">/ month</div>
+        <p class="text-[color:var(--fg-dim)] text-[14px] mt-4">For a side project or a single agent in staging.</p>
+        <div class="dot-divider my-6"></div>
+        <ul class="space-y-3 text-[14px]">
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>100,000 guardrail evals / mo</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>14-day session retention</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>All 28 policy templates</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Community Slack</li>
+        </ul>
+        <a href="#" class="mt-auto pt-7 inline-flex items-center justify-center h-10 rounded-full border hairline-2 text-[14px] lift hover:bg-white/[0.04]">Start free</a>
+      </div>
+      <!-- Pro (featured) -->
+      <div class="relative rounded-2xl p-7 bg-[var(--bg-2)] flex flex-col ring-accent">
+        <span class="absolute -top-3 left-5 mono text-[10.5px] uppercase tracking-wider px-2.5 py-1 rounded-full text-[#062614]" style="background:#3ECF8E">Most popular</span>
+        <div class="flex items-baseline justify-between">
+          <h3 class="text-lg font-semibold">Pro</h3>
+          <span class="mono text-[11px] text-[color:var(--accent)]">incl. audit log</span>
+        </div>
+        <div class="display text-5xl mt-5 tabular">$49</div>
+        <div class="mono text-[11.5px] text-[color:var(--fg-faint)] mt-1">/ month · billed annually</div>
+        <p class="text-[color:var(--fg-dim)] text-[14px] mt-4">For teams shipping LLM features to real customers.</p>
+        <div class="dot-divider my-6"></div>
+        <ul class="space-y-3 text-[14px]">
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>5,000,000 guardrail evals / mo</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>90-day session + signed audit log</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Custom TypeScript rules</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Slack + PagerDuty routing</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>SLA: P95 &lt; 12ms</li>
+        </ul>
+        <a href="#" class="btn-primary mt-auto pt-0 inline-flex items-center justify-center h-10 rounded-full text-[14px] lift" style="margin-top:1.75rem">Start 14-day trial</a>
+      </div>
+      <!-- Enterprise -->
+      <div class="rounded-2xl border hairline p-7 bg-[var(--bg-2)] flex flex-col">
+        <div class="flex items-baseline justify-between">
+          <h3 class="text-lg font-semibold">Enterprise</h3>
+          <span class="mono text-[11px] text-[color:var(--fg-faint)]">BYOC</span>
+        </div>
+        <div class="display text-5xl mt-5 tabular">$249</div>
+        <div class="mono text-[11.5px] text-[color:var(--fg-faint)] mt-1">/ month base · usage on top</div>
+        <p class="text-[color:var(--fg-dim)] text-[14px] mt-4">For regulated industries and 100M+ request workloads.</p>
+        <div class="dot-divider my-6"></div>
+        <ul class="space-y-3 text-[14px]">
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Bring-your-own-cloud deployment</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>SOC 2 Type II + HIPAA + SCIM</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Customer-managed encryption keys</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Solution architect + 1h SLA</li>
+        </ul>
+        <a href="#" class="mt-auto pt-7 inline-flex items-center justify-center h-10 rounded-full border hairline-2 text-[14px] lift hover:bg-white/[0.04]">Talk to sales</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="border-t hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-24">
+    <div class="max-w-2xl">
+      <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent)]">Customers</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Engineers who can't afford <span class="half-tone">a 2am model surprise.</span></h2>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-12">
+      <!-- card -->
+      <div class="rounded-2xl border hairline p-6 bg-[var(--bg-2)]">
+        <div class="flex gap-0.5 accent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        </div>
+        <blockquote class="mt-4 text-[15px] leading-relaxed text-[color:var(--fg)]">"Mirror replaced 2,400 lines of ad-hoc Python regex with twelve YAML files. Our PII incident rate dropped to zero for the last 184 days."</blockquote>
+        <div class="flex items-center gap-3 mt-6">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center mono text-[12px] font-semibold" style="background:rgba(62,207,142,0.16);color:#3ECF8E">PA</div>
+          <div class="text-[13px]">
+            <div class="font-medium">Priya Anand</div>
+            <div class="text-[color:var(--fg-faint)]">Staff Engineer · Linnea</div>
+          </div>
+        </div>
+      </div>
+      <div class="rounded-2xl border hairline p-6 bg-[var(--bg-2)]">
+        <div class="flex gap-0.5 accent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        </div>
+        <blockquote class="mt-4 text-[15px] leading-relaxed">"The shadow-mode rollouts are the killer feature. We've shipped 38 policies without a single false-positive incident in production."</blockquote>
+        <div class="flex items-center gap-3 mt-6">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center mono text-[12px] font-semibold" style="background:rgba(62,207,142,0.16);color:#3ECF8E">MT</div>
+          <div class="text-[13px]">
+            <div class="font-medium">Marcus Tobin</div>
+            <div class="text-[color:var(--fg-faint)]">Founding Engineer · Forecast</div>
+          </div>
+        </div>
+      </div>
+      <div class="rounded-2xl border hairline p-6 bg-[var(--bg-2)]">
+        <div class="flex gap-0.5 accent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        </div>
+        <blockquote class="mt-4 text-[15px] leading-relaxed">"P95 added 6ms to our agent loop. It's the cheapest insurance policy we've ever bought, and the audit log paid off in the first SOC 2 review."</blockquote>
+        <div class="flex items-center gap-3 mt-6">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center mono text-[12px] font-semibold" style="background:rgba(62,207,142,0.16);color:#3ECF8E">HS</div>
+          <div class="text-[13px]">
+            <div class="font-medium">Hana Suzuki</div>
+            <div class="text-[color:var(--fg-faint)]">ML Lead · Glide</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="border-t hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-24 grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-12">
+    <div>
+      <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent)]">FAQ</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Frequently asked, <span class="half-tone">honestly answered.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4 max-w-sm">If you have a deeper question, the <a href="#" class="accent">engineering Slack</a> answers within a few hours during EU/US hours.</p>
+    </div>
+    <div class="divide-y" style="--tw-divide-opacity:1">
+      <details class="py-5 border-b hairline group">
+        <summary class="flex items-center justify-between gap-6">
+          <span class="text-[16px] font-medium">How is a "guardrail evaluation" billed?</span>
+          <span class="faq-plus mono text-lg leading-none">+</span>
+        </summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">One eval = one rule running against one inference. A request that triggers 3 rules costs 3 evals. We bill in $0.00018 increments and bundles roll over month-to-month for 90 days. Shadow-mode evals are billed at 25% of the live rate.</p>
+      </details>
+      <details class="py-5 border-b hairline group">
+        <summary class="flex items-center justify-between gap-6">
+          <span class="text-[16px] font-medium">Do you run guardrails in-process or as a sidecar?</span>
+          <span class="faq-plus mono text-lg leading-none">+</span>
+        </summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">Both. The SDK runs deterministic rules (allowlists, schemas, redaction) in-process — typical overhead 1.4ms. ML-based rules (toxicity, jailbreak) run in a local sidecar that you deploy alongside your service. We also offer a managed proxy at proxy.mirror.dev for teams who don't want to host anything.</p>
+      </details>
+      <details class="py-5 border-b hairline group">
+        <summary class="flex items-center justify-between gap-6">
+          <span class="text-[16px] font-medium">Can I write custom rules in TypeScript?</span>
+          <span class="faq-plus mono text-lg leading-none">+</span>
+        </summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">Yes. Export a function with signature <span class="mono text-[12.5px] text-[color:var(--accent)]">(ctx) =&gt; Verdict</span> and reference it from YAML. Custom rules run sandboxed in V8 isolates with a 50ms hard timeout and no network access by default. We also support Python via a gRPC bridge for the ML team's preferences.</p>
+      </details>
+      <details class="py-5 border-b hairline group">
+        <summary class="flex items-center justify-between gap-6">
+          <span class="text-[16px] font-medium">What's your latency overhead in the proxy mode?</span>
+          <span class="faq-plus mono text-lg leading-none">+</span>
+        </summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">For a request with 4 active rules: P50 8ms, P95 11.8ms, P99 18.3ms — measured against our public dashboard at status.mirror.dev. The proxy speaks the OpenAI chat-completion protocol natively, so swapping <span class="mono text-[12.5px]">api.openai.com</span> for <span class="mono text-[12.5px]">proxy.mirror.dev</span> is the entire integration.</p>
+      </details>
+      <details class="py-5 border-b hairline group">
+        <summary class="flex items-center justify-between gap-6">
+          <span class="text-[16px] font-medium">How do you handle PII in logs?</span>
+          <span class="faq-plus mono text-lg leading-none">+</span>
+        </summary>
+        <p class="mt-3 text-[color:var(--fg-dim)] leading-relaxed text-[14.5px]">Redaction happens before the model call, and the redacted form is what lands in our logs. Re-hydration tokens live exclusively in your customer-managed KMS key — we cannot decrypt them. The audit log writer signs each entry with an Ed25519 key per workspace so you can verify chain-of-custody at any time.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="px-6 pb-24">
+  <div class="max-w-[1240px] mx-auto relative rounded-2xl border hairline overflow-hidden p-10 md:p-16 text-center" style="background:linear-gradient(180deg, rgba(62,207,142,0.04), rgba(255,255,255,0));">
+    <div class="absolute inset-0 dot-grid opacity-80 pointer-events-none"></div>
+    <div class="absolute inset-x-0 top-0 h-full radial-fade-accent pointer-events-none"></div>
+    <div class="relative">
+      <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent)] inline-flex items-center gap-2"><span class="pulse-dot"></span>Now in GA</div>
+      <h2 class="display text-4xl md:text-6xl mt-5">Stop fearing the model. <span class="half-tone">Trust the policy.</span></h2>
+      <p class="text-[color:var(--fg-dim)] mt-4 max-w-xl mx-auto">Ship your next LLM feature behind 12 audited rules. The free tier covers 100k evaluations and never expires.</p>
+      <div class="mt-7 flex items-center gap-3 justify-center flex-wrap">
+        <a href="#" class="btn-primary lift rounded-full px-5 h-11 inline-flex items-center gap-1.5 text-[14px]">
+          Start guarding free
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#" class="lift rounded-full px-5 h-11 inline-flex items-center text-[14px] border hairline-2 hover:bg-white/[0.04]">Talk to sales</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="border-t hairline">
+  <div class="max-w-[1240px] mx-auto px-6 py-14 grid grid-cols-2 md:grid-cols-5 gap-8">
+    <div class="col-span-2">
+      <div class="flex items-center gap-2.5">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10.5" stroke="#EDEDED" stroke-width="1.25"/><circle cx="12" cy="12" r="6.5" stroke="#3ECF8E" stroke-width="1.25"/><circle cx="12" cy="12" r="2.4" fill="#3ECF8E"/></svg>
+        <span class="text-[15px] font-semibold tracking-tight">Mirror</span>
+      </div>
+      <p class="text-[13.5px] text-[color:var(--fg-dim)] mt-3 max-w-xs">Runtime guardrails for LLM applications. OpenTelemetry-native.</p>
+      <a href="#" class="mt-4 mono text-[11px] inline-flex items-center gap-2 border hairline rounded-full pl-2 pr-3 py-1 text-[color:var(--fg-dim)]"><span class="pulse-dot"></span>All systems normal · 99.992% / 90d</a>
+    </div>
+    <div>
+      <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Product</div>
+      <ul class="mt-3 space-y-2 text-[13.5px] text-[color:var(--fg-dim)]">
+        <li><a href="#" class="hover:text-white">Guardrails</a></li>
+        <li><a href="#" class="hover:text-white">Audit log</a></li>
+        <li><a href="#" class="hover:text-white">Templates</a></li>
+        <li><a href="#" class="hover:text-white">Routing</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Developers</div>
+      <ul class="mt-3 space-y-2 text-[13.5px] text-[color:var(--fg-dim)]">
+        <li><a href="#" class="hover:text-white">Docs</a></li>
+        <li><a href="#" class="hover:text-white">SDK reference</a></li>
+        <li><a href="#" class="hover:text-white">OTEL guide</a></li>
+        <li><a href="#" class="hover:text-white">Changelog</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)]">Company</div>
+      <ul class="mt-3 space-y-2 text-[13.5px] text-[color:var(--fg-dim)]">
+        <li><a href="#" class="hover:text-white">About</a></li>
+        <li><a href="#" class="hover:text-white">Customers</a></li>
+        <li><a href="#" class="hover:text-white">Security</a></li>
+        <li><a href="#" class="hover:text-white">Careers · 4</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="border-t hairline">
+    <div class="max-w-[1240px] mx-auto px-6 py-5 flex flex-col md:flex-row items-center justify-between gap-3 mono text-[11.5px] text-[color:var(--fg-faint)]">
+      <div>© 2026 Mirror Labs, Inc. · San Francisco / Berlin</div>
+      <div class="flex items-center gap-5">
+        <a href="#" class="hover:text-white">Privacy</a>
+        <a href="#" class="hover:text-white">Terms</a>
+        <a href="#" class="hover:text-white">DPA</a>
+        <span class="text-[color:var(--fg-faint)]">v2.4.1 · 8f2a1c</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Procedural sparklines
+  function buildPath(svg, data, opts) {
+    const { width, height, padY = 4, area = false } = opts;
+    const max = Math.max(...data), min = Math.min(...data);
+    const span = Math.max(1, max - min);
+    const stepX = width / (data.length - 1);
+    let d = '';
+    data.forEach((v, i) => {
+      const x = i * stepX;
+      const y = padY + (1 - (v - min) / span) * (height - padY * 2);
+      d += (i === 0 ? 'M' : 'L') + x.toFixed(2) + ',' + y.toFixed(2) + ' ';
+    });
+    if (area) {
+      d += `L${width.toFixed(2)},${height} L0,${height} Z`;
+    }
+    return d;
+  }
+  // Random-ish but deterministic series
+  function series(n, base, vol, seed) {
+    let s = seed; const out = [];
+    for (let i = 0; i < n; i++) {
+      s = (s * 9301 + 49297) % 233280;
+      const r = s / 233280;
+      base = base + (r - 0.45) * vol;
+      out.push(base);
+    }
+    return out;
+  }
+  // hero spark
+  const d1 = series(28, 50, 7, 17).map((v, i, a) => v + i * 1.2);
+  document.getElementById('spark1-line').setAttribute('d', buildPath(null, d1, { width: 280, height: 70 }));
+  document.getElementById('spark1-area').setAttribute('d', buildPath(null, d1, { width: 280, height: 70, area: true }));
+
+  // eval chart
+  const eW = 520, eH = 180;
+  const baseline = series(60, 90, 1.8, 41).map(v => v + 8);
+  const current = series(60, 90, 5, 13).map((v, i) => v - i * 0.9);
+  document.getElementById('eval-base').setAttribute('d', buildPath(null, baseline, { width: eW, height: eH, padY: 14 }));
+  document.getElementById('eval-line').setAttribute('d', buildPath(null, current, { width: eW, height: eH, padY: 14 }));
+  document.getElementById('eval-area').setAttribute('d', buildPath(null, current, { width: eW, height: eH, padY: 14, area: true }));
+</script>
+
+</body>
+</html>
