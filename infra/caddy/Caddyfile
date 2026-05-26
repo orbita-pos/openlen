@@ -172,6 +172,16 @@ openlen.com, www.openlen.com {
 # right order, so TLS handshakes against unknown SNI returned "internal
 # error" without logging.
 :443 {
+	# Per-request access log — without this Caddy logs nothing about
+	# the custom-domain traffic, which is exactly where we had the
+	# most debugging pain (TLS internal errors with no stack trace).
+	# JSON output goes to journald via the systemd unit's stdout.
+	log {
+		output stdout
+		format json
+		level INFO
+	}
+
 	tls {
 		on_demand
 	}

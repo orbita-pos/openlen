@@ -462,6 +462,15 @@ export async function publishProject(
   // 5. Filesystem write. On failure, undo the DB row so the user can
   // try again (or pick a different subdomain) without the row claiming
   // a sub they didn't actually publish.
+  //
+  // Failure modes we recover from here:
+  //   - publishToDir creates `<sub>/releases/` via mkdir BEFORE the
+  //     HTML pipeline runs (Tailwind bake, asset migration). If any of
+  //     those throw, we end up with an empty `<sub>/` dir on disk +
+  //     potentially the subdomain claimed in DB. Both are leaks.
+  //   - The Caddy wildcard would serve a stale `current/` symlink (from
+  //     a prior publish of the same sub) even after our DB rollback,
+  //     so the dir cleanup must run as well.
   let publishResult: { sha: string; html: string; written: boolean };
   try {
     publishResult = await publishToDir({
@@ -472,24 +481,49 @@ export async function publishProject(
       analyticsEnabled: !project.data?.settings?.analyticsDisabled,
     });
   } catch (err) {
-    await db
-      .update(schema.projects)
-      .set({
-        subdomain: previousSubdomain,
-        publishedAt: prev?.publishedAt ?? null,
-        publishedHtml: prev?.publishedHtml ?? null,
-        publishedReleaseSha: prev?.publishedReleaseSha ?? null,
-        status: prev?.status ?? "draft",
-        deployUrl: previousSubdomain
-          ? `${previousSubdomain}.${publishBaseHost()}`
-          : null,
-        updatedAt: now,
-      })
-      .where(eq(schema.projects.id, params.projectId))
-      .catch(() => {
-        // If even the rollback fails the row is wedged — surface the
-        // original error and let the operator clean up.
-      });
+    // Roll back DB. We loudly log rollback failures instead of silently
+    // swallowing — silent rollback failures are exactly how production
+    // ends up with phantom subdomains (DB claims live, disk has nothing).
+    try {
+      await db
+        .update(schema.projects)
+        .set({
+          subdomain: previousSubdomain,
+          publishedAt: prev?.publishedAt ?? null,
+          publishedHtml: prev?.publishedHtml ?? null,
+          publishedReleaseSha: prev?.publishedReleaseSha ?? null,
+          status: prev?.status ?? "draft",
+          deployUrl: previousSubdomain
+            ? `${previousSubdomain}.${publishBaseHost()}`
+            : null,
+          updatedAt: now,
+        })
+        .where(eq(schema.projects.id, params.projectId));
+    } catch (rollbackErr) {
+      // eslint-disable-next-line no-console
+      console.error(
+        "[publish] CRITICAL: rollback failed for project",
+        params.projectId,
+        "subdomain may be stuck at",
+        v.value,
+        rollbackErr,
+      );
+    }
+    // Clean up the orphan dir we just created on disk (if any).
+    // Only do this when CLAIMING NEW — never blow away a previously-
+    // published sub's dir on a rename-failure case.
+    if (isClaimingNew) {
+      try {
+        await unpublishDir(v.value);
+      } catch (cleanupErr) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          "[publish] could not clean up orphan dir after failure",
+          v.value,
+          cleanupErr,
+        );
+      }
+    }
     throw err;
   }
 
