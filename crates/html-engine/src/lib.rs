@@ -4,6 +4,7 @@
 extern crate napi_derive;
 
 pub mod error;
+pub mod minify;
 pub mod normalize;
 pub mod ops;
 pub mod parser;
@@ -41,6 +42,39 @@ pub struct JsSanitizeResult {
     pub errors: Vec<String>,
     /// Counts of silently-stripped XSS-shaped content (telemetry only).
     pub removed: JsSanitizeRemovedCounts,
+}
+
+#[napi(object, js_name = "OptimizeStats")]
+pub struct JsOptimizeStats {
+    pub bytes_in: u32,
+    pub bytes_out: u32,
+    pub css_inlined: bool,
+    pub tailwind_classes_kept: u32,
+}
+
+#[napi(object, js_name = "OptimizeResult")]
+pub struct JsOptimizeResult {
+    /// Minified HTML when the gate passes; absent on a slot-path
+    /// detection (caller must treat as a publish-block).
+    pub html: Option<String>,
+    /// Position-tagged reasons when the gate fires. Empty on success.
+    pub errors: Vec<String>,
+    pub stats: JsOptimizeStats,
+}
+
+#[napi]
+pub fn optimize_for_publish(html: String) -> JsOptimizeResult {
+    let r = minify::optimize_for_publish(&html);
+    JsOptimizeResult {
+        html: r.html,
+        errors: r.errors,
+        stats: JsOptimizeStats {
+            bytes_in: r.stats.bytes_in,
+            bytes_out: r.stats.bytes_out,
+            css_inlined: r.stats.css_inlined,
+            tailwind_classes_kept: r.stats.tailwind_classes_kept,
+        },
+    }
 }
 
 #[napi]
