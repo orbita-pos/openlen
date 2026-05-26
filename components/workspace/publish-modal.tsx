@@ -174,7 +174,9 @@ export function PublishModal({
 
   const doPublish = useCallback(async () => {
     if (submitting) return;
-    if (check.kind !== "available") return;
+    // Allow the existing subdomain through even when the availability check
+    // hasn't settled yet — same precedence as `canPublish` below.
+    if (check.kind !== "available" && !isCurrent) return;
     setSubmitting("publishing");
     setError(null);
     try {
@@ -202,7 +204,7 @@ export function PublishModal({
       );
       setSubmitting(null);
     }
-  }, [submitting, check, project.id, normalized, onSuccess, onClose]);
+  }, [submitting, check, isCurrent, project.id, normalized, onSuccess, onClose]);
 
   const doUnpublish = useCallback(async () => {
     if (submitting) return;
@@ -233,8 +235,13 @@ export function PublishModal({
 
   const previewSub = normalized || "your-name";
   const fullUrl = `https://${previewSub}.${BASE_HOST}`;
-  const canPublish = check.kind === "available" && !submitting;
   const isPublished = project.subdomain !== null;
+  // canPublish stays true while the modal renders the project's current
+  // subdomain — the availability effect briefly leaves check.kind === "idle"
+  // on first paint (and on any reset) before the [normalized, isCurrent]
+  // dependency settles, which would otherwise force the user to edit the
+  // input just to wake up the Re-publish button. The server re-validates.
+  const canPublish = !submitting && (check.kind === "available" || isCurrent);
   const wouldChangeName =
     isPublished && !isCurrent && check.kind === "available";
 

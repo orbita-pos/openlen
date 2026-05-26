@@ -14,6 +14,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import {
   ChevronDown,
@@ -215,15 +216,15 @@ export function TopBar({
   return (
     <header className="relative z-30 h-[60px] shrink-0 border-b bd bg-app flex items-center justify-between px-3 sm:px-4 gap-3">
       <div className="flex items-center gap-3 min-w-0">
-        <a
-          href="/projects"
+        <Link
+          href="/"
           className="flex items-center gap-2 shrink-0 rounded-md -mx-1 px-1 py-0.5 hover:bg-hover transition"
         >
           <OpenLenMark className="h-7 w-7 shrink-0" />
           <span className="font-display text-[15px] tracking-tight hidden md:inline">
             Open<span className="text-coral-500 dark:text-coral-400">Len</span>
           </span>
-        </a>
+        </Link>
         <div className="h-5 w-px bg-[color:var(--border)] hidden md:block" />
         <button
           type="button"
