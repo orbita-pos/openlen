@@ -1,0 +1,20 @@
+[workspace]
+members = ["crates/html-engine"]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "AGPL-3.0-only"
+repository = "https://github.com/jesusbernalrj/inari-pages"
+
+[profile.release]
+lto = true
+opt-level = 3
+codegen-units = 1
+strip = true
+panic = "abort"
+
+[profile.bench]
+lto = true
+opt-level = 3
+codegen-units = 1
