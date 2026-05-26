@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/html-engine"]
+members = ["crates/html-engine", "crates/edge"]
 resolver = "2"
 
 [workspace.package]
