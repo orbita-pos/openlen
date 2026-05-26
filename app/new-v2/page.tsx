@@ -1128,6 +1128,22 @@ function NewV2Inner() {
           open={customDomainOpen}
           onClose={() => setCustomDomainOpen(false)}
           projectId={loadedProject.id}
+          projectSubdomain={loadedProject.subdomain}
+          onAutoPublished={(sub) => {
+            // Reflect the silent first-publish in the workspace state so
+            // the TopBar Live pill + Deploy dropdown stop saying "not
+            // published yet" without forcing a full page reload.
+            setLoadedProject((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    subdomain: sub,
+                    publishedAt: new Date(),
+                    hasUnpublishedChanges: false,
+                  }
+                : prev,
+            );
+          }}
         />
       )}
       {loadedProject && (

@@ -26,7 +26,12 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: Request): Promise<Response> {
   const url = new URL(req.url);
-  const host = url.searchParams.get("host");
+  // Caddy's `on_demand_tls.ask` directive appends `?domain=<hostname>` to
+  // the URL it calls (NOT `?host=` — that's a common gotcha). Accept both
+  // so the endpoint works whether called by Caddy (`domain`) or by
+  // anything else we wire up later (`host`).
+  const host =
+    url.searchParams.get("domain") ?? url.searchParams.get("host");
   if (!host) {
     return new Response("missing host", { status: 400 });
   }

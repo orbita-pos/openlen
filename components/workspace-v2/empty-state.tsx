@@ -168,9 +168,14 @@ function RecentStrip() {
             }>;
           } | null,
         ) => {
-          if (cancelled || !data?.projects) return;
+          if (cancelled) return;
+          // Resolve to an array unconditionally — when the API returns
+          // null (401, network error), missing field, or an empty list
+          // we still want to FLIP items out of the null/loading state so
+          // the strip can hide itself instead of skeleton'ing forever.
+          const list = data?.projects ?? [];
           setItems(
-            data.projects.slice(0, 4).map((p) => ({
+            list.slice(0, 4).map((p) => ({
               id: p.id,
               title: p.title,
               subdomain: p.subdomain,

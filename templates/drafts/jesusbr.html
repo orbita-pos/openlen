@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Jesús Bernal — building OpenLen + InariWatch</title>
+    <meta
+      name="description"
+      content="Independent developer in Mexico City. Building OpenLen (open-source landing-page builder) and InariWatch (error monitoring for AI apps). Software you can actually own."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='6' fill='%23FF5A36'/%3E%3C/svg%3E"
+    />
+    <meta property="og:title" content="Jesús Bernal — building OpenLen + InariWatch" />
+    <meta
+      property="og:description"
+      content="Independent developer in Mexico City. Software you can actually own."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://jesusbr.com" />
+    <meta name="twitter:card" content="summary" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --coral: #ff5a36;
+        --coral-soft: #ffe8e0;
+        --ink: #0a0a0a;
+        --ink-2: #404040;
+        --ink-3: #737373;
+        --ink-4: #a3a3a3;
+        --ink-5: #d4d4d4;
+        --paper: #fafaf9;
+        --paper-2: #f5f5f4;
+        --rule: rgba(0, 0, 0, 0.08);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --ink: #fafafa;
+          --ink-2: #d4d4d4;
+          --ink-3: #a3a3a3;
+          --ink-4: #737373;
+          --ink-5: #404040;
+          --paper: #0a0a0a;
+          --paper-2: #141414;
+          --rule: rgba(255, 255, 255, 0.08);
+        }
+      }
+      html {
+        background: var(--paper);
+        color: var(--ink);
+        scroll-behavior: smooth;
+      }
+      body {
+        font-family: "Inter", system-ui, -apple-system, sans-serif;
+        font-feature-settings: "ss01", "ss02", "cv01", "cv02", "cv11";
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+      .serif {
+        font-family: "Instrument Serif", "Newsreader", Georgia, serif;
+        font-weight: 400;
+        letter-spacing: -0.015em;
+      }
+      .mono {
+        font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+        font-feature-settings: "calt" 0;
+      }
+
+      .ink { color: var(--ink); }
+      .ink-2 { color: var(--ink-2); }
+      .ink-3 { color: var(--ink-3); }
+      .ink-4 { color: var(--ink-4); }
+      .coral { color: var(--coral); }
+
+      /* Caps eyebrow */
+      .eyebrow {
+        font-size: 10.5px;
+        font-weight: 600;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+      }
+
+      /* Hover-underline links — coral underline draws in from left. */
+      a.entry {
+        position: relative;
+        padding-bottom: 1px;
+      }
+      a.entry::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        bottom: -1px;
+        height: 1px;
+        width: 0;
+        background: var(--coral);
+        transition: width 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      }
+      a.entry:hover::after { width: 100%; }
+
+      /* Subtle arrow that slides on hover */
+      .arrow {
+        display: inline-block;
+        transition: transform 220ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        color: var(--ink-4);
+      }
+      a:hover .arrow { transform: translate(2px, -2px); }
+
+      /* Live pulse — coral, soft */
+      .pulse {
+        position: relative;
+        width: 7px;
+        height: 7px;
+        flex-shrink: 0;
+      }
+      .pulse::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 999px;
+        background: var(--coral);
+        animation: ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+        opacity: 0.55;
+      }
+      .pulse::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 999px;
+        background: var(--coral);
+      }
+      @keyframes ping {
+        75%, 100% {
+          transform: scale(2.6);
+          opacity: 0;
+        }
+      }
+
+      /* Hairline divider */
+      .rule {
+        border-color: var(--rule);
+      }
+
+      /* Subtle dot grid background */
+      .grid-bg::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image: radial-gradient(
+          circle at 1px 1px,
+          rgba(0, 0, 0, 0.05) 1px,
+          transparent 0
+        );
+        background-size: 28px 28px;
+        opacity: 0.55;
+        z-index: 0;
+        mask-image: linear-gradient(to bottom, black 0%, black 70%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to bottom, black 0%, black 70%, transparent 100%);
+      }
+      @media (prefers-color-scheme: dark) {
+        .grid-bg::before {
+          background-image: radial-gradient(
+            circle at 1px 1px,
+            rgba(255, 255, 255, 0.06) 1px,
+            transparent 0
+          );
+        }
+      }
+
+      main { position: relative; z-index: 1; }
+
+      /* Project table — year + name + meta */
+      .ptable { width: 100%; border-collapse: collapse; }
+      .ptable td {
+        padding: 14px 0;
+        vertical-align: baseline;
+        border-bottom: 1px solid var(--rule);
+      }
+      .ptable tr:last-child td { border-bottom: 0; }
+      .ptable .y {
+        width: 56px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 11.5px;
+        color: var(--ink-4);
+        font-feature-settings: "calt" 0;
+        padding-right: 18px;
+      }
+      .ptable .s {
+        width: 14px;
+        padding-right: 12px;
+        color: var(--ink-4);
+        font-size: 12px;
+      }
+      .ptable .s.active { color: var(--coral); }
+      .ptable .meta {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10.5px;
+        color: var(--ink-4);
+        white-space: nowrap;
+        padding-left: 16px;
+      }
+
+      /* Principles — oversized quote marks */
+      .principle {
+        position: relative;
+        padding-left: 24px;
+      }
+      .principle::before {
+        content: "—";
+        position: absolute;
+        left: 0;
+        top: 0;
+        color: var(--coral);
+        font-weight: 500;
+      }
+
+      /* Big headline — tight tracking + italic accent */
+      .headline {
+        font-family: "Instrument Serif", Georgia, serif;
+        font-weight: 400;
+        letter-spacing: -0.025em;
+        line-height: 1.02;
+      }
+      .headline em {
+        font-style: italic;
+        color: var(--coral);
+      }
+    </style>
+  </head>
+  <body class="grid-bg">
+    <main class="mx-auto max-w-[640px] px-6 py-20 sm:py-28">
+      <!-- ── Top status row ────────────────────────────────────────────── -->
+      <header class="flex items-center justify-between mb-16 sm:mb-20">
+        <div class="flex items-center gap-2.5">
+          <span class="pulse" aria-hidden="true"></span>
+          <span class="eyebrow">Mexico City · Available</span>
+        </div>
+        <span class="mono text-[10.5px] ink-4">v.2026</span>
+      </header>
+
+      <!-- ── Hero ──────────────────────────────────────────────────────── -->
+      <section>
+        <p class="eyebrow mb-4">Jesús Bernal</p>
+        <h1 class="headline text-[44px] sm:text-[60px] ink">
+          I build software you can <em>actually own</em>.
+        </h1>
+        <p class="mt-6 text-[15.5px] leading-[1.65] ink-2 max-w-[52ch]">
+          Software keeps disappearing into someone else&rsquo;s cloud. I make
+          products that stay yours &mdash; open-source, self-hostable, on your
+          own domain. Lately that&rsquo;s
+          <a class="entry ink font-medium" href="https://openlen.com">OpenLen</a>
+          and
+          <a class="entry ink font-medium" href="https://inariwatch.com">InariWatch</a>.
+        </p>
+      </section>
+
+      <!-- ── Currently ─────────────────────────────────────────────────── -->
+      <section class="mt-16 sm:mt-20">
+        <div class="flex items-baseline justify-between mb-5">
+          <h2 class="eyebrow">Currently building</h2>
+          <span class="mono text-[10px] ink-4">2026 →</span>
+        </div>
+
+        <table class="ptable">
+          <tbody>
+            <tr>
+              <td class="y">2026</td>
+              <td class="s active" title="Active">◆</td>
+              <td>
+                <a href="https://openlen.com" class="entry ink text-[17px] font-medium inline-flex items-baseline gap-2">
+                  OpenLen
+                  <span class="arrow text-[12px]">↗</span>
+                </a>
+                <p class="mt-1 text-[13.5px] leading-[1.5] ink-2 max-w-[54ch]">
+                  Open-source AI landing-page builder. Lovable-quality output,
+                  your code, your subdomain. Self-hosted on a $4 VPS.
+                </p>
+              </td>
+              <td class="meta">AGPL · Next.js</td>
+            </tr>
+            <tr>
+              <td class="y">2026</td>
+              <td class="s active" title="Active">◆</td>
+              <td>
+                <a href="https://inariwatch.com" class="entry ink text-[17px] font-medium inline-flex items-baseline gap-2">
+                  InariWatch
+                  <span class="arrow text-[12px]">↗</span>
+                </a>
+                <p class="mt-1 text-[13.5px] leading-[1.5] ink-2 max-w-[54ch]">
+                  Zero-config error capture for Node.js. AI diagnosis, session
+                  replay, Claude / Cursor / VS Code integration out of the box.
+                </p>
+              </td>
+              <td class="meta">SDK · TypeScript</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ── Past & side ───────────────────────────────────────────────── -->
+      <section class="mt-14 sm:mt-16">
+        <div class="flex items-baseline justify-between mb-5">
+          <h2 class="eyebrow">Past &amp; side</h2>
+          <span class="mono text-[10px] ink-4">archive</span>
+        </div>
+
+        <table class="ptable">
+          <tbody>
+            <tr>
+              <td class="y">2026</td>
+              <td class="s" title="Shipped">✓</td>
+              <td>
+                <a href="https://sentinel-roan-eight.vercel.app" class="entry ink text-[15px] font-medium inline-flex items-baseline gap-2">
+                  Sentinel
+                  <span class="arrow text-[11px]">↗</span>
+                </a>
+                <p class="mt-0.5 text-[13px] leading-[1.5] ink-3 max-w-[54ch]">
+                  Personal gameplay intelligence for League of Legends. Pattern
+                  detection, live game companion, draft analysis. 50&nbsp;MB, no
+                  ads.
+                </p>
+              </td>
+              <td class="meta">Rust · Tauri</td>
+            </tr>
+            <tr>
+              <td class="y">2026</td>
+              <td class="s" title="Shipped">✓</td>
+              <td>
+                <a href="https://github.com/orbita-pos/spider" class="entry ink text-[15px] font-medium inline-flex items-baseline gap-2">
+                  Spider
+                  <span class="arrow text-[11px]">↗</span>
+                </a>
+                <p class="mt-0.5 text-[13px] leading-[1.5] ink-3 max-w-[54ch]">
+                  Search engine from scratch &mdash; Go crawler, inverted index,
+                  BM25 ranking, and PageRank. Learning exercise that grew up.
+                </p>
+              </td>
+              <td class="meta">Go</td>
+            </tr>
+            <tr>
+              <td class="y">2026</td>
+              <td class="s" title="Shipped">✓</td>
+              <td>
+                <a href="https://github.com/orbita-pos/vertex" class="entry ink text-[15px] font-medium inline-flex items-baseline gap-2">
+                  Vertex
+                  <span class="arrow text-[11px]">↗</span>
+                </a>
+                <p class="mt-0.5 text-[13px] leading-[1.5] ink-3 max-w-[54ch]">
+                  Video conferencing platform with a custom SFU written in Rust.
+                  No third-party WebRTC infra.
+                </p>
+              </td>
+              <td class="meta">Rust · WebRTC</td>
+            </tr>
+            <tr>
+              <td class="y">2026</td>
+              <td class="s" title="Shipped">✓</td>
+              <td>
+                <a href="https://github.com/orbita-pos/jesusbr-shadow" class="entry ink text-[15px] font-medium inline-flex items-baseline gap-2">
+                  Shadow
+                  <span class="arrow text-[11px]">↗</span>
+                </a>
+                <p class="mt-0.5 text-[13px] leading-[1.5] ink-3 max-w-[54ch]">
+                  P2P encrypted communication with the Signal protocol
+                  (X3DH&nbsp;+&nbsp;Double Ratchet), in Rust compiled to WASM.
+                </p>
+              </td>
+              <td class="meta">Rust · WASM</td>
+            </tr>
+            <tr>
+              <td class="y">2024</td>
+              <td class="s" title="Shipped">✓</td>
+              <td>
+                <a href="https://github.com/orbita-pos/orbita-pos" class="entry ink text-[15px] font-medium inline-flex items-baseline gap-2">
+                  Órbita POS
+                  <span class="arrow text-[11px]">↗</span>
+                </a>
+                <p class="mt-0.5 text-[13px] leading-[1.5] ink-3 max-w-[54ch]">
+                  Modern point-of-sale for Mexican restaurants. Windows-native,
+                  CFDI 4.0 e-invoicing built in.
+                </p>
+              </td>
+              <td class="meta">.NET · MX</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ── Principles ────────────────────────────────────────────────── -->
+      <section class="mt-16 sm:mt-20">
+        <h2 class="eyebrow mb-6">How I work</h2>
+        <ul class="space-y-3.5 text-[15.5px] leading-[1.5] ink">
+          <li class="principle serif italic text-[18px]">
+            Self-hostable beats hosted.
+          </li>
+          <li class="principle serif italic text-[18px]">
+            Open-source compounds.
+          </li>
+          <li class="principle serif italic text-[18px]">
+            Ship small things, often.
+          </li>
+          <li class="principle serif italic text-[18px]">
+            Read the source before the docs.
+          </li>
+        </ul>
+      </section>
+
+      <!-- ── Stack ─────────────────────────────────────────────────────── -->
+      <section class="mt-16 sm:mt-20">
+        <h2 class="eyebrow mb-5">Stack today</h2>
+        <p class="mono text-[12.5px] leading-[2] ink-2">
+          TypeScript&nbsp;·&nbsp;Rust&nbsp;·&nbsp;Go&nbsp;·&nbsp;Next.js<br/>
+          Postgres&nbsp;·&nbsp;Caddy&nbsp;·&nbsp;Hetzner&nbsp;·&nbsp;R2<br/>
+          AGPL by default
+        </p>
+      </section>
+
+      <!-- ── Reach me ──────────────────────────────────────────────────── -->
+      <section class="mt-16 sm:mt-20">
+        <h2 class="eyebrow mb-5">Reach me</h2>
+        <ul class="space-y-2 text-[14.5px]">
+          <li>
+            <a class="entry ink inline-flex items-baseline gap-2" href="mailto:info@jesusbr.com">
+              info@jesusbr.com
+              <span class="arrow text-[11px]">↗</span>
+            </a>
+          </li>
+          <li>
+            <a class="entry ink inline-flex items-baseline gap-2" href="https://github.com/jesusbernalrj">
+              <span class="mono text-[13px] ink-3">gh/</span>jesusbernalrj
+              <span class="arrow text-[11px]">↗</span>
+            </a>
+          </li>
+          <li>
+            <a class="entry ink inline-flex items-baseline gap-2" href="https://github.com/orbita-pos">
+              <span class="mono text-[13px] ink-3">gh/</span>orbita-pos
+              <span class="arrow text-[11px]">↗</span>
+            </a>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ── Footer ────────────────────────────────────────────────────── -->
+      <footer class="mt-24 pt-6 border-t rule flex items-center justify-between text-[11px] ink-4">
+        <span class="mono">jesusbr.com</span>
+        <span>© 2026 · Made by hand</span>
+      </footer>
+    </main>
+  </body>
+</html>

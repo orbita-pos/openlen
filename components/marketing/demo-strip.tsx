@@ -49,8 +49,12 @@ export async function DemoStrip() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
-          {featured.map((t, i) => (
-            <TemplateCard key={t.id} template={t} priority={i === 0} />
+          {featured.map((t) => (
+            // All three cards are above the fold on the marketing landing,
+            // so they get eager loading + high fetchPriority. Without this
+            // the 2nd/3rd cards' lazy-loaded thumbs sometimes lose the
+            // load event race after hydration and stick on the shimmer.
+            <TemplateCard key={t.id} template={t} priority />
           ))}
         </div>
 
