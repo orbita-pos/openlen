@@ -41,13 +41,17 @@ export class R2Storage implements StorageAdapter {
     this.clientPromise = (async () => {
       let sdk: AwsSdkModule;
       try {
-        // Variable-form specifier prevents bundlers from trying to resolve
-        // the module at build time. Only the first call pays the import cost.
-        const specifier = "@aws-sdk/client-s3";
-        sdk = (await import(/* @vite-ignore */ specifier)) as AwsSdkModule;
-      } catch {
+        // Static-string dynamic import so Next.js's webpack pass traces the
+        // module and bundles it into the standalone output. We previously
+        // used a variable-form specifier to dodge bundler resolution, but
+        // that meant `@aws-sdk/client-s3` was missing from the prod
+        // standalone bundle and every R2 upload threw at runtime.
+        sdk = (await import("@aws-sdk/client-s3")) as unknown as AwsSdkModule;
+      } catch (err) {
         throw new Error(
-          "R2Storage requires @aws-sdk/client-s3. Run `npm install @aws-sdk/client-s3`, or unset R2_* env vars to fall back to filesystem.",
+          `R2Storage failed to load @aws-sdk/client-s3: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
         );
       }
       const client = new sdk.S3Client({
