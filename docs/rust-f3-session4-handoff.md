@@ -4,7 +4,7 @@
 **Date:** 2026-05-27
 **Scope shipped:** F3 Session 4 — the production cutover. `/api/generate` now consumes `generateHtmlStream` (Gemini via `@openlen/ai-gateway` + `HtmlStream` sanitize/normalize), `/api/templates/ai-design` runs on `GeminiProvider` directly (one level under the helper, because Mode A's `<edits>` XML output cannot pipe through HtmlStream). The `together-ai` SDK dependency is removed; legacy "Kimi K2.6 / Together" copy across the chat UI + workspace comments is updated. F3 is officially complete after this merges.
 
-Self-commit SHA: `<PLACEHOLDER>` (filled by the conventional follow-up commit, matching the F3 S1/S2/S3 pattern).
+Self-commit SHA: `da91ac2` (filled by the conventional follow-up commit, matching the F3 S1/S2/S3 pattern).
 
 ## TL;DR
 
