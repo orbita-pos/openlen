@@ -1,0 +1,280 @@
+// TypeScript shim over the Rust `@openlen/ai-gateway` napi-rs binding.
+//
+// Why this file exists: the napi crate emits a JS-friendly but
+// "flat-tagged" shape for `StreamEvent` — every field optional, a
+// `type` string discriminating which fields are populated. The shape
+// is mechanical (one field per Rust enum variant payload) and not
+// what JS callers actually want to write. This wrapper narrows that
+// raw shape into a proper TypeScript discriminated union so callers
+// pattern-match cleanly:
+//
+//   for await (const event of provider.stream(req, { signal })) {
+//     if (event.type === "text_delta") process.stdout.write(event.text)
+//     if (event.type === "usage")      console.log("tokens:", event)
+//     if (event.type === "done")       console.log("reason:", event.stopReason)
+//   }
+//
+// Build prerequisite: `cd crates/ai-gateway && npm run build` must have
+// produced `index.js` + `index.d.ts` for this module to type-check.
+//
+// Thinking-budget gotcha (Gemini 2.5 Flash, observed F3 S1 post-fix):
+// Flash applies an internal "thinking budget" before emitting the
+// first user-visible token. For trivial prompts (e.g. `"hi"`) and a
+// stingy `maxOutputTokens` (≤ 128), the model can spend the entire
+// budget thinking and emit zero output tokens — the stream ends with
+// `usage` + `done { kind: 'max_tokens' }` but no `text_delta` events.
+// Pass `maxOutputTokens >= 256` for prompts of any length to ensure
+// at least a few output tokens land in the budget. See
+// docs/rust-f3-session1-handoff.md for the original incident.
+
+import {
+  GeminiProvider as RustGeminiProvider,
+  type GeminiStream as RustGeminiStream,
+  estimateTokens as rustEstimateTokens,
+  type Message as RustMessage,
+  type StopReason as RustStopReason,
+  type StreamEvent as RustStreamEvent,
+  type StreamRequest as RustStreamRequest,
+} from "@openlen/ai-gateway";
+
+// ─── Public types ──────────────────────────────────────────────────────────
+
+export type Role = "system" | "user" | "assistant";
+
+export interface Message {
+  role: Role;
+  content: string;
+}
+
+export interface StreamRequest {
+  model: string;
+  messages: Message[];
+  /** Gemini 2.5 Flash: keep `>= 256` for any prompt to avoid empty
+   *  output due to thinking-budget consumption (see file header). */
+  maxOutputTokens?: number;
+  /** Range 0.0–2.0; passed verbatim to Gemini. */
+  temperature?: number;
+}
+
+export type StreamEvent =
+  | { type: "start"; id: string }
+  | { type: "text_delta"; text: string }
+  | { type: "usage"; inputTokens: number; outputTokens: number }
+  | { type: "done"; stopReason: StopReason };
+
+export type StopReason =
+  | { kind: "end_turn" }
+  | { kind: "max_tokens" }
+  | { kind: "cancelled" }
+  | { kind: "error"; error: string };
+
+export type GatewayErrorKind =
+  | "api"
+  | "network"
+  | "cancelled"
+  | "invalid_response"
+  | "rate_limited"
+  | "auth";
+
+export class GatewayError extends Error {
+  constructor(
+    public readonly kind: GatewayErrorKind,
+    public readonly retryable: boolean,
+    message: string,
+    public readonly retryAfterMs?: number,
+  ) {
+    super(message);
+    this.name = "GatewayError";
+  }
+}
+
+export interface StreamOptions {
+  /** Abort the stream from JS. The signal is wired to the inner
+   *  Rust `CancellationToken`; aborting it tears down the upstream
+   *  socket inside the documented < 500 ms SLA. Mid-stream cancel
+   *  yields a terminal `{ type: 'done', stopReason: { kind: 'cancelled' }}`
+   *  event; pre-flight cancel yields the same shape (the binding
+   *  synthesises it). */
+  signal?: AbortSignal;
+}
+
+// ─── Free functions ────────────────────────────────────────────────────────
+
+/** Coarse `chars / 4` token estimator for pre-flight credit checks.
+ *  Cheap; intentionally over-estimates so the gate fails closed. Exact
+ *  counts arrive in the `usage` stream event mid-stream. */
+export function estimateTokens(text: string): number {
+  return rustEstimateTokens(text);
+}
+
+// ─── Provider class ────────────────────────────────────────────────────────
+
+export class GeminiProvider {
+  private readonly inner: RustGeminiProvider;
+
+  constructor(apiKey: string, baseUrl?: string) {
+    this.inner = new RustGeminiProvider(apiKey, baseUrl);
+  }
+
+  estimateInputTokens(messages: Message[]): number {
+    return this.inner.estimateInputTokens(messages.map(messageToRust));
+  }
+
+  /** Open a streaming generation. Returns an async iterator — consume
+   *  with `for await (const event of stream)`. Cancel by aborting
+   *  `opts.signal`, or by `break`ing out of the loop (the iterator's
+   *  `return()` triggers an internal `cancel()`).
+   *
+   *  Errors:
+   *  - Stream-level failures (mid-flight network drop, malformed SSE,
+   *    upstream 5xx, auth failure on initial POST) throw a typed
+   *    {@link GatewayError} inside the for-await loop.
+   *  - Cancellation NEVER throws — see {@link StreamOptions.signal}.
+   */
+  stream(
+    request: StreamRequest,
+    opts: StreamOptions = {},
+  ): AsyncIterableIterator<StreamEvent> {
+    const inner = this.inner.stream(streamRequestToRust(request));
+    if (opts.signal) {
+      if (opts.signal.aborted) {
+        inner.cancel();
+      } else {
+        opts.signal.addEventListener("abort", () => inner.cancel(), {
+          once: true,
+        });
+      }
+    }
+    return iterate(inner);
+  }
+}
+
+// ─── Internal: AsyncIterator over the Rust stream ──────────────────────────
+
+async function* iterate(
+  inner: RustGeminiStream,
+): AsyncIterableIterator<StreamEvent> {
+  try {
+    while (true) {
+      let raw: RustStreamEvent | null;
+      try {
+        raw = await inner.next();
+      } catch (rawErr) {
+        throw rehydrateError(rawErr);
+      }
+      if (raw === null) return;
+      yield narrowEvent(raw);
+    }
+  } finally {
+    // Caller broke out of the loop early (or threw); ensure the
+    // upstream socket is torn down.
+    inner.cancel();
+  }
+}
+
+// ─── Internal: shape conversions ───────────────────────────────────────────
+
+function messageToRust(m: Message): RustMessage {
+  return { role: m.role, content: m.content };
+}
+
+function streamRequestToRust(r: StreamRequest): RustStreamRequest {
+  return {
+    model: r.model,
+    messages: r.messages.map(messageToRust),
+    maxOutputTokens: r.maxOutputTokens,
+    temperature: r.temperature,
+  };
+}
+
+function narrowEvent(raw: RustStreamEvent): StreamEvent {
+  switch (raw.type) {
+    case "start":
+      return { type: "start", id: raw.id as string };
+    case "text_delta":
+      return { type: "text_delta", text: raw.text as string };
+    case "usage":
+      return {
+        type: "usage",
+        inputTokens: raw.inputTokens as number,
+        outputTokens: raw.outputTokens as number,
+      };
+    case "done":
+      return {
+        type: "done",
+        stopReason: narrowStopReason(raw.stopReason as RustStopReason),
+      };
+    default:
+      throw new Error(
+        `@openlen/ai-gateway: unexpected stream event type "${raw.type}"`,
+      );
+  }
+}
+
+function narrowStopReason(raw: RustStopReason): StopReason {
+  switch (raw.kind) {
+    case "end_turn":
+      return { kind: "end_turn" };
+    case "max_tokens":
+      return { kind: "max_tokens" };
+    case "cancelled":
+      return { kind: "cancelled" };
+    case "error":
+      return { kind: "error", error: raw.error ?? "" };
+    default:
+      throw new Error(
+        `@openlen/ai-gateway: unexpected stopReason kind "${raw.kind}"`,
+      );
+  }
+}
+
+// ─── Internal: napi Error envelope → typed GatewayError ────────────────────
+
+interface GatewayEnvelope {
+  kind: GatewayErrorKind;
+  retryable: boolean;
+  message: string;
+  retryAfterMs?: number | null;
+}
+
+function rehydrateError(raw: unknown): Error {
+  const envelope = tryParseEnvelope(raw);
+  if (envelope) {
+    return new GatewayError(
+      envelope.kind,
+      envelope.retryable,
+      envelope.message,
+      envelope.retryAfterMs ?? undefined,
+    );
+  }
+  return raw instanceof Error ? raw : new Error(String(raw));
+}
+
+function tryParseEnvelope(raw: unknown): GatewayEnvelope | null {
+  if (!raw || typeof raw !== "object") return null;
+  const message = (raw as { message?: unknown }).message;
+  if (typeof message !== "string") return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(message);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object") return null;
+  const kind = (parsed as { kind?: unknown }).kind;
+  const retryable = (parsed as { retryable?: unknown }).retryable;
+  const msg = (parsed as { message?: unknown }).message;
+  if (typeof kind !== "string" || typeof retryable !== "boolean") return null;
+  return {
+    kind: kind as GatewayErrorKind,
+    retryable,
+    message: typeof msg === "string" ? msg : "",
+    retryAfterMs: optionalNumber(
+      (parsed as { retryAfterMs?: unknown }).retryAfterMs,
+    ),
+  };
+}
+
+function optionalNumber(v: unknown): number | undefined {
+  return typeof v === "number" ? v : undefined;
+}

@@ -1,0 +1,10 @@
+# Source — not shipped to npm consumers; they get the prebuilt .node + index.js + index.d.ts only.
+src/
+tests/
+__test__/
+build.rs
+Cargo.toml
+Cargo.lock
+target/
+.gitignore
+README.md
