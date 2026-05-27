@@ -1,8 +1,8 @@
 // HTML editing operations — ID-tagged DOM addressing for the Chat tab's
 // patch protocol. Server-side we inject a `data-op-id` attribute on every
-// element of the project HTML before sending it to Kimi K2.6. The model
-// emits ops keyed on those IDs (e.g. `target="a4"`); the applier looks
-// them up and mutates the DOM. After applying, we strip the IDs so
+// element of the project HTML before sending it to the chat model. The
+// model emits ops keyed on those IDs (e.g. `target="a4"`); the applier
+// looks them up and mutates the DOM. After applying, we strip the IDs so
 // persisted / published HTML stays clean.
 //
 // Why IDs and not exact-string-match (SEARCH/REPLACE) anchors:
@@ -44,10 +44,10 @@ export function tagWithOpIds(html: string): TaggedHtmlResult {
 
 export interface ScopedView {
   /** The enclosing semantic container's outerHtml, still carrying op-ids
-   *  so Kimi can address its descendants. */
+   *  so the model can address its descendants. */
   scopedHtml: string;
-  /** The container's own op-id — Kimi uses this to delete/replace the
-   *  whole scoped block, or insert siblings before/after it. */
+  /** The container's own op-id — the model uses this to delete/replace
+   *  the whole scoped block, or insert siblings before/after it. */
   containerOpId: string;
   /** One-line-per-top-level-section summary of the whole document so the
    *  model knows what else lives on the page even though we didn't ship
@@ -61,7 +61,7 @@ export interface ScopedView {
 /** Resolve a CSS-selector breadcrumb (from the iframe's section-select
  *  script) against an already-tagged document, returning the matched
  *  element's `data-op-id`. Used by the Chat AI route to turn a click
- *  gesture into a hard pin for Kimi.
+ *  gesture into a hard pin for the model.
  *
  *  Returns null when the path is empty, the document doesn't parse, or
  *  the selector doesn't match anything. The caller falls back to the
@@ -75,7 +75,7 @@ export function resolveOpIdByPath(
 
 /** Given a tagged document and a pin (an op-id known to exist), return a
  *  scoped view: the pin's enclosing semantic container + an outline of all
- *  other top-level sections. Lets the route send Kimi a tiny payload
+ *  other top-level sections. Lets the route send the model a tiny payload
  *  instead of the entire taggedHtml.
  *
  *  Returns null when:
@@ -123,9 +123,9 @@ export interface OpParseResult {
   errors: string[];
 }
 
-/** Parse the `<edits>...</edits>` envelope Kimi emits in ops mode. Tolerant
- *  to surrounding whitespace + markdown fences (already stripped by caller).
- *  Returns ops in emission order. */
+/** Parse the `<edits>...</edits>` envelope the model emits in ops mode.
+ *  Tolerant to surrounding whitespace + markdown fences (already stripped
+ *  by caller). Returns ops in emission order. */
 export function parseOps(rawHtml: string): OpParseResult {
   const r = rustParseOps(rawHtml);
   return {

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": false,
   "license": "AGPL-3.0-only",
-  "description": "Open-source landing page generator with smart multi-model routing on Together AI.",
+  "description": "Open-source landing page generator powered by Gemini streaming via the @openlen/ai-gateway Rust crate.",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
@@ -62,7 +62,6 @@
     "server-only": "^0.0.1",
     "sharp": "^0.34.5",
     "tailwind-merge": "^3.6.0",
-    "together-ai": "^0.21.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {

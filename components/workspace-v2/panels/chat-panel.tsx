@@ -1,8 +1,8 @@
 // Chat tab — primary design surface for flat (template-clone / paste)
 // projects. When the panel is mounted with `flatProjectId` + `onFlatHtmlUpdate`,
-// it talks to /api/templates/ai-design (Kimi K2.6 streaming SSE) and drip-
-// feeds the iframe via `onFlatHtmlUpdate`. Other states (loading, no
-// project) render a skeleton or empty card — never a mock conversation.
+// it talks to /api/templates/ai-design (Gemini streaming SSE) and drip-feeds
+// the iframe via `onFlatHtmlUpdate`. Other states (loading, no project)
+// render a skeleton or empty card — never a mock conversation.
 
 "use client";
 
@@ -33,7 +33,7 @@ export interface ScopedSelection {
   hint: string;
   /** CSS-selector breadcrumb (`section:nth-of-type(3) > h1:nth-of-type(1)`)
    *  built by the iframe section-select script. The API resolves this to a
-   *  specific `data-op-id` so Kimi gets a hard target, not a fuzzy text hint. */
+   *  specific `data-op-id` so the model gets a hard target, not a fuzzy text hint. */
   path: string;
 }
 
@@ -44,7 +44,7 @@ export interface AttachedImage {
 
 interface ChatPanelProps {
   /** When provided (a flat project is loaded), the chat operates the real
-   *  AI design surface — Kimi K2.6 streaming + per-turn Undo. */
+   *  AI design surface — Gemini streaming + per-turn Undo. */
   flatProjectId?: string;
   flatProjectHtml?: string;
   onFlatHtmlUpdate?: (newHtml: string) => void;
@@ -55,7 +55,7 @@ interface ChatPanelProps {
    *  and other tabs (via BroadcastChannel) converge. */
   onChatChange?: () => void;
   /** Mirrors the chat's streaming state to the parent so the preview can
-   *  overlay the page-building loader while Kimi redesigns. */
+   *  overlay the page-building loader while the model redesigns. */
   onRedesigningChange?: (active: boolean) => void;
   /** True while the parent is still fetching `/api/projects/<id>` — render
    *  a skeleton so a brief flash of the empty/fallback state doesn't appear
@@ -162,7 +162,7 @@ function ChatNoProjectState() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// AI Design Chat — Kimi K2.6 streaming, flat projects only.
+// AI Design Chat — Gemini streaming, flat projects only.
 // ════════════════════════════════════════════════════════════════════════════
 
 type TurnStatus = "streaming" | "applied" | "error" | "reverted";
@@ -182,7 +182,7 @@ interface DesignTurn {
   appliedAt?: number;
   /** ms-epoch when the turn started — drives the elapsed-time label
    *  shown next to "Designing your page…" so the user has signal that
-   *  Kimi is still chewing through HTML. */
+   *  the model is still chewing through HTML. */
   startedAt?: number;
   /** Total HTML chars received from the stream so far. Surfaced in the
    *  streaming footer as forward-motion proof. */
@@ -286,8 +286,8 @@ function AIDesignChat({
   }, []);
 
   // Mirror streaming state to the parent so the preview can overlay the
-  // page-building loader while Kimi redesigns. Cleanup forces it off if the
-  // chat unmounts mid-stream (a tab switch aborts the request).
+  // page-building loader while the model redesigns. Cleanup forces it off
+  // if the chat unmounts mid-stream (a tab switch aborts the request).
   useEffect(() => {
     onRedesigningChangeRef.current?.(sending);
     return () => onRedesigningChangeRef.current?.(false);

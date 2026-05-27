@@ -13,7 +13,7 @@
 // derived from tag + innerText / id / classes. `path` is a CSS-selector
 // breadcrumb (`section:nth-of-type(3) > div:nth-of-type(2) > h1:nth-of-type(1)`)
 // the server uses to resolve the exact data-op-id of the clicked element, so
-// Kimi gets a hard pin instead of a fuzzy text hint.
+// the model gets a hard pin instead of a fuzzy text hint.
 
 const SECTION_SELECT_STYLE = `
 [data-openlen-select-hover] {
