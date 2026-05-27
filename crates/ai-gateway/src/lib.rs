@@ -21,6 +21,7 @@
 //! - `lib/credits.ts` hook-up + `/api/generate` cutover — F3 S3-S4.
 
 pub mod error;
+pub mod gemini;
 pub mod tokenizer;
 pub mod types;
 
