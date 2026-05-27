@@ -28,8 +28,13 @@ const FAST_MODEL: &str = "gemini-2.5-flash";
 async fn live_mini_prompt_emits_expected_event_shape() {
     let provider = GeminiProvider::new(api_key());
 
+    // 2.5 Flash reserves part of `max_output_tokens` for internal thinking
+    // before emitting visible text. A budget of 16 is consumed entirely by
+    // thinking on trivial prompts and the stream finishes with MAX_TOKENS
+    // before any TextDelta is emitted. 256 covers any plausible thinking
+    // + a one-word response with margin to spare.
     let req = StreamRequest::new(FAST_MODEL, vec![Message::user("Say hi in one word.")])
-        .with_max_output_tokens(16)
+        .with_max_output_tokens(256)
         .with_temperature(0.0);
 
     let mut stream = provider
