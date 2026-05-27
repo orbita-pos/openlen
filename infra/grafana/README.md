@@ -80,3 +80,58 @@ To disable the exporter entirely, set `OPENLEN_EDGE_METRICS_BIND=off`.
   `Host:` headers you may want to add a Prometheus relabel rule that
   drops unknown hosts before they reach storage.
 - Refresh defaults to 30 s. Time range defaults to last 1 h.
+
+## Alert rules (F2 S7)
+
+`openlen-edge-alerts.yaml` is a Prometheus rule file covering the
+F2 S7 soak window's automated gates — error rate, p99 latency, cert
+renewal-due, cert issuance failures, proxy upstream errors, and
+handshake cap saturation.
+
+### Loading the rules
+
+Add the rule file to Prometheus' `rule_files:` block:
+
+```yaml
+# /etc/prometheus/prometheus.yml
+rule_files:
+  - /etc/prometheus/rules/openlen-edge-alerts.yaml
+
+scrape_configs:
+  - job_name: openlen-edge
+    scrape_interval: 15s
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["127.0.0.1:9090"]
+        labels:
+          service: openlen-edge
+```
+
+Copy / symlink the file to that path, then reload Prometheus without
+restart:
+
+```bash
+sudo install -d /etc/prometheus/rules
+sudo install -m 0644 infra/grafana/openlen-edge-alerts.yaml \
+                     /etc/prometheus/rules/openlen-edge-alerts.yaml
+curl -X POST http://127.0.0.1:9090/-/reload
+```
+
+Verify the rules loaded:
+
+```bash
+curl -s http://127.0.0.1:9090/api/v1/rules | jq '.data.groups[] | select(.name=="openlen-edge.health")'
+```
+
+### Tuning
+
+Every alert thresholds was chosen for the first 7 days of soak — strict
+enough to catch a regression, loose enough to skip the noise floor of
+a healthy steady state. Re-tune AFTER you have baseline data:
+
+- `EdgeHighLatency` p99 > 1s is conservative. Once you have a week of
+  bench-baseline p99 you can probably drop this to 250-500 ms.
+- `EdgeProxyUpstreamErrors` > 1/s should drop to 0.1/s once you confirm
+  Node is steady.
+- `EdgeHandshakeCapApproaching` is harmless until traffic doubles —
+  silence it if you raise `OPENLEN_EDGE_MAX_INFLIGHT`.

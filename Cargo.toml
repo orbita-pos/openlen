@@ -7,6 +7,15 @@ edition = "2021"
 license = "AGPL-3.0-only"
 repository = "https://github.com/jesusbernalrj/inari-pages"
 
+# openlen-edge binary size cap: **≤ 8.0 MiB stripped** (Linux x86_64; the
+# Windows `.exe` we build for dev mirrors it within ~50 KiB). Tracked as a
+# soft target — exceeding it should trigger a profile review, not block work.
+# The cap was 7.5 MiB through F2 S6; S6's Prometheus exporter (~200 KiB net)
+# pushed the binary to 7.66 MiB, and F2 S7 promotes the cap to 8.0 MiB to
+# accommodate the metrics surface plus headroom for the apex / shared-uploads
+# routing additions in this session. A future drop is available via the
+# regex-removal refactor sketched in the S6 handoff Open Q #3 (~500 KiB
+# savings) — out of scope for migration session.
 [profile.release]
 lto = true
 opt-level = 3
