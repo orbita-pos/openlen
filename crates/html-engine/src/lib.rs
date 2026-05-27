@@ -248,3 +248,33 @@ pub fn extract_logo(html: String) -> Option<JsExtractedLogo> {
 pub fn inject_logo(html: String, logo_url: String) -> String {
     publish::inject_logo(&html, &logo_url)
 }
+
+#[napi(object, js_name = "UnsplashCredit")]
+pub struct JsUnsplashCredit {
+    pub author: String,
+    pub author_url: String,
+}
+
+#[napi(object, js_name = "ConsolidationResult")]
+pub struct JsConsolidationResult {
+    pub html: String,
+    pub credits: Vec<JsUnsplashCredit>,
+    pub anonymous_unsplash_count: u32,
+}
+
+#[napi]
+pub fn consolidate_unsplash_credits(html: String) -> JsConsolidationResult {
+    let r = publish::consolidate_unsplash_credits(&html);
+    JsConsolidationResult {
+        html: r.html,
+        credits: r
+            .credits
+            .into_iter()
+            .map(|c| JsUnsplashCredit {
+                author: c.author,
+                author_url: c.author_url,
+            })
+            .collect(),
+        anonymous_unsplash_count: r.anonymous_unsplash_count,
+    }
+}

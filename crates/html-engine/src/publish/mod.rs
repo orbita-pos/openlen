@@ -8,8 +8,10 @@
 // lol-html's single-pass streaming model the way the sanitize / normalize
 // passes do.
 
+pub mod credits;
 pub mod logo;
 
+pub use credits::{consolidate_unsplash_credits, ConsolidationResult, UnsplashCredit};
 pub use logo::{extract_logo, inject_logo, ExtractedLogo};
 
 use kuchikiki::traits::TendrilSink;
@@ -45,6 +47,38 @@ pub(crate) fn escape_attr(s: &str) -> String {
         match c {
             '&' => out.push_str("&amp;"),
             '"' => out.push_str("&quot;"),
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
+/// Stricter attribute escape — also encodes `<` and `>`. Mirror of the inline
+/// `escapeAttr` in lib/publish/credits.ts where values are user-controlled
+/// photographer names / URLs that could contain HTML-meaningful characters.
+pub(crate) fn escape_attr_strict(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '"' => out.push_str("&quot;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
+/// Escape `&`, `<`, `>` for safe interpolation into HTML element text.
+/// Mirror of `escapeHtml` in lib/publish/credits.ts.
+pub(crate) fn escape_html(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
             _ => out.push(c),
         }
     }
