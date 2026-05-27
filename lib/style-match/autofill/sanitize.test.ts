@@ -1,7 +1,9 @@
-// Tests for the migrated lib/style-match/autofill/sanitize.ts — verify the
-// public contract `sanitizeFilledHtml` is preserved under the default
-// `shadow-prefer-ts` mode AND that flipping to `rust` mode produces the
-// adapted Rust output that respects the same TS-shape contract.
+// Tests for sanitizeFilledHtml — the autofill-output sanitizer that strips
+// scripts (except the whitelisted Tailwind CDN), iframe/object/embed,
+// on*= event handlers, dangerous URL schemes, and meta-refresh / set-cookie
+// redirects, while preserving the design-bearing HTML.
+//
+// Backed by Rust's `sanitize_for_publish` since F1 S9.
 //
 // Run via: npx tsx --test lib/style-match/autofill/sanitize.test.ts
 //
@@ -14,174 +16,77 @@ import { strict as assert } from "node:assert";
 
 import { sanitizeFilledHtml } from "./sanitize";
 
-function withEnv<T>(
-  vars: Record<string, string | undefined>,
-  fn: () => T,
-): T {
-  const prior: Record<string, string | undefined> = {};
-  for (const k of Object.keys(vars)) {
-    prior[k] = process.env[k];
-    if (vars[k] === undefined) delete process.env[k];
-    else process.env[k] = vars[k];
-  }
-  try {
-    return fn();
-  } finally {
-    for (const k of Object.keys(prior)) {
-      if (prior[k] === undefined) delete process.env[k];
-      else process.env[k] = prior[k];
-    }
-  }
-}
-
-// All shadow-soak warnings emit to console.warn. Silence them per test by
-// temporarily replacing the global console.warn — we don't want to validate
-// the log format here (shadow-soak.test.ts owns that).
-function quiet<T>(fn: () => T): T {
-  const orig = console.warn;
-  console.warn = () => {};
-  try {
-    return fn();
-  } finally {
-    console.warn = orig;
-  }
-}
-
-// ─── Default mode (shadow-prefer-ts): legacy TS behaviour preserved ───────
-
-test("default mode: empty input → zero counters (legacy cheerio normalises to wrap)", () => {
-  // cheerio.load("").html() emits `<html><head></head><body></body></html>` —
-  // we don't assert byte-equal here because the Rust impl preserves empty,
-  // and the shadow-soak warning surfaces the divergence intentionally. What
-  // we ARE testing: the counters are zero (no XSS-shaped content stripped).
-  const r = quiet(() => sanitizeFilledHtml(""));
+test("empty input → zero counters", () => {
+  const r = sanitizeFilledHtml("");
   assert.equal(r.removed.scripts, 0);
   assert.equal(r.removed.eventHandlers, 0);
   assert.equal(r.removed.dangerousUrls, 0);
   assert.equal(r.removed.iframes, 0);
 });
 
-test("default mode: clean HTML passes through", () => {
+test("clean HTML passes through", () => {
   const html = "<div class=\"card\"><h1>Title</h1><p>body</p></div>";
-  const r = quiet(() => sanitizeFilledHtml(html));
+  const r = sanitizeFilledHtml(html);
   assert.ok(r.html.includes("Title"));
   assert.ok(r.html.includes("body"));
   assert.equal(r.removed.scripts, 0);
 });
 
-test("default mode: inline <script> stripped", () => {
-  const html = "<div><script>alert('xss')</script><p>safe</p></div>";
-  const r = quiet(() => sanitizeFilledHtml(html));
-  assert.ok(!r.html.includes("<script>"));
-  assert.ok(r.html.includes("<p>safe</p>"));
+test("inline <script> stripped; Tailwind CDN whitelist preserved", () => {
+  const html =
+    '<head><script src="https://cdn.tailwindcss.com"></script><script>alert(1)</script></head>';
+  const r = sanitizeFilledHtml(html);
+  assert.ok(r.html.includes("cdn.tailwindcss.com"));
+  assert.ok(!/<script>alert/.test(r.html));
   assert.equal(r.removed.scripts, 1);
 });
 
-test("default mode: Tailwind CDN script preserved (whitelist)", () => {
-  const html =
-    '<head><script src="https://cdn.tailwindcss.com"></script></head>';
-  const r = quiet(() => sanitizeFilledHtml(html));
-  assert.ok(r.html.includes("cdn.tailwindcss.com"));
-  assert.equal(r.removed.scripts, 0);
-});
-
-test("default mode: onclick + onmouseover event handlers stripped", () => {
+test("onclick + onmouseover event handlers stripped", () => {
   const html = '<button onclick="x()" onmouseover="y()">go</button>';
-  const r = quiet(() => sanitizeFilledHtml(html));
+  const r = sanitizeFilledHtml(html);
   assert.ok(!r.html.toLowerCase().includes("onclick"));
   assert.ok(!r.html.toLowerCase().includes("onmouseover"));
   assert.equal(r.removed.eventHandlers, 2);
 });
 
-test("default mode: iframe + object + embed removed", () => {
+test("iframe + object + embed removed", () => {
   const html =
     '<div><iframe src="x"></iframe><object data="y"></object><embed src="z"></div>';
-  const r = quiet(() => sanitizeFilledHtml(html));
+  const r = sanitizeFilledHtml(html);
   assert.ok(!r.html.includes("<iframe"));
   assert.ok(!r.html.includes("<object"));
   assert.ok(!r.html.includes("<embed"));
   assert.equal(r.removed.iframes, 3);
 });
 
-test("default mode: javascript: href stripped", () => {
-  const html = '<a href="javascript:alert(1)">x</a>';
-  const r = quiet(() => sanitizeFilledHtml(html));
-  assert.ok(!r.html.toLowerCase().includes("javascript:"));
-  assert.equal(r.removed.dangerousUrls, 1);
-});
-
-test("default mode: vbscript: action stripped", () => {
-  const html = '<form action="vbscript:bad()"><input/></form>';
-  const r = quiet(() => sanitizeFilledHtml(html));
-  assert.ok(!r.html.toLowerCase().includes("vbscript:"));
-  assert.equal(r.removed.dangerousUrls, 1);
-});
-
-test("default mode: meta-refresh counted as scripts (legacy TS contract)", () => {
-  const html = '<head><meta http-equiv="refresh" content="0;url=evil.com"></head>';
-  const r = quiet(() => sanitizeFilledHtml(html));
-  // TS contract bundles meta-refresh into `scripts`. The Rust adapter
-  // re-bundles for the shadow comparison, but the public counter the
-  // caller observes is `scripts` either way.
-  assert.equal(r.removed.scripts, 1);
-});
-
-test("default mode: meta http-equiv=set-cookie removed", () => {
+test("javascript: + vbscript: URLs stripped", () => {
   const html =
-    '<head><meta http-equiv="set-cookie" content="session=hijack"></head>';
-  const r = quiet(() => sanitizeFilledHtml(html));
-  assert.ok(!r.html.toLowerCase().includes("set-cookie"));
-  assert.equal(r.removed.scripts, 1);
+    '<a href="javascript:alert(1)">x</a><form action="vbscript:bad()"></form>';
+  const r = sanitizeFilledHtml(html);
+  assert.ok(!r.html.toLowerCase().includes("javascript:"));
+  assert.ok(!r.html.toLowerCase().includes("vbscript:"));
+  assert.equal(r.removed.dangerousUrls, 2);
 });
 
-// ─── Force TS mode (cutover dry-run reverse): same as default ──────────────
-
-test("forced ts mode: matches default behaviour", () => {
-  withEnv({ OPENLEN_SHADOW_SANITIZE_FILLED_HTML: "ts" }, () => {
-    const r = sanitizeFilledHtml('<div><script>x</script></div>');
-    assert.ok(!r.html.includes("<script>"));
-    assert.equal(r.removed.scripts, 1);
-  });
+test("meta-refresh + set-cookie bundled into scripts counter (TS contract)", () => {
+  // Rust splits meta-refresh into its own counter; the wrapper re-bundles
+  // both meta-equiv removals (refresh + set-cookie) into `scripts` so the
+  // public counters stay one-for-one with the legacy contract.
+  const html =
+    '<head><meta http-equiv="refresh" content="0;url=evil.com"><meta http-equiv="set-cookie" content="session=hijack"></head>';
+  const r = sanitizeFilledHtml(html);
+  assert.ok(!r.html.toLowerCase().includes("http-equiv"));
+  assert.equal(r.removed.scripts, 2);
 });
 
-// ─── Force RUST mode (cutover dry-run forward): adapted shape ──────────────
-
-test("forced rust mode: counters bundle metaRefresh into scripts (adapter)", () => {
-  withEnv({ OPENLEN_SHADOW_SANITIZE_FILLED_HTML: "rust" }, () => {
-    const r = sanitizeFilledHtml('<head><meta http-equiv="refresh" content="0"></head>');
-    // Rust splits meta-refresh into its own counter; the adapter re-bundles
-    // it into `scripts` to match the TS contract. So scripts === 1.
-    assert.equal(r.removed.scripts, 1);
-    assert.equal(r.removed.eventHandlers, 0);
-  });
+test("data-slot-path input throws (editor marker leaked into autofill)", () => {
+  assert.throws(
+    () => sanitizeFilledHtml('<div data-slot-path="hero.title">x</div>'),
+    /sanitize gate fired/,
+  );
 });
 
-test("forced rust mode: still strips scripts + handlers + urls", () => {
-  withEnv({ OPENLEN_SHADOW_SANITIZE_FILLED_HTML: "rust" }, () => {
-    const r = sanitizeFilledHtml(
-      '<a href="javascript:1" onclick="x()">hi</a><script>x</script>',
-    );
-    assert.ok(!r.html.toLowerCase().includes("javascript:"));
-    assert.ok(!r.html.toLowerCase().includes("onclick"));
-    assert.ok(!r.html.includes("<script"));
-    assert.equal(r.removed.scripts, 1);
-    assert.equal(r.removed.eventHandlers, 1);
-    assert.equal(r.removed.dangerousUrls, 1);
-  });
-});
-
-test("forced rust mode: data-slot-path input throws (adapter contract)", () => {
-  withEnv({ OPENLEN_SHADOW_SANITIZE_FILLED_HTML: "rust" }, () => {
-    assert.throws(
-      () => sanitizeFilledHtml('<div data-slot-path="hero.title">x</div>'),
-      /sanitize gate fired/,
-    );
-  });
-});
-
-// ─── Adversarial smoke (light — full 1000-doc corpus is in Rust crate) ────
-
-test("default mode: prompt-injection-style mixed payload", () => {
+test("adversarial mixed payload: every XSS shape stripped, counters add up", () => {
   const evil = [
     "<div>",
     '<script>fetch("/steal")</script>',
@@ -192,8 +97,7 @@ test("default mode: prompt-injection-style mixed payload", () => {
     '<meta http-equiv="refresh" content="0;url=attacker">',
     "</div>",
   ].join("");
-  const r = quiet(() => sanitizeFilledHtml(evil));
-  // All XSS-shaped content stripped, design-bearing markup preserved.
+  const r = sanitizeFilledHtml(evil);
   assert.ok(!r.html.toLowerCase().includes("<script"));
   assert.ok(!r.html.toLowerCase().includes("javascript:"));
   assert.ok(!r.html.toLowerCase().includes("onclick"));
