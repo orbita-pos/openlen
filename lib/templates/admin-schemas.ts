@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { detectSlotPath } from "@/lib/html-engine";
+
 // Shared Zod schemas + invariant helpers for the admin template endpoints.
 // Both POST (create / replace) and PUT (partial update) consume these so
 // validation rules live in one place. The CLI under scripts/templates-add.ts
@@ -97,7 +99,9 @@ export const UpdateSchema = z
 export type UpdateTemplateInput = z.infer<typeof UpdateSchema>;
 
 // Same defense-in-depth check publishToDir() does: editor-mode markers
-// from the workspace must never reach storage.
+// from the workspace must never reach storage. Routed through the Rust-
+// backed `detectSlotPath` so we catch mixed-case / entity-encoded /
+// whitespace-around-equals variants the inline `String.includes` missed.
 export function htmlContainsEditorMarker(html: string): boolean {
-  return html.includes("data-slot-path=");
+  return detectSlotPath(html);
 }

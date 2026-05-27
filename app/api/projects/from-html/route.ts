@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { createVersion } from "@/lib/projects/versions";
+import { detectSlotPath } from "@/lib/html-engine";
 import { normalizeBornCanonical } from "@/lib/normalize";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -42,7 +43,7 @@ export async function POST(req: Request): Promise<Response> {
   if (Buffer.byteLength(html, "utf8") > MAX_HTML_BYTES) {
     return json({ error: "too_large", message: "HTML must be under 8 MB" }, 413);
   }
-  if (html.includes("data-slot-path=")) {
+  if (detectSlotPath(html)) {
     return json(
       {
         error: "invalid_html",

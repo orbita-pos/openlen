@@ -14,8 +14,45 @@
 // Trade-off accepted: cheerio adds ~150KB to the server bundle but it's
 // already in the project's deps. No runtime cost per request beyond the
 // parse/serialize round trip (~20-50ms for a 50KB template).
+//
+// ─── Migration note (F1 S7) ────────────────────────────────────────────────
+// All six exports route through `lib/shadow-soak.ts` so we can soak the Rust
+// ID-tag ops engine (`crates/html-engine`) against the legacy cheerio path
+// before flipping the cutover. Default mode is `shadow-prefer-ts`, so
+// production behaviour is unchanged — Rust runs in shadow, divergences land
+// as `[shadow-soak] divergence …` warnings. Flip per call site with
+// `OPENLEN_SHADOW_<NAME>=rust` (kebab → screaming-snake) once soak data is
+// clean.
+//
+// Known semantic divergences (logged by shadow-soak — these are *expected*
+// for shadow output and validate the harness is working):
+//   - `applyOps` hierarchy cascade. When an op deletes an ancestor of a
+//     later op's target, the Rust engine's `apply_ops` under-reports
+//     `appliedCount` because lol-html's streaming handler still fires
+//     inside the to-be-removed range. The visible HTML is correct (the
+//     contract callers depend on), so the equality predicate accepts
+//     this gap — see `applyOpsEquality` below. Full Rust fix is deferred
+//     until shadow data shows how often real Kimi batches trip the
+//     cascade. Tracked in S1 handoff §2.
+//   - Serialiser whitespace / attribute quoting. cheerio + lol-html
+//     disagree on optional whitespace and attribute quoting. Logged but
+//     behaviour-equivalent.
+//   - parseOps error wording — Rust and TS message phrasings differ on
+//     "missing attribute" vs "unknown op type" paths. Op count and
+//     contents match; only the human-readable `errors` strings drift.
 
 import * as cheerio from "cheerio";
+
+import {
+  applyOps as rustApplyOps,
+  buildScopedView as rustBuildScopedView,
+  parseOps as rustParseOps,
+  resolveOpIdByPath as rustResolveOpIdByPath,
+  stripOpIds as rustStripOpIds,
+  tagWithOpIds as rustTagWithOpIds,
+  type ScopedView as RustScopedView,
+} from "@/lib/html-engine";
+import { shadowCompare } from "@/lib/shadow-soak";
 
 const OP_ID_ATTR = "data-op-id";
 // Tags we skip when tagging — they don't have meaningful "edit me" semantics
@@ -45,6 +82,16 @@ export interface TaggedHtmlResult {
  *  monotonic strings (a, b, c, ..., z, 10, 11, ...) to keep them as short
  *  as possible in the prompt. */
 export function tagWithOpIds(html: string): TaggedHtmlResult {
+  return shadowCompare(
+    "tag-with-op-ids",
+    `bytes=${html.length}`,
+    () => tagWithOpIdsTs(html),
+    () => tagWithOpIdsRust(html),
+    { fallbackMode: "shadow-prefer-ts" },
+  );
+}
+
+function tagWithOpIdsTs(html: string): TaggedHtmlResult {
   if (!html || html.trim().length === 0) {
     return { taggedHtml: html, taggedCount: 0 };
   }
@@ -71,6 +118,10 @@ export function tagWithOpIds(html: string): TaggedHtmlResult {
   return { taggedHtml: $.html(), taggedCount: counter };
 }
 
+function tagWithOpIdsRust(html: string): TaggedHtmlResult {
+  return rustTagWithOpIds(html);
+}
+
 /** Resolve a CSS-selector breadcrumb (from the iframe's section-select
  *  script) against an already-tagged document, returning the matched
  *  element's `data-op-id`. Used by the Chat AI route to turn a click
@@ -80,6 +131,19 @@ export function tagWithOpIds(html: string): TaggedHtmlResult {
  *  the selector doesn't match anything. The caller falls back to the
  *  textual hint in that case — so a miss never breaks the request. */
 export function resolveOpIdByPath(
+  taggedHtml: string,
+  path: string,
+): string | null {
+  return shadowCompare(
+    "resolve-op-id-by-path",
+    `bytes=${taggedHtml.length},path=${path.slice(0, 64)}`,
+    () => resolveOpIdByPathTs(taggedHtml, path),
+    () => resolveOpIdByPathRust(taggedHtml, path),
+    { fallbackMode: "shadow-prefer-ts" },
+  );
+}
+
+function resolveOpIdByPathTs(
   taggedHtml: string,
   path: string,
 ): string | null {
@@ -104,6 +168,13 @@ export function resolveOpIdByPath(
   if (!found || found.length === 0) return null;
   const opId = found.attr(OP_ID_ATTR);
   return typeof opId === "string" && opId.length > 0 ? opId : null;
+}
+
+function resolveOpIdByPathRust(
+  taggedHtml: string,
+  path: string,
+): string | null {
+  return rustResolveOpIdByPath(taggedHtml, path);
 }
 
 // Semantic containers we consider "section-like" — the body's direct
@@ -148,6 +219,19 @@ export interface ScopedView {
  *
  *  Caller falls back to sending the full taggedHtml in that case. */
 export function buildScopedView(
+  taggedHtml: string,
+  pinnedOpId: string,
+): ScopedView | null {
+  return shadowCompare(
+    "build-scoped-view",
+    `bytes=${taggedHtml.length},pin=${pinnedOpId}`,
+    () => buildScopedViewTs(taggedHtml, pinnedOpId),
+    () => buildScopedViewRust(taggedHtml, pinnedOpId),
+    { fallbackMode: "shadow-prefer-ts" },
+  );
+}
+
+function buildScopedViewTs(
   taggedHtml: string,
   pinnedOpId: string,
 ): ScopedView | null {
@@ -236,15 +320,43 @@ export function buildScopedView(
   };
 }
 
+function buildScopedViewRust(
+  taggedHtml: string,
+  pinnedOpId: string,
+): ScopedView | null {
+  const r = rustBuildScopedView(taggedHtml, pinnedOpId) as RustScopedView | null;
+  if (!r) return null;
+  return {
+    scopedHtml: r.scopedHtml,
+    containerOpId: r.containerOpId,
+    outline: r.outline,
+    pinIsContainer: r.pinIsContainer,
+  };
+}
+
 /** Strip `data-op-id` attributes from the HTML. Always called before
  *  persisting / publishing so the IDs never leak to disk or to the user's
  *  subdomain. */
 export function stripOpIds(html: string): string {
+  return shadowCompare(
+    "strip-op-ids",
+    `bytes=${html.length}`,
+    () => stripOpIdsTs(html),
+    () => stripOpIdsRust(html),
+    { fallbackMode: "shadow-prefer-ts" },
+  );
+}
+
+function stripOpIdsTs(html: string): string {
   if (!html) return html;
   // Cheap regex strip — avoids a parse+serialize round trip on a doc that
   // may already be ~60KB. The attribute value is `[a-z0-9]+` so the
   // regex is bounded and safe.
   return html.replace(/\s*data-op-id="[a-z0-9]+"/gi, "");
+}
+
+function stripOpIdsRust(html: string): string {
+  return rustStripOpIds(html);
 }
 
 export type OpType =
@@ -280,6 +392,22 @@ const SELF_CLOSING_EDIT_RE = /<edit\b([^>]*)\/>/gi;
  *  to surrounding whitespace + markdown fences (already stripped by caller).
  *  Returns ops in emission order. */
 export function parseOps(rawHtml: string): OpParseResult {
+  return shadowCompare(
+    "parse-ops",
+    `bytes=${rawHtml.length}`,
+    () => parseOpsTs(rawHtml),
+    () => parseOpsRust(rawHtml),
+    {
+      fallbackMode: "shadow-prefer-ts",
+      // Op contents match across impls but error message wording drifts
+      // (TS hand-written strings vs Rust's parse module). Compare ops
+      // structurally; only the error-count is checked, not the strings.
+      equalityFn: parseOpsEquality,
+    },
+  );
+}
+
+function parseOpsTs(rawHtml: string): OpParseResult {
   const errors: string[] = [];
   if (!rawHtml || rawHtml.trim().length === 0) {
     return { ops: [], errors: ["Empty ops body"] };
@@ -356,6 +484,38 @@ export function parseOps(rawHtml: string): OpParseResult {
   return { ops, errors };
 }
 
+function parseOpsRust(rawHtml: string): OpParseResult {
+  const r = rustParseOps(rawHtml);
+  return {
+    // Rust's `Op.type` is `string`; the parser only emits validated
+    // op types, so the cast is safe.
+    ops: r.ops.map((op) => ({
+      type: op.type as OpType,
+      target: op.target,
+      newHtml: op.newHtml,
+    })),
+    errors: r.errors,
+  };
+}
+
+/** Equality for parseOps: ops must match structurally (type/target/newHtml
+ *  on each), errors are compared by count only — the human-readable
+ *  message strings drift between the cheerio impl and the Rust parser. */
+function parseOpsEquality(ts: unknown, rust: unknown): boolean {
+  const t = ts as OpParseResult;
+  const r = rust as OpParseResult;
+  if (t.ops.length !== r.ops.length) return false;
+  for (let i = 0; i < t.ops.length; i += 1) {
+    const a = t.ops[i];
+    const b = r.ops[i];
+    if (a.type !== b.type) return false;
+    if (a.target !== b.target) return false;
+    if ((a.newHtml ?? "") !== (b.newHtml ?? "")) return false;
+  }
+  if (t.errors.length !== r.errors.length) return false;
+  return true;
+}
+
 function parseAttrs(raw: string): Record<string, string> {
   const out: Record<string, string> = {};
   for (const m of raw.matchAll(ATTR_RE)) {
@@ -392,6 +552,22 @@ export interface OpApplyResult {
  *  any target is missing, bail. Successful run returns the spliced doc with
  *  IDs stripped. */
 export function applyOps(taggedHtml: string, ops: Op[]): OpApplyResult {
+  return shadowCompare(
+    "apply-ops",
+    `bytes=${taggedHtml.length},ops=${ops.length}`,
+    () => applyOpsTs(taggedHtml, ops),
+    () => applyOpsRust(taggedHtml, ops),
+    {
+      fallbackMode: "shadow-prefer-ts",
+      // The visible HTML is the contract callers depend on. `appliedCount`
+      // drifts on hierarchy cascade (S1 carry-over) — accept the gap when
+      // HTML matches. See file-level migration note.
+      equalityFn: applyOpsEquality,
+    },
+  );
+}
+
+function applyOpsTs(taggedHtml: string, ops: Op[]): OpApplyResult {
   if (ops.length === 0) {
     return { html: null, errors: [], appliedCount: 0 };
   }
@@ -498,6 +674,36 @@ export function applyOps(taggedHtml: string, ops: Op[]): OpApplyResult {
 
   const html = $.html();
   return { html, errors, appliedCount };
+}
+
+function applyOpsRust(taggedHtml: string, ops: Op[]): OpApplyResult {
+  const r = rustApplyOps(taggedHtml, ops);
+  return {
+    html: r.html,
+    errors: r.errors.map((e) => ({
+      opIndex: e.opIndex,
+      op: e.op as OpType,
+      target: e.target,
+      reason: e.reason,
+    })),
+    appliedCount: r.appliedCount,
+  };
+}
+
+/** Equality for applyOps: the visible HTML is the contract callers depend
+ *  on (chat flow renders it to the iframe; publish flow writes it to disk).
+ *  The S1 hierarchy-cascade carry-over makes `appliedCount` drift on
+ *  parent-delete + child-replace combos — accept that gap when the HTML
+ *  matches. `errors` lengths must agree (one side flagging an error the
+ *  other ignored = a real divergence to surface), but reason wording is
+ *  ignored. */
+function applyOpsEquality(ts: unknown, rust: unknown): boolean {
+  const t = ts as OpApplyResult;
+  const r = rust as OpApplyResult;
+  if (t.html !== r.html) return false;
+  if (t.errors.length !== r.errors.length) return false;
+  // appliedCount intentionally not compared — see S1 cascade note.
+  return true;
 }
 
 function escapeAttr(s: string): string {

@@ -9,6 +9,7 @@ import {
   type TokenUsage,
 } from "@/lib/credits";
 import { DESIGN_GUIDANCE } from "@/lib/design-guidance";
+import { detectSlotPath } from "@/lib/html-engine";
 import { normalizeBornCanonical } from "@/lib/normalize";
 import { resolveAIProvider } from "@/lib/ai-provider";
 import {
@@ -430,7 +431,7 @@ export async function POST(req: Request): Promise<Response> {
           closeStream();
           return;
         }
-        if (html.includes("data-slot-path=")) {
+        if (detectSlotPath(html)) {
           emit("error", {
             message: "The model emitted editor-mode markers — try again.",
           });

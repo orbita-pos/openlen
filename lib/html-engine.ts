@@ -180,6 +180,25 @@ export function buildScopedView(
 
 export { RustHtmlStream as HtmlStream };
 
+// ─── Higher-level helpers ──────────────────────────────────────────────────
+//
+// Built on the shimmed primitives above for callers that need a single-shot
+// boolean instead of the full sanitize result.
+
+/** Detect whether `html` contains the editor-mode `data-slot-path=` marker
+ *  in any of its known variants (literal, mixed-case, entity-encoded,
+ *  whitespace-around-equals). Defers to Rust's `sanitize_for_publish`
+ *  slot-path gate (S3 + S5 cross-chunk scanner) which catches variants the
+ *  inline `html.includes("data-slot-path=")` check misses.
+ *
+ *  Returns true when the gate fires. Use this everywhere the publish /
+ *  ingestion paths reject editor-mode HTML — consolidates the inline call
+ *  sites under one Rust-backed implementation. */
+export function detectSlotPath(html: string): boolean {
+  const r = sanitizeForPublish(html);
+  return r.html === null;
+}
+
 // ─── Conversion helpers ────────────────────────────────────────────────────
 
 function opFromRust(o: RustOp): Op {

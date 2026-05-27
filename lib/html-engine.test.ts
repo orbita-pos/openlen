@@ -13,6 +13,7 @@ import { strict as assert } from "node:assert";
 import {
   applyOps,
   buildScopedView,
+  detectSlotPath,
   HtmlStream,
   normalizeBornCanonical,
   optimizeForPublish,
@@ -175,4 +176,48 @@ test("HtmlStream: rejects data-slot-path mid-stream", () => {
     () => stream.write('<div data-slot-path="x">'),
     /data-slot-path/,
   );
+});
+
+// ─── detectSlotPath helper (S7 — consolidates 9 inline call sites) ────────
+
+test("detectSlotPath: clean HTML → false", () => {
+  assert.equal(detectSlotPath("<div>hi</div>"), false);
+});
+
+test("detectSlotPath: empty input → false", () => {
+  assert.equal(detectSlotPath(""), false);
+});
+
+test("detectSlotPath: literal lowercase marker → true", () => {
+  assert.equal(detectSlotPath('<div data-slot-path="hero.title">x</div>'), true);
+});
+
+test("detectSlotPath: mixed-case marker → true (TS String.includes missed this)", () => {
+  assert.equal(detectSlotPath('<div Data-Slot-Path="x">y</div>'), true);
+});
+
+test("detectSlotPath: entity-encoded equals sign → true (TS String.includes missed this)", () => {
+  assert.equal(
+    detectSlotPath('<div data-slot-path&#x3d;"x">y</div>'),
+    true,
+  );
+});
+
+test("detectSlotPath: whitespace around equals → true (TS String.includes missed this)", () => {
+  assert.equal(detectSlotPath('<div data-slot-path ="x">y</div>'), true);
+});
+
+test("detectSlotPath: substring 'data-slot-path' without '=' is not a marker", () => {
+  // The Rust gate requires the attribute-equals shape, not just the
+  // substring. A bare 'data-slot-path' in text content is not a marker.
+  assert.equal(detectSlotPath("<p>see data-slot-path docs</p>"), false);
+});
+
+test("detectSlotPath: marker buried inside a larger document → true", () => {
+  const html =
+    "<html><head><title>x</title></head><body>" +
+    "<header>top</header>" +
+    "<main><section><p data-slot-path=\"hero.title\">x</p></section></main>" +
+    "</body></html>";
+  assert.equal(detectSlotPath(html), true);
 });

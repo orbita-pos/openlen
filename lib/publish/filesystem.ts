@@ -14,6 +14,7 @@ import {
 import path from "node:path";
 import sharp from "sharp";
 import { validateSubdomain } from "@/lib/subdomain/validate";
+import { detectSlotPath } from "@/lib/html-engine";
 import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
 import { consolidateUnsplashCredits } from "@/lib/publish/credits";
 import { wirePublishedForms } from "@/lib/publish/forms";
@@ -326,7 +327,7 @@ export async function publishToDir(
   if (!v.ok) {
     throw new Error(`publishToDir: invalid subdomain (${v.reason})`);
   }
-  if (params.html.includes("data-slot-path=")) {
+  if (detectSlotPath(params.html)) {
     throw new Error(
       "publishToDir: refusing to write HTML containing data-slot-path (editor-mode leaked into publish path)",
     );
