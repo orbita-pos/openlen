@@ -55,6 +55,9 @@ notify = { version = "8", default-features = false, features = ["macos_kqueue"] 
 sha2 = "0.10"
 rcgen = "0.13"
 serde_json = "1"
+metrics = "0.24"
+metrics-exporter-prometheus = { version = "0.16", default-features = false, features = ["http-listener"] }
+metrics-process = "2"
 
 [dev-dependencies]
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "http2", "stream"] }

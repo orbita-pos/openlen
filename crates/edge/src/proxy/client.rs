@@ -113,11 +113,38 @@ impl NodeClient {
         let timeout = self.connect_timeout;
         let inner = self.inner.clone();
         let body_idle = self.body_idle_timeout;
+        let started = std::time::Instant::now();
         let fut = async move { inner.request(req).await };
-        match tokio::time::timeout(timeout, fut).await {
-            Ok(Ok(resp)) => Ok(map_response(resp, body_idle)),
-            Ok(Err(err)) => Err(NodeClientError::Transport(err.to_string())),
-            Err(_) => Err(NodeClientError::HeadersTimeout(timeout)),
+        let result = tokio::time::timeout(timeout, fut).await;
+        let elapsed = started.elapsed().as_secs_f64();
+        metrics::histogram!("openlen_edge_proxy_upstream_duration_seconds").record(elapsed);
+        match result {
+            Ok(Ok(resp)) => {
+                if resp.status().is_server_error() {
+                    metrics::counter!(
+                        "openlen_edge_proxy_upstream_errors_total",
+                        "reason" => "upstream_5xx",
+                    )
+                    .increment(1);
+                }
+                Ok(map_response(resp, body_idle))
+            }
+            Ok(Err(err)) => {
+                metrics::counter!(
+                    "openlen_edge_proxy_upstream_errors_total",
+                    "reason" => "connect_refused",
+                )
+                .increment(1);
+                Err(NodeClientError::Transport(err.to_string()))
+            }
+            Err(_) => {
+                metrics::counter!(
+                    "openlen_edge_proxy_upstream_errors_total",
+                    "reason" => "header_timeout",
+                )
+                .increment(1);
+                Err(NodeClientError::HeadersTimeout(timeout))
+            }
         }
     }
 }

@@ -251,8 +251,27 @@ impl LayeredLookup {
 impl DomainLookup for LayeredLookup {
     async fn lookup(&self, host: &str) -> LookupResult {
         let key = host.to_ascii_lowercase();
+        let started = std::time::Instant::now();
 
         if let Some(entry) = self.cache.get(&key).await {
+            let result_label = if entry.value.is_some() {
+                "hit_positive"
+            } else {
+                "hit_negative"
+            };
+            metrics::counter!(
+                "openlen_edge_domain_lookup_total",
+                "result" => result_label,
+            )
+            .increment(1);
+            metrics::histogram!(
+                "openlen_edge_domain_lookup_duration_seconds",
+                "cache" => "hit",
+            )
+            .record(started.elapsed().as_secs_f64());
+            metrics::gauge!("openlen_edge_domain_reval_permits_available")
+                .set(self.reval_sem.available_permits() as f64);
+
             if self.cache.is_stale(&entry) {
                 // Cap simultaneous background revalidations. A wave of
                 // stale entries can't pile up Postgres queries faster than
@@ -289,6 +308,22 @@ impl DomainLookup for LayeredLookup {
                 base.lookup(&key_for_flight).await
             })
             .await;
+
+        let result_label = match &result {
+            Ok(Some(_)) => "miss",
+            Ok(None) => "miss",
+            Err(_) => "error",
+        };
+        metrics::counter!(
+            "openlen_edge_domain_lookup_total",
+            "result" => result_label,
+        )
+        .increment(1);
+        metrics::histogram!(
+            "openlen_edge_domain_lookup_duration_seconds",
+            "cache" => "miss",
+        )
+        .record(started.elapsed().as_secs_f64());
 
         match &result {
             Ok(v) => self.cache.insert(key, v.clone()).await,
