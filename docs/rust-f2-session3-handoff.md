@@ -16,7 +16,7 @@ None this session — F2 S1 + S2 are both on `master @ ae8af12`, the branch was 
 
 ```
 1ac0fda  feat(rust/edge): F2 Sem 5-6 — reverse proxy to Node :3000 + HTTP/1.1 keep-alive
-<docs>   docs(rust): F2 session-3 handoff — Sem 5-6 proxy shipped
+0553d44  docs(rust): F2 session-3 handoff — Sem 5-6 proxy shipped
 ```
 
 Forked off `master @ ae8af12`. No file under `crates/html-engine/` was touched (parallel F1 S4 owns the minify path) and `.gitattributes` was left alone for the same reason.
