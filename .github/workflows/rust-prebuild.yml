@@ -1,0 +1,133 @@
+name: html-engine-prebuild
+
+# Builds the `openlen-html-engine` napi-rs binary per supported platform on every
+# `html-engine-v*` tag push, uploads each `.node` as an artifact, and attaches
+# them all to a GitHub Release.
+#
+# Consumer side: `infra/scripts/deploy.sh` (or any deployer) downloads the
+# appropriate `.node` for the host triple from the GH Release matching the
+# pinned `html-engine` version. See `docs/rust-prebuild-flow.md`.
+#
+# Local dev: this workflow is NOT involved — `npm run build` inside
+# `crates/html-engine` produces an in-place `.node` that the workspace
+# consumes via the `file:./crates/html-engine` dep in the root `package.json`.
+
+on:
+  push:
+    tags:
+      - "html-engine-v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag name to build (e.g. html-engine-v0.1.0). Used only when triggered manually."
+        required: true
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  build:
+    name: build / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact: openlen-html-engine.win32-x64-msvc.node
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact: openlen-html-engine.linux-x64-gnu.node
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo registry + target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install crate dependencies
+        working-directory: crates/html-engine
+        run: npm install --no-audit --no-fund
+
+      - name: napi build (release)
+        working-directory: crates/html-engine
+        run: npm run build
+
+      - name: Verify artifact exists
+        shell: bash
+        working-directory: crates/html-engine
+        run: |
+          test -f "${{ matrix.artifact }}" || {
+            echo "::error::Expected ${{ matrix.artifact }} not produced by napi build"
+            ls -la
+            exit 1
+          }
+
+      - name: Upload prebuild artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: crates/html-engine/${{ matrix.artifact }}
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: attach to GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all prebuild artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -la artifacts/
+
+      - name: Resolve release tag
+        id: tag
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.tag }}" ]; then
+            echo "name=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create / update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.name }}
+          name: ${{ steps.tag.outputs.name }}
+          files: artifacts/*.node
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          draft: false
+          prerelease: false
