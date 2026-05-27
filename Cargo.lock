@@ -2174,6 +2174,7 @@ dependencies = [
  "napi-derive",
  "napi-sys",
  "once_cell",
+ "tokio",
 ]
 
 [[package]]
@@ -2339,6 +2340,9 @@ dependencies = [
  "async-stream",
  "bytes",
  "futures",
+ "napi",
+ "napi-build",
+ "napi-derive",
  "reqwest",
  "serde",
  "serde_json",
