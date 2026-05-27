@@ -1,7 +1,8 @@
 // Section-reorder injection for the iframe — drag handles + drop indicator
 // + pointer-event wiring that lets the user move top-level page blocks
-// without going through Kimi. Works on mouse, touch, and pen via a single
-// code path (HTML5 drag-and-drop was rejected for being touch-hostile).
+// without going through the chat model. Works on mouse, touch, and pen
+// via a single code path (HTML5 drag-and-drop was rejected for being
+// touch-hostile).
 //
 // Mirrors the inline-edit pattern: inject style + script before </body>,
 // the script mutates the DOM in place, applies a FLIP animation, and on
