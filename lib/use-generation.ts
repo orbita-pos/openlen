@@ -28,10 +28,10 @@ export interface UseGenerationResult {
 }
 
 // No SSE byte for this long → assume the server is wedged and give up.
-// Generous — Together is slow under load but usually finishes, and the route
-// streams bytes throughout (html_chunk, or a progress ping while building the
-// model spec), so a healthy generation always keeps this reset. The server's
-// own stall guard (720s) normally errors first.
+// The /api/generate route streams bytes throughout (html_chunk during the
+// page write, or a progress ping every 5s during Gemini's initial think),
+// so a healthy generation always keeps this reset. Generous enough that
+// only a fully dead connection trips it.
 const SILENCE_TIMEOUT_MS = 780_000;
 
 export function useGeneration(): UseGenerationResult {
