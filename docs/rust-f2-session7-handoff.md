@@ -37,6 +37,7 @@ in). Worktree set up clean at `D:\worktrees\openlen-f2-s7` via
 ## Commits on this branch
 
 ```
+d2df7cb  docs(rust):          F2 session-7 handoff — migration toolkit complete (F2 DONE)
 2c32b5e  feat(infra/grafana): F2 S7 F  — Prometheus alert rules
 03950c2  test(infra/edge):    F2 S7 E  — post-cutover smoke (8 checks)
 4a338ee  docs(infra/edge):    F2 S7 D  — cutover runbook
@@ -51,9 +52,9 @@ ba7731c  feat(rust/edge):     F2 S7 A5 — security header parity
 04aa587  feat(rust/edge):     F2 S7 A1 — populate cert_renewal_due_total
 ```
 
-Twelve commits, each independently reviewable. The 69be2aa fixup is a
-zero-risk `.gitignore` extension + index removal (`__pycache__/` from
-the diff.py validation step accidentally landed in B).
+Thirteen commits including this self-reference. The 69be2aa fixup is
+a zero-risk `.gitignore` extension + index removal (`__pycache__/`
+from the diff.py validation step accidentally landed in B).
 
 ## Milestones covered
 
