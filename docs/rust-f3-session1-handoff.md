@@ -43,10 +43,11 @@ a3af725 feat(rust/ai-gateway): F3 S1 B — public stream types
 3dbef8a feat(rust/ai-gateway): F3 S1 E — Gemini SSE parser
 84757e2 feat(rust/ai-gateway): F3 S1 F — GeminiProvider impl
 43b2e1c test(rust/ai-gateway): F3 S1 G — HTTP-level tests (mock + live)
-<TBD>   docs(rust): F3 S1 H — session-1 handoff
+ce07ab6 docs(rust): F3 session-1 handoff — ai-gateway crate + GeminiProvider
 ```
 
-The eighth commit (this doc) lands once the SHA below is filled in.
+The follow-up "fill in self-commit SHA" commit on top of `ce07ab6` is
+the conventional second step per the F1 S9 pattern.
 
 ## F3 plan (4 sessions planned) and where this lands
 
@@ -560,4 +561,4 @@ reviewer first.
 
 ## Self-commit SHA
 
-This handoff doc was committed as: `<TBD — fill once the commit lands>`
+This handoff doc was committed as: `ce07ab6`
