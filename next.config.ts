@@ -18,13 +18,44 @@ const nextConfig = {
       "./node_modules/tailwindcss/stubs/*",
     ],
   },
-  // Without external-ing tailwindcss + postcss, webpack inlines them into
-  // .next/server/chunks/*.js and the bundled code's __dirname resolves to
-  // chunks/, where it then looks for `chunks/css/preflight.css` (doesn't
-  // exist). Marking them external preserves the original node_modules
-  // layout at runtime so `require.resolve` / __dirname-based asset
-  // lookups in publish-time Tailwind baking find their CSS files.
-  serverExternalPackages: ["tailwindcss", "postcss"],
+  // External Node packages:
+  // - tailwindcss, postcss: webpack would inline them into .next/server/
+  //   chunks/*.js, breaking package-relative asset paths (preflight.css,
+  //   stubs). Required by the publish-time Tailwind pipeline.
+  // - @openlen/html-engine: ships a native `.node` binding that webpack
+  //   can't parse. Externalising hands the require off to Node's loader at
+  //   runtime, which knows how to load native modules. Required after the
+  //   F1 S9 cutover, where every consumer of the Rust engine resolves
+  //   through `lib/html-engine.ts` → `@openlen/html-engine` → `.node`.
+  serverExternalPackages: ["tailwindcss", "postcss", "@openlen/html-engine"],
+  // serverExternalPackages alone doesn't always exclude transitively-linked
+  // workspace deps from webpack's module graph (the `file:` symlink to
+  // crates/html-engine gets followed into the napi `index.js` and chokes
+  // on the bundled `.node` file). Belt-and-braces: a server-only webpack
+  // external that matches the package name AND the workspace symlink path.
+  webpack: (config: unknown, ctx: { isServer: boolean }) => {
+    if (!ctx.isServer) return config;
+    const c = config as { externals?: unknown[] };
+    const externals = c.externals ?? [];
+    externals.push(
+      (
+        { request }: { request?: string },
+        callback: (err: null | Error, result?: string) => void,
+      ) => {
+        if (!request) return callback(null);
+        if (
+          request === "@openlen/html-engine" ||
+          request.endsWith("/crates/html-engine/index.js") ||
+          request.endsWith(".node")
+        ) {
+          return callback(null, "commonjs " + request);
+        }
+        callback(null);
+      },
+    );
+    c.externals = externals;
+    return config;
+  },
   // Standalone build emits `.next/standalone/server.js` plus the minimum
   // `node_modules/` tree the runtime actually needs. `.next/static/` and
   // `public/` stay outside `standalone/` and must be copied in by the
