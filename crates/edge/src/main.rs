@@ -21,6 +21,10 @@ async fn main() -> Result<()> {
         cert = %cfg.cert_path.display(),
         publish_root = %cfg.publish_root.display(),
         max_inflight = cfg.max_inflight,
+        node_url = %cfg.node_url,
+        node_timeout_secs = cfg.node_timeout_secs,
+        proxy_hosts = ?cfg.proxy_hosts,
+        proxy_paths = ?cfg.proxy_paths,
         "openlen-edge starting"
     );
 
