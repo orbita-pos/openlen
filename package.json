@@ -47,7 +47,6 @@
     "@projectwallace/css-design-tokens": "^0.11.4",
     "apcach": "^0.6.4",
     "bcryptjs": "^3.0.3",
-    "cheerio": "^1.2.0",
     "clsx": "^2.1.1",
     "culori": "^4.0.2",
     "drizzle-orm": "^0.45.2",
