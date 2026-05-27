@@ -10,8 +10,31 @@
 //
 // We deliberately keep <style> blocks (templates need them) but strip
 // <script> except the known-safe Tailwind CDN import we whitelist by URL.
+//
+// ─── Migration note (F1 S6) ────────────────────────────────────────────────
+// Routed through `lib/shadow-soak` so we can soak the Rust sanitize gate
+// against the legacy cheerio path. Default mode is `shadow-prefer-ts`, so
+// production behaviour is unchanged — Rust runs in shadow, divergences land
+// as `[shadow-soak] divergence …` warnings. Flip with OPENLEN_SHADOW_MODE
+// or OPENLEN_SHADOW_SANITIZE_FILLED_HTML once soak data is clean.
+//
+// Known semantic divergences (logged by shadow-soak — these are *expected*
+// for shadow output and validate the harness is working):
+//   - Counter shape: TS bundles <meta http-equiv="refresh"> into `removed.scripts`;
+//     Rust splits it into `removed.metaRefresh`. The Rust→TS adapter below
+//     re-bundles for like-for-like comparison.
+//   - Serialiser whitespace / attribute quoting: cheerio's serialiser and
+//     lol-html's output may differ in optional whitespace. Logged but
+//     behaviour-equivalent.
+//   - Slot-path gate: Rust's `sanitize_for_publish` fail-fasts when it sees
+//     `data-slot-path=`. Autofill HTML should never carry that marker, so
+//     the gate firing here indicates an upstream bug — the Rust adapter
+//     throws so shadow-soak surfaces it as `errorShapeMismatch=true`.
 
 import * as cheerio from "cheerio";
+
+import { sanitizeForPublish as rustSanitizeForPublish } from "@/lib/html-engine";
+import { shadowCompare } from "@/lib/shadow-soak";
 
 const ALLOWED_SCRIPT_SRCS = new Set([
   "https://cdn.tailwindcss.com",
@@ -37,6 +60,16 @@ export interface SanitizeResult {
 }
 
 export function sanitizeFilledHtml(html: string): SanitizeResult {
+  return shadowCompare(
+    "sanitize-filled-html",
+    `bytes=${html.length}`,
+    () => sanitizeFilledHtmlTs(html),
+    () => sanitizeFilledHtmlRust(html),
+    { fallbackMode: "shadow-prefer-ts" },
+  );
+}
+
+function sanitizeFilledHtmlTs(html: string): SanitizeResult {
   const $ = cheerio.load(html, { xmlMode: false });
   const removed = {
     scripts: 0,
@@ -98,5 +131,33 @@ export function sanitizeFilledHtml(html: string): SanitizeResult {
   return {
     html: $.html(),
     removed,
+  };
+}
+
+/** Run the Rust `sanitize_for_publish` and adapt to the TS-shape SanitizeResult.
+ *
+ *  Two adapter responsibilities:
+ *    1. Re-bundle Rust's `metaRefresh` counter into `scripts` so the counter
+ *       totals match the TS contract one-for-one.
+ *    2. Throw on the slot-path gate. Autofill HTML should never carry
+ *       `data-slot-path=` (it's an editor-mode marker stripped by the
+ *       caller chain). If it ever fires here, we want shadow-soak to flag
+ *       the upstream bug — not silently return TS as if both impls agreed.
+ */
+function sanitizeFilledHtmlRust(html: string): SanitizeResult {
+  const r = rustSanitizeForPublish(html);
+  if (r.html === null) {
+    throw new Error(
+      `sanitize gate fired (unexpected for autofill): ${r.errors.join("; ")}`,
+    );
+  }
+  return {
+    html: r.html,
+    removed: {
+      scripts: r.removed.scripts + r.removed.metaRefresh,
+      eventHandlers: r.removed.eventHandlers,
+      dangerousUrls: r.removed.dangerousUrls,
+      iframes: r.removed.iframes,
+    },
   };
 }
