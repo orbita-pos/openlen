@@ -8,9 +8,11 @@
 // Option<T> on the Rust side, so consumers can rely on `result.html === null`
 // without writing `?? null` themselves.
 //
-// Imported by `lib/shadow-soak.ts` (F1 S6) and by any future call-site that
-// migrates off cheerio/regex (F1 S7-S9). The HtmlStream class is re-exported
-// verbatim — its constructor/write/end signatures don't touch Option<T>.
+// Public surface for the Motor HTML cutover (F1 S9): every TS consumer that
+// used to live behind `lib/shadow-soak.ts` now imports from here directly.
+// `lib/shadow-soak.ts` is kept as reusable infrastructure for future
+// TS → Rust migrations. The HtmlStream class is re-exported verbatim — its
+// constructor/write/end signatures don't touch Option<T>.
 //
 // Build prerequisite: `cd crates/html-engine && npm run build` must have
 // produced `index.js` + `index.d.ts` for this module to type-check.
