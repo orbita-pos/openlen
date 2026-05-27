@@ -14,11 +14,13 @@ const ENV_NODE_URL: &str = "OPENLEN_EDGE_NODE_URL";
 const ENV_PROXY_HOSTS: &str = "OPENLEN_EDGE_PROXY_HOSTS";
 const ENV_PROXY_PATHS: &str = "OPENLEN_EDGE_PROXY_PATHS";
 const ENV_NODE_TIMEOUT_SECS: &str = "OPENLEN_EDGE_NODE_TIMEOUT_SECS";
+const ENV_PROXY_BODY_IDLE_TIMEOUT_SECS: &str = "OPENLEN_EDGE_PROXY_BODY_IDLE_TIMEOUT_SECS";
 const ENV_DATABASE_URL: &str = "OPENLEN_EDGE_DATABASE_URL";
 const ENV_DB_POOL_MAX: &str = "OPENLEN_EDGE_DB_POOL_MAX";
 const ENV_DOMAIN_CACHE_TTL_SECS: &str = "OPENLEN_EDGE_DOMAIN_CACHE_TTL_SECS";
 const ENV_DOMAIN_NEGATIVE_TTL_SECS: &str = "OPENLEN_EDGE_DOMAIN_NEGATIVE_TTL_SECS";
 const ENV_DOMAIN_CACHE_MAX: &str = "OPENLEN_EDGE_DOMAIN_CACHE_MAX";
+const ENV_DOMAIN_REVAL_CONCURRENCY: &str = "OPENLEN_EDGE_DOMAIN_REVAL_CONCURRENCY";
 const ENV_INTERNAL_API_BIND: &str = "OPENLEN_EDGE_INTERNAL_API_BIND";
 const ENV_ACME_CONTACT: &str = "OPENLEN_EDGE_ACME_CONTACT";
 const ENV_ACME_DIRECTORY_URL: &str = "OPENLEN_EDGE_ACME_DIRECTORY_URL";
@@ -26,6 +28,7 @@ const ENV_CERT_DIR: &str = "OPENLEN_EDGE_CERT_DIR";
 const ENV_ACME_ENABLED: &str = "OPENLEN_EDGE_ACME_ENABLED";
 const ENV_CERT_RENEWAL_THRESHOLD_DAYS: &str = "OPENLEN_EDGE_CERT_RENEWAL_THRESHOLD_DAYS";
 const ENV_CERT_RENEWAL_INTERVAL_SECS: &str = "OPENLEN_EDGE_CERT_RENEWAL_INTERVAL_SECS";
+const ENV_METRICS_BIND: &str = "OPENLEN_EDGE_METRICS_BIND";
 
 const DEFAULT_BIND: &str = "0.0.0.0:443";
 const DEFAULT_BIND_HTTP: &str = "0.0.0.0:80";
@@ -37,6 +40,11 @@ const DEFAULT_NODE_URL: &str = "http://127.0.0.1:3000";
 const DEFAULT_PROXY_HOSTS: &str = "openlen.com,www.openlen.com";
 const DEFAULT_PROXY_PATHS: &str = "/c/";
 const DEFAULT_NODE_TIMEOUT_SECS: u64 = 30;
+/// Default idle window between upstream body frames before the proxy drops
+/// the connection. 60 s is generous enough for SSE keep-alives (Node Next.js
+/// defaults to sending a ping every 30 s) while still capping a hostile
+/// upstream that sends headers and hangs the body indefinitely.
+const DEFAULT_PROXY_BODY_IDLE_TIMEOUT_SECS: u64 = 60;
 const DEFAULT_DB_POOL_MAX: u32 = 8;
 const DEFAULT_DOMAIN_CACHE_TTL_SECS: u64 = 60;
 const DEFAULT_DOMAIN_NEGATIVE_TTL_SECS: u64 = 60;
@@ -49,6 +57,10 @@ const DEFAULT_ACME_DIRECTORY_URL: &str = "https://acme-v02.api.letsencrypt.org/d
 const DEFAULT_CERT_DIR: &str = "/var/openlen/certs";
 const DEFAULT_CERT_RENEWAL_THRESHOLD_DAYS: u32 = 30;
 const DEFAULT_CERT_RENEWAL_INTERVAL_SECS: u64 = 24 * 60 * 60;
+/// Loopback-only by default — Prometheus servers scrape locally / via a
+/// node-local sidecar. Production operators can flip the bind to expose
+/// metrics on a trusted interface.
+const DEFAULT_METRICS_BIND: &str = "127.0.0.1:9090";
 
 #[derive(Debug, Clone)]
 pub struct EdgeConfig {
@@ -62,6 +74,9 @@ pub struct EdgeConfig {
     pub proxy_hosts: Vec<String>,
     pub proxy_paths: Vec<String>,
     pub node_timeout_secs: u64,
+    /// Per-frame idle timeout on the upstream response body. `0` disables the
+    /// timer — the body streams forever once headers arrive.
+    pub proxy_body_idle_timeout_secs: u64,
     /// Postgres connection string for the custom-domain lookup. `None` /
     /// empty = run with an empty in-memory mock (custom domains never match).
     pub database_url: Option<String>,
@@ -69,6 +84,12 @@ pub struct EdgeConfig {
     pub domain_cache_ttl_secs: u64,
     pub domain_negative_ttl_secs: u64,
     pub domain_cache_max: u64,
+    /// Cap on simultaneous background stale-while-revalidate refreshes on
+    /// the domain cache. Without this, a wave of entries crossing TTL/2 at
+    /// the same wall clock could spawn N revalidation tasks against the
+    /// Postgres pool — `0` defaults to `db_pool_max` so the worst case is
+    /// pool-sized, not cache-sized.
+    pub domain_reval_concurrency: u32,
     /// Bind address for the loopback-only internal API
     /// (`/internal/domains/lookup`). `None` = disabled.
     pub internal_api_bind: Option<SocketAddr>,
@@ -91,6 +112,9 @@ pub struct EdgeConfig {
     pub cert_renewal_threshold_days: u32,
     /// Interval between renewal sweeps (background task).
     pub cert_renewal_interval_secs: u64,
+    /// Bind address for the Prometheus `/metrics` endpoint. `None` disables
+    /// the exporter.
+    pub metrics_bind: Option<SocketAddr>,
 }
 
 fn parse_csv_lower(raw: &str) -> Vec<String> {
@@ -167,6 +191,12 @@ impl EdgeConfig {
             })?,
             Err(_) => DEFAULT_NODE_TIMEOUT_SECS,
         };
+        let proxy_body_idle_timeout_secs = match env::var(ENV_PROXY_BODY_IDLE_TIMEOUT_SECS) {
+            Ok(raw) => raw.parse::<u64>().with_context(|| {
+                format!("{ENV_PROXY_BODY_IDLE_TIMEOUT_SECS}={raw} is not a non-negative integer")
+            })?,
+            Err(_) => DEFAULT_PROXY_BODY_IDLE_TIMEOUT_SECS,
+        };
 
         let database_url = env::var(ENV_DATABASE_URL).ok().filter(|s| !s.is_empty());
         let db_pool_max = match env::var(ENV_DB_POOL_MAX) {
@@ -192,6 +222,14 @@ impl EdgeConfig {
                 format!("{ENV_DOMAIN_CACHE_MAX}={raw} is not a non-negative integer")
             })?,
             Err(_) => DEFAULT_DOMAIN_CACHE_MAX,
+        };
+        // 0 defers the default to db_pool_max so callers don't have to keep
+        // two numbers in sync. Explicit overrides are honored.
+        let domain_reval_concurrency = match env::var(ENV_DOMAIN_REVAL_CONCURRENCY) {
+            Ok(raw) => raw.parse::<u32>().with_context(|| {
+                format!("{ENV_DOMAIN_REVAL_CONCURRENCY}={raw} is not a positive integer")
+            })?,
+            Err(_) => db_pool_max,
         };
         let internal_api_bind = match env::var(ENV_INTERNAL_API_BIND) {
             Ok(raw) => parse_optional_socketaddr(ENV_INTERNAL_API_BIND, &raw)?,
@@ -222,6 +260,10 @@ impl EdgeConfig {
             })?,
             Err(_) => DEFAULT_CERT_RENEWAL_INTERVAL_SECS,
         };
+        let metrics_bind = match env::var(ENV_METRICS_BIND) {
+            Ok(raw) => parse_optional_socketaddr(ENV_METRICS_BIND, &raw)?,
+            Err(_) => Some(DEFAULT_METRICS_BIND.parse().unwrap()),
+        };
 
         Ok(Self {
             bind,
@@ -234,11 +276,13 @@ impl EdgeConfig {
             proxy_hosts,
             proxy_paths,
             node_timeout_secs,
+            proxy_body_idle_timeout_secs,
             database_url,
             db_pool_max,
             domain_cache_ttl_secs,
             domain_negative_ttl_secs,
             domain_cache_max,
+            domain_reval_concurrency,
             internal_api_bind,
             acme_contact,
             acme_directory_url,
@@ -246,6 +290,7 @@ impl EdgeConfig {
             acme_enabled,
             cert_renewal_threshold_days,
             cert_renewal_interval_secs,
+            metrics_bind,
         })
     }
 
@@ -266,11 +311,13 @@ pub struct EdgeConfigBuilder {
     proxy_hosts: Option<Vec<String>>,
     proxy_paths: Option<Vec<String>>,
     node_timeout_secs: Option<u64>,
+    proxy_body_idle_timeout_secs: Option<u64>,
     database_url: Option<Option<String>>,
     db_pool_max: Option<u32>,
     domain_cache_ttl_secs: Option<u64>,
     domain_negative_ttl_secs: Option<u64>,
     domain_cache_max: Option<u64>,
+    domain_reval_concurrency: Option<u32>,
     internal_api_bind: Option<Option<SocketAddr>>,
     acme_contact: Option<Option<String>>,
     acme_directory_url: Option<String>,
@@ -278,6 +325,7 @@ pub struct EdgeConfigBuilder {
     acme_enabled: Option<bool>,
     cert_renewal_threshold_days: Option<u32>,
     cert_renewal_interval_secs: Option<u64>,
+    metrics_bind: Option<Option<SocketAddr>>,
 }
 
 impl EdgeConfigBuilder {
@@ -331,6 +379,11 @@ impl EdgeConfigBuilder {
         self
     }
 
+    pub fn proxy_body_idle_timeout_secs(mut self, secs: u64) -> Self {
+        self.proxy_body_idle_timeout_secs = Some(secs);
+        self
+    }
+
     pub fn database_url(mut self, url: Option<String>) -> Self {
         self.database_url = Some(url);
         self
@@ -353,6 +406,11 @@ impl EdgeConfigBuilder {
 
     pub fn domain_cache_max(mut self, n: u64) -> Self {
         self.domain_cache_max = Some(n);
+        self
+    }
+
+    pub fn domain_reval_concurrency(mut self, n: u32) -> Self {
+        self.domain_reval_concurrency = Some(n);
         self
     }
 
@@ -391,6 +449,11 @@ impl EdgeConfigBuilder {
         self
     }
 
+    pub fn metrics_bind(mut self, addr: Option<SocketAddr>) -> Self {
+        self.metrics_bind = Some(addr);
+        self
+    }
+
     pub fn build(self) -> Result<EdgeConfig> {
         Ok(EdgeConfig {
             bind: self
@@ -415,6 +478,9 @@ impl EdgeConfigBuilder {
                 .proxy_paths
                 .unwrap_or_else(|| parse_csv(DEFAULT_PROXY_PATHS)),
             node_timeout_secs: self.node_timeout_secs.unwrap_or(DEFAULT_NODE_TIMEOUT_SECS),
+            proxy_body_idle_timeout_secs: self
+                .proxy_body_idle_timeout_secs
+                .unwrap_or(DEFAULT_PROXY_BODY_IDLE_TIMEOUT_SECS),
             database_url: self.database_url.unwrap_or(None),
             db_pool_max: self.db_pool_max.unwrap_or(DEFAULT_DB_POOL_MAX),
             domain_cache_ttl_secs: self
@@ -424,6 +490,9 @@ impl EdgeConfigBuilder {
                 .domain_negative_ttl_secs
                 .unwrap_or(DEFAULT_DOMAIN_NEGATIVE_TTL_SECS),
             domain_cache_max: self.domain_cache_max.unwrap_or(DEFAULT_DOMAIN_CACHE_MAX),
+            domain_reval_concurrency: self
+                .domain_reval_concurrency
+                .unwrap_or(self.db_pool_max.unwrap_or(DEFAULT_DB_POOL_MAX)),
             internal_api_bind: self.internal_api_bind.unwrap_or(None),
             acme_contact: {
                 let contact = self.acme_contact.unwrap_or(None);
@@ -444,6 +513,7 @@ impl EdgeConfigBuilder {
             cert_renewal_interval_secs: self
                 .cert_renewal_interval_secs
                 .unwrap_or(DEFAULT_CERT_RENEWAL_INTERVAL_SECS),
+            metrics_bind: self.metrics_bind.unwrap_or(None),
         })
     }
 }

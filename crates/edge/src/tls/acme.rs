@@ -39,13 +39,18 @@ use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use dashmap::DashMap;
 use instant_acme::{
-    Account, AuthorizationStatus, ChallengeType, Identifier, NewAccount, NewOrder, OrderStatus,
-    RetryPolicy,
+    Account, AccountCredentials, AuthorizationStatus, ChallengeType, Identifier, NewAccount,
+    NewOrder, OrderStatus, RetryPolicy,
 };
 use rustls::sign::CertifiedKey;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 use crate::tls::store::{self, build_certified_key, load_pem_certs, load_pem_key};
+
+/// File inside `cert_dir` that holds the serialized [`AccountCredentials`].
+/// Sidecar to the per-domain cert directories so a single secret-store / mount
+/// covers everything ACME-related.
+pub(crate) const ACCOUNT_FILE: &str = "account.json";
 
 /// Validity used when we can't derive the cert's NotAfter directly from the
 /// X.509 envelope. Let's Encrypt issues 90-day certs, so 89 days is a safe
@@ -95,6 +100,13 @@ impl AcmeClient {
     /// Open (or create) an ACME account against `directory_url` and return
     /// a ready-to-issue client. `contact` is a bare mailbox; we add the
     /// `mailto:` scheme automatically.
+    ///
+    /// On first boot the account is created against the directory and the
+    /// returned [`AccountCredentials`] are persisted to
+    /// `${cert_dir}/account.json`. On subsequent boots the credentials are
+    /// loaded from disk and the account is restored via
+    /// `AccountBuilder::from_credentials`, so we don't re-register and risk
+    /// the LE per-IP new-account rate limit during restart storms.
     pub async fn new(contact: &str, directory_url: &str, cert_dir: PathBuf) -> Result<Self> {
         if contact.trim().is_empty() {
             return Err(anyhow!(
@@ -104,14 +116,40 @@ impl AcmeClient {
         std::fs::create_dir_all(&cert_dir)
             .with_context(|| format!("creating cert dir {}", cert_dir.display()))?;
 
+        let account_path = cert_dir.join(ACCOUNT_FILE);
+        if let Some(creds) = read_account_credentials(&account_path)? {
+            let http = Box::new(super::acme_http::build_acme_http_client());
+            match Account::builder_with_http(http)
+                .from_credentials(creds)
+                .await
+            {
+                Ok(account) => {
+                    info!(
+                        path = %account_path.display(),
+                        "ACME account restored from persisted credentials"
+                    );
+                    return Ok(Self {
+                        account,
+                        challenges: Arc::new(DashMap::new()),
+                        cert_dir,
+                    });
+                }
+                Err(err) => warn!(
+                    path = %account_path.display(),
+                    error = %err,
+                    "failed to restore ACME account from credentials — falling back to fresh registration"
+                ),
+            }
+        }
+
         let mailto = if contact.starts_with("mailto:") {
             contact.to_owned()
         } else {
             format!("mailto:{contact}")
         };
 
-        let (account, _credentials) = Account::builder()
-            .context("instant-acme: building account builder")?
+        let http = Box::new(super::acme_http::build_acme_http_client());
+        let (account, credentials) = Account::builder_with_http(http)
             .create(
                 &NewAccount {
                     contact: &[&mailto],
@@ -123,6 +161,14 @@ impl AcmeClient {
             )
             .await
             .context("instant-acme: creating account")?;
+
+        if let Err(err) = write_account_credentials(&account_path, &credentials) {
+            warn!(
+                path = %account_path.display(),
+                error = %err,
+                "failed to persist ACME account credentials — next boot will re-register"
+            );
+        }
 
         info!(directory = %directory_url, "ACME account opened");
 
@@ -155,13 +201,56 @@ impl AcmeClient {
 impl AcmeIssuer for AcmeClient {
     async fn issue(&self, domain: &str) -> Result<IssuedCert> {
         let domain = domain.to_ascii_lowercase();
-        tokio::time::timeout(ISSUE_TIMEOUT, issue_inner(self, &domain))
-            .await
-            .map_err(|_| anyhow!("ACME issuance for {domain} exceeded {ISSUE_TIMEOUT:?}"))?
+        let started = std::time::Instant::now();
+        let outcome = tokio::time::timeout(ISSUE_TIMEOUT, issue_inner(self, &domain)).await;
+        let elapsed = started.elapsed().as_secs_f64();
+        metrics::histogram!("openlen_edge_cert_issuance_duration_seconds").record(elapsed);
+        match outcome {
+            Ok(Ok(cert)) => {
+                metrics::counter!(
+                    "openlen_edge_cert_issuance_total",
+                    "result" => "success",
+                )
+                .increment(1);
+                Ok(cert)
+            }
+            Ok(Err(err)) => {
+                let label = classify_issuance_error(&err);
+                metrics::counter!(
+                    "openlen_edge_cert_issuance_total",
+                    "result" => label,
+                )
+                .increment(1);
+                Err(err)
+            }
+            Err(_) => {
+                metrics::counter!(
+                    "openlen_edge_cert_issuance_total",
+                    "result" => "timeout",
+                )
+                .increment(1);
+                Err(anyhow!(
+                    "ACME issuance for {domain} exceeded {ISSUE_TIMEOUT:?}"
+                ))
+            }
+        }
     }
 
     fn get_challenge(&self, token: &str) -> Option<String> {
         self.challenges.get(token).map(|v| v.clone())
+    }
+}
+
+/// Rough best-effort classification — the upstream error type is anyhow
+/// so we work off the string. Keeps label cardinality bounded.
+fn classify_issuance_error(err: &anyhow::Error) -> &'static str {
+    let s = err.to_string().to_ascii_lowercase();
+    if s.contains("rate") {
+        "rate_limited"
+    } else if s.contains("invalid") || s.contains("authoriz") || s.contains("identif") {
+        "validation_failed"
+    } else {
+        "other"
     }
 }
 
@@ -273,16 +362,222 @@ fn now_secs() -> u64 {
         .unwrap_or(0)
 }
 
-/// Best-effort parse of the leaf cert's NotAfter. We could pull in
-/// `x509-parser` for guaranteed accuracy, but the DER tag format is
-/// well-known enough to scan for the ASN.1 `UTCTime` (tag 0x17) or
-/// `GeneralizedTime` (tag 0x18) directly. If parsing fails, the caller
-/// falls back to the 89-day default.
-fn parse_not_after(_pem: &str) -> Option<u64> {
-    // Deliberately a no-op for now — the fallback path is the supported
-    // one. Wiring a tiny DER scanner here is an optional precision boost;
-    // the renewal sweep covers any underestimate.
-    None
+/// Try to load persisted [`AccountCredentials`] from `path`. Returns `Ok(None)`
+/// if the file is absent (fresh install). Surfaces an error if the file
+/// exists but can't be parsed — we'd rather fail loud than silently re-register
+/// over an unparseable account file.
+pub(crate) fn read_account_credentials(
+    path: &std::path::Path,
+) -> Result<Option<AccountCredentials>> {
+    if !path.exists() {
+        return Ok(None);
+    }
+    let raw = std::fs::read_to_string(path)
+        .with_context(|| format!("reading ACME account credentials at {}", path.display()))?;
+    let creds = serde_json::from_str::<AccountCredentials>(&raw)
+        .with_context(|| format!("parsing ACME account credentials at {}", path.display()))?;
+    Ok(Some(creds))
+}
+
+/// Atomically persist `credentials` to `path` (tempfile + rename). On Unix
+/// the file ends up with mode 0o600 — the key material is sensitive and
+/// reading it should require the same uid that runs the edge.
+pub(crate) fn write_account_credentials(
+    path: &std::path::Path,
+    credentials: &AccountCredentials,
+) -> Result<()> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| anyhow!("write target has no parent: {}", path.display()))?;
+    std::fs::create_dir_all(parent)
+        .with_context(|| format!("creating account dir {}", parent.display()))?;
+    let tmp = parent.join(format!(
+        ".{}.tmp",
+        path.file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("account-tmp")
+    ));
+    let body = serde_json::to_vec(credentials).context("serializing ACME account credentials")?;
+    std::fs::write(&tmp, &body).with_context(|| format!("writing {}", tmp.display()))?;
+    set_owner_only_perms(&tmp);
+    std::fs::rename(&tmp, path)
+        .with_context(|| format!("atomic rename {} -> {}", tmp.display(), path.display()))?;
+    Ok(())
+}
+
+#[cfg(unix)]
+fn set_owner_only_perms(path: &std::path::Path) {
+    use std::os::unix::fs::PermissionsExt;
+    if let Err(err) = std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600)) {
+        warn!(path = %path.display(), error = %err, "failed to set 0600 on account credentials");
+    }
+}
+
+#[cfg(not(unix))]
+fn set_owner_only_perms(_path: &std::path::Path) {}
+
+/// Parse the leaf cert's NotAfter and return it as unix seconds.
+///
+/// We deliberately avoid pulling `x509-parser` (or any ASN.1 crate) — that
+/// would re-add ~150 KiB to the binary right after A1's swap trimmed
+/// `rustls-platform-verifier`. Instead we walk the DER envelope by hand: PEM
+/// → DER via `rustls_pemfile` (already in the dep graph for cert loading),
+/// then the well-known X.509 SEQUENCE layout down to `validity.notAfter`.
+///
+/// Returns `None` on any parse failure — the caller falls back to the
+/// 89-day default which keeps the renewal sweep firing on time.
+fn parse_not_after(pem: &str) -> Option<u64> {
+    let mut reader = pem.as_bytes();
+    let der = rustls_pemfile::certs(&mut reader).next()?.ok()?;
+    parse_not_after_der(&der)
+}
+
+fn parse_not_after_der(der: &[u8]) -> Option<u64> {
+    // Certificate ::= SEQUENCE { tbsCertificate, signatureAlgorithm,
+    //                            signatureValue }
+    let cert_body = read_sequence(der)?;
+    // TBSCertificate ::= SEQUENCE { version [0] EXPLICIT? Default v1,
+    //                               serialNumber INTEGER,
+    //                               signature AlgorithmIdentifier,
+    //                               issuer Name,
+    //                               validity Validity, ... }
+    let tbs = read_sequence(cert_body)?;
+    let after_version = skip_explicit_version(tbs);
+    let after_serial = skip_tlv(after_version)?;
+    let after_sig = skip_tlv(after_serial)?;
+    let after_issuer = skip_tlv(after_sig)?;
+    // Validity ::= SEQUENCE { notBefore Time, notAfter Time }
+    let validity = read_sequence(after_issuer)?;
+    let after_not_before = skip_tlv(validity)?;
+    let (tag, value, _) = read_tlv(after_not_before)?;
+    parse_asn1_time(tag, value)
+}
+
+/// Read a SEQUENCE (tag 0x30) and return its value bytes.
+fn read_sequence(bytes: &[u8]) -> Option<&[u8]> {
+    let (tag, value, _) = read_tlv(bytes)?;
+    if tag != 0x30 {
+        return None;
+    }
+    Some(value)
+}
+
+/// Skip the optional `[0] EXPLICIT version` wrapper (tag 0xA0). When absent
+/// the integer is just the version part, which is the default v1.
+fn skip_explicit_version(bytes: &[u8]) -> &[u8] {
+    if let Some((tag, _, rest)) = read_tlv(bytes) {
+        if tag == 0xA0 {
+            return rest;
+        }
+    }
+    bytes
+}
+
+/// Skip one TLV by returning the slice following it.
+fn skip_tlv(bytes: &[u8]) -> Option<&[u8]> {
+    let (_, _, rest) = read_tlv(bytes)?;
+    Some(rest)
+}
+
+/// Parse a single DER TLV. Returns (tag, value, rest). Long-form lengths up
+/// to 4 bytes are supported; that covers every leaf cert we'll ever see.
+fn read_tlv(bytes: &[u8]) -> Option<(u8, &[u8], &[u8])> {
+    let tag = *bytes.first()?;
+    let after_tag = bytes.get(1..)?;
+    let (len, after_len) = read_length(after_tag)?;
+    if after_len.len() < len {
+        return None;
+    }
+    let (value, rest) = after_len.split_at(len);
+    Some((tag, value, rest))
+}
+
+fn read_length(bytes: &[u8]) -> Option<(usize, &[u8])> {
+    let first = *bytes.first()?;
+    let rest = bytes.get(1..)?;
+    if first < 0x80 {
+        return Some((first as usize, rest));
+    }
+    let n = (first & 0x7F) as usize;
+    if n == 0 || n > 4 || rest.len() < n {
+        return None;
+    }
+    let mut len = 0usize;
+    for &b in &rest[..n] {
+        len = (len << 8) | (b as usize);
+    }
+    Some((len, &rest[n..]))
+}
+
+/// Parse an ASN.1 UTCTime (`tag 0x17`, `YYMMDDHHMMSSZ`) or GeneralizedTime
+/// (`tag 0x18`, `YYYYMMDDHHMMSSZ`) into a unix timestamp. Only the `Z`
+/// (UTC) variant is supported — every CA we care about emits Zulu times.
+fn parse_asn1_time(tag: u8, value: &[u8]) -> Option<u64> {
+    let s = std::str::from_utf8(value).ok()?;
+    let (y, m, d, hh, mm, ss) = match tag {
+        0x17 if s.len() == 13 && s.ends_with('Z') => {
+            let yy: u32 = s.get(0..2)?.parse().ok()?;
+            // RFC 5280 §4.1.2.5.1: 00-49 → 2000-2049, 50-99 → 1950-1999.
+            let year = if yy < 50 { 2000 + yy } else { 1900 + yy };
+            let m: u32 = s.get(2..4)?.parse().ok()?;
+            let d: u32 = s.get(4..6)?.parse().ok()?;
+            let hh: u32 = s.get(6..8)?.parse().ok()?;
+            let mm: u32 = s.get(8..10)?.parse().ok()?;
+            let ss: u32 = s.get(10..12)?.parse().ok()?;
+            (year, m, d, hh, mm, ss)
+        }
+        0x18 if s.len() == 15 && s.ends_with('Z') => {
+            let year: u32 = s.get(0..4)?.parse().ok()?;
+            let m: u32 = s.get(4..6)?.parse().ok()?;
+            let d: u32 = s.get(6..8)?.parse().ok()?;
+            let hh: u32 = s.get(8..10)?.parse().ok()?;
+            let mm: u32 = s.get(10..12)?.parse().ok()?;
+            let ss: u32 = s.get(12..14)?.parse().ok()?;
+            (year, m, d, hh, mm, ss)
+        }
+        _ => return None,
+    };
+    ymdhms_to_unix(y, m, d, hh, mm, ss)
+}
+
+fn ymdhms_to_unix(year: u32, month: u32, day: u32, hh: u32, mm: u32, ss: u32) -> Option<u64> {
+    if !(1970..=9999).contains(&year)
+        || !(1..=12).contains(&month)
+        || !(1..=31).contains(&day)
+        || hh >= 24
+        || mm >= 60
+        || ss >= 60
+    {
+        return None;
+    }
+    let mut days: u64 = 0;
+    for y in 1970..year {
+        days += if is_leap_year(y) { 366 } else { 365 };
+    }
+    for m in 1..month {
+        days += days_in_month(year, m) as u64;
+    }
+    days += (day - 1) as u64;
+    Some(days * 86_400 + (hh as u64) * 3_600 + (mm as u64) * 60 + (ss as u64))
+}
+
+fn is_leap_year(year: u32) -> bool {
+    (year.is_multiple_of(4) && !year.is_multiple_of(100)) || year.is_multiple_of(400)
+}
+
+fn days_in_month(year: u32, month: u32) -> u32 {
+    match month {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 => {
+            if is_leap_year(year) {
+                29
+            } else {
+                28
+            }
+        }
+        _ => 0,
+    }
 }
 
 #[cfg(test)]
@@ -432,8 +727,103 @@ mod tests {
 
     #[test]
     fn parse_not_after_returns_none_for_unknown_format() {
-        // Sentinel — the no-op parser must not lie about expiry.
+        // Non-PEM input must not panic and must surface None — the caller
+        // falls back to the 89-day default.
         assert!(parse_not_after("garbage").is_none());
+        assert!(parse_not_after("").is_none());
+    }
+
+    #[test]
+    fn parse_not_after_reads_self_signed_cert_expiry() {
+        // What matters for this test is that we extract a finite, future
+        // timestamp — not the 89-day fallback the caller uses when the
+        // parse fails. `rcgen::generate_simple_self_signed` defaults
+        // `not_after` to year 4096, so the parsed value sits far in the
+        // future; we just check it's not in the past and not absurd.
+        let (cert_pem, _) = crate::tls::store::tests::test_self_signed("expiry.test");
+        let after = parse_not_after(&cert_pem).expect("must parse self-signed cert");
+        let now = now_secs();
+        assert!(after > now, "expiry must be in the future, got {after}");
+        // Year 9999 cap — defends against integer overflow / wild parses.
+        let year_9999 = ymdhms_to_unix(9999, 12, 31, 23, 59, 59).unwrap();
+        assert!(after <= year_9999, "expiry must be in-range, got {after}");
+    }
+
+    #[test]
+    fn ymdhms_to_unix_handles_known_epoch() {
+        // 1970-01-01T00:00:00Z = 0
+        assert_eq!(ymdhms_to_unix(1970, 1, 1, 0, 0, 0), Some(0));
+        // 2024-01-01T00:00:00Z = 1704067200 (independently verified)
+        assert_eq!(ymdhms_to_unix(2024, 1, 1, 0, 0, 0), Some(1_704_067_200));
+        // 2024 was a leap year — 2024-03-01 follows Feb 29
+        assert_eq!(ymdhms_to_unix(2024, 3, 1, 0, 0, 0), Some(1_709_251_200));
+        // 2023 was NOT a leap year — 2023-03-01 follows Feb 28
+        assert_eq!(ymdhms_to_unix(2023, 3, 1, 0, 0, 0), Some(1_677_628_800));
+    }
+
+    #[test]
+    fn ymdhms_to_unix_rejects_garbage() {
+        assert!(ymdhms_to_unix(2024, 13, 1, 0, 0, 0).is_none()); // month 13
+        assert!(ymdhms_to_unix(2024, 1, 32, 0, 0, 0).is_none()); // day 32
+        assert!(ymdhms_to_unix(2024, 1, 1, 24, 0, 0).is_none()); // hour 24
+        assert!(ymdhms_to_unix(2024, 1, 1, 0, 60, 0).is_none()); // minute 60
+        assert!(ymdhms_to_unix(2024, 1, 1, 0, 0, 60).is_none()); // second 60
+        assert!(ymdhms_to_unix(1900, 1, 1, 0, 0, 0).is_none()); // year < 1970
+    }
+
+    #[test]
+    fn parse_asn1_time_handles_utctime() {
+        // 240315120000Z → 2024-03-15T12:00:00Z
+        let v = b"240315120000Z";
+        let secs = parse_asn1_time(0x17, v).expect("UTCTime");
+        // 2024-03-15T12:00:00Z = 1710504000 (independently verified)
+        assert_eq!(secs, 1_710_504_000);
+    }
+
+    #[test]
+    fn parse_asn1_time_handles_generalizedtime() {
+        // 20240315120000Z → same wall clock as the UTCTime above
+        let v = b"20240315120000Z";
+        let secs = parse_asn1_time(0x18, v).expect("GeneralizedTime");
+        assert_eq!(secs, 1_710_504_000);
+    }
+
+    #[test]
+    fn parse_asn1_time_rejects_non_zulu() {
+        // Missing trailing Z → unsupported timezone offset, reject.
+        assert!(parse_asn1_time(0x17, b"240315120000+").is_none());
+        assert!(parse_asn1_time(0x18, b"20240315120000+").is_none());
+    }
+
+    #[test]
+    fn parse_asn1_time_utctime_two_digit_year_pivot() {
+        // 00-49 → 2000-2049
+        let v_2024 = b"240101000000Z";
+        let v_1999 = b"990101000000Z";
+        let s_2024 = parse_asn1_time(0x17, v_2024).expect("2024");
+        let s_1999 = parse_asn1_time(0x17, v_1999).expect("1999");
+        assert!(s_2024 > s_1999, "2024 > 1999 wall clock");
+    }
+
+    #[test]
+    fn read_length_short_form() {
+        let (len, rest) = read_length(&[0x05, 0xAA, 0xBB]).unwrap();
+        assert_eq!(len, 5);
+        assert_eq!(rest, &[0xAA, 0xBB]);
+    }
+
+    #[test]
+    fn read_length_long_form_two_bytes() {
+        // 0x82 → next 2 bytes are the length
+        let (len, rest) = read_length(&[0x82, 0x01, 0xFF, 0xAA]).unwrap();
+        assert_eq!(len, 0x01FF);
+        assert_eq!(rest, &[0xAA]);
+    }
+
+    #[test]
+    fn read_length_rejects_zero_byte_long_form() {
+        // 0x80 (indefinite length, illegal in DER) must be refused
+        assert!(read_length(&[0x80, 0xAA]).is_none());
     }
 
     #[test]
@@ -447,5 +837,94 @@ mod tests {
         mock.store_challenge("abc", "key-auth-abc");
         assert_eq!(mock.get_challenge("abc").as_deref(), Some("key-auth-abc"));
         assert_eq!(mock.get_challenge("missing"), None);
+    }
+
+    /// Build a minimally-valid serialized AccountCredentials JSON blob. The
+    /// PKCS#8 payload is non-decryptable nonsense — instant-acme's
+    /// deserializer only checks the base64 framing, not the inner key — so
+    /// this is enough to exercise the file-I/O round trip without needing
+    /// rcgen or a real CA roundtrip in the test path.
+    fn sample_credentials_json() -> String {
+        // 24 bytes of zeroes, base64-url-safe-no-pad. Decodes cleanly so
+        // PrivatePkcs8KeyDer::from accepts the bytes.
+        const FAKE_PKCS8_B64: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+        format!(
+            r#"{{"id":"https://acme-staging-v02.api.letsencrypt.org/acme/acct/123","key_pkcs8":"{FAKE_PKCS8_B64}","directory":"https://acme-staging-v02.api.letsencrypt.org/directory"}}"#
+        )
+    }
+
+    #[test]
+    fn read_account_credentials_returns_none_when_file_missing() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let path = tmp.path().join(ACCOUNT_FILE);
+        assert!(!path.exists());
+        assert!(read_account_credentials(&path).unwrap().is_none());
+    }
+
+    #[test]
+    fn write_then_read_account_credentials_round_trip() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let path = tmp.path().join(ACCOUNT_FILE);
+        let creds: AccountCredentials = serde_json::from_str(&sample_credentials_json()).unwrap();
+        write_account_credentials(&path, &creds).unwrap();
+        assert!(path.exists());
+        let loaded = read_account_credentials(&path).unwrap().expect("Some");
+        let back = serde_json::to_string(&loaded).unwrap();
+        assert!(back.contains("acme/acct/123"));
+        assert!(back.contains("acme-staging-v02"));
+    }
+
+    #[test]
+    fn read_account_credentials_surfaces_parse_error_for_garbage() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let path = tmp.path().join(ACCOUNT_FILE);
+        std::fs::write(&path, b"not json").unwrap();
+        match read_account_credentials(&path) {
+            Ok(_) => panic!("expected parse error"),
+            Err(err) => {
+                let msg = format!("{err:#}");
+                assert!(
+                    msg.contains("parsing ACME account credentials"),
+                    "msg: {msg}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn write_account_credentials_replaces_existing_atomically() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let path = tmp.path().join(ACCOUNT_FILE);
+        let creds: AccountCredentials = serde_json::from_str(&sample_credentials_json()).unwrap();
+        write_account_credentials(&path, &creds).unwrap();
+        let first = std::fs::read_to_string(&path).unwrap();
+        // Second write with the same blob should leave the file unchanged
+        // (atomic rename, no partial state).
+        write_account_credentials(&path, &creds).unwrap();
+        let second = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(first, second);
+    }
+
+    #[test]
+    fn write_account_credentials_creates_parent_dir_if_missing() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let nested = tmp.path().join("nested/sub");
+        let path = nested.join(ACCOUNT_FILE);
+        let creds: AccountCredentials = serde_json::from_str(&sample_credentials_json()).unwrap();
+        write_account_credentials(&path, &creds).unwrap();
+        assert!(path.exists());
+        assert!(nested.exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_account_credentials_sets_owner_only_perms_on_unix() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::TempDir::new().unwrap();
+        let path = tmp.path().join(ACCOUNT_FILE);
+        let creds: AccountCredentials = serde_json::from_str(&sample_credentials_json()).unwrap();
+        write_account_credentials(&path, &creds).unwrap();
+        let mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600, "expected 0o600, got {mode:o}");
     }
 }

@@ -8,6 +8,8 @@ use hyper_util::client::legacy::{connect::HttpConnector, Client as LegacyClient}
 use hyper_util::rt::TokioExecutor;
 use thiserror::Error;
 
+use super::timeout_body::TimeoutBody;
+
 type InnerClient = LegacyClient<HttpConnector, Body>;
 
 #[derive(Debug, Error)]
@@ -32,6 +34,11 @@ pub struct NodeClient {
     /// arrive the body streams with no further wall-clock cap, so SSE flows
     /// through indefinitely.
     connect_timeout: Duration,
+    /// Per-frame idle timeout on the upstream response body. `None` disables —
+    /// the body streams forever once headers arrive. `Some(d)` arms a timer
+    /// that fires `d` after the last frame; if no new frame arrives the body
+    /// errors out and the upstream connection is dropped.
+    body_idle_timeout: Option<Duration>,
 }
 
 impl std::fmt::Debug for NodeClient {
@@ -39,6 +46,7 @@ impl std::fmt::Debug for NodeClient {
         f.debug_struct("NodeClient")
             .field("authority", &self.authority)
             .field("connect_timeout", &self.connect_timeout)
+            .field("body_idle_timeout", &self.body_idle_timeout)
             .finish_non_exhaustive()
     }
 }
@@ -49,6 +57,7 @@ impl NodeClient {
         pool_idle: Duration,
         pool_max_idle_per_host: usize,
         connect_timeout: Duration,
+        body_idle_timeout: Option<Duration>,
     ) -> Result<Self, NodeClientError> {
         let parsed: Uri = node_url
             .parse()
@@ -70,6 +79,7 @@ impl NodeClient {
             inner: Arc::new(inner),
             authority: Arc::new(authority),
             connect_timeout,
+            body_idle_timeout,
         })
     }
 
@@ -85,28 +95,67 @@ impl NodeClient {
         self.connect_timeout
     }
 
+    pub fn body_idle_timeout(&self) -> Option<Duration> {
+        self.body_idle_timeout
+    }
+
     pub fn authority(&self) -> &str {
         &self.authority
     }
 
     /// Send `req` to the upstream. Returns a `Response<Body>` whose body
     /// streams from the upstream connection without buffering. The wall-clock
-    /// timeout only covers the header-arrival phase.
+    /// timeout only covers the header-arrival phase. When `body_idle_timeout`
+    /// is set, each frame poll on the returned body is gated by an idle timer
+    /// so a hostile upstream that hangs the body can't pin a tokio task and
+    /// a pool slot forever.
     pub async fn send(&self, req: Request<Body>) -> Result<Response<Body>, NodeClientError> {
         let timeout = self.connect_timeout;
         let inner = self.inner.clone();
+        let body_idle = self.body_idle_timeout;
+        let started = std::time::Instant::now();
         let fut = async move { inner.request(req).await };
-        match tokio::time::timeout(timeout, fut).await {
-            Ok(Ok(resp)) => Ok(map_response(resp)),
-            Ok(Err(err)) => Err(NodeClientError::Transport(err.to_string())),
-            Err(_) => Err(NodeClientError::HeadersTimeout(timeout)),
+        let result = tokio::time::timeout(timeout, fut).await;
+        let elapsed = started.elapsed().as_secs_f64();
+        metrics::histogram!("openlen_edge_proxy_upstream_duration_seconds").record(elapsed);
+        match result {
+            Ok(Ok(resp)) => {
+                if resp.status().is_server_error() {
+                    metrics::counter!(
+                        "openlen_edge_proxy_upstream_errors_total",
+                        "reason" => "upstream_5xx",
+                    )
+                    .increment(1);
+                }
+                Ok(map_response(resp, body_idle))
+            }
+            Ok(Err(err)) => {
+                metrics::counter!(
+                    "openlen_edge_proxy_upstream_errors_total",
+                    "reason" => "connect_refused",
+                )
+                .increment(1);
+                Err(NodeClientError::Transport(err.to_string()))
+            }
+            Err(_) => {
+                metrics::counter!(
+                    "openlen_edge_proxy_upstream_errors_total",
+                    "reason" => "header_timeout",
+                )
+                .increment(1);
+                Err(NodeClientError::HeadersTimeout(timeout))
+            }
         }
     }
 }
 
-fn map_response(resp: Response<Incoming>) -> Response<Body> {
+fn map_response(resp: Response<Incoming>, body_idle: Option<Duration>) -> Response<Body> {
     let (parts, body) = resp.into_parts();
-    Response::from_parts(parts, Body::new(body))
+    let body = match body_idle {
+        Some(d) => Body::new(TimeoutBody::new(body, d)),
+        None => Body::new(body),
+    };
+    Response::from_parts(parts, body)
 }
 
 #[cfg(test)]
@@ -120,6 +169,7 @@ mod tests {
             Duration::from_secs(90),
             32,
             Duration::from_secs(30),
+            None,
         )
         .unwrap_err();
         assert!(
@@ -135,6 +185,7 @@ mod tests {
             Duration::from_secs(90),
             32,
             Duration::from_secs(30),
+            None,
         )
         .unwrap_err();
         assert!(
@@ -150,6 +201,7 @@ mod tests {
             Duration::from_secs(90),
             32,
             Duration::from_secs(30),
+            None,
         )
         .unwrap_err();
         assert!(
@@ -165,6 +217,7 @@ mod tests {
             Duration::from_secs(90),
             32,
             Duration::from_secs(30),
+            None,
         )
         .expect("default URL parses");
         assert_eq!(c.authority(), "127.0.0.1:3000");
@@ -178,6 +231,7 @@ mod tests {
             Duration::from_secs(90),
             32,
             Duration::from_secs(30),
+            None,
         )
         .unwrap();
         let u = c.upstream_uri("/foo?x=1&y=2").unwrap();

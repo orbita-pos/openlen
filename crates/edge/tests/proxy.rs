@@ -111,10 +111,30 @@ async fn hop_in_response() -> Response<Body> {
         .unwrap()
 }
 
+async fn hang_body_handler() -> Response<Body> {
+    // Headers flush immediately, body hangs forever. Exercises the per-frame
+    // idle timeout in `TimeoutBody`.
+    let s = stream! {
+        // Send one chunk so the response is established with a body, then
+        // never produce another frame.
+        yield Ok::<Bytes, std::io::Error>(Bytes::from("first\n"));
+        let () = std::future::pending::<()>().await;
+        // unreachable, but the macro needs to see at least one trailing yield
+        yield Ok(Bytes::from(""));
+    };
+    Response::builder()
+        .status(StatusCode::OK)
+        .header("content-type", "text/event-stream")
+        .header("cache-control", "no-cache")
+        .body(Body::from_stream(s))
+        .unwrap()
+}
+
 fn mock_router() -> Router {
     Router::new()
         .route("/sse", get(sse_handler))
         .route("/hop-resp", get(hop_in_response))
+        .route("/hang-body", get(hang_body_handler))
         .fallback(any(echo_handler))
         // The 5 MB body test exceeds axum's default 2 MiB extractor limit; the
         // mock needs to accept arbitrary sizes so we can assert what the edge
@@ -171,6 +191,7 @@ struct EdgeOpts<'a> {
     max_inflight: usize,
     proxy_hosts: Option<Vec<String>>,
     proxy_paths: Option<Vec<String>>,
+    body_idle_timeout_secs: Option<u64>,
 }
 
 async fn spawn_edge(opts: EdgeOpts<'_>) -> Edge {
@@ -189,6 +210,9 @@ async fn spawn_edge(opts: EdgeOpts<'_>) -> Edge {
     }
     if let Some(p) = opts.proxy_paths {
         builder = builder.proxy_paths(p);
+    }
+    if let Some(secs) = opts.body_idle_timeout_secs {
+        builder = builder.proxy_body_idle_timeout_secs(secs);
     }
     let cfg = builder.build().expect("EdgeConfig::build");
 
@@ -219,6 +243,7 @@ async fn spawn_edge_default(node_url: &str) -> Edge {
         max_inflight: 4096,
         proxy_hosts: None,
         proxy_paths: None,
+        body_idle_timeout_secs: None,
     })
     .await
 }
@@ -700,6 +725,7 @@ async fn conn_cap_zero_drops_proxy_too() {
         max_inflight: 0,
         proxy_hosts: None,
         proxy_paths: None,
+        body_idle_timeout_secs: None,
     })
     .await;
     let result = timeout(
@@ -729,6 +755,7 @@ async fn custom_proxy_hosts_replace_apex() {
         max_inflight: 4096,
         proxy_hosts: Some(vec!["api.example.com".into()]),
         proxy_paths: None,
+        body_idle_timeout_secs: None,
     })
     .await;
     // openlen.com no longer in the proxy list → not_found
@@ -749,6 +776,7 @@ async fn custom_proxy_paths_replace_default() {
         max_inflight: 4096,
         proxy_hosts: None,
         proxy_paths: Some(vec!["/api/".into()]),
+        body_idle_timeout_secs: None,
     })
     .await;
     // /api/ on a subdomain proxies
@@ -933,4 +961,84 @@ async fn many_concurrent_proxied_requests_share_pool() {
         }
     }
     assert_eq!(ok, 32);
+}
+
+// ---------------------------------------------------------------------------
+// 10. F2 S6 A4 — upstream body idle timeout
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn upstream_body_idle_timeout_truncates_response() {
+    // Mock returns headers + one chunk + hangs the body forever. With a
+    // 200 ms idle window the edge must error the body within ~milliseconds
+    // of the second poll, not pin the tokio task waiting forever.
+    let node = spawn_mock_node().await;
+    let edge = spawn_edge(EdgeOpts {
+        node_url: &node.url(),
+        max_inflight: 4096,
+        proxy_hosts: None,
+        proxy_paths: None,
+        body_idle_timeout_secs: Some(1),
+    })
+    .await;
+    let started = Instant::now();
+    let resp = timeout(
+        Duration::from_secs(5),
+        client()
+            .get(format!("https://{}/hang-body", edge.addr))
+            .header("host", "openlen.com")
+            .send(),
+    )
+    .await
+    .expect("send did not time out")
+    .expect("send ok");
+    assert_eq!(resp.status(), 200, "headers must arrive normally");
+
+    // Reading the body must surface an error after ~1s, not hang.
+    let result = timeout(Duration::from_secs(4), resp.text()).await;
+    let elapsed = started.elapsed();
+    assert!(
+        result.is_ok(),
+        "body read should not be killed by outer timeout — idle timer must fire first"
+    );
+    // The body either errored OR returned a truncated string; either way
+    // the request completed well before the outer 4 s deadline.
+    assert!(
+        elapsed < Duration::from_secs(4),
+        "idle-timeout teardown took too long: {elapsed:?}"
+    );
+    assert!(
+        elapsed >= Duration::from_millis(800),
+        "idle timeout fired too early: {elapsed:?}"
+    );
+}
+
+#[tokio::test]
+async fn upstream_body_idle_timeout_disabled_via_zero() {
+    // body_idle_timeout_secs=0 disables the timer — SSE-like streams that
+    // pause longer than the timer would have allowed still flow normally.
+    let node = spawn_mock_node().await;
+    let edge = spawn_edge(EdgeOpts {
+        node_url: &node.url(),
+        max_inflight: 4096,
+        proxy_hosts: None,
+        proxy_paths: None,
+        body_idle_timeout_secs: Some(0),
+    })
+    .await;
+    // /sse on the mock streams 20 chunks × 50 ms apart — well under any
+    // realistic idle window, but here we're just proving the disabled path
+    // doesn't break SSE either.
+    let resp = client()
+        .get(format!("https://{}/sse", edge.addr))
+        .header("host", "openlen.com")
+        .send()
+        .await
+        .expect("send");
+    assert_eq!(resp.status(), 200);
+    let body = resp.text().await.expect("body");
+    assert!(
+        body.matches("data: chunk").count() == 20,
+        "expected 20 SSE chunks, got body: {body}"
+    );
 }
