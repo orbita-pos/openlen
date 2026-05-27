@@ -41,7 +41,14 @@ once_cell = "1"
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls-aws-lc-rs", "postgres"] }
 moka = { version = "0.12", features = ["future"] }
 async-trait = "0.1"
-instant-acme = { version = "0.8", default-features = false, features = ["aws-lc-rs", "hyper-rustls", "rcgen"] }
+instant-acme = { version = "0.8", default-features = false, features = ["aws-lc-rs", "rcgen"] }
+# Custom ACME HTTP client built on hyper-rustls + webpki-roots. Avoids
+# instant-acme's default `hyper-rustls` feature which forces the
+# `rustls-platform-verifier` dep (~500 KB stripped); webpki-tokio bundles
+# Mozilla roots into the binary instead, fine for an outbound-only ACME
+# client.
+hyper-rustls = { version = "0.27", default-features = false, features = ["http1", "webpki-tokio", "tls12", "aws-lc-rs"] }
+webpki-roots = "0.26"
 dashmap = "6"
 notify = { version = "8", default-features = false, features = ["macos_kqueue"] }
 sha2 = "0.10"

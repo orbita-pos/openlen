@@ -110,8 +110,8 @@ impl AcmeClient {
             format!("mailto:{contact}")
         };
 
-        let (account, _credentials) = Account::builder()
-            .context("instant-acme: building account builder")?
+        let http = Box::new(super::acme_http::build_acme_http_client());
+        let (account, _credentials) = Account::builder_with_http(http)
             .create(
                 &NewAccount {
                     contact: &[&mailto],
