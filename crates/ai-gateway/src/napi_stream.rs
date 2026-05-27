@@ -52,11 +52,14 @@ use tokio::sync::Mutex as TokioMutex;
 use tokio_util::sync::CancellationToken;
 
 use crate::error::GatewayError;
-use crate::napi::{gateway_error_to_napi, JsGeminiProvider, JsStreamEvent, JsStreamRequest};
-use crate::types::{StopReason, StreamEvent, StreamRequest};
+use crate::napi::{gateway_error_to_napi, GeminiProvider, StreamEvent, StreamRequest};
+use crate::types::{
+    StopReason as NativeStopReason, StreamEvent as NativeStreamEvent,
+    StreamRequest as NativeStreamRequest,
+};
 
 #[napi]
-impl JsGeminiProvider {
+impl GeminiProvider {
     /// Open a streaming generation. **Synchronous** — returns immediately
     /// with a `GeminiStream` whose upstream POST hasn't started yet. The
     /// POST fires lazily on the first `next()` call. That lets JS callers
@@ -68,16 +71,16 @@ impl JsGeminiProvider {
     /// will serialise on the internal mutex. `cancel()` doesn't take the
     /// mutex and is safe to call concurrently with `next()`.
     #[napi]
-    pub fn stream(&self, request: JsStreamRequest) -> Result<JsGeminiStream> {
-        let native: StreamRequest = request.try_into()?;
-        Ok(JsGeminiStream::new(self.inner.clone(), native))
+    pub fn stream(&self, request: StreamRequest) -> Result<GeminiStream> {
+        let native: NativeStreamRequest = request.try_into()?;
+        Ok(GeminiStream::new(self.inner.clone(), native))
     }
 }
 
 /// JS-facing async iterator over Gemini stream events. Construct via
 /// `GeminiProvider#stream(request)`.
-#[napi(js_name = "GeminiStream")]
-pub struct JsGeminiStream {
+#[napi]
+pub struct GeminiStream {
     state: Arc<TokioMutex<StreamState>>,
     cancel: CancellationToken,
 }
@@ -86,10 +89,10 @@ enum StreamState {
     /// Pre-POST: parameters captured, network not yet hit.
     Initial {
         provider: crate::GeminiProvider,
-        request: StreamRequest,
+        request: NativeStreamRequest,
     },
     /// POST returned 200; pulling SSE frames.
-    Open(BoxStream<'static, std::result::Result<StreamEvent, GatewayError>>),
+    Open(BoxStream<'static, std::result::Result<NativeStreamEvent, GatewayError>>),
     /// Pre-start cancel happened; the next call yields a synthetic
     /// `Done { Cancelled }` before moving to `Closed`. This exists so
     /// JS callers see exactly one terminal `done` event regardless of
@@ -103,15 +106,15 @@ enum StreamState {
 enum Action {
     OpenStream {
         provider: crate::GeminiProvider,
-        request: StreamRequest,
+        request: NativeStreamRequest,
     },
     PullNext {
-        stream: BoxStream<'static, std::result::Result<StreamEvent, GatewayError>>,
+        stream: BoxStream<'static, std::result::Result<NativeStreamEvent, GatewayError>>,
     },
 }
 
-impl JsGeminiStream {
-    fn new(provider: crate::GeminiProvider, request: StreamRequest) -> Self {
+impl GeminiStream {
+    fn new(provider: crate::GeminiProvider, request: NativeStreamRequest) -> Self {
         Self {
             state: Arc::new(TokioMutex::new(StreamState::Initial { provider, request })),
             cancel: CancellationToken::new(),
@@ -120,7 +123,7 @@ impl JsGeminiStream {
 }
 
 #[napi]
-impl JsGeminiStream {
+impl GeminiStream {
     /// Pull the next [`crate::types::StreamEvent`]. Resolves to `null` (JS)
     /// when the stream is exhausted; throws a `GatewayError`-envelope
     /// `Error` on stream-level failures (network drop mid-flight,
@@ -129,7 +132,7 @@ impl JsGeminiStream {
     /// Safe to call repeatedly after the iterator has ended — additional
     /// calls return `null` synchronously without re-hitting the network.
     #[napi]
-    pub async fn next(&self) -> Result<Option<JsStreamEvent>> {
+    pub async fn next(&self) -> Result<Option<StreamEvent>> {
         loop {
             // Decision phase: hold the lock just long enough to extract
             // an Action describing the heavy work. Cancel can race with
@@ -144,8 +147,8 @@ impl JsGeminiStream {
                     StreamState::Open(stream) => Action::PullNext { stream },
                     StreamState::PendingSyntheticDone => {
                         // state stays Closed; emit the terminal event.
-                        return Ok(Some(JsStreamEvent::from(StreamEvent::Done {
-                            stop_reason: StopReason::Cancelled,
+                        return Ok(Some(StreamEvent::from(NativeStreamEvent::Done {
+                            stop_reason: NativeStopReason::Cancelled,
                         })));
                     }
                     StreamState::Closed => return Ok(None),
