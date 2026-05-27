@@ -19,3 +19,7 @@
 //! - napi-rs binding to Node — F3 S2.
 //! - HtmlStream integration — F3 S3.
 //! - `lib/credits.ts` hook-up + `/api/generate` cutover — F3 S3-S4.
+
+pub mod types;
+
+pub use types::{Message, Role, StopReason, StreamEvent, StreamRequest, Usage};
