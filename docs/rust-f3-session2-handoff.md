@@ -51,8 +51,8 @@ de81dff feat(rust/ai-gateway): F3 S2 B — expose GeminiProvider via napi
 d59abdf ci(ai-gateway):        F3 S2 F — prebuild workflow for tag pushes
 ```
 
-Self-commit SHA for this handoff doc: `__SELF_SHA__` (to be filled in
-by the conventional follow-up commit).
+Self-commit SHA for this handoff doc: `854b408` (filled in by the
+conventional follow-up commit).
 
 ## Phase-by-phase
 
