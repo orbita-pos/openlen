@@ -1,0 +1,65 @@
+[Unit]
+Description=OpenLen Rust edge — TLS terminator + static/proxy frontend
+Documentation=https://github.com/jesusbernalrj/inari-pages/blob/master/docs/rust-f2-session7-handoff.md
+After=network-online.target
+Wants=network-online.target
+
+# Deliberately NOT ordered after openlen-app.service: the edge serves static
+# pages from disk independently and 502s upstream routes while the Node app
+# is restarting. Keeping the edge up during app rolls is the whole point of
+# splitting them.
+
+[Service]
+Type=simple
+User=openlen-edge
+Group=openlen-edge
+
+# Runtime config — secrets land in /etc/openlen/edge.env (mode 640
+# root:openlen-edge so the systemd User= can read, the world cannot).
+# Override defaults documented in infra/edge/edge.env.example.
+EnvironmentFile=/etc/openlen/edge.env
+
+ExecStart=/usr/local/bin/openlen-edge
+
+# Restart policy: crash → 5s wait → retry, up to 3 in 60s before giving up.
+# journalctl -u openlen-edge surfaces the reason in either case.
+Restart=on-failure
+RestartSec=5s
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+# Bind to :80 and :443 without running as root. CAP_NET_BIND_SERVICE granted
+# via systemd's ambient capability set, which is the modern way that doesn't
+# require setcap on the binary (install.sh sets it too as a belt-and-braces
+# fallback). The binary itself drops every other capability after binding.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=openlen-edge
+
+# Security hardening — ProtectSystem=full keeps /usr, /boot, /etc read-only;
+# ReadWritePaths re-opens just the cert state directory the renewal sweep
+# rotates files in. The certbot wildcard cert at
+# /etc/letsencrypt/live/openlen.com/{fullchain,privkey}.pem is read-only;
+# group ACL (managed by install.sh) grants the openlen-edge user read access.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+RestrictRealtime=true
+ReadWritePaths=/var/lib/openlen-edge
+
+# Open-file cap. The edge holds an idle pool of upstream Node connections
+# (default 32 per host × N hosts) plus one fd per inbound TLS handshake.
+# Default ulimit (1024) is fine for now, but bumping early avoids surprises
+# during a flash crowd.
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
