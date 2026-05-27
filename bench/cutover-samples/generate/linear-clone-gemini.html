@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Beam – The new standard for issue tracking</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: var(--ol-bg);
+      --surface: var(--ol-surface);
+      --fg: var(--ol-fg);
+      --border: var(--ol-border);
+      --accent: 49 46 229; /* indigo-600 */
+      --accent-fg: #ffffff;
+      --font-display: 'Inter', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    
+    body {
+      background-color: var(--bg);
+      color: var(--fg);
+      font-family: var(--font-body);
+      -webkit-font-smoothing: antialiased;
+    }
+    .font-display { font-family: var(--ol-font-display); }
+    .font-mono { font-family: var(--font-mono); }
+    .bg-grid { background-image: linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 32px 32px; }
+    .radial-fade { background: radial-gradient(40% 40% at 50% 0%, rgba(var(--accent), 0.1) 0%, transparent 100%); }
+    .radial-fade-bottom { background: radial-gradient(60% 50% at 50% 100%, rgba(var(--accent), 0.1) 0%, transparent 100%); }
+    .marquee { animation: marquee 30s linear infinite; }
+    .marquee2 { animation: marquee2 30s linear infinite; }
+    @keyframes marquee { 0% { transform: translateX(0%); } 100% { transform: translateX(-100%); } }
+    @keyframes marquee2 { 0% { transform: translateX(100%); } 100% { transform: translateX(0%); } }
+    .ping-dot { position: relative; }
+    .ping-dot::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 9999px; background-color: rgba(var(--accent), 1); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite; }
+    @keyframes ping { 75%, 100% { transform: scale(2); opacity: 0; } }
+    details > summary { list-style: none; }
+    details > summary::-webkit-details-marker { display: none; }
+    details[open] .plus-icon { transform: rotate(45deg); }
+    .pricing-featured { border-color: rgba(var(--accent), 1); }
+  </style>
+<script data-ol-radius>(function(){var w=window;w.tailwind=w.tailwind||{};var c=w.tailwind.config||{};var t=c.theme||{};var e=t.extend||{};e.borderRadius=Object.assign({},e.borderRadius,{sm:'var(--ol-r-sm)',DEFAULT:'var(--ol-r)',md:'var(--ol-r-md)',lg:'var(--ol-r-lg)',xl:'var(--ol-r-xl)','2xl':'var(--ol-r-2xl)','3xl':'var(--ol-r-3xl)'});w.tailwind.config=Object.assign({},c,{theme:Object.assign({},t,{extend:Object.assign({},e)})});})();</script><style data-ol-radius>:root{--ol-r-scale:1;--ol-r-sm:calc(0.125rem*var(--ol-r-scale));--ol-r:calc(0.25rem*var(--ol-r-scale));--ol-r-md:calc(0.375rem*var(--ol-r-scale));--ol-r-lg:calc(0.5rem*var(--ol-r-scale));--ol-r-xl:calc(0.75rem*var(--ol-r-scale));--ol-r-2xl:calc(1rem*var(--ol-r-scale));--ol-r-3xl:calc(1.5rem*var(--ol-r-scale));}</style><script data-ol-space>(function(){var w=window;w.tailwind=w.tailwind||{};var c=w.tailwind.config||{};var t=c.theme||{};var e=t.extend||{};var m={'0':'var(--ol-space-0)','px':'var(--ol-space-px)','0.5':'var(--ol-space-0_5)','1':'var(--ol-space-1)','1.5':'var(--ol-space-1_5)','2':'var(--ol-space-2)','2.5':'var(--ol-space-2_5)','3':'var(--ol-space-3)','3.5':'var(--ol-space-3_5)','4':'var(--ol-space-4)','5':'var(--ol-space-5)','6':'var(--ol-space-6)','7':'var(--ol-space-7)','8':'var(--ol-space-8)','9':'var(--ol-space-9)','10':'var(--ol-space-10)','11':'var(--ol-space-11)','12':'var(--ol-space-12)','14':'var(--ol-space-14)','16':'var(--ol-space-16)','20':'var(--ol-space-20)','24':'var(--ol-space-24)','28':'var(--ol-space-28)','32':'var(--ol-space-32)','36':'var(--ol-space-36)','40':'var(--ol-space-40)','44':'var(--ol-space-44)','48':'var(--ol-space-48)','52':'var(--ol-space-52)','56':'var(--ol-space-56)','60':'var(--ol-space-60)','64':'var(--ol-space-64)','72':'var(--ol-space-72)','80':'var(--ol-space-80)','96':'var(--ol-space-96)'};e.padding=Object.assign({},e.padding,m);e.margin=Object.assign({},e.margin,m);e.gap=Object.assign({},e.gap,m);w.tailwind.config=Object.assign({},c,{theme:Object.assign({},t,{extend:Object.assign({},e)})});})();</script><style data-ol-space>:root{--ol-space-scale:1;--ol-space-0:calc(0px*var(--ol-space-scale));--ol-space-px:calc(1px*var(--ol-space-scale));--ol-space-0_5:calc(0.125rem*var(--ol-space-scale));--ol-space-1:calc(0.25rem*var(--ol-space-scale));--ol-space-1_5:calc(0.375rem*var(--ol-space-scale));--ol-space-2:calc(0.5rem*var(--ol-space-scale));--ol-space-2_5:calc(0.625rem*var(--ol-space-scale));--ol-space-3:calc(0.75rem*var(--ol-space-scale));--ol-space-3_5:calc(0.875rem*var(--ol-space-scale));--ol-space-4:calc(1rem*var(--ol-space-scale));--ol-space-5:calc(1.25rem*var(--ol-space-scale));--ol-space-6:calc(1.5rem*var(--ol-space-scale));--ol-space-7:calc(1.75rem*var(--ol-space-scale));--ol-space-8:calc(2rem*var(--ol-space-scale));--ol-space-9:calc(2.25rem*var(--ol-space-scale));--ol-space-10:calc(2.5rem*var(--ol-space-scale));--ol-space-11:calc(2.75rem*var(--ol-space-scale));--ol-space-12:calc(3rem*var(--ol-space-scale));--ol-space-14:calc(3.5rem*var(--ol-space-scale));--ol-space-16:calc(4rem*var(--ol-space-scale));--ol-space-20:calc(5rem*var(--ol-space-scale));--ol-space-24:calc(6rem*var(--ol-space-scale));--ol-space-28:calc(7rem*var(--ol-space-scale));--ol-space-32:calc(8rem*var(--ol-space-scale));--ol-space-36:calc(9rem*var(--ol-space-scale));--ol-space-40:calc(10rem*var(--ol-space-scale));--ol-space-44:calc(11rem*var(--ol-space-scale));--ol-space-48:calc(12rem*var(--ol-space-scale));--ol-space-52:calc(13rem*var(--ol-space-scale));--ol-space-56:calc(14rem*var(--ol-space-scale));--ol-space-60:calc(15rem*var(--ol-space-scale));--ol-space-64:calc(16rem*var(--ol-space-scale));--ol-space-72:calc(18rem*var(--ol-space-scale));--ol-space-80:calc(20rem*var(--ol-space-scale));--ol-space-96:calc(24rem*var(--ol-space-scale));}</style><script data-ol-type>(function(){var w=window;w.tailwind=w.tailwind||{};var c=w.tailwind.config||{};var t=c.theme||{};var e=t.extend||{};e.fontSize=Object.assign({},e.fontSize,{'xs':['var(--ol-text-xs)','var(--ol-lh-xs)'],'sm':['var(--ol-text-sm)','var(--ol-lh-sm)'],'base':['var(--ol-text-base)','var(--ol-lh-base)'],'lg':['var(--ol-text-lg)','var(--ol-lh-lg)'],'xl':['var(--ol-text-xl)','var(--ol-lh-xl)'],'2xl':['var(--ol-text-2xl)','var(--ol-lh-2xl)'],'3xl':['var(--ol-text-3xl)','var(--ol-lh-3xl)'],'4xl':['var(--ol-text-4xl)','var(--ol-lh-4xl)'],'5xl':['var(--ol-text-5xl)','var(--ol-lh-5xl)'],'6xl':['var(--ol-text-6xl)','var(--ol-lh-6xl)'],'7xl':['var(--ol-text-7xl)','var(--ol-lh-7xl)'],'8xl':['var(--ol-text-8xl)','var(--ol-lh-8xl)'],'9xl':['var(--ol-text-9xl)','var(--ol-lh-9xl)']});w.tailwind.config=Object.assign({},c,{theme:Object.assign({},t,{extend:Object.assign({},e)})});})();</script><style data-ol-type>:root{--ol-text-scale:1;--ol-text-xs:calc(0.75rem*var(--ol-text-scale));--ol-lh-xs:calc(1rem*var(--ol-text-scale));--ol-text-sm:calc(0.875rem*var(--ol-text-scale));--ol-lh-sm:calc(1.25rem*var(--ol-text-scale));--ol-text-base:calc(1rem*var(--ol-text-scale));--ol-lh-base:calc(1.5rem*var(--ol-text-scale));--ol-text-lg:calc(1.125rem*var(--ol-text-scale));--ol-lh-lg:calc(1.75rem*var(--ol-text-scale));--ol-text-xl:calc(1.25rem*var(--ol-text-scale));--ol-lh-xl:calc(1.75rem*var(--ol-text-scale));--ol-text-2xl:calc(1.5rem*var(--ol-text-scale));--ol-lh-2xl:calc(2rem*var(--ol-text-scale));--ol-text-3xl:calc(1.875rem*var(--ol-text-scale));--ol-lh-3xl:calc(2.25rem*var(--ol-text-scale));--ol-text-4xl:calc(2.25rem*var(--ol-text-scale));--ol-lh-4xl:calc(2.5rem*var(--ol-text-scale));--ol-text-5xl:calc(3rem*var(--ol-text-scale));--ol-lh-5xl:calc(1*var(--ol-text-scale));--ol-text-6xl:calc(3.75rem*var(--ol-text-scale));--ol-lh-6xl:calc(1*var(--ol-text-scale));--ol-text-7xl:calc(4.5rem*var(--ol-text-scale));--ol-lh-7xl:calc(1*var(--ol-text-scale));--ol-text-8xl:calc(6rem*var(--ol-text-scale));--ol-lh-8xl:calc(1*var(--ol-text-scale));--ol-text-9xl:calc(8rem*var(--ol-text-scale));--ol-lh-9xl:calc(1*var(--ol-text-scale));}</style><link data-ol-font rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist:wght@400;500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Outfit:wght@400;500;600;700&amp;family=Space+Grotesk:wght@400;500;600;700&amp;family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&amp;family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&amp;family=Crimson+Pro:wght@400;500;600;700&amp;family=Playfair+Display:wght@400;500;600;700&amp;family=DM+Serif+Display&amp;family=Instrument+Serif&amp;display=swap"><style data-ol-font>:root{--ol-font-display:'var(--font-display)',sans-serif;}</style><style data-ol-color>:root{--ol-bg:#ffffff;--ol-surface:#f9fafb;--ol-fg:#111827;--ol-border:#e5e7eb;}</style><style data-ol-modes>:root[data-ol-mode="dark"]{--ol-bg:#050505;--ol-surface:#111111;--ol-fg:#f9fafb;--ol-border:rgba(255, 255, 255, 0.08);--ol-accent:99 102 241;}</style></head>
+<body class="antialiased">
+
+  <div id="root" class="flex flex-col min-h-screen">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-50 backdrop-blur-md bg-white/80 dark:bg-black/50 border-b border-[var(--border)]">
+      <div class="container mx-auto px-4">
+        <div class="flex items-center justify-between h-16">
+          <div class="flex items-center space-x-8">
+            <a href="#" class="flex items-center space-x-2">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-[rgb(var(--accent))]"><path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 7L12 12L22 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 22V12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span class="font-semibold text-lg text-[var(--fg)]">Beam</span>
+            </a>
+            <nav class="hidden md:flex items-center space-x-6 text-sm font-medium text-slate-700 dark:text-slate-300">
+              <a href="#" class="hover:text-[var(--fg)] transition-colors">Features</a>
+              <a href="#" class="hover:text-[var(--fg)] transition-colors">Docs</a>
+              <a href="#" class="hover:text-[var(--fg)] transition-colors">Changelog</a>
+              <a href="#" class="hover:text-[var(--fg)] transition-colors">Pricing</a>
+            </nav>
+          </div>
+          <div class="flex items-center space-x-4">
+            <a href="#" class="hidden md:inline-block text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-[var(--fg)] transition-colors">Sign In</a>
+            <a href="#" class="flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md transition-colors bg-[rgb(var(--accent))] text-[var(--accent-fg)] hover:bg-opacity-90">
+              <span>Request a demo</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ml-1.5"><path d="m9 18 6-6-6-6"/></svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+
+      <!-- Hero -->
+      <section class="relative py-20 md:py-32">
+        <div class="absolute inset-0 radial-fade pointer-events-none"></div>
+        <div class="container mx-auto px-4 text-center">
+          <div class="inline-flex items-center space-x-2 text-xs font-mono px-3 py-1 rounded-full border border-[var(--border)] bg-[var(--surface)] mb-6">
+            <div class="w-2 h-2 rounded-full bg-[rgb(var(--accent))] ping-dot"></div>
+            <span>v1.2 · Cycles now generally available</span>
+          </div>
+          <h1 class="font-display text-5xl md:text-7xl font-bold tracking-tighter mb-6 text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400">
+            The new standard for issue tracking. <br><span class="opacity-50">Fast, opinionated, and built for builders.</span>
+          </h1>
+          <p class="max-w-2xl mx-auto text-lg text-slate-400 mb-8">
+            Beam is an issue tracker designed from the ground up for speed and developer happiness. Automate triage, manage cycles, and ship with momentum.
+          </p>
+          <div class="flex justify-center items-center space-x-4 mb-6">
+            <a href="#" class="flex items-center justify-center px-5 py-3 text-base font-medium rounded-md transition-colors bg-[rgb(var(--accent))] text-[var(--accent-fg)] hover:bg-opacity-90">
+              Sign up for free
+            </a>
+            <a href="#" class="flex items-center justify-center px-5 py-3 text-base font-medium rounded-md transition-colors bg-white/10 text-white hover:bg-white/20 border border-white/10">
+              View interactive demo
+            </a>
+          </div>
+          <p class="font-mono text-sm text-slate-500">$ npx create-beam-app</p>
+        </div>
+        <div class="container mx-auto px-4 mt-16">
+          <div class="relative w-full max-w-5xl mx-auto p-1.5 rounded-xl border border-[var(--border)] bg-gradient-to-b from-slate-800/50 to-slate-900/50 shadow-2xl shadow-black/50">
+            <div class="aspect-[16/9] w-full rounded-lg bg-black bg-grid">
+              <div class="p-8 flex flex-col h-full">
+                <div class="flex-1">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-1.5">
+                      <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                      <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                      <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                    </div>
+                    <div class="font-mono text-xs text-slate-500">BEAM-2024 / Q2 Cycle</div>
+                  </div>
+                  <div class="mt-8 space-y-3">
+                    <div class="h-4 w-3/4 rounded bg-slate-800 animate-pulse"></div>
+                    <div class="h-4 w-1/2 rounded bg-slate-800 animate-pulse"></div>
+                    <div class="h-4 w-2/3 rounded bg-slate-800 animate-pulse"></div>
+                  </div>
+                </div>
+                <div class="flex items-center justify-between border-t border-[var(--border)] pt-4">
+                  <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2 text-sm text-slate-400">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                      <span>12d left</span>
+                    </div>
+                    <div class="flex items-center space-x-2 text-sm text-slate-400">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                      <span>4 members</span>
+                    </div>
+                  </div>
+                  <div class="flex -space-x-2">
+                    <div class="w-8 h-8 rounded-full bg-indigo-500 border-2 border-slate-800 ring-2 ring-slate-900"></div>
+                    <div class="w-8 h-8 rounded-full bg-cyan-500 border-2 border-slate-800 ring-2 ring-slate-900"></div>
+                    <div class="w-8 h-8 rounded-full bg-emerald-500 border-2 border-slate-800 ring-2 ring-slate-900"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Logo Cloud -->
+      <section class="py-12 border-y border-[var(--border)]">
+        <div class="container mx-auto px-4">
+          <p class="text-center font-mono text-sm uppercase text-slate-500 mb-8">Trusted by the most ambitious teams</p>
+          <div class="relative w-full overflow-hidden">
+            <div class="flex">
+              <div class="flex w-full shrink-0 items-center justify-around marquee">
+                <svg class="h-8 text-slate-400" viewBox="0 0 110 24" fill="currentColor"><text x="0" y="16" font-family="serif" font-weight="bold" font-size="20">atrium</text></svg>
+                <svg class="h-8 text-slate-400" viewBox="0 0 110 24" fill="currentColor"><text x="0" y="16" font-family="sans-serif" font-weight="bold" font-size="20">Vantage</text></svg>
+                <svg class="h-8 text-slate-400" viewBox="0 0 110 24" fill="currentColor"><text x="0" y="16" font-family="monospace" font-weight="bold" font-size="20">Glide</text></svg>
+                <svg class="h-8 text-slate-400" viewBox="0 0 110 24" fill="currentColor"><text x="0" y="16" font-family="serif" font-style="italic" font-size="22">Nimbus</text></svg>
+                <svg class="h-8 text-slate-400" viewBox="0 0 110 24" fill="currentColor"><text x="0" y="16" font-family="sans-serif" font-weight="bold" font-size="20">Coast</text></svg>
+                <svg class="h-8 text-slate-400" viewBox="0 0 110 24" fill="currentColor"><text x="0" y="16" font-family="sans-serif" font-weight="500" font-size="20">Crucible</text></svg>
+              </div>
+              <div class="flex w-full shrink-0 items-center justify-around marquee2">
+                <svg class="h-8 text-slate-400" viewBox="0 0 110 24" fill="currentColor"><text x="0" y="16" font-family="serif" font-weight="bold" font-size="20">atrium</text></svg>
+                <svg class="h-8 text-slate-400" viewBox="0 0 110 24" fill="currentColor"><text x="0" y="16" font-family="sans-serif" font-weight="bold" font-size="20">Vantage</text></svg>
+                <svg class="h-8 text-slate-400" viewBox="0 0 110 24" fill="currentColor"><text x="0" y="16" font-family="monospace" font-weight="bold" font-size="20">Glide</text></svg>
+                <svg class="h-8 text-slate-400" viewBox="0 0 110 24" fill="currentColor"><text x="0" y="16" font-family="serif" font-style="italic" font-size="22">Nimbus</text></svg>
+                <svg class="h-8 text-slate-400" viewBox="0 0 110 24" fill="currentColor"><text x="0" y="16" font-family="sans-serif" font-weight="bold" font-size="20">Coast</text></svg>
+                <svg class="h-8 text-slate-400" viewBox="0 0 110 24" fill="currentColor"><text x="0" y="16" font-family="sans-serif" font-weight="500" font-size="20">Crucible</text></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Bento Features -->
+      <section class="py-20 md:py-32 bg-[var(--surface)]">
+        <div class="container mx-auto px-4">
+          <div class="text-center mb-12">
+            <p class="font-mono text-sm text-[rgb(var(--accent))]">Why Beam?</p>
+            <h2 class="font-display text-4xl md:text-5xl font-bold tracking-tighter mt-2 text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400">Designed for modern software teams</h2>
+            <p class="max-w-2xl mx-auto mt-4 text-lg text-slate-400">Everything you need to build momentum, right out of the box.</p>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+            <div class="md:col-span-7 md:row-span-2 p-6 rounded-xl border border-[var(--border)] bg-black/30 flex flex-col">
+              <div class="flex-shrink-0">
+                <div class="w-10 h-10 rounded-lg bg-[rgb(var(--accent))] flex items-center justify-center mb-4"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M21 6H3a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2Z"/><path d="M3.5 6.5a2.5 2.5 0 1 1 5 0"/></svg></div>
+                <p class="font-mono text-sm text-slate-400">Cycles</p>
+                <h3 class="font-display text-2xl font-bold tracking-tight mt-1">Build momentum with cycles</h3>
+                <p class="mt-2 text-slate-400">Plan work in time-boxed sprints. Beam automatically tracks progress, projects burn-down, and highlights scope creep.</p>
+              </div>
+              <div class="flex-1 mt-6 flex items-end">
+                <div class="w-full p-4 rounded-lg bg-slate-900/50 border border-[var(--border)]">
+                  <div class="flex items-end h-32 space-x-2">
+                    <div class="w-full bg-indigo-500 rounded-t-sm" style="height: 80%"></div>
+                    <div class="w-full bg-indigo-500 rounded-t-sm" style="height: 70%"></div>
+                    <div class="w-full bg-indigo-500 rounded-t-sm" style="height: 65%"></div>
+                    <div class="w-full bg-indigo-500 rounded-t-sm" style="height: 50%"></div>
+                    <div class="w-full bg-slate-700 rounded-t-sm" style="height: 40%"></div>
+                    <div class="w-full bg-slate-700 rounded-t-sm" style="height: 30%"></div>
+                    <div class="w-full bg-slate-700 rounded-t-sm" style="height: 20%"></div>
+                    <div class="w-full bg-slate-700 rounded-t-sm" style="height: 10%"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="md:col-span-5 p-6 rounded-xl border border-[var(--border)] bg-black/30">
+              <div class="w-10 h-10 rounded-lg bg-[rgb(var(--accent))] flex items-center justify-center mb-4"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg></div>
+              <p class="font-mono text-sm text-slate-400">AI Triage</p>
+              <h3 class="font-display text-xl font-bold tracking-tight mt-1">Automated issue triage</h3>
+              <p class="mt-2 text-slate-400">Beam's AI assistant automatically labels, prioritizes, and assigns incoming issues based on content and code context.</p>
+            </div>
+            <div class="md:col-span-5 p-6 rounded-xl border border-[var(--border)] bg-black/30">
+              <div class="w-10 h-10 rounded-lg bg-[rgb(var(--accent))] flex items-center justify-center mb-4"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 8h6"/><path d="m10 12-2 2 2 2"/><path d="M14 16h-4"/></svg></div>
+              <p class="font-mono text-sm text-slate-400">Keyboard First</p>
+              <h3 class="font-display text-xl font-bold tracking-tight mt-1">Designed for the command line</h3>
+              <p class="mt-2 text-slate-400">Navigate, create, and update issues without leaving your keyboard. The command menu is always a keystroke away.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Pricing -->
+      <section id="pricing" class="py-20 md:py-32">
+        <div class="container mx-auto px-4">
+          <div class="text-center mb-12">
+            <p class="font-mono text-sm text-[rgb(var(--accent))]">Pricing</p>
+            <h2 class="font-display text-4xl md:text-5xl font-bold tracking-tighter mt-2 text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400">Fair pricing for teams of all sizes</h2>
+            <p class="max-w-2xl mx-auto mt-4 text-lg text-slate-400">Start for free on our generous Hobby plan, and scale as you grow.</p>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <div class="p-8 rounded-xl border border-[var(--border)] bg-[var(--surface)]">
+              <h3 class="text-lg font-semibold">Hobby</h3>
+              <p class="text-4xl font-bold tracking-tight mt-4">$0</p>
+              <p class="text-slate-400 mt-1">Free forever</p>
+              <p class="text-slate-400 mt-4 text-sm">For personal projects and small teams getting started.</p>
+              <div class="h-px bg-[var(--border)] my-6"></div>
+              <ul class="space-y-3 text-sm">
+                <li class="flex items-center"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-[rgb(var(--accent))]"><path d="M20 6 9 17l-5-5"/></svg>Up to 3 users</li>
+                <li class="flex items-center"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-[rgb(var(--accent))]"><path d="M20 6 9 17l-5-5"/></svg>Unlimited issues</li>
+                <li class="flex items-center"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-[rgb(var(--accent))]"><path d="M20 6 9 17l-5-5"/></svg>Community support</li>
+              </ul>
+              <a href="#" class="block w-full text-center mt-8 px-5 py-3 text-sm font-medium rounded-md transition-colors bg-white/10 text-white hover:bg-white/20 border border-white/10">Get started</a>
+            </div>
+            <div class="relative p-8 rounded-xl border-2 pricing-featured bg-[var(--surface)]">
+              <div class="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                <div class="px-3 py-1 text-xs font-medium rounded-full bg-[rgb(var(--accent))] text-white">Most Popular</div>
+              </div>
+              <h3 class="text-lg font-semibold">Team</h3>
+              <p class="text-4xl font-bold tracking-tight mt-4">$12<span class="text-xl font-medium text-slate-400">/user/mo</span></p>
+              <p class="text-slate-400 mt-1">Billed annually</p>
+              <p class="text-slate-400 mt-4 text-sm">For growing teams that need to move fast and stay aligned.</p>
+              <div class="h-px bg-[var(--border)] my-6"></div>
+              <ul class="space-y-3 text-sm">
+                <li class="flex items-center"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-[rgb(var(--accent))]"><path d="M20 6 9 17l-5-5"/></svg>Everything in Hobby, plus:</li>
+                <li class="flex items-center"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-[rgb(var(--accent))]"><path d="M20 6 9 17l-5-5"/></svg>AI Triage (1,000/mo)</li>
+                <li class="flex items-center"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-[rgb(var(--accent))]"><path d="M20 6 9 17l-5-5"/></svg>GitHub & GitLab integration</li>
+                <li class="flex items-center"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-[rgb(var(--accent))]"><path d="M20 6 9 17l-5-5"/></svg>Priority support</li>
+              </ul>
+              <a href="#" class="block w-full text-center mt-8 px-5 py-3 text-sm font-medium rounded-md transition-colors bg-[rgb(var(--accent))] text-[var(--accent-fg)] hover:bg-opacity-90">Start 14-day trial</a>
+            </div>
+            <div class="p-8 rounded-xl border border-[var(--border)] bg-[var(--surface)]">
+              <h3 class="text-lg font-semibold">Scale</h3>
+              <p class="text-4xl font-bold tracking-tight mt-4">Contact us</p>
+              <p class="text-slate-400 mt-1">For large organizations</p>
+              <p class="text-slate-400 mt-4 text-sm">For orgs with advanced security and compliance needs.</p>
+              <div class="h-px bg-[var(--border)] my-6"></div>
+              <ul class="space-y-3 text-sm">
+                <li class="flex items-center"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-[rgb(var(--accent))]"><path d="M20 6 9 17l-5-5"/></svg>Everything in Team, plus:</li>
+                <li class="flex items-center"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-[rgb(var(--accent))]"><path d="M20 6 9 17l-5-5"/></svg>SAML/SSO</li>
+                <li class="flex items-center"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-[rgb(var(--accent))]"><path d="M20 6 9 17l-5-5"/></svg>SOC2 Type II compliance</li>
+                <li class="flex items-center"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-[rgb(var(--accent))]"><path d="M20 6 9 17l-5-5"/></svg>Dedicated account manager</li>
+              </ul>
+              <a href="#" class="block w-full text-center mt-8 px-5 py-3 text-sm font-medium rounded-md transition-colors bg-white/10 text-white hover:bg-white/20 border border-white/10">Request a demo</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FAQ -->
+      <section class="py-20 md:py-32 bg-[var(--surface)]">
+        <div class="container mx-auto px-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+            <div class="md:col-span-1">
+              <p class="font-mono text-sm text-[rgb(var(--accent))]">FAQ</p>
+              <h2 class="font-display text-4xl font-bold tracking-tighter mt-2">Common questions</h2>
+            </div>
+            <div class="md:col-span-2 space-y-4">
+              <details class="border-b border-[var(--border)] pb-4 group">
+                <summary class="flex items-center justify-between cursor-pointer py-2">
+                  <span class="text-lg font-medium text-slate-200 group-hover:text-white">Can I import issues from Jira or Linear?</span>
+                  <div class="w-6 h-6 flex items-center justify-center text-slate-500 plus-icon transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                  </div>
+                </summary>
+                <div class="pt-2 text-slate-400">Yes. We offer one-click importers for Jira, Linear, Asana, and GitHub Issues. You can import all your historical data, including comments, attachments, and labels, in just a few minutes.</div>
+              </details>
+              <details class="border-b border-[var(--border)] pb-4 group">
+                <summary class="flex items-center justify-between cursor-pointer py-2">
+                  <span class="text-lg font-medium text-slate-200 group-hover:text-white">How is a "user" defined for billing?</span>
+                  <div class="w-6 h-6 flex items-center justify-center text-slate-500 plus-icon transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                  </div>
+                </summary>
+                <div class="pt-2 text-slate-400">A user is any member of your workspace with create, edit, or comment permissions. We do not charge for read-only guest accounts. You are only billed for active users during a given billing cycle.</div>
+              </details>
+              <details class="border-b border-[var(--border)] pb-4 group">
+                <summary class="flex items-center justify-between cursor-pointer py-2">
+                  <span class="text-lg font-medium text-slate-200 group-hover:text-white">Do you offer a self-hosted option?</span>
+                  <div class="w-6 h-6 flex items-center justify-center text-slate-500 plus-icon transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                  </div>
+                </summary>
+                <div class="pt-2 text-slate-400">Self-hosting is available for customers on our Scale plan. We provide a Docker container that can be deployed into your own VPC. Please contact sales for more information on system requirements and pricing.</div>
+              </details>
+              <details class="border-b border-[var(--border)] pb-4 group">
+                <summary class="flex items-center justify-between cursor-pointer py-2">
+                  <span class="text-lg font-medium text-slate-200 group-hover:text-white">How does the AI triage feature work?</span>
+                  <div class="w-6 h-6 flex items-center justify-center text-slate-500 plus-icon transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                  </div>
+                </summary>
+                <div class="pt-2 text-slate-400">Our AI model is trained on a vast dataset of open-source projects. When a new issue is created, the model analyzes its title and description to predict the appropriate labels (e.g., bug, feature, chore), priority, and potential assignee based on your team's past activity and code ownership.</div>
+              </details>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Final CTA -->
+      <section class="py-20 md:py-32">
+        <div class="container mx-auto px-4">
+          <div class="relative max-w-4xl mx-auto text-center p-12 rounded-2xl overflow-hidden border border-[var(--border)] bg-[var(--surface)]">
+            <div class="absolute inset-0 bg-grid -z-10"></div>
+            <div class="absolute inset-0 radial-fade-bottom -z-10"></div>
+            <h2 class="font-display text-4xl md:text-5xl font-bold tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400">
+              Ship with confidence.
+            </h2>
+            <p class="mt-4 text-lg text-slate-400 max-w-xl mx-auto">
+              Join thousands of teams building their best work with Beam. Sign up for a free 14-day trial, no credit card required.
+            </p>
+            <div class="mt-8 flex justify-center items-center space-x-4">
+              <a href="#" class="flex items-center justify-center px-5 py-3 text-base font-medium rounded-md transition-colors bg-[rgb(var(--accent))] text-[var(--accent-fg)] hover:bg-opacity-90">
+                Start your free trial
+              </a>
+              <a href="#" class="flex items-center justify-center px-5 py-3 text-base font-medium rounded-md transition-colors bg-white/10 text-white hover:bg-white/20 border border-white/10">
+                Contact sales
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-[var(--border)]">
+      <div class="container mx-auto px-4 py-12">
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-8">
+          <div class="col-span-2 md:col-span-1">
+            <a href="#" class="flex items-center space-x-2">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" class="text-[rgb(var(--accent))]"><path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 7L12 12L22 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 22V12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span class="font-semibold text-lg text-[var(--fg)]">Beam</span>
+            </a>
+            <p class="mt-4 text-sm text-slate-400">The new standard for issue tracking.</p>
+            <div class="mt-4 flex items-center space-x-2">
+              <div class="w-2 h-2 rounded-full bg-green-500"></div>
+              <span class="text-xs text-slate-400">All systems operational</span>
+            </div>
+          </div>
+          <div>
+            <h3 class="font-semibold text-sm">Product</h3>
+            <ul class="mt-4 space-y-3 text-sm text-slate-400">
+              <li><a href="#" class="hover:text-white">Features</a></li>
+              <li><a href="#" class="hover:text-white">Pricing</a></li>
+              <li><a href="#" class="hover:text-white">Integrations</a></li>
+              <li><a href="#" class="hover:text-white">Changelog</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="font-semibold text-sm">Developers</h3>
+            <ul class="mt-4 space-y-3 text-sm text-slate-400">
+              <li><a href="#" class="hover:text-white">Documentation</a></li>
+              <li><a href="#" class="hover:text-white">API Reference</a></li>
+              <li><a href="#" class="hover:text-white">SDKs</a></li>
+              <li><a href="#" class="hover:text-white">Status</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="font-semibold text-sm">Company</h3>
+            <ul class="mt-4 space-y-3 text-sm text-slate-400">
+              <li><a href="#" class="hover:text-white">About</a></li>
+              <li><a href="#" class="hover:text-white">Blog</a></li>
+              <li><a href="#" class="hover:text-white">Careers</a></li>
+              <li><a href="#" class="hover:text-white">Contact</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="font-semibold text-sm">Legal</h3>
+            <ul class="mt-4 space-y-3 text-sm text-slate-400">
+              <li><a href="#" class="hover:text-white">Privacy Policy</a></li>
+              <li><a href="#" class="hover:text-white">Terms of Service</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="mt-12 pt-8 border-t border-[var(--border)] flex justify-between items-center text-xs text-slate-500">
+          <p>&copy; 2024 Beam Inc. All rights reserved.</p>
+          <p class="font-mono">v1.2.5</p>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Beam — Issue tracker for fast teams</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: var(--ol-bg);
+      --fg: var(--ol-fg);
+      --border: var(--ol-border);
+      --font-body: 'Inter', sans-serif;
+      --font-display: 'Fraunces', serif;
+    }
+    body { background: var(--bg); color: var(--fg); font-family: var(--font-body); }
+    .font-display { font-family: var(--ol-font-display); }
+    .hairline-border { border-color: var(--border); }
+  </style>
+<script data-ol-radius>(function(){var w=window;w.tailwind=w.tailwind||{};var c=w.tailwind.config||{};var t=c.theme||{};var e=t.extend||{};e.borderRadius=Object.assign({},e.borderRadius,{sm:'var(--ol-r-sm)',DEFAULT:'var(--ol-r)',md:'var(--ol-r-md)',lg:'var(--ol-r-lg)',xl:'var(--ol-r-xl)','2xl':'var(--ol-r-2xl)','3xl':'var(--ol-r-3xl)'});w.tailwind.config=Object.assign({},c,{theme:Object.assign({},t,{extend:Object.assign({},e)})});})();</script><style data-ol-radius>:root{--ol-r-scale:1;--ol-r-sm:calc(0.125rem*var(--ol-r-scale));--ol-r:calc(0.25rem*var(--ol-r-scale));--ol-r-md:calc(0.375rem*var(--ol-r-scale));--ol-r-lg:calc(0.5rem*var(--ol-r-scale));--ol-r-xl:calc(0.75rem*var(--ol-r-scale));--ol-r-2xl:calc(1rem*var(--ol-r-scale));--ol-r-3xl:calc(1.5rem*var(--ol-r-scale));}</style><script data-ol-space>(function(){var w=window;w.tailwind=w.tailwind||{};var c=w.tailwind.config||{};var t=c.theme||{};var e=t.extend||{};var m={'0':'var(--ol-space-0)','px':'var(--ol-space-px)','0.5':'var(--ol-space-0_5)','1':'var(--ol-space-1)','1.5':'var(--ol-space-1_5)','2':'var(--ol-space-2)','2.5':'var(--ol-space-2_5)','3':'var(--ol-space-3)','3.5':'var(--ol-space-3_5)','4':'var(--ol-space-4)','5':'var(--ol-space-5)','6':'var(--ol-space-6)','7':'var(--ol-space-7)','8':'var(--ol-space-8)','9':'var(--ol-space-9)','10':'var(--ol-space-10)','11':'var(--ol-space-11)','12':'var(--ol-space-12)','14':'var(--ol-space-14)','16':'var(--ol-space-16)','20':'var(--ol-space-20)','24':'var(--ol-space-24)','28':'var(--ol-space-28)','32':'var(--ol-space-32)','36':'var(--ol-space-36)','40':'var(--ol-space-40)','44':'var(--ol-space-44)','48':'var(--ol-space-48)','52':'var(--ol-space-52)','56':'var(--ol-space-56)','60':'var(--ol-space-60)','64':'var(--ol-space-64)','72':'var(--ol-space-72)','80':'var(--ol-space-80)','96':'var(--ol-space-96)'};e.padding=Object.assign({},e.padding,m);e.margin=Object.assign({},e.margin,m);e.gap=Object.assign({},e.gap,m);w.tailwind.config=Object.assign({},c,{theme:Object.assign({},t,{extend:Object.assign({},e)})});})();</script><style data-ol-space>:root{--ol-space-scale:1;--ol-space-0:calc(0px*var(--ol-space-scale));--ol-space-px:calc(1px*var(--ol-space-scale));--ol-space-0_5:calc(0.125rem*var(--ol-space-scale));--ol-space-1:calc(0.25rem*var(--ol-space-scale));--ol-space-1_5:calc(0.375rem*var(--ol-space-scale));--ol-space-2:calc(0.5rem*var(--ol-space-scale));--ol-space-2_5:calc(0.625rem*var(--ol-space-scale));--ol-space-3:calc(0.75rem*var(--ol-space-scale));--ol-space-3_5:calc(0.875rem*var(--ol-space-scale));--ol-space-4:calc(1rem*var(--ol-space-scale));--ol-space-5:calc(1.25rem*var(--ol-space-scale));--ol-space-6:calc(1.5rem*var(--ol-space-scale));--ol-space-7:calc(1.75rem*var(--ol-space-scale));--ol-space-8:calc(2rem*var(--ol-space-scale));--ol-space-9:calc(2.25rem*var(--ol-space-scale));--ol-space-10:calc(2.5rem*var(--ol-space-scale));--ol-space-11:calc(2.75rem*var(--ol-space-scale));--ol-space-12:calc(3rem*var(--ol-space-scale));--ol-space-14:calc(3.5rem*var(--ol-space-scale));--ol-space-16:calc(4rem*var(--ol-space-scale));--ol-space-20:calc(5rem*var(--ol-space-scale));--ol-space-24:calc(6rem*var(--ol-space-scale));--ol-space-28:calc(7rem*var(--ol-space-scale));--ol-space-32:calc(8rem*var(--ol-space-scale));--ol-space-36:calc(9rem*var(--ol-space-scale));--ol-space-40:calc(10rem*var(--ol-space-scale));--ol-space-44:calc(11rem*var(--ol-space-scale));--ol-space-48:calc(12rem*var(--ol-space-scale));--ol-space-52:calc(13rem*var(--ol-space-scale));--ol-space-56:calc(14rem*var(--ol-space-scale));--ol-space-60:calc(15rem*var(--ol-space-scale));--ol-space-64:calc(16rem*var(--ol-space-scale));--ol-space-72:calc(18rem*var(--ol-space-scale));--ol-space-80:calc(20rem*var(--ol-space-scale));--ol-space-96:calc(24rem*var(--ol-space-scale));}</style><script data-ol-type>(function(){var w=window;w.tailwind=w.tailwind||{};var c=w.tailwind.config||{};var t=c.theme||{};var e=t.extend||{};e.fontSize=Object.assign({},e.fontSize,{'xs':['var(--ol-text-xs)','var(--ol-lh-xs)'],'sm':['var(--ol-text-sm)','var(--ol-lh-sm)'],'base':['var(--ol-text-base)','var(--ol-lh-base)'],'lg':['var(--ol-text-lg)','var(--ol-lh-lg)'],'xl':['var(--ol-text-xl)','var(--ol-lh-xl)'],'2xl':['var(--ol-text-2xl)','var(--ol-lh-2xl)'],'3xl':['var(--ol-text-3xl)','var(--ol-lh-3xl)'],'4xl':['var(--ol-text-4xl)','var(--ol-lh-4xl)'],'5xl':['var(--ol-text-5xl)','var(--ol-lh-5xl)'],'6xl':['var(--ol-text-6xl)','var(--ol-lh-6xl)'],'7xl':['var(--ol-text-7xl)','var(--ol-lh-7xl)'],'8xl':['var(--ol-text-8xl)','var(--ol-lh-8xl)'],'9xl':['var(--ol-text-9xl)','var(--ol-lh-9xl)']});w.tailwind.config=Object.assign({},c,{theme:Object.assign({},t,{extend:Object.assign({},e)})});})();</script><style data-ol-type>:root{--ol-text-scale:1;--ol-text-xs:calc(0.75rem*var(--ol-text-scale));--ol-lh-xs:calc(1rem*var(--ol-text-scale));--ol-text-sm:calc(0.875rem*var(--ol-text-scale));--ol-lh-sm:calc(1.25rem*var(--ol-text-scale));--ol-text-base:calc(1rem*var(--ol-text-scale));--ol-lh-base:calc(1.5rem*var(--ol-text-scale));--ol-text-lg:calc(1.125rem*var(--ol-text-scale));--ol-lh-lg:calc(1.75rem*var(--ol-text-scale));--ol-text-xl:calc(1.25rem*var(--ol-text-scale));--ol-lh-xl:calc(1.75rem*var(--ol-text-scale));--ol-text-2xl:calc(1.5rem*var(--ol-text-scale));--ol-lh-2xl:calc(2rem*var(--ol-text-scale));--ol-text-3xl:calc(1.875rem*var(--ol-text-scale));--ol-lh-3xl:calc(2.25rem*var(--ol-text-scale));--ol-text-4xl:calc(2.25rem*var(--ol-text-scale));--ol-lh-4xl:calc(2.5rem*var(--ol-text-scale));--ol-text-5xl:calc(3rem*var(--ol-text-scale));--ol-lh-5xl:calc(1*var(--ol-text-scale));--ol-text-6xl:calc(3.75rem*var(--ol-text-scale));--ol-lh-6xl:calc(1*var(--ol-text-scale));--ol-text-7xl:calc(4.5rem*var(--ol-text-scale));--ol-lh-7xl:calc(1*var(--ol-text-scale));--ol-text-8xl:calc(6rem*var(--ol-text-scale));--ol-lh-8xl:calc(1*var(--ol-text-scale));--ol-text-9xl:calc(8rem*var(--ol-text-scale));--ol-lh-9xl:calc(1*var(--ol-text-scale));}</style><link data-ol-font rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist:wght@400;500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Outfit:wght@400;500;600;700&amp;family=Space+Grotesk:wght@400;500;600;700&amp;family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&amp;family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&amp;family=Crimson+Pro:wght@400;500;600;700&amp;family=Playfair+Display:wght@400;500;600;700&amp;family=DM+Serif+Display&amp;family=Instrument+Serif&amp;display=swap"><style data-ol-font>:root{--ol-font-display:'var(--font-display)',sans-serif;}</style><style data-ol-color>:root{--ol-bg:#fbf9f6;--ol-fg:#1a1a1a;--ol-border:#eaeaea;}</style></head>
+<body class="antialiased">
+  <div class="max-w-6xl mx-auto px-8">
+    <header class="py-8 flex items-center justify-between border-b hairline-border">
+      <div class="font-display font-semibold text-xl tracking-tight">Beam</div>
+      <nav class="flex gap-8 text-sm tracking-wide">
+        <a href="#features" class="hover:text-neutral-500 transition-colors">Features</a>
+        <a href="#pricing" class="hover:text-neutral-500 transition-colors">Pricing</a>
+        <a href="#about" class="hover:text-neutral-500 transition-colors">About</a>
+      </nav>
+    </header>
+  </div>
+
+  <main class="max-w-6xl mx-auto px-8">
+    <section class="py-32 text-center">
+      <h1 class="font-display text-7xl font-semibold leading-tight max-w-4xl mx-auto">Track issues at the speed of thought.</h1>
+      <p class="mt-6 text-lg text-neutral-600 max-w-xl mx-auto">Beam is the issue tracker engineering teams reach for when Linear feels heavy.</p>
+      <a href="#start" class="inline-block mt-10 px-8 py-3 border hairline-border text-sm font-medium rounded-md hover:bg-white/50 transition-colors">Get started</a>
+    </section>
+  </main>
+
+  <div class="max-w-6xl mx-auto">
+    <section id="features" class="grid grid-cols-1 md:grid-cols-3 border-t hairline-border">
+      <div class="p-10">
+        <h3 class="font-display text-2xl mb-3">Keyboard first</h3>
+        <p class="text-neutral-600 leading-relaxed">Every action has a shortcut. Built for the keyboard, not the mouse.</p>
+      </div>
+      <div class="p-10 border-t md:border-t-0 md:border-l hairline-border">
+        <h3 class="font-display text-2xl mb-3">Sub-100ms</h3>
+        <p class="text-neutral-600 leading-relaxed">Local-first sync means your UI never waits for the server.</p>
+      </div>
+      <div class="p-10 border-t md:border-t-0 md:border-l hairline-border">
+        <h3 class="font-display text-2xl mb-3">Honest pricing</h3>
+        <p class="text-neutral-600 leading-relaxed">One flat price. No seat math. No enterprise rug pull.</p>
+      </div>
+    </section>
+  </div>
+
+  <footer class="max-w-6xl mx-auto px-8">
+    <div class="py-12 text-center border-t hairline-border">
+      <p class="text-sm text-neutral-500">© 2026 Beam Inc.</p>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,1 @@
+The design is shifted to a dark, cinematic aesthetic to create a more focused and premium feel, aligning with modern developer tools. I've increased whitespace and typographic scale for better readability and visual hierarchy, while the feature section now uses a two-column grid with detailed cards to better explain the product's value propositions.
