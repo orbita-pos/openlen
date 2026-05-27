@@ -1,5 +1,6 @@
 pub mod config;
 pub mod files;
+pub mod lookup;
 pub mod observability;
 pub mod proxy;
 pub mod routing;
@@ -7,9 +8,17 @@ pub mod server;
 pub mod tls;
 
 pub use config::{EdgeConfig, EdgeConfigBuilder};
+pub use lookup::{
+    build_lookup_from_config, run_internal_api, serve_internal_api, DomainLookup, InternalApiState,
+    LayeredLookup, LookupError, LookupResult, MockDomainLookup, PostgresDomainLookup,
+};
 pub use proxy::{decide_route, NodeClient, NodeClientError, RouteAction};
-pub use routing::{extract_subdomain, run_http_redirect};
-pub use server::{bind, router, AppState, BoundServer, SERVER_HEADER_VALUE, VERSION};
+pub use routing::{
+    extract_subdomain, is_openlen_zone, looks_like_public_hostname, run_http_redirect,
+};
+pub use server::{
+    bind, bind_with_lookup, router, AppState, BoundServer, SERVER_HEADER_VALUE, VERSION,
+};
 pub use tls::{load_wildcard, WildcardCertError};
 
 use std::sync::Once;

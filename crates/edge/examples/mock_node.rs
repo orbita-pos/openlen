@@ -35,6 +35,10 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         .fallback(any(handler))
         .layer(DefaultBodyLimit::disable());
-    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
     Ok(())
 }

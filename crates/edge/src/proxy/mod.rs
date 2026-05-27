@@ -11,7 +11,8 @@ use axum::body::Body;
 use axum::http::{Request, Response, Version};
 use tracing::{debug, warn};
 
-use crate::routing::extract_subdomain;
+use crate::routing::subdomain::normalize_host;
+use crate::routing::{extract_subdomain, is_openlen_zone, looks_like_public_hostname};
 
 /// Where a request should be handled.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -20,6 +21,10 @@ pub enum RouteAction {
     Disk { sub: String },
     /// Proxy the request to the configured Node upstream as-is.
     Proxy,
+    /// `host` is a candidate custom domain — caller must async-resolve it via
+    /// the `DomainLookup` layer and route to disk on a hit, or 404 on a miss.
+    /// The host string is already port-stripped + lowercased.
+    CustomDomain { host: String },
     /// No matching route — caller should respond 404.
     NotFound,
 }
@@ -32,16 +37,24 @@ pub enum RouteAction {
 ///    - `path` starts with any prefix in `proxy_paths`     → [`RouteAction::Proxy`]
 ///      (analytics beacon `/c/` by default).
 ///    - otherwise                                          → [`RouteAction::Disk`]
-/// 3. else                                                 → [`RouteAction::NotFound`]
+/// 3. `host` is in the `openlen.com` zone but didn't match step 1 or 2
+///    (nested subdomain like `a.b.openlen.com`, or apex absent from
+///    `proxy_hosts`)                                       → [`RouteAction::NotFound`]
+/// 4. `host` does not look like a public hostname          → [`RouteAction::NotFound`]
+/// 5. `host` is a candidate custom domain:
+///    - `path` starts with any prefix in `proxy_paths`     → [`RouteAction::Proxy`]
+///      (Node owns `/c/` analytics + `/api/f/` form submissions even on
+///      custom domains; that's deliberate — see F2 S4 handoff §4)
+///    - otherwise                                          → [`RouteAction::CustomDomain`]
 pub fn decide_route(
     host: &str,
     path: &str,
     proxy_hosts: &[String],
     proxy_paths: &[String],
 ) -> RouteAction {
-    let host_no_port = host.split(':').next().unwrap_or(host).to_ascii_lowercase();
+    let host_lc = normalize_host(host);
 
-    if proxy_hosts.iter().any(|h| h == &host_no_port) {
+    if proxy_hosts.iter().any(|h| h == &host_lc) {
         return RouteAction::Proxy;
     }
 
@@ -52,7 +65,19 @@ pub fn decide_route(
         return RouteAction::Disk { sub };
     }
 
-    RouteAction::NotFound
+    if is_openlen_zone(&host_lc) {
+        return RouteAction::NotFound;
+    }
+
+    if !looks_like_public_hostname(&host_lc) {
+        return RouteAction::NotFound;
+    }
+
+    if proxy_paths.iter().any(|p| path.starts_with(p.as_str())) {
+        return RouteAction::Proxy;
+    }
+
+    RouteAction::CustomDomain { host: host_lc }
 }
 
 /// Forward `req` to `client`'s upstream, applying header transforms and
@@ -179,9 +204,17 @@ mod tests {
     }
 
     #[test]
-    fn unknown_host_not_found() {
+    fn external_hostname_becomes_custom_domain_candidate() {
+        // With F2 S4, any well-formed public hostname OUTSIDE the openlen.com
+        // zone is a candidate for a custom-domain lookup. The lookup itself
+        // happens in the server layer; decide_route just classifies.
         let a = decide_route("ghost.example.com", "/", &default_hosts(), &default_paths());
-        assert_eq!(a, RouteAction::NotFound);
+        assert_eq!(
+            a,
+            RouteAction::CustomDomain {
+                host: "ghost.example.com".into()
+            }
+        );
     }
 
     #[test]
@@ -199,12 +232,12 @@ mod tests {
     fn custom_hosts_swap_apex_behavior() {
         let hosts = vec!["api.example.com".into()];
         let paths = vec!["/c/".into()];
-        // openlen.com no longer proxied
+        // openlen.com no longer proxied — still in our zone → NotFound.
         assert_eq!(
             decide_route("openlen.com", "/", &hosts, &paths),
             RouteAction::NotFound
         );
-        // api.example.com gets proxy
+        // api.example.com is in proxy_hosts → Proxy.
         assert_eq!(
             decide_route("api.example.com", "/x", &hosts, &paths),
             RouteAction::Proxy
@@ -242,5 +275,89 @@ mod tests {
             decide_route("demo.openlen.com", "/cool/foo", &hosts, &paths),
             RouteAction::Disk { sub: "demo".into() }
         );
+    }
+
+    #[test]
+    fn custom_domain_candidate_returns_customdomain() {
+        let a = decide_route("mybrand.com", "/", &default_hosts(), &default_paths());
+        assert_eq!(
+            a,
+            RouteAction::CustomDomain {
+                host: "mybrand.com".into()
+            }
+        );
+    }
+
+    #[test]
+    fn custom_domain_subdomain_returns_customdomain() {
+        let a = decide_route(
+            "landing.miempresa.com",
+            "/about",
+            &default_hosts(),
+            &default_paths(),
+        );
+        assert_eq!(
+            a,
+            RouteAction::CustomDomain {
+                host: "landing.miempresa.com".into()
+            }
+        );
+    }
+
+    #[test]
+    fn custom_domain_with_port_returns_normalized_host() {
+        let a = decide_route("mybrand.com:443", "/", &default_hosts(), &default_paths());
+        assert_eq!(
+            a,
+            RouteAction::CustomDomain {
+                host: "mybrand.com".into()
+            }
+        );
+    }
+
+    #[test]
+    fn custom_domain_uppercase_normalized() {
+        let a = decide_route("Mybrand.COM", "/", &default_hosts(), &default_paths());
+        assert_eq!(
+            a,
+            RouteAction::CustomDomain {
+                host: "mybrand.com".into()
+            }
+        );
+    }
+
+    #[test]
+    fn custom_domain_with_proxy_path_routes_to_proxy() {
+        // /c/abc on a custom domain still goes to Node (analytics beacon).
+        let a = decide_route("mybrand.com", "/c/abc", &default_hosts(), &default_paths());
+        assert_eq!(a, RouteAction::Proxy);
+    }
+
+    #[test]
+    fn apex_without_proxy_hosts_stays_not_found() {
+        // openlen.com NOT in proxy_hosts list, and it's our zone → NotFound,
+        // never CustomDomain.
+        let hosts: Vec<String> = vec![];
+        let a = decide_route("openlen.com", "/", &hosts, &default_paths());
+        assert_eq!(a, RouteAction::NotFound);
+    }
+
+    #[test]
+    fn garbage_host_stays_not_found() {
+        let a = decide_route("not a host", "/", &default_hosts(), &default_paths());
+        assert_eq!(a, RouteAction::NotFound);
+    }
+
+    #[test]
+    fn localhost_stays_not_found() {
+        // No dot → not a public hostname → 404, not a custom-domain lookup.
+        let a = decide_route("localhost", "/", &default_hosts(), &default_paths());
+        assert_eq!(a, RouteAction::NotFound);
+    }
+
+    #[test]
+    fn ip_literal_stays_not_found() {
+        let a = decide_route("127.0.0.1", "/", &default_hosts(), &default_paths());
+        assert_eq!(a, RouteAction::NotFound);
     }
 }

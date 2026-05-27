@@ -23,6 +23,7 @@ use tracing::{debug, error, info, warn};
 
 use crate::config::EdgeConfig;
 use crate::files::{cache_control_for, resolve, Resolved};
+use crate::lookup::{DomainLookup, MockDomainLookup};
 use crate::proxy::{self, decide_route, NodeClient, RouteAction};
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -40,18 +41,42 @@ const NODE_POOL_MAX_IDLE_PER_HOST: usize = 32;
 const HEADER_READ_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Per-request state injected into the router. Holds the canonicalized publish
-/// root so the file resolver never re-canonicalises on the hot path, and a
-/// pre-built [`NodeClient`] + proxy decision lists for the proxy module.
-#[derive(Debug, Clone)]
+/// root so the file resolver never re-canonicalises on the hot path, a
+/// pre-built [`NodeClient`] + proxy decision lists for the proxy module, and a
+/// trait-object [`DomainLookup`] for resolving custom domains.
+#[derive(Clone)]
 pub struct AppState {
     pub publish_root: Arc<PathBuf>,
     pub node_client: NodeClient,
     pub proxy_hosts: Arc<Vec<String>>,
     pub proxy_paths: Arc<Vec<String>>,
+    pub domain_lookup: Arc<dyn DomainLookup>,
+}
+
+impl std::fmt::Debug for AppState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AppState")
+            .field("publish_root", &self.publish_root)
+            .field("node_client", &self.node_client)
+            .field("proxy_hosts", &self.proxy_hosts)
+            .field("proxy_paths", &self.proxy_paths)
+            .field("domain_lookup", &self.domain_lookup)
+            .finish()
+    }
 }
 
 impl AppState {
+    /// Build an [`AppState`] with an empty in-memory custom-domain mock. The
+    /// mock never matches, so custom-domain requests fall through to 404 —
+    /// useful for the routing/proxy integration tests which don't exercise the
+    /// lookup path. Production callers should use [`AppState::with_lookup`]
+    /// (or [`bind_with_lookup`]) to inject a real lookup.
     pub fn from_config(config: &EdgeConfig) -> Result<Self> {
+        Self::with_lookup(config, Arc::new(MockDomainLookup::new()))
+    }
+
+    /// Build an [`AppState`] with the supplied custom-domain lookup.
+    pub fn with_lookup(config: &EdgeConfig, domain_lookup: Arc<dyn DomainLookup>) -> Result<Self> {
         let canonical = config
             .publish_root
             .canonicalize()
@@ -68,6 +93,7 @@ impl AppState {
             node_client,
             proxy_hosts: Arc::new(config.proxy_hosts.clone()),
             proxy_paths: Arc::new(config.proxy_paths.clone()),
+            domain_lookup,
         })
     }
 }
@@ -108,6 +134,22 @@ async fn serve_or_proxy(
     match decide_route(&host, &url_path, &state.proxy_hosts, &state.proxy_paths) {
         RouteAction::Proxy => proxy::forward(&state.node_client, peer, host, req).await,
         RouteAction::Disk { sub } => serve_from_disk(&state, peer, &sub, &url_path).await,
+        RouteAction::CustomDomain { host: custom_host } => {
+            match state.domain_lookup.lookup(&custom_host).await {
+                Ok(Some(sub)) => {
+                    debug!(%peer, host = %custom_host, %sub, "custom domain resolved");
+                    serve_from_disk(&state, peer, &sub, &url_path).await
+                }
+                Ok(None) => {
+                    debug!(%peer, host = %custom_host, "custom domain unknown or unverified");
+                    not_found()
+                }
+                Err(err) => {
+                    warn!(%peer, host = %custom_host, error = %err, "custom domain lookup errored");
+                    not_found()
+                }
+            }
+        }
         RouteAction::NotFound => {
             debug!(%host, %peer, "host did not match any route");
             not_found()
@@ -173,6 +215,16 @@ pub struct BoundServer {
 }
 
 pub async fn bind(config: &EdgeConfig, tls_config: Arc<ServerConfig>) -> Result<BoundServer> {
+    bind_with_lookup(config, tls_config, Arc::new(MockDomainLookup::new())).await
+}
+
+/// Bind the TLS listener with a custom-domain lookup injected. The production
+/// entry point — `main.rs` calls this with a `LayeredLookup` over Postgres.
+pub async fn bind_with_lookup(
+    config: &EdgeConfig,
+    tls_config: Arc<ServerConfig>,
+    domain_lookup: Arc<dyn DomainLookup>,
+) -> Result<BoundServer> {
     let listener = TcpListener::bind(config.bind)
         .await
         .with_context(|| format!("failed to bind {}", config.bind))?;
@@ -186,9 +238,13 @@ pub async fn bind(config: &EdgeConfig, tls_config: Arc<ServerConfig>) -> Result<
         node_timeout_secs = config.node_timeout_secs,
         proxy_hosts = ?config.proxy_hosts,
         proxy_paths = ?config.proxy_paths,
+        domain_cache_max = config.domain_cache_max,
+        domain_cache_ttl_secs = config.domain_cache_ttl_secs,
+        domain_negative_ttl_secs = config.domain_negative_ttl_secs,
+        has_database = config.database_url.is_some(),
         "openlen-edge listening"
     );
-    let state = AppState::from_config(config)?;
+    let state = AppState::with_lookup(config, domain_lookup)?;
     Ok(BoundServer {
         local_addr,
         listener,
