@@ -1,0 +1,208 @@
+// TypeScript shim over the Rust `@openlen/html-engine` napi-rs binding.
+//
+// Why this file exists: napi-rs serializes `Option<T>` as an *absent
+// property* in struct returns (`undefined` in JS), and existing TS consumers
+// in this repo (lib/html-ops.ts, lib/publish/optimize-html.ts, etc.) treat
+// `null` as the canonical "no result" sentinel — never `undefined`. This
+// wrapper normalises `undefined` → `null` at every call site that has an
+// Option<T> on the Rust side, so consumers can rely on `result.html === null`
+// without writing `?? null` themselves.
+//
+// Imported by `lib/shadow-soak.ts` (F1 S6) and by any future call-site that
+// migrates off cheerio/regex (F1 S7-S9). The HtmlStream class is re-exported
+// verbatim — its constructor/write/end signatures don't touch Option<T>.
+//
+// Build prerequisite: `cd crates/html-engine && npm run build` must have
+// produced `index.js` + `index.d.ts` for this module to type-check.
+
+import {
+  applyOps as rustApplyOps,
+  buildScopedView as rustBuildScopedView,
+  HtmlStream as RustHtmlStream,
+  normalizeBornCanonical as rustNormalizeBornCanonical,
+  optimizeForPublish as rustOptimizeForPublish,
+  parseOps as rustParseOps,
+  resolveOpIdByPath as rustResolveOpIdByPath,
+  roundTrip as rustRoundTrip,
+  sanitizeForPublish as rustSanitizeForPublish,
+  stripOpIds as rustStripOpIds,
+  tagWithOpIds as rustTagWithOpIds,
+} from "@openlen/html-engine";
+
+import type {
+  ApplyError as RustApplyError,
+  ApplyResult as RustApplyResult,
+  HtmlStreamOpts,
+  HtmlStreamRemovedCounts,
+  HtmlStreamResult,
+  Op as RustOp,
+  OptimizeResult as RustOptimizeResult,
+  OptimizeStats,
+  ParseResult as RustParseResult,
+  SanitizeRemovedCounts,
+  SanitizeResult as RustSanitizeResult,
+  ScopedView,
+  TaggedHtmlResult,
+} from "@openlen/html-engine";
+
+// ─── Re-exported types ──────────────────────────────────────────────────────
+//
+// All types are pass-through except those that contain an `Option<String>`
+// field — those get a shape with `string | null` instead of `string |
+// undefined` so callers can use the canonical null-sentinel pattern.
+
+export type {
+  HtmlStreamOpts,
+  HtmlStreamRemovedCounts,
+  HtmlStreamResult,
+  OptimizeStats,
+  SanitizeRemovedCounts,
+  ScopedView,
+  TaggedHtmlResult,
+};
+
+export interface SanitizeResult {
+  html: string | null;
+  errors: string[];
+  removed: SanitizeRemovedCounts;
+}
+
+export interface OptimizeResult {
+  html: string | null;
+  errors: string[];
+  stats: OptimizeStats;
+}
+
+export interface Op {
+  type: string;
+  target: string;
+  newHtml?: string;
+}
+
+export interface ApplyError {
+  opIndex: number;
+  op: string;
+  target: string;
+  reason: string;
+}
+
+export interface ApplyResult {
+  html: string | null;
+  errors: ApplyError[];
+  appliedCount: number;
+}
+
+export interface ParseResult {
+  ops: Op[];
+  errors: string[];
+}
+
+// ─── Plain re-exports (no shim needed) ─────────────────────────────────────
+
+export function roundTrip(html: string): string {
+  return rustRoundTrip(html);
+}
+
+export function normalizeBornCanonical(html: string): string {
+  return rustNormalizeBornCanonical(html);
+}
+
+export function stripOpIds(html: string): string {
+  return rustStripOpIds(html);
+}
+
+export function tagWithOpIds(html: string): TaggedHtmlResult {
+  return rustTagWithOpIds(html);
+}
+
+export function parseOps(rawHtml: string): ParseResult {
+  const r = rustParseOps(rawHtml) as RustParseResult;
+  return {
+    ops: r.ops.map(opFromRust),
+    errors: r.errors,
+  };
+}
+
+// ─── Shimmed exports (Option<T> → null) ────────────────────────────────────
+//
+// Each function below pulls the underlying napi result and replaces any
+// `undefined` Option field with `null`. The transformation is structural,
+// not behavioral — values that are present pass through verbatim.
+
+export function sanitizeForPublish(html: string): SanitizeResult {
+  const r = rustSanitizeForPublish(html) as RustSanitizeResult;
+  return {
+    html: r.html ?? null,
+    errors: r.errors,
+    removed: r.removed,
+  };
+}
+
+export function optimizeForPublish(html: string): OptimizeResult {
+  const r = rustOptimizeForPublish(html) as RustOptimizeResult;
+  return {
+    html: r.html ?? null,
+    errors: r.errors,
+    stats: r.stats,
+  };
+}
+
+export function applyOps(taggedHtml: string, ops: Op[]): ApplyResult {
+  const r = rustApplyOps(taggedHtml, ops.map(opToRust)) as RustApplyResult;
+  return {
+    html: r.html ?? null,
+    errors: r.errors.map(applyErrorFromRust),
+    appliedCount: r.appliedCount,
+  };
+}
+
+export function resolveOpIdByPath(
+  taggedHtml: string,
+  path: string,
+): string | null {
+  const r = rustResolveOpIdByPath(taggedHtml, path);
+  return r ?? null;
+}
+
+export function buildScopedView(
+  taggedHtml: string,
+  pinnedOpId: string,
+): ScopedView | null {
+  const r = rustBuildScopedView(taggedHtml, pinnedOpId);
+  return r ?? null;
+}
+
+// ─── Class re-export ───────────────────────────────────────────────────────
+//
+// `HtmlStream` is both a runtime constructor and a TypeScript type — re-export
+// it as-is. No shim layer because the class's constructor / write / end
+// signatures don't surface any `Option<T>` field on JS.
+
+export { RustHtmlStream as HtmlStream };
+
+// ─── Conversion helpers ────────────────────────────────────────────────────
+
+function opFromRust(o: RustOp): Op {
+  return {
+    type: o.type,
+    target: o.target,
+    newHtml: o.newHtml ?? undefined,
+  };
+}
+
+function opToRust(o: Op): RustOp {
+  return {
+    type: o.type,
+    target: o.target,
+    newHtml: o.newHtml ?? undefined,
+  } as RustOp;
+}
+
+function applyErrorFromRust(e: RustApplyError): ApplyError {
+  return {
+    opIndex: e.opIndex,
+    op: e.op,
+    target: e.target,
+    reason: e.reason,
+  };
+}

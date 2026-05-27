@@ -4,8 +4,20 @@
   "private": true,
   "main": "index.js",
   "types": "index.d.ts",
+  "description": "Rust-backed HTML engine for OpenLen — round-trip + ID-tag ops + normalize chain + sanitize + minify + streaming.",
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jesusbernalrj/inari-pages.git",
+    "directory": "crates/html-engine"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts"
+  ],
   "napi": {
     "name": "openlen-html-engine",
+    "npmClient": "npm",
     "triples": {
       "defaults": false,
       "additional": [
@@ -18,7 +30,12 @@
     "build": "napi build --platform --release",
     "build:debug": "napi build --platform",
     "test:rust": "cargo test",
-    "test:node": "node --test __test__/*.test.mjs"
+    "test:node": "node --test __test__/*.test.mjs",
+    "prepublishOnly": "napi prepublish -t npm --skip-gh-release"
+  },
+  "optionalDependencies": {
+    "@openlen/html-engine-win32-x64-msvc": "0.1.0",
+    "@openlen/html-engine-linux-x64-gnu": "0.1.0"
   },
   "devDependencies": {
     "@napi-rs/cli": "^2.18.0"

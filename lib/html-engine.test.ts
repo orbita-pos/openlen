@@ -1,0 +1,178 @@
+// Smoke tests for lib/html-engine.ts — verifies the Option<T> → null shim
+// fires at every documented site and that pass-through exports preserve
+// the underlying napi-rs semantics.
+//
+// Run via: npx tsx --test lib/html-engine.test.ts
+//
+// Requires: `cd crates/html-engine && npm install && npm run build` so the
+// `.node` binary exists and `index.{js,d.ts}` are generated.
+
+import { test } from "node:test";
+import { strict as assert } from "node:assert";
+
+import {
+  applyOps,
+  buildScopedView,
+  HtmlStream,
+  normalizeBornCanonical,
+  optimizeForPublish,
+  parseOps,
+  resolveOpIdByPath,
+  roundTrip,
+  sanitizeForPublish,
+  stripOpIds,
+  tagWithOpIds,
+} from "./html-engine";
+
+test("roundTrip preserves a clean fragment", () => {
+  const html = "<div><p>hi</p></div>";
+  assert.equal(typeof roundTrip(html), "string");
+});
+
+test("normalizeBornCanonical returns a string for empty input", () => {
+  assert.equal(typeof normalizeBornCanonical(""), "string");
+});
+
+test("sanitizeForPublish: clean input → html is string, errors empty", () => {
+  const r = sanitizeForPublish('<div class="card"><h1>Hi</h1></div>');
+  assert.equal(typeof r.html, "string");
+  assert.ok(r.html !== null, "shim should keep present html as string, not null");
+  assert.deepEqual(r.errors, []);
+  assert.equal(r.removed.scripts, 0);
+  assert.equal(r.removed.eventHandlers, 0);
+  assert.equal(r.removed.dangerousUrls, 0);
+  assert.equal(r.removed.iframes, 0);
+  assert.equal(r.removed.metaRefresh, 0);
+});
+
+test("sanitizeForPublish: slot-path gate → html === null (shim from undefined)", () => {
+  const r = sanitizeForPublish('<div data-slot-path="hero.title">x</div>');
+  // The Rust side returns html: undefined here; the shim normalises to null.
+  assert.equal(r.html, null, "shim must convert undefined → null exactly");
+  assert.notEqual(r.html, undefined, "shim should never leak undefined");
+  assert.ok(r.errors.length > 0, "errors should be populated on gate trigger");
+  assert.match(r.errors[0], /data-slot-path/);
+});
+
+test("sanitizeForPublish: inline <script> stripped", () => {
+  const r = sanitizeForPublish("<div><script>alert(1)</script><p>x</p></div>");
+  assert.ok(r.html !== null);
+  assert.ok(!r.html!.includes("<script>"), "inline script must be removed");
+  assert.equal(r.removed.scripts, 1);
+});
+
+test("optimizeForPublish: clean input → html string + stats", () => {
+  const r = optimizeForPublish("<!doctype html><html><body><div>x</div></body></html>");
+  assert.ok(r.html !== null);
+  assert.equal(typeof r.stats.bytesIn, "number");
+  assert.equal(typeof r.stats.bytesOut, "number");
+  assert.deepEqual(r.errors, []);
+});
+
+test("optimizeForPublish: slot-path gate → html null via shim", () => {
+  const r = optimizeForPublish('<div data-slot-path="x">y</div>');
+  assert.equal(r.html, null);
+  assert.notEqual(r.html, undefined);
+  assert.ok(r.errors.length > 0);
+});
+
+test("tagWithOpIds: assigns IDs + count matches", () => {
+  const r = tagWithOpIds("<div><p>a</p><p>b</p></div>");
+  assert.ok(r.taggedCount >= 3, `expected ≥3 tags, got ${r.taggedCount}`);
+  assert.ok(r.taggedHtml.includes("data-op-id"));
+});
+
+test("stripOpIds: removes data-op-id attributes", () => {
+  const tagged = tagWithOpIds("<div><p>x</p></div>").taggedHtml;
+  assert.ok(tagged.includes("data-op-id"));
+  const stripped = stripOpIds(tagged);
+  assert.ok(!stripped.includes("data-op-id"), "all data-op-id attrs must be gone");
+});
+
+test("parseOps: empty envelope errors", () => {
+  const r = parseOps("");
+  assert.equal(r.ops.length, 0);
+  assert.ok(r.errors.length > 0);
+});
+
+test("parseOps: parses a delete op", () => {
+  const r = parseOps('<edits><edit op="delete" target="a1"/></edits>');
+  assert.equal(r.errors.length, 0);
+  assert.equal(r.ops.length, 1);
+  assert.equal(r.ops[0].type, "delete");
+  assert.equal(r.ops[0].target, "a1");
+  assert.equal(r.ops[0].newHtml, undefined);
+});
+
+test("applyOps: html=null shim when validation fails", () => {
+  // Empty ops array → Rust returns html: undefined, errors should still be empty
+  // because phase-1 validation never runs. The shim must still surface null.
+  const r = applyOps("<div></div>", []);
+  assert.equal(r.html, null, "empty ops → html null (shim from undefined)");
+  assert.notEqual(r.html, undefined);
+  assert.equal(r.appliedCount, 0);
+});
+
+test("applyOps: successful replace returns string html", () => {
+  const tagged = tagWithOpIds("<div><p>old</p></div>").taggedHtml;
+  // Find the <p>'s op-id from the tagged HTML.
+  const m = tagged.match(/data-op-id="(\w+)"[^>]*>old/);
+  if (!m) throw new Error(`could not extract op-id from ${tagged}`);
+  const pId = m[1];
+  const r = applyOps(tagged, [
+    { type: "replace", target: pId, newHtml: "<p>new</p>" },
+  ]);
+  assert.ok(r.html !== null, `expected string, got ${r.html}; errors=${JSON.stringify(r.errors)}`);
+  assert.ok(r.html!.includes("<p>new</p>"));
+});
+
+test("resolveOpIdByPath: returns null (shim) when path doesn't match", () => {
+  const tagged = tagWithOpIds("<body><div><p>x</p></div></body>").taggedHtml;
+  const r = resolveOpIdByPath(tagged, "div > span");
+  assert.equal(r, null);
+  assert.notEqual(r, undefined);
+});
+
+test("resolveOpIdByPath: returns string when path matches", () => {
+  const tagged = tagWithOpIds("<body><div><p>x</p></div></body>").taggedHtml;
+  const r = resolveOpIdByPath(tagged, "div > p");
+  assert.equal(typeof r, "string");
+  assert.ok((r ?? "").length > 0);
+});
+
+test("buildScopedView: returns null (shim) on missing pin", () => {
+  const tagged = tagWithOpIds("<body><section><p>x</p></section></body>").taggedHtml;
+  const r = buildScopedView(tagged, "nonexistent-pin");
+  assert.equal(r, null);
+  assert.notEqual(r, undefined);
+});
+
+test("buildScopedView: returns object when pin exists", () => {
+  const tagged = tagWithOpIds("<body><section><p>x</p></section></body>").taggedHtml;
+  // Get the <section>'s op-id.
+  const m = tagged.match(/<section[^>]*data-op-id="(\w+)"/);
+  if (!m) throw new Error(`could not find section op-id in ${tagged}`);
+  const r = buildScopedView(tagged, m[1]);
+  assert.ok(r !== null);
+  assert.equal(typeof r!.scopedHtml, "string");
+  assert.equal(r!.containerOpId, m[1]);
+});
+
+test("HtmlStream: round-trip on a small doc preserves output", () => {
+  const stream = new HtmlStream();
+  const out1 = stream.write("<div><p>hi</p></div>");
+  const result = stream.end();
+  // bytesIn matches what we fed; finalHtml is the post-processed full document.
+  assert.equal(result.bytesIn, "<div><p>hi</p></div>".length);
+  assert.equal(typeof result.finalHtml, "string");
+  // Per-write return may be empty (lol-html buffering); that's expected.
+  assert.equal(typeof out1, "string");
+});
+
+test("HtmlStream: rejects data-slot-path mid-stream", () => {
+  const stream = new HtmlStream();
+  assert.throws(
+    () => stream.write('<div data-slot-path="x">'),
+    /data-slot-path/,
+  );
+});
