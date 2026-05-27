@@ -1,0 +1,497 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "OpenLen edge — request rate, latency, cert issuance, proxy upstream health, connection cap, and process stats. Scrapes /metrics from openlen-edge (default 127.0.0.1:9090).",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "Per-host request rate over the last minute. Top 20 hosts by traffic. Use the `host` variable to filter to a single project.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisLabel": "req/s",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "spanNulls": false
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "id": 1,
+      "options": {
+        "legend": {"calcs": ["lastNotNull", "mean"], "displayMode": "table", "placement": "right"},
+        "tooltip": {"mode": "multi", "sort": "desc"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "topk(20, sum by (host) (rate(openlen_edge_requests_total{host=~\"$host\"}[1m])))",
+          "legendFormat": "{{host}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Request rate by host (top 20)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "p50 / p95 / p99 response latency, broken out by route kind. `subdomain_disk` is the file-serve path; `proxy` is the Node upstream; `custom_domain_disk` is the per-host file path; `not_found` is the 404 path.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisLabel": "seconds",
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "lineWidth": 1
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "id": 2,
+      "options": {
+        "legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "right"},
+        "tooltip": {"mode": "multi", "sort": "desc"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "histogram_quantile(0.5, sum by (le, route_kind) (rate(openlen_edge_request_duration_seconds_bucket{host=~\"$host\"}[5m])))",
+          "legendFormat": "p50 {{route_kind}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "histogram_quantile(0.95, sum by (le, route_kind) (rate(openlen_edge_request_duration_seconds_bucket{host=~\"$host\"}[5m])))",
+          "legendFormat": "p95 {{route_kind}}",
+          "refId": "B"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "histogram_quantile(0.99, sum by (le, route_kind) (rate(openlen_edge_request_duration_seconds_bucket{host=~\"$host\"}[5m])))",
+          "legendFormat": "p99 {{route_kind}}",
+          "refId": "C"
+        }
+      ],
+      "title": "Latency p50 / p95 / p99 by route kind",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "Distribution of response status codes over the last 5 minutes.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "mappings": [],
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 8},
+      "id": 3,
+      "options": {
+        "displayLabels": ["percent"],
+        "legend": {"displayMode": "table", "placement": "right", "values": ["value", "percent"]},
+        "pieType": "donut",
+        "reduceOptions": {"calcs": ["sum"], "fields": "", "values": false},
+        "tooltip": {"mode": "single"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "sum by (status_class) (rate(openlen_edge_requests_total{host=~\"$host\"}[5m]))",
+          "legendFormat": "{{status_class}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Status class distribution",
+      "type": "piechart"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "Upstream proxy failures by reason. `connect_refused` = Node not reachable; `header_timeout` = headers didn't arrive within OPENLEN_EDGE_NODE_TIMEOUT_SECS; `upstream_5xx` = Node returned a 5xx; `body_idle_timeout` = body hung past OPENLEN_EDGE_PROXY_BODY_IDLE_TIMEOUT_SECS.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "bars", "fillOpacity": 50, "lineWidth": 1},
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 16, "x": 8, "y": 8},
+      "id": 4,
+      "options": {
+        "legend": {"calcs": ["lastNotNull", "mean", "sum"], "displayMode": "table", "placement": "right"},
+        "tooltip": {"mode": "multi", "sort": "desc"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "sum by (reason) (rate(openlen_edge_proxy_upstream_errors_total[5m]))",
+          "legendFormat": "{{reason}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Proxy upstream errors / sec",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "Ratio of cached lookups vs. total. `hit_positive` + `hit_negative` ÷ all results.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "yellow", "value": 0.5},
+              {"color": "green", "value": 0.9}
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 16},
+      "id": 5,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "(sum(rate(openlen_edge_domain_lookup_total{result=~\"hit_.*\"}[5m]))) / (sum(rate(openlen_edge_domain_lookup_total[5m])))",
+          "refId": "A"
+        }
+      ],
+      "title": "Domain cache hit ratio",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "Concurrent lookups for the same key that were coalesced into one base call by the singleflight layer. High values indicate hot keys.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "line", "fillOpacity": 10, "lineWidth": 1},
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 9, "x": 6, "y": 16},
+      "id": 6,
+      "options": {
+        "legend": {"calcs": ["lastNotNull", "mean"], "displayMode": "list", "placement": "bottom"},
+        "tooltip": {"mode": "single"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "sum(rate(openlen_edge_domain_singleflight_coalesced_total[5m]))",
+          "legendFormat": "coalesced/s",
+          "refId": "A"
+        }
+      ],
+      "title": "Singleflight coalescing rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "ACME issuance outcomes / sec.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "bars", "fillOpacity": 60, "lineWidth": 1},
+          "unit": "ops"
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "success"}, "properties": [{"id": "color", "value": {"fixedColor": "green", "mode": "fixed"}}]}
+        ]
+      },
+      "gridPos": {"h": 6, "w": 9, "x": 15, "y": 16},
+      "id": 7,
+      "options": {
+        "legend": {"calcs": ["sum"], "displayMode": "table", "placement": "right"},
+        "tooltip": {"mode": "multi"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "sum by (result) (rate(openlen_edge_cert_issuance_total[5m]))",
+          "legendFormat": "{{result}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Cert issuance outcomes",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "Current count of stored certs whose expiry sits within the configured renewal threshold (default 30 days).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 1},
+              {"color": "red", "value": 10}
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 5, "w": 6, "x": 0, "y": 22},
+      "id": 8,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "openlen_edge_cert_renewal_due_total",
+          "refId": "A"
+        }
+      ],
+      "title": "Certs due for renewal",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "Active certs by type. `wildcard` is the openlen.com wildcard slot (always 1 when boot succeeded); `custom` is the size of the per-host map.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 5, "w": 6, "x": 6, "y": 22},
+      "id": 9,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "orientation": "horizontal",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "openlen_edge_active_certs_total",
+          "legendFormat": "{{type}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Active certs",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "Inflight TLS handshakes / open requests vs. the configured cap. The denominator is the OPENLEN_EDGE_MAX_INFLIGHT value the operator set (placeholder 4096 in PromQL — adjust if you raised it).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 0.6},
+              {"color": "red", "value": 0.9}
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 5, "w": 6, "x": 12, "y": 22},
+      "id": 10,
+      "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "openlen_edge_handshake_inflight / 4096",
+          "refId": "A"
+        }
+      ],
+      "title": "Connection cap utilization",
+      "type": "gauge"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "Upstream HTTP/1.1 connection pool — idle vs. inflight. Idle = warm connections waiting; inflight = currently relaying a request.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "line", "fillOpacity": 10, "lineWidth": 1},
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 5, "w": 6, "x": 18, "y": 22},
+      "id": 11,
+      "options": {
+        "legend": {"calcs": ["lastNotNull"], "displayMode": "list", "placement": "bottom"},
+        "tooltip": {"mode": "multi"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "openlen_edge_proxy_pool_idle_connections",
+          "legendFormat": "idle",
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "openlen_edge_proxy_pool_inflight_connections",
+          "legendFormat": "inflight",
+          "refId": "B"
+        }
+      ],
+      "title": "Proxy pool",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "Process resource use — CPU rate, resident memory, open file descriptors. Sourced from the `metrics-process` collector, polled every 10s.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "line", "fillOpacity": 0, "lineWidth": 1}
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "RSS"}, "properties": [{"id": "unit", "value": "bytes"}]},
+          {"matcher": {"id": "byName", "options": "CPU"}, "properties": [{"id": "unit", "value": "percentunit"}]},
+          {"matcher": {"id": "byName", "options": "Open FDs"}, "properties": [{"id": "unit", "value": "short"}]}
+        ]
+      },
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 27},
+      "id": 12,
+      "options": {
+        "legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "right"},
+        "tooltip": {"mode": "multi"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "rate(process_cpu_seconds_total[1m])",
+          "legendFormat": "CPU",
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "process_resident_memory_bytes",
+          "legendFormat": "RSS",
+          "refId": "B"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+          "expr": "process_open_fds",
+          "legendFormat": "Open FDs",
+          "refId": "C"
+        }
+      ],
+      "title": "Process — CPU / RSS / FDs",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["openlen", "edge"],
+  "templating": {
+    "list": [
+      {
+        "current": {"selected": false, "text": "Prometheus", "value": "Prometheus"},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "DS_PROMETHEUS",
+        "options": [],
+        "query": "prometheus",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "allValue": ".*",
+        "current": {"selected": true, "text": "All", "value": "$__all"},
+        "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+        "definition": "label_values(openlen_edge_requests_total, host)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Host",
+        "multi": true,
+        "name": "host",
+        "options": [],
+        "query": {"query": "label_values(openlen_edge_requests_total, host)", "refId": "Prometheus-host-Variable-Query"},
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {"from": "now-1h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "OpenLen Edge",
+  "uid": "openlen-edge",
+  "version": 1,
+  "weekStart": ""
+}
