@@ -3,7 +3,7 @@
 Branch: `rust/f1-5-cheerio-cleanup` off `master`'s `719111b` (the F3 S2 napi+TS-wrapper merge tip at the time the worktree was created).
 
 ```
-{{SELF_SHA}}  docs(rust): F1.5 Phase F — final handoff + bundle stats
+4c30477  docs(rust): F1.5 Phase F — final handoff + bundle stats
 29e237e        chore(deps): F1.5 E — remove cheerio
 8b1b14b        feat(rust): F1.5 D4 — cutover lib/branding/inject-logo.ts to Rust
 50f0870        feat(rust): F1.5 D3 — cutover lib/branding/extract-logo.ts to Rust
@@ -192,4 +192,4 @@ No PR. The user owns the merge.
 
 ## Self-SHA
 
-`{{SELF_SHA}}` — replaced after the Phase F handoff commit lands.
+`4c30477` — replaced after the Phase F handoff commit lands.
