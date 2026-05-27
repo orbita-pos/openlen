@@ -58,9 +58,23 @@ opt-level = "z"
 opt-level = "z"
 [profile.release.package.asn1-rs]
 opt-level = "z"
-[profile.release.package.simple_asn1]
-opt-level = "z"
 [profile.release.package.ring]
+opt-level = "s"
+# F2 S6: webpki-roots ships the Mozilla CA bundle as static data; nothing
+# inlines into hot code, so `z` is essentially free here.
+[profile.release.package.webpki-roots]
+opt-level = "z"
+[profile.release.package.webpki]
+opt-level = "z"
+# regex_automata + regex_syntax are pulled by the `regex` crate the routing
+# layer uses for hostname validation. The matchers are touched per request
+# but the compiled state machines + AC trees are large; "s" keeps inlining
+# for the hot path while trimming the cold construction code.
+[profile.release.package.regex-automata]
+opt-level = "s"
+[profile.release.package.regex-syntax]
+opt-level = "z"
+[profile.release.package.aho-corasick]
 opt-level = "s"
 # Cold-path crypto used by ACME signing / cert generation. Shaves
 # another ~150 KB by giving up inlining inside the seldom-used path.

@@ -1553,11 +1553,8 @@ dependencies = [
  "http-body",
  "http-body-util",
  "httpdate",
- "hyper",
  "hyper-rustls",
- "hyper-util",
  "rcgen 0.14.8",
- "rustls",
  "rustls-pki-types",
  "serde",
  "serde_json",
@@ -2199,6 +2196,7 @@ dependencies = [
  "http",
  "http-body-util",
  "hyper",
+ "hyper-rustls",
  "hyper-util",
  "instant-acme",
  "mime_guess",
@@ -2223,6 +2221,7 @@ dependencies = [
  "tower-http 0.5.2",
  "tracing",
  "tracing-subscriber",
+ "webpki-roots 0.26.11",
 ]
 
 [[package]]
