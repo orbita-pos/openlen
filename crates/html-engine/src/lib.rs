@@ -243,3 +243,8 @@ pub fn extract_logo(html: String) -> Option<JsExtractedLogo> {
         is_data_uri: l.is_data_uri,
     })
 }
+
+#[napi]
+pub fn inject_logo(html: String, logo_url: String) -> String {
+    publish::inject_logo(&html, &logo_url)
+}
