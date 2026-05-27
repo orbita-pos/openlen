@@ -2,15 +2,16 @@ use std::future::Future;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::{Context, Result};
 use axum::body::Body;
-use axum::extract::{ConnectInfo, Host, State};
-use axum::http::{header, HeaderValue, StatusCode, Uri};
-use axum::response::{IntoResponse, Response};
+use axum::extract::{ConnectInfo, State};
+use axum::http::{header, HeaderValue, Request, Response, StatusCode};
+use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::Router;
-use hyper_util::rt::{TokioExecutor, TokioIo};
+use hyper_util::rt::{TokioExecutor, TokioIo, TokioTimer};
 use rustls::ServerConfig;
 use tokio::net::TcpListener;
 use tokio::sync::{watch, Semaphore};
@@ -22,31 +23,59 @@ use tracing::{debug, error, info, warn};
 
 use crate::config::EdgeConfig;
 use crate::files::{cache_control_for, resolve, Resolved};
-use crate::routing::extract_subdomain;
+use crate::proxy::{self, decide_route, NodeClient, RouteAction};
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const SERVER_HEADER_VALUE: &str = concat!("openlen-edge/", env!("CARGO_PKG_VERSION"));
 
-/// Per-request state injected into the router. Holds the canonicalized
-/// publish root so the file resolver never re-canonicalises on the hot path.
+/// HTTP/1.1 idle-pool tuning for the upstream Node client. Chosen so the pool
+/// can amortize a steady stream of forwarded requests without holding too many
+/// FDs open against a single Node process.
+const NODE_POOL_IDLE: Duration = Duration::from_secs(90);
+const NODE_POOL_MAX_IDLE_PER_HOST: usize = 32;
+
+/// Cap on inbound HTTP/1.1 header read. Closes Slowloris-style requests that
+/// dribble headers across many TCP segments. Matches the value we'll add to the
+/// upstream client pool.
+const HEADER_READ_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// Per-request state injected into the router. Holds the canonicalized publish
+/// root so the file resolver never re-canonicalises on the hot path, and a
+/// pre-built [`NodeClient`] + proxy decision lists for the proxy module.
 #[derive(Debug, Clone)]
 pub struct AppState {
     pub publish_root: Arc<PathBuf>,
+    pub node_client: NodeClient,
+    pub proxy_hosts: Arc<Vec<String>>,
+    pub proxy_paths: Arc<Vec<String>>,
 }
 
 impl AppState {
-    pub fn new(publish_root: PathBuf) -> Self {
-        let canonical = publish_root.canonicalize().unwrap_or(publish_root);
-        Self {
+    pub fn from_config(config: &EdgeConfig) -> Result<Self> {
+        let canonical = config
+            .publish_root
+            .canonicalize()
+            .unwrap_or_else(|_| config.publish_root.clone());
+        let node_client = NodeClient::new(
+            &config.node_url,
+            NODE_POOL_IDLE,
+            NODE_POOL_MAX_IDLE_PER_HOST,
+            Duration::from_secs(config.node_timeout_secs),
+        )
+        .context("constructing upstream NodeClient")?;
+        Ok(Self {
             publish_root: Arc::new(canonical),
-        }
+            node_client,
+            proxy_hosts: Arc::new(config.proxy_hosts.clone()),
+            proxy_paths: Arc::new(config.proxy_paths.clone()),
+        })
     }
 }
 
 pub fn router(state: AppState) -> Router {
     Router::new()
         .route("/_edge/version", get(version))
-        .fallback(serve_subdomain)
+        .fallback(serve_or_proxy)
         .with_state(state)
         .layer(SetResponseHeaderLayer::overriding(
             header::SERVER,
@@ -62,19 +91,37 @@ async fn version() -> impl IntoResponse {
     )
 }
 
-async fn serve_subdomain(
-    Host(host): Host,
-    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+async fn serve_or_proxy(
     State(state): State<AppState>,
-    uri: Uri,
-) -> Response {
-    let Some(sub) = extract_subdomain(&host) else {
-        debug!(%host, %peer, "host did not match *.openlen.com");
-        return not_found();
-    };
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    req: Request<Body>,
+) -> Response<Body> {
+    let host = req
+        .headers()
+        .get(header::HOST)
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned)
+        .or_else(|| req.uri().authority().map(|a| a.as_str().to_owned()))
+        .unwrap_or_default();
+    let url_path = req.uri().path().to_owned();
 
-    let sub_root = state.publish_root.join(&sub).join("current");
-    let url_path = uri.path();
+    match decide_route(&host, &url_path, &state.proxy_hosts, &state.proxy_paths) {
+        RouteAction::Proxy => proxy::forward(&state.node_client, peer, host, req).await,
+        RouteAction::Disk { sub } => serve_from_disk(&state, peer, &sub, &url_path).await,
+        RouteAction::NotFound => {
+            debug!(%host, %peer, "host did not match any route");
+            not_found()
+        }
+    }
+}
+
+async fn serve_from_disk(
+    state: &AppState,
+    peer: SocketAddr,
+    sub: &str,
+    url_path: &str,
+) -> Response<Body> {
+    let sub_root = state.publish_root.join(sub).join("current");
 
     match resolve(&sub_root, url_path) {
         Resolved::File(path) => match tokio::fs::read(&path).await {
@@ -83,7 +130,7 @@ async fn serve_subdomain(
                 let cache_ctl = cache_control_for(ext);
                 let mime = mime_guess::from_path(&path).first_or_octet_stream();
                 debug!(
-                    %peer, sub=%sub, path=%url_path, file=%path.display(),
+                    %peer, sub, path = %url_path, file = %path.display(),
                     bytes = bytes.len(), "serve file"
                 );
                 Response::builder()
@@ -95,24 +142,24 @@ async fn serve_subdomain(
             }
             Err(err) => {
                 warn!(
-                    %peer, sub=%sub, path=%url_path,
-                    file=%path.display(), error=%err, "file read failed"
+                    %peer, sub, path = %url_path,
+                    file = %path.display(), error = %err, "file read failed"
                 );
                 not_found()
             }
         },
         Resolved::NotFound => {
-            debug!(%peer, sub=%sub, path=%url_path, "file not found");
+            debug!(%peer, sub, path = %url_path, "file not found");
             not_found()
         }
         Resolved::BadRequest => {
-            warn!(%peer, sub=%sub, path=%url_path, "rejected unsafe path");
+            warn!(%peer, sub, path = %url_path, "rejected unsafe path");
             (StatusCode::BAD_REQUEST, "bad request\n").into_response()
         }
     }
 }
 
-fn not_found() -> Response {
+fn not_found() -> Response<Body> {
     (StatusCode::NOT_FOUND, "Not Found\n").into_response()
 }
 
@@ -132,8 +179,16 @@ pub async fn bind(config: &EdgeConfig, tls_config: Arc<ServerConfig>) -> Result<
     let local_addr = listener
         .local_addr()
         .context("listener.local_addr() failed")?;
-    info!(addr = %local_addr, max_inflight = config.max_inflight, "openlen-edge listening");
-    let state = AppState::new(config.publish_root.clone());
+    info!(
+        addr = %local_addr,
+        max_inflight = config.max_inflight,
+        node_url = %config.node_url,
+        node_timeout_secs = config.node_timeout_secs,
+        proxy_hosts = ?config.proxy_hosts,
+        proxy_paths = ?config.proxy_paths,
+        "openlen-edge listening"
+    );
+    let state = AppState::from_config(config)?;
     Ok(BoundServer {
         local_addr,
         listener,
@@ -217,10 +272,17 @@ async fn serve_one(
         .expect("axum IntoMakeServiceWithConnectInfo is infallible");
     let svc = hyper_util::service::TowerToHyperService::new(svc);
 
-    if let Err(err) = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new())
-        .serve_connection_with_upgrades(io, svc)
-        .await
-    {
+    let mut builder = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new());
+    // `header_read_timeout` requires a registered Timer (otherwise hyper
+    // panics at runtime the first time it tries to arm one — surfaces on
+    // any real-world client that splits the request line and headers across
+    // separate TCP segments, even though loopback test traffic skates by).
+    builder
+        .http1()
+        .timer(TokioTimer::new())
+        .header_read_timeout(HEADER_READ_TIMEOUT)
+        .keep_alive(true);
+    if let Err(err) = builder.serve_connection_with_upgrades(io, svc).await {
         warn!(%peer, error = %err, "hyper serve_connection ended");
     }
     Ok(())

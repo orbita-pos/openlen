@@ -213,10 +213,14 @@ async fn missing_asset_returns_404_not_spa() {
 }
 
 #[tokio::test]
-async fn apex_host_returns_404() {
+async fn apex_with_default_proxy_backend_down_returns_502() {
+    // With the default proxy config (apex/www → Node :3000) and no Node
+    // listening in this harness, apex traffic surfaces a 502 instead of the
+    // old 404. The dedicated proxy.rs suite covers the success path with a
+    // mock Node.
     let h = spawn_edge().await;
     let resp = get(h.addr, "openlen.com", "/").await;
-    assert_eq!(resp.status(), 404);
+    assert_eq!(resp.status(), 502);
 }
 
 #[tokio::test]
@@ -257,10 +261,20 @@ fn raw_router_request(uri: &str, host: &str) -> Request<Body> {
     req
 }
 
+fn test_app_state() -> AppState {
+    let cfg = EdgeConfig::builder()
+        .bind("127.0.0.1:0".parse().unwrap())
+        .cert_path(PathBuf::from("/tmp/cert.pem"))
+        .key_path(PathBuf::from("/tmp/key.pem"))
+        .publish_root(PathBuf::from(FIXTURE_ROOT))
+        .build()
+        .unwrap();
+    AppState::from_config(&cfg).expect("AppState::from_config")
+}
+
 #[tokio::test]
 async fn router_rejects_encoded_parent_dir() {
-    let state = AppState::new(PathBuf::from(FIXTURE_ROOT));
-    let app = router(state);
+    let app = router(test_app_state());
     let resp = app
         .oneshot(raw_router_request(
             "/%2E%2E/%2E%2E/etc/passwd",
@@ -273,8 +287,7 @@ async fn router_rejects_encoded_parent_dir() {
 
 #[tokio::test]
 async fn router_rejects_null_byte_in_path() {
-    let state = AppState::new(PathBuf::from(FIXTURE_ROOT));
-    let app = router(state);
+    let app = router(test_app_state());
     let resp = app
         .oneshot(raw_router_request("/index.html%00.png", "demo.openlen.com"))
         .await
