@@ -278,3 +278,27 @@ pub fn consolidate_unsplash_credits(html: String) -> JsConsolidationResult {
         anonymous_unsplash_count: r.anonymous_unsplash_count,
     }
 }
+
+#[napi(object, js_name = "WireFormConfig")]
+pub struct JsWireFormConfig {
+    pub index: u32,
+    pub success_message: Option<String>,
+    pub redirect_url: Option<String>,
+}
+
+#[napi]
+pub fn wire_published_forms(
+    html: String,
+    action: String,
+    configs: Vec<JsWireFormConfig>,
+) -> String {
+    let native_configs: Vec<publish::FormConfig> = configs
+        .into_iter()
+        .map(|c| publish::FormConfig {
+            index: c.index,
+            success_message: c.success_message,
+            redirect_url: c.redirect_url,
+        })
+        .collect();
+    publish::wire_published_forms(&html, &action, &native_configs)
+}

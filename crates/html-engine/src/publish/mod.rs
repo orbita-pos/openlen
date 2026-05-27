@@ -9,9 +9,11 @@
 // passes do.
 
 pub mod credits;
+pub mod forms;
 pub mod logo;
 
 pub use credits::{consolidate_unsplash_credits, ConsolidationResult, UnsplashCredit};
+pub use forms::{wire_published_forms, FormConfig};
 pub use logo::{extract_logo, inject_logo, ExtractedLogo};
 
 use kuchikiki::traits::TendrilSink;
