@@ -101,8 +101,8 @@ interface LeftSidebarProps {
   entryMode?: "choosing" | "ai" | "template" | "paste" | "editing";
   /** Raw HTML of the currently loaded flat project (template-clone or paste).
    *  When present, ChatPanel switches from the mock Orchestra round-trip to
-   *  the real Kimi K2.6 design surface, and ContentPanel renders a hint
-   *  card pointing the user at the iframe (instead of the slot form). */
+   *  the real Gemini design surface, and ContentPanel renders a hint card
+   *  pointing the user at the iframe (instead of the slot form). */
   flatProjectHtml?: string;
   flatProjectId?: string;
   onFlatHtmlUpdate?: (html: string) => void;
@@ -153,7 +153,7 @@ interface LeftSidebarProps {
   aiBriefState?: BriefFormState;
   aiOnGenerate?: () => void;
   aiGenerating?: boolean;
-  /** Model choice (Kimi / Gemini) for generation — forwarded to AiBriefPanel. */
+  /** Model choice (Pro / Flash) for generation — forwarded to AiBriefPanel. */
   aiModel?: AIModel;
   aiOnModelChange?: (m: AIModel) => void;
 }

@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calliope | AI-Powered Customer Support</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --accent: var(--ol-accent);
+      --accent-r: var(--ol-accent-r);
+      --bg: 249 250 251; /* gray-50 */
+      --surface: 255 255 255; /* white */
+      --fg: 17 24 39; /* gray-900 */
+      --fg-muted: 107 114 128; /* gray-500 */
+      --border: 229 231 235; /* gray-200 */
+      --font-display: 'Inter', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --radius: 0.75rem;
+    }
+    
+    body {
+      font-family: var(--font-body);
+      background-color: rgb(var(--bg));
+      color: rgb(var(--fg));
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    .font-display { font-family: var(--ol-font-display); }
+    .font-mono { font-family: var(--font-mono); }
+    .bg-main { background-color: rgb(var(--bg)); }
+    .bg-surface { background-color: rgb(var(--surface)); }
+    .text-main { color: rgb(var(--fg)); }
+    .text-muted { color: rgb(var(--fg-muted)); }
+    .border-main { border-color: rgb(var(--border)); }
+    .accent { color: var(--accent); }
+    .bg-accent { background-color: var(--accent); }
+    .border-accent { border-color: var(--accent); }
+    .ring-accent { ring-color: var(--accent); }
+    .shadow-accent-glow { box-shadow: 0 0 2rem rgba(var(--accent-r), 0.15), 0 0 0.25rem rgba(var(--accent-r), 0.1); }
+    .radial-fade { background-image: radial-gradient(60% 50% at 50% 0%, rgba(var(--accent-r), 0.1) 0%, transparent 70%); }
+    .dot-grid { background-image: linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px); background-size: 32px 32px; }
+    .dark .dot-grid { background-image: linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px); }
+    .pulse-dot { display: inline-flex; position: relative; }
+    .pulse-dot::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 9999px; background-color: var(--accent); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite; }
+    @keyframes ping { 75%, 100% { transform: scale(2); opacity: 0; } }
+    .marquee { --gap: 1rem; display: flex; overflow: hidden; user-select: none; gap: var(--gap); }
+    .marquee-content { flex-shrink: 0; display: flex; justify-content: space-around; min-width: 100%; gap: var(--gap); animation: scroll 30s linear infinite; }
+    @keyframes scroll { to { transform: translateX(calc(-100% - var(--gap))); } }
+    .feature-card { border: 1px solid rgb(var(--border)); border-radius: var(--radius); padding: 2rem; }
+    details summary { cursor: pointer; }
+    details summary .icon { transition: transform 0.2s; }
+    details[open] summary .icon { transform: rotate(45deg); }
+    .waitlist-form { transition: box-shadow 0.2s ease-in-out; }
+    .waitlist-form:focus-within { box-shadow: 0 0 0 2px rgb(var(--bg)), 0 0 0 4px var(--accent); }
+  </style>
+<script data-ol-radius>(function(){var w=window;w.tailwind=w.tailwind||{};var c=w.tailwind.config||{};var t=c.theme||{};var e=t.extend||{};e.borderRadius=Object.assign({},e.borderRadius,{sm:'var(--ol-r-sm)',DEFAULT:'var(--ol-r)',md:'var(--ol-r-md)',lg:'var(--ol-r-lg)',xl:'var(--ol-r-xl)','2xl':'var(--ol-r-2xl)','3xl':'var(--ol-r-3xl)'});w.tailwind.config=Object.assign({},c,{theme:Object.assign({},t,{extend:Object.assign({},e)})});})();</script><style data-ol-radius>:root{--ol-r-scale:1;--ol-r-sm:calc(0.125rem*var(--ol-r-scale));--ol-r:calc(0.25rem*var(--ol-r-scale));--ol-r-md:calc(0.375rem*var(--ol-r-scale));--ol-r-lg:calc(0.5rem*var(--ol-r-scale));--ol-r-xl:calc(0.75rem*var(--ol-r-scale));--ol-r-2xl:calc(1rem*var(--ol-r-scale));--ol-r-3xl:calc(1.5rem*var(--ol-r-scale));}</style><script data-ol-space>(function(){var w=window;w.tailwind=w.tailwind||{};var c=w.tailwind.config||{};var t=c.theme||{};var e=t.extend||{};var m={'0':'var(--ol-space-0)','px':'var(--ol-space-px)','0.5':'var(--ol-space-0_5)','1':'var(--ol-space-1)','1.5':'var(--ol-space-1_5)','2':'var(--ol-space-2)','2.5':'var(--ol-space-2_5)','3':'var(--ol-space-3)','3.5':'var(--ol-space-3_5)','4':'var(--ol-space-4)','5':'var(--ol-space-5)','6':'var(--ol-space-6)','7':'var(--ol-space-7)','8':'var(--ol-space-8)','9':'var(--ol-space-9)','10':'var(--ol-space-10)','11':'var(--ol-space-11)','12':'var(--ol-space-12)','14':'var(--ol-space-14)','16':'var(--ol-space-16)','20':'var(--ol-space-20)','24':'var(--ol-space-24)','28':'var(--ol-space-28)','32':'var(--ol-space-32)','36':'var(--ol-space-36)','40':'var(--ol-space-40)','44':'var(--ol-space-44)','48':'var(--ol-space-48)','52':'var(--ol-space-52)','56':'var(--ol-space-56)','60':'var(--ol-space-60)','64':'var(--ol-space-64)','72':'var(--ol-space-72)','80':'var(--ol-space-80)','96':'var(--ol-space-96)'};e.padding=Object.assign({},e.padding,m);e.margin=Object.assign({},e.margin,m);e.gap=Object.assign({},e.gap,m);w.tailwind.config=Object.assign({},c,{theme:Object.assign({},t,{extend:Object.assign({},e)})});})();</script><style data-ol-space>:root{--ol-space-scale:1;--ol-space-0:calc(0px*var(--ol-space-scale));--ol-space-px:calc(1px*var(--ol-space-scale));--ol-space-0_5:calc(0.125rem*var(--ol-space-scale));--ol-space-1:calc(0.25rem*var(--ol-space-scale));--ol-space-1_5:calc(0.375rem*var(--ol-space-scale));--ol-space-2:calc(0.5rem*var(--ol-space-scale));--ol-space-2_5:calc(0.625rem*var(--ol-space-scale));--ol-space-3:calc(0.75rem*var(--ol-space-scale));--ol-space-3_5:calc(0.875rem*var(--ol-space-scale));--ol-space-4:calc(1rem*var(--ol-space-scale));--ol-space-5:calc(1.25rem*var(--ol-space-scale));--ol-space-6:calc(1.5rem*var(--ol-space-scale));--ol-space-7:calc(1.75rem*var(--ol-space-scale));--ol-space-8:calc(2rem*var(--ol-space-scale));--ol-space-9:calc(2.25rem*var(--ol-space-scale));--ol-space-10:calc(2.5rem*var(--ol-space-scale));--ol-space-11:calc(2.75rem*var(--ol-space-scale));--ol-space-12:calc(3rem*var(--ol-space-scale));--ol-space-14:calc(3.5rem*var(--ol-space-scale));--ol-space-16:calc(4rem*var(--ol-space-scale));--ol-space-20:calc(5rem*var(--ol-space-scale));--ol-space-24:calc(6rem*var(--ol-space-scale));--ol-space-28:calc(7rem*var(--ol-space-scale));--ol-space-32:calc(8rem*var(--ol-space-scale));--ol-space-36:calc(9rem*var(--ol-space-scale));--ol-space-40:calc(10rem*var(--ol-space-scale));--ol-space-44:calc(11rem*var(--ol-space-scale));--ol-space-48:calc(12rem*var(--ol-space-scale));--ol-space-52:calc(13rem*var(--ol-space-scale));--ol-space-56:calc(14rem*var(--ol-space-scale));--ol-space-60:calc(15rem*var(--ol-space-scale));--ol-space-64:calc(16rem*var(--ol-space-scale));--ol-space-72:calc(18rem*var(--ol-space-scale));--ol-space-80:calc(20rem*var(--ol-space-scale));--ol-space-96:calc(24rem*var(--ol-space-scale));}</style><script data-ol-type>(function(){var w=window;w.tailwind=w.tailwind||{};var c=w.tailwind.config||{};var t=c.theme||{};var e=t.extend||{};e.fontSize=Object.assign({},e.fontSize,{'xs':['var(--ol-text-xs)','var(--ol-lh-xs)'],'sm':['var(--ol-text-sm)','var(--ol-lh-sm)'],'base':['var(--ol-text-base)','var(--ol-lh-base)'],'lg':['var(--ol-text-lg)','var(--ol-lh-lg)'],'xl':['var(--ol-text-xl)','var(--ol-lh-xl)'],'2xl':['var(--ol-text-2xl)','var(--ol-lh-2xl)'],'3xl':['var(--ol-text-3xl)','var(--ol-lh-3xl)'],'4xl':['var(--ol-text-4xl)','var(--ol-lh-4xl)'],'5xl':['var(--ol-text-5xl)','var(--ol-lh-5xl)'],'6xl':['var(--ol-text-6xl)','var(--ol-lh-6xl)'],'7xl':['var(--ol-text-7xl)','var(--ol-lh-7xl)'],'8xl':['var(--ol-text-8xl)','var(--ol-lh-8xl)'],'9xl':['var(--ol-text-9xl)','var(--ol-lh-9xl)']});w.tailwind.config=Object.assign({},c,{theme:Object.assign({},t,{extend:Object.assign({},e)})});})();</script><style data-ol-type>:root{--ol-text-scale:1;--ol-text-xs:calc(0.75rem*var(--ol-text-scale));--ol-lh-xs:calc(1rem*var(--ol-text-scale));--ol-text-sm:calc(0.875rem*var(--ol-text-scale));--ol-lh-sm:calc(1.25rem*var(--ol-text-scale));--ol-text-base:calc(1rem*var(--ol-text-scale));--ol-lh-base:calc(1.5rem*var(--ol-text-scale));--ol-text-lg:calc(1.125rem*var(--ol-text-scale));--ol-lh-lg:calc(1.75rem*var(--ol-text-scale));--ol-text-xl:calc(1.25rem*var(--ol-text-scale));--ol-lh-xl:calc(1.75rem*var(--ol-text-scale));--ol-text-2xl:calc(1.5rem*var(--ol-text-scale));--ol-lh-2xl:calc(2rem*var(--ol-text-scale));--ol-text-3xl:calc(1.875rem*var(--ol-text-scale));--ol-lh-3xl:calc(2.25rem*var(--ol-text-scale));--ol-text-4xl:calc(2.25rem*var(--ol-text-scale));--ol-lh-4xl:calc(2.5rem*var(--ol-text-scale));--ol-text-5xl:calc(3rem*var(--ol-text-scale));--ol-lh-5xl:calc(1*var(--ol-text-scale));--ol-text-6xl:calc(3.75rem*var(--ol-text-scale));--ol-lh-6xl:calc(1*var(--ol-text-scale));--ol-text-7xl:calc(4.5rem*var(--ol-text-scale));--ol-lh-7xl:calc(1*var(--ol-text-scale));--ol-text-8xl:calc(6rem*var(--ol-text-scale));--ol-lh-8xl:calc(1*var(--ol-text-scale));--ol-text-9xl:calc(8rem*var(--ol-text-scale));--ol-lh-9xl:calc(1*var(--ol-text-scale));}</style><link data-ol-font rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist:wght@400;500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Outfit:wght@400;500;600;700&amp;family=Space+Grotesk:wght@400;500;600;700&amp;family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&amp;family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&amp;family=Crimson+Pro:wght@400;500;600;700&amp;family=Playfair+Display:wght@400;500;600;700&amp;family=DM+Serif+Display&amp;family=Instrument+Serif&amp;display=swap"><style data-ol-font>:root{--ol-font-display:'var(--font-display)',sans-serif;}</style><style data-ol-accent>:root{--ol-accent:#ff5a36;--ol-accent-r:255,90,54;}</style><style data-ol-modes>:root[data-ol-mode="dark"]{--ol-bg:17 17 17;--ol-surface:23 23 23;--ol-fg:245 245 245;--ol-border:38 38 38;--ol-accent:#FF6A4D;--ol-accent-r:255,106,77;}</style></head>
+<body class="bg-main text-main">
+
+  <div id="root">
+    <header class="sticky top-0 z-40 w-full border-b border-main bg-surface/80 backdrop-blur-lg">
+      <div class="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <a href="#" class="flex items-center gap-2">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" class="accent"><path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM10.6338 16.9031C10.2222 17.1587 9.75 16.8576 9.75 16.3693V7.63068C9.75 7.14238 10.2222 6.84131 10.6338 7.09689L17.6531 11.4662C18.0416 11.7083 18.0416 12.2917 17.6531 12.5338L10.6338 16.9031Z" fill="currentColor"/></svg>
+          <span class="font-semibold text-lg text-main">Calliope</span>
+        </a>
+        <nav class="hidden items-center gap-6 text-sm md:flex">
+          <a href="#" class="text-muted transition-colors hover:text-main">Features</a>
+          <a href="#" class="text-muted transition-colors hover:text-main">Pricing</a>
+          <a href="#" class="text-muted transition-colors hover:text-main">Docs</a>
+          <a href="#" class="text-muted transition-colors hover:text-main">Company</a>
+        </nav>
+        <div class="flex items-center gap-4">
+          <a href="#" class="hidden text-sm font-medium text-muted transition-colors hover:text-main sm:block">Sign In</a>
+          <a href="#waitlist" class="inline-flex items-center justify-center rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-opacity-90">
+            Join Waitlist
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="ml-1 h-5 w-5"><path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" /></svg>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="relative pt-24 pb-20 sm:pt-32 sm:pb-28">
+        <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="mx-auto max-w-3xl text-center">
+            <div class="mb-4 flex justify-center">
+              <div class="inline-flex items-center gap-2 rounded-full border border-main px-3 py-1 text-xs font-medium font-mono text-muted">
+                <span class="pulse-dot mr-1 h-2 w-2"><span class="h-2 w-2 rounded-full bg-accent"></span></span>
+                Private Beta · Now Open
+              </div>
+            </div>
+            <h1 class="font-display text-4xl font-extrabold tracking-tighter text-main sm:text-6xl">
+              Your smartest support agent <span class="opacity-50">is one click away.</span>
+            </h1>
+            <p class="mx-auto mt-6 max-w-2xl text-lg text-muted">
+              Calliope is an AI-powered copilot for your support team. It learns your knowledge base, drafts perfect replies, and resolves up to 70% of conversations automatically.
+            </p>
+            <form id="waitlist" class="mx-auto mt-8 flex max-w-lg items-center gap-2 rounded-full border border-main bg-surface p-2 waitlist-form">
+              <input type="email" placeholder="you@company.com" required class="w-full flex-1 appearance-none bg-transparent px-4 py-2 text-main placeholder:text-muted focus:outline-none">
+              <button type="submit" class="flex-none rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-opacity hover:bg-opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                Request Access
+              </button>
+            </form>
+          </div>
+          <div class="relative mt-16 sm:mt-24">
+            <div class="absolute inset-x-0 -top-8 -bottom-16 bg-gradient-to-t from-bg-main to-transparent"></div>
+            <div class="relative mx-auto max-w-6xl rounded-xl border border-main bg-surface p-2 shadow-2xl shadow-black/10 dark:shadow-white/5">
+              <div class="aspect-[1.7] w-full rounded-lg bg-gradient-to-br from-orange-100 to-rose-100 dark:from-orange-900/20 dark:to-rose-900/20"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="py-12 sm:py-16">
+        <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="mx-auto max-w-5xl text-center">
+            <p class="font-mono text-sm uppercase tracking-wider text-muted">Trusted by the world's most innovative support teams</p>
+          </div>
+          <div class="marquee mt-8 [mask-image:_linear-gradient(to_right,transparent_0,_black_128px,_black_calc(100%-128px),transparent_100%)]">
+            <div class="marquee-content">
+              <div class="flex items-center justify-center text-2xl font-bold text-muted">Glide</div>
+              <div class="flex items-center justify-center text-2xl font-bold text-muted">Forecast</div>
+              <div class="flex items-center justify-center text-2xl font-bold text-muted">atrium</div>
+              <div class="flex items-center justify-center text-2xl font-bold text-muted">Foundry & Co</div>
+              <div class="flex items-center justify-center text-2xl font-bold text-muted">Vantage</div>
+              <div class="flex items-center justify-center text-2xl font-bold text-muted">Brightwave</div>
+              <div class="flex items-center justify-center text-2xl font-bold text-muted">Nimbus</div>
+              <div class="flex items-center justify-center text-2xl font-bold text-muted">Coast</div>
+            </div>
+            <div class="marquee-content" aria-hidden="true">
+              <div class="flex items-center justify-center text-2xl font-bold text-muted">Glide</div>
+              <div class="flex items-center justify-center text-2xl font-bold text-muted">Forecast</div>
+              <div class="flex items-center justify-center text-2xl font-bold text-muted">atrium</div>
+              <div class="flex items-center justify-center text-2xl font-bold text-muted">Foundry & Co</div>
+              <div class="flex items-center justify-center text-2xl font-bold text-muted">Vantage</div>
+              <div class="flex items-center justify-center text-2xl font-bold text-muted">Brightwave</div>
+              <div class="flex items-center justify-center text-2xl font-bold text-muted">Nimbus</div>
+              <div class="flex items-center justify-center text-2xl font-bold text-muted">Coast</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="bg-surface py-20 sm:py-28">
+        <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="mx-auto max-w-2xl lg:mx-0 lg:max-w-none">
+            <div class="lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-8">
+              <div class="lg:sticky lg:top-24">
+                <p class="font-mono text-sm uppercase tracking-wider text-muted">Automate</p>
+                <h2 class="mt-2 font-display text-3xl font-bold tracking-tight text-main sm:text-4xl">Triage and route, instantly.</h2>
+                <p class="mt-6 text-lg text-muted">
+                  Calliope automatically categorizes incoming tickets by intent, sentiment, and urgency. Create powerful routing rules that get every conversation to the right agent, right away.
+                </p>
+                <ul class="mt-8 space-y-4 text-base text-muted">
+                  <li class="flex gap-x-3">
+                    <svg class="mt-1 h-5 w-5 flex-none accent" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>
+                    <span><strong>98.7% classification accuracy</strong> on common support topics.</span>
+                  </li>
+                  <li class="flex gap-x-3">
+                    <svg class="mt-1 h-5 w-5 flex-none accent" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>
+                    <span>Integrates with Zendesk, Intercom, and Front out of the box.</span>
+                  </li>
+                  <li class="flex gap-x-3">
+                    <svg class="mt-1 h-5 w-5 flex-none accent" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>
+                    <span>Reduce time-to-first-response by an average of 42%.</span>
+                  </li>
+                </ul>
+              </div>
+              <div class="mt-12 lg:mt-0">
+                <div class="aspect-[1.5] w-full rounded-xl border border-main bg-white dark:bg-zinc-900 p-2">
+                    <div class="h-full w-full rounded-lg bg-gradient-to-br from-orange-50 to-rose-50 dark:from-orange-900/10 dark:to-rose-900/10"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="py-20 sm:py-28">
+        <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="mx-auto max-w-2xl lg:mx-0 lg:max-w-none">
+            <div class="lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-8">
+              <div class="mt-12 lg:mt-0 lg:col-start-2 lg:row-start-1">
+                <div class="lg:sticky lg:top-24">
+                  <p class="font-mono text-sm uppercase tracking-wider text-muted">Respond</p>
+                  <h2 class="mt-2 font-display text-3xl font-bold tracking-tight text-main sm:text-4xl">Draft replies in your brand’s voice.</h2>
+                  <p class="mt-6 text-lg text-muted">
+                    Stop writing the same answers over and over. Calliope learns from your past conversations and help docs to generate on-brand, accurate responses that your agents can use and edit with a single click.
+                  </p>
+                  <ul class="mt-8 space-y-4 text-base text-muted">
+                    <li class="flex gap-x-3">
+                      <svg class="mt-1 h-5 w-5 flex-none accent" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>
+                      <span><strong>AI-suggested replies</strong> that match your team's tone and style.</span>
+                    </li>
+                    <li class="flex gap-x-3">
+                      <svg class="mt-1 h-5 w-5 flex-none accent" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>
+                      <span>Syncs with Notion, Confluence, and Zendesk Guide for up-to-date info.</span>
+                    </li>
+                    <li class="flex gap-x-3">
+                      <svg class="mt-1 h-5 w-5 flex-none accent" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>
+                      <span>Escalate complex issues to humans with full context attached.</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              <div class="lg:col-start-1 lg:row-start-1">
+                <div class="aspect-[1.5] w-full rounded-xl border border-main bg-white dark:bg-zinc-900 p-2">
+                    <div class="h-full w-full rounded-lg bg-gradient-to-br from-orange-50 to-rose-50 dark:from-orange-900/10 dark:to-rose-900/10"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="bg-surface py-20 sm:py-28">
+        <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="mx-auto max-w-2xl text-center">
+            <p class="font-mono text-sm uppercase tracking-wider text-muted">Capabilities</p>
+            <h2 class="mt-2 font-display text-3xl font-bold tracking-tight text-main sm:text-4xl">A complete support toolkit.</h2>
+            <p class="mt-4 text-lg text-muted">
+              From analyzing trends to speaking your customers' language, Calliope has you covered.
+            </p>
+          </div>
+          <div class="mt-16 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+            <div class="feature-card">
+              <h3 class="font-semibold text-main">Automated Resolution</h3>
+              <p class="mt-2 text-muted">Answer common questions and handle simple requests instantly, 24/7, freeing up your agents for high-impact work.</p>
+            </div>
+            <div class="feature-card">
+              <h3 class="font-semibold text-main">Sentiment Analysis</h3>
+              <p class="mt-2 text-muted">Gauge customer happiness in real-time. Prioritize frustrated users and track sentiment trends across all conversations.</p>
+            </div>
+            <div class="feature-card">
+              <h3 class="font-semibold text-main">Multilingual Support</h3>
+              <p class="mt-2 text-muted">Engage with your global customer base in over 50 languages without hiring a single new agent.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="py-20 sm:py-28">
+        <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="mx-auto max-w-2xl text-center">
+            <h2 class="font-display text-3xl font-bold tracking-tight text-main sm:text-4xl">Support teams ship faster than ever</h2>
+            <p class="mt-4 text-lg text-muted">
+              Leaders at top companies use Calliope to scale their support without scaling their headcount.
+            </p>
+          </div>
+          <div class="mx-auto mt-16 grid max-w-lg grid-cols-1 gap-8 lg:max-w-none lg:grid-cols-3">
+            <div class="flex flex-col rounded-lg border border-main bg-surface p-8">
+              <div class="flex items-center text-yellow-400">
+                <svg viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M10.868 2.884c.321-.772 1.305-.772 1.626 0l1.864 4.492a.75.75 0 00.566.41l4.963.722c.818.119 1.145 1.121.553 1.706l-3.59 3.498a.75.75 0 00-.215.662l.849 4.944c.14.814-.712 1.439-1.442 1.056L10.25 18.22a.75.75 0 00-.702 0l-4.43 2.329c-.73.383-1.583-.242-1.442-1.056l.849-4.944a.75.75 0 00-.215-.662l-3.59-3.498c-.592-.585-.265-1.587.553-1.706l4.963-.722a.75.75 0 00.566-.41l1.864-4.492z" clip-rule="evenodd" /></svg>
+                <svg viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M10.868 2.884c.321-.772 1.305-.772 1.626 0l1.864 4.492a.75.75 0 00.566.41l4.963.722c.818.119 1.145 1.121.553 1.706l-3.59 3.498a.75.75 0 00-.215.662l.849 4.944c.14.814-.712 1.439-1.442 1.056L10.25 18.22a.75.75 0 00-.702 0l-4.43 2.329c-.73.383-1.583-.242-1.442-1.056l.849-4.944a.75.75 0 00-.215-.662l-3.59-3.498c-.592-.585-.265-1.587.553-1.706l4.963-.722a.75.75 0 00.566-.41l1.864-4.492z" clip-rule="evenodd" /></svg>
+                <svg viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M10.868 2.884c.321-.772 1.305-.772 1.626 0l1.864 4.492a.75.75 0 00.566.41l4.963.722c.818.119 1.145 1.121.553 1.706l-3.59 3.498a.75.75 0 00-.215.662l.849 4.944c.14.814-.712 1.439-1.442 1.056L10.25 18.22a.75.75 0 00-.702 0l-4.43 2.329c-.73.383-1.583-.242-1.442-1.056l.849-4.944a.75.75 0 00-.215-.662l-3.59-3.498c-.592-.585-.265-1.587.553-1.706l4.963-.722a.75.75 0 00.566-.41l1.864-4.492z" clip-rule="evenodd" /></svg>
+                <svg viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M10.868 2.884c.321-.772 1.305-.772 1.626 0l1.864 4.492a.75.75 0 00.566.41l4.963.722c.818.119 1.145 1.121.553 1.706l-3.59 3.498a.75.75 0 00-.215.662l.849 4.944c.14.814-.712 1.439-1.442 1.056L10.25 18.22a.75.75 0 00-.702 0l-4.43 2.329c-.73.383-1.583-.242-1.442-1.056l.849-4.944a.75.75 0 00-.215-.662l-3.59-3.498c-.592-.585-.265-1.587.553-1.706l4.963-.722a.75.75 0 00.566-.41l1.864-4.492z" clip-rule="evenodd" /></svg>
+                <svg viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M10.868 2.884c.321-.772 1.305-.772 1.626 0l1.864 4.492a.75.75 0 00.566.41l4.963.722c.818.119 1.145 1.121.553 1.706l-3.59 3.498a.75.75 0 00-.215.662l.849 4.944c.14.814-.712 1.439-1.442 1.056L10.25 18.22a.75.75 0 00-.702 0l-4.43 2.329c-.73.383-1.583-.242-1.442-1.056l.849-4.944a.75.75 0 00-.215-.662l-3.59-3.498c-.592-.585-.265-1.587.553-1.706l4.963-.722a.75.75 0 00.566-.41l1.864-4.492z" clip-rule="evenodd" /></svg>
+              </div>
+              <blockquote class="mt-4 text-lg text-main">
+                <p>"We reduced our first response time by 68% within a month of implementing Calliope. It's like having a dozen new agents who know our product inside and out from day one."</p>
+              </blockquote>
+              <div class="mt-6 flex items-center gap-4">
+                <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 dark:bg-zinc-700 font-medium text-main">HS</div>
+                <div>
+                  <div class="font-semibold text-main">Hana Suzuki</div>
+                  <div class="text-sm text-muted">Head of Support, Nimbus</div>
+                </div>
+              </div>
+            </div>
+            <div class="flex flex-col rounded-lg border border-main bg-surface p-8">
+              <div class="flex items-center text-yellow-400">
+                <svg viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M10.868 2.884c.321-.772 1.305-.772 1.626 0l1.864 4.492a.75.75 0 00.566.41l4.963.722c.818.119 1.145 1.121.553 1.706l-3.59 3.498a.75.75 0 00-.215.662l.849 4.944c.14.814-.712 1.439-1.442 1.056L10.25 18.22a.75.75 0 00-.702 0l-4.43 2.329c-.73.383-1.583-.242-1.442-1.056l.849-4.944a.75.75 0 00-.215-.662l-3.59-3.498c-.592-.585-.265-1.587.553-1.706l4.963-.722a.75.75 0 00.566-.41l1.864-4.492z" clip-rule="evenodd" /></svg>
+                <svg viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M10.868 2.884c.321-.772 1.305-.772 1.626 0l1.864 4.492a.75.75 0 00.566.41l4.963.722c.818.119 1.145 1.121.553 1.706l-3.59 3.498a.75.75 0 00-.215.662l.849 4.944c.14.814-.712 1.439-1.442 1.056L10.25 18.22a.75.75 0 00-.702 0l-4.43 2.329c-.73.383-1.583-.242-1.442-1.056l.849-4.944a.75.75 0 00-.215-.662l-3.59-3.498c-.592-.585-.265-1.587.553-1.706l4.963-.722a.75.75 0 00.566-.41l1.864-4.492z" clip-rule="evenodd" /></svg>
+                <svg viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M10.868 2.884c.321-.772 1.305-.772 1.626 0l1.864 4.492a.75.75 0 00.566.41l4.963.722c.818.119 1.145 1.121.553 1.706l-3.59 3.498a.75.75 0 00-.215.662l.849 4.944c.14.814-.712 1.439-1.442 1.056L10.25 18.22a.75.75 0 00-.702 0l-4.43 2.329c-.73.383-1.583-.242-1.442-1.056l.849-4.944a.75.75 0 00-.215-.662l-3.59-3.498c-.592-.585-.265-1.587.553-1.706l4.963-.722a.75.75 0 00.566-.41l1.864-4.492z" clip-rule="evenodd" /></svg>
+                <svg viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M10.868 2.884c.321-.772 1.305-.772 1.626 0l1.864 4.492a.75.75 0 00.566.41l4.963.722c.818.119 1.145 1.121.553 1.706l-3.59 3.498a.75.75 0 00-.215.662l.849 4.944c.14.814-.712 1.439-1.442 1.056L10.25 18.22a.75.75 0 00-.702 0l-4.43 2.329c-.73.383-1.583-.242-1.442-1.056l.849-4.944a.75.75 0 00-.215-.662l-3.59-3.498c-.592-.585-.265-1.587.553-1.706l4.963-.722a.75.75 0 00.566-.41l1.864-4.492z" clip-rule="evenodd" /></svg>
+                <svg viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M10.868 2.884c.321-.772 1.305-.772 1.626 0l1.864 4.492a.75.75 0 00.566.41l4.963.722c.818.119 1.145 1.121.553 1.706l-3.59 3.498a.75.75 0 00-.215.662l.849 4.944c.14.814-.712 1.439-1.442 1.056L10.25 18.22a.75.75 0 00-.702 0l-4.43 2.329c-.73.383-1.583-.242-1.442-1.056l.849-4.944a.75.75 0 00-.215-.662l-3.59-3.498c-.592-.585-.265-1.587.553-1.706l4.963-.722a.75.75 0 00.566-.41l1.864-4.492z" clip-rule="evenodd" /></svg>
+              </div>
+              <blockquote class="mt-4 text-lg text-main">
+                <p>"The AI-suggested replies are shockingly good. Our agents can now handle 3x the conversation volume without sacrificing quality. It has completely changed our support model for the better."</p>
+              </blockquote>
+              <div class="mt-6 flex items-center gap-4">
+                <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 dark:bg-zinc-700 font-medium text-main">MT</div>
+                <div>
+                  <div class="font-semibold text-main">Marcus Tobin</div>
+                  <div class="text-sm text-muted">Founding Engineer, Lattice</div>
+                </div>
+              </div>
+            </div>
+            <div class="flex flex-col rounded-lg border border-main bg-surface p-8">
+              <div class="flex items-center text-yellow-400">
+                <svg viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M10.868 2.884c.321-.772 1.305-.772 1.626 0l1.864 4.492a.75.75 0 00.566.41l4.963.722c.818.119 1.145 1.121.553 1.706l-3.59 3.498a.75.75 0 00-.215.662l.849 4.944c.14.814-.712 1.439-1.442 1.056L10.25 18.22a.75.75 0 00-.702 0l-4.43 2.329c-.73.383-1.583-.242-1.442-1.056l.849-4.944a.75.75 0 00-.215-.662l-3.59-3.498c-.592-.585-.265-1.587.553-1.706l4.963-.722a.75.75 0 00.566-.41l1.864-4.492z" clip-rule="evenodd" /></svg>
+                <svg viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M10.868 2.884c.321-.772 1.305-.772 1.626 0l1.864 4.492a.75.75 0 00.566.41l4.963.722c.818.119 1.145 1.121.553 1.706l-3.59 3.498a.75.75 0 00-.215.662l.849 4.944c.14.814-.712 1.439-1.442 1.056L10.25 18.22a.75.75 0 00-.702 0l-4.43 2.329c-.73.383-1.583-.242-1.442-1.056l.849-4.944a.75.75 0 00-.215-.662l-3.59-3.498c-.592-.585-.265-1.587.553-1.706l4.963-.722a.75.75 0 00.566-.41l1.864-4.492z" clip-rule="evenodd" /></svg>
+                <svg viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M10.868 2.884c.321-.772 1.305-.772 1.626 0l1.864 4.492a.75.75 0 00.566.41l4.963.722c.818.119 1.145 1.121.553 1.706l-3.59 3.498a.75.75 0 00-.215.662l.849 4.944c.14.814-.712 1.439-1.442 1.056L10.25 18.22a.75.75 0 00-.702 0l-4.43 2.329c-.73.383-1.583-.242-1.442-1.056l.849-4.944a.75.75 0 00-.215-.662l-3.59-3.498c-.592-.585-.265-1.587.553-1.706l4.963-.722a.75.75 0 00.566-.41l1.864-4.492z" clip-rule="evenodd" /></svg>
+                <svg viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M10.868 2.884c.321-.772 1.305-.772 1.626 0l1.864 4.492a.75.75 0 00.566.41l4.963.722c.818.119 1.145 1.121.553 1.706l-3.59 3.498a.75.75 0 00-.215.662l.849 4.944c.14.814-.712 1.439-1.442 1.056L10.25 18.22a.75.75 0 00-.702 0l-4.43 2.329c-.73.383-1.583-.242-1.442-1.056l.849-4.944a.75.75 0 00-.215-.662l-3.59-3.498c-.592-.585-.265-1.587.553-1.706l4.963-.722a.75.75 0 00.566-.41l1.864-4.492z" clip-rule="evenodd" /></svg>
+                <svg viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M10.868 2.884c.321-.772 1.305-.772 1.626 0l1.864 4.492a.75.75 0 00.566.41l4.963.722c.818.119 1.145 1.121.553 1.706l-3.59 3.498a.75.75 0 00-.215.662l.849 4.944c.14.814-.712 1.439-1.442 1.056L10.25 18.22a.75.75 0 00-.702 0l-4.43 2.329c-.73.383-1.583-.242-1.442-1.056l.849-4.944a.75.75 0 00-.215-.662l-3.59-3.498c-.592-.585-.265-1.587.553-1.706l4.963-.722a.75.75 0 00.566-.41l1.864-4.492z" clip-rule="evenodd" /></svg>
+              </div>
+              <blockquote class="mt-4 text-lg text-main">
+                <p>"The onboarding was seamless. We connected our knowledge base and within hours Calliope was handling real customer queries. The analytics dashboard gives us insights we never had before."</p>
+              </blockquote>
+              <div class="mt-6 flex items-center gap-4">
+                <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 dark:bg-zinc-700 font-medium text-main">IC</div>
+                <div>
+                  <div class="font-semibold text-main">Ines Calderón</div>
+                  <div class="text-sm text-muted">Head of Eng, Forecast</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="bg-surface py-20 sm:py-28">
+        <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="grid grid-cols-1 gap-12 lg:grid-cols-3">
+            <div class="lg:col-span-1">
+              <p class="font-mono text-sm uppercase tracking-wider text-muted">FAQ</p>
+              <h2 class="mt-2 font-display text-3xl font-bold tracking-tight text-main sm:text-4xl">Frequently Asked Questions</h2>
+            </div>
+            <div class="lg:col-span-2">
+              <div class="space-y-4">
+                <details class="group border-b border-main pb-4">
+                  <summary class="flex items-center justify-between font-medium text-main">
+                    How does Calliope learn our company's specific knowledge?
+                    <span class="icon text-accent"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg></span>
+                  </summary>
+                  <p class="mt-4 text-muted">Calliope connects to your existing knowledge bases like Notion, Confluence, or Zendesk Guide. It continuously syncs to learn your product, policies, and best practices. You can also provide it with conversation histories to learn your team's unique voice and tone.</p>
+                </details>
+                <details class="group border-b border-main pb-4">
+                  <summary class="flex items-center justify-between font-medium text-main">
+                    Is our customer data secure?
+                    <span class="icon text-accent"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg></span>
+                  </summary>
+                  <p class="mt-4 text-muted">Yes. We are SOC 2 Type II compliant and all data is encrypted at rest and in transit. We use sub-processors who meet our stringent security standards. Your data is used exclusively to power your instance of Calliope and is never shared or used for training models for other customers.</p>
+                </details>
+                <details class="group border-b border-main pb-4">
+                  <summary class="flex items-center justify-between font-medium text-main">
+                    What platforms does Calliope integrate with?
+                    <span class="icon text-accent"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg></span>
+                  </summary>
+                  <p class="mt-4 text-muted">We have native integrations for Zendesk, Intercom, Front, and Salesforce Service Cloud. We also offer a robust API for custom integrations with any other help desk or communication platform.</p>
+                </details>
+                <details class="group border-b border-main pb-4">
+                  <summary class="flex items-center justify-between font-medium text-main">
+                    How does automated resolution work?
+                    <span class="icon text-accent"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg></span>
+                  </summary>
+                  <p class="mt-4 text-muted">You define rules and confidence thresholds. When Calliope is highly confident it has the correct answer to a customer's question (e.g., "how do I reset my password?"), it can respond and close the ticket automatically. For more complex or sensitive issues, it will draft a reply and assign it to a human agent for review.</p>
+                </details>
+                <details class="group border-b border-main pb-4">
+                  <summary class="flex items-center justify-between font-medium text-main">
+                    Can we customize the AI's personality?
+                    <span class="icon text-accent"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg></span>
+                  </summary>
+                  <p class="mt-4 text-muted">Absolutely. You can provide Calliope with brand guidelines and examples of ideal conversations. It will adapt its tone, phrasing, and even emoji usage to perfectly match your brand's voice, ensuring a consistent customer experience.</p>
+                </details>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="py-20 sm:py-28">
+        <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="relative overflow-hidden rounded-2xl bg-surface px-6 py-20 shadow-xl sm:px-12 sm:py-24">
+            <div class="absolute inset-0 bg-zinc-900/10 dark:bg-zinc-900/50 dot-grid [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_70%)]"></div>
+            <div class="relative mx-auto max-w-2xl text-center">
+              <h2 class="font-display text-3xl font-bold tracking-tight text-main sm:text-4xl">
+                Ready to transform your customer support?
+              </h2>
+              <p class="mx-auto mt-4 max-w-xl text-lg text-muted">
+                Join the private beta to see how Calliope can help your team resolve issues faster and deliver exceptional service.
+              </p>
+              <a href="#waitlist" class="mt-8 inline-flex items-center justify-center rounded-full bg-accent px-6 py-3 text-base font-semibold text-white shadow-sm transition-opacity hover:bg-opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                Join the Waitlist
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="bg-surface border-t border-main">
+      <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
+        <div class="grid grid-cols-2 gap-8 md:grid-cols-5">
+          <div class="col-span-2 md:col-span-1">
+            <a href="#" class="flex items-center gap-2">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" class="accent"><path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM10.6338 16.9031C10.2222 17.1587 9.75 16.8576 9.75 16.3693V7.63068C9.75 7.14238 10.2222 6.84131 10.6338 7.09689L17.6531 11.4662C18.0416 11.7083 18.0416 12.2917 17.6531 12.5338L10.6338 16.9031Z" fill="currentColor"/></svg>
+              <span class="font-semibold text-lg text-main">Calliope</span>
+            </a>
+            <p class="mt-4 text-sm text-muted">AI support that feels human.</p>
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold text-main">Product</h3>
+            <ul class="mt-4 space-y-3">
+              <li><a href="#" class="text-sm text-muted transition-colors hover:text-main">Features</a></li>
+              <li><a href="#" class="text-sm text-muted transition-colors hover:text-main">Pricing</a></li>
+              <li><a href="#" class="text-sm text-muted transition-colors hover:text-main">Integrations</a></li>
+              <li><a href="#" class="text-sm text-muted transition-colors hover:text-main">Changelog</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold text-main">Developers</h3>
+            <ul class="mt-4 space-y-3">
+              <li><a href="#" class="text-sm text-muted transition-colors hover:text-main">Documentation</a></li>
+              <li><a href="#" class="text-sm text-muted transition-colors hover:text-main">API Reference</a></li>
+              <li><a href="#" class="text-sm text-muted transition-colors hover:text-main">Status</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold text-main">Company</h3>
+            <ul class="mt-4 space-y-3">
+              <li><a href="#" class="text-sm text-muted transition-colors hover:text-main">About</a></li>
+              <li><a href="#" class="text-sm text-muted transition-colors hover:text-main">Blog</a></li>
+              <li><a href="#" class="text-sm text-muted transition-colors hover:text-main">Careers</a></li>
+              <li><a href="#" class="text-sm text-muted transition-colors hover:text-main">Contact</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="mt-12 border-t border-main pt-8 flex flex-col items-center justify-between gap-4 md:flex-row">
+          <p class="text-sm text-muted">&copy; 2024 Calliope, Inc. All rights reserved.</p>
+          <div class="flex items-center gap-4">
+            <a href="#" class="text-sm text-muted transition-colors hover:text-main">Privacy Policy</a>
+            <a href="#" class="text-sm text-muted transition-colors hover:text-main">Terms of Service</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  
+</body>
+</html>

@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Caracol — Specialty Coffee, Mexico City</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: hsl(38, 40%, 96%);
+      --surface: hsl(38, 40%, 93%);
+      --fg: hsl(31, 30%, 20%);
+      --fg-muted: hsl(31, 20%, 40%);
+      --accent: hsl(18, 65%, 50%);
+      --border: hsl(31, 20%, 85%);
+      --font-display: 'Source Serif 4', serif;
+      --font-body: 'Inter', sans-serif;
+      --radius: 0.5rem;
+    }
+    body {
+      background-color: var(--bg);
+      color: var(--fg);
+      font-family: var(--font-body);
+      -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      font-family: var(--ol-font-display);
+      font-weight: 600;
+    }
+    .accent-dot::before {
+      content: '';
+      display: inline-block;
+      width: 0.375rem;
+      height: 0.375rem;
+      border-radius: 9999px;
+      background-color: var(--accent);
+      margin-right: 0.75rem;
+    }
+    .menu-item-price {
+      font-feature-settings: 'tnum';
+    }
+    .fade-in-up {
+      animation: fadeInUp 0.8s ease-out forwards;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    @keyframes fadeInUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .fade-in-up:nth-child(1) { animation-delay: 0.1s; }
+    .fade-in-up:nth-child(2) { animation-delay: 0.2s; }
+    .fade-in-up:nth-child(3) { animation-delay: 0.3s; }
+    .fade-in-up:nth-child(4) { animation-delay: 0.4s; }
+    .fade-in-up:nth-child(5) { animation-delay: 0.5s; }
+    .fade-in-up:nth-child(6) { animation-delay: 0.6s; }
+  </style>
+<script data-ol-radius>(function(){var w=window;w.tailwind=w.tailwind||{};var c=w.tailwind.config||{};var t=c.theme||{};var e=t.extend||{};e.borderRadius=Object.assign({},e.borderRadius,{sm:'var(--ol-r-sm)',DEFAULT:'var(--ol-r)',md:'var(--ol-r-md)',lg:'var(--ol-r-lg)',xl:'var(--ol-r-xl)','2xl':'var(--ol-r-2xl)','3xl':'var(--ol-r-3xl)'});w.tailwind.config=Object.assign({},c,{theme:Object.assign({},t,{extend:Object.assign({},e)})});})();</script><style data-ol-radius>:root{--ol-r-scale:1;--ol-r-sm:calc(0.125rem*var(--ol-r-scale));--ol-r:calc(0.25rem*var(--ol-r-scale));--ol-r-md:calc(0.375rem*var(--ol-r-scale));--ol-r-lg:calc(0.5rem*var(--ol-r-scale));--ol-r-xl:calc(0.75rem*var(--ol-r-scale));--ol-r-2xl:calc(1rem*var(--ol-r-scale));--ol-r-3xl:calc(1.5rem*var(--ol-r-scale));}</style><script data-ol-space>(function(){var w=window;w.tailwind=w.tailwind||{};var c=w.tailwind.config||{};var t=c.theme||{};var e=t.extend||{};var m={'0':'var(--ol-space-0)','px':'var(--ol-space-px)','0.5':'var(--ol-space-0_5)','1':'var(--ol-space-1)','1.5':'var(--ol-space-1_5)','2':'var(--ol-space-2)','2.5':'var(--ol-space-2_5)','3':'var(--ol-space-3)','3.5':'var(--ol-space-3_5)','4':'var(--ol-space-4)','5':'var(--ol-space-5)','6':'var(--ol-space-6)','7':'var(--ol-space-7)','8':'var(--ol-space-8)','9':'var(--ol-space-9)','10':'var(--ol-space-10)','11':'var(--ol-space-11)','12':'var(--ol-space-12)','14':'var(--ol-space-14)','16':'var(--ol-space-16)','20':'var(--ol-space-20)','24':'var(--ol-space-24)','28':'var(--ol-space-28)','32':'var(--ol-space-32)','36':'var(--ol-space-36)','40':'var(--ol-space-40)','44':'var(--ol-space-44)','48':'var(--ol-space-48)','52':'var(--ol-space-52)','56':'var(--ol-space-56)','60':'var(--ol-space-60)','64':'var(--ol-space-64)','72':'var(--ol-space-72)','80':'var(--ol-space-80)','96':'var(--ol-space-96)'};e.padding=Object.assign({},e.padding,m);e.margin=Object.assign({},e.margin,m);e.gap=Object.assign({},e.gap,m);w.tailwind.config=Object.assign({},c,{theme:Object.assign({},t,{extend:Object.assign({},e)})});})();</script><style data-ol-space>:root{--ol-space-scale:1;--ol-space-0:calc(0px*var(--ol-space-scale));--ol-space-px:calc(1px*var(--ol-space-scale));--ol-space-0_5:calc(0.125rem*var(--ol-space-scale));--ol-space-1:calc(0.25rem*var(--ol-space-scale));--ol-space-1_5:calc(0.375rem*var(--ol-space-scale));--ol-space-2:calc(0.5rem*var(--ol-space-scale));--ol-space-2_5:calc(0.625rem*var(--ol-space-scale));--ol-space-3:calc(0.75rem*var(--ol-space-scale));--ol-space-3_5:calc(0.875rem*var(--ol-space-scale));--ol-space-4:calc(1rem*var(--ol-space-scale));--ol-space-5:calc(1.25rem*var(--ol-space-scale));--ol-space-6:calc(1.5rem*var(--ol-space-scale));--ol-space-7:calc(1.75rem*var(--ol-space-scale));--ol-space-8:calc(2rem*var(--ol-space-scale));--ol-space-9:calc(2.25rem*var(--ol-space-scale));--ol-space-10:calc(2.5rem*var(--ol-space-scale));--ol-space-11:calc(2.75rem*var(--ol-space-scale));--ol-space-12:calc(3rem*var(--ol-space-scale));--ol-space-14:calc(3.5rem*var(--ol-space-scale));--ol-space-16:calc(4rem*var(--ol-space-scale));--ol-space-20:calc(5rem*var(--ol-space-scale));--ol-space-24:calc(6rem*var(--ol-space-scale));--ol-space-28:calc(7rem*var(--ol-space-scale));--ol-space-32:calc(8rem*var(--ol-space-scale));--ol-space-36:calc(9rem*var(--ol-space-scale));--ol-space-40:calc(10rem*var(--ol-space-scale));--ol-space-44:calc(11rem*var(--ol-space-scale));--ol-space-48:calc(12rem*var(--ol-space-scale));--ol-space-52:calc(13rem*var(--ol-space-scale));--ol-space-56:calc(14rem*var(--ol-space-scale));--ol-space-60:calc(15rem*var(--ol-space-scale));--ol-space-64:calc(16rem*var(--ol-space-scale));--ol-space-72:calc(18rem*var(--ol-space-scale));--ol-space-80:calc(20rem*var(--ol-space-scale));--ol-space-96:calc(24rem*var(--ol-space-scale));}</style><script data-ol-type>(function(){var w=window;w.tailwind=w.tailwind||{};var c=w.tailwind.config||{};var t=c.theme||{};var e=t.extend||{};e.fontSize=Object.assign({},e.fontSize,{'xs':['var(--ol-text-xs)','var(--ol-lh-xs)'],'sm':['var(--ol-text-sm)','var(--ol-lh-sm)'],'base':['var(--ol-text-base)','var(--ol-lh-base)'],'lg':['var(--ol-text-lg)','var(--ol-lh-lg)'],'xl':['var(--ol-text-xl)','var(--ol-lh-xl)'],'2xl':['var(--ol-text-2xl)','var(--ol-lh-2xl)'],'3xl':['var(--ol-text-3xl)','var(--ol-lh-3xl)'],'4xl':['var(--ol-text-4xl)','var(--ol-lh-4xl)'],'5xl':['var(--ol-text-5xl)','var(--ol-lh-5xl)'],'6xl':['var(--ol-text-6xl)','var(--ol-lh-6xl)'],'7xl':['var(--ol-text-7xl)','var(--ol-lh-7xl)'],'8xl':['var(--ol-text-8xl)','var(--ol-lh-8xl)'],'9xl':['var(--ol-text-9xl)','var(--ol-lh-9xl)']});w.tailwind.config=Object.assign({},c,{theme:Object.assign({},t,{extend:Object.assign({},e)})});})();</script><style data-ol-type>:root{--ol-text-scale:1;--ol-text-xs:calc(0.75rem*var(--ol-text-scale));--ol-lh-xs:calc(1rem*var(--ol-text-scale));--ol-text-sm:calc(0.875rem*var(--ol-text-scale));--ol-lh-sm:calc(1.25rem*var(--ol-text-scale));--ol-text-base:calc(1rem*var(--ol-text-scale));--ol-lh-base:calc(1.5rem*var(--ol-text-scale));--ol-text-lg:calc(1.125rem*var(--ol-text-scale));--ol-lh-lg:calc(1.75rem*var(--ol-text-scale));--ol-text-xl:calc(1.25rem*var(--ol-text-scale));--ol-lh-xl:calc(1.75rem*var(--ol-text-scale));--ol-text-2xl:calc(1.5rem*var(--ol-text-scale));--ol-lh-2xl:calc(2rem*var(--ol-text-scale));--ol-text-3xl:calc(1.875rem*var(--ol-text-scale));--ol-lh-3xl:calc(2.25rem*var(--ol-text-scale));--ol-text-4xl:calc(2.25rem*var(--ol-text-scale));--ol-lh-4xl:calc(2.5rem*var(--ol-text-scale));--ol-text-5xl:calc(3rem*var(--ol-text-scale));--ol-lh-5xl:calc(1*var(--ol-text-scale));--ol-text-6xl:calc(3.75rem*var(--ol-text-scale));--ol-lh-6xl:calc(1*var(--ol-text-scale));--ol-text-7xl:calc(4.5rem*var(--ol-text-scale));--ol-lh-7xl:calc(1*var(--ol-text-scale));--ol-text-8xl:calc(6rem*var(--ol-text-scale));--ol-lh-8xl:calc(1*var(--ol-text-scale));--ol-text-9xl:calc(8rem*var(--ol-text-scale));--ol-lh-9xl:calc(1*var(--ol-text-scale));}</style><link data-ol-font rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist:wght@400;500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Outfit:wght@400;500;600;700&amp;family=Space+Grotesk:wght@400;500;600;700&amp;family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&amp;family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&amp;family=Crimson+Pro:wght@400;500;600;700&amp;family=Playfair+Display:wght@400;500;600;700&amp;family=DM+Serif+Display&amp;family=Instrument+Serif&amp;display=swap"><style data-ol-font>:root{--ol-font-display:'var(--font-display)',sans-serif;}</style></head>
+<body class="antialiased">
+
+  <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b" style="border-color: var(--border);">
+    <div class="container mx-auto px-6 py-4">
+      <nav class="flex items-center justify-between">
+        <a href="#" class="flex items-center space-x-2" title="Caracol Home">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 16.5C14.4853 16.5 16.5 14.4853 16.5 12C16.5 9.51472 14.4853 7.5 12 7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="font-display font-semibold text-lg" style="color: var(--fg);">Caracol</span>
+        </a>
+        <div class="hidden md:flex items-center space-x-8 text-sm font-medium" style="color: var(--fg-muted);">
+          <a href="#origins" class="hover:text-black transition-colors">Origins</a>
+          <a href="#menu" class="hover:text-black transition-colors">Menu</a>
+          <a href="#visit" class="hover:text-black transition-colors">Visit</a>
+          <a href="#" class="px-4 py-2 rounded-full text-white transition-colors" style="background-color: var(--accent);">Reservar</a>
+        </div>
+        <div class="md:hidden">
+          <button type="button" class="p-2 -m-2">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            </svg>
+          </button>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="py-24 sm:py-32">
+      <div class="container mx-auto px-6 text-center">
+        <h1 class="text-5xl md:text-7xl lg:text-8xl !leading-tight tracking-tighter max-w-4xl mx-auto">Café de origen, con alma de barrio.</h1>
+        <p class="max-w-2xl mx-auto mt-6 text-lg" style="color: var(--fg-muted);">
+          In the heart of Roma Norte, Caracol is a refuge for coffee lovers. We source single-origin beans directly from fincas in Chiapas and Oaxaca, roasting in-house to bring out the unique story in every cup.
+        </p>
+        <div class="mt-10 flex justify-center gap-x-4">
+          <a href="#menu" class="px-6 py-3 rounded-full text-white font-medium" style="background-color: var(--accent);">View Menu</a>
+          <a href="#visit" class="px-6 py-3 rounded-full font-medium border" style="color: var(--fg-muted); border-color: var(--border);">Find Us</a>
+        </div>
+      </div>
+      <div class="container mx-auto px-6 mt-16">
+        <div class="aspect-[16/9] md:aspect-[21/9] w-full rounded-2xl bg-gradient-to-br from-neutral-200 to-neutral-300" style="background-color: var(--surface);">
+          <!-- Hero image placeholder -->
+        </div>
+      </div>
+    </section>
+
+    <section id="origins" class="py-24 sm:py-32" style="background-color: var(--surface);">
+      <div class="container mx-auto px-6">
+        <div class="grid md:grid-cols-2 gap-16 items-center">
+          <div>
+            <p class="font-medium" style="color: var(--accent);">NUESTRAS RAÍCES</p>
+            <h2 class="text-4xl md:text-5xl !leading-tight mt-2 tracking-tight">Direct from the Finca</h2>
+            <p class="mt-6 text-lg" style="color: var(--fg-muted);">
+              We believe great coffee begins with a great relationship. We partner directly with small-lot farmers in Mexico’s most celebrated coffee regions, ensuring fair prices and sustainable practices. Each bean is a testament to the land and the hands that harvested it.
+            </p>
+            <ul class="mt-8 space-y-4">
+              <li class="flex items-start">
+                <span class="accent-dot mt-2"></span>
+                <span><strong class="font-medium text-black">Pluma Hidalgo, Oaxaca</strong> — Notes of chocolate, almond, and citrus from high-altitude Typica varietals.</span>
+              </li>
+              <li class="flex items-start">
+                <span class="accent-dot mt-2"></span>
+                <span><strong class="font-medium text-black">Jaltenango, Chiapas</strong> — A balanced cup with hints of stone fruit and brown sugar from Bourbon and Caturra beans.</span>
+              </li>
+              <li class="flex items-start">
+                <span class="accent-dot mt-2"></span>
+                <span><strong class="font-medium text-black">Coatepec, Veracruz</strong> — Bright, floral, and complex; a showcase of the region's rich volcanic soil.</span>
+              </li>
+            </ul>
+          </div>
+          <div class="aspect-square rounded-2xl flex items-center justify-center" style="background-color: var(--bg);">
+            <svg viewBox="0 0 200 200" class="w-full h-full text-gray-300" style="color: var(--border);">
+              <path fill="currentColor" d="M100 0C44.8 0 0 44.8 0 100s44.8 100 100 100 100-44.8 100-100S155.2 0 100 0zM81.2 153.1c-2.8-1.5-5.3-3.2-7.5-5.2-1.1-1-2-2-3-3.1-4.9-5.1-7.8-11.4-8.7-18.2-1.2-8.5 2.1-16.7 8.3-22.3 2.1-1.9 4.6-3.4 7.2-4.5 3.4-1.4 7.1-2.1 10.8-2.1 3.2 0 6.4.6 9.4 1.7 8.4 3.1 14.5 10.1 16.5 18.7 1.3 5.4.6 11-2 16-1.5 3-3.6 5.6-6.2 7.7-4.4 3.6-9.8 5.6-15.5 5.6-3.2 0-6.4-.6-9.3-1.9zm39.1-39.2c2.1-4.7 2.1-9.9 0-14.7-2.7-6.2-7.8-11-14.2-13.1-6.2-2.1-12.8-1.3-18.4 2.1-4.6 2.8-8.1 7.1-9.9 12.2-2.3 6.6-.7 13.9 4.3 19.3 5.7 6.1 13.9 9.1 22.1 7.5 7.6-1.5 13.7-6.8 16.1-13.3z"></path>
+              <text x="50%" y="50%" font-family="var(--font-display)" font-size="12" fill="var(--fg-muted)" text-anchor="middle" dy=".3em">México</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <section id="menu" class="py-24 sm:py-32">
+      <div class="container mx-auto px-6">
+        <div class="text-center max-w-2xl mx-auto">
+          <p class="font-medium" style="color: var(--accent);">NUESTRO MENÚ</p>
+          <h2 class="text-4xl md:text-5xl !leading-tight mt-2 tracking-tight">Simple, Perfected</h2>
+          <p class="mt-4 text-lg" style="color: var(--fg-muted);">
+            A focused selection of espresso drinks, hand-poured methods, and house specialties, complemented by fresh pastries from local bakers.
+          </p>
+        </div>
+
+        <div class="mt-16 max-w-4xl mx-auto grid md:grid-cols-2 gap-x-12 gap-y-8">
+          <div class="fade-in-up">
+            <div class="flex justify-between items-baseline">
+              <h4 class="text-lg font-semibold">Espresso</h4>
+              <span class="flex-1 border-b border-dashed mx-3" style="border-color: var(--border);"></span>
+              <span class="menu-item-price font-medium">$55</span>
+            </div>
+            <p class="mt-1" style="color: var(--fg-muted);">Double shot, house roast.</p>
+          </div>
+          <div class="fade-in-up">
+            <div class="flex justify-between items-baseline">
+              <h4 class="text-lg font-semibold">Chemex</h4>
+              <span class="flex-1 border-b border-dashed mx-3" style="border-color: var(--border);"></span>
+              <span class="menu-item-price font-medium">$95</span>
+            </div>
+            <p class="mt-1" style="color: var(--fg-muted);">Clean, delicate brew. Serves one.</p>
+          </div>
+          <div class="fade-in-up">
+            <div class="flex justify-between items-baseline">
+              <h4 class="text-lg font-semibold">Flat White</h4>
+              <span class="flex-1 border-b border-dashed mx-3" style="border-color: var(--border);"></span>
+              <span class="menu-item-price font-medium">$75</span>
+            </div>
+            <p class="mt-1" style="color: var(--fg-muted);">Velvety microfoam, perfectly integrated.</p>
+          </div>
+          <div class="fade-in-up">
+            <div class="flex justify-between items-baseline">
+              <h4 class="text-lg font-semibold">V60 Pour-Over</h4>
+              <span class="flex-1 border-b border-dashed mx-3" style="border-color: var(--border);"></span>
+              <span class="menu-item-price font-medium">$90</span>
+            </div>
+            <p class="mt-1" style="color: var(--fg-muted);">Bright and complex. Your choice of bean.</p>
+          </div>
+          <div class="fade-in-up">
+            <div class="flex justify-between items-baseline">
+              <h4 class="text-lg font-semibold">Cold Brew</h4>
+              <span class="flex-1 border-b border-dashed mx-3" style="border-color: var(--border);"></span>
+              <span class="menu-item-price font-medium">$80</span>
+            </div>
+            <p class="mt-1" style="color: var(--fg-muted);">Slow-steeped for 18 hours. Smooth & strong.</p>
+          </div>
+          <div class="fade-in-up">
+            <div class="flex justify-between items-baseline">
+              <h4 class="text-lg font-semibold">Café de Olla Especiado</h4>
+              <span class="flex-1 border-b border-dashed mx-3" style="border-color: var(--border);"></span>
+              <span class="menu-item-price font-medium">$85</span>
+            </div>
+            <p class="mt-1" style="color: var(--fg-muted);">Piloncillo, cinnamon, and star anise.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="visit" class="py-24 sm:py-32" style="background-color: var(--surface);">
+      <div class="container mx-auto px-6">
+        <div class="grid md:grid-cols-5 gap-12">
+          <div class="md:col-span-2">
+            <p class="font-medium" style="color: var(--accent);">VISÍTANOS</p>
+            <h2 class="text-4xl md:text-5xl !leading-tight mt-2 tracking-tight">Your Daily Ritual Awaits</h2>
+            <div class="mt-8 space-y-6 text-lg">
+              <div>
+                <h4 class="font-semibold">Dirección</h4>
+                <p style="color: var(--fg-muted);">Calle Colima 123, Roma Nte.<br>Cuauhtémoc, 06700<br>Ciudad de México, CDMX</p>
+              </div>
+              <div>
+                <h4 class="font-semibold">Horario</h4>
+                <p style="color: var(--fg-muted);">Lunes – Viernes: 7:30 – 20:00<br>Sábado & Domingo: 8:00 – 20:00</p>
+              </div>
+            </div>
+          </div>
+          <div class="md:col-span-3 min-h-[300px] md:min-h-0 rounded-2xl" style="background-color: var(--bg);">
+            <div class="w-full h-full bg-cover bg-center rounded-2xl flex items-center justify-center" style="background-image: url('data:image/svg+xml,%3Csvg width=\'80\' height=\'80\' viewBox=\'0 0 80 80\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23e8e4d9\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M50 50c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c-5.523 0-10-4.477-10-10zm10 20c-11.046 0-20-8.954-20-20s8.954-20 20-20 20 8.954 20 20-8.954 20-20 20zM30 10c-5.523 0-10 4.477-10 10s4.477 10 10 10 10-4.477 10-10-4.477-10-10-10zM10 30c0-11.046 8.954-20 20-20s20 8.954 20 20-8.954 20-20 20-20-8.954-20-20z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');">
+              <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-x-2 px-5 py-3 rounded-full text-white font-medium shadow-lg" style="background-color: var(--accent);">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5">
+                  <path fill-rule="evenodd" d="m9.69 18.933.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 0 0 .281-.14c.186-.1.4-.223.654-.369.625-.36.942-.562 1.278-.817.327-.248.614-.52.876-.81.268-.295.504-.62.696-.976.187-.348.342-.717.464-1.1.125-.387.217-.803.28-1.242a5.5 5.5 0 0 0 .041-.49l.008-.148.001-.006a5.002 5.002 0 0 0-5.003-5.003 5 5 0 0 0-5 5c0 .003 0 .006.001.009l.008.147a5.835 5.835 0 0 0 .28 1.242c.122.383.277.752.464 1.1.192.356.428.682.696.976.262.29.55.562.876.81.336.255.653.457 1.278.817.254.146.468.27.654.369a5.745 5.745 0 0 0 .28.14l.019.008.006.003ZM10 11.25a2.25 2.25 0 1 0 0-4.5 2.25 2.25 0 0 0 0 4.5Z" clip-rule="evenodd" />
+                </svg>
+                Open in Maps
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t" style="border-color: var(--border);">
+    <div class="container mx-auto px-6 py-12">
+      <div class="grid md:grid-cols-4 gap-8">
+        <div class="col-span-1 md:col-span-2">
+          <a href="#" class="flex items-center space-x-2" title="Caracol Home">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M12 16.5C14.4853 16.5 16.5 14.4853 16.5 12C16.5 9.51472 14.4853 7.5 12 7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="font-display font-semibold text-lg" style="color: var(--fg);">Caracol</span>
+          </a>
+          <p class="mt-4 max-w-xs" style="color: var(--fg-muted);">
+            Specialty coffee sourced with intention, served with care in Mexico City.
+          </p>
+        </div>
+        <div>
+          <h4 class="font-semibold">Explore</h4>
+          <ul class="mt-4 space-y-2" style="color: var(--fg-muted);">
+            <li><a href="#origins" class="hover:text-black transition-colors">Origins</a></li>
+            <li><a href="#menu" class="hover:text-black transition-colors">Menu</a></li>
+            <li><a href="#visit" class="hover:text-black transition-colors">Visit</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-semibold">Connect</h4>
+          <ul class="mt-4 space-y-2" style="color: var(--fg-muted);">
+            <li><a href="#" class="hover:text-black transition-colors">Instagram</a></li>
+            <li><a href="#" class="hover:text-black transition-colors">Email Us</a></li>
+            <li><a href="#" class="hover:text-black transition-colors">WhatsApp</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="mt-12 pt-8 border-t flex justify-between items-center text-sm" style="border-color: var(--border); color: var(--fg-muted);">
+        <p>&copy; 2024 Caracol Cafetería. All rights reserved.</p>
+        <div class="flex space-x-4">
+          <a href="#" class="hover:text-black transition-colors">Privacy</a>
+          <a href="#" class="hover:text-black transition-colors">Terms</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

@@ -1,12 +1,13 @@
-// Distilled design guidance for the Chat AI editing surface (Kimi K2.6
-// via /api/templates/ai-design). Sourced from docs/claude-design-prompts.md
-// — the same briefs that produced the curated templates (Mirror, Anchor,
-// Foundry, …) with claude.ai Opus 4.7.
+// Distilled design guidance for the AI surfaces (Gemini via
+// /api/generate + /api/templates/ai-design). Sourced from
+// docs/claude-design-prompts.md — the same briefs that produced the
+// curated templates (Mirror, Anchor, Foundry, …) with claude.ai
+// Opus 4.7.
 //
 // The point: a user can type a vague brief ("make a pricing page") and
 // still get template-quality output, because the design taste lives in
-// the system prompt, not the user's input. Kimi K2.6 is a capable model
-// — it just needs the same context Opus had.
+// the system prompt, not the user's input. The chat model is capable —
+// it just needs the same context Opus had.
 //
 // AESTHETIC ALIGNMENT: this matches the curated-template look (Inter as
 // house font, marquee logo clouds, "Most popular" pricing ring, pulse-dot

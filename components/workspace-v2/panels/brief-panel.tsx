@@ -1,5 +1,5 @@
 // Brief mode panel — per-project AI context. A single textarea whose
-// contents get auto-prepended to every Chat tab prompt sent to Kimi K2.6
+// contents get auto-prepended to every Chat tab prompt sent to Gemini
 // (see `/api/templates/ai-design`). Mirrors Claude.ai's "Project
 // instructions" pattern: persistent, AI-aware context that travels across
 // chat turns instead of having to be re-typed each time.
