@@ -14,6 +14,12 @@ const ENV_NODE_URL: &str = "OPENLEN_EDGE_NODE_URL";
 const ENV_PROXY_HOSTS: &str = "OPENLEN_EDGE_PROXY_HOSTS";
 const ENV_PROXY_PATHS: &str = "OPENLEN_EDGE_PROXY_PATHS";
 const ENV_NODE_TIMEOUT_SECS: &str = "OPENLEN_EDGE_NODE_TIMEOUT_SECS";
+const ENV_DATABASE_URL: &str = "OPENLEN_EDGE_DATABASE_URL";
+const ENV_DB_POOL_MAX: &str = "OPENLEN_EDGE_DB_POOL_MAX";
+const ENV_DOMAIN_CACHE_TTL_SECS: &str = "OPENLEN_EDGE_DOMAIN_CACHE_TTL_SECS";
+const ENV_DOMAIN_NEGATIVE_TTL_SECS: &str = "OPENLEN_EDGE_DOMAIN_NEGATIVE_TTL_SECS";
+const ENV_DOMAIN_CACHE_MAX: &str = "OPENLEN_EDGE_DOMAIN_CACHE_MAX";
+const ENV_INTERNAL_API_BIND: &str = "OPENLEN_EDGE_INTERNAL_API_BIND";
 
 const DEFAULT_BIND: &str = "0.0.0.0:443";
 const DEFAULT_BIND_HTTP: &str = "0.0.0.0:80";
@@ -25,6 +31,10 @@ const DEFAULT_NODE_URL: &str = "http://127.0.0.1:3000";
 const DEFAULT_PROXY_HOSTS: &str = "openlen.com,www.openlen.com";
 const DEFAULT_PROXY_PATHS: &str = "/c/";
 const DEFAULT_NODE_TIMEOUT_SECS: u64 = 30;
+const DEFAULT_DB_POOL_MAX: u32 = 8;
+const DEFAULT_DOMAIN_CACHE_TTL_SECS: u64 = 60;
+const DEFAULT_DOMAIN_NEGATIVE_TTL_SECS: u64 = 60;
+const DEFAULT_DOMAIN_CACHE_MAX: u64 = 10_000;
 
 #[derive(Debug, Clone)]
 pub struct EdgeConfig {
@@ -38,6 +48,16 @@ pub struct EdgeConfig {
     pub proxy_hosts: Vec<String>,
     pub proxy_paths: Vec<String>,
     pub node_timeout_secs: u64,
+    /// Postgres connection string for the custom-domain lookup. `None` /
+    /// empty = run with an empty in-memory mock (custom domains never match).
+    pub database_url: Option<String>,
+    pub db_pool_max: u32,
+    pub domain_cache_ttl_secs: u64,
+    pub domain_negative_ttl_secs: u64,
+    pub domain_cache_max: u64,
+    /// Bind address for the loopback-only internal API
+    /// (`/internal/domains/lookup`). `None` = disabled.
+    pub internal_api_bind: Option<SocketAddr>,
 }
 
 fn parse_csv_lower(raw: &str) -> Vec<String> {
@@ -52,6 +72,15 @@ fn parse_csv(raw: &str) -> Vec<String> {
         .map(|s| s.trim().to_owned())
         .filter(|s| !s.is_empty())
         .collect()
+}
+
+fn parse_optional_socketaddr(env_name: &str, raw: &str) -> Result<Option<SocketAddr>> {
+    if raw.is_empty() || raw.eq_ignore_ascii_case("off") {
+        return Ok(None);
+    }
+    Ok(Some(raw.parse().with_context(|| {
+        format!("{env_name}={raw} is not a valid socket address")
+    })?))
 }
 
 impl EdgeConfig {
@@ -96,6 +125,36 @@ impl EdgeConfig {
             Err(_) => DEFAULT_NODE_TIMEOUT_SECS,
         };
 
+        let database_url = env::var(ENV_DATABASE_URL).ok().filter(|s| !s.is_empty());
+        let db_pool_max = match env::var(ENV_DB_POOL_MAX) {
+            Ok(raw) => raw
+                .parse::<u32>()
+                .with_context(|| format!("{ENV_DB_POOL_MAX}={raw} is not a positive integer"))?,
+            Err(_) => DEFAULT_DB_POOL_MAX,
+        };
+        let domain_cache_ttl_secs = match env::var(ENV_DOMAIN_CACHE_TTL_SECS) {
+            Ok(raw) => raw.parse::<u64>().with_context(|| {
+                format!("{ENV_DOMAIN_CACHE_TTL_SECS}={raw} is not a non-negative integer")
+            })?,
+            Err(_) => DEFAULT_DOMAIN_CACHE_TTL_SECS,
+        };
+        let domain_negative_ttl_secs = match env::var(ENV_DOMAIN_NEGATIVE_TTL_SECS) {
+            Ok(raw) => raw.parse::<u64>().with_context(|| {
+                format!("{ENV_DOMAIN_NEGATIVE_TTL_SECS}={raw} is not a non-negative integer")
+            })?,
+            Err(_) => DEFAULT_DOMAIN_NEGATIVE_TTL_SECS,
+        };
+        let domain_cache_max = match env::var(ENV_DOMAIN_CACHE_MAX) {
+            Ok(raw) => raw.parse::<u64>().with_context(|| {
+                format!("{ENV_DOMAIN_CACHE_MAX}={raw} is not a non-negative integer")
+            })?,
+            Err(_) => DEFAULT_DOMAIN_CACHE_MAX,
+        };
+        let internal_api_bind = match env::var(ENV_INTERNAL_API_BIND) {
+            Ok(raw) => parse_optional_socketaddr(ENV_INTERNAL_API_BIND, &raw)?,
+            Err(_) => None,
+        };
+
         Ok(Self {
             bind,
             bind_http,
@@ -107,6 +166,12 @@ impl EdgeConfig {
             proxy_hosts,
             proxy_paths,
             node_timeout_secs,
+            database_url,
+            db_pool_max,
+            domain_cache_ttl_secs,
+            domain_negative_ttl_secs,
+            domain_cache_max,
+            internal_api_bind,
         })
     }
 
@@ -127,6 +192,12 @@ pub struct EdgeConfigBuilder {
     proxy_hosts: Option<Vec<String>>,
     proxy_paths: Option<Vec<String>>,
     node_timeout_secs: Option<u64>,
+    database_url: Option<Option<String>>,
+    db_pool_max: Option<u32>,
+    domain_cache_ttl_secs: Option<u64>,
+    domain_negative_ttl_secs: Option<u64>,
+    domain_cache_max: Option<u64>,
+    internal_api_bind: Option<Option<SocketAddr>>,
 }
 
 impl EdgeConfigBuilder {
@@ -180,6 +251,36 @@ impl EdgeConfigBuilder {
         self
     }
 
+    pub fn database_url(mut self, url: Option<String>) -> Self {
+        self.database_url = Some(url);
+        self
+    }
+
+    pub fn db_pool_max(mut self, n: u32) -> Self {
+        self.db_pool_max = Some(n);
+        self
+    }
+
+    pub fn domain_cache_ttl_secs(mut self, secs: u64) -> Self {
+        self.domain_cache_ttl_secs = Some(secs);
+        self
+    }
+
+    pub fn domain_negative_ttl_secs(mut self, secs: u64) -> Self {
+        self.domain_negative_ttl_secs = Some(secs);
+        self
+    }
+
+    pub fn domain_cache_max(mut self, n: u64) -> Self {
+        self.domain_cache_max = Some(n);
+        self
+    }
+
+    pub fn internal_api_bind(mut self, addr: Option<SocketAddr>) -> Self {
+        self.internal_api_bind = Some(addr);
+        self
+    }
+
     pub fn build(self) -> Result<EdgeConfig> {
         Ok(EdgeConfig {
             bind: self
@@ -204,6 +305,16 @@ impl EdgeConfigBuilder {
                 .proxy_paths
                 .unwrap_or_else(|| parse_csv(DEFAULT_PROXY_PATHS)),
             node_timeout_secs: self.node_timeout_secs.unwrap_or(DEFAULT_NODE_TIMEOUT_SECS),
+            database_url: self.database_url.unwrap_or(None),
+            db_pool_max: self.db_pool_max.unwrap_or(DEFAULT_DB_POOL_MAX),
+            domain_cache_ttl_secs: self
+                .domain_cache_ttl_secs
+                .unwrap_or(DEFAULT_DOMAIN_CACHE_TTL_SECS),
+            domain_negative_ttl_secs: self
+                .domain_negative_ttl_secs
+                .unwrap_or(DEFAULT_DOMAIN_NEGATIVE_TTL_SECS),
+            domain_cache_max: self.domain_cache_max.unwrap_or(DEFAULT_DOMAIN_CACHE_MAX),
+            internal_api_bind: self.internal_api_bind.unwrap_or(None),
         })
     }
 }
@@ -279,6 +390,47 @@ mod tests {
     }
 
     #[test]
+    fn builder_fills_lookup_defaults() {
+        let cfg = EdgeConfig::builder()
+            .bind("127.0.0.1:0".parse().unwrap())
+            .cert_path(PathBuf::from("/tmp/cert.pem"))
+            .key_path(PathBuf::from("/tmp/key.pem"))
+            .build()
+            .unwrap();
+        assert!(cfg.database_url.is_none());
+        assert_eq!(cfg.db_pool_max, DEFAULT_DB_POOL_MAX);
+        assert_eq!(cfg.domain_cache_ttl_secs, DEFAULT_DOMAIN_CACHE_TTL_SECS);
+        assert_eq!(
+            cfg.domain_negative_ttl_secs,
+            DEFAULT_DOMAIN_NEGATIVE_TTL_SECS
+        );
+        assert_eq!(cfg.domain_cache_max, DEFAULT_DOMAIN_CACHE_MAX);
+        assert!(cfg.internal_api_bind.is_none());
+    }
+
+    #[test]
+    fn builder_accepts_explicit_lookup_settings() {
+        let cfg = EdgeConfig::builder()
+            .bind("127.0.0.1:0".parse().unwrap())
+            .cert_path(PathBuf::from("/tmp/cert.pem"))
+            .key_path(PathBuf::from("/tmp/key.pem"))
+            .database_url(Some("postgres://localhost/db".into()))
+            .db_pool_max(16)
+            .domain_cache_ttl_secs(120)
+            .domain_negative_ttl_secs(30)
+            .domain_cache_max(50_000)
+            .internal_api_bind(Some("127.0.0.1:3081".parse().unwrap()))
+            .build()
+            .unwrap();
+        assert_eq!(cfg.database_url.as_deref(), Some("postgres://localhost/db"));
+        assert_eq!(cfg.db_pool_max, 16);
+        assert_eq!(cfg.domain_cache_ttl_secs, 120);
+        assert_eq!(cfg.domain_negative_ttl_secs, 30);
+        assert_eq!(cfg.domain_cache_max, 50_000);
+        assert_eq!(cfg.internal_api_bind.unwrap().port(), 3081);
+    }
+
+    #[test]
     fn parse_csv_lower_trims_and_lowercases() {
         let v = parse_csv_lower(" Openlen.COM , www.openlen.com , ");
         assert_eq!(v, vec!["openlen.com", "www.openlen.com"]);
@@ -288,5 +440,23 @@ mod tests {
     fn parse_csv_preserves_case() {
         let v = parse_csv(" /API/ , /c/ ");
         assert_eq!(v, vec!["/API/", "/c/"]);
+    }
+
+    #[test]
+    fn parse_optional_socketaddr_off_returns_none() {
+        assert_eq!(parse_optional_socketaddr("X", "off").unwrap(), None);
+        assert_eq!(parse_optional_socketaddr("X", "OFF").unwrap(), None);
+        assert_eq!(parse_optional_socketaddr("X", "").unwrap(), None);
+    }
+
+    #[test]
+    fn parse_optional_socketaddr_parses_real_addr() {
+        let v = parse_optional_socketaddr("X", "127.0.0.1:3081").unwrap();
+        assert_eq!(v.unwrap().port(), 3081);
+    }
+
+    #[test]
+    fn parse_optional_socketaddr_rejects_garbage() {
+        assert!(parse_optional_socketaddr("X", "not-an-addr").is_err());
     }
 }
