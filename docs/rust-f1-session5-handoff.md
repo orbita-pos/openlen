@@ -1,11 +1,12 @@
 # F1 Rust HTML engine — Session 5 handoff
 
-Branch: `rust/f1-session5-streaming` (off `master`'s `4b54e87` = F1 S1+S2+S3+S4 + F2 S1+S2+S3 merged tip, **not** pushed, no PR).
+Branch: `rust/f1-session5-streaming` (off `master`'s `4b54e87` = F1 S1+S2+S3+S4 + F2 S1+S2+S3 merged tip, 4 commits, **not** pushed, no PR).
 
 ```
-<placeholder>  docs(rust): F1 session-5 handoff — Sem 9 streaming API for F3
-<placeholder>  test(rust): F1 Sem 9 stream — Rust integration suite + FFI smoke
-<placeholder>  feat(rust): F1 Sem 9 — streaming HtmlStream (tag+sanitize composite + slot-path scanner)
+1f92807  docs(rust): F1 session-5 handoff — Sem 9 streaming API shipped
+f8ef4e7  test(rust): F1 Sem 9 streaming — FFI smoke (16 cases over the napi boundary)
+4c8f9d2  test(rust): F1 Sem 9 streaming — 57 integration tests
+a02dbca  feat(rust): F1 Sem 9 streaming — HtmlStream class (composite tag+sanitize + slot-path scanner)
 ```
 
 > Worktree note. Work happened entirely in `D:\worktrees\openlen-f1-s5` (created as `git worktree add -b rust/f1-session5-streaming D:/worktrees/openlen-f1-s5 master`). Zero overlap with the parallel `D:\worktrees\openlen-f2-edge` (F2 session 4 custom domains) session — F1 S5 only touches `crates/html-engine/`. `cargo fmt --all` did re-format `crates/edge/examples/mock_node.rs` once; reverted before commit so this branch is strictly F1.
@@ -241,6 +242,8 @@ The new tests + napi class add to the cargo and Node test sets; CI will pick the
    - 4-pass sanitize consolidation — superseded for the streaming surface (S5 already runs one composite handler), still open for the **sync** sanitize path (S3).
    - Tailwind CDN bake (Sem 8.5 future session) (S4).
    - 20% reduction target recalibration — see #5 (S4).
+
+> The handoff doc itself is committed as `1f92807` with `<placeholder>` lines for the commit hashes above — the placeholders are replaced in a tiny follow-up commit (same pattern as S2/S3). When you check this file out on a clean branch you'll see the final hashes; the in-flight commit graph used placeholders to dodge the circular dependency.
 
 ## Files touched
 
