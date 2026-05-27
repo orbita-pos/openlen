@@ -3,41 +3,53 @@
 //! Re-exposes the concrete [`crate::GeminiProvider`] as a JavaScript class,
 //! with the supporting types ([`crate::types::Message`],
 //! [`crate::types::StreamRequest`], [`crate::types::StreamEvent`], etc.)
-//! marshalled as plain JS objects. The Rust side stays in `snake_case`;
-//! napi-derive auto-camelCases field names so JS sees `inputTokens`,
-//! `maxOutputTokens`, etc.
+//! marshalled as plain JS objects. napi-derive auto-camelCases field names
+//! so JS sees `inputTokens`, `maxOutputTokens`, etc.
+//!
+//! Naming policy: the napi structs in this module share their Rust names
+//! with their JS exports (e.g. `Message`, `StreamRequest`). The native Rust
+//! types from [`crate::types`] are still available under their canonical
+//! paths — this module imports them via aliases like
+//! [`NativeMessage`](crate::types::Message). napi-derive then needs no
+//! `js_name` rewrites for object structs, which (as of `napi-derive` 2.x)
+//! don't emit the `JsX = X` alias that classes get and would leave
+//! cross-references inside other structs unresolved.
+//!
+//! Stream class ([`GeminiStream`]) is defined in [`crate::napi_stream`].
 //!
 //! Type bridge cheat-sheet:
 //!
-//! | Rust                              | JS                                                                       |
-//! |-----------------------------------|--------------------------------------------------------------------------|
-//! | `crate::GeminiProvider`           | `GeminiProvider` (class)                                                 |
-//! | `crate::types::Message`           | `{ role: 'system'\|'user'\|'assistant', content: string }`                |
-//! | `crate::types::StreamRequest`     | `{ model, messages, maxOutputTokens?, temperature? }`                    |
-//! | `crate::types::StreamEvent`       | flat-tagged union — see [`JsStreamEvent`] for the discriminated shape    |
-//! | `crate::types::StopReason`        | `{ kind: 'end_turn'\|'max_tokens'\|'cancelled'\|'error', error?: string }` |
-//! | `crate::error::GatewayError`      | thrown as `Error` whose `.message` is a JSON envelope (see below)        |
+//! | Rust (this module)         | JS                                                                         |
+//! |----------------------------|----------------------------------------------------------------------------|
+//! | `GeminiProvider`           | `GeminiProvider` (class)                                                   |
+//! | `GeminiStream`             | `GeminiStream` (class)                                                     |
+//! | `Message`                  | `{ role: 'system'\|'user'\|'assistant', content: string }`                  |
+//! | `StreamRequest`            | `{ model, messages, maxOutputTokens?, temperature? }`                      |
+//! | `StreamEvent`              | flat-tagged union — see [`StreamEvent`] for the discriminated shape         |
+//! | `StopReason`               | `{ kind: 'end_turn'\|'max_tokens'\|'cancelled'\|'error', error?: string }`  |
+//! | `crate::error::GatewayError` | thrown as `Error` whose `.message` is a JSON envelope (see below)        |
 //!
 //! Error envelope: each [`crate::error::GatewayError`] variant is mapped to
 //! a [`napi::Error`] whose `reason` field is a JSON string of the shape
-//! `{"kind":"…","retryable":bool,"message":"…"}`. The TS wrapper at
-//! `lib/ai-gateway.ts` parses this envelope back into a typed
+//! `{"kind":"…","retryable":bool,"message":"…","retryAfterMs":num|null}`. The
+//! TS wrapper at `lib/ai-gateway.ts` parses this envelope back into a typed
 //! `GatewayError` so JS callers don't have to.
-//!
-//! Stream class ([`JsGeminiStream`]) is defined in [`crate::napi_stream`].
 
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 
 use crate::error::GatewayError;
 use crate::tokenizer;
-use crate::types::{Message, Role, StopReason, StreamEvent, StreamRequest};
+use crate::types::{
+    Message as NativeMessage, Role as NativeRole, StopReason as NativeStopReason,
+    StreamEvent as NativeStreamEvent, StreamRequest as NativeStreamRequest,
+};
 
 // --- Public-typed marshalling structs --------------------------------------
 
-#[napi(object, js_name = "Message")]
+#[napi(object)]
 #[derive(Debug, Clone)]
-pub struct JsMessage {
+pub struct Message {
     /// One of `"system"`, `"user"`, or `"assistant"`. Any other value is
     /// rejected with a `GatewayError`-shaped `Error` from the consuming
     /// method (`estimateInputTokens`, `stream`).
@@ -45,11 +57,11 @@ pub struct JsMessage {
     pub content: String,
 }
 
-#[napi(object, js_name = "StreamRequest")]
+#[napi(object)]
 #[derive(Debug, Clone)]
-pub struct JsStreamRequest {
+pub struct StreamRequest {
     pub model: String,
-    pub messages: Vec<JsMessage>,
+    pub messages: Vec<Message>,
     pub max_output_tokens: Option<u32>,
     /// napi-rs marshals JS `number` as `f64`; the underlying Rust type
     /// stores `f32`. Lossy down-cast happens on the boundary — the
@@ -64,24 +76,24 @@ pub struct JsStreamRequest {
 /// `StreamEvent = { type: 'start', id } | { type: 'text_delta', text } | …`
 /// so callers don't see the optionals.
 ///
-/// Emission order from [`crate::GeminiProvider::stream`]:
+/// Emission order from `GeminiProvider#stream`:
 /// `Start { id }` → 0..N `TextDelta { text }` → optional `Usage` →
 /// terminal `Done { stopReason }`.
-#[napi(object, js_name = "StreamEvent")]
+#[napi(object)]
 #[derive(Debug, Clone)]
-pub struct JsStreamEvent {
+pub struct StreamEvent {
     #[napi(js_name = "type")]
     pub event_type: String,
     pub id: Option<String>,
     pub text: Option<String>,
     pub input_tokens: Option<u32>,
     pub output_tokens: Option<u32>,
-    pub stop_reason: Option<JsStopReason>,
+    pub stop_reason: Option<StopReason>,
 }
 
-#[napi(object, js_name = "StopReason")]
+#[napi(object)]
 #[derive(Debug, Clone)]
-pub struct JsStopReason {
+pub struct StopReason {
     /// One of `"end_turn"`, `"max_tokens"`, `"cancelled"`, `"error"`.
     pub kind: String,
     /// Populated only when `kind == "error"`. Carries the upstream
@@ -92,28 +104,28 @@ pub struct JsStopReason {
 
 // --- Conversions: JS shapes → native ---------------------------------------
 
-impl TryFrom<JsMessage> for Message {
+impl TryFrom<Message> for NativeMessage {
     type Error = napi::Error;
 
-    fn try_from(m: JsMessage) -> std::result::Result<Self, Self::Error> {
+    fn try_from(m: Message) -> std::result::Result<Self, Self::Error> {
         let role = parse_role(&m.role)?;
-        Ok(Message {
+        Ok(NativeMessage {
             role,
             content: m.content,
         })
     }
 }
 
-impl TryFrom<JsStreamRequest> for StreamRequest {
+impl TryFrom<StreamRequest> for NativeStreamRequest {
     type Error = napi::Error;
 
-    fn try_from(r: JsStreamRequest) -> std::result::Result<Self, Self::Error> {
-        let messages: Vec<Message> = r
+    fn try_from(r: StreamRequest) -> std::result::Result<Self, Self::Error> {
+        let messages: Vec<NativeMessage> = r
             .messages
             .into_iter()
-            .map(Message::try_from)
+            .map(NativeMessage::try_from)
             .collect::<std::result::Result<_, _>>()?;
-        let mut req = StreamRequest::new(r.model, messages);
+        let mut req = NativeStreamRequest::new(r.model, messages);
         if let Some(n) = r.max_output_tokens {
             req = req.with_max_output_tokens(n);
         }
@@ -124,11 +136,11 @@ impl TryFrom<JsStreamRequest> for StreamRequest {
     }
 }
 
-fn parse_role(s: &str) -> Result<Role> {
+fn parse_role(s: &str) -> Result<NativeRole> {
     match s {
-        "system" => Ok(Role::System),
-        "user" => Ok(Role::User),
-        "assistant" => Ok(Role::Assistant),
+        "system" => Ok(NativeRole::System),
+        "user" => Ok(NativeRole::User),
+        "assistant" => Ok(NativeRole::Assistant),
         other => Err(napi::Error::from_reason(format!(
             "invalid role \"{other}\" (expected one of: system, user, assistant)"
         ))),
@@ -137,22 +149,22 @@ fn parse_role(s: &str) -> Result<Role> {
 
 // --- Conversions: native → JS shapes ---------------------------------------
 
-impl From<StopReason> for JsStopReason {
-    fn from(sr: StopReason) -> Self {
+impl From<NativeStopReason> for StopReason {
+    fn from(sr: NativeStopReason) -> Self {
         match sr {
-            StopReason::EndTurn => Self {
+            NativeStopReason::EndTurn => Self {
                 kind: "end_turn".to_owned(),
                 error: None,
             },
-            StopReason::MaxTokens => Self {
+            NativeStopReason::MaxTokens => Self {
                 kind: "max_tokens".to_owned(),
                 error: None,
             },
-            StopReason::Cancelled => Self {
+            NativeStopReason::Cancelled => Self {
                 kind: "cancelled".to_owned(),
                 error: None,
             },
-            StopReason::Error(e) => Self {
+            NativeStopReason::Error(e) => Self {
                 kind: "error".to_owned(),
                 error: Some(e),
             },
@@ -160,10 +172,10 @@ impl From<StopReason> for JsStopReason {
     }
 }
 
-impl From<StreamEvent> for JsStreamEvent {
-    fn from(ev: StreamEvent) -> Self {
+impl From<NativeStreamEvent> for StreamEvent {
+    fn from(ev: NativeStreamEvent) -> Self {
         match ev {
-            StreamEvent::Start { id } => Self {
+            NativeStreamEvent::Start { id } => Self {
                 event_type: "start".to_owned(),
                 id: Some(id),
                 text: None,
@@ -171,7 +183,7 @@ impl From<StreamEvent> for JsStreamEvent {
                 output_tokens: None,
                 stop_reason: None,
             },
-            StreamEvent::TextDelta { text } => Self {
+            NativeStreamEvent::TextDelta { text } => Self {
                 event_type: "text_delta".to_owned(),
                 id: None,
                 text: Some(text),
@@ -179,7 +191,7 @@ impl From<StreamEvent> for JsStreamEvent {
                 output_tokens: None,
                 stop_reason: None,
             },
-            StreamEvent::Usage {
+            NativeStreamEvent::Usage {
                 input_tokens,
                 output_tokens,
             } => Self {
@@ -190,7 +202,7 @@ impl From<StreamEvent> for JsStreamEvent {
                 output_tokens: Some(output_tokens),
                 stop_reason: None,
             },
-            StreamEvent::Done { stop_reason } => Self {
+            NativeStreamEvent::Done { stop_reason } => Self {
                 event_type: "done".to_owned(),
                 id: None,
                 text: None,
@@ -244,13 +256,13 @@ pub fn js_estimate_tokens(text: String) -> u32 {
 
 /// JS-facing wrapper around [`crate::GeminiProvider`]. Cheap to construct;
 /// holds a `reqwest::Client` internally that is reused across calls.
-#[napi(js_name = "GeminiProvider")]
-pub struct JsGeminiProvider {
+#[napi]
+pub struct GeminiProvider {
     pub(crate) inner: crate::GeminiProvider,
 }
 
 #[napi]
-impl JsGeminiProvider {
+impl GeminiProvider {
     /// Construct a provider bound to a Gemini API key. `baseUrl` is
     /// optional — defaults to `https://generativelanguage.googleapis.com`
     /// (the official upstream); override for tests pointing at a mock
@@ -268,10 +280,10 @@ impl JsGeminiProvider {
     /// across messages). Exact billing-grade counts arrive as the
     /// `usage` stream event mid-stream.
     #[napi]
-    pub fn estimate_input_tokens(&self, messages: Vec<JsMessage>) -> Result<u32> {
-        let native: Vec<Message> = messages
+    pub fn estimate_input_tokens(&self, messages: Vec<Message>) -> Result<u32> {
+        let native: Vec<NativeMessage> = messages
             .into_iter()
-            .map(Message::try_from)
+            .map(NativeMessage::try_from)
             .collect::<std::result::Result<_, _>>()?;
         Ok(self.inner.estimate_input_tokens(&native))
     }
@@ -283,9 +295,12 @@ mod tests {
 
     #[test]
     fn parse_role_recognises_all_three_lowercase_variants() {
-        assert!(matches!(parse_role("system").unwrap(), Role::System));
-        assert!(matches!(parse_role("user").unwrap(), Role::User));
-        assert!(matches!(parse_role("assistant").unwrap(), Role::Assistant));
+        assert!(matches!(parse_role("system").unwrap(), NativeRole::System));
+        assert!(matches!(parse_role("user").unwrap(), NativeRole::User));
+        assert!(matches!(
+            parse_role("assistant").unwrap(),
+            NativeRole::Assistant
+        ));
     }
 
     #[test]
@@ -301,66 +316,66 @@ mod tests {
 
     #[test]
     fn message_try_from_round_trips_role_and_content() {
-        let m = JsMessage {
+        let m = Message {
             role: "user".to_owned(),
             content: "hi there".to_owned(),
         };
-        let native: Message = m.try_into().unwrap();
-        assert_eq!(native.role, Role::User);
+        let native: NativeMessage = m.try_into().unwrap();
+        assert_eq!(native.role, NativeRole::User);
         assert_eq!(native.content, "hi there");
     }
 
     #[test]
     fn stream_request_try_from_carries_all_optional_fields() {
-        let r = JsStreamRequest {
+        let r = StreamRequest {
             model: "gemini-2.5-flash".to_owned(),
-            messages: vec![JsMessage {
+            messages: vec![Message {
                 role: "system".to_owned(),
                 content: "be brief".to_owned(),
             }],
             max_output_tokens: Some(256),
             temperature: Some(0.2),
         };
-        let native: StreamRequest = r.try_into().unwrap();
+        let native: NativeStreamRequest = r.try_into().unwrap();
         assert_eq!(native.model, "gemini-2.5-flash");
         assert_eq!(native.max_output_tokens, Some(256));
         assert!((native.temperature.unwrap() - 0.2).abs() < 1e-6);
         assert_eq!(native.messages.len(), 1);
-        assert_eq!(native.messages[0].role, Role::System);
+        assert_eq!(native.messages[0].role, NativeRole::System);
     }
 
     #[test]
     fn stream_request_try_from_propagates_role_error() {
-        let r = JsStreamRequest {
+        let r = StreamRequest {
             model: "gemini-2.5-flash".to_owned(),
-            messages: vec![JsMessage {
+            messages: vec![Message {
                 role: "assistant_typo".to_owned(),
                 content: "hi".to_owned(),
             }],
             max_output_tokens: None,
             temperature: None,
         };
-        let err = StreamRequest::try_from(r).unwrap_err();
+        let err = NativeStreamRequest::try_from(r).unwrap_err();
         assert!(err.to_string().contains("assistant_typo"));
     }
 
     #[test]
     fn stop_reason_end_turn_into_js_drops_error() {
-        let js: JsStopReason = StopReason::EndTurn.into();
+        let js: StopReason = NativeStopReason::EndTurn.into();
         assert_eq!(js.kind, "end_turn");
         assert!(js.error.is_none());
     }
 
     #[test]
     fn stop_reason_error_into_js_carries_error_string() {
-        let js: JsStopReason = StopReason::Error("safety: blocked".to_owned()).into();
+        let js: StopReason = NativeStopReason::Error("safety: blocked".to_owned()).into();
         assert_eq!(js.kind, "error");
         assert_eq!(js.error.as_deref(), Some("safety: blocked"));
     }
 
     #[test]
     fn stream_event_start_into_js_has_only_id_field() {
-        let js: JsStreamEvent = StreamEvent::Start { id: "abc".into() }.into();
+        let js: StreamEvent = NativeStreamEvent::Start { id: "abc".into() }.into();
         assert_eq!(js.event_type, "start");
         assert_eq!(js.id.as_deref(), Some("abc"));
         assert!(js.text.is_none());
@@ -371,7 +386,7 @@ mod tests {
 
     #[test]
     fn stream_event_text_delta_into_js_has_only_text_field() {
-        let js: JsStreamEvent = StreamEvent::TextDelta {
+        let js: StreamEvent = NativeStreamEvent::TextDelta {
             text: "Hello".into(),
         }
         .into();
@@ -382,7 +397,7 @@ mod tests {
 
     #[test]
     fn stream_event_usage_into_js_carries_both_token_counts() {
-        let js: JsStreamEvent = StreamEvent::Usage {
+        let js: StreamEvent = NativeStreamEvent::Usage {
             input_tokens: 12,
             output_tokens: 34,
         }
@@ -394,8 +409,8 @@ mod tests {
 
     #[test]
     fn stream_event_done_into_js_wraps_stop_reason() {
-        let js: JsStreamEvent = StreamEvent::Done {
-            stop_reason: StopReason::MaxTokens,
+        let js: StreamEvent = NativeStreamEvent::Done {
+            stop_reason: NativeStopReason::MaxTokens,
         }
         .into();
         assert_eq!(js.event_type, "done");
