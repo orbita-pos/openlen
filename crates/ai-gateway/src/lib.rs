@@ -21,7 +21,9 @@
 //! - `lib/credits.ts` hook-up + `/api/generate` cutover — F3 S3-S4.
 
 pub mod error;
+pub mod tokenizer;
 pub mod types;
 
 pub use error::GatewayError;
+pub use tokenizer::estimate_tokens;
 pub use types::{Message, Role, StopReason, StreamEvent, StreamRequest, Usage};
