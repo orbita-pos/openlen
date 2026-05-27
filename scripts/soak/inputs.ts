@@ -6,7 +6,7 @@
 //   - db         — N rows from projectVersions.html (real user data; only when
 //                  DATABASE_URL is set, otherwise [] with a warning).
 //   - adversarial — 13 hand-crafted edge cases that probe the gates + the
-//                  serializer drift between cheerio and lol-html.
+//                  serializer drift between the legacy TS parser and lol-html.
 //
 // See docs/rust-f1-soak-runbook.md for how the soak run consumes these.
 

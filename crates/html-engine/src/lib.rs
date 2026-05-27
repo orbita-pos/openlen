@@ -8,6 +8,7 @@ pub mod minify;
 pub mod normalize;
 pub mod ops;
 pub mod parser;
+pub mod publish;
 pub mod sanitize;
 pub mod stream;
 
@@ -225,4 +226,79 @@ pub fn build_scoped_view(tagged_html: String, pinned_op_id: String) -> Option<Js
         outline: v.outline,
         pin_is_container: v.pin_is_container,
     })
+}
+
+// ─── publish-time helpers (F1.5) ──────────────────────────────────────────────
+
+#[napi(object, js_name = "ExtractedLogo")]
+pub struct JsExtractedLogo {
+    pub href: String,
+    pub is_data_uri: bool,
+}
+
+#[napi]
+pub fn extract_logo(html: String) -> Option<JsExtractedLogo> {
+    publish::extract_logo(&html).map(|l| JsExtractedLogo {
+        href: l.href,
+        is_data_uri: l.is_data_uri,
+    })
+}
+
+#[napi]
+pub fn inject_logo(html: String, logo_url: String) -> String {
+    publish::inject_logo(&html, &logo_url)
+}
+
+#[napi(object, js_name = "UnsplashCredit")]
+pub struct JsUnsplashCredit {
+    pub author: String,
+    pub author_url: String,
+}
+
+#[napi(object, js_name = "ConsolidationResult")]
+pub struct JsConsolidationResult {
+    pub html: String,
+    pub credits: Vec<JsUnsplashCredit>,
+    pub anonymous_unsplash_count: u32,
+}
+
+#[napi]
+pub fn consolidate_unsplash_credits(html: String) -> JsConsolidationResult {
+    let r = publish::consolidate_unsplash_credits(&html);
+    JsConsolidationResult {
+        html: r.html,
+        credits: r
+            .credits
+            .into_iter()
+            .map(|c| JsUnsplashCredit {
+                author: c.author,
+                author_url: c.author_url,
+            })
+            .collect(),
+        anonymous_unsplash_count: r.anonymous_unsplash_count,
+    }
+}
+
+#[napi(object, js_name = "WireFormConfig")]
+pub struct JsWireFormConfig {
+    pub index: u32,
+    pub success_message: Option<String>,
+    pub redirect_url: Option<String>,
+}
+
+#[napi]
+pub fn wire_published_forms(
+    html: String,
+    action: String,
+    configs: Vec<JsWireFormConfig>,
+) -> String {
+    let native_configs: Vec<publish::FormConfig> = configs
+        .into_iter()
+        .map(|c| publish::FormConfig {
+            index: c.index,
+            success_message: c.success_message,
+            redirect_url: c.redirect_url,
+        })
+        .collect();
+    publish::wire_published_forms(&html, &action, &native_configs)
 }
