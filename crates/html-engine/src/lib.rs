@@ -8,6 +8,7 @@ pub mod minify;
 pub mod normalize;
 pub mod ops;
 pub mod parser;
+pub mod publish;
 pub mod sanitize;
 pub mod stream;
 
@@ -224,5 +225,21 @@ pub fn build_scoped_view(tagged_html: String, pinned_op_id: String) -> Option<Js
         container_op_id: v.container_op_id,
         outline: v.outline,
         pin_is_container: v.pin_is_container,
+    })
+}
+
+// ─── publish-time helpers (F1.5) ──────────────────────────────────────────────
+
+#[napi(object, js_name = "ExtractedLogo")]
+pub struct JsExtractedLogo {
+    pub href: String,
+    pub is_data_uri: bool,
+}
+
+#[napi]
+pub fn extract_logo(html: String) -> Option<JsExtractedLogo> {
+    publish::extract_logo(&html).map(|l| JsExtractedLogo {
+        href: l.href,
+        is_data_uri: l.is_data_uri,
     })
 }
