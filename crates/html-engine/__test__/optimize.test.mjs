@@ -81,15 +81,18 @@ test("counter.html starter: reduction + idempotence", () => {
   assert.equal(r2.html, r1.html);
 });
 
-test("manuscript.html starter: reduction (≥12%, denser) + idempotence", () => {
+test("manuscript.html starter: reduction (≥11%, denser) + idempotence", () => {
   const src = starter("manuscript.html");
   const r1 = optimizeForPublish(src);
   assert.deepEqual(r1.errors, []);
   assert.ok(r1.html != null);
   const pct = (1 - r1.html.length / src.length) * 100;
   // manuscript has the lowest whitespace by raw byte count; threshold
-  // is correspondingly lower than counter/mirror.
-  assert.ok(pct >= 12, `manuscript reduction ${pct.toFixed(1)}% below 12%`);
+  // is correspondingly lower than counter/mirror. Threshold recalibrated
+  // from 12.0% to 11.0% mirroring c1a7494 (the Rust-test twin), after the
+  // S4 .gitattributes LF pin dropped the source from 38 091 → 37 576 bytes
+  // while minify output stayed at 33 113.
+  assert.ok(pct >= 11, `manuscript reduction ${pct.toFixed(1)}% below 11%`);
   const r2 = optimizeForPublish(r1.html);
   assert.equal(r2.html, r1.html);
 });
