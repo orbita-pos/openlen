@@ -8,11 +8,11 @@ import {
   debitCredits,
   estimateCredits,
   creditsForUsage,
-  type TokenUsage,
 } from "@/lib/credits";
 import { DESIGN_GUIDANCE } from "@/lib/design-guidance";
-import { resolveAIProvider } from "@/lib/ai-provider";
+import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { detectSlotPath } from "@/lib/html-engine";
+import { GeminiProvider, type Message } from "@/lib/ai-gateway";
 import {
   applyOps,
   buildScopedView,
@@ -27,24 +27,30 @@ import { normalizeBornCanonical } from "@/lib/normalize";
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/templates/ai-design — conversational AI page redesign.
 //
-// Body: { projectId, currentHtml, prompt, history? }
+// Body: { projectId, currentHtml, prompt, history?, model?, scope?, attachedImage? }
 //
-// Streams Server-Sent Events as Kimi K2.6 reasons + rewrites the page:
-//   - reasoning_chunk { text }   — append-only, one per upstream token-ish
+// Streams Server-Sent Events as Gemini reasons + rewrites the page:
+//   - reasoning_chunk { text }   — append-only, the model's design notes
 //   - html_chunk      { text }   — append-only, after the ---HTML--- marker
-//   - done            { reasoning, html, updatedAt }  — persists HTML to DB
+//   - done            { reasoning, html, updatedAt, mode, appliedOpCount }
 //   - error           { message }
 //
 // The system prompt instructs the model to first write 1-3 sentences of
-// design reasoning, then a literal `---HTML---` marker on its own line, then
-// the full new HTML document. We split on the marker as bytes arrive so the
-// client can update reasoning text and iframe srcDoc independently.
+// design reasoning, then a literal `---HTML---` marker on its own line,
+// then either an <edits> ops block (Mode A) or a full HTML document
+// (Mode B). We split on the marker as bytes arrive so the client can
+// update reasoning text and iframe srcDoc independently.
+//
+// Provider: Gemini via @openlen/ai-gateway (F3 cutover, 2026-05-27).
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const runtime = "nodejs";
 
 const ENCODER = new TextEncoder();
 const MARKER = "---HTML---";
+// Hard upper bound on a single Gemini chat-edit turn. Real edits can take
+// ~3 min on dense pages; this only catches a wedged stream, not a slow one.
+const STREAM_TIMEOUT_MS = 360_000;
 
 const SYSTEM_PROMPT = `You are a senior product designer with the eye of Linear, Vercel, Stripe, and Resend. You design polished, opinionated landing pages — modern typography, generous whitespace, subtle motion, hairline borders, real copy that says specific things about real fictional products.
 
@@ -153,7 +159,7 @@ interface ScopeBody {
   hint?: string;
   /** CSS-selector breadcrumb from the iframe's section-select script.
    *  When set and it resolves to an element in the tagged document, the
-   *  request becomes a hard-pin (Kimi must anchor on that op-id) instead
+   *  request becomes a hard-pin (Gemini must anchor on that op-id) instead
    *  of a soft text-hint. */
   path?: string;
 }
@@ -173,9 +179,9 @@ interface AttachedImageBody {
 // When a scopedView is provided (pin resolved AND we successfully sliced
 // the enclosing semantic container), the message ships ONLY that slice
 // plus a compact outline of the doc's other top-level sections. Full
-// taggedHtml is omitted — that's the whole point: a long editorial
-// template easily blows past Kimi K2.6's 262K-token context if shipped in
-// full every turn, even when the user only wants to touch one section.
+// taggedHtml is omitted — a long editorial template easily blows past the
+// model's context if shipped in full every turn, even when the user only
+// wants to touch one section.
 function buildUserMessage(args: {
   briefBlock: string;
   taggedHtml: string;
@@ -231,9 +237,7 @@ ${args.prompt}`;
 
 function stripMarkdownFences(s: string): string {
   let out = s.trim();
-  // Leading ```html or ``` on its own line
   out = out.replace(/^```(?:html|xml)?[\t ]*\r?\n?/i, "");
-  // Trailing ``` on its own line
   out = out.replace(/\r?\n?[\t ]*```\s*$/i, "");
   return out.trim();
 }
@@ -243,12 +247,12 @@ interface AiDesignBody {
   currentHtml?: string;
   prompt?: string;
   history?: HistoryTurn[];
-  /** "kimi" (default) or "gemini" — the model the Chat panel picked. */
+  /** "gemini-pro" (default) or "gemini-flash" — the model the Chat panel picked. */
   model?: string;
   /** When set, the user has scoped this turn to a single element of the
-   *  current HTML. Kimi is instructed to modify ONLY that element. */
+   *  current HTML. The model is instructed to modify ONLY that element. */
   scope?: ScopeBody;
-  /** When set, the user has attached an image to insert. Kimi receives
+  /** When set, the user has attached an image to insert. The model receives
    *  the URL + alt and is instructed to place it per the user's prompt
    *  (right side, background, hero, etc.) or by inference if unspecified. */
   attachedImage?: AttachedImageBody;
@@ -363,17 +367,16 @@ export async function POST(req: Request): Promise<Response> {
   const existing = rows[0];
   if (!existing) return errorJson(404, "project not found");
 
-  // Model choice — the Chat panel picks Kimi (Together) or Gemini; both
-  // speak the OpenAI-compatible streaming API (see lib/ai-provider).
-  const PROVIDER = resolveAIProvider(body.model);
+  const aiModel: AIModel = body.model === "gemini-flash" ? "gemini-flash" : "gemini-pro";
+  const PROVIDER = resolveAIProvider(aiModel);
   if (!PROVIDER.key) {
     return errorJson(500, `${PROVIDER.label} API key missing`);
   }
 
   // Project Brief — persistent user-controlled context from the Brief sidebar
-  // tab. Prepended to the turn's user message so Kimi sees it as part of the
-  // current request, not buried in a previous turn. Trimmed at the source by
-  // setProjectUserBrief (4000-char cap) so we don't have to worry here.
+  // tab. Prepended to the turn's user message so the model sees it as part of
+  // the current request, not buried in a previous turn. Trimmed at the source
+  // by setProjectUserBrief (4000-char cap) so we don't have to worry here.
   const userBrief = (existing.userBrief ?? "").trim();
   const briefBlock = userBrief
     ? `PROJECT BRIEF (persistent — applies to every request):\n${userBrief}\n\n`
@@ -389,10 +392,10 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   // Hard-pin: if the client sent a path AND it resolves to an element in
-  // the tagged document, Kimi gets a precise data-op-id target. On any
-  // failure (missing path, malformed selector, element not found), we
-  // degrade silently to the textual hint — the request still works,
-  // just with the old soft-hint behavior.
+  // the tagged document, the model gets a precise data-op-id target. On
+  // any failure (missing path, malformed selector, element not found), we
+  // degrade silently to the textual hint — the request still works, just
+  // with the old soft-hint behavior.
   let scopePin: { opId: string; hint: string } | null = null;
   if (scopePath && scopeHint) {
     const opId = resolveOpIdByPath(taggedHtml, scopePath);
@@ -402,10 +405,10 @@ export async function POST(req: Request): Promise<Response> {
   // When the pin resolved, slice the doc to just the pin's enclosing
   // semantic container + an outline of the rest. This is the fix for
   // 400-too-large errors on long editorial templates: a 200KB doc would
-  // blow Kimi K2.6's 262K-token context, but the same request scoped to
-  // one section ships in <5KB. We still tag the full doc (above) and
-  // apply ops against it, so the model can still reference outline op-ids
-  // for cross-section edits.
+  // blow the context, but the same request scoped to one section ships
+  // in <5KB. We still tag the full doc (above) and apply ops against it,
+  // so the model can still reference outline op-ids for cross-section
+  // edits.
   let scopedView: ScopedView | null = null;
   if (scopePin) {
     scopedView = buildScopedView(taggedHtml, scopePin.opId);
@@ -421,12 +424,12 @@ export async function POST(req: Request): Promise<Response> {
     attachedImage,
   });
 
-  // Pre-flight size guard. Kimi K2.6 has a 262_144-token context. Together
-  // bills + rejects per-call, so a 434K-token request comes back as a flat
-  // 400. Be conservative: ~3.5 chars per token on tag-dense HTML, cap at
-  // 240K tokens (leaves ~22K for system prompt + response headroom). When
-  // we exceed, surface a UI-actionable error pointing at Select instead of
-  // letting Together's opaque "input too long" leak through.
+  // Pre-flight size guard. Gemini 2.5 Pro has a 1M-token context but a
+  // single chat-edit turn against a 200KB tagged doc is wasteful. Be
+  // conservative: ~3.5 chars per token on tag-dense HTML, cap at 240K
+  // tokens (the previous Kimi cap; keeps responses snappy and within
+  // Gemini's per-call billing sweet spot). When we exceed, surface a
+  // UI-actionable error pointing at Select.
   const SYSTEM_TOKEN_BUDGET = 4_000;
   const MAX_PROMPT_TOKENS = 240_000;
   const estimatedTokens =
@@ -449,7 +452,7 @@ export async function POST(req: Request): Promise<Response> {
     )}K tokens${scopedView ? " (scoped)" : ""}${attachedImage ? " +image" : ""}`,
   );
 
-  const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+  const messages: Message[] = [
     { role: "system", content: SYSTEM_PROMPT },
     ...history,
     {
@@ -458,7 +461,9 @@ export async function POST(req: Request): Promise<Response> {
     },
   ];
 
-  const stream = new ReadableStream<Uint8Array>({
+  const upstreamAbort = new AbortController();
+
+  const sse = new ReadableStream<Uint8Array>({
     async start(controller) {
       let closed = false;
       const emit = (event: string, data: unknown) => {
@@ -474,6 +479,10 @@ export async function POST(req: Request): Promise<Response> {
       const closeStream = () => {
         if (closed) return;
         closed = true;
+        if (timeoutHandle) {
+          clearTimeout(timeoutHandle);
+          timeoutHandle = null;
+        }
         try {
           controller.close();
         } catch {
@@ -529,6 +538,13 @@ export async function POST(req: Request): Promise<Response> {
         }
       };
 
+      // Hard ceiling — abort a genuinely stalled upstream. Set well above
+      // a normal slow run (a real chat edit can take ~3 min) so it only
+      // catches true hangs.
+      let timeoutHandle: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+        upstreamAbort.abort();
+      }, STREAM_TIMEOUT_MS);
+
       try {
         // Credit gate — chat edits debit credits, metered + charged after
         // the edit is applied + saved (see below).
@@ -542,99 +558,71 @@ export async function POST(req: Request): Promise<Response> {
           return;
         }
 
-        const upstream = await fetch(
-          PROVIDER.url,
+        const provider = new GeminiProvider(PROVIDER.key as string);
+        const events = provider.stream(
           {
-            method: "POST",
-            headers: {
-              "content-type": "application/json",
-              authorization: `Bearer ${PROVIDER.key}`,
-            },
-            body: JSON.stringify({
-              model: PROVIDER.model,
-              messages,
-              temperature: 0.8,
-              // Structural rebuilds (add nav/footer/sections) on dense
-              // editorial templates regularly exceed 32K. 64K is well
-              // within Kimi K2.6's per-response cap and keeps the
-              // truncation edge case rare without making every easy
-              // request slow. Paired with the OUTPUT EFFICIENCY block
-              // in the system prompt that discourages bloat.
-              max_tokens: 65_536,
-              stream: true,
-              stream_options: { include_usage: true },
-            }),
-            // Hard ceiling — abort a genuinely stalled upstream. Set well
-            // above a normal slow run (a real chat edit can take ~3 min) so
-            // it only catches true hangs, not slow-but-working responses.
-            signal: AbortSignal.timeout(360_000),
+            model: PROVIDER.model,
+            messages,
+            // Structural rebuilds on dense editorial templates regularly
+            // exceed 32K. 64K is well within Gemini 2.5 Pro's per-response
+            // cap and keeps the truncation edge case rare without making
+            // every easy request slow. Paired with the OUTPUT EFFICIENCY
+            // block in the system prompt that discourages bloat.
+            maxOutputTokens: 65_536,
+            temperature: 0.8,
           },
+          { signal: upstreamAbort.signal },
         );
 
-        if (!upstream.ok || !upstream.body) {
-          const text = await upstream.text().catch(() => "");
+        let finishReason:
+          | "end_turn"
+          | "max_tokens"
+          | "cancelled"
+          | "error"
+          | null = null;
+        let usage: { inputTokens: number; outputTokens: number } | null = null;
+        let providerError: string | null = null;
+
+        try {
+          for await (const event of events) {
+            if (event.type === "text_delta") {
+              handleDelta(event.text);
+            } else if (event.type === "usage") {
+              usage = {
+                inputTokens: event.inputTokens,
+                outputTokens: event.outputTokens,
+              };
+            } else if (event.type === "done") {
+              finishReason = event.stopReason.kind;
+              if (event.stopReason.kind === "error") {
+                providerError = event.stopReason.error;
+              }
+              break;
+            }
+          }
+        } catch (loopErr) {
+          const msg =
+            loopErr instanceof Error ? loopErr.message : String(loopErr);
           emit("error", {
-            message: `${PROVIDER.label} API ${upstream.status}: ${text.slice(0, 200)}`,
+            message: upstreamAbort.signal.aborted
+              ? "The model took too long (over 6 minutes) and was stopped. Try a smaller / more scoped change (🎯 Select), or try again."
+              : `${PROVIDER.label} stream failed: ${msg}`,
           });
           closeStream();
           return;
         }
 
-        const reader = upstream.body.getReader();
-        const decoder = new TextDecoder();
-        let sseBuf = "";
-        let upstreamDone = false;
-        // Together emits `finish_reason: "length"` on the final chunk when
-        // it hit max_tokens — Kimi K2.6 has a per-response cap that's
-        // lower than what we ask for. Surface this distinctly so the
-        // error message can tell the user it was a hard cap, not bad
-        // HTML, and steer them to use Select for structural changes.
-        let finishReason: string | null = null;
-        let usage: TokenUsage | null = null;
-
-        while (!upstreamDone) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          sseBuf += decoder.decode(value, { stream: true });
-          let nl: number;
-          while ((nl = sseBuf.indexOf("\n\n")) >= 0) {
-            const block = sseBuf.slice(0, nl);
-            sseBuf = sseBuf.slice(nl + 2);
-            for (const line of block.split("\n")) {
-              if (!line.startsWith("data: ")) continue;
-              const payload = line.slice(6).trim();
-              if (payload === "[DONE]") {
-                upstreamDone = true;
-                break;
-              }
-              try {
-                const parsed = JSON.parse(payload) as {
-                  choices?: Array<{
-                    delta?: { content?: string };
-                    finish_reason?: string | null;
-                  }>;
-                  usage?: TokenUsage | null;
-                };
-                if (parsed.usage) usage = parsed.usage;
-                const choice = parsed.choices?.[0];
-                if (typeof choice?.finish_reason === "string") {
-                  finishReason = choice.finish_reason;
-                }
-                const content = choice?.delta?.content;
-                if (typeof content === "string" && content.length > 0) {
-                  handleDelta(content);
-                }
-              } catch {
-                /* skip malformed line */
-              }
-            }
-            if (upstreamDone) break;
-          }
+        if (providerError) {
+          emit("error", {
+            message: `${PROVIDER.label}: ${providerError}`,
+          });
+          closeStream();
+          return;
         }
 
         if (mode === "reasoning") {
-          // We never crossed the ---HTML--- marker. Either Kimi forgot to
-          // emit it, or the response was so short / chatty it didn't get
+          // We never crossed the ---HTML--- marker. Either the model forgot
+          // to emit it, or the response was so short / chatty it didn't get
           // there. Distinct from truncation mid-HTML.
           flushReasoning(true);
           emit("error", {
@@ -674,7 +662,7 @@ export async function POST(req: Request): Promise<Response> {
           if (ops.length === 0) {
             emit("error", {
               message:
-                "Empty <edits> block — Kimi didn't emit any operations. Try again.",
+                "Empty <edits> block — the model didn't emit any operations. Try again.",
             });
             closeStream();
             return;
@@ -685,7 +673,7 @@ export async function POST(req: Request): Promise<Response> {
           const opsCap = scopedView ? 16 : 8;
           if (ops.length > opsCap) {
             emit("error", {
-              message: `Kimi emitted ${ops.length} ops but the cap is ${opsCap}. Break the request into multiple smaller chats.`,
+              message: `Model emitted ${ops.length} ops but the cap is ${opsCap}. Break the request into multiple smaller chats.`,
             });
             closeStream();
             return;
@@ -711,19 +699,19 @@ export async function POST(req: Request): Promise<Response> {
             return;
           }
         } else {
-          // Mode B — full rewrite. Defensive: strip any data-op-id Kimi
-          // might have re-emitted into the output even though the prompt
-          // told it not to.
+          // Mode B — full rewrite. Defensive: strip any data-op-id the
+          // model might have re-emitted into the output even though the
+          // prompt told it not to.
           outputMode = "rewrite";
-          // Scoped requests must NEVER produce a Mode B response — Kimi
-          // only saw a slice of the doc, so a "full rewrite" from that
-          // context would replace the entire page with what's actually
-          // just one section. The prompt forbids it; if we get one anyway,
-          // bail rather than truncate the user's page.
+          // Scoped requests must NEVER produce a Mode B response — the
+          // model only saw a slice of the doc, so a "full rewrite" from
+          // that context would replace the entire page with what's
+          // actually just one section. The prompt forbids it; if we get
+          // one anyway, bail rather than truncate the user's page.
           if (scopedView) {
             emit("error", {
               message:
-                "Kimi emitted a full rewrite from a scoped view — that would replace the whole page with just one section. Try again, or clear the 🎯 Select to allow a full rewrite.",
+                "Model emitted a full rewrite from a scoped view — that would replace the whole page with just one section. Try again, or clear the 🎯 Select to allow a full rewrite.",
             });
             closeStream();
             return;
@@ -732,7 +720,7 @@ export async function POST(req: Request): Promise<Response> {
           if (trimmedHtml.length < 1000) {
             emit("error", {
               message:
-                "HTML came back too short to be a real page — Kimi probably truncated. Try a smaller change or chat again.",
+                "HTML came back too short to be a real page — the model probably truncated. Try a smaller change or chat again.",
             });
             closeStream();
             return;
@@ -746,9 +734,9 @@ export async function POST(req: Request): Promise<Response> {
             return;
           }
           if (!/<\/html>\s*$/i.test(trimmedHtml)) {
-            const wasLengthCap = finishReason === "length";
+            const wasLengthCap = finishReason === "max_tokens";
             const message = wasLengthCap
-              ? "Response hit Kimi's per-turn output cap before closing </html>. Kimi should have picked Mode A (ops) for this — try again, or click 🎯 Select to focus the next attempt."
+              ? "Response hit the per-turn output cap before closing </html>. The model should have picked Mode A (ops) for this — try again, or click 🎯 Select to focus the next attempt."
               : "Response ended without closing </html>. Try again.";
             emit("error", { message });
             closeStream();
@@ -764,8 +752,9 @@ export async function POST(req: Request): Promise<Response> {
         }
 
         // Born-canonical: a Mode B rewrite — or ops that hit the token
-        // blocks — can drop the data-ol-* contract. Re-run the chain so the
-        // page stays themeable. Idempotent: a no-op when the markers survived.
+        // blocks — can drop the data-ol-* contract. Re-run the chain so
+        // the page stays themeable. Idempotent: a no-op when the markers
+        // survived.
         trimmedHtml = normalizeBornCanonical(trimmedHtml);
 
         const reasoning = accumulatedReasoning.trim();
@@ -794,8 +783,8 @@ export async function POST(req: Request): Promise<Response> {
 
         // Snapshot the post-chat state into the version timeline so the
         // user can restore later. Failures here don't break the stream —
-        // we still apply the HTML and emit done. The label tags the
-        // mode + op count explicitly so the timeline reads cleanly.
+        // we still apply the HTML and emit done. The label tags the mode
+        // + op count explicitly so the timeline reads cleanly.
         const versionLabel =
           outputMode === "ops"
             ? `Ops (${appliedOpCount}): ${prompt.slice(0, 70)}${prompt.length > 70 ? "…" : ""}`
@@ -810,24 +799,19 @@ export async function POST(req: Request): Promise<Response> {
           console.error("[ai-design] version snapshot failed", err);
         });
 
-        // Debit credits — billed from the real token usage Together reports
-        // (stream_options.include_usage). Falls back to a char estimate only
-        // if that usage chunk never arrived.
-        const credits =
-          usage?.prompt_tokens != null && usage.completion_tokens != null
-            ? creditsForUsage(
-                usage.prompt_tokens,
-                usage.completion_tokens,
-                PROVIDER.rate,
-              )
-            : estimateCredits(
-                SYSTEM_PROMPT.length + userMessageContent.length,
-                accumulatedReasoning.length + accumulatedHtml.length,
-                PROVIDER.rate,
-              );
+        // Debit credits — billed from the real token usage the provider
+        // reports. Falls back to a char estimate only if the usage event
+        // never arrived (rare; Gemini emits it on every stream).
+        const credits = usage
+          ? creditsForUsage(usage.inputTokens, usage.outputTokens, PROVIDER.rate)
+          : estimateCredits(
+              SYSTEM_PROMPT.length + userMessageContent.length,
+              accumulatedReasoning.length + accumulatedHtml.length,
+              PROVIDER.rate,
+            );
         // eslint-disable-next-line no-console
         console.log(
-          `[ai-design] tokens — prompt: ${usage?.prompt_tokens ?? "?"}, completion: ${usage?.completion_tokens ?? "?"} → ${credits} credits`,
+          `[ai-design] tokens — prompt: ${usage?.inputTokens ?? "?"}, output: ${usage?.outputTokens ?? "?"} → ${credits} credits`,
         );
         await debitCredits(userId, credits);
 
@@ -842,23 +826,18 @@ export async function POST(req: Request): Promise<Response> {
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error("[ai-design] stream failed", err);
-        const timedOut =
-          !!err &&
-          typeof err === "object" &&
-          (err as { name?: unknown }).name === "TimeoutError";
         emit("error", {
-          message: timedOut
-            ? "The model took too long (over 6 minutes) and was stopped. Try a smaller / more scoped change (🎯 Select), or try again."
-            : err instanceof Error
-              ? err.message
-              : "Unknown error",
+          message: err instanceof Error ? err.message : "Unknown error",
         });
         closeStream();
       }
     },
+    cancel() {
+      upstreamAbort.abort();
+    },
   });
 
-  return new Response(stream, {
+  return new Response(sse, {
     headers: {
       "content-type": "text/event-stream",
       "cache-control": "no-cache, no-transform",
