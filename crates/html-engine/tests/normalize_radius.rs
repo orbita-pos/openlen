@@ -1,7 +1,7 @@
-// Byte-equal + idempotence tests for normalize::radius — the contract that
-// ties the Rust port to lib/normalize-radius.ts. Fixtures are produced by
-// `__test__/gen-fixtures.ts`; regenerate via `npx tsx __test__/gen-fixtures.ts`
-// whenever the TS reference changes.
+// Byte-equal + idempotence tests for normalize::radius — frozen fixtures
+// under `tests/fixtures/{radius,space,type,font,accent,color,modes,chain}/`
+// were generated from the legacy TS chain prior to its deletion in F1 S9
+// and now serve as the static contract for the Rust port.
 
 use std::fs;
 use std::path::{Path, PathBuf};
