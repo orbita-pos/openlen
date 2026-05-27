@@ -128,7 +128,10 @@ fn reduction_counter() {
 
 #[test]
 fn reduction_manuscript() {
-    assert_reduction("manuscript.html", 12.0);
+    // Threshold recalibrated from 12.0% to 11.0% after the S4 .gitattributes
+    // LF pin dropped manuscript.html from 38 091 (CRLF) to 37 576 bytes (LF),
+    // shifting the reduction ratio while the minify output stayed the same.
+    assert_reduction("manuscript.html", 11.0);
 }
 
 // ─── Idempotence on each starter ───
