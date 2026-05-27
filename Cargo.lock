@@ -2194,6 +2194,7 @@ dependencies = [
  "dashmap 6.2.1",
  "futures-util",
  "http",
+ "http-body",
  "http-body-util",
  "hyper",
  "hyper-rustls",

@@ -1,9 +1,11 @@
 pub mod client;
 pub mod headers;
 pub mod stream;
+pub mod timeout_body;
 
 pub use client::{NodeClient, NodeClientError};
 pub use stream::{bad_gateway, error_to_response, gateway_timeout};
+pub use timeout_body::TimeoutBody;
 
 use std::net::SocketAddr;
 

@@ -14,6 +14,7 @@ const ENV_NODE_URL: &str = "OPENLEN_EDGE_NODE_URL";
 const ENV_PROXY_HOSTS: &str = "OPENLEN_EDGE_PROXY_HOSTS";
 const ENV_PROXY_PATHS: &str = "OPENLEN_EDGE_PROXY_PATHS";
 const ENV_NODE_TIMEOUT_SECS: &str = "OPENLEN_EDGE_NODE_TIMEOUT_SECS";
+const ENV_PROXY_BODY_IDLE_TIMEOUT_SECS: &str = "OPENLEN_EDGE_PROXY_BODY_IDLE_TIMEOUT_SECS";
 const ENV_DATABASE_URL: &str = "OPENLEN_EDGE_DATABASE_URL";
 const ENV_DB_POOL_MAX: &str = "OPENLEN_EDGE_DB_POOL_MAX";
 const ENV_DOMAIN_CACHE_TTL_SECS: &str = "OPENLEN_EDGE_DOMAIN_CACHE_TTL_SECS";
@@ -37,6 +38,11 @@ const DEFAULT_NODE_URL: &str = "http://127.0.0.1:3000";
 const DEFAULT_PROXY_HOSTS: &str = "openlen.com,www.openlen.com";
 const DEFAULT_PROXY_PATHS: &str = "/c/";
 const DEFAULT_NODE_TIMEOUT_SECS: u64 = 30;
+/// Default idle window between upstream body frames before the proxy drops
+/// the connection. 60 s is generous enough for SSE keep-alives (Node Next.js
+/// defaults to sending a ping every 30 s) while still capping a hostile
+/// upstream that sends headers and hangs the body indefinitely.
+const DEFAULT_PROXY_BODY_IDLE_TIMEOUT_SECS: u64 = 60;
 const DEFAULT_DB_POOL_MAX: u32 = 8;
 const DEFAULT_DOMAIN_CACHE_TTL_SECS: u64 = 60;
 const DEFAULT_DOMAIN_NEGATIVE_TTL_SECS: u64 = 60;
@@ -62,6 +68,9 @@ pub struct EdgeConfig {
     pub proxy_hosts: Vec<String>,
     pub proxy_paths: Vec<String>,
     pub node_timeout_secs: u64,
+    /// Per-frame idle timeout on the upstream response body. `0` disables the
+    /// timer — the body streams forever once headers arrive.
+    pub proxy_body_idle_timeout_secs: u64,
     /// Postgres connection string for the custom-domain lookup. `None` /
     /// empty = run with an empty in-memory mock (custom domains never match).
     pub database_url: Option<String>,
@@ -167,6 +176,12 @@ impl EdgeConfig {
             })?,
             Err(_) => DEFAULT_NODE_TIMEOUT_SECS,
         };
+        let proxy_body_idle_timeout_secs = match env::var(ENV_PROXY_BODY_IDLE_TIMEOUT_SECS) {
+            Ok(raw) => raw.parse::<u64>().with_context(|| {
+                format!("{ENV_PROXY_BODY_IDLE_TIMEOUT_SECS}={raw} is not a non-negative integer")
+            })?,
+            Err(_) => DEFAULT_PROXY_BODY_IDLE_TIMEOUT_SECS,
+        };
 
         let database_url = env::var(ENV_DATABASE_URL).ok().filter(|s| !s.is_empty());
         let db_pool_max = match env::var(ENV_DB_POOL_MAX) {
@@ -234,6 +249,7 @@ impl EdgeConfig {
             proxy_hosts,
             proxy_paths,
             node_timeout_secs,
+            proxy_body_idle_timeout_secs,
             database_url,
             db_pool_max,
             domain_cache_ttl_secs,
@@ -266,6 +282,7 @@ pub struct EdgeConfigBuilder {
     proxy_hosts: Option<Vec<String>>,
     proxy_paths: Option<Vec<String>>,
     node_timeout_secs: Option<u64>,
+    proxy_body_idle_timeout_secs: Option<u64>,
     database_url: Option<Option<String>>,
     db_pool_max: Option<u32>,
     domain_cache_ttl_secs: Option<u64>,
@@ -328,6 +345,11 @@ impl EdgeConfigBuilder {
 
     pub fn node_timeout_secs(mut self, secs: u64) -> Self {
         self.node_timeout_secs = Some(secs);
+        self
+    }
+
+    pub fn proxy_body_idle_timeout_secs(mut self, secs: u64) -> Self {
+        self.proxy_body_idle_timeout_secs = Some(secs);
         self
     }
 
@@ -415,6 +437,9 @@ impl EdgeConfigBuilder {
                 .proxy_paths
                 .unwrap_or_else(|| parse_csv(DEFAULT_PROXY_PATHS)),
             node_timeout_secs: self.node_timeout_secs.unwrap_or(DEFAULT_NODE_TIMEOUT_SECS),
+            proxy_body_idle_timeout_secs: self
+                .proxy_body_idle_timeout_secs
+                .unwrap_or(DEFAULT_PROXY_BODY_IDLE_TIMEOUT_SECS),
             database_url: self.database_url.unwrap_or(None),
             db_pool_max: self.db_pool_max.unwrap_or(DEFAULT_DB_POOL_MAX),
             domain_cache_ttl_secs: self

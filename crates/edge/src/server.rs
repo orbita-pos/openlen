@@ -81,11 +81,17 @@ impl AppState {
             .publish_root
             .canonicalize()
             .unwrap_or_else(|_| config.publish_root.clone());
+        let body_idle = if config.proxy_body_idle_timeout_secs == 0 {
+            None
+        } else {
+            Some(Duration::from_secs(config.proxy_body_idle_timeout_secs))
+        };
         let node_client = NodeClient::new(
             &config.node_url,
             NODE_POOL_IDLE,
             NODE_POOL_MAX_IDLE_PER_HOST,
             Duration::from_secs(config.node_timeout_secs),
+            body_idle,
         )
         .context("constructing upstream NodeClient")?;
         Ok(Self {
