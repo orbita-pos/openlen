@@ -1,6 +1,6 @@
 use std::future::Future;
 use std::net::SocketAddr;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -22,9 +22,19 @@ use tower_http::trace::TraceLayer;
 use tracing::{debug, error, info, warn};
 
 use crate::config::EdgeConfig;
-use crate::files::{cache_control_for, resolve, Resolved};
+use crate::files::{cache_control_for, resolve, resolve_strict, Resolved};
 use crate::lookup::{DomainLookup, MockDomainLookup};
-use crate::proxy::{self, decide_route, NodeClient, RouteAction};
+use crate::proxy::{self, decide_route, disk_base_for, DiskBase, NodeClient, RouteAction};
+
+/// Cache-Control for files served out of the shared uploads root. 30 days
+/// immutable matches nginx's `expires 30d; Cache-Control: public, immutable`
+/// and Caddy's `public, immutable, max-age=2592000` — uploads are content-
+/// hashed by the workspace flow, so they don't change in place.
+const SHARED_UPLOADS_CACHE_CONTROL: &str = "public, immutable, max-age=2592000";
+
+/// Cache-Control for files under `/_next/static/`. Next.js hashes the build
+/// output, so 1 year + immutable is correct. Matches nginx + Caddy.
+const NEXT_STATIC_CACHE_CONTROL: &str = "public, immutable, max-age=31536000";
 
 /// Bucket labels matching the response status class. Cheap match instead of
 /// re-formatting on every emission.
@@ -43,6 +53,8 @@ fn route_kind_label(action: &RouteAction) -> &'static str {
         RouteAction::Disk { .. } => "subdomain_disk",
         RouteAction::CustomDomain { .. } => "custom_domain_disk",
         RouteAction::Proxy => "proxy",
+        RouteAction::SharedUploads => "shared_uploads",
+        RouteAction::NextStatic => "next_static",
         RouteAction::NotFound => "not_found",
     }
 }
@@ -68,9 +80,16 @@ const HEADER_READ_TIMEOUT: Duration = Duration::from_secs(30);
 #[derive(Clone)]
 pub struct AppState {
     pub publish_root: Arc<PathBuf>,
+    /// Canonical shared-uploads root. Serves `<uploads_root>/<path>` for any
+    /// host whose URL starts with `/uploads/`.
+    pub uploads_root: Arc<PathBuf>,
+    /// Canonical Next.js static root. Serves `<next_static_root>/<path>` for
+    /// apex/www hosts whose URL starts with `/_next/static/`.
+    pub next_static_root: Arc<PathBuf>,
     pub node_client: NodeClient,
     pub proxy_hosts: Arc<Vec<String>>,
     pub proxy_paths: Arc<Vec<String>>,
+    pub custom_domain_proxy_paths: Arc<Vec<String>>,
     pub domain_lookup: Arc<dyn DomainLookup>,
 }
 
@@ -78,9 +97,12 @@ impl std::fmt::Debug for AppState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AppState")
             .field("publish_root", &self.publish_root)
+            .field("uploads_root", &self.uploads_root)
+            .field("next_static_root", &self.next_static_root)
             .field("node_client", &self.node_client)
             .field("proxy_hosts", &self.proxy_hosts)
             .field("proxy_paths", &self.proxy_paths)
+            .field("custom_domain_proxy_paths", &self.custom_domain_proxy_paths)
             .field("domain_lookup", &self.domain_lookup)
             .finish()
     }
@@ -102,6 +124,18 @@ impl AppState {
             .publish_root
             .canonicalize()
             .unwrap_or_else(|_| config.publish_root.clone());
+        // Falling back to the un-canonicalized path lets tests / dev boots
+        // succeed before the dir exists on disk; `resolve_strict` will just
+        // return NotFound on the first lookup and the operator gets a clean
+        // 404 instead of a startup crash.
+        let uploads_canonical = config
+            .uploads_root
+            .canonicalize()
+            .unwrap_or_else(|_| config.uploads_root.clone());
+        let next_static_canonical = config
+            .next_static_root
+            .canonicalize()
+            .unwrap_or_else(|_| config.next_static_root.clone());
         let body_idle = if config.proxy_body_idle_timeout_secs == 0 {
             None
         } else {
@@ -117,9 +151,12 @@ impl AppState {
         .context("constructing upstream NodeClient")?;
         Ok(Self {
             publish_root: Arc::new(canonical),
+            uploads_root: Arc::new(uploads_canonical),
+            next_static_root: Arc::new(next_static_canonical),
             node_client,
             proxy_hosts: Arc::new(config.proxy_hosts.clone()),
             proxy_paths: Arc::new(config.proxy_paths.clone()),
+            custom_domain_proxy_paths: Arc::new(config.custom_domain_proxy_paths.clone()),
             domain_lookup,
         })
     }
@@ -159,7 +196,13 @@ async fn serve_or_proxy(
     let url_path = req.uri().path().to_owned();
 
     let started = std::time::Instant::now();
-    let action = decide_route(&host, &url_path, &state.proxy_hosts, &state.proxy_paths);
+    let action = decide_route(
+        &host,
+        &url_path,
+        &state.proxy_hosts,
+        &state.proxy_paths,
+        &state.custom_domain_proxy_paths,
+    );
     let route_kind = route_kind_label(&action);
 
     let response = match action {
@@ -180,6 +223,28 @@ async fn serve_or_proxy(
                     not_found()
                 }
             }
+        }
+        RouteAction::SharedUploads => {
+            // `/uploads/foo.png` resolves to `<uploads_root>/foo.png`. Strip
+            // the leading prefix before handing the path to the strict
+            // resolver — anything outside the configured root surfaces as
+            // 404, never SPA fallback.
+            let rel = url_path
+                .strip_prefix("/uploads/")
+                .unwrap_or(url_path.as_str());
+            serve_shared(&state.uploads_root, rel, SHARED_UPLOADS_CACHE_CONTROL, peer).await
+        }
+        RouteAction::NextStatic => {
+            let rel = url_path
+                .strip_prefix("/_next/static/")
+                .unwrap_or(url_path.as_str());
+            serve_shared(
+                &state.next_static_root,
+                rel,
+                NEXT_STATIC_CACHE_CONTROL,
+                peer,
+            )
+            .await
         }
         RouteAction::NotFound => {
             debug!(%host, %peer, "host did not match any route");
@@ -215,7 +280,13 @@ async fn serve_from_disk(
     sub: &str,
     url_path: &str,
 ) -> Response<Body> {
-    let sub_root = state.publish_root.join(sub).join("current");
+    // /assets/* lives at `<publish>/<sub>/assets/...` — a sibling of `current/`
+    // managed by the publish flow. Keeping it outside `current/` lets the
+    // file survive release rotations (the assets dir is shared across deploys).
+    let sub_root = match disk_base_for(url_path) {
+        DiskBase::Current => state.publish_root.join(sub).join("current"),
+        DiskBase::Sibling => state.publish_root.join(sub),
+    };
 
     match resolve(&sub_root, url_path) {
         Resolved::File(path) => match tokio::fs::read(&path).await {
@@ -248,6 +319,49 @@ async fn serve_from_disk(
         }
         Resolved::BadRequest => {
             warn!(%peer, sub, path = %url_path, "rejected unsafe path");
+            (StatusCode::BAD_REQUEST, "bad request\n").into_response()
+        }
+    }
+}
+
+/// Serve `<root>/<rel_path>` direct from disk for the shared-root routes
+/// (`/uploads/`, `/_next/static/`). No SPA fallback, no dir-index — a miss is
+/// a 404, a traversal attempt is a 400.
+async fn serve_shared(
+    root: &Path,
+    rel_path: &str,
+    cache_control: &'static str,
+    peer: SocketAddr,
+) -> Response<Body> {
+    match resolve_strict(root, rel_path) {
+        Resolved::File(path) => match tokio::fs::read(&path).await {
+            Ok(bytes) => {
+                let mime = mime_guess::from_path(&path).first_or_octet_stream();
+                debug!(
+                    %peer, rel = %rel_path, file = %path.display(),
+                    bytes = bytes.len(), "serve shared file"
+                );
+                Response::builder()
+                    .status(StatusCode::OK)
+                    .header(header::CONTENT_TYPE, mime.as_ref())
+                    .header(header::CACHE_CONTROL, cache_control)
+                    .body(Body::from(bytes))
+                    .expect("response is valid")
+            }
+            Err(err) => {
+                warn!(
+                    %peer, rel = %rel_path, file = %path.display(),
+                    error = %err, "shared file read failed"
+                );
+                not_found()
+            }
+        },
+        Resolved::NotFound => {
+            debug!(%peer, rel = %rel_path, "shared file not found");
+            not_found()
+        }
+        Resolved::BadRequest => {
+            warn!(%peer, rel = %rel_path, "rejected unsafe shared path");
             (StatusCode::BAD_REQUEST, "bad request\n").into_response()
         }
     }

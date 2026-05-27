@@ -9,10 +9,13 @@ const ENV_BIND_HTTP: &str = "OPENLEN_EDGE_BIND_HTTP";
 const ENV_CERT: &str = "OPENLEN_EDGE_CERT";
 const ENV_KEY: &str = "OPENLEN_EDGE_KEY";
 const ENV_PUBLISH_ROOT: &str = "OPENLEN_EDGE_PUBLISH_ROOT";
+const ENV_UPLOADS_ROOT: &str = "OPENLEN_EDGE_UPLOADS_ROOT";
+const ENV_NEXT_STATIC_ROOT: &str = "OPENLEN_EDGE_NEXT_STATIC_ROOT";
 const ENV_MAX_INFLIGHT: &str = "OPENLEN_EDGE_MAX_INFLIGHT";
 const ENV_NODE_URL: &str = "OPENLEN_EDGE_NODE_URL";
 const ENV_PROXY_HOSTS: &str = "OPENLEN_EDGE_PROXY_HOSTS";
 const ENV_PROXY_PATHS: &str = "OPENLEN_EDGE_PROXY_PATHS";
+const ENV_CUSTOM_DOMAIN_PROXY_PATHS: &str = "OPENLEN_EDGE_CUSTOM_DOMAIN_PROXY_PATHS";
 const ENV_NODE_TIMEOUT_SECS: &str = "OPENLEN_EDGE_NODE_TIMEOUT_SECS";
 const ENV_PROXY_BODY_IDLE_TIMEOUT_SECS: &str = "OPENLEN_EDGE_PROXY_BODY_IDLE_TIMEOUT_SECS";
 const ENV_DATABASE_URL: &str = "OPENLEN_EDGE_DATABASE_URL";
@@ -35,10 +38,29 @@ const DEFAULT_BIND_HTTP: &str = "0.0.0.0:80";
 const DEFAULT_CERT: &str = "/etc/letsencrypt/live/openlen.com/fullchain.pem";
 const DEFAULT_KEY: &str = "/etc/letsencrypt/live/openlen.com/privkey.pem";
 const DEFAULT_PUBLISH_ROOT: &str = "/var/www/openlen";
+/// Shared uploads root — `<UPLOADS_DIR>` in `openlen-app.service`. Served
+/// direct from disk on every host (apex, wildcard subdomain, custom domain)
+/// when the URL starts with `/uploads/`, bypassing Node.
+const DEFAULT_UPLOADS_ROOT: &str = "/var/openlen/uploads";
+/// Next.js build-time static assets root. Served direct from disk on the
+/// apex/www hosts only when the URL starts with `/_next/static/`. The path
+/// matches the `cp` step in `infra/scripts/deploy.sh`.
+const DEFAULT_NEXT_STATIC_ROOT: &str = "/opt/openlen-app/.next/static";
 const DEFAULT_MAX_INFLIGHT: usize = 4096;
 const DEFAULT_NODE_URL: &str = "http://127.0.0.1:3000";
 const DEFAULT_PROXY_HOSTS: &str = "openlen.com,www.openlen.com";
-const DEFAULT_PROXY_PATHS: &str = "/c/";
+/// Path prefixes proxied to Node on wildcard subdomain hosts. `/c/` is the
+/// analytics beacon; `/api/f/` is lead-capture form submissions. Both are
+/// public/anonymous endpoints — broader `/api/*` access is deliberately not
+/// granted to subdomain hosts (that would expose the auth-gated app API to
+/// any user-deployed page).
+const DEFAULT_PROXY_PATHS: &str = "/c/,/api/f/";
+/// Path prefixes proxied to Node on custom-domain hosts. Broader than
+/// `proxy_paths` — custom domains alias a single project, so the full
+/// `/api/*` surface is fine to expose (most endpoints 401 without a cookie;
+/// the public ones — `/api/f/`, `/c/` — keep working). Mirrors the Caddyfile
+/// `@passthrough path /api/* /c/*` matcher we used in F2's plan B.
+const DEFAULT_CUSTOM_DOMAIN_PROXY_PATHS: &str = "/c/,/api/";
 const DEFAULT_NODE_TIMEOUT_SECS: u64 = 30;
 /// Default idle window between upstream body frames before the proxy drops
 /// the connection. 60 s is generous enough for SSE keep-alives (Node Next.js
@@ -69,10 +91,22 @@ pub struct EdgeConfig {
     pub cert_path: PathBuf,
     pub key_path: PathBuf,
     pub publish_root: PathBuf,
+    /// Shared user-uploads root. Served direct from disk when a URL starts
+    /// with `/uploads/`, regardless of host.
+    pub uploads_root: PathBuf,
+    /// Next.js build-time static assets root. Served direct from disk on
+    /// apex/www hosts only when a URL starts with `/_next/static/`.
+    pub next_static_root: PathBuf,
     pub max_inflight: usize,
     pub node_url: String,
     pub proxy_hosts: Vec<String>,
     pub proxy_paths: Vec<String>,
+    /// Path prefixes proxied to Node specifically on custom-domain hosts —
+    /// kept separate from `proxy_paths` so the wildcard subdomain remains
+    /// restricted to `/c/` + `/api/f/` while custom domains get the broader
+    /// `/api/*` surface (most endpoints 401 anyway; this matters for the few
+    /// public ones).
+    pub custom_domain_proxy_paths: Vec<String>,
     pub node_timeout_secs: u64,
     /// Per-frame idle timeout on the upstream response body. `0` disables the
     /// timer — the body streams forever once headers arrive.
@@ -171,6 +205,12 @@ impl EdgeConfig {
         let publish_root = PathBuf::from(
             env::var(ENV_PUBLISH_ROOT).unwrap_or_else(|_| DEFAULT_PUBLISH_ROOT.into()),
         );
+        let uploads_root = PathBuf::from(
+            env::var(ENV_UPLOADS_ROOT).unwrap_or_else(|_| DEFAULT_UPLOADS_ROOT.into()),
+        );
+        let next_static_root = PathBuf::from(
+            env::var(ENV_NEXT_STATIC_ROOT).unwrap_or_else(|_| DEFAULT_NEXT_STATIC_ROOT.into()),
+        );
 
         let max_inflight = match env::var(ENV_MAX_INFLIGHT) {
             Ok(raw) => raw.parse::<usize>().with_context(|| {
@@ -185,6 +225,10 @@ impl EdgeConfig {
         );
         let proxy_paths =
             parse_csv(&env::var(ENV_PROXY_PATHS).unwrap_or_else(|_| DEFAULT_PROXY_PATHS.into()));
+        let custom_domain_proxy_paths = parse_csv(
+            &env::var(ENV_CUSTOM_DOMAIN_PROXY_PATHS)
+                .unwrap_or_else(|_| DEFAULT_CUSTOM_DOMAIN_PROXY_PATHS.into()),
+        );
         let node_timeout_secs = match env::var(ENV_NODE_TIMEOUT_SECS) {
             Ok(raw) => raw.parse::<u64>().with_context(|| {
                 format!("{ENV_NODE_TIMEOUT_SECS}={raw} is not a non-negative integer")
@@ -271,10 +315,13 @@ impl EdgeConfig {
             cert_path,
             key_path,
             publish_root,
+            uploads_root,
+            next_static_root,
             max_inflight,
             node_url,
             proxy_hosts,
             proxy_paths,
+            custom_domain_proxy_paths,
             node_timeout_secs,
             proxy_body_idle_timeout_secs,
             database_url,
@@ -306,10 +353,13 @@ pub struct EdgeConfigBuilder {
     cert_path: Option<PathBuf>,
     key_path: Option<PathBuf>,
     publish_root: Option<PathBuf>,
+    uploads_root: Option<PathBuf>,
+    next_static_root: Option<PathBuf>,
     max_inflight: Option<usize>,
     node_url: Option<String>,
     proxy_hosts: Option<Vec<String>>,
     proxy_paths: Option<Vec<String>>,
+    custom_domain_proxy_paths: Option<Vec<String>>,
     node_timeout_secs: Option<u64>,
     proxy_body_idle_timeout_secs: Option<u64>,
     database_url: Option<Option<String>>,
@@ -354,6 +404,16 @@ impl EdgeConfigBuilder {
         self
     }
 
+    pub fn uploads_root(mut self, path: PathBuf) -> Self {
+        self.uploads_root = Some(path);
+        self
+    }
+
+    pub fn next_static_root(mut self, path: PathBuf) -> Self {
+        self.next_static_root = Some(path);
+        self
+    }
+
     pub fn max_inflight(mut self, cap: usize) -> Self {
         self.max_inflight = Some(cap);
         self
@@ -371,6 +431,11 @@ impl EdgeConfigBuilder {
 
     pub fn proxy_paths(mut self, paths: Vec<String>) -> Self {
         self.proxy_paths = Some(paths);
+        self
+    }
+
+    pub fn custom_domain_proxy_paths(mut self, paths: Vec<String>) -> Self {
+        self.custom_domain_proxy_paths = Some(paths);
         self
     }
 
@@ -469,6 +534,12 @@ impl EdgeConfigBuilder {
             publish_root: self
                 .publish_root
                 .unwrap_or_else(|| PathBuf::from(DEFAULT_PUBLISH_ROOT)),
+            uploads_root: self
+                .uploads_root
+                .unwrap_or_else(|| PathBuf::from(DEFAULT_UPLOADS_ROOT)),
+            next_static_root: self
+                .next_static_root
+                .unwrap_or_else(|| PathBuf::from(DEFAULT_NEXT_STATIC_ROOT)),
             max_inflight: self.max_inflight.unwrap_or(DEFAULT_MAX_INFLIGHT),
             node_url: self.node_url.unwrap_or_else(|| DEFAULT_NODE_URL.into()),
             proxy_hosts: self
@@ -477,6 +548,9 @@ impl EdgeConfigBuilder {
             proxy_paths: self
                 .proxy_paths
                 .unwrap_or_else(|| parse_csv(DEFAULT_PROXY_PATHS)),
+            custom_domain_proxy_paths: self
+                .custom_domain_proxy_paths
+                .unwrap_or_else(|| parse_csv(DEFAULT_CUSTOM_DOMAIN_PROXY_PATHS)),
             node_timeout_secs: self.node_timeout_secs.unwrap_or(DEFAULT_NODE_TIMEOUT_SECS),
             proxy_body_idle_timeout_secs: self
                 .proxy_body_idle_timeout_secs
@@ -566,8 +640,43 @@ mod tests {
             .unwrap();
         assert_eq!(cfg.node_url, "http://127.0.0.1:3000");
         assert_eq!(cfg.proxy_hosts, vec!["openlen.com", "www.openlen.com"]);
-        assert_eq!(cfg.proxy_paths, vec!["/c/"]);
+        assert_eq!(cfg.proxy_paths, vec!["/c/", "/api/f/"]);
+        assert_eq!(cfg.custom_domain_proxy_paths, vec!["/c/", "/api/"]);
         assert_eq!(cfg.node_timeout_secs, DEFAULT_NODE_TIMEOUT_SECS);
+    }
+
+    #[test]
+    fn builder_fills_disk_root_defaults() {
+        let cfg = EdgeConfig::builder()
+            .bind("127.0.0.1:0".parse().unwrap())
+            .cert_path(PathBuf::from("/tmp/cert.pem"))
+            .key_path(PathBuf::from("/tmp/key.pem"))
+            .build()
+            .unwrap();
+        assert_eq!(cfg.uploads_root, PathBuf::from(DEFAULT_UPLOADS_ROOT));
+        assert_eq!(
+            cfg.next_static_root,
+            PathBuf::from(DEFAULT_NEXT_STATIC_ROOT)
+        );
+    }
+
+    #[test]
+    fn builder_accepts_explicit_disk_roots() {
+        let cfg = EdgeConfig::builder()
+            .bind("127.0.0.1:0".parse().unwrap())
+            .cert_path(PathBuf::from("/tmp/cert.pem"))
+            .key_path(PathBuf::from("/tmp/key.pem"))
+            .uploads_root(PathBuf::from("/srv/up"))
+            .next_static_root(PathBuf::from("/srv/static"))
+            .custom_domain_proxy_paths(vec!["/c/".into(), "/api/".into(), "/extra/".into()])
+            .build()
+            .unwrap();
+        assert_eq!(cfg.uploads_root, PathBuf::from("/srv/up"));
+        assert_eq!(cfg.next_static_root, PathBuf::from("/srv/static"));
+        assert_eq!(
+            cfg.custom_domain_proxy_paths,
+            vec!["/c/", "/api/", "/extra/"]
+        );
     }
 
     #[test]
