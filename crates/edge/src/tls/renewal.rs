@@ -76,6 +76,17 @@ pub async fn run_renewal_loop(
     }
 }
 
+/// Count entries whose remaining validity is at or below `threshold_seconds`.
+/// Lifted out of [`run_sweep_once`] so the renewal-due gauge population can be
+/// tested without standing up a global metrics recorder (the recorder is a
+/// once-per-process resource — see `tests/metrics.rs`).
+fn count_due_for_renewal(entries: &[store::StoredCert], threshold_seconds: u64) -> usize {
+    entries
+        .iter()
+        .filter(|e| seconds_until(e.expires_at) <= threshold_seconds)
+        .count()
+}
+
 /// One pass: scan cert_dir, renew anything below the threshold. Public so
 /// tests can drive a sweep deterministically without waiting on the timer.
 pub async fn run_sweep_once(
@@ -91,6 +102,12 @@ pub async fn run_sweep_once(
         }
     };
     let threshold = cfg.threshold_seconds();
+    // Snapshot before renewals run. After a clean sweep the count drops to 0;
+    // the gauge tracks "what we found at scan time", not the residue, so an
+    // alert can fire on a spike (e.g. account rate-limited → backlog grows).
+    let due_now = count_due_for_renewal(&entries, threshold);
+    metrics::gauge!("openlen_edge_cert_renewal_due_total").set(due_now as f64);
+
     let mut considered = 0usize;
     let mut renewed = 0usize;
     let mut failed = 0usize;
@@ -125,7 +142,10 @@ pub async fn run_sweep_once(
             }
         }
     }
-    info!(considered, renewed, failed, "ACME renewal sweep complete");
+    info!(
+        considered,
+        due_now, renewed, failed, "ACME renewal sweep complete"
+    );
 }
 
 #[cfg(test)]
@@ -284,5 +304,28 @@ mod tests {
             interval: Duration::from_secs(86_400),
         };
         assert_eq!(cfg.threshold_seconds(), 30 * 86_400);
+    }
+
+    #[test]
+    fn count_due_for_renewal_respects_threshold() {
+        let tmp = TempDir::new().unwrap();
+        seed_cert_on_disk(tmp.path(), "near.com", now_secs() + 3 * 86_400);
+        seed_cert_on_disk(tmp.path(), "fresh.com", now_secs() + 60 * 86_400);
+        let entries = store::load_all(tmp.path()).expect("load_all");
+        assert_eq!(entries.len(), 2);
+        // Threshold = 7 days → only the 3-day cert is due.
+        assert_eq!(count_due_for_renewal(&entries, 7 * 86_400), 1);
+        // Threshold = 100 days → both certs are due.
+        assert_eq!(count_due_for_renewal(&entries, 100 * 86_400), 2);
+        // Threshold = 1 day → no cert is due (3-day cert is still above).
+        assert_eq!(count_due_for_renewal(&entries, 86_400), 0);
+    }
+
+    #[test]
+    fn count_due_for_renewal_treats_expired_as_due() {
+        let tmp = TempDir::new().unwrap();
+        seed_cert_on_disk(tmp.path(), "expired.com", 1);
+        let entries = store::load_all(tmp.path()).expect("load_all");
+        assert_eq!(count_due_for_renewal(&entries, 30 * 86_400), 1);
     }
 }

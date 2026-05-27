@@ -1,0 +1,136 @@
+# Prometheus alert rules for openlen-edge.
+#
+# Loaded into Prometheus via `rule_files:` in prometheus.yml:
+#   rule_files:
+#     - /etc/prometheus/rules/openlen-edge-alerts.yaml
+#
+# Then either `kill -HUP $(pidof prometheus)` or
+# `curl -X POST http://127.0.0.1:9090/-/reload` to apply without restart.
+#
+# Each alert is the minimum gate for the F2 S7 soak window (CUTOVER.md §8).
+# Tighten thresholds AFTER 7 days of clean baseline data — starting strict
+# would generate false positives during normal traffic spikes.
+#
+# Routing: every rule carries `service: openlen-edge` so the Alertmanager
+# route can match on it and silence/group accordingly.
+
+groups:
+  - name: openlen-edge.health
+    interval: 30s
+    rules:
+      # --- Request path ----------------------------------------------------
+      - alert: EdgeHighErrorRate
+        expr: |
+          (
+            sum(rate(openlen_edge_requests_total{status_class="5xx"}[5m]))
+            /
+            sum(rate(openlen_edge_requests_total[5m]))
+          ) > 0.005
+        for: 5m
+        labels:
+          severity: critical
+          service: openlen-edge
+        annotations:
+          summary: "openlen-edge 5xx rate above 0.5% for 5 minutes"
+          description: |
+            The edge is returning HTTP 5xx for more than 0.5% of all requests
+            over the last 5 minutes. Check journald (`journalctl -u openlen-edge
+            -n 100`), the Grafana edge dashboard for which route_kind is
+            spiking, and whether the Node app is healthy (proxy_upstream_errors
+            metric).
+          runbook: "infra/edge/CUTOVER.md#7-rollback-procedures-per-step"
+
+      - alert: EdgeHighLatency
+        expr: |
+          histogram_quantile(
+            0.99,
+            sum by (le) (rate(openlen_edge_request_duration_seconds_bucket[5m]))
+          ) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          service: openlen-edge
+        annotations:
+          summary: "openlen-edge p99 latency above 1s for 5 minutes"
+          description: |
+            p99 end-to-end request latency at the edge has been above 1s for 5
+            minutes. Compare against `bench/results/edge/*.json` p99 numbers —
+            if the bench passed at <100ms p99 and we're now at >1s, something
+            is wrong (upstream Node, disk I/O, or DB pool exhaustion).
+          runbook: "infra/edge/CUTOVER.md#8-soak-window-7-days-post-cutover"
+
+      # --- TLS / ACME ------------------------------------------------------
+      - alert: EdgeRenewalDueImminent
+        # Populated by tls/renewal.rs every sweep cycle (default 24h). Any
+        # non-zero value means there are certs the renewal sweep couldn't
+        # rotate above the configured threshold (default 30 days).
+        expr: openlen_edge_cert_renewal_due_total > 0
+        for: 30m
+        labels:
+          severity: warning
+          service: openlen-edge
+        annotations:
+          summary: "{{ $value }} cert(s) inside the renewal threshold"
+          description: |
+            One or more custom-domain certs has fallen inside the renewal
+            threshold (default 30 days remaining). If the gauge stays
+            non-zero across multiple sweeps, the renewal task is failing —
+            check `openlen_edge_cert_issuance_total{result!="success"}` and
+            recent journald lines for ACME errors.
+
+      - alert: EdgeCertIssuanceFailing
+        # Issuance attempts that aren't succeeding for >30m suggest the
+        # account got rate-limited or the ACME directory is degraded.
+        expr: |
+          (
+            sum(rate(openlen_edge_cert_issuance_total[15m]))
+            -
+            sum(rate(openlen_edge_cert_issuance_total{result="success"}[15m]))
+          ) > 0
+        for: 30m
+        labels:
+          severity: critical
+          service: openlen-edge
+        annotations:
+          summary: "openlen-edge ACME issuance has been failing for 30m"
+          description: |
+            Cert issuance attempts continued for the last 30 minutes without a
+            single success. Check the `result` label distribution
+            (rate_limited / validation_failed / timeout) and the
+            `OPENLEN_EDGE_ACME_DIRECTORY_URL` — fall back to staging for
+            recovery if Let's Encrypt prod is rate-limiting us.
+
+      # --- Proxy upstream --------------------------------------------------
+      - alert: EdgeProxyUpstreamErrors
+        # >1 proxy upstream error per second sustained for 5m = Node is
+        # flapping or unreachable.
+        expr: sum(rate(openlen_edge_proxy_upstream_errors_total[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: openlen-edge
+        annotations:
+          summary: "openlen-edge proxy upstream errors > 1/s for 5m"
+          description: |
+            The edge is failing more than one upstream proxy request per
+            second (connect_refused / header_timeout / body_idle_timeout /
+            upstream_5xx). Inspect by `reason` label. Typically means Node
+            is restarting, deadlocked, or has lost its DB pool.
+
+      # --- Cap saturation --------------------------------------------------
+      - alert: EdgeHandshakeCapApproaching
+        # If we're regularly hitting handshake_capped, raise
+        # OPENLEN_EDGE_MAX_INFLIGHT in /etc/openlen/edge.env. This fires on
+        # the COUNTER rate, not the gauge.
+        expr: sum(rate(openlen_edge_handshake_capped_total[5m])) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          service: openlen-edge
+        annotations:
+          summary: "openlen-edge dropping connections at the inflight cap"
+          description: |
+            More than one connection per 10 seconds has been refused at the
+            accept loop for the last 10 minutes. Either traffic is exceeding
+            the OPENLEN_EDGE_MAX_INFLIGHT cap (raise it) or a slowloris-style
+            client is parking handshakes (investigate peer IPs).

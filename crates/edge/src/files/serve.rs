@@ -72,6 +72,34 @@ pub fn resolve(publish_root: &Path, url_path: &str) -> Resolved {
     resolve_existing(publish_root, &publish_root.join("index.html"))
 }
 
+/// Strict lookup: serve `<root>/<rel_path>` if it exists, else `NotFound`. No
+/// SPA fallback, no directory index. Used by the shared roots
+/// (`/var/openlen/uploads`, `/opt/openlen-app/.next/static`) where a missing
+/// file is a real 404 and falling back to an HTML index would mask broken
+/// references.
+///
+/// The path is percent-decoded + walked for traversal exactly like
+/// [`resolve`]; an absolute / NUL-bearing / `..`-bearing input still surfaces
+/// as `BadRequest`.
+pub fn resolve_strict(root: &Path, rel_path: &str) -> Resolved {
+    let decoded = match percent_decode_str(rel_path).decode_utf8() {
+        Ok(s) => s.into_owned(),
+        Err(_) => return Resolved::BadRequest,
+    };
+    if decoded.contains('\0') {
+        return Resolved::BadRequest;
+    }
+    let rel = decoded.trim_start_matches('/');
+    let rel = rel.strip_suffix('/').unwrap_or(rel);
+    if !is_safe(rel) {
+        return Resolved::BadRequest;
+    }
+    if rel.is_empty() {
+        return Resolved::NotFound;
+    }
+    resolve_existing(root, &root.join(rel))
+}
+
 fn is_safe(rel: &str) -> bool {
     if rel.is_empty() {
         return true;
@@ -220,5 +248,44 @@ mod tests {
         fs::write(dir.path().join("with space.txt"), b"hi").unwrap();
         let r = resolve(dir.path(), "/with%20space.txt");
         assert!(matches!(&r, Resolved::File(_)));
+    }
+
+    #[test]
+    fn strict_finds_existing_file() {
+        let dir = setup_fixture();
+        let r = resolve_strict(dir.path(), "/assets/logo.svg");
+        assert!(matches!(&r, Resolved::File(p) if p.ends_with("logo.svg")));
+    }
+
+    #[test]
+    fn strict_does_not_spa_fallback_on_extensionless_miss() {
+        let dir = setup_fixture();
+        // Existing `resolve` would 200 with index.html for this. Strict must
+        // 404 — uploads / static assets are not React routes.
+        let r = resolve_strict(dir.path(), "/no/such/page");
+        assert_eq!(r, Resolved::NotFound);
+    }
+
+    #[test]
+    fn strict_does_not_use_directory_index() {
+        let dir = setup_fixture();
+        // `about/` has index.html in the fixture. Existing `resolve` follows
+        // it; strict must NOT (uploads dirs are not browsable).
+        let r = resolve_strict(dir.path(), "/about/");
+        assert_eq!(r, Resolved::NotFound);
+    }
+
+    #[test]
+    fn strict_rejects_traversal() {
+        let dir = setup_fixture();
+        let r = resolve_strict(dir.path(), "/../../etc/passwd");
+        assert_eq!(r, Resolved::BadRequest);
+    }
+
+    #[test]
+    fn strict_empty_path_is_not_found() {
+        let dir = setup_fixture();
+        assert_eq!(resolve_strict(dir.path(), ""), Resolved::NotFound);
+        assert_eq!(resolve_strict(dir.path(), "/"), Resolved::NotFound);
     }
 }
