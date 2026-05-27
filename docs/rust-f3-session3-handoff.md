@@ -46,7 +46,7 @@ Three commits, one per logical phase (B is documentation-only — HtmlStream was
 4699424  test(ai-stream): F3 S3 E — generateHtmlStream tests (12 cases, mock-based)
 ```
 
-Self-commit SHA for this handoff doc: `<placeholder>` (filled in by the conventional follow-up commit, matching the F3 S1/S2 pattern).
+Self-commit SHA for this handoff doc: `952eef4` (filled in by the conventional follow-up commit, matching the F3 S1/S2 pattern).
 
 ## Acceptance vs. the S3 brief
 
