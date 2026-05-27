@@ -20,7 +20,10 @@
 import {
   applyOps as rustApplyOps,
   buildScopedView as rustBuildScopedView,
+  consolidateUnsplashCredits as rustConsolidateUnsplashCredits,
+  extractLogo as rustExtractLogo,
   HtmlStream as RustHtmlStream,
+  injectLogo as rustInjectLogo,
   normalizeBornCanonical as rustNormalizeBornCanonical,
   optimizeForPublish as rustOptimizeForPublish,
   parseOps as rustParseOps,
@@ -29,11 +32,13 @@ import {
   sanitizeForPublish as rustSanitizeForPublish,
   stripOpIds as rustStripOpIds,
   tagWithOpIds as rustTagWithOpIds,
+  wirePublishedForms as rustWirePublishedForms,
 } from "@openlen/html-engine";
 
 import type {
   ApplyError as RustApplyError,
   ApplyResult as RustApplyResult,
+  ConsolidationResult as RustConsolidationResult,
   HtmlStreamOpts,
   HtmlStreamRemovedCounts,
   HtmlStreamResult,
@@ -45,6 +50,8 @@ import type {
   SanitizeResult as RustSanitizeResult,
   ScopedView,
   TaggedHtmlResult,
+  UnsplashCredit as RustUnsplashCredit,
+  WireFormConfig,
 } from "@openlen/html-engine";
 
 // ─── Re-exported types ──────────────────────────────────────────────────────
@@ -61,7 +68,26 @@ export type {
   SanitizeRemovedCounts,
   ScopedView,
   TaggedHtmlResult,
+  WireFormConfig,
 };
+
+// ─── F1.5 publish-time types ────────────────────────────────────────────────
+
+export interface ExtractedLogo {
+  href: string;
+  isDataUri: boolean;
+}
+
+export interface UnsplashCredit {
+  author: string;
+  authorUrl: string;
+}
+
+export interface ConsolidationResult {
+  html: string;
+  credits: UnsplashCredit[];
+  anonymousUnsplashCount: number;
+}
 
 export interface SanitizeResult {
   html: string | null;
@@ -199,6 +225,62 @@ export { RustHtmlStream as HtmlStream };
 export function detectSlotPath(html: string): boolean {
   const r = sanitizeForPublish(html);
   return r.html === null;
+}
+
+// ─── F1.5 publish-time helpers ──────────────────────────────────────────────
+//
+// Each function here corresponds to one of the four non-Motor-HTML consumers
+// F1 S9 left on cheerio. See crates/html-engine/src/publish/ for the Rust
+// implementations and the per-function contracts.
+
+/** Extract the page's favicon / logo URL — first `<link rel>` whose rel
+ *  tokens contain "icon", or fall back to `<meta property="og:image">`.
+ *  Returns null when nothing matched. The caller decides what to do with a
+ *  data: URI (upload to storage vs. keep inline). */
+export function extractLogo(html: string): ExtractedLogo | null {
+  const r = rustExtractLogo(html);
+  return r ?? null;
+}
+
+/** Bake the project's resolved logo URL into `<head>` as `<link rel="icon">`
+ *  + (conditionally) `<meta property="og:image">`. Removes any existing
+ *  rel="icon" / rel="shortcut" links — apple-touch-icon / mask-icon are
+ *  preserved (their rel tokens are multi-char strings that don't equal
+ *  either of those literals). Soft-fails to the original HTML on any
+ *  no-op condition. */
+export function injectLogo(html: string, logoUrl: string): string {
+  return rustInjectLogo(html, logoUrl);
+}
+
+/** Defense-in-depth Unsplash attribution: harvests photographers from
+ *  inline credit spans, counts anonymous (paste-URL / template-baked)
+ *  Unsplash images, and injects a sr-only `<aside>` + per-credit
+ *  `<meta name="image-source">` tags. Idempotent — re-running on a doc
+ *  with prior artifacts strips them before writing fresh ones. */
+export function consolidateUnsplashCredits(html: string): ConsolidationResult {
+  const r = rustConsolidateUnsplashCredits(html) as RustConsolidationResult;
+  return {
+    html: r.html,
+    credits: r.credits.map((c: RustUnsplashCredit) => ({
+      author: c.author,
+      authorUrl: c.authorUrl,
+    })),
+    anonymousUnsplashCount: r.anonymousUnsplashCount,
+  };
+}
+
+/** Wire every `<form>` in `html` to OpenLen's submit endpoint at `action`,
+ *  baking per-form config (success message / redirect URL) keyed by
+ *  document-order index, plus the inline submit-via-fetch script (once
+ *  per doc). The caller pre-computes `action` from `NEXT_PUBLIC_SITE_URL +
+ *  /api/f/<subdomain>` — env-var access stays TS-side. Returns the
+ *  original string verbatim when the doc has no `<form>` elements. */
+export function wirePublishedForms(
+  html: string,
+  action: string,
+  configs: WireFormConfig[],
+): string {
+  return rustWirePublishedForms(html, action, configs);
 }
 
 // ─── Conversion helpers ────────────────────────────────────────────────────
