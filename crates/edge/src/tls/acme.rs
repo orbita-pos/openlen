@@ -201,13 +201,56 @@ impl AcmeClient {
 impl AcmeIssuer for AcmeClient {
     async fn issue(&self, domain: &str) -> Result<IssuedCert> {
         let domain = domain.to_ascii_lowercase();
-        tokio::time::timeout(ISSUE_TIMEOUT, issue_inner(self, &domain))
-            .await
-            .map_err(|_| anyhow!("ACME issuance for {domain} exceeded {ISSUE_TIMEOUT:?}"))?
+        let started = std::time::Instant::now();
+        let outcome = tokio::time::timeout(ISSUE_TIMEOUT, issue_inner(self, &domain)).await;
+        let elapsed = started.elapsed().as_secs_f64();
+        metrics::histogram!("openlen_edge_cert_issuance_duration_seconds").record(elapsed);
+        match outcome {
+            Ok(Ok(cert)) => {
+                metrics::counter!(
+                    "openlen_edge_cert_issuance_total",
+                    "result" => "success",
+                )
+                .increment(1);
+                Ok(cert)
+            }
+            Ok(Err(err)) => {
+                let label = classify_issuance_error(&err);
+                metrics::counter!(
+                    "openlen_edge_cert_issuance_total",
+                    "result" => label,
+                )
+                .increment(1);
+                Err(err)
+            }
+            Err(_) => {
+                metrics::counter!(
+                    "openlen_edge_cert_issuance_total",
+                    "result" => "timeout",
+                )
+                .increment(1);
+                Err(anyhow!(
+                    "ACME issuance for {domain} exceeded {ISSUE_TIMEOUT:?}"
+                ))
+            }
+        }
     }
 
     fn get_challenge(&self, token: &str) -> Option<String> {
         self.challenges.get(token).map(|v| v.clone())
+    }
+}
+
+/// Rough best-effort classification — the upstream error type is anyhow
+/// so we work off the string. Keeps label cardinality bounded.
+fn classify_issuance_error(err: &anyhow::Error) -> &'static str {
+    let s = err.to_string().to_ascii_lowercase();
+    if s.contains("rate") {
+        "rate_limited"
+    } else if s.contains("invalid") || s.contains("authoriz") || s.contains("identif") {
+        "validation_failed"
+    } else {
+        "other"
     }
 }
 

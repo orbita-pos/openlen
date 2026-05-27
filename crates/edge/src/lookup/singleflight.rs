@@ -53,12 +53,18 @@ where
         F: FnOnce() -> Fut,
         Fut: Future<Output = V>,
     {
-        let cell = {
+        let (cell, coalesced) = {
             let mut map = self.inner.lock().expect("singleflight map poisoned");
-            map.entry(key.clone())
+            let existed = map.contains_key(&key);
+            let cell = map
+                .entry(key.clone())
                 .or_insert_with(|| Arc::new(OnceCell::new()))
-                .clone()
+                .clone();
+            (cell, existed)
         };
+        if coalesced {
+            metrics::counter!("openlen_edge_domain_singleflight_coalesced_total").increment(1);
+        }
 
         let value_ref = cell.get_or_init(|| async { f().await }).await;
         let value = value_ref.clone();

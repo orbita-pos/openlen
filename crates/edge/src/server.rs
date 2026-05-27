@@ -26,6 +26,27 @@ use crate::files::{cache_control_for, resolve, Resolved};
 use crate::lookup::{DomainLookup, MockDomainLookup};
 use crate::proxy::{self, decide_route, NodeClient, RouteAction};
 
+/// Bucket labels matching the response status class. Cheap match instead of
+/// re-formatting on every emission.
+fn status_class(code: u16) -> &'static str {
+    match code / 100 {
+        2 => "2xx",
+        3 => "3xx",
+        4 => "4xx",
+        5 => "5xx",
+        _ => "other",
+    }
+}
+
+fn route_kind_label(action: &RouteAction) -> &'static str {
+    match action {
+        RouteAction::Disk { .. } => "subdomain_disk",
+        RouteAction::CustomDomain { .. } => "custom_domain_disk",
+        RouteAction::Proxy => "proxy",
+        RouteAction::NotFound => "not_found",
+    }
+}
+
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const SERVER_HEADER_VALUE: &str = concat!("openlen-edge/", env!("CARGO_PKG_VERSION"));
 
@@ -137,8 +158,12 @@ async fn serve_or_proxy(
         .unwrap_or_default();
     let url_path = req.uri().path().to_owned();
 
-    match decide_route(&host, &url_path, &state.proxy_hosts, &state.proxy_paths) {
-        RouteAction::Proxy => proxy::forward(&state.node_client, peer, host, req).await,
+    let started = std::time::Instant::now();
+    let action = decide_route(&host, &url_path, &state.proxy_hosts, &state.proxy_paths);
+    let route_kind = route_kind_label(&action);
+
+    let response = match action {
+        RouteAction::Proxy => proxy::forward(&state.node_client, peer, host.clone(), req).await,
         RouteAction::Disk { sub } => serve_from_disk(&state, peer, &sub, &url_path).await,
         RouteAction::CustomDomain { host: custom_host } => {
             match state.domain_lookup.lookup(&custom_host).await {
@@ -160,7 +185,28 @@ async fn serve_or_proxy(
             debug!(%host, %peer, "host did not match any route");
             not_found()
         }
-    }
+    };
+
+    // Cardinality control: use the bare host without the port for the label.
+    // Per-host cardinality is unbounded in theory; production should rely on
+    // Prometheus relabel rules if a hostile peer floods Host headers.
+    let host_label = host.split(':').next().unwrap_or(&host).to_ascii_lowercase();
+    let status = response.status().as_u16();
+    metrics::counter!(
+        "openlen_edge_requests_total",
+        "host" => host_label.clone(),
+        "status_class" => status_class(status),
+        "route_kind" => route_kind,
+    )
+    .increment(1);
+    metrics::histogram!(
+        "openlen_edge_request_duration_seconds",
+        "host" => host_label,
+        "route_kind" => route_kind,
+    )
+    .record(started.elapsed().as_secs_f64());
+
+    response
 }
 
 async fn serve_from_disk(
@@ -289,14 +335,23 @@ impl BoundServer {
                 Err(_) => {
                     warn!(%peer, max_inflight = self.max_inflight,
                         "in-flight connection cap reached, dropping connection");
+                    metrics::counter!("openlen_edge_handshake_capped_total").increment(1);
                     drop(stream);
                     continue;
                 }
             };
 
+            // Update the gauge from outside the spawn so the value reflects
+            // the cap state at accept time, not after the task has had a
+            // chance to run.
+            let inflight_after_acquire = self.max_inflight - sem.available_permits();
+            metrics::gauge!("openlen_edge_handshake_inflight").set(inflight_after_acquire as f64);
+
             let acceptor = acceptor.clone();
             let app = app.clone();
             let close_rx = close_rx.clone();
+            let sem_for_task = sem.clone();
+            let cap = self.max_inflight;
 
             tokio::spawn(async move {
                 let _permit = permit;
@@ -304,6 +359,10 @@ impl BoundServer {
                     debug!(%peer, error = %err, "connection ended with error");
                 }
                 drop(close_rx);
+                // Permit drops here too; refresh the gauge so an idle period
+                // doesn't leave a stale peak value.
+                let now_inflight = cap - sem_for_task.available_permits();
+                metrics::gauge!("openlen_edge_handshake_inflight").set(now_inflight as f64);
             });
         }
 

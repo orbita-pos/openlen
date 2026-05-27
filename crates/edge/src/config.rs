@@ -28,6 +28,7 @@ const ENV_CERT_DIR: &str = "OPENLEN_EDGE_CERT_DIR";
 const ENV_ACME_ENABLED: &str = "OPENLEN_EDGE_ACME_ENABLED";
 const ENV_CERT_RENEWAL_THRESHOLD_DAYS: &str = "OPENLEN_EDGE_CERT_RENEWAL_THRESHOLD_DAYS";
 const ENV_CERT_RENEWAL_INTERVAL_SECS: &str = "OPENLEN_EDGE_CERT_RENEWAL_INTERVAL_SECS";
+const ENV_METRICS_BIND: &str = "OPENLEN_EDGE_METRICS_BIND";
 
 const DEFAULT_BIND: &str = "0.0.0.0:443";
 const DEFAULT_BIND_HTTP: &str = "0.0.0.0:80";
@@ -56,6 +57,10 @@ const DEFAULT_ACME_DIRECTORY_URL: &str = "https://acme-v02.api.letsencrypt.org/d
 const DEFAULT_CERT_DIR: &str = "/var/openlen/certs";
 const DEFAULT_CERT_RENEWAL_THRESHOLD_DAYS: u32 = 30;
 const DEFAULT_CERT_RENEWAL_INTERVAL_SECS: u64 = 24 * 60 * 60;
+/// Loopback-only by default — Prometheus servers scrape locally / via a
+/// node-local sidecar. Production operators can flip the bind to expose
+/// metrics on a trusted interface.
+const DEFAULT_METRICS_BIND: &str = "127.0.0.1:9090";
 
 #[derive(Debug, Clone)]
 pub struct EdgeConfig {
@@ -107,6 +112,9 @@ pub struct EdgeConfig {
     pub cert_renewal_threshold_days: u32,
     /// Interval between renewal sweeps (background task).
     pub cert_renewal_interval_secs: u64,
+    /// Bind address for the Prometheus `/metrics` endpoint. `None` disables
+    /// the exporter.
+    pub metrics_bind: Option<SocketAddr>,
 }
 
 fn parse_csv_lower(raw: &str) -> Vec<String> {
@@ -252,6 +260,10 @@ impl EdgeConfig {
             })?,
             Err(_) => DEFAULT_CERT_RENEWAL_INTERVAL_SECS,
         };
+        let metrics_bind = match env::var(ENV_METRICS_BIND) {
+            Ok(raw) => parse_optional_socketaddr(ENV_METRICS_BIND, &raw)?,
+            Err(_) => Some(DEFAULT_METRICS_BIND.parse().unwrap()),
+        };
 
         Ok(Self {
             bind,
@@ -278,6 +290,7 @@ impl EdgeConfig {
             acme_enabled,
             cert_renewal_threshold_days,
             cert_renewal_interval_secs,
+            metrics_bind,
         })
     }
 
@@ -312,6 +325,7 @@ pub struct EdgeConfigBuilder {
     acme_enabled: Option<bool>,
     cert_renewal_threshold_days: Option<u32>,
     cert_renewal_interval_secs: Option<u64>,
+    metrics_bind: Option<Option<SocketAddr>>,
 }
 
 impl EdgeConfigBuilder {
@@ -435,6 +449,11 @@ impl EdgeConfigBuilder {
         self
     }
 
+    pub fn metrics_bind(mut self, addr: Option<SocketAddr>) -> Self {
+        self.metrics_bind = Some(addr);
+        self
+    }
+
     pub fn build(self) -> Result<EdgeConfig> {
         Ok(EdgeConfig {
             bind: self
@@ -494,6 +513,7 @@ impl EdgeConfigBuilder {
             cert_renewal_interval_secs: self
                 .cert_renewal_interval_secs
                 .unwrap_or(DEFAULT_CERT_RENEWAL_INTERVAL_SECS),
+            metrics_bind: self.metrics_bind.unwrap_or(None),
         })
     }
 }
