@@ -3,7 +3,7 @@
 Branch: `rust/f1-session9-cheerio-cleanup` (off `master`'s `2ada4f3` = F1 soak-tooling merge tip, **not** pushed, no PR).
 
 ```
-<docs-commit>  docs(rust): F1 session-9 handoff — Sem 12 cutover complete (F1 DONE)
+78c4d36  docs(rust): F1 session-9 handoff — Sem 12 cutover complete (F1 DONE)
 1ab1724  fix(infra): externalise @openlen/html-engine for the Next.js webpack server bundle
 9c4a56c  docs(rust): F1 S9 D — refresh lib/html-engine.ts header
 8e8b225  feat(rust): F1 S9 A4 — cutover optimize-html.ts + delete Tailwind bake arm
