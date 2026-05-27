@@ -495,6 +495,67 @@ async fn subdomain_api_other_serves_from_disk_not_proxy() {
 }
 
 #[tokio::test]
+async fn security_headers_emitted_on_subdomain_responses() {
+    // nginx and Caddy both emit these on every served response. The edge
+    // must too — the cutover runbook calls these out as part of the smoke
+    // check, and downgrading any of them would weaken the prod posture.
+    let h = spawn_edge().await;
+    let resp = get(h.addr, "demo.openlen.com", "/").await;
+    assert_eq!(resp.status(), 200);
+
+    let header_str = |name: &str| -> String {
+        resp.headers()
+            .get(name)
+            .unwrap_or_else(|| panic!("expected response header `{name}`"))
+            .to_str()
+            .unwrap()
+            .to_owned()
+    };
+
+    assert!(
+        header_str("strict-transport-security").contains("max-age=31536000"),
+        "HSTS must carry a year of max-age"
+    );
+    assert!(
+        header_str("strict-transport-security").contains("includeSubDomains"),
+        "HSTS must include subdomains"
+    );
+    assert_eq!(header_str("x-content-type-options"), "nosniff");
+    assert_eq!(header_str("x-frame-options"), "SAMEORIGIN");
+    assert_eq!(
+        header_str("referrer-policy"),
+        "strict-origin-when-cross-origin"
+    );
+    assert_eq!(
+        header_str("permissions-policy"),
+        "camera=(), microphone=(), geolocation=()"
+    );
+}
+
+#[tokio::test]
+async fn security_headers_emitted_on_shared_uploads_responses() {
+    // Confirm the layer applies on the shared-uploads path too — not just
+    // on disk-served subdomain responses.
+    let uploads = seed_uploads_dir(b"x");
+    let h = spawn_with_roots(
+        PathBuf::from(FIXTURE_ROOT),
+        Some(uploads.path().to_path_buf()),
+        None,
+        4096,
+    )
+    .await;
+    let resp = get(h.addr, "demo.openlen.com", "/uploads/hello.png").await;
+    assert_eq!(resp.status(), 200);
+    assert!(resp.headers().contains_key("strict-transport-security"));
+    assert!(resp.headers().contains_key("x-content-type-options"));
+    assert!(resp.headers().contains_key("x-frame-options"));
+    assert!(resp.headers().contains_key("referrer-policy"));
+    assert!(resp.headers().contains_key("permissions-policy"));
+    drop(uploads);
+    drop(h);
+}
+
+#[tokio::test]
 async fn subdomain_uploads_raw_traversal_returns_bad_request() {
     // Through the raw router (bypassing reqwest's WHATWG normalisation), an
     // encoded parent-dir segment under /uploads/ must surface as 400 — the
