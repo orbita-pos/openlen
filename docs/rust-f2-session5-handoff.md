@@ -26,7 +26,7 @@ None this session — `master @ a5b30e3` matched the prompt's expected head exac
 
 ```
 4c523f3  feat(rust/edge): F2 Sem 9-10 — ACME on-demand + cert hot-reload + renewal
-<docs commit hash filled in after this handoff is committed>
+e474507  docs(rust): F2 session-5 handoff — Sem 9-10 ACME shipped
 ```
 
 Forked off `master @ a5b30e3`. Touches only `crates/edge/`, the workspace `Cargo.toml` (release-profile opt-level overrides for new deps), and `Cargo.lock`. Zero edits under `crates/html-engine/`, `lib/`, `app/`, `components/`, or `infra/`.
