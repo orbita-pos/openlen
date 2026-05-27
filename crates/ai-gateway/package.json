@@ -1,0 +1,47 @@
+{
+  "name": "@openlen/ai-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "types": "index.d.ts",
+  "description": "Rust-backed AI streaming gateway for OpenLen — Gemini streaming with cancel propagation + usage-metadata billing.",
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jesusbernalrj/inari-pages.git",
+    "directory": "crates/ai-gateway"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts"
+  ],
+  "napi": {
+    "name": "openlen-ai-gateway",
+    "npmClient": "npm",
+    "triples": {
+      "defaults": false,
+      "additional": [
+        "x86_64-pc-windows-msvc",
+        "x86_64-unknown-linux-gnu"
+      ]
+    }
+  },
+  "scripts": {
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "test:rust": "cargo test",
+    "test:node": "node --test __test__/*.test.mjs",
+    "test": "node --test __test__/*.test.mjs",
+    "prepublishOnly": "napi prepublish -t npm --skip-gh-release"
+  },
+  "optionalDependencies": {
+    "@openlen/ai-gateway-win32-x64-msvc": "0.1.0",
+    "@openlen/ai-gateway-linux-x64-gnu": "0.1.0"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^2.18.0"
+  },
+  "engines": {
+    "node": ">= 18"
+  }
+}
