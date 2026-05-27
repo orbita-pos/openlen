@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { getTemplate, getTemplateHtml } from "@/lib/templates/store";
 import { createVersion } from "@/lib/projects/versions";
+import { detectSlotPath } from "@/lib/html-engine";
 import { normalizeBornCanonical } from "@/lib/normalize";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -48,7 +49,7 @@ export async function POST(req: Request): Promise<Response> {
 
   // Defense in depth: the publish flow rejects HTML containing this marker.
   // Bail early so we don't insert a project that can never be published.
-  if (html.includes("data-slot-path=")) {
+  if (detectSlotPath(html)) {
     return json(
       {
         error: "invalid_template",
