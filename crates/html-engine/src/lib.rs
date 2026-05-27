@@ -9,6 +9,7 @@ pub mod normalize;
 pub mod ops;
 pub mod parser;
 pub mod sanitize;
+pub mod stream;
 
 use napi::Result;
 
