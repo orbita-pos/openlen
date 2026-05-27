@@ -3,11 +3,12 @@
 Branch: `rust/f1-session6-migration` (off `master`'s `a5b30e3` = F1 S5 streaming + F2 S4 custom-domains merged tip, **not** pushed, no PR).
 
 ```
-<placeholder-handoff>  docs(rust): F1 session-6 handoff — Sem 10 Phase 1 (foundation + POC) shipped
-<placeholder-poc>      feat(rust): F1 S6 — sanitize.ts shadow-soak POC + migration playbook
-<placeholder-soak>     feat(rust): F1 S6 — shadow-soak harness (lib/shadow-soak.ts) + tests
-<placeholder-wrapper>  feat(rust): F1 S6 — TS wrapper layer (lib/html-engine.ts) with Option→null shim + tests
-<placeholder-prebuild> feat(ci): F1 S6 — prebuild distribution workflow + crate package.json metadata
+739a970  docs(rust): F1 session-6 handoff — Sem 10 Phase 1 (foundation + POC) shipped
+7658535  feat(rust): F1 S6 — sanitize.ts shadow-soak POC + migration playbook
+945904a  feat(rust): F1 S6 — shadow-soak harness for the TS → Rust migration
+70ade68  feat(rust): F1 S6 — TS wrapper layer (lib/html-engine.ts) with Option→null shim
+085b697  ci(rust): F1 S6 — prebuild distribution + crate package.json metadata
+a0a84ab  fix(test): mirror c1a7494 — manuscript reduction threshold 12 -> 11 in Node test
 ```
 
 > Worktree note. Work happened entirely in `D:\worktrees\openlen-f1-s6` (created as `git worktree add -b rust/f1-session6-migration D:/worktrees/openlen-f1-s6 master`). Zero overlap with the parallel `D:\worktrees\openlen-f2-edge` (F2 S5 ACME) session — F1 S6 only touches Node-side files (`lib/*`, `app/*` were not touched), the prebuild workflow YAML, and three metadata files on `crates/html-engine/` (package.json + the new docs).
