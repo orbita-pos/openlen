@@ -182,11 +182,7 @@ mod tests {
         let mut p = SseParser::new();
         let events = p.feed(&single_event_bytes("hi")).unwrap();
         assert_eq!(events.len(), 1);
-        let text = events[0].candidates[0]
-            .content
-            .as_ref()
-            .unwrap()
-            .parts[0]
+        let text = events[0].candidates[0].content.as_ref().unwrap().parts[0]
             .text
             .as_deref()
             .unwrap();
@@ -301,7 +297,8 @@ mod tests {
         //
         // We use a struct shape our `GeminiEvent` accepts: empty candidates
         // plus a usageMetadata object.
-        let bytes = b"data: {\"candidates\":[],\ndata: \"usageMetadata\":{\"promptTokenCount\":1}}\n\n";
+        let bytes =
+            b"data: {\"candidates\":[],\ndata: \"usageMetadata\":{\"promptTokenCount\":1}}\n\n";
         let events = p.feed(bytes).unwrap();
         assert_eq!(events.len(), 1);
         assert_eq!(
@@ -340,10 +337,7 @@ mod tests {
         let events = p.feed(bytes).unwrap();
         assert_eq!(events.len(), 1);
         let ev = &events[0];
-        assert_eq!(
-            ev.candidates[0].finish_reason.as_deref(),
-            Some("STOP"),
-        );
+        assert_eq!(ev.candidates[0].finish_reason.as_deref(), Some("STOP"),);
         let um = ev.usage_metadata.as_ref().unwrap();
         assert_eq!(um.prompt_token_count, Some(12));
         assert_eq!(um.candidates_token_count, Some(5));
