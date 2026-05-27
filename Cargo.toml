@@ -27,10 +27,47 @@ opt-level = "s"
 opt-level = "s"
 [profile.release.package.moka]
 opt-level = "s"
+# F2 S5: ACME-related deps. The issue path runs at most a handful of times
+# per day per domain — completely off the hot request path — so trading
+# inlining for size is the obvious move. instant-acme bundles ring + rcgen
+# pathways which are the biggest chunks.
+[profile.release.package.instant-acme]
+opt-level = "z"
+[profile.release.package.hyper-rustls]
+opt-level = "z"
+[profile.release.package.rustls-platform-verifier]
+opt-level = "z"
+[profile.release.package.rustls-platform-verifier-android]
+opt-level = "z"
+[profile.release.package.rcgen]
+opt-level = "z"
+[profile.release.package.notify]
+opt-level = "z"
+[profile.release.package.notify-types]
+opt-level = "z"
+[profile.release.package.rustls-webpki]
+opt-level = "s"
+[profile.release.package.dashmap]
+opt-level = "s"
+# x509/asn-related — only ever touched during cert load + ACME finalize.
+[profile.release.package.x509-parser]
+opt-level = "z"
+[profile.release.package.yasna]
+opt-level = "z"
+[profile.release.package.der-parser]
+opt-level = "z"
+[profile.release.package.asn1-rs]
+opt-level = "z"
+[profile.release.package.simple_asn1]
+opt-level = "z"
+[profile.release.package.ring]
+opt-level = "s"
+# Cold-path crypto used by ACME signing / cert generation. Shaves
+# another ~150 KB by giving up inlining inside the seldom-used path.
 [profile.release.package.aws-lc-rs]
-opt-level = "s"
+opt-level = "z"
 [profile.release.package.aws-lc-sys]
-opt-level = "s"
+opt-level = "z"
 
 [profile.bench]
 lto = true

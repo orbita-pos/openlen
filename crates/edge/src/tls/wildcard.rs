@@ -4,6 +4,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
+use rustls::server::ResolvesServerCert;
 use rustls::ServerConfig;
 use thiserror::Error;
 
@@ -47,6 +48,19 @@ pub fn load_wildcard(
     cfg.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
 
     Ok(Arc::new(cfg))
+}
+
+/// Build a `ServerConfig` backed by an arbitrary
+/// [`ResolvesServerCert`] (the dynamic-cert flow uses this with our
+/// [`super::resolver::DynamicCertResolver`]). Picks the same ALPN list as
+/// [`load_wildcard`] so HTTP/2 + HTTP/1.1 keep working.
+pub fn build_dynamic_config(resolver: Arc<dyn ResolvesServerCert>) -> Arc<ServerConfig> {
+    crate::ensure_crypto_provider();
+    let mut cfg = ServerConfig::builder()
+        .with_no_client_auth()
+        .with_cert_resolver(resolver);
+    cfg.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
+    Arc::new(cfg)
 }
 
 fn load_certs(path: &Path) -> Result<Vec<CertificateDer<'static>>, WildcardCertError> {
@@ -118,5 +132,27 @@ mod tests {
         let key = write_temp(b"");
         let err = load_wildcard(cert.path(), key.path()).unwrap_err();
         assert!(matches!(err, WildcardCertError::NoCertificates(_)));
+    }
+
+    #[test]
+    fn build_dynamic_config_sets_alpn_h2_h1() {
+        use std::sync::Arc;
+
+        #[derive(Debug)]
+        struct AlwaysNone;
+        impl rustls::server::ResolvesServerCert for AlwaysNone {
+            fn resolve(
+                &self,
+                _: rustls::server::ClientHello,
+            ) -> Option<Arc<rustls::sign::CertifiedKey>> {
+                None
+            }
+        }
+
+        let cfg = build_dynamic_config(Arc::new(AlwaysNone));
+        assert_eq!(
+            cfg.alpn_protocols,
+            vec![b"h2".to_vec(), b"http/1.1".to_vec()]
+        );
     }
 }

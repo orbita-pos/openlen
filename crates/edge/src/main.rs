@@ -1,13 +1,18 @@
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
+use std::time::Duration;
 
 use anyhow::Result;
+use dashmap::DashMap;
+use rustls::sign::CertifiedKey;
 use tokio::signal;
 use tokio::sync::Notify;
 use tracing::{info, warn};
 
 use openlen_edge::{
-    bind_with_lookup, build_lookup_from_config, ensure_crypto_provider, load_wildcard,
-    observability, run_http_redirect, run_internal_api, EdgeConfig, InternalApiState,
+    bind_with_lookup, build_dynamic_config, build_lookup_from_config, ensure_crypto_provider,
+    load_persisted_certs, observability, read_cert_pair, run_http_redirect, run_internal_api,
+    run_renewal_loop, watch_wildcard, AcmeClient, AcmeIssuer, DynamicCertResolver, EdgeConfig,
+    InternalApiState, RenewalConfig,
 };
 
 #[tokio::main]
@@ -31,12 +36,81 @@ async fn main() -> Result<()> {
         domain_cache_max = cfg.domain_cache_max,
         domain_cache_ttl_secs = cfg.domain_cache_ttl_secs,
         internal_api_bind = ?cfg.internal_api_bind,
+        cert_dir = %cfg.cert_dir.display(),
+        acme_enabled = cfg.acme_enabled,
+        acme_directory = %cfg.acme_directory_url,
+        cert_renewal_threshold_days = cfg.cert_renewal_threshold_days,
         "openlen-edge starting"
     );
 
     let lookup = build_lookup_from_config(&cfg).await?;
-    let tls = load_wildcard(&cfg.cert_path, &cfg.key_path)?;
-    let tls_server = bind_with_lookup(&cfg, tls, lookup.clone()).await?;
+
+    // Wildcard cert slot — populated from disk, swapped by the hot-reload
+    // watcher on certbot rotations.
+    let wildcard_key = read_cert_pair(&cfg.cert_path, &cfg.key_path)?;
+    let wildcard_slot: Arc<RwLock<Arc<CertifiedKey>>> =
+        Arc::new(RwLock::new(Arc::new(wildcard_key)));
+
+    // Custom-cert map — pre-populated from any certs persisted on disk.
+    let custom: Arc<DashMap<String, Arc<CertifiedKey>>> = Arc::new(DashMap::new());
+    match load_persisted_certs(&cfg.cert_dir) {
+        Ok(stored) => {
+            for entry in stored {
+                info!(
+                    domain = %entry.domain,
+                    expires_at = entry.expires_at,
+                    "loaded persisted cert"
+                );
+                custom.insert(entry.domain, entry.certified);
+            }
+        }
+        Err(err) => warn!(
+            cert_dir = %cfg.cert_dir.display(),
+            error = %err,
+            "failed to enumerate cert dir — starting with empty custom-cert map"
+        ),
+    }
+
+    // ACME client — only constructed when both `acme_enabled` and a
+    // contact mailbox are configured. Without either, the resolver
+    // refuses to issue and unknown custom hosts get a clean handshake
+    // failure.
+    let acme_issuer: Option<Arc<dyn AcmeIssuer>> = if cfg.acme_enabled {
+        match &cfg.acme_contact {
+            Some(contact) if !contact.trim().is_empty() => {
+                match AcmeClient::new(contact, &cfg.acme_directory_url, cfg.cert_dir.clone()).await
+                {
+                    Ok(client) => Some(Arc::new(client)),
+                    Err(err) => {
+                        warn!(error = %err, "ACME client init failed — on-demand issuance disabled");
+                        None
+                    }
+                }
+            }
+            _ => {
+                warn!(
+                    "OPENLEN_EDGE_ACME_ENABLED=true but OPENLEN_EDGE_ACME_CONTACT is empty — on-demand issuance disabled"
+                );
+                None
+            }
+        }
+    } else {
+        None
+    };
+
+    let resolver = DynamicCertResolver::new(
+        wildcard_slot.clone(),
+        custom.clone(),
+        acme_issuer.clone(),
+        lookup.clone() as Arc<dyn openlen_edge::DomainLookup>,
+    );
+    let tls = build_dynamic_config(Arc::new(resolver));
+    let tls_server = bind_with_lookup(
+        &cfg,
+        tls,
+        lookup.clone() as Arc<dyn openlen_edge::DomainLookup>,
+    )
+    .await?;
 
     let shutdown = Arc::new(Notify::new());
 
@@ -46,11 +120,40 @@ async fn main() -> Result<()> {
         tls_server.serve(signal).await
     });
 
+    // Wildcard cert hot-reload.
+    let reload_shutdown = shutdown.clone();
+    let reload_cert = cfg.cert_path.clone();
+    let reload_key = cfg.key_path.clone();
+    let reload_slot = wildcard_slot.clone();
+    let reload_task = tokio::spawn(async move {
+        let signal = async move { reload_shutdown.notified().await };
+        watch_wildcard(reload_cert, reload_key, reload_slot, signal).await
+    });
+
+    // Background renewal sweep.
+    let renewal_task = if let Some(acme) = acme_issuer.clone() {
+        let renewal_shutdown = shutdown.clone();
+        let renewal_cfg = RenewalConfig {
+            cert_dir: cfg.cert_dir.clone(),
+            threshold_days: cfg.cert_renewal_threshold_days,
+            interval: Duration::from_secs(cfg.cert_renewal_interval_secs),
+        };
+        let custom_for_renewal = custom.clone();
+        Some(tokio::spawn(async move {
+            let signal = async move { renewal_shutdown.notified().await };
+            run_renewal_loop(renewal_cfg, acme, custom_for_renewal, signal).await;
+            Ok::<(), anyhow::Error>(())
+        }))
+    } else {
+        None
+    };
+
     let redirect_task = if let Some(bind_http) = cfg.bind_http {
         let redirect_shutdown = shutdown.clone();
+        let redirect_acme = acme_issuer.clone();
         Some(tokio::spawn(async move {
             let signal = async move { redirect_shutdown.notified().await };
-            run_http_redirect(bind_http, signal).await
+            run_http_redirect(bind_http, redirect_acme, signal).await
         }))
     } else {
         None
@@ -98,6 +201,18 @@ async fn main() -> Result<()> {
             Ok(Err(err)) => warn!(error = %err, "internal API exited with error"),
             Err(err) => warn!(error = %err, "internal API task panicked"),
         }
+    }
+    if let Some(handle) = renewal_task {
+        match handle.await {
+            Ok(Ok(())) => {}
+            Ok(Err(err)) => warn!(error = %err, "renewal task exited with error"),
+            Err(err) => warn!(error = %err, "renewal task panicked"),
+        }
+    }
+    match reload_task.await {
+        Ok(Ok(())) => {}
+        Ok(Err(err)) => warn!(error = %err, "wildcard reload task exited with error"),
+        Err(err) => warn!(error = %err, "wildcard reload task panicked"),
     }
 
     tls_result
