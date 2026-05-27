@@ -3,7 +3,7 @@
 Branch: `rust/f1-session8-optimize-migration` (off `master`'s `e4b4121` = F1 S7 merge tip + F2 S5 ACME merge tip, **not** pushed, no PR).
 
 ```
-<TBD>    docs(rust): F1 session-8 handoff — Sem 10 Phase 3 shipped
+9fc5142  docs(rust): F1 session-8 handoff — Sem 10 Phase 3 shipped
 5dd1592  feat(rust): F1 S8 — migrate lib/publish/optimize-html.ts via async shadow-soak
 a5304b3  feat(rust): F1 S8 — extend shadow-soak harness with asyncShadowCompare
 ```
