@@ -128,11 +128,12 @@ export const projects = pgTable(
     logoUrl: text("logoUrl"),
     data: jsonb("data").$type<ProjectData>().notNull(),
     // Per-project AI context — user-controlled instructions that get
-    // prepended to every Chat tab prompt sent to Kimi K2.6. Equivalent to
-    // Claude.ai's "Project instructions" feature: persistent system-prompt-
-    // level context that travels across regen turns. Distinct from the
-    // immutable `brief` column above (which is the original orchestrator
-    // brief / synthetic placeholder set at project creation).
+    // prepended to every Chat tab prompt sent to the chat model.
+    // Equivalent to Claude.ai's "Project instructions" feature: persistent
+    // system-prompt-level context that travels across regen turns.
+    // Distinct from the immutable `brief` column above (which is the
+    // original orchestrator brief / synthetic placeholder set at project
+    // creation).
     userBrief: text("userBrief"),
     // Session 11 — claimed subdomain (e.g. `acme` → acme.openlen.com).
     // UNIQUE constraint enforces global uniqueness; clearing it
