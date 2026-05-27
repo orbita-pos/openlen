@@ -348,7 +348,7 @@ export async function publishToDir(
   // to see the original `images.unsplash.com` URLs to detect anonymous
   // (paste-URL / template-baked) photos; after migrateUnsplashAssets rewrites
   // them to `/assets/<sha>.webp`, the Unsplash provenance is lost. Soft-fail
-  // so a cheerio parse hiccup never blocks a publish.
+  // so a parse hiccup never blocks a publish.
   let creditedHtml = optimized.html;
   try {
     creditedHtml = consolidateUnsplashCredits(optimized.html).html;
@@ -393,7 +393,7 @@ export async function publishToDir(
 
   // Wire <form>s to the OpenLen submit endpoint + inject the inline-submit
   // script. Done last so the action lands on the final asset-rewritten HTML.
-  // Soft-fail — a cheerio hiccup must never block a publish.
+  // Soft-fail — a parse hiccup must never block a publish.
   try {
     migratedHtml = wirePublishedForms(migratedHtml, sub, params.formConfigs);
   } catch (err) {

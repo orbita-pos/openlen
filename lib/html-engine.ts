@@ -230,8 +230,9 @@ export function detectSlotPath(html: string): boolean {
 // ─── F1.5 publish-time helpers ──────────────────────────────────────────────
 //
 // Each function here corresponds to one of the four non-Motor-HTML consumers
-// F1 S9 left on cheerio. See crates/html-engine/src/publish/ for the Rust
-// implementations and the per-function contracts.
+// F1 S9 left behind on the legacy TS parser. See
+// crates/html-engine/src/publish/ for the Rust implementations and the
+// per-function contracts; docs/rust-f1-5-handoff.md for the migration log.
 
 /** Extract the page's favicon / logo URL — first `<link rel>` whose rel
  *  tokens contain "icon", or fall back to `<meta property="og:image">`.

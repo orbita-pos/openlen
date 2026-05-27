@@ -6,9 +6,9 @@
 // image/svg+xml when it embeds a script).
 //
 // We don't try to "fix" or rewrite the value — we drop the attribute entirely
-// so the browser silently no-ops the link. This matches the TS reference
-// (removeAttr in cheerio) and avoids the second-order problem of trying to
-// normalize a hostile URL.
+// so the browser silently no-ops the link. This matches the legacy TS
+// reference (removeAttr on the parsed tree) and avoids the second-order
+// problem of trying to normalize a hostile URL.
 
 use lol_html::{element, rewrite_str, RewriteStrSettings};
 use once_cell::sync::Lazy;
