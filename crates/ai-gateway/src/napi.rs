@@ -208,11 +208,6 @@ impl From<StreamEvent> for JsStreamEvent {
 /// envelope as the reason. The TS wrapper parses this back into a typed
 /// `GatewayError` class so callers see `err.kind`, `err.retryable`, and
 /// `err.message` directly.
-///
-/// The function is only called from the stream binding ([`crate::napi_stream`],
-/// added in Phase C). Until that lands, suppress the dead-code warning so
-/// the type-marshalling and constructor surface still build clippy-clean.
-#[allow(dead_code)]
 pub(crate) fn gateway_error_to_napi(err: GatewayError) -> napi::Error {
     let kind = match &err {
         GatewayError::ApiError { .. } => "api",
