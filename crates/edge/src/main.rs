@@ -8,6 +8,7 @@ use tokio::signal;
 use tokio::sync::Notify;
 use tracing::{info, warn};
 
+use observability::{install_exporter, spawn_process_collector_loop};
 use openlen_edge::{
     bind_with_lookup, build_dynamic_config, build_lookup_from_config, ensure_crypto_provider,
     load_persisted_certs, observability, read_cert_pair, run_http_redirect, run_internal_api,
@@ -42,6 +43,27 @@ async fn main() -> Result<()> {
         cert_renewal_threshold_days = cfg.cert_renewal_threshold_days,
         "openlen-edge starting"
     );
+
+    // Metrics exporter — installed before anything else so the first request
+    // / first issuance lands in the global registry. The handle stays in
+    // scope so the recorder isn't dropped.
+    let _metrics_handle = match cfg.metrics_bind {
+        Some(addr) => match install_exporter(addr) {
+            Ok(h) => {
+                info!(addr = %addr, "Prometheus /metrics listener installed");
+                Some(h)
+            }
+            Err(err) => {
+                warn!(addr = %addr, error = %err, "metrics exporter install failed — continuing without metrics");
+                None
+            }
+        },
+        None => {
+            info!("metrics exporter disabled (OPENLEN_EDGE_METRICS_BIND=off)");
+            None
+        }
+    };
+    let process_collector = spawn_process_collector_loop(Duration::from_secs(10));
 
     let lookup = build_lookup_from_config(&cfg).await?;
 
@@ -105,6 +127,26 @@ async fn main() -> Result<()> {
         lookup.clone() as Arc<dyn openlen_edge::DomainLookup>,
     );
     let tls = build_dynamic_config(Arc::new(resolver));
+
+    // Periodic refresh of cert-count gauges. Cheap (one DashMap len()).
+    let active_certs_custom = custom.clone();
+    let active_certs_task = tokio::spawn(async move {
+        let mut ticker = tokio::time::interval(Duration::from_secs(30));
+        ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+        loop {
+            ticker.tick().await;
+            metrics::gauge!(
+                "openlen_edge_active_certs_total",
+                "type" => "wildcard",
+            )
+            .set(1.0);
+            metrics::gauge!(
+                "openlen_edge_active_certs_total",
+                "type" => "custom",
+            )
+            .set(active_certs_custom.len() as f64);
+        }
+    });
     let tls_server = bind_with_lookup(
         &cfg,
         tls,
@@ -214,6 +256,8 @@ async fn main() -> Result<()> {
         Ok(Err(err)) => warn!(error = %err, "wildcard reload task exited with error"),
         Err(err) => warn!(error = %err, "wildcard reload task panicked"),
     }
+    active_certs_task.abort();
+    process_collector.abort();
 
     tls_result
 }
