@@ -7,7 +7,7 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use axum::body::Body;
 use axum::extract::{ConnectInfo, State};
-use axum::http::{header, HeaderValue, Request, Response, StatusCode};
+use axum::http::{header, HeaderName, HeaderValue, Request, Response, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::Router;
@@ -35,6 +35,22 @@ const SHARED_UPLOADS_CACHE_CONTROL: &str = "public, immutable, max-age=2592000";
 /// Cache-Control for files under `/_next/static/`. Next.js hashes the build
 /// output, so 1 year + immutable is correct. Matches nginx + Caddy.
 const NEXT_STATIC_CACHE_CONTROL: &str = "public, immutable, max-age=31536000";
+
+/// Security headers applied to every response — values match nginx
+/// `add_header ... always` + Caddy `header { ... }` parity. Set with
+/// `SetResponseHeaderLayer::overriding`, so an upstream that tries to set a
+/// weaker policy gets canonicalised at the edge.
+const HSTS_VALUE: &str = "max-age=31536000; includeSubDomains";
+const X_CTO_VALUE: &str = "nosniff";
+const X_FRAME_OPTIONS_VALUE: &str = "SAMEORIGIN";
+const REFERRER_POLICY_VALUE: &str = "strict-origin-when-cross-origin";
+const PERMISSIONS_POLICY_VALUE: &str = "camera=(), microphone=(), geolocation=()";
+
+/// Permissions-Policy isn't a `http::header::HeaderName` constant in the
+/// current http crate version. `HeaderName::from_static` is a cheap
+/// validation, but `router()` runs once on startup so we still construct it
+/// inline at the call site rather than caching.
+const PERMISSIONS_POLICY_NAME: &str = "permissions-policy";
 
 /// Bucket labels matching the response status class. Cheap match instead of
 /// re-formatting on every emission.
@@ -170,6 +186,26 @@ pub fn router(state: AppState) -> Router {
         .layer(SetResponseHeaderLayer::overriding(
             header::SERVER,
             HeaderValue::from_static(SERVER_HEADER_VALUE),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            header::STRICT_TRANSPORT_SECURITY,
+            HeaderValue::from_static(HSTS_VALUE),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            header::X_CONTENT_TYPE_OPTIONS,
+            HeaderValue::from_static(X_CTO_VALUE),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            header::X_FRAME_OPTIONS,
+            HeaderValue::from_static(X_FRAME_OPTIONS_VALUE),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            header::REFERRER_POLICY,
+            HeaderValue::from_static(REFERRER_POLICY_VALUE),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            HeaderName::from_static(PERMISSIONS_POLICY_NAME),
+            HeaderValue::from_static(PERMISSIONS_POLICY_VALUE),
         ))
         .layer(TraceLayer::new_for_http())
 }

@@ -61,9 +61,7 @@ async fn apex_handler() -> Response<Body> {
 }
 
 async fn start_mock_node() -> MockNode {
-    let listener = TcpListener::bind("127.0.0.1:0")
-        .await
-        .expect("mock listen");
+    let listener = TcpListener::bind("127.0.0.1:0").await.expect("mock listen");
     let addr = listener.local_addr().expect("local_addr");
     let app = Router::new().fallback(any(apex_handler));
     let (tx, rx) = oneshot::channel::<()>();
