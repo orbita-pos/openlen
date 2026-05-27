@@ -27,6 +27,7 @@ pub mod tokenizer;
 pub mod types;
 
 pub mod napi;
+pub mod napi_stream;
 
 pub use error::GatewayError;
 pub use gemini::GeminiProvider;
