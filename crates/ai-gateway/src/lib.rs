@@ -6,17 +6,18 @@
 //! upstream call mid-flight by signalling a
 //! [`tokio_util::sync::CancellationToken`] (or simply dropping the stream).
 //!
-//! Scope today (F3 S1):
+//! Two surfaces:
 //!
-//! - `gemini::GeminiProvider` — REST/SSE streaming against
-//!   `generativelanguage.googleapis.com`, no napi binding yet.
-//! - `tokenizer::estimate_tokens` — chars/4 heuristic for pre-flight credit
-//!   checks. Exact counts come from `StreamEvent::Usage` events emitted by
-//!   the provider.
+//! - **Native Rust API** (`gemini::GeminiProvider`, `tokenizer::estimate_tokens`)
+//!   — used by other crates in this workspace and by Rust integration tests.
+//!   Stable since F3 S1.
+//! - **napi binding** (`napi::*`, `napi_stream::*`) — exposes the same surface
+//!   to Node via napi-rs. Added in F3 S2. The binding is additive: every
+//!   item in those modules has a JS counterpart, and the native Rust API is
+//!   untouched.
 //!
 //! Out of scope:
 //!
-//! - napi-rs binding to Node — F3 S2.
 //! - HtmlStream integration — F3 S3.
 //! - `lib/credits.ts` hook-up + `/api/generate` cutover — F3 S3-S4.
 
@@ -24,6 +25,9 @@ pub mod error;
 pub mod gemini;
 pub mod tokenizer;
 pub mod types;
+
+pub mod napi;
+pub mod napi_stream;
 
 pub use error::GatewayError;
 pub use gemini::GeminiProvider;
