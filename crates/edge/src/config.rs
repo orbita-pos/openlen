@@ -20,6 +20,12 @@ const ENV_DOMAIN_CACHE_TTL_SECS: &str = "OPENLEN_EDGE_DOMAIN_CACHE_TTL_SECS";
 const ENV_DOMAIN_NEGATIVE_TTL_SECS: &str = "OPENLEN_EDGE_DOMAIN_NEGATIVE_TTL_SECS";
 const ENV_DOMAIN_CACHE_MAX: &str = "OPENLEN_EDGE_DOMAIN_CACHE_MAX";
 const ENV_INTERNAL_API_BIND: &str = "OPENLEN_EDGE_INTERNAL_API_BIND";
+const ENV_ACME_CONTACT: &str = "OPENLEN_EDGE_ACME_CONTACT";
+const ENV_ACME_DIRECTORY_URL: &str = "OPENLEN_EDGE_ACME_DIRECTORY_URL";
+const ENV_CERT_DIR: &str = "OPENLEN_EDGE_CERT_DIR";
+const ENV_ACME_ENABLED: &str = "OPENLEN_EDGE_ACME_ENABLED";
+const ENV_CERT_RENEWAL_THRESHOLD_DAYS: &str = "OPENLEN_EDGE_CERT_RENEWAL_THRESHOLD_DAYS";
+const ENV_CERT_RENEWAL_INTERVAL_SECS: &str = "OPENLEN_EDGE_CERT_RENEWAL_INTERVAL_SECS";
 
 const DEFAULT_BIND: &str = "0.0.0.0:443";
 const DEFAULT_BIND_HTTP: &str = "0.0.0.0:80";
@@ -35,6 +41,14 @@ const DEFAULT_DB_POOL_MAX: u32 = 8;
 const DEFAULT_DOMAIN_CACHE_TTL_SECS: u64 = 60;
 const DEFAULT_DOMAIN_NEGATIVE_TTL_SECS: u64 = 60;
 const DEFAULT_DOMAIN_CACHE_MAX: u64 = 10_000;
+/// Default Let's Encrypt production directory URL. Set
+/// `OPENLEN_EDGE_ACME_DIRECTORY_URL` to the staging endpoint
+/// (`https://acme-staging-v02.api.letsencrypt.org/directory`) for tests + dry
+/// runs.
+const DEFAULT_ACME_DIRECTORY_URL: &str = "https://acme-v02.api.letsencrypt.org/directory";
+const DEFAULT_CERT_DIR: &str = "/var/openlen/certs";
+const DEFAULT_CERT_RENEWAL_THRESHOLD_DAYS: u32 = 30;
+const DEFAULT_CERT_RENEWAL_INTERVAL_SECS: u64 = 24 * 60 * 60;
 
 #[derive(Debug, Clone)]
 pub struct EdgeConfig {
@@ -58,6 +72,25 @@ pub struct EdgeConfig {
     /// Bind address for the loopback-only internal API
     /// (`/internal/domains/lookup`). `None` = disabled.
     pub internal_api_bind: Option<SocketAddr>,
+    /// Contact mailbox passed to the ACME registration (`mailto:<addr>`).
+    /// Required by Let's Encrypt — issuance is refused without it.
+    pub acme_contact: Option<String>,
+    /// ACME directory URL. Defaults to Let's Encrypt production. Tests +
+    /// dry-runs should point at the staging endpoint.
+    pub acme_directory_url: String,
+    /// On-disk root for ACME-issued cert chains. One sub-directory per
+    /// domain (path-hashed); the cert + private key + chain land as PEM
+    /// files inside.
+    pub cert_dir: PathBuf,
+    /// Master switch — when `false`, the dynamic resolver refuses to spawn
+    /// any new issuance. Cert hot-reload still works; pre-loaded custom
+    /// certs from `cert_dir` are still served. Defaults to `false` unless
+    /// `acme_contact` is set.
+    pub acme_enabled: bool,
+    /// Renew certificates with less than this many days of validity left.
+    pub cert_renewal_threshold_days: u32,
+    /// Interval between renewal sweeps (background task).
+    pub cert_renewal_interval_secs: u64,
 }
 
 fn parse_csv_lower(raw: &str) -> Vec<String> {
@@ -72,6 +105,16 @@ fn parse_csv(raw: &str) -> Vec<String> {
         .map(|s| s.trim().to_owned())
         .filter(|s| !s.is_empty())
         .collect()
+}
+
+fn parse_bool(env_name: &str, raw: &str) -> Result<bool> {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "1" | "true" | "yes" | "on" => Ok(true),
+        "0" | "false" | "no" | "off" | "" => Ok(false),
+        other => Err(anyhow::anyhow!(
+            "{env_name}={other} is not a recognised boolean (use 1/true/on or 0/false/off)"
+        )),
+    }
 }
 
 fn parse_optional_socketaddr(env_name: &str, raw: &str) -> Result<Option<SocketAddr>> {
@@ -155,6 +198,31 @@ impl EdgeConfig {
             Err(_) => None,
         };
 
+        let acme_contact = env::var(ENV_ACME_CONTACT).ok().filter(|s| !s.is_empty());
+        let acme_directory_url =
+            env::var(ENV_ACME_DIRECTORY_URL).unwrap_or_else(|_| DEFAULT_ACME_DIRECTORY_URL.into());
+        let cert_dir =
+            PathBuf::from(env::var(ENV_CERT_DIR).unwrap_or_else(|_| DEFAULT_CERT_DIR.into()));
+        let acme_enabled = match env::var(ENV_ACME_ENABLED) {
+            Ok(raw) => parse_bool(ENV_ACME_ENABLED, &raw)?,
+            // Default = on whenever a contact mailbox is set. Lets `main.rs`
+            // boot with ACME working out of the box once the operator
+            // provides the one required value.
+            Err(_) => acme_contact.is_some(),
+        };
+        let cert_renewal_threshold_days = match env::var(ENV_CERT_RENEWAL_THRESHOLD_DAYS) {
+            Ok(raw) => raw.parse::<u32>().with_context(|| {
+                format!("{ENV_CERT_RENEWAL_THRESHOLD_DAYS}={raw} is not a non-negative integer")
+            })?,
+            Err(_) => DEFAULT_CERT_RENEWAL_THRESHOLD_DAYS,
+        };
+        let cert_renewal_interval_secs = match env::var(ENV_CERT_RENEWAL_INTERVAL_SECS) {
+            Ok(raw) => raw.parse::<u64>().with_context(|| {
+                format!("{ENV_CERT_RENEWAL_INTERVAL_SECS}={raw} is not a non-negative integer")
+            })?,
+            Err(_) => DEFAULT_CERT_RENEWAL_INTERVAL_SECS,
+        };
+
         Ok(Self {
             bind,
             bind_http,
@@ -172,6 +240,12 @@ impl EdgeConfig {
             domain_negative_ttl_secs,
             domain_cache_max,
             internal_api_bind,
+            acme_contact,
+            acme_directory_url,
+            cert_dir,
+            acme_enabled,
+            cert_renewal_threshold_days,
+            cert_renewal_interval_secs,
         })
     }
 
@@ -198,6 +272,12 @@ pub struct EdgeConfigBuilder {
     domain_negative_ttl_secs: Option<u64>,
     domain_cache_max: Option<u64>,
     internal_api_bind: Option<Option<SocketAddr>>,
+    acme_contact: Option<Option<String>>,
+    acme_directory_url: Option<String>,
+    cert_dir: Option<PathBuf>,
+    acme_enabled: Option<bool>,
+    cert_renewal_threshold_days: Option<u32>,
+    cert_renewal_interval_secs: Option<u64>,
 }
 
 impl EdgeConfigBuilder {
@@ -281,6 +361,36 @@ impl EdgeConfigBuilder {
         self
     }
 
+    pub fn acme_contact(mut self, contact: Option<String>) -> Self {
+        self.acme_contact = Some(contact);
+        self
+    }
+
+    pub fn acme_directory_url(mut self, url: impl Into<String>) -> Self {
+        self.acme_directory_url = Some(url.into());
+        self
+    }
+
+    pub fn cert_dir(mut self, path: PathBuf) -> Self {
+        self.cert_dir = Some(path);
+        self
+    }
+
+    pub fn acme_enabled(mut self, enabled: bool) -> Self {
+        self.acme_enabled = Some(enabled);
+        self
+    }
+
+    pub fn cert_renewal_threshold_days(mut self, days: u32) -> Self {
+        self.cert_renewal_threshold_days = Some(days);
+        self
+    }
+
+    pub fn cert_renewal_interval_secs(mut self, secs: u64) -> Self {
+        self.cert_renewal_interval_secs = Some(secs);
+        self
+    }
+
     pub fn build(self) -> Result<EdgeConfig> {
         Ok(EdgeConfig {
             bind: self
@@ -315,6 +425,25 @@ impl EdgeConfigBuilder {
                 .unwrap_or(DEFAULT_DOMAIN_NEGATIVE_TTL_SECS),
             domain_cache_max: self.domain_cache_max.unwrap_or(DEFAULT_DOMAIN_CACHE_MAX),
             internal_api_bind: self.internal_api_bind.unwrap_or(None),
+            acme_contact: {
+                let contact = self.acme_contact.unwrap_or(None);
+                // Promote the `acme_enabled` default exactly as `from_env`
+                // does — caller can still override with `.acme_enabled(true)`.
+                contact
+            },
+            acme_directory_url: self
+                .acme_directory_url
+                .unwrap_or_else(|| DEFAULT_ACME_DIRECTORY_URL.into()),
+            cert_dir: self
+                .cert_dir
+                .unwrap_or_else(|| PathBuf::from(DEFAULT_CERT_DIR)),
+            acme_enabled: self.acme_enabled.unwrap_or(false),
+            cert_renewal_threshold_days: self
+                .cert_renewal_threshold_days
+                .unwrap_or(DEFAULT_CERT_RENEWAL_THRESHOLD_DAYS),
+            cert_renewal_interval_secs: self
+                .cert_renewal_interval_secs
+                .unwrap_or(DEFAULT_CERT_RENEWAL_INTERVAL_SECS),
         })
     }
 }
@@ -458,5 +587,64 @@ mod tests {
     #[test]
     fn parse_optional_socketaddr_rejects_garbage() {
         assert!(parse_optional_socketaddr("X", "not-an-addr").is_err());
+    }
+
+    #[test]
+    fn builder_fills_acme_defaults() {
+        let cfg = EdgeConfig::builder()
+            .bind("127.0.0.1:0".parse().unwrap())
+            .cert_path(PathBuf::from("/tmp/cert.pem"))
+            .key_path(PathBuf::from("/tmp/key.pem"))
+            .build()
+            .unwrap();
+        assert!(cfg.acme_contact.is_none());
+        assert_eq!(cfg.acme_directory_url, DEFAULT_ACME_DIRECTORY_URL);
+        assert_eq!(cfg.cert_dir, PathBuf::from(DEFAULT_CERT_DIR));
+        assert!(!cfg.acme_enabled);
+        assert_eq!(
+            cfg.cert_renewal_threshold_days,
+            DEFAULT_CERT_RENEWAL_THRESHOLD_DAYS
+        );
+        assert_eq!(
+            cfg.cert_renewal_interval_secs,
+            DEFAULT_CERT_RENEWAL_INTERVAL_SECS
+        );
+    }
+
+    #[test]
+    fn builder_accepts_explicit_acme_settings() {
+        let cfg = EdgeConfig::builder()
+            .bind("127.0.0.1:0".parse().unwrap())
+            .cert_path(PathBuf::from("/tmp/cert.pem"))
+            .key_path(PathBuf::from("/tmp/key.pem"))
+            .acme_contact(Some("ops@openlen.com".into()))
+            .acme_directory_url("https://acme-staging-v02.api.letsencrypt.org/directory")
+            .cert_dir(PathBuf::from("/tmp/openlen-certs"))
+            .acme_enabled(true)
+            .cert_renewal_threshold_days(15)
+            .cert_renewal_interval_secs(3600)
+            .build()
+            .unwrap();
+        assert_eq!(cfg.acme_contact.as_deref(), Some("ops@openlen.com"));
+        assert!(cfg.acme_directory_url.contains("staging"));
+        assert_eq!(cfg.cert_dir, PathBuf::from("/tmp/openlen-certs"));
+        assert!(cfg.acme_enabled);
+        assert_eq!(cfg.cert_renewal_threshold_days, 15);
+        assert_eq!(cfg.cert_renewal_interval_secs, 3600);
+    }
+
+    #[test]
+    fn parse_bool_handles_common_truthy_and_falsy_values() {
+        for v in ["1", "true", "TRUE", "yes", "on"] {
+            assert!(parse_bool("X", v).unwrap(), "{v} should be truthy");
+        }
+        for v in ["0", "false", "no", "off", ""] {
+            assert!(!parse_bool("X", v).unwrap(), "{v} should be falsy");
+        }
+    }
+
+    #[test]
+    fn parse_bool_rejects_garbage() {
+        assert!(parse_bool("X", "maybe").is_err());
     }
 }
