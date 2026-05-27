@@ -39,13 +39,18 @@ use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use dashmap::DashMap;
 use instant_acme::{
-    Account, AuthorizationStatus, ChallengeType, Identifier, NewAccount, NewOrder, OrderStatus,
-    RetryPolicy,
+    Account, AccountCredentials, AuthorizationStatus, ChallengeType, Identifier, NewAccount,
+    NewOrder, OrderStatus, RetryPolicy,
 };
 use rustls::sign::CertifiedKey;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 use crate::tls::store::{self, build_certified_key, load_pem_certs, load_pem_key};
+
+/// File inside `cert_dir` that holds the serialized [`AccountCredentials`].
+/// Sidecar to the per-domain cert directories so a single secret-store / mount
+/// covers everything ACME-related.
+pub(crate) const ACCOUNT_FILE: &str = "account.json";
 
 /// Validity used when we can't derive the cert's NotAfter directly from the
 /// X.509 envelope. Let's Encrypt issues 90-day certs, so 89 days is a safe
@@ -95,6 +100,13 @@ impl AcmeClient {
     /// Open (or create) an ACME account against `directory_url` and return
     /// a ready-to-issue client. `contact` is a bare mailbox; we add the
     /// `mailto:` scheme automatically.
+    ///
+    /// On first boot the account is created against the directory and the
+    /// returned [`AccountCredentials`] are persisted to
+    /// `${cert_dir}/account.json`. On subsequent boots the credentials are
+    /// loaded from disk and the account is restored via
+    /// `AccountBuilder::from_credentials`, so we don't re-register and risk
+    /// the LE per-IP new-account rate limit during restart storms.
     pub async fn new(contact: &str, directory_url: &str, cert_dir: PathBuf) -> Result<Self> {
         if contact.trim().is_empty() {
             return Err(anyhow!(
@@ -104,6 +116,32 @@ impl AcmeClient {
         std::fs::create_dir_all(&cert_dir)
             .with_context(|| format!("creating cert dir {}", cert_dir.display()))?;
 
+        let account_path = cert_dir.join(ACCOUNT_FILE);
+        if let Some(creds) = read_account_credentials(&account_path)? {
+            let http = Box::new(super::acme_http::build_acme_http_client());
+            match Account::builder_with_http(http)
+                .from_credentials(creds)
+                .await
+            {
+                Ok(account) => {
+                    info!(
+                        path = %account_path.display(),
+                        "ACME account restored from persisted credentials"
+                    );
+                    return Ok(Self {
+                        account,
+                        challenges: Arc::new(DashMap::new()),
+                        cert_dir,
+                    });
+                }
+                Err(err) => warn!(
+                    path = %account_path.display(),
+                    error = %err,
+                    "failed to restore ACME account from credentials — falling back to fresh registration"
+                ),
+            }
+        }
+
         let mailto = if contact.starts_with("mailto:") {
             contact.to_owned()
         } else {
@@ -111,7 +149,7 @@ impl AcmeClient {
         };
 
         let http = Box::new(super::acme_http::build_acme_http_client());
-        let (account, _credentials) = Account::builder_with_http(http)
+        let (account, credentials) = Account::builder_with_http(http)
             .create(
                 &NewAccount {
                     contact: &[&mailto],
@@ -123,6 +161,14 @@ impl AcmeClient {
             )
             .await
             .context("instant-acme: creating account")?;
+
+        if let Err(err) = write_account_credentials(&account_path, &credentials) {
+            warn!(
+                path = %account_path.display(),
+                error = %err,
+                "failed to persist ACME account credentials — next boot will re-register"
+            );
+        }
 
         info!(directory = %directory_url, "ACME account opened");
 
@@ -272,6 +318,60 @@ fn now_secs() -> u64 {
         .map(|d| d.as_secs())
         .unwrap_or(0)
 }
+
+/// Try to load persisted [`AccountCredentials`] from `path`. Returns `Ok(None)`
+/// if the file is absent (fresh install). Surfaces an error if the file
+/// exists but can't be parsed — we'd rather fail loud than silently re-register
+/// over an unparseable account file.
+pub(crate) fn read_account_credentials(
+    path: &std::path::Path,
+) -> Result<Option<AccountCredentials>> {
+    if !path.exists() {
+        return Ok(None);
+    }
+    let raw = std::fs::read_to_string(path)
+        .with_context(|| format!("reading ACME account credentials at {}", path.display()))?;
+    let creds = serde_json::from_str::<AccountCredentials>(&raw)
+        .with_context(|| format!("parsing ACME account credentials at {}", path.display()))?;
+    Ok(Some(creds))
+}
+
+/// Atomically persist `credentials` to `path` (tempfile + rename). On Unix
+/// the file ends up with mode 0o600 — the key material is sensitive and
+/// reading it should require the same uid that runs the edge.
+pub(crate) fn write_account_credentials(
+    path: &std::path::Path,
+    credentials: &AccountCredentials,
+) -> Result<()> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| anyhow!("write target has no parent: {}", path.display()))?;
+    std::fs::create_dir_all(parent)
+        .with_context(|| format!("creating account dir {}", parent.display()))?;
+    let tmp = parent.join(format!(
+        ".{}.tmp",
+        path.file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("account-tmp")
+    ));
+    let body = serde_json::to_vec(credentials).context("serializing ACME account credentials")?;
+    std::fs::write(&tmp, &body).with_context(|| format!("writing {}", tmp.display()))?;
+    set_owner_only_perms(&tmp);
+    std::fs::rename(&tmp, path)
+        .with_context(|| format!("atomic rename {} -> {}", tmp.display(), path.display()))?;
+    Ok(())
+}
+
+#[cfg(unix)]
+fn set_owner_only_perms(path: &std::path::Path) {
+    use std::os::unix::fs::PermissionsExt;
+    if let Err(err) = std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600)) {
+        warn!(path = %path.display(), error = %err, "failed to set 0600 on account credentials");
+    }
+}
+
+#[cfg(not(unix))]
+fn set_owner_only_perms(_path: &std::path::Path) {}
 
 /// Best-effort parse of the leaf cert's NotAfter. We could pull in
 /// `x509-parser` for guaranteed accuracy, but the DER tag format is
@@ -447,5 +547,94 @@ mod tests {
         mock.store_challenge("abc", "key-auth-abc");
         assert_eq!(mock.get_challenge("abc").as_deref(), Some("key-auth-abc"));
         assert_eq!(mock.get_challenge("missing"), None);
+    }
+
+    /// Build a minimally-valid serialized AccountCredentials JSON blob. The
+    /// PKCS#8 payload is non-decryptable nonsense — instant-acme's
+    /// deserializer only checks the base64 framing, not the inner key — so
+    /// this is enough to exercise the file-I/O round trip without needing
+    /// rcgen or a real CA roundtrip in the test path.
+    fn sample_credentials_json() -> String {
+        // 24 bytes of zeroes, base64-url-safe-no-pad. Decodes cleanly so
+        // PrivatePkcs8KeyDer::from accepts the bytes.
+        const FAKE_PKCS8_B64: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+        format!(
+            r#"{{"id":"https://acme-staging-v02.api.letsencrypt.org/acme/acct/123","key_pkcs8":"{FAKE_PKCS8_B64}","directory":"https://acme-staging-v02.api.letsencrypt.org/directory"}}"#
+        )
+    }
+
+    #[test]
+    fn read_account_credentials_returns_none_when_file_missing() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let path = tmp.path().join(ACCOUNT_FILE);
+        assert!(!path.exists());
+        assert!(read_account_credentials(&path).unwrap().is_none());
+    }
+
+    #[test]
+    fn write_then_read_account_credentials_round_trip() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let path = tmp.path().join(ACCOUNT_FILE);
+        let creds: AccountCredentials = serde_json::from_str(&sample_credentials_json()).unwrap();
+        write_account_credentials(&path, &creds).unwrap();
+        assert!(path.exists());
+        let loaded = read_account_credentials(&path).unwrap().expect("Some");
+        let back = serde_json::to_string(&loaded).unwrap();
+        assert!(back.contains("acme/acct/123"));
+        assert!(back.contains("acme-staging-v02"));
+    }
+
+    #[test]
+    fn read_account_credentials_surfaces_parse_error_for_garbage() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let path = tmp.path().join(ACCOUNT_FILE);
+        std::fs::write(&path, b"not json").unwrap();
+        match read_account_credentials(&path) {
+            Ok(_) => panic!("expected parse error"),
+            Err(err) => {
+                let msg = format!("{err:#}");
+                assert!(
+                    msg.contains("parsing ACME account credentials"),
+                    "msg: {msg}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn write_account_credentials_replaces_existing_atomically() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let path = tmp.path().join(ACCOUNT_FILE);
+        let creds: AccountCredentials = serde_json::from_str(&sample_credentials_json()).unwrap();
+        write_account_credentials(&path, &creds).unwrap();
+        let first = std::fs::read_to_string(&path).unwrap();
+        // Second write with the same blob should leave the file unchanged
+        // (atomic rename, no partial state).
+        write_account_credentials(&path, &creds).unwrap();
+        let second = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(first, second);
+    }
+
+    #[test]
+    fn write_account_credentials_creates_parent_dir_if_missing() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let nested = tmp.path().join("nested/sub");
+        let path = nested.join(ACCOUNT_FILE);
+        let creds: AccountCredentials = serde_json::from_str(&sample_credentials_json()).unwrap();
+        write_account_credentials(&path, &creds).unwrap();
+        assert!(path.exists());
+        assert!(nested.exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_account_credentials_sets_owner_only_perms_on_unix() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::TempDir::new().unwrap();
+        let path = tmp.path().join(ACCOUNT_FILE);
+        let creds: AccountCredentials = serde_json::from_str(&sample_credentials_json()).unwrap();
+        write_account_credentials(&path, &creds).unwrap();
+        let mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600, "expected 0o600, got {mode:o}");
     }
 }

@@ -64,8 +64,6 @@ opt-level = "s"
 # inlines into hot code, so `z` is essentially free here.
 [profile.release.package.webpki-roots]
 opt-level = "z"
-[profile.release.package.webpki]
-opt-level = "z"
 # regex_automata + regex_syntax are pulled by the `regex` crate the routing
 # layer uses for hostname validation. The matchers are touched per request
 # but the compiled state machines + AC trees are large; "s" keeps inlining
