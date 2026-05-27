@@ -15,7 +15,17 @@ tokio = { version = "1", features = ["full"] }
 tower = "0.5"
 tower-http = { version = "0.5", features = ["trace", "compression-gzip", "set-header"] }
 hyper = "1"
-hyper-util = { version = "0.1", features = ["server", "server-auto", "tokio"] }
+hyper-util = { version = "0.1", features = [
+    "server",
+    "server-auto",
+    "tokio",
+    "client",
+    "client-legacy",
+    "http1",
+] }
+http = "1"
+http-body-util = "0.1"
+bytes = "1"
 rustls = "0.23"
 tokio-rustls = "0.26"
 rustls-pemfile = "2"
@@ -31,6 +41,8 @@ once_cell = "1"
 
 [dev-dependencies]
 rcgen = "0.13"
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "http2"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "http2", "stream"] }
 tempfile = "3"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
+async-stream = "0.3"
+futures-util = "0.3"

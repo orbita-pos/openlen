@@ -10,6 +10,10 @@ const ENV_CERT: &str = "OPENLEN_EDGE_CERT";
 const ENV_KEY: &str = "OPENLEN_EDGE_KEY";
 const ENV_PUBLISH_ROOT: &str = "OPENLEN_EDGE_PUBLISH_ROOT";
 const ENV_MAX_INFLIGHT: &str = "OPENLEN_EDGE_MAX_INFLIGHT";
+const ENV_NODE_URL: &str = "OPENLEN_EDGE_NODE_URL";
+const ENV_PROXY_HOSTS: &str = "OPENLEN_EDGE_PROXY_HOSTS";
+const ENV_PROXY_PATHS: &str = "OPENLEN_EDGE_PROXY_PATHS";
+const ENV_NODE_TIMEOUT_SECS: &str = "OPENLEN_EDGE_NODE_TIMEOUT_SECS";
 
 const DEFAULT_BIND: &str = "0.0.0.0:443";
 const DEFAULT_BIND_HTTP: &str = "0.0.0.0:80";
@@ -17,6 +21,10 @@ const DEFAULT_CERT: &str = "/etc/letsencrypt/live/openlen.com/fullchain.pem";
 const DEFAULT_KEY: &str = "/etc/letsencrypt/live/openlen.com/privkey.pem";
 const DEFAULT_PUBLISH_ROOT: &str = "/var/www/openlen";
 const DEFAULT_MAX_INFLIGHT: usize = 4096;
+const DEFAULT_NODE_URL: &str = "http://127.0.0.1:3000";
+const DEFAULT_PROXY_HOSTS: &str = "openlen.com,www.openlen.com";
+const DEFAULT_PROXY_PATHS: &str = "/c/";
+const DEFAULT_NODE_TIMEOUT_SECS: u64 = 30;
 
 #[derive(Debug, Clone)]
 pub struct EdgeConfig {
@@ -26,6 +34,24 @@ pub struct EdgeConfig {
     pub key_path: PathBuf,
     pub publish_root: PathBuf,
     pub max_inflight: usize,
+    pub node_url: String,
+    pub proxy_hosts: Vec<String>,
+    pub proxy_paths: Vec<String>,
+    pub node_timeout_secs: u64,
+}
+
+fn parse_csv_lower(raw: &str) -> Vec<String> {
+    raw.split(',')
+        .map(|s| s.trim().to_ascii_lowercase())
+        .filter(|s| !s.is_empty())
+        .collect()
+}
+
+fn parse_csv(raw: &str) -> Vec<String> {
+    raw.split(',')
+        .map(|s| s.trim().to_owned())
+        .filter(|s| !s.is_empty())
+        .collect()
 }
 
 impl EdgeConfig {
@@ -57,6 +83,19 @@ impl EdgeConfig {
             Err(_) => DEFAULT_MAX_INFLIGHT,
         };
 
+        let node_url = env::var(ENV_NODE_URL).unwrap_or_else(|_| DEFAULT_NODE_URL.into());
+        let proxy_hosts = parse_csv_lower(
+            &env::var(ENV_PROXY_HOSTS).unwrap_or_else(|_| DEFAULT_PROXY_HOSTS.into()),
+        );
+        let proxy_paths =
+            parse_csv(&env::var(ENV_PROXY_PATHS).unwrap_or_else(|_| DEFAULT_PROXY_PATHS.into()));
+        let node_timeout_secs = match env::var(ENV_NODE_TIMEOUT_SECS) {
+            Ok(raw) => raw.parse::<u64>().with_context(|| {
+                format!("{ENV_NODE_TIMEOUT_SECS}={raw} is not a non-negative integer")
+            })?,
+            Err(_) => DEFAULT_NODE_TIMEOUT_SECS,
+        };
+
         Ok(Self {
             bind,
             bind_http,
@@ -64,6 +103,10 @@ impl EdgeConfig {
             key_path,
             publish_root,
             max_inflight,
+            node_url,
+            proxy_hosts,
+            proxy_paths,
+            node_timeout_secs,
         })
     }
 
@@ -80,6 +123,10 @@ pub struct EdgeConfigBuilder {
     key_path: Option<PathBuf>,
     publish_root: Option<PathBuf>,
     max_inflight: Option<usize>,
+    node_url: Option<String>,
+    proxy_hosts: Option<Vec<String>>,
+    proxy_paths: Option<Vec<String>>,
+    node_timeout_secs: Option<u64>,
 }
 
 impl EdgeConfigBuilder {
@@ -113,6 +160,26 @@ impl EdgeConfigBuilder {
         self
     }
 
+    pub fn node_url(mut self, url: impl Into<String>) -> Self {
+        self.node_url = Some(url.into());
+        self
+    }
+
+    pub fn proxy_hosts(mut self, hosts: Vec<String>) -> Self {
+        self.proxy_hosts = Some(hosts.into_iter().map(|s| s.to_ascii_lowercase()).collect());
+        self
+    }
+
+    pub fn proxy_paths(mut self, paths: Vec<String>) -> Self {
+        self.proxy_paths = Some(paths);
+        self
+    }
+
+    pub fn node_timeout_secs(mut self, secs: u64) -> Self {
+        self.node_timeout_secs = Some(secs);
+        self
+    }
+
     pub fn build(self) -> Result<EdgeConfig> {
         Ok(EdgeConfig {
             bind: self
@@ -129,6 +196,14 @@ impl EdgeConfigBuilder {
                 .publish_root
                 .unwrap_or_else(|| PathBuf::from(DEFAULT_PUBLISH_ROOT)),
             max_inflight: self.max_inflight.unwrap_or(DEFAULT_MAX_INFLIGHT),
+            node_url: self.node_url.unwrap_or_else(|| DEFAULT_NODE_URL.into()),
+            proxy_hosts: self
+                .proxy_hosts
+                .unwrap_or_else(|| parse_csv_lower(DEFAULT_PROXY_HOSTS)),
+            proxy_paths: self
+                .proxy_paths
+                .unwrap_or_else(|| parse_csv(DEFAULT_PROXY_PATHS)),
+            node_timeout_secs: self.node_timeout_secs.unwrap_or(DEFAULT_NODE_TIMEOUT_SECS),
         })
     }
 }
@@ -169,5 +244,49 @@ mod tests {
             .unwrap();
         assert_eq!(cfg.bind_http.unwrap().port(), 8080);
         assert_eq!(cfg.max_inflight, 8);
+    }
+
+    #[test]
+    fn builder_fills_proxy_defaults() {
+        let cfg = EdgeConfig::builder()
+            .bind("127.0.0.1:0".parse().unwrap())
+            .cert_path(PathBuf::from("/tmp/cert.pem"))
+            .key_path(PathBuf::from("/tmp/key.pem"))
+            .build()
+            .unwrap();
+        assert_eq!(cfg.node_url, "http://127.0.0.1:3000");
+        assert_eq!(cfg.proxy_hosts, vec!["openlen.com", "www.openlen.com"]);
+        assert_eq!(cfg.proxy_paths, vec!["/c/"]);
+        assert_eq!(cfg.node_timeout_secs, DEFAULT_NODE_TIMEOUT_SECS);
+    }
+
+    #[test]
+    fn builder_accepts_explicit_proxy_settings() {
+        let cfg = EdgeConfig::builder()
+            .bind("127.0.0.1:0".parse().unwrap())
+            .cert_path(PathBuf::from("/tmp/cert.pem"))
+            .key_path(PathBuf::from("/tmp/key.pem"))
+            .node_url("http://10.0.0.5:8080")
+            .proxy_hosts(vec!["Example.COM".into(), "api.example.com".into()])
+            .proxy_paths(vec!["/api/".into(), "/c/".into()])
+            .node_timeout_secs(15)
+            .build()
+            .unwrap();
+        assert_eq!(cfg.node_url, "http://10.0.0.5:8080");
+        assert_eq!(cfg.proxy_hosts, vec!["example.com", "api.example.com"]);
+        assert_eq!(cfg.proxy_paths, vec!["/api/", "/c/"]);
+        assert_eq!(cfg.node_timeout_secs, 15);
+    }
+
+    #[test]
+    fn parse_csv_lower_trims_and_lowercases() {
+        let v = parse_csv_lower(" Openlen.COM , www.openlen.com , ");
+        assert_eq!(v, vec!["openlen.com", "www.openlen.com"]);
+    }
+
+    #[test]
+    fn parse_csv_preserves_case() {
+        let v = parse_csv(" /API/ , /c/ ");
+        assert_eq!(v, vec!["/API/", "/c/"]);
     }
 }
