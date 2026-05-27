@@ -97,41 +97,31 @@ mod tests {
     fn rate_limited_display_formats_retry_after() {
         let with = GatewayError::RateLimited {
             retry_after_ms: Some(60_000),
-        };
-        assert!(
-            with.to_string().contains("60000 ms"),
-            "got: {}",
-            with.to_string()
-        );
+        }
+        .to_string();
+        assert!(with.contains("60000 ms"), "got: {with}");
 
         let without = GatewayError::RateLimited {
             retry_after_ms: None,
-        };
-        assert!(
-            without.to_string().contains("unspecified"),
-            "got: {}",
-            without.to_string()
-        );
+        }
+        .to_string();
+        assert!(without.contains("unspecified"), "got: {without}");
     }
 
     #[test]
     fn auth_error_display_mentions_api_key() {
-        assert!(
-            GatewayError::AuthError
-                .to_string()
-                .to_lowercase()
-                .contains("api"),
-        );
+        assert!(GatewayError::AuthError
+            .to_string()
+            .to_lowercase()
+            .contains("api"),);
     }
 
     #[test]
     fn cancelled_display_mentions_cancel() {
-        assert!(
-            GatewayError::Cancelled
-                .to_string()
-                .to_lowercase()
-                .contains("cancel"),
-        );
+        assert!(GatewayError::Cancelled
+            .to_string()
+            .to_lowercase()
+            .contains("cancel"),);
     }
 
     #[test]
