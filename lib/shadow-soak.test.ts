@@ -9,6 +9,7 @@ import { test } from "node:test";
 import { strict as assert } from "node:assert";
 
 import {
+  asyncShadowCompare,
   shadowCompare,
   setShadowLogger,
   type ShadowDivergenceRecord,
@@ -388,4 +389,170 @@ test("setShadowLogger(null) restores default (no-throw smoke)", () => {
     () => "a",
     { fallbackMode: "shadow-prefer-ts" },
   );
+});
+
+// ─── asyncShadowCompare — F1 S8 async variant ─────────────────────────────────
+//
+// Tests mirror the sync surface above, with an async TS arm + a sync-or-async
+// Rust arm. The harness must await both before comparing, and the divergence
+// + error-shape semantics carry over byte-equal.
+
+test("asyncShadowCompare ts mode: only TS runs, returns awaited value", async () => {
+  let rustCalled = false;
+  const r = await asyncShadowCompare(
+    "async-test-ts-only",
+    "",
+    async () => "ts-async",
+    () => {
+      rustCalled = true;
+      return "rust-sync";
+    },
+    { fallbackMode: "ts" },
+  );
+  assert.equal(r, "ts-async");
+  assert.equal(rustCalled, false);
+});
+
+test("asyncShadowCompare rust mode: only Rust runs, supports async or sync rust impl", async () => {
+  let tsCalled = false;
+  const rAsync = await asyncShadowCompare(
+    "async-test-rust-async",
+    "",
+    async () => {
+      tsCalled = true;
+      return "ts";
+    },
+    async () => "rust-async",
+    { fallbackMode: "rust" },
+  );
+  assert.equal(rAsync, "rust-async");
+  assert.equal(tsCalled, false);
+
+  // Sync Rust under the async harness works too:
+  const rSync = await asyncShadowCompare(
+    "async-test-rust-sync",
+    "",
+    async () => "ts",
+    () => "rust-sync",
+    { fallbackMode: "rust" },
+  );
+  assert.equal(rSync, "rust-sync");
+});
+
+test("asyncShadowCompare shadow-prefer-ts: both await, no log when equal", async () => {
+  const { records, logger } = makeRecordingLogger();
+  const r = await asyncShadowCompare(
+    "async-test-shadow-match",
+    "args",
+    async () => ({ html: "x", n: 1 }),
+    () => ({ html: "x", n: 1 }),
+    { fallbackMode: "shadow-prefer-ts", logger },
+  );
+  assert.deepEqual(r, { html: "x", n: 1 });
+  assert.equal(records.length, 0);
+});
+
+test("asyncShadowCompare shadow-prefer-ts: logs divergence + returns TS", async () => {
+  const { records, logger } = makeRecordingLogger();
+  const r = await asyncShadowCompare(
+    "async-test-shadow-diverge",
+    "args=42",
+    async () => "from-ts",
+    async () => "from-rust",
+    { fallbackMode: "shadow-prefer-ts", logger },
+  );
+  assert.equal(r, "from-ts");
+  assert.equal(records.length, 1);
+  const rec = records[0];
+  assert.equal(rec.name, "async-test-shadow-diverge");
+  assert.equal(rec.errorShapeMismatch, false);
+  assert.equal(rec.tsBytes, "from-ts".length);
+  assert.equal(rec.rustBytes, "from-rust".length);
+  assert.ok(rec.tsMillis >= 0);
+  assert.ok(rec.rustMillis >= 0);
+});
+
+test("asyncShadowCompare shadow-prefer-rust: returns Rust output on divergence", async () => {
+  const { records, logger } = makeRecordingLogger();
+  const r = await asyncShadowCompare(
+    "async-test-prefer-rust",
+    "",
+    async () => "ts-value",
+    async () => "rust-value",
+    { fallbackMode: "shadow-prefer-rust", logger },
+  );
+  assert.equal(r, "rust-value");
+  assert.equal(records.length, 1);
+});
+
+test("asyncShadowCompare: TS-only throws in shadow → divergence + TS error propagates", async () => {
+  const { records, logger } = makeRecordingLogger();
+  await assert.rejects(
+    () =>
+      asyncShadowCompare(
+        "async-test-ts-throws",
+        "",
+        async () => {
+          throw new Error("ts async boom");
+        },
+        async () => "rust-ok",
+        { fallbackMode: "shadow-prefer-ts", logger },
+      ),
+    /ts async boom/,
+  );
+  assert.equal(records.length, 1);
+  assert.equal(records[0].errorShapeMismatch, true);
+});
+
+test("asyncShadowCompare: Rust-only throws in shadow → divergence + TS value returned", async () => {
+  const { records, logger } = makeRecordingLogger();
+  const r = await asyncShadowCompare(
+    "async-test-rust-throws",
+    "",
+    async () => "ts-ok",
+    () => {
+      throw new Error("rust boom");
+    },
+    { fallbackMode: "shadow-prefer-ts", logger },
+  );
+  assert.equal(r, "ts-ok");
+  assert.equal(records.length, 1);
+  assert.equal(records[0].errorShapeMismatch, true);
+});
+
+test("asyncShadowCompare: env-var overrides take effect", async () => {
+  let tsCalled = false;
+  await withEnv({ OPENLEN_SHADOW_ASYNC_ENV_OVERRIDE: "rust" }, async () => {
+    await asyncShadowCompare(
+      "async-env-override",
+      "",
+      async () => {
+        tsCalled = true;
+        return "ts";
+      },
+      () => "rust",
+      { fallbackMode: "shadow-prefer-ts" },
+    );
+  });
+  assert.equal(tsCalled, false, "per-call env var should force rust-only");
+});
+
+test("asyncShadowCompare: custom equalityFn applies", async () => {
+  const { records, logger } = makeRecordingLogger();
+  await asyncShadowCompare(
+    "async-custom-eq",
+    "",
+    async () => ({ html: "a", baked: true }),
+    async () => ({ html: "a", baked: false }),
+    {
+      fallbackMode: "shadow-prefer-ts",
+      logger,
+      equalityFn: (ts, rust) => {
+        const t = ts as { html: string };
+        const r = rust as { html: string };
+        return t.html === r.html;
+      },
+    },
+  );
+  assert.equal(records.length, 0, "html-only equality should suppress baked-field diff");
 });

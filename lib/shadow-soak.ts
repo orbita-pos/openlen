@@ -143,6 +143,79 @@ export function shadowCompare<T>(
   return rustValue;
 }
 
+/** Async variant of `shadowCompare`. Same mode-resolution + divergence +
+ *  logging semantics; awaits both arms before comparing. Either arm may
+ *  return a plain `T` or a `Promise<T>` — the harness awaits transparently.
+ *  Used for migrations whose TS impl is async (e.g. postcss/tailwindcss in
+ *  `lib/publish/optimize-html.ts`). The tail logic is duplicated from
+ *  `shadowCompare` rather than refactored into a shared helper so the
+ *  sync surface and its 20 existing tests stay byte-equal. */
+export async function asyncShadowCompare<T>(
+  name: string,
+  argsSummary: string,
+  tsImpl: () => Promise<T> | T,
+  rustImpl: () => Promise<T> | T,
+  options: ShadowCompareOptions = {},
+): Promise<T> {
+  const mode = resolveMode(name, options.fallbackMode ?? "shadow-prefer-ts");
+  if (mode === "ts") return tsImpl();
+  if (mode === "rust") return rustImpl();
+
+  const tsStart = nowMillis();
+  let tsValue: T;
+  let tsError: unknown = undefined;
+  try {
+    tsValue = await tsImpl();
+  } catch (err) {
+    tsError = err;
+    tsValue = undefined as unknown as T;
+  }
+  const tsMillis = nowMillis() - tsStart;
+
+  const rustStart = nowMillis();
+  let rustValue: T;
+  let rustError: unknown = undefined;
+  try {
+    rustValue = await rustImpl();
+  } catch (err) {
+    rustError = err;
+    rustValue = undefined as unknown as T;
+  }
+  const rustMillis = nowMillis() - rustStart;
+
+  const equality = options.equalityFn ?? deepEqual;
+  const { diverged, errorShapeMismatch } = compareOutcomes(
+    tsValue,
+    tsError,
+    rustValue,
+    rustError,
+    equality,
+  );
+
+  if (diverged) {
+    const logger = options.logger ?? moduleLogger;
+    logger.onDivergence({
+      name,
+      argsSummary: capStr(argsSummary, 200),
+      tsValuePreview: capStr(stableStringify(tsError ?? tsValue), 2048),
+      rustValuePreview: capStr(stableStringify(rustError ?? rustValue), 2048),
+      tsBytes: byteLen(tsValue),
+      rustBytes: byteLen(rustValue),
+      tsMillis,
+      rustMillis,
+      errorShapeMismatch,
+    });
+  }
+
+  if (mode === "shadow-prefer-ts") {
+    if (tsError !== undefined) throw tsError;
+    return tsValue;
+  }
+  // shadow-prefer-rust
+  if (rustError !== undefined) throw rustError;
+  return rustValue;
+}
+
 function resolveMode(name: string, fallback: ShadowMode): ShadowMode {
   const slug = "OPENLEN_SHADOW_" + name.toUpperCase().replace(/[^A-Z0-9_]/g, "_");
   const perCall = process.env[slug];
