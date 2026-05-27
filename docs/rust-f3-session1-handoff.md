@@ -64,7 +64,7 @@ the conventional second step per the F1 S9 pattern.
 |---|---|---|
 | `cargo check --workspace` | green | green (incl. `openlen-html-engine` + `openlen-edge` unchanged) |
 | `cargo test -p openlen-ai-gateway` (no env var) | green | **77 / 77** (65 lib unit + 12 integration mock) |
-| `cargo test -p openlen-ai-gateway -- --include-ignored` | green when `GEMINI_API_KEY` set | **untested locally** — no key in this session's environment; 2 live tests are written and ready (`tests/gemini_live.rs`). User can verify before merge. |
+| `cargo test -p openlen-ai-gateway -- --include-ignored` | green when `GEMINI_API_KEY` set | **green** after the post-session test fix below: `live_cancel_mid_stream_yields_done_cancelled_within_500ms` passed on the first run; `live_mini_prompt_emits_expected_event_shape` failed initially because `max_output_tokens=16` was fully consumed by Gemini 2.5 Flash's internal thinking budget before any visible text was emitted. Bumped to 256 — see "Post-session fix" below. |
 | Cancel propagation <500 ms | mock + live | **mock: ~3 ms wall** (`cancel_mid_stream_yields_done_cancelled_within_500ms`); live: written but unverified |
 | `lib.rs` exports `GeminiProvider, StreamEvent, StreamRequest, StopReason, Usage, GatewayError, Message, Role`, plus `estimate_tokens` | met | met |
 | Zero references to `Provider` trait / `dyn` / Anthropic / Together / OpenAI / Kimi in new code | met | met (greppable) |
@@ -72,6 +72,30 @@ the conventional second step per the F1 S9 pattern.
 | `cargo fmt -p openlen-ai-gateway -- --check` | clean | clean |
 | `cargo clippy -p openlen-ai-gateway --all-targets -- -D warnings` | clean | clean |
 | Handoff doc | present | this file |
+
+### Post-session fix — `live_mini_prompt_emits_expected_event_shape`
+
+When the operator ran `cargo test -- --include-ignored` against real
+Gemini, `live_cancel_mid_stream_yields_done_cancelled_within_500ms`
+passed but `live_mini_prompt_emits_expected_event_shape` failed with
+`expected at least one TextDelta`. Root cause: Gemini 2.5 Flash spends
+part of its `max_output_tokens` budget on internal "thinking" tokens
+before emitting visible text; with `max_output_tokens=16` the model
+exhausted the entire budget on thinking and the stream terminated with
+`finishReason=MAX_TOKENS` before any visible part was emitted. The
+parser is correct — there were genuinely no text deltas to surface.
+
+Fix: bumped `max_output_tokens` from 16 to 256 in the mini-prompt test
+with an inline comment explaining the thinking-budget reservation. The
+cancel test was already at 512 and unaffected. Both live tests pass.
+
+Implication for F3 S4 cutover: `lib/credits.ts` and any caller that
+configures `max_output_tokens` should be aware that 2.5 Flash and 2.5
+Pro reserve part of the budget for thinking. Very small caps (≤32)
+risk producing zero visible output. Reasonable callers (the existing
+generate / ai-design flows) already use budgets in the thousands so
+this is not a production issue, only a smoke-test gotcha worth
+documenting.
 
 ### Test breakdown
 
