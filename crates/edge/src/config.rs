@@ -20,6 +20,7 @@ const ENV_DB_POOL_MAX: &str = "OPENLEN_EDGE_DB_POOL_MAX";
 const ENV_DOMAIN_CACHE_TTL_SECS: &str = "OPENLEN_EDGE_DOMAIN_CACHE_TTL_SECS";
 const ENV_DOMAIN_NEGATIVE_TTL_SECS: &str = "OPENLEN_EDGE_DOMAIN_NEGATIVE_TTL_SECS";
 const ENV_DOMAIN_CACHE_MAX: &str = "OPENLEN_EDGE_DOMAIN_CACHE_MAX";
+const ENV_DOMAIN_REVAL_CONCURRENCY: &str = "OPENLEN_EDGE_DOMAIN_REVAL_CONCURRENCY";
 const ENV_INTERNAL_API_BIND: &str = "OPENLEN_EDGE_INTERNAL_API_BIND";
 const ENV_ACME_CONTACT: &str = "OPENLEN_EDGE_ACME_CONTACT";
 const ENV_ACME_DIRECTORY_URL: &str = "OPENLEN_EDGE_ACME_DIRECTORY_URL";
@@ -78,6 +79,12 @@ pub struct EdgeConfig {
     pub domain_cache_ttl_secs: u64,
     pub domain_negative_ttl_secs: u64,
     pub domain_cache_max: u64,
+    /// Cap on simultaneous background stale-while-revalidate refreshes on
+    /// the domain cache. Without this, a wave of entries crossing TTL/2 at
+    /// the same wall clock could spawn N revalidation tasks against the
+    /// Postgres pool — `0` defaults to `db_pool_max` so the worst case is
+    /// pool-sized, not cache-sized.
+    pub domain_reval_concurrency: u32,
     /// Bind address for the loopback-only internal API
     /// (`/internal/domains/lookup`). `None` = disabled.
     pub internal_api_bind: Option<SocketAddr>,
@@ -208,6 +215,14 @@ impl EdgeConfig {
             })?,
             Err(_) => DEFAULT_DOMAIN_CACHE_MAX,
         };
+        // 0 defers the default to db_pool_max so callers don't have to keep
+        // two numbers in sync. Explicit overrides are honored.
+        let domain_reval_concurrency = match env::var(ENV_DOMAIN_REVAL_CONCURRENCY) {
+            Ok(raw) => raw.parse::<u32>().with_context(|| {
+                format!("{ENV_DOMAIN_REVAL_CONCURRENCY}={raw} is not a positive integer")
+            })?,
+            Err(_) => db_pool_max,
+        };
         let internal_api_bind = match env::var(ENV_INTERNAL_API_BIND) {
             Ok(raw) => parse_optional_socketaddr(ENV_INTERNAL_API_BIND, &raw)?,
             Err(_) => None,
@@ -255,6 +270,7 @@ impl EdgeConfig {
             domain_cache_ttl_secs,
             domain_negative_ttl_secs,
             domain_cache_max,
+            domain_reval_concurrency,
             internal_api_bind,
             acme_contact,
             acme_directory_url,
@@ -288,6 +304,7 @@ pub struct EdgeConfigBuilder {
     domain_cache_ttl_secs: Option<u64>,
     domain_negative_ttl_secs: Option<u64>,
     domain_cache_max: Option<u64>,
+    domain_reval_concurrency: Option<u32>,
     internal_api_bind: Option<Option<SocketAddr>>,
     acme_contact: Option<Option<String>>,
     acme_directory_url: Option<String>,
@@ -378,6 +395,11 @@ impl EdgeConfigBuilder {
         self
     }
 
+    pub fn domain_reval_concurrency(mut self, n: u32) -> Self {
+        self.domain_reval_concurrency = Some(n);
+        self
+    }
+
     pub fn internal_api_bind(mut self, addr: Option<SocketAddr>) -> Self {
         self.internal_api_bind = Some(addr);
         self
@@ -449,6 +471,9 @@ impl EdgeConfigBuilder {
                 .domain_negative_ttl_secs
                 .unwrap_or(DEFAULT_DOMAIN_NEGATIVE_TTL_SECS),
             domain_cache_max: self.domain_cache_max.unwrap_or(DEFAULT_DOMAIN_CACHE_MAX),
+            domain_reval_concurrency: self
+                .domain_reval_concurrency
+                .unwrap_or(self.db_pool_max.unwrap_or(DEFAULT_DB_POOL_MAX)),
             internal_api_bind: self.internal_api_bind.unwrap_or(None),
             acme_contact: {
                 let contact = self.acme_contact.unwrap_or(None);
