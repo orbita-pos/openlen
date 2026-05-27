@@ -22,17 +22,23 @@ const nextConfig = {
   // - tailwindcss, postcss: webpack would inline them into .next/server/
   //   chunks/*.js, breaking package-relative asset paths (preflight.css,
   //   stubs). Required by the publish-time Tailwind pipeline.
-  // - @openlen/html-engine: ships a native `.node` binding that webpack
-  //   can't parse. Externalising hands the require off to Node's loader at
-  //   runtime, which knows how to load native modules. Required after the
-  //   F1 S9 cutover, where every consumer of the Rust engine resolves
-  //   through `lib/html-engine.ts` → `@openlen/html-engine` → `.node`.
-  serverExternalPackages: ["tailwindcss", "postcss", "@openlen/html-engine"],
+  // - @openlen/html-engine, @openlen/ai-gateway: each ships a native
+  //   `.node` binding that webpack can't parse. Externalising hands the
+  //   require off to Node's loader at runtime, which knows how to load
+  //   native modules. html-engine landed in F1 S9 (commit 1ab1724);
+  //   ai-gateway landed in F3 S3 when `lib/ai-stream/generate.ts` became
+  //   the first app-code consumer of `@openlen/ai-gateway`.
+  serverExternalPackages: [
+    "tailwindcss",
+    "postcss",
+    "@openlen/html-engine",
+    "@openlen/ai-gateway",
+  ],
   // serverExternalPackages alone doesn't always exclude transitively-linked
   // workspace deps from webpack's module graph (the `file:` symlink to
-  // crates/html-engine gets followed into the napi `index.js` and chokes
-  // on the bundled `.node` file). Belt-and-braces: a server-only webpack
-  // external that matches the package name AND the workspace symlink path.
+  // crates/<name> gets followed into the napi `index.js` and chokes on the
+  // bundled `.node` file). Belt-and-braces: a server-only webpack external
+  // that matches each package name AND its workspace symlink path.
   webpack: (config: unknown, ctx: { isServer: boolean }) => {
     if (!ctx.isServer) return config;
     const c = config as { externals?: unknown[] };
@@ -45,7 +51,9 @@ const nextConfig = {
         if (!request) return callback(null);
         if (
           request === "@openlen/html-engine" ||
+          request === "@openlen/ai-gateway" ||
           request.endsWith("/crates/html-engine/index.js") ||
+          request.endsWith("/crates/ai-gateway/index.js") ||
           request.endsWith(".node")
         ) {
           return callback(null, "commonjs " + request);
