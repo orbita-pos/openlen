@@ -12,6 +12,7 @@ import {
 } from "@/lib/credits";
 import { DESIGN_GUIDANCE } from "@/lib/design-guidance";
 import { resolveAIProvider } from "@/lib/ai-provider";
+import { detectSlotPath } from "@/lib/html-engine";
 import {
   applyOps,
   buildScopedView,
@@ -701,7 +702,7 @@ export async function POST(req: Request): Promise<Response> {
           }
           trimmedHtml = applyResult.html;
           appliedOpCount = applyResult.appliedCount;
-          if (trimmedHtml.includes("data-slot-path=")) {
+          if (detectSlotPath(trimmedHtml)) {
             emit("error", {
               message:
                 "Ops produced HTML with editor-mode markers — try again.",
@@ -753,7 +754,7 @@ export async function POST(req: Request): Promise<Response> {
             closeStream();
             return;
           }
-          if (trimmedHtml.includes("data-slot-path=")) {
+          if (detectSlotPath(trimmedHtml)) {
             emit("error", {
               message: "Model emitted editor-mode markers — try again.",
             });

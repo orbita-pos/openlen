@@ -6,6 +6,7 @@ import type { ProjectData } from "@/lib/projects/types";
 import { createVersion } from "@/lib/projects/versions";
 import { getCreditState, debitCredits, AUTOFILL_CREDIT_COST } from "@/lib/credits";
 import { consumeToken, RATE_LIMITS } from "@/lib/rate-limit";
+import { detectSlotPath } from "@/lib/html-engine";
 import {
   ExtractedBusinessDataSchema,
   extractFromImage,
@@ -222,7 +223,7 @@ export async function POST(req: Request) {
           closeStream();
           return;
         }
-        if (fill.filledHtml.includes("data-slot-path=")) {
+        if (detectSlotPath(fill.filledHtml)) {
           emit("error", {
             kind: "editor-marker-leak",
             message: "Model emitted editor-mode markers — try again.",

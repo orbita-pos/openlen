@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import type { ProjectData } from "@/lib/projects/types";
 import { createVersion } from "@/lib/projects/versions";
+import { detectSlotPath } from "@/lib/html-engine";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PATCH /api/projects/[id]/html — overwrite `data.html` for a project.
@@ -65,7 +66,7 @@ export async function PATCH(
       413,
     );
   }
-  if (html.includes("data-slot-path=")) {
+  if (detectSlotPath(html)) {
     return json(
       {
         error: "invalid_html",
