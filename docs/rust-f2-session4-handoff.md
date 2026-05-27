@@ -18,7 +18,7 @@ None this session — `master @ 4b54e87` matched the prompt's expected head exac
 
 ```
 847e669  feat(rust/edge): F2 Sem 7-8 — custom domain lookup + LRU cache + singleflight
-<docs>   docs(rust): F2 session-4 handoff — Sem 7-8 custom domains shipped
+d391d04  docs(rust): F2 session-4 handoff — Sem 7-8 custom domains shipped
 ```
 
 Forked off `master @ 4b54e87`. Touches only `crates/edge/`, `Cargo.toml` (workspace), and `Cargo.lock`. Zero edits under `crates/html-engine/` — the parallel F1 S5 on `rust/f1-session5-streaming` is unaffected.
