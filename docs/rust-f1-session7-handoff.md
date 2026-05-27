@@ -3,7 +3,10 @@
 Branch: `rust/f1-session7-migrate-ops-normalize` (off `master`'s `a3efd15` = F1 S6 merge tip, **not** pushed, no PR).
 
 ```
-(commits TBD by user at merge — fill in after `git log master..HEAD` lands)
+7c274c7  docs(rust): F1 session-7 handoff — Sem 10 Phase 2 shipped
+55ccaa1  feat(rust): F1 S7 — detectSlotPath helper + consolidate 9 inline gate sites
+f892416  feat(rust): F1 S7 — migrate lib/normalize.ts via shadow-soak
+b05d1e2  feat(rust): F1 S7 — migrate lib/html-ops.ts (6 exports) via shadow-soak
 ```
 
 > Worktree note. Work happened entirely in `D:\worktrees\openlen-f1-s7` (created as `git worktree add -b rust/f1-session7-migrate-ops-normalize D:/worktrees/openlen-f1-s7 a3efd15`). Zero overlap with the parallel `D:\worktrees\openlen-f2-edge` (F2 S5 ACME) session — F1 S7 only touches Node-side files (`lib/*` + a handful of `app/api/*/route.ts` to switch the slot-path gate over to the new helper). The Rust crate at `crates/html-engine/src/**` was not modified — every migration target was already shipped by S1–S5.
