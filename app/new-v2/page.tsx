@@ -76,7 +76,7 @@ interface LoadedProject {
   /** True when this project was created from a template or pasted HTML —
    *  i.e. `data.filledBlocks` is empty. Flat projects don't have slot-
    *  based structure, so customization splits into two surfaces:
-   *  - **Chat tab** redesigns the page end-to-end via Kimi K2.6 streaming.
+   *  - **Chat tab** redesigns the page end-to-end via Gemini streaming.
    *  - **Content tab** activates contentEditable in the iframe so the
    *    user can click any text and edit it directly (autosaved). */
   isFlat: boolean;
