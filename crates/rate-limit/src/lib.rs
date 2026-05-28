@@ -29,14 +29,19 @@
 pub mod bucket;
 pub mod error;
 pub mod hybrid;
+#[cfg(feature = "napi-bindings")]
 pub mod napi;
 pub mod postgres;
+pub mod smart_cache;
 pub mod types;
 
 pub use bucket::MemoryLimiter;
 pub use error::RateLimitError;
 pub use hybrid::HybridLimiter;
 pub use postgres::PostgresLimiter;
+pub use smart_cache::{
+    PersistenceMode, SmartCache, SmartCacheConfig, SmartCacheStats,
+};
 pub use types::{
     ConsumeOutcome, LimitDecision, LimitWindow, MemorySpec, RemainingWindow, UsageWindow,
 };
