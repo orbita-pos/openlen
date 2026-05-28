@@ -22,7 +22,10 @@ async fn try_connect() -> sqlx::Result<Option<PgPool>> {
         );
         return Ok(None);
     };
-    let pool = PgPoolOptions::new().max_connections(5).connect(&url).await?;
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&url)
+        .await?;
     Ok(Some(pool))
 }
 
@@ -59,13 +62,12 @@ async fn cleanup(pool: &PgPool, key: &str) {
 }
 
 async fn count_events(pool: &PgPool, key: &str) -> i64 {
-    let row: (i64,) = sqlx::query_as(
-        r#"SELECT COUNT(*)::bigint FROM "rateLimitEvents" WHERE "key" = $1"#,
-    )
-    .bind(key)
-    .fetch_one(pool)
-    .await
-    .unwrap();
+    let row: (i64,) =
+        sqlx::query_as(r#"SELECT COUNT(*)::bigint FROM "rateLimitEvents" WHERE "key" = $1"#)
+            .bind(key)
+            .fetch_one(pool)
+            .await
+            .unwrap();
     row.0
 }
 
@@ -138,10 +140,7 @@ async fn blocked_events_do_not_persist() -> sqlx::Result<()> {
 
     tokio::time::sleep(Duration::from_millis(400)).await;
     let persisted = count_events(&pool, &key).await;
-    assert_eq!(
-        persisted, 2,
-        "blocked decisions must not enqueue PG writes"
-    );
+    assert_eq!(persisted, 2, "blocked decisions must not enqueue PG writes");
     assert_eq!(cache.stats().persisted(), 2);
     assert_eq!(cache.stats().block(), 10);
 
@@ -159,13 +158,11 @@ async fn hydration_seeds_memory_from_recent_pg_rows() -> sqlx::Result<()> {
 
     // Pre-populate PG with 4 events for this key, all in the past minute.
     for _ in 0..4 {
-        sqlx::query(
-            r#"INSERT INTO "rateLimitEvents" ("id", "key") VALUES ($1, $2)"#,
-        )
-        .bind(uuid::Uuid::new_v4().to_string())
-        .bind(&key)
-        .execute(&pool)
-        .await?;
+        sqlx::query(r#"INSERT INTO "rateLimitEvents" ("id", "key") VALUES ($1, $2)"#)
+            .bind(uuid::Uuid::new_v4().to_string())
+            .bind(&key)
+            .execute(&pool)
+            .await?;
     }
 
     // Boot a fresh SmartCache and hydrate against the 1-minute window.
@@ -182,14 +179,20 @@ async fn hydration_seeds_memory_from_recent_pg_rows() -> sqlx::Result<()> {
         label: "minute".into(),
     }];
     let seeded = cache.hydrate(&windows).await.unwrap();
-    assert!(seeded >= 1, "at least one (key, window) pair must be seeded");
+    assert!(
+        seeded >= 1,
+        "at least one (key, window) pair must be seeded"
+    );
     assert!(cache.stats().seeded() >= 1);
 
     // After hydration the memory bucket is at max - 4 = 1 token. One
     // consume passes, the second blocks.
     assert!(cache.check_and_consume(&key, &windows).await.unwrap().ok);
     let blocked = cache.check_and_consume(&key, &windows).await.unwrap();
-    assert!(!blocked.ok, "hydrated bucket should already be at the limit");
+    assert!(
+        !blocked.ok,
+        "hydrated bucket should already be at the limit"
+    );
 
     cleanup(&pool, &key).await;
     Ok(())

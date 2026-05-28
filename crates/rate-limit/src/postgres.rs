@@ -41,7 +41,8 @@ use crate::types::{LimitDecision, LimitWindow, RemainingWindow, UsageWindow};
 /// SQL strings live as `pub(crate) const` so the unit tests can assert
 /// the shape (quoted identifiers, positional binds) without spinning up
 /// a database.
-pub(crate) const COUNT_SQL: &str = r#"SELECT COUNT(*)::bigint FROM "rateLimitEvents" WHERE "key" = $1 AND "createdAt" > $2"#;
+pub(crate) const COUNT_SQL: &str =
+    r#"SELECT COUNT(*)::bigint FROM "rateLimitEvents" WHERE "key" = $1 AND "createdAt" > $2"#;
 
 pub(crate) const OLDEST_SQL: &str = r#"SELECT "createdAt" FROM "rateLimitEvents" WHERE "key" = $1 AND "createdAt" > $2 ORDER BY "createdAt" LIMIT 1"#;
 

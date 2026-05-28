@@ -208,7 +208,11 @@ where
                 .unwrap_or_else(|| "ip:unknown".to_owned());
 
             // 3. Decision.
-            let decision = match config.smart_cache.check_and_consume(&key, &config.windows).await {
+            let decision = match config
+                .smart_cache
+                .check_and_consume(&key, &config.windows)
+                .await
+            {
                 Ok(d) => d,
                 Err(err) => {
                     // Fail open — a broken limiter must not take down traffic.
@@ -264,12 +268,18 @@ where
                 .map(|t| {
                     let now = chrono::Utc::now();
                     let delta = t.signed_duration_since(now).num_seconds();
-                    if delta < 0 { 1 } else { delta as u64 }
+                    if delta < 0 {
+                        1
+                    } else {
+                        delta as u64
+                    }
                 })
                 .unwrap_or(60);
 
             debug!(
-                key, source = source.as_label(), path,
+                key,
+                source = source.as_label(),
+                path,
                 window = blocked.map(|w| w.label.as_str()).unwrap_or("?"),
                 retry_after_secs,
                 "rate-limit blocked"
@@ -287,7 +297,10 @@ where
 
 /// Walks `headers` then peer-addr per the configured order and returns the
 /// first IP that parses. Untrusted peers cause header values to be ignored.
-pub fn extract_client_ip(req: &Request<Body>, cfg: &IpExtractConfig) -> (Option<String>, ClientIpSource) {
+pub fn extract_client_ip(
+    req: &Request<Body>,
+    cfg: &IpExtractConfig,
+) -> (Option<String>, ClientIpSource) {
     let peer_ip = req
         .extensions()
         .get::<ConnectInfo<SocketAddr>>()
@@ -295,7 +308,7 @@ pub fn extract_client_ip(req: &Request<Body>, cfg: &IpExtractConfig) -> (Option<
     let peer_trusted = match peer_ip {
         None => false,
         Some(_) if cfg.trusted_proxies.is_empty() => true,
-        Some(ip) => cfg.trusted_proxies.iter().any(|t| *t == ip),
+        Some(ip) => cfg.trusted_proxies.contains(&ip),
     };
 
     if peer_trusted {
@@ -378,10 +391,15 @@ mod tests {
         exempt: Vec<String>,
         trust_all: bool,
     ) -> RateLimitConfig {
-        let mut ip_config = IpExtractConfig::default();
-        if !trust_all {
-            ip_config.trusted_proxies = vec!["127.0.0.1".parse().unwrap()];
-        }
+        let trusted_proxies = if trust_all {
+            Vec::new()
+        } else {
+            vec!["127.0.0.1".parse().unwrap()]
+        };
+        let ip_config = IpExtractConfig {
+            trusted_proxies,
+            ..IpExtractConfig::default()
+        };
         RateLimitConfig {
             smart_cache,
             windows: Arc::new(windows()),
@@ -391,16 +409,18 @@ mod tests {
     }
 
     fn req_with(path: &str, peer: &str) -> Request<Body> {
-        let mut req = Request::builder()
-            .uri(path)
-            .body(Body::empty())
-            .unwrap();
+        let mut req = Request::builder().uri(path).body(Body::empty()).unwrap();
         let addr: SocketAddr = peer.parse().unwrap();
         req.extensions_mut().insert(ConnectInfo(addr));
         req
     }
 
-    fn req_with_header(path: &str, peer: &str, header_name: &'static str, header_val: &str) -> Request<Body> {
+    fn req_with_header(
+        path: &str,
+        peer: &str,
+        header_name: &'static str,
+        header_val: &str,
+    ) -> Request<Body> {
         let mut req = req_with(path, peer);
         req.headers_mut().insert(
             HeaderName::from_static(header_name),
@@ -416,8 +436,7 @@ mod tests {
     impl Service<Request<Body>> for DummyInner {
         type Response = Response<Body>;
         type Error = Infallible;
-        type Future =
-            Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+        type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
         fn poll_ready(&mut self, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
             Poll::Ready(Ok(()))
         }
@@ -441,10 +460,7 @@ mod tests {
 
         for _ in 0..3 {
             let svc = svc.clone();
-            let resp = svc
-                .oneshot(req_with("/", "8.8.8.8:1234"))
-                .await
-                .unwrap();
+            let resp = svc.oneshot(req_with("/", "8.8.8.8:1234")).await.unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
             assert!(resp.headers().contains_key("x-passed-through"));
         }
@@ -470,11 +486,19 @@ mod tests {
         assert!(resp.headers().contains_key("x-ratelimit-remaining"));
         assert!(resp.headers().contains_key("x-ratelimit-reset"));
         assert_eq!(
-            resp.headers().get("x-ratelimit-limit").unwrap().to_str().unwrap(),
+            resp.headers()
+                .get("x-ratelimit-limit")
+                .unwrap()
+                .to_str()
+                .unwrap(),
             "3"
         );
         assert_eq!(
-            resp.headers().get("x-ratelimit-remaining").unwrap().to_str().unwrap(),
+            resp.headers()
+                .get("x-ratelimit-remaining")
+                .unwrap()
+                .to_str()
+                .unwrap(),
             "0"
         );
     }
@@ -497,10 +521,7 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::TOO_MANY_REQUESTS);
         // … but /c/ is exempt and still passes.
         let s = svc.clone();
-        let resp = s
-            .oneshot(req_with("/c/abc", "9.9.9.9:1"))
-            .await
-            .unwrap();
+        let resp = s.oneshot(req_with("/c/abc", "9.9.9.9:1")).await.unwrap();
         assert_eq!(resp.status(), StatusCode::OK);
     }
 
@@ -541,7 +562,11 @@ mod tests {
                 .oneshot(req_with_header("/", "8.8.8.8:1", "cf-connecting-ip", ip))
                 .await
                 .unwrap();
-            assert_eq!(resp.status(), StatusCode::OK, "cf-ip={ip} should pass first time");
+            assert_eq!(
+                resp.status(),
+                StatusCode::OK,
+                "cf-ip={ip} should pass first time"
+            );
         }
     }
 
@@ -582,8 +607,10 @@ mod tests {
 
     #[test]
     fn extract_client_ip_prefers_cf_header_when_trusted() {
-        let mut ip_config = IpExtractConfig::default();
-        ip_config.trusted_proxies = vec!["127.0.0.1".parse().unwrap()];
+        let ip_config = IpExtractConfig {
+            trusted_proxies: vec!["127.0.0.1".parse().unwrap()],
+            ..IpExtractConfig::default()
+        };
         let req = req_with_header("/", "127.0.0.1:1", "cf-connecting-ip", "1.2.3.4");
         let (ip, src) = extract_client_ip(&req, &ip_config);
         assert_eq!(ip.as_deref(), Some("1.2.3.4"));
@@ -592,8 +619,10 @@ mod tests {
 
     #[test]
     fn extract_client_ip_ignores_header_from_untrusted_peer() {
-        let mut ip_config = IpExtractConfig::default();
-        ip_config.trusted_proxies = vec!["127.0.0.1".parse().unwrap()];
+        let ip_config = IpExtractConfig {
+            trusted_proxies: vec!["127.0.0.1".parse().unwrap()],
+            ..IpExtractConfig::default()
+        };
         let req = req_with_header("/", "9.9.9.9:1", "cf-connecting-ip", "1.2.3.4");
         let (ip, src) = extract_client_ip(&req, &ip_config);
         // Header ignored — peer addr used.
@@ -604,12 +633,7 @@ mod tests {
     #[test]
     fn extract_client_ip_handles_comma_chain() {
         let ip_config = IpExtractConfig::default(); // trust-all
-        let req = req_with_header(
-            "/",
-            "1.1.1.1:1",
-            "x-real-ip",
-            "5.6.7.8, 192.168.1.1",
-        );
+        let req = req_with_header("/", "1.1.1.1:1", "x-real-ip", "5.6.7.8, 192.168.1.1");
         let (ip, src) = extract_client_ip(&req, &ip_config);
         assert_eq!(ip.as_deref(), Some("5.6.7.8"));
         assert_eq!(src, ClientIpSource::XRealIp);
@@ -645,7 +669,10 @@ mod tests {
 
     #[test]
     fn client_ip_source_labels_are_lowercase_underscored() {
-        assert_eq!(ClientIpSource::CfConnectingIp.as_label(), "cf_connecting_ip");
+        assert_eq!(
+            ClientIpSource::CfConnectingIp.as_label(),
+            "cf_connecting_ip"
+        );
         assert_eq!(ClientIpSource::XRealIp.as_label(), "x_real_ip");
         assert_eq!(ClientIpSource::PeerAddr.as_label(), "peer_addr");
         assert_eq!(ClientIpSource::Unknown.as_label(), "unknown");
@@ -656,15 +683,27 @@ mod tests {
         let resp = blocked_response(300, 0, 1_700_000_000, 42);
         assert_eq!(resp.status(), StatusCode::TOO_MANY_REQUESTS);
         assert_eq!(
-            resp.headers().get(header::RETRY_AFTER).unwrap().to_str().unwrap(),
+            resp.headers()
+                .get(header::RETRY_AFTER)
+                .unwrap()
+                .to_str()
+                .unwrap(),
             "42"
         );
         assert_eq!(
-            resp.headers().get("x-ratelimit-limit").unwrap().to_str().unwrap(),
+            resp.headers()
+                .get("x-ratelimit-limit")
+                .unwrap()
+                .to_str()
+                .unwrap(),
             "300"
         );
         assert_eq!(
-            resp.headers().get("x-ratelimit-reset").unwrap().to_str().unwrap(),
+            resp.headers()
+                .get("x-ratelimit-reset")
+                .unwrap()
+                .to_str()
+                .unwrap(),
             "1700000000"
         );
     }

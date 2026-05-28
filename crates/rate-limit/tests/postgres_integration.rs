@@ -15,7 +15,7 @@
 use std::env;
 
 use openlen_rate_limit::{LimitWindow, PostgresLimiter};
-use sqlx::{Executor, PgPool, postgres::PgPoolOptions};
+use sqlx::{postgres::PgPoolOptions, Executor, PgPool};
 
 /// Connect if either env var is present. Returns `Ok(None)` to make tests
 /// no-op when no test database is configured — keeps the suite green on
@@ -26,12 +26,13 @@ async fn try_connect() -> sqlx::Result<Option<PgPool>> {
         .or_else(|| env::var("DATABASE_URL").ok())
         .filter(|s| !s.is_empty());
     let Some(url) = url else {
-        eprintln!(
-            "[postgres_integration] SKIP — set OPENLEN_RATE_LIMIT_TEST_DATABASE_URL to run"
-        );
+        eprintln!("[postgres_integration] SKIP — set OPENLEN_RATE_LIMIT_TEST_DATABASE_URL to run");
         return Ok(None);
     };
-    let pool = PgPoolOptions::new().max_connections(5).connect(&url).await?;
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&url)
+        .await?;
     Ok(Some(pool))
 }
 
@@ -92,8 +93,14 @@ async fn check_and_consume_inserts_until_max() -> sqlx::Result<()> {
     }
     let blocked = limiter.check_and_consume(&key, &windows).await.unwrap();
     assert!(!blocked.ok, "4th consume must be blocked");
-    assert_eq!(blocked.blocked.as_ref().map(|w| &w.label), Some(&"minute".to_string()));
-    assert!(blocked.reset_at.is_some(), "blocked decision must report reset_at");
+    assert_eq!(
+        blocked.blocked.as_ref().map(|w| &w.label),
+        Some(&"minute".to_string())
+    );
+    assert!(
+        blocked.reset_at.is_some(),
+        "blocked decision must report reset_at"
+    );
 
     cleanup(&pool, &key).await;
     Ok(())

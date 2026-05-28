@@ -119,7 +119,8 @@ pub fn inject_logo(html: &str, logo_url: &str) -> String {
                 if rel.is_empty() {
                     return false;
                 }
-                rel.split_whitespace().any(|t| t == "icon" || t == "shortcut")
+                rel.split_whitespace()
+                    .any(|t| t == "icon" || t == "shortcut")
             })
             .collect(),
         Err(_) => vec![],

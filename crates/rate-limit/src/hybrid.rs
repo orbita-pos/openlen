@@ -81,7 +81,7 @@ impl HybridLimiter {
         key: &str,
         windows: &[LimitWindow],
     ) -> Result<LimitDecision, RateLimitError> {
-        let pg = self.persistent.as_ref().ok_or_else(|| no_persistent())?;
+        let pg = self.persistent.as_ref().ok_or_else(no_persistent)?;
         pg.check_and_consume(key, windows).await
     }
 
@@ -91,7 +91,7 @@ impl HybridLimiter {
         key: &str,
         windows: &[LimitWindow],
     ) -> Result<Vec<UsageWindow>, RateLimitError> {
-        let pg = self.persistent.as_ref().ok_or_else(|| no_persistent())?;
+        let pg = self.persistent.as_ref().ok_or_else(no_persistent)?;
         pg.get_usage(key, windows).await
     }
 }

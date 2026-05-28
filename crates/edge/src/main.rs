@@ -11,10 +11,10 @@ use tracing::{info, warn};
 use observability::{install_exporter, spawn_process_collector_loop};
 use openlen_edge::{
     bind_with_lookup_and_layers, build_dynamic_config, build_lookup_from_config,
-    ensure_crypto_provider, load_persisted_certs, observability, read_cert_pair,
-    run_http_redirect, run_internal_api, run_renewal_loop, watch_wildcard, AcmeClient,
-    AcmeIssuer, DynamicCertResolver, EdgeConfig, InternalApiState, IpExtractConfig,
-    RateLimitConfig, RateLimitLayer, RenewalConfig,
+    ensure_crypto_provider, load_persisted_certs, observability, read_cert_pair, run_http_redirect,
+    run_internal_api, run_renewal_loop, watch_wildcard, AcmeClient, AcmeIssuer,
+    DynamicCertResolver, EdgeConfig, InternalApiState, IpExtractConfig, RateLimitConfig,
+    RateLimitLayer, RenewalConfig,
 };
 use openlen_rate_limit::{LimitWindow, SmartCache, SmartCacheConfig};
 
@@ -155,8 +155,7 @@ async fn main() -> Result<()> {
     // shutdown signal tears both down together.
     let (rate_limit_layer, _rate_limit_bg): (Option<RateLimitLayer>, _) = if cfg.rate_limit_enabled
     {
-        let (cache, bg) =
-            SmartCache::start_memory_only(SmartCacheConfig::memory_only());
+        let (cache, bg) = SmartCache::start_memory_only(SmartCacheConfig::memory_only());
         let windows = vec![
             LimitWindow {
                 window_ms: 60_000,
