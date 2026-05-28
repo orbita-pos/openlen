@@ -34,6 +34,11 @@ pub struct JsVariant {
     pub format: String,
     /// Encoder quality 1..=100. Ignored for PNG (lossless).
     pub quality: u32,
+    /// WebP-only: separate quality for the alpha channel (0..=100).
+    /// When omitted, alpha is encoded at the same quality as color
+    /// (sharp's default when `alphaQuality` isn't passed). No effect on
+    /// AVIF / JPEG / PNG variants.
+    pub alpha_quality: Option<u32>,
 }
 
 #[napi(object)]
@@ -46,6 +51,11 @@ pub struct ProcessRequestJs {
     /// Clamp a variant's target width to the input's intrinsic width.
     /// Default: `true` (sharp's `withoutEnlargement` default).
     pub without_enlargement: Option<bool>,
+    /// When `true`, compute a BlurHash + dominant color placeholder from
+    /// the oriented source and attach it as `result.placeholder`. Adds
+    /// ~1 ms on a small thumb; opt-in so legacy callers stay zero-cost.
+    /// Default: `false`.
+    pub placeholder: Option<bool>,
 }
 
 #[napi(object)]
@@ -66,8 +76,26 @@ pub struct VariantOutputJs {
 
 #[napi(object)]
 #[derive(Clone)]
+pub struct PlaceholderJs {
+    /// BlurHash string (Woltapp format). Decode client-side with
+    /// `blurhash-canvas` (Web) or `react-blurhash`.
+    pub blurhash: String,
+    /// Hex `#RRGGBB` of the thumbnail's dominant color bucket.
+    pub dominant_color: String,
+    /// Thumbnail width the BlurHash + color were computed from.
+    pub width: u32,
+    /// Thumbnail height (paired with `width`).
+    pub height: u32,
+}
+
+#[napi(object)]
+#[derive(Clone)]
 pub struct ProcessResultJs {
     pub variants: Vec<VariantOutputJs>,
+    /// Present when the request set `placeholder: true`. Carries the
+    /// BlurHash + dominant color for the source image — suitable for
+    /// `style.backgroundColor` + LQIP rendering on the client.
+    pub placeholder: Option<PlaceholderJs>,
 }
 
 fn envelope(kind: &str, retryable: bool, message: impl Into<String>) -> String {
@@ -100,11 +128,13 @@ fn invalid_format(format: &str) -> napi::Error {
 /// ```js
 /// const result = await processImage({
 ///   input: Buffer,
-///   variants: [{ width, format, quality }, ...],
+///   variants: [{ width, format, quality, alphaQuality? }, ...],
 ///   autoOrient?: boolean,        // default true
-///   withoutEnlargement?: boolean // default true
+///   withoutEnlargement?: boolean,// default true
+///   placeholder?: boolean,       // default false; when true → result.placeholder
 /// })
 /// // result.variants: [{ width, height, format, mime, bytes, size }, ...]
+/// // result.placeholder: undefined | { blurhash, dominantColor, width, height }
 /// ```
 #[napi]
 pub async fn process_image(req: ProcessRequestJs) -> Result<ProcessResultJs> {
@@ -120,6 +150,7 @@ pub async fn process_image(req: ProcessRequestJs) -> Result<ProcessResultJs> {
                 max_height: v.max_height,
                 format: fmt,
                 quality: v.quality.min(100) as u8,
+                alpha_quality: v.alpha_quality.map(|q| q.min(100) as u8),
             })
         })
         .collect::<Result<Vec<_>>>()?;
@@ -129,6 +160,7 @@ pub async fn process_image(req: ProcessRequestJs) -> Result<ProcessResultJs> {
         variants,
         auto_orient: req.auto_orient.unwrap_or(true),
         without_enlargement: req.without_enlargement.unwrap_or(true),
+        placeholder: req.placeholder.unwrap_or(false),
     };
 
     let result = tokio::task::spawn_blocking(move || pipeline::process_image(native_req))
@@ -152,8 +184,16 @@ pub async fn process_image(req: ProcessRequestJs) -> Result<ProcessResultJs> {
         })
         .collect();
 
+    let placeholder_js = result.placeholder.map(|p| PlaceholderJs {
+        blurhash: p.blurhash,
+        dominant_color: p.dominant_color,
+        width: p.width,
+        height: p.height,
+    });
+
     Ok(ProcessResultJs {
         variants: variants_js,
+        placeholder: placeholder_js,
     })
 }
 

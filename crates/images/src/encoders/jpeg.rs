@@ -33,7 +33,7 @@ pub fn encode(img: &RgbaImage, quality: u8) -> Result<Vec<u8>, ImageError> {
     }
 
     let mut out: Vec<u8> = Vec::with_capacity(rgb.len() / 8);
-    let mut encoder = Encoder::new(&mut out, quality.max(1).min(100));
+    let mut encoder = Encoder::new(&mut out, quality.clamp(1, 100));
     encoder.set_progressive(true);
     encoder
         .encode(&rgb, w as u16, h as u16, ColorType::Rgb)
@@ -87,13 +87,9 @@ mod tests {
 
     #[test]
     fn oversize_dimensions_errors() {
-        // Don't actually allocate a 70k×1 image — just check the guard.
-        // Smallest case that exceeds u16::MAX = 65536.
-        let mut img = RgbaImage::new(1, 1);
-        // Force the dim check by hand: we can't make a RgbaImage of size
-        // > u32::MAX, but we can verify the guard exists by faking via
-        // a 0-dim input.
-        img = RgbaImage::new(0, 0);
+        // Allocating a 70k×1 image just to test the guard would burn 280 MB.
+        // 0×0 is the smallest input that exercises the same dim-range check.
+        let img = RgbaImage::new(0, 0);
         let err = encode(&img, 80).unwrap_err();
         assert_eq!(err.kind(), "encode");
     }
