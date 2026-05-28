@@ -1,7 +1,7 @@
-import sharp from "sharp";
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
+import { legacyWebp2000Variant, processImage } from "@/lib/images";
 import {
   ACCEPTED_MIMES,
   extForMime,
@@ -92,29 +92,27 @@ export async function POST(
   }
 
   // Optimize before storage. SVG (vector) and GIF (animation) bypass —
-  // sharp can lose them. Everything else: downscale to 2000px max + WebP
-  // at quality 85. On any sharp failure, ship the original — the page
-  // still works, just heavier.
+  // the Rust pipeline can't preserve either (vector → raster lossy;
+  // animation → single frame). Everything else: downscale to 2000px max
+  // on the longer edge + WebP at quality 85. On any pipeline failure
+  // ship the original — the page still works, just heavier.
   let finalBuffer = buffer;
   let finalExt = ext;
   let finalMime = mime;
   if (mime !== "image/svg+xml" && mime !== "image/gif") {
     try {
-      finalBuffer = await sharp(buffer)
-        .rotate() // honor EXIF orientation
-        .resize({
-          width: 2000,
-          height: 2000,
-          fit: "inside",
-          withoutEnlargement: true,
-        })
-        .webp({ quality: 85, effort: 4 })
-        .toBuffer();
+      const { variants } = await processImage({
+        input: buffer,
+        variants: [legacyWebp2000Variant()],
+        autoOrient: true,
+        withoutEnlargement: true,
+      });
+      finalBuffer = variants[0].bytes;
       finalExt = "webp";
       finalMime = "image/webp";
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.warn("[projects/assets] sharp optimization failed; using original", err);
+      console.warn("[projects/assets] image optimization failed; using original", err);
     }
   }
 

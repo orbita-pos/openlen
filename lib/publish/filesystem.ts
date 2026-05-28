@@ -12,7 +12,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
-import sharp from "sharp";
+import { legacyWebp2000Variant, processImage } from "@/lib/images";
 import { validateSubdomain } from "@/lib/subdomain/validate";
 import { detectSlotPath } from "@/lib/html-engine";
 import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
@@ -255,16 +255,13 @@ async function migrateUnsplashAssets(params: {
           return;
         }
 
-        const optimized = await sharp(raw)
-          .rotate()
-          .resize({
-            width: 2000,
-            height: 2000,
-            fit: "inside",
-            withoutEnlargement: true,
-          })
-          .webp({ quality: 85, effort: 4 })
-          .toBuffer();
+        const { variants: optimizedVariants } = await processImage({
+          input: raw,
+          variants: [legacyWebp2000Variant()],
+          autoOrient: true,
+          withoutEnlargement: true,
+        });
+        const optimized = optimizedVariants[0].bytes;
 
         const hash = createHash("sha256")
           .update(optimized)
