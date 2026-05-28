@@ -56,6 +56,12 @@ pub struct Variant {
     /// Target max width in pixels. `0` means "use the input's intrinsic
     /// width" (skip resize). Aspect ratio is always preserved.
     pub width: u32,
+    /// Optional companion bound on the height. When present, the variant
+    /// is scaled by the SMALLER of (width/orig_w) and (max_height/orig_h)
+    /// — sharp's `{ width, height, fit: 'inside' }` semantics. Use this
+    /// to fit a portrait-oriented input inside a square bounding box.
+    /// `None` (the default) leaves the height unbounded.
+    pub max_height: Option<u32>,
     pub format: Format,
     /// Encoder quality 1..=100. Ignored for PNG (lossless).
     pub quality: u8,
@@ -86,15 +92,41 @@ pub struct ProcessResult {
     pub variants: Vec<VariantOutput>,
 }
 
-/// Effective target width given the input dims and the request flags.
-fn effective_width(requested: u32, orig_w: u32, without_enlargement: bool) -> u32 {
-    if requested == 0 {
-        return orig_w;
+/// Effective output dimensions given the variant's bounds and the input
+/// dimensions. Mirrors sharp's `fit: 'inside'` semantics when `max_height`
+/// is set: scale by whichever of (width/orig_w, max_height/orig_h) is
+/// smaller, so neither bound is exceeded.
+fn effective_dimensions(
+    v: &Variant,
+    orig_w: u32,
+    orig_h: u32,
+    without_enlargement: bool,
+) -> (u32, u32) {
+    let width_unset = v.width == 0;
+    let target_w = if width_unset { orig_w } else { v.width };
+
+    // Aspect math is done in f64 to avoid overflow on large inputs and to
+    // keep rounding error tiny; we round-to-nearest at the end.
+    let scale_w = if width_unset {
+        1.0
+    } else {
+        target_w as f64 / orig_w.max(1) as f64
+    };
+    let scale_h = match v.max_height {
+        Some(h) => h as f64 / orig_h.max(1) as f64,
+        None => f64::INFINITY,
+    };
+    // Pick the tighter bound. When max_height is None, scale_h is infinity
+    // so scale_w wins as expected.
+    let mut scale = scale_w.min(scale_h);
+
+    if without_enlargement && scale > 1.0 {
+        scale = 1.0;
     }
-    if without_enlargement && requested >= orig_w {
-        return orig_w;
-    }
-    requested
+
+    let out_w = ((orig_w as f64 * scale).round() as u32).max(1);
+    let out_h = ((orig_h as f64 * scale).round() as u32).max(1);
+    (out_w, out_h)
 }
 
 pub fn process_image(req: ProcessRequest) -> Result<ProcessResult, ImageError> {
@@ -128,22 +160,23 @@ pub fn process_image(req: ProcessRequest) -> Result<ProcessResult, ImageError> {
         )));
     }
 
-    // 3. Collect the unique set of target widths that need a resize.
+    // 3. Collect the unique set of (out_w, out_h) pairs that need a resize.
+    //    Cache by both dims — two variants with the same width but different
+    //    max_height bounds can legitimately resolve to different sizes.
     //    BTreeSet keeps iteration deterministic — handy for tests.
-    let mut widths: BTreeSet<u32> = BTreeSet::new();
+    let mut dims: BTreeSet<(u32, u32)> = BTreeSet::new();
     for v in &req.variants {
-        let w = effective_width(v.width, orig_w, req.without_enlargement);
-        if w != orig_w {
-            widths.insert(w);
+        let (w, h) = effective_dimensions(v, orig_w, orig_h, req.without_enlargement);
+        if (w, h) != (orig_w, orig_h) {
+            dims.insert((w, h));
         }
     }
 
-    // 4. Materialise each non-original width once.
-    let mut cache: HashMap<u32, RgbaImage> = HashMap::with_capacity(widths.len());
-    for w in widths {
-        let h = ((orig_h as u64 * w as u64) / orig_w.max(1) as u64).max(1) as u32;
+    // 4. Materialise each non-original (w, h) once.
+    let mut cache: HashMap<(u32, u32), RgbaImage> = HashMap::with_capacity(dims.len());
+    for (w, h) in dims {
         let resized = resize::resize_lanczos3(&base, w, h);
-        cache.insert(w, resized);
+        cache.insert((w, h), resized);
     }
 
     // 5. Encode every variant. Sharp parity: even if two variants share
@@ -153,11 +186,11 @@ pub fn process_image(req: ProcessRequest) -> Result<ProcessResult, ImageError> {
     //    and the dedup logic isn't worth its complexity cost.
     let mut outputs = Vec::with_capacity(req.variants.len());
     for v in &req.variants {
-        let w = effective_width(v.width, orig_w, req.without_enlargement);
-        let resized: &RgbaImage = if w == orig_w {
+        let (w, h) = effective_dimensions(v, orig_w, orig_h, req.without_enlargement);
+        let resized: &RgbaImage = if (w, h) == (orig_w, orig_h) {
             &base
         } else {
-            cache.get(&w).expect("pre-computed in step 4")
+            cache.get(&(w, h)).expect("pre-computed in step 4")
         };
         let (rw, rh) = (resized.width(), resized.height());
         let bytes = match v.format {
@@ -199,6 +232,7 @@ mod tests {
             input: vec![],
             variants: vec![Variant {
                 width: 100,
+                max_height: None,
                 format: Format::Webp,
                 quality: 80,
             }],
@@ -225,6 +259,7 @@ mod tests {
             input: b"not actually an image".to_vec(),
             variants: vec![Variant {
                 width: 100,
+                max_height: None,
                 format: Format::Webp,
                 quality: 80,
             }],
@@ -241,6 +276,7 @@ mod tests {
             input,
             variants: vec![Variant {
                 width: 100,
+                max_height: None,
                 format: Format::Webp,
                 quality: 80,
             }],
@@ -267,16 +303,19 @@ mod tests {
             variants: vec![
                 Variant {
                     width: 100,
+                    max_height: None,
                     format: Format::Webp,
                     quality: 80,
                 },
                 Variant {
                     width: 100,
+                    max_height: None,
                     format: Format::Avif,
                     quality: 65,
                 },
                 Variant {
                     width: 100,
+                    max_height: None,
                     format: Format::Jpeg,
                     quality: 85,
                 },
@@ -303,6 +342,7 @@ mod tests {
             input,
             variants: vec![Variant {
                 width: 800,
+                max_height: None,
                 format: Format::Webp,
                 quality: 80,
             }],
@@ -322,6 +362,7 @@ mod tests {
             input,
             variants: vec![Variant {
                 width: 0,
+                max_height: None,
                 format: Format::Png,
                 quality: 0,
             }],
@@ -341,16 +382,19 @@ mod tests {
             variants: vec![
                 Variant {
                     width: 200,
+                    max_height: None,
                     format: Format::Webp,
                     quality: 80,
                 },
                 Variant {
                     width: 100,
+                    max_height: None,
                     format: Format::Webp,
                     quality: 80,
                 },
                 Variant {
                     width: 50,
+                    max_height: None,
                     format: Format::Webp,
                     quality: 80,
                 },
@@ -374,5 +418,71 @@ mod tests {
         assert_eq!(Format::parse("JPEG"), Some(Format::Jpeg));
         assert_eq!(Format::parse("png"), Some(Format::Png));
         assert_eq!(Format::parse("bmp"), None);
+    }
+
+    #[test]
+    fn max_height_constraint_wins_for_tall_input() {
+        // 100×400 portrait input with bounds (200, 200, fit: inside).
+        // Width bound alone would scale up to 200×800 (clamped by
+        // withoutEnlargement back to 100×400). Height bound forces
+        // scale = 200/400 = 0.5 → 50×200.
+        let input = solid_png(100, 400, [120, 60, 30, 255]);
+        let r = process_image(ProcessRequest {
+            input,
+            variants: vec![Variant {
+                width: 200,
+                max_height: Some(200),
+                format: Format::Webp,
+                quality: 80,
+            }],
+            auto_orient: false,
+            without_enlargement: true,
+        })
+        .unwrap();
+        assert_eq!(r.variants[0].width, 50);
+        assert_eq!(r.variants[0].height, 200);
+    }
+
+    #[test]
+    fn max_height_constraint_with_landscape_input_keeps_width_bound() {
+        // 400×100 landscape, bounds (200, 200). Width bound is tighter
+        // (200/400 = 0.5) and gives 200×50; height bound 200/100=2.0 is
+        // looser. Output should track the width bound.
+        let input = solid_png(400, 100, [60, 120, 30, 255]);
+        let r = process_image(ProcessRequest {
+            input,
+            variants: vec![Variant {
+                width: 200,
+                max_height: Some(200),
+                format: Format::Webp,
+                quality: 80,
+            }],
+            auto_orient: false,
+            without_enlargement: true,
+        })
+        .unwrap();
+        assert_eq!(r.variants[0].width, 200);
+        assert_eq!(r.variants[0].height, 50);
+    }
+
+    #[test]
+    fn max_height_none_matches_pre_max_height_behaviour() {
+        // Sanity: a variant with max_height: None should produce exactly
+        // the same dimensions as the legacy width-only API.
+        let input = solid_png(400, 200, [10, 20, 30, 255]);
+        let r = process_image(ProcessRequest {
+            input,
+            variants: vec![Variant {
+                width: 200,
+                max_height: None,
+                format: Format::Webp,
+                quality: 80,
+            }],
+            auto_orient: false,
+            without_enlargement: true,
+        })
+        .unwrap();
+        assert_eq!(r.variants[0].width, 200);
+        assert_eq!(r.variants[0].height, 100);
     }
 }
