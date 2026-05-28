@@ -328,5 +328,5 @@ not a Rust code change; defer to operator.
 
 ## Self-commit SHA
 
-`__SELF_SHA__` — the Phase J commit that introduced this handoff doc.
+`be4784d` — the Phase J commit that introduced this handoff doc.
 Subsequent commits on `rust/f4-images-s2` are doc-only fill-ins.
