@@ -1,0 +1,62 @@
+[package]
+name = "openlen-images"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "OpenLen image processing — Lanczos resize + AVIF/WebP/JPEG/PNG encoding + variant pipeline. Replaces the `sharp` Node binding."
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+napi = { version = "2", default-features = false, features = ["napi6", "async", "tokio_rt"] }
+napi-derive = "2"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"] }
+
+# image: decoder + resize. `webp` feature here enables WebP DECODE (so we
+# can re-process WebP user uploads); lossy WebP ENCODE goes through the
+# standalone `webp` crate below because `image`'s built-in WebP encoder
+# is lossless-only — sharp uses the same split (libwebp underneath).
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "gif", "webp", "rayon"] }
+
+# AVIF via ravif (pure Rust; rav1e encoder).
+#
+# `default-features = false` + only `threading` because rav1e's `asm`
+# feature requires NASM in PATH on the build machine, which adds a
+# toolchain dependency we don't want for `git clone && npm i && next dev`.
+# Cost: AVIF encoding is ~3× slower without the assembly intrinsics. We
+# accept that — AVIF is the slowest encoder anyway and the variants
+# pipeline runs at upload time (not request time), so the latency hit is
+# off the user-perceived hot path. If/when prod Linux perf becomes a
+# concern, the swap is `features = ["asm", "threading"]` with NASM
+# installed in the Hetzner image (`apt install nasm`).
+ravif = { version = "0.11", default-features = false, features = ["threading"] }
+# ravif takes `Img<&[rgb::RGBA8]>` as input; the `rgb` crate is its
+# canonical interop type.
+rgb = "0.8"
+
+# Lossy WebP via libwebp. Alpha-aware (alphaQuality controllable).
+webp = "0.3"
+
+# Pure-Rust JPEG encoder with progressive support. Within ~5–10% of mozjpeg
+# for matched quality, and no NASM/cmake requirement on Windows MSVC.
+jpeg-encoder = "0.6"
+
+# PNG re-optimization (zlib level 6 → smaller, deterministic output).
+# `parallel` enables rayon, which `image` is already pulling in.
+oxipng = { version = "9", default-features = false, features = ["parallel"] }
+
+# EXIF reading for orientation auto-rotate (sharp does this transparently;
+# the `image` crate does NOT, so we read the tag + rotate explicitly).
+kamadak-exif = "0.5"
+
+thiserror = "1"
+tracing = "0.1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[build-dependencies]
+napi-build = "2"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
