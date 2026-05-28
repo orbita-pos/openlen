@@ -2964,6 +2964,7 @@ name = "openlen-images"
 version = "0.1.0"
 dependencies = [
  "blurhash",
+ "criterion",
  "image",
  "jpeg-encoder",
  "kamadak-exif",

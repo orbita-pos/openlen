@@ -108,12 +108,17 @@ fn thumb_dimensions(orig_w: u32, orig_h: u32) -> (u32, u32) {
 }
 
 fn compute_blurhash(img: &RgbaImage) -> Result<String, ImageError> {
-    blurhash::encode(BLURHASH_X, BLURHASH_Y, img.width(), img.height(), img.as_raw()).map_err(
-        |e| ImageError::Encode {
-            format: "blurhash",
-            message: e.to_string(),
-        },
+    blurhash::encode(
+        BLURHASH_X,
+        BLURHASH_Y,
+        img.width(),
+        img.height(),
+        img.as_raw(),
     )
+    .map_err(|e| ImageError::Encode {
+        format: "blurhash",
+        message: e.to_string(),
+    })
 }
 
 /// Dominant color via 4-bit-per-channel histogram. Walks the thumbnail's

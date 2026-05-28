@@ -25,9 +25,7 @@ pub fn apply_orientation(img: DynamicImage, orientation: u32) -> DynamicImage {
         2 => img.fliph(),
         3 => img.rotate180(),
         4 => img.flipv(),
-        5 => DynamicImage::ImageRgba8(image::imageops::flip_horizontal(
-            &img.rotate90().to_rgba8(),
-        )),
+        5 => DynamicImage::ImageRgba8(image::imageops::flip_horizontal(&img.rotate90().to_rgba8())),
         6 => img.rotate90(),
         7 => DynamicImage::ImageRgba8(image::imageops::flip_horizontal(
             &img.rotate270().to_rgba8(),
