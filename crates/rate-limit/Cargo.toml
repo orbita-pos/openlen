@@ -8,9 +8,16 @@ description = "OpenLen unified rate limiter — in-memory token buckets + Postgr
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+# Default-on for the napi cdylib build that ships @openlen/rate-limit. Pure-
+# Rust consumers (e.g. crates/edge) depend with `default-features = false` to
+# skip pulling napi + the napi-build script into their dep graph.
+default = ["napi-bindings"]
+napi-bindings = ["dep:napi", "dep:napi-derive", "dep:napi-build"]
+
 [dependencies]
-napi = { version = "2", default-features = false, features = ["napi6", "async", "tokio_rt"] }
-napi-derive = "2"
+napi = { version = "2", default-features = false, features = ["napi6", "async", "tokio_rt"], optional = true }
+napi-derive = { version = "2", optional = true }
 tokio = { version = "1", features = ["rt-multi-thread", "time", "macros", "sync"] }
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "chrono", "uuid", "macros"] }
 dashmap = "6"
@@ -22,7 +29,7 @@ tracing = "0.1"
 uuid = { version = "1", features = ["v4"] }
 
 [build-dependencies]
-napi-build = "2"
+napi-build = { version = "2", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "time", "test-util"] }
