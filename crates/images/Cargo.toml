@@ -50,6 +50,11 @@ oxipng = { version = "9", default-features = false, features = ["parallel"] }
 # the `image` crate does NOT, so we read the tag + rotate explicitly).
 kamadak-exif = "0.5"
 
+# BlurHash encoder for the `placeholder: true` pipeline flag. Emits the
+# compact (~30-char) Woltapp string the client decodes into a blurred
+# preview while the real image bytes are still loading.
+blurhash = "0.2"
+
 thiserror = "1"
 tracing = "0.1"
 serde = { version = "1", features = ["derive"] }
