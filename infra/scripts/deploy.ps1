@@ -17,8 +17,14 @@
 #   $env:OPENLEN_HOST = "openlen"          # ssh alias from ~/.ssh/config
 #   $env:OPENLEN_REMOTE_PATH = "/opt/openlen-app"
 #   $env:OPENLEN_SKIP_BUILD = "1"          # reuse existing .next/standalone
-#   $env:OPENLEN_REBUILD_CRATES = "1"      # rebuild Rust .node binaries on box
-#                                          # (required when crates/ changed)
+#   $env:OPENLEN_SKIP_CRATES_REBUILD = "1" # skip the Rust crate rebuild step.
+#                                          # RISKY — the atomic swap wipes
+#                                          # /opt/openlen-app/node_modules/
+#                                          # @openlen/*, so the rebuild is what
+#                                          # puts linux-x64-gnu .node binaries
+#                                          # back. Without it prod crashes with
+#                                          # MODULE_NOT_FOUND at runtime.
+#                                          # Only set when you're sure (rare).
 
 $ErrorActionPreference = "Stop"
 
@@ -100,13 +106,20 @@ chown -R openlen-deploy:www-data $stagingDir
 & ssh $host_ $extractCmd
 if ($LASTEXITCODE -ne 0) { throw "Remote extract failed (exit $LASTEXITCODE)" }
 
-# --- 5.5. Rebuild Rust crates on box (optional) ----------------------
-# When OPENLEN_REBUILD_CRATES=1, rsync the Rust workspace to the box and
-# rebuild the linux-x64-gnu .node binaries into the STAGING dir, so they
-# enter the atomic swap in step 6. Without this, the win32 .node binaries
-# from the local build would land on Linux and crash on first require().
-# JS-only deploys (95% of them) leave this off and pay no cost.
-if ($env:OPENLEN_REBUILD_CRATES -eq "1") {
+# --- 5.5. Rebuild Rust crates on box (default ON) --------------------
+# The atomic swap in step 6 wipes /opt/openlen-app/node_modules/@openlen/*
+# every time, replacing it with the contents of the local Windows-built
+# tarball (which only has win32-x64-msvc .node binaries). Without
+# rebuilding the linux-x64-gnu .node files into the staging dir BEFORE the
+# swap, the app on the box crashes at runtime with MODULE_NOT_FOUND on
+# require('@openlen/rate-limit-linux-x64-gnu') (and all 4 crates).
+#
+# So this step must run on EVERY deploy by default. The opt-out exists
+# for the very rare case where you know the .node files are otherwise
+# preserved — but in practice it should almost never be set.
+# Cargo cache stays hot between deploys → 30-40s when nothing changed in
+# crates/, ~5 min on the first deploy of the day.
+if ($env:OPENLEN_SKIP_CRATES_REBUILD -ne "1") {
   Step "5.5" "Rebuilding Rust crates on box (this takes ~5 min)..."
   $sw = [System.Diagnostics.Stopwatch]::StartNew()
   # Ship the Rust workspace + build script to the box. PowerShell on
@@ -156,16 +169,12 @@ bash /root/build-crates-on-box.sh $stagingDir
   $sw.Stop()
   Write-Host ("    done in {0}s" -f [math]::Round($sw.Elapsed.TotalSeconds, 1))
 } else {
-  # Heuristic: warn if Rust source changed in the last commit but the flag
-  # is off — catches "I edited crates/ and forgot the flag" without forcing
-  # the 5-min cost on every deploy.
-  $cratesChanged = $null
-  try { $cratesChanged = & git diff --stat HEAD~1 HEAD -- crates/ 2>$null } catch {}
-  if ($cratesChanged) {
-    Write-Host ""
-    Write-Host "  WARN: crates/ has changes vs HEAD~1 but OPENLEN_REBUILD_CRATES is not set." -ForegroundColor Yellow
-    Write-Host "        If the Rust binaries need rebuilding, set `$env:OPENLEN_REBUILD_CRATES=`"1`" and re-run." -ForegroundColor Yellow
-  }
+  # Opt-out path. Loudly warn — this almost certainly breaks prod.
+  Step "5.5" "Skipping Rust crate rebuild (OPENLEN_SKIP_CRATES_REBUILD=1)"
+  Write-Host "  WARNING: the atomic swap wipes /opt/openlen-app/node_modules/@openlen/*/." -ForegroundColor Yellow
+  Write-Host "  Without the rebuild step, the box will have Windows .node binaries → MODULE_NOT_FOUND on require." -ForegroundColor Yellow
+  Write-Host "  This flag should almost never be set. If you set it by mistake, abort with Ctrl+C now." -ForegroundColor Yellow
+  Start-Sleep -Seconds 3
 }
 
 # --- 6. Atomic swap + restart + smoke test ---------------------------
