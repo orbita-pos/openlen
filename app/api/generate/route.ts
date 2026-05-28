@@ -151,7 +151,7 @@ export async function POST(req: Request): Promise<Response> {
   if (!PROVIDER.key) {
     return json({ error: `${PROVIDER.label} API key missing` }, 500);
   }
-  const aiModel: AIModel = modelParam === "gemini-flash" ? "gemini-flash" : "gemini-pro";
+  const aiModel: AIModel = modelParam === "gemini-pro" ? "gemini-pro" : "gemini-flash";
   const messages = [
     { role: "system" as const, content: SYSTEM_PROMPT },
     { role: "user" as const, content: REFERENCE_MESSAGE },

@@ -194,7 +194,7 @@ export function LeftSidebar({
   aiBriefState,
   aiOnGenerate,
   aiGenerating = false,
-  aiModel = "gemini-pro",
+  aiModel = "gemini-flash",
   aiOnModelChange,
 }: LeftSidebarProps) {
   const isFlatProject = flatProjectId !== undefined;

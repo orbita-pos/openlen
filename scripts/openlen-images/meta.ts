@@ -1,9 +1,9 @@
 // Source-of-truth metadata for the "Imagenes by OpenLen" set.
 //
-// 406 entries, paired by index with the PNGs in Downloads/img-chatgpt sorted by
+// 454 entries, paired by index with the PNGs in Downloads/img-chatgpt sorted by
 // file mtime (= generation order = prompt order). Prompt #19 (brutalist
-// concrete) was skipped during generation, so promptNum runs 1..407 with a gap
-// at 19 — 406 images total. Entries are stored in mtime order, which usually
+// concrete) was skipped during generation, so promptNum runs 1..455 with a gap
+// at 19 — 454 images total. Entries are stored in mtime order, which usually
 // matches promptNum order — except prompts regenerated late (#170, #272), which
 // are listed in their mtime position within their batch, not by promptNum.
 //
@@ -29,7 +29,9 @@ export type ImageStyle =
   | "gradient-bg"
   | "pet-editorial"
   | "creator-mockup"
-  | "sports-editorial";
+  | "sports-editorial"
+  | "travel-editorial"
+  | "wedding-editorial";
 
 export interface ImageMeta {
   promptNum: number;
@@ -502,9 +504,65 @@ export const IMAGE_META: ImageMeta[] = [
   { promptNum: 405, slug: "worldcup-trophy",        style: "product-still-life",       family: ["event", "ecommerce"],             alt: "Editorial illustration of a gold trophy with a soccer ball at its base on a red, green and white color-blocked background" },
   { promptNum: 406, slug: "worldcup-stadium",       style: "architecture-editorial",   family: ["event", "travel"],                alt: "Editorial illustration of a packed modern football stadium with impressionist crowd brush strokes and floating confetti" },
   { promptNum: 407, slug: "worldcup-skyline",       style: "architecture-editorial",   family: ["event", "travel"],                alt: "Editorial illustration of the NYC Manhattan skyline silhouette against a vibrant orange-red sunset with painterly clouds" },
+  // 2026-05-26 batch — 24 travel-editorial photographs (planes/trains/cars/
+  // backpacks/hotels/coastlines/cities/markets). Photoreal, partial body, no
+  // clear faces — same convention as lifestyle/sports/pet. Generated in prompt
+  // order, so mtime order = promptNum 408..431.
+  { promptNum: 408, slug: "airplane-wing-clouds",   style: "travel-editorial",         family: ["travel", "hospitality"],          alt: "Editorial travel photograph from a window seat of an airplane wing over a golden-hour cloud sea" },
+  { promptNum: 409, slug: "hand-passport",          style: "travel-editorial",         family: ["travel", "hospitality"],          alt: "Editorial travel photograph of a hand holding a worn navy passport and boarding pass on a stone airport counter" },
+  { promptNum: 410, slug: "vintage-suitcase",       style: "travel-editorial",         family: ["travel", "ecommerce"],            alt: "Editorial travel photograph of a tan leather suitcase with brass clasps on a wide-plank wood floor with linen and a film camera" },
+  { promptNum: 411, slug: "backpack-ridge",         style: "travel-editorial",         family: ["travel", "wellness"],             alt: "Editorial travel photograph of a worn olive backpack on grey granite with mountains receding into blue haze" },
+  { promptNum: 412, slug: "train-carriage-dusk",    style: "travel-editorial",         family: ["travel", "hospitality"],          alt: "Editorial travel photograph of an empty vintage European train carriage with warm sconces and motion-blur landscape" },
+  { promptNum: 413, slug: "coastal-road-aerial",    style: "travel-editorial",         family: ["travel", "hospitality"],          alt: "Editorial travel photograph from a drone of a winding coastal road on a cliff with a single white car mid-curve" },
+  { promptNum: 414, slug: "hotel-balcony-breakfast",style: "travel-editorial",         family: ["hospitality", "travel"],          alt: "Editorial travel photograph of hands pouring coffee on a small balcony table with a croissant and a folded paper map" },
+  { promptNum: 415, slug: "sailboat-water",         style: "travel-editorial",         family: ["travel", "hospitality"],          alt: "Editorial travel photograph of a single white sailboat from a low angle on glinting water with a distant island silhouette" },
+  { promptNum: 416, slug: "tokyo-crosswalk",        style: "travel-editorial",         family: ["travel", "agency"],               alt: "Editorial travel photograph from above of a wet neon-reflective Shibuya-style crosswalk at dusk with umbrellas" },
+  { promptNum: 417, slug: "camper-van-sunrise",     style: "travel-editorial",         family: ["travel", "wellness"],             alt: "Editorial travel photograph of a vintage cream camper van parked on a coastal cliff at dawn with mist over the ocean" },
+  { promptNum: 418, slug: "hand-pinning-map",       style: "travel-editorial",         family: ["agency", "travel"],               alt: "Editorial travel photograph from above of a hand placing a brass pin on a folded world map with a compass and notebook" },
+  { promptNum: 419, slug: "mountain-hut-interior",  style: "travel-editorial",         family: ["hospitality", "travel"],          alt: "Editorial travel photograph of a small wood-paneled alpine cabin interior with a wool blanket, boots and a lantern" },
+  { promptNum: 420, slug: "riad-marrakech",         style: "travel-editorial",         family: ["hospitality", "travel"],          alt: "Editorial travel photograph of a tiled mosaic courtyard with a still fountain, fig tree shadow and brass lanterns" },
+  { promptNum: 421, slug: "bicycle-paris",          style: "travel-editorial",         family: ["travel", "portfolio"],            alt: "Editorial travel photograph of a cream city bike with a wicker basket leaning on a Haussmann limestone wall" },
+  { promptNum: 422, slug: "snow-cabin-window",      style: "travel-editorial",         family: ["hospitality", "travel"],          alt: "Editorial travel photograph through a frosted cabin window of snow-covered pines with a single set of footprints" },
+  { promptNum: 423, slug: "departures-board-night", style: "travel-editorial",         family: ["agency", "travel"],               alt: "Editorial travel photograph of a flickering split-flap departures board in a quiet terminal with blurred figures" },
+  { promptNum: 424, slug: "souk-spice-stalls",      style: "travel-editorial",         family: ["travel", "food-beverage"],        alt: "Editorial travel photograph from above of conical mounds of red, yellow and orange spices in burlap sacks with brass scoops" },
+  { promptNum: 425, slug: "floatplane-fjord",       style: "travel-editorial",         family: ["travel", "hospitality"],          alt: "Editorial travel photograph of a single red floatplane docked on glassy still water with vertical green cliffs" },
+  { promptNum: 426, slug: "hammock-palms",          style: "travel-editorial",         family: ["hospitality", "travel"],          alt: "Editorial travel photograph of a cream cotton hammock strung between two palms over white sand and turquoise water" },
+  { promptNum: 427, slug: "greek-alley-stairs",     style: "travel-editorial",         family: ["travel", "hospitality"],          alt: "Editorial travel photograph of a narrow whitewashed Greek-island alley with a blue door and bougainvillea spilling over a stair" },
+  { promptNum: 428, slug: "train-window-blur",      style: "travel-editorial",         family: ["travel", "editorial"],            alt: "Editorial travel photograph of an interior train window with motion-blurred forest streaking past and an espresso cup on a jacket" },
+  { promptNum: 429, slug: "lantern-festival",       style: "travel-editorial",         family: ["travel", "event"],                alt: "Editorial travel photograph of paper lanterns rising into a dark blue sky over a temple silhouette with figures from behind" },
+  { promptNum: 430, slug: "roadtrip-dashboard",     style: "travel-editorial",         family: ["travel", "portfolio"],            alt: "Editorial travel photograph from the passenger seat of a dashboard with a paper map, sunglasses and a desert highway to red mesas" },
+  { promptNum: 431, slug: "hotel-pool-twilight",    style: "travel-editorial",         family: ["hospitality", "travel"],          alt: "Editorial travel photograph from above of an empty turquoise infinity pool at dusk with a single white lounger and palm shadow" },
+  // 2026-05-26 batch — 24 wedding-editorial photographs (rings/bouquet/venue/
+  // tablescape/dress/cake/send-off). Photoreal, partial body, no clear faces.
+  // Fills the previously-empty `wedding` family slug. Generated in prompt
+  // order, so mtime order = promptNum 432..455.
+  { promptNum: 432, slug: "wedding-rings-linen",    style: "wedding-editorial",        family: ["wedding", "hospitality"],         alt: "Editorial wedding close-up of two gold wedding bands resting on folded ivory linen with soft window light" },
+  { promptNum: 433, slug: "wedding-ring-box",       style: "wedding-editorial",        family: ["wedding", "ecommerce"],           alt: "Editorial wedding top-down of an open velvet ring box with a single gold band beside a small white peony stem on cream paper" },
+  { promptNum: 434, slug: "wedding-bouquet",        style: "wedding-editorial",        family: ["wedding", "hospitality"],         alt: "Editorial wedding close-up of a bridal bouquet of white peonies, garden roses and eucalyptus wrapped in silk ribbon" },
+  { promptNum: 435, slug: "wedding-bouquet-flatlay",style: "wedding-editorial",        family: ["wedding", "ecommerce"],           alt: "Editorial wedding top-down flatlay of bouquet ingredients with peonies, ranunculus, sweet pea, eucalyptus, ribbon and shears on cream linen" },
+  { promptNum: 436, slug: "wedding-hands-bouquet",  style: "wedding-editorial",        family: ["wedding", "hospitality"],         alt: "Editorial wedding close-up of a bride's hands holding a soft pastel bouquet at waist height in an ivory silk dress" },
+  { promptNum: 437, slug: "wedding-first-look",     style: "wedding-editorial",        family: ["wedding", "editorial"],           alt: "Editorial wedding photograph of two hands clasping, one with a wedding band, in soft late-afternoon light against blurred greenery" },
+  { promptNum: 438, slug: "wedding-couple-meadow",  style: "wedding-editorial",        family: ["wedding", "travel"],              alt: "Editorial wedding photograph from behind of a bride and groom silhouette walking through a sunlit meadow at golden hour" },
+  { promptNum: 439, slug: "wedding-vineyard-venue", style: "wedding-editorial",        family: ["wedding", "hospitality"],         alt: "Editorial wedding wide photograph of a stone vineyard estate with string lights between cypresses and long reception tables at dusk" },
+  { promptNum: 440, slug: "wedding-aisle-back",     style: "wedding-editorial",        family: ["wedding", "hospitality"],         alt: "Editorial wedding photograph from behind of an outdoor ceremony aisle with white chairs, petals on grass and a floral arch" },
+  { promptNum: 441, slug: "wedding-long-tablescape",style: "wedding-editorial",        family: ["wedding", "hospitality"],         alt: "Editorial wedding photograph of a long outdoor reception table under string lights with linen, candles, low florals and glassware" },
+  { promptNum: 442, slug: "wedding-place-setting",  style: "wedding-editorial",        family: ["wedding", "hospitality"],         alt: "Editorial wedding top-down of a single place setting with linen napkin tied with eucalyptus, calligraphy name card and brass flatware" },
+  { promptNum: 443, slug: "wedding-champagne-toast",style: "wedding-editorial",        family: ["wedding", "hospitality"],         alt: "Editorial wedding close-up of two hands clinking champagne coupes with warm reception bokeh behind" },
+  { promptNum: 444, slug: "wedding-cake",           style: "wedding-editorial",        family: ["wedding", "hospitality"],         alt: "Editorial wedding close-up of a three-tier white buttercream wedding cake with fresh peonies and trailing greenery on a marble stand" },
+  { promptNum: 445, slug: "wedding-cutting-cake",   style: "wedding-editorial",        family: ["wedding", "hospitality"],         alt: "Editorial wedding close-up of four hands on a cake knife mid-cut into a tiered cake with gold bands visible" },
+  { promptNum: 446, slug: "wedding-dress-hanging",  style: "wedding-editorial",        family: ["wedding", "ecommerce"],           alt: "Editorial wedding photograph of an ivory wedding dress on a wooden hanger by a natural-light window with a veil draped beside it" },
+  { promptNum: 447, slug: "wedding-bridal-shoes",   style: "wedding-editorial",        family: ["wedding", "ecommerce"],           alt: "Editorial wedding still life of a pair of ivory satin bridal heels on a wide-plank wood floor with a folded veil and a peony" },
+  { promptNum: 448, slug: "wedding-boutonniere",    style: "wedding-editorial",        family: ["wedding", "editorial"],           alt: "Editorial wedding close-up of a white-and-greenery boutonniere pinned to a navy wool suit lapel in soft natural light" },
+  { promptNum: 449, slug: "wedding-confetti-sendoff",style:"wedding-editorial",        family: ["wedding", "hospitality"],         alt: "Editorial wedding photograph from behind of a couple walking through a tunnel of guests throwing white petal confetti at dusk" },
+  { promptNum: 450, slug: "wedding-first-dance",    style: "wedding-editorial",        family: ["wedding", "hospitality"],         alt: "Editorial wedding wide photograph of a couple silhouette mid-dance under string lights on a warm-lit dance floor with guest bokeh" },
+  { promptNum: 451, slug: "wedding-candlelit-reception",style: "wedding-editorial",    family: ["wedding", "hospitality"],         alt: "Editorial wedding photograph of a candlelit indoor reception with a long table, cascading candles and a floral runner" },
+  { promptNum: 452, slug: "wedding-stationery",     style: "wedding-editorial",        family: ["wedding", "agency"],              alt: "Editorial wedding top-down of a stationery suite with invitation, RSVP card, vellum overlay, wax seal and envelope on cream linen with eucalyptus" },
+  { promptNum: 453, slug: "wedding-beach-arch",     style: "wedding-editorial",        family: ["wedding", "travel"],              alt: "Editorial wedding wide photograph of a driftwood ceremony arch with cream florals on white sand at golden hour over turquoise ocean" },
+  { promptNum: 454, slug: "wedding-garden-arbor",   style: "wedding-editorial",        family: ["wedding", "hospitality"],         alt: "Editorial wedding photograph of a wrought-iron garden arbor heavy with peonies and trailing greenery in a manicured garden" },
+  { promptNum: 455, slug: "wedding-vintage-car",    style: "wedding-editorial",        family: ["wedding", "hospitality"],         alt: "Editorial wedding photograph of a cream vintage convertible decorated with a Just Married sign and trailing white ribbons under arching trees at dusk" },
 ];
 
 // Sanity: catch a future drift between this list and what process.ts expects.
-if (IMAGE_META.length !== 406) {
-  throw new Error(`IMAGE_META must have 406 entries (got ${IMAGE_META.length})`);
+if (IMAGE_META.length !== 454) {
+  throw new Error(`IMAGE_META must have 454 entries (got ${IMAGE_META.length})`);
 }

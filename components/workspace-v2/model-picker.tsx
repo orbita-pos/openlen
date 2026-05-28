@@ -12,8 +12,8 @@ const MODEL_META: Record<
   AIModel,
   { label: string; dot: string; note: string }
 > = {
-  "gemini-pro": { label: "Gemini 2.5 Pro", dot: "#4285F4", note: "Recommended" },
-  "gemini-flash": { label: "Gemini 2.5 Flash", dot: "#10B981", note: "Faster" },
+  "gemini-pro": { label: "Gemini 3.1 Pro", dot: "#4285F4", note: "Deeper" },
+  "gemini-flash": { label: "Gemini 3.5 Flash", dot: "#10B981", note: "Recommended" },
 };
 
 const STORAGE_KEY = "openlen:ai-model";
@@ -21,7 +21,7 @@ const STORAGE_KEY = "openlen:ai-model";
 /** The model choice, backed by localStorage so it survives reloads and is
  *  shared across the chat + generation surfaces. */
 export function useAIModel(): [AIModel, (m: AIModel) => void] {
-  const [model, setModel] = useState<AIModel>("gemini-pro");
+  const [model, setModel] = useState<AIModel>("gemini-flash");
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (stored === "gemini-pro" || stored === "gemini-flash") setModel(stored);
