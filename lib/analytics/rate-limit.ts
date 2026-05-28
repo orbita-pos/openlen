@@ -1,54 +1,29 @@
-// In-memory per-IP rate limiter for the analytics collector endpoint.
+// Per-IP rate limiter for the analytics collector endpoint.
 //
-// Sized for casual abuse, not adversaries — 100 events/min per IP is
-// generous for legitimate use (a session of ~50 outbound clicks) but
-// enough of a ceiling that a quick scripted flood gets dropped.
-// Single-instance state; if we ever run the app on multiple Hetzner
-// boxes behind a load balancer, swap this for Redis-backed limiting.
+// 100 events/min per IP — generous enough for legit traffic (~50 outbound
+// clicks in a session) but firm enough to drop scripted floods. The engine
+// lives in the Rust limiter (`@openlen/rate-limit` / `lib/rate-limit-rs.ts`);
+// this module keeps `shouldDropForRateLimit` + `getClientIp` as the
+// invariant call sites import.
 //
-// Memory bound: each entry is ~80 bytes, the map is swept every N
-// requests to evict windows that have aged out — practical ceiling
-// is "active IPs in the last 2 minutes" which is bounded by traffic.
+// History: this file used to own its own `Map<ip, { count, windowStart }>`
+// + sweep loop. Replaced with the shared Rust token bucket in F4 so all
+// per-process limit state lives in one place. Behaviour is close-enough
+// at the ceiling — token bucket continuous refill vs. hard-count discrete
+// reset — for an anti-spam guard. Documented in the F4 handoff.
+
+import { tryConsumeMemory } from "@/lib/rate-limit-rs";
 
 const LIMIT_PER_MIN = 100;
 const WINDOW_MS = 60_000;
-const SWEEP_EVERY = 1000;
-
-interface Bucket {
-  count: number;
-  windowStart: number;
-}
-
-const buckets = new Map<string, Bucket>();
-let opsSinceSweep = 0;
-
-function sweepStale(): void {
-  const cutoff = Date.now() - WINDOW_MS * 2;
-  for (const [ip, b] of buckets) {
-    if (b.windowStart < cutoff) buckets.delete(ip);
-  }
-}
 
 /** Returns true when the given IP has exceeded the per-minute window
- *  and should be silently dropped. Side-effecting: increments the
- *  counter on success. */
+ *  and should be silently dropped. Side-effecting: consumes one token
+ *  on success. */
 export function shouldDropForRateLimit(ip: string | null): boolean {
   if (!ip) return false; // no IP signal, can't apply per-IP limit
-  const now = Date.now();
-  const b = buckets.get(ip);
-  if (!b || now - b.windowStart >= WINDOW_MS) {
-    buckets.set(ip, { count: 1, windowStart: now });
-  } else if (b.count >= LIMIT_PER_MIN) {
-    return true;
-  } else {
-    b.count++;
-  }
-  opsSinceSweep++;
-  if (opsSinceSweep >= SWEEP_EVERY) {
-    opsSinceSweep = 0;
-    sweepStale();
-  }
-  return false;
+  const out = tryConsumeMemory(`analytics:${ip}`, LIMIT_PER_MIN, WINDOW_MS);
+  return !out.allowed;
 }
 
 /** Resolve the most-trustworthy client IP available, in order:

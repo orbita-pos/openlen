@@ -1,17 +1,25 @@
-import { and, eq, gt, sql as sqlOp } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import {
+  checkAndConsumePersistent,
+  getUsagePersistent,
+  type LimitWindow as RsLimitWindow,
+} from "@/lib/rate-limit-rs";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Rate limiting + plan-based quotas.
 //
-// One Postgres table backs everything (rate_limit_events). Each row is a
+// One Postgres table backs everything (rateLimitEvents). Each row is a
 // timestamped event for a namespaced key — `user:<id>:generate`,
-// `ip:<addr>:register`, etc. checkAndConsume runs an atomic "count rows in
-// window → reject if over → insert" sequence per limit.
+// `ip:<addr>:register`, etc. checkAndConsume runs an atomic-ish "count rows
+// in window → reject if over → insert" sequence per limit.
 //
-// Plan tiers are hardcoded here for now. Stripe webhook will mutate
-// users.plan in Phase 3 — the limits map below is the single source of
-// truth for what each tier gets.
+// Engine: as of F4 the actual SQL lives in Rust (`crates/rate-limit`). This
+// module preserves the export surface every caller in the repo relies on
+// (checkAndConsume, getUsage, PLAN_LIMITS, helpers) and delegates the
+// hot path to the napi binding. The race window the TS comment used to
+// describe ("two concurrent requests right at the limit might both pass")
+// is preserved verbatim — same SQL pattern, just executed from Rust.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type Plan = "free" | "pro";
@@ -74,72 +82,26 @@ export interface LimitDecision {
 }
 
 /**
- * Atomic check + record. If any window is over its limit, returns
- * { ok: false } WITHOUT inserting a new event. Otherwise inserts and
- * returns { ok: true } with remaining counts.
+ * Atomic-ish check + record — delegates to the Rust limiter. If any window
+ * is over its limit, returns { ok: false } WITHOUT inserting a new event.
+ * Otherwise inserts and returns { ok: true } with remaining counts.
  *
- * Postgres handles concurrency: COUNT happens before INSERT and the index
- * keeps both fast. Two concurrent requests right at the limit might both
- * pass — acceptable slop for a quota system, not for a money-critical lock.
+ * Throws `RateLimitError` (from `lib/rate-limit-rs.ts`) on infrastructure
+ * failures — same propagation contract as before; existing callers that
+ * don't catch were already letting Next.js 500.
  */
 export async function checkAndConsume(
   key: string,
   windows: LimitWindow[],
 ): Promise<LimitDecision> {
-  // Count rows per window in parallel.
-  const counts = await Promise.all(
-    windows.map(async (w) => {
-      const since = new Date(Date.now() - w.windowMs);
-      const rows = await db
-        .select({ count: sqlOp<number>`count(*)::int` })
-        .from(schema.rateLimitEvents)
-        .where(
-          and(
-            eq(schema.rateLimitEvents.key, key),
-            gt(schema.rateLimitEvents.createdAt, since),
-          ),
-        );
-      return { window: w, count: rows[0]?.count ?? 0 };
-    }),
-  );
-
-  const blocked = counts.find((c) => c.count >= c.window.max);
-  if (blocked) {
-    // Find the oldest event in this window — when it ages out the limit
-    // resets enough to allow one more.
-    const since = new Date(Date.now() - blocked.window.windowMs);
-    const oldest = await db
-      .select({ createdAt: schema.rateLimitEvents.createdAt })
-      .from(schema.rateLimitEvents)
-      .where(
-        and(
-          eq(schema.rateLimitEvents.key, key),
-          gt(schema.rateLimitEvents.createdAt, since),
-        ),
-      )
-      .orderBy(schema.rateLimitEvents.createdAt)
-      .limit(1);
-    const resetAt = oldest[0]
-      ? new Date(oldest[0].createdAt.getTime() + blocked.window.windowMs)
-      : new Date(Date.now() + blocked.window.windowMs);
-    return {
-      ok: false,
-      blocked: blocked.window,
-      resetAt,
-      remaining: counts.map((c) => ({
-        window: c.window,
-        remaining: Math.max(0, c.window.max - c.count),
-      })),
-    };
-  }
-
-  await db.insert(schema.rateLimitEvents).values({ key });
-
+  const decision = await checkAndConsumePersistent(key, toRsWindows(windows));
   return {
-    ok: true,
-    remaining: counts.map((c) => ({
-      window: c.window,
-      remaining: Math.max(0, c.window.max - c.count - 1),
+    ok: decision.ok,
+    blocked: decision.blocked ? fromRsWindow(decision.blocked) : undefined,
+    resetAt: decision.resetAt,
+    remaining: decision.remaining.map((r) => ({
+      window: fromRsWindow(r.window),
+      remaining: r.remaining,
     })),
   };
 }
@@ -152,23 +114,12 @@ export async function getUsage(
   key: string,
   windows: LimitWindow[],
 ): Promise<Array<{ window: LimitWindow; remaining: number; used: number }>> {
-  const counts = await Promise.all(
-    windows.map(async (w) => {
-      const since = new Date(Date.now() - w.windowMs);
-      const rows = await db
-        .select({ count: sqlOp<number>`count(*)::int` })
-        .from(schema.rateLimitEvents)
-        .where(
-          and(
-            eq(schema.rateLimitEvents.key, key),
-            gt(schema.rateLimitEvents.createdAt, since),
-          ),
-        );
-      const used = rows[0]?.count ?? 0;
-      return { window: w, used, remaining: Math.max(0, w.max - used) };
-    }),
-  );
-  return counts;
+  const usage = await getUsagePersistent(key, toRsWindows(windows));
+  return usage.map((u) => ({
+    window: fromRsWindow(u.window),
+    used: u.used,
+    remaining: u.remaining,
+  }));
 }
 
 export async function getUserPlan(userId: string): Promise<Plan> {
@@ -206,4 +157,18 @@ export function getClientIp(req: Request): string {
   const xff = headers.get("x-forwarded-for");
   if (xff) return xff.split(",")[0].trim();
   return "unknown";
+}
+
+// ─── Native <-> shim window conversions ──────────────────────────────────
+
+function toRsWindows(windows: LimitWindow[]): RsLimitWindow[] {
+  return windows.map((w) => ({
+    windowMs: w.windowMs,
+    max: w.max,
+    label: w.label,
+  }));
+}
+
+function fromRsWindow(w: RsLimitWindow): LimitWindow {
+  return { windowMs: w.windowMs, max: w.max, label: w.label };
 }

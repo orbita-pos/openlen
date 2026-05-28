@@ -22,17 +22,20 @@ const nextConfig = {
   // - tailwindcss, postcss: webpack would inline them into .next/server/
   //   chunks/*.js, breaking package-relative asset paths (preflight.css,
   //   stubs). Required by the publish-time Tailwind pipeline.
-  // - @openlen/html-engine, @openlen/ai-gateway: each ships a native
-  //   `.node` binding that webpack can't parse. Externalising hands the
-  //   require off to Node's loader at runtime, which knows how to load
-  //   native modules. html-engine landed in F1 S9 (commit 1ab1724);
-  //   ai-gateway landed in F3 S3 when `lib/ai-stream/generate.ts` became
-  //   the first app-code consumer of `@openlen/ai-gateway`.
+  // - @openlen/html-engine, @openlen/ai-gateway, @openlen/rate-limit:
+  //   each ships a native `.node` binding that webpack can't parse.
+  //   Externalising hands the require off to Node's loader at runtime,
+  //   which knows how to load native modules. html-engine landed in
+  //   F1 S9 (commit 1ab1724); ai-gateway landed in F3 S3 when
+  //   `lib/ai-stream/generate.ts` became the first app-code consumer;
+  //   rate-limit landed in F4 when `lib/rate-limit-rs.ts` consolidated
+  //   the four legacy limit modules onto the new Rust engine.
   serverExternalPackages: [
     "tailwindcss",
     "postcss",
     "@openlen/html-engine",
     "@openlen/ai-gateway",
+    "@openlen/rate-limit",
   ],
   // serverExternalPackages alone doesn't always exclude transitively-linked
   // workspace deps from webpack's module graph (the `file:` symlink to
@@ -52,8 +55,10 @@ const nextConfig = {
         if (
           request === "@openlen/html-engine" ||
           request === "@openlen/ai-gateway" ||
+          request === "@openlen/rate-limit" ||
           request.endsWith("/crates/html-engine/index.js") ||
           request.endsWith("/crates/ai-gateway/index.js") ||
+          request.endsWith("/crates/rate-limit/index.js") ||
           request.endsWith(".node")
         ) {
           return callback(null, "commonjs " + request);
