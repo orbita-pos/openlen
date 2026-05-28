@@ -468,7 +468,9 @@ type OpenLenStyle =
   | "gradient-bg"
   | "pet-editorial"
   | "creator-mockup"
-  | "sports-editorial";
+  | "sports-editorial"
+  | "travel-editorial"
+  | "wedding-editorial";
 
 interface OpenLenImage {
   id: string;
@@ -497,6 +499,8 @@ const OPENLEN_STYLE_FILTERS: { value: OpenLenStyle | "all"; label: string }[] = 
   { value: "interior-editorial", label: "Interiors" },
   { value: "architecture-editorial", label: "Architecture" },
   { value: "nature-editorial", label: "Nature" },
+  { value: "travel-editorial", label: "Travel" },
+  { value: "wedding-editorial", label: "Wedding" },
   { value: "food-editorial", label: "Food" },
   { value: "lifestyle-editorial", label: "Lifestyle" },
   { value: "sports-editorial", label: "Sports" },
@@ -515,6 +519,8 @@ const OPENLEN_STYLE_BADGE: Record<OpenLenStyle, string> = {
   "interior-editorial": "Interior",
   "architecture-editorial": "Architecture",
   "nature-editorial": "Nature",
+  "travel-editorial": "Travel",
+  "wedding-editorial": "Wedding",
   "food-editorial": "Food",
   "lifestyle-editorial": "Lifestyle",
   "sports-editorial": "Sports",

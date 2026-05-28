@@ -19,24 +19,26 @@ export interface AIProvider {
 const GEMINI_URL =
   "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 
-/** Map the picked model to its provider config. Default is Gemini 2.5 Pro —
- *  Linear-tier landing-page quality at a sane cost. Flash is the faster,
- *  cheaper alternative when speed beats polish. */
+/** Map the picked model to its provider config. Default is Gemini 3.5 Flash —
+ *  launched at Google I/O 2026, beats 3.1 Pro on coding benches at lower cost
+ *  ($9/M output vs $10/M for 2.5 Pro). Pro tier upgrades to 3.1 Pro Preview
+ *  for deeper reasoning (1M context, 2M for 3.1). Both ship ~35% higher coding
+ *  accuracy vs the 2.5 line per Google + community frontend benchmarks. */
 export function resolveAIProvider(model: string | undefined): AIProvider {
-  if (model === "gemini-flash") {
+  if (model === "gemini-pro") {
     return {
       url: GEMINI_URL,
       key: process.env.GEMINI_API_KEY,
-      model: "gemini-2.5-flash",
-      rate: "gemini-flash",
-      label: "Gemini 2.5 Flash",
+      model: "gemini-3.1-pro-preview",
+      rate: "gemini-pro",
+      label: "Gemini 3.1 Pro",
     };
   }
   return {
     url: GEMINI_URL,
     key: process.env.GEMINI_API_KEY,
-    model: "gemini-2.5-pro",
-    rate: "gemini-pro",
-    label: "Gemini 2.5 Pro",
+    model: "gemini-3.5-flash",
+    rate: "gemini-flash",
+    label: "Gemini 3.5 Flash",
   };
 }

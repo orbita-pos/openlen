@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generated": "2026-05-25T07:08:18.215Z",
-  "count": 406,
+  "generated": "2026-05-26T22:37:31.821Z",
+  "count": 454,
   "images": [
     {
       "id": "01-warm-glassy",
@@ -6090,6 +6090,726 @@
         "hero": "https://images.openlen.com/407-worldcup-skyline-1920.webp",
         "tablet": "https://images.openlen.com/407-worldcup-skyline-800.webp",
         "thumb": "https://images.openlen.com/407-worldcup-skyline-400.webp"
+      }
+    },
+    {
+      "id": "408-airplane-wing-clouds",
+      "promptNum": 408,
+      "style": "travel-editorial",
+      "family": [
+        "travel",
+        "hospitality"
+      ],
+      "alt": "Editorial travel photograph from a window seat of an airplane wing over a golden-hour cloud sea",
+      "src": {
+        "hero": "https://images.openlen.com/408-airplane-wing-clouds-1920.webp",
+        "tablet": "https://images.openlen.com/408-airplane-wing-clouds-800.webp",
+        "thumb": "https://images.openlen.com/408-airplane-wing-clouds-400.webp"
+      }
+    },
+    {
+      "id": "409-hand-passport",
+      "promptNum": 409,
+      "style": "travel-editorial",
+      "family": [
+        "travel",
+        "hospitality"
+      ],
+      "alt": "Editorial travel photograph of a hand holding a worn navy passport and boarding pass on a stone airport counter",
+      "src": {
+        "hero": "https://images.openlen.com/409-hand-passport-1920.webp",
+        "tablet": "https://images.openlen.com/409-hand-passport-800.webp",
+        "thumb": "https://images.openlen.com/409-hand-passport-400.webp"
+      }
+    },
+    {
+      "id": "410-vintage-suitcase",
+      "promptNum": 410,
+      "style": "travel-editorial",
+      "family": [
+        "travel",
+        "ecommerce"
+      ],
+      "alt": "Editorial travel photograph of a tan leather suitcase with brass clasps on a wide-plank wood floor with linen and a film camera",
+      "src": {
+        "hero": "https://images.openlen.com/410-vintage-suitcase-1920.webp",
+        "tablet": "https://images.openlen.com/410-vintage-suitcase-800.webp",
+        "thumb": "https://images.openlen.com/410-vintage-suitcase-400.webp"
+      }
+    },
+    {
+      "id": "411-backpack-ridge",
+      "promptNum": 411,
+      "style": "travel-editorial",
+      "family": [
+        "travel",
+        "wellness"
+      ],
+      "alt": "Editorial travel photograph of a worn olive backpack on grey granite with mountains receding into blue haze",
+      "src": {
+        "hero": "https://images.openlen.com/411-backpack-ridge-1920.webp",
+        "tablet": "https://images.openlen.com/411-backpack-ridge-800.webp",
+        "thumb": "https://images.openlen.com/411-backpack-ridge-400.webp"
+      }
+    },
+    {
+      "id": "412-train-carriage-dusk",
+      "promptNum": 412,
+      "style": "travel-editorial",
+      "family": [
+        "travel",
+        "hospitality"
+      ],
+      "alt": "Editorial travel photograph of an empty vintage European train carriage with warm sconces and motion-blur landscape",
+      "src": {
+        "hero": "https://images.openlen.com/412-train-carriage-dusk-1920.webp",
+        "tablet": "https://images.openlen.com/412-train-carriage-dusk-800.webp",
+        "thumb": "https://images.openlen.com/412-train-carriage-dusk-400.webp"
+      }
+    },
+    {
+      "id": "413-coastal-road-aerial",
+      "promptNum": 413,
+      "style": "travel-editorial",
+      "family": [
+        "travel",
+        "hospitality"
+      ],
+      "alt": "Editorial travel photograph from a drone of a winding coastal road on a cliff with a single white car mid-curve",
+      "src": {
+        "hero": "https://images.openlen.com/413-coastal-road-aerial-1920.webp",
+        "tablet": "https://images.openlen.com/413-coastal-road-aerial-800.webp",
+        "thumb": "https://images.openlen.com/413-coastal-road-aerial-400.webp"
+      }
+    },
+    {
+      "id": "414-hotel-balcony-breakfast",
+      "promptNum": 414,
+      "style": "travel-editorial",
+      "family": [
+        "hospitality",
+        "travel"
+      ],
+      "alt": "Editorial travel photograph of hands pouring coffee on a small balcony table with a croissant and a folded paper map",
+      "src": {
+        "hero": "https://images.openlen.com/414-hotel-balcony-breakfast-1920.webp",
+        "tablet": "https://images.openlen.com/414-hotel-balcony-breakfast-800.webp",
+        "thumb": "https://images.openlen.com/414-hotel-balcony-breakfast-400.webp"
+      }
+    },
+    {
+      "id": "415-sailboat-water",
+      "promptNum": 415,
+      "style": "travel-editorial",
+      "family": [
+        "travel",
+        "hospitality"
+      ],
+      "alt": "Editorial travel photograph of a single white sailboat from a low angle on glinting water with a distant island silhouette",
+      "src": {
+        "hero": "https://images.openlen.com/415-sailboat-water-1920.webp",
+        "tablet": "https://images.openlen.com/415-sailboat-water-800.webp",
+        "thumb": "https://images.openlen.com/415-sailboat-water-400.webp"
+      }
+    },
+    {
+      "id": "416-tokyo-crosswalk",
+      "promptNum": 416,
+      "style": "travel-editorial",
+      "family": [
+        "travel",
+        "agency"
+      ],
+      "alt": "Editorial travel photograph from above of a wet neon-reflective Shibuya-style crosswalk at dusk with umbrellas",
+      "src": {
+        "hero": "https://images.openlen.com/416-tokyo-crosswalk-1920.webp",
+        "tablet": "https://images.openlen.com/416-tokyo-crosswalk-800.webp",
+        "thumb": "https://images.openlen.com/416-tokyo-crosswalk-400.webp"
+      }
+    },
+    {
+      "id": "417-camper-van-sunrise",
+      "promptNum": 417,
+      "style": "travel-editorial",
+      "family": [
+        "travel",
+        "wellness"
+      ],
+      "alt": "Editorial travel photograph of a vintage cream camper van parked on a coastal cliff at dawn with mist over the ocean",
+      "src": {
+        "hero": "https://images.openlen.com/417-camper-van-sunrise-1920.webp",
+        "tablet": "https://images.openlen.com/417-camper-van-sunrise-800.webp",
+        "thumb": "https://images.openlen.com/417-camper-van-sunrise-400.webp"
+      }
+    },
+    {
+      "id": "418-hand-pinning-map",
+      "promptNum": 418,
+      "style": "travel-editorial",
+      "family": [
+        "agency",
+        "travel"
+      ],
+      "alt": "Editorial travel photograph from above of a hand placing a brass pin on a folded world map with a compass and notebook",
+      "src": {
+        "hero": "https://images.openlen.com/418-hand-pinning-map-1920.webp",
+        "tablet": "https://images.openlen.com/418-hand-pinning-map-800.webp",
+        "thumb": "https://images.openlen.com/418-hand-pinning-map-400.webp"
+      }
+    },
+    {
+      "id": "419-mountain-hut-interior",
+      "promptNum": 419,
+      "style": "travel-editorial",
+      "family": [
+        "hospitality",
+        "travel"
+      ],
+      "alt": "Editorial travel photograph of a small wood-paneled alpine cabin interior with a wool blanket, boots and a lantern",
+      "src": {
+        "hero": "https://images.openlen.com/419-mountain-hut-interior-1920.webp",
+        "tablet": "https://images.openlen.com/419-mountain-hut-interior-800.webp",
+        "thumb": "https://images.openlen.com/419-mountain-hut-interior-400.webp"
+      }
+    },
+    {
+      "id": "420-riad-marrakech",
+      "promptNum": 420,
+      "style": "travel-editorial",
+      "family": [
+        "hospitality",
+        "travel"
+      ],
+      "alt": "Editorial travel photograph of a tiled mosaic courtyard with a still fountain, fig tree shadow and brass lanterns",
+      "src": {
+        "hero": "https://images.openlen.com/420-riad-marrakech-1920.webp",
+        "tablet": "https://images.openlen.com/420-riad-marrakech-800.webp",
+        "thumb": "https://images.openlen.com/420-riad-marrakech-400.webp"
+      }
+    },
+    {
+      "id": "421-bicycle-paris",
+      "promptNum": 421,
+      "style": "travel-editorial",
+      "family": [
+        "travel",
+        "portfolio"
+      ],
+      "alt": "Editorial travel photograph of a cream city bike with a wicker basket leaning on a Haussmann limestone wall",
+      "src": {
+        "hero": "https://images.openlen.com/421-bicycle-paris-1920.webp",
+        "tablet": "https://images.openlen.com/421-bicycle-paris-800.webp",
+        "thumb": "https://images.openlen.com/421-bicycle-paris-400.webp"
+      }
+    },
+    {
+      "id": "422-snow-cabin-window",
+      "promptNum": 422,
+      "style": "travel-editorial",
+      "family": [
+        "hospitality",
+        "travel"
+      ],
+      "alt": "Editorial travel photograph through a frosted cabin window of snow-covered pines with a single set of footprints",
+      "src": {
+        "hero": "https://images.openlen.com/422-snow-cabin-window-1920.webp",
+        "tablet": "https://images.openlen.com/422-snow-cabin-window-800.webp",
+        "thumb": "https://images.openlen.com/422-snow-cabin-window-400.webp"
+      }
+    },
+    {
+      "id": "423-departures-board-night",
+      "promptNum": 423,
+      "style": "travel-editorial",
+      "family": [
+        "agency",
+        "travel"
+      ],
+      "alt": "Editorial travel photograph of a flickering split-flap departures board in a quiet terminal with blurred figures",
+      "src": {
+        "hero": "https://images.openlen.com/423-departures-board-night-1920.webp",
+        "tablet": "https://images.openlen.com/423-departures-board-night-800.webp",
+        "thumb": "https://images.openlen.com/423-departures-board-night-400.webp"
+      }
+    },
+    {
+      "id": "424-souk-spice-stalls",
+      "promptNum": 424,
+      "style": "travel-editorial",
+      "family": [
+        "travel",
+        "food-beverage"
+      ],
+      "alt": "Editorial travel photograph from above of conical mounds of red, yellow and orange spices in burlap sacks with brass scoops",
+      "src": {
+        "hero": "https://images.openlen.com/424-souk-spice-stalls-1920.webp",
+        "tablet": "https://images.openlen.com/424-souk-spice-stalls-800.webp",
+        "thumb": "https://images.openlen.com/424-souk-spice-stalls-400.webp"
+      }
+    },
+    {
+      "id": "425-floatplane-fjord",
+      "promptNum": 425,
+      "style": "travel-editorial",
+      "family": [
+        "travel",
+        "hospitality"
+      ],
+      "alt": "Editorial travel photograph of a single red floatplane docked on glassy still water with vertical green cliffs",
+      "src": {
+        "hero": "https://images.openlen.com/425-floatplane-fjord-1920.webp",
+        "tablet": "https://images.openlen.com/425-floatplane-fjord-800.webp",
+        "thumb": "https://images.openlen.com/425-floatplane-fjord-400.webp"
+      }
+    },
+    {
+      "id": "426-hammock-palms",
+      "promptNum": 426,
+      "style": "travel-editorial",
+      "family": [
+        "hospitality",
+        "travel"
+      ],
+      "alt": "Editorial travel photograph of a cream cotton hammock strung between two palms over white sand and turquoise water",
+      "src": {
+        "hero": "https://images.openlen.com/426-hammock-palms-1920.webp",
+        "tablet": "https://images.openlen.com/426-hammock-palms-800.webp",
+        "thumb": "https://images.openlen.com/426-hammock-palms-400.webp"
+      }
+    },
+    {
+      "id": "427-greek-alley-stairs",
+      "promptNum": 427,
+      "style": "travel-editorial",
+      "family": [
+        "travel",
+        "hospitality"
+      ],
+      "alt": "Editorial travel photograph of a narrow whitewashed Greek-island alley with a blue door and bougainvillea spilling over a stair",
+      "src": {
+        "hero": "https://images.openlen.com/427-greek-alley-stairs-1920.webp",
+        "tablet": "https://images.openlen.com/427-greek-alley-stairs-800.webp",
+        "thumb": "https://images.openlen.com/427-greek-alley-stairs-400.webp"
+      }
+    },
+    {
+      "id": "428-train-window-blur",
+      "promptNum": 428,
+      "style": "travel-editorial",
+      "family": [
+        "travel",
+        "editorial"
+      ],
+      "alt": "Editorial travel photograph of an interior train window with motion-blurred forest streaking past and an espresso cup on a jacket",
+      "src": {
+        "hero": "https://images.openlen.com/428-train-window-blur-1920.webp",
+        "tablet": "https://images.openlen.com/428-train-window-blur-800.webp",
+        "thumb": "https://images.openlen.com/428-train-window-blur-400.webp"
+      }
+    },
+    {
+      "id": "429-lantern-festival",
+      "promptNum": 429,
+      "style": "travel-editorial",
+      "family": [
+        "travel",
+        "event"
+      ],
+      "alt": "Editorial travel photograph of paper lanterns rising into a dark blue sky over a temple silhouette with figures from behind",
+      "src": {
+        "hero": "https://images.openlen.com/429-lantern-festival-1920.webp",
+        "tablet": "https://images.openlen.com/429-lantern-festival-800.webp",
+        "thumb": "https://images.openlen.com/429-lantern-festival-400.webp"
+      }
+    },
+    {
+      "id": "430-roadtrip-dashboard",
+      "promptNum": 430,
+      "style": "travel-editorial",
+      "family": [
+        "travel",
+        "portfolio"
+      ],
+      "alt": "Editorial travel photograph from the passenger seat of a dashboard with a paper map, sunglasses and a desert highway to red mesas",
+      "src": {
+        "hero": "https://images.openlen.com/430-roadtrip-dashboard-1920.webp",
+        "tablet": "https://images.openlen.com/430-roadtrip-dashboard-800.webp",
+        "thumb": "https://images.openlen.com/430-roadtrip-dashboard-400.webp"
+      }
+    },
+    {
+      "id": "431-hotel-pool-twilight",
+      "promptNum": 431,
+      "style": "travel-editorial",
+      "family": [
+        "hospitality",
+        "travel"
+      ],
+      "alt": "Editorial travel photograph from above of an empty turquoise infinity pool at dusk with a single white lounger and palm shadow",
+      "src": {
+        "hero": "https://images.openlen.com/431-hotel-pool-twilight-1920.webp",
+        "tablet": "https://images.openlen.com/431-hotel-pool-twilight-800.webp",
+        "thumb": "https://images.openlen.com/431-hotel-pool-twilight-400.webp"
+      }
+    },
+    {
+      "id": "432-wedding-rings-linen",
+      "promptNum": 432,
+      "style": "wedding-editorial",
+      "family": [
+        "wedding",
+        "hospitality"
+      ],
+      "alt": "Editorial wedding close-up of two gold wedding bands resting on folded ivory linen with soft window light",
+      "src": {
+        "hero": "https://images.openlen.com/432-wedding-rings-linen-1920.webp",
+        "tablet": "https://images.openlen.com/432-wedding-rings-linen-800.webp",
+        "thumb": "https://images.openlen.com/432-wedding-rings-linen-400.webp"
+      }
+    },
+    {
+      "id": "433-wedding-ring-box",
+      "promptNum": 433,
+      "style": "wedding-editorial",
+      "family": [
+        "wedding",
+        "ecommerce"
+      ],
+      "alt": "Editorial wedding top-down of an open velvet ring box with a single gold band beside a small white peony stem on cream paper",
+      "src": {
+        "hero": "https://images.openlen.com/433-wedding-ring-box-1920.webp",
+        "tablet": "https://images.openlen.com/433-wedding-ring-box-800.webp",
+        "thumb": "https://images.openlen.com/433-wedding-ring-box-400.webp"
+      }
+    },
+    {
+      "id": "434-wedding-bouquet",
+      "promptNum": 434,
+      "style": "wedding-editorial",
+      "family": [
+        "wedding",
+        "hospitality"
+      ],
+      "alt": "Editorial wedding close-up of a bridal bouquet of white peonies, garden roses and eucalyptus wrapped in silk ribbon",
+      "src": {
+        "hero": "https://images.openlen.com/434-wedding-bouquet-1920.webp",
+        "tablet": "https://images.openlen.com/434-wedding-bouquet-800.webp",
+        "thumb": "https://images.openlen.com/434-wedding-bouquet-400.webp"
+      }
+    },
+    {
+      "id": "435-wedding-bouquet-flatlay",
+      "promptNum": 435,
+      "style": "wedding-editorial",
+      "family": [
+        "wedding",
+        "ecommerce"
+      ],
+      "alt": "Editorial wedding top-down flatlay of bouquet ingredients with peonies, ranunculus, sweet pea, eucalyptus, ribbon and shears on cream linen",
+      "src": {
+        "hero": "https://images.openlen.com/435-wedding-bouquet-flatlay-1920.webp",
+        "tablet": "https://images.openlen.com/435-wedding-bouquet-flatlay-800.webp",
+        "thumb": "https://images.openlen.com/435-wedding-bouquet-flatlay-400.webp"
+      }
+    },
+    {
+      "id": "436-wedding-hands-bouquet",
+      "promptNum": 436,
+      "style": "wedding-editorial",
+      "family": [
+        "wedding",
+        "hospitality"
+      ],
+      "alt": "Editorial wedding close-up of a bride's hands holding a soft pastel bouquet at waist height in an ivory silk dress",
+      "src": {
+        "hero": "https://images.openlen.com/436-wedding-hands-bouquet-1920.webp",
+        "tablet": "https://images.openlen.com/436-wedding-hands-bouquet-800.webp",
+        "thumb": "https://images.openlen.com/436-wedding-hands-bouquet-400.webp"
+      }
+    },
+    {
+      "id": "437-wedding-first-look",
+      "promptNum": 437,
+      "style": "wedding-editorial",
+      "family": [
+        "wedding",
+        "editorial"
+      ],
+      "alt": "Editorial wedding photograph of two hands clasping, one with a wedding band, in soft late-afternoon light against blurred greenery",
+      "src": {
+        "hero": "https://images.openlen.com/437-wedding-first-look-1920.webp",
+        "tablet": "https://images.openlen.com/437-wedding-first-look-800.webp",
+        "thumb": "https://images.openlen.com/437-wedding-first-look-400.webp"
+      }
+    },
+    {
+      "id": "438-wedding-couple-meadow",
+      "promptNum": 438,
+      "style": "wedding-editorial",
+      "family": [
+        "wedding",
+        "travel"
+      ],
+      "alt": "Editorial wedding photograph from behind of a bride and groom silhouette walking through a sunlit meadow at golden hour",
+      "src": {
+        "hero": "https://images.openlen.com/438-wedding-couple-meadow-1920.webp",
+        "tablet": "https://images.openlen.com/438-wedding-couple-meadow-800.webp",
+        "thumb": "https://images.openlen.com/438-wedding-couple-meadow-400.webp"
+      }
+    },
+    {
+      "id": "439-wedding-vineyard-venue",
+      "promptNum": 439,
+      "style": "wedding-editorial",
+      "family": [
+        "wedding",
+        "hospitality"
+      ],
+      "alt": "Editorial wedding wide photograph of a stone vineyard estate with string lights between cypresses and long reception tables at dusk",
+      "src": {
+        "hero": "https://images.openlen.com/439-wedding-vineyard-venue-1920.webp",
+        "tablet": "https://images.openlen.com/439-wedding-vineyard-venue-800.webp",
+        "thumb": "https://images.openlen.com/439-wedding-vineyard-venue-400.webp"
+      }
+    },
+    {
+      "id": "440-wedding-aisle-back",
+      "promptNum": 440,
+      "style": "wedding-editorial",
+      "family": [
+        "wedding",
+        "hospitality"
+      ],
+      "alt": "Editorial wedding photograph from behind of an outdoor ceremony aisle with white chairs, petals on grass and a floral arch",
+      "src": {
+        "hero": "https://images.openlen.com/440-wedding-aisle-back-1920.webp",
+        "tablet": "https://images.openlen.com/440-wedding-aisle-back-800.webp",
+        "thumb": "https://images.openlen.com/440-wedding-aisle-back-400.webp"
+      }
+    },
+    {
+      "id": "441-wedding-long-tablescape",
+      "promptNum": 441,
+      "style": "wedding-editorial",
+      "family": [
+        "wedding",
+        "hospitality"
+      ],
+      "alt": "Editorial wedding photograph of a long outdoor reception table under string lights with linen, candles, low florals and glassware",
+      "src": {
+        "hero": "https://images.openlen.com/441-wedding-long-tablescape-1920.webp",
+        "tablet": "https://images.openlen.com/441-wedding-long-tablescape-800.webp",
+        "thumb": "https://images.openlen.com/441-wedding-long-tablescape-400.webp"
+      }
+    },
+    {
+      "id": "442-wedding-place-setting",
+      "promptNum": 442,
+      "style": "wedding-editorial",
+      "family": [
+        "wedding",
+        "hospitality"
+      ],
+      "alt": "Editorial wedding top-down of a single place setting with linen napkin tied with eucalyptus, calligraphy name card and brass flatware",
+      "src": {
+        "hero": "https://images.openlen.com/442-wedding-place-setting-1920.webp",
+        "tablet": "https://images.openlen.com/442-wedding-place-setting-800.webp",
+        "thumb": "https://images.openlen.com/442-wedding-place-setting-400.webp"
+      }
+    },
+    {
+      "id": "443-wedding-champagne-toast",
+      "promptNum": 443,
+      "style": "wedding-editorial",
+      "family": [
+        "wedding",
+        "hospitality"
+      ],
+      "alt": "Editorial wedding close-up of two hands clinking champagne coupes with warm reception bokeh behind",
+      "src": {
+        "hero": "https://images.openlen.com/443-wedding-champagne-toast-1920.webp",
+        "tablet": "https://images.openlen.com/443-wedding-champagne-toast-800.webp",
+        "thumb": "https://images.openlen.com/443-wedding-champagne-toast-400.webp"
+      }
+    },
+    {
+      "id": "444-wedding-cake",
+      "promptNum": 444,
+      "style": "wedding-editorial",
+      "family": [
+        "wedding",
+        "hospitality"
+      ],
+      "alt": "Editorial wedding close-up of a three-tier white buttercream wedding cake with fresh peonies and trailing greenery on a marble stand",
+      "src": {
+        "hero": "https://images.openlen.com/444-wedding-cake-1920.webp",
+        "tablet": "https://images.openlen.com/444-wedding-cake-800.webp",
+        "thumb": "https://images.openlen.com/444-wedding-cake-400.webp"
+      }
+    },
+    {
+      "id": "445-wedding-cutting-cake",
+      "promptNum": 445,
+      "style": "wedding-editorial",
+      "family": [
+        "wedding",
+        "hospitality"
+      ],
+      "alt": "Editorial wedding close-up of four hands on a cake knife mid-cut into a tiered cake with gold bands visible",
+      "src": {
+        "hero": "https://images.openlen.com/445-wedding-cutting-cake-1920.webp",
+        "tablet": "https://images.openlen.com/445-wedding-cutting-cake-800.webp",
+        "thumb": "https://images.openlen.com/445-wedding-cutting-cake-400.webp"
+      }
+    },
+    {
+      "id": "446-wedding-dress-hanging",
+      "promptNum": 446,
+      "style": "wedding-editorial",
+      "family": [
+        "wedding",
+        "ecommerce"
+      ],
+      "alt": "Editorial wedding photograph of an ivory wedding dress on a wooden hanger by a natural-light window with a veil draped beside it",
+      "src": {
+        "hero": "https://images.openlen.com/446-wedding-dress-hanging-1920.webp",
+        "tablet": "https://images.openlen.com/446-wedding-dress-hanging-800.webp",
+        "thumb": "https://images.openlen.com/446-wedding-dress-hanging-400.webp"
+      }
+    },
+    {
+      "id": "447-wedding-bridal-shoes",
+      "promptNum": 447,
+      "style": "wedding-editorial",
+      "family": [
+        "wedding",
+        "ecommerce"
+      ],
+      "alt": "Editorial wedding still life of a pair of ivory satin bridal heels on a wide-plank wood floor with a folded veil and a peony",
+      "src": {
+        "hero": "https://images.openlen.com/447-wedding-bridal-shoes-1920.webp",
+        "tablet": "https://images.openlen.com/447-wedding-bridal-shoes-800.webp",
+        "thumb": "https://images.openlen.com/447-wedding-bridal-shoes-400.webp"
+      }
+    },
+    {
+      "id": "448-wedding-boutonniere",
+      "promptNum": 448,
+      "style": "wedding-editorial",
+      "family": [
+        "wedding",
+        "editorial"
+      ],
+      "alt": "Editorial wedding close-up of a white-and-greenery boutonniere pinned to a navy wool suit lapel in soft natural light",
+      "src": {
+        "hero": "https://images.openlen.com/448-wedding-boutonniere-1920.webp",
+        "tablet": "https://images.openlen.com/448-wedding-boutonniere-800.webp",
+        "thumb": "https://images.openlen.com/448-wedding-boutonniere-400.webp"
+      }
+    },
+    {
+      "id": "449-wedding-confetti-sendoff",
+      "promptNum": 449,
+      "style": "wedding-editorial",
+      "family": [
+        "wedding",
+        "hospitality"
+      ],
+      "alt": "Editorial wedding photograph from behind of a couple walking through a tunnel of guests throwing white petal confetti at dusk",
+      "src": {
+        "hero": "https://images.openlen.com/449-wedding-confetti-sendoff-1920.webp",
+        "tablet": "https://images.openlen.com/449-wedding-confetti-sendoff-800.webp",
+        "thumb": "https://images.openlen.com/449-wedding-confetti-sendoff-400.webp"
+      }
+    },
+    {
+      "id": "450-wedding-first-dance",
+      "promptNum": 450,
+      "style": "wedding-editorial",
+      "family": [
+        "wedding",
+        "hospitality"
+      ],
+      "alt": "Editorial wedding wide photograph of a couple silhouette mid-dance under string lights on a warm-lit dance floor with guest bokeh",
+      "src": {
+        "hero": "https://images.openlen.com/450-wedding-first-dance-1920.webp",
+        "tablet": "https://images.openlen.com/450-wedding-first-dance-800.webp",
+        "thumb": "https://images.openlen.com/450-wedding-first-dance-400.webp"
+      }
+    },
+    {
+      "id": "451-wedding-candlelit-reception",
+      "promptNum": 451,
+      "style": "wedding-editorial",
+      "family": [
+        "wedding",
+        "hospitality"
+      ],
+      "alt": "Editorial wedding photograph of a candlelit indoor reception with a long table, cascading candles and a floral runner",
+      "src": {
+        "hero": "https://images.openlen.com/451-wedding-candlelit-reception-1920.webp",
+        "tablet": "https://images.openlen.com/451-wedding-candlelit-reception-800.webp",
+        "thumb": "https://images.openlen.com/451-wedding-candlelit-reception-400.webp"
+      }
+    },
+    {
+      "id": "452-wedding-stationery",
+      "promptNum": 452,
+      "style": "wedding-editorial",
+      "family": [
+        "wedding",
+        "agency"
+      ],
+      "alt": "Editorial wedding top-down of a stationery suite with invitation, RSVP card, vellum overlay, wax seal and envelope on cream linen with eucalyptus",
+      "src": {
+        "hero": "https://images.openlen.com/452-wedding-stationery-1920.webp",
+        "tablet": "https://images.openlen.com/452-wedding-stationery-800.webp",
+        "thumb": "https://images.openlen.com/452-wedding-stationery-400.webp"
+      }
+    },
+    {
+      "id": "453-wedding-beach-arch",
+      "promptNum": 453,
+      "style": "wedding-editorial",
+      "family": [
+        "wedding",
+        "travel"
+      ],
+      "alt": "Editorial wedding wide photograph of a driftwood ceremony arch with cream florals on white sand at golden hour over turquoise ocean",
+      "src": {
+        "hero": "https://images.openlen.com/453-wedding-beach-arch-1920.webp",
+        "tablet": "https://images.openlen.com/453-wedding-beach-arch-800.webp",
+        "thumb": "https://images.openlen.com/453-wedding-beach-arch-400.webp"
+      }
+    },
+    {
+      "id": "454-wedding-garden-arbor",
+      "promptNum": 454,
+      "style": "wedding-editorial",
+      "family": [
+        "wedding",
+        "hospitality"
+      ],
+      "alt": "Editorial wedding photograph of a wrought-iron garden arbor heavy with peonies and trailing greenery in a manicured garden",
+      "src": {
+        "hero": "https://images.openlen.com/454-wedding-garden-arbor-1920.webp",
+        "tablet": "https://images.openlen.com/454-wedding-garden-arbor-800.webp",
+        "thumb": "https://images.openlen.com/454-wedding-garden-arbor-400.webp"
+      }
+    },
+    {
+      "id": "455-wedding-vintage-car",
+      "promptNum": 455,
+      "style": "wedding-editorial",
+      "family": [
+        "wedding",
+        "hospitality"
+      ],
+      "alt": "Editorial wedding photograph of a cream vintage convertible decorated with a Just Married sign and trailing white ribbons under arching trees at dusk",
+      "src": {
+        "hero": "https://images.openlen.com/455-wedding-vintage-car-1920.webp",
+        "tablet": "https://images.openlen.com/455-wedding-vintage-car-800.webp",
+        "thumb": "https://images.openlen.com/455-wedding-vintage-car-400.webp"
       }
     }
   ]
