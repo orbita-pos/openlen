@@ -1,6 +1,6 @@
 # Quality S1 handoff — HTML post-processor + few-shot snippets + prompt restructure
 
-Self-SHA: _to fill at merge_
+Self-SHA: `9431b850491777853723ab314a539d5190231eae`
 
 ## Mission recap
 
