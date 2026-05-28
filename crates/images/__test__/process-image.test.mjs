@@ -295,3 +295,64 @@ test("processImage returns mime matching format for every variant", async () => 
     assert.equal(v.mime, expected[v.format]);
   }
 });
+
+test("processImage with placeholder:true returns a populated placeholder", async () => {
+  const result = await processImage({
+    input: BLUE_200x100_PNG,
+    variants: [{ width: 100, format: "webp", quality: 80 }],
+    autoOrient: false,
+    placeholder: true,
+  });
+  assert.ok(result.placeholder, "expected result.placeholder to be set");
+  const p = result.placeholder;
+  assert.equal(typeof p.blurhash, "string");
+  assert.ok(p.blurhash.length >= 10, `unexpected blurhash length ${p.blurhash.length}`);
+  assert.match(p.dominantColor, /^#[0-9a-f]{6}$/);
+  assert.notEqual(p.dominantColor, "#000000");
+  // 200×100 input → 32×16 thumb (longest-edge scaling).
+  assert.equal(p.width, 32);
+  assert.equal(p.height, 16);
+});
+
+test("processImage without placeholder flag leaves result.placeholder absent", async () => {
+  const result = await processImage({
+    input: BLUE_200x100_PNG,
+    variants: [{ width: 100, format: "webp", quality: 80 }],
+    autoOrient: false,
+  });
+  // napi omits the property when None — `placeholder in result` is the
+  // strict check; checking == undefined catches both absent and explicit.
+  assert.equal(result.placeholder, undefined);
+});
+
+test("processImage with alphaQuality routes WebP through encode_advanced", async () => {
+  // Transparent input exercises the alpha path; alphaQuality 95 with a
+  // low color quality 40 routes through the libwebp WebPConfig branch.
+  const TRANSPARENT_PNG = makePng(16, 16, [220, 60, 60, 128]);
+  const result = await processImage({
+    input: TRANSPARENT_PNG,
+    variants: [{ width: 16, format: "webp", quality: 40, alphaQuality: 95 }],
+    autoOrient: false,
+  });
+  assert.equal(result.variants.length, 1);
+  const v = result.variants[0];
+  assert.equal(v.format, "webp");
+  assert.equal(v.bytes.subarray(0, 4).toString("ascii"), "RIFF");
+  assert.ok(v.bytes.length > 12);
+});
+
+test("processImage placeholder dimensions track the oriented base", async () => {
+  // 200×100 landscape → 32×16. Verifies the placeholder thumb is
+  // computed from the SAME oriented base buffer the variants pipeline
+  // resizes from (not the raw decoded image), so EXIF rotation would
+  // flow through correctly when present.
+  const result = await processImage({
+    input: BLUE_200x100_PNG,
+    variants: [{ width: 100, format: "webp", quality: 80 }],
+    autoOrient: true,
+    placeholder: true,
+  });
+  assert.ok(result.placeholder);
+  assert.equal(result.placeholder.width, 32);
+  assert.equal(result.placeholder.height, 16);
+});

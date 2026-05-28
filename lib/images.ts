@@ -32,6 +32,11 @@ export interface ProcessVariantSpec {
   format: ImageFormat;
   /** Encoder quality 1..=100. Ignored for PNG (lossless). */
   quality: number;
+  /** WebP-only: separate quality knob for the alpha channel (0..=100) —
+   *  sharp's `webp({ quality, alphaQuality })`. Omit to keep alpha at
+   *  the same quality as color (today's behaviour). No effect on
+   *  AVIF / JPEG / PNG variants. */
+  alphaQuality?: number;
 }
 
 export interface ProcessImageOptions {
@@ -41,6 +46,10 @@ export interface ProcessImageOptions {
   autoOrient?: boolean;
   /** Clamp target widths to the input's intrinsic width. Default: true. */
   withoutEnlargement?: boolean;
+  /** When true, compute a [`Placeholder`] (BlurHash + dominant color)
+   *  from the oriented source and attach it to `result.placeholder`.
+   *  Opt-in — adds ~1 ms even on a small input. Default: false. */
+  placeholder?: boolean;
 }
 
 export interface VariantOutput {
@@ -53,8 +62,26 @@ export interface VariantOutput {
   size: number;
 }
 
+/** BlurHash + dominant color summary returned when `placeholder: true`.
+ *  Suitable for `style.backgroundColor` and `<img>` LQIP rendering. */
+export interface Placeholder {
+  /** Woltapp BlurHash string. Decode with `blurhash-canvas` (Web) or
+   *  `react-blurhash` (React). ~30 chars at 4×3 components. */
+  blurhash: string;
+  /** Hex `#RRGGBB` of the thumb's dominant color bucket. Use as a
+   *  `style.backgroundColor` while the real bytes are loading so the
+   *  layout box isn't white before paint. */
+  dominantColor: string;
+  /** Width of the thumb the placeholder was derived from. */
+  width: number;
+  /** Height of the thumb (paired with `width`). */
+  height: number;
+}
+
 export interface ProcessImageResult {
   variants: VariantOutput[];
+  /** Present when the request set `placeholder: true`. */
+  placeholder?: Placeholder;
 }
 
 // ─── Typed error envelope ────────────────────────────────────────────────
@@ -127,9 +154,11 @@ export async function processImage(
         maxHeight: v.maxHeight,
         format: v.format,
         quality: v.quality,
+        alphaQuality: v.alphaQuality,
       })),
       autoOrient: opts.autoOrient,
       withoutEnlargement: opts.withoutEnlargement,
+      placeholder: opts.placeholder,
     };
     raw = await nativeProcessImage(req);
   } catch (err) {
@@ -144,6 +173,14 @@ export async function processImage(
       bytes: v.bytes,
       size: v.size,
     })),
+    placeholder: raw.placeholder
+      ? {
+          blurhash: raw.placeholder.blurhash,
+          dominantColor: raw.placeholder.dominantColor,
+          width: raw.placeholder.width,
+          height: raw.placeholder.height,
+        }
+      : undefined,
   };
 }
 
