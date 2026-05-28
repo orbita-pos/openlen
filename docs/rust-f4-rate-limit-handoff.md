@@ -236,4 +236,5 @@ the napi struct needs `BigInt` fields. Documented in `crates/rate-limit/src/napi
 
 ## Self-commit SHA
 
-_filled by the final commit on this branch_
+`0e48f46` — the Phase H validation commit that introduced this handoff
+doc. Subsequent commits on `rust/f4-rate-limit` are doc-only fill-ins.
