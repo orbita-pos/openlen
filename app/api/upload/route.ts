@@ -1,5 +1,12 @@
 import { randomBytes } from "node:crypto";
 import { auth } from "@/auth";
+import {
+  fallbackFormatForMime,
+  OpenLenImageError,
+  processImage,
+  uploadResponsiveVariantSet,
+  type ImageFormat,
+} from "@/lib/images";
 import { getStorage } from "@/lib/storage";
 
 export const runtime = "nodejs";
@@ -14,7 +21,15 @@ export const dynamic = "force-dynamic";
 //                   so a future delete-all-images-for-page operation is one
 //                   prefix list). Optional — falls back to "anon".
 //
-// Returns: { url, size, key }
+// Pipeline (per @openlen/images, replacing the sharp Node binding):
+//   - JPEG/PNG/WebP input → decode → EXIF auto-rotate → fan-out to
+//     {200, 400, 800}w × {webp, avif} + one legacy fallback at 800w.
+//     Upload all variants in parallel; respond with `{ url, variants[] }`
+//     where `url` points at the largest fallback (back-compat with the
+//     pre-variant response shape — existing callers that only read `.url`
+//     keep working).
+//   - GIF input → bypass (decoding + re-encoding would strip animation).
+//     Upload the bytes as-is and respond with an empty `variants[]`.
 //
 // Auth: required. Anonymous uploads would let any visitor burn through
 // storage quota and dump arbitrary files on the public domain. No quota /
@@ -29,12 +44,42 @@ const ALLOWED_MIME = new Set([
   "image/gif",
 ]);
 
-const MIME_EXT: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-  "image/gif": "gif",
-};
+function extForFormat(fmt: ImageFormat): string {
+  switch (fmt) {
+    case "jpeg":
+      return "jpg";
+    case "png":
+      return "png";
+    case "webp":
+      return "webp";
+    case "avif":
+      return "avif";
+  }
+}
+
+interface UploadedVariant {
+  width: number;
+  height: number;
+  format: ImageFormat;
+  mime: string;
+  url: string;
+  size: number;
+  key: string;
+}
+
+interface UploadResponse {
+  /** Primary URL — the largest legacy-fallback variant (JPEG/PNG at 800w)
+   *  for processed uploads, or the pass-through original for GIF. Matches
+   *  the field the pre-variants response shape exposed; existing callers
+   *  (properties-panel.tsx) only read this. */
+  url: string;
+  /** Bytes of the primary file (matches the URL). */
+  size: number;
+  /** Storage key of the primary file. */
+  key: string;
+  /** All produced variants. Empty for GIF pass-through. */
+  variants: UploadedVariant[];
+}
 
 export async function POST(req: Request): Promise<Response> {
   const session = await auth();
@@ -87,21 +132,101 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  const ext = MIME_EXT[file.type] ?? "bin";
   const hash = randomBytes(8).toString("hex");
-  const key = `uploads/${generationId}/${hash}.${ext}`;
+  const storage = getStorage();
 
+  // ─── GIF pass-through ──────────────────────────────────────────────────
+  // Re-encoding an animated GIF would either strip the animation (sharp's
+  // default) or balloon the file with first-frame-only WebP. Keeping it
+  // untouched matches what sharp does and lets reaction GIFs render
+  // correctly on the published page.
+  if (file.type === "image/gif") {
+    const key = `uploads/${generationId}/${hash}.gif`;
+    try {
+      const result = await storage.upload({
+        key,
+        contentType: file.type,
+        body: buffer,
+      });
+      const body: UploadResponse = {
+        url: result.url,
+        size: result.size,
+        key,
+        variants: [],
+      };
+      return json(body, 200);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return json({ error: `Upload failed: ${message}` }, 500);
+    }
+  }
+
+  // ─── Variant pipeline ──────────────────────────────────────────────────
+  const fallback = fallbackFormatForMime(file.type);
+  const variantSpec = uploadResponsiveVariantSet(fallback);
+
+  let processed;
   try {
-    const result = await getStorage().upload({
-      key,
-      contentType: file.type,
-      body: buffer,
+    processed = await processImage({
+      input: buffer,
+      variants: variantSpec,
+      autoOrient: true,
+      withoutEnlargement: true,
     });
-    return json({ url: result.url, size: result.size, key }, 200);
+  } catch (err) {
+    if (err instanceof OpenLenImageError) {
+      // Decode failure on user-supplied bytes → 422 (the bytes are bad).
+      // Encode / invalid_input fall through to 500 — those would be our
+      // bugs, not the user's.
+      const status = err.kind === "decode" ? 422 : 500;
+      return json(
+        { error: `Image processing failed: ${err.message}`, kind: err.kind },
+        status,
+      );
+    }
+    const message = err instanceof Error ? err.message : String(err);
+    return json({ error: `Image processing failed: ${message}` }, 500);
+  }
+
+  let uploaded: UploadedVariant[];
+  try {
+    uploaded = await Promise.all(
+      processed.variants.map(async (v) => {
+        const ext = extForFormat(v.format);
+        const key = `uploads/${generationId}/${hash}_${v.width}w.${ext}`;
+        const result = await storage.upload({
+          key,
+          contentType: v.mime,
+          body: v.bytes,
+        });
+        return {
+          width: v.width,
+          height: v.height,
+          format: v.format,
+          mime: v.mime,
+          url: result.url,
+          size: result.size,
+          key,
+        };
+      }),
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return json({ error: `Upload failed: ${message}` }, 500);
   }
+
+  // Primary = the largest legacy fallback. uploadResponsiveVariantSet
+  // always includes one, but defend against future changes.
+  const primary =
+    uploaded.find((u) => u.format === fallback) ?? uploaded[uploaded.length - 1];
+
+  const body: UploadResponse = {
+    url: primary.url,
+    size: primary.size,
+    key: primary.key,
+    variants: uploaded,
+  };
+  return json(body, 200);
 }
 
 function json(body: unknown, status: number): Response {
