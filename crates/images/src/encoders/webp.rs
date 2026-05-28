@@ -11,7 +11,7 @@ use image::RgbaImage;
 /// asymmetric tuning. If that changes, expose `alphaQuality` as a second
 /// arg without breaking the existing callers (default = quality).
 pub fn encode(img: &RgbaImage, quality: u8) -> Result<Vec<u8>, ImageError> {
-    let q = quality.max(1).min(100) as f32;
+    let q = quality.clamp(1, 100) as f32;
     let encoder = ::webp::Encoder::from_rgba(img.as_raw(), img.width(), img.height());
     let mem = encoder.encode(q);
     Ok(mem.to_vec())
