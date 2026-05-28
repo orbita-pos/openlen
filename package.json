@@ -43,6 +43,7 @@
     "@neondatabase/serverless": "^1.1.0",
     "@openlen/ai-gateway": "file:./crates/ai-gateway",
     "@openlen/html-engine": "file:./crates/html-engine",
+    "@openlen/images": "file:./crates/images",
     "@openlen/rate-limit": "file:./crates/rate-limit",
     "@projectwallace/css-analyzer": "^9.8.1",
     "@projectwallace/css-design-tokens": "^0.11.4",
