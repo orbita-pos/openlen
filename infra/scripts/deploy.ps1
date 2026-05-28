@@ -17,6 +17,8 @@
 #   $env:OPENLEN_HOST = "openlen"          # ssh alias from ~/.ssh/config
 #   $env:OPENLEN_REMOTE_PATH = "/opt/openlen-app"
 #   $env:OPENLEN_SKIP_BUILD = "1"          # reuse existing .next/standalone
+#   $env:OPENLEN_REBUILD_CRATES = "1"      # rebuild Rust .node binaries on box
+#                                          # (required when crates/ changed)
 
 $ErrorActionPreference = "Stop"
 
@@ -97,6 +99,43 @@ chown -R openlen-deploy:www-data $stagingDir
 "@
 & ssh $host_ $extractCmd
 if ($LASTEXITCODE -ne 0) { throw "Remote extract failed (exit $LASTEXITCODE)" }
+
+# --- 5.5. Rebuild Rust crates on box (optional) ----------------------
+# When OPENLEN_REBUILD_CRATES=1, rsync the Rust workspace to the box and
+# rebuild the linux-x64-gnu .node binaries into the STAGING dir, so they
+# enter the atomic swap in step 6. Without this, the win32 .node binaries
+# from the local build would land on Linux and crash on first require().
+# JS-only deploys (95% of them) leave this off and pay no cost.
+if ($env:OPENLEN_REBUILD_CRATES -eq "1") {
+  Step "5.5" "Rebuilding Rust crates on box (this takes ~5 min)..."
+  $sw = [System.Diagnostics.Stopwatch]::StartNew()
+  # Ship the build script + Rust workspace to the box. The script lives
+  # versioned at infra/scripts/build-crates-on-box.sh; sync it every
+  # deploy so the box always runs the repo's current version.
+  & rsync -az "infra/scripts/build-crates-on-box.sh" "${host_}:/root/"
+  if ($LASTEXITCODE -ne 0) { throw "Build script rsync failed (exit $LASTEXITCODE)" }
+  & rsync -az --delete crates/ "${host_}:/root/openlen-workspace/crates/"
+  if ($LASTEXITCODE -ne 0) { throw "Crates rsync failed (exit $LASTEXITCODE)" }
+  & rsync -az Cargo.toml Cargo.lock "${host_}:/root/openlen-workspace/"
+  if ($LASTEXITCODE -ne 0) { throw "Cargo manifest rsync failed (exit $LASTEXITCODE)" }
+  # Build into staging — the script restarts only when targeting the live
+  # dir, so passing staging here is safe: rebuild then continue to swap.
+  & ssh $host_ "bash /root/build-crates-on-box.sh $stagingDir"
+  if ($LASTEXITCODE -ne 0) { throw "Crate rebuild failed (exit $LASTEXITCODE)" }
+  $sw.Stop()
+  Write-Host ("    done in {0}s" -f [math]::Round($sw.Elapsed.TotalSeconds, 1))
+} else {
+  # Heuristic: warn if Rust source changed in the last commit but the flag
+  # is off — catches "I edited crates/ and forgot the flag" without forcing
+  # the 5-min cost on every deploy.
+  $cratesChanged = $null
+  try { $cratesChanged = & git diff --stat HEAD~1 HEAD -- crates/ 2>$null } catch {}
+  if ($cratesChanged) {
+    Write-Host ""
+    Write-Host "  WARN: crates/ has changes vs HEAD~1 but OPENLEN_REBUILD_CRATES is not set." -ForegroundColor Yellow
+    Write-Host "        If the Rust binaries need rebuilding, set `$env:OPENLEN_REBUILD_CRATES=`"1`" and re-run." -ForegroundColor Yellow
+  }
+}
 
 # --- 6. Atomic swap + restart + smoke test ---------------------------
 Step 6 "Atomic swap + restart..."
