@@ -224,10 +224,7 @@ impl SmartCache {
 
     /// PG-backed build. The `persistence_mode` field on `config` controls
     /// whether the flush task actually starts.
-    pub fn start_with_pool(
-        pool: PgPool,
-        config: SmartCacheConfig,
-    ) -> (Self, SmartCacheBackground) {
+    pub fn start_with_pool(pool: PgPool, config: SmartCacheConfig) -> (Self, SmartCacheBackground) {
         let memory = Arc::new(MemoryLimiter::new());
         Self::start_with(memory, Some(pool), config)
     }
@@ -342,7 +339,10 @@ impl SmartCache {
         }
 
         if let Some(idx) = blocked_idx {
-            self.inner.stats.memory_block.fetch_add(1, Ordering::Relaxed);
+            self.inner
+                .stats
+                .memory_block
+                .fetch_add(1, Ordering::Relaxed);
             let blocked_window = per_window[idx].0.clone();
             let retry_ms = per_window[idx].1.retry_after_ms.min(i64::MAX as u64) as i64;
             let reset_at = Some(Utc::now() + chrono::Duration::milliseconds(retry_ms));
@@ -361,9 +361,15 @@ impl SmartCache {
             });
         }
 
-        self.inner.stats.memory_allow.fetch_add(1, Ordering::Relaxed);
+        self.inner
+            .stats
+            .memory_allow
+            .fetch_add(1, Ordering::Relaxed);
 
-        if matches!(self.inner.config.persistence_mode, PersistenceMode::AllEvents) {
+        if matches!(
+            self.inner.config.persistence_mode,
+            PersistenceMode::AllEvents
+        ) {
             if let Some(tx) = &self.inner.flush_tx {
                 let event = FlushEvent {
                     key: key.to_owned(),
@@ -372,11 +378,17 @@ impl SmartCache {
                 match tx.try_send(event) {
                     Ok(()) => {}
                     Err(mpsc::error::TrySendError::Full(_)) => {
-                        self.inner.stats.flush_dropped.fetch_add(1, Ordering::Relaxed);
+                        self.inner
+                            .stats
+                            .flush_dropped
+                            .fetch_add(1, Ordering::Relaxed);
                         debug!(key, "smart cache flush queue full — dropping event");
                     }
                     Err(mpsc::error::TrySendError::Closed(_)) => {
-                        self.inner.stats.flush_dropped.fetch_add(1, Ordering::Relaxed);
+                        self.inner
+                            .stats
+                            .flush_dropped
+                            .fetch_add(1, Ordering::Relaxed);
                     }
                 }
             }
@@ -563,7 +575,9 @@ async fn flush_batch(
             }
             Err(err) => {
                 warn!(error = %err, count, "smart cache flush INSERT failed");
-                stats.flush_failed.fetch_add(count as u64, Ordering::Relaxed);
+                stats
+                    .flush_failed
+                    .fetch_add(count as u64, Ordering::Relaxed);
             }
         }
     }
@@ -595,11 +609,17 @@ mod tests {
         let (cache, _bg) = SmartCache::start_memory_only(SmartCacheConfig::default());
         let windows = windows_for_test();
         for i in 0..5 {
-            let dec = cache.check_and_consume("ip:1.2.3.4", &windows).await.unwrap();
+            let dec = cache
+                .check_and_consume("ip:1.2.3.4", &windows)
+                .await
+                .unwrap();
             assert!(dec.ok, "consume #{i} should be allowed");
             assert!(dec.blocked.is_none());
         }
-        let blocked = cache.check_and_consume("ip:1.2.3.4", &windows).await.unwrap();
+        let blocked = cache
+            .check_and_consume("ip:1.2.3.4", &windows)
+            .await
+            .unwrap();
         assert!(!blocked.ok);
         assert!(blocked.blocked.is_some());
         assert_eq!(blocked.blocked.as_ref().unwrap().label, "per_min");
@@ -719,11 +739,7 @@ mod tests {
     async fn refill_after_window_lets_traffic_resume() {
         let clock = Arc::new(MockClock::at(1_000));
         let memory = Arc::new(MemoryLimiter::with_clock(clock.clone()));
-        let (cache, _bg) = SmartCache::start_with(
-            memory,
-            None,
-            SmartCacheConfig::memory_only(),
-        );
+        let (cache, _bg) = SmartCache::start_with(memory, None, SmartCacheConfig::memory_only());
         let windows = vec![LimitWindow {
             window_ms: 60_000,
             max: 3,

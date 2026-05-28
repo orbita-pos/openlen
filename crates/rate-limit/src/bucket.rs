@@ -426,9 +426,7 @@ mod tests {
     #[tokio::test]
     async fn spawn_gc_runs_periodically() {
         let clock = Arc::new(MockClock::at(0));
-        let lim = Arc::new(
-            MemoryLimiter::with_clock(clock.clone()).with_idle_eviction_ms(50),
-        );
+        let lim = Arc::new(MemoryLimiter::with_clock(clock.clone()).with_idle_eviction_ms(50));
         // Add a bucket, drop GC handle separately, sleep enough to let the
         // task tick at least once on a short cadence.
         lim.try_consume("u:a", MemorySpec::new(1, 1_000));
@@ -438,6 +436,10 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(80)).await;
         handle.abort();
         let _ = handle.await;
-        assert_eq!(lim.len(), 0, "background GC should have evicted the idle bucket");
+        assert_eq!(
+            lim.len(),
+            0,
+            "background GC should have evicted the idle bucket"
+        );
     }
 }

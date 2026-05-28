@@ -97,14 +97,10 @@ async fn spawn_with_rate_limit(
     let layer = RateLimitLayer::new(rl_cfg);
 
     let tls = load_wildcard(&cert_path, &key_path).expect("load tls");
-    let bound = bind_with_lookup_and_layers(
-        &cfg,
-        tls,
-        Arc::new(MockDomainLookup::new()),
-        Some(layer),
-    )
-    .await
-    .expect("bind");
+    let bound =
+        bind_with_lookup_and_layers(&cfg, tls, Arc::new(MockDomainLookup::new()), Some(layer))
+            .await
+            .expect("bind");
     let addr = bound.local_addr;
 
     let (tx, rx) = oneshot::channel::<()>();
@@ -163,11 +159,19 @@ async fn burst_past_per_min_limit_returns_429_with_headers() {
     // Headers — these come from the middleware's blocked_response builder.
     assert!(resp.headers().contains_key("retry-after"));
     assert_eq!(
-        resp.headers().get("x-ratelimit-limit").unwrap().to_str().unwrap(),
+        resp.headers()
+            .get("x-ratelimit-limit")
+            .unwrap()
+            .to_str()
+            .unwrap(),
         "3"
     );
     assert_eq!(
-        resp.headers().get("x-ratelimit-remaining").unwrap().to_str().unwrap(),
+        resp.headers()
+            .get("x-ratelimit-remaining")
+            .unwrap()
+            .to_str()
+            .unwrap(),
         "0"
     );
     assert!(resp.headers().contains_key("x-ratelimit-reset"));
@@ -200,12 +204,7 @@ async fn exempt_path_bypasses_limit() {
 
 #[tokio::test]
 async fn well_known_acme_challenge_exempt_by_default() {
-    let h = spawn_with_rate_limit(
-        1,
-        100,
-        vec!["/.well-known/acme-challenge/".into()],
-    )
-    .await;
+    let h = spawn_with_rate_limit(1, 100, vec!["/.well-known/acme-challenge/".into()]).await;
     // Burn the lone token.
     let _ = get(h.addr, "demo.openlen.com", "/").await;
     let blocked = get(h.addr, "demo.openlen.com", "/").await;

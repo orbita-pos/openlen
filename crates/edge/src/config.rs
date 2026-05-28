@@ -225,9 +225,8 @@ fn parse_ip_csv(env_name: &str, raw: &str) -> Result<Vec<IpAddr>> {
         .map(|s| s.trim())
         .filter(|s| !s.is_empty())
         .map(|s| {
-            s.parse::<IpAddr>().with_context(|| {
-                format!("{env_name}={raw}: entry '{s}' is not a valid IP address")
-            })
+            s.parse::<IpAddr>()
+                .with_context(|| format!("{env_name}={raw}: entry '{s}' is not a valid IP address"))
         })
         .collect()
 }
@@ -954,12 +953,15 @@ mod tests {
             .build()
             .unwrap();
         assert!(!cfg.rate_limit_enabled, "default must be off");
-        assert_eq!(cfg.rate_limit_per_ip_per_min, DEFAULT_RATE_LIMIT_PER_IP_PER_MIN);
-        assert_eq!(cfg.rate_limit_per_ip_per_hour, DEFAULT_RATE_LIMIT_PER_IP_PER_HOUR);
-        assert!(cfg
-            .rate_limit_exempt_paths
-            .iter()
-            .any(|p| p == "/c/"));
+        assert_eq!(
+            cfg.rate_limit_per_ip_per_min,
+            DEFAULT_RATE_LIMIT_PER_IP_PER_MIN
+        );
+        assert_eq!(
+            cfg.rate_limit_per_ip_per_hour,
+            DEFAULT_RATE_LIMIT_PER_IP_PER_HOUR
+        );
+        assert!(cfg.rate_limit_exempt_paths.iter().any(|p| p == "/c/"));
         assert!(cfg
             .rate_limit_exempt_paths
             .iter()
