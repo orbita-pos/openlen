@@ -84,10 +84,26 @@ export async function renderHtmlToInlineImage(
   try {
     const puppeteer = (await import("puppeteer")).default;
     const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH?.trim() || undefined;
+    // Override HOME for the Chrome subprocess so its XDG bootstrap (mimeapps,
+    // crashpad database, default config) lands somewhere writable. The
+    // openlen-app systemd unit hardens /home/<service-user> as read-only via
+    // ProtectHome — without this, Chrome crashes at launch with
+    // "cannot create directory '~/.local': Read-only file system".
+    // /tmp is always writable; the env override only affects the spawned
+    // Chrome process, not the Node parent.
     const browser = await puppeteer.launch({
       headless: true,
       executablePath,
-      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+      ],
+      env: {
+        ...process.env,
+        HOME: "/tmp",
+      },
     });
     try {
       const page = await browser.newPage();

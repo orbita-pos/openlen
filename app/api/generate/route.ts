@@ -261,7 +261,10 @@ ${brief}`;
         const runPass = async (
           genMessages: Message[],
           label: string,
-        ): Promise<{ ok: true; html: string } | { ok: false; message: string }> => {
+        ): Promise<
+          | { ok: true; html: string }
+          | { ok: false; message: string; retryable: boolean }
+        > => {
           const { stream, done } = generateHtmlStream({
             apiKey: PROVIDER.key as string,
             messages: genMessages,
@@ -314,6 +317,7 @@ ${brief}`;
             return {
               ok: false,
               message: summary.error?.message ?? "Generation failed — try again.",
+              retryable: true,
             };
           }
 
@@ -327,6 +331,7 @@ ${brief}`;
               ok: false,
               message:
                 "The model didn't return a complete HTML document. Try again.",
+              retryable: true,
             };
           }
           if (!/<\/html>\s*$/i.test(passHtml)) {
@@ -336,12 +341,17 @@ ${brief}`;
                 summary.stopKind === "max_tokens"
                   ? "The page hit the model's output cap before finishing. Try a shorter, more focused brief."
                   : "The page ended without a closing </html>. Try again.",
+              // max_tokens is deterministic — same brief at same cap will hit
+              // it again. Truncated streams from upstream congestion ARE
+              // retryable.
+              retryable: summary.stopKind !== "max_tokens",
             };
           }
           if (detectSlotPath(passHtml)) {
             return {
               ok: false,
               message: "The model emitted editor-mode markers — try again.",
+              retryable: false,
             };
           }
 
@@ -353,7 +363,20 @@ ${brief}`;
         };
 
         // ── Initial pass ────────────────────────────────────────────────────
-        const first = await runPass(messages, "initial");
+        // Auto-retry ONCE on transient failures (truncated streams, garbage
+        // output) — Gemini Flash cuts mid-document under load and a fresh
+        // attempt usually completes. max_tokens / editor-markers are
+        // deterministic and surface immediately. The user pays for the
+        // tokens of both attempts on a retry, but that's a 1/20 occurrence
+        // and the alternative is a hard "Generation failed" wall.
+        let first = await runPass(messages, "initial");
+        if (!first.ok && first.retryable) {
+          // eslint-disable-next-line no-console
+          console.log(
+            `[generate] initial pass failed (${first.message}) — auto-retrying`,
+          );
+          first = await runPass(messages, "initial-retry");
+        }
         if (!first.ok) {
           emit("error", { message: first.message });
           closeStream();
