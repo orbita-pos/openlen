@@ -367,6 +367,14 @@ struct GenerationConfig {
     temperature: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     max_output_tokens: Option<u32>,
+    // Quality S3: structured-output controls. `responseMimeType` /
+    // `responseSchema` are the native Gemini field names — serialized verbatim
+    // under `generationConfig`. Skipped when unset so the free-form path emits
+    // an unchanged body.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    response_mime_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    response_schema: Option<serde_json::Value>,
 }
 
 fn build_request_body(request: &StreamRequest) -> GeminiRequestBody {
@@ -414,11 +422,16 @@ fn build_request_body(request: &StreamRequest) -> GeminiRequestBody {
         })
     };
 
-    let generation_config = if request.temperature.is_some() || request.max_output_tokens.is_some()
+    let generation_config = if request.temperature.is_some()
+        || request.max_output_tokens.is_some()
+        || request.response_mime_type.is_some()
+        || request.response_schema.is_some()
     {
         Some(GenerationConfig {
             temperature: request.temperature,
             max_output_tokens: request.max_output_tokens,
+            response_mime_type: request.response_mime_type.clone(),
+            response_schema: request.response_schema.clone(),
         })
     } else {
         None
@@ -569,6 +582,48 @@ mod tests {
 
         assert_eq!(v["generationConfig"]["temperature"], 0.5);
         assert_eq!(v["generationConfig"]["maxOutputTokens"], 100);
+    }
+
+    #[test]
+    fn build_request_body_emits_structured_output_in_generation_config() {
+        let schema = serde_json::json!({
+            "type": "OBJECT",
+            "properties": {
+                "shouldRegenerate": { "type": "BOOLEAN" }
+            },
+            "required": ["shouldRegenerate"]
+        });
+        let req = StreamRequest::new("gemini-2.5-flash", vec![Message::user("critique this")])
+            .with_response_mime_type("application/json")
+            .with_response_schema(schema);
+        let body = build_request_body(&req);
+        let cfg = body
+            .generation_config
+            .as_ref()
+            .expect("structured output should force a generationConfig");
+        assert_eq!(cfg.response_mime_type.as_deref(), Some("application/json"));
+        assert!(cfg.response_schema.is_some());
+
+        // Native camelCase wire shape under generationConfig.
+        let v: serde_json::Value = serde_json::to_value(&body).unwrap();
+        assert_eq!(v["generationConfig"]["responseMimeType"], "application/json");
+        assert_eq!(
+            v["generationConfig"]["responseSchema"]["type"],
+            "OBJECT"
+        );
+        assert_eq!(
+            v["generationConfig"]["responseSchema"]["properties"]["shouldRegenerate"]["type"],
+            "BOOLEAN"
+        );
+    }
+
+    #[test]
+    fn build_request_body_no_structured_output_omits_generation_config() {
+        let req = StreamRequest::new("gemini-2.5-flash", vec![Message::user("hi")]);
+        let body = build_request_body(&req);
+        assert!(body.generation_config.is_none());
+        let v: serde_json::Value = serde_json::to_value(&body).unwrap();
+        assert!(v.get("generationConfig").is_none());
     }
 
     #[test]
