@@ -1,5 +1,5 @@
 use std::env;
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
@@ -32,6 +32,11 @@ const ENV_ACME_ENABLED: &str = "OPENLEN_EDGE_ACME_ENABLED";
 const ENV_CERT_RENEWAL_THRESHOLD_DAYS: &str = "OPENLEN_EDGE_CERT_RENEWAL_THRESHOLD_DAYS";
 const ENV_CERT_RENEWAL_INTERVAL_SECS: &str = "OPENLEN_EDGE_CERT_RENEWAL_INTERVAL_SECS";
 const ENV_METRICS_BIND: &str = "OPENLEN_EDGE_METRICS_BIND";
+const ENV_RATE_LIMIT_ENABLED: &str = "OPENLEN_EDGE_RATE_LIMIT_ENABLED";
+const ENV_RATE_LIMIT_PER_IP_PER_MIN: &str = "OPENLEN_EDGE_RATE_LIMIT_PER_IP_PER_MIN";
+const ENV_RATE_LIMIT_PER_IP_PER_HOUR: &str = "OPENLEN_EDGE_RATE_LIMIT_PER_IP_PER_HOUR";
+const ENV_RATE_LIMIT_EXEMPT_PATHS: &str = "OPENLEN_EDGE_RATE_LIMIT_EXEMPT_PATHS";
+const ENV_RATE_LIMIT_TRUSTED_PROXIES: &str = "OPENLEN_EDGE_RATE_LIMIT_TRUSTED_PROXIES";
 
 const DEFAULT_BIND: &str = "0.0.0.0:443";
 const DEFAULT_BIND_HTTP: &str = "0.0.0.0:80";
@@ -83,6 +88,20 @@ const DEFAULT_CERT_RENEWAL_INTERVAL_SECS: u64 = 24 * 60 * 60;
 /// node-local sidecar. Production operators can flip the bind to expose
 /// metrics on a trusted interface.
 const DEFAULT_METRICS_BIND: &str = "127.0.0.1:9090";
+/// Per-IP, per-minute burst limit. Tuned so a Cloudflare-fronted scrape that
+/// runs ~5 reqs/sec for sustained periods (the default for most bot
+/// crawlers) sits comfortably below; abusive bursts above 5 rps trip
+/// quickly.
+const DEFAULT_RATE_LIMIT_PER_IP_PER_MIN: u32 = 300;
+/// Per-IP, per-hour sustained limit. Caps a steady ~1.4 rps over an hour —
+/// enough headroom for shared NAT (small office, hotel WiFi) while still
+/// flagging single-IP scrapers/bots.
+const DEFAULT_RATE_LIMIT_PER_IP_PER_HOUR: u32 = 5000;
+/// Comma-separated exempt path prefixes. `/c/` analytics beacons are
+/// already rate-limited Node-side and account for the highest steady-state
+/// volume; ACME HTTP-01 challenges must never be blocked or cert issuance
+/// fails.
+const DEFAULT_RATE_LIMIT_EXEMPT_PATHS: &str = "/c/,/.well-known/acme-challenge/";
 
 #[derive(Debug, Clone)]
 pub struct EdgeConfig {
@@ -149,6 +168,23 @@ pub struct EdgeConfig {
     /// Bind address for the Prometheus `/metrics` endpoint. `None` disables
     /// the exporter.
     pub metrics_bind: Option<SocketAddr>,
+    /// Master switch for the edge-side IP rate limiter. Defaults `false` so
+    /// the cutover stays safe — operators flip it on after the initial
+    /// soak, see `infra/edge/CUTOVER.md`.
+    pub rate_limit_enabled: bool,
+    /// Per-IP burst cap (token bucket size + refill window = 60 s).
+    pub rate_limit_per_ip_per_min: u32,
+    /// Per-IP sustained cap (token bucket size + refill window = 1 h).
+    pub rate_limit_per_ip_per_hour: u32,
+    /// Path prefixes that bypass the limiter entirely. Defaults cover
+    /// `/c/` (analytics, rate-limited Node-side) and ACME HTTP-01.
+    pub rate_limit_exempt_paths: Vec<String>,
+    /// TCP peer IPs that the middleware trusts to forward proxy headers
+    /// like `cf-connecting-ip`. Empty = trust all peers (fine for the
+    /// current single-Cloudflare-edge posture). Restrict to the
+    /// Cloudflare IP ranges if the edge ever sits behind a less-trusted
+    /// proxy chain.
+    pub rate_limit_trusted_proxies: Vec<IpAddr>,
 }
 
 fn parse_csv_lower(raw: &str) -> Vec<String> {
@@ -182,6 +218,18 @@ fn parse_optional_socketaddr(env_name: &str, raw: &str) -> Result<Option<SocketA
     Ok(Some(raw.parse().with_context(|| {
         format!("{env_name}={raw} is not a valid socket address")
     })?))
+}
+
+fn parse_ip_csv(env_name: &str, raw: &str) -> Result<Vec<IpAddr>> {
+    raw.split(',')
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .map(|s| {
+            s.parse::<IpAddr>().with_context(|| {
+                format!("{env_name}={raw}: entry '{s}' is not a valid IP address")
+            })
+        })
+        .collect()
 }
 
 impl EdgeConfig {
@@ -308,6 +356,30 @@ impl EdgeConfig {
             Ok(raw) => parse_optional_socketaddr(ENV_METRICS_BIND, &raw)?,
             Err(_) => Some(DEFAULT_METRICS_BIND.parse().unwrap()),
         };
+        let rate_limit_enabled = match env::var(ENV_RATE_LIMIT_ENABLED) {
+            Ok(raw) => parse_bool(ENV_RATE_LIMIT_ENABLED, &raw)?,
+            Err(_) => false,
+        };
+        let rate_limit_per_ip_per_min = match env::var(ENV_RATE_LIMIT_PER_IP_PER_MIN) {
+            Ok(raw) => raw.parse::<u32>().with_context(|| {
+                format!("{ENV_RATE_LIMIT_PER_IP_PER_MIN}={raw} is not a positive integer")
+            })?,
+            Err(_) => DEFAULT_RATE_LIMIT_PER_IP_PER_MIN,
+        };
+        let rate_limit_per_ip_per_hour = match env::var(ENV_RATE_LIMIT_PER_IP_PER_HOUR) {
+            Ok(raw) => raw.parse::<u32>().with_context(|| {
+                format!("{ENV_RATE_LIMIT_PER_IP_PER_HOUR}={raw} is not a positive integer")
+            })?,
+            Err(_) => DEFAULT_RATE_LIMIT_PER_IP_PER_HOUR,
+        };
+        let rate_limit_exempt_paths = parse_csv(
+            &env::var(ENV_RATE_LIMIT_EXEMPT_PATHS)
+                .unwrap_or_else(|_| DEFAULT_RATE_LIMIT_EXEMPT_PATHS.into()),
+        );
+        let rate_limit_trusted_proxies = match env::var(ENV_RATE_LIMIT_TRUSTED_PROXIES) {
+            Ok(raw) => parse_ip_csv(ENV_RATE_LIMIT_TRUSTED_PROXIES, &raw)?,
+            Err(_) => Vec::new(),
+        };
 
         Ok(Self {
             bind,
@@ -338,6 +410,11 @@ impl EdgeConfig {
             cert_renewal_threshold_days,
             cert_renewal_interval_secs,
             metrics_bind,
+            rate_limit_enabled,
+            rate_limit_per_ip_per_min,
+            rate_limit_per_ip_per_hour,
+            rate_limit_exempt_paths,
+            rate_limit_trusted_proxies,
         })
     }
 
@@ -376,6 +453,11 @@ pub struct EdgeConfigBuilder {
     cert_renewal_threshold_days: Option<u32>,
     cert_renewal_interval_secs: Option<u64>,
     metrics_bind: Option<Option<SocketAddr>>,
+    rate_limit_enabled: Option<bool>,
+    rate_limit_per_ip_per_min: Option<u32>,
+    rate_limit_per_ip_per_hour: Option<u32>,
+    rate_limit_exempt_paths: Option<Vec<String>>,
+    rate_limit_trusted_proxies: Option<Vec<IpAddr>>,
 }
 
 impl EdgeConfigBuilder {
@@ -519,6 +601,31 @@ impl EdgeConfigBuilder {
         self
     }
 
+    pub fn rate_limit_enabled(mut self, enabled: bool) -> Self {
+        self.rate_limit_enabled = Some(enabled);
+        self
+    }
+
+    pub fn rate_limit_per_ip_per_min(mut self, n: u32) -> Self {
+        self.rate_limit_per_ip_per_min = Some(n);
+        self
+    }
+
+    pub fn rate_limit_per_ip_per_hour(mut self, n: u32) -> Self {
+        self.rate_limit_per_ip_per_hour = Some(n);
+        self
+    }
+
+    pub fn rate_limit_exempt_paths(mut self, paths: Vec<String>) -> Self {
+        self.rate_limit_exempt_paths = Some(paths);
+        self
+    }
+
+    pub fn rate_limit_trusted_proxies(mut self, ips: Vec<IpAddr>) -> Self {
+        self.rate_limit_trusted_proxies = Some(ips);
+        self
+    }
+
     pub fn build(self) -> Result<EdgeConfig> {
         Ok(EdgeConfig {
             bind: self
@@ -588,6 +695,17 @@ impl EdgeConfigBuilder {
                 .cert_renewal_interval_secs
                 .unwrap_or(DEFAULT_CERT_RENEWAL_INTERVAL_SECS),
             metrics_bind: self.metrics_bind.unwrap_or(None),
+            rate_limit_enabled: self.rate_limit_enabled.unwrap_or(false),
+            rate_limit_per_ip_per_min: self
+                .rate_limit_per_ip_per_min
+                .unwrap_or(DEFAULT_RATE_LIMIT_PER_IP_PER_MIN),
+            rate_limit_per_ip_per_hour: self
+                .rate_limit_per_ip_per_hour
+                .unwrap_or(DEFAULT_RATE_LIMIT_PER_IP_PER_HOUR),
+            rate_limit_exempt_paths: self
+                .rate_limit_exempt_paths
+                .unwrap_or_else(|| parse_csv(DEFAULT_RATE_LIMIT_EXEMPT_PATHS)),
+            rate_limit_trusted_proxies: self.rate_limit_trusted_proxies.unwrap_or_default(),
         })
     }
 }
@@ -825,5 +943,68 @@ mod tests {
     #[test]
     fn parse_bool_rejects_garbage() {
         assert!(parse_bool("X", "maybe").is_err());
+    }
+
+    #[test]
+    fn builder_fills_rate_limit_defaults_disabled() {
+        let cfg = EdgeConfig::builder()
+            .bind("127.0.0.1:0".parse().unwrap())
+            .cert_path(PathBuf::from("/tmp/cert.pem"))
+            .key_path(PathBuf::from("/tmp/key.pem"))
+            .build()
+            .unwrap();
+        assert!(!cfg.rate_limit_enabled, "default must be off");
+        assert_eq!(cfg.rate_limit_per_ip_per_min, DEFAULT_RATE_LIMIT_PER_IP_PER_MIN);
+        assert_eq!(cfg.rate_limit_per_ip_per_hour, DEFAULT_RATE_LIMIT_PER_IP_PER_HOUR);
+        assert!(cfg
+            .rate_limit_exempt_paths
+            .iter()
+            .any(|p| p == "/c/"));
+        assert!(cfg
+            .rate_limit_exempt_paths
+            .iter()
+            .any(|p| p.starts_with("/.well-known/")));
+        assert!(cfg.rate_limit_trusted_proxies.is_empty());
+    }
+
+    #[test]
+    fn builder_accepts_explicit_rate_limit_overrides() {
+        let cfg = EdgeConfig::builder()
+            .bind("127.0.0.1:0".parse().unwrap())
+            .cert_path(PathBuf::from("/tmp/cert.pem"))
+            .key_path(PathBuf::from("/tmp/key.pem"))
+            .rate_limit_enabled(true)
+            .rate_limit_per_ip_per_min(50)
+            .rate_limit_per_ip_per_hour(1000)
+            .rate_limit_exempt_paths(vec!["/healthz".into()])
+            .rate_limit_trusted_proxies(vec!["10.0.0.1".parse().unwrap()])
+            .build()
+            .unwrap();
+        assert!(cfg.rate_limit_enabled);
+        assert_eq!(cfg.rate_limit_per_ip_per_min, 50);
+        assert_eq!(cfg.rate_limit_per_ip_per_hour, 1000);
+        assert_eq!(cfg.rate_limit_exempt_paths, vec!["/healthz"]);
+        assert_eq!(cfg.rate_limit_trusted_proxies.len(), 1);
+    }
+
+    #[test]
+    fn parse_ip_csv_handles_v4_v6_and_whitespace() {
+        let v = parse_ip_csv("X", " 1.2.3.4 , ::1 , 10.0.0.1").unwrap();
+        assert_eq!(v.len(), 3);
+        assert!(v.iter().any(|i| i.is_ipv4()));
+        assert!(v.iter().any(|i| i.is_ipv6()));
+    }
+
+    #[test]
+    fn parse_ip_csv_rejects_garbage() {
+        assert!(parse_ip_csv("X", "1.2.3.4,not-an-ip").is_err());
+    }
+
+    #[test]
+    fn parse_ip_csv_empty_returns_empty_vec() {
+        let v = parse_ip_csv("X", "").unwrap();
+        assert!(v.is_empty());
+        let v = parse_ip_csv("X", " , , ").unwrap();
+        assert!(v.is_empty());
     }
 }
