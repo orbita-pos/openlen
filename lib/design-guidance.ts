@@ -265,6 +265,19 @@ LAYOUT BANS:
 
 export const DESIGN_REFERENCE = `
 ═══════════════════════════════════════════════════════════════════════════
+REFERENCE IMAGE — the quality bar (when present)
+═══════════════════════════════════════════════════════════════════════════
+
+A reference design from our curated set may be attached as an image in the
+user message. It represents the QUALITY BAR — match its polish: spacing
+discipline, density, corner-radius and shadow restraint, typographic rhythm,
+overall composure. Do NOT copy it section-for-section or reuse its copy. It
+is one example of the level you're aiming for; adapt the structure freely to
+fit the brief (a SaaS brief still gets a SaaS layout even if the reference is
+a restaurant). The snippets below are complementary — transferable CSS
+recipes; the image is the overall aesthetic.
+
+═══════════════════════════════════════════════════════════════════════════
 CSS RECIPES — copy these patterns where called for
 ═══════════════════════════════════════════════════════════════════════════
 

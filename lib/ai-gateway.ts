@@ -46,6 +46,15 @@ export interface Message {
   content: string;
 }
 
+/** A reference image attached to a request. Rendered as a native Gemini
+ *  `inlineData` part on the last user content (Quality S2). The native API
+ *  can't fetch remote URLs, so callers pass base64 bytes (no `data:`
+ *  prefix). */
+export interface InlineImage {
+  mimeType: string;
+  dataBase64: string;
+}
+
 export interface StreamRequest {
   model: string;
   messages: Message[];
@@ -54,6 +63,9 @@ export interface StreamRequest {
   maxOutputTokens?: number;
   /** Range 0.0–2.0; passed verbatim to Gemini. */
   temperature?: number;
+  /** Reference images attached to the LAST user message. Empty/omitted for
+   *  the text-only path. */
+  images?: InlineImage[];
 }
 
 export type StreamEvent =
@@ -184,6 +196,7 @@ function streamRequestToRust(r: StreamRequest): RustStreamRequest {
     messages: r.messages.map(messageToRust),
     maxOutputTokens: r.maxOutputTokens,
     temperature: r.temperature,
+    images: r.images,
   };
 }
 
