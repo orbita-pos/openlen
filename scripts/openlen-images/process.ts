@@ -12,9 +12,9 @@
 // Run with: npm run openlen-images:process
 // Override input: OPENLEN_IMAGES_INPUT=/some/other/dir npm run openlen-images:process
 
-import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import sharp from "sharp";
+import { processImage } from "../../lib/images";
 import { IMAGE_META, type ImageMeta, type ImageStyle } from "./meta";
 import type { TemplateFamily } from "../../lib/templates/families";
 import { getOpenLenImageStorage } from "../../lib/storage/openlen-images";
@@ -109,16 +109,28 @@ async function main() {
     const baseId = id(meta);
     const inputPath = join(INPUT_DIR, file);
 
+    const inputBytes = await readFile(inputPath);
+    // One decode + 3 resizes in a single native call. The previous code
+    // re-decoded the same file for each variant; the new pipeline pays
+    // the decode cost once and shares the base image across all three
+    // width buckets.
+    const { variants } = await processImage({
+      input: inputBytes,
+      variants: SIZES.map((s) => ({
+        width: s.width,
+        format: "webp" as const,
+        quality: 82,
+      })),
+      autoOrient: false,
+      withoutEnlargement: true,
+    });
     const src = {} as ManifestImage["src"];
-    for (const size of SIZES) {
-      const body = await sharp(inputPath)
-        .resize({ width: size.width, withoutEnlargement: true })
-        .webp({ quality: 82 })
-        .toBuffer();
+    for (let s = 0; s < SIZES.length; s++) {
+      const size = SIZES[s];
       const { url } = await storage.upload({
         key: `${baseId}-${size.width}.webp`,
         contentType: "image/webp",
-        body,
+        body: variants[s].bytes,
       });
       src[size.key] = url;
     }

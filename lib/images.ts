@@ -24,6 +24,11 @@ export type ImageFormat = "webp" | "avif" | "jpeg" | "png";
 export interface ProcessVariantSpec {
   /** Target max width in pixels. `0` = use the input's intrinsic width. */
   width: number;
+  /** Optional companion bound on the height. When present, the variant
+   *  is scaled by the SMALLER of the width and height bounds — sharp's
+   *  `{ width, height, fit: 'inside' }` semantics. Omit to leave the
+   *  height unbounded. */
+  maxHeight?: number;
   format: ImageFormat;
   /** Encoder quality 1..=100. Ignored for PNG (lossless). */
   quality: number;
@@ -119,6 +124,7 @@ export async function processImage(
       input: opts.input,
       variants: opts.variants.map((v) => ({
         width: v.width,
+        maxHeight: v.maxHeight,
         format: v.format,
         quality: v.quality,
       })),
@@ -175,8 +181,10 @@ export function fallbackFormatForMime(mime: string): ImageFormat {
 /** Single-variant preset matching the legacy `sharp` recipe used in
  *  `lib/publish/filesystem.ts` (Unsplash optimize) and
  *  `app/api/projects/[id]/assets/route.ts` (user-asset POST):
- *  one WebP variant at quality 85, max-width 2000, EXIF auto-rotate,
- *  no enlargement. Exposed as a preset so the two consumers stay in sync. */
+ *  one WebP variant at quality 85, capped at 2000 px on the longer
+ *  edge (sharp's `{width:2000, height:2000, fit:'inside'}`), EXIF
+ *  auto-rotate, no enlargement. Exposed as a preset so the two
+ *  consumers stay in sync. */
 export function legacyWebp2000Variant(): ProcessVariantSpec {
-  return { width: 2000, format: "webp", quality: 85 };
+  return { width: 2000, maxHeight: 2000, format: "webp", quality: 85 };
 }

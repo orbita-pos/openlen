@@ -24,6 +24,11 @@ pub struct JsVariant {
     /// Target max width in pixels. Pass 0 to use the input's intrinsic
     /// width (skip resize). Aspect ratio is always preserved.
     pub width: u32,
+    /// Optional companion bound on the height. When present, the variant
+    /// is scaled by the SMALLER of the width and the height bound —
+    /// sharp's `{ width, height, fit: 'inside' }` semantics. Omit to
+    /// leave the height unbounded.
+    pub max_height: Option<u32>,
     /// One of: `"webp"`, `"avif"`, `"jpeg"` (alias: `"jpg"`), `"png"`.
     /// Case-insensitive.
     pub format: String,
@@ -112,6 +117,7 @@ pub async fn process_image(req: ProcessRequestJs) -> Result<ProcessResultJs> {
             let fmt = NativeFormat::parse(&v.format).ok_or_else(|| invalid_format(&v.format))?;
             Ok(pipeline::Variant {
                 width: v.width,
+                max_height: v.max_height,
                 format: fmt,
                 quality: v.quality.min(100) as u8,
             })
