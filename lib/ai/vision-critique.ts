@@ -60,9 +60,12 @@ export interface CritiqueInternals {
 }
 
 // Abort + return the first pass if the whole critique (render + model call)
-// hasn't resolved in this long. The user shouldn't pay 30+ seconds because the
-// critic is being slow.
-const DEFAULT_TIMEOUT_MS = 12_000;
+// hasn't resolved in this long. Bumped 12s→18s after the S3 smoke: Pulsegrid
+// timed out at 12016ms (Flash p95 with a base64 image + structured output runs
+// ~8–15s), so 12s produced ~33% fallbacks; 18s brings that to ~5–10%. The
+// fallback is safe (ship-as-is, no regen) but each timed-out critic still costs
+// a credit + cycle, so widening the window is worth it. Test-overridable.
+export const DEFAULT_TIMEOUT_MS = 18_000;
 // The verdict is tiny, but `issues` can carry a few sentences and Flash spends
 // a thinking budget before its first token — keep this generous so it never
 // truncates mid-JSON.
@@ -298,11 +301,16 @@ function clampScore(v: unknown): number | null {
   return Math.max(1, Math.min(10, Math.round(n)));
 }
 
+// Gemini Flash under load sometimes wraps the JSON verdict in ```json … ```
+// fences despite JSON mode (observed: Mariana smoke fell back as "malformed
+// JSON"). Strip an opening ```json / ``` fence (with any surrounding
+// whitespace) and a trailing ``` before parsing.
 function stripFences(s: string): string {
-  let out = s.trim();
-  out = out.replace(/^```(?:json)?[\t ]*\r?\n?/i, "");
-  out = out.replace(/\r?\n?[\t ]*```\s*$/i, "");
-  return out.trim();
+  return s
+    .trim()
+    .replace(/^\s*```(?:json)?\s*\n?/i, "")
+    .replace(/\n?\s*```\s*$/i, "")
+    .trim();
 }
 
 function logVerdict(v: CritiqueVerdict): void {
