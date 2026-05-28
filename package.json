@@ -38,7 +38,6 @@
     "@auth/drizzle-adapter": "^1.11.2",
     "@aws-sdk/client-s3": "^3.1049.0",
     "@axe-core/puppeteer": "^4.11.3",
-    "@imgly/background-removal-node": "^1.4.5",
     "@inariwatch/capture": "^0.14.0",
     "@neondatabase/serverless": "^1.1.0",
     "@openlen/ai-gateway": "file:./crates/ai-gateway",
