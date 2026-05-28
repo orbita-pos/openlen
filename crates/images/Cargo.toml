@@ -65,3 +65,12 @@ napi-build = "2"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+# Bench harness — criterion drives the pipeline regression-guard suite in
+# benches/pipeline.rs. `html_reports` keeps `target/criterion/report/`
+# usable in the browser; `cargo_bench_support` lets us invoke via
+# `cargo bench` (the workflow most operators expect).
+criterion = { version = "0.5", default-features = false, features = ["html_reports", "cargo_bench_support"] }
+
+[[bench]]
+name = "pipeline"
+harness = false
