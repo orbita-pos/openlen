@@ -3,7 +3,7 @@
 Branch: `rust/f4-rate-limit-s2`
 Worktree: `D:/worktrees/openlen-f4-rl-s2`
 Base: `origin/master` @ `8f740a2` (post-F4 S1 merge)
-Self-SHA: _filled at the bottom by the closing commit_
+Self-SHA: `3b65e7e`
 
 ## TL;DR
 
@@ -425,4 +425,6 @@ time-pausing; deferred as it's not introduced by this session.
 
 ## Self-commit SHA
 
-_filled by the closing commit_
+`3b65e7e` — the Phase H commit that introduced this handoff doc. Any
+subsequent commits on `rust/f4-rate-limit-s2` will be SHA-fill follow-ups
+or post-review fixups.
