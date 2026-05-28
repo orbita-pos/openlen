@@ -444,3 +444,130 @@ app talking to a dead listener.
 
 Do NOT remove nginx earlier than 7 days — the rollback path in
 section 7 depends on it.
+
+---
+
+## 10. Activating rate-limit (F4 S2) post-cutover
+
+The edge ships with a per-IP rate limiter (60-second burst + 1-hour
+sustained) that drops 429 BEFORE the request reaches Node. It defaults
+**off** so the cutover stays safe; activate gradually once the basic
+soak is clean and you've watched a few hours of normal traffic
+distribution.
+
+### 10a. Pre-flight (10 min)
+
+Confirm the new env vars are set in `/etc/openlen/edge.env`:
+
+```bash
+grep -E '^OPENLEN_EDGE_RATE_LIMIT' /etc/openlen/edge.env || true
+# Expect either empty (using defaults) or explicit overrides — both fine.
+```
+
+Pick starting limits based on observed traffic. Pull last hour's
+distribution from Grafana:
+
+```promql
+topk(20, sum by (host) (rate(openlen_edge_requests_total[1h])))
+```
+
+If your hottest legitimate origin sits at ~200 rps for short bursts,
+set per-min ≥ 300 (default) and per-hour ≥ that origin's hourly total
+× 1.2 for margin. Aggressive limits trip false positives; conservative
+limits catch fewer bots — start permissive, tighten after seeing the
+blocked-by-IP histogram.
+
+### 10b. Enable + reload (1 min)
+
+```bash
+# /etc/openlen/edge.env
+OPENLEN_EDGE_RATE_LIMIT_ENABLED=1
+# Optional overrides — sane defaults documented in edge.env.example
+# OPENLEN_EDGE_RATE_LIMIT_PER_IP_PER_MIN=300
+# OPENLEN_EDGE_RATE_LIMIT_PER_IP_PER_HOUR=5000
+
+sudo systemctl restart openlen-edge
+sudo systemctl status openlen-edge   # expect "active (running)"
+```
+
+The startup log line shows the active config:
+
+```bash
+sudo journalctl -u openlen-edge -n 50 --no-pager | grep -i 'rate.limit'
+# edge rate-limit enabled per_min=300 per_hour=5000 exempt_paths=[...] trusted_proxies=0
+```
+
+### 10c. Verify (5 min)
+
+```bash
+# 1. /metrics surfaces the new counters
+curl -s http://127.0.0.1:9090/metrics | grep openlen_edge_rate_limit
+#   openlen_edge_rate_limit_decisions_total{result="allowed"} 17
+#   openlen_edge_rate_limit_decision_duration_seconds_count 17
+#   openlen_edge_rate_limit_memory_hits_total{source="peer_addr"} 17
+
+# 2. ACME challenges still pass (exempt). Force a renewal-check probe:
+curl -sk -o /dev/null -w '%{http_code}\n' \
+  https://openlen.com/.well-known/acme-challenge/probe
+# Expect 404 (no challenge file), NOT 429.
+
+# 3. Synthetic burst from a test machine ONLY (not from prod):
+#    From your laptop — replace IP with one you control:
+for i in $(seq 1 350); do curl -sk -o /dev/null -w '%{http_code}\n' \
+  https://demo.openlen.com/ ; done | sort | uniq -c
+# Expect: ~300 × 200, ~50 × 429 (with the default per-min=300).
+```
+
+### 10d. Soak (24-72 h)
+
+Watch four Grafana panels (add to the openlen-edge dashboard):
+
+- **Decisions / sec, by result** — `sum by (result)
+  (rate(openlen_edge_rate_limit_decisions_total[1m]))` — `blocked`
+  should be a tiny minority of `allowed`. A spike in `blocked` with no
+  `error` correlation = real abuse caught. A spike in `error` =
+  limiter failures (would fail-open, but worth a look).
+- **Decision latency p99** — `histogram_quantile(0.99,
+  sum(rate(openlen_edge_rate_limit_decision_duration_seconds_bucket[5m]))
+  by (le))` — memory-bucket should run sub-100 µs. If p99 climbs past
+  10 ms, something's wrong (lock contention? GC pause?).
+- **IP source distribution** — `sum by (source)
+  (rate(openlen_edge_rate_limit_memory_hits_total[5m]))` — should be
+  dominated by `cf_connecting_ip` in prod. If `peer_addr` dominates,
+  Cloudflare's not forwarding the header (or trusted_proxies is
+  misconfigured).
+- **5xx ratio** — unchanged from baseline. If 5xx rises after enabling
+  rate-limit, the limiter is mis-classifying legitimate traffic as
+  abuse and Node's failing under the increased retry pressure.
+
+### 10e. Rollback (~5 sec)
+
+If the soak shows false positives or the metrics look wrong:
+
+```bash
+# /etc/openlen/edge.env
+OPENLEN_EDGE_RATE_LIMIT_ENABLED=0
+sudo systemctl restart openlen-edge
+```
+
+The restart is a fresh process. SmartCache state (in-memory) is
+discarded — limits are not "remembered" across restarts. This is the
+deliberate trade-off for the memory-only mode: an unwanted block clears
+the moment you flip the switch. No DB rollback, no migration, no
+forward-compat shim.
+
+### 10f. Tuning checklist
+
+After 7 days of soak the per-IP defaults usually need one of:
+
+- **Tighten** if `blocked` ratio is consistently < 0.01 % and your
+  `topk(IP)` histogram shows steady high-volume probers — drop
+  per-min to 150-200, per-hour to 2500-3500.
+- **Loosen** if `blocked` includes IPs from Grafana's known-good
+  origins (search engines, monitoring services, your office NAT) —
+  raise per-hour to 10 000+; consider adding their IPs to
+  `OPENLEN_EDGE_RATE_LIMIT_TRUSTED_PROXIES` if Cloudflare isn't already
+  fronting them.
+
+Limit tuning is iterative — never on call alone; do it after a
+session of correlating Grafana counters against the access logs.
