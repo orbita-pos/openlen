@@ -112,9 +112,29 @@ if ($env:OPENLEN_REBUILD_CRATES -eq "1") {
   # Ship the Rust workspace + build script to the box. PowerShell on
   # Windows doesn't ship rsync, so we tar + scp + remote-extract — same
   # pattern as the standalone deploy in steps 3-5.
+  # Force cwd to repo root (the script lives at infra/scripts/, ../.. = root).
+  $repoRoot = (Resolve-Path "$PSScriptRoot/../..").Path
+  Set-Location $repoRoot
   $cratesTarball = "openlen-crates.tar.gz"
-  & tar -czf $cratesTarball Cargo.toml Cargo.lock crates/
-  if ($LASTEXITCODE -ne 0) { throw "Crates tar failed (exit $LASTEXITCODE)" }
+  if (Test-Path $cratesTarball) { Remove-Item -Force $cratesTarball }
+  # Wrap tar to opt out of strict ErrorActionPreference — tar.exe writes
+  # verbose listings + benign warnings to stderr, which $ErrorAction="Stop"
+  # treats as a script-fatal error even when the exit code is 0. Standard
+  # PowerShell pattern for native commands.
+  $prevPref = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try {
+    $tarOutput = & tar -czf $cratesTarball Cargo.toml Cargo.lock crates 2>&1
+    $tarExit = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $prevPref
+  }
+  if ($tarExit -ne 0) {
+    Write-Host "tar output (last 20 lines):"
+    $tarOutput | Select-Object -Last 20 | ForEach-Object { Write-Host "  $_" }
+    throw "Crates tar failed (exit $tarExit)"
+  }
+  Write-Host ("    bundled $((Get-Item $cratesTarball).Length / 1MB) MB")
   & scp -q $cratesTarball "${host_}:/root/"
   if ($LASTEXITCODE -ne 0) { throw "Crates scp failed (exit $LASTEXITCODE)" }
   & scp -q "infra/scripts/build-crates-on-box.sh" "${host_}:/root/"
