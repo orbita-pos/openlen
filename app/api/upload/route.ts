@@ -67,6 +67,17 @@ interface UploadedVariant {
   key: string;
 }
 
+interface UploadPlaceholder {
+  /** Woltapp BlurHash string (~30 chars at 4×3 components). */
+  blurhash: string;
+  /** Hex `#RRGGBB` of the source's dominant color. */
+  dominantColor: string;
+  /** Thumb width the placeholder was computed from. */
+  width: number;
+  /** Thumb height (paired with `width`). */
+  height: number;
+}
+
 interface UploadResponse {
   /** Primary URL — the largest legacy-fallback variant (JPEG/PNG at 800w)
    *  for processed uploads, or the pass-through original for GIF. Matches
@@ -79,6 +90,9 @@ interface UploadResponse {
   key: string;
   /** All produced variants. Empty for GIF pass-through. */
   variants: UploadedVariant[];
+  /** BlurHash + dominant color for LQIP rendering on the client.
+   *  Absent for GIF pass-through (no decode → no placeholder). */
+  placeholder?: UploadPlaceholder;
 }
 
 export async function POST(req: Request): Promise<Response> {
@@ -172,6 +186,7 @@ export async function POST(req: Request): Promise<Response> {
       variants: variantSpec,
       autoOrient: true,
       withoutEnlargement: true,
+      placeholder: true,
     });
   } catch (err) {
     if (err instanceof OpenLenImageError) {
@@ -225,6 +240,14 @@ export async function POST(req: Request): Promise<Response> {
     size: primary.size,
     key: primary.key,
     variants: uploaded,
+    placeholder: processed.placeholder
+      ? {
+          blurhash: processed.placeholder.blurhash,
+          dominantColor: processed.placeholder.dominantColor,
+          width: processed.placeholder.width,
+          height: processed.placeholder.height,
+        }
+      : undefined,
   };
   return json(body, 200);
 }
