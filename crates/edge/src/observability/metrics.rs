@@ -33,6 +33,14 @@ pub const LOOKUP_DURATION_BUCKETS: &[f64] = &[
     0.00001, 0.00005, 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0,
 ];
 
+/// Rate-limit decision duration buckets in seconds. Memory-bucket math
+/// runs in ~1 µs; the 1 ms tail covers a worst-case allocation under
+/// load. Includes a 10 ms bucket for when the cache ever consults PG
+/// (today never — edge runs memory-only).
+pub const RATE_LIMIT_DURATION_BUCKETS: &[f64] = &[
+    0.000_001, 0.000_005, 0.000_010, 0.000_050, 0.000_100, 0.000_500, 0.001, 0.005, 0.010,
+];
+
 /// Stand-up the global recorder + the `/metrics` HTTP listener.
 ///
 /// `bind` is the listener address. Returns the [`PrometheusHandle`] so the
@@ -65,6 +73,12 @@ pub fn install_exporter(bind: SocketAddr) -> Result<PrometheusHandle> {
             .set_buckets_for_metric(Matcher::Full(name.to_owned()), LOOKUP_DURATION_BUCKETS)
             .with_context(|| format!("registering buckets for {name}"))?;
     }
+    builder = builder
+        .set_buckets_for_metric(
+            Matcher::Full("openlen_edge_rate_limit_decision_duration_seconds".to_owned()),
+            RATE_LIMIT_DURATION_BUCKETS,
+        )
+        .context("registering rate-limit decision duration buckets")?;
 
     // `build()` gives us both the recorder + the HTTP listener future; we
     // install the recorder globally + spawn the future ourselves so the
@@ -165,6 +179,29 @@ fn register_descriptions() {
         "openlen_edge_handshake_capped_total",
         "Connections dropped at the accept loop because the inflight cap was reached."
     );
+
+    // Edge IP rate-limit middleware (F4 S2). Counts every decision the
+    // middleware makes — exempt path / allowed / blocked / error. PG-hit
+    // counter is registered even though the edge currently runs the
+    // SmartCache in memory-only mode (always 0); leaving it in keeps the
+    // Grafana panel template stable for the day someone wires PG.
+    describe_counter!(
+        "openlen_edge_rate_limit_decisions_total",
+        "Rate-limit decisions — exempt / allowed / blocked / error."
+    );
+    describe_histogram!(
+        "openlen_edge_rate_limit_decision_duration_seconds",
+        Unit::Seconds,
+        "End-to-end time spent in the rate-limit middleware (IP extraction + bucket check)."
+    );
+    describe_counter!(
+        "openlen_edge_rate_limit_memory_hits_total",
+        "Decisions answered from the in-process token bucket, labeled by IP source."
+    );
+    describe_counter!(
+        "openlen_edge_rate_limit_pg_hits_total",
+        "Decisions that reached the Postgres limiter (always 0 while the edge runs memory-only)."
+    );
 }
 
 /// Snapshot process-level stats (CPU, RSS, open FDs). Call from a tokio
@@ -193,6 +230,7 @@ mod tests {
             REQUEST_DURATION_BUCKETS,
             CERT_ISSUANCE_BUCKETS,
             LOOKUP_DURATION_BUCKETS,
+            RATE_LIMIT_DURATION_BUCKETS,
         ] {
             assert!(!buckets.is_empty(), "buckets non-empty");
             assert!(buckets[0] > 0.0, "buckets[0] > 0");

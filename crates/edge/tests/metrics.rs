@@ -87,6 +87,18 @@ async fn prometheus_exporter_full_surface() {
     metrics::gauge!("openlen_edge_proxy_pool_inflight_connections").set(0.0);
     metrics::gauge!("openlen_edge_handshake_inflight").set(0.0);
     metrics::counter!("openlen_edge_handshake_capped_total").increment(0);
+    metrics::counter!(
+        "openlen_edge_rate_limit_decisions_total",
+        "result" => "allowed",
+    )
+    .increment(0);
+    metrics::histogram!("openlen_edge_rate_limit_decision_duration_seconds").record(0.000_005);
+    metrics::counter!(
+        "openlen_edge_rate_limit_memory_hits_total",
+        "source" => "cf_connecting_ip",
+    )
+    .increment(0);
+    metrics::counter!("openlen_edge_rate_limit_pg_hits_total").increment(0);
 
     // Let the HTTP listener bind + first samples flush.
     tokio::time::sleep(Duration::from_millis(150)).await;
@@ -125,12 +137,27 @@ async fn prometheus_exporter_full_surface() {
         "openlen_edge_proxy_pool_inflight_connections",
         "openlen_edge_handshake_inflight",
         "openlen_edge_handshake_capped_total",
+        "openlen_edge_rate_limit_decisions_total",
+        "openlen_edge_rate_limit_decision_duration_seconds",
+        "openlen_edge_rate_limit_memory_hits_total",
+        "openlen_edge_rate_limit_pg_hits_total",
     ] {
         assert!(
             body.contains(&format!("# HELP {required}")),
             "missing HELP line for {required}"
         );
     }
+
+    // 4. Rate-limit histogram bucket sanity — at least one of our explicit
+    // sub-millisecond buckets must surface.
+    assert!(
+        body.contains("openlen_edge_rate_limit_decision_duration_seconds_bucket"),
+        "rate-limit histogram bucket lines missing"
+    );
+    assert!(
+        body.contains("le=\"0.00001\"") || body.contains("le=\"1e-5\""),
+        "expected configured 10 µs rate-limit bucket in output"
+    );
 
     // 3. Histogram rendered as buckets, not summary quantiles. Our explicit
     // bucket configuration must surface (`_bucket{le="..."}` lines).
