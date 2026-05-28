@@ -39,6 +39,18 @@ export const AUTOFILL_CREDIT_COST = 5;
  *  constant exists for documentation / future surfacing, not for debiting. */
 export const REFERENCE_IMAGE_CREDIT_OVERHEAD = 1;
 
+/** Quality S3 vision critic — credit overhead when the critic triggers a
+ *  regeneration. Like REFERENCE_IMAGE_CREDIT_OVERHEAD this is DOCUMENTATION,
+ *  not a separate debit: the regen runs a full second `generateHtmlStream`
+ *  pass, so its real token cost is metered + debited automatically by that
+ *  pass's `usage` event via `creditsForUsage` — exactly like the first pass.
+ *  The critic call itself is NOT debited (its image input is ~free on Flash
+ *  and its output is a tiny JSON verdict). So the WORST CASE for a user is two
+ *  metered generations on one request — roughly double the first-pass cost,
+ *  which this constant rounds to "+1 generation" of overhead. The regen is
+ *  hard-capped at 1, so the cost can never exceed two passes. */
+export const REGEN_CREDIT_OVERHEAD = 1;
+
 /** One credit = this much raw model cost, in USD. */
 const USD_PER_CREDIT = 0.01;
 

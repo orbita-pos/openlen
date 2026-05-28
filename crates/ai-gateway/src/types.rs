@@ -81,6 +81,17 @@ pub struct StreamRequest {
     /// is byte-for-byte unchanged.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub images: Vec<InlineImage>,
+    /// Structured-output controls (Quality S3 vision critic). When
+    /// `response_mime_type` is `Some("application/json")`, Gemini is forced to
+    /// emit valid JSON instead of free-form text. `response_schema`, when set,
+    /// further constrains the output to a Gemini-subset OpenAPI schema —
+    /// passed through verbatim to `generationConfig.responseSchema`. Both
+    /// `None` by default: the free-form generation path is byte-for-byte
+    /// unchanged.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub response_mime_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub response_schema: Option<serde_json::Value>,
 }
 
 impl StreamRequest {
@@ -91,6 +102,8 @@ impl StreamRequest {
             max_output_tokens: None,
             temperature: None,
             images: Vec::new(),
+            response_mime_type: None,
+            response_schema: None,
         }
     }
 
@@ -106,6 +119,16 @@ impl StreamRequest {
 
     pub fn with_images(mut self, images: Vec<InlineImage>) -> Self {
         self.images = images;
+        self
+    }
+
+    pub fn with_response_mime_type(mut self, mime: impl Into<String>) -> Self {
+        self.response_mime_type = Some(mime.into());
+        self
+    }
+
+    pub fn with_response_schema(mut self, schema: serde_json::Value) -> Self {
+        self.response_schema = Some(schema);
         self
     }
 }
@@ -245,6 +268,30 @@ mod tests {
         let v: serde_json::Value = serde_json::to_value(&req).unwrap();
         assert_eq!(v["images"][0]["mime_type"], "image/jpeg");
         assert_eq!(v["images"][0]["data_base64"], "QUJD");
+    }
+
+    #[test]
+    fn structured_output_fields_skip_when_unset() {
+        let req = StreamRequest::new("gemini-2.5-flash", vec![Message::user("hi")]);
+        let v: serde_json::Value = serde_json::to_value(&req).unwrap();
+        assert!(v.get("response_mime_type").is_none());
+        assert!(v.get("response_schema").is_none());
+    }
+
+    #[test]
+    fn structured_output_builders_set_and_serialize() {
+        let schema = serde_json::json!({
+            "type": "OBJECT",
+            "properties": { "ok": { "type": "BOOLEAN" } },
+        });
+        let req = StreamRequest::new("gemini-2.5-flash", vec![Message::user("hi")])
+            .with_response_mime_type("application/json")
+            .with_response_schema(schema.clone());
+        assert_eq!(req.response_mime_type.as_deref(), Some("application/json"));
+        assert_eq!(req.response_schema.as_ref(), Some(&schema));
+        let v: serde_json::Value = serde_json::to_value(&req).unwrap();
+        assert_eq!(v["response_mime_type"], "application/json");
+        assert_eq!(v["response_schema"]["type"], "OBJECT");
     }
 
     #[test]

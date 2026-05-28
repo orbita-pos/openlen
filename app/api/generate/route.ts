@@ -8,7 +8,9 @@ import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { generateHtmlStream } from "@/lib/ai-stream/generate";
 import { selectReferenceTemplate } from "@/lib/templates/select-reference";
 import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
-import type { InlineImage } from "@/lib/ai-gateway";
+import { critiqueGeneratedPage } from "@/lib/ai/vision-critique";
+import { recordCriticRun, recordRegenOutcome } from "@/lib/ai/quality-metrics";
+import type { InlineImage, Message } from "@/lib/ai-gateway";
 import {
   PLAN_LIMITS,
   checkAndConsume,
@@ -251,94 +253,173 @@ ${brief}`;
           `[generate] auth + quota + credits ok — calling ${PROVIDER.label}`,
         );
 
-        const { stream, done } = generateHtmlStream({
-          apiKey: PROVIDER.key as string,
-          messages,
-          images: referenceImages,
-          model: aiModel,
-          userId,
-          signal: upstreamAbort.signal,
-          // Fresh pages have no need for op-ids; they're a chat-tab
-          // protocol marker injected at edit time by tagWithOpIds. Saving
-          // them with the project bloats every row and re-tagging on every
-          // chat turn would still rewrite them, so leave them off.
-          htmlOpts: { injectOpIds: false },
-          maxOutputTokens: 65_536,
-          temperature: 0.8,
-        });
+        // One generation pass: stream HTML chunks to the client, await the
+        // canonical post-process HTML, then validate it. Returns the validated
+        // document or a user-facing error message. Used for both the initial
+        // pass and the (optional) critic-driven regen — the regen re-streams
+        // so the live preview shows the better version coming together.
+        const runPass = async (
+          genMessages: Message[],
+          label: string,
+        ): Promise<{ ok: true; html: string } | { ok: false; message: string }> => {
+          const { stream, done } = generateHtmlStream({
+            apiKey: PROVIDER.key as string,
+            messages: genMessages,
+            images: referenceImages,
+            model: aiModel,
+            userId,
+            signal: upstreamAbort.signal,
+            // Fresh pages have no need for op-ids; they're a chat-tab
+            // protocol marker injected at edit time by tagWithOpIds. Saving
+            // them with the project bloats every row and re-tagging on every
+            // chat turn would still rewrite them, so leave them off.
+            htmlOpts: { injectOpIds: false },
+            maxOutputTokens: 65_536,
+            temperature: 0.8,
+          });
 
-        // Pipe per-write HTML chunks to the SSE client as `html_chunk`
-        // events. HtmlStream already sanitizes + applies the born-canonical
-        // marker pass on end(); the chunks here are the same bytes the
-        // final document will contain (sans normalize-time rewrites).
-        const reader = stream.getReader();
-        const decoder = new TextDecoder();
-        let loggedFirst = false;
-        while (true) {
-          let chunk: ReadableStreamReadResult<Uint8Array>;
-          try {
-            chunk = await reader.read();
-          } catch (readErr) {
-            // The stream errored — break out and surface via `done`.
-            // eslint-disable-next-line no-console
-            console.error("[generate] reader error", readErr);
-            break;
-          }
-          if (chunk.done) break;
-          const text = decoder.decode(chunk.value, { stream: true });
-          if (text.length > 0) {
-            if (!loggedFirst) {
-              loggedFirst = true;
+          // Pipe per-write HTML chunks to the SSE client as `html_chunk`
+          // events. HtmlStream already sanitizes + applies the born-canonical
+          // marker pass on end(); the chunks here are the same bytes the
+          // final document will contain (sans normalize-time rewrites).
+          const reader = stream.getReader();
+          const decoder = new TextDecoder();
+          let loggedFirst = false;
+          while (true) {
+            let chunk: ReadableStreamReadResult<Uint8Array>;
+            try {
+              chunk = await reader.read();
+            } catch (readErr) {
+              // The stream errored — break out and surface via `done`.
               // eslint-disable-next-line no-console
-              console.log("[generate] streaming started");
+              console.error(`[generate] reader error (${label})`, readErr);
+              break;
             }
-            totalHtmlChars += text.length;
-            emit("html_chunk", { text });
+            if (chunk.done) break;
+            const text = decoder.decode(chunk.value, { stream: true });
+            if (text.length > 0) {
+              if (!loggedFirst) {
+                loggedFirst = true;
+                // eslint-disable-next-line no-console
+                console.log(`[generate] streaming started (${label})`);
+              }
+              totalHtmlChars += text.length;
+              emit("html_chunk", { text });
+            }
+          }
+
+          const summary = await done;
+
+          if (summary.stopKind === "error" || !summary.finalHtml) {
+            return {
+              ok: false,
+              message: summary.error?.message ?? "Generation failed — try again.",
+            };
+          }
+
+          // Gemini occasionally wraps the output in ```html...``` fences
+          // despite the system prompt forbidding it. Strip a possible fence
+          // pair before validating — same safety net the Kimi-era route had.
+          const passHtml = stripMarkdownFences(summary.finalHtml);
+
+          if (passHtml.length < 1000 || !/^<!doctype/i.test(passHtml)) {
+            return {
+              ok: false,
+              message:
+                "The model didn't return a complete HTML document. Try again.",
+            };
+          }
+          if (!/<\/html>\s*$/i.test(passHtml)) {
+            return {
+              ok: false,
+              message:
+                summary.stopKind === "max_tokens"
+                  ? "The page hit the model's output cap before finishing. Try a shorter, more focused brief."
+                  : "The page ended without a closing </html>. Try again.",
+            };
+          }
+          if (detectSlotPath(passHtml)) {
+            return {
+              ok: false,
+              message: "The model emitted editor-mode markers — try again.",
+            };
+          }
+
+          // eslint-disable-next-line no-console
+          console.log(
+            `[generate] tokens (${label}) — prompt: ${summary.usage?.inputTokens ?? "?"}, output: ${summary.usage?.outputTokens ?? "?"} → ${summary.creditsDebited} credits`,
+          );
+          return { ok: true, html: passHtml };
+        };
+
+        // ── Initial pass ────────────────────────────────────────────────────
+        const first = await runPass(messages, "initial");
+        if (!first.ok) {
+          emit("error", { message: first.message });
+          closeStream();
+          return;
+        }
+        let html = first.html;
+        let regenerated = false;
+
+        // ── Vision critic loop (Quality S3) ─────────────────────────────────
+        // Render the page, show Gemini Flash the screenshot, and regenerate
+        // with surgical feedback if the verdict says the page is visually
+        // broken. The win is variance reduction — catching the ~5% of broken
+        // pages before they reach the user — not raising the average.
+        //
+        // Kill switch: OPENLEN_VISION_CRITIC=0 falls back to S2 one-shot
+        // behavior (no critic call). Default ON. Capped at exactly ONE regen —
+        // a flawed page beats a third try the user has to wait on. Born-
+        // canonical normalization already ran inside each runPass (HtmlStream
+        // .end()), so the chosen final — first pass or regen — is canonical;
+        // nothing re-normalizes between critique and regen.
+        if (process.env.OPENLEN_VISION_CRITIC !== "0") {
+          emit("critic-checking", {});
+          const verdict = await critiqueGeneratedPage({
+            brief,
+            html,
+            model: "gemini-3.5-flash",
+            apiKey: PROVIDER.key as string,
+          });
+          recordCriticRun({
+            shouldRegenerate: verdict.shouldRegenerate,
+            fallback: verdict.fallback,
+          });
+          // eslint-disable-next-line no-console
+          console.log(
+            `[critic] regen=${verdict.shouldRegenerate ? "triggered" : "skipped"}`,
+          );
+
+          if (verdict.shouldRegenerate) {
+            // Reason goes to the client only to drive a neutral "improving the
+            // design…" state — never the raw critic text (bad UX to tell a
+            // user their page looked bad).
+            emit("regen-starting", { reason: verdict.issues.join("; ") });
+            const regenBriefBlock = `<critic-feedback>\n${verdict.regenerationFeedback}\n\nIssues found in the previous attempt: ${verdict.issues.join(", ")}\n</critic-feedback>\n\n${briefBlock}`;
+            const regenMessages: Message[] = [
+              { role: "system", content: SYSTEM_PROMPT },
+              { role: "user", content: REFERENCE_MESSAGE },
+              { role: "user", content: regenBriefBlock },
+            ];
+            const regen = await runPass(regenMessages, "regen");
+            if (regen.ok) {
+              html = regen.html;
+              regenerated = true;
+              recordRegenOutcome(true);
+            } else {
+              // Regen produced invalid HTML — ship the (already-valid) first
+              // pass rather than error or wait for a third try.
+              // eslint-disable-next-line no-console
+              console.warn(
+                `[generate] regen failed validation (${regen.message}) — shipping first pass`,
+              );
+              recordRegenOutcome(false);
+            }
           }
         }
 
-        const summary = await done;
-
-        if (summary.stopKind === "error" || !summary.finalHtml) {
-          emit("error", {
-            message:
-              summary.error?.message ?? "Generation failed — try again.",
-          });
-          closeStream();
-          return;
-        }
-
-        // Gemini occasionally wraps the output in ```html...``` fences
-        // despite the system prompt forbidding it. Strip a possible fence
-        // pair before validating — same safety net the Kimi-era route had.
-        const html = stripMarkdownFences(summary.finalHtml);
-
-        if (html.length < 1000 || !/^<!doctype/i.test(html)) {
-          emit("error", {
-            message:
-              "The model didn't return a complete HTML document. Try again.",
-          });
-          closeStream();
-          return;
-        }
-        if (!/<\/html>\s*$/i.test(html)) {
-          emit("error", {
-            message:
-              summary.stopKind === "max_tokens"
-                ? "The page hit the model's output cap before finishing. Try a shorter, more focused brief."
-                : "The page ended without a closing </html>. Try again.",
-          });
-          closeStream();
-          return;
-        }
-        if (detectSlotPath(html)) {
-          emit("error", {
-            message: "The model emitted editor-mode markers — try again.",
-          });
-          closeStream();
-          return;
-        }
-
+        // ── Save the chosen final document ──────────────────────────────────
         const title = extractTitle(html) ?? brief.slice(0, 60).trim();
 
         let projectId: string;
@@ -361,19 +442,14 @@ ${brief}`;
         await createVersion({
           projectId,
           html,
-          label: `Generated: ${title}`,
+          label: regenerated ? `Generated (regen): ${title}` : `Generated: ${title}`,
           source: "initial",
         }).catch((err: unknown) => {
           // eslint-disable-next-line no-console
           console.error("[generate] initial version snapshot failed", err);
         });
 
-        // eslint-disable-next-line no-console
-        console.log(
-          `[generate] tokens — prompt: ${summary.usage?.inputTokens ?? "?"}, output: ${summary.usage?.outputTokens ?? "?"} → ${summary.creditsDebited} credits`,
-        );
-
-        emit("project_saved", { projectId, title });
+        emit("project_saved", { projectId, title, regenerated });
         closeStream();
       } catch (err) {
         upstreamAbort.abort();
