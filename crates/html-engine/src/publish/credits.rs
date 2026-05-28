@@ -85,15 +85,12 @@ pub fn consolidate_unsplash_credits(html: &str) -> ConsolidationResult {
     let mut seen_urls: std::collections::HashSet<String> = std::collections::HashSet::new();
     if let Ok(spans) = doc.select(r#"[data-openlen-credit="unsplash"]"#) {
         for span in spans {
-            let first_anchor = span
-                .as_node()
-                .descendants()
-                .find(|n| {
-                    matches!(
-                        n.data(),
-                        NodeData::Element(d) if d.name.local.as_ref() == "a"
-                    )
-                });
+            let first_anchor = span.as_node().descendants().find(|n| {
+                matches!(
+                    n.data(),
+                    NodeData::Element(d) if d.name.local.as_ref() == "a"
+                )
+            });
             let anchor = match first_anchor {
                 Some(a) => a,
                 None => continue,
@@ -115,10 +112,7 @@ pub fn consolidate_unsplash_credits(html: &str) -> ConsolidationResult {
                 continue;
             }
             if seen_urls.insert(author_url.clone()) {
-                credits.push(UnsplashCredit {
-                    author,
-                    author_url,
-                });
+                credits.push(UnsplashCredit { author, author_url });
             }
         }
     }
@@ -130,12 +124,7 @@ pub fn consolidate_unsplash_credits(html: &str) -> ConsolidationResult {
     let mut anonymous_unsplash_count: u32 = 0;
     if let Ok(imgs) = doc.select("img") {
         for img in imgs {
-            let src = img
-                .attributes
-                .borrow()
-                .get("src")
-                .unwrap_or("")
-                .to_string();
+            let src = img.attributes.borrow().get("src").unwrap_or("").to_string();
             if !UNSPLASH_CDN_RE.is_match(&src) {
                 continue;
             }
@@ -402,16 +391,19 @@ mod tests {
         let twice = run(&once.html);
         // Counts match between runs (the strip+rewrite produced the same set).
         assert_eq!(once.credits, twice.credits);
-        assert_eq!(once.anonymous_unsplash_count, twice.anonymous_unsplash_count);
+        assert_eq!(
+            once.anonymous_unsplash_count,
+            twice.anonymous_unsplash_count
+        );
         // No duplicate meta or aggregate elements.
         assert_eq!(
-            twice
-                .html
-                .matches(r#"name="image-source""#)
-                .count(),
+            twice.html.matches(r#"name="image-source""#).count(),
             once.html.matches(r#"name="image-source""#).count(),
         );
-        assert_eq!(twice.html.matches("data-openlen-credits-aggregate").count(), 1);
+        assert_eq!(
+            twice.html.matches("data-openlen-credits-aggregate").count(),
+            1
+        );
     }
 
     #[test]

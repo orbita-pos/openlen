@@ -105,7 +105,7 @@ mod tests {
     #[test]
     fn memory_spec_serializes_snake_case_fields() {
         let s = MemorySpec::new(5, 60_000);
-        let v = serde_json::to_value(&s).unwrap();
+        let v = serde_json::to_value(s).unwrap();
         assert_eq!(v["limit"], 5);
         assert_eq!(v["window_ms"], 60_000);
     }

@@ -170,13 +170,11 @@ impl TryFrom<LimitWindow> for NativeLimitWindow {
     type Error = napi::Error;
     fn try_from(w: LimitWindow) -> std::result::Result<Self, Self::Error> {
         if w.window_ms == 0 {
-            return Err(napi::Error::from_reason(
-                rate_limit_envelope(
-                    "invalid_window",
-                    false,
-                    "window_ms must be > 0",
-                ),
-            ));
+            return Err(napi::Error::from_reason(rate_limit_envelope(
+                "invalid_window",
+                false,
+                "window_ms must be > 0",
+            )));
         }
         if w.max == 0 {
             return Err(napi::Error::from_reason(rate_limit_envelope(
@@ -269,8 +267,7 @@ impl RateLimiter {
             .map(u64::from)
             .unwrap_or_else(|| DEFAULT_GC_INTERVAL.as_millis() as u64);
 
-        let memory =
-            Arc::new(MemoryLimiter::new().with_idle_eviction_ms(idle_ms));
+        let memory = Arc::new(MemoryLimiter::new().with_idle_eviction_ms(idle_ms));
         let gc_handle = memory.spawn_gc(Duration::from_millis(gc_ms));
 
         Self {
@@ -285,12 +282,7 @@ impl RateLimiter {
     /// A non-positive `windowMs` fails open with `allowed = true` to match
     /// the TS behaviour.
     #[napi]
-    pub fn try_consume(
-        &self,
-        key: String,
-        limit: u32,
-        window_ms: u32,
-    ) -> ConsumeOutcome {
+    pub fn try_consume(&self, key: String, limit: u32, window_ms: u32) -> ConsumeOutcome {
         if window_ms == 0 || limit == 0 {
             return ConsumeOutcome {
                 allowed: true,
