@@ -66,6 +66,12 @@ pub struct Variant {
     pub format: Format,
     /// Encoder quality 1..=100. Ignored for PNG (lossless).
     pub quality: u8,
+    /// WebP-only: separate quality knob for the alpha channel (0..=100).
+    /// When `None`, alpha is encoded at the same quality as the color
+    /// channels (sharp's default when `alphaQuality` is omitted). When
+    /// `Some`, libwebp's WebPConfig is used to encode color and alpha
+    /// independently. No effect on AVIF / JPEG / PNG variants.
+    pub alpha_quality: Option<u8>,
 }
 
 #[derive(Debug, Clone)]
@@ -215,7 +221,7 @@ pub fn process_image(req: ProcessRequest) -> Result<ProcessResult, ImageError> {
         };
         let (rw, rh) = (resized.width(), resized.height());
         let bytes = match v.format {
-            Format::Webp => encoders::webp::encode(resized, v.quality)?,
+            Format::Webp => encoders::webp::encode(resized, v.quality, v.alpha_quality)?,
             Format::Avif => encoders::avif::encode(resized, v.quality)?,
             Format::Jpeg => encoders::jpeg::encode(resized, v.quality)?,
             // PNG ignores the quality knob; the variant-level setting
@@ -259,6 +265,7 @@ mod tests {
                 max_height: None,
                 format: Format::Webp,
                 quality: 80,
+                alpha_quality: None,
             }],
             auto_orient: true,
             without_enlargement: true,
@@ -288,6 +295,7 @@ mod tests {
                 max_height: None,
                 format: Format::Webp,
                 quality: 80,
+                alpha_quality: None,
             }],
             auto_orient: true,
             without_enlargement: true,
@@ -306,6 +314,7 @@ mod tests {
                 max_height: None,
                 format: Format::Webp,
                 quality: 80,
+                alpha_quality: None,
             }],
             auto_orient: false,
             without_enlargement: true,
@@ -334,18 +343,21 @@ mod tests {
                     max_height: None,
                     format: Format::Webp,
                     quality: 80,
+                    alpha_quality: None,
                 },
                 Variant {
                     width: 100,
                     max_height: None,
                     format: Format::Avif,
                     quality: 65,
+                    alpha_quality: None,
                 },
                 Variant {
                     width: 100,
                     max_height: None,
                     format: Format::Jpeg,
                     quality: 85,
+                    alpha_quality: None,
                 },
             ],
             auto_orient: false,
@@ -374,6 +386,7 @@ mod tests {
                 max_height: None,
                 format: Format::Webp,
                 quality: 80,
+                alpha_quality: None,
             }],
             auto_orient: false,
             without_enlargement: true,
@@ -395,6 +408,7 @@ mod tests {
                 max_height: None,
                 format: Format::Png,
                 quality: 0,
+                alpha_quality: None,
             }],
             auto_orient: false,
             without_enlargement: false,
@@ -416,18 +430,21 @@ mod tests {
                     max_height: None,
                     format: Format::Webp,
                     quality: 80,
+                    alpha_quality: None,
                 },
                 Variant {
                     width: 100,
                     max_height: None,
                     format: Format::Webp,
                     quality: 80,
+                    alpha_quality: None,
                 },
                 Variant {
                     width: 50,
                     max_height: None,
                     format: Format::Webp,
                     quality: 80,
+                    alpha_quality: None,
                 },
             ],
             auto_orient: false,
@@ -466,6 +483,7 @@ mod tests {
                 max_height: Some(200),
                 format: Format::Webp,
                 quality: 80,
+                alpha_quality: None,
             }],
             auto_orient: false,
             without_enlargement: true,
@@ -489,6 +507,7 @@ mod tests {
                 max_height: Some(200),
                 format: Format::Webp,
                 quality: 80,
+                alpha_quality: None,
             }],
             auto_orient: false,
             without_enlargement: true,
@@ -511,6 +530,7 @@ mod tests {
                 max_height: None,
                 format: Format::Webp,
                 quality: 80,
+                alpha_quality: None,
             }],
             auto_orient: false,
             without_enlargement: true,
@@ -531,6 +551,7 @@ mod tests {
                 max_height: None,
                 format: Format::Webp,
                 quality: 80,
+                alpha_quality: None,
             }],
             auto_orient: false,
             without_enlargement: true,
@@ -550,6 +571,7 @@ mod tests {
                 max_height: None,
                 format: Format::Webp,
                 quality: 80,
+                alpha_quality: None,
             }],
             auto_orient: false,
             without_enlargement: true,
@@ -584,6 +606,7 @@ mod tests {
                 max_height: None,
                 format: Format::Webp,
                 quality: 80,
+                alpha_quality: None,
             }],
             auto_orient: true,
             without_enlargement: true,

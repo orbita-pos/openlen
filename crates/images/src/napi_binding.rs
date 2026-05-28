@@ -120,6 +120,10 @@ pub async fn process_image(req: ProcessRequestJs) -> Result<ProcessResultJs> {
                 max_height: v.max_height,
                 format: fmt,
                 quality: v.quality.min(100) as u8,
+                // Phase E wires the JS-side `alphaQuality` knob through.
+                // For now the napi entry always passes None (symmetric
+                // quality, matching today's behaviour exactly).
+                alpha_quality: None,
             })
         })
         .collect::<Result<Vec<_>>>()?;
