@@ -12,7 +12,8 @@ import {
 import { DESIGN_GUIDANCE, DESIGN_REFERENCE } from "@/lib/design-guidance";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { detectSlotPath } from "@/lib/html-engine";
-import { GeminiProvider, type Message } from "@/lib/ai-gateway";
+import { GeminiProvider, type InlineImage, type Message } from "@/lib/ai-gateway";
+import { renderHtmlToInlineImage } from "@/lib/ai/inline-image";
 import {
   applyOps,
   buildScopedView,
@@ -461,13 +462,39 @@ ${DESIGN_REFERENCE}
     )}K tokens${scopedView ? " (scoped)" : ""}${attachedImage ? " +image" : ""}`,
   );
 
+  // Quality S2 — render the CURRENT page to a full-page image and attach it
+  // as VISUAL CONTEXT so the model can see what it's editing (spacing,
+  // hierarchy, balance). Reference only — never inserted.
+  //
+  // OFF by default: it spawns headless Chromium PER chat turn and we have no
+  // evidence yet that the image moves the needle for ai-design (most turns
+  // mutate the HTML, so a per-turn render rarely earns its cost). Opt in with
+  // OPENLEN_AIDESIGN_PAGE_REFERENCE=1 once a use case proves it (e.g.
+  // "redesign this page as SaaS"). The /api/generate reference — the
+  // paper-backed win — is unconditional. Also skipped when the user attached
+  // an image (avoid two-image confusion). Best-effort: a render failure just
+  // proceeds text-only.
+  let referenceImages: InlineImage[] | undefined;
+  let finalUserContent = userMessageContent;
+  if (!attachedImage && process.env.OPENLEN_AIDESIGN_PAGE_REFERENCE === "1") {
+    const rendered = await renderHtmlToInlineImage(currentHtml);
+    if (rendered) {
+      referenceImages = [rendered];
+      finalUserContent = `${userMessageContent}
+
+VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (what the user sees right now). Use it only to judge the present visual state — spacing, hierarchy, balance, what's already there — when deciding your edit. It is REFERENCE ONLY: do NOT insert it as an <img>, and do NOT treat it as a "USER ATTACHED IMAGE".`;
+      // eslint-disable-next-line no-console
+      console.log("[ai-design] attached current-page render as visual context");
+    }
+  }
+
   const messages: Message[] = [
     { role: "system", content: SYSTEM_PROMPT },
     { role: "user", content: referenceMessage },
     ...history,
     {
       role: "user",
-      content: userMessageContent,
+      content: finalUserContent,
     },
   ];
 
@@ -573,6 +600,7 @@ ${DESIGN_REFERENCE}
           {
             model: PROVIDER.model,
             messages,
+            images: referenceImages,
             // Structural rebuilds on dense editorial templates regularly
             // exceed 32K. 64K is well within Gemini 2.5 Pro's per-response
             // cap and keeps the truncation edge case rare without making

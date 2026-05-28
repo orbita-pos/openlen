@@ -320,9 +320,39 @@ struct GeminiRequestContent {
     parts: Vec<GeminiRequestPart>,
 }
 
+/// A native Gemini content part. Carries EITHER `text` OR `inlineData`
+/// (never both); the unused field is skipped so a text part serializes to
+/// `{"text":"…"}` and an image part to `{"inlineData":{…}}`.
 #[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
 struct GeminiRequestPart {
-    text: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    text: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    inline_data: Option<GeminiInlineData>,
+}
+
+impl GeminiRequestPart {
+    fn text(s: String) -> Self {
+        Self {
+            text: Some(s),
+            inline_data: None,
+        }
+    }
+
+    fn image(mime_type: String, data: String) -> Self {
+        Self {
+            text: None,
+            inline_data: Some(GeminiInlineData { mime_type, data }),
+        }
+    }
+}
+
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct GeminiInlineData {
+    mime_type: String,
+    data: String,
 }
 
 #[derive(Serialize, Debug)]
@@ -345,21 +375,34 @@ fn build_request_body(request: &StreamRequest) -> GeminiRequestBody {
 
     for msg in &request.messages {
         match msg.role {
-            Role::System => system_parts.push(GeminiRequestPart {
-                text: msg.content.clone(),
-            }),
+            Role::System => system_parts.push(GeminiRequestPart::text(msg.content.clone())),
             Role::User => contents.push(GeminiRequestContent {
                 role: "user",
-                parts: vec![GeminiRequestPart {
-                    text: msg.content.clone(),
-                }],
+                parts: vec![GeminiRequestPart::text(msg.content.clone())],
             }),
             Role::Assistant => contents.push(GeminiRequestContent {
                 role: "model",
-                parts: vec![GeminiRequestPart {
-                    text: msg.content.clone(),
-                }],
+                parts: vec![GeminiRequestPart::text(msg.content.clone())],
             }),
+        }
+    }
+
+    // Quality S2: attach reference images as native inlineData parts on the
+    // LAST user content (the brief turn in /api/generate, the current-doc
+    // turn in /api/templates/ai-design). If there's no user content at all,
+    // synthesize one to carry them.
+    if !request.images.is_empty() {
+        let image_parts = request
+            .images
+            .iter()
+            .map(|img| GeminiRequestPart::image(img.mime_type.clone(), img.data_base64.clone()));
+        if let Some(last_user) = contents.iter_mut().rev().find(|c| c.role == "user") {
+            last_user.parts.extend(image_parts);
+        } else {
+            contents.push(GeminiRequestContent {
+                role: "user",
+                parts: image_parts.collect(),
+            });
         }
     }
 
@@ -428,7 +471,8 @@ mod tests {
         let body = build_request_body(&req);
         assert_eq!(body.contents.len(), 1);
         assert_eq!(body.contents[0].role, "user");
-        assert_eq!(body.contents[0].parts[0].text, "hi");
+        assert_eq!(body.contents[0].parts[0].text.as_deref(), Some("hi"));
+        assert!(body.contents[0].parts[0].inline_data.is_none());
         assert!(body.system_instruction.is_none());
         assert!(body.generation_config.is_none());
     }
@@ -459,7 +503,7 @@ mod tests {
         assert_eq!(body.contents[0].role, "user");
         let si = body.system_instruction.as_ref().unwrap();
         assert_eq!(si.parts.len(), 1);
-        assert_eq!(si.parts[0].text, "you are a helpful assistant");
+        assert_eq!(si.parts[0].text.as_deref(), Some("you are a helpful assistant"));
     }
 
     #[test]
@@ -475,8 +519,8 @@ mod tests {
         let body = build_request_body(&req);
         let si = body.system_instruction.as_ref().unwrap();
         assert_eq!(si.parts.len(), 2);
-        assert_eq!(si.parts[0].text, "part one");
-        assert_eq!(si.parts[1].text, "part two");
+        assert_eq!(si.parts[0].text.as_deref(), Some("part one"));
+        assert_eq!(si.parts[1].text.as_deref(), Some("part two"));
     }
 
     #[test]
@@ -525,6 +569,82 @@ mod tests {
 
         assert_eq!(v["generationConfig"]["temperature"], 0.5);
         assert_eq!(v["generationConfig"]["maxOutputTokens"], 100);
+    }
+
+    #[test]
+    fn build_request_body_appends_image_to_last_user_content() {
+        let req = StreamRequest::new(
+            "gemini-2.5-flash",
+            vec![Message::system("be brief"), Message::user("the brief")],
+        )
+        .with_images(vec![crate::types::InlineImage {
+            mime_type: "image/jpeg".into(),
+            data_base64: "QUJD".into(),
+        }]);
+        let body = build_request_body(&req);
+        assert_eq!(body.contents.len(), 1);
+        assert_eq!(body.contents[0].role, "user");
+        assert_eq!(body.contents[0].parts.len(), 2);
+        assert_eq!(body.contents[0].parts[0].text.as_deref(), Some("the brief"));
+        let img = body.contents[0].parts[1].inline_data.as_ref().unwrap();
+        assert_eq!(img.mime_type, "image/jpeg");
+        assert_eq!(img.data, "QUJD");
+
+        // Wire JSON uses native camelCase inlineData / mimeType.
+        let v: serde_json::Value = serde_json::to_value(&body).unwrap();
+        assert_eq!(v["contents"][0]["parts"][0]["text"], "the brief");
+        assert_eq!(
+            v["contents"][0]["parts"][1]["inlineData"]["mimeType"],
+            "image/jpeg"
+        );
+        assert_eq!(v["contents"][0]["parts"][1]["inlineData"]["data"], "QUJD");
+    }
+
+    #[test]
+    fn build_request_body_attaches_image_to_last_user_not_first() {
+        let req = StreamRequest::new(
+            "gemini-2.5-flash",
+            vec![
+                Message::user("reference catalog"),
+                Message::assistant("ok"),
+                Message::user("the brief"),
+            ],
+        )
+        .with_images(vec![crate::types::InlineImage {
+            mime_type: "image/png".into(),
+            data_base64: "Zm9v".into(),
+        }]);
+        let body = build_request_body(&req);
+        // First user content untouched; the LAST user content gets the image.
+        assert_eq!(body.contents[0].parts.len(), 1);
+        assert!(body.contents[0].parts[0].inline_data.is_none());
+        let last = body.contents.last().unwrap();
+        assert_eq!(last.role, "user");
+        assert_eq!(last.parts.len(), 2);
+        assert!(last.parts[1].inline_data.is_some());
+    }
+
+    #[test]
+    fn build_request_body_no_images_emits_no_inline_data() {
+        let req = StreamRequest::new("gemini-2.5-flash", vec![Message::user("hi")]);
+        let body = build_request_body(&req);
+        let v: serde_json::Value = serde_json::to_value(&body).unwrap();
+        assert!(v["contents"][0]["parts"][0].get("inlineData").is_none());
+        assert_eq!(body.contents[0].parts.len(), 1);
+    }
+
+    #[test]
+    fn build_request_body_synthesizes_user_content_for_image_without_user_msg() {
+        let req = StreamRequest::new("gemini-2.5-flash", vec![Message::system("be brief")])
+            .with_images(vec![crate::types::InlineImage {
+                mime_type: "image/jpeg".into(),
+                data_base64: "QUJD".into(),
+            }]);
+        let body = build_request_body(&req);
+        assert_eq!(body.contents.len(), 1);
+        assert_eq!(body.contents[0].role, "user");
+        assert_eq!(body.contents[0].parts.len(), 1);
+        assert!(body.contents[0].parts[0].inline_data.is_some());
     }
 
     #[test]

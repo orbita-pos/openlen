@@ -27,6 +27,18 @@ export const CREDITS_BY_PLAN: Record<Plan, number> = {
  *  isn't token-metered like generate / chat. */
 export const AUTOFILL_CREDIT_COST = 5;
 
+/** Quality S2 multimodal reference — upper bound on the extra cost of the
+ *  reference image attached to a generate / chat-edit call. NO separate debit
+ *  is applied: the image is sent as a native `inlineData` part, so its input
+ *  tokens are already included in the `promptTokenCount` Gemini reports and
+ *  are billed automatically by `creditsForUsage`. A 1280-wide full-page JPG
+ *  costs ≈258–516 image tokens on Flash (~free) and ≈$0.002 on Pro — under
+ *  one credit either way, hence this generous round-up. Gemini does NOT cache
+ *  user-message images across calls (unlike Anthropic), so every request
+ *  re-sends the bytes; at this token volume the cost is negligible. This
+ *  constant exists for documentation / future surfacing, not for debiting. */
+export const REFERENCE_IMAGE_CREDIT_OVERHEAD = 1;
+
 /** One credit = this much raw model cost, in USD. */
 const USD_PER_CREDIT = 0.01;
 

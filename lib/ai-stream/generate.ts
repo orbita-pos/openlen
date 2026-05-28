@@ -39,6 +39,7 @@
 
 import {
   GeminiProvider as RealGeminiProvider,
+  type InlineImage,
   type Message,
   type StreamEvent,
 } from "@/lib/ai-gateway";
@@ -102,6 +103,9 @@ export interface GenerateHtmlStreamOpts {
   /** Gemini API key. */
   apiKey: string;
   messages: Message[];
+  /** Reference images attached to the last user message (Quality S2
+   *  multimodal reference). Empty/omitted = text-only. */
+  images?: InlineImage[];
   /** Credit-rate key + provider model picker. Defaults to "gemini-pro". */
   model?: AIModel;
   /** Cancel the in-flight generation. The stream closes within ~500 ms;
@@ -179,6 +183,7 @@ export interface GeminiProviderLike {
       messages: Message[];
       maxOutputTokens?: number;
       temperature?: number;
+      images?: InlineImage[];
     },
     opts: { signal?: AbortSignal },
   ): AsyncIterableIterator<StreamEvent>;
@@ -266,6 +271,7 @@ export function generateHtmlStream(
             messages: opts.messages,
             maxOutputTokens: opts.maxOutputTokens,
             temperature: opts.temperature,
+            images: opts.images,
           },
           { signal: internalAbort.signal },
         );

@@ -41,8 +41,9 @@ use napi_derive::napi;
 use crate::error::GatewayError;
 use crate::tokenizer;
 use crate::types::{
-    Message as NativeMessage, Role as NativeRole, StopReason as NativeStopReason,
-    StreamEvent as NativeStreamEvent, StreamRequest as NativeStreamRequest,
+    InlineImage as NativeInlineImage, Message as NativeMessage, Role as NativeRole,
+    StopReason as NativeStopReason, StreamEvent as NativeStreamEvent,
+    StreamRequest as NativeStreamRequest,
 };
 
 // --- Public-typed marshalling structs --------------------------------------
@@ -57,6 +58,16 @@ pub struct Message {
     pub content: String,
 }
 
+/// A reference image attached to a request, marshalled as JS
+/// `{ mimeType: string, dataBase64: string }`. Rendered as a native Gemini
+/// `inlineData` part on the last user content (Quality S2).
+#[napi(object)]
+#[derive(Debug, Clone)]
+pub struct InlineImage {
+    pub mime_type: String,
+    pub data_base64: String,
+}
+
 #[napi(object)]
 #[derive(Debug, Clone)]
 pub struct StreamRequest {
@@ -68,6 +79,8 @@ pub struct StreamRequest {
     /// rounding error for a temperature in `[0.0, 2.0]` is below
     /// `1e-7`, well inside Gemini's tolerance.
     pub temperature: Option<f64>,
+    /// Reference images. Omitted / empty for the text-only path.
+    pub images: Option<Vec<InlineImage>>,
 }
 
 /// Flat-tagged discriminated union. The `type` field is always present;
@@ -116,6 +129,15 @@ impl TryFrom<Message> for NativeMessage {
     }
 }
 
+impl From<InlineImage> for NativeInlineImage {
+    fn from(i: InlineImage) -> Self {
+        NativeInlineImage {
+            mime_type: i.mime_type,
+            data_base64: i.data_base64,
+        }
+    }
+}
+
 impl TryFrom<StreamRequest> for NativeStreamRequest {
     type Error = napi::Error;
 
@@ -131,6 +153,9 @@ impl TryFrom<StreamRequest> for NativeStreamRequest {
         }
         if let Some(t) = r.temperature {
             req = req.with_temperature(t as f32);
+        }
+        if let Some(images) = r.images {
+            req = req.with_images(images.into_iter().map(NativeInlineImage::from).collect());
         }
         Ok(req)
     }
@@ -335,6 +360,7 @@ mod tests {
             }],
             max_output_tokens: Some(256),
             temperature: Some(0.2),
+            images: None,
         };
         let native: NativeStreamRequest = r.try_into().unwrap();
         assert_eq!(native.model, "gemini-2.5-flash");
@@ -342,6 +368,28 @@ mod tests {
         assert!((native.temperature.unwrap() - 0.2).abs() < 1e-6);
         assert_eq!(native.messages.len(), 1);
         assert_eq!(native.messages[0].role, NativeRole::System);
+        assert!(native.images.is_empty());
+    }
+
+    #[test]
+    fn stream_request_try_from_maps_images() {
+        let r = StreamRequest {
+            model: "gemini-2.5-flash".to_owned(),
+            messages: vec![Message {
+                role: "user".to_owned(),
+                content: "hi".to_owned(),
+            }],
+            max_output_tokens: None,
+            temperature: None,
+            images: Some(vec![InlineImage {
+                mime_type: "image/jpeg".to_owned(),
+                data_base64: "QUJD".to_owned(),
+            }]),
+        };
+        let native: NativeStreamRequest = r.try_into().unwrap();
+        assert_eq!(native.images.len(), 1);
+        assert_eq!(native.images[0].mime_type, "image/jpeg");
+        assert_eq!(native.images[0].data_base64, "QUJD");
     }
 
     #[test]
@@ -354,6 +402,7 @@ mod tests {
             }],
             max_output_tokens: None,
             temperature: None,
+            images: None,
         };
         let err = NativeStreamRequest::try_from(r).unwrap_err();
         assert!(err.to_string().contains("assistant_typo"));

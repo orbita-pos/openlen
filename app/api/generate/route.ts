@@ -6,6 +6,9 @@ import { DESIGN_GUIDANCE, DESIGN_REFERENCE } from "@/lib/design-guidance";
 import { detectSlotPath } from "@/lib/html-engine";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { generateHtmlStream } from "@/lib/ai-stream/generate";
+import { selectReferenceTemplate } from "@/lib/templates/select-reference";
+import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
+import type { InlineImage } from "@/lib/ai-gateway";
 import {
   PLAN_LIMITS,
   checkAndConsume,
@@ -152,10 +155,44 @@ export async function POST(req: Request): Promise<Response> {
     return json({ error: `${PROVIDER.label} API key missing` }, 500);
   }
   const aiModel: AIModel = modelParam === "gemini-pro" ? "gemini-pro" : "gemini-flash";
+
+  // Quality S2 — pick a curated template screenshot as a multimodal quality
+  // reference and attach it (base64 inlineData) to the brief turn, which is
+  // the last user message the gateway anchors images on. Best-effort: a
+  // selector miss or fetch failure falls back cleanly to text-only.
+  let referenceImages: InlineImage[] | undefined;
+  let briefBlock = `BRIEF:\n${brief}`;
+  try {
+    const ref = await selectReferenceTemplate(brief);
+    if (ref) {
+      const img = await fetchImageAsInlineData(ref.screenshotUrl);
+      if (img) {
+        referenceImages = [img];
+        briefBlock = `<reference family="${ref.family}" id="${ref.id}">
+The attached image is a high-quality landing page from our curated set. Match its visual quality, density, spacing discipline, and aesthetic polish. Adapt the layout to fit the brief — do NOT copy sections verbatim.
+</reference>
+
+BRIEF:
+${brief}`;
+        // eslint-disable-next-line no-console
+        console.log(`[generate] reference template: ${ref.id} (family=${ref.family})`);
+      } else {
+        // eslint-disable-next-line no-console
+        console.log(`[generate] reference ${ref.id} chosen but image fetch failed — text-only`);
+      }
+    } else {
+      // eslint-disable-next-line no-console
+      console.log(`[generate] no reference template matched — text-only`);
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[generate] reference selection failed — text-only", err);
+  }
+
   const messages = [
     { role: "system" as const, content: SYSTEM_PROMPT },
     { role: "user" as const, content: REFERENCE_MESSAGE },
-    { role: "user" as const, content: `BRIEF:\n${brief}` },
+    { role: "user" as const, content: briefBlock },
   ];
 
   const upstreamAbort = new AbortController();
@@ -217,6 +254,7 @@ export async function POST(req: Request): Promise<Response> {
         const { stream, done } = generateHtmlStream({
           apiKey: PROVIDER.key as string,
           messages,
+          images: referenceImages,
           model: aiModel,
           userId,
           signal: upstreamAbort.signal,

@@ -53,6 +53,18 @@ impl Message {
     }
 }
 
+/// An inline image attached to a request. Rendered as a native Gemini
+/// `inlineData` part (base64). Added for the Quality S2 multimodal reference:
+/// the native `streamGenerateContent` API does NOT fetch remote URLs, so the
+/// caller fetches the image and passes the base64 bytes here.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct InlineImage {
+    /// MIME type, e.g. `"image/jpeg"` or `"image/png"`.
+    pub mime_type: String,
+    /// Base64-encoded image bytes — no `data:` URI prefix.
+    pub data_base64: String,
+}
+
 /// Input to [`crate::gemini::GeminiProvider::stream`]. The model string is
 /// passed through verbatim to Gemini, e.g. `"gemini-2.5-pro"` or
 /// `"gemini-2.5-flash"`.
@@ -64,6 +76,11 @@ pub struct StreamRequest {
     pub max_output_tokens: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub temperature: Option<f32>,
+    /// Reference images for the request. Attached as native `inlineData`
+    /// parts on the LAST user content. Empty by default — the text-only path
+    /// is byte-for-byte unchanged.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub images: Vec<InlineImage>,
 }
 
 impl StreamRequest {
@@ -73,6 +90,7 @@ impl StreamRequest {
             messages,
             max_output_tokens: None,
             temperature: None,
+            images: Vec::new(),
         }
     }
 
@@ -83,6 +101,11 @@ impl StreamRequest {
 
     pub fn with_temperature(mut self, t: f32) -> Self {
         self.temperature = Some(t);
+        self
+    }
+
+    pub fn with_images(mut self, images: Vec<InlineImage>) -> Self {
+        self.images = images;
         self
     }
 }
@@ -197,9 +220,31 @@ mod tests {
         let v: serde_json::Value = serde_json::to_value(&req).unwrap();
         assert!(v.get("max_output_tokens").is_none());
         assert!(v.get("temperature").is_none());
+        // images defaults empty and is skipped — text-only requests are
+        // byte-for-byte unchanged.
+        assert!(v.get("images").is_none());
         assert_eq!(v["model"], "gemini-2.5-flash");
         assert_eq!(v["messages"][0]["role"], "user");
         assert_eq!(v["messages"][0]["content"], "hi");
+    }
+
+    #[test]
+    fn stream_request_new_defaults_images_empty() {
+        let req = StreamRequest::new("gemini-2.5-flash", vec![Message::user("hi")]);
+        assert!(req.images.is_empty());
+    }
+
+    #[test]
+    fn with_images_attaches_and_serializes() {
+        let req = StreamRequest::new("gemini-2.5-flash", vec![Message::user("hi")])
+            .with_images(vec![InlineImage {
+                mime_type: "image/jpeg".into(),
+                data_base64: "QUJD".into(),
+            }]);
+        assert_eq!(req.images.len(), 1);
+        let v: serde_json::Value = serde_json::to_value(&req).unwrap();
+        assert_eq!(v["images"][0]["mime_type"], "image/jpeg");
+        assert_eq!(v["images"][0]["data_base64"], "QUJD");
     }
 
     #[test]
