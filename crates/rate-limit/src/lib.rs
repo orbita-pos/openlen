@@ -40,7 +40,7 @@ pub use error::RateLimitError;
 pub use hybrid::HybridLimiter;
 pub use postgres::PostgresLimiter;
 pub use smart_cache::{
-    PersistenceMode, SmartCache, SmartCacheConfig, SmartCacheStats,
+    PersistenceMode, SmartCache, SmartCacheBackground, SmartCacheConfig, SmartCacheStats,
 };
 pub use types::{
     ConsumeOutcome, LimitDecision, LimitWindow, MemorySpec, RemainingWindow, UsageWindow,
