@@ -1,6 +1,7 @@
 pub mod config;
 pub mod files;
 pub mod lookup;
+pub mod middleware;
 pub mod observability;
 pub mod proxy;
 pub mod routing;
