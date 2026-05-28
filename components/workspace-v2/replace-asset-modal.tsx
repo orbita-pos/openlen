@@ -16,6 +16,10 @@ import {
   type IconCategory,
 } from "@/lib/lucide-curated";
 import { useFocusTrap } from "./use-focus-trap";
+import {
+  ResponsiveImage,
+  type ResponsiveVariant,
+} from "./responsive-image";
 
 export type ReplaceKind = "icon" | "image";
 
@@ -651,6 +655,16 @@ function OpenLenCard({
   onPick: () => void;
 }) {
   const [loaded, setLoaded] = useState(false);
+  // OpenLen manifest exposes hero/tablet/thumb — three widths of the
+  // same WebP. Feed all three as a single-format multi-width set so
+  // the card pulls the smallest variant that fits the slot (typically
+  // `thumb` on the picker grid; higher-density displays may opt into
+  // `tablet` automatically).
+  const variants: ResponsiveVariant[] = [
+    { width: 400, mime: "image/webp", url: image.src.thumb },
+    { width: 800, mime: "image/webp", url: image.src.tablet },
+    { width: 1920, mime: "image/webp", url: image.src.hero },
+  ];
   return (
     <button
       type="button"
@@ -659,12 +673,13 @@ function OpenLenCard({
       aria-label={`Use OpenLen image: ${image.alt}`}
       title={image.alt}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <ResponsiveImage
         src={image.src.thumb}
+        variants={variants}
         alt={image.alt}
         onLoad={() => setLoaded(true)}
         loading="lazy"
+        sizes="(min-width: 768px) 33vw, 50vw"
         className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${
           loaded ? "opacity-100" : "opacity-0"
         }`}
