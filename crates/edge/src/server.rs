@@ -24,6 +24,7 @@ use tracing::{debug, error, info, warn};
 use crate::config::EdgeConfig;
 use crate::files::{cache_control_for, resolve, resolve_strict, Resolved};
 use crate::lookup::{DomainLookup, MockDomainLookup};
+use crate::middleware::RateLimitLayer;
 use crate::proxy::{self, decide_route, disk_base_for, DiskBase, NodeClient, RouteAction};
 
 /// Cache-Control for files served out of the shared uploads root. 30 days
@@ -179,35 +180,45 @@ impl AppState {
 }
 
 pub fn router(state: AppState) -> Router {
-    Router::new()
+    router_with_layers(state, None)
+}
+
+/// Build the router with optional extra layers. The rate-limit layer is
+/// attached innermost (closest to the handler) so blocked responses still
+/// pick up the SetResponseHeader layers on the way back out.
+pub fn router_with_layers(state: AppState, rate_limit: Option<RateLimitLayer>) -> Router {
+    let mut r = Router::new()
         .route("/_edge/version", get(version))
         .fallback(serve_or_proxy)
-        .with_state(state)
-        .layer(SetResponseHeaderLayer::overriding(
-            header::SERVER,
-            HeaderValue::from_static(SERVER_HEADER_VALUE),
-        ))
-        .layer(SetResponseHeaderLayer::overriding(
-            header::STRICT_TRANSPORT_SECURITY,
-            HeaderValue::from_static(HSTS_VALUE),
-        ))
-        .layer(SetResponseHeaderLayer::overriding(
-            header::X_CONTENT_TYPE_OPTIONS,
-            HeaderValue::from_static(X_CTO_VALUE),
-        ))
-        .layer(SetResponseHeaderLayer::overriding(
-            header::X_FRAME_OPTIONS,
-            HeaderValue::from_static(X_FRAME_OPTIONS_VALUE),
-        ))
-        .layer(SetResponseHeaderLayer::overriding(
-            header::REFERRER_POLICY,
-            HeaderValue::from_static(REFERRER_POLICY_VALUE),
-        ))
-        .layer(SetResponseHeaderLayer::overriding(
-            HeaderName::from_static(PERMISSIONS_POLICY_NAME),
-            HeaderValue::from_static(PERMISSIONS_POLICY_VALUE),
-        ))
-        .layer(TraceLayer::new_for_http())
+        .with_state(state);
+    if let Some(layer) = rate_limit {
+        r = r.layer(layer);
+    }
+    r.layer(SetResponseHeaderLayer::overriding(
+        header::SERVER,
+        HeaderValue::from_static(SERVER_HEADER_VALUE),
+    ))
+    .layer(SetResponseHeaderLayer::overriding(
+        header::STRICT_TRANSPORT_SECURITY,
+        HeaderValue::from_static(HSTS_VALUE),
+    ))
+    .layer(SetResponseHeaderLayer::overriding(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static(X_CTO_VALUE),
+    ))
+    .layer(SetResponseHeaderLayer::overriding(
+        header::X_FRAME_OPTIONS,
+        HeaderValue::from_static(X_FRAME_OPTIONS_VALUE),
+    ))
+    .layer(SetResponseHeaderLayer::overriding(
+        header::REFERRER_POLICY,
+        HeaderValue::from_static(REFERRER_POLICY_VALUE),
+    ))
+    .layer(SetResponseHeaderLayer::overriding(
+        HeaderName::from_static(PERMISSIONS_POLICY_NAME),
+        HeaderValue::from_static(PERMISSIONS_POLICY_VALUE),
+    ))
+    .layer(TraceLayer::new_for_http())
 }
 
 async fn version() -> impl IntoResponse {
@@ -427,6 +438,18 @@ pub async fn bind_with_lookup(
     tls_config: Arc<ServerConfig>,
     domain_lookup: Arc<dyn DomainLookup>,
 ) -> Result<BoundServer> {
+    bind_with_lookup_and_layers(config, tls_config, domain_lookup, None).await
+}
+
+/// Bind variant that accepts an optional rate-limit layer. Constructed in
+/// `main.rs` when `OPENLEN_EDGE_RATE_LIMIT_ENABLED=1`; otherwise the
+/// regular `bind_with_lookup` flow runs (no layer overhead).
+pub async fn bind_with_lookup_and_layers(
+    config: &EdgeConfig,
+    tls_config: Arc<ServerConfig>,
+    domain_lookup: Arc<dyn DomainLookup>,
+    rate_limit: Option<RateLimitLayer>,
+) -> Result<BoundServer> {
     let listener = TcpListener::bind(config.bind)
         .await
         .with_context(|| format!("failed to bind {}", config.bind))?;
@@ -444,6 +467,7 @@ pub async fn bind_with_lookup(
         domain_cache_ttl_secs = config.domain_cache_ttl_secs,
         domain_negative_ttl_secs = config.domain_negative_ttl_secs,
         has_database = config.database_url.is_some(),
+        rate_limit_enabled = rate_limit.is_some(),
         "openlen-edge listening"
     );
     let state = AppState::with_lookup(config, domain_lookup)?;
@@ -451,7 +475,7 @@ pub async fn bind_with_lookup(
         local_addr,
         listener,
         tls_config,
-        router: router(state),
+        router: router_with_layers(state, rate_limit),
         max_inflight: config.max_inflight,
     })
 }

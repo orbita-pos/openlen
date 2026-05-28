@@ -10,11 +10,13 @@ use tracing::{info, warn};
 
 use observability::{install_exporter, spawn_process_collector_loop};
 use openlen_edge::{
-    bind_with_lookup, build_dynamic_config, build_lookup_from_config, ensure_crypto_provider,
-    load_persisted_certs, observability, read_cert_pair, run_http_redirect, run_internal_api,
-    run_renewal_loop, watch_wildcard, AcmeClient, AcmeIssuer, DynamicCertResolver, EdgeConfig,
-    InternalApiState, RenewalConfig,
+    bind_with_lookup_and_layers, build_dynamic_config, build_lookup_from_config,
+    ensure_crypto_provider, load_persisted_certs, observability, read_cert_pair,
+    run_http_redirect, run_internal_api, run_renewal_loop, watch_wildcard, AcmeClient,
+    AcmeIssuer, DynamicCertResolver, EdgeConfig, InternalApiState, IpExtractConfig,
+    RateLimitConfig, RateLimitLayer, RenewalConfig,
 };
+use openlen_rate_limit::{LimitWindow, SmartCache, SmartCacheConfig};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -147,10 +149,54 @@ async fn main() -> Result<()> {
             .set(active_certs_custom.len() as f64);
         }
     });
-    let tls_server = bind_with_lookup(
+    // Edge-side IP rate limiter. Defaults OFF — operators flip on after
+    // initial soak (see infra/edge/CUTOVER.md §10). The SmartCache + its
+    // background tasks live in the same scope as the TLS server so a
+    // shutdown signal tears both down together.
+    let (rate_limit_layer, _rate_limit_bg): (Option<RateLimitLayer>, _) = if cfg.rate_limit_enabled
+    {
+        let (cache, bg) =
+            SmartCache::start_memory_only(SmartCacheConfig::memory_only());
+        let windows = vec![
+            LimitWindow {
+                window_ms: 60_000,
+                max: cfg.rate_limit_per_ip_per_min,
+                label: "per_min".into(),
+            },
+            LimitWindow {
+                window_ms: 3_600_000,
+                max: cfg.rate_limit_per_ip_per_hour,
+                label: "per_hour".into(),
+            },
+        ];
+        let ip_config = IpExtractConfig {
+            trusted_proxies: cfg.rate_limit_trusted_proxies.clone(),
+            ..IpExtractConfig::default()
+        };
+        let rl_cfg = RateLimitConfig {
+            smart_cache: cache,
+            windows: Arc::new(windows),
+            exempt_path_prefixes: Arc::new(cfg.rate_limit_exempt_paths.clone()),
+            ip_config,
+        };
+        info!(
+            per_min = cfg.rate_limit_per_ip_per_min,
+            per_hour = cfg.rate_limit_per_ip_per_hour,
+            exempt_paths = ?cfg.rate_limit_exempt_paths,
+            trusted_proxies = cfg.rate_limit_trusted_proxies.len(),
+            "edge rate-limit enabled"
+        );
+        (Some(RateLimitLayer::new(rl_cfg)), Some(bg))
+    } else {
+        info!("edge rate-limit disabled (OPENLEN_EDGE_RATE_LIMIT_ENABLED unset)");
+        (None, None)
+    };
+
+    let tls_server = bind_with_lookup_and_layers(
         &cfg,
         tls,
         lookup.clone() as Arc<dyn openlen_edge::DomainLookup>,
+        rate_limit_layer,
     )
     .await?;
 

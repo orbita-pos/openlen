@@ -17,8 +17,13 @@ pub use proxy::{decide_route, NodeClient, NodeClientError, RouteAction};
 pub use routing::{
     extract_subdomain, is_openlen_zone, looks_like_public_hostname, run_http_redirect,
 };
+pub use middleware::{
+    extract_client_ip, ClientIpSource, IpExtractConfig, RateLimitConfig, RateLimitLayer,
+    RateLimitMiddleware,
+};
 pub use server::{
-    bind, bind_with_lookup, router, AppState, BoundServer, SERVER_HEADER_VALUE, VERSION,
+    bind, bind_with_lookup, bind_with_lookup_and_layers, router, router_with_layers, AppState,
+    BoundServer, SERVER_HEADER_VALUE, VERSION,
 };
 pub use tls::{
     build_dynamic_config, cert_dir_for, load_persisted_certs, load_wildcard, read_cert_pair,
