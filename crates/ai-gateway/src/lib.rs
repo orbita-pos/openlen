@@ -32,4 +32,4 @@ pub mod napi_stream;
 pub use error::GatewayError;
 pub use gemini::GeminiProvider;
 pub use tokenizer::estimate_tokens;
-pub use types::{Message, Role, StopReason, StreamEvent, StreamRequest, Usage};
+pub use types::{InlineImage, Message, Role, StopReason, StreamEvent, StreamRequest, Usage};

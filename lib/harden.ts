@@ -29,7 +29,16 @@
 
 import { hardenVisualQuality as rustHardenVisualQuality } from "@openlen/html-engine";
 
-export type HardenWarningKind = "banned_phrase" | "generic_cta";
+export type HardenWarningKind =
+  | "banned_phrase"
+  | "generic_cta"
+  | "copied_section";
+
+function narrowWarningKind(kind: string): HardenWarningKind {
+  return kind === "banned_phrase" || kind === "copied_section"
+    ? kind
+    : "generic_cta";
+}
 
 export interface HardenWarning {
   kind: HardenWarningKind;
@@ -65,7 +74,7 @@ export function hardenVisualQuality(html: string): HardenResult {
       tailwindBlackNormalized: r.counts.tailwindBlackNormalized,
     },
     warnings: r.warnings.map((w) => ({
-      kind: w.kind === "banned_phrase" ? "banned_phrase" : "generic_cta",
+      kind: narrowWarningKind(w.kind),
       matched: w.matched,
     })),
   };
