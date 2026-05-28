@@ -129,6 +129,10 @@ pub async fn process_image(req: ProcessRequestJs) -> Result<ProcessResultJs> {
         variants,
         auto_orient: req.auto_orient.unwrap_or(true),
         without_enlargement: req.without_enlargement.unwrap_or(true),
+        // Phase E wires the JS-side `placeholder` flag through. Until
+        // then the napi entry always passes false — existing JS callers
+        // never knew the flag existed, so they're unaffected.
+        placeholder: false,
     };
 
     let result = tokio::task::spawn_blocking(move || pipeline::process_image(native_req))

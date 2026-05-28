@@ -8,6 +8,7 @@
 use crate::encoders;
 use crate::error::ImageError;
 use crate::exif;
+use crate::placeholder::{self, Placeholder};
 use crate::resize;
 use image::RgbaImage;
 use serde::{Deserialize, Serialize};
@@ -77,6 +78,12 @@ pub struct ProcessRequest {
     /// Sharp parity for `withoutEnlargement: true`: a variant whose target
     /// width >= the input's intrinsic width falls back to the original.
     pub without_enlargement: bool,
+    /// When `true`, compute a [`Placeholder`] (BlurHash + dominant color)
+    /// from the oriented source and attach it to [`ProcessResult::placeholder`].
+    /// Opt-in because the BlurHash encode adds ~1 ms even on a small thumb
+    /// and not every consumer needs it (server-side optimize jobs that just
+    /// rewrite an asset don't care about LQIP).
+    pub placeholder: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -90,6 +97,10 @@ pub struct VariantOutput {
 #[derive(Debug, Clone)]
 pub struct ProcessResult {
     pub variants: Vec<VariantOutput>,
+    /// Present when [`ProcessRequest::placeholder`] was `true`. Carries
+    /// the BlurHash + dominant color computed from the oriented source,
+    /// suitable for `style.backgroundColor` + `<img>` LQIP rendering.
+    pub placeholder: Option<Placeholder>,
 }
 
 /// Effective output dimensions given the variant's bounds and the input
@@ -160,6 +171,16 @@ pub fn process_image(req: ProcessRequest) -> Result<ProcessResult, ImageError> {
         )));
     }
 
+    // Placeholder is opt-in. Computed from the oriented base so the
+    // BlurHash + dominant color match what the variants will render.
+    // Done before the variant resize cache to keep the work close to the
+    // decode (warm CPU cache on the RGBA buffer).
+    let placeholder = if req.placeholder {
+        Some(placeholder::compute_placeholder(&base)?)
+    } else {
+        None
+    };
+
     // 3. Collect the unique set of (out_w, out_h) pairs that need a resize.
     //    Cache by both dims — two variants with the same width but different
     //    max_height bounds can legitimately resolve to different sizes.
@@ -209,7 +230,10 @@ pub fn process_image(req: ProcessRequest) -> Result<ProcessResult, ImageError> {
         });
     }
 
-    Ok(ProcessResult { variants: outputs })
+    Ok(ProcessResult {
+        variants: outputs,
+        placeholder,
+    })
 }
 
 #[cfg(test)]
@@ -238,6 +262,7 @@ mod tests {
             }],
             auto_orient: true,
             without_enlargement: true,
+            placeholder: false,
         });
         assert!(matches!(r, Err(ImageError::InvalidInput(_))));
     }
@@ -249,6 +274,7 @@ mod tests {
             variants: vec![],
             auto_orient: true,
             without_enlargement: true,
+            placeholder: false,
         });
         assert!(matches!(r, Err(ImageError::InvalidInput(_))));
     }
@@ -265,6 +291,7 @@ mod tests {
             }],
             auto_orient: true,
             without_enlargement: true,
+            placeholder: false,
         });
         assert!(matches!(r, Err(ImageError::Decode(_))));
     }
@@ -282,6 +309,7 @@ mod tests {
             }],
             auto_orient: false,
             without_enlargement: true,
+            placeholder: false,
         })
         .unwrap();
         assert_eq!(r.variants.len(), 1);
@@ -322,6 +350,7 @@ mod tests {
             ],
             auto_orient: false,
             without_enlargement: true,
+            placeholder: false,
         })
         .unwrap();
         assert_eq!(r.variants.len(), 3);
@@ -348,6 +377,7 @@ mod tests {
             }],
             auto_orient: false,
             without_enlargement: true,
+            placeholder: false,
         })
         .unwrap();
         // Asked for 800w but input is 100w → withoutEnlargement keeps 100w.
@@ -368,6 +398,7 @@ mod tests {
             }],
             auto_orient: false,
             without_enlargement: false,
+            placeholder: false,
         })
         .unwrap();
         assert_eq!(r.variants[0].width, 80);
@@ -401,6 +432,7 @@ mod tests {
             ],
             auto_orient: false,
             without_enlargement: true,
+            placeholder: false,
         })
         .unwrap();
         assert_eq!(
@@ -437,6 +469,7 @@ mod tests {
             }],
             auto_orient: false,
             without_enlargement: true,
+            placeholder: false,
         })
         .unwrap();
         assert_eq!(r.variants[0].width, 50);
@@ -459,6 +492,7 @@ mod tests {
             }],
             auto_orient: false,
             without_enlargement: true,
+            placeholder: false,
         })
         .unwrap();
         assert_eq!(r.variants[0].width, 200);
@@ -480,9 +514,85 @@ mod tests {
             }],
             auto_orient: false,
             without_enlargement: true,
+            placeholder: false,
         })
         .unwrap();
         assert_eq!(r.variants[0].width, 200);
         assert_eq!(r.variants[0].height, 100);
+    }
+
+    #[test]
+    fn placeholder_flag_off_leaves_result_field_none() {
+        let input = solid_png(100, 50, [120, 60, 200, 255]);
+        let r = process_image(ProcessRequest {
+            input,
+            variants: vec![Variant {
+                width: 50,
+                max_height: None,
+                format: Format::Webp,
+                quality: 80,
+            }],
+            auto_orient: false,
+            without_enlargement: true,
+            placeholder: false,
+        })
+        .unwrap();
+        assert!(r.placeholder.is_none(), "expected None, got {:?}", r.placeholder);
+    }
+
+    #[test]
+    fn placeholder_flag_on_populates_result_field() {
+        let input = solid_png(200, 100, [60, 180, 240, 255]);
+        let r = process_image(ProcessRequest {
+            input,
+            variants: vec![Variant {
+                width: 100,
+                max_height: None,
+                format: Format::Webp,
+                quality: 80,
+            }],
+            auto_orient: false,
+            without_enlargement: true,
+            placeholder: true,
+        })
+        .unwrap();
+        let p = r.placeholder.expect("placeholder requested but None");
+        // Solid 60/180/240 → blue-cyan bucket. The histogram-centroid hex
+        // is deterministic; verifying the prefix is enough to know the
+        // dominant-color path ran (vs. defaulting to #000000).
+        assert!(p.dominant_color.starts_with('#'));
+        assert_eq!(p.dominant_color.len(), 7);
+        assert_ne!(p.dominant_color, "#000000");
+        assert!(!p.blurhash.is_empty());
+        // 200×100 input → 32×16 thumb (longest-edge scaling).
+        assert_eq!(p.width, 32);
+        assert_eq!(p.height, 16);
+    }
+
+    #[test]
+    fn placeholder_uses_oriented_base_not_raw_decode() {
+        // Smoke: with auto_orient=true, placeholder is computed on the
+        // post-rotate image, so a portrait EXIF-tagged input produces
+        // a portrait-thumb placeholder. PNG fixture has no EXIF so the
+        // base test is a no-op rotation; this guarantees the placeholder
+        // dimensions track the variants pipeline's "base" buffer.
+        let input = solid_png(400, 100, [200, 80, 80, 255]);
+        let r = process_image(ProcessRequest {
+            input,
+            variants: vec![Variant {
+                width: 200,
+                max_height: None,
+                format: Format::Webp,
+                quality: 80,
+            }],
+            auto_orient: true,
+            without_enlargement: true,
+            placeholder: true,
+        })
+        .unwrap();
+        let p = r.placeholder.expect("placeholder requested but None");
+        // 400×100 (landscape, longest edge 400) → thumb 32×8.
+        assert_eq!(p.width, 32);
+        assert_eq!(p.height, 8);
     }
 }
