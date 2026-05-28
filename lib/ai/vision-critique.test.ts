@@ -14,6 +14,7 @@ import {
   critiqueGeneratedPage,
   parseVerdict,
   structuralSummary,
+  DEFAULT_TIMEOUT_MS,
   type CritiqueProviderLike,
 } from "./vision-critique";
 import type { InlineImage, StreamEvent, StreamRequest } from "../ai-gateway";
@@ -132,6 +133,10 @@ test("handles malformed JSON gracefully (returns no-critique fallback)", async (
   assert.equal(verdict.shouldRegenerate, false, "fallback never triggers regen");
 });
 
+test("default critic deadline is 18s (smoke: Pulsegrid timed out at 12016ms under 12s)", () => {
+  assert.equal(DEFAULT_TIMEOUT_MS, 18_000);
+});
+
 test("times out and falls back when the critic call stalls", async () => {
   const provider = hangingProvider();
   const t0 = performance.now();
@@ -228,6 +233,25 @@ test("parseVerdict: strips ```json fences", () => {
   const v = parseVerdict("```json\n" + verdictJson({ visualQuality: 8 }) + "\n```");
   assert.ok(v);
   assert.equal(v.visualQuality, 8);
+});
+
+test("parseVerdict: parses a full verdict wrapped in ```json fences (Mariana smoke)", () => {
+  // Real failure mode: Flash wrapped the whole verdict object in a fenced
+  // block with surrounding whitespace/newlines.
+  const wrapped =
+    "```json\n" + verdictJson({ visualQuality: 8, briefAdherence: 8 }) + "\n```\n";
+  const v = parseVerdict(wrapped);
+  assert.ok(v);
+  assert.equal(v.fallback, false);
+  assert.equal(v.visualQuality, 8);
+  assert.equal(v.briefAdherence, 8);
+});
+
+test("parseVerdict: parses a verdict wrapped in bare ``` fences", () => {
+  const wrapped = "```\n" + verdictJson({ visualQuality: 9 }) + "\n```";
+  const v = parseVerdict(wrapped);
+  assert.ok(v);
+  assert.equal(v.visualQuality, 9);
 });
 
 test("parseVerdict: salvages JSON embedded in prose", () => {
