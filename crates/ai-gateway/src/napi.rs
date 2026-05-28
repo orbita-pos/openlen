@@ -24,7 +24,7 @@
 //! | `GeminiProvider`           | `GeminiProvider` (class)                                                   |
 //! | `GeminiStream`             | `GeminiStream` (class)                                                     |
 //! | `Message`                  | `{ role: 'system'\|'user'\|'assistant', content: string }`                  |
-//! | `StreamRequest`            | `{ model, messages, maxOutputTokens?, temperature? }`                      |
+//! | `StreamRequest`            | `{ model, messages, maxOutputTokens?, temperature?, images?, responseMimeType?, responseSchemaJson? }` |
 //! | `StreamEvent`              | flat-tagged union — see [`StreamEvent`] for the discriminated shape         |
 //! | `StopReason`               | `{ kind: 'end_turn'\|'max_tokens'\|'cancelled'\|'error', error?: string }`  |
 //! | `crate::error::GatewayError` | thrown as `Error` whose `.message` is a JSON envelope (see below)        |
@@ -81,6 +81,15 @@ pub struct StreamRequest {
     pub temperature: Option<f64>,
     /// Reference images. Omitted / empty for the text-only path.
     pub images: Option<Vec<InlineImage>>,
+    /// Structured-output MIME type (Quality S3). Pass `"application/json"` to
+    /// force Gemini into JSON mode. Omitted for the free-form text path.
+    pub response_mime_type: Option<String>,
+    /// Gemini-subset response schema, JSON-encoded as a STRING. napi-rs has no
+    /// `serde_json::Value` bridge in this crate's feature set, so the TS
+    /// wrapper `JSON.stringify`s the schema object and we parse it back to a
+    /// `serde_json::Value` here. An unparseable string is a hard error so a
+    /// caller bug surfaces loudly instead of silently dropping the constraint.
+    pub response_schema_json: Option<String>,
 }
 
 /// Flat-tagged discriminated union. The `type` field is always present;
@@ -156,6 +165,17 @@ impl TryFrom<StreamRequest> for NativeStreamRequest {
         }
         if let Some(images) = r.images {
             req = req.with_images(images.into_iter().map(NativeInlineImage::from).collect());
+        }
+        if let Some(mime) = r.response_mime_type {
+            req = req.with_response_mime_type(mime);
+        }
+        if let Some(schema_json) = r.response_schema_json {
+            let schema: serde_json::Value = serde_json::from_str(&schema_json).map_err(|e| {
+                napi::Error::from_reason(format!(
+                    "responseSchemaJson is not valid JSON: {e}"
+                ))
+            })?;
+            req = req.with_response_schema(schema);
         }
         Ok(req)
     }
@@ -361,6 +381,8 @@ mod tests {
             max_output_tokens: Some(256),
             temperature: Some(0.2),
             images: None,
+            response_mime_type: None,
+            response_schema_json: None,
         };
         let native: NativeStreamRequest = r.try_into().unwrap();
         assert_eq!(native.model, "gemini-2.5-flash");
@@ -385,6 +407,8 @@ mod tests {
                 mime_type: "image/jpeg".to_owned(),
                 data_base64: "QUJD".to_owned(),
             }]),
+            response_mime_type: None,
+            response_schema_json: None,
         };
         let native: NativeStreamRequest = r.try_into().unwrap();
         assert_eq!(native.images.len(), 1);
@@ -403,9 +427,50 @@ mod tests {
             max_output_tokens: None,
             temperature: None,
             images: None,
+            response_mime_type: None,
+            response_schema_json: None,
         };
         let err = NativeStreamRequest::try_from(r).unwrap_err();
         assert!(err.to_string().contains("assistant_typo"));
+    }
+
+    #[test]
+    fn stream_request_try_from_parses_response_schema_json() {
+        let r = StreamRequest {
+            model: "gemini-2.5-flash".to_owned(),
+            messages: vec![Message {
+                role: "user".to_owned(),
+                content: "hi".to_owned(),
+            }],
+            max_output_tokens: None,
+            temperature: None,
+            images: None,
+            response_mime_type: Some("application/json".to_owned()),
+            response_schema_json: Some(r#"{"type":"OBJECT","properties":{"ok":{"type":"BOOLEAN"}}}"#.to_owned()),
+        };
+        let native: NativeStreamRequest = r.try_into().unwrap();
+        assert_eq!(native.response_mime_type.as_deref(), Some("application/json"));
+        let schema = native.response_schema.expect("schema parsed");
+        assert_eq!(schema["type"], "OBJECT");
+        assert_eq!(schema["properties"]["ok"]["type"], "BOOLEAN");
+    }
+
+    #[test]
+    fn stream_request_try_from_rejects_malformed_response_schema_json() {
+        let r = StreamRequest {
+            model: "gemini-2.5-flash".to_owned(),
+            messages: vec![Message {
+                role: "user".to_owned(),
+                content: "hi".to_owned(),
+            }],
+            max_output_tokens: None,
+            temperature: None,
+            images: None,
+            response_mime_type: Some("application/json".to_owned()),
+            response_schema_json: Some("{not valid json".to_owned()),
+        };
+        let err = NativeStreamRequest::try_from(r).unwrap_err();
+        assert!(err.to_string().contains("responseSchemaJson is not valid JSON"));
     }
 
     #[test]

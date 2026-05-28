@@ -66,6 +66,16 @@ export interface StreamRequest {
   /** Reference images attached to the LAST user message. Empty/omitted for
    *  the text-only path. */
   images?: InlineImage[];
+  /** Structured output (Quality S3). Set to `"application/json"` to force
+   *  Gemini into JSON mode. Omitted = free-form text (unchanged path). */
+  responseMimeType?: string;
+  /** Gemini-subset OpenAPI response schema constraining the JSON output. Sent
+   *  verbatim as `generationConfig.responseSchema`. Use UPPERCASE `type`
+   *  values ("OBJECT", "STRING", "INTEGER", "ARRAY", "BOOLEAN") per the native
+   *  Gemini Schema enum. The wrapper `JSON.stringify`s this across the napi
+   *  boundary; only meaningful alongside `responseMimeType:
+   *  "application/json"`. */
+  responseSchema?: Record<string, unknown>;
 }
 
 export type StreamEvent =
@@ -197,6 +207,12 @@ function streamRequestToRust(r: StreamRequest): RustStreamRequest {
     maxOutputTokens: r.maxOutputTokens,
     temperature: r.temperature,
     images: r.images,
+    responseMimeType: r.responseMimeType,
+    // The napi layer takes the schema as a JSON string (no serde_json::Value
+    // bridge in the crate's feature set) and parses it back to a Value.
+    responseSchemaJson: r.responseSchema
+      ? JSON.stringify(r.responseSchema)
+      : undefined,
   };
 }
 
