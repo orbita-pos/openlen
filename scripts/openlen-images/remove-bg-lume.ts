@@ -6,7 +6,7 @@
 
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import sharp from "sharp";
+import { processImage } from "../../lib/images";
 import { getOpenLenImageStorage } from "../../lib/storage/openlen-images";
 
 const INPUT_DIR = join(
@@ -57,15 +57,29 @@ async function main() {
 
     const buf = await readFile(path);
 
-    for (const { width } of SIZES) {
-      const body = await sharp(buf)
-        .resize({ width, withoutEnlargement: true })
-        .webp({ quality: 90, alphaQuality: 90 })
-        .toBuffer();
+    // One decode + 3 alpha-preserving WebP encodes in a single native
+    // call. The `webp` encoder in the Rust pipeline is alpha-aware; we
+    // only expose a single `quality` knob (legacy sharp had a separate
+    // alphaQuality, but no current callsite needs an asymmetric setting
+    // — the transparent LUME drops compress fine at quality 90 across
+    // both channels).
+    const { variants } = await processImage({
+      input: buf,
+      variants: SIZES.map(({ width }) => ({
+        width,
+        format: "webp" as const,
+        quality: 90,
+      })),
+      autoOrient: false,
+      withoutEnlargement: true,
+    });
+
+    for (let s = 0; s < SIZES.length; s++) {
+      const { width } = SIZES[s];
       const { url } = await storage.upload({
         key: `${baseId}-nobg-${width}.webp`,
         contentType: "image/webp",
-        body,
+        body: variants[s].bytes,
       });
       if (width === 1920) heroUrls.push({ label, url });
     }

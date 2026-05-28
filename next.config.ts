@@ -22,20 +22,23 @@ const nextConfig = {
   // - tailwindcss, postcss: webpack would inline them into .next/server/
   //   chunks/*.js, breaking package-relative asset paths (preflight.css,
   //   stubs). Required by the publish-time Tailwind pipeline.
-  // - @openlen/html-engine, @openlen/ai-gateway, @openlen/rate-limit:
-  //   each ships a native `.node` binding that webpack can't parse.
-  //   Externalising hands the require off to Node's loader at runtime,
-  //   which knows how to load native modules. html-engine landed in
-  //   F1 S9 (commit 1ab1724); ai-gateway landed in F3 S3 when
+  // - @openlen/html-engine, @openlen/ai-gateway, @openlen/rate-limit,
+  //   @openlen/images: each ships a native `.node` binding that webpack
+  //   can't parse. Externalising hands the require off to Node's loader
+  //   at runtime, which knows how to load native modules. html-engine
+  //   landed in F1 S9 (commit 1ab1724); ai-gateway landed in F3 S3 when
   //   `lib/ai-stream/generate.ts` became the first app-code consumer;
   //   rate-limit landed in F4 when `lib/rate-limit-rs.ts` consolidated
-  //   the four legacy limit modules onto the new Rust engine.
+  //   the four legacy limit modules; images landed in F4 when
+  //   `app/api/upload/route.ts` became the first consumer (replacing
+  //   the `sharp` Node binding).
   serverExternalPackages: [
     "tailwindcss",
     "postcss",
     "@openlen/html-engine",
     "@openlen/ai-gateway",
     "@openlen/rate-limit",
+    "@openlen/images",
   ],
   // serverExternalPackages alone doesn't always exclude transitively-linked
   // workspace deps from webpack's module graph (the `file:` symlink to
@@ -56,9 +59,11 @@ const nextConfig = {
           request === "@openlen/html-engine" ||
           request === "@openlen/ai-gateway" ||
           request === "@openlen/rate-limit" ||
+          request === "@openlen/images" ||
           request.endsWith("/crates/html-engine/index.js") ||
           request.endsWith("/crates/ai-gateway/index.js") ||
           request.endsWith("/crates/rate-limit/index.js") ||
+          request.endsWith("/crates/images/index.js") ||
           request.endsWith(".node")
         ) {
           return callback(null, "commonjs " + request);

@@ -22,8 +22,8 @@
 
 import { eq } from "drizzle-orm";
 import puppeteer, { type Browser } from "puppeteer";
-import sharp from "sharp";
 import { db, schema } from "@/lib/db";
+import { processImage } from "@/lib/images";
 import { setTemplateThumbnail } from "@/lib/templates/store";
 import { getTemplateStorage } from "@/lib/storage/templates";
 
@@ -94,9 +94,15 @@ async function captureOne(
     // AVIF over WebP — typically ~30% smaller at visually-equivalent
     // quality (q65 AVIF ≈ q85 WebP). Safari 16+ / Chrome / Firefox all
     // support AVIF; the alpha audience for OpenLen is essentially 100%.
-    const avifBuffer = await sharp(pngBuffer)
-      .avif({ quality: 65, effort: 4 })
-      .toBuffer();
+    // No resize requested — width:0 keeps the screenshot's intrinsic
+    // 1280×800 dimensions.
+    const { variants } = await processImage({
+      input: pngBuffer,
+      variants: [{ width: 0, format: "avif", quality: 65 }],
+      autoOrient: false,
+      withoutEnlargement: true,
+    });
+    const avifBuffer = variants[0].bytes;
 
     const key = `thumbnails/${row.id}-${row.contentHash}.avif`;
     const storage = getTemplateStorage();
