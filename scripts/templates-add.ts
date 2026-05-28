@@ -19,6 +19,7 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { upsertTemplate } from "../lib/templates/store";
+import { captureScreenshotForTemplate } from "../lib/templates/capture-screenshot";
 import {
   CreateSchema,
   htmlContainsEditorMarker,
@@ -130,6 +131,15 @@ async function main() {
   console.log(`  contentHash  : ${record.contentHash}`);
   console.log(`  storageUrl   : ${record.storageUrl}`);
   console.log(`  size         : ${record.size} bytes`);
+
+  // Capture the full-page reference screenshot inline (Quality S2). A
+  // template without a screenshot silently loses the multimodal vision
+  // boost in /api/generate, so a capture failure fails the whole add —
+  // re-run after fixing (or run `templates:capture-screenshots` for a
+  // one-off backfill).
+  console.log(`Capturing full-page reference screenshot...`);
+  const screenshotUrl = await captureScreenshotForTemplate(record.id);
+  console.log(`  screenshotUrl: ${screenshotUrl}`);
 }
 
 main().catch((err) => {

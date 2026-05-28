@@ -52,6 +52,10 @@ export interface TemplateRecord {
   /** Pre-rendered WebP thumbnail URL for gallery / homepage cards. Null
    *  until `templates:thumbnails` has been run for this row. */
   thumbnailUrl: string | null;
+  /** Full-page JPG render used as a multimodal AI reference (Quality S2).
+   *  Null until `templates:capture-screenshots` has run. Reference-only —
+   *  never served to a published page. */
+  screenshotUrl: string | null;
   /** Hand-curated "top-tier" flag. When true, the template surfaces in the
    *  dedicated Featured section at the top of /templates with an accent
    *  badge on its card. Defaults to false. */
@@ -206,6 +210,7 @@ function rowToRecord(row: typeof schema.templates.$inferSelect): TemplateRecord 
     size: row.size,
     status: row.status as TemplateStatus,
     thumbnailUrl: row.thumbnailUrl,
+    screenshotUrl: row.screenshotUrl,
     featured: row.featured,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -222,6 +227,20 @@ export async function setTemplateThumbnail(
   await db
     .update(schema.templates)
     .set({ thumbnailUrl, updatedAt: new Date() })
+    .where(eq(schema.templates.id, id));
+}
+
+/** Persist the full-page screenshot URL for a template. Used by
+ *  `templates:capture-screenshots` (and inline by `templates:add`) after
+ *  uploading the JPG to storage. The screenshot is a multimodal AI
+ *  reference — see schema.ts `screenshotUrl`. */
+export async function setTemplateScreenshot(
+  id: string,
+  screenshotUrl: string,
+): Promise<void> {
+  await db
+    .update(schema.templates)
+    .set({ screenshotUrl, updatedAt: new Date() })
     .where(eq(schema.templates.id, id));
 }
 
