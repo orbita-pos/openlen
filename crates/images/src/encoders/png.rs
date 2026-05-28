@@ -52,7 +52,10 @@ mod tests {
         let img = solid(16, 16, [10, 20, 30, 255]);
         let bytes = encode(&img, false).unwrap();
         // PNG signature.
-        assert_eq!(&bytes[0..8], &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+        assert_eq!(
+            &bytes[0..8],
+            &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+        );
     }
 
     #[test]
@@ -73,7 +76,12 @@ mod tests {
         // and the optimized version is typically smaller. The assertion is
         // conservative ("not worse") because oxipng's preset 2 occasionally
         // ties with image-rs's `Best` setting on solid inputs.
-        assert!(opt.len() <= raw.len() + 8, "raw={} opt={}", raw.len(), opt.len());
+        assert!(
+            opt.len() <= raw.len() + 8,
+            "raw={} opt={}",
+            raw.len(),
+            opt.len()
+        );
     }
 
     #[test]

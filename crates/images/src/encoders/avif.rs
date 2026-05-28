@@ -24,7 +24,7 @@ pub fn encode(img: &RgbaImage, quality: u8) -> Result<Vec<u8>, ImageError> {
     let img_view: Img<&[RGBA8]> = Img::new(rgba, w, h);
 
     let res = Encoder::new()
-        .with_quality(quality.max(1).min(100) as f32)
+        .with_quality(quality.clamp(1, 100) as f32)
         .with_speed(6)
         .encode_rgba(img_view)
         .map_err(|e| ImageError::Encode {
