@@ -9,7 +9,7 @@ import {
   estimateCredits,
   creditsForUsage,
 } from "@/lib/credits";
-import { DESIGN_GUIDANCE } from "@/lib/design-guidance";
+import { DESIGN_GUIDANCE, DESIGN_REFERENCE } from "@/lib/design-guidance";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { detectSlotPath } from "@/lib/html-engine";
 import { GeminiProvider, type Message } from "@/lib/ai-gateway";
@@ -430,10 +430,19 @@ export async function POST(req: Request): Promise<Response> {
   // tokens (the previous Kimi cap; keeps responses snappy and within
   // Gemini's per-call billing sweet spot). When we exceed, surface a
   // UI-actionable error pointing at Select.
-  const SYSTEM_TOKEN_BUDGET = 4_000;
+  //
+  // SYSTEM_TOKEN_BUDGET accounts for SYSTEM_PROMPT (with DESIGN_GUIDANCE
+  // inlined) plus the REFERENCE_MESSAGE user turn — together ≈ 7K tokens.
+  const SYSTEM_TOKEN_BUDGET = 7_000;
   const MAX_PROMPT_TOKENS = 240_000;
+  const referenceMessage = `<reference>
+The following library is the design taste catalog. Use it as material to draw from for full rewrites — match the register, don't quote verbatim.
+
+${DESIGN_REFERENCE}
+</reference>`;
   const estimatedTokens =
-    Math.ceil(userMessageContent.length / 3.5) + SYSTEM_TOKEN_BUDGET;
+    Math.ceil((userMessageContent.length + referenceMessage.length) / 3.5) +
+    SYSTEM_TOKEN_BUDGET;
   if (estimatedTokens > MAX_PROMPT_TOKENS) {
     const suggestion = scopedView
       ? "even scoped to this section it's still too large — try clicking 🎯 Select on a smaller child element"
@@ -454,6 +463,7 @@ export async function POST(req: Request): Promise<Response> {
 
   const messages: Message[] = [
     { role: "system", content: SYSTEM_PROMPT },
+    { role: "user", content: referenceMessage },
     ...history,
     {
       role: "user",
