@@ -109,19 +109,30 @@ if ($LASTEXITCODE -ne 0) { throw "Remote extract failed (exit $LASTEXITCODE)" }
 if ($env:OPENLEN_REBUILD_CRATES -eq "1") {
   Step "5.5" "Rebuilding Rust crates on box (this takes ~5 min)..."
   $sw = [System.Diagnostics.Stopwatch]::StartNew()
-  # Ship the build script + Rust workspace to the box. The script lives
-  # versioned at infra/scripts/build-crates-on-box.sh; sync it every
-  # deploy so the box always runs the repo's current version.
-  & rsync -az "infra/scripts/build-crates-on-box.sh" "${host_}:/root/"
-  if ($LASTEXITCODE -ne 0) { throw "Build script rsync failed (exit $LASTEXITCODE)" }
-  & rsync -az --delete crates/ "${host_}:/root/openlen-workspace/crates/"
-  if ($LASTEXITCODE -ne 0) { throw "Crates rsync failed (exit $LASTEXITCODE)" }
-  & rsync -az Cargo.toml Cargo.lock "${host_}:/root/openlen-workspace/"
-  if ($LASTEXITCODE -ne 0) { throw "Cargo manifest rsync failed (exit $LASTEXITCODE)" }
-  # Build into staging — the script restarts only when targeting the live
-  # dir, so passing staging here is safe: rebuild then continue to swap.
-  & ssh $host_ "bash /root/build-crates-on-box.sh $stagingDir"
+  # Ship the Rust workspace + build script to the box. PowerShell on
+  # Windows doesn't ship rsync, so we tar + scp + remote-extract — same
+  # pattern as the standalone deploy in steps 3-5.
+  $cratesTarball = "openlen-crates.tar.gz"
+  & tar -czf $cratesTarball Cargo.toml Cargo.lock crates/
+  if ($LASTEXITCODE -ne 0) { throw "Crates tar failed (exit $LASTEXITCODE)" }
+  & scp -q $cratesTarball "${host_}:/root/"
+  if ($LASTEXITCODE -ne 0) { throw "Crates scp failed (exit $LASTEXITCODE)" }
+  & scp -q "infra/scripts/build-crates-on-box.sh" "${host_}:/root/"
+  if ($LASTEXITCODE -ne 0) { throw "Build script scp failed (exit $LASTEXITCODE)" }
+  # Extract the workspace + run the build script against the staging dir.
+  # The script restarts only when targeting the live dir, so passing
+  # staging here is safe — rebuild then continue to the swap in step 6.
+  $cratesCmd = @"
+set -e
+mkdir -p /root/openlen-workspace
+tar -xzf /root/$cratesTarball -C /root/openlen-workspace
+rm /root/$cratesTarball
+chmod +x /root/build-crates-on-box.sh
+bash /root/build-crates-on-box.sh $stagingDir
+"@
+  & ssh $host_ $cratesCmd
   if ($LASTEXITCODE -ne 0) { throw "Crate rebuild failed (exit $LASTEXITCODE)" }
+  Remove-Item -Force $cratesTarball
   $sw.Stop()
   Write-Host ("    done in {0}s" -f [math]::Round($sw.Elapsed.TotalSeconds, 1))
 } else {
