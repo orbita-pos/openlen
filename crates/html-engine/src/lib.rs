@@ -302,3 +302,52 @@ pub fn wire_published_forms(
         .collect();
     publish::wire_published_forms(&html, &action, &native_configs)
 }
+
+// ─── Quality S1: visual-quality hardening ─────────────────────────────────────
+
+#[napi(object, js_name = "HardenCounts")]
+pub struct JsHardenCounts {
+    pub white_alpha_capped: u32,
+    pub black_alpha_capped: u32,
+    pub tailwind_white_normalized: u32,
+    pub tailwind_black_normalized: u32,
+}
+
+#[napi(object, js_name = "HardenWarning")]
+pub struct JsHardenWarning {
+    /// "banned_phrase" | "generic_cta"
+    pub kind: String,
+    pub matched: String,
+}
+
+#[napi(object, js_name = "HardenResult")]
+pub struct JsHardenResult {
+    pub html: String,
+    pub counts: JsHardenCounts,
+    pub warnings: Vec<JsHardenWarning>,
+}
+
+#[napi]
+pub fn harden_visual_quality(html: String) -> JsHardenResult {
+    let r = publish::harden_visual_quality(&html);
+    JsHardenResult {
+        html: r.html,
+        counts: JsHardenCounts {
+            white_alpha_capped: r.counts.white_alpha_capped,
+            black_alpha_capped: r.counts.black_alpha_capped,
+            tailwind_white_normalized: r.counts.tailwind_white_normalized,
+            tailwind_black_normalized: r.counts.tailwind_black_normalized,
+        },
+        warnings: r
+            .warnings
+            .into_iter()
+            .map(|w| JsHardenWarning {
+                kind: match w.kind {
+                    publish::WarningKind::BannedPhrase => "banned_phrase".to_string(),
+                    publish::WarningKind::GenericCta => "generic_cta".to_string(),
+                },
+                matched: w.matched,
+            })
+            .collect(),
+    }
+}

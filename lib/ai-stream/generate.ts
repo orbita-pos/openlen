@@ -47,10 +47,54 @@ import {
   type HtmlStreamOpts,
   type HtmlStreamResult,
 } from "@/lib/html-engine";
+import { hardenVisualQuality } from "@/lib/harden";
 import { creditsForUsage, debitCredits as realDebitCredits } from "@/lib/credits";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 
 const DEFAULT_MODEL: AIModel = "gemini-pro";
+
+// Quality S1 post-processor — runs once at end-of-stream on the canonical
+// HTML before the summary resolves. Border alpha caps + Tailwind class
+// normalization are applied silently; banned-phrase + generic-CTA warnings
+// are logged. Idempotent: a no-op when the HTML is already clean.
+//
+// Failure mode: if hardening throws (binding missing, malformed regex), the
+// original HTML is returned unchanged. The Rust impl never throws on valid
+// input, so the catch is purely defensive.
+function applyHardening(html: string | null): string | null {
+  if (html === null || html.length === 0) return html;
+  try {
+    const r = hardenVisualQuality(html);
+    if (
+      r.counts.whiteAlphaCapped +
+        r.counts.blackAlphaCapped +
+        r.counts.tailwindWhiteNormalized +
+        r.counts.tailwindBlackNormalized >
+      0
+    ) {
+      // eslint-disable-next-line no-console
+      console.log(
+        "[generate] hardened — w:%d b:%d tw-w:%d tw-b:%d",
+        r.counts.whiteAlphaCapped,
+        r.counts.blackAlphaCapped,
+        r.counts.tailwindWhiteNormalized,
+        r.counts.tailwindBlackNormalized,
+      );
+    }
+    if (r.warnings.length > 0) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[generate] harden warnings: %s",
+        r.warnings.map((w) => `${w.kind}:${w.matched}`).join(", "),
+      );
+    }
+    return r.html;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[generate] hardenVisualQuality threw — using raw HTML", err);
+    return html;
+  }
+}
 
 // ─── Public types ──────────────────────────────────────────────────────────
 
@@ -321,7 +365,7 @@ export function generateHtmlStream(
                 }
                 safeClose();
                 resolveDone({
-                  finalHtml: endResult.finalHtml,
+                  finalHtml: applyHardening(endResult.finalHtml),
                   result: endResult,
                   usage,
                   creditsDebited,
@@ -382,7 +426,7 @@ export function generateHtmlStream(
         }
         safeClose();
         resolveDone({
-          finalHtml: endResult.finalHtml,
+          finalHtml: applyHardening(endResult.finalHtml),
           result: endResult,
           usage,
           creditsDebited,

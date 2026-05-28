@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { createProject } from "@/lib/projects";
 import { createVersion } from "@/lib/projects/versions";
 import { getCreditState } from "@/lib/credits";
-import { DESIGN_GUIDANCE } from "@/lib/design-guidance";
+import { DESIGN_GUIDANCE, DESIGN_REFERENCE } from "@/lib/design-guidance";
 import { detectSlotPath } from "@/lib/html-engine";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { generateHtmlStream } from "@/lib/ai-stream/generate";
@@ -68,6 +68,16 @@ NON-NEGOTIABLE CONSTRAINTS:
 
 OUTPUT FORMAT — follow exactly:
 Emit the complete HTML document directly, starting with <!doctype html> and ending with </html>. No preamble, no design notes, no markdown code fences — the first character of your response is <.`;
+
+// CSS recipes, micro-snippets, and brand catalogs ship as a separate
+// user-tagged reference block. Gemini 3.x treats long system prompts as
+// constraints — pushing taste material into a `<reference>`-tagged user
+// turn keeps the model from over-anchoring on phrasing.
+const REFERENCE_MESSAGE = `<reference>
+The following library is the design taste catalog. Use it as material to draw from when filling in the variant brief — match the register, don't quote verbatim.
+
+${DESIGN_REFERENCE}
+</reference>`;
 
 export async function POST(req: Request): Promise<Response> {
   let body: unknown;
@@ -144,6 +154,7 @@ export async function POST(req: Request): Promise<Response> {
   const aiModel: AIModel = modelParam === "gemini-flash" ? "gemini-flash" : "gemini-pro";
   const messages = [
     { role: "system" as const, content: SYSTEM_PROMPT },
+    { role: "user" as const, content: REFERENCE_MESSAGE },
     { role: "user" as const, content: `BRIEF:\n${brief}` },
   ];
 
