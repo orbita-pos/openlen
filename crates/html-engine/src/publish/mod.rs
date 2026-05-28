@@ -9,10 +9,12 @@
 
 pub mod credits;
 pub mod forms;
+pub mod harden;
 pub mod logo;
 
 pub use credits::{consolidate_unsplash_credits, ConsolidationResult, UnsplashCredit};
 pub use forms::{wire_published_forms, FormConfig};
+pub use harden::{harden_visual_quality, HardenCounts, HardenResult, HardenWarning, WarningKind};
 pub use logo::{extract_logo, inject_logo, ExtractedLogo};
 
 use kuchikiki::traits::TendrilSink;
