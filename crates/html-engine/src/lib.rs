@@ -315,7 +315,7 @@ pub struct JsHardenCounts {
 
 #[napi(object, js_name = "HardenWarning")]
 pub struct JsHardenWarning {
-    /// "banned_phrase" | "generic_cta"
+    /// "banned_phrase" | "generic_cta" | "copied_section"
     pub kind: String,
     pub matched: String,
 }
@@ -345,6 +345,7 @@ pub fn harden_visual_quality(html: String) -> JsHardenResult {
                 kind: match w.kind {
                     publish::WarningKind::BannedPhrase => "banned_phrase".to_string(),
                     publish::WarningKind::GenericCta => "generic_cta".to_string(),
+                    publish::WarningKind::CopiedSection => "copied_section".to_string(),
                 },
                 matched: w.matched,
             })

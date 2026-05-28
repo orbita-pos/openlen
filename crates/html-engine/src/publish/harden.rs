@@ -23,11 +23,62 @@
 // `<style>` text content — regex is faster and clearer here, and the rest
 // of the publish pipeline is already mixed regex/lol-html/kuchikiki.
 
+use std::collections::HashSet;
+
 use once_cell::sync::Lazy;
 use regex::{Captures, Regex};
 
 const MAX_ALPHA_WHITE: f64 = 0.06;
 const MAX_ALPHA_BLACK: f64 = 0.08;
+
+// ─── Copy-detection (Quality S2) ─────────────────────────────────────────────
+//
+// Soft signal — NEVER rewrites or blocks. The vision reference can tempt the
+// model to reproduce a template's section copy verbatim; if 3+ generated
+// <section>s near-exactly match the curated corpus, we emit warnings so the
+// tester (or a future critic loop) can decide. We do NOT auto-rewrite: the
+// false-positive risk on legit short hero copy ("Build faster") is too high.
+//
+// Corpus = distinctive section copy from the three in-repo starter templates
+// (Mirror / Manuscript / Counter). The spec asked for the "top 5"; only these
+// three ship in the repo (templates/starter/), and Mirror is the canonical
+// reference the selector falls back to — so they're exactly the copy most at
+// risk of being echoed. Refresh by hand if the starters change.
+
+/// Character-trigram overlap coefficient above which a section counts as a
+/// near-verbatim copy of a corpus entry.
+const COPY_TRIGRAM_OVERLAP_THRESHOLD: f64 = 0.9;
+/// Only warn when at least this many sections match — one coincidental match
+/// shouldn't fire.
+const COPY_MIN_MATCHED_SECTIONS: usize = 3;
+/// We compare the first N chars of each section's flattened text.
+const COPY_SECTION_TEXT_LEN: usize = 200;
+
+const COPY_CORPUS: &[&str] = &[
+    // Mirror — AI eval / guardrails devtool.
+    "every guardrail your safety team would have written by hand.",
+    "promote evals to production guardrails.",
+    "pay for evaluations. not seats.",
+    "engineers who can't afford a 2am model surprise.",
+    "frequently asked, honestly answered.",
+    "stop fearing the model. trust the policy.",
+    // Manuscript — editorial writing tool.
+    "an editor that disappears.",
+    "numbers, when you actually want them.",
+    "your list is yours. we mean it.",
+    "what manuscript isn't.",
+    "curated. not tiered.",
+    "things sensible people ask before signing up.",
+    "write the issue that took you six drafts to get right.",
+    // Counter — café / point-of-sale.
+    "built around the morning rush, not the spreadsheet.",
+    "four pieces. one quiet shop floor.",
+    "flat monthly. no per-transaction surcharge.",
+    "sun cafe cut their morning rush by 38% in one quarter.",
+    "plays nicely with the tools you already pay for.",
+    "questions our shop owners ask before signing.",
+    "ring up your first oat latte in 14 days.",
+];
 
 /// Tailwind border alpha steps over 5 (= 0.05 ≈ hairline) that we cap. We
 /// rewrite to `5` to match the canonical templates' `border-white/5` /
@@ -61,6 +112,9 @@ const GENERIC_CTAS: &[&str] = &[
 pub enum WarningKind {
     BannedPhrase,
     GenericCta,
+    /// A generated <section> closely matches curated template copy — possible
+    /// verbatim copying of the vision reference. Signal only; not a gate.
+    CopiedSection,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -147,6 +201,19 @@ static TW_BLACK_RE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"\bborder-black/(\d{1,3})\b").expect("valid tailwind black regex")
 });
 
+// Copy-detection: pull each <section>…</section>, then flatten its inner HTML
+// to text. Non-greedy + dotall; nested <section> is vanishingly rare in
+// generated marketing pages and a non-greedy match is fine for first-N-char
+// text extraction.
+static SECTION_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"(?is)<section\b[^>]*>(.*?)</section>").expect("valid section regex")
+});
+
+static TAG_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?s)<[^>]*>").expect("valid tag-strip regex"));
+
+static WS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s+").expect("valid whitespace regex"));
+
 // ─── Public entrypoint ──────────────────────────────────────────────────────
 
 /// Apply the Quality S1 visual-quality hardening pass.
@@ -160,7 +227,8 @@ pub fn harden_visual_quality(html: &str) -> HardenResult {
 
     let stage1 = cap_border_alphas(html, &mut counts);
     let stage2 = normalize_tailwind_borders(&stage1, &mut counts);
-    let warnings = scan_warnings(&stage2);
+    let mut warnings = scan_warnings(&stage2);
+    warnings.extend(scan_copied_sections(&stage2));
 
     HardenResult {
         html: stage2,
@@ -274,6 +342,81 @@ fn contains_case_insensitive(haystack: &str, needle: &str) -> bool {
     let h_lower = haystack.to_ascii_lowercase();
     let n_lower = needle.to_ascii_lowercase();
     h_lower.contains(&n_lower)
+}
+
+// ─── Stage 4: detect sections copied near-verbatim from curated templates ────
+
+/// Flatten a section's inner HTML to lowercased, whitespace-collapsed text,
+/// truncated to the first [`COPY_SECTION_TEXT_LEN`] chars.
+fn normalize_section_text(inner: &str) -> String {
+    let no_tags = TAG_RE.replace_all(inner, " ");
+    let collapsed = WS_RE.replace_all(no_tags.trim(), " ");
+    collapsed
+        .to_lowercase()
+        .chars()
+        .take(COPY_SECTION_TEXT_LEN)
+        .collect()
+}
+
+fn section_texts(html: &str) -> Vec<String> {
+    SECTION_RE
+        .captures_iter(html)
+        .filter_map(|c| c.get(1))
+        .map(|m| normalize_section_text(m.as_str()))
+        .filter(|t| !t.is_empty())
+        .collect()
+}
+
+fn char_trigrams(s: &str) -> HashSet<String> {
+    let chars: Vec<char> = s.chars().collect();
+    let mut set = HashSet::new();
+    if chars.len() < 3 {
+        if !chars.is_empty() {
+            set.insert(chars.into_iter().collect());
+        }
+        return set;
+    }
+    for w in chars.windows(3) {
+        set.insert(w.iter().collect());
+    }
+    set
+}
+
+/// Overlap coefficient: |A∩B| / min(|A|,|B|). Using min (not union) means a
+/// short corpus phrase fully contained in a longer section scores ~1.0 —
+/// exactly the "section reproduces this copy" case we want to catch.
+fn overlap_coefficient(a: &HashSet<String>, b: &HashSet<String>) -> f64 {
+    if a.is_empty() || b.is_empty() {
+        return 0.0;
+    }
+    let inter = a.intersection(b).count();
+    inter as f64 / a.len().min(b.len()) as f64
+}
+
+fn scan_copied_sections(html: &str) -> Vec<HardenWarning> {
+    let corpus: Vec<HashSet<String>> = COPY_CORPUS.iter().map(|c| char_trigrams(c)).collect();
+
+    let mut matched: Vec<String> = Vec::new();
+    for text in section_texts(html) {
+        let tg = char_trigrams(&text);
+        let is_copy = corpus
+            .iter()
+            .any(|ct| overlap_coefficient(ct, &tg) >= COPY_TRIGRAM_OVERLAP_THRESHOLD);
+        if is_copy {
+            matched.push(text.chars().take(60).collect());
+        }
+    }
+
+    if matched.len() < COPY_MIN_MATCHED_SECTIONS {
+        return Vec::new();
+    }
+    matched
+        .into_iter()
+        .map(|m| HardenWarning {
+            kind: WarningKind::CopiedSection,
+            matched: m,
+        })
+        .collect()
 }
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
@@ -462,5 +605,72 @@ mod tests {
         assert_eq!(result.html, "");
         assert_eq!(result.counts, HardenCounts::default());
         assert!(result.warnings.is_empty());
+    }
+
+    // ─── Copy-detection (Quality S2) ─────────────────────────────────────────
+
+    fn copy_warnings(result: &HardenResult) -> usize {
+        result
+            .warnings
+            .iter()
+            .filter(|w| w.kind == WarningKind::CopiedSection)
+            .count()
+    }
+
+    #[test]
+    fn flags_three_sections_copied_verbatim_from_corpus() {
+        let input = concat!(
+            r#"<section><h2>An editor that disappears.</h2></section>"#,
+            r#"<section><h2>Curated. Not tiered.</h2></section>"#,
+            r#"<section><h2>Ring up your first oat latte in 14 days.</h2></section>"#,
+        );
+        let result = harden_visual_quality(input);
+        assert_eq!(copy_warnings(&result), 3);
+        // Signal only — never rewrites copy.
+        assert_eq!(result.html, input);
+    }
+
+    #[test]
+    fn does_not_flag_when_fewer_than_three_sections_match() {
+        let input = concat!(
+            r#"<section><h2>An editor that disappears.</h2></section>"#,
+            r#"<section><h2>Curated. Not tiered.</h2></section>"#,
+        );
+        let result = harden_visual_quality(input);
+        assert_eq!(copy_warnings(&result), 0);
+    }
+
+    #[test]
+    fn does_not_flag_original_section_copy() {
+        let input = concat!(
+            r#"<section><h2>Track every shipment from one calm dashboard.</h2></section>"#,
+            r#"<section><h2>Your warehouse, finally in sync.</h2></section>"#,
+            r#"<section><h2>Simple pricing that grows with your pallet volume.</h2></section>"#,
+        );
+        let result = harden_visual_quality(input);
+        assert_eq!(copy_warnings(&result), 0);
+    }
+
+    #[test]
+    fn copy_detection_does_not_rewrite_and_is_idempotent() {
+        let input = concat!(
+            r#"<section><h2>An editor that disappears.</h2></section>"#,
+            r#"<section><h2>Curated. Not tiered.</h2></section>"#,
+            r#"<section><h2>Ring up your first oat latte in 14 days.</h2></section>"#,
+        );
+        let pass1 = harden_visual_quality(input);
+        let pass2 = harden_visual_quality(&pass1.html);
+        assert_eq!(pass1.html, input);
+        assert_eq!(pass1.html, pass2.html);
+        assert_eq!(pass1.warnings.len(), pass2.warnings.len());
+    }
+
+    #[test]
+    fn copy_detection_ignores_html_without_sections() {
+        // Banned-phrase tests use section-free HTML — confirm copy-detection
+        // adds nothing there so those counts stay exact.
+        let input = r#"<h1>An editor that disappears.</h1>"#;
+        let result = harden_visual_quality(input);
+        assert_eq!(copy_warnings(&result), 0);
     }
 }
