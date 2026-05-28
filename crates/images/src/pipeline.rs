@@ -558,7 +558,11 @@ mod tests {
             placeholder: false,
         })
         .unwrap();
-        assert!(r.placeholder.is_none(), "expected None, got {:?}", r.placeholder);
+        assert!(
+            r.placeholder.is_none(),
+            "expected None, got {:?}",
+            r.placeholder
+        );
     }
 
     #[test]

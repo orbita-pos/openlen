@@ -6,7 +6,10 @@ pub enum ImageError {
     Decode(String),
 
     #[error("encode failed ({format}): {message}")]
-    Encode { format: &'static str, message: String },
+    Encode {
+        format: &'static str,
+        message: String,
+    },
 
     #[error("resize failed: {0}")]
     Resize(String),

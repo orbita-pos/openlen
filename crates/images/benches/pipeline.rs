@@ -114,11 +114,7 @@ fn hue_to_rgb(h: f32, v: f32) -> (u8, u8, u8) {
         _ => (1.0, p, q),
     };
     let scale = (v * 255.0).clamp(0.0, 255.0);
-    (
-        (r * scale) as u8,
-        (g * scale) as u8,
-        (b * scale) as u8,
-    )
+    ((r * scale) as u8, (g * scale) as u8, (b * scale) as u8)
 }
 
 // ─── Production variant spec (mirrors uploadResponsiveVariantSet) ──────────
