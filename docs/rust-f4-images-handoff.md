@@ -3,7 +3,7 @@
 Branch: `rust/f4-images-pipeline`
 Worktree: `D:/worktrees/openlen-f4-images`
 Base: `origin/master` @ `8f740a2` (post-F4 rate-limit merge)
-Self-SHA: _filled at the bottom by the closing commit_
+Self-SHA: see the **Self-commit SHA** section at the bottom.
 
 ## What shipped
 
@@ -234,4 +234,7 @@ here for the next session that touches upload UI.
 
 ---
 
-Self-SHA: _to be filled by the closing commit_
+## Self-commit SHA
+
+`a09010d` — the Phase I commit that introduced this handoff doc.
+Subsequent commits on `rust/f4-images-pipeline` are doc-only fill-ins.
