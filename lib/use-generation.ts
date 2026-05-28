@@ -7,9 +7,11 @@ import type { AIModel } from "@/lib/ai-provider";
 // useGeneration — drives the /new-v2 AI entry flow.
 //
 // POSTs a brief to /api/generate and consumes the Server-Sent Events stream
-// (reasoning_chunk / html_chunk / project_saved / error). The page renders the
-// streaming reasoning, then a live preview of the streaming HTML, then
-// redirects to ?project=<id> when `project_saved` lands.
+// (reasoning_chunk / html_chunk / critic-checking / regen-starting /
+// project_saved / error). The page renders the streaming reasoning, then a
+// live preview of the streaming HTML; if the S3 vision critic triggers a
+// regen the preview resets and the improved version streams in. Redirects to
+// ?project=<id> when `project_saved` lands.
 //
 // A client-side watchdog aborts if the server goes fully silent (a wedged
 // route, a dead connection, no SSE at all) — the server's own stall guard
@@ -18,7 +20,7 @@ import type { AIModel } from "@/lib/ai-provider";
 
 export type GenerationState =
   | { kind: "idle" }
-  | { kind: "generating"; reasoning: string; html: string }
+  | { kind: "generating"; reasoning: string; html: string; notice?: string }
   | { kind: "done"; projectId: string; title: string }
   | { kind: "error"; message: string };
 
@@ -194,6 +196,24 @@ function applyEvent(
     const text = data.text;
     setState((prev) =>
       prev.kind === "generating" ? { ...prev, html: prev.html + text } : prev,
+    );
+  } else if (event === "critic-checking") {
+    // S3 vision critic is rendering + scoring the page. Abstract progress
+    // text only — never surface that "the AI is checking if it looks bad".
+    setState((prev) =>
+      prev.kind === "generating"
+        ? { ...prev, notice: "Checking visual quality…" }
+        : prev,
+    );
+  } else if (event === "regen-starting") {
+    // The critic asked for a regen. Reset the preview buffer so the better
+    // version streams in fresh (replacing the discarded first pass — Phase
+    // 3.3). The `reason` payload is intentionally NOT shown: keep it abstract
+    // (Phase 3.2) so we never tell the user their page looked broken.
+    setState((prev) =>
+      prev.kind === "generating"
+        ? { ...prev, html: "", notice: "Improving the design…" }
+        : prev,
     );
   } else if (event === "project_saved") {
     const projectId = typeof data.projectId === "string" ? data.projectId : "";

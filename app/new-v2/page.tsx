@@ -270,8 +270,13 @@ function NewV2Inner() {
     if (
       aiGenState.kind !== "generating" ||
       aiGenState.reasoning ||
-      aiGenState.html
+      aiGenState.html ||
+      aiGenState.notice
     ) {
+      // `notice` is set only during the critic / regen phases — a known
+      // progress step, not a silent freeze. Suppress the "server saturated"
+      // note there so it can't override the abstract "Improving the design…"
+      // text (the initial silent-wait note stays html-gated as before).
       setGenSlow(false);
       return;
     }
@@ -1060,9 +1065,11 @@ function NewV2Inner() {
             <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-preview-a">
               <div className="h-9 shrink-0 flex items-center gap-2 px-4 border-b bd text-[11.5px] fg-muted">
                 <span className="h-3 w-3 rounded-full border-2 border-coral-500 border-t-transparent animate-spin" />
-                {aiGenState.html
-                  ? "Designing your page…"
-                  : "Thinking through the design…"}
+                {aiGenState.notice
+                  ? aiGenState.notice
+                  : aiGenState.html
+                    ? "Designing your page…"
+                    : "Thinking through the design…"}
               </div>
               <div className="flex-1 min-h-0">
                 <PageBuildingLoader
