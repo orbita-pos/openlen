@@ -288,7 +288,7 @@ mod tests {
         assert_eq!(r.variants[0].width, 100);
         // 200×100 scaled to width 100 → height 50.
         assert_eq!(r.variants[0].height, 50);
-        assert!(r.variants[0].bytes.len() > 0);
+        assert!(!r.variants[0].bytes.is_empty());
         assert_eq!(r.variants[0].format, Format::Webp);
     }
 
@@ -328,7 +328,7 @@ mod tests {
         for v in &r.variants {
             assert_eq!(v.width, 100);
             assert_eq!(v.height, 50);
-            assert!(v.bytes.len() > 0);
+            assert!(!v.bytes.is_empty());
         }
         assert_eq!(r.variants[0].format, Format::Webp);
         assert_eq!(r.variants[1].format, Format::Avif);
