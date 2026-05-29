@@ -98,3 +98,4 @@ public/openlen-images/*.webp
 /tests/visual/corpus/templates/
 /tests/visual/corpus/sections/
 /tests/visual/corpus/*.css
+/tests/visual/corpus/*passmap*.json
