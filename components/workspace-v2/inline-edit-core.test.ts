@@ -14,6 +14,7 @@ import {
   establishesContainingBlock,
   buildStyleMirror,
   serializeTextWithBreaks,
+  collapseWhitespaceForOverlay,
   linesToBreaksHtml,
   caretRangeFromPoint,
 } from "./inline-edit-core";
@@ -199,6 +200,45 @@ describe("serializeTextWithBreaks", () => {
   });
 });
 
+describe("collapseWhitespaceForOverlay", () => {
+  it("collapses pretty-printed leading/interior newlines + indent (the dominant corpus bug)", () => {
+    // The overlay host is forced to pre-wrap; raw source text would render the
+    // newlines literally and wrap wrongly. Collapse to the page's rendered form.
+    expect(
+      collapseWhitespaceForOverlay("\n          Lisbon HQ · Est. 2019\n       ", "normal", false, false),
+    ).toBe("Lisbon HQ · Est. 2019");
+  });
+  it("collapses interior whitespace runs to a single space", () => {
+    expect(collapseWhitespaceForOverlay("a   b\n\tc", "normal", false, false)).toBe("a b c");
+  });
+  it("treats nowrap like normal (collapses, never preserves newlines)", () => {
+    expect(collapseWhitespaceForOverlay("  x \n y ", "nowrap", false, false)).toBe("x y");
+  });
+  it("preserves a significant inter-run space ONLY when a sibling abuts that edge", () => {
+    // "foo <b>x</b> bar": the leading text run has a TRAILING sibling (<b>) — its
+    // trailing space is significant and must survive the commit round-trip.
+    expect(collapseWhitespaceForOverlay("foo ", "normal", false, true)).toBe("foo ");
+    // " bar" run has a PREVIOUS sibling (<b>) — leading space significant.
+    expect(collapseWhitespaceForOverlay(" bar", "normal", true, false)).toBe(" bar");
+    // Same text with no abutting sibling → trimmed (line-start whitespace drops).
+    expect(collapseWhitespaceForOverlay("foo ", "normal", false, false)).toBe("foo");
+    expect(collapseWhitespaceForOverlay(" bar", "normal", false, false)).toBe("bar");
+  });
+  it("preserves whitespace verbatim for pre / pre-wrap / break-spaces", () => {
+    const raw = "  line1\n    line2  ";
+    expect(collapseWhitespaceForOverlay(raw, "pre", false, false)).toBe(raw);
+    expect(collapseWhitespaceForOverlay(raw, "pre-wrap", false, false)).toBe(raw);
+    expect(collapseWhitespaceForOverlay(raw, "break-spaces", false, false)).toBe(raw);
+  });
+  it("pre-line collapses spaces/tabs but keeps newlines", () => {
+    expect(collapseWhitespaceForOverlay("a  \t b\nc  d", "pre-line", false, false)).toBe("a b\nc d");
+  });
+  it("handles null/empty input", () => {
+    expect(collapseWhitespaceForOverlay("", "normal", false, false)).toBe("");
+    expect(collapseWhitespaceForOverlay(null as unknown as string, "normal", true, true)).toBe("");
+  });
+});
+
 describe("linesToBreaksHtml", () => {
   it("escapes HTML special characters", () => {
     expect(linesToBreaksHtml("a < b & c > d")).toBe("a &lt; b &amp; c &gt; d");
@@ -276,6 +316,7 @@ describe("composed injection script", () => {
       "establishesContainingBlock",
       "buildStyleMirror",
       "serializeTextWithBreaks",
+      "collapseWhitespaceForOverlay",
       "linesToBreaksHtml",
       "caretRangeFromPoint",
       "STYLE_PROPS",

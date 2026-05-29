@@ -1,0 +1,442 @@
+{
+  "totalBodies": 290,
+  "bodiesWithEditables": 285,
+  "totalElements": 45220,
+  "signatureLegend": "editMode|align|balance|fontUnit|ancestorCB|cbDecision|lineCount",
+  "clusters": [
+    {
+      "signature": "element|left|nobalance|vw|noAncT|fixed|single",
+      "count": 14485,
+      "failed": 1,
+      "cats": {
+        "D-multiline": 1
+      },
+      "example": {
+        "bodyId": "about-01",
+        "tag": "span"
+      }
+    },
+    {
+      "signature": "element|left|nobalance|px|noAncT|fixed|single",
+      "count": 11460,
+      "failed": 1,
+      "cats": {
+        "D-multiline": 1
+      },
+      "example": {
+        "bodyId": "about-01",
+        "tag": "div"
+      }
+    },
+    {
+      "signature": "element|left|nobalance|px|ancTransform|fixed|single",
+      "count": 3235,
+      "failed": 19,
+      "cats": {
+        "D-multiline": 19
+      },
+      "example": {
+        "bodyId": "cta-03",
+        "tag": "div"
+      }
+    },
+    {
+      "signature": "element|left|nobalance|vw|noAncT|fixed|multiline",
+      "count": 3034,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "about-01",
+        "tag": "h2"
+      }
+    },
+    {
+      "signature": "element|left|nobalance|vw|ancTransform|fixed|single",
+      "count": 2579,
+      "failed": 10,
+      "cats": {
+        "D-multiline": 10
+      },
+      "example": {
+        "bodyId": "comparison-06",
+        "tag": "span"
+      }
+    },
+    {
+      "signature": "run|left|nobalance|px|noAncT|fixed|single",
+      "count": 2489,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "about-01",
+        "tag": "div"
+      }
+    },
+    {
+      "signature": "run|left|nobalance|vw|noAncT|fixed|single",
+      "count": 1835,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "cta-02",
+        "tag": "span"
+      }
+    },
+    {
+      "signature": "element|center|nobalance|vw|noAncT|fixed|single",
+      "count": 1515,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "about-02",
+        "tag": "div"
+      }
+    },
+    {
+      "signature": "element|center|nobalance|px|noAncT|fixed|single",
+      "count": 997,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "about-02",
+        "tag": "span"
+      }
+    },
+    {
+      "signature": "element|left|nobalance|px|noAncT|fixed|multiline",
+      "count": 860,
+      "failed": 1,
+      "cats": {
+        "C-wrap": 1
+      },
+      "example": {
+        "bodyId": "about-01",
+        "tag": "p"
+      }
+    },
+    {
+      "signature": "run|center|nobalance|vw|noAncT|fixed|single",
+      "count": 394,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "about-02",
+        "tag": "div"
+      }
+    },
+    {
+      "signature": "run|left|nobalance|px|ancTransform|fixed|single",
+      "count": 282,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "faq-04",
+        "tag": "summary"
+      }
+    },
+    {
+      "signature": "run|left|nobalance|vw|noAncT|fixed|multiline",
+      "count": 273,
+      "failed": 1,
+      "cats": {
+        "C-wrap": 1
+      },
+      "example": {
+        "bodyId": "cta-02",
+        "tag": "p"
+      }
+    },
+    {
+      "signature": "element|left|nobalance|px|ancTransform|fixed|multiline",
+      "count": 232,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "faq-04",
+        "tag": "div"
+      }
+    },
+    {
+      "signature": "element|center|nobalance|vw|ancTransform|fixed|single",
+      "count": 229,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "bittersweet",
+        "tag": "p"
+      }
+    },
+    {
+      "signature": "element|center|nobalance|vw|noAncT|fixed|multiline",
+      "count": 207,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "about-02",
+        "tag": "p"
+      }
+    },
+    {
+      "signature": "element|left|nobalance|vw|ancTransform|fixed|multiline",
+      "count": 201,
+      "failed": 12,
+      "cats": {
+        "C-wrap": 12
+      },
+      "example": {
+        "bodyId": "how-it-works-04",
+        "tag": "p"
+      }
+    },
+    {
+      "signature": "run|center|nobalance|px|noAncT|fixed|single",
+      "count": 193,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "about-02",
+        "tag": "div"
+      }
+    },
+    {
+      "signature": "run|left|nobalance|vw|ancTransform|fixed|single",
+      "count": 162,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "navbar-04",
+        "tag": "span"
+      }
+    },
+    {
+      "signature": "element|center|nobalance|px|ancTransform|fixed|single",
+      "count": 153,
+      "failed": 2,
+      "cats": {
+        "D-multiline": 2
+      },
+      "example": {
+        "bodyId": "borealis",
+        "tag": "span"
+      }
+    },
+    {
+      "signature": "element|center|nobalance|px|noAncT|fixed|multiline",
+      "count": 95,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "comparison-01",
+        "tag": "p"
+      }
+    },
+    {
+      "signature": "run|left|nobalance|px|noAncT|fixed|multiline",
+      "count": 95,
+      "failed": 3,
+      "cats": {
+        "C-wrap": 3
+      },
+      "example": {
+        "bodyId": "cta-02",
+        "tag": "h2"
+      }
+    },
+    {
+      "signature": "run|center|nobalance|vw|ancTransform|fixed|single",
+      "count": 66,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "atrium-loft",
+        "tag": "button"
+      }
+    },
+    {
+      "signature": "run|center|nobalance|vw|noAncT|fixed|multiline",
+      "count": 33,
+      "failed": 1,
+      "cats": {
+        "C-wrap": 1
+      },
+      "example": {
+        "bodyId": "cta-04",
+        "tag": "p"
+      }
+    },
+    {
+      "signature": "run|left|nobalance|px|ancTransform|fixed|multiline",
+      "count": 27,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "borealis",
+        "tag": "p"
+      }
+    },
+    {
+      "signature": "run|left|nobalance|vw|ancTransform|fixed|multiline",
+      "count": 23,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "borealis",
+        "tag": "p"
+      }
+    },
+    {
+      "signature": "element|center|nobalance|vw|ancTransform|fixed|multiline",
+      "count": 23,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "bracket",
+        "tag": "p"
+      }
+    },
+    {
+      "signature": "run|center|nobalance|px|ancTransform|fixed|single",
+      "count": 15,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "bulwark",
+        "tag": "p"
+      }
+    },
+    {
+      "signature": "run|center|nobalance|px|noAncT|fixed|multiline",
+      "count": 9,
+      "failed": 1,
+      "cats": {
+        "C-wrap": 1
+      },
+      "example": {
+        "bodyId": "cta-01",
+        "tag": "p"
+      }
+    },
+    {
+      "signature": "element|left|balance|px|noAncT|fixed|single",
+      "count": 5,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "gallery-01",
+        "tag": "h2"
+      }
+    },
+    {
+      "signature": "run|left|balance|px|noAncT|fixed|single",
+      "count": 2,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "hero-02",
+        "tag": "h1"
+      }
+    },
+    {
+      "signature": "element|center|balance|px|noAncT|fixed|multiline",
+      "count": 2,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "hero-04",
+        "tag": "h1"
+      }
+    },
+    {
+      "signature": "element|center|nobalance|px|ancTransform|fixed|multiline",
+      "count": 2,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "sprout",
+        "tag": "h3"
+      }
+    },
+    {
+      "signature": "run|center|balance|vw|noAncT|fixed|single",
+      "count": 1,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "about-02",
+        "tag": "h2"
+      }
+    },
+    {
+      "signature": "run|left|balance|vw|noAncT|fixed|multiline",
+      "count": 1,
+      "failed": 1,
+      "cats": {
+        "C-wrap": 1
+      },
+      "example": {
+        "bodyId": "about-05",
+        "tag": "p"
+      }
+    },
+    {
+      "signature": "element|center|balance|px|noAncT|fixed|single",
+      "count": 1,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "gallery-02",
+        "tag": "h2"
+      }
+    },
+    {
+      "signature": "run|center|balance|px|noAncT|fixed|single",
+      "count": 1,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "hero-01",
+        "tag": "h1"
+      }
+    },
+    {
+      "signature": "element|left|balance|px|noAncT|fixed|multiline",
+      "count": 1,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "hero-03",
+        "tag": "h1"
+      }
+    },
+    {
+      "signature": "element|left|balance|vw|noAncT|fixed|multiline",
+      "count": 1,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "stats-05",
+        "tag": "h2"
+      }
+    },
+    {
+      "signature": "element|center|balance|vw|noAncT|fixed|multiline",
+      "count": 1,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "stats-06",
+        "tag": "h2"
+      }
+    },
+    {
+      "signature": "run|center|nobalance|vw|ancTransform|fixed|multiline",
+      "count": 1,
+      "failed": 0,
+      "cats": {},
+      "example": {
+        "bodyId": "bracket",
+        "tag": "h2"
+      }
+    }
+  ]
+}

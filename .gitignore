@@ -95,3 +95,7 @@ public/openlen-images/*.webp
 /INARI_DESIGN_ENGINE.md
 /docs/SHOW_HN_DRAFT.md
 *.tar.gz
+/tests/visual/corpus/templates/
+/tests/visual/corpus/sections/
+/tests/visual/corpus/*.css
+/tests/visual/corpus/*passmap*.json

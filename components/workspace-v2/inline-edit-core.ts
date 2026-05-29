@@ -283,6 +283,49 @@ export function serializeTextWithBreaks(el: Element): string {
 }
 
 /**
+ * Normalize a source text run to the string the page actually RENDERS, so an
+ * overlay can show it identically.
+ *
+ * WHY (Phase 3.3 — the dominant real-corpus bug): Chromium forces
+ * `white-space: pre-wrap` on a `contenteditable=plaintext-only` host, OVERRIDING
+ * the mirrored `white-space`. So the overlay renders a source text node's
+ * pretty-printed leading/interior newlines + indentation LITERALLY — e.g.
+ * "\n      Lisbon HQ\n   " becomes a blank first line + indented text + wrap
+ * noise — while the page (white-space:normal) collapses all of it to
+ * "Lisbon HQ". The overlay then sits one line low and wraps wrongly. Rather than
+ * fight the forced pre-wrap, we feed the overlay the collapsed text.
+ *
+ * Collapsing matches CSS white-space processing for the common cases:
+ *   - pre / pre-wrap / break-spaces → preserve verbatim (page preserves it too)
+ *   - pre-line → collapse spaces/tabs runs, keep newlines
+ *   - normal / nowrap (and anything else) → collapse every whitespace run
+ *     (incl. newlines) to a single space, then drop a leading/trailing space
+ *     UNLESS a sibling text/mark abuts that edge (hasPrev/hasNext) — that space
+ *     is significant inter-run separation and must survive the commit round-trip
+ *     (else "foo <b>bar</b> baz" would lose the gap and read "…</b>baz").
+ *
+ * Pure + self-contained (inline regex only). The result is what we put in the
+ * overlay AND the change-detection snapshot, so a no-op edit commits nothing.
+ */
+export function collapseWhitespaceForOverlay(
+  raw: string,
+  whiteSpace: string | null | undefined,
+  hasPrev: boolean,
+  hasNext: boolean,
+): string {
+  if (raw == null) return "";
+  var ws = whiteSpace || "";
+  if (ws === "pre" || ws === "pre-wrap" || ws === "break-spaces") return raw;
+  if (ws === "pre-line") return raw.replace(/[ \t\f]+/g, " ");
+  // normal | nowrap | (unknown) — full collapse.
+  var leadWs = /^[\s ​﻿]/.test(raw);
+  var trailWs = /[\s ​﻿]$/.test(raw);
+  var collapsed = raw.replace(/[\t\n\r\f  ​﻿]+/g, " ");
+  var core = collapsed.replace(/^ /, "").replace(/ $/, "");
+  return (hasPrev && leadWs ? " " : "") + core + (hasNext && trailWs ? " " : "");
+}
+
+/**
  * Convert plain text (possibly containing "\n" soft breaks the user typed via
  * Shift+Enter) into HTML-safe markup with <br> for newlines. Used to commit a
  * multi-line element-mode edit. Pure.
