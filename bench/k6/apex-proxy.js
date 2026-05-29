@@ -2,7 +2,7 @@
 //
 // Drives a steady GET / against `Host: openlen.com` (the apex landing) so the
 // edge always falls through to Node. Useful for confirming the edge doesn't
-// slow apex traffic vs. nginx's direct proxy_pass.
+// slow apex traffic vs. Caddy's reverse_proxy.
 //
 // Tunable env:
 //   OPENLEN_TARGET  https://127.0.0.1:443 (the listener under test)

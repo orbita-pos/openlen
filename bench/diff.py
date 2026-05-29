@@ -5,9 +5,9 @@ Prints a table with median RPS, p50/p95/p99 latency, and error rate for each
 scenario. Applies the cutover acceptance gates from infra/edge/CUTOVER.md
 step 4f:
 
-  * edge median RPS  >= 95% of nginx median RPS
-  * edge p99 latency <= 120% of nginx p99 latency
-  * edge error rate  <=  nginx error rate + 0.1pp
+  * edge median RPS  >= 95% of Caddy median RPS
+  * edge p99 latency <= 120% of Caddy p99 latency
+  * edge error rate  <=  Caddy error rate + 0.1pp
 
 Exits 0 if ALL scenarios pass every gate, 1 otherwise. The operator chains on
 the exit code:

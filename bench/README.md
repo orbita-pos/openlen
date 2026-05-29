@@ -1,6 +1,6 @@
 # OpenLen edge bench harness
 
-Compares the edge (Rust) against nginx (incumbent) under realistic traffic
+Compares the edge (Rust) against Caddy (incumbent) under realistic traffic
 shapes, so the operator can prove RPS / p99 parity before the swap. Drives
 k6 at the box from the same box — no internet hop, no Cloudflare in the
 path; we want the raw server delta.
@@ -33,7 +33,7 @@ The wildcard scenario is the gate that matters most — published landings are t
 
 ## Running the bench
 
-### 1. Baseline (nginx still on :443)
+### 1. Baseline (Caddy still on :443)
 
 ```bash
 cd /opt/openlen-app   # or wherever the repo lives
@@ -42,9 +42,9 @@ bash bench/run-baseline.sh
 
 Writes JSON summaries to `bench/results/baseline/`.
 
-### 2. Edge sidecar (nginx still on :443, edge on :8443)
+### 2. Edge sidecar (Caddy still on :443, edge on :8443)
 
-Per the cutover runbook (`infra/edge/CUTOVER.md` step 4d), start the edge with `OPENLEN_EDGE_BIND=0.0.0.0:8443` so it doesn't fight nginx for the public ports.
+Per the cutover runbook (`infra/edge/CUTOVER.md` step 4d), start the edge with `OPENLEN_EDGE_BIND=0.0.0.0:8443` so it doesn't fight Caddy for the public ports.
 
 ```bash
 bash bench/run-edge.sh
@@ -60,9 +60,9 @@ python3 bench/diff.py
 
 Prints a per-scenario table and applies the acceptance gates:
 
-- **edge median RPS ≥ 95 % of nginx median RPS**
-- **edge p99 latency ≤ 120 % of nginx p99 latency**
-- **edge error rate ≤ nginx error rate + 0.1 pp**
+- **edge median RPS ≥ 95 % of Caddy median RPS**
+- **edge p99 latency ≤ 120 % of Caddy p99 latency**
+- **edge error rate ≤ Caddy error rate + 0.1 pp**
 
 Exits 0 on all-pass, 1 otherwise. Chain everything together in CI / runbook:
 

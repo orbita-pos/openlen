@@ -2,7 +2,7 @@
 //
 // Drives a steady GET / against a real `<sub>.openlen.com` so the edge
 // resolves index.html off disk directly. The biggest traffic class in prod;
-// this is the gate-relevant scenario for "is the edge as fast as nginx?".
+// this is the gate-relevant scenario for "is the edge as fast as Caddy?".
 //
 // Pick a SUB that's actually deployed and has an index.html at
 // /var/www/openlen/<sub>/current/. The operator passes it via env.

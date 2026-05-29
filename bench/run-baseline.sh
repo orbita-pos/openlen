@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Run the four bench scenarios against the current nginx listener on :443.
+# Run the four bench scenarios against the current Caddy listener on :443.
 # Writes JSON summary outputs into bench/results/baseline/ so bench/diff.py
 # can compare them to the edge run.
 #
-# Run this BEFORE the cutover, while nginx is still owning :443. Re-run
+# Run this BEFORE the cutover, while Caddy is still owning :443. Re-run
 # whenever the baseline needs refreshing (after a Next.js version bump, after
 # a hardware change, etc.).
 #
@@ -11,7 +11,7 @@
 #   bash bench/run-baseline.sh
 #
 # Override defaults with env vars (see each k6 script for the full list):
-#   OPENLEN_TARGET=https://127.0.0.1:443        (default — nginx on :443)
+#   OPENLEN_TARGET=https://127.0.0.1:443        (default — Caddy on :443)
 #   OPENLEN_SUB=mirror                          (subdomain known to exist)
 #   OPENLEN_CUSTOM_HOST=mybrand.com             (verified custom domain)
 #   DURATION=60s                                 (per scenario)

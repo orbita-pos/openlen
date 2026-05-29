@@ -2,8 +2,8 @@
 //
 // Drives a steady GET / against a verified custom-domain host. With the edge,
 // every request hits the LRU-cached custom-domain lookup → serve from disk
-// (same code path as wildcard subdomain after the lookup hit). With nginx +
-// the old Next /served/<host>/ adapter it's a proxy hop to Node — that's the
+// (same code path as wildcard subdomain after the lookup hit). With Caddy +
+// the Next /served/<host>/ adapter it's a proxy hop to Node — that's the
 // delta we're measuring.
 //
 // The custom domain must already be verified (`customDomains.status =

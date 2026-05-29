@@ -1,6 +1,6 @@
 [Unit]
 Description=OpenLen Next.js application
-After=network.target nginx.service
+After=network.target caddy.service
 Wants=network-online.target
 
 [Service]
@@ -9,9 +9,10 @@ User=openlen-deploy
 Group=www-data
 WorkingDirectory=/opt/openlen-app
 
-# Bind to localhost only — nginx is the only thing that should reach the
-# Node process. 0.0.0.0 here would be reachable from the public internet
-# despite ufw, since nginx isn't in the path.
+# Bind to localhost only — the web tier (Caddy today, openlen-edge after
+# cutover) is the only thing that should reach the Node process. 0.0.0.0
+# here would be reachable from the public internet despite ufw, since the
+# web tier isn't in the path.
 Environment=NODE_ENV=production
 Environment=PORT=3000
 Environment=HOSTNAME=127.0.0.1
@@ -24,8 +25,8 @@ Environment=UPLOADS_PUBLIC_URL=/uploads
 Environment=WITNESS_DIR=/var/openlen/witness
 
 # Session 11 — per-user subdomain hosting. The publish flow writes one
-# directory per claimed subdomain to PUBLISH_ROOT; nginx serves it. The
-# wildcard server block reads from the same root. PUBLISH_BASE_HOST is
+# directory per claimed subdomain to PUBLISH_ROOT; the web tier serves it.
+# The wildcard site block reads from the same root. PUBLISH_BASE_HOST is
 # the bare host that subdomains are stitched onto when building URLs.
 Environment=PUBLISH_ROOT=/var/www/openlen
 Environment=PUBLISH_BASE_HOST=openlen.com

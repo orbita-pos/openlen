@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Run the four bench scenarios against the edge sidecar (default :8443) while
-# nginx still owns :443. Writes JSON summary outputs into bench/results/edge/
+# Caddy still owns :443. Writes JSON summary outputs into bench/results/edge/
 # so bench/diff.py can compare them to the baseline.
 #
 # Pre-requisite: edge running with OPENLEN_EDGE_BIND=0.0.0.0:8443 (see step
-# 4d in infra/edge/CUTOVER.md — the side-by-side bake-off). nginx still
+# 4d in infra/edge/CUTOVER.md — the side-by-side bake-off). Caddy still
 # owns :443 + :80; the edge only listens on :8443 during this phase.
 #
 # Usage:
