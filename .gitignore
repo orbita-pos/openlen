@@ -10,6 +10,12 @@
 
 # testing
 /coverage
+# Playwright run artifacts (the committed visual baseline lives under
+# tests/e2e/*-snapshots/ and IS tracked; these are per-run scratch only).
+/test-results/
+/playwright-report/
+/blob-report/
+/.playwright/
 
 # next.js
 /.next/

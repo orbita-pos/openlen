@@ -27,8 +27,16 @@ const INSPECT_STYLE = `
   outline: 2px solid rgba(255,90,54,0.95) !important;
   outline-offset: -2px !important;
 }
-body[data-openlen-inspect-mode] [data-openlen-inspect-hover] {
+body[data-openlen-edit-mode] [data-openlen-inspect-hover] {
   cursor: pointer !important;
+}
+/* Editor V3 gate — outlines only render when edit mode is on. The script
+   is persistent in the iframe and only updates hover/selected attrs while
+   in edit mode (handler-level gate), but the gate here also masks any
+   leftover attrs from a stale mid-toggle state. */
+body:not([data-openlen-edit-mode]) [data-openlen-inspect-hover],
+body:not([data-openlen-edit-mode]) [data-openlen-inspect-selected] {
+  outline: none !important;
 }
 `;
 
@@ -499,9 +507,17 @@ const INSPECT_SCRIPT = `
     postPageMeta();
   }
 
-  document.body.setAttribute('data-openlen-inspect-mode', '');
+  // Editor V3 — gate interaction handlers on body[data-openlen-edit-mode].
+  // The script is permanently in the persistent iframe; activation is a
+  // body-attr flip the parent owns. mouseleave runs always so a stale hover
+  // attr left behind by a mid-toggle gets cleared as soon as the cursor
+  // leaves the iframe.
+  function inEditMode() {
+    return !!(document.body && document.body.hasAttribute('data-openlen-edit-mode'));
+  }
 
   document.addEventListener('mousemove', function (e) {
+    if (!inEditMode()) return;
     var t = resolveTarget(e.target);
     if (!selectable(t)) { setHover(null); return; }
     setHover(t);
@@ -510,6 +526,7 @@ const INSPECT_SCRIPT = `
   document.addEventListener('mouseleave', function () { setHover(null); }, true);
 
   document.addEventListener('click', function (e) {
+    if (!inEditMode()) return;
     e.preventDefault();
     e.stopPropagation();
     var t = resolveTarget(e.target);
@@ -520,6 +537,7 @@ const INSPECT_SCRIPT = `
 
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
+    if (!inEditMode()) return;
     setSelected(null);
     post({ type: 'openlen:element-deselected' });
   }, true);
