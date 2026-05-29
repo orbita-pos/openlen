@@ -111,6 +111,13 @@ import {
   linesToBreaksHtml,
   caretRangeFromPoint,
 } from "./inline-edit-core";
+import {
+  rectsToRows,
+  rowsMatch,
+  childIndexPath,
+  nodeAtPath,
+  shouldUseGhostLayout,
+} from "@/lib/workspace-v2/inline-edit/ghost-sibling-layout";
 
 const INLINE_EDIT_STYLE = `
 /* Editable affordances — gated on body[data-openlen-edit-mode] so idle
@@ -177,6 +184,12 @@ const CORE_SRC = [
   `var collapseWhitespaceForOverlay = ${collapseWhitespaceForOverlay.toString()};`,
   `var linesToBreaksHtml = ${linesToBreaksHtml.toString()};`,
   `var caretRangeFromPoint = ${caretRangeFromPoint.toString()};`,
+  // Subsystem B (ghost-sibling layout) pure helpers.
+  `var rectsToRows = ${rectsToRows.toString()};`,
+  `var rowsMatch = ${rowsMatch.toString()};`,
+  `var childIndexPath = ${childIndexPath.toString()};`,
+  `var nodeAtPath = ${nodeAtPath.toString()};`,
+  `var shouldUseGhostLayout = ${shouldUseGhostLayout.toString()};`,
 ].join("\n");
 
 // The runtime glue. Hand-written browser JS — deliberately contains NO regex
@@ -225,6 +238,10 @@ ${CORE_SRC}
   function captureClean() {
     var clone = document.documentElement.cloneNode(true);
     clone.querySelectorAll('[data-openlen-inline-edit]').forEach(function (n) { n.remove(); });
+    // Subsystem B ghost clones are transient editor twins — drop them wholesale
+    // (the editable span lives inside) so a capture mid-ghost can't duplicate
+    // content. Normally removed on finishEdit before any capture.
+    clone.querySelectorAll('[data-openlen-edit-ghost]').forEach(function (n) { n.remove(); });
     clone.querySelectorAll('[data-openlen-edit-overlay]').forEach(function (n) { n.remove(); });
     // Unwrap temp run-wrappers: replace each with its children so the run text
     // is preserved exactly (a stale wrapper must never reach the saved HTML).
@@ -262,6 +279,7 @@ ${CORE_SRC}
   var wrap = null;            // run-mode: temp <span> hiding just that run
   var posTarget = null;       // element whose rect drives overlay placement
   var anchorNode = null;      // original text whose FIRST GLYPH the overlay aligns to
+  var ghost = null;           // Subsystem B: { clone, realAncestor, origFirst } when ghost-editing
   var snapshot = '';          // text snapshot for change detection
   var overlayAbsolute = false;// position:absolute (vs fixed) for this session
   var borderAdjustX = 0;      // source's L+R border, subtracted from overlay width
@@ -374,6 +392,7 @@ ${CORE_SRC}
   // containing block (transform/filter/perspective) that shifts the origin.
   function positionOverlay() {
     if (!overlay || !posTarget) return;
+    if (ghost) { positionGhostClone(); return; }
     var p = placement();
     if (overlayAbsolute) {
       var br = document.body.getBoundingClientRect();
@@ -470,6 +489,144 @@ ${CORE_SRC}
     wrap = null;
   }
 
+  // ── Subsystem B: ghost-sibling layout ────────────────────────────────────
+  // Client rects of a node's text content (DOMRectList → array-like for rectsToRows).
+  function nodeRects(node) {
+    var rg = document.createRange();
+    rg.selectNodeContents(node);
+    return rg.getClientRects();
+  }
+
+  // Try the clone-as-editor path for a target text node whose lines are
+  // co-determined by sibling/float context (centered runs sharing a line, text
+  // wrapping around a float). Returns true + fully sets up the editor on success;
+  // returns false with NO side effects so the caller falls back to the overlay.
+  function tryGhostEdit(el, tn, styleSource, hasPrevSib, hasNextSib, clickX, clickY) {
+    if (!tn || tn.nodeType !== 3) return false;
+    var cs = window.getComputedStyle(styleSource);
+    var origRows = rectsToRows(nodeRects(tn));
+    if (origRows.length <= 1) return false; // single line → glyph-anchor is exact
+
+    // Does anything beyond the target share its inline formatting context?
+    var startBlock = blockContainer(tn);
+    var hasOtherInline = (el.children && el.children.length > 0) ||
+      (startBlock && startBlock.childNodes && startBlock.childNodes.length > 1);
+    // Float intrusion signal: under start/left alignment, lines indented unevenly.
+    var minL = origRows[0].left, maxL = origRows[0].left;
+    for (var i = 1; i < origRows.length; i++) {
+      if (origRows[i].left < minL) minL = origRows[i].left;
+      if (origRows[i].left > maxL) maxL = origRows[i].left;
+    }
+    var leftStart = cs.textAlign === 'left' || cs.textAlign === 'start' || cs.textAlign === '';
+    var hasFloatContext = leftStart && (maxL - minL) > 2;
+
+    if (!shouldUseGhostLayout({
+      fragmentCount: origRows.length,
+      textAlign: cs.textAlign,
+      hasOtherInlineContent: hasOtherInline,
+      hasFloatContext: hasFloatContext,
+    })) return false;
+
+    var origFirst = firstGlyphRect(tn);
+    var initialText = collapseWhitespaceForOverlay(tn.data, cs.whiteSpace, hasPrevSib, hasNextSib);
+
+    // Escalate: clone the smallest ancestor whose clone reproduces origRows.
+    var ancestor = startBlock;
+    for (var depth = 0; depth < 5 && ancestor && ancestor !== document.body; depth++) {
+      var path = childIndexPath(ancestor, tn);
+      if (path) {
+        var clone = ancestor.cloneNode(true);
+        var cloneTn = nodeAtPath(clone, path);
+        if (cloneTn && cloneTn.nodeType === 3) {
+          // strip page editor markers from the clone so it can't capture clicks
+          // or be mistaken for editable; tag it for captureClean removal.
+          clone.setAttribute('data-openlen-edit-ghost', '');
+          try {
+            var marked = clone.querySelectorAll('[data-openlen-editable]');
+            for (var q = 0; q < marked.length; q++) marked[q].removeAttribute('data-openlen-editable');
+            if (clone.hasAttribute('data-openlen-editable')) clone.removeAttribute('data-openlen-editable');
+          } catch (_m) {}
+          // Off-screen measure pass: same width + inherited context as the real
+          // ancestor, out of flow (no page shift).
+          var ar = ancestor.getBoundingClientRect();
+          clone.style.position = 'absolute';
+          clone.style.left = '-99999px';
+          clone.style.top = '0';
+          clone.style.margin = '0';
+          clone.style.width = ar.width + 'px';
+          ancestor.parentNode.insertBefore(clone, ancestor.nextSibling);
+          // Make ONLY the target editable inside the clone, with collapsed text
+          // (the editable host is forced to pre-wrap, like the floating overlay).
+          var span = document.createElement('span');
+          span.setAttribute('data-openlen-edit-overlay', '');
+          span.setAttribute('contenteditable', 'plaintext-only');
+          span.setAttribute('spellcheck', 'true');
+          cloneTn.parentNode.insertBefore(span, cloneTn);
+          span.appendChild(cloneTn);
+          cloneTn.data = initialText;
+          var cloneRows = rectsToRows(nodeRects(cloneTn));
+          if (rowsMatch(origRows, cloneRows, 1.75)) {
+            // SUCCESS — this clone reproduces the page layout. Commit to it.
+            ghost = { clone: clone, realAncestor: ancestor, origFirst: origFirst };
+            overlay = span;
+            textNode = tn;                 // the REAL node committed on finish
+            posTarget = ancestor;          // drives reposition + sync
+            anchorNode = cloneTn;          // clone's target glyph (for self-correct)
+            snapshot = initialText;
+            overlayAbsolute = false;
+            try {
+              overlayAbsolute =
+                establishesContainingBlock(window.getComputedStyle(document.body)) ||
+                establishesContainingBlock(window.getComputedStyle(document.documentElement));
+            } catch (_e) {}
+            ancestor.setAttribute('data-openlen-edit-hidden', ''); // hide real, show clone
+            positionGhostClone();
+            startSync();
+            try { span.focus({ preventScroll: true }); } catch (_f) { try { span.focus(); } catch (__) {} }
+            var cr = caretRangeFromPoint(document, clickX, clickY, span);
+            if (!cr) { cr = document.createRange(); cr.selectNodeContents(span); cr.collapse(false); }
+            var sel = window.getSelection();
+            if (sel) { sel.removeAllRanges(); sel.addRange(cr); }
+            return true;
+          }
+          // didn't reproduce → discard this clone, escalate
+          clone.remove();
+        }
+      }
+      ancestor = ancestor.parentElement;
+    }
+    return false; // no reproducing ancestor within cap → caller uses the overlay
+  }
+
+  // Keep the ghost clone glued over the (hidden) real ancestor; glyph-anchor the
+  // clone's target to the original's captured first-glyph position.
+  function positionGhostClone() {
+    if (!ghost || !ghost.clone || !posTarget) return;
+    var rr = posTarget.getBoundingClientRect();
+    var c = ghost.clone;
+    if (overlayAbsolute) {
+      var br = document.body.getBoundingClientRect();
+      c.style.position = 'absolute';
+      c.style.left = (rr.left - br.left) + 'px';
+      c.style.top = (rr.top - br.top) + 'px';
+    } else {
+      c.style.position = 'fixed';
+      c.style.left = rr.left + 'px';
+      c.style.top = rr.top + 'px';
+    }
+    c.style.width = rr.width + 'px';
+    var va = firstGlyphRect(overlay);
+    if (va && ghost.origFirst) {
+      var dx = ghost.origFirst.left - va.left;
+      var dy = ghost.origFirst.top - va.top;
+      if (dx < -0.5 || dx > 0.5 || dy < -0.5 || dy > 0.5) {
+        c.style.left = ((parseFloat(c.style.left) || 0) + dx) + 'px';
+        c.style.top = ((parseFloat(c.style.top) || 0) + dy) + 'px';
+      }
+    }
+    lastRectKey = rectKey(rr);
+  }
+
   function startEdit(el, clickX, clickY) {
     if (!el) return;
     // Always finish (commit) any in-flight edit first — covers fast
@@ -506,6 +663,11 @@ ${CORE_SRC}
         // Capture sibling adjacency BEFORE wrapping (wrapRun re-parents tn).
         hasPrevSib = !!tn.previousSibling;
         hasNextSib = !!tn.nextSibling;
+        // Subsystem B: if this run wraps and its lines are co-determined by
+        // siblings/floats, edit a context-preserving clone instead. Self-
+        // validating — returns false (no side effects) when it can't reproduce
+        // the layout, so the floating-overlay path below runs unchanged.
+        if (tryGhostEdit(el, tn, tn.parentElement || el, hasPrevSib, hasNextSib, clickX, clickY)) return;
         wrap = wrapRun(tn);
         if (!wrap) {
           // Couldn't wrap (detached text node) — fall back to element-mode
@@ -521,6 +683,10 @@ ${CORE_SRC}
       }
     }
     if (mode === 'element') {
+      // Subsystem B for a clean text element whose lines reflow around a float
+      // (editorial paragraphs) — clone-as-editor before falling back to overlay.
+      var etn = firstNonBlankTextNode(el);
+      if (etn && tryGhostEdit(el, etn, el, false, false, clickX, clickY)) return;
       styleSource = el;
       anchorNode = el;
       rawInitial = serializeTextWithBreaks(el);
@@ -603,6 +769,23 @@ ${CORE_SRC}
     if (!editable || !overlay) return;
     stopSync();
 
+    // Subsystem B teardown: commit to the REAL text node, drop the clone, unhide.
+    if (ghost) {
+      var gNewText = overlay.textContent;
+      var gChanged = false;
+      if (commit && gNewText !== snapshot && textNode) {
+        textNode.data = gNewText; // surgical: the single real run/text node
+        gChanged = true;
+      }
+      try { ghost.clone.remove(); } catch (_g) {}
+      try { ghost.realAncestor.removeAttribute('data-openlen-edit-hidden'); } catch (_h) {}
+      ghost = null;
+      editable = null; overlay = null; mode = null; textNode = null;
+      posTarget = null; anchorNode = null; snapshot = ''; lastRectKey = ''; borderAdjustX = 0;
+      if (gChanged) postChanged();
+      return;
+    }
+
     var el = editable;
     var ov = overlay;
     var m = mode;
@@ -673,11 +856,11 @@ ${CORE_SRC}
     } else if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       finishEdit(true);
-    } else if (e.key === 'Enter' && e.shiftKey && mode === 'run') {
-      // Run-mode edits ONE inline text node — a soft break there can't be
-      // persisted (a newline in a single text node collapses at render). Block
-      // it so the overlay never shows a break the commit would silently drop.
-      // Element-mode keeps Shift+Enter → native soft break → <br> on commit.
+    } else if (e.key === 'Enter' && e.shiftKey && (mode === 'run' || ghost)) {
+      // Run-mode (and any ghost edit) edits ONE inline text node — a soft break
+      // there can't be persisted (a newline in a single text node collapses at
+      // render). Block it so the overlay never shows a break the commit drops.
+      // Element-mode (non-ghost) keeps Shift+Enter → native soft break → <br>.
       e.preventDefault();
     }
   });
