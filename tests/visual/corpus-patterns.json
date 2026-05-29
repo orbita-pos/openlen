@@ -31,9 +31,9 @@
     {
       "signature": "element|left|nobalance|px|ancTransform|fixed|single",
       "count": 3235,
-      "failed": 33,
+      "failed": 19,
       "cats": {
-        "D-multiline": 33
+        "D-multiline": 19
       },
       "example": {
         "bodyId": "cta-03",
@@ -43,10 +43,8 @@
     {
       "signature": "element|left|nobalance|vw|noAncT|fixed|multiline",
       "count": 3034,
-      "failed": 6,
-      "cats": {
-        "D-multiline": 6
-      },
+      "failed": 0,
+      "cats": {},
       "example": {
         "bodyId": "about-01",
         "tag": "h2"
@@ -55,9 +53,9 @@
     {
       "signature": "element|left|nobalance|vw|ancTransform|fixed|single",
       "count": 2579,
-      "failed": 27,
+      "failed": 10,
       "cats": {
-        "D-multiline": 27
+        "D-multiline": 10
       },
       "example": {
         "bodyId": "comparison-06",
@@ -107,10 +105,9 @@
     {
       "signature": "element|left|nobalance|px|noAncT|fixed|multiline",
       "count": 860,
-      "failed": 3,
+      "failed": 1,
       "cats": {
-        "C-wrap": 2,
-        "D-multiline": 1
+        "C-wrap": 1
       },
       "example": {
         "bodyId": "about-01",
@@ -152,10 +149,8 @@
     {
       "signature": "element|left|nobalance|px|ancTransform|fixed|multiline",
       "count": 232,
-      "failed": 4,
-      "cats": {
-        "C-wrap": 4
-      },
+      "failed": 0,
+      "cats": {},
       "example": {
         "bodyId": "faq-04",
         "tag": "div"
@@ -184,10 +179,9 @@
     {
       "signature": "element|left|nobalance|vw|ancTransform|fixed|multiline",
       "count": 201,
-      "failed": 21,
+      "failed": 12,
       "cats": {
-        "C-wrap": 20,
-        "D-multiline": 1
+        "C-wrap": 12
       },
       "example": {
         "bodyId": "how-it-works-04",
@@ -217,9 +211,9 @@
     {
       "signature": "element|center|nobalance|px|ancTransform|fixed|single",
       "count": 153,
-      "failed": 5,
+      "failed": 2,
       "cats": {
-        "D-multiline": 5
+        "D-multiline": 2
       },
       "example": {
         "bodyId": "borealis",
@@ -239,10 +233,9 @@
     {
       "signature": "run|left|nobalance|px|noAncT|fixed|multiline",
       "count": 95,
-      "failed": 5,
+      "failed": 3,
       "cats": {
-        "C-wrap": 4,
-        "D-multiline": 1
+        "C-wrap": 3
       },
       "example": {
         "bodyId": "cta-02",
@@ -262,9 +255,9 @@
     {
       "signature": "run|center|nobalance|vw|noAncT|fixed|multiline",
       "count": 33,
-      "failed": 26,
+      "failed": 1,
       "cats": {
-        "C-wrap": 26
+        "C-wrap": 1
       },
       "example": {
         "bodyId": "cta-04",
@@ -274,10 +267,8 @@
     {
       "signature": "run|left|nobalance|px|ancTransform|fixed|multiline",
       "count": 27,
-      "failed": 2,
-      "cats": {
-        "C-wrap": 2
-      },
+      "failed": 0,
+      "cats": {},
       "example": {
         "bodyId": "borealis",
         "tag": "p"
@@ -316,9 +307,9 @@
     {
       "signature": "run|center|nobalance|px|noAncT|fixed|multiline",
       "count": 9,
-      "failed": 5,
+      "failed": 1,
       "cats": {
-        "C-wrap": 5
+        "C-wrap": 1
       },
       "example": {
         "bodyId": "cta-01",
@@ -440,10 +431,8 @@
     {
       "signature": "run|center|nobalance|vw|ancTransform|fixed|multiline",
       "count": 1,
-      "failed": 1,
-      "cats": {
-        "C-wrap": 1
-      },
+      "failed": 0,
+      "cats": {},
       "example": {
         "bodyId": "bracket",
         "tag": "h2"
