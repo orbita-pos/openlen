@@ -95,6 +95,16 @@ const REPLACE_STYLE = `
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+/* Editor V3 gate — script + UI nodes live permanently in the persistent
+   iframe; visibility is gated on body[data-openlen-edit-mode]. */
+body:not([data-openlen-edit-mode]) .openlen-replace-button,
+body:not([data-openlen-edit-mode]) .openlen-replace-copy-chip {
+  display: none !important;
+}
+body:not([data-openlen-edit-mode]) [data-openlen-replace-target] {
+  outline: none !important;
+  cursor: auto !important;
+}
 `;
 
 const REPLACE_SCRIPT = `
@@ -503,13 +513,19 @@ const REPLACE_SCRIPT = `
   }
 
   function setup() {
-    document.addEventListener('mousemove', onMouseMove, true);
-    document.addEventListener('keydown', onKey, true);
-    // Plain click capture-phase listener — opens Replace on any click
-    // over an image-like element. The capture phase ensures we run
-    // before any user-template handlers; preventDefault stops <a>
-    // navigation if the asset happens to be inside a link.
-    document.addEventListener('click', onImageClick, true);
+    // Editor V3 — gate user-facing interaction handlers on edit mode. The
+    // message handler is the parent contract (asset swaps come back from
+    // the modal) and stays always-on so post-edit swaps still apply if
+    // the user momentarily exits edit mode mid-flow.
+    function gated(fn) {
+      return function (e) {
+        if (!document.body || !document.body.hasAttribute('data-openlen-edit-mode')) return;
+        return fn(e);
+      };
+    }
+    document.addEventListener('mousemove', gated(onMouseMove), true);
+    document.addEventListener('keydown', gated(onKey), true);
+    document.addEventListener('click', gated(onImageClick), true);
     window.addEventListener('message', onParentMessage);
   }
 

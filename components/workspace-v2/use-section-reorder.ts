@@ -86,6 +86,15 @@ const REORDER_STYLE = `
   outline: 2px solid rgba(255,90,54,0.35);
   outline-offset: -2px;
 }
+/* Editor V3 gate — script + UI nodes live permanently in the persistent
+   iframe; visibility is gated on body[data-openlen-edit-mode]. */
+body:not([data-openlen-edit-mode]) .openlen-reorder-handle,
+body:not([data-openlen-edit-mode]) .openlen-reorder-indicator {
+  display: none !important;
+}
+body:not([data-openlen-edit-mode]) [data-openlen-reorder-index][data-openlen-hovering] {
+  outline: none !important;
+}
 body[data-openlen-drag-active],
 body[data-openlen-drag-active] * {
   cursor: grabbing !important;
@@ -968,14 +977,23 @@ const REORDER_SCRIPT = `
     // and pen with one code path. pointermove must be { passive: false }
     // so we can preventDefault to stop the browser from auto-scrolling
     // while the user is mid-drag.
-    document.addEventListener('pointerdown', onPointerDown, true);
-    document.addEventListener('pointermove', onPointerMove, { capture: true, passive: false });
-    document.addEventListener('pointerup', onPointerUp, true);
-    document.addEventListener('pointercancel', onPointerCancel, true);
-    document.addEventListener('keydown', onKey, true);
-    // Drives drag-handle visibility — reacts to cursor moves into/out of
-    // sections, and to Replace's data-openlen-over-image signal.
-    document.addEventListener('mousemove', onGlobalMouseMove, true);
+    // Editor V3 — gate all interaction handlers on body[data-openlen-edit-mode].
+    // The listeners stay registered permanently (persistent iframe pattern);
+    // when edit mode is off they early-return and no drag UI / state changes.
+    // repositionHandles is layout-only and runs always so handles don't
+    // drift after a viewport resize.
+    function gated(fn) {
+      return function (e) {
+        if (!document.body || !document.body.hasAttribute('data-openlen-edit-mode')) return;
+        return fn(e);
+      };
+    }
+    document.addEventListener('pointerdown', gated(onPointerDown), true);
+    document.addEventListener('pointermove', gated(onPointerMove), { capture: true, passive: false });
+    document.addEventListener('pointerup', gated(onPointerUp), true);
+    document.addEventListener('pointercancel', gated(onPointerCancel), true);
+    document.addEventListener('keydown', gated(onKey), true);
+    document.addEventListener('mousemove', gated(onGlobalMouseMove), true);
     window.addEventListener('resize', repositionHandles);
   }
 

@@ -357,6 +357,52 @@ export const templates = pgTable(
   ],
 );
 
+// Section library — curated, re-themeable HTML FRAGMENTS (a single
+// <section>/<header>/<footer>) inserted into existing user pages. Mirrors the
+// `templates` storage pattern (body in object storage under a `sections/`
+// prefix, metadata here) but typed by section TYPE (hero/pricing/…) instead of
+// design family, since a section's look is re-themed to the host on insert.
+export const sections = pgTable(
+  "sections",
+  {
+    id: text("id").primaryKey(), // slug — 'hero-01', 'pricing-03', …
+    type: text("type").notNull(), // 'hero' | 'pricing' | 'features' | …
+    name: text("name").notNull(), // display name, e.g. "Pricing — 3 Tiers"
+    variantLabel: text("variantLabel").notNull(), // "3 Tiers", "Centrado", …
+    rootTag: text("rootTag").notNull(), // 'section' | 'header' | 'footer' | …
+    mode: text("mode").notNull().default("light"), // preview-backdrop hint
+
+    // Scoped HTML fragment in object storage (same bucket as templates,
+    // `sections/<id>-<hash>.html` key).
+    storageKey: text("storageKey").notNull(),
+    storageUrl: text("storageUrl").notNull(),
+    contentHash: text("contentHash").notNull(), // sha256 first 12 chars
+    size: integer("size").notNull(),
+
+    // :root custom properties parsed at ingest (--accent / --font-display /
+    // --radius …), so the re-theme path knows which tokens to remap.
+    designTokens: jsonb("designTokens").$type<Record<string, string>>(),
+    // Google-Fonts stylesheet hrefs to hoist into the host <head> on insert.
+    fonts: jsonb("fonts").$type<string[]>(),
+
+    // Content rendered by inline JS into empty containers (comparison / tab
+    // variants) — insertion must preserve <script>; inline-edit is limited.
+    needsJs: boolean("needsJs").notNull().default(false),
+    // Ships decorative gradient placeholders that don't auto-retheme — prompt
+    // the user to swap real assets on insert (gallery).
+    hasPlaceholders: boolean("hasPlaceholders").notNull().default(false),
+
+    // Pre-rendered gallery thumbnail. Null until a thumbnail pass has run.
+    thumbnailUrl: text("thumbnailUrl"),
+
+    status: text("status").notNull().default("published"),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+    publishedAt: timestamp("publishedAt", { mode: "date" }),
+  },
+  (table) => [index("sections_status_type_idx").on(table.status, table.type)],
+);
+
 // Per-page analytics events — append-only log of pageviews + outbound clicks
 // from published OpenLen pages. The tracker snippet injected at publish time
 // fires a `sendBeacon` to POST /c/<projectId> on every view + every external

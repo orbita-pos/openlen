@@ -23,6 +23,7 @@ import { AutofillModal } from "@/components/workspace-v2/autofill-modal";
 import { CustomDomainModal } from "@/components/workspace-v2/custom-domain-modal";
 import { EmptyState } from "@/components/workspace-v2/empty-state";
 import { LeftSidebar, type SidebarMode } from "@/components/workspace-v2/left-sidebar";
+import type { SectionSpec } from "@/components/workspace-v2/sections-data";
 import { PreviewPlaceholder } from "@/components/workspace-v2/preview-placeholder";
 import { SECTIONS, type Section } from "@/components/workspace-v2/mock-data";
 import { PreviewArea } from "@/components/workspace-v2/preview-area";
@@ -39,6 +40,7 @@ import {
 } from "@/components/workspace-v2/replace-asset-modal";
 import { StatusBar } from "@/components/workspace-v2/status-bar";
 import { TopBar } from "@/components/workspace-v2/top-bar";
+import { stripEditorInstrumentation } from "@/components/workspace-v2/strip-editor-instrumentation";
 import { useDarkMode } from "@/lib/use-dark-mode";
 
 // Outer shell exists so `useSearchParams()` in the inner component has a
@@ -92,76 +94,69 @@ interface LoadedProject {
   settings: ProjectSettings | undefined;
 }
 
-// Strip every OpenLen editor-mode marker from an HTML document string.
-//
-// The Content tab injects three editing scripts into the preview iframe at
-// once — inline-edit, section-reorder, image-replace. Each script's own
-// "post clean HTML" step only removes ITS OWN markers, so the HTML it posts
-// back still carries the other two scripts plus any `contenteditable`
-// attributes. Persisted unchecked, that HTML keeps the page editable on
-// every other tab — and would ship editor scripts to the published page.
-// We sanitize here so `data.html` is always the as-a-visitor-sees-it
-// document. Fast path skips the parse when there's nothing to strip.
-function stripEditorInstrumentation(html: string): string {
-  if (!html) return html;
-  if (!html.includes("data-openlen-") && !html.includes("contenteditable")) {
-    return html;
-  }
-  if (typeof DOMParser === "undefined") return html;
-  try {
-    const doc = new DOMParser().parseFromString(html, "text/html");
-    // Injected <style>/<script> + the UI nodes they create (drag handles,
-    // replace buttons, drop indicator, copy chip) all carry their script's
-    // marker — removing the marked elements clears the whole surface.
-    doc
-      .querySelectorAll(
-        "[data-openlen-inline-edit],[data-openlen-reorder],[data-openlen-replace],[data-openlen-section-select],[data-openlen-inspect]",
-      )
-      .forEach((n) => n.remove());
-    // Editing-only attributes left on real content elements — strip the
-    // attribute, keep the element.
-    doc
-      .querySelectorAll("[contenteditable]")
-      .forEach((n) => n.removeAttribute("contenteditable"));
-    for (const attr of [
-      "data-openlen-reorder-index",
-      "data-openlen-hovering",
-      "data-openlen-dragging",
-      "data-openlen-drag-bg-applied",
-      "data-openlen-replace-target",
-      "data-openlen-select-hover",
-      "data-openlen-inspect-hover",
-      "data-openlen-inspect-selected",
-    ]) {
-      doc.querySelectorAll(`[${attr}]`).forEach((n) => n.removeAttribute(attr));
-    }
-    if (doc.body) {
-      for (const attr of [
-        "data-openlen-drag-active",
-        "data-openlen-replace-mode",
-        "data-openlen-over-image",
-        "data-openlen-select-mode",
-        "data-openlen-inspect-mode",
-      ]) {
-        doc.body.removeAttribute(attr);
-      }
-    }
-    return "<!doctype html>\n" + doc.documentElement.outerHTML;
-  } catch {
-    return html;
-  }
-}
+// stripEditorInstrumentation moved to
+// @/components/workspace-v2/strip-editor-instrumentation (so it can be unit
+// tested + reused). It is the single funnel every openlen:html-changed passes
+// through, and it now also strips Editor V5's marker set (overlay, run-wrap,
+// editable/edit-hidden/edit-noedit).
 
 type EntryMode = "choosing" | "ai" | "template" | "paste" | "editing";
 
 const ALL_TABS: SidebarMode[] = [
   "chat",
   "templates",
+  "library",
   "pages",
   "leads",
   "versions",
   "brief",
 ];
+
+// "Match to page" re-theme prompt — scoped to the inserted section so the
+// model rewrites only its styling to fit the host page.
+const RETHEME_PROMPT =
+  "Restyle ONLY this section so it visually matches the rest of the page: adopt the page's accent color, heading and body fonts, corner radius, border treatment, and spacing rhythm. Keep the section's layout structure, all copy, images, and any JavaScript or interactive behavior exactly as-is — change styling only, so the section reads as a native part of this page.";
+
+// Minimal SSE reader for /api/templates/ai-design — returns the final HTML from
+// the `done` event. The endpoint saves the project + creates a version +
+// debits credits itself, so the caller only syncs the iframe. Mirrors the
+// chat panel's parser (event:/data: framing).
+async function readAiDesignFinalHtml(res: Response): Promise<string | null> {
+  if (!res.ok || !res.body) return null;
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  let finalHtml: string | null = null;
+  outer: for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let nl: number;
+    while ((nl = buf.indexOf("\n\n")) >= 0) {
+      const block = buf.slice(0, nl);
+      buf = buf.slice(nl + 2);
+      let ev = "message";
+      let data = "";
+      for (const line of block.split("\n")) {
+        if (line.startsWith("event: ")) ev = line.slice(7).trim();
+        else if (line.startsWith("data: ")) data += line.slice(6);
+      }
+      if (!data) continue;
+      if (ev === "done") {
+        try {
+          const d = JSON.parse(data) as { html?: string };
+          if (typeof d.html === "string") finalHtml = d.html;
+        } catch {
+          /* ignore */
+        }
+        break outer;
+      } else if (ev === "error") {
+        break outer; // finalHtml stays null → caller treats as no-op
+      }
+    }
+  }
+  return finalHtml;
+}
 
 function NewV2Inner() {
   const [dark, toggleDark] = useDarkMode();
@@ -224,6 +219,109 @@ function NewV2Inner() {
   // Starts 0 (resets on project switch) — the first save's mismatch is
   // harmless, it just dedups against the project's existing version.
   const projectUpdatedAtRef = useRef(0);
+
+  // Section library insert — the Library tab calls handleInsertSection; we
+  // fetch the scoped fragment then bump insertRequest's nonce, which
+  // PreviewArea turns into an `openlen:section-insert` postMessage to the
+  // iframe. The actual insert + save rides the normal html-changed round-trip.
+  const [insertingSectionId, setInsertingSectionId] = useState<string | null>(
+    null,
+  );
+  const [insertRequest, setInsertRequest] = useState<{
+    html: string;
+    nonce: number;
+  } | null>(null);
+  const insertNonceRef = useRef(0);
+  // After an insert, the section coexists (scoped) but still wears its own
+  // look. We surface a "Match to page" chip; clicking it fires a scoped
+  // ai-design re-theme so the section reads as native. lastInserted tracks
+  // which section the chip targets.
+  const [lastInserted, setLastInserted] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [matchingToPage, setMatchingToPage] = useState(false);
+
+  const handleInsertSection = async (spec: SectionSpec) => {
+    if (!loadedProject) return;
+    setInsertingSectionId(spec.id);
+    try {
+      const res = await fetch(`/api/sections/${spec.id}`, {
+        headers: { Accept: "application/json" },
+      });
+      if (!res.ok) throw new Error(`section fetch failed: ${res.status}`);
+      const json = (await res.json()) as { html?: string };
+      if (!json.html) throw new Error("section html missing");
+      insertNonceRef.current += 1;
+      setInsertRequest({ html: json.html, nonce: insertNonceRef.current });
+      setLastInserted({ id: spec.id, name: spec.name });
+    } catch {
+      // best-effort — a toast could surface this later
+    } finally {
+      setInsertingSectionId(null);
+    }
+  };
+
+  // Ask the iframe for the current :nth-of-type path of [data-sec="<id>"] —
+  // recomputed on demand so it survives a reorder before the user matches.
+  const requestSectionPath = (secId: string): Promise<string | null> =>
+    new Promise((resolve) => {
+      const win = iframeElRef.current?.contentWindow;
+      if (!win) return resolve(null);
+      let settled = false;
+      const onMsg = (e: MessageEvent) => {
+        if (
+          e.data?.type === "openlen:section-path-result" &&
+          e.data.secId === secId
+        ) {
+          settled = true;
+          window.removeEventListener("message", onMsg);
+          resolve(typeof e.data.path === "string" ? e.data.path : null);
+        }
+      };
+      window.addEventListener("message", onMsg);
+      win.postMessage({ type: "openlen:section-path", secId }, "*");
+      window.setTimeout(() => {
+        if (!settled) {
+          window.removeEventListener("message", onMsg);
+          resolve(null);
+        }
+      }, 1500);
+    });
+
+  const handleMatchToPage = async () => {
+    if (!loadedProject || !lastInserted || matchingToPage) return;
+    const proj = loadedProject;
+    const target = lastInserted;
+    setMatchingToPage(true);
+    try {
+      const path = await requestSectionPath(target.id);
+      const res = await fetch("/api/templates/ai-design", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          projectId: proj.id,
+          currentHtml: proj.html,
+          prompt: RETHEME_PROMPT,
+          scope: {
+            hint: `${target.name} (just-inserted section)`,
+            ...(path ? { path } : {}),
+          },
+        }),
+      });
+      const finalHtml = await readAiDesignFinalHtml(res);
+      if (finalHtml) {
+        setLoadedProject((prev) =>
+          prev && prev.id === proj.id ? { ...prev, html: finalHtml } : prev,
+        );
+        setLastInserted(null);
+      }
+    } catch {
+      // best-effort — a toast could surface this later
+    } finally {
+      setMatchingToPage(false);
+    }
+  };
 
   // AI generation flow — owned here so the brief survives panel switches
   // inside the same /new-v2?mode=ai session. On completion, we redirect
@@ -588,13 +686,16 @@ function NewV2Inner() {
   const saveTimerRef = useRef<number | null>(null);
   const savedFlashRef = useRef<number | null>(null);
 
-  // Listen for the iframe's `openlen:html-changed` messages whenever the
-  // user has the right-side Edit toggle on. Inline-edit, Reorder, Replace
-  // and inspect-mode property edits all emit via this same contract; the
-  // scripts only inject while editingActive is true.
-  const acceptsHtmlChanged = editingActive;
+  // Listen for the iframe's `openlen:html-changed` messages. Kept mounted for
+  // the whole life of a loaded project (NOT gated on editingActive): when the
+  // user toggles Edit OFF mid-edit, inline-edit commits + flushes a final
+  // html-changed as part of that transition — if the listener were torn down
+  // synchronously with the toggle, that flush would be dropped and the edit
+  // lost. The editor scripts only POST while in edit mode, so an always-mounted
+  // listener never receives spurious saves. Inline-edit, Reorder, Replace,
+  // Insert and inspect-mode property edits all emit via this same contract.
   useEffect(() => {
-    if (!acceptsHtmlChanged || !loadedProject) return;
+    if (!loadedProject) return;
     const projectId = loadedProject.id;
 
     const onMessage = (e: MessageEvent) => {
@@ -613,7 +714,9 @@ function NewV2Inner() {
             ? "replace"
             : e.data.source === "props"
               ? "props"
-              : "inline-edit";
+              : e.data.source === "section-insert"
+                ? "section-insert"
+                : "inline-edit";
       setLoadedProject((prev) =>
         prev && prev.id === projectId ? { ...prev, html } : prev,
       );
@@ -673,7 +776,7 @@ function NewV2Inner() {
         savedFlashRef.current = null;
       }
     };
-  }, [acceptsHtmlChanged, loadedProject?.id, loadedProject?.subdomain]);
+  }, [loadedProject?.id, loadedProject?.subdomain]);
 
   // Reset transient interaction modes whenever the loaded project changes
   // (cross-project switches inside /new-v2). Without this, the iframe
@@ -966,7 +1069,7 @@ function NewV2Inner() {
         dark={dark}
         onToggleDark={toggleDark}
       />
-      <div className="flex-1 min-h-0 flex">
+      <div className="flex-1 min-h-0 flex relative">
         <LeftSidebar
           collapsed={leftCollapsed}
           onToggleCollapse={() => setLeftCollapsed((c) => !c)}
@@ -981,6 +1084,8 @@ function NewV2Inner() {
             setTemplateError(null);
           }}
           previewingTemplateId={previewingTemplate?.id ?? null}
+          onInsertSection={handleInsertSection}
+          insertingSectionId={insertingSectionId}
           lockedTabs={lockedTabs}
           lockReason={lockReason}
           entryMode={entryMode}
@@ -1115,6 +1220,7 @@ function NewV2Inner() {
                 editingActive={editingActive}
                 inspectMode={inspectMode}
                 onToggleInspect={toggleInspect}
+                insertRequest={insertRequest}
                 onIframeRef={(el) => {
                   iframeElRef.current = el;
                 }}
@@ -1124,37 +1230,67 @@ function NewV2Inner() {
                     : `/api/projects/${loadedProject.id}/raw`
                 }
               />
+              {lastInserted && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3 py-2 rounded-full bg-elev border bd shadow-card fade-in">
+                  <span className="text-[12px] fg-muted">
+                    Inserted <b className="fg">{lastInserted.name}</b>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleMatchToPage}
+                    disabled={matchingToPage}
+                    className="inline-flex items-center gap-1 h-7 px-3 rounded-full bg-[var(--accent)] text-white text-[11px] font-medium hover:brightness-105 transition disabled:opacity-60 disabled:cursor-wait"
+                  >
+                    {matchingToPage ? "Matching…" : "✨ Match to page"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLastInserted(null)}
+                    disabled={matchingToPage}
+                    className="text-[11px] fg-faint hover:fg px-1 disabled:opacity-50"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
               {inspectMode && (
-                <PropertiesPanel
-                  selection={inspectSelection}
-                  pageMeta={pageMeta}
-                  html={loadedProject?.html}
-                  analyticsDisabled={
-                    loadedProject?.settings?.analyticsDisabled ?? false
-                  }
-                  projectId={loadedProject?.id}
-                  projectTitle={loadedProject?.title}
-                  logoUrl={loadedProject?.logoUrl ?? null}
-                  formConfig={
-                    typeof inspectSelection?.formIndex === "number"
-                      ? loadedProject?.settings?.forms?.[
-                          String(inspectSelection.formIndex)
-                        ] ?? null
-                      : null
-                  }
-                  onApplyElementProp={applyElementProp}
-                  onApplyPageMeta={applyPageMeta}
-                  onApplyFormConfig={applyFormConfig}
-                  onApplyStyle={applyStyle}
-                  onToggleAnalytics={applyAnalyticsDisabled}
-                  onApplyLogoUrl={loadedProject ? applyLogoUrl : undefined}
-                  onSendTestFormEmail={sendTestFormEmail}
-                  onClearSelection={() => setInspectSelection(null)}
-                  onClose={() => {
-                    setInspectMode(false);
-                    setInspectSelection(null);
-                  }}
-                />
+                // Floating drawer (overlay, not push). PreviewArea keeps its
+                // full width so the iframe's Fit-scale and content layout stay
+                // constant between editing-on and editing-off — the user sees
+                // the same render regardless of whether the inspector is open.
+                // Pattern parallels Figma/Webflow/Framer's right rail.
+                <div className="absolute right-0 top-0 bottom-0 z-20 shadow-2xl">
+                  <PropertiesPanel
+                    selection={inspectSelection}
+                    pageMeta={pageMeta}
+                    html={loadedProject?.html}
+                    analyticsDisabled={
+                      loadedProject?.settings?.analyticsDisabled ?? false
+                    }
+                    projectId={loadedProject?.id}
+                    projectTitle={loadedProject?.title}
+                    logoUrl={loadedProject?.logoUrl ?? null}
+                    formConfig={
+                      typeof inspectSelection?.formIndex === "number"
+                        ? loadedProject?.settings?.forms?.[
+                            String(inspectSelection.formIndex)
+                          ] ?? null
+                        : null
+                    }
+                    onApplyElementProp={applyElementProp}
+                    onApplyPageMeta={applyPageMeta}
+                    onApplyFormConfig={applyFormConfig}
+                    onApplyStyle={applyStyle}
+                    onToggleAnalytics={applyAnalyticsDisabled}
+                    onApplyLogoUrl={loadedProject ? applyLogoUrl : undefined}
+                    onSendTestFormEmail={sendTestFormEmail}
+                    onClearSelection={() => setInspectSelection(null)}
+                    onClose={() => {
+                      setInspectMode(false);
+                      setInspectSelection(null);
+                    }}
+                  />
+                </div>
               )}
             </>
           ) : (

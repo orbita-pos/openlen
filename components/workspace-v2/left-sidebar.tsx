@@ -38,9 +38,11 @@ import {
 } from "./panels/chat-panel";
 import { PagesPanel } from "./panels/pages-panel";
 import { PastePanel } from "./panels/paste-panel";
+import { SectionsPanel } from "./panels/sections-panel";
 import { SubmissionsPanel } from "./panels/submissions-panel";
 import { TemplatesPanel } from "./panels/templates-panel";
 import { VersionsPanel } from "./panels/versions-panel";
+import type { SectionSpec } from "./sections-data";
 import { IconBtn, Tooltip } from "./ui";
 
 import type { ComponentType } from "react";
@@ -48,6 +50,7 @@ import type { ComponentType } from "react";
 export type SidebarMode =
   | "chat"
   | "templates"
+  | "library"
   | "pages"
   | "leads"
   | "insights"
@@ -64,6 +67,7 @@ interface ModeTab {
 const MODE_TABS: ModeTab[] = [
   { id: "chat", icon: ChatIcon, label: "Chat", title: "Chat with Orchestra" },
   { id: "templates", icon: Grid3, label: "Templates", title: "Start from a template" },
+  { id: "library", icon: Layers, label: "Library", title: "Insert a section" },
   { id: "pages", icon: FileText, label: "Pages", title: "Recent projects" },
   { id: "leads", icon: Inbox, label: "Leads", title: "Form submissions" },
   { id: "insights", icon: BarChart3, label: "Insights", title: "Page analytics" },
@@ -89,6 +93,10 @@ interface LeftSidebarProps {
   }) => void;
   /** ID of the currently previewed template (highlights the matching card). */
   previewingTemplateId?: string | null;
+  /** Insert a library section into the current project (Library tab). */
+  onInsertSection?: (s: SectionSpec) => void;
+  /** Section id currently being inserted — shows a pending state on its card. */
+  insertingSectionId?: string | null;
   /** Tabs that are visually locked + non-interactive. Used when the
    *  workspace is in a guided entry flow (e.g. user picked "AI" — only
    *  the chat tab is active until the page has been generated). */
@@ -169,6 +177,8 @@ export function LeftSidebar({
   onUpdateSection,
   onPreviewTemplate,
   previewingTemplateId,
+  onInsertSection,
+  insertingSectionId = null,
   lockedTabs,
   lockReason,
   entryMode = "editing",
@@ -210,6 +220,8 @@ export function LeftSidebar({
   const visibleTabs = MODE_TABS.filter((t) => {
     if (entryMode === "editing" && t.id === "templates") return false;
     if (entryMode !== "editing" && t.id === "insights") return false;
+    // Library inserts into the current project — editing-only, like Insights.
+    if (entryMode !== "editing" && t.id === "library") return false;
     return true;
   });
 
@@ -346,6 +358,12 @@ export function LeftSidebar({
                   })
                 }
                 previewingId={previewingTemplateId ?? null}
+              />
+            )}
+            {mode === "library" && (
+              <SectionsPanel
+                onInsert={onInsertSection ?? (() => {})}
+                insertingId={insertingSectionId}
               />
             )}
             {mode === "pages" && (

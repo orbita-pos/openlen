@@ -18,6 +18,7 @@ import { IconBtn, Segmented } from "./ui";
 import { injectElementInspect } from "./use-element-inspect";
 import { injectImageReplace } from "./use-image-replace";
 import { injectInlineEdit } from "./use-inline-edit";
+import { injectSectionInsert } from "./use-section-insert";
 import { injectSectionReorder } from "./use-section-reorder";
 import { injectSectionSelect } from "./use-section-select";
 import { PageBuildingLoader } from "./page-building-loader";
@@ -75,6 +76,11 @@ interface PreviewAreaProps {
   /** Toggles inspect mode from the preview toolbar. Omitted (e.g. in
    *  template-preview) hides the toolbar button. */
   onToggleInspect?: () => void;
+  /** A pending section-insert request. When `nonce` changes, the iframe is
+   *  posted `openlen:section-insert` with the fragment `html`; the iframe
+   *  drops it into the page and posts back the changed HTML through the
+   *  normal save path. */
+  insertRequest?: { html: string; nonce: number } | null;
 }
 
 export function PreviewArea({
@@ -92,6 +98,7 @@ export function PreviewArea({
   redesigning = false,
   inspectMode = false,
   onToggleInspect,
+  insertRequest = null,
 }: PreviewAreaProps) {
   const [device, setDevice] = useState<Device>("desktop");
   const [zoom, setZoom] = useState<Zoom>("fit");
@@ -101,24 +108,14 @@ export function PreviewArea({
   const iframeLocalRef = useRef<HTMLIFrameElement | null>(null);
   const [fitScale, setFitScale] = useState(1);
 
-  // srcDoc snapshot — re-derived only when an injection mode flips, or
-  // when `doc` changes outside of an active in-place mutation session.
-  //
-  // Priority order:
-  //   section-select   → ONLY select script (Crosshair from chat takes over)
-  //   editingActive    → all 4 editing scripts run together: image/icon
-  //                       replace + section reorder + element-inspect +
-  //                       inline text edit. Inspect underpins the right-side
-  //                       PropertiesPanel (selection + per-element props).
-  //   else             → raw doc, no scripts (visitor-clean preview)
-  const derive = (
-    rawDoc: string,
-    edit: boolean,
-    select: boolean,
-    editing: boolean,
-  ): string => {
-    if (select) return injectSectionSelect(rawDoc);
-    if (!editing) return rawDoc;
+  // Editor V3 — persistent iframe pattern. All 5 editor scripts are ALWAYS
+  // injected into the srcDoc regardless of mode flags; each script gates its
+  // interaction handlers + UI visibility on body[data-openlen-edit-mode] (or
+  // data-openlen-select-mode for section-select). The iframe document never
+  // reloads on a mode toggle — that's just a body attribute flip the parent
+  // sends via postMessage. Eliminates the flicker, font-reload, and text
+  // re-balance pass the old conditional-injection approach caused.
+  const derive = (rawDoc: string): string => {
     // Replace BEFORE Reorder so Replace's mousemove listener registers
     // first → fires first on each event → sets the `over-image` body
     // attribute before Reorder's listener reads it. Avoids a one-frame
@@ -126,64 +123,120 @@ export function PreviewArea({
     let html = injectImageReplace(rawDoc);
     html = injectSectionReorder(html);
     html = injectElementInspect(html);
-    if (edit) html = injectInlineEdit(html);
+    html = injectInlineEdit(html);
+    html = injectSectionSelect(html);
+    html = injectSectionInsert(html);
     return html;
   };
-  const [stableSrcDoc, setStableSrcDoc] = useState<string>(() =>
-    derive(doc, editableInjection, sectionSelectMode, editingActive),
-  );
-  const prevInjectionRef = useRef({
-    edit: editableInjection,
-    select: sectionSelectMode,
-    editing: editingActive,
-  });
+  const [stableSrcDoc, setStableSrcDoc] = useState<string>(() => derive(doc));
+  const wasEditingRef = useRef(false);
   useEffect(() => {
-    const prev = prevInjectionRef.current;
-    const modeChanged =
-      prev.edit !== editableInjection ||
-      prev.select !== sectionSelectMode ||
-      prev.editing !== editingActive;
-    prevInjectionRef.current = {
-      edit: editableInjection,
-      select: sectionSelectMode,
-      editing: editingActive,
-    };
-    if (modeChanged) {
-      setStableSrcDoc(
-        derive(doc, editableInjection, sectionSelectMode, editingActive),
-      );
+    // While editing is active a mid-session `doc` update would wreck live
+    // state (an open overlay editor, the inspect script's selected node).
+    // Skip the reload in that window. The post-edit save round-trips the
+    // updated doc back; once editing closes we pick it up.
+    if (editingActive) {
+      wasEditingRef.current = true;
       return;
     }
-    // While editing is active a mid-session `doc` update would wreck live
-    // state (a contentEditable cursor, the inspect script's selected node).
-    // Skip the reload in that window. Other surfaces (default preview,
-    // section-select) mirror doc updates so chat completions, undo,
-    // restore, palette swaps, etc. show up live.
-    if (!editingActive) {
-      setStableSrcDoc(
-        derive(doc, editableInjection, sectionSelectMode, editingActive),
-      );
+    // Just LEFT an editing session: the iframe DOM holds the user's latest
+    // edits (inline-edit commits + flushes a final html-changed on exit) and
+    // that save is in flight. Skip this one re-derive so a now-stale `doc`
+    // doesn't clobber the live DOM before the flush lands; the incoming
+    // html-changed updates `doc` and re-derives with the fresh HTML next pass.
+    if (wasEditingRef.current) {
+      wasEditingRef.current = false;
+      return;
     }
-  }, [doc, editableInjection, sectionSelectMode, editingActive]);
+    setStableSrcDoc(derive(doc));
+  }, [doc, editingActive]);
+
+  // Mode sync — every flag change becomes a postMessage to the iframe. The
+  // iframe's bootstrap (in use-inline-edit.ts) translates this into body
+  // attrs that every other script gates on. No srcDoc change, no remount.
+  const modesRef = useRef({
+    editMode: editingActive,
+    selectMode: sectionSelectMode,
+  });
+  useEffect(() => {
+    modesRef.current = {
+      editMode: editingActive,
+      selectMode: sectionSelectMode,
+    };
+    const iframe = iframeLocalRef.current;
+    if (!iframe?.contentWindow) return;
+    iframe.contentWindow.postMessage(
+      { type: "openlen:set-mode", ...modesRef.current },
+      "*",
+    );
+  }, [editingActive, sectionSelectMode]);
+
+  // On iframe ready (fresh load, or post-srcDoc-change reload), push the
+  // current mode state so the iframe matches the parent immediately.
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      if (!e.data || typeof e.data !== "object") return;
+      if (e.data.type !== "openlen:iframe-ready") return;
+      iframeLocalRef.current?.contentWindow?.postMessage(
+        { type: "openlen:set-mode", ...modesRef.current },
+        "*",
+      );
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
+  // Section-insert — when the parent bumps the request nonce (user clicked
+  // Insert in the Library tab), post the fragment into the live iframe. The
+  // injected script (use-section-insert.ts) drops it in and posts the changed
+  // HTML back through the normal openlen:html-changed save path.
+  const lastInsertNonce = useRef<number>(0);
+  useEffect(() => {
+    if (!insertRequest || insertRequest.nonce === lastInsertNonce.current) return;
+    const iframe = iframeLocalRef.current;
+    if (!iframe?.contentWindow) return;
+    lastInsertNonce.current = insertRequest.nonce;
+    iframe.contentWindow.postMessage(
+      { type: "openlen:section-insert", html: insertRequest.html },
+      "*",
+    );
+  }, [insertRequest]);
 
   const deviceWidth = { desktop: 1280, tablet: 820, mobile: 390 }[device];
 
   useEffect(() => {
     if (!containerRef.current) return;
     const el = containerRef.current;
+    // ResizeObserver loop guard: opening the right Properties panel resizes
+    // this container, and the scaled wrapper inside it can land right at the
+    // boundary where overflow:auto toggles a scrollbar. That 15px swing
+    // changes clientWidth → new scale → new wrapper width → scrollbar flips
+    // back → loop, until the page locks up.
+    // Two-part fix: (1) rAF throttle so a burst of resize fires within one
+    // frame collapses to a single compute; (2) deadband so scale changes
+    // below ~1% (invisible to the eye) don't re-trigger the layout.
+    let rafId: number | null = null;
     const compute = () => {
-      const cw = el.clientWidth;
-      const ch = el.clientHeight;
-      const availW = cw - 24;
-      const availH = ch - 24;
-      const sW = availW / deviceWidth;
-      const sH = availH / 800;
-      setFitScale(Math.min(1, sW, sH));
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        const cw = el.clientWidth;
+        const ch = el.clientHeight;
+        const availW = cw - 24;
+        const availH = ch - 24;
+        const sW = availW / deviceWidth;
+        const sH = availH / 800;
+        const next = Math.min(1, sW, sH);
+        setFitScale((prev) => (Math.abs(next - prev) < 0.005 ? prev : next));
+      });
     };
     compute();
     const ro = new ResizeObserver(compute);
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
   }, [deviceWidth]);
 
   const scale =
