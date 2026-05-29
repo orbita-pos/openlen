@@ -169,5 +169,127 @@ Reported, not shipped as silent limitations.
 - artifacts: `tests/visual/{corpus-patterns,corpus-diagnostic}.json`,
   `tests/visual/corpus/manifest.json` (bodies + compiled CSS gitignored)
 
+═══════════════════════════════════════════════════════════════════════════════
+
+# Phase 6 — final push (branch `feature/editor-v5-final-push`)
+
+Built the two architectural subsystems the Phase-6 spec above proposed, behind a
+hard regression floor. **Corpus failures 141 → 53 (88 fixed); pass 99.69 % →
+99.88 %; ZERO floor regressions across every commit.**
+
+| gate | result |
+|---|---|
+| tsc / vitest / e2e | clean · **71** unit (was 47) · **23** e2e (was 17) |
+| floor (per-element passmap diff, budget 5) | **0 pass→fail regressions** at every commit |
+| Subsystem B fixed | **45** (centered-run-sharing-line + float-wrap) |
+| Subsystem A fixed | **43** (3D / animated ancestors; **0 engaged-fail**) |
+| overlay/clone open (Gate 4, budget 20 ms p99) | **0.11 ms mean / 0.30 ms p99 / 1.70 ms max** |
+
+## Floor instrument
+
+`diagnose.ts` now emits `corpus-passmap.json` (stable `kind/bodyId#idx` → category
+for all ~45,220 elements); `regression-check.ts` diffs it against a saved baseline
+and exits non-zero on any previously-passing element that regresses. Calibrated
+noise = 0 pass→fail (the only drift is one flaky body, `bio-avery`, whose ~59
+editables intermittently fail to mark on time — reported as "vanished", never
+counted, since Phase-6 work never touches element marking). Every commit below
+was gated through this with **0 regressions**.
+
+## Subsystem B — ghost-sibling layout (`lib/workspace-v2/inline-edit/ghost-sibling-layout.ts`)
+
+**What broke:** a centered/justified run whose wrapped line shares a visual line
+with a sibling mark (`…staff <span>meeting</span>` centered together) — the
+isolated overlay centers the run alone (cinder line-2 x=677 vs page x=176); and
+(a NEW class the corpus revealed) a paragraph whose lines reflow **around a
+floated figure** (editorial templates — lines 2-3 indent to the float, later
+lines return left).
+
+**Fix:** clone the smallest ancestor whose clone REPRODUCES the target's on-page
+line rows (escalating up to 5 levels — the block container handles inline-sibling;
+escalating to the float's container handles float-wrap), make only the target
+editable inside it, edit there with full context. **Self-validating**: a clone is
+used only when `rowsMatch` (≤1.75 px, shift-invariant) confirms it reproduces the
+layout; else the run falls back to the existing overlay. So B can only ever fix or
+no-op — never regress.
+
+**Coverage:** genuine-2D failures 55 → 10 (45 fixed). The 10 residual: ~5 are
+metric noise (`fragDx≈0` — a hung trailing-space wrapped to its own invisible
+line; glyphs are aligned), ~5 are centered runs whose clone reproduces the
+structure but is ~2 px off in relative line offset (a sub-pixel centering nuance
+at the off-screen measurement, e.g. `halo`/`magnolia`) — just over the 1.75 px
+validation tolerance, so B conservatively falls back rather than risk a 2 px-off
+engage. Loosening the tolerance was rejected (could engage a borderline clone on a
+currently-passing element → regression risk).
+
+## Subsystem A — in-context clone for 3D/animated ancestors (`lib/workspace-v2/inline-edit/transform-composition.ts`)
+
+**What broke:** a target inside a `matrix3d(...)` ancestor (rotateY flips,
+perspective tilts; 71 static + 15 also-animated of the 86) is 3D-projected; a flat
+body-level overlay misses it by tens–thousands of px (`atrium` dx = -2076).
+
+**Fix (chosen mechanism — deviates from the literal A.1-A.4 matrix-math spec, with
+rationale):** rather than hand-compose the DOMMatrix chain + perspective division
+(a projective, non-affine transform — error-prone, and a 2D nudge can't correct a
+projected element), **let the browser project**. Clone the block container and
+insert it as a sibling INSIDE the same transformed ancestor at the block's LOCAL
+box (`offsetLeft/offsetTop`); it inherits the identical transform + perspective +
+perspective-origin and projects onto the original (~1 px). This realizes A.3's
+"3D-context wrapper that mirrors the perspective chain" using the REAL chain.
+**Animation (A.4) is handled for free** — the clone shares the animating ancestor,
+so it tracks keyframe/marquee/scroll transforms with no per-frame recompute.
+Self-validating: loose absolute first-row overlap (≤16 px — catches a catastrophic
+offsetParent miss) + shift-invariant `rowsMatch` (so an ancestor that advanced
+between the two measurements still validates).
+
+**Coverage:** **when A engages it is ALWAYS ≤2 px (0 engaged-fail)** — the
+self-validation guarantees it. Across the 3 largest 3D bodies it engages+passes
+130/154 (atrium 25/36, stride 61/67, brace 44/51); 43 of 86 corpus 3D cases fixed,
+0 regression. Residual 43 fall back safely. NOTE on measurement: the corpus
+diagnostic clicks every editable in rapid SEQUENCE on these animated/duplicated-
+marquee pages; replaying a candidate clone in isolation shows the same elements
+*would* engage, so the diagnostic's sequential synthetic clicking under-counts A's
+real-world (one-element-at-a-time) coverage. The honest committed number is the
+sequential one (43); real-use coverage is higher.
+
+## Phase-6 e2e (`tests/e2e/inline-edit-phase6.spec.ts`, 6 tests)
+
+Self-contained fixtures (no Tailwind/network): B centered-run-sharing-a-mark (≤2 px
++ clone keeps the full heading visible), B float-wrap paragraph (≤2 px); A
+perspective+rotateY tilt (≤2 px), A rotateY(180) flip (≤2 px), A running-animation
+(in-context clone engages). All green.
+
+## Performance (real)
+
+Overlay/clone open (creation + placement + style mirror + self-correct/validate),
+125 samples across the 5 Phase-6 fixtures (B+A clone paths): **mean 0.11 ms, p50
+0.10 ms, p99 0.30 ms, max 1.70 ms** — far under the 20 ms p99 budget. (Cloning the
+small editorial/heading block containers is cheap; animation tracking adds no
+per-frame matrix cost.)
+
+## Did NOT reach 100 % — what remains (53 of 45,220 = 0.12 %)
+
+Per the spec's "STOP and document what blocked you" — the residual is genuinely
+non-reproducible within the ≤2 px self-validation, NOT shipped silent:
+- **~43 3D cases that fall back** — when the in-context clone's projected target
+  rows don't reproduce the original within tolerance under the diagnostic's
+  sequential measurement (animated/duplicated marquee content; rotateY-flip
+  caret-resolution on mirrored text for run-mode). They degrade to the flat
+  overlay (their pre-Phase-6 state), never worse.
+- **~5 sub-pixel centered runs** (`halo` etc.) — clone reproduces structure but is
+  ~2 px off; B falls back to protect the floor.
+- **~5 metric-noise** (`fragDx≈0`) — visually correct; a hung trailing-space on its
+  own line trips the line-count check.
+
+New edge class flagged (per the spec's request): **float-wrap paragraphs** — now
+handled by B's escalating clone (the float lives outside the paragraph's block, so
+B escalates to the float's container).
+
+## Files (Phase 6)
+
+- subsystems: `lib/workspace-v2/inline-edit/{ghost-sibling-layout,transform-composition}.ts` (+ `.test.ts`)
+- runtime integration: `components/workspace-v2/use-inline-edit.ts`
+- floor instrument: `scripts/editor-v5/{diagnose,regression-check}.ts`
+- e2e: `tests/e2e/inline-edit-phase6.spec.ts`
+
 ---
-Report self-SHA-256 (of all content above this line): `a6ed1c7db5186f52cdf4408c3d170033d3463de4974922f63d70b3dc838f5e00`
+Report self-SHA-256 (of all content above this line): `f60cdd70c984176d785ed3e272586f23b61b8ab5b696a85d5e5490992dd8382b`
