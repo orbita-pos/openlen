@@ -10,11 +10,17 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "bake:lucide": "tsx scripts/bake-lucide-svgs.ts",
     "templates:seed": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates-seed.ts",
     "templates:add": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates-add.ts",
     "templates:republish": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates-republish.ts",
     "templates:count": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/count-templates.ts",
+    "sections:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-migrate.ts",
+    "sections:seed": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-seed.ts",
+    "sections:count": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/count-sections.ts",
     "templates:thumbnails": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/generate-thumbnails.ts",
     "templates:capture-screenshots": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/capture-screenshots.ts",
     "templates:test-select-reference": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/test-select-reference.ts",
@@ -71,6 +77,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/culori": "^4.0.1",
     "@types/node": "^22.10.0",
@@ -81,11 +88,13 @@
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.17.0",
     "eslint-config-next": "^15.5.0",
+    "jsdom": "^25.0.1",
     "lighthouse": "^13.3.0",
     "playwright": "^1.60.0",
     "postcss": "^8.5.0",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.22.0",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.9"
   }
 }

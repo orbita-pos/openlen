@@ -34,7 +34,7 @@ interface PatchBody {
    *  structural mutations (reorder, replace) which always snapshot so the
    *  version timeline shows them distinctly. Anything unrecognized is
    *  treated as inline-edit. */
-  source?: "inline-edit" | "reorder" | "replace" | "props";
+  source?: "inline-edit" | "reorder" | "replace" | "props" | "section-insert";
   /** ms-epoch of the project's updatedAt this tab last wrote. When it no
    *  longer matches, another writer (typically a second browser tab) changed
    *  data.html since — the current HTML is about to be clobbered, so we
@@ -166,6 +166,15 @@ export async function PATCH(
         projectId: id,
         html,
         label: "Edited properties",
+        source: "manual",
+      });
+    } else if (body.source === "section-insert") {
+      // Inserting a library section is a discrete structural action —
+      // snapshot it so the user has a clean undo point before/after.
+      await createVersion({
+        projectId: id,
+        html,
+        label: "Inserted section",
         source: "manual",
       });
     } else {
