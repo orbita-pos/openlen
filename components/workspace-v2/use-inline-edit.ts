@@ -118,6 +118,10 @@ import {
   nodeAtPath,
   shouldUseGhostLayout,
 } from "@/lib/workspace-v2/inline-edit/ghost-sibling-layout";
+import {
+  isThreeDTransform,
+  rowsOverlap,
+} from "@/lib/workspace-v2/inline-edit/transform-composition";
 
 const INLINE_EDIT_STYLE = `
 /* Editable affordances — gated on body[data-openlen-edit-mode] so idle
@@ -190,6 +194,9 @@ const CORE_SRC = [
   `var childIndexPath = ${childIndexPath.toString()};`,
   `var nodeAtPath = ${nodeAtPath.toString()};`,
   `var shouldUseGhostLayout = ${shouldUseGhostLayout.toString()};`,
+  // Subsystem A (3D / animated ancestor) pure helpers.
+  `var isThreeDTransform = ${isThreeDTransform.toString()};`,
+  `var rowsOverlap = ${rowsOverlap.toString()};`,
 ].join("\n");
 
 // The runtime glue. Hand-written browser JS — deliberately contains NO regex
@@ -598,12 +605,110 @@ ${CORE_SRC}
     return false; // no reproducing ancestor within cap → caller uses the overlay
   }
 
+  // ── Subsystem A: 3D / animated ancestor (in-context clone) ───────────────
+  // Nearest ancestor with a 3D transform (matrix3d / perspective), or null.
+  function threeDAncestor(node) {
+    var a = node && node.nodeType === 1 ? node.parentElement : (node ? node.parentElement : null);
+    while (a && a !== document.documentElement) {
+      var t;
+      try { t = window.getComputedStyle(a).transform; } catch (_e) { t = ''; }
+      if (isThreeDTransform(t)) return a;
+      a = a.parentElement;
+    }
+    return null;
+  }
+
+  // Try editing a target inside a 3D-/animated- ancestor by cloning its block
+  // container IN-CONTEXT (a sibling inside the same transformed ancestor) so the
+  // browser projects + animates the clone identically. Self-validating: engaged
+  // only if the clone's target SCREEN rows overlap the original within tol;
+  // otherwise no side effects and the caller falls back. Returns true on engage.
+  function tryTransformGhost(el, tn, hasPrevSib, hasNextSib, clickX, clickY) {
+    if (!tn || tn.nodeType !== 3) return false;
+    if (!threeDAncestor(tn)) return false; // not a 3D case → let B / overlay handle
+    var styleSource = (el.children && el.children.length === 0) ? el : (tn.parentElement || el);
+    var cs = window.getComputedStyle(styleSource);
+    var origRows = rectsToRows(nodeRects(tn));
+    if (origRows.length === 0) return false;
+    var initialText = collapseWhitespaceForOverlay(tn.data, cs.whiteSpace, hasPrevSib, hasNextSib);
+
+    var blk = blockContainer(tn);
+    var path = childIndexPath(blk, tn);
+    if (!path) return false;
+    var clone = blk.cloneNode(true);
+    var cloneTn = nodeAtPath(clone, path);
+    if (!cloneTn || cloneTn.nodeType !== 3) return false;
+    clone.setAttribute('data-openlen-edit-ghost', '');
+    try {
+      var marked = clone.querySelectorAll('[data-openlen-editable]');
+      for (var q = 0; q < marked.length; q++) marked[q].removeAttribute('data-openlen-editable');
+      if (clone.hasAttribute('data-openlen-editable')) clone.removeAttribute('data-openlen-editable');
+    } catch (_m) {}
+    // In-context placement: absolute at the block's LOCAL box, inserted as a
+    // sibling so it inherits the same ancestor 3D transform + perspective.
+    clone.style.position = 'absolute';
+    clone.style.margin = '0';
+    clone.style.left = blk.offsetLeft + 'px';
+    clone.style.top = blk.offsetTop + 'px';
+    clone.style.width = blk.offsetWidth + 'px';
+    blk.parentNode.insertBefore(clone, blk.nextSibling);
+    var span = document.createElement('span');
+    span.setAttribute('data-openlen-edit-overlay', '');
+    span.setAttribute('contenteditable', 'plaintext-only');
+    span.setAttribute('spellcheck', 'true');
+    cloneTn.parentNode.insertBefore(span, cloneTn);
+    span.appendChild(cloneTn);
+    cloneTn.data = initialText;
+    // Validate: the clone's FIRST row roughly overlaps the original (the
+    // in-context positioning landed it — loose 16px bound catches a catastrophic
+    // offsetParent miss) AND the per-line STRUCTURE matches (rowsMatch is
+    // shift-invariant, so an ANIMATED ancestor that advanced a few px between the
+    // two measurements still validates — the clone tracks it continuously since
+    // it shares the same animated ancestor).
+    var cloneRows = rectsToRows(nodeRects(cloneTn));
+    var firstOk = origRows.length > 0 && cloneRows.length > 0 &&
+      rowsOverlap([origRows[0]], [cloneRows[0]], 16);
+    if (!firstOk || !rowsMatch(origRows, cloneRows, 1.75)) {
+      clone.remove();
+      return false; // didn't reproduce the projected layout → fall back
+    }
+    ghost = { clone: clone, realAncestor: blk, origFirst: null, is3d: true };
+    overlay = span;
+    textNode = tn;
+    posTarget = blk;
+    anchorNode = cloneTn;
+    snapshot = initialText;
+    overlayAbsolute = false;
+    blk.setAttribute('data-openlen-edit-hidden', '');
+    positionGhostClone();
+    startSync();
+    try { span.focus({ preventScroll: true }); } catch (_f) { try { span.focus(); } catch (__) {} }
+    var cr = caretRangeFromPoint(document, clickX, clickY, span);
+    if (!cr) { cr = document.createRange(); cr.selectNodeContents(span); cr.collapse(false); }
+    var sel = window.getSelection();
+    if (sel) { sel.removeAllRanges(); sel.addRange(cr); }
+    return true;
+  }
+
   // Keep the ghost clone glued over the (hidden) real ancestor; glyph-anchor the
   // clone's target to the original's captured first-glyph position.
   function positionGhostClone() {
     if (!ghost || !ghost.clone || !posTarget) return;
-    var rr = posTarget.getBoundingClientRect();
     var c = ghost.clone;
+    if (ghost.is3d) {
+      // In-context: position at the block's LOCAL box so the inherited ancestor
+      // transform projects it onto the original. No 2D glyph-nudge (a 2D nudge
+      // doesn't linearly correct a projected element; inheritance already
+      // overlaps it). Animation tracks for free (shared animated ancestor).
+      var blk = posTarget;
+      c.style.position = 'absolute';
+      c.style.left = blk.offsetLeft + 'px';
+      c.style.top = blk.offsetTop + 'px';
+      c.style.width = blk.offsetWidth + 'px';
+      lastRectKey = rectKey(blk.getBoundingClientRect());
+      return;
+    }
+    var rr = posTarget.getBoundingClientRect();
     if (overlayAbsolute) {
       var br = document.body.getBoundingClientRect();
       c.style.position = 'absolute';
@@ -663,6 +768,8 @@ ${CORE_SRC}
         // Capture sibling adjacency BEFORE wrapping (wrapRun re-parents tn).
         hasPrevSib = !!tn.previousSibling;
         hasNextSib = !!tn.nextSibling;
+        // Subsystem A: target inside a 3D/animated ancestor → in-context clone.
+        if (tryTransformGhost(el, tn, hasPrevSib, hasNextSib, clickX, clickY)) return;
         // Subsystem B: if this run wraps and its lines are co-determined by
         // siblings/floats, edit a context-preserving clone instead. Self-
         // validating — returns false (no side effects) when it can't reproduce
@@ -683,9 +790,10 @@ ${CORE_SRC}
       }
     }
     if (mode === 'element') {
-      // Subsystem B for a clean text element whose lines reflow around a float
-      // (editorial paragraphs) — clone-as-editor before falling back to overlay.
+      // Subsystem A (3D/animated ancestor) then B (float reflow) — clone-as-editor
+      // before falling back to the floating overlay.
       var etn = firstNonBlankTextNode(el);
+      if (etn && tryTransformGhost(el, etn, false, false, clickX, clickY)) return;
       if (etn && tryGhostEdit(el, etn, el, false, false, clickX, clickY)) return;
       styleSource = el;
       anchorNode = el;
