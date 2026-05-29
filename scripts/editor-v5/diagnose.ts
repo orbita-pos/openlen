@@ -370,6 +370,18 @@ async function main() {
   }
   await browser.close();
 
+  // ---- Per-element passmap (regression floor) ----
+  // Stable key = kind/bodyId#idx (querySelectorAll order is stable for a fixed
+  // body). regression-check.ts diffs this against a saved baseline so a Phase-6
+  // subsystem can never silently break a previously-passing element.
+  const passmap: Record<string, string> = {};
+  for (const r of rows) passmap[`${r.kind}/${r.bodyId}#${r.idx}`] = r.category;
+  writeFileSync(
+    join(CORPUS_DIR, "corpus-passmap.json"),
+    JSON.stringify(passmap),
+    "utf8",
+  );
+
   // ---- Diagnostic summary ----
   const byCat: Record<string, number> = {};
   for (const r of rows) byCat[r.category] = (byCat[r.category] || 0) + 1;
