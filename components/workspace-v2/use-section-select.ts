@@ -53,7 +53,13 @@ const SECTION_SELECT_SCRIPT = `
   function cleanup() {
     if (hovered) hovered.removeAttribute('data-openlen-select-hover');
     hovered = null;
-    document.body.removeAttribute('data-openlen-select-mode');
+    // Editor V3 — don't remove body attr; the parent owns the select-mode
+    // flag and will flip it off after receiving our 'section-selected' or
+    // 'section-select-cancelled' postMessage.
+  }
+
+  function inSelectMode() {
+    return !!(document.body && document.body.hasAttribute('data-openlen-select-mode'));
   }
 
   function buildHint(el) {
@@ -91,9 +97,10 @@ const SECTION_SELECT_SCRIPT = `
     return segs.join(' > ');
   }
 
-  document.body.setAttribute('data-openlen-select-mode', '');
-
+  // Editor V3 — the script is permanently injected; activation is a body
+  // attr the parent flips via postMessage. Handlers gate on inSelectMode().
   document.addEventListener('mousemove', function (e) {
+    if (!inSelectMode()) return;
     var t = e.target;
     if (!isSelectable(t)) { setHover(null); return; }
     setHover(t);
@@ -102,6 +109,7 @@ const SECTION_SELECT_SCRIPT = `
   document.addEventListener('mouseleave', function () { setHover(null); }, true);
 
   document.addEventListener('click', function (e) {
+    if (!inSelectMode()) return;
     e.preventDefault();
     e.stopPropagation();
     var t = e.target;
@@ -119,6 +127,7 @@ const SECTION_SELECT_SCRIPT = `
 
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
+    if (!inSelectMode()) return;
     cleanup();
     try {
       window.parent.postMessage({
