@@ -106,13 +106,21 @@ openlen.com, www.openlen.com {
 		Permissions-Policy "camera=(), microphone=(), geolocation=()"
 	}
 
-	# Cache rules — HTML short max-age + long s-maxage so the CF edge
-	# caches aggressively; assets are immutable for a month.
-	@html path *.html
-	header @html Cache-Control "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400"
-
+	# Cache-Control — assets immutable for a month; the HTML document gets a
+	# short browser TTL + long s-maxage so Cloudflare's edge caches it. The
+	# old `@html path *.html` matcher missed "/" (try_files maps it to
+	# index.html, but the matcher sees the literal "/"), so every landing
+	# page's homepage went out with no cache header and CF returned
+	# cf-cache-status: DYNAMIC — an origin hit on every visit. Match HTML as
+	# "not an asset and not a proxied path" so root + clean URLs are covered.
 	@assets path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif
 	header @assets Cache-Control "public, immutable, max-age=2592000"
+
+	@doc {
+		not path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif
+		not path /c/* /api/f/* /uploads/* /assets/*
+	}
+	header @doc Cache-Control "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400"
 
 	# Analytics beacons → Next.js, preserving CF-* headers for IP /
 	# country resolution at the app layer (request log is off here —

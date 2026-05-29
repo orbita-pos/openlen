@@ -21,7 +21,7 @@
 # What this does NOT do:
 #   * systemctl enable openlen-edge   — the cutover runbook decides timing.
 #   * systemctl start openlen-edge    — same.
-#   * Drop nginx                       — same.
+#   * Stop/disable Caddy               — same.
 #   * Write /etc/openlen/edge.env     — the operator fills it from the
 #                                      template before the first start.
 #

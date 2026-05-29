@@ -1,6 +1,6 @@
-# Edge cutover — nginx → openlen-edge
+# Edge cutover — Caddy → openlen-edge
 
-Step-by-step replacement of the production nginx web tier with the Rust
+Step-by-step replacement of the production Caddy web tier with the Rust
 `openlen-edge` binary. After cutover, the edge serves:
 
 - `openlen.com` + `www.openlen.com` — reverse-proxy to Next.js on
@@ -58,8 +58,8 @@ postpone the cutover.
 ```bash
 ssh -i ~/.ssh/openlen-admin root@178.156.175.171
 
-# nginx config is currently valid (rollback depends on it).
-nginx -t
+# Caddy config is currently valid (rollback depends on it).
+caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 
 # Wildcard cert has > 30 days of validity (we don't want to be inside the
 # renewal window during the swap).
@@ -104,7 +104,7 @@ longer TTL a week after the soak completes.
 ## 4. Side-by-side deployment (bake-off phase)
 
 The edge runs on a non-production port (`:8443`) so it doesn't fight
-nginx. Run for at least 24h before the swap — long enough to catch
+Caddy. Run for at least 24h before the swap — long enough to catch
 issuance + renewal edge cases.
 
 ### 4a. Run install.sh
@@ -145,7 +145,7 @@ sudo $EDITOR /etc/openlen/edge.env
 # - OPENLEN_EDGE_DATABASE_URL=<the Neon URL from /etc/openlen/openlen.env>
 # - OPENLEN_EDGE_ACME_CONTACT=ops@openlen.com   (already set in template)
 # - OPENLEN_EDGE_BIND=0.0.0.0:8443              (BAKE-OFF only — production swap unsets this)
-# - OPENLEN_EDGE_BIND_HTTP=off                  (BAKE-OFF only — nginx still owns :80)
+# - OPENLEN_EDGE_BIND_HTTP=off                  (BAKE-OFF only — Caddy still owns :80)
 # - RUST_LOG=info,openlen_edge=debug            (extra signal during bake-off)
 ```
 
@@ -188,16 +188,16 @@ laptop benches over the open internet add too much variance.
 
 ```bash
 cd /opt/openlen-app
-bash bench/run-baseline.sh    # OPENLEN_TARGET defaults to :443 = nginx
+bash bench/run-baseline.sh    # OPENLEN_TARGET defaults to :443 = Caddy
 bash bench/run-edge.sh        # OPENLEN_TARGET defaults to :8443 = edge sidecar
 python3 bench/diff.py
 ```
 
 The diff applies three gates per scenario:
 
-- **edge median RPS ≥ 95 % of nginx RPS**
-- **edge p99 latency ≤ 120 % of nginx p99**
-- **edge error rate ≤ nginx error rate + 0.1 pp**
+- **edge median RPS ≥ 95 % of Caddy RPS**
+- **edge p99 latency ≤ 120 % of Caddy p99**
+- **edge error rate ≤ Caddy error rate + 0.1 pp**
 
 If `diff.py` exits non-zero, **STOP. NO CUTOVER.** Investigate
 (check `journalctl -u openlen-edge`, the Grafana dashboard for the
@@ -221,7 +221,7 @@ The operator watches:
 
 If any of those go sideways during the soak → **STOP**. The sidecar
 can be killed cleanly (`systemctl stop openlen-edge`) without
-production impact since nginx still owns :443.
+production impact since Caddy still owns :443.
 
 ---
 
@@ -246,23 +246,30 @@ sudo $EDITOR /etc/openlen/edge.env
 # - RUST_LOG=info,openlen_edge=info    (drop the debug verbosity)
 ```
 
-### 5c. Stop nginx
+### 5c. Stop Caddy
 
 ```bash
-sudo systemctl stop nginx
+sudo systemctl stop caddy
 ```
 
 This is the start of the downtime window. Apex + wildcard subdomain
 TLS handshakes fail until 5e.
 
-### 5d. Disable nginx (do not remove yet — rollback needs it)
+### 5d. Disable Caddy + repoint the app unit (keep Caddy on disk — rollback needs it)
 
 ```bash
-sudo systemctl disable nginx
+sudo systemctl disable caddy
+
+# Re-point openlen-app's ordering dependency to the edge so a future
+# reboot/restart starts the app AFTER its web tier. Do it NOW, not in §9 —
+# otherwise the app unit keeps an After= on a disabled service.
+sudo sed -i -E 's/^After=network.target .*/After=network.target openlen-edge.service/' \
+  /etc/systemd/system/openlen-app.service
+sudo systemctl daemon-reload
 ```
 
-The unit file stays on disk. `systemctl start nginx` is the rollback
-command if anything goes wrong in the next 5 minutes.
+The Caddy unit + config stay on disk. `systemctl start caddy` is the
+rollback command if anything goes wrong in the next 5 minutes.
 
 ### 5e. Start the edge on production ports
 
@@ -329,7 +336,7 @@ Pick the one matching where the failure surfaced.
 
 ### 7a. Failed during 4f (bench gate)
 
-The edge is still on :8443; nginx never stopped. **No downtime.**
+The edge is still on :8443; Caddy never stopped. **No downtime.**
 
 ```bash
 sudo systemctl stop openlen-edge
@@ -343,19 +350,19 @@ Same as 7a — sidecar only.
 
 ### 7c. Failed during 5e (edge wouldn't start on :443)
 
-The edge stopped, then both nginx + edge are stopped. **Active
+The edge stopped, then both Caddy + edge are stopped. **Active
 downtime.**
 
 ```bash
-sudo systemctl start nginx
-sudo systemctl enable nginx
-sudo systemctl status nginx --no-pager
-# nginx is back. Diagnose the edge failure in parallel:
+sudo systemctl start caddy
+sudo systemctl enable caddy
+sudo systemctl status caddy --no-pager
+# Caddy is back. Diagnose the edge failure in parallel:
 sudo journalctl -u openlen-edge --since "5 minutes ago" --no-pager
 ```
 
-The Caddy-era unit file is irrelevant; this rollback hits the same
-nginx config that was running pre-cutover.
+This rollback restores the same Caddy config (`/etc/caddy/Caddyfile`)
+that was serving pre-cutover.
 
 ### 7d. Failed during 5f (smoke test)
 
@@ -364,8 +371,8 @@ serving real traffic, possibly incorrectly.**
 
 ```bash
 sudo systemctl stop openlen-edge
-sudo systemctl start nginx
-sudo systemctl enable nginx
+sudo systemctl start caddy
+sudo systemctl enable caddy
 sudo systemctl disable openlen-edge
 sudo bash /opt/openlen-app/infra/edge/smoke-test.sh  # confirm prod restored
 ```
@@ -384,14 +391,14 @@ Then diagnose. Common smoke failures and what they usually mean:
 
 ### 7e. During the soak window (post-cutover)
 
-Same procedure as 7d. The edge can be replaced with nginx at any time
+Same procedure as 7d. The edge can be replaced with Caddy at any time
 during the first 7 days while we keep both unit files on disk.
 
 ---
 
 ## 8. Soak window (7 days post-cutover)
 
-The edge stays on the production ports; nginx is disabled but its
+The edge stays on the production ports; Caddy is disabled but its
 config + binary remain on disk. The soak passes when ALL of these hold
 for 7 consecutive days:
 
@@ -414,35 +421,38 @@ the automated gates. Manual checks for the cert ones.
 
 ---
 
-## 9. nginx removal (after 7 clean days of soak)
+## 9. Caddy decommission (after 7 clean days of soak)
 
 ```bash
-# 1. Snapshot what we're about to delete (cheap, ~1 MB).
-sudo tar czf /root/nginx-backup-pre-removal.tar.gz \
-  /etc/nginx /var/log/nginx
+# 1. Snapshot what we're about to delete (cheap).
+sudo tar czf /root/caddy-backup-pre-removal.tar.gz \
+  /etc/caddy /var/log/caddy 2>/dev/null
 
-# 2. Remove the packages.
-sudo apt-get remove --purge nginx-full nginx-common
+# 2. Remove the package.
+sudo apt-get remove --purge caddy
 
-# 3. Remove the now-orphaned config dir (the .conf files we put there).
-sudo rm -rf /etc/nginx
+# 3. Remove the now-orphaned config dir.
+sudo rm -rf /etc/caddy
 
-# 4. Keep the access logs around for 30 days — they're the only record of
-#    nginx-era request patterns. Logrotate cleans them up.
-# (no-op — /var/log/nginx/ stays; logrotate handles aging.)
+# 4. The certbot renewal deploy hook used to `systemctl reload caddy`. The
+#    edge hot-reloads the wildcard cert via its own file watcher
+#    (crates/edge/src/tls/reload.rs), so that hook now targets a removed
+#    service — delete it.
+sudo rm -f /etc/letsencrypt/renewal-hooks/deploy/reload-caddy.sh
 
-# 5. Update openlen-app.service: remove `After=nginx.service`, add
-#    `After=openlen-edge.service`. Re-deploy:
-sudo $EDITOR /etc/systemd/system/openlen-app.service
-sudo systemctl daemon-reload
-sudo systemctl restart openlen-app
+# 5. openlen-app.service's `After=` was already repointed to
+#    openlen-edge.service at cutover (§5d) — nothing to do here unless you
+#    skipped it. If so:
+#    sudo sed -i -E 's/^After=network.target .*/After=network.target openlen-edge.service/' \
+#      /etc/systemd/system/openlen-app.service
+#    sudo systemctl daemon-reload && sudo systemctl restart openlen-app
 ```
 
-Step 5 keeps openlen-app dependent on the edge being up — useful so
-that an edge restart cascades a clean app restart instead of leaving the
-app talking to a dead listener.
+The app unit already depends on the edge being up (set at §5d) — so an
+edge restart cascades a clean app restart instead of leaving the app
+talking to a dead listener.
 
-Do NOT remove nginx earlier than 7 days — the rollback path in
+Do NOT remove Caddy earlier than 7 days — the rollback path in
 section 7 depends on it.
 
 ---

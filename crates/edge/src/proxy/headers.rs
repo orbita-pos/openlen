@@ -200,6 +200,19 @@ mod tests {
     }
 
     #[test]
+    fn cf_headers_pass_through_to_upstream() {
+        // Cloudflare sets CF-Connecting-IP + CF-IPCountry on the origin
+        // request; the analytics endpoint (/c/) reads them for visitor IP +
+        // country. They are NOT hop-by-hop, so prepare_for_upstream must leave
+        // them intact for `forward()` to pass through to Node — parity with
+        // Caddy's `header_up CF-Connecting-IP` / `CF-IPCountry`.
+        let mut h = hm(&[("cf-connecting-ip", "198.51.100.9"), ("cf-ipcountry", "MX")]);
+        prepare_for_upstream(&mut h, "demo.openlen.com", peer());
+        assert_eq!(h.get("cf-connecting-ip").unwrap(), "198.51.100.9");
+        assert_eq!(h.get("cf-ipcountry").unwrap(), "MX");
+    }
+
+    #[test]
     fn prepare_strips_hop_by_hop_then_sets_forwarded() {
         let mut h = hm(&[
             ("connection", "upgrade"),
