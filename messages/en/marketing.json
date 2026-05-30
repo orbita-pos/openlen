@@ -182,6 +182,14 @@
       "privacy": "Privacy",
       "terms": "Terms",
       "contact": "Contact"
+    },
+    "legal": {
+      "title": "Legal",
+      "cookies": "Cookies",
+      "acceptableUse": "Acceptable Use",
+      "refunds": "Refunds & Cancellation",
+      "subprocessors": "Subprocessors",
+      "docs": "Docs"
     }
   },
   "gallery": {
