@@ -7,8 +7,8 @@ OpenLen is a landing-page builder. Users describe a page (or pick a template, or
 | Path | What lives here |
 |---|---|
 | `app/` | Next.js App Router pages + API routes |
-| `app/new-v2/` | The workspace — 3 entry paths (AI / Template / Paste) + editing + Deploy dropdown. The only workspace route; legacy `/new` was retired and redirects here via middleware. |
-| `app/projects/` | Project list view. "New" buttons route to `/new-v2`. |
+| `app/new/` | The workspace — 3 entry paths (AI / Template / Paste) + editing + Deploy dropdown. The only workspace route (lives at `/new`; the old `/new-v2` path now redirects here via middleware). The React component dir stays `components/workspace-v2/` and the scoped CSS class stays `.workspace-v2` — only the URL/route is `/new`. |
+| `app/projects/` | Project list view. "New" buttons route to `/new`. |
 | `app/api/projects/[id]/publish/` | POST/DELETE — claim subdomain + write `project.data.html` to disk via `publishToDir`. |
 | `app/api/projects/from-template/` | POST — clone a curated template's HTML into a new user project. |
 | `app/api/projects/from-html/` | POST — accept raw HTML (typically from claude.ai), create project. |
@@ -31,7 +31,7 @@ OpenLen is a landing-page builder. Users describe a page (or pick a template, or
 
 ## Workspace V2 mental model
 
-`/new-v2` has an `EntryMode` state machine derived from URL params:
+`/new` has an `EntryMode` state machine derived from URL params:
 
 - `?` (no params) → `choosing` → EmptyState with 3 cards (AI / Template / Paste)
 - `?mode=ai` → `ai` → renders the AI brief panel; on submit, `useGeneration` opens an SSE stream to `/api/generate` (one free-form Kimi K2.6 call) and shows a live preview of the streaming HTML, then redirects to `?project=<id>` once the project is saved
@@ -67,7 +67,7 @@ Curated templates are **not individual files in the repo**, and there is **no `c
 - **Server store**: `lib/templates/store.ts` — `listTemplates`, `getTemplate`, `upsertTemplate`, `getTemplateHtml`, `archiveTemplate`.
 - **Client-safe types**: `lib/templates/families.ts` — `TemplateFamily` union + `TEMPLATE_FAMILY_META` (zero node imports, safe to import from client components).
 - **Zod schemas**: `lib/templates/admin-schemas.ts` — shared by the admin API routes and the CLIs.
-- **Public API**: `GET /api/templates`, `GET /api/templates/[id]`. The `/new-v2` gallery reads through these (`components/workspace-v2/use-templates.ts`).
+- **Public API**: `GET /api/templates`, `GET /api/templates/[id]`. The `/new` gallery reads through these (`components/workspace-v2/use-templates.ts`).
 - **In-repo starter pack**: `templates/starter/` — 3 HTMLs (mirror, manuscript, counter) + `manifest.ts`, uploaded by `npm run templates:seed` so a fresh clone boots with a non-empty gallery.
 
 **Adding a template** — run the CLI, never touch the repo:
@@ -94,6 +94,6 @@ Community-submitted templates (a moderated `community_templates` table layered o
 - Hetzner box IP: `178.156.175.171`. Deploy via `infra/scripts/deploy.sh`.
 - DNS via Cloudflare; certs via Let's Encrypt DNS-01 ACME (`infra/dns/`).
 - Database: Neon Postgres. Drizzle ORM (`lib/db/schema.ts`).
-- Auth: Auth.js v5 with email/password + OAuth providers. After login → `/new-v2`.
-- Tailwind CSS v4 + custom design tokens in `app/new-v2/tokens.css` (scoped to `.workspace-v2`).
+- Auth: Auth.js v5 with email/password + OAuth providers. After login → `/new`.
+- Tailwind CSS v4 + custom design tokens in `app/new/tokens.css` (scoped to `.workspace-v2`).
 - `InariWatch` (memory: `openlen-vs-inariwatch-boundaries`) is a sister product — error monitoring. Different repo concerns; the `inari-` strings that remain in code are intentional (analytics, not branding).
