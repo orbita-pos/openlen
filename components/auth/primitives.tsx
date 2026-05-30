@@ -6,6 +6,7 @@ import type {
   InputHTMLAttributes,
   ReactNode,
 } from "react";
+import { useTranslations } from "next-intl";
 import { AlertCircle, Check, Loader, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -181,9 +182,15 @@ export function scorePassword(pw: string): number {
 }
 
 export function StrengthBar({ pw }: { pw: string }) {
+  const t = useTranslations("auth");
   const s = scorePassword(pw);
   if (s < 0) return null;
-  const labels = ["Weak", "Okay", "Strong", "Very strong"];
+  const labels = [
+    t("strength.weak"),
+    t("strength.okay"),
+    t("strength.strong"),
+    t("strength.veryStrong"),
+  ];
   const colors = ["bg-red-500", "bg-amber-500", "bg-emerald-500", "bg-emerald-500"];
   return (
     <div className="mt-2 flex items-center gap-2">
@@ -254,11 +261,12 @@ export function MatchIndicator({
   match: boolean;
   mismatch: boolean;
 }) {
+  const t = useTranslations("auth");
   if (match) {
     return (
       <span
         className="inline-flex items-center justify-center h-7 w-7 text-emerald-500"
-        aria-label="Passwords match"
+        aria-label={t("reset.passwordsMatch")}
       >
         <Check size={15} strokeWidth={3} />
       </span>
@@ -268,7 +276,7 @@ export function MatchIndicator({
     return (
       <span
         className="inline-flex items-center justify-center h-7 w-7 text-red-500"
-        aria-label="Passwords do not match"
+        aria-label={t("reset.passwordsNoMatch")}
       >
         <X size={15} strokeWidth={2.5} />
       </span>

@@ -1,0 +1,61 @@
+{
+  "aiBrief": {
+    "title": "Describe your page",
+    "subtitle": "Tell me what you want — I'll compose the page for you.",
+    "placeholder": "A landing page for my SaaS that…",
+    "attachImage": "Attach an image — available after generation",
+    "scopeSection": "Scope to a section — available after generation",
+    "autofill": "Autofill with my info — available after generation",
+    "availableAfter": "Available once your project is created",
+    "generate": "Generate"
+  },
+  "brief": {
+    "label": "Brief",
+    "description": "Persistent context the AI sees on every chat. Brand, voice, constraints, reminders.",
+    "placeholder": "e.g.\n\n- This is a landing for Counter, a coffee shop in Polanco.\n- Voice: warm, friendly, no tech jargon.\n- Accent: warm orange (#C66B3D).\n- To do: ask the designer for the final logo.",
+    "emptyTitle": "The Brief lives per project.",
+    "emptyHint": "Open a project from the Pages tab to write its brief.",
+    "saving": "Saving…",
+    "saved": "Saved · injected on every chat",
+    "saveFailed": "Save failed",
+    "saveErrorRetry": "Couldn't save — try again.",
+    "ready": "Ready"
+  },
+  "templates": {
+    "heading": "Curated templates",
+    "intro": "Click a card to preview it big. When you're ready, hit <b>Use this template</b> in the banner to clone it into a new project.",
+    "newProjectWarning": "Picking a template starts a <b>new</b> project. Your current project stays saved in <projectsLink>/projects</projectsLink>.",
+    "all": "All",
+    "previewTemplateAria": "Preview template: {name}",
+    "preview": "Preview",
+    "previewing": "Previewing",
+    "templateCount": "{count, plural, one {# template} other {# templates}}",
+    "loadError": "Failed to load templates — {error}",
+    "footer": "Templates are static HTML — pure markup, Tailwind CDN, Google Fonts. Cloning makes them yours; only your project claims a subdomain when you hit Deploy."
+  },
+  "sections": {
+    "heading": "Section library",
+    "intro": "Insert a section into your current page. It drops in at the bottom — drag it into place with the section handles. The look adapts to your page on the next restyle.",
+    "all": "All",
+    "jsTooltip": "Renders content via JS — preserved on insert, limited inline-edit",
+    "imgTooltip": "Ships gradient placeholders — swap real images after insert",
+    "insertAria": "Insert {name} into the current page",
+    "insert": "Insert",
+    "inserting": "Inserting…",
+    "loadError": "Failed to load sections — {error}",
+    "footer": "Sections are scoped fragments — their styles can't clash with your page. Insert, then reorder and restyle to taste."
+  },
+  "paste": {
+    "heading": "Paste HTML",
+    "description": "Drop in the HTML claude.ai gave you (or any self-contained landing page HTML). We'll host it on your subdomain.",
+    "projectNameLabel": "Project name",
+    "projectNamePlaceholder": "Auto-detected from the page title if blank",
+    "htmlLabel": "HTML",
+    "charCount": "{count, number} chars",
+    "errorEmpty": "Paste some HTML first.",
+    "errorHttp": "HTTP {status} — try again.",
+    "creating": "Creating project…",
+    "createProject": "Create project",
+    "deployHint": "Next: click Deploy to publish to a subdomain."
+  }
+}

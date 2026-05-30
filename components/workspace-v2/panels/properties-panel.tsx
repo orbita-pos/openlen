@@ -12,7 +12,8 @@
 
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { FormConfig } from "@/lib/projects/types";
 import { checkSeo, type SeoIssue, type SeoFixField } from "@/lib/seo-check";
 import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
@@ -131,16 +132,17 @@ export function PropertiesPanel({
   onClearSelection,
   onClose,
 }: PropertiesPanelProps) {
+  const t = useTranslations("panelsProps");
   return (
     <aside className="h-full w-[300px] shrink-0 bg-side border-l bd flex flex-col fade-slide">
       <div className="flex items-center justify-between px-3 h-10 border-b bd shrink-0">
         <span className="text-[10px] uppercase tracking-[0.16em] fg-faint font-semibold ui-small">
-          Inspector
+          {t("header.inspector")}
         </span>
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close inspector"
+          aria-label={t("header.closeInspector")}
           className="h-6 w-6 inline-flex items-center justify-center rounded-md fg-faint hover:fg hover:bg-hover transition"
         >
           <X size={13} />
@@ -197,6 +199,7 @@ function ElementView({
   ) => Promise<{ ok: boolean; sentTo?: string; message?: string }>;
   onBack: () => void;
 }) {
+  const t = useTranslations("panelsProps");
   const { path, tag, hint, props, formIndex, style } = selection;
   return (
     <div className="fade-in">
@@ -205,7 +208,7 @@ function ElementView({
         onClick={onBack}
         className="flex items-center gap-1.5 px-3 h-8 w-full text-[11px] fg-faint hover:fg hover:bg-hover transition border-b bd"
       >
-        <Globe size={11} /> Page settings
+        <Globe size={11} /> {t("element.pageSettings")}
       </button>
       <div className="px-3 py-2.5 border-b bd flex items-center gap-1.5">
         <span className="inline-flex items-center h-4 px-1.5 rounded bg-elev border bd text-[9.5px] font-mono fg-muted uppercase">
@@ -214,33 +217,33 @@ function ElementView({
         <span className="text-[11.5px] fg-muted truncate">{hint}</span>
       </div>
       {tag === "a" && (
-        <Section label="Link" icon={<ExternalLink size={11} />}>
+        <Section label={t("link.title")} icon={<ExternalLink size={11} />}>
           <TextField
-            label="Destination"
+            label={t("link.destination")}
             value={props.href ?? ""}
-            placeholder="https://…  or  #section"
+            placeholder={t("link.destinationPlaceholder")}
             mono
             onCommit={(v) => onApply(path, "href", v)}
           />
           <Toggle
-            label="Open in new tab"
+            label={t("link.openInNewTab")}
             on={(props.target ?? "") === "_blank"}
             onChange={(on) => onApply(path, "target", on ? "_blank" : null)}
           />
         </Section>
       )}
       {tag === "img" && (
-        <Section label="Image" icon={<ImageIcon size={11} />}>
+        <Section label={t("image.title")} icon={<ImageIcon size={11} />}>
           <TextField
-            label="Alt text"
+            label={t("image.altText")}
             value={props.alt ?? ""}
-            placeholder="Describe the image"
+            placeholder={t("image.altPlaceholder")}
             onCommit={(v) => onApply(path, "alt", v)}
           />
           {props.src ? (
             <div>
               <span className="block text-[10px] uppercase tracking-[0.14em] fg-faint font-semibold mb-1">
-                Source
+                {t("image.source")}
               </span>
               <p className="text-[10.5px] fg-faint font-mono break-all leading-snug">
                 {props.src}
@@ -271,16 +274,17 @@ function StyleSection({
   style: InspectSelection["style"];
   onApply: (path: string, prop: string, value: string) => void;
 }) {
+  const t = useTranslations("panelsProps");
   const s = style ?? {};
   return (
-    <Section label="Style" icon={<PaletteIcon size={11} />}>
+    <Section label={t("style.title")} icon={<PaletteIcon size={11} />}>
       <ColorField
-        label="Text color"
+        label={t("style.textColor")}
         value={s.color ?? ""}
         onCommit={(v) => onApply(path, "color", v)}
       />
       <ColorField
-        label="Background"
+        label={t("style.background")}
         value={s.backgroundColor ?? ""}
         onCommit={(v) => onApply(path, "background-color", v)}
       />
@@ -305,34 +309,45 @@ function FormView({
     formIndex: number,
   ) => Promise<{ ok: boolean; sentTo?: string; message?: string }>;
 }) {
+  const t = useTranslations("panelsProps");
   return (
-    <Section label="Form" icon={<Inbox size={11} />}>
+    <Section label={t("form.title")} icon={<Inbox size={11} />}>
       <TextField
-        label="Notify email"
+        label={t("form.notifyEmail")}
         value={config?.notifyEmail ?? ""}
-        placeholder="Default: your account email"
+        placeholder={t("form.notifyEmailPlaceholder")}
         mono
+        validate={(v) =>
+          !v.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())
+            ? null
+            : t("form.invalidEmail")
+        }
         onCommit={(v) => onApply(formIndex, { notifyEmail: v })}
       />
       <TextField
-        label="Success message"
+        label={t("form.successMessage")}
         value={config?.successMessage ?? ""}
-        placeholder="✓ Thanks — we got your message."
+        placeholder={t("form.successMessagePlaceholder")}
         multiline
         onCommit={(v) => onApply(formIndex, { successMessage: v })}
       />
       <TextField
-        label="Redirect after submit"
+        label={t("form.redirect")}
         value={config?.redirectUrl ?? ""}
-        placeholder="https://…/thank-you  (optional)"
+        placeholder={t("form.redirectPlaceholder")}
         mono
+        validate={(v) =>
+          !v.trim() || /^https?:\/\/\S+$/.test(v.trim())
+            ? null
+            : t("form.invalidUrl")
+        }
         onCommit={(v) => onApply(formIndex, { redirectUrl: v })}
       />
       {onSendTestEmail && (
         <TestEmailButton formIndex={formIndex} onSend={onSendTestEmail} />
       )}
       <p className="text-[10.5px] fg-faint leading-relaxed pt-0.5">
-        Form changes apply on your next deploy.
+        {t("form.applyNote")}
       </p>
     </Section>
   );
@@ -353,6 +368,7 @@ function TestEmailButton({
     | { kind: "sent"; to: string }
     | { kind: "error"; message: string };
   const [state, setState] = useState<State>({ kind: "idle" });
+  const t = useTranslations("panelsProps");
 
   const handleClick = async () => {
     setState({ kind: "sending" });
@@ -364,14 +380,14 @@ function TestEmailButton({
       } else {
         setState({
           kind: "error",
-          message: res.message ?? "Couldn't send the test email.",
+          message: res.message ?? t("testEmail.sendFailed"),
         });
         window.setTimeout(() => setState({ kind: "idle" }), 8000);
       }
     } catch (err) {
       setState({
         kind: "error",
-        message: err instanceof Error ? err.message : "Network error.",
+        message: err instanceof Error ? err.message : t("testEmail.networkError"),
       });
       window.setTimeout(() => setState({ kind: "idle" }), 8000);
     }
@@ -385,12 +401,14 @@ function TestEmailButton({
         onClick={handleClick}
         className="w-full inline-flex items-center justify-center gap-1.5 h-7 rounded-md border bd bg-app fg-muted hover:fg hover:bg-hover transition text-[11px] disabled:opacity-50"
       >
-        {state.kind === "sending" ? "Sending…" : "Send test email"}
+        {state.kind === "sending" ? t("testEmail.sending") : t("testEmail.send")}
       </button>
       {state.kind === "sent" && (
         <p className="mt-1 text-[10.5px] text-emerald-600 dark:text-emerald-400 leading-relaxed">
-          ✓ Test sent to <span className="font-mono">{state.to}</span>. Check
-          inbox + spam folder.
+          {t.rich("testEmail.sentTo", {
+            to: state.to,
+            mono: (chunks) => <span className="font-mono">{chunks}</span>,
+          })}
         </p>
       )}
       {state.kind === "error" && (
@@ -427,17 +445,29 @@ function PageView({
   // ~50-100KB), no debouncing needed — the parent only updates html when
   // the iframe has actually settled an edit.
   const report = useMemo(() => (html ? checkSeo(html) : null), [html]);
+  const t = useTranslations("panelsProps");
+  const rootRef = useRef<HTMLDivElement>(null);
+  // Clicking an SEO issue jumps to (and focuses) the field that fixes it.
+  const focusField = useCallback((field: SeoFixField) => {
+    const el = rootRef.current?.querySelector<HTMLElement>(
+      `[data-meta-field="${field}"]`,
+    );
+    if (el) {
+      el.scrollIntoView({ block: "center", behavior: "smooth" });
+      el.focus();
+    }
+  }, []);
 
   if (!pageMeta) {
     return (
       <div className="px-4 py-8 text-center">
-        <p className="text-[11.5px] fg-faint">Loading page settings…</p>
+        <p className="text-[11.5px] fg-faint">{t("page.loading")}</p>
       </div>
     );
   }
   return (
-    <div className="fade-in">
-      {report && <SeoHealthSection report={report} />}
+    <div className="fade-in" ref={rootRef}>
+      {report && <SeoHealthSection report={report} onFix={focusField} />}
       {onApplyLogoUrl && (
         <LogoSection
           projectId={projectId}
@@ -446,50 +476,53 @@ function PageView({
           onApply={onApplyLogoUrl}
         />
       )}
-      <Section label="Page" icon={<Globe size={11} />}>
+      <Section label={t("page.title")} icon={<Globe size={11} />}>
         <TextField
-          label="Title"
+          label={t("page.fieldTitle")}
           value={pageMeta.title}
-          placeholder="Page title"
+          placeholder={t("page.fieldTitlePlaceholder")}
+          dataField="title"
           onCommit={(v) => onApply("title", v)}
         />
         <TextField
-          label="Description"
+          label={t("page.fieldDescription")}
           value={pageMeta.description}
-          placeholder="Short description for search results"
+          placeholder={t("page.fieldDescriptionPlaceholder")}
           multiline
+          dataField="description"
           onCommit={(v) => onApply("description", v)}
         />
         <TextField
-          label="Social image (OG)"
+          label={t("page.fieldSocialImage")}
           value={pageMeta.ogImage}
           placeholder="https://…/cover.png"
           mono
+          dataField="ogImage"
           onCommit={(v) => onApply("ogImage", v)}
         />
         <TextField
-          label="Favicon"
+          label={t("page.fieldFavicon")}
           value={pageMeta.favicon}
           placeholder="https://…/icon.png"
           mono
+          dataField="favicon"
           onCommit={(v) => onApply("favicon", v)}
         />
       </Section>
       {onToggleAnalytics && (
-        <Section label="Privacy" icon={<Activity size={11} />}>
+        <Section label={t("privacy.title")} icon={<Activity size={11} />}>
           <Toggle
-            label="Enable analytics"
+            label={t("privacy.enableAnalytics")}
             on={!analyticsDisabled}
             onChange={(on) => onToggleAnalytics(!on)}
           />
           <p className="text-[10.5px] fg-faint leading-relaxed">
-            Anonymous pageviews + outbound clicks. No cookies, no IP storage,
-            no consent banner. Applies on next publish.
+            {t("privacy.note")}
           </p>
         </Section>
       )}
       <p className="px-3 pt-3 pb-4 text-[10.5px] fg-faint leading-relaxed">
-        Hacé click en cualquier elemento de la página para editarlo.
+        {t("page.clickHint")}
       </p>
     </div>
   );
@@ -497,9 +530,12 @@ function PageView({
 
 function SeoHealthSection({
   report,
+  onFix,
 }: {
   report: { score: number; total: number; issues: SeoIssue[] };
+  onFix?: (field: SeoFixField) => void;
 }) {
+  const t = useTranslations("panelsProps");
   const { score, total, issues } = report;
   const passing = score === total;
   const ratio = total > 0 ? score / total : 0;
@@ -510,7 +546,7 @@ function SeoHealthSection({
         ? "warn"
         : "bad";
   return (
-    <Section label="Page health" icon={<Activity size={11} />}>
+    <Section label={t("health.title")} icon={<Activity size={11} />}>
       <div className="flex items-center gap-2">
         <ScoreRing score={score} total={total} tone={tone} />
         <div className="flex-1 min-w-0">
@@ -518,21 +554,19 @@ function SeoHealthSection({
             <strong className="font-semibold tabular-nums">
               {score}/{total}
             </strong>{" "}
-            <span className="fg-muted">passing</span>
+            <span className="fg-muted">{t("health.passing")}</span>
           </div>
           <div className="text-[10.5px] fg-faint mt-0.5">
             {passing
-              ? "Page looks healthy."
-              : issues.length === 1
-                ? "1 issue to address."
-                : `${issues.length} issues to address.`}
+              ? t("health.healthy")
+              : t("health.issuesToAddress", { count: issues.length })}
           </div>
         </div>
       </div>
       {issues.length > 0 && (
         <ul className="mt-2 space-y-1">
           {issues.map((issue) => (
-            <SeoIssueRow key={issue.code} issue={issue} />
+            <SeoIssueRow key={issue.code} issue={issue} onFix={onFix} />
           ))}
         </ul>
       )}
@@ -611,6 +645,7 @@ function LogoSection({
   logoUrl: string | null;
   onApply: (logoUrl: string | null) => void;
 }) {
+  const t = useTranslations("panelsProps");
   const [mode, setMode] = useState<"upload" | "url" | "auto">("upload");
   const [urlDraft, setUrlDraft] = useState(
     logoUrl && !logoUrl.startsWith("data:") ? logoUrl : "",
@@ -631,7 +666,7 @@ function LogoSection({
     e.target.value = ""; // allow re-selecting the same file
     if (!file) return;
     if (!projectId) {
-      setError("Save the project before uploading a logo.");
+      setError(t("logo.errorSaveFirst"));
       return;
     }
     setError(null);
@@ -646,12 +681,12 @@ function LogoSection({
         error?: string;
       } | null;
       if (!res.ok || !data?.url) {
-        setError(data?.error ?? `Upload failed (${res.status})`);
+        setError(data?.error ?? t("logo.errorUploadStatus", { status: res.status }));
         return;
       }
       onApply(data.url);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      setError(err instanceof Error ? err.message : t("logo.errorUploadFailed"));
     } finally {
       setUploading(false);
     }
@@ -661,7 +696,7 @@ function LogoSection({
     const v = urlDraft.trim();
     if (!v) return;
     if (!/^https?:\/\//i.test(v)) {
-      setError("Use a full https:// URL.");
+      setError(t("logo.errorFullUrl"));
       return;
     }
     setError(null);
@@ -674,27 +709,27 @@ function LogoSection({
   };
 
   return (
-    <Section label="Logo" icon={<ImageIcon size={11} />}>
+    <Section label={t("logo.title")} icon={<ImageIcon size={11} />}>
       <div className="flex items-center gap-2.5">
         <span className="shrink-0 h-16 w-16 rounded-lg overflow-hidden bg-elev border bd flex items-center justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={preview}
-            alt="Project logo preview"
+            alt={t("logo.previewAlt")}
             className="w-full h-full object-contain"
           />
         </span>
         <div className="min-w-0 flex-1">
           <div className="text-[11.5px] fg leading-snug">
-            {logoUrl ? "Custom logo" : "Default — initial letter"}
+            {logoUrl ? t("logo.custom") : t("logo.default")}
           </div>
           <div className="text-[10.5px] fg-faint leading-snug truncate">
             {logoUrl
               ? logoUrl.startsWith("data:")
-                ? "Inline SVG"
+                ? t("logo.inlineSvg")
                 : new URL(logoUrl, "https://x").pathname.split("/").pop() ||
                   logoUrl
-              : "Used as favicon, card badge, OG fallback."}
+              : t("logo.usedAs")}
           </div>
         </div>
       </div>
@@ -708,13 +743,17 @@ function LogoSection({
               setMode(m);
               setError(null);
             }}
-            className={`h-6 px-2 rounded transition ${
+            className={`h-6 px-2 rounded transition focus-visible:ring-1 focus-visible:ring-[color:var(--accent-ring)]/40 focus:outline-none ${
               mode === m
                 ? "bg-app fg shadow-sm"
                 : "fg-muted hover:fg"
             }`}
           >
-            {m === "upload" ? "Upload" : m === "url" ? "Paste URL" : "Auto"}
+            {m === "upload"
+              ? t("logo.tabUpload")
+              : m === "url"
+                ? t("logo.tabPasteUrl")
+                : t("logo.tabAuto")}
           </button>
         ))}
       </div>
@@ -734,10 +773,10 @@ function LogoSection({
             onClick={onUploadClick}
             className="w-full inline-flex items-center justify-center gap-1.5 h-7 rounded-md border bd bg-app fg-muted hover:fg hover:bg-hover transition text-[11px] disabled:opacity-50"
           >
-            {uploading ? "Uploading…" : "Choose image"}
+            {uploading ? t("logo.uploading") : t("logo.chooseImage")}
           </button>
           <p className="text-[10.5px] fg-faint leading-relaxed">
-            PNG / SVG / WebP. Square images render best.
+            {t("logo.uploadHint")}
           </p>
         </div>
       )}
@@ -755,10 +794,10 @@ function LogoSection({
                 (e.target as HTMLInputElement).blur();
               }
             }}
-            className="w-full bg-app border bd rounded-md px-2 py-1.5 text-[11px] font-mono fg focus:border-[color:var(--accent)] focus:outline-none placeholder:fg-faint"
+            className="w-full bg-app border bd rounded-md px-2 py-1.5 text-[11px] font-mono fg focus:border-[color:var(--accent)] focus:outline-none focus:ring-1 focus:ring-[color:var(--accent-ring)]/30 placeholder:fg-faint"
           />
           <p className="text-[10.5px] fg-faint leading-relaxed">
-            Use the full https:// URL of a hosted image.
+            {t("logo.urlHint")}
           </p>
         </div>
       )}
@@ -770,11 +809,10 @@ function LogoSection({
             onClick={onAutoGenerate}
             className="w-full inline-flex items-center justify-center gap-1.5 h-7 rounded-md border bd bg-app fg-muted hover:fg hover:bg-hover transition text-[11px]"
           >
-            Generate from title
+            {t("logo.generateFromTitle")}
           </button>
           <p className="text-[10.5px] fg-faint leading-relaxed">
-            Coral disc with the first letter of &quot;{projectTitle || "Page"}
-            &quot;.
+            {t("logo.autoHint", { title: projectTitle || t("logo.defaultTitleFallback") })}
           </p>
         </div>
       )}
@@ -795,25 +833,45 @@ function LogoSection({
           }}
           className="self-start text-[10.5px] fg-faint hover:fg underline-offset-2 hover:underline transition"
         >
-          Clear logo
+          {t("logo.clear")}
         </button>
       )}
     </Section>
   );
 }
 
-function SeoIssueRow({ issue }: { issue: SeoIssue }) {
-  const dotColor =
-    issue.level === "error" ? "bg-red-500" : "bg-amber-500";
+function SeoIssueRow({
+  issue,
+  onFix,
+}: {
+  issue: SeoIssue;
+  onFix?: (field: SeoFixField) => void;
+}) {
+  const dotColor = issue.level === "error" ? "bg-red-500" : "bg-amber-500";
+  const dot = (
+    <span
+      className={`mt-1 shrink-0 h-1.5 w-1.5 rounded-full ${dotColor}`}
+      aria-hidden
+    />
+  );
+  const field = issue.fixField;
+  if (field && onFix) {
+    return (
+      <li>
+        <button
+          type="button"
+          onClick={() => onFix(field)}
+          className="flex w-full items-start gap-1.5 rounded px-1 py-0.5 text-left text-[10.5px] fg-muted hover:fg hover:bg-hover focus-visible:ring-1 focus-visible:ring-[color:var(--accent-ring)]/40 focus:outline-none transition leading-relaxed"
+        >
+          {dot}
+          <span className="flex-1">{issue.message}</span>
+        </button>
+      </li>
+    );
+  }
   return (
-    <li
-      data-fix-field={issue.fixField ?? undefined}
-      className="flex items-start gap-1.5 px-1 py-0.5 text-[10.5px] fg-muted leading-relaxed"
-    >
-      <span
-        className={`mt-1 shrink-0 h-1.5 w-1.5 rounded-full ${dotColor}`}
-        aria-hidden
-      />
+    <li className="flex items-start gap-1.5 px-1 py-0.5 text-[10.5px] fg-muted leading-relaxed">
+      {dot}
       <span className="flex-1">{issue.message}</span>
     </li>
   );

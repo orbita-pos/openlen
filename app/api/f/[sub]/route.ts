@@ -172,7 +172,7 @@ async function notifyOwner(
     to,
     projectTitle: row.title,
     fields: data,
-    dashboardUrl: `${SITE_URL}/new-v2?project=${projectId}`,
+    dashboardUrl: `${SITE_URL}/new?project=${projectId}`,
     meta,
   });
 }

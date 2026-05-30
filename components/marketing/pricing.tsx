@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
 import {
   ArrowRight,
   Check,
@@ -19,6 +20,7 @@ interface Tier {
   name: string;
   featured?: boolean;
   comingSoon?: boolean;
+  oss?: boolean;
   price: number;
   suffix: string;
   blurb: string;
@@ -26,94 +28,99 @@ interface Tier {
   features: string[];
 }
 
-const tiers: Tier[] = [
-  {
-    name: "Free",
-    price: 0,
-    suffix: "during alpha",
-    blurb: "Everything works. No paywall during the alpha.",
-    cta: { label: "Try it free", variant: "primary", icon: Sparkles, href: "/register" },
-    features: [
-      "Generate from a prompt (Gemini 2.5 Pro)",
-      "165 templates including 30 link-in-bio",
-      "Publish to <you>.openlen.com",
-      "Privacy-first analytics + per-link click tracking",
-      "Lead forms with email notifications",
-    ],
-  },
-  {
-    name: "Pro",
-    featured: true,
-    comingSoon: true,
-    price: 19,
-    suffix: "/month",
-    blurb: "Higher generation limits + custom domains.",
-    cta: { label: "Get notified at launch", variant: "outline", icon: ArrowRight, href: "/register" },
-    features: [
-      "Everything in Free",
-      "1,000 AI generations / month",
-      "Custom domains (links.your-brand.com)",
-      "Analytics retention beyond 90 days",
-      "Priority email support",
-    ],
-  },
-  {
-    name: "Self-host",
-    price: 0,
-    suffix: "forever",
-    blurb: "Run the whole stack on your own box.",
-    cta: { label: "Clone the repo", variant: "outline", icon: GithubIcon, href: "https://github.com/jesusbernalrj/inari-pages" },
-    features: [
-      "AGPLv3 — yours to modify + redistribute",
-      "Bring your own Gemini / Kimi API key",
-      "Single Hetzner box runs everything",
-      "Wildcard subdomain via nginx",
-      "No bill, no rate limit, no oversight",
-    ],
-  },
-];
+export async function Pricing() {
+  const t = await getTranslations("marketing");
 
-export function Pricing() {
+  const tiers: Tier[] = [
+    {
+      name: t("pricing.free.name"),
+      price: 0,
+      suffix: t("pricing.free.suffix"),
+      blurb: t("pricing.free.blurb"),
+      cta: { label: t("pricing.free.cta"), variant: "primary", icon: Sparkles, href: "/register" },
+      features: [
+        t("pricing.free.features.0"),
+        t("pricing.free.features.1"),
+        t("pricing.free.features.2"),
+        t("pricing.free.features.3"),
+        t("pricing.free.features.4"),
+      ],
+    },
+    {
+      name: t("pricing.pro.name"),
+      featured: true,
+      comingSoon: true,
+      price: 19,
+      suffix: t("pricing.pro.suffix"),
+      blurb: t("pricing.pro.blurb"),
+      cta: { label: t("pricing.pro.cta"), variant: "outline", icon: ArrowRight, href: "/register" },
+      features: [
+        t("pricing.pro.features.0"),
+        t("pricing.pro.features.1"),
+        t("pricing.pro.features.2"),
+        t("pricing.pro.features.3"),
+        t("pricing.pro.features.4"),
+      ],
+    },
+    {
+      name: t("pricing.selfHost.name"),
+      oss: true,
+      price: 0,
+      suffix: t("pricing.selfHost.suffix"),
+      blurb: t("pricing.selfHost.blurb"),
+      cta: { label: t("pricing.selfHost.cta"), variant: "outline", icon: GithubIcon, href: "https://github.com/jesusbernalrj/inari-pages" },
+      features: [
+        t("pricing.selfHost.features.0"),
+        t("pricing.selfHost.features.1"),
+        t("pricing.selfHost.features.2"),
+        t("pricing.selfHost.features.3"),
+        t("pricing.selfHost.features.4"),
+      ],
+    },
+  ];
+
   return (
     <section id="pricing" className="relative">
       <div className="mx-auto max-w-6xl px-6 py-24 sm:py-28">
         <div className="text-center max-w-2xl mx-auto">
           <Badge tone="zinc">
-            <Wallet size={11} /> Pricing
+            <Wallet size={11} /> {t("pricing.badge")}
           </Badge>
           <h2 className="mt-4 text-3xl sm:text-5xl font-semibold tracking-tightest leading-[1.05]">
-            Free during alpha.{" "}
-            <span className="text-zinc-500 dark:text-zinc-400">Self-host forever.</span>
+            {t.rich("pricing.title", {
+              muted: (chunks) => (
+                <span className="text-zinc-500 dark:text-zinc-400">{chunks}</span>
+              ),
+            })}
           </h2>
           <p className="mt-4 text-zinc-500 dark:text-zinc-400">
-            No paywall while we&apos;re shipping v1 — every feature is open
-            for testing. Pro tier with custom domains + higher limits is in
-            the works.
+            {t("pricing.subtitle")}
           </p>
         </div>
 
         <div className="mt-14 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-5">
-          {tiers.map((t) => {
-            const CtaIcon = t.cta.icon;
+          {tiers.map((tier) => {
+            const CtaIcon = tier.cta.icon;
             const ctaButton = (
-              <Button variant={t.cta.variant} size="lg" className="mt-6 w-full">
-                <CtaIcon size={15} /> {t.cta.label}
+              <Button variant={tier.cta.variant} size="lg" className="mt-6 w-full">
+                <CtaIcon size={15} /> {tier.cta.label}
               </Button>
             );
+            const isExternalCta = tier.cta.href?.startsWith("https://");
             return (
               <div
-                key={t.name}
+                key={tier.name}
                 className={cn(
                   "relative rounded-2xl bg-white dark:bg-[#0a0a0a] p-7 sm:p-8 flex flex-col",
-                  t.featured
+                  tier.featured
                     ? "ring-coral lg:scale-[1.02] lg:-my-2"
                     : "ring-1 ring-zinc-200 dark:ring-zinc-800",
                 )}
               >
-                {t.featured && (
+                {tier.featured && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <span className="inline-flex items-center gap-1 rounded-full bg-zinc-900 dark:bg-zinc-200 px-3 py-1 text-[11px] font-semibold text-white dark:text-zinc-900 shadow-md">
-                      {t.comingSoon ? "Coming soon" : (<><Sparkles size={11} /> Most popular</>)}
+                      {tier.comingSoon ? t("pricing.comingSoon") : (<><Sparkles size={11} /> {t("pricing.mostPopular")}</>)}
                     </span>
                   </div>
                 )}
@@ -121,57 +128,59 @@ export function Pricing() {
                   <h3
                     className={cn(
                       "text-lg font-semibold",
-                      t.featured && "text-coral-700 dark:text-coral-300",
+                      tier.featured && "text-coral-700 dark:text-coral-300",
                     )}
                   >
-                    {t.name}
+                    {tier.name}
                   </h3>
-                  {t.name === "Self-host" && (
+                  {tier.oss && (
                     <span className="text-[11px] uppercase tracking-wider text-zinc-400">
                       OSS
                     </span>
                   )}
                 </div>
-                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{t.blurb}</p>
+                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{tier.blurb}</p>
 
                 <div className="mt-6 flex items-end gap-1.5">
                   <span className="text-5xl font-semibold tracking-tightest tabular-nums">
-                    ${t.price}
+                    ${tier.price}
                   </span>
                   <span className="text-sm text-zinc-500 dark:text-zinc-400 mb-1.5">
-                    {t.suffix}
+                    {tier.suffix}
                   </span>
                 </div>
 
-                {t.cta.href ? (
-                  <Link
-                    href={t.cta.href}
-                    // External repo links (Self-host tier) share their
-                    // accessible name with the other GitHub anchors on
-                    // the page so screen readers don't read four
-                    // different labels for the same destination.
-                    aria-label={
-                      t.cta.href.startsWith("https://github.com/")
-                        ? "OpenLen on GitHub"
-                        : undefined
-                    }
-                  >
-                    {ctaButton}
-                  </Link>
+                {tier.cta.href ? (
+                  isExternalCta ? (
+                    // External repo links (Self-host tier) stay plain <a> and
+                    // share their accessible name with the other GitHub anchors
+                    // on the page so screen readers don't read four different
+                    // labels for the same destination.
+                    <a
+                      href={tier.cta.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={t("pricing.githubAria")}
+                    >
+                      {ctaButton}
+                    </a>
+                  ) : (
+                    <Link href={tier.cta.href}>{ctaButton}</Link>
+                  )
                 ) : (
                   ctaButton
                 )}
 
                 <div className="mt-7 border-t border-zinc-100 dark:border-zinc-900 pt-6">
                   <ul className="space-y-3">
-                    {t.features.map((f, fi) => (
+                    {tier.features.map((f, fi) => (
                       <li key={fi} className="flex items-start gap-2.5 text-sm">
                         <Check
                           size={14}
                           strokeWidth={2.5}
                           className={cn(
                             "mt-0.5 shrink-0",
-                            t.featured ? "text-coral-500" : "text-emerald-500",
+                            tier.featured ? "text-coral-500" : "text-emerald-500",
                           )}
                         />
                         <span className="text-zinc-700 dark:text-zinc-300">{f}</span>
@@ -185,8 +194,7 @@ export function Pricing() {
         </div>
 
         <div className="mt-10 text-center text-xs text-zinc-500 dark:text-zinc-400">
-          All plans include the open-source generator under AGPL. Hosted plans add
-          convenience, not features.
+          {t("pricing.footnote")}
         </div>
       </div>
     </section>

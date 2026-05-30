@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { ChevronDown, Moon, Sun, X } from "lucide-react";
 import { useDarkMode } from "@/lib/use-dark-mode";
 import { cn } from "@/lib/cn";
 import { CreditPill } from "@/components/app/credit-pill";
 import { OpenLenMark } from "@/components/openlen-logo";
+import { LocaleSwitcher } from "@/components/locale-switcher";
 import type { ReactNode } from "react";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -30,6 +32,7 @@ export interface AppHeaderProps {
 }
 
 export function AppHeader({ nav, actions }: AppHeaderProps) {
+  const t = useTranslations("projects");
   const [dark, toggleDark] = useDarkMode();
   return (
     <header className="sticky top-0 z-40 h-14 shrink-0 border-b border-zinc-200 dark:border-zinc-800 bg-white/85 dark:bg-[#0a0a0a]/85 backdrop-blur-md">
@@ -55,10 +58,11 @@ export function AppHeader({ nav, actions }: AppHeaderProps) {
             <div className="hidden sm:block h-5 w-px bg-zinc-200 dark:bg-zinc-800 mx-1" />
           )}
           <CreditPill />
+          <LocaleSwitcher />
           <button
             type="button"
             onClick={toggleDark}
-            aria-label="Toggle dark mode"
+            aria-label={t("appHeader.toggleDarkMode")}
             className="inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition"
           >
             {dark ? <Sun size={15} /> : <Moon size={15} />}
@@ -76,6 +80,7 @@ export function AppHeader({ nav, actions }: AppHeaderProps) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function UserMenu() {
+  const t = useTranslations("projects");
   const { data: session } = useSession();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -112,7 +117,7 @@ function UserMenu() {
         <div className="absolute right-0 mt-2 w-60 rounded-xl ring-1 ring-zinc-200 dark:ring-zinc-800 bg-white dark:bg-[#0a0a0a] shadow-lg p-1.5">
           <div className="px-3 py-2.5">
             <div className="text-sm font-medium truncate">
-              {user?.name ?? "Signed in"}
+              {user?.name ?? t("appHeader.signedIn")}
             </div>
             <div className="text-xs text-zinc-500 truncate">
               {user?.email ?? "—"}
@@ -124,17 +129,23 @@ function UserMenu() {
             onClick={() => setOpen(false)}
             className="flex items-center w-full text-left px-3 py-1.5 rounded-md text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900"
           >
-            My pages
+            {t("appHeader.myPages")}
           </Link>
-          {["Settings", "Billing", "API keys"].map((l) => (
+          {(
+            [
+              { key: "settings", label: t("appHeader.settings") },
+              { key: "billing", label: t("appHeader.billing") },
+              { key: "apiKeys", label: t("appHeader.apiKeys") },
+            ] as const
+          ).map((item) => (
             <button
               type="button"
-              key={l}
+              key={item.key}
               className="flex items-center w-full text-left px-3 py-1.5 rounded-md text-sm text-zinc-500 dark:text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-900 cursor-not-allowed"
-              title={`${l} — coming soon`}
+              title={t("appHeader.comingSoon", { label: item.label })}
               disabled
             >
-              {l}
+              {item.label}
             </button>
           ))}
           <div className="border-t border-zinc-100 dark:border-zinc-900 my-1" />
@@ -143,7 +154,7 @@ function UserMenu() {
             onClick={() => void signOut({ callbackUrl: "/login" })}
             className="flex items-center gap-2 w-full text-left px-3 py-1.5 rounded-md text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900"
           >
-            <X size={13} /> Sign out
+            <X size={13} /> {t("appHeader.signOut")}
           </button>
         </div>
       )}

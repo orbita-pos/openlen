@@ -1,0 +1,125 @@
+{
+  "customDomain": {
+    "validation": {
+      "invalidHostname": "No es un nombre de host válido.",
+      "reservedSubdomain": "Los subdominios de openlen.com se gestionan desde Deploy."
+    },
+    "errors": {
+      "loadFailed": "No se pudieron cargar los dominios.",
+      "networkLoad": "Error de red al cargar los dominios.",
+      "networkPreparing": "Error de red al preparar el proyecto.",
+      "addTaken": "Otro proyecto ya reclamó este dominio.",
+      "addGeneric": "No se pudo añadir este dominio.",
+      "networkAdd": "Error de red al añadir el dominio.",
+      "verifyFailed": "Falló la verificación. Vuelve a revisar el registro TXT.",
+      "networkVerify": "Error de red durante la verificación.",
+      "removeFailed": "No se pudo eliminar el dominio.",
+      "networkRemove": "Error de red al eliminar el dominio."
+    },
+    "autoPublish": {
+      "limitReached": "Ya tienes {limit, plural, one {# proyecto publicado} other {# proyectos publicados}} en tu plan. Despublica otro proyecto o pásate a Pro para tener más subdominios.",
+      "notFound": "No se encontró el proyecto. Prueba a recargar la página.",
+      "invalid": "No se pudo generar un subdominio interno válido. Usa Publicar manualmente.",
+      "reserved": "El subdominio interno coincide con un nombre reservado. Usa Publicar manualmente.",
+      "fallback": "No se pudo publicar automáticamente ({error}). Usa Publicar manualmente primero.",
+      "unknownError": "error desconocido"
+    },
+    "defaultProviderName": "tu proveedor de DNS",
+    "confirmRemove": "¿Eliminar {domain}? Quienes lo visiten verán un error de TLS en cuestión de minutos.",
+    "header": {
+      "title": "Dominio propio",
+      "subtitle": "Sirve tu proyecto en tu propio nombre de host."
+    },
+    "close": "Cerrar",
+    "preparing": {
+      "title": "Preparando tu proyecto…",
+      "subtitle": "Configurando el destino de alojamiento para que tu dominio propio tenga adónde apuntar."
+    },
+    "publishFirst": {
+      "title": "Primero publica tu página",
+      "subtitle": "Un dominio propio necesita que tu página esté en línea en un subdominio de openlen.com al que apuntar. Elige el nombre (puedes cambiarlo después volviendo a publicar).",
+      "placeholder": "mi-pagina",
+      "button": "Publicar",
+      "publishing": "Publicando…"
+    },
+    "add": {
+      "label": "Añadir un dominio",
+      "placeholder": "landing.miempresa.com",
+      "adding": "Añadiendo…",
+      "button": "Añadir"
+    },
+    "list": {
+      "heading": "Dominios",
+      "refreshing": "Actualizando…",
+      "empty": "Todavía no hay ninguno. Añade uno arriba para apuntar tu propio nombre de host a este proyecto.",
+      "verified": "Verificado · TLS activo",
+      "waiting": "Esperando al DNS",
+      "open": "Abrir",
+      "verify": "Verificar",
+      "removeAria": "Eliminar {domain}",
+      "dnsSetup": "Configuración del DNS"
+    },
+    "dns": {
+      "setupFor": "Configuración del DNS para",
+      "oneClickAvailable": "Tu proveedor de DNS admite la configuración con un solo clic.",
+      "manualHint": "Añade estos dos registros en tu proveedor de DNS (Cloudflare, GoDaddy, etc.). La mayoría se propagan en 1–5 minutos.",
+      "pointsTraffic": "Dirige el tráfico",
+      "provesOwnership": "Verifica la titularidad",
+      "name": "Nombre",
+      "value": "Valor",
+      "cloudflareHint": "En Cloudflare, configura <strong>Estado del proxy: solo DNS</strong> (nube gris). El proxy con nube naranja impide la emisión del certificado TLS."
+    },
+    "connect": {
+      "title": "Configuración con un clic con {provider}",
+      "subtitle": "Olvídate de copiar y pegar: añadimos los registros DNS por ti."
+    }
+  },
+  "publish": {
+    "errors": {
+      "publishGeneric": "No se pudo publicar: {reason}",
+      "unpublishGeneric": "No se pudo despublicar: {reason}"
+    },
+    "previewName": "tu-nombre",
+    "primary": {
+      "publishing": "Publicando…",
+      "moveSubdomain": "Mover a un nuevo subdominio",
+      "republish": "Volver a publicar",
+      "publish": "Publicar"
+    },
+    "header": {
+      "titleManage": "Gestionar publicación",
+      "titlePublish": "Publicar en openlen.com",
+      "subtitleManage": "Elige un nuevo nombre, vuelve a publicar o retíralo.",
+      "subtitlePublish": "Elige un nombre. En la web pública en un segundo."
+    },
+    "close": "Cerrar",
+    "subdomainLabel": "Subdominio",
+    "subdomainPlaceholder": "tu-nombre",
+    "preview": "Vista previa",
+    "limitsHint": "Plan gratuito: 1 página publicada. Pro: 10. Letras minúsculas, números y guiones (1–63 caracteres).",
+    "unpublish": {
+      "sure": "¿Seguro?",
+      "confirm": "Sí, despublicar",
+      "no": "No",
+      "button": "Despublicar"
+    },
+    "useOwnDomain": "O usa mi propio dominio",
+    "cancel": "Cancelar",
+    "status": {
+      "choose": "Elige un nombre arriba.",
+      "checking": "Comprobando disponibilidad…",
+      "currentPage": "Esta es tu página actual —",
+      "visit": "visitar",
+      "available": "Disponible",
+      "invalid": "Usa letras minúsculas, números y guiones (no al principio ni al final).",
+      "reserved": "Este nombre está reservado. Prueba con otro.",
+      "taken": "Ya está en uso. Prueba con otro.",
+      "limit": "Has alcanzado el límite de tu plan: despublica otra página o mejóralo."
+    }
+  },
+  "inspector": {
+    "radius": "Radio",
+    "radiusPlaceholder": "8px",
+    "hexPlaceholder": "#rrggbb"
+  }
+}

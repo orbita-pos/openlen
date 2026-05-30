@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Loader } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -26,8 +27,10 @@ export function OAuthButton({
   disabledHint,
   onClick,
 }: OAuthButtonProps) {
+  const t = useTranslations("auth");
   const isGithub = provider === "github";
-  const labelDefault = isGithub ? "Continue with GitHub" : "Continue with Google";
+  const providerName = isGithub ? "GitHub" : "Google";
+  const labelDefault = t("oauth.continueWith", { provider: providerName });
   return (
     <button
       type="button"
@@ -51,7 +54,7 @@ export function OAuthButton({
         <GoogleG size={17} />
       )}
       <span>
-        {loading ? `Connecting to ${isGithub ? "GitHub" : "Google"}…` : labelDefault}
+        {loading ? t("oauth.connectingTo", { provider: providerName }) : labelDefault}
       </span>
     </button>
   );

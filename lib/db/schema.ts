@@ -9,6 +9,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
 import type { ProjectData } from "@/lib/projects/types";
@@ -558,3 +559,78 @@ export const passwordResetTokens = pgTable("passwordResetTokens", {
   used: boolean("used").notNull().default(false),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
 });
+
+// External-deploy OAuth connections — one row per (user, provider). The token
+// is an ACCOUNT-level credential (connect once, deploy any project), so it
+// lives at user grain, not per-project. Powers the Deploy-dropdown "Deploy to
+// Vercel" / "Push to GitHub" export targets. The deploy RESULT (which repo /
+// project, the live URL) is per-project — see `projectDeployments` below.
+//
+// accessToken is stored ENCRYPTED (aes-256-gcm via lib/integrations/crypto.ts).
+// Both providers issue long-lived tokens (GitHub OAuth-App tokens don't expire;
+// Vercel connectable-integration tokens are long-lived), so `refreshToken` is
+// reserved for a future token-rotating flow but unused today.
+export const userConnections = pgTable(
+  "userConnections",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(), // 'vercel' | 'github'
+    // Encrypted at rest. Never returned to the client.
+    accessToken: text("accessToken").notNull(),
+    refreshToken: text("refreshToken"), // reserved; unused (long-lived tokens)
+    // Display label for the connected account: GitHub login, or Vercel
+    // user/team name. Surfaced as "Connected as …" in the deploy modal.
+    accountLabel: text("accountLabel"),
+    // Vercel team id when the integration was installed on a team (null =
+    // personal account). Passed as ?teamId= on deploy. Always null for GitHub.
+    teamId: text("teamId"),
+    scope: text("scope"),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("userConnections_userId_provider_idx").on(
+      table.userId,
+      table.provider,
+    ),
+  ],
+);
+
+// Per-project external-deploy result — one row per (project, provider). Tracks
+// where this project was last pushed (repo / Vercel project name), its live
+// URL, and a content hash for drift detection ("Re-deploy" vs "up to date").
+// Mirrors the projects.publishedReleaseSha drift mechanism for openlen.com.
+export const projectDeployments = pgTable(
+  "projectDeployments",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(), // 'vercel' | 'github'
+    // User-editable target name: the GitHub repo name or the Vercel project
+    // name. Appears in the public URL (owner.github.io/<remoteName>,
+    // <remoteName>-*.vercel.app). Re-deploying with the same name updates it.
+    remoteName: text("remoteName").notNull(),
+    liveUrl: text("liveUrl"),
+    lastDeployedAt: timestamp("lastDeployedAt", { mode: "date" }),
+    // First 12 chars of sha256(optimized export HTML) at last deploy — drift
+    // detection vs the project's current optimized HTML.
+    lastDeploySha: text("lastDeploySha"),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("projectDeployments_projectId_provider_idx").on(
+      table.projectId,
+      table.provider,
+    ),
+  ],
+);

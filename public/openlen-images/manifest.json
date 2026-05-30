@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generated": "2026-05-26T22:37:31.821Z",
-  "count": 454,
+  "generated": "2026-05-29T22:45:20.097Z",
+  "count": 502,
   "images": [
     {
       "id": "01-warm-glassy",
@@ -6810,6 +6810,726 @@
         "hero": "https://images.openlen.com/455-wedding-vintage-car-1920.webp",
         "tablet": "https://images.openlen.com/455-wedding-vintage-car-800.webp",
         "thumb": "https://images.openlen.com/455-wedding-vintage-car-400.webp"
+      }
+    },
+    {
+      "id": "456-vinyl-turntable",
+      "promptNum": 456,
+      "style": "music-editorial",
+      "family": [
+        "music",
+        "editorial"
+      ],
+      "alt": "Editorial music macro of a black vinyl record on a vintage turntable with the needle resting on the grooves in warm window light",
+      "src": {
+        "hero": "https://images.openlen.com/456-vinyl-turntable-1920.webp",
+        "tablet": "https://images.openlen.com/456-vinyl-turntable-800.webp",
+        "thumb": "https://images.openlen.com/456-vinyl-turntable-400.webp"
+      }
+    },
+    {
+      "id": "457-stacked-vinyl-records",
+      "promptNum": 457,
+      "style": "music-editorial",
+      "family": [
+        "music",
+        "ecommerce"
+      ],
+      "alt": "Editorial music still life of a leaning stack of vinyl LPs in faded paper sleeves on a wood floor beside a chunky hi-fi receiver",
+      "src": {
+        "hero": "https://images.openlen.com/457-stacked-vinyl-records-1920.webp",
+        "tablet": "https://images.openlen.com/457-stacked-vinyl-records-800.webp",
+        "thumb": "https://images.openlen.com/457-stacked-vinyl-records-400.webp"
+      }
+    },
+    {
+      "id": "458-electric-guitar-amp",
+      "promptNum": 458,
+      "style": "music-editorial",
+      "family": [
+        "music",
+        "creator"
+      ],
+      "alt": "Editorial music photograph of a vintage electric guitar leaning on a tweed amplifier in a sunlit rehearsal room with dust in the light",
+      "src": {
+        "hero": "https://images.openlen.com/458-electric-guitar-amp-1920.webp",
+        "tablet": "https://images.openlen.com/458-electric-guitar-amp-800.webp",
+        "thumb": "https://images.openlen.com/458-electric-guitar-amp-400.webp"
+      }
+    },
+    {
+      "id": "459-guitar-headstock-macro",
+      "promptNum": 459,
+      "style": "music-editorial",
+      "family": [
+        "music",
+        "ecommerce"
+      ],
+      "alt": "Editorial music macro of an electric guitar headstock with chrome tuners, brand inlay, woodgrain and motion-blur on a single string",
+      "src": {
+        "hero": "https://images.openlen.com/459-guitar-headstock-macro-1920.webp",
+        "tablet": "https://images.openlen.com/459-guitar-headstock-macro-800.webp",
+        "thumb": "https://images.openlen.com/459-guitar-headstock-macro-400.webp"
+      }
+    },
+    {
+      "id": "460-acoustic-window",
+      "promptNum": 460,
+      "style": "music-editorial",
+      "family": [
+        "music",
+        "podcast"
+      ],
+      "alt": "Editorial music photograph of an acoustic guitar resting on a velvet chair in a soft window-lit room with sheet music on the floor",
+      "src": {
+        "hero": "https://images.openlen.com/460-acoustic-window-1920.webp",
+        "tablet": "https://images.openlen.com/460-acoustic-window-800.webp",
+        "thumb": "https://images.openlen.com/460-acoustic-window-400.webp"
+      }
+    },
+    {
+      "id": "461-drum-kit-stage",
+      "promptNum": 461,
+      "style": "music-editorial",
+      "family": [
+        "music",
+        "event"
+      ],
+      "alt": "Editorial music wide photograph of a full drum kit on a dim stage with a single warm spotlight, smoke in the beam and crossed sticks on the snare",
+      "src": {
+        "hero": "https://images.openlen.com/461-drum-kit-stage-1920.webp",
+        "tablet": "https://images.openlen.com/461-drum-kit-stage-800.webp",
+        "thumb": "https://images.openlen.com/461-drum-kit-stage-400.webp"
+      }
+    },
+    {
+      "id": "462-cymbal-hit-blur",
+      "promptNum": 462,
+      "style": "music-editorial",
+      "family": [
+        "music",
+        "event"
+      ],
+      "alt": "Editorial music close-up of a hand mid-strike on a brass cymbal with motion blur and water droplets flying off the edge",
+      "src": {
+        "hero": "https://images.openlen.com/462-cymbal-hit-blur-1920.webp",
+        "tablet": "https://images.openlen.com/462-cymbal-hit-blur-800.webp",
+        "thumb": "https://images.openlen.com/462-cymbal-hit-blur-400.webp"
+      }
+    },
+    {
+      "id": "463-mixing-console-knobs",
+      "promptNum": 463,
+      "style": "music-editorial",
+      "family": [
+        "music",
+        "podcast"
+      ],
+      "alt": "Editorial music macro of a mixing console with backlit faders, glowing VU meters and rows of color-coded knobs at shallow depth of field",
+      "src": {
+        "hero": "https://images.openlen.com/463-mixing-console-knobs-1920.webp",
+        "tablet": "https://images.openlen.com/463-mixing-console-knobs-800.webp",
+        "thumb": "https://images.openlen.com/463-mixing-console-knobs-400.webp"
+      }
+    },
+    {
+      "id": "464-control-room-window",
+      "promptNum": 464,
+      "style": "music-editorial",
+      "family": [
+        "music",
+        "podcast"
+      ],
+      "alt": "Editorial music photograph from a studio control room — large mixing desk and glass window to a live room with hanging mics under warm amber LEDs",
+      "src": {
+        "hero": "https://images.openlen.com/464-control-room-window-1920.webp",
+        "tablet": "https://images.openlen.com/464-control-room-window-800.webp",
+        "thumb": "https://images.openlen.com/464-control-room-window-400.webp"
+      }
+    },
+    {
+      "id": "465-vintage-ribbon-mic",
+      "promptNum": 465,
+      "style": "music-editorial",
+      "family": [
+        "music",
+        "podcast"
+      ],
+      "alt": "Editorial music close-up of a vintage chrome ribbon microphone on a brass stand in a warm-lit studio with acoustic foam bokeh",
+      "src": {
+        "hero": "https://images.openlen.com/465-vintage-ribbon-mic-1920.webp",
+        "tablet": "https://images.openlen.com/465-vintage-ribbon-mic-800.webp",
+        "thumb": "https://images.openlen.com/465-vintage-ribbon-mic-400.webp"
+      }
+    },
+    {
+      "id": "466-condenser-mic-booth",
+      "promptNum": 466,
+      "style": "music-editorial",
+      "family": [
+        "podcast",
+        "music"
+      ],
+      "alt": "Editorial music photograph of a large-diaphragm condenser microphone with a pop filter inside a vocal booth framed by deep red acoustic panels",
+      "src": {
+        "hero": "https://images.openlen.com/466-condenser-mic-booth-1920.webp",
+        "tablet": "https://images.openlen.com/466-condenser-mic-booth-800.webp",
+        "thumb": "https://images.openlen.com/466-condenser-mic-booth-400.webp"
+      }
+    },
+    {
+      "id": "467-piano-keys-macro",
+      "promptNum": 467,
+      "style": "music-editorial",
+      "family": [
+        "music",
+        "editorial"
+      ],
+      "alt": "Editorial music macro of ivory and black piano keys with soft reflections, hammers visible at the lid edge and warm side light",
+      "src": {
+        "hero": "https://images.openlen.com/467-piano-keys-macro-1920.webp",
+        "tablet": "https://images.openlen.com/467-piano-keys-macro-800.webp",
+        "thumb": "https://images.openlen.com/467-piano-keys-macro-400.webp"
+      }
+    },
+    {
+      "id": "468-grand-piano-hall",
+      "promptNum": 468,
+      "style": "music-editorial",
+      "family": [
+        "music",
+        "event"
+      ],
+      "alt": "Editorial music wide photograph of a single grand piano with its lid open on the stage of an empty concert hall under golden chandeliers",
+      "src": {
+        "hero": "https://images.openlen.com/468-grand-piano-hall-1920.webp",
+        "tablet": "https://images.openlen.com/468-grand-piano-hall-800.webp",
+        "thumb": "https://images.openlen.com/468-grand-piano-hall-400.webp"
+      }
+    },
+    {
+      "id": "469-synthesizer-keys",
+      "promptNum": 469,
+      "style": "music-editorial",
+      "family": [
+        "music",
+        "creator"
+      ],
+      "alt": "Editorial music close-up of a vintage synthesizer with glowing oscillator LEDs, color-coded keys and coiled patch cables in dim purple ambient light",
+      "src": {
+        "hero": "https://images.openlen.com/469-synthesizer-keys-1920.webp",
+        "tablet": "https://images.openlen.com/469-synthesizer-keys-800.webp",
+        "thumb": "https://images.openlen.com/469-synthesizer-keys-400.webp"
+      }
+    },
+    {
+      "id": "470-modular-synth-patch",
+      "promptNum": 470,
+      "style": "music-editorial",
+      "family": [
+        "music",
+        "creator"
+      ],
+      "alt": "Editorial music macro of a Eurorack modular synth panel with rainbow patch cables crossing between modules and glowing knobs on a dark backdrop",
+      "src": {
+        "hero": "https://images.openlen.com/470-modular-synth-patch-1920.webp",
+        "tablet": "https://images.openlen.com/470-modular-synth-patch-800.webp",
+        "thumb": "https://images.openlen.com/470-modular-synth-patch-400.webp"
+      }
+    },
+    {
+      "id": "471-studio-headphones-desk",
+      "promptNum": 471,
+      "style": "music-editorial",
+      "family": [
+        "music",
+        "podcast"
+      ],
+      "alt": "Editorial music still life of studio headphones resting on a vintage notebook with handwritten lyrics on a worn wood desk beside a coffee mug",
+      "src": {
+        "hero": "https://images.openlen.com/471-studio-headphones-desk-1920.webp",
+        "tablet": "https://images.openlen.com/471-studio-headphones-desk-800.webp",
+        "thumb": "https://images.openlen.com/471-studio-headphones-desk-400.webp"
+      }
+    },
+    {
+      "id": "472-dj-deck-closeup",
+      "promptNum": 472,
+      "style": "music-editorial",
+      "family": [
+        "music",
+        "event"
+      ],
+      "alt": "Editorial music close-up of a CDJ deck mid-mix with an illuminated jog wheel and hands on the crossfader with blurred club lights behind",
+      "src": {
+        "hero": "https://images.openlen.com/472-dj-deck-closeup-1920.webp",
+        "tablet": "https://images.openlen.com/472-dj-deck-closeup-800.webp",
+        "thumb": "https://images.openlen.com/472-dj-deck-closeup-400.webp"
+      }
+    },
+    {
+      "id": "473-concert-lights-stage",
+      "promptNum": 473,
+      "style": "music-editorial",
+      "family": [
+        "music",
+        "event"
+      ],
+      "alt": "Editorial music photograph from the stage looking out at a dark concert venue with warm spotlight beams cutting through smoke and blurred crowd silhouettes",
+      "src": {
+        "hero": "https://images.openlen.com/473-concert-lights-stage-1920.webp",
+        "tablet": "https://images.openlen.com/473-concert-lights-stage-800.webp",
+        "thumb": "https://images.openlen.com/473-concert-lights-stage-400.webp"
+      }
+    },
+    {
+      "id": "474-festival-crowd-hands",
+      "promptNum": 474,
+      "style": "music-editorial",
+      "family": [
+        "music",
+        "event"
+      ],
+      "alt": "Editorial music wide photograph from behind a crowd at a sunset open-air festival with hands raised and warm stage lights against a pink-orange sky",
+      "src": {
+        "hero": "https://images.openlen.com/474-festival-crowd-hands-1920.webp",
+        "tablet": "https://images.openlen.com/474-festival-crowd-hands-800.webp",
+        "thumb": "https://images.openlen.com/474-festival-crowd-hands-400.webp"
+      }
+    },
+    {
+      "id": "475-sheet-music-stand",
+      "promptNum": 475,
+      "style": "music-editorial",
+      "family": [
+        "music",
+        "education"
+      ],
+      "alt": "Editorial music close-up of open sheet music on a black music stand under soft practice-room light with a single pencil resting on the page",
+      "src": {
+        "hero": "https://images.openlen.com/475-sheet-music-stand-1920.webp",
+        "tablet": "https://images.openlen.com/475-sheet-music-stand-800.webp",
+        "thumb": "https://images.openlen.com/475-sheet-music-stand-400.webp"
+      }
+    },
+    {
+      "id": "476-hand-writing-music",
+      "promptNum": 476,
+      "style": "music-editorial",
+      "family": [
+        "music",
+        "editorial"
+      ],
+      "alt": "Editorial music close-up of a hand with a pencil writing notes onto staff paper on a piano lid with a brass candleholder behind",
+      "src": {
+        "hero": "https://images.openlen.com/476-hand-writing-music-1920.webp",
+        "tablet": "https://images.openlen.com/476-hand-writing-music-800.webp",
+        "thumb": "https://images.openlen.com/476-hand-writing-music-400.webp"
+      }
+    },
+    {
+      "id": "477-cassette-walkman",
+      "promptNum": 477,
+      "style": "music-editorial",
+      "family": [
+        "music",
+        "editorial"
+      ],
+      "alt": "Editorial music top-down still life of a vintage Sony Walkman, two cassette tapes with handwritten labels and tangled wired earbuds on kraft paper",
+      "src": {
+        "hero": "https://images.openlen.com/477-cassette-walkman-1920.webp",
+        "tablet": "https://images.openlen.com/477-cassette-walkman-800.webp",
+        "thumb": "https://images.openlen.com/477-cassette-walkman-400.webp"
+      }
+    },
+    {
+      "id": "478-saxophone-jazz-bar",
+      "promptNum": 478,
+      "style": "music-editorial",
+      "family": [
+        "music",
+        "hospitality"
+      ],
+      "alt": "Editorial music photograph of a brass saxophone resting on a velvet stool in a moody jazz bar with blue stage lights and bottle bokeh behind",
+      "src": {
+        "hero": "https://images.openlen.com/478-saxophone-jazz-bar-1920.webp",
+        "tablet": "https://images.openlen.com/478-saxophone-jazz-bar-800.webp",
+        "thumb": "https://images.openlen.com/478-saxophone-jazz-bar-400.webp"
+      }
+    },
+    {
+      "id": "479-mic-empty-stage",
+      "promptNum": 479,
+      "style": "music-editorial",
+      "family": [
+        "music",
+        "podcast"
+      ],
+      "alt": "Editorial music wide photograph of a single vintage microphone on a stand at center stage of a small empty venue under a warm spotlight",
+      "src": {
+        "hero": "https://images.openlen.com/479-mic-empty-stage-1920.webp",
+        "tablet": "https://images.openlen.com/479-mic-empty-stage-800.webp",
+        "thumb": "https://images.openlen.com/479-mic-empty-stage-400.webp"
+      }
+    },
+    {
+      "id": "480-controller-macro",
+      "promptNum": 480,
+      "style": "gaming-editorial",
+      "family": [
+        "gaming",
+        "ecommerce"
+      ],
+      "alt": "Editorial gaming macro close-up of a modern gamepad controller on a dark desk with analog sticks, textured grip and LED light bar glow",
+      "src": {
+        "hero": "https://images.openlen.com/480-controller-macro-1920.webp",
+        "tablet": "https://images.openlen.com/480-controller-macro-800.webp",
+        "thumb": "https://images.openlen.com/480-controller-macro-400.webp"
+      }
+    },
+    {
+      "id": "481-hands-on-controller",
+      "promptNum": 481,
+      "style": "gaming-editorial",
+      "family": [
+        "gaming",
+        "creator"
+      ],
+      "alt": "Editorial gaming close-up of hands gripping a black gamepad mid-game with blue LED glow and blurred monitor reflection",
+      "src": {
+        "hero": "https://images.openlen.com/481-hands-on-controller-1920.webp",
+        "tablet": "https://images.openlen.com/481-hands-on-controller-800.webp",
+        "thumb": "https://images.openlen.com/481-hands-on-controller-400.webp"
+      }
+    },
+    {
+      "id": "482-mechanical-keyboard-rgb",
+      "promptNum": 482,
+      "style": "gaming-editorial",
+      "family": [
+        "gaming",
+        "ecommerce"
+      ],
+      "alt": "Editorial gaming macro of a mechanical keyboard with per-key RGB lighting in a dark room with shallow depth of field over a deskmat",
+      "src": {
+        "hero": "https://images.openlen.com/482-mechanical-keyboard-rgb-1920.webp",
+        "tablet": "https://images.openlen.com/482-mechanical-keyboard-rgb-800.webp",
+        "thumb": "https://images.openlen.com/482-mechanical-keyboard-rgb-400.webp"
+      }
+    },
+    {
+      "id": "483-gaming-mouse-rgb",
+      "promptNum": 483,
+      "style": "gaming-editorial",
+      "family": [
+        "gaming",
+        "ecommerce"
+      ],
+      "alt": "Editorial gaming close-up of a gaming mouse on a black cloth deskmat with RGB scroll wheel glow and side buttons in sharp focus",
+      "src": {
+        "hero": "https://images.openlen.com/483-gaming-mouse-rgb-1920.webp",
+        "tablet": "https://images.openlen.com/483-gaming-mouse-rgb-800.webp",
+        "thumb": "https://images.openlen.com/483-gaming-mouse-rgb-400.webp"
+      }
+    },
+    {
+      "id": "484-headset-on-stand",
+      "promptNum": 484,
+      "style": "gaming-editorial",
+      "family": [
+        "gaming",
+        "ecommerce"
+      ],
+      "alt": "Editorial gaming photograph of a gaming headset hanging on a metal stand with RGB ear-cup glow on a dark desk under soft purple ambient light",
+      "src": {
+        "hero": "https://images.openlen.com/484-headset-on-stand-1920.webp",
+        "tablet": "https://images.openlen.com/484-headset-on-stand-800.webp",
+        "thumb": "https://images.openlen.com/484-headset-on-stand-400.webp"
+      }
+    },
+    {
+      "id": "485-headset-on-desk",
+      "promptNum": 485,
+      "style": "gaming-editorial",
+      "family": [
+        "gaming",
+        "creator"
+      ],
+      "alt": "Editorial gaming photograph of an over-ear gaming headset resting beside a mechanical keyboard with ambient RGB underglow and blurred dual monitors",
+      "src": {
+        "hero": "https://images.openlen.com/485-headset-on-desk-1920.webp",
+        "tablet": "https://images.openlen.com/485-headset-on-desk-800.webp",
+        "thumb": "https://images.openlen.com/485-headset-on-desk-400.webp"
+      }
+    },
+    {
+      "id": "486-curved-monitor-game",
+      "promptNum": 486,
+      "style": "gaming-editorial",
+      "family": [
+        "gaming",
+        "event"
+      ],
+      "alt": "Editorial gaming close-up of an ultrawide curved monitor displaying a fantasy-shooter game scene at dusk with screen reflection in a dark room",
+      "src": {
+        "hero": "https://images.openlen.com/486-curved-monitor-game-1920.webp",
+        "tablet": "https://images.openlen.com/486-curved-monitor-game-800.webp",
+        "thumb": "https://images.openlen.com/486-curved-monitor-game-400.webp"
+      }
+    },
+    {
+      "id": "487-triple-monitor-setup",
+      "promptNum": 487,
+      "style": "gaming-editorial",
+      "family": [
+        "gaming",
+        "creator"
+      ],
+      "alt": "Editorial gaming wide photograph of a three-monitor gaming setup with RGB underglow strip behind the desk and gradient ambient light on a dark wall",
+      "src": {
+        "hero": "https://images.openlen.com/487-triple-monitor-setup-1920.webp",
+        "tablet": "https://images.openlen.com/487-triple-monitor-setup-800.webp",
+        "thumb": "https://images.openlen.com/487-triple-monitor-setup-400.webp"
+      }
+    },
+    {
+      "id": "488-streamer-rig-idle",
+      "promptNum": 488,
+      "style": "gaming-editorial",
+      "family": [
+        "gaming",
+        "creator"
+      ],
+      "alt": "Editorial gaming photograph of an empty streamer setup with ring light, condenser mic on a boom, dual monitors with chat overlay and RGB keyboard glow",
+      "src": {
+        "hero": "https://images.openlen.com/488-streamer-rig-idle-1920.webp",
+        "tablet": "https://images.openlen.com/488-streamer-rig-idle-800.webp",
+        "thumb": "https://images.openlen.com/488-streamer-rig-idle-400.webp"
+      }
+    },
+    {
+      "id": "489-console-and-controller",
+      "promptNum": 489,
+      "style": "gaming-editorial",
+      "family": [
+        "gaming",
+        "ecommerce"
+      ],
+      "alt": "Editorial gaming photograph of a sleek modern game console on a wood entertainment unit with a controller beside it and soft TV glow behind",
+      "src": {
+        "hero": "https://images.openlen.com/489-console-and-controller-1920.webp",
+        "tablet": "https://images.openlen.com/489-console-and-controller-800.webp",
+        "thumb": "https://images.openlen.com/489-console-and-controller-400.webp"
+      }
+    },
+    {
+      "id": "490-retro-console-nostalgia",
+      "promptNum": 490,
+      "style": "gaming-editorial",
+      "family": [
+        "gaming",
+        "editorial"
+      ],
+      "alt": "Editorial gaming top-down still life of a vintage 90s game console with two wired controllers and a stack of cartridges on a kraft surface",
+      "src": {
+        "hero": "https://images.openlen.com/490-retro-console-nostalgia-1920.webp",
+        "tablet": "https://images.openlen.com/490-retro-console-nostalgia-800.webp",
+        "thumb": "https://images.openlen.com/490-retro-console-nostalgia-400.webp"
+      }
+    },
+    {
+      "id": "491-racing-wheel-rig",
+      "promptNum": 491,
+      "style": "gaming-editorial",
+      "family": [
+        "gaming",
+        "event"
+      ],
+      "alt": "Editorial gaming wide photograph of a racing wheel and pedals mounted on a sim-racing cockpit with a curved monitor showing a dusk track and RGB underbody glow",
+      "src": {
+        "hero": "https://images.openlen.com/491-racing-wheel-rig-1920.webp",
+        "tablet": "https://images.openlen.com/491-racing-wheel-rig-800.webp",
+        "thumb": "https://images.openlen.com/491-racing-wheel-rig-400.webp"
+      }
+    },
+    {
+      "id": "492-flight-stick-hotas",
+      "promptNum": 492,
+      "style": "gaming-editorial",
+      "family": [
+        "gaming",
+        "technical-minimal"
+      ],
+      "alt": "Editorial gaming close-up of a HOTAS flight stick and throttle on a dark desk with illuminated buttons and a blurred cockpit-sim monitor behind",
+      "src": {
+        "hero": "https://images.openlen.com/492-flight-stick-hotas-1920.webp",
+        "tablet": "https://images.openlen.com/492-flight-stick-hotas-800.webp",
+        "thumb": "https://images.openlen.com/492-flight-stick-hotas-400.webp"
+      }
+    },
+    {
+      "id": "493-vr-headset-desk",
+      "promptNum": 493,
+      "style": "gaming-editorial",
+      "family": [
+        "gaming",
+        "technical-minimal"
+      ],
+      "alt": "Editorial gaming close-up of a modern VR headset resting on a dark desk beside two motion controllers in soft window light catching the lens",
+      "src": {
+        "hero": "https://images.openlen.com/493-vr-headset-desk-1920.webp",
+        "tablet": "https://images.openlen.com/493-vr-headset-desk-800.webp",
+        "thumb": "https://images.openlen.com/493-vr-headset-desk-400.webp"
+      }
+    },
+    {
+      "id": "494-vr-controllers-hands",
+      "promptNum": 494,
+      "style": "gaming-editorial",
+      "family": [
+        "gaming",
+        "creator"
+      ],
+      "alt": "Editorial gaming photograph of hands holding two VR motion controllers mid-game with tracking-ring LED glow and a blurred living-room behind",
+      "src": {
+        "hero": "https://images.openlen.com/494-vr-controllers-hands-1920.webp",
+        "tablet": "https://images.openlen.com/494-vr-controllers-hands-800.webp",
+        "thumb": "https://images.openlen.com/494-vr-controllers-hands-400.webp"
+      }
+    },
+    {
+      "id": "495-custom-pc-interior",
+      "promptNum": 495,
+      "style": "gaming-editorial",
+      "family": [
+        "gaming",
+        "technical-minimal"
+      ],
+      "alt": "Editorial gaming macro of a custom-built gaming PC interior with RGB GPU fans, liquid cooling tubes and a tempered glass side panel",
+      "src": {
+        "hero": "https://images.openlen.com/495-custom-pc-interior-1920.webp",
+        "tablet": "https://images.openlen.com/495-custom-pc-interior-800.webp",
+        "thumb": "https://images.openlen.com/495-custom-pc-interior-400.webp"
+      }
+    },
+    {
+      "id": "496-pc-tower-desk",
+      "promptNum": 496,
+      "style": "gaming-editorial",
+      "family": [
+        "gaming",
+        "ecommerce"
+      ],
+      "alt": "Editorial gaming photograph of a gaming PC tower with a glass side panel and RGB internals beside a curved monitor and keyboard in a dark room with neon underglow",
+      "src": {
+        "hero": "https://images.openlen.com/496-pc-tower-desk-1920.webp",
+        "tablet": "https://images.openlen.com/496-pc-tower-desk-800.webp",
+        "thumb": "https://images.openlen.com/496-pc-tower-desk-400.webp"
+      }
+    },
+    {
+      "id": "497-esports-player-back",
+      "promptNum": 497,
+      "style": "gaming-editorial",
+      "family": [
+        "gaming",
+        "event"
+      ],
+      "alt": "Editorial gaming wide photograph from behind an esports player at their station with RGB peripherals, a tournament scoreboard blurred on the main screen and stage lights overhead",
+      "src": {
+        "hero": "https://images.openlen.com/497-esports-player-back-1920.webp",
+        "tablet": "https://images.openlen.com/497-esports-player-back-800.webp",
+        "thumb": "https://images.openlen.com/497-esports-player-back-400.webp"
+      }
+    },
+    {
+      "id": "498-esports-arena-crowd",
+      "promptNum": 498,
+      "style": "gaming-editorial",
+      "family": [
+        "gaming",
+        "event"
+      ],
+      "alt": "Editorial gaming wide photograph of an esports arena stage from the back of a darkened crowd with a giant LED screen and blue and magenta stage wash",
+      "src": {
+        "hero": "https://images.openlen.com/498-esports-arena-crowd-1920.webp",
+        "tablet": "https://images.openlen.com/498-esports-arena-crowd-800.webp",
+        "thumb": "https://images.openlen.com/498-esports-arena-crowd-400.webp"
+      }
+    },
+    {
+      "id": "499-retro-arcade-glow",
+      "promptNum": 499,
+      "style": "gaming-editorial",
+      "family": [
+        "gaming",
+        "editorial"
+      ],
+      "alt": "Editorial gaming photograph of a row of vintage arcade cabinets in a dim arcade with magenta and cyan neon glow and joysticks in soft focus",
+      "src": {
+        "hero": "https://images.openlen.com/499-retro-arcade-glow-1920.webp",
+        "tablet": "https://images.openlen.com/499-retro-arcade-glow-800.webp",
+        "thumb": "https://images.openlen.com/499-retro-arcade-glow-400.webp"
+      }
+    },
+    {
+      "id": "500-crt-pixel-art",
+      "promptNum": 500,
+      "style": "gaming-editorial",
+      "family": [
+        "gaming",
+        "editorial"
+      ],
+      "alt": "Editorial gaming close-up of a vintage CRT monitor displaying a pixel-art scene with scanlines and soft phosphor glow in a dark room",
+      "src": {
+        "hero": "https://images.openlen.com/500-crt-pixel-art-1920.webp",
+        "tablet": "https://images.openlen.com/500-crt-pixel-art-800.webp",
+        "thumb": "https://images.openlen.com/500-crt-pixel-art-400.webp"
+      }
+    },
+    {
+      "id": "501-gaming-chair-rgb",
+      "promptNum": 501,
+      "style": "gaming-editorial",
+      "family": [
+        "gaming",
+        "ecommerce"
+      ],
+      "alt": "Editorial gaming photograph of a high-back gaming chair behind a desk with RGB-lit peripherals and neon underglow on the floor in a dark room",
+      "src": {
+        "hero": "https://images.openlen.com/501-gaming-chair-rgb-1920.webp",
+        "tablet": "https://images.openlen.com/501-gaming-chair-rgb-800.webp",
+        "thumb": "https://images.openlen.com/501-gaming-chair-rgb-400.webp"
+      }
+    },
+    {
+      "id": "502-lan-party-wide",
+      "promptNum": 502,
+      "style": "gaming-editorial",
+      "family": [
+        "gaming",
+        "event"
+      ],
+      "alt": "Editorial gaming wide photograph of a LAN party hall with rows of gaming stations, RGB peripherals glowing across the room and blurred figures from behind",
+      "src": {
+        "hero": "https://images.openlen.com/502-lan-party-wide-1920.webp",
+        "tablet": "https://images.openlen.com/502-lan-party-wide-800.webp",
+        "thumb": "https://images.openlen.com/502-lan-party-wide-400.webp"
+      }
+    },
+    {
+      "id": "503-controller-couch",
+      "promptNum": 503,
+      "style": "gaming-editorial",
+      "family": [
+        "gaming",
+        "hospitality"
+      ],
+      "alt": "Editorial gaming top-down of a black gamepad resting on a coffee table beside a cold drink and a takeout box with a blurred TV game scene behind",
+      "src": {
+        "hero": "https://images.openlen.com/503-controller-couch-1920.webp",
+        "tablet": "https://images.openlen.com/503-controller-couch-800.webp",
+        "thumb": "https://images.openlen.com/503-controller-couch-400.webp"
       }
     }
   ]

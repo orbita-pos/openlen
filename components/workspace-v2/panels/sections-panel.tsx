@@ -7,10 +7,10 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { ChevronRight, Sparkles } from "../icons";
 import { TemplatePreviewFrame } from "../template-preview-frame";
 import {
-  SECTION_TYPE_META,
   SECTION_TYPES_ORDERED,
   type SectionSpec,
   type SectionType,
@@ -33,6 +33,7 @@ function SectionCard({
   onInsert: (s: SectionSpec) => void;
   inserting: boolean;
 }) {
+  const t = useTranslations("panelsA");
   return (
     <div
       className="group relative w-full rounded-lg overflow-hidden ring-1 ring-[color:var(--border)] hover:ring-[color:var(--border-strong)] transition-all duration-200"
@@ -53,7 +54,7 @@ function SectionCard({
             {section.needsJs && (
               <span
                 className="text-[8.5px] uppercase tracking-[0.12em] px-1 py-0.5 rounded fg-faint bg-hover font-semibold"
-                title="Renders content via JS — preserved on insert, limited inline-edit"
+                title={t("sections.jsTooltip")}
               >
                 JS
               </span>
@@ -61,7 +62,7 @@ function SectionCard({
             {section.hasPlaceholders && (
               <span
                 className="text-[8.5px] uppercase tracking-[0.12em] px-1 py-0.5 rounded fg-faint bg-hover font-semibold"
-                title="Ships gradient placeholders — swap real images after insert"
+                title={t("sections.imgTooltip")}
               >
                 IMG
               </span>
@@ -73,11 +74,11 @@ function SectionCard({
           type="button"
           onClick={() => onInsert(section)}
           disabled={inserting}
-          aria-label={`Insert ${section.name} into the current page`}
+          aria-label={t("sections.insertAria", { name: section.name })}
           className="mt-1 w-full inline-flex items-center justify-center gap-1.5 text-[11px] font-medium h-7 rounded-md text-white transition disabled:opacity-60"
           style={{ background: "var(--accent)" }}
         >
-          {inserting ? "Inserting…" : "Insert"}
+          {inserting ? t("sections.inserting") : t("sections.insert")}
           {!inserting && <ChevronRight size={11} stroke={2.5} />}
         </button>
       </div>
@@ -86,6 +87,8 @@ function SectionCard({
 }
 
 export function SectionsPanel({ onInsert, insertingId }: SectionsPanelProps) {
+  const t = useTranslations("panelsA");
+  const ts = useTranslations("sections");
   const [typeFilter, setTypeFilter] = useState<SectionType | "all">("all");
   const { sections, byType, isLoading, error } = useSections();
 
@@ -98,13 +101,11 @@ export function SectionsPanel({ onInsert, insertingId }: SectionsPanelProps) {
       <div className="flex items-center gap-2 mb-2">
         <Sparkles size={13} className="text-accent" />
         <h2 className="text-[11px] uppercase tracking-[0.16em] fg-faint font-semibold ui-small">
-          Section library
+          {t("sections.heading")}
         </h2>
       </div>
       <p className="text-[11px] fg-muted leading-snug mb-3">
-        Insert a section into your current page. It drops in at the bottom —
-        drag it into place with the section handles. The look adapts to your
-        page on the next restyle.
+        {t("sections.intro")}
       </p>
 
       <div className="flex flex-wrap gap-1 mb-4">
@@ -117,7 +118,8 @@ export function SectionsPanel({ onInsert, insertingId }: SectionsPanelProps) {
               : "fg-muted bg-hover hover:fg"
           }`}
         >
-          All{sections.length > 0 ? ` ${sections.length}` : ""}
+          {t("sections.all")}
+          {sections.length > 0 ? ` ${sections.length}` : ""}
         </button>
         {SECTION_TYPES_ORDERED.map((t) => (
           <button
@@ -130,14 +132,14 @@ export function SectionsPanel({ onInsert, insertingId }: SectionsPanelProps) {
                 : "fg-muted bg-hover hover:fg"
             }`}
           >
-            {SECTION_TYPE_META[t].label}
+            {ts(t)}
           </button>
         ))}
       </div>
 
       {error && (
         <div className="mb-3 px-2.5 py-2 rounded-md ring-1 ring-rose-300/60 dark:ring-rose-500/30 bg-rose-50 dark:bg-rose-500/5 text-[11px] text-rose-700 dark:text-rose-300">
-          Failed to load sections — {error}
+          {t("sections.loadError", { error })}
         </div>
       )}
 
@@ -158,7 +160,7 @@ export function SectionsPanel({ onInsert, insertingId }: SectionsPanelProps) {
             <section key={type} className="mb-5 last:mb-2">
               <div className="mb-3 mt-1 first:mt-0 flex items-baseline justify-between gap-2">
                 <h3 className="text-[10.5px] uppercase tracking-[0.18em] fg font-semibold ui-small">
-                  {SECTION_TYPE_META[type].label}
+                  {ts(type)}
                 </h3>
                 <span className="text-[10px] fg-faint tabular-nums">
                   {ofType.length}
@@ -179,8 +181,7 @@ export function SectionsPanel({ onInsert, insertingId }: SectionsPanelProps) {
         })}
 
       <div className="mt-4 px-1 text-[10px] fg-faint leading-relaxed">
-        Sections are scoped fragments — their styles can&apos;t clash with your
-        page. Insert, then reorder and restyle to taste.
+        {t("sections.footer")}
       </div>
     </div>
   );

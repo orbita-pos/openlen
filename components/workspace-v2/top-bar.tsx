@@ -14,7 +14,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { signOut, useSession } from "next-auth/react";
 import {
   ChevronDown,
@@ -31,6 +32,7 @@ import {
 import { IconBtn, StatusDot } from "./ui";
 import { CreditPill } from "@/components/app/credit-pill";
 import { OpenLenMark } from "@/components/openlen-logo";
+import { LocaleSwitcher } from "@/components/locale-switcher";
 import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
 
 interface ReleaseEntry {
@@ -68,6 +70,10 @@ interface TopBarProps {
   /** Open the custom-domain modal. Pass undefined to hide the entry
    *  point (no project loaded). */
   onCustomDomain?: () => void;
+  /** Open the "Deploy to Vercel" modal. Undefined hides the entry. */
+  onDeployVercel?: () => void;
+  /** Open the "Push to GitHub" modal. Undefined hides the entry. */
+  onDeployGitHub?: () => void;
   dark: boolean;
   onToggleDark: () => void;
 }
@@ -83,9 +89,12 @@ export function TopBar({
   projectId,
   onRolledBack,
   onCustomDomain,
+  onDeployVercel,
+  onDeployGitHub,
   dark,
   onToggleDark,
 }: TopBarProps) {
+  const t = useTranslations("topbar");
   const { data: session } = useSession();
   const userName = session?.user?.name ?? "";
   const userEmail = session?.user?.email ?? "";
@@ -101,7 +110,7 @@ export function TopBar({
   // to first name + first letter of last to keep it on one line.
   const displayName = (() => {
     const n = userName.trim();
-    if (!n) return userEmail || "Account";
+    if (!n) return userEmail || t("account.fallbackName");
     const parts = n.split(/\s+/);
     if (parts.length === 1) return parts[0];
     return `${parts[0]} ${parts[parts.length - 1].charAt(0).toUpperCase()}.`;
@@ -179,9 +188,7 @@ export function TopBar({
 
   const onRollbackClick = async (sha: string) => {
     if (!projectId || rollingSha) return;
-    const ok = window.confirm(
-      `Roll back the live site to deploy ${sha}? Visitors will see this earlier version within seconds.`,
-    );
+    const ok = window.confirm(t("rollback.confirm", { sha }));
     if (!ok) return;
     setRollingSha(sha);
     try {
@@ -194,8 +201,8 @@ export function TopBar({
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         window.alert(
           body.error === "release_gone"
-            ? "That deploy has been pruned from disk and can't be restored."
-            : "Rollback failed. Try again.",
+            ? t("rollback.errorGone")
+            : t("rollback.errorGeneric"),
         );
         return;
       }
@@ -241,7 +248,7 @@ export function TopBar({
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onBlur={() => {
-                onRename(draft.trim() || "Untitled");
+                onRename(draft.trim() || t("projectName.untitled"));
                 setEditingName(false);
               }}
               onKeyDown={(e) => {
@@ -255,11 +262,11 @@ export function TopBar({
             />
           ) : (
             <>
-              <span className="text-[13px] fg-muted">Workspace</span>
-              <span className="fg-faint">—</span>
+              <span className="text-[13px] fg-muted whitespace-nowrap shrink-0">{t("projectName.workspaceLabel")}</span>
+              <span className="fg-faint shrink-0">—</span>
               {projectLoading ? (
                 <span className="text-[13px] font-medium fg-faint truncate animate-pulse">
-                  Loading…
+                  {t("common.loading")}
                 </span>
               ) : (
                 <>
@@ -287,12 +294,12 @@ export function TopBar({
           {savingStatus === "saving" ? (
             <>
               <StatusDot color="#FF5A36" pulse />
-              <span className="font-mono fg-muted">Saving…</span>
+              <span className="font-mono fg-muted">{t("save.saving")}</span>
             </>
           ) : (
             <>
               <StatusDot color="#10B981" />
-              <span className="font-mono fg-muted">Saved · just now</span>
+              <span className="font-mono fg-muted">{t("save.saved")}</span>
             </>
           )}
         </span>
@@ -310,7 +317,7 @@ export function TopBar({
             className="inline-flex items-center gap-1.5 h-8 px-2.5 sm:px-3 rounded-md bg-[var(--accent)] text-white text-[12px] font-medium hover:brightness-105 active:brightness-95 shadow-coral transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Sparkles size={12} />
-            <span className="hidden sm:inline">Deploy</span>
+            <span className="hidden sm:inline">{t("deploy.button")}</span>
             <ChevronDown
               size={11}
               className={`transition ${deployOpen ? "rotate-180" : ""}`}
@@ -319,7 +326,7 @@ export function TopBar({
           {deployOpen && (
             <div className="absolute right-0 mt-2 w-72 rounded-xl bg-elev border bd shadow-elev p-1.5 z-50 slide-down">
               <div className="px-2.5 pt-1.5 pb-2 text-[10px] uppercase tracking-wider fg-faint">
-                Ship it
+                {t("deploy.shipIt")}
               </div>
 
               {published ? (
@@ -330,12 +337,12 @@ export function TopBar({
                       <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
                     </span>
                     <span className="min-w-0 text-[11.5px] font-semibold tracking-tight text-emerald-800 dark:text-emerald-300 truncate">
-                      Live at {published.subdomain}.openlen.com
+                      {t("deploy.liveAt", { subdomain: published.subdomain })}
                     </span>
                   </div>
                   {published.hasUnpublishedChanges && (
                     <div className="mt-1 text-[10.5px] text-amber-700 dark:text-amber-300">
-                      You have unpublished changes.
+                      {t("deploy.unpublishedChanges")}
                     </div>
                   )}
                   <div className="mt-2 flex items-center gap-1.5 flex-wrap">
@@ -347,7 +354,7 @@ export function TopBar({
                         onClick={() => setDeployOpen(false)}
                         className="inline-flex items-center gap-1 h-6 px-2 rounded text-[11px] font-medium text-emerald-800 dark:text-emerald-300 ring-1 ring-emerald-200 dark:ring-emerald-500/30 hover:bg-emerald-100 dark:hover:bg-emerald-500/10 transition"
                       >
-                        <ExternalLink size={10} /> Open
+                        <ExternalLink size={10} /> {t("deploy.open")}
                       </a>
                     )}
                     {onPublish && (
@@ -360,7 +367,7 @@ export function TopBar({
                           }}
                           className="inline-flex items-center gap-1 h-6 px-2 rounded text-[11px] font-medium text-emerald-800 dark:text-emerald-300 ring-1 ring-emerald-200 dark:ring-emerald-500/30 hover:bg-emerald-100 dark:hover:bg-emerald-500/10 transition"
                         >
-                          <RefreshCw size={10} /> Re-publish
+                          <RefreshCw size={10} /> {t("deploy.republish")}
                         </button>
                         <button
                           type="button"
@@ -370,7 +377,7 @@ export function TopBar({
                           }}
                           className="inline-flex items-center gap-1 h-6 px-2 rounded text-[11px] font-medium text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-500/10 transition"
                         >
-                          <X size={10} /> Unpublish
+                          <X size={10} /> {t("deploy.unpublish")}
                         </button>
                       </>
                     )}
@@ -391,10 +398,10 @@ export function TopBar({
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13px] font-semibold tracking-tight fg">
-                      Publish to openlen.com
+                      {t("deploy.publishCta.title")}
                     </span>
                     <span className="block text-[11px] fg-faint">
-                      Free hosting on your own subdomain
+                      {t("deploy.publishCta.subtitle")}
                     </span>
                   </span>
                   <ChevronRight size={12} className="fg-faint group-hover:text-[var(--accent)] transition" />
@@ -419,10 +426,10 @@ export function TopBar({
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13px] font-semibold tracking-tight fg">
-                      Custom domain
+                      {t("deploy.customDomain.title")}
                     </span>
                     <span className="block text-[11px] fg-faint">
-                      Serve this page from your own hostname
+                      {t("deploy.customDomain.subtitle")}
                     </span>
                   </span>
                   <ChevronRight size={12} className="fg-faint group-hover:text-[var(--accent)] transition" />
@@ -431,44 +438,66 @@ export function TopBar({
 
               <div className="border-t bd my-1" />
 
-              {[
-                { label: "Deploy to Vercel", sub: "Coming soon" },
-                { label: "Push to GitHub", sub: "Coming soon" },
-                { label: "Deploy to Cloudflare", sub: "Coming soon" },
-              ].map((o) => (
-                <button
-                  key={o.label}
-                  type="button"
-                  disabled
-                  className="flex items-center gap-3 w-full text-left px-2.5 py-2 rounded-md opacity-50 cursor-not-allowed"
-                >
-                  <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md ring-1 ring-[color:var(--border)] bg-app fg-muted">
-                    <Globe size={13} />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] font-medium fg">
-                      {o.label}
+              {(
+                [
+                  {
+                    id: "vercel",
+                    label: t("deploy.providers.vercel"),
+                    subtitle: t("deploy.providers.vercelSubtitle"),
+                    onClick: onDeployVercel,
+                  },
+                  {
+                    id: "github",
+                    label: t("deploy.providers.github"),
+                    subtitle: t("deploy.providers.githubSubtitle"),
+                    onClick: onDeployGitHub,
+                  },
+                ] as const
+              )
+                .filter((o) => o.onClick)
+                .map((o) => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => {
+                      setDeployOpen(false);
+                      o.onClick?.();
+                    }}
+                    className="flex items-center gap-3 w-full text-left px-2.5 py-2 rounded-md hover:bg-hover transition group"
+                  >
+                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md ring-1 ring-[color:var(--accent)]/30 bg-[color:var(--accent)]/10 text-[var(--accent)]">
+                      <Globe size={13} />
                     </span>
-                    <span className="block text-[11px] fg-faint">{o.sub}</span>
-                  </span>
-                </button>
-              ))}
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13px] font-semibold tracking-tight fg">
+                        {o.label}
+                      </span>
+                      <span className="block text-[11px] fg-faint">
+                        {o.subtitle}
+                      </span>
+                    </span>
+                    <ChevronRight
+                      size={12}
+                      className="fg-faint group-hover:text-[var(--accent)] transition"
+                    />
+                  </button>
+                ))}
 
               {published && projectId && (
                 <>
                   <div className="border-t bd my-1" />
                   <div className="px-2.5 pt-1.5 pb-1 text-[10px] uppercase tracking-wider fg-faint flex items-center gap-1.5">
                     <HistoryIcon size={10} />
-                    Previous deploys
+                    {t("deploy.previousDeploys")}
                   </div>
                   {releasesLoading && (
                     <div className="px-2.5 py-1.5 text-[11px] fg-faint">
-                      Loading…
+                      {t("common.loading")}
                     </div>
                   )}
                   {!releasesLoading && releases && releases.length <= 1 && (
                     <div className="px-2.5 py-1.5 text-[11px] fg-faint">
-                      No prior deploys yet.
+                      {t("deploy.noPriorDeploys")}
                     </div>
                   )}
                   {!releasesLoading &&
@@ -492,12 +521,12 @@ export function TopBar({
                               {r.sha}
                             </span>
                             <span className="block text-[10.5px] fg-faint">
-                              {formatRelative(r.mtime)}
+                              {formatRelative(r.mtime, t)}
                             </span>
                           </span>
                           {rollingSha === r.sha && (
                             <span className="text-[10.5px] fg-faint">
-                              Rolling back…
+                              {t("rollback.inProgress")}
                             </span>
                           )}
                         </button>
@@ -519,7 +548,11 @@ export function TopBar({
 
         <span className="hidden md:inline-block h-5 w-px bg-[color:var(--border)] mx-1.5" />
         <CreditPill />
-        <IconBtn label={dark ? "Light mode" : "Dark mode"} onClick={onToggleDark}>
+        <LocaleSwitcher />
+        <IconBtn
+          label={dark ? t("theme.lightMode") : t("theme.darkMode")}
+          onClick={onToggleDark}
+        >
           {dark ? <Sun size={14} /> : <Moon size={14} />}
         </IconBtn>
         <div className="relative" ref={profRef}>
@@ -559,13 +592,13 @@ export function TopBar({
                   {userEmail || "—"}
                 </div>
               </div>
-              <a
+              <Link
                 href="/projects"
                 className="flex items-center justify-between w-full text-left px-2.5 py-1.5 rounded-md text-[13px] fg hover:bg-hover transition"
               >
-                <span>All projects</span>
+                <span>{t("account.allProjects")}</span>
                 <ExternalLink size={11} className="fg-faint" />
-              </a>
+              </Link>
               <button
                 type="button"
                 onClick={() => {
@@ -574,7 +607,7 @@ export function TopBar({
                 }}
                 className="flex items-center gap-2.5 w-full text-left px-2.5 py-1.5 rounded-md text-[13px] fg hover:bg-hover transition"
               >
-                Sign out
+                {t("account.signOut")}
               </button>
             </div>
           )}
@@ -584,17 +617,20 @@ export function TopBar({
   );
 }
 
-function formatRelative(iso: string): string {
+function formatRelative(
+  iso: string,
+  t: (key: string, values?: Record<string, string | number>) => string,
+): string {
   const then = new Date(iso).getTime();
   if (!Number.isFinite(then)) return "—";
   const diffMs = Date.now() - then;
   const sec = Math.round(diffMs / 1000);
-  if (sec < 60) return `${sec}s ago`;
+  if (sec < 60) return t("relativeTime.seconds", { count: sec });
   const min = Math.round(sec / 60);
-  if (min < 60) return `${min}m ago`;
+  if (min < 60) return t("relativeTime.minutes", { count: min });
   const hr = Math.round(min / 60);
-  if (hr < 24) return `${hr}h ago`;
+  if (hr < 24) return t("relativeTime.hours", { count: hr });
   const day = Math.round(hr / 24);
-  if (day < 30) return `${day}d ago`;
+  if (day < 30) return t("relativeTime.days", { count: day });
   return new Date(iso).toLocaleDateString();
 }

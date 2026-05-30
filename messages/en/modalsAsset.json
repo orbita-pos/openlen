@@ -1,0 +1,184 @@
+{
+  "common": {
+    "close": "Close",
+    "closeButton": "Close",
+    "cancel": "Cancel",
+    "apply": "Apply",
+    "loading": "Loading…"
+  },
+  "header": {
+    "iconTitle": "Replace icon",
+    "imageTitle": "Replace image",
+    "iconSubtitle": "Pick a Lucide icon to swap in. Size and color from the original are preserved.",
+    "imageSubtitle": "Paste an image URL (Unsplash, your CDN, anywhere). The slot's aspect ratio is preserved."
+  },
+  "icon": {
+    "searchPlaceholder": "Search 100+ icons…",
+    "current": "Current",
+    "noMatch": "No icons match \"{query}\".",
+    "pickAria": "Pick {name}"
+  },
+  "image": {
+    "tabs": {
+      "openlen": "By OpenLen",
+      "paste": "Paste URL",
+      "unsplash": "Unsplash",
+      "upload": "Upload"
+    }
+  },
+  "paste": {
+    "urlLabel": "Image URL",
+    "invalidUrl": "Doesn't look like a valid http(s) URL.",
+    "altLabel": "Alt text <hint>· optional but better for a11y</hint>",
+    "altPlaceholder": "Describe the image…",
+    "preview": "Preview",
+    "previewError": "Couldn't load that URL. Check it's public + reachable.",
+    "previewAlt": "preview",
+    "applyImage": "Apply image"
+  },
+  "openlen": {
+    "searchPlaceholder": "Search {count} OpenLen images…",
+    "loadFailed": "Failed to load",
+    "noMatch": "No images match \"{query}\".",
+    "empty": "Nothing here yet.",
+    "footer": "Curated images by OpenLen — included with self-host",
+    "useImageAria": "Use OpenLen image: {alt}",
+    "filters": {
+      "all": "All",
+      "3d-abstract": "3D",
+      "gradient-bg": "Gradients",
+      "device-mockup": "Mockups",
+      "creator-mockup": "Creator",
+      "product-still-life": "Products",
+      "claymorph": "Clay",
+      "interior-editorial": "Interiors",
+      "architecture-editorial": "Architecture",
+      "nature-editorial": "Nature",
+      "travel-editorial": "Travel",
+      "wedding-editorial": "Wedding",
+      "music-editorial": "Music",
+      "gaming-editorial": "Gaming",
+      "food-editorial": "Food",
+      "lifestyle-editorial": "Lifestyle",
+      "sports-editorial": "Sports",
+      "pet-editorial": "Pets",
+      "fashion-editorial": "Fashion"
+    },
+    "badges": {
+      "3d-abstract": "3D",
+      "gradient-bg": "Gradient",
+      "device-mockup": "Mockup",
+      "creator-mockup": "Creator",
+      "product-still-life": "Product",
+      "claymorph": "Clay",
+      "interior-editorial": "Interior",
+      "architecture-editorial": "Architecture",
+      "nature-editorial": "Nature",
+      "travel-editorial": "Travel",
+      "wedding-editorial": "Wedding",
+      "music-editorial": "Music",
+      "gaming-editorial": "Gaming",
+      "food-editorial": "Food",
+      "lifestyle-editorial": "Lifestyle",
+      "sports-editorial": "Sports",
+      "pet-editorial": "Pet",
+      "fashion-editorial": "Fashion"
+    }
+  },
+  "unsplash": {
+    "searchFailed": "Search failed",
+    "demoPlaceholder": "Demo mode — set UNSPLASH_ACCESS_KEY for full search",
+    "searchPlaceholder": "Search Unsplash photos…",
+    "noMatch": "No photos match \"{query}\".",
+    "typeToSearch": "Type to search.",
+    "attribution": "Photos from <link>Unsplash</link>",
+    "demoBadge": "DEMO · {count} photos",
+    "usePhotoAria": "Use photo by {author}: {alt}"
+  },
+  "upload": {
+    "tooLarge": "File too large. Max {max} MB.",
+    "notImage": "That's not an image — please pick a png/jpg/webp/gif/svg.",
+    "networkError": "Network error during upload.",
+    "failed": "Upload failed ({status})",
+    "unavailable": "Upload isn't available outside a project.",
+    "previewAlt": "upload preview",
+    "swapHint": "Click again or drop another to swap.",
+    "dropHere": "Drop an image here",
+    "browseHint": "or click to browse · png / jpg / webp / gif / svg · up to {max} MB",
+    "altLabel": "Alt text <hint>· optional</hint>",
+    "uploadingProgress": "Uploading… {percent}%",
+    "storedIn": "Stored in your project's asset storage",
+    "uploading": "Uploading…",
+    "uploadApply": "Upload & apply"
+  },
+  "autofill": {
+    "title": "Fill with your info",
+    "subtitle": "Upload an image with your business info or type the details by hand. Your template fills with your real content — the design stays the same.",
+    "subtitleShort": "Image or details → your template fills with your content.",
+    "tabs": {
+      "image": "Upload image",
+      "text": "Type info"
+    },
+    "image": {
+      "previewAlt": "Preview",
+      "sizeChange": "{kb} KB · click to change",
+      "dropPrompt": "Drag an image, click to choose, or paste from your clipboard",
+      "hint": "JPG or PNG · up to 8 MB · screenshots, menu photos, brochures…"
+    },
+    "fields": {
+      "businessName": {
+        "label": "Business name *",
+        "placeholder": "Juan's Tacos"
+      },
+      "industry": {
+        "label": "Industry / type",
+        "placeholder": "Traditional Mexican taquería"
+      },
+      "tagline": {
+        "label": "Tagline (1 punchy line)",
+        "placeholder": "Authentic tacos al pastor since 1989"
+      },
+      "pitch": {
+        "label": "Pitch (1-2 sentences about your business)",
+        "placeholder": "Over 30 years serving the best tacos al pastor in Monterrey. Family tradition, fresh ingredients."
+      },
+      "heroKeyword": {
+        "label": "Hero keyword",
+        "placeholder": "tradition"
+      },
+      "ctaPrimary": {
+        "label": "Primary CTA",
+        "placeholder": "Order on WhatsApp"
+      }
+    },
+    "stages": {
+      "extracting": "Reading image…",
+      "tagging": "Preparing template…",
+      "calling-model": "Kimi K2.6 writing…",
+      "applying": "Applying changes…",
+      "persisting": "Saving…",
+      "done": "Done",
+      "error": "Error"
+    },
+    "doneStatus": "✓ Done · {seconds}s",
+    "tips": {
+      "image": "Tip: a menu photo, a screenshot of your site, a brochure — anything works.",
+      "text": "Tip: a name + tagline + pitch is enough. The rest of the template stays intact."
+    },
+    "processing": "Processing…",
+    "errors": {
+      "notImage": "The file isn't an image.",
+      "onlyJpgPng": "We only accept JPG or PNG.",
+      "tooLarge": "Image too large ({size} MB, max 8 MB).",
+      "tooSmallBytes": "Image too small — try a screenshot or a real photo (min 4 KB).",
+      "tooSmallDims": "Image too small ({width}×{height}px). Minimum 200×200 — try a screenshot of your site or a photo of the menu.",
+      "cantRead": "We couldn't read the image. Try another one.",
+      "uploadFirst": "Upload an image first.",
+      "needBusinessName": "You need at least the business name.",
+      "network": "Network error",
+      "server": "Server {status}: {detail}",
+      "streamRead": "Stream read failed",
+      "unknown": "Unknown error"
+    }
+  }
+}

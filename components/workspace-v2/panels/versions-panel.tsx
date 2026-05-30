@@ -18,6 +18,7 @@ import {
   type CSSProperties,
 } from "react";
 import { createPortal } from "react-dom";
+import { useTranslations } from "next-intl";
 import { HistoryIcon, Sparkles } from "../icons";
 import { useFocusTrap } from "../use-focus-trap";
 
@@ -52,6 +53,7 @@ export function VersionsPanel({
   currentProjectId,
   onRestoreApplied,
 }: VersionsPanelProps) {
+  const t = useTranslations("panelsB");
   const [items, setItems] = useState<VersionItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [restoring, setRestoring] = useState<string | null>(null);
@@ -76,7 +78,7 @@ export function VersionsPanel({
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Failed to load versions");
+        setError(err instanceof Error ? err.message : t("versions.loadError"));
         setItems([]);
       });
     return () => {
@@ -115,7 +117,7 @@ export function VersionsPanel({
         setError(
           err instanceof Error
             ? err.message
-            : "Couldn't restore — try again.",
+            : t("versions.restoreError"),
         );
       } finally {
         setRestoring(null);
@@ -133,10 +135,10 @@ export function VersionsPanel({
             <HistoryIcon size={14} />
           </div>
           <p className="text-[11.5px] fg-muted leading-relaxed">
-            Versions live per project.
+            {t("versions.perProject")}
           </p>
           <p className="mt-1.5 text-[10.5px] fg-faint leading-relaxed">
-            Open a project from the Pages tab to see its history.
+            {t("versions.perProjectHint")}
           </p>
         </div>
       </div>
@@ -147,10 +149,10 @@ export function VersionsPanel({
     <div className="flex flex-col h-full">
       <div className="px-3 pt-3 pb-1.5 shrink-0">
         <div className="text-[10px] uppercase tracking-[0.16em] fg-faint font-semibold ui-small">
-          Version history
+          {t("versions.title")}
         </div>
         <div className="text-[11px] fg-faint mt-0.5">
-          Auto-snapshots on chat, publish, and clone.
+          {t("versions.subtitle")}
         </div>
       </div>
       {error && (
@@ -166,10 +168,10 @@ export function VersionsPanel({
               <Sparkles size={14} />
             </div>
             <p className="text-[12px] fg-muted leading-relaxed">
-              No versions yet.
+              {t("versions.empty")}
             </p>
             <p className="mt-1 text-[10.5px] fg-faint leading-relaxed">
-              The next chat or publish will create one.
+              {t("versions.emptyHint")}
             </p>
           </div>
         )}
@@ -213,6 +215,7 @@ function VersionCard({
   disabled: boolean;
   onRestoreClick: () => void;
 }) {
+  const t = useTranslations("panelsB");
   return (
     <div
       className={`group relative rounded-lg ring-1 transition overflow-hidden ${
@@ -231,11 +234,11 @@ function VersionCard({
         </div>
         <div className="mt-1.5 flex items-center justify-between gap-1.5">
           <span className="text-[10.5px] fg-faint truncate">
-            {relativeTime(item.createdAt)}
+            {relativeTime(item.createdAt, t)}
           </span>
           {isCurrent ? (
             <span className="text-[9.5px] uppercase tracking-wider text-accent font-semibold ui-small">
-              Current
+              {t("versions.current")}
             </span>
           ) : (
             <button
@@ -244,7 +247,7 @@ function VersionCard({
               disabled={disabled}
               className="text-[10.5px] font-medium text-accent hover:underline disabled:opacity-40 disabled:no-underline"
             >
-              Restore
+              {t("versions.restore")}
             </button>
           )}
         </div>
@@ -254,31 +257,32 @@ function VersionCard({
 }
 
 function SourceBadge({ source }: { source: VersionSource }) {
+  const t = useTranslations("panelsB");
   const meta: Record<
     VersionSource,
     { label: string; color: string; bg: string }
   > = {
-    initial: { label: "Init", color: "fg-faint", bg: "bg-elev" },
-    chat: { label: "Chat", color: "text-accent", bg: "bg-accent-soft" },
+    initial: { label: t("versions.source.initial"), color: "fg-faint", bg: "bg-elev" },
+    chat: { label: t("versions.source.chat"), color: "text-accent", bg: "bg-accent-soft" },
     publish: {
-      label: "Live",
+      label: t("versions.source.publish"),
       color: "text-emerald-600 dark:text-emerald-400",
       bg: "bg-emerald-500/10",
     },
-    restore: { label: "Undo", color: "fg-muted", bg: "bg-hover" },
-    manual: { label: "Saved", color: "fg-muted", bg: "bg-hover" },
+    restore: { label: t("versions.source.restore"), color: "fg-muted", bg: "bg-hover" },
+    manual: { label: t("versions.source.manual"), color: "fg-muted", bg: "bg-hover" },
     "style-match": {
-      label: "Fill",
+      label: t("versions.source.styleMatch"),
       color: "text-accent",
       bg: "bg-accent-soft",
     },
     reorder: {
-      label: "Order",
+      label: t("versions.source.reorder"),
       color: "text-accent",
       bg: "bg-accent-soft",
     },
     replace: {
-      label: "Asset",
+      label: t("versions.source.replace"),
       color: "text-accent",
       bg: "bg-accent-soft",
     },
@@ -309,6 +313,7 @@ function VersionThumb({
   versionId: string;
   label: string;
 }) {
+  const t = useTranslations("panelsB");
   const wrapperRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -364,7 +369,7 @@ function VersionThumb({
     <div
       ref={wrapperRef}
       className="relative overflow-hidden border-b bd"
-      aria-label={`Thumbnail of version ${label}`}
+      aria-label={t("versions.thumbnailOf", { label })}
     >
       <div
         ref={stageRef}
@@ -384,7 +389,7 @@ function VersionThumb({
         {mounted && scale > 0 && (
           <iframe
             src={`/api/projects/${projectId}/versions/${versionId}/raw`}
-            title={`${label} thumbnail`}
+            title={t("versions.thumbnailTitle", { label })}
             sandbox="allow-scripts allow-same-origin"
             loading="lazy"
             referrerPolicy="no-referrer"
@@ -418,6 +423,7 @@ function ConfirmRestoreModal({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const t = useTranslations("panelsB");
   // Portal to document.body so position:fixed isn't contained by any
   // ancestor with `transform`/`backdrop-filter`/`filter`/`perspective`.
   // The sidebar tree has such ancestors which previously trapped this
@@ -454,17 +460,16 @@ function ConfirmRestoreModal({
         onClick={(e) => e.stopPropagation()}
       >
         <h3 id="restore-modal-title" className="text-[15px] font-semibold fg leading-tight font-display">
-          Restore this version?
+          {t("versions.confirmTitle")}
         </h3>
         <p className="mt-2 text-[12px] fg-muted leading-relaxed">
-          The page will roll back to:
+          {t("versions.confirmRollback")}
         </p>
         <p className="mt-1 text-[12.5px] fg leading-snug line-clamp-3 italic">
           &ldquo;{item.label}&rdquo;
         </p>
         <p className="mt-3 text-[11px] fg-faint leading-relaxed">
-          Your current page is saved as a version first — you can restore back
-          if you change your mind.
+          {t("versions.confirmNote")}
         </p>
         <div className="mt-5 flex items-center justify-end gap-2">
           <button
@@ -473,7 +478,7 @@ function ConfirmRestoreModal({
             disabled={isRestoring}
             className="inline-flex items-center h-8 px-3 rounded-md fg-muted hover:fg hover:bg-hover transition text-[12.5px] disabled:opacity-50"
           >
-            Cancel
+            {t("versions.cancel")}
           </button>
           <button
             type="button"
@@ -481,7 +486,7 @@ function ConfirmRestoreModal({
             disabled={isRestoring}
             className="inline-flex items-center h-8 px-3.5 rounded-md bg-[color:var(--accent)] text-white text-[12.5px] font-medium hover:brightness-105 active:brightness-95 shadow-coral transition disabled:opacity-60"
           >
-            {isRestoring ? "Restoring…" : "Restore"}
+            {isRestoring ? t("versions.restoring") : t("versions.restore")}
           </button>
         </div>
       </div>
@@ -510,19 +515,22 @@ function Skeletons() {
   );
 }
 
-function relativeTime(iso: string): string {
+function relativeTime(
+  iso: string,
+  t: (key: string, values?: Record<string, string | number>) => string,
+): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "—";
   const ms = Date.now() - date.getTime();
   const s = Math.floor(ms / 1000);
-  if (s < 60) return "just now";
+  if (s < 60) return t("time.justNow");
   const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ago`;
+  if (m < 60) return t("time.minutesAgo", { count: m });
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
+  if (h < 24) return t("time.hoursAgo", { count: h });
   const d = Math.floor(h / 24);
-  if (d === 1) return "yesterday";
-  if (d < 7) return `${d}d ago`;
-  if (d < 30) return `${Math.floor(d / 7)}w ago`;
+  if (d === 1) return t("time.yesterday");
+  if (d < 7) return t("time.daysAgo", { count: d });
+  if (d < 30) return t("time.weeksAgo", { count: Math.floor(d / 7) });
   return date.toLocaleDateString();
 }

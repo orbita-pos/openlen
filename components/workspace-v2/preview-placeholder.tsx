@@ -6,6 +6,7 @@
 
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ChevronLeft, FileText, PaletteIcon, Wand } from "./icons";
 
 interface PreviewPlaceholderProps {
@@ -16,29 +17,18 @@ const SPEC: Record<
   PreviewPlaceholderProps["mode"],
   {
     Icon: React.ComponentType<{ size?: number; className?: string }>;
-    title: string;
-    hint: string;
   }
 > = {
-  ai: {
-    Icon: Wand,
-    title: "Brief your page in the sidebar",
-    hint: "Describe what you want and the orchestrator will compose it.",
-  },
-  template: {
-    Icon: PaletteIcon,
-    title: "Browse the gallery in the sidebar",
-    hint: "Click any template to clone it into a new project.",
-  },
-  paste: {
-    Icon: FileText,
-    title: "Paste your HTML in the sidebar",
-    hint: "Drop in HTML from claude.ai (or anywhere) — we'll host it.",
-  },
+  ai: { Icon: Wand },
+  template: { Icon: PaletteIcon },
+  paste: { Icon: FileText },
 };
 
 export function PreviewPlaceholder({ mode }: PreviewPlaceholderProps) {
-  const { Icon, title, hint } = SPEC[mode];
+  const t = useTranslations("wsChrome");
+  const { Icon } = SPEC[mode];
+  const title = t(`placeholder.${mode}.title`);
+  const hint = t(`placeholder.${mode}.hint`);
   return (
     <section className="relative flex flex-col flex-1 min-w-0 bg-preview-a">
       <div className="flex-1 min-h-0 flex items-center justify-center px-6">
@@ -52,7 +42,7 @@ export function PreviewPlaceholder({ mode }: PreviewPlaceholderProps) {
           <p className="mt-2 text-[12.5px] fg-muted leading-relaxed">{hint}</p>
           <div className="mt-5 inline-flex items-center gap-1.5 text-[11px] fg-faint">
             <ChevronLeft size={12} />
-            Sidebar
+            {t("placeholder.sidebar")}
           </div>
         </div>
       </div>

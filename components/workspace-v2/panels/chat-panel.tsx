@@ -6,6 +6,7 @@
 
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   useCallback,
   useEffect,
@@ -22,6 +23,7 @@ import {
   SendUp,
   Sparkles,
   Wand,
+  WandSparkles,
   X,
 } from "../icons";
 import { ReplaceAssetModal } from "../replace-asset-modal";
@@ -69,8 +71,8 @@ interface ChatPanelProps {
   onToggleSectionSelect?: (active: boolean) => void;
   scopedSelection?: ScopedSelection | null;
   onClearScope?: () => void;
-  /** Open the Autofill modal. Renders a Sparkles icon in the composer
-   *  when provided. Pass undefined to hide (e.g., non-flat projects). */
+  /** Open the Autofill modal. Renders a labeled "Autofill" pill in the
+   *  composer when provided. Pass undefined to hide (e.g., non-flat projects). */
   onAutofill?: () => void;
   /** External push of composer draft text — used by the post-swap chip
    *  to suggest a context-aware prompt. Set non-null to apply; chat-
@@ -144,6 +146,7 @@ function ChatLoadingSkeleton() {
 }
 
 function ChatNoProjectState() {
+  const t = useTranslations("panelsChat");
   return (
     <div className="h-full flex items-center justify-center px-6 py-8 text-center">
       <div className="max-w-[220px]">
@@ -151,10 +154,10 @@ function ChatNoProjectState() {
           <Sparkles size={14} />
         </div>
         <p className="text-[11.5px] fg-muted leading-relaxed">
-          No project loaded yet.
+          {t("noProject.title")}
         </p>
         <p className="mt-1.5 text-[10.5px] fg-faint leading-relaxed">
-          Pick a starting point or open one from Pages.
+          {t("noProject.subtitle")}
         </p>
       </div>
     </div>
@@ -189,13 +192,13 @@ interface DesignTurn {
   streamedChars?: number;
 }
 
-const QUICK_PROMPTS: ReadonlyArray<string> = [
-  "Make it premium",
-  "Linear vibe",
-  "Brutalist",
-  "More playful",
-  "Rewrite the hero",
-  "Add a testimonials section",
+const QUICK_PROMPT_KEYS: ReadonlyArray<string> = [
+  "quickPrompts.premium",
+  "quickPrompts.linear",
+  "quickPrompts.brutalist",
+  "quickPrompts.playful",
+  "quickPrompts.rewriteHero",
+  "quickPrompts.testimonials",
 ];
 
 const FLUSH_INTERVAL_MS = 800;
@@ -230,6 +233,7 @@ function AIDesignChat({
   pendingDraft?: string | null;
   onPendingDraftConsumed?: () => void;
 }) {
+  const t = useTranslations("panelsChat");
   // Seed from the persisted transcript so a reload / tab-switch remount
   // restores the conversation. Restored turns carry no HTML snapshot — their
   // inline Undo is hidden (the Versions tab covers older revisions).
@@ -505,7 +509,7 @@ function AIDesignChat({
             errorText:
               typeof errPayload?.error === "string"
                 ? errPayload.error
-                : `Request failed (${res.status})`,
+                : t("errors.requestFailed", { status: res.status }),
           });
           return;
         }
@@ -601,7 +605,7 @@ function AIDesignChat({
               errorMessage =
                 typeof data.message === "string"
                   ? data.message
-                  : "Something went wrong — try again.";
+                  : t("errors.generic");
               break outer;
             }
           }
@@ -619,7 +623,7 @@ function AIDesignChat({
           if (lastFlushedLen > 0) onLocalUpdate(preEditHtml);
           updateTurn(turnId, {
             status: "error",
-            errorText: "Stream ended without a final HTML — try again.",
+            errorText: t("errors.noFinalHtml"),
           });
           return;
         }
@@ -642,14 +646,15 @@ function AIDesignChat({
       } catch (err) {
         clearFlush();
         if (abort.signal.aborted) {
-          updateTurn(turnId, { status: "error", errorText: "Cancelled." });
+          updateTurn(turnId, {
+            status: "error",
+            errorText: t("errors.cancelled"),
+          });
         } else {
           updateTurn(turnId, {
             status: "error",
             errorText:
-              err instanceof Error
-                ? err.message
-                : "Network error — try again.",
+              err instanceof Error ? err.message : t("errors.network"),
           });
         }
       } finally {
@@ -666,6 +671,7 @@ function AIDesignChat({
       projectId,
       scopedSelection,
       sending,
+      t,
       updateTurn,
     ],
   );
@@ -789,6 +795,7 @@ function EmptyState({
   onPick: (prompt: string) => void;
   disabled: boolean;
 }) {
+  const t = useTranslations("panelsChat");
   return (
     <div className="pt-2">
       <div className="text-center mb-4">
@@ -796,24 +803,27 @@ function EmptyState({
           <Sparkles size={15} />
         </div>
         <h3 className="text-[14px] font-semibold fg leading-tight">
-          Describe your page
+          {t("empty.title")}
         </h3>
         <p className="mt-1 text-[11px] fg-faint leading-relaxed">
-          I have full control over your page. Ask me anything.
+          {t("empty.subtitle")}
         </p>
       </div>
       <div className="grid grid-cols-2 gap-1.5">
-        {QUICK_PROMPTS.map((p) => (
-          <button
-            key={p}
-            type="button"
-            disabled={disabled}
-            onClick={() => onPick(p)}
-            className="text-left text-[11.5px] fg leading-tight px-2.5 py-2 rounded-md ring-1 ring-[color:var(--border)] bg-[color:var(--bg)] hover:bg-hover hover:ring-[color:var(--border-strong)] transition disabled:opacity-50"
-          >
-            {p}
-          </button>
-        ))}
+        {QUICK_PROMPT_KEYS.map((key) => {
+          const label = t(key);
+          return (
+            <button
+              key={key}
+              type="button"
+              disabled={disabled}
+              onClick={() => onPick(label)}
+              className="text-left text-[11.5px] fg leading-tight px-2.5 py-2 rounded-md ring-1 ring-[color:var(--border)] bg-[color:var(--bg)] hover:bg-hover hover:ring-[color:var(--border-strong)] transition disabled:opacity-50"
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -832,6 +842,7 @@ function TurnView({
   onCancel: () => void;
   hideAIBubble: boolean;
 }) {
+  const t = useTranslations("panelsChat");
   return (
     <div className="space-y-2">
       <div className="flex gap-2 flex-row-reverse">
@@ -849,7 +860,7 @@ function TurnView({
                   className="h-9 w-9 rounded object-cover ring-1 ring-[color:var(--accent)]/30"
                 />
                 <span className="text-[10px] fg-faint ui-small">
-                  Image sent
+                  {t("turn.imageSent")}
                 </span>
               </div>
             )}
@@ -900,6 +911,7 @@ function TurnFooter({
   onCancel: () => void;
   hasText: boolean;
 }) {
+  const t = useTranslations("panelsChat");
   const marginClass = hasText ? "mt-2" : "";
   if (turn.status === "streaming") {
     const elapsedSec = turn.startedAt
@@ -908,8 +920,8 @@ function TurnFooter({
     const chars = turn.streamedChars ?? 0;
     const phaseLabel =
       chars > 0
-        ? `Writing page · ${formatChars(chars)}`
-        : "Designing your page…";
+        ? t("streaming.writingPage", { chars: formatChars(chars, t) })
+        : t("streaming.designing");
     return (
       <div
         className={`${marginClass} inline-flex items-center gap-2 rounded-md bg-app border bd px-1.5 py-0.5 text-[10.5px] fg-faint ui-small`}
@@ -922,7 +934,7 @@ function TurnFooter({
           onClick={onCancel}
           className="text-accent hover:underline"
         >
-          Cancel
+          {t("streaming.cancel")}
         </button>
       </div>
     );
@@ -936,14 +948,18 @@ function TurnFooter({
         className={`${marginClass} inline-flex items-center gap-2 rounded-md bg-app border bd px-1.5 py-0.5 text-[10.5px] fg-faint ui-small`}
       >
         <Wand size={10} className="text-[var(--accent)]" />
-        <span>Applied · {relativeTime(turn.appliedAt ?? Date.now())}</span>
+        <span>
+          {t("applied.label", {
+            time: relativeTime(turn.appliedAt ?? Date.now(), t),
+          })}
+        </span>
         {canUndo && (
           <button
             type="button"
             onClick={() => onUndo(turn)}
             className="text-accent hover:underline"
           >
-            Undo
+            {t("applied.undo")}
           </button>
         )}
       </div>
@@ -954,7 +970,7 @@ function TurnFooter({
       <div
         className={`${marginClass} inline-flex items-center gap-1.5 rounded-md bg-app border bd px-1.5 py-0.5 text-[10.5px] fg-faint ui-small`}
       >
-        Reverted.
+        {t("reverted")}
       </div>
     );
   }
@@ -964,14 +980,14 @@ function TurnFooter({
     >
       <X size={11} className="mt-0.5 shrink-0" />
       <span className="flex-1 break-words">
-        {turn.errorText ?? "Something went wrong."}
+        {turn.errorText ?? t("errors.generic")}
       </span>
       <button
         type="button"
         onClick={() => onRetry(turn)}
         className="shrink-0 underline hover:opacity-80"
       >
-        Retry
+        {t("error.retry")}
       </button>
     </div>
   );
@@ -1034,19 +1050,20 @@ function Composer({
   model: AIModel;
   onModelChange: (m: AIModel) => void;
 }) {
+  const t = useTranslations("panelsChat");
   return (
     <div className="shrink-0 px-3 pb-3">
       {scopedSelection && (
         <div className="mb-1.5 inline-flex items-center gap-1.5 max-w-full rounded-md ring-1 ring-[color:var(--accent)]/40 bg-accent-soft px-2 py-1 text-[11px] text-accent ui-small fade-in">
           <Crosshair size={11} />
-          <span className="font-medium shrink-0">Scoped:</span>
+          <span className="font-medium shrink-0">{t("composer.scoped")}</span>
           <span className="truncate font-mono text-[10.5px] min-w-0">
             {scopedSelection.hint}
           </span>
           <button
             type="button"
             onClick={onClearScope}
-            aria-label="Clear scope"
+            aria-label={t("composer.clearScope")}
             className="shrink-0 inline-flex h-4 w-4 items-center justify-center rounded hover:bg-[color:var(--accent)]/20 transition"
           >
             <X size={10} />
@@ -1061,14 +1078,14 @@ function Composer({
             alt=""
             className="h-5 w-5 rounded object-cover"
           />
-          <span className="font-medium shrink-0">Image:</span>
+          <span className="font-medium shrink-0">{t("composer.image")}</span>
           <span className="truncate font-mono text-[10.5px] min-w-0">
             {attachedImage.alt || displayUrl(attachedImage.url)}
           </span>
           <button
             type="button"
             onClick={onClearAttachedImage}
-            aria-label="Remove attached image"
+            aria-label={t("composer.removeImage")}
             className="shrink-0 inline-flex h-4 w-4 items-center justify-center rounded hover:bg-[color:var(--accent)]/20 transition"
           >
             <X size={10} />
@@ -1090,8 +1107,10 @@ function Composer({
           disabled={sending}
           placeholder={
             scopedSelection
-              ? `Change the selected ${scopedSelection.hint.split(" ")[0]}…`
-              : "Describe how your page should look or read…"
+              ? t("composer.placeholderScoped", {
+                  target: scopedSelection.hint.split(" ")[0],
+                })
+              : t("composer.placeholder")
           }
           className="block w-full bg-transparent text-[12.5px] leading-relaxed px-3 pt-2.5 pb-1 fg placeholder:fg-faint focus:outline-none resize-none disabled:opacity-60"
           style={{ minHeight: 32 }}
@@ -1100,8 +1119,8 @@ function Composer({
           <div className="flex items-center gap-0.5">
             <button
               type="button"
-              aria-label="Attach an image"
-              title="Attach an image to insert into the page"
+              aria-label={t("composer.attachImage")}
+              title={t("composer.attachImageTitle")}
               onClick={onAttachImage}
               disabled={sending || !onAttachImage}
               className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition disabled:opacity-40 ${
@@ -1117,13 +1136,13 @@ function Composer({
                 type="button"
                 aria-label={
                   sectionSelectMode
-                    ? "Cancel selection mode (ESC)"
-                    : "Select a section to scope"
+                    ? t("composer.cancelSelection")
+                    : t("composer.selectSection")
                 }
                 title={
                   sectionSelectMode
-                    ? "Click any section in the preview, or ESC to cancel"
-                    : "Scope your next message to one section"
+                    ? t("composer.cancelSelectionTitle")
+                    : t("composer.selectSectionTitle")
                 }
                 onClick={() => onToggleSectionSelect(!sectionSelectMode)}
                 disabled={sending}
@@ -1136,23 +1155,31 @@ function Composer({
                 <Crosshair size={13} />
               </button>
             )}
-            {onAutofill && (
-              <button
-                type="button"
-                aria-label="Autofill with my info"
-                title="Autofill the template with your business info — upload a screenshot or type your data"
-                onClick={onAutofill}
-                disabled={sending}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-md fg-faint hover:fg hover:bg-hover transition disabled:opacity-40"
-              >
-                <Wand size={13} />
-              </button>
-            )}
             <ModelPicker
               model={model}
               onChange={onModelChange}
               disabled={sending}
+              compact
             />
+            {onAutofill && (
+              <>
+                <span
+                  aria-hidden
+                  className="h-4 w-px shrink-0 bg-[color:var(--border)] mx-1"
+                />
+                <button
+                  type="button"
+                  aria-label={t("composer.autofill")}
+                  title={t("composer.autofillTitle")}
+                  onClick={onAutofill}
+                  disabled={sending}
+                  className="shrink-0 inline-flex items-center gap-1 h-7 px-2 rounded-md text-[11.5px] font-medium fg-faint hover:fg hover:bg-hover hover:ring-1 hover:ring-[color:var(--border)] transition disabled:opacity-40"
+                >
+                  <WandSparkles size={13} />
+                  <span>{t("composer.autofillLabel")}</span>
+                </button>
+              </>
+            )}
           </div>
           <button
             type="button"
@@ -1168,7 +1195,7 @@ function Composer({
               <Loader size={12} className="animate-spin" />
             ) : value.trim() ? (
               <>
-                <SendUp size={12} /> <span>Send</span>
+                <SendUp size={12} /> <span>{t("composer.send")}</span>
               </>
             ) : (
               <SendUp size={13} />
@@ -1194,9 +1221,11 @@ function restoreTurn(s: StoredChatTurn): DesignTurn {
   };
 }
 
-function formatChars(n: number): string {
-  if (n < 1000) return `${n} chars`;
-  return `${(n / 1000).toFixed(1)}k chars`;
+type Translator = ReturnType<typeof useTranslations<"panelsChat">>;
+
+function formatChars(n: number, t: Translator): string {
+  if (n < 1000) return t("chars.count", { count: n });
+  return t("chars.thousands", { count: (n / 1000).toFixed(1) });
 }
 
 function displayUrl(raw: string): string {
@@ -1209,15 +1238,15 @@ function displayUrl(raw: string): string {
   }
 }
 
-function relativeTime(ms: number): string {
+function relativeTime(ms: number, t: Translator): string {
   const diffSec = Math.max(0, Math.floor((Date.now() - ms) / 1000));
-  if (diffSec < 5) return "just now";
-  if (diffSec < 60) return `${diffSec}s ago`;
+  if (diffSec < 5) return t("relativeTime.justNow");
+  if (diffSec < 60) return t("relativeTime.seconds", { count: diffSec });
   const min = Math.floor(diffSec / 60);
-  if (min < 60) return `${min}m ago`;
+  if (min < 60) return t("relativeTime.minutes", { count: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
+  if (hr < 24) return t("relativeTime.hours", { count: hr });
   const d = Math.floor(hr / 24);
-  return `${d}d ago`;
+  return t("relativeTime.days", { count: d });
 }
 

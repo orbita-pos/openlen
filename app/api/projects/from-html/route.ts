@@ -10,7 +10,7 @@ import { normalizeBornCanonical } from "@/lib/normalize";
 //
 // Accepts ANY HTML string from the client (typically pasted from a claude.ai
 // artifact) and persists it as the new project's `data.html`. The Deploy
-// dropdown on /new-v2 then publishes that HTML verbatim through
+// dropdown on /new then publishes that HTML verbatim through
 // `publishProject` → `publishToDir`.
 //
 // Safety:

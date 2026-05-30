@@ -1,0 +1,49 @@
+{
+  "header": {
+    "titleVercel": "Desplegar en Vercel",
+    "titleGithub": "Subir a GitHub",
+    "subtitleVercel": "Publica esta página en tu propia cuenta de Vercel.",
+    "subtitleGithub": "Publica esta página en un repo de GitHub Pages."
+  },
+  "close": "Cerrar",
+  "notConfigured": {
+    "title": "Aún no disponible",
+    "body": "Este destino de despliegue no está configurado en esta instancia de OpenLen."
+  },
+  "connect": {
+    "lead": "Conecta tu cuenta de {provider} para publicar esta página ahí.",
+    "button": "Conectar {provider}",
+    "redirecting": "Redirigiendo…"
+  },
+  "connected": {
+    "as": "Conectado como {account}",
+    "asAnon": "Conectado",
+    "nameLabel": "Nombre",
+    "nameHintVercel": "Aparece en la URL: nombre.vercel.app",
+    "nameHintGithub": "Aparece en la URL: tu.github.io/nombre",
+    "deploy": "Desplegar",
+    "redeploy": "Volver a desplegar",
+    "deploying": "Desplegando…",
+    "live": "En vivo",
+    "open": "Abrir",
+    "upToDate": "Al día con tus últimos cambios.",
+    "drift": "Tienes cambios que aún no se han desplegado.",
+    "propagation": "La primera vez, GitHub Pages puede tardar un minuto en estar en vivo.",
+    "publishing": "Publicando… puede tardar hasta un minuto en estar en vivo. Si la abres enseguida quizá veas un 404 un momento — recarga.",
+    "disconnect": "Desconectar"
+  },
+  "errors": {
+    "loadFailed": "No se pudo cargar la conexión.",
+    "invalidName": "Usa minúsculas, números y guiones (1–39 caracteres, sin guion al inicio o final).",
+    "notConnected": "Conecta tu cuenta primero.",
+    "tokenInvalid": "Tu conexión caducó — vuelve a conectarte.",
+    "deployFailed": "Falló el despliegue: {message}",
+    "deployGeneric": "Falló el despliegue. Inténtalo de nuevo.",
+    "network": "Error de red. Inténtalo de nuevo.",
+    "denied": "Se canceló la autorización.",
+    "state": "Falló la comprobación de conexión. Inténtalo de nuevo.",
+    "exchange": "No se pudo completar la conexión. Inténtalo de nuevo.",
+    "not_configured": "Este destino de despliegue no está configurado en esta instancia de OpenLen."
+  },
+  "confirmDisconnect": "¿Desconectar {provider}? Tu página desplegada sigue en vivo — solo tendrás que volver a conectarte para desplegar de nuevo."
+}

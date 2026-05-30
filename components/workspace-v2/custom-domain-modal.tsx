@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   AlertCircle,
   CheckCircle2,
@@ -61,14 +62,33 @@ export interface CustomDomainModalProps {
   open: boolean;
   onClose: () => void;
   projectId: string;
-  /** Current `*.openlen.com` slug claimed by this project. When null we
-   *  auto-publish to a derived slug (`p-<projectId8>`) on modal open so
-   *  the user never has to think about subdomain choice — Vercel-style. */
+  /** Current `*.openlen.com` slug claimed by this project. Null = not yet
+   *  published; the modal then shows a "publish first" step with an editable
+   *  subdomain instead of silently claiming one. */
   projectSubdomain: string | null;
-  /** Notify the parent that we just auto-published. The parent typically
-   *  re-fetches the project so the TopBar Live pill + publish state stay
-   *  in sync without a hard refresh. */
+  /** Project title — seeds the default subdomain in the publish-first step. */
+  projectTitle?: string;
+  /** Notify the parent that the project was just published from this modal.
+   *  The parent re-fetches so the TopBar Live pill + publish state stay in
+   *  sync without a hard refresh. */
   onAutoPublished?: (subdomain: string) => void;
+}
+
+// Seed the publish-first subdomain field with a friendly slug from the title
+// (the user can edit it). Falls back to p-<id8> when the title yields nothing
+// usable. Pure-numeric is avoided — the publish API rejects it.
+function defaultSubdomain(
+  title: string | undefined,
+  projectId: string,
+): string {
+  const slug = (title ?? "")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40)
+    .replace(/-+$/g, "");
+  return slug && !/^\d+$/.test(slug) ? slug : `p-${projectId.slice(0, 8)}`;
 }
 
 // Mirrors the server validator — same regex, same suffix denylist. Catches
@@ -81,12 +101,14 @@ function normalizeInput(s: string): string {
   return s.trim().toLowerCase().replace(/^https?:\/\//, "").split("/")[0];
 }
 
-function clientValidate(domain: string): string | null {
+type ClientValidationError = "invalidHostname" | "reservedSubdomain";
+
+function clientValidate(domain: string): ClientValidationError | null {
   if (!domain) return null;
-  if (!DOMAIN_REGEX.test(domain)) return "Not a valid hostname.";
+  if (!DOMAIN_REGEX.test(domain)) return "invalidHostname";
   for (const suffix of RESERVED_SUFFIXES) {
     if (domain.endsWith(suffix)) {
-      return "Subdomains of openlen.com are managed via Deploy.";
+      return "reservedSubdomain";
     }
   }
   return null;
@@ -97,8 +119,10 @@ export function CustomDomainModal({
   onClose,
   projectId,
   projectSubdomain,
+  projectTitle,
   onAutoPublished,
 }: CustomDomainModalProps) {
+  const t = useTranslations("modalsDomain");
   const [domains, setDomains] = useState<DomainRow[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [input, setInput] = useState("");
@@ -107,14 +131,14 @@ export function CustomDomainModal({
   const [verifying, setVerifying] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // Track whether the modal is currently performing the silent first-time
-  // publish for a fresh (never-deployed) project. Gates the claim UI so the
-  // user doesn't see an "Add domain" form before the project actually has
-  // somewhere to route to.
-  const [autoPublishing, setAutoPublishing] = useState(false);
+  // Null until the project has a claimed subdomain. Gates the modal between the
+  // "publish first" step and the domain-claim UI.
   const [autoPublishedSub, setAutoPublishedSub] = useState<string | null>(
     projectSubdomain,
   );
+  // Publish-first step — editable subdomain + in-flight flag.
+  const [subInput, setSubInput] = useState("");
+  const [publishing, setPublishing] = useState(false);
   const [lastAddedDns, setLastAddedDns] = useState<
     | { domain: string; dns: DnsInstructions }
     | null
@@ -149,7 +173,9 @@ export function CustomDomainModal({
             ...m,
             [domain]: {
               url: body.url!,
-              providerName: body.provider?.name ?? "your DNS provider",
+              providerName:
+                body.provider?.name ??
+                t("customDomain.defaultProviderName"),
             },
           }));
         } else {
@@ -159,7 +185,7 @@ export function CustomDomainModal({
         setConnect((m) => ({ ...m, [domain]: null }));
       }
     },
-    [projectId],
+    [projectId, t],
   );
 
   // Pulls the current claim list. Called on mount + after every mutation.
@@ -172,7 +198,7 @@ export function CustomDomainModal({
     try {
       const res = await fetch(`/api/projects/${projectId}/domains`);
       if (!res.ok) {
-        setError("Failed to load domains.");
+        setError(t("customDomain.errors.loadFailed"));
         return;
       }
       const data = (await res.json()) as { domains: DomainRow[] };
@@ -193,85 +219,72 @@ export function CustomDomainModal({
         });
       }
     } catch {
-      setError("Network error while loading domains.");
+      setError(t("customDomain.errors.networkLoad"));
     } finally {
       setLoading(false);
     }
-  }, [projectId, probeConnect]);
+  }, [projectId, probeConnect, t]);
 
-  // Silent first-publish — when the modal opens on a project that has no
-  // *.openlen.com subdomain yet, claim an auto-derived slug first. The
-  // user never sees the subdomain choice; their custom domain becomes
-  // the canonical URL. Mirrors the Vercel/Netlify pattern (auto subdomain
-  // exists behind the scenes; the user only sees their custom domain).
+  // On open: reset transient state and seed the publish-first subdomain field
+  // from the title (only matters when the project isn't published yet). No more
+  // silent auto-publish — the user explicitly picks a subdomain and clicks
+  // Publish in the step below.
   useEffect(() => {
     if (!open) return;
     setInput("");
     setAddError(null);
     setError(null);
     setLastAddedDns(null);
-
-    const ensurePublished = async () => {
-      if (autoPublishedSub) return;
-      setAutoPublishing(true);
-      const autoSub = `p-${projectId.slice(0, 8)}`;
-      try {
-        const res = await fetch(`/api/projects/${projectId}/publish`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ subdomain: autoSub }),
-        });
-        if (!res.ok) {
-          const body = (await res.json().catch(() => ({}))) as {
-            error?: string;
-            message?: string;
-            limit?: number;
-          };
-          if (body.error === "taken") {
-            // Almost impossible — projectId is a UUID — but degrade
-            // gracefully: append a random suffix and retry once.
-            const fallback = `${autoSub}-${Math.random().toString(36).slice(2, 5)}`;
-            const retry = await fetch(`/api/projects/${projectId}/publish`, {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({ subdomain: fallback }),
-            });
-            if (retry.ok) {
-              setAutoPublishedSub(fallback);
-              onAutoPublished?.(fallback);
-              return;
-            }
-          }
-          // Map API error codes to actionable copy. Generic fallback only
-          // for truly unknown failures.
-          const friendly =
-            body.error === "limit_reached"
-              ? `You already have ${body.limit ?? 1} published project on your plan. Unpublish another project, or upgrade to Pro for more subdomains.`
-              : body.error === "not_found"
-                ? "Project not found. Try reloading the page."
-                : body.error === "invalid"
-                  ? "Could not generate a valid internal subdomain. Use Publish manually."
-                  : body.error === "reserved"
-                    ? "Internal subdomain conflicts with a reserved name. Use Publish manually."
-                    : body.message ||
-                      `Could not auto-publish (${body.error ?? "unknown error"}). Use Publish manually first.`;
-          setError(friendly);
-          return;
-        }
-        setAutoPublishedSub(autoSub);
-        onAutoPublished?.(autoSub);
-      } catch {
-        setError("Network error while preparing the project.");
-      } finally {
-        setAutoPublishing(false);
-      }
-    };
-
-    void ensurePublished().then(() => {
-      void refresh();
-    });
+    if (!autoPublishedSub) {
+      setSubInput(defaultSubdomain(projectTitle, projectId));
+    }
+    void refresh();
     setTimeout(() => inputRef.current?.focus(), 30);
-  }, [open, projectId, autoPublishedSub, onAutoPublished, refresh]);
+  }, [open, projectId, projectTitle, autoPublishedSub, refresh]);
+
+  // Publish-first step — claim the chosen subdomain, then reveal the
+  // domain-claim UI. Reuses the same POST /publish the Deploy dropdown uses.
+  const onPublishSubdomain = async () => {
+    const sub = subInput.trim().toLowerCase();
+    if (!sub) return;
+    setPublishing(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/publish`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ subdomain: sub }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          message?: string;
+          limit?: number;
+        };
+        const friendly =
+          body.error === "taken"
+            ? t("publish.status.taken")
+            : body.error === "limit_reached"
+              ? t("customDomain.autoPublish.limitReached", {
+                  limit: body.limit ?? 1,
+                })
+              : body.error === "not_found"
+                ? t("customDomain.autoPublish.notFound")
+                : body.error === "reserved"
+                  ? t("publish.status.reserved")
+                  : t("publish.status.invalid");
+        setError(friendly);
+        return;
+      }
+      setAutoPublishedSub(sub);
+      onAutoPublished?.(sub);
+      await refresh();
+    } catch {
+      setError(t("customDomain.errors.networkPreparing"));
+    } finally {
+      setPublishing(false);
+    }
+  };
 
   // Auto-poll verification every 30s while there's at least one pending row.
   // Clears immediately on close to avoid wasting requests on a hidden modal.
@@ -300,7 +313,7 @@ export function CustomDomainModal({
     if (!domain) return;
     const clientErr = clientValidate(domain);
     if (clientErr) {
-      setAddError(clientErr);
+      setAddError(t(`customDomain.validation.${clientErr}`));
       return;
     }
     setAdding(true);
@@ -322,8 +335,8 @@ export function CustomDomainModal({
         setAddError(
           body.message ||
             (body.error === "taken"
-              ? "Domain is already claimed by another project."
-              : "Couldn't add this domain."),
+              ? t("customDomain.errors.addTaken")
+              : t("customDomain.errors.addGeneric")),
         );
         return;
       }
@@ -337,7 +350,7 @@ export function CustomDomainModal({
       }
       await refresh();
     } catch {
-      setAddError("Network error while adding domain.");
+      setAddError(t("customDomain.errors.networkAdd"));
     } finally {
       setAdding(false);
     }
@@ -357,7 +370,7 @@ export function CustomDomainModal({
         reason?: string;
       };
       if (!res.ok || !body.ok) {
-        setError(body.message || "Verification failed. Re-check the TXT record.");
+        setError(body.message || t("customDomain.errors.verifyFailed"));
       } else {
         setError(null);
         // Keep the DNS panel collapsed once verified.
@@ -365,7 +378,7 @@ export function CustomDomainModal({
       }
       await refresh();
     } catch {
-      setError("Network error during verification.");
+      setError(t("customDomain.errors.networkVerify"));
     } finally {
       setVerifying(null);
     }
@@ -373,7 +386,7 @@ export function CustomDomainModal({
 
   const onRemove = async (domain: string) => {
     const confirmed = window.confirm(
-      `Remove ${domain}? Visitors hitting it will see a TLS error within minutes.`,
+      t("customDomain.confirmRemove", { domain }),
     );
     if (!confirmed) return;
     setRemoving(domain);
@@ -383,14 +396,14 @@ export function CustomDomainModal({
         { method: "DELETE" },
       );
       if (!res.ok) {
-        setError("Failed to remove the domain.");
+        setError(t("customDomain.errors.removeFailed"));
       } else {
         setError(null);
         if (lastAddedDns?.domain === domain) setLastAddedDns(null);
       }
       await refresh();
     } catch {
-      setError("Network error while removing domain.");
+      setError(t("customDomain.errors.networkRemove"));
     } finally {
       setRemoving(null);
     }
@@ -420,10 +433,10 @@ export function CustomDomainModal({
             </span>
             <div>
               <h2 className="text-[14px] font-semibold tracking-tight fg">
-                Custom domain
+                {t("customDomain.header.title")}
               </h2>
               <p className="text-[11px] fg-faint">
-                Serve your project at your own hostname.
+                {t("customDomain.header.subtitle")}
               </p>
             </div>
           </div>
@@ -431,7 +444,7 @@ export function CustomDomainModal({
             type="button"
             onClick={onClose}
             className="inline-flex h-7 w-7 items-center justify-center rounded-md hover:bg-hover transition fg-muted"
-            aria-label="Close"
+            aria-label={t("customDomain.close")}
           >
             <X size={14} />
           </button>
@@ -445,27 +458,64 @@ export function CustomDomainModal({
             </div>
           )}
 
-          {/* Silent first-publish indicator — surfaces only the FIRST time
-              the modal opens on a never-deployed project. Mirrors what
-              Vercel/Netlify do behind the scenes: assign an internal
-              subdomain so the custom domain has something to alias. */}
-          {autoPublishing && (
-            <div className="flex items-center gap-2.5 rounded-md ring-1 ring-[color:var(--accent)]/30 bg-[color:var(--accent)]/5 px-3 py-2.5">
-              <Loader2 size={14} className="animate-spin text-[var(--accent)]" />
-              <div className="text-[12px] fg">
-                Preparing your project…
-                <span className="block text-[11px] fg-faint mt-0.5">
-                  Setting up the hosting target so your custom domain has
-                  something to point at.
-                </span>
+          {/* Publish-first step — shown until the project has a subdomain. No
+              silent publish: the user picks the name and clicks Publish. */}
+          {!autoPublishedSub && (
+            <div className="rounded-lg ring-1 ring-[color:var(--accent)]/30 bg-[color:var(--accent)]/5 p-3.5 space-y-3">
+              <div>
+                <div className="text-[12.5px] font-semibold fg">
+                  {t("customDomain.publishFirst.title")}
+                </div>
+                <p className="text-[11px] fg-faint mt-0.5">
+                  {t("customDomain.publishFirst.subtitle")}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <div className="flex-1 flex items-center rounded-md ring-1 ring-[color:var(--border)] bg-app focus-within:ring-2 focus-within:ring-[color:var(--accent)] transition overflow-hidden">
+                  <input
+                    value={subInput}
+                    onChange={(e) =>
+                      setSubInput(
+                        e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""),
+                      )
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !publishing && subInput.trim())
+                        onPublishSubdomain();
+                    }}
+                    placeholder={t("customDomain.publishFirst.placeholder")}
+                    className="flex-1 min-w-0 h-9 px-3 bg-transparent text-[13px] fg placeholder:fg-faint focus:outline-none"
+                  />
+                  <span className="px-2.5 text-[11.5px] fg-faint shrink-0 border-l bd">
+                    .openlen.com
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={onPublishSubdomain}
+                  disabled={publishing || !subInput.trim()}
+                  className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-md bg-[var(--accent)] text-white text-[12.5px] font-medium hover:brightness-105 transition disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                >
+                  {publishing ? (
+                    <>
+                      <Loader2 size={12} className="animate-spin" />{" "}
+                      {t("customDomain.publishFirst.publishing")}
+                    </>
+                  ) : (
+                    t("customDomain.publishFirst.button")
+                  )}
+                </button>
               </div>
             </div>
           )}
 
+          {/* Domain-claim UI — only once the project has a subdomain to alias. */}
+          {autoPublishedSub && (
+            <>
           {/* Add a domain */}
           <div>
             <label className="block text-[11.5px] font-medium fg mb-1.5">
-              Add a domain
+              {t("customDomain.add.label")}
             </label>
             <div className="flex gap-2">
               <input
@@ -478,22 +528,23 @@ export function CustomDomainModal({
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !adding) onAdd();
                 }}
-                placeholder="landing.miempresa.com"
+                placeholder={t("customDomain.add.placeholder")}
                 className="flex-1 h-9 px-3 rounded-md ring-1 ring-[color:var(--border)] bg-app text-[13px] fg placeholder:fg-faint focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)] transition"
               />
               <button
                 type="button"
                 onClick={onAdd}
-                disabled={adding || autoPublishing || !input.trim()}
+                disabled={adding || !input.trim()}
                 className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-md bg-[var(--accent)] text-white text-[12.5px] font-medium hover:brightness-105 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {adding ? (
                   <>
-                    <Loader2 size={12} className="animate-spin" /> Adding…
+                    <Loader2 size={12} className="animate-spin" />{" "}
+                    {t("customDomain.add.adding")}
                   </>
                 ) : (
                   <>
-                    <Plus size={12} /> Add
+                    <Plus size={12} /> {t("customDomain.add.button")}
                   </>
                 )}
               </button>
@@ -522,17 +573,18 @@ export function CustomDomainModal({
           <div>
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-[11px] uppercase tracking-wider fg-faint font-medium">
-                Domains
+                {t("customDomain.list.heading")}
               </h3>
               {loading && (
                 <span className="text-[10.5px] fg-faint inline-flex items-center gap-1">
-                  <Loader2 size={10} className="animate-spin" /> Refreshing…
+                  <Loader2 size={10} className="animate-spin" />{" "}
+                  {t("customDomain.list.refreshing")}
                 </span>
               )}
             </div>
             {!loading && domains && domains.length === 0 && (
               <p className="text-[12px] fg-faint">
-                None yet. Add one above to point your own hostname at this project.
+                {t("customDomain.list.empty")}
               </p>
             )}
             {domains && domains.length > 0 && (
@@ -550,12 +602,12 @@ export function CustomDomainModal({
                         {d.verified ? (
                           <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-emerald-700 dark:text-emerald-300">
                             <CheckCircle2 size={11} />
-                            <span>Verified · TLS active</span>
+                            <span>{t("customDomain.list.verified")}</span>
                           </div>
                         ) : (
                           <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-amber-700 dark:text-amber-300">
                             <Loader2 size={11} className="animate-spin" />
-                            <span>Waiting on DNS</span>
+                            <span>{t("customDomain.list.waiting")}</span>
                           </div>
                         )}
                       </div>
@@ -567,7 +619,8 @@ export function CustomDomainModal({
                             rel="noreferrer"
                             className="inline-flex items-center gap-1 h-7 px-2 rounded text-[11.5px] font-medium fg-muted hover:bg-hover transition"
                           >
-                            <ExternalLink size={11} /> Open
+                            <ExternalLink size={11} />{" "}
+                            {t("customDomain.list.open")}
                           </a>
                         )}
                         {!d.verified && (
@@ -582,7 +635,7 @@ export function CustomDomainModal({
                             ) : (
                               <RefreshCw size={11} />
                             )}
-                            Verify
+                            {t("customDomain.list.verify")}
                           </button>
                         )}
                         <button
@@ -590,7 +643,9 @@ export function CustomDomainModal({
                           onClick={() => onRemove(d.domain)}
                           disabled={removing === d.domain}
                           className="inline-flex items-center gap-1 h-7 px-2 rounded text-[11.5px] font-medium text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-500/10 transition disabled:opacity-50"
-                          aria-label={`Remove ${d.domain}`}
+                          aria-label={t("customDomain.list.removeAria", {
+                            domain: d.domain,
+                          })}
                         >
                           <Trash2 size={11} />
                         </button>
@@ -600,7 +655,7 @@ export function CustomDomainModal({
                       <details className="mt-2.5 group">
                         <summary className="cursor-pointer text-[11.5px] fg-muted hover:fg transition list-none flex items-center gap-1">
                           <span className="inline-block transition group-open:rotate-90">▸</span>
-                          DNS setup
+                          {t("customDomain.list.dnsSetup")}
                         </summary>
                         <DnsInstructionsBody
                           domain={d.domain}
@@ -614,6 +669,8 @@ export function CustomDomainModal({
               </ul>
             )}
           </div>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -636,17 +693,19 @@ function DnsInstructionsPanel({
    *  supported (manual is the only path). */
   connect: ConnectAvailability | null | undefined;
 }) {
+  const t = useTranslations("modalsDomain");
   return (
     <div className="rounded-lg ring-1 ring-[color:var(--accent)]/30 bg-[color:var(--accent)]/5 p-3.5">
       <div className="flex items-center justify-between gap-2 mb-2">
         <div>
           <div className="text-[12px] font-semibold fg">
-            DNS setup for <span className="font-mono">{domain}</span>
+            {t("customDomain.dns.setupFor")}{" "}
+            <span className="font-mono">{domain}</span>
           </div>
           <p className="text-[11px] fg-faint mt-0.5">
             {connect
-              ? "One-click setup is available for your DNS provider."
-              : "Add these two records at your DNS provider (Cloudflare, GoDaddy, etc.). Most propagate within 1–5 minutes."}
+              ? t("customDomain.dns.oneClickAvailable")
+              : t("customDomain.dns.manualHint")}
           </p>
         </div>
         <button
@@ -660,7 +719,7 @@ function DnsInstructionsPanel({
           ) : (
             <RefreshCw size={11} />
           )}
-          Verify
+          {t("customDomain.list.verify")}
         </button>
       </div>
       {connect && (
@@ -674,13 +733,13 @@ function DnsInstructionsPanel({
         kind={dns.cname ? "CNAME" : "A"}
         name={dns.cname ? dns.cname.name : dns.a.name}
         value={dns.cname ? dns.cname.value : dns.a.value}
-        purpose="Points traffic"
+        purpose={t("customDomain.dns.pointsTraffic")}
       />
       <DnsRecord
         kind="TXT"
         name={dns.txt.name}
         value={dns.txt.value}
-        purpose="Proves ownership"
+        purpose={t("customDomain.dns.provesOwnership")}
       />
     </div>
   );
@@ -695,6 +754,7 @@ function DnsInstructionsBody({
   token: string;
   connect: ConnectAvailability | null | undefined;
 }) {
+  const t = useTranslations("modalsDomain");
   // Mirrors the server-side dnsInstructions() function so the panel is
   // self-contained — we don't need to re-fetch the original POST response.
   const ip = "178.156.175.171"; // CUSTOM_DOMAIN_TARGET_IP default
@@ -708,13 +768,13 @@ function DnsInstructionsBody({
         kind={isApex ? "A" : "A"}
         name={domain}
         value={ip}
-        purpose="Points traffic"
+        purpose={t("customDomain.dns.pointsTraffic")}
       />
       <DnsRecord
         kind="TXT"
         name={`_openlen-challenge.${domain}`}
         value={token}
-        purpose="Proves ownership"
+        purpose={t("customDomain.dns.provesOwnership")}
       />
     </div>
   );
@@ -732,6 +792,7 @@ function ConnectButton({
   url: string;
   className?: string;
 }) {
+  const t = useTranslations("modalsDomain");
   return (
     <a
       href={url}
@@ -747,10 +808,10 @@ function ConnectButton({
         </span>
         <span className="min-w-0">
           <span className="block text-[12.5px] font-semibold fg leading-tight">
-            One-click setup with {providerName}
+            {t("customDomain.connect.title", { provider: providerName })}
           </span>
           <span className="block text-[10.5px] fg-faint leading-tight mt-0.5">
-            Skip copy-pasting — we&apos;ll add the DNS records for you.
+            {t("customDomain.connect.subtitle")}
           </span>
         </span>
       </span>
@@ -773,6 +834,7 @@ function DnsRecord({
   value: string;
   purpose: string;
 }) {
+  const t = useTranslations("modalsDomain");
   // A + CNAME records on Cloudflare must be "DNS only" (gray cloud), not
   // proxied (orange cloud). The proxy strips Let's Encrypt's HTTP-01 ACME
   // challenge so Caddy can never issue a TLS cert, and on top of that
@@ -801,7 +863,7 @@ function DnsRecord({
         </span>
       </div>
       <div className="grid grid-cols-[60px_1fr_auto] items-center gap-1.5 text-[11.5px]">
-        <span className="fg-faint">Name</span>
+        <span className="fg-faint">{t("customDomain.dns.name")}</span>
         <code className="font-mono fg truncate">{name}</code>
         <button
           type="button"
@@ -812,7 +874,7 @@ function DnsRecord({
         </button>
       </div>
       <div className="grid grid-cols-[60px_1fr_auto] items-center gap-1.5 text-[11.5px] mt-0.5">
-        <span className="fg-faint">Value</span>
+        <span className="fg-faint">{t("customDomain.dns.value")}</span>
         <code className="font-mono fg truncate">{value}</code>
         <button
           type="button"
@@ -826,8 +888,9 @@ function DnsRecord({
         <div className="mt-1.5 flex items-center gap-1.5 text-[10.5px] text-amber-700 dark:text-amber-300">
           <AlertCircle size={10} className="shrink-0" />
           <span>
-            On Cloudflare, set <strong>Proxy status: DNS only</strong> (gray
-            cloud). Orange-cloud proxying blocks TLS cert issuance.
+            {t.rich("customDomain.dns.cloudflareHint", {
+              strong: (chunks) => <strong>{chunks}</strong>,
+            })}
           </span>
         </div>
       )}

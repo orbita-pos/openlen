@@ -1,9 +1,9 @@
-// Entry chooser shown when /new-v2 loads with no `?project=` query param
+// Entry chooser shown when /new loads with no `?project=` query param
 // and no entry mode picked yet. Three cards mirror the three create flows
 // the workspace exposes: AI brief → orchestrator, curated template, or paste
 // HTML straight from claude.ai (or anywhere). Picking one transitions the
 // workspace into a "guided" state where only the relevant left-sidebar tab
-// is unlocked — see `EntryMode` in /new-v2/page.tsx for the state machine.
+// is unlocked — see `EntryMode` in /new/page.tsx for the state machine.
 //
 // A "Continue working" strip above the cards surfaces the user's most-recent
 // drafts so coming back to the app doesn't require navigating to /projects.
@@ -16,7 +16,8 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { Link, useRouter } from "@/i18n/navigation";
 import { ChevronRight, FileText, PaletteIcon, Sparkles, Wand } from "./icons";
 import { StatusDot } from "./ui";
 
@@ -49,31 +50,32 @@ export function EmptyState({
   onPickTemplate,
   onPickPaste,
 }: EmptyStateProps) {
+  const t = useTranslations("wsChrome");
   const cards: CardSpec[] = [
     {
       id: "ai",
       Icon: Wand,
-      title: "Generate with AI",
-      description: "Describe your page in plain English. We compose it.",
-      detail: "Brief → page in ~30s",
+      title: t("empty.cards.ai.title"),
+      description: t("empty.cards.ai.description"),
+      detail: t("empty.cards.ai.detail"),
       accent: "var(--accent)",
       onClick: onPickAI,
     },
     {
       id: "template",
       Icon: PaletteIcon,
-      title: "Start from a template",
-      description: "Pick a curated landing across six aesthetic families.",
-      detail: "30 designs · ready to publish",
+      title: t("empty.cards.template.title"),
+      description: t("empty.cards.template.description"),
+      detail: t("empty.cards.template.detail"),
       accent: "var(--accent)",
       onClick: onPickTemplate,
     },
     {
       id: "paste",
       Icon: FileText,
-      title: "Paste your HTML",
-      description: "Bring HTML from claude.ai or anywhere. We host it.",
-      detail: "Self-contained · published in one click",
+      title: t("empty.cards.paste.title"),
+      description: t("empty.cards.paste.description"),
+      detail: t("empty.cards.paste.detail"),
       accent: "var(--accent)",
       onClick: onPickPaste,
     },
@@ -85,14 +87,15 @@ export function EmptyState({
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full bg-accent-soft text-accent text-[11px] font-medium mb-5">
             <Sparkles size={11} />
-            OpenLen Workspace
+            {t("empty.badge")}
           </div>
           <h1 className="text-[34px] md:text-[42px] font-semibold fg tracking-tight leading-[1.05]">
-            What do you want to start with?
+            {t("empty.heading")}
           </h1>
           <p className="mt-3 text-[14px] md:text-[15px] fg-muted max-w-xl mx-auto leading-relaxed">
-            Three paths to a published landing page. Pick one and we&apos;ll get
-            you a real subdomain on <span className="fg">openlen.com</span>.
+            {t.rich("empty.subheading", {
+              domain: (chunks) => <span className="fg">{chunks}</span>,
+            })}
           </p>
         </div>
 
@@ -121,7 +124,7 @@ export function EmptyState({
               <div className="mt-4 flex items-center justify-between text-[11px] fg-faint">
                 <span className="font-mono">{c.detail}</span>
                 <span className="inline-flex items-center gap-0.5 fg-muted group-hover:text-accent transition-colors">
-                  Pick this
+                  {t("empty.pickThis")}
                   <ChevronRight size={12} />
                 </span>
               </div>
@@ -130,13 +133,16 @@ export function EmptyState({
         </div>
 
         <div className="mt-8 text-center text-[12px] fg-faint">
-          or{" "}
-          <a
-            href="/projects"
-            className="fg-muted hover:fg underline underline-offset-2 transition"
-          >
-            browse your projects →
-          </a>
+          {t.rich("empty.browseProjects", {
+            link: (chunks) => (
+              <Link
+                href="/projects"
+                className="fg-muted hover:fg underline underline-offset-2 transition"
+              >
+                {chunks}
+              </Link>
+            ),
+          })}
         </div>
       </div>
     </div>
@@ -149,6 +155,7 @@ export function EmptyState({
 // clean). Clicking a card hard-navigates to the V2 workspace with the
 // project loaded.
 function RecentStrip() {
+  const t = useTranslations("wsChrome");
   const router = useRouter();
   const [items, setItems] = useState<RecentProject[] | null>(null);
 
@@ -204,20 +211,20 @@ function RecentStrip() {
     <div className="mb-8">
       <div className="flex items-center justify-between mb-3">
         <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.16em] fg-faint font-semibold ui-small">
-          <span>Continue working</span>
+          <span>{t("empty.recent.title")}</span>
           {items === null && (
             <span
               className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--accent)] pulse-soft"
-              aria-label="Loading recent projects"
+              aria-label={t("empty.recent.loading")}
             />
           )}
         </div>
-        <a
+        <Link
           href="/projects"
           className="text-[11px] fg-muted hover:fg transition inline-flex items-center gap-0.5"
         >
-          All projects <ChevronRight size={11} />
-        </a>
+          {t("empty.recent.all")} <ChevronRight size={11} />
+        </Link>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {items === null
@@ -226,7 +233,7 @@ function RecentStrip() {
               <RecentCard
                 key={p.id}
                 project={p}
-                onClick={() => router.push(`/new-v2?project=${p.id}`)}
+                onClick={() => router.push(`/new?project=${p.id}`)}
               />
             ))}
       </div>
@@ -259,6 +266,7 @@ function RecentCard({
   project: RecentProject;
   onClick: () => void;
 }) {
+  const t = useTranslations("wsChrome");
   const wrapperRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -340,7 +348,7 @@ function RecentCard({
           {mounted && scale > 0 && (
             <iframe
               src={`/api/projects/${project.id}/raw`}
-              title={`${project.title} thumbnail`}
+              title={t("empty.recent.thumbnail", { title: project.title })}
               sandbox="allow-scripts allow-same-origin"
               loading="lazy"
               referrerPolicy="no-referrer"
@@ -356,7 +364,7 @@ function RecentCard({
         </div>
         <div className="mt-0.5 flex items-center justify-between gap-1.5">
           <span className="text-[10.5px] fg-faint truncate">
-            {relativeTime(project.updatedAt)}
+            {relativeTime(project.updatedAt, t)}
           </span>
           {project.subdomain ? (
             <span
@@ -367,19 +375,19 @@ function RecentCard({
               }`}
               title={
                 project.hasUnpublishedChanges
-                  ? "Published — has unpublished edits"
-                  : "Published"
+                  ? t("empty.recent.publishedWithEdits")
+                  : t("empty.recent.published")
               }
             >
               <StatusDot
                 color={project.hasUnpublishedChanges ? "#F59E0B" : "#10B981"}
                 pulse={!project.hasUnpublishedChanges}
               />
-              <span>Live</span>
+              <span>{t("empty.recent.live")}</span>
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 ui-small shrink-0">
-              <StatusDot color="#F59E0B" /> Draft
+              <StatusDot color="#F59E0B" /> {t("empty.recent.draft")}
             </span>
           )}
         </div>
@@ -398,19 +406,22 @@ function RecentCard({
   );
 }
 
-function relativeTime(iso: string): string {
+function relativeTime(
+  iso: string,
+  t: (key: string, values?: Record<string, string | number>) => string,
+): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "—";
   const ms = Date.now() - date.getTime();
   const s = Math.floor(ms / 1000);
-  if (s < 60) return "just now";
+  if (s < 60) return t("empty.recent.time.justNow");
   const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ago`;
+  if (m < 60) return t("empty.recent.time.minutes", { count: m });
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
+  if (h < 24) return t("empty.recent.time.hours", { count: h });
   const d = Math.floor(h / 24);
-  if (d === 1) return "yesterday";
-  if (d < 7) return `${d}d ago`;
-  if (d < 30) return `${Math.floor(d / 7)}w ago`;
+  if (d === 1) return t("empty.recent.time.yesterday");
+  if (d < 7) return t("empty.recent.time.days", { count: d });
+  if (d < 30) return t("empty.recent.time.weeks", { count: Math.floor(d / 7) });
   return date.toLocaleDateString();
 }

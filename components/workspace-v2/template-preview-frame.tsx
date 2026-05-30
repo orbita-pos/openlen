@@ -24,6 +24,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 export interface TemplatePreviewFrameProps {
   /** URL served from /public/templates/ — includes the hash that picks the
@@ -47,6 +48,7 @@ export function TemplatePreviewFrame({
   nativeWidth = 1280,
   nativeHeight = 800,
 }: TemplatePreviewFrameProps) {
+  const t = useTranslations("wsChrome");
   const wrapperRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -104,7 +106,7 @@ export function TemplatePreviewFrame({
           ? "inset 0 0 0 1.5px var(--accent)"
           : "inset 0 0 0 1px color-mix(in oklch, var(--border) 100%, transparent)",
       }}
-      aria-label={`Live preview of ${name}`}
+      aria-label={t("templatePreview.ariaLabel", { name })}
     >
       {/* Browser chrome strip — purely decorative cue that this is a webpage. */}
       <div
@@ -144,7 +146,7 @@ export function TemplatePreviewFrame({
               style={{ background: "var(--accent)" }}
               aria-hidden
             />
-            Applied
+            {t("templatePreview.applied")}
           </span>
         )}
       </div>
@@ -174,7 +176,7 @@ export function TemplatePreviewFrame({
         {mounted && scale > 0 && (
           <iframe
             src={url}
-            title={`${name} live preview`}
+            title={t("templatePreview.iframeTitle", { name })}
             sandbox="allow-scripts allow-same-origin"
             loading="lazy"
             referrerPolicy="no-referrer"

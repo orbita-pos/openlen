@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { Moon, Sun } from "lucide-react";
 import { useDarkMode } from "@/lib/use-dark-mode";
 import { OpenLenMark } from "@/components/openlen-logo";
@@ -15,6 +16,7 @@ import type { ReactNode } from "react";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function AuthShell({ children }: { children: ReactNode }) {
+  const t = useTranslations("auth");
   const [dark, toggleDark] = useDarkMode();
 
   return (
@@ -36,7 +38,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
         <button
           type="button"
           onClick={toggleDark}
-          aria-label="Toggle dark mode"
+          aria-label={t("shell.toggleDarkMode")}
           className="inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-900 transition-colors"
         >
           {dark ? <Sun size={15} /> : <Moon size={15} />}
@@ -66,16 +68,16 @@ export function AuthShell({ children }: { children: ReactNode }) {
             rel="noreferrer"
             className="hover:text-zinc-700 dark:hover:text-zinc-300"
           >
-            Open source on GitHub
+            {t("shell.openSource")}
           </a>
         </div>
         <div className="flex items-center gap-3">
           <a href="#" className="hover:text-zinc-700 dark:hover:text-zinc-300">
-            Privacy
+            {t("shell.privacy")}
           </a>
           <span className="text-zinc-300 dark:text-zinc-800">·</span>
           <a href="#" className="hover:text-zinc-700 dark:hover:text-zinc-300">
-            Terms
+            {t("shell.terms")}
           </a>
         </div>
       </footer>

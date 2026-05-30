@@ -1,4 +1,5 @@
 import { Check, Layers, X } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
 
@@ -13,52 +14,6 @@ interface Row {
   us?: boolean;
   values: CellValue[];
 }
-
-const cols = ["Price", "Your code", "Open source", "Self-host", "Analytics"];
-
-const rows: Row[] = [
-  {
-    name: "OpenLen",
-    us: true,
-    values: [
-      { type: "price", v: "Free (alpha)" },
-      { type: "yes", note: "HTML" },
-      { type: "yes", note: "AGPLv3" },
-      { type: "yes" },
-      { type: "yes", note: "Built-in" },
-    ],
-  },
-  {
-    name: "Lovable",
-    values: [
-      { type: "price", v: "$25-220/mo" },
-      { type: "partial", v: "Export" },
-      { type: "no" },
-      { type: "no" },
-      { type: "no" },
-    ],
-  },
-  {
-    name: "Framer",
-    values: [
-      { type: "price", v: "$30+/mo" },
-      { type: "no" },
-      { type: "no" },
-      { type: "no" },
-      { type: "partial", v: "Basic" },
-    ],
-  },
-  {
-    name: "Linktree",
-    values: [
-      { type: "price", v: "$4-24/mo" },
-      { type: "no" },
-      { type: "no" },
-      { type: "no" },
-      { type: "partial", v: "Paid tier" },
-    ],
-  },
-];
 
 function Cell({ v }: { v: CellValue }) {
   if (v.type === "price") {
@@ -108,19 +63,73 @@ function Cell({ v }: { v: CellValue }) {
   );
 }
 
-export function Comparison() {
+export async function Comparison() {
+  const t = await getTranslations("marketing");
+
+  const cols = [
+    t("comparison.cols.price"),
+    t("comparison.cols.yourCode"),
+    t("comparison.cols.openSource"),
+    t("comparison.cols.selfHost"),
+    t("comparison.cols.analytics"),
+  ];
+
+  const rows: Row[] = [
+    {
+      name: "OpenLen",
+      us: true,
+      values: [
+        { type: "price", v: t("comparison.values.freeAlpha") },
+        { type: "yes", note: "HTML" },
+        { type: "yes", note: "AGPLv3" },
+        { type: "yes" },
+        { type: "yes", note: t("comparison.values.builtIn") },
+      ],
+    },
+    {
+      name: "Lovable",
+      values: [
+        { type: "price", v: "$25-220/mo" },
+        { type: "partial", v: t("comparison.values.export") },
+        { type: "no" },
+        { type: "no" },
+        { type: "no" },
+      ],
+    },
+    {
+      name: "Framer",
+      values: [
+        { type: "price", v: "$30+/mo" },
+        { type: "no" },
+        { type: "no" },
+        { type: "no" },
+        { type: "partial", v: t("comparison.values.basic") },
+      ],
+    },
+    {
+      name: "Linktree",
+      values: [
+        { type: "price", v: "$4-24/mo" },
+        { type: "no" },
+        { type: "no" },
+        { type: "no" },
+        { type: "partial", v: t("comparison.values.paidTier") },
+      ],
+    },
+  ];
+
   return (
     <section className="relative border-y border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-950">
       <div className="mx-auto max-w-6xl px-6 py-24">
         <div className="text-center max-w-2xl mx-auto">
           <Badge tone="zinc">
-            <Layers size={11} /> Compare
+            <Layers size={11} /> {t("comparison.badge")}
           </Badge>
           <h2 className="mt-4 text-3xl sm:text-5xl font-semibold tracking-tightest leading-[1.05]">
-            We did the math, so you don&apos;t have to.
+            {t("comparison.title")}
           </h2>
           <p className="mt-4 text-zinc-500 dark:text-zinc-400">
-            An honest, unflattering side-by-side. Updated May 2026.
+            {t("comparison.subtitle")}
           </p>
         </div>
 
@@ -173,7 +182,7 @@ export function Comparison() {
                         </span>
                         {row.us && (
                           <Badge tone="coral" className="ml-1 !py-0.5 !text-[10px]">
-                            that&apos;s us
+                            {t("comparison.thatsUs")}
                           </Badge>
                         )}
                       </div>
@@ -191,9 +200,7 @@ export function Comparison() {
         </div>
 
         <p className="mt-4 text-xs text-zinc-500 dark:text-zinc-400">
-          Pricing reflects public plans as of May 2026. Linktree included because
-          our 30 link-in-bio creator templates target the same audience —
-          difference is you own the HTML and the subdomain.
+          {t("comparison.footnote")}
         </p>
       </div>
     </section>

@@ -1,9 +1,9 @@
 // Source-of-truth metadata for the "Imagenes by OpenLen" set.
 //
-// 454 entries, paired by index with the PNGs in Downloads/img-chatgpt sorted by
+// 502 entries, paired by index with the PNGs in Downloads/img-chatgpt sorted by
 // file mtime (= generation order = prompt order). Prompt #19 (brutalist
-// concrete) was skipped during generation, so promptNum runs 1..455 with a gap
-// at 19 — 454 images total. Entries are stored in mtime order, which usually
+// concrete) was skipped during generation, so promptNum runs 1..503 with a gap
+// at 19 — 502 images total. Entries are stored in mtime order, which usually
 // matches promptNum order — except prompts regenerated late (#170, #272), which
 // are listed in their mtime position within their batch, not by promptNum.
 //
@@ -31,7 +31,9 @@ export type ImageStyle =
   | "creator-mockup"
   | "sports-editorial"
   | "travel-editorial"
-  | "wedding-editorial";
+  | "wedding-editorial"
+  | "music-editorial"
+  | "gaming-editorial";
 
 export interface ImageMeta {
   promptNum: number;
@@ -560,9 +562,67 @@ export const IMAGE_META: ImageMeta[] = [
   { promptNum: 453, slug: "wedding-beach-arch",     style: "wedding-editorial",        family: ["wedding", "travel"],              alt: "Editorial wedding wide photograph of a driftwood ceremony arch with cream florals on white sand at golden hour over turquoise ocean" },
   { promptNum: 454, slug: "wedding-garden-arbor",   style: "wedding-editorial",        family: ["wedding", "hospitality"],         alt: "Editorial wedding photograph of a wrought-iron garden arbor heavy with peonies and trailing greenery in a manicured garden" },
   { promptNum: 455, slug: "wedding-vintage-car",    style: "wedding-editorial",        family: ["wedding", "hospitality"],         alt: "Editorial wedding photograph of a cream vintage convertible decorated with a Just Married sign and trailing white ribbons under arching trees at dusk" },
+  // 2026-05-26 batch — 24 music-editorial photographs (vinyl/guitars/drums/
+  // mixing/mics/piano/synths/headphones/stage/jazz). Photoreal, partial body,
+  // no clear faces — same convention as lifestyle/sports/pet/travel/wedding.
+  // Fills the previously-empty `music` family slug (also covers `podcast`).
+  // Generated in prompt order, so mtime order = promptNum 456..479.
+  { promptNum: 456, slug: "vinyl-turntable",        style: "music-editorial",          family: ["music", "editorial"],             alt: "Editorial music macro of a black vinyl record on a vintage turntable with the needle resting on the grooves in warm window light" },
+  { promptNum: 457, slug: "stacked-vinyl-records",  style: "music-editorial",          family: ["music", "ecommerce"],             alt: "Editorial music still life of a leaning stack of vinyl LPs in faded paper sleeves on a wood floor beside a chunky hi-fi receiver" },
+  { promptNum: 458, slug: "electric-guitar-amp",    style: "music-editorial",          family: ["music", "creator"],               alt: "Editorial music photograph of a vintage electric guitar leaning on a tweed amplifier in a sunlit rehearsal room with dust in the light" },
+  { promptNum: 459, slug: "guitar-headstock-macro", style: "music-editorial",          family: ["music", "ecommerce"],             alt: "Editorial music macro of an electric guitar headstock with chrome tuners, brand inlay, woodgrain and motion-blur on a single string" },
+  { promptNum: 460, slug: "acoustic-window",        style: "music-editorial",          family: ["music", "podcast"],               alt: "Editorial music photograph of an acoustic guitar resting on a velvet chair in a soft window-lit room with sheet music on the floor" },
+  { promptNum: 461, slug: "drum-kit-stage",         style: "music-editorial",          family: ["music", "event"],                 alt: "Editorial music wide photograph of a full drum kit on a dim stage with a single warm spotlight, smoke in the beam and crossed sticks on the snare" },
+  { promptNum: 462, slug: "cymbal-hit-blur",        style: "music-editorial",          family: ["music", "event"],                 alt: "Editorial music close-up of a hand mid-strike on a brass cymbal with motion blur and water droplets flying off the edge" },
+  { promptNum: 463, slug: "mixing-console-knobs",   style: "music-editorial",          family: ["music", "podcast"],               alt: "Editorial music macro of a mixing console with backlit faders, glowing VU meters and rows of color-coded knobs at shallow depth of field" },
+  { promptNum: 464, slug: "control-room-window",    style: "music-editorial",          family: ["music", "podcast"],               alt: "Editorial music photograph from a studio control room — large mixing desk and glass window to a live room with hanging mics under warm amber LEDs" },
+  { promptNum: 465, slug: "vintage-ribbon-mic",     style: "music-editorial",          family: ["music", "podcast"],               alt: "Editorial music close-up of a vintage chrome ribbon microphone on a brass stand in a warm-lit studio with acoustic foam bokeh" },
+  { promptNum: 466, slug: "condenser-mic-booth",    style: "music-editorial",          family: ["podcast", "music"],               alt: "Editorial music photograph of a large-diaphragm condenser microphone with a pop filter inside a vocal booth framed by deep red acoustic panels" },
+  { promptNum: 467, slug: "piano-keys-macro",       style: "music-editorial",          family: ["music", "editorial"],             alt: "Editorial music macro of ivory and black piano keys with soft reflections, hammers visible at the lid edge and warm side light" },
+  { promptNum: 468, slug: "grand-piano-hall",       style: "music-editorial",          family: ["music", "event"],                 alt: "Editorial music wide photograph of a single grand piano with its lid open on the stage of an empty concert hall under golden chandeliers" },
+  { promptNum: 469, slug: "synthesizer-keys",       style: "music-editorial",          family: ["music", "creator"],               alt: "Editorial music close-up of a vintage synthesizer with glowing oscillator LEDs, color-coded keys and coiled patch cables in dim purple ambient light" },
+  { promptNum: 470, slug: "modular-synth-patch",    style: "music-editorial",          family: ["music", "creator"],               alt: "Editorial music macro of a Eurorack modular synth panel with rainbow patch cables crossing between modules and glowing knobs on a dark backdrop" },
+  { promptNum: 471, slug: "studio-headphones-desk", style: "music-editorial",          family: ["music", "podcast"],               alt: "Editorial music still life of studio headphones resting on a vintage notebook with handwritten lyrics on a worn wood desk beside a coffee mug" },
+  { promptNum: 472, slug: "dj-deck-closeup",        style: "music-editorial",          family: ["music", "event"],                 alt: "Editorial music close-up of a CDJ deck mid-mix with an illuminated jog wheel and hands on the crossfader with blurred club lights behind" },
+  { promptNum: 473, slug: "concert-lights-stage",   style: "music-editorial",          family: ["music", "event"],                 alt: "Editorial music photograph from the stage looking out at a dark concert venue with warm spotlight beams cutting through smoke and blurred crowd silhouettes" },
+  { promptNum: 474, slug: "festival-crowd-hands",   style: "music-editorial",          family: ["music", "event"],                 alt: "Editorial music wide photograph from behind a crowd at a sunset open-air festival with hands raised and warm stage lights against a pink-orange sky" },
+  { promptNum: 475, slug: "sheet-music-stand",      style: "music-editorial",          family: ["music", "education"],             alt: "Editorial music close-up of open sheet music on a black music stand under soft practice-room light with a single pencil resting on the page" },
+  { promptNum: 476, slug: "hand-writing-music",     style: "music-editorial",          family: ["music", "editorial"],             alt: "Editorial music close-up of a hand with a pencil writing notes onto staff paper on a piano lid with a brass candleholder behind" },
+  { promptNum: 477, slug: "cassette-walkman",       style: "music-editorial",          family: ["music", "editorial"],             alt: "Editorial music top-down still life of a vintage Sony Walkman, two cassette tapes with handwritten labels and tangled wired earbuds on kraft paper" },
+  { promptNum: 478, slug: "saxophone-jazz-bar",     style: "music-editorial",          family: ["music", "hospitality"],           alt: "Editorial music photograph of a brass saxophone resting on a velvet stool in a moody jazz bar with blue stage lights and bottle bokeh behind" },
+  { promptNum: 479, slug: "mic-empty-stage",        style: "music-editorial",          family: ["music", "podcast"],               alt: "Editorial music wide photograph of a single vintage microphone on a stand at center stage of a small empty venue under a warm spotlight" },
+  // 2026-05-26 batch — 24 gaming-editorial photographs (controller/keyboard/
+  // mouse/headset/monitor/console/racing/VR/PC/esports/arcade/CRT). Photoreal,
+  // partial body, no clear faces — same convention as other *-editorial styles.
+  // Fills the previously-empty `gaming` family slug. Generated in prompt order,
+  // so mtime order = promptNum 480..503.
+  { promptNum: 480, slug: "controller-macro",       style: "gaming-editorial",         family: ["gaming", "ecommerce"],            alt: "Editorial gaming macro close-up of a modern gamepad controller on a dark desk with analog sticks, textured grip and LED light bar glow" },
+  { promptNum: 481, slug: "hands-on-controller",    style: "gaming-editorial",         family: ["gaming", "creator"],              alt: "Editorial gaming close-up of hands gripping a black gamepad mid-game with blue LED glow and blurred monitor reflection" },
+  { promptNum: 482, slug: "mechanical-keyboard-rgb",style: "gaming-editorial",         family: ["gaming", "ecommerce"],            alt: "Editorial gaming macro of a mechanical keyboard with per-key RGB lighting in a dark room with shallow depth of field over a deskmat" },
+  { promptNum: 483, slug: "gaming-mouse-rgb",       style: "gaming-editorial",         family: ["gaming", "ecommerce"],            alt: "Editorial gaming close-up of a gaming mouse on a black cloth deskmat with RGB scroll wheel glow and side buttons in sharp focus" },
+  { promptNum: 484, slug: "headset-on-stand",       style: "gaming-editorial",         family: ["gaming", "ecommerce"],            alt: "Editorial gaming photograph of a gaming headset hanging on a metal stand with RGB ear-cup glow on a dark desk under soft purple ambient light" },
+  { promptNum: 485, slug: "headset-on-desk",        style: "gaming-editorial",         family: ["gaming", "creator"],              alt: "Editorial gaming photograph of an over-ear gaming headset resting beside a mechanical keyboard with ambient RGB underglow and blurred dual monitors" },
+  { promptNum: 486, slug: "curved-monitor-game",    style: "gaming-editorial",         family: ["gaming", "event"],                alt: "Editorial gaming close-up of an ultrawide curved monitor displaying a fantasy-shooter game scene at dusk with screen reflection in a dark room" },
+  { promptNum: 487, slug: "triple-monitor-setup",   style: "gaming-editorial",         family: ["gaming", "creator"],              alt: "Editorial gaming wide photograph of a three-monitor gaming setup with RGB underglow strip behind the desk and gradient ambient light on a dark wall" },
+  { promptNum: 488, slug: "streamer-rig-idle",      style: "gaming-editorial",         family: ["gaming", "creator"],              alt: "Editorial gaming photograph of an empty streamer setup with ring light, condenser mic on a boom, dual monitors with chat overlay and RGB keyboard glow" },
+  { promptNum: 489, slug: "console-and-controller", style: "gaming-editorial",         family: ["gaming", "ecommerce"],            alt: "Editorial gaming photograph of a sleek modern game console on a wood entertainment unit with a controller beside it and soft TV glow behind" },
+  { promptNum: 490, slug: "retro-console-nostalgia",style: "gaming-editorial",         family: ["gaming", "editorial"],            alt: "Editorial gaming top-down still life of a vintage 90s game console with two wired controllers and a stack of cartridges on a kraft surface" },
+  { promptNum: 491, slug: "racing-wheel-rig",       style: "gaming-editorial",         family: ["gaming", "event"],                alt: "Editorial gaming wide photograph of a racing wheel and pedals mounted on a sim-racing cockpit with a curved monitor showing a dusk track and RGB underbody glow" },
+  { promptNum: 492, slug: "flight-stick-hotas",     style: "gaming-editorial",         family: ["gaming", "technical-minimal"],    alt: "Editorial gaming close-up of a HOTAS flight stick and throttle on a dark desk with illuminated buttons and a blurred cockpit-sim monitor behind" },
+  { promptNum: 493, slug: "vr-headset-desk",        style: "gaming-editorial",         family: ["gaming", "technical-minimal"],    alt: "Editorial gaming close-up of a modern VR headset resting on a dark desk beside two motion controllers in soft window light catching the lens" },
+  { promptNum: 494, slug: "vr-controllers-hands",   style: "gaming-editorial",         family: ["gaming", "creator"],              alt: "Editorial gaming photograph of hands holding two VR motion controllers mid-game with tracking-ring LED glow and a blurred living-room behind" },
+  { promptNum: 495, slug: "custom-pc-interior",     style: "gaming-editorial",         family: ["gaming", "technical-minimal"],    alt: "Editorial gaming macro of a custom-built gaming PC interior with RGB GPU fans, liquid cooling tubes and a tempered glass side panel" },
+  { promptNum: 496, slug: "pc-tower-desk",          style: "gaming-editorial",         family: ["gaming", "ecommerce"],            alt: "Editorial gaming photograph of a gaming PC tower with a glass side panel and RGB internals beside a curved monitor and keyboard in a dark room with neon underglow" },
+  { promptNum: 497, slug: "esports-player-back",    style: "gaming-editorial",         family: ["gaming", "event"],                alt: "Editorial gaming wide photograph from behind an esports player at their station with RGB peripherals, a tournament scoreboard blurred on the main screen and stage lights overhead" },
+  { promptNum: 498, slug: "esports-arena-crowd",    style: "gaming-editorial",         family: ["gaming", "event"],                alt: "Editorial gaming wide photograph of an esports arena stage from the back of a darkened crowd with a giant LED screen and blue and magenta stage wash" },
+  { promptNum: 499, slug: "retro-arcade-glow",      style: "gaming-editorial",         family: ["gaming", "editorial"],            alt: "Editorial gaming photograph of a row of vintage arcade cabinets in a dim arcade with magenta and cyan neon glow and joysticks in soft focus" },
+  { promptNum: 500, slug: "crt-pixel-art",          style: "gaming-editorial",         family: ["gaming", "editorial"],            alt: "Editorial gaming close-up of a vintage CRT monitor displaying a pixel-art scene with scanlines and soft phosphor glow in a dark room" },
+  { promptNum: 501, slug: "gaming-chair-rgb",       style: "gaming-editorial",         family: ["gaming", "ecommerce"],            alt: "Editorial gaming photograph of a high-back gaming chair behind a desk with RGB-lit peripherals and neon underglow on the floor in a dark room" },
+  { promptNum: 502, slug: "lan-party-wide",         style: "gaming-editorial",         family: ["gaming", "event"],                alt: "Editorial gaming wide photograph of a LAN party hall with rows of gaming stations, RGB peripherals glowing across the room and blurred figures from behind" },
+  { promptNum: 503, slug: "controller-couch",       style: "gaming-editorial",         family: ["gaming", "hospitality"],          alt: "Editorial gaming top-down of a black gamepad resting on a coffee table beside a cold drink and a takeout box with a blurred TV game scene behind" },
 ];
 
 // Sanity: catch a future drift between this list and what process.ts expects.
-if (IMAGE_META.length !== 454) {
-  throw new Error(`IMAGE_META must have 454 entries (got ${IMAGE_META.length})`);
+if (IMAGE_META.length !== 502) {
+  throw new Error(`IMAGE_META must have 502 entries (got ${IMAGE_META.length})`);
 }

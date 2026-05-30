@@ -1,0 +1,42 @@
+{
+  "templatesIndex": {
+    "hero": {
+      "eyebrow": "{count, plural, =0 {NO TEMPLATES YET} one {# HAND-BUILT TEMPLATE} other {# HAND-BUILT TEMPLATES}}",
+      "title": "Landing pages built by hand. Ready to make yours.",
+      "lede": "Static HTML, optimized. Pick one, fill it with your info, deploy to your subdomain in one click."
+    }
+  },
+  "templateDetail": {
+    "backToAll": "All templates",
+    "viewLive": "View live template",
+    "meta": {
+      "family": "Family",
+      "mode": "Mode",
+      "accent": "Accent color",
+      "format": "Format",
+      "formatValue": "Static HTML"
+    },
+    "related": {
+      "heading": "More from {family}"
+    }
+  },
+  "blogIndex": {
+    "eyebrow": "BLOG",
+    "title": "What's new in OpenLen",
+    "lede": "Releases, changelog, and the thinking behind them.",
+    "readPost": "Read post"
+  },
+  "blogPost": {
+    "back": "Blog"
+  },
+  "notFound": {
+    "badge": "Error 404",
+    "title": "This page <accent>doesn't exist.</accent>",
+    "lede": "This URL doesn't match any template or project. Head back home or pick one of the 15 curated templates.",
+    "backHome": "Back to home",
+    "viewTemplates": "View templates"
+  },
+  "devLoader": {
+    "caption": "Designing your page…"
+  }
+}

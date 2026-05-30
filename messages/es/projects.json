@@ -1,0 +1,138 @@
+{
+  "metaTitle": "Mis páginas · OpenLen",
+  "header": {
+    "myPages": "Mis páginas",
+    "newPage": "Nueva página"
+  },
+  "status": {
+    "published": "Publicada",
+    "draft": "Borrador",
+    "archived": "Archivada"
+  },
+  "toolbar": {
+    "title": "Mis páginas",
+    "pages": "{count, plural, one {# página} other {# páginas}}",
+    "publishedCount": "{count} publicadas",
+    "filterLabel": "Filtro: {label}",
+    "clearFilter": "Quitar filtro",
+    "searchPlaceholder": "Buscar páginas…",
+    "filters": {
+      "all": "Todas las páginas",
+      "draft": "Borradores",
+      "published": "Publicadas",
+      "archived": "Archivadas"
+    },
+    "sorts": {
+      "edited": "Editadas recientemente",
+      "created": "Fecha de creación",
+      "name": "Nombre (A → Z)"
+    },
+    "gridView": "Vista de cuadrícula",
+    "listView": "Vista de lista"
+  },
+  "usage": {
+    "total": "Total",
+    "totalPages": "{count, plural, one {# página} other {# páginas}} en tu workspace",
+    "thisMonth": "Este mes",
+    "creditsUsed": "{used} / {allotment} créditos usados",
+    "freePlan": "Plan gratis",
+    "proPlan": "Plan Pro",
+    "creditsLeft": "{count, plural, one {# crédito restante} other {# créditos restantes}}",
+    "dismiss": "Descartar"
+  },
+  "list": {
+    "name": "Nombre",
+    "status": "Estado",
+    "tags": "Etiquetas",
+    "edited": "Editada",
+    "notDeployed": "Sin desplegar"
+  },
+  "card": {
+    "projectMenu": "Menú del proyecto",
+    "published": "Publicada",
+    "unpublishedChanges": "Cambios sin publicar",
+    "open": "Abrir",
+    "editedAgo": "Editada {time}",
+    "sections": "{count, plural, one {# sección} other {# secciones}}"
+  },
+  "menu": {
+    "closeMenu": "Cerrar menú",
+    "open": "Abrir",
+    "duplicate": "Duplicar",
+    "rename": "Renombrar",
+    "downloadZip": "Descargar .zip",
+    "openPublished": "Abrir página publicada",
+    "publish": "Publicar…",
+    "archived": "Archivada",
+    "archive": "Archivar",
+    "delete": "Eliminar"
+  },
+  "bulk": {
+    "selected": "seleccionadas",
+    "archive": "Archivar",
+    "delete": "Eliminar",
+    "cancel": "Cancelar"
+  },
+  "empty": {
+    "badge": "Tu workspace, recién estrenado",
+    "title": "Tu primera página<br></br>en 60 segundos.",
+    "subtitle": "Describe lo que quieres. Generamos los textos, el diseño, las imágenes y el código.",
+    "examples": {
+      "invoicing": {
+        "title": "SaaS de facturación con Stripe",
+        "brief": "Una landing para una herramienta que ayuda a los freelancers a controlar sus facturas y cobrar más rápido."
+      },
+      "portfolio": {
+        "title": "Portafolio de diseñador en Ciudad de México",
+        "brief": "Sitio personal para un diseñador UI/UX con 6 casos de estudio y un distintivo de disponibilidad."
+      },
+      "conference": {
+        "title": "Página de evento para una conferencia virtual",
+        "brief": "Landing de evento para una conferencia de indie hacking de 2 días, con cuadrícula de ponentes y entradas."
+      },
+      "coffee": {
+        "title": "Suscripción de café de origen único",
+        "brief": "Hero de e-commerce para una suscripción de café de tueste artesanal, entregado cada martes."
+      }
+    },
+    "startFromScratch": "Empezar desde cero"
+  },
+  "noResults": {
+    "title": "Ninguna página coincide con \"{query}\"",
+    "subtitle": "Prueba con otra búsqueda, o empieza una nueva.",
+    "clearSearch": "Borrar búsqueda",
+    "createNew": "Crear nueva"
+  },
+  "actions": {
+    "deleteConfirm": "¿Eliminar esta página? Esta acción no se puede deshacer.",
+    "deleteError": "No se pudo eliminar: {error}",
+    "archiveError": "No se pudo archivar: {error}",
+    "renamePrompt": "Nuevo nombre",
+    "renameError": "No se pudo renombrar: {error}",
+    "duplicateError": "No se pudo duplicar: {error}",
+    "exportLoadError": "No se pudo cargar el proyecto para exportarlo.",
+    "zipError": "No se pudo crear el zip: {error}",
+    "bulkDeleteConfirm": "¿Eliminar {count} páginas? Esta acción no se puede deshacer."
+  },
+  "relativeTime": {
+    "justNow": "ahora mismo",
+    "minutesAgo": "hace {count} min",
+    "hoursAgo": "hace {count} h",
+    "yesterday": "ayer",
+    "daysAgo": "hace {count} d",
+    "weeksAgo": "hace {count} sem"
+  },
+  "appHeader": {
+    "toggleDarkMode": "Cambiar modo oscuro",
+    "signedIn": "Sesión iniciada",
+    "myPages": "Mis páginas",
+    "settings": "Ajustes",
+    "billing": "Facturación",
+    "apiKeys": "Claves API",
+    "comingSoon": "{label} — próximamente",
+    "signOut": "Cerrar sesión"
+  },
+  "creditPill": {
+    "tooltip": "Te quedan {balance} de {allotment} créditos de IA este mes"
+  }
+}

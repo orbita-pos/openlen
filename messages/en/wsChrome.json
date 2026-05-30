@@ -1,0 +1,139 @@
+{
+  "sidebar": {
+    "tabs": {
+      "chat": { "label": "Chat", "title": "Chat with Orchestra" },
+      "templates": { "label": "Templates", "title": "Start from a template" },
+      "library": { "label": "Library", "title": "Insert a section" },
+      "pages": { "label": "Pages", "title": "Recent projects" },
+      "leads": { "label": "Leads", "title": "Form submissions" },
+      "insights": { "label": "Insights", "title": "Page analytics" },
+      "versions": { "label": "Versions", "title": "Version history" },
+      "brief": { "label": "Brief", "title": "Project brief (AI context)" }
+    },
+    "tabLocked": "{label} — locked",
+    "expandPanel": "Expand panel",
+    "collapsePanel": "Collapse panel",
+    "choosing": {
+      "title": "Tools live here once you've started.",
+      "hint": "Pick a starting point from the right →"
+    }
+  },
+  "preview": {
+    "zoomFit": "Fit",
+    "toolbar": {
+      "editPage": "Edit page (⌘E)",
+      "exitEdit": "Exit edit mode (⌘E)",
+      "showGrid": "Show grid overlay",
+      "hideGrid": "Hide grid overlay",
+      "refresh": "Refresh preview",
+      "openNewTab": "Open in new tab"
+    },
+    "banner": {
+      "sectionSelect": "Click any section to scope your next chat · <kbd></kbd> to cancel",
+      "inlineEdit": "Click any text in the page to edit it inline · <kbd></kbd> to cancel"
+    },
+    "templateBanner": {
+      "previewing": "Previewing template",
+      "previewingNamed": "Previewing: {name}",
+      "readOnly": "Read-only — nothing saved until you commit",
+      "cloning": "Cloning…",
+      "use": "Use this template →",
+      "clear": "Clear"
+    },
+    "iframeTitle": "OpenLen workspace preview",
+    "redesigning": "Redesigning your page…"
+  },
+  "placeholder": {
+    "ai": {
+      "title": "Brief your page in the sidebar",
+      "hint": "Describe what you want and the orchestrator will compose it."
+    },
+    "template": {
+      "title": "Browse the gallery in the sidebar",
+      "hint": "Click any template to clone it into a new project."
+    },
+    "paste": {
+      "title": "Paste your HTML in the sidebar",
+      "hint": "Drop in HTML from claude.ai (or anywhere) — we'll host it."
+    },
+    "sidebar": "Sidebar"
+  },
+  "empty": {
+    "badge": "OpenLen Workspace",
+    "heading": "What do you want to start with?",
+    "subheading": "Three paths to a published landing page. Pick one and we'll get you a real subdomain on <domain>openlen.com</domain>.",
+    "pickThis": "Pick this",
+    "browseProjects": "or <link>browse your projects →</link>",
+    "cards": {
+      "ai": {
+        "title": "Generate with AI",
+        "description": "Describe your page in plain English. We compose it.",
+        "detail": "Brief → page in ~30s"
+      },
+      "template": {
+        "title": "Start from a template",
+        "description": "Pick a curated landing across six aesthetic families.",
+        "detail": "30 designs · ready to publish"
+      },
+      "paste": {
+        "title": "Paste your HTML",
+        "description": "Bring HTML from claude.ai or anywhere. We host it.",
+        "detail": "Self-contained · published in one click"
+      }
+    },
+    "recent": {
+      "title": "Continue working",
+      "loading": "Loading recent projects",
+      "all": "All projects",
+      "thumbnail": "{title} thumbnail",
+      "publishedWithEdits": "Published — has unpublished edits",
+      "published": "Published",
+      "live": "Live",
+      "draft": "Draft",
+      "time": {
+        "justNow": "just now",
+        "minutes": "{count}m ago",
+        "hours": "{count}h ago",
+        "yesterday": "yesterday",
+        "days": "{count}d ago",
+        "weeks": "{count}w ago"
+      }
+    }
+  },
+  "status": {
+    "drift": "Drift from {domain}",
+    "saved": "Saved · {ago}",
+    "live": "Live at {domain}",
+    "ready": "Ready to ship",
+    "saving": "Saving…",
+    "commandPalette": "command palette",
+    "ago": {
+      "justNow": "just now",
+      "seconds": "{count}s ago",
+      "minutes": "{count}m ago",
+      "hours": "{count}h ago",
+      "days": "{count}d ago"
+    }
+  },
+  "loader": {
+    "sections": {
+      "hero": "Hero",
+      "features": "Features",
+      "pricing": "Pricing",
+      "reviews": "Reviews",
+      "footer": "Footer"
+    }
+  },
+  "modelPicker": {
+    "switch": "Switch model — Gemini Pro / Flash",
+    "note": {
+      "deeper": "Deeper",
+      "recommended": "Recommended"
+    }
+  },
+  "templatePreview": {
+    "ariaLabel": "Live preview of {name}",
+    "iframeTitle": "{name} live preview",
+    "applied": "Applied"
+  }
+}

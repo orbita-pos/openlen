@@ -1,0 +1,90 @@
+{
+  "header": {
+    "inspector": "Inspector",
+    "closeInspector": "Close inspector"
+  },
+  "element": {
+    "pageSettings": "Page settings"
+  },
+  "link": {
+    "title": "Link",
+    "destination": "Destination",
+    "destinationPlaceholder": "https://…  or  #section",
+    "openInNewTab": "Open in new tab"
+  },
+  "image": {
+    "title": "Image",
+    "altText": "Alt text",
+    "altPlaceholder": "Describe the image",
+    "source": "Source"
+  },
+  "style": {
+    "title": "Style",
+    "textColor": "Text color",
+    "background": "Background"
+  },
+  "form": {
+    "title": "Form",
+    "notifyEmail": "Notify email",
+    "notifyEmailPlaceholder": "Default: your account email",
+    "successMessage": "Success message",
+    "successMessagePlaceholder": "✓ Thanks — we got your message.",
+    "redirect": "Redirect after submit",
+    "redirectPlaceholder": "https://…/thank-you  (optional)",
+    "invalidEmail": "Enter a valid email address.",
+    "invalidUrl": "Enter a full URL starting with http:// or https://.",
+    "applyNote": "Form changes apply on your next deploy."
+  },
+  "testEmail": {
+    "send": "Send test email",
+    "sending": "Sending…",
+    "sentTo": "✓ Test sent to <mono>{to}</mono>. Check inbox + spam folder.",
+    "sendFailed": "Couldn't send the test email.",
+    "networkError": "Network error."
+  },
+  "page": {
+    "loading": "Loading page settings…",
+    "title": "Page",
+    "fieldTitle": "Title",
+    "fieldTitlePlaceholder": "Page title",
+    "fieldDescription": "Description",
+    "fieldDescriptionPlaceholder": "Short description for search results",
+    "fieldSocialImage": "Social image (OG)",
+    "fieldFavicon": "Favicon",
+    "clickHint": "Click any element on the page to edit it."
+  },
+  "privacy": {
+    "title": "Privacy",
+    "enableAnalytics": "Enable analytics",
+    "note": "Anonymous pageviews + outbound clicks. No cookies, no IP storage, no consent banner. Applies on next publish."
+  },
+  "health": {
+    "title": "Page health",
+    "passing": "passing",
+    "healthy": "Page looks healthy.",
+    "issuesToAddress": "{count, plural, one {# issue to address.} other {# issues to address.}}"
+  },
+  "logo": {
+    "title": "Logo",
+    "previewAlt": "Project logo preview",
+    "custom": "Custom logo",
+    "default": "Default — initial letter",
+    "inlineSvg": "Inline SVG",
+    "usedAs": "Used as favicon, card badge, OG fallback.",
+    "tabUpload": "Upload",
+    "tabPasteUrl": "Paste URL",
+    "tabAuto": "Auto",
+    "uploading": "Uploading…",
+    "chooseImage": "Choose image",
+    "uploadHint": "PNG / SVG / WebP. Square images render best.",
+    "urlHint": "Use the full https:// URL of a hosted image.",
+    "generateFromTitle": "Generate from title",
+    "autoHint": "Coral disc with the first letter of “{title}”.",
+    "defaultTitleFallback": "Page",
+    "clear": "Clear logo",
+    "errorSaveFirst": "Save the project before uploading a logo.",
+    "errorUploadStatus": "Upload failed ({status})",
+    "errorUploadFailed": "Upload failed",
+    "errorFullUrl": "Use a full https:// URL."
+  }
+}

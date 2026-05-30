@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { ChevronUp } from "./icons";
 import { StatusDot } from "./ui";
 import type { AIModel } from "@/lib/ai-provider";
@@ -8,12 +9,24 @@ import type { AIModel } from "@/lib/ai-provider";
 // Model picker shared by the Chat redesign composer and the AI generation
 // brief panel — a small dropdown to switch between the two Gemini tiers.
 
+// Model display names are product nouns (kept literal); `noteKey` resolves
+// to a translated descriptor at render time.
 const MODEL_META: Record<
   AIModel,
-  { label: string; dot: string; note: string }
+  { label: string; short: string; dot: string; noteKey: string }
 > = {
-  "gemini-pro": { label: "Gemini 3.1 Pro", dot: "#4285F4", note: "Deeper" },
-  "gemini-flash": { label: "Gemini 3.5 Flash", dot: "#10B981", note: "Recommended" },
+  "gemini-pro": {
+    label: "Gemini 3.1 Pro",
+    short: "Pro",
+    dot: "#4285F4",
+    noteKey: "modelPicker.note.deeper",
+  },
+  "gemini-flash": {
+    label: "Gemini 3.5 Flash",
+    short: "Flash",
+    dot: "#10B981",
+    noteKey: "modelPicker.note.recommended",
+  },
 };
 
 const STORAGE_KEY = "openlen:ai-model";
@@ -41,11 +54,16 @@ export function ModelPicker({
   model,
   onChange,
   disabled = false,
+  compact = false,
 }: {
   model: AIModel;
   onChange: (m: AIModel) => void;
   disabled?: boolean;
+  /** Narrow surfaces (the chat composer) show the tier word only
+   *  ("Flash"/"Pro") instead of the full model name to save row width. */
+  compact?: boolean;
 }) {
+  const t = useTranslations("wsChrome");
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -64,11 +82,11 @@ export function ModelPicker({
         type="button"
         disabled={disabled}
         onClick={() => setOpen((o) => !o)}
-        title="Switch model — Gemini Pro / Flash"
+        title={t("modelPicker.switch")}
         className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-[10px] fg-muted ui-small hover:fg hover:bg-hover transition disabled:opacity-40"
       >
         <StatusDot color={MODEL_META[model].dot} pulse />
-        <span>{MODEL_META[model].label}</span>
+        <span>{compact ? MODEL_META[model].short : MODEL_META[model].label}</span>
         <ChevronUp size={10} className={open ? "rotate-180" : ""} />
       </button>
       {open && (
@@ -88,7 +106,7 @@ export function ModelPicker({
               <StatusDot color={MODEL_META[m].dot} pulse={m === model} />
               <span>{MODEL_META[m].label}</span>
               <span className="ml-auto text-[9.5px] fg-faint ui-small">
-                {MODEL_META[m].note}
+                {t(MODEL_META[m].noteKey)}
               </span>
             </button>
           ))}

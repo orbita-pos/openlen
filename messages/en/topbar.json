@@ -1,0 +1,59 @@
+{
+  "common": {
+    "loading": "Loading…"
+  },
+  "projectName": {
+    "workspaceLabel": "Workspace",
+    "untitled": "Untitled"
+  },
+  "save": {
+    "saving": "Saving…",
+    "saved": "Saved · just now"
+  },
+  "deploy": {
+    "button": "Deploy",
+    "shipIt": "Ship it",
+    "liveAt": "Live at {subdomain}.openlen.com",
+    "unpublishedChanges": "You have unpublished changes.",
+    "open": "Open",
+    "republish": "Re-publish",
+    "unpublish": "Unpublish",
+    "publishCta": {
+      "title": "Publish to openlen.com",
+      "subtitle": "Free hosting on your own subdomain"
+    },
+    "customDomain": {
+      "title": "Custom domain",
+      "subtitle": "Serve this page from your own hostname"
+    },
+    "providers": {
+      "vercel": "Deploy to Vercel",
+      "github": "Push to GitHub",
+      "vercelSubtitle": "Your own *.vercel.app URL",
+      "githubSubtitle": "A GitHub Pages repo"
+    },
+    "previousDeploys": "Previous deploys",
+    "noPriorDeploys": "No prior deploys yet."
+  },
+  "rollback": {
+    "confirm": "Roll back the live site to deploy {sha}? Visitors will see this earlier version within seconds.",
+    "errorGone": "That deploy has been pruned from disk and can't be restored.",
+    "errorGeneric": "Rollback failed. Try again.",
+    "inProgress": "Rolling back…"
+  },
+  "theme": {
+    "lightMode": "Light mode",
+    "darkMode": "Dark mode"
+  },
+  "account": {
+    "fallbackName": "Account",
+    "allProjects": "All projects",
+    "signOut": "Sign out"
+  },
+  "relativeTime": {
+    "seconds": "{count}s ago",
+    "minutes": "{count}m ago",
+    "hours": "{count}h ago",
+    "days": "{count}d ago"
+  }
+}

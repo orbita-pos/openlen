@@ -1,0 +1,61 @@
+{
+  "aiBrief": {
+    "title": "Describe tu página",
+    "subtitle": "Dime qué quieres y yo compongo la página por ti.",
+    "placeholder": "Una landing page para mi SaaS que…",
+    "attachImage": "Adjuntar una imagen — disponible tras generar",
+    "scopeSection": "Acotar a una sección — disponible tras generar",
+    "autofill": "Autocompletar con mi información — disponible tras generar",
+    "availableAfter": "Disponible una vez que se cree tu proyecto",
+    "generate": "Generar"
+  },
+  "brief": {
+    "label": "Brief",
+    "description": "Contexto persistente que la IA ve en cada chat. Marca, tono, restricciones, recordatorios.",
+    "placeholder": "p. ej.\n\n- Esta es una landing para Counter, una cafetería en Polanco.\n- Tono: cercano, amable, sin tecnicismos.\n- Color de acento: naranja cálido (#C66B3D).\n- Pendiente: pedir el logo final al diseñador.",
+    "emptyTitle": "El Brief es por proyecto.",
+    "emptyHint": "Abre un proyecto desde la pestaña Páginas para escribir su brief.",
+    "saving": "Guardando…",
+    "saved": "Guardado · se inyecta en cada chat",
+    "saveFailed": "Error al guardar",
+    "saveErrorRetry": "No se pudo guardar — inténtalo de nuevo.",
+    "ready": "Listo"
+  },
+  "templates": {
+    "heading": "Plantillas seleccionadas",
+    "intro": "Haz clic en una tarjeta para verla en grande. Cuando estés listo, pulsa <b>Usar esta plantilla</b> en el banner para clonarla en un nuevo proyecto.",
+    "newProjectWarning": "Elegir una plantilla inicia un proyecto <b>nuevo</b>. Tu proyecto actual sigue guardado en <projectsLink>/projects</projectsLink>.",
+    "all": "Todas",
+    "previewTemplateAria": "Vista previa de la plantilla: {name}",
+    "preview": "Vista previa",
+    "previewing": "En vista previa",
+    "templateCount": "{count, plural, one {# plantilla} other {# plantillas}}",
+    "loadError": "No se pudieron cargar las plantillas — {error}",
+    "footer": "Las plantillas son HTML estático — markup puro, Tailwind CDN, Google Fonts. Al clonarla se vuelve tuya; solo tu proyecto reclama un subdominio cuando pulsas Deploy."
+  },
+  "sections": {
+    "heading": "Biblioteca de secciones",
+    "intro": "Inserta una sección en tu página actual. Aparece al final — arrástrala a su lugar con los controladores de sección. El estilo se adapta a tu página en el siguiente reestilizado.",
+    "all": "Todas",
+    "jsTooltip": "Renderiza el contenido con JS — se conserva al insertar, edición en línea limitada",
+    "imgTooltip": "Incluye placeholders con degradado — sustituye por imágenes reales tras insertar",
+    "insertAria": "Insertar {name} en la página actual",
+    "insert": "Insertar",
+    "inserting": "Insertando…",
+    "loadError": "No se pudieron cargar las secciones — {error}",
+    "footer": "Las secciones son fragmentos con estilos acotados — no pueden chocar con los de tu página. Insértala y luego reordénala y reestilízala a tu gusto."
+  },
+  "paste": {
+    "heading": "Pegar HTML",
+    "description": "Pega el HTML que te dio claude.ai (o cualquier HTML de landing page autocontenido). Lo alojamos en tu subdominio.",
+    "projectNameLabel": "Nombre del proyecto",
+    "projectNamePlaceholder": "Se detecta del título de la página si lo dejas vacío",
+    "htmlLabel": "HTML",
+    "charCount": "{count, number} caracteres",
+    "errorEmpty": "Pega algo de HTML primero.",
+    "errorHttp": "HTTP {status} — inténtalo de nuevo.",
+    "creating": "Creando proyecto…",
+    "createProject": "Crear proyecto",
+    "deployHint": "Siguiente: pulsa Deploy para publicar en un subdominio."
+  }
+}

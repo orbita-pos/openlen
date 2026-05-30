@@ -1,0 +1,90 @@
+{
+  "header": {
+    "inspector": "Inspector",
+    "closeInspector": "Cerrar inspector"
+  },
+  "element": {
+    "pageSettings": "Ajustes de la página"
+  },
+  "link": {
+    "title": "Enlace",
+    "destination": "Destino",
+    "destinationPlaceholder": "https://…  o  #seccion",
+    "openInNewTab": "Abrir en una pestaña nueva"
+  },
+  "image": {
+    "title": "Imagen",
+    "altText": "Texto alternativo",
+    "altPlaceholder": "Describe la imagen",
+    "source": "Origen"
+  },
+  "style": {
+    "title": "Estilo",
+    "textColor": "Color del texto",
+    "background": "Fondo"
+  },
+  "form": {
+    "title": "Formulario",
+    "notifyEmail": "Email de notificación",
+    "notifyEmailPlaceholder": "Por defecto: el email de tu cuenta",
+    "successMessage": "Mensaje de éxito",
+    "successMessagePlaceholder": "✓ Gracias — recibimos tu mensaje.",
+    "redirect": "Redirigir tras enviar",
+    "redirectPlaceholder": "https://…/gracias  (opcional)",
+    "invalidEmail": "Introduce un correo electrónico válido.",
+    "invalidUrl": "Introduce una URL completa que empiece con http:// o https://.",
+    "applyNote": "Los cambios del formulario se aplican en tu próximo deploy."
+  },
+  "testEmail": {
+    "send": "Enviar email de prueba",
+    "sending": "Enviando…",
+    "sentTo": "✓ Prueba enviada a <mono>{to}</mono>. Revisa tu bandeja de entrada y la carpeta de spam.",
+    "sendFailed": "No se pudo enviar el email de prueba.",
+    "networkError": "Error de red."
+  },
+  "page": {
+    "loading": "Cargando ajustes de la página…",
+    "title": "Página",
+    "fieldTitle": "Título",
+    "fieldTitlePlaceholder": "Título de la página",
+    "fieldDescription": "Descripción",
+    "fieldDescriptionPlaceholder": "Descripción breve para los resultados de búsqueda",
+    "fieldSocialImage": "Imagen social (OG)",
+    "fieldFavicon": "Favicon",
+    "clickHint": "Haz clic en cualquier elemento de la página para editarlo."
+  },
+  "privacy": {
+    "title": "Privacidad",
+    "enableAnalytics": "Activar analíticas",
+    "note": "Vistas anónimas + clics salientes. Sin cookies, sin almacenar IPs, sin banner de consentimiento. Se aplica en la próxima publicación."
+  },
+  "health": {
+    "title": "Estado de la página",
+    "passing": "correctos",
+    "healthy": "La página se ve saludable.",
+    "issuesToAddress": "{count, plural, one {# problema por resolver.} other {# problemas por resolver.}}"
+  },
+  "logo": {
+    "title": "Logo",
+    "previewAlt": "Vista previa del logo del proyecto",
+    "custom": "Logo personalizado",
+    "default": "Predeterminado — letra inicial",
+    "inlineSvg": "SVG en línea",
+    "usedAs": "Se usa como favicon, insignia de tarjeta y respaldo de OG.",
+    "tabUpload": "Subir",
+    "tabPasteUrl": "Pegar URL",
+    "tabAuto": "Automático",
+    "uploading": "Subiendo…",
+    "chooseImage": "Elegir imagen",
+    "uploadHint": "PNG / SVG / WebP. Las imágenes cuadradas se ven mejor.",
+    "urlHint": "Usa la URL https:// completa de una imagen alojada.",
+    "generateFromTitle": "Generar a partir del título",
+    "autoHint": "Disco coral con la primera letra de “{title}”.",
+    "defaultTitleFallback": "Página",
+    "clear": "Quitar logo",
+    "errorSaveFirst": "Guarda el proyecto antes de subir un logo.",
+    "errorUploadStatus": "Error al subir ({status})",
+    "errorUploadFailed": "Error al subir",
+    "errorFullUrl": "Usa una URL https:// completa."
+  }
+}

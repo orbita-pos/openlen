@@ -1,0 +1,70 @@
+{
+  "noProject": {
+    "title": "Todavía no hay ningún proyecto cargado.",
+    "subtitle": "Elige un punto de partida o abre uno desde Páginas."
+  },
+  "quickPrompts": {
+    "premium": "Dale un aire premium",
+    "linear": "Estilo Linear",
+    "brutalist": "Brutalista",
+    "playful": "Más desenfadado",
+    "rewriteHero": "Reescribe el hero",
+    "testimonials": "Añade una sección de testimonios"
+  },
+  "empty": {
+    "title": "Describe tu página",
+    "subtitle": "Tengo control total sobre tu página. Pídeme lo que quieras."
+  },
+  "turn": {
+    "imageSent": "Imagen enviada"
+  },
+  "streaming": {
+    "writingPage": "Escribiendo la página · {chars}",
+    "designing": "Diseñando tu página…",
+    "cancel": "Cancelar"
+  },
+  "applied": {
+    "label": "Aplicado · {time}",
+    "undo": "Deshacer"
+  },
+  "reverted": "Revertido.",
+  "error": {
+    "retry": "Reintentar"
+  },
+  "errors": {
+    "requestFailed": "Error en la solicitud ({status})",
+    "generic": "Algo salió mal: inténtalo de nuevo.",
+    "noFinalHtml": "El stream terminó sin un HTML final: inténtalo de nuevo.",
+    "cancelled": "Cancelado.",
+    "network": "Error de red: inténtalo de nuevo."
+  },
+  "chars": {
+    "count": "{count} caracteres",
+    "thousands": "{count}k caracteres"
+  },
+  "relativeTime": {
+    "justNow": "justo ahora",
+    "seconds": "hace {count}s",
+    "minutes": "hace {count}min",
+    "hours": "hace {count}h",
+    "days": "hace {count}d"
+  },
+  "composer": {
+    "scoped": "Acotado:",
+    "clearScope": "Quitar el ámbito",
+    "image": "Imagen:",
+    "removeImage": "Quitar la imagen adjunta",
+    "placeholder": "Describe cómo debería verse o leerse tu página…",
+    "placeholderScoped": "Cambia el {target} seleccionado…",
+    "attachImage": "Adjuntar una imagen",
+    "attachImageTitle": "Adjunta una imagen para insertarla en la página",
+    "selectSection": "Selecciona una sección para acotar",
+    "selectSectionTitle": "Acota tu próximo mensaje a una sola sección",
+    "cancelSelection": "Cancelar el modo de selección (ESC)",
+    "cancelSelectionTitle": "Haz clic en cualquier sección de la vista previa, o pulsa ESC para cancelar",
+    "autofill": "Rellenar con mi información",
+    "autofillLabel": "Rellenar",
+    "autofillTitle": "Rellena la plantilla con la información de tu negocio: sube una captura o escribe tus datos",
+    "send": "Enviar"
+  }
+}

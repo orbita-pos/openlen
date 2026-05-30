@@ -1,0 +1,49 @@
+{
+  "header": {
+    "titleVercel": "Deploy to Vercel",
+    "titleGithub": "Push to GitHub",
+    "subtitleVercel": "Publish this page to your own Vercel account.",
+    "subtitleGithub": "Publish this page to a GitHub Pages repo."
+  },
+  "close": "Close",
+  "notConfigured": {
+    "title": "Not available yet",
+    "body": "This deploy target isn't set up on this OpenLen instance."
+  },
+  "connect": {
+    "lead": "Connect your {provider} account to publish this page there.",
+    "button": "Connect {provider}",
+    "redirecting": "Redirecting…"
+  },
+  "connected": {
+    "as": "Connected as {account}",
+    "asAnon": "Connected",
+    "nameLabel": "Name",
+    "nameHintVercel": "Used in the URL: name.vercel.app",
+    "nameHintGithub": "Used in the URL: you.github.io/name",
+    "deploy": "Deploy",
+    "redeploy": "Re-deploy",
+    "deploying": "Deploying…",
+    "live": "Live",
+    "open": "Open",
+    "upToDate": "Up to date with your latest edits.",
+    "drift": "You have changes that aren't deployed yet.",
+    "propagation": "GitHub Pages can take a minute to go live the first time.",
+    "publishing": "Publishing… it can take up to a minute to go live. Opening it right away may show a 404 for a moment — just refresh.",
+    "disconnect": "Disconnect"
+  },
+  "errors": {
+    "loadFailed": "Couldn't load the connection.",
+    "invalidName": "Use lowercase letters, numbers and hyphens (1–39 chars, no leading or trailing hyphen).",
+    "notConnected": "Connect your account first.",
+    "tokenInvalid": "Your connection expired — please reconnect.",
+    "deployFailed": "Deploy failed: {message}",
+    "deployGeneric": "Deploy failed. Please try again.",
+    "network": "Network error. Try again.",
+    "denied": "Authorization was cancelled.",
+    "state": "Connection check failed. Please try again.",
+    "exchange": "Couldn't complete the connection. Try again.",
+    "not_configured": "This deploy target isn't set up on this OpenLen instance."
+  },
+  "confirmDisconnect": "Disconnect {provider}? Your deployed page stays live — you'll just need to reconnect to deploy again."
+}

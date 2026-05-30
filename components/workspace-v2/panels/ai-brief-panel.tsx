@@ -1,4 +1,4 @@
-// AI brief panel — sidebar entry for `?mode=ai` in /new-v2. Visually
+// AI brief panel — sidebar entry for `?mode=ai` in /new. Visually
 // mirrors ChatPanel (V2 design tokens, chat-style composer + empty-state
 // quick prompts) so the AI generation flow feels like the editing chat
 // the user already knows. Submits to the orchestrator via the parent's
@@ -7,6 +7,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import {
   Crosshair,
   ImageIcon,
@@ -35,6 +36,7 @@ export function AiBriefPanel({
   model,
   onModelChange,
 }: AiBriefPanelProps) {
+  const t = useTranslations("panelsA");
   const taRef = useRef<HTMLTextAreaElement>(null);
 
   // Focus the composer on mount so users can just start typing.
@@ -61,10 +63,10 @@ export function AiBriefPanel({
               <Sparkles size={15} />
             </div>
             <h3 className="text-[14px] font-semibold fg leading-tight">
-              Describe your page
+              {t("aiBrief.title")}
             </h3>
             <p className="mt-1 text-[11px] fg-faint leading-relaxed">
-              Tell me what you want — I&apos;ll compose the page for you.
+              {t("aiBrief.subtitle")}
             </p>
           </div>
           <div className="grid grid-cols-2 gap-1.5">
@@ -96,7 +98,7 @@ export function AiBriefPanel({
             }}
             rows={1}
             disabled={generating}
-            placeholder="A landing page for my SaaS that…"
+            placeholder={t("aiBrief.placeholder")}
             maxLength={2000}
             className="block w-full bg-transparent text-[12.5px] leading-relaxed px-3 pt-2.5 pb-1 fg placeholder:fg-faint focus:outline-none resize-none disabled:opacity-60"
             style={{ minHeight: 32 }}
@@ -109,8 +111,8 @@ export function AiBriefPanel({
               <button
                 type="button"
                 disabled
-                aria-label="Attach an image — available after generation"
-                title="Available once your project is created"
+                aria-label={t("aiBrief.attachImage")}
+                title={t("aiBrief.availableAfter")}
                 className="inline-flex h-7 w-7 items-center justify-center rounded-md fg-faint opacity-40 cursor-not-allowed"
               >
                 <ImageIcon size={13} />
@@ -118,8 +120,8 @@ export function AiBriefPanel({
               <button
                 type="button"
                 disabled
-                aria-label="Scope to a section — available after generation"
-                title="Available once your project is created"
+                aria-label={t("aiBrief.scopeSection")}
+                title={t("aiBrief.availableAfter")}
                 className="inline-flex h-7 w-7 items-center justify-center rounded-md fg-faint opacity-40 cursor-not-allowed"
               >
                 <Crosshair size={13} />
@@ -127,8 +129,8 @@ export function AiBriefPanel({
               <button
                 type="button"
                 disabled
-                aria-label="Autofill with my info — available after generation"
-                title="Available once your project is created"
+                aria-label={t("aiBrief.autofill")}
+                title={t("aiBrief.availableAfter")}
                 className="inline-flex h-7 w-7 items-center justify-center rounded-md fg-faint opacity-40 cursor-not-allowed"
               >
                 <Wand size={13} />
@@ -153,7 +155,7 @@ export function AiBriefPanel({
                 <Loader size={12} className="animate-spin" />
               ) : canGenerate ? (
                 <>
-                  <SendUp size={12} /> <span>Generate</span>
+                  <SendUp size={12} /> <span>{t("aiBrief.generate")}</span>
                 </>
               ) : (
                 <SendUp size={13} />

@@ -5,6 +5,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Inbox } from "../icons";
 
 interface SubmissionItem {
@@ -18,6 +19,7 @@ export function SubmissionsPanel({
 }: {
   currentProjectId?: string | null;
 }) {
+  const t = useTranslations("panelsB");
   const [items, setItems] = useState<SubmissionItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,7 +41,7 @@ export function SubmissionsPanel({
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Failed to load leads");
+        setError(err instanceof Error ? err.message : t("leads.loadError"));
         setItems([]);
       });
     return () => {
@@ -55,10 +57,10 @@ export function SubmissionsPanel({
             <Inbox size={14} />
           </div>
           <p className="text-[11.5px] fg-muted leading-relaxed">
-            Leads live per project.
+            {t("leads.perProject")}
           </p>
           <p className="mt-1.5 text-[10.5px] fg-faint leading-relaxed">
-            Open a project from the Pages tab to see its submissions.
+            {t("leads.perProjectHint")}
           </p>
         </div>
       </div>
@@ -69,10 +71,10 @@ export function SubmissionsPanel({
     <div className="flex flex-col h-full">
       <div className="px-3 pt-3 pb-1.5 shrink-0">
         <div className="text-[10px] uppercase tracking-[0.16em] fg-faint font-semibold ui-small">
-          Leads
+          {t("leads.title")}
         </div>
         <div className="text-[11px] fg-faint mt-0.5">
-          Form submissions from your published page.
+          {t("leads.subtitle")}
         </div>
       </div>
       {error && (
@@ -88,10 +90,10 @@ export function SubmissionsPanel({
               <Inbox size={14} />
             </div>
             <p className="text-[12px] fg-muted leading-relaxed">
-              No leads yet.
+              {t("leads.empty")}
             </p>
             <p className="mt-1 text-[10.5px] fg-faint leading-relaxed">
-              Publish your page — every form submission lands here.
+              {t("leads.emptyHint")}
             </p>
           </div>
         )}
@@ -108,14 +110,15 @@ export function SubmissionsPanel({
 }
 
 function SubmissionCard({ item }: { item: SubmissionItem }) {
+  const t = useTranslations("panelsB");
   const fields = Object.entries(item.data);
   return (
     <div className="rounded-lg ring-1 ring-[color:var(--border)] bg-[color:var(--bg)] px-2.5 py-2">
       <div className="text-[10px] fg-faint ui-small mb-1.5">
-        {relativeTime(item.createdAt)}
+        {relativeTime(item.createdAt, t)}
       </div>
       {fields.length === 0 ? (
-        <span className="text-[11.5px] fg-faint italic">Empty submission</span>
+        <span className="text-[11.5px] fg-faint italic">{t("leads.emptySubmission")}</span>
       ) : (
         <dl className="space-y-1">
           {fields.map(([k, v]) => (
@@ -147,18 +150,21 @@ function Skeletons() {
   );
 }
 
-function relativeTime(iso: string): string {
+function relativeTime(
+  iso: string,
+  t: (key: string, values?: Record<string, string | number>) => string,
+): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "—";
   const ms = Date.now() - date.getTime();
   const s = Math.floor(ms / 1000);
-  if (s < 60) return "just now";
+  if (s < 60) return t("time.justNow");
   const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ago`;
+  if (m < 60) return t("time.minutesAgo", { count: m });
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
+  if (h < 24) return t("time.hoursAgo", { count: h });
   const d = Math.floor(h / 24);
-  if (d === 1) return "yesterday";
-  if (d < 7) return `${d}d ago`;
+  if (d === 1) return t("time.yesterday");
+  if (d < 7) return t("time.daysAgo", { count: d });
   return date.toLocaleDateString();
 }

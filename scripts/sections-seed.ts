@@ -19,7 +19,11 @@ import {
 } from "../lib/sections/admin-schemas";
 import { scopeSectionDocument } from "../lib/sections/scope";
 import { upsertSection } from "../lib/sections/store";
-import { SECTION_TYPE_META, type SectionType } from "../lib/sections/types";
+import {
+  SECTION_TYPES,
+  SECTION_TYPE_META,
+  type SectionType,
+} from "../lib/sections/types";
 
 // type → folder relative to the library root. `match` (hero only) filters
 // top-level files, since the root also contains the other type subfolders.
@@ -82,37 +86,122 @@ async function listHtml(dir: string, match?: RegExp): Promise<string[]> {
     .sort();
 }
 
+// Recursively collect .html files under dir, skipping screenshot/asset dirs
+// (the claude.ai download folders carry a screenshots/ sibling).
+async function listHtmlRec(dir: string): Promise<string[]> {
+  let entries;
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const out: string[] = [];
+  for (const e of entries) {
+    if (e.isDirectory()) {
+      if (/^(screenshots?|assets|images?|img|thumbs?)$/i.test(e.name)) continue;
+      out.push(...(await listHtmlRec(join(dir, e.name))));
+    } else if (e.isFile() && e.name.toLowerCase().endsWith(".html")) {
+      out.push(join(dir, e.name));
+    }
+  }
+  return out.sort();
+}
+
+// Section types in gallery order — position i (1-based) ↔ folder "section{i}".
+const ORDERED_TYPES = [...SECTION_TYPES].sort(
+  (a, b) => SECTION_TYPE_META[a].order - SECTION_TYPE_META[b].order,
+);
+
+type Group = { type: SectionType; files: string[] };
+
+// Numbered layout: a root holding section1/ … sectionN/ subfolders (one per
+// ordered type, variants possibly nested in a variants/ subfolder). Maps
+// section1 → ORDERED_TYPES[0], section2 → [1], … Returns null when absent so
+// the caller falls back to the legacy FOLDERS map.
+async function detectNumbered(rootAbs: string): Promise<Group[] | null> {
+  let entries;
+  try {
+    entries = await readdir(rootAbs, { withFileTypes: true });
+  } catch {
+    return null;
+  }
+  const nums = entries
+    .filter((e) => e.isDirectory() && /^section\d+$/i.test(e.name))
+    .map((e) => ({ name: e.name, n: parseInt(e.name.replace(/\D/g, ""), 10) }))
+    .sort((a, b) => a.n - b.n);
+  if (nums.length === 0) return null;
+
+  const groups: Group[] = [];
+  for (const { name, n } of nums) {
+    const type = ORDERED_TYPES[n - 1];
+    if (!type) {
+      console.warn(`  !!  ${name}: no section type at position ${n} (have ${ORDERED_TYPES.length}) — skipped`);
+      continue;
+    }
+    groups.push({ type, files: await listHtmlRec(join(rootAbs, name)) });
+  }
+  return groups;
+}
+
+// Infer the section's mode from its variant label (the filenames encode it,
+// e.g. "Variant 08 - Cream Premium"); default light when no keyword.
+function modeOf(label: string): "dark" | "light" | "cream" {
+  const s = label.toLowerCase();
+  if (/\bdark\b/.test(s)) return "dark";
+  if (/\bcream\b/.test(s)) return "cream";
+  return "light";
+}
+
 async function main() {
-  const root = process.argv.slice(2).find((a) => !a.startsWith("--"));
+  const args = process.argv.slice(2);
+  const dry = args.includes("--dry-run");
+  const root = args.find((a) => !a.startsWith("--"));
   if (!root) {
-    console.error('Usage: npm run sections:seed -- "<library root dir>"');
+    console.error('Usage: npm run sections:seed -- "<library root dir>" [--dry-run]');
     process.exit(2);
   }
   const rootAbs = resolve(root);
-  console.log(`Seeding sections from ${rootAbs}\n`);
+
+  // Two layouts: numbered (section1..N/, one per ordered type) or the legacy
+  // FOLDERS map. Numbered wins when present.
+  const numbered = await detectNumbered(rootAbs);
+  let groups: Group[];
+  if (numbered) {
+    groups = numbered;
+  } else {
+    groups = [];
+    for (const folder of FOLDERS) {
+      const dir = folder.rel === "." ? rootAbs : join(rootAbs, ...folder.rel.split("/"));
+      const names = await listHtml(dir, folder.match);
+      groups.push({ type: folder.type, files: names.map((n) => join(dir, n)) });
+    }
+  }
+
+  console.log(
+    `Seeding sections from ${rootAbs} (${numbered ? "numbered" : "legacy"} layout)` +
+      `${dry ? " [DRY RUN — no DB writes]" : ""}\n`,
+  );
 
   let ok = 0;
   const seenSlugs = new Set<string>();
   const failed: { file: string; reason: string }[] = [];
 
-  for (const folder of FOLDERS) {
-    const dir = folder.rel === "." ? rootAbs : join(rootAbs, ...folder.rel.split("/"));
-    const files = await listHtml(dir, folder.match);
+  for (const { type, files } of groups) {
     if (files.length === 0) {
-      console.log(`  --  ${folder.type.padEnd(13)} (no files in ${folder.rel})`);
+      console.log(`  --  ${type.padEnd(13)} (no files)`);
       continue;
     }
 
     let counter = 0;
-    for (const file of files) {
+    for (const abs of files) {
       counter++;
-      const { idx, label } = parseVariant(file, folder.type);
+      const file = basename(abs);
+      const { idx, label } = parseVariant(file, type);
       const n = idx > 0 ? idx : counter;
-      let slug = `${folder.type}-${String(n).padStart(2, "0")}`;
+      let slug = `${type}-${String(n).padStart(2, "0")}`;
       while (seenSlugs.has(slug)) slug = `${slug}x`; // dedupe guard
       seenSlugs.add(slug);
 
-      const abs = join(dir, file);
       try {
         const raw = await readFile(abs, "utf8");
         if (!raw.trim()) {
@@ -122,16 +211,16 @@ async function main() {
         const scoped = scopeSectionDocument(raw, slug);
         const payload = {
           id: slug,
-          type: folder.type,
-          name: `${SECTION_TYPE_META[folder.type].label} — ${label}`,
+          type,
+          name: `${SECTION_TYPE_META[type].label} — ${label}`,
           variantLabel: label,
           rootTag: scoped.rootTag,
-          mode: "light" as const,
+          mode: modeOf(label),
           html: scoped.html,
           designTokens: scoped.designTokens,
           fonts: scoped.fonts,
           needsJs: scoped.needsJs,
-          hasPlaceholders: folder.type === "gallery",
+          hasPlaceholders: type === "gallery",
           status: "published" as const,
         };
 
@@ -142,6 +231,15 @@ async function main() {
         }
         if (htmlContainsEditorMarker(parsed.data.html)) {
           failed.push({ file, reason: "contains data-slot-path marker" });
+          continue;
+        }
+
+        if (dry) {
+          console.log(
+            `  dry ${slug.padEnd(18)} ${scoped.rootTag.padEnd(7)} ${parsed.data.html.length}b` +
+              ` ${payload.mode.padEnd(5)}${scoped.needsJs ? " [js]" : ""}`,
+          );
+          ok++;
           continue;
         }
 
@@ -157,7 +255,7 @@ async function main() {
     }
   }
 
-  console.log(`\nDone. seeded=${ok} failed=${failed.length}`);
+  console.log(`\nDone. ${dry ? "validated" : "seeded"}=${ok} failed=${failed.length}`);
   if (failed.length > 0) {
     console.log("\nFailures:");
     for (const f of failed) console.log(`  ${f.file} — ${f.reason}`);

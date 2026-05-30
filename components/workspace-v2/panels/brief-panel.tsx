@@ -11,6 +11,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { HistoryIcon, Sparkles } from "../icons";
 
 interface BriefPanelProps {
@@ -37,6 +38,7 @@ export function BriefPanel({
   initialBrief = "",
   onSaved,
 }: BriefPanelProps) {
+  const t = useTranslations("panelsA");
   const [draft, setDraft] = useState(initialBrief);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [errorText, setErrorText] = useState<string | null>(null);
@@ -84,13 +86,13 @@ export function BriefPanel({
         if (abort.signal.aborted) return;
         setSaveState("error");
         setErrorText(
-          err instanceof Error ? err.message : "Couldn't save — try again.",
+          err instanceof Error ? err.message : t("brief.saveErrorRetry"),
         );
       } finally {
         if (inflightRef.current === abort) inflightRef.current = null;
       }
     },
-    [currentProjectId, onSaved],
+    [currentProjectId, onSaved, t],
   );
 
   // Debounced save on every keystroke once the project is loaded.
@@ -129,10 +131,10 @@ export function BriefPanel({
             <HistoryIcon size={14} />
           </div>
           <p className="text-[11.5px] fg-muted leading-relaxed">
-            The Brief lives per project.
+            {t("brief.emptyTitle")}
           </p>
           <p className="mt-1.5 text-[10.5px] fg-faint leading-relaxed">
-            Open a project from the Pages tab to write its brief.
+            {t("brief.emptyHint")}
           </p>
         </div>
       </div>
@@ -146,11 +148,10 @@ export function BriefPanel({
       <div className="px-3 pt-3 pb-2 shrink-0">
         <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.16em] fg-faint font-semibold ui-small">
           <Sparkles size={11} className="text-accent" />
-          <span>Brief</span>
+          <span>{t("brief.label")}</span>
         </div>
         <div className="text-[11px] fg-faint mt-0.5 leading-relaxed">
-          Persistent context the AI sees on every chat. Brand, voice,
-          constraints, reminders.
+          {t("brief.description")}
         </div>
       </div>
       <div className="flex-1 min-h-0 px-3 pb-2">
@@ -158,7 +159,7 @@ export function BriefPanel({
           value={draft}
           onChange={(e) => setDraft(e.target.value.slice(0, MAX_LEN))}
           spellCheck={false}
-          placeholder={`e.g.\n\n- This is a landing for Counter, a coffee shop in Polanco.\n- Voice: warm, friendly, no tech jargon.\n- Accent: warm orange (#C66B3D).\n- Pendiente: pedir el logo final al diseñador.`}
+          placeholder={t("brief.placeholder")}
           className="w-full h-full resize-none rounded-md ring-1 ring-[color:var(--border)] bg-[color:var(--bg)] fg placeholder:fg-faint text-[12px] leading-relaxed px-3 py-2.5 focus:outline-none focus:ring-[color:var(--border-strong)] nice-scroll"
         />
       </div>
@@ -187,11 +188,12 @@ function SaveIndicator({
   state: SaveState;
   errorText: string | null;
 }) {
+  const t = useTranslations("panelsA");
   if (state === "saving") {
     return (
       <span className="inline-flex items-center gap-1.5">
         <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] pulse-soft" />
-        <span>Saving…</span>
+        <span>{t("brief.saving")}</span>
       </span>
     );
   }
@@ -199,7 +201,7 @@ function SaveIndicator({
     return (
       <span className="inline-flex items-center gap-1.5">
         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-        <span>Saved · injected on every chat</span>
+        <span>{t("brief.saved")}</span>
       </span>
     );
   }
@@ -207,14 +209,14 @@ function SaveIndicator({
     return (
       <span className="inline-flex items-center gap-1.5 text-red-600 dark:text-red-400">
         <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-        <span>{errorText ?? "Save failed"}</span>
+        <span>{errorText ?? t("brief.saveFailed")}</span>
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1.5">
       <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--border-strong)]" />
-      <span>Ready</span>
+      <span>{t("brief.ready")}</span>
     </span>
   );
 }

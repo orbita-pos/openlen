@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 
 // PageBuildingLoader — window-card carousel loader (v0-style).
 //
@@ -10,9 +11,9 @@ import type { ReactNode } from "react";
 // assembling in a staggered wave, as if being designed. Pure CSS — a
 // translateX marquee + a per-block build loop — no JS, no deps.
 
-const SECTIONS: { label: string; body: ReactNode }[] = [
+const SECTIONS: { labelKey: string; body: ReactNode }[] = [
   {
-    label: "Hero",
+    labelKey: "loader.sections.hero",
     body: (
       <>
         <div
@@ -41,7 +42,7 @@ const SECTIONS: { label: string; body: ReactNode }[] = [
     ),
   },
   {
-    label: "Features",
+    labelKey: "loader.sections.features",
     body: (
       <div style={{ display: "flex", gap: 10, width: "100%" }}>
         <div
@@ -70,7 +71,7 @@ const SECTIONS: { label: string; body: ReactNode }[] = [
     ),
   },
   {
-    label: "Pricing",
+    labelKey: "loader.sections.pricing",
     body: (
       <div
         style={{
@@ -106,7 +107,7 @@ const SECTIONS: { label: string; body: ReactNode }[] = [
     ),
   },
   {
-    label: "Reviews",
+    labelKey: "loader.sections.reviews",
     body: (
       <>
         <div style={{ display: "flex", gap: 9, width: "100%" }}>
@@ -159,7 +160,7 @@ const SECTIONS: { label: string; body: ReactNode }[] = [
     ),
   },
   {
-    label: "Footer",
+    labelKey: "loader.sections.footer",
     body: (
       <>
         <div
@@ -200,12 +201,13 @@ function SectionCard({ label, body }: { label: string; body: ReactNode }) {
 }
 
 export function PageBuildingLoader({ caption }: { caption?: string }) {
+  const t = useTranslations("wsChrome");
   return (
     <div className="cz-root">
       <div className="cz-viewport" aria-hidden>
         <div className="cz-track">
           {[...SECTIONS, ...SECTIONS].map((s, i) => (
-            <SectionCard key={i} label={s.label} body={s.body} />
+            <SectionCard key={i} label={t(s.labelKey)} body={s.body} />
           ))}
         </div>
       </div>

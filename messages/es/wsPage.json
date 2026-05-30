@@ -1,0 +1,40 @@
+{
+  "defaultProjectName": "Página de precios",
+  "chatDraft": {
+    "iconChanged": "Acabo de cambiar el icono aquí. Actualiza el título y la descripción de alrededor para que el significado coincida con el nuevo icono.",
+    "imageChanged": "Acabo de cambiar la imagen aquí. Actualiza el texto de alrededor para que coincida con lo que muestra la imagen."
+  },
+  "lockReason": {
+    "choosing": "Primero elige un punto de partida",
+    "created": "Disponible cuando hayas creado tu página"
+  },
+  "formEmail": {
+    "noProject": "No hay ningún proyecto cargado.",
+    "noDestination": "Primero define un correo de notificación en este formulario (o en tu cuenta).",
+    "sendFailed": "No se pudo enviar ({status}).",
+    "networkError": "Error de red."
+  },
+  "template": {
+    "networkError": "Error de red — inténtalo de nuevo."
+  },
+  "aiStatus": {
+    "designing": "Diseñando tu página…",
+    "thinking": "Pensando el diseño…",
+    "serverSaturated": "El servidor está muy saturado — esto puede tardar. No cierres la página, por favor.",
+    "readingBrief": "Leyendo tu brief…"
+  },
+  "aiError": {
+    "title": "Falló la generación",
+    "tweak": "Ajusta tu brief en la barra lateral e inténtalo de nuevo."
+  },
+  "inserted": {
+    "label": "Insertaste <b>{name}</b>",
+    "matching": "Adaptando…",
+    "matchToPage": "✨ Adaptar a la página",
+    "dismiss": "Descartar"
+  },
+  "editing": {
+    "noHtml": "Este proyecto aún no tiene contenido HTML.",
+    "loading": "Cargando proyecto…"
+  }
+}
