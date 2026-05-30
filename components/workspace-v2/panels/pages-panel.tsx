@@ -11,7 +11,7 @@
 //     project renders at desktop breakpoints (responsive media queries hit
 //     correctly).
 //   * pointer-events: none on the iframe so the wrapping <button> handles
-//     clicks (route to /new-v2?project=<id>).
+//     clicks (route to /new?project=<id>).
 //   * Active project (matches `currentProjectId`) gets an accent ring +
 //     "Active" pill. Click on the active card is a no-op.
 //   * The unmount-on-tab-switch refetches on next open — captures any
@@ -26,7 +26,8 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { Plus, Sparkles } from "../icons";
 import { Button, StatusDot } from "../ui";
 
@@ -46,6 +47,7 @@ interface PagesPanelProps {
 }
 
 export function PagesPanel({ currentProjectId }: PagesPanelProps) {
+  const t = useTranslations("panelsB");
   const router = useRouter();
   const [items, setItems] = useState<ProjectListItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -85,7 +87,7 @@ export function PagesPanel({ currentProjectId }: PagesPanelProps) {
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Failed to load projects");
+        setError(err instanceof Error ? err.message : t("pages.loadError"));
         setItems([]);
       });
     return () => {
@@ -96,13 +98,13 @@ export function PagesPanel({ currentProjectId }: PagesPanelProps) {
   const onCardClick = useCallback(
     (id: string) => {
       if (id === currentProjectId) return;
-      router.push(`/new-v2?project=${id}`);
+      router.push(`/new?project=${id}`);
     },
     [currentProjectId, router],
   );
 
   const onNewPage = useCallback(() => {
-    router.push("/new-v2");
+    router.push("/new");
   }, [router]);
 
   return (
@@ -114,7 +116,7 @@ export function PagesPanel({ currentProjectId }: PagesPanelProps) {
           className="w-full justify-center"
           onClick={onNewPage}
         >
-          <Plus size={12} /> New page
+          <Plus size={12} /> {t("pages.newPage")}
         </Button>
       </div>
       <div className="flex-1 overflow-y-auto nice-scroll px-3 pb-3">
@@ -148,6 +150,7 @@ function ProjectCard({
   active: boolean;
   onClick: () => void;
 }) {
+  const t = useTranslations("panelsB");
   return (
     <button
       type="button"
@@ -166,13 +169,13 @@ function ProjectCard({
           </span>
           {active && (
             <span className="text-[9px] uppercase tracking-wider text-accent font-semibold ui-small shrink-0">
-              Active
+              {t("pages.active")}
             </span>
           )}
         </div>
         <div className="mt-0.5 flex items-center justify-between gap-1.5">
           <span className="text-[10.5px] fg-faint truncate">
-            {relativeTime(project.updatedAt)}
+            {relativeTime(project.updatedAt, t)}
           </span>
           <StatusBadge project={project} />
         </div>
@@ -182,6 +185,7 @@ function ProjectCard({
 }
 
 function StatusBadge({ project }: { project: ProjectListItem }) {
+  const t = useTranslations("panelsB");
   if (project.subdomain) {
     return (
       <span
@@ -192,8 +196,8 @@ function StatusBadge({ project }: { project: ProjectListItem }) {
         }`}
         title={
           project.hasUnpublishedChanges
-            ? "Published — has unpublished edits"
-            : "Published"
+            ? t("pages.publishedUnpublishedEdits")
+            : t("pages.published")
         }
       >
         <StatusDot
@@ -208,7 +212,7 @@ function StatusBadge({ project }: { project: ProjectListItem }) {
   }
   return (
     <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 ui-small shrink-0">
-      <StatusDot color="#F59E0B" /> Draft
+      <StatusDot color="#F59E0B" /> {t("pages.draft")}
     </span>
   );
 }
@@ -223,6 +227,7 @@ function ProjectThumb({
   projectId: string;
   title: string;
 }) {
+  const t = useTranslations("panelsB");
   const wrapperRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -279,7 +284,7 @@ function ProjectThumb({
     <div
       ref={wrapperRef}
       className="relative overflow-hidden border-b bd"
-      aria-label={`Thumbnail of ${title}`}
+      aria-label={t("pages.thumbnailOf", { title })}
     >
       <div
         ref={stageRef}
@@ -299,7 +304,7 @@ function ProjectThumb({
         {mounted && scale > 0 && (
           <iframe
             src={`/api/projects/${projectId}/raw`}
-            title={`${title} thumbnail`}
+            title={t("pages.thumbnailTitle", { title })}
             sandbox="allow-scripts allow-same-origin"
             loading="lazy"
             referrerPolicy="no-referrer"
@@ -348,13 +353,14 @@ function EmptyOrError({
   onNewPage: () => void;
   error: string | null;
 }) {
+  const t = useTranslations("panelsB");
   return (
     <div className="px-2 py-8 text-center">
       <div className="mx-auto mb-3 inline-flex h-9 w-9 items-center justify-center rounded-md ring-1 ring-[color:var(--border)] bg-elev text-accent">
         <Sparkles size={14} />
       </div>
       <p className="text-[12px] fg-muted leading-relaxed">
-        {error ? "Couldn't load your projects." : "No pages yet."}
+        {error ? t("pages.loadFailed") : t("pages.empty")}
       </p>
       {error ? (
         <p className="mt-1 text-[10.5px] fg-faint leading-relaxed font-mono">
@@ -362,7 +368,7 @@ function EmptyOrError({
         </p>
       ) : (
         <p className="mt-1 text-[10.5px] fg-faint leading-relaxed">
-          Create one to see it here.
+          {t("pages.emptyHint")}
         </p>
       )}
       <button
@@ -370,25 +376,28 @@ function EmptyOrError({
         onClick={onNewPage}
         className="mt-3 inline-flex items-center gap-1 h-7 px-2.5 rounded-md bg-[var(--accent)] text-white text-[11.5px] font-medium hover:brightness-105 transition"
       >
-        <Plus size={11} /> New page
+        <Plus size={11} /> {t("pages.newPage")}
       </button>
     </div>
   );
 }
 
-function relativeTime(iso: string): string {
+function relativeTime(
+  iso: string,
+  t: (key: string, values?: Record<string, string | number>) => string,
+): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "—";
   const ms = Date.now() - date.getTime();
   const s = Math.floor(ms / 1000);
-  if (s < 60) return "just now";
+  if (s < 60) return t("time.justNow");
   const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ago`;
+  if (m < 60) return t("time.minutesAgo", { count: m });
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
+  if (h < 24) return t("time.hoursAgo", { count: h });
   const d = Math.floor(h / 24);
-  if (d === 1) return "yesterday";
-  if (d < 7) return `${d}d ago`;
-  if (d < 30) return `${Math.floor(d / 7)}w ago`;
+  if (d === 1) return t("time.yesterday");
+  if (d < 7) return t("time.daysAgo", { count: d });
+  if (d < 30) return t("time.weeksAgo", { count: Math.floor(d / 7) });
   return date.toLocaleDateString();
 }

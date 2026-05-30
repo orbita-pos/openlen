@@ -11,6 +11,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/cn";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -71,6 +72,7 @@ export function PublishModal({
   onSuccess,
   onOpenCustomDomain,
 }: PublishModalProps) {
+  const t = useTranslations("modalsDomain");
   const [value, setValue] = useState(project.subdomain ?? "");
   const [check, setCheck] = useState<CheckState>({ kind: "idle" });
   const [submitting, setSubmitting] = useState<
@@ -192,7 +194,7 @@ export function PublishModal({
         else if (reason === "reserved") setCheck({ kind: "reserved" });
         else if (reason === "invalid") setCheck({ kind: "invalid" });
         else if (reason === "limit_reached") setCheck({ kind: "limit" });
-        else setError(`Couldn't publish: ${reason}`);
+        else setError(t("publish.errors.publishGeneric", { reason }));
         setSubmitting(null);
         return;
       }
@@ -200,11 +202,22 @@ export function PublishModal({
       onClose();
     } catch (err) {
       setError(
-        `Couldn't publish: ${err instanceof Error ? err.message : String(err)}`,
+        t("publish.errors.publishGeneric", {
+          reason: err instanceof Error ? err.message : String(err),
+        }),
       );
       setSubmitting(null);
     }
-  }, [submitting, check, isCurrent, project.id, normalized, onSuccess, onClose]);
+  }, [
+    submitting,
+    check,
+    isCurrent,
+    project.id,
+    normalized,
+    onSuccess,
+    onClose,
+    t,
+  ]);
 
   const doUnpublish = useCallback(async () => {
     if (submitting) return;
@@ -217,7 +230,11 @@ export function PublishModal({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}) as { error?: string });
-        setError(`Couldn't unpublish: ${data?.error ?? `HTTP ${res.status}`}`);
+        setError(
+          t("publish.errors.unpublishGeneric", {
+            reason: data?.error ?? `HTTP ${res.status}`,
+          }),
+        );
         setSubmitting(null);
         return;
       }
@@ -225,15 +242,17 @@ export function PublishModal({
       onClose();
     } catch (err) {
       setError(
-        `Couldn't unpublish: ${err instanceof Error ? err.message : String(err)}`,
+        t("publish.errors.unpublishGeneric", {
+          reason: err instanceof Error ? err.message : String(err),
+        }),
       );
       setSubmitting(null);
     }
-  }, [submitting, project.id, project.subdomain, onSuccess, onClose]);
+  }, [submitting, project.id, project.subdomain, onSuccess, onClose, t]);
 
   if (!open) return null;
 
-  const previewSub = normalized || "your-name";
+  const previewSub = normalized || t("publish.previewName");
   const fullUrl = `https://${previewSub}.${BASE_HOST}`;
   const isPublished = project.subdomain !== null;
   // canPublish stays true while the modal renders the project's current
@@ -252,10 +271,10 @@ export function PublishModal({
   // way to push them live. Publish is content-addressed on disk so a no-op
   // re-publish is essentially free.
   let primaryLabel: string;
-  if (submitting === "publishing") primaryLabel = "Publishing…";
-  else if (wouldChangeName) primaryLabel = "Move to new subdomain";
-  else if (isPublished && isCurrent) primaryLabel = "Re-publish";
-  else primaryLabel = "Publish";
+  if (submitting === "publishing") primaryLabel = t("publish.primary.publishing");
+  else if (wouldChangeName) primaryLabel = t("publish.primary.moveSubdomain");
+  else if (isPublished && isCurrent) primaryLabel = t("publish.primary.republish");
+  else primaryLabel = t("publish.primary.publish");
 
   return (
     <div
@@ -272,12 +291,14 @@ export function PublishModal({
             </span>
             <div className="min-w-0">
               <div className="text-[14px] font-semibold tracking-tight truncate">
-                {isPublished ? "Manage publish" : "Publish to openlen.com"}
+                {isPublished
+                  ? t("publish.header.titleManage")
+                  : t("publish.header.titlePublish")}
               </div>
               <div className="text-[11px] text-zinc-500 truncate">
                 {isPublished
-                  ? "Pick a new name, re-publish, or take it down."
-                  : "Pick a name. Live on the public web in a second."}
+                  ? t("publish.header.subtitleManage")
+                  : t("publish.header.subtitlePublish")}
               </div>
             </div>
           </div>
@@ -285,7 +306,7 @@ export function PublishModal({
             type="button"
             onClick={onClose}
             disabled={submitting !== null}
-            aria-label="Close"
+            aria-label={t("publish.close")}
             className="inline-flex h-7 w-7 items-center justify-center rounded-md text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <X size={14} />
@@ -298,7 +319,7 @@ export function PublishModal({
               htmlFor="publish-subdomain"
               className="block text-[11px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-semibold mb-1.5"
             >
-              Subdomain
+              {t("publish.subdomainLabel")}
             </label>
             <div
               className={cn(
@@ -326,7 +347,7 @@ export function PublishModal({
                     void doPublish();
                   }
                 }}
-                placeholder="your-name"
+                placeholder={t("publish.subdomainPlaceholder")}
                 spellCheck={false}
                 autoCapitalize="none"
                 autoCorrect="off"
@@ -344,7 +365,7 @@ export function PublishModal({
 
           <div className="rounded-lg bg-zinc-50/60 dark:bg-zinc-900/50 ring-1 ring-zinc-200 dark:ring-zinc-800 px-3.5 py-3">
             <div className="text-[10.5px] uppercase tracking-wider text-zinc-400 font-semibold mb-1">
-              Preview
+              {t("publish.preview")}
             </div>
             <div className="text-[13px] font-mono text-zinc-700 dark:text-zinc-300 break-all">
               {fullUrl}
@@ -359,8 +380,7 @@ export function PublishModal({
           )}
 
           <div className="text-[11px] text-zinc-500 leading-relaxed">
-            Free tier: 1 published page. Pro: 10. Lowercase letters, numbers,
-            and hyphens (1–63 chars).
+            {t("publish.limitsHint")}
           </div>
         </div>
 
@@ -370,7 +390,7 @@ export function PublishModal({
               (confirmUnpublish ? (
                 <>
                   <span className="text-[11px] text-red-600 dark:text-red-400">
-                    Sure?
+                    {t("publish.unpublish.sure")}
                   </span>
                   <button
                     type="button"
@@ -383,7 +403,7 @@ export function PublishModal({
                     ) : (
                       <Trash2 size={12} />
                     )}
-                    Yes, unpublish
+                    {t("publish.unpublish.confirm")}
                   </button>
                   <button
                     type="button"
@@ -391,7 +411,7 @@ export function PublishModal({
                     disabled={submitting !== null}
                     className="h-8 px-2.5 rounded-md text-[12px] font-medium text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
                   >
-                    No
+                    {t("publish.unpublish.no")}
                   </button>
                 </>
               ) : (
@@ -401,7 +421,7 @@ export function PublishModal({
                   disabled={submitting !== null}
                   className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[12px] font-medium text-zinc-500 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition disabled:opacity-50"
                 >
-                  <Trash2 size={12} /> Unpublish
+                  <Trash2 size={12} /> {t("publish.unpublish.button")}
                 </button>
               ))}
           </div>
@@ -421,7 +441,7 @@ export function PublishModal({
                 }}
                 className="mr-auto inline-flex items-center gap-1 h-8 px-2 rounded-md text-[12px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-coral-600 dark:hover:text-coral-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
               >
-                Or use my own domain
+                {t("publish.useOwnDomain")}
                 <span aria-hidden>→</span>
               </button>
             )}
@@ -431,7 +451,7 @@ export function PublishModal({
               disabled={submitting !== null}
               className="h-8 px-3 rounded-md text-[12px] font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition disabled:opacity-50"
             >
-              Cancel
+              {t("publish.cancel")}
             </button>
             <button
               type="button"
@@ -467,15 +487,19 @@ function Status({
   isCurrent: boolean;
   url: string;
 }) {
+  const t = useTranslations("modalsDomain");
   if (check.kind === "idle") {
     return (
-      <span className="text-[11px] text-zinc-400">Choose a name above.</span>
+      <span className="text-[11px] text-zinc-400">
+        {t("publish.status.choose")}
+      </span>
     );
   }
   if (check.kind === "checking") {
     return (
       <span className="inline-flex items-center gap-1.5 text-[11px] text-zinc-500">
-        <Loader2 size={11} className="animate-spin" /> Checking availability…
+        <Loader2 size={11} className="animate-spin" />{" "}
+        {t("publish.status.checking")}
       </span>
     );
   }
@@ -483,49 +507,49 @@ function Status({
     if (isCurrent) {
       return (
         <span className="inline-flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400">
-          <CheckCircle2 size={11} /> This is your current page —{" "}
+          <CheckCircle2 size={11} /> {t("publish.status.currentPage")}{" "}
           <a
             href={url}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-0.5 underline-offset-2 hover:underline"
           >
-            visit <ExternalLink size={9} />
+            {t("publish.status.visit")} <ExternalLink size={9} />
           </a>
         </span>
       );
     }
     return (
       <span className="inline-flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400">
-        <CheckCircle2 size={11} /> Available
+        <CheckCircle2 size={11} /> {t("publish.status.available")}
       </span>
     );
   }
   if (check.kind === "invalid") {
     return (
       <span className="text-[11px] text-red-600 dark:text-red-400">
-        Use lowercase letters, numbers, and hyphens (not leading/trailing).
+        {t("publish.status.invalid")}
       </span>
     );
   }
   if (check.kind === "reserved") {
     return (
       <span className="text-[11px] text-red-600 dark:text-red-400">
-        This name is reserved. Try another.
+        {t("publish.status.reserved")}
       </span>
     );
   }
   if (check.kind === "taken") {
     return (
       <span className="text-[11px] text-red-600 dark:text-red-400">
-        Already taken. Try another.
+        {t("publish.status.taken")}
       </span>
     );
   }
   if (check.kind === "limit") {
     return (
       <span className="text-[11px] text-red-600 dark:text-red-400">
-        Plan cap reached — unpublish another page or upgrade.
+        {t("publish.status.limit")}
       </span>
     );
   }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { useState } from "react";
 import { ArrowRight, Loader2 } from "lucide-react";
 
@@ -18,11 +19,13 @@ interface UseTemplateButtonProps {
 export function UseTemplateButton({
   templateId,
   className = "",
-  label = "Usar este template",
+  label,
 }: UseTemplateButtonProps) {
+  const t = useTranslations("marketing");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const ctaLabel = label ?? t("useTemplate.cta");
 
   const onClick = async () => {
     setLoading(true);
@@ -40,19 +43,24 @@ export function UseTemplateButton({
       }
       if (!res.ok) {
         const body = await res.text().catch(() => "");
-        setError(`Error ${res.status}: ${body.slice(0, 120)}`);
+        setError(
+          t("useTemplate.errorStatus", {
+            status: res.status,
+            detail: body.slice(0, 120),
+          }),
+        );
         setLoading(false);
         return;
       }
       const data = (await res.json()) as { projectId?: string };
       if (data.projectId) {
-        router.push(`/new-v2?project=${data.projectId}`);
+        router.push(`/new?project=${data.projectId}`);
       } else {
-        setError("Respuesta inesperada del servidor");
+        setError(t("useTemplate.unexpectedResponse"));
         setLoading(false);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error de red");
+      setError(err instanceof Error ? err.message : t("useTemplate.networkError"));
       setLoading(false);
     }
   };
@@ -71,11 +79,11 @@ export function UseTemplateButton({
         {loading ? (
           <>
             <Loader2 size={14} className="animate-spin" />
-            <span>Creando proyecto…</span>
+            <span>{t("useTemplate.creating")}</span>
           </>
         ) : (
           <>
-            <span>{label}</span>
+            <span>{ctaLabel}</span>
             <ArrowRight size={14} />
           </>
         )}

@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { listTemplates } from "@/lib/templates/store";
@@ -21,6 +22,7 @@ const FEATURED_CREATOR_IDS = [
 ] as const;
 
 export async function CreatorShowcase() {
+  const t = await getTranslations("marketing");
   const all = await listTemplates();
   const byId = new Map(all.map((t) => [t.id, t]));
   const featured = FEATURED_CREATOR_IDS.flatMap((id) => {
@@ -39,24 +41,24 @@ export async function CreatorShowcase() {
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
           <div>
             <Badge tone="coral">
-              <Sparkles size={11} /> For creators
+              <Sparkles size={11} /> {t("creatorShowcase.badge")}
             </Badge>
             <h2 className="mt-4 text-3xl sm:text-5xl font-semibold tracking-tightest leading-[1.05]">
-              Link pages you{" "}
-              <span className="text-zinc-500 dark:text-zinc-400">actually own.</span>
+              {t.rich("creatorShowcase.title", {
+                muted: (chunks) => (
+                  <span className="text-zinc-500 dark:text-zinc-400">{chunks}</span>
+                ),
+              })}
             </h2>
             <p className="mt-4 max-w-xl text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              {creatorCount} hand-built link-in-bio templates for streamers,
-              musicians, photographers, indie makers, and premium creators.
-              Per-link click tracking + page analytics built in — no Linktree
-              tax, no Google Analytics, no cookies.
+              {t("creatorShowcase.description", { count: creatorCount })}
             </p>
           </div>
           <Link
             href="/templates"
             className="shrink-0 inline-flex items-center gap-1.5 rounded-full ring-1 ring-zinc-300 dark:ring-zinc-700 hover:ring-zinc-900 dark:hover:ring-zinc-100 px-5 py-2.5 text-sm font-medium text-zinc-900 dark:text-zinc-100 transition self-start md:self-end"
           >
-            All {creatorCount} creator templates
+            {t("creatorShowcase.allCount", { count: creatorCount })}
             <ArrowRight size={14} />
           </Link>
         </div>

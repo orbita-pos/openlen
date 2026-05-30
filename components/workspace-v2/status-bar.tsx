@@ -6,6 +6,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Cloud, CloudCheck, Globe } from "./icons";
 import { StatusDot } from "./ui";
 
@@ -15,15 +16,21 @@ interface StatusBarProps {
   lastSavedAt?: Date | null;
 }
 
-function fmtAgo(seconds: number): string {
-  if (seconds < 5) return "just now";
-  if (seconds < 60) return `${seconds}s ago`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  return `${Math.floor(seconds / 86400)}d ago`;
+function fmtAgo(
+  seconds: number,
+  t: (key: string, values?: Record<string, string | number>) => string,
+): string {
+  if (seconds < 5) return t("status.ago.justNow");
+  if (seconds < 60) return t("status.ago.seconds", { count: seconds });
+  if (seconds < 3600)
+    return t("status.ago.minutes", { count: Math.floor(seconds / 60) });
+  if (seconds < 86400)
+    return t("status.ago.hours", { count: Math.floor(seconds / 3600) });
+  return t("status.ago.days", { count: Math.floor(seconds / 86400) });
 }
 
 export function StatusBar({ saving, published, lastSavedAt }: StatusBarProps) {
+  const t = useTranslations("wsChrome");
   // Tick once a second only when we have a save timestamp to keep the
   // "Saved · Xs ago" label fresh. No timestamp = no timer.
   const [, setTick] = useState(0);
@@ -44,7 +51,7 @@ export function StatusBar({ saving, published, lastSavedAt }: StatusBarProps) {
       <span className="inline-flex items-center gap-1.5">
         <StatusDot color="#F59E0B" />
         <span className="fg-muted font-medium">
-          Drift from {published.subdomain}.openlen.com
+          {t("status.drift", { domain: `${published.subdomain}.openlen.com` })}
         </span>
       </span>
     );
@@ -53,7 +60,7 @@ export function StatusBar({ saving, published, lastSavedAt }: StatusBarProps) {
       <span className="inline-flex items-center gap-1.5">
         <CloudCheck size={11} className="text-emerald-500" />
         <span className="fg-muted font-medium">
-          Saved · {fmtAgo(savedSeconds!)}
+          {t("status.saved", { ago: fmtAgo(savedSeconds!, t) })}
         </span>
       </span>
     );
@@ -62,7 +69,7 @@ export function StatusBar({ saving, published, lastSavedAt }: StatusBarProps) {
       <span className="inline-flex items-center gap-1.5">
         <StatusDot color="#10B981" pulse />
         <span className="fg-muted font-medium truncate">
-          Live at {published.subdomain}.openlen.com
+          {t("status.live", { domain: `${published.subdomain}.openlen.com` })}
         </span>
       </span>
     );
@@ -70,7 +77,7 @@ export function StatusBar({ saving, published, lastSavedAt }: StatusBarProps) {
     main = (
       <span className="inline-flex items-center gap-1.5">
         <Globe size={11} className="fg-faint" />
-        <span className="fg-faint font-medium">Ready to ship</span>
+        <span className="fg-faint font-medium">{t("status.ready")}</span>
       </span>
     );
   }
@@ -86,12 +93,12 @@ export function StatusBar({ saving, published, lastSavedAt }: StatusBarProps) {
           aria-hidden={!saving}
         >
           <Cloud size={10} className="pulse-soft" />
-          <span className="font-semibold">Saving…</span>
+          <span className="font-semibold">{t("status.saving")}</span>
         </span>
         <kbd className="inline-flex items-center px-1 rounded bg-elev border bd font-mono text-[10px]">
           ⌘K
         </kbd>
-        <span>command palette</span>
+        <span>{t("status.commandPalette")}</span>
       </div>
     </div>
   );

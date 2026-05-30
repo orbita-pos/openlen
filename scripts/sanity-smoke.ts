@@ -88,7 +88,12 @@ const checks: Check[] = [
     expect: 307,
   },
   {
-    name: "new-v2 (gated -> 307)",
+    name: "new (gated -> 307)",
+    path: "/new",
+    expect: 307,
+  },
+  {
+    name: "new-v2 (legacy redirect -> 307)",
     path: "/new-v2",
     expect: 307,
   },

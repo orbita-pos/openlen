@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useFocusTrap } from "./use-focus-trap";
 
 type Tab = "image" | "text";
@@ -14,16 +15,6 @@ type Stage =
   | "persisting"
   | "done"
   | "error";
-
-const STAGE_LABELS: Record<Exclude<Stage, "idle">, string> = {
-  extracting: "Leyendo imagen…",
-  tagging: "Preparando template…",
-  "calling-model": "Kimi K2.6 escribiendo…",
-  applying: "Aplicando cambios…",
-  persisting: "Guardando…",
-  done: "Listo",
-  error: "Error",
-};
 
 interface TextFormState {
   business_name: string;
@@ -56,6 +47,7 @@ export function AutofillModal({
   onClose,
   onApplied,
 }: AutofillModalProps) {
+  const t = useTranslations("modalsAsset");
   const [tab, setTab] = useState<Tab>("image");
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [imageBytes, setImageBytes] = useState(0);
@@ -112,21 +104,21 @@ export function AutofillModal({
 
   const handleFile = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) {
-      setErrorMessage("El archivo no es una imagen.");
+      setErrorMessage(t("autofill.errors.notImage"));
       return;
     }
     if (file.type !== "image/jpeg" && file.type !== "image/png") {
-      setErrorMessage("Solo aceptamos JPG o PNG.");
+      setErrorMessage(t("autofill.errors.onlyJpgPng"));
       return;
     }
     if (file.size > 8 * 1024 * 1024) {
       setErrorMessage(
-        `Imagen muy grande (${(file.size / 1024 / 1024).toFixed(1)} MB, máximo 8 MB).`,
+        t("autofill.errors.tooLarge", { size: (file.size / 1024 / 1024).toFixed(1) }),
       );
       return;
     }
     if (file.size < 4 * 1024) {
-      setErrorMessage("Imagen muy chica — probá con un screenshot o foto real (mínimo 4 KB).");
+      setErrorMessage(t("autofill.errors.tooSmallBytes"));
       return;
     }
     setErrorMessage(null);
@@ -140,7 +132,10 @@ export function AutofillModal({
       probe.onload = () => {
         if (probe.naturalWidth < 200 || probe.naturalHeight < 200) {
           setErrorMessage(
-            `Imagen muy chica (${probe.naturalWidth}×${probe.naturalHeight}px). Mínimo 200×200 — probá con un screenshot de tu sitio o foto del menú.`,
+            t("autofill.errors.tooSmallDims", {
+              width: probe.naturalWidth,
+              height: probe.naturalHeight,
+            }),
           );
           setImageDataUrl(null);
           return;
@@ -148,12 +143,12 @@ export function AutofillModal({
         setImageDataUrl(reader.result as string);
       };
       probe.onerror = () => {
-        setErrorMessage("No pudimos leer la imagen. Probá con otra.");
+        setErrorMessage(t("autofill.errors.cantRead"));
       };
       probe.src = reader.result;
     };
     reader.readAsDataURL(file);
-  }, []);
+  }, [t]);
 
   const handleDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
@@ -178,7 +173,7 @@ export function AutofillModal({
   const buildBody = useCallback((): Record<string, unknown> | null => {
     if (tab === "image") {
       if (!imageDataUrl) {
-        setErrorMessage("Subí una imagen primero.");
+        setErrorMessage(t("autofill.errors.uploadFirst"));
         return null;
       }
       return {
@@ -189,7 +184,7 @@ export function AutofillModal({
       };
     }
     if (!textForm.business_name.trim()) {
-      setErrorMessage("Necesitás al menos el nombre del negocio.");
+      setErrorMessage(t("autofill.errors.needBusinessName"));
       return null;
     }
     const data = {
@@ -208,7 +203,7 @@ export function AutofillModal({
       language_detected: "es",
     };
     return { projectId, source: "text", data };
-  }, [tab, imageDataUrl, imageMime, projectId, textForm]);
+  }, [tab, imageDataUrl, imageMime, projectId, textForm, t]);
 
   const submit = useCallback(async () => {
     const body = buildBody();
@@ -232,13 +227,13 @@ export function AutofillModal({
     } catch (err) {
       if (controller.signal.aborted) return;
       setStage("error");
-      setErrorMessage(err instanceof Error ? err.message : "Network error");
+      setErrorMessage(err instanceof Error ? err.message : t("autofill.errors.network"));
       return;
     }
     if (!response.ok || !response.body) {
       const text = await response.text().catch(() => "");
       setStage("error");
-      setErrorMessage(`Servidor ${response.status}: ${text.slice(0, 200)}`);
+      setErrorMessage(t("autofill.errors.server", { status: response.status, detail: text.slice(0, 200) }));
       return;
     }
 
@@ -252,7 +247,7 @@ export function AutofillModal({
       } catch (err) {
         if (controller.signal.aborted) return;
         setStage("error");
-        setErrorMessage(err instanceof Error ? err.message : "Stream read failed");
+        setErrorMessage(err instanceof Error ? err.message : t("autofill.errors.streamRead"));
         return;
       }
       if (chunk.done) break;
@@ -289,12 +284,12 @@ export function AutofillModal({
           return;
         } else if (eventName === "error") {
           setStage("error");
-          setErrorMessage((parsed as { message?: string }).message ?? "Unknown error");
+          setErrorMessage((parsed as { message?: string }).message ?? t("autofill.errors.unknown"));
           return;
         }
       }
     }
-  }, [buildBody, onApplied, onClose, tab]);
+  }, [buildBody, onApplied, onClose, tab, t]);
 
   const cancel = useCallback(() => {
     abortRef.current?.abort();
@@ -334,13 +329,13 @@ export function AutofillModal({
         <div className="px-4 sm:px-5 py-3 sm:py-4 border-b bd flex items-center justify-between gap-2">
           <div className="min-w-0">
             <div id="autofill-modal-title" className="text-[14px] sm:text-[15px] font-semibold fg font-display">
-              Llenar con tu info
+              {t("autofill.title")}
             </div>
             <div className="hidden sm:block text-[12px] fg-faint mt-0.5 leading-snug">
-              Subí una imagen con la info de tu negocio o escribí los datos a mano. Tu template se llena con tu contenido real — el diseño no cambia.
+              {t("autofill.subtitle")}
             </div>
             <div className="sm:hidden text-[11px] fg-faint mt-0.5 leading-snug">
-              Imagen o datos → tu template se llena con tu contenido.
+              {t("autofill.subtitleShort")}
             </div>
           </div>
           <button
@@ -348,7 +343,7 @@ export function AutofillModal({
             onClick={() => !isBusy && onClose()}
             disabled={isBusy}
             className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-md fg-faint hover:fg hover:bg-hover transition disabled:opacity-30"
-            aria-label="Cerrar"
+            aria-label={t("common.close")}
           >
             ✕
           </button>
@@ -363,7 +358,7 @@ export function AutofillModal({
               tab === "image" ? "seg-active" : "fg-muted hover:fg hover:bg-hover"
             }`}
           >
-            📷 Subir imagen
+            📷 {t("autofill.tabs.image")}
           </button>
           <button
             type="button"
@@ -373,7 +368,7 @@ export function AutofillModal({
               tab === "text" ? "seg-active" : "fg-muted hover:fg hover:bg-hover"
             }`}
           >
-            ✍️ Escribir info
+            ✍️ {t("autofill.tabs.text")}
           </button>
         </div>
 
@@ -390,21 +385,21 @@ export function AutofillModal({
                   <div>
                     <img
                       src={imageDataUrl}
-                      alt="Preview"
+                      alt={t("autofill.image.previewAlt")}
                       className="max-h-48 mx-auto rounded-md shadow-card"
                     />
                     <div className="mt-3 text-[12px] fg-faint">
-                      {(imageBytes / 1024).toFixed(0)} KB · click para cambiar
+                      {t("autofill.image.sizeChange", { kb: (imageBytes / 1024).toFixed(0) })}
                     </div>
                   </div>
                 ) : (
                   <div>
                     <div className="text-3xl mb-2">📷</div>
                     <div className="text-[13px] fg">
-                      Arrastrá una imagen, click para elegir, o pegá del portapapeles
+                      {t("autofill.image.dropPrompt")}
                     </div>
                     <div className="text-[11px] fg-faint mt-2">
-                      JPG o PNG · máximo 8 MB · screenshots, fotos de menú, brochures…
+                      {t("autofill.image.hint")}
                     </div>
                   </div>
                 )}
@@ -425,41 +420,41 @@ export function AutofillModal({
           {tab === "text" && (
             <div className="space-y-2.5">
               <Field
-                label="Nombre del negocio *"
+                label={t("autofill.fields.businessName.label")}
                 value={textForm.business_name}
                 onChange={(v) => setTextForm((s) => ({ ...s, business_name: v }))}
-                placeholder="Tacos de Juan"
+                placeholder={t("autofill.fields.businessName.placeholder")}
               />
               <Field
-                label="Industria / tipo"
+                label={t("autofill.fields.industry.label")}
                 value={textForm.industry}
                 onChange={(v) => setTextForm((s) => ({ ...s, industry: v }))}
-                placeholder="Taquería tradicional mexicana"
+                placeholder={t("autofill.fields.industry.placeholder")}
               />
               <Field
-                label="Tagline (1 línea punchy)"
+                label={t("autofill.fields.tagline.label")}
                 value={textForm.tagline}
                 onChange={(v) => setTextForm((s) => ({ ...s, tagline: v }))}
-                placeholder="Auténticos tacos al pastor desde 1989"
+                placeholder={t("autofill.fields.tagline.placeholder")}
               />
               <FieldTextarea
-                label="Pitch (1-2 frases sobre tu negocio)"
+                label={t("autofill.fields.pitch.label")}
                 value={textForm.pitch}
                 onChange={(v) => setTextForm((s) => ({ ...s, pitch: v }))}
-                placeholder="Más de 30 años sirviendo los mejores tacos al pastor de Monterrey. Tradición familiar, ingredientes frescos."
+                placeholder={t("autofill.fields.pitch.placeholder")}
               />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <Field
-                  label="Palabra clave del hero"
+                  label={t("autofill.fields.heroKeyword.label")}
                   value={textForm.hero_keyword}
                   onChange={(v) => setTextForm((s) => ({ ...s, hero_keyword: v }))}
-                  placeholder="tradición"
+                  placeholder={t("autofill.fields.heroKeyword.placeholder")}
                 />
                 <Field
-                  label="CTA principal"
+                  label={t("autofill.fields.ctaPrimary.label")}
                   value={textForm.cta_primary}
                   onChange={(v) => setTextForm((s) => ({ ...s, cta_primary: v }))}
-                  placeholder="Pide por WhatsApp"
+                  placeholder={t("autofill.fields.ctaPrimary.placeholder")}
                 />
               </div>
             </div>
@@ -472,7 +467,7 @@ export function AutofillModal({
               <>
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--accent)] animate-pulse" />
                 <span className="truncate">
-                  {STAGE_LABELS[stage as Exclude<Stage, "idle">]} · {elapsedSec}s
+                  {t(`autofill.stages.${stage as Exclude<Stage, "idle">}`)} · {elapsedSec}s
                   {bytes > 0 && stage === "calling-model"
                     ? ` · ${(bytes / 1024).toFixed(1)} KB`
                     : ""}
@@ -481,7 +476,7 @@ export function AutofillModal({
             )}
             {stage === "done" && (
               <span className="text-emerald-600 dark:text-emerald-400">
-                ✓ Listo · {elapsedSec}s
+                {t("autofill.doneStatus", { seconds: elapsedSec })}
               </span>
             )}
             {stage === "error" && errorMessage && (
@@ -492,8 +487,8 @@ export function AutofillModal({
             {stage === "idle" && !errorMessage && (
               <span className="truncate">
                 {tab === "image"
-                  ? "Tip: foto del menú, captura de tu sitio, brochure — todo sirve."
-                  : "Tip: con nombre + tagline + pitch alcanza. Resto del template queda intacto."}
+                  ? t("autofill.tips.image")
+                  : t("autofill.tips.text")}
               </span>
             )}
             {stage === "idle" && errorMessage && (
@@ -509,7 +504,7 @@ export function AutofillModal({
                 onClick={cancel}
                 className="px-3 py-1.5 text-[12.5px] fg-muted hover:fg hover:bg-hover rounded-md transition"
               >
-                Cancelar
+                {t("common.cancel")}
               </button>
             ) : (
               <button
@@ -517,7 +512,7 @@ export function AutofillModal({
                 onClick={onClose}
                 className="px-3 py-1.5 text-[12.5px] fg-muted hover:fg hover:bg-hover rounded-md transition"
               >
-                Cerrar
+                {t("common.closeButton")}
               </button>
             )}
             <button
@@ -526,7 +521,7 @@ export function AutofillModal({
               disabled={isBusy || stage === "done"}
               className="px-4 py-1.5 text-[12.5px] font-medium rounded-md bg-[color:var(--accent)] text-white shadow-coral hover:brightness-105 active:brightness-95 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
             >
-              {isBusy ? "Procesando…" : "Aplicar"}
+              {isBusy ? t("autofill.processing") : t("common.apply")}
             </button>
           </div>
         </div>

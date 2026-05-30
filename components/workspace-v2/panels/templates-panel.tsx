@@ -3,7 +3,7 @@
 // Each card is a live thumbnail of the HTML served from
 // /public/templates/curated/<id>.html. Clicking a card calls
 // /api/projects/from-template { templateId } which clones the HTML into a
-// new project owned by the caller and redirects to /new-v2?project=<newId>
+// new project owned by the caller and redirects to /new?project=<newId>
 // where the Deploy dropdown is enabled. Templates themselves never have a
 // subdomain — only the resulting user project does, at publish time.
 
@@ -11,6 +11,8 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { ChevronRight, Check, Sparkles } from "../icons";
 import {
   TemplatePreviewFrame,
@@ -43,12 +45,13 @@ function TemplateCard({
   onPreview,
   previewing,
 }: TemplateCardProps) {
+  const t = useTranslations("panelsA");
   const applied = previewing;
   return (
     <button
       type="button"
       onClick={() => onPreview(template)}
-      aria-label={`Preview template: ${template.name}`}
+      aria-label={t("templates.previewTemplateAria", { name: template.name })}
       aria-pressed={applied}
       className={`group relative w-full text-left rounded-lg overflow-hidden ring-1 transition-all duration-200 ${
         applied
@@ -76,7 +79,7 @@ function TemplateCard({
             className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 h-7 rounded-full text-white"
             style={{ background: "var(--accent)" }}
           >
-            Preview
+            {t("templates.preview")}
             <ChevronRight size={11} stroke={2.5} />
           </span>
         </div>
@@ -90,7 +93,7 @@ function TemplateCard({
           {applied && (
             <span className="inline-flex items-center gap-0.5 text-[9px] uppercase tracking-[0.14em] text-accent font-semibold shrink-0">
               <Check size={9} stroke={3} />
-              Previewing
+              {t("templates.previewing")}
             </span>
           )}
         </div>
@@ -121,6 +124,7 @@ function FamilyHeader({
   tagline: string;
   count: number;
 }) {
+  const t = useTranslations("panelsA");
   return (
     <div className="mb-3 mt-1 first:mt-0">
       <div className="flex items-baseline justify-between gap-2">
@@ -128,7 +132,7 @@ function FamilyHeader({
           {label}
         </h3>
         <span className="text-[10px] fg-faint tabular-nums">
-          {count} template{count === 1 ? "" : "s"}
+          {t("templates.templateCount", { count })}
         </span>
       </div>
       <p className="text-[10.5px] fg-faint leading-snug mt-1">{tagline}</p>
@@ -143,10 +147,12 @@ export function TemplatesPanel({
   const [familyFilter, setFamilyFilter] = useState<TemplateFamily | "all">(
     "all",
   );
+  const t = useTranslations("panelsA");
   const searchParams = useSearchParams();
   const currentProjectId = searchParams.get("project");
   const { templates, byFamily, isLoading, error } = useTemplates();
 
+  const tf = useTranslations("families");
   const visibleFamilies = TEMPLATE_FAMILIES.filter(
     (f) => familyFilter === "all" || familyFilter === f.id,
   );
@@ -156,19 +162,29 @@ export function TemplatesPanel({
       <div className="flex items-center gap-2 mb-2">
         <Sparkles size={13} className="text-accent" />
         <h2 className="text-[11px] uppercase tracking-[0.16em] fg-faint font-semibold ui-small">
-          Curated templates
+          {t("templates.heading")}
         </h2>
       </div>
       <p className="text-[11px] fg-muted leading-snug mb-3">
-        Click a card to preview it big. When you&apos;re ready, hit{" "}
-        <b>Use this template</b> in the banner to clone it into a new project.
+        {t.rich("templates.intro", {
+          b: (chunks) => <b>{chunks}</b>,
+        })}
       </p>
 
       {currentProjectId && (
         <div className="mb-3 flex items-start gap-2 px-2.5 py-2 rounded-md ring-1 ring-amber-300/60 dark:ring-amber-500/30 bg-amber-50 dark:bg-amber-500/5">
           <span className="text-[11px] text-amber-800 dark:text-amber-200 leading-snug">
-            Picking a template starts a <b>new</b> project. Your current
-            project stays saved in <a href="/projects" className="underline underline-offset-2">/projects</a>.
+            {t.rich("templates.newProjectWarning", {
+              b: (chunks) => <b>{chunks}</b>,
+              projectsLink: (chunks) => (
+                <Link
+                  href="/projects"
+                  className="underline underline-offset-2"
+                >
+                  {chunks}
+                </Link>
+              ),
+            })}
           </span>
         </div>
       )}
@@ -183,7 +199,8 @@ export function TemplatesPanel({
               : "fg-muted bg-hover hover:fg"
           }`}
         >
-          All{templates.length > 0 ? ` ${templates.length}` : ""}
+          {t("templates.all")}
+          {templates.length > 0 ? ` ${templates.length}` : ""}
         </button>
         {TEMPLATE_FAMILIES.map((f) => (
           <button
@@ -196,14 +213,14 @@ export function TemplatesPanel({
                 : "fg-muted bg-hover hover:fg"
             }`}
           >
-            {f.label}
+            {tf(`${f.id}.label`)}
           </button>
         ))}
       </div>
 
       {error && (
         <div className="mb-3 px-2.5 py-2 rounded-md ring-1 ring-rose-300/60 dark:ring-rose-500/30 bg-rose-50 dark:bg-rose-500/5 text-[11px] text-rose-700 dark:text-rose-300">
-          Failed to load templates — {error}
+          {t("templates.loadError", { error })}
         </div>
       )}
 
@@ -223,8 +240,8 @@ export function TemplatesPanel({
           return (
             <section key={family.id} className="mb-5 last:mb-2">
               <FamilyHeader
-                label={family.label}
-                tagline={family.tagline}
+                label={tf(`${family.id}.label`)}
+                tagline={tf(`${family.id}.tagline`)}
                 count={familyTemplates.length}
               />
               <div className="flex flex-col gap-3">
@@ -242,9 +259,7 @@ export function TemplatesPanel({
         })}
 
       <div className="mt-4 px-1 text-[10px] fg-faint leading-relaxed">
-        Templates are static HTML — pure markup, Tailwind CDN, Google Fonts.
-        Cloning makes them yours; only your project claims a subdomain when
-        you hit Deploy.
+        {t("templates.footer")}
       </div>
     </div>
   );

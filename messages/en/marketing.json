@@ -1,0 +1,217 @@
+{
+  "nav": {
+    "links": {
+      "templates": "Templates",
+      "features": "Features",
+      "pricing": "Pricing",
+      "docs": "Docs"
+    },
+    "githubAria": "OpenLen on GitHub",
+    "toggleDark": "Toggle dark mode",
+    "signIn": "Sign in",
+    "tryFree": "Try it free"
+  },
+  "hero": {
+    "alphaBadge": "Alpha",
+    "alphaPitch": "165 hand-built templates — free during alpha",
+    "title": "Landing pages you own.<br></br><muted>AI-built.</muted> <gradient>Open source.</gradient>",
+    "subtitle": "Generate from a prompt, pick from <strong>165 templates</strong>, or paste your own HTML. Edit, publish to your subdomain, get <strong>privacy-first analytics</strong> built in.",
+    "tagline": "Your HTML. Your subdomain. AGPLv3 — fork, audit, self-host. No lock-in, no consent banners.",
+    "pagesThisWeek": "<strong>{count, number}</strong> pages generated this week",
+    "githubAria": "OpenLen on GitHub",
+    "starOnGithub": "Star on GitHub"
+  },
+  "heroPrompt": {
+    "placeholder": "A landing page for my SaaS that…",
+    "tools": {
+      "attachImage": "Attach an image",
+      "scopeSection": "Scope to a section",
+      "autofill": "Autofill with your info",
+      "titleSuffix": "{label} — available once your page exists",
+      "ariaSuffix": "{label} (available after generation)"
+    },
+    "generate": "Generate",
+    "tryLabel": "Try"
+  },
+  "signInDialog": {
+    "close": "Close",
+    "title": "Sign in to generate",
+    "body": "You need an account to build your page — it's free. Your prompt is saved, so you pick up right where you left off.",
+    "createAccount": "Create free account",
+    "logIn": "Log in"
+  },
+  "demoStrip": {
+    "eyebrow": "{count} HAND-BUILT TEMPLATES — ALL READY TO PUBLISH",
+    "title": "Real templates.<br></br><muted> Pick, fill, publish.</muted>",
+    "description": "Each template is self-contained HTML — Tailwind + Google Fonts inline, no React runtime. Clone, edit copy + images, deploy to your subdomain.",
+    "browseAll": "Browse all {count} templates"
+  },
+  "features": {
+    "badge": "Why OpenLen",
+    "title": "Built for people who'd rather <muted>own software</muted> than rent it.",
+    "items": {
+      "templates": {
+        "title": "165 production templates",
+        "body": "Hand-built marketing landings + 30 link-in-bio creator hubs (streamer, musician, photographer, indie maker). Pick one, customize in-iframe, publish to your subdomain."
+      },
+      "analytics": {
+        "title": "Privacy-first analytics built in",
+        "body": "Per-link click tracking, page visits, top referrers, country split — no cookies, no IP storage, no consent banner. GDPR-clear by design. Same model as Plausible, but yours."
+      },
+      "ownHtml": {
+        "title": "Your HTML, your subdomain",
+        "body": "Pure HTML + Tailwind output. Publish to '<you>'.openlen.com instantly, or take the file and host anywhere — Vercel, Cloudflare, GitHub Pages, your own server. No runtime lock-in."
+      },
+      "openSource": {
+        "title": "Open source (AGPLv3)",
+        "body": "Fork it. Audit it. Self-host the whole stack on a single Hetzner box. Generator, editor, publish pipeline, and analytics all live in the repo."
+      }
+    }
+  },
+  "comparison": {
+    "badge": "Compare",
+    "title": "We did the math, so you don't have to.",
+    "subtitle": "An honest, unflattering side-by-side. Updated May 2026.",
+    "cols": {
+      "price": "Price",
+      "yourCode": "Your code",
+      "openSource": "Open source",
+      "selfHost": "Self-host",
+      "analytics": "Analytics"
+    },
+    "values": {
+      "freeAlpha": "Free (alpha)",
+      "builtIn": "Built-in",
+      "export": "Export",
+      "basic": "Basic",
+      "paidTier": "Paid tier"
+    },
+    "thatsUs": "that's us",
+    "footnote": "Pricing reflects public plans as of May 2026. Linktree included because our 30 link-in-bio creator templates target the same audience — difference is you own the HTML and the subdomain."
+  },
+  "creatorShowcase": {
+    "badge": "For creators",
+    "title": "Link pages you <muted>actually own.</muted>",
+    "description": "{count} hand-built link-in-bio templates for streamers, musicians, photographers, indie makers, and premium creators. Per-link click tracking + page analytics built in — no Linktree tax, no Google Analytics, no cookies.",
+    "allCount": "All {count} creator templates"
+  },
+  "pricing": {
+    "badge": "Pricing",
+    "title": "Free during alpha. <muted>Self-host forever.</muted>",
+    "subtitle": "No paywall while we're shipping v1 — every feature is open for testing. Pro tier with custom domains + higher limits is in the works.",
+    "comingSoon": "Coming soon",
+    "mostPopular": "Most popular",
+    "githubAria": "OpenLen on GitHub",
+    "footnote": "All plans include the open-source generator under AGPL. Hosted plans add convenience, not features.",
+    "free": {
+      "name": "Free",
+      "suffix": "during alpha",
+      "blurb": "Everything works. No paywall during the alpha.",
+      "cta": "Try it free",
+      "features": {
+        "0": "Generate from a prompt (Gemini 2.5 Pro)",
+        "1": "165 templates including 30 link-in-bio",
+        "2": "Publish to '<you>'.openlen.com",
+        "3": "Privacy-first analytics + per-link click tracking",
+        "4": "Lead forms with email notifications"
+      }
+    },
+    "pro": {
+      "name": "Pro",
+      "suffix": "/month",
+      "blurb": "Higher generation limits + custom domains.",
+      "cta": "Get notified at launch",
+      "features": {
+        "0": "Everything in Free",
+        "1": "1,000 AI generations / month",
+        "2": "Custom domains (links.your-brand.com)",
+        "3": "Analytics retention beyond 90 days",
+        "4": "Priority email support"
+      }
+    },
+    "selfHost": {
+      "name": "Self-host",
+      "suffix": "forever",
+      "blurb": "Run the whole stack on your own box.",
+      "cta": "Clone the repo",
+      "features": {
+        "0": "AGPLv3 — yours to modify + redistribute",
+        "1": "Bring your own Gemini / Kimi API key",
+        "2": "Single Hetzner box runs everything",
+        "3": "Wildcard subdomain via nginx",
+        "4": "No bill, no rate limit, no oversight"
+      }
+    }
+  },
+  "finalCta": {
+    "badge": "Own your stack",
+    "title": "Stop paying for lock-in.<br></br><muted>Start owning your landing pages.</muted>",
+    "subtitle": "One prompt away from a landing page that's <strong>yours, deployable anywhere, in code you can read.</strong>",
+    "generateBtn": "Generate my page — free",
+    "githubAria": "OpenLen on GitHub",
+    "cloneBtn": "Clone on GitHub",
+    "perks": {
+      "noCard": "No credit card",
+      "agpl": "AGPLv3 — yours forever",
+      "selfHost": "Self-host on a single box"
+    }
+  },
+  "footer": {
+    "tagline": "An open lens on your landing pages. AI-built, your HTML, your subdomain — AGPLv3, no lock-in.",
+    "githubAria": "OpenLen on GitHub",
+    "twitterAria": "Twitter",
+    "docsAria": "Docs",
+    "licensed": "AGPL-3.0 licensed",
+    "builtWith": "Built with OpenLen, naturally.",
+    "operational": "All systems operational",
+    "product": {
+      "title": "Product",
+      "features": "Features",
+      "pricing": "Pricing",
+      "changelog": "Changelog",
+      "roadmap": "Roadmap"
+    },
+    "openSource": {
+      "title": "Open source",
+      "agplLicense": "AGPL license",
+      "contribute": "Contribute"
+    },
+    "company": {
+      "title": "Company",
+      "blog": "Blog",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "contact": "Contact"
+    }
+  },
+  "gallery": {
+    "searchPlaceholder": "Search by name, family, or use case…",
+    "searchAria": "Search templates",
+    "clearSearch": "Clear search",
+    "showing": "Showing {shown} of {total} templates",
+    "matching": "Matching <code>{query}</code>",
+    "templateCount": "{count, plural, one {# template} other {# templates}}",
+    "featured": {
+      "eyebrow": "Top-tier showcases",
+      "title": "Featured templates",
+      "description": "Hand-built showcases with real photography — examples of what your page can look like fully populated.",
+      "curated": "{count} curated"
+    },
+    "empty": {
+      "message": "No templates match <code>{query}</code>.",
+      "clear": "Clear search"
+    }
+  },
+  "templateCard": {
+    "featured": "Featured",
+    "previewAlt": "{name} template preview",
+    "livePreview": "{name} live preview"
+  },
+  "useTemplate": {
+    "cta": "Use this template",
+    "creating": "Creating project…",
+    "errorStatus": "Error {status}: {detail}",
+    "unexpectedResponse": "Unexpected response from the server",
+    "networkError": "Network error"
+  }
+}

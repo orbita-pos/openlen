@@ -1,18 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { ArrowRight, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GithubIcon } from "@/components/ui/brand-icons";
 import { cn } from "@/lib/cn";
 import { OpenLenMark } from "@/components/openlen-logo";
+import { LocaleSwitcher } from "@/components/locale-switcher";
 
 const links = [
-  { label: "Templates", href: "/templates" },
-  { label: "Features", href: "/#features" },
-  { label: "Pricing", href: "/#pricing" },
-  { label: "Docs", href: "/#docs" },
+  { labelKey: "nav.links.templates", href: "/templates" },
+  { labelKey: "nav.links.features", href: "/#features" },
+  { labelKey: "nav.links.pricing", href: "/#pricing" },
+  { labelKey: "nav.links.docs", href: "/#docs" },
 ] as const;
 
 export interface NavProps {
@@ -21,6 +23,7 @@ export interface NavProps {
 }
 
 export function Nav({ dark, onToggleDark }: NavProps) {
+  const t = useTranslations("marketing");
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -48,19 +51,19 @@ export function Nav({ dark, onToggleDark }: NavProps) {
 
         <nav className="hidden md:flex items-center gap-1 text-sm">
           {links.map((l) => (
-            <a
-              key={l.label}
+            <Link
+              key={l.labelKey}
               href={l.href}
               className="px-3 py-1.5 rounded-md text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
             >
-              {l.label}
-            </a>
+              {t(l.labelKey)}
+            </Link>
           ))}
           <a
             href="https://github.com/jesusbernalrj/inari-pages"
             target="_blank"
             rel="noreferrer"
-            aria-label="OpenLen on GitHub"
+            aria-label={t("nav.githubAria")}
             className="ml-1 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
           >
             <GithubIcon size={14} />
@@ -69,10 +72,11 @@ export function Nav({ dark, onToggleDark }: NavProps) {
         </nav>
 
         <div className="flex items-center gap-1.5">
+          <LocaleSwitcher />
           <button
             type="button"
             onClick={onToggleDark}
-            aria-label="Toggle dark mode"
+            aria-label={t("nav.toggleDark")}
             className="inline-flex h-9 w-9 items-center justify-center rounded-md text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-900 transition-colors"
           >
             {dark ? <Sun size={16} /> : <Moon size={16} />}
@@ -81,11 +85,11 @@ export function Nav({ dark, onToggleDark }: NavProps) {
             href="/login"
             className="hidden sm:inline-flex items-center h-9 px-3 rounded-md text-[13px] font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors"
           >
-            Sign in
+            {t("nav.signIn")}
           </Link>
           <Link href="/register" className="hidden sm:inline-flex">
             <Button size="sm">
-              Try it free <ArrowRight size={14} />
+              {t("nav.tryFree")} <ArrowRight size={14} />
             </Button>
           </Link>
         </div>

@@ -1,0 +1,40 @@
+{
+  "defaultProjectName": "Pricing Page",
+  "chatDraft": {
+    "iconChanged": "I just changed the icon here. Update the surrounding title and description so the meaning matches the new icon.",
+    "imageChanged": "I just changed the image here. Update the surrounding copy so it matches what the image shows."
+  },
+  "lockReason": {
+    "choosing": "Pick a starting point first",
+    "created": "Available once your page is created"
+  },
+  "formEmail": {
+    "noProject": "No project loaded.",
+    "noDestination": "Set a notify email in this form (or your account) first.",
+    "sendFailed": "Send failed ({status}).",
+    "networkError": "Network error."
+  },
+  "template": {
+    "networkError": "Network error — try again."
+  },
+  "aiStatus": {
+    "designing": "Designing your page…",
+    "thinking": "Thinking through the design…",
+    "serverSaturated": "The server is very busy — this may take a while. Please don't close the page.",
+    "readingBrief": "Reading your brief…"
+  },
+  "aiError": {
+    "title": "Generation failed",
+    "tweak": "Tweak your brief in the sidebar and try again."
+  },
+  "inserted": {
+    "label": "Inserted <b>{name}</b>",
+    "matching": "Matching…",
+    "matchToPage": "✨ Match to page",
+    "dismiss": "Dismiss"
+  },
+  "editing": {
+    "noHtml": "This project has no HTML content yet.",
+    "loading": "Loading project…"
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "common": {
+    "loading": "Cargando…"
+  },
+  "projectName": {
+    "workspaceLabel": "Espacio de trabajo",
+    "untitled": "Sin título"
+  },
+  "save": {
+    "saving": "Guardando…",
+    "saved": "Guardado · ahora mismo"
+  },
+  "deploy": {
+    "button": "Publicar",
+    "shipIt": "Lánzalo",
+    "liveAt": "En vivo en {subdomain}.openlen.com",
+    "unpublishedChanges": "Tienes cambios sin publicar.",
+    "open": "Abrir",
+    "republish": "Volver a publicar",
+    "unpublish": "Despublicar",
+    "publishCta": {
+      "title": "Publicar en openlen.com",
+      "subtitle": "Hosting gratis en tu propio subdominio"
+    },
+    "customDomain": {
+      "title": "Dominio propio",
+      "subtitle": "Sirve esta página desde tu propio dominio"
+    },
+    "providers": {
+      "vercel": "Desplegar en Vercel",
+      "github": "Subir a GitHub",
+      "vercelSubtitle": "Tu propia URL *.vercel.app",
+      "githubSubtitle": "Un repo de GitHub Pages"
+    },
+    "previousDeploys": "Despliegues anteriores",
+    "noPriorDeploys": "Aún no hay despliegues anteriores."
+  },
+  "rollback": {
+    "confirm": "¿Restaurar el sitio en vivo al despliegue {sha}? Los visitantes verán esta versión anterior en cuestión de segundos.",
+    "errorGone": "Ese despliegue se eliminó del disco y no se puede restaurar.",
+    "errorGeneric": "No se pudo restaurar. Inténtalo de nuevo.",
+    "inProgress": "Restaurando…"
+  },
+  "theme": {
+    "lightMode": "Modo claro",
+    "darkMode": "Modo oscuro"
+  },
+  "account": {
+    "fallbackName": "Cuenta",
+    "allProjects": "Todos los proyectos",
+    "signOut": "Cerrar sesión"
+  },
+  "relativeTime": {
+    "seconds": "hace {count}s",
+    "minutes": "hace {count}min",
+    "hours": "hace {count}h",
+    "days": "hace {count}d"
+  }
+}

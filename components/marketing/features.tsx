@@ -6,49 +6,53 @@ import {
   Unlock,
   type LucideIcon,
 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
 
 interface FeatureItem {
   icon: LucideIcon;
-  title: string;
-  body: string;
+  titleKey: string;
+  bodyKey: string;
 }
 
 const items: FeatureItem[] = [
   {
     icon: LayoutGrid,
-    title: "165 production templates",
-    body: "Hand-built marketing landings + 30 link-in-bio creator hubs (streamer, musician, photographer, indie maker). Pick one, customize in-iframe, publish to your subdomain.",
+    titleKey: "features.items.templates.title",
+    bodyKey: "features.items.templates.body",
   },
   {
     icon: BarChart3,
-    title: "Privacy-first analytics built in",
-    body: "Per-link click tracking, page visits, top referrers, country split — no cookies, no IP storage, no consent banner. GDPR-clear by design. Same model as Plausible, but yours.",
+    titleKey: "features.items.analytics.title",
+    bodyKey: "features.items.analytics.body",
   },
   {
     icon: Code,
-    title: "Your HTML, your subdomain",
-    body: "Pure HTML + Tailwind output. Publish to <you>.openlen.com instantly, or take the file and host anywhere — Vercel, Cloudflare, GitHub Pages, your own server. No runtime lock-in.",
+    titleKey: "features.items.ownHtml.title",
+    bodyKey: "features.items.ownHtml.body",
   },
   {
     icon: Unlock,
-    title: "Open source (AGPLv3)",
-    body: "Fork it. Audit it. Self-host the whole stack on a single Hetzner box. Generator, editor, publish pipeline, and analytics all live in the repo.",
+    titleKey: "features.items.openSource.title",
+    bodyKey: "features.items.openSource.body",
   },
 ];
 
-export function Features() {
+export async function Features() {
+  const t = await getTranslations("marketing");
   return (
     <section id="features" className="relative">
       <div className="mx-auto max-w-6xl px-6 py-24 sm:py-28">
         <div className="max-w-2xl">
           <Badge tone="coral">
-            <Heart size={11} /> Why OpenLen
+            <Heart size={11} /> {t("features.badge")}
           </Badge>
           <h2 className="mt-4 text-3xl sm:text-5xl font-semibold tracking-tightest leading-[1.05]">
-            Built for people who&apos;d rather{" "}
-            <span className="text-zinc-500 dark:text-zinc-400">own software</span> than
-            rent it.
+            {t.rich("features.title", {
+              muted: (chunks) => (
+                <span className="text-zinc-500 dark:text-zinc-400">{chunks}</span>
+              ),
+            })}
           </h2>
         </div>
 
@@ -57,17 +61,17 @@ export function Features() {
             const Icon = it.icon;
             return (
               <div
-                key={it.title}
+                key={it.titleKey}
                 className="group relative bg-white dark:bg-[#0a0a0a] p-7 sm:p-8 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-950"
               >
                 <div className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-coral-50 text-coral-600 dark:bg-coral-500/10 dark:text-coral-400 ring-1 ring-coral-200/60 dark:ring-coral-500/20">
                   <Icon size={18} strokeWidth={2} />
                 </div>
                 <h3 className="mt-5 text-[15px] font-semibold tracking-tight">
-                  {it.title}
+                  {t(it.titleKey)}
                 </h3>
                 <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                  {it.body}
+                  {t(it.bodyKey)}
                 </p>
               </div>
             );

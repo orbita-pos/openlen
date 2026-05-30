@@ -89,7 +89,7 @@ export async function GET(
   // ?domain-connect=done so the modal knows to re-poll verification.
   const url = new URL(req.url);
   const origin = `${url.protocol}//${url.host}`;
-  const redirectUri = `${origin}/new-v2?project=${encodeURIComponent(id)}&domain-connect=done`;
+  const redirectUri = `${origin}/new?project=${encodeURIComponent(id)}&domain-connect=done`;
 
   let applyUrl: string;
   try {

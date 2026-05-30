@@ -1,11 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { useEffect, useRef, useState } from "react";
-import {
-  TEMPLATE_FAMILY_META,
-  type TemplateFamily,
-} from "@/lib/templates/families";
+import { type TemplateFamily } from "@/lib/templates/families";
 
 // Minimal shape this component needs. Marketing pages pass DB records
 // directly; the schema lives in @/lib/templates/store.
@@ -48,6 +46,7 @@ export function TemplateCard({
   compact = false,
   priority = false,
 }: TemplateCardProps) {
+  const t = useTranslations("marketing");
   const wrapperRef = useRef<HTMLAnchorElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -110,7 +109,7 @@ export function TemplateCard({
     return () => ro.disconnect();
   }, [hasThumbnail]);
 
-  const family = TEMPLATE_FAMILY_META[template.family];
+  const tf = useTranslations("families");
 
   return (
     <Link
@@ -132,7 +131,7 @@ export function TemplateCard({
     >
       {template.featured && (
         <span className="absolute z-20 top-2 right-2 inline-flex items-center gap-1 rounded-full bg-coral-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow-md uppercase tracking-wider">
-          ★ Featured
+          ★ {t("templateCard.featured")}
         </span>
       )}
       {/* Browser chrome strip */}
@@ -172,7 +171,7 @@ export function TemplateCard({
           <img
             ref={imgRef}
             src={template.thumbnailUrl ?? ""}
-            alt={`${template.name} template preview`}
+            alt={t("templateCard.previewAlt", { name: template.name })}
             width={nativeWidth}
             height={nativeHeight}
             loading={priority ? "eager" : "lazy"}
@@ -195,7 +194,7 @@ export function TemplateCard({
           scale > 0 && (
             <iframe
               src={template.storageUrl}
-              title={`${template.name} live preview`}
+              title={t("templateCard.livePreview", { name: template.name })}
               sandbox="allow-scripts allow-same-origin"
               loading="lazy"
               referrerPolicy="no-referrer"
@@ -233,7 +232,7 @@ export function TemplateCard({
                   {template.name}
                 </h3>
                 <span className="text-[10.5px] uppercase tracking-wider text-zinc-500 dark:text-zinc-500 font-medium">
-                  {family.label}
+                  {tf(`${template.family}.label`)}
                 </span>
               </div>
               <p className="mt-1 text-[12.5px] text-zinc-600 dark:text-zinc-400 leading-relaxed line-clamp-2">

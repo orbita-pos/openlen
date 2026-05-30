@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
 import { ArrowRight, Star } from "lucide-react";
 import { GithubIcon } from "@/components/ui/brand-icons";
 import { countProjectsSince } from "@/lib/projects";
@@ -34,6 +35,7 @@ function formatStars(n: number): string {
 }
 
 export async function Hero() {
+  const t = await getTranslations("marketing");
   // Real numbers for the trust row. Each chip hides itself when there is
   // nothing real to show yet (pre-launch): a 0 page count and a 0 / failed
   // star fetch each drop their chip instead of rendering a sad "0".
@@ -58,9 +60,9 @@ export async function Hero() {
             className="group inline-flex items-center gap-2 rounded-full bg-white dark:bg-zinc-950 ring-1 ring-zinc-200 dark:ring-zinc-800 px-3 py-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 shadow-sm hover:ring-zinc-300 dark:hover:ring-zinc-700 transition"
           >
             <span className="inline-flex items-center gap-1 rounded-full bg-coral-500/10 text-coral-700 dark:text-coral-300 px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
-              Alpha
+              {t("hero.alphaBadge")}
             </span>
-            165 hand-built templates — free during alpha
+            {t("hero.alphaPitch")}
             <ArrowRight
               size={12}
               className="opacity-50 transition group-hover:translate-x-0.5 group-hover:opacity-100"
@@ -68,28 +70,30 @@ export async function Hero() {
           </Link>
 
           <h1 className="mt-7 max-w-4xl text-balance text-5xl sm:text-6xl md:text-7xl font-semibold tracking-tightest leading-[1.02]">
-            Landing pages you own.
-            <br />
-            <span className="text-zinc-500 dark:text-zinc-400">AI-built.</span>{" "}
-            <span className="bg-gradient-to-br from-coral-500 to-coral-700 bg-clip-text text-transparent">
-              Open source.
-            </span>
+            {t.rich("hero.title", {
+              br: () => <br />,
+              muted: (chunks) => (
+                <span className="text-zinc-500 dark:text-zinc-400">{chunks}</span>
+              ),
+              gradient: (chunks) => (
+                <span className="bg-gradient-to-br from-coral-500 to-coral-700 bg-clip-text text-transparent">
+                  {chunks}
+                </span>
+              ),
+            })}
           </h1>
 
           <p className="mt-6 max-w-xl text-pretty text-lg text-zinc-600 dark:text-zinc-400">
-            Generate from a prompt, pick from{" "}
-            <span className="text-zinc-900 dark:text-zinc-100 font-medium">
-              165 templates
-            </span>
-            , or paste your own HTML. Edit, publish to your subdomain, get{" "}
-            <span className="text-zinc-900 dark:text-zinc-100 font-medium">
-              privacy-first analytics
-            </span>{" "}
-            built in.
+            {t.rich("hero.subtitle", {
+              strong: (chunks) => (
+                <span className="text-zinc-900 dark:text-zinc-100 font-medium">
+                  {chunks}
+                </span>
+              ),
+            })}
           </p>
           <p className="mt-3 max-w-xl text-pretty text-sm text-zinc-500 dark:text-zinc-400">
-            Your HTML. Your subdomain. AGPLv3 — fork, audit, self-host. No
-            lock-in, no consent banners.
+            {t("hero.tagline")}
           </p>
 
           <div className="mt-10 w-full max-w-2xl">
@@ -110,10 +114,14 @@ export async function Hero() {
                     ))}
                   </div>
                   <span>
-                    <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                      {pagesThisWeek.toLocaleString("en-US")}
-                    </span>{" "}
-                    pages generated this week
+                    {t.rich("hero.pagesThisWeek", {
+                      count: pagesThisWeek,
+                      strong: (chunks) => (
+                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                          {chunks}
+                        </span>
+                      ),
+                    })}
                   </span>
                 </div>
                 <span className="hidden sm:inline text-zinc-300 dark:text-zinc-800">
@@ -125,11 +133,11 @@ export async function Hero() {
               href={REPO_URL}
               target="_blank"
               rel="noreferrer"
-              aria-label="OpenLen on GitHub"
+              aria-label={t("hero.githubAria")}
               className="inline-flex items-center gap-1.5 hover:text-zinc-900 dark:hover:text-zinc-100 transition"
             >
               <GithubIcon size={12} />
-              <span>Star on GitHub</span>
+              <span>{t("hero.starOnGithub")}</span>
               {stars != null && stars > 0 && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 dark:bg-zinc-900 px-1.5 py-0.5 text-[10.5px] font-medium tabular-nums text-zinc-600 dark:text-zinc-400">
                   <Star size={9} className="text-amber-500" />

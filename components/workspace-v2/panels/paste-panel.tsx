@@ -3,15 +3,17 @@
 // state). User pastes HTML from a claude.ai artifact (or anywhere else),
 // optionally names the project, and we POST it to /api/projects/from-html
 // — that creates a real project row with `data.html` set, then the page
-// router-pushes to /new-v2?project=<newId> where Deploy is enabled.
+// router-pushes to /new?project=<newId> where Deploy is enabled.
 
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { FileText, Sparkles, X } from "../icons";
 
 export function PastePanel() {
+  const t = useTranslations("panelsA");
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [html, setHtml] = useState("");
@@ -23,7 +25,7 @@ export function PastePanel() {
     if (submitting) return;
     const trimmed = html.trim();
     if (trimmed.length === 0) {
-      setError("Paste some HTML first.");
+      setError(t("paste.errorEmpty"));
       return;
     }
     setSubmitting(true);
@@ -43,7 +45,9 @@ export function PastePanel() {
           error?: string;
         };
         setError(
-          data.message ?? data.error ?? `HTTP ${res.status} — try again.`,
+          data.message ??
+            data.error ??
+            t("paste.errorHttp", { status: res.status }),
         );
         setSubmitting(false);
         return;
@@ -52,7 +56,7 @@ export function PastePanel() {
       // Hard nav (window.location) rather than router.push because the page
       // needs to re-mount and re-fetch with the new project — soft nav would
       // keep stale state (templatePreview, entryMode, etc).
-      window.location.href = `/new-v2?project=${data.projectId}`;
+      window.location.href = `/new?project=${data.projectId}`;
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setSubmitting(false);
@@ -68,24 +72,23 @@ export function PastePanel() {
         <div className="flex items-center gap-2 mb-2">
           <FileText size={13} className="text-accent" />
           <h2 className="text-[11px] uppercase tracking-[0.16em] fg-faint font-semibold ui-small">
-            Paste HTML
+            {t("paste.heading")}
           </h2>
         </div>
         <p className="text-[11px] fg-muted leading-snug">
-          Drop in the HTML claude.ai gave you (or any self-contained landing
-          page HTML). We&apos;ll host it on your subdomain.
+          {t("paste.description")}
         </p>
       </div>
 
       <div className="px-3 pb-2 shrink-0">
         <label className="block text-[10px] uppercase tracking-[0.14em] fg-faint font-semibold mb-1.5">
-          Project name
+          {t("paste.projectNameLabel")}
         </label>
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Auto-detected from <title> if blank"
+          placeholder={t("paste.projectNamePlaceholder")}
           disabled={submitting}
           className="w-full h-8 px-2.5 text-[12.5px] rounded-md ring-1 ring-[color:var(--border)] bg-[color:var(--bg)] fg placeholder:fg-faint focus:outline-none focus:ring-[color:var(--border-strong)] disabled:opacity-50 disabled:cursor-not-allowed"
         />
@@ -93,7 +96,7 @@ export function PastePanel() {
 
       <div className="px-3 pb-2 flex-1 min-h-0 flex flex-col">
         <label className="block text-[10px] uppercase tracking-[0.14em] fg-faint font-semibold mb-1.5">
-          HTML
+          {t("paste.htmlLabel")}
         </label>
         <textarea
           ref={textareaRef}
@@ -106,7 +109,7 @@ export function PastePanel() {
         />
         {showCount && (
           <div className="mt-1 text-[10px] fg-faint font-mono tabular-nums">
-            {charCount.toLocaleString()} chars
+            {t("paste.charCount", { count: charCount })}
           </div>
         )}
       </div>
@@ -130,17 +133,17 @@ export function PastePanel() {
           {submitting ? (
             <>
               <span className="inline-block w-2 h-2 rounded-full bg-white/80 animate-pulse" />
-              Creating project…
+              {t("paste.creating")}
             </>
           ) : (
             <>
               <Sparkles size={12} />
-              Create project
+              {t("paste.createProject")}
             </>
           )}
         </button>
         <p className="mt-2 text-[10px] fg-faint leading-relaxed text-center">
-          Next: click Deploy to publish to a subdomain.
+          {t("paste.deployHint")}
         </p>
       </div>
     </div>

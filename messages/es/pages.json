@@ -1,0 +1,42 @@
+{
+  "templatesIndex": {
+    "hero": {
+      "eyebrow": "{count, plural, =0 {AÚN NO HAY PLANTILLAS} one {# PLANTILLA HECHA A MANO} other {# PLANTILLAS HECHAS A MANO}}",
+      "title": "Landing pages hechas a mano. Listas para hacer la tuya.",
+      "lede": "HTML estático y optimizado. Elige una, complétala con tu información y publícala en tu subdominio con un solo clic."
+    }
+  },
+  "templateDetail": {
+    "backToAll": "Todas las plantillas",
+    "viewLive": "Ver plantilla en vivo",
+    "meta": {
+      "family": "Familia",
+      "mode": "Modo",
+      "accent": "Color de acento",
+      "format": "Formato",
+      "formatValue": "HTML estático"
+    },
+    "related": {
+      "heading": "Más de {family}"
+    }
+  },
+  "blogIndex": {
+    "eyebrow": "BLOG",
+    "title": "Novedades de OpenLen",
+    "lede": "Lanzamientos, changelog y las ideas detrás de ellos.",
+    "readPost": "Leer entrada"
+  },
+  "blogPost": {
+    "back": "Blog"
+  },
+  "notFound": {
+    "badge": "Error 404",
+    "title": "Esta página <accent>no existe.</accent>",
+    "lede": "Esta URL no corresponde a ninguna plantilla ni proyecto. Vuelve al inicio o elige una de las 15 plantillas curadas.",
+    "backHome": "Volver al inicio",
+    "viewTemplates": "Ver plantillas"
+  },
+  "devLoader": {
+    "caption": "Diseñando tu página…"
+  }
+}

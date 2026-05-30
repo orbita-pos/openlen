@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter, Link } from "@/i18n/navigation";
 import { useSession } from "next-auth/react";
 import {
   ArrowUp,
@@ -17,14 +18,15 @@ import { QUICK_PROMPTS } from "@/lib/quick-prompts";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Hero prompt input — the homepage entry into AI generation. Mirrors the
-// /new-v2 AI brief panel: same quick-prompts, same composer affordances.
+// /new AI brief panel: same quick-prompts, same composer affordances.
 //
-// Submit, when signed in, routes to /new-v2?mode=ai&brief=…&autostart=1 so the
+// Submit, when signed in, routes to /new?mode=ai&brief=…&autostart=1 so the
 // build kicks off on arrival. When signed out, a dialog asks the user to sign
 // in first — the brief rides along via ?next= so nothing is lost.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function HeroPromptInput() {
+  const t = useTranslations("marketing");
   const router = useRouter();
   const { status } = useSession();
   const [value, setValue] = useState("");
@@ -40,10 +42,10 @@ export function HeroPromptInput() {
     el.style.height = Math.min(el.scrollHeight, 240) + "px";
   }, [value]);
 
-  // Match the /new-v2 brief panel — a real brief needs a little substance.
+  // Match the /new brief panel — a real brief needs a little substance.
   const canSend = value.trim().length >= 10;
 
-  const target = `/new-v2?mode=ai&brief=${encodeURIComponent(
+  const target = `/new?mode=ai&brief=${encodeURIComponent(
     value.trim(),
   )}&autostart=1`;
 
@@ -78,7 +80,7 @@ export function HeroPromptInput() {
               }
             }}
             rows={2}
-            placeholder="A landing page for my SaaS that…"
+            placeholder={t("heroPrompt.placeholder")}
             maxLength={2000}
             className="block w-full resize-none bg-transparent text-[15px] leading-relaxed text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-500 focus:outline-none"
             style={{ minHeight: 56 }}
@@ -88,18 +90,18 @@ export function HeroPromptInput() {
         <div className="flex items-center justify-between gap-2 px-2.5 pb-2.5 pt-1">
           <div className="flex items-center gap-0.5">
             {/* Editing affordances — a preview of what unlocks once the page
-                exists, mirroring the /new-v2 brief panel. */}
+                exists, mirroring the /new brief panel. */}
             {[
-              { Icon: ImageIcon, label: "Attach an image" },
-              { Icon: Crosshair, label: "Scope to a section" },
-              { Icon: Wand2, label: "Autofill with your info" },
+              { Icon: ImageIcon, label: t("heroPrompt.tools.attachImage") },
+              { Icon: Crosshair, label: t("heroPrompt.tools.scopeSection") },
+              { Icon: Wand2, label: t("heroPrompt.tools.autofill") },
             ].map(({ Icon, label }) => (
               <button
                 key={label}
                 type="button"
                 disabled
-                title={`${label} — available once your page exists`}
-                aria-label={`${label} (available after generation)`}
+                title={t("heroPrompt.tools.titleSuffix", { label })}
+                aria-label={t("heroPrompt.tools.ariaSuffix", { label })}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-300 dark:text-zinc-700 cursor-not-allowed"
               >
                 <Icon size={15} />
@@ -124,13 +126,13 @@ export function HeroPromptInput() {
                 ? "px-3.5 bg-coral-500 text-white hover:bg-coral-600 active:bg-coral-700 btn-coral-shadow disabled:opacity-80"
                 : "w-9 bg-zinc-100 dark:bg-zinc-900 text-zinc-400 dark:text-zinc-600 cursor-not-allowed",
             )}
-            aria-label="Generate"
+            aria-label={t("heroPrompt.generate")}
           >
             {submitting ? (
               <Loader2 size={15} className="animate-spin" />
             ) : canSend ? (
               <>
-                <Sparkles size={14} /> Generate
+                <Sparkles size={14} /> {t("heroPrompt.generate")}
                 <kbd className="ml-0.5 hidden sm:inline-flex items-center px-1 rounded text-[10px] font-mono bg-white/20 text-white/90">
                   ⌘↵
                 </kbd>
@@ -144,7 +146,7 @@ export function HeroPromptInput() {
 
       <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5">
         <span className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400 font-semibold mr-1">
-          Try
+          {t("heroPrompt.tryLabel")}
         </span>
         {QUICK_PROMPTS.map((p) => (
           <button
@@ -178,6 +180,7 @@ function SignInDialog({
   next: string;
   onClose: () => void;
 }) {
+  const t = useTranslations("marketing");
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -208,7 +211,7 @@ function SignInDialog({
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close"
+          aria-label={t("signInDialog.close")}
           className="absolute right-3 top-3 inline-flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 dark:hover:text-zinc-200 dark:hover:bg-zinc-900 transition"
         >
           <X size={15} />
@@ -220,25 +223,24 @@ function SignInDialog({
           id="signin-dialog-title"
           className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100"
         >
-          Sign in to generate
+          {t("signInDialog.title")}
         </h2>
         <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">
-          You need an account to build your page — it&apos;s free. Your prompt
-          is saved, so you pick up right where you left off.
+          {t("signInDialog.body")}
         </p>
         <div className="mt-5 flex flex-col gap-2">
-          <a
+          <Link
             href={`/register${q}`}
             className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-coral-500 text-white text-[13.5px] font-medium hover:bg-coral-600 active:bg-coral-700 btn-coral-shadow transition"
           >
-            <Sparkles size={14} /> Create free account
-          </a>
-          <a
+            <Sparkles size={14} /> {t("signInDialog.createAccount")}
+          </Link>
+          <Link
             href={`/login${q}`}
             className="inline-flex h-10 items-center justify-center rounded-lg ring-1 ring-zinc-200 dark:ring-zinc-800 text-[13.5px] font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition"
           >
-            Log in
-          </a>
+            {t("signInDialog.logIn")}
+          </Link>
         </div>
       </div>
     </div>

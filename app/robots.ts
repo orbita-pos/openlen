@@ -1,6 +1,12 @@
 import type { MetadataRoute } from "next";
+import { routing } from "@/i18n/routing";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://openlen.com";
+
+// Expand a locale-agnostic suffix into one entry per locale prefix, since
+// every page route is locale-prefixed (/en/…, /es/…).
+const perLocale = (suffix: string) =>
+  routing.locales.map((locale) => `/${locale}${suffix}`);
 
 // AI training bots we explicitly opt out of. Curated from
 // https://github.com/ai-robots-txt/ai.robots.txt as of 2026-05.
@@ -37,14 +43,16 @@ export default function robots(): MetadataRoute.Robots {
       // are explicitly off-limits.
       {
         userAgent: "*",
-        allow: ["/", "/templates", "/templates/curated/"],
+        allow: ["/", ...perLocale(""), ...perLocale("/templates")],
         disallow: [
           "/api/",
-          "/new-v2",
-          "/projects",
-          "/login",
-          "/signup",
           "/auth/",
+          ...perLocale("/new"),
+          ...perLocale("/projects"),
+          ...perLocale("/login"),
+          ...perLocale("/register"),
+          ...perLocale("/forgot"),
+          ...perLocale("/reset"),
         ],
       },
       // Block AI training crawlers entirely. Used to be CF-managed

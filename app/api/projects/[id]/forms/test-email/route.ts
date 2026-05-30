@@ -90,7 +90,7 @@ export async function POST(
       to,
       projectTitle: row.title,
       fields: DUMMY_FIELDS,
-      dashboardUrl: `${SITE_URL}/new-v2?project=${id}`,
+      dashboardUrl: `${SITE_URL}/new?project=${id}`,
       testMode: true,
       meta: {
         submittedAt: new Date(),

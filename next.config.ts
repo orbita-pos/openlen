@@ -1,5 +1,8 @@
 import { withInariWatch } from "@inariwatch/capture/next";
+import createNextIntlPlugin from "next-intl/plugin";
 import path from "node:path";
+
+const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
 // NextConfig is intentionally untyped here. `withInariWatch` accepts a
 // loose `NextConfig` shape (`experimental?: Record<string, unknown>`) that
@@ -81,4 +84,4 @@ const nextConfig = {
   output: "standalone" as const,
 };
 
-export default withInariWatch(nextConfig);
+export default withNextIntl(withInariWatch(nextConfig));

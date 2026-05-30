@@ -1,71 +1,138 @@
+import createIntlMiddleware from "next-intl/middleware";
+import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/auth";
-import { NextResponse } from "next/server";
+import { routing } from "@/i18n/routing";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Route guard.
+// Middleware = next-intl locale routing + Auth.js route guard, composed.
 //
-// /new-v2 and any future authenticated-only routes redirect to /login when
-// the user has no session. Auth pages and the homepage stay public. Auth.js
-// internal routes (/api/auth/*) are always allowed.
+//   • Public routes (/, /<locale>, /<locale>/templates, /<locale>/blog, …)
+//     run ONLY the intl middleware. They never touch `auth()`, so no
+//     csrf/session Set-Cookie is emitted and Cloudflare can still cache them
+//     (with localeCookie disabled in routing.ts, the intl middleware emits no
+//     Set-Cookie either).
 //
-// Legacy /new → /new-v2 redirect: the old V1 workspace was retired; any
-// inbound link to /new (cached search results, third-party blog posts,
-// shared deep links with ?brief=…) now lands on the V2 workspace. Query
-// params survive the redirect via the `search` copy below.
+//   • Protected routes (/<locale>/new, /<locale>/projects) run through
+//     `auth()`. No session → redirect to the localized /login with ?next=.
+//     With a session, the intl middleware runs to finish locale handling.
+//
+//   • Old /new-v2 (and /<locale>/new-v2) → /<locale>/new, preserving query.
+//     On /new itself a ?brief=… link without ?mode forces ?mode=ai so the
+//     workspace opens the AI flow with the brief pre-filled.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const PROTECTED_PAGE_PREFIXES = ["/new-v2", "/projects"];
+const intlMiddleware = createIntlMiddleware(routing);
+const locales = routing.locales as readonly string[];
 
-function isProtected(pathname: string): boolean {
-  for (const p of PROTECTED_PAGE_PREFIXES) {
-    if (pathname === p || pathname.startsWith(p + "/")) return true;
-  }
-  return false;
+const PROTECTED = ["/new", "/projects"];
+
+function localeFromPath(pathname: string): string {
+  const seg = pathname.split("/")[1];
+  return locales.includes(seg) ? seg : routing.defaultLocale;
 }
 
-export default auth((req) => {
-  const { pathname, search } = req.nextUrl;
-
-  // Legacy /new redirect — keep search params so /new?brief=… → /new-v2?mode=ai&brief=…
-  if (pathname === "/new" || pathname.startsWith("/new/")) {
-    const url = new URL("/new-v2", req.nextUrl.origin);
-    if (search) {
-      const incoming = new URLSearchParams(search);
-      // If brief is present, force ?mode=ai so the V2 page enters the AI
-      // flow with the brief pre-filled. Other params (publish, etc.)
-      // ride along.
-      if (incoming.has("brief") && !incoming.has("mode")) {
-        incoming.set("mode", "ai");
-      }
-      url.search = "?" + incoming.toString();
-    }
-    return NextResponse.redirect(url);
+function pathWithoutLocale(pathname: string): string {
+  const seg = pathname.split("/")[1];
+  if (locales.includes(seg)) {
+    const rest = pathname.slice(seg.length + 1);
+    return rest === "" ? "/" : rest;
   }
+  return pathname;
+}
 
-  if (!isProtected(pathname)) return NextResponse.next();
+function isProtected(pathname: string): boolean {
+  const bare = pathWithoutLocale(pathname);
+  return PROTECTED.some((p) => bare === p || bare.startsWith(p + "/"));
+}
 
+// Auth-gated branch. `auth()` augments the request with `.auth`; when a
+// session exists we hand off to the intl middleware to complete locale
+// resolution. The cast bridges Auth.js's (req, ctx) handler signature to the
+// single-arg call we make here — ctx is unused.
+const authMiddleware = auth((req) => {
   if (!req.auth) {
-    const loginUrl = new URL("/login", req.nextUrl.origin);
-    loginUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(loginUrl);
+    const locale = localeFromPath(req.nextUrl.pathname);
+    const loginUrl = new URL(`/${locale}/login`, req.nextUrl.origin);
+    loginUrl.searchParams.set("next", req.nextUrl.pathname);
+    return fixRedirectHost(NextResponse.redirect(loginUrl));
   }
-  return NextResponse.next();
-});
+  return fixRedirectHost(intlMiddleware(req));
+}) as unknown as (req: NextRequest) => ReturnType<typeof intlMiddleware>;
+
+// Behind the Caddy proxy, Next builds absolute redirects from the upstream
+// authority — the internal PORT (3000) leaks into the Location
+// (https://openlen.com:3000/en), and the host can surface as localhost. Both
+// break real visitors. We REBUILD the redirect with a clean canonical URL:
+// mutating the Location header alone doesn't stick, because Next re-serializes
+// the response from the URL the redirect was created with.
+//
+// Trigger is dev-safe without a NODE_ENV gate: it only fires when the target is
+// our own domain carrying a stray port, or a leaked localhost in production.
+// In dev the redirect target is plain localhost:3000 (correct) → untouched.
+const IS_PROD = process.env.NODE_ENV === "production";
+
+function fixRedirectHost(res: NextResponse): NextResponse {
+  const loc = res.headers.get("location");
+  if (!loc) return res;
+  let u: URL;
+  try {
+    u = new URL(loc, "https://openlen.com");
+  } catch {
+    return res;
+  }
+  const h = u.hostname;
+  const ourHostWithPort =
+    (h === "openlen.com" || h === "www.openlen.com") && !!u.port;
+  const leakedLocalhost =
+    IS_PROD && (h === "localhost" || h === "127.0.0.1" || h === "0.0.0.0");
+  if (!ourHostWithPort && !leakedLocalhost) return res;
+
+  u.protocol = "https:";
+  u.hostname = "openlen.com";
+  u.port = "";
+  const fixed = NextResponse.redirect(u, res.status);
+  res.headers.forEach((value, key) => {
+    if (key.toLowerCase() !== "location") fixed.headers.set(key, value);
+  });
+  return fixed;
+}
+
+export default function middleware(req: NextRequest): ReturnType<typeof intlMiddleware> {
+  const { pathname, search } = req.nextUrl;
+  const bare = pathWithoutLocale(pathname);
+
+  // The workspace lives at /new. Old /new-v2 links + bookmarks → /new,
+  // preserving any query.
+  if (bare === "/new-v2" || bare.startsWith("/new-v2/")) {
+    const url = new URL(
+      pathname.replace("/new-v2", "/new"),
+      req.nextUrl.origin,
+    );
+    if (search) url.search = search;
+    return fixRedirectHost(NextResponse.redirect(url));
+  }
+
+  // A brief in the URL without an explicit mode opens the AI entry flow.
+  if (bare === "/new") {
+    const params = new URLSearchParams(search);
+    if (params.has("brief") && !params.has("mode")) {
+      params.set("mode", "ai");
+      const url = new URL(pathname, req.nextUrl.origin);
+      url.search = "?" + params.toString();
+      return fixRedirectHost(NextResponse.redirect(url));
+    }
+  }
+
+  if (isProtected(pathname)) {
+    return authMiddleware(req);
+  }
+  return fixRedirectHost(intlMiddleware(req));
+}
 
 export const config = {
-  // Scope middleware to ONLY the routes it needs to act on:
-  //   - /new (legacy redirect to /new-v2)
-  //   - /new-v2/* and /projects/* (auth gate)
-  //
-  // Marketing routes (/, /templates/*, /blog/*, /pricing) intentionally
-  // bypass middleware. Without this scoping, `auth()` runs on every page
-  // and injects `Set-Cookie: __Host-authjs.csrf-token` into the response,
-  // which Cloudflare treats as user-specific and refuses to cache (cf-
-  // cache-status: BYPASS). With the matcher narrowed, anonymous responses
-  // for /  carry no Set-Cookie and CF can cache them at the edge.
-  //
-  // Auth pages (/login, /register) call `auth()` directly inside their
-  // server components when they need the session — they're not cached
-  // anyway, so the cookie is fine there.
-  matcher: ["/new", "/new/:path*", "/new-v2/:path*", "/projects/:path*"],
+  // Run on every browsable path so `/` negotiates a locale. Excludes API
+  // routes, Next internals, the published-page handlers (served, c) and any
+  // path with a dot (static assets + metadata files: robots.txt, sitemap.xml,
+  // icon.svg, og.png, favicon.ico, …).
+  matcher: ["/((?!api|_next|_vercel|served|c|.*\\..*).*)"],
 };

@@ -1,0 +1,94 @@
+{
+  "time": {
+    "justNow": "just now",
+    "minutesAgo": "{count}m ago",
+    "hoursAgo": "{count}h ago",
+    "yesterday": "yesterday",
+    "daysAgo": "{count}d ago",
+    "weeksAgo": "{count}w ago"
+  },
+  "pages": {
+    "newPage": "New page",
+    "active": "Active",
+    "published": "Published",
+    "publishedUnpublishedEdits": "Published — has unpublished edits",
+    "draft": "Draft",
+    "thumbnailOf": "Thumbnail of {title}",
+    "thumbnailTitle": "{title} thumbnail",
+    "loadError": "Failed to load projects",
+    "loadFailed": "Couldn't load your projects.",
+    "empty": "No pages yet.",
+    "emptyHint": "Create one to see it here."
+  },
+  "versions": {
+    "loadError": "Failed to load versions",
+    "restoreError": "Couldn't restore — try again.",
+    "perProject": "Versions live per project.",
+    "perProjectHint": "Open a project from the Pages tab to see its history.",
+    "title": "Version history",
+    "subtitle": "Auto-snapshots on chat, publish, and clone.",
+    "empty": "No versions yet.",
+    "emptyHint": "The next chat or publish will create one.",
+    "current": "Current",
+    "restore": "Restore",
+    "restoring": "Restoring…",
+    "cancel": "Cancel",
+    "confirmTitle": "Restore this version?",
+    "confirmRollback": "The page will roll back to:",
+    "confirmNote": "Your current page is saved as a version first — you can restore back if you change your mind.",
+    "thumbnailOf": "Thumbnail of version {label}",
+    "thumbnailTitle": "{label} thumbnail",
+    "source": {
+      "initial": "Init",
+      "chat": "Chat",
+      "publish": "Live",
+      "restore": "Undo",
+      "manual": "Saved",
+      "styleMatch": "Fill",
+      "reorder": "Order",
+      "replace": "Asset"
+    }
+  },
+  "insights": {
+    "loadError": "Failed to load insights",
+    "title": "Insights",
+    "subtitle": "Privacy-first analytics for this page.",
+    "perProject": "Insights live per project.",
+    "perProjectHint": "Open a project from the Pages tab to see its analytics.",
+    "range": {
+      "all": "All"
+    },
+    "emptyRange": "No data yet for this range.",
+    "emptyRangeHint": "Publish your page and share the link — analytics start the moment a visitor hits it.",
+    "kpi": {
+      "views": "Views",
+      "uniques": "Uniques",
+      "clicks": "Clicks"
+    },
+    "visitsOverTime": "Visits over time",
+    "dayCount": "{count, plural, one {# day} other {# days}}",
+    "topLinks": "Top links",
+    "noClicks": "No outbound clicks yet.",
+    "referrers": "Referrers",
+    "directOnly": "Direct only",
+    "countries": "Countries",
+    "noCountryData": "No country data",
+    "device": "Device",
+    "noDeviceData": "No device data",
+    "deviceType": {
+      "mobile": "Mobile",
+      "desktop": "Desktop",
+      "tablet": "Tablet"
+    }
+  },
+  "leads": {
+    "loadError": "Failed to load leads",
+    "perProject": "Leads live per project.",
+    "perProjectHint": "Open a project from the Pages tab to see its submissions.",
+    "title": "Leads",
+    "subtitle": "Form submissions from your published page.",
+    "empty": "No leads yet.",
+    "emptyHint": "Publish your page — every form submission lands here.",
+    "emptySubmission": "Empty submission"
+  }
+}

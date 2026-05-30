@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
 import { ArrowRight } from "lucide-react";
 import { listTemplates } from "@/lib/templates/store";
 import { TemplateCard } from "./template-card";
@@ -11,6 +12,7 @@ import { TemplateCard } from "./template-card";
 const FEATURED_IDS = ["pier", "mirror", "manuscript"] as const;
 
 export async function DemoStrip() {
+  const t = await getTranslations("marketing");
   // One query drives both the featured cards and the live template count.
   const all = await listTemplates();
   const byId = new Map(all.map((t) => [t.id, t]));
@@ -33,18 +35,19 @@ export async function DemoStrip() {
                 <span className="absolute inline-flex h-full w-full rounded-full bg-coral-500 opacity-75 animate-ping" />
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-coral-500" />
               </span>
-              {count} HAND-BUILT TEMPLATES — ALL READY TO PUBLISH
+              {t("demoStrip.eyebrow", { count })}
             </div>
             <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight">
-              Real templates.
-              <br className="sm:hidden" />
-              <span className="text-zinc-500 dark:text-zinc-400"> Pick, fill, publish.</span>
+              {t.rich("demoStrip.title", {
+                br: () => <br className="sm:hidden" />,
+                muted: (chunks) => (
+                  <span className="text-zinc-500 dark:text-zinc-400">{chunks}</span>
+                ),
+              })}
             </h2>
           </div>
           <div className="text-sm text-zinc-500 dark:text-zinc-400 max-w-xs">
-            Each template is self-contained HTML — Tailwind + Google Fonts
-            inline, no React runtime. Clone, edit copy + images, deploy to your
-            subdomain.
+            {t("demoStrip.description")}
           </div>
         </div>
 
@@ -63,7 +66,7 @@ export async function DemoStrip() {
             href="/templates"
             className="inline-flex items-center gap-1.5 rounded-full ring-1 ring-zinc-300 dark:ring-zinc-700 hover:ring-zinc-900 dark:hover:ring-zinc-100 px-5 py-2.5 text-sm font-medium text-zinc-900 dark:text-zinc-100 transition"
           >
-            Browse all {count} templates
+            {t("demoStrip.browseAll", { count })}
             <ArrowRight size={14} />
           </Link>
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Coins } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -16,6 +17,7 @@ import { cn } from "@/lib/cn";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function CreditPill() {
+  const t = useTranslations("projects");
   const [credits, setCredits] = useState<{
     balance: number;
     allotment: number;
@@ -38,7 +40,10 @@ export function CreditPill() {
   const empty = credits.balance <= 0;
   return (
     <span
-      title={`${credits.balance} of ${credits.allotment} AI credits left this month`}
+      title={t("creditPill.tooltip", {
+        balance: credits.balance,
+        allotment: credits.allotment,
+      })}
       className={cn(
         "hidden sm:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[12px] font-medium ring-1 ring-inset tabular-nums",
         empty

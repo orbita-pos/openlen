@@ -1,10 +1,12 @@
-import Link from "next/link";
+import { getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
 import { Check, Sparkles, Unlock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { GithubIcon } from "@/components/ui/brand-icons";
 
-export function FinalCta() {
+export async function FinalCta() {
+  const t = await getTranslations("marketing");
   return (
     <section className="relative overflow-hidden">
       <div className="mx-auto max-w-6xl px-6 py-24">
@@ -24,52 +26,51 @@ export function FinalCta() {
               tone="coral"
               className="!bg-coral-500/15 !text-coral-300 !ring-coral-500/30"
             >
-              <Unlock size={11} /> Own your stack
+              <Unlock size={11} /> {t("finalCta.badge")}
             </Badge>
             <h2 className="mt-5 text-4xl sm:text-6xl font-semibold tracking-tightest text-white leading-[1.02]">
-              Stop paying for lock-in.
-              <br />
-              <span className="text-zinc-500">
-                Start owning your landing pages.
-              </span>
+              {t.rich("finalCta.title", {
+                br: () => <br />,
+                muted: (chunks) => <span className="text-zinc-500">{chunks}</span>,
+              })}
             </h2>
             <p className="mt-6 text-lg text-zinc-300 max-w-xl">
-              One prompt away from a landing page that&apos;s{" "}
-              <span className="text-white font-medium">
-                yours, deployable anywhere, in code you can read.
-              </span>
+              {t.rich("finalCta.subtitle", {
+                strong: (chunks) => (
+                  <span className="text-white font-medium">{chunks}</span>
+                ),
+              })}
             </p>
             <div className="mt-9 flex flex-col sm:flex-row items-start sm:items-center gap-3">
               <Link href="/register">
                 <Button size="lg" className="!h-12 !px-6 text-[15px]">
-                  <Sparkles size={16} /> Generate my page — free
+                  <Sparkles size={16} /> {t("finalCta.generateBtn")}
                 </Button>
               </Link>
               <a
                 href="https://github.com/jesusbernalrj/inari-pages"
                 target="_blank"
                 rel="noreferrer"
-                aria-label="OpenLen on GitHub"
+                aria-label={t("finalCta.githubAria")}
               >
                 <Button
                   variant="outline"
                   size="lg"
                   className="!h-12 !px-6 text-[15px] !bg-transparent !text-white !ring-zinc-700 hover:!bg-zinc-900"
                 >
-                  <GithubIcon size={16} /> Clone on GitHub
+                  <GithubIcon size={16} /> {t("finalCta.cloneBtn")}
                 </Button>
               </a>
             </div>
             <div className="mt-5 text-xs text-zinc-500 flex flex-wrap items-center gap-4">
               <span className="flex items-center gap-1.5">
-                <Check size={12} className="text-emerald-400" /> No credit card
+                <Check size={12} className="text-emerald-400" /> {t("finalCta.perks.noCard")}
               </span>
               <span className="flex items-center gap-1.5">
-                <Check size={12} className="text-emerald-400" /> AGPLv3 — yours forever
+                <Check size={12} className="text-emerald-400" /> {t("finalCta.perks.agpl")}
               </span>
               <span className="hidden sm:flex items-center gap-1.5">
-                <Check size={12} className="text-emerald-400" /> Self-host on
-                a single box
+                <Check size={12} className="text-emerald-400" /> {t("finalCta.perks.selfHost")}
               </span>
             </div>
           </div>

@@ -151,7 +151,74 @@ function scopeSelector(selector: string, scope: string): string {
   if (lead) return `${scope}${lead[1] || " "}${lead[2]}`.trimEnd();
   // bare universal reset → wrapper + its descendants
   if (s === "*") return `${scope}, ${scope} *`;
-  return `${scope} ${s}`;
+  // General case. The original selector's first compound may target the
+  // WRAPPER element itself — generated sections routinely put a wrapper class
+  // (.sec / .lc07 / .hero…) on the root <section> and key every rule off it.
+  // A plain descendant scope (`[data-sec] .sec`) does NOT match the root (an
+  // element is not its own descendant), so the wrapper's background + text
+  // color silently drop. Emit BOTH: the root-or-self match (scope merged into
+  // the first compound) and the descendant match. Faithful to the source
+  // cascade — if the root genuinely lacks the class, the self-variant matches
+  // nothing and is harmless.
+  const self = scopeFirstCompound(s, scope);
+  const descendant = `${scope} ${s}`;
+  return self && self !== descendant ? `${self}, ${descendant}` : descendant;
+}
+
+// Merge the scope attribute into the FIRST compound of a complex selector so
+// it matches when that compound is the wrapper element itself.
+//   ".lc07 .logo svg" → '[data-sec="x"].lc07 .logo svg'
+//   "section.foo"     → 'section[data-sec="x"].foo'
+function scopeFirstCompound(selector: string, scope: string): string | null {
+  const m = /^([^\s>+~]+)([\s\S]*)$/.exec(selector.trim());
+  if (!m) return null;
+  return `${mergeCompound(m[1], scope)}${m[2]}`;
+}
+
+function mergeCompound(compound: string, scope: string): string {
+  // scope is an attribute selector (e.g. '[data-sec="x"]'); place it after an
+  // optional leading type selector so the compound stays valid CSS.
+  const t = /^([a-zA-Z][\w-]*|\*)?([\s\S]*)$/.exec(compound);
+  const type = t?.[1] ?? "";
+  const rest = t?.[2] ?? "";
+  if (type === "*") return `${scope}${rest}`;
+  return `${type}${scope}${rest}`;
+}
+
+// Repair helper for fragments scoped by the pre-fix scoper: given ALREADY-scoped
+// CSS, add the missing root-or-self variant to every descendant-scoped rule.
+// Idempotent — skips variants already present and leaves child/`:root`/`*`
+// forms (which already match the root correctly) untouched.
+export function backfillRootSelfVariants(css: string, slug: string): string {
+  const scope = `[data-sec="${slug}"]`;
+  let root: postcss.Root;
+  try {
+    root = postcss.parse(css);
+  } catch {
+    return css;
+  }
+  root.walkRules((rule) => {
+    const parent = rule.parent;
+    if (parent && parent.type === "atrule" && /keyframes$/i.test((parent as AtRule).name)) {
+      return;
+    }
+    const prefix = `${scope} `;
+    const seen = new Set(rule.selectors.map((x) => x.trim()));
+    const out: string[] = [];
+    for (const sel of rule.selectors) {
+      const s = sel.trim();
+      out.push(s);
+      if (!s.startsWith(prefix)) continue; // only descendant-scoped rules
+      const original = s.slice(prefix.length); // recover the source selector
+      const self = scopeFirstCompound(original, scope);
+      if (self && !seen.has(self)) {
+        out.push(self);
+        seen.add(self);
+      }
+    }
+    rule.selectors = out;
+  });
+  return root.toString();
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────

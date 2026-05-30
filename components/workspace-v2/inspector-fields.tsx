@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 
 // Section — labeled card with optional icon, contains a stack of fields.
 export function Section({
@@ -23,13 +24,17 @@ export function Section({
   );
 }
 
-// TextField — labeled input with onCommit on blur or Enter.
+// TextField — labeled input with onCommit on blur or Enter. Optional
+// commit-time validation keeps an invalid value in the field (shown inline)
+// instead of pushing it downstream.
 export function TextField({
   label,
   value,
   placeholder,
   mono,
   multiline,
+  validate,
+  dataField,
   onCommit,
 }: {
   label: string;
@@ -37,16 +42,38 @@ export function TextField({
   placeholder?: string;
   mono?: boolean;
   multiline?: boolean;
+  /** Return an error message to reject the edit, or null to accept. */
+  validate?: (value: string) => string | null;
+  /** Stamped as data-meta-field so the SEO health report can focus this
+   *  field when an issue is clicked. */
+  dataField?: string;
   onCommit: (value: string) => void;
 }) {
   const [draft, setDraft] = useState(value);
-  useEffect(() => setDraft(value), [value]);
+  const [error, setError] = useState<string | null>(null);
+  const errorId = useId();
+  useEffect(() => {
+    setDraft(value);
+    setError(null);
+  }, [value]);
   const commit = () => {
-    if (draft !== value) onCommit(draft);
+    if (draft === value) {
+      setError(null);
+      return;
+    }
+    const err = validate ? validate(draft) : null;
+    if (err) {
+      setError(err);
+      return;
+    }
+    setError(null);
+    onCommit(draft);
   };
-  const cls = `w-full bg-app border bd rounded-md px-2 py-1.5 text-[12px] fg focus:border-[color:var(--accent)] focus:outline-none focus:ring-1 focus:ring-[color:var(--accent-ring)]/30 transition placeholder:fg-faint ${
-    mono ? "font-mono text-[11.5px]" : ""
-  }`;
+  const cls = `w-full bg-app border rounded-md px-2 py-1.5 text-[12px] fg focus:outline-none focus:ring-1 transition placeholder:fg-faint ${
+    error
+      ? "border-red-500/60 focus:border-red-500 focus:ring-red-500/30"
+      : "bd focus:border-[color:var(--accent)] focus:ring-[color:var(--accent-ring)]/30"
+  } ${mono ? "font-mono text-[11.5px]" : ""}`;
   return (
     <label className="flex flex-col gap-1">
       <span className="text-[10.5px] fg-faint">{label}</span>
@@ -54,6 +81,9 @@ export function TextField({
         <textarea
           value={draft}
           placeholder={placeholder}
+          aria-invalid={!!error}
+          aria-describedby={error ? errorId : undefined}
+          data-meta-field={dataField}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}
           rows={2}
@@ -64,6 +94,9 @@ export function TextField({
           type="text"
           value={draft}
           placeholder={placeholder}
+          aria-invalid={!!error}
+          aria-describedby={error ? errorId : undefined}
+          data-meta-field={dataField}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}
           onKeyDown={(e) => {
@@ -72,11 +105,22 @@ export function TextField({
           className={cls}
         />
       )}
+      {error && (
+        <span
+          id={errorId}
+          className="text-[10px] text-red-600 dark:text-red-400 leading-snug"
+        >
+          {error}
+        </span>
+      )}
     </label>
   );
 }
 
-// ColorField — labeled native color input + hex text input.
+// ColorField — labeled native color input + hex text input. Both commit only
+// on blur/Enter (never per keystroke or per picker-drag frame): a draft holds
+// the in-progress value so the swatch previews live without flooding the
+// iframe, and a half-typed/invalid hex reverts instead of round-tripping.
 export function ColorField({
   label,
   value,
@@ -86,22 +130,45 @@ export function ColorField({
   value: string;
   onCommit: (value: string) => void;
 }) {
-  const safe = /^#[0-9a-fA-F]{6}$/.test(value) ? value : "#000000";
+  const t = useTranslations("modalsDomain");
+  const [draft, setDraft] = useState(value);
+  useEffect(() => setDraft(value), [value]);
+  const isHex = (v: string) => /^#[0-9a-fA-F]{6}$/.test(v);
+  const safe = isHex(draft) ? draft : "#000000";
+  const commit = () => {
+    const v = draft.trim();
+    if (v === value) return;
+    if (v === "" || isHex(v)) onCommit(v);
+    else setDraft(value);
+  };
   return (
     <label className="flex items-center gap-2">
       <span className="text-[10.5px] fg-faint flex-1">{label}</span>
       <input
         type="color"
         value={safe}
-        onChange={(e) => onCommit(e.target.value)}
-        className="h-6 w-8 rounded border bd cursor-pointer p-0"
+        aria-label={label}
+        onChange={(e) => {
+          // The native picker always yields a valid #rrggbb and is a
+          // deliberate pick, so commit live. (Only the hex TEXT field waits
+          // for blur — that's where per-keystroke floods + half-typed values
+          // came from. The native picker has no onBlur on most browsers.)
+          setDraft(e.target.value);
+          onCommit(e.target.value);
+        }}
+        className="h-7 w-8 rounded border bd cursor-pointer p-0 focus:outline-none focus:ring-1 focus:ring-[color:var(--accent-ring)]/30"
       />
       <input
         type="text"
-        value={value}
-        onChange={(e) => onCommit(e.target.value)}
-        placeholder="#rrggbb"
-        className="w-[80px] bg-app border bd rounded-md px-2 py-1 text-[11px] font-mono fg focus:border-[color:var(--accent)] focus:outline-none"
+        value={draft}
+        aria-label={label}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        }}
+        placeholder={t("inspector.hexPlaceholder")}
+        className="w-[80px] bg-app border bd rounded-md px-2 py-1 text-[11px] font-mono fg focus:border-[color:var(--accent)] focus:outline-none focus:ring-1 focus:ring-[color:var(--accent-ring)]/30"
       />
     </label>
   );
@@ -115,23 +182,29 @@ export function RadiusField({
   value: string;
   onCommit: (value: string) => void;
 }) {
+  const t = useTranslations("modalsDomain");
   const [draft, setDraft] = useState(value);
   useEffect(() => setDraft(value), [value]);
   return (
     <label className="flex items-center gap-2">
-      <span className="text-[10.5px] fg-faint flex-1">Radius</span>
+      <span className="text-[10.5px] fg-faint flex-1">
+        {t("inspector.radius")}
+      </span>
       <input
         type="text"
         value={draft}
-        placeholder="8px"
+        placeholder={t("inspector.radiusPlaceholder")}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={() => {
-          if (draft !== value) onCommit(draft);
+          let v = draft.trim();
+          // A bare number is invalid CSS for border-radius — assume px.
+          if (/^\d+(\.\d+)?$/.test(v)) v = `${v}px`;
+          if (v !== value) onCommit(v);
         }}
         onKeyDown={(e) => {
           if (e.key === "Enter") (e.target as HTMLInputElement).blur();
         }}
-        className="w-[80px] bg-app border bd rounded-md px-2 py-1 text-[11px] font-mono fg focus:border-[color:var(--accent)] focus:outline-none"
+        className="w-[80px] bg-app border bd rounded-md px-2 py-1 text-[11px] font-mono fg focus:border-[color:var(--accent)] focus:outline-none focus:ring-1 focus:ring-[color:var(--accent-ring)]/30"
       />
     </label>
   );

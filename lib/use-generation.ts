@@ -4,7 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import type { AIModel } from "@/lib/ai-provider";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// useGeneration — drives the /new-v2 AI entry flow.
+// useGeneration — drives the /new AI entry flow.
 //
 // POSTs a brief to /api/generate and consumes the Server-Sent Events stream
 // (reasoning_chunk / html_chunk / critic-checking / regen-starting /

@@ -312,7 +312,7 @@
 
 @media (min-width: 768px) {
   /* `:has()` makes this fire on the very first paint as soon as the
-     workspace mounts (no useEffect lag). Without it, /new-v2's layout
+     workspace mounts (no useEffect lag). Without it, /new's layout
      classNames are set client-side after hydration and the StatusBar
      briefly appears mid-page because `h-full` on the workspace-v2 root
      collapses to 0 while body height is still auto.

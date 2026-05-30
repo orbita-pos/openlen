@@ -13,6 +13,7 @@
 
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   BarChart3,
   ChatIcon,
@@ -60,19 +61,17 @@ export type SidebarMode =
 interface ModeTab {
   id: SidebarMode;
   icon: ComponentType<{ size?: number }>;
-  label: string;
-  title: string;
 }
 
 const MODE_TABS: ModeTab[] = [
-  { id: "chat", icon: ChatIcon, label: "Chat", title: "Chat with Orchestra" },
-  { id: "templates", icon: Grid3, label: "Templates", title: "Start from a template" },
-  { id: "library", icon: Layers, label: "Library", title: "Insert a section" },
-  { id: "pages", icon: FileText, label: "Pages", title: "Recent projects" },
-  { id: "leads", icon: Inbox, label: "Leads", title: "Form submissions" },
-  { id: "insights", icon: BarChart3, label: "Insights", title: "Page analytics" },
-  { id: "versions", icon: HistoryIcon, label: "Versions", title: "Version history" },
-  { id: "brief", icon: Sparkles, label: "Brief", title: "Project brief (AI context)" },
+  { id: "chat", icon: ChatIcon },
+  { id: "templates", icon: Grid3 },
+  { id: "library", icon: Layers },
+  { id: "pages", icon: FileText },
+  { id: "leads", icon: Inbox },
+  { id: "insights", icon: BarChart3 },
+  { id: "versions", icon: HistoryIcon },
+  { id: "brief", icon: Sparkles },
 ];
 
 interface LeftSidebarProps {
@@ -147,7 +146,7 @@ interface LeftSidebarProps {
   onToggleSectionSelect?: (active: boolean) => void;
   scopedSelection?: ScopedSelection | null;
   onClearScope?: () => void;
-  /** Open the Autofill modal (Sparkles icon in chat composer). */
+  /** Open the Autofill modal (labeled pill in chat composer). */
   onAutofill?: () => void;
   /** When set, ChatPanel applies this string to its draft on the next
    *  effect run. Used by the post-swap "Update copy?" chip to push a
@@ -207,35 +206,43 @@ export function LeftSidebar({
   aiModel = "gemini-flash",
   aiOnModelChange,
 }: LeftSidebarProps) {
+  const t = useTranslations("wsChrome");
   const isFlatProject = flatProjectId !== undefined;
   const lockedSet = new Set(lockedTabs ?? []);
   const isLocked = (id: SidebarMode) => lockedSet.has(id);
-  const activeMeta = MODE_TABS.find((t) => t.id === mode) ?? MODE_TABS[0];
+  const tabLabel = (id: SidebarMode) => t(`sidebar.tabs.${id}.label`);
+  const tabTitle = (id: SidebarMode) => t(`sidebar.tabs.${id}.title`);
+  const activeMeta = MODE_TABS.find((tab) => tab.id === mode) ?? MODE_TABS[0];
 
   // Tab visibility rules:
   // - Templates is an entry-flow surface only — once a project is open there's
   //   nothing to commit to, so we drop it in editing mode.
   // - Insights is editing-only — there's no project to read analytics for in
   //   the entry flows (the project doesn't exist yet).
-  const visibleTabs = MODE_TABS.filter((t) => {
-    if (entryMode === "editing" && t.id === "templates") return false;
-    if (entryMode !== "editing" && t.id === "insights") return false;
+  const visibleTabs = MODE_TABS.filter((tab) => {
+    if (entryMode === "editing" && tab.id === "templates") return false;
+    if (entryMode !== "editing" && tab.id === "insights") return false;
     // Library inserts into the current project — editing-only, like Insights.
-    if (entryMode !== "editing" && t.id === "library") return false;
+    if (entryMode !== "editing" && tab.id === "library") return false;
     return true;
   });
 
   if (collapsed) {
     return (
       <aside className="h-full w-12 shrink-0 bg-side border-r bd flex flex-col items-center pt-2 gap-1">
-        {visibleTabs.map((t) => {
-          const active = mode === t.id;
-          const locked = isLocked(t.id);
-          const I = t.icon;
+        {visibleTabs.map((tab) => {
+          const active = mode === tab.id;
+          const locked = isLocked(tab.id);
+          const I = tab.icon;
           return (
             <Tooltip
-              key={t.id}
-              label={locked ? (lockReason ?? `${t.label} — locked`) : t.label}
+              key={tab.id}
+              label={
+                locked
+                  ? (lockReason ??
+                    t("sidebar.tabLocked", { label: tabLabel(tab.id) }))
+                  : tabLabel(tab.id)
+              }
               side="right"
             >
               <button
@@ -243,7 +250,7 @@ export function LeftSidebar({
                 disabled={locked}
                 onClick={() => {
                   if (locked) return;
-                  setMode(t.id);
+                  setMode(tab.id);
                   onToggleCollapse();
                 }}
                 className={`h-8 w-8 inline-flex items-center justify-center rounded-md transition-all duration-150 ease-out ${
@@ -259,7 +266,7 @@ export function LeftSidebar({
             </Tooltip>
           );
         })}
-        <Tooltip label="Expand panel" side="right">
+        <Tooltip label={t("sidebar.expandPanel")} side="right">
           <button
             type="button"
             onClick={onToggleCollapse}
@@ -276,21 +283,26 @@ export function LeftSidebar({
     <aside className="h-full w-[320px] shrink-0 bg-side border-r bd flex flex-col">
       <div className="flex items-center justify-between px-2 pt-2 pb-1.5 border-b bd shrink-0">
         <div className="inline-flex items-center gap-0.5">
-          {visibleTabs.map((t) => {
-            const active = mode === t.id;
-            const locked = isLocked(t.id);
-            const I = t.icon;
+          {visibleTabs.map((tab) => {
+            const active = mode === tab.id;
+            const locked = isLocked(tab.id);
+            const I = tab.icon;
             return (
               <Tooltip
-                key={t.id}
-                label={locked ? (lockReason ?? `${t.label} — locked`) : t.label}
+                key={tab.id}
+                label={
+                  locked
+                    ? (lockReason ??
+                      t("sidebar.tabLocked", { label: tabLabel(tab.id) }))
+                    : tabLabel(tab.id)
+                }
               >
                 <button
                   type="button"
                   disabled={locked}
                   onClick={() => {
                     if (locked) return;
-                    setMode(t.id);
+                    setMode(tab.id);
                   }}
                   className={`h-7 w-8 inline-flex items-center justify-center rounded-md transition-all duration-150 ease-out ${
                     locked
@@ -306,13 +318,13 @@ export function LeftSidebar({
             );
           })}
         </div>
-        <IconBtn label="Collapse panel" size="sm" onClick={onToggleCollapse}>
+        <IconBtn label={t("sidebar.collapsePanel")} size="sm" onClick={onToggleCollapse}>
           <PanelLeft size={13} />
         </IconBtn>
       </div>
       <div className="flex items-center justify-between px-3 py-1.5 border-b bd shrink-0">
         <span className="text-[10px] uppercase tracking-[0.16em] fg-faint font-semibold ui-small">
-          {activeMeta.title}
+          {tabTitle(activeMeta.id)}
         </span>
       </div>
       <div key={`${entryMode}:${mode}`} className="flex-1 min-h-0 fade-slide">
@@ -400,6 +412,7 @@ export function LeftSidebar({
 // taking up the main area to the right — the panel is essentially idle, so
 // we explain that with a small visual rather than rendering a stale panel.
 function ChoosingPlaceholder() {
+  const t = useTranslations("wsChrome");
   return (
     <div className="h-full flex items-center justify-center px-6 py-8 text-center">
       <div className="max-w-[200px]">
@@ -407,10 +420,10 @@ function ChoosingPlaceholder() {
           <Layers size={15} />
         </div>
         <p className="text-[11.5px] fg-muted leading-relaxed">
-          Tools live here once you&apos;ve started.
+          {t("sidebar.choosing.title")}
         </p>
         <p className="mt-2 text-[10.5px] fg-faint leading-relaxed">
-          Pick a starting point from the right →
+          {t("sidebar.choosing.hint")}
         </p>
       </div>
     </div>

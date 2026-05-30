@@ -1,0 +1,70 @@
+{
+  "noProject": {
+    "title": "No project loaded yet.",
+    "subtitle": "Pick a starting point or open one from Pages."
+  },
+  "quickPrompts": {
+    "premium": "Make it premium",
+    "linear": "Linear vibe",
+    "brutalist": "Brutalist",
+    "playful": "More playful",
+    "rewriteHero": "Rewrite the hero",
+    "testimonials": "Add a testimonials section"
+  },
+  "empty": {
+    "title": "Describe your page",
+    "subtitle": "I have full control over your page. Ask me anything."
+  },
+  "turn": {
+    "imageSent": "Image sent"
+  },
+  "streaming": {
+    "writingPage": "Writing page · {chars}",
+    "designing": "Designing your page…",
+    "cancel": "Cancel"
+  },
+  "applied": {
+    "label": "Applied · {time}",
+    "undo": "Undo"
+  },
+  "reverted": "Reverted.",
+  "error": {
+    "retry": "Retry"
+  },
+  "errors": {
+    "requestFailed": "Request failed ({status})",
+    "generic": "Something went wrong — try again.",
+    "noFinalHtml": "Stream ended without a final HTML — try again.",
+    "cancelled": "Cancelled.",
+    "network": "Network error — try again."
+  },
+  "chars": {
+    "count": "{count} chars",
+    "thousands": "{count}k chars"
+  },
+  "relativeTime": {
+    "justNow": "just now",
+    "seconds": "{count}s ago",
+    "minutes": "{count}m ago",
+    "hours": "{count}h ago",
+    "days": "{count}d ago"
+  },
+  "composer": {
+    "scoped": "Scoped:",
+    "clearScope": "Clear scope",
+    "image": "Image:",
+    "removeImage": "Remove attached image",
+    "placeholder": "Describe how your page should look or read…",
+    "placeholderScoped": "Change the selected {target}…",
+    "attachImage": "Attach an image",
+    "attachImageTitle": "Attach an image to insert into the page",
+    "selectSection": "Select a section to scope",
+    "selectSectionTitle": "Scope your next message to one section",
+    "cancelSelection": "Cancel selection mode (ESC)",
+    "cancelSelectionTitle": "Click any section in the preview, or ESC to cancel",
+    "autofill": "Autofill with my info",
+    "autofillLabel": "Autofill",
+    "autofillTitle": "Autofill the template with your business info — upload a screenshot or type your data",
+    "send": "Send"
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "time": {
+    "justNow": "ahora mismo",
+    "minutesAgo": "hace {count} min",
+    "hoursAgo": "hace {count} h",
+    "yesterday": "ayer",
+    "daysAgo": "hace {count} d",
+    "weeksAgo": "hace {count} sem"
+  },
+  "pages": {
+    "newPage": "Nueva página",
+    "active": "Activa",
+    "published": "Publicada",
+    "publishedUnpublishedEdits": "Publicada — tiene cambios sin publicar",
+    "draft": "Borrador",
+    "thumbnailOf": "Miniatura de {title}",
+    "thumbnailTitle": "Miniatura de {title}",
+    "loadError": "No se pudieron cargar los proyectos",
+    "loadFailed": "No pudimos cargar tus proyectos.",
+    "empty": "Aún no tienes páginas.",
+    "emptyHint": "Crea una para verla aquí."
+  },
+  "versions": {
+    "loadError": "No se pudieron cargar las versiones",
+    "restoreError": "No se pudo restaurar — inténtalo de nuevo.",
+    "perProject": "Las versiones son por proyecto.",
+    "perProjectHint": "Abre un proyecto desde la pestaña Páginas para ver su historial.",
+    "title": "Historial de versiones",
+    "subtitle": "Capturas automáticas al chatear, publicar y clonar.",
+    "empty": "Aún no hay versiones.",
+    "emptyHint": "El próximo chat o publicación creará una.",
+    "current": "Actual",
+    "restore": "Restaurar",
+    "restoring": "Restaurando…",
+    "cancel": "Cancelar",
+    "confirmTitle": "¿Restaurar esta versión?",
+    "confirmRollback": "La página volverá a:",
+    "confirmNote": "Tu página actual se guarda primero como versión — puedes volver a ella si cambias de opinión.",
+    "thumbnailOf": "Miniatura de la versión {label}",
+    "thumbnailTitle": "Miniatura de {label}",
+    "source": {
+      "initial": "Inicio",
+      "chat": "Chat",
+      "publish": "Vivo",
+      "restore": "Deshacer",
+      "manual": "Guardado",
+      "styleMatch": "Relleno",
+      "reorder": "Orden",
+      "replace": "Recurso"
+    }
+  },
+  "insights": {
+    "loadError": "No se pudieron cargar las estadísticas",
+    "title": "Estadísticas",
+    "subtitle": "Analíticas con privacidad para esta página.",
+    "perProject": "Las estadísticas son por proyecto.",
+    "perProjectHint": "Abre un proyecto desde la pestaña Páginas para ver sus analíticas.",
+    "range": {
+      "all": "Todo"
+    },
+    "emptyRange": "Aún no hay datos para este periodo.",
+    "emptyRangeHint": "Publica tu página y comparte el enlace — las analíticas empiezan en cuanto la visita un usuario.",
+    "kpi": {
+      "views": "Vistas",
+      "uniques": "Únicos",
+      "clicks": "Clics"
+    },
+    "visitsOverTime": "Visitas a lo largo del tiempo",
+    "dayCount": "{count, plural, one {# día} other {# días}}",
+    "topLinks": "Enlaces principales",
+    "noClicks": "Aún no hay clics salientes.",
+    "referrers": "Referencias",
+    "directOnly": "Solo directo",
+    "countries": "Países",
+    "noCountryData": "Sin datos de país",
+    "device": "Dispositivo",
+    "noDeviceData": "Sin datos de dispositivo",
+    "deviceType": {
+      "mobile": "Móvil",
+      "desktop": "Escritorio",
+      "tablet": "Tablet"
+    }
+  },
+  "leads": {
+    "loadError": "No se pudieron cargar los leads",
+    "perProject": "Los leads son por proyecto.",
+    "perProjectHint": "Abre un proyecto desde la pestaña Páginas para ver sus envíos.",
+    "title": "Leads",
+    "subtitle": "Envíos de formularios desde tu página publicada.",
+    "empty": "Aún no hay leads.",
+    "emptyHint": "Publica tu página — cada envío de formulario llegará aquí.",
+    "emptySubmission": "Envío vacío"
+  }
+}

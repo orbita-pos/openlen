@@ -9,6 +9,7 @@ import {
   type ChangeEvent,
 } from "react";
 import { createPortal } from "react-dom";
+import { useTranslations } from "next-intl";
 import {
   CATEGORY_LABELS,
   CURATED_ICONS,
@@ -75,6 +76,7 @@ export function ReplaceAssetModal({
   onClose,
   onPick,
 }: ReplaceAssetModalProps) {
+  const t = useTranslations("modalsAsset");
   const trapRef = useFocusTrap(open);
 
   useEffect(() => {
@@ -111,19 +113,19 @@ export function ReplaceAssetModal({
               id="replace-asset-title"
               className="text-[14px] sm:text-[15px] font-semibold fg font-display"
             >
-              {kind === "icon" ? "Replace icon" : "Replace image"}
+              {kind === "icon" ? t("header.iconTitle") : t("header.imageTitle")}
             </div>
             <div className="hidden sm:block text-[12px] fg-faint mt-0.5 leading-snug">
               {kind === "icon"
-                ? "Pick a Lucide icon to swap in. Size and color from the original are preserved."
-                : "Paste an image URL (Unsplash, your CDN, anywhere). The slot's aspect ratio is preserved."}
+                ? t("header.iconSubtitle")
+                : t("header.imageSubtitle")}
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-md fg-faint hover:fg hover:bg-hover transition"
-            aria-label="Cerrar"
+            aria-label={t("common.close")}
           >
             ✕
           </button>
@@ -155,6 +157,7 @@ function IconPicker({
   currentSvg: string | null;
   onPick: (payload: ReplacePayload) => void;
 }) {
+  const t = useTranslations("modalsAsset");
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -198,13 +201,13 @@ function IconPicker({
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search 100+ icons…"
+              placeholder={t("icon.searchPlaceholder")}
               className="w-full h-9 px-3 rounded-md border bd bg-app text-[13px] fg placeholder:fg-faint focus:outline-none focus:border-[color:var(--accent)] focus:ring-1 focus:ring-[color:var(--accent-ring)]/30 transition"
             />
           </div>
           {currentSvg && (
             <div className="flex items-center gap-2 px-2 py-1 rounded-md ring-1 ring-[color:var(--border)] bg-app shrink-0">
-              <span className="text-[10.5px] fg-faint ui-small">Current</span>
+              <span className="text-[10.5px] fg-faint ui-small">{t("icon.current")}</span>
               <span
                 className="inline-flex items-center justify-center w-5 h-5 fg-muted"
                 aria-hidden
@@ -219,7 +222,7 @@ function IconPicker({
       <div className="flex-1 overflow-y-auto nice-scroll px-4 sm:px-5 pb-4">
         {grouped.length === 0 ? (
           <div className="py-10 text-center text-[12px] fg-faint">
-            No icons match &quot;{query}&quot;.
+            {t("icon.noMatch", { query })}
           </div>
         ) : (
           grouped.map(([category, icons]) => (
@@ -235,7 +238,7 @@ function IconPicker({
                     onClick={handlePick}
                     data-icon-name={name}
                     title={name}
-                    aria-label={`Pick ${name}`}
+                    aria-label={t("icon.pickAria", { name })}
                     className="group relative h-12 flex flex-col items-center justify-center gap-0.5 rounded-md ring-1 ring-[color:var(--border)] bg-app hover:bg-hover hover:ring-[color:var(--accent)]/50 transition fg-muted hover:text-[color:var(--accent)]"
                   >
                     <Component size={18} strokeWidth={2} aria-hidden />
@@ -265,22 +268,23 @@ function ImagePicker({
   projectId: string | null;
   onPick: (payload: ReplacePayload) => void;
 }) {
+  const t = useTranslations("modalsAsset");
   const [tab, setTab] = useState<ImageTab>("openlen");
 
   return (
     <div className="flex flex-col">
       <div className="px-4 sm:px-5 pt-2.5 flex gap-1 text-[12.5px] border-b bd shrink-0">
         <TabButton active={tab === "openlen"} onClick={() => setTab("openlen")}>
-          By OpenLen
+          {t("image.tabs.openlen")}
         </TabButton>
         <TabButton active={tab === "paste"} onClick={() => setTab("paste")}>
-          Paste URL
+          {t("image.tabs.paste")}
         </TabButton>
         <TabButton active={tab === "unsplash"} onClick={() => setTab("unsplash")}>
-          Unsplash
+          {t("image.tabs.unsplash")}
         </TabButton>
         <TabButton active={tab === "upload"} onClick={() => setTab("upload")}>
-          Upload
+          {t("image.tabs.upload")}
         </TabButton>
       </div>
       {tab === "openlen" && <OpenLenTab onPick={onPick} />}
@@ -324,6 +328,7 @@ function PasteUrlTab({
   currentSrc: string | null;
   onPick: (payload: ReplacePayload) => void;
 }) {
+  const t = useTranslations("modalsAsset");
   const [url, setUrl] = useState(currentSrc ?? "");
   const [alt, setAlt] = useState("");
   const [previewLoaded, setPreviewLoaded] = useState(false);
@@ -372,7 +377,7 @@ function PasteUrlTab({
       <div className="px-4 sm:px-5 py-4 space-y-3.5">
         <div>
           <label className="block text-[11px] fg-faint mb-1 ui-small uppercase tracking-wider">
-            Image URL
+            {t("paste.urlLabel")}
           </label>
           <input
             ref={inputRef}
@@ -385,20 +390,22 @@ function PasteUrlTab({
           />
           {url.trim() && !isValidUrl && (
             <div className="mt-1 text-[11px] text-red-600 dark:text-red-400">
-              Doesn&apos;t look like a valid http(s) URL.
+              {t("paste.invalidUrl")}
             </div>
           )}
         </div>
 
         <div>
           <label className="block text-[11px] fg-faint mb-1 ui-small uppercase tracking-wider">
-            Alt text <span className="fg-faint">· optional but better for a11y</span>
+            {t.rich("paste.altLabel", {
+              hint: (chunks) => <span className="fg-faint">{chunks}</span>,
+            })}
           </label>
           <input
             type="text"
             value={alt}
             onChange={(e) => setAlt(e.target.value)}
-            placeholder="Describe the image…"
+            placeholder={t("paste.altPlaceholder")}
             className="w-full h-9 px-3 rounded-md border bd bg-app text-[13px] fg placeholder:fg-faint focus:outline-none focus:border-[color:var(--accent)] focus:ring-1 focus:ring-[color:var(--accent-ring)]/30 transition"
           />
         </div>
@@ -406,18 +413,18 @@ function PasteUrlTab({
         {isValidUrl && (
           <div>
             <div className="text-[11px] fg-faint mb-1.5 ui-small uppercase tracking-wider">
-              Preview
+              {t("paste.preview")}
             </div>
             <div className="relative rounded-md ring-1 ring-[color:var(--border)] bg-app overflow-hidden h-44 flex items-center justify-center">
               {previewError ? (
                 <div className="text-[12px] fg-faint">
-                  Couldn&apos;t load that URL. Check it&apos;s public + reachable.
+                  {t("paste.previewError")}
                 </div>
               ) : (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={url.trim()}
-                  alt="preview"
+                  alt={t("paste.previewAlt")}
                   onLoad={() => setPreviewLoaded(true)}
                   onError={() => setPreviewError(true)}
                   className={`max-h-full max-w-full object-contain transition-opacity duration-200 ${
@@ -426,7 +433,7 @@ function PasteUrlTab({
                 />
               )}
               {!previewLoaded && !previewError && (
-                <div className="absolute text-[11px] fg-faint">Loading…</div>
+                <div className="absolute text-[11px] fg-faint">{t("common.loading")}</div>
               )}
             </div>
           </div>
@@ -440,7 +447,7 @@ function PasteUrlTab({
           disabled={!isValidUrl}
           className="inline-flex items-center justify-center gap-1.5 h-8 px-3.5 rounded-md text-[12px] font-medium bg-[var(--accent)] text-white hover:brightness-105 shadow-coral transition disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          Apply image
+          {t("paste.applyImage")}
         </button>
       </div>
     </div>
@@ -470,7 +477,9 @@ type OpenLenStyle =
   | "creator-mockup"
   | "sports-editorial"
   | "travel-editorial"
-  | "wedding-editorial";
+  | "wedding-editorial"
+  | "music-editorial"
+  | "gaming-editorial";
 
 interface OpenLenImage {
   id: string;
@@ -488,44 +497,50 @@ interface OpenLenManifest {
   images: OpenLenImage[];
 }
 
-const OPENLEN_STYLE_FILTERS: { value: OpenLenStyle | "all"; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "3d-abstract", label: "3D" },
-  { value: "gradient-bg", label: "Gradients" },
-  { value: "device-mockup", label: "Mockups" },
-  { value: "creator-mockup", label: "Creator" },
-  { value: "product-still-life", label: "Products" },
-  { value: "claymorph", label: "Clay" },
-  { value: "interior-editorial", label: "Interiors" },
-  { value: "architecture-editorial", label: "Architecture" },
-  { value: "nature-editorial", label: "Nature" },
-  { value: "travel-editorial", label: "Travel" },
-  { value: "wedding-editorial", label: "Wedding" },
-  { value: "food-editorial", label: "Food" },
-  { value: "lifestyle-editorial", label: "Lifestyle" },
-  { value: "sports-editorial", label: "Sports" },
-  { value: "pet-editorial", label: "Pets" },
-  { value: "fashion-editorial", label: "Fashion" },
+// Filter chip values; labels are resolved via t("openlen.filters.<value>").
+const OPENLEN_STYLE_FILTERS: (OpenLenStyle | "all")[] = [
+  "all",
+  "3d-abstract",
+  "gradient-bg",
+  "device-mockup",
+  "creator-mockup",
+  "product-still-life",
+  "claymorph",
+  "interior-editorial",
+  "architecture-editorial",
+  "nature-editorial",
+  "travel-editorial",
+  "wedding-editorial",
+  "music-editorial",
+  "gaming-editorial",
+  "food-editorial",
+  "lifestyle-editorial",
+  "sports-editorial",
+  "pet-editorial",
+  "fashion-editorial",
 ];
 
-// Short badge shown on each card's hover overlay.
-const OPENLEN_STYLE_BADGE: Record<OpenLenStyle, string> = {
-  "3d-abstract": "3D",
-  "gradient-bg": "Gradient",
-  "device-mockup": "Mockup",
-  "creator-mockup": "Creator",
-  "product-still-life": "Product",
-  claymorph: "Clay",
-  "interior-editorial": "Interior",
-  "architecture-editorial": "Architecture",
-  "nature-editorial": "Nature",
-  "travel-editorial": "Travel",
-  "wedding-editorial": "Wedding",
-  "food-editorial": "Food",
-  "lifestyle-editorial": "Lifestyle",
-  "sports-editorial": "Sports",
-  "pet-editorial": "Pet",
-  "fashion-editorial": "Fashion",
+// Short badge keys shown on each card's hover overlay; resolved via
+// t("openlen.badges.<style>").
+const OPENLEN_STYLE_BADGE_KEY: Record<OpenLenStyle, string> = {
+  "3d-abstract": "3d-abstract",
+  "gradient-bg": "gradient-bg",
+  "device-mockup": "device-mockup",
+  "creator-mockup": "creator-mockup",
+  "product-still-life": "product-still-life",
+  claymorph: "claymorph",
+  "interior-editorial": "interior-editorial",
+  "architecture-editorial": "architecture-editorial",
+  "nature-editorial": "nature-editorial",
+  "travel-editorial": "travel-editorial",
+  "wedding-editorial": "wedding-editorial",
+  "music-editorial": "music-editorial",
+  "gaming-editorial": "gaming-editorial",
+  "food-editorial": "food-editorial",
+  "lifestyle-editorial": "lifestyle-editorial",
+  "sports-editorial": "sports-editorial",
+  "pet-editorial": "pet-editorial",
+  "fashion-editorial": "fashion-editorial",
 };
 
 function OpenLenTab({
@@ -533,6 +548,7 @@ function OpenLenTab({
 }: {
   onPick: (payload: ReplacePayload) => void;
 }) {
+  const t = useTranslations("modalsAsset");
   const [data, setData] = useState<OpenLenManifest | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -553,13 +569,13 @@ function OpenLenTab({
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Failed to load");
+        setError(err instanceof Error ? err.message : t("openlen.loadFailed"));
         setLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const filtered = useMemo(() => {
     if (!data) return [];
@@ -593,23 +609,25 @@ function OpenLenTab({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={
-            data ? `Search ${data.count} OpenLen images…` : "Loading…"
+            data
+              ? t("openlen.searchPlaceholder", { count: data.count })
+              : t("common.loading")
           }
           className="w-full h-9 px-3 rounded-md border bd bg-app text-[13px] fg placeholder:fg-faint focus:outline-none focus:border-[color:var(--accent)] focus:ring-1 focus:ring-[color:var(--accent-ring)]/30 transition"
         />
         <div className="flex items-center gap-1.5">
           {OPENLEN_STYLE_FILTERS.map((f) => (
             <button
-              key={f.value}
+              key={f}
               type="button"
-              onClick={() => setStyleFilter(f.value)}
+              onClick={() => setStyleFilter(f)}
               className={`px-2.5 py-1 rounded-full text-[11px] transition border ${
-                styleFilter === f.value
+                styleFilter === f
                   ? "bg-[color:var(--accent)] text-white border-transparent"
                   : "bd bg-app fg-muted hover:fg"
               }`}
             >
-              {f.label}
+              {t(`openlen.filters.${f}`)}
             </button>
           ))}
         </div>
@@ -617,7 +635,7 @@ function OpenLenTab({
 
       <div className="flex-1 overflow-y-auto nice-scroll px-4 sm:px-5 pb-4">
         {loading ? (
-          <div className="py-10 text-center text-[12px] fg-faint">Loading…</div>
+          <div className="py-10 text-center text-[12px] fg-faint">{t("common.loading")}</div>
         ) : error ? (
           <div className="py-10 text-center text-[12px] text-red-600 dark:text-red-400">
             {error}
@@ -625,8 +643,8 @@ function OpenLenTab({
         ) : filtered.length === 0 ? (
           <div className="py-10 text-center text-[12px] fg-faint">
             {query.trim()
-              ? `No images match "${query.trim()}".`
-              : "Nothing here yet."}
+              ? t("openlen.noMatch", { query: query.trim() })
+              : t("openlen.empty")}
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -642,7 +660,7 @@ function OpenLenTab({
       </div>
 
       <div className="px-4 sm:px-5 py-2 border-t bd bg-app/40 flex items-center justify-between text-[10.5px] fg-faint ui-small">
-        <span>Curated images by OpenLen — included with self-host</span>
+        <span>{t("openlen.footer")}</span>
         {data && (
           <span className="font-mono">
             {filtered.length}/{data.count}
@@ -660,6 +678,7 @@ function OpenLenCard({
   image: OpenLenImage;
   onPick: () => void;
 }) {
+  const t = useTranslations("modalsAsset");
   const [loaded, setLoaded] = useState(false);
   // OpenLen manifest exposes hero/tablet/thumb — three widths of the
   // same WebP. Feed all three as a single-format multi-width set so
@@ -676,7 +695,7 @@ function OpenLenCard({
       type="button"
       onClick={onPick}
       className="group relative aspect-[16/10] rounded-md overflow-hidden ring-1 ring-[color:var(--border)] bg-app hover:ring-[color:var(--accent)]/60 transition focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]"
-      aria-label={`Use OpenLen image: ${image.alt}`}
+      aria-label={t("openlen.useImageAria", { alt: image.alt })}
       title={image.alt}
     >
       <ResponsiveImage
@@ -693,7 +712,7 @@ function OpenLenCard({
       <div className="absolute inset-x-0 bottom-0 px-2 py-1.5 bg-gradient-to-t from-black/70 to-transparent text-white text-[10.5px] opacity-0 group-hover:opacity-100 transition flex items-center justify-between">
         <span className="truncate">{image.family[0] ?? image.style}</span>
         <span className="ml-1 px-1.5 py-0.5 rounded-sm bg-white/20 backdrop-blur-sm text-[9.5px] uppercase tracking-wider shrink-0">
-          {OPENLEN_STYLE_BADGE[image.style]}
+          {t(`openlen.badges.${OPENLEN_STYLE_BADGE_KEY[image.style]}`)}
         </span>
       </div>
     </button>
@@ -728,6 +747,7 @@ function UnsplashTab({
 }: {
   onPick: (payload: ReplacePayload) => void;
 }) {
+  const t = useTranslations("modalsAsset");
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
   const [data, setData] = useState<UnsplashSearchResponse | null>(null);
@@ -763,13 +783,13 @@ function UnsplashTab({
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Search failed");
+        setError(err instanceof Error ? err.message : t("unsplash.searchFailed"));
         setLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [debounced]);
+  }, [debounced, t]);
 
   const handlePick = (photo: UnsplashPhoto) => {
     // Per Unsplash API guidelines, ping their download_location endpoint
@@ -805,8 +825,8 @@ function UnsplashTab({
           onChange={(e) => setQuery(e.target.value)}
           placeholder={
             data?.demoMode
-              ? "Demo mode — set UNSPLASH_ACCESS_KEY for full search"
-              : "Search Unsplash photos…"
+              ? t("unsplash.demoPlaceholder")
+              : t("unsplash.searchPlaceholder")
           }
           className="w-full h-9 px-3 rounded-md border bd bg-app text-[13px] fg placeholder:fg-faint focus:outline-none focus:border-[color:var(--accent)] focus:ring-1 focus:ring-[color:var(--accent-ring)]/30 transition"
         />
@@ -814,14 +834,14 @@ function UnsplashTab({
 
       <div className="flex-1 overflow-y-auto nice-scroll px-4 sm:px-5 pb-4">
         {loading && !data ? (
-          <div className="py-10 text-center text-[12px] fg-faint">Loading…</div>
+          <div className="py-10 text-center text-[12px] fg-faint">{t("common.loading")}</div>
         ) : error ? (
           <div className="py-10 text-center text-[12px] text-red-600 dark:text-red-400">
             {error}
           </div>
         ) : !data || data.results.length === 0 ? (
           <div className="py-10 text-center text-[12px] fg-faint">
-            {debounced ? `No photos match "${debounced}".` : "Type to search."}
+            {debounced ? t("unsplash.noMatch", { query: debounced }) : t("unsplash.typeToSearch")}
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -838,18 +858,21 @@ function UnsplashTab({
 
       <div className="px-4 sm:px-5 py-2 border-t bd bg-app/40 flex items-center justify-between text-[10.5px] fg-faint ui-small">
         <span>
-          Photos from{" "}
-          <a
-            href="https://unsplash.com?utm_source=openlen&utm_medium=referral"
-            target="_blank"
-            rel="noreferrer"
-            className="hover:text-accent underline-offset-2 hover:underline"
-          >
-            Unsplash
-          </a>
+          {t.rich("unsplash.attribution", {
+            link: (chunks) => (
+              <a
+                href="https://unsplash.com?utm_source=openlen&utm_medium=referral"
+                target="_blank"
+                rel="noreferrer"
+                className="hover:text-accent underline-offset-2 hover:underline"
+              >
+                {chunks}
+              </a>
+            ),
+          })}
         </span>
         {data?.demoMode && (
-          <span className="font-mono">DEMO · {data.results.length} photos</span>
+          <span className="font-mono">{t("unsplash.demoBadge", { count: data.results.length })}</span>
         )}
       </div>
     </div>
@@ -863,13 +886,14 @@ function UnsplashCard({
   photo: UnsplashPhoto;
   onPick: () => void;
 }) {
+  const t = useTranslations("modalsAsset");
   const [loaded, setLoaded] = useState(false);
   return (
     <button
       type="button"
       onClick={onPick}
       className="group relative aspect-[4/3] rounded-md overflow-hidden ring-1 ring-[color:var(--border)] bg-app hover:ring-[color:var(--accent)]/60 transition focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]"
-      aria-label={`Use photo by ${photo.author}: ${photo.alt}`}
+      aria-label={t("unsplash.usePhotoAria", { author: photo.author, alt: photo.alt })}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
@@ -904,6 +928,7 @@ function UploadTab({
   projectId: string | null;
   onPick: (payload: ReplacePayload) => void;
 }) {
+  const t = useTranslations("modalsAsset");
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [alt, setAlt] = useState("");
@@ -926,18 +951,18 @@ function UploadTab({
   const acceptFile = useCallback((next: File) => {
     setError(null);
     if (next.size > MAX_UPLOAD_MB * 1024 * 1024) {
-      setError(`File too large. Max ${MAX_UPLOAD_MB} MB.`);
+      setError(t("upload.tooLarge", { max: MAX_UPLOAD_MB }));
       setStatus("error");
       return;
     }
     if (!/^image\//.test(next.type)) {
-      setError("That's not an image — please pick a png/jpg/webp/gif/svg.");
+      setError(t("upload.notImage"));
       setStatus("error");
       return;
     }
     setFile(next);
     setStatus("selected");
-  }, []);
+  }, [t]);
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const next = e.target.files?.[0];
@@ -973,7 +998,7 @@ function UploadTab({
       if (e.lengthComputable) setProgress(e.loaded / e.total);
     };
     xhr.onerror = () => {
-      setError("Network error during upload.");
+      setError(t("upload.networkError"));
       setStatus("error");
     };
     xhr.onload = () => {
@@ -983,11 +1008,13 @@ function UploadTab({
           setStatus("done");
           onPick({ url: data.url as string, alt: alt.trim() || undefined });
         } else {
-          setError(data?.message ?? data?.error ?? `Upload failed (${xhr.status})`);
+          setError(
+            data?.message ?? data?.error ?? t("upload.failed", { status: xhr.status }),
+          );
           setStatus("error");
         }
       } catch {
-        setError(`Upload failed (${xhr.status})`);
+        setError(t("upload.failed", { status: xhr.status }));
         setStatus("error");
       }
     };
@@ -995,12 +1022,12 @@ function UploadTab({
     const form = new FormData();
     form.append("file", file);
     xhr.send(form);
-  }, [file, projectId, alt, onPick]);
+  }, [file, projectId, alt, onPick, t]);
 
   if (!projectId) {
     return (
       <div className="px-4 sm:px-5 py-10 text-center text-[12px] fg-faint">
-        Upload isn&apos;t available outside a project.
+        {t("upload.unavailable")}
       </div>
     );
   }
@@ -1039,24 +1066,23 @@ function UploadTab({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={previewUrl}
-                alt="upload preview"
+                alt={t("upload.previewAlt")}
                 className="mx-auto max-h-36 object-contain rounded"
               />
               <div className="text-[11px] fg-muted">
                 {file?.name} · {prettySize(file?.size ?? 0)}
               </div>
               <div className="text-[10.5px] fg-faint">
-                Click again or drop another to swap.
+                {t("upload.swapHint")}
               </div>
             </div>
           ) : (
             <div className="space-y-1">
               <div className="text-[13px] fg font-medium">
-                Drop an image here
+                {t("upload.dropHere")}
               </div>
               <div className="text-[11px] fg-faint">
-                or click to browse · png / jpg / webp / gif / svg · up to{" "}
-                {MAX_UPLOAD_MB} MB
+                {t("upload.browseHint", { max: MAX_UPLOAD_MB })}
               </div>
             </div>
           )}
@@ -1065,13 +1091,15 @@ function UploadTab({
         {file && (
           <div>
             <label className="block text-[11px] fg-faint mb-1 ui-small uppercase tracking-wider">
-              Alt text <span className="fg-faint">· optional</span>
+              {t.rich("upload.altLabel", {
+                hint: (chunks) => <span className="fg-faint">{chunks}</span>,
+              })}
             </label>
             <input
               type="text"
               value={alt}
               onChange={(e) => setAlt(e.target.value)}
-              placeholder="Describe the image…"
+              placeholder={t("paste.altPlaceholder")}
               disabled={status === "uploading"}
               className="w-full h-9 px-3 rounded-md border bd bg-app text-[13px] fg placeholder:fg-faint focus:outline-none focus:border-[color:var(--accent)] focus:ring-1 focus:ring-[color:var(--accent-ring)]/30 transition disabled:opacity-60"
             />
@@ -1081,7 +1109,7 @@ function UploadTab({
         {status === "uploading" && (
           <div>
             <div className="text-[11px] fg-faint mb-1">
-              Uploading… {Math.round(progress * 100)}%
+              {t("upload.uploadingProgress", { percent: Math.round(progress * 100) })}
             </div>
             <div className="h-1.5 rounded-full bg-hover overflow-hidden">
               <div
@@ -1101,7 +1129,7 @@ function UploadTab({
 
       <div className="px-4 sm:px-5 py-3 border-t bd bg-app/40 flex items-center justify-between gap-2">
         <span className="text-[10.5px] fg-faint ui-small">
-          Stored in {storageHint()}
+          {t("upload.storedIn")}
         </span>
         <button
           type="button"
@@ -1109,7 +1137,7 @@ function UploadTab({
           disabled={!file || status === "uploading"}
           className="inline-flex items-center justify-center gap-1.5 h-8 px-3.5 rounded-md text-[12px] font-medium bg-[var(--accent)] text-white hover:brightness-105 shadow-coral transition disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {status === "uploading" ? "Uploading…" : "Upload & apply"}
+          {status === "uploading" ? t("upload.uploading") : t("upload.uploadApply")}
         </button>
       </div>
     </div>
@@ -1120,10 +1148,4 @@ function prettySize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-}
-
-function storageHint(): string {
-  // We can't tell client-side which backend is configured. Show a generic
-  // hint; the user knows what THEIR deploy uses.
-  return "your project's asset storage";
 }

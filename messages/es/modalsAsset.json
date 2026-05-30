@@ -1,0 +1,184 @@
+{
+  "common": {
+    "close": "Cerrar",
+    "closeButton": "Cerrar",
+    "cancel": "Cancelar",
+    "apply": "Aplicar",
+    "loading": "Cargando…"
+  },
+  "header": {
+    "iconTitle": "Reemplazar icono",
+    "imageTitle": "Reemplazar imagen",
+    "iconSubtitle": "Elige un icono de Lucide para intercambiar. Se conservan el tamaño y el color del original.",
+    "imageSubtitle": "Pega la URL de una imagen (Unsplash, tu CDN, donde sea). Se conserva la relación de aspecto del espacio."
+  },
+  "icon": {
+    "searchPlaceholder": "Busca entre más de 100 iconos…",
+    "current": "Actual",
+    "noMatch": "Ningún icono coincide con \"{query}\".",
+    "pickAria": "Elegir {name}"
+  },
+  "image": {
+    "tabs": {
+      "openlen": "De OpenLen",
+      "paste": "Pegar URL",
+      "unsplash": "Unsplash",
+      "upload": "Subir"
+    }
+  },
+  "paste": {
+    "urlLabel": "URL de la imagen",
+    "invalidUrl": "No parece una URL http(s) válida.",
+    "altLabel": "Texto alternativo <hint>· opcional, pero mejor para accesibilidad</hint>",
+    "altPlaceholder": "Describe la imagen…",
+    "preview": "Vista previa",
+    "previewError": "No se pudo cargar esa URL. Comprueba que sea pública y accesible.",
+    "previewAlt": "vista previa",
+    "applyImage": "Aplicar imagen"
+  },
+  "openlen": {
+    "searchPlaceholder": "Busca entre {count} imágenes de OpenLen…",
+    "loadFailed": "No se pudo cargar",
+    "noMatch": "Ninguna imagen coincide con \"{query}\".",
+    "empty": "Todavía no hay nada aquí.",
+    "footer": "Imágenes seleccionadas por OpenLen — incluidas con el self-host",
+    "useImageAria": "Usar imagen de OpenLen: {alt}",
+    "filters": {
+      "all": "Todas",
+      "3d-abstract": "3D",
+      "gradient-bg": "Degradados",
+      "device-mockup": "Mockups",
+      "creator-mockup": "Creadores",
+      "product-still-life": "Productos",
+      "claymorph": "Clay",
+      "interior-editorial": "Interiores",
+      "architecture-editorial": "Arquitectura",
+      "nature-editorial": "Naturaleza",
+      "travel-editorial": "Viajes",
+      "wedding-editorial": "Bodas",
+      "music-editorial": "Música",
+      "gaming-editorial": "Gaming",
+      "food-editorial": "Comida",
+      "lifestyle-editorial": "Lifestyle",
+      "sports-editorial": "Deportes",
+      "pet-editorial": "Mascotas",
+      "fashion-editorial": "Moda"
+    },
+    "badges": {
+      "3d-abstract": "3D",
+      "gradient-bg": "Degradado",
+      "device-mockup": "Mockup",
+      "creator-mockup": "Creador",
+      "product-still-life": "Producto",
+      "claymorph": "Clay",
+      "interior-editorial": "Interior",
+      "architecture-editorial": "Arquitectura",
+      "nature-editorial": "Naturaleza",
+      "travel-editorial": "Viajes",
+      "wedding-editorial": "Boda",
+      "music-editorial": "Música",
+      "gaming-editorial": "Gaming",
+      "food-editorial": "Comida",
+      "lifestyle-editorial": "Lifestyle",
+      "sports-editorial": "Deportes",
+      "pet-editorial": "Mascota",
+      "fashion-editorial": "Moda"
+    }
+  },
+  "unsplash": {
+    "searchFailed": "La búsqueda falló",
+    "demoPlaceholder": "Modo demo — configura UNSPLASH_ACCESS_KEY para la búsqueda completa",
+    "searchPlaceholder": "Busca fotos en Unsplash…",
+    "noMatch": "Ninguna foto coincide con \"{query}\".",
+    "typeToSearch": "Escribe para buscar.",
+    "attribution": "Fotos de <link>Unsplash</link>",
+    "demoBadge": "DEMO · {count} fotos",
+    "usePhotoAria": "Usar foto de {author}: {alt}"
+  },
+  "upload": {
+    "tooLarge": "Archivo demasiado grande. Máximo {max} MB.",
+    "notImage": "Eso no es una imagen — elige un png/jpg/webp/gif/svg.",
+    "networkError": "Error de red durante la subida.",
+    "failed": "La subida falló ({status})",
+    "unavailable": "Subir no está disponible fuera de un proyecto.",
+    "previewAlt": "vista previa de la subida",
+    "swapHint": "Vuelve a hacer clic o suelta otra para cambiarla.",
+    "dropHere": "Suelta una imagen aquí",
+    "browseHint": "o haz clic para buscar · png / jpg / webp / gif / svg · hasta {max} MB",
+    "altLabel": "Texto alternativo <hint>· opcional</hint>",
+    "uploadingProgress": "Subiendo… {percent}%",
+    "storedIn": "Guardado en el almacenamiento de recursos de tu proyecto",
+    "uploading": "Subiendo…",
+    "uploadApply": "Subir y aplicar"
+  },
+  "autofill": {
+    "title": "Llenar con tu info",
+    "subtitle": "Sube una imagen con la info de tu negocio o escribe los datos a mano. Tu plantilla se llena con tu contenido real — el diseño no cambia.",
+    "subtitleShort": "Imagen o datos → tu plantilla se llena con tu contenido.",
+    "tabs": {
+      "image": "Subir imagen",
+      "text": "Escribir info"
+    },
+    "image": {
+      "previewAlt": "Vista previa",
+      "sizeChange": "{kb} KB · haz clic para cambiar",
+      "dropPrompt": "Arrastra una imagen, haz clic para elegir, o pega del portapapeles",
+      "hint": "JPG o PNG · hasta 8 MB · capturas de pantalla, fotos de menú, folletos…"
+    },
+    "fields": {
+      "businessName": {
+        "label": "Nombre del negocio *",
+        "placeholder": "Tacos de Juan"
+      },
+      "industry": {
+        "label": "Industria / tipo",
+        "placeholder": "Taquería tradicional mexicana"
+      },
+      "tagline": {
+        "label": "Tagline (1 línea con gancho)",
+        "placeholder": "Auténticos tacos al pastor desde 1989"
+      },
+      "pitch": {
+        "label": "Pitch (1-2 frases sobre tu negocio)",
+        "placeholder": "Más de 30 años sirviendo los mejores tacos al pastor de Monterrey. Tradición familiar, ingredientes frescos."
+      },
+      "heroKeyword": {
+        "label": "Palabra clave del hero",
+        "placeholder": "tradición"
+      },
+      "ctaPrimary": {
+        "label": "CTA principal",
+        "placeholder": "Pide por WhatsApp"
+      }
+    },
+    "stages": {
+      "extracting": "Leyendo imagen…",
+      "tagging": "Preparando plantilla…",
+      "calling-model": "Kimi K2.6 escribiendo…",
+      "applying": "Aplicando cambios…",
+      "persisting": "Guardando…",
+      "done": "Listo",
+      "error": "Error"
+    },
+    "doneStatus": "✓ Listo · {seconds}s",
+    "tips": {
+      "image": "Tip: una foto del menú, una captura de tu sitio, un folleto — todo sirve.",
+      "text": "Tip: con nombre + tagline + pitch alcanza. El resto de la plantilla queda intacto."
+    },
+    "processing": "Procesando…",
+    "errors": {
+      "notImage": "El archivo no es una imagen.",
+      "onlyJpgPng": "Solo aceptamos JPG o PNG.",
+      "tooLarge": "Imagen demasiado grande ({size} MB, máximo 8 MB).",
+      "tooSmallBytes": "Imagen demasiado pequeña — prueba con una captura de pantalla o una foto real (mínimo 4 KB).",
+      "tooSmallDims": "Imagen demasiado pequeña ({width}×{height}px). Mínimo 200×200 — prueba con una captura de tu sitio o una foto del menú.",
+      "cantRead": "No pudimos leer la imagen. Prueba con otra.",
+      "uploadFirst": "Sube una imagen primero.",
+      "needBusinessName": "Necesitas al menos el nombre del negocio.",
+      "network": "Error de red",
+      "server": "Servidor {status}: {detail}",
+      "streamRead": "Falló la lectura del stream",
+      "unknown": "Error desconocido"
+    }
+  }
+}

@@ -1,0 +1,138 @@
+{
+  "metaTitle": "My pages · OpenLen",
+  "header": {
+    "myPages": "My pages",
+    "newPage": "New page"
+  },
+  "status": {
+    "published": "Published",
+    "draft": "Draft",
+    "archived": "Archived"
+  },
+  "toolbar": {
+    "title": "My pages",
+    "pages": "{count, plural, one {# page} other {# pages}}",
+    "publishedCount": "{count} published",
+    "filterLabel": "Filter: {label}",
+    "clearFilter": "Clear filter",
+    "searchPlaceholder": "Search pages…",
+    "filters": {
+      "all": "All pages",
+      "draft": "Drafts",
+      "published": "Published",
+      "archived": "Archived"
+    },
+    "sorts": {
+      "edited": "Last edited",
+      "created": "Date created",
+      "name": "Name (A → Z)"
+    },
+    "gridView": "Grid view",
+    "listView": "List view"
+  },
+  "usage": {
+    "total": "Total",
+    "totalPages": "{count, plural, one {# page} other {# pages}} in your workspace",
+    "thisMonth": "This month",
+    "creditsUsed": "{used} / {allotment} credits used",
+    "freePlan": "Free plan",
+    "proPlan": "Pro plan",
+    "creditsLeft": "{count, plural, one {# credit left} other {# credits left}}",
+    "dismiss": "Dismiss"
+  },
+  "list": {
+    "name": "Name",
+    "status": "Status",
+    "tags": "Tags",
+    "edited": "Edited",
+    "notDeployed": "Not deployed"
+  },
+  "card": {
+    "projectMenu": "Project menu",
+    "published": "Published",
+    "unpublishedChanges": "Unpublished changes",
+    "open": "Open",
+    "editedAgo": "Edited {time}",
+    "sections": "{count, plural, one {# section} other {# sections}}"
+  },
+  "menu": {
+    "closeMenu": "Close menu",
+    "open": "Open",
+    "duplicate": "Duplicate",
+    "rename": "Rename",
+    "downloadZip": "Download .zip",
+    "openPublished": "Open published page",
+    "publish": "Publish…",
+    "archived": "Archived",
+    "archive": "Archive",
+    "delete": "Delete"
+  },
+  "bulk": {
+    "selected": "selected",
+    "archive": "Archive",
+    "delete": "Delete",
+    "cancel": "Cancel"
+  },
+  "empty": {
+    "badge": "Your workspace, fresh out of the box",
+    "title": "Your first page<br></br>in 60 seconds.",
+    "subtitle": "Describe what you want. We'll generate the copy, the layout, the imagery, and the code.",
+    "examples": {
+      "invoicing": {
+        "title": "Stripe-based invoicing SaaS",
+        "brief": "A landing for a tool that helps freelancers track invoices and get paid faster."
+      },
+      "portfolio": {
+        "title": "Designer portfolio in Mexico City",
+        "brief": "Personal site for a UI/UX designer with 6 case studies and an availability badge."
+      },
+      "conference": {
+        "title": "Virtual conference event page",
+        "brief": "Event landing for a 2-day indie hacking conference, with speaker grid and tickets."
+      },
+      "coffee": {
+        "title": "Single-origin coffee subscription",
+        "brief": "E-commerce hero for a small-batch coffee subscription, delivered every Tuesday."
+      }
+    },
+    "startFromScratch": "Start from scratch"
+  },
+  "noResults": {
+    "title": "No pages match \"{query}\"",
+    "subtitle": "Try a different search, or start a fresh one.",
+    "clearSearch": "Clear search",
+    "createNew": "Create new"
+  },
+  "actions": {
+    "deleteConfirm": "Delete this page? This cannot be undone.",
+    "deleteError": "Couldn't delete: {error}",
+    "archiveError": "Couldn't archive: {error}",
+    "renamePrompt": "New name",
+    "renameError": "Couldn't rename: {error}",
+    "duplicateError": "Couldn't duplicate: {error}",
+    "exportLoadError": "Couldn't load project to export.",
+    "zipError": "Couldn't build zip: {error}",
+    "bulkDeleteConfirm": "Delete {count} pages? This cannot be undone."
+  },
+  "relativeTime": {
+    "justNow": "just now",
+    "minutesAgo": "{count} min ago",
+    "hoursAgo": "{count}h ago",
+    "yesterday": "yesterday",
+    "daysAgo": "{count}d ago",
+    "weeksAgo": "{count}w ago"
+  },
+  "appHeader": {
+    "toggleDarkMode": "Toggle dark mode",
+    "signedIn": "Signed in",
+    "myPages": "My pages",
+    "settings": "Settings",
+    "billing": "Billing",
+    "apiKeys": "API keys",
+    "comingSoon": "{label} — coming soon",
+    "signOut": "Sign out"
+  },
+  "creditPill": {
+    "tooltip": "{balance} of {allotment} AI credits left this month"
+  }
+}

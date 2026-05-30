@@ -8,6 +8,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { BarChart3 } from "../icons";
 import { Sparkline } from "../insights-sparkline";
 import type {
@@ -24,17 +25,12 @@ const RANGES: ReadonlyArray<{ id: InsightsRange; label: string }> = [
   { id: "all", label: "All" },
 ];
 
-const DEVICE_LABELS: Record<string, string> = {
-  mobile: "Mobile",
-  desktop: "Desktop",
-  tablet: "Tablet",
-};
-
 export function InsightsPanel({
   currentProjectId,
 }: {
   currentProjectId?: string | null;
 }) {
+  const t = useTranslations("panelsB");
   const [range, setRange] = useState<InsightsRange>("7d");
   const [data, setData] = useState<Insights | null>(null);
   const [loading, setLoading] = useState(false);
@@ -62,7 +58,7 @@ export function InsightsPanel({
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Failed to load insights");
+        setError(err instanceof Error ? err.message : t("insights.loadError"));
         setLoading(false);
       });
     return () => {
@@ -80,10 +76,10 @@ export function InsightsPanel({
         <div className="flex items-center justify-between">
           <div>
             <div className="text-[10px] uppercase tracking-[0.16em] fg-faint font-semibold ui-small">
-              Insights
+              {t("insights.title")}
             </div>
             <div className="text-[11px] fg-faint mt-0.5">
-              Privacy-first analytics for this page.
+              {t("insights.subtitle")}
             </div>
           </div>
           <RangePicker value={range} onChange={setRange} disabled={loading} />
@@ -106,6 +102,7 @@ export function InsightsPanel({
 }
 
 function NoProject() {
+  const t = useTranslations("panelsB");
   return (
     <div className="h-full flex items-center justify-center px-6 py-8 text-center">
       <div className="max-w-[220px]">
@@ -113,10 +110,10 @@ function NoProject() {
           <BarChart3 size={14} />
         </div>
         <p className="text-[11.5px] fg-muted leading-relaxed">
-          Insights live per project.
+          {t("insights.perProject")}
         </p>
         <p className="mt-1.5 text-[10.5px] fg-faint leading-relaxed">
-          Open a project from the Pages tab to see its analytics.
+          {t("insights.perProjectHint")}
         </p>
       </div>
     </div>
@@ -132,6 +129,7 @@ function RangePicker({
   onChange: (r: InsightsRange) => void;
   disabled: boolean;
 }) {
+  const t = useTranslations("panelsB");
   return (
     <div className="inline-flex items-center gap-0.5 rounded-md bg-elev border bd p-0.5">
       {RANGES.map((r) => (
@@ -146,7 +144,7 @@ function RangePicker({
               : "fg-faint hover:fg"
           }`}
         >
-          {r.label}
+          {r.id === "all" ? t("insights.range.all") : r.label}
         </button>
       ))}
     </div>
@@ -176,27 +174,28 @@ function Content({ data }: { data: Insights }) {
 }
 
 function EmptyState() {
+  const t = useTranslations("panelsB");
   return (
     <div className="rounded-md border bd bg-elev p-4 text-center">
       <p className="text-[11.5px] fg-muted leading-relaxed">
-        No data yet for this range.
+        {t("insights.emptyRange")}
       </p>
       <p className="mt-1 text-[10.5px] fg-faint leading-relaxed">
-        Publish your page and share the link — analytics start the moment a
-        visitor hits it.
+        {t("insights.emptyRangeHint")}
       </p>
     </div>
   );
 }
 
 function KpiRow({ totals }: { totals: Insights["totals"] }) {
+  const t = useTranslations("panelsB");
   const ctr =
     totals.views > 0 ? Math.round((totals.clicks / totals.views) * 1000) / 10 : 0;
   return (
     <div className="grid grid-cols-2 gap-1.5">
-      <KpiCard label="Views" value={totals.views} />
-      <KpiCard label="Uniques" value={totals.uniques} />
-      <KpiCard label="Clicks" value={totals.clicks} />
+      <KpiCard label={t("insights.kpi.views")} value={totals.views} />
+      <KpiCard label={t("insights.kpi.uniques")} value={totals.uniques} />
+      <KpiCard label={t("insights.kpi.clicks")} value={totals.clicks} />
       <KpiCard label="CTR" value={`${ctr}%`} />
     </div>
   );
@@ -216,15 +215,16 @@ function KpiCard({ label, value }: { label: string; value: number | string }) {
 }
 
 function VisitsChart({ byDay }: { byDay: Insights["byDay"] }) {
+  const t = useTranslations("panelsB");
   const views = useMemo(() => byDay.map((d) => d.views), [byDay]);
   return (
     <div className="rounded-md border bd bg-elev p-2">
       <div className="flex items-center justify-between mb-1">
         <span className="text-[9.5px] uppercase tracking-[0.14em] fg-faint font-semibold ui-small">
-          Visits over time
+          {t("insights.visitsOverTime")}
         </span>
         <span className="text-[10px] fg-faint tabular-nums">
-          {byDay.length} {byDay.length === 1 ? "day" : "days"}
+          {t("insights.dayCount", { count: byDay.length })}
         </span>
       </div>
       <Sparkline
@@ -239,13 +239,14 @@ function VisitsChart({ byDay }: { byDay: Insights["byDay"] }) {
 }
 
 function TopLinksTable({ links }: { links: InsightsLink[] }) {
+  const t = useTranslations("panelsB");
   if (links.length === 0) {
     return (
       <div className="rounded-md border bd bg-elev p-3">
         <div className="text-[9.5px] uppercase tracking-[0.14em] fg-faint font-semibold ui-small mb-1">
-          Top links
+          {t("insights.topLinks")}
         </div>
-        <p className="text-[10.5px] fg-faint">No outbound clicks yet.</p>
+        <p className="text-[10.5px] fg-faint">{t("insights.noClicks")}</p>
       </div>
     );
   }
@@ -253,7 +254,7 @@ function TopLinksTable({ links }: { links: InsightsLink[] }) {
   return (
     <div className="rounded-md border bd bg-elev p-2">
       <div className="text-[9.5px] uppercase tracking-[0.14em] fg-faint font-semibold ui-small mb-1.5 px-1">
-        Top links
+        {t("insights.topLinks")}
       </div>
       <ul className="space-y-0.5">
         {links.map((link) => (
@@ -305,13 +306,18 @@ function SideBySide({
   countries: InsightsRow[];
   device: Insights["deviceSplit"];
 }) {
+  const t = useTranslations("panelsB");
   return (
     <div className="grid grid-cols-2 gap-1.5">
-      <SimpleListCard label="Referrers" rows={referrers} fallback="Direct only" />
       <SimpleListCard
-        label="Countries"
+        label={t("insights.referrers")}
+        rows={referrers}
+        fallback={t("insights.directOnly")}
+      />
+      <SimpleListCard
+        label={t("insights.countries")}
         rows={countries}
-        fallback="No country data"
+        fallback={t("insights.noCountryData")}
       />
       <DeviceCard device={device} />
     </div>
@@ -356,6 +362,7 @@ function SimpleListCard({
 }
 
 function DeviceCard({ device }: { device: Insights["deviceSplit"] }) {
+  const t = useTranslations("panelsB");
   const total = device.mobile + device.desktop + device.tablet;
   const rows = (["mobile", "desktop", "tablet"] as const).map((k) => ({
     key: k,
@@ -365,10 +372,10 @@ function DeviceCard({ device }: { device: Insights["deviceSplit"] }) {
   return (
     <div className="rounded-md border bd bg-elev p-2">
       <div className="text-[9.5px] uppercase tracking-[0.14em] fg-faint font-semibold ui-small mb-1">
-        Device
+        {t("insights.device")}
       </div>
       {total === 0 ? (
-        <p className="text-[10.5px] fg-faint">No device data</p>
+        <p className="text-[10.5px] fg-faint">{t("insights.noDeviceData")}</p>
       ) : (
         <ul className="space-y-0.5">
           {rows.map((r) => (
@@ -376,7 +383,7 @@ function DeviceCard({ device }: { device: Insights["deviceSplit"] }) {
               key={r.key}
               className="flex items-center justify-between gap-1 text-[11px]"
             >
-              <span className="fg">{DEVICE_LABELS[r.key]}</span>
+              <span className="fg">{t(`insights.deviceType.${r.key}`)}</span>
               <span className="fg-faint tabular-nums">{r.pct}%</span>
             </li>
           ))}

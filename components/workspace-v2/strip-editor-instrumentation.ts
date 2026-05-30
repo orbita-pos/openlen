@@ -5,7 +5,7 @@
 // section-insert). Each script's own "post clean HTML" step only removes ITS
 // OWN markers, so the HTML any one of them posts back still carries the other
 // scripts' markers. This is the single funnel every `openlen:html-changed`
-// passes through (app/new-v2/page.tsx), so it must produce the clean,
+// passes through (app/new/page.tsx), so it must produce the clean,
 // as-a-visitor-sees-it document that gets PATCHed + eventually published.
 //
 // Editor V5 note: inline-edit no longer puts `contenteditable` on page

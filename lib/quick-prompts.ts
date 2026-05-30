@@ -1,4 +1,4 @@
-// Quick-prompt presets — shared by the homepage hero input and the /new-v2
+// Quick-prompt presets — shared by the homepage hero input and the /new
 // AI brief panel so the two stay in sync. Each chip shows `label`; clicking
 // fills the composer with the detailed `prompt`.
 

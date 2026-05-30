@@ -1,0 +1,125 @@
+{
+  "customDomain": {
+    "validation": {
+      "invalidHostname": "Not a valid hostname.",
+      "reservedSubdomain": "Subdomains of openlen.com are managed via Deploy."
+    },
+    "errors": {
+      "loadFailed": "Failed to load domains.",
+      "networkLoad": "Network error while loading domains.",
+      "networkPreparing": "Network error while preparing the project.",
+      "addTaken": "Domain is already claimed by another project.",
+      "addGeneric": "Couldn't add this domain.",
+      "networkAdd": "Network error while adding domain.",
+      "verifyFailed": "Verification failed. Re-check the TXT record.",
+      "networkVerify": "Network error during verification.",
+      "removeFailed": "Failed to remove the domain.",
+      "networkRemove": "Network error while removing domain."
+    },
+    "autoPublish": {
+      "limitReached": "You already have {limit, plural, one {# published project} other {# published projects}} on your plan. Unpublish another project, or upgrade to Pro for more subdomains.",
+      "notFound": "Project not found. Try reloading the page.",
+      "invalid": "Could not generate a valid internal subdomain. Use Publish manually.",
+      "reserved": "Internal subdomain conflicts with a reserved name. Use Publish manually.",
+      "fallback": "Could not auto-publish ({error}). Use Publish manually first.",
+      "unknownError": "unknown error"
+    },
+    "defaultProviderName": "your DNS provider",
+    "confirmRemove": "Remove {domain}? Visitors hitting it will see a TLS error within minutes.",
+    "header": {
+      "title": "Custom domain",
+      "subtitle": "Serve your project at your own hostname."
+    },
+    "close": "Close",
+    "preparing": {
+      "title": "Preparing your project…",
+      "subtitle": "Setting up the hosting target so your custom domain has something to point at."
+    },
+    "publishFirst": {
+      "title": "Publish your page first",
+      "subtitle": "A custom domain needs your page live on an openlen.com subdomain to point at. Pick the name (you can change it later by re-publishing).",
+      "placeholder": "my-page",
+      "button": "Publish",
+      "publishing": "Publishing…"
+    },
+    "add": {
+      "label": "Add a domain",
+      "placeholder": "landing.miempresa.com",
+      "adding": "Adding…",
+      "button": "Add"
+    },
+    "list": {
+      "heading": "Domains",
+      "refreshing": "Refreshing…",
+      "empty": "None yet. Add one above to point your own hostname at this project.",
+      "verified": "Verified · TLS active",
+      "waiting": "Waiting on DNS",
+      "open": "Open",
+      "verify": "Verify",
+      "removeAria": "Remove {domain}",
+      "dnsSetup": "DNS setup"
+    },
+    "dns": {
+      "setupFor": "DNS setup for",
+      "oneClickAvailable": "One-click setup is available for your DNS provider.",
+      "manualHint": "Add these two records at your DNS provider (Cloudflare, GoDaddy, etc.). Most propagate within 1–5 minutes.",
+      "pointsTraffic": "Points traffic",
+      "provesOwnership": "Proves ownership",
+      "name": "Name",
+      "value": "Value",
+      "cloudflareHint": "On Cloudflare, set <strong>Proxy status: DNS only</strong> (gray cloud). Orange-cloud proxying blocks TLS cert issuance."
+    },
+    "connect": {
+      "title": "One-click setup with {provider}",
+      "subtitle": "Skip copy-pasting — we'll add the DNS records for you."
+    }
+  },
+  "publish": {
+    "errors": {
+      "publishGeneric": "Couldn't publish: {reason}",
+      "unpublishGeneric": "Couldn't unpublish: {reason}"
+    },
+    "previewName": "your-name",
+    "primary": {
+      "publishing": "Publishing…",
+      "moveSubdomain": "Move to new subdomain",
+      "republish": "Re-publish",
+      "publish": "Publish"
+    },
+    "header": {
+      "titleManage": "Manage publish",
+      "titlePublish": "Publish to openlen.com",
+      "subtitleManage": "Pick a new name, re-publish, or take it down.",
+      "subtitlePublish": "Pick a name. Live on the public web in a second."
+    },
+    "close": "Close",
+    "subdomainLabel": "Subdomain",
+    "subdomainPlaceholder": "your-name",
+    "preview": "Preview",
+    "limitsHint": "Free tier: 1 published page. Pro: 10. Lowercase letters, numbers, and hyphens (1–63 chars).",
+    "unpublish": {
+      "sure": "Sure?",
+      "confirm": "Yes, unpublish",
+      "no": "No",
+      "button": "Unpublish"
+    },
+    "useOwnDomain": "Or use my own domain",
+    "cancel": "Cancel",
+    "status": {
+      "choose": "Choose a name above.",
+      "checking": "Checking availability…",
+      "currentPage": "This is your current page —",
+      "visit": "visit",
+      "available": "Available",
+      "invalid": "Use lowercase letters, numbers, and hyphens (not leading/trailing).",
+      "reserved": "This name is reserved. Try another.",
+      "taken": "Already taken. Try another.",
+      "limit": "Plan cap reached — unpublish another page or upgrade."
+    }
+  },
+  "inspector": {
+    "radius": "Radius",
+    "radiusPlaceholder": "8px",
+    "hexPlaceholder": "#rrggbb"
+  }
+}

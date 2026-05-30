@@ -21,6 +21,7 @@ export default defineConfig({
     include: [
       "components/workspace-v2/**/*.test.ts",
       "lib/workspace-v2/**/*.test.ts",
+      "lib/sections/**/*.test.ts",
     ],
     exclude: ["node_modules/**", "tests/e2e/**", ".next/**"],
   },

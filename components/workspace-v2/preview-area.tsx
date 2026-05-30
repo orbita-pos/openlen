@@ -4,6 +4,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   ExternalLink,
   Grid3,
@@ -100,6 +101,7 @@ export function PreviewArea({
   onToggleInspect,
   insertRequest = null,
 }: PreviewAreaProps) {
+  const t = useTranslations("wsChrome");
   const [device, setDevice] = useState<Device>("desktop");
   const [zoom, setZoom] = useState<Zoom>("fit");
   const [gridOverlay, setGridOverlay] = useState(false);
@@ -274,7 +276,7 @@ export function PreviewArea({
                 zoom === z ? "bg-app fg shadow-card" : "fg-faint hover:fg"
               }`}
             >
-              {z === "fit" ? "Fit" : `${z}%`}
+              {z === "fit" ? t("preview.zoomFit") : `${z}%`}
             </button>
           ))}
         </div>
@@ -288,7 +290,11 @@ export function PreviewArea({
         <div className="ml-auto flex items-center gap-0.5">
           {onToggleInspect && (
             <IconBtn
-              label={inspectMode ? "Exit edit mode (⌘E)" : "Edit page (⌘E)"}
+              label={
+                inspectMode
+                  ? t("preview.toolbar.exitEdit")
+                  : t("preview.toolbar.editPage")
+              }
               size="sm"
               active={inspectMode}
               onClick={onToggleInspect}
@@ -297,7 +303,11 @@ export function PreviewArea({
             </IconBtn>
           )}
           <IconBtn
-            label={gridOverlay ? "Hide grid overlay" : "Show grid overlay"}
+            label={
+              gridOverlay
+                ? t("preview.toolbar.hideGrid")
+                : t("preview.toolbar.showGrid")
+            }
             size="sm"
             active={gridOverlay}
             onClick={() => setGridOverlay((g) => !g)}
@@ -305,15 +315,15 @@ export function PreviewArea({
             <Grid3 size={12} />
           </IconBtn>
           <IconBtn
-            label="Refresh preview"
+            label={t("preview.toolbar.refresh")}
             size="sm"
-            onClick={() => setRefreshTick((t) => t + 1)}
+            onClick={() => setRefreshTick((tick) => tick + 1)}
           >
             <RefreshCw size={12} />
           </IconBtn>
           {openInNewTabUrl && (
             <IconBtn
-              label="Open in new tab"
+              label={t("preview.toolbar.openNewTab")}
               size="sm"
               onClick={() => {
                 window.open(
@@ -333,30 +343,39 @@ export function PreviewArea({
           <span className="inline-flex h-3 w-3 items-center justify-center rounded-full ring-1 ring-[color:var(--accent)]">
             <span className="block h-1 w-1 rounded-full bg-[var(--accent)]" />
           </span>
-          Click any section to scope your next chat ·{" "}
-          <kbd className="px-1 rounded bg-elev border bd font-mono text-[10px]">
-            ESC
-          </kbd>{" "}
-          to cancel
+          {t.rich("preview.banner.sectionSelect", {
+            kbd: () => (
+              <kbd className="px-1 rounded bg-elev border bd font-mono text-[10px]">
+                ESC
+              </kbd>
+            ),
+          })}
         </div>
       )}
       {editableInjection && !sectionSelectMode && (
         <div className="relative z-10 shrink-0 h-7 flex items-center justify-center gap-2 text-[11.5px] bg-accent-soft text-accent border-b bd ui-small fade-in">
-          <Pencil size={11} /> Click any text in the page to edit it inline ·{" "}
-          <kbd className="px-1 rounded bg-elev border bd font-mono text-[10px]">
-            ESC
-          </kbd>{" "}
-          to cancel
+          <Pencil size={11} />{" "}
+          {t.rich("preview.banner.inlineEdit", {
+            kbd: () => (
+              <kbd className="px-1 rounded bg-elev border bd font-mono text-[10px]">
+                ESC
+              </kbd>
+            ),
+          })}
         </div>
       )}
       {previewUrl && (
         <div className="relative z-10 shrink-0 h-9 flex items-center px-3 gap-3 text-[11.5px] bg-accent-soft text-accent border-b bd ui-small fade-in">
           <span className="font-medium">
-            Previewing{templateName ? `: ${templateName}` : " template"}
+            {templateName
+              ? t("preview.templateBanner.previewingNamed", {
+                  name: templateName,
+                })
+              : t("preview.templateBanner.previewing")}
           </span>
           <span className="fg-faint hidden sm:inline">·</span>
           <span className="fg-muted hidden sm:inline">
-            Read-only — nothing saved until you commit
+            {t("preview.templateBanner.readOnly")}
           </span>
           <div className="ml-auto flex items-center gap-1.5">
             {onUseTemplate && (
@@ -369,10 +388,10 @@ export function PreviewArea({
                 {useTemplateLoading ? (
                   <>
                     <span className="inline-block w-1.5 h-1.5 rounded-full bg-white/80 animate-pulse" />
-                    Cloning…
+                    {t("preview.templateBanner.cloning")}
                   </>
                 ) : (
-                  <>Use this template →</>
+                  <>{t("preview.templateBanner.use")}</>
                 )}
               </button>
             )}
@@ -383,7 +402,7 @@ export function PreviewArea({
                 disabled={useTemplateLoading}
                 className="inline-flex items-center gap-1 h-6 px-2 rounded bg-app/40 hover:bg-app/70 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <X size={10} /> Clear
+                <X size={10} /> {t("preview.templateBanner.clear")}
               </button>
             )}
           </div>
@@ -410,7 +429,7 @@ export function PreviewArea({
               {...(previewUrl
                 ? { src: previewUrl }
                 : { srcDoc: stableSrcDoc })}
-              title="OpenLen workspace preview"
+              title={t("preview.iframeTitle")}
               sandbox="allow-scripts allow-same-origin"
               style={{
                 width: deviceWidth,
@@ -435,7 +454,7 @@ export function PreviewArea({
       </div>
       {redesigning && (
         <div className="absolute inset-0 z-40">
-          <PageBuildingLoader caption="Redesigning your page…" />
+          <PageBuildingLoader caption={t("preview.redesigning")} />
         </div>
       )}
     </section>
