@@ -81,7 +81,12 @@ const DEFAULT_DOMAIN_CACHE_MAX: u64 = 10_000;
 /// (`https://acme-staging-v02.api.letsencrypt.org/directory`) for tests + dry
 /// runs.
 const DEFAULT_ACME_DIRECTORY_URL: &str = "https://acme-v02.api.letsencrypt.org/directory";
-const DEFAULT_CERT_DIR: &str = "/var/openlen/certs";
+// Must match install.sh's STATE_DIR/certs AND the unit's
+// ReadWritePaths=/var/lib/openlen-edge — the ACME issuer + renewal sweep
+// write here. The old /var/openlen/certs default couldn't be created by the
+// non-root edge user (that dir is the app's, root-owned), so on-demand TLS
+// silently disabled itself.
+const DEFAULT_CERT_DIR: &str = "/var/lib/openlen-edge/certs";
 const DEFAULT_CERT_RENEWAL_THRESHOLD_DAYS: u32 = 30;
 const DEFAULT_CERT_RENEWAL_INTERVAL_SECS: u64 = 24 * 60 * 60;
 /// Loopback-only by default — Prometheus servers scrape locally / via a

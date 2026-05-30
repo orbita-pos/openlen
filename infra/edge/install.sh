@@ -113,8 +113,11 @@ for path in /etc/letsencrypt/live/openlen.com/fullchain.pem \
 done
 
 # Make sure the live/ + archive/ dirs are traversable so the openlen-edge
-# user can reach the files. Default certbot mode is 755 (live) + 700
-# (archive) — opening archive/ to group execute is the minimum needed.
+# user can reach the files. certbot leaves live/ at 755 but archive/ at 700
+# (root-only) — without o+x on the archive/ PARENT the non-root edge can't
+# traverse down to the per-domain dir below, even with the per-domain perms.
+# o+x = traverse only; per-domain dirs + cert files still gate actual reads.
+chmod o+x /etc/letsencrypt/live /etc/letsencrypt/archive 2>/dev/null || true
 [[ -d /etc/letsencrypt/live/openlen.com ]] && \
   chgrp "$GROUP" /etc/letsencrypt/live/openlen.com && \
   chmod 750 /etc/letsencrypt/live/openlen.com
