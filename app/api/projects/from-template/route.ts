@@ -4,6 +4,7 @@ import { getTemplate, getTemplateHtml } from "@/lib/templates/store";
 import { createVersion } from "@/lib/projects/versions";
 import { detectSlotPath } from "@/lib/html-engine";
 import { normalizeBornCanonical } from "@/lib/normalize";
+import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/projects/from-template
@@ -62,8 +63,11 @@ export async function POST(req: Request): Promise<Response> {
 
   // Clone the template's HTML through the born-canonical normalizer so the
   // user's project enters with the same token contract as a generated page
-  // (radius / font / accent become editable in the inspector).
-  const finalHtml = normalizeBornCanonical(html);
+  // (radius / font / accent become editable in the inspector), then complete
+  // the <head> so it's born SEO-healthy (title / description / og / favicon).
+  const finalHtml = ensurePageMeta(normalizeBornCanonical(html), {
+    title: entry.name,
+  });
 
   const projectId = crypto.randomUUID();
   try {

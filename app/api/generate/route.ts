@@ -4,6 +4,7 @@ import { createVersion } from "@/lib/projects/versions";
 import { getCreditState } from "@/lib/credits";
 import { DESIGN_GUIDANCE, DESIGN_REFERENCE } from "@/lib/design-guidance";
 import { detectSlotPath } from "@/lib/html-engine";
+import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
 import { generateHtmlStream } from "@/lib/ai-stream/generate";
 import { selectReferenceTemplate } from "@/lib/templates/select-reference";
@@ -444,6 +445,9 @@ ${brief}`;
 
         // ── Save the chosen final document ──────────────────────────────────
         const title = extractTitle(html) ?? brief.slice(0, 60).trim();
+        // Born SEO-healthy: complete the <head> (description / og / favicon)
+        // so the user never has to. No-op for tags the model already emitted.
+        html = ensurePageMeta(html, { title });
 
         let projectId: string;
         try {

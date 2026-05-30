@@ -3,6 +3,7 @@ import { db, schema } from "@/lib/db";
 import { createVersion } from "@/lib/projects/versions";
 import { detectSlotPath } from "@/lib/html-engine";
 import { normalizeBornCanonical } from "@/lib/normalize";
+import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/projects/from-html
@@ -54,14 +55,16 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  // Born-canonical: pasted HTML enters on the same token contract as a
-  // generated page — radius / font / accent become controllable.
-  const finalHtml = normalizeBornCanonical(html);
-
   const title =
     (typeof body.title === "string" && body.title.trim()) ||
     extractTitle(html) ||
     "Untitled page";
+
+  // Born-canonical: pasted HTML enters on the same token contract as a
+  // generated page — radius / font / accent become controllable. Then
+  // complete the <head> so it's born SEO-healthy (the user pasting raw HTML
+  // often has no meta description / og tags / favicon).
+  const finalHtml = ensurePageMeta(normalizeBornCanonical(html), { title });
 
   const projectId = crypto.randomUUID();
   try {

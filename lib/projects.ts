@@ -16,6 +16,8 @@ import { backupReleaseToR2 } from "@/lib/publish/backup-r2";
 import { createVersion } from "@/lib/projects/versions";
 import { getChatMessages } from "@/lib/projects/chat";
 import { normalizeBornCanonical } from "@/lib/normalize";
+import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
+import { upgradeDataUriOgImage } from "@/lib/branding/upgrade-og-image";
 import { resolveProjectLogo } from "@/lib/branding/resolve-project-logo";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -187,10 +189,14 @@ export async function getProject(
   const chatHistory = await getChatMessages(projectId);
   const derivedDeploy = deployUrlFor(row.subdomain);
   // Normalize on load — runs the born-canonical chain so legacy / pre-
-  // normalizer projects expose the Theme picker contract just like new ones.
-  // Idempotent: already-canonical projects get a near-no-op pass.
+  // normalizer projects expose the Theme picker contract just like new ones,
+  // then completes the <head> so the Page Health panel reads green even for
+  // projects created before auto-meta existed. Idempotent: already-complete
+  // projects get a near-no-op pass.
   const rawHtml = row.data?.html ?? "";
-  const currentHtml = rawHtml ? normalizeBornCanonical(rawHtml) : "";
+  const currentHtml = rawHtml
+    ? ensurePageMeta(normalizeBornCanonical(rawHtml), { title: row.title })
+    : "";
   const data: ProjectData =
     row.data && currentHtml !== rawHtml
       ? { ...row.data, html: currentHtml }
@@ -423,6 +429,7 @@ export async function publishProject(
     .select({
       id: schema.projects.id,
       userId: schema.projects.userId,
+      title: schema.projects.title,
       data: schema.projects.data,
       subdomain: schema.projects.subdomain,
       logoUrl: schema.projects.logoUrl,
@@ -459,7 +466,18 @@ export async function publishProject(
     if (count >= cap) throw new SubdomainLimitError(cap);
   }
 
-  const html = project.data?.html ?? "";
+  // Born-complete the <head> at publish too, so even legacy projects (and
+  // pages published without ever opening the editor) ship with a real meta
+  // description / og tags / favicon. Then host any branded og:image card so
+  // social crawlers can fetch it. Both soft: a hiccup must never block a
+  // publish.
+  let html = ensurePageMeta(project.data?.html ?? "", { title: project.title });
+  try {
+    html = await upgradeDataUriOgImage(html);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[publish] og:image upgrade failed; continuing", err);
+  }
   const now = new Date();
 
   // 4. DB upsert — claim the subdomain. We do this BEFORE the filesystem
