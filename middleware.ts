@@ -53,7 +53,11 @@ const authMiddleware = auth((req) => {
   if (!req.auth) {
     const locale = localeFromPath(req.nextUrl.pathname);
     const loginUrl = new URL(`/${locale}/login`, req.nextUrl.origin);
-    loginUrl.searchParams.set("next", req.nextUrl.pathname);
+    // Store the locale-LESS path: the login page feeds `next` into next-intl's
+    // locale-aware redirect/router, which re-prefixes it. A prefixed value here
+    // would double up (/en/new → /en/en/new → 404). Matches every other caller
+    // (projects/page.tsx, use-template-button, …) which pass bare paths.
+    loginUrl.searchParams.set("next", pathWithoutLocale(req.nextUrl.pathname));
     return fixRedirectHost(NextResponse.redirect(loginUrl));
   }
   return fixRedirectHost(intlMiddleware(req));
