@@ -4,6 +4,12 @@ Documentation=https://github.com/jesusbernalrj/inari-pages/blob/master/docs/rust
 After=network-online.target
 Wants=network-online.target
 
+# Restart rate-limit belongs in [Unit] (not [Service], where systemd warns
+# and ignores it): give up if the unit fails 3 times within 60s. Pairs with
+# Restart=on-failure + RestartSec in [Service].
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
 # Deliberately NOT ordered after openlen-app.service: the edge serves static
 # pages from disk independently and 502s upstream routes while the Node app
 # is restarting. Keeping the edge up during app rolls is the whole point of
