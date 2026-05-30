@@ -24,6 +24,7 @@ import {
   type ScopedView,
 } from "@/lib/html-ops";
 import { normalizeBornCanonical } from "@/lib/normalize";
+import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/templates/ai-design — conversational AI page redesign.
@@ -792,8 +793,9 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         // Born-canonical: a Mode B rewrite — or ops that hit the token
         // blocks — can drop the data-ol-* contract. Re-run the chain so
         // the page stays themeable. Idempotent: a no-op when the markers
-        // survived.
-        trimmedHtml = normalizeBornCanonical(trimmedHtml);
+        // survived. Then re-complete the <head> in case a full rewrite
+        // dropped the meta description / og tags / favicon.
+        trimmedHtml = ensurePageMeta(normalizeBornCanonical(trimmedHtml));
 
         const reasoning = accumulatedReasoning.trim();
         const now = new Date();
