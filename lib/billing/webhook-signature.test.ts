@@ -1,7 +1,9 @@
+import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { verifyWebhookSignature } from "./webhook-signature";
 
-// The canonical standard-webhooks (Svix) test vector — same scheme Polar uses.
+// The canonical standard-webhooks (Svix) test vector — the base64-decoded-key
+// variant (one of the schemes verifyWebhookSignature accepts).
 const SECRET = "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw";
 const ID = "msg_p5jXN8AQM9LWM0D4loKWxJek";
 const TIMESTAMP = "1614265330";
@@ -79,5 +81,25 @@ describe("verifyWebhookSignature", () => {
         payload: PAYLOAD,
       }),
     ).toBe(false);
+  });
+
+  it("accepts Polar's raw-secret-as-key scheme (secret verbatim, no base64 decode)", () => {
+    const secret = "whsec_polar_style_raw_secret_123";
+    const id = "evt_abc";
+    const ts = "1700000000";
+    const payload = '{"type":"subscription.active","data":{}}';
+    // Polar signs using the full secret string as the raw UTF-8 HMAC key.
+    const sig = createHmac("sha256", Buffer.from(secret, "utf8"))
+      .update(`${id}.${ts}.${payload}`)
+      .digest("base64");
+    expect(
+      verifyWebhookSignature({
+        secret,
+        id,
+        timestamp: ts,
+        signatureHeader: `v1,${sig}`,
+        payload,
+      }),
+    ).toBe(true);
   });
 });
