@@ -173,7 +173,7 @@ provider-agnostic).
 
 Once steps 1–4 are done + CF has approved:
 
-1. Add a custom domain in /new-v2 → Custom domain modal
+1. Add a custom domain in /new → Custom domain modal
 2. Type a domain that's on a CF-managed zone (e.g. one of yours that
    uses CF nameservers)
 3. The modal should show **"One-click setup with Cloudflare"** above the
