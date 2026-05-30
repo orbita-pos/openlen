@@ -2,48 +2,69 @@
 
 import { FileCode, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { GithubIcon, TwitterIcon } from "@/components/ui/brand-icons";
 import { OpenLenMark } from "@/components/openlen-logo";
 
+const REPO = "https://github.com/jesusbernalrj/inari-pages";
+
+type FooterLink = { label: string; href?: string; external?: boolean };
+
 // Client component: it's rendered inside MarketingChrome ("use client"), so it
 // must use the client useTranslations hook, not the server getTranslations.
+// Internal links use the next-intl Link so the active locale prefix is kept.
 export function Footer() {
   const t = useTranslations("marketing");
 
-  const columns = [
+  const columns: { title: string; links: FooterLink[] }[] = [
     {
       title: t("footer.product.title"),
       links: [
-        t("footer.product.features"),
-        t("footer.product.pricing"),
-        t("footer.product.changelog"),
-        t("footer.product.roadmap"),
+        { label: t("footer.product.features") },
+        { label: t("footer.product.pricing") },
+        { label: t("footer.product.changelog") },
+        { label: t("footer.product.roadmap") },
       ],
     },
     {
       title: t("footer.openSource.title"),
       links: [
-        "GitHub",
-        t("footer.openSource.agplLicense"),
-        t("footer.openSource.contribute"),
-        "Discord",
+        { label: "GitHub", href: REPO, external: true },
+        { label: t("footer.openSource.agplLicense"), href: REPO, external: true },
+        { label: t("footer.openSource.contribute"), href: REPO, external: true },
+        { label: "Discord" },
       ],
     },
     {
       title: t("footer.company.title"),
       links: [
-        t("footer.company.blog"),
-        t("footer.company.privacy"),
-        t("footer.company.terms"),
-        t("footer.company.contact"),
+        { label: t("footer.company.blog"), href: "/blog" },
+        { label: t("footer.company.privacy"), href: "/privacy" },
+        { label: t("footer.company.terms"), href: "/terms" },
+        { label: t("footer.company.contact"), href: "/support" },
+      ],
+    },
+    {
+      title: t("footer.legal.title"),
+      links: [
+        { label: t("footer.legal.cookies"), href: "/cookie-policy" },
+        { label: t("footer.legal.acceptableUse"), href: "/acceptable-use" },
+        { label: t("footer.legal.refunds"), href: "/refund" },
+        { label: t("footer.legal.subprocessors"), href: "/subprocessors" },
+        { label: t("footer.legal.docs"), href: "/docs" },
       ],
     },
   ];
 
+  const linkClass =
+    "text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors";
+  const iconClass =
+    "inline-flex h-9 w-9 items-center justify-center rounded-md ring-1 ring-zinc-200 dark:ring-zinc-800 text-zinc-600 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition";
+
   return (
     <footer className="border-t border-zinc-200 dark:border-zinc-800">
       <div className="mx-auto max-w-6xl px-6 py-14">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-10">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-10">
           <div className="col-span-2 md:col-span-2">
             <a href="#top" className="flex items-center gap-2 group">
               <OpenLenMark className="h-6 w-6 shrink-0" />
@@ -56,28 +77,24 @@ export function Footer() {
             </p>
             <div className="mt-5 flex items-center gap-2">
               <a
-                href="https://github.com/jesusbernalrj/inari-pages"
+                href={REPO}
                 target="_blank"
                 rel="noreferrer"
                 aria-label={t("footer.githubAria")}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-md ring-1 ring-zinc-200 dark:ring-zinc-800 text-zinc-600 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition"
+                className={iconClass}
               >
                 <GithubIcon size={15} />
               </a>
               <a
                 href="https://twitter.com"
                 aria-label={t("footer.twitterAria")}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-md ring-1 ring-zinc-200 dark:ring-zinc-800 text-zinc-600 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition"
+                className={iconClass}
               >
                 <TwitterIcon size={15} />
               </a>
-              <a
-                href="#docs"
-                aria-label={t("footer.docsAria")}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-md ring-1 ring-zinc-200 dark:ring-zinc-800 text-zinc-600 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition"
-              >
+              <Link href="/docs" aria-label={t("footer.docsAria")} className={iconClass}>
                 <FileCode size={15} />
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -88,13 +105,22 @@ export function Footer() {
               </div>
               <ul className="mt-4 space-y-3">
                 {col.links.map((l) => (
-                  <li key={l}>
-                    <a
-                      href="#"
-                      className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
-                    >
-                      {l}
-                    </a>
+                  <li key={l.label}>
+                    {l.href ? (
+                      l.external ? (
+                        <a href={l.href} target="_blank" rel="noreferrer" className={linkClass}>
+                          {l.label}
+                        </a>
+                      ) : (
+                        <Link href={l.href} className={linkClass}>
+                          {l.label}
+                        </Link>
+                      )
+                    ) : (
+                      <a href="#" className={linkClass}>
+                        {l.label}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -107,7 +133,9 @@ export function Footer() {
             <span>© 2026 OpenLen</span>
             <span className="text-zinc-300 dark:text-zinc-700">·</span>
             <a
-              href="#license"
+              href={REPO}
+              target="_blank"
+              rel="noreferrer"
               className="hover:text-zinc-900 dark:hover:text-zinc-100 inline-flex items-center gap-1.5"
             >
               <ShieldCheck size={12} /> {t("footer.licensed")}
