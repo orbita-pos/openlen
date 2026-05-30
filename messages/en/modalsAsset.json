@@ -113,11 +113,16 @@
   },
   "autofill": {
     "title": "Fill with your info",
-    "subtitle": "Upload an image with your business info or type the details by hand. Your template fills with your real content — the design stays the same.",
-    "subtitleShort": "Image or details → your template fills with your content.",
+    "subtitle": "Upload an image with your info — or just describe your business. Your template fills with your real content; the design stays the same.",
+    "subtitleShort": "Image or words → your template fills with your content.",
     "tabs": {
       "image": "Upload image",
-      "text": "Type info"
+      "text": "Describe it"
+    },
+    "describe": {
+      "label": "Tell me about your business",
+      "placeholder": "e.g. A taquería in Monterrey serving tacos al pastor since 1989. Family-run, fresh ingredients. Orders by WhatsApp.",
+      "hint": "Write it however you like — I'll pull out the name, a tagline and a call-to-action, then fill the page."
     },
     "image": {
       "previewAlt": "Preview",
@@ -163,7 +168,7 @@
     "doneStatus": "✓ Done · {seconds}s",
     "tips": {
       "image": "Tip: a menu photo, a screenshot of your site, a brochure — anything works.",
-      "text": "Tip: a name + tagline + pitch is enough. The rest of the template stays intact."
+      "text": "Tip: a sentence or two about what you do is enough — the AI writes the rest."
     },
     "processing": "Processing…",
     "errors": {
@@ -175,6 +180,7 @@
       "cantRead": "We couldn't read the image. Try another one.",
       "uploadFirst": "Upload an image first.",
       "needBusinessName": "You need at least the business name.",
+      "needDescription": "Tell me a bit about your business — at least a sentence.",
       "network": "Network error",
       "server": "Server {status}: {detail}",
       "streamRead": "Stream read failed",

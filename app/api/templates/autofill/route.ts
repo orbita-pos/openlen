@@ -8,8 +8,8 @@ import { getCreditState, debitCredits, AUTOFILL_CREDIT_COST } from "@/lib/credit
 import { consumeToken, RATE_LIMITS } from "@/lib/rate-limit";
 import { detectSlotPath } from "@/lib/html-engine";
 import {
-  ExtractedBusinessDataSchema,
   extractFromImage,
+  extractFromText,
   fillTemplate,
   type ExtractedBusinessData,
 } from "@/lib/style-match/autofill";
@@ -18,7 +18,7 @@ import {
 //
 // Body shapes (one of):
 //   { projectId: string, source: "image", image: base64, imageMime?: "image/jpeg" | "image/png" }
-//   { projectId: string, source: "text",  data: ExtractedBusinessData }
+//   { projectId: string, source: "text",  description: string }
 //
 // Streams Server-Sent Events:
 //   progress  { stage: "extracting" | "tagging" | "calling-model" | "applying" | "persisting" }
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
     source?: unknown;
     image?: unknown;
     imageMime?: unknown;
-    data?: unknown;
+    description?: unknown;
   };
   try {
     body = await req.json();
@@ -86,7 +86,7 @@ export async function POST(req: Request) {
 
   let imageBuffer: Buffer | null = null;
   let imageMime: "image/jpeg" | "image/png" = "image/jpeg";
-  let providedData: ExtractedBusinessData | null = null;
+  let description = "";
 
   if (source === "image") {
     if (typeof body.image !== "string" || body.image.length === 0) {
@@ -107,17 +107,13 @@ export async function POST(req: Request) {
     }
     if (body.imageMime === "image/png") imageMime = "image/png";
   } else {
-    const parsed = ExtractedBusinessDataSchema.safeParse(body.data);
-    if (!parsed.success) {
-      return errorJson(
-        400,
-        `data is invalid: ${parsed.error.issues
-          .slice(0, 3)
-          .map((i) => `${i.path.join(".")}: ${i.message}`)
-          .join(" | ")}`,
-      );
+    description = typeof body.description === "string" ? body.description.trim() : "";
+    if (description.length < 10) {
+      return errorJson(400, "description is required — write at least a sentence about your business");
     }
-    providedData = parsed.data;
+    if (description.length > 4000) {
+      return errorJson(400, "description too long (max 4000 characters)");
+    }
   }
 
   const rows = await db
@@ -203,8 +199,16 @@ export async function POST(req: Request) {
           }
           businessData = extracted.data;
           emit("extracted", { data: businessData });
-        } else if (providedData) {
-          businessData = providedData;
+        } else if (source === "text") {
+          emit("progress", { stage: "extracting" });
+          const extracted = await extractFromText({ description });
+          if (!extracted.ok) {
+            emit("error", { kind: extracted.error.kind, message: extracted.error.message });
+            closeStream();
+            return;
+          }
+          businessData = extracted.data;
+          emit("extracted", { data: businessData });
         } else {
           emit("error", { kind: "bug", message: "Unreachable input branch" });
           closeStream();
