@@ -70,10 +70,15 @@ impl NodeClient {
             .ok_or_else(|| NodeClientError::InvalidNodeUrl(node_url.to_owned()))?
             .to_string();
 
+        // Disable Nagle on the upstream sockets too — same 40ms delayed-ACK
+        // tax as the inbound side, but on the edge→Node hop. HttpConnector
+        // defaults nodelay to false.
+        let mut connector = HttpConnector::new();
+        connector.set_nodelay(true);
         let inner = LegacyClient::builder(TokioExecutor::new())
             .pool_idle_timeout(pool_idle)
             .pool_max_idle_per_host(pool_max_idle_per_host)
-            .build_http::<Body>();
+            .build::<_, Body>(connector);
 
         Ok(Self {
             inner: Arc::new(inner),

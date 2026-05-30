@@ -554,6 +554,12 @@ async fn serve_one(
     peer: SocketAddr,
     app: Router,
 ) -> Result<()> {
+    // Disable Nagle's algorithm. Without TCP_NODELAY the small TLS-framed
+    // HTTP responses collide with the client's delayed-ACK timer, adding a
+    // fixed ~40ms per request on every connection (Linux delayed-ACK floor).
+    // Caddy/Go set this by default; tokio's TcpStream does not.
+    let _ = stream.set_nodelay(true);
+
     let tls = acceptor
         .accept(stream)
         .await
