@@ -35,8 +35,9 @@ export const users = pgTable("users", {
   emailVerified: timestamp("emailVerified", { mode: "date" }),
   image: text("image"),
   passwordHash: text("passwordHash"),
-  // Subscription tier. Stripe webhook (Phase 3) is what flips this to "pro";
-  // for now everyone is "free". Free tier = 3 generations/month + 5/hour.
+  // Subscription tier. The Polar billing webhook (app/api/billing/webhook)
+  // flips this to "pro" on an active subscription and back to "free" on
+  // revoke. Free-tier limits live in lib/limits.ts + lib/credits.ts.
   plan: text("plan").notNull().default("free"),
   // Role for admin-gated endpoints (template upload/edit/delete). 'user' for
   // everyone by default; flip to 'admin' manually in DB or via seed script.
@@ -46,6 +47,14 @@ export const users = pgTable("users", {
   // on the first balance read.
   credits: integer("credits").notNull().default(0),
   creditsRefreshedAt: timestamp("creditsRefreshedAt", { mode: "date" }),
+  // Polar (Merchant-of-Record) billing linkage. Set by the billing webhook
+  // from the subscription it receives; userId is passed to Polar as the
+  // checkout's customer_external_id + metadata so the webhook maps back here.
+  polarCustomerId: text("polarCustomerId"),
+  polarSubscriptionId: text("polarSubscriptionId"),
+  // Last subscription status Polar reported: 'active' | 'trialing' |
+  // 'canceled' | 'past_due' | … . null = never subscribed.
+  subscriptionStatus: text("subscriptionStatus"),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
 });
 

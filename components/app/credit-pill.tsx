@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Coins } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -18,6 +18,7 @@ import { cn } from "@/lib/cn";
 
 export function CreditPill() {
   const t = useTranslations("projects");
+  const locale = useLocale();
   const [credits, setCredits] = useState<{
     balance: number;
     allotment: number;
@@ -38,21 +39,37 @@ export function CreditPill() {
 
   if (!credits) return null;
   const empty = credits.balance <= 0;
-  return (
-    <span
-      title={t("creditPill.tooltip", {
-        balance: credits.balance,
-        allotment: credits.allotment,
-      })}
-      className={cn(
-        "hidden sm:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[12px] font-medium ring-1 ring-inset tabular-nums",
-        empty
-          ? "bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 ring-red-200 dark:ring-red-500/30"
-          : "bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 ring-zinc-200 dark:ring-zinc-800",
-      )}
-    >
+  const className = cn(
+    "hidden sm:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[12px] font-medium ring-1 ring-inset tabular-nums",
+    empty
+      ? "bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 ring-red-200 dark:ring-red-500/30"
+      : "bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 ring-zinc-200 dark:ring-zinc-800",
+  );
+  const tooltip = t("creditPill.tooltip", {
+    balance: credits.balance,
+    allotment: credits.allotment,
+  });
+  const inner = (
+    <>
       <Coins size={13} className={empty ? "text-red-500" : "text-coral-500"} />
       {credits.balance}
+    </>
+  );
+  // Out of credits → the pill becomes the upgrade entry point (Polar checkout).
+  if (empty) {
+    return (
+      <a
+        href={`/api/billing/checkout?locale=${locale}`}
+        title={tooltip}
+        className={cn(className, "hover:opacity-90 transition-opacity")}
+      >
+        {inner}
+      </a>
+    );
+  }
+  return (
+    <span title={tooltip} className={className}>
+      {inner}
     </span>
   );
 }
