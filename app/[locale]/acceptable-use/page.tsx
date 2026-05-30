@@ -33,10 +33,11 @@ export default async function AcceptableUsePage({
           <p>
             OpenLen es un creador de landing pages que te permite publicar HTML
             arbitrario en subdominios <strong>&lt;nombre&gt;.openlen.com</strong>,
-            conectar tu propio dominio y exportar tu página a Vercel o GitHub.
-            Esta Política de uso aceptable describe lo que no está permitido al
-            usar OpenLen para crear, publicar, exportar o distribuir páginas.
-            Forma parte de nuestros{" "}
+            conectar tu propio dominio y exportar tu página a Vercel o GitHub. El
+            Servicio lo opera <strong>[NOMBRE LEGAL], que opera OpenLen</strong>,
+            con sede en México. Esta Política de uso aceptable describe lo que no
+            está permitido al usar OpenLen para crear, publicar, exportar o
+            distribuir páginas. Forma parte de nuestros{" "}
             <Link href="/terms">Términos de servicio</Link> y debe leerse junto
             con nuestra <Link href="/privacy">Política de privacidad</Link>.
           </p>
@@ -57,6 +58,12 @@ export default async function AcceptableUsePage({
               o dinero de forma fraudulenta.
             </li>
             <li>
+              <strong>Estafas financieras y de criptomonedas</strong> — esquemas
+              de inversión fraudulentos, falsos sorteos o &quot;giveaways&quot;,
+              airdrops engañosos y cualquier página creada para apropiarse de
+              fondos o activos digitales de las personas.
+            </li>
+            <li>
               <strong>Malware</strong> — distribución de virus, troyanos,
               scripts maliciosos o cualquier código destinado a dañar
               dispositivos o sistemas, o a comprometer su seguridad.
@@ -67,6 +74,17 @@ export default async function AcceptableUsePage({
               denuncia a las autoridades competentes.
             </li>
             <li>
+              <strong>Imágenes íntimas no consentidas (NCII)</strong> — contenido
+              sexual o íntimo que represente a personas reales sin su
+              consentimiento, incluida la difusión de imágenes privadas y los
+              montajes sexuales no consentidos de personas reales.
+            </li>
+            <li>
+              <strong>Contenido terrorista o extremista violento</strong> —
+              material que promueva, glorifique o facilite el terrorismo, el
+              extremismo violento o actos de violencia contra personas o grupos.
+            </li>
+            <li>
               <strong>Odio, acoso y doxxing</strong> — discurso de odio,
               hostigamiento dirigido, amenazas o la divulgación de información
               privada de terceros sin su consentimiento.
@@ -74,6 +92,12 @@ export default async function AcceptableUsePage({
             <li>
               <strong>Difamación</strong> — afirmaciones falsas que dañen la
               reputación de una persona o entidad.
+            </li>
+            <li>
+              <strong>Venta de bienes regulados o falsificados</strong> — oferta
+              o venta de drogas, sustancias controladas, armas, productos
+              falsificados u otros bienes y servicios cuya venta esté restringida
+              o prohibida por la ley aplicable.
             </li>
             <li>
               <strong>Infracción de propiedad intelectual o marcas</strong> —
@@ -92,35 +116,76 @@ export default async function AcceptableUsePage({
               <strong>Suplantación engañosa</strong> — hacerte pasar por otra
               persona, marca u organización con intención de engañar.
             </li>
+            <li>
+              <strong>Encubrimiento engañoso (cloaking)</strong> — mostrar a
+              OpenLen un contenido distinto del que reciben las personas que
+              visitan tu página, con el fin de eludir la moderación o nuestras
+              reglas.
+            </li>
           </ul>
 
           <h2>Páginas que recopilan datos de visitantes</h2>
           <p>
             Si tu página publicada recopila datos de visitantes (por ejemplo,
             mediante formularios), tú actúas como responsable del tratamiento de
-            esos datos y OpenLen actúa como encargado. Debes contar con una base
-            legal para recopilarlos, publicar tu propio aviso de privacidad y
-            atender los derechos de las personas usuarias. Las páginas que crees
-            pueden incluir código de terceros que establezca cookies u otros
-            mecanismos de seguimiento; gestionar ese código y su cumplimiento es
-            tu responsabilidad.
+            esos datos y OpenLen actúa como encargado, conforme a la Ley Federal
+            de Protección de Datos Personales en Posesión de los Particulares
+            (LFPDPPP). Debes contar con una base legal para recopilarlos,
+            publicar tu propio aviso de privacidad y atender los derechos de las
+            personas usuarias. En México, la autoridad de protección de datos es
+            la <strong>Secretaría Anticorrupción y Buena Administración</strong>,
+            que asumió las funciones del extinto INAI en marzo de 2025. Las
+            páginas que crees pueden incluir código de terceros que establezca
+            cookies u otros mecanismos de seguimiento; gestionar ese código y su
+            cumplimiento es tu responsabilidad.
+          </p>
+
+          <h2>Pagos y servicios que usamos</h2>
+          <p>
+            Los pagos de los planes de pago se procesan a través de{" "}
+            <strong>Polar</strong> (Polar Software Inc., Estados Unidos), que
+            actúa como comerciante de registro (Merchant of Record): Polar trata
+            los datos financieros y patrimoniales del cobro, emite la factura y
+            recauda los impuestos. OpenLen solo conserva el estado de tu
+            suscripción y tu plan; nunca almacenamos los números de tarjeta. Para
+            la captura de errores usamos <strong>InariWatch</strong>{" "}
+            (<code>@inariwatch/capture</code>), un producto hermano del mismo
+            operador, por lo que esta captura de errores es de primera parte y no
+            un tercero independiente.
           </p>
 
           <h2>Aplicación</h2>
           <p>
             Si una página o cuenta incumple esta política, podemos retirar el
-            contenido afectado y suspender la cuenta. En casos especialmente
-            graves —como CSAM, malware o phishing activo— podemos retirar el
-            contenido sin aviso previo. La exportación a Vercel o GitHub no te
-            exime de estas reglas mientras uses OpenLen.
+            contenido afectado y suspender o cancelar la cuenta. En casos
+            especialmente graves —como CSAM, NCII, contenido terrorista, malware
+            o phishing activo— podemos retirar el contenido sin aviso previo. La
+            exportación a Vercel o GitHub no te exime de estas reglas mientras
+            uses OpenLen.
+          </p>
+          <p>
+            Cuando sea razonablemente posible, te avisaremos antes de retirar
+            contenido o suspender tu cuenta y te indicaremos el motivo. Puedes
+            apelar cualquier medida escribiéndonos a{" "}
+            <a href="mailto:info@jesusbr.com">info@jesusbr.com</a>. Salvo en casos
+            especialmente graves, tendrás la oportunidad de exportar tu contenido
+            antes de que se elimine. Constituyen motivos de suspensión o
+            cancelación, entre otros, el incumplimiento de esta política o de los{" "}
+            <Link href="/terms">Términos de servicio</Link>, el uso fraudulento o
+            abusivo del Servicio, y la falta de pago de un plan de pago.
           </p>
 
           <h2>Denuncias de abuso y propiedad intelectual</h2>
           <p>
-            Para denunciar abusos o solicitar la retirada de contenido por
-            infracción de propiedad intelectual (estilo DMCA), escríbenos a{" "}
+            Para denunciar abusos, escríbenos a{" "}
             <a href="mailto:info@jesusbr.com">info@jesusbr.com</a> e incluye la
-            URL afectada y una descripción del problema.
+            URL afectada y una descripción del problema. Para solicitar la
+            retirada de contenido por infracción de propiedad intelectual (estilo
+            DMCA), consulta la sección de propiedad intelectual y derechos de
+            autor en nuestros{" "}
+            <Link href="/terms">Términos de servicio</Link>; dirige el aviso a{" "}
+            <a href="mailto:info@jesusbr.com">info@jesusbr.com</a>, que actúa como
+            agente designado para tales avisos.
           </p>
         </>
       ) : (
@@ -128,7 +193,9 @@ export default async function AcceptableUsePage({
           <p>
             OpenLen is a landing-page builder that lets you publish arbitrary
             HTML to <strong>&lt;name&gt;.openlen.com</strong> subdomains, attach
-            your own custom domain, and export your page to Vercel or GitHub.
+            your own custom domain, and export your page to Vercel or GitHub. The
+            Service is operated by{" "}
+            <strong>[NOMBRE LEGAL], operating OpenLen</strong>, based in Mexico.
             This Acceptable Use Policy describes what is not allowed when you use
             OpenLen to create, publish, export, or distribute pages. It forms
             part of our <Link href="/terms">Terms of Service</Link> and should be
@@ -151,6 +218,11 @@ export default async function AcceptableUsePage({
               money.
             </li>
             <li>
+              <strong>Financial and crypto scams</strong> — fraudulent investment
+              schemes, fake giveaways, deceptive airdrops, and any page created to
+              part people from their funds or digital assets.
+            </li>
+            <li>
               <strong>Malware</strong> — distributing viruses, trojans,
               malicious scripts, or any code intended to harm devices or systems
               or compromise their security.
@@ -161,6 +233,17 @@ export default async function AcceptableUsePage({
               relevant authorities.
             </li>
             <li>
+              <strong>Non-consensual intimate imagery (NCII)</strong> — sexual or
+              intimate content depicting real people without their consent,
+              including the distribution of private images and non-consensual
+              sexual deepfakes of real people.
+            </li>
+            <li>
+              <strong>Terrorist or violent-extremist content</strong> — material
+              that promotes, glorifies, or facilitates terrorism, violent
+              extremism, or acts of violence against people or groups.
+            </li>
+            <li>
               <strong>Hate, harassment, and doxxing</strong> — hate speech,
               targeted harassment, threats, or publishing someone&apos;s private
               information without their consent.
@@ -168,6 +251,12 @@ export default async function AcceptableUsePage({
             <li>
               <strong>Defamation</strong> — false statements that damage the
               reputation of a person or entity.
+            </li>
+            <li>
+              <strong>Sale of regulated or counterfeit goods</strong> — offering
+              or selling drugs, controlled substances, weapons, counterfeit
+              products, or other goods and services whose sale is restricted or
+              prohibited under applicable law.
             </li>
             <li>
               <strong>IP and trademark infringement</strong> — publishing
@@ -186,34 +275,73 @@ export default async function AcceptableUsePage({
               <strong>Deceptive impersonation</strong> — pretending to be
               another person, brand, or organization with intent to mislead.
             </li>
+            <li>
+              <strong>Deceptive cloaking</strong> — showing OpenLen different
+              content from what you serve to visitors, in order to evade
+              moderation or our rules.
+            </li>
           </ul>
 
           <h2>Pages that collect visitor data</h2>
           <p>
             If your published page collects visitor data (for example, through
             forms), you act as the data controller for that data and OpenLen
-            acts as a processor. You must have a lawful basis to collect it,
-            publish your own privacy notice, and honor visitor rights. Pages you
-            build may include third-party code that sets cookies or other
+            acts as a processor, under Mexico&apos;s Federal Law on the
+            Protection of Personal Data Held by Private Parties (LFPDPPP). You
+            must have a lawful basis to collect it, publish your own privacy
+            notice, and honor visitor rights. In Mexico, the data-protection
+            authority is the{" "}
+            <strong>Secretaría Anticorrupción y Buena Administración</strong>,
+            which assumed the functions of the former INAI in March 2025. Pages
+            you build may include third-party code that sets cookies or other
             tracking; managing that code and its compliance is your
             responsibility.
+          </p>
+
+          <h2>Payments and services we use</h2>
+          <p>
+            Payments for paid plans are processed through <strong>Polar</strong>{" "}
+            (Polar Software Inc., United States), which acts as the Merchant of
+            Record: Polar processes the billing&apos;s financial and patrimonial
+            data, issues the invoice, and collects tax. OpenLen retains only your
+            subscription status and plan; we never store card numbers. For error
+            monitoring we use <strong>InariWatch</strong>{" "}
+            (<code>@inariwatch/capture</code>), a sister product from the same
+            operator, so this error capture is first-party rather than an
+            independent third party.
           </p>
 
           <h2>Enforcement</h2>
           <p>
             If a page or account breaches this policy, we may take down the
-            affected content and suspend the account. For egregious cases — such
-            as CSAM, malware, or active phishing — we may remove content without
-            prior notice. Exporting to Vercel or GitHub does not exempt you from
-            these rules while you use OpenLen.
+            affected content and suspend or terminate the account. For egregious
+            cases — such as CSAM, NCII, terrorist content, malware, or active
+            phishing — we may remove content without prior notice. Exporting to
+            Vercel or GitHub does not exempt you from these rules while you use
+            OpenLen.
+          </p>
+          <p>
+            Where practicable, we will give you notice before we remove content
+            or suspend your account and tell you why. You may appeal any action
+            by emailing us at{" "}
+            <a href="mailto:info@jesusbr.com">info@jesusbr.com</a>. Absent
+            egregious cause, you will have the opportunity to export your content
+            before it is deleted. Grounds for suspension or termination include,
+            among others, breach of this policy or of the{" "}
+            <Link href="/terms">Terms of Service</Link>, fraudulent or abusive use
+            of the Service, and non-payment of a paid plan.
           </p>
 
           <h2>Reporting abuse and IP takedowns</h2>
           <p>
-            To report abuse or request the removal of content for intellectual
-            property infringement (DMCA-style), email us at{" "}
+            To report abuse, email us at{" "}
             <a href="mailto:info@jesusbr.com">info@jesusbr.com</a> with the
-            affected URL and a description of the issue.
+            affected URL and a description of the issue. To request the removal of
+            content for intellectual-property infringement (DMCA-style), see the
+            copyright and intellectual-property section of our{" "}
+            <Link href="/terms">Terms of Service</Link>; direct your notice to{" "}
+            <a href="mailto:info@jesusbr.com">info@jesusbr.com</a>, which acts as
+            the designated agent for such notices.
           </p>
         </>
       )}

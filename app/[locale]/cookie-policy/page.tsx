@@ -29,9 +29,10 @@ export default async function Page({
       {es ? (
         <>
           <p>
-            OpenLen («nosotros») es un creador de landing pages con inteligencia
-            artificial en openlen.com. Esta política explica las cookies que
-            usamos y por qué. La versión corta: solo usamos cookies estrictamente
+            [NOMBRE LEGAL], que opera OpenLen, con domicilio en México, es un
+            creador de landing pages con inteligencia artificial en openlen.com.
+            Esta política explica las cookies que usamos y por qué. La versión
+            corta: en nuestra propia aplicación solo usamos cookies estrictamente
             necesarias para que el servicio funcione, y no usamos cookies de
             analítica, publicidad ni seguimiento entre sitios.
           </p>
@@ -54,8 +55,18 @@ export default async function Page({
               <strong>Cookie de sesión (Auth.js)</strong> — se establece cuando
               inicias sesión. Es <strong>httpOnly</strong> (inaccesible desde
               JavaScript) y va firmada. Sirve para mantenerte autenticado entre
-              páginas y para que podamos guardar y editar tus proyectos. Sin ella
-              no podrías permanecer con la sesión iniciada.
+              páginas y para que podamos guardar y editar tus proyectos. Tiene
+              una duración aproximada de <strong>30 días</strong> o hasta que
+              cierras sesión, lo que ocurra primero. Sin ella no podrías
+              permanecer con la sesión iniciada.
+            </li>
+            <li>
+              <strong>Cookies del inicio de sesión con OAuth</strong> — cuando
+              inicias sesión con Google o GitHub, el redireccionamiento de ese
+              proveedor puede establecer cookies estrictamente necesarias de
+              corta duración (por ejemplo, de protección CSRF y PKCE) durante el
+              propio flujo de autenticación. Solo existen mientras dura el inicio
+              de sesión y se eliminan al completarse.
             </li>
             <li>
               <strong>ol_oauth_state</strong> — una cookie de corta duración
@@ -82,18 +93,32 @@ export default async function Page({
             </li>
             <li>
               La analítica de las páginas publicadas es{" "}
-              <strong>sin cookies</strong> (un beacon del mismo origen que solo
-              registra datos agregados, nunca IPs completas ni identificadores
-              persistentes).
+              <strong>sin cookies</strong>: un beacon del mismo origen que solo
+              registra datos agregados (nunca IPs completas ni identificadores
+              persistentes) y que <strong>no guarda nada</strong> en el
+              dispositivo del visitante (ni cookie, ni localStorage).
             </li>
           </ul>
 
+          <h2>Monitoreo de errores (InariWatch)</h2>
+          <p>
+            Usamos <strong>InariWatch</strong> (@inariwatch/capture) para detectar
+            errores técnicos en la aplicación. InariWatch es un producto hermano
+            del <strong>mismo operador</strong>, por lo que lo tratamos como
+            captura de errores propia (de primera parte) y no como un tercero
+            independiente. No establece cookies de seguimiento ni se usa para
+            publicidad.
+          </p>
+
           <h2>Por qué no mostramos un banner de consentimiento</h2>
           <p>
-            Como solo usamos cookies estrictamente necesarias para prestar el
-            servicio que has solicitado, y ninguna cookie de analítica,
-            publicidad ni de terceros, no se requiere tu consentimiento previo y
-            por eso no verás un banner de cookies.
+            En nuestra propia aplicación solo usamos cookies estrictamente
+            necesarias para prestar el servicio que has solicitado, y ninguna
+            cookie de analítica, publicidad ni de terceros. Por eso no se requiere
+            tu consentimiento previo y no verás un banner de cookies. (Esto aplica
+            únicamente a las cookies de OpenLen; las páginas publicadas por
+            usuarios pueden incluir cookies de terceros, como se explica más
+            abajo.)
           </p>
 
           <h2>Cómo borrar o gestionar las cookies</h2>
@@ -125,10 +150,11 @@ export default async function Page({
       ) : (
         <>
           <p>
-            OpenLen (&quot;we&quot;) is an AI landing-page builder at openlen.com.
-            This policy explains the cookies we use and why. The short version:
-            we use only strictly-necessary cookies to make the service work, and
-            no analytics, advertising, or cross-site tracking cookies.
+            [NOMBRE LEGAL], operating OpenLen, based in Mexico, is an AI
+            landing-page builder at openlen.com. This policy explains the cookies
+            we use and why. The short version: in our own app we use only
+            strictly-necessary cookies to make the service work, and no
+            analytics, advertising, or cross-site tracking cookies.
           </p>
 
           <h2>What a cookie is</h2>
@@ -149,8 +175,16 @@ export default async function Page({
               <strong>Session cookie (Auth.js)</strong> — set when you sign in.
               It is <strong>httpOnly</strong> (not accessible from JavaScript)
               and signed. It keeps you authenticated across pages so we can save
-              and edit your projects. Without it you couldn&apos;t stay signed
-              in.
+              and edit your projects. It lasts roughly <strong>30 days</strong>{" "}
+              or until you log out, whichever comes first. Without it you
+              couldn&apos;t stay signed in.
+            </li>
+            <li>
+              <strong>OAuth sign-in cookies</strong> — when you sign in with
+              Google or GitHub, that provider&apos;s redirect may set short-lived
+              strictly-necessary cookies (for example, CSRF and PKCE protection)
+              during the sign-in flow itself. They exist only for the duration of
+              sign-in and are cleared once it completes.
             </li>
             <li>
               <strong>ol_oauth_state</strong> — a short-lived cookie (httpOnly,
@@ -173,18 +207,31 @@ export default async function Page({
               URL path, not from a cookie.
             </li>
             <li>
-              Analytics on published pages is <strong>cookieless</strong> (a
-              same-origin beacon that records only aggregate data, never full IP
-              addresses or persistent identifiers).
+              Analytics on published pages is <strong>cookieless</strong>: a
+              same-origin beacon that records only aggregate data (never full IP
+              addresses or persistent identifiers) and that{" "}
+              <strong>stores nothing</strong> on the visitor&apos;s device (no
+              cookie, no localStorage).
             </li>
           </ul>
 
+          <h2>Error monitoring (InariWatch)</h2>
+          <p>
+            We use <strong>InariWatch</strong> (@inariwatch/capture) to detect
+            technical errors in the app. InariWatch is a sister product from the{" "}
+            <strong>same operator</strong>, so we treat it as our own first-party
+            error capture rather than an independent third party. It sets no
+            tracking cookies and is not used for advertising.
+          </p>
+
           <h2>Why we don&apos;t show a consent banner</h2>
           <p>
-            Because we use only strictly-necessary cookies to deliver the service
-            you requested, and no analytics, advertising, or third-party cookies,
-            no prior consent is required and so you won&apos;t see a cookie
-            banner.
+            In our own app we use only strictly-necessary cookies to deliver the
+            service you requested, and no analytics, advertising, or third-party
+            cookies. That is why no prior consent is required and you won&apos;t
+            see a cookie banner. (This applies only to OpenLen&apos;s own cookies;
+            pages published by users may include third-party cookies, as
+            explained below.)
           </p>
 
           <h2>How to clear or manage cookies</h2>
