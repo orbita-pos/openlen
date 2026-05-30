@@ -50,7 +50,7 @@ export async function Pricing() {
       name: t("pricing.pro.name"),
       featured: true,
       comingSoon: true,
-      price: 19,
+      price: 7,
       suffix: t("pricing.pro.suffix"),
       blurb: t("pricing.pro.blurb"),
       cta: { label: t("pricing.pro.cta"), variant: "outline", icon: ArrowRight, href: "/register" },
