@@ -11,6 +11,13 @@ export {
   type ExtractImageErr,
 } from "./extract-image";
 export {
+  extractFromText,
+  type ExtractTextInput,
+  type ExtractTextResult,
+  type ExtractTextOk,
+  type ExtractTextErr,
+} from "./extract-text";
+export {
   fillTemplate,
   buildFillUserMessage,
   FILL_SYSTEM_PROMPT,

@@ -16,24 +16,6 @@ type Stage =
   | "done"
   | "error";
 
-interface TextFormState {
-  business_name: string;
-  industry: string;
-  tagline: string;
-  pitch: string;
-  hero_keyword: string;
-  cta_primary: string;
-}
-
-const EMPTY_TEXT_FORM: TextFormState = {
-  business_name: "",
-  industry: "",
-  tagline: "",
-  pitch: "",
-  hero_keyword: "",
-  cta_primary: "",
-};
-
 export interface AutofillModalProps {
   open: boolean;
   projectId: string;
@@ -52,7 +34,7 @@ export function AutofillModal({
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [imageBytes, setImageBytes] = useState(0);
   const [imageMime, setImageMime] = useState<"image/jpeg" | "image/png">("image/jpeg");
-  const [textForm, setTextForm] = useState<TextFormState>(EMPTY_TEXT_FORM);
+  const [description, setDescription] = useState("");
   const [stage, setStage] = useState<Stage>("idle");
   const [bytes, setBytes] = useState(0);
   const [startedAt, setStartedAt] = useState<number | null>(null);
@@ -183,27 +165,13 @@ export function AutofillModal({
         imageMime,
       };
     }
-    if (!textForm.business_name.trim()) {
-      setErrorMessage(t("autofill.errors.needBusinessName"));
+    const desc = description.trim();
+    if (desc.length < 10) {
+      setErrorMessage(t("autofill.errors.needDescription"));
       return null;
     }
-    const data = {
-      business_name: textForm.business_name.trim() || null,
-      industry: textForm.industry.trim() || null,
-      tagline_es: textForm.tagline.trim() || null,
-      tagline_en: null,
-      pitch: textForm.pitch.trim() || null,
-      hero_keyword: textForm.hero_keyword.trim() || null,
-      features: [],
-      pricing: [],
-      testimonials: [],
-      cta_primary: textForm.cta_primary.trim() || null,
-      cta_secondary: null,
-      faq_questions: [],
-      language_detected: "es",
-    };
-    return { projectId, source: "text", data };
-  }, [tab, imageDataUrl, imageMime, projectId, textForm, t]);
+    return { projectId, source: "text", description: desc };
+  }, [tab, imageDataUrl, imageMime, projectId, description, t]);
 
   const submit = useCallback(async () => {
     const body = buildBody();
@@ -214,7 +182,8 @@ export function AutofillModal({
     setErrorMessage(null);
     setStartedAt(Date.now());
     setBytes(0);
-    setStage(tab === "image" ? "extracting" : "tagging");
+    // Both paths now extract first (image → vision, text → description parse).
+    setStage("extracting");
 
     let response: Response;
     try {
@@ -418,45 +387,22 @@ export function AutofillModal({
           )}
 
           {tab === "text" && (
-            <div className="space-y-2.5">
-              <Field
-                label={t("autofill.fields.businessName.label")}
-                value={textForm.business_name}
-                onChange={(v) => setTextForm((s) => ({ ...s, business_name: v }))}
-                placeholder={t("autofill.fields.businessName.placeholder")}
-              />
-              <Field
-                label={t("autofill.fields.industry.label")}
-                value={textForm.industry}
-                onChange={(v) => setTextForm((s) => ({ ...s, industry: v }))}
-                placeholder={t("autofill.fields.industry.placeholder")}
-              />
-              <Field
-                label={t("autofill.fields.tagline.label")}
-                value={textForm.tagline}
-                onChange={(v) => setTextForm((s) => ({ ...s, tagline: v }))}
-                placeholder={t("autofill.fields.tagline.placeholder")}
-              />
-              <FieldTextarea
-                label={t("autofill.fields.pitch.label")}
-                value={textForm.pitch}
-                onChange={(v) => setTextForm((s) => ({ ...s, pitch: v }))}
-                placeholder={t("autofill.fields.pitch.placeholder")}
-              />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <Field
-                  label={t("autofill.fields.heroKeyword.label")}
-                  value={textForm.hero_keyword}
-                  onChange={(v) => setTextForm((s) => ({ ...s, hero_keyword: v }))}
-                  placeholder={t("autofill.fields.heroKeyword.placeholder")}
+            <div className="space-y-2">
+              <label className="block">
+                <span className="text-[10.5px] font-medium fg-muted uppercase tracking-wider">
+                  {t("autofill.describe.label")}
+                </span>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder={t("autofill.describe.placeholder")}
+                  rows={6}
+                  className="mt-1.5 w-full px-3 py-2.5 text-[13px] fg bg-app border bd rounded-md focus:bd-strong focus:outline-none placeholder:fg-faint resize-y min-h-[150px] leading-relaxed transition"
                 />
-                <Field
-                  label={t("autofill.fields.ctaPrimary.label")}
-                  value={textForm.cta_primary}
-                  onChange={(v) => setTextForm((s) => ({ ...s, cta_primary: v }))}
-                  placeholder={t("autofill.fields.ctaPrimary.placeholder")}
-                />
-              </div>
+              </label>
+              <p className="text-[11px] fg-faint leading-relaxed">
+                {t("autofill.describe.hint")}
+              </p>
             </div>
           )}
         </div>
@@ -530,56 +476,5 @@ export function AutofillModal({
   );
 }
 
-function Field({
-  label,
-  value,
-  onChange,
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-}) {
-  return (
-    <label className="block">
-      <span className="text-[10.5px] font-medium fg-muted uppercase tracking-wider">
-        {label}
-      </span>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="mt-1 w-full px-3 py-2 text-[13px] fg bg-app border bd rounded-md focus:bd-strong focus:outline-none placeholder:fg-faint transition"
-      />
-    </label>
-  );
-}
-
-function FieldTextarea({
-  label,
-  value,
-  onChange,
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-}) {
-  return (
-    <label className="block">
-      <span className="text-[10.5px] font-medium fg-muted uppercase tracking-wider">
-        {label}
-      </span>
-      <textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        rows={3}
-        className="mt-1 w-full px-3 py-2 text-[13px] fg bg-app border bd rounded-md focus:bd-strong focus:outline-none placeholder:fg-faint resize-none transition"
-      />
-    </label>
-  );
-}
+// Field / FieldTextarea were removed when the Text tab became a single
+// free-text description box (the AI now structures it).

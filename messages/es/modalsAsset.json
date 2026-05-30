@@ -113,11 +113,16 @@
   },
   "autofill": {
     "title": "Llenar con tu info",
-    "subtitle": "Sube una imagen con la info de tu negocio o escribe los datos a mano. Tu plantilla se llena con tu contenido real — el diseño no cambia.",
-    "subtitleShort": "Imagen o datos → tu plantilla se llena con tu contenido.",
+    "subtitle": "Sube una imagen con tu info — o simplemente describe tu negocio. Tu plantilla se llena con tu contenido real; el diseño no cambia.",
+    "subtitleShort": "Imagen o palabras → tu plantilla se llena con tu contenido.",
     "tabs": {
       "image": "Subir imagen",
-      "text": "Escribir info"
+      "text": "Descríbelo"
+    },
+    "describe": {
+      "label": "Cuéntame de tu negocio",
+      "placeholder": "ej. Una taquería en Monterrey, tacos al pastor desde 1989. Negocio familiar, ingredientes frescos. Pedidos por WhatsApp.",
+      "hint": "Escríbelo como quieras — yo saco el nombre, un tagline y un botón de acción, y relleno la página."
     },
     "image": {
       "previewAlt": "Vista previa",
@@ -163,7 +168,7 @@
     "doneStatus": "✓ Listo · {seconds}s",
     "tips": {
       "image": "Tip: una foto del menú, una captura de tu sitio, un folleto — todo sirve.",
-      "text": "Tip: con nombre + tagline + pitch alcanza. El resto de la plantilla queda intacto."
+      "text": "Tip: con una o dos frases sobre lo que haces alcanza — la IA escribe el resto."
     },
     "processing": "Procesando…",
     "errors": {
@@ -175,6 +180,7 @@
       "cantRead": "No pudimos leer la imagen. Prueba con otra.",
       "uploadFirst": "Sube una imagen primero.",
       "needBusinessName": "Necesitas al menos el nombre del negocio.",
+      "needDescription": "Cuéntame un poco de tu negocio — al menos una frase.",
       "network": "Error de red",
       "server": "Servidor {status}: {detail}",
       "streamRead": "Falló la lectura del stream",
