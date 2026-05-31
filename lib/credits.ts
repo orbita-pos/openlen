@@ -8,10 +8,10 @@ import type { Plan } from "@/lib/limits";
 // Every AI call (page generation, chat edit, autofill) debits credits. One
 // credit ≈ $0.01 of raw model cost — the charge is computed from the real
 // token volume, so a big page costs more credits than a small one. The plan
-// PRICE embeds the markup: Pro is $20/mo for 1000 credits (~$10 of raw cost),
-// so even a maxed-out Pro user leaves ~50% margin; a free user is capped at
-// 20 credits (~$0.20) — enough for ~3 Flash generates or ~1 Pro generate, the
-// "try-it" funnel before hitting the upgrade prompt.
+// PRICE embeds the markup: Pro is $7/mo for 150 credits (≈$1.50 of raw cost if
+// fully spent — roughly 10 Pro page generates), leaving a wide margin even when
+// maxed out; a free user is capped at 20 credits (~$0.20) — enough for ~3 Flash
+// generates or ~1 Pro generate, the "try-it" funnel before the upgrade prompt.
 //
 // v1 is a monthly RESET (no rollover): the first balance read after 30 days
 // sets the balance back to the plan allotment. Rollover-with-expiry would
@@ -21,7 +21,7 @@ import type { Plan } from "@/lib/limits";
 /** Monthly credit allotment per plan. */
 export const CREDITS_BY_PLAN: Record<Plan, number> = {
   free: 20,
-  pro: 1000,
+  pro: 150,
 };
 
 /** Flat charge for an autofill / style-match run. Cheap + occasional, so it

@@ -20,6 +20,8 @@
     "templates:count": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/count-templates.ts",
     "sections:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-migrate.ts",
     "integrations:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/integrations-migrate.ts",
+    "billing:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/billing-migrate.ts",
+    "billing:smoke": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/billing-smoke.ts",
     "sections:seed": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-seed.ts",
     "sections:count": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/count-sections.ts",
     "sections:backfill-scope": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-backfill-scope.ts",

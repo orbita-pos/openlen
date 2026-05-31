@@ -98,7 +98,7 @@
   "pricing": {
     "badge": "Precios",
     "title": "Gratis durante la alpha. <muted>Self-host para siempre.</muted>",
-    "subtitle": "Sin muro de pago mientras lanzamos la v1 — todas las funciones están abiertas para probar. El plan Pro con dominios propios + límites más altos está en camino.",
+    "subtitle": "Empieza gratis con 20 créditos de IA al mes. Pásate a Pro por 150 — o hospeda todo el stack tú mismo sin límite alguno.",
     "comingSoon": "Próximamente",
     "mostPopular": "Más popular",
     "githubAria": "OpenLen en GitHub",
@@ -109,7 +109,7 @@
       "blurb": "Todo funciona. Sin muro de pago durante la alpha.",
       "cta": "Pruébalo gratis",
       "features": {
-        "0": "Genera desde un prompt (Gemini 2.5 Pro)",
+        "0": "20 créditos de IA al mes",
         "1": "165 plantillas, incluidas 30 link-in-bio",
         "2": "Publica en '<tu>'.openlen.com",
         "3": "Analíticas con privacidad + seguimiento de clics por enlace",
@@ -119,11 +119,11 @@
     "pro": {
       "name": "Pro",
       "suffix": "/mes",
-      "blurb": "Límites de generación más altos + dominios propios.",
-      "cta": "Avísame en el lanzamiento",
+      "blurb": "150 créditos de IA al mes — unas 10 generaciones de página Pro.",
+      "cta": "Pásate a Pro",
       "features": {
         "0": "Todo lo del plan Gratis",
-        "1": "1.000 generaciones con IA al mes",
+        "1": "150 créditos de IA al mes (≈10 generaciones de página Pro)",
         "2": "Dominios propios (links.tu-marca.com)",
         "3": "Retención de analíticas más allá de 90 días",
         "4": "Soporte prioritario por email"

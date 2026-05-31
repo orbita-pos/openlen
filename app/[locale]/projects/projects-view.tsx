@@ -8,12 +8,15 @@ import {
   useState,
   useTransition,
 } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { Link, useRouter } from "@/i18n/navigation";
 import {
+  AlertTriangle,
   Archive,
   ArrowUpDown,
   Check,
+  CheckCircle2,
   ChevronDown,
   ChevronRight,
   Copy,
@@ -76,9 +79,21 @@ const STATUS_TONE: Record<
   },
 };
 
+type BillingErrorCode = "not_configured" | "checkout_failed" | "portal_failed";
+type BillingNotice =
+  | { kind: "success" }
+  | { kind: "error"; code: BillingErrorCode };
+
+const BILLING_ERROR_CODES: BillingErrorCode[] = [
+  "not_configured",
+  "checkout_failed",
+  "portal_failed",
+];
+
 export function ProjectsView({ projects: initial }: { projects: ProjectSummary[] }) {
   const t = useTranslations("projects");
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [projects, setProjects] = useState(initial);
   const [view, setView] = useState<ViewMode>("grid");
   const [q, setQ] = useState("");
@@ -91,6 +106,7 @@ export function ProjectsView({ projects: initial }: { projects: ProjectSummary[]
   } | null>(null);
   const [usageDismissed, setUsageDismissed] = useState(false);
   const [usage, setUsage] = useState<UsageInfo | null>(null);
+  const [billingNotice, setBillingNotice] = useState<BillingNotice | null>(null);
   const [_pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -99,6 +115,21 @@ export function ProjectsView({ projects: initial }: { projects: ProjectSummary[]
       .then((d) => setUsage(d))
       .catch(() => {});
   }, []);
+
+  // Polar checkout/portal returns here with ?upgraded=1 on success or
+  // ?billing_error=<code> on failure. Show a banner, then strip the param
+  // so a refresh doesn't re-trigger it.
+  useEffect(() => {
+    const upgraded = searchParams.get("upgraded");
+    const errorParam = searchParams.get("billing_error");
+    let notice: BillingNotice | null = null;
+    if (upgraded === "1") notice = { kind: "success" };
+    else if (errorParam && BILLING_ERROR_CODES.includes(errorParam as BillingErrorCode))
+      notice = { kind: "error", code: errorParam as BillingErrorCode };
+    if (!notice) return;
+    setBillingNotice(notice);
+    router.replace("/projects");
+  }, [searchParams, router]);
 
   // Keyboard: ⌘F focuses search, Esc clears selection or search.
   const searchRef = useRef<HTMLInputElement>(null);
@@ -311,6 +342,13 @@ export function ProjectsView({ projects: initial }: { projects: ProjectSummary[]
           </Link>
         }
       />
+
+      {billingNotice && (
+        <BillingBanner
+          notice={billingNotice}
+          onDismiss={() => setBillingNotice(null)}
+        />
+      )}
 
       <Toolbar
         total={total}
@@ -635,6 +673,52 @@ function Toolbar({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Billing banner — checkout/portal result from Polar (?upgraded / ?billing_error)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function BillingBanner({
+  notice,
+  onDismiss,
+}: {
+  notice: BillingNotice;
+  onDismiss: () => void;
+}) {
+  const t = useTranslations("projects");
+  const isSuccess = notice.kind === "success";
+  const message = isSuccess
+    ? t("billing.success")
+    : t(`billing.errors.${notice.code}`);
+  return (
+    <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 pt-4">
+      <div
+        role={isSuccess ? "status" : "alert"}
+        className={cn(
+          "flex items-start gap-3 rounded-xl ring-1 ring-inset px-3.5 py-3 text-[13px]",
+          isSuccess
+            ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 ring-emerald-200 dark:ring-emerald-500/30"
+            : "bg-red-50 dark:bg-red-500/10 text-red-800 dark:text-red-200 ring-red-200 dark:ring-red-500/30",
+        )}
+      >
+        {isSuccess ? (
+          <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-500" />
+        ) : (
+          <AlertTriangle size={16} className="mt-0.5 shrink-0 text-red-500" />
+        )}
+        <span className="min-w-0 flex-1 leading-snug">{message}</span>
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label={t("billing.dismissBanner")}
+          className="-mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md hover:bg-black/5 dark:hover:bg-white/10 transition"
+        >
+          <X size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Usage strip (3 cards) — real numbers from /api/usage
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -648,6 +732,7 @@ function UsageStrip({
   onDismiss: () => void;
 }) {
   const t = useTranslations("projects");
+  const locale = useLocale();
   const { balance, allotment } = usage.credits;
   const used = Math.max(0, allotment - balance);
   const pct = allotment > 0 ? Math.round((used / allotment) * 100) : 0;
@@ -703,6 +788,15 @@ function UsageStrip({
                 style={{ width: `${Math.min(100, pct)}%` }}
               />
             </div>
+            {usage.plan === "free" && (
+              <a
+                href={`/api/billing/checkout?locale=${locale}`}
+                title={t("billing.upgradeHint")}
+                className="mt-2 inline-flex items-center gap-1 h-7 px-2.5 rounded-md bg-coral-500 text-white text-[12px] font-medium hover:bg-coral-600 active:bg-coral-700 btn-coral-shadow transition"
+              >
+                <Sparkles size={12} /> {t("billing.upgradeCta")}
+              </a>
+            )}
           </div>
           <button
             type="button"
