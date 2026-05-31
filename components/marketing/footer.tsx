@@ -6,7 +6,7 @@ import { Link } from "@/i18n/navigation";
 import { GithubIcon, TwitterIcon } from "@/components/ui/brand-icons";
 import { OpenLenMark } from "@/components/openlen-logo";
 
-const REPO = "https://github.com/jesusbernalrj/inari-pages";
+const REPO = "https://github.com/orbita-pos/openlen";
 
 type FooterLink = { label: string; href?: string; external?: boolean };
 

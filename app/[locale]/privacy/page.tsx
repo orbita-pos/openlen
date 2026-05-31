@@ -3,13 +3,22 @@ import { setRequestLocale } from "next-intl/server";
 import { LegalPage } from "@/components/legal-page";
 import { Link } from "@/i18n/navigation";
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://openlen.com";
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  return { title: locale === "es" ? "Aviso de privacidad" : "Privacy Policy" };
+  return {
+    title: locale === "es" ? "Aviso de privacidad" : "Privacy Policy",
+    description:
+      locale === "es"
+        ? "Qué datos personales trata OpenLen, para qué, con quién los comparte y cómo ejercer tus derechos (LFPDPPP y RGPD)."
+        : "What personal data OpenLen processes, why, who it shares it with, and how to exercise your rights (LFPDPPP and GDPR).",
+    alternates: { canonical: `${SITE_URL}/${locale}/privacy` },
+  };
 }
 
 export default async function PrivacyPage({
@@ -96,9 +105,11 @@ export default async function PrivacyPage({
             <li>
               <strong>Envíos de formularios en páginas publicadas</strong> —
               cuando un visitante envía un formulario en la página publicada de un
-              usuario, guardamos los valores de los campos más metadatos (IP
-              truncada, User-Agent truncado, referente y país, dispositivo y
-              navegador derivados). Ver el apartado «Datos de formularios».
+              usuario, guardamos los valores de los campos más metadatos (la
+              dirección IP y el User-Agent del visitante, conservados brevemente
+              para protección frente a spam y abuso, además del referente y el
+              país, dispositivo y navegador derivados). Ver el apartado «Datos de
+              formularios».
             </li>
             <li>
               <strong>Analítica de páginas publicadas</strong> — analítica
@@ -163,10 +174,11 @@ export default async function PrivacyPage({
             enlace, el referente, el país (código de 2 letras a partir de
             Cloudflare), el dispositivo, el navegador y un{" "}
             <strong>hash salado e irreversible</strong> del User-Agent (uaHash).{" "}
-            <strong>Cloudflare</strong> (CDN) procesa la IP completa del visitante
-            en el edge para derivar el código de país; OpenLen solo almacena una IP
-            truncada. <strong>Nunca</strong> guardamos IPs completas, cookies ni el
-            User-Agent en bruto. Los registros de analítica en bruto se eliminan a
+            <strong>Cloudflare</strong> (CDN) deriva el código de país de 2 letras
+            en el edge; la analítica <strong>no almacena ninguna IP</strong> ni
+            ningún dato derivado de la IP. Nuestra analítica respetuosa{" "}
+            <strong>nunca</strong> guarda IPs completas, cookies ni el User-Agent
+            en bruto. Los registros de analítica en bruto se eliminan a
             los <strong>90 días</strong>; el resumen diario conserva únicamente
             conteos agregados.
           </p>
@@ -429,8 +441,9 @@ export default async function PrivacyPage({
             <li>
               <strong>Published-page form submissions</strong> — when a visitor
               submits a form on a user&apos;s published page, we store the field
-              values plus metadata (truncated IP, truncated User-Agent, referrer,
-              and derived country, device, and browser). See the
+              values plus metadata (the visitor&apos;s IP address and User-Agent,
+              retained briefly for spam and abuse protection, plus the referrer and
+              derived country, device, and browser). See the
               &quot;Published-page form data&quot; section.
             </li>
             <li>
@@ -493,9 +506,10 @@ export default async function PrivacyPage({
             click), the link href and label, the referrer, the country (2-letter
             code from Cloudflare), the device, the browser, and a{" "}
             <strong>salted, non-reversible hash</strong> of the User-Agent
-            (uaHash). <strong>Cloudflare</strong> (CDN) processes the
-            visitor&apos;s full IP at the edge to derive the country code; OpenLen
-            stores only a truncated IP. We <strong>never</strong> store full IP
+            (uaHash). <strong>Cloudflare</strong> (CDN) derives the 2-letter
+            country code at the edge; the analytics{" "}
+            <strong>store no IP</strong> and nothing IP-derived is persisted. Our
+            privacy-first analytics <strong>never</strong> store full IP
             addresses, cookies, or the raw User-Agent. Raw analytics rows are
             deleted after <strong>90 days</strong>; a daily rollup keeps only
             aggregate counts.

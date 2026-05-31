@@ -68,7 +68,7 @@ export async function Pricing() {
       price: 0,
       suffix: t("pricing.selfHost.suffix"),
       blurb: t("pricing.selfHost.blurb"),
-      cta: { label: t("pricing.selfHost.cta"), variant: "outline", icon: GithubIcon, href: "https://github.com/jesusbernalrj/inari-pages" },
+      cta: { label: t("pricing.selfHost.cta"), variant: "outline", icon: GithubIcon, href: "https://github.com/orbita-pos/openlen" },
       features: [
         t("pricing.selfHost.features.0"),
         t("pricing.selfHost.features.1"),

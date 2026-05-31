@@ -3,13 +3,22 @@ import { setRequestLocale } from "next-intl/server";
 import { LegalPage } from "@/components/legal-page";
 import { Link } from "@/i18n/navigation";
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://openlen.com";
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  return { title: locale === "es" ? "Subprocesadores" : "Subprocessors" };
+  const es = locale === "es";
+  return {
+    title: es ? "Subprocesadores" : "Subprocessors",
+    description: es
+      ? "Los terceros (subprocesadores) que pueden tratar datos de usuarios o visitantes al prestar OpenLen."
+      : "The third parties (subprocessors) that may process user or visitor data when providing OpenLen.",
+    alternates: { canonical: `${SITE_URL}/${locale}/subprocessors` },
+  };
 }
 
 export default async function SubprocessorsPage({
@@ -34,7 +43,7 @@ export default async function SubprocessorsPage({
             terceros (subprocesadores) que pueden tratar datos de usuarios o de
             visitantes al prestar OpenLen, el creador de landing pages en
             openlen.com. El responsable que opera OpenLen es{" "}
-            <strong>Jesús Bernal, que opera OpenLen</strong>, con sede en
+            <strong>Jesús Bernal</strong>, con sede en
             México; para cualquier asunto relacionado con esta lista, escríbenos a{" "}
             <a href="mailto:info@jesusbr.com">info@jesusbr.com</a>. Para cada
             proveedor indicamos su finalidad, las categorías de datos que recibe y
@@ -78,8 +87,8 @@ export default async function SubprocessorsPage({
           <h2>Pagos</h2>
           <ul>
             <li>
-              <strong>Polar</strong> (Polar Software Inc.) — comerciante de
-              registro (Merchant of Record) que procesa la facturación y el pago.
+              <strong>Polar</strong> (Polar Software Inc.) — comerciante
+              registrado (Merchant of Record) que procesa la facturación y el pago.
               Polar trata los datos financieros y patrimoniales del pago, emite la
               factura y recauda los impuestos aplicables; OpenLen solo conserva el
               estado de la suscripción y el plan, y <strong>nunca</strong> guarda
@@ -170,7 +179,7 @@ export default async function SubprocessorsPage({
             lists the third parties (subprocessors) that may process user or
             visitor data when we provide OpenLen, the landing-page builder at
             openlen.com. The party operating OpenLen is{" "}
-            <strong>Jesús Bernal, operating OpenLen</strong>, based in Mexico;
+            <strong>Jesús Bernal</strong>, based in Mexico;
             for any matter related to this list, email{" "}
             <a href="mailto:info@jesusbr.com">info@jesusbr.com</a>. For each
             provider we state its purpose, the categories of data it receives, and

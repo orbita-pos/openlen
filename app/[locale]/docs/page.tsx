@@ -3,13 +3,22 @@ import { setRequestLocale } from "next-intl/server";
 import { LegalPage } from "@/components/legal-page";
 import { Link } from "@/i18n/navigation";
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://openlen.com";
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  return { title: locale === "es" ? "Documentación" : "Documentation" };
+  const es = locale === "es";
+  return {
+    title: es ? "Documentación" : "Documentation",
+    description: es
+      ? "Guía paso a paso para crear, editar, publicar y exportar tu landing page con OpenLen, sin escribir código."
+      : "Step-by-step guide to create, edit, publish, and export your landing page with OpenLen, no coding required.",
+    alternates: { canonical: `${SITE_URL}/${locale}/docs` },
+  };
 }
 
 export default async function DocsPage({

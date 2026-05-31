@@ -63,7 +63,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
           </a>
           <span className="text-zinc-300 dark:text-zinc-800">·</span>
           <a
-            href="https://github.com/jesusbernalrj/inari-pages"
+            href="https://github.com/orbita-pos/openlen"
             target="_blank"
             rel="noreferrer"
             className="hover:text-zinc-700 dark:hover:text-zinc-300"

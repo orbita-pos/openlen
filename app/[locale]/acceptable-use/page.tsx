@@ -3,14 +3,21 @@ import { setRequestLocale } from "next-intl/server";
 import { LegalPage } from "@/components/legal-page";
 import { Link } from "@/i18n/navigation";
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://openlen.com";
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
+  const es = locale === "es";
   return {
-    title: locale === "es" ? "Política de uso aceptable" : "Acceptable Use Policy",
+    title: es ? "Política de uso aceptable" : "Acceptable Use Policy",
+    description: es
+      ? "Qué no está permitido al crear, publicar, exportar o distribuir páginas con OpenLen, y cómo aplicamos estas reglas."
+      : "What is not allowed when creating, publishing, exporting, or distributing pages with OpenLen, and how we enforce these rules.",
+    alternates: { canonical: `${SITE_URL}/${locale}/acceptable-use` },
   };
 }
 
@@ -38,7 +45,7 @@ export default async function AcceptableUsePage({
             con sede en México. Esta Política de uso aceptable describe lo que no
             está permitido al usar OpenLen para crear, publicar, exportar o
             distribuir páginas. Forma parte de nuestros{" "}
-            <Link href="/terms">Términos de servicio</Link> y debe leerse junto
+            <Link href="/terms">Términos del servicio</Link> y debe leerse junto
             con nuestra <Link href="/privacy">Política de privacidad</Link>.
           </p>
 
@@ -144,7 +151,7 @@ export default async function AcceptableUsePage({
           <p>
             Los pagos de los planes de pago se procesan a través de{" "}
             <strong>Polar</strong> (Polar Software Inc., Estados Unidos), que
-            actúa como comerciante de registro (Merchant of Record): Polar trata
+            actúa como comerciante registrado (Merchant of Record): Polar trata
             los datos financieros y patrimoniales del cobro, emite la factura y
             recauda los impuestos. OpenLen solo conserva el estado de tu
             suscripción y tu plan; nunca almacenamos los números de tarjeta. Para
@@ -171,7 +178,7 @@ export default async function AcceptableUsePage({
             especialmente graves, tendrás la oportunidad de exportar tu contenido
             antes de que se elimine. Constituyen motivos de suspensión o
             cancelación, entre otros, el incumplimiento de esta política o de los{" "}
-            <Link href="/terms">Términos de servicio</Link>, el uso fraudulento o
+            <Link href="/terms">Términos del servicio</Link>, el uso fraudulento o
             abusivo del Servicio, y la falta de pago de un plan de pago.
           </p>
 
@@ -183,7 +190,7 @@ export default async function AcceptableUsePage({
             retirada de contenido por infracción de propiedad intelectual (estilo
             DMCA), consulta la sección de propiedad intelectual y derechos de
             autor en nuestros{" "}
-            <Link href="/terms">Términos de servicio</Link>; dirige el aviso a{" "}
+            <Link href="/terms">Términos del servicio</Link>; dirige el aviso a{" "}
             <a href="mailto:info@jesusbr.com">info@jesusbr.com</a>, que actúa como
             agente designado para tales avisos.
           </p>
