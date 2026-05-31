@@ -4,6 +4,7 @@ import { createVersion } from "@/lib/projects/versions";
 import { detectSlotPath } from "@/lib/html-engine";
 import { normalizeBornCanonical } from "@/lib/normalize";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
+import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/projects/from-html
@@ -95,6 +96,10 @@ export async function POST(req: Request): Promise<Response> {
     // eslint-disable-next-line no-console
     console.error("[from-html] initial version snapshot failed", err);
   });
+
+  // Background card thumbnail so the pasted page shows a preview in /projects
+  // instead of the placeholder icon. Fire-and-forget — never blocks the create.
+  void renderProjectThumbnail({ projectId, html: finalHtml });
 
   return json({ projectId, title }, 200);
 }

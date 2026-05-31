@@ -19,6 +19,7 @@ import { normalizeBornCanonical } from "@/lib/normalize";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { upgradeDataUriOgImage } from "@/lib/branding/upgrade-og-image";
 import { resolveProjectLogo } from "@/lib/branding/resolve-project-logo";
+import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Project persistence helpers.
@@ -119,6 +120,11 @@ export async function createProject(
     status: "draft",
     data: { html: input.html },
   });
+  // Render a card thumbnail in the background so the project doesn't show the
+  // placeholder icon in /projects. Fire-and-forget: never delays the create
+  // response, never fails it. (Paste + template clones render/inherit in their
+  // own routes.)
+  void renderProjectThumbnail({ projectId: id, html: input.html });
   return id;
 }
 
@@ -644,6 +650,11 @@ export async function publishProject(
   // vars aren't set or the API call errors — stale edge content will
   // flush within `s-maxage` anyway.
   await purgeSubdomain(v.value);
+
+  // 9. Refresh the card thumbnail from the just-published bytes. Fire-and-
+  // forget + soft-fail (same posture as the R2 backup above) — the publish is
+  // already done; a stale or missing thumbnail must never block it.
+  void renderProjectThumbnail({ projectId: params.projectId, html });
 
   return {
     subdomain: v.value,

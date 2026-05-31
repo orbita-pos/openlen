@@ -14,7 +14,7 @@ function ipv4ToInt(parts: number[]): number {
   return ((parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3]) >>> 0;
 }
 
-function ipInPrivateRange(ip: string): boolean {
+export function ipInPrivateRange(ip: string): boolean {
   const parts = ip.split(".").map(Number);
   if (parts.length !== 4 || parts.some((n) => Number.isNaN(n) || n < 0 || n > 255)) {
     return true;
