@@ -136,7 +136,7 @@ export default async function LocaleLayout({
               name: "OpenLen",
               url: SITE_URL,
               logo: `${SITE_URL}/logo.png`,
-              sameAs: ["https://github.com/jesusbernalrj/inari-pages"],
+              sameAs: ["https://github.com/orbita-pos/openlen"],
             }),
           }}
         />
