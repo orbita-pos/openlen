@@ -6,6 +6,7 @@ import { Comparison } from "@/components/marketing/comparison";
 import { Pricing } from "@/components/marketing/pricing";
 import { FinalCta } from "@/components/marketing/final-cta";
 import { MarketingChrome } from "@/components/marketing/marketing-chrome";
+import { countTemplates } from "@/lib/templates/store";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://openlen.com";
 
@@ -23,12 +24,13 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const es = locale === "es";
+  const count = await countTemplates().catch(() => 0);
   const title = es
     ? "Landing pages que son tuyas. Hechas con IA. Código abierto."
     : "Landing pages you own. AI-built. Open source.";
   const description = es
-    ? "Una mirada abierta a tus landing pages. Creador de código abierto con generación por IA, 165 plantillas (incluidas 30 link-in-bio para creadores), analítica respetuosa con la privacidad y tu HTML — AGPLv3."
-    : "An open lens on your landing pages. Open-source builder with AI generation, 165 templates including 30 link-in-bio creator hubs, privacy-first analytics, your HTML — AGPLv3.";
+    ? `Una mirada abierta a tus landing pages. Creador de código abierto con generación por IA, ${count} plantillas (incluidas 30 link-in-bio para creadores), analítica respetuosa con la privacidad y tu HTML — AGPLv3.`
+    : `An open lens on your landing pages. Open-source builder with AI generation, ${count} templates including 30 link-in-bio creator hubs, privacy-first analytics, your HTML — AGPLv3.`;
   return {
     title,
     description,

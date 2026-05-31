@@ -3,6 +3,7 @@ import { Link } from "@/i18n/navigation";
 import { ArrowRight, Star } from "lucide-react";
 import { GithubIcon } from "@/components/ui/brand-icons";
 import { countProjectsSince } from "@/lib/projects";
+import { countTemplates } from "@/lib/templates/store";
 import { HeroPromptInput } from "./hero-prompt-input";
 
 const avatarColors = ["#FF5A36", "#22d3ee", "#a78bfa", "#facc15", "#34d399"];
@@ -39,9 +40,10 @@ export async function Hero() {
   // Real numbers for the trust row. Each chip hides itself when there is
   // nothing real to show yet (pre-launch): a 0 page count and a 0 / failed
   // star fetch each drop their chip instead of rendering a sad "0".
-  const [pagesThisWeek, stars] = await Promise.all([
+  const [pagesThisWeek, stars, templateCount] = await Promise.all([
     countProjectsSince(7).catch(() => 0),
     getRepoStars(),
+    countTemplates().catch(() => 0),
   ]);
 
   return (
@@ -62,7 +64,7 @@ export async function Hero() {
             <span className="inline-flex items-center gap-1 rounded-full bg-coral-500/10 text-coral-700 dark:text-coral-300 px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
               {t("hero.alphaBadge")}
             </span>
-            {t("hero.alphaPitch")}
+            {t("hero.alphaPitch", { count: templateCount })}
             <ArrowRight
               size={12}
               className="opacity-50 transition group-hover:translate-x-0.5 group-hover:opacity-100"
@@ -85,6 +87,7 @@ export async function Hero() {
 
           <p className="mt-6 max-w-xl text-pretty text-lg text-zinc-600 dark:text-zinc-400">
             {t.rich("hero.subtitle", {
+              count: templateCount,
               strong: (chunks) => (
                 <span className="text-zinc-900 dark:text-zinc-100 font-medium">
                   {chunks}

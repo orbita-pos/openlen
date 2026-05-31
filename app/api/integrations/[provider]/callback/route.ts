@@ -7,6 +7,7 @@ import {
   verifyState,
 } from "@/lib/integrations/oauth";
 import { upsertConnection } from "@/lib/integrations";
+import { routing } from "@/i18n/routing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,7 +18,6 @@ export const dynamic = "force-dynamic";
 // logged-in user, then returns to the workspace with a `connected` flag.
 
 const STATE_COOKIE = "ol_oauth_state";
-const LOCALES = ["en", "es"];
 
 export async function GET(
   req: NextRequest,
@@ -35,9 +35,10 @@ export async function GET(
 
   const verified = stateParam ? verifyState(stateParam) : null;
   const locale =
-    verified?.locale && LOCALES.includes(verified.locale)
+    verified?.locale &&
+    (routing.locales as readonly string[]).includes(verified.locale)
       ? verified.locale
-      : "en";
+      : routing.defaultLocale;
   const projectId = verified?.projectId ?? "";
 
   const backTo = (qp: Record<string, string>): Response => {

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { GithubIcon } from "@/components/ui/brand-icons";
 import { Button, type ButtonVariant } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+import { countTemplates } from "@/lib/templates/store";
 
 type CtaIconComponent =
   | LucideIcon
@@ -30,6 +31,7 @@ interface Tier {
 
 export async function Pricing() {
   const t = await getTranslations("marketing");
+  const templateCount = await countTemplates().catch(() => 0);
 
   const tiers: Tier[] = [
     {
@@ -40,7 +42,7 @@ export async function Pricing() {
       cta: { label: t("pricing.free.cta"), variant: "primary", icon: Sparkles, href: "/register" },
       features: [
         t("pricing.free.features.0"),
-        t("pricing.free.features.1"),
+        t("pricing.free.features.1", { count: templateCount }),
         t("pricing.free.features.2"),
         t("pricing.free.features.3"),
         t("pricing.free.features.4"),

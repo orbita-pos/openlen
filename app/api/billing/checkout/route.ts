@@ -2,11 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { billingConfigured, createCheckout } from "@/lib/billing/polar";
 import { publicOrigin } from "@/lib/integrations/oauth";
+import { routing } from "@/i18n/routing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const LOCALES = ["en", "es"];
 
 // GET /api/billing/checkout?locale=<en|es>
 // Full-page navigation (not fetch) from the in-app "Upgrade" affordance. Auths
@@ -14,7 +13,9 @@ const LOCALES = ["en", "es"];
 // Failures bounce back into /projects with a ?billing_error= the UI can show.
 export async function GET(req: NextRequest): Promise<Response> {
   const localeParam = req.nextUrl.searchParams.get("locale") ?? "en";
-  const locale = LOCALES.includes(localeParam) ? localeParam : "en";
+  const locale = (routing.locales as readonly string[]).includes(localeParam)
+    ? localeParam
+    : routing.defaultLocale;
   const projects = new URL(`/${locale}/projects`, publicOrigin());
 
   const session = await auth();
