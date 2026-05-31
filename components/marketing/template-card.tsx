@@ -130,7 +130,7 @@ export function TemplateCard({
       }}
     >
       {template.featured && (
-        <span className="absolute z-20 top-2 right-2 inline-flex items-center gap-1 rounded-full bg-coral-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow-md uppercase tracking-wider">
+        <span className="absolute z-20 top-2 right-2 inline-flex items-center gap-1 rounded-full bg-coral-700 px-2 py-0.5 text-[10px] font-semibold text-white shadow-md uppercase tracking-wider">
           ★ {t("templateCard.featured")}
         </span>
       )}
@@ -231,7 +231,7 @@ export function TemplateCard({
                 <h3 className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
                   {template.name}
                 </h3>
-                <span className="text-[10.5px] uppercase tracking-wider text-zinc-500 dark:text-zinc-500 font-medium">
+                <span className="text-[10.5px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-medium">
                   {tf(`${template.family}.label`)}
                 </span>
               </div>

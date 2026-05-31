@@ -98,7 +98,7 @@ export function TemplatesGallery({ templates }: TemplatesGalleryProps) {
           <div className="relative">
             <Search
               size={16}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500 pointer-events-none"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 dark:text-zinc-400 pointer-events-none"
               aria-hidden
             />
             <input
@@ -119,12 +119,12 @@ export function TemplatesGallery({ templates }: TemplatesGalleryProps) {
                     inputRef.current?.focus();
                   }}
                   aria-label={t("gallery.clearSearch")}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-md text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition"
                 >
                   <X size={14} />
                 </button>
               )}
-              <kbd className="hidden sm:inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded text-[11px] font-mono text-zinc-400 dark:text-zinc-500 ring-1 ring-zinc-200 dark:ring-zinc-800 bg-zinc-50 dark:bg-zinc-900">
+              <kbd className="hidden sm:inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded text-[11px] font-mono text-zinc-500 dark:text-zinc-400 ring-1 ring-zinc-200 dark:ring-zinc-800 bg-zinc-50 dark:bg-zinc-900">
                 /
               </kbd>
             </div>
@@ -230,7 +230,7 @@ function FamilySections({ templates }: { templates: TemplateCardData[] }) {
                   {tf(`${family}.tagline`)}
                 </p>
               </div>
-              <span className="text-xs text-zinc-400 dark:text-zinc-400 uppercase tracking-wider font-medium">
+              <span className="text-xs text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-medium">
                 {t("gallery.templateCount", { count: familyTemplates.length })}
               </span>
             </div>

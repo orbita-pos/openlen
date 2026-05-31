@@ -133,7 +133,7 @@ export async function Pricing() {
                     {tier.name}
                   </h3>
                   {tier.oss && (
-                    <span className="text-[11px] uppercase tracking-wider text-zinc-400">
+                    <span className="text-[11px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                       OSS
                     </span>
                   )}
@@ -152,14 +152,10 @@ export async function Pricing() {
                 {tier.cta.href ? (
                   isExternalCta ? (
                     // External repo links (Self-host tier) stay plain <a> and
-                    // share their accessible name with the other GitHub anchors
-                    // on the page so screen readers don't read four different
-                    // labels for the same destination.
                     <a
                       href={tier.cta.href}
                       target="_blank"
                       rel="noreferrer"
-                      aria-label={t("pricing.githubAria")}
                     >
                       {ctaButton}
                     </a>

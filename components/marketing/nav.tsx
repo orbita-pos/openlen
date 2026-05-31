@@ -45,7 +45,7 @@ export function Nav({ dark, onToggleDark }: NavProps) {
         <Link href="/" className="flex items-center gap-2 group">
           <OpenLenMark className="h-6 w-6 shrink-0" />
           <span className="font-semibold tracking-tight text-[15px]">
-            Open<span className="text-coral-500 dark:text-coral-400">Len</span>
+            Open<span className="text-coral-700 dark:text-coral-400">Len</span>
           </span>
         </Link>
 
@@ -63,7 +63,6 @@ export function Nav({ dark, onToggleDark }: NavProps) {
             href="https://github.com/orbita-pos/openlen"
             target="_blank"
             rel="noreferrer"
-            aria-label={t("nav.githubAria")}
             className="ml-1 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
           >
             <GithubIcon size={14} />

@@ -48,16 +48,16 @@ export function Combobox({
         className="flex items-center justify-between w-full h-9 px-3 text-sm rounded-lg bg-white dark:bg-[#0a0a0a] ring-1 ring-zinc-200 dark:ring-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-coral-500 transition"
       >
         <span
-          className={value ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-400"}
+          className={value ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-500 dark:text-zinc-400"}
         >
           {value || buttonPlaceholder}
         </span>
-        <ChevronDown size={14} className="text-zinc-400" />
+        <ChevronDown size={14} className="text-zinc-500 dark:text-zinc-400" />
       </button>
       {open && (
         <div className="absolute z-30 mt-1 w-full rounded-lg ring-1 ring-zinc-200 dark:ring-zinc-800 bg-white dark:bg-[#0a0a0a] shadow-lg overflow-hidden">
           <div className="flex items-center gap-2 px-2.5 border-b border-zinc-100 dark:border-zinc-900">
-            <Search size={13} className="text-zinc-400" />
+            <Search size={13} className="text-zinc-500 dark:text-zinc-400" />
             <input
               autoFocus
               value={query}
@@ -68,7 +68,7 @@ export function Combobox({
           </div>
           <div className="max-h-56 overflow-y-auto p-1 nice-scroll">
             {filtered.length === 0 && (
-              <div className="px-2.5 py-3 text-xs text-zinc-400 text-center">
+              <div className="px-2.5 py-3 text-xs text-zinc-500 dark:text-zinc-400 text-center">
                 {emptyLabel}
               </div>
             )}

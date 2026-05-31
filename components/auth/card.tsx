@@ -23,7 +23,7 @@ export function Card({
           {title}
         </h1>
         {subtitle && (
-          <p className="mt-1.5 text-[14px] text-zinc-500 dark:text-zinc-500 leading-relaxed">
+          <p className="mt-1.5 text-[14px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
             {subtitle}
           </p>
         )}

@@ -67,7 +67,7 @@ export function Footer() {
             <Link href="/" className="flex items-center gap-2 group">
               <OpenLenMark className="h-6 w-6 shrink-0" />
               <span className="font-semibold tracking-tight">
-                Open<span className="text-coral-500 dark:text-coral-400">Len</span>
+                Open<span className="text-coral-700 dark:text-coral-400">Len</span>
               </span>
             </Link>
             <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400 max-w-sm">

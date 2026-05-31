@@ -126,7 +126,7 @@ export function ResetForm({ token }: { token: string }) {
                 type="button"
                 onClick={() => setShowPw((s) => !s)}
                 aria-label={showPw ? t("fields.hidePassword") : t("fields.showPassword")}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition"
               >
                 {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
@@ -173,7 +173,7 @@ export function ResetForm({ token }: { token: string }) {
           )}
         </AuthButton>
       </form>
-      <div className="pt-1 text-center text-[13px] text-zinc-500 dark:text-zinc-500">
+      <div className="pt-1 text-center text-[13px] text-zinc-500 dark:text-zinc-400">
         <Link
           href="/login"
           className="font-medium hover:text-zinc-900 dark:hover:text-zinc-100"

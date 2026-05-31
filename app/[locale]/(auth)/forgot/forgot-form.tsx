@@ -66,7 +66,7 @@ export function ForgotForm() {
               strong: (chunks) => <span className="font-medium">{chunks}</span>,
             })}
           </p>
-          <p className="mt-3 text-[12px] text-zinc-400 dark:text-zinc-600">
+          <p className="mt-3 text-[12px] text-zinc-500 dark:text-zinc-400">
             {t("forgot.sent.notSeeing")}{" "}
             <button
               type="button"
@@ -80,7 +80,7 @@ export function ForgotForm() {
           </p>
         </div>
 
-        <div className="border-t border-zinc-100 dark:border-zinc-900 pt-4 text-center text-[13px] text-zinc-500 dark:text-zinc-500">
+        <div className="border-t border-zinc-100 dark:border-zinc-900 pt-4 text-center text-[13px] text-zinc-500 dark:text-zinc-400">
           <Link
             href="/login"
             className="inline-flex items-center gap-1.5 font-medium text-coral-700 dark:text-coral-400 hover:underline"
@@ -129,7 +129,7 @@ export function ForgotForm() {
           )}
         </AuthButton>
       </form>
-      <div className="pt-2 text-center text-[13px] text-zinc-500 dark:text-zinc-500">
+      <div className="pt-2 text-center text-[13px] text-zinc-500 dark:text-zinc-400">
         {t("forgot.remembered")}{" "}
         <Link
           href="/login"

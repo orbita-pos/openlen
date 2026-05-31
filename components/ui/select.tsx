@@ -46,12 +46,12 @@ export function Select({
       >
         <span
           className={
-            selected ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-400"
+            selected ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-500 dark:text-zinc-400"
           }
         >
           {selected ? selected.label : placeholder}
         </span>
-        <ChevronDown size={14} className="text-zinc-400" />
+        <ChevronDown size={14} className="text-zinc-500 dark:text-zinc-400" />
       </button>
       {open && (
         <div className="absolute z-30 mt-1 w-full rounded-lg ring-1 ring-zinc-200 dark:ring-zinc-800 bg-white dark:bg-[#0a0a0a] shadow-lg p-1">

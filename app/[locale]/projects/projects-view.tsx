@@ -395,7 +395,7 @@ export function ProjectsView({ projects: initial }: { projects: ProjectSummary[]
         ) : (
           <div className="mx-auto max-w-7xl px-4 sm:px-6 py-2">
             <div className="rounded-xl bg-white dark:bg-[#0a0a0a] ring-1 ring-zinc-200 dark:ring-zinc-800 overflow-hidden">
-              <div className="hidden md:flex items-center gap-3 px-4 h-9 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/30 text-[10.5px] uppercase tracking-wider text-zinc-400 dark:text-zinc-600 font-semibold">
+              <div className="hidden md:flex items-center gap-3 px-4 h-9 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/30 text-[10.5px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-semibold">
                 <span className="w-5" />
                 <span className="w-14" />
                 <span className="flex-1">{t("list.name")}</span>
@@ -532,7 +532,7 @@ function Toolbar({
           <h1 className="text-[34px] sm:text-[40px] font-semibold tracking-tight leading-[1.0]">
             {t("toolbar.title")}
           </h1>
-          <p className="mt-1.5 text-[14px] text-zinc-500 dark:text-zinc-500">
+          <p className="mt-1.5 text-[14px] text-zinc-500 dark:text-zinc-400">
             <span className="tabular-nums">{t("toolbar.pages", { count: total })}</span>
             {published > 0 && (
               <>
@@ -560,7 +560,7 @@ function Toolbar({
           <div className="relative">
             <Search
               size={13}
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none"
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 dark:text-zinc-400 pointer-events-none"
             />
             <input
               ref={searchRef}
@@ -569,7 +569,7 @@ function Toolbar({
               placeholder={t("toolbar.searchPlaceholder")}
               className="h-9 pl-8 pr-9 text-sm rounded-lg bg-white dark:bg-[#0a0a0a] ring-1 ring-zinc-200 dark:ring-zinc-800 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-coral-500 transition w-44 sm:w-56"
             />
-            <kbd className="hidden sm:inline-flex absolute right-2 top-1/2 -translate-y-1/2 h-5 items-center px-1 rounded text-[10px] font-mono ring-1 ring-zinc-200 dark:ring-zinc-800 text-zinc-400 bg-white dark:bg-[#0a0a0a]">
+            <kbd className="hidden sm:inline-flex absolute right-2 top-1/2 -translate-y-1/2 h-5 items-center px-1 rounded text-[10px] font-mono ring-1 ring-zinc-200 dark:ring-zinc-800 text-zinc-500 dark:text-zinc-400 bg-white dark:bg-[#0a0a0a]">
               ⌘F
             </kbd>
           </div>
@@ -584,7 +584,7 @@ function Toolbar({
               <span className="hidden sm:inline">
                 {FILTERS.find((f) => f.id === filter)?.label}
               </span>
-              <ChevronDown size={11} className="text-zinc-400" />
+              <ChevronDown size={11} className="text-zinc-500 dark:text-zinc-400" />
             </button>
             {filterOpen && (
               <div className="absolute right-0 mt-1.5 w-44 rounded-xl bg-white dark:bg-zinc-950 ring-1 ring-zinc-200 dark:ring-zinc-800 shadow-xl p-1 z-30">
@@ -621,7 +621,7 @@ function Toolbar({
               <span className="hidden sm:inline">
                 {SORTS.find((s) => s.id === sort)?.label}
               </span>
-              <ChevronDown size={11} className="text-zinc-400" />
+              <ChevronDown size={11} className="text-zinc-500 dark:text-zinc-400" />
             </button>
             {sortOpen && (
               <div className="absolute right-0 mt-1.5 w-48 rounded-xl bg-white dark:bg-zinc-950 ring-1 ring-zinc-200 dark:ring-zinc-800 shadow-xl p-1 z-30">
@@ -745,7 +745,7 @@ function UsageStrip({
             <Sparkles size={16} />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="text-[10.5px] uppercase tracking-wider text-zinc-400 dark:text-zinc-600 font-semibold">
+            <div className="text-[10.5px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-semibold">
               {t("usage.total")}
             </div>
             <div className="text-[13.5px] font-medium leading-tight tabular-nums">
@@ -759,7 +759,7 @@ function UsageStrip({
             <Zap size={15} />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="text-[10.5px] uppercase tracking-wider text-zinc-400 dark:text-zinc-600 font-semibold">
+            <div className="text-[10.5px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-semibold">
               {t("usage.thisMonth")}
             </div>
             <div className="text-[13.5px] font-medium leading-tight tabular-nums">
@@ -773,7 +773,7 @@ function UsageStrip({
             <Layers size={15} />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="text-[10.5px] uppercase tracking-wider text-zinc-400 dark:text-zinc-600 font-semibold">
+            <div className="text-[10.5px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-semibold">
               {usage.plan === "free" ? t("usage.freePlan") : t("usage.proPlan")}
             </div>
             <div className="text-[13.5px] font-medium leading-tight tabular-nums">
@@ -802,7 +802,7 @@ function UsageStrip({
             type="button"
             onClick={onDismiss}
             aria-label={t("usage.dismiss")}
-            className="absolute top-1.5 right-1.5 inline-flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition"
+            className="absolute top-1.5 right-1.5 inline-flex h-6 w-6 items-center justify-center rounded-md text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition"
           >
             <X size={13} />
           </button>
@@ -1030,7 +1030,7 @@ function ProjectCard({
             </span>
           )}
         </h3>
-        <div className="mt-1 text-[11.5px] text-zinc-500 dark:text-zinc-500 flex items-center gap-1.5">
+        <div className="mt-1 text-[11.5px] text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
           <span suppressHydrationWarning>{t("card.editedAgo", { time: relativeTime(project.updatedAt, t) })}</span>
           {project.subdomain ? (
             <>
@@ -1067,7 +1067,7 @@ function ProjectCard({
             ))}
           </div>
         )}
-        <div className="mt-3 flex items-center justify-between border-t border-zinc-100 dark:border-zinc-900 pt-2.5 text-[11.5px] text-zinc-500 dark:text-zinc-500">
+        <div className="mt-3 flex items-center justify-between border-t border-zinc-100 dark:border-zinc-900 pt-2.5 text-[11.5px] text-zinc-500 dark:text-zinc-400">
           <span className="inline-flex items-center gap-1">
             <Layers size={11} /> {t("card.sections", { count: project.sectionCount })}
           </span>
@@ -1168,7 +1168,7 @@ function ProjectRow({
             </span>
           )}
         </div>
-        <div className="text-[11px] text-zinc-500 dark:text-zinc-500 truncate">
+        <div className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
           {project.subdomain ? (
             <span className="inline-flex items-center gap-1">
               <Globe size={10} /> {project.subdomain}.openlen.com
@@ -1195,7 +1195,7 @@ function ProjectRow({
 
       <div
         suppressHydrationWarning
-        className="hidden md:block shrink-0 text-[11.5px] text-zinc-500 dark:text-zinc-500 w-24 truncate text-right"
+        className="hidden md:block shrink-0 text-[11.5px] text-zinc-500 dark:text-zinc-400 w-24 truncate text-right"
       >
         {relativeTime(project.updatedAt, t)}
       </div>
@@ -1208,7 +1208,7 @@ function ProjectRow({
           onMenu(e.currentTarget.getBoundingClientRect());
         }}
         aria-label={t("card.projectMenu")}
-        className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-md text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition"
+        className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition"
       >
         <MoreHorizontal size={14} />
       </button>
@@ -1328,7 +1328,7 @@ function MenuDropdown({
                 <it.icon size={14} className="opacity-70" />
                 <span className="flex-1">{it.label}</span>
                 {it.hint && (
-                  <span className="text-[10px] text-zinc-400">{it.hint}</span>
+                  <span className="text-[10px] text-zinc-500 dark:text-zinc-400">{it.hint}</span>
                 )}
               </button>
             </span>
@@ -1390,7 +1390,7 @@ function BulkBar({
           <button
             type="button"
             onClick={onCancel}
-            className="inline-flex h-7 px-2.5 items-center rounded-md text-[12px] text-zinc-400 hover:text-white hover:bg-zinc-900 transition"
+            className="inline-flex h-7 px-2.5 items-center rounded-md text-[12px] text-zinc-500 dark:text-zinc-400 hover:text-white hover:bg-zinc-900 transition"
           >
             {t("bulk.cancel")}
           </button>
@@ -1428,7 +1428,7 @@ function EmptyState() {
       <h2 className="text-[36px] sm:text-[48px] font-semibold tracking-tight leading-[1.0]">
         {t.rich("empty.title", { br: () => <br /> })}
       </h2>
-      <p className="mt-4 max-w-md mx-auto text-[15px] text-zinc-500 dark:text-zinc-500 leading-relaxed">
+      <p className="mt-4 max-w-md mx-auto text-[15px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
         {t("empty.subtitle")}
       </p>
 
@@ -1446,7 +1446,7 @@ function EmptyState() {
               <div className="text-[13px] font-semibold tracking-tight">
                 {ex.title}
               </div>
-              <div className="text-[12px] text-zinc-500 dark:text-zinc-500 mt-0.5 leading-snug line-clamp-2">
+              <div className="text-[12px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-snug line-clamp-2">
                 &quot;{ex.brief}&quot;
               </div>
             </div>
@@ -1486,7 +1486,7 @@ function NoResults({
       <div className="text-[16px] font-semibold tracking-tight">
         {t("noResults.title", { query: q })}
       </div>
-      <p className="mt-1.5 text-[13px] text-zinc-500 dark:text-zinc-500">
+      <p className="mt-1.5 text-[13px] text-zinc-500 dark:text-zinc-400">
         {t("noResults.subtitle")}
       </p>
       <div className="mt-5 flex items-center justify-center gap-2">
