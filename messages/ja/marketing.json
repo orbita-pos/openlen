@@ -1,0 +1,225 @@
+{
+  "nav": {
+    "links": {
+      "templates": "テンプレート",
+      "features": "機能",
+      "pricing": "料金",
+      "docs": "ドキュメント"
+    },
+    "githubAria": "GitHub の OpenLen",
+    "toggleDark": "ダークモードを切り替え",
+    "signIn": "ログイン",
+    "tryFree": "無料で試す"
+  },
+  "hero": {
+    "alphaBadge": "アルファ版",
+    "alphaPitch": "手作りのテンプレート {count} 点 — アルファ版の間は無料",
+    "title": "あなたが所有するランディングページ。<br></br><muted>AIで構築。</muted> <gradient>オープンソース。</gradient>",
+    "subtitle": "プロンプトから生成、<strong>{count} 点のテンプレート</strong>から選択、または自分の HTML を貼り付け。編集してサブドメインに公開、<strong>プライバシー重視のアナリティクス</strong>を標準搭載。",
+    "tagline": "あなたの HTML。あなたのサブドメイン。AGPLv3 — フォーク、監査、セルフホストが自由。ロックインなし、同意バナーなし。",
+    "pagesThisWeek": "今週生成されたページ数は <strong>{count, number}</strong>",
+    "githubAria": "GitHub の OpenLen",
+    "starOnGithub": "GitHub でスターを付ける"
+  },
+  "heroPrompt": {
+    "placeholder": "私の SaaS のためのランディングページで…",
+    "tools": {
+      "attachImage": "画像を添付",
+      "scopeSection": "セクションを指定",
+      "autofill": "あなたの情報で自動入力",
+      "titleSuffix": "{label} — ページが作成されると利用可能",
+      "ariaSuffix": "{label}（生成後に利用可能）"
+    },
+    "generate": "生成",
+    "tryLabel": "試す"
+  },
+  "signInDialog": {
+    "close": "閉じる",
+    "title": "ログインして生成",
+    "body": "ページを構築するにはアカウントが必要です — 無料です。プロンプトは保存されるので、中断したところから再開できます。",
+    "createAccount": "無料アカウントを作成",
+    "logIn": "ログイン"
+  },
+  "demoStrip": {
+    "eyebrow": "手作りのテンプレート {count} 点 — すべて公開準備完了",
+    "title": "本物のテンプレート。<br></br><muted> 選んで、入力して、公開。</muted>",
+    "description": "各テンプレートは自己完結型の HTML — Tailwind と Google Fonts をインライン化し、React ランタイムは不要。複製してコピーと画像を編集し、サブドメインに公開します。",
+    "browseAll": "{count} 点すべてのテンプレートを見る"
+  },
+  "features": {
+    "badge": "OpenLen を選ぶ理由",
+    "title": "ソフトウェアを<muted>借りるより所有したい</muted>人のために。",
+    "items": {
+      "templates": {
+        "title": "本番品質のテンプレート {count} 点",
+        "body": "手作りのマーケティング向けランディング、さらに 30 種類の link-in-bio クリエイターハブ（配信者、ミュージシャン、フォトグラファー、個人開発者）。ひとつ選んで iframe 内でカスタマイズし、サブドメインに公開できます。"
+      },
+      "analytics": {
+        "title": "プライバシー重視のアナリティクスを標準搭載",
+        "body": "リンクごとのクリック計測、ページ訪問、上位リファラー、国別内訳 — Cookie なし、IP 保存なし、同意バナーなし。設計段階から GDPR にクリア。Plausible と同じ仕組みを、あなた自身のものとして。"
+      },
+      "ownHtml": {
+        "title": "あなたの HTML、あなたのサブドメイン",
+        "body": "純粋な HTML + Tailwind の出力。'<you>'.openlen.com に即座に公開、またはファイルを持ち出してどこでもホスト可能 — Vercel、Cloudflare、GitHub Pages、自前のサーバーでも。ランタイムのロックインはありません。"
+      },
+      "openSource": {
+        "title": "オープンソース（AGPLv3）",
+        "body": "フォークして。監査して。Hetzner の 1 台ですべてのスタックをセルフホスト。ジェネレーター、エディター、公開パイプライン、アナリティクスはすべてリポジトリにあります。"
+      }
+    }
+  },
+  "comparison": {
+    "badge": "比較",
+    "title": "計算は私たちがやりました、あなたは不要です。",
+    "subtitle": "正直で、飾らない横並び比較。2026年5月更新。",
+    "cols": {
+      "price": "料金",
+      "yourCode": "あなたのコード",
+      "openSource": "オープンソース",
+      "selfHost": "セルフホスト",
+      "analytics": "アナリティクス"
+    },
+    "values": {
+      "freeAlpha": "無料（アルファ版）",
+      "builtIn": "標準搭載",
+      "export": "エクスポート",
+      "basic": "ベーシック",
+      "paidTier": "有料プラン"
+    },
+    "thatsUs": "これが私たち",
+    "footnote": "料金は2026年5月時点の公開プランを反映しています。Linktree を含めたのは、私たちの 30 種類の link-in-bio クリエイターテンプレートが同じ層を対象にしているためです — 違いは、あなたが HTML とサブドメインを所有する点です。"
+  },
+  "creatorShowcase": {
+    "badge": "クリエイター向け",
+    "title": "本当に<muted>あなたのものになる</muted>リンクページ。",
+    "description": "配信者、ミュージシャン、フォトグラファー、個人開発者、プレミアムクリエイター向けの手作り link-in-bio テンプレート {count} 点。リンクごとのクリック計測とページアナリティクスを標準搭載 — Linktree の手数料なし、Google Analytics なし、Cookie なし。",
+    "allCount": "{count} 点すべてのクリエイターテンプレート"
+  },
+  "pricing": {
+    "badge": "料金",
+    "title": "アルファ版の間は無料。<muted>セルフホストはずっと無料。</muted>",
+    "subtitle": "月20 AIクレジットで無料スタート。Pro にアップグレードして150クレジット — または制限のないセルフホストでスタック全体を自分のものに。",
+    "comingSoon": "近日公開",
+    "mostPopular": "一番人気",
+    "githubAria": "GitHub の OpenLen",
+    "footnote": "すべてのプランに AGPL ライセンスのオープンソースジェネレーターが含まれます。ホスティングプランは機能ではなく利便性を追加します。",
+    "free": {
+      "name": "Free",
+      "suffix": "アルファ版の間",
+      "blurb": "すべて使えます。アルファ版の間はペイウォールなし。",
+      "cta": "無料で試す",
+      "features": {
+        "0": "月20 AIクレジット",
+        "1": "link-in-bio 30 点を含むテンプレート {count} 点",
+        "2": "'<you>'.openlen.com に公開",
+        "3": "プライバシー重視のアナリティクス + リンクごとのクリック計測",
+        "4": "メール通知付きのリードフォーム"
+      }
+    },
+    "pro": {
+      "name": "Pro",
+      "suffix": "/月",
+      "blurb": "月150 AIクレジット — Pro ページ生成およそ10回分。",
+      "cta": "Pro にアップグレード",
+      "features": {
+        "0": "Free のすべて",
+        "1": "月150 AIクレジット（Pro ページ生成およそ10回分）",
+        "2": "カスタムドメイン（links.your-brand.com）",
+        "3": "90日を超えるアナリティクス保持",
+        "4": "優先メールサポート"
+      }
+    },
+    "selfHost": {
+      "name": "セルフホスト",
+      "suffix": "ずっと",
+      "blurb": "自分のサーバーでスタック全体を動かす。",
+      "cta": "リポジトリを複製",
+      "features": {
+        "0": "AGPLv3 — 改変も再配布もあなたの自由",
+        "1": "自分の Gemini / Kimi API キーを使用",
+        "2": "Hetzner の 1 台ですべてを実行",
+        "3": "nginx でワイルドカードサブドメイン",
+        "4": "請求なし、レート制限なし、監視なし"
+      }
+    }
+  },
+  "finalCta": {
+    "badge": "スタックを所有しよう",
+    "title": "ロックインへの支払いをやめよう。<br></br><muted>ランディングページを所有しはじめよう。</muted>",
+    "subtitle": "プロンプトひとつで、<strong>あなたのもので、どこでもデプロイでき、読めるコードでできた</strong>ランディングページが手に入ります。",
+    "generateBtn": "ページを生成 — 無料",
+    "githubAria": "GitHub の OpenLen",
+    "cloneBtn": "GitHub で複製",
+    "perks": {
+      "noCard": "クレジットカード不要",
+      "agpl": "AGPLv3 — ずっとあなたのもの",
+      "selfHost": "1 台でセルフホスト"
+    }
+  },
+  "footer": {
+    "tagline": "あなたのランディングページへのオープンなレンズ。AIで構築、あなたの HTML、あなたのサブドメイン — AGPLv3、ロックインなし。",
+    "githubAria": "GitHub の OpenLen",
+    "twitterAria": "Twitter",
+    "docsAria": "ドキュメント",
+    "licensed": "AGPL-3.0 ライセンス",
+    "builtWith": "もちろん OpenLen で構築。",
+    "operational": "すべてのシステムが正常稼働中",
+    "product": {
+      "title": "プロダクト",
+      "features": "機能",
+      "pricing": "料金",
+      "changelog": "変更履歴",
+      "roadmap": "ロードマップ"
+    },
+    "openSource": {
+      "title": "オープンソース",
+      "agplLicense": "AGPL ライセンス",
+      "contribute": "コントリビュート"
+    },
+    "company": {
+      "title": "会社情報",
+      "blog": "ブログ",
+      "privacy": "プライバシー",
+      "terms": "利用規約",
+      "contact": "お問い合わせ"
+    },
+    "legal": {
+      "title": "法的事項",
+      "cookies": "Cookie",
+      "acceptableUse": "利用規定",
+      "refunds": "返金とキャンセル",
+      "subprocessors": "サブプロセッサー",
+      "docs": "ドキュメント"
+    }
+  },
+  "gallery": {
+    "searchPlaceholder": "名前、ファミリー、用途で検索…",
+    "searchAria": "テンプレートを検索",
+    "clearSearch": "検索をクリア",
+    "showing": "{total} 点中 {shown} 点を表示中",
+    "matching": "<code>{query}</code> に一致",
+    "templateCount": "{count, plural, one {# テンプレート} other {# テンプレート}}",
+    "featured": {
+      "eyebrow": "最上級のショーケース",
+      "title": "注目のテンプレート",
+      "description": "本物の写真を使った手作りのショーケース — あなたのページがフルに作り込まれたときの仕上がりの例です。",
+      "curated": "厳選 {count} 点"
+    },
+    "empty": {
+      "message": "<code>{query}</code> に一致するテンプレートはありません。",
+      "clear": "検索をクリア"
+    }
+  },
+  "templateCard": {
+    "featured": "注目",
+    "previewAlt": "{name} テンプレートのプレビュー",
+    "livePreview": "{name} のライブプレビュー"
+  },
+  "useTemplate": {
+    "cta": "このテンプレートを使う",
+    "creating": "プロジェクトを作成中…",
+    "errorStatus": "エラー {status}: {detail}",
+    "unexpectedResponse": "サーバーから予期しない応答がありました",
+    "networkError": "ネットワークエラー"
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "aiBrief": {
+    "title": "Descreva sua página",
+    "subtitle": "Me diga o que você quer — eu monto a página para você.",
+    "placeholder": "Uma landing page para o meu SaaS que…",
+    "attachImage": "Anexar uma imagem — disponível após a geração",
+    "scopeSection": "Limitar a uma seção — disponível após a geração",
+    "autofill": "Preencher com os meus dados — disponível após a geração",
+    "availableAfter": "Disponível assim que seu projeto for criado",
+    "generate": "Gerar"
+  },
+  "brief": {
+    "label": "Briefing",
+    "description": "Contexto fixo que a IA vê em cada conversa. Marca, tom de voz, restrições, lembretes.",
+    "placeholder": "ex.\n\n- Esta é uma landing para a Counter, uma cafeteria em Polanco.\n- Tom de voz: acolhedor, amigável, sem jargão técnico.\n- Cor de destaque: laranja quente (#C66B3D).\n- A fazer: pedir o logo final para o designer.",
+    "emptyTitle": "O Briefing é específico de cada projeto.",
+    "emptyHint": "Abra um projeto na aba Páginas para escrever o briefing dele.",
+    "saving": "Salvando…",
+    "saved": "Salvo · injetado em cada conversa",
+    "saveFailed": "Falha ao salvar",
+    "saveErrorRetry": "Não foi possível salvar — tente novamente.",
+    "ready": "Pronto"
+  },
+  "templates": {
+    "heading": "Modelos selecionados",
+    "intro": "Clique em um card para ver a prévia em tamanho grande. Quando estiver pronto, toque em <b>Usar este modelo</b> no banner para cloná-lo em um novo projeto.",
+    "newProjectWarning": "Escolher um modelo inicia um projeto <b>novo</b>. Seu projeto atual continua salvo em <projectsLink>/projects</projectsLink>.",
+    "all": "Todos",
+    "previewTemplateAria": "Pré-visualizar modelo: {name}",
+    "preview": "Prévia",
+    "previewing": "Pré-visualizando",
+    "templateCount": "{count, plural, one {# modelo} other {# modelos}}",
+    "loadError": "Falha ao carregar os modelos — {error}",
+    "footer": "Os modelos são HTML estático — marcação pura, Tailwind via CDN, Google Fonts. Ao clonar, eles passam a ser seus; só o seu projeto reivindica um subdomínio quando você toca em Publicar."
+  },
+  "sections": {
+    "heading": "Biblioteca de seções",
+    "intro": "Insira uma seção na sua página atual. Ela entra no rodapé — arraste para o lugar usando as alças da seção. A aparência se adapta à sua página na próxima reestilização.",
+    "all": "Todas",
+    "jsTooltip": "Renderiza o conteúdo via JS — preservado na inserção, edição inline limitada",
+    "imgTooltip": "Vem com placeholders em gradiente — troque por imagens reais após inserir",
+    "insertAria": "Inserir {name} na página atual",
+    "insert": "Inserir",
+    "inserting": "Inserindo…",
+    "loadError": "Falha ao carregar as seções — {error}",
+    "footer": "As seções são fragmentos com escopo próprio — seus estilos não conflitam com a sua página. Insira, depois reordene e reestilize do seu jeito."
+  },
+  "paste": {
+    "heading": "Colar HTML",
+    "description": "Cole o HTML que o claude.ai te deu (ou qualquer HTML de landing page autossuficiente). A gente hospeda no seu subdomínio.",
+    "projectNameLabel": "Nome do projeto",
+    "projectNamePlaceholder": "Detectado automaticamente pelo título da página se ficar em branco",
+    "htmlLabel": "HTML",
+    "charCount": "{count, number} caracteres",
+    "errorEmpty": "Cole algum HTML primeiro.",
+    "errorHttp": "HTTP {status} — tente novamente.",
+    "creating": "Criando projeto…",
+    "createProject": "Criar projeto",
+    "deployHint": "A seguir: toque em Publicar para publicar em um subdomínio."
+  }
+}

@@ -1,0 +1,150 @@
+{
+  "metaTitle": "Le mie pagine",
+  "header": {
+    "myPages": "Le mie pagine",
+    "newPage": "Nuova pagina"
+  },
+  "status": {
+    "published": "Pubblicata",
+    "draft": "Bozza",
+    "archived": "Archiviata"
+  },
+  "toolbar": {
+    "title": "Le mie pagine",
+    "pages": "{count, plural, one {# pagina} other {# pagine}}",
+    "publishedCount": "{count} pubblicate",
+    "filterLabel": "Filtro: {label}",
+    "clearFilter": "Rimuovi filtro",
+    "searchPlaceholder": "Cerca pagine…",
+    "filters": {
+      "all": "Tutte le pagine",
+      "draft": "Bozze",
+      "published": "Pubblicate",
+      "archived": "Archiviate"
+    },
+    "sorts": {
+      "edited": "Ultima modifica",
+      "created": "Data di creazione",
+      "name": "Nome (A → Z)"
+    },
+    "gridView": "Vista griglia",
+    "listView": "Vista elenco"
+  },
+  "usage": {
+    "total": "Totale",
+    "totalPages": "{count, plural, one {# pagina} other {# pagine}} nel tuo spazio di lavoro",
+    "thisMonth": "Questo mese",
+    "creditsUsed": "{used} / {allotment} crediti usati",
+    "freePlan": "Piano Free",
+    "proPlan": "Piano Pro",
+    "creditsLeft": "{count, plural, one {# credito rimasto} other {# crediti rimasti}}",
+    "dismiss": "Ignora"
+  },
+  "list": {
+    "name": "Nome",
+    "status": "Stato",
+    "tags": "Tag",
+    "edited": "Modificata",
+    "notDeployed": "Non pubblicata"
+  },
+  "card": {
+    "projectMenu": "Menu progetto",
+    "published": "Pubblicata",
+    "unpublishedChanges": "Modifiche non pubblicate",
+    "open": "Apri",
+    "editedAgo": "Modificata {time}",
+    "sections": "{count, plural, one {# sezione} other {# sezioni}}"
+  },
+  "menu": {
+    "closeMenu": "Chiudi menu",
+    "open": "Apri",
+    "duplicate": "Duplica",
+    "rename": "Rinomina",
+    "downloadZip": "Scarica .zip",
+    "openPublished": "Apri pagina pubblicata",
+    "publish": "Pubblica…",
+    "archived": "Archiviata",
+    "archive": "Archivia",
+    "delete": "Elimina"
+  },
+  "bulk": {
+    "selected": "selezionate",
+    "archive": "Archivia",
+    "delete": "Elimina",
+    "cancel": "Annulla"
+  },
+  "empty": {
+    "badge": "Il tuo spazio di lavoro, pronto all'uso",
+    "title": "La tua prima pagina<br></br>in 60 secondi.",
+    "subtitle": "Descrivi quello che vuoi. Ci pensiamo noi ai testi, al layout, alle immagini e al codice.",
+    "examples": {
+      "invoicing": {
+        "title": "SaaS di fatturazione basato su Stripe",
+        "brief": "Una landing per uno strumento che aiuta i freelance a tenere traccia delle fatture e a farsi pagare più in fretta."
+      },
+      "portfolio": {
+        "title": "Portfolio di un designer a Città del Messico",
+        "brief": "Sito personale per un designer UI/UX con 6 case study e un badge di disponibilità."
+      },
+      "conference": {
+        "title": "Pagina evento per una conferenza virtuale",
+        "brief": "Landing per una conferenza di indie hacking di 2 giorni, con griglia degli speaker e biglietti."
+      },
+      "coffee": {
+        "title": "Abbonamento a caffè a origine singola",
+        "brief": "Hero e-commerce per un abbonamento a caffè in piccoli lotti, consegnato ogni martedì."
+      }
+    },
+    "startFromScratch": "Inizia da zero"
+  },
+  "noResults": {
+    "title": "Nessuna pagina corrisponde a \"{query}\"",
+    "subtitle": "Prova una ricerca diversa oppure inizia da capo.",
+    "clearSearch": "Cancella ricerca",
+    "createNew": "Crea nuova"
+  },
+  "actions": {
+    "deleteConfirm": "Eliminare questa pagina? L'operazione non può essere annullata.",
+    "deleteError": "Impossibile eliminare: {error}",
+    "archiveError": "Impossibile archiviare: {error}",
+    "renamePrompt": "Nuovo nome",
+    "renameError": "Impossibile rinominare: {error}",
+    "duplicateError": "Impossibile duplicare: {error}",
+    "exportLoadError": "Impossibile caricare il progetto da esportare.",
+    "zipError": "Impossibile creare lo zip: {error}",
+    "bulkDeleteConfirm": "Eliminare {count} pagine? L'operazione non può essere annullata."
+  },
+  "relativeTime": {
+    "justNow": "proprio ora",
+    "minutesAgo": "{count} min fa",
+    "hoursAgo": "{count} h fa",
+    "yesterday": "ieri",
+    "daysAgo": "{count} g fa",
+    "weeksAgo": "{count} sett. fa"
+  },
+  "appHeader": {
+    "toggleDarkMode": "Attiva/disattiva modalità scura",
+    "signedIn": "Accesso eseguito",
+    "myPages": "Le mie pagine",
+    "settings": "Impostazioni",
+    "billing": "Fatturazione",
+    "manageBilling": "Gestisci fatturazione",
+    "apiKeys": "Chiavi API",
+    "comingSoon": "{label} — in arrivo",
+    "signOut": "Esci"
+  },
+  "creditPill": {
+    "tooltip": "{balance} di {allotment} crediti AI rimasti questo mese"
+  },
+  "billing": {
+    "upgradeCta": "Passa a Pro",
+    "upgradeHint": "150 crediti AI / mese",
+    "dismissBanner": "Ignora",
+    "success": "Ora sei su Pro — 150 crediti AI al mese. Grazie per l'upgrade!",
+    "errors": {
+      "not_configured": "La fatturazione non è ancora configurata. Riprova più tardi o contatta l'assistenza.",
+      "checkout_failed": "Non siamo riusciti ad avviare il pagamento. Riprova.",
+      "portal_failed": "Non siamo riusciti ad aprire il tuo portale di fatturazione. Assicurati di avere un abbonamento attivo e riprova."
+    }
+  }
+}

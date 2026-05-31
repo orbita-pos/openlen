@@ -1,0 +1,139 @@
+{
+  "sidebar": {
+    "tabs": {
+      "chat": { "label": "채팅", "title": "Orchestra와 채팅" },
+      "templates": { "label": "템플릿", "title": "템플릿으로 시작하기" },
+      "library": { "label": "라이브러리", "title": "섹션 추가" },
+      "pages": { "label": "페이지", "title": "최근 프로젝트" },
+      "leads": { "label": "리드", "title": "폼 제출" },
+      "insights": { "label": "인사이트", "title": "페이지 분석" },
+      "versions": { "label": "버전", "title": "버전 기록" },
+      "brief": { "label": "브리프", "title": "프로젝트 브리프 (AI 컨텍스트)" }
+    },
+    "tabLocked": "{label} — 잠김",
+    "expandPanel": "패널 펼치기",
+    "collapsePanel": "패널 접기",
+    "choosing": {
+      "title": "작업을 시작하면 여기에 도구가 나타납니다.",
+      "hint": "오른쪽에서 시작점을 선택하세요 →"
+    }
+  },
+  "preview": {
+    "zoomFit": "맞춤",
+    "toolbar": {
+      "editPage": "페이지 편집 (⌘E)",
+      "exitEdit": "편집 모드 종료 (⌘E)",
+      "showGrid": "그리드 오버레이 표시",
+      "hideGrid": "그리드 오버레이 숨기기",
+      "refresh": "미리보기 새로고침",
+      "openNewTab": "새 탭에서 열기"
+    },
+    "banner": {
+      "sectionSelect": "섹션을 클릭하면 다음 채팅 범위를 지정할 수 있습니다 · 취소하려면 <kbd></kbd>",
+      "inlineEdit": "페이지의 텍스트를 클릭하면 인라인으로 편집할 수 있습니다 · 취소하려면 <kbd></kbd>"
+    },
+    "templateBanner": {
+      "previewing": "템플릿 미리보기 중",
+      "previewingNamed": "미리보기 중: {name}",
+      "readOnly": "읽기 전용 — 적용하기 전까지 저장되지 않습니다",
+      "cloning": "복제 중…",
+      "use": "이 템플릿 사용 →",
+      "clear": "지우기"
+    },
+    "iframeTitle": "OpenLen 워크스페이스 미리보기",
+    "redesigning": "페이지를 다시 디자인하는 중…"
+  },
+  "placeholder": {
+    "ai": {
+      "title": "사이드바에서 페이지를 설명하세요",
+      "hint": "원하는 내용을 설명하면 오케스트레이터가 구성해 드립니다."
+    },
+    "template": {
+      "title": "사이드바에서 갤러리를 둘러보세요",
+      "hint": "템플릿을 클릭하면 새 프로젝트로 복제됩니다."
+    },
+    "paste": {
+      "title": "사이드바에 HTML을 붙여넣으세요",
+      "hint": "claude.ai(또는 어디서든)의 HTML을 붙여넣으면 호스팅해 드립니다."
+    },
+    "sidebar": "사이드바"
+  },
+  "empty": {
+    "badge": "OpenLen 워크스페이스",
+    "heading": "무엇으로 시작하시겠어요?",
+    "subheading": "게시된 랜딩 페이지로 가는 세 가지 길. 하나를 선택하면 <domain>openlen.com</domain>의 실제 서브도메인을 드립니다.",
+    "pickThis": "이것 선택",
+    "browseProjects": "또는 <link>내 프로젝트 둘러보기 →</link>",
+    "cards": {
+      "ai": {
+        "title": "AI로 생성",
+        "description": "원하는 페이지를 일상 언어로 설명하면 저희가 구성합니다.",
+        "detail": "브리프 → 약 30초 만에 페이지 완성"
+      },
+      "template": {
+        "title": "템플릿으로 시작",
+        "description": "여섯 가지 감성 패밀리에서 엄선된 랜딩을 골라보세요.",
+        "detail": "디자인 30종 · 바로 게시 가능"
+      },
+      "paste": {
+        "title": "HTML 붙여넣기",
+        "description": "claude.ai나 어디서든 HTML을 가져오세요. 저희가 호스팅합니다.",
+        "detail": "독립 실행형 · 클릭 한 번으로 게시"
+      }
+    },
+    "recent": {
+      "title": "작업 이어가기",
+      "loading": "최근 프로젝트 불러오는 중",
+      "all": "전체 프로젝트",
+      "thumbnail": "{title} 썸네일",
+      "publishedWithEdits": "게시됨 — 게시되지 않은 편집 내용 있음",
+      "published": "게시됨",
+      "live": "라이브",
+      "draft": "초안",
+      "time": {
+        "justNow": "방금 전",
+        "minutes": "{count}분 전",
+        "hours": "{count}시간 전",
+        "yesterday": "어제",
+        "days": "{count}일 전",
+        "weeks": "{count}주 전"
+      }
+    }
+  },
+  "status": {
+    "drift": "{domain}에서 변경됨",
+    "saved": "저장됨 · {ago}",
+    "live": "{domain}에서 라이브",
+    "ready": "게시 준비 완료",
+    "saving": "저장 중…",
+    "commandPalette": "명령 팔레트",
+    "ago": {
+      "justNow": "방금 전",
+      "seconds": "{count}초 전",
+      "minutes": "{count}분 전",
+      "hours": "{count}시간 전",
+      "days": "{count}일 전"
+    }
+  },
+  "loader": {
+    "sections": {
+      "hero": "히어로",
+      "features": "기능",
+      "pricing": "요금제",
+      "reviews": "후기",
+      "footer": "푸터"
+    }
+  },
+  "modelPicker": {
+    "switch": "모델 전환 — Gemini Pro / Flash",
+    "note": {
+      "deeper": "더 깊이",
+      "recommended": "추천"
+    }
+  },
+  "templatePreview": {
+    "ariaLabel": "{name} 라이브 미리보기",
+    "iframeTitle": "{name} 라이브 미리보기",
+    "applied": "적용됨"
+  }
+}

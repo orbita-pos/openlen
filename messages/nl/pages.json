@@ -1,0 +1,44 @@
+{
+  "templatesIndex": {
+    "hero": {
+      "eyebrow": "{count, plural, =0 {NOG GEEN TEMPLATES} one {# HANDGEMAAKTE TEMPLATE} other {# HANDGEMAAKTE TEMPLATES}}",
+      "title": "Met de hand gebouwde landingspagina's. Klaar om de jouwe te maken.",
+      "lede": "Statische HTML, geoptimaliseerd. Kies er een, vul je gegevens in en deploy naar je subdomein met één klik."
+    }
+  },
+  "templateDetail": {
+    "backToAll": "Alle templates",
+    "viewLive": "Live template bekijken",
+    "meta": {
+      "family": "Familie",
+      "mode": "Modus",
+      "accent": "Accentkleur",
+      "format": "Formaat",
+      "formatValue": "Statische HTML"
+    },
+    "related": {
+      "heading": "Meer uit {family}"
+    }
+  },
+  "blogIndex": {
+    "eyebrow": "BLOG",
+    "title": "Wat is er nieuw in OpenLen",
+    "lede": "Releases, changelog en het denkwerk erachter.",
+    "readPost": "Bericht lezen"
+  },
+  "blogPost": {
+    "back": "Blog"
+  },
+  "notFound": {
+    "metaTitle": "Pagina niet gevonden",
+    "metaDescription": "Deze URL komt niet overeen met een OpenLen-pagina.",
+    "badge": "Fout 404",
+    "title": "Deze pagina <accent>bestaat niet.</accent>",
+    "lede": "Deze URL komt niet overeen met een template of project. Ga terug naar de startpagina of kies een van de 15 zorgvuldig samengestelde templates.",
+    "backHome": "Terug naar start",
+    "viewTemplates": "Templates bekijken"
+  },
+  "devLoader": {
+    "caption": "Je pagina wordt ontworpen…"
+  }
+}

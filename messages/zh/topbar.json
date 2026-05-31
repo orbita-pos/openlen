@@ -1,0 +1,59 @@
+{
+  "common": {
+    "loading": "加载中…"
+  },
+  "projectName": {
+    "workspaceLabel": "工作区",
+    "untitled": "未命名"
+  },
+  "save": {
+    "saving": "保存中…",
+    "saved": "已保存 · 刚刚"
+  },
+  "deploy": {
+    "button": "发布",
+    "shipIt": "立即上线",
+    "liveAt": "已上线 {subdomain}.openlen.com",
+    "unpublishedChanges": "你有尚未发布的更改。",
+    "open": "打开",
+    "republish": "重新发布",
+    "unpublish": "取消发布",
+    "publishCta": {
+      "title": "发布到 openlen.com",
+      "subtitle": "在你的专属子域名上免费托管"
+    },
+    "customDomain": {
+      "title": "自定义域名",
+      "subtitle": "用你自己的域名访问此页面"
+    },
+    "providers": {
+      "vercel": "部署到 Vercel",
+      "github": "推送到 GitHub",
+      "vercelSubtitle": "你专属的 *.vercel.app 网址",
+      "githubSubtitle": "一个 GitHub Pages 仓库"
+    },
+    "previousDeploys": "历史发布记录",
+    "noPriorDeploys": "暂无历史发布记录。"
+  },
+  "rollback": {
+    "confirm": "要将线上站点回滚到部署 {sha} 吗？访客将在几秒内看到这个较早的版本。",
+    "errorGone": "该部署已从磁盘清理，无法恢复。",
+    "errorGeneric": "回滚失败，请重试。",
+    "inProgress": "回滚中…"
+  },
+  "theme": {
+    "lightMode": "浅色模式",
+    "darkMode": "深色模式"
+  },
+  "account": {
+    "fallbackName": "账户",
+    "allProjects": "所有项目",
+    "signOut": "退出登录"
+  },
+  "relativeTime": {
+    "seconds": "{count} 秒前",
+    "minutes": "{count} 分钟前",
+    "hours": "{count} 小时前",
+    "days": "{count} 天前"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "defaultProjectName": "价格页面",
+  "chatDraft": {
+    "iconChanged": "我刚刚更换了这里的图标。请更新周围的标题和描述，让含义与新图标相符。",
+    "imageChanged": "我刚刚更换了这里的图片。请更新周围的文案，让它与图片所展示的内容相符。"
+  },
+  "lockReason": {
+    "choosing": "请先选择一个起点",
+    "created": "页面创建后即可使用"
+  },
+  "formEmail": {
+    "noProject": "未加载任何项目。",
+    "noDestination": "请先在此表单（或你的账户）中设置接收通知的邮箱。",
+    "sendFailed": "发送失败（{status}）。",
+    "networkError": "网络错误。"
+  },
+  "template": {
+    "networkError": "网络错误——请重试。"
+  },
+  "aiStatus": {
+    "designing": "正在设计你的页面……",
+    "thinking": "正在构思设计方案……",
+    "serverSaturated": "服务器十分繁忙——这可能需要一些时间。请不要关闭页面。",
+    "readingBrief": "正在阅读你的需求……"
+  },
+  "aiError": {
+    "title": "生成失败",
+    "tweak": "在侧边栏中调整你的需求后再试一次。"
+  },
+  "inserted": {
+    "label": "已插入 <b>{name}</b>",
+    "matching": "正在匹配……",
+    "matchToPage": "✨ 匹配到页面",
+    "dismiss": "关闭"
+  },
+  "editing": {
+    "noHtml": "此项目尚无 HTML 内容。",
+    "loading": "正在加载项目……"
+  }
+}

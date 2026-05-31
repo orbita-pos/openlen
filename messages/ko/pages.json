@@ -1,0 +1,44 @@
+{
+  "templatesIndex": {
+    "hero": {
+      "eyebrow": "{count, plural, =0 {아직 템플릿이 없습니다} one {직접 제작한 템플릿 #개} other {직접 제작한 템플릿 #개}}",
+      "title": "손으로 만든 랜딩 페이지. 당신의 페이지로 바로 시작하세요.",
+      "lede": "최적화된 정적 HTML. 마음에 드는 템플릿을 골라 정보를 채우고, 클릭 한 번으로 내 서브도메인에 배포하세요."
+    }
+  },
+  "templateDetail": {
+    "backToAll": "전체 템플릿",
+    "viewLive": "라이브 템플릿 보기",
+    "meta": {
+      "family": "패밀리",
+      "mode": "모드",
+      "accent": "강조 색상",
+      "format": "포맷",
+      "formatValue": "정적 HTML"
+    },
+    "related": {
+      "heading": "{family}의 다른 템플릿"
+    }
+  },
+  "blogIndex": {
+    "eyebrow": "블로그",
+    "title": "OpenLen의 새로운 소식",
+    "lede": "릴리스, 변경 로그, 그리고 그 뒤에 담긴 생각.",
+    "readPost": "글 읽기"
+  },
+  "blogPost": {
+    "back": "블로그"
+  },
+  "notFound": {
+    "metaTitle": "페이지를 찾을 수 없습니다",
+    "metaDescription": "이 URL과 일치하는 OpenLen 페이지가 없습니다.",
+    "badge": "오류 404",
+    "title": "이 페이지는 <accent>존재하지 않습니다.</accent>",
+    "lede": "이 URL과 일치하는 템플릿이나 프로젝트가 없습니다. 홈으로 돌아가거나 엄선된 15개의 템플릿 중 하나를 골라보세요.",
+    "backHome": "홈으로 돌아가기",
+    "viewTemplates": "템플릿 보기"
+  },
+  "devLoader": {
+    "caption": "페이지를 디자인하는 중…"
+  }
+}

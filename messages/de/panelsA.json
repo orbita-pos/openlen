@@ -1,0 +1,61 @@
+{
+  "aiBrief": {
+    "title": "Beschreibe deine Seite",
+    "subtitle": "Sag mir, was du willst – ich gestalte die Seite für dich.",
+    "placeholder": "Eine Landingpage für mein SaaS, die …",
+    "attachImage": "Bild anhängen – verfügbar nach der Generierung",
+    "scopeSection": "Auf einen Abschnitt eingrenzen – verfügbar nach der Generierung",
+    "autofill": "Mit meinen Infos automatisch ausfüllen – verfügbar nach der Generierung",
+    "availableAfter": "Verfügbar, sobald dein Projekt erstellt ist",
+    "generate": "Generieren"
+  },
+  "brief": {
+    "label": "Briefing",
+    "description": "Dauerhafter Kontext, den die KI bei jedem Chat sieht. Marke, Tonalität, Vorgaben, Notizen.",
+    "placeholder": "z. B.\n\n- Das ist eine Landingpage für Counter, ein Café in Polanco.\n- Tonalität: warm, freundlich, kein Tech-Jargon.\n- Akzent: warmes Orange (#C66B3D).\n- To-do: die Designerin nach dem finalen Logo fragen.",
+    "emptyTitle": "Das Briefing gehört zu jedem Projekt einzeln.",
+    "emptyHint": "Öffne ein Projekt im Tab „Seiten“, um sein Briefing zu schreiben.",
+    "saving": "Wird gespeichert …",
+    "saved": "Gespeichert · bei jedem Chat eingefügt",
+    "saveFailed": "Speichern fehlgeschlagen",
+    "saveErrorRetry": "Speichern nicht möglich – bitte erneut versuchen.",
+    "ready": "Bereit"
+  },
+  "templates": {
+    "heading": "Kuratierte Vorlagen",
+    "intro": "Klicke auf eine Karte, um sie groß anzusehen. Wenn du bereit bist, klicke im Banner auf <b>Diese Vorlage verwenden</b>, um sie in ein neues Projekt zu klonen.",
+    "newProjectWarning": "Mit einer Vorlage startest du ein <b>neues</b> Projekt. Dein aktuelles Projekt bleibt gespeichert unter <projectsLink>/projects</projectsLink>.",
+    "all": "Alle",
+    "previewTemplateAria": "Vorlage ansehen: {name}",
+    "preview": "Vorschau",
+    "previewing": "Vorschau läuft",
+    "templateCount": "{count, plural, one {# Vorlage} other {# Vorlagen}}",
+    "loadError": "Vorlagen konnten nicht geladen werden – {error}",
+    "footer": "Vorlagen sind statisches HTML – reines Markup, Tailwind CDN, Google Fonts. Beim Klonen gehören sie dir; nur dein Projekt beansprucht eine Subdomain, wenn du auf Veröffentlichen klickst."
+  },
+  "sections": {
+    "heading": "Abschnitts-Bibliothek",
+    "intro": "Füge einen Abschnitt in deine aktuelle Seite ein. Er landet ganz unten – ziehe ihn mit den Abschnitts-Griffen an die richtige Stelle. Das Aussehen passt sich beim nächsten Umgestalten an deine Seite an.",
+    "all": "Alle",
+    "jsTooltip": "Rendert Inhalte per JS – beim Einfügen erhalten, eingeschränktes Inline-Bearbeiten",
+    "imgTooltip": "Liefert Farbverlauf-Platzhalter – echte Bilder nach dem Einfügen austauschen",
+    "insertAria": "{name} in die aktuelle Seite einfügen",
+    "insert": "Einfügen",
+    "inserting": "Wird eingefügt …",
+    "loadError": "Abschnitte konnten nicht geladen werden – {error}",
+    "footer": "Abschnitte sind gekapselte Fragmente – ihre Stile können nicht mit deiner Seite kollidieren. Einfügen, dann nach Belieben umsortieren und umgestalten."
+  },
+  "paste": {
+    "heading": "HTML einfügen",
+    "description": "Füge hier das HTML ein, das dir claude.ai gegeben hat (oder jede in sich geschlossene Landingpage als HTML). Wir hosten es auf deiner Subdomain.",
+    "projectNameLabel": "Projektname",
+    "projectNamePlaceholder": "Wird aus dem Seitentitel erkannt, wenn leer",
+    "htmlLabel": "HTML",
+    "charCount": "{count, number} Zeichen",
+    "errorEmpty": "Füge zuerst etwas HTML ein.",
+    "errorHttp": "HTTP {status} – bitte erneut versuchen.",
+    "creating": "Projekt wird erstellt …",
+    "createProject": "Projekt erstellen",
+    "deployHint": "Als Nächstes: auf Veröffentlichen klicken, um auf einer Subdomain zu veröffentlichen."
+  }
+}

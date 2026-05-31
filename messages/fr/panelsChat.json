@@ -1,0 +1,70 @@
+{
+  "noProject": {
+    "title": "Aucun projet chargé pour l'instant.",
+    "subtitle": "Choisissez un point de départ ou ouvrez-en un depuis Pages."
+  },
+  "quickPrompts": {
+    "premium": "Rendez-la premium",
+    "linear": "Ambiance Linear",
+    "brutalist": "Brutaliste",
+    "playful": "Plus ludique",
+    "rewriteHero": "Réécrire le hero",
+    "testimonials": "Ajouter une section témoignages"
+  },
+  "empty": {
+    "title": "Décrivez votre page",
+    "subtitle": "J'ai le contrôle total de votre page. Demandez-moi ce que vous voulez."
+  },
+  "turn": {
+    "imageSent": "Image envoyée"
+  },
+  "streaming": {
+    "writingPage": "Rédaction de la page · {chars}",
+    "designing": "Conception de votre page…",
+    "cancel": "Annuler"
+  },
+  "applied": {
+    "label": "Appliqué · {time}",
+    "undo": "Annuler"
+  },
+  "reverted": "Modifications annulées.",
+  "error": {
+    "retry": "Réessayer"
+  },
+  "errors": {
+    "requestFailed": "Échec de la requête ({status})",
+    "generic": "Une erreur est survenue — réessayez.",
+    "noFinalHtml": "Le flux s'est terminé sans HTML final — réessayez.",
+    "cancelled": "Annulé.",
+    "network": "Erreur réseau — réessayez."
+  },
+  "chars": {
+    "count": "{count} caractères",
+    "thousands": "{count} k caractères"
+  },
+  "relativeTime": {
+    "justNow": "à l'instant",
+    "seconds": "il y a {count} s",
+    "minutes": "il y a {count} min",
+    "hours": "il y a {count} h",
+    "days": "il y a {count} j"
+  },
+  "composer": {
+    "scoped": "Ciblé :",
+    "clearScope": "Effacer le ciblage",
+    "image": "Image :",
+    "removeImage": "Retirer l'image jointe",
+    "placeholder": "Décrivez l'apparence ou le contenu souhaité de votre page…",
+    "placeholderScoped": "Modifier le {target} sélectionné…",
+    "attachImage": "Joindre une image",
+    "attachImageTitle": "Joindre une image à insérer dans la page",
+    "selectSection": "Sélectionner une section à cibler",
+    "selectSectionTitle": "Ciblez votre prochain message sur une seule section",
+    "cancelSelection": "Quitter le mode sélection (ESC)",
+    "cancelSelectionTitle": "Cliquez sur une section de l'aperçu, ou ESC pour annuler",
+    "autofill": "Remplir avec mes infos",
+    "autofillLabel": "Remplissage auto",
+    "autofillTitle": "Remplir le template avec les infos de votre activité — importez une capture d'écran ou saisissez vos données",
+    "send": "Envoyer"
+  }
+}

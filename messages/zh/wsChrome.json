@@ -1,0 +1,139 @@
+{
+  "sidebar": {
+    "tabs": {
+      "chat": { "label": "对话", "title": "与 Orchestra 对话" },
+      "templates": { "label": "模板", "title": "从模板开始" },
+      "library": { "label": "区块库", "title": "插入区块" },
+      "pages": { "label": "页面", "title": "最近的项目" },
+      "leads": { "label": "线索", "title": "表单提交" },
+      "insights": { "label": "数据洞察", "title": "页面分析" },
+      "versions": { "label": "版本", "title": "版本历史" },
+      "brief": { "label": "需求说明", "title": "项目需求说明（AI 上下文）" }
+    },
+    "tabLocked": "{label} — 已锁定",
+    "expandPanel": "展开面板",
+    "collapsePanel": "收起面板",
+    "choosing": {
+      "title": "开始后，工具会出现在这里。",
+      "hint": "从右侧选择一个起点 →"
+    }
+  },
+  "preview": {
+    "zoomFit": "适应",
+    "toolbar": {
+      "editPage": "编辑页面（⌘E）",
+      "exitEdit": "退出编辑模式（⌘E）",
+      "showGrid": "显示网格叠加层",
+      "hideGrid": "隐藏网格叠加层",
+      "refresh": "刷新预览",
+      "openNewTab": "在新标签页中打开"
+    },
+    "banner": {
+      "sectionSelect": "点击任意区块，为下一次对话指定范围 · 按 <kbd></kbd> 取消",
+      "inlineEdit": "点击页面中的任意文本即可就地编辑 · 按 <kbd></kbd> 取消"
+    },
+    "templateBanner": {
+      "previewing": "正在预览模板",
+      "previewingNamed": "正在预览：{name}",
+      "readOnly": "只读 — 在你确认前不会保存任何内容",
+      "cloning": "正在克隆…",
+      "use": "使用此模板 →",
+      "clear": "清除"
+    },
+    "iframeTitle": "OpenLen 工作区预览",
+    "redesigning": "正在重新设计你的页面…"
+  },
+  "placeholder": {
+    "ai": {
+      "title": "在侧边栏中描述你的页面需求",
+      "hint": "描述你想要的效果，编排器会为你生成。"
+    },
+    "template": {
+      "title": "在侧边栏中浏览模板库",
+      "hint": "点击任意模板，即可克隆为新项目。"
+    },
+    "paste": {
+      "title": "在侧边栏中粘贴你的 HTML",
+      "hint": "粘贴来自 claude.ai（或任意来源）的 HTML — 由我们托管。"
+    },
+    "sidebar": "侧边栏"
+  },
+  "empty": {
+    "badge": "OpenLen 工作区",
+    "heading": "你想从什么开始？",
+    "subheading": "通往已发布落地页的三条路径。选择一条，我们就为你在 <domain>openlen.com</domain> 上配好一个真实的子域名。",
+    "pickThis": "选择此项",
+    "browseProjects": "或<link>浏览你的项目 →</link>",
+    "cards": {
+      "ai": {
+        "title": "用 AI 生成",
+        "description": "用日常语言描述你的页面，我们来生成。",
+        "detail": "需求说明 → 约 30 秒生成页面"
+      },
+      "template": {
+        "title": "从模板开始",
+        "description": "从六大美学家族中挑选精选落地页。",
+        "detail": "30 款设计 · 即可发布"
+      },
+      "paste": {
+        "title": "粘贴你的 HTML",
+        "description": "从 claude.ai 或任意来源带来 HTML，由我们托管。",
+        "detail": "自包含 · 一键发布"
+      }
+    },
+    "recent": {
+      "title": "继续工作",
+      "loading": "正在加载最近的项目",
+      "all": "所有项目",
+      "thumbnail": "{title} 缩略图",
+      "publishedWithEdits": "已发布 — 有未发布的修改",
+      "published": "已发布",
+      "live": "已上线",
+      "draft": "草稿",
+      "time": {
+        "justNow": "刚刚",
+        "minutes": "{count} 分钟前",
+        "hours": "{count} 小时前",
+        "yesterday": "昨天",
+        "days": "{count} 天前",
+        "weeks": "{count} 周前"
+      }
+    }
+  },
+  "status": {
+    "drift": "与 {domain} 存在差异",
+    "saved": "已保存 · {ago}",
+    "live": "已上线于 {domain}",
+    "ready": "可以发布",
+    "saving": "正在保存…",
+    "commandPalette": "命令面板",
+    "ago": {
+      "justNow": "刚刚",
+      "seconds": "{count} 秒前",
+      "minutes": "{count} 分钟前",
+      "hours": "{count} 小时前",
+      "days": "{count} 天前"
+    }
+  },
+  "loader": {
+    "sections": {
+      "hero": "主视觉",
+      "features": "功能",
+      "pricing": "定价",
+      "reviews": "评价",
+      "footer": "页脚"
+    }
+  },
+  "modelPicker": {
+    "switch": "切换模型 — Gemini Pro / Flash",
+    "note": {
+      "deeper": "更深入",
+      "recommended": "推荐"
+    }
+  },
+  "templatePreview": {
+    "ariaLabel": "{name} 的实时预览",
+    "iframeTitle": "{name} 实时预览",
+    "applied": "已应用"
+  }
+}

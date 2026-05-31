@@ -1,0 +1,70 @@
+{
+  "noProject": {
+    "title": "Nessun progetto ancora caricato.",
+    "subtitle": "Scegli un punto di partenza o aprine uno da Pagine."
+  },
+  "quickPrompts": {
+    "premium": "Rendila premium",
+    "linear": "Stile Linear",
+    "brutalist": "Brutalista",
+    "playful": "Più giocosa",
+    "rewriteHero": "Riscrivi la hero",
+    "testimonials": "Aggiungi una sezione testimonianze"
+  },
+  "empty": {
+    "title": "Descrivi la tua pagina",
+    "subtitle": "Ho pieno controllo sulla tua pagina. Chiedimi qualsiasi cosa."
+  },
+  "turn": {
+    "imageSent": "Immagine inviata"
+  },
+  "streaming": {
+    "writingPage": "Scrittura pagina · {chars}",
+    "designing": "Sto progettando la tua pagina…",
+    "cancel": "Annulla"
+  },
+  "applied": {
+    "label": "Applicato · {time}",
+    "undo": "Annulla"
+  },
+  "reverted": "Ripristinato.",
+  "error": {
+    "retry": "Riprova"
+  },
+  "errors": {
+    "requestFailed": "Richiesta non riuscita ({status})",
+    "generic": "Qualcosa è andato storto — riprova.",
+    "noFinalHtml": "Lo stream è terminato senza un HTML finale — riprova.",
+    "cancelled": "Annullato.",
+    "network": "Errore di rete — riprova."
+  },
+  "chars": {
+    "count": "{count} caratteri",
+    "thousands": "{count}k caratteri"
+  },
+  "relativeTime": {
+    "justNow": "proprio ora",
+    "seconds": "{count}s fa",
+    "minutes": "{count}m fa",
+    "hours": "{count}h fa",
+    "days": "{count}g fa"
+  },
+  "composer": {
+    "scoped": "Ambito:",
+    "clearScope": "Rimuovi ambito",
+    "image": "Immagine:",
+    "removeImage": "Rimuovi immagine allegata",
+    "placeholder": "Descrivi come deve apparire o leggersi la tua pagina…",
+    "placeholderScoped": "Modifica {target} selezionato…",
+    "attachImage": "Allega un'immagine",
+    "attachImageTitle": "Allega un'immagine da inserire nella pagina",
+    "selectSection": "Seleziona una sezione da delimitare",
+    "selectSectionTitle": "Limita il tuo prossimo messaggio a una sola sezione",
+    "cancelSelection": "Annulla la modalità selezione (ESC)",
+    "cancelSelectionTitle": "Clicca una sezione qualsiasi nell'anteprima, oppure ESC per annullare",
+    "autofill": "Compila con i miei dati",
+    "autofillLabel": "Compila",
+    "autofillTitle": "Compila il template con i dati della tua attività — carica uno screenshot o digita i tuoi dati",
+    "send": "Invia"
+  }
+}

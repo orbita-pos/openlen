@@ -1,0 +1,49 @@
+{
+  "header": {
+    "titleVercel": "Implementeren op Vercel",
+    "titleGithub": "Pushen naar GitHub",
+    "subtitleVercel": "Publiceer deze pagina naar je eigen Vercel-account.",
+    "subtitleGithub": "Publiceer deze pagina naar een GitHub Pages-repo."
+  },
+  "close": "Sluiten",
+  "notConfigured": {
+    "title": "Nog niet beschikbaar",
+    "body": "Deze implementatiebestemming is niet ingesteld op deze OpenLen-instance."
+  },
+  "connect": {
+    "lead": "Koppel je {provider}-account om deze pagina daar te publiceren.",
+    "button": "{provider} koppelen",
+    "redirecting": "Doorsturen…"
+  },
+  "connected": {
+    "as": "Gekoppeld als {account}",
+    "asAnon": "Gekoppeld",
+    "nameLabel": "Naam",
+    "nameHintVercel": "Gebruikt in de URL: name.vercel.app",
+    "nameHintGithub": "Gebruikt in de URL: you.github.io/name",
+    "deploy": "Implementeren",
+    "redeploy": "Opnieuw implementeren",
+    "deploying": "Bezig met implementeren…",
+    "live": "Live",
+    "open": "Openen",
+    "upToDate": "Up-to-date met je laatste wijzigingen.",
+    "drift": "Je hebt wijzigingen die nog niet zijn geïmplementeerd.",
+    "propagation": "Het kan de eerste keer een minuut duren voordat GitHub Pages live is.",
+    "publishing": "Bezig met publiceren… het kan tot een minuut duren voordat het live is. Als je het meteen opent, zie je mogelijk even een 404 — gewoon vernieuwen.",
+    "disconnect": "Ontkoppelen"
+  },
+  "errors": {
+    "loadFailed": "Kon de koppeling niet laden.",
+    "invalidName": "Gebruik kleine letters, cijfers en koppeltekens (1–39 tekens, geen koppelteken aan het begin of einde).",
+    "notConnected": "Koppel eerst je account.",
+    "tokenInvalid": "Je koppeling is verlopen — koppel opnieuw.",
+    "deployFailed": "Implementeren mislukt: {message}",
+    "deployGeneric": "Implementeren mislukt. Probeer het opnieuw.",
+    "network": "Netwerkfout. Probeer het opnieuw.",
+    "denied": "De autorisatie is geannuleerd.",
+    "state": "Controle van de koppeling mislukt. Probeer het opnieuw.",
+    "exchange": "Kon de koppeling niet voltooien. Probeer het opnieuw.",
+    "not_configured": "Deze implementatiebestemming is niet ingesteld op deze OpenLen-instance."
+  },
+  "confirmDisconnect": "{provider} ontkoppelen? Je geïmplementeerde pagina blijft live — je hoeft alleen opnieuw te koppelen om weer te implementeren."
+}

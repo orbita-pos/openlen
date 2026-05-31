@@ -1,0 +1,40 @@
+{
+  "defaultProjectName": "가격 페이지",
+  "chatDraft": {
+    "iconChanged": "방금 여기 아이콘을 바꿨어요. 새 아이콘에 맞게 주변 제목과 설명을 업데이트해 주세요.",
+    "imageChanged": "방금 여기 이미지를 바꿨어요. 이미지 내용에 맞게 주변 문구를 업데이트해 주세요."
+  },
+  "lockReason": {
+    "choosing": "먼저 시작점을 선택하세요",
+    "created": "페이지가 생성되면 사용할 수 있습니다"
+  },
+  "formEmail": {
+    "noProject": "불러온 프로젝트가 없습니다.",
+    "noDestination": "먼저 이 폼(또는 계정)에 알림 이메일을 설정하세요.",
+    "sendFailed": "전송 실패 ({status}).",
+    "networkError": "네트워크 오류."
+  },
+  "template": {
+    "networkError": "네트워크 오류 — 다시 시도하세요."
+  },
+  "aiStatus": {
+    "designing": "페이지를 디자인하는 중…",
+    "thinking": "디자인을 구상하는 중…",
+    "serverSaturated": "서버가 매우 혼잡합니다 — 시간이 다소 걸릴 수 있어요. 페이지를 닫지 말아 주세요.",
+    "readingBrief": "브리프를 읽는 중…"
+  },
+  "aiError": {
+    "title": "생성 실패",
+    "tweak": "사이드바에서 브리프를 수정하고 다시 시도하세요."
+  },
+  "inserted": {
+    "label": "<b>{name}</b> 삽입됨",
+    "matching": "매칭 중…",
+    "matchToPage": "✨ 페이지에 맞추기",
+    "dismiss": "닫기"
+  },
+  "editing": {
+    "noHtml": "이 프로젝트에는 아직 HTML 콘텐츠가 없습니다.",
+    "loading": "프로젝트를 불러오는 중…"
+  }
+}

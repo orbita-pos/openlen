@@ -1,0 +1,61 @@
+{
+  "aiBrief": {
+    "title": "ページを説明してください",
+    "subtitle": "ご希望を教えてください。私がページを組み立てます。",
+    "placeholder": "私のSaaSのためのランディングページで…",
+    "attachImage": "画像を添付 — 生成後に利用できます",
+    "scopeSection": "セクションを指定 — 生成後に利用できます",
+    "autofill": "自分の情報で自動入力 — 生成後に利用できます",
+    "availableAfter": "プロジェクトを作成すると利用できます",
+    "generate": "生成"
+  },
+  "brief": {
+    "label": "ブリーフ",
+    "description": "すべてのチャットでAIが参照する永続的なコンテキスト。ブランド、トーン、制約、メモなど。",
+    "placeholder": "例:\n\n- これはポランコにあるコーヒーショップ「Counter」のランディングページです。\n- トーン: 温かくフレンドリーに、専門用語は使わない。\n- アクセント: 温かみのあるオレンジ (#C66B3D)。\n- ToDo: デザイナーに最終ロゴを依頼する。",
+    "emptyTitle": "ブリーフはプロジェクトごとに保存されます。",
+    "emptyHint": "「ページ」タブからプロジェクトを開いて、そのブリーフを書きましょう。",
+    "saving": "保存中…",
+    "saved": "保存済み · すべてのチャットに反映されます",
+    "saveFailed": "保存に失敗しました",
+    "saveErrorRetry": "保存できませんでした — もう一度お試しください。",
+    "ready": "準備完了"
+  },
+  "templates": {
+    "heading": "厳選テンプレート",
+    "intro": "カードをクリックすると大きくプレビューできます。準備ができたら、バナーの<b>このテンプレートを使う</b>を押して、新しいプロジェクトに複製しましょう。",
+    "newProjectWarning": "テンプレートを選ぶと<b>新しい</b>プロジェクトが始まります。現在のプロジェクトは<projectsLink>/projects</projectsLink>に保存されたままです。",
+    "all": "すべて",
+    "previewTemplateAria": "テンプレートをプレビュー: {name}",
+    "preview": "プレビュー",
+    "previewing": "プレビュー中",
+    "templateCount": "{count, plural, one {# 件のテンプレート} other {# 件のテンプレート}}",
+    "loadError": "テンプレートの読み込みに失敗しました — {error}",
+    "footer": "テンプレートは静的HTML — 純粋なマークアップ、Tailwind CDN、Google Fontsです。複製すればあなたのものになります。サブドメインを取得するのは、デプロイを押したときのあなたのプロジェクトだけです。"
+  },
+  "sections": {
+    "heading": "セクションライブラリ",
+    "intro": "現在のページにセクションを挿入します。一番下に追加されるので、セクションハンドルでドラッグして配置してください。見た目は次回のリスタイルでページに合わせて調整されます。",
+    "all": "すべて",
+    "jsTooltip": "JSでコンテンツを表示 — 挿入時も保持されますが、インライン編集は制限されます",
+    "imgTooltip": "グラデーションのプレースホルダー付き — 挿入後に実際の画像に差し替えてください",
+    "insertAria": "{name}を現在のページに挿入",
+    "insert": "挿入",
+    "inserting": "挿入中…",
+    "loadError": "セクションの読み込みに失敗しました — {error}",
+    "footer": "セクションはスコープ化されたフラグメントなので、スタイルがページと衝突することはありません。挿入したら、お好みに合わせて並べ替え・リスタイルしましょう。"
+  },
+  "paste": {
+    "heading": "HTMLを貼り付け",
+    "description": "claude.aiが生成したHTML（または自己完結したランディングページのHTML）を貼り付けてください。あなたのサブドメインでホストします。",
+    "projectNameLabel": "プロジェクト名",
+    "projectNamePlaceholder": "空欄の場合はページタイトルから自動検出されます",
+    "htmlLabel": "HTML",
+    "charCount": "{count, number} 文字",
+    "errorEmpty": "まずHTMLを貼り付けてください。",
+    "errorHttp": "HTTP {status} — もう一度お試しください。",
+    "creating": "プロジェクトを作成中…",
+    "createProject": "プロジェクトを作成",
+    "deployHint": "次に: デプロイをクリックして、サブドメインに公開しましょう。"
+  }
+}

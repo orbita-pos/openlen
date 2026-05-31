@@ -1,0 +1,49 @@
+{
+  "header": {
+    "titleVercel": "Déployer sur Vercel",
+    "titleGithub": "Publier sur GitHub",
+    "subtitleVercel": "Publiez cette page sur votre propre compte Vercel.",
+    "subtitleGithub": "Publiez cette page dans un dépôt GitHub Pages."
+  },
+  "close": "Fermer",
+  "notConfigured": {
+    "title": "Pas encore disponible",
+    "body": "Cette cible de déploiement n'est pas configurée sur cette instance OpenLen."
+  },
+  "connect": {
+    "lead": "Connectez votre compte {provider} pour y publier cette page.",
+    "button": "Connecter {provider}",
+    "redirecting": "Redirection…"
+  },
+  "connected": {
+    "as": "Connecté en tant que {account}",
+    "asAnon": "Connecté",
+    "nameLabel": "Nom",
+    "nameHintVercel": "Utilisé dans l'URL : name.vercel.app",
+    "nameHintGithub": "Utilisé dans l'URL : you.github.io/name",
+    "deploy": "Déployer",
+    "redeploy": "Redéployer",
+    "deploying": "Déploiement…",
+    "live": "En ligne",
+    "open": "Ouvrir",
+    "upToDate": "À jour avec vos dernières modifications.",
+    "drift": "Vous avez des modifications qui ne sont pas encore déployées.",
+    "propagation": "La première mise en ligne sur GitHub Pages peut prendre une minute.",
+    "publishing": "Publication… la mise en ligne peut prendre jusqu'à une minute. Si vous l'ouvrez tout de suite, une erreur 404 peut s'afficher un instant — il suffit d'actualiser.",
+    "disconnect": "Déconnecter"
+  },
+  "errors": {
+    "loadFailed": "Impossible de charger la connexion.",
+    "invalidName": "Utilisez des lettres minuscules, des chiffres et des tirets (1 à 39 caractères, sans tiret au début ni à la fin).",
+    "notConnected": "Connectez d'abord votre compte.",
+    "tokenInvalid": "Votre connexion a expiré — veuillez vous reconnecter.",
+    "deployFailed": "Échec du déploiement : {message}",
+    "deployGeneric": "Échec du déploiement. Veuillez réessayer.",
+    "network": "Erreur réseau. Réessayez.",
+    "denied": "L'autorisation a été annulée.",
+    "state": "La vérification de la connexion a échoué. Veuillez réessayer.",
+    "exchange": "Impossible de finaliser la connexion. Réessayez.",
+    "not_configured": "Cette cible de déploiement n'est pas configurée sur cette instance OpenLen."
+  },
+  "confirmDisconnect": "Déconnecter {provider} ? Votre page déployée reste en ligne — vous devrez simplement vous reconnecter pour déployer à nouveau."
+}

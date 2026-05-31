@@ -1,0 +1,125 @@
+{
+  "customDomain": {
+    "validation": {
+      "invalidHostname": "有効なホスト名ではありません。",
+      "reservedSubdomain": "openlen.com のサブドメインは「公開」から管理します。"
+    },
+    "errors": {
+      "loadFailed": "ドメインの読み込みに失敗しました。",
+      "networkLoad": "ドメインの読み込み中にネットワークエラーが発生しました。",
+      "networkPreparing": "プロジェクトの準備中にネットワークエラーが発生しました。",
+      "addTaken": "このドメインはすでに別のプロジェクトで使用されています。",
+      "addGeneric": "このドメインを追加できませんでした。",
+      "networkAdd": "ドメインの追加中にネットワークエラーが発生しました。",
+      "verifyFailed": "検証に失敗しました。TXT レコードをもう一度確認してください。",
+      "networkVerify": "検証中にネットワークエラーが発生しました。",
+      "removeFailed": "ドメインの削除に失敗しました。",
+      "networkRemove": "ドメインの削除中にネットワークエラーが発生しました。"
+    },
+    "autoPublish": {
+      "limitReached": "現在のプランでは、すでに {limit, plural, one {# 件のプロジェクト} other {# 件のプロジェクト}} を公開しています。別のプロジェクトを非公開にするか、Pro にアップグレードしてサブドメインを増やしてください。",
+      "notFound": "プロジェクトが見つかりません。ページを再読み込みしてください。",
+      "invalid": "有効な内部サブドメインを生成できませんでした。手動で公開してください。",
+      "reserved": "内部サブドメインが予約名と競合しています。手動で公開してください。",
+      "fallback": "自動公開できませんでした（{error}）。先に手動で公開してください。",
+      "unknownError": "不明なエラー"
+    },
+    "defaultProviderName": "ご利用の DNS プロバイダー",
+    "confirmRemove": "{domain} を削除しますか？数分以内に、アクセスした訪問者には TLS エラーが表示されるようになります。",
+    "header": {
+      "title": "カスタムドメイン",
+      "subtitle": "独自のホスト名でプロジェクトを配信します。"
+    },
+    "close": "閉じる",
+    "preparing": {
+      "title": "プロジェクトを準備しています…",
+      "subtitle": "カスタムドメインの向き先となるホスティングターゲットを設定しています。"
+    },
+    "publishFirst": {
+      "title": "まずページを公開してください",
+      "subtitle": "カスタムドメインを向けるには、ページが openlen.com のサブドメインで公開されている必要があります。名前を選んでください（再公開すれば後から変更できます）。",
+      "placeholder": "my-page",
+      "button": "公開",
+      "publishing": "公開しています…"
+    },
+    "add": {
+      "label": "ドメインを追加",
+      "placeholder": "landing.miempresa.com",
+      "adding": "追加しています…",
+      "button": "追加"
+    },
+    "list": {
+      "heading": "ドメイン",
+      "refreshing": "更新しています…",
+      "empty": "まだありません。上で 1 つ追加して、独自のホスト名をこのプロジェクトに向けましょう。",
+      "verified": "検証済み · TLS 有効",
+      "waiting": "DNS を待機中",
+      "open": "開く",
+      "verify": "検証",
+      "removeAria": "{domain} を削除",
+      "dnsSetup": "DNS 設定"
+    },
+    "dns": {
+      "setupFor": "DNS 設定の対象",
+      "oneClickAvailable": "ご利用の DNS プロバイダーではワンクリック設定が利用できます。",
+      "manualHint": "ご利用の DNS プロバイダー（Cloudflare、GoDaddy など）でこの 2 件のレコードを追加してください。多くの場合、1〜5 分で反映されます。",
+      "pointsTraffic": "トラフィックを向けます",
+      "provesOwnership": "所有権を証明します",
+      "name": "名前",
+      "value": "値",
+      "cloudflareHint": "Cloudflare では <strong>プロキシステータス: DNS only</strong>（グレーの雲）に設定してください。オレンジの雲（プロキシ有効）にすると TLS 証明書の発行がブロックされます。"
+    },
+    "connect": {
+      "title": "{provider} でワンクリック設定",
+      "subtitle": "コピー＆ペーストは不要 — DNS レコードはこちらで追加します。"
+    }
+  },
+  "publish": {
+    "errors": {
+      "publishGeneric": "公開できませんでした: {reason}",
+      "unpublishGeneric": "非公開にできませんでした: {reason}"
+    },
+    "previewName": "your-name",
+    "primary": {
+      "publishing": "公開しています…",
+      "moveSubdomain": "新しいサブドメインに移動",
+      "republish": "再公開",
+      "publish": "公開"
+    },
+    "header": {
+      "titleManage": "公開設定の管理",
+      "titlePublish": "openlen.com に公開",
+      "subtitleManage": "新しい名前を選んだり、再公開したり、公開を取り下げたりできます。",
+      "subtitlePublish": "名前を選んでください。数秒で公開ウェブ上に表示されます。"
+    },
+    "close": "閉じる",
+    "subdomainLabel": "サブドメイン",
+    "subdomainPlaceholder": "your-name",
+    "preview": "プレビュー",
+    "limitsHint": "無料プラン: 公開ページ 1 つ。Pro: 10 つ。小文字、数字、ハイフンが使えます（1〜63 文字）。",
+    "unpublish": {
+      "sure": "よろしいですか？",
+      "confirm": "はい、非公開にします",
+      "no": "いいえ",
+      "button": "非公開にする"
+    },
+    "useOwnDomain": "または独自ドメインを使う",
+    "cancel": "キャンセル",
+    "status": {
+      "choose": "上で名前を選んでください。",
+      "checking": "利用可能か確認しています…",
+      "currentPage": "これは現在のページです —",
+      "visit": "表示",
+      "available": "利用可能",
+      "invalid": "小文字、数字、ハイフンを使ってください（先頭・末尾は不可）。",
+      "reserved": "この名前は予約されています。別の名前をお試しください。",
+      "taken": "すでに使用されています。別の名前をお試しください。",
+      "limit": "プランの上限に達しました — 別のページを非公開にするか、アップグレードしてください。"
+    }
+  },
+  "inspector": {
+    "radius": "角丸",
+    "radiusPlaceholder": "8px",
+    "hexPlaceholder": "#rrggbb"
+  }
+}

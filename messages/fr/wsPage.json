@@ -1,0 +1,40 @@
+{
+  "defaultProjectName": "Page de tarifs",
+  "chatDraft": {
+    "iconChanged": "Je viens de changer l'icône ici. Mets à jour le titre et la description autour pour que le sens corresponde à la nouvelle icône.",
+    "imageChanged": "Je viens de changer l'image ici. Mets à jour le texte autour pour qu'il corresponde à ce que montre l'image."
+  },
+  "lockReason": {
+    "choosing": "Choisissez d'abord un point de départ",
+    "created": "Disponible une fois votre page créée"
+  },
+  "formEmail": {
+    "noProject": "Aucun projet chargé.",
+    "noDestination": "Définissez d'abord un e-mail de notification dans ce formulaire (ou dans votre compte).",
+    "sendFailed": "Échec de l'envoi ({status}).",
+    "networkError": "Erreur réseau."
+  },
+  "template": {
+    "networkError": "Erreur réseau — réessayez."
+  },
+  "aiStatus": {
+    "designing": "Conception de votre page…",
+    "thinking": "Réflexion sur le design…",
+    "serverSaturated": "Le serveur est très sollicité — cela peut prendre un moment. Ne fermez pas la page.",
+    "readingBrief": "Lecture de votre brief…"
+  },
+  "aiError": {
+    "title": "Échec de la génération",
+    "tweak": "Ajustez votre brief dans la barre latérale et réessayez."
+  },
+  "inserted": {
+    "label": "<b>{name}</b> inséré",
+    "matching": "Harmonisation…",
+    "matchToPage": "✨ Harmoniser avec la page",
+    "dismiss": "Ignorer"
+  },
+  "editing": {
+    "noHtml": "Ce projet n'a pas encore de contenu HTML.",
+    "loading": "Chargement du projet…"
+  }
+}
