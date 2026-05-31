@@ -45,6 +45,23 @@ function isProtected(pathname: string): boolean {
   return PROTECTED.some((p) => bare === p || bare.startsWith(p + "/"));
 }
 
+// Cheap session-cookie presence check — deliberately does NOT decrypt or call
+// auth(), so a cookieless (logged-out) visitor is untouched and /login + /register
+// stay cacheable. Auth.js v5 names the JWT cookie authjs.session-token (http) /
+// __Secure-authjs.session-token (https), optionally .0/.1 chunked for big tokens.
+function hasSessionCookie(req: NextRequest): boolean {
+  return req.cookies
+    .getAll()
+    .some((c) => /^(__Secure-)?authjs\.session-token(\.\d+)?$/.test(c.name));
+}
+
+// Mirror register/login page sanitizeNext: keep an in-app ?next= path, reject
+// offsite / protocol-relative values.
+function sanitizeNext(raw: string | null): string {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/new";
+  return raw;
+}
+
 // Auth-gated branch. `auth()` augments the request with `.auth`; when a
 // session exists we hand off to the intl middleware to complete locale
 // resolution. The cast bridges Auth.js's (req, ctx) handler signature to the
@@ -125,6 +142,19 @@ export default function middleware(req: NextRequest): ReturnType<typeof intlMidd
       url.search = "?" + params.toString();
       return fixRedirectHost(NextResponse.redirect(url));
     }
+  }
+
+  // Already-authenticated users hitting /login or /register: the pages' own
+  // auth() guard redirects them to /new, but only AFTER the route's loading.tsx
+  // skeleton paints — a visible ~1s flash while the slow auth() round-trip
+  // resolves. Catch it at the edge instead so no auth-card segment ever renders;
+  // honor ?next= so the Hero brief flow keeps flowing through to /new?mode=ai.
+  if ((bare === "/login" || bare === "/register") && hasSessionCookie(req)) {
+    const locale = localeFromPath(pathname);
+    const target = sanitizeNext(req.nextUrl.searchParams.get("next"));
+    return fixRedirectHost(
+      NextResponse.redirect(new URL(`/${locale}${target}`, req.nextUrl.origin)),
+    );
   }
 
   if (isProtected(pathname)) {
