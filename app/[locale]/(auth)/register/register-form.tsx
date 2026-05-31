@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
@@ -31,6 +31,7 @@ export function RegisterForm({
   oauth: { github: boolean; google: boolean };
 }) {
   const t = useTranslations("auth");
+  const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = sanitizeNext(searchParams.get("next"));
@@ -86,7 +87,7 @@ export function RegisterForm({
 
   const onOAuth = async (provider: "github" | "google") => {
     setOauthLoading(provider);
-    await signIn(provider, { callbackUrl: nextPath });
+    await signIn(provider, { callbackUrl: `/${locale}${nextPath}` });
   };
 
   return (
@@ -183,20 +184,24 @@ export function RegisterForm({
             <>
               {t.rich("register.agree", {
                 terms: (chunks) => (
-                  <a
-                    href="#"
+                  <Link
+                    href="/terms"
+                    target="_blank"
+                    rel="noreferrer"
                     className="font-medium text-zinc-900 dark:text-zinc-100 underline underline-offset-2 hover:no-underline"
                   >
                     {chunks}
-                  </a>
+                  </Link>
                 ),
                 privacy: (chunks) => (
-                  <a
-                    href="#"
+                  <Link
+                    href="/privacy"
+                    target="_blank"
+                    rel="noreferrer"
                     className="font-medium text-zinc-900 dark:text-zinc-100 underline underline-offset-2 hover:no-underline"
                   >
                     {chunks}
-                  </a>
+                  </Link>
                 ),
               })}{" "}
               <span className="text-zinc-400 dark:text-zinc-600 italic">

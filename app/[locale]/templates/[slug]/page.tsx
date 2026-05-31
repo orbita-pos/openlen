@@ -34,23 +34,25 @@ export async function generateMetadata({
   const { slug, locale } = await params;
   const t = await getTemplate(slug);
   if (!t || t.status !== "published") {
-    return { title: "Template not found | OpenLen" };
+    return { title: "Template not found" };
   }
   const tf = await getTranslations({ locale, namespace: "families" });
   const familyLabel = tf(`${t.family}.label`);
   return {
-    title: `${t.name} — Template ${familyLabel.toLowerCase()} | OpenLen`,
+    title: `${t.name} — Template ${familyLabel.toLowerCase()}`,
     description: `${t.pitch} — ${t.description}. Template gratuita lista para publicar en tu subdominio openlen.com.`,
     openGraph: {
       title: `${t.name} — Template para ${familyLabel}`,
       description: t.pitch,
       type: "website",
       url: `https://openlen.com/templates/${t.id}`,
+      images: ["/og.png"],
     },
     twitter: {
       card: "summary_large_image",
       title: `${t.name} | OpenLen`,
       description: t.pitch,
+      images: ["/og.png"],
     },
     alternates: {
       canonical: `https://openlen.com/templates/${t.id}`,

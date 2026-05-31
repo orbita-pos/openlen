@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { ChevronDown, Moon, Sun, X } from "lucide-react";
@@ -81,6 +81,7 @@ export function AppHeader({ nav, actions }: AppHeaderProps) {
 
 function UserMenu() {
   const t = useTranslations("projects");
+  const locale = useLocale();
   const { data: session } = useSession();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -151,7 +152,7 @@ function UserMenu() {
           <div className="border-t border-zinc-100 dark:border-zinc-900 my-1" />
           <button
             type="button"
-            onClick={() => void signOut({ callbackUrl: "/login" })}
+            onClick={() => void signOut({ callbackUrl: `/${locale}/login` })}
             className="flex items-center gap-2 w-full text-left px-3 py-1.5 rounded-md text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900"
           >
             <X size={13} /> {t("appHeader.signOut")}

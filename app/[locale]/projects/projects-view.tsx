@@ -215,6 +215,19 @@ export function ProjectsView({ projects: initial }: { projects: ProjectSummary[]
         alert(t("actions.duplicateError", { error: res.statusText }));
         return;
       }
+      const data = (await res.json().catch(() => null)) as {
+        project?: ProjectSummary;
+      } | null;
+      if (data?.project) {
+        const created = data.project;
+        const newProject: ProjectSummary = {
+          ...created,
+          createdAt: new Date(created.createdAt),
+          updatedAt: new Date(created.updatedAt),
+          publishedAt: created.publishedAt ? new Date(created.publishedAt) : null,
+        };
+        setProjects((prev) => [newProject, ...prev]);
+      }
       refresh();
     },
     [refresh],
@@ -924,7 +937,7 @@ function ProjectCard({
           )}
         </h3>
         <div className="mt-1 text-[11.5px] text-zinc-500 dark:text-zinc-500 flex items-center gap-1.5">
-          <span>{t("card.editedAgo", { time: relativeTime(project.updatedAt, t) })}</span>
+          <span suppressHydrationWarning>{t("card.editedAgo", { time: relativeTime(project.updatedAt, t) })}</span>
           {project.subdomain ? (
             <>
               <span className="text-zinc-300 dark:text-zinc-700">·</span>
@@ -1086,7 +1099,10 @@ function ProjectRow({
         ))}
       </div>
 
-      <div className="hidden md:block shrink-0 text-[11.5px] text-zinc-500 dark:text-zinc-500 w-24 truncate text-right">
+      <div
+        suppressHydrationWarning
+        className="hidden md:block shrink-0 text-[11.5px] text-zinc-500 dark:text-zinc-500 w-24 truncate text-right"
+      >
         {relativeTime(project.updatedAt, t)}
       </div>
 

@@ -32,11 +32,13 @@ export async function generateMetadata({
       description: post.excerpt,
       type: "article",
       url: `https://openlen.com/blog/${post.slug}`,
+      images: ["/og.png"],
     },
     twitter: {
       card: "summary_large_image",
       title: `${post.title} | OpenLen`,
       description: post.excerpt,
+      images: ["/og.png"],
     },
     alternates: { canonical: `https://openlen.com/blog/${post.slug}` },
   };

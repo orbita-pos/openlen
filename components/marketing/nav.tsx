@@ -14,7 +14,7 @@ const links = [
   { labelKey: "nav.links.templates", href: "/templates" },
   { labelKey: "nav.links.features", href: "/#features" },
   { labelKey: "nav.links.pricing", href: "/#pricing" },
-  { labelKey: "nav.links.docs", href: "/#docs" },
+  { labelKey: "nav.links.docs", href: "/docs" },
 ] as const;
 
 export interface NavProps {
