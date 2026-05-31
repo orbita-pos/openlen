@@ -3,13 +3,22 @@ import { setRequestLocale } from "next-intl/server";
 import { LegalPage } from "@/components/legal-page";
 import { Link } from "@/i18n/navigation";
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://openlen.com";
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  return { title: locale === "es" ? "Política de cookies" : "Cookie Policy" };
+  return {
+    title: locale === "es" ? "Política de cookies" : "Cookie Policy",
+    description:
+      locale === "es"
+        ? "Qué cookies usa OpenLen (solo estrictamente necesarias) y por qué no mostramos un banner de consentimiento."
+        : "Which cookies OpenLen uses (strictly necessary only) and why we show no consent banner.",
+    alternates: { canonical: `${SITE_URL}/${locale}/cookie-policy` },
+  };
 }
 
 export default async function Page({

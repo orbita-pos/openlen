@@ -3,13 +3,22 @@ import { setRequestLocale } from "next-intl/server";
 import { LegalPage } from "@/components/legal-page";
 import { Link } from "@/i18n/navigation";
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://openlen.com";
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  return { title: locale === "es" ? "Términos del servicio" : "Terms of Service" };
+  const es = locale === "es";
+  return {
+    title: es ? "Términos del servicio" : "Terms of Service",
+    description: es
+      ? "Los términos que rigen tu uso de OpenLen: cuentas, contenido, resultados de IA, facturación y responsabilidad."
+      : "The terms that govern your use of OpenLen: accounts, content, AI output, billing, and liability.",
+    alternates: { canonical: `${SITE_URL}/${locale}/terms` },
+  };
 }
 
 export default async function TermsPage({
@@ -69,8 +78,9 @@ export default async function TermsPage({
 
           <h2>Elegibilidad y cuentas</h2>
           <p>
-            Debes tener al menos 18 años, o la mayoría de edad en tu jurisdicción,
-            para usar el Servicio. Puedes registrarte con correo y contraseña o
+            Como titular de la cuenta de OpenLen, debes tener al menos 18 años, o
+            la mayoría de edad en tu jurisdicción, para usar el Servicio. Puedes
+            registrarte con correo y contraseña o
             mediante inicio de sesión de Google o GitHub. Eres responsable de
             mantener la confidencialidad de tus credenciales y de toda la actividad
             que ocurra en tu cuenta. Avísanos de inmediato si detectas un uso no
@@ -94,8 +104,8 @@ export default async function TermsPage({
             OpenLen es de código abierto y se distribuye bajo la licencia AGPLv3.
             En cumplimiento de la sección 13 de la AGPLv3, el código fuente
             correspondiente está disponible al público en{" "}
-            <a href="https://github.com/jesusbernalrj/inari-pages">
-              github.com/jesusbernalrj/inari-pages
+            <a href="https://github.com/orbita-pos/openlen">
+              github.com/orbita-pos/openlen
             </a>
             . Esa licencia rige el código fuente, pero <strong>no</strong> rige tu
             uso de la instancia alojada en openlen.com: dicho uso se rige
@@ -126,10 +136,11 @@ export default async function TermsPage({
             base de licitud y aviso de privacidad.
           </p>
           <p>
-            Declaras y garantizas que no dirigirás tus páginas a menores de 13 años
-            ni recopilarás a sabiendas datos personales de menores, y que las
-            páginas que publiques cumplen la legislación aplicable en materia de
-            publicidad, comercio electrónico y protección de datos.
+            Con independencia del requisito de edad para tu propia cuenta, declaras
+            y garantizas que no dirigirás las páginas que publiques a menores de 13
+            años ni recopilarás a sabiendas datos personales de menores a través de
+            ellas, y que dichas páginas cumplen la legislación aplicable en materia
+            de publicidad, comercio electrónico y protección de datos.
           </p>
           <p>
             Podemos retirar o deshabilitar contenido cuando, de buena fe, estimemos
@@ -235,7 +246,7 @@ export default async function TermsPage({
             plan gratuito incluye 20 créditos al mes. Los créditos se reinician
             cada mes y no se acumulan. Los pagos son procesados por{" "}
             <strong>Polar</strong> (Polar Software Inc., Estados Unidos), que actúa
-            como <strong>comerciante de registro (Merchant of Record)</strong>:
+            como <strong>comerciante registrado (Merchant of Record)</strong>:
             Polar es el vendedor legal, procesa tus datos de pago y de facturación
             (datos financieros o patrimoniales), emite la factura o recibo y recauda
             y remite los impuestos aplicables. OpenLen solo conserva el estado de tu
@@ -379,8 +390,9 @@ export default async function TermsPage({
 
           <h2>Eligibility and accounts</h2>
           <p>
-            You must be at least 18 years old, or the age of majority in your
-            jurisdiction, to use the Service. You can sign up with email and
+            As the OpenLen account holder, you must be at least 18 years old, or
+            the age of majority in your jurisdiction, to use the Service. You can
+            sign up with email and
             password or via Google or GitHub sign-in. You&apos;re responsible for
             keeping your credentials confidential and for all activity that occurs
             under your account. Tell us right away if you notice any unauthorized
@@ -403,8 +415,8 @@ export default async function TermsPage({
             open source and distributed under the AGPLv3 license. In compliance with
             section 13 of the AGPLv3, the corresponding source code is publicly
             available at{" "}
-            <a href="https://github.com/jesusbernalrj/inari-pages">
-              github.com/jesusbernalrj/inari-pages
+            <a href="https://github.com/orbita-pos/openlen">
+              github.com/orbita-pos/openlen
             </a>
             . That license governs the source code but does <strong>not</strong>{" "}
             govern your use of the hosted instance at openlen.com: your use of the
@@ -434,9 +446,10 @@ export default async function TermsPage({
             notice.
           </p>
           <p>
-            You represent and warrant that you will not target your pages at
-            children under 13 or knowingly collect children&apos;s personal data,
-            and that the pages you publish comply with applicable advertising,
+            Separately from the age requirement for your own account, you represent
+            and warrant that you will not target the pages you publish at children
+            under 13 or knowingly collect children&apos;s personal data through
+            them, and that those pages comply with applicable advertising,
             e-commerce, and data-protection law.
           </p>
           <p>

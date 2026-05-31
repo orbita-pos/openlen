@@ -3,14 +3,21 @@ import { setRequestLocale } from "next-intl/server";
 import { LegalPage } from "@/components/legal-page";
 import { Link } from "@/i18n/navigation";
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://openlen.com";
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
+  const es = locale === "es";
   return {
-    title: locale === "es" ? "Reembolsos y cancelación" : "Refund & Cancellation",
+    title: es ? "Reembolsos y cancelación" : "Refund & Cancellation",
+    description: es
+      ? "Cómo funcionan los planes, créditos, renovación, cancelación y reembolsos de OpenLen."
+      : "How OpenLen plans, credits, renewal, cancellation, and refunds work.",
+    alternates: { canonical: `${SITE_URL}/${locale}/refund` },
   };
 }
 
@@ -39,8 +46,8 @@ export default async function RefundPage({
 
           <h2>Quiénes operamos OpenLen</h2>
           <p>
-            OpenLen es operado por <strong>Jesús Bernal</strong>, que opera
-            OpenLen, con sede en México (el &quot;responsable&quot;). Para
+            OpenLen es operado por <strong>Jesús Bernal</strong>, con sede en
+            México (el &quot;responsable&quot;). Para
             cualquier consulta sobre facturación, cancelaciones o reembolsos,
             escríbenos a{" "}
             <a href="mailto:info@jesusbr.com">info@jesusbr.com</a>. Estos términos
@@ -184,8 +191,8 @@ export default async function RefundPage({
 
           <h2>Who operates OpenLen</h2>
           <p>
-            OpenLen is operated by <strong>Jesús Bernal</strong>, operating
-            OpenLen, based in Mexico (the &quot;operator&quot;). For any question
+            OpenLen is operated by <strong>Jesús Bernal</strong>, based in
+            Mexico (the &quot;operator&quot;). For any question
             about billing, cancellations, or refunds, email us at{" "}
             <a href="mailto:info@jesusbr.com">info@jesusbr.com</a>. These terms are
             governed by the laws of Mexico.
