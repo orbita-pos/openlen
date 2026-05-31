@@ -14,7 +14,7 @@ export function Field({ label, hint, htmlFor, children }: FieldProps) {
         <span className="text-[13px] font-medium text-zinc-900 dark:text-zinc-100">
           {label}
         </span>
-        {hint && <span className="text-[11px] text-zinc-400">{hint}</span>}
+        {hint && <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{hint}</span>}
       </div>
       {children}
     </label>

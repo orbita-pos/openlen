@@ -51,7 +51,6 @@ export async function FinalCta() {
                 href="https://github.com/orbita-pos/openlen"
                 target="_blank"
                 rel="noreferrer"
-                aria-label={t("finalCta.githubAria")}
               >
                 <Button
                   variant="outline"

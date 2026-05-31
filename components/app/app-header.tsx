@@ -41,7 +41,7 @@ export function AppHeader({ nav, actions }: AppHeaderProps) {
           <Link href="/" className="flex items-center gap-2 shrink-0">
             <OpenLenMark className="h-6 w-6 shrink-0" />
             <span className="hidden sm:inline font-semibold tracking-tight text-[14px]">
-              Open<span className="text-coral-500 dark:text-coral-400">Len</span>
+              Open<span className="text-coral-700 dark:text-coral-400">Len</span>
             </span>
           </Link>
           {nav && (
@@ -163,7 +163,7 @@ function UserMenu() {
             <button
               type="button"
               key={item.key}
-              className="flex items-center w-full text-left px-3 py-1.5 rounded-md text-sm text-zinc-500 dark:text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-900 cursor-not-allowed"
+              className="flex items-center w-full text-left px-3 py-1.5 rounded-md text-sm text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900 cursor-not-allowed"
               title={t("appHeader.comingSoon", { label: item.label })}
               disabled
             >

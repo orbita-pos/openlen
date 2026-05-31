@@ -230,7 +230,7 @@ export function TopBar({
         >
           <OpenLenMark className="h-7 w-7 shrink-0" />
           <span className="font-display text-[15px] tracking-tight hidden md:inline">
-            Open<span className="text-coral-500 dark:text-coral-400">Len</span>
+            Open<span className="text-coral-700 dark:text-coral-400">Len</span>
           </span>
         </Link>
         <div className="h-5 w-px bg-[color:var(--border)] hidden md:block" />

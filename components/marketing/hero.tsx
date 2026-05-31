@@ -133,7 +133,6 @@ export async function Hero() {
               href={REPO_URL}
               target="_blank"
               rel="noreferrer"
-              aria-label={t("hero.githubAria")}
               className="inline-flex items-center gap-1.5 hover:text-zinc-900 dark:hover:text-zinc-100 transition"
             >
               <GithubIcon size={12} />

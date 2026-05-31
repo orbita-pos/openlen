@@ -49,7 +49,9 @@ export function LocaleSwitcher({ className }: { className?: string }) {
             type="button"
             onClick={() => switchTo(locale)}
             aria-pressed={isActive}
-            aria-label={locale === "es" ? t("switchToSpanish") : t("switchToEnglish")}
+            aria-label={`${LABELS[locale] ?? locale.toUpperCase()}: ${
+              locale === "es" ? t("switchToSpanish") : t("switchToEnglish")
+            }`}
             disabled={pending}
             className={cn(
               "rounded px-1.5 py-0.5 text-[11px] font-semibold leading-none transition-colors",

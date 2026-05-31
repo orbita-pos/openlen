@@ -22,7 +22,7 @@ function Cell({ v }: { v: CellValue }) {
         className={cn(
           "text-sm tabular-nums font-medium",
           v.strike
-            ? "text-zinc-400 line-through"
+            ? "text-zinc-500 dark:text-zinc-400 line-through"
             : "text-zinc-900 dark:text-zinc-100",
         )}
       >
@@ -46,8 +46,8 @@ function Cell({ v }: { v: CellValue }) {
   }
   if (v.type === "no") {
     return (
-      <span className="inline-flex items-center gap-1.5 text-sm text-zinc-400 dark:text-zinc-600">
-        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-900 text-zinc-400 dark:text-zinc-600 ring-1 ring-zinc-200/60 dark:ring-zinc-800">
+      <span className="inline-flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 ring-1 ring-zinc-200/60 dark:ring-zinc-800">
           <X size={12} strokeWidth={2.5} />
         </span>
       </span>
@@ -138,10 +138,11 @@ export async function Comparison() {
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950">
-                  <th className="sticky left-0 z-10 bg-zinc-50/80 dark:bg-zinc-950 px-6 py-4 text-xs font-medium uppercase tracking-wider text-zinc-600 dark:text-zinc-400" />
+                  <th scope="col" className="sticky left-0 z-10 bg-zinc-50/80 dark:bg-zinc-950 px-6 py-4 text-xs font-medium uppercase tracking-wider text-zinc-600 dark:text-zinc-400" />
                   {cols.map((c) => (
                     <th
                       key={c}
+                      scope="col"
                       className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-zinc-600 dark:text-zinc-400 whitespace-nowrap"
                     >
                       {c}
@@ -158,9 +159,10 @@ export async function Comparison() {
                       row.us && "bg-coral-50/30 dark:bg-coral-500/[0.04]",
                     )}
                   >
-                    <td
+                    <th
+                      scope="row"
                       className={cn(
-                        "sticky left-0 px-6 py-5 whitespace-nowrap",
+                        "sticky left-0 px-6 py-5 whitespace-nowrap text-left font-normal",
                         row.us
                           ? "bg-coral-50/30 dark:bg-coral-500/[0.04]"
                           : "bg-white dark:bg-[#0a0a0a]",
@@ -186,7 +188,7 @@ export async function Comparison() {
                           </Badge>
                         )}
                       </div>
-                    </td>
+                    </th>
                     {row.values.map((v, vi) => (
                       <td key={vi} className="px-6 py-5">
                         <Cell v={v} />

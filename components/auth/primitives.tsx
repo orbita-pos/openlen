@@ -91,7 +91,7 @@ export const AuthInput = forwardRef<HTMLInputElement, AuthInputProps>(
               : "ring-zinc-200 dark:ring-zinc-800 focus-within:ring-2 focus-within:ring-coral-500",
           )}
         >
-          {leftIcon && <span className="pl-3 text-zinc-400">{leftIcon}</span>}
+          {leftIcon && <span className="pl-3 text-zinc-500 dark:text-zinc-400">{leftIcon}</span>}
           <input
             id={id}
             ref={ref}
@@ -107,7 +107,7 @@ export const AuthInput = forwardRef<HTMLInputElement, AuthInputProps>(
           {rightSlot && <span className="pr-1.5">{rightSlot}</span>}
         </div>
         {hint && !error && (
-          <p className="mt-1.5 text-[11px] text-zinc-500 dark:text-zinc-500">{hint}</p>
+          <p className="mt-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">{hint}</p>
         )}
       </div>
     );
@@ -118,7 +118,7 @@ export function AuthDivider({ children }: { children: ReactNode }) {
   return (
     <div className="relative my-1 flex items-center">
       <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
-      <span className="px-3 text-[11px] uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">
+      <span className="px-3 text-[11px] uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
         {children}
       </span>
       <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
@@ -232,7 +232,7 @@ export function Requirement({
     <li
       className={cn(
         "flex items-center gap-2 text-[12px] transition-colors",
-        ok ? "text-emerald-700 dark:text-emerald-400" : "text-zinc-500 dark:text-zinc-500",
+        ok ? "text-emerald-700 dark:text-emerald-400" : "text-zinc-500 dark:text-zinc-400",
       )}
     >
       <span
@@ -240,7 +240,7 @@ export function Requirement({
           "inline-flex h-3.5 w-3.5 items-center justify-center rounded-full ring-1 transition-colors",
           ok
             ? "bg-emerald-500 ring-emerald-500 text-white"
-            : "bg-white dark:bg-[#0a0a0a] ring-zinc-300 dark:ring-zinc-700 text-zinc-400",
+            : "bg-white dark:bg-[#0a0a0a] ring-zinc-300 dark:ring-zinc-700 text-zinc-500 dark:text-zinc-400",
         )}
       >
         {ok ? (

@@ -155,7 +155,7 @@ export function RegisterForm({
                 type="button"
                 onClick={() => setShowPw((s) => !s)}
                 aria-label={showPw ? t("fields.hidePassword") : t("fields.showPassword")}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition"
               >
                 {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
@@ -168,7 +168,7 @@ export function RegisterForm({
           id="name"
           label={t.rich("register.nameLabel", {
             optional: (chunks) => (
-              <span className="text-zinc-400 font-normal">{chunks}</span>
+              <span className="text-zinc-500 dark:text-zinc-400 font-normal">{chunks}</span>
             ),
           })}
           autoComplete="name"
@@ -204,7 +204,7 @@ export function RegisterForm({
                   </Link>
                 ),
               })}{" "}
-              <span className="text-zinc-400 dark:text-zinc-600 italic">
+              <span className="text-zinc-500 dark:text-zinc-400 italic">
                 {t("register.agplNote")}
               </span>
             </>
@@ -226,7 +226,7 @@ export function RegisterForm({
         </AuthButton>
       </form>
 
-      <div className="pt-2 text-center text-[13px] text-zinc-500 dark:text-zinc-500">
+      <div className="pt-2 text-center text-[13px] text-zinc-500 dark:text-zinc-400">
         {t("register.haveAccount")}{" "}
         <Link
           href="/login"

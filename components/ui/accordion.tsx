@@ -34,7 +34,7 @@ export function Accordion({
         <ChevronDown
           size={15}
           className={cn(
-            "text-zinc-400 transition-transform",
+            "text-zinc-500 dark:text-zinc-400 transition-transform",
             open && "rotate-180",
           )}
         />

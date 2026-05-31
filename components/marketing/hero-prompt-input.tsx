@@ -124,7 +124,7 @@ export function HeroPromptInput() {
               "inline-flex items-center justify-center gap-1.5 h-9 rounded-lg text-[13px] font-medium transition",
               canSend
                 ? "px-3.5 bg-coral-500 text-white hover:bg-coral-600 active:bg-coral-700 btn-coral-shadow disabled:opacity-80"
-                : "w-9 bg-zinc-100 dark:bg-zinc-900 text-zinc-400 dark:text-zinc-600 cursor-not-allowed",
+                : "w-9 bg-zinc-100 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 cursor-not-allowed",
             )}
             aria-label={t("heroPrompt.generate")}
           >
@@ -212,7 +212,7 @@ function SignInDialog({
           type="button"
           onClick={onClose}
           aria-label={t("signInDialog.close")}
-          className="absolute right-3 top-3 inline-flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 dark:hover:text-zinc-200 dark:hover:bg-zinc-900 transition"
+          className="absolute right-3 top-3 inline-flex h-7 w-7 items-center justify-center rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 dark:hover:text-zinc-200 dark:hover:bg-zinc-900 transition"
         >
           <X size={15} />
         </button>
