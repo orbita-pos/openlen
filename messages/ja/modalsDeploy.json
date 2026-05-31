@@ -1,0 +1,49 @@
+{
+  "header": {
+    "titleVercel": "Vercel にデプロイ",
+    "titleGithub": "GitHub にプッシュ",
+    "subtitleVercel": "このページをご自身の Vercel アカウントに公開します。",
+    "subtitleGithub": "このページを GitHub Pages のリポジトリに公開します。"
+  },
+  "close": "閉じる",
+  "notConfigured": {
+    "title": "まだ利用できません",
+    "body": "このデプロイ先は、この OpenLen インスタンスでは設定されていません。"
+  },
+  "connect": {
+    "lead": "{provider} アカウントを接続して、このページをそこに公開しましょう。",
+    "button": "{provider} を接続",
+    "redirecting": "リダイレクト中…"
+  },
+  "connected": {
+    "as": "{account} として接続済み",
+    "asAnon": "接続済み",
+    "nameLabel": "名前",
+    "nameHintVercel": "URL に使われます：name.vercel.app",
+    "nameHintGithub": "URL に使われます：you.github.io/name",
+    "deploy": "デプロイ",
+    "redeploy": "再デプロイ",
+    "deploying": "デプロイ中…",
+    "live": "公開中",
+    "open": "開く",
+    "upToDate": "最新の編集内容まで反映済みです。",
+    "drift": "まだデプロイされていない変更があります。",
+    "propagation": "GitHub Pages は初回の公開までに 1 分ほどかかることがあります。",
+    "publishing": "公開中… 反映までに最大 1 分ほどかかることがあります。すぐに開くと一時的に 404 が表示される場合がありますが、更新すれば解決します。",
+    "disconnect": "接続を解除"
+  },
+  "errors": {
+    "loadFailed": "接続を読み込めませんでした。",
+    "invalidName": "英小文字・数字・ハイフンを使用してください（1〜39 文字、先頭と末尾にハイフンは不可）。",
+    "notConnected": "先にアカウントを接続してください。",
+    "tokenInvalid": "接続の有効期限が切れました。再接続してください。",
+    "deployFailed": "デプロイに失敗しました：{message}",
+    "deployGeneric": "デプロイに失敗しました。もう一度お試しください。",
+    "network": "ネットワークエラーです。もう一度お試しください。",
+    "denied": "認証がキャンセルされました。",
+    "state": "接続の確認に失敗しました。もう一度お試しください。",
+    "exchange": "接続を完了できませんでした。もう一度お試しください。",
+    "not_configured": "このデプロイ先は、この OpenLen インスタンスでは設定されていません。"
+  },
+  "confirmDisconnect": "{provider} の接続を解除しますか？ デプロイ済みのページは公開されたままです。再びデプロイするには再接続が必要になるだけです。"
+}

@@ -1,0 +1,94 @@
+{
+  "time": {
+    "justNow": "proprio ora",
+    "minutesAgo": "{count} min fa",
+    "hoursAgo": "{count} h fa",
+    "yesterday": "ieri",
+    "daysAgo": "{count} g fa",
+    "weeksAgo": "{count} sett fa"
+  },
+  "pages": {
+    "newPage": "Nuova pagina",
+    "active": "Attiva",
+    "published": "Pubblicata",
+    "publishedUnpublishedEdits": "Pubblicata — ci sono modifiche non pubblicate",
+    "draft": "Bozza",
+    "thumbnailOf": "Anteprima di {title}",
+    "thumbnailTitle": "Anteprima di {title}",
+    "loadError": "Caricamento dei progetti non riuscito",
+    "loadFailed": "Impossibile caricare i tuoi progetti.",
+    "empty": "Ancora nessuna pagina.",
+    "emptyHint": "Creane una per vederla qui."
+  },
+  "versions": {
+    "loadError": "Caricamento delle versioni non riuscito",
+    "restoreError": "Ripristino non riuscito — riprova.",
+    "perProject": "Le versioni sono legate a ogni progetto.",
+    "perProjectHint": "Apri un progetto dalla scheda Pagine per vederne la cronologia.",
+    "title": "Cronologia versioni",
+    "subtitle": "Snapshot automatici a ogni chat, pubblicazione e clonazione.",
+    "empty": "Ancora nessuna versione.",
+    "emptyHint": "La prossima chat o pubblicazione ne creerà una.",
+    "current": "Attuale",
+    "restore": "Ripristina",
+    "restoring": "Ripristino in corso…",
+    "cancel": "Annulla",
+    "confirmTitle": "Ripristinare questa versione?",
+    "confirmRollback": "La pagina tornerà a:",
+    "confirmNote": "La tua pagina attuale viene salvata prima come versione — puoi ripristinarla se cambi idea.",
+    "thumbnailOf": "Anteprima della versione {label}",
+    "thumbnailTitle": "Anteprima di {label}",
+    "source": {
+      "initial": "Inizio",
+      "chat": "Chat",
+      "publish": "Live",
+      "restore": "Annulla",
+      "manual": "Salvata",
+      "styleMatch": "Riempi",
+      "reorder": "Ordina",
+      "replace": "Risorsa"
+    }
+  },
+  "insights": {
+    "loadError": "Caricamento delle statistiche non riuscito",
+    "title": "Statistiche",
+    "subtitle": "Analisi rispettose della privacy per questa pagina.",
+    "perProject": "Le statistiche sono legate a ogni progetto.",
+    "perProjectHint": "Apri un progetto dalla scheda Pagine per vederne le analisi.",
+    "range": {
+      "all": "Tutto"
+    },
+    "emptyRange": "Ancora nessun dato per questo intervallo.",
+    "emptyRangeHint": "Pubblica la pagina e condividi il link — le analisi partono nel momento in cui arriva un visitatore.",
+    "kpi": {
+      "views": "Visualizzazioni",
+      "uniques": "Univoci",
+      "clicks": "Clic"
+    },
+    "visitsOverTime": "Visite nel tempo",
+    "dayCount": "{count, plural, one {# giorno} other {# giorni}}",
+    "topLinks": "Link più cliccati",
+    "noClicks": "Ancora nessun clic in uscita.",
+    "referrers": "Provenienze",
+    "directOnly": "Solo dirette",
+    "countries": "Paesi",
+    "noCountryData": "Nessun dato sui paesi",
+    "device": "Dispositivo",
+    "noDeviceData": "Nessun dato sui dispositivi",
+    "deviceType": {
+      "mobile": "Mobile",
+      "desktop": "Desktop",
+      "tablet": "Tablet"
+    }
+  },
+  "leads": {
+    "loadError": "Caricamento dei contatti non riuscito",
+    "perProject": "I contatti sono legati a ogni progetto.",
+    "perProjectHint": "Apri un progetto dalla scheda Pagine per vederne gli invii.",
+    "title": "Contatti",
+    "subtitle": "Invii dei moduli dalla tua pagina pubblicata.",
+    "empty": "Ancora nessun contatto.",
+    "emptyHint": "Pubblica la pagina — ogni invio del modulo arriva qui.",
+    "emptySubmission": "Invio vuoto"
+  }
+}

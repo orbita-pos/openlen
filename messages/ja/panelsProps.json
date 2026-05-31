@@ -1,0 +1,90 @@
+{
+  "header": {
+    "inspector": "インスペクター",
+    "closeInspector": "インスペクターを閉じる"
+  },
+  "element": {
+    "pageSettings": "ページ設定"
+  },
+  "link": {
+    "title": "リンク",
+    "destination": "リンク先",
+    "destinationPlaceholder": "https://…  または  #section",
+    "openInNewTab": "新しいタブで開く"
+  },
+  "image": {
+    "title": "画像",
+    "altText": "代替テキスト",
+    "altPlaceholder": "画像を説明してください",
+    "source": "ソース"
+  },
+  "style": {
+    "title": "スタイル",
+    "textColor": "テキストの色",
+    "background": "背景"
+  },
+  "form": {
+    "title": "フォーム",
+    "notifyEmail": "通知先メールアドレス",
+    "notifyEmailPlaceholder": "既定：アカウントのメールアドレス",
+    "successMessage": "送信完了メッセージ",
+    "successMessagePlaceholder": "✓ ありがとうございます。メッセージを受け取りました。",
+    "redirect": "送信後のリダイレクト",
+    "redirectPlaceholder": "https://…/thank-you  （任意）",
+    "invalidEmail": "有効なメールアドレスを入力してください。",
+    "invalidUrl": "http:// または https:// で始まる完全な URL を入力してください。",
+    "applyNote": "フォームの変更は次回のデプロイで反映されます。"
+  },
+  "testEmail": {
+    "send": "テストメールを送信",
+    "sending": "送信中…",
+    "sentTo": "✓ テストメールを <mono>{to}</mono> に送信しました。受信トレイと迷惑メールフォルダをご確認ください。",
+    "sendFailed": "テストメールを送信できませんでした。",
+    "networkError": "ネットワークエラー。"
+  },
+  "page": {
+    "loading": "ページ設定を読み込み中…",
+    "title": "ページ",
+    "fieldTitle": "タイトル",
+    "fieldTitlePlaceholder": "ページタイトル",
+    "fieldDescription": "説明",
+    "fieldDescriptionPlaceholder": "検索結果向けの短い説明",
+    "fieldSocialImage": "ソーシャル画像（OG）",
+    "fieldFavicon": "ファビコン",
+    "clickHint": "ページ上の任意の要素をクリックすると編集できます。"
+  },
+  "privacy": {
+    "title": "プライバシー",
+    "enableAnalytics": "アナリティクスを有効にする",
+    "note": "匿名のページビューと外部リンクのクリックを計測します。Cookie なし、IP の保存なし、同意バナーなし。次回の公開で反映されます。"
+  },
+  "health": {
+    "title": "ページの健全性",
+    "passing": "合格",
+    "healthy": "ページは良好です。",
+    "issuesToAddress": "{count, plural, one {対応が必要な問題が #件あります。} other {対応が必要な問題が #件あります。}}"
+  },
+  "logo": {
+    "title": "ロゴ",
+    "previewAlt": "プロジェクトのロゴプレビュー",
+    "custom": "カスタムロゴ",
+    "default": "既定 — 頭文字",
+    "inlineSvg": "インライン SVG",
+    "usedAs": "ファビコン、カードバッジ、OG のフォールバックとして使用されます。",
+    "tabUpload": "アップロード",
+    "tabPasteUrl": "URL を貼り付け",
+    "tabAuto": "自動",
+    "uploading": "アップロード中…",
+    "chooseImage": "画像を選択",
+    "uploadHint": "PNG / SVG / WebP。正方形の画像が最適に表示されます。",
+    "urlHint": "ホスティングされた画像の完全な https:// URL を使用してください。",
+    "generateFromTitle": "タイトルから生成",
+    "autoHint": "「{title}」の頭文字を入れたコーラル色のディスク。",
+    "defaultTitleFallback": "ページ",
+    "clear": "ロゴをクリア",
+    "errorSaveFirst": "ロゴをアップロードする前にプロジェクトを保存してください。",
+    "errorUploadStatus": "アップロードに失敗しました（{status}）",
+    "errorUploadFailed": "アップロードに失敗しました",
+    "errorFullUrl": "完全な https:// URL を使用してください。"
+  }
+}

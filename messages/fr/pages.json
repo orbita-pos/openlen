@@ -1,0 +1,44 @@
+{
+  "templatesIndex": {
+    "hero": {
+      "eyebrow": "{count, plural, =0 {AUCUN MODÈLE POUR L'INSTANT} one {# MODÈLE FAIT MAIN} other {# MODÈLES FAITS MAIN}}",
+      "title": "Des landing pages conçues à la main. Prêtes à devenir les vôtres.",
+      "lede": "Du HTML statique, optimisé. Choisissez-en une, remplissez-la avec vos infos et déployez-la sur votre sous-domaine en un clic."
+    }
+  },
+  "templateDetail": {
+    "backToAll": "Tous les modèles",
+    "viewLive": "Voir le modèle en ligne",
+    "meta": {
+      "family": "Famille",
+      "mode": "Mode",
+      "accent": "Couleur d'accent",
+      "format": "Format",
+      "formatValue": "HTML statique"
+    },
+    "related": {
+      "heading": "Plus de modèles de la famille {family}"
+    }
+  },
+  "blogIndex": {
+    "eyebrow": "BLOG",
+    "title": "Les nouveautés d'OpenLen",
+    "lede": "Versions, journal des modifications et la réflexion qui se cache derrière.",
+    "readPost": "Lire l'article"
+  },
+  "blogPost": {
+    "back": "Blog"
+  },
+  "notFound": {
+    "metaTitle": "Page introuvable",
+    "metaDescription": "Cette URL ne correspond à aucune page OpenLen.",
+    "badge": "Erreur 404",
+    "title": "Cette page <accent>n'existe pas.</accent>",
+    "lede": "Cette URL ne correspond à aucun modèle ni projet. Revenez à l'accueil ou choisissez l'un des 15 modèles sélectionnés.",
+    "backHome": "Retour à l'accueil",
+    "viewTemplates": "Voir les modèles"
+  },
+  "devLoader": {
+    "caption": "Conception de votre page…"
+  }
+}

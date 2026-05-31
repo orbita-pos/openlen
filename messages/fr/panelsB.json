@@ -1,0 +1,94 @@
+{
+  "time": {
+    "justNow": "à l'instant",
+    "minutesAgo": "il y a {count} min",
+    "hoursAgo": "il y a {count} h",
+    "yesterday": "hier",
+    "daysAgo": "il y a {count} j",
+    "weeksAgo": "il y a {count} sem."
+  },
+  "pages": {
+    "newPage": "Nouvelle page",
+    "active": "Active",
+    "published": "Publiée",
+    "publishedUnpublishedEdits": "Publiée — modifications non publiées",
+    "draft": "Brouillon",
+    "thumbnailOf": "Miniature de {title}",
+    "thumbnailTitle": "Miniature de {title}",
+    "loadError": "Échec du chargement des projets",
+    "loadFailed": "Impossible de charger vos projets.",
+    "empty": "Aucune page pour l'instant.",
+    "emptyHint": "Créez-en une pour la voir ici."
+  },
+  "versions": {
+    "loadError": "Échec du chargement des versions",
+    "restoreError": "Restauration impossible — réessayez.",
+    "perProject": "Les versions sont propres à chaque projet.",
+    "perProjectHint": "Ouvrez un projet depuis l'onglet Pages pour consulter son historique.",
+    "title": "Historique des versions",
+    "subtitle": "Captures automatiques lors d'un chat, d'une publication et d'un clonage.",
+    "empty": "Aucune version pour l'instant.",
+    "emptyHint": "Le prochain chat ou la prochaine publication en créera une.",
+    "current": "Actuelle",
+    "restore": "Restaurer",
+    "restoring": "Restauration…",
+    "cancel": "Annuler",
+    "confirmTitle": "Restaurer cette version ?",
+    "confirmRollback": "La page sera rétablie à :",
+    "confirmNote": "Votre page actuelle est d'abord enregistrée comme version — vous pourrez la restaurer si vous changez d'avis.",
+    "thumbnailOf": "Miniature de la version {label}",
+    "thumbnailTitle": "Miniature de {label}",
+    "source": {
+      "initial": "Init",
+      "chat": "Chat",
+      "publish": "En ligne",
+      "restore": "Annuler",
+      "manual": "Enregistrée",
+      "styleMatch": "Remplir",
+      "reorder": "Ordre",
+      "replace": "Élément"
+    }
+  },
+  "insights": {
+    "loadError": "Échec du chargement des statistiques",
+    "title": "Statistiques",
+    "subtitle": "Analytics respectueuses de la vie privée pour cette page.",
+    "perProject": "Les statistiques sont propres à chaque projet.",
+    "perProjectHint": "Ouvrez un projet depuis l'onglet Pages pour consulter ses analytics.",
+    "range": {
+      "all": "Tout"
+    },
+    "emptyRange": "Aucune donnée pour cette période.",
+    "emptyRangeHint": "Publiez votre page et partagez le lien — les analytics démarrent dès le premier visiteur.",
+    "kpi": {
+      "views": "Vues",
+      "uniques": "Visiteurs uniques",
+      "clicks": "Clics"
+    },
+    "visitsOverTime": "Visites dans le temps",
+    "dayCount": "{count, plural, one {# jour} other {# jours}}",
+    "topLinks": "Liens les plus cliqués",
+    "noClicks": "Aucun clic sortant pour l'instant.",
+    "referrers": "Sources de trafic",
+    "directOnly": "Trafic direct uniquement",
+    "countries": "Pays",
+    "noCountryData": "Aucune donnée par pays",
+    "device": "Appareil",
+    "noDeviceData": "Aucune donnée par appareil",
+    "deviceType": {
+      "mobile": "Mobile",
+      "desktop": "Ordinateur",
+      "tablet": "Tablette"
+    }
+  },
+  "leads": {
+    "loadError": "Échec du chargement des contacts",
+    "perProject": "Les contacts sont propres à chaque projet.",
+    "perProjectHint": "Ouvrez un projet depuis l'onglet Pages pour consulter ses soumissions.",
+    "title": "Contacts",
+    "subtitle": "Soumissions de formulaire depuis votre page publiée.",
+    "empty": "Aucun contact pour l'instant.",
+    "emptyHint": "Publiez votre page — chaque soumission de formulaire arrive ici.",
+    "emptySubmission": "Soumission vide"
+  }
+}

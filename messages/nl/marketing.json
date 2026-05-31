@@ -1,0 +1,225 @@
+{
+  "nav": {
+    "links": {
+      "templates": "Templates",
+      "features": "Functies",
+      "pricing": "Prijzen",
+      "docs": "Docs"
+    },
+    "githubAria": "OpenLen op GitHub",
+    "toggleDark": "Donkere modus aan/uit",
+    "signIn": "Inloggen",
+    "tryFree": "Probeer gratis"
+  },
+  "hero": {
+    "alphaBadge": "Alpha",
+    "alphaPitch": "{count} handgemaakte templates — gratis tijdens de alpha",
+    "title": "Landingspagina's die echt van jou zijn.<br></br><muted>AI-gebouwd.</muted> <gradient>Open source.</gradient>",
+    "subtitle": "Genereer vanuit een prompt, kies uit <strong>{count} templates</strong> of plak je eigen HTML. Bewerk, publiceer naar je subdomein en krijg <strong>privacy-first analytics</strong> standaard ingebouwd.",
+    "tagline": "Jouw HTML. Jouw subdomein. AGPLv3 — fork, controleer, self-host. Geen lock-in, geen toestemmingsbanners.",
+    "pagesThisWeek": "<strong>{count, number}</strong> pagina's deze week gegenereerd",
+    "githubAria": "OpenLen op GitHub",
+    "starOnGithub": "Geef een ster op GitHub"
+  },
+  "heroPrompt": {
+    "placeholder": "Een landingspagina voor mijn SaaS die…",
+    "tools": {
+      "attachImage": "Een afbeelding toevoegen",
+      "scopeSection": "Beperk tot een sectie",
+      "autofill": "Automatisch invullen met jouw gegevens",
+      "titleSuffix": "{label} — beschikbaar zodra je pagina bestaat",
+      "ariaSuffix": "{label} (beschikbaar na het genereren)"
+    },
+    "generate": "Genereren",
+    "tryLabel": "Probeer"
+  },
+  "signInDialog": {
+    "close": "Sluiten",
+    "title": "Log in om te genereren",
+    "body": "Je hebt een account nodig om je pagina te bouwen — het is gratis. Je prompt wordt bewaard, zodat je verdergaat waar je gebleven was.",
+    "createAccount": "Maak een gratis account aan",
+    "logIn": "Inloggen"
+  },
+  "demoStrip": {
+    "eyebrow": "{count} HANDGEMAAKTE TEMPLATES — ALLEMAAL KLAAR OM TE PUBLICEREN",
+    "title": "Echte templates.<br></br><muted> Kies, vul in, publiceer.</muted>",
+    "description": "Elke template is zelfstandige HTML — Tailwind + Google Fonts inline, geen React-runtime. Klonen, tekst + afbeeldingen aanpassen, naar je subdomein publiceren.",
+    "browseAll": "Bekijk alle {count} templates"
+  },
+  "features": {
+    "badge": "Waarom OpenLen",
+    "title": "Gemaakt voor mensen die hun software liever <muted>bezitten</muted> dan huren.",
+    "items": {
+      "templates": {
+        "title": "{count} kant-en-klare templates",
+        "body": "Handgemaakte marketinglandings + 30 link-in-bio creatorhubs (streamer, muzikant, fotograaf, indie maker). Kies er een, pas hem aan in de iframe en publiceer naar je subdomein."
+      },
+      "analytics": {
+        "title": "Privacy-first analytics ingebouwd",
+        "body": "Kliks per link, paginabezoeken, topverwijzers, verdeling per land — geen cookies, geen IP-opslag, geen toestemmingsbanner. AVG-proof by design. Hetzelfde model als Plausible, maar dan van jou."
+      },
+      "ownHtml": {
+        "title": "Jouw HTML, jouw subdomein",
+        "body": "Pure HTML + Tailwind als output. Publiceer direct naar '<you>'.openlen.com, of neem het bestand mee en host het overal — Vercel, Cloudflare, GitHub Pages, je eigen server. Geen runtime-lock-in."
+      },
+      "openSource": {
+        "title": "Open source (AGPLv3)",
+        "body": "Fork het. Controleer het. Self-host de hele stack op één Hetzner-box. Generator, editor, publicatiepijplijn en analytics staan allemaal in de repo."
+      }
+    }
+  },
+  "comparison": {
+    "badge": "Vergelijk",
+    "title": "Wij hebben het uitgerekend, zodat jij dat niet hoeft.",
+    "subtitle": "Een eerlijke, niet-vleiende vergelijking naast elkaar. Bijgewerkt in mei 2026.",
+    "cols": {
+      "price": "Prijs",
+      "yourCode": "Jouw code",
+      "openSource": "Open source",
+      "selfHost": "Self-host",
+      "analytics": "Analytics"
+    },
+    "values": {
+      "freeAlpha": "Gratis (alpha)",
+      "builtIn": "Ingebouwd",
+      "export": "Exporteren",
+      "basic": "Basis",
+      "paidTier": "Betaald abonnement"
+    },
+    "thatsUs": "dat zijn wij",
+    "footnote": "Prijzen weerspiegelen de openbare abonnementen van mei 2026. Linktree is opgenomen omdat onze 30 link-in-bio creatortemplates op hetzelfde publiek mikken — het verschil is dat jij de HTML en het subdomein bezit."
+  },
+  "creatorShowcase": {
+    "badge": "Voor creators",
+    "title": "Linkpagina's die je <muted>echt bezit.</muted>",
+    "description": "{count} handgemaakte link-in-bio templates voor streamers, muzikanten, fotografen, indie makers en premium creators. Kliks per link + pagina-analytics ingebouwd — geen Linktree-tarief, geen Google Analytics, geen cookies.",
+    "allCount": "Alle {count} creatortemplates"
+  },
+  "pricing": {
+    "badge": "Prijzen",
+    "title": "Gratis tijdens de alpha. <muted>Voor altijd self-hosten.</muted>",
+    "subtitle": "Begin gratis met 20 AI-credits per maand. Upgrade naar Pro voor 150 — of self-host de hele stack zonder enige limiet.",
+    "comingSoon": "Binnenkort beschikbaar",
+    "mostPopular": "Meest gekozen",
+    "githubAria": "OpenLen op GitHub",
+    "footnote": "Alle abonnementen bevatten de open-source generator onder AGPL. Gehoste abonnementen voegen gemak toe, geen functies.",
+    "free": {
+      "name": "Gratis",
+      "suffix": "tijdens de alpha",
+      "blurb": "Alles werkt. Geen betaalmuur tijdens de alpha.",
+      "cta": "Probeer gratis",
+      "features": {
+        "0": "20 AI-credits / maand",
+        "1": "{count} templates inclusief 30 link-in-bio",
+        "2": "Publiceren naar '<you>'.openlen.com",
+        "3": "Privacy-first analytics + kliks per link",
+        "4": "Leadformulieren met e-mailmeldingen"
+      }
+    },
+    "pro": {
+      "name": "Pro",
+      "suffix": "/maand",
+      "blurb": "150 AI-credits per maand — ongeveer 10 Pro-paginageneraties.",
+      "cta": "Upgrade naar Pro",
+      "features": {
+        "0": "Alles uit Gratis",
+        "1": "150 AI-credits / maand (≈10 Pro-paginageneraties)",
+        "2": "Eigen domeinen (links.jouw-merk.com)",
+        "3": "Analytics-bewaring langer dan 90 dagen",
+        "4": "Prioriteit-e-mailondersteuning"
+      }
+    },
+    "selfHost": {
+      "name": "Self-host",
+      "suffix": "voor altijd",
+      "blurb": "Draai de hele stack op je eigen box.",
+      "cta": "Kloon de repo",
+      "features": {
+        "0": "AGPLv3 — van jou om aan te passen + te verspreiden",
+        "1": "Gebruik je eigen Gemini- / Kimi-API-sleutel",
+        "2": "Eén Hetzner-box draait alles",
+        "3": "Wildcard-subdomein via nginx",
+        "4": "Geen rekening, geen ratelimiet, geen toezicht"
+      }
+    }
+  },
+  "finalCta": {
+    "badge": "Bezit je stack",
+    "title": "Stop met betalen voor lock-in.<br></br><muted>Begin met het bezitten van je landingspagina's.</muted>",
+    "subtitle": "Eén prompt verwijderd van een landingspagina die <strong>van jou is, overal te deployen, in code die je kunt lezen.</strong>",
+    "generateBtn": "Genereer mijn pagina — gratis",
+    "githubAria": "OpenLen op GitHub",
+    "cloneBtn": "Klonen op GitHub",
+    "perks": {
+      "noCard": "Geen creditcard",
+      "agpl": "AGPLv3 — voor altijd van jou",
+      "selfHost": "Self-host op één box"
+    }
+  },
+  "footer": {
+    "tagline": "Een open lens op je landingspagina's. AI-gebouwd, jouw HTML, jouw subdomein — AGPLv3, geen lock-in.",
+    "githubAria": "OpenLen op GitHub",
+    "twitterAria": "Twitter",
+    "docsAria": "Docs",
+    "licensed": "Gelicentieerd onder AGPL-3.0",
+    "builtWith": "Gebouwd met OpenLen, uiteraard.",
+    "operational": "Alle systemen operationeel",
+    "product": {
+      "title": "Product",
+      "features": "Functies",
+      "pricing": "Prijzen",
+      "changelog": "Changelog",
+      "roadmap": "Roadmap"
+    },
+    "openSource": {
+      "title": "Open source",
+      "agplLicense": "AGPL-licentie",
+      "contribute": "Bijdragen"
+    },
+    "company": {
+      "title": "Bedrijf",
+      "blog": "Blog",
+      "privacy": "Privacy",
+      "terms": "Voorwaarden",
+      "contact": "Contact"
+    },
+    "legal": {
+      "title": "Juridisch",
+      "cookies": "Cookies",
+      "acceptableUse": "Acceptabel gebruik",
+      "refunds": "Terugbetaling & annulering",
+      "subprocessors": "Subverwerkers",
+      "docs": "Docs"
+    }
+  },
+  "gallery": {
+    "searchPlaceholder": "Zoek op naam, familie of toepassing…",
+    "searchAria": "Templates zoeken",
+    "clearSearch": "Zoekopdracht wissen",
+    "showing": "{shown} van {total} templates weergegeven",
+    "matching": "Overeenkomend met <code>{query}</code>",
+    "templateCount": "{count, plural, one {# template} other {# templates}}",
+    "featured": {
+      "eyebrow": "Toonaangevende showcases",
+      "title": "Uitgelichte templates",
+      "description": "Handgemaakte showcases met echte fotografie — voorbeelden van hoe je pagina er volledig ingevuld uit kan zien.",
+      "curated": "{count} samengesteld"
+    },
+    "empty": {
+      "message": "Geen templates komen overeen met <code>{query}</code>.",
+      "clear": "Zoekopdracht wissen"
+    }
+  },
+  "templateCard": {
+    "featured": "Uitgelicht",
+    "previewAlt": "Voorbeeld van template {name}",
+    "livePreview": "Live preview van {name}"
+  },
+  "useTemplate": {
+    "cta": "Gebruik deze template",
+    "creating": "Project aanmaken…",
+    "errorStatus": "Fout {status}: {detail}",
+    "unexpectedResponse": "Onverwacht antwoord van de server",
+    "networkError": "Netwerkfout"
+  }
+}

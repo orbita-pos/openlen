@@ -1,0 +1,150 @@
+{
+  "metaTitle": "Meine Seiten",
+  "header": {
+    "myPages": "Meine Seiten",
+    "newPage": "Neue Seite"
+  },
+  "status": {
+    "published": "Veröffentlicht",
+    "draft": "Entwurf",
+    "archived": "Archiviert"
+  },
+  "toolbar": {
+    "title": "Meine Seiten",
+    "pages": "{count, plural, one {# Seite} other {# Seiten}}",
+    "publishedCount": "{count} veröffentlicht",
+    "filterLabel": "Filter: {label}",
+    "clearFilter": "Filter zurücksetzen",
+    "searchPlaceholder": "Seiten durchsuchen…",
+    "filters": {
+      "all": "Alle Seiten",
+      "draft": "Entwürfe",
+      "published": "Veröffentlicht",
+      "archived": "Archiviert"
+    },
+    "sorts": {
+      "edited": "Zuletzt bearbeitet",
+      "created": "Erstellungsdatum",
+      "name": "Name (A → Z)"
+    },
+    "gridView": "Rasteransicht",
+    "listView": "Listenansicht"
+  },
+  "usage": {
+    "total": "Gesamt",
+    "totalPages": "{count, plural, one {# Seite} other {# Seiten}} in deinem Workspace",
+    "thisMonth": "Diesen Monat",
+    "creditsUsed": "{used} / {allotment} Credits verbraucht",
+    "freePlan": "Free-Tarif",
+    "proPlan": "Pro-Tarif",
+    "creditsLeft": "{count, plural, one {# Credit übrig} other {# Credits übrig}}",
+    "dismiss": "Ausblenden"
+  },
+  "list": {
+    "name": "Name",
+    "status": "Status",
+    "tags": "Tags",
+    "edited": "Bearbeitet",
+    "notDeployed": "Nicht veröffentlicht"
+  },
+  "card": {
+    "projectMenu": "Projektmenü",
+    "published": "Veröffentlicht",
+    "unpublishedChanges": "Nicht veröffentlichte Änderungen",
+    "open": "Öffnen",
+    "editedAgo": "Bearbeitet {time}",
+    "sections": "{count, plural, one {# Abschnitt} other {# Abschnitte}}"
+  },
+  "menu": {
+    "closeMenu": "Menü schließen",
+    "open": "Öffnen",
+    "duplicate": "Duplizieren",
+    "rename": "Umbenennen",
+    "downloadZip": ".zip herunterladen",
+    "openPublished": "Veröffentlichte Seite öffnen",
+    "publish": "Veröffentlichen…",
+    "archived": "Archiviert",
+    "archive": "Archivieren",
+    "delete": "Löschen"
+  },
+  "bulk": {
+    "selected": "ausgewählt",
+    "archive": "Archivieren",
+    "delete": "Löschen",
+    "cancel": "Abbrechen"
+  },
+  "empty": {
+    "badge": "Dein Workspace, frisch ausgepackt",
+    "title": "Deine erste Seite<br></br>in 60 Sekunden.",
+    "subtitle": "Beschreibe einfach, was du brauchst. Wir generieren Text, Layout, Bilder und Code.",
+    "examples": {
+      "invoicing": {
+        "title": "Rechnungs-SaaS auf Stripe-Basis",
+        "brief": "Eine Landingpage für ein Tool, das Freelancern hilft, Rechnungen im Blick zu behalten und schneller bezahlt zu werden."
+      },
+      "portfolio": {
+        "title": "Designer-Portfolio in Mexiko-Stadt",
+        "brief": "Persönliche Website für einen UI/UX-Designer mit 6 Case Studies und einem Verfügbarkeits-Badge."
+      },
+      "conference": {
+        "title": "Eventseite für eine Online-Konferenz",
+        "brief": "Event-Landingpage für eine 2-tägige Indie-Hacking-Konferenz, mit Speaker-Übersicht und Tickets."
+      },
+      "coffee": {
+        "title": "Abo für sortenreinen Kaffee",
+        "brief": "E-Commerce-Hero für ein Kaffee-Abo aus kleinen Röstchargen, geliefert jeden Dienstag."
+      }
+    },
+    "startFromScratch": "Von Grund auf starten"
+  },
+  "noResults": {
+    "title": "Keine Seiten passen zu „{query}“",
+    "subtitle": "Versuche eine andere Suche oder fang neu an.",
+    "clearSearch": "Suche zurücksetzen",
+    "createNew": "Neu erstellen"
+  },
+  "actions": {
+    "deleteConfirm": "Diese Seite löschen? Das lässt sich nicht rückgängig machen.",
+    "deleteError": "Löschen fehlgeschlagen: {error}",
+    "archiveError": "Archivieren fehlgeschlagen: {error}",
+    "renamePrompt": "Neuer Name",
+    "renameError": "Umbenennen fehlgeschlagen: {error}",
+    "duplicateError": "Duplizieren fehlgeschlagen: {error}",
+    "exportLoadError": "Projekt konnte nicht zum Export geladen werden.",
+    "zipError": "ZIP konnte nicht erstellt werden: {error}",
+    "bulkDeleteConfirm": "{count} Seiten löschen? Das lässt sich nicht rückgängig machen."
+  },
+  "relativeTime": {
+    "justNow": "gerade eben",
+    "minutesAgo": "vor {count} Min.",
+    "hoursAgo": "vor {count} Std.",
+    "yesterday": "gestern",
+    "daysAgo": "vor {count} T.",
+    "weeksAgo": "vor {count} Wo."
+  },
+  "appHeader": {
+    "toggleDarkMode": "Dark Mode umschalten",
+    "signedIn": "Angemeldet",
+    "myPages": "Meine Seiten",
+    "settings": "Einstellungen",
+    "billing": "Abrechnung",
+    "manageBilling": "Abrechnung verwalten",
+    "apiKeys": "API-Schlüssel",
+    "comingSoon": "{label} — demnächst verfügbar",
+    "signOut": "Abmelden"
+  },
+  "creditPill": {
+    "tooltip": "{balance} von {allotment} KI-Credits diesen Monat übrig"
+  },
+  "billing": {
+    "upgradeCta": "Auf Pro upgraden",
+    "upgradeHint": "150 KI-Credits / Monat",
+    "dismissBanner": "Ausblenden",
+    "success": "Du bist jetzt auf Pro — 150 KI-Credits pro Monat. Danke fürs Upgrade!",
+    "errors": {
+      "not_configured": "Die Abrechnung ist noch nicht eingerichtet. Bitte versuche es später erneut oder wende dich an den Support.",
+      "checkout_failed": "Dein Checkout konnte nicht gestartet werden. Bitte versuche es erneut.",
+      "portal_failed": "Dein Abrechnungsportal konnte nicht geöffnet werden. Stelle sicher, dass du ein aktives Abo hast, und versuche es dann erneut."
+    }
+  }
+}

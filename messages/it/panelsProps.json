@@ -1,0 +1,90 @@
+{
+  "header": {
+    "inspector": "Ispettore",
+    "closeInspector": "Chiudi ispettore"
+  },
+  "element": {
+    "pageSettings": "Impostazioni pagina"
+  },
+  "link": {
+    "title": "Link",
+    "destination": "Destinazione",
+    "destinationPlaceholder": "https://…  oppure  #sezione",
+    "openInNewTab": "Apri in una nuova scheda"
+  },
+  "image": {
+    "title": "Immagine",
+    "altText": "Testo alternativo",
+    "altPlaceholder": "Descrivi l'immagine",
+    "source": "Origine"
+  },
+  "style": {
+    "title": "Stile",
+    "textColor": "Colore del testo",
+    "background": "Sfondo"
+  },
+  "form": {
+    "title": "Modulo",
+    "notifyEmail": "Email di notifica",
+    "notifyEmailPlaceholder": "Predefinita: l'email del tuo account",
+    "successMessage": "Messaggio di conferma",
+    "successMessagePlaceholder": "✓ Grazie — abbiamo ricevuto il tuo messaggio.",
+    "redirect": "Reindirizzamento dopo l'invio",
+    "redirectPlaceholder": "https://…/grazie  (facoltativo)",
+    "invalidEmail": "Inserisci un indirizzo email valido.",
+    "invalidUrl": "Inserisci un URL completo che inizi con http:// o https://.",
+    "applyNote": "Le modifiche al modulo si applicano al prossimo deploy."
+  },
+  "testEmail": {
+    "send": "Invia email di prova",
+    "sending": "Invio in corso…",
+    "sentTo": "✓ Prova inviata a <mono>{to}</mono>. Controlla la posta in arrivo e la cartella spam.",
+    "sendFailed": "Impossibile inviare l'email di prova.",
+    "networkError": "Errore di rete."
+  },
+  "page": {
+    "loading": "Caricamento impostazioni pagina…",
+    "title": "Pagina",
+    "fieldTitle": "Titolo",
+    "fieldTitlePlaceholder": "Titolo della pagina",
+    "fieldDescription": "Descrizione",
+    "fieldDescriptionPlaceholder": "Breve descrizione per i risultati di ricerca",
+    "fieldSocialImage": "Immagine social (OG)",
+    "fieldFavicon": "Favicon",
+    "clickHint": "Clicca un elemento qualsiasi della pagina per modificarlo."
+  },
+  "privacy": {
+    "title": "Privacy",
+    "enableAnalytics": "Attiva le statistiche",
+    "note": "Visualizzazioni anonime + clic in uscita. Nessun cookie, nessun salvataggio dell'IP, nessun banner di consenso. Si applica alla prossima pubblicazione."
+  },
+  "health": {
+    "title": "Stato della pagina",
+    "passing": "superati",
+    "healthy": "La pagina è in salute.",
+    "issuesToAddress": "{count, plural, one {# problema da risolvere.} other {# problemi da risolvere.}}"
+  },
+  "logo": {
+    "title": "Logo",
+    "previewAlt": "Anteprima del logo del progetto",
+    "custom": "Logo personalizzato",
+    "default": "Predefinito — lettera iniziale",
+    "inlineSvg": "SVG inline",
+    "usedAs": "Usato come favicon, badge della scheda, fallback OG.",
+    "tabUpload": "Carica",
+    "tabPasteUrl": "Incolla URL",
+    "tabAuto": "Auto",
+    "uploading": "Caricamento in corso…",
+    "chooseImage": "Scegli immagine",
+    "uploadHint": "PNG / SVG / WebP. Le immagini quadrate rendono meglio.",
+    "urlHint": "Usa l'URL https:// completo di un'immagine ospitata online.",
+    "generateFromTitle": "Genera dal titolo",
+    "autoHint": "Disco corallo con la prima lettera di “{title}”.",
+    "defaultTitleFallback": "Pagina",
+    "clear": "Rimuovi logo",
+    "errorSaveFirst": "Salva il progetto prima di caricare un logo.",
+    "errorUploadStatus": "Caricamento non riuscito ({status})",
+    "errorUploadFailed": "Caricamento non riuscito",
+    "errorFullUrl": "Usa un URL https:// completo."
+  }
+}

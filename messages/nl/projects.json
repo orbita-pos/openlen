@@ -1,0 +1,150 @@
+{
+  "metaTitle": "Mijn pagina's",
+  "header": {
+    "myPages": "Mijn pagina's",
+    "newPage": "Nieuwe pagina"
+  },
+  "status": {
+    "published": "Gepubliceerd",
+    "draft": "Concept",
+    "archived": "Gearchiveerd"
+  },
+  "toolbar": {
+    "title": "Mijn pagina's",
+    "pages": "{count, plural, one {# pagina} other {# pagina's}}",
+    "publishedCount": "{count} gepubliceerd",
+    "filterLabel": "Filter: {label}",
+    "clearFilter": "Filter wissen",
+    "searchPlaceholder": "Pagina's zoeken…",
+    "filters": {
+      "all": "Alle pagina's",
+      "draft": "Concepten",
+      "published": "Gepubliceerd",
+      "archived": "Gearchiveerd"
+    },
+    "sorts": {
+      "edited": "Laatst bewerkt",
+      "created": "Aanmaakdatum",
+      "name": "Naam (A → Z)"
+    },
+    "gridView": "Rasterweergave",
+    "listView": "Lijstweergave"
+  },
+  "usage": {
+    "total": "Totaal",
+    "totalPages": "{count, plural, one {# pagina} other {# pagina's}} in je werkruimte",
+    "thisMonth": "Deze maand",
+    "creditsUsed": "{used} / {allotment} credits gebruikt",
+    "freePlan": "Gratis abonnement",
+    "proPlan": "Pro-abonnement",
+    "creditsLeft": "{count, plural, one {# credit over} other {# credits over}}",
+    "dismiss": "Sluiten"
+  },
+  "list": {
+    "name": "Naam",
+    "status": "Status",
+    "tags": "Tags",
+    "edited": "Bewerkt",
+    "notDeployed": "Niet gepubliceerd"
+  },
+  "card": {
+    "projectMenu": "Projectmenu",
+    "published": "Gepubliceerd",
+    "unpublishedChanges": "Niet-gepubliceerde wijzigingen",
+    "open": "Openen",
+    "editedAgo": "Bewerkt {time}",
+    "sections": "{count, plural, one {# sectie} other {# secties}}"
+  },
+  "menu": {
+    "closeMenu": "Menu sluiten",
+    "open": "Openen",
+    "duplicate": "Dupliceren",
+    "rename": "Naam wijzigen",
+    "downloadZip": ".zip downloaden",
+    "openPublished": "Gepubliceerde pagina openen",
+    "publish": "Publiceren…",
+    "archived": "Gearchiveerd",
+    "archive": "Archiveren",
+    "delete": "Verwijderen"
+  },
+  "bulk": {
+    "selected": "geselecteerd",
+    "archive": "Archiveren",
+    "delete": "Verwijderen",
+    "cancel": "Annuleren"
+  },
+  "empty": {
+    "badge": "Je werkruimte, vers uit de doos",
+    "title": "Je eerste pagina<br></br>in 60 seconden.",
+    "subtitle": "Beschrijf wat je wilt. Wij genereren de tekst, de lay-out, de beelden en de code.",
+    "examples": {
+      "invoicing": {
+        "title": "Facturatie-SaaS op basis van Stripe",
+        "brief": "Een landingspagina voor een tool waarmee freelancers facturen bijhouden en sneller betaald krijgen."
+      },
+      "portfolio": {
+        "title": "Portfolio van een ontwerper in Mexico-Stad",
+        "brief": "Persoonlijke site voor een UI/UX-ontwerper met 6 casestudy's en een beschikbaarheidsbadge."
+      },
+      "conference": {
+        "title": "Eventpagina voor een virtuele conferentie",
+        "brief": "Eventlandingspagina voor een tweedaagse indie-hacking-conferentie, met sprekersraster en tickets."
+      },
+      "coffee": {
+        "title": "Abonnement op single-origin koffie",
+        "brief": "E-commerce hero voor een ambachtelijk koffieabonnement, elke dinsdag bezorgd."
+      }
+    },
+    "startFromScratch": "Helemaal opnieuw beginnen"
+  },
+  "noResults": {
+    "title": "Geen pagina's komen overeen met \"{query}\"",
+    "subtitle": "Probeer een andere zoekopdracht of begin opnieuw.",
+    "clearSearch": "Zoekopdracht wissen",
+    "createNew": "Nieuwe maken"
+  },
+  "actions": {
+    "deleteConfirm": "Deze pagina verwijderen? Dit kan niet ongedaan worden gemaakt.",
+    "deleteError": "Verwijderen mislukt: {error}",
+    "archiveError": "Archiveren mislukt: {error}",
+    "renamePrompt": "Nieuwe naam",
+    "renameError": "Naam wijzigen mislukt: {error}",
+    "duplicateError": "Dupliceren mislukt: {error}",
+    "exportLoadError": "Project laden om te exporteren mislukt.",
+    "zipError": "Zip-bestand maken mislukt: {error}",
+    "bulkDeleteConfirm": "{count} pagina's verwijderen? Dit kan niet ongedaan worden gemaakt."
+  },
+  "relativeTime": {
+    "justNow": "zojuist",
+    "minutesAgo": "{count} min geleden",
+    "hoursAgo": "{count} u geleden",
+    "yesterday": "gisteren",
+    "daysAgo": "{count} d geleden",
+    "weeksAgo": "{count} w geleden"
+  },
+  "appHeader": {
+    "toggleDarkMode": "Donkere modus wisselen",
+    "signedIn": "Ingelogd",
+    "myPages": "Mijn pagina's",
+    "settings": "Instellingen",
+    "billing": "Facturatie",
+    "manageBilling": "Facturatie beheren",
+    "apiKeys": "API-sleutels",
+    "comingSoon": "{label} — binnenkort beschikbaar",
+    "signOut": "Uitloggen"
+  },
+  "creditPill": {
+    "tooltip": "{balance} van {allotment} AI-credits over deze maand"
+  },
+  "billing": {
+    "upgradeCta": "Upgraden naar Pro",
+    "upgradeHint": "150 AI-credits / maand",
+    "dismissBanner": "Sluiten",
+    "success": "Je zit nu op Pro — 150 AI-credits per maand. Bedankt voor je upgrade!",
+    "errors": {
+      "not_configured": "Facturatie is nog niet ingesteld. Probeer het later opnieuw of neem contact op met support.",
+      "checkout_failed": "We konden je afrekenen niet starten. Probeer het opnieuw.",
+      "portal_failed": "We konden je facturatieportaal niet openen. Controleer of je een actief abonnement hebt en probeer het opnieuw."
+    }
+  }
+}

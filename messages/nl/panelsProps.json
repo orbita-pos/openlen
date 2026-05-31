@@ -1,0 +1,90 @@
+{
+  "header": {
+    "inspector": "Inspecteur",
+    "closeInspector": "Inspecteur sluiten"
+  },
+  "element": {
+    "pageSettings": "Pagina-instellingen"
+  },
+  "link": {
+    "title": "Link",
+    "destination": "Bestemming",
+    "destinationPlaceholder": "https://…  of  #sectie",
+    "openInNewTab": "Openen in nieuw tabblad"
+  },
+  "image": {
+    "title": "Afbeelding",
+    "altText": "Alt-tekst",
+    "altPlaceholder": "Beschrijf de afbeelding",
+    "source": "Bron"
+  },
+  "style": {
+    "title": "Stijl",
+    "textColor": "Tekstkleur",
+    "background": "Achtergrond"
+  },
+  "form": {
+    "title": "Formulier",
+    "notifyEmail": "Meldingsmail",
+    "notifyEmailPlaceholder": "Standaard: het e-mailadres van je account",
+    "successMessage": "Succesbericht",
+    "successMessagePlaceholder": "✓ Bedankt — we hebben je bericht ontvangen.",
+    "redirect": "Doorsturen na verzenden",
+    "redirectPlaceholder": "https://…/bedankt  (optioneel)",
+    "invalidEmail": "Voer een geldig e-mailadres in.",
+    "invalidUrl": "Voer een volledige URL in die begint met http:// of https://.",
+    "applyNote": "Formulierwijzigingen worden toegepast bij je volgende deploy."
+  },
+  "testEmail": {
+    "send": "Testmail verzenden",
+    "sending": "Bezig met verzenden…",
+    "sentTo": "✓ Test verzonden naar <mono>{to}</mono>. Controleer je inbox en spammap.",
+    "sendFailed": "De testmail kon niet worden verzonden.",
+    "networkError": "Netwerkfout."
+  },
+  "page": {
+    "loading": "Pagina-instellingen laden…",
+    "title": "Pagina",
+    "fieldTitle": "Titel",
+    "fieldTitlePlaceholder": "Paginatitel",
+    "fieldDescription": "Beschrijving",
+    "fieldDescriptionPlaceholder": "Korte beschrijving voor zoekresultaten",
+    "fieldSocialImage": "Socialemedia-afbeelding (OG)",
+    "fieldFavicon": "Favicon",
+    "clickHint": "Klik op een element op de pagina om het te bewerken."
+  },
+  "privacy": {
+    "title": "Privacy",
+    "enableAnalytics": "Analytics inschakelen",
+    "note": "Anonieme paginaweergaven en uitgaande klikken. Geen cookies, geen IP-opslag, geen toestemmingsbanner. Wordt toegepast bij de volgende publicatie."
+  },
+  "health": {
+    "title": "Paginagezondheid",
+    "passing": "geslaagd",
+    "healthy": "Pagina ziet er gezond uit.",
+    "issuesToAddress": "{count, plural, one {# probleem op te lossen.} other {# problemen op te lossen.}}"
+  },
+  "logo": {
+    "title": "Logo",
+    "previewAlt": "Voorbeeld van projectlogo",
+    "custom": "Eigen logo",
+    "default": "Standaard — beginletter",
+    "inlineSvg": "Inline SVG",
+    "usedAs": "Gebruikt als favicon, kaartbadge en OG-fallback.",
+    "tabUpload": "Uploaden",
+    "tabPasteUrl": "URL plakken",
+    "tabAuto": "Automatisch",
+    "uploading": "Bezig met uploaden…",
+    "chooseImage": "Afbeelding kiezen",
+    "uploadHint": "PNG / SVG / WebP. Vierkante afbeeldingen ogen het best.",
+    "urlHint": "Gebruik de volledige https://-URL van een gehoste afbeelding.",
+    "generateFromTitle": "Genereren op basis van titel",
+    "autoHint": "Koraalkleurige schijf met de eerste letter van “{title}”.",
+    "defaultTitleFallback": "Pagina",
+    "clear": "Logo wissen",
+    "errorSaveFirst": "Sla het project op voordat je een logo uploadt.",
+    "errorUploadStatus": "Uploaden mislukt ({status})",
+    "errorUploadFailed": "Uploaden mislukt",
+    "errorFullUrl": "Gebruik een volledige https://-URL."
+  }
+}

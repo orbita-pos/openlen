@@ -1,0 +1,150 @@
+{
+  "metaTitle": "我的页面",
+  "header": {
+    "myPages": "我的页面",
+    "newPage": "新建页面"
+  },
+  "status": {
+    "published": "已发布",
+    "draft": "草稿",
+    "archived": "已归档"
+  },
+  "toolbar": {
+    "title": "我的页面",
+    "pages": "{count, plural, one {# 个页面} other {# 个页面}}",
+    "publishedCount": "{count} 个已发布",
+    "filterLabel": "筛选：{label}",
+    "clearFilter": "清除筛选",
+    "searchPlaceholder": "搜索页面…",
+    "filters": {
+      "all": "全部页面",
+      "draft": "草稿",
+      "published": "已发布",
+      "archived": "已归档"
+    },
+    "sorts": {
+      "edited": "最近编辑",
+      "created": "创建日期",
+      "name": "名称（A → Z）"
+    },
+    "gridView": "网格视图",
+    "listView": "列表视图"
+  },
+  "usage": {
+    "total": "总计",
+    "totalPages": "工作区中共有 {count, plural, one {# 个页面} other {# 个页面}}",
+    "thisMonth": "本月",
+    "creditsUsed": "已使用 {used} / {allotment} 积分",
+    "freePlan": "免费版",
+    "proPlan": "Pro 版",
+    "creditsLeft": "{count, plural, one {剩余 # 积分} other {剩余 # 积分}}",
+    "dismiss": "关闭"
+  },
+  "list": {
+    "name": "名称",
+    "status": "状态",
+    "tags": "标签",
+    "edited": "编辑时间",
+    "notDeployed": "未部署"
+  },
+  "card": {
+    "projectMenu": "项目菜单",
+    "published": "已发布",
+    "unpublishedChanges": "有未发布的更改",
+    "open": "打开",
+    "editedAgo": "编辑于 {time}",
+    "sections": "{count, plural, one {# 个版块} other {# 个版块}}"
+  },
+  "menu": {
+    "closeMenu": "关闭菜单",
+    "open": "打开",
+    "duplicate": "创建副本",
+    "rename": "重命名",
+    "downloadZip": "下载 .zip",
+    "openPublished": "打开已发布页面",
+    "publish": "发布…",
+    "archived": "已归档",
+    "archive": "归档",
+    "delete": "删除"
+  },
+  "bulk": {
+    "selected": "已选择",
+    "archive": "归档",
+    "delete": "删除",
+    "cancel": "取消"
+  },
+  "empty": {
+    "badge": "你的工作区，全新启程",
+    "title": "60 秒打造<br></br>你的第一个页面。",
+    "subtitle": "描述你想要的效果，我们会生成文案、布局、图片和代码。",
+    "examples": {
+      "invoicing": {
+        "title": "基于 Stripe 的发票 SaaS",
+        "brief": "为一款帮助自由职业者追踪发票、更快收款的工具打造的落地页。"
+      },
+      "portfolio": {
+        "title": "墨西哥城的设计师作品集",
+        "brief": "UI/UX 设计师的个人网站，含 6 个案例研究和一个接单状态徽章。"
+      },
+      "conference": {
+        "title": "线上会议活动页",
+        "brief": "为期 2 天的独立开发者大会活动落地页，含讲者阵容和门票。"
+      },
+      "coffee": {
+        "title": "单一产地咖啡订阅",
+        "brief": "小批量咖啡订阅的电商主视觉，每周二配送到家。"
+      }
+    },
+    "startFromScratch": "从空白开始"
+  },
+  "noResults": {
+    "title": "没有页面匹配“{query}”",
+    "subtitle": "试试换个搜索词，或重新开始。",
+    "clearSearch": "清除搜索",
+    "createNew": "新建"
+  },
+  "actions": {
+    "deleteConfirm": "删除此页面？此操作无法撤销。",
+    "deleteError": "删除失败：{error}",
+    "archiveError": "归档失败：{error}",
+    "renamePrompt": "新名称",
+    "renameError": "重命名失败：{error}",
+    "duplicateError": "创建副本失败：{error}",
+    "exportLoadError": "无法加载项目以导出。",
+    "zipError": "构建压缩包失败：{error}",
+    "bulkDeleteConfirm": "删除 {count} 个页面？此操作无法撤销。"
+  },
+  "relativeTime": {
+    "justNow": "刚刚",
+    "minutesAgo": "{count} 分钟前",
+    "hoursAgo": "{count} 小时前",
+    "yesterday": "昨天",
+    "daysAgo": "{count} 天前",
+    "weeksAgo": "{count} 周前"
+  },
+  "appHeader": {
+    "toggleDarkMode": "切换深色模式",
+    "signedIn": "已登录",
+    "myPages": "我的页面",
+    "settings": "设置",
+    "billing": "账单",
+    "manageBilling": "管理账单",
+    "apiKeys": "API 密钥",
+    "comingSoon": "{label} — 即将推出",
+    "signOut": "退出登录"
+  },
+  "creditPill": {
+    "tooltip": "本月还剩 {balance} / {allotment} AI 积分"
+  },
+  "billing": {
+    "upgradeCta": "升级到 Pro",
+    "upgradeHint": "每月 150 AI 积分",
+    "dismissBanner": "关闭",
+    "success": "你已升级到 Pro —— 每月 150 AI 积分。感谢升级！",
+    "errors": {
+      "not_configured": "账单功能尚未配置。请稍后重试或联系支持团队。",
+      "checkout_failed": "无法启动结账流程，请重试。",
+      "portal_failed": "无法打开你的账单门户。请确认你有有效的订阅后再重试。"
+    }
+  }
+}

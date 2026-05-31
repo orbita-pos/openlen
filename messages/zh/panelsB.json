@@ -1,0 +1,94 @@
+{
+  "time": {
+    "justNow": "刚刚",
+    "minutesAgo": "{count} 分钟前",
+    "hoursAgo": "{count} 小时前",
+    "yesterday": "昨天",
+    "daysAgo": "{count} 天前",
+    "weeksAgo": "{count} 周前"
+  },
+  "pages": {
+    "newPage": "新建页面",
+    "active": "进行中",
+    "published": "已发布",
+    "publishedUnpublishedEdits": "已发布 — 有未发布的修改",
+    "draft": "草稿",
+    "thumbnailOf": "{title} 的缩略图",
+    "thumbnailTitle": "{title} 缩略图",
+    "loadError": "加载项目失败",
+    "loadFailed": "无法加载你的项目。",
+    "empty": "还没有页面。",
+    "emptyHint": "创建一个，它会显示在这里。"
+  },
+  "versions": {
+    "loadError": "加载版本失败",
+    "restoreError": "无法恢复 — 请重试。",
+    "perProject": "版本按项目独立保存。",
+    "perProjectHint": "从「页面」选项卡打开一个项目，即可查看其历史记录。",
+    "title": "版本历史",
+    "subtitle": "在聊天、发布和克隆时自动生成快照。",
+    "empty": "还没有版本。",
+    "emptyHint": "下一次聊天或发布将自动创建一个版本。",
+    "current": "当前",
+    "restore": "恢复",
+    "restoring": "正在恢复…",
+    "cancel": "取消",
+    "confirmTitle": "要恢复到此版本吗？",
+    "confirmRollback": "页面将回退到：",
+    "confirmNote": "系统会先将你当前的页面保存为一个版本 — 如果改变主意，随时可以恢复回来。",
+    "thumbnailOf": "版本 {label} 的缩略图",
+    "thumbnailTitle": "{label} 缩略图",
+    "source": {
+      "initial": "初始",
+      "chat": "聊天",
+      "publish": "上线",
+      "restore": "撤销",
+      "manual": "已保存",
+      "styleMatch": "填充",
+      "reorder": "排序",
+      "replace": "素材"
+    }
+  },
+  "insights": {
+    "loadError": "加载数据洞察失败",
+    "title": "数据洞察",
+    "subtitle": "为此页面提供注重隐私的分析。",
+    "perProject": "数据洞察按项目独立保存。",
+    "perProjectHint": "从「页面」选项卡打开一个项目，即可查看其分析数据。",
+    "range": {
+      "all": "全部"
+    },
+    "emptyRange": "此时间范围内暂无数据。",
+    "emptyRangeHint": "发布你的页面并分享链接 — 访客一打开，分析数据就会开始记录。",
+    "kpi": {
+      "views": "浏览量",
+      "uniques": "独立访客",
+      "clicks": "点击量"
+    },
+    "visitsOverTime": "访问量趋势",
+    "dayCount": "{count, plural, one {# 天} other {# 天}}",
+    "topLinks": "热门链接",
+    "noClicks": "还没有外链点击。",
+    "referrers": "来源网站",
+    "directOnly": "仅直接访问",
+    "countries": "国家/地区",
+    "noCountryData": "暂无国家/地区数据",
+    "device": "设备",
+    "noDeviceData": "暂无设备数据",
+    "deviceType": {
+      "mobile": "手机",
+      "desktop": "电脑",
+      "tablet": "平板"
+    }
+  },
+  "leads": {
+    "loadError": "加载线索失败",
+    "perProject": "线索按项目独立保存。",
+    "perProjectHint": "从「页面」选项卡打开一个项目，即可查看其表单提交。",
+    "title": "线索",
+    "subtitle": "来自你已发布页面的表单提交。",
+    "empty": "还没有线索。",
+    "emptyHint": "发布你的页面 — 每一次表单提交都会汇集到这里。",
+    "emptySubmission": "空提交"
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "header": {
+    "inspector": "Inspektor",
+    "closeInspector": "Inspektor schließen"
+  },
+  "element": {
+    "pageSettings": "Seiteneinstellungen"
+  },
+  "link": {
+    "title": "Link",
+    "destination": "Ziel",
+    "destinationPlaceholder": "https://…  oder  #abschnitt",
+    "openInNewTab": "In neuem Tab öffnen"
+  },
+  "image": {
+    "title": "Bild",
+    "altText": "Alt-Text",
+    "altPlaceholder": "Beschreibe das Bild",
+    "source": "Quelle"
+  },
+  "style": {
+    "title": "Stil",
+    "textColor": "Textfarbe",
+    "background": "Hintergrund"
+  },
+  "form": {
+    "title": "Formular",
+    "notifyEmail": "Benachrichtigungs-E-Mail",
+    "notifyEmailPlaceholder": "Standard: E-Mail deines Kontos",
+    "successMessage": "Erfolgsmeldung",
+    "successMessagePlaceholder": "✓ Danke – wir haben deine Nachricht erhalten.",
+    "redirect": "Weiterleitung nach dem Absenden",
+    "redirectPlaceholder": "https://…/danke  (optional)",
+    "invalidEmail": "Gib eine gültige E-Mail-Adresse ein.",
+    "invalidUrl": "Gib eine vollständige URL ein, die mit http:// oder https:// beginnt.",
+    "applyNote": "Formularänderungen werden bei deinem nächsten Deploy wirksam."
+  },
+  "testEmail": {
+    "send": "Test-E-Mail senden",
+    "sending": "Wird gesendet…",
+    "sentTo": "✓ Test an <mono>{to}</mono> gesendet. Prüfe Posteingang und Spam-Ordner.",
+    "sendFailed": "Test-E-Mail konnte nicht gesendet werden.",
+    "networkError": "Netzwerkfehler."
+  },
+  "page": {
+    "loading": "Seiteneinstellungen werden geladen…",
+    "title": "Seite",
+    "fieldTitle": "Titel",
+    "fieldTitlePlaceholder": "Seitentitel",
+    "fieldDescription": "Beschreibung",
+    "fieldDescriptionPlaceholder": "Kurze Beschreibung für Suchergebnisse",
+    "fieldSocialImage": "Social-Bild (OG)",
+    "fieldFavicon": "Favicon",
+    "clickHint": "Klicke auf ein beliebiges Element der Seite, um es zu bearbeiten."
+  },
+  "privacy": {
+    "title": "Datenschutz",
+    "enableAnalytics": "Analytics aktivieren",
+    "note": "Anonyme Seitenaufrufe und ausgehende Klicks. Keine Cookies, keine IP-Speicherung, kein Einwilligungsbanner. Wird beim nächsten Veröffentlichen wirksam."
+  },
+  "health": {
+    "title": "Seitenzustand",
+    "passing": "bestanden",
+    "healthy": "Die Seite sieht gesund aus.",
+    "issuesToAddress": "{count, plural, one {# Problem zu beheben.} other {# Probleme zu beheben.}}"
+  },
+  "logo": {
+    "title": "Logo",
+    "previewAlt": "Vorschau des Projektlogos",
+    "custom": "Eigenes Logo",
+    "default": "Standard – Anfangsbuchstabe",
+    "inlineSvg": "Inline-SVG",
+    "usedAs": "Wird als Favicon, Karten-Badge und OG-Fallback verwendet.",
+    "tabUpload": "Hochladen",
+    "tabPasteUrl": "URL einfügen",
+    "tabAuto": "Auto",
+    "uploading": "Wird hochgeladen…",
+    "chooseImage": "Bild auswählen",
+    "uploadHint": "PNG / SVG / WebP. Quadratische Bilder sehen am besten aus.",
+    "urlHint": "Verwende die vollständige https://-URL eines gehosteten Bildes.",
+    "generateFromTitle": "Aus Titel erzeugen",
+    "autoHint": "Korallfarbene Scheibe mit dem ersten Buchstaben von „{title}“.",
+    "defaultTitleFallback": "Seite",
+    "clear": "Logo entfernen",
+    "errorSaveFirst": "Speichere das Projekt, bevor du ein Logo hochlädst.",
+    "errorUploadStatus": "Upload fehlgeschlagen ({status})",
+    "errorUploadFailed": "Upload fehlgeschlagen",
+    "errorFullUrl": "Verwende eine vollständige https://-URL."
+  }
+}

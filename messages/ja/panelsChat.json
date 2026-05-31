@@ -1,0 +1,70 @@
+{
+  "noProject": {
+    "title": "まだプロジェクトが読み込まれていません。",
+    "subtitle": "出発点を選ぶか、「ページ」から開いてください。"
+  },
+  "quickPrompts": {
+    "premium": "高級感を出す",
+    "linear": "Linear風に",
+    "brutalist": "ブルータリズム",
+    "playful": "もっと遊び心を",
+    "rewriteHero": "ヒーローを書き直す",
+    "testimonials": "お客様の声セクションを追加"
+  },
+  "empty": {
+    "title": "ページを説明してください",
+    "subtitle": "ページの編集はすべてお任せください。何でも聞いてください。"
+  },
+  "turn": {
+    "imageSent": "画像を送信しました"
+  },
+  "streaming": {
+    "writingPage": "ページを作成中 · {chars}",
+    "designing": "ページをデザインしています…",
+    "cancel": "キャンセル"
+  },
+  "applied": {
+    "label": "適用済み · {time}",
+    "undo": "元に戻す"
+  },
+  "reverted": "元に戻しました。",
+  "error": {
+    "retry": "再試行"
+  },
+  "errors": {
+    "requestFailed": "リクエストに失敗しました（{status}）",
+    "generic": "問題が発生しました。もう一度お試しください。",
+    "noFinalHtml": "最終的なHTMLが得られないままストリームが終了しました。もう一度お試しください。",
+    "cancelled": "キャンセルしました。",
+    "network": "ネットワークエラーです。もう一度お試しください。"
+  },
+  "chars": {
+    "count": "{count}文字",
+    "thousands": "{count}k文字"
+  },
+  "relativeTime": {
+    "justNow": "たった今",
+    "seconds": "{count}秒前",
+    "minutes": "{count}分前",
+    "hours": "{count}時間前",
+    "days": "{count}日前"
+  },
+  "composer": {
+    "scoped": "対象範囲：",
+    "clearScope": "範囲をクリア",
+    "image": "画像：",
+    "removeImage": "添付した画像を削除",
+    "placeholder": "ページの見た目や文章をどうしたいか説明してください…",
+    "placeholderScoped": "選択した{target}を変更…",
+    "attachImage": "画像を添付",
+    "attachImageTitle": "ページに挿入する画像を添付します",
+    "selectSection": "範囲を指定するセクションを選択",
+    "selectSectionTitle": "次のメッセージを1つのセクションに限定します",
+    "cancelSelection": "選択モードを終了（ESC）",
+    "cancelSelectionTitle": "プレビューで任意のセクションをクリック、またはESCでキャンセル",
+    "autofill": "自分の情報で自動入力",
+    "autofillLabel": "自動入力",
+    "autofillTitle": "あなたのビジネス情報でテンプレートを自動入力 — スクリーンショットをアップロードするかデータを入力してください",
+    "send": "送信"
+  }
+}

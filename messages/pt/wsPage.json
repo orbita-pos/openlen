@@ -1,0 +1,40 @@
+{
+  "defaultProjectName": "Página de Preços",
+  "chatDraft": {
+    "iconChanged": "Acabei de trocar o ícone aqui. Atualize o título e a descrição ao redor para que o sentido combine com o novo ícone.",
+    "imageChanged": "Acabei de trocar a imagem aqui. Atualize o texto ao redor para que combine com o que a imagem mostra."
+  },
+  "lockReason": {
+    "choosing": "Escolha primeiro um ponto de partida",
+    "created": "Disponível assim que sua página for criada"
+  },
+  "formEmail": {
+    "noProject": "Nenhum projeto carregado.",
+    "noDestination": "Defina antes um e-mail de notificação neste formulário (ou na sua conta).",
+    "sendFailed": "Falha no envio ({status}).",
+    "networkError": "Erro de rede."
+  },
+  "template": {
+    "networkError": "Erro de rede — tente novamente."
+  },
+  "aiStatus": {
+    "designing": "Criando o design da sua página…",
+    "thinking": "Pensando no design…",
+    "serverSaturated": "O servidor está muito ocupado — isso pode demorar um pouco. Não feche a página.",
+    "readingBrief": "Lendo seu briefing…"
+  },
+  "aiError": {
+    "title": "Falha na geração",
+    "tweak": "Ajuste seu briefing na barra lateral e tente novamente."
+  },
+  "inserted": {
+    "label": "<b>{name}</b> inserido",
+    "matching": "Combinando…",
+    "matchToPage": "✨ Combinar com a página",
+    "dismiss": "Dispensar"
+  },
+  "editing": {
+    "noHtml": "Este projeto ainda não tem conteúdo HTML.",
+    "loading": "Carregando projeto…"
+  }
+}

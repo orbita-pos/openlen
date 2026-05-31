@@ -1,0 +1,70 @@
+{
+  "noProject": {
+    "title": "尚未加载任何项目。",
+    "subtitle": "选择一个起点，或从「页面」中打开一个。"
+  },
+  "quickPrompts": {
+    "premium": "让它更高级",
+    "linear": "Linear 风格",
+    "brutalist": "粗野主义",
+    "playful": "更活泼一些",
+    "rewriteHero": "重写主视觉区",
+    "testimonials": "添加用户评价模块"
+  },
+  "empty": {
+    "title": "描述你的页面",
+    "subtitle": "我能完全掌控你的页面。尽管开口。"
+  },
+  "turn": {
+    "imageSent": "图片已发送"
+  },
+  "streaming": {
+    "writingPage": "正在编写页面 · {chars}",
+    "designing": "正在为你设计页面…",
+    "cancel": "取消"
+  },
+  "applied": {
+    "label": "已应用 · {time}",
+    "undo": "撤销"
+  },
+  "reverted": "已还原。",
+  "error": {
+    "retry": "重试"
+  },
+  "errors": {
+    "requestFailed": "请求失败（{status}）",
+    "generic": "出了点问题——请重试。",
+    "noFinalHtml": "数据流结束，但未返回最终 HTML——请重试。",
+    "cancelled": "已取消。",
+    "network": "网络错误——请重试。"
+  },
+  "chars": {
+    "count": "{count} 个字符",
+    "thousands": "{count}k 个字符"
+  },
+  "relativeTime": {
+    "justNow": "刚刚",
+    "seconds": "{count} 秒前",
+    "minutes": "{count} 分钟前",
+    "hours": "{count} 小时前",
+    "days": "{count} 天前"
+  },
+  "composer": {
+    "scoped": "已限定范围：",
+    "clearScope": "清除范围",
+    "image": "图片：",
+    "removeImage": "移除已附加的图片",
+    "placeholder": "描述你的页面应该长什么样、读起来如何…",
+    "placeholderScoped": "修改选中的{target}…",
+    "attachImage": "附加图片",
+    "attachImageTitle": "附加一张图片，插入到页面中",
+    "selectSection": "选择要限定的模块",
+    "selectSectionTitle": "将你的下一条消息限定到某个模块",
+    "cancelSelection": "退出选择模式（ESC）",
+    "cancelSelectionTitle": "点击预览中的任意模块，或按 ESC 取消",
+    "autofill": "用我的信息自动填充",
+    "autofillLabel": "自动填充",
+    "autofillTitle": "用你的业务信息自动填充模板——上传截图或输入你的数据",
+    "send": "发送"
+  }
+}

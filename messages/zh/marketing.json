@@ -1,0 +1,225 @@
+{
+  "nav": {
+    "links": {
+      "templates": "模板",
+      "features": "功能",
+      "pricing": "定价",
+      "docs": "文档"
+    },
+    "githubAria": "OpenLen on GitHub",
+    "toggleDark": "切换深色模式",
+    "signIn": "登录",
+    "tryFree": "免费试用"
+  },
+  "hero": {
+    "alphaBadge": "Alpha",
+    "alphaPitch": "{count} 套纯手工打造的模板 — Alpha 期间免费",
+    "title": "完全属于你的着陆页。<br></br><muted>AI 生成。</muted> <gradient>开源。</gradient>",
+    "subtitle": "用一句话生成、从 <strong>{count} 套模板</strong> 中挑选，或粘贴你自己的 HTML。编辑后发布到你的子域名，内置 <strong>隐私优先的数据分析</strong>。",
+    "tagline": "你的 HTML，你的子域名。AGPLv3 — 任意 fork、审计、自托管。无锁定，无 cookie 同意横幅。",
+    "pagesThisWeek": "本周已生成 <strong>{count, number}</strong> 个页面",
+    "githubAria": "OpenLen on GitHub",
+    "starOnGithub": "在 GitHub 上 Star"
+  },
+  "heroPrompt": {
+    "placeholder": "为我的 SaaS 做一个着陆页，主打……",
+    "tools": {
+      "attachImage": "添加图片",
+      "scopeSection": "限定到某个区块",
+      "autofill": "用你的信息自动填充",
+      "titleSuffix": "{label} — 页面创建后即可使用",
+      "ariaSuffix": "{label}（生成后可用）"
+    },
+    "generate": "生成",
+    "tryLabel": "试试"
+  },
+  "signInDialog": {
+    "close": "关闭",
+    "title": "登录后即可生成",
+    "body": "你需要一个账户来搭建页面 — 完全免费。你的提示词已保存，登录后即可从中断处继续。",
+    "createAccount": "创建免费账户",
+    "logIn": "登录"
+  },
+  "demoStrip": {
+    "eyebrow": "{count} 套纯手工模板 — 全部可直接发布",
+    "title": "真实可用的模板。<br></br><muted> 挑选、填充、发布。</muted>",
+    "description": "每套模板都是自包含的 HTML — Tailwind 与 Google Fonts 内联，无需 React 运行时。克隆后编辑文案和图片，发布到你的子域名。",
+    "browseAll": "浏览全部 {count} 套模板"
+  },
+  "features": {
+    "badge": "为什么选 OpenLen",
+    "title": "为那些<muted>宁愿拥有软件</muted>、也不愿租用软件的人打造。",
+    "items": {
+      "templates": {
+        "title": "{count} 套可投产模板",
+        "body": "手工打造的营销着陆页，外加 30 个 link-in-bio 创作者主页（主播、音乐人、摄影师、独立开发者）。任选其一，在 iframe 内自定义，发布到你的子域名。"
+      },
+      "analytics": {
+        "title": "内置隐私优先的数据分析",
+        "body": "逐链接点击追踪、页面访问量、热门来源、国家分布 — 不用 cookie，不存储 IP，无需同意横幅。设计上即符合 GDPR。与 Plausible 同样的理念，但完全归你所有。"
+      },
+      "ownHtml": {
+        "title": "你的 HTML，你的子域名",
+        "body": "输出纯 HTML + Tailwind。可立即发布到 '<you>'.openlen.com，也可拿走文件托管到任何地方 — Vercel、Cloudflare、GitHub Pages、你自己的服务器。无运行时锁定。"
+      },
+      "openSource": {
+        "title": "开源（AGPLv3）",
+        "body": "随你 fork、审计，把整套技术栈自托管在一台 Hetzner 主机上。生成器、编辑器、发布流水线和数据分析全都在仓库里。"
+      }
+    }
+  },
+  "comparison": {
+    "badge": "对比",
+    "title": "我们替你算好了账。",
+    "subtitle": "一份诚实、不加修饰的横向对比。更新于 2026 年 5 月。",
+    "cols": {
+      "price": "价格",
+      "yourCode": "你的代码",
+      "openSource": "开源",
+      "selfHost": "自托管",
+      "analytics": "数据分析"
+    },
+    "values": {
+      "freeAlpha": "免费（alpha）",
+      "builtIn": "内置",
+      "export": "导出",
+      "basic": "基础版",
+      "paidTier": "付费档位"
+    },
+    "thatsUs": "就是我们",
+    "footnote": "定价以 2026 年 5 月各家公开方案为准。之所以纳入 Linktree，是因为我们的 30 个 link-in-bio 创作者模板面向同一群用户 — 区别在于 HTML 和子域名都归你所有。"
+  },
+  "creatorShowcase": {
+    "badge": "为创作者打造",
+    "title": "<muted>真正属于你</muted>的链接页。",
+    "description": "{count} 套手工打造的 link-in-bio 模板，面向主播、音乐人、摄影师、独立开发者和高端创作者。内置逐链接点击追踪与页面分析 — 没有 Linktree 的抽成，没有 Google Analytics，也没有 cookie。",
+    "allCount": "全部 {count} 套创作者模板"
+  },
+  "pricing": {
+    "badge": "定价",
+    "title": "Alpha 期间免费。<muted>自托管永久免费。</muted>",
+    "subtitle": "免费起步，每月 20 个 AI 额度。升级 Pro 可享 150 个 — 或自托管整套技术栈，完全不设限制。",
+    "comingSoon": "即将推出",
+    "mostPopular": "最受欢迎",
+    "githubAria": "OpenLen on GitHub",
+    "footnote": "所有方案都包含基于 AGPL 的开源生成器。托管方案增加的是便利，而非功能。",
+    "free": {
+      "name": "免费版",
+      "suffix": "Alpha 期间",
+      "blurb": "一切功能可用。Alpha 期间没有任何付费墙。",
+      "cta": "免费试用",
+      "features": {
+        "0": "每月 20 个 AI 额度",
+        "1": "{count} 套模板，含 30 个 link-in-bio",
+        "2": "发布到 '<you>'.openlen.com",
+        "3": "隐私优先的数据分析 + 逐链接点击追踪",
+        "4": "带邮件通知的潜客表单"
+      }
+    },
+    "pro": {
+      "name": "Pro",
+      "suffix": "/月",
+      "blurb": "每月 150 个 AI 额度 — 约可生成 10 个 Pro 页面。",
+      "cta": "升级到 Pro",
+      "features": {
+        "0": "包含免费版全部功能",
+        "1": "每月 150 个 AI 额度（≈10 个 Pro 页面生成）",
+        "2": "自定义域名（links.your-brand.com）",
+        "3": "分析数据保留超过 90 天",
+        "4": "优先邮件支持"
+      }
+    },
+    "selfHost": {
+      "name": "自托管",
+      "suffix": "永久",
+      "blurb": "把整套技术栈跑在你自己的主机上。",
+      "cta": "克隆仓库",
+      "features": {
+        "0": "AGPLv3 — 可自由修改与再分发",
+        "1": "自带 Gemini / Kimi API 密钥",
+        "2": "单台 Hetzner 主机即可跑通一切",
+        "3": "通过 nginx 实现泛子域名",
+        "4": "无账单、无限速、无监管"
+      }
+    }
+  },
+  "finalCta": {
+    "badge": "掌控你的技术栈",
+    "title": "别再为锁定买单。<br></br><muted>从此真正拥有你的着陆页。</muted>",
+    "subtitle": "一句提示词，即可获得一个<strong>完全属于你、可部署到任何地方、代码清晰可读</strong>的着陆页。",
+    "generateBtn": "免费生成我的页面",
+    "githubAria": "OpenLen on GitHub",
+    "cloneBtn": "在 GitHub 上克隆",
+    "perks": {
+      "noCard": "无需信用卡",
+      "agpl": "AGPLv3 — 永久归你所有",
+      "selfHost": "单台主机即可自托管"
+    }
+  },
+  "footer": {
+    "tagline": "为你的着陆页带来一扇开放之窗。AI 生成，你的 HTML，你的子域名 — AGPLv3，无锁定。",
+    "githubAria": "OpenLen on GitHub",
+    "twitterAria": "Twitter",
+    "docsAria": "文档",
+    "licensed": "采用 AGPL-3.0 许可",
+    "builtWith": "自然，本站也是用 OpenLen 搭建的。",
+    "operational": "所有系统运行正常",
+    "product": {
+      "title": "产品",
+      "features": "功能",
+      "pricing": "定价",
+      "changelog": "更新日志",
+      "roadmap": "路线图"
+    },
+    "openSource": {
+      "title": "开源",
+      "agplLicense": "AGPL 许可证",
+      "contribute": "参与贡献"
+    },
+    "company": {
+      "title": "公司",
+      "blog": "博客",
+      "privacy": "隐私",
+      "terms": "条款",
+      "contact": "联系我们"
+    },
+    "legal": {
+      "title": "法律",
+      "cookies": "Cookie",
+      "acceptableUse": "可接受使用政策",
+      "refunds": "退款与取消",
+      "subprocessors": "子处理方",
+      "docs": "文档"
+    }
+  },
+  "gallery": {
+    "searchPlaceholder": "按名称、系列或使用场景搜索……",
+    "searchAria": "搜索模板",
+    "clearSearch": "清除搜索",
+    "showing": "正在显示 {total} 套模板中的 {shown} 套",
+    "matching": "匹配 <code>{query}</code>",
+    "templateCount": "{count, plural, one {# 套模板} other {# 套模板}}",
+    "featured": {
+      "eyebrow": "顶级精选展示",
+      "title": "精选模板",
+      "description": "采用真实摄影作品的手工展示案例 — 让你预览页面完整填充后的样子。",
+      "curated": "{count} 套精选"
+    },
+    "empty": {
+      "message": "没有模板匹配 <code>{query}</code>。",
+      "clear": "清除搜索"
+    }
+  },
+  "templateCard": {
+    "featured": "精选",
+    "previewAlt": "{name} 模板预览",
+    "livePreview": "{name} 实时预览"
+  },
+  "useTemplate": {
+    "cta": "使用此模板",
+    "creating": "正在创建项目……",
+    "errorStatus": "错误 {status}：{detail}",
+    "unexpectedResponse": "服务器返回了意外的响应",
+    "networkError": "网络错误"
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "common": {
+    "loading": "Carregando…"
+  },
+  "projectName": {
+    "workspaceLabel": "Área de trabalho",
+    "untitled": "Sem título"
+  },
+  "save": {
+    "saving": "Salvando…",
+    "saved": "Salvo · agora mesmo"
+  },
+  "deploy": {
+    "button": "Publicar",
+    "shipIt": "Mandar pro ar",
+    "liveAt": "No ar em {subdomain}.openlen.com",
+    "unpublishedChanges": "Você tem alterações não publicadas.",
+    "open": "Abrir",
+    "republish": "Republicar",
+    "unpublish": "Despublicar",
+    "publishCta": {
+      "title": "Publicar em openlen.com",
+      "subtitle": "Hospedagem grátis no seu próprio subdomínio"
+    },
+    "customDomain": {
+      "title": "Domínio personalizado",
+      "subtitle": "Sirva esta página a partir do seu próprio domínio"
+    },
+    "providers": {
+      "vercel": "Publicar na Vercel",
+      "github": "Enviar para o GitHub",
+      "vercelSubtitle": "Sua própria URL *.vercel.app",
+      "githubSubtitle": "Um repositório do GitHub Pages"
+    },
+    "previousDeploys": "Publicações anteriores",
+    "noPriorDeploys": "Ainda não há publicações anteriores."
+  },
+  "rollback": {
+    "confirm": "Reverter o site no ar para a publicação {sha}? Os visitantes verão esta versão anterior em segundos.",
+    "errorGone": "Essa publicação foi removida do disco e não pode ser restaurada.",
+    "errorGeneric": "Falha na reversão. Tente novamente.",
+    "inProgress": "Revertendo…"
+  },
+  "theme": {
+    "lightMode": "Modo claro",
+    "darkMode": "Modo escuro"
+  },
+  "account": {
+    "fallbackName": "Conta",
+    "allProjects": "Todos os projetos",
+    "signOut": "Sair"
+  },
+  "relativeTime": {
+    "seconds": "há {count}s",
+    "minutes": "há {count}min",
+    "hours": "há {count}h",
+    "days": "há {count}d"
+  }
+}

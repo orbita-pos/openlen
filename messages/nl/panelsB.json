@@ -1,0 +1,94 @@
+{
+  "time": {
+    "justNow": "zojuist",
+    "minutesAgo": "{count} min geleden",
+    "hoursAgo": "{count} u geleden",
+    "yesterday": "gisteren",
+    "daysAgo": "{count} d geleden",
+    "weeksAgo": "{count} w geleden"
+  },
+  "pages": {
+    "newPage": "Nieuwe pagina",
+    "active": "Actief",
+    "published": "Gepubliceerd",
+    "publishedUnpublishedEdits": "Gepubliceerd — heeft niet-gepubliceerde wijzigingen",
+    "draft": "Concept",
+    "thumbnailOf": "Miniatuur van {title}",
+    "thumbnailTitle": "Miniatuur van {title}",
+    "loadError": "Projecten laden mislukt",
+    "loadFailed": "We konden je projecten niet laden.",
+    "empty": "Nog geen pagina's.",
+    "emptyHint": "Maak er een om hem hier te zien."
+  },
+  "versions": {
+    "loadError": "Versies laden mislukt",
+    "restoreError": "Herstellen mislukt — probeer het opnieuw.",
+    "perProject": "Versies horen bij een project.",
+    "perProjectHint": "Open een project via het tabblad Pagina's om de geschiedenis te zien.",
+    "title": "Versiegeschiedenis",
+    "subtitle": "Automatische snapshots bij chat, publiceren en klonen.",
+    "empty": "Nog geen versies.",
+    "emptyHint": "De volgende chat of publicatie maakt er een aan.",
+    "current": "Huidig",
+    "restore": "Herstellen",
+    "restoring": "Bezig met herstellen…",
+    "cancel": "Annuleren",
+    "confirmTitle": "Deze versie herstellen?",
+    "confirmRollback": "De pagina wordt teruggezet naar:",
+    "confirmNote": "Je huidige pagina wordt eerst als versie opgeslagen — je kunt altijd terug als je je bedenkt.",
+    "thumbnailOf": "Miniatuur van versie {label}",
+    "thumbnailTitle": "Miniatuur van {label}",
+    "source": {
+      "initial": "Start",
+      "chat": "Chat",
+      "publish": "Live",
+      "restore": "Ongedaan",
+      "manual": "Opgeslagen",
+      "styleMatch": "Vullen",
+      "reorder": "Volgorde",
+      "replace": "Asset"
+    }
+  },
+  "insights": {
+    "loadError": "Inzichten laden mislukt",
+    "title": "Inzichten",
+    "subtitle": "Privacyvriendelijke analytics voor deze pagina.",
+    "perProject": "Inzichten horen bij een project.",
+    "perProjectHint": "Open een project via het tabblad Pagina's om de analytics te zien.",
+    "range": {
+      "all": "Alles"
+    },
+    "emptyRange": "Nog geen data voor dit bereik.",
+    "emptyRangeHint": "Publiceer je pagina en deel de link — de analytics starten zodra een bezoeker binnenkomt.",
+    "kpi": {
+      "views": "Weergaven",
+      "uniques": "Unieke bezoekers",
+      "clicks": "Klikken"
+    },
+    "visitsOverTime": "Bezoeken in de tijd",
+    "dayCount": "{count, plural, one {# dag} other {# dagen}}",
+    "topLinks": "Topkoppelingen",
+    "noClicks": "Nog geen uitgaande klikken.",
+    "referrers": "Verwijzers",
+    "directOnly": "Alleen direct",
+    "countries": "Landen",
+    "noCountryData": "Geen landgegevens",
+    "device": "Apparaat",
+    "noDeviceData": "Geen apparaatgegevens",
+    "deviceType": {
+      "mobile": "Mobiel",
+      "desktop": "Desktop",
+      "tablet": "Tablet"
+    }
+  },
+  "leads": {
+    "loadError": "Leads laden mislukt",
+    "perProject": "Leads horen bij een project.",
+    "perProjectHint": "Open een project via het tabblad Pagina's om de inzendingen te zien.",
+    "title": "Leads",
+    "subtitle": "Formulierinzendingen van je gepubliceerde pagina.",
+    "empty": "Nog geen leads.",
+    "emptyHint": "Publiceer je pagina — elke formulierinzending komt hier terecht.",
+    "emptySubmission": "Lege inzending"
+  }
+}

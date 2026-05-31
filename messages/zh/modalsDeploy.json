@@ -1,0 +1,49 @@
+{
+  "header": {
+    "titleVercel": "部署到 Vercel",
+    "titleGithub": "推送到 GitHub",
+    "subtitleVercel": "将此页面发布到你自己的 Vercel 账户。",
+    "subtitleGithub": "将此页面发布到 GitHub Pages 仓库。"
+  },
+  "close": "关闭",
+  "notConfigured": {
+    "title": "暂不可用",
+    "body": "此 OpenLen 实例尚未配置该部署目标。"
+  },
+  "connect": {
+    "lead": "连接你的 {provider} 账户即可将此页面发布到那里。",
+    "button": "连接 {provider}",
+    "redirecting": "正在跳转…"
+  },
+  "connected": {
+    "as": "已以 {account} 身份连接",
+    "asAnon": "已连接",
+    "nameLabel": "名称",
+    "nameHintVercel": "用于 URL：name.vercel.app",
+    "nameHintGithub": "用于 URL：you.github.io/name",
+    "deploy": "部署",
+    "redeploy": "重新部署",
+    "deploying": "正在部署…",
+    "live": "已上线",
+    "open": "打开",
+    "upToDate": "已与你最新的编辑保持同步。",
+    "drift": "你有尚未部署的更改。",
+    "propagation": "GitHub Pages 首次上线可能需要一分钟。",
+    "publishing": "正在发布…上线最多可能需要一分钟。立即打开可能会短暂显示 404——刷新一下即可。",
+    "disconnect": "断开连接"
+  },
+  "errors": {
+    "loadFailed": "无法加载连接。",
+    "invalidName": "请使用小写字母、数字和连字符（1–39 个字符，开头和结尾不能是连字符）。",
+    "notConnected": "请先连接你的账户。",
+    "tokenInvalid": "你的连接已过期——请重新连接。",
+    "deployFailed": "部署失败：{message}",
+    "deployGeneric": "部署失败，请重试。",
+    "network": "网络错误，请重试。",
+    "denied": "授权已取消。",
+    "state": "连接检查失败，请重试。",
+    "exchange": "无法完成连接，请重试。",
+    "not_configured": "此 OpenLen 实例尚未配置该部署目标。"
+  },
+  "confirmDisconnect": "要断开 {provider} 的连接吗？你已部署的页面将保持上线——只是下次部署时需要重新连接。"
+}
