@@ -1,0 +1,70 @@
+{
+  "noProject": {
+    "title": "Noch kein Projekt geladen.",
+    "subtitle": "Wähle einen Ausgangspunkt oder öffne eines unter „Seiten“."
+  },
+  "quickPrompts": {
+    "premium": "Hochwertiger gestalten",
+    "linear": "Linear-Style",
+    "brutalist": "Brutalistisch",
+    "playful": "Verspielter",
+    "rewriteHero": "Hero neu schreiben",
+    "testimonials": "Kundenstimmen-Bereich hinzufügen"
+  },
+  "empty": {
+    "title": "Beschreibe deine Seite",
+    "subtitle": "Ich habe volle Kontrolle über deine Seite. Frag mich alles."
+  },
+  "turn": {
+    "imageSent": "Bild gesendet"
+  },
+  "streaming": {
+    "writingPage": "Seite wird geschrieben · {chars}",
+    "designing": "Deine Seite wird gestaltet…",
+    "cancel": "Abbrechen"
+  },
+  "applied": {
+    "label": "Angewendet · {time}",
+    "undo": "Rückgängig"
+  },
+  "reverted": "Zurückgesetzt.",
+  "error": {
+    "retry": "Erneut versuchen"
+  },
+  "errors": {
+    "requestFailed": "Anfrage fehlgeschlagen ({status})",
+    "generic": "Etwas ist schiefgelaufen — versuch es noch einmal.",
+    "noFinalHtml": "Stream endete ohne fertiges HTML — versuch es noch einmal.",
+    "cancelled": "Abgebrochen.",
+    "network": "Netzwerkfehler — versuch es noch einmal."
+  },
+  "chars": {
+    "count": "{count} Zeichen",
+    "thousands": "{count}k Zeichen"
+  },
+  "relativeTime": {
+    "justNow": "gerade eben",
+    "seconds": "vor {count}s",
+    "minutes": "vor {count}min",
+    "hours": "vor {count}h",
+    "days": "vor {count}d"
+  },
+  "composer": {
+    "scoped": "Eingegrenzt:",
+    "clearScope": "Eingrenzung aufheben",
+    "image": "Bild:",
+    "removeImage": "Angehängtes Bild entfernen",
+    "placeholder": "Beschreibe, wie deine Seite aussehen oder klingen soll…",
+    "placeholderScoped": "{target} ändern…",
+    "attachImage": "Bild anhängen",
+    "attachImageTitle": "Ein Bild anhängen, um es in die Seite einzufügen",
+    "selectSection": "Bereich zum Eingrenzen auswählen",
+    "selectSectionTitle": "Deine nächste Nachricht auf einen Bereich eingrenzen",
+    "cancelSelection": "Auswahlmodus abbrechen (ESC)",
+    "cancelSelectionTitle": "Klicke einen Bereich in der Vorschau an oder drücke ESC zum Abbrechen",
+    "autofill": "Mit meinen Daten ausfüllen",
+    "autofillLabel": "Automatisch ausfüllen",
+    "autofillTitle": "Die Vorlage mit deinen Geschäftsdaten ausfüllen — lade einen Screenshot hoch oder gib deine Daten ein",
+    "send": "Senden"
+  }
+}

@@ -1,0 +1,190 @@
+{
+  "common": {
+    "close": "关闭",
+    "closeButton": "关闭",
+    "cancel": "取消",
+    "apply": "应用",
+    "loading": "加载中…"
+  },
+  "header": {
+    "iconTitle": "替换图标",
+    "imageTitle": "替换图片",
+    "iconSubtitle": "选择一个 Lucide 图标进行替换。将保留原图标的尺寸和颜色。",
+    "imageSubtitle": "粘贴图片 URL（Unsplash、你的 CDN，任何来源均可）。将保留插槽的宽高比。"
+  },
+  "icon": {
+    "searchPlaceholder": "搜索 100+ 个图标…",
+    "current": "当前",
+    "noMatch": "没有图标匹配“{query}”。",
+    "pickAria": "选择 {name}"
+  },
+  "image": {
+    "tabs": {
+      "openlen": "OpenLen 提供",
+      "paste": "粘贴 URL",
+      "unsplash": "Unsplash",
+      "upload": "上传"
+    }
+  },
+  "paste": {
+    "urlLabel": "图片 URL",
+    "invalidUrl": "看起来不是有效的 http(s) URL。",
+    "altLabel": "替代文本 <hint>· 可选，但有助于无障碍访问</hint>",
+    "altPlaceholder": "描述这张图片…",
+    "preview": "预览",
+    "previewError": "无法加载该 URL。请确认它是公开且可访问的。",
+    "previewAlt": "预览",
+    "applyImage": "应用图片"
+  },
+  "openlen": {
+    "searchPlaceholder": "搜索 {count} 张 OpenLen 图片…",
+    "loadFailed": "加载失败",
+    "noMatch": "没有图片匹配“{query}”。",
+    "empty": "这里还什么都没有。",
+    "footer": "由 OpenLen 精选的图片 — 自托管版本已包含",
+    "useImageAria": "使用 OpenLen 图片：{alt}",
+    "filters": {
+      "all": "全部",
+      "3d-abstract": "3D",
+      "gradient-bg": "渐变",
+      "device-mockup": "样机",
+      "creator-mockup": "创作者",
+      "product-still-life": "产品",
+      "claymorph": "黏土",
+      "interior-editorial": "室内",
+      "architecture-editorial": "建筑",
+      "nature-editorial": "自然",
+      "travel-editorial": "旅行",
+      "wedding-editorial": "婚礼",
+      "music-editorial": "音乐",
+      "gaming-editorial": "游戏",
+      "food-editorial": "美食",
+      "lifestyle-editorial": "生活方式",
+      "sports-editorial": "运动",
+      "pet-editorial": "宠物",
+      "fashion-editorial": "时尚"
+    },
+    "badges": {
+      "3d-abstract": "3D",
+      "gradient-bg": "渐变",
+      "device-mockup": "样机",
+      "creator-mockup": "创作者",
+      "product-still-life": "产品",
+      "claymorph": "黏土",
+      "interior-editorial": "室内",
+      "architecture-editorial": "建筑",
+      "nature-editorial": "自然",
+      "travel-editorial": "旅行",
+      "wedding-editorial": "婚礼",
+      "music-editorial": "音乐",
+      "gaming-editorial": "游戏",
+      "food-editorial": "美食",
+      "lifestyle-editorial": "生活方式",
+      "sports-editorial": "运动",
+      "pet-editorial": "宠物",
+      "fashion-editorial": "时尚"
+    }
+  },
+  "unsplash": {
+    "searchFailed": "搜索失败",
+    "demoPlaceholder": "演示模式 — 设置 UNSPLASH_ACCESS_KEY 以启用完整搜索",
+    "searchPlaceholder": "搜索 Unsplash 图片…",
+    "noMatch": "没有图片匹配“{query}”。",
+    "typeToSearch": "输入以搜索。",
+    "attribution": "图片来自 <link>Unsplash</link>",
+    "demoBadge": "演示 · {count} 张图片",
+    "usePhotoAria": "使用 {author} 的图片：{alt}"
+  },
+  "upload": {
+    "tooLarge": "文件过大。最大 {max} MB。",
+    "notImage": "这不是图片 — 请选择 png/jpg/webp/gif/svg 格式。",
+    "networkError": "上传时发生网络错误。",
+    "failed": "上传失败（{status}）",
+    "unavailable": "上传功能仅在项目内可用。",
+    "previewAlt": "上传预览",
+    "swapHint": "再次点击或拖入另一张图片即可替换。",
+    "dropHere": "将图片拖放到此处",
+    "browseHint": "或点击浏览 · png / jpg / webp / gif / svg · 最大 {max} MB",
+    "altLabel": "替代文本 <hint>· 可选</hint>",
+    "uploadingProgress": "上传中… {percent}%",
+    "storedIn": "存储在你项目的资源存储空间中",
+    "uploading": "上传中…",
+    "uploadApply": "上传并应用"
+  },
+  "autofill": {
+    "title": "用你的信息填充",
+    "subtitle": "上传一张包含你信息的图片 — 或者直接描述你的业务。模板会填入你的真实内容，设计保持不变。",
+    "subtitleShort": "图片或文字 → 模板自动填入你的内容。",
+    "tabs": {
+      "image": "上传图片",
+      "text": "用文字描述"
+    },
+    "describe": {
+      "label": "介绍一下你的业务",
+      "placeholder": "例如：一家位于蒙特雷的塔可店，自 1989 年起供应炭烤塔可。家族经营，食材新鲜。通过 WhatsApp 接单。",
+      "hint": "随你怎么写都行 — 我会从中提取名称、一句标语和行动号召，然后填入页面。"
+    },
+    "image": {
+      "previewAlt": "预览",
+      "sizeChange": "{kb} KB · 点击更换",
+      "dropPrompt": "拖入图片、点击选择，或从剪贴板粘贴",
+      "hint": "JPG 或 PNG · 最大 8 MB · 截图、菜单照片、宣传册…"
+    },
+    "fields": {
+      "businessName": {
+        "label": "业务名称 *",
+        "placeholder": "Juan's Tacos"
+      },
+      "industry": {
+        "label": "行业 / 类型",
+        "placeholder": "传统墨西哥塔可店"
+      },
+      "tagline": {
+        "label": "标语（一句有力的话）",
+        "placeholder": "自 1989 年起，正宗炭烤塔可"
+      },
+      "pitch": {
+        "label": "简介（关于你业务的 1-2 句话）",
+        "placeholder": "30 多年来供应蒙特雷最好的炭烤塔可。家族传承，食材新鲜。"
+      },
+      "heroKeyword": {
+        "label": "主视觉关键词",
+        "placeholder": "传承"
+      },
+      "ctaPrimary": {
+        "label": "主要行动号召",
+        "placeholder": "在 WhatsApp 下单"
+      }
+    },
+    "stages": {
+      "extracting": "正在读取图片…",
+      "tagging": "正在准备模板…",
+      "calling-model": "Kimi K2.6 正在撰写…",
+      "applying": "正在应用更改…",
+      "persisting": "正在保存…",
+      "done": "完成",
+      "error": "错误"
+    },
+    "doneStatus": "✓ 完成 · {seconds}秒",
+    "tips": {
+      "image": "提示：菜单照片、网站截图、宣传册 — 什么都可以。",
+      "text": "提示：用一两句话说明你做什么就够了 — 其余的交给 AI。"
+    },
+    "processing": "处理中…",
+    "errors": {
+      "notImage": "该文件不是图片。",
+      "onlyJpgPng": "我们仅支持 JPG 或 PNG。",
+      "tooLarge": "图片过大（{size} MB，最大 8 MB）。",
+      "tooSmallBytes": "图片过小 — 请尝试截图或真实照片（最小 4 KB）。",
+      "tooSmallDims": "图片过小（{width}×{height}px）。最小为 200×200 — 请尝试网站截图或菜单照片。",
+      "cantRead": "我们无法读取这张图片。请换一张试试。",
+      "uploadFirst": "请先上传一张图片。",
+      "needBusinessName": "至少需要填写业务名称。",
+      "needDescription": "请简单介绍一下你的业务 — 至少一句话。",
+      "network": "网络错误",
+      "server": "服务器 {status}：{detail}",
+      "streamRead": "数据流读取失败",
+      "unknown": "未知错误"
+    }
+  }
+}

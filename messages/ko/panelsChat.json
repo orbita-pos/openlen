@@ -1,0 +1,70 @@
+{
+  "noProject": {
+    "title": "아직 불러온 프로젝트가 없습니다.",
+    "subtitle": "시작점을 선택하거나 페이지에서 하나를 열어 보세요."
+  },
+  "quickPrompts": {
+    "premium": "고급스럽게 만들기",
+    "linear": "Linear 스타일",
+    "brutalist": "브루탈리즘",
+    "playful": "더 발랄하게",
+    "rewriteHero": "히어로 다시 쓰기",
+    "testimonials": "후기 섹션 추가"
+  },
+  "empty": {
+    "title": "페이지를 설명해 주세요",
+    "subtitle": "페이지를 완전히 제어할 수 있어요. 무엇이든 물어보세요."
+  },
+  "turn": {
+    "imageSent": "이미지 전송됨"
+  },
+  "streaming": {
+    "writingPage": "페이지 작성 중 · {chars}",
+    "designing": "페이지를 디자인하는 중…",
+    "cancel": "취소"
+  },
+  "applied": {
+    "label": "적용됨 · {time}",
+    "undo": "실행 취소"
+  },
+  "reverted": "되돌렸습니다.",
+  "error": {
+    "retry": "다시 시도"
+  },
+  "errors": {
+    "requestFailed": "요청 실패 ({status})",
+    "generic": "문제가 발생했습니다 — 다시 시도해 주세요.",
+    "noFinalHtml": "최종 HTML 없이 스트림이 종료되었습니다 — 다시 시도해 주세요.",
+    "cancelled": "취소되었습니다.",
+    "network": "네트워크 오류 — 다시 시도해 주세요."
+  },
+  "chars": {
+    "count": "{count}자",
+    "thousands": "{count}천 자"
+  },
+  "relativeTime": {
+    "justNow": "방금 전",
+    "seconds": "{count}초 전",
+    "minutes": "{count}분 전",
+    "hours": "{count}시간 전",
+    "days": "{count}일 전"
+  },
+  "composer": {
+    "scoped": "범위 지정:",
+    "clearScope": "범위 해제",
+    "image": "이미지:",
+    "removeImage": "첨부된 이미지 제거",
+    "placeholder": "페이지의 모습이나 문구를 어떻게 만들지 설명해 주세요…",
+    "placeholderScoped": "선택한 {target} 변경…",
+    "attachImage": "이미지 첨부",
+    "attachImageTitle": "페이지에 삽입할 이미지를 첨부하세요",
+    "selectSection": "범위를 지정할 섹션 선택",
+    "selectSectionTitle": "다음 메시지의 범위를 한 섹션으로 지정",
+    "cancelSelection": "선택 모드 취소 (ESC)",
+    "cancelSelectionTitle": "미리보기에서 아무 섹션이나 클릭하거나 ESC로 취소하세요",
+    "autofill": "내 정보로 자동 채우기",
+    "autofillLabel": "자동 채우기",
+    "autofillTitle": "내 비즈니스 정보로 템플릿을 자동 채우기 — 스크린샷을 업로드하거나 데이터를 입력하세요",
+    "send": "보내기"
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "aiBrief": {
+    "title": "Beschrijf je pagina",
+    "subtitle": "Vertel me wat je wilt — ik stel de pagina voor je samen.",
+    "placeholder": "Een landingspagina voor mijn SaaS die…",
+    "attachImage": "Voeg een afbeelding toe — beschikbaar na het genereren",
+    "scopeSection": "Beperk tot een sectie — beschikbaar na het genereren",
+    "autofill": "Automatisch invullen met mijn gegevens — beschikbaar na het genereren",
+    "availableAfter": "Beschikbaar zodra je project is aangemaakt",
+    "generate": "Genereren"
+  },
+  "brief": {
+    "label": "Briefing",
+    "description": "Vaste context die de AI bij elke chat ziet. Merk, tone of voice, randvoorwaarden, herinneringen.",
+    "placeholder": "bijv.\n\n- Dit is een landingspagina voor Counter, een koffiebar in Polanco.\n- Tone of voice: warm, vriendelijk, geen technisch jargon.\n- Accent: warm oranje (#C66B3D).\n- Nog doen: vraag de ontwerper om het definitieve logo.",
+    "emptyTitle": "De briefing hoort bij een specifiek project.",
+    "emptyHint": "Open een project via het tabblad Pagina's om de briefing te schrijven.",
+    "saving": "Opslaan…",
+    "saved": "Opgeslagen · bij elke chat meegegeven",
+    "saveFailed": "Opslaan mislukt",
+    "saveErrorRetry": "Kon niet opslaan — probeer het opnieuw.",
+    "ready": "Klaar"
+  },
+  "templates": {
+    "heading": "Samengestelde templates",
+    "intro": "Klik op een kaart voor een grote preview. Als je er klaar voor bent, klik je op <b>Gebruik deze template</b> in de banner om hem te klonen naar een nieuw project.",
+    "newProjectWarning": "Een template kiezen start een <b>nieuw</b> project. Je huidige project blijft opgeslagen in <projectsLink>/projects</projectsLink>.",
+    "all": "Alle",
+    "previewTemplateAria": "Template bekijken: {name}",
+    "preview": "Preview",
+    "previewing": "Preview actief",
+    "templateCount": "{count, plural, one {# template} other {# templates}}",
+    "loadError": "Templates laden mislukt — {error}",
+    "footer": "Templates zijn statische HTML — pure markup, Tailwind CDN, Google Fonts. Klonen maakt ze van jou; alleen je project claimt een subdomein wanneer je op Deployen klikt."
+  },
+  "sections": {
+    "heading": "Sectiebibliotheek",
+    "intro": "Voeg een sectie toe aan je huidige pagina. Hij verschijnt onderaan — sleep hem op zijn plek met de sectiegrepen. De stijl past zich bij de volgende restyle aan je pagina aan.",
+    "all": "Alle",
+    "jsTooltip": "Geeft content weer via JS — blijft behouden bij invoegen, beperkt inline bewerken",
+    "imgTooltip": "Wordt geleverd met gradient-placeholders — vervang echte afbeeldingen na het invoegen",
+    "insertAria": "{name} invoegen in de huidige pagina",
+    "insert": "Invoegen",
+    "inserting": "Invoegen…",
+    "loadError": "Secties laden mislukt — {error}",
+    "footer": "Secties zijn afgeschermde fragmenten — hun stijlen kunnen niet botsen met je pagina. Voeg in en pas daarna de volgorde en stijl naar wens aan."
+  },
+  "paste": {
+    "heading": "HTML plakken",
+    "description": "Plak de HTML die claude.ai je gaf (of de HTML van een willekeurige zelfstandige landingspagina). Wij hosten hem op jouw subdomein.",
+    "projectNameLabel": "Projectnaam",
+    "projectNamePlaceholder": "Automatisch afgeleid van de paginatitel als dit leeg blijft",
+    "htmlLabel": "HTML",
+    "charCount": "{count, number} tekens",
+    "errorEmpty": "Plak eerst wat HTML.",
+    "errorHttp": "HTTP {status} — probeer het opnieuw.",
+    "creating": "Project aanmaken…",
+    "createProject": "Project aanmaken",
+    "deployHint": "Volgende stap: klik op Deployen om te publiceren naar een subdomein."
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "header": {
+    "titleVercel": "Publicar na Vercel",
+    "titleGithub": "Enviar para o GitHub",
+    "subtitleVercel": "Publique esta página na sua própria conta da Vercel.",
+    "subtitleGithub": "Publique esta página em um repositório do GitHub Pages."
+  },
+  "close": "Fechar",
+  "notConfigured": {
+    "title": "Ainda não disponível",
+    "body": "Este destino de publicação não está configurado nesta instância do OpenLen."
+  },
+  "connect": {
+    "lead": "Conecte sua conta do {provider} para publicar esta página lá.",
+    "button": "Conectar {provider}",
+    "redirecting": "Redirecionando…"
+  },
+  "connected": {
+    "as": "Conectado como {account}",
+    "asAnon": "Conectado",
+    "nameLabel": "Nome",
+    "nameHintVercel": "Usado na URL: name.vercel.app",
+    "nameHintGithub": "Usado na URL: you.github.io/name",
+    "deploy": "Publicar",
+    "redeploy": "Publicar de novo",
+    "deploying": "Publicando…",
+    "live": "No ar",
+    "open": "Abrir",
+    "upToDate": "Em dia com suas últimas edições.",
+    "drift": "Você tem alterações que ainda não foram publicadas.",
+    "propagation": "O GitHub Pages pode levar um minuto para entrar no ar na primeira vez.",
+    "publishing": "Publicando… pode levar até um minuto para entrar no ar. Se você abrir logo de cara, pode aparecer um 404 por um instante — é só atualizar.",
+    "disconnect": "Desconectar"
+  },
+  "errors": {
+    "loadFailed": "Não foi possível carregar a conexão.",
+    "invalidName": "Use letras minúsculas, números e hifens (1–39 caracteres, sem hífen no início ou no fim).",
+    "notConnected": "Conecte sua conta primeiro.",
+    "tokenInvalid": "Sua conexão expirou — reconecte, por favor.",
+    "deployFailed": "Falha na publicação: {message}",
+    "deployGeneric": "Falha na publicação. Tente novamente.",
+    "network": "Erro de rede. Tente novamente.",
+    "denied": "A autorização foi cancelada.",
+    "state": "Falha na verificação da conexão. Tente novamente.",
+    "exchange": "Não foi possível concluir a conexão. Tente novamente.",
+    "not_configured": "Este destino de publicação não está configurado nesta instância do OpenLen."
+  },
+  "confirmDisconnect": "Desconectar {provider}? Sua página publicada continua no ar — você só vai precisar reconectar para publicar de novo."
+}

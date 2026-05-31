@@ -1,0 +1,40 @@
+{
+  "defaultProjectName": "Prijzenpagina",
+  "chatDraft": {
+    "iconChanged": "Ik heb het icoon hier zojuist gewijzigd. Werk de bijbehorende titel en beschrijving bij zodat de betekenis overeenkomt met het nieuwe icoon.",
+    "imageChanged": "Ik heb de afbeelding hier zojuist gewijzigd. Werk de omringende tekst bij zodat die overeenkomt met wat de afbeelding toont."
+  },
+  "lockReason": {
+    "choosing": "Kies eerst een startpunt",
+    "created": "Beschikbaar zodra je pagina is aangemaakt"
+  },
+  "formEmail": {
+    "noProject": "Geen project geladen.",
+    "noDestination": "Stel eerst een meld-e-mailadres in bij dit formulier (of je account).",
+    "sendFailed": "Verzenden mislukt ({status}).",
+    "networkError": "Netwerkfout."
+  },
+  "template": {
+    "networkError": "Netwerkfout — probeer het opnieuw."
+  },
+  "aiStatus": {
+    "designing": "Je pagina wordt ontworpen…",
+    "thinking": "Bezig met nadenken over het ontwerp…",
+    "serverSaturated": "De server is erg druk — dit kan even duren. Sluit de pagina niet.",
+    "readingBrief": "Je briefing wordt gelezen…"
+  },
+  "aiError": {
+    "title": "Genereren mislukt",
+    "tweak": "Pas je briefing in de zijbalk aan en probeer het opnieuw."
+  },
+  "inserted": {
+    "label": "<b>{name}</b> ingevoegd",
+    "matching": "Afstemmen…",
+    "matchToPage": "✨ Afstemmen op pagina",
+    "dismiss": "Sluiten"
+  },
+  "editing": {
+    "noHtml": "Dit project heeft nog geen HTML-inhoud.",
+    "loading": "Project laden…"
+  }
+}

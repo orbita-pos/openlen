@@ -1,0 +1,40 @@
+{
+  "defaultProjectName": "料金ページ",
+  "chatDraft": {
+    "iconChanged": "ここのアイコンを変更しました。新しいアイコンに合うように、周りのタイトルと説明を更新してください。",
+    "imageChanged": "ここの画像を変更しました。画像の内容に合うように、周りの文章を更新してください。"
+  },
+  "lockReason": {
+    "choosing": "まずは出発点を選んでください",
+    "created": "ページを作成すると利用できます"
+  },
+  "formEmail": {
+    "noProject": "プロジェクトが読み込まれていません。",
+    "noDestination": "まずこのフォーム（またはアカウント）に通知用メールアドレスを設定してください。",
+    "sendFailed": "送信に失敗しました（{status}）。",
+    "networkError": "ネットワークエラーです。"
+  },
+  "template": {
+    "networkError": "ネットワークエラー — もう一度お試しください。"
+  },
+  "aiStatus": {
+    "designing": "ページをデザインしています…",
+    "thinking": "デザインを考えています…",
+    "serverSaturated": "サーバーが非常に混み合っています — しばらく時間がかかる場合があります。ページを閉じないでください。",
+    "readingBrief": "ブリーフを読み込んでいます…"
+  },
+  "aiError": {
+    "title": "生成に失敗しました",
+    "tweak": "サイドバーでブリーフを調整して、もう一度お試しください。"
+  },
+  "inserted": {
+    "label": "<b>{name}</b> を挿入しました",
+    "matching": "調整中…",
+    "matchToPage": "✨ ページに合わせる",
+    "dismiss": "閉じる"
+  },
+  "editing": {
+    "noHtml": "このプロジェクトにはまだHTMLコンテンツがありません。",
+    "loading": "プロジェクトを読み込んでいます…"
+  }
+}

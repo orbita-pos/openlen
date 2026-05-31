@@ -1,15 +1,11 @@
 import { defineRouting } from "next-intl/routing";
 
-// English + Spanish, both locale-prefixed (/en, /es). `/` negotiates from
+// English + Spanish + 8 more, all locale-prefixed. `/` negotiates from
 // Accept-Language and 308-redirects to the best match (English fallback).
-//
-// localeCookie is disabled on purpose: the locale already lives in the URL,
-// so we don't need a NEXT_LOCALE cookie to persist it — and emitting a
-// Set-Cookie on public marketing routes would make Cloudflare treat the
-// response as user-specific and refuse to cache it (the same reason the
-// middleware matcher used to exclude marketing routes entirely).
+// localeCookie disabled on purpose — locale lives in the URL; a NEXT_LOCALE
+// Set-Cookie on public marketing routes would break Cloudflare edge caching.
 export const routing = defineRouting({
-  locales: ["en", "es"],
+  locales: ["en", "es", "pt", "fr", "de", "it", "ja", "ko", "zh", "nl"],
   defaultLocale: "en",
   localePrefix: "always",
   localeCookie: false,

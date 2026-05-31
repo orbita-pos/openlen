@@ -1,0 +1,125 @@
+{
+  "customDomain": {
+    "validation": {
+      "invalidHostname": "Geen geldige hostnaam.",
+      "reservedSubdomain": "Subdomeinen van openlen.com worden beheerd via Publiceren."
+    },
+    "errors": {
+      "loadFailed": "Domeinen laden mislukt.",
+      "networkLoad": "Netwerkfout tijdens het laden van domeinen.",
+      "networkPreparing": "Netwerkfout tijdens het voorbereiden van het project.",
+      "addTaken": "Dit domein is al geclaimd door een ander project.",
+      "addGeneric": "Dit domein kon niet worden toegevoegd.",
+      "networkAdd": "Netwerkfout tijdens het toevoegen van het domein.",
+      "verifyFailed": "Verificatie mislukt. Controleer het TXT-record opnieuw.",
+      "networkVerify": "Netwerkfout tijdens de verificatie.",
+      "removeFailed": "Het domein kon niet worden verwijderd.",
+      "networkRemove": "Netwerkfout tijdens het verwijderen van het domein."
+    },
+    "autoPublish": {
+      "limitReached": "Je hebt al {limit, plural, one {# gepubliceerd project} other {# gepubliceerde projecten}} in je abonnement. Maak een ander project ongepubliceerd of upgrade naar Pro voor meer subdomeinen.",
+      "notFound": "Project niet gevonden. Probeer de pagina opnieuw te laden.",
+      "invalid": "Er kon geen geldig intern subdomein worden gegenereerd. Gebruik Publiceren handmatig.",
+      "reserved": "Het interne subdomein botst met een gereserveerde naam. Gebruik Publiceren handmatig.",
+      "fallback": "Automatisch publiceren is mislukt ({error}). Gebruik eerst handmatig Publiceren.",
+      "unknownError": "onbekende fout"
+    },
+    "defaultProviderName": "je DNS-provider",
+    "confirmRemove": "{domain} verwijderen? Bezoekers krijgen binnen enkele minuten een TLS-fout te zien.",
+    "header": {
+      "title": "Eigen domein",
+      "subtitle": "Serveer je project op je eigen hostnaam."
+    },
+    "close": "Sluiten",
+    "preparing": {
+      "title": "Je project wordt voorbereid…",
+      "subtitle": "We zetten de hostingbestemming op zodat je eigen domein ergens naar kan verwijzen."
+    },
+    "publishFirst": {
+      "title": "Publiceer eerst je pagina",
+      "subtitle": "Een eigen domein heeft je pagina live op een openlen.com-subdomein nodig om naar te verwijzen. Kies de naam (je kunt deze later wijzigen door opnieuw te publiceren).",
+      "placeholder": "mijn-pagina",
+      "button": "Publiceren",
+      "publishing": "Publiceren…"
+    },
+    "add": {
+      "label": "Een domein toevoegen",
+      "placeholder": "landing.mijnbedrijf.nl",
+      "adding": "Toevoegen…",
+      "button": "Toevoegen"
+    },
+    "list": {
+      "heading": "Domeinen",
+      "refreshing": "Vernieuwen…",
+      "empty": "Nog geen. Voeg er hierboven een toe om je eigen hostnaam naar dit project te laten verwijzen.",
+      "verified": "Geverifieerd · TLS actief",
+      "waiting": "Wachten op DNS",
+      "open": "Openen",
+      "verify": "Verifiëren",
+      "removeAria": "{domain} verwijderen",
+      "dnsSetup": "DNS-instellingen"
+    },
+    "dns": {
+      "setupFor": "DNS-instellingen voor",
+      "oneClickAvailable": "Installatie met één klik is beschikbaar voor je DNS-provider.",
+      "manualHint": "Voeg deze twee records toe bij je DNS-provider (Cloudflare, GoDaddy, enz.). De meeste worden binnen 1–5 minuten verwerkt.",
+      "pointsTraffic": "Stuurt verkeer door",
+      "provesOwnership": "Bewijst eigendom",
+      "name": "Naam",
+      "value": "Waarde",
+      "cloudflareHint": "Stel bij Cloudflare <strong>Proxystatus: Alleen DNS</strong> in (grijze wolk). Proxyen via de oranje wolk blokkeert de uitgifte van het TLS-certificaat."
+    },
+    "connect": {
+      "title": "Installatie met één klik via {provider}",
+      "subtitle": "Geen gekopieer en geplak — wij voegen de DNS-records voor je toe."
+    }
+  },
+  "publish": {
+    "errors": {
+      "publishGeneric": "Publiceren mislukt: {reason}",
+      "unpublishGeneric": "Ongepubliceerd maken mislukt: {reason}"
+    },
+    "previewName": "jouw-naam",
+    "primary": {
+      "publishing": "Publiceren…",
+      "moveSubdomain": "Naar nieuw subdomein verplaatsen",
+      "republish": "Opnieuw publiceren",
+      "publish": "Publiceren"
+    },
+    "header": {
+      "titleManage": "Publicatie beheren",
+      "titlePublish": "Publiceren naar openlen.com",
+      "subtitleManage": "Kies een nieuwe naam, publiceer opnieuw of haal de pagina offline.",
+      "subtitlePublish": "Kies een naam. In een seconde live op het openbare web."
+    },
+    "close": "Sluiten",
+    "subdomainLabel": "Subdomein",
+    "subdomainPlaceholder": "jouw-naam",
+    "preview": "Voorbeeld",
+    "limitsHint": "Gratis tier: 1 gepubliceerde pagina. Pro: 10. Kleine letters, cijfers en koppeltekens (1–63 tekens).",
+    "unpublish": {
+      "sure": "Zeker weten?",
+      "confirm": "Ja, ongepubliceerd maken",
+      "no": "Nee",
+      "button": "Ongepubliceerd maken"
+    },
+    "useOwnDomain": "Of gebruik mijn eigen domein",
+    "cancel": "Annuleren",
+    "status": {
+      "choose": "Kies hierboven een naam.",
+      "checking": "Beschikbaarheid controleren…",
+      "currentPage": "Dit is je huidige pagina —",
+      "visit": "bezoeken",
+      "available": "Beschikbaar",
+      "invalid": "Gebruik kleine letters, cijfers en koppeltekens (niet aan het begin of einde).",
+      "reserved": "Deze naam is gereserveerd. Probeer een andere.",
+      "taken": "Al in gebruik. Probeer een andere.",
+      "limit": "Abonnementslimiet bereikt — maak een andere pagina ongepubliceerd of upgrade."
+    }
+  },
+  "inspector": {
+    "radius": "Straal",
+    "radiusPlaceholder": "8px",
+    "hexPlaceholder": "#rrggbb"
+  }
+}

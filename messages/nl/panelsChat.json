@@ -1,0 +1,70 @@
+{
+  "noProject": {
+    "title": "Nog geen project geladen.",
+    "subtitle": "Kies een startpunt of open er een vanuit Pagina's."
+  },
+  "quickPrompts": {
+    "premium": "Maak het premium",
+    "linear": "Linear-look",
+    "brutalist": "Brutalistisch",
+    "playful": "Speelser",
+    "rewriteHero": "Herschrijf de hero",
+    "testimonials": "Voeg een sectie met testimonials toe"
+  },
+  "empty": {
+    "title": "Beschrijf je pagina",
+    "subtitle": "Ik heb volledige controle over je pagina. Vraag me wat je wilt."
+  },
+  "turn": {
+    "imageSent": "Afbeelding verstuurd"
+  },
+  "streaming": {
+    "writingPage": "Pagina schrijven · {chars}",
+    "designing": "Je pagina ontwerpen…",
+    "cancel": "Annuleren"
+  },
+  "applied": {
+    "label": "Toegepast · {time}",
+    "undo": "Ongedaan maken"
+  },
+  "reverted": "Teruggedraaid.",
+  "error": {
+    "retry": "Opnieuw proberen"
+  },
+  "errors": {
+    "requestFailed": "Verzoek mislukt ({status})",
+    "generic": "Er ging iets mis — probeer het opnieuw.",
+    "noFinalHtml": "Stream eindigde zonder definitieve HTML — probeer het opnieuw.",
+    "cancelled": "Geannuleerd.",
+    "network": "Netwerkfout — probeer het opnieuw."
+  },
+  "chars": {
+    "count": "{count} tekens",
+    "thousands": "{count}k tekens"
+  },
+  "relativeTime": {
+    "justNow": "zojuist",
+    "seconds": "{count}s geleden",
+    "minutes": "{count}m geleden",
+    "hours": "{count}u geleden",
+    "days": "{count}d geleden"
+  },
+  "composer": {
+    "scoped": "Beperkt tot:",
+    "clearScope": "Bereik wissen",
+    "image": "Afbeelding:",
+    "removeImage": "Bijgevoegde afbeelding verwijderen",
+    "placeholder": "Beschrijf hoe je pagina eruit moet zien of moet lezen…",
+    "placeholderScoped": "Wijzig de geselecteerde {target}…",
+    "attachImage": "Een afbeelding bijvoegen",
+    "attachImageTitle": "Voeg een afbeelding toe om in de pagina in te voegen",
+    "selectSection": "Selecteer een sectie om het bereik te beperken",
+    "selectSectionTitle": "Beperk je volgende bericht tot één sectie",
+    "cancelSelection": "Selectiemodus annuleren (ESC)",
+    "cancelSelectionTitle": "Klik op een sectie in de preview, of druk op ESC om te annuleren",
+    "autofill": "Automatisch invullen met mijn gegevens",
+    "autofillLabel": "Automatisch invullen",
+    "autofillTitle": "Vul de template automatisch in met je bedrijfsgegevens — upload een screenshot of typ je gegevens",
+    "send": "Versturen"
+  }
+}

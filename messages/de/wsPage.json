@@ -1,0 +1,40 @@
+{
+  "defaultProjectName": "Preisseite",
+  "chatDraft": {
+    "iconChanged": "Ich habe gerade das Icon hier geändert. Passe den umgebenden Titel und die Beschreibung an, damit die Bedeutung zum neuen Icon passt.",
+    "imageChanged": "Ich habe gerade das Bild hier geändert. Passe den umgebenden Text an, damit er zum Inhalt des Bildes passt."
+  },
+  "lockReason": {
+    "choosing": "Wähle zuerst einen Ausgangspunkt",
+    "created": "Verfügbar, sobald deine Seite erstellt ist"
+  },
+  "formEmail": {
+    "noProject": "Kein Projekt geladen.",
+    "noDestination": "Lege zuerst eine Benachrichtigungs-E-Mail in diesem Formular (oder in deinem Konto) fest.",
+    "sendFailed": "Senden fehlgeschlagen ({status}).",
+    "networkError": "Netzwerkfehler."
+  },
+  "template": {
+    "networkError": "Netzwerkfehler – versuche es erneut."
+  },
+  "aiStatus": {
+    "designing": "Deine Seite wird gestaltet …",
+    "thinking": "Das Design wird durchdacht …",
+    "serverSaturated": "Der Server ist stark ausgelastet – das kann einen Moment dauern. Bitte schließe die Seite nicht.",
+    "readingBrief": "Dein Briefing wird gelesen …"
+  },
+  "aiError": {
+    "title": "Generierung fehlgeschlagen",
+    "tweak": "Passe dein Briefing in der Seitenleiste an und versuche es erneut."
+  },
+  "inserted": {
+    "label": "<b>{name}</b> eingefügt",
+    "matching": "Wird abgestimmt …",
+    "matchToPage": "✨ An Seite anpassen",
+    "dismiss": "Schließen"
+  },
+  "editing": {
+    "noHtml": "Dieses Projekt hat noch keinen HTML-Inhalt.",
+    "loading": "Projekt wird geladen …"
+  }
+}

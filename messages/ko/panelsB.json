@@ -1,0 +1,94 @@
+{
+  "time": {
+    "justNow": "방금 전",
+    "minutesAgo": "{count}분 전",
+    "hoursAgo": "{count}시간 전",
+    "yesterday": "어제",
+    "daysAgo": "{count}일 전",
+    "weeksAgo": "{count}주 전"
+  },
+  "pages": {
+    "newPage": "새 페이지",
+    "active": "활성",
+    "published": "게시됨",
+    "publishedUnpublishedEdits": "게시됨 — 게시되지 않은 변경 사항 있음",
+    "draft": "초안",
+    "thumbnailOf": "{title}의 썸네일",
+    "thumbnailTitle": "{title} 썸네일",
+    "loadError": "프로젝트를 불러오지 못했습니다",
+    "loadFailed": "프로젝트를 불러올 수 없습니다.",
+    "empty": "아직 페이지가 없습니다.",
+    "emptyHint": "하나 만들면 여기에 표시됩니다."
+  },
+  "versions": {
+    "loadError": "버전을 불러오지 못했습니다",
+    "restoreError": "복원할 수 없습니다 — 다시 시도해 주세요.",
+    "perProject": "버전은 프로젝트별로 관리됩니다.",
+    "perProjectHint": "페이지 탭에서 프로젝트를 열어 기록을 확인하세요.",
+    "title": "버전 기록",
+    "subtitle": "채팅, 게시, 복제 시 자동으로 스냅샷을 저장합니다.",
+    "empty": "아직 버전이 없습니다.",
+    "emptyHint": "다음 채팅이나 게시 시 하나가 생성됩니다.",
+    "current": "현재",
+    "restore": "복원",
+    "restoring": "복원 중…",
+    "cancel": "취소",
+    "confirmTitle": "이 버전을 복원할까요?",
+    "confirmRollback": "페이지가 다음 버전으로 되돌아갑니다:",
+    "confirmNote": "현재 페이지가 먼저 버전으로 저장됩니다 — 마음이 바뀌면 다시 복원할 수 있습니다.",
+    "thumbnailOf": "버전 {label}의 썸네일",
+    "thumbnailTitle": "{label} 썸네일",
+    "source": {
+      "initial": "초기",
+      "chat": "채팅",
+      "publish": "게시",
+      "restore": "되돌리기",
+      "manual": "저장됨",
+      "styleMatch": "채우기",
+      "reorder": "정렬",
+      "replace": "에셋"
+    }
+  },
+  "insights": {
+    "loadError": "인사이트를 불러오지 못했습니다",
+    "title": "인사이트",
+    "subtitle": "이 페이지를 위한 프라이버시 우선 분석.",
+    "perProject": "인사이트는 프로젝트별로 관리됩니다.",
+    "perProjectHint": "페이지 탭에서 프로젝트를 열어 분석을 확인하세요.",
+    "range": {
+      "all": "전체"
+    },
+    "emptyRange": "이 기간에 대한 데이터가 아직 없습니다.",
+    "emptyRangeHint": "페이지를 게시하고 링크를 공유하세요 — 방문자가 접속하는 순간부터 분석이 시작됩니다.",
+    "kpi": {
+      "views": "조회수",
+      "uniques": "순 방문자",
+      "clicks": "클릭수"
+    },
+    "visitsOverTime": "기간별 방문",
+    "dayCount": "{count, plural, one {#일} other {#일}}",
+    "topLinks": "인기 링크",
+    "noClicks": "아직 외부 클릭이 없습니다.",
+    "referrers": "유입 경로",
+    "directOnly": "직접 유입만",
+    "countries": "국가",
+    "noCountryData": "국가 데이터 없음",
+    "device": "기기",
+    "noDeviceData": "기기 데이터 없음",
+    "deviceType": {
+      "mobile": "모바일",
+      "desktop": "데스크톱",
+      "tablet": "태블릿"
+    }
+  },
+  "leads": {
+    "loadError": "리드를 불러오지 못했습니다",
+    "perProject": "리드는 프로젝트별로 관리됩니다.",
+    "perProjectHint": "페이지 탭에서 프로젝트를 열어 제출 내역을 확인하세요.",
+    "title": "리드",
+    "subtitle": "게시된 페이지에서 들어온 양식 제출.",
+    "empty": "아직 리드가 없습니다.",
+    "emptyHint": "페이지를 게시하세요 — 모든 양식 제출이 여기에 도착합니다.",
+    "emptySubmission": "빈 제출"
+  }
+}

@@ -1,0 +1,125 @@
+{
+  "customDomain": {
+    "validation": {
+      "invalidHostname": "主机名无效。",
+      "reservedSubdomain": "openlen.com 的子域名通过“发布”管理。"
+    },
+    "errors": {
+      "loadFailed": "加载域名失败。",
+      "networkLoad": "加载域名时出现网络错误。",
+      "networkPreparing": "准备项目时出现网络错误。",
+      "addTaken": "该域名已被其他项目占用。",
+      "addGeneric": "无法添加此域名。",
+      "networkAdd": "添加域名时出现网络错误。",
+      "verifyFailed": "验证失败。请重新检查 TXT 记录。",
+      "networkVerify": "验证过程中出现网络错误。",
+      "removeFailed": "移除域名失败。",
+      "networkRemove": "移除域名时出现网络错误。"
+    },
+    "autoPublish": {
+      "limitReached": "你的套餐已有 {limit, plural, one {# 个已发布项目} other {# 个已发布项目}}。请取消发布其他项目，或升级到 Pro 以获得更多子域名。",
+      "notFound": "未找到项目。请尝试重新加载页面。",
+      "invalid": "无法生成有效的内部子域名。请手动使用“发布”。",
+      "reserved": "内部子域名与保留名称冲突。请手动使用“发布”。",
+      "fallback": "无法自动发布（{error}）。请先手动使用“发布”。",
+      "unknownError": "未知错误"
+    },
+    "defaultProviderName": "你的 DNS 服务商",
+    "confirmRemove": "移除 {domain}？访问它的用户将在几分钟内看到 TLS 错误。",
+    "header": {
+      "title": "自定义域名",
+      "subtitle": "用你自己的主机名访问你的项目。"
+    },
+    "close": "关闭",
+    "preparing": {
+      "title": "正在准备你的项目…",
+      "subtitle": "正在设置托管目标，让你的自定义域名有可指向的地址。"
+    },
+    "publishFirst": {
+      "title": "请先发布你的页面",
+      "subtitle": "自定义域名需要你的页面先上线到一个 openlen.com 子域名作为指向目标。请选择名称（之后可通过重新发布更改）。",
+      "placeholder": "my-page",
+      "button": "发布",
+      "publishing": "发布中…"
+    },
+    "add": {
+      "label": "添加域名",
+      "placeholder": "landing.miempresa.com",
+      "adding": "添加中…",
+      "button": "添加"
+    },
+    "list": {
+      "heading": "域名",
+      "refreshing": "刷新中…",
+      "empty": "暂无域名。在上方添加一个，将你自己的主机名指向此项目。",
+      "verified": "已验证 · TLS 已启用",
+      "waiting": "等待 DNS 生效",
+      "open": "打开",
+      "verify": "验证",
+      "removeAria": "移除 {domain}",
+      "dnsSetup": "DNS 设置"
+    },
+    "dns": {
+      "setupFor": "DNS 设置目标",
+      "oneClickAvailable": "你的 DNS 服务商支持一键设置。",
+      "manualHint": "在你的 DNS 服务商（Cloudflare、GoDaddy 等）处添加这两条记录。大多数会在 1–5 分钟内生效。",
+      "pointsTraffic": "引导流量",
+      "provesOwnership": "验证所有权",
+      "name": "名称",
+      "value": "值",
+      "cloudflareHint": "在 Cloudflare 上，请设置 <strong>代理状态：仅 DNS</strong>（灰色云朵）。开启橙色云朵代理会阻止 TLS 证书签发。"
+    },
+    "connect": {
+      "title": "使用 {provider} 一键设置",
+      "subtitle": "无需手动复制粘贴——我们会帮你添加 DNS 记录。"
+    }
+  },
+  "publish": {
+    "errors": {
+      "publishGeneric": "无法发布：{reason}",
+      "unpublishGeneric": "无法取消发布：{reason}"
+    },
+    "previewName": "your-name",
+    "primary": {
+      "publishing": "发布中…",
+      "moveSubdomain": "迁移到新子域名",
+      "republish": "重新发布",
+      "publish": "发布"
+    },
+    "header": {
+      "titleManage": "管理发布",
+      "titlePublish": "发布到 openlen.com",
+      "subtitleManage": "选择新名称、重新发布或下线。",
+      "subtitlePublish": "选择一个名称。一秒内即可上线到公网。"
+    },
+    "close": "关闭",
+    "subdomainLabel": "子域名",
+    "subdomainPlaceholder": "your-name",
+    "preview": "预览",
+    "limitsHint": "免费版：1 个已发布页面。Pro：10 个。仅限小写字母、数字和连字符（1–63 个字符）。",
+    "unpublish": {
+      "sure": "确定吗？",
+      "confirm": "是的，取消发布",
+      "no": "否",
+      "button": "取消发布"
+    },
+    "useOwnDomain": "或使用我自己的域名",
+    "cancel": "取消",
+    "status": {
+      "choose": "请在上方选择一个名称。",
+      "checking": "正在检查可用性…",
+      "currentPage": "这是你当前的页面 —",
+      "visit": "访问",
+      "available": "可用",
+      "invalid": "请使用小写字母、数字和连字符（不可置于开头或结尾）。",
+      "reserved": "此名称已被保留。请换一个。",
+      "taken": "已被占用。请换一个。",
+      "limit": "已达套餐上限——请取消发布其他页面或升级。"
+    }
+  },
+  "inspector": {
+    "radius": "圆角",
+    "radiusPlaceholder": "8px",
+    "hexPlaceholder": "#rrggbb"
+  }
+}

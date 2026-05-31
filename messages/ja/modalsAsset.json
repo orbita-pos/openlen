@@ -1,0 +1,190 @@
+{
+  "common": {
+    "close": "閉じる",
+    "closeButton": "閉じる",
+    "cancel": "キャンセル",
+    "apply": "適用",
+    "loading": "読み込み中…"
+  },
+  "header": {
+    "iconTitle": "アイコンを差し替え",
+    "imageTitle": "画像を差し替え",
+    "iconSubtitle": "差し替えるLucideアイコンを選択。元のサイズと色はそのまま引き継がれます。",
+    "imageSubtitle": "画像のURLを貼り付け（Unsplash、自前のCDN、どこからでも）。スロットの縦横比は維持されます。"
+  },
+  "icon": {
+    "searchPlaceholder": "100種類以上のアイコンを検索…",
+    "current": "現在",
+    "noMatch": "「{query}」に一致するアイコンはありません。",
+    "pickAria": "{name} を選択"
+  },
+  "image": {
+    "tabs": {
+      "openlen": "OpenLen提供",
+      "paste": "URLを貼り付け",
+      "unsplash": "Unsplash",
+      "upload": "アップロード"
+    }
+  },
+  "paste": {
+    "urlLabel": "画像URL",
+    "invalidUrl": "有効なhttp(s)のURLではないようです。",
+    "altLabel": "代替テキスト <hint>· 任意ですがアクセシビリティ向上に役立ちます</hint>",
+    "altPlaceholder": "画像を説明…",
+    "preview": "プレビュー",
+    "previewError": "そのURLを読み込めませんでした。公開状態でアクセス可能かご確認ください。",
+    "previewAlt": "プレビュー",
+    "applyImage": "画像を適用"
+  },
+  "openlen": {
+    "searchPlaceholder": "{count}枚のOpenLen画像を検索…",
+    "loadFailed": "読み込みに失敗しました",
+    "noMatch": "「{query}」に一致する画像はありません。",
+    "empty": "まだ何もありません。",
+    "footer": "OpenLen厳選の画像 — セルフホストに同梱",
+    "useImageAria": "OpenLen画像を使用: {alt}",
+    "filters": {
+      "all": "すべて",
+      "3d-abstract": "3D",
+      "gradient-bg": "グラデーション",
+      "device-mockup": "モックアップ",
+      "creator-mockup": "クリエイター",
+      "product-still-life": "プロダクト",
+      "claymorph": "クレイ",
+      "interior-editorial": "インテリア",
+      "architecture-editorial": "建築",
+      "nature-editorial": "ネイチャー",
+      "travel-editorial": "トラベル",
+      "wedding-editorial": "ウェディング",
+      "music-editorial": "ミュージック",
+      "gaming-editorial": "ゲーミング",
+      "food-editorial": "フード",
+      "lifestyle-editorial": "ライフスタイル",
+      "sports-editorial": "スポーツ",
+      "pet-editorial": "ペット",
+      "fashion-editorial": "ファッション"
+    },
+    "badges": {
+      "3d-abstract": "3D",
+      "gradient-bg": "グラデーション",
+      "device-mockup": "モックアップ",
+      "creator-mockup": "クリエイター",
+      "product-still-life": "プロダクト",
+      "claymorph": "クレイ",
+      "interior-editorial": "インテリア",
+      "architecture-editorial": "建築",
+      "nature-editorial": "ネイチャー",
+      "travel-editorial": "トラベル",
+      "wedding-editorial": "ウェディング",
+      "music-editorial": "ミュージック",
+      "gaming-editorial": "ゲーミング",
+      "food-editorial": "フード",
+      "lifestyle-editorial": "ライフスタイル",
+      "sports-editorial": "スポーツ",
+      "pet-editorial": "ペット",
+      "fashion-editorial": "ファッション"
+    }
+  },
+  "unsplash": {
+    "searchFailed": "検索に失敗しました",
+    "demoPlaceholder": "デモモード — 全件検索にはUNSPLASH_ACCESS_KEYを設定してください",
+    "searchPlaceholder": "Unsplashの写真を検索…",
+    "noMatch": "「{query}」に一致する写真はありません。",
+    "typeToSearch": "入力して検索。",
+    "attribution": "写真の提供元: <link>Unsplash</link>",
+    "demoBadge": "デモ · {count}枚の写真",
+    "usePhotoAria": "{author} の写真を使用: {alt}"
+  },
+  "upload": {
+    "tooLarge": "ファイルが大きすぎます。最大{max} MBです。",
+    "notImage": "画像ではありません — png/jpg/webp/gif/svg を選択してください。",
+    "networkError": "アップロード中にネットワークエラーが発生しました。",
+    "failed": "アップロードに失敗しました（{status}）",
+    "unavailable": "プロジェクト外ではアップロードできません。",
+    "previewAlt": "アップロードプレビュー",
+    "swapHint": "もう一度クリックするか、別の画像をドロップして差し替え。",
+    "dropHere": "ここに画像をドロップ",
+    "browseHint": "またはクリックして選択 · png / jpg / webp / gif / svg · 最大{max} MB",
+    "altLabel": "代替テキスト <hint>· 任意</hint>",
+    "uploadingProgress": "アップロード中… {percent}%",
+    "storedIn": "プロジェクトのアセットストレージに保存されます",
+    "uploading": "アップロード中…",
+    "uploadApply": "アップロードして適用"
+  },
+  "autofill": {
+    "title": "あなたの情報で埋める",
+    "subtitle": "あなたの情報が載った画像をアップロード — または、ビジネスを説明するだけでもOK。テンプレートが実際の内容で埋まり、デザインはそのままです。",
+    "subtitleShort": "画像または文章 → テンプレートがあなたの内容で埋まります。",
+    "tabs": {
+      "image": "画像をアップロード",
+      "text": "説明する"
+    },
+    "describe": {
+      "label": "ビジネスについて教えてください",
+      "placeholder": "例：モンテレイにある1989年創業のタケリア。アル・パストール・タコスを提供。家族経営、新鮮な食材を使用。注文はWhatsAppで。",
+      "hint": "好きなように書いてください — 名前、キャッチコピー、行動を促す一言を抽出し、ページを埋めます。"
+    },
+    "image": {
+      "previewAlt": "プレビュー",
+      "sizeChange": "{kb} KB · クリックして変更",
+      "dropPrompt": "画像をドラッグ、クリックして選択、またはクリップボードから貼り付け",
+      "hint": "JPGまたはPNG · 最大8 MB · スクリーンショット、メニュー写真、パンフレットなど…"
+    },
+    "fields": {
+      "businessName": {
+        "label": "ビジネス名 *",
+        "placeholder": "フアンのタコス"
+      },
+      "industry": {
+        "label": "業種 / タイプ",
+        "placeholder": "伝統的なメキシカン・タケリア"
+      },
+      "tagline": {
+        "label": "キャッチコピー（1行のインパクトある言葉）",
+        "placeholder": "1989年から続く本格アル・パストール・タコス"
+      },
+      "pitch": {
+        "label": "紹介文（ビジネスについて1〜2文）",
+        "placeholder": "モンテレイで30年以上にわたり最高のアル・パストール・タコスを提供。家族の伝統、新鮮な食材。"
+      },
+      "heroKeyword": {
+        "label": "ヒーローのキーワード",
+        "placeholder": "伝統"
+      },
+      "ctaPrimary": {
+        "label": "メインのCTA",
+        "placeholder": "WhatsAppで注文"
+      }
+    },
+    "stages": {
+      "extracting": "画像を読み取り中…",
+      "tagging": "テンプレートを準備中…",
+      "calling-model": "Kimi K2.6 が作成中…",
+      "applying": "変更を適用中…",
+      "persisting": "保存中…",
+      "done": "完了",
+      "error": "エラー"
+    },
+    "doneStatus": "✓ 完了 · {seconds}秒",
+    "tips": {
+      "image": "ヒント：メニューの写真、サイトのスクリーンショット、パンフレット — 何でも使えます。",
+      "text": "ヒント：あなたが何をしているか1〜2文あれば十分です — 残りはAIが書きます。"
+    },
+    "processing": "処理中…",
+    "errors": {
+      "notImage": "ファイルが画像ではありません。",
+      "onlyJpgPng": "JPGまたはPNGのみ対応しています。",
+      "tooLarge": "画像が大きすぎます（{size} MB、最大8 MB）。",
+      "tooSmallBytes": "画像が小さすぎます — スクリーンショットか実際の写真をお試しください（最小4 KB）。",
+      "tooSmallDims": "画像が小さすぎます（{width}×{height}px）。最小は200×200です — サイトのスクリーンショットかメニューの写真をお試しください。",
+      "cantRead": "画像を読み取れませんでした。別の画像をお試しください。",
+      "uploadFirst": "まず画像をアップロードしてください。",
+      "needBusinessName": "少なくともビジネス名が必要です。",
+      "needDescription": "ビジネスについて少し教えてください — 最低でも1文を。",
+      "network": "ネットワークエラー",
+      "server": "サーバー {status}: {detail}",
+      "streamRead": "ストリームの読み取りに失敗しました",
+      "unknown": "不明なエラー"
+    }
+  }
+}

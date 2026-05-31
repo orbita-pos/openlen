@@ -1,0 +1,44 @@
+{
+  "templatesIndex": {
+    "hero": {
+      "eyebrow": "{count, plural, =0 {NOCH KEINE VORLAGEN} one {# HANDGEBAUTE VORLAGE} other {# HANDGEBAUTE VORLAGEN}}",
+      "title": "Von Hand gebaute Landingpages. Bereit für deine.",
+      "lede": "Statisches HTML, optimiert. Such dir eine aus, füll sie mit deinen Inhalten und veröffentliche sie mit einem Klick auf deiner Subdomain."
+    }
+  },
+  "templateDetail": {
+    "backToAll": "Alle Vorlagen",
+    "viewLive": "Live-Vorlage ansehen",
+    "meta": {
+      "family": "Familie",
+      "mode": "Modus",
+      "accent": "Akzentfarbe",
+      "format": "Format",
+      "formatValue": "Statisches HTML"
+    },
+    "related": {
+      "heading": "Mehr aus {family}"
+    }
+  },
+  "blogIndex": {
+    "eyebrow": "BLOG",
+    "title": "Neues bei OpenLen",
+    "lede": "Releases, Changelog und die Überlegungen dahinter.",
+    "readPost": "Beitrag lesen"
+  },
+  "blogPost": {
+    "back": "Blog"
+  },
+  "notFound": {
+    "metaTitle": "Seite nicht gefunden",
+    "metaDescription": "Diese URL passt zu keiner OpenLen-Seite.",
+    "badge": "Fehler 404",
+    "title": "Diese Seite <accent>existiert nicht.</accent>",
+    "lede": "Diese URL passt zu keiner Vorlage und keinem Projekt. Geh zurück zur Startseite oder wähle eine der 15 kuratierten Vorlagen.",
+    "backHome": "Zurück zur Startseite",
+    "viewTemplates": "Vorlagen ansehen"
+  },
+  "devLoader": {
+    "caption": "Deine Seite wird gestaltet…"
+  }
+}

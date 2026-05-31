@@ -1,0 +1,150 @@
+{
+  "metaTitle": "マイページ",
+  "header": {
+    "myPages": "マイページ",
+    "newPage": "新規ページ"
+  },
+  "status": {
+    "published": "公開済み",
+    "draft": "下書き",
+    "archived": "アーカイブ済み"
+  },
+  "toolbar": {
+    "title": "マイページ",
+    "pages": "{count, plural, one {# ページ} other {# ページ}}",
+    "publishedCount": "{count} 件公開中",
+    "filterLabel": "フィルター：{label}",
+    "clearFilter": "フィルターを解除",
+    "searchPlaceholder": "ページを検索…",
+    "filters": {
+      "all": "すべてのページ",
+      "draft": "下書き",
+      "published": "公開済み",
+      "archived": "アーカイブ済み"
+    },
+    "sorts": {
+      "edited": "最終更新日",
+      "created": "作成日",
+      "name": "名前（A → Z）"
+    },
+    "gridView": "グリッド表示",
+    "listView": "リスト表示"
+  },
+  "usage": {
+    "total": "合計",
+    "totalPages": "ワークスペース内に {count, plural, one {# ページ} other {# ページ}}",
+    "thisMonth": "今月",
+    "creditsUsed": "{used} / {allotment} クレジット使用",
+    "freePlan": "無料プラン",
+    "proPlan": "Pro プラン",
+    "creditsLeft": "{count, plural, one {残り # クレジット} other {残り # クレジット}}",
+    "dismiss": "閉じる"
+  },
+  "list": {
+    "name": "名前",
+    "status": "ステータス",
+    "tags": "タグ",
+    "edited": "更新日",
+    "notDeployed": "未デプロイ"
+  },
+  "card": {
+    "projectMenu": "プロジェクトメニュー",
+    "published": "公開済み",
+    "unpublishedChanges": "未公開の変更",
+    "open": "開く",
+    "editedAgo": "{time}に更新",
+    "sections": "{count, plural, one {# セクション} other {# セクション}}"
+  },
+  "menu": {
+    "closeMenu": "メニューを閉じる",
+    "open": "開く",
+    "duplicate": "複製",
+    "rename": "名前を変更",
+    "downloadZip": ".zip をダウンロード",
+    "openPublished": "公開ページを開く",
+    "publish": "公開…",
+    "archived": "アーカイブ済み",
+    "archive": "アーカイブ",
+    "delete": "削除"
+  },
+  "bulk": {
+    "selected": "件選択中",
+    "archive": "アーカイブ",
+    "delete": "削除",
+    "cancel": "キャンセル"
+  },
+  "empty": {
+    "badge": "さあ、ワークスペースの始まりです",
+    "title": "最初のページを<br></br>60秒で。",
+    "subtitle": "作りたいものを伝えるだけ。コピー、レイアウト、ビジュアル、コードまですべて生成します。",
+    "examples": {
+      "invoicing": {
+        "title": "Stripe ベースの請求 SaaS",
+        "brief": "フリーランスが請求書を管理し、より早く支払いを受け取れるツールのランディングページ。"
+      },
+      "portfolio": {
+        "title": "メキシコシティのデザイナーポートフォリオ",
+        "brief": "6 件のケーススタディと稼働状況バッジを備えた UI/UX デザイナーの個人サイト。"
+      },
+      "conference": {
+        "title": "オンラインカンファレンスのイベントページ",
+        "brief": "2 日間のインディーハッカーカンファレンスのイベントページ。登壇者一覧とチケット付き。"
+      },
+      "coffee": {
+        "title": "シングルオリジンコーヒーのサブスク",
+        "brief": "毎週火曜にお届けする少量生産コーヒーサブスクの EC ヒーローセクション。"
+      }
+    },
+    "startFromScratch": "ゼロから作成"
+  },
+  "noResults": {
+    "title": "「{query}」に一致するページはありません",
+    "subtitle": "別のキーワードで検索するか、新しく作成してみましょう。",
+    "clearSearch": "検索をクリア",
+    "createNew": "新規作成"
+  },
+  "actions": {
+    "deleteConfirm": "このページを削除しますか？この操作は取り消せません。",
+    "deleteError": "削除できませんでした：{error}",
+    "archiveError": "アーカイブできませんでした：{error}",
+    "renamePrompt": "新しい名前",
+    "renameError": "名前を変更できませんでした：{error}",
+    "duplicateError": "複製できませんでした：{error}",
+    "exportLoadError": "エクスポート用にプロジェクトを読み込めませんでした。",
+    "zipError": "zip を作成できませんでした：{error}",
+    "bulkDeleteConfirm": "{count} 件のページを削除しますか？この操作は取り消せません。"
+  },
+  "relativeTime": {
+    "justNow": "たった今",
+    "minutesAgo": "{count} 分前",
+    "hoursAgo": "{count} 時間前",
+    "yesterday": "昨日",
+    "daysAgo": "{count} 日前",
+    "weeksAgo": "{count} 週間前"
+  },
+  "appHeader": {
+    "toggleDarkMode": "ダークモードを切り替え",
+    "signedIn": "サインイン中",
+    "myPages": "マイページ",
+    "settings": "設定",
+    "billing": "お支払い",
+    "manageBilling": "お支払いを管理",
+    "apiKeys": "API キー",
+    "comingSoon": "{label} — 近日公開",
+    "signOut": "サインアウト"
+  },
+  "creditPill": {
+    "tooltip": "今月の AI クレジット残り {balance} / {allotment}"
+  },
+  "billing": {
+    "upgradeCta": "Pro にアップグレード",
+    "upgradeHint": "月 150 AI クレジット",
+    "dismissBanner": "閉じる",
+    "success": "Pro へのアップグレードが完了しました — 毎月 150 AI クレジットをご利用いただけます。ありがとうございます！",
+    "errors": {
+      "not_configured": "お支払いの設定がまだ完了していません。しばらくしてからもう一度お試しいただくか、サポートにお問い合わせください。",
+      "checkout_failed": "チェックアウトを開始できませんでした。もう一度お試しください。",
+      "portal_failed": "お支払いポータルを開けませんでした。有効なサブスクリプションがあることを確認してから、もう一度お試しください。"
+    }
+  }
+}

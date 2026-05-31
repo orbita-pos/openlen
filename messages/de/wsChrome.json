@@ -1,0 +1,139 @@
+{
+  "sidebar": {
+    "tabs": {
+      "chat": { "label": "Chat", "title": "Mit Orchestra chatten" },
+      "templates": { "label": "Vorlagen", "title": "Mit einer Vorlage starten" },
+      "library": { "label": "Bibliothek", "title": "Abschnitt einfügen" },
+      "pages": { "label": "Seiten", "title": "Letzte Projekte" },
+      "leads": { "label": "Leads", "title": "Formular-Einsendungen" },
+      "insights": { "label": "Insights", "title": "Seitenanalyse" },
+      "versions": { "label": "Versionen", "title": "Versionsverlauf" },
+      "brief": { "label": "Briefing", "title": "Projekt-Briefing (KI-Kontext)" }
+    },
+    "tabLocked": "{label} — gesperrt",
+    "expandPanel": "Panel ausklappen",
+    "collapsePanel": "Panel einklappen",
+    "choosing": {
+      "title": "Sobald du startest, erscheinen hier die Werkzeuge.",
+      "hint": "Wähle rechts einen Startpunkt →"
+    }
+  },
+  "preview": {
+    "zoomFit": "Anpassen",
+    "toolbar": {
+      "editPage": "Seite bearbeiten (⌘E)",
+      "exitEdit": "Bearbeitungsmodus verlassen (⌘E)",
+      "showGrid": "Raster einblenden",
+      "hideGrid": "Raster ausblenden",
+      "refresh": "Vorschau aktualisieren",
+      "openNewTab": "In neuem Tab öffnen"
+    },
+    "banner": {
+      "sectionSelect": "Klicke auf einen Abschnitt, um deinen nächsten Chat darauf zu beziehen · <kbd></kbd> zum Abbrechen",
+      "inlineEdit": "Klicke auf einen Text auf der Seite, um ihn direkt zu bearbeiten · <kbd></kbd> zum Abbrechen"
+    },
+    "templateBanner": {
+      "previewing": "Vorlagenvorschau",
+      "previewingNamed": "Vorschau: {name}",
+      "readOnly": "Schreibgeschützt — nichts wird gespeichert, bis du übernimmst",
+      "cloning": "Wird geklont…",
+      "use": "Diese Vorlage verwenden →",
+      "clear": "Zurücksetzen"
+    },
+    "iframeTitle": "OpenLen Workspace-Vorschau",
+    "redesigning": "Deine Seite wird neu gestaltet…"
+  },
+  "placeholder": {
+    "ai": {
+      "title": "Beschreibe deine Seite in der Seitenleiste",
+      "hint": "Beschreibe, was du willst, und der Orchestrator setzt es zusammen."
+    },
+    "template": {
+      "title": "Durchstöbere die Galerie in der Seitenleiste",
+      "hint": "Klicke auf eine Vorlage, um sie in ein neues Projekt zu klonen."
+    },
+    "paste": {
+      "title": "Füge dein HTML in der Seitenleiste ein",
+      "hint": "HTML von claude.ai (oder anderswo) einfügen — wir hosten es."
+    },
+    "sidebar": "Seitenleiste"
+  },
+  "empty": {
+    "badge": "OpenLen Workspace",
+    "heading": "Womit möchtest du starten?",
+    "subheading": "Drei Wege zu einer veröffentlichten Landingpage. Wähle einen und wir richten dir eine echte Subdomain unter <domain>openlen.com</domain> ein.",
+    "pickThis": "Das auswählen",
+    "browseProjects": "oder <link>deine Projekte durchsuchen →</link>",
+    "cards": {
+      "ai": {
+        "title": "Mit KI generieren",
+        "description": "Beschreibe deine Seite in einfachen Worten. Wir setzen sie zusammen.",
+        "detail": "Briefing → Seite in ~30 Sek."
+      },
+      "template": {
+        "title": "Mit einer Vorlage starten",
+        "description": "Wähle eine kuratierte Landingpage aus sechs Design-Familien.",
+        "detail": "30 Designs · sofort veröffentlichbar"
+      },
+      "paste": {
+        "title": "Dein HTML einfügen",
+        "description": "Bring HTML von claude.ai oder anderswo mit. Wir hosten es.",
+        "detail": "In sich geschlossen · mit einem Klick veröffentlicht"
+      }
+    },
+    "recent": {
+      "title": "Weiterarbeiten",
+      "loading": "Letzte Projekte werden geladen",
+      "all": "Alle Projekte",
+      "thumbnail": "Vorschaubild von {title}",
+      "publishedWithEdits": "Veröffentlicht — hat unveröffentlichte Änderungen",
+      "published": "Veröffentlicht",
+      "live": "Live",
+      "draft": "Entwurf",
+      "time": {
+        "justNow": "gerade eben",
+        "minutes": "vor {count} Min.",
+        "hours": "vor {count} Std.",
+        "yesterday": "gestern",
+        "days": "vor {count} T.",
+        "weeks": "vor {count} Wo."
+      }
+    }
+  },
+  "status": {
+    "drift": "Abweichung von {domain}",
+    "saved": "Gespeichert · {ago}",
+    "live": "Live unter {domain}",
+    "ready": "Bereit zum Veröffentlichen",
+    "saving": "Wird gespeichert…",
+    "commandPalette": "Befehlspalette",
+    "ago": {
+      "justNow": "gerade eben",
+      "seconds": "vor {count} Sek.",
+      "minutes": "vor {count} Min.",
+      "hours": "vor {count} Std.",
+      "days": "vor {count} T."
+    }
+  },
+  "loader": {
+    "sections": {
+      "hero": "Hero",
+      "features": "Funktionen",
+      "pricing": "Preise",
+      "reviews": "Bewertungen",
+      "footer": "Footer"
+    }
+  },
+  "modelPicker": {
+    "switch": "Modell wechseln — Gemini Pro / Flash",
+    "note": {
+      "deeper": "Gründlicher",
+      "recommended": "Empfohlen"
+    }
+  },
+  "templatePreview": {
+    "ariaLabel": "Live-Vorschau von {name}",
+    "iframeTitle": "{name} Live-Vorschau",
+    "applied": "Angewendet"
+  }
+}

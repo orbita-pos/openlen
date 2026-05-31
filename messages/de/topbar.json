@@ -1,0 +1,59 @@
+{
+  "common": {
+    "loading": "Wird geladen…"
+  },
+  "projectName": {
+    "workspaceLabel": "Arbeitsbereich",
+    "untitled": "Ohne Titel"
+  },
+  "save": {
+    "saving": "Wird gespeichert…",
+    "saved": "Gespeichert · gerade eben"
+  },
+  "deploy": {
+    "button": "Veröffentlichen",
+    "shipIt": "Loslegen",
+    "liveAt": "Live unter {subdomain}.openlen.com",
+    "unpublishedChanges": "Du hast nicht veröffentlichte Änderungen.",
+    "open": "Öffnen",
+    "republish": "Erneut veröffentlichen",
+    "unpublish": "Veröffentlichung aufheben",
+    "publishCta": {
+      "title": "Auf openlen.com veröffentlichen",
+      "subtitle": "Kostenloses Hosting auf deiner eigenen Subdomain"
+    },
+    "customDomain": {
+      "title": "Eigene Domain",
+      "subtitle": "Diese Seite über deinen eigenen Hostnamen ausliefern"
+    },
+    "providers": {
+      "vercel": "Auf Vercel veröffentlichen",
+      "github": "Auf GitHub übertragen",
+      "vercelSubtitle": "Deine eigene *.vercel.app-URL",
+      "githubSubtitle": "Ein GitHub-Pages-Repo"
+    },
+    "previousDeploys": "Frühere Deployments",
+    "noPriorDeploys": "Noch keine früheren Deployments."
+  },
+  "rollback": {
+    "confirm": "Die Live-Seite auf Deployment {sha} zurücksetzen? Besucher sehen diese frühere Version innerhalb von Sekunden.",
+    "errorGone": "Dieses Deployment wurde von der Festplatte entfernt und kann nicht wiederhergestellt werden.",
+    "errorGeneric": "Zurücksetzen fehlgeschlagen. Versuche es erneut.",
+    "inProgress": "Wird zurückgesetzt…"
+  },
+  "theme": {
+    "lightMode": "Heller Modus",
+    "darkMode": "Dunkler Modus"
+  },
+  "account": {
+    "fallbackName": "Konto",
+    "allProjects": "Alle Projekte",
+    "signOut": "Abmelden"
+  },
+  "relativeTime": {
+    "seconds": "vor {count}s",
+    "minutes": "vor {count}m",
+    "hours": "vor {count}h",
+    "days": "vor {count}d"
+  }
+}

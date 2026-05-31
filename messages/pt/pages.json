@@ -1,0 +1,44 @@
+{
+  "templatesIndex": {
+    "hero": {
+      "eyebrow": "{count, plural, =0 {AINDA SEM TEMPLATES} one {# TEMPLATE FEITO À MÃO} other {# TEMPLATES FEITOS À MÃO}}",
+      "title": "Landing pages feitas à mão. Prontas pra você usar.",
+      "lede": "HTML estático e otimizado. Escolha um, preencha com suas informações e publique no seu subdomínio em um clique."
+    }
+  },
+  "templateDetail": {
+    "backToAll": "Todos os templates",
+    "viewLive": "Ver template no ar",
+    "meta": {
+      "family": "Família",
+      "mode": "Modo",
+      "accent": "Cor de destaque",
+      "format": "Formato",
+      "formatValue": "HTML estático"
+    },
+    "related": {
+      "heading": "Mais de {family}"
+    }
+  },
+  "blogIndex": {
+    "eyebrow": "BLOG",
+    "title": "Novidades na OpenLen",
+    "lede": "Lançamentos, changelog e o raciocínio por trás deles.",
+    "readPost": "Ler post"
+  },
+  "blogPost": {
+    "back": "Blog"
+  },
+  "notFound": {
+    "metaTitle": "Página não encontrada",
+    "metaDescription": "Esta URL não corresponde a nenhuma página da OpenLen.",
+    "badge": "Erro 404",
+    "title": "Esta página <accent>não existe.</accent>",
+    "lede": "Esta URL não corresponde a nenhum template ou projeto. Volte para a página inicial ou escolha um dos 15 templates selecionados.",
+    "backHome": "Voltar para o início",
+    "viewTemplates": "Ver templates"
+  },
+  "devLoader": {
+    "caption": "Criando sua página…"
+  }
+}

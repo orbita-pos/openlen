@@ -1,0 +1,125 @@
+{
+  "customDomain": {
+    "validation": {
+      "invalidHostname": "Kein gültiger Hostname.",
+      "reservedSubdomain": "Subdomains von openlen.com werden über Deploy verwaltet."
+    },
+    "errors": {
+      "loadFailed": "Domains konnten nicht geladen werden.",
+      "networkLoad": "Netzwerkfehler beim Laden der Domains.",
+      "networkPreparing": "Netzwerkfehler beim Vorbereiten des Projekts.",
+      "addTaken": "Diese Domain ist bereits von einem anderen Projekt belegt.",
+      "addGeneric": "Diese Domain konnte nicht hinzugefügt werden.",
+      "networkAdd": "Netzwerkfehler beim Hinzufügen der Domain.",
+      "verifyFailed": "Verifizierung fehlgeschlagen. Prüfe den TXT-Eintrag noch einmal.",
+      "networkVerify": "Netzwerkfehler bei der Verifizierung.",
+      "removeFailed": "Die Domain konnte nicht entfernt werden.",
+      "networkRemove": "Netzwerkfehler beim Entfernen der Domain."
+    },
+    "autoPublish": {
+      "limitReached": "Du hast in deinem Tarif bereits {limit, plural, one {# veröffentlichtes Projekt} other {# veröffentlichte Projekte}}. Hebe die Veröffentlichung eines anderen Projekts auf oder wechsle zu Pro für mehr Subdomains.",
+      "notFound": "Projekt nicht gefunden. Lade die Seite neu.",
+      "invalid": "Es konnte keine gültige interne Subdomain erzeugt werden. Nutze Veröffentlichen manuell.",
+      "reserved": "Die interne Subdomain kollidiert mit einem reservierten Namen. Nutze Veröffentlichen manuell.",
+      "fallback": "Automatisches Veröffentlichen nicht möglich ({error}). Veröffentliche zuerst manuell.",
+      "unknownError": "Unbekannter Fehler"
+    },
+    "defaultProviderName": "deinem DNS-Anbieter",
+    "confirmRemove": "{domain} entfernen? Besucher, die sie aufrufen, sehen innerhalb von Minuten einen TLS-Fehler.",
+    "header": {
+      "title": "Eigene Domain",
+      "subtitle": "Stelle dein Projekt unter deinem eigenen Hostnamen bereit."
+    },
+    "close": "Schließen",
+    "preparing": {
+      "title": "Dein Projekt wird vorbereitet…",
+      "subtitle": "Wir richten das Hosting-Ziel ein, auf das deine eigene Domain verweisen kann."
+    },
+    "publishFirst": {
+      "title": "Veröffentliche zuerst deine Seite",
+      "subtitle": "Eine eigene Domain braucht deine Seite live auf einer openlen.com-Subdomain, auf die sie verweisen kann. Wähle den Namen (du kannst ihn später durch erneutes Veröffentlichen ändern).",
+      "placeholder": "meine-seite",
+      "button": "Veröffentlichen",
+      "publishing": "Wird veröffentlicht…"
+    },
+    "add": {
+      "label": "Domain hinzufügen",
+      "placeholder": "landing.meinunternehmen.com",
+      "adding": "Wird hinzugefügt…",
+      "button": "Hinzufügen"
+    },
+    "list": {
+      "heading": "Domains",
+      "refreshing": "Wird aktualisiert…",
+      "empty": "Noch keine. Füge oben eine hinzu, um deinen eigenen Hostnamen auf dieses Projekt zu verweisen.",
+      "verified": "Verifiziert · TLS aktiv",
+      "waiting": "Warten auf DNS",
+      "open": "Öffnen",
+      "verify": "Verifizieren",
+      "removeAria": "{domain} entfernen",
+      "dnsSetup": "DNS-Einrichtung"
+    },
+    "dns": {
+      "setupFor": "DNS-Einrichtung für",
+      "oneClickAvailable": "Für deinen DNS-Anbieter ist eine Ein-Klick-Einrichtung verfügbar.",
+      "manualHint": "Füge diese beiden Einträge bei deinem DNS-Anbieter (Cloudflare, GoDaddy usw.) hinzu. Die meisten werden innerhalb von 1–5 Minuten übernommen.",
+      "pointsTraffic": "Leitet den Traffic weiter",
+      "provesOwnership": "Bestätigt die Inhaberschaft",
+      "name": "Name",
+      "value": "Wert",
+      "cloudflareHint": "Setze bei Cloudflare <strong>Proxy-Status: Nur DNS</strong> (graue Wolke). Das Proxying mit der orangen Wolke verhindert die Ausstellung des TLS-Zertifikats."
+    },
+    "connect": {
+      "title": "Ein-Klick-Einrichtung mit {provider}",
+      "subtitle": "Kein Kopieren und Einfügen — wir fügen die DNS-Einträge für dich hinzu."
+    }
+  },
+  "publish": {
+    "errors": {
+      "publishGeneric": "Veröffentlichen nicht möglich: {reason}",
+      "unpublishGeneric": "Veröffentlichung konnte nicht aufgehoben werden: {reason}"
+    },
+    "previewName": "dein-name",
+    "primary": {
+      "publishing": "Wird veröffentlicht…",
+      "moveSubdomain": "Auf neue Subdomain verschieben",
+      "republish": "Erneut veröffentlichen",
+      "publish": "Veröffentlichen"
+    },
+    "header": {
+      "titleManage": "Veröffentlichung verwalten",
+      "titlePublish": "Auf openlen.com veröffentlichen",
+      "subtitleManage": "Wähle einen neuen Namen, veröffentliche erneut oder nimm die Seite offline.",
+      "subtitlePublish": "Wähle einen Namen. In einer Sekunde live im öffentlichen Web."
+    },
+    "close": "Schließen",
+    "subdomainLabel": "Subdomain",
+    "subdomainPlaceholder": "dein-name",
+    "preview": "Vorschau",
+    "limitsHint": "Kostenloser Tarif: 1 veröffentlichte Seite. Pro: 10. Kleinbuchstaben, Zahlen und Bindestriche (1–63 Zeichen).",
+    "unpublish": {
+      "sure": "Sicher?",
+      "confirm": "Ja, Veröffentlichung aufheben",
+      "no": "Nein",
+      "button": "Veröffentlichung aufheben"
+    },
+    "useOwnDomain": "Oder meine eigene Domain verwenden",
+    "cancel": "Abbrechen",
+    "status": {
+      "choose": "Wähle oben einen Namen.",
+      "checking": "Verfügbarkeit wird geprüft…",
+      "currentPage": "Das ist deine aktuelle Seite —",
+      "visit": "besuchen",
+      "available": "Verfügbar",
+      "invalid": "Verwende Kleinbuchstaben, Zahlen und Bindestriche (nicht am Anfang/Ende).",
+      "reserved": "Dieser Name ist reserviert. Versuche einen anderen.",
+      "taken": "Bereits vergeben. Versuche einen anderen.",
+      "limit": "Tariflimit erreicht — hebe die Veröffentlichung einer anderen Seite auf oder führe ein Upgrade durch."
+    }
+  },
+  "inspector": {
+    "radius": "Radius",
+    "radiusPlaceholder": "8px",
+    "hexPlaceholder": "#rrggbb"
+  }
+}

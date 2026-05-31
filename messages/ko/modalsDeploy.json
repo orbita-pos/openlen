@@ -1,0 +1,49 @@
+{
+  "header": {
+    "titleVercel": "Vercel에 배포",
+    "titleGithub": "GitHub에 푸시",
+    "subtitleVercel": "이 페이지를 내 Vercel 계정에 게시합니다.",
+    "subtitleGithub": "이 페이지를 GitHub Pages 저장소에 게시합니다."
+  },
+  "close": "닫기",
+  "notConfigured": {
+    "title": "아직 사용할 수 없음",
+    "body": "이 OpenLen 인스턴스에는 해당 배포 대상이 설정되어 있지 않습니다."
+  },
+  "connect": {
+    "lead": "{provider} 계정을 연결하면 이 페이지를 거기에 게시할 수 있습니다.",
+    "button": "{provider} 연결",
+    "redirecting": "이동 중…"
+  },
+  "connected": {
+    "as": "{account}(으)로 연결됨",
+    "asAnon": "연결됨",
+    "nameLabel": "이름",
+    "nameHintVercel": "URL에 사용됩니다: name.vercel.app",
+    "nameHintGithub": "URL에 사용됩니다: you.github.io/name",
+    "deploy": "배포",
+    "redeploy": "다시 배포",
+    "deploying": "배포 중…",
+    "live": "게시됨",
+    "open": "열기",
+    "upToDate": "최신 편집 내용이 모두 반영되어 있습니다.",
+    "drift": "아직 배포되지 않은 변경 사항이 있습니다.",
+    "propagation": "GitHub Pages는 처음 게시될 때 적용까지 1분 정도 걸릴 수 있습니다.",
+    "publishing": "게시 중… 적용까지 최대 1분이 걸릴 수 있습니다. 바로 열면 잠시 404가 보일 수 있으니 새로고침하세요.",
+    "disconnect": "연결 해제"
+  },
+  "errors": {
+    "loadFailed": "연결 정보를 불러오지 못했습니다.",
+    "invalidName": "소문자, 숫자, 하이픈을 사용하세요(1~39자, 하이픈으로 시작하거나 끝낼 수 없음).",
+    "notConnected": "먼저 계정을 연결하세요.",
+    "tokenInvalid": "연결이 만료되었습니다 — 다시 연결해 주세요.",
+    "deployFailed": "배포 실패: {message}",
+    "deployGeneric": "배포에 실패했습니다. 다시 시도해 주세요.",
+    "network": "네트워크 오류입니다. 다시 시도하세요.",
+    "denied": "인증이 취소되었습니다.",
+    "state": "연결 확인에 실패했습니다. 다시 시도해 주세요.",
+    "exchange": "연결을 완료하지 못했습니다. 다시 시도하세요.",
+    "not_configured": "이 OpenLen 인스턴스에는 해당 배포 대상이 설정되어 있지 않습니다."
+  },
+  "confirmDisconnect": "{provider} 연결을 해제할까요? 배포된 페이지는 그대로 게시된 상태로 유지되며, 다시 배포하려면 재연결만 하면 됩니다."
+}

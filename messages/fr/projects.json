@@ -1,0 +1,150 @@
+{
+  "metaTitle": "Mes pages",
+  "header": {
+    "myPages": "Mes pages",
+    "newPage": "Nouvelle page"
+  },
+  "status": {
+    "published": "Publiée",
+    "draft": "Brouillon",
+    "archived": "Archivée"
+  },
+  "toolbar": {
+    "title": "Mes pages",
+    "pages": "{count, plural, one {# page} other {# pages}}",
+    "publishedCount": "{count} publiée(s)",
+    "filterLabel": "Filtre : {label}",
+    "clearFilter": "Effacer le filtre",
+    "searchPlaceholder": "Rechercher des pages…",
+    "filters": {
+      "all": "Toutes les pages",
+      "draft": "Brouillons",
+      "published": "Publiées",
+      "archived": "Archivées"
+    },
+    "sorts": {
+      "edited": "Dernière modification",
+      "created": "Date de création",
+      "name": "Nom (A → Z)"
+    },
+    "gridView": "Vue grille",
+    "listView": "Vue liste"
+  },
+  "usage": {
+    "total": "Total",
+    "totalPages": "{count, plural, one {# page} other {# pages}} dans votre espace de travail",
+    "thisMonth": "Ce mois-ci",
+    "creditsUsed": "{used} / {allotment} crédits utilisés",
+    "freePlan": "Forfait gratuit",
+    "proPlan": "Forfait Pro",
+    "creditsLeft": "{count, plural, one {# crédit restant} other {# crédits restants}}",
+    "dismiss": "Ignorer"
+  },
+  "list": {
+    "name": "Nom",
+    "status": "Statut",
+    "tags": "Étiquettes",
+    "edited": "Modifiée",
+    "notDeployed": "Non déployée"
+  },
+  "card": {
+    "projectMenu": "Menu du projet",
+    "published": "Publiée",
+    "unpublishedChanges": "Modifications non publiées",
+    "open": "Ouvrir",
+    "editedAgo": "Modifiée {time}",
+    "sections": "{count, plural, one {# section} other {# sections}}"
+  },
+  "menu": {
+    "closeMenu": "Fermer le menu",
+    "open": "Ouvrir",
+    "duplicate": "Dupliquer",
+    "rename": "Renommer",
+    "downloadZip": "Télécharger le .zip",
+    "openPublished": "Ouvrir la page publiée",
+    "publish": "Publier…",
+    "archived": "Archivée",
+    "archive": "Archiver",
+    "delete": "Supprimer"
+  },
+  "bulk": {
+    "selected": "sélectionnée(s)",
+    "archive": "Archiver",
+    "delete": "Supprimer",
+    "cancel": "Annuler"
+  },
+  "empty": {
+    "badge": "Votre espace de travail, tout neuf",
+    "title": "Votre première page<br></br>en 60 secondes.",
+    "subtitle": "Décrivez ce que vous voulez. Nous générons le texte, la mise en page, les images et le code.",
+    "examples": {
+      "invoicing": {
+        "title": "SaaS de facturation basé sur Stripe",
+        "brief": "Une landing pour un outil qui aide les indépendants à suivre leurs factures et à être payés plus vite."
+      },
+      "portfolio": {
+        "title": "Portfolio de designer à Mexico",
+        "brief": "Site personnel pour un designer UI/UX avec 6 études de cas et un badge de disponibilité."
+      },
+      "conference": {
+        "title": "Page d'événement pour une conférence virtuelle",
+        "brief": "Landing d'événement pour une conférence d'indie hacking de 2 jours, avec une grille d'intervenants et la billetterie."
+      },
+      "coffee": {
+        "title": "Abonnement à du café de pure origine",
+        "brief": "Hero e-commerce pour un abonnement à du café en petites quantités, livré chaque mardi."
+      }
+    },
+    "startFromScratch": "Partir de zéro"
+  },
+  "noResults": {
+    "title": "Aucune page ne correspond à « {query} »",
+    "subtitle": "Essayez une autre recherche ou repartez de zéro.",
+    "clearSearch": "Effacer la recherche",
+    "createNew": "Créer une page"
+  },
+  "actions": {
+    "deleteConfirm": "Supprimer cette page ? Cette action est irréversible.",
+    "deleteError": "Suppression impossible : {error}",
+    "archiveError": "Archivage impossible : {error}",
+    "renamePrompt": "Nouveau nom",
+    "renameError": "Renommage impossible : {error}",
+    "duplicateError": "Duplication impossible : {error}",
+    "exportLoadError": "Impossible de charger le projet à exporter.",
+    "zipError": "Création du zip impossible : {error}",
+    "bulkDeleteConfirm": "Supprimer {count} pages ? Cette action est irréversible."
+  },
+  "relativeTime": {
+    "justNow": "à l'instant",
+    "minutesAgo": "il y a {count} min",
+    "hoursAgo": "il y a {count} h",
+    "yesterday": "hier",
+    "daysAgo": "il y a {count} j",
+    "weeksAgo": "il y a {count} sem."
+  },
+  "appHeader": {
+    "toggleDarkMode": "Activer/désactiver le mode sombre",
+    "signedIn": "Connecté",
+    "myPages": "Mes pages",
+    "settings": "Paramètres",
+    "billing": "Facturation",
+    "manageBilling": "Gérer la facturation",
+    "apiKeys": "Clés API",
+    "comingSoon": "{label} — bientôt disponible",
+    "signOut": "Se déconnecter"
+  },
+  "creditPill": {
+    "tooltip": "{balance} crédits IA restants sur {allotment} ce mois-ci"
+  },
+  "billing": {
+    "upgradeCta": "Passer à Pro",
+    "upgradeHint": "150 crédits IA / mois",
+    "dismissBanner": "Ignorer",
+    "success": "Vous êtes désormais sur le forfait Pro — 150 crédits IA par mois. Merci pour votre passage à Pro !",
+    "errors": {
+      "not_configured": "La facturation n'est pas encore configurée. Veuillez réessayer plus tard ou contacter le support.",
+      "checkout_failed": "Nous n'avons pas pu démarrer votre paiement. Veuillez réessayer.",
+      "portal_failed": "Nous n'avons pas pu ouvrir votre portail de facturation. Assurez-vous d'avoir un abonnement actif, puis réessayez."
+    }
+  }
+}
