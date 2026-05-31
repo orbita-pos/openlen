@@ -1,6 +1,6 @@
-# 185 pages via 37 prompts — claude.ai design briefs
+# 197 pages via 39 prompts — claude.ai design briefs
 
-Thirty-seven prompts to paste into claude.ai (Opus 4.7) under your Max 20x subscription. Each prompt produces **5 distinct, production-quality pages** as separate `text/html` artifacts in a single conversation. Total: **185 pages** across 37 aesthetic briefs (Prompts 1–32 are marketing landings; Prompts 33–37 are link-in-bio creator hubs).
+Thirty-nine prompts to paste into claude.ai (Opus 4.7) under your Max 20x subscription. Each prompt produces **5–6 distinct, production-quality pages** as separate `text/html` artifacts in a single conversation. Total: **197 pages** across 39 aesthetic briefs (Prompts 1–32 are marketing landings; Prompts 33–37 are link-in-bio creator hubs; Prompts 38–39 are booking & newsletter, 6 variants each).
 
 ## How to use
 
@@ -3754,6 +3754,228 @@ VARIANT 05: kit ren — Creator-engineer (newsletter + open source + small apps)
 - Shipped: "minus.tools — LIVE — 24 apps — 2024 / jot — LIVE — 8.4k stars — 2023 / kindle-export — LIVE — 412 stars — 2025 / [the book] — DRAFT — 84% — 2024".
 
 Produce all 5 as separate text/html artifacts. Voice is matter-of-fact, factual, builder-quiet — no hype, no growth-hack language, real numbers.
+```
+
+---
+
+## Prompt 38 — Booking & Appointments (6 pages, mostly light + warm + cream modes)
+
+```
+Brief: Produce 6 landing pages in the "Bookable" aesthetic — premium service-business sites with an integrated booking feel, the kind a salon, clinic, coach, or studio actually wants. Think Squire's barbershop pages, the Mindbody/Boulevard "book the chair" flow, NexHealth dental, Calendly's discovery-call clarity, and a Glossier-clean med-spa. These are real brick-and-mortar (or 1:1) service businesses, NOT SaaS — the entire page exists to get a stranger to pick a time. The signature element is a BOOKING WIDGET in the hero: a mini month calendar with a chosen day, a column of time-slot pills (some greyed "booked"), a selected service + price summary, and a "Confirm booking" button — looks real, fully non-functional. The CTA everywhere is "Book appointment," never "Buy" or "Sign up."
+
+SHARED AESTHETIC (all 6 variants):
+- Mode: mostly light / warm / cream — calm, trustworthy, premium-local; one dark-warm variant (the barbershop). Per-variant fonts: a confident serif (Fraunces, Source Serif 4, Cormorant) for the grooming/spa/pilates feel OR a clean sans (Inter Display, Geist) for the dental/coaching feel · Body: Inter 400-500, line-height 1.55-1.6 · Mono: Geist Mono 400 — ONLY for times, durations, prices, hours, and license numbers (tabular-nums) · letter-spacing: tight display (-0.02em) on headlines · borders: hairline 1px on the calendar grid, slot pills, hours table · background texture: a faint warm grain or a barely-there dotted grid; calendar/widget on a raised card with a soft shadow · signature motion: the selected day + selected time-slot pill animate to the accent on load; a pulse-dot on the "live availability" indicator.
+- Generous rounded cards (14-18px radius), soft shadows. The booking widget reappears as a sticky CTA on scroll. A trust row near the hero (★ 4.9 · Google reviews · years in business · "Walk-ins welcome" or "By appointment").
+
+SHARED SECTION SKELETON (all 6 follow this order):
+1. Sticky nav: wordmark + links (Services, Pricing, Team / About, Reviews) + a prominent accent "Book appointment" CTA pill.
+2. Hero: pill badge (business type + neighborhood), display headline (with the half-tone trick), sub ~22 words, dual CTA ("Book appointment" + "Call · Directions"), a trust line ("★ 4.9 · 312 reviews · open 6 days"), and the SIGNATURE MOCKUP — the booking widget (mini month calendar with one selected day, a time-slot pill column with 2-3 greyed "booked", a chosen service + price summary line, "Confirm booking" button).
+3. Services + prices: a list/grid of services with durations (mono) + prices (mono) — real-feeling.
+4. How it works: 3 steps — Pick a time → Get a reminder (text/email) → Show up — with mono step labels.
+5. Team / practitioners: cards with a gradient/SVG avatar, name, role, specialty, and a "Book with <name>" link.
+6. Gallery / before-after: gradient-div placeholders in a tasteful grid (work, the space, results).
+7. Reviews: 4-6 five-star cards with real-sounding local names + neighborhoods + a Google-style aggregate ("4.9 · 312 reviews") and the Google "G" mark.
+8. Location + hours: address block, an hours table (mono), parking/transit, and an inline-SVG stylized neighborhood map (streets + a pin — NOT an external map image).
+9. FAQ: 5 questions a real buyer/patient/client asks (deposits, cancellation window, insurance, walk-ins, first-visit prep).
+10. Final CTA band: "Book now" + the widget echoed or a "next available" line.
+11. Footer: business name + address + phone + hours + booking-app mention + Instagram + (where relevant) license #.
+
+VISUAL FLOURISHES SPECIFIC TO BOOKING & APPOINTMENTS (use across the 6 as appropriate):
+- The hero booking widget: mini month grid (7 cols, ~5 rows), one day ringed in the accent; a vertical stack of time-slot pills with 2-3 greyed/struck "booked" and one selected; a service+price summary row; a "Confirm booking" button. A tiny inline script may set the SVG calendar-cell positions or the map path d= — no framework JS.
+- A "next available" line with a pulse-dot ("Next opening: today 3:30pm").
+- "X spots left this week" / "booking 2 weeks out" urgency pill.
+- Time-slot pills in mono, the booked ones at 40% opacity with a strike.
+- A duration+price chip on every service row (mono, tabular-nums).
+- The inline-SVG neighborhood map: a few street lines, a block or two, and an accent map-pin marking the location.
+- A reminder/confirmation toast mockup ("✓ Booked — Tue, Jun 9 · 3:30pm. Reminder sent.").
+
+THE 6 VARIANTS — produce one text/html artifact per variant:
+
+VARIANT 01: Fade & Co — A modern barbershop + grooming lounge.
+- Mode: dark-warm. Bg #16130D. Accent: amber #E8A33D. Text #F4EDE0.
+- Display font: Inter Display 800 (tight) with a small caps wordmark; Geist Mono for times/prices.
+- Logo: an inline-SVG straight-razor crossed with a comb forming an "F," or a single amber barber-pole stripe wrapping the "&".
+- Pitch: "A cut worth the chair." Half-tone: "A cut worth <muted>the chair</muted>."
+- Audience: guys who want a precise, repeatable fade and a hot-towel finish — not a $12 chop-shop.
+- Hero mockup: month calendar with Thu Jun 11 selected; slot pills 10:00 (booked), 10:45 (booked), 11:30 (selected), 12:15, 1:00; service summary "Skin fade + beard · 45 min · $66 · with Marcus"; "Confirm booking."
+- Sections specifics: Services — Signature cut $38 · 30 min, Skin fade $42 · 35 min, Beard trim & line-up $28 · 20 min, Cut + beard combo $66 · 45 min, Hot-towel shave $40 · 30 min, Kids' cut (under 12) $26 · 25 min, Gray-blending $20 add-on, Buzz $24 · 15 min. "Next available: today 3:30pm" pulse-dot. Team — Marcus (owner, scissor work), Deon (fades + designs), Theo (beards + shaves), Ray (classic cuts).
+- FAQ Q's: "Do you take walk-ins or is it appointment-only?", "Is there a deposit, and what's your no-show policy?", "Can I book the same barber every time?", "Do you do beard designs and hairline edge-ups?", "How early should I show up for my first visit?".
+- Social proof names: Andre Whitfield (Bushwick), Sam Okafor, Luis Reyes, Marcus's regulars wall, "Cuts & Co Supply," Trell B., Devon M.
+
+VARIANT 02: Northbrook Dental — A family dentistry + orthodontics practice.
+- Mode: light, calm + trustworthy. Bg #FFFFFF. Accent: teal #14B8A6. Text #102A2A.
+- Display font: Inter Display 700; Source Serif 4 500 for the "gentle, family" warmth lines.
+- Logo: an inline-SVG rounded tooth with a single teal leaf/check, or a soft arch over "ND."
+- Pitch: "Dental care your whole family can relax into." Half-tone: "Dental care your whole family can <muted>relax into</muted>."
+- Audience: parents booking the family, plus adults wanting Invisalign — anxious-dentist-avoiders included.
+- Hero mockup: month calendar with Tue Jun 9 selected; slots 8:00, 9:00 (booked), 10:30 (selected), 1:00, 2:30 (booked), 4:00; summary "New-patient exam + cleaning · 60 min · $0 with most insurance · Dr. Patel"; "Confirm booking." A small "Accepting new patients" pulse-dot.
+- Sections specifics: Services — New-patient exam + X-rays + cleaning (covered by most insurance), Routine cleaning $130, Whitening $349, Invisalign from $3,900 (free consult), Crowns, Implants (free consult), Emergency same-day visit, Kids' first-visit. "How it works" reframed: Book online → Text reminder → We verify your insurance before you arrive. Team — Dr. Aisha Patel DDS (general), Dr. Ryan Cole DMD (ortho), Maria the hygienist, a kids-friendly note.
+- FAQ Q's: "Do you take my insurance, and what's covered on a first visit?", "I haven't been to a dentist in years — will I be judged?", "Do you see kids, and at what age should they start?", "What's the cost of Invisalign and do you offer payment plans?", "Can you see me today for a toothache?".
+- Social proof names: The Alvarez family, Jenna R. (Northbrook), Pawel K., Dana Whitfield, Marcus & Lily (siblings), "★ 4.9 · 312 reviews."
+
+VARIANT 03: Mantel — A boutique reformer-pilates studio.
+- Mode: cream, serene. Bg #F6F0E6. Accent: terracotta #C56A4E. Text #2A2017.
+- Display font: Cormorant 600 (high-contrast serif) for headlines; Geist Mono for class times.
+- Logo: an inline-SVG single reformer-spring coil curling into an "M," or a clean lowercase serif "mantel" with a hairline underline.
+- Pitch: "Strength, slowly. Then suddenly." Half-tone: "Strength, slowly. <muted>Then suddenly.</muted>"
+- Audience: people who tried mat pilates on an app and want the real reformer, in small classes, with form correction.
+- Hero mockup: month calendar with Wed Jun 10 selected; class-slot pills 6:00am (booked), 7:15am (selected), 9:00am, 12:00pm (booked), 5:30pm, 6:45pm; summary "Reformer Flow · 50 min · 6 spots · with Sofia"; "Reserve your spot." "4 spots left · Wed 7:15am" pulse-dot.
+- Sections specifics: Classes/pricing — Single class $34, 5-class pack $155, 10-class pack $290, Unlimited monthly $239 (Most popular), Intro offer "First reformer class $19." Class types — Reformer Flow, Slow & Strong, Jumpboard cardio, Prenatal reformer, Foundations (first-timers). A weekly grid hint: ~6 classes/day, max 8 reformers. Team — Sofia (founder, classical + contemporary), Priya, Elena, with mono certs "Balanced Body · 500hr."
+- FAQ Q's: "I've never used a reformer — is there a beginner class?", "What's your class-cancellation window before you charge me?", "How many people are in a class?", "Do I need grip socks, and do you sell them?", "Can I freeze my unlimited membership?".
+- Social proof names: Clara Bennett, Noor H., Yuki T., Megan (Riverside), "joined 1,180 members," Anaïs L., a 4.9 Google aggregate.
+
+VARIANT 04: Reid Advisory — 1:1 executive + business coaching (book a discovery call).
+- Mode: light, premium-restrained. Bg #FBFAF8. Accent: deep indigo #2D4A7C. Text #14181F.
+- Display font: Source Serif 4 600 for gravitas; Inter for body; Geist Mono for the call slots + timezone.
+- Logo: an inline-SVG monogram "RA" in a thin ruled box, or a single ascending plotted line through "Reid."
+- Pitch: "Clarity, on the calendar." Half-tone: "Clarity, <muted>on the calendar.</muted>"
+- Audience: founders and senior leaders booking a paid 1:1 engagement — the hero books a free 30-min discovery call.
+- Hero mockup: a Calendly-style booking — month calendar with Mon Jun 8 selected; slots in a timezone line "(GMT-5)" 9:00 (booked), 11:00 (selected), 2:00, 3:30 (booked), 4:30; summary "Discovery call · 30 min · free · video"; "Confirm time." A "Replies within 1 business day" line.
+- Sections specifics: Services/pricing — Free discovery call (30 min), 1:1 monthly coaching $1,200/mo (2 sessions), Intensive day "Strategy Day" $2,400, Founder sprint (6 weeks) $4,800, Team offsite facilitation (quoted). "How it works" reframed: Book a discovery call → We map your goals → Choose a coaching cadence. About/credentials instead of a team grid — 18 years operating + advising, ICF-PCC cert (mono), ex-COO note, client logos marquee.
+- FAQ Q's: "What happens on the free discovery call — is it a sales pitch?", "How are sessions delivered and how long is the commitment?", "What's your reschedule/cancellation policy for a paid session?", "Do you work with early-stage founders or only execs?", "Is anything we discuss confidential?".
+- Social proof names: a logo marquee — "Mileu," "Northwind Labs," "Carta-style fintech," plus named quotes: Dana Osei (VP Product), Tomás R. (founder), Helena Brandt (COO).
+
+VARIANT 05: Bramble & Paw — Pet grooming + daycare.
+- Mode: warm light, friendly. Bg #FCF8F0. Accent: sage #6B8E5A. Text #20271C.
+- Display font: Fraunces 600 (a touch playful); Geist Mono for slot times/prices.
+- Logo: an inline-SVG paw-print where one toe-bean is a sage leaf, or a rounded "B&P" with a tiny dog-ear.
+- Pitch: "A spa day for the good boy." Half-tone: "A spa day for <muted>the good boy.</muted>"
+- Audience: dog (and some cat) owners booking a groom, plus parents of daycare regulars — friendly, reassuring, not clinical.
+- Hero mockup: month calendar with Fri Jun 12 selected; drop-off slot pills 8:00 (booked), 9:00 (selected), 10:00, 11:00 (booked), 1:00; summary "Full groom · medium dog · ~2.5 hrs · $78 · with Tasha"; "Book drop-off." A "3 grooming slots left this week" pulse-dot.
+- Sections specifics: Services/pricing by size — Bath & brush (sm $42 / md $54 / lg $68), Full groom (sm $62 / md $78 / lg $96), Nail trim $18, Teeth-brushing add-on $12, De-shed treatment $25, Daycare full day $40 / half day $26 / 10-day pass $340, Puppy intro day $20. Team — Tasha (master groomer, doodles + double-coats), Marco (cats + small breeds), the daycare crew. Gallery = before/after fluff grid.
+- FAQ Q's: "Does my dog need vaccinations to come, and which ones?", "How long does a full groom take — do I leave them or wait?", "What's your policy if my dog is anxious or reactive?", "Do you do daycare and grooming the same day?", "What's the cancellation/no-show fee for a grooming slot?".
+- Social proof names: "Bailey's mom" Erin K., the Castillos (& Mochi), Greg + Waffles, Priya N. (& two cats), "★ 4.9 · 268 reviews," Hannah & Biscuit.
+
+VARIANT 06: Lumen Aesthetics — A med-spa / skin + aesthetics clinic.
+- Mode: light-luxe. Bg #FDFBF8. Accent: rose-gold #C9A36B. Text #1C1814.
+- Display font: Cormorant 600 (elegant) for headlines; Inter for body; Geist Mono for treatment durations/prices.
+- Logo: an inline-SVG thin rose-gold ring with a soft inner glow around an "L," or a serif "LUMEN" with a hairline gold rule.
+- Pitch: "Skin that looks like rest." Half-tone: "Skin that looks <muted>like rest.</muted>"
+- Audience: people booking facials, injectables, and laser — wants discretion, licensed providers, and clear consult-first messaging.
+- Hero mockup: month calendar with Thu Jun 11 selected; slots 10:00 (booked), 11:30 (selected), 1:00, 2:30, 4:00 (booked); summary "Signature HydraGlow facial · 60 min · $185 · with Dr. Lane, RN"; "Book consultation." A "Complimentary consult before any injectable" line + pulse-dot.
+- Sections specifics: Services/pricing — HydraGlow facial $185 · 60 min, Chemical peel $160 · 45 min, Microneedling $290 · 75 min, Botox $13/unit (free consult), Dermal filler from $650/syringe, Laser hair removal from $120/session, IPL photofacial $325, Lip flip $120. "How it works": Book a consult → Custom plan from a licensed provider → Treatment + aftercare. Team — Dr. Elise Lane RN (medical director, mono "RN · 12 yrs"), Camille (master esthetician), Dr. Kwan (oversight).
+- FAQ Q's: "Do I need a consultation before injectables or laser?", "Is there downtime after microneedling or a peel?", "Who actually performs the treatment — a nurse or an esthetician?", "What's your deposit and cancellation policy for booked appointments?", "Are results guaranteed, and how many sessions will I need?".
+- Social proof names: Brooke A., Naomi S. (Eastside), Valentina R., "★ 4.9 · 207 reviews," Priscilla M., Jordan T., a discreet "as seen in" local-press strip.
+
+Produce all 6 as separate text/html artifacts.
+```
+
+Registration table (one row per variant — run `templates:add`):
+
+```
+fade-and-co        | family=local-services | mode=dark  | accent=#E8A33D | pitch="A cut worth the chair." | description="Modern barbershop and grooming lounge — book a barber, see slot availability, and lock in your fade and beard combo online."
+northbrook-dental  | family=health-tech    | mode=light | accent=#14B8A6 | pitch="Dental care your whole family can relax into." | description="Family dentistry and orthodontics with online booking, insurance-checked first visits, and Invisalign consults."
+mantel-pilates     | family=wellness       | mode=cream | accent=#C56A4E | pitch="Strength, slowly. Then suddenly." | description="Boutique reformer-pilates studio with small classes, live spot availability, and a first-class intro offer."
+reid-advisory      | family=local-services | mode=light | accent=#2D4A7C | pitch="Clarity, on the calendar." | description="1:1 executive and business coaching — book a free discovery call and choose a coaching cadence."
+bramble-and-paw    | family=local-services | mode=light | accent=#6B8E5A | pitch="A spa day for the good boy." | description="Pet grooming and dog daycare with size-based pricing, drop-off booking, and before-after results."
+lumen-aesthetics   | family=health-tech    | mode=light | accent=#C9A36B | pitch="Skin that looks like rest." | description="Med-spa and aesthetics clinic — book facials, injectables, and laser with licensed providers, consult-first."
+```
+
+---
+
+## Prompt 39 — Newsletter & Publication (6 pages, mixed: 2 dark · 3 light/cream · 1 cream+mono)
+
+```
+Brief: Produce 6 landing pages in the "Subscribe-First Publication" aesthetic — premium-editorial subscribe pages for independent newsletters, with the conversion intent of Substack/Ghost/Beehiiv but the typographic taste of a printed quarterly. References: the quiet authority of Stratechery's subscribe page, the cream newspaper grade of The Browser, and Ghost's clean members-first templates — every variant's job is to make a reader type their email in the hero.
+
+SHARED AESTHETIC (all 6 variants):
+- Mode: 2 dark · 3 light/cream · 1 cream-with-mono (per-variant accent below) · Display + Body + (per-variant) a mono or serif accent named from Google Fonts · tight display tracking -0.02em to -0.03em · hairline rules at currentColor opacity 0.10-0.14 · paper/dot-grid or faint vertical-rule "column" texture on hero only · signature motion = the subscribe button settles into a "✓ Subscribed — check your inbox" confirmation state on submit (one tiny inline script toggling a class; NO real network call), plus a slow opacity pulse on the live "joined this week" dot.
+
+SHARED SECTION SKELETON (all 6 follow this order):
+1. Sticky nav: wordmark + links (Archive · About · Sponsor [optional]) + a high-contrast "Subscribe" CTA pill.
+2. Hero: editorial eyebrow + display headline + 1-line dek + the SIGNATURE MOCKUP = a prominent subscribe form (email input + button) with a subscriber-count + cadence line directly under it ("Join 11,204 readers · every Tuesday, 6am ET") + a small "read by people at <3-5 wordmarks>" row.
+3. "What you'll get" — 3-4 value props, each tied to a NAMED recurring section of the letter (not generic "quality content").
+4. Sample issue preview: one styled excerpt card that reads like a real issue — issue number + date + title + a serif pull-quote + a figure/chart placeholder (inline SVG) + read-time + "Read the full issue →".
+5. Archive grid: 6-8 past-issue cards (issue №/date · title · 1-line dek · read-time), titles specific enough to sound real.
+6. Author / masthead: bio card with an inline-SVG avatar monogram, name, one-line credentials, and a 2-line "why I write this" note.
+7. Social proof: 2-3 subscriber quote cards + a metric strip (open rate · subscribers · issues shipped · avg read-time) in tabular-nums.
+8. Pricing: a Free tier and ONE Paid tier (real price) — Paid card lists exactly what it unlocks (full archive · subscriber-only deep dives · community/threads).
+9. FAQ: 5 questions a real subscriber actually asks.
+10. Final subscribe CTA: restated headline + the email form again + the count/cadence line.
+11. Footer: wordmark + Archive/About/Privacy + "Powered by [platform]" microline + an unsubscribe-anytime reassurance line.
+
+VISUAL FLOURISHES SPECIFIC TO NEWSLETTER (use across the 6 as appropriate):
+- The subscribe form is the hero — oversize it: large input (h≈56px), bold button, the count+cadence line styled as a single quiet caption underneath; the button flips to a "✓ Subscribed" state on click (inline script, class toggle only).
+- A "fresh off the press" issue card with a faint left ruled margin and an issue-number tab (e.g. "№ 142") in the corner.
+- Chart/figure placeholders drawn as inline SVG appropriate to the letter: a benchmark bar set, a price line, a type-specimen block, a recipe step-diagram, a strength-progression line, an MRR sparkline — set d=/heights via one tiny inline script from a data array.
+- Open-rate / subscriber / issues-shipped metric strip in tabular-nums with hairline column rules.
+- "Read by people at" marquee or static row of 4-6 plausible wordmarks.
+- A subtle accent-colored "ribbon" or №-tab on the paid tier ("Reader-supported").
+
+THE 6 VARIANTS — produce one text/html artifact per variant:
+
+VARIANT 01: Signal Theory — sharp AI/tech analysis: essays plus original benchmarks.
+- Mode: dark editorial. Accent: electric violet #7C5CFC. Bg #0B0A12, text #ECE9F5. Display: Söhne-like via Inter Tight 600 / Body: Inter 400 / Mono: IBM Plex Mono 500 (benchmark tables, issue numbers).
+- Logo: inline SVG — a thin violet sine wave crossing a hairline baseline, "ST" monogram set in the trough.
+- Pitch: "The benchmark behind the hype." Half-tone: "The benchmark <muted>behind the hype</muted>."
+- Audience: ML engineers, founders, and analysts who want measured takes, not threads.
+- Hero mockup: subscribe form over a faint violet column-grid; under it "Join 18,402 readers · every Wednesday, 7am ET · read by people at Anthropic · Ramp · Modal · Hugging Face". Beside the form, a small benchmark card: "GPT-class latency p50 — 4 models, bars at 312/418/506/611 ms" drawn as inline-SVG bars.
+- Sections specifics: "What you'll get" = The Benchmark (one original eval per month), The Margin (footnotes + corrections), Signal vs Noise (one chart, one claim). Sample issue: "№ 142 · The agent eval everyone's quoting is measuring the wrong thing." Pricing: Free (essays + the weekly note) / Pro $12/mo or $120/yr (full benchmark datasets · model-card deep dives · the private analyst thread).
+- FAQ Q's: "Free vs Pro — what's actually paywalled?" · "How often do you send, and will you sell my email?" · "Can I expense this through work?" · "Do you publish your benchmark methodology?" · "Refunds if I don't find it useful?"
+- Social proof names: Modal, Ramp, Hugging Face, Vercel, Linear, Replicate, Baseten, Cohere.
+
+VARIANT 02: The Ledger — markets, macro, and money, once a week.
+- Mode: cream / newspaper-grade. Accent: gold #B08D2E. Bg #F6F1E6, text #1B1813, rule lines warm. Display: Libre Caslon Display 600 (masthead serif) / Body: Source Serif 4 400 / Mono: JetBrains Mono 500 (tickers, dates).
+- Logo: inline SVG — an engraved-style "TL" inside a thin ruled rectangle with a tiny rule below, like a newspaper nameplate.
+- Pitch: "Money, explained like you're smart." Half-tone: "Money, explained <muted>like you're smart</muted>."
+- Audience: operators, founders, and curious professionals who want macro without the doom or the jargon.
+- Hero mockup: a nameplate masthead ("THE LEDGER · EST. 2023 · ISSUE № 168") above the subscribe form; cadence line "Join 31,890 readers · every Sunday, 8am ET · read at Stripe · Brex · Mercury · a16z". A small price-line SVG: "10-yr yield, 12 weeks — line from 3.9% → 4.6%" with a gold stroke.
+- Sections specifics: "What you'll get" = The Open (the week in one paragraph), The Chart (one figure, explained), Position (what it means for your money — not advice). Sample issue: "№ 168 · The carry trade nobody's pricing in." Pricing: Free (Sunday open + one chart) / Paid $9/mo or $90/yr (full Sunday letter · the midweek macro note · the archive of 168 issues · charts as CSV).
+- FAQ Q's: "Is this financial advice?" (no — clear disclaimer) · "Free vs paid — what do I miss on free?" · "Cadence — really just Sundays?" · "Can my employer expense it?" · "Will you ever sell or rent my email?"
+- Social proof names: Stripe, Brex, Mercury, a16z, Carta, Ramp, Bloomberg desk readers, Sequoia.
+
+VARIANT 03: Off-Grid — a weekly letter on design, type, and the craft of making things.
+- Mode: light, type-forward. Accent: red #E5484D. Bg #FBFAF8, text #16140F. Display: Fraunces 72pt 500 (display optical) / Body: Inter 400 / Mono: Space Mono 500 (issue tabs, captions).
+- Logo: inline SVG — a bold lowercase "o" with a single red baseline-grid line struck through it, like a type-specimen mark.
+- Pitch: "A weekly look at things made well." Half-tone: "A weekly look at <muted>things made well</muted>."
+- Audience: designers, typographers, and makers who care about the seams.
+- Hero mockup: subscribe form on a faint baseline-grid; under it "Join 9,640 readers · every Thursday, 9am · read by designers at Figma · Pentagram · Frank Collective". Beside it a type-specimen block: a huge red Fraunces "Ag" with metric lines (cap-height, x-height, baseline) labeled in mono.
+- Sections specifics: "What you'll get" = The Specimen (one typeface, examined), Found Objects (5 things worth your eye), The Margin Note (one craft principle). Sample issue: "№ 87 · Why grotesks feel honest and humanists feel kind." Pricing: Free (the Thursday letter) / Supporter $7/mo or $70/yr (the full specimen archive · downloadable grid templates · the readers' show-and-tell thread).
+- FAQ Q's: "What do I get on free vs Supporter?" · "How often, and what time zone?" · "Can I expense a Supporter membership?" · "Do you sell or share my email — ever?" · "Can I cancel and keep what I downloaded?"
+- Social proof names: Figma, Pentagram, Frank Collective, Monotype, Readymag, It's Nice That, Klim Type, Cosmos.
+
+VARIANT 04: Mise — a chef's weekly letter on recipes and technique.
+- Mode: warm cream. Accent: olive #6E7B2E. Bg #F4EFE3, text #1E1B12, warm rules. Display: Cormorant Garamond 600 (elegant kitchen serif) / Body: Inter 400 / Mono: IBM Plex Mono 500 (timings, quantities).
+- Logo: inline SVG — a single olive chef's knife rendered as a clean line mark over the word "mise" in small caps.
+- Pitch: "Cook like you mean it." Half-tone: "Cook like you <muted>mean it</muted>."
+- Audience: home cooks who already own a good knife and want technique, not 40-ingredient gimmicks.
+- Hero mockup: subscribe form on warm paper; under it "Join 14,206 readers · every Friday, 4pm — in time for the weekend · read in kitchens at Bon Appétit · Eleven Madison alumni · Serious Eats". Beside it a recipe step-diagram: a 4-node SVG flow ("brine 2h → sear 90s/side → rest 8m → slice") with olive connectors and mono timings.
+- Sections specifics: "What you'll get" = The Recipe (one dish, tested 6 ways), The Technique (the one move that fixes it), Pantry Note (an ingredient, demystified). Sample issue: "№ 96 · The 8-minute confit that makes any white fish taste expensive." Pricing: Free (the Friday recipe) / Table $8/mo or $80/yr (the full tested-recipe archive · printable cards · the subscriber cook-along thread + monthly Q&A).
+- FAQ Q's: "What's free vs on the Table plan?" · "How often do recipes land, and when?" · "Can I expense this if I cook for work?" · "Are recipes printable / saveable?" · "Do you sell my email to brands?"
+- Social proof names: Bon Appétit, Serious Eats, Eleven Madison alumni, Food52, Smitten Kitchen readers, Kenji's notes, Ottolenghi test kitchen, Caraway.
+
+VARIANT 05: Baseline — evidence-based strength and health coaching, in your inbox.
+- Mode: light, energetic. Accent: lime #65A30D. Bg #FCFCFA, text #14160C. Display: Archivo 700 (athletic grotesk) / Body: Inter 400 / Mono: Space Grotesk 500 (set/rep notation, dates).
+- Logo: inline SVG — a lime ascending bar-step mark (3 rising bars) beside "BASELINE" in tight caps.
+- Pitch: "Get strong on the evidence, not the hype." Half-tone: "Get strong on the evidence, <muted>not the hype</muted>."
+- Audience: intermediate lifters and busy professionals tired of fitness-influencer noise.
+- Hero mockup: subscribe form on clean white; under it "Join 22,118 readers · every Monday, 6am · read by coaches at Whoop · Eight Sleep · Renaissance Periodization". Beside it a strength-progression line SVG: "estimated 1RM, 16 weeks — 84kg → 112kg" with lime stroke + a dashed deload week marked in mono.
+- Sections specifics: "What you'll get" = The Study (one paper, translated to your gym) , The Program Note (a tweak you can use Monday), Ask the Coach (one reader question, answered). Sample issue: "№ 131 · Junk volume is real — here's where your sets stop counting." Pricing: Free (the Monday letter) / Coached $10/mo or $96/yr (full periodized programs as PDFs · video form-check reviews · the lifters' Q&A thread).
+- FAQ Q's: "Is this medical or training advice?" (clear disclaimer) · "Free vs Coached — what's behind the paywall?" · "How often, and can I deload the emails too?" · "Can I expense Coached through a wellness stipend?" · "Do you ever sell my email or health info?"
+- Social proof names: Whoop, Eight Sleep, Renaissance Periodization, StrongLifts readers, Barbell Medicine, Stronger by Science, Fitbod, Hevy.
+
+VARIANT 06: Workbench — an indie maker's build-in-public log: revenue, shipping, lessons.
+- Mode: cream + mono. Accent: orange #F97316. Bg #F7F3EA, text #161310, dot-grid texture. Display: Inter Tight 600 (-0.03em) / Body: Inter 400 / Mono: JetBrains Mono 500 (heavy — MRR, dates, commit-style entries).
+- Logo: inline SVG — an orange bracket-and-bolt "[w]" mark, terminal-flavored.
+- Pitch: "Building it in public, numbers and all." Half-tone: "Building it in public, <muted>numbers and all</muted>."
+- Audience: indie hackers, solo founders, and builders who learn from real revenue, not launch tweets.
+- Hero mockup: subscribe form on dot-grid cream; under it "Join 11,204 readers · every Tuesday, 6am ET · read by makers at Resend · Beehiiv · Plausible". Beside it an MRR sparkline SVG: "MRR, last 90 days — $0 → $4,128" with orange stroke + tabular-nums "$4,128 MRR · 312 users · v2.1" mono caption.
+- Sections specifics: "What you'll get" = The Numbers (MRR, churn, the real dashboard), Shipped (what went out + what broke), The Lesson (one mistake, so you skip it). Sample issue: "№ 54 · I cut my pricing page from 3 tiers to 1 and revenue went up." Pricing: Free (the Tuesday log) / Builder $9/mo or $90/yr (the full metrics archive as CSV · teardown deep-dives · the makers' private thread + monthly office hours).
+- FAQ Q's: "Free vs Builder — what's gated?" · "How often, and do you actually share real numbers?" · "Can I expense Builder as a business cost?" · "Will you sell my email to sponsors?" · "Cancel anytime — do I keep the archive I paid for?"
+- Social proof names: Resend, Beehiiv, Plausible, Tinybird, Posthog, Render, Polar, Lemon Squeezy.
+
+Produce all 6 as separate text/html artifacts. Voice per masthead: V01 measured-analytical, V02 dry newspaper authority, V03 type-nerd intimate, V04 confident kitchen-warm, V05 no-bullshit coach, V06 plain builder-honest with real numbers.
+```
+
+Registration table (run `templates:add` once per row):
+
+```
+signal-theory  | family=editorial      | mode=dark  | accent=#7C5CFC | pitch="The benchmark behind the hype."           | description="Subscribe page for a dark-editorial AI/tech analysis newsletter — original benchmarks, model-card deep dives, and a paid analyst thread."
+the-ledger     | family=editorial      | mode=cream | accent=#B08D2E | pitch="Money, explained like you're smart."      | description="Newspaper-grade cream subscribe page for a weekly markets-and-macro letter with a serif nameplate masthead and paid archive."
+off-grid-type  | family=editorial      | mode=light | accent=#E5484D | pitch="A weekly look at things made well."        | description="Type-forward light subscribe page for a weekly design-and-typography letter with a specimen block and supporter tier."
+mise-letter    | family=food-beverage  | mode=cream | accent=#6E7B2E | pitch="Cook like you mean it."                   | description="Warm-cream subscribe page for a chef's weekly recipe-and-technique newsletter with a step-diagram and tested-recipe archive."
+baseline-strength | family=creator     | mode=light | accent=#65A30D | pitch="Get strong on the evidence, not the hype." | description="Energetic light subscribe page for an evidence-based strength-and-health coaching letter with a 1RM progression chart and coached tier."
+workbench-log  | family=creator        | mode=cream | accent=#F97316 | pitch="Building it in public, numbers and all."  | description="Cream-and-mono subscribe page for an indie-maker build-in-public log — MRR sparkline, shipped/broke notes, and a paid metrics archive."
 ```
 
 ---
