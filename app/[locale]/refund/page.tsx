@@ -39,7 +39,7 @@ export default async function RefundPage({
 
           <h2>Quiénes operamos OpenLen</h2>
           <p>
-            OpenLen es operado por <strong>[NOMBRE LEGAL]</strong>, que opera
+            OpenLen es operado por <strong>Jesús Bernal</strong>, que opera
             OpenLen, con sede en México (el &quot;responsable&quot;). Para
             cualquier consulta sobre facturación, cancelaciones o reembolsos,
             escríbenos a{" "}
@@ -184,7 +184,7 @@ export default async function RefundPage({
 
           <h2>Who operates OpenLen</h2>
           <p>
-            OpenLen is operated by <strong>[NOMBRE LEGAL]</strong>, operating
+            OpenLen is operated by <strong>Jesús Bernal</strong>, operating
             OpenLen, based in Mexico (the &quot;operator&quot;). For any question
             about billing, cancellations, or refunds, email us at{" "}
             <a href="mailto:info@jesusbr.com">info@jesusbr.com</a>. These terms are

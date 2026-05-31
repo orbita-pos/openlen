@@ -30,7 +30,7 @@ export default async function TermsPage({
         <>
           <p>
             Estos Términos del servicio (los &quot;Términos&quot;) son un acuerdo
-            entre tú y <strong>[NOMBRE LEGAL], que opera OpenLen</strong>, y
+            entre tú y <strong>Jesús Bernal, que opera OpenLen</strong>, y
             regulan tu uso de OpenLen, un creador de landing pages con
             inteligencia artificial disponible en openlen.com (el
             &quot;Servicio&quot;). Al crear una cuenta o usar el Servicio aceptas
@@ -39,7 +39,7 @@ export default async function TermsPage({
 
           <h2>Quiénes somos y ley aplicable</h2>
           <p>
-            El Servicio lo opera <strong>[NOMBRE LEGAL], que opera OpenLen</strong>,
+            El Servicio lo opera <strong>Jesús Bernal, que opera OpenLen</strong>,
             con base en México. Toda comunicación legal, de soporte, de abuso o de
             retiro de contenido se realiza por correo a{" "}
             <a href="mailto:info@jesusbr.com">info@jesusbr.com</a>. Estos Términos
@@ -341,7 +341,7 @@ export default async function TermsPage({
         <>
           <p>
             These Terms of Service (the &quot;Terms&quot;) are an agreement between
-            you and <strong>[NOMBRE LEGAL], operating OpenLen</strong>, and govern
+            you and <strong>Jesús Bernal, operating OpenLen</strong>, and govern
             your use of OpenLen, an AI landing-page builder available at openlen.com
             (the &quot;Service&quot;). By creating an account or using the Service
             you agree to these Terms. If you don&apos;t agree, don&apos;t use the
@@ -350,7 +350,7 @@ export default async function TermsPage({
 
           <h2>Who we are and governing law</h2>
           <p>
-            The Service is operated by <strong>[NOMBRE LEGAL], operating
+            The Service is operated by <strong>Jesús Bernal, operating
             OpenLen</strong>, based in Mexico. All legal, support, abuse, and
             content-takedown communication is handled by email at{" "}
             <a href="mailto:info@jesusbr.com">info@jesusbr.com</a>. These Terms are

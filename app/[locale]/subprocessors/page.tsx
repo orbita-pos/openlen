@@ -34,7 +34,7 @@ export default async function SubprocessorsPage({
             terceros (subprocesadores) que pueden tratar datos de usuarios o de
             visitantes al prestar OpenLen, el creador de landing pages en
             openlen.com. El responsable que opera OpenLen es{" "}
-            <strong>[NOMBRE LEGAL], que opera OpenLen</strong>, con sede en
+            <strong>Jesús Bernal, que opera OpenLen</strong>, con sede en
             México; para cualquier asunto relacionado con esta lista, escríbenos a{" "}
             <a href="mailto:info@jesusbr.com">info@jesusbr.com</a>. Para cada
             proveedor indicamos su finalidad, las categorías de datos que recibe y
@@ -170,7 +170,7 @@ export default async function SubprocessorsPage({
             lists the third parties (subprocessors) that may process user or
             visitor data when we provide OpenLen, the landing-page builder at
             openlen.com. The party operating OpenLen is{" "}
-            <strong>[NOMBRE LEGAL], operating OpenLen</strong>, based in Mexico;
+            <strong>Jesús Bernal, operating OpenLen</strong>, based in Mexico;
             for any matter related to this list, email{" "}
             <a href="mailto:info@jesusbr.com">info@jesusbr.com</a>. For each
             provider we state its purpose, the categories of data it receives, and
