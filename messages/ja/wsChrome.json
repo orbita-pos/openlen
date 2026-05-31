@@ -1,0 +1,139 @@
+{
+  "sidebar": {
+    "tabs": {
+      "chat": { "label": "チャット", "title": "Orchestra とチャット" },
+      "templates": { "label": "テンプレート", "title": "テンプレートから始める" },
+      "library": { "label": "ライブラリ", "title": "セクションを挿入" },
+      "pages": { "label": "ページ", "title": "最近のプロジェクト" },
+      "leads": { "label": "リード", "title": "フォームの送信内容" },
+      "insights": { "label": "インサイト", "title": "ページ分析" },
+      "versions": { "label": "バージョン", "title": "バージョン履歴" },
+      "brief": { "label": "ブリーフ", "title": "プロジェクトブリーフ（AI コンテキスト）" }
+    },
+    "tabLocked": "{label} — ロック中",
+    "expandPanel": "パネルを展開",
+    "collapsePanel": "パネルを折りたたむ",
+    "choosing": {
+      "title": "始めると、ここにツールが表示されます。",
+      "hint": "右側から出発点を選んでください →"
+    }
+  },
+  "preview": {
+    "zoomFit": "全体表示",
+    "toolbar": {
+      "editPage": "ページを編集（⌘E）",
+      "exitEdit": "編集モードを終了（⌘E）",
+      "showGrid": "グリッドを表示",
+      "hideGrid": "グリッドを非表示",
+      "refresh": "プレビューを更新",
+      "openNewTab": "新しいタブで開く"
+    },
+    "banner": {
+      "sectionSelect": "任意のセクションをクリックして次のチャットの対象に設定 · <kbd></kbd> でキャンセル",
+      "inlineEdit": "ページ内の任意のテキストをクリックしてその場で編集 · <kbd></kbd> でキャンセル"
+    },
+    "templateBanner": {
+      "previewing": "テンプレートをプレビュー中",
+      "previewingNamed": "プレビュー中: {name}",
+      "readOnly": "読み取り専用 — 確定するまで保存されません",
+      "cloning": "複製中…",
+      "use": "このテンプレートを使う →",
+      "clear": "クリア"
+    },
+    "iframeTitle": "OpenLen ワークスペースプレビュー",
+    "redesigning": "ページを再デザイン中…"
+  },
+  "placeholder": {
+    "ai": {
+      "title": "サイドバーでページのブリーフを作成",
+      "hint": "作りたいものを説明すれば、オーケストレーターが構成します。"
+    },
+    "template": {
+      "title": "サイドバーでギャラリーを閲覧",
+      "hint": "任意のテンプレートをクリックして、新しいプロジェクトに複製します。"
+    },
+    "paste": {
+      "title": "サイドバーに HTML を貼り付け",
+      "hint": "claude.ai（など）から HTML を貼り付けてください — こちらでホストします。"
+    },
+    "sidebar": "サイドバー"
+  },
+  "empty": {
+    "badge": "OpenLen ワークスペース",
+    "heading": "何から始めますか？",
+    "subheading": "公開ランディングページへの道は 3 つ。1 つ選べば、<domain>openlen.com</domain> に本物のサブドメインを用意します。",
+    "pickThis": "これを選ぶ",
+    "browseProjects": "または <link>プロジェクトを見る →</link>",
+    "cards": {
+      "ai": {
+        "title": "AI で生成",
+        "description": "ページをふつうの言葉で説明するだけ。こちらで構成します。",
+        "detail": "ブリーフ → 約 30 秒でページ完成"
+      },
+      "template": {
+        "title": "テンプレートから始める",
+        "description": "6 つのデザインファミリーから厳選されたランディングを選択。",
+        "detail": "30 種類のデザイン · すぐに公開可能"
+      },
+      "paste": {
+        "title": "HTML を貼り付け",
+        "description": "claude.ai などから HTML を持ち込んでください。こちらでホストします。",
+        "detail": "自己完結型 · ワンクリックで公開"
+      }
+    },
+    "recent": {
+      "title": "作業を続ける",
+      "loading": "最近のプロジェクトを読み込み中",
+      "all": "すべてのプロジェクト",
+      "thumbnail": "{title} のサムネイル",
+      "publishedWithEdits": "公開済み — 未公開の編集あり",
+      "published": "公開済み",
+      "live": "公開中",
+      "draft": "下書き",
+      "time": {
+        "justNow": "たった今",
+        "minutes": "{count} 分前",
+        "hours": "{count} 時間前",
+        "yesterday": "昨日",
+        "days": "{count} 日前",
+        "weeks": "{count} 週間前"
+      }
+    }
+  },
+  "status": {
+    "drift": "{domain} との差分あり",
+    "saved": "保存済み · {ago}",
+    "live": "{domain} で公開中",
+    "ready": "公開準備完了",
+    "saving": "保存中…",
+    "commandPalette": "コマンドパレット",
+    "ago": {
+      "justNow": "たった今",
+      "seconds": "{count} 秒前",
+      "minutes": "{count} 分前",
+      "hours": "{count} 時間前",
+      "days": "{count} 日前"
+    }
+  },
+  "loader": {
+    "sections": {
+      "hero": "ヒーロー",
+      "features": "機能",
+      "pricing": "料金",
+      "reviews": "レビュー",
+      "footer": "フッター"
+    }
+  },
+  "modelPicker": {
+    "switch": "モデルを切り替え — Gemini Pro / Flash",
+    "note": {
+      "deeper": "より深く",
+      "recommended": "おすすめ"
+    }
+  },
+  "templatePreview": {
+    "ariaLabel": "{name} のライブプレビュー",
+    "iframeTitle": "{name} のライブプレビュー",
+    "applied": "適用済み"
+  }
+}

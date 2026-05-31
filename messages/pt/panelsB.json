@@ -1,0 +1,94 @@
+{
+  "time": {
+    "justNow": "agora mesmo",
+    "minutesAgo": "há {count}min",
+    "hoursAgo": "há {count}h",
+    "yesterday": "ontem",
+    "daysAgo": "há {count}d",
+    "weeksAgo": "há {count}sem"
+  },
+  "pages": {
+    "newPage": "Nova página",
+    "active": "Ativa",
+    "published": "Publicada",
+    "publishedUnpublishedEdits": "Publicada — com edições não publicadas",
+    "draft": "Rascunho",
+    "thumbnailOf": "Miniatura de {title}",
+    "thumbnailTitle": "Miniatura de {title}",
+    "loadError": "Falha ao carregar os projetos",
+    "loadFailed": "Não foi possível carregar seus projetos.",
+    "empty": "Nenhuma página ainda.",
+    "emptyHint": "Crie uma para vê-la aqui."
+  },
+  "versions": {
+    "loadError": "Falha ao carregar as versões",
+    "restoreError": "Não foi possível restaurar — tente novamente.",
+    "perProject": "As versões ficam por projeto.",
+    "perProjectHint": "Abra um projeto na aba Páginas para ver o histórico.",
+    "title": "Histórico de versões",
+    "subtitle": "Snapshots automáticos ao usar o chat, publicar e clonar.",
+    "empty": "Nenhuma versão ainda.",
+    "emptyHint": "O próximo chat ou publicação criará uma.",
+    "current": "Atual",
+    "restore": "Restaurar",
+    "restoring": "Restaurando…",
+    "cancel": "Cancelar",
+    "confirmTitle": "Restaurar esta versão?",
+    "confirmRollback": "A página voltará para:",
+    "confirmNote": "Sua página atual é salva como versão primeiro — você pode restaurá-la se mudar de ideia.",
+    "thumbnailOf": "Miniatura da versão {label}",
+    "thumbnailTitle": "Miniatura de {label}",
+    "source": {
+      "initial": "Início",
+      "chat": "Chat",
+      "publish": "No ar",
+      "restore": "Desfazer",
+      "manual": "Salva",
+      "styleMatch": "Preencher",
+      "reorder": "Ordem",
+      "replace": "Recurso"
+    }
+  },
+  "insights": {
+    "loadError": "Falha ao carregar os insights",
+    "title": "Insights",
+    "subtitle": "Analytics com foco em privacidade para esta página.",
+    "perProject": "Os insights ficam por projeto.",
+    "perProjectHint": "Abra um projeto na aba Páginas para ver os analytics.",
+    "range": {
+      "all": "Tudo"
+    },
+    "emptyRange": "Ainda não há dados para este período.",
+    "emptyRangeHint": "Publique sua página e compartilhe o link — os analytics começam assim que um visitante a acessa.",
+    "kpi": {
+      "views": "Visualizações",
+      "uniques": "Únicos",
+      "clicks": "Cliques"
+    },
+    "visitsOverTime": "Visitas ao longo do tempo",
+    "dayCount": "{count, plural, one {# dia} other {# dias}}",
+    "topLinks": "Links principais",
+    "noClicks": "Nenhum clique de saída ainda.",
+    "referrers": "Origens",
+    "directOnly": "Apenas direto",
+    "countries": "Países",
+    "noCountryData": "Sem dados de país",
+    "device": "Dispositivo",
+    "noDeviceData": "Sem dados de dispositivo",
+    "deviceType": {
+      "mobile": "Celular",
+      "desktop": "Desktop",
+      "tablet": "Tablet"
+    }
+  },
+  "leads": {
+    "loadError": "Falha ao carregar os leads",
+    "perProject": "Os leads ficam por projeto.",
+    "perProjectHint": "Abra um projeto na aba Páginas para ver os envios.",
+    "title": "Leads",
+    "subtitle": "Envios de formulário da sua página publicada.",
+    "empty": "Nenhum lead ainda.",
+    "emptyHint": "Publique sua página — cada envio de formulário chega aqui.",
+    "emptySubmission": "Envio vazio"
+  }
+}

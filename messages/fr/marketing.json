@@ -1,0 +1,225 @@
+{
+  "nav": {
+    "links": {
+      "templates": "Modèles",
+      "features": "Fonctionnalités",
+      "pricing": "Tarifs",
+      "docs": "Docs"
+    },
+    "githubAria": "OpenLen sur GitHub",
+    "toggleDark": "Activer le mode sombre",
+    "signIn": "Se connecter",
+    "tryFree": "Essayer gratuitement"
+  },
+  "hero": {
+    "alphaBadge": "Alpha",
+    "alphaPitch": "{count} modèles conçus à la main — gratuits pendant l'alpha",
+    "title": "Des landing pages qui vous appartiennent.<br></br><muted>Créées par l'IA.</muted> <gradient>Open source.</gradient>",
+    "subtitle": "Générez à partir d'un prompt, choisissez parmi <strong>{count} modèles</strong> ou collez votre propre HTML. Modifiez, publiez sur votre sous-domaine et profitez d'une <strong>analyse respectueuse de la vie privée</strong> intégrée.",
+    "tagline": "Votre HTML. Votre sous-domaine. AGPLv3 — forkez, auditez, auto-hébergez. Aucun verrouillage, aucune bannière de consentement.",
+    "pagesThisWeek": "<strong>{count, number}</strong> pages générées cette semaine",
+    "githubAria": "OpenLen sur GitHub",
+    "starOnGithub": "Mettre une étoile sur GitHub"
+  },
+  "heroPrompt": {
+    "placeholder": "Une landing page pour mon SaaS qui…",
+    "tools": {
+      "attachImage": "Joindre une image",
+      "scopeSection": "Cibler une section",
+      "autofill": "Remplir automatiquement avec vos infos",
+      "titleSuffix": "{label} — disponible une fois votre page créée",
+      "ariaSuffix": "{label} (disponible après génération)"
+    },
+    "generate": "Générer",
+    "tryLabel": "Essayer"
+  },
+  "signInDialog": {
+    "close": "Fermer",
+    "title": "Connectez-vous pour générer",
+    "body": "Il vous faut un compte pour créer votre page — c'est gratuit. Votre prompt est sauvegardé, vous reprenez exactement là où vous vous êtes arrêté.",
+    "createAccount": "Créer un compte gratuit",
+    "logIn": "Se connecter"
+  },
+  "demoStrip": {
+    "eyebrow": "{count} MODÈLES CONÇUS À LA MAIN — TOUS PRÊTS À PUBLIER",
+    "title": "De vrais modèles.<br></br><muted> Choisissez, remplissez, publiez.</muted>",
+    "description": "Chaque modèle est du HTML autonome — Tailwind + Google Fonts en ligne, sans runtime React. Clonez, modifiez le texte et les images, déployez sur votre sous-domaine.",
+    "browseAll": "Parcourir les {count} modèles"
+  },
+  "features": {
+    "badge": "Pourquoi OpenLen",
+    "title": "Conçu pour celles et ceux qui préfèrent <muted>posséder leurs logiciels</muted> plutôt que les louer.",
+    "items": {
+      "templates": {
+        "title": "{count} modèles prêts pour la production",
+        "body": "Des landing pages marketing conçues à la main + 30 hubs link-in-bio pour créateurs (streamer, musicien, photographe, indépendant). Choisissez-en un, personnalisez-le dans l'iframe, publiez-le sur votre sous-domaine."
+      },
+      "analytics": {
+        "title": "Analyse respectueuse de la vie privée intégrée",
+        "body": "Suivi des clics par lien, visites de page, principaux référents, répartition par pays — sans cookies, sans stockage d'IP, sans bannière de consentement. Conforme au RGPD par conception. Le même modèle que Plausible, mais à vous."
+      },
+      "ownHtml": {
+        "title": "Votre HTML, votre sous-domaine",
+        "body": "Une sortie 100 % HTML + Tailwind. Publiez instantanément sur '<you>'.openlen.com, ou récupérez le fichier et hébergez-le où vous voulez — Vercel, Cloudflare, GitHub Pages, votre propre serveur. Aucun verrouillage de runtime."
+      },
+      "openSource": {
+        "title": "Open source (AGPLv3)",
+        "body": "Forkez-le. Auditez-le. Auto-hébergez toute la stack sur une seule machine Hetzner. Le générateur, l'éditeur, le pipeline de publication et l'analyse vivent tous dans le dépôt."
+      }
+    }
+  },
+  "comparison": {
+    "badge": "Comparer",
+    "title": "On a fait les calculs pour que vous n'ayez pas à les faire.",
+    "subtitle": "Un comparatif honnête, sans complaisance. Mis à jour en mai 2026.",
+    "cols": {
+      "price": "Prix",
+      "yourCode": "Votre code",
+      "openSource": "Open source",
+      "selfHost": "Auto-hébergement",
+      "analytics": "Analyse"
+    },
+    "values": {
+      "freeAlpha": "Gratuit (alpha)",
+      "builtIn": "Intégré",
+      "export": "Export",
+      "basic": "Basique",
+      "paidTier": "Offre payante"
+    },
+    "thatsUs": "c'est nous",
+    "footnote": "Les tarifs reflètent les offres publiques en date de mai 2026. Linktree est inclus parce que nos 30 modèles link-in-bio pour créateurs visent le même public — la différence, c'est que le HTML et le sous-domaine vous appartiennent."
+  },
+  "creatorShowcase": {
+    "badge": "Pour les créateurs",
+    "title": "Des pages de liens qui vous <muted>appartiennent vraiment.</muted>",
+    "description": "{count} modèles link-in-bio conçus à la main pour streamers, musiciens, photographes, indépendants et créateurs premium. Suivi des clics par lien + analyse de page intégrés — sans taxe Linktree, sans Google Analytics, sans cookies.",
+    "allCount": "Les {count} modèles pour créateurs"
+  },
+  "pricing": {
+    "badge": "Tarifs",
+    "title": "Gratuit pendant l'alpha. <muted>Auto-hébergé pour toujours.</muted>",
+    "subtitle": "Commencez gratuitement avec 20 crédits IA par mois. Passez à Pro pour en obtenir 150 — ou auto-hébergez toute la stack sans aucune limite.",
+    "comingSoon": "Bientôt disponible",
+    "mostPopular": "Le plus populaire",
+    "githubAria": "OpenLen sur GitHub",
+    "footnote": "Toutes les offres incluent le générateur open source sous licence AGPL. Les offres hébergées ajoutent du confort, pas des fonctionnalités.",
+    "free": {
+      "name": "Gratuit",
+      "suffix": "pendant l'alpha",
+      "blurb": "Tout fonctionne. Aucun paywall pendant l'alpha.",
+      "cta": "Essayer gratuitement",
+      "features": {
+        "0": "20 crédits IA / mois",
+        "1": "{count} modèles, dont 30 link-in-bio",
+        "2": "Publication sur '<you>'.openlen.com",
+        "3": "Analyse respectueuse de la vie privée + suivi des clics par lien",
+        "4": "Formulaires de prospection avec notifications par e-mail"
+      }
+    },
+    "pro": {
+      "name": "Pro",
+      "suffix": "/mois",
+      "blurb": "150 crédits IA par mois — environ 10 générations de page Pro.",
+      "cta": "Passer à Pro",
+      "features": {
+        "0": "Tout ce qui est inclus dans Gratuit",
+        "1": "150 crédits IA / mois (≈10 générations de page Pro)",
+        "2": "Domaines personnalisés (links.votre-marque.com)",
+        "3": "Conservation des analyses au-delà de 90 jours",
+        "4": "Support prioritaire par e-mail"
+      }
+    },
+    "selfHost": {
+      "name": "Auto-hébergement",
+      "suffix": "pour toujours",
+      "blurb": "Faites tourner toute la stack sur votre propre machine.",
+      "cta": "Cloner le dépôt",
+      "features": {
+        "0": "AGPLv3 — à vous de modifier et redistribuer",
+        "1": "Apportez votre propre clé API Gemini / Kimi",
+        "2": "Une seule machine Hetzner fait tout tourner",
+        "3": "Sous-domaine wildcard via nginx",
+        "4": "Aucune facture, aucune limite de débit, aucune surveillance"
+      }
+    }
+  },
+  "finalCta": {
+    "badge": "Possédez votre stack",
+    "title": "Arrêtez de payer pour le verrouillage.<br></br><muted>Devenez propriétaire de vos landing pages.</muted>",
+    "subtitle": "Un seul prompt vous sépare d'une landing page <strong>qui vous appartient, déployable n'importe où, dans un code que vous pouvez lire.</strong>",
+    "generateBtn": "Générer ma page — gratuit",
+    "githubAria": "OpenLen sur GitHub",
+    "cloneBtn": "Cloner sur GitHub",
+    "perks": {
+      "noCard": "Sans carte bancaire",
+      "agpl": "AGPLv3 — à vous pour toujours",
+      "selfHost": "Auto-hébergement sur une seule machine"
+    }
+  },
+  "footer": {
+    "tagline": "Un regard ouvert sur vos landing pages. Créées par l'IA, votre HTML, votre sous-domaine — AGPLv3, aucun verrouillage.",
+    "githubAria": "OpenLen sur GitHub",
+    "twitterAria": "Twitter",
+    "docsAria": "Docs",
+    "licensed": "Sous licence AGPL-3.0",
+    "builtWith": "Créé avec OpenLen, évidemment.",
+    "operational": "Tous les systèmes opérationnels",
+    "product": {
+      "title": "Produit",
+      "features": "Fonctionnalités",
+      "pricing": "Tarifs",
+      "changelog": "Journal des modifications",
+      "roadmap": "Feuille de route"
+    },
+    "openSource": {
+      "title": "Open source",
+      "agplLicense": "Licence AGPL",
+      "contribute": "Contribuer"
+    },
+    "company": {
+      "title": "Entreprise",
+      "blog": "Blog",
+      "privacy": "Confidentialité",
+      "terms": "Conditions",
+      "contact": "Contact"
+    },
+    "legal": {
+      "title": "Mentions légales",
+      "cookies": "Cookies",
+      "acceptableUse": "Utilisation acceptable",
+      "refunds": "Remboursements et annulation",
+      "subprocessors": "Sous-traitants",
+      "docs": "Docs"
+    }
+  },
+  "gallery": {
+    "searchPlaceholder": "Rechercher par nom, famille ou cas d'usage…",
+    "searchAria": "Rechercher des modèles",
+    "clearSearch": "Effacer la recherche",
+    "showing": "Affichage de {shown} sur {total} modèles",
+    "matching": "Correspondant à <code>{query}</code>",
+    "templateCount": "{count, plural, one {# modèle} other {# modèles}}",
+    "featured": {
+      "eyebrow": "Vitrines haut de gamme",
+      "title": "Modèles à la une",
+      "description": "Des vitrines conçues à la main avec de vraies photographies — des exemples de ce à quoi votre page peut ressembler une fois entièrement remplie.",
+      "curated": "{count} sélectionnés"
+    },
+    "empty": {
+      "message": "Aucun modèle ne correspond à <code>{query}</code>.",
+      "clear": "Effacer la recherche"
+    }
+  },
+  "templateCard": {
+    "featured": "À la une",
+    "previewAlt": "Aperçu du modèle {name}",
+    "livePreview": "Aperçu en direct de {name}"
+  },
+  "useTemplate": {
+    "cta": "Utiliser ce modèle",
+    "creating": "Création du projet…",
+    "errorStatus": "Erreur {status} : {detail}",
+    "unexpectedResponse": "Réponse inattendue du serveur",
+    "networkError": "Erreur réseau"
+  }
+}

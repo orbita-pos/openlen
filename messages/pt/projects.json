@@ -1,0 +1,150 @@
+{
+  "metaTitle": "Minhas páginas",
+  "header": {
+    "myPages": "Minhas páginas",
+    "newPage": "Nova página"
+  },
+  "status": {
+    "published": "Publicada",
+    "draft": "Rascunho",
+    "archived": "Arquivada"
+  },
+  "toolbar": {
+    "title": "Minhas páginas",
+    "pages": "{count, plural, one {# página} other {# páginas}}",
+    "publishedCount": "{count} publicadas",
+    "filterLabel": "Filtro: {label}",
+    "clearFilter": "Limpar filtro",
+    "searchPlaceholder": "Buscar páginas…",
+    "filters": {
+      "all": "Todas as páginas",
+      "draft": "Rascunhos",
+      "published": "Publicadas",
+      "archived": "Arquivadas"
+    },
+    "sorts": {
+      "edited": "Última edição",
+      "created": "Data de criação",
+      "name": "Nome (A → Z)"
+    },
+    "gridView": "Visualização em grade",
+    "listView": "Visualização em lista"
+  },
+  "usage": {
+    "total": "Total",
+    "totalPages": "{count, plural, one {# página} other {# páginas}} no seu workspace",
+    "thisMonth": "Este mês",
+    "creditsUsed": "{used} / {allotment} créditos usados",
+    "freePlan": "Plano gratuito",
+    "proPlan": "Plano Pro",
+    "creditsLeft": "{count, plural, one {# crédito restante} other {# créditos restantes}}",
+    "dismiss": "Dispensar"
+  },
+  "list": {
+    "name": "Nome",
+    "status": "Status",
+    "tags": "Tags",
+    "edited": "Editada",
+    "notDeployed": "Não publicada"
+  },
+  "card": {
+    "projectMenu": "Menu do projeto",
+    "published": "Publicada",
+    "unpublishedChanges": "Alterações não publicadas",
+    "open": "Abrir",
+    "editedAgo": "Editada {time}",
+    "sections": "{count, plural, one {# seção} other {# seções}}"
+  },
+  "menu": {
+    "closeMenu": "Fechar menu",
+    "open": "Abrir",
+    "duplicate": "Duplicar",
+    "rename": "Renomear",
+    "downloadZip": "Baixar .zip",
+    "openPublished": "Abrir página publicada",
+    "publish": "Publicar…",
+    "archived": "Arquivada",
+    "archive": "Arquivar",
+    "delete": "Excluir"
+  },
+  "bulk": {
+    "selected": "selecionadas",
+    "archive": "Arquivar",
+    "delete": "Excluir",
+    "cancel": "Cancelar"
+  },
+  "empty": {
+    "badge": "Seu workspace, recém-saído da caixa",
+    "title": "Sua primeira página<br></br>em 60 segundos.",
+    "subtitle": "Descreva o que você quer. A gente gera o texto, o layout, as imagens e o código.",
+    "examples": {
+      "invoicing": {
+        "title": "SaaS de faturamento com Stripe",
+        "brief": "Uma landing para uma ferramenta que ajuda freelancers a acompanhar faturas e receber mais rápido."
+      },
+      "portfolio": {
+        "title": "Portfólio de designer na Cidade do México",
+        "brief": "Site pessoal para um designer de UI/UX com 6 estudos de caso e um selo de disponibilidade."
+      },
+      "conference": {
+        "title": "Página de evento de conferência virtual",
+        "brief": "Landing de evento para uma conferência de indie hacking de 2 dias, com grade de palestrantes e ingressos."
+      },
+      "coffee": {
+        "title": "Assinatura de café de origem única",
+        "brief": "Hero de e-commerce para uma assinatura de café em pequenos lotes, entregue toda terça-feira."
+      }
+    },
+    "startFromScratch": "Começar do zero"
+  },
+  "noResults": {
+    "title": "Nenhuma página corresponde a \"{query}\"",
+    "subtitle": "Tente uma busca diferente ou comece uma nova.",
+    "clearSearch": "Limpar busca",
+    "createNew": "Criar nova"
+  },
+  "actions": {
+    "deleteConfirm": "Excluir esta página? Isso não pode ser desfeito.",
+    "deleteError": "Não foi possível excluir: {error}",
+    "archiveError": "Não foi possível arquivar: {error}",
+    "renamePrompt": "Novo nome",
+    "renameError": "Não foi possível renomear: {error}",
+    "duplicateError": "Não foi possível duplicar: {error}",
+    "exportLoadError": "Não foi possível carregar o projeto para exportar.",
+    "zipError": "Não foi possível gerar o zip: {error}",
+    "bulkDeleteConfirm": "Excluir {count} páginas? Isso não pode ser desfeito."
+  },
+  "relativeTime": {
+    "justNow": "agora mesmo",
+    "minutesAgo": "há {count} min",
+    "hoursAgo": "há {count}h",
+    "yesterday": "ontem",
+    "daysAgo": "há {count}d",
+    "weeksAgo": "há {count}sem"
+  },
+  "appHeader": {
+    "toggleDarkMode": "Alternar modo escuro",
+    "signedIn": "Conectado",
+    "myPages": "Minhas páginas",
+    "settings": "Configurações",
+    "billing": "Faturamento",
+    "manageBilling": "Gerenciar faturamento",
+    "apiKeys": "Chaves de API",
+    "comingSoon": "{label} — em breve",
+    "signOut": "Sair"
+  },
+  "creditPill": {
+    "tooltip": "{balance} de {allotment} créditos de IA restantes este mês"
+  },
+  "billing": {
+    "upgradeCta": "Fazer upgrade para o Pro",
+    "upgradeHint": "150 créditos de IA / mês",
+    "dismissBanner": "Dispensar",
+    "success": "Você está no Pro agora — 150 créditos de IA por mês. Obrigado por fazer o upgrade!",
+    "errors": {
+      "not_configured": "O faturamento ainda não está configurado. Tente novamente mais tarde ou entre em contato com o suporte.",
+      "checkout_failed": "Não foi possível iniciar o seu checkout. Tente novamente.",
+      "portal_failed": "Não foi possível abrir o seu portal de faturamento. Verifique se você tem uma assinatura ativa e tente novamente."
+    }
+  }
+}

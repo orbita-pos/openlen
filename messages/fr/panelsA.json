@@ -1,0 +1,61 @@
+{
+  "aiBrief": {
+    "title": "Décrivez votre page",
+    "subtitle": "Dites-moi ce que vous voulez — je compose la page pour vous.",
+    "placeholder": "Une page de destination pour mon SaaS qui…",
+    "attachImage": "Joindre une image — disponible après la génération",
+    "scopeSection": "Cibler une section — disponible après la génération",
+    "autofill": "Remplir automatiquement avec mes infos — disponible après la génération",
+    "availableAfter": "Disponible une fois votre projet créé",
+    "generate": "Générer"
+  },
+  "brief": {
+    "label": "Brief",
+    "description": "Contexte permanent que l'IA voit à chaque conversation. Marque, ton, contraintes, rappels.",
+    "placeholder": "ex.\n\n- Page de destination pour Counter, un café à Polanco.\n- Ton : chaleureux, amical, sans jargon technique.\n- Couleur d'accent : orange chaud (#C66B3D).\n- À faire : demander le logo final au designer.",
+    "emptyTitle": "Le brief est propre à chaque projet.",
+    "emptyHint": "Ouvrez un projet depuis l'onglet Pages pour rédiger son brief.",
+    "saving": "Enregistrement…",
+    "saved": "Enregistré · injecté à chaque conversation",
+    "saveFailed": "Échec de l'enregistrement",
+    "saveErrorRetry": "Impossible d'enregistrer — réessayez.",
+    "ready": "Prêt"
+  },
+  "templates": {
+    "heading": "Modèles sélectionnés",
+    "intro": "Cliquez sur une carte pour la prévisualiser en grand. Quand vous êtes prêt, cliquez sur <b>Utiliser ce modèle</b> dans la bannière pour le cloner dans un nouveau projet.",
+    "newProjectWarning": "Choisir un modèle démarre un <b>nouveau</b> projet. Votre projet actuel reste enregistré dans <projectsLink>/projects</projectsLink>.",
+    "all": "Tous",
+    "previewTemplateAria": "Prévisualiser le modèle : {name}",
+    "preview": "Aperçu",
+    "previewing": "Aperçu en cours",
+    "templateCount": "{count, plural, one {# modèle} other {# modèles}}",
+    "loadError": "Échec du chargement des modèles — {error}",
+    "footer": "Les modèles sont du HTML statique — pur balisage, Tailwind CDN, Google Fonts. Les cloner les rend vôtres ; seul votre projet réserve un sous-domaine quand vous cliquez sur Déployer."
+  },
+  "sections": {
+    "heading": "Bibliothèque de sections",
+    "intro": "Insérez une section dans votre page actuelle. Elle s'ajoute en bas — faites-la glisser à sa place avec les poignées de section. L'apparence s'adapte à votre page au prochain restylage.",
+    "all": "Toutes",
+    "jsTooltip": "Affiche le contenu via JS — préservé à l'insertion, édition en ligne limitée",
+    "imgTooltip": "Livré avec des dégradés provisoires — remplacez par de vraies images après l'insertion",
+    "insertAria": "Insérer {name} dans la page actuelle",
+    "insert": "Insérer",
+    "inserting": "Insertion…",
+    "loadError": "Échec du chargement des sections — {error}",
+    "footer": "Les sections sont des fragments isolés — leurs styles ne peuvent pas entrer en conflit avec votre page. Insérez, puis réorganisez et restylez à votre goût."
+  },
+  "paste": {
+    "heading": "Coller du HTML",
+    "description": "Collez le HTML que claude.ai vous a donné (ou n'importe quelle page de destination HTML autonome). Nous l'hébergeons sur votre sous-domaine.",
+    "projectNameLabel": "Nom du projet",
+    "projectNamePlaceholder": "Détecté automatiquement depuis le titre de la page si vide",
+    "htmlLabel": "HTML",
+    "charCount": "{count, number} caractères",
+    "errorEmpty": "Collez d'abord du HTML.",
+    "errorHttp": "HTTP {status} — réessayez.",
+    "creating": "Création du projet…",
+    "createProject": "Créer le projet",
+    "deployHint": "Ensuite : cliquez sur Déployer pour publier sur un sous-domaine."
+  }
+}

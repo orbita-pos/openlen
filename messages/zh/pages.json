@@ -1,0 +1,44 @@
+{
+  "templatesIndex": {
+    "hero": {
+      "eyebrow": "{count, plural, =0 {暂无模板} one {# 个纯手工打造的模板} other {# 个纯手工打造的模板}}",
+      "title": "手工精制的着陆页，一键变成你自己的。",
+      "lede": "静态 HTML，已优化。选一个，填入你的信息，一键发布到你的子域名。"
+    }
+  },
+  "templateDetail": {
+    "backToAll": "全部模板",
+    "viewLive": "查看在线模板",
+    "meta": {
+      "family": "系列",
+      "mode": "风格",
+      "accent": "强调色",
+      "format": "格式",
+      "formatValue": "静态 HTML"
+    },
+    "related": {
+      "heading": "更多来自 {family} 的模板"
+    }
+  },
+  "blogIndex": {
+    "eyebrow": "博客",
+    "title": "OpenLen 有什么新动态",
+    "lede": "版本发布、更新日志，以及背后的思考。",
+    "readPost": "阅读全文"
+  },
+  "blogPost": {
+    "back": "博客"
+  },
+  "notFound": {
+    "metaTitle": "页面未找到",
+    "metaDescription": "此网址不对应任何 OpenLen 页面。",
+    "badge": "错误 404",
+    "title": "此页面<accent>不存在。</accent>",
+    "lede": "此网址不对应任何模板或项目。返回首页，或从 15 个精选模板中挑一个。",
+    "backHome": "返回首页",
+    "viewTemplates": "查看模板"
+  },
+  "devLoader": {
+    "caption": "正在为你设计页面…"
+  }
+}

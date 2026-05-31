@@ -1,0 +1,44 @@
+{
+  "templatesIndex": {
+    "hero": {
+      "eyebrow": "{count, plural, =0 {テンプレートはまだありません} one {手作りテンプレート #点} other {手作りテンプレート #点}}",
+      "title": "手作りのランディングページ。あなた仕様に、すぐ仕上がる。",
+      "lede": "最適化された静的HTML。好きな1点を選んで、あなたの情報を入れ、ワンクリックでサブドメインに公開。"
+    }
+  },
+  "templateDetail": {
+    "backToAll": "すべてのテンプレート",
+    "viewLive": "ライブテンプレートを見る",
+    "meta": {
+      "family": "ファミリー",
+      "mode": "モード",
+      "accent": "アクセントカラー",
+      "format": "フォーマット",
+      "formatValue": "静的HTML"
+    },
+    "related": {
+      "heading": "{family}のその他のテンプレート"
+    }
+  },
+  "blogIndex": {
+    "eyebrow": "ブログ",
+    "title": "OpenLenの最新情報",
+    "lede": "リリース、変更履歴、その背景にある考え方。",
+    "readPost": "記事を読む"
+  },
+  "blogPost": {
+    "back": "ブログ"
+  },
+  "notFound": {
+    "metaTitle": "ページが見つかりません",
+    "metaDescription": "このURLに一致するOpenLenのページはありません。",
+    "badge": "エラー404",
+    "title": "このページは<accent>存在しません。</accent>",
+    "lede": "このURLに一致するテンプレートやプロジェクトはありません。ホームに戻るか、厳選された15点のテンプレートから選んでください。",
+    "backHome": "ホームに戻る",
+    "viewTemplates": "テンプレートを見る"
+  },
+  "devLoader": {
+    "caption": "ページをデザイン中…"
+  }
+}

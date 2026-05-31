@@ -1,0 +1,49 @@
+{
+  "header": {
+    "titleVercel": "Bei Vercel veröffentlichen",
+    "titleGithub": "Zu GitHub pushen",
+    "subtitleVercel": "Veröffentliche diese Seite in deinem eigenen Vercel-Konto.",
+    "subtitleGithub": "Veröffentliche diese Seite in einem GitHub-Pages-Repo."
+  },
+  "close": "Schließen",
+  "notConfigured": {
+    "title": "Noch nicht verfügbar",
+    "body": "Dieses Veröffentlichungsziel ist auf dieser OpenLen-Instanz nicht eingerichtet."
+  },
+  "connect": {
+    "lead": "Verbinde dein {provider}-Konto, um diese Seite dort zu veröffentlichen.",
+    "button": "{provider} verbinden",
+    "redirecting": "Weiterleitung…"
+  },
+  "connected": {
+    "as": "Verbunden als {account}",
+    "asAnon": "Verbunden",
+    "nameLabel": "Name",
+    "nameHintVercel": "Wird in der URL verwendet: name.vercel.app",
+    "nameHintGithub": "Wird in der URL verwendet: you.github.io/name",
+    "deploy": "Veröffentlichen",
+    "redeploy": "Erneut veröffentlichen",
+    "deploying": "Wird veröffentlicht…",
+    "live": "Live",
+    "open": "Öffnen",
+    "upToDate": "Auf dem neuesten Stand deiner Änderungen.",
+    "drift": "Du hast Änderungen, die noch nicht veröffentlicht sind.",
+    "propagation": "GitHub Pages kann beim ersten Mal eine Minute brauchen, bis es live ist.",
+    "publishing": "Wird veröffentlicht… es kann bis zu einer Minute dauern, bis die Seite live ist. Wenn du sie sofort öffnest, erscheint kurz ein 404 — einfach neu laden.",
+    "disconnect": "Trennen"
+  },
+  "errors": {
+    "loadFailed": "Die Verbindung konnte nicht geladen werden.",
+    "invalidName": "Verwende Kleinbuchstaben, Zahlen und Bindestriche (1–39 Zeichen, kein Bindestrich am Anfang oder Ende).",
+    "notConnected": "Verbinde zuerst dein Konto.",
+    "tokenInvalid": "Deine Verbindung ist abgelaufen — bitte verbinde dich erneut.",
+    "deployFailed": "Veröffentlichung fehlgeschlagen: {message}",
+    "deployGeneric": "Veröffentlichung fehlgeschlagen. Bitte versuche es erneut.",
+    "network": "Netzwerkfehler. Versuche es erneut.",
+    "denied": "Die Autorisierung wurde abgebrochen.",
+    "state": "Verbindungsprüfung fehlgeschlagen. Bitte versuche es erneut.",
+    "exchange": "Die Verbindung konnte nicht abgeschlossen werden. Versuche es erneut.",
+    "not_configured": "Dieses Veröffentlichungsziel ist auf dieser OpenLen-Instanz nicht eingerichtet."
+  },
+  "confirmDisconnect": "{provider} trennen? Deine veröffentlichte Seite bleibt live — du musst dich nur erneut verbinden, um wieder zu veröffentlichen."
+}

@@ -1,0 +1,225 @@
+{
+  "nav": {
+    "links": {
+      "templates": "템플릿",
+      "features": "기능",
+      "pricing": "요금제",
+      "docs": "문서"
+    },
+    "githubAria": "GitHub의 OpenLen",
+    "toggleDark": "다크 모드 전환",
+    "signIn": "로그인",
+    "tryFree": "무료로 시작하기"
+  },
+  "hero": {
+    "alphaBadge": "알파",
+    "alphaPitch": "직접 제작한 템플릿 {count}개 — 알파 기간 동안 무료",
+    "title": "당신이 소유하는 랜딩 페이지.<br></br><muted>AI가 제작.</muted> <gradient>오픈 소스.</gradient>",
+    "subtitle": "프롬프트로 생성하거나, <strong>템플릿 {count}개</strong> 중에서 고르거나, 직접 만든 HTML을 붙여넣으세요. 편집하고, 내 서브도메인에 게시하고, <strong>프라이버시 우선 분석</strong>을 기본으로 사용하세요.",
+    "tagline": "당신의 HTML. 당신의 서브도메인. AGPLv3 — 포크하고, 감사하고, 직접 호스팅하세요. 종속도, 동의 배너도 없습니다.",
+    "pagesThisWeek": "이번 주 생성된 페이지 <strong>{count, number}</strong>개",
+    "githubAria": "GitHub의 OpenLen",
+    "starOnGithub": "GitHub에서 Star 누르기"
+  },
+  "heroPrompt": {
+    "placeholder": "내 SaaS를 위한 랜딩 페이지인데…",
+    "tools": {
+      "attachImage": "이미지 첨부",
+      "scopeSection": "특정 섹션으로 범위 지정",
+      "autofill": "내 정보로 자동 채우기",
+      "titleSuffix": "{label} — 페이지가 생성된 후 사용 가능",
+      "ariaSuffix": "{label} (생성 후 사용 가능)"
+    },
+    "generate": "생성",
+    "tryLabel": "예시"
+  },
+  "signInDialog": {
+    "close": "닫기",
+    "title": "로그인하고 생성하기",
+    "body": "페이지를 만들려면 계정이 필요합니다 — 무료입니다. 입력한 프롬프트는 저장되니, 멈춘 지점에서 바로 이어서 진행할 수 있습니다.",
+    "createAccount": "무료 계정 만들기",
+    "logIn": "로그인"
+  },
+  "demoStrip": {
+    "eyebrow": "직접 제작한 템플릿 {count}개 — 모두 바로 게시 가능",
+    "title": "진짜 템플릿.<br></br><muted> 고르고, 채우고, 게시하세요.</muted>",
+    "description": "각 템플릿은 독립적인 HTML입니다 — Tailwind와 Google Fonts가 인라인으로 포함되고, React 런타임은 없습니다. 복제하고, 문구와 이미지를 편집한 뒤, 내 서브도메인에 배포하세요.",
+    "browseAll": "템플릿 {count}개 모두 둘러보기"
+  },
+  "features": {
+    "badge": "OpenLen을 선택하는 이유",
+    "title": "소프트웨어를 빌리기보다 <muted>소유하고 싶은</muted> 사람들을 위해 만들었습니다.",
+    "items": {
+      "templates": {
+        "title": "프로덕션 템플릿 {count}개",
+        "body": "직접 제작한 마케팅 랜딩 페이지와 30개의 링크인바이오 크리에이터 허브(스트리머, 뮤지션, 포토그래퍼, 인디 메이커). 하나를 골라 iframe 안에서 커스터마이징하고 내 서브도메인에 게시하세요."
+      },
+      "analytics": {
+        "title": "프라이버시 우선 분석 기본 제공",
+        "body": "링크별 클릭 추적, 페이지 방문, 상위 유입 경로, 국가별 분포 — 쿠키도, IP 저장도, 동의 배너도 없습니다. 설계 자체가 GDPR에 부합합니다. Plausible과 같은 방식이지만, 온전히 당신의 것입니다."
+      },
+      "ownHtml": {
+        "title": "당신의 HTML, 당신의 서브도메인",
+        "body": "순수 HTML + Tailwind 결과물. '<you>'.openlen.com에 즉시 게시하거나, 파일을 가져가 어디서든 호스팅하세요 — Vercel, Cloudflare, GitHub Pages, 직접 운영하는 서버까지. 런타임 종속이 없습니다."
+      },
+      "openSource": {
+        "title": "오픈 소스 (AGPLv3)",
+        "body": "포크하세요. 감사하세요. 전체 스택을 단일 Hetzner 서버에서 직접 호스팅하세요. 생성기, 에디터, 게시 파이프라인, 분석까지 모두 저장소에 들어 있습니다."
+      }
+    }
+  },
+  "comparison": {
+    "badge": "비교",
+    "title": "계산은 우리가 해뒀으니, 당신은 안 해도 됩니다.",
+    "subtitle": "꾸밈없는 솔직한 비교표. 2026년 5월 업데이트.",
+    "cols": {
+      "price": "가격",
+      "yourCode": "내 코드 소유",
+      "openSource": "오픈 소스",
+      "selfHost": "직접 호스팅",
+      "analytics": "분석"
+    },
+    "values": {
+      "freeAlpha": "무료 (알파)",
+      "builtIn": "기본 제공",
+      "export": "내보내기",
+      "basic": "기본",
+      "paidTier": "유료 플랜"
+    },
+    "thatsUs": "바로 우리입니다",
+    "footnote": "가격은 2026년 5월 기준 공개 플랜을 반영합니다. Linktree를 포함한 이유는 30개의 링크인바이오 크리에이터 템플릿이 동일한 대상을 겨냥하기 때문입니다 — 차이점은 HTML과 서브도메인을 당신이 소유한다는 것입니다."
+  },
+  "creatorShowcase": {
+    "badge": "크리에이터를 위해",
+    "title": "정말로 <muted>당신이 소유하는</muted> 링크 페이지.",
+    "description": "스트리머, 뮤지션, 포토그래퍼, 인디 메이커, 프리미엄 크리에이터를 위해 직접 제작한 링크인바이오 템플릿 {count}개. 링크별 클릭 추적과 페이지 분석이 기본 제공됩니다 — Linktree 수수료도, Google Analytics도, 쿠키도 없습니다.",
+    "allCount": "크리에이터 템플릿 {count}개 전체"
+  },
+  "pricing": {
+    "badge": "요금제",
+    "title": "알파 기간 동안 무료. <muted>직접 호스팅은 영원히 무료.</muted>",
+    "subtitle": "매달 20 AI 크레딧으로 무료로 시작하세요. Pro로 업그레이드하면 150 크레딧 — 또는 전체 스택을 직접 호스팅해 제한 없이 사용하세요.",
+    "comingSoon": "출시 예정",
+    "mostPopular": "가장 인기",
+    "githubAria": "GitHub의 OpenLen",
+    "footnote": "모든 플랜에는 AGPL 라이선스의 오픈 소스 생성기가 포함됩니다. 호스팅 플랜은 기능이 아니라 편의를 더해줍니다.",
+    "free": {
+      "name": "무료",
+      "suffix": "알파 기간 동안",
+      "blurb": "모든 기능이 작동합니다. 알파 기간 동안 유료 장벽이 없습니다.",
+      "cta": "무료로 시작하기",
+      "features": {
+        "0": "월 20 AI 크레딧",
+        "1": "링크인바이오 30개를 포함한 템플릿 {count}개",
+        "2": "'<you>'.openlen.com에 게시",
+        "3": "프라이버시 우선 분석 + 링크별 클릭 추적",
+        "4": "이메일 알림이 포함된 리드 폼"
+      }
+    },
+    "pro": {
+      "name": "Pro",
+      "suffix": "/월",
+      "blurb": "월 150 AI 크레딧 — Pro 페이지 약 10회 생성 분량.",
+      "cta": "Pro로 업그레이드",
+      "features": {
+        "0": "무료 플랜의 모든 기능",
+        "1": "월 150 AI 크레딧 (Pro 페이지 약 10회 생성)",
+        "2": "커스텀 도메인 (links.your-brand.com)",
+        "3": "90일을 넘는 분석 데이터 보관",
+        "4": "우선 이메일 지원"
+      }
+    },
+    "selfHost": {
+      "name": "직접 호스팅",
+      "suffix": "영원히",
+      "blurb": "전체 스택을 당신의 서버에서 직접 운영하세요.",
+      "cta": "저장소 복제하기",
+      "features": {
+        "0": "AGPLv3 — 자유롭게 수정하고 재배포할 수 있습니다",
+        "1": "직접 발급한 Gemini / Kimi API 키 사용",
+        "2": "단일 Hetzner 서버로 모든 것을 실행",
+        "3": "nginx를 통한 와일드카드 서브도메인",
+        "4": "청구서도, 사용 제한도, 감시도 없음"
+      }
+    }
+  },
+  "finalCta": {
+    "badge": "당신의 스택을 소유하세요",
+    "title": "종속에 비용 그만 내세요.<br></br><muted>당신의 랜딩 페이지를 소유하기 시작하세요.</muted>",
+    "subtitle": "프롬프트 하나면 <strong>온전히 당신의 것이고, 어디든 배포 가능하며, 직접 읽을 수 있는 코드로 된</strong> 랜딩 페이지가 완성됩니다.",
+    "generateBtn": "내 페이지 생성 — 무료",
+    "githubAria": "GitHub의 OpenLen",
+    "cloneBtn": "GitHub에서 복제하기",
+    "perks": {
+      "noCard": "신용카드 불필요",
+      "agpl": "AGPLv3 — 영원히 당신의 것",
+      "selfHost": "단일 서버에서 직접 호스팅"
+    }
+  },
+  "footer": {
+    "tagline": "당신의 랜딩 페이지를 위한 열린 렌즈. AI가 제작하고, 당신의 HTML, 당신의 서브도메인 — AGPLv3, 종속 없음.",
+    "githubAria": "GitHub의 OpenLen",
+    "twitterAria": "Twitter",
+    "docsAria": "문서",
+    "licensed": "AGPL-3.0 라이선스",
+    "builtWith": "당연히 OpenLen으로 제작했습니다.",
+    "operational": "모든 시스템 정상 작동",
+    "product": {
+      "title": "제품",
+      "features": "기능",
+      "pricing": "요금제",
+      "changelog": "변경 이력",
+      "roadmap": "로드맵"
+    },
+    "openSource": {
+      "title": "오픈 소스",
+      "agplLicense": "AGPL 라이선스",
+      "contribute": "기여하기"
+    },
+    "company": {
+      "title": "회사",
+      "blog": "블로그",
+      "privacy": "개인정보 처리방침",
+      "terms": "이용약관",
+      "contact": "문의하기"
+    },
+    "legal": {
+      "title": "법적 고지",
+      "cookies": "쿠키",
+      "acceptableUse": "이용 정책",
+      "refunds": "환불 및 취소",
+      "subprocessors": "수탁 처리자",
+      "docs": "문서"
+    }
+  },
+  "gallery": {
+    "searchPlaceholder": "이름, 패밀리 또는 활용 사례로 검색…",
+    "searchAria": "템플릿 검색",
+    "clearSearch": "검색 지우기",
+    "showing": "템플릿 {total}개 중 {shown}개 표시",
+    "matching": "<code>{query}</code> 일치 결과",
+    "templateCount": "{count, plural, one {템플릿 #개} other {템플릿 #개}}",
+    "featured": {
+      "eyebrow": "최상위 쇼케이스",
+      "title": "추천 템플릿",
+      "description": "실제 사진으로 직접 제작한 쇼케이스 — 콘텐츠가 모두 채워졌을 때 당신의 페이지가 어떤 모습일지 보여주는 예시입니다.",
+      "curated": "엄선된 {count}개"
+    },
+    "empty": {
+      "message": "<code>{query}</code>와 일치하는 템플릿이 없습니다.",
+      "clear": "검색 지우기"
+    }
+  },
+  "templateCard": {
+    "featured": "추천",
+    "previewAlt": "{name} 템플릿 미리보기",
+    "livePreview": "{name} 라이브 미리보기"
+  },
+  "useTemplate": {
+    "cta": "이 템플릿 사용하기",
+    "creating": "프로젝트 생성 중…",
+    "errorStatus": "오류 {status}: {detail}",
+    "unexpectedResponse": "서버에서 예상치 못한 응답이 왔습니다",
+    "networkError": "네트워크 오류"
+  }
+}

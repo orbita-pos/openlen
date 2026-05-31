@@ -1,0 +1,61 @@
+{
+  "aiBrief": {
+    "title": "페이지를 설명해 주세요",
+    "subtitle": "원하시는 내용을 알려주시면 제가 페이지를 만들어 드릴게요.",
+    "placeholder": "내 SaaS를 위한 랜딩 페이지로…",
+    "attachImage": "이미지 첨부 — 생성 후 사용 가능",
+    "scopeSection": "특정 섹션으로 범위 지정 — 생성 후 사용 가능",
+    "autofill": "내 정보로 자동 채우기 — 생성 후 사용 가능",
+    "availableAfter": "프로젝트가 생성되면 사용할 수 있어요",
+    "generate": "생성하기"
+  },
+  "brief": {
+    "label": "브리프",
+    "description": "AI가 모든 채팅에서 참고하는 고정 컨텍스트예요. 브랜드, 톤, 제약 사항, 메모를 담아 두세요.",
+    "placeholder": "예시\n\n- 폴랑코에 있는 커피숍 Counter의 랜딩 페이지예요.\n- 톤: 따뜻하고 친근하게, 기술 용어 없이.\n- 강조 색상: 따뜻한 오렌지 (#C66B3D).\n- 할 일: 디자이너에게 최종 로고 요청하기.",
+    "emptyTitle": "브리프는 프로젝트마다 따로 존재해요.",
+    "emptyHint": "Pages 탭에서 프로젝트를 열어 브리프를 작성하세요.",
+    "saving": "저장 중…",
+    "saved": "저장됨 · 모든 채팅에 반영돼요",
+    "saveFailed": "저장 실패",
+    "saveErrorRetry": "저장하지 못했어요 — 다시 시도해 주세요.",
+    "ready": "준비됨"
+  },
+  "templates": {
+    "heading": "엄선한 템플릿",
+    "intro": "카드를 클릭하면 크게 미리 볼 수 있어요. 마음에 들면 배너의 <b>이 템플릿 사용하기</b>를 눌러 새 프로젝트로 복제하세요.",
+    "newProjectWarning": "템플릿을 고르면 <b>새</b> 프로젝트가 시작돼요. 현재 프로젝트는 <projectsLink>/projects</projectsLink>에 그대로 저장돼 있어요.",
+    "all": "전체",
+    "previewTemplateAria": "템플릿 미리 보기: {name}",
+    "preview": "미리 보기",
+    "previewing": "미리 보는 중",
+    "templateCount": "{count, plural, one {템플릿 #개} other {템플릿 #개}}",
+    "loadError": "템플릿을 불러오지 못했어요 — {error}",
+    "footer": "템플릿은 정적 HTML이에요 — 순수 마크업, Tailwind CDN, Google Fonts. 복제하면 온전히 내 것이 되고, Deploy를 눌러야 비로소 내 프로젝트가 서브도메인을 차지해요."
+  },
+  "sections": {
+    "heading": "섹션 라이브러리",
+    "intro": "현재 페이지에 섹션을 삽입하세요. 맨 아래에 추가되며, 섹션 핸들로 끌어 원하는 위치에 놓을 수 있어요. 다음 리스타일 때 페이지에 맞게 모양이 조정돼요.",
+    "all": "전체",
+    "jsTooltip": "JS로 콘텐츠를 렌더링해요 — 삽입 시 유지되지만 인라인 편집은 제한돼요",
+    "imgTooltip": "그라데이션 자리표시자가 함께 들어와요 — 삽입 후 실제 이미지로 교체하세요",
+    "insertAria": "현재 페이지에 {name} 삽입",
+    "insert": "삽입",
+    "inserting": "삽입 중…",
+    "loadError": "섹션을 불러오지 못했어요 — {error}",
+    "footer": "섹션은 범위가 한정된 조각이에요 — 그 스타일이 페이지와 충돌하지 않아요. 삽입한 뒤 순서를 바꾸고 취향대로 다시 꾸미세요."
+  },
+  "paste": {
+    "heading": "HTML 붙여넣기",
+    "description": "claude.ai가 만들어 준 HTML(또는 완결된 랜딩 페이지 HTML)을 붙여넣으세요. 내 서브도메인에 호스팅해 드릴게요.",
+    "projectNameLabel": "프로젝트 이름",
+    "projectNamePlaceholder": "비워 두면 페이지 제목에서 자동으로 감지해요",
+    "htmlLabel": "HTML",
+    "charCount": "{count, number}자",
+    "errorEmpty": "먼저 HTML을 붙여넣으세요.",
+    "errorHttp": "HTTP {status} — 다시 시도해 주세요.",
+    "creating": "프로젝트 생성 중…",
+    "createProject": "프로젝트 만들기",
+    "deployHint": "다음: Deploy를 클릭해 서브도메인에 게시하세요."
+  }
+}

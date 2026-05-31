@@ -1,0 +1,59 @@
+{
+  "common": {
+    "loading": "불러오는 중…"
+  },
+  "projectName": {
+    "workspaceLabel": "워크스페이스",
+    "untitled": "제목 없음"
+  },
+  "save": {
+    "saving": "저장 중…",
+    "saved": "저장됨 · 방금"
+  },
+  "deploy": {
+    "button": "배포",
+    "shipIt": "지금 배포",
+    "liveAt": "{subdomain}.openlen.com 에서 공개됨",
+    "unpublishedChanges": "게시되지 않은 변경 사항이 있습니다.",
+    "open": "열기",
+    "republish": "다시 게시",
+    "unpublish": "게시 취소",
+    "publishCta": {
+      "title": "openlen.com 에 게시",
+      "subtitle": "내 서브도메인에서 무료로 호스팅"
+    },
+    "customDomain": {
+      "title": "맞춤 도메인",
+      "subtitle": "내 호스트네임으로 이 페이지 제공"
+    },
+    "providers": {
+      "vercel": "Vercel에 배포",
+      "github": "GitHub에 푸시",
+      "vercelSubtitle": "내 전용 *.vercel.app URL",
+      "githubSubtitle": "GitHub Pages 저장소"
+    },
+    "previousDeploys": "이전 배포",
+    "noPriorDeploys": "아직 이전 배포가 없습니다."
+  },
+  "rollback": {
+    "confirm": "공개된 사이트를 {sha} 배포로 되돌릴까요? 방문자에게는 몇 초 안에 이 이전 버전이 표시됩니다.",
+    "errorGone": "해당 배포는 디스크에서 정리되어 복원할 수 없습니다.",
+    "errorGeneric": "되돌리기에 실패했습니다. 다시 시도해 주세요.",
+    "inProgress": "되돌리는 중…"
+  },
+  "theme": {
+    "lightMode": "라이트 모드",
+    "darkMode": "다크 모드"
+  },
+  "account": {
+    "fallbackName": "계정",
+    "allProjects": "모든 프로젝트",
+    "signOut": "로그아웃"
+  },
+  "relativeTime": {
+    "seconds": "{count}초 전",
+    "minutes": "{count}분 전",
+    "hours": "{count}시간 전",
+    "days": "{count}일 전"
+  }
+}

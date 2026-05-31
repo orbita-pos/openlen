@@ -1,0 +1,90 @@
+{
+  "header": {
+    "inspector": "Inspecteur",
+    "closeInspector": "Fermer l'inspecteur"
+  },
+  "element": {
+    "pageSettings": "Paramètres de la page"
+  },
+  "link": {
+    "title": "Lien",
+    "destination": "Destination",
+    "destinationPlaceholder": "https://…  ou  #section",
+    "openInNewTab": "Ouvrir dans un nouvel onglet"
+  },
+  "image": {
+    "title": "Image",
+    "altText": "Texte alternatif",
+    "altPlaceholder": "Décrivez l'image",
+    "source": "Source"
+  },
+  "style": {
+    "title": "Style",
+    "textColor": "Couleur du texte",
+    "background": "Arrière-plan"
+  },
+  "form": {
+    "title": "Formulaire",
+    "notifyEmail": "E-mail de notification",
+    "notifyEmailPlaceholder": "Par défaut : l'e-mail de votre compte",
+    "successMessage": "Message de confirmation",
+    "successMessagePlaceholder": "✓ Merci — nous avons bien reçu votre message.",
+    "redirect": "Redirection après envoi",
+    "redirectPlaceholder": "https://…/merci  (facultatif)",
+    "invalidEmail": "Saisissez une adresse e-mail valide.",
+    "invalidUrl": "Saisissez une URL complète commençant par http:// ou https://.",
+    "applyNote": "Les modifications du formulaire s'appliquent à votre prochain déploiement."
+  },
+  "testEmail": {
+    "send": "Envoyer un e-mail de test",
+    "sending": "Envoi…",
+    "sentTo": "✓ Test envoyé à <mono>{to}</mono>. Vérifiez votre boîte de réception et vos spams.",
+    "sendFailed": "Impossible d'envoyer l'e-mail de test.",
+    "networkError": "Erreur réseau."
+  },
+  "page": {
+    "loading": "Chargement des paramètres de la page…",
+    "title": "Page",
+    "fieldTitle": "Titre",
+    "fieldTitlePlaceholder": "Titre de la page",
+    "fieldDescription": "Description",
+    "fieldDescriptionPlaceholder": "Brève description pour les résultats de recherche",
+    "fieldSocialImage": "Image sociale (OG)",
+    "fieldFavicon": "Favicon",
+    "clickHint": "Cliquez sur n'importe quel élément de la page pour le modifier."
+  },
+  "privacy": {
+    "title": "Confidentialité",
+    "enableAnalytics": "Activer les statistiques",
+    "note": "Pages vues et clics sortants anonymes. Aucun cookie, aucun stockage d'IP, aucune bannière de consentement. S'applique à la prochaine publication."
+  },
+  "health": {
+    "title": "État de la page",
+    "passing": "validés",
+    "healthy": "La page semble en bonne santé.",
+    "issuesToAddress": "{count, plural, one {# problème à résoudre.} other {# problèmes à résoudre.}}"
+  },
+  "logo": {
+    "title": "Logo",
+    "previewAlt": "Aperçu du logo du projet",
+    "custom": "Logo personnalisé",
+    "default": "Par défaut — lettre initiale",
+    "inlineSvg": "SVG en ligne",
+    "usedAs": "Utilisé comme favicon, badge de carte et image OG de secours.",
+    "tabUpload": "Importer",
+    "tabPasteUrl": "Coller une URL",
+    "tabAuto": "Auto",
+    "uploading": "Importation…",
+    "chooseImage": "Choisir une image",
+    "uploadHint": "PNG / SVG / WebP. Les images carrées s'affichent le mieux.",
+    "urlHint": "Utilisez l'URL https:// complète d'une image hébergée.",
+    "generateFromTitle": "Générer à partir du titre",
+    "autoHint": "Disque corail avec la première lettre de « {title} ».",
+    "defaultTitleFallback": "Page",
+    "clear": "Effacer le logo",
+    "errorSaveFirst": "Enregistrez le projet avant d'importer un logo.",
+    "errorUploadStatus": "Échec de l'importation ({status})",
+    "errorUploadFailed": "Échec de l'importation",
+    "errorFullUrl": "Utilisez une URL https:// complète."
+  }
+}

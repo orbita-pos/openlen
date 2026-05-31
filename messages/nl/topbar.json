@@ -1,0 +1,59 @@
+{
+  "common": {
+    "loading": "Laden…"
+  },
+  "projectName": {
+    "workspaceLabel": "Werkruimte",
+    "untitled": "Naamloos"
+  },
+  "save": {
+    "saving": "Opslaan…",
+    "saved": "Opgeslagen · zojuist"
+  },
+  "deploy": {
+    "button": "Publiceren",
+    "shipIt": "Live zetten",
+    "liveAt": "Live op {subdomain}.openlen.com",
+    "unpublishedChanges": "Je hebt niet-gepubliceerde wijzigingen.",
+    "open": "Openen",
+    "republish": "Opnieuw publiceren",
+    "unpublish": "Publicatie ongedaan maken",
+    "publishCta": {
+      "title": "Publiceren naar openlen.com",
+      "subtitle": "Gratis hosting op je eigen subdomein"
+    },
+    "customDomain": {
+      "title": "Eigen domein",
+      "subtitle": "Serveer deze pagina vanaf je eigen hostnaam"
+    },
+    "providers": {
+      "vercel": "Implementeren naar Vercel",
+      "github": "Pushen naar GitHub",
+      "vercelSubtitle": "Je eigen *.vercel.app-URL",
+      "githubSubtitle": "Een GitHub Pages-repo"
+    },
+    "previousDeploys": "Eerdere implementaties",
+    "noPriorDeploys": "Nog geen eerdere implementaties."
+  },
+  "rollback": {
+    "confirm": "De live site terugzetten naar implementatie {sha}? Bezoekers zien deze oudere versie binnen enkele seconden.",
+    "errorGone": "Die implementatie is van de schijf verwijderd en kan niet worden hersteld.",
+    "errorGeneric": "Terugzetten mislukt. Probeer het opnieuw.",
+    "inProgress": "Terugzetten…"
+  },
+  "theme": {
+    "lightMode": "Lichte modus",
+    "darkMode": "Donkere modus"
+  },
+  "account": {
+    "fallbackName": "Account",
+    "allProjects": "Alle projecten",
+    "signOut": "Afmelden"
+  },
+  "relativeTime": {
+    "seconds": "{count}s geleden",
+    "minutes": "{count}m geleden",
+    "hours": "{count}u geleden",
+    "days": "{count}d geleden"
+  }
+}

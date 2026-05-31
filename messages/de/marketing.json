@@ -1,0 +1,225 @@
+{
+  "nav": {
+    "links": {
+      "templates": "Vorlagen",
+      "features": "Funktionen",
+      "pricing": "Preise",
+      "docs": "Doku"
+    },
+    "githubAria": "OpenLen auf GitHub",
+    "toggleDark": "Dunkelmodus umschalten",
+    "signIn": "Anmelden",
+    "tryFree": "Kostenlos testen"
+  },
+  "hero": {
+    "alphaBadge": "Alpha",
+    "alphaPitch": "{count} handgebaute Vorlagen — während der Alpha kostenlos",
+    "title": "Landingpages, die dir gehören.<br></br><muted>KI-gebaut.</muted> <gradient>Open Source.</gradient>",
+    "subtitle": "Erstelle aus einem Prompt, wähle aus <strong>{count} Vorlagen</strong> oder füge dein eigenes HTML ein. Bearbeite, veröffentliche auf deiner Subdomain und erhalte integrierte <strong>datenschutzfreundliche Analytics</strong>.",
+    "tagline": "Dein HTML. Deine Subdomain. AGPLv3 — forken, prüfen, selbst hosten. Kein Lock-in, keine Cookie-Banner.",
+    "pagesThisWeek": "<strong>{count, number}</strong> Seiten diese Woche erstellt",
+    "githubAria": "OpenLen auf GitHub",
+    "starOnGithub": "Auf GitHub mit Stern markieren"
+  },
+  "heroPrompt": {
+    "placeholder": "Eine Landingpage für mein SaaS, die …",
+    "tools": {
+      "attachImage": "Bild anhängen",
+      "scopeSection": "Auf einen Abschnitt eingrenzen",
+      "autofill": "Mit deinen Infos automatisch ausfüllen",
+      "titleSuffix": "{label} — verfügbar, sobald deine Seite existiert",
+      "ariaSuffix": "{label} (nach der Erstellung verfügbar)"
+    },
+    "generate": "Erstellen",
+    "tryLabel": "Testen"
+  },
+  "signInDialog": {
+    "close": "Schließen",
+    "title": "Zum Erstellen anmelden",
+    "body": "Du brauchst ein Konto, um deine Seite zu bauen — es ist kostenlos. Dein Prompt wird gespeichert, sodass du genau dort weitermachst, wo du aufgehört hast.",
+    "createAccount": "Kostenloses Konto erstellen",
+    "logIn": "Anmelden"
+  },
+  "demoStrip": {
+    "eyebrow": "{count} HANDGEBAUTE VORLAGEN — ALLE BEREIT ZUR VERÖFFENTLICHUNG",
+    "title": "Echte Vorlagen.<br></br><muted> Wählen, ausfüllen, veröffentlichen.</muted>",
+    "description": "Jede Vorlage ist eigenständiges HTML — Tailwind + Google Fonts inline, keine React-Runtime. Klonen, Texte + Bilder bearbeiten, auf deiner Subdomain veröffentlichen.",
+    "browseAll": "Alle {count} Vorlagen durchsuchen"
+  },
+  "features": {
+    "badge": "Warum OpenLen",
+    "title": "Gemacht für Menschen, die Software lieber <muted>besitzen</muted> als mieten.",
+    "items": {
+      "templates": {
+        "title": "{count} produktionsreife Vorlagen",
+        "body": "Handgebaute Marketing-Landingpages + 30 Link-in-Bio-Hubs für Creator (Streamer, Musiker, Fotografen, Indie-Maker). Eine auswählen, im iframe anpassen, auf deiner Subdomain veröffentlichen."
+      },
+      "analytics": {
+        "title": "Datenschutzfreundliche Analytics integriert",
+        "body": "Klick-Tracking pro Link, Seitenaufrufe, Top-Referrer, Länderaufteilung — keine Cookies, keine IP-Speicherung, kein Cookie-Banner. DSGVO-konform by Design. Dasselbe Modell wie Plausible, nur deins."
+      },
+      "ownHtml": {
+        "title": "Dein HTML, deine Subdomain",
+        "body": "Reines HTML + Tailwind als Ausgabe. Veröffentliche sofort auf '<you>'.openlen.com oder nimm die Datei und hoste sie überall — Vercel, Cloudflare, GitHub Pages, deinem eigenen Server. Kein Runtime-Lock-in."
+      },
+      "openSource": {
+        "title": "Open Source (AGPLv3)",
+        "body": "Forke es. Prüfe es. Hoste den gesamten Stack selbst auf einer einzigen Hetzner-Box. Generator, Editor, Publish-Pipeline und Analytics liegen alle im Repo."
+      }
+    }
+  },
+  "comparison": {
+    "badge": "Vergleich",
+    "title": "Wir haben gerechnet, damit du es nicht musst.",
+    "subtitle": "Ein ehrlicher, schonungsloser Direktvergleich. Aktualisiert im Mai 2026.",
+    "cols": {
+      "price": "Preis",
+      "yourCode": "Dein Code",
+      "openSource": "Open Source",
+      "selfHost": "Selbst hosten",
+      "analytics": "Analytics"
+    },
+    "values": {
+      "freeAlpha": "Kostenlos (Alpha)",
+      "builtIn": "Integriert",
+      "export": "Export",
+      "basic": "Basis",
+      "paidTier": "Kostenpflichtig"
+    },
+    "thatsUs": "das sind wir",
+    "footnote": "Die Preise spiegeln die öffentlichen Tarife mit Stand Mai 2026 wider. Linktree ist enthalten, weil unsere 30 Link-in-Bio-Creator-Vorlagen dieselbe Zielgruppe ansprechen — der Unterschied: Dir gehören das HTML und die Subdomain."
+  },
+  "creatorShowcase": {
+    "badge": "Für Creator",
+    "title": "Link-Seiten, die dir <muted>wirklich gehören.</muted>",
+    "description": "{count} handgebaute Link-in-Bio-Vorlagen für Streamer, Musiker, Fotografen, Indie-Maker und Premium-Creator. Klick-Tracking pro Link + Seiten-Analytics integriert — keine Linktree-Gebühr, kein Google Analytics, keine Cookies.",
+    "allCount": "Alle {count} Creator-Vorlagen"
+  },
+  "pricing": {
+    "badge": "Preise",
+    "title": "Während der Alpha kostenlos. <muted>Für immer selbst hosten.</muted>",
+    "subtitle": "Starte kostenlos mit 20 KI-Credits pro Monat. Upgrade auf Pro für 150 — oder hoste den gesamten Stack ganz ohne Limits selbst.",
+    "comingSoon": "Demnächst",
+    "mostPopular": "Am beliebtesten",
+    "githubAria": "OpenLen auf GitHub",
+    "footnote": "Alle Tarife enthalten den Open-Source-Generator unter AGPL. Gehostete Tarife bieten Komfort, keine zusätzlichen Funktionen.",
+    "free": {
+      "name": "Kostenlos",
+      "suffix": "während der Alpha",
+      "blurb": "Alles funktioniert. Keine Paywall während der Alpha.",
+      "cta": "Kostenlos testen",
+      "features": {
+        "0": "20 KI-Credits / Monat",
+        "1": "{count} Vorlagen, inklusive 30 Link-in-Bio",
+        "2": "Auf '<you>'.openlen.com veröffentlichen",
+        "3": "Datenschutzfreundliche Analytics + Klick-Tracking pro Link",
+        "4": "Lead-Formulare mit E-Mail-Benachrichtigungen"
+      }
+    },
+    "pro": {
+      "name": "Pro",
+      "suffix": "/Monat",
+      "blurb": "150 KI-Credits pro Monat — etwa 10 Pro-Seitenerstellungen.",
+      "cta": "Auf Pro upgraden",
+      "features": {
+        "0": "Alles aus Kostenlos",
+        "1": "150 KI-Credits / Monat (≈10 Pro-Seitenerstellungen)",
+        "2": "Eigene Domains (links.deine-marke.com)",
+        "3": "Analytics-Aufbewahrung über 90 Tage hinaus",
+        "4": "Bevorzugter E-Mail-Support"
+      }
+    },
+    "selfHost": {
+      "name": "Selbst hosten",
+      "suffix": "für immer",
+      "blurb": "Betreibe den gesamten Stack auf deiner eigenen Box.",
+      "cta": "Repo klonen",
+      "features": {
+        "0": "AGPLv3 — deins zum Anpassen + Weitergeben",
+        "1": "Eigenen Gemini-/Kimi-API-Key nutzen",
+        "2": "Eine einzige Hetzner-Box betreibt alles",
+        "3": "Wildcard-Subdomain über nginx",
+        "4": "Keine Rechnung, kein Rate-Limit, keine Kontrolle von außen"
+      }
+    }
+  },
+  "finalCta": {
+    "badge": "Besitze deinen Stack",
+    "title": "Hör auf, für Lock-in zu zahlen.<br></br><muted>Fang an, deine Landingpages zu besitzen.</muted>",
+    "subtitle": "Nur einen Prompt entfernt von einer Landingpage, die <strong>dir gehört, überall einsetzbar ist und aus Code besteht, den du lesen kannst.</strong>",
+    "generateBtn": "Meine Seite erstellen — kostenlos",
+    "githubAria": "OpenLen auf GitHub",
+    "cloneBtn": "Auf GitHub klonen",
+    "perks": {
+      "noCard": "Keine Kreditkarte",
+      "agpl": "AGPLv3 — für immer deins",
+      "selfHost": "Selbst hosten auf einer einzigen Box"
+    }
+  },
+  "footer": {
+    "tagline": "Ein offener Blick auf deine Landingpages. KI-gebaut, dein HTML, deine Subdomain — AGPLv3, kein Lock-in.",
+    "githubAria": "OpenLen auf GitHub",
+    "twitterAria": "Twitter",
+    "docsAria": "Doku",
+    "licensed": "Lizenziert unter AGPL-3.0",
+    "builtWith": "Mit OpenLen gebaut, natürlich.",
+    "operational": "Alle Systeme betriebsbereit",
+    "product": {
+      "title": "Produkt",
+      "features": "Funktionen",
+      "pricing": "Preise",
+      "changelog": "Changelog",
+      "roadmap": "Roadmap"
+    },
+    "openSource": {
+      "title": "Open Source",
+      "agplLicense": "AGPL-Lizenz",
+      "contribute": "Mitwirken"
+    },
+    "company": {
+      "title": "Unternehmen",
+      "blog": "Blog",
+      "privacy": "Datenschutz",
+      "terms": "AGB",
+      "contact": "Kontakt"
+    },
+    "legal": {
+      "title": "Rechtliches",
+      "cookies": "Cookies",
+      "acceptableUse": "Nutzungsrichtlinie",
+      "refunds": "Erstattung & Kündigung",
+      "subprocessors": "Unterauftragsverarbeiter",
+      "docs": "Doku"
+    }
+  },
+  "gallery": {
+    "searchPlaceholder": "Nach Name, Familie oder Anwendungsfall suchen …",
+    "searchAria": "Vorlagen durchsuchen",
+    "clearSearch": "Suche zurücksetzen",
+    "showing": "{shown} von {total} Vorlagen werden angezeigt",
+    "matching": "Treffer für <code>{query}</code>",
+    "templateCount": "{count, plural, one {# Vorlage} other {# Vorlagen}}",
+    "featured": {
+      "eyebrow": "Erstklassige Showcases",
+      "title": "Ausgewählte Vorlagen",
+      "description": "Handgebaute Showcases mit echter Fotografie — Beispiele dafür, wie deine Seite vollständig befüllt aussehen kann.",
+      "curated": "{count} kuratiert"
+    },
+    "empty": {
+      "message": "Keine Vorlagen passen zu <code>{query}</code>.",
+      "clear": "Suche zurücksetzen"
+    }
+  },
+  "templateCard": {
+    "featured": "Empfohlen",
+    "previewAlt": "Vorschau der Vorlage {name}",
+    "livePreview": "Live-Vorschau von {name}"
+  },
+  "useTemplate": {
+    "cta": "Diese Vorlage verwenden",
+    "creating": "Projekt wird erstellt …",
+    "errorStatus": "Fehler {status}: {detail}",
+    "unexpectedResponse": "Unerwartete Antwort vom Server",
+    "networkError": "Netzwerkfehler"
+  }
+}

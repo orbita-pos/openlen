@@ -1,0 +1,139 @@
+{
+  "sidebar": {
+    "tabs": {
+      "chat": { "label": "Chat", "title": "Chat met Orchestra" },
+      "templates": { "label": "Sjablonen", "title": "Begin met een sjabloon" },
+      "library": { "label": "Bibliotheek", "title": "Voeg een sectie toe" },
+      "pages": { "label": "Pagina's", "title": "Recente projecten" },
+      "leads": { "label": "Leads", "title": "Formulierinzendingen" },
+      "insights": { "label": "Inzichten", "title": "Pagina-analyse" },
+      "versions": { "label": "Versies", "title": "Versiegeschiedenis" },
+      "brief": { "label": "Briefing", "title": "Projectbriefing (AI-context)" }
+    },
+    "tabLocked": "{label} — vergrendeld",
+    "expandPanel": "Paneel uitvouwen",
+    "collapsePanel": "Paneel inklappen",
+    "choosing": {
+      "title": "De tools verschijnen hier zodra je begint.",
+      "hint": "Kies rechts een startpunt →"
+    }
+  },
+  "preview": {
+    "zoomFit": "Passend",
+    "toolbar": {
+      "editPage": "Pagina bewerken (⌘E)",
+      "exitEdit": "Bewerkmodus verlaten (⌘E)",
+      "showGrid": "Rasteroverlay tonen",
+      "hideGrid": "Rasteroverlay verbergen",
+      "refresh": "Voorbeeld vernieuwen",
+      "openNewTab": "Openen in nieuw tabblad"
+    },
+    "banner": {
+      "sectionSelect": "Klik op een sectie om je volgende chat erop te richten · <kbd></kbd> om te annuleren",
+      "inlineEdit": "Klik op tekst in de pagina om die direct te bewerken · <kbd></kbd> om te annuleren"
+    },
+    "templateBanner": {
+      "previewing": "Sjabloon bekijken",
+      "previewingNamed": "Voorbeeld: {name}",
+      "readOnly": "Alleen-lezen — er wordt niets opgeslagen tot je bevestigt",
+      "cloning": "Klonen…",
+      "use": "Dit sjabloon gebruiken →",
+      "clear": "Wissen"
+    },
+    "iframeTitle": "Voorbeeld van OpenLen-werkruimte",
+    "redesigning": "Je pagina wordt opnieuw ontworpen…"
+  },
+  "placeholder": {
+    "ai": {
+      "title": "Brief je pagina in de zijbalk",
+      "hint": "Beschrijf wat je wilt en de orchestrator stelt het samen."
+    },
+    "template": {
+      "title": "Blader door de galerij in de zijbalk",
+      "hint": "Klik op een sjabloon om het te klonen naar een nieuw project."
+    },
+    "paste": {
+      "title": "Plak je HTML in de zijbalk",
+      "hint": "Plaats HTML vanuit claude.ai (of waar dan ook) — wij hosten het."
+    },
+    "sidebar": "Zijbalk"
+  },
+  "empty": {
+    "badge": "OpenLen-werkruimte",
+    "heading": "Waarmee wil je beginnen?",
+    "subheading": "Drie wegen naar een gepubliceerde landingspagina. Kies er één en wij regelen een echt subdomein op <domain>openlen.com</domain>.",
+    "pickThis": "Dit kiezen",
+    "browseProjects": "of <link>blader door je projecten →</link>",
+    "cards": {
+      "ai": {
+        "title": "Genereren met AI",
+        "description": "Beschrijf je pagina in gewone taal. Wij stellen het samen.",
+        "detail": "Briefing → pagina in ~30s"
+      },
+      "template": {
+        "title": "Begin met een sjabloon",
+        "description": "Kies een zorgvuldig samengestelde landingspagina uit zes stijlfamilies.",
+        "detail": "30 ontwerpen · klaar om te publiceren"
+      },
+      "paste": {
+        "title": "Plak je HTML",
+        "description": "Breng HTML mee vanuit claude.ai of waar dan ook. Wij hosten het.",
+        "detail": "Zelfstandig · gepubliceerd met één klik"
+      }
+    },
+    "recent": {
+      "title": "Verder werken",
+      "loading": "Recente projecten laden",
+      "all": "Alle projecten",
+      "thumbnail": "Miniatuur van {title}",
+      "publishedWithEdits": "Gepubliceerd — heeft niet-gepubliceerde wijzigingen",
+      "published": "Gepubliceerd",
+      "live": "Live",
+      "draft": "Concept",
+      "time": {
+        "justNow": "zojuist",
+        "minutes": "{count}m geleden",
+        "hours": "{count}u geleden",
+        "yesterday": "gisteren",
+        "days": "{count}d geleden",
+        "weeks": "{count}w geleden"
+      }
+    }
+  },
+  "status": {
+    "drift": "Verschil met {domain}",
+    "saved": "Opgeslagen · {ago}",
+    "live": "Live op {domain}",
+    "ready": "Klaar om te publiceren",
+    "saving": "Opslaan…",
+    "commandPalette": "opdrachtenpalet",
+    "ago": {
+      "justNow": "zojuist",
+      "seconds": "{count}s geleden",
+      "minutes": "{count}m geleden",
+      "hours": "{count}u geleden",
+      "days": "{count}d geleden"
+    }
+  },
+  "loader": {
+    "sections": {
+      "hero": "Hero",
+      "features": "Functies",
+      "pricing": "Prijzen",
+      "reviews": "Reviews",
+      "footer": "Voettekst"
+    }
+  },
+  "modelPicker": {
+    "switch": "Model wisselen — Gemini Pro / Flash",
+    "note": {
+      "deeper": "Grondiger",
+      "recommended": "Aanbevolen"
+    }
+  },
+  "templatePreview": {
+    "ariaLabel": "Live voorbeeld van {name}",
+    "iframeTitle": "Live voorbeeld van {name}",
+    "applied": "Toegepast"
+  }
+}

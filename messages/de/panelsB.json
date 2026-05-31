@@ -1,0 +1,94 @@
+{
+  "time": {
+    "justNow": "gerade eben",
+    "minutesAgo": "vor {count} Min.",
+    "hoursAgo": "vor {count} Std.",
+    "yesterday": "gestern",
+    "daysAgo": "vor {count} T.",
+    "weeksAgo": "vor {count} Wo."
+  },
+  "pages": {
+    "newPage": "Neue Seite",
+    "active": "Aktiv",
+    "published": "Veröffentlicht",
+    "publishedUnpublishedEdits": "Veröffentlicht – mit nicht veröffentlichten Änderungen",
+    "draft": "Entwurf",
+    "thumbnailOf": "Vorschaubild von {title}",
+    "thumbnailTitle": "Vorschaubild von {title}",
+    "loadError": "Projekte konnten nicht geladen werden",
+    "loadFailed": "Deine Projekte konnten nicht geladen werden.",
+    "empty": "Noch keine Seiten.",
+    "emptyHint": "Erstelle eine, um sie hier zu sehen."
+  },
+  "versions": {
+    "loadError": "Versionen konnten nicht geladen werden",
+    "restoreError": "Wiederherstellen fehlgeschlagen – versuch es erneut.",
+    "perProject": "Versionen werden pro Projekt geführt.",
+    "perProjectHint": "Öffne ein Projekt im Tab „Seiten“, um seinen Verlauf zu sehen.",
+    "title": "Versionsverlauf",
+    "subtitle": "Automatische Snapshots bei Chat, Veröffentlichung und Klon.",
+    "empty": "Noch keine Versionen.",
+    "emptyHint": "Der nächste Chat oder die nächste Veröffentlichung erstellt eine.",
+    "current": "Aktuell",
+    "restore": "Wiederherstellen",
+    "restoring": "Wird wiederhergestellt …",
+    "cancel": "Abbrechen",
+    "confirmTitle": "Diese Version wiederherstellen?",
+    "confirmRollback": "Die Seite wird zurückgesetzt auf:",
+    "confirmNote": "Deine aktuelle Seite wird zuerst als Version gesichert – du kannst sie wiederherstellen, falls du es dir anders überlegst.",
+    "thumbnailOf": "Vorschaubild von Version {label}",
+    "thumbnailTitle": "Vorschaubild von {label}",
+    "source": {
+      "initial": "Start",
+      "chat": "Chat",
+      "publish": "Live",
+      "restore": "Zurück",
+      "manual": "Gespeichert",
+      "styleMatch": "Füllen",
+      "reorder": "Reihenfolge",
+      "replace": "Asset"
+    }
+  },
+  "insights": {
+    "loadError": "Insights konnten nicht geladen werden",
+    "title": "Insights",
+    "subtitle": "Datenschutzfreundliche Analytics für diese Seite.",
+    "perProject": "Insights werden pro Projekt geführt.",
+    "perProjectHint": "Öffne ein Projekt im Tab „Seiten“, um seine Analytics zu sehen.",
+    "range": {
+      "all": "Alle"
+    },
+    "emptyRange": "Für diesen Zeitraum noch keine Daten.",
+    "emptyRangeHint": "Veröffentliche deine Seite und teile den Link – die Analytics starten, sobald ein Besucher sie aufruft.",
+    "kpi": {
+      "views": "Aufrufe",
+      "uniques": "Eindeutige",
+      "clicks": "Klicks"
+    },
+    "visitsOverTime": "Besuche im Zeitverlauf",
+    "dayCount": "{count, plural, one {# Tag} other {# Tage}}",
+    "topLinks": "Top-Links",
+    "noClicks": "Noch keine ausgehenden Klicks.",
+    "referrers": "Verweise",
+    "directOnly": "Nur direkt",
+    "countries": "Länder",
+    "noCountryData": "Keine Länderdaten",
+    "device": "Gerät",
+    "noDeviceData": "Keine Gerätedaten",
+    "deviceType": {
+      "mobile": "Mobil",
+      "desktop": "Desktop",
+      "tablet": "Tablet"
+    }
+  },
+  "leads": {
+    "loadError": "Leads konnten nicht geladen werden",
+    "perProject": "Leads werden pro Projekt geführt.",
+    "perProjectHint": "Öffne ein Projekt im Tab „Seiten“, um seine Einsendungen zu sehen.",
+    "title": "Leads",
+    "subtitle": "Formulareinsendungen von deiner veröffentlichten Seite.",
+    "empty": "Noch keine Leads.",
+    "emptyHint": "Veröffentliche deine Seite – jede Formulareinsendung landet hier.",
+    "emptySubmission": "Leere Einsendung"
+  }
+}

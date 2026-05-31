@@ -1,0 +1,190 @@
+{
+  "common": {
+    "close": "Sluiten",
+    "closeButton": "Sluiten",
+    "cancel": "Annuleren",
+    "apply": "Toepassen",
+    "loading": "Laden…"
+  },
+  "header": {
+    "iconTitle": "Pictogram vervangen",
+    "imageTitle": "Afbeelding vervangen",
+    "iconSubtitle": "Kies een Lucide-pictogram om in te wisselen. De grootte en kleur van het origineel blijven behouden.",
+    "imageSubtitle": "Plak een afbeeldings-URL (Unsplash, je eigen CDN, waar dan ook). De beeldverhouding van het vak blijft behouden."
+  },
+  "icon": {
+    "searchPlaceholder": "Zoek in 100+ pictogrammen…",
+    "current": "Huidig",
+    "noMatch": "Geen pictogrammen komen overeen met \"{query}\".",
+    "pickAria": "Kies {name}"
+  },
+  "image": {
+    "tabs": {
+      "openlen": "Door OpenLen",
+      "paste": "URL plakken",
+      "unsplash": "Unsplash",
+      "upload": "Uploaden"
+    }
+  },
+  "paste": {
+    "urlLabel": "Afbeeldings-URL",
+    "invalidUrl": "Dit lijkt geen geldige http(s)-URL.",
+    "altLabel": "Alt-tekst <hint>· optioneel maar beter voor toegankelijkheid</hint>",
+    "altPlaceholder": "Beschrijf de afbeelding…",
+    "preview": "Voorbeeld",
+    "previewError": "Kon die URL niet laden. Controleer of hij openbaar en bereikbaar is.",
+    "previewAlt": "voorbeeld",
+    "applyImage": "Afbeelding toepassen"
+  },
+  "openlen": {
+    "searchPlaceholder": "Zoek in {count} OpenLen-afbeeldingen…",
+    "loadFailed": "Laden mislukt",
+    "noMatch": "Geen afbeeldingen komen overeen met \"{query}\".",
+    "empty": "Hier staat nog niets.",
+    "footer": "Geselecteerde afbeeldingen door OpenLen — inbegrepen bij zelf-hosten",
+    "useImageAria": "Gebruik OpenLen-afbeelding: {alt}",
+    "filters": {
+      "all": "Alle",
+      "3d-abstract": "3D",
+      "gradient-bg": "Verlopen",
+      "device-mockup": "Mockups",
+      "creator-mockup": "Creator",
+      "product-still-life": "Producten",
+      "claymorph": "Klei",
+      "interior-editorial": "Interieurs",
+      "architecture-editorial": "Architectuur",
+      "nature-editorial": "Natuur",
+      "travel-editorial": "Reizen",
+      "wedding-editorial": "Bruiloft",
+      "music-editorial": "Muziek",
+      "gaming-editorial": "Gaming",
+      "food-editorial": "Eten",
+      "lifestyle-editorial": "Lifestyle",
+      "sports-editorial": "Sport",
+      "pet-editorial": "Huisdieren",
+      "fashion-editorial": "Mode"
+    },
+    "badges": {
+      "3d-abstract": "3D",
+      "gradient-bg": "Verloop",
+      "device-mockup": "Mockup",
+      "creator-mockup": "Creator",
+      "product-still-life": "Product",
+      "claymorph": "Klei",
+      "interior-editorial": "Interieur",
+      "architecture-editorial": "Architectuur",
+      "nature-editorial": "Natuur",
+      "travel-editorial": "Reizen",
+      "wedding-editorial": "Bruiloft",
+      "music-editorial": "Muziek",
+      "gaming-editorial": "Gaming",
+      "food-editorial": "Eten",
+      "lifestyle-editorial": "Lifestyle",
+      "sports-editorial": "Sport",
+      "pet-editorial": "Huisdier",
+      "fashion-editorial": "Mode"
+    }
+  },
+  "unsplash": {
+    "searchFailed": "Zoeken mislukt",
+    "demoPlaceholder": "Demomodus — stel UNSPLASH_ACCESS_KEY in voor volledig zoeken",
+    "searchPlaceholder": "Zoek Unsplash-foto's…",
+    "noMatch": "Geen foto's komen overeen met \"{query}\".",
+    "typeToSearch": "Typ om te zoeken.",
+    "attribution": "Foto's van <link>Unsplash</link>",
+    "demoBadge": "DEMO · {count} foto's",
+    "usePhotoAria": "Gebruik foto van {author}: {alt}"
+  },
+  "upload": {
+    "tooLarge": "Bestand te groot. Max {max} MB.",
+    "notImage": "Dat is geen afbeelding — kies een png/jpg/webp/gif/svg.",
+    "networkError": "Netwerkfout tijdens uploaden.",
+    "failed": "Uploaden mislukt ({status})",
+    "unavailable": "Uploaden is niet beschikbaar buiten een project.",
+    "previewAlt": "uploadvoorbeeld",
+    "swapHint": "Klik opnieuw of sleep een andere om te wisselen.",
+    "dropHere": "Sleep hier een afbeelding naartoe",
+    "browseHint": "of klik om te bladeren · png / jpg / webp / gif / svg · tot {max} MB",
+    "altLabel": "Alt-tekst <hint>· optioneel</hint>",
+    "uploadingProgress": "Uploaden… {percent}%",
+    "storedIn": "Opgeslagen in de assetopslag van je project",
+    "uploading": "Uploaden…",
+    "uploadApply": "Uploaden en toepassen"
+  },
+  "autofill": {
+    "title": "Vul in met je gegevens",
+    "subtitle": "Upload een afbeelding met je gegevens — of beschrijf gewoon je bedrijf. Je template wordt gevuld met je echte content; het ontwerp blijft hetzelfde.",
+    "subtitleShort": "Afbeelding of tekst → je template wordt gevuld met je content.",
+    "tabs": {
+      "image": "Afbeelding uploaden",
+      "text": "Beschrijf het"
+    },
+    "describe": {
+      "label": "Vertel me over je bedrijf",
+      "placeholder": "bijv. Een taquería in Monterrey die sinds 1989 tacos al pastor serveert. Familiebedrijf, verse ingrediënten. Bestellen via WhatsApp.",
+      "hint": "Schrijf het zoals je wilt — ik haal de naam, een slogan en een call-to-action eruit en vul daarna de pagina."
+    },
+    "image": {
+      "previewAlt": "Voorbeeld",
+      "sizeChange": "{kb} KB · klik om te wijzigen",
+      "dropPrompt": "Sleep een afbeelding, klik om te kiezen of plak vanaf je klembord",
+      "hint": "JPG of PNG · tot 8 MB · screenshots, menufoto's, brochures…"
+    },
+    "fields": {
+      "businessName": {
+        "label": "Bedrijfsnaam *",
+        "placeholder": "Juan's Tacos"
+      },
+      "industry": {
+        "label": "Branche / type",
+        "placeholder": "Traditionele Mexicaanse taquería"
+      },
+      "tagline": {
+        "label": "Slogan (1 pakkende regel)",
+        "placeholder": "Authentieke tacos al pastor sinds 1989"
+      },
+      "pitch": {
+        "label": "Pitch (1-2 zinnen over je bedrijf)",
+        "placeholder": "Al meer dan 30 jaar de beste tacos al pastor van Monterrey. Familietraditie, verse ingrediënten."
+      },
+      "heroKeyword": {
+        "label": "Hero-trefwoord",
+        "placeholder": "traditie"
+      },
+      "ctaPrimary": {
+        "label": "Primaire CTA",
+        "placeholder": "Bestel via WhatsApp"
+      }
+    },
+    "stages": {
+      "extracting": "Afbeelding lezen…",
+      "tagging": "Template voorbereiden…",
+      "calling-model": "Kimi K2.6 schrijft…",
+      "applying": "Wijzigingen toepassen…",
+      "persisting": "Opslaan…",
+      "done": "Klaar",
+      "error": "Fout"
+    },
+    "doneStatus": "✓ Klaar · {seconds}s",
+    "tips": {
+      "image": "Tip: een menufoto, een screenshot van je site, een brochure — alles werkt.",
+      "text": "Tip: een zin of twee over wat je doet is genoeg — de AI schrijft de rest."
+    },
+    "processing": "Verwerken…",
+    "errors": {
+      "notImage": "Het bestand is geen afbeelding.",
+      "onlyJpgPng": "We accepteren alleen JPG of PNG.",
+      "tooLarge": "Afbeelding te groot ({size} MB, max 8 MB).",
+      "tooSmallBytes": "Afbeelding te klein — probeer een screenshot of een echte foto (min 4 KB).",
+      "tooSmallDims": "Afbeelding te klein ({width}×{height}px). Minimaal 200×200 — probeer een screenshot van je site of een foto van het menu.",
+      "cantRead": "We konden de afbeelding niet lezen. Probeer een andere.",
+      "uploadFirst": "Upload eerst een afbeelding.",
+      "needBusinessName": "Je hebt op zijn minst de bedrijfsnaam nodig.",
+      "needDescription": "Vertel me wat over je bedrijf — op zijn minst een zin.",
+      "network": "Netwerkfout",
+      "server": "Server {status}: {detail}",
+      "streamRead": "Stream lezen mislukt",
+      "unknown": "Onbekende fout"
+    }
+  }
+}

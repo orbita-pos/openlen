@@ -1,0 +1,61 @@
+{
+  "aiBrief": {
+    "title": "描述你的页面",
+    "subtitle": "告诉我你想要什么，我来帮你生成页面。",
+    "placeholder": "为我的 SaaS 制作一个落地页，内容是……",
+    "attachImage": "附加图片 — 生成后可用",
+    "scopeSection": "锁定到某个区块 — 生成后可用",
+    "autofill": "用我的信息自动填充 — 生成后可用",
+    "availableAfter": "项目创建后即可使用",
+    "generate": "生成"
+  },
+  "brief": {
+    "label": "简介",
+    "description": "AI 在每次对话中都会看到的持久上下文。品牌、语气、限制、备忘。",
+    "placeholder": "例如\n\n- 这是 Counter 的落地页，一家位于 Polanco 的咖啡馆。\n- 语气：温暖、亲切，不用技术术语。\n- 主色：暖橙色（#C66B3D）。\n- 待办：向设计师索取最终版 logo。",
+    "emptyTitle": "简介按项目独立保存。",
+    "emptyHint": "在“页面”标签中打开一个项目来撰写它的简介。",
+    "saving": "保存中…",
+    "saved": "已保存 · 每次对话都会注入",
+    "saveFailed": "保存失败",
+    "saveErrorRetry": "无法保存 — 请重试。",
+    "ready": "就绪"
+  },
+  "templates": {
+    "heading": "精选模板",
+    "intro": "点击卡片可放大预览。准备好后，在横幅中点击 <b>使用此模板</b>，即可将它克隆为一个新项目。",
+    "newProjectWarning": "选用模板会创建一个<b>新</b>项目。你当前的项目仍会保存在 <projectsLink>/projects</projectsLink> 中。",
+    "all": "全部",
+    "previewTemplateAria": "预览模板：{name}",
+    "preview": "预览",
+    "previewing": "预览中",
+    "templateCount": "{count, plural, one {# 个模板} other {# 个模板}}",
+    "loadError": "加载模板失败 — {error}",
+    "footer": "模板是静态 HTML — 纯标记、Tailwind CDN、Google Fonts。克隆后它们就归你所有；只有当你点击发布时，你的项目才会占用一个子域名。"
+  },
+  "sections": {
+    "heading": "区块库",
+    "intro": "向当前页面插入一个区块。它会落在页面底部 — 用区块手柄把它拖到合适的位置。下次重新设计时，它的外观会自动适配你的页面。",
+    "all": "全部",
+    "jsTooltip": "通过 JS 渲染内容 — 插入时会保留，行内编辑受限",
+    "imgTooltip": "自带渐变占位图 — 插入后请替换为真实图片",
+    "insertAria": "将 {name} 插入到当前页面",
+    "insert": "插入",
+    "inserting": "插入中…",
+    "loadError": "加载区块失败 — {error}",
+    "footer": "区块是作用域隔离的片段 — 它们的样式不会与你的页面冲突。插入后，再按喜好重新排序和调整样式。"
+  },
+  "paste": {
+    "heading": "粘贴 HTML",
+    "description": "把 claude.ai 给你的 HTML（或任何自包含的落地页 HTML）粘贴进来。我们会将它托管在你的子域名上。",
+    "projectNameLabel": "项目名称",
+    "projectNamePlaceholder": "留空则自动从页面标题中识别",
+    "htmlLabel": "HTML",
+    "charCount": "{count, number} 个字符",
+    "errorEmpty": "请先粘贴一些 HTML。",
+    "errorHttp": "HTTP {status} — 请重试。",
+    "creating": "正在创建项目…",
+    "createProject": "创建项目",
+    "deployHint": "下一步：点击发布，将其部署到子域名。"
+  }
+}

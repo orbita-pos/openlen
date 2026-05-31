@@ -1,0 +1,90 @@
+{
+  "header": {
+    "inspector": "检查器",
+    "closeInspector": "关闭检查器"
+  },
+  "element": {
+    "pageSettings": "页面设置"
+  },
+  "link": {
+    "title": "链接",
+    "destination": "目标地址",
+    "destinationPlaceholder": "https://…  或  #section",
+    "openInNewTab": "在新标签页中打开"
+  },
+  "image": {
+    "title": "图片",
+    "altText": "替代文本",
+    "altPlaceholder": "描述这张图片",
+    "source": "图片来源"
+  },
+  "style": {
+    "title": "样式",
+    "textColor": "文字颜色",
+    "background": "背景"
+  },
+  "form": {
+    "title": "表单",
+    "notifyEmail": "通知邮箱",
+    "notifyEmailPlaceholder": "默认：你的账户邮箱",
+    "successMessage": "成功提示",
+    "successMessagePlaceholder": "✓ 谢谢，我们已收到你的消息。",
+    "redirect": "提交后跳转",
+    "redirectPlaceholder": "https://…/thank-you （可选）",
+    "invalidEmail": "请输入有效的邮箱地址。",
+    "invalidUrl": "请输入以 http:// 或 https:// 开头的完整网址。",
+    "applyNote": "表单更改将在你下次部署时生效。"
+  },
+  "testEmail": {
+    "send": "发送测试邮件",
+    "sending": "发送中…",
+    "sentTo": "✓ 测试邮件已发送至 <mono>{to}</mono>。请检查收件箱和垃圾邮件文件夹。",
+    "sendFailed": "无法发送测试邮件。",
+    "networkError": "网络错误。"
+  },
+  "page": {
+    "loading": "正在加载页面设置…",
+    "title": "页面",
+    "fieldTitle": "标题",
+    "fieldTitlePlaceholder": "页面标题",
+    "fieldDescription": "描述",
+    "fieldDescriptionPlaceholder": "用于搜索结果的简短描述",
+    "fieldSocialImage": "社交分享图（OG）",
+    "fieldFavicon": "网站图标",
+    "clickHint": "点击页面上的任意元素即可编辑。"
+  },
+  "privacy": {
+    "title": "隐私",
+    "enableAnalytics": "启用分析",
+    "note": "匿名统计页面浏览量和外链点击。无 Cookie、不存储 IP、无需同意横幅。下次发布时生效。"
+  },
+  "health": {
+    "title": "页面健康度",
+    "passing": "项通过",
+    "healthy": "页面状态良好。",
+    "issuesToAddress": "{count, plural, one {# 个待处理问题。} other {# 个待处理问题。}}"
+  },
+  "logo": {
+    "title": "Logo",
+    "previewAlt": "项目 Logo 预览",
+    "custom": "自定义 Logo",
+    "default": "默认 — 首字母",
+    "inlineSvg": "内联 SVG",
+    "usedAs": "用作网站图标、卡片徽标和 OG 后备图。",
+    "tabUpload": "上传",
+    "tabPasteUrl": "粘贴网址",
+    "tabAuto": "自动",
+    "uploading": "上传中…",
+    "chooseImage": "选择图片",
+    "uploadHint": "PNG / SVG / WebP。正方形图片显示效果最佳。",
+    "urlHint": "请使用托管图片的完整 https:// 网址。",
+    "generateFromTitle": "根据标题生成",
+    "autoHint": "珊瑚色圆盘，中间是“{title}”的首字母。",
+    "defaultTitleFallback": "页面",
+    "clear": "清除 Logo",
+    "errorSaveFirst": "上传 Logo 前请先保存项目。",
+    "errorUploadStatus": "上传失败（{status}）",
+    "errorUploadFailed": "上传失败",
+    "errorFullUrl": "请使用完整的 https:// 网址。"
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "time": {
+    "justNow": "たった今",
+    "minutesAgo": "{count}分前",
+    "hoursAgo": "{count}時間前",
+    "yesterday": "昨日",
+    "daysAgo": "{count}日前",
+    "weeksAgo": "{count}週間前"
+  },
+  "pages": {
+    "newPage": "新しいページ",
+    "active": "稼働中",
+    "published": "公開済み",
+    "publishedUnpublishedEdits": "公開済み — 未公開の変更あり",
+    "draft": "下書き",
+    "thumbnailOf": "{title}のサムネイル",
+    "thumbnailTitle": "{title}のサムネイル",
+    "loadError": "プロジェクトの読み込みに失敗しました",
+    "loadFailed": "プロジェクトを読み込めませんでした。",
+    "empty": "ページはまだありません。",
+    "emptyHint": "作成するとここに表示されます。"
+  },
+  "versions": {
+    "loadError": "バージョンの読み込みに失敗しました",
+    "restoreError": "復元できませんでした — もう一度お試しください。",
+    "perProject": "バージョンはプロジェクトごとに保存されます。",
+    "perProjectHint": "「ページ」タブからプロジェクトを開くと履歴を確認できます。",
+    "title": "バージョン履歴",
+    "subtitle": "チャット・公開・複製のたびに自動でスナップショットを保存します。",
+    "empty": "バージョンはまだありません。",
+    "emptyHint": "次のチャットまたは公開で作成されます。",
+    "current": "現在",
+    "restore": "復元",
+    "restoring": "復元中…",
+    "cancel": "キャンセル",
+    "confirmTitle": "このバージョンを復元しますか？",
+    "confirmRollback": "ページは次の状態に戻ります：",
+    "confirmNote": "現在のページは先にバージョンとして保存されるので、気が変わってもいつでも元に戻せます。",
+    "thumbnailOf": "バージョン{label}のサムネイル",
+    "thumbnailTitle": "{label}のサムネイル",
+    "source": {
+      "initial": "初期",
+      "chat": "チャット",
+      "publish": "公開",
+      "restore": "取り消し",
+      "manual": "保存",
+      "styleMatch": "反映",
+      "reorder": "並べ替え",
+      "replace": "素材"
+    }
+  },
+  "insights": {
+    "loadError": "インサイトの読み込みに失敗しました",
+    "title": "インサイト",
+    "subtitle": "このページのプライバシー重視のアナリティクス。",
+    "perProject": "インサイトはプロジェクトごとに保存されます。",
+    "perProjectHint": "「ページ」タブからプロジェクトを開くとアナリティクスを確認できます。",
+    "range": {
+      "all": "すべて"
+    },
+    "emptyRange": "この期間のデータはまだありません。",
+    "emptyRangeHint": "ページを公開してリンクをシェアしましょう。訪問された瞬間からアナリティクスの計測が始まります。",
+    "kpi": {
+      "views": "ビュー数",
+      "uniques": "ユニーク数",
+      "clicks": "クリック数"
+    },
+    "visitsOverTime": "期間別の訪問数",
+    "dayCount": "{count, plural, one {#日} other {#日}}",
+    "topLinks": "人気のリンク",
+    "noClicks": "外部リンクのクリックはまだありません。",
+    "referrers": "リファラー",
+    "directOnly": "ダイレクトのみ",
+    "countries": "国",
+    "noCountryData": "国データがありません",
+    "device": "デバイス",
+    "noDeviceData": "デバイスデータがありません",
+    "deviceType": {
+      "mobile": "モバイル",
+      "desktop": "デスクトップ",
+      "tablet": "タブレット"
+    }
+  },
+  "leads": {
+    "loadError": "リードの読み込みに失敗しました",
+    "perProject": "リードはプロジェクトごとに保存されます。",
+    "perProjectHint": "「ページ」タブからプロジェクトを開くと送信内容を確認できます。",
+    "title": "リード",
+    "subtitle": "公開ページのフォームから送信された内容。",
+    "empty": "リードはまだありません。",
+    "emptyHint": "ページを公開しましょう。フォームの送信はすべてここに届きます。",
+    "emptySubmission": "空の送信"
+  }
+}

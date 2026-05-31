@@ -1,0 +1,139 @@
+{
+  "sidebar": {
+    "tabs": {
+      "chat": { "label": "Chat", "title": "Converse com o Orchestra" },
+      "templates": { "label": "Templates", "title": "Comece com um template" },
+      "library": { "label": "Biblioteca", "title": "Inserir uma seção" },
+      "pages": { "label": "Páginas", "title": "Projetos recentes" },
+      "leads": { "label": "Leads", "title": "Envios de formulário" },
+      "insights": { "label": "Insights", "title": "Análise da página" },
+      "versions": { "label": "Versões", "title": "Histórico de versões" },
+      "brief": { "label": "Briefing", "title": "Briefing do projeto (contexto da IA)" }
+    },
+    "tabLocked": "{label} — bloqueado",
+    "expandPanel": "Expandir painel",
+    "collapsePanel": "Recolher painel",
+    "choosing": {
+      "title": "As ferramentas aparecem aqui assim que você começar.",
+      "hint": "Escolha um ponto de partida à direita →"
+    }
+  },
+  "preview": {
+    "zoomFit": "Ajustar",
+    "toolbar": {
+      "editPage": "Editar página (⌘E)",
+      "exitEdit": "Sair do modo de edição (⌘E)",
+      "showGrid": "Mostrar grade sobreposta",
+      "hideGrid": "Ocultar grade sobreposta",
+      "refresh": "Atualizar pré-visualização",
+      "openNewTab": "Abrir em nova aba"
+    },
+    "banner": {
+      "sectionSelect": "Clique em qualquer seção para direcionar seu próximo chat · <kbd></kbd> para cancelar",
+      "inlineEdit": "Clique em qualquer texto da página para editá-lo na hora · <kbd></kbd> para cancelar"
+    },
+    "templateBanner": {
+      "previewing": "Pré-visualizando template",
+      "previewingNamed": "Pré-visualizando: {name}",
+      "readOnly": "Somente leitura — nada é salvo até você confirmar",
+      "cloning": "Clonando…",
+      "use": "Usar este template →",
+      "clear": "Limpar"
+    },
+    "iframeTitle": "Pré-visualização do espaço de trabalho do OpenLen",
+    "redesigning": "Redesenhando sua página…"
+  },
+  "placeholder": {
+    "ai": {
+      "title": "Descreva sua página na barra lateral",
+      "hint": "Diga o que você quer e o orquestrador vai montar para você."
+    },
+    "template": {
+      "title": "Explore a galeria na barra lateral",
+      "hint": "Clique em qualquer template para cloná-lo em um novo projeto."
+    },
+    "paste": {
+      "title": "Cole seu HTML na barra lateral",
+      "hint": "Cole o HTML do claude.ai (ou de qualquer lugar) — a gente hospeda."
+    },
+    "sidebar": "Barra lateral"
+  },
+  "empty": {
+    "badge": "Espaço de trabalho OpenLen",
+    "heading": "Por onde você quer começar?",
+    "subheading": "Três caminhos para uma landing page publicada. Escolha um e você terá um subdomínio de verdade em <domain>openlen.com</domain>.",
+    "pickThis": "Escolher este",
+    "browseProjects": "ou <link>veja seus projetos →</link>",
+    "cards": {
+      "ai": {
+        "title": "Gerar com IA",
+        "description": "Descreva sua página em palavras simples. A gente monta.",
+        "detail": "Briefing → página em ~30s"
+      },
+      "template": {
+        "title": "Comece com um template",
+        "description": "Escolha uma landing selecionada entre seis famílias estéticas.",
+        "detail": "30 designs · prontos para publicar"
+      },
+      "paste": {
+        "title": "Cole seu HTML",
+        "description": "Traga HTML do claude.ai ou de qualquer lugar. A gente hospeda.",
+        "detail": "Autossuficiente · publicado em um clique"
+      }
+    },
+    "recent": {
+      "title": "Continuar trabalhando",
+      "loading": "Carregando projetos recentes",
+      "all": "Todos os projetos",
+      "thumbnail": "Miniatura de {title}",
+      "publishedWithEdits": "Publicado — tem edições não publicadas",
+      "published": "Publicado",
+      "live": "No ar",
+      "draft": "Rascunho",
+      "time": {
+        "justNow": "agora mesmo",
+        "minutes": "há {count}min",
+        "hours": "há {count}h",
+        "yesterday": "ontem",
+        "days": "há {count}d",
+        "weeks": "há {count}sem"
+      }
+    }
+  },
+  "status": {
+    "drift": "Divergência em relação a {domain}",
+    "saved": "Salvo · {ago}",
+    "live": "No ar em {domain}",
+    "ready": "Pronto para publicar",
+    "saving": "Salvando…",
+    "commandPalette": "paleta de comandos",
+    "ago": {
+      "justNow": "agora mesmo",
+      "seconds": "há {count}s",
+      "minutes": "há {count}min",
+      "hours": "há {count}h",
+      "days": "há {count}d"
+    }
+  },
+  "loader": {
+    "sections": {
+      "hero": "Destaque",
+      "features": "Recursos",
+      "pricing": "Preços",
+      "reviews": "Avaliações",
+      "footer": "Rodapé"
+    }
+  },
+  "modelPicker": {
+    "switch": "Trocar modelo — Gemini Pro / Flash",
+    "note": {
+      "deeper": "Mais aprofundado",
+      "recommended": "Recomendado"
+    }
+  },
+  "templatePreview": {
+    "ariaLabel": "Pré-visualização ao vivo de {name}",
+    "iframeTitle": "Pré-visualização ao vivo de {name}",
+    "applied": "Aplicado"
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "common": {
+    "loading": "Chargement…"
+  },
+  "projectName": {
+    "workspaceLabel": "Espace de travail",
+    "untitled": "Sans titre"
+  },
+  "save": {
+    "saving": "Enregistrement…",
+    "saved": "Enregistré · à l'instant"
+  },
+  "deploy": {
+    "button": "Déployer",
+    "shipIt": "Publier",
+    "liveAt": "En ligne sur {subdomain}.openlen.com",
+    "unpublishedChanges": "Vous avez des modifications non publiées.",
+    "open": "Ouvrir",
+    "republish": "Republier",
+    "unpublish": "Dépublier",
+    "publishCta": {
+      "title": "Publier sur openlen.com",
+      "subtitle": "Hébergement gratuit sur votre propre sous-domaine"
+    },
+    "customDomain": {
+      "title": "Domaine personnalisé",
+      "subtitle": "Servez cette page depuis votre propre nom de domaine"
+    },
+    "providers": {
+      "vercel": "Déployer sur Vercel",
+      "github": "Pousser vers GitHub",
+      "vercelSubtitle": "Votre propre URL *.vercel.app",
+      "githubSubtitle": "Un dépôt GitHub Pages"
+    },
+    "previousDeploys": "Déploiements précédents",
+    "noPriorDeploys": "Aucun déploiement précédent pour le moment."
+  },
+  "rollback": {
+    "confirm": "Rétablir le site en ligne sur le déploiement {sha} ? Les visiteurs verront cette version antérieure en quelques secondes.",
+    "errorGone": "Ce déploiement a été supprimé du disque et ne peut pas être restauré.",
+    "errorGeneric": "Échec du rétablissement. Réessayez.",
+    "inProgress": "Rétablissement…"
+  },
+  "theme": {
+    "lightMode": "Mode clair",
+    "darkMode": "Mode sombre"
+  },
+  "account": {
+    "fallbackName": "Compte",
+    "allProjects": "Tous les projets",
+    "signOut": "Se déconnecter"
+  },
+  "relativeTime": {
+    "seconds": "il y a {count} s",
+    "minutes": "il y a {count} min",
+    "hours": "il y a {count} h",
+    "days": "il y a {count} j"
+  }
+}

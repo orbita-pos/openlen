@@ -1,0 +1,59 @@
+{
+  "common": {
+    "loading": "Caricamento…"
+  },
+  "projectName": {
+    "workspaceLabel": "Area di lavoro",
+    "untitled": "Senza titolo"
+  },
+  "save": {
+    "saving": "Salvataggio…",
+    "saved": "Salvato · proprio ora"
+  },
+  "deploy": {
+    "button": "Pubblica",
+    "shipIt": "Vai online",
+    "liveAt": "Online su {subdomain}.openlen.com",
+    "unpublishedChanges": "Hai modifiche non pubblicate.",
+    "open": "Apri",
+    "republish": "Ripubblica",
+    "unpublish": "Annulla pubblicazione",
+    "publishCta": {
+      "title": "Pubblica su openlen.com",
+      "subtitle": "Hosting gratuito sul tuo sottodominio"
+    },
+    "customDomain": {
+      "title": "Dominio personalizzato",
+      "subtitle": "Pubblica questa pagina sul tuo dominio"
+    },
+    "providers": {
+      "vercel": "Pubblica su Vercel",
+      "github": "Invia a GitHub",
+      "vercelSubtitle": "Il tuo URL *.vercel.app personale",
+      "githubSubtitle": "Un repository GitHub Pages"
+    },
+    "previousDeploys": "Pubblicazioni precedenti",
+    "noPriorDeploys": "Ancora nessuna pubblicazione precedente."
+  },
+  "rollback": {
+    "confirm": "Ripristinare il sito online alla pubblicazione {sha}? I visitatori vedranno questa versione precedente nel giro di pochi secondi.",
+    "errorGone": "Questa pubblicazione è stata rimossa dal disco e non può essere ripristinata.",
+    "errorGeneric": "Ripristino non riuscito. Riprova.",
+    "inProgress": "Ripristino in corso…"
+  },
+  "theme": {
+    "lightMode": "Tema chiaro",
+    "darkMode": "Tema scuro"
+  },
+  "account": {
+    "fallbackName": "Account",
+    "allProjects": "Tutti i progetti",
+    "signOut": "Esci"
+  },
+  "relativeTime": {
+    "seconds": "{count} s fa",
+    "minutes": "{count} min fa",
+    "hours": "{count} h fa",
+    "days": "{count} g fa"
+  }
+}

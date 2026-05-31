@@ -1,0 +1,90 @@
+{
+  "header": {
+    "inspector": "인스펙터",
+    "closeInspector": "인스펙터 닫기"
+  },
+  "element": {
+    "pageSettings": "페이지 설정"
+  },
+  "link": {
+    "title": "링크",
+    "destination": "연결 대상",
+    "destinationPlaceholder": "https://…  또는  #section",
+    "openInNewTab": "새 탭에서 열기"
+  },
+  "image": {
+    "title": "이미지",
+    "altText": "대체 텍스트",
+    "altPlaceholder": "이미지를 설명하세요",
+    "source": "소스"
+  },
+  "style": {
+    "title": "스타일",
+    "textColor": "텍스트 색상",
+    "background": "배경"
+  },
+  "form": {
+    "title": "양식",
+    "notifyEmail": "알림 이메일",
+    "notifyEmailPlaceholder": "기본값: 계정 이메일",
+    "successMessage": "성공 메시지",
+    "successMessagePlaceholder": "✓ 감사합니다 — 메시지를 잘 받았습니다.",
+    "redirect": "제출 후 리디렉션",
+    "redirectPlaceholder": "https://…/thank-you  (선택 사항)",
+    "invalidEmail": "유효한 이메일 주소를 입력하세요.",
+    "invalidUrl": "http:// 또는 https://로 시작하는 전체 URL을 입력하세요.",
+    "applyNote": "양식 변경 사항은 다음 배포 시 적용됩니다."
+  },
+  "testEmail": {
+    "send": "테스트 이메일 보내기",
+    "sending": "보내는 중…",
+    "sentTo": "✓ <mono>{to}</mono>(으)로 테스트를 보냈습니다. 받은 편지함과 스팸 폴더를 확인하세요.",
+    "sendFailed": "테스트 이메일을 보내지 못했습니다.",
+    "networkError": "네트워크 오류."
+  },
+  "page": {
+    "loading": "페이지 설정을 불러오는 중…",
+    "title": "페이지",
+    "fieldTitle": "제목",
+    "fieldTitlePlaceholder": "페이지 제목",
+    "fieldDescription": "설명",
+    "fieldDescriptionPlaceholder": "검색 결과에 표시될 짧은 설명",
+    "fieldSocialImage": "소셜 이미지 (OG)",
+    "fieldFavicon": "파비콘",
+    "clickHint": "페이지의 아무 요소나 클릭하면 편집할 수 있습니다."
+  },
+  "privacy": {
+    "title": "개인정보 보호",
+    "enableAnalytics": "분석 사용",
+    "note": "익명 페이지뷰 + 외부 링크 클릭. 쿠키, IP 저장, 동의 배너 없음. 다음 게시 시 적용됩니다."
+  },
+  "health": {
+    "title": "페이지 상태",
+    "passing": "통과",
+    "healthy": "페이지가 정상입니다.",
+    "issuesToAddress": "{count, plural, one {# 가지 해결할 문제가 있습니다.} other {# 가지 해결할 문제가 있습니다.}}"
+  },
+  "logo": {
+    "title": "로고",
+    "previewAlt": "프로젝트 로고 미리보기",
+    "custom": "맞춤 로고",
+    "default": "기본값 — 첫 글자",
+    "inlineSvg": "인라인 SVG",
+    "usedAs": "파비콘, 카드 배지, OG 대체 이미지로 사용됩니다.",
+    "tabUpload": "업로드",
+    "tabPasteUrl": "URL 붙여넣기",
+    "tabAuto": "자동",
+    "uploading": "업로드 중…",
+    "chooseImage": "이미지 선택",
+    "uploadHint": "PNG / SVG / WebP. 정사각형 이미지가 가장 잘 표시됩니다.",
+    "urlHint": "호스팅된 이미지의 전체 https:// URL을 사용하세요.",
+    "generateFromTitle": "제목에서 생성",
+    "autoHint": "“{title}”의 첫 글자가 들어간 코랄색 원형.",
+    "defaultTitleFallback": "페이지",
+    "clear": "로고 지우기",
+    "errorSaveFirst": "로고를 업로드하기 전에 프로젝트를 저장하세요.",
+    "errorUploadStatus": "업로드 실패 ({status})",
+    "errorUploadFailed": "업로드 실패",
+    "errorFullUrl": "전체 https:// URL을 사용하세요."
+  }
+}
