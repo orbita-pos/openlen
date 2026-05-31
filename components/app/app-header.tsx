@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { ChevronDown, Moon, Sun, X } from "lucide-react";
@@ -81,8 +81,10 @@ export function AppHeader({ nav, actions }: AppHeaderProps) {
 
 function UserMenu() {
   const t = useTranslations("projects");
+  const locale = useLocale();
   const { data: session } = useSession();
   const [open, setOpen] = useState(false);
+  const [plan, setPlan] = useState<"free" | "pro" | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const user = session?.user;
 
@@ -92,6 +94,19 @@ function UserMenu() {
     };
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/usage")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { plan?: "free" | "pro" } | null) => {
+        if (!cancelled && d?.plan) setPlan(d.plan);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const initials = useMemo(() => {
@@ -131,10 +146,17 @@ function UserMenu() {
           >
             {t("appHeader.myPages")}
           </Link>
+          {plan === "pro" && (
+            <a
+              href={`/api/billing/portal?locale=${locale}`}
+              className="flex items-center w-full text-left px-3 py-1.5 rounded-md text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+            >
+              {t("appHeader.manageBilling")}
+            </a>
+          )}
           {(
             [
               { key: "settings", label: t("appHeader.settings") },
-              { key: "billing", label: t("appHeader.billing") },
               { key: "apiKeys", label: t("appHeader.apiKeys") },
             ] as const
           ).map((item) => (

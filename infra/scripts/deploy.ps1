@@ -2,13 +2,14 @@
 #
 # Replaces the manual scp + ssh-extract + ssh-swap dance:
 #   1. npm run build
-#   2. compose standalone (cp static + public into .next/standalone)
-#   3. tar to openlen-deploy.tar.gz
-#   4. scp the tarball to /root/ on the box
-#   5. extract to /opt/openlen-app-staging
-#   6. systemd stop -> atomic mv swap -> start
-#   7. cleanup local + remote tarball
-#   8. smoke test
+#   2. npm run billing:migrate (idempotent DB migration, before the swap)
+#   3. compose standalone (cp static + public into .next/standalone)
+#   4. tar to openlen-deploy.tar.gz
+#   5. scp the tarball to /root/ on the box
+#   6. extract to /opt/openlen-app-staging
+#   7. systemd stop -> atomic mv swap -> start
+#   8. cleanup local + remote tarball
+#   9. smoke test
 #
 # Usage (from repo root):
 #   npm run deploy:prod
@@ -36,7 +37,7 @@ $backupDir = "$remoteDir.old"
 
 function Step($n, $msg) {
   Write-Host ""
-  Write-Host "[$n/6] $msg" -ForegroundColor Cyan
+  Write-Host "[$n/7] $msg" -ForegroundColor Cyan
 }
 
 # --- 1. Build ----------------------------------------------------------
@@ -51,8 +52,19 @@ if ($env:OPENLEN_SKIP_BUILD -ne "1") {
   Step 1 "Skipping build (OPENLEN_SKIP_BUILD=1) -- reusing .next/standalone"
 }
 
-# --- 2. Compose standalone with static + public -----------------------
-Step 2 "Composing standalone (copying .next/static + public/)..."
+# --- 2. Apply DB migrations -------------------------------------------
+# Runs locally against the cloud DB (Neon) using DATABASE_URL from
+# .env.local — the same way every other tsx script in package.json reads
+# secrets. MUST run BEFORE the atomic swap: the new code shipped below
+# reads billing columns + the webhook table, so without this migration
+# the freshly-swapped service breaks signup. billing:migrate is idempotent
+# (ADD COLUMN / CREATE TABLE IF NOT EXISTS), so re-running a deploy is safe.
+Step 2 "Applying billing DB migration (npm run billing:migrate)..."
+npm run billing:migrate
+if ($LASTEXITCODE -ne 0) { throw "billing:migrate failed (exit $LASTEXITCODE)" }
+
+# --- 3. Compose standalone with static + public -----------------------
+Step 3 "Composing standalone (copying .next/static + public/)..."
 New-Item -ItemType Directory -Force -Path ".next/standalone/.next/static" | Out-Null
 Copy-Item -Recurse -Force ".next/static/*" ".next/standalone/.next/static/"
 if (Test-Path "public") {
@@ -65,10 +77,10 @@ Write-Host ("    standalone: {0} MB" -f [math]::Round($size/1MB, 1))
 # Note: we used to install sharp's linux binaries client-side here, but
 # Windows npm refuses to materialize platform-mismatched optionals into
 # node_modules (it short-circuits the install). The fix lives on the box
-# now — see step 5 below.
+# now — see step 6 below.
 
-# --- 3. Tar locally ----------------------------------------------------
-Step 3 "Creating tarball ($tarballName)..."
+# --- 4. Tar locally ----------------------------------------------------
+Step 4 "Creating tarball ($tarballName)..."
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 & tar -czf $tarballName -C .next/standalone .
 if ($LASTEXITCODE -ne 0) { throw "tar failed (exit $LASTEXITCODE)" }
@@ -76,15 +88,15 @@ $tarSize = (Get-Item $tarballName).Length
 $sw.Stop()
 Write-Host ("    {0} MB, {1}s" -f [math]::Round($tarSize/1MB, 1), [math]::Round($sw.Elapsed.TotalSeconds, 1))
 
-# --- 4. SCP to box -----------------------------------------------------
-Step 4 "Uploading to ${host_}:/root/..."
+# --- 5. SCP to box -----------------------------------------------------
+Step 5 "Uploading to ${host_}:/root/..."
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 & scp -q $tarballName "${host_}:/root/"
 if ($LASTEXITCODE -ne 0) { throw "scp failed (exit $LASTEXITCODE)" }
 $sw.Stop()
 Write-Host ("    {0}s" -f [math]::Round($sw.Elapsed.TotalSeconds, 1))
 
-# --- 5. Extract on box + install sharp linux binaries -----------------
+# --- 6. Extract on box + install sharp linux binaries -----------------
 # After untarring the Windows-built standalone, we still need sharp's
 # linux-x64 native binaries (they were never in the tarball because
 # Windows npm refuses to install platform-mismatched optionals). Doing
@@ -92,7 +104,7 @@ Write-Host ("    {0}s" -f [math]::Round($sw.Elapsed.TotalSeconds, 1))
 # PUPPETEER_SKIP_DOWNLOAD=1 prevents puppeteer's postinstall from trying
 # to re-download chrome-headless-shell (its cache may be corrupted from
 # prior interrupted installs).
-Step 5 "Extracting to $stagingDir + installing sharp linux binaries..."
+Step 6 "Extracting to $stagingDir + installing sharp linux binaries..."
 $extractCmd = @"
 set -e
 rm -rf $stagingDir
@@ -106,8 +118,8 @@ chown -R openlen-deploy:www-data $stagingDir
 & ssh $host_ $extractCmd
 if ($LASTEXITCODE -ne 0) { throw "Remote extract failed (exit $LASTEXITCODE)" }
 
-# --- 5.5. Rebuild Rust crates on box (default ON) --------------------
-# The atomic swap in step 6 wipes /opt/openlen-app/node_modules/@openlen/*
+# --- 6.5. Rebuild Rust crates on box (default ON) --------------------
+# The atomic swap in step 7 wipes /opt/openlen-app/node_modules/@openlen/*
 # every time, replacing it with the contents of the local Windows-built
 # tarball (which only has win32-x64-msvc .node binaries). Without
 # rebuilding the linux-x64-gnu .node files into the staging dir BEFORE the
@@ -120,11 +132,11 @@ if ($LASTEXITCODE -ne 0) { throw "Remote extract failed (exit $LASTEXITCODE)" }
 # Cargo cache stays hot between deploys → 30-40s when nothing changed in
 # crates/, ~5 min on the first deploy of the day.
 if ($env:OPENLEN_SKIP_CRATES_REBUILD -ne "1") {
-  Step "5.5" "Rebuilding Rust crates on box (this takes ~5 min)..."
+  Step "6.5" "Rebuilding Rust crates on box (this takes ~5 min)..."
   $sw = [System.Diagnostics.Stopwatch]::StartNew()
   # Ship the Rust workspace + build script to the box. PowerShell on
   # Windows doesn't ship rsync, so we tar + scp + remote-extract — same
-  # pattern as the standalone deploy in steps 3-5.
+  # pattern as the standalone deploy in steps 4-6.
   # Force cwd to repo root (the script lives at infra/scripts/, ../.. = root).
   $repoRoot = (Resolve-Path "$PSScriptRoot/../..").Path
   Set-Location $repoRoot
@@ -154,7 +166,7 @@ if ($env:OPENLEN_SKIP_CRATES_REBUILD -ne "1") {
   if ($LASTEXITCODE -ne 0) { throw "Build script scp failed (exit $LASTEXITCODE)" }
   # Extract the workspace + run the build script against the staging dir.
   # The script restarts only when targeting the live dir, so passing
-  # staging here is safe — rebuild then continue to the swap in step 6.
+  # staging here is safe — rebuild then continue to the swap in step 7.
   $cratesCmd = @"
 set -e
 mkdir -p /root/openlen-workspace
@@ -170,15 +182,15 @@ bash /root/build-crates-on-box.sh $stagingDir
   Write-Host ("    done in {0}s" -f [math]::Round($sw.Elapsed.TotalSeconds, 1))
 } else {
   # Opt-out path. Loudly warn — this almost certainly breaks prod.
-  Step "5.5" "Skipping Rust crate rebuild (OPENLEN_SKIP_CRATES_REBUILD=1)"
+  Step "6.5" "Skipping Rust crate rebuild (OPENLEN_SKIP_CRATES_REBUILD=1)"
   Write-Host "  WARNING: the atomic swap wipes /opt/openlen-app/node_modules/@openlen/*/." -ForegroundColor Yellow
   Write-Host "  Without the rebuild step, the box will have Windows .node binaries → MODULE_NOT_FOUND on require." -ForegroundColor Yellow
   Write-Host "  This flag should almost never be set. If you set it by mistake, abort with Ctrl+C now." -ForegroundColor Yellow
   Start-Sleep -Seconds 3
 }
 
-# --- 6. Atomic swap + restart + smoke test ---------------------------
-Step 6 "Atomic swap + restart..."
+# --- 7. Atomic swap + restart + smoke test ---------------------------
+Step 7 "Atomic swap + restart..."
 $swapCmd = @"
 systemctl stop openlen-app
 rm -rf $backupDir
