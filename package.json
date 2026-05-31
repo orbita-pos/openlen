@@ -27,6 +27,7 @@
     "sections:backfill-scope": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-backfill-scope.ts",
     "sections:verify-render": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-verify-render.ts",
     "templates:thumbnails": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/generate-thumbnails.ts",
+    "projects:thumbnails": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/projects/generate-thumbnails.ts",
     "templates:capture-screenshots": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/capture-screenshots.ts",
     "templates:test-select-reference": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/test-select-reference.ts",
     "templates:bootstrap-thumbnail-column": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/bootstrap-thumbnail-column.ts",

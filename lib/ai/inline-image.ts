@@ -10,6 +10,7 @@
 // quality boost, never load-bearing.
 
 import type { InlineImage } from "@/lib/ai-gateway";
+import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
 
 const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
@@ -107,6 +108,9 @@ export async function renderHtmlToInlineImage(
     });
     try {
       const page = await browser.newPage();
+      // Block subresource fetches to internal/loopback/metadata hosts — this
+      // HTML is model-generated and not fully trusted. (SSRF guard.)
+      await installSubresourceSsrfGuard(page);
       await page.setViewport({ width: 1280, height: 720 });
       await page.setContent(html, { waitUntil: "load", timeout: 20_000 });
       // Tailwind CDN + Google Fonts apply async after `load`; wait for fonts

@@ -35,6 +35,12 @@ const nextConfig = {
   //   the four legacy limit modules; images landed in F4 when
   //   `app/api/upload/route.ts` became the first consumer (replacing
   //   the `sharp` Node binding).
+  // - puppeteer: a large package with dynamic requires + a bundled-browser
+  //   resolver that webpack can't trace. Externalising hands the require to
+  //   Node at runtime (the box renders project-card thumbnails on publish /
+  //   create via lib/projects/thumbnail.ts, reaching system Chrome through
+  //   PUPPETEER_EXECUTABLE_PATH). It's a runtime dependency, so the
+  //   standalone tracer copies it into the output tree.
   serverExternalPackages: [
     "tailwindcss",
     "postcss",
@@ -42,6 +48,7 @@ const nextConfig = {
     "@openlen/ai-gateway",
     "@openlen/rate-limit",
     "@openlen/images",
+    "puppeteer",
   ],
   // serverExternalPackages alone doesn't always exclude transitively-linked
   // workspace deps from webpack's module graph (the `file:` symlink to
