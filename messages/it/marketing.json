@@ -138,7 +138,7 @@
         "0": "AGPLv3 — tuo da modificare e ridistribuire",
         "1": "Usa la tua chiave API Gemini / Kimi",
         "2": "Un singolo server Hetzner fa girare tutto",
-        "3": "Sottodominio wildcard tramite nginx",
+        "3": "Sottodominio wildcard tramite Caddy",
         "4": "Nessuna fattura, nessun limite di richieste, nessun controllo esterno"
       }
     }

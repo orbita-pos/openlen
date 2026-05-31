@@ -138,7 +138,7 @@
         "0": "AGPLv3 — à vous de modifier et redistribuer",
         "1": "Apportez votre propre clé API Gemini / Kimi",
         "2": "Une seule machine Hetzner fait tout tourner",
-        "3": "Sous-domaine wildcard via nginx",
+        "3": "Sous-domaine wildcard via Caddy",
         "4": "Aucune facture, aucune limite de débit, aucune surveillance"
       }
     }

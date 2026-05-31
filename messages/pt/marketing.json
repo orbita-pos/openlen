@@ -138,7 +138,7 @@
         "0": "AGPLv3 — sua para modificar + redistribuir",
         "1": "Use sua própria chave de API Gemini / Kimi",
         "2": "Uma única máquina Hetzner roda tudo",
-        "3": "Subdomínio curinga via nginx",
+        "3": "Subdomínio curinga via Caddy",
         "4": "Sem conta, sem limite de uso, sem supervisão"
       }
     }

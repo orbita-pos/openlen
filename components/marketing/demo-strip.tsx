@@ -5,11 +5,11 @@ import { listTemplates } from "@/lib/templates/store";
 import { TemplateCard } from "./template-card";
 
 // Featured templates on the marketing landing page. One per family bucket
-// so visitors see breadth at a glance — a polished creator hub (pier), a
-// devtool marketing landing (mirror), and a premium editorial (manuscript).
-// Order is intentional: pier first as the LCP card because it's the most
-// visually striking. Full gallery is at /templates.
-const FEATURED_IDS = ["pier", "mirror", "manuscript"] as const;
+// so visitors see breadth at a glance — a better-for-you e-commerce brand
+// (lume), a premium Japan travel itinerary (kiri), and a festival-energy
+// event page (mundial-26). Order is intentional: lume first as the LCP card.
+// Full gallery is at /templates.
+const FEATURED_IDS = ["lume", "kiri", "mundial-26"] as const;
 
 export async function DemoStrip() {
   const t = await getTranslations("marketing");

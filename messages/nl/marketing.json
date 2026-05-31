@@ -138,7 +138,7 @@
         "0": "AGPLv3 — van jou om aan te passen + te verspreiden",
         "1": "Gebruik je eigen Gemini- / Kimi-API-sleutel",
         "2": "Eén Hetzner-box draait alles",
-        "3": "Wildcard-subdomein via nginx",
+        "3": "Wildcard-subdomein via Caddy",
         "4": "Geen rekening, geen ratelimiet, geen toezicht"
       }
     }
