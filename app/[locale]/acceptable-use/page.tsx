@@ -34,7 +34,7 @@ export default async function AcceptableUsePage({
             OpenLen es un creador de landing pages que te permite publicar HTML
             arbitrario en subdominios <strong>&lt;nombre&gt;.openlen.com</strong>,
             conectar tu propio dominio y exportar tu página a Vercel o GitHub. El
-            Servicio lo opera <strong>[NOMBRE LEGAL], que opera OpenLen</strong>,
+            Servicio lo opera <strong>Jesús Bernal, que opera OpenLen</strong>,
             con sede en México. Esta Política de uso aceptable describe lo que no
             está permitido al usar OpenLen para crear, publicar, exportar o
             distribuir páginas. Forma parte de nuestros{" "}
@@ -195,7 +195,7 @@ export default async function AcceptableUsePage({
             HTML to <strong>&lt;name&gt;.openlen.com</strong> subdomains, attach
             your own custom domain, and export your page to Vercel or GitHub. The
             Service is operated by{" "}
-            <strong>[NOMBRE LEGAL], operating OpenLen</strong>, based in Mexico.
+            <strong>Jesús Bernal, operating OpenLen</strong>, based in Mexico.
             This Acceptable Use Policy describes what is not allowed when you use
             OpenLen to create, publish, export, or distribute pages. It forms
             part of our <Link href="/terms">Terms of Service</Link> and should be

@@ -29,7 +29,7 @@ export default async function PrivacyPage({
       {es ? (
         <>
           <p>
-            <strong>[NOMBRE LEGAL]</strong>, que opera OpenLen, es el responsable
+            <strong>Jesús Bernal</strong>, que opera OpenLen, es el responsable
             del tratamiento de los datos personales que recabamos a través del
             creador de landing pages con IA en openlen.com. Este aviso explica qué
             datos personales tratamos, para qué, con quién los compartimos y cómo
@@ -48,7 +48,7 @@ export default async function PrivacyPage({
           <h2>Responsable del tratamiento</h2>
           <p>
             El responsable de tus datos personales es{" "}
-            <strong>[NOMBRE LEGAL]</strong>, que opera OpenLen, con sede en México.
+            <strong>Jesús Bernal</strong>, que opera OpenLen, con sede en México.
             Para cualquier asunto de privacidad, incluido el ejercicio de tus
             derechos, escríbenos a{" "}
             <a href="mailto:info@jesusbr.com">info@jesusbr.com</a>.
@@ -367,7 +367,7 @@ export default async function PrivacyPage({
       ) : (
         <>
           <p>
-            <strong>[NOMBRE LEGAL]</strong>, operating OpenLen, is the controller
+            <strong>Jesús Bernal</strong>, operating OpenLen, is the controller
             (responsable) of the personal data we collect through the AI
             landing-page builder at openlen.com. This notice explains what personal
             data we process, why, who we share it with, and how you can exercise
@@ -385,7 +385,7 @@ export default async function PrivacyPage({
           <h2>Data controller</h2>
           <p>
             The controller (responsable) of your personal data is{" "}
-            <strong>[NOMBRE LEGAL]</strong>, operating OpenLen, based in Mexico. For
+            <strong>Jesús Bernal</strong>, operating OpenLen, based in Mexico. For
             any privacy matter, including exercising your rights, email{" "}
             <a href="mailto:info@jesusbr.com">info@jesusbr.com</a>.
           </p>

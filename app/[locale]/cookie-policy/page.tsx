@@ -29,7 +29,7 @@ export default async function Page({
       {es ? (
         <>
           <p>
-            [NOMBRE LEGAL], que opera OpenLen, con domicilio en México, es un
+            Jesús Bernal, que opera OpenLen, con domicilio en México, es un
             creador de landing pages con inteligencia artificial en openlen.com.
             Esta política explica las cookies que usamos y por qué. La versión
             corta: en nuestra propia aplicación solo usamos cookies estrictamente
@@ -150,7 +150,7 @@ export default async function Page({
       ) : (
         <>
           <p>
-            [NOMBRE LEGAL], operating OpenLen, based in Mexico, is an AI
+            Jesús Bernal, operating OpenLen, based in Mexico, is an AI
             landing-page builder at openlen.com. This policy explains the cookies
             we use and why. The short version: in our own app we use only
             strictly-necessary cookies to make the service work, and no
