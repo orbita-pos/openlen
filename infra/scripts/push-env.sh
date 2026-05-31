@@ -131,6 +131,11 @@ awk '
   }
 ' /tmp/openlen.env.patch /etc/openlen/openlen.env > /tmp/openlen.env.merged
 
+# Normalize line endings: a Windows-edited infra/.env.production carries CRLF,
+# and a trailing \r in a value (e.g. an API token) makes the app read it as
+# "value\r" → silent 401s that look like a wrong key. Strip CR before install.
+sed -i 's/\r$//' /tmp/openlen.env.merged
+
 # Sanity: merged file must be non-empty and contain at least the keys
 # the app needs to boot. If something went wrong, bail without touching
 # the live env.

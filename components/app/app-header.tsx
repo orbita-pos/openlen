@@ -154,22 +154,6 @@ function UserMenu() {
               {t("appHeader.manageBilling")}
             </a>
           )}
-          {(
-            [
-              { key: "settings", label: t("appHeader.settings") },
-              { key: "apiKeys", label: t("appHeader.apiKeys") },
-            ] as const
-          ).map((item) => (
-            <button
-              type="button"
-              key={item.key}
-              className="flex items-center w-full text-left px-3 py-1.5 rounded-md text-sm text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900 cursor-not-allowed"
-              title={t("appHeader.comingSoon", { label: item.label })}
-              disabled
-            >
-              {item.label}
-            </button>
-          ))}
           <div className="border-t border-zinc-100 dark:border-zinc-900 my-1" />
           <button
             type="button"
