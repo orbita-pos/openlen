@@ -112,7 +112,7 @@ export function HeroPromptInput() {
                 <span className="absolute inset-0 rounded-full bg-emerald-500 opacity-70 animate-ping" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
               </span>
-              Gemini 2.5 Pro
+              Gemini 3.1 Pro
             </span>
           </div>
 
