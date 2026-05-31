@@ -13,6 +13,24 @@ const from = process.env.EMAIL_FROM ?? "OpenLen <no-reply@openlen.com>";
 
 const client = apiKey ? new Resend(apiKey) : null;
 
+// The dev fallback only console-logs the action URL, so without this a
+// misconfigured server "succeeds" while no email is ever sent — the silent
+// failure that makes password reset look broken. We deliberately don't throw
+// (that would 500 only for real users → an enumeration signal); instead we
+// scream in the server log so the misconfig is visible to the operator while
+// the request stays anti-enumeration-safe. Returns null → caller no-ops.
+function liveClientOrWarn(context: string): Resend | null {
+  if (client) return client;
+  if (process.env.NODE_ENV === "production") {
+    // eslint-disable-next-line no-console
+    console.error(
+      `[email] RESEND_API_KEY is not set — ${context} was NOT sent. ` +
+        "Set RESEND_API_KEY on the server and verify the sending domain in Resend.",
+    );
+  }
+  return null;
+}
+
 export interface PasswordResetEmail {
   to: string;
   name: string | null;
@@ -22,18 +40,23 @@ export interface PasswordResetEmail {
 export async function sendPasswordResetEmail(
   input: PasswordResetEmail,
 ): Promise<void> {
-  if (!client) {
-    // eslint-disable-next-line no-console
-    console.log(
-      `\n  📧 [DEV] Password reset email to ${input.to}\n     ${input.resetUrl}\n     (set RESEND_API_KEY in .env.local to send real emails)\n`,
-    );
+  const live = liveClientOrWarn("password reset email");
+  if (!live) {
+    // Dev only: print the reset link so the flow is testable without a key.
+    // In prod liveClientOrWarn() already logged the misconfig.
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(
+        `\n  📧 [DEV] Password reset email to ${input.to}\n     ${input.resetUrl}\n     (set RESEND_API_KEY in .env.local to send real emails)\n`,
+      );
+    }
     return;
   }
 
   const html = buildPasswordResetHtml(input);
   const text = buildPasswordResetText(input);
 
-  await client.emails.send({
+  await live.emails.send({
     from,
     to: input.to,
     subject: "Reset your OpenLen password",
