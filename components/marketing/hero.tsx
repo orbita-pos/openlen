@@ -7,13 +7,13 @@ import { HeroPromptInput } from "./hero-prompt-input";
 
 const avatarColors = ["#FF5A36", "#22d3ee", "#a78bfa", "#facc15", "#34d399"];
 
-const REPO_URL = "https://github.com/jesusbernalrj/inari-pages";
+const REPO_URL = "https://github.com/orbita-pos/openlen";
 
 // Live GitHub star count, cached for an hour. Returns null on any failure
 // (rate limit, network) — the caller then omits the count chip entirely.
 async function getRepoStars(): Promise<number | null> {
   try {
-    const res = await fetch("https://api.github.com/repos/jesusbernalrj/inari-pages", {
+    const res = await fetch("https://api.github.com/repos/orbita-pos/openlen", {
       headers: {
         Accept: "application/vnd.github+json",
         "User-Agent": "openlen-site",

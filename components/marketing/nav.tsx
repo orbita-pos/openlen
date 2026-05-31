@@ -60,7 +60,7 @@ export function Nav({ dark, onToggleDark }: NavProps) {
             </Link>
           ))}
           <a
-            href="https://github.com/jesusbernalrj/inari-pages"
+            href="https://github.com/orbita-pos/openlen"
             target="_blank"
             rel="noreferrer"
             aria-label={t("nav.githubAria")}

@@ -67,7 +67,7 @@ Two options, both documented but the simpler one is the default today.
 HTML_ENGINE_VERSION="0.1.0"
 TRIPLE="linux-x64-gnu"
 ARTIFACT="openlen-html-engine.${TRIPLE}.node"
-GH_REPO="jesusbernalrj/inari-pages"
+GH_REPO="orbita-pos/openlen"
 TAG="html-engine-v${HTML_ENGINE_VERSION}"
 
 cd crates/html-engine
@@ -131,7 +131,7 @@ git tag html-engine-v0.1.1
 git push origin master html-engine-v0.1.1
 ```
 
-The `rust-prebuild.yml` workflow fires on the tag push, builds + uploads, and creates the GH Release. Manual verification: visit `https://github.com/jesusbernalrj/inari-pages/releases/tag/html-engine-v0.1.1` — both `.node` files should be attached.
+The `rust-prebuild.yml` workflow fires on the tag push, builds + uploads, and creates the GH Release. Manual verification: visit `https://github.com/orbita-pos/openlen/releases/tag/html-engine-v0.1.1` — both `.node` files should be attached.
 
 ## Known limitations / out of scope
 

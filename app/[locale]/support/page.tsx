@@ -10,8 +10,12 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
+  const es = locale === "es";
   return {
-    title: locale === "es" ? "Soporte" : "Support",
+    title: es ? "Soporte" : "Support",
+    description: es
+      ? "Cómo contactar al equipo de OpenLen y obtener ayuda por correo o GitHub."
+      : "How to contact the OpenLen team and get help by email or GitHub.",
     alternates: { canonical: `${SITE_URL}/${locale}/support` },
   };
 }
@@ -39,11 +43,11 @@ export default async function SupportPage({
             <li>
               <strong>GitHub</strong> — abre una incidencia en{" "}
               <a
-                href="https://github.com/jesusbernalrj/inari-pages/issues"
+                href="https://github.com/orbita-pos/openlen/issues"
                 target="_blank"
                 rel="noreferrer"
               >
-                github.com/jesusbernalrj/inari-pages
+                github.com/orbita-pos/openlen
               </a>{" "}
               (OpenLen es de código abierto).
             </li>
@@ -67,11 +71,11 @@ export default async function SupportPage({
             <li>
               <strong>GitHub</strong> — open an issue at{" "}
               <a
-                href="https://github.com/jesusbernalrj/inari-pages/issues"
+                href="https://github.com/orbita-pos/openlen/issues"
                 target="_blank"
                 rel="noreferrer"
               >
-                github.com/jesusbernalrj/inari-pages
+                github.com/orbita-pos/openlen
               </a>{" "}
               (OpenLen is open source).
             </li>

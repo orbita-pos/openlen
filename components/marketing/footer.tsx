@@ -6,11 +6,12 @@ import { Link } from "@/i18n/navigation";
 import { GithubIcon, TwitterIcon } from "@/components/ui/brand-icons";
 import { OpenLenMark } from "@/components/openlen-logo";
 
-const REPO_URL = "https://github.com/jesusbernalrj/inari-pages";
-const LICENSE_URL = `${REPO_URL}/blob/master/LICENSE`;
+const REPO = "https://github.com/orbita-pos/openlen";
+const LICENSE_URL = `${REPO}/blob/master/LICENSE`;
 
 // Client component: it's rendered inside MarketingChrome ("use client"), so it
 // must use the client useTranslations hook, not the server getTranslations.
+// Internal links use the next-intl Link so the active locale prefix is kept.
 export function Footer() {
   const t = useTranslations("marketing");
 
@@ -28,7 +29,7 @@ export function Footer() {
     {
       title: t("footer.openSource.title"),
       links: [
-        { label: "GitHub", href: REPO_URL, external: true },
+        { label: "GitHub", href: REPO, external: true },
         { label: t("footer.openSource.agplLicense"), href: LICENSE_URL, external: true },
       ],
     },
@@ -38,14 +39,30 @@ export function Footer() {
         { label: t("footer.company.blog"), href: "/blog" },
         { label: t("footer.company.privacy"), href: "/privacy" },
         { label: t("footer.company.terms"), href: "/terms" },
+        { label: t("footer.company.contact"), href: "/support" },
+      ],
+    },
+    {
+      title: t("footer.legal.title"),
+      links: [
+        { label: t("footer.legal.cookies"), href: "/cookie-policy" },
+        { label: t("footer.legal.acceptableUse"), href: "/acceptable-use" },
+        { label: t("footer.legal.refunds"), href: "/refund" },
+        { label: t("footer.legal.subprocessors"), href: "/subprocessors" },
+        { label: t("footer.legal.docs"), href: "/docs" },
       ],
     },
   ];
 
+  const linkClass =
+    "text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors";
+  const iconClass =
+    "inline-flex h-9 w-9 items-center justify-center rounded-md ring-1 ring-zinc-200 dark:ring-zinc-800 text-zinc-600 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition";
+
   return (
     <footer className="border-t border-zinc-200 dark:border-zinc-800">
       <div className="mx-auto max-w-6xl px-6 py-14">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-10">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-10">
           <div className="col-span-2 md:col-span-2">
             <Link href="/" className="flex items-center gap-2 group">
               <OpenLenMark className="h-6 w-6 shrink-0" />
@@ -58,26 +75,22 @@ export function Footer() {
             </p>
             <div className="mt-5 flex items-center gap-2">
               <a
-                href="https://github.com/jesusbernalrj/inari-pages"
+                href={REPO}
                 target="_blank"
                 rel="noreferrer"
                 aria-label={t("footer.githubAria")}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-md ring-1 ring-zinc-200 dark:ring-zinc-800 text-zinc-600 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition"
+                className={iconClass}
               >
                 <GithubIcon size={15} />
               </a>
               <a
                 href="https://twitter.com"
                 aria-label={t("footer.twitterAria")}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-md ring-1 ring-zinc-200 dark:ring-zinc-800 text-zinc-600 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition"
+                className={iconClass}
               >
                 <TwitterIcon size={15} />
               </a>
-              <Link
-                href="/docs"
-                aria-label={t("footer.docsAria")}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-md ring-1 ring-zinc-200 dark:ring-zinc-800 text-zinc-600 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition"
-              >
+              <Link href="/docs" aria-label={t("footer.docsAria")} className={iconClass}>
                 <FileCode size={15} />
               </Link>
             </div>
@@ -92,19 +105,11 @@ export function Footer() {
                 {col.links.map((l) => (
                   <li key={l.label}>
                     {l.external ? (
-                      <a
-                        href={l.href}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
-                      >
+                      <a href={l.href} target="_blank" rel="noreferrer" className={linkClass}>
                         {l.label}
                       </a>
                     ) : (
-                      <Link
-                        href={l.href}
-                        className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
-                      >
+                      <Link href={l.href} className={linkClass}>
                         {l.label}
                       </Link>
                     )}
