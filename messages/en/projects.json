@@ -128,11 +128,23 @@
     "myPages": "My pages",
     "settings": "Settings",
     "billing": "Billing",
+    "manageBilling": "Manage billing",
     "apiKeys": "API keys",
     "comingSoon": "{label} — coming soon",
     "signOut": "Sign out"
   },
   "creditPill": {
     "tooltip": "{balance} of {allotment} AI credits left this month"
+  },
+  "billing": {
+    "upgradeCta": "Upgrade to Pro",
+    "upgradeHint": "150 AI credits / month",
+    "dismissBanner": "Dismiss",
+    "success": "You're on Pro now — 150 AI credits a month. Thanks for upgrading!",
+    "errors": {
+      "not_configured": "Billing isn't set up yet. Please try again later or contact support.",
+      "checkout_failed": "We couldn't start your checkout. Please try again.",
+      "portal_failed": "We couldn't open your billing portal. Make sure you have an active subscription, then try again."
+    }
   }
 }
