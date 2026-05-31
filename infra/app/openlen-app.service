@@ -54,6 +54,17 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=openlen-app
 
+# Memory bounding. The publish/create paths now spawn headless Chrome to
+# render project-card thumbnails (lib/projects/thumbnail.ts, capped at
+# OPENLEN_THUMBNAIL_CONCURRENCY=1 by default). On the 4 GB CX22 with no swap, a
+# render storm could otherwise let the kernel OOM-killer reap the Node process.
+# MemoryHigh is a SOFT cap: past it the cgroup is throttled + reclaimed under
+# pressure (slows down, never killed); it leaves headroom for the OS + Caddy.
+# Tune up if the app legitimately needs more. (No hard MemoryMax — we prefer
+# slow over a hard kill.)
+MemoryAccounting=true
+MemoryHigh=3G
+
 # Security hardening. ProtectSystem=full keeps /usr, /boot, /etc read-only;
 # ReadWritePaths re-opens just the dirs the app needs to write.
 NoNewPrivileges=true

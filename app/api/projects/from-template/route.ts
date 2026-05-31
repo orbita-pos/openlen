@@ -76,7 +76,12 @@ export async function POST(req: Request): Promise<Response> {
       userId: session.user.id,
       title: entry.name,
       brief: `Curated template: ${entry.name}`,
-      thumbnailUrl: null,
+      // Inherit the curated template's own rendered preview as the project's
+      // initial card thumbnail — a real preview from the first second, no
+      // render needed. The screenshot (full-page JPG) is the fallback if the
+      // AVIF card thumbnail isn't generated yet. Refreshed to the project's
+      // own bytes on first publish.
+      thumbnailUrl: entry.thumbnailUrl ?? entry.screenshotUrl ?? null,
       tags: [entry.id, "template", entry.family],
       status: "draft",
       data: { html: finalHtml },
