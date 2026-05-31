@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { signIn } from "next-auth/react";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
@@ -24,6 +24,7 @@ export function LoginForm({
   oauth: { github: boolean; google: boolean };
 }) {
   const t = useTranslations("auth");
+  const locale = useLocale();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -57,7 +58,7 @@ export function LoginForm({
 
   const onOAuth = async (provider: "github" | "google") => {
     setOauthLoading(provider);
-    await signIn(provider, { callbackUrl: next });
+    await signIn(provider, { callbackUrl: `/${locale}${next}` });
   };
 
   return (

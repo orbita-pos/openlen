@@ -2,13 +2,18 @@ import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
 import { LegalPage } from "@/components/legal-page";
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://openlen.com";
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  return { title: locale === "es" ? "Términos de servicio" : "Terms of Service" };
+  return {
+    title: locale === "es" ? "Términos de servicio" : "Terms of Service",
+    alternates: { canonical: `${SITE_URL}/${locale}/terms` },
+  };
 }
 
 export default async function TermsPage({

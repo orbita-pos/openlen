@@ -991,6 +991,27 @@ function NewV2Inner() {
     [loadedProject?.id, loadedProject?.logoUrl],
   );
 
+  const persistRename = useCallback(
+    (next: string) => {
+      const projectId = loadedProject?.id;
+      const prevName = projectName;
+      setProjectName(next);
+      if (!projectId) return;
+      void fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ title: next }),
+      })
+        .then((r) => {
+          if (!r.ok) throw new Error(`PATCH failed (${r.status})`);
+        })
+        .catch(() => {
+          setProjectName(prevName);
+        });
+    },
+    [loadedProject?.id, projectName],
+  );
+
   const applyAnalyticsDisabled = useCallback(
     (disabled: boolean) => {
       const projectId = loadedProject?.id;
@@ -1074,7 +1095,7 @@ function NewV2Inner() {
     <div className="workspace-v2 h-full flex flex-col">
       <TopBar
         projectName={projectName}
-        onRename={setProjectName}
+        onRename={persistRename}
         projectLogoUrl={loadedProject?.logoUrl ?? null}
         projectLoading={!!projectParam && !loadedProject}
         savingStatus={savingStatus}

@@ -12,7 +12,7 @@ import type { TemplateCardData } from "@/components/marketing/template-card";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Templates | OpenLen",
+  title: "Templates",
   description:
     "Hand-built landing page templates for SaaS, devtools, ecommerce, restaurants, editorial brands, creators, and more. Static HTML, optimized, ready to publish to your openlen.com subdomain.",
   openGraph: {
@@ -21,12 +21,14 @@ export const metadata: Metadata = {
       "Hand-built templates ready to fill with your info and publish.",
     type: "website",
     url: "https://openlen.com/templates",
+    images: ["/og.png"],
   },
   twitter: {
     card: "summary_large_image",
     title: "Templates | OpenLen",
     description:
       "Hand-built templates for SaaS, ecommerce, creators, and more.",
+    images: ["/og.png"],
   },
   alternates: {
     canonical: "https://openlen.com/templates",

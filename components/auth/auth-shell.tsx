@@ -72,13 +72,13 @@ export function AuthShell({ children }: { children: ReactNode }) {
           </a>
         </div>
         <div className="flex items-center gap-3">
-          <a href="#" className="hover:text-zinc-700 dark:hover:text-zinc-300">
+          <Link href="/privacy" className="hover:text-zinc-700 dark:hover:text-zinc-300">
             {t("shell.privacy")}
-          </a>
+          </Link>
           <span className="text-zinc-300 dark:text-zinc-800">·</span>
-          <a href="#" className="hover:text-zinc-700 dark:hover:text-zinc-300">
+          <Link href="/terms" className="hover:text-zinc-700 dark:hover:text-zinc-300">
             {t("shell.terms")}
-          </a>
+          </Link>
         </div>
       </footer>
     </div>

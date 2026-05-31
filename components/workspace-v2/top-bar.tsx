@@ -14,7 +14,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { signOut, useSession } from "next-auth/react";
 import {
@@ -95,6 +95,7 @@ export function TopBar({
   onToggleDark,
 }: TopBarProps) {
   const t = useTranslations("topbar");
+  const locale = useLocale();
   const { data: session } = useSession();
   const userName = session?.user?.name ?? "";
   const userEmail = session?.user?.email ?? "";
@@ -603,7 +604,7 @@ export function TopBar({
                 type="button"
                 onClick={() => {
                   setProfileOpen(false);
-                  void signOut({ callbackUrl: "/login" });
+                  void signOut({ callbackUrl: `/${locale}/login` });
                 }}
                 className="flex items-center gap-2.5 w-full text-left px-2.5 py-1.5 rounded-md text-[13px] fg hover:bg-hover transition"
               >

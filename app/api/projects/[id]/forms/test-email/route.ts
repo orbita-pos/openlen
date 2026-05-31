@@ -2,9 +2,12 @@ import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { sendLeadNotificationEmail } from "@/lib/email";
+import { checkAndConsume } from "@/lib/limits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const HOUR = 60 * 60 * 1000;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/projects/[id]/forms/test-email
@@ -38,6 +41,23 @@ export async function POST(
   const session = await auth();
   if (!session?.user?.id) return json({ ok: false, reason: "unauthorized" }, 401);
   const { id } = await ctx.params;
+
+  // Sends a formatted email to an owner-controlled address — same per-user
+  // anti-burst guard as every other email-sending route.
+  const limit = await checkAndConsume(
+    `user:${session.user.id}:form-test-email`,
+    [{ windowMs: HOUR, max: 5, label: "hourly" }],
+  );
+  if (!limit.ok && limit.blocked) {
+    return json(
+      {
+        error: "rate_limited",
+        scope: limit.blocked.label,
+        resetAt: limit.resetAt?.toISOString(),
+      },
+      429,
+    );
+  }
 
   const body = (await req.json().catch(() => ({}))) as {
     formIndex?: number;

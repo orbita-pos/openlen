@@ -4,11 +4,14 @@ import { ArrowRight, Home } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { MarketingChrome } from "@/components/marketing/marketing-chrome";
 
-export const metadata: Metadata = {
-  title: "Página no encontrada",
-  description: "La URL no corresponde a ninguna página de OpenLen.",
-  robots: { index: false, follow: true },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("pages");
+  return {
+    title: t("notFound.metaTitle"),
+    description: t("notFound.metaDescription"),
+    robots: { index: false, follow: true },
+  };
+}
 
 export default async function NotFound() {
   const t = await getTranslations("pages");

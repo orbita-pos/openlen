@@ -30,6 +30,8 @@
     "back": "Blog"
   },
   "notFound": {
+    "metaTitle": "Page not found",
+    "metaDescription": "This URL doesn't match any OpenLen page.",
     "badge": "Error 404",
     "title": "This page <accent>doesn't exist.</accent>",
     "lede": "This URL doesn't match any template or project. Head back home or pick one of the 15 curated templates.",

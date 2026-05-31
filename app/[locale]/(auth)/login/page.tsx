@@ -1,4 +1,4 @@
-import { getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { LoginForm } from "./login-form";
 import { auth, enabledOauthProviders } from "@/auth";
@@ -21,6 +21,7 @@ export default async function LoginPage({
   searchParams: Promise<{ next?: string; error?: string }>;
 }) {
   const { locale } = await params;
+  setRequestLocale(locale);
   const { next, error } = await searchParams;
   const target = sanitizeNext(next);
 

@@ -15,11 +15,13 @@ export const metadata: Metadata = {
     description: "Product updates and releases from OpenLen.",
     type: "website",
     url: "https://openlen.com/blog",
+    images: ["/og.png"],
   },
   twitter: {
     card: "summary_large_image",
     title: "Blog | OpenLen",
     description: "Product updates and releases from OpenLen.",
+    images: ["/og.png"],
   },
   alternates: { canonical: "https://openlen.com/blog" },
 };
