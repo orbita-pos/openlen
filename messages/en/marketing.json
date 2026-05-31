@@ -98,7 +98,7 @@
   "pricing": {
     "badge": "Pricing",
     "title": "Free during alpha. <muted>Self-host forever.</muted>",
-    "subtitle": "No paywall while we're shipping v1 — every feature is open for testing. Pro tier with custom domains + higher limits is in the works.",
+    "subtitle": "Start free with 20 AI credits a month. Upgrade to Pro for 150 — or self-host the whole stack with no limits at all.",
     "comingSoon": "Coming soon",
     "mostPopular": "Most popular",
     "githubAria": "OpenLen on GitHub",
@@ -109,7 +109,7 @@
       "blurb": "Everything works. No paywall during the alpha.",
       "cta": "Try it free",
       "features": {
-        "0": "Generate from a prompt (Gemini 2.5 Pro)",
+        "0": "20 AI credits / month",
         "1": "165 templates including 30 link-in-bio",
         "2": "Publish to '<you>'.openlen.com",
         "3": "Privacy-first analytics + per-link click tracking",
@@ -119,11 +119,11 @@
     "pro": {
       "name": "Pro",
       "suffix": "/month",
-      "blurb": "Higher generation limits + custom domains.",
-      "cta": "Get notified at launch",
+      "blurb": "150 AI credits a month — about 10 Pro page generations.",
+      "cta": "Upgrade to Pro",
       "features": {
         "0": "Everything in Free",
-        "1": "1,000 AI generations / month",
+        "1": "150 AI credits / month (≈10 Pro page generations)",
         "2": "Custom domains (links.your-brand.com)",
         "3": "Analytics retention beyond 90 days",
         "4": "Priority email support"

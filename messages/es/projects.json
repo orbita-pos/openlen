@@ -128,11 +128,23 @@
     "myPages": "Mis páginas",
     "settings": "Ajustes",
     "billing": "Facturación",
+    "manageBilling": "Gestionar facturación",
     "apiKeys": "Claves API",
     "comingSoon": "{label} — próximamente",
     "signOut": "Cerrar sesión"
   },
   "creditPill": {
     "tooltip": "Te quedan {balance} de {allotment} créditos de IA este mes"
+  },
+  "billing": {
+    "upgradeCta": "Pásate a Pro",
+    "upgradeHint": "150 créditos de IA al mes",
+    "dismissBanner": "Descartar",
+    "success": "Ya estás en Pro — 150 créditos de IA al mes. ¡Gracias por mejorar tu plan!",
+    "errors": {
+      "not_configured": "La facturación aún no está configurada. Inténtalo más tarde o contacta con soporte.",
+      "checkout_failed": "No pudimos iniciar tu pago. Inténtalo de nuevo.",
+      "portal_failed": "No pudimos abrir tu portal de facturación. Comprueba que tienes una suscripción activa y vuelve a intentarlo."
+    }
   }
 }

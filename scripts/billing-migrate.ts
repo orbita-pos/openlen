@@ -20,6 +20,14 @@ async function main() {
     sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "subscriptionStatus" text;`,
   );
 
+  // Webhook idempotency ledger — see lib/db/schema.ts processedWebhooks.
+  await db.execute(
+    sql`CREATE TABLE IF NOT EXISTS "processedWebhooks" (
+      "id" text PRIMARY KEY,
+      "receivedAt" timestamp NOT NULL DEFAULT now()
+    );`,
+  );
+
   console.log("users billing columns ready.");
   process.exit(0);
 }

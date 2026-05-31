@@ -49,7 +49,6 @@ export async function Pricing() {
     {
       name: t("pricing.pro.name"),
       featured: true,
-      comingSoon: true,
       price: 7,
       suffix: t("pricing.pro.suffix"),
       blurb: t("pricing.pro.blurb"),

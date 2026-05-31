@@ -99,14 +99,26 @@ export async function createCustomerPortalUrl(userId: string): Promise<string> {
 
 // ── Plan state transitions ──────────────────────────────────────────────────
 
-const ACTIVE_STATUSES = new Set(["active", "trialing"]);
+// Statuses that keep Pro ACCESS. past_due is included so a failed renewal
+// doesn't instantly lock a paying user out while Polar retries the charge —
+// credits are NOT refilled on it (the wasPro guard below handles that).
+const ACCESS_STATUSES = new Set(["active", "trialing", "past_due"]);
+// Statuses where the subscription is definitively over — downgrade to free.
+const TERMINAL_STATUSES = new Set([
+  "canceled",
+  "unpaid",
+  "revoked",
+  "incomplete_expired",
+]);
 
 /**
  * Reconcile a user's plan with the latest subscription status from Polar.
- * Active/trialing → "pro" (and grant the Pro credit allotment on the FIRST
- * transition only, so repeated webhooks can't be used to refill); anything
- * else → "free". The monthly credit reset in lib/credits.ts handles renewals,
- * so we deliberately don't refill on every active webhook.
+ * Access statuses (active/trialing/past_due) → "pro" (and grant the Pro credit
+ * allotment on the FIRST free → pro transition only, so repeated webhooks —
+ * including past_due — can't be used to refill); terminal statuses
+ * (canceled/unpaid/revoked/incomplete_expired) → "free". The monthly credit
+ * reset in lib/credits.ts handles renewals, so we deliberately don't refill on
+ * every active webhook. Any other/unknown status leaves the plan unchanged.
  */
 export async function applySubscriptionState(params: {
   userId: string;
@@ -121,16 +133,20 @@ export async function applySubscriptionState(params: {
     .limit(1);
   if (!rows[0]) return; // unknown user — nothing to do
 
-  if (ACTIVE_STATUSES.has(params.status)) {
+  if (ACCESS_STATUSES.has(params.status)) {
     const wasPro = rows[0].plan === "pro";
     await db
       .update(schema.users)
       .set({
         plan: "pro",
-        polarCustomerId: params.customerId ?? undefined,
+        // Don't overwrite an existing id with null — only set when we have one.
+        ...(params.customerId
+          ? { polarCustomerId: params.customerId }
+          : {}),
         polarSubscriptionId: params.subscriptionId ?? undefined,
         subscriptionStatus: params.status,
-        // Grant the Pro allotment only on the free → pro transition.
+        // Grant the Pro allotment only on the free → pro transition (never on
+        // past_due — that must not top up credits).
         ...(wasPro
           ? {}
           : { credits: CREDITS_BY_PLAN.pro, creditsRefreshedAt: new Date() }),
@@ -139,10 +155,13 @@ export async function applySubscriptionState(params: {
     return;
   }
 
-  await db
-    .update(schema.users)
-    .set({ plan: "free", subscriptionStatus: params.status })
-    .where(eq(schema.users.id, params.userId));
+  if (TERMINAL_STATUSES.has(params.status)) {
+    await db
+      .update(schema.users)
+      .set({ plan: "free", subscriptionStatus: params.status })
+      .where(eq(schema.users.id, params.userId));
+  }
+  // Any other/unknown status: leave the plan unchanged.
 }
 
 /** Pull our userId out of a Polar subscription payload. We set both

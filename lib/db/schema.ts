@@ -555,6 +555,16 @@ export const customDomains = pgTable(
   ],
 );
 
+// Webhook idempotency ledger — one row per processed Polar webhook delivery,
+// keyed by the `webhook-id` header. The billing webhook INSERTs the id with
+// ON CONFLICT DO NOTHING before processing; an empty RETURNING means the
+// delivery is a duplicate (Polar retries), so the route short-circuits without
+// re-applying the subscription state.
+export const processedWebhooks = pgTable("processedWebhooks", {
+  id: text("id").primaryKey(),
+  receivedAt: timestamp("receivedAt", { mode: "date" }).notNull().defaultNow(),
+});
+
 // Password reset tokens — separate table so a leaked token only impacts
 // password reset and not session/email-verification flows.
 export const passwordResetTokens = pgTable("passwordResetTokens", {

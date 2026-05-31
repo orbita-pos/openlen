@@ -20,7 +20,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   const session = await auth();
   if (!session?.user?.id) {
     const login = new URL(`/${locale}/login`, publicOrigin());
-    login.searchParams.set("next", "/api/billing/checkout");
+    login.searchParams.set("next", `/api/billing/checkout?locale=${locale}`);
     return NextResponse.redirect(login);
   }
 
