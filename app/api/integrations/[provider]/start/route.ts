@@ -9,6 +9,7 @@ import {
   publicOrigin,
   signState,
 } from "@/lib/integrations/oauth";
+import { routing } from "@/i18n/routing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,7 +21,6 @@ export const dynamic = "force-dynamic";
 // an error query param rather than returning JSON the user would see raw.
 
 const STATE_COOKIE = "ol_oauth_state";
-const LOCALES = ["en", "es"];
 
 export async function GET(
   req: NextRequest,
@@ -38,7 +38,9 @@ export async function GET(
 
   const projectId = req.nextUrl.searchParams.get("project") ?? "";
   const localeParam = req.nextUrl.searchParams.get("locale") ?? "en";
-  const locale = LOCALES.includes(localeParam) ? localeParam : "en";
+  const locale = (routing.locales as readonly string[]).includes(localeParam)
+    ? localeParam
+    : routing.defaultLocale;
   if (!projectId) {
     return NextResponse.json({ error: "missing_project" }, { status: 400 });
   }

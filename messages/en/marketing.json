@@ -13,9 +13,9 @@
   },
   "hero": {
     "alphaBadge": "Alpha",
-    "alphaPitch": "165 hand-built templates — free during alpha",
+    "alphaPitch": "{count} hand-built templates — free during alpha",
     "title": "Landing pages you own.<br></br><muted>AI-built.</muted> <gradient>Open source.</gradient>",
-    "subtitle": "Generate from a prompt, pick from <strong>165 templates</strong>, or paste your own HTML. Edit, publish to your subdomain, get <strong>privacy-first analytics</strong> built in.",
+    "subtitle": "Generate from a prompt, pick from <strong>{count} templates</strong>, or paste your own HTML. Edit, publish to your subdomain, get <strong>privacy-first analytics</strong> built in.",
     "tagline": "Your HTML. Your subdomain. AGPLv3 — fork, audit, self-host. No lock-in, no consent banners.",
     "pagesThisWeek": "<strong>{count, number}</strong> pages generated this week",
     "githubAria": "OpenLen on GitHub",
@@ -51,7 +51,7 @@
     "title": "Built for people who'd rather <muted>own software</muted> than rent it.",
     "items": {
       "templates": {
-        "title": "165 production templates",
+        "title": "{count} production templates",
         "body": "Hand-built marketing landings + 30 link-in-bio creator hubs (streamer, musician, photographer, indie maker). Pick one, customize in-iframe, publish to your subdomain."
       },
       "analytics": {
@@ -110,7 +110,7 @@
       "cta": "Try it free",
       "features": {
         "0": "20 AI credits / month",
-        "1": "165 templates including 30 link-in-bio",
+        "1": "{count} templates including 30 link-in-bio",
         "2": "Publish to '<you>'.openlen.com",
         "3": "Privacy-first analytics + per-link click tracking",
         "4": "Lead forms with email notifications"

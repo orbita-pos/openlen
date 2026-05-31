@@ -13,9 +13,9 @@
   },
   "hero": {
     "alphaBadge": "Alpha",
-    "alphaPitch": "165 plantillas hechas a mano — gratis durante la alpha",
+    "alphaPitch": "{count} plantillas hechas a mano — gratis durante la alpha",
     "title": "Landing pages que son tuyas.<br></br><muted>Creadas con IA.</muted> <gradient>Código abierto.</gradient>",
-    "subtitle": "Genera desde un prompt, elige entre <strong>165 plantillas</strong> o pega tu propio HTML. Edita, publica en tu subdominio y obtén <strong>analíticas que respetan la privacidad</strong> integradas.",
+    "subtitle": "Genera desde un prompt, elige entre <strong>{count} plantillas</strong> o pega tu propio HTML. Edita, publica en tu subdominio y obtén <strong>analíticas que respetan la privacidad</strong> integradas.",
     "tagline": "Tu HTML. Tu subdominio. AGPLv3 — bifurca, audita, hospédalo tú mismo. Sin ataduras ni banners de consentimiento.",
     "pagesThisWeek": "<strong>{count, number}</strong> páginas generadas esta semana",
     "githubAria": "OpenLen en GitHub",
@@ -51,7 +51,7 @@
     "title": "Hecho para quienes prefieren <muted>tener su software</muted> en lugar de alquilarlo.",
     "items": {
       "templates": {
-        "title": "165 plantillas listas para producción",
+        "title": "{count} plantillas listas para producción",
         "body": "Landings de marketing hechas a mano + 30 hubs link-in-bio para creadores (streamer, músico, fotógrafo, indie maker). Elige una, personalízala en el iframe y publícala en tu subdominio."
       },
       "analytics": {
@@ -110,7 +110,7 @@
       "cta": "Pruébalo gratis",
       "features": {
         "0": "20 créditos de IA al mes",
-        "1": "165 plantillas, incluidas 30 link-in-bio",
+        "1": "{count} plantillas, incluidas 30 link-in-bio",
         "2": "Publica en '<tu>'.openlen.com",
         "3": "Analíticas con privacidad + seguimiento de clics por enlace",
         "4": "Formularios de contacto con notificaciones por email"

@@ -5,7 +5,8 @@
 // Presentational types + family meta live in `./families.ts` so client
 // components can import them without dragging node:* into the browser.
 import { createHash } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { cache } from "react";
+import { and, count, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getTemplateStorage } from "@/lib/storage/templates";
 import {
@@ -84,6 +85,19 @@ export async function listTemplates(opts?: {
     .orderBy(schema.templates.createdAt);
   return rows.map(rowToRecord);
 }
+
+/** Live count of published templates — powers the "N templates" copy on the
+ *  marketing surfaces (hero, features, pricing, home metadata) so the number is
+ *  never a stale hardcode. cache()d so the several callers in one page render
+ *  share a single COUNT query. The home is ISR (revalidate 60s), so a newly
+ *  added template shows up within a minute. */
+export const countTemplates = cache(async (): Promise<number> => {
+  const rows = await db
+    .select({ n: count() })
+    .from(schema.templates)
+    .where(eq(schema.templates.status, "published"));
+  return Number(rows[0]?.n ?? 0);
+});
 
 // Admin-only: list EVERY row regardless of status (drafts + archived too).
 // Public listTemplates() filters to published; the admin UI needs the

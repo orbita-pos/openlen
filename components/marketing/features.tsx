@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
+import { countTemplates } from "@/lib/templates/store";
 
 interface FeatureItem {
   icon: LucideIcon;
@@ -40,6 +41,7 @@ const items: FeatureItem[] = [
 
 export async function Features() {
   const t = await getTranslations("marketing");
+  const templateCount = await countTemplates().catch(() => 0);
   return (
     <section id="features" className="relative">
       <div className="mx-auto max-w-6xl px-6 py-24 sm:py-28">
@@ -68,7 +70,7 @@ export async function Features() {
                   <Icon size={18} strokeWidth={2} />
                 </div>
                 <h3 className="mt-5 text-[15px] font-semibold tracking-tight">
-                  {t(it.titleKey)}
+                  {t(it.titleKey, { count: templateCount })}
                 </h3>
                 <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
                   {t(it.bodyKey)}

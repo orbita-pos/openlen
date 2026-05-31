@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     template: "%s | OpenLen",
   },
   description:
-    "An open lens on your landing pages. Open-source builder with AI generation, 165 templates including 30 link-in-bio creator hubs, privacy-first analytics, your HTML — AGPLv3.",
+    "An open lens on your landing pages. Open-source builder with AI generation, a library of templates including link-in-bio creator hubs, privacy-first analytics, your HTML — AGPLv3.",
   keywords: [
     "landing page builder",
     "AI landing page",
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     siteName: "OpenLen",
     title: "OpenLen — Landing pages you own. AI-built. Open source.",
     description:
-      "Generate landing pages or pick from 165 templates. Publish to your subdomain with privacy-first analytics built in.",
+      "Generate landing pages or pick from a library of templates. Publish to your subdomain with privacy-first analytics built in.",
     images: [
       {
         url: "/og.png",
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "OpenLen — Landing pages you own",
     description:
-      "Open-source landing-page builder. 165 templates, AI generation, privacy-first analytics, AGPLv3.",
+      "Open-source landing-page builder. A library of templates, AI generation, privacy-first analytics, AGPLv3.",
     images: ["/og.png"],
   },
   robots: {
