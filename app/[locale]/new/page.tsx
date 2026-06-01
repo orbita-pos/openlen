@@ -1148,6 +1148,12 @@ function NewV2Inner() {
           aiModel={genModel}
           aiOnModelChange={setGenModel}
         />
+        {/* One <main> landmark for the workspace center. `contents` keeps the
+            flex layout byte-identical (generates no box) while giving the a11y
+            tree exactly one main region (fixes landmark-one-main + region). The
+            sr-only h1 gives every entry state a top-level heading. */}
+        <main className="contents">
+        <h1 className="sr-only">OpenLen workspace</h1>
         {entryMode === "choosing" && (
           <EmptyState
             onPickAI={handlePickAI}
@@ -1325,6 +1331,7 @@ function NewV2Inner() {
               </div>
             </div>
           ))}
+        </main>
       </div>
       <StatusBar saving={saving} published={published} />
       {loadedProject && (

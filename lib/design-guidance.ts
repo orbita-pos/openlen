@@ -364,7 +364,7 @@ canonical templates. Don't quote them verbatim; emulate the pattern.
   --hair-2: rgba(255,255,255,0.10);  /* rarely — only the strongest visible row separator */
   --fg: #EDEDED;
   --fg-dim: rgba(255,255,255,0.62);
-  --fg-faint: rgba(255,255,255,0.40);
+  --fg-faint: rgba(255,255,255,0.55);  /* >=4.5:1 on dark bg (WCAG AA) */
   --accent: #3ECF8E;
   --accent-r: 62,207,142;
 }
