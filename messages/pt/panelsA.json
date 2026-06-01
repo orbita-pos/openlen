@@ -35,15 +35,22 @@
   },
   "sections": {
     "heading": "Biblioteca de seções",
-    "intro": "Insira uma seção na sua página atual. Ela entra no rodapé — arraste para o lugar usando as alças da seção. A aparência se adapta à sua página na próxima reestilização.",
+    "intro": "Pré-visualize qualquer seção e use-a na sua página — ela combina com as suas cores e entra no lugar certo.",
     "all": "Todas",
     "jsTooltip": "Renderiza o conteúdo via JS — preservado na inserção, edição inline limitada",
     "imgTooltip": "Vem com placeholders em gradiente — troque por imagens reais após inserir",
-    "insertAria": "Inserir {name} na página atual",
-    "insert": "Inserir",
-    "inserting": "Inserindo…",
     "loadError": "Falha ao carregar as seções — {error}",
-    "footer": "As seções são fragmentos com escopo próprio — seus estilos não conflitam com a sua página. Insira, depois reordene e reestilize do seu jeito."
+    "footer": "Navbars e rodapés substituem o existente; o resto é empilhado onde encaixa.",
+    "preview": "Pré-visualizar",
+    "previewAria": "Pré-visualizar {name}",
+    "useOnPage": "Usar na minha página",
+    "preparing": "Combinando…",
+    "useHint": "Ela se adapta às cores da sua página ao usá-la.",
+    "viewDesktop": "Visualização desktop",
+    "viewMobile": "Visualização móvel",
+    "close": "Fechar",
+    "errNoCredits": "Você ficou sem créditos este mês.",
+    "errGeneric": "Não foi possível adicionar a seção. Tente de novo."
   },
   "paste": {
     "heading": "Colar HTML",

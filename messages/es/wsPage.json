@@ -28,10 +28,9 @@
     "tweak": "Ajusta tu brief en la barra lateral e inténtalo de nuevo."
   },
   "inserted": {
-    "label": "Insertaste <b>{name}</b>",
-    "matching": "Adaptando…",
-    "matchToPage": "✨ Adaptar a la página",
-    "dismiss": "Descartar"
+    "label": "Añadiste <b>{name}</b>",
+    "dismiss": "Descartar",
+    "undo": "Deshacer"
   },
   "editing": {
     "noHtml": "Este proyecto aún no tiene contenido HTML.",

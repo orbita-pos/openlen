@@ -35,15 +35,22 @@
   },
   "sections": {
     "heading": "区块库",
-    "intro": "向当前页面插入一个区块。它会落在页面底部 — 用区块手柄把它拖到合适的位置。下次重新设计时，它的外观会自动适配你的页面。",
+    "intro": "预览任意版块，然后用到你的页面——它会匹配你的配色并落在合适的位置。",
     "all": "全部",
     "jsTooltip": "通过 JS 渲染内容 — 插入时会保留，行内编辑受限",
     "imgTooltip": "自带渐变占位图 — 插入后请替换为真实图片",
-    "insertAria": "将 {name} 插入到当前页面",
-    "insert": "插入",
-    "inserting": "插入中…",
     "loadError": "加载区块失败 — {error}",
-    "footer": "区块是作用域隔离的片段 — 它们的样式不会与你的页面冲突。插入后，再按喜好重新排序和调整样式。"
+    "footer": "导航栏和页脚会替换现有的；其他版块则按位置叠加。",
+    "preview": "预览",
+    "previewAria": "预览 {name}",
+    "useOnPage": "用到我的页面",
+    "preparing": "匹配中…",
+    "useHint": "使用时会自动适配你页面的配色。",
+    "viewDesktop": "桌面视图",
+    "viewMobile": "移动视图",
+    "close": "关闭",
+    "errNoCredits": "本月的额度已用完。",
+    "errGeneric": "无法添加该版块，请重试。"
   },
   "paste": {
     "heading": "粘贴 HTML",

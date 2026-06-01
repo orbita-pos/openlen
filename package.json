@@ -25,6 +25,7 @@
     "sections:seed": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-seed.ts",
     "sections:count": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/count-sections.ts",
     "sections:backfill-scope": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-backfill-scope.ts",
+    "sections:backfill-host-adopt": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-backfill-host-adopt.ts",
     "sections:verify-render": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-verify-render.ts",
     "templates:thumbnails": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/generate-thumbnails.ts",
     "projects:thumbnails": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/projects/generate-thumbnails.ts",
