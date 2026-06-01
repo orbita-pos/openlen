@@ -18,6 +18,7 @@
 #   $env:OPENLEN_HOST = "openlen"          # ssh alias from ~/.ssh/config
 #   $env:OPENLEN_REMOTE_PATH = "/opt/openlen-app"
 #   $env:OPENLEN_SKIP_BUILD = "1"          # reuse existing .next/standalone
+#   $env:OPENLEN_SKIP_MIGRATE = "1"        # skip billing:migrate (already applied)
 #   $env:OPENLEN_SKIP_CRATES_REBUILD = "1" # skip the Rust crate rebuild step.
 #                                          # RISKY — the atomic swap wipes
 #                                          # /opt/openlen-app/node_modules/
@@ -59,9 +60,18 @@ if ($env:OPENLEN_SKIP_BUILD -ne "1") {
 # reads billing columns + the webhook table, so without this migration
 # the freshly-swapped service breaks signup. billing:migrate is idempotent
 # (ADD COLUMN / CREATE TABLE IF NOT EXISTS), so re-running a deploy is safe.
-Step 2 "Applying billing DB migration (npm run billing:migrate)..."
-npm run billing:migrate
-if ($LASTEXITCODE -ne 0) { throw "billing:migrate failed (exit $LASTEXITCODE)" }
+# OPENLEN_SKIP_MIGRATE=1 skips this — set ONLY when the migration was already
+# applied this session. (billing-migrate's tsx process can crash with a libuv
+# UV_HANDLE_CLOSING assertion at process.exit on Windows AFTER the SQL ran
+# successfully; the SQL is idempotent so the DB is fine, but the non-zero exit
+# would abort the deploy. Skip to get past that once it's confirmed applied.)
+if ($env:OPENLEN_SKIP_MIGRATE -ne "1") {
+  Step 2 "Applying billing DB migration (npm run billing:migrate)..."
+  npm run billing:migrate
+  if ($LASTEXITCODE -ne 0) { throw "billing:migrate failed (exit $LASTEXITCODE)" }
+} else {
+  Step 2 "Skipping billing DB migration (OPENLEN_SKIP_MIGRATE=1) -- assumed already applied"
+}
 
 # --- 3. Compose standalone with static + public -----------------------
 Step 3 "Composing standalone (copying .next/static + public/)..."
