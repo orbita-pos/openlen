@@ -9,7 +9,7 @@
   --bg-elev:       oklch(100% 0 0);
   --fg:            oklch(15% 0.01 12);
   --fg-muted:      oklch(45% 0.01 12);
-  --fg-faint:      oklch(60% 0.01 12);
+  --fg-faint:      oklch(48% 0.01 12);  /* darkened to clear WCAG AA 4.5:1 on light --bg */
   --border:        oklch(85% 0.005 12 / 0.6);
   --border-strong: oklch(78% 0.005 12 / 0.8);
   --hover:         oklch(95% 0.005 12);
@@ -32,7 +32,7 @@
   --bg-elev:       oklch(15% 0.01 12);
   --fg:            oklch(96% 0.005 12);
   --fg-muted:      oklch(65% 0.01 12);
-  --fg-faint:      oklch(50% 0.01 12);
+  --fg-faint:      oklch(64% 0.01 12);  /* lightened to clear WCAG AA 4.5:1 on dark --bg */
   --border:        oklch(25% 0.01 12 / 0.7);
   --border-strong: oklch(32% 0.01 12 / 0.9);
   --hover:         oklch(18% 0.01 12);

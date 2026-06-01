@@ -67,6 +67,7 @@ export function IconBtn({
         type="button"
         onClick={onClick}
         disabled={disabled}
+        aria-label={label}
         className={`inline-flex ${sizes[size]} items-center justify-center rounded-md transition ${
           disabled
             ? "fg-faint opacity-40 cursor-not-allowed"
@@ -134,6 +135,8 @@ export function Button({
 export interface SegmentedOption<T extends string> {
   value: T;
   label: string;
+  /** Accessible name when the visual `label` is empty (icon-only option). */
+  ariaLabel?: string;
   icon?: ComponentType<{ size?: number }>;
 }
 
@@ -164,6 +167,8 @@ export function Segmented<T extends string>({
             key={o.value}
             type="button"
             onClick={() => onChange(o.value)}
+            aria-label={o.ariaLabel}
+            aria-pressed={active}
             className={`inline-flex items-center gap-1.5 ${sizes[size]} px-2.5 rounded-md font-medium transition ${
               active ? "seg-active" : "fg-muted hover:fg"
             }`}

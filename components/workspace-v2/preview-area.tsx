@@ -306,9 +306,9 @@ export function PreviewArea({
           value={device}
           onChange={setDevice}
           options={[
-            { value: "desktop", label: "", icon: Monitor },
-            { value: "tablet", label: "", icon: Tablet },
-            { value: "mobile", label: "", icon: Smartphone },
+            { value: "desktop", label: "", ariaLabel: "Desktop preview", icon: Monitor },
+            { value: "tablet", label: "", ariaLabel: "Tablet preview", icon: Tablet },
+            { value: "mobile", label: "", ariaLabel: "Mobile preview", icon: Smartphone },
           ]}
         />
         <span className="h-5 w-px bg-[color:var(--border)]" />

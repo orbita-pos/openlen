@@ -1185,6 +1185,7 @@ function Composer({
             type="button"
             onClick={onSubmit}
             disabled={!value.trim() || sending}
+            aria-label={t("composer.send")}
             className={`inline-flex items-center justify-center gap-1 h-7 rounded-md text-[11.5px] font-medium transition ${
               value.trim() && !sending
                 ? "px-2.5 bg-[var(--accent)] text-white shadow-coral hover:brightness-105"
