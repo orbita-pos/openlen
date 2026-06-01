@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import type { ProjectData } from "@/lib/projects/types";
 import { createVersion } from "@/lib/projects/versions";
-import { detectSlotPath } from "@/lib/html-engine";
+import { sanitizeForPublish } from "@/lib/html-engine";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PATCH /api/projects/[id]/html — overwrite `data.html` for a project.
@@ -59,14 +59,15 @@ export async function PATCH(
       400,
     );
   }
-  const html = body.html;
-  if (Buffer.byteLength(html, "utf8") > MAX_HTML_BYTES) {
+  const rawHtml = body.html;
+  if (Buffer.byteLength(rawHtml, "utf8") > MAX_HTML_BYTES) {
     return json(
       { error: "too_large", message: "HTML must be under 8 MB" },
       413,
     );
   }
-  if (detectSlotPath(html)) {
+  const sanitized = sanitizeForPublish(rawHtml);
+  if (sanitized.html === null) {
     return json(
       {
         error: "invalid_html",
@@ -76,6 +77,10 @@ export async function PATCH(
       400,
     );
   }
+  // Store the SANITIZED html — inline scripts / on*-handlers / dangerous URLs /
+  // iframes are stripped here (Tailwind CDN preserved) so a crafted PATCH body
+  // can never persist XSS into the DB or a published page.
+  const html = sanitized.html;
 
   const rows = await db
     .select({

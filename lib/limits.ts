@@ -69,6 +69,13 @@ export const IP_LIMITS: Record<string, LimitWindow[]> = {
   reset: [
     { windowMs: HOUR, max: 10, label: "hourly" },
   ],
+  // Credentials sign-in (brute-force / credential-stuffing). Loose enough for
+  // shared NAT and a user fat-fingering their password, tight enough to make
+  // online guessing infeasible. Enforced in app/api/auth/[...nextauth]/route.ts.
+  login: [
+    { windowMs: 15 * 60 * 1000, max: 20, label: "15-minute" },
+    { windowMs: HOUR, max: 60, label: "hourly" },
+  ],
 };
 
 export interface LimitDecision {

@@ -140,11 +140,20 @@ async function fetchSettings(
   host: string,
   domain: string,
 ): Promise<ProviderSettings | null> {
+  // SECURITY: `host` is read from an attacker-controllable _domainconnect TXT
+  // record, so this fetch is an SSRF sink. Accept only a bare https hostname
+  // (no custom port) that resolves ENTIRELY to public IPs — this blocks
+  // 169.254.169.254 (cloud metadata), localhost, RFC1918 / CGNAT, link-local,
+  // etc. — and never follow redirects (a 3xx could hop to an internal URL).
+  const hostname = parseHttpsHostname(host);
+  if (!hostname || !(await resolvesToPublicIp(hostname))) return null;
+
   // Domain Connect spec — providers expose /v2/<domain>/settings.
-  const url = `https://${host.replace(/^https?:\/\//, "")}/v2/${encodeURIComponent(domain)}/settings`;
+  const url = `https://${hostname}/v2/${encodeURIComponent(domain)}/settings`;
   try {
     const res = await fetch(url, {
       headers: { accept: "application/json" },
+      redirect: "error",
       signal: AbortSignal.timeout(5000),
     });
     if (!res.ok) return null;
@@ -152,6 +161,61 @@ async function fetchSettings(
   } catch {
     return null;
   }
+}
+
+// ─── SSRF guards for the TXT-supplied provider host ──────────────────────────
+
+/** Extract a bare hostname from a TXT-supplied value, accepting only plain
+ *  https on the default port. Returns null for other schemes, explicit ports,
+ *  or garbage. */
+function parseHttpsHostname(raw: string): string | null {
+  try {
+    const u = new URL(raw.includes("://") ? raw : `https://${raw}`);
+    if (u.protocol !== "https:") return null;
+    if (u.port && u.port !== "443") return null;
+    return u.hostname;
+  } catch {
+    return null;
+  }
+}
+
+/** True only when every A/AAAA address `hostname` resolves to is a public,
+ *  routable address. (A determined attacker could still DNS-rebind in the
+ *  TOCTOU window, but the caller reads only `urlSyncUX` and discards non-2xx
+ *  bodies, which bounds the residual risk.) */
+async function resolvesToPublicIp(hostname: string): Promise<boolean> {
+  try {
+    const addrs = await dnsPromises.lookup(hostname, { all: true });
+    return addrs.length > 0 && addrs.every((a) => isPublicIp(a.address));
+  } catch {
+    return false;
+  }
+}
+
+function isPublicIp(ip: string): boolean {
+  const v4 = ip.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (v4) {
+    const [a, b] = v4.slice(1).map(Number);
+    if (a === 0 || a === 10 || a === 127) return false; // this-net / private / loopback
+    if (a === 169 && b === 254) return false; // link-local + cloud metadata
+    if (a === 172 && b >= 16 && b <= 31) return false; // private
+    if (a === 192 && b === 168) return false; // private
+    if (a === 100 && b >= 64 && b <= 127) return false; // CGNAT
+    if (a >= 224) return false; // multicast + reserved
+    return true;
+  }
+  const lower = ip.toLowerCase();
+  if (lower === "::1" || lower === "::") return false; // loopback / unspecified
+  if (
+    lower.startsWith("fe80") ||
+    lower.startsWith("fc") ||
+    lower.startsWith("fd")
+  ) {
+    return false; // link-local + unique-local
+  }
+  const mapped = lower.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
+  if (mapped) return isPublicIp(mapped[1]);
+  return true;
 }
 
 export interface BuildApplyUrlParams {
