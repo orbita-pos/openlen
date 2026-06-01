@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { getTemplate, getTemplateHtml } from "@/lib/templates/store";
 import { createVersion } from "@/lib/projects/versions";
-import { detectSlotPath } from "@/lib/html-engine";
+import { sanitizeForPublish } from "@/lib/html-engine";
 import { normalizeBornCanonical } from "@/lib/normalize";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 
@@ -48,9 +48,11 @@ export async function POST(req: Request): Promise<Response> {
     return json({ error: "template_body_unavailable" }, 500);
   }
 
-  // Defense in depth: the publish flow rejects HTML containing this marker.
-  // Bail early so we don't insert a project that can never be published.
-  if (detectSlotPath(html)) {
+  // Defense in depth: sanitize the curated body (strips any stray
+  // scripts/handlers/iframes; clean templates pass through byte-identical) and
+  // reject the data-slot-path editor marker the publish flow also rejects.
+  const sanitized = sanitizeForPublish(html);
+  if (sanitized.html === null) {
     return json(
       {
         error: "invalid_template",
@@ -60,12 +62,13 @@ export async function POST(req: Request): Promise<Response> {
       500,
     );
   }
+  const cleanHtml = sanitized.html;
 
   // Clone the template's HTML through the born-canonical normalizer so the
   // user's project enters with the same token contract as a generated page
   // (radius / font / accent become editable in the inspector), then complete
   // the <head> so it's born SEO-healthy (title / description / og / favicon).
-  const finalHtml = ensurePageMeta(normalizeBornCanonical(html), {
+  const finalHtml = ensurePageMeta(normalizeBornCanonical(cleanHtml), {
     title: entry.name,
   });
 

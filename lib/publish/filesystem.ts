@@ -14,7 +14,7 @@ import {
 import path from "node:path";
 import { legacyWebp2000Variant, processImage } from "@/lib/images";
 import { validateSubdomain } from "@/lib/subdomain/validate";
-import { detectSlotPath } from "@/lib/html-engine";
+import { sanitizeForPublish } from "@/lib/html-engine";
 import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
 import { consolidateUnsplashCredits } from "@/lib/publish/credits";
 import { wirePublishedForms } from "@/lib/publish/forms";
@@ -324,11 +324,17 @@ export async function publishToDir(
   if (!v.ok) {
     throw new Error(`publishToDir: invalid subdomain (${v.reason})`);
   }
-  if (detectSlotPath(params.html)) {
+  // Defense-in-depth: sanitize immediately before the disk write. Strips any
+  // inline script / on*-handler / dangerous URL / iframe that slipped past the
+  // ingestion gates (Tailwind CDN preserved); rejects data-slot-path editor
+  // markers. Clean HTML passes through byte-identical.
+  const sanitized = sanitizeForPublish(params.html);
+  if (sanitized.html === null) {
     throw new Error(
       "publishToDir: refusing to write HTML containing data-slot-path (editor-mode leaked into publish path)",
     );
   }
+  const publishHtml = sanitized.html;
 
   const sub = v.value;
   const root = getRoot();
@@ -339,7 +345,7 @@ export async function publishToDir(
   // Optimize for production before computing the SHA so identical post-
   // optimization output (e.g. user clicks Deploy twice without editing)
   // dedupes on disk.
-  const optimized = await optimizeHtmlForProduction(params.html);
+  const optimized = await optimizeHtmlForProduction(publishHtml);
 
   // Consolidate Unsplash credits BEFORE the asset migrations below. We need
   // to see the original `images.unsplash.com` URLs to detect anonymous

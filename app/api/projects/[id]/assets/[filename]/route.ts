@@ -37,12 +37,20 @@ export async function GET(
   new Uint8Array(ab).set(result.contents);
   const blob = new Blob([ab], { type: result.contentType });
 
-  return new Response(blob, {
-    status: 200,
-    headers: {
-      "content-type": result.contentType,
-      // Hash-based filename → immutable forever once written.
-      "cache-control": "public, max-age=31536000, immutable",
-    },
-  });
+  const headers: Record<string, string> = {
+    "content-type": result.contentType,
+    // Hash-based filename → immutable forever once written.
+    "cache-control": "public, max-age=31536000, immutable",
+    // Never let a browser MIME-sniff a stored asset into an executable type.
+    "x-content-type-options": "nosniff",
+  };
+  // SECURITY: SVG can carry inline <script>/on*-handlers that execute when the
+  // file is opened as a top-level document on our own origin (stored XSS).
+  // Force download on navigation — <img>/<link rel="icon"> embedding, which
+  // ignores Content-Disposition, keeps working.
+  if (result.contentType === "image/svg+xml") {
+    headers["content-disposition"] = "attachment";
+  }
+
+  return new Response(blob, { status: 200, headers });
 }

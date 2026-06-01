@@ -80,10 +80,16 @@ export async function POST(req: Request): Promise<Response> {
         used: false,
       });
 
-      const origin = req.headers.get("origin")
-        ?? process.env.NEXTAUTH_URL
-        ?? "http://localhost:3000";
-      const resetUrl = `${origin}/reset/${rawToken}`;
+      // SECURITY: never derive the reset-link base from request headers.
+      // Origin/Host are attacker-controllable — using them lets an attacker
+      // POST /forgot with `Origin: https://evil.com` so the victim's emailed
+      // reset link points at evil.com, leaking the single-use token (account
+      // takeover). Build the URL from the server-trusted env URL only.
+      const base =
+        process.env.NEXTAUTH_URL ??
+        process.env.AUTH_URL ??
+        "http://localhost:3000";
+      const resetUrl = `${base}/reset/${rawToken}`;
 
       await sendPasswordResetEmail({
         to: email,

@@ -11,7 +11,7 @@ import {
 } from "@/lib/credits";
 import { DESIGN_GUIDANCE, DESIGN_REFERENCE } from "@/lib/design-guidance";
 import { resolveAIProvider, type AIModel } from "@/lib/ai-provider";
-import { detectSlotPath } from "@/lib/html-engine";
+import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import { GeminiProvider, type InlineImage, type Message } from "@/lib/ai-gateway";
 import { renderHtmlToInlineImage } from "@/lib/ai/inline-image";
 import {
@@ -790,12 +790,24 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           }
         }
 
+        // Sanitize the model output before persistence — strip any inline
+        // scripts / on*-handlers / dangerous URLs / iframes the model may have
+        // emitted despite the system prompt (prompt guidance is not an
+        // enforcement boundary). Mirrors the /api/generate sanitize:true path.
+        const sanitizeResult = sanitizeForPublish(trimmedHtml);
+        if (sanitizeResult.html === null) {
+          emit("error", {
+            message: "Model emitted editor-mode markers — try again.",
+          });
+          closeStream();
+          return;
+        }
         // Born-canonical: a Mode B rewrite — or ops that hit the token
         // blocks — can drop the data-ol-* contract. Re-run the chain so
         // the page stays themeable. Idempotent: a no-op when the markers
         // survived. Then re-complete the <head> in case a full rewrite
         // dropped the meta description / og tags / favicon.
-        trimmedHtml = ensurePageMeta(normalizeBornCanonical(trimmedHtml));
+        trimmedHtml = ensurePageMeta(normalizeBornCanonical(sanitizeResult.html));
 
         const reasoning = accumulatedReasoning.trim();
         const now = new Date();

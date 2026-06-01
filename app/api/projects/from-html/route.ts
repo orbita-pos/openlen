@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { createVersion } from "@/lib/projects/versions";
-import { detectSlotPath } from "@/lib/html-engine";
+import { sanitizeForPublish } from "@/lib/html-engine";
 import { normalizeBornCanonical } from "@/lib/normalize";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
@@ -17,8 +17,10 @@ import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
 //
 // Safety:
 // - 8 MB max HTML size.
-// - Reject HTML containing `data-slot-path=` (editor-mode marker; the same
-//   guard runs again in publishToDir as defense in depth).
+// - sanitizeForPublish() strips inline scripts / on*-handlers / dangerous-URL
+//   schemes / iframes / meta-refresh (Tailwind CDN is preserved) and rejects
+//   `data-slot-path=` editor markers. We store the CLEANED html; the same gate
+//   runs again in publishToDir as defense in depth.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const runtime = "nodejs";
@@ -45,7 +47,8 @@ export async function POST(req: Request): Promise<Response> {
   if (Buffer.byteLength(html, "utf8") > MAX_HTML_BYTES) {
     return json({ error: "too_large", message: "HTML must be under 8 MB" }, 413);
   }
-  if (detectSlotPath(html)) {
+  const sanitized = sanitizeForPublish(html);
+  if (sanitized.html === null) {
     return json(
       {
         error: "invalid_html",
@@ -55,6 +58,7 @@ export async function POST(req: Request): Promise<Response> {
       400,
     );
   }
+  const cleanHtml = sanitized.html;
 
   const title =
     (typeof body.title === "string" && body.title.trim()) ||
@@ -65,7 +69,7 @@ export async function POST(req: Request): Promise<Response> {
   // generated page — radius / font / accent become controllable. Then
   // complete the <head> so it's born SEO-healthy (the user pasting raw HTML
   // often has no meta description / og tags / favicon).
-  const finalHtml = ensurePageMeta(normalizeBornCanonical(html), { title });
+  const finalHtml = ensurePageMeta(normalizeBornCanonical(cleanHtml), { title });
 
   const projectId = crypto.randomUUID();
   try {
