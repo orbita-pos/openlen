@@ -1,7 +1,6 @@
 import NextAuth from "next-auth";
 import type { NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import bcrypt from "bcryptjs";
@@ -11,10 +10,9 @@ import { db, schema } from "@/lib/db";
 // ─────────────────────────────────────────────────────────────────────────────
 // Auth.js v5 configuration.
 //
-// Three providers:
+// Two providers:
 //   1. Credentials (email + password)        — always enabled
-//   2. GitHub OAuth                          — enabled iff GITHUB_ID + GITHUB_SECRET
-//   3. Google OAuth                          — enabled iff GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET
+//   2. Google OAuth                          — enabled iff GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET
 //
 // Sessions are stored in the database via the Drizzle adapter. We could use
 // JWT-only sessions for less DB load, but database sessions let us revoke
@@ -55,15 +53,6 @@ const providers: NextAuthConfig["providers"] = [
     },
   }),
 ];
-
-if (process.env.GITHUB_ID && process.env.GITHUB_SECRET) {
-  providers.push(
-    GitHub({
-      clientId: process.env.GITHUB_ID,
-      clientSecret: process.env.GITHUB_SECRET,
-    }),
-  );
-}
 
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   providers.push(
@@ -112,6 +101,5 @@ export const { handlers, auth, signIn, signOut } = NextAuth(config);
  * pages read this to decide whether to render the GitHub/Google buttons.
  */
 export const enabledOauthProviders = {
-  github: !!(process.env.GITHUB_ID && process.env.GITHUB_SECRET),
   google: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
 };

@@ -195,7 +195,14 @@ export async function restoreVersion(
     });
   }
 
-  const nextData: ProjectData = { html: row.versionHtml };
+  // Merge, don't replace: a version row stores only `html`, so restoring with
+  // `{ html }` alone would wipe data.settings (per-form notify/redirect config
+  // + analyticsDisabled). Preserve the project's current settings, mirroring
+  // the PATCH /html route.
+  const nextData: ProjectData = {
+    ...(row.projectData ?? {}),
+    html: row.versionHtml,
+  };
   await db
     .update(schema.projects)
     .set({ data: nextData, updatedAt: new Date() })

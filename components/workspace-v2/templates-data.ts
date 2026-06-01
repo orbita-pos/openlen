@@ -1,13 +1,14 @@
 // Workspace TemplatesPanel data layer.
 //
-// Family metadata is presentation-only (labels + taglines) and lives here
-// as a static array — translating from store's TEMPLATE_FAMILY_META, which
-// is canonical. Per-template data is fetched live from /api/templates via
+// Family metadata (labels + taglines) is presentation-only and derived
+// directly from the canonical TEMPLATE_FAMILY_META in lib/templates/families.ts
+// so it can't drift. Per-template data is fetched live from /api/templates via
 // the useTemplates() hook in `use-templates.ts`.
 
-import type {
-  TemplateFamily,
-  TemplateMode,
+import {
+  TEMPLATE_FAMILY_META,
+  type TemplateFamily,
+  type TemplateMode,
 } from "@/lib/templates/families";
 
 export type { TemplateFamily, TemplateMode } from "@/lib/templates/families";
@@ -18,104 +19,12 @@ export interface TemplateFamilyMeta {
   tagline: string;
 }
 
-export const TEMPLATE_FAMILIES: TemplateFamilyMeta[] = [
-  {
-    id: "technical-minimal",
-    label: "Technical Minimal",
-    tagline:
-      "Dark, mono accents, terminal mockups. For devtools and infra.",
-  },
-  {
-    id: "editorial",
-    label: "Editorial",
-    tagline:
-      "Serif headlines, numbered sections, magazine rhythm. For premium and craft brands.",
-  },
-  {
-    id: "commerce",
-    label: "Commerce",
-    tagline:
-      "Modern retail tech, payment flows, product mockups. For POS and marketplace.",
-  },
-  {
-    id: "documentation",
-    label: "Documentation",
-    tagline:
-      "Side-nav, code blocks, callouts. For SDKs, APIs, and developer references.",
-  },
-  {
-    id: "saas",
-    label: "SaaS",
-    tagline:
-      "Long-form marketing pages with social proof, pricing, and conversion sections.",
-  },
-  {
-    id: "ai-ml",
-    label: "AI / ML",
-    tagline:
-      "Model playgrounds, eval dashboards, agent traces. For LLM and ML products.",
-  },
-  {
-    id: "fintech",
-    label: "Fintech",
-    tagline:
-      "Banking, payments, trading. Trust signals, tabular numbers, regulatory badges.",
-  },
-  {
-    id: "health-tech",
-    label: "Health-tech",
-    tagline:
-      "Telehealth, fitness, mental health, EHR. Calmer typography, warm accents, clinical trust signals.",
-  },
-  {
-    id: "portfolio",
-    label: "Portfolio",
-    tagline:
-      "Personal home page — name + work + writing + contact. Quieter, typography-driven, no pricing.",
-  },
-  {
-    id: "pre-launch",
-    label: "Pre-launch",
-    tagline:
-      "Single-purpose teaser. Display headline + waitlist input + optional countdown. Hype-building.",
-  },
-  {
-    id: "event",
-    label: "Event",
-    tagline:
-      "Conferences, workshops, meetups. Schedule grids, speaker cards, ticket tiers.",
-  },
-  {
-    id: "agency",
-    label: "Agency / Studio",
-    tagline:
-      "Brand studios, dev shops, motion houses. Case-study heavy, restrained voice, team-focused.",
-  },
-  {
-    id: "real-estate",
-    label: "Real Estate",
-    tagline:
-      "Property listings, agents, brokerages. Photo galleries, map views, comparable sales.",
-  },
-  {
-    id: "hospitality",
-    label: "Hospitality",
-    tagline:
-      "Restaurants, hotels, cafés. Menus, reservations, ambient photography, chef and owner stories.",
-  },
-  {
-    id: "ecommerce",
-    label: "E-commerce",
-    tagline:
-      "Single-product DTC landings. Multiple images, variants, size guides, reviews, add-to-cart.",
-  },
-  {
-    id: "climate",
-    label: "Climate / Sustainability",
-    tagline:
-      "Carbon accounting, ESG dashboards, climate tech. Emission charts, supply chain maps, certification badges.",
-  },
-];
+// Derived from the canonical TEMPLATE_FAMILY_META so the workspace picker can
+// never again drift from the schema/DB. The previous hand-maintained copy was
+// stuck at 16 of 32 families and hid 56% of the published gallery.
+export const TEMPLATE_FAMILIES: TemplateFamilyMeta[] = (
+  Object.keys(TEMPLATE_FAMILY_META) as TemplateFamily[]
+).map((id) => ({ id, ...TEMPLATE_FAMILY_META[id] }));
 
 // Shape the TemplatesPanel cards consume. Derived from the API list
 // response (id/name/pitch/family/accent/storageUrl/mode) plus a few

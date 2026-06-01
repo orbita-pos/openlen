@@ -21,7 +21,7 @@ export function LoginForm({
 }: {
   next: string;
   initialError: string | null;
-  oauth: { github: boolean; google: boolean };
+  oauth: { google: boolean };
 }) {
   const t = useTranslations("auth");
   const locale = useLocale();
@@ -30,7 +30,7 @@ export function LoginForm({
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState<"github" | "google" | null>(null);
+  const [oauthLoading, setOauthLoading] = useState<"google" | null>(null);
   const [error, setError] = useState<string | null>(initialError);
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -56,7 +56,7 @@ export function LoginForm({
     }
   };
 
-  const onOAuth = async (provider: "github" | "google") => {
+  const onOAuth = async (provider: "google") => {
     setOauthLoading(provider);
     await signIn(provider, { callbackUrl: `/${locale}${next}` });
   };

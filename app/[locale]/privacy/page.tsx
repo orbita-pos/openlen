@@ -69,7 +69,7 @@ export default async function PrivacyPage({
               <strong>Datos de cuenta</strong> — tu correo, nombre opcional, URL
               de imagen de perfil opcional, contraseña protegida mediante hash
               (bcrypt), plan, rol y saldo de créditos de IA. Puedes iniciar sesión
-              con Google o GitHub mediante Auth.js.
+              con Google mediante Auth.js.
             </li>
             <li>
               <strong>Tu contenido</strong> — los proyectos que creas (título,
@@ -323,7 +323,7 @@ export default async function PrivacyPage({
             <li>
               <strong>Terceros responsables</strong> (tratan datos bajo su propia
               responsabilidad): <strong>Polar</strong> para los datos de pago;{" "}
-              <strong>Google</strong> y <strong>GitHub</strong> cuando eliges
+              <strong>Google</strong> cuando eliges
               iniciar sesión con OAuth; y <strong>Vercel</strong> o{" "}
               <strong>GitHub</strong> cuando tú inicias una exportación de tus
               páginas.
@@ -407,7 +407,7 @@ export default async function PrivacyPage({
             <li>
               <strong>Account data</strong> — your email, optional name, optional
               profile-image URL, hashed password (bcrypt), plan, role, and AI
-              credit balance. You can sign in with Google or GitHub via Auth.js.
+              credit balance. You can sign in with Google via Auth.js.
             </li>
             <li>
               <strong>Your content</strong> — the projects you create (title,
@@ -645,7 +645,7 @@ export default async function PrivacyPage({
             <li>
               <strong>Third-party controllers</strong> (process data under their
               own responsibility): <strong>Polar</strong> for payment data;{" "}
-              <strong>Google</strong> and <strong>GitHub</strong> when you choose to
+              <strong>Google</strong> when you choose to
               sign in via OAuth; and <strong>Vercel</strong> or{" "}
               <strong>GitHub</strong> when you initiate an export of your pages.
             </li>
