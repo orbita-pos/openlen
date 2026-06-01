@@ -28,10 +28,9 @@
     "tweak": "Passe dein Briefing in der Seitenleiste an und versuche es erneut."
   },
   "inserted": {
-    "label": "<b>{name}</b> eingefügt",
-    "matching": "Wird abgestimmt …",
-    "matchToPage": "✨ An Seite anpassen",
-    "dismiss": "Schließen"
+    "label": "<b>{name}</b> hinzugefügt",
+    "dismiss": "Schließen",
+    "undo": "Rückgängig"
   },
   "editing": {
     "noHtml": "Dieses Projekt hat noch keinen HTML-Inhalt.",

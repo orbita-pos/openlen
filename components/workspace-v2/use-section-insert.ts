@@ -11,7 +11,14 @@
 // `data-openlen-section-insert` marker so it strips itself from the posted
 // HTML; the parent's stripEditorInstrumentation handles the other tools.
 //
-// Parent → iframe:  { type: "openlen:section-insert", html: "<fragment>" }
+// Placement is type-aware: a navbar lands at the top of the page, a footer at
+// the bottom, everything else at the end (above a trailing footer if present).
+// "Undo" posts `openlen:section-remove`; the script pulls the exact nodes it
+// last inserted back out and re-serializes — no reload, so the preview never
+// blanks to white.
+//
+// Parent → iframe:  { type: "openlen:section-insert", html: "<fragment>", sectionType }
+// Parent → iframe:  { type: "openlen:section-remove" }
 // Iframe → parent:  { type: "openlen:html-changed", outerHtml, source: "section-insert" }
 
 const INSERT_SCRIPT = `
@@ -42,13 +49,68 @@ const INSERT_SCRIPT = `
     return body;
   }
 
-  function insertFragment(fragHtml) {
+  function lastElement(parent) {
+    var kids = candidates(parent);
+    return kids.length ? kids[kids.length - 1] : null;
+  }
+
+  // Where a section of this type should land. Returns the node to insert
+  // BEFORE, or null to append at the end. A navbar goes to the very TOP (a nav
+  // dropped at the bottom was the "white band at the end" bug); a footer goes
+  // to the bottom; everything else lands at the end but ABOVE a trailing footer
+  // if the page already has one (so a CTA/features block doesn't fall below it).
+  function placementAnchor(root, sectionType) {
+    if (sectionType === 'navbar') return root.firstChild;
+    if (sectionType === 'footer') return null;
+    var last = lastElement(root);
+    if (last && last.tagName === 'FOOTER') return last;
+    return null;
+  }
+
+  // Navbars and footers are page singletons — replace an existing one instead
+  // of stacking a second (two navbars is never what the user wants). Returns the
+  // top-level landmark to swap out: the FIRST nav/header for a navbar, the LAST
+  // footer for a footer. Heuristic — a non-semantic div-as-nav won't be caught.
+  function findExistingSameType(root, sectionType) {
+    var kids = candidates(root);
+    if (sectionType === 'navbar') {
+      for (var i = 0; i < kids.length; i++) {
+        if (kids[i].tagName === 'NAV' || kids[i].tagName === 'HEADER') return kids[i];
+      }
+      return null;
+    }
+    if (sectionType === 'footer') {
+      for (var j = kids.length - 1; j >= 0; j--) {
+        if (kids[j].tagName === 'FOOTER') return kids[j];
+      }
+      return null;
+    }
+    return null;
+  }
+
+  function insertFragment(fragHtml, sectionType) {
     var root = findContentRoot();
     if (!root) return null;
+
+    // Singleton replace (navbar/footer): pull the existing one out FIRST (before
+    // computing the anchor / inserting the new), remembering it + its slot so an
+    // Undo can put it back exactly where it was.
+    var removed = null;
+    if (sectionType === 'navbar' || sectionType === 'footer') {
+      var existing = findExistingSameType(root, sectionType);
+      if (existing) {
+        removed = { node: existing, sectionType: sectionType, parent: root };
+        root.removeChild(existing);
+      }
+    }
+
     var tmp = document.createElement('div');
     tmp.innerHTML = fragHtml;
     var nodes = Array.prototype.slice.call(tmp.childNodes);
+    var anchor = placementAnchor(root, sectionType);
+    if (anchor && anchor.parentNode !== root) anchor = null; // safety
     var insertedEls = [];
+    var insertedAll = [];
     nodes.forEach(function (node) {
       var toAppend = node;
       // <script> set via innerHTML never executes — recreate it so JS-driven
@@ -61,9 +123,21 @@ const INSERT_SCRIPT = `
         s.textContent = node.textContent;
         toAppend = s;
       }
-      root.appendChild(toAppend);
+      // insertBefore(node, anchor) keeps order: each node lands just before the
+      // anchor, after the previously inserted ones. null anchor → append.
+      if (anchor) root.insertBefore(toAppend, anchor);
+      else root.appendChild(toAppend);
+      insertedAll.push(toAppend);
       if (toAppend.nodeType === 1) insertedEls.push(toAppend);
     });
+    // Remember EVERY node we added (including the "\n" text nodes between the
+    // font <link>/<style>/section parts) so an Undo pulls them ALL back out and
+    // restores the DOM cleanly — element-only tracking left orphan whitespace in
+    // the re-serialized HTML across add/undo cycles. No srcDoc reload: the live
+    // DOM stays authoritative. removedReplace lets Undo also restore a swapped-out
+    // navbar/footer.
+    lastInsertedNodes = insertedAll.slice();
+    removedReplace = removed;
 
     // The section element (for scroll + highlight): prefer a landmark/root tag.
     var main = null;
@@ -109,47 +183,52 @@ const INSERT_SCRIPT = `
     } catch (_) {}
   }
 
-  // Build the :nth-of-type CSS breadcrumb the ai-design scope resolver wants
-  // (resolveOpIdByPath uses :nth-of-type paths, NOT attribute selectors). Used
-  // by "Match to page" to scope a re-theme to the just-inserted section — we
-  // recompute the path on demand so it survives a reorder before matching.
-  function olBuildPath(el) {
-    var segs = [];
-    var node = el;
-    while (node && node.nodeType === 1 && node.tagName !== 'BODY' && node.tagName !== 'HTML') {
-      var parent = node.parentElement;
-      if (!parent) { segs.unshift(node.tagName.toLowerCase()); break; }
-      var n = 0, found = 0;
-      for (var i = 0; i < parent.children.length; i++) {
-        var c = parent.children[i];
-        if (c.tagName === node.tagName) { n++; if (c === node) found = n; }
-      }
-      segs.unshift(node.tagName.toLowerCase() + ':nth-of-type(' + (found || 1) + ')');
-      node = parent;
-    }
-    return segs.join(' > ');
-  }
-
+  var lastInsertHtml = '';
+  var lastInsertAt = 0;
+  var lastInsertedNodes = [];
+  var removedReplace = null;
   window.addEventListener('message', function (e) {
     var d = e.data;
-    if (!d || d.type !== 'openlen:section-insert' || typeof d.html !== 'string') return;
-    var main = insertFragment(d.html);
+    if (!d) return;
+
+    // Undo of the most recent insert — pull the exact nodes we added back out
+    // and re-serialize through the SAME html-changed save path. No reload, so
+    // the live DOM never blanks to white. If the insert replaced a singleton
+    // (navbar/footer), put the old one back in its original slot.
+    if (d.type === 'openlen:section-remove') {
+      if (!lastInsertedNodes.length && !removedReplace) return;
+      lastInsertedNodes.forEach(function (n) {
+        if (n && n.parentNode) n.parentNode.removeChild(n);
+      });
+      lastInsertedNodes = [];
+      if (removedReplace && removedReplace.node && removedReplace.parent) {
+        // Restore the swapped-out singleton at its canonical spot (navbar→top,
+        // footer→bottom) — robust even if the page was reordered between the
+        // insert and this undo (a captured nextSibling anchor could have moved).
+        var p = removedReplace.parent;
+        if (removedReplace.sectionType === 'navbar') p.insertBefore(removedReplace.node, p.firstChild);
+        else p.appendChild(removedReplace.node);
+      }
+      removedReplace = null;
+      lastInsertHtml = '';
+      setTimeout(postClean, 30);
+      return;
+    }
+
+    if (d.type !== 'openlen:section-insert' || typeof d.html !== 'string') return;
+    // Idempotency guard — appendChild is not idempotent, so a double-click (or a
+    // stray duplicate message) posting the SAME fragment in quick succession
+    // would stack two copies. Ignore an identical fragment within 1.2s. A
+    // different section (different html) or an intentional repeat after the
+    // window still inserts.
+    var now = Date.now();
+    if (d.html === lastInsertHtml && (now - lastInsertAt) < 1200) return;
+    lastInsertHtml = d.html;
+    lastInsertAt = now;
+    var main = insertFragment(d.html, d.sectionType);
     if (!main) return;
     // Let layout settle (and any inserted <script> run) before serializing.
     setTimeout(postClean, 80);
-  });
-
-  window.addEventListener('message', function (e) {
-    var d = e.data;
-    if (!d || d.type !== 'openlen:section-path' || typeof d.secId !== 'string') return;
-    var el = document.querySelector('[data-sec="' + d.secId + '"]');
-    var path = el ? olBuildPath(el) : '';
-    try {
-      window.parent.postMessage(
-        { type: 'openlen:section-path-result', secId: d.secId, path: path },
-        '*',
-      );
-    } catch (_) {}
   });
 })();
 `;

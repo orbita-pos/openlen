@@ -28,10 +28,9 @@
     "tweak": "Tweak your brief in the sidebar and try again."
   },
   "inserted": {
-    "label": "Inserted <b>{name}</b>",
-    "matching": "Matching…",
-    "matchToPage": "✨ Match to page",
-    "dismiss": "Dismiss"
+    "label": "Added <b>{name}</b>",
+    "dismiss": "Dismiss",
+    "undo": "Undo"
   },
   "editing": {
     "noHtml": "This project has no HTML content yet.",

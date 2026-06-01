@@ -28,10 +28,9 @@
     "tweak": "在侧边栏中调整你的需求后再试一次。"
   },
   "inserted": {
-    "label": "已插入 <b>{name}</b>",
-    "matching": "正在匹配……",
-    "matchToPage": "✨ 匹配到页面",
-    "dismiss": "关闭"
+    "label": "已添加 <b>{name}</b>",
+    "dismiss": "关闭",
+    "undo": "撤销"
   },
   "editing": {
     "noHtml": "此项目尚无 HTML 内容。",

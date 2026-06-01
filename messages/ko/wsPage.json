@@ -28,10 +28,9 @@
     "tweak": "사이드바에서 브리프를 수정하고 다시 시도하세요."
   },
   "inserted": {
-    "label": "<b>{name}</b> 삽입됨",
-    "matching": "매칭 중…",
-    "matchToPage": "✨ 페이지에 맞추기",
-    "dismiss": "닫기"
+    "label": "<b>{name}</b> 추가됨",
+    "dismiss": "닫기",
+    "undo": "실행 취소"
   },
   "editing": {
     "noHtml": "이 프로젝트에는 아직 HTML 콘텐츠가 없습니다.",
