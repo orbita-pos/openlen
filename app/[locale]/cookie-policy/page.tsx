@@ -71,7 +71,7 @@ export default async function Page({
             </li>
             <li>
               <strong>Cookies del inicio de sesión con OAuth</strong> — cuando
-              inicias sesión con Google o GitHub, el redireccionamiento de ese
+              inicias sesión con Google, el redireccionamiento de ese
               proveedor puede establecer cookies estrictamente necesarias de
               corta duración (por ejemplo, de protección CSRF y PKCE) durante el
               propio flujo de autenticación. Solo existen mientras dura el inicio
@@ -190,7 +190,7 @@ export default async function Page({
             </li>
             <li>
               <strong>OAuth sign-in cookies</strong> — when you sign in with
-              Google or GitHub, that provider&apos;s redirect may set short-lived
+              Google, that provider&apos;s redirect may set short-lived
               strictly-necessary cookies (for example, CSRF and PKCE protection)
               during the sign-in flow itself. They exist only for the duration of
               sign-in and are cleared once it completes.

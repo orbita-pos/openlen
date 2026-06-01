@@ -28,7 +28,7 @@ function sanitizeNext(raw: string | null): string {
 export function RegisterForm({
   oauth,
 }: {
-  oauth: { github: boolean; google: boolean };
+  oauth: { google: boolean };
 }) {
   const t = useTranslations("auth");
   const locale = useLocale();
@@ -41,7 +41,7 @@ export function RegisterForm({
   const [showPw, setShowPw] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState<"github" | "google" | null>(null);
+  const [oauthLoading, setOauthLoading] = useState<"google" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [exists, setExists] = useState(false);
 
@@ -85,7 +85,7 @@ export function RegisterForm({
     }
   };
 
-  const onOAuth = async (provider: "github" | "google") => {
+  const onOAuth = async (provider: "google") => {
     setOauthLoading(provider);
     await signIn(provider, { callbackUrl: `/${locale}${nextPath}` });
   };

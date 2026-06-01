@@ -81,7 +81,7 @@ export default async function TermsPage({
             Como titular de la cuenta de OpenLen, debes tener al menos 18 años, o
             la mayoría de edad en tu jurisdicción, para usar el Servicio. Puedes
             registrarte con correo y contraseña o
-            mediante inicio de sesión de Google o GitHub. Eres responsable de
+            mediante inicio de sesión de Google. Eres responsable de
             mantener la confidencialidad de tus credenciales y de toda la actividad
             que ocurra en tu cuenta. Avísanos de inmediato si detectas un uso no
             autorizado.

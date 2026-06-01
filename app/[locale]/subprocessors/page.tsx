@@ -159,10 +159,6 @@ export default async function SubprocessorsPage({
               Datos: tu correo, nombre y URL de imagen de perfil (según los
               permisos que apruebes). Región: Estados Unidos.
             </li>
-            <li>
-              <strong>GitHub</strong> — proveedor de inicio de sesión OAuth.
-              Datos: tu correo y datos básicos de perfil. Región: Estados Unidos.
-            </li>
           </ul>
 
           <h2>Contacto</h2>
@@ -288,10 +284,6 @@ export default async function SubprocessorsPage({
               <strong>Google</strong> — OAuth sign-in provider. Data: your email,
               name, and profile image URL (based on the permissions you approve).
               Region: United States.
-            </li>
-            <li>
-              <strong>GitHub</strong> — OAuth sign-in provider. Data: your email
-              and basic profile data. Region: United States.
             </li>
           </ul>
 

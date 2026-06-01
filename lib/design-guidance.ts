@@ -377,7 +377,7 @@ canonical templates. Don't quote them verbatim; emulate the pattern.
   --paper: #F4F1EB;
   --ink: #1A1714;
   --ink-2: #5C544B;
-  --ink-3: #8E867B;
+  --ink-3: #6B6358;  /* muted text — darkened to clear WCAG AA 4.5:1 on --bg */
   --accent: #B36A3A;
   --rule: rgba(26,23,20,0.10);
   --rule-soft: rgba(26,23,20,0.06);  /* primary divider */
