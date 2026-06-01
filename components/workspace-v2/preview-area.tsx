@@ -78,10 +78,22 @@ interface PreviewAreaProps {
    *  template-preview) hides the toolbar button. */
   onToggleInspect?: () => void;
   /** A pending section-insert request. When `nonce` changes, the iframe is
-   *  posted `openlen:section-insert` with the fragment `html`; the iframe
-   *  drops it into the page and posts back the changed HTML through the
-   *  normal save path. */
-  insertRequest?: { html: string; nonce: number } | null;
+   *  posted `openlen:section-insert` with the fragment `html` + `sectionType`
+   *  (drives placement: navbar→top, footer→bottom, else→end); the iframe drops
+   *  it into the page and posts back the changed HTML through the normal save
+   *  path. */
+  insertRequest?: { html: string; nonce: number; sectionType?: string } | null;
+  /** A pending Undo-of-insert. When `nonce` changes, the iframe is posted
+   *  `openlen:section-remove`; it pulls the last-inserted nodes back out and
+   *  re-serializes through the same save path — no reload (the live DOM is
+   *  already correct, so we suppress the srcDoc re-derive like insert does). */
+  removeRequest?: { nonce: number } | null;
+  /** Stable identity for the iframe `key` (the project id). The iframe should
+   *  remount only on a genuine document switch — NOT on every content edit.
+   *  Without this we key on `doc.slice(0,120)`, which a top-of-page insert (a
+   *  prepended navbar) changes, forcing a remount that renders the stale
+   *  pre-insert srcDoc and makes the just-added section vanish. */
+  docKey?: string;
 }
 
 export function PreviewArea({
@@ -100,6 +112,8 @@ export function PreviewArea({
   inspectMode = false,
   onToggleInspect,
   insertRequest = null,
+  removeRequest = null,
+  docKey,
 }: PreviewAreaProps) {
   const t = useTranslations("wsChrome");
   const [device, setDevice] = useState<Device>("desktop");
@@ -132,7 +146,18 @@ export function PreviewArea({
   };
   const [stableSrcDoc, setStableSrcDoc] = useState<string>(() => derive(doc));
   const wasEditingRef = useRef(false);
+  // Set when we post a section-insert to the iframe: the section is dropped into
+  // the LIVE iframe DOM (appendChild) and the resulting html-changed updates
+  // `doc`. We must NOT re-derive/reload for that update — reloading blanks the
+  // iframe to white (the wrapper's bg-white) while a heavy page re-parses, which
+  // reads as "a white block got added on insert". The live DOM already shows the
+  // section; the saved html carries it for the next genuine re-derive.
+  const skipInsertReloadRef = useRef(false);
   useEffect(() => {
+    if (skipInsertReloadRef.current) {
+      skipInsertReloadRef.current = false;
+      return;
+    }
     // While editing is active a mid-session `doc` update would wreck live
     // state (an open overlay editor, the inspect script's selected node).
     // Skip the reload in that window. The post-edit save round-trips the
@@ -198,11 +223,32 @@ export function PreviewArea({
     const iframe = iframeLocalRef.current;
     if (!iframe?.contentWindow) return;
     lastInsertNonce.current = insertRequest.nonce;
+    // Don't let the resulting html-changed reload the iframe (it would blank to
+    // white); the section is injected into the live DOM directly.
+    skipInsertReloadRef.current = true;
     iframe.contentWindow.postMessage(
-      { type: "openlen:section-insert", html: insertRequest.html },
+      {
+        type: "openlen:section-insert",
+        html: insertRequest.html,
+        sectionType: insertRequest.sectionType,
+      },
       "*",
     );
   }, [insertRequest]);
+
+  // Undo-of-insert — mirror of the insert effect. The iframe removes the
+  // last-inserted nodes from the LIVE DOM and re-serializes; suppress the
+  // resulting re-derive so the preview doesn't reload (and flash white) for a
+  // change the DOM already reflects.
+  const lastRemoveNonce = useRef<number>(0);
+  useEffect(() => {
+    if (!removeRequest || removeRequest.nonce === lastRemoveNonce.current) return;
+    const iframe = iframeLocalRef.current;
+    if (!iframe?.contentWindow) return;
+    lastRemoveNonce.current = removeRequest.nonce;
+    skipInsertReloadRef.current = true;
+    iframe.contentWindow.postMessage({ type: "openlen:section-remove" }, "*");
+  }, [removeRequest]);
 
   const deviceWidth = { desktop: 1280, tablet: 820, mobile: 390 }[device];
 
@@ -421,7 +467,7 @@ export function PreviewArea({
             style={{ height: 800 * scale }}
           >
             <iframe
-              key={`${previewUrl ?? doc.slice(0, 120)}:${refreshTick}`}
+              key={`${previewUrl ?? docKey ?? doc.slice(0, 120)}:${refreshTick}`}
               ref={(el) => {
                 iframeLocalRef.current = el;
                 if (onIframeRef) onIframeRef(el);

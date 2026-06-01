@@ -1,4 +1,4 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import {
   ArrowRight,
@@ -31,6 +31,7 @@ interface Tier {
 
 export async function Pricing() {
   const t = await getTranslations("marketing");
+  const locale = await getLocale();
   const templateCount = await countTemplates().catch(() => 0);
 
   const tiers: Tier[] = [
@@ -54,7 +55,7 @@ export async function Pricing() {
       price: 7,
       suffix: t("pricing.pro.suffix"),
       blurb: t("pricing.pro.blurb"),
-      cta: { label: t("pricing.pro.cta"), variant: "outline", icon: ArrowRight, href: "/register" },
+      cta: { label: t("pricing.pro.cta"), variant: "outline", icon: ArrowRight, href: `/api/billing/checkout?locale=${locale}` },
       features: [
         t("pricing.pro.features.0"),
         t("pricing.pro.features.1"),
@@ -108,6 +109,10 @@ export async function Pricing() {
               </Button>
             );
             const isExternalCta = tier.cta.href?.startsWith("https://");
+            // /api/* (Pro → Polar checkout): plain same-tab <a>. NOT next-intl
+            // Link (it prefixes the locale → /en/api/... → 404), and NOT
+            // target=_blank — it's a same-origin redirect to the hosted checkout.
+            const isRawCta = tier.cta.href?.startsWith("/api/");
             return (
               <div
                 key={tier.name}
@@ -161,6 +166,8 @@ export async function Pricing() {
                     >
                       {ctaButton}
                     </a>
+                  ) : isRawCta ? (
+                    <a href={tier.cta.href}>{ctaButton}</a>
                   ) : (
                     <Link href={tier.cta.href}>{ctaButton}</Link>
                   )

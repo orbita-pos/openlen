@@ -92,10 +92,9 @@ interface LeftSidebarProps {
   }) => void;
   /** ID of the currently previewed template (highlights the matching card). */
   previewingTemplateId?: string | null;
-  /** Insert a library section into the current project (Library tab). */
-  onInsertSection?: (s: SectionSpec) => void;
-  /** Section id currently being inserted — shows a pending state on its card. */
-  insertingSectionId?: string | null;
+  /** Open the preview dialog for a library section (Library tab). The actual
+   *  match-then-insert happens from the dialog's "Use on my page" action. */
+  onPreviewSection?: (s: SectionSpec) => void;
   /** Tabs that are visually locked + non-interactive. Used when the
    *  workspace is in a guided entry flow (e.g. user picked "AI" — only
    *  the chat tab is active until the page has been generated). */
@@ -176,8 +175,7 @@ export function LeftSidebar({
   onUpdateSection,
   onPreviewTemplate,
   previewingTemplateId,
-  onInsertSection,
-  insertingSectionId = null,
+  onPreviewSection,
   lockedTabs,
   lockReason,
   entryMode = "editing",
@@ -373,10 +371,7 @@ export function LeftSidebar({
               />
             )}
             {mode === "library" && (
-              <SectionsPanel
-                onInsert={onInsertSection ?? (() => {})}
-                insertingId={insertingSectionId}
-              />
+              <SectionsPanel onPreview={onPreviewSection ?? (() => {})} />
             )}
             {mode === "pages" && (
               <PagesPanel currentProjectId={currentProjectId} />

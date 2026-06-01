@@ -8,7 +8,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronRight, Sparkles } from "../icons";
+import { Eye, Sparkles } from "../icons";
 import { TemplatePreviewFrame } from "../template-preview-frame";
 import {
   SECTION_TYPES_ORDERED,
@@ -18,35 +18,37 @@ import {
 import { useSections } from "../use-sections";
 
 interface SectionsPanelProps {
-  /** Insert this section into the current project. */
-  onInsert: (s: SectionSpec) => void;
-  /** Id currently being inserted (shows a pending state on the card). */
-  insertingId?: string | null;
+  /** Open the preview dialog for this section. The match-then-insert commit
+   *  happens from inside the dialog ("Use on my page"). */
+  onPreview: (s: SectionSpec) => void;
 }
 
 function SectionCard({
   section,
-  onInsert,
-  inserting,
+  onPreview,
 }: {
   section: SectionSpec;
-  onInsert: (s: SectionSpec) => void;
-  inserting: boolean;
+  onPreview: (s: SectionSpec) => void;
 }) {
   const t = useTranslations("panelsA");
   return (
-    <div
-      className="group relative w-full rounded-lg overflow-hidden ring-1 ring-[color:var(--border)] hover:ring-[color:var(--border-strong)] transition-all duration-200"
+    <button
+      type="button"
+      onClick={() => onPreview(section)}
+      aria-label={t("sections.previewAria", { name: section.name })}
+      className="group relative block w-full text-left rounded-lg overflow-hidden ring-1 ring-[color:var(--border)] hover:ring-[color:var(--border-strong)] transition-all duration-200 cursor-pointer"
       style={{ background: "var(--bg)" }}
     >
-      <TemplatePreviewFrame
-        url={section.previewUrl}
-        name={section.variantLabel}
-        nativeHeight={620}
-      />
+      <div className="pointer-events-none">
+        <TemplatePreviewFrame
+          url={section.previewUrl}
+          name={section.variantLabel}
+          nativeHeight={620}
+        />
+      </div>
 
       <div className="px-3 pt-2.5 pb-3 border-t bd">
-        <div className="flex items-baseline justify-between gap-2 mb-1">
+        <div className="flex items-baseline justify-between gap-2 mb-1.5">
           <h3 className="text-[13px] font-semibold fg leading-tight tracking-tight truncate">
             {section.variantLabel}
           </h3>
@@ -70,23 +72,16 @@ function SectionCard({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => onInsert(section)}
-          disabled={inserting}
-          aria-label={t("sections.insertAria", { name: section.name })}
-          className="mt-1 w-full inline-flex items-center justify-center gap-1.5 text-[11px] font-medium h-7 rounded-md text-white transition disabled:opacity-60"
-          style={{ background: "var(--accent)" }}
-        >
-          {inserting ? t("sections.inserting") : t("sections.insert")}
-          {!inserting && <ChevronRight size={11} stroke={2.5} />}
-        </button>
+        <span className="w-full inline-flex items-center justify-center gap-1.5 text-[11px] font-medium h-7 rounded-md fg bg-hover group-hover:bg-app group-hover:fg transition">
+          <Eye size={12} />
+          {t("sections.preview")}
+        </span>
       </div>
-    </div>
+    </button>
   );
 }
 
-export function SectionsPanel({ onInsert, insertingId }: SectionsPanelProps) {
+export function SectionsPanel({ onPreview }: SectionsPanelProps) {
   const t = useTranslations("panelsA");
   const ts = useTranslations("sections");
   const [typeFilter, setTypeFilter] = useState<SectionType | "all">("all");
@@ -168,12 +163,7 @@ export function SectionsPanel({ onInsert, insertingId }: SectionsPanelProps) {
               </div>
               <div className="grid grid-cols-1 gap-3">
                 {ofType.map((s) => (
-                  <SectionCard
-                    key={s.id}
-                    section={s}
-                    onInsert={onInsert}
-                    inserting={insertingId === s.id}
-                  />
+                  <SectionCard key={s.id} section={s} onPreview={onPreview} />
                 ))}
               </div>
             </section>

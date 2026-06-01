@@ -35,15 +35,22 @@
   },
   "sections": {
     "heading": "Abschnitts-Bibliothek",
-    "intro": "Füge einen Abschnitt in deine aktuelle Seite ein. Er landet ganz unten – ziehe ihn mit den Abschnitts-Griffen an die richtige Stelle. Das Aussehen passt sich beim nächsten Umgestalten an deine Seite an.",
+    "intro": "Sieh dir eine Sektion in der Vorschau an und verwende sie auf deiner Seite — sie wird an deine Farben angepasst und an der richtigen Stelle eingefügt.",
     "all": "Alle",
     "jsTooltip": "Rendert Inhalte per JS – beim Einfügen erhalten, eingeschränktes Inline-Bearbeiten",
     "imgTooltip": "Liefert Farbverlauf-Platzhalter – echte Bilder nach dem Einfügen austauschen",
-    "insertAria": "{name} in die aktuelle Seite einfügen",
-    "insert": "Einfügen",
-    "inserting": "Wird eingefügt …",
     "loadError": "Abschnitte konnten nicht geladen werden – {error}",
-    "footer": "Abschnitte sind gekapselte Fragmente – ihre Stile können nicht mit deiner Seite kollidieren. Einfügen, dann nach Belieben umsortieren und umgestalten."
+    "footer": "Navbars und Footer ersetzen den vorhandenen; alles andere wird passend eingefügt.",
+    "preview": "Vorschau",
+    "previewAria": "{name} in der Vorschau ansehen",
+    "useOnPage": "Auf meiner Seite verwenden",
+    "preparing": "Wird angepasst…",
+    "useHint": "Beim Verwenden passt sie sich an die Farben deiner Seite an.",
+    "viewDesktop": "Desktop-Ansicht",
+    "viewMobile": "Mobile Ansicht",
+    "close": "Schließen",
+    "errNoCredits": "Deine Credits sind diesen Monat aufgebraucht.",
+    "errGeneric": "Abschnitt konnte nicht hinzugefügt werden. Versuch es erneut."
   },
   "paste": {
     "heading": "HTML einfügen",

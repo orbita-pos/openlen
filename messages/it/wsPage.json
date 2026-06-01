@@ -28,10 +28,9 @@
     "tweak": "Modifica il brief nella barra laterale e riprova."
   },
   "inserted": {
-    "label": "Inserito <b>{name}</b>",
-    "matching": "Adattamento in corso…",
-    "matchToPage": "✨ Adatta alla pagina",
-    "dismiss": "Ignora"
+    "label": "<b>{name}</b> aggiunta",
+    "dismiss": "Ignora",
+    "undo": "Annulla"
   },
   "editing": {
     "noHtml": "Questo progetto non ha ancora contenuti HTML.",

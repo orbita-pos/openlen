@@ -110,13 +110,6 @@ export function RegisterForm({
 
       <div className="space-y-2.5">
         <OAuthButton
-          provider="github"
-          loading={oauthLoading === "github"}
-          disabled={!oauth.github}
-          disabledHint="Set GITHUB_ID + GITHUB_SECRET in .env.local to enable"
-          onClick={() => onOAuth("github")}
-        />
-        <OAuthButton
           provider="google"
           loading={oauthLoading === "google"}
           disabled={!oauth.google}
