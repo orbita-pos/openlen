@@ -28,10 +28,9 @@
     "tweak": "Ajustez votre brief dans la barre latérale et réessayez."
   },
   "inserted": {
-    "label": "<b>{name}</b> inséré",
-    "matching": "Harmonisation…",
-    "matchToPage": "✨ Harmoniser avec la page",
-    "dismiss": "Ignorer"
+    "label": "<b>{name}</b> ajoutée",
+    "dismiss": "Ignorer",
+    "undo": "Annuler"
   },
   "editing": {
     "noHtml": "Ce projet n'a pas encore de contenu HTML.",

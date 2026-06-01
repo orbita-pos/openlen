@@ -28,10 +28,9 @@
     "tweak": "Pas je briefing in de zijbalk aan en probeer het opnieuw."
   },
   "inserted": {
-    "label": "<b>{name}</b> ingevoegd",
-    "matching": "Afstemmen…",
-    "matchToPage": "✨ Afstemmen op pagina",
-    "dismiss": "Sluiten"
+    "label": "<b>{name}</b> toegevoegd",
+    "dismiss": "Sluiten",
+    "undo": "Ongedaan maken"
   },
   "editing": {
     "noHtml": "Dit project heeft nog geen HTML-inhoud.",

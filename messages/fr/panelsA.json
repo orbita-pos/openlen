@@ -35,15 +35,22 @@
   },
   "sections": {
     "heading": "Bibliothèque de sections",
-    "intro": "Insérez une section dans votre page actuelle. Elle s'ajoute en bas — faites-la glisser à sa place avec les poignées de section. L'apparence s'adapte à votre page au prochain restylage.",
+    "intro": "Prévisualisez n'importe quelle section, puis utilisez-la sur votre page — elle s'harmonise avec vos couleurs et se place au bon endroit.",
     "all": "Toutes",
     "jsTooltip": "Affiche le contenu via JS — préservé à l'insertion, édition en ligne limitée",
     "imgTooltip": "Livré avec des dégradés provisoires — remplacez par de vraies images après l'insertion",
-    "insertAria": "Insérer {name} dans la page actuelle",
-    "insert": "Insérer",
-    "inserting": "Insertion…",
     "loadError": "Échec du chargement des sections — {error}",
-    "footer": "Les sections sont des fragments isolés — leurs styles ne peuvent pas entrer en conflit avec votre page. Insérez, puis réorganisez et restylez à votre goût."
+    "footer": "Les barres de navigation et pieds de page remplacent l'existant ; le reste s'empile au bon endroit.",
+    "preview": "Aperçu",
+    "previewAria": "Aperçu de {name}",
+    "useOnPage": "Utiliser sur ma page",
+    "preparing": "Harmonisation…",
+    "useHint": "Elle s'adapte aux couleurs de votre page quand vous l'utilisez.",
+    "viewDesktop": "Vue ordinateur",
+    "viewMobile": "Vue mobile",
+    "close": "Fermer",
+    "errNoCredits": "Vous n'avez plus de crédits ce mois-ci.",
+    "errGeneric": "Impossible d'ajouter la section. Réessayez."
   },
   "paste": {
     "heading": "Coller du HTML",

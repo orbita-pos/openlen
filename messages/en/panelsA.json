@@ -35,15 +35,22 @@
   },
   "sections": {
     "heading": "Section library",
-    "intro": "Insert a section into your current page. It drops in at the bottom — drag it into place with the section handles. The look adapts to your page on the next restyle.",
+    "intro": "Preview any section, then use it on your page — it's matched to your colors and dropped into the right spot.",
     "all": "All",
     "jsTooltip": "Renders content via JS — preserved on insert, limited inline-edit",
     "imgTooltip": "Ships gradient placeholders — swap real images after insert",
-    "insertAria": "Insert {name} into the current page",
-    "insert": "Insert",
-    "inserting": "Inserting…",
     "loadError": "Failed to load sections — {error}",
-    "footer": "Sections are scoped fragments — their styles can't clash with your page. Insert, then reorder and restyle to taste."
+    "footer": "Navbars and footers replace the existing one; everything else stacks where it fits.",
+    "preview": "Preview",
+    "previewAria": "Preview {name}",
+    "useOnPage": "Use on my page",
+    "preparing": "Matching…",
+    "useHint": "It adapts to your page's colors when you use it.",
+    "viewDesktop": "Desktop view",
+    "viewMobile": "Mobile view",
+    "close": "Close",
+    "errNoCredits": "You're out of credits this month.",
+    "errGeneric": "Couldn't add the section. Try again."
   },
   "paste": {
     "heading": "Paste HTML",

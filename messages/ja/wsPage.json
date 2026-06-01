@@ -28,10 +28,9 @@
     "tweak": "サイドバーでブリーフを調整して、もう一度お試しください。"
   },
   "inserted": {
-    "label": "<b>{name}</b> を挿入しました",
-    "matching": "調整中…",
-    "matchToPage": "✨ ページに合わせる",
-    "dismiss": "閉じる"
+    "label": "<b>{name}</b> を追加しました",
+    "dismiss": "閉じる",
+    "undo": "元に戻す"
   },
   "editing": {
     "noHtml": "このプロジェクトにはまだHTMLコンテンツがありません。",

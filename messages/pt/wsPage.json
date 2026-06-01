@@ -28,10 +28,9 @@
     "tweak": "Ajuste seu briefing na barra lateral e tente novamente."
   },
   "inserted": {
-    "label": "<b>{name}</b> inserido",
-    "matching": "Combinando…",
-    "matchToPage": "✨ Combinar com a página",
-    "dismiss": "Dispensar"
+    "label": "<b>{name}</b> adicionada",
+    "dismiss": "Dispensar",
+    "undo": "Desfazer"
   },
   "editing": {
     "noHtml": "Este projeto ainda não tem conteúdo HTML.",

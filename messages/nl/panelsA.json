@@ -35,15 +35,22 @@
   },
   "sections": {
     "heading": "Sectiebibliotheek",
-    "intro": "Voeg een sectie toe aan je huidige pagina. Hij verschijnt onderaan — sleep hem op zijn plek met de sectiegrepen. De stijl past zich bij de volgende restyle aan je pagina aan.",
+    "intro": "Bekijk een sectie in voorbeeld en gebruik hem op je pagina — hij wordt afgestemd op je kleuren en op de juiste plek geplaatst.",
     "all": "Alle",
     "jsTooltip": "Geeft content weer via JS — blijft behouden bij invoegen, beperkt inline bewerken",
     "imgTooltip": "Wordt geleverd met gradient-placeholders — vervang echte afbeeldingen na het invoegen",
-    "insertAria": "{name} invoegen in de huidige pagina",
-    "insert": "Invoegen",
-    "inserting": "Invoegen…",
     "loadError": "Secties laden mislukt — {error}",
-    "footer": "Secties zijn afgeschermde fragmenten — hun stijlen kunnen niet botsen met je pagina. Voeg in en pas daarna de volgorde en stijl naar wens aan."
+    "footer": "Navigatiebalken en footers vervangen de bestaande; de rest komt erbij waar het past.",
+    "preview": "Voorbeeld",
+    "previewAria": "Voorbeeld van {name}",
+    "useOnPage": "Op mijn pagina gebruiken",
+    "preparing": "Afstemmen…",
+    "useHint": "Bij gebruik past hij zich aan de kleuren van je pagina aan.",
+    "viewDesktop": "Desktopweergave",
+    "viewMobile": "Mobiele weergave",
+    "close": "Sluiten",
+    "errNoCredits": "Je credits voor deze maand zijn op.",
+    "errGeneric": "Kon de sectie niet toevoegen. Probeer opnieuw."
   },
   "paste": {
     "heading": "HTML plakken",
