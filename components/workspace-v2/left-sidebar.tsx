@@ -232,20 +232,15 @@ export function LeftSidebar({
           const active = mode === tab.id;
           const locked = isLocked(tab.id);
           const I = tab.icon;
+          const label = locked
+            ? (lockReason ?? t("sidebar.tabLocked", { label: tabLabel(tab.id) }))
+            : tabLabel(tab.id);
           return (
-            <Tooltip
-              key={tab.id}
-              label={
-                locked
-                  ? (lockReason ??
-                    t("sidebar.tabLocked", { label: tabLabel(tab.id) }))
-                  : tabLabel(tab.id)
-              }
-              side="right"
-            >
+            <Tooltip key={tab.id} label={label} side="right">
               <button
                 type="button"
                 disabled={locked}
+                aria-label={label}
                 onClick={() => {
                   if (locked) return;
                   setMode(tab.id);
@@ -268,6 +263,7 @@ export function LeftSidebar({
           <button
             type="button"
             onClick={onToggleCollapse}
+            aria-label={t("sidebar.expandPanel")}
             className="mt-auto mb-3 h-8 w-8 inline-flex items-center justify-center rounded-md fg-muted hover:fg hover:bg-hover transition"
           >
             <PanelRight size={14} />
@@ -285,19 +281,15 @@ export function LeftSidebar({
             const active = mode === tab.id;
             const locked = isLocked(tab.id);
             const I = tab.icon;
+            const label = locked
+              ? (lockReason ?? t("sidebar.tabLocked", { label: tabLabel(tab.id) }))
+              : tabLabel(tab.id);
             return (
-              <Tooltip
-                key={tab.id}
-                label={
-                  locked
-                    ? (lockReason ??
-                      t("sidebar.tabLocked", { label: tabLabel(tab.id) }))
-                    : tabLabel(tab.id)
-                }
-              >
+              <Tooltip key={tab.id} label={label}>
                 <button
                   type="button"
                   disabled={locked}
+                  aria-label={label}
                   onClick={() => {
                     if (locked) return;
                     setMode(tab.id);

@@ -145,6 +145,7 @@ export function AiBriefPanel({
               type="button"
               onClick={onGenerate}
               disabled={!canGenerate}
+              aria-label={t("aiBrief.generate")}
               className={`inline-flex items-center justify-center gap-1 h-7 rounded-md text-[11.5px] font-medium transition ${
                 canGenerate
                   ? "px-2.5 bg-[var(--accent)] text-white shadow-coral hover:brightness-105"

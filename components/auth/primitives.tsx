@@ -128,7 +128,10 @@ export function AuthDivider({ children }: { children: ReactNode }) {
 
 export function ErrorBanner({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-lg bg-red-50 dark:bg-red-500/10 ring-1 ring-red-200 dark:ring-red-500/30 px-3 py-2.5 flex items-start gap-2.5 text-[13px] text-red-700 dark:text-red-300 lift">
+    <div
+      role="alert"
+      className="rounded-lg bg-red-50 dark:bg-red-500/10 ring-1 ring-red-200 dark:ring-red-500/30 px-3 py-2.5 flex items-start gap-2.5 text-[13px] text-red-700 dark:text-red-300 lift"
+    >
       <AlertCircle size={15} className="shrink-0 mt-0.5" />
       <div className="leading-snug">{children}</div>
     </div>

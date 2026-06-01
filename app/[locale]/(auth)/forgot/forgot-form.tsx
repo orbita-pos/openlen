@@ -48,7 +48,7 @@ export function ForgotForm() {
         subtitle={t("forgot.sent.subtitle")}
         kicker={t("forgot.sent.kicker")}
       >
-        <div className="-mt-1 flex flex-col items-center text-center py-2">
+        <div role="status" className="-mt-1 flex flex-col items-center text-center py-2">
           <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-coral-50 dark:bg-coral-500/10 ring-1 ring-coral-200 dark:ring-coral-500/30 text-coral-600 dark:text-coral-400 mb-4">
             <Mail size={22} />
           </span>

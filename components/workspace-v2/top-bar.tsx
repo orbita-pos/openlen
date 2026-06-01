@@ -315,6 +315,7 @@ export function TopBar({
             type="button"
             onClick={() => setDeployOpen((o) => !o)}
             disabled={!onPublish}
+            aria-label={t("deploy.button")}
             className="inline-flex items-center gap-1.5 h-8 px-2.5 sm:px-3 rounded-md bg-[var(--accent)] text-white text-[12px] font-medium hover:brightness-105 active:brightness-95 shadow-coral transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Sparkles size={12} />
