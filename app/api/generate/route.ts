@@ -118,8 +118,24 @@ export async function POST(req: Request): Promise<Response> {
   // credits without ever creating an account.
   if (!userId) return json({ error: "unauthorized" }, 401);
 
-  // Quota check — hourly + monthly windows defined in lib/limits.ts.
   const plan = await getUserPlan(userId);
+
+  // Bespoke from-scratch generation is a PRO feature. Free users get the
+  // curation path (/api/curate — pick a curated template + fill copy). The
+  // client only routes here when "From scratch" is selected, so a free user
+  // hitting this gets a graceful upsell instead of a silent no-op.
+  if (plan !== "pro") {
+    return json(
+      {
+        error: "pro_only",
+        message:
+          "From-scratch generation is a Pro feature. Upgrade to Pro, or use the Quick (curated) flow.",
+      },
+      403,
+    );
+  }
+
+  // Quota check — hourly + monthly windows defined in lib/limits.ts.
   const decision = await checkAndConsume(
     userLimitKey(userId, "generate"),
     PLAN_LIMITS[plan].generate,

@@ -7,7 +7,9 @@
     "scopeSection": "특정 섹션으로 범위 지정 — 생성 후 사용 가능",
     "autofill": "내 정보로 자동 채우기 — 생성 후 사용 가능",
     "availableAfter": "프로젝트가 생성되면 사용할 수 있어요",
-    "generate": "생성하기"
+    "generate": "생성하기",
+    "modeQuick": "빠르게",
+    "modeScratch": "처음부터"
   },
   "brief": {
     "label": "브리프",

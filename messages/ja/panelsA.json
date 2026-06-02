@@ -7,7 +7,9 @@
     "scopeSection": "セクションを指定 — 生成後に利用できます",
     "autofill": "自分の情報で自動入力 — 生成後に利用できます",
     "availableAfter": "プロジェクトを作成すると利用できます",
-    "generate": "生成"
+    "generate": "生成",
+    "modeQuick": "クイック",
+    "modeScratch": "ゼロから"
   },
   "brief": {
     "label": "ブリーフ",

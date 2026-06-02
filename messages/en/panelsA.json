@@ -7,7 +7,9 @@
     "scopeSection": "Scope to a section — available after generation",
     "autofill": "Autofill with my info — available after generation",
     "availableAfter": "Available once your project is created",
-    "generate": "Generate"
+    "generate": "Generate",
+    "modeQuick": "Quick",
+    "modeScratch": "From scratch"
   },
   "brief": {
     "label": "Brief",

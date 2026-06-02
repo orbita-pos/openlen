@@ -7,7 +7,9 @@
     "scopeSection": "Beperk tot een sectie — beschikbaar na het genereren",
     "autofill": "Automatisch invullen met mijn gegevens — beschikbaar na het genereren",
     "availableAfter": "Beschikbaar zodra je project is aangemaakt",
-    "generate": "Genereren"
+    "generate": "Genereren",
+    "modeQuick": "Snel",
+    "modeScratch": "Vanaf nul"
   },
   "brief": {
     "label": "Briefing",
