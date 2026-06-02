@@ -15,6 +15,7 @@ import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { PublishModal } from "@/components/workspace/publish-modal";
 import { useCuration } from "@/lib/use-curation";
+import { useGeneration } from "@/lib/use-generation";
 import { useAIModel } from "@/components/workspace-v2/model-picker";
 import type {
   FormConfig,
@@ -298,13 +299,15 @@ function NewV2Inner() {
   // AI generation flow — owned here so the brief survives panel switches
   // inside the same /new?mode=ai session. On completion, we redirect
   // to ?project=<id> which drops the user into editing mode.
-  // Free-tier AI = CURATION (pick a curated template + fill copy). Same state
-  // shape as the old useGeneration, so the render + ?project redirect below are
-  // reused verbatim. (Bespoke /api/generate stays for the future Pro path.)
-  const {
-    state: aiGenState,
-    curate: aiGenerate,
-  } = useCuration();
+  // AI entry: "quick" = curation (free, /api/curate), "scratch" = bespoke
+  // from-scratch (Pro, /api/generate). Both hooks run; the toggle picks which
+  // drives the UI. Same GenerationState shape, so the render + ?project redirect
+  // below are reused for both. Bespoke is gated server-side (free → 403 upsell).
+  const [aiMode, setAiMode] = useState<"quick" | "scratch">("quick");
+  const curation = useCuration();
+  const bespoke = useGeneration();
+  const aiGenState = aiMode === "scratch" ? bespoke.state : curation.state;
+  const aiGenerate = aiMode === "scratch" ? bespoke.generate : curation.curate;
   // Brief can be pre-filled from a deep link (homepage hero CTA, projects
   // example cards, etc.) via ?brief=<urlencoded>.
   const briefParam = searchParams.get("brief");
@@ -316,7 +319,7 @@ function NewV2Inner() {
   );
   const aiGenerating = aiGenState.kind === "generating";
   const [genSlow, setGenSlow] = useState(false);
-  const [genModel, setGenModel] = useAIModel();
+  const [genModel] = useAIModel();
   const handleAiGenerate = useCallback(() => {
     if (aiGenerating) return;
     const brief = aiPrompt.trim();
@@ -1148,8 +1151,8 @@ function NewV2Inner() {
           aiBriefState={aiBriefFormState}
           aiOnGenerate={handleAiGenerate}
           aiGenerating={aiGenerating}
-          aiModel={genModel}
-          aiOnModelChange={setGenModel}
+          aiMode={aiMode}
+          aiOnModeChange={setAiMode}
         />
         {/* One <main> landmark for the workspace center. `contents` keeps the
             flex layout byte-identical (generates no box) while giving the a11y

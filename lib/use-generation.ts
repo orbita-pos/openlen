@@ -144,6 +144,13 @@ async function errorMessage(response: Response): Promise<string> {
   if (response.status === 401) {
     return "You need to be signed in to generate. Reload the page.";
   }
+  if (response.status === 403) {
+    const data = (await response.json().catch(() => ({}))) as { message?: string };
+    return (
+      data.message ??
+      "From-scratch generation is a Pro feature. Upgrade to Pro, or use the Quick (curated) flow."
+    );
+  }
   if (response.status === 429) {
     const data = (await response.json().catch(() => ({}))) as {
       scope?: string;

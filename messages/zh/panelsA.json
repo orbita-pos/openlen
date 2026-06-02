@@ -7,7 +7,9 @@
     "scopeSection": "锁定到某个区块 — 生成后可用",
     "autofill": "用我的信息自动填充 — 生成后可用",
     "availableAfter": "项目创建后即可使用",
-    "generate": "生成"
+    "generate": "生成",
+    "modeQuick": "快速",
+    "modeScratch": "从零开始"
   },
   "brief": {
     "label": "简介",

@@ -16,25 +16,24 @@ import {
   Sparkles,
   Wand,
 } from "../icons";
-import { ModelPicker } from "../model-picker";
 import type { BriefFormState } from "@/components/workspace/types";
-import type { AIModel } from "@/lib/ai-provider";
 import { QUICK_PROMPTS } from "@/lib/quick-prompts";
 
 export interface AiBriefPanelProps {
   state: BriefFormState;
   onGenerate: () => void;
   generating: boolean;
-  model: AIModel;
-  onModelChange: (m: AIModel) => void;
+  /** "quick" = curated (free), "scratch" = bespoke from-scratch (Pro). */
+  mode: "quick" | "scratch";
+  onModeChange: (m: "quick" | "scratch") => void;
 }
 
 export function AiBriefPanel({
   state,
   onGenerate,
   generating,
-  model,
-  onModelChange,
+  mode,
+  onModeChange,
 }: AiBriefPanelProps) {
   const t = useTranslations("panelsA");
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -135,11 +134,31 @@ export function AiBriefPanel({
               >
                 <Wand size={13} />
               </button>
-              <ModelPicker
-                model={model}
-                onChange={onModelChange}
-                disabled={generating}
-              />
+              <div className="inline-flex items-center gap-0.5 rounded-md border bd bg-[color:var(--bg)] p-0.5">
+                <button
+                  type="button"
+                  disabled={generating}
+                  onClick={() => onModeChange("quick")}
+                  className={`h-6 px-2 rounded text-[11px] font-medium transition ${
+                    mode === "quick" ? "bg-elev fg shadow-card" : "fg-faint hover:fg"
+                  }`}
+                >
+                  {t("aiBrief.modeQuick")}
+                </button>
+                <button
+                  type="button"
+                  disabled={generating}
+                  onClick={() => onModeChange("scratch")}
+                  className={`h-6 px-2 rounded text-[11px] font-medium inline-flex items-center gap-1 transition ${
+                    mode === "scratch" ? "bg-elev fg shadow-card" : "fg-faint hover:fg"
+                  }`}
+                >
+                  {t("aiBrief.modeScratch")}
+                  <span className="text-[9px] uppercase tracking-wide px-1 rounded bg-accent-soft text-accent">
+                    Pro
+                  </span>
+                </button>
+              </div>
             </div>
             <button
               type="button"
@@ -148,7 +167,7 @@ export function AiBriefPanel({
               aria-label={t("aiBrief.generate")}
               className={`inline-flex items-center justify-center gap-1 h-7 rounded-md text-[11.5px] font-medium transition ${
                 canGenerate
-                  ? "px-2.5 bg-[var(--accent)] text-white shadow-coral hover:brightness-105"
+                  ? "px-2.5 bg-[var(--accent-strong)] text-white shadow-coral hover:brightness-105"
                   : "w-7 bg-hover fg-faint cursor-not-allowed"
               }`}
             >

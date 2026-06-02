@@ -7,7 +7,9 @@
     "scopeSection": "Limitar a uma seção — disponível após a geração",
     "autofill": "Preencher com os meus dados — disponível após a geração",
     "availableAfter": "Disponível assim que seu projeto for criado",
-    "generate": "Gerar"
+    "generate": "Gerar",
+    "modeQuick": "Rápido",
+    "modeScratch": "Do zero"
   },
   "brief": {
     "label": "Briefing",

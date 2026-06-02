@@ -30,7 +30,6 @@ import type { Section } from "./mock-data";
 import { BriefPanel } from "./panels/brief-panel";
 import { InsightsPanel } from "./panels/insights-panel";
 import type { BriefFormState } from "@/components/workspace/types";
-import type { AIModel } from "@/lib/ai-provider";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { AiBriefPanel } from "./panels/ai-brief-panel";
 import {
@@ -159,9 +158,9 @@ interface LeftSidebarProps {
   aiBriefState?: BriefFormState;
   aiOnGenerate?: () => void;
   aiGenerating?: boolean;
-  /** Model choice (Pro / Flash) for generation — forwarded to AiBriefPanel. */
-  aiModel?: AIModel;
-  aiOnModelChange?: (m: AIModel) => void;
+  /** Generation mode — "quick" (curated, free) vs "scratch" (bespoke, Pro). */
+  aiMode?: "quick" | "scratch";
+  aiOnModeChange?: (m: "quick" | "scratch") => void;
 }
 
 export function LeftSidebar({
@@ -201,8 +200,8 @@ export function LeftSidebar({
   aiBriefState,
   aiOnGenerate,
   aiGenerating = false,
-  aiModel = "gemini-flash",
-  aiOnModelChange,
+  aiMode = "quick",
+  aiOnModeChange,
 }: LeftSidebarProps) {
   const t = useTranslations("wsChrome");
   const isFlatProject = flatProjectId !== undefined;
@@ -327,8 +326,8 @@ export function LeftSidebar({
             state={aiBriefState}
             onGenerate={aiOnGenerate ?? (() => {})}
             generating={aiGenerating}
-            model={aiModel}
-            onModelChange={aiOnModelChange ?? (() => {})}
+            mode={aiMode}
+            onModeChange={aiOnModeChange ?? (() => {})}
           />
         ) : (
           <>
