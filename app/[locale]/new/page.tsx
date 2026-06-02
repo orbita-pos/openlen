@@ -14,7 +14,7 @@ import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { PublishModal } from "@/components/workspace/publish-modal";
-import { useGeneration } from "@/lib/use-generation";
+import { useCuration } from "@/lib/use-curation";
 import { useAIModel } from "@/components/workspace-v2/model-picker";
 import type {
   FormConfig,
@@ -298,10 +298,13 @@ function NewV2Inner() {
   // AI generation flow — owned here so the brief survives panel switches
   // inside the same /new?mode=ai session. On completion, we redirect
   // to ?project=<id> which drops the user into editing mode.
+  // Free-tier AI = CURATION (pick a curated template + fill copy). Same state
+  // shape as the old useGeneration, so the render + ?project redirect below are
+  // reused verbatim. (Bespoke /api/generate stays for the future Pro path.)
   const {
     state: aiGenState,
-    generate: aiGenerate,
-  } = useGeneration();
+    curate: aiGenerate,
+  } = useCuration();
   // Brief can be pre-filled from a deep link (homepage hero CTA, projects
   // example cards, etc.) via ?brief=<urlencoded>.
   const briefParam = searchParams.get("brief");
@@ -1153,7 +1156,7 @@ function NewV2Inner() {
             tree exactly one main region (fixes landmark-one-main + region). The
             sr-only h1 gives every entry state a top-level heading. */}
         <main className="contents">
-        <h1 className="sr-only">OpenLen workspace</h1>
+        <h1 className="sr-only">{t("a11y.workspaceHeading")}</h1>
         {entryMode === "choosing" && (
           <EmptyState
             onPickAI={handlePickAI}

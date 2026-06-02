@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   ExternalLink,
@@ -123,6 +123,15 @@ export function PreviewArea({
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeLocalRef = useRef<HTMLIFrameElement | null>(null);
   const [fitScale, setFitScale] = useState(1);
+
+  // Backdrop behind/around the iframe. The wrapper is a fixed-height "screen"
+  // with rounded corners; a hardcoded white backdrop flashed a white band on
+  // dark pages (during a heavy re-parse, on sub-pixel scale rounding, before
+  // the srcDoc paints). Match it to the page's own background instead.
+  const pageBg = useMemo(
+    () => /--ol-bg\s*:\s*([^;"}]+)/i.exec(doc)?.[1]?.trim() || "#ffffff",
+    [doc],
+  );
 
   // Editor V3 — persistent iframe pattern. All 5 editor scripts are ALWAYS
   // injected into the srcDoc regardless of mode flags; each script gates its
@@ -306,9 +315,9 @@ export function PreviewArea({
           value={device}
           onChange={setDevice}
           options={[
-            { value: "desktop", label: "", ariaLabel: "Desktop preview", icon: Monitor },
-            { value: "tablet", label: "", ariaLabel: "Tablet preview", icon: Tablet },
-            { value: "mobile", label: "", ariaLabel: "Mobile preview", icon: Smartphone },
+            { value: "desktop", label: "", ariaLabel: t("preview.viewport.desktop"), icon: Monitor },
+            { value: "tablet", label: "", ariaLabel: t("preview.viewport.tablet"), icon: Tablet },
+            { value: "mobile", label: "", ariaLabel: t("preview.viewport.mobile"), icon: Smartphone },
           ]}
         />
         <span className="h-5 w-px bg-[color:var(--border)]" />
@@ -429,7 +438,7 @@ export function PreviewArea({
                 type="button"
                 onClick={onUseTemplate}
                 disabled={useTemplateLoading}
-                className="inline-flex items-center gap-1 h-6 px-2 rounded bg-[var(--accent)] text-white text-[11px] font-medium hover:brightness-105 shadow-coral transition disabled:opacity-60 disabled:cursor-wait"
+                className="inline-flex items-center gap-1 h-6 px-2 rounded bg-[var(--accent-strong)] text-white text-[11px] font-medium hover:brightness-105 shadow-coral transition disabled:opacity-60 disabled:cursor-wait"
               >
                 {useTemplateLoading ? (
                   <>
@@ -463,8 +472,8 @@ export function PreviewArea({
           style={{ width: deviceWidth * scale }}
         >
           <div
-            className="rounded-xl ring-1 ring-[color:var(--border)] overflow-hidden bg-white shadow-card relative"
-            style={{ height: 800 * scale }}
+            className="rounded-xl ring-1 ring-[color:var(--border)] overflow-hidden shadow-card relative"
+            style={{ height: 800 * scale, background: pageBg }}
           >
             <iframe
               key={`${previewUrl ?? docKey ?? doc.slice(0, 120)}:${refreshTick}`}
@@ -483,8 +492,8 @@ export function PreviewArea({
                 transform: `scale(${scale})`,
                 transformOrigin: "top left",
                 border: 0,
+                background: pageBg,
               }}
-              className="bg-white"
             />
             {gridOverlay && (
               <div

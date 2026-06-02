@@ -226,6 +226,91 @@ export function backfillRootSelfVariants(css: string, slug: string): string {
   return root.toString();
 }
 
+// ── centering repair (for the already-stored corpus) ──────────────────────────
+//
+// Sections ingested BEFORE applyHostAdoption was taught to keep the centering
+// display lost their `display:grid;place-items:center` root rule (it was
+// stripped together with the 100vh shell). Their inner content wrapper —
+// `width:100%;max-width:1180px` with no `margin:auto` — then fell flush-left.
+// The host-adopt backfill can't restore it (it re-runs on the already-stripped
+// CSS, so there's nothing left to keep). This repair works the OTHER way: it
+// gives an orphaned max-width wrapper its own `margin:auto`, which centres it
+// regardless of the parent. Idempotent — a wrapper that already has an auto
+// margin (authored or previously repaired) is skipped.
+
+// A max-width that bounds a centred container: any fixed length (incl. inside
+// min()/clamp()). NOT `none` and NOT a pure percentage (those are full-width).
+function isContainerMaxWidth(value: string): boolean {
+  const v = value.trim().toLowerCase();
+  if (v === "none") return false;
+  return /\d\s*(px|rem|em|ch)/i.test(v);
+}
+
+/** Re-centre a section's content that was authored to sit in a wider parent.
+ *  Two flush-left idioms are repaired: (1) a block bounded by a fixed
+ *  `max-width` with no auto margin → add `margin:auto`; (2) a `display:grid`
+ *  whose tracks may not fill the row (capped/fixed/auto columns) with no
+ *  `justify-content` → add `justify-content:center` (a no-op on 1fr-fill grids).
+ *  Skips absolutely-positioned / floated / inline boxes (un-centrable that way)
+ *  and anything already centred (idempotent). Returns the css + the selectors
+ *  touched (empty ⇒ nothing to repair, used by the audit as a dry detector). */
+export function centerOrphanedMaxWidth(
+  css: string,
+  slug: string,
+): { css: string; centered: string[] } {
+  const scope = `[data-sec="${slug}"]`;
+  let root: postcss.Root;
+  try {
+    root = postcss.parse(css);
+  } catch {
+    return { css, centered: [] };
+  }
+
+  const centered: string[] = [];
+  root.walkRules((rule) => {
+    const parent = rule.parent;
+    if (parent && parent.type === "atrule" && /keyframes$/i.test((parent as AtRule).name)) return;
+    if (!rule.selectors.some((s) => s.includes(scope))) return;
+
+    let hasContainerMaxW = false;
+    let hasAutoMargin = false;
+    let disqualified = false;
+    let isGrid = false;
+    let hasJustify = false; // justify-content / place-content already set
+    rule.walkDecls((d) => {
+      const p = d.prop.toLowerCase();
+      const v = d.value.trim().toLowerCase();
+      if (p === "max-width" && isContainerMaxWidth(v)) hasContainerMaxW = true;
+      if (/^margin(-left|-right|-inline(-start|-end)?)?$/.test(p) && /\bauto\b/.test(v)) hasAutoMargin = true;
+      if (p === "position" && /^(absolute|fixed)$/.test(v)) disqualified = true;
+      if (p === "float" && /^(left|right)$/.test(v)) disqualified = true;
+      if (p === "display" && /\binline\b/.test(v)) disqualified = true; // inline / inline-block / inline-flex
+      if (p === "display" && /\bgrid\b/.test(v)) isGrid = true;
+      if (p === "justify-content" || p === "place-content") hasJustify = true;
+    });
+
+    let touched = false;
+    // A block bounded by a fixed max-width but with no auto margin sits
+    // flush-left — give it margin:auto. (The disqualifiers skip boxes
+    // margin:auto can't centre: absolute/fixed/floated/inline.)
+    if (hasContainerMaxW && !hasAutoMargin && !disqualified) {
+      rule.append({ prop: "margin-left", value: "auto" });
+      rule.append({ prop: "margin-right", value: "auto" });
+      touched = true;
+    }
+    // A grid whose tracks may not fill the row (capped / auto / fixed columns)
+    // sits flush-left too — justify-content:center centres the track group.
+    // No-op on 1fr-fill grids, so it's safe to apply broadly.
+    if (isGrid && !hasJustify && !disqualified) {
+      rule.append({ prop: "justify-content", value: "center" });
+      touched = true;
+    }
+    if (touched) centered.push(rule.selector.replace(/\s+/g, " ").trim().slice(0, 80));
+  });
+
+  return centered.length ? { css: root.toString(), centered } : { css, centered: [] };
+}
+
 // ── section host-safety pass ──────────────────────────────────────────────────
 //
 // Sections were authored as standalone documents: they carry a full-bleed
@@ -238,9 +323,12 @@ export function backfillRootSelfVariants(css: string, slug: string): string {
 // applyHostAdoption makes the section host-SAFE + readable (NOT a forced palette
 // match — see below):
 //   1. neutralize standalone-shell artifacts on the ROOT rule only: viewport
-//      min-height, the light full-bleed gutter background, grid-centering, and a
-//      page-level sticky/fixed header (z-index ≥ 20 — leaves in-section sticky
-//      like a pricing table's thead at z-index:3 untouched).
+//      min-height, the light full-bleed gutter background, and a page-level
+//      sticky/fixed header (z-index ≥ 20 — leaves in-section sticky like a
+//      pricing table's thead at z-index:3 untouched). The centering display
+//      (grid/flex + place/align/justify) is KEPT: once min-height is gone the
+//      section is content-height, so the centering only positions the inner
+//      block horizontally — removing it dropped max-width heroes flush-left.
 //   2. append a scoped utility shim defining the bespoke classes in terms of the
 //      section's OWN tokens, so the section renders as authored (readable) on any
 //      host instead of unstyled.
@@ -333,16 +421,13 @@ export function applyHostAdoption(css: string, slug: string): string {
         d.remove();
         return;
       }
-      if (hadViewportHeight && p === "display" && /\b(grid|flex)\b/i.test(d.value)) {
-        d.remove();
-        return;
-      }
-      if (
-        hadViewportHeight &&
-        /^(place-items|place-content|align-items|justify-items|justify-content)$/.test(p)
-      ) {
-        d.remove();
-      }
+      // KEEP the centering display (grid/flex) + place/align/justify. Removing
+      // the viewport min-height already de-shells the section; once it's
+      // content-height a `display:grid;place-items:center` (or column-flex
+      // `align-items:center`) just centres the inner block HORIZONTALLY — which
+      // is how these heroes were composed. Stripping it (the old behaviour) left
+      // a `max-width` inner wrapper with no `margin:auto`, so the hero fell
+      // flush-left instead of staying centred.
     });
 
     neutralizeStickyNav(rule);

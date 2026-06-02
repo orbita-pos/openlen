@@ -1,16 +1,17 @@
-// Template + business data → filled HTML via Kimi K2.6 with ID-tagged ops.
-// Streaming-capable: callers can pass onChunk to receive deltas as they
-// arrive (used by the API route to forward SSE events to the client).
+// Template + business data → filled HTML via Gemini Flash with ID-tagged ops.
+// Migrated off Kimi/Together (2026-06-02 — the F3 Gemini-only stack). One
+// non-streaming generateContent call; onChunk fires once on completion.
 
 import { applyOps, parseOps, stripOpIds, tagWithOpIds } from "@/lib/html-ops";
 import { getCachedFill, hashFillInput, setCachedFill } from "./cache";
 import { sanitizeFilledHtml } from "./sanitize";
 import type { ExtractedBusinessData } from "./types";
 
-const TOGETHER_ENDPOINT = "https://api.together.xyz/v1/chat/completions";
-const MODEL_ID = "moonshotai/Kimi-K2.6";
+const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
+const MODEL_ID =
+  process.env.STYLE_MATCH_FILL_MODEL || process.env.STYLE_MATCH_TEXT_MODEL || "gemini-2.5-flash";
 const MAX_TOKENS = 16_000;
-const TEMPERATURE = 0.6;
+const TEMPERATURE = 0.5;
 const SUCCESS_THRESHOLD = 0.8;
 
 export const FILL_SYSTEM_PROMPT = `You are filling a generic landing page template with a real business's specific data. Your job is to replace generic placeholder copy with the user's actual business details — surgically, at the leaf level. You do NOT redesign, restructure, or restyle the page.
@@ -148,7 +149,7 @@ export interface FillTemplateInput {
   sourceHtml: string;
   /** Business data (extracted from image or provided directly). */
   data: ExtractedBusinessData | Record<string, unknown>;
-  /** Optional callback fired for each streamed delta from Kimi. */
+  /** Optional progress callback (fires once on completion — non-streaming). */
   onChunk?: (cumulativeBytes: number) => void;
   /** Optional progress callback for stages. */
   onStage?: (stage: "tagging" | "calling-model" | "applying") => void;
@@ -194,13 +195,13 @@ export async function fillTemplate(
   input: FillTemplateInput,
 ): Promise<FillTemplateResult> {
   const t0 = Date.now();
-  const apiKey = process.env.TOGETHER_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return {
       ok: false,
       error: {
         kind: "missing-key",
-        message: "TOGETHER_API_KEY not set",
+        message: "GEMINI_API_KEY not set",
       },
       durationMs: Date.now() - t0,
     };
@@ -241,30 +242,20 @@ export async function fillTemplate(
   }
 
   input.onStage?.("calling-model");
-  const messages = [
-    { role: "system" as const, content: FILL_SYSTEM_PROMPT },
-    {
-      role: "user" as const,
-      content: buildFillUserMessage(input.data, taggedHtml),
-    },
-  ];
-
+  const url = `${GEMINI_BASE}/${MODEL_ID}:generateContent?key=${encodeURIComponent(apiKey)}`;
   let response: Response;
   try {
-    response = await fetch(TOGETHER_ENDPOINT, {
+    response = await fetch(url, {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${apiKey}`,
-      },
+      headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        model: MODEL_ID,
-        messages,
-        temperature: TEMPERATURE,
-        max_tokens: MAX_TOKENS,
-        stream: true,
-        enable_thinking: false,
-        chat_template_kwargs: { enable_thinking: false },
+        systemInstruction: { parts: [{ text: FILL_SYSTEM_PROMPT }] },
+        contents: [{ role: "user", parts: [{ text: buildFillUserMessage(input.data, taggedHtml) }] }],
+        generationConfig: {
+          temperature: TEMPERATURE,
+          maxOutputTokens: MAX_TOKENS,
+          thinkingConfig: { thinkingBudget: 0 },
+        },
       }),
       signal: input.signal,
     });
@@ -285,91 +276,36 @@ export async function fillTemplate(
       durationMs: Date.now() - t0,
     };
   }
-  if (!response.ok || !response.body) {
+  if (!response.ok) {
     const text = await response.text().catch(() => "");
     return {
       ok: false,
       error: {
         kind: "api",
-        message: `Together ${response.status}: ${text.slice(0, 400)}`,
+        message: `Gemini ${response.status}: ${text.slice(0, 400)}`,
       },
       durationMs: Date.now() - t0,
     };
   }
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let sseBuf = "";
-  let accumulated = "";
-  let usage: { inputTokens: number; outputTokens: number } | undefined;
-  let finishReason: string | null = null;
-  let upstreamDone = false;
-
-  while (!upstreamDone) {
-    let chunk: ReadableStreamReadResult<Uint8Array>;
-    try {
-      chunk = await reader.read();
-    } catch (err) {
-      if (input.signal?.aborted) {
-        return {
-          ok: false,
-          error: { kind: "aborted", message: "Stream aborted" },
-          durationMs: Date.now() - t0,
-        };
+  const payload = (await response.json()) as {
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> }; finishReason?: string }>;
+    usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
+  };
+  const accumulated =
+    payload.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+  input.onChunk?.(accumulated.length);
+  const usage = payload.usageMetadata
+    ? {
+        inputTokens: payload.usageMetadata.promptTokenCount ?? 0,
+        outputTokens: payload.usageMetadata.candidatesTokenCount ?? 0,
       }
-      return {
-        ok: false,
-        error: {
-          kind: "api",
-          message: err instanceof Error ? err.message : String(err),
-        },
-        durationMs: Date.now() - t0,
-      };
-    }
-    if (chunk.done) break;
-    sseBuf += decoder.decode(chunk.value, { stream: true });
-    let nl: number;
-    while ((nl = sseBuf.indexOf("\n\n")) >= 0) {
-      const block = sseBuf.slice(0, nl);
-      sseBuf = sseBuf.slice(nl + 2);
-      for (const line of block.split("\n")) {
-        if (!line.startsWith("data: ")) continue;
-        const payload = line.slice(6).trim();
-        if (payload === "[DONE]") {
-          upstreamDone = true;
-          break;
-        }
-        try {
-          const parsed = JSON.parse(payload) as {
-            choices?: Array<{
-              delta?: { content?: string };
-              finish_reason?: string | null;
-            }>;
-            usage?: { prompt_tokens?: number; completion_tokens?: number };
-          };
-          const c = parsed.choices?.[0];
-          if (c?.finish_reason) finishReason = c.finish_reason;
-          const content = c?.delta?.content;
-          if (typeof content === "string" && content.length > 0) {
-            accumulated += content;
-            input.onChunk?.(accumulated.length);
-          }
-          if (parsed.usage) {
-            usage = {
-              inputTokens: parsed.usage.prompt_tokens ?? 0,
-              outputTokens: parsed.usage.completion_tokens ?? 0,
-            };
-          }
-        } catch {
-          /* swallow malformed SSE line */
-        }
-      }
-    }
-  }
+    : undefined;
+  const finishReason: string | null = payload.candidates?.[0]?.finishReason ?? null;
 
   input.onStage?.("applying");
   const { ops: rawOps, errors: parseErrors } = parseOps(accumulated);
-  // Belt-and-suspenders: drop any delete ops Kimi might emit despite the
+  // Belt-and-suspenders: drop any delete ops the model might emit despite the
   // prompt explicitly forbidding them. Autofill preserves structure;
   // deletions break the template's layout and orphan future chat edits.
   const ops = rawOps.filter((op) => op.type !== "delete");
@@ -378,7 +314,7 @@ export async function fillTemplate(
       ok: false,
       error: {
         kind: "parse",
-        message: `Couldn't parse ops: ${parseErrors[0]}${finishReason === "length" ? " (response hit token cap)" : ""}`,
+        message: `Couldn't parse ops: ${parseErrors[0]}${/length|max_?tokens/i.test(finishReason ?? "") ? " (response hit token cap)" : ""}`,
       },
       rawResponse: accumulated,
       durationMs: Date.now() - t0,
@@ -436,7 +372,7 @@ export async function fillTemplate(
     sanitized.removed.iframes > 0
   ) {
     // Log so prompt-injection attempts surface in telemetry without
-    // failing the request — Kimi cleaned up as it should.
+    // failing the request — the model cleaned up as it should.
     console.warn("[autofill] sanitizer stripped:", sanitized.removed);
   }
   setCachedFill(fillHash, sanitized.html);

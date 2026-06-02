@@ -38,6 +38,11 @@ OUTPUT FORMAT — read carefully:
 - Lift-on-hover transitions for buttons (50-150ms ease).
 - One mode per variant — pick the mode that best fits the brand (dark, light, cream, etc.) per the brief. Do not include a theme toggle.
 
+DESIGN TOKENS (the OpenLen contract — every color/radius/font resolves from a var; see docs/openlen-contract.md):
+- Declare these on :root (your chosen mode's values) + a :root.dark { } flip, and reference them via var() everywhere: --bg, --surface, --surface-2, --fg, --fg-muted, --fg-faint, --border, --border-strong, --accent, --accent-r (COMMA R,G,B triplet, e.g. 62,207,142, for rgba(var(--accent-r), <a>)), --accent-ink (text/icons that sit ON the accent), --radius, --font-display, --font-body, --font-mono.
+- NO raw hex (#rrggbb) outside the :root / :root.dark blocks — define a token, then use var(--…). Neutral rgba textures/shadows + the hairline border alphas are fine.
+- Exactly ONE accent. Text on the accent uses var(--accent-ink), never a hardcoded hex. Status colors (if any) are --warn / --danger, NOT a second accent.
+
 VISUAL QUALITY BAR:
 - Headlines have a "half-tone" trick: split into two parts, the second part rendered at ~45% opacity (e.g. "See what your agents <span class='opacity-45'>actually did.</span>"). Use sparingly, not on every headline.
 - Live-feel indicators: `pulse-dot` animation (radial expanding shadow on a small colored dot).

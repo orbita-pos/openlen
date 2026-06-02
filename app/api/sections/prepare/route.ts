@@ -97,7 +97,10 @@ export async function POST(req: Request): Promise<Response> {
     return json({ html: fragment, credits: 0, matched: false }, 200);
   }
 
-  const aiModel: AIModel = body?.model === "gemini-flash" ? "gemini-flash" : "gemini-pro";
+  // Recolour is a mechanical CSS task (rewrite colour values, keep structure) —
+  // Flash does it well in ~15-30s vs Pro's 1-2min, and at a fraction of the
+  // cost, which is what keeps assembly cheap. Pro stays available via the body.
+  const aiModel: AIModel = body?.model === "gemini-pro" ? "gemini-pro" : "gemini-flash";
   const PROVIDER = resolveAIProvider(aiModel);
   if (!PROVIDER.key) return json({ error: "provider_unconfigured", message: `${PROVIDER.label} API key missing` }, 500);
 
