@@ -130,8 +130,8 @@ const INSERT_SCRIPT = `
       insertedAll.push(toAppend);
       if (toAppend.nodeType === 1) insertedEls.push(toAppend);
     });
-    // Remember EVERY node we added (including the "\n" text nodes between the
-    // font <link>/<style>/section parts) so an Undo pulls them ALL back out and
+    // Remember EVERY node we added (including the inter-element whitespace text
+    // nodes between the font <link>/<style>/section parts) so an Undo pulls them ALL back out and
     // restores the DOM cleanly — element-only tracking left orphan whitespace in
     // the re-serialized HTML across add/undo cycles. No srcDoc reload: the live
     // DOM stays authoritative. removedReplace lets Undo also restore a swapped-out

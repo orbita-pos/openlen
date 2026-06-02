@@ -3,6 +3,7 @@ import {
   scopeSectionDocument,
   backfillRootSelfVariants,
   applyHostAdoption,
+  centerOrphanedMaxWidth,
 } from "./scope";
 
 // Regression: generated sections put a wrapper class (.sec / .lc07 / .hero…) on
@@ -85,12 +86,16 @@ describe("applyHostAdoption — host palette + shell neutralization", () => {
     expect(out).not.toContain("var(--border");
   });
 
-  it("neutralizes a viewport-height preview shell on the root (bug 4)", () => {
+  it("neutralizes a viewport-height preview shell but KEEPS the centering (bug 4)", () => {
     const css = `[data-sec="${slug}"]{margin:0;background:#f1f1f4;min-height:100vh;display:grid;place-items:center}`;
     const out = applyHostAdoption(css, slug);
     expect(out).not.toMatch(/min-height:\s*100vh/);
     expect(out).not.toContain("#f1f1f4"); // full-bleed gutter background dropped
-    expect(out).not.toMatch(/place-items:\s*center/);
+    // The centering display + place-items stay: once the section is
+    // content-height they only centre the inner block horizontally (how heroes
+    // were composed). Stripping them dropped max-width heroes flush-left.
+    expect(out).toContain("display:grid");
+    expect(out).toMatch(/place-items:\s*center/);
   });
 
   it("drops a light gutter background when the root is a body-reset (margin:0)", () => {
@@ -124,5 +129,73 @@ describe("applyHostAdoption — host palette + shell neutralization", () => {
     const once = applyHostAdoption(tokenBlock, slug);
     const twice = applyHostAdoption(once, slug);
     expect(twice).toBe(once);
+  });
+});
+
+describe("centerOrphanedMaxWidth — repair flush-left wrappers", () => {
+  const slug = "hero-z";
+
+  it("adds margin:auto to a width:100% + max-width wrapper", () => {
+    const css = `[data-sec="${slug}"]{font-family:var(--font-body)}
+[data-sec="${slug}"] .hero{width:100%;max-width:1180px;background:var(--surface)}`;
+    const { css: out, centered } = centerOrphanedMaxWidth(css, slug);
+    expect(centered.length).toBe(1);
+    expect(out).toMatch(/\.hero\{[^}]*margin-left:\s*auto/);
+    expect(out).toMatch(/\.hero\{[^}]*margin-right:\s*auto/);
+  });
+
+  it("matches a fixed length inside min()/clamp()", () => {
+    const css = `[data-sec="${slug}"] .wrap{width:100%;max-width:min(1100px, 92vw)}`;
+    const { centered } = centerOrphanedMaxWidth(css, slug);
+    expect(centered.length).toBe(1);
+  });
+
+  it("does NOT touch a descendant flex wrapper without width:100% (the .winbar false-positive)", () => {
+    // A mockup title bar: flex + align-items:center, no width:100%/max-width.
+    const css = `[data-sec="${slug}"] .winbar{display:flex;align-items:center}
+[data-sec="${slug}"] .hero{width:100%;max-width:1180px}`;
+    const { centered } = centerOrphanedMaxWidth(css, slug);
+    expect(centered.length).toBe(1); // only .hero, .winbar untouched
+    expect(centered[0]).toContain(".hero");
+  });
+
+  it("centres a bare max-width block (width:100% not required)", () => {
+    const css = `[data-sec="${slug}"] .hero{max-width:1180px}`;
+    const { css: out, centered } = centerOrphanedMaxWidth(css, slug);
+    expect(centered.length).toBe(1);
+    expect(out).toMatch(/margin-left:\s*auto/);
+  });
+
+  it("centres a grid whose tracks may not fill, via justify-content", () => {
+    const css = `[data-sec="${slug}"] .cards{display:grid;gap:18px;grid-template-columns:repeat(3,320px)}`;
+    const { css: out, centered } = centerOrphanedMaxWidth(css, slug);
+    expect(centered.length).toBe(1);
+    expect(out).toMatch(/justify-content:\s*center/);
+  });
+
+  it("leaves a grid that already sets justify-content alone", () => {
+    const css = `[data-sec="${slug}"] .cards{display:grid;justify-content:start;grid-template-columns:200px 200px}`;
+    const { centered } = centerOrphanedMaxWidth(css, slug);
+    expect(centered.length).toBe(0);
+  });
+
+  it("skips a wrapper that already has an auto margin (idempotent)", () => {
+    const css = `[data-sec="${slug}"] .hero{width:100%;max-width:1180px;margin:0 auto}`;
+    const { centered } = centerOrphanedMaxWidth(css, slug);
+    expect(centered.length).toBe(0);
+  });
+
+  it("skips absolutely-positioned / floated / inline max-width elements", () => {
+    const css = `[data-sec="${slug}"] .badge{width:100%;max-width:200px;position:absolute}
+[data-sec="${slug}"] .chip{width:100%;max-width:120px;display:inline-block}`;
+    const { centered } = centerOrphanedMaxWidth(css, slug);
+    expect(centered.length).toBe(0);
+  });
+
+  it("ignores max-width:100% and none (full-width, not a container)", () => {
+    const css = `[data-sec="${slug}"] .full{width:100%;max-width:100%}
+[data-sec="${slug}"] .open{width:100%;max-width:none}`;
+    const { centered } = centerOrphanedMaxWidth(css, slug);
+    expect(centered.length).toBe(0);
   });
 });

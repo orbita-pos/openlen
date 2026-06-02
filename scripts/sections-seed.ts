@@ -17,6 +17,7 @@ import {
   CreateSectionSchema,
   htmlContainsEditorMarker,
 } from "../lib/sections/admin-schemas";
+import { lintContract } from "../lib/contract/lint";
 import { scopeSectionDocument } from "../lib/sections/scope";
 import { upsertSection } from "../lib/sections/store";
 import {
@@ -155,6 +156,7 @@ function modeOf(label: string): "dark" | "light" | "cream" {
 async function main() {
   const args = process.argv.slice(2);
   const dry = args.includes("--dry-run");
+  const enforce = args.includes("--enforce-contract");
   const root = args.find((a) => !a.startsWith("--"));
   if (!root) {
     console.error('Usage: npm run sections:seed -- "<library root dir>" [--dry-run]');
@@ -183,6 +185,8 @@ async function main() {
   );
 
   let ok = 0;
+  let contractErrorSections = 0;
+  let contractWarnSections = 0;
   const seenSlugs = new Set<string>();
   const failed: { file: string; reason: string }[] = [];
 
@@ -234,10 +238,33 @@ async function main() {
           continue;
         }
 
+        // Design-contract check (docs/openlen-contract.md) on the section
+        // SOURCE. Non-blocking by default (the pre-contract library still
+        // seeds); --enforce-contract makes contract errors skip the section.
+        const lint = lintContract(raw, { kind: "section", mode: payload.mode });
+        const cErrs = lint.violations.filter((v) => v.level === "error").length;
+        const cWarns = lint.violations.length - cErrs;
+        if (cErrs > 0) {
+          contractErrorSections++;
+          if (enforce) {
+            failed.push({
+              file,
+              reason: `contract: ${lint.violations
+                .filter((v) => v.level === "error")
+                .map((v) => v.rule)
+                .join(", ")}`,
+            });
+            continue;
+          }
+        } else if (cWarns > 0) {
+          contractWarnSections++;
+        }
+        const cmark = cErrs || cWarns ? ` [c:${cErrs}e/${cWarns}w]` : "";
+
         if (dry) {
           console.log(
             `  dry ${slug.padEnd(18)} ${scoped.rootTag.padEnd(7)} ${parsed.data.html.length}b` +
-              ` ${payload.mode.padEnd(5)}${scoped.needsJs ? " [js]" : ""}`,
+              ` ${payload.mode.padEnd(5)}${scoped.needsJs ? " [js]" : ""}${cmark}`,
           );
           ok++;
           continue;
@@ -246,7 +273,7 @@ async function main() {
         const rec = await upsertSection(parsed.data);
         console.log(
           `  ok  ${slug.padEnd(18)} ${rec.rootTag.padEnd(7)} ${rec.size}b` +
-            `${rec.needsJs ? " [js]" : ""}${rec.hasPlaceholders ? " [ph]" : ""}`,
+            `${rec.needsJs ? " [js]" : ""}${rec.hasPlaceholders ? " [ph]" : ""}${cmark}`,
         );
         ok++;
       } catch (err) {
@@ -256,6 +283,12 @@ async function main() {
   }
 
   console.log(`\nDone. ${dry ? "validated" : "seeded"}=${ok} failed=${failed.length}`);
+  if (contractErrorSections || contractWarnSections) {
+    console.log(
+      `contract (${enforce ? "ENFORCED" : "non-blocking"}): ` +
+        `${contractErrorSections} sections with errors, ${contractWarnSections} with warnings — see docs/openlen-contract.md`,
+    );
+  }
   if (failed.length > 0) {
     console.log("\nFailures:");
     for (const f of failed) console.log(`  ${f.file} — ${f.reason}`);

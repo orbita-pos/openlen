@@ -24,6 +24,7 @@ import {
   CreateSchema,
   htmlContainsEditorMarker,
 } from "../lib/templates/admin-schemas";
+import { lintContract } from "../lib/contract/lint";
 
 interface ParsedFlags {
   htmlPath: string;
@@ -37,8 +38,9 @@ function parseArgs(argv: string[]): ParsedFlags | null {
     if (a.startsWith("--")) {
       const eq = a.indexOf("=");
       if (eq === -1) {
-        // --flag with no value isn't supported; everything is --k=v
-        return null;
+        // bare flag (e.g. --enforce-contract) → boolean "true"
+        flags[a.slice(2)] = "true";
+        continue;
       }
       const key = a.slice(2, eq);
       const value = a.slice(eq + 1);
@@ -121,6 +123,33 @@ async function main() {
       "HTML contains `data-slot-path=` — that marker is only valid in editor-mode workspace output, not in a curated template. Re-export the HTML without it.",
     );
     process.exit(1);
+  }
+
+  // Design-contract check (docs/openlen-contract.md). Warns by default so the
+  // pre-contract library can still be (re-)added; pass --enforce-contract to
+  // BLOCK on errors and guarantee a new template is born contract-clean.
+  const lint = lintContract(result.data.html, {
+    kind: "document",
+    mode: result.data.mode as "dark" | "light" | "cream",
+  });
+  if (lint.violations.length > 0) {
+    const errs = lint.violations.filter((v) => v.level === "error");
+    const warns = lint.violations.filter((v) => v.level === "warning");
+    console.log(`Contract lint: ${errs.length} errors, ${warns.length} warnings`);
+    for (const v of lint.violations) {
+      console.log(`  ${v.level === "error" ? "x" : "!"} [${v.rule}] ${v.detail}`);
+    }
+    if (!lint.ok && flags["enforce-contract"] === "true") {
+      console.error(
+        "\nAborting — contract errors with --enforce-contract. Fix the HTML, or drop the flag to add anyway.",
+      );
+      process.exit(1);
+    }
+    if (!lint.ok) {
+      console.log(
+        "(adding despite contract errors — pass --enforce-contract to block)\n",
+      );
+    }
   }
 
   console.log(`Uploading "${result.data.id}" (${result.data.html.length} bytes)...`);

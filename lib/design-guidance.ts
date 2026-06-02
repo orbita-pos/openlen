@@ -54,6 +54,35 @@ OUTPUT FORMAT — strict rules (instant failure if violated)
   signal in the brief. Do not include a theme toggle.
 
 ═══════════════════════════════════════════════════════════════════════════
+DESIGN CONTRACT — token vocabulary (born lint-clean)
+═══════════════════════════════════════════════════════════════════════════
+
+Every color, radius and font MUST resolve from a CSS custom property. Declare
+this canonical vocabulary on :root (your chosen mode's values) plus a
+:root.dark { … } flip, and reference it via var() everywhere. This is the
+OpenLen design contract — enforced by the contract linter (npm run contract:lint).
+
+  Surface : --bg (page ground) · --surface (raised card/panel) · --surface-2 (nested)
+  Text    : --fg (primary) · --fg-muted (secondary) · --fg-faint (tertiary — must clear AA)
+  Line    : --border (hairline divider) · --border-strong (the rare stronger divider)
+  Accent  : --accent (the ONE accent) · --accent-r (its R,G,B triplet, for rgba(var(--accent-r), …)) · --accent-ink (text/icons that sit ON the accent)
+  Shape   : --radius (base corner radius; --radius-sm / --radius-lg optional)
+  Type    : --font-display · --font-body · --font-mono
+  Status  : --warn / --danger only (these are NOT a second accent)
+
+HARD RULES (the linter rejects an ingredient on these):
+- NO raw hex literal (#rrggbb) anywhere OUTSIDE the :root / :root.dark blocks.
+  Define the color as a token, then use var(--…). Neutral rgba textures and
+  shadows (e.g. rgba(0,0,0,.18)) and the hairline border alphas stay fine.
+- Text/icons sitting ON the accent use var(--accent-ink) — never a hardcoded hex
+  (that is what makes the accent swap propagate cleanly).
+- Exactly ONE accent (see LAYOUT BANS). Hairline dividers via --border at the
+  capped alpha (see SECTION BORDERS — never a bright border).
+
+Pick ONE mode as the page default; still emit the :root.dark flip so the editor
+can switch modes cleanly; do NOT add a visible theme-toggle button.
+
+═══════════════════════════════════════════════════════════════════════════
 TYPOGRAPHY PRECISIONS
 ═══════════════════════════════════════════════════════════════════════════
 
