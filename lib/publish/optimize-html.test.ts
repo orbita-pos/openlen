@@ -1,8 +1,8 @@
-// Tests for optimizeHtmlForProduction — publish-time HTML/CSS minify
-// backed by Rust's `optimize_for_publish` since F1 S9. The Tailwind bake
-// step was removed in F1 S9 (per soak data — Lighthouse impact is the
-// operator's post-deploy check); published pages depend on the Tailwind
-// CDN at render.
+// Tests for optimizeHtmlForProduction — publish-time Tailwind bake + Rust
+// `optimize_for_publish` minify. The bake (revived) strips the render-blocking
+// `cdn.tailwindcss.com` runtime and inlines the page's minimal CSS; the Rust
+// pass then minifies HTML + the injected <style>. `bakeTailwind` is tested in
+// isolation (no Rust, no env) since it's the pure new logic.
 //
 // Run via: npx tsx --test lib/publish/optimize-html.test.ts
 //
@@ -13,7 +13,7 @@
 import { test } from "node:test";
 import { strict as assert } from "node:assert";
 
-import { optimizeHtmlForProduction } from "./optimize-html";
+import { optimizeHtmlForProduction, bakeTailwind } from "./optimize-html";
 
 function withEnv<T>(
   vars: Record<string, string | undefined>,
@@ -85,14 +85,14 @@ test("prod mode: tiny doc → minified output (<= input length)", async () => {
   });
 });
 
-test("prod mode: doc with Tailwind CDN script — CDN survives, no bake", async () => {
+test("prod mode: doc with Tailwind CDN script — baked out, CDN stripped", async () => {
   await withEnv({ NODE_ENV: "production" }, async () => {
     const r = await optimizeHtmlForProduction(DOC_WITH_CDN);
-    // The Rust minify pass doesn't strip the CDN <script> — that was the
-    // legacy TS bake's job. Published pages depend on the CDN at runtime.
-    assert.ok(r.html.includes("cdn.tailwindcss.com"));
-    assert.equal(r.baked, false);
-    assert.equal(r.cssBytes, 0);
+    // The bake replaces the render-blocking CDN runtime with inline CSS.
+    assert.ok(!r.html.includes("cdn.tailwindcss.com"), "CDN script stripped");
+    assert.ok(r.html.includes(".text-lg"), "used utility inlined");
+    assert.equal(r.baked, true);
+    assert.ok(r.cssBytes > 0);
   });
 });
 
@@ -130,4 +130,53 @@ test("prod mode: two calls with same input produce same output (no state leak)",
     const b = await optimizeHtmlForProduction(TINY_DOC);
     assert.equal(a.html, b.html);
   });
+});
+
+// ─── bakeTailwind (pure — no Rust, no env) ───────────────────────────────────
+
+test("bake: strips CDN, inlines used utilities at end of <head>", async () => {
+  const r = await bakeTailwind(DOC_WITH_CDN);
+  assert.equal(r.baked, true);
+  assert.ok(!r.html.includes("cdn.tailwindcss.com"), "CDN script removed");
+  assert.ok(r.html.includes("<style data-tw-baked>"), "baked style injected");
+  assert.ok(r.html.includes(".p-4"), "p-4 generated");
+  assert.ok(r.html.includes(".text-lg"), "text-lg generated");
+  assert.ok(r.cssBytes > 0);
+  // Injected at end of head so utilities win specificity ties (CDN parity).
+  assert.ok(
+    r.html.indexOf("data-tw-baked") < r.html.indexOf("</head>"),
+    "baked style is inside <head>",
+  );
+});
+
+test("bake: arbitrary values survive (content-scanned, not purged)", async () => {
+  const doc =
+    '<!doctype html><html><head><script src="https://cdn.tailwindcss.com"></script></head><body><div class="max-w-[1240px] text-[13px]">x</div></body></html>';
+  const r = await bakeTailwind(doc);
+  assert.equal(r.baked, true);
+  assert.ok(r.html.includes("max-w-\\[1240px\\]"), "arbitrary max-w generated");
+  assert.ok(r.html.includes("text-\\[13px\\]"), "arbitrary text size generated");
+});
+
+test("bake: no CDN script → passthrough, unchanged", async () => {
+  const r = await bakeTailwind(TINY_DOC);
+  assert.equal(r.baked, false);
+  assert.equal(r.html, TINY_DOC);
+  assert.equal(r.cssBytes, 0);
+});
+
+test("bake: ?plugins= CDN variant is left intact (plugin utils not reproducible)", async () => {
+  const doc =
+    '<!doctype html><html><head><script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script></head><body><div class="p-4">x</div></body></html>';
+  const r = await bakeTailwind(doc);
+  assert.equal(r.baked, false);
+  assert.ok(r.html.includes("cdn.tailwindcss.com?plugins="), "CDN kept");
+  assert.equal(r.html, doc);
+});
+
+test("bake: idempotent — baking already-baked HTML is a no-op", async () => {
+  const once = await bakeTailwind(DOC_WITH_CDN);
+  const twice = await bakeTailwind(once.html);
+  assert.equal(twice.baked, false);
+  assert.equal(twice.html, once.html);
 });
