@@ -64,7 +64,7 @@ export function BgThumb({ id, label, active, hue, onClick }: BgThumbProps) {
       <div className="relative w-full" style={{ aspectRatio: "16 / 9" }}>
         <C hue={hue} />
         {active && (
-          <span className="absolute top-1 right-1 inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[var(--accent)] text-white shadow-sm">
+          <span className="absolute top-1 right-1 inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[var(--accent-strong)] text-white shadow-sm">
             <Check size={9} stroke={3} />
           </span>
         )}

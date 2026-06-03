@@ -1,14 +1,38 @@
 {
   "sidebar": {
     "tabs": {
-      "chat": { "label": "채팅", "title": "Orchestra와 채팅" },
-      "templates": { "label": "템플릿", "title": "템플릿으로 시작하기" },
-      "library": { "label": "라이브러리", "title": "섹션 추가" },
-      "pages": { "label": "페이지", "title": "최근 프로젝트" },
-      "leads": { "label": "리드", "title": "폼 제출" },
-      "insights": { "label": "인사이트", "title": "페이지 분석" },
-      "versions": { "label": "버전", "title": "버전 기록" },
-      "brief": { "label": "브리프", "title": "프로젝트 브리프 (AI 컨텍스트)" }
+      "chat": {
+        "label": "채팅",
+        "title": "Orchestra와 채팅"
+      },
+      "templates": {
+        "label": "템플릿",
+        "title": "템플릿으로 시작하기"
+      },
+      "library": {
+        "label": "라이브러리",
+        "title": "섹션 추가"
+      },
+      "pages": {
+        "label": "페이지",
+        "title": "최근 프로젝트"
+      },
+      "leads": {
+        "label": "리드",
+        "title": "폼 제출"
+      },
+      "insights": {
+        "label": "인사이트",
+        "title": "페이지 분석"
+      },
+      "versions": {
+        "label": "버전",
+        "title": "버전 기록"
+      },
+      "brief": {
+        "label": "브리프",
+        "title": "프로젝트 브리프 (AI 컨텍스트)"
+      }
     },
     "tabLocked": "{label} — 잠김",
     "expandPanel": "패널 펼치기",
@@ -41,12 +65,17 @@
       "clear": "지우기"
     },
     "iframeTitle": "OpenLen 워크스페이스 미리보기",
-    "redesigning": "페이지를 다시 디자인하는 중…"
+    "redesigning": "페이지를 다시 디자인하는 중…",
+    "viewport": {
+      "desktop": "데스크톱 미리보기",
+      "tablet": "태블릿 미리보기",
+      "mobile": "모바일 미리보기"
+    }
   },
   "placeholder": {
     "ai": {
       "title": "사이드바에서 페이지를 설명하세요",
-      "hint": "원하는 내용을 설명하면 오케스트레이터가 구성해 드립니다."
+      "hint": "원하는 것을 설명하면 AI가 만들어 드립니다."
     },
     "template": {
       "title": "사이드바에서 갤러리를 둘러보세요",
@@ -67,7 +96,7 @@
     "cards": {
       "ai": {
         "title": "AI로 생성",
-        "description": "원하는 페이지를 일상 언어로 설명하면 저희가 구성합니다.",
+        "description": "페이지를 일상 언어로 설명하세요. AI가 만들어 드립니다.",
         "detail": "브리프 → 약 30초 만에 페이지 완성"
       },
       "template": {

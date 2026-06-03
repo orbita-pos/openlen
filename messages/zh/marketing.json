@@ -9,7 +9,8 @@
     "githubAria": "OpenLen on GitHub",
     "toggleDark": "切换深色模式",
     "signIn": "登录",
-    "tryFree": "免费试用"
+    "tryFree": "免费试用",
+    "menu": "菜单"
   },
   "hero": {
     "alphaBadge": "Alpha",
@@ -87,7 +88,8 @@
       "paidTier": "付费档位"
     },
     "thatsUs": "就是我们",
-    "footnote": "定价以 2026 年 5 月各家公开方案为准。之所以纳入 Linktree，是因为我们的 30 个 link-in-bio 创作者模板面向同一群用户 — 区别在于 HTML 和子域名都归你所有。"
+    "footnote": "定价以 2026 年 5 月各家公开方案为准。之所以纳入 Linktree，是因为我们的 30 个 link-in-bio 创作者模板面向同一群用户 — 区别在于 HTML 和子域名都归你所有。",
+    "featureColumn": "功能"
   },
   "creatorShowcase": {
     "badge": "为创作者打造",

@@ -1,14 +1,38 @@
 {
   "sidebar": {
     "tabs": {
-      "chat": { "label": "Chat", "title": "Mit Orchestra chatten" },
-      "templates": { "label": "Vorlagen", "title": "Mit einer Vorlage starten" },
-      "library": { "label": "Bibliothek", "title": "Abschnitt einfügen" },
-      "pages": { "label": "Seiten", "title": "Letzte Projekte" },
-      "leads": { "label": "Leads", "title": "Formular-Einsendungen" },
-      "insights": { "label": "Insights", "title": "Seitenanalyse" },
-      "versions": { "label": "Versionen", "title": "Versionsverlauf" },
-      "brief": { "label": "Briefing", "title": "Projekt-Briefing (KI-Kontext)" }
+      "chat": {
+        "label": "Chat",
+        "title": "Mit Orchestra chatten"
+      },
+      "templates": {
+        "label": "Vorlagen",
+        "title": "Mit einer Vorlage starten"
+      },
+      "library": {
+        "label": "Bibliothek",
+        "title": "Abschnitt einfügen"
+      },
+      "pages": {
+        "label": "Seiten",
+        "title": "Letzte Projekte"
+      },
+      "leads": {
+        "label": "Leads",
+        "title": "Formular-Einsendungen"
+      },
+      "insights": {
+        "label": "Insights",
+        "title": "Seitenanalyse"
+      },
+      "versions": {
+        "label": "Versionen",
+        "title": "Versionsverlauf"
+      },
+      "brief": {
+        "label": "Briefing",
+        "title": "Projekt-Briefing (KI-Kontext)"
+      }
     },
     "tabLocked": "{label} — gesperrt",
     "expandPanel": "Panel ausklappen",
@@ -41,12 +65,17 @@
       "clear": "Zurücksetzen"
     },
     "iframeTitle": "OpenLen Workspace-Vorschau",
-    "redesigning": "Deine Seite wird neu gestaltet…"
+    "redesigning": "Deine Seite wird neu gestaltet…",
+    "viewport": {
+      "desktop": "Desktop-Vorschau",
+      "tablet": "Tablet-Vorschau",
+      "mobile": "Mobile Vorschau"
+    }
   },
   "placeholder": {
     "ai": {
       "title": "Beschreibe deine Seite in der Seitenleiste",
-      "hint": "Beschreibe, was du willst, und der Orchestrator setzt es zusammen."
+      "hint": "Beschreibe, was du willst, und die KI baut es."
     },
     "template": {
       "title": "Durchstöbere die Galerie in der Seitenleiste",
@@ -67,7 +96,7 @@
     "cards": {
       "ai": {
         "title": "Mit KI generieren",
-        "description": "Beschreibe deine Seite in einfachen Worten. Wir setzen sie zusammen.",
+        "description": "Beschreibe deine Seite in einfachem Deutsch. Die KI baut sie für dich.",
         "detail": "Briefing → Seite in ~30 Sek."
       },
       "template": {

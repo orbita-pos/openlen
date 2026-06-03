@@ -269,7 +269,7 @@ export function DeployIntegrationModal({
                 type="button"
                 onClick={onConnect}
                 disabled={connecting}
-                className="inline-flex items-center gap-2 h-9 px-3.5 rounded-md bg-[var(--accent)] text-white text-[12.5px] font-medium hover:brightness-105 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-2 h-9 px-3.5 rounded-md bg-[var(--accent-strong)] text-white text-[12.5px] font-medium hover:brightness-105 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {connecting ? (
                   <Loader2 size={13} className="animate-spin" />
@@ -353,7 +353,7 @@ export function DeployIntegrationModal({
                   type="button"
                   onClick={onDeploy}
                   disabled={deploying || !nameValid}
-                  className="inline-flex items-center gap-2 h-9 px-3.5 rounded-md bg-[var(--accent)] text-white text-[12.5px] font-medium hover:brightness-105 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 h-9 px-3.5 rounded-md bg-[var(--accent-strong)] text-white text-[12.5px] font-medium hover:brightness-105 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {deploying ? (
                     <Loader2 size={13} className="animate-spin" />

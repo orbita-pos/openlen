@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Foldglass — A creative studio for brands worth a second look</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#FBFAF7; --surface:#FFFFFF; --surface-2:#F2EFE8;
+    --fg:#15120E; --fg-muted:#5A534A; --fg-faint:#6E665B;
+    --border:rgba(21,18,14,.08); --border-strong:rgba(21,18,14,.12);
+    --accent:#E0533D; --accent-r:224,83,61; --accent-ink:#FFFFFF;
+    --radius:16px; --radius-sm:10px; --radius-lg:26px;
+    --font-display:'Fraunces',Georgia,serif;
+    --font-body:'Inter',ui-sans-serif,system-ui,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,monospace;
+    --ph1a:#E0533D; --ph1b:#F2A65A; --ph1c:#FBE2C2;
+    --ph2a:#2B2A45; --ph2b:#5B4E8A; --ph2c:#E0533D;
+    --ph3a:#143A3A; --ph3b:#2E7D6E; --ph3c:#C6E0A4;
+    --ph4a:#1B1815; --ph4b:#4A3F36; --ph4c:#E0533D;
+    --ph5a:#3A1E2E; --ph5b:#8A2E5B; --ph5c:#F2A65A;
+    --ph6a:#0E2A3A; --ph6b:#2A6F8A; --ph6c:#F2EFE8;
+  }
+  :root.dark {
+    --bg:#0C0B0A; --surface:#141210; --surface-2:#1B1815;
+    --fg:#F4F1EA; --fg-muted:rgba(244,241,234,.66); --fg-faint:rgba(244,241,234,.52);
+    --border:rgba(255,255,255,.06); --border-strong:rgba(255,255,255,.10);
+    --accent:#FF6A4D; --accent-r:255,106,77; --accent-ink:#180704;
+  }
+  html { background:var(--bg); color:var(--fg); }
+  body {
+    font-family:var(--font-body);
+    font-feature-settings:"ss01","cv11";
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    background:var(--bg); color:var(--fg);
+  }
+  .mono { font-family:var(--font-mono); }
+  .display { font-family:var(--font-display); letter-spacing:-0.03em; line-height:0.94; font-weight:500; }
+  .serif { font-family:var(--font-display); }
+  .tabular { font-variant-numeric:tabular-nums; }
+  .hairline { border-color:var(--border); }
+  .hairline-strong { border-color:var(--border-strong); }
+  .accent { color:var(--accent); }
+  .dot-grid {
+    background-image:radial-gradient(circle, rgba(var(--accent-r),0.10) 1px, transparent 1px);
+    background-size:26px 26px;
+  }
+  .hero-fade { background:radial-gradient(58% 52% at 50% 4%, rgba(var(--accent-r),0.10), transparent 70%); }
+  @keyframes pulse-dot {
+    0% { box-shadow:0 0 0 0 rgba(var(--accent-r),0.5); }
+    70% { box-shadow:0 0 0 7px rgba(var(--accent-r),0); }
+    100% { box-shadow:0 0 0 0 rgba(var(--accent-r),0); }
+  }
+  .pulse-dot { width:6px; height:6px; border-radius:999px; background:var(--accent); animation:pulse-dot 1.8s infinite; }
+  @keyframes marquee { 0% { transform:translateX(0); } 100% { transform:translateX(-50%); } }
+  .marquee-track { animation:marquee 42s linear infinite; }
+  .lift { transition:transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease, background-color 120ms ease, color 120ms ease; }
+  .lift:hover { transform:translateY(-1px); }
+  .btn-primary { background:var(--accent); color:var(--accent-ink); font-weight:600; }
+  .btn-primary:hover { box-shadow:0 8px 28px -10px rgba(var(--accent-r),0.7); }
+  .btn-ghost { background:transparent; color:var(--fg); border:1px solid var(--border-strong); }
+  .btn-ghost:hover { border-color:var(--accent); color:var(--accent); }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); }
+  .ring-accent { box-shadow:0 0 0 1px rgba(var(--accent-r),0.55), 0 20px 60px -28px rgba(var(--accent-r),0.45); }
+  .badge { color:var(--fg-muted); border:1px solid var(--border); border-radius:999px; font-family:var(--font-mono); text-transform:uppercase; letter-spacing:.04em; }
+  details > summary { list-style:none; cursor:pointer; }
+  details > summary::-webkit-details-marker { display:none; }
+  details[open] .faq-plus { transform:rotate(45deg); }
+  .faq-plus { transition:transform 150ms ease; color:var(--accent); }
+  .half-tone { color:var(--fg-faint); }
+  .dot-divider {
+    background-image:linear-gradient(to right, var(--border-strong) 34%, transparent 0%);
+    background-position:top; background-size:6px 1px; background-repeat:repeat-x; height:1px;
+  }
+  .check {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:16px; height:16px; border-radius:999px;
+    background:rgba(var(--accent-r),0.14); color:var(--accent); flex:0 0 16px;
+  }
+  /* selected-work hover */
+  .work-card { position:relative; overflow:hidden; border-radius:var(--radius-lg); border:1px solid var(--border); }
+  .work-thumb { transition:transform 600ms cubic-bezier(.2,.7,.2,1), filter 400ms ease; }
+  .work-card:hover .work-thumb { transform:scale(1.045); filter:saturate(1.1); }
+  .work-meta { transition:transform 360ms cubic-bezier(.2,.7,.2,1), opacity 360ms ease; }
+  .work-arrow { transition:transform 360ms cubic-bezier(.2,.7,.2,1), opacity 360ms ease; opacity:0; transform:translate(8px,-8px); }
+  .work-card:hover .work-arrow { opacity:1; transform:translate(0,0); }
+  .work-scrim { background:linear-gradient(0deg, rgba(8,6,4,0.72) 0%, rgba(8,6,4,0.18) 46%, transparent 78%); }
+  /* gradient placeholder fields */
+  .ph1 { background:linear-gradient(135deg, var(--ph1a) 0%, var(--ph1b) 52%, var(--ph1c) 100%); }
+  .ph2 { background:linear-gradient(150deg, var(--ph2a) 0%, var(--ph2b) 48%, var(--ph2c) 120%); }
+  .ph3 { background:linear-gradient(135deg, var(--ph3a) 0%, var(--ph3b) 55%, var(--ph3c) 100%); }
+  .ph4 { background:linear-gradient(140deg, var(--ph4a) 0%, var(--ph4b) 50%, var(--ph4c) 130%); }
+  .ph5 { background:linear-gradient(135deg, var(--ph5a) 0%, var(--ph5b) 50%, var(--ph5c) 120%); }
+  .ph6 { background:linear-gradient(150deg, var(--ph6a) 0%, var(--ph6b) 52%, var(--ph6c) 130%); }
+  .grain { background-image:radial-gradient(circle at 50% 50%, rgba(255,255,255,0.10), transparent 60%); mix-blend-mode:overlay; }
+  .svc-row:hover .svc-num { color:var(--accent); }
+  .svc-row:hover .svc-arrow { opacity:1; transform:translateX(0); }
+  .svc-arrow { opacity:0; transform:translateX(-6px); transition:transform 200ms ease, opacity 200ms ease; }
+  .svc-num { transition:color 200ms ease; }
+  .oversize { font-size:clamp(54px, 13vw, 168px); }
+</style>
+</head>
+<body class="min-h-screen antialiased">
+
+<header class="sticky top-0 z-40 backdrop-blur-md border-b hairline" style="background:color-mix(in srgb, var(--bg) 78%, transparent)">
+  <div class="max-w-[1280px] mx-auto px-5 sm:px-7 h-15 py-3 flex items-center justify-between">
+    <a href="#" class="flex items-center gap-2.5">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="2.5" y="2.5" width="19" height="19" rx="3.5" stroke="var(--fg)" stroke-width="1.3"/>
+        <path d="M12 3.5L20.5 12 12 20.5 3.5 12 12 3.5Z" stroke="var(--accent)" stroke-width="1.3"/>
+        <path d="M12 3.5v17M3.5 12h17" stroke="var(--accent)" stroke-width="0.7" opacity="0.5"/>
+      </svg>
+      <span class="text-[16px] font-semibold tracking-tight">Foldglass</span>
+      <span class="badge text-[9.5px] px-2 py-0.5 hidden sm:inline-flex">Studio</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8 text-[13.5px] text-[color:var(--fg-muted)]">
+      <a class="hover:text-[color:var(--fg)] lift" href="#work">Work</a>
+      <a class="hover:text-[color:var(--fg)] lift" href="#services">Services</a>
+      <a class="hover:text-[color:var(--fg)] lift" href="#studio">Studio</a>
+      <a class="hover:text-[color:var(--fg)] lift" href="#voices">Voices</a>
+    </nav>
+    <div class="flex items-center gap-3.5">
+      <a href="#" class="text-[13.5px] text-[color:var(--fg-muted)] hover:text-[color:var(--fg)] hidden sm:inline">Sign in</a>
+      <a href="#contact" class="btn-primary lift rounded-full pl-4 pr-3 h-9 inline-flex items-center gap-1.5 text-[13.5px]">
+        Start a project
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </div>
+</header>
+
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 dot-grid opacity-90 pointer-events-none"></div>
+  <div class="absolute inset-x-0 top-0 h-[700px] hero-fade pointer-events-none"></div>
+  <div class="relative max-w-[1280px] mx-auto px-5 sm:px-7 pt-16 pb-12 md:pt-24 md:pb-16">
+    <div class="flex items-center justify-between gap-4 flex-wrap">
+      <div class="badge text-[10.5px] px-2.5 py-1 inline-flex items-center gap-2" style="background:var(--surface)">
+        <span class="pulse-dot"></span>
+        Booking Q3 2026 · 2 slots left
+      </div>
+      <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)] hidden sm:block">Brand · Web · Motion — est. Lisbon 2017</div>
+    </div>
+
+    <h1 class="display oversize mt-7 max-w-[14ch]">
+      Brands worth a <span class="half-tone italic">second look.</span>
+    </h1>
+
+    <div class="mt-8 grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 lg:gap-12 items-end">
+      <p class="max-w-xl text-[17px] md:text-[18.5px] text-[color:var(--fg-muted)] leading-relaxed">
+        Foldglass is an eight-person studio for founders who refuse to look like everyone else. We build identities, websites, and launch films — shipped in 6 weeks, not 6 months.
+      </p>
+      <div class="flex items-center gap-3 flex-wrap">
+        <a href="#contact" class="btn-primary lift rounded-full px-5 h-11 inline-flex items-center gap-1.5 text-[14.5px]">
+          Book an intro call
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#work" class="btn-ghost lift rounded-full px-5 h-11 inline-flex items-center text-[14.5px]">See the work</a>
+      </div>
+    </div>
+
+    <div class="mt-12 grid grid-cols-2 md:grid-cols-4 gap-px rounded-2xl overflow-hidden border hairline" style="background:var(--border)">
+      <div class="card rounded-none p-5">
+        <div class="display text-4xl tabular">147</div>
+        <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)] mt-1.5">Brands shipped</div>
+      </div>
+      <div class="card rounded-none p-5">
+        <div class="display text-4xl tabular">6.2<span class="text-xl text-[color:var(--fg-muted)]">wk</span></div>
+        <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)] mt-1.5">Median launch</div>
+      </div>
+      <div class="card rounded-none p-5">
+        <div class="display text-4xl tabular">3<span class="text-xl text-[color:var(--fg-muted)]">×</span></div>
+        <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)] mt-1.5">D&amp;AD Pencils</div>
+      </div>
+      <div class="card rounded-none p-5">
+        <div class="display text-4xl tabular">$0.4<span class="text-xl text-[color:var(--fg-muted)]">B</span></div>
+        <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)] mt-1.5">Client raises post-rebrand</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="border-y hairline">
+  <div class="max-w-[1280px] mx-auto px-5 sm:px-7 py-8">
+    <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)] text-center">Trusted by the founders of</div>
+    <div class="overflow-hidden mt-6 [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]">
+      <div class="marquee-track flex gap-16 w-max items-center text-[color:var(--fg-muted)]">
+        <span class="text-2xl font-serif italic">Halcyon</span>
+        <span class="text-2xl font-semibold tracking-tight">VANTAGE</span>
+        <span class="text-2xl font-light tracking-[0.2em]">BRIGHTWAVE</span>
+        <span class="text-2xl serif">Cassette</span>
+        <span class="text-2xl font-semibold italic">Northwind</span>
+        <span class="text-2xl mono tracking-tight">coast/</span>
+        <span class="text-2xl font-bold tracking-tighter">Strata.</span>
+        <span class="text-2xl serif italic">Pavilion</span>
+        <span class="text-2xl font-serif italic">Halcyon</span>
+        <span class="text-2xl font-semibold tracking-tight">VANTAGE</span>
+        <span class="text-2xl font-light tracking-[0.2em]">BRIGHTWAVE</span>
+        <span class="text-2xl serif">Cassette</span>
+        <span class="text-2xl font-semibold italic">Northwind</span>
+        <span class="text-2xl mono tracking-tight">coast/</span>
+        <span class="text-2xl font-bold tracking-tighter">Strata.</span>
+        <span class="text-2xl serif italic">Pavilion</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="work" class="relative">
+  <div class="max-w-[1280px] mx-auto px-5 sm:px-7 py-20 md:py-28">
+    <div class="flex items-end justify-between gap-6 flex-wrap">
+      <div class="max-w-2xl">
+        <div class="mono text-[11px] uppercase tracking-[0.18em] accent">Selected work</div>
+        <h2 class="display text-4xl md:text-6xl mt-4">Six we'd put our <span class="half-tone italic">name on.</span></h2>
+      </div>
+      <a href="#" class="btn-ghost lift rounded-full px-5 h-10 inline-flex items-center text-[14px] shrink-0">Full archive — 41 projects</a>
+    </div>
+
+    <div class="mt-12 grid grid-cols-1 md:grid-cols-6 gap-4 md:auto-rows-[300px]">
+      <a href="#" class="work-card group md:col-span-4 md:row-span-1 lift">
+        <div class="work-thumb ph1 absolute inset-0"></div>
+        <div class="grain absolute inset-0"></div>
+        <div class="absolute inset-0 work-scrim"></div>
+        <div class="work-arrow absolute top-5 right-5 w-9 h-9 rounded-full grid place-items-center" style="background:var(--accent-ink);color:var(--accent)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M17 7H9M17 7v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="work-meta absolute bottom-0 left-0 right-0 p-6 text-[color:#FBFAF7]">
+          <div class="mono text-[11px] uppercase tracking-[0.16em] opacity-80">Brand · Web · Type</div>
+          <div class="serif text-3xl md:text-4xl mt-1.5">Halcyon Capital</div>
+          <p class="text-[13.5px] opacity-85 mt-1 max-w-md">Repositioning a $2B fund from "another VC" into the firm founders email first. +212% inbound.</p>
+        </div>
+      </a>
+
+      <a href="#" class="work-card group md:col-span-2 lift">
+        <div class="work-thumb ph2 absolute inset-0"></div>
+        <div class="grain absolute inset-0"></div>
+        <div class="absolute inset-0 work-scrim"></div>
+        <div class="work-arrow absolute top-5 right-5 w-9 h-9 rounded-full grid place-items-center" style="background:var(--accent-ink);color:var(--accent)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M17 7H9M17 7v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="work-meta absolute bottom-0 left-0 right-0 p-6 text-[color:#FBFAF7]">
+          <div class="mono text-[11px] uppercase tracking-[0.16em] opacity-80">Identity · Motion</div>
+          <div class="serif text-3xl mt-1.5">Cassette</div>
+          <p class="text-[13.5px] opacity-85 mt-1">A music label rebuilt as a tape you can hear.</p>
+        </div>
+      </a>
+
+      <a href="#" class="work-card group md:col-span-2 lift">
+        <div class="work-thumb ph3 absolute inset-0"></div>
+        <div class="grain absolute inset-0"></div>
+        <div class="absolute inset-0 work-scrim"></div>
+        <div class="work-arrow absolute top-5 right-5 w-9 h-9 rounded-full grid place-items-center" style="background:var(--accent-ink);color:var(--accent)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M17 7H9M17 7v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="work-meta absolute bottom-0 left-0 right-0 p-6 text-[color:#FBFAF7]">
+          <div class="mono text-[11px] uppercase tracking-[0.16em] opacity-80">Packaging · Web</div>
+          <div class="serif text-3xl mt-1.5">Pavilion Tea</div>
+          <p class="text-[13.5px] opacity-85 mt-1">Sold out three Whole Foods regions in 9 days.</p>
+        </div>
+      </a>
+
+      <a href="#" class="work-card group md:col-span-4 lift">
+        <div class="work-thumb ph4 absolute inset-0"></div>
+        <div class="grain absolute inset-0"></div>
+        <div class="absolute inset-0 work-scrim"></div>
+        <div class="work-arrow absolute top-5 right-5 w-9 h-9 rounded-full grid place-items-center" style="background:var(--accent-ink);color:var(--accent)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M17 7H9M17 7v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="work-meta absolute bottom-0 left-0 right-0 p-6 text-[color:#FBFAF7]">
+          <div class="mono text-[11px] uppercase tracking-[0.16em] opacity-80">Brand system · Launch film</div>
+          <div class="serif text-3xl md:text-4xl mt-1.5">Northwind Power</div>
+          <p class="text-[13.5px] opacity-85 mt-1 max-w-md">An energy startup that wanted to feel like a movement. 1.4M views on the launch film, day one.</p>
+        </div>
+      </a>
+
+      <a href="#" class="work-card group md:col-span-3 lift">
+        <div class="work-thumb ph5 absolute inset-0"></div>
+        <div class="grain absolute inset-0"></div>
+        <div class="absolute inset-0 work-scrim"></div>
+        <div class="work-arrow absolute top-5 right-5 w-9 h-9 rounded-full grid place-items-center" style="background:var(--accent-ink);color:var(--accent)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M17 7H9M17 7v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="work-meta absolute bottom-0 left-0 right-0 p-6 text-[color:#FBFAF7]">
+          <div class="mono text-[11px] uppercase tracking-[0.16em] opacity-80">Editorial · Art direction</div>
+          <div class="serif text-3xl mt-1.5">Strata Quarterly</div>
+          <p class="text-[13.5px] opacity-85 mt-1">A print journal people actually keep on the shelf.</p>
+        </div>
+      </a>
+
+      <a href="#" class="work-card group md:col-span-3 lift">
+        <div class="work-thumb ph6 absolute inset-0"></div>
+        <div class="grain absolute inset-0"></div>
+        <div class="absolute inset-0 work-scrim"></div>
+        <div class="work-arrow absolute top-5 right-5 w-9 h-9 rounded-full grid place-items-center" style="background:var(--accent-ink);color:var(--accent)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M17 7H9M17 7v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="work-meta absolute bottom-0 left-0 right-0 p-6 text-[color:#FBFAF7]">
+          <div class="mono text-[11px] uppercase tracking-[0.16em] opacity-80">Product · Web app</div>
+          <div class="serif text-3xl mt-1.5">Coast Maps</div>
+          <p class="text-[13.5px] opacity-85 mt-1">A navigation app that finally feels like the sea.</p>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section id="services" class="border-t hairline" style="background:var(--surface-2)">
+  <div class="max-w-[1280px] mx-auto px-5 sm:px-7 py-20 md:py-28">
+    <div class="grid grid-cols-1 lg:grid-cols-[0.85fr_1.15fr] gap-12">
+      <div>
+        <div class="mono text-[11px] uppercase tracking-[0.18em] accent">What we do</div>
+        <h2 class="display text-4xl md:text-5xl mt-4">Four ways we make you <span class="half-tone italic">impossible to ignore.</span></h2>
+        <p class="text-[color:var(--fg-muted)] mt-5 leading-relaxed max-w-md">No retainers, no account managers, no decks that go nowhere. One senior team, a fixed scope, a date on the calendar.</p>
+        <a href="#contact" class="inline-flex items-center gap-1.5 mt-7 accent text-[14.5px] lift font-medium">
+          See how an engagement runs
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+      </div>
+
+      <div>
+        <div class="grid grid-cols-1 divide-y" style="--tw-divide-opacity:1">
+          <a href="#" class="svc-row group flex items-start gap-5 py-6 border-b hairline">
+            <span class="svc-num mono text-[13px] text-[color:var(--fg-faint)] mt-1 w-8 shrink-0">01</span>
+            <div class="flex-1">
+              <h3 class="serif text-2xl md:text-3xl">Brand identity</h3>
+              <p class="text-[color:var(--fg-muted)] text-[14.5px] mt-1.5 leading-relaxed">Naming, logotype, a type system, and a 60-page book your whole company can actually use. Built to scale past the launch.</p>
+              <div class="flex flex-wrap gap-2 mt-3 mono text-[11px]">
+                <span class="badge px-2.5 py-1">Naming</span>
+                <span class="badge px-2.5 py-1">Logotype</span>
+                <span class="badge px-2.5 py-1">Type system</span>
+                <span class="badge px-2.5 py-1">Guidelines</span>
+              </div>
+            </div>
+            <svg class="svc-arrow accent mt-2 shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M17 7H9M17 7v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a href="#" class="svc-row group flex items-start gap-5 py-6 border-b hairline">
+            <span class="svc-num mono text-[13px] text-[color:var(--fg-faint)] mt-1 w-8 shrink-0">02</span>
+            <div class="flex-1">
+              <h3 class="serif text-2xl md:text-3xl">Websites &amp; product</h3>
+              <p class="text-[color:var(--fg-muted)] text-[14.5px] mt-1.5 leading-relaxed">Marketing sites and product UI, designed and built in-house. Framer, Next.js, or whatever ships fastest — handed off with the code, not a PDF.</p>
+              <div class="flex flex-wrap gap-2 mt-3 mono text-[11px]">
+                <span class="badge px-2.5 py-1">Art direction</span>
+                <span class="badge px-2.5 py-1">UX</span>
+                <span class="badge px-2.5 py-1">Build</span>
+                <span class="badge px-2.5 py-1">CMS</span>
+              </div>
+            </div>
+            <svg class="svc-arrow accent mt-2 shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M17 7H9M17 7v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a href="#" class="svc-row group flex items-start gap-5 py-6 border-b hairline">
+            <span class="svc-num mono text-[13px] text-[color:var(--fg-faint)] mt-1 w-8 shrink-0">03</span>
+            <div class="flex-1">
+              <h3 class="serif text-2xl md:text-3xl">Motion &amp; film</h3>
+              <p class="text-[color:var(--fg-muted)] text-[14.5px] mt-1.5 leading-relaxed">Launch films, product reels, and the 12-second loop that lives on your homepage. Storyboarded, scored, and color-graded under one roof.</p>
+              <div class="flex flex-wrap gap-2 mt-3 mono text-[11px]">
+                <span class="badge px-2.5 py-1">Direction</span>
+                <span class="badge px-2.5 py-1">3D</span>
+                <span class="badge px-2.5 py-1">Sound</span>
+                <span class="badge px-2.5 py-1">Grade</span>
+              </div>
+            </div>
+            <svg class="svc-arrow accent mt-2 shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M17 7H9M17 7v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a href="#" class="svc-row group flex items-start gap-5 py-6">
+            <span class="svc-num mono text-[13px] text-[color:var(--fg-faint)] mt-1 w-8 shrink-0">04</span>
+            <div class="flex-1">
+              <h3 class="serif text-2xl md:text-3xl">Launch sprint</h3>
+              <p class="text-[color:var(--fg-muted)] text-[14.5px] mt-1.5 leading-relaxed">Going to market in two weeks? Name, identity, a one-page site, and the launch post — done in a single focused fortnight with you in the room.</p>
+              <div class="flex flex-wrap gap-2 mt-3 mono text-[11px]">
+                <span class="badge px-2.5 py-1">2 weeks</span>
+                <span class="badge px-2.5 py-1">Fixed price</span>
+                <span class="badge px-2.5 py-1">In-person</span>
+              </div>
+            </div>
+            <svg class="svc-arrow accent mt-2 shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M17 7H9M17 7v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="studio" class="border-t hairline">
+  <div class="max-w-[1280px] mx-auto px-5 sm:px-7 py-20 md:py-28 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+    <div class="relative">
+      <div class="rounded-[26px] ph2 aspect-[4/5] w-full"></div>
+      <div class="grain absolute inset-0 rounded-[26px]"></div>
+      <div class="card absolute -bottom-6 -left-2 sm:-left-6 p-5 max-w-[260px] ring-accent">
+        <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">The room, today</div>
+        <div class="flex items-center gap-2 mt-2 text-[13px]">
+          <span class="pulse-dot"></span>
+          <span class="text-[color:var(--fg-muted)]">Lisbon — 4 working, 2 on calls</span>
+        </div>
+        <div class="dot-divider my-4"></div>
+        <div class="display text-3xl tabular">8</div>
+        <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)] mt-1">People. That's the whole studio.</div>
+      </div>
+    </div>
+    <div>
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">The studio</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Small on purpose. <span class="half-tone italic">Senior by default.</span></h2>
+      <p class="text-[color:var(--fg-muted)] mt-5 leading-relaxed">We started Foldglass in a Lisbon attic in 2017 because we were tired of agencies where the people who pitched the work never touched it. Here, the designer you meet is the designer who builds it. Eight of us, no juniors hidden in a back room, no account layer between you and the people doing the work.</p>
+      <ul class="mt-7 space-y-3.5 text-[15.5px]">
+        <li class="flex gap-3 items-start"><span class="check mt-0.5"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>One senior lead from kickoff to handoff — never reassigned mid-project.</span></li>
+        <li class="flex gap-3 items-start"><span class="check mt-0.5"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>We take three clients a quarter. When we're full, we'll tell you the next opening.</span></li>
+        <li class="flex gap-3 items-start"><span class="check mt-0.5"><svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Fixed scope, fixed price, fixed date — quoted before you sign anything.</span></li>
+      </ul>
+      <a href="#contact" class="inline-flex items-center gap-1.5 mt-8 accent text-[14.5px] lift font-medium">Meet the eight of us
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section id="voices" class="border-t hairline" style="background:var(--surface-2)">
+  <div class="max-w-[1280px] mx-auto px-5 sm:px-7 py-20 md:py-28">
+    <div class="max-w-2xl">
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">Voices</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Founders who'd <span class="half-tone italic">hire us twice.</span></h2>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-12">
+      <div class="card p-6">
+        <div class="flex gap-0.5 accent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        </div>
+        <blockquote class="mt-4 text-[15.5px] leading-relaxed serif italic">"We came in with a logo and left with a company. Six weeks later we closed our Series A — three partners told us the brand is why they took the meeting."</blockquote>
+        <div class="flex items-center gap-3 mt-6">
+          <div class="w-9 h-9 rounded-full grid place-items-center mono text-[12px] font-semibold" style="background:rgba(var(--accent-r),0.16);color:var(--accent)">AG</div>
+          <div class="text-[13px]">
+            <div class="font-medium">Aaliyah Greene</div>
+            <div class="text-[color:var(--fg-faint)]">Founder · Northwind Power</div>
+          </div>
+        </div>
+      </div>
+      <div class="card p-6">
+        <div class="flex gap-0.5 accent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        </div>
+        <blockquote class="mt-4 text-[15.5px] leading-relaxed serif italic">"The launch film did 1.4 million views in 48 hours. I've worked with agencies ten times their size that couldn't have made it half as sharp."</blockquote>
+        <div class="flex items-center gap-3 mt-6">
+          <div class="w-9 h-9 rounded-full grid place-items-center mono text-[12px] font-semibold" style="background:rgba(var(--accent-r),0.16);color:var(--accent)">DS</div>
+          <div class="text-[13px]">
+            <div class="font-medium">Diego Sastre</div>
+            <div class="text-[color:var(--fg-faint)]">CEO · Cassette</div>
+          </div>
+        </div>
+      </div>
+      <div class="card p-6">
+        <div class="flex gap-0.5 accent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        </div>
+        <blockquote class="mt-4 text-[15.5px] leading-relaxed serif italic">"Foldglass quoted a date and hit it to the day. The packaging sold out three regions in nine days — our ops team still hasn't forgiven them."</blockquote>
+        <div class="flex items-center gap-3 mt-6">
+          <div class="w-9 h-9 rounded-full grid place-items-center mono text-[12px] font-semibold" style="background:rgba(var(--accent-r),0.16);color:var(--accent)">TF</div>
+          <div class="text-[13px]">
+            <div class="font-medium">Tamsin Fellowes</div>
+            <div class="text-[color:var(--fg-faint)]">Founder · Pavilion Tea</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="border-t hairline">
+  <div class="max-w-[1280px] mx-auto px-5 sm:px-7 py-20 md:py-28 grid grid-cols-1 lg:grid-cols-[0.8fr_1.2fr] gap-12">
+    <div>
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">Before you write</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">The questions <span class="half-tone italic">we always get.</span></h2>
+      <p class="text-[color:var(--fg-muted)] mt-5 leading-relaxed max-w-sm">Still unsure? A 20-minute intro call sorts most of it. No deck, no pitch — just whether we're the right fit.</p>
+    </div>
+    <div>
+      <details class="py-5 border-b hairline group" open>
+        <summary class="flex items-center justify-between gap-6">
+          <span class="text-[16.5px] font-medium serif">What does a full brand + site engagement cost?</span>
+          <span class="faq-plus mono text-xl leading-none">+</span>
+        </summary>
+        <p class="mt-3 text-[color:var(--fg-muted)] leading-relaxed text-[14.5px]">A complete identity plus a marketing site typically runs €38k–€72k depending on scope and how many surfaces we design. We quote a fixed number before you sign — no hourly billing, no surprise overage. The two-week Launch Sprint is a flat €18k.</p>
+      </details>
+      <details class="py-5 border-b hairline group">
+        <summary class="flex items-center justify-between gap-6">
+          <span class="text-[16.5px] font-medium serif">How can you ship a rebrand in six weeks?</span>
+          <span class="faq-plus mono text-xl leading-none">+</span>
+        </summary>
+        <p class="mt-3 text-[color:var(--fg-muted)] leading-relaxed text-[14.5px]">Because we take one project at a time per lead and skip the layers most agencies add. Week 1–2 is strategy and naming, 3–4 is identity, 5–6 is application and build. You get something real to react to every Friday, so nothing piles up for a big reveal at the end.</p>
+      </details>
+      <details class="py-5 border-b hairline group">
+        <summary class="flex items-center justify-between gap-6">
+          <span class="text-[16.5px] font-medium serif">Do you build the site or just design it?</span>
+          <span class="faq-plus mono text-xl leading-none">+</span>
+        </summary>
+        <p class="mt-3 text-[color:var(--fg-muted)] leading-relaxed text-[14.5px]">We build it. Two of our eight are engineers — we ship in Framer, Next.js, or Astro and hand over the repo plus a CMS your marketing team can run without us. You're never stuck waiting on the studio to change a headline.</p>
+      </details>
+      <details class="py-5 border-b hairline group">
+        <summary class="flex items-center justify-between gap-6">
+          <span class="text-[16.5px] font-medium serif">Who actually does the work — and do they stay on?</span>
+          <span class="faq-plus mono text-xl leading-none">+</span>
+        </summary>
+        <p class="mt-3 text-[color:var(--fg-muted)] leading-relaxed text-[14.5px]">The senior who runs your kickoff runs your project end to end. We don't reassign mid-engagement and we don't hide juniors behind a creative director. The person presenting the work is the person who made it.</p>
+      </details>
+      <details class="py-5 border-b hairline group">
+        <summary class="flex items-center justify-between gap-6">
+          <span class="text-[16.5px] font-medium serif">We're pre-revenue. Will you still take us on?</span>
+          <span class="faq-plus mono text-xl leading-none">+</span>
+        </summary>
+        <p class="mt-3 text-[color:var(--fg-muted)] leading-relaxed text-[14.5px]">Often, yes — about a third of our work is pre-launch founders. We reserve one slot a quarter for early-stage companies at a reduced rate when the idea is strong and the timing is right. Tell us where you are; we'll be straight with you.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section id="contact" class="border-t hairline relative overflow-hidden">
+  <div class="absolute inset-0 dot-grid opacity-80 pointer-events-none"></div>
+  <div class="absolute inset-x-0 top-0 h-[420px] hero-fade pointer-events-none"></div>
+  <div class="relative max-w-[1280px] mx-auto px-5 sm:px-7 py-24 md:py-32">
+    <div class="card ring-accent rounded-[26px] p-8 md:p-14 text-center max-w-3xl mx-auto" style="background:var(--surface)">
+      <div class="badge text-[10.5px] px-2.5 py-1 inline-flex items-center gap-2 mx-auto">
+        <span class="pulse-dot"></span>
+        Replies within one business day
+      </div>
+      <h2 class="display text-5xl md:text-7xl mt-6">Let's make something <span class="half-tone italic">worth keeping.</span></h2>
+      <p class="text-[color:var(--fg-muted)] mt-5 text-[17px] leading-relaxed max-w-xl mx-auto">Tell us what you're building and the date you need to be live. We'll come back with whether we're a fit and what it would take.</p>
+      <div class="mt-9 flex items-center gap-3 flex-wrap justify-center">
+        <a href="#" class="btn-primary lift rounded-full px-6 h-12 inline-flex items-center gap-1.5 text-[15px]">
+          Book an intro call
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="mailto:studio@foldglass.co" class="btn-ghost lift rounded-full px-6 h-12 inline-flex items-center text-[15px]">studio@foldglass.co</a>
+      </div>
+      <div class="mt-8 mono text-[12px] uppercase tracking-[0.16em] text-[color:var(--fg-faint)]">Lisbon · New York · remote everywhere else</div>
+    </div>
+  </div>
+</section>
+
+<footer class="border-t hairline" style="background:var(--surface-2)">
+  <div class="max-w-[1280px] mx-auto px-5 sm:px-7 py-14">
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-8">
+      <div class="col-span-2">
+        <a href="#" class="flex items-center gap-2.5">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="2.5" y="2.5" width="19" height="19" rx="3.5" stroke="var(--fg)" stroke-width="1.3"/>
+            <path d="M12 3.5L20.5 12 12 20.5 3.5 12 12 3.5Z" stroke="var(--accent)" stroke-width="1.3"/>
+          </svg>
+          <span class="text-[15px] font-semibold tracking-tight">Foldglass</span>
+        </a>
+        <p class="text-[color:var(--fg-muted)] text-[14px] mt-4 max-w-xs leading-relaxed serif italic">A creative studio for brands worth a second look.</p>
+        <div class="badge text-[10.5px] px-2.5 py-1 inline-flex items-center gap-2 mt-5">
+          <span class="pulse-dot"></span>
+          2 project slots open — Q3 2026
+        </div>
+      </div>
+      <div>
+        <div class="mono text-[10.5px] uppercase tracking-[0.16em] text-[color:var(--fg-faint)]">Studio</div>
+        <ul class="mt-4 space-y-2.5 text-[14px] text-[color:var(--fg-muted)]">
+          <li><a href="#work" class="hover:text-[color:var(--fg)] lift">Work</a></li>
+          <li><a href="#services" class="hover:text-[color:var(--fg)] lift">Services</a></li>
+          <li><a href="#studio" class="hover:text-[color:var(--fg)] lift">About</a></li>
+          <li><a href="#" class="hover:text-[color:var(--fg)] lift">Careers</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="mono text-[10.5px] uppercase tracking-[0.16em] text-[color:var(--fg-faint)]">Connect</div>
+        <ul class="mt-4 space-y-2.5 text-[14px] text-[color:var(--fg-muted)]">
+          <li><a href="#" class="hover:text-[color:var(--fg)] lift">Instagram</a></li>
+          <li><a href="#" class="hover:text-[color:var(--fg)] lift">Behance</a></li>
+          <li><a href="#" class="hover:text-[color:var(--fg)] lift">Dribbble</a></li>
+          <li><a href="#" class="hover:text-[color:var(--fg)] lift">Read</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="mono text-[10.5px] uppercase tracking-[0.16em] text-[color:var(--fg-faint)]">Say hi</div>
+        <ul class="mt-4 space-y-2.5 text-[14px] text-[color:var(--fg-muted)]">
+          <li><a href="mailto:studio@foldglass.co" class="hover:text-[color:var(--fg)] lift">studio@foldglass.co</a></li>
+          <li><a href="#contact" class="hover:text-[color:var(--fg)] lift">Start a project</a></li>
+          <li><a href="#" class="hover:text-[color:var(--fg)] lift">Press kit</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="mt-12 pt-6 border-t hairline flex flex-col sm:flex-row items-center justify-between gap-4 text-[12.5px] text-[color:var(--fg-faint)]">
+      <span>© 2026 Foldglass Studio, Lda.</span>
+      <div class="flex items-center gap-5">
+        <a href="#" class="hover:text-[color:var(--fg)]">Privacy</a>
+        <a href="#" class="hover:text-[color:var(--fg)]">Terms</a>
+        <span class="mono">v3 · made in Lisbon</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

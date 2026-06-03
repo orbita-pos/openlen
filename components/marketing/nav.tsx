@@ -98,12 +98,11 @@ export function Nav({ dark, onToggleDark }: NavProps) {
           </Link>
           {/* Mobile menu toggle — the desktop nav and (on the smallest screens)
               the auth CTAs are hidden, so without this a phone visitor can't
-              reach the links or sign up. aria-label is hardcoded English for
-              now; localize via a marketing.nav.menu key later. */}
+              reach the links or sign up. */}
           <button
             type="button"
             onClick={() => setMenuOpen((o) => !o)}
-            aria-label="Menu"
+            aria-label={t("nav.menu")}
             aria-expanded={menuOpen}
             aria-controls="mobile-nav-panel"
             className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-md text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-900 transition-colors"

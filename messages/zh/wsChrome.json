@@ -1,14 +1,38 @@
 {
   "sidebar": {
     "tabs": {
-      "chat": { "label": "对话", "title": "与 Orchestra 对话" },
-      "templates": { "label": "模板", "title": "从模板开始" },
-      "library": { "label": "区块库", "title": "插入区块" },
-      "pages": { "label": "页面", "title": "最近的项目" },
-      "leads": { "label": "线索", "title": "表单提交" },
-      "insights": { "label": "数据洞察", "title": "页面分析" },
-      "versions": { "label": "版本", "title": "版本历史" },
-      "brief": { "label": "需求说明", "title": "项目需求说明（AI 上下文）" }
+      "chat": {
+        "label": "对话",
+        "title": "与 Orchestra 对话"
+      },
+      "templates": {
+        "label": "模板",
+        "title": "从模板开始"
+      },
+      "library": {
+        "label": "区块库",
+        "title": "插入区块"
+      },
+      "pages": {
+        "label": "页面",
+        "title": "最近的项目"
+      },
+      "leads": {
+        "label": "线索",
+        "title": "表单提交"
+      },
+      "insights": {
+        "label": "数据洞察",
+        "title": "页面分析"
+      },
+      "versions": {
+        "label": "版本",
+        "title": "版本历史"
+      },
+      "brief": {
+        "label": "需求说明",
+        "title": "项目需求说明（AI 上下文）"
+      }
     },
     "tabLocked": "{label} — 已锁定",
     "expandPanel": "展开面板",
@@ -41,12 +65,17 @@
       "clear": "清除"
     },
     "iframeTitle": "OpenLen 工作区预览",
-    "redesigning": "正在重新设计你的页面…"
+    "redesigning": "正在重新设计你的页面…",
+    "viewport": {
+      "desktop": "桌面预览",
+      "tablet": "平板预览",
+      "mobile": "移动预览"
+    }
   },
   "placeholder": {
     "ai": {
       "title": "在侧边栏中描述你的页面需求",
-      "hint": "描述你想要的效果，编排器会为你生成。"
+      "hint": "描述你想要的，AI 帮你生成。"
     },
     "template": {
       "title": "在侧边栏中浏览模板库",
@@ -67,7 +96,7 @@
     "cards": {
       "ai": {
         "title": "用 AI 生成",
-        "description": "用日常语言描述你的页面，我们来生成。",
+        "description": "用日常语言描述你的页面，AI 帮你生成。",
         "detail": "需求说明 → 约 30 秒生成页面"
       },
       "template": {

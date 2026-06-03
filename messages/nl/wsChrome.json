@@ -1,14 +1,38 @@
 {
   "sidebar": {
     "tabs": {
-      "chat": { "label": "Chat", "title": "Chat met Orchestra" },
-      "templates": { "label": "Sjablonen", "title": "Begin met een sjabloon" },
-      "library": { "label": "Bibliotheek", "title": "Voeg een sectie toe" },
-      "pages": { "label": "Pagina's", "title": "Recente projecten" },
-      "leads": { "label": "Leads", "title": "Formulierinzendingen" },
-      "insights": { "label": "Inzichten", "title": "Pagina-analyse" },
-      "versions": { "label": "Versies", "title": "Versiegeschiedenis" },
-      "brief": { "label": "Briefing", "title": "Projectbriefing (AI-context)" }
+      "chat": {
+        "label": "Chat",
+        "title": "Chat met Orchestra"
+      },
+      "templates": {
+        "label": "Sjablonen",
+        "title": "Begin met een sjabloon"
+      },
+      "library": {
+        "label": "Bibliotheek",
+        "title": "Voeg een sectie toe"
+      },
+      "pages": {
+        "label": "Pagina's",
+        "title": "Recente projecten"
+      },
+      "leads": {
+        "label": "Leads",
+        "title": "Formulierinzendingen"
+      },
+      "insights": {
+        "label": "Inzichten",
+        "title": "Pagina-analyse"
+      },
+      "versions": {
+        "label": "Versies",
+        "title": "Versiegeschiedenis"
+      },
+      "brief": {
+        "label": "Briefing",
+        "title": "Projectbriefing (AI-context)"
+      }
     },
     "tabLocked": "{label} — vergrendeld",
     "expandPanel": "Paneel uitvouwen",
@@ -41,12 +65,17 @@
       "clear": "Wissen"
     },
     "iframeTitle": "Voorbeeld van OpenLen-werkruimte",
-    "redesigning": "Je pagina wordt opnieuw ontworpen…"
+    "redesigning": "Je pagina wordt opnieuw ontworpen…",
+    "viewport": {
+      "desktop": "Desktopvoorbeeld",
+      "tablet": "Tabletvoorbeeld",
+      "mobile": "Mobiel voorbeeld"
+    }
   },
   "placeholder": {
     "ai": {
       "title": "Brief je pagina in de zijbalk",
-      "hint": "Beschrijf wat je wilt en de orchestrator stelt het samen."
+      "hint": "Beschrijf wat je wilt en de AI bouwt het."
     },
     "template": {
       "title": "Blader door de galerij in de zijbalk",
@@ -67,7 +96,7 @@
     "cards": {
       "ai": {
         "title": "Genereren met AI",
-        "description": "Beschrijf je pagina in gewone taal. Wij stellen het samen.",
+        "description": "Beschrijf je pagina in gewone taal. De AI bouwt 'm voor je.",
         "detail": "Briefing → pagina in ~30s"
       },
       "template": {

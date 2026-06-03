@@ -153,7 +153,7 @@ export function SectionPreviewModal({
             type="button"
             onClick={() => onUse(section)}
             disabled={using}
-            className="shrink-0 inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[var(--accent)] text-white text-[12.5px] font-semibold shadow-coral hover:brightness-105 transition disabled:opacity-60 disabled:cursor-wait"
+            className="shrink-0 inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[var(--accent-strong)] text-white text-[12.5px] font-semibold shadow-coral hover:brightness-105 transition disabled:opacity-60 disabled:cursor-wait"
           >
             {using ? (
               <>

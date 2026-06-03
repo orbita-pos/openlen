@@ -134,11 +134,18 @@ export async function Comparison() {
         </div>
 
         <div className="mt-14 rounded-2xl ring-1 ring-zinc-200 dark:ring-zinc-800 bg-white dark:bg-[#0a0a0a] overflow-hidden">
-          <div className="overflow-x-auto">
+          <div
+            className="overflow-x-auto"
+            tabIndex={0}
+            role="region"
+            aria-label={t("comparison.title")}
+          >
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950">
-                  <th scope="col" className="sticky left-0 z-10 bg-zinc-50/80 dark:bg-zinc-950 px-6 py-4 text-xs font-medium uppercase tracking-wider text-zinc-600 dark:text-zinc-400" />
+                  <th scope="col" className="sticky left-0 z-10 bg-zinc-50/80 dark:bg-zinc-950 px-6 py-4 text-xs font-medium uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
+                    <span className="sr-only">{t("comparison.featureColumn")}</span>
+                  </th>
                   {cols.map((c) => (
                     <th
                       key={c}

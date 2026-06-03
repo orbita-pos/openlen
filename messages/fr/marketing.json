@@ -9,7 +9,8 @@
     "githubAria": "OpenLen sur GitHub",
     "toggleDark": "Activer le mode sombre",
     "signIn": "Se connecter",
-    "tryFree": "Essayer gratuitement"
+    "tryFree": "Essayer gratuitement",
+    "menu": "Menu"
   },
   "hero": {
     "alphaBadge": "Alpha",
@@ -87,7 +88,8 @@
       "paidTier": "Offre payante"
     },
     "thatsUs": "c'est nous",
-    "footnote": "Les tarifs reflètent les offres publiques en date de mai 2026. Linktree est inclus parce que nos 30 modèles link-in-bio pour créateurs visent le même public — la différence, c'est que le HTML et le sous-domaine vous appartiennent."
+    "footnote": "Les tarifs reflètent les offres publiques en date de mai 2026. Linktree est inclus parce que nos 30 modèles link-in-bio pour créateurs visent le même public — la différence, c'est que le HTML et le sous-domaine vous appartiennent.",
+    "featureColumn": "Fonctionnalité"
   },
   "creatorShowcase": {
     "badge": "Pour les créateurs",

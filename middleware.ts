@@ -1,6 +1,7 @@
 import createIntlMiddleware from "next-intl/middleware";
 import { NextResponse, type NextRequest } from "next/server";
-import { auth } from "@/auth";
+import NextAuth from "next-auth";
+import authConfig from "@/auth.config";
 import { routing } from "@/i18n/routing";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -23,6 +24,11 @@ import { routing } from "@/i18n/routing";
 
 const intlMiddleware = createIntlMiddleware(routing);
 const locales = routing.locales as readonly string[];
+
+// Edge-safe auth instance built from the DB-free config (auth.config.ts).
+// Importing `auth` from "@/auth" here would pull the node-postgres driver into
+// the middleware's edge bundle and break `next build`.
+const { auth } = NextAuth(authConfig);
 
 const PROTECTED = ["/new", "/projects"];
 

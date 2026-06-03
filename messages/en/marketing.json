@@ -9,7 +9,8 @@
     "githubAria": "OpenLen on GitHub",
     "toggleDark": "Toggle dark mode",
     "signIn": "Sign in",
-    "tryFree": "Try it free"
+    "tryFree": "Try it free",
+    "menu": "Menu"
   },
   "hero": {
     "alphaBadge": "Alpha",
@@ -87,7 +88,8 @@
       "paidTier": "Paid tier"
     },
     "thatsUs": "that's us",
-    "footnote": "Pricing reflects public plans as of May 2026. Linktree included because our 30 link-in-bio creator templates target the same audience — difference is you own the HTML and the subdomain."
+    "footnote": "Pricing reflects public plans as of May 2026. Linktree included because our 30 link-in-bio creator templates target the same audience — difference is you own the HTML and the subdomain.",
+    "featureColumn": "Feature"
   },
   "creatorShowcase": {
     "badge": "For creators",

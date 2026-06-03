@@ -9,7 +9,8 @@
     "githubAria": "OpenLen op GitHub",
     "toggleDark": "Donkere modus aan/uit",
     "signIn": "Inloggen",
-    "tryFree": "Probeer gratis"
+    "tryFree": "Probeer gratis",
+    "menu": "Menu"
   },
   "hero": {
     "alphaBadge": "Alpha",
@@ -87,7 +88,8 @@
       "paidTier": "Betaald abonnement"
     },
     "thatsUs": "dat zijn wij",
-    "footnote": "Prijzen weerspiegelen de openbare abonnementen van mei 2026. Linktree is opgenomen omdat onze 30 link-in-bio creatortemplates op hetzelfde publiek mikken — het verschil is dat jij de HTML en het subdomein bezit."
+    "footnote": "Prijzen weerspiegelen de openbare abonnementen van mei 2026. Linktree is opgenomen omdat onze 30 link-in-bio creatortemplates op hetzelfde publiek mikken — het verschil is dat jij de HTML en het subdomein bezit.",
+    "featureColumn": "Functie"
   },
   "creatorShowcase": {
     "badge": "Voor creators",

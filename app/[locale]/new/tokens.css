@@ -14,6 +14,7 @@
   --border-strong: oklch(78% 0.005 12 / 0.8);
   --hover:         oklch(95% 0.005 12);
   --accent:        #FF5A36;
+  --accent-strong: #D63916;  /* white-text CTA fill — #fff on it = 4.7:1 (WCAG AA) */
   --accent-soft:   oklch(96% 0.04 30);
   --accent-ring:   oklch(74% 0.18 30);
   --shadow-card:   0 1px 2px 0 oklch(0% 0 0 / 0.04), 0 1px 3px 0 oklch(0% 0 0 / 0.04);

@@ -9,7 +9,8 @@
     "githubAria": "OpenLen no GitHub",
     "toggleDark": "Alternar modo escuro",
     "signIn": "Entrar",
-    "tryFree": "Teste grátis"
+    "tryFree": "Teste grátis",
+    "menu": "Menu"
   },
   "hero": {
     "alphaBadge": "Alpha",
@@ -87,7 +88,8 @@
       "paidTier": "Plano pago"
     },
     "thatsUs": "somos nós",
-    "footnote": "Os preços refletem os planos públicos de maio de 2026. O Linktree foi incluído porque nossos 30 templates de link na bio para criadores miram o mesmo público — a diferença é que o HTML e o subdomínio são seus."
+    "footnote": "Os preços refletem os planos públicos de maio de 2026. O Linktree foi incluído porque nossos 30 templates de link na bio para criadores miram o mesmo público — a diferença é que o HTML e o subdomínio são seus.",
+    "featureColumn": "Recurso"
   },
   "creatorShowcase": {
     "badge": "Para criadores",

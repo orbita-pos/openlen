@@ -1,14 +1,38 @@
 {
   "sidebar": {
     "tabs": {
-      "chat": { "label": "Chat", "title": "Converse com o Orchestra" },
-      "templates": { "label": "Templates", "title": "Comece com um template" },
-      "library": { "label": "Biblioteca", "title": "Inserir uma seção" },
-      "pages": { "label": "Páginas", "title": "Projetos recentes" },
-      "leads": { "label": "Leads", "title": "Envios de formulário" },
-      "insights": { "label": "Insights", "title": "Análise da página" },
-      "versions": { "label": "Versões", "title": "Histórico de versões" },
-      "brief": { "label": "Briefing", "title": "Briefing do projeto (contexto da IA)" }
+      "chat": {
+        "label": "Chat",
+        "title": "Converse com o Orchestra"
+      },
+      "templates": {
+        "label": "Templates",
+        "title": "Comece com um template"
+      },
+      "library": {
+        "label": "Biblioteca",
+        "title": "Inserir uma seção"
+      },
+      "pages": {
+        "label": "Páginas",
+        "title": "Projetos recentes"
+      },
+      "leads": {
+        "label": "Leads",
+        "title": "Envios de formulário"
+      },
+      "insights": {
+        "label": "Insights",
+        "title": "Análise da página"
+      },
+      "versions": {
+        "label": "Versões",
+        "title": "Histórico de versões"
+      },
+      "brief": {
+        "label": "Briefing",
+        "title": "Briefing do projeto (contexto da IA)"
+      }
     },
     "tabLocked": "{label} — bloqueado",
     "expandPanel": "Expandir painel",
@@ -41,12 +65,17 @@
       "clear": "Limpar"
     },
     "iframeTitle": "Pré-visualização do espaço de trabalho do OpenLen",
-    "redesigning": "Redesenhando sua página…"
+    "redesigning": "Redesenhando sua página…",
+    "viewport": {
+      "desktop": "Pré-visualização desktop",
+      "tablet": "Pré-visualização tablet",
+      "mobile": "Pré-visualização móvel"
+    }
   },
   "placeholder": {
     "ai": {
       "title": "Descreva sua página na barra lateral",
-      "hint": "Diga o que você quer e o orquestrador vai montar para você."
+      "hint": "Descreva o que você quer e a IA constrói."
     },
     "template": {
       "title": "Explore a galeria na barra lateral",
@@ -67,7 +96,7 @@
     "cards": {
       "ai": {
         "title": "Gerar com IA",
-        "description": "Descreva sua página em palavras simples. A gente monta.",
+        "description": "Descreva sua página em linguagem simples. A IA a cria para você.",
         "detail": "Briefing → página em ~30s"
       },
       "template": {
