@@ -21,7 +21,9 @@
     "designing": "페이지를 디자인하는 중…",
     "thinking": "디자인을 구상하는 중…",
     "serverSaturated": "서버가 매우 혼잡합니다 — 시간이 다소 걸릴 수 있어요. 페이지를 닫지 말아 주세요.",
-    "readingBrief": "브리프를 읽는 중…"
+    "readingBrief": "브리프를 읽는 중…",
+    "assembling": "페이지를 만드는 중",
+    "ready": "페이지가 준비되었습니다"
   },
   "aiError": {
     "title": "생성 실패",
@@ -35,5 +37,8 @@
   "editing": {
     "noHtml": "이 프로젝트에는 아직 HTML 콘텐츠가 없습니다.",
     "loading": "프로젝트를 불러오는 중…"
+  },
+  "a11y": {
+    "workspaceHeading": "OpenLen 작업 공간"
   }
 }

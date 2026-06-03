@@ -38,7 +38,7 @@ import {
   type InspectSelection,
   type PageMeta,
 } from "@/components/workspace-v2/panels/properties-panel";
-import { PageBuildingLoader } from "@/components/workspace-v2/page-building-loader";
+import { PageAssembling } from "@/components/workspace-v2/page-assembling";
 import {
   ReplaceAssetModal,
   type ReplaceKind,
@@ -359,11 +359,23 @@ function NewV2Inner() {
     const t = setTimeout(() => setGenSlow(true), 8000);
     return () => clearTimeout(t);
   }, [aiGenState]);
-  // When generation completes and the project has been persisted, drop
-  // the user into the editing surface for that project.
+  // Keep the last painted preview so the "done" beat can hold the finished
+  // page on screen (✓ ready) instead of cutting straight to a white flash.
+  const lastPreviewHtmlRef = useRef("");
+  useEffect(() => {
+    if (aiGenState.kind === "generating" && aiGenState.html) {
+      lastPreviewHtmlRef.current = aiGenState.html;
+    }
+  }, [aiGenState]);
+  // When generation completes and the project has been persisted, hold the
+  // finished page for a beat (✓ ready), then drop the user into editing.
   useEffect(() => {
     if (aiGenState.kind !== "done") return;
-    window.location.href = `/new?project=${aiGenState.projectId}`;
+    const projectId = aiGenState.projectId;
+    const timer = setTimeout(() => {
+      window.location.href = `/new?project=${projectId}`;
+    }, 1100);
+    return () => clearTimeout(timer);
   }, [aiGenState]);
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
@@ -1194,25 +1206,27 @@ function NewV2Inner() {
             <PreviewPlaceholder mode="template" />
           ))}
         {entryMode === "ai" && (
-          aiGenState.kind === "generating" ? (
+          aiGenState.kind === "generating" || aiGenState.kind === "done" ? (
             <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-preview-a">
-              <div className="h-9 shrink-0 flex items-center gap-2 px-4 border-b bd text-[11.5px] fg-muted">
-                <span className="h-3 w-3 rounded-full border-2 border-coral-500 border-t-transparent animate-spin" />
-                {aiGenState.notice
-                  ? aiGenState.notice
-                  : aiGenState.html
-                    ? t("aiStatus.designing")
-                    : t("aiStatus.thinking")}
-              </div>
-              <div className="flex-1 min-h-0">
-                <PageBuildingLoader
-                  caption={
-                    genSlow
-                      ? t("aiStatus.serverSaturated")
-                      : aiGenState.reasoning || t("aiStatus.readingBrief")
-                  }
-                />
-              </div>
+              <PageAssembling
+                html={
+                  aiGenState.kind === "generating"
+                    ? aiGenState.html || lastPreviewHtmlRef.current
+                    : lastPreviewHtmlRef.current
+                }
+                streaming={aiMode === "scratch" && aiGenState.kind === "generating"}
+                done={aiGenState.kind === "done"}
+                slow={genSlow}
+                caption={
+                  aiGenState.kind === "generating"
+                    ? aiGenState.notice
+                      ? aiGenState.notice
+                      : aiGenState.html
+                        ? t("aiStatus.designing")
+                        : t("aiStatus.thinking")
+                    : undefined
+                }
+              />
             </section>
           ) : aiGenState.kind === "error" ? (
             <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-preview-a">

@@ -21,7 +21,9 @@
     "designing": "Je pagina wordt ontworpen…",
     "thinking": "Bezig met nadenken over het ontwerp…",
     "serverSaturated": "De server is erg druk — dit kan even duren. Sluit de pagina niet.",
-    "readingBrief": "Je briefing wordt gelezen…"
+    "readingBrief": "Je briefing wordt gelezen…",
+    "assembling": "Je pagina wordt gebouwd",
+    "ready": "Je pagina is klaar"
   },
   "aiError": {
     "title": "Genereren mislukt",
@@ -35,5 +37,8 @@
   "editing": {
     "noHtml": "Dit project heeft nog geen HTML-inhoud.",
     "loading": "Project laden…"
+  },
+  "a11y": {
+    "workspaceHeading": "OpenLen-werkruimte"
   }
 }

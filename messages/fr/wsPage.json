@@ -21,7 +21,9 @@
     "designing": "Conception de votre page…",
     "thinking": "Réflexion sur le design…",
     "serverSaturated": "Le serveur est très sollicité — cela peut prendre un moment. Ne fermez pas la page.",
-    "readingBrief": "Lecture de votre brief…"
+    "readingBrief": "Lecture de votre brief…",
+    "assembling": "Construction de votre page",
+    "ready": "Votre page est prête"
   },
   "aiError": {
     "title": "Échec de la génération",
@@ -35,5 +37,8 @@
   "editing": {
     "noHtml": "Ce projet n'a pas encore de contenu HTML.",
     "loading": "Chargement du projet…"
+  },
+  "a11y": {
+    "workspaceHeading": "Espace de travail OpenLen"
   }
 }

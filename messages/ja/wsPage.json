@@ -21,7 +21,9 @@
     "designing": "ページをデザインしています…",
     "thinking": "デザインを考えています…",
     "serverSaturated": "サーバーが非常に混み合っています — しばらく時間がかかる場合があります。ページを閉じないでください。",
-    "readingBrief": "ブリーフを読み込んでいます…"
+    "readingBrief": "ブリーフを読み込んでいます…",
+    "assembling": "ページを作成中",
+    "ready": "ページが完成しました"
   },
   "aiError": {
     "title": "生成に失敗しました",
@@ -35,5 +37,8 @@
   "editing": {
     "noHtml": "このプロジェクトにはまだHTMLコンテンツがありません。",
     "loading": "プロジェクトを読み込んでいます…"
+  },
+  "a11y": {
+    "workspaceHeading": "OpenLen ワークスペース"
   }
 }

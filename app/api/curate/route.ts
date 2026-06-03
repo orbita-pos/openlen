@@ -29,6 +29,7 @@ import { fillAssembled } from "@/lib/assemble/fill";
 //
 // SSE events:
 //   progress { stage: "picking"|"loading"|"filling"|"persisting" }
+//   preview  { html }   — the chosen template (instant), then the filled page
 //   done     { projectId, title, templateId, filled, appliedOps, credits, durationMs }
 //   error    { kind, message }
 // ─────────────────────────────────────────────────────────────────────────────
@@ -131,6 +132,9 @@ export async function POST(req: Request): Promise<Response> {
           emit("error", { kind: "template-unavailable", message: "Chosen template's HTML is unavailable." });
           return close();
         }
+        // Show the real chosen design immediately — the user watches their
+        // actual page appear while the copy fills in next.
+        emit("preview", { html: templateHtml });
 
         // 3. Fill the invented copy (Gemini); degrades to the template's own copy.
         emit("progress", { stage: "filling" });
@@ -149,6 +153,9 @@ export async function POST(req: Request): Promise<Response> {
           return close();
         }
         const cleanHtml = sanitized.html;
+        // Swap the preview to the filled page so the copy visibly lands
+        // before the editor hand-off.
+        emit("preview", { html: cleanHtml });
 
         // 6. Persist as a new project.
         emit("progress", { stage: "persisting" });

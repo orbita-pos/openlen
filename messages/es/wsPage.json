@@ -21,7 +21,9 @@
     "designing": "Diseñando tu página…",
     "thinking": "Pensando el diseño…",
     "serverSaturated": "El servidor está muy saturado — esto puede tardar. No cierres la página, por favor.",
-    "readingBrief": "Leyendo tu brief…"
+    "readingBrief": "Leyendo tu brief…",
+    "assembling": "Armando tu página",
+    "ready": "Tu página está lista"
   },
   "aiError": {
     "title": "Falló la generación",
@@ -35,5 +37,8 @@
   "editing": {
     "noHtml": "Este proyecto aún no tiene contenido HTML.",
     "loading": "Cargando proyecto…"
+  },
+  "a11y": {
+    "workspaceHeading": "Espacio de trabajo de OpenLen"
   }
 }
