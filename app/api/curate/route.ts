@@ -14,7 +14,7 @@ import { normalizeBornCanonical } from "@/lib/normalize";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
 import { listTemplates, getTemplateHtml } from "@/lib/templates/store";
-import { pickTemplate, type TemplateCatalogItem } from "@/lib/curate/pick-template";
+import { pickTemplate, pickWeighted, type TemplateCatalogItem } from "@/lib/curate/pick-template";
 import { fillAssembled } from "@/lib/assemble/fill";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -123,11 +123,15 @@ export async function POST(req: Request): Promise<Response> {
           emit("error", { kind: pick.error.kind, message: `Pick failed: ${pick.error.message}` });
           return close();
         }
-        const chosen = templates.find((t) => t.id === pick.templateId);
+        // Pick one of the model's ranked candidates, biased toward #1 — so
+        // re-generating the same brief gives a different (still well-fitting)
+        // template instead of the same page every time.
+        const chosenId = pickWeighted(pick.templateIds);
+        const chosen = templates.find((t) => t.id === chosenId);
 
         // 2. Load the chosen template's HTML.
         emit("progress", { stage: "loading" });
-        const templateHtml = await getTemplateHtml(pick.templateId);
+        const templateHtml = await getTemplateHtml(chosenId);
         if (templateHtml === null) {
           emit("error", { kind: "template-unavailable", message: "Chosen template's HTML is unavailable." });
           return close();
@@ -195,7 +199,7 @@ export async function POST(req: Request): Promise<Response> {
         emit("done", {
           projectId,
           title,
-          templateId: pick.templateId,
+          templateId: chosenId,
           filled: fill.filled,
           appliedOps: fill.appliedOps,
           credits,
