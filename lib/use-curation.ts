@@ -152,6 +152,9 @@ function applyEvent(
     const stage = typeof data.stage === "string" ? data.stage : "";
     const notice = STAGE_TEXT[stage] ?? "Working…";
     setState((prev) => (prev.kind === "generating" ? { ...prev, notice } : prev));
+  } else if (event === "preview" && typeof data.html === "string") {
+    const html = data.html;
+    setState((prev) => (prev.kind === "generating" ? { ...prev, html } : prev));
   } else if (event === "done") {
     const projectId = typeof data.projectId === "string" ? data.projectId : "";
     const title = typeof data.title === "string" ? data.title : "Untitled page";

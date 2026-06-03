@@ -21,7 +21,9 @@
     "designing": "Deine Seite wird gestaltet …",
     "thinking": "Das Design wird durchdacht …",
     "serverSaturated": "Der Server ist stark ausgelastet – das kann einen Moment dauern. Bitte schließe die Seite nicht.",
-    "readingBrief": "Dein Briefing wird gelesen …"
+    "readingBrief": "Dein Briefing wird gelesen …",
+    "assembling": "Deine Seite wird erstellt",
+    "ready": "Deine Seite ist fertig"
   },
   "aiError": {
     "title": "Generierung fehlgeschlagen",
@@ -35,5 +37,8 @@
   "editing": {
     "noHtml": "Dieses Projekt hat noch keinen HTML-Inhalt.",
     "loading": "Projekt wird geladen …"
+  },
+  "a11y": {
+    "workspaceHeading": "OpenLen-Arbeitsbereich"
   }
 }

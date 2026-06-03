@@ -21,7 +21,9 @@
     "designing": "Criando o design da sua página…",
     "thinking": "Pensando no design…",
     "serverSaturated": "O servidor está muito ocupado — isso pode demorar um pouco. Não feche a página.",
-    "readingBrief": "Lendo seu briefing…"
+    "readingBrief": "Lendo seu briefing…",
+    "assembling": "Montando sua página",
+    "ready": "Sua página está pronta"
   },
   "aiError": {
     "title": "Falha na geração",
@@ -35,5 +37,8 @@
   "editing": {
     "noHtml": "Este projeto ainda não tem conteúdo HTML.",
     "loading": "Carregando projeto…"
+  },
+  "a11y": {
+    "workspaceHeading": "Espaço de trabalho do OpenLen"
   }
 }

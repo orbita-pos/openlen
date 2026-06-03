@@ -21,7 +21,9 @@
     "designing": "Stiamo progettando la tua pagina…",
     "thinking": "Stiamo studiando il design…",
     "serverSaturated": "Il server è molto occupato — potrebbe volerci un po'. Non chiudere la pagina.",
-    "readingBrief": "Stiamo leggendo il tuo brief…"
+    "readingBrief": "Stiamo leggendo il tuo brief…",
+    "assembling": "Creazione della tua pagina",
+    "ready": "La tua pagina è pronta"
   },
   "aiError": {
     "title": "Generazione non riuscita",
@@ -35,5 +37,8 @@
   "editing": {
     "noHtml": "Questo progetto non ha ancora contenuti HTML.",
     "loading": "Caricamento del progetto…"
+  },
+  "a11y": {
+    "workspaceHeading": "Area di lavoro OpenLen"
   }
 }

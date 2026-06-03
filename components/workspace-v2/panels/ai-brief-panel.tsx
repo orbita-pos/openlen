@@ -6,15 +6,18 @@
 
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
+  ChevronUp,
   Crosshair,
   ImageIcon,
   Loader,
+  Pencil,
   SendUp,
   Sparkles,
   Wand,
+  Zap,
 } from "../icons";
 import type { BriefFormState } from "@/components/workspace/types";
 import { QUICK_PROMPTS } from "@/lib/quick-prompts";
@@ -134,31 +137,13 @@ export function AiBriefPanel({
               >
                 <Wand size={13} />
               </button>
-              <div className="inline-flex items-center gap-0.5 rounded-md border bd bg-[color:var(--bg)] p-0.5">
-                <button
-                  type="button"
-                  disabled={generating}
-                  onClick={() => onModeChange("quick")}
-                  className={`h-6 px-2 rounded text-[11px] font-medium transition ${
-                    mode === "quick" ? "bg-elev fg shadow-card" : "fg-faint hover:fg"
-                  }`}
-                >
-                  {t("aiBrief.modeQuick")}
-                </button>
-                <button
-                  type="button"
-                  disabled={generating}
-                  onClick={() => onModeChange("scratch")}
-                  className={`h-6 px-2 rounded text-[11px] font-medium inline-flex items-center gap-1 transition ${
-                    mode === "scratch" ? "bg-elev fg shadow-card" : "fg-faint hover:fg"
-                  }`}
-                >
-                  {t("aiBrief.modeScratch")}
-                  <span className="text-[9px] uppercase tracking-wide px-1 rounded bg-accent-soft text-accent">
-                    Pro
-                  </span>
-                </button>
-              </div>
+              {/* Mode select — a compact dropdown (like the old model picker)
+                  so the two mode names don't crowd the row. */}
+              <ModeSelect
+                mode={mode}
+                onModeChange={onModeChange}
+                disabled={generating}
+              />
             </div>
             <button
               type="button"
@@ -184,6 +169,83 @@ export function AiBriefPanel({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Mode select — the curated/bespoke chooser, styled as a compact dropdown
+// (the same pattern as the old model picker) so its two option names live in
+// the popover instead of crowding the composer row.
+function ModeSelect({
+  mode,
+  onModeChange,
+  disabled,
+}: {
+  mode: "quick" | "scratch";
+  onModeChange: (m: "quick" | "scratch") => void;
+  disabled: boolean;
+}) {
+  const t = useTranslations("panelsA");
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    window.addEventListener("pointerdown", onDown);
+    return () => window.removeEventListener("pointerdown", onDown);
+  }, [open]);
+
+  const OPTIONS = [
+    { value: "quick" as const, icon: <Zap size={12} />, label: t("aiBrief.modeQuick"), pro: false },
+    { value: "scratch" as const, icon: <Pencil size={12} />, label: t("aiBrief.modeScratch"), pro: true },
+  ];
+  const current = OPTIONS.find((o) => o.value === mode) ?? OPTIONS[0];
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((o) => !o)}
+        className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-[10.5px] fg-muted hover:fg hover:bg-hover transition disabled:opacity-40"
+      >
+        {current.icon}
+        <span>{current.label}</span>
+        {current.pro && (
+          <span className="text-[8px] font-semibold uppercase tracking-wide text-accent">
+            Pro
+          </span>
+        )}
+        <ChevronUp size={10} className={open ? "rotate-180" : ""} />
+      </button>
+      {open && (
+        <div className="absolute bottom-full left-0 mb-1.5 w-44 rounded-lg border bd bg-elev shadow-card p-1 z-30">
+          {OPTIONS.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => {
+                onModeChange(o.value);
+                setOpen(false);
+              }}
+              className={`w-full inline-flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11.5px] transition ${
+                o.value === mode ? "bg-accent-soft text-accent" : "fg hover:bg-hover"
+              }`}
+            >
+              {o.icon}
+              <span>{o.label}</span>
+              {o.pro && (
+                <span className="ml-auto text-[8.5px] font-semibold uppercase tracking-wide text-accent">
+                  Pro
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -21,7 +21,9 @@
     "designing": "Designing your page…",
     "thinking": "Thinking through the design…",
     "serverSaturated": "The server is very busy — this may take a while. Please don't close the page.",
-    "readingBrief": "Reading your brief…"
+    "readingBrief": "Reading your brief…",
+    "assembling": "Building your page",
+    "ready": "Your page is ready"
   },
   "aiError": {
     "title": "Generation failed",
@@ -35,5 +37,8 @@
   "editing": {
     "noHtml": "This project has no HTML content yet.",
     "loading": "Loading project…"
+  },
+  "a11y": {
+    "workspaceHeading": "OpenLen workspace"
   }
 }
