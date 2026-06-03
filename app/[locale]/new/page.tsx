@@ -16,6 +16,7 @@ import { useTranslations } from "next-intl";
 import { PublishModal } from "@/components/workspace/publish-modal";
 import { useCuration } from "@/lib/use-curation";
 import { useGeneration } from "@/lib/use-generation";
+import { setGenerationBusy } from "@/lib/generation-busy";
 import { useAIModel } from "@/components/workspace-v2/model-picker";
 import type {
   FormConfig,
@@ -377,6 +378,13 @@ function NewV2Inner() {
     }, 1100);
     return () => clearTimeout(timer);
   }, [aiGenState]);
+  // Publish the in-flight generation state so the header's locale switcher can
+  // disable itself — switching locale navigates + remounts /new, which would
+  // drop the page being built. Cleared on unmount.
+  useEffect(() => {
+    setGenerationBusy(aiGenerating);
+    return () => setGenerationBusy(false);
+  }, [aiGenerating]);
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       const data = e.data;

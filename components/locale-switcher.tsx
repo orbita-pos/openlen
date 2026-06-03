@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Check, ChevronDown, Globe } from "lucide-react";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
+import { useGenerationBusy } from "@/lib/generation-busy";
 import { cn } from "@/lib/cn";
 
 const NATIVE_NAMES: Record<string, string> = {
@@ -34,6 +35,10 @@ export function LocaleSwitcher({ className }: { className?: string }) {
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  // While an AI generation is in flight on /new, switching locale would
+  // navigate + remount the workspace and drop the page being built — so the
+  // switcher disables itself until it finishes.
+  const busy = useGenerationBusy();
 
   // Close on outside click + Escape.
   useEffect(() => {
@@ -54,7 +59,7 @@ export function LocaleSwitcher({ className }: { className?: string }) {
 
   function switchTo(locale: string) {
     setOpen(false);
-    if (locale === active || pending) return;
+    if (locale === active || pending || busy) return;
     const search = typeof window !== "undefined" ? window.location.search : "";
     const query = Object.fromEntries(new URLSearchParams(search));
     startTransition(() => {
@@ -67,7 +72,7 @@ export function LocaleSwitcher({ className }: { className?: string }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        disabled={pending}
+        disabled={pending || busy}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={t("language")}
@@ -78,7 +83,8 @@ export function LocaleSwitcher({ className }: { className?: string }) {
           "dark:text-zinc-300 dark:hover:bg-zinc-800/70 dark:hover:text-white",
           "focus:outline-none focus-visible:ring-2 focus-visible:ring-coral-500/40",
           open && "bg-zinc-100 text-zinc-900 dark:bg-zinc-800/70 dark:text-white",
-          pending && "opacity-60",
+          (pending || busy) && "opacity-60",
+          busy && "cursor-not-allowed",
         )}
       >
         <Globe size={14} className="shrink-0 text-zinc-400 dark:text-zinc-500" />
