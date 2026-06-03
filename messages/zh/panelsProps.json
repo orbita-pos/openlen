@@ -86,5 +86,23 @@
     "errorUploadStatus": "上传失败（{status}）",
     "errorUploadFailed": "上传失败",
     "errorFullUrl": "请使用完整的 https:// 网址。"
+  },
+  "theme": {
+    "title": "风格",
+    "darkMode": "深色模式",
+    "noDark": "此模板没有深色模式",
+    "reset": "还原",
+    "more": "更多",
+    "less": "收起",
+    "generator": "自定义生成",
+    "customColor": "自定义颜色",
+    "apply": "应用",
+    "generatorHint": "选一个颜色 → 完整协调的配色",
+    "cat": {
+      "editorial": "编辑风",
+      "minimal": "极简",
+      "vibrant": "鲜明",
+      "expressive": "个性"
+    }
   }
 }

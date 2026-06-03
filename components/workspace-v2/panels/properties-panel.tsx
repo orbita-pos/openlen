@@ -12,11 +12,24 @@
 
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { useTranslations } from "next-intl";
 import type { FormConfig } from "@/lib/projects/types";
 import { checkSeo, type SeoIssue, type SeoFixField } from "@/lib/seo-check";
 import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
+import {
+  THEME_PRESETS,
+  THEME_CATEGORIES,
+  type ThemePreset,
+} from "@/lib/theme-presets";
+import { lookFromAccent } from "@/lib/palette-gen";
 import {
   ColorField,
   RadiusField,
@@ -63,6 +76,13 @@ export interface PageMeta {
   description: string;
   ogImage: string;
   favicon: string;
+  /** Current light/dark mode of the page (the data-ol-mode attr on <html>).
+   *  Drives the Looks-row Dark toggle. */
+  mode?: "light" | "dark";
+  /** True when the born-canonical engine lifted a model-designed :root.dark
+   *  palette — the only case where flipping to dark stays coherent, so the
+   *  deterministic Dark toggle is gated on it. */
+  hasDark?: boolean;
 }
 
 interface PropertiesPanelProps {
@@ -101,6 +121,18 @@ interface PropertiesPanelProps {
   /** Persist the per-project logo. Pass null to clear it. Omit to hide
    *  the Logo section (entry-mode panels). */
   onApplyLogoUrl?: (logoUrl: string | null) => void;
+  /** Apply a curated theme preset — a {token: value} bundle posted to the
+   *  iframe as scope "theme-bundle", landing atomically. Omit to hide the
+   *  Looks row (entry-mode panels with no real project). */
+  onApplyLook?: (tokens: Record<string, string>) => void;
+  /** Flip the page's light/dark mode (deterministic; the panel only offers
+   *  the toggle when pageMeta.hasDark — a designed dark palette exists). */
+  onApplyThemeMode?: (mode: "light" | "dark") => void;
+  /** Reset the page's theme to its original (as-loaded) tokens + mode.
+   *  Omit to hide the reset affordance (no baseline captured yet). */
+  onResetTheme?: () => void;
+  /** The page's original accent hex — renders the "Original" bead's color. */
+  originalAccent?: string;
   /** Fire a test lead notification email to whichever address would
    *  receive the real one for this form. Resolves with the result so
    *  the FormView can render inline feedback. Omit to hide the button. */
@@ -128,6 +160,10 @@ export function PropertiesPanel({
   onApplyStyle,
   onToggleAnalytics,
   onApplyLogoUrl,
+  onApplyLook,
+  onApplyThemeMode,
+  onResetTheme,
+  originalAccent,
   onSendTestFormEmail,
   onClearSelection,
   onClose,
@@ -173,6 +209,10 @@ export function PropertiesPanel({
             onApply={onApplyPageMeta}
             onToggleAnalytics={onToggleAnalytics}
             onApplyLogoUrl={onApplyLogoUrl}
+            onApplyLook={onApplyLook}
+            onApplyThemeMode={onApplyThemeMode}
+            onResetTheme={onResetTheme}
+            originalAccent={originalAccent}
           />
         )}
       </div>
@@ -430,6 +470,10 @@ function PageView({
   onApply,
   onToggleAnalytics,
   onApplyLogoUrl,
+  onApplyLook,
+  onApplyThemeMode,
+  onResetTheme,
+  originalAccent,
 }: {
   pageMeta: PageMeta | null;
   html?: string;
@@ -440,6 +484,10 @@ function PageView({
   onApply: (field: keyof PageMeta, value: string) => void;
   onToggleAnalytics?: (disabled: boolean) => void;
   onApplyLogoUrl?: (logoUrl: string | null) => void;
+  onApplyLook?: (tokens: Record<string, string>) => void;
+  onApplyThemeMode?: (mode: "light" | "dark") => void;
+  onResetTheme?: () => void;
+  originalAccent?: string;
 }) {
   // Recompute the SEO report on every HTML change. Cheap (DOMParser on
   // ~50-100KB), no debouncing needed — the parent only updates html when
@@ -467,6 +515,16 @@ function PageView({
   }
   return (
     <div className="fade-in" ref={rootRef}>
+      {onApplyLook && (
+        <ThemeSection
+          mode={pageMeta.mode ?? "light"}
+          hasDark={!!pageMeta.hasDark}
+          onApplyLook={onApplyLook}
+          onApplyMode={onApplyThemeMode}
+          onReset={onResetTheme}
+          originalAccent={originalAccent}
+        />
+      )}
       {report && <SeoHealthSection report={report} onFix={focusField} />}
       {onApplyLogoUrl && (
         <LogoSection
@@ -525,6 +583,291 @@ function PageView({
         {t("page.clickHint")}
       </p>
     </div>
+  );
+}
+
+// A glossy 3D "bead" rendered from a single accent color — layered
+// specular highlight + satin shimmer + radial body shading (light center →
+// saturated → dark rim), with an inner highlight/shadow for depth. Lightened
+// and darkened stops are derived from the accent via color-mix.
+function orbStyle(accent: string): CSSProperties {
+  const light = `color-mix(in srgb, ${accent} 26%, #ffffff)`;
+  const dark = `color-mix(in srgb, ${accent} 64%, #000000)`;
+  const deep = `color-mix(in srgb, ${accent} 46%, #000000)`;
+  return {
+    background: [
+      // sharp specular hotspot — small, so the colour gradient dominates
+      "radial-gradient(circle at 34% 26%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 17%)",
+      // soft secondary sheen
+      "radial-gradient(circle at 30% 23%, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 33%)",
+      // iridescent satin streaks (pearly shimmer)
+      "conic-gradient(from 15deg at 50% 48%, rgba(255,255,255,0) 0deg, rgba(255,255,255,0.20) 55deg, rgba(255,255,255,0) 120deg, rgba(255,255,255,0.12) 180deg, rgba(255,255,255,0) 240deg, rgba(255,255,255,0.18) 310deg, rgba(255,255,255,0) 360deg)",
+      // body shading — strong light → saturated → dark → deep rim
+      `radial-gradient(circle at 42% 40%, ${light} 0%, ${accent} 42%, ${dark} 84%, ${deep} 100%)`,
+    ].join(", "),
+    boxShadow:
+      "inset 0 2px 3px rgba(255,255,255,0.55), inset 0 -6px 10px rgba(0,0,0,0.38), inset 0 0 0 1px rgba(0,0,0,0.12), 0 2px 5px -1px rgba(0,0,0,0.30)",
+  };
+}
+
+// The thin dark arc drawn around the picked bead (≈73% of the ring, gap at the
+// lower-right) — the "selected" affordance.
+function SelectedArc() {
+  return (
+    <svg
+      viewBox="0 0 52 52"
+      fill="none"
+      aria-hidden
+      className="absolute -inset-[3px] pointer-events-none"
+    >
+      <circle
+        cx="26"
+        cy="26"
+        r="24"
+        stroke="var(--fg)"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeDasharray="112 151"
+        transform="rotate(-118 26 26)"
+        opacity="0.8"
+      />
+    </svg>
+  );
+}
+
+// How many preset beads the compact inline row shows collapsed; the rest
+// reveal inline when the "+" is expanded. Keeps the row tidy by default.
+const INLINE_PRESET_MAX = 4;
+
+// A glossy accent bead button + label — shared by presets, Original, and the
+// generator preview.
+function Bead({
+  accent,
+  label,
+  title,
+  selected,
+  badge,
+  onClick,
+}: {
+  accent: string;
+  label: string;
+  title?: string;
+  selected?: boolean;
+  badge?: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-pressed={selected}
+      onClick={onClick}
+      className="group flex w-10 flex-col items-center gap-1.5 focus:outline-none"
+    >
+      <span className="relative inline-flex h-8 w-8 items-center justify-center rounded-full group-focus-visible:ring-2 group-focus-visible:ring-[color:var(--accent-ring)]/60">
+        <span
+          className="absolute inset-0 rounded-full transition-transform duration-150 group-hover:scale-[1.08] group-active:scale-95"
+          style={orbStyle(accent)}
+        />
+        {badge && (
+          <span className="absolute -bottom-0.5 -right-0.5 inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-app border bd text-[8px] leading-none fg-muted shadow-sm">
+            {badge}
+          </span>
+        )}
+        {selected && <SelectedArc />}
+      </span>
+      <span className="text-[9.5px] fg-faint leading-none truncate max-w-full">
+        {label}
+      </span>
+    </button>
+  );
+}
+
+// The dashed "+" / "−" bead that expands / collapses the full picker.
+function ExpandBead({
+  expanded,
+  label,
+  onClick,
+}: {
+  expanded: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <div className="flex w-10 flex-col items-center gap-1.5">
+      <button
+        type="button"
+        title={label}
+        aria-expanded={expanded}
+        onClick={onClick}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-dashed bd bg-elev fg-faint transition hover:bg-hover hover:fg focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-ring)]/60"
+      >
+        <span className="text-[16px] leading-none -mt-px">
+          {expanded ? "−" : "+"}
+        </span>
+      </button>
+      <span className="text-[9.5px] fg-faint leading-none truncate max-w-full">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+// Seed generator — pick one color, get a coherent, contrast-guaranteed recolor
+// (light + dark derived from the accent). Live preview bead; click to apply.
+function LookGenerator({ onApply }: { onApply: (accent: string) => void }) {
+  const t = useTranslations("panelsProps");
+  const [seed, setSeed] = useState("#6d5efc");
+  const previewAccent = useMemo(
+    () => lookFromAccent(seed).light["--ol-accent"],
+    [seed],
+  );
+  return (
+    <div className="flex flex-col gap-2 border-t bd pt-3">
+      <span className="text-[10px] uppercase tracking-[0.14em] fg-faint font-semibold">
+        {t("theme.generator")}
+      </span>
+      <div className="flex items-center gap-2.5">
+        <input
+          type="color"
+          value={seed}
+          onChange={(e) => setSeed(e.target.value)}
+          aria-label={t("theme.customColor")}
+          className="h-8 w-8 shrink-0 cursor-pointer rounded-full border bd bg-transparent p-0 overflow-hidden"
+        />
+        <Bead
+          accent={previewAccent}
+          label={t("theme.apply")}
+          title={t("theme.apply")}
+          onClick={() => onApply(seed)}
+        />
+        <p className="flex-1 text-[10px] fg-faint leading-snug">
+          {t("theme.generatorHint")}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// Looks — the deterministic theme picker. Original (the page's own theme) is
+// the first bead; curated presets are glossy accent beads; "+" expands the row
+// inline (no modal) to the full categorized library + a seed generator. The
+// picked bead gets a thin arc ring. Dark per look: applying a look in dark mode
+// (or toggling dark) swaps in a contrast-guaranteed dark palette derived from
+// the accent. The Dark toggle shows only where a designed dark exists (hasDark).
+function ThemeSection({
+  mode,
+  hasDark,
+  originalAccent,
+  onApplyLook,
+  onApplyMode,
+  onReset,
+}: {
+  mode: "light" | "dark";
+  hasDark: boolean;
+  originalAccent?: string;
+  onApplyLook: (tokens: Record<string, string>) => void;
+  onApplyMode?: (mode: "light" | "dark") => void;
+  onReset?: () => void;
+}) {
+  const t = useTranslations("panelsProps");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const hasMore = THEME_PRESETS.length > INLINE_PRESET_MAX;
+
+  const applyPreset = (preset: ThemePreset) => {
+    onApplyLook(preset.tokens);
+    setSelectedId(preset.id);
+  };
+  const applyGenerated = (accent: string) => {
+    onApplyLook(lookFromAccent(accent).light);
+    setSelectedId(null);
+  };
+  const originalBead = onReset ? (
+    <Bead
+      accent={originalAccent || "#9ca3af"}
+      label={t("theme.reset")}
+      title={t("theme.reset")}
+      badge="↺"
+      selected={selectedId === "__original__"}
+      onClick={() => {
+        onReset();
+        setSelectedId("__original__");
+      }}
+    />
+  ) : null;
+
+  return (
+    <Section label={t("theme.title")} icon={<PaletteIcon size={11} />}>
+      {!expanded ? (
+        <div className="flex flex-wrap gap-x-1.5 gap-y-3 pt-0.5">
+          {originalBead}
+          {THEME_PRESETS.slice(0, INLINE_PRESET_MAX).map((p) => (
+            <Bead
+              key={p.id}
+              accent={p.tokens["--ol-accent"] ?? "#888888"}
+              label={p.name}
+              title={p.hint}
+              selected={selectedId === p.id}
+              onClick={() => applyPreset(p)}
+            />
+          ))}
+          {hasMore && (
+            <ExpandBead
+              expanded={false}
+              label={t("theme.more")}
+              onClick={() => setExpanded(true)}
+            />
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3.5 pt-0.5">
+          <div className="flex flex-wrap items-start gap-x-1.5 gap-y-3">
+            {originalBead}
+            <ExpandBead
+              expanded
+              label={t("theme.less")}
+              onClick={() => setExpanded(false)}
+            />
+          </div>
+          {THEME_CATEGORIES.map((cat) => {
+            const inCat = THEME_PRESETS.filter((p) => p.category === cat);
+            if (inCat.length === 0) return null;
+            return (
+              <div key={cat}>
+                <span className="block text-[10px] uppercase tracking-[0.14em] fg-faint font-semibold mb-1.5">
+                  {t(`theme.cat.${cat}`)}
+                </span>
+                <div className="flex flex-wrap gap-x-1.5 gap-y-3">
+                  {inCat.map((p) => (
+                    <Bead
+                      key={p.id}
+                      accent={p.tokens["--ol-accent"] ?? "#888888"}
+                      label={p.name}
+                      title={p.hint}
+                      selected={selectedId === p.id}
+                      onClick={() => applyPreset(p)}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+          <LookGenerator onApply={applyGenerated} />
+        </div>
+      )}
+      {hasDark && onApplyMode ? (
+        <Toggle
+          label={t("theme.darkMode")}
+          on={mode === "dark"}
+          onChange={(on) => onApplyMode(on ? "dark" : "light")}
+        />
+      ) : (
+        <p className="text-[10.5px] fg-faint leading-relaxed">
+          {t("theme.noDark")}
+        </p>
+      )}
+    </Section>
   );
 }
 

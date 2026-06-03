@@ -86,5 +86,23 @@
     "errorUploadStatus": "Falha no envio ({status})",
     "errorUploadFailed": "Falha no envio",
     "errorFullUrl": "Use uma URL https:// completa."
+  },
+  "theme": {
+    "title": "Estilos",
+    "darkMode": "Modo escuro",
+    "noDark": "Este modelo não tem modo escuro",
+    "reset": "Original",
+    "more": "Mais",
+    "less": "Menos",
+    "generator": "Crie o seu",
+    "customColor": "Cor personalizada",
+    "apply": "Aplicar",
+    "generatorHint": "Escolha uma cor → uma paleta coerente completa",
+    "cat": {
+      "editorial": "Editorial",
+      "minimal": "Minimalista",
+      "vibrant": "Vibrante",
+      "expressive": "Expressivo"
+    }
   }
 }

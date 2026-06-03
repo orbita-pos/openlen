@@ -86,5 +86,23 @@
     "errorUploadStatus": "Error al subir ({status})",
     "errorUploadFailed": "Error al subir",
     "errorFullUrl": "Usa una URL https:// completa."
+  },
+  "theme": {
+    "title": "Estilos",
+    "darkMode": "Modo oscuro",
+    "noDark": "Esta plantilla no tiene modo oscuro",
+    "reset": "Original",
+    "more": "Más",
+    "less": "Menos",
+    "generator": "Crea el tuyo",
+    "customColor": "Color personalizado",
+    "apply": "Aplicar",
+    "generatorHint": "Elige un color → una paleta coherente completa",
+    "cat": {
+      "editorial": "Editorial",
+      "minimal": "Minimal",
+      "vibrant": "Vibrante",
+      "expressive": "Expresivo"
+    }
   }
 }

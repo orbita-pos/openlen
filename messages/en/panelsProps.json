@@ -86,5 +86,23 @@
     "errorUploadStatus": "Upload failed ({status})",
     "errorUploadFailed": "Upload failed",
     "errorFullUrl": "Use a full https:// URL."
+  },
+  "theme": {
+    "title": "Looks",
+    "darkMode": "Dark mode",
+    "noDark": "No dark mode for this template",
+    "reset": "Original",
+    "more": "More",
+    "less": "Less",
+    "generator": "Make your own",
+    "customColor": "Custom color",
+    "apply": "Apply",
+    "generatorHint": "Pick a color → a full coherent palette",
+    "cat": {
+      "editorial": "Editorial",
+      "minimal": "Minimal",
+      "vibrant": "Vibrant",
+      "expressive": "Expressive"
+    }
   }
 }

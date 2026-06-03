@@ -86,5 +86,23 @@
     "errorUploadStatus": "アップロードに失敗しました（{status}）",
     "errorUploadFailed": "アップロードに失敗しました",
     "errorFullUrl": "完全な https:// URL を使用してください。"
+  },
+  "theme": {
+    "title": "ルック",
+    "darkMode": "ダークモード",
+    "noDark": "このテンプレートはダークモードに対応していません",
+    "reset": "元に戻す",
+    "more": "もっと",
+    "less": "折りたたむ",
+    "generator": "自分で作る",
+    "customColor": "カスタムカラー",
+    "apply": "適用",
+    "generatorHint": "色を選ぶ → 一貫したパレット一式",
+    "cat": {
+      "editorial": "エディトリアル",
+      "minimal": "ミニマル",
+      "vibrant": "鮮やか",
+      "expressive": "個性的"
+    }
   }
 }

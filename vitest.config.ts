@@ -26,6 +26,8 @@ export default defineConfig({
       "lib/curate/**/*.test.ts",
       "lib/billing/**/*.test.ts",
       "lib/theme-derive.test.ts",
+      "lib/palette-gen-look.test.ts",
+      "lib/theme-presets.test.ts",
     ],
     exclude: ["node_modules/**", "tests/e2e/**", ".next/**"],
   },

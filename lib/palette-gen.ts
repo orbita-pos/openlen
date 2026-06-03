@@ -7,7 +7,7 @@
 // Color math runs in OkLCH for perceptual uniformity (close hues = close
 // perception), then formats to hex for the inspector.
 
-import { formatHex, oklch, rgb } from "culori";
+import { formatHex, oklch, rgb, wcagContrast } from "culori";
 import type { Oklch } from "culori";
 import type { Palette } from "./palettes";
 
@@ -163,6 +163,101 @@ export function generatePalettesAroundAccent(
     out.push(buildOne(hue, recipe, i, `Var ${i + 1}`));
   }
   return out;
+}
+
+// ── Seed → single coherent look (light + dark) ───────────────────────────
+// Used by the inspector's Looks generator ("pick one accent → a whole look")
+// and to derive a curated preset's dark counterpart from its accent. Produces
+// only the 5 base color tokens the Looks engine actually drives (muted/faint
+// tiers follow from --ol-fg in the born-canonical templates).
+
+export interface LookBase {
+  // Index signature so a LookBase is usable anywhere a token bundle
+  // (Record<string, string>) is expected — e.g. the inspector's onApplyLook.
+  [key: string]: string;
+  "--ol-bg": string;
+  "--ol-surface": string;
+  "--ol-fg": string;
+  "--ol-border": string;
+  "--ol-accent": string;
+}
+
+export interface ModeLook {
+  light: LookBase;
+  dark: LookBase;
+}
+
+// Minimum contrast the accent must clear against its own bg (WCAG AA for large
+// text / UI). Brand-true accents that already pass are kept verbatim; only the
+// ones that would be unreadable (e.g. bright yellow on white) get nudged.
+const ACCENT_MIN_CR = 3.1;
+
+/** Walk lightness in `dir` until the accent clears `target` contrast on `bg`,
+ *  keeping hue + chroma (so the brand identity survives, only legibility is
+ *  enforced). Returns the first passing hex, or the last tried at the L bound. */
+function accentForBg(
+  hue: number,
+  chroma: number,
+  startL: number,
+  bg: string,
+  target: number,
+  dir: "darken" | "brighten",
+): string {
+  let l = startL;
+  let hex = toHex(l, chroma, hue);
+  for (let i = 0; i < 32 && (wcagContrast(hex, bg) ?? 0) < target; i++) {
+    l += dir === "darken" ? -0.03 : 0.03;
+    if (l <= 0.06 || l >= 0.97) break;
+    hex = toHex(l, chroma, hue);
+  }
+  return hex;
+}
+
+/** Derive a coherent light + dark base palette from one accent seed. Hue +
+ *  chroma come from the accent (OkLCH); fg/bg lightness targets are fixed so
+ *  body text always clears AA by construction, and the accent is contrast-
+ *  guaranteed on each bg (kept verbatim when it already passes). sRGB-clamped. */
+export function lookFromAccent(accentHex: string): ModeLook {
+  const parsed = oklch(accentHex) as Oklch | undefined;
+  const hue = parsed?.h ?? 0;
+  const chroma = parsed?.c ?? 0.15;
+  const seedL = parsed?.l ?? 0.55;
+  const seedHex = formatHex(rgb(parsed)) ?? accentHex;
+
+  const lightBg = toHex(0.985, Math.min(0.008, chroma * 0.06), hue);
+  const darkBg = toHex(0.16, Math.min(0.018, chroma * 0.12), hue);
+  const darkChroma = Math.max(chroma, 0.1);
+
+  const lightAccent =
+    (wcagContrast(seedHex, lightBg) ?? 0) >= ACCENT_MIN_CR
+      ? seedHex
+      : accentForBg(hue, chroma, seedL, lightBg, ACCENT_MIN_CR, "darken");
+  const darkAccent = accentForBg(
+    hue,
+    darkChroma,
+    0.72,
+    darkBg,
+    ACCENT_MIN_CR,
+    "brighten",
+  );
+
+  const light: LookBase = {
+    "--ol-bg": lightBg,
+    "--ol-surface": "#ffffff",
+    "--ol-fg": toHex(0.2, Math.min(0.02, chroma * 0.12), hue),
+    "--ol-border": toHex(0.9, Math.min(0.012, chroma * 0.08), hue),
+    "--ol-accent": lightAccent,
+  };
+
+  const dark: LookBase = {
+    "--ol-bg": darkBg,
+    "--ol-surface": toHex(0.21, Math.min(0.022, chroma * 0.12), hue),
+    "--ol-fg": toHex(0.93, Math.min(0.012, chroma * 0.08), hue),
+    "--ol-border": toHex(0.3, Math.min(0.022, chroma * 0.12), hue),
+    "--ol-accent": darkAccent,
+  };
+
+  return { light, dark };
 }
 
 /** Tiny deterministic PRNG (mulberry32) — fast, good distribution for UI use. */
