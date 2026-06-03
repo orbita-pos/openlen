@@ -1,39 +1,65 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Publish-time HTML optimizer.
 //
-// Curated templates ship with the Tailwind CDN runtime (`cdn.tailwindcss.com`)
-// for editor preview convenience. At publish, the Rust `optimize_for_publish`
-// pass (S4 Option C) minifies the HTML + inlines-CSS — no Tailwind bake.
-// Published pages depend on the Tailwind CDN at render time; the bandwidth /
-// TTFB win is the disk size shrinking by ~94 KB per publish (soak p50). The
-// FCP impact of the CDN dependency is unmeasured and is the operator's
-// post-deploy verification.
+// Curated + AI-generated pages ship with the Tailwind CDN runtime
+// (`cdn.tailwindcss.com`) for editor-preview convenience. That CDN is the
+// Tailwind v3 *Play* build — a render-blocking <script> in <head> that ships
+// a full CSS JIT engine (~360 KB) and compiles utilities in the visitor's
+// browser on every load (FOUC + render-block + main-thread TBT + a hard
+// third-party dependency). At publish we bake it out:
 //
-// Idempotent: minify on already-minified HTML is a near no-op (a few bytes of
-// jitter at most).
+//   1. Compile the page's used utilities with Tailwind's PostCSS plugin,
+//      scanning the literal HTML as content (so arbitrary values like
+//      `bg-[#0F0F0F]` are captured too) — typically <15 KB of CSS.
+//   2. Replace the CDN <script> with an inline <style data-tw-baked>.
+//   3. Hand off to the Rust `optimize_for_publish` pass (S4 Option C) which
+//      minifies the HTML + minifies the inline CSS we just injected.
 //
-// Dev-mode skip: in non-production environments the function passes the HTML
-// through unchanged. Next.js webpack on Windows mangled tailwindcss's asset
-// paths in the legacy bake path, so dev publishes never invoked the
-// optimizer — editor preview uses the CDN <script> directly. The Rust minify
-// could in principle run in dev (no webpack involvement), but editor preview
-// doesn't call this function anyway, so the gate stays for parity.
+// Why baking with Tailwind's DEFAULT theme is correct here: `sanitizeForPublish`
+// runs BEFORE this step and strips every inline <script> except the CDN src
+// (crates/html-engine/.../sanitize/scripts.rs), so any inline `tailwind.config`
+// is already gone by publish time — the CDN itself would have rendered without
+// it too. Plain `<style>` blocks (`:root` vars, keyframes, custom classes) are
+// not Tailwind and pass through untouched. Templates use no `@apply` and no
+// `?plugins=` CDN variant on the live surface (verified), so default-theme +
+// preflight reproduces exactly what the CDN would paint.
 //
-// Slot-path gate: the Rust `optimize_for_publish` returns `html: null` when
-// it detects the editor-mode `data-slot-path=` marker. Defense-in-depth —
-// the upstream `detectSlotPath` gate at `publishToDir` should have caught it
-// first; if it didn't, throwing here keeps the marker off disk.
+// Safety: the bake never blocks a publish. If no plain CDN script is present
+// it's a no-op (idempotent — safe on already-baked HTML); if the CDN uses the
+// `?plugins=` variant (whose plugin utilities we don't have installed) the CDN
+// is kept; if the Tailwind compile throws (e.g. a standalone-tracer asset miss)
+// it falls back to the original HTML so the page still works via the CDN.
+//
+// Dev-mode skip: in non-production the function passes HTML through unchanged.
+// Next.js webpack on Windows mangles tailwindcss's package-relative asset
+// paths (preflight.css), so the bake only runs in standalone prod builds —
+// `next.config.ts` externalises tailwindcss/postcss and copies their CSS
+// assets into the standalone tree so the prod resolve works. Editor preview
+// doesn't call this function anyway.
+//
+// Slot-path gate: the Rust `optimize_for_publish` returns `html: null` when it
+// detects the editor-mode `data-slot-path=` marker. Defense-in-depth — the
+// upstream `detectSlotPath` gate at `publishToDir` should have caught it first;
+// throwing here keeps the marker off disk.
 // ─────────────────────────────────────────────────────────────────────────────
+
+import postcss from "postcss";
+import tailwindcss from "tailwindcss";
 
 import { optimizeForPublish as rustOptimizeForPublish } from "@/lib/html-engine";
 
+const TAILWIND_INPUT = "@tailwind base;\n@tailwind components;\n@tailwind utilities;\n";
+
+// Match the Tailwind Play CDN <script> in <head>. Group 1 captures everything
+// after `.com` up to the closing quote — used to detect the `?plugins=` variant.
+const CDN_SCRIPT_RE =
+  /<script\b[^>]*\bsrc=["']https?:\/\/(?:cdn|play)\.tailwindcss\.com([^"']*)["'][^>]*>\s*<\/script>/i;
+
 export interface OptimizeResult {
   html: string;
-  /** Always false — the Tailwind bake step was removed in F1 S9. Kept on
-   *  the contract because callers (filesystem.ts) only read `.html`, so the
-   *  documentary field is harmless and removing it would churn the type. */
+  /** True when the Tailwind CDN <script> was replaced with inline baked CSS. */
   baked: boolean;
-  /** Always 0 — bake-byte counter is no longer meaningful. */
+  /** Bytes of generated CSS before the Rust minify (0 when not baked). */
   cssBytes: number;
 }
 
@@ -43,11 +69,70 @@ export async function optimizeHtmlForProduction(
   if (process.env.NODE_ENV !== "production") {
     return { html, baked: false, cssBytes: 0 };
   }
-  const r = rustOptimizeForPublish(html);
+  const baked = await bakeTailwind(html);
+  const r = rustOptimizeForPublish(baked.html);
   if (r.html === null) {
     throw new Error(
       `optimize gate fired (slot-path detected): ${r.errors.join("; ")}`,
     );
   }
-  return { html: r.html, baked: false, cssBytes: 0 };
+  return { html: r.html, baked: baked.baked, cssBytes: baked.cssBytes };
+}
+
+/**
+ * Strip the Tailwind CDN runtime and inline the minimal CSS the page needs.
+ * Pure (no Rust, no env) so it's unit-testable on its own. Returns the HTML
+ * unchanged + `baked:false` on every safe-skip path (no CDN script, `?plugins=`
+ * variant, or compile failure) so it can never break a publish.
+ */
+export async function bakeTailwind(html: string): Promise<OptimizeResult> {
+  const m = CDN_SCRIPT_RE.exec(html);
+  if (!m) return { html, baked: false, cssBytes: 0 };
+  // The `?plugins=forms,typography,…` variant pulls in official plugins whose
+  // utilities we don't have installed — baking would silently drop them, so
+  // keep the CDN for those pages.
+  if (/\bplugins=/i.test(m[1] ?? "")) {
+    return { html, baked: false, cssBytes: 0 };
+  }
+
+  let css: string;
+  try {
+    css = await generateTailwindCss(html);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[optimize-html] Tailwind bake failed; serving CDN HTML:",
+      err instanceof Error ? err.message : err,
+    );
+    return { html, baked: false, cssBytes: 0 };
+  }
+
+  // Strip the CDN <script>, then inject the baked <style> at the END of
+  // <head> (after the page's own static <style> blocks). The Tailwind Play
+  // CDN appends its generated <style> to document.head at runtime, so its
+  // utilities win specificity TIES against the page's custom classes (e.g.
+  // `class="display tracking-tight"` — both single-class, source order
+  // decides). Injecting in-place where the script was would flip those ties
+  // and diverge from what the author saw. Function-form replacements so `$`
+  // sequences in the CSS aren't read as regex backreferences.
+  const styleTag = `<style data-tw-baked>\n${css}\n</style>`;
+  const withoutCdn = html.replace(CDN_SCRIPT_RE, "");
+  const headClose = /<\/head\s*>/i;
+  const out = headClose.test(withoutCdn)
+    ? withoutCdn.replace(headClose, (close) => `${styleTag}${close}`)
+    : html.replace(CDN_SCRIPT_RE, () => styleTag); // no </head>: fall back in-place
+  return { html: out, baked: true, cssBytes: css.length };
+}
+
+async function generateTailwindCss(html: string): Promise<string> {
+  const result = await postcss([
+    tailwindcss({
+      content: [{ raw: html, extension: "html" }],
+      theme: { extend: {} },
+      plugins: [],
+      corePlugins: { preflight: true },
+    } as Parameters<typeof tailwindcss>[0]),
+  ]).process(TAILWIND_INPUT, { from: undefined });
+
+  return result.css;
 }
