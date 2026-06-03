@@ -1,14 +1,38 @@
 {
   "sidebar": {
     "tabs": {
-      "chat": { "label": "Chat", "title": "Chat with Orchestra" },
-      "templates": { "label": "Templates", "title": "Start from a template" },
-      "library": { "label": "Library", "title": "Insert a section" },
-      "pages": { "label": "Pages", "title": "Recent projects" },
-      "leads": { "label": "Leads", "title": "Form submissions" },
-      "insights": { "label": "Insights", "title": "Page analytics" },
-      "versions": { "label": "Versions", "title": "Version history" },
-      "brief": { "label": "Brief", "title": "Project brief (AI context)" }
+      "chat": {
+        "label": "Chat",
+        "title": "Chat with Orchestra"
+      },
+      "templates": {
+        "label": "Templates",
+        "title": "Start from a template"
+      },
+      "library": {
+        "label": "Library",
+        "title": "Insert a section"
+      },
+      "pages": {
+        "label": "Pages",
+        "title": "Recent projects"
+      },
+      "leads": {
+        "label": "Leads",
+        "title": "Form submissions"
+      },
+      "insights": {
+        "label": "Insights",
+        "title": "Page analytics"
+      },
+      "versions": {
+        "label": "Versions",
+        "title": "Version history"
+      },
+      "brief": {
+        "label": "Brief",
+        "title": "Project brief (AI context)"
+      }
     },
     "tabLocked": "{label} — locked",
     "expandPanel": "Expand panel",
@@ -41,12 +65,17 @@
       "clear": "Clear"
     },
     "iframeTitle": "OpenLen workspace preview",
-    "redesigning": "Redesigning your page…"
+    "redesigning": "Redesigning your page…",
+    "viewport": {
+      "desktop": "Desktop preview",
+      "tablet": "Tablet preview",
+      "mobile": "Mobile preview"
+    }
   },
   "placeholder": {
     "ai": {
       "title": "Brief your page in the sidebar",
-      "hint": "Describe what you want and the orchestrator will compose it."
+      "hint": "Describe what you want and the AI will build it."
     },
     "template": {
       "title": "Browse the gallery in the sidebar",
@@ -67,7 +96,7 @@
     "cards": {
       "ai": {
         "title": "Generate with AI",
-        "description": "Describe your page in plain English. We compose it.",
+        "description": "Describe your page in plain English. The AI builds it for you.",
         "detail": "Brief → page in ~30s"
       },
       "template": {

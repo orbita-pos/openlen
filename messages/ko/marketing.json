@@ -9,7 +9,8 @@
     "githubAria": "GitHub의 OpenLen",
     "toggleDark": "다크 모드 전환",
     "signIn": "로그인",
-    "tryFree": "무료로 시작하기"
+    "tryFree": "무료로 시작하기",
+    "menu": "메뉴"
   },
   "hero": {
     "alphaBadge": "알파",
@@ -87,7 +88,8 @@
       "paidTier": "유료 플랜"
     },
     "thatsUs": "바로 우리입니다",
-    "footnote": "가격은 2026년 5월 기준 공개 플랜을 반영합니다. Linktree를 포함한 이유는 30개의 링크인바이오 크리에이터 템플릿이 동일한 대상을 겨냥하기 때문입니다 — 차이점은 HTML과 서브도메인을 당신이 소유한다는 것입니다."
+    "footnote": "가격은 2026년 5월 기준 공개 플랜을 반영합니다. Linktree를 포함한 이유는 30개의 링크인바이오 크리에이터 템플릿이 동일한 대상을 겨냥하기 때문입니다 — 차이점은 HTML과 서브도메인을 당신이 소유한다는 것입니다.",
+    "featureColumn": "기능"
   },
   "creatorShowcase": {
     "badge": "크리에이터를 위해",

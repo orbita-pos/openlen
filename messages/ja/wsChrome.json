@@ -1,14 +1,38 @@
 {
   "sidebar": {
     "tabs": {
-      "chat": { "label": "チャット", "title": "Orchestra とチャット" },
-      "templates": { "label": "テンプレート", "title": "テンプレートから始める" },
-      "library": { "label": "ライブラリ", "title": "セクションを挿入" },
-      "pages": { "label": "ページ", "title": "最近のプロジェクト" },
-      "leads": { "label": "リード", "title": "フォームの送信内容" },
-      "insights": { "label": "インサイト", "title": "ページ分析" },
-      "versions": { "label": "バージョン", "title": "バージョン履歴" },
-      "brief": { "label": "ブリーフ", "title": "プロジェクトブリーフ（AI コンテキスト）" }
+      "chat": {
+        "label": "チャット",
+        "title": "Orchestra とチャット"
+      },
+      "templates": {
+        "label": "テンプレート",
+        "title": "テンプレートから始める"
+      },
+      "library": {
+        "label": "ライブラリ",
+        "title": "セクションを挿入"
+      },
+      "pages": {
+        "label": "ページ",
+        "title": "最近のプロジェクト"
+      },
+      "leads": {
+        "label": "リード",
+        "title": "フォームの送信内容"
+      },
+      "insights": {
+        "label": "インサイト",
+        "title": "ページ分析"
+      },
+      "versions": {
+        "label": "バージョン",
+        "title": "バージョン履歴"
+      },
+      "brief": {
+        "label": "ブリーフ",
+        "title": "プロジェクトブリーフ（AI コンテキスト）"
+      }
     },
     "tabLocked": "{label} — ロック中",
     "expandPanel": "パネルを展開",
@@ -41,12 +65,17 @@
       "clear": "クリア"
     },
     "iframeTitle": "OpenLen ワークスペースプレビュー",
-    "redesigning": "ページを再デザイン中…"
+    "redesigning": "ページを再デザイン中…",
+    "viewport": {
+      "desktop": "デスクトッププレビュー",
+      "tablet": "タブレットプレビュー",
+      "mobile": "モバイルプレビュー"
+    }
   },
   "placeholder": {
     "ai": {
       "title": "サイドバーでページのブリーフを作成",
-      "hint": "作りたいものを説明すれば、オーケストレーターが構成します。"
+      "hint": "作りたいものを説明すると、AIが作ります。"
     },
     "template": {
       "title": "サイドバーでギャラリーを閲覧",
@@ -67,7 +96,7 @@
     "cards": {
       "ai": {
         "title": "AI で生成",
-        "description": "ページをふつうの言葉で説明するだけ。こちらで構成します。",
+        "description": "ページを普通の言葉で説明してください。AIが作成します。",
         "detail": "ブリーフ → 約 30 秒でページ完成"
       },
       "template": {

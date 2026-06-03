@@ -9,7 +9,8 @@
     "githubAria": "GitHub の OpenLen",
     "toggleDark": "ダークモードを切り替え",
     "signIn": "ログイン",
-    "tryFree": "無料で試す"
+    "tryFree": "無料で試す",
+    "menu": "メニュー"
   },
   "hero": {
     "alphaBadge": "アルファ版",
@@ -87,7 +88,8 @@
       "paidTier": "有料プラン"
     },
     "thatsUs": "これが私たち",
-    "footnote": "料金は2026年5月時点の公開プランを反映しています。Linktree を含めたのは、私たちの 30 種類の link-in-bio クリエイターテンプレートが同じ層を対象にしているためです — 違いは、あなたが HTML とサブドメインを所有する点です。"
+    "footnote": "料金は2026年5月時点の公開プランを反映しています。Linktree を含めたのは、私たちの 30 種類の link-in-bio クリエイターテンプレートが同じ層を対象にしているためです — 違いは、あなたが HTML とサブドメインを所有する点です。",
+    "featureColumn": "機能"
   },
   "creatorShowcase": {
     "badge": "クリエイター向け",

@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Sable — Turn any document into typed, validated JSON</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FCFCFD;
+    --surface: #FFFFFF;
+    --surface-2: #F6F7F9;
+    --fg: #14161B;
+    --fg-muted: #5A6071;
+    --fg-faint: #767D8E;
+    --border: rgba(20,22,27,0.08);
+    --border-strong: rgba(20,22,27,0.12);
+    --accent: #4F46E5;
+    --accent-r: 79,70,229;
+    --accent-ink: #FFFFFF;
+    --warn: #B45309;
+    --danger: #BE3A3A;
+    --code-str: #2F855A;
+    --code-num: #B45309;
+    --radius: 14px;
+    --radius-sm: 9px;
+    --radius-lg: 22px;
+    --font-display: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  :root.dark {
+    --bg: #0B0C0F;
+    --surface: #111319;
+    --surface-2: #161922;
+    --fg: #ECEDF1;
+    --fg-muted: rgba(236,237,241,0.64);
+    --fg-faint: rgba(236,237,241,0.50);
+    --border: rgba(255,255,255,0.06);
+    --border-strong: rgba(255,255,255,0.10);
+    --accent: #818CF8;
+    --accent-r: 129,140,248;
+    --accent-ink: #0B0C0F;
+    --warn: #F5C892;
+    --danger: #F4A1A1;
+    --code-str: #7EE2A8;
+    --code-num: #F5C892;
+  }
+  html, body { background: var(--bg); color: var(--fg); }
+  body {
+    font-family: var(--font-body);
+    font-feature-settings: "ss01","cv11";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .mono { font-family: var(--font-mono); }
+  .display { font-family: var(--font-display); letter-spacing: -0.035em; line-height: 0.96; font-weight: 600; }
+  .tabular { font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .hairline { border-color: var(--border); }
+  .hairline-2 { border-color: var(--border-strong); }
+  .half-tone { color: var(--fg-faint); }
+  .accent { color: var(--accent); }
+  .surface { background: var(--surface); }
+  .surface-2 { background: var(--surface-2); }
+  .dot-grid {
+    background-image: radial-gradient(circle, rgba(20,22,27,0.05) 1px, transparent 1px);
+    background-size: 30px 30px;
+  }
+  :root.dark .dot-grid { background-image: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px); }
+  .radial-fade {
+    background: radial-gradient(58% 50% at 50% 0%, rgba(var(--accent-r),0.10), transparent 72%);
+  }
+  .radial-soft {
+    background: radial-gradient(50% 60% at 50% 0%, rgba(var(--accent-r),0.07), transparent 72%);
+  }
+  @keyframes pulse-dot {
+    0% { box-shadow: 0 0 0 0 rgba(var(--accent-r),0.5); }
+    70% { box-shadow: 0 0 0 7px rgba(var(--accent-r),0); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--accent-r),0); }
+  }
+  .pulse-dot { width: 6px; height: 6px; border-radius: 999px; background: var(--accent); animation: pulse-dot 1.8s infinite; }
+  @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+  .marquee-track { animation: marquee 36s linear infinite; }
+  .lift { transition: transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease, border-color 120ms ease; }
+  .lift:hover { transform: translateY(-1px); }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .btn-primary:hover { box-shadow: 0 8px 26px -10px rgba(var(--accent-r),0.65); }
+  .btn-ghost { background: var(--surface); color: var(--fg); border: 1px solid var(--border-strong); }
+  .btn-ghost:hover { background: var(--surface-2); }
+  .ring-accent { box-shadow: 0 0 0 1.5px rgba(var(--accent-r),0.55), 0 24px 60px -28px rgba(var(--accent-r),0.45); }
+  .card-shadow { box-shadow: 0 1px 2px rgba(20,22,27,0.04), 0 16px 40px -28px rgba(20,22,27,0.22); }
+  :root.dark .card-shadow { box-shadow: 0 1px 2px rgba(0,0,0,0.4), 0 18px 50px -30px rgba(0,0,0,0.7); }
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+  details[open] .faq-plus { transform: rotate(45deg); }
+  .faq-plus { transition: transform 150ms ease; color: var(--accent); }
+  .dot-divider {
+    background-image: linear-gradient(to right, var(--border-strong) 38%, transparent 0%);
+    background-position: top; background-size: 6px 1px; background-repeat: repeat-x; height: 1px;
+  }
+  .check {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 15px; height: 15px; border-radius: 999px;
+    background: rgba(var(--accent-r),0.13); color: var(--accent); flex: 0 0 15px;
+  }
+  .badge {
+    color: var(--fg-muted); border: 1px solid var(--border);
+    border-radius: 999px; font-family: var(--font-mono);
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+  .json-key { color: var(--accent); }
+  .json-str { color: var(--code-str); }
+  .json-num { color: var(--code-num); }
+  .json-punct { color: var(--fg-faint); }
+  .field-pill { background: rgba(var(--accent-r),0.10); color: var(--accent); }
+  .row-sep { border-top: 1px solid var(--border); }
+</style>
+</head>
+<body class="min-h-screen">
+
+<header class="sticky top-0 z-40 backdrop-blur-md bg-[rgba(252,252,253,0.78)] border-b hairline">
+  <div class="max-w-[1200px] mx-auto px-6 h-14 flex items-center justify-between">
+    <a href="#" class="flex items-center gap-2.5">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="2.5" y="2.5" width="19" height="19" rx="5.5" stroke="var(--fg)" stroke-width="1.3"/>
+        <path d="M8 9.5h8M8 13h8M8 16.5h4.5" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      <span class="text-[15px] font-semibold tracking-tight">Sable</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-7 text-[13.5px] text-[color:var(--fg-muted)]">
+      <a class="hover:text-[color:var(--fg)] lift" href="#how">How it works</a>
+      <a class="hover:text-[color:var(--fg)] lift" href="#quality">Benchmarks</a>
+      <a class="hover:text-[color:var(--fg)] lift" href="#docs">Docs</a>
+      <a class="hover:text-[color:var(--fg)] lift" href="#pricing">Pricing</a>
+    </nav>
+    <div class="flex items-center gap-4">
+      <a href="#" class="text-[13.5px] text-[color:var(--fg-muted)] hover:text-[color:var(--fg)] hidden sm:inline">Sign in</a>
+      <a href="#" class="btn-primary lift rounded-full pl-3.5 pr-2.5 h-8 inline-flex items-center gap-1 text-[13px]">
+        Get an API key
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </div>
+</header>
+
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 dot-grid opacity-90 pointer-events-none"></div>
+  <div class="absolute inset-x-0 top-0 h-[620px] radial-fade pointer-events-none"></div>
+  <div class="relative max-w-[1200px] mx-auto px-6 pt-20 pb-14">
+    <div class="flex flex-col items-center text-center max-w-3xl mx-auto">
+      <div class="mono text-[11px] tracking-wider uppercase text-[color:var(--fg-muted)] inline-flex items-center gap-2 border hairline rounded-full pl-2 pr-3 py-1 surface">
+        <span class="pulse-dot"></span>
+        v3.1 · schema-guided extraction
+      </div>
+      <h1 class="display text-[52px] sm:text-[68px] md:text-[82px] mt-6">
+        Turn any document into <span class="half-tone">typed, validated JSON.</span>
+      </h1>
+      <p class="mt-6 max-w-xl text-[15.5px] text-[color:var(--fg-muted)] leading-relaxed">
+        Sable reads PDFs, scans, and emails against a schema you define — returning structured fields with a confidence score and a pixel-level citation for every value. No templates, no brittle regex.
+      </p>
+      <div class="mt-8 flex items-center gap-3 flex-wrap justify-center">
+        <a href="#" class="btn-primary lift rounded-full px-4 h-10 inline-flex items-center gap-1.5 text-[14px]">
+          Get an API key
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#how" class="btn-ghost lift rounded-full px-4 h-10 inline-flex items-center text-[14px]">See how it works</a>
+      </div>
+      <div class="mt-6 mono text-[12.5px] text-[color:var(--fg-faint)]">
+        <span class="text-[color:var(--fg-muted)]">$</span> pip install sable
+      </div>
+    </div>
+
+    <div class="mt-14 grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-4">
+      <div class="rounded-2xl border hairline surface card-shadow overflow-hidden">
+        <div class="flex items-center justify-between px-4 h-10 border-b hairline">
+          <div class="flex items-center gap-2 mono text-[11.5px] text-[color:var(--fg-muted)]">
+            <span class="w-2 h-2 rounded-full" style="background:var(--danger);opacity:.7"></span>
+            <span class="w-2 h-2 rounded-full" style="background:var(--warn);opacity:.7"></span>
+            <span class="w-2 h-2 rounded-full" style="background:var(--accent);opacity:.7"></span>
+            <span class="ml-2">invoice_4471.pdf → extract()</span>
+          </div>
+          <div class="mono text-[11px] text-[color:var(--accent)] flex items-center gap-2"><span class="pulse-dot"></span> 1.2s</div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2">
+          <div class="p-5 border-b md:border-b-0 md:border-r hairline">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Source · page 1 of 3</div>
+            <div class="mt-3 rounded-xl border hairline surface-2 p-4 space-y-2.5 text-[12px] leading-relaxed text-[color:var(--fg-muted)]">
+              <div class="font-semibold text-[color:var(--fg)] text-[13px]">Northwind Logistics — Invoice</div>
+              <div class="flex justify-between"><span>Invoice no.</span><span class="field-pill rounded px-1.5 py-0.5 mono text-[11px]">NW-4471</span></div>
+              <div class="flex justify-between"><span>Issued</span><span class="field-pill rounded px-1.5 py-0.5 mono text-[11px]">2026-04-18</span></div>
+              <div class="flex justify-between"><span>Due</span><span class="field-pill rounded px-1.5 py-0.5 mono text-[11px]">2026-05-18</span></div>
+              <div class="h-px bg-[var(--border)] my-1"></div>
+              <div class="flex justify-between"><span>Freight — LCL ocean</span><span>$ 8,420.00</span></div>
+              <div class="flex justify-between"><span>Customs brokerage</span><span>$ 615.50</span></div>
+              <div class="flex justify-between text-[color:var(--fg)] font-medium"><span>Total due</span><span class="field-pill rounded px-1.5 py-0.5 mono text-[11px]">$ 9,035.50</span></div>
+            </div>
+          </div>
+          <div class="p-5">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Output · validated against schema</div>
+            <pre class="mono text-[11.5px] leading-[1.7] mt-3 overflow-x-auto"><span class="json-punct">{</span>
+  <span class="json-key">"invoice_no"</span><span class="json-punct">:</span> <span class="json-str">"NW-4471"</span><span class="json-punct">,</span>
+  <span class="json-key">"issued"</span><span class="json-punct">:</span> <span class="json-str">"2026-04-18"</span><span class="json-punct">,</span>
+  <span class="json-key">"due"</span><span class="json-punct">:</span> <span class="json-str">"2026-05-18"</span><span class="json-punct">,</span>
+  <span class="json-key">"currency"</span><span class="json-punct">:</span> <span class="json-str">"USD"</span><span class="json-punct">,</span>
+  <span class="json-key">"line_items"</span><span class="json-punct">:</span> <span class="json-num">2</span><span class="json-punct">,</span>
+  <span class="json-key">"total"</span><span class="json-punct">:</span> <span class="json-num">9035.50</span><span class="json-punct">,</span>
+  <span class="json-key">"_confidence"</span><span class="json-punct">:</span> <span class="json-num">0.991</span>
+<span class="json-punct">}</span></pre>
+            <div class="mt-4 flex items-center gap-2 mono text-[11px]">
+              <span class="check"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              <span class="text-[color:var(--fg-muted)]">7/7 fields cited · 0 schema errors</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border hairline surface card-shadow p-5 flex flex-col">
+        <div class="flex items-center justify-between">
+          <div class="mono text-[11px] uppercase tracking-wider text-[color:var(--fg-faint)]">Last 24h · prod</div>
+          <div class="mono text-[11px] text-[color:var(--accent)] flex items-center gap-1.5"><span class="pulse-dot"></span>live</div>
+        </div>
+        <div class="grid grid-cols-2 gap-px mt-5 bg-[var(--border)] rounded-xl overflow-hidden border hairline">
+          <div class="surface p-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Docs parsed</div>
+            <div class="display text-3xl mt-2 tabular">412,907</div>
+            <div class="mono text-[11px] mt-1 accent tabular">+9.2% vs Tue</div>
+          </div>
+          <div class="surface p-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Field accuracy</div>
+            <div class="display text-3xl mt-2 tabular">98.7<span class="text-base text-[color:var(--fg-muted)]"> %</span></div>
+            <div class="mono text-[11px] mt-1 accent tabular">+0.4pp vs Tue</div>
+          </div>
+          <div class="surface p-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">P95 latency</div>
+            <div class="display text-3xl mt-2 tabular">1.18<span class="text-base text-[color:var(--fg-muted)]"> s</span></div>
+            <div class="mono text-[11px] mt-1 accent tabular">−0.21s vs Tue</div>
+          </div>
+          <div class="surface p-4">
+            <div class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Cost / page</div>
+            <div class="display text-3xl mt-2 tabular">$0.0041</div>
+            <div class="mono text-[11px] mt-1 accent tabular">−$0.0006 vs Tue</div>
+          </div>
+        </div>
+        <div class="mt-5">
+          <div class="flex items-center justify-between mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">
+            <span>Pages / min</span>
+            <span class="tabular text-[color:var(--fg-muted)]">peak 6,140</span>
+          </div>
+          <svg viewBox="0 0 280 64" class="w-full h-[64px] mt-2" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="spk" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.24"/>
+                <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <path d="M0 48 L23 44 L47 46 L70 38 L93 40 L117 30 L140 33 L163 22 L187 26 L210 16 L233 20 L257 11 L280 14 L280 64 L0 64 Z" fill="url(#spk)"/>
+            <path d="M0 48 L23 44 L47 46 L70 38 L93 40 L117 30 L140 33 L163 22 L187 26 L210 16 L233 20 L257 11 L280 14" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="mt-auto pt-5 mono text-[11.5px] text-[color:var(--fg-faint)] flex items-center justify-between">
+          <span>region: us-east / eu-central</span>
+          <span class="text-[color:var(--fg-muted)]">99.98% uptime</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="border-y hairline surface-2">
+  <div class="max-w-[1200px] mx-auto px-6 py-9">
+    <div class="mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--fg-faint)] text-center">Extracting documents in production at</div>
+    <div class="overflow-hidden mt-6 [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]">
+      <div class="marquee-track flex gap-14 w-max items-center text-[color:var(--fg-muted)]">
+        <span class="text-2xl font-serif italic">Linnea</span>
+        <span class="text-2xl font-semibold tracking-tight">FORECAST</span>
+        <span class="text-2xl font-light tracking-[0.18em]">GLIDE</span>
+        <span class="text-2xl font-serif">Mercury</span>
+        <span class="text-2xl font-semibold italic">Brightwave</span>
+        <span class="text-2xl font-mono tracking-tight">nimbus.</span>
+        <span class="text-2xl font-bold tracking-tighter">Strata/</span>
+        <span class="text-2xl font-serif italic">Vantage</span>
+        <span class="text-2xl font-serif italic">Linnea</span>
+        <span class="text-2xl font-semibold tracking-tight">FORECAST</span>
+        <span class="text-2xl font-light tracking-[0.18em]">GLIDE</span>
+        <span class="text-2xl font-serif">Mercury</span>
+        <span class="text-2xl font-semibold italic">Brightwave</span>
+        <span class="text-2xl font-mono tracking-tight">nimbus.</span>
+        <span class="text-2xl font-bold tracking-tighter">Strata/</span>
+        <span class="text-2xl font-serif italic">Vantage</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how" class="relative">
+  <div class="max-w-[1200px] mx-auto px-6 py-24">
+    <div class="max-w-2xl">
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">How it works</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Three calls from raw file <span class="half-tone">to clean record.</span></h2>
+      <p class="text-[color:var(--fg-muted)] mt-4 max-w-xl">Define the shape you want once. Sable handles the OCR, layout, and reasoning — and refuses to guess when a field isn't there.</p>
+    </div>
+
+    <div class="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div class="rounded-2xl border hairline surface card-shadow p-6">
+        <div class="flex items-center justify-between">
+          <span class="w-9 h-9 rounded-full border hairline-2 inline-flex items-center justify-center mono text-[13px] font-semibold accent">01</span>
+          <span class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Define</span>
+        </div>
+        <h3 class="display text-xl mt-5">Describe the schema.</h3>
+        <p class="text-[color:var(--fg-muted)] mt-2 text-sm leading-relaxed">A Pydantic model or plain JSON Schema. Sable infers types, required fields, and enums from it.</p>
+        <pre class="mono text-[11.5px] leading-relaxed mt-4 p-3 rounded-xl border hairline surface-2 overflow-x-auto"><span class="json-key">class</span> Invoice(BaseModel):
+    invoice_no: <span class="json-str">str</span>
+    due: <span class="json-str">date</span>
+    total: <span class="json-str">Decimal</span></pre>
+      </div>
+      <div class="rounded-2xl border hairline surface card-shadow p-6">
+        <div class="flex items-center justify-between">
+          <span class="w-9 h-9 rounded-full border hairline-2 inline-flex items-center justify-center mono text-[13px] font-semibold accent">02</span>
+          <span class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Extract</span>
+        </div>
+        <h3 class="display text-xl mt-5">Point it at a file.</h3>
+        <p class="text-[color:var(--fg-muted)] mt-2 text-sm leading-relaxed">PDF, PNG, DOCX, or an email URL. One call streams structured fields back as the model reads.</p>
+        <pre class="mono text-[11.5px] leading-relaxed mt-4 p-3 rounded-xl border hairline surface-2 overflow-x-auto"><span class="json-key">res</span> = sable.extract(
+  file=<span class="json-str">"inv.pdf"</span>,
+  schema=<span class="json-key">Invoice</span>,
+)</pre>
+      </div>
+      <div class="rounded-2xl border hairline surface card-shadow p-6">
+        <div class="flex items-center justify-between">
+          <span class="w-9 h-9 rounded-full border hairline-2 inline-flex items-center justify-center mono text-[13px] font-semibold accent">03</span>
+          <span class="mono text-[10.5px] uppercase tracking-wider text-[color:var(--fg-faint)]">Verify</span>
+        </div>
+        <h3 class="display text-xl mt-5">Trust every value.</h3>
+        <p class="text-[color:var(--fg-muted)] mt-2 text-sm leading-relaxed">Each field carries a confidence score and a bounding box. Route low-confidence rows to review automatically.</p>
+        <pre class="mono text-[11.5px] leading-relaxed mt-4 p-3 rounded-xl border hairline surface-2 overflow-x-auto"><span class="json-key">res</span>.confidence  <span class="json-punct"># 0.991</span>
+<span class="json-key">res</span>.cite(<span class="json-str">"total"</span>)
+<span class="json-punct"># p1 · box(412,..)</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="quality" class="border-t hairline surface-2 relative">
+  <div class="max-w-[1200px] mx-auto px-6 py-24">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      <div>
+        <div class="mono text-[11px] uppercase tracking-[0.18em] accent">Benchmarks</div>
+        <h2 class="display text-4xl md:text-5xl mt-4">Measured on documents <span class="half-tone">that actually fight back.</span></h2>
+        <p class="text-[color:var(--fg-muted)] mt-4 leading-relaxed">We test on 14,200 held-out real-world documents — crumpled receipts, multi-column statements, handwriting, and forms in nine languages. Every number below is field-level exact match, not "looks about right."</p>
+        <ul class="mt-6 space-y-3 text-[15px]">
+          <li class="flex gap-3 items-start"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Calibrated confidence — when Sable says 0.95, it's right 95% of the time, ±1.3pp.</span></li>
+          <li class="flex gap-3 items-start"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Abstains instead of hallucinating — a missing field returns <span class="mono text-[13px] accent">null</span>, never a plausible invention.</span></li>
+          <li class="flex gap-3 items-start"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Frozen eval set, public methodology — rerun every model release in CI.</span></li>
+        </ul>
+        <a href="#" class="inline-flex items-center gap-1 mt-7 accent text-[14px] lift">Read the benchmark report <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </div>
+
+      <div class="rounded-2xl border hairline surface card-shadow overflow-hidden">
+        <div class="flex items-center justify-between px-4 h-10 border-b hairline mono text-[11.5px] text-[color:var(--fg-muted)]">
+          <span>extraction-bench · v4 · 14,200 docs</span>
+          <span class="accent">field exact-match</span>
+        </div>
+        <div class="p-5 space-y-4">
+          <div>
+            <div class="flex items-center justify-between text-[13px]"><span class="font-medium">Sable v3.1</span><span class="mono tabular accent">98.7%</span></div>
+            <div class="mt-1.5 h-2 rounded-full surface-2 overflow-hidden"><div class="h-full rounded-full" style="width:98.7%;background:var(--accent)"></div></div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between text-[13px]"><span class="text-[color:var(--fg-muted)]">Generic VLM + prompt</span><span class="mono tabular text-[color:var(--fg-muted)]">91.2%</span></div>
+            <div class="mt-1.5 h-2 rounded-full surface-2 overflow-hidden"><div class="h-full rounded-full" style="width:91.2%;background:var(--border-strong)"></div></div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between text-[13px]"><span class="text-[color:var(--fg-muted)]">Template OCR engine</span><span class="mono tabular text-[color:var(--fg-muted)]">82.4%</span></div>
+            <div class="mt-1.5 h-2 rounded-full surface-2 overflow-hidden"><div class="h-full rounded-full" style="width:82.4%;background:var(--border-strong)"></div></div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between text-[13px]"><span class="text-[color:var(--fg-muted)]">Manual data entry (n=40)</span><span class="mono tabular text-[color:var(--fg-muted)]">96.1%</span></div>
+            <div class="mt-1.5 h-2 rounded-full surface-2 overflow-hidden"><div class="h-full rounded-full" style="width:96.1%;background:var(--border-strong)"></div></div>
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-px bg-[var(--border)] border-t hairline">
+          <div class="surface p-4">
+            <div class="mono text-[10px] uppercase tracking-wider text-[color:var(--fg-faint)]">Hallucinated fields</div>
+            <div class="display text-2xl mt-1 tabular">0.06%</div>
+          </div>
+          <div class="surface p-4">
+            <div class="mono text-[10px] uppercase tracking-wider text-[color:var(--fg-faint)]">Languages</div>
+            <div class="display text-2xl mt-1 tabular">31</div>
+          </div>
+          <div class="surface p-4">
+            <div class="mono text-[10px] uppercase tracking-wider text-[color:var(--fg-faint)]">Cost / 1k pages</div>
+            <div class="display text-2xl mt-1 tabular">$4.10</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="border-t hairline">
+  <div class="max-w-[1200px] mx-auto px-6 py-20">
+    <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+      <div class="max-w-xl">
+        <div class="mono text-[11px] uppercase tracking-[0.18em] accent">Integrations</div>
+        <h2 class="display text-3xl md:text-4xl mt-4">Lands wherever your data already lives.</h2>
+      </div>
+      <p class="text-[color:var(--fg-muted)] text-sm max-w-sm md:text-right">Native sinks for warehouses, queues, and storage — plus a typed SDK for Python, TypeScript, and Go.</p>
+    </div>
+    <div class="mt-10 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div class="rounded-xl border hairline surface card-shadow p-4 flex flex-col items-center justify-center gap-2 lift h-24"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><ellipse cx="12" cy="6" rx="7.5" ry="3" stroke="var(--accent)" stroke-width="1.4"/><path d="M4.5 6v12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3V6" stroke="var(--fg-muted)" stroke-width="1.3"/></svg><span class="mono text-[11.5px] text-[color:var(--fg-muted)]">Postgres</span></div>
+      <div class="rounded-xl border hairline surface card-shadow p-4 flex flex-col items-center justify-center gap-2 lift h-24"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 7l8-4 8 4-8 4-8-4z" stroke="var(--accent)" stroke-width="1.3"/><path d="M4 7v6l8 4 8-4V7" stroke="var(--fg-muted)" stroke-width="1.3"/></svg><span class="mono text-[11.5px] text-[color:var(--fg-muted)]">Snowflake</span></div>
+      <div class="rounded-xl border hairline surface card-shadow p-4 flex flex-col items-center justify-center gap-2 lift h-24"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="var(--accent)" stroke-width="1.3"/><path d="M4 9h16M9 5v14" stroke="var(--fg-muted)" stroke-width="1.2"/></svg><span class="mono text-[11.5px] text-[color:var(--fg-muted)]">S3</span></div>
+      <div class="rounded-xl border hairline surface card-shadow p-4 flex flex-col items-center justify-center gap-2 lift h-24"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 12h7M13 12h7" stroke="var(--fg-muted)" stroke-width="1.3"/><circle cx="6" cy="12" r="2.4" stroke="var(--accent)" stroke-width="1.3"/><circle cx="18" cy="12" r="2.4" stroke="var(--accent)" stroke-width="1.3"/></svg><span class="mono text-[11.5px] text-[color:var(--fg-muted)]">Kafka</span></div>
+      <div class="rounded-xl border hairline surface card-shadow p-4 flex flex-col items-center justify-center gap-2 lift h-24"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="3" stroke="var(--accent)" stroke-width="1.3"/><path d="M8 14l3-4 2 2.5L16 9" stroke="var(--fg-muted)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="mono text-[11.5px] text-[color:var(--fg-muted)]">Webhooks</span></div>
+      <div class="rounded-xl border hairline surface card-shadow p-4 flex flex-col items-center justify-center gap-2 lift h-24"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9 8l-4 4 4 4M15 8l4 4-4 4" stroke="var(--accent)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="mono text-[11.5px] text-[color:var(--fg-muted)]">REST API</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="pricing" class="border-t hairline surface-2 relative">
+  <div class="absolute inset-x-0 top-0 h-[300px] radial-soft pointer-events-none"></div>
+  <div class="relative max-w-[1200px] mx-auto px-6 py-24">
+    <div class="text-center max-w-2xl mx-auto">
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">Pricing</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Pay per page. <span class="half-tone">Not per seat.</span></h2>
+      <p class="text-[color:var(--fg-muted)] mt-4">One page = one side of a document. Failed extractions and abstentions are never billed. Volume bundles roll over for 90 days.</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-12">
+      <div class="rounded-2xl border hairline surface card-shadow p-7 flex flex-col">
+        <div class="flex items-baseline justify-between">
+          <h3 class="text-lg font-semibold">Indie</h3>
+          <span class="mono text-[11px] text-[color:var(--fg-faint)]">free forever</span>
+        </div>
+        <div class="display text-5xl mt-5 tabular">$0</div>
+        <div class="mono text-[11.5px] text-[color:var(--fg-faint)] mt-1">/ month</div>
+        <p class="text-[color:var(--fg-muted)] text-[14px] mt-4">For a prototype or a single internal workflow.</p>
+        <div class="dot-divider my-6"></div>
+        <ul class="space-y-3 text-[14px]">
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>1,000 pages / mo</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Confidence scores + citations</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>All 31 languages</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Community Slack</li>
+        </ul>
+        <a href="#" class="btn-ghost mt-auto rounded-full inline-flex items-center justify-center h-10 text-[14px] lift" style="margin-top:1.75rem">Start free</a>
+      </div>
+      <div class="relative rounded-2xl surface card-shadow p-7 flex flex-col ring-accent">
+        <span class="absolute -top-3 left-5 mono text-[10.5px] uppercase tracking-wider px-2.5 py-1 rounded-full" style="background:var(--accent);color:var(--accent-ink)">Most popular</span>
+        <div class="flex items-baseline justify-between">
+          <h3 class="text-lg font-semibold">Scale</h3>
+          <span class="mono text-[11px] accent">incl. review queue</span>
+        </div>
+        <div class="display text-5xl mt-5 tabular">$0.004</div>
+        <div class="mono text-[11.5px] text-[color:var(--fg-faint)] mt-1">/ page · after 1,000 free</div>
+        <p class="text-[color:var(--fg-muted)] text-[14px] mt-4">For teams running extraction in production at volume.</p>
+        <div class="dot-divider my-6"></div>
+        <ul class="space-y-3 text-[14px]">
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Unlimited pages, usage-based</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Human-in-the-loop review queue</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Warehouse + queue sinks</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>SLA: P95 &lt; 1.5s</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Priority support</li>
+        </ul>
+        <a href="#" class="btn-primary mt-auto inline-flex items-center justify-center h-10 rounded-full text-[14px] lift" style="margin-top:1.75rem">Start with 1,000 free</a>
+      </div>
+      <div class="rounded-2xl border hairline surface card-shadow p-7 flex flex-col">
+        <div class="flex items-baseline justify-between">
+          <h3 class="text-lg font-semibold">Enterprise</h3>
+          <span class="mono text-[11px] text-[color:var(--fg-faint)]">on-prem</span>
+        </div>
+        <div class="display text-5xl mt-5 tabular">Custom</div>
+        <div class="mono text-[11.5px] text-[color:var(--fg-faint)] mt-1">annual · volume committed</div>
+        <p class="text-[color:var(--fg-muted)] text-[14px] mt-4">For regulated data that can't leave your VPC.</p>
+        <div class="dot-divider my-6"></div>
+        <ul class="space-y-3 text-[14px]">
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Self-hosted / air-gapped deploy</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>SOC 2 Type II + HIPAA + SCIM</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Fine-tuned to your doc types</li>
+          <li class="flex gap-2.5"><span class="check mt-1"><svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Solution architect + 1h SLA</li>
+        </ul>
+        <a href="#" class="btn-ghost mt-auto rounded-full inline-flex items-center justify-center h-10 text-[14px] lift" style="margin-top:1.75rem">Talk to sales</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="border-t hairline">
+  <div class="max-w-[1200px] mx-auto px-6 py-24">
+    <div class="max-w-2xl">
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">Customers</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">Teams that retired their <span class="half-tone">data-entry queue.</span></h2>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-12">
+      <div class="rounded-2xl border hairline surface card-shadow p-6">
+        <div class="flex gap-0.5 accent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        </div>
+        <blockquote class="mt-4 text-[15px] leading-relaxed">"We were paying a BPO vendor to key 9,000 freight invoices a month. Sable does it at 98.6% accuracy and the review queue catches the rest. We cut that line item by $41,000 a quarter."</blockquote>
+        <div class="flex items-center gap-3 mt-6">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center mono text-[12px] font-semibold" style="background:rgba(var(--accent-r),0.13);color:var(--accent)">IC</div>
+          <div class="text-[13px]"><div class="font-medium">Ines Calderón</div><div class="text-[color:var(--fg-faint)]">Head of Eng · Strata</div></div>
+        </div>
+      </div>
+      <div class="rounded-2xl border hairline surface card-shadow p-6">
+        <div class="flex gap-0.5 accent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        </div>
+        <blockquote class="mt-4 text-[15px] leading-relaxed">"The fact that it returns null instead of guessing is the whole reason I trust it. The citations let our auditors trace every number back to the pixel it came from."</blockquote>
+        <div class="flex items-center gap-3 mt-6">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center mono text-[12px] font-semibold" style="background:rgba(var(--accent-r),0.13);color:var(--accent)">YA</div>
+          <div class="text-[13px]"><div class="font-medium">Yusuf Abara</div><div class="text-[color:var(--fg-faint)]">CTO · Mercury</div></div>
+        </div>
+      </div>
+      <div class="rounded-2xl border hairline surface card-shadow p-6">
+        <div class="flex gap-0.5 accent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        </div>
+        <blockquote class="mt-4 text-[15px] leading-relaxed">"Swapped out 1,800 lines of bespoke parsing logic for a Pydantic model and one extract() call. Onboarding a new document type went from a two-week project to an afternoon."</blockquote>
+        <div class="flex items-center gap-3 mt-6">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center mono text-[12px] font-semibold" style="background:rgba(var(--accent-r),0.13);color:var(--accent)">HS</div>
+          <div class="text-[13px]"><div class="font-medium">Hana Suzuki</div><div class="text-[color:var(--fg-faint)]">ML Lead · Brightwave</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="docs" class="border-t hairline surface-2">
+  <div class="max-w-[1200px] mx-auto px-6 py-24 grid grid-cols-1 lg:grid-cols-[0.8fr_1.2fr] gap-12">
+    <div>
+      <div class="mono text-[11px] uppercase tracking-[0.18em] accent">FAQ</div>
+      <h2 class="display text-4xl md:text-5xl mt-4">The questions engineers ask first.</h2>
+      <p class="text-[color:var(--fg-muted)] mt-4 text-sm leading-relaxed">Everything else is in the <a href="#" class="accent">docs</a> — including the OpenAPI spec, retry semantics, and the eval harness.</p>
+    </div>
+    <div>
+      <details class="py-5 border-b hairline group" open>
+        <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">How do confidence scores get calibrated?</span><span class="faq-plus mono text-lg leading-none">+</span></summary>
+        <p class="mt-3 text-[color:var(--fg-muted)] leading-relaxed text-[14.5px]">We fit an isotonic regression on a 14,200-document holdout per release, so the reported probability matches observed accuracy. At 0.95 the field is correct 95% of the time within ±1.3pp — verified in CI before any model ships.</p>
+      </details>
+      <details class="py-5 border-b hairline group">
+        <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">What happens when a field isn't in the document?</span><span class="faq-plus mono text-lg leading-none">+</span></summary>
+        <p class="mt-3 text-[color:var(--fg-muted)] leading-relaxed text-[14.5px]">Sable returns <span class="mono accent">null</span> with a low confidence and an empty citation rather than fabricating a value. You can set a per-field <span class="mono">required=True</span> to raise a validation error instead, or route the document straight to the review queue.</p>
+      </details>
+      <details class="py-5 border-b hairline group">
+        <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">Can I extract nested tables and line items?</span><span class="faq-plus mono text-lg leading-none">+</span></summary>
+        <p class="mt-3 text-[color:var(--fg-muted)] leading-relaxed text-[14.5px]">Yes — model a field as <span class="mono">list[LineItem]</span> and Sable returns one object per row with its own confidence and bounding box. Multi-page tables are stitched automatically using layout continuity.</p>
+      </details>
+      <details class="py-5 border-b hairline group">
+        <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">Does my data train your models?</span><span class="faq-plus mono text-lg leading-none">+</span></summary>
+        <p class="mt-3 text-[color:var(--fg-muted)] leading-relaxed text-[14.5px]">Never by default. Documents are processed in memory and dropped within 24h unless you opt into retention for the review queue. On Enterprise, processing runs entirely inside your VPC and nothing leaves your network.</p>
+      </details>
+      <details class="py-5 border-b hairline group">
+        <summary class="flex items-center justify-between gap-6"><span class="text-[16px] font-medium">What's the latency for a 3-page PDF?</span><span class="faq-plus mono text-lg leading-none">+</span></summary>
+        <p class="mt-3 text-[color:var(--fg-muted)] leading-relaxed text-[14.5px]">P50 0.74s, P95 1.18s, P99 2.4s for a typical 3-page document with a 12-field schema. Fields stream back as they resolve, so you can render partial results before the call completes.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section class="border-t hairline">
+  <div class="max-w-[1200px] mx-auto px-6 py-20">
+    <div class="relative rounded-[var(--radius-lg)] border hairline surface overflow-hidden card-shadow">
+      <div class="absolute inset-0 dot-grid opacity-70 pointer-events-none"></div>
+      <div class="absolute inset-x-0 top-0 h-[260px] radial-soft pointer-events-none"></div>
+      <div class="relative px-6 py-16 sm:py-20 text-center">
+        <h2 class="display text-4xl md:text-5xl max-w-2xl mx-auto">Parse your first document <span class="half-tone">in the next five minutes.</span></h2>
+        <p class="mt-5 text-[color:var(--fg-muted)] max-w-lg mx-auto text-[15px]">1,000 free pages a month, no card. Drop in your schema, point it at a file, ship the JSON.</p>
+        <div class="mt-8 flex items-center gap-3 flex-wrap justify-center">
+          <a href="#" class="btn-primary lift rounded-full px-4 h-11 inline-flex items-center gap-1.5 text-[14px]">
+            Get an API key
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a href="#docs" class="btn-ghost lift rounded-full px-4 h-11 inline-flex items-center text-[14px]">Read the quickstart</a>
+        </div>
+        <div class="mt-6 mono text-[12.5px] text-[color:var(--fg-faint)]"><span class="text-[color:var(--fg-muted)]">$</span> pip install sable &amp;&amp; sable login</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="border-t hairline surface-2">
+  <div class="max-w-[1200px] mx-auto px-6 py-14">
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-8">
+      <div class="col-span-2 md:col-span-1">
+        <a href="#" class="flex items-center gap-2.5">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5" stroke="var(--fg)" stroke-width="1.3"/><path d="M8 9.5h8M8 13h8M8 16.5h4.5" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <span class="text-[14px] font-semibold tracking-tight">Sable</span>
+        </a>
+        <p class="text-[color:var(--fg-faint)] text-[13px] mt-3 leading-relaxed">Structured extraction for documents that fight back.</p>
+        <div class="badge inline-flex items-center gap-2 mt-4 px-2.5 py-1 text-[10.5px]"><span class="pulse-dot"></span>All systems operational</div>
+      </div>
+      <div>
+        <div class="mono text-[11px] uppercase tracking-wider text-[color:var(--fg-faint)]">Product</div>
+        <ul class="mt-4 space-y-2.5 text-[13.5px] text-[color:var(--fg-muted)]">
+          <li><a href="#how" class="hover:text-[color:var(--fg)]">How it works</a></li>
+          <li><a href="#quality" class="hover:text-[color:var(--fg)]">Benchmarks</a></li>
+          <li><a href="#pricing" class="hover:text-[color:var(--fg)]">Pricing</a></li>
+          <li><a href="#" class="hover:text-[color:var(--fg)]">Changelog</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="mono text-[11px] uppercase tracking-wider text-[color:var(--fg-faint)]">Developers</div>
+        <ul class="mt-4 space-y-2.5 text-[13.5px] text-[color:var(--fg-muted)]">
+          <li><a href="#docs" class="hover:text-[color:var(--fg)]">Docs</a></li>
+          <li><a href="#" class="hover:text-[color:var(--fg)]">API reference</a></li>
+          <li><a href="#" class="hover:text-[color:var(--fg)]">Python SDK</a></li>
+          <li><a href="#" class="hover:text-[color:var(--fg)]">Status</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="mono text-[11px] uppercase tracking-wider text-[color:var(--fg-faint)]">Company</div>
+        <ul class="mt-4 space-y-2.5 text-[13.5px] text-[color:var(--fg-muted)]">
+          <li><a href="#" class="hover:text-[color:var(--fg)]">About</a></li>
+          <li><a href="#" class="hover:text-[color:var(--fg)]">Security</a></li>
+          <li><a href="#" class="hover:text-[color:var(--fg)]">Careers</a></li>
+          <li><a href="#" class="hover:text-[color:var(--fg)]">Contact</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="mt-12 pt-6 border-t hairline flex flex-col sm:flex-row items-center justify-between gap-3 text-[12.5px] text-[color:var(--fg-faint)]">
+      <span>© 2026 Sable Labs, Inc.</span>
+      <div class="flex items-center gap-5">
+        <a href="#" class="hover:text-[color:var(--fg)]">Privacy</a>
+        <a href="#" class="hover:text-[color:var(--fg)]">Terms</a>
+        <span class="mono">v3.1.0</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

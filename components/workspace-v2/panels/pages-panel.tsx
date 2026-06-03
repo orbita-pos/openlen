@@ -374,7 +374,7 @@ function EmptyOrError({
       <button
         type="button"
         onClick={onNewPage}
-        className="mt-3 inline-flex items-center gap-1 h-7 px-2.5 rounded-md bg-[var(--accent)] text-white text-[11.5px] font-medium hover:brightness-105 transition"
+        className="mt-3 inline-flex items-center gap-1 h-7 px-2.5 rounded-md bg-[var(--accent-strong)] text-white text-[11.5px] font-medium hover:brightness-105 transition"
       >
         <Plus size={11} /> {t("pages.newPage")}
       </button>

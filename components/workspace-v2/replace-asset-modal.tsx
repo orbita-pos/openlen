@@ -445,7 +445,7 @@ function PasteUrlTab({
           type="button"
           onClick={handleSubmit}
           disabled={!isValidUrl}
-          className="inline-flex items-center justify-center gap-1.5 h-8 px-3.5 rounded-md text-[12px] font-medium bg-[var(--accent)] text-white hover:brightness-105 shadow-coral transition disabled:opacity-40 disabled:cursor-not-allowed"
+          className="inline-flex items-center justify-center gap-1.5 h-8 px-3.5 rounded-md text-[12px] font-medium bg-[var(--accent-strong)] text-white hover:brightness-105 shadow-coral transition disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {t("paste.applyImage")}
         </button>
@@ -1135,7 +1135,7 @@ function UploadTab({
           type="button"
           onClick={() => void handleUpload()}
           disabled={!file || status === "uploading"}
-          className="inline-flex items-center justify-center gap-1.5 h-8 px-3.5 rounded-md text-[12px] font-medium bg-[var(--accent)] text-white hover:brightness-105 shadow-coral transition disabled:opacity-40 disabled:cursor-not-allowed"
+          className="inline-flex items-center justify-center gap-1.5 h-8 px-3.5 rounded-md text-[12px] font-medium bg-[var(--accent-strong)] text-white hover:brightness-105 shadow-coral transition disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {status === "uploading" ? t("upload.uploading") : t("upload.uploadApply")}
         </button>

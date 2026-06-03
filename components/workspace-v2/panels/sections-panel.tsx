@@ -109,7 +109,7 @@ export function SectionsPanel({ onPreview }: SectionsPanelProps) {
           onClick={() => setTypeFilter("all")}
           className={`text-[10.5px] px-2.5 py-1 rounded-md transition font-medium ${
             typeFilter === "all"
-              ? "bg-[var(--accent)] text-white"
+              ? "bg-[var(--accent-strong)] text-white"
               : "fg-muted bg-hover hover:fg"
           }`}
         >
@@ -123,7 +123,7 @@ export function SectionsPanel({ onPreview }: SectionsPanelProps) {
             onClick={() => setTypeFilter(t)}
             className={`text-[10.5px] px-2.5 py-1 rounded-md transition font-medium ${
               typeFilter === t
-                ? "bg-[var(--accent)] text-white"
+                ? "bg-[var(--accent-strong)] text-white"
                 : "fg-muted bg-hover hover:fg"
             }`}
           >

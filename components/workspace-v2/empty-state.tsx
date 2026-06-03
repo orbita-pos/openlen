@@ -85,7 +85,7 @@ export function EmptyState({
     <div className="flex-1 min-h-0 flex items-center justify-center bg-app overflow-y-auto">
       <div className="w-full max-w-5xl px-6 py-12">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full bg-accent-soft text-accent text-[11px] font-medium mb-5">
+          <div className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full bg-accent-soft text-coral-700 dark:text-coral-300 text-[11px] font-medium mb-5">
             <Sparkles size={11} />
             {t("empty.badge")}
           </div>
@@ -370,7 +370,7 @@ function RecentCard({
             <span
               className={`inline-flex items-center gap-1 text-[10px] ui-small shrink-0 ${
                 project.hasUnpublishedChanges
-                  ? "text-amber-600 dark:text-amber-400"
+                  ? "text-amber-700 dark:text-amber-400"
                   : "text-emerald-600 dark:text-emerald-400"
               }`}
               title={
@@ -386,7 +386,7 @@ function RecentCard({
               <span>{t("empty.recent.live")}</span>
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 ui-small shrink-0">
+            <span className="inline-flex items-center gap-1 text-[10px] text-amber-700 dark:text-amber-400 ui-small shrink-0">
               <StatusDot color="#F59E0B" /> {t("empty.recent.draft")}
             </span>
           )}

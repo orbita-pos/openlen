@@ -849,8 +849,8 @@ export async function countProjectsSince(days: number): Promise<number> {
   return rows[0]?.count ?? 0;
 }
 
-// Postgres UNIQUE-violation SQLSTATE. Drizzle surfaces it on err.cause.code
-// for neon-http (sometimes err.code directly) — check both shapes.
+// Postgres UNIQUE-violation SQLSTATE. node-postgres surfaces it cleanly on
+// err.code; keep the err.cause.code + message checks as defensive fallbacks.
 function isUniqueViolation(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
   const anyErr = err as { code?: unknown; cause?: { code?: unknown } };
@@ -858,7 +858,7 @@ function isUniqueViolation(err: unknown): boolean {
   if (anyErr.cause && (anyErr.cause as { code?: unknown }).code === "23505") {
     return true;
   }
-  // neon-http sometimes packs the message as "...code: 23505...".
+  // Last-resort: some drivers pack the code into the message string.
   const msg = err instanceof Error ? err.message : "";
   return /23505/.test(msg);
 }

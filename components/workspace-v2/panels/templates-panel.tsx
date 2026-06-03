@@ -195,7 +195,7 @@ export function TemplatesPanel({
           onClick={() => setFamilyFilter("all")}
           className={`text-[10.5px] px-2.5 py-1 rounded-md transition font-medium ${
             familyFilter === "all"
-              ? "bg-[var(--accent)] text-white"
+              ? "bg-[var(--accent-strong)] text-white"
               : "fg-muted bg-hover hover:fg"
           }`}
         >
@@ -209,7 +209,7 @@ export function TemplatesPanel({
             onClick={() => setFamilyFilter(f.id)}
             className={`text-[10.5px] px-2.5 py-1 rounded-md transition font-medium ${
               familyFilter === f.id
-                ? "bg-[var(--accent)] text-white"
+                ? "bg-[var(--accent-strong)] text-white"
                 : "fg-muted bg-hover hover:fg"
             }`}
           >

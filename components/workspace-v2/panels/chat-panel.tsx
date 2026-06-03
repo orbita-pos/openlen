@@ -873,7 +873,7 @@ function TurnView({
 
       {!hideAIBubble && (
         <div className="flex gap-2">
-          <span className="shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent)] text-white">
+          <span className="shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent-strong)] text-white">
             <Sparkles size={11} />
           </span>
           <div className="min-w-0 max-w-[85%]">
@@ -996,7 +996,7 @@ function TurnFooter({
 function ThinkingBubble() {
   return (
     <div className="flex gap-2">
-      <span className="shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent)] text-white">
+      <span className="shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent-strong)] text-white">
         <Sparkles size={11} />
       </span>
       <div className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2.5 bg-elev border bd">
@@ -1125,7 +1125,7 @@ function Composer({
               disabled={sending || !onAttachImage}
               className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition disabled:opacity-40 ${
                 attachedImage
-                  ? "bg-[var(--accent)] text-white shadow-coral"
+                  ? "bg-[var(--accent-strong)] text-white shadow-coral"
                   : "fg-faint hover:fg hover:bg-hover"
               }`}
             >
@@ -1148,7 +1148,7 @@ function Composer({
                 disabled={sending}
                 className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition disabled:opacity-40 ${
                   sectionSelectMode
-                    ? "bg-[var(--accent)] text-white shadow-coral"
+                    ? "bg-[var(--accent-strong)] text-white shadow-coral"
                     : "fg-faint hover:fg hover:bg-hover"
                 }`}
               >
@@ -1188,7 +1188,7 @@ function Composer({
             aria-label={t("composer.send")}
             className={`inline-flex items-center justify-center gap-1 h-7 rounded-md text-[11.5px] font-medium transition ${
               value.trim() && !sending
-                ? "px-2.5 bg-[var(--accent)] text-white shadow-coral hover:brightness-105"
+                ? "px-2.5 bg-[var(--accent-strong)] text-white shadow-coral hover:brightness-105"
                 : "w-7 bg-hover fg-faint cursor-not-allowed"
             }`}
           >

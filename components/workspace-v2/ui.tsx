@@ -72,7 +72,7 @@ export function IconBtn({
           disabled
             ? "fg-faint opacity-40 cursor-not-allowed"
             : active
-              ? "bg-[var(--accent)] text-white"
+              ? "bg-[var(--accent-strong)] text-white"
               : "fg-muted hover:fg hover:bg-hover"
         } ${className}`}
       >
@@ -113,7 +113,7 @@ export function Button({
   };
   const variants: Record<ButtonVariant, string> = {
     primary:
-      "bg-[var(--accent)] text-white border border-[var(--accent)] hover:brightness-105 active:brightness-95 shadow-coral",
+      "bg-[var(--accent-strong)] text-white border border-[var(--accent)] hover:brightness-105 active:brightness-95 shadow-coral",
     ghost:
       "bg-transparent fg-muted border border-transparent hover:bg-hover hover:fg hover:border-[color:var(--border)]",
     outline:

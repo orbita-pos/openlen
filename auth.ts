@@ -6,19 +6,24 @@ import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import authConfig from "@/auth.config";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Auth.js v5 configuration.
+// Auth.js v5 — full (Node-runtime) configuration.
+//
+// Shared, edge-safe bits (session strategy, pages, callbacks, trustHost) live
+// in auth.config.ts so middleware.ts can verify JWTs at the edge without
+// importing the DB driver. Here we add the Node-only pieces: the Drizzle
+// adapter and the Credentials provider (bcrypt + DB lookup).
 //
 // Two providers:
-//   1. Credentials (email + password)        — always enabled
-//   2. Google OAuth                          — enabled iff GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET
+//   1. Credentials (email + password)  — always enabled
+//   2. Google OAuth                    — enabled iff GOOGLE_CLIENT_ID + SECRET
 //
-// Sessions are stored in the database via the Drizzle adapter. We could use
-// JWT-only sessions for less DB load, but database sessions let us revoke
-// individual sessions and inspect active users without parsing tokens.
+// Sessions are JWT (see auth.config.ts). The adapter persists users/accounts
+// for OAuth linking; session reads don't hit the DB.
 //
-// Make sure NEXTAUTH_SECRET is set in .env.local (used to sign session cookies).
+// Make sure NEXTAUTH_SECRET is set (used to sign session cookies).
 // ─────────────────────────────────────────────────────────────────────────────
 
 const providers: NextAuthConfig["providers"] = [
@@ -64,6 +69,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 }
 
 export const config: NextAuthConfig = {
+  ...authConfig,
   adapter: DrizzleAdapter(db, {
     usersTable: schema.users,
     accountsTable: schema.accounts,
@@ -71,34 +77,13 @@ export const config: NextAuthConfig = {
     verificationTokensTable: schema.verificationTokens,
   }),
   providers,
-  session: {
-    strategy: "jwt",
-    maxAge: 60 * 60 * 24 * 30,
-  },
-  pages: {
-    signIn: "/login",
-    error: "/login",
-  },
-  callbacks: {
-    async session({ session, token }) {
-      if (token?.sub && session.user) {
-        session.user.id = token.sub;
-      }
-      return session;
-    },
-    async jwt({ token, user }) {
-      if (user?.id) token.sub = user.id;
-      return token;
-    },
-  },
-  trustHost: true,
 };
 
 export const { handlers, auth, signIn, signOut } = NextAuth(config);
 
 /**
  * Names of OAuth providers actually enabled at runtime. The login/register
- * pages read this to decide whether to render the GitHub/Google buttons.
+ * pages read this to decide whether to render the Google button.
  */
 export const enabledOauthProviders = {
   google: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),

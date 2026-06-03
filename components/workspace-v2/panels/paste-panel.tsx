@@ -128,7 +128,7 @@ export function PastePanel() {
           type="button"
           onClick={handleCreate}
           disabled={submitting || html.trim().length === 0}
-          className="w-full h-9 inline-flex items-center justify-center gap-1.5 rounded-md bg-[var(--accent)] text-white text-[12.5px] font-medium hover:brightness-105 active:brightness-95 shadow-coral transition disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full h-9 inline-flex items-center justify-center gap-1.5 rounded-md bg-[var(--accent-strong)] text-white text-[12.5px] font-medium hover:brightness-105 active:brightness-95 shadow-coral transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submitting ? (
             <>

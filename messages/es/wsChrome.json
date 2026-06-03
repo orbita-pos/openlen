@@ -1,14 +1,38 @@
 {
   "sidebar": {
     "tabs": {
-      "chat": { "label": "Chat", "title": "Chatea con Orchestra" },
-      "templates": { "label": "Plantillas", "title": "Empieza con una plantilla" },
-      "library": { "label": "Biblioteca", "title": "Inserta una sección" },
-      "pages": { "label": "Páginas", "title": "Proyectos recientes" },
-      "leads": { "label": "Leads", "title": "Envíos de formularios" },
-      "insights": { "label": "Métricas", "title": "Analíticas de la página" },
-      "versions": { "label": "Versiones", "title": "Historial de versiones" },
-      "brief": { "label": "Brief", "title": "Brief del proyecto (contexto de IA)" }
+      "chat": {
+        "label": "Chat",
+        "title": "Chatea con Orchestra"
+      },
+      "templates": {
+        "label": "Plantillas",
+        "title": "Empieza con una plantilla"
+      },
+      "library": {
+        "label": "Biblioteca",
+        "title": "Inserta una sección"
+      },
+      "pages": {
+        "label": "Páginas",
+        "title": "Proyectos recientes"
+      },
+      "leads": {
+        "label": "Leads",
+        "title": "Envíos de formularios"
+      },
+      "insights": {
+        "label": "Métricas",
+        "title": "Analíticas de la página"
+      },
+      "versions": {
+        "label": "Versiones",
+        "title": "Historial de versiones"
+      },
+      "brief": {
+        "label": "Brief",
+        "title": "Brief del proyecto (contexto de IA)"
+      }
     },
     "tabLocked": "{label} — bloqueado",
     "expandPanel": "Expandir panel",
@@ -41,12 +65,17 @@
       "clear": "Quitar"
     },
     "iframeTitle": "Vista previa del workspace de OpenLen",
-    "redesigning": "Rediseñando tu página…"
+    "redesigning": "Rediseñando tu página…",
+    "viewport": {
+      "desktop": "Vista previa de escritorio",
+      "tablet": "Vista previa de tablet",
+      "mobile": "Vista previa móvil"
+    }
   },
   "placeholder": {
     "ai": {
       "title": "Describe tu página en la barra lateral",
-      "hint": "Describe lo que quieres y el orquestador la compondrá."
+      "hint": "Describe lo que quieres y la IA la armará."
     },
     "template": {
       "title": "Explora la galería en la barra lateral",
@@ -67,7 +96,7 @@
     "cards": {
       "ai": {
         "title": "Generar con IA",
-        "description": "Describe tu página en lenguaje natural. Nosotros la componemos.",
+        "description": "Describe tu página en lenguaje natural. La IA la arma por ti.",
         "detail": "Brief → página en ~30 s"
       },
       "template": {

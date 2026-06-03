@@ -494,7 +494,7 @@ export function CustomDomainModal({
                   type="button"
                   onClick={onPublishSubdomain}
                   disabled={publishing || !subInput.trim()}
-                  className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-md bg-[var(--accent)] text-white text-[12.5px] font-medium hover:brightness-105 transition disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                  className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-md bg-[var(--accent-strong)] text-white text-[12.5px] font-medium hover:brightness-105 transition disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                 >
                   {publishing ? (
                     <>
@@ -535,7 +535,7 @@ export function CustomDomainModal({
                 type="button"
                 onClick={onAdd}
                 disabled={adding || !input.trim()}
-                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-md bg-[var(--accent)] text-white text-[12.5px] font-medium hover:brightness-105 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-md bg-[var(--accent-strong)] text-white text-[12.5px] font-medium hover:brightness-105 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {adding ? (
                   <>
@@ -712,7 +712,7 @@ function DnsInstructionsPanel({
           type="button"
           onClick={onVerify}
           disabled={verifying}
-          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-[var(--accent)] text-white text-[11.5px] font-medium hover:brightness-105 transition disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-[var(--accent-strong)] text-white text-[11.5px] font-medium hover:brightness-105 transition disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
         >
           {verifying ? (
             <Loader2 size={11} className="animate-spin" />
@@ -803,7 +803,7 @@ function ConnectButton({
       }`}
     >
       <span className="flex items-center gap-2 min-w-0">
-        <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded bg-[var(--accent)] text-white">
+        <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded bg-[var(--accent-strong)] text-white">
           <Zap size={12} />
         </span>
         <span className="min-w-0">
