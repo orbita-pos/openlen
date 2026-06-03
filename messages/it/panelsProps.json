@@ -86,5 +86,23 @@
     "errorUploadStatus": "Caricamento non riuscito ({status})",
     "errorUploadFailed": "Caricamento non riuscito",
     "errorFullUrl": "Usa un URL https:// completo."
+  },
+  "theme": {
+    "title": "Stili",
+    "darkMode": "Modalità scura",
+    "noDark": "Questo modello non ha la modalità scura",
+    "reset": "Originale",
+    "more": "Altri",
+    "less": "Meno",
+    "generator": "Crea il tuo",
+    "customColor": "Colore personalizzato",
+    "apply": "Applica",
+    "generatorHint": "Scegli un colore → una palette coerente completa",
+    "cat": {
+      "editorial": "Editoriale",
+      "minimal": "Minimal",
+      "vibrant": "Vivace",
+      "expressive": "Espressivo"
+    }
   }
 }

@@ -86,5 +86,23 @@
     "errorUploadStatus": "Upload fehlgeschlagen ({status})",
     "errorUploadFailed": "Upload fehlgeschlagen",
     "errorFullUrl": "Verwende eine vollständige https://-URL."
+  },
+  "theme": {
+    "title": "Looks",
+    "darkMode": "Dunkelmodus",
+    "noDark": "Diese Vorlage hat keinen Dunkelmodus",
+    "reset": "Original",
+    "more": "Mehr",
+    "less": "Weniger",
+    "generator": "Eigenen erstellen",
+    "customColor": "Eigene Farbe",
+    "apply": "Anwenden",
+    "generatorHint": "Farbe wählen → eine komplette stimmige Palette",
+    "cat": {
+      "editorial": "Editorial",
+      "minimal": "Minimal",
+      "vibrant": "Lebhaft",
+      "expressive": "Ausdrucksstark"
+    }
   }
 }

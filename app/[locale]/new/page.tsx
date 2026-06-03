@@ -39,6 +39,7 @@ import {
   type InspectSelection,
   type PageMeta,
 } from "@/components/workspace-v2/panels/properties-panel";
+import { lookFromAccent } from "@/lib/palette-gen";
 import { PageAssembling } from "@/components/workspace-v2/page-assembling";
 import {
   ReplaceAssetModal,
@@ -119,6 +120,32 @@ const ALL_TABS: SidebarMode[] = [
   "brief",
 ];
 
+// Build the "Original" theme baseline from a page-meta payload — the resolved
+// --ol-* token values + mode the page loaded with. Empty string for a token
+// the page doesn't define (so the reset removes that override rather than
+// pinning a blank). Mirrors the token set the inspector's Looks presets drive.
+function readThemeBaseline(m: Record<string, unknown>): {
+  tokens: Record<string, string>;
+  mode: "light" | "dark";
+} {
+  const str = (v: unknown) => (typeof v === "string" ? v : "");
+  const num = (v: unknown) => (typeof v === "number" ? String(v) : "");
+  return {
+    tokens: {
+      "--ol-bg": str(m.bg),
+      "--ol-surface": str(m.surface),
+      "--ol-fg": str(m.fg),
+      "--ol-border": str(m.border),
+      "--ol-accent": str(m.accent),
+      "--ol-font-display": str(m.displayFont),
+      "--ol-r-scale": num(m.radiusScale),
+      "--ol-text-scale": num(m.typeScale),
+      "--ol-space-scale": num(m.spaceScale),
+    },
+    mode: m.mode === "dark" ? "dark" : "light",
+  };
+}
+
 function NewV2Inner() {
   const t = useTranslations("wsPage");
   const tSections = useTranslations("panelsA");
@@ -193,6 +220,18 @@ function NewV2Inner() {
     currentSrc: string | null;
   } | null>(null);
   const [pendingChatDraft, setPendingChatDraft] = useState<string | null>(null);
+  // The page's theme tokens as first observed this project load — drives the
+  // inspector's "Original" reset (re-applies these resolved values).
+  const [originalTheme, setOriginalTheme] = useState<{
+    tokens: Record<string, string>;
+    mode: "light" | "dark";
+  } | null>(null);
+  // The light-mode token bundle of the currently-applied Look (a preset or a
+  // generated palette), or null when on Original. Lets the dark toggle re-apply
+  // the right mode's colors for the active look.
+  const [activeLook, setActiveLook] = useState<Record<string, string> | null>(
+    null,
+  );
   const [chatRedesigning, setChatRedesigning] = useState(false);
   const iframeElRef = useRef<HTMLIFrameElement | null>(null);
   // Optimistic-concurrency base — the project's updatedAt this tab last
@@ -468,7 +507,14 @@ function NewV2Inner() {
             description: typeof m.description === "string" ? m.description : "",
             ogImage: typeof m.ogImage === "string" ? m.ogImage : "",
             favicon: typeof m.favicon === "string" ? m.favicon : "",
+            mode: m.mode === "dark" ? "dark" : "light",
+            hasDark: !!m.hasDark,
           });
+          // Snapshot the page's original theme tokens from the FIRST meta of
+          // this project load — the "Original" reset re-applies these resolved
+          // values (never blank-clears, which would break the canonize force-
+          // CSS on legacy pages where --ol-bg/--ol-fg are pinned inline only).
+          setOriginalTheme((prev) => prev ?? readThemeBaseline(m));
         }
       }
     };
@@ -791,6 +837,8 @@ function NewV2Inner() {
       setInspectMode(false);
       setInspectSelection(null);
       setPageMeta(null);
+      setOriginalTheme(null);
+      setActiveLook(null);
       // Section library transient UI is project-scoped — a stale preview/Undo
       // pill (or a still-pending insert request themed for the old project) must
       // not carry across a project switch.
@@ -870,6 +918,77 @@ function NewV2Inner() {
     },
     [],
   );
+  // Theme preset ("5 bolas") — apply a whole {token: value} bundle to <html>
+  // at once. The iframe sets them inline (and re-derives --ol-accent-r) in a
+  // single reclean, then persists via openlen:html-changed. Deterministic +
+  // reversible: re-applying a different preset, or resetting, just recomputes.
+  const applyThemeBundle = useCallback((tokens: Record<string, string>) => {
+    iframeElRef.current?.contentWindow?.postMessage(
+      { type: "openlen:apply-prop", scope: "theme-bundle", tokens },
+      "*",
+    );
+  }, []);
+  // Light/dark flip — toggles the data-ol-mode attr on <html>. Empty value
+  // removes the attr (→ light default); "dark" sets it.
+  const applyThemeMode = useCallback((nextMode: "light" | "dark") => {
+    iframeElRef.current?.contentWindow?.postMessage(
+      {
+        type: "openlen:apply-prop",
+        scope: "theme",
+        prop: "data-ol-mode",
+        value: nextMode === "dark" ? "dark" : "",
+      },
+      "*",
+    );
+  }, []);
+  // "Custom look" bola — route to the Chat surface and auto-fire a curated
+  // restyle prompt (the ai-design endpoint snapshots a version itself, so the
+  // look is reachable again for free via the chat Undo / Versions tab).
+  // Apply a Look for a target mode: the LIGHT bundle lands as-is in light; in
+  // dark, its 5 base colors are swapped for a contrast-guaranteed dark set
+  // derived from the accent (font/radius/scale tokens stay). A null bundle =
+  // Original (the page's captured baseline). Always sets the mode attr too.
+  const modeRef = useRef<"light" | "dark">("light");
+  modeRef.current = pageMeta?.mode ?? "light";
+  const applyLookForMode = useCallback(
+    (lightBundle: Record<string, string> | null, mode: "light" | "dark") => {
+      const base = lightBundle ?? originalTheme?.tokens ?? null;
+      if (base) {
+        if (mode === "dark") {
+          const accent = base["--ol-accent"];
+          const dark = accent ? lookFromAccent(accent).dark : {};
+          applyThemeBundle({ ...base, ...dark });
+        } else {
+          applyThemeBundle(base);
+        }
+      }
+      applyThemeMode(mode);
+    },
+    [originalTheme, applyThemeBundle, applyThemeMode],
+  );
+  // Apply a Look (preset or generated) in the current mode, and remember it so
+  // a later dark/light toggle re-derives the right colors.
+  const applyLook = useCallback(
+    (lightBundle: Record<string, string>) => {
+      setActiveLook(lightBundle);
+      applyLookForMode(lightBundle, modeRef.current);
+    },
+    [applyLookForMode],
+  );
+  // Dark/light toggle — re-applies the active Look's colors for the new mode.
+  const toggleThemeMode = useCallback(
+    (mode: "light" | "dark") => {
+      applyLookForMode(activeLook, mode);
+    },
+    [applyLookForMode, activeLook],
+  );
+  // "Original" reset — drop the active Look and re-apply the page's captured
+  // baseline (re-applies resolved values rather than blank-clearing, which
+  // would break canonize's force-CSS on legacy pages).
+  const resetTheme = useCallback(() => {
+    setActiveLook(null);
+    applyLookForMode(null, modeRef.current);
+  }, [applyLookForMode]);
   // Form config is not HTML — it persists straight to ProjectData.settings
   // (so the notify email never reaches the published page source).
   const applyFormConfig = useCallback(
@@ -1340,6 +1459,12 @@ function NewV2Inner() {
                     onApplyStyle={applyStyle}
                     onToggleAnalytics={applyAnalyticsDisabled}
                     onApplyLogoUrl={loadedProject ? applyLogoUrl : undefined}
+                    onApplyLook={loadedProject ? applyLook : undefined}
+                    onApplyThemeMode={loadedProject ? toggleThemeMode : undefined}
+                    onResetTheme={
+                      loadedProject && originalTheme ? resetTheme : undefined
+                    }
+                    originalAccent={originalTheme?.tokens["--ol-accent"] || undefined}
                     onSendTestFormEmail={sendTestFormEmail}
                     onClearSelection={() => setInspectSelection(null)}
                     onClose={() => {

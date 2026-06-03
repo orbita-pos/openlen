@@ -86,5 +86,23 @@
     "errorUploadStatus": "업로드 실패 ({status})",
     "errorUploadFailed": "업로드 실패",
     "errorFullUrl": "전체 https:// URL을 사용하세요."
+  },
+  "theme": {
+    "title": "룩",
+    "darkMode": "다크 모드",
+    "noDark": "이 템플릿은 다크 모드를 지원하지 않습니다",
+    "reset": "원래대로",
+    "more": "더 보기",
+    "less": "접기",
+    "generator": "직접 만들기",
+    "customColor": "맞춤 색상",
+    "apply": "적용",
+    "generatorHint": "색을 고르면 → 일관된 팔레트 완성",
+    "cat": {
+      "editorial": "에디토리얼",
+      "minimal": "미니멀",
+      "vibrant": "비비드",
+      "expressive": "개성적"
+    }
   }
 }

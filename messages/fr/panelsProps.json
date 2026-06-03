@@ -86,5 +86,23 @@
     "errorUploadStatus": "Échec de l'importation ({status})",
     "errorUploadFailed": "Échec de l'importation",
     "errorFullUrl": "Utilisez une URL https:// complète."
+  },
+  "theme": {
+    "title": "Styles",
+    "darkMode": "Mode sombre",
+    "noDark": "Ce modèle n'a pas de mode sombre",
+    "reset": "Original",
+    "more": "Plus",
+    "less": "Moins",
+    "generator": "Crée le tien",
+    "customColor": "Couleur personnalisée",
+    "apply": "Appliquer",
+    "generatorHint": "Choisis une couleur → une palette cohérente complète",
+    "cat": {
+      "editorial": "Éditorial",
+      "minimal": "Minimal",
+      "vibrant": "Vif",
+      "expressive": "Expressif"
+    }
   }
 }
