@@ -9,7 +9,7 @@
 
 import { writeFileSync } from "node:fs";
 import { listTemplates, getTemplateHtml } from "../lib/templates/store";
-import { pickTemplate, type TemplateCatalogItem } from "../lib/curate/pick-template";
+import { pickTemplate, pickWeighted, type TemplateCatalogItem } from "../lib/curate/pick-template";
 import { fillAssembled } from "../lib/assemble/fill";
 import { normalizeBornCanonical } from "../lib/normalize";
 import { ensurePageMeta } from "../lib/publish/ensure-page-meta";
@@ -47,13 +47,14 @@ async function main(): Promise<void> {
     if (pick.raw) console.error(`  raw head: ${pick.raw.slice(0, 200)}`);
     process.exit(1);
   }
-  const chosen = templates.find((t) => t.id === pick.templateId)!;
-  console.log(`  picked: ${pick.templateId} (${chosen.name} · ${chosen.family} · ${chosen.mode})`);
+  const chosenId = pickWeighted(pick.templateIds);
+  const chosen = templates.find((t) => t.id === chosenId)!;
+  console.log(`  candidates: [${pick.templateIds.join(", ")}] → picked: ${chosenId} (${chosen.name} · ${chosen.family} · ${chosen.mode})`);
   console.log(`  copy: ${pick.copy.business_name ?? "(none)"} — "${pick.copy.tagline_en ?? pick.copy.tagline_es ?? ""}"`);
   if (pick.usage) console.log(`  pick tokens: in=${pick.usage.inputTokens} out=${pick.usage.outputTokens}`);
 
   console.log(`▸ load template HTML`);
-  const templateHtml = await getTemplateHtml(pick.templateId);
+  const templateHtml = await getTemplateHtml(chosenId);
   if (templateHtml === null) {
     console.error("  FAILED: template HTML unavailable");
     process.exit(1);
@@ -73,7 +74,7 @@ async function main(): Promise<void> {
   }
 
   writeFileSync(outFile, sanitized.html);
-  console.log(`\n✓ wrote ${outFile}  (${sanitized.html.length} bytes)  template="${pick.templateId}"  title="${title}"`);
+  console.log(`\n✓ wrote ${outFile}  (${sanitized.html.length} bytes)  template="${chosenId}"  title="${title}"`);
   console.log(`  next: open it, and/or  npm run spike:judge -- ./spike\n`);
   process.exit(0);
 }

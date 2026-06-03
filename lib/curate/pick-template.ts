@@ -26,10 +26,28 @@ export interface TemplateCatalogItem {
 }
 
 export const PickSchema = z.object({
-  templateId: z.string(),
+  // Ranked best-fit candidates (best first). The route picks one with a bias
+  // toward #1 so re-generating the same brief yields a different — but still
+  // well-fitting — template instead of always the same page.
+  templateIds: z.array(z.string()).min(1),
   copy: LenientBusinessDataSchema,
 });
 export type Pick = z.infer<typeof PickSchema>;
+
+/** Pick one id from a ranked list, biased toward the front (harmonic weights:
+ *  #1≈0.55, #2≈0.27, #3≈0.18 for a top-3). So the first generation is usually
+ *  the best fit, and re-generating still varies. `rnd` injectable for tests. */
+export function pickWeighted(ids: string[], rnd: () => number = Math.random): string {
+  if (ids.length <= 1) return ids[0];
+  const weights = ids.map((_, i) => 1 / (i + 1));
+  const total = weights.reduce((a, b) => a + b, 0);
+  let r = rnd() * total;
+  for (let i = 0; i < ids.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return ids[i];
+  }
+  return ids[0];
+}
 
 export function buildCatalog(items: TemplateCatalogItem[]): string {
   return items
@@ -38,11 +56,11 @@ export function buildCatalog(items: TemplateCatalogItem[]): string {
 }
 
 export function pickSystemPrompt(catalog: string): string {
-  return `You are the page planner for OpenLen. Given a brief, you (1) pick the ONE template from the catalog below that best fits the brief, and (2) invent the brief-specific copy. Output STRICT JSON only — no markdown, no prose.
+  return `You are the page planner for OpenLen. Given a brief, you (1) pick the THREE templates from the catalog below that best fit the brief (ranked, best first), and (2) invent the brief-specific copy. Output STRICT JSON only — no markdown, no prose.
 
 Shape:
 {
-  "templateId": "<an id copied EXACTLY from the catalog>",
+  "templateIds": ["<best-fit id>", "<2nd best id>", "<3rd best id>"],
   "copy": {
     "business_name": string|null, "industry": string|null,
     "tagline_es": string|null, "tagline_en": string|null,
@@ -57,8 +75,8 @@ Shape:
 }
 
 PICK RULES:
-- "templateId" MUST be one of the ids listed below, copied EXACTLY. Choose by fit: industry/mood/audience match, and the right mode (dark = technical/SaaS/bold; light/cream = warm/editorial/consumer).
-- Prefer a template whose structure naturally suits the brief (a SaaS template for a dev tool, an editorial template for a studio, a warm template for food/hospitality).
+- "templateIds" MUST be 3 ids copied EXACTLY from the catalog below (best fit first). ALL THREE must genuinely fit the brief — same industry/mood/audience and the right mode (dark = technical/SaaS/bold; light/cream = warm/editorial/consumer). Don't pad with a bad match: if only 1–2 truly fit, return just those.
+- Prefer templates whose structure naturally suits the brief (a SaaS template for a dev tool, an editorial template for a studio, a warm template for food/hospitality). The 3 should be plausible alternatives a designer would offer for the same brief.
 
 COPY RULES (you DO invent — this is a demo page, not verified client data):
 - Invent a believable, specific, on-brand demo: product/company name, a punchy tagline, a 1–2 sentence pitch, a hero_keyword, 3–6 concrete features, realistic pricing tiers if the brief implies a paid product, 2–3 testimonials with fictional plausible names, 3–5 FAQ Q&As, natural CTAs.
@@ -72,7 +90,8 @@ Return ONLY the JSON object.`;
 
 export interface PickTemplateOk {
   ok: true;
-  templateId: string;
+  /** Ranked, catalog-validated candidates (best first). Route picks one via pickWeighted. */
+  templateIds: string[];
   copy: ExtractedBusinessData;
   raw: string;
   usage?: { inputTokens: number; outputTokens: number };
@@ -162,11 +181,14 @@ export async function pickTemplate(
     };
   }
   const ids = new Set(catalog.map((c) => c.id));
-  if (!ids.has(validated.data.templateId)) {
-    return { ok: false, error: { kind: "unknown-template", message: `model picked "${validated.data.templateId}" which is not in the catalog` }, raw, durationMs: dur(t0, opts) };
+  // Keep only catalog ids, ranked, de-duplicated. Tolerates the model padding
+  // or hallucinating an id — we just drop the invalid ones.
+  const templateIds = [...new Set(validated.data.templateIds)].filter((id) => ids.has(id));
+  if (templateIds.length === 0) {
+    return { ok: false, error: { kind: "unknown-template", message: `model picked ${JSON.stringify(validated.data.templateIds)} — none in the catalog` }, raw, durationMs: dur(t0, opts) };
   }
 
-  return { ok: true, templateId: validated.data.templateId, copy: validated.data.copy, raw, usage, durationMs: dur(t0, opts) };
+  return { ok: true, templateIds, copy: validated.data.copy, raw, usage, durationMs: dur(t0, opts) };
 }
 
 function dur(t0: number, opts?: { now?: number }): number {
