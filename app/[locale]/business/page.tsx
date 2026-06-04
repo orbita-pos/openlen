@@ -1,20 +1,17 @@
 "use client";
 
 // "Mi negocio" — full management page for the user's saved business profiles.
-// Replaces the manage-profiles modal as the home for the profile (the /new
-// picker's quick-create modal still exists). Wired to /api/profiles (CRUD),
-// /api/profiles/assets (logo+photo upload) and /api/profiles/extract (import).
-// Spanish copy for v1 (LatAm persona); i18n is a follow-up.
+// Wired to /api/profiles (CRUD), /api/profiles/assets (logo+photo upload) and
+// /api/profiles/extract (import). i18n via the `miNegocio` namespace.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useDarkMode } from "@/lib/use-dark-mode";
 import type {
   BusinessProfile,
   BusinessProfileData,
-  BusinessProfileLink,
 } from "@/lib/business-profiles/types";
 
 /* ───────── Icons (lucide-style) ───────── */
@@ -66,16 +63,16 @@ const Star = (p: IconProps) => <Icon {...p}><polygon points="12 2 15.09 8.26 22 
 const ArrowRight = (p: IconProps) => <Icon {...p}><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></Icon>;
 const Loader = (p: IconProps) => <Icon {...p}><path d="M21 12a9 9 0 1 1-6.219-8.56" /></Icon>;
 
-/* ───────── Link presets (trimmed for the non-tech persona) ───────── */
+/* ───────── Link presets (label resolved via i18n at render) ───────── */
 const TIPOS_ENLACE: Record<
   string,
-  { label: string; icon: (p: IconProps) => React.ReactElement; placeholder: string }
+  { labelKey: string; icon: (p: IconProps) => React.ReactElement; placeholder: string }
 > = {
-  website: { label: "Sitio web", icon: Globe, placeholder: "tunegocio.mx" },
-  menu: { label: "Menú / Linktree", icon: Link2, placeholder: "linktr.ee/tunegocio" },
-  youtube: { label: "YouTube", icon: Youtube, placeholder: "youtube.com/@tunegocio" },
-  tiktok: { label: "TikTok", icon: Tiktok, placeholder: "@tunegocio" },
-  otro: { label: "Otro enlace", icon: Link2, placeholder: "pega-tu-link.com" },
+  website: { labelKey: "links.website", icon: Globe, placeholder: "tunegocio.mx" },
+  menu: { labelKey: "links.menu", icon: Link2, placeholder: "linktr.ee/tunegocio" },
+  youtube: { labelKey: "links.youtube", icon: Youtube, placeholder: "youtube.com/@tunegocio" },
+  tiktok: { labelKey: "links.tiktok", icon: Tiktok, placeholder: "@tunegocio" },
+  otro: { labelKey: "links.otro", icon: Link2, placeholder: "pega-tu-link.com" },
 };
 const ORDEN_TIPOS = ["website", "menu", "youtube", "tiktok", "otro"];
 const COLORES = ["#FF5A36", "#C2410C", "#DB2777", "#2563EB", "#0F766E", "#7C3AED", "#CA8A04", "#1A1A1A"];
@@ -104,7 +101,6 @@ function emptyData(): BusinessProfileData {
   };
 }
 
-// Ensure contact/socials/brand/arrays exist so the form binds safely.
 function hydrate(d: BusinessProfileData): BusinessProfileData {
   const e = emptyData();
   return {
@@ -206,6 +202,7 @@ const Field = ({ icon: I, value, onChange, placeholder }: { icon?: (p: IconProps
 
 /* ───────── Page ───────── */
 export default function BusinessPage() {
+  const t = useTranslations("miNegocio");
   const [dark, toggleDark] = useDarkMode();
   const router = useRouter();
   const locale = useLocale();
@@ -304,7 +301,7 @@ export default function BusinessPage() {
   const save = async () => {
     if (!active) return;
     setSaving(true);
-    const name = active.name.trim() || "Mi negocio";
+    const name = active.name.trim() || t("title");
     const payload = { name, data: { ...active.data, business_name: name } };
     try {
       if (active.isNew) {
@@ -334,7 +331,7 @@ export default function BusinessPage() {
   const remove = async () => {
     if (!active) return;
     if (!active.isNew) {
-      if (!window.confirm(`¿Eliminar "${active.name || "este negocio"}"?`)) return;
+      if (!window.confirm(t("deleteConfirm", { name: active.name || t("switcher.newBusiness") }))) return;
       await fetch(`/api/profiles/${active.id}`, { method: "DELETE" });
     }
     setData((d) => {
@@ -388,16 +385,15 @@ export default function BusinessPage() {
 
   return (
     <div className="min-h-screen bg-[#FAFAF9] text-[#1A1A1A] dark:bg-[#0E0E10] dark:text-[#F4F4F3] antialiased">
-      {/* Header */}
       <header className="sticky top-0 z-40 border-b border-[#EEECEA] dark:border-white/8 bg-[#FAFAF9]/85 dark:bg-[#0E0E10]/85 backdrop-blur">
         <div className="max-w-6xl mx-auto px-5 sm:px-6 h-16 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             <Link href={`/${locale}/new`} className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-coral-500 text-white font-bold text-[14px] shrink-0">O</Link>
             <span className="font-semibold tracking-tight text-[15px] hidden sm:inline">OpenLen</span>
             <span className="h-5 w-px bg-[#E5E3E1] dark:bg-white/10 mx-1 hidden sm:block" />
-            <span className="text-[15px] font-semibold text-[#6B6967] dark:text-[#9B9897]">Mi negocio</span>
+            <span className="text-[15px] font-semibold text-[#6B6967] dark:text-[#9B9897]">{t("title")}</span>
           </div>
-          <button onClick={toggleDark} aria-label="Cambiar tema"
+          <button onClick={toggleDark} aria-label={t("theme")}
             className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[#6B6967] dark:text-[#9B9897] hover:bg-white dark:hover:bg-white/5 ring-1 ring-transparent hover:ring-[#E5E3E1] dark:hover:ring-white/10 transition">
             {dark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
@@ -405,46 +401,44 @@ export default function BusinessPage() {
       </header>
 
       {loading ? (
-        <div className="max-w-6xl mx-auto px-5 py-20 text-center text-[13px] text-[#8A8784]">Cargando…</div>
+        <div className="max-w-6xl mx-auto px-5 py-20 text-center text-[13px] text-[#8A8784]">{t("loading")}</div>
       ) : hasNone ? (
-        <EmptyState importing={importing} onPickFile={() => importRef.current?.click()} onDescribe={(t) => void doDescribe(t)} onManual={() => nuevo()} />
+        <EmptyState importing={importing} onPickFile={() => importRef.current?.click()} onDescribe={(t2) => void doDescribe(t2)} onManual={() => nuevo()} />
       ) : active ? (
         <main className="max-w-6xl mx-auto px-5 sm:px-6 py-7 sm:py-9">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-7">
             <div>
-              <h1 className="text-[26px] sm:text-[30px] font-bold tracking-tight leading-tight">Mi negocio</h1>
-              <p className="text-[13.5px] text-[#8A8784] dark:text-[#9B9897] mt-1">Llénalo una vez. Cada página nueva ya nace con tu info.</p>
+              <h1 className="text-[26px] sm:text-[30px] font-bold tracking-tight leading-tight">{t("title")}</h1>
+              <p className="text-[13.5px] text-[#8A8784] dark:text-[#9B9897] mt-1">{t("subtitle")}</p>
             </div>
             <div className="flex items-center gap-2.5">
               <Switcher profiles={data} active={active} onPick={setActiveId} onNew={() => nuevo()} />
               <button onClick={() => void save()} disabled={saving}
                 className="inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-coral-600 text-white text-[14px] font-semibold shadow-[0_8px_22px_-8px_rgba(255,90,54,0.55)] hover:bg-coral-700 active:scale-[0.98] transition shrink-0 disabled:opacity-60">
-                {saving ? <Loader size={16} className="animate-spin" /> : <Check size={16} />} Guardar
+                {saving ? <Loader size={16} className="animate-spin" /> : <Check size={16} />} {t("save")}
               </button>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5">
             <div className="space-y-5">
-              {/* Identidad */}
               <Card className="p-6">
-                <SectionHead icon={Store} title="Identidad" hint="Lo básico que verá la gente en todas tus páginas." />
+                <SectionHead icon={Store} title={t("identity.title")} hint={t("identity.hint")} />
                 <div className="space-y-4">
-                  <div><Label>Nombre del negocio</Label><Field value={active.name} onChange={setName} placeholder="Ej. Café Luna" /></div>
+                  <div><Label>{t("identity.name")}</Label><Field value={active.name} onChange={setName} placeholder={t("identity.namePlaceholder")} /></div>
                   <div>
-                    <Label>¿Qué haces?</Label>
-                    <Field value={active.data.industry ?? ""} onChange={(v) => setField("industry", v)} placeholder="Café de especialidad y pan recién horneado." />
-                    <p className="mt-1.5 text-[12px] text-[#A8A5A2] dark:text-[#7C7977]">Una sola línea, como se lo dirías a un cliente nuevo.</p>
+                    <Label>{t("identity.what")}</Label>
+                    <Field value={active.data.industry ?? ""} onChange={(v) => setField("industry", v)} placeholder={t("identity.whatPlaceholder")} />
+                    <p className="mt-1.5 text-[12px] text-[#A8A5A2] dark:text-[#7C7977]">{t("identity.whatHint")}</p>
                   </div>
                 </div>
               </Card>
 
-              {/* Marca */}
               <Card className="p-6">
-                <SectionHead icon={Sparkles} title="Marca" hint="Tu logo, tu color y tus fotos. Esto le da personalidad a cada página." />
+                <SectionHead icon={Sparkles} title={t("brand.title")} hint={t("brand.hint")} />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
                   <div>
-                    <Label>Logo</Label>
+                    <Label>{t("brand.logo")}</Label>
                     <div className="flex items-center gap-3">
                       {active.data.brand?.logoUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -454,17 +448,17 @@ export default function BusinessPage() {
                       )}
                       <button onClick={() => logoRef.current?.click()} disabled={busyAsset}
                         className="flex-1 inline-flex items-center justify-center gap-2 h-16 rounded-xl border border-dashed border-[#D6D3D0] dark:border-white/15 text-[#8A8784] dark:text-[#9B9897] hover:border-coral-400 hover:text-coral-600 dark:hover:text-coral-300 transition text-[13px] font-medium disabled:opacity-60">
-                        <Upload size={16} /> Subir logo
+                        <Upload size={16} /> {t("brand.upload")}
                       </button>
                       <input ref={logoRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden"
                         onChange={(e) => { const f = e.target.files?.[0]; if (f) void onLogo(f); }} />
                     </div>
                   </div>
                   <div>
-                    <Label>Color de marca</Label>
+                    <Label>{t("brand.color")}</Label>
                     <div className="flex items-center gap-2.5">
                       <input type="color" value={/^#[0-9a-fA-F]{6}$/.test(active.data.brand?.accent ?? "") ? active.data.brand!.accent! : "#FF5A36"}
-                        onChange={(e) => setColor(e.target.value)} aria-label="Color de marca"
+                        onChange={(e) => setColor(e.target.value)} aria-label={t("brand.color")}
                         className="h-11 w-11 rounded-xl ring-1 ring-black/10 dark:ring-white/15 shrink-0 cursor-pointer bg-transparent" />
                       <div className="flex-1 flex items-center gap-2 rounded-lg bg-white dark:bg-[#121214] ring-1 ring-[#E5E3E1] dark:ring-white/10 px-3 h-11">
                         <span className="text-[14px] font-mono uppercase">{active.data.brand?.accent ?? "—"}</span>
@@ -477,17 +471,17 @@ export default function BusinessPage() {
                           style={{ background: c }} aria-label={c} />
                       ))}
                     </div>
-                    <p className="mt-2 text-[12px] text-[#A8A5A2] dark:text-[#7C7977] leading-snug">Lo tomamos de tu logo automáticamente. Puedes cambiarlo cuando quieras.</p>
+                    <p className="mt-2 text-[12px] text-[#A8A5A2] dark:text-[#7C7977] leading-snug">{t("brand.colorHint")}</p>
                   </div>
                 </div>
                 <div>
-                  <Label>Fotos del negocio</Label>
+                  <Label>{t("brand.photos")}</Label>
                   <div className="grid grid-cols-4 sm:grid-cols-5 gap-2.5">
                     {(active.data.photos ?? []).map((f, i) => (
                       <div key={`${f}-${i}`} className="group relative aspect-square rounded-xl overflow-hidden ring-1 ring-[#E5E3E1] dark:ring-white/10">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={f} alt="" className="h-full w-full object-cover" />
-                        <button onClick={() => delFoto(i)} aria-label="Eliminar foto"
+                        <button onClick={() => delFoto(i)} aria-label={t("brand.removePhoto")}
                           className="absolute top-1.5 right-1.5 inline-flex h-6 w-6 items-center justify-center rounded-lg bg-black/55 backdrop-blur text-white opacity-0 group-hover:opacity-100 transition hover:bg-black/75">
                           <Trash size={12} />
                         </button>
@@ -495,7 +489,7 @@ export default function BusinessPage() {
                     ))}
                     <button onClick={() => photosRef.current?.click()} disabled={busyAsset}
                       className="aspect-square rounded-xl border border-dashed border-[#D6D3D0] dark:border-white/15 flex flex-col items-center justify-center gap-1 text-[#A8A5A2] dark:text-[#7C7977] hover:border-coral-400 hover:text-coral-600 dark:hover:text-coral-300 transition disabled:opacity-60">
-                      <Plus size={18} /><span className="text-[10.5px] font-medium">Agregar</span>
+                      <Plus size={18} /><span className="text-[10.5px] font-medium">{t("brand.add")}</span>
                     </button>
                     <input ref={photosRef} type="file" accept="image/png,image/jpeg,image/webp" multiple className="hidden"
                       onChange={(e) => { const fs = Array.from(e.target.files ?? []); if (fs.length) void onPhotos(fs); }} />
@@ -503,23 +497,21 @@ export default function BusinessPage() {
                 </div>
               </Card>
 
-              {/* Contacto */}
               <Card className="p-6">
-                <SectionHead icon={Phone} title="Contacto" hint="Cómo te encuentran y te escriben tus clientes." />
+                <SectionHead icon={Phone} title={t("contact.title")} hint={t("contact.hint")} />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div><Label>WhatsApp</Label><Field icon={Whats} value={active.data.contact?.whatsapp ?? ""} onChange={(v) => setContact("whatsapp", v)} placeholder="55 1234 5678" /></div>
-                  <div><Label>Teléfono</Label><Field icon={Phone} value={active.data.contact?.phone ?? ""} onChange={(v) => setContact("phone", v)} placeholder="55 8765 4321" /></div>
-                  <div><Label>Email</Label><Field icon={Mail} value={active.data.contact?.email ?? ""} onChange={(v) => setContact("email", v)} placeholder="hola@tunegocio.mx" /></div>
-                  <div><Label>Instagram</Label><Field icon={Insta} value={active.data.contact?.socials?.instagram ?? ""} onChange={(v) => setSocial("instagram", v)} placeholder="@tunegocio" /></div>
-                  <div className="sm:col-span-2"><Label>Dirección</Label><Field icon={MapPin} value={active.data.contact?.address ?? ""} onChange={(v) => setContact("address", v)} placeholder="Calle, número, colonia, ciudad" /></div>
-                  <div><Label>Facebook</Label><Field icon={Facebook} value={active.data.contact?.socials?.facebook ?? ""} onChange={(v) => setSocial("facebook", v)} placeholder="Tu página" /></div>
-                  <div><Label>TikTok</Label><Field icon={Tiktok} value={active.data.contact?.socials?.tiktok ?? ""} onChange={(v) => setSocial("tiktok", v)} placeholder="@tunegocio" /></div>
+                  <div><Label>{t("contact.whatsapp")}</Label><Field icon={Whats} value={active.data.contact?.whatsapp ?? ""} onChange={(v) => setContact("whatsapp", v)} placeholder="55 1234 5678" /></div>
+                  <div><Label>{t("contact.phone")}</Label><Field icon={Phone} value={active.data.contact?.phone ?? ""} onChange={(v) => setContact("phone", v)} placeholder="55 8765 4321" /></div>
+                  <div><Label>{t("contact.email")}</Label><Field icon={Mail} value={active.data.contact?.email ?? ""} onChange={(v) => setContact("email", v)} placeholder="hola@tunegocio.mx" /></div>
+                  <div><Label>{t("contact.instagram")}</Label><Field icon={Insta} value={active.data.contact?.socials?.instagram ?? ""} onChange={(v) => setSocial("instagram", v)} placeholder="@tunegocio" /></div>
+                  <div className="sm:col-span-2"><Label>{t("contact.address")}</Label><Field icon={MapPin} value={active.data.contact?.address ?? ""} onChange={(v) => setContact("address", v)} placeholder={t("contact.addressPlaceholder")} /></div>
+                  <div><Label>{t("contact.facebook")}</Label><Field icon={Facebook} value={active.data.contact?.socials?.facebook ?? ""} onChange={(v) => setSocial("facebook", v)} placeholder={t("contact.facebookPlaceholder")} /></div>
+                  <div><Label>{t("contact.tiktok")}</Label><Field icon={Tiktok} value={active.data.contact?.socials?.tiktok ?? ""} onChange={(v) => setSocial("tiktok", v)} placeholder="@tunegocio" /></div>
                 </div>
               </Card>
 
-              {/* Más enlaces */}
               <Card className="p-6">
-                <SectionHead icon={Link2} title="Más enlaces" hint="Tu sitio actual, un Linktree, YouTube… lo que quieras compartir." />
+                <SectionHead icon={Link2} title={t("links.title")} hint={t("links.hint")} />
                 <div className="space-y-2.5">
                   {(active.data.links ?? []).map((e, i) => {
                     const cfg = TIPOS_ENLACE[e.type] ?? TIPOS_ENLACE.otro;
@@ -528,12 +520,12 @@ export default function BusinessPage() {
                       <div key={i} className="flex items-center gap-2">
                         <div className="flex items-center gap-2.5 flex-1 rounded-lg bg-white dark:bg-[#121214] ring-1 ring-[#E5E3E1] dark:ring-white/10 focus-within:ring-2 focus-within:ring-coral-500 transition px-3 h-11">
                           <I size={16} className="shrink-0 text-[#A8A5A2] dark:text-[#7C7977]" />
-                          <span className="text-[12px] font-medium text-[#8A8784] dark:text-[#9B9897] shrink-0 hidden sm:inline">{cfg.label}</span>
+                          <span className="text-[12px] font-medium text-[#8A8784] dark:text-[#9B9897] shrink-0 hidden sm:inline">{t(cfg.labelKey)}</span>
                           <span className="h-4 w-px bg-[#E5E3E1] dark:bg-white/10 shrink-0 hidden sm:block" />
                           <input value={e.url} onChange={(ev) => patchEnlace(i, ev.target.value)} placeholder={cfg.placeholder}
                             className="w-full bg-transparent text-[14px] text-[#1A1A1A] dark:text-[#F4F4F3] placeholder:text-[#C0BDBA] dark:placeholder:text-[#5C5957] focus:outline-none" />
                         </div>
-                        <button onClick={() => delEnlace(i)} aria-label="Quitar enlace"
+                        <button onClick={() => delEnlace(i)} aria-label={t("links.remove")}
                           className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-[#A8A5A2] dark:text-[#7C7977] hover:text-coral-600 hover:bg-coral-50 dark:hover:bg-coral-500/10 transition shrink-0">
                           <Trash size={15} />
                         </button>
@@ -541,44 +533,42 @@ export default function BusinessPage() {
                     );
                   })}
                   {(active.data.links ?? []).length === 0 && (
-                    <p className="text-[13px] text-[#A8A5A2] dark:text-[#7C7977] py-1">Aún no agregas enlaces. Elige uno abajo 👇</p>
+                    <p className="text-[13px] text-[#A8A5A2] dark:text-[#7C7977] py-1">{t("links.empty")}</p>
                   )}
                 </div>
                 <div className="mt-4 flex flex-wrap gap-1.5">
-                  {ORDEN_TIPOS.map((t) => {
-                    const cfg = TIPOS_ENLACE[t];
+                  {ORDEN_TIPOS.map((tp) => {
+                    const cfg = TIPOS_ENLACE[tp];
                     const I = cfg.icon;
                     return (
-                      <button key={t} onClick={() => addEnlace(t)}
+                      <button key={tp} onClick={() => addEnlace(tp)}
                         className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg ring-1 ring-[#E5E3E1] dark:ring-white/10 bg-[#FAFAF9] dark:bg-white/5 text-[12.5px] font-medium text-[#6B6967] dark:text-[#9B9897] hover:ring-coral-300 dark:hover:ring-coral-500/40 hover:text-coral-700 dark:hover:text-coral-300 transition">
-                        <Plus size={12} /> <I size={13} /> {cfg.label}
+                        <Plus size={12} /> <I size={13} /> {t(cfg.labelKey)}
                       </button>
                     );
                   })}
                 </div>
               </Card>
 
-              {/* Danger / default row */}
               <div className="flex items-center justify-between px-1">
                 <button onClick={() => void makeDefault()} disabled={active.isDefault || active.isNew}
                   className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[#6B6967] dark:text-[#9B9897] hover:text-coral-700 dark:hover:text-coral-300 transition disabled:opacity-40">
-                  <Star size={13} /> {active.isDefault ? "Es tu negocio principal" : "Hacer principal"}
+                  <Star size={13} /> {active.isDefault ? t("isDefault") : t("makeDefault")}
                 </button>
                 <button onClick={() => void remove()}
                   className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[#A8A5A2] hover:text-red-600 transition">
-                  <Trash size={13} /> Eliminar negocio
+                  <Trash size={13} /> {t("delete")}
                 </button>
               </div>
             </div>
 
-            {/* Sticky preview */}
             <div className="lg:sticky lg:top-[88px] lg:self-start space-y-3">
               <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-coral-700 dark:text-coral-300">
                 <span className="relative flex h-1.5 w-1.5"><span className="absolute inset-0 rounded-full bg-coral-500 opacity-70 animate-ping" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-coral-500" /></span>
-                Así se ve en tus páginas
+                {t("preview.badge")}
               </span>
               <PreviewHero p={active} />
-              <p className="text-[12px] text-[#A8A5A2] dark:text-[#7C7977] leading-snug px-1">Cada página que crees usa esta info y tu color de marca. Cambia algo aquí y se actualiza en todas.</p>
+              <p className="text-[12px] text-[#A8A5A2] dark:text-[#7C7977] leading-snug px-1">{t("preview.hint")}</p>
             </div>
           </div>
         </main>
@@ -591,7 +581,7 @@ export default function BusinessPage() {
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
           <div className="flex items-center gap-2.5 rounded-full bg-[#1A1A1A] dark:bg-white text-white dark:text-[#1A1A1A] pl-3 pr-4 py-2.5 shadow-xl">
             <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white"><Check size={12} stroke={3} /></span>
-            <span className="text-[13.5px] font-medium">Guardado. Tus páginas ya usan esta info.</span>
+            <span className="text-[13.5px] font-medium">{t("toast")}</span>
           </div>
         </div>
       )}
@@ -601,6 +591,7 @@ export default function BusinessPage() {
 
 /* ───────── Business switcher ───────── */
 function Switcher({ profiles, active, onPick, onNew }: { profiles: LocalProfile[]; active: LocalProfile; onPick: (id: string) => void; onNew: () => void }) {
+  const t = useTranslations("miNegocio");
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -614,25 +605,25 @@ function Switcher({ profiles, active, onPick, onNew }: { profiles: LocalProfile[
         className="flex items-center gap-2.5 h-11 pl-1.5 pr-3 rounded-xl bg-white dark:bg-[#1A1A1D] ring-1 ring-[#E5E3E1] dark:ring-white/10 hover:ring-[#D6D3D0] dark:hover:ring-white/20 transition">
         <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-white text-[14px] font-bold shrink-0" style={{ background: active.data.brand?.accent ?? "#FF5A36" }}>{inicialDe(active.name)}</span>
         <span className="min-w-0 text-left">
-          <span className="block text-[13.5px] font-semibold leading-tight truncate max-w-[160px]">{active.name.trim() || "Negocio nuevo"}</span>
-          <span className="block text-[11px] text-[#8A8784] dark:text-[#9B9897] leading-tight">Cambiar negocio</span>
+          <span className="block text-[13.5px] font-semibold leading-tight truncate max-w-[160px]">{active.name.trim() || t("switcher.newBusiness")}</span>
+          <span className="block text-[11px] text-[#8A8784] dark:text-[#9B9897] leading-tight">{t("switcher.change")}</span>
         </span>
         <ChevronDown size={15} className="text-[#A8A5A2] ml-1 shrink-0" />
       </button>
       {open && (
         <div className="absolute right-0 sm:left-0 mt-2 w-[300px] rounded-2xl bg-white dark:bg-[#1A1A1D] ring-1 ring-[#E5E3E1] dark:ring-white/10 shadow-xl p-1.5 z-30">
-          <div className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#8A8784]">Tus negocios</div>
+          <div className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#8A8784]">{t("switcher.yours")}</div>
           {profiles.map((n) => (
             <button key={n.id} onClick={() => { onPick(n.id); setOpen(false); }}
               className={`flex items-center gap-2.5 w-full text-left px-2 py-2 rounded-xl transition ${n.id === active.id ? "bg-[#FAFAF9] dark:bg-white/5" : "hover:bg-[#FAFAF9] dark:hover:bg-white/5"}`}>
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-white text-[14px] font-bold shrink-0" style={{ background: n.data.brand?.accent ?? "#FF5A36" }}>{inicialDe(n.name)}</span>
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-1.5">
-                  <span className="text-[13.5px] font-semibold truncate">{n.name.trim() || "Negocio nuevo"}</span>
-                  {n.isDefault && <span className="inline-flex items-center gap-1 rounded-full bg-coral-50 dark:bg-coral-500/15 text-coral-700 dark:text-coral-300 px-1.5 py-0.5 text-[10px] font-semibold"><Star size={9} /> Principal</span>}
-                  {n.isNew && <span className="inline-flex items-center rounded-full bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 text-[10px] font-semibold">Nuevo</span>}
+                  <span className="text-[13.5px] font-semibold truncate">{n.name.trim() || t("switcher.newBusiness")}</span>
+                  {n.isDefault && <span className="inline-flex items-center gap-1 rounded-full bg-coral-50 dark:bg-coral-500/15 text-coral-700 dark:text-coral-300 px-1.5 py-0.5 text-[10px] font-semibold"><Star size={9} /> {t("switcher.principal")}</span>}
+                  {n.isNew && <span className="inline-flex items-center rounded-full bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 text-[10px] font-semibold">{t("switcher.new")}</span>}
                 </span>
-                <span className="block text-[11.5px] text-[#8A8784] dark:text-[#9B9897] truncate">{(n.data.industry ?? "").trim() || "Sin descripción todavía"}</span>
+                <span className="block text-[11.5px] text-[#8A8784] dark:text-[#9B9897] truncate">{(n.data.industry ?? "").trim() || t("switcher.noDesc")}</span>
               </span>
               {n.id === active.id && <Check size={15} className="text-coral-600 shrink-0" />}
             </button>
@@ -641,7 +632,7 @@ function Switcher({ profiles, active, onPick, onNew }: { profiles: LocalProfile[
           <button onClick={() => { onNew(); setOpen(false); }}
             className="flex items-center gap-2.5 w-full text-left px-2.5 py-2 rounded-xl text-[13.5px] font-medium text-coral-700 dark:text-coral-300 hover:bg-coral-50 dark:hover:bg-coral-500/10 transition">
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg ring-1 ring-dashed ring-coral-300 dark:ring-coral-500/40 shrink-0"><Plus size={16} /></span>
-            Nuevo negocio
+            {t("switcher.add")}
           </button>
         </div>
       )}
@@ -651,8 +642,9 @@ function Switcher({ profiles, active, onPick, onNew }: { profiles: LocalProfile[
 
 /* ───────── Mini live preview ───────── */
 function PreviewHero({ p }: { p: LocalProfile }) {
-  const nombre = p.name.trim() || "Tu negocio";
-  const tagline = (p.data.industry ?? "").trim() || "Aquí va una línea de lo que haces.";
+  const t = useTranslations("miNegocio");
+  const nombre = p.name.trim() || t("preview.fallbackName");
+  const tagline = (p.data.industry ?? "").trim() || t("preview.fallbackTagline");
   const color = p.data.brand?.accent ?? "#FF5A36";
   return (
     <div className="rounded-xl overflow-hidden ring-1 ring-[#E5E3E1] dark:ring-white/10 bg-white dark:bg-[#0E0E10]">
@@ -675,15 +667,15 @@ function PreviewHero({ p }: { p: LocalProfile }) {
             </span>
             <span className="text-[10px] font-semibold text-white drop-shadow">{nombre}</span>
           </div>
-          <span className="rounded-md px-1.5 py-0.5 text-[8px] font-semibold text-white" style={{ background: color }}>Contáctanos</span>
+          <span className="rounded-md px-1.5 py-0.5 text-[8px] font-semibold text-white" style={{ background: color }}>{t("preview.contact")}</span>
         </div>
       </div>
       <div className="px-3.5 py-3.5">
         <div className="text-[15px] font-bold tracking-tight leading-tight">{nombre}</div>
         <div className="text-[11px] text-[#6B6967] dark:text-[#9B9897] mt-1 leading-snug">{tagline}</div>
         <div className="mt-2.5 flex items-center gap-1.5">
-          <span className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[10.5px] font-semibold text-white" style={{ background: color }}><Whats size={11} /> Escríbenos</span>
-          <span className="inline-flex items-center rounded-lg px-2.5 py-1.5 text-[10.5px] font-medium ring-1 ring-[#E5E3E1] dark:ring-white/15 text-[#1A1A1A] dark:text-[#F4F4F3]">Ver más</span>
+          <span className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[10.5px] font-semibold text-white" style={{ background: color }}><Whats size={11} /> {t("preview.write")}</span>
+          <span className="inline-flex items-center rounded-lg px-2.5 py-1.5 text-[10.5px] font-medium ring-1 ring-[#E5E3E1] dark:ring-white/15 text-[#1A1A1A] dark:text-[#F4F4F3]">{t("preview.more")}</span>
         </div>
       </div>
     </div>
@@ -692,26 +684,27 @@ function PreviewHero({ p }: { p: LocalProfile }) {
 
 /* ───────── Empty state ───────── */
 function EmptyState({ importing, onPickFile, onDescribe, onManual }: { importing: boolean; onPickFile: () => void; onDescribe: (text: string) => void; onManual: () => void }) {
+  const t = useTranslations("miNegocio");
   const [mode, setMode] = useState<"choose" | "describe">("choose");
   const [text, setText] = useState("");
   return (
     <div className="max-w-2xl mx-auto px-5 py-12 sm:py-20 text-center">
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-coral-50 dark:bg-coral-500/15 text-coral-700 dark:text-coral-300 px-3 py-1 text-[12px] font-semibold mb-6"><Sparkles size={13} /> Empecemos por lo importante</span>
-      <h1 className="text-[30px] sm:text-[38px] font-bold tracking-tight leading-[1.05]">Cuéntanos de tu negocio<br />una sola vez.</h1>
-      <p className="mt-4 max-w-md mx-auto text-[15px] text-[#6B6967] dark:text-[#9B9897] leading-relaxed">Con esto, cada página que crees ya nace con tu nombre, tus fotos, tu contacto y tu color. Tú no vuelves a llenar nada.</p>
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-coral-50 dark:bg-coral-500/15 text-coral-700 dark:text-coral-300 px-3 py-1 text-[12px] font-semibold mb-6"><Sparkles size={13} /> {t("empty.badge")}</span>
+      <h1 className="text-[30px] sm:text-[38px] font-bold tracking-tight leading-[1.05]">{t("empty.h1a")}<br />{t("empty.h1b")}</h1>
+      <p className="mt-4 max-w-md mx-auto text-[15px] text-[#6B6967] dark:text-[#9B9897] leading-relaxed">{t("empty.sub")}</p>
 
       {mode === "describe" ? (
         <div className="mt-9 max-w-md mx-auto text-left">
           <textarea value={text} onChange={(e) => setText(e.target.value)} rows={4} disabled={importing}
-            placeholder="Ej. Tengo una cafetería en la Roma que vende café de especialidad y pan recién horneado. Pedidos por WhatsApp."
+            placeholder={t("empty.describePlaceholder")}
             className="w-full px-3.5 py-3 text-[14px] rounded-xl bg-white dark:bg-[#1A1A1D] ring-1 ring-[#E5E3E1] dark:ring-white/10 focus:ring-2 focus:ring-coral-500 focus:outline-none placeholder:text-[#C0BDBA] dark:placeholder:text-[#5C5957] resize-y leading-relaxed disabled:opacity-70" />
           <div className="mt-3 flex items-center gap-2">
             <button onClick={() => onDescribe(text)} disabled={importing || text.trim().length < 10}
               className="inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-coral-600 text-white text-[14px] font-semibold hover:bg-coral-700 transition disabled:opacity-50">
-              {importing ? <><Loader size={16} className="animate-spin" /> Armando tu perfil…</> : <>Continuar <ArrowRight size={14} /></>}
+              {importing ? <><Loader size={16} className="animate-spin" /> {t("empty.building")}</> : <>{t("empty.continue")} <ArrowRight size={14} /></>}
             </button>
             <button onClick={() => setMode("choose")} disabled={importing}
-              className="h-11 px-3 rounded-xl text-[13.5px] font-medium text-[#6B6967] dark:text-[#9B9897] hover:bg-white dark:hover:bg-white/5 transition disabled:opacity-50">Atrás</button>
+              className="h-11 px-3 rounded-xl text-[13.5px] font-medium text-[#6B6967] dark:text-[#9B9897] hover:bg-white dark:hover:bg-white/5 transition disabled:opacity-50">{t("empty.back")}</button>
           </div>
         </div>
       ) : (
@@ -720,19 +713,19 @@ function EmptyState({ importing, onPickFile, onDescribe, onManual }: { importing
             <button onClick={onPickFile} disabled={importing}
               className="group rounded-2xl bg-white dark:bg-[#1A1A1D] ring-1 ring-[#E5E3E1] dark:ring-white/10 hover:ring-coral-300 dark:hover:ring-coral-500/40 hover:shadow-md transition p-5 disabled:opacity-70">
               <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-coral-50 dark:bg-coral-500/15 text-coral-600 dark:text-coral-300 mb-4">{importing ? <Loader size={20} className="animate-spin" /> : <Camera size={20} />}</span>
-              <div className="text-[15px] font-semibold tracking-tight">Sube una captura de tu Instagram</div>
-              <div className="text-[13px] text-[#8A8784] dark:text-[#9B9897] mt-1 leading-snug">Leemos tu nombre, fotos y bio para llenar todo solito.</div>
-              <div className="mt-3 inline-flex items-center gap-1 text-[12.5px] font-semibold text-coral-700 dark:text-coral-300">{importing ? "Leyendo tu perfil…" : <>Subir captura <ArrowRight size={13} /></>}</div>
+              <div className="text-[15px] font-semibold tracking-tight">{t("empty.screenshot")}</div>
+              <div className="text-[13px] text-[#8A8784] dark:text-[#9B9897] mt-1 leading-snug">{t("empty.screenshotHint")}</div>
+              <div className="mt-3 inline-flex items-center gap-1 text-[12.5px] font-semibold text-coral-700 dark:text-coral-300">{importing ? t("empty.reading") : <>{t("empty.uploadScreenshot")} <ArrowRight size={13} /></>}</div>
             </button>
             <button onClick={() => setMode("describe")} disabled={importing}
               className="group rounded-2xl bg-white dark:bg-[#1A1A1D] ring-1 ring-[#E5E3E1] dark:ring-white/10 hover:ring-coral-300 dark:hover:ring-coral-500/40 hover:shadow-md transition p-5 disabled:opacity-70">
               <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-coral-50 dark:bg-coral-500/15 text-coral-600 dark:text-coral-300 mb-4"><Pencil size={20} /></span>
-              <div className="text-[15px] font-semibold tracking-tight">Descríbelo con tus palabras</div>
-              <div className="text-[13px] text-[#8A8784] dark:text-[#9B9897] mt-1 leading-snug">&quot;Tengo una cafetería en la Roma…&quot; y nosotros armamos el resto.</div>
-              <div className="mt-3 inline-flex items-center gap-1 text-[12.5px] font-semibold text-coral-700 dark:text-coral-300">Escribir <ArrowRight size={13} /></div>
+              <div className="text-[15px] font-semibold tracking-tight">{t("empty.describe")}</div>
+              <div className="text-[13px] text-[#8A8784] dark:text-[#9B9897] mt-1 leading-snug">{t("empty.describeHint")}</div>
+              <div className="mt-3 inline-flex items-center gap-1 text-[12.5px] font-semibold text-coral-700 dark:text-coral-300">{t("empty.write")} <ArrowRight size={13} /></div>
             </button>
           </div>
-          <p className="mt-6 text-[12.5px] text-[#A8A5A2] dark:text-[#7C7977]">¿Prefieres a mano? <button onClick={onManual} className="font-semibold text-[#6B6967] dark:text-[#9B9897] hover:text-coral-700 dark:hover:text-coral-300 transition underline underline-offset-2">Llenar yo mismo</button></p>
+          <p className="mt-6 text-[12.5px] text-[#A8A5A2] dark:text-[#7C7977]">{t("empty.prefer")} <button onClick={onManual} className="font-semibold text-[#6B6967] dark:text-[#9B9897] hover:text-coral-700 dark:hover:text-coral-300 transition underline underline-offset-2">{t("empty.fillMyself")}</button></p>
         </>
       )}
     </div>
