@@ -140,6 +140,23 @@ function blankProfile(): LocalProfile {
 
 const inicialDe = (name: string) => (name.trim()[0] || "N").toUpperCase();
 
+// Business avatar: the brand logo if set, else the name's initial on the accent.
+function BizAvatar({ name, logoUrl, accent, className = "" }: { name: string; logoUrl?: string | null; accent?: string | null; className?: string }) {
+  return (
+    <span
+      className={`inline-flex items-center justify-center overflow-hidden text-white font-bold shrink-0 ${className}`}
+      style={{ background: logoUrl ? "#ffffff" : accent ?? "#FF5A36" }}
+    >
+      {logoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={logoUrl} alt="" className="h-full w-full object-contain" />
+      ) : (
+        inicialDe(name)
+      )}
+    </span>
+  );
+}
+
 async function uploadAsset(file: File): Promise<string | null> {
   const form = new FormData();
   form.append("file", file);
@@ -642,7 +659,7 @@ function Switcher({ profiles, active, onPick, onNew }: { profiles: LocalProfile[
     <div className="relative" ref={ref}>
       <button onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-2.5 h-11 pl-1.5 pr-3 rounded-xl bg-white dark:bg-[#1A1A1D] ring-1 ring-[#E5E3E1] dark:ring-white/10 hover:ring-[#D6D3D0] dark:hover:ring-white/20 transition">
-        <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-white text-[14px] font-bold shrink-0" style={{ background: active.data.brand?.accent ?? "#FF5A36" }}>{inicialDe(active.name)}</span>
+        <BizAvatar name={active.name} logoUrl={active.data.brand?.logoUrl} accent={active.data.brand?.accent} className="h-8 w-8 rounded-lg text-[14px] ring-1 ring-black/5 dark:ring-white/10" />
         <span className="min-w-0 text-left">
           <span className="block text-[13.5px] font-semibold leading-tight truncate max-w-[160px]">{active.name.trim() || t("switcher.newBusiness")}</span>
           <span className="block text-[11px] text-[#8A8784] dark:text-[#9B9897] leading-tight">{t("switcher.change")}</span>
@@ -655,7 +672,7 @@ function Switcher({ profiles, active, onPick, onNew }: { profiles: LocalProfile[
           {profiles.map((n) => (
             <button key={n.id} onClick={() => { onPick(n.id); setOpen(false); }}
               className={`flex items-center gap-2.5 w-full text-left px-2 py-2 rounded-xl transition ${n.id === active.id ? "bg-[#FAFAF9] dark:bg-white/5" : "hover:bg-[#FAFAF9] dark:hover:bg-white/5"}`}>
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-white text-[14px] font-bold shrink-0" style={{ background: n.data.brand?.accent ?? "#FF5A36" }}>{inicialDe(n.name)}</span>
+              <BizAvatar name={n.name} logoUrl={n.data.brand?.logoUrl} accent={n.data.brand?.accent} className="h-9 w-9 rounded-lg text-[14px]" />
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-1.5">
                   <span className="text-[13.5px] font-semibold truncate">{n.name.trim() || t("switcher.newBusiness")}</span>
