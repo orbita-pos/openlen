@@ -65,7 +65,8 @@
     "publish": "发布…",
     "archived": "已归档",
     "archive": "归档",
-    "delete": "删除"
+    "delete": "删除",
+    "moveToBusiness": "移动到业务"
   },
   "bulk": {
     "selected": "已选择",
@@ -112,7 +113,8 @@
     "duplicateError": "创建副本失败：{error}",
     "exportLoadError": "无法加载项目以导出。",
     "zipError": "构建压缩包失败：{error}",
-    "bulkDeleteConfirm": "删除 {count} 个页面？此操作无法撤销。"
+    "bulkDeleteConfirm": "删除 {count} 个页面？此操作无法撤销。",
+    "moveError": "无法移动：{error}"
   },
   "relativeTime": {
     "justNow": "刚刚",
@@ -146,5 +148,11 @@
       "checkout_failed": "无法启动结账流程，请重试。",
       "portal_failed": "无法打开你的账单门户。请确认你有有效的订阅后再重试。"
     }
+  },
+  "move": {
+    "title": "移动到业务",
+    "subtitle": "选择此页面所属的业务。",
+    "current": "当前",
+    "cancel": "取消"
   }
 }

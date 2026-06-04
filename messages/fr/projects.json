@@ -65,7 +65,8 @@
     "publish": "Publier…",
     "archived": "Archivée",
     "archive": "Archiver",
-    "delete": "Supprimer"
+    "delete": "Supprimer",
+    "moveToBusiness": "Déplacer vers une entreprise"
   },
   "bulk": {
     "selected": "sélectionnée(s)",
@@ -112,7 +113,8 @@
     "duplicateError": "Duplication impossible : {error}",
     "exportLoadError": "Impossible de charger le projet à exporter.",
     "zipError": "Création du zip impossible : {error}",
-    "bulkDeleteConfirm": "Supprimer {count} pages ? Cette action est irréversible."
+    "bulkDeleteConfirm": "Supprimer {count} pages ? Cette action est irréversible.",
+    "moveError": "Déplacement impossible : {error}"
   },
   "relativeTime": {
     "justNow": "à l'instant",
@@ -146,5 +148,11 @@
       "checkout_failed": "Nous n'avons pas pu démarrer votre paiement. Veuillez réessayer.",
       "portal_failed": "Nous n'avons pas pu ouvrir votre portail de facturation. Assurez-vous d'avoir un abonnement actif, puis réessayez."
     }
+  },
+  "move": {
+    "title": "Déplacer vers une entreprise",
+    "subtitle": "Choisissez à quelle entreprise appartient cette page.",
+    "current": "Actuelle",
+    "cancel": "Annuler"
   }
 }

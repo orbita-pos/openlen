@@ -65,7 +65,8 @@
     "publish": "Pubblica…",
     "archived": "Archiviata",
     "archive": "Archivia",
-    "delete": "Elimina"
+    "delete": "Elimina",
+    "moveToBusiness": "Sposta in un'attività"
   },
   "bulk": {
     "selected": "selezionate",
@@ -112,7 +113,8 @@
     "duplicateError": "Impossibile duplicare: {error}",
     "exportLoadError": "Impossibile caricare il progetto da esportare.",
     "zipError": "Impossibile creare lo zip: {error}",
-    "bulkDeleteConfirm": "Eliminare {count} pagine? L'operazione non può essere annullata."
+    "bulkDeleteConfirm": "Eliminare {count} pagine? L'operazione non può essere annullata.",
+    "moveError": "Impossibile spostare: {error}"
   },
   "relativeTime": {
     "justNow": "proprio ora",
@@ -146,5 +148,11 @@
       "checkout_failed": "Non siamo riusciti ad avviare il pagamento. Riprova.",
       "portal_failed": "Non siamo riusciti ad aprire il tuo portale di fatturazione. Assicurati di avere un abbonamento attivo e riprova."
     }
+  },
+  "move": {
+    "title": "Sposta in un'attività",
+    "subtitle": "Scegli a quale attività appartiene questa pagina.",
+    "current": "Attuale",
+    "cancel": "Annulla"
   }
 }

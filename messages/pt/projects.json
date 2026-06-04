@@ -65,7 +65,8 @@
     "publish": "Publicar…",
     "archived": "Arquivada",
     "archive": "Arquivar",
-    "delete": "Excluir"
+    "delete": "Excluir",
+    "moveToBusiness": "Mover para empresa"
   },
   "bulk": {
     "selected": "selecionadas",
@@ -112,7 +113,8 @@
     "duplicateError": "Não foi possível duplicar: {error}",
     "exportLoadError": "Não foi possível carregar o projeto para exportar.",
     "zipError": "Não foi possível gerar o zip: {error}",
-    "bulkDeleteConfirm": "Excluir {count} páginas? Isso não pode ser desfeito."
+    "bulkDeleteConfirm": "Excluir {count} páginas? Isso não pode ser desfeito.",
+    "moveError": "Não foi possível mover: {error}"
   },
   "relativeTime": {
     "justNow": "agora mesmo",
@@ -146,5 +148,11 @@
       "checkout_failed": "Não foi possível iniciar o seu checkout. Tente novamente.",
       "portal_failed": "Não foi possível abrir o seu portal de faturamento. Verifique se você tem uma assinatura ativa e tente novamente."
     }
+  },
+  "move": {
+    "title": "Mover para empresa",
+    "subtitle": "Escolha a que empresa esta página pertence.",
+    "current": "Atual",
+    "cancel": "Cancelar"
   }
 }

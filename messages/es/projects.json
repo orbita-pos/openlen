@@ -65,7 +65,8 @@
     "publish": "Publicar…",
     "archived": "Archivada",
     "archive": "Archivar",
-    "delete": "Eliminar"
+    "delete": "Eliminar",
+    "moveToBusiness": "Mover a negocio"
   },
   "bulk": {
     "selected": "seleccionadas",
@@ -112,7 +113,8 @@
     "duplicateError": "No se pudo duplicar: {error}",
     "exportLoadError": "No se pudo cargar el proyecto para exportarlo.",
     "zipError": "No se pudo crear el zip: {error}",
-    "bulkDeleteConfirm": "¿Eliminar {count} páginas? Esta acción no se puede deshacer."
+    "bulkDeleteConfirm": "¿Eliminar {count} páginas? Esta acción no se puede deshacer.",
+    "moveError": "No se pudo mover: {error}"
   },
   "relativeTime": {
     "justNow": "ahora mismo",
@@ -146,5 +148,11 @@
       "checkout_failed": "No pudimos iniciar tu pago. Inténtalo de nuevo.",
       "portal_failed": "No pudimos abrir tu portal de facturación. Comprueba que tienes una suscripción activa y vuelve a intentarlo."
     }
+  },
+  "move": {
+    "title": "Mover a negocio",
+    "subtitle": "Elige a qué negocio pertenece esta página.",
+    "current": "Actual",
+    "cancel": "Cancelar"
   }
 }

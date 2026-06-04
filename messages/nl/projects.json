@@ -65,7 +65,8 @@
     "publish": "Publiceren…",
     "archived": "Gearchiveerd",
     "archive": "Archiveren",
-    "delete": "Verwijderen"
+    "delete": "Verwijderen",
+    "moveToBusiness": "Naar bedrijf verplaatsen"
   },
   "bulk": {
     "selected": "geselecteerd",
@@ -112,7 +113,8 @@
     "duplicateError": "Dupliceren mislukt: {error}",
     "exportLoadError": "Project laden om te exporteren mislukt.",
     "zipError": "Zip-bestand maken mislukt: {error}",
-    "bulkDeleteConfirm": "{count} pagina's verwijderen? Dit kan niet ongedaan worden gemaakt."
+    "bulkDeleteConfirm": "{count} pagina's verwijderen? Dit kan niet ongedaan worden gemaakt.",
+    "moveError": "Verplaatsen mislukt: {error}"
   },
   "relativeTime": {
     "justNow": "zojuist",
@@ -146,5 +148,11 @@
       "checkout_failed": "We konden je afrekenen niet starten. Probeer het opnieuw.",
       "portal_failed": "We konden je facturatieportaal niet openen. Controleer of je een actief abonnement hebt en probeer het opnieuw."
     }
+  },
+  "move": {
+    "title": "Naar bedrijf verplaatsen",
+    "subtitle": "Kies bij welk bedrijf deze pagina hoort.",
+    "current": "Huidige",
+    "cancel": "Annuleren"
   }
 }

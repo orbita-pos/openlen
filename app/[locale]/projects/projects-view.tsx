@@ -32,6 +32,7 @@ import {
   Search,
   SlidersHorizontal,
   Sparkles,
+  Store,
   Trash2,
   X,
   Zap,
@@ -49,6 +50,12 @@ import type { ProjectStatus, ProjectSummary } from "@/lib/projects";
 type ViewMode = "grid" | "list";
 type FilterId = "all" | "draft" | "published" | "archived";
 type SortId = "edited" | "created" | "name";
+
+interface BusinessOption {
+  id: string;
+  name: string;
+  isDefault: boolean;
+}
 
 interface UsageInfo {
   plan: "free" | "pro";
@@ -104,6 +111,8 @@ export function ProjectsView({ projects: initial }: { projects: ProjectSummary[]
     anchor: DOMRect;
     project: ProjectSummary;
   } | null>(null);
+  const [profiles, setProfiles] = useState<BusinessOption[]>([]);
+  const [moveTarget, setMoveTarget] = useState<ProjectSummary | null>(null);
   const [usageDismissed, setUsageDismissed] = useState(false);
   const [usage, setUsage] = useState<UsageInfo | null>(null);
   const [billingNotice, setBillingNotice] = useState<BillingNotice | null>(null);
@@ -113,6 +122,18 @@ export function ProjectsView({ projects: initial }: { projects: ProjectSummary[]
     void fetch("/api/usage")
       .then((r) => (r.ok ? (r.json() as Promise<UsageInfo>) : null))
       .then((d) => setUsage(d))
+      .catch(() => {});
+  }, []);
+
+  // The user's businesses — powers "Move to business" (shown only at 2+).
+  useEffect(() => {
+    void fetch("/api/profiles")
+      .then((r) =>
+        r.ok ? (r.json() as Promise<{ profiles: BusinessOption[] }>) : null,
+      )
+      .then((d) => {
+        if (d?.profiles) setProfiles(d.profiles);
+      })
       .catch(() => {});
   }, []);
 
@@ -214,6 +235,25 @@ export function ProjectsView({ projects: initial }: { projects: ProjectSummary[]
       refresh();
     },
     [refresh],
+  );
+
+  const onMove = useCallback(
+    async (id: string, profileId: string) => {
+      const res = await fetch(`/api/projects/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profileId }),
+      });
+      if (!res.ok) {
+        alert(t("actions.moveError", { error: res.statusText }));
+        return;
+      }
+      setProjects((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, profileId } : p)),
+      );
+      setMoveTarget(null);
+    },
+    [t],
   );
 
   const onRename = useCallback(
@@ -458,6 +498,21 @@ export function ProjectsView({ projects: initial }: { projects: ProjectSummary[]
             setMenu(null);
             void onDelete(id);
           }}
+          canMove={profiles.length >= 2}
+          onMove={() => {
+            const p = menu.project;
+            setMenu(null);
+            setMoveTarget(p);
+          }}
+        />
+      )}
+
+      {moveTarget && (
+        <MoveToBusinessModal
+          project={moveTarget}
+          profiles={profiles}
+          onPick={(profileId) => void onMove(moveTarget.id, profileId)}
+          onClose={() => setMoveTarget(null)}
         />
       )}
     </div>
@@ -1225,6 +1280,8 @@ function MenuDropdown({
   onDownloadZip,
   onArchive,
   onDelete,
+  canMove,
+  onMove,
 }: {
   anchor: DOMRect;
   project: ProjectSummary;
@@ -1234,6 +1291,8 @@ function MenuDropdown({
   onDownloadZip: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  canMove: boolean;
+  onMove: () => void;
 }) {
   const t = useTranslations("projects");
   const ref = useRef<HTMLDivElement>(null);
@@ -1289,6 +1348,9 @@ function MenuDropdown({
           onClick: () =>
             window.location.assign(`/new?project=${project.id}`),
         },
+    ...(canMove
+      ? [{ icon: Store, label: t("menu.moveToBusiness"), onClick: onMove }]
+      : []),
     { icon: Archive, label: project.status === "archived" ? t("menu.archived") : t("menu.archive"), onClick: onArchive, disabled: project.status === "archived" },
     { icon: Trash2, label: t("menu.delete"), onClick: onDelete, danger: true },
   ];
@@ -1336,6 +1398,85 @@ function MenuDropdown({
         })}
       </div>
     </>
+  );
+}
+
+function MoveToBusinessModal({
+  project,
+  profiles,
+  onPick,
+  onClose,
+}: {
+  project: ProjectSummary;
+  profiles: BusinessOption[];
+  onPick: (profileId: string) => void;
+  onClose: () => void;
+}) {
+  const t = useTranslations("projects");
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <button
+        type="button"
+        aria-label={t("move.cancel")}
+        onClick={onClose}
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+      />
+      <div className="relative w-full max-w-sm rounded-2xl bg-white dark:bg-zinc-950 ring-1 ring-zinc-200 dark:ring-zinc-800 shadow-xl p-5">
+        <h2 className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
+          {t("move.title")}
+        </h2>
+        <p className="mt-1 text-[13px] text-zinc-500 dark:text-zinc-400">
+          {t("move.subtitle")}
+        </p>
+        <div className="mt-4 space-y-1 max-h-72 overflow-y-auto">
+          {profiles.map((b) => {
+            const current = b.id === project.profileId;
+            return (
+              <button
+                key={b.id}
+                type="button"
+                onClick={() => onPick(b.id)}
+                className={cn(
+                  "flex items-center gap-2.5 w-full text-left px-3 py-2.5 rounded-lg text-[13.5px] transition ring-1",
+                  current
+                    ? "ring-zinc-300 dark:ring-zinc-700 bg-zinc-50 dark:bg-zinc-900"
+                    : "ring-transparent hover:bg-zinc-50 dark:hover:bg-zinc-900",
+                )}
+              >
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 shrink-0">
+                  <Store size={14} />
+                </span>
+                <span className="flex-1 truncate font-medium text-zinc-800 dark:text-zinc-200">
+                  {b.name?.trim() || "—"}
+                </span>
+                {current && (
+                  <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                    {t("move.current")}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-4 flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-3 py-1.5 rounded-lg text-[13px] font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition"
+          >
+            {t("move.cancel")}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

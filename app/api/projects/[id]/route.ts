@@ -5,6 +5,7 @@ import {
   getProject,
   renameProject,
   setProjectLogoUrl,
+  setProjectProfileId,
   setProjectStatus,
   setProjectUserBrief,
 } from "@/lib/projects";
@@ -46,13 +47,19 @@ const PatchSchema = z.object({
       z.null(),
     ])
     .optional(),
+  // profileId moves a page to another business (null clears the link).
+  profileId: z.union([z.string().uuid(), z.null()]).optional(),
 }).refine(
   (v) =>
     v.title !== undefined ||
     v.status !== undefined ||
     v.userBrief !== undefined ||
-    v.logoUrl !== undefined,
-  { message: "Provide at least one of: title, status, userBrief, logoUrl" },
+    v.logoUrl !== undefined ||
+    v.profileId !== undefined,
+  {
+    message:
+      "Provide at least one of: title, status, userBrief, logoUrl, profileId",
+  },
 );
 
 export async function PATCH(
@@ -101,6 +108,16 @@ export async function PATCH(
       parsed.data.logoUrl,
     );
     if (!ok) return json({ error: "not_found" }, 404);
+    touched = true;
+  }
+  if (parsed.data.profileId !== undefined) {
+    const r = await setProjectProfileId(
+      id,
+      session.user.id,
+      parsed.data.profileId,
+    );
+    if (r === "invalid_profile") return json({ error: "invalid_profile" }, 400);
+    if (!r) return json({ error: "not_found" }, 404);
     touched = true;
   }
   if (!touched) return json({ error: "no_op" }, 400);
