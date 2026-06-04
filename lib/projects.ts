@@ -186,6 +186,49 @@ export async function listProjects(userId: string): Promise<ProjectSummary[]> {
   });
 }
 
+export interface ProfilePageSummary {
+  id: string;
+  title: string;
+  status: ProjectStatus;
+  thumbnailUrl: string | null;
+  subdomain: string | null;
+  updatedAt: Date;
+}
+
+// The pages belonging to one business — powers the "Tus páginas" list on the
+// /business page. Lightweight (no HTML) and ownership-scoped.
+export async function listProjectsForProfile(
+  userId: string,
+  profileId: string,
+): Promise<ProfilePageSummary[]> {
+  const rows = await db
+    .select({
+      id: schema.projects.id,
+      title: schema.projects.title,
+      status: schema.projects.status,
+      thumbnailUrl: schema.projects.thumbnailUrl,
+      subdomain: schema.projects.subdomain,
+      updatedAt: schema.projects.updatedAt,
+    })
+    .from(schema.projects)
+    .where(
+      and(
+        eq(schema.projects.userId, userId),
+        eq(schema.projects.profileId, profileId),
+      ),
+    )
+    .orderBy(desc(schema.projects.updatedAt))
+    .limit(100);
+  return rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    status: asStatus(r.status),
+    thumbnailUrl: r.thumbnailUrl,
+    subdomain: r.subdomain,
+    updatedAt: r.updatedAt,
+  }));
+}
+
 export async function getProject(
   projectId: string,
   userId: string,

@@ -59,6 +59,8 @@ const Trash = (p: IconProps) => <Icon {...p}><path d="M3 6h18" /><path d="M19 6v
 const Sparkles = (p: IconProps) => <Icon {...p}><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /></Icon>;
 const Star = (p: IconProps) => <Icon {...p}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></Icon>;
 const Loader = (p: IconProps) => <Icon {...p}><path d="M21 12a9 9 0 1 1-6.219-8.56" /></Icon>;
+const LayoutIcon = (p: IconProps) => <Icon {...p}><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></Icon>;
+const ChevronRight = (p: IconProps) => <Icon {...p}><polyline points="9 18 15 12 9 6" /></Icon>;
 
 /* ───────── Link presets (label resolved via i18n at render) ───────── */
 const TIPOS_ENLACE: Record<
@@ -81,6 +83,14 @@ interface LocalProfile {
   isDefault: boolean;
   data: BusinessProfileData;
   isNew?: boolean;
+}
+
+interface PageItem {
+  id: string;
+  title: string;
+  status: string;
+  thumbnailUrl: string | null;
+  subdomain: string | null;
 }
 
 function emptyData(): BusinessProfileData {
@@ -212,6 +222,8 @@ export default function BusinessPage() {
   const [busyAsset, setBusyAsset] = useState(false);
   const logoRef = useRef<HTMLInputElement>(null);
   const photosRef = useRef<HTMLInputElement>(null);
+  const [pages, setPages] = useState<PageItem[]>([]);
+  const [pagesLoading, setPagesLoading] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -244,6 +256,30 @@ export default function BusinessPage() {
   }, [load]);
 
   const active = data.find((p) => p.id === activeId) ?? null;
+
+  // Load the active business's pages (saved businesses only).
+  useEffect(() => {
+    if (!active || active.isNew) {
+      setPages([]);
+      return;
+    }
+    const id = active.id;
+    let cancelled = false;
+    setPagesLoading(true);
+    void fetch(`/api/profiles/${id}/projects`)
+      .then((r) => (r.ok ? (r.json() as Promise<{ pages?: PageItem[] }>) : null))
+      .then((d) => {
+        if (!cancelled && d?.pages) setPages(d.pages);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setPagesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active?.id, active?.isNew]);
 
   const updateActive = useCallback(
     (fn: (p: LocalProfile) => LocalProfile) => {
@@ -513,6 +549,43 @@ export default function BusinessPage() {
                   })}
                 </div>
               </Card>
+
+              {!active.isNew && (
+                <Card className="p-6">
+                  <SectionHead icon={LayoutIcon} title={t("pages.title")} hint={t("pages.hint")} />
+                  {pagesLoading ? (
+                    <p className="text-[13px] text-[#A8A5A2] dark:text-[#7C7977] py-1">{t("loading")}</p>
+                  ) : pages.length === 0 ? (
+                    <p className="text-[13px] text-[#A8A5A2] dark:text-[#7C7977] py-1">{t("pages.empty")}</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {pages.map((pg) => (
+                        <Link
+                          key={pg.id}
+                          href={`/${locale}/new?project=${pg.id}`}
+                          className="group flex items-center gap-3 rounded-xl p-2 ring-1 ring-transparent hover:ring-[#E5E3E1] dark:hover:ring-white/10 hover:bg-[#FAFAF9] dark:hover:bg-white/5 transition"
+                        >
+                          <span className="h-10 w-14 shrink-0 rounded-lg overflow-hidden ring-1 ring-[#E5E3E1] dark:ring-white/10 bg-[#FAFAF9] dark:bg-white/5 flex items-center justify-center">
+                            {pg.thumbnailUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={pg.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                              <LayoutIcon size={15} className="text-[#C0BDBA] dark:text-[#5C5957]" />
+                            )}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-[13.5px] font-medium truncate">{pg.title}</span>
+                            <span className="block text-[11.5px] text-[#A8A5A2] dark:text-[#7C7977] truncate">
+                              {pg.subdomain ? `${pg.subdomain}.openlen.com` : t("pages.draft")}
+                            </span>
+                          </span>
+                          <ChevronRight size={15} className="text-[#C0BDBA] dark:text-[#5C5957] group-hover:text-coral-500 shrink-0" />
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              )}
 
               <div className="flex items-center justify-between px-1">
                 <button onClick={() => void makeDefault()} disabled={active.isDefault || active.isNew}

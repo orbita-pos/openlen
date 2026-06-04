@@ -92,5 +92,11 @@
     "manual": "Llénalo a mano",
     "manualHint": "Escribe tú mismo tu nombre, contacto y demás. Toma 1 minuto.",
     "start": "Empezar"
+  },
+  "pages": {
+    "title": "Tus páginas",
+    "hint": "Las páginas que pertenecen a este negocio.",
+    "empty": "Aún no tienes páginas en este negocio.",
+    "draft": "Borrador"
   }
 }

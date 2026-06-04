@@ -92,5 +92,11 @@
     "manual": "Compila a mano",
     "manualHint": "Scrivi tu il nome, i contatti e il resto. Ci vuole 1 minuto.",
     "start": "Inizia"
+  },
+  "pages": {
+    "title": "Le tue pagine",
+    "hint": "Le pagine che appartengono a questa attività.",
+    "empty": "Ancora nessuna pagina in questa attività.",
+    "draft": "Bozza"
   }
 }

@@ -92,5 +92,11 @@
     "manual": "Von Hand ausfüllen",
     "manualHint": "Tippe deinen Namen, Kontakt und den Rest selbst ein. Dauert 1 Minute.",
     "start": "Los geht's"
+  },
+  "pages": {
+    "title": "Deine Seiten",
+    "hint": "Die Seiten, die zu diesem Unternehmen gehören.",
+    "empty": "Noch keine Seiten in diesem Unternehmen.",
+    "draft": "Entwurf"
   }
 }
