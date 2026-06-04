@@ -21,10 +21,16 @@
   "image": {
     "tabs": {
       "openlen": "OpenLen 提供",
+      "profiles": "我的店铺",
       "paste": "粘贴 URL",
       "unsplash": "Unsplash",
       "upload": "上传"
     }
+  },
+  "businessProfiles": {
+    "logo": "Logo",
+    "empty": "你的店铺资料中还没有图片。",
+    "useAria": "使用 {name}"
   },
   "paste": {
     "urlLabel": "图片 URL",

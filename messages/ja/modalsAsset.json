@@ -21,10 +21,16 @@
   "image": {
     "tabs": {
       "openlen": "OpenLen提供",
+      "profiles": "マイビジネス",
       "paste": "URLを貼り付け",
       "unsplash": "Unsplash",
       "upload": "アップロード"
     }
+  },
+  "businessProfiles": {
+    "logo": "ロゴ",
+    "empty": "ビジネスプロフィールにはまだ画像がありません。",
+    "useAria": "{name} を使用"
   },
   "paste": {
     "urlLabel": "画像URL",

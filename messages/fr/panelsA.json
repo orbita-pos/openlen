@@ -81,6 +81,7 @@
     "save": "Enregistrer",
     "saving": "Enregistrement…",
     "back": "Retour",
+    "photosRemove": "Supprimer",
     "confirm": {
       "subtitle": "Vérifiez vos informations — corrigez ce qu'il faut, puis enregistrez."
     },
@@ -107,7 +108,8 @@
       "address": "Adresse",
       "instagram": "Instagram",
       "color": "Couleur de la marque",
-      "takeFromLogo": "Depuis le logo"
+      "takeFromLogo": "Depuis le logo",
+      "photos": "Photos"
     },
     "errors": {
       "image": "Uniquement des images JPG ou PNG.",

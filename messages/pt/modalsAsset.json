@@ -21,10 +21,16 @@
   "image": {
     "tabs": {
       "openlen": "Pela OpenLen",
+      "profiles": "Meu negócio",
       "paste": "Colar URL",
       "unsplash": "Unsplash",
       "upload": "Enviar"
     }
+  },
+  "businessProfiles": {
+    "logo": "Logo",
+    "empty": "Ainda não há imagens no perfil do seu negócio.",
+    "useAria": "Usar {name}"
   },
   "paste": {
     "urlLabel": "URL da imagem",

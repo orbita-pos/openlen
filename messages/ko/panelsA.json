@@ -81,6 +81,7 @@
     "save": "저장",
     "saving": "저장 중…",
     "back": "뒤로",
+    "photosRemove": "삭제",
     "confirm": {
       "subtitle": "내용을 확인하세요 — 고칠 부분을 수정한 뒤 저장하세요."
     },
@@ -107,7 +108,8 @@
       "address": "주소",
       "instagram": "Instagram",
       "color": "브랜드 색상",
-      "takeFromLogo": "로고에서"
+      "takeFromLogo": "로고에서",
+      "photos": "사진"
     },
     "errors": {
       "image": "JPG 또는 PNG 이미지만 가능해요.",

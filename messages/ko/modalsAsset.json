@@ -21,10 +21,16 @@
   "image": {
     "tabs": {
       "openlen": "OpenLen 제공",
+      "profiles": "내 비즈니스",
       "paste": "URL 붙여넣기",
       "unsplash": "Unsplash",
       "upload": "업로드"
     }
+  },
+  "businessProfiles": {
+    "logo": "로고",
+    "empty": "아직 비즈니스 프로필에 이미지가 없습니다.",
+    "useAria": "{name} 사용"
   },
   "paste": {
     "urlLabel": "이미지 URL",

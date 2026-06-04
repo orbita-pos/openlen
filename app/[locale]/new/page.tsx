@@ -26,6 +26,7 @@ import type {
 import { AutofillModal } from "@/components/workspace-v2/autofill-modal";
 import { BusinessProfileModal } from "@/components/workspace-v2/business-profile-modal";
 import { ManageProfilesModal } from "@/components/workspace-v2/manage-profiles-modal";
+import type { BusinessProfile } from "@/lib/business-profiles/types";
 import { CustomDomainModal } from "@/components/workspace-v2/custom-domain-modal";
 import { DeployIntegrationModal } from "@/components/workspace-v2/deploy-integration-modal";
 import { EmptyState } from "@/components/workspace-v2/empty-state";
@@ -351,7 +352,7 @@ function NewV2Inner() {
   const aiGenState = aiMode === "scratch" ? bespoke.state : curation.state;
   // Saved business profiles ("Mi negocio") — seed the curation flow. Fetched on
   // mount; the default profile auto-selects (the user can switch or pick none).
-  const [profiles, setProfiles] = useState<{ id: string; name: string }[]>([]);
+  const [profiles, setProfiles] = useState<BusinessProfile[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [manageProfilesOpen, setManageProfilesOpen] = useState(false);
@@ -359,11 +360,9 @@ function NewV2Inner() {
     try {
       const res = await fetch("/api/profiles");
       if (!res.ok) return;
-      const json = (await res.json()) as {
-        profiles?: { id: string; name: string; isDefault?: boolean }[];
-      };
+      const json = (await res.json()) as { profiles?: BusinessProfile[] };
       const list = json.profiles ?? [];
-      setProfiles(list.map((p) => ({ id: p.id, name: p.name })));
+      setProfiles(list);
       setSelectedProfileId(
         (cur) => cur ?? list.find((p) => p.isDefault)?.id ?? null,
       );
@@ -1694,6 +1693,19 @@ function NewV2Inner() {
         currentSvg={assetModal?.currentSvg ?? null}
         currentSrc={assetModal?.currentSrc ?? null}
         projectId={loadedProject?.id ?? null}
+        activeProfile={(() => {
+          const p =
+            profiles.find((x) => x.id === selectedProfileId) ??
+            profiles.find((x) => x.isDefault) ??
+            null;
+          return p
+            ? {
+                name: p.name,
+                logoUrl: p.data.brand?.logoUrl ?? null,
+                photos: p.data.photos ?? [],
+              }
+            : null;
+        })()}
         onClose={() => setAssetModal(null)}
         onPick={(payload: ReplacePayload) => {
           if (!assetModal) return;

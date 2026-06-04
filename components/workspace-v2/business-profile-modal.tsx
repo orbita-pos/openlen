@@ -27,6 +27,8 @@ interface Draft {
   address: string;
   instagram: string;
   accent: string; // brand colour hex (derived from the logo or typed)
+  logoUrl: string;
+  photos: string[];
 }
 
 const EMPTY: Draft = {
@@ -39,6 +41,8 @@ const EMPTY: Draft = {
   address: "",
   instagram: "",
   accent: "",
+  logoUrl: "",
+  photos: [],
 };
 
 export interface BusinessProfileModalProps {
@@ -58,6 +62,7 @@ export function BusinessProfileModal({
   const trapRef = useFocusTrap(open);
   const fileRef = useRef<HTMLInputElement>(null);
   const logoColorRef = useRef<HTMLInputElement>(null);
+  const photosRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState<Step>("import");
   const [source, setSource] = useState<Source>("image");
@@ -156,6 +161,49 @@ export function BusinessProfileModal({
       /* couldn't read the colour — the hex field stays editable */
     }
   }, []);
+
+  // Upload a logo/photo to the user's profile asset namespace → returns a URL.
+  const uploadAsset = useCallback(async (file: File): Promise<string | null> => {
+    const form = new FormData();
+    form.append("file", file);
+    try {
+      const res = await fetch("/api/profiles/assets", { method: "POST", body: form });
+      const json = (await res.json().catch(() => ({}))) as { url?: string };
+      return res.ok && typeof json.url === "string" ? json.url : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  // A logo upload both STORES the logo (brand.logoUrl) and derives the accent.
+  const handleLogoFile = useCallback(
+    async (file: File) => {
+      setBusy(true);
+      try {
+        const url = await uploadAsset(file);
+        if (url) setDraft((d) => ({ ...d, logoUrl: url }));
+        await deriveAccentFromLogo(file);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [uploadAsset, deriveAccentFromLogo],
+  );
+
+  const handlePhotos = useCallback(
+    async (files: File[]) => {
+      setBusy(true);
+      try {
+        for (const f of files.slice(0, 8)) {
+          const url = await uploadAsset(f);
+          if (url) setDraft((d) => ({ ...d, photos: [...d.photos, url] }));
+        }
+      } finally {
+        setBusy(false);
+      }
+    },
+    [uploadAsset],
+  );
 
   const extract = useCallback(async () => {
     setError(null);
@@ -355,6 +403,14 @@ export function BusinessProfileModal({
                   {t("profile.fields.color")}
                 </span>
                 <div className="mt-1 flex items-center gap-2">
+                  {draft.logoUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={draft.logoUrl}
+                      alt=""
+                      className="h-9 w-9 shrink-0 rounded-md object-contain border bd bg-app"
+                    />
+                  )}
                   <input
                     type="color"
                     value={/^#[0-9a-fA-F]{6}$/.test(draft.accent) ? draft.accent : "#e8743a"}
@@ -372,7 +428,8 @@ export function BusinessProfileModal({
                   <button
                     type="button"
                     onClick={() => logoColorRef.current?.click()}
-                    className="shrink-0 px-2.5 py-2 text-[11.5px] fg-muted hover:fg hover:bg-hover rounded-md ring-1 ring-[color:var(--border)] transition"
+                    disabled={busy}
+                    className="shrink-0 px-2.5 py-2 text-[11.5px] fg-muted hover:fg hover:bg-hover rounded-md ring-1 ring-[color:var(--border)] transition disabled:opacity-40"
                   >
                     {t("profile.fields.takeFromLogo")}
                   </button>
@@ -383,7 +440,56 @@ export function BusinessProfileModal({
                     className="hidden"
                     onChange={(e) => {
                       const f = e.target.files?.[0];
-                      if (f) void deriveAccentFromLogo(f);
+                      if (f) void handleLogoFile(f);
+                    }}
+                  />
+                </div>
+              </div>
+              <div>
+                <span className="text-[10.5px] font-medium fg-muted uppercase tracking-wider">
+                  {t("profile.fields.photos")}
+                </span>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  {draft.photos.map((url, i) => (
+                    <div key={`${url}-${i}`} className="relative">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={url}
+                        alt=""
+                        className="h-12 w-12 rounded-md object-cover border bd"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setDraft((d) => ({
+                            ...d,
+                            photos: d.photos.filter((_, j) => j !== i),
+                          }))
+                        }
+                        aria-label={t("profile.photosRemove")}
+                        className="absolute -top-1.5 -right-1.5 h-4 w-4 inline-flex items-center justify-center rounded-full bg-[color:var(--bg)] border bd text-[9px] fg-faint hover:fg"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => photosRef.current?.click()}
+                    disabled={busy}
+                    className="h-12 w-12 shrink-0 inline-flex items-center justify-center rounded-md border-2 border-dashed bd hover:bd-strong text-lg fg-faint transition disabled:opacity-40"
+                  >
+                    +
+                  </button>
+                  <input
+                    ref={photosRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files ?? []);
+                      if (files.length) void handlePhotos(files);
                     }}
                   />
                 </div>
@@ -472,6 +578,8 @@ function draftFromExtracted(data: Record<string, unknown>): Draft {
     address: str(contact.address),
     instagram: str(socials.instagram),
     accent: "",
+    logoUrl: "",
+    photos: [],
   };
 }
 
@@ -488,6 +596,8 @@ function draftFromProfile(p: BusinessProfile): Draft {
     address: str(contact?.address),
     instagram: str(contact?.socials?.instagram),
     accent: str(data.brand?.accent),
+    logoUrl: str(data.brand?.logoUrl),
+    photos: Array.isArray(data.photos) ? data.photos : [],
   };
 }
 
@@ -518,7 +628,10 @@ function draftToData(d: Draft): BusinessProfileData {
         website: null,
       },
     },
-    brand: d.accent.trim() ? { logoUrl: null, accent: d.accent.trim() } : null,
-    photos: [],
+    brand:
+      d.accent.trim() || d.logoUrl.trim()
+        ? { logoUrl: d.logoUrl.trim() || null, accent: d.accent.trim() || null }
+        : null,
+    photos: d.photos,
   };
 }
