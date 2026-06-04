@@ -98,6 +98,9 @@ export interface CreateProjectInput {
   /** Explicit project title. Falls back to the HTML <title>, then a brief
    *  snippet. */
   title?: string;
+  /** The business this page belongs to (FK → businessProfiles). Pages are
+   *  always associated to a business; the caller resolves explicit-or-default. */
+  profileId?: string | null;
 }
 
 export async function createProject(
@@ -118,6 +121,7 @@ export async function createProject(
     thumbnailUrl: null,
     tags: [],
     status: "draft",
+    profileId: input.profileId ?? null,
     data: { html: input.html },
   });
   // Render a card thumbnail in the background so the project doesn't show the

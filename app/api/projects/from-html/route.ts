@@ -4,6 +4,7 @@ import { createVersion } from "@/lib/projects/versions";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { normalizeBornCanonical } from "@/lib/normalize";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
+import { resolveProfileForCreation } from "@/lib/business-profiles/store";
 import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -71,6 +72,7 @@ export async function POST(req: Request): Promise<Response> {
   // often has no meta description / og tags / favicon).
   const finalHtml = ensurePageMeta(normalizeBornCanonical(cleanHtml), { title });
 
+  const business = await resolveProfileForCreation(session.user.id);
   const projectId = crypto.randomUUID();
   try {
     await db.insert(schema.projects).values({
@@ -81,6 +83,7 @@ export async function POST(req: Request): Promise<Response> {
       thumbnailUrl: null,
       tags: ["paste"],
       status: "draft",
+      profileId: business.id,
       data: { html: finalHtml },
     });
   } catch (err) {

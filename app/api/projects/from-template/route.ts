@@ -5,6 +5,7 @@ import { createVersion } from "@/lib/projects/versions";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { normalizeBornCanonical } from "@/lib/normalize";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
+import { resolveProfileForCreation } from "@/lib/business-profiles/store";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/projects/from-template
@@ -72,6 +73,7 @@ export async function POST(req: Request): Promise<Response> {
     title: entry.name,
   });
 
+  const business = await resolveProfileForCreation(session.user.id);
   const projectId = crypto.randomUUID();
   try {
     await db.insert(schema.projects).values({
@@ -87,6 +89,7 @@ export async function POST(req: Request): Promise<Response> {
       thumbnailUrl: entry.thumbnailUrl ?? entry.screenshotUrl ?? null,
       tags: [entry.id, "template", entry.family],
       status: "draft",
+      profileId: business.id,
       data: { html: finalHtml },
     });
   } catch (err) {
