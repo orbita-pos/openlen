@@ -66,5 +66,11 @@
     "creating": "Création du projet…",
     "createProject": "Créer le projet",
     "deployHint": "Ensuite : cliquez sur Déployer pour publier sur un sous-domaine."
+  },
+  "quickPrompts": {
+    "saas": "Lancement SaaS",
+    "portfolio": "Portfolio",
+    "coffee": "Abonnement café",
+    "event": "Événement"
   }
 }

@@ -208,6 +208,19 @@ export async function restoreVersion(
     .set({ data: nextData, updatedAt: new Date() })
     .where(eq(schema.projects.id, params.projectId));
 
+  // Forward marker: the live page is now this restored version. Snapshot it as
+  // the NEWEST entry so the timeline + the panel's "Current" indicator point at
+  // what the user actually sees (the "Before restoring" snapshot above is the
+  // older state, kept so the restore itself stays undoable). Without this, the
+  // newest row is "Before restoring" yet the page matches an OLDER row, so the
+  // panel mislabels the wrong snapshot as Current.
+  await createVersion({
+    projectId: params.projectId,
+    html: row.versionHtml,
+    label: `Restored "${row.versionLabel.slice(0, 60)}"`,
+    source: "restore",
+  });
+
   return { html: row.versionHtml, label: row.versionLabel };
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { AIModel } from "@/lib/ai-provider";
 import type { GenerationState } from "@/lib/use-generation";
 
@@ -40,6 +40,11 @@ const STAGE_TEXT: Record<string, string> = {
 export function useCuration(): UseCurationResult {
   const [state, setState] = useState<GenerationState>({ kind: "idle" });
   const abortRef = useRef<AbortController | null>(null);
+
+  // Abort any in-flight stream on unmount so a curation the user walked away
+  // from stops server-side (it would otherwise still create + save an orphan
+  // project and burn Gemini usage).
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   // `model` is accepted for drop-in parity with useGeneration's signature but
   // ignored — curation has no model picker (it always uses Flash for pick + fill).
