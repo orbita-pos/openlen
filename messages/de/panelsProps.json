@@ -36,7 +36,9 @@
       "left": "Linksbündig",
       "center": "Zentriert",
       "right": "Rechtsbündig"
-    }
+    },
+    "hide": "Element ausblenden",
+    "hideHint": "Auf der veröffentlichten Seite ausgeblendet — hier abgedunkelt, damit du es wiederherstellen kannst"
   },
   "form": {
     "title": "Formular",

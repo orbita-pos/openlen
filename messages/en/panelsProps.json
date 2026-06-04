@@ -36,7 +36,9 @@
       "left": "Align left",
       "center": "Align center",
       "right": "Align right"
-    }
+    },
+    "hide": "Hide element",
+    "hideHint": "Hidden on the published page — shown dimmed here so you can restore it"
   },
   "form": {
     "title": "Form",

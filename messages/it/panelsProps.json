@@ -36,7 +36,9 @@
       "left": "Allinea a sinistra",
       "center": "Centra",
       "right": "Allinea a destra"
-    }
+    },
+    "hide": "Nascondi elemento",
+    "hideHint": "Nascosto nella pagina pubblicata — qui appare attenuato così puoi ripristinarlo"
   },
   "form": {
     "title": "Modulo",

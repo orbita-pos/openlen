@@ -36,7 +36,9 @@
       "left": "Alinhar à esquerda",
       "center": "Centralizar",
       "right": "Alinhar à direita"
-    }
+    },
+    "hide": "Ocultar elemento",
+    "hideHint": "Oculto na página publicada — aqui aparece esmaecido para você poder restaurar"
   },
   "form": {
     "title": "Formulário",

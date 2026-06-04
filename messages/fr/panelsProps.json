@@ -36,7 +36,9 @@
       "left": "Aligner à gauche",
       "center": "Centrer",
       "right": "Aligner à droite"
-    }
+    },
+    "hide": "Masquer l'élément",
+    "hideHint": "Masqué sur la page publiée — affiché en grisé ici pour pouvoir le restaurer"
   },
   "form": {
     "title": "Formulaire",
