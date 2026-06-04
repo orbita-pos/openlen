@@ -12,8 +12,8 @@ OpenLen is a landing-page builder. Users describe a page (or pick a template, or
 | `app/api/projects/[id]/publish/` | POST/DELETE — claim subdomain + write `project.data.html` to disk via `publishToDir`. |
 | `app/api/projects/from-template/` | POST — clone a curated template's HTML into a new user project. |
 | `app/api/projects/from-html/` | POST — accept raw HTML (typically from claude.ai), create project. |
-| `app/api/generate/` | POST — free-form AI generation: one Kimi K2.6 streaming call (system prompt from `lib/design-guidance.ts`) → a complete HTML document, saved as a new project. |
-| `app/api/templates/ai-design/` | POST — conversational page editing (the Chat tab). Same Kimi K2.6 engine as `generate`, but editing an existing page; Mode A ops / Mode B full rewrite. |
+| `app/api/generate/` | POST — free-form AI generation: one Gemini streaming call (system prompt from `lib/design-guidance.ts`) → a complete HTML document, saved as a new project. |
+| `app/api/templates/ai-design/` | POST — conversational page editing (the Chat tab). Same Gemini engine as `generate`, but editing an existing page; Mode A ops / Mode B full rewrite. |
 | `components/workspace-v2/` | V2 workspace UI — TopBar, LeftSidebar (tabbed panel), PreviewArea, panels for each mode. |
 | `lib/templates/` | Template store — `store.ts` (server: list/get/upsert against DB + R2), `families.ts` (client-safe family types/metadata), `admin-schemas.ts` (Zod). Templates are DB-backed; add via `npm run templates:add`. |
 | `lib/design-guidance.ts` | `DESIGN_GUIDANCE` — the distilled design system fed into both AI surfaces (`generate` + `ai-design`). |
@@ -34,12 +34,12 @@ OpenLen is a landing-page builder. Users describe a page (or pick a template, or
 `/new` has an `EntryMode` state machine derived from URL params:
 
 - `?` (no params) → `choosing` → EmptyState with 3 cards (AI / Template / Paste)
-- `?mode=ai` → `ai` → renders the AI brief panel; on submit, `useGeneration` opens an SSE stream to `/api/generate` (one free-form Kimi K2.6 call) and shows a live preview of the streaming HTML, then redirects to `?project=<id>` once the project is saved
+- `?mode=ai` → `ai` → renders the AI brief panel; on submit, `useGeneration` opens an SSE stream to `/api/generate` (one free-form Gemini call) and shows a live preview of the streaming HTML, then redirects to `?project=<id>` once the project is saved
 - `?mode=template` → `template` → templates gallery in sidebar + preview-first commit flow in main area
 - `?mode=paste` → `paste` → PastePanel in sidebar (textarea + title)
 - `?project=<id>` → `editing` → workspace with TopBar Deploy, sidebar tabs, full preview
 
-The sidebar locks tabs per entry mode — in an entry flow only the relevant tab is interactive; in `editing` every tab opens. Every project is a single flat HTML document: `data` is just `{ html }` (there is no slot-based project type — generation is free-form). The Content tab activates in-iframe editing (inline-edit + section reorder + asset replace); the Chat tab redesigns the page end-to-end via Kimi K2.6.
+The sidebar locks tabs per entry mode — in an entry flow only the relevant tab is interactive; in `editing` every tab opens. Every project is a single flat HTML document: `data` is just `{ html }` (there is no slot-based project type — generation is free-form). The Content tab activates in-iframe editing (inline-edit + section reorder + asset replace); the Chat tab redesigns the page end-to-end via Gemini.
 
 ## Commands
 
@@ -85,7 +85,7 @@ It validates against `admin-schemas.ts` (rejects `data-slot-path=`), uploads the
 
 Community-submitted templates (a moderated `community_templates` table layered on top of curated) remain a possible future feature — not built, don't build it speculatively.
 
-**Design surface philosophy.** Customization happens in three places — the **Chat tab** for open-ended AI restyle, the **Content tab** for direct in-iframe text editing + section reorder + asset replace, and the inspector (`components/workspace-v2/panels/properties-panel.tsx`) for per-element properties + global theme controls (radius/font/accent). The Chat tab talks to `/api/templates/ai-design` (streaming SSE). AI generation defaults to Gemini 2.5 Pro for code-gen speed; Kimi K2.6 stays as an explicit alternative via the model picker.
+**Design surface philosophy.** Customization happens in three places — the **Chat tab** for open-ended AI restyle, the **Content tab** for direct in-iframe text editing + section reorder + asset replace, and the inspector (`components/workspace-v2/panels/properties-panel.tsx`) for per-element properties + global theme controls (radius/font/accent). The Chat tab talks to `/api/templates/ai-design` (streaming SSE). AI generation runs on Gemini.
 
 **The Canva-mode pivot was rolled back on 2026-05-24** — see [[canva-mode-decision]] memory for the full reasoning. Short version: the document-model engine (`lib/doc/*`) and the structured Canva inspector worked in principle but the conversion of polished HTML templates lost too much visual fidelity (animations, custom CSS, brand SVGs all stripped). User prefers the HTML visual quality. Everything related (`lib/doc/`, `components/workspace-v2/model/`, scripts/templates-convert-*, ai-edit endpoint, document-mode flag) was removed. The born-canonical normalizer (`lib/normalize.ts`) is the only ingestion path now — `from-html` + `from-template` + `generate` all produce plain HTML projects. **Do not propose Canva-mode revival without explicit user request.**
 

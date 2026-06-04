@@ -36,7 +36,7 @@ Environment=PUBLISH_BASE_HOST=openlen.com
 # ~/.cache/puppeteer which doesn't exist for a system user.
 Environment=PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
-# Secrets (TOGETHER_API_KEY, DATABASE_URL, NEXTAUTH_SECRET, etc.) live in
+# Secrets (GEMINI_API_KEY, DATABASE_URL, NEXTAUTH_SECRET, etc.) live in
 # /etc/openlen/openlen.env. install-app.sh sets perms to 640 root:openlen-deploy
 # so the systemd User= can read but other users can't.
 EnvironmentFile=/etc/openlen/openlen.env

@@ -7,7 +7,7 @@
 # want to change. Everything else on the box stays as-is.
 #
 # Why a separate local file (not .env.local):
-#   `.env.local` is the Next.js dev convention — TOGETHER_API_KEY,
+#   `.env.local` is the Next.js dev convention — GEMINI_API_KEY,
 #   DATABASE_URL, NEXTAUTH_SECRET pointing at *dev* infra. Production
 #   secrets stay physically separate so a stray MOCK_MODE=1 or a dev DB
 #   URL can never reach the box.

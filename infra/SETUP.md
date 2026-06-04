@@ -196,7 +196,7 @@ or chat:
 ```bash
 ssh -i ~/.ssh/openlen-admin root@<HETZNER_IP>
 nano /etc/openlen/openlen.env
-# Fill in TOGETHER_API_KEY, DATABASE_URL, NEXTAUTH_SECRET, NEXTAUTH_URL
+# Fill in GEMINI_API_KEY, DATABASE_URL, NEXTAUTH_SECRET, NEXTAUTH_URL
 # (see infra/app/env.example for the full list)
 ```
 
