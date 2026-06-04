@@ -65,7 +65,8 @@
     "publish": "公開…",
     "archived": "アーカイブ済み",
     "archive": "アーカイブ",
-    "delete": "削除"
+    "delete": "削除",
+    "moveToBusiness": "ビジネスに移動"
   },
   "bulk": {
     "selected": "件選択中",
@@ -112,7 +113,8 @@
     "duplicateError": "複製できませんでした：{error}",
     "exportLoadError": "エクスポート用にプロジェクトを読み込めませんでした。",
     "zipError": "zip を作成できませんでした：{error}",
-    "bulkDeleteConfirm": "{count} 件のページを削除しますか？この操作は取り消せません。"
+    "bulkDeleteConfirm": "{count} 件のページを削除しますか？この操作は取り消せません。",
+    "moveError": "移動できませんでした: {error}"
   },
   "relativeTime": {
     "justNow": "たった今",
@@ -146,5 +148,11 @@
       "checkout_failed": "チェックアウトを開始できませんでした。もう一度お試しください。",
       "portal_failed": "お支払いポータルを開けませんでした。有効なサブスクリプションがあることを確認してから、もう一度お試しください。"
     }
+  },
+  "move": {
+    "title": "ビジネスに移動",
+    "subtitle": "このページが属するビジネスを選んでください。",
+    "current": "現在",
+    "cancel": "キャンセル"
   }
 }

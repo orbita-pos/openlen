@@ -65,7 +65,8 @@
     "publish": "게시…",
     "archived": "보관됨",
     "archive": "보관",
-    "delete": "삭제"
+    "delete": "삭제",
+    "moveToBusiness": "비즈니스로 이동"
   },
   "bulk": {
     "selected": "개 선택됨",
@@ -112,7 +113,8 @@
     "duplicateError": "복제하지 못했습니다: {error}",
     "exportLoadError": "내보낼 프로젝트를 불러오지 못했습니다.",
     "zipError": "zip 파일을 만들지 못했습니다: {error}",
-    "bulkDeleteConfirm": "{count}개의 페이지를 삭제할까요? 이 작업은 되돌릴 수 없습니다."
+    "bulkDeleteConfirm": "{count}개의 페이지를 삭제할까요? 이 작업은 되돌릴 수 없습니다.",
+    "moveError": "이동할 수 없습니다: {error}"
   },
   "relativeTime": {
     "justNow": "방금 전",
@@ -146,5 +148,11 @@
       "checkout_failed": "결제를 시작하지 못했습니다. 다시 시도해 주세요.",
       "portal_failed": "결제 포털을 열지 못했습니다. 활성화된 구독이 있는지 확인한 후 다시 시도해 주세요."
     }
+  },
+  "move": {
+    "title": "비즈니스로 이동",
+    "subtitle": "이 페이지가 속한 비즈니스를 선택하세요.",
+    "current": "현재",
+    "cancel": "취소"
   }
 }

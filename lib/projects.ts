@@ -20,6 +20,7 @@ import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { upgradeDataUriOgImage } from "@/lib/branding/upgrade-og-image";
 import { resolveProjectLogo } from "@/lib/branding/resolve-project-logo";
 import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
+import { getProfile } from "@/lib/business-profiles/store";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Project persistence helpers.
@@ -45,6 +46,9 @@ export interface ProjectSummary {
   publishedAt: Date | null;
   hasUnpublishedChanges: boolean;
   sectionCount: number;
+  /** The business this page belongs to (FK → businessProfiles). Null only for
+   *  legacy pages created before the default-business model. */
+  profileId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -142,6 +146,7 @@ export async function listProjects(userId: string): Promise<ProjectSummary[]> {
       deployUrl: schema.projects.deployUrl,
       thumbnailUrl: schema.projects.thumbnailUrl,
       logoUrl: schema.projects.logoUrl,
+      profileId: schema.projects.profileId,
       subdomain: schema.projects.subdomain,
       publishedAt: schema.projects.publishedAt,
       publishedHtml: schema.projects.publishedHtml,
@@ -167,6 +172,7 @@ export async function listProjects(userId: string): Promise<ProjectSummary[]> {
       deployUrl: derivedDeploy ?? row.deployUrl,
       thumbnailUrl: row.thumbnailUrl,
       logoUrl: row.logoUrl,
+      profileId: row.profileId,
       subdomain: row.subdomain,
       publishedAt: row.publishedAt,
       hasUnpublishedChanges:
@@ -222,6 +228,7 @@ export async function getProject(
     userBrief: row.userBrief ?? null,
     thumbnailUrl: row.thumbnailUrl,
     logoUrl: row.logoUrl,
+    profileId: row.profileId,
     subdomain: row.subdomain,
     publishedAt: row.publishedAt,
     hasUnpublishedChanges:
@@ -281,6 +288,32 @@ export async function renameProject(
   const result = await db
     .update(schema.projects)
     .set({ title, updatedAt: new Date() })
+    .where(
+      and(
+        eq(schema.projects.id, projectId),
+        eq(schema.projects.userId, userId),
+      ),
+    )
+    .returning({ id: schema.projects.id });
+  return result.length > 0;
+}
+
+// Move a project to another business (or clear with null). Returns
+// "invalid_profile" if the target business isn't the user's, false if the
+// project isn't theirs, true on success. Seed-only: this only re-links the
+// page — it does NOT re-apply the business's info to the existing HTML.
+export async function setProjectProfileId(
+  projectId: string,
+  userId: string,
+  profileId: string | null,
+): Promise<boolean | "invalid_profile"> {
+  if (profileId) {
+    const owned = await getProfile(userId, profileId);
+    if (!owned) return "invalid_profile";
+  }
+  const result = await db
+    .update(schema.projects)
+    .set({ profileId, updatedAt: new Date() })
     .where(
       and(
         eq(schema.projects.id, projectId),

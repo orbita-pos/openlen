@@ -65,7 +65,8 @@
     "publish": "Publish…",
     "archived": "Archived",
     "archive": "Archive",
-    "delete": "Delete"
+    "delete": "Delete",
+    "moveToBusiness": "Move to business"
   },
   "bulk": {
     "selected": "selected",
@@ -112,7 +113,8 @@
     "duplicateError": "Couldn't duplicate: {error}",
     "exportLoadError": "Couldn't load project to export.",
     "zipError": "Couldn't build zip: {error}",
-    "bulkDeleteConfirm": "Delete {count} pages? This cannot be undone."
+    "bulkDeleteConfirm": "Delete {count} pages? This cannot be undone.",
+    "moveError": "Could not move: {error}"
   },
   "relativeTime": {
     "justNow": "just now",
@@ -146,5 +148,11 @@
       "checkout_failed": "We couldn't start your checkout. Please try again.",
       "portal_failed": "We couldn't open your billing portal. Make sure you have an active subscription, then try again."
     }
+  },
+  "move": {
+    "title": "Move to business",
+    "subtitle": "Pick which business this page belongs to.",
+    "current": "Current",
+    "cancel": "Cancel"
   }
 }
