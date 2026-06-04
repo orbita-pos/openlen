@@ -691,17 +691,17 @@ function DeleteBusinessDialog({ name, busy, onConfirm, onClose }: { name: string
               className="w-full px-3 h-11 rounded-lg bg-white dark:bg-[#121214] ring-1 ring-[#E5E3E1] dark:ring-white/10 focus:ring-2 focus:ring-red-500 focus:outline-none text-[14px] placeholder:text-[#C0BDBA] dark:placeholder:text-[#5C5957]"
             />
           </div>
-        </div>
-        <div className="flex items-center justify-end gap-2 px-5 py-3.5 bg-[#FAFAF9] dark:bg-white/5 border-t border-[#EEECEA] dark:border-white/8">
-          <button type="button" onClick={onClose} className="h-9 px-3.5 rounded-lg text-[13px] font-medium text-[#6B6967] dark:text-[#9B9897] hover:bg-white dark:hover:bg-white/10 transition">{t("deleteDialog.cancel")}</button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={!match || busy}
-            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-red-600 text-white text-[13px] font-semibold hover:bg-red-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {busy ? <Loader size={14} className="animate-spin" /> : <Trash size={14} />} {t("deleteDialog.confirm")}
-          </button>
+          <div className="mt-5 flex items-center justify-end gap-2">
+            <button type="button" onClick={onClose} className="h-9 px-3.5 rounded-lg text-[13px] font-medium text-[#6B6967] dark:text-[#9B9897] hover:bg-[#F4F2F0] dark:hover:bg-white/10 transition">{t("deleteDialog.cancel")}</button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={!match || busy}
+              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-red-600 text-white text-[13px] font-semibold hover:bg-red-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {busy ? <Loader size={14} className="animate-spin" /> : <Trash size={14} />} {t("deleteDialog.confirm")}
+            </button>
+          </div>
         </div>
       </div>
     </div>
