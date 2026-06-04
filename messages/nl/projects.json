@@ -158,7 +158,8 @@
   },
   "nav": {
     "myPages": "Mijn pagina's",
-    "myBusiness": "Mijn bedrijf"
+    "myBusiness": "Mijn bedrijf",
+    "messages": "Berichten"
   },
   "deleteDialog": {
     "title": "Deze pagina verwijderen?",
@@ -173,5 +174,13 @@
     "messages": "Berichten",
     "none": "Nog geen bezoeken",
     "rangeTip": "Laatste 7 dagen"
+  },
+  "inbox": {
+    "title": "Berichten",
+    "subtitle": "Wat mensen je via je pagina’s hebben gestuurd.",
+    "empty": "Nog geen berichten",
+    "emptyHint": "Als iemand een contactformulier op je pagina’s invult, verschijnt het hier — en we mailen het je.",
+    "from": "vanaf {page}",
+    "createCta": "Pagina maken"
   }
 }

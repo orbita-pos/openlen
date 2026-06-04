@@ -197,11 +197,20 @@ export function HeaderChevron({ className }: { className?: string }) {
 
 // Shared dashboard nav — the same "Mis páginas · Mi negocio" links on /projects
 // and /business so the two feel like one app. `active` highlights the current.
-export function DashboardNav({ active }: { active: "pages" | "business" }) {
+export function DashboardNav({
+  active,
+}: {
+  active: "pages" | "business" | "messages";
+}) {
   const t = useTranslations("projects");
-  const items: { key: "pages" | "business"; href: string; label: string }[] = [
+  const items: {
+    key: "pages" | "business" | "messages";
+    href: string;
+    label: string;
+  }[] = [
     { key: "pages", href: "/projects", label: t("nav.myPages") },
     { key: "business", href: "/business", label: t("nav.myBusiness") },
+    { key: "messages", href: "/messages", label: t("nav.messages") },
   ];
   return (
     <nav className="flex items-center gap-0.5">

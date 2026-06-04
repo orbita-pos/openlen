@@ -158,7 +158,8 @@
   },
   "nav": {
     "myPages": "My pages",
-    "myBusiness": "My business"
+    "myBusiness": "My business",
+    "messages": "Messages"
   },
   "deleteDialog": {
     "title": "Delete this page?",
@@ -173,5 +174,13 @@
     "messages": "Messages",
     "none": "No visits yet",
     "rangeTip": "Last 7 days"
+  },
+  "inbox": {
+    "title": "Messages",
+    "subtitle": "What people have sent you from your pages.",
+    "empty": "No messages yet",
+    "emptyHint": "When someone fills a contact form on your pages, it shows up here — and we email you.",
+    "from": "from {page}",
+    "createCta": "Create a page"
   }
 }

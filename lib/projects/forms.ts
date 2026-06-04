@@ -52,3 +52,46 @@ export async function listSubmissions(
     .orderBy(desc(schema.formSubmissions.createdAt))
     .limit(SUBMISSIONS_LIMIT);
 }
+
+export interface UserSubmissionItem {
+  id: string;
+  projectId: string;
+  projectTitle: string;
+  subdomain: string | null;
+  data: Record<string, string>;
+  meta: {
+    ip?: string;
+    ua?: string;
+    ref?: string;
+    country?: string | null;
+    device?: string | null;
+    browser?: string | null;
+  } | null;
+  createdAt: Date;
+}
+
+/** Every form submission across a user's projects, newest-first — powers the
+ *  dashboard "Mensajes" inbox. Joins each page's title + subdomain. The caller
+ *  (the /messages route) strips raw ip/ua before sending to the client. */
+export async function listSubmissionsForUser(
+  userId: string,
+): Promise<UserSubmissionItem[]> {
+  return db
+    .select({
+      id: schema.formSubmissions.id,
+      projectId: schema.formSubmissions.projectId,
+      projectTitle: schema.projects.title,
+      subdomain: schema.projects.subdomain,
+      data: schema.formSubmissions.data,
+      meta: schema.formSubmissions.meta,
+      createdAt: schema.formSubmissions.createdAt,
+    })
+    .from(schema.formSubmissions)
+    .innerJoin(
+      schema.projects,
+      eq(schema.formSubmissions.projectId, schema.projects.id),
+    )
+    .where(eq(schema.projects.userId, userId))
+    .orderBy(desc(schema.formSubmissions.createdAt))
+    .limit(SUBMISSIONS_LIMIT);
+}
