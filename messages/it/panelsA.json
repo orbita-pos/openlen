@@ -72,5 +72,56 @@
     "portfolio": "Portfolio",
     "coffee": "Abbonamento caffè",
     "event": "Evento"
+  },
+  "profile": {
+    "title": "La mia attività",
+    "titleEdit": "Modifica attività",
+    "subtitle": "Importa i tuoi dati una volta sola — ogni pagina li riceve in automatico.",
+    "close": "Chiudi",
+    "save": "Salva",
+    "saving": "Salvataggio…",
+    "back": "Indietro",
+    "confirm": {
+      "subtitle": "Controlla i tuoi dati — correggi quello che serve, poi salva."
+    },
+    "import": {
+      "image": "📷 Screenshot",
+      "url": "🔗 Sito web",
+      "text": "✍️ Descrivi",
+      "imageDrop": "Trascina uno screenshot o clicca per caricarlo",
+      "imageHint": "Va benissimo uno screenshot del tuo Instagram, del menu o di un volantino.",
+      "urlPlaceholder": "https://il-tuo-sito.com o il tuo link",
+      "textPlaceholder": "es. Tramonto, una caffetteria specialty a Oaxaca…",
+      "extract": "Leggi i miei dati",
+      "extracting": "Lettura…",
+      "manual": "Inserisci a mano"
+    },
+    "fields": {
+      "label": "Dai un nome a questa attività",
+      "labelPlaceholder": "es. La mia caffetteria",
+      "businessName": "Nome dell'attività",
+      "industry": "Cosa fai",
+      "whatsapp": "WhatsApp",
+      "phone": "Telefono",
+      "email": "Email",
+      "address": "Indirizzo",
+      "instagram": "Instagram"
+    },
+    "errors": {
+      "image": "Solo immagini JPG o PNG.",
+      "tooLarge": "Immagine troppo grande (max 8 MB).",
+      "uploadFirst": "Carica prima un'immagine.",
+      "url": "Inserisci un link valido (https://…).",
+      "describe": "Scrivi almeno una frase.",
+      "extract": "Non sono riuscito a leggerlo — prova un'altra fonte o inserisci a mano.",
+      "name": "Dai un nome a questa attività.",
+      "save": "Salvataggio non riuscito — riprova."
+    }
+  },
+  "profilePicker": {
+    "add": "Aggiungi la mia attività",
+    "for": "Per",
+    "none": "Nessuna attività",
+    "new": "Nuova attività"
   }
 }

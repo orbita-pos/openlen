@@ -72,5 +72,56 @@
     "portfolio": "Portfolio",
     "coffee": "Kaffee-Abo",
     "event": "Event"
+  },
+  "profile": {
+    "title": "Mein Unternehmen",
+    "titleEdit": "Unternehmen bearbeiten",
+    "subtitle": "Importiere deine Infos einmal — jede Seite übernimmt sie automatisch.",
+    "close": "Schließen",
+    "save": "Speichern",
+    "saving": "Wird gespeichert…",
+    "back": "Zurück",
+    "confirm": {
+      "subtitle": "Prüf deine Angaben — korrigier, was nötig ist, und speichere dann."
+    },
+    "import": {
+      "image": "📷 Screenshot",
+      "url": "🔗 Website",
+      "text": "✍️ Beschreiben",
+      "imageDrop": "Zieh einen Screenshot hierher oder klick zum Hochladen",
+      "imageHint": "Ein Screenshot deines Instagram, deiner Karte oder eines Flyers passt prima.",
+      "urlPlaceholder": "https://deine-seite.de oder dein Link",
+      "textPlaceholder": "z. B. Tramonto, ein Café für Spezialitätenkaffee in Oaxaca…",
+      "extract": "Meine Infos auslesen",
+      "extracting": "Wird ausgelesen…",
+      "manual": "Von Hand eintragen"
+    },
+    "fields": {
+      "label": "Gib diesem Unternehmen einen Namen",
+      "labelPlaceholder": "z. B. Mein Café",
+      "businessName": "Name des Unternehmens",
+      "industry": "Was du machst",
+      "whatsapp": "WhatsApp",
+      "phone": "Telefon",
+      "email": "E-Mail",
+      "address": "Adresse",
+      "instagram": "Instagram"
+    },
+    "errors": {
+      "image": "Nur JPG- oder PNG-Bilder.",
+      "tooLarge": "Bild zu groß (max. 8 MB).",
+      "uploadFirst": "Lade zuerst ein Bild hoch.",
+      "url": "Gib einen gültigen Link ein (https://…).",
+      "describe": "Schreib mindestens einen Satz.",
+      "extract": "Das konnte ich nicht auslesen — probier eine andere Quelle oder trag es von Hand ein.",
+      "name": "Gib diesem Unternehmen einen Namen.",
+      "save": "Konnte nicht gespeichert werden — versuch es erneut."
+    }
+  },
+  "profilePicker": {
+    "add": "Mein Unternehmen hinzufügen",
+    "for": "Für",
+    "none": "Kein Unternehmen",
+    "new": "Neues Unternehmen"
   }
 }

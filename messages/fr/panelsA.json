@@ -72,5 +72,56 @@
     "portfolio": "Portfolio",
     "coffee": "Abonnement café",
     "event": "Événement"
+  },
+  "profile": {
+    "title": "Mon entreprise",
+    "titleEdit": "Modifier l'entreprise",
+    "subtitle": "Importez vos infos une seule fois — chaque page les reprend automatiquement.",
+    "close": "Fermer",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "back": "Retour",
+    "confirm": {
+      "subtitle": "Vérifiez vos informations — corrigez ce qu'il faut, puis enregistrez."
+    },
+    "import": {
+      "image": "📷 Capture d'écran",
+      "url": "🔗 Site web",
+      "text": "✍️ Décrire",
+      "imageDrop": "Déposez une capture d'écran ou cliquez pour l'importer",
+      "imageHint": "Une capture de votre Instagram, de votre menu ou d'un flyer fait très bien l'affaire.",
+      "urlPlaceholder": "https://votre-site.com ou votre lien",
+      "textPlaceholder": "ex. Tramonto, un café de spécialité à Oaxaca…",
+      "extract": "Lire mes infos",
+      "extracting": "Lecture…",
+      "manual": "Remplir à la main"
+    },
+    "fields": {
+      "label": "Donnez un nom à cette entreprise",
+      "labelPlaceholder": "ex. Mon café",
+      "businessName": "Nom de l'entreprise",
+      "industry": "Votre activité",
+      "whatsapp": "WhatsApp",
+      "phone": "Téléphone",
+      "email": "E-mail",
+      "address": "Adresse",
+      "instagram": "Instagram"
+    },
+    "errors": {
+      "image": "Uniquement des images JPG ou PNG.",
+      "tooLarge": "Image trop volumineuse (8 Mo max).",
+      "uploadFirst": "Importez d'abord une image.",
+      "url": "Saisissez un lien valide (https://…).",
+      "describe": "Écrivez au moins une phrase.",
+      "extract": "Lecture impossible — essayez une autre source ou remplissez à la main.",
+      "name": "Donnez un nom à cette entreprise.",
+      "save": "Enregistrement impossible — réessayez."
+    }
+  },
+  "profilePicker": {
+    "add": "Ajouter mon entreprise",
+    "for": "Pour",
+    "none": "Aucune entreprise",
+    "new": "Nouvelle entreprise"
   }
 }

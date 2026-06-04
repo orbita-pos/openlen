@@ -24,6 +24,7 @@ import type {
   StoredChatTurn,
 } from "@/lib/projects/types";
 import { AutofillModal } from "@/components/workspace-v2/autofill-modal";
+import { BusinessProfileModal } from "@/components/workspace-v2/business-profile-modal";
 import { CustomDomainModal } from "@/components/workspace-v2/custom-domain-modal";
 import { DeployIntegrationModal } from "@/components/workspace-v2/deploy-integration-modal";
 import { EmptyState } from "@/components/workspace-v2/empty-state";
@@ -347,7 +348,30 @@ function NewV2Inner() {
   const curation = useCuration();
   const bespoke = useGeneration();
   const aiGenState = aiMode === "scratch" ? bespoke.state : curation.state;
-  const aiGenerate = aiMode === "scratch" ? bespoke.generate : curation.curate;
+  // Saved business profiles ("Mi negocio") — seed the curation flow. Fetched on
+  // mount; the default profile auto-selects (the user can switch or pick none).
+  const [profiles, setProfiles] = useState<{ id: string; name: string }[]>([]);
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const refreshProfiles = useCallback(async () => {
+    try {
+      const res = await fetch("/api/profiles");
+      if (!res.ok) return;
+      const json = (await res.json()) as {
+        profiles?: { id: string; name: string; isDefault?: boolean }[];
+      };
+      const list = json.profiles ?? [];
+      setProfiles(list.map((p) => ({ id: p.id, name: p.name })));
+      setSelectedProfileId(
+        (cur) => cur ?? list.find((p) => p.isDefault)?.id ?? null,
+      );
+    } catch {
+      /* network — leave the picker empty */
+    }
+  }, []);
+  useEffect(() => {
+    void refreshProfiles();
+  }, [refreshProfiles]);
   // Brief can be pre-filled from a deep link (homepage hero CTA, projects
   // example cards, etc.) via ?brief=<urlencoded>.
   const briefParam = searchParams.get("brief");
@@ -364,8 +388,17 @@ function NewV2Inner() {
     if (aiGenerating) return;
     const brief = aiPrompt.trim();
     if (brief.length < 10) return;
-    void aiGenerate(brief, genModel);
-  }, [aiGenerating, aiPrompt, aiGenerate, genModel]);
+    if (aiMode === "scratch") void bespoke.generate(brief, genModel);
+    else void curation.curate(brief, selectedProfileId);
+  }, [
+    aiGenerating,
+    aiPrompt,
+    aiMode,
+    bespoke,
+    curation,
+    genModel,
+    selectedProfileId,
+  ]);
   // A deep link with `?autostart=1` (the homepage hero) kicks generation
   // off on arrival. The param is stripped right after so a manual reload of
   // this URL doesn't re-fire — and re-bill — the generation.
@@ -1351,6 +1384,10 @@ function NewV2Inner() {
           aiGenerating={aiGenerating}
           aiMode={aiMode}
           aiOnModeChange={setAiMode}
+          aiProfiles={profiles}
+          aiSelectedProfileId={selectedProfileId}
+          aiOnSelectProfile={setSelectedProfileId}
+          aiOnManageProfiles={() => setProfileModalOpen(true)}
         />
         {/* One <main> landmark for the workspace center. `contents` keeps the
             flex layout byte-identical (generates no box) while giving the a11y
@@ -1635,6 +1672,14 @@ function NewV2Inner() {
           }
         />
       )}
+      <BusinessProfileModal
+        open={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        onSaved={(p) => {
+          void refreshProfiles();
+          setSelectedProfileId(p.id);
+        }}
+      />
       <ReplaceAssetModal
         open={!!assetModal}
         kind={assetModal?.kind ?? null}

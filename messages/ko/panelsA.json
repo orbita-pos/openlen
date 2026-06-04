@@ -72,5 +72,56 @@
     "portfolio": "포트폴리오",
     "coffee": "커피 구독",
     "event": "이벤트"
+  },
+  "profile": {
+    "title": "내 비즈니스",
+    "titleEdit": "비즈니스 수정",
+    "subtitle": "정보를 한 번만 가져오면 모든 페이지에 자동으로 반영돼요.",
+    "close": "닫기",
+    "save": "저장",
+    "saving": "저장 중…",
+    "back": "뒤로",
+    "confirm": {
+      "subtitle": "내용을 확인하세요 — 고칠 부분을 수정한 뒤 저장하세요."
+    },
+    "import": {
+      "image": "📷 스크린샷",
+      "url": "🔗 웹사이트",
+      "text": "✍️ 직접 설명",
+      "imageDrop": "스크린샷을 끌어다 놓거나 클릭해서 올리세요",
+      "imageHint": "Instagram, 메뉴판, 전단지 스크린샷이면 충분해요.",
+      "urlPlaceholder": "https://내-사이트.com 또는 내 링크",
+      "textPlaceholder": "예: Oaxaca에 있는 스페셜티 커피숍 Tramonto…",
+      "extract": "내 정보 읽어 오기",
+      "extracting": "읽는 중…",
+      "manual": "직접 입력하기"
+    },
+    "fields": {
+      "label": "이 비즈니스의 이름",
+      "labelPlaceholder": "예: 우리 커피숍",
+      "businessName": "비즈니스 이름",
+      "industry": "하시는 일",
+      "whatsapp": "WhatsApp",
+      "phone": "전화번호",
+      "email": "이메일",
+      "address": "주소",
+      "instagram": "Instagram"
+    },
+    "errors": {
+      "image": "JPG 또는 PNG 이미지만 가능해요.",
+      "tooLarge": "이미지가 너무 커요 (최대 8 MB).",
+      "uploadFirst": "먼저 이미지를 올려 주세요.",
+      "url": "올바른 링크를 입력하세요 (https://…).",
+      "describe": "한 문장 이상 적어 주세요.",
+      "extract": "읽어 오지 못했어요 — 다른 자료로 시도하거나 직접 입력해 주세요.",
+      "name": "이 비즈니스에 이름을 지어 주세요.",
+      "save": "저장하지 못했어요 — 다시 시도해 주세요."
+    }
+  },
+  "profilePicker": {
+    "add": "내 비즈니스 추가",
+    "for": "대상",
+    "none": "비즈니스 없음",
+    "new": "새 비즈니스"
   }
 }

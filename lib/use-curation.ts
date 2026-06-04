@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AIModel } from "@/lib/ai-provider";
 import type { GenerationState } from "@/lib/use-generation";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -20,7 +19,7 @@ import type { GenerationState } from "@/lib/use-generation";
 
 export interface UseCurationResult {
   state: GenerationState;
-  curate: (brief: string, model?: AIModel) => Promise<void>;
+  curate: (brief: string, profileId?: string | null) => Promise<void>;
 }
 
 const SILENCE_TIMEOUT_MS = 180_000; // curation is short; only a dead connection trips this
@@ -46,9 +45,10 @@ export function useCuration(): UseCurationResult {
   // project and burn Gemini usage).
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  // `model` is accepted for drop-in parity with useGeneration's signature but
-  // ignored — curation has no model picker (it always uses Flash for pick + fill).
-  const curate = useCallback(async (brief: string, _model?: AIModel) => {
+  // `profileId` (optional) seeds the page from a saved business profile — the
+  // server overlays the user's real info onto the model's invented copy. No
+  // model picker: curation always uses Flash for pick + fill.
+  const curate = useCallback(async (brief: string, profileId?: string | null) => {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -74,7 +74,7 @@ export function useCuration(): UseCurationResult {
       response = await fetch("/api/curate", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
-        body: JSON.stringify({ brief }),
+        body: JSON.stringify({ brief, profileId: profileId ?? undefined }),
         signal: controller.signal,
       });
     } catch (err) {

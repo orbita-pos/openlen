@@ -72,5 +72,56 @@
     "portfolio": "作品集",
     "coffee": "咖啡订阅",
     "event": "活动"
+  },
+  "profile": {
+    "title": "我的店铺",
+    "titleEdit": "编辑店铺信息",
+    "subtitle": "信息只需导入一次 — 之后每个页面都会自动用上。",
+    "close": "关闭",
+    "save": "保存",
+    "saving": "保存中…",
+    "back": "返回",
+    "confirm": {
+      "subtitle": "核对一下你的信息 — 有需要就改一改，然后保存。"
+    },
+    "import": {
+      "image": "📷 截图",
+      "url": "🔗 网站",
+      "text": "✍️ 文字描述",
+      "imageDrop": "把截图拖进来，或点击上传",
+      "imageHint": "你的 Instagram、菜单或宣传单的截图就很好用。",
+      "urlPlaceholder": "https://你的网站.com 或你的链接",
+      "textPlaceholder": "例如：Tramonto，一家位于 Oaxaca 的精品咖啡馆……",
+      "extract": "读取我的信息",
+      "extracting": "读取中…",
+      "manual": "手动填写"
+    },
+    "fields": {
+      "label": "给这家店铺起个名字",
+      "labelPlaceholder": "例如：我的咖啡馆",
+      "businessName": "店铺名称",
+      "industry": "你是做什么的",
+      "whatsapp": "WhatsApp",
+      "phone": "电话",
+      "email": "邮箱",
+      "address": "地址",
+      "instagram": "Instagram"
+    },
+    "errors": {
+      "image": "只支持 JPG 或 PNG 图片。",
+      "tooLarge": "图片太大了（最大 8 MB）。",
+      "uploadFirst": "请先上传一张图片。",
+      "url": "请输入一个有效的链接（https://…）。",
+      "describe": "至少写一句话吧。",
+      "extract": "没能读取成功 — 换个来源，或者手动填写吧。",
+      "name": "给这家店铺起个名字吧。",
+      "save": "没能保存成功 — 请重试。"
+    }
+  },
+  "profilePicker": {
+    "add": "添加我的店铺",
+    "for": "用于",
+    "none": "暂无店铺",
+    "new": "新建店铺"
   }
 }

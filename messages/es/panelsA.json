@@ -72,5 +72,56 @@
     "portfolio": "Portafolio",
     "coffee": "Suscripción de café",
     "event": "Evento"
+  },
+  "profile": {
+    "title": "Mi negocio",
+    "titleEdit": "Editar negocio",
+    "subtitle": "Importa tu info una vez — cada página la tendrá automáticamente.",
+    "close": "Cerrar",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "back": "Atrás",
+    "confirm": {
+      "subtitle": "Revisa tus datos — corrige lo que sea y guarda."
+    },
+    "import": {
+      "image": "📷 Captura",
+      "url": "🔗 Sitio web",
+      "text": "✍️ Describir",
+      "imageDrop": "Arrastra una captura o haz clic para subir",
+      "imageHint": "Una captura de tu Instagram, menú o flyer funciona perfecto.",
+      "urlPlaceholder": "https://tu-sitio.com o tu enlace",
+      "textPlaceholder": "ej. Tramonto, una cafetería de especialidad en Oaxaca…",
+      "extract": "Leer mi info",
+      "extracting": "Leyendo…",
+      "manual": "Llenar a mano"
+    },
+    "fields": {
+      "label": "Nombra este negocio",
+      "labelPlaceholder": "ej. Mi cafetería",
+      "businessName": "Nombre del negocio",
+      "industry": "Qué haces",
+      "whatsapp": "WhatsApp",
+      "phone": "Teléfono",
+      "email": "Correo",
+      "address": "Dirección",
+      "instagram": "Instagram"
+    },
+    "errors": {
+      "image": "Solo imágenes JPG o PNG.",
+      "tooLarge": "Imagen muy grande (máx 8 MB).",
+      "uploadFirst": "Sube una imagen primero.",
+      "url": "Pon un enlace válido (https://…).",
+      "describe": "Escribe al menos una frase.",
+      "extract": "No pude leer eso — prueba otra fuente o llena a mano.",
+      "name": "Ponle un nombre a este negocio.",
+      "save": "No se pudo guardar — intenta de nuevo."
+    }
+  },
+  "profilePicker": {
+    "add": "Agregar mi negocio",
+    "for": "Para",
+    "none": "Sin negocio",
+    "new": "Nuevo negocio"
   }
 }

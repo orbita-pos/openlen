@@ -29,6 +29,11 @@ export interface AiBriefPanelProps {
   /** "quick" = curated (free), "scratch" = bespoke from-scratch (Pro). */
   mode: "quick" | "scratch";
   onModeChange: (m: "quick" | "scratch") => void;
+  /** Saved business profiles for the "Mi negocio" picker (curation only). */
+  profiles?: { id: string; name: string }[];
+  selectedProfileId?: string | null;
+  onSelectProfile?: (id: string | null) => void;
+  onManageProfiles?: () => void;
 }
 
 export function AiBriefPanel({
@@ -37,6 +42,10 @@ export function AiBriefPanel({
   generating,
   mode,
   onModeChange,
+  profiles = [],
+  selectedProfileId = null,
+  onSelectProfile,
+  onManageProfiles,
 }: AiBriefPanelProps) {
   const t = useTranslations("panelsA");
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -87,6 +96,15 @@ export function AiBriefPanel({
         </div>
       </div>
       <div className="shrink-0 px-3 pb-3">
+        {mode === "quick" && (
+          <ProfilePicker
+            profiles={profiles}
+            selectedId={selectedProfileId}
+            onSelect={onSelectProfile ?? (() => {})}
+            onManage={onManageProfiles ?? (() => {})}
+            disabled={generating}
+          />
+        )}
         <div className="rounded-xl border bd bg-elev focus-within:border-[color:var(--accent)] focus-within:ring-1 focus-within:ring-[color:var(--accent-ring)]/30 transition">
           <textarea
             ref={taRef}
@@ -247,5 +265,123 @@ function ModeSelect({
         </div>
       )}
     </div>
+  );
+}
+
+// "Mi negocio" picker — seeds the curation flow from a saved profile. Hidden in
+// bespoke mode. With no profiles it's a single "add" link; with one or more it's
+// a dropdown (+ "new business"). "None" = let the AI invent the copy.
+function ProfilePicker({
+  profiles,
+  selectedId,
+  onSelect,
+  onManage,
+  disabled,
+}: {
+  profiles: { id: string; name: string }[];
+  selectedId: string | null;
+  onSelect: (id: string | null) => void;
+  onManage: () => void;
+  disabled: boolean;
+}) {
+  const t = useTranslations("panelsA");
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    window.addEventListener("pointerdown", onDown);
+    return () => window.removeEventListener("pointerdown", onDown);
+  }, [open]);
+
+  if (profiles.length === 0) {
+    return (
+      <button
+        type="button"
+        onClick={onManage}
+        disabled={disabled}
+        className="mb-2 inline-flex items-center gap-1.5 text-[11px] fg-muted hover:fg transition disabled:opacity-40"
+      >
+        <Sparkles size={11} /> {t("profilePicker.add")}
+      </button>
+    );
+  }
+
+  const selected = profiles.find((p) => p.id === selectedId) ?? null;
+  return (
+    <div className="mb-2 flex items-center gap-1.5 text-[11px]" ref={ref}>
+      <span className="fg-faint">{t("profilePicker.for")}</span>
+      <div className="relative">
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => setOpen((o) => !o)}
+          className="inline-flex items-center gap-1 h-6 px-2 rounded-md fg hover:bg-hover ring-1 ring-[color:var(--border)] transition disabled:opacity-40"
+        >
+          <span className="max-w-[140px] truncate">
+            {selected ? selected.name : t("profilePicker.none")}
+          </span>
+          <ChevronUp size={9} className={open ? "rotate-180" : ""} />
+        </button>
+        {open && (
+          <div className="absolute bottom-full left-0 mb-1 w-48 rounded-lg border bd bg-elev shadow-card p-1 z-30">
+            <PickItem
+              active={selectedId === null}
+              label={t("profilePicker.none")}
+              onClick={() => {
+                onSelect(null);
+                setOpen(false);
+              }}
+            />
+            {profiles.map((p) => (
+              <PickItem
+                key={p.id}
+                active={selectedId === p.id}
+                label={p.name}
+                onClick={() => {
+                  onSelect(p.id);
+                  setOpen(false);
+                }}
+              />
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onManage();
+              }}
+              className="w-full text-left px-2 py-1.5 rounded-md text-[11.5px] text-accent hover:bg-hover transition"
+            >
+              + {t("profilePicker.new")}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PickItem({
+  active,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full text-left px-2 py-1.5 rounded-md text-[11.5px] truncate transition ${
+        active ? "bg-accent-soft text-accent" : "fg hover:bg-hover"
+      }`}
+    >
+      {label}
+    </button>
   );
 }
