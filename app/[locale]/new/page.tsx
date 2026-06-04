@@ -434,6 +434,11 @@ function NewV2Inner() {
     const onMessage = (e: MessageEvent) => {
       const data = e.data;
       if (!data || typeof data !== "object") return;
+      // Only trust messages from the live preview iframe — a stray window (other
+      // tab / embed) can't drive the editor. (In-iframe scripts still share the
+      // iframe's contentWindow; their containment is the corpus/ingestion layer.)
+      if (iframeElRef.current && e.source !== iframeElRef.current.contentWindow)
+        return;
       if (data.type === "openlen:section-selected") {
         if (
           typeof data.hint === "string" &&
@@ -668,7 +673,14 @@ function NewV2Inner() {
   // iframe affordances at once: drag handles, image/icon replace, inline
   // text edit, AND element-inspect outlines. Off → iframe renders clean.
   const editingActive =
-    inspectMode && entryMode === "editing" && !!loadedProject;
+    inspectMode &&
+    entryMode === "editing" &&
+    !!loadedProject &&
+    // Suppress the editor (inline-edit + element-inspect) while the Chat tab's
+    // "pick an element" gesture is active — otherwise a single iframe click both
+    // scope-selects for chat AND pops the inline-edit overlay (the two modes
+    // shared the same edit-mode body attr).
+    !sectionSelectMode;
   // Autofill is a flat-project feature (you fill a template's generic copy
   // with your business data). It doesn't apply to slot-based AI projects
   // which already have AI-generated content for each slot.
@@ -750,6 +762,9 @@ function NewV2Inner() {
 
     const onMessage = (e: MessageEvent) => {
       if (!e.data || e.data.type !== "openlen:html-changed") return;
+      // Only the live preview iframe may PATCH the project's HTML.
+      if (iframeElRef.current && e.source !== iframeElRef.current.contentWindow)
+        return;
       const rawHtml =
         typeof e.data.outerHtml === "string" ? e.data.outerHtml : "";
       if (!rawHtml) return;
@@ -1528,6 +1543,7 @@ function NewV2Inner() {
       <StatusBar saving={saving} published={published} />
       {loadedProject && (
         <CustomDomainModal
+          key={loadedProject.id}
           open={customDomainOpen}
           onClose={() => setCustomDomainOpen(false)}
           projectId={loadedProject.id}
