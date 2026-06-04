@@ -29,7 +29,11 @@ import type { BusinessProfile } from "@/lib/business-profiles/types";
 import { CustomDomainModal } from "@/components/workspace-v2/custom-domain-modal";
 import { DeployIntegrationModal } from "@/components/workspace-v2/deploy-integration-modal";
 import { EmptyState } from "@/components/workspace-v2/empty-state";
-import { LeftSidebar, type SidebarMode } from "@/components/workspace-v2/left-sidebar";
+import {
+  LeftSidebar,
+  type SidebarMode,
+  type SectionView,
+} from "@/components/workspace-v2/left-sidebar";
 import { Check, Undo, X } from "@/components/workspace-v2/icons";
 import { SectionPreviewModal } from "@/components/workspace-v2/section-preview-modal";
 import type { SectionSpec } from "@/components/workspace-v2/sections-data";
@@ -151,6 +155,7 @@ function readThemeBaseline(m: Record<string, unknown>): {
 function NewV2Inner() {
   const t = useTranslations("wsPage");
   const tSections = useTranslations("panelsA");
+  const tNav = useTranslations("projects");
   const [dark, toggleDark] = useDarkMode();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -175,6 +180,10 @@ function NewV2Inner() {
     entryMode === "template" ? "templates" : "chat",
   );
   const [leftCollapsed, setLeftCollapsed] = useState(false);
+  // Which account section the workspace CENTER renders — "page" = the page
+  // canvas (default; the editor behaves exactly as before). The rail's global
+  // icons switch this; nothing navigates away.
+  const [centerView, setCenterView] = useState<SectionView>("page");
   const [saving, setSaving] = useState(false);
   const [loadedProject, setLoadedProject] = useState<LoadedProject | null>(null);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
@@ -1332,6 +1341,8 @@ function NewV2Inner() {
         <LeftSidebar
           collapsed={leftCollapsed}
           onToggleCollapse={() => setLeftCollapsed((c) => !c)}
+          activeSection={centerView}
+          onSelectSection={setCenterView}
           mode={mode}
           setMode={setMode}
           sections={sections}
@@ -1400,6 +1411,27 @@ function NewV2Inner() {
             sr-only h1 gives every entry state a top-level heading. */}
         <main className="contents">
         <h1 className="sr-only">{t("a11y.workspaceHeading")}</h1>
+        {centerView !== "page" ? (
+          <section className="flex-1 min-w-0 min-h-0 flex items-center justify-center bg-preview-a">
+            <div className="text-center px-6">
+              <div className="text-[15px] font-semibold fg">
+                {tNav(
+                  centerView === "projects"
+                    ? "nav.myPages"
+                    : centerView === "analytics"
+                      ? "nav.analytics"
+                      : centerView === "messages"
+                        ? "nav.messages"
+                        : "nav.myBusiness",
+                )}
+              </div>
+              <div className="mt-1 text-[12.5px] fg-faint">
+                {tNav("sections.comingSoon")}
+              </div>
+            </div>
+          </section>
+        ) : (
+          <>
         {entryMode === "choosing" && (
           <EmptyState
             onPickAI={handlePickAI}
@@ -1594,6 +1626,8 @@ function NewV2Inner() {
               </div>
             </div>
           ))}
+          </>
+        )}
         </main>
       </div>
       <StatusBar saving={saving} published={published} />

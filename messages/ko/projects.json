@@ -160,7 +160,8 @@
     "myPages": "내 페이지",
     "myBusiness": "내 비즈니스",
     "messages": "메시지",
-    "analytics": "분석"
+    "analytics": "분석",
+    "page": "페이지"
   },
   "deleteDialog": {
     "title": "이 페이지를 삭제할까요?",
@@ -193,5 +194,8 @@
     "perPage": "페이지별",
     "empty": "아직 데이터가 없습니다",
     "emptyHint": "페이지를 게시하고 링크를 공유하면 방문자 수와 문의 수가 여기에 표시됩니다."
+  },
+  "sections": {
+    "comingSoon": "다음 단계에서 여기에 표시됩니다."
   }
 }

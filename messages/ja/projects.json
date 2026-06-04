@@ -160,7 +160,8 @@
     "myPages": "マイページ",
     "myBusiness": "マイビジネス",
     "messages": "メッセージ",
-    "analytics": "分析"
+    "analytics": "分析",
+    "page": "ページ"
   },
   "deleteDialog": {
     "title": "このページを削除しますか？",
@@ -193,5 +194,8 @@
     "perPage": "ページ別",
     "empty": "まだデータはありません",
     "emptyHint": "ページを公開してリンクを共有すると、訪問者数や問い合わせ数がここに表示されます。"
+  },
+  "sections": {
+    "comingSoon": "次のステップでここに表示されます。"
   }
 }
