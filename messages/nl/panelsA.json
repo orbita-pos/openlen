@@ -105,7 +105,9 @@
       "phone": "Telefoon",
       "email": "E-mail",
       "address": "Adres",
-      "instagram": "Instagram"
+      "instagram": "Instagram",
+      "color": "Merkkleur",
+      "takeFromLogo": "Uit logo"
     },
     "errors": {
       "image": "Alleen JPG- of PNG-afbeeldingen.",

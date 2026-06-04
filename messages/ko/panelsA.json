@@ -105,7 +105,9 @@
       "phone": "전화번호",
       "email": "이메일",
       "address": "주소",
-      "instagram": "Instagram"
+      "instagram": "Instagram",
+      "color": "브랜드 색상",
+      "takeFromLogo": "로고에서"
     },
     "errors": {
       "image": "JPG 또는 PNG 이미지만 가능해요.",

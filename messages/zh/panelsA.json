@@ -105,7 +105,9 @@
       "phone": "电话",
       "email": "邮箱",
       "address": "地址",
-      "instagram": "Instagram"
+      "instagram": "Instagram",
+      "color": "品牌色",
+      "takeFromLogo": "从徽标提取"
     },
     "errors": {
       "image": "只支持 JPG 或 PNG 图片。",
