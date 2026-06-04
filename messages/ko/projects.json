@@ -159,7 +159,8 @@
   "nav": {
     "myPages": "내 페이지",
     "myBusiness": "내 비즈니스",
-    "messages": "메시지"
+    "messages": "메시지",
+    "analytics": "분석"
   },
   "deleteDialog": {
     "title": "이 페이지를 삭제할까요?",
@@ -182,5 +183,15 @@
     "emptyHint": "누군가 내 페이지의 문의 양식을 작성하면 여기에 표시되고 이메일로도 알려드립니다.",
     "from": "{page} 에서",
     "createCta": "페이지 만들기"
+  },
+  "analytics": {
+    "title": "분석",
+    "subtitle": "최근 30일간 페이지 현황입니다.",
+    "views": "조회",
+    "clicks": "클릭",
+    "leads": "메시지",
+    "perPage": "페이지별",
+    "empty": "아직 데이터가 없습니다",
+    "emptyHint": "페이지를 게시하고 링크를 공유하면 방문자 수와 문의 수가 여기에 표시됩니다."
   }
 }

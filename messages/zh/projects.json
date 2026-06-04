@@ -159,7 +159,8 @@
   "nav": {
     "myPages": "我的页面",
     "myBusiness": "我的业务",
-    "messages": "消息"
+    "messages": "消息",
+    "analytics": "数据分析"
   },
   "deleteDialog": {
     "title": "删除此页面？",
@@ -182,5 +183,15 @@
     "emptyHint": "当有人在你的页面填写联系表单时，会显示在这里，我们也会发邮件通知你。",
     "from": "来自 {page}",
     "createCta": "创建页面"
+  },
+  "analytics": {
+    "title": "数据分析",
+    "subtitle": "你的页面在过去 30 天的表现。",
+    "views": "浏览",
+    "clicks": "点击",
+    "leads": "消息",
+    "perPage": "按页面",
+    "empty": "暂无数据",
+    "emptyHint": "发布页面并分享链接，这里会显示有多少人访问并联系你。"
   }
 }

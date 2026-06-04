@@ -159,7 +159,8 @@
   "nav": {
     "myPages": "マイページ",
     "myBusiness": "マイビジネス",
-    "messages": "メッセージ"
+    "messages": "メッセージ",
+    "analytics": "分析"
   },
   "deleteDialog": {
     "title": "このページを削除しますか？",
@@ -182,5 +183,15 @@
     "emptyHint": "誰かがあなたのページの問い合わせフォームを送ると、ここに表示され、メールでもお知らせします。",
     "from": "{page} から",
     "createCta": "ページを作成"
+  },
+  "analytics": {
+    "title": "分析",
+    "subtitle": "過去30日間のページの状況。",
+    "views": "表示",
+    "clicks": "クリック",
+    "leads": "メッセージ",
+    "perPage": "ページ別",
+    "empty": "まだデータはありません",
+    "emptyHint": "ページを公開してリンクを共有すると、訪問者数や問い合わせ数がここに表示されます。"
   }
 }
