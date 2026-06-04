@@ -56,11 +56,8 @@ const Globe = (p: IconProps) => <Icon {...p}><circle cx="12" cy="12" r="10" /><p
 const Link2 = (p: IconProps) => <Icon {...p}><path d="M9 17H7A5 5 0 0 1 7 7h2" /><path d="M15 7h2a5 5 0 1 1 0 10h-2" /><line x1="8" x2="16" y1="12" y2="12" /></Icon>;
 const Youtube = (p: IconProps) => <Icon {...p}><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17" /><path d="m10 15 5-3-5-3z" /></Icon>;
 const Trash = (p: IconProps) => <Icon {...p}><path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></Icon>;
-const Camera = (p: IconProps) => <Icon {...p}><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" /></Icon>;
-const Pencil = (p: IconProps) => <Icon {...p}><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" /></Icon>;
 const Sparkles = (p: IconProps) => <Icon {...p}><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /></Icon>;
 const Star = (p: IconProps) => <Icon {...p}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></Icon>;
-const ArrowRight = (p: IconProps) => <Icon {...p}><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></Icon>;
 const Loader = (p: IconProps) => <Icon {...p}><path d="M21 12a9 9 0 1 1-6.219-8.56" /></Icon>;
 
 /* ───────── Link presets (label resolved via i18n at render) ───────── */
@@ -215,8 +212,6 @@ export default function BusinessPage() {
   const [busyAsset, setBusyAsset] = useState(false);
   const logoRef = useRef<HTMLInputElement>(null);
   const photosRef = useRef<HTMLInputElement>(null);
-  const importRef = useRef<HTMLInputElement>(null);
-  const [importing, setImporting] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -227,8 +222,16 @@ export default function BusinessPage() {
       }
       const j = (await res.json().catch(() => ({}))) as { profiles?: BusinessProfile[] };
       const list = (j.profiles ?? []).map(fromServer);
-      setData(list);
-      setActiveId((cur) => cur ?? list.find((p) => p.isDefault)?.id ?? list[0]?.id ?? null);
+      if (list.length === 0) {
+        // No saved businesses yet → land straight on a blank form (the design),
+        // not an onboarding screen.
+        const blank = blankProfile();
+        setData([blank]);
+        setActiveId(blank.id);
+      } else {
+        setData(list);
+        setActiveId((cur) => cur ?? list.find((p) => p.isDefault)?.id ?? list[0]?.id ?? null);
+      }
     } catch {
       /* leave empty */
     } finally {
@@ -336,52 +339,15 @@ export default function BusinessPage() {
     }
     setData((d) => {
       const next = d.filter((p) => p.id !== active.id);
+      if (next.length === 0) {
+        const blank = blankProfile();
+        setActiveId(blank.id);
+        return [blank];
+      }
       setActiveId(next.find((p) => p.isDefault)?.id ?? next[0]?.id ?? null);
       return next;
     });
   };
-
-  const doImport = async (file: File) => {
-    setImporting(true);
-    try {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => (typeof r.result === "string" ? resolve(r.result) : reject(new Error()));
-        r.onerror = () => reject(new Error());
-        r.readAsDataURL(file);
-      });
-      const res = await fetch("/api/profiles/extract", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ source: "image", image: dataUrl, imageMime: file.type === "image/png" ? "image/png" : "image/jpeg" }),
-      });
-      const j = (await res.json().catch(() => ({}))) as { ok?: boolean; data?: BusinessProfileData };
-      const accent = await accentFromImage(file);
-      const seed = j.ok && j.data ? j.data : emptyData();
-      if (accent) seed.brand = { logoUrl: null, accent };
-      nuevo(seed);
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  const doDescribe = async (text: string) => {
-    if (text.trim().length < 10) return;
-    setImporting(true);
-    try {
-      const res = await fetch("/api/profiles/extract", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ source: "text", description: text.trim() }),
-      });
-      const j = (await res.json().catch(() => ({}))) as { ok?: boolean; data?: BusinessProfileData };
-      nuevo(j.ok && j.data ? j.data : emptyData());
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  const hasNone = !loading && data.length === 0;
 
   return (
     <div className="min-h-screen bg-[#FAFAF9] text-[#1A1A1A] dark:bg-[#0E0E10] dark:text-[#F4F4F3] antialiased">
@@ -402,8 +368,6 @@ export default function BusinessPage() {
 
       {loading ? (
         <div className="max-w-6xl mx-auto px-5 py-20 text-center text-[13px] text-[#8A8784]">{t("loading")}</div>
-      ) : hasNone ? (
-        <EmptyState importing={importing} onPickFile={() => importRef.current?.click()} onDescribe={(t2) => void doDescribe(t2)} onManual={() => nuevo()} />
       ) : active ? (
         <main className="max-w-6xl mx-auto px-5 sm:px-6 py-7 sm:py-9">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-7">
@@ -574,8 +538,6 @@ export default function BusinessPage() {
         </main>
       ) : null}
 
-      <input ref={importRef} type="file" accept="image/png,image/jpeg" className="hidden"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) void doImport(f); }} />
 
       {saved && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
@@ -682,51 +644,3 @@ function PreviewHero({ p }: { p: LocalProfile }) {
   );
 }
 
-/* ───────── Empty state ───────── */
-function EmptyState({ importing, onPickFile, onDescribe, onManual }: { importing: boolean; onPickFile: () => void; onDescribe: (text: string) => void; onManual: () => void }) {
-  const t = useTranslations("miNegocio");
-  const [mode, setMode] = useState<"choose" | "describe">("choose");
-  const [text, setText] = useState("");
-  return (
-    <div className="max-w-2xl mx-auto px-5 py-12 sm:py-20 text-center">
-      <h1 className="text-[24px] sm:text-[28px] font-bold tracking-tight leading-tight">{t("title")}</h1>
-      <p className="mt-2 max-w-md mx-auto text-[14px] text-[#6B6967] dark:text-[#9B9897] leading-relaxed">{t("subtitle")}</p>
-
-      {mode === "describe" ? (
-        <div className="mt-9 max-w-md mx-auto text-left">
-          <textarea value={text} onChange={(e) => setText(e.target.value)} rows={4} disabled={importing}
-            placeholder={t("empty.describePlaceholder")}
-            className="w-full px-3.5 py-3 text-[14px] rounded-xl bg-white dark:bg-[#1A1A1D] ring-1 ring-[#E5E3E1] dark:ring-white/10 focus:ring-2 focus:ring-coral-500 focus:outline-none placeholder:text-[#C0BDBA] dark:placeholder:text-[#5C5957] resize-y leading-relaxed disabled:opacity-70" />
-          <div className="mt-3 flex items-center gap-2">
-            <button onClick={() => onDescribe(text)} disabled={importing || text.trim().length < 10}
-              className="inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-coral-600 text-white text-[14px] font-semibold hover:bg-coral-700 transition disabled:opacity-50">
-              {importing ? <><Loader size={16} className="animate-spin" /> {t("empty.building")}</> : <>{t("empty.continue")} <ArrowRight size={14} /></>}
-            </button>
-            <button onClick={() => setMode("choose")} disabled={importing}
-              className="h-11 px-3 rounded-xl text-[13.5px] font-medium text-[#6B6967] dark:text-[#9B9897] hover:bg-white dark:hover:bg-white/5 transition disabled:opacity-50">{t("empty.back")}</button>
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className="mt-9 grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
-            <button onClick={onPickFile} disabled={importing}
-              className="group rounded-2xl bg-white dark:bg-[#1A1A1D] ring-1 ring-[#E5E3E1] dark:ring-white/10 hover:ring-coral-300 dark:hover:ring-coral-500/40 hover:shadow-md transition p-5 disabled:opacity-70">
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-coral-50 dark:bg-coral-500/15 text-coral-600 dark:text-coral-300 mb-4">{importing ? <Loader size={20} className="animate-spin" /> : <Camera size={20} />}</span>
-              <div className="text-[15px] font-semibold tracking-tight">{t("empty.screenshot")}</div>
-              <div className="text-[13px] text-[#8A8784] dark:text-[#9B9897] mt-1 leading-snug">{t("empty.screenshotHint")}</div>
-              <div className="mt-3 inline-flex items-center gap-1 text-[12.5px] font-semibold text-coral-700 dark:text-coral-300">{importing ? t("empty.reading") : <>{t("empty.uploadScreenshot")} <ArrowRight size={13} /></>}</div>
-            </button>
-            <button onClick={() => setMode("describe")} disabled={importing}
-              className="group rounded-2xl bg-white dark:bg-[#1A1A1D] ring-1 ring-[#E5E3E1] dark:ring-white/10 hover:ring-coral-300 dark:hover:ring-coral-500/40 hover:shadow-md transition p-5 disabled:opacity-70">
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-coral-50 dark:bg-coral-500/15 text-coral-600 dark:text-coral-300 mb-4"><Pencil size={20} /></span>
-              <div className="text-[15px] font-semibold tracking-tight">{t("empty.describe")}</div>
-              <div className="text-[13px] text-[#8A8784] dark:text-[#9B9897] mt-1 leading-snug">{t("empty.describeHint")}</div>
-              <div className="mt-3 inline-flex items-center gap-1 text-[12.5px] font-semibold text-coral-700 dark:text-coral-300">{t("empty.write")} <ArrowRight size={13} /></div>
-            </button>
-          </div>
-          <p className="mt-6 text-[12.5px] text-[#A8A5A2] dark:text-[#7C7977]">{t("empty.prefer")} <button onClick={onManual} className="font-semibold text-[#6B6967] dark:text-[#9B9897] hover:text-coral-700 dark:hover:text-coral-300 transition underline underline-offset-2">{t("empty.fillMyself")}</button></p>
-        </>
-      )}
-    </div>
-  );
-}
