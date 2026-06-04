@@ -138,7 +138,7 @@
       "cta": "Clone the repo",
       "features": {
         "0": "AGPLv3 — yours to modify + redistribute",
-        "1": "Bring your own Gemini / Kimi API key",
+        "1": "Bring your own Gemini API key",
         "2": "Single Hetzner box runs everything",
         "3": "Wildcard subdomain via Caddy",
         "4": "No bill, no rate limit, no oversight"

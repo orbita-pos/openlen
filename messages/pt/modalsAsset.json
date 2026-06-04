@@ -165,7 +165,7 @@
     "stages": {
       "extracting": "Lendo a imagem…",
       "tagging": "Preparando o template…",
-      "calling-model": "Kimi K2.6 escrevendo…",
+      "calling-model": "Escrevendo seu texto…",
       "applying": "Aplicando as alterações…",
       "persisting": "Salvando…",
       "done": "Concluído",

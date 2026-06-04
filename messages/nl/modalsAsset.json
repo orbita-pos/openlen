@@ -165,7 +165,7 @@
     "stages": {
       "extracting": "Afbeelding lezen…",
       "tagging": "Template voorbereiden…",
-      "calling-model": "Kimi K2.6 schrijft…",
+      "calling-model": "Je teksten schrijven…",
       "applying": "Wijzigingen toepassen…",
       "persisting": "Opslaan…",
       "done": "Klaar",

@@ -36,7 +36,7 @@ export function consumeToken(key: string, spec: BucketSpec): RateLimitResult {
 
 /** Preset specs for the features we rate-limit today. */
 export const RATE_LIMITS = {
-  /** Autofill: image extraction + Kimi fill. Expensive (~\$0.002/call) but
+  /** Autofill: image extraction + Gemini fill. Expensive (~\$0.002/call) but
    *  not abusive at 10/hour for free users. Adjust per pricing tier later. */
   autofill: { limit: 10, windowMs: 60 * 60 * 1000 },
 } as const;

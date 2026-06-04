@@ -138,7 +138,7 @@
       "cta": "Clona el repo",
       "features": {
         "0": "AGPLv3 — tuyo para modificar y redistribuir",
-        "1": "Usa tu propia clave de API de Gemini / Kimi",
+        "1": "Usa tu propia clave de API de Gemini",
         "2": "Un único servidor Hetzner lo ejecuta todo",
         "3": "Subdominio comodín mediante Caddy",
         "4": "Sin facturas, sin límites de tasa, sin supervisión"
