@@ -21,10 +21,16 @@
   "image": {
     "tabs": {
       "openlen": "Door OpenLen",
+      "profiles": "Mijn bedrijf",
       "paste": "URL plakken",
       "unsplash": "Unsplash",
       "upload": "Uploaden"
     }
+  },
+  "businessProfiles": {
+    "logo": "Logo",
+    "empty": "Nog geen afbeeldingen in je bedrijfsprofiel.",
+    "useAria": "Gebruik {name}"
   },
   "paste": {
     "urlLabel": "Afbeeldings-URL",

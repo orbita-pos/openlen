@@ -81,6 +81,7 @@
     "save": "Opslaan",
     "saving": "Opslaan…",
     "back": "Terug",
+    "photosRemove": "Verwijderen",
     "confirm": {
       "subtitle": "Controleer je gegevens — pas aan wat nodig is en sla dan op."
     },
@@ -107,7 +108,8 @@
       "address": "Adres",
       "instagram": "Instagram",
       "color": "Merkkleur",
-      "takeFromLogo": "Uit logo"
+      "takeFromLogo": "Uit logo",
+      "photos": "Foto's"
     },
     "errors": {
       "image": "Alleen JPG- of PNG-afbeeldingen.",

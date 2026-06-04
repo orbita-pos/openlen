@@ -63,6 +63,13 @@ export interface ReplaceAssetModalProps {
   /** The current project's id — required for the Upload tab so it knows
    *  where to POST. When omitted, the Upload tab shows a disabled state. */
   projectId?: string | null;
+  /** The user's active business profile — surfaces its logo + photos as a
+   *  "Mi negocio" image source. Null/no assets hides that tab. */
+  activeProfile?: {
+    name: string;
+    logoUrl?: string | null;
+    photos?: string[];
+  } | null;
   onClose: () => void;
   onPick: (payload: ReplacePayload) => void;
 }
@@ -73,6 +80,7 @@ export function ReplaceAssetModal({
   currentSvg,
   currentSrc,
   projectId,
+  activeProfile,
   onClose,
   onPick,
 }: ReplaceAssetModalProps) {
@@ -137,6 +145,7 @@ export function ReplaceAssetModal({
           <ImagePicker
             currentSrc={currentSrc ?? null}
             projectId={projectId ?? null}
+            activeProfile={activeProfile ?? null}
             onPick={onPick}
           />
         )}
@@ -257,18 +266,29 @@ function IconPicker({
 // Image picker — tabbed: Paste URL · Unsplash · Upload (Upload TBD)
 // ────────────────────────────────────────────────────────────────────────
 
-type ImageTab = "openlen" | "paste" | "unsplash" | "upload";
+type ImageTab = "openlen" | "profiles" | "paste" | "unsplash" | "upload";
 
 function ImagePicker({
   currentSrc,
   projectId,
+  activeProfile,
   onPick,
 }: {
   currentSrc: string | null;
   projectId: string | null;
+  activeProfile: {
+    name: string;
+    logoUrl?: string | null;
+    photos?: string[];
+  } | null;
   onPick: (payload: ReplacePayload) => void;
 }) {
   const t = useTranslations("modalsAsset");
+  const hasProfileAssets = !!(
+    activeProfile &&
+    (activeProfile.logoUrl ||
+      (activeProfile.photos && activeProfile.photos.length))
+  );
   const [tab, setTab] = useState<ImageTab>("openlen");
 
   return (
@@ -277,6 +297,11 @@ function ImagePicker({
         <TabButton active={tab === "openlen"} onClick={() => setTab("openlen")}>
           {t("image.tabs.openlen")}
         </TabButton>
+        {hasProfileAssets && (
+          <TabButton active={tab === "profiles"} onClick={() => setTab("profiles")}>
+            {t("image.tabs.profiles")}
+          </TabButton>
+        )}
         <TabButton active={tab === "paste"} onClick={() => setTab("paste")}>
           {t("image.tabs.paste")}
         </TabButton>
@@ -288,10 +313,56 @@ function ImagePicker({
         </TabButton>
       </div>
       {tab === "openlen" && <OpenLenTab onPick={onPick} />}
+      {tab === "profiles" && hasProfileAssets && activeProfile && (
+        <BusinessProfilesTab profile={activeProfile} onPick={onPick} />
+      )}
       {tab === "paste" && <PasteUrlTab currentSrc={currentSrc} onPick={onPick} />}
       {tab === "unsplash" && <UnsplashTab onPick={onPick} />}
       {tab === "upload" && (
         <UploadTab projectId={projectId} onPick={onPick} />
+      )}
+    </div>
+  );
+}
+
+// "Mi negocio" image source — the active profile's logo + photos, click to use.
+function BusinessProfilesTab({
+  profile,
+  onPick,
+}: {
+  profile: { name: string; logoUrl?: string | null; photos?: string[] };
+  onPick: (payload: ReplacePayload) => void;
+}) {
+  const t = useTranslations("modalsAsset");
+  const items: { url: string; label: string }[] = [];
+  if (profile.logoUrl) {
+    items.push({ url: profile.logoUrl, label: t("businessProfiles.logo") });
+  }
+  for (const url of profile.photos ?? []) {
+    items.push({ url, label: profile.name });
+  }
+
+  return (
+    <div className="px-4 sm:px-5 py-4 min-h-[240px] max-h-[60vh] overflow-y-auto nice-scroll">
+      {items.length === 0 ? (
+        <div className="py-10 text-center text-[12px] fg-faint">
+          {t("businessProfiles.empty")}
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+          {items.map((it, i) => (
+            <button
+              key={`${it.url}-${i}`}
+              type="button"
+              onClick={() => onPick({ url: it.url, alt: it.label })}
+              aria-label={t("businessProfiles.useAria", { name: it.label })}
+              className="relative aspect-square rounded-md overflow-hidden border bd hover:bd-strong transition"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={it.url} alt="" className="h-full w-full object-cover" />
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );

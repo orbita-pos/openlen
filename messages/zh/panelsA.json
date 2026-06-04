@@ -81,6 +81,7 @@
     "save": "保存",
     "saving": "保存中…",
     "back": "返回",
+    "photosRemove": "移除",
     "confirm": {
       "subtitle": "核对一下你的信息 — 有需要就改一改，然后保存。"
     },
@@ -107,7 +108,8 @@
       "address": "地址",
       "instagram": "Instagram",
       "color": "品牌色",
-      "takeFromLogo": "从徽标提取"
+      "takeFromLogo": "从徽标提取",
+      "photos": "照片"
     },
     "errors": {
       "image": "只支持 JPG 或 PNG 图片。",

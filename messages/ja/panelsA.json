@@ -81,6 +81,7 @@
     "save": "保存",
     "saving": "保存中…",
     "back": "戻る",
+    "photosRemove": "削除",
     "confirm": {
       "subtitle": "内容をご確認ください — 必要なら直してから保存しましょう。"
     },
@@ -107,7 +108,8 @@
       "address": "住所",
       "instagram": "Instagram",
       "color": "ブランドカラー",
-      "takeFromLogo": "ロゴから取得"
+      "takeFromLogo": "ロゴから取得",
+      "photos": "写真"
     },
     "errors": {
       "image": "JPGまたはPNGの画像のみです。",

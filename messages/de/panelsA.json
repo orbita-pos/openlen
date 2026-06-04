@@ -81,6 +81,7 @@
     "save": "Speichern",
     "saving": "Wird gespeichert…",
     "back": "Zurück",
+    "photosRemove": "Entfernen",
     "confirm": {
       "subtitle": "Prüf deine Angaben — korrigier, was nötig ist, und speichere dann."
     },
@@ -107,7 +108,8 @@
       "address": "Adresse",
       "instagram": "Instagram",
       "color": "Markenfarbe",
-      "takeFromLogo": "Aus dem Logo"
+      "takeFromLogo": "Aus dem Logo",
+      "photos": "Fotos"
     },
     "errors": {
       "image": "Nur JPG- oder PNG-Bilder.",
