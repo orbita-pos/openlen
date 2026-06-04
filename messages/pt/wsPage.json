@@ -27,7 +27,8 @@
   },
   "aiError": {
     "title": "Falha na geração",
-    "tweak": "Ajuste seu briefing na barra lateral e tente novamente."
+    "tweak": "Ajuste seu briefing na barra lateral e tente novamente.",
+    "retry": "Tentar de novo"
   },
   "inserted": {
     "label": "<b>{name}</b> adicionada",

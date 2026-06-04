@@ -27,7 +27,8 @@
   },
   "aiError": {
     "title": "Generation failed",
-    "tweak": "Tweak your brief in the sidebar and try again."
+    "tweak": "Tweak your brief in the sidebar and try again.",
+    "retry": "Try again"
   },
   "inserted": {
     "label": "Added <b>{name}</b>",

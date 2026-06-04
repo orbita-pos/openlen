@@ -769,9 +769,9 @@ function DnsInstructionsBody({
         <ConnectButton providerName={connect.providerName} url={connect.url} />
       )}
       <DnsRecord
-        kind={isApex ? "A" : "A"}
+        kind={isApex ? "A" : "CNAME"}
         name={domain}
-        value={ip}
+        value={isApex ? ip : "custom.openlen.com"}
         purpose={t("customDomain.dns.pointsTraffic")}
       />
       <DnsRecord

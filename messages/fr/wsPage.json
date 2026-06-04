@@ -27,7 +27,8 @@
   },
   "aiError": {
     "title": "Échec de la génération",
-    "tweak": "Ajustez votre brief dans la barre latérale et réessayez."
+    "tweak": "Ajustez votre brief dans la barre latérale et réessayez.",
+    "retry": "Réessayer"
   },
   "inserted": {
     "label": "<b>{name}</b> ajoutée",
