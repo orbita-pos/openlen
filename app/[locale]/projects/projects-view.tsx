@@ -40,7 +40,6 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { AppHeader, DashboardNav } from "@/components/app/app-header";
 import { cn } from "@/lib/cn";
 import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
 import type { ProjectStatus, ProjectSummary } from "@/lib/projects";
@@ -375,19 +374,7 @@ export function ProjectsView({
     });
 
   return (
-    <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-[#0a0a0a]">
-      <AppHeader
-        nav={<DashboardNav active="pages" />}
-        actions={
-          <Link
-            href="/new"
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-coral-500 text-white text-[12px] font-medium hover:bg-coral-600 active:bg-coral-700 btn-coral-shadow transition"
-          >
-            <Plus size={13} /> {t("header.newPage")}
-          </Link>
-        }
-      />
-
+    <>
       {billingNotice && (
         <BillingBanner
           notice={billingNotice}
@@ -529,7 +516,7 @@ export function ProjectsView({
           onClose={() => setDeleteTarget(null)}
         />
       )}
-    </div>
+    </>
   );
 }
 

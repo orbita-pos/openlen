@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { auth } from "@/auth";
 import { listSubmissionsForUser } from "@/lib/projects/forms";
+import { DashboardShell } from "@/components/app/dashboard-shell";
 import { MessagesView } from "./messages-view";
 
 export const dynamic = "force-dynamic";
@@ -40,5 +41,9 @@ export default async function MessagesPage({
     device: r.meta?.device ?? null,
     createdAt: r.createdAt,
   }));
-  return <MessagesView leads={leads} />;
+  return (
+    <DashboardShell active="messages">
+      <MessagesView leads={leads} />
+    </DashboardShell>
+  );
 }

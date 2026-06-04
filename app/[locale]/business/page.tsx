@@ -8,7 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { AppHeader, DashboardNav } from "@/components/app/app-header";
+import { DashboardShell } from "@/components/app/dashboard-shell";
 import type {
   BusinessProfile,
   BusinessProfileData,
@@ -415,18 +415,8 @@ export default function BusinessPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAF9] text-[#1A1A1A] dark:bg-[#0E0E10] dark:text-[#F4F4F3] antialiased">
-      <AppHeader
-        nav={<DashboardNav active="business" />}
-        actions={
-          <Link
-            href={active && !active.isNew ? `/${locale}/new?mode=ai&profile=${active.id}` : `/${locale}/new`}
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-coral-500 text-white text-[12px] font-medium hover:bg-coral-600 active:bg-coral-700 transition shrink-0"
-          >
-            <Plus size={13} /> {t("pages.newPage")}
-          </Link>
-        }
-      />
+    <DashboardShell active="business">
+      <div className="flex-1 bg-[#FAFAF9] text-[#1A1A1A] dark:bg-[#0E0E10] dark:text-[#F4F4F3] antialiased">
 
       {loading ? (
         <div className="max-w-6xl mx-auto px-5 py-20 text-center text-[13px] text-[#8A8784]">{t("loading")}</div>
@@ -598,6 +588,14 @@ export default function BusinessPage() {
                     <h2 className="text-[15px] font-semibold tracking-tight leading-tight">{t("pages.title")}</h2>
                     <p className="text-[12.5px] text-[#8A8784] dark:text-[#9B9897] mt-0.5 leading-snug">{t("pages.hint")}</p>
                   </div>
+                  {!active.isNew && (
+                    <Link
+                      href={`/${locale}/new?mode=ai&profile=${active.id}`}
+                      className="inline-flex items-center gap-1 h-8 px-2.5 rounded-lg bg-coral-50 dark:bg-coral-500/15 text-coral-700 dark:text-coral-300 text-[12px] font-semibold hover:bg-coral-100 dark:hover:bg-coral-500/25 transition shrink-0"
+                    >
+                      <Plus size={13} /> {t("pages.newPage")}
+                    </Link>
+                  )}
                 </div>
                 {active.isNew ? (
                   <p className="text-[13px] text-[#A8A5A2] dark:text-[#7C7977] py-2">{t("pages.newBiz")}</p>
@@ -651,7 +649,8 @@ export default function BusinessPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </DashboardShell>
   );
 }
 

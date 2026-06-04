@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { listProjects } from "@/lib/projects";
 import { getProjectStatsForUser } from "@/lib/analytics/queries";
 import { listProfiles } from "@/lib/business-profiles/store";
+import { DashboardShell } from "@/components/app/dashboard-shell";
 import { ProjectsView } from "./projects-view";
 
 export const dynamic = "force-dynamic";
@@ -41,5 +42,9 @@ export default async function ProjectsPage({
     isDefault: p.isDefault,
   }));
   const withStats = projects.map((p) => ({ ...p, stats: statsMap.get(p.id) }));
-  return <ProjectsView projects={withStats} profiles={profiles} />;
+  return (
+    <DashboardShell active="pages">
+      <ProjectsView projects={withStats} profiles={profiles} />
+    </DashboardShell>
+  );
 }
