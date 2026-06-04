@@ -118,6 +118,15 @@
       "extract": "Couldn't read that — try another source or fill in by hand.",
       "name": "Give this business a name.",
       "save": "Couldn't save — try again."
+    },
+    "manage": {
+      "title": "My businesses",
+      "empty": "No businesses saved yet.",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteConfirm": "Delete {name}?",
+      "setDefault": "Make default",
+      "isDefault": "Default"
     }
   },
   "profilePicker": {

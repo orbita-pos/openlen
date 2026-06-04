@@ -48,6 +48,7 @@
   "account": {
     "fallbackName": "Account",
     "allProjects": "Alle projecten",
+    "manageProfiles": "Mijn bedrijf",
     "signOut": "Afmelden"
   },
   "relativeTime": {

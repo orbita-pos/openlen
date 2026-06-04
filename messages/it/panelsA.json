@@ -118,6 +118,15 @@
       "extract": "Non sono riuscito a leggerlo — prova un'altra fonte o inserisci a mano.",
       "name": "Dai un nome a questa attività.",
       "save": "Salvataggio non riuscito — riprova."
+    },
+    "manage": {
+      "title": "Le mie attività",
+      "empty": "Nessuna attività salvata per ora.",
+      "edit": "Modifica",
+      "delete": "Elimina",
+      "deleteConfirm": "Eliminare {name}?",
+      "setDefault": "Imposta come predefinita",
+      "isDefault": "Predefinita"
     }
   },
   "profilePicker": {

@@ -118,6 +118,15 @@
       "extract": "Lecture impossible — essayez une autre source ou remplissez à la main.",
       "name": "Donnez un nom à cette entreprise.",
       "save": "Enregistrement impossible — réessayez."
+    },
+    "manage": {
+      "title": "Mes entreprises",
+      "empty": "Aucune entreprise enregistrée pour le moment.",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "deleteConfirm": "Supprimer {name} ?",
+      "setDefault": "Définir par défaut",
+      "isDefault": "Par défaut"
     }
   },
   "profilePicker": {

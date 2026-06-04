@@ -118,6 +118,15 @@
       "extract": "Kon dat niet lezen — probeer een andere bron of vul handmatig in.",
       "name": "Geef dit bedrijf een naam.",
       "save": "Opslaan mislukt — probeer het opnieuw."
+    },
+    "manage": {
+      "title": "Mijn bedrijven",
+      "empty": "Nog geen bedrijven opgeslagen.",
+      "edit": "Bewerken",
+      "delete": "Verwijderen",
+      "deleteConfirm": "{name} verwijderen?",
+      "setDefault": "Als standaard instellen",
+      "isDefault": "Standaard"
     }
   },
   "profilePicker": {

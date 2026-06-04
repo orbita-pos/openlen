@@ -48,6 +48,7 @@
   "account": {
     "fallbackName": "계정",
     "allProjects": "모든 프로젝트",
+    "manageProfiles": "내 비즈니스",
     "signOut": "로그아웃"
   },
   "relativeTime": {

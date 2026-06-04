@@ -118,6 +118,15 @@
       "extract": "没能读取成功 — 换个来源，或者手动填写吧。",
       "name": "给这家店铺起个名字吧。",
       "save": "没能保存成功 — 请重试。"
+    },
+    "manage": {
+      "title": "我的店铺",
+      "empty": "还没有保存任何店铺。",
+      "edit": "编辑",
+      "delete": "删除",
+      "deleteConfirm": "确定要删除 {name} 吗？",
+      "setDefault": "设为默认",
+      "isDefault": "默认"
     }
   },
   "profilePicker": {

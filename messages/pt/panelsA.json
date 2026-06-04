@@ -118,6 +118,15 @@
       "extract": "Não consegui ler isso — tente outra fonte ou preencha na mão.",
       "name": "Dê um nome a este negócio.",
       "save": "Não foi possível salvar — tente novamente."
+    },
+    "manage": {
+      "title": "Meus negócios",
+      "empty": "Nenhum negócio salvo ainda.",
+      "edit": "Editar",
+      "delete": "Excluir",
+      "deleteConfirm": "Excluir {name}?",
+      "setDefault": "Tornar padrão",
+      "isDefault": "Padrão"
     }
   },
   "profilePicker": {
