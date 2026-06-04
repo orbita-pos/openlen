@@ -160,7 +160,8 @@
     "myPages": "Mijn pagina's",
     "myBusiness": "Mijn bedrijf",
     "messages": "Berichten",
-    "analytics": "Statistieken"
+    "analytics": "Statistieken",
+    "page": "Pagina"
   },
   "deleteDialog": {
     "title": "Deze pagina verwijderen?",
@@ -193,5 +194,8 @@
     "perPage": "Per pagina",
     "empty": "Nog geen gegevens",
     "emptyHint": "Publiceer een pagina en deel de link — hier zie je hoeveel mensen hem bezoeken en contact opnemen."
+  },
+  "sections": {
+    "comingSoon": "Komt hier in de volgende stap."
   }
 }

@@ -160,7 +160,8 @@
     "myPages": "我的页面",
     "myBusiness": "我的业务",
     "messages": "消息",
-    "analytics": "数据分析"
+    "analytics": "数据分析",
+    "page": "页面"
   },
   "deleteDialog": {
     "title": "删除此页面？",
@@ -193,5 +194,8 @@
     "perPage": "按页面",
     "empty": "暂无数据",
     "emptyHint": "发布页面并分享链接，这里会显示有多少人访问并联系你。"
+  },
+  "sections": {
+    "comingSoon": "下一步将在这里显示。"
   }
 }

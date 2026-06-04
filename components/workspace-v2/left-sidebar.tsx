@@ -14,7 +14,6 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
 import {
   BarChart3,
   ChatIcon,
@@ -23,6 +22,7 @@ import {
   HistoryIcon,
   Inbox,
   Layers,
+  Monitor,
   PanelLeft,
   PanelRight,
   Sparkles,
@@ -52,36 +52,55 @@ import type { ComponentType } from "react";
 // The account-wide sections — the SAME nav as the dashboard, living inside the
 // editor's existing sidebar (not a second rail) so you can jump anywhere from
 // here. Links navigate away from the editor (the page auto-saves).
+export type SectionView =
+  | "page"
+  | "projects"
+  | "analytics"
+  | "messages"
+  | "business";
+
 const GLOBAL_SECTIONS: ReadonlyArray<{
-  href: string;
+  view: SectionView;
   icon: typeof FileText;
   key: string;
 }> = [
-  { href: "/projects", icon: FileText, key: "nav.myPages" },
-  { href: "/analytics", icon: BarChart3, key: "nav.analytics" },
-  { href: "/messages", icon: Inbox, key: "nav.messages" },
-  { href: "/business", icon: Store, key: "nav.myBusiness" },
+  { view: "page", icon: Monitor, key: "nav.page" },
+  { view: "projects", icon: FileText, key: "nav.myPages" },
+  { view: "analytics", icon: BarChart3, key: "nav.analytics" },
+  { view: "messages", icon: Inbox, key: "nav.messages" },
+  { view: "business", icon: Store, key: "nav.myBusiness" },
 ];
 
-function GlobalSections({ vertical }: { vertical: boolean }) {
+function GlobalSections({
+  vertical,
+  active,
+  onSelect,
+}: {
+  vertical: boolean;
+  active: SectionView;
+  onSelect: (v: SectionView) => void;
+}) {
   const t = useTranslations("projects");
   return (
     <>
       {GLOBAL_SECTIONS.map((s) => {
         const I = s.icon;
+        const isActive = active === s.view;
         return (
-          <Tooltip
-            key={s.href}
-            label={t(s.key)}
-            side={vertical ? "right" : undefined}
-          >
-            <Link
-              href={s.href}
+          <Tooltip key={s.view} label={t(s.key)} side={vertical ? "right" : undefined}>
+            <button
+              type="button"
+              onClick={() => onSelect(s.view)}
               aria-label={t(s.key)}
-              className={`${vertical ? "h-8 w-8" : "h-7 w-8"} inline-flex items-center justify-center rounded-md fg-muted hover:fg hover:bg-hover transition`}
+              aria-current={isActive ? "page" : undefined}
+              className={`${vertical ? "h-8 w-8" : "h-7 w-8"} inline-flex items-center justify-center rounded-md transition ${
+                isActive
+                  ? "bg-elev fg shadow-card border bd"
+                  : "fg-muted hover:fg hover:bg-hover"
+              }`}
             >
               <I size={vertical ? 14 : 13} />
-            </Link>
+            </button>
           </Tooltip>
         );
       })}
@@ -208,6 +227,10 @@ interface LeftSidebarProps {
   aiSelectedProfileId?: string | null;
   aiOnSelectProfile?: (id: string | null) => void;
   aiOnManageProfiles?: () => void;
+  /** The account section shown in the workspace CENTER ("page" = the canvas).
+   *  The global-section rail icons set this; the parent renders the section. */
+  activeSection?: SectionView;
+  onSelectSection?: (v: SectionView) => void;
 }
 
 export function LeftSidebar({
@@ -225,6 +248,8 @@ export function LeftSidebar({
   lockedTabs,
   lockReason,
   entryMode = "editing",
+  activeSection = "page",
+  onSelectSection,
   flatProjectHtml,
   flatProjectId,
   onFlatHtmlUpdate,
@@ -278,7 +303,11 @@ export function LeftSidebar({
   if (collapsed) {
     return (
       <aside className="h-full w-12 shrink-0 bg-side border-r bd flex flex-col items-center pt-2 gap-1">
-        <GlobalSections vertical />
+        <GlobalSections
+          vertical
+          active={activeSection}
+          onSelect={onSelectSection ?? (() => {})}
+        />
         <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
         {visibleTabs.map((tab) => {
           const active = mode === tab.id;
@@ -330,7 +359,11 @@ export function LeftSidebar({
       {/* The icon rail stays vertical + fixed — identical to collapsed; the
           panel just opens to its right (it never reflows into a top row). */}
       <div className="h-full w-12 shrink-0 flex flex-col items-center pt-2 gap-1 border-r bd">
-        <GlobalSections vertical />
+        <GlobalSections
+          vertical
+          active={activeSection}
+          onSelect={onSelectSection ?? (() => {})}
+        />
         <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
         {visibleTabs.map((tab) => {
           const active = mode === tab.id;

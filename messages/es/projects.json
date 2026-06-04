@@ -160,7 +160,8 @@
     "myPages": "Mis páginas",
     "myBusiness": "Mi negocio",
     "messages": "Mensajes",
-    "analytics": "Métricas"
+    "analytics": "Métricas",
+    "page": "Página"
   },
   "deleteDialog": {
     "title": "¿Eliminar esta página?",
@@ -193,5 +194,8 @@
     "perPage": "Por página",
     "empty": "Aún no hay datos",
     "emptyHint": "Publica una página y comparte el link — aquí verás cuánta gente la visita y te contacta."
+  },
+  "sections": {
+    "comingSoon": "Lo conectamos aquí en el siguiente paso."
   }
 }
