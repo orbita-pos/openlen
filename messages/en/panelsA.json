@@ -72,5 +72,56 @@
     "portfolio": "Portfolio",
     "coffee": "Coffee subscription",
     "event": "Event"
+  },
+  "profile": {
+    "title": "My business",
+    "titleEdit": "Edit business",
+    "subtitle": "Import your info once — every page gets it automatically.",
+    "close": "Close",
+    "save": "Save",
+    "saving": "Saving…",
+    "back": "Back",
+    "confirm": {
+      "subtitle": "Check your details — fix anything, then save."
+    },
+    "import": {
+      "image": "📷 Screenshot",
+      "url": "🔗 Website",
+      "text": "✍️ Describe",
+      "imageDrop": "Drop a screenshot or click to upload",
+      "imageHint": "A screenshot of your Instagram, menu, or flyer works great.",
+      "urlPlaceholder": "https://your-site.com or your link",
+      "textPlaceholder": "e.g. Tramonto, a specialty coffee shop in Oaxaca…",
+      "extract": "Read my info",
+      "extracting": "Reading…",
+      "manual": "Fill in by hand"
+    },
+    "fields": {
+      "label": "Name this business",
+      "labelPlaceholder": "e.g. My coffee shop",
+      "businessName": "Business name",
+      "industry": "What you do",
+      "whatsapp": "WhatsApp",
+      "phone": "Phone",
+      "email": "Email",
+      "address": "Address",
+      "instagram": "Instagram"
+    },
+    "errors": {
+      "image": "Only JPG or PNG images.",
+      "tooLarge": "Image too large (max 8 MB).",
+      "uploadFirst": "Upload an image first.",
+      "url": "Enter a valid link (https://…).",
+      "describe": "Write at least a sentence.",
+      "extract": "Couldn't read that — try another source or fill in by hand.",
+      "name": "Give this business a name.",
+      "save": "Couldn't save — try again."
+    }
+  },
+  "profilePicker": {
+    "add": "Add my business",
+    "for": "For",
+    "none": "No business",
+    "new": "New business"
   }
 }

@@ -72,5 +72,56 @@
     "portfolio": "ポートフォリオ",
     "coffee": "コーヒーのサブスク",
     "event": "イベント"
+  },
+  "profile": {
+    "title": "私のお店",
+    "titleEdit": "お店を編集",
+    "subtitle": "情報を一度取り込むだけ — すべてのページに自動で反映されます。",
+    "close": "閉じる",
+    "save": "保存",
+    "saving": "保存中…",
+    "back": "戻る",
+    "confirm": {
+      "subtitle": "内容をご確認ください — 必要なら直してから保存しましょう。"
+    },
+    "import": {
+      "image": "📷 スクリーンショット",
+      "url": "🔗 ウェブサイト",
+      "text": "✍️ 説明する",
+      "imageDrop": "スクリーンショットをドロップ、またはクリックしてアップロード",
+      "imageHint": "Instagramやメニュー、チラシのスクリーンショットがぴったりです。",
+      "urlPlaceholder": "https://あなたのサイト.com またはあなたのリンク",
+      "textPlaceholder": "例: Tramonto、Oaxacaにあるスペシャルティコーヒーショップ…",
+      "extract": "情報を読み取る",
+      "extracting": "読み取り中…",
+      "manual": "手入力する"
+    },
+    "fields": {
+      "label": "このお店に名前を付ける",
+      "labelPlaceholder": "例: 私のコーヒーショップ",
+      "businessName": "お店の名前",
+      "industry": "お店の内容",
+      "whatsapp": "WhatsApp",
+      "phone": "電話番号",
+      "email": "メールアドレス",
+      "address": "住所",
+      "instagram": "Instagram"
+    },
+    "errors": {
+      "image": "JPGまたはPNGの画像のみです。",
+      "tooLarge": "画像が大きすぎます（最大8 MB）。",
+      "uploadFirst": "まず画像をアップロードしてください。",
+      "url": "有効なリンクを入力してください（https://…）。",
+      "describe": "少なくとも一文は書いてください。",
+      "extract": "読み取れませんでした — 別のソースを試すか、手入力してください。",
+      "name": "このお店に名前を付けてください。",
+      "save": "保存できませんでした — もう一度お試しください。"
+    }
+  },
+  "profilePicker": {
+    "add": "お店を追加",
+    "for": "対象",
+    "none": "お店なし",
+    "new": "新しいお店"
   }
 }

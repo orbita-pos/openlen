@@ -72,5 +72,56 @@
     "portfolio": "Portfolio",
     "coffee": "Koffieabonnement",
     "event": "Evenement"
+  },
+  "profile": {
+    "title": "Mijn bedrijf",
+    "titleEdit": "Bedrijf bewerken",
+    "subtitle": "Importeer je gegevens één keer — elke pagina krijgt ze automatisch.",
+    "close": "Sluiten",
+    "save": "Opslaan",
+    "saving": "Opslaan…",
+    "back": "Terug",
+    "confirm": {
+      "subtitle": "Controleer je gegevens — pas aan wat nodig is en sla dan op."
+    },
+    "import": {
+      "image": "📷 Schermafbeelding",
+      "url": "🔗 Website",
+      "text": "✍️ Beschrijven",
+      "imageDrop": "Sleep een schermafbeelding hierheen of klik om te uploaden",
+      "imageHint": "Een schermafbeelding van je Instagram, menukaart of flyer werkt prima.",
+      "urlPlaceholder": "https://jouw-site.nl of je link",
+      "textPlaceholder": "bijv. Tramonto, een specialty coffee shop in Oaxaca…",
+      "extract": "Lees mijn gegevens",
+      "extracting": "Bezig met lezen…",
+      "manual": "Handmatig invullen"
+    },
+    "fields": {
+      "label": "Geef dit bedrijf een naam",
+      "labelPlaceholder": "bijv. Mijn koffiebar",
+      "businessName": "Bedrijfsnaam",
+      "industry": "Wat je doet",
+      "whatsapp": "WhatsApp",
+      "phone": "Telefoon",
+      "email": "E-mail",
+      "address": "Adres",
+      "instagram": "Instagram"
+    },
+    "errors": {
+      "image": "Alleen JPG- of PNG-afbeeldingen.",
+      "tooLarge": "Afbeelding te groot (max. 8 MB).",
+      "uploadFirst": "Upload eerst een afbeelding.",
+      "url": "Voer een geldige link in (https://…).",
+      "describe": "Schrijf minstens één zin.",
+      "extract": "Kon dat niet lezen — probeer een andere bron of vul handmatig in.",
+      "name": "Geef dit bedrijf een naam.",
+      "save": "Opslaan mislukt — probeer het opnieuw."
+    }
+  },
+  "profilePicker": {
+    "add": "Mijn bedrijf toevoegen",
+    "for": "Voor",
+    "none": "Geen bedrijf",
+    "new": "Nieuw bedrijf"
   }
 }
