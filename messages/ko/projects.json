@@ -158,7 +158,8 @@
   },
   "nav": {
     "myPages": "내 페이지",
-    "myBusiness": "내 비즈니스"
+    "myBusiness": "내 비즈니스",
+    "messages": "메시지"
   },
   "deleteDialog": {
     "title": "이 페이지를 삭제할까요?",
@@ -173,5 +174,13 @@
     "messages": "메시지",
     "none": "아직 방문이 없습니다",
     "rangeTip": "최근 7일"
+  },
+  "inbox": {
+    "title": "메시지",
+    "subtitle": "사람들이 내 페이지에서 보낸 메시지입니다.",
+    "empty": "아직 메시지가 없습니다",
+    "emptyHint": "누군가 내 페이지의 문의 양식을 작성하면 여기에 표시되고 이메일로도 알려드립니다.",
+    "from": "{page} 에서",
+    "createCta": "페이지 만들기"
   }
 }

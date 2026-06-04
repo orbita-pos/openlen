@@ -158,7 +158,8 @@
   },
   "nav": {
     "myPages": "我的页面",
-    "myBusiness": "我的业务"
+    "myBusiness": "我的业务",
+    "messages": "消息"
   },
   "deleteDialog": {
     "title": "删除此页面？",
@@ -173,5 +174,13 @@
     "messages": "消息",
     "none": "暂无访问",
     "rangeTip": "最近 7 天"
+  },
+  "inbox": {
+    "title": "消息",
+    "subtitle": "人们通过你的页面发给你的消息。",
+    "empty": "暂无消息",
+    "emptyHint": "当有人在你的页面填写联系表单时，会显示在这里，我们也会发邮件通知你。",
+    "from": "来自 {page}",
+    "createCta": "创建页面"
   }
 }

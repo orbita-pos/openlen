@@ -158,7 +158,8 @@
   },
   "nav": {
     "myPages": "Mes pages",
-    "myBusiness": "Mon entreprise"
+    "myBusiness": "Mon entreprise",
+    "messages": "Messages"
   },
   "deleteDialog": {
     "title": "Supprimer cette page ?",
@@ -173,5 +174,13 @@
     "messages": "Messages",
     "none": "Aucune visite pour l’instant",
     "rangeTip": "7 derniers jours"
+  },
+  "inbox": {
+    "title": "Messages",
+    "subtitle": "Ce que les gens vous ont envoyé depuis vos pages.",
+    "empty": "Aucun message pour l’instant",
+    "emptyHint": "Quand quelqu’un remplit un formulaire de contact sur vos pages, ça apparaît ici — et on vous prévient par email.",
+    "from": "depuis {page}",
+    "createCta": "Créer une page"
   }
 }

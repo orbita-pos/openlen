@@ -158,7 +158,8 @@
   },
   "nav": {
     "myPages": "Meine Seiten",
-    "myBusiness": "Mein Unternehmen"
+    "myBusiness": "Mein Unternehmen",
+    "messages": "Nachrichten"
   },
   "deleteDialog": {
     "title": "Diese Seite löschen?",
@@ -173,5 +174,13 @@
     "messages": "Nachrichten",
     "none": "Noch keine Besuche",
     "rangeTip": "Letzte 7 Tage"
+  },
+  "inbox": {
+    "title": "Nachrichten",
+    "subtitle": "Was Leute dir über deine Seiten geschrieben haben.",
+    "empty": "Noch keine Nachrichten",
+    "emptyHint": "Wenn jemand auf deinen Seiten ein Kontaktformular ausfüllt, erscheint es hier — und wir mailen es dir.",
+    "from": "von {page}",
+    "createCta": "Seite erstellen"
   }
 }
