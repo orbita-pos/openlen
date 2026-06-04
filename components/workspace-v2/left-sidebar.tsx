@@ -45,7 +45,7 @@ import { SubmissionsPanel } from "./panels/submissions-panel";
 import { TemplatesPanel } from "./panels/templates-panel";
 import { VersionsPanel } from "./panels/versions-panel";
 import type { SectionSpec } from "./sections-data";
-import { IconBtn, Tooltip } from "./ui";
+import { Tooltip } from "./ui";
 
 import type { ComponentType } from "react";
 
@@ -326,47 +326,54 @@ export function LeftSidebar({
   }
 
   return (
-    <aside className="h-full w-[320px] shrink-0 bg-side border-r bd flex flex-col">
-      <div className="flex items-center gap-0.5 px-2 pt-2 pb-1 border-b bd shrink-0">
-        <GlobalSections vertical={false} />
+    <aside className="h-full shrink-0 flex bg-side border-r bd">
+      {/* The icon rail stays vertical + fixed — identical to collapsed; the
+          panel just opens to its right (it never reflows into a top row). */}
+      <div className="h-full w-12 shrink-0 flex flex-col items-center pt-2 gap-1 border-r bd">
+        <GlobalSections vertical />
+        <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
+        {visibleTabs.map((tab) => {
+          const active = mode === tab.id;
+          const locked = isLocked(tab.id);
+          const I = tab.icon;
+          const label = locked
+            ? (lockReason ?? t("sidebar.tabLocked", { label: tabLabel(tab.id) }))
+            : tabLabel(tab.id);
+          return (
+            <Tooltip key={tab.id} label={label} side="right">
+              <button
+                type="button"
+                disabled={locked}
+                aria-label={label}
+                onClick={() => {
+                  if (locked) return;
+                  setMode(tab.id);
+                }}
+                className={`h-8 w-8 inline-flex items-center justify-center rounded-md transition-all duration-150 ease-out ${
+                  locked
+                    ? "fg-faint opacity-50 cursor-not-allowed"
+                    : active
+                      ? "bg-elev fg shadow-card border bd"
+                      : "fg-muted hover:fg hover:bg-hover"
+                }`}
+              >
+                <I size={14} />
+              </button>
+            </Tooltip>
+          );
+        })}
+        <Tooltip label={t("sidebar.collapsePanel")} side="right">
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            aria-label={t("sidebar.collapsePanel")}
+            className="mt-auto mb-3 h-8 w-8 inline-flex items-center justify-center rounded-md fg-muted hover:fg hover:bg-hover transition"
+          >
+            <PanelLeft size={14} />
+          </button>
+        </Tooltip>
       </div>
-      <div className="flex items-center justify-between px-2 pt-2 pb-1.5 border-b bd shrink-0">
-        <div className="inline-flex items-center gap-0.5">
-          {visibleTabs.map((tab) => {
-            const active = mode === tab.id;
-            const locked = isLocked(tab.id);
-            const I = tab.icon;
-            const label = locked
-              ? (lockReason ?? t("sidebar.tabLocked", { label: tabLabel(tab.id) }))
-              : tabLabel(tab.id);
-            return (
-              <Tooltip key={tab.id} label={label}>
-                <button
-                  type="button"
-                  disabled={locked}
-                  aria-label={label}
-                  onClick={() => {
-                    if (locked) return;
-                    setMode(tab.id);
-                  }}
-                  className={`h-7 w-8 inline-flex items-center justify-center rounded-md transition-all duration-150 ease-out ${
-                    locked
-                      ? "fg-faint opacity-50 cursor-not-allowed"
-                      : active
-                        ? "bg-elev fg shadow-card border bd"
-                        : "fg-muted hover:fg hover:bg-hover"
-                  }`}
-                >
-                  <I size={13} />
-                </button>
-              </Tooltip>
-            );
-          })}
-        </div>
-        <IconBtn label={t("sidebar.collapsePanel")} size="sm" onClick={onToggleCollapse}>
-          <PanelLeft size={13} />
-        </IconBtn>
-      </div>
+      <div className="w-[272px] shrink-0 flex flex-col min-w-0">
       <div className="flex items-center justify-between px-3 py-1.5 border-b bd shrink-0">
         <span className="text-[10px] uppercase tracking-[0.16em] fg-faint font-semibold ui-small">
           {tabTitle(activeMeta.id)}
@@ -448,6 +455,7 @@ export function LeftSidebar({
             )}
           </>
         )}
+      </div>
       </div>
     </aside>
   );
