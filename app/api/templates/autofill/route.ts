@@ -256,7 +256,12 @@ export async function POST(req: Request) {
 
         const now = new Date();
         try {
-          const nextData: ProjectData = { html: fill.filledHtml };
+          // Preserve data.settings (form notify/redirect/success +
+          // analyticsDisabled) — only the html changes here.
+          const nextData: ProjectData = {
+            ...(existing.data ?? {}),
+            html: fill.filledHtml,
+          };
           await db
             .update(schema.projects)
             .set({ data: nextData, updatedAt: now })

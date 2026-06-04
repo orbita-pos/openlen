@@ -813,7 +813,12 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         const now = new Date();
 
         try {
-          const nextData: ProjectData = { html: trimmedHtml };
+          // Preserve data.settings (per-form notify/redirect/success +
+          // analyticsDisabled) — only the html changes here.
+          const nextData: ProjectData = {
+            ...(existing.data ?? {}),
+            html: trimmedHtml,
+          };
           await db
             .update(schema.projects)
             .set({ data: nextData, updatedAt: now })

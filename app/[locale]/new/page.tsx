@@ -411,12 +411,18 @@ function NewV2Inner() {
   // finished page for a beat (✓ ready), then drop the user into editing.
   useEffect(() => {
     if (aiGenState.kind !== "done") return;
+    // Only redirect while still IN the AI entry flow. A generation that
+    // finishes in the background after the user soft-navigated elsewhere (e.g.
+    // back to a project they were editing) must not hard-redirect them away —
+    // if entryMode left "ai", this effect re-runs and the cleanup cancels the
+    // pending hop.
+    if (entryMode !== "ai") return;
     const projectId = aiGenState.projectId;
     const timer = setTimeout(() => {
       window.location.href = `/new?project=${projectId}`;
     }, 1100);
     return () => clearTimeout(timer);
-  }, [aiGenState]);
+  }, [aiGenState, entryMode]);
   // Publish the in-flight generation state so the header's locale switcher can
   // disable itself — switching locale navigates + remounts /new, which would
   // drop the page being built. Cleared on unmount.
@@ -764,6 +770,13 @@ function NewV2Inner() {
       setLoadedProject((prev) =>
         prev && prev.id === projectId ? { ...prev, html } : prev,
       );
+      // A structural change (reorder / section insert) shifts sibling indices,
+      // so the inspector's positional :nth-of-type path is now stale — drop the
+      // selection so the next property edit can't land on the wrong element
+      // (the user re-clicks to re-select).
+      if (source === "reorder" || source === "section-insert") {
+        setInspectSelection(null);
+      }
       if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
       saveTimerRef.current = window.setTimeout(() => {
         setSavingStatus("saving");
@@ -820,7 +833,12 @@ function NewV2Inner() {
         savedFlashRef.current = null;
       }
     };
-  }, [loadedProject?.id, loadedProject?.subdomain]);
+    // Intentionally NOT depending on loadedProject.subdomain: it flips null→value
+    // on first publish, and re-binding here would tear down the listener and
+    // CANCEL a pending autosave debounce — dropping the last pre-publish edit.
+    // The save reads the fresh subdomain via functional setState, so it stays
+    // correct without the dep.
+  }, [loadedProject?.id]);
 
   // Reset transient interaction modes whenever the loaded project changes
   // (cross-project switches inside /new). Without this, the iframe
