@@ -30,7 +30,7 @@ landing: [inari.openlen.com](https://inari.openlen.com).
   Netlify, Cloudflare, GitHub Pages, your own server — anywhere static
   hosting works.
 - **10× cheaper than Lovable.** Smart routing across 7+ models on
-  [Together AI](https://together.ai) keeps real cost at **~$0.13/generation**
+  [Google Gemini](https://ai.google.dev) keeps real cost at **~$0.13/generation**
   (measured across 5 representative briefs — see [EVAL_PHASE_2.md](./EVAL_PHASE_2.md)).
 - **Slot-filling architecture.** The AI picks block IDs from a curated 15-block
   library and fills slot JSON. Code assembles HTML deterministically. Bug
@@ -49,7 +49,7 @@ git clone https://github.com/orbita-pos/openlen
 cd openlen
 npm install
 cp .env.local.example .env.local
-# Add TOGETHER_API_KEY, DATABASE_URL (Neon), NEXTAUTH_SECRET
+# Add GEMINI_API_KEY, DATABASE_URL (Neon), NEXTAUTH_SECRET
 # Or leave MOCK_MODE=1 for offline dev (no DB/API needed)
 npm run dev
 ```
@@ -73,7 +73,7 @@ gate verdicts, and witness path.
 
 | Variable               | Default | Purpose                                                          |
 |------------------------|---------|------------------------------------------------------------------|
-| `TOGETHER_API_KEY`     | _none_  | Required when `MOCK_MODE` is off. Get one at together.ai.       |
+| `GEMINI_API_KEY`       | _none_  | Required when `MOCK_MODE` is off. Get one at ai.google.dev.     |
 | `MOCK_MODE`            | _off_   | Set to `1` to use canned responses (no API spend, no key needed). |
 | `OPENLEN_DOMAIN`       | _none_  | Optional. Canonical URL used in generated meta tags.            |
 | `INARIWATCH_DSN`       | _none_  | Optional. Error monitoring DSN; auto-local in dev when blank.    |
@@ -173,7 +173,7 @@ inari-pages/
 
 ## Eval
 
-Five representative briefs run end-to-end against real Together AI calls.
+Five representative briefs run end-to-end against real Gemini calls.
 Per-brief outputs, witness JSONL, cost breakdowns, and honest scoring live
 in [`evals/`](./evals/) and [`EVAL_PHASE_2.md`](./EVAL_PHASE_2.md):
 
@@ -191,7 +191,7 @@ To re-run:
 
 ```bash
 MOCK_MODE=1 npm run eval        # offline pass against mocks
-TOGETHER_API_KEY=… npm run eval # real run, ~$0.50–1.40 total
+GEMINI_API_KEY=… npm run eval # real run, ~$0.50–1.40 total
 ```
 
 ## Witness recordings
@@ -226,7 +226,7 @@ Architecture research ([`RESEARCH_FINDINGS.md`](./RESEARCH_FINDINGS.md))
 identified that the catalog approach has a ceiling. V3 pivots to:
 
 - **Curated design system** (8 backgrounds + 20 palettes + 6 typography systems + 5 layout primitives) hand-tuned in claude.ai
-- **AI runtime composes from menu** (Kimi K2.6 planner + writer, single Together AI vendor, ~$0.015/gen — 8× cheaper than V1)
+- **AI runtime composes from menu** (Gemini planner + writer, single Google Gemini vendor, ~$0.015/gen — 8× cheaper than V1)
 - **Visual design knobs in the workspace** — click thumbnails to swap bg/palette/typography/density/radius/decoration instantly. Zero AI call per knob change.
 - **No more AI image gen** — replaced with Unsplash API + SVG decoration primitives + user uploads. Editorial photo quality, no FLUX cost or hallucinations.
 

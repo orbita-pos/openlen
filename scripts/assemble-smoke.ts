@@ -5,7 +5,7 @@
 //
 //   npm run assemble:smoke -- "<brief>" spike/01.assembled.html
 //
-// Needs GEMINI_API_KEY (recipe), TOGETHER_API_KEY (copy fill), R2 + Neon
+// Needs GEMINI_API_KEY (recipe + copy fill), R2 + Neon
 // (section fragments) — all reachable locally for the user; blocked in the
 // sandbox, so this is user-run.
 
@@ -52,7 +52,7 @@ async function main(): Promise<void> {
   const stitched = await stitchSections(picks, recipe.theme);
   console.log(`  stitched: ${stitched.length} bytes`);
 
-  console.log(`▸ fill copy (Kimi)`);
+  console.log(`▸ fill copy (Gemini)`);
   const fill = await fillAssembled(stitched, recipe.copy);
   console.log(`  filled=${fill.filled} appliedOps=${fill.appliedOps}${fill.reason ? `  (${fill.reason})` : ""}`);
 
