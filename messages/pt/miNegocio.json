@@ -105,5 +105,12 @@
     "newPage": "Nova página",
     "viewAll": "Ver todas"
   },
-  "back": "Voltar"
+  "back": "Voltar",
+  "deleteDialog": {
+    "title": "Excluir esta empresa?",
+    "body": "Isto exclui “{name}” permanentemente. Suas páginas vão para sua empresa principal.",
+    "confirmLabel": "Digite {name} para confirmar",
+    "cancel": "Cancelar",
+    "confirm": "Excluir empresa"
+  }
 }

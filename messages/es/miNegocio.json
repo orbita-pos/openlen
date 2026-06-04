@@ -105,5 +105,12 @@
     "newPage": "Nueva página",
     "viewAll": "Ver todas"
   },
-  "back": "Volver"
+  "back": "Volver",
+  "deleteDialog": {
+    "title": "¿Eliminar este negocio?",
+    "body": "Esto elimina “{name}” de forma permanente. Sus páginas se moverán a tu negocio principal.",
+    "confirmLabel": "Escribe {name} para confirmar",
+    "cancel": "Cancelar",
+    "confirm": "Eliminar negocio"
+  }
 }

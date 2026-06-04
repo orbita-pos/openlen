@@ -105,5 +105,12 @@
     "newPage": "新建页面",
     "viewAll": "查看全部"
   },
-  "back": "返回"
+  "back": "返回",
+  "deleteDialog": {
+    "title": "删除此业务？",
+    "body": "这将永久删除“{name}”。其页面将移至你的默认业务。",
+    "confirmLabel": "输入 {name} 以确认",
+    "cancel": "取消",
+    "confirm": "删除业务"
+  }
 }

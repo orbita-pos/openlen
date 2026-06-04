@@ -105,5 +105,12 @@
     "newPage": "New page",
     "viewAll": "View all"
   },
-  "back": "Back"
+  "back": "Back",
+  "deleteDialog": {
+    "title": "Delete this business?",
+    "body": "This permanently deletes “{name}”. Its pages move to your default business.",
+    "confirmLabel": "Type {name} to confirm",
+    "cancel": "Cancel",
+    "confirm": "Delete business"
+  }
 }

@@ -59,6 +59,7 @@ const Star = (p: IconProps) => <Icon {...p}><polygon points="12 2 15.09 8.26 22 
 const Loader = (p: IconProps) => <Icon {...p}><path d="M21 12a9 9 0 1 1-6.219-8.56" /></Icon>;
 const LayoutIcon = (p: IconProps) => <Icon {...p}><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></Icon>;
 const ChevronRight = (p: IconProps) => <Icon {...p}><polyline points="9 18 15 12 9 6" /></Icon>;
+const Alert = (p: IconProps) => <Icon {...p}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></Icon>;
 
 /* ───────── Link presets (label resolved via i18n at render) ───────── */
 const TIPOS_ENLACE: Record<
@@ -234,6 +235,8 @@ export default function BusinessPage() {
   const photosRef = useRef<HTMLInputElement>(null);
   const [pages, setPages] = useState<PageItem[]>([]);
   const [pagesLoading, setPagesLoading] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -378,14 +381,9 @@ export default function BusinessPage() {
     await fetch(`/api/profiles/${active.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ setDefault: true }) });
     setData((d) => d.map((p) => ({ ...p, isDefault: p.id === active.id })));
   };
-  const remove = async () => {
-    if (!active) return;
-    if (!active.isNew) {
-      if (!window.confirm(t("deleteConfirm", { name: active.name || t("switcher.newBusiness") }))) return;
-      await fetch(`/api/profiles/${active.id}`, { method: "DELETE" });
-    }
+  const removeActiveLocal = () => {
     setData((d) => {
-      const next = d.filter((p) => p.id !== active.id);
+      const next = d.filter((p) => p.id !== activeId);
       if (next.length === 0) {
         const blank = blankProfile();
         setActiveId(blank.id);
@@ -394,6 +392,26 @@ export default function BusinessPage() {
       setActiveId(next.find((p) => p.isDefault)?.id ?? next[0]?.id ?? null);
       return next;
     });
+  };
+  const onDeleteClick = () => {
+    if (!active) return;
+    // An unsaved blank just gets discarded — nothing on the server to confirm.
+    if (active.isNew) {
+      removeActiveLocal();
+      return;
+    }
+    setDeleteOpen(true);
+  };
+  const confirmDelete = async () => {
+    if (!active || active.isNew) return;
+    setDeleting(true);
+    try {
+      await fetch(`/api/profiles/${active.id}`, { method: "DELETE" });
+      setDeleteOpen(false);
+      removeActiveLocal();
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -563,7 +581,7 @@ export default function BusinessPage() {
                   className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[#6B6967] dark:text-[#9B9897] hover:text-coral-700 dark:hover:text-coral-300 transition disabled:opacity-40">
                   <Star size={13} /> {active.isDefault ? t("isDefault") : t("makeDefault")}
                 </button>
-                <button onClick={() => void remove()}
+                <button onClick={onDeleteClick}
                   className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[#A8A5A2] hover:text-red-600 transition">
                   <Trash size={13} /> {t("delete")}
                 </button>
@@ -616,6 +634,15 @@ export default function BusinessPage() {
       ) : null}
 
 
+      {deleteOpen && active && (
+        <DeleteBusinessDialog
+          name={active.name.trim() || t("title")}
+          busy={deleting}
+          onConfirm={() => void confirmDelete()}
+          onClose={() => setDeleteOpen(false)}
+        />
+      )}
+
       {saved && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
           <div className="flex items-center gap-2.5 rounded-full bg-[#1A1A1A] dark:bg-white text-white dark:text-[#1A1A1A] pl-3 pr-4 py-2.5 shadow-xl">
@@ -624,6 +651,59 @@ export default function BusinessPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ───────── Delete confirmation (type-the-name, Vercel-style) ───────── */
+function DeleteBusinessDialog({ name, busy, onConfirm, onClose }: { name: string; busy: boolean; onConfirm: () => void; onClose: () => void }) {
+  const t = useTranslations("miNegocio");
+  const [typed, setTyped] = useState("");
+  const match = typed.trim() === name.trim();
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+      <button type="button" aria-label={t("deleteDialog.cancel")} onClick={onClose} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+      <div className="relative w-full max-w-md rounded-2xl bg-white dark:bg-[#1A1A1D] ring-1 ring-[#E5E3E1] dark:ring-white/10 shadow-xl overflow-hidden">
+        <div className="p-5">
+          <div className="flex items-start gap-3">
+            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/15 text-red-600 dark:text-red-400">
+              <Alert size={18} />
+            </span>
+            <div className="min-w-0">
+              <h2 className="text-[15px] font-semibold tracking-tight">{t("deleteDialog.title")}</h2>
+              <p className="text-[13px] text-[#6B6967] dark:text-[#9B9897] mt-1 leading-snug">{t("deleteDialog.body", { name })}</p>
+            </div>
+          </div>
+          <div className="mt-4">
+            <label className="block text-[12px] font-medium text-[#6B6967] dark:text-[#9B9897] mb-1.5">{t("deleteDialog.confirmLabel", { name })}</label>
+            <input
+              autoFocus
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              placeholder={name}
+              className="w-full px-3 h-11 rounded-lg bg-white dark:bg-[#121214] ring-1 ring-[#E5E3E1] dark:ring-white/10 focus:ring-2 focus:ring-red-500 focus:outline-none text-[14px] placeholder:text-[#C0BDBA] dark:placeholder:text-[#5C5957]"
+            />
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-2 px-5 py-3.5 bg-[#FAFAF9] dark:bg-white/5 border-t border-[#EEECEA] dark:border-white/8">
+          <button type="button" onClick={onClose} className="h-9 px-3.5 rounded-lg text-[13px] font-medium text-[#6B6967] dark:text-[#9B9897] hover:bg-white dark:hover:bg-white/10 transition">{t("deleteDialog.cancel")}</button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={!match || busy}
+            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-red-600 text-white text-[13px] font-semibold hover:bg-red-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {busy ? <Loader size={14} className="animate-spin" /> : <Trash size={14} />} {t("deleteDialog.confirm")}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

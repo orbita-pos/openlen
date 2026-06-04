@@ -105,5 +105,12 @@
     "newPage": "Nieuwe pagina",
     "viewAll": "Alles bekijken"
   },
-  "back": "Terug"
+  "back": "Terug",
+  "deleteDialog": {
+    "title": "Dit bedrijf verwijderen?",
+    "body": "Dit verwijdert “{name}” permanent. De pagina’s gaan naar je standaardbedrijf.",
+    "confirmLabel": "Typ {name} om te bevestigen",
+    "cancel": "Annuleren",
+    "confirm": "Bedrijf verwijderen"
+  }
 }
