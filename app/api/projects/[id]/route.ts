@@ -47,8 +47,9 @@ const PatchSchema = z.object({
       z.null(),
     ])
     .optional(),
-  // profileId moves a page to another business (null clears the link).
-  profileId: z.union([z.string().uuid(), z.null()]).optional(),
+  // profileId moves a page to another business. uuid-only: the API never
+  // orphans a page (null), upholding "every page has a business".
+  profileId: z.string().uuid().optional(),
 }).refine(
   (v) =>
     v.title !== undefined ||

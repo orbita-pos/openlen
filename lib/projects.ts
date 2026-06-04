@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, isNotNull, ne, sql as sqlOp } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull, isNull, ne, sql as sqlOp } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import type { ProjectData, StoredChatTurn } from "@/lib/projects/types";
 import { getUserPlan } from "@/lib/limits";
@@ -415,9 +415,27 @@ export async function duplicateProject(
     subdomain: null,
     publishedAt: null,
     publishedHtml: null,
+    profileId: existing.profileId,
     data: existing.data,
   });
   return id;
+}
+
+// Re-home a user's orphaned pages (profileId NULL — e.g. after their business
+// was deleted) onto a business, so every page keeps an association.
+export async function reassignNullProjects(
+  userId: string,
+  toProfileId: string,
+): Promise<void> {
+  await db
+    .update(schema.projects)
+    .set({ profileId: toProfileId, updatedAt: new Date() })
+    .where(
+      and(
+        eq(schema.projects.userId, userId),
+        isNull(schema.projects.profileId),
+      ),
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
