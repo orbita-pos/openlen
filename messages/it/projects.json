@@ -167,5 +167,11 @@
     "confirmLabel": "Digita {name} per confermare",
     "cancel": "Annulla",
     "confirm": "Elimina pagina"
+  },
+  "stats": {
+    "views": "Visite",
+    "messages": "Messaggi",
+    "none": "Ancora nessuna visita",
+    "rangeTip": "Ultimi 7 giorni"
   }
 }

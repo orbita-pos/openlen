@@ -167,5 +167,11 @@
     "confirmLabel": "{name} と入力して確認",
     "cancel": "キャンセル",
     "confirm": "ページを削除"
+  },
+  "stats": {
+    "views": "表示",
+    "messages": "メッセージ",
+    "none": "まだ訪問はありません",
+    "rangeTip": "過去7日間"
   }
 }
