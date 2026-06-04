@@ -27,7 +27,6 @@ async function fetchTemplates(): Promise<TemplateSpec[]> {
       headers: { Accept: "application/json" },
     });
     if (!res.ok) {
-      inflight = null;
       throw new Error(`templates fetch failed: ${res.status}`);
     }
     const json = (await res.json()) as {
@@ -35,9 +34,13 @@ async function fetchTemplates(): Promise<TemplateSpec[]> {
     };
     const specs = json.templates.map(apiItemToSpec);
     cached = specs;
-    inflight = null;
     return specs;
   })();
+  // Clear the in-flight slot on ANY failure (rejected fetch, malformed body)
+  // so a later mount retries instead of replaying the rejected promise forever.
+  inflight.catch(() => {
+    inflight = null;
+  });
   return inflight;
 }
 

@@ -24,7 +24,6 @@ async function fetchSections(): Promise<SectionSpec[]> {
       headers: { Accept: "application/json" },
     });
     if (!res.ok) {
-      inflight = null;
       throw new Error(`sections fetch failed: ${res.status}`);
     }
     const json = (await res.json()) as {
@@ -32,9 +31,13 @@ async function fetchSections(): Promise<SectionSpec[]> {
     };
     const specs = json.sections.map(apiItemToSpec);
     cached = specs;
-    inflight = null;
     return specs;
   })();
+  // Clear the in-flight slot on ANY failure so a later mount retries instead
+  // of replaying the rejected promise forever.
+  inflight.catch(() => {
+    inflight = null;
+  });
   return inflight;
 }
 

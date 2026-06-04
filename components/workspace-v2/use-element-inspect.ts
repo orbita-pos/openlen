@@ -491,8 +491,10 @@ const INSPECT_SCRIPT = `
         el.style.setProperty('background-color', value);
         el.style.setProperty('background-image', 'none');
       } else {
+        // Clearing the colour only drops the colour — it must NOT wipe an
+        // image fill (that's what the dedicated "Remove image" / kind:'clear'
+        // is for). Keeping them separate prevents silent image loss.
         el.style.removeProperty('background-color');
-        el.style.removeProperty('background-image');
       }
     } else if (kind === 'image' && value) {
       el.style.setProperty('background-image', 'url("' + value + '")');
@@ -707,9 +709,10 @@ const INSPECT_SCRIPT = `
       'html,body,[data-ol-bg-carrier]{background-color:var(--ol-bg) !important;}' +
       'html,body{color:var(--ol-fg) !important;}';
     document.head.appendChild(s);
-    // Persist the canonized state so subsequent loads + the published page
-    // ship with the contract baked in.
-    postClean();
+    // Do NOT postClean here — canonize runs on every load purely as an
+    // in-editor aid (it's idempotent + guarded by data-ol-force), so persisting
+    // it would fire an unsolicited save just from VIEWING a legacy/pasted
+    // project. The canonized state is captured naturally on the first real edit.
   }
   canonizeAtRuntime();
 
