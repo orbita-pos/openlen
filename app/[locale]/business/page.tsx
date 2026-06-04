@@ -61,6 +61,7 @@ const Star = (p: IconProps) => <Icon {...p}><polygon points="12 2 15.09 8.26 22 
 const Loader = (p: IconProps) => <Icon {...p}><path d="M21 12a9 9 0 1 1-6.219-8.56" /></Icon>;
 const LayoutIcon = (p: IconProps) => <Icon {...p}><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></Icon>;
 const ChevronRight = (p: IconProps) => <Icon {...p}><polyline points="9 18 15 12 9 6" /></Icon>;
+const ArrowLeft = (p: IconProps) => <Icon {...p}><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></Icon>;
 
 /* ───────── Link presets (label resolved via i18n at render) ───────── */
 const TIPOS_ENLACE: Record<
@@ -404,6 +405,13 @@ export default function BusinessPage() {
       <header className="sticky top-0 z-40 border-b border-[#EEECEA] dark:border-white/8 bg-[#FAFAF9]/85 dark:bg-[#0E0E10]/85 backdrop-blur">
         <div className="max-w-6xl mx-auto px-5 sm:px-6 h-16 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
+            <Link
+              href={`/${locale}/new`}
+              aria-label={t("back")}
+              className="inline-flex items-center gap-1.5 h-9 pl-2 pr-2.5 rounded-lg text-[13px] font-medium text-[#6B6967] dark:text-[#9B9897] hover:bg-white dark:hover:bg-white/5 ring-1 ring-transparent hover:ring-[#E5E3E1] dark:hover:ring-white/10 transition shrink-0"
+            >
+              <ArrowLeft size={16} /> <span className="hidden sm:inline">{t("back")}</span>
+            </Link>
             <Link href={`/${locale}/new`} className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-coral-500 text-white font-bold text-[14px] shrink-0">O</Link>
             <span className="font-semibold tracking-tight text-[15px] hidden sm:inline">OpenLen</span>
             <span className="h-5 w-px bg-[#E5E3E1] dark:bg-white/10 mx-1 hidden sm:block" />
