@@ -99,6 +99,10 @@
     "empty": "Noch keine Seiten in diesem Unternehmen.",
     "draft": "Entwurf",
     "emptyCta": "Seite erstellen",
-    "newBiz": "Speichere dieses Unternehmen, um seine Seiten zu sehen."
+    "newBiz": "Speichere dieses Unternehmen, um seine Seiten zu sehen.",
+    "live": "Live",
+    "viewPublished": "Live ansehen",
+    "newPage": "Neue Seite",
+    "viewAll": "Alle ansehen"
   }
 }

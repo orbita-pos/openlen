@@ -99,6 +99,10 @@
     "empty": "Ancora nessuna pagina in questa attività.",
     "draft": "Bozza",
     "emptyCta": "Crea una pagina",
-    "newBiz": "Salva questa attività per vedere le sue pagine."
+    "newBiz": "Salva questa attività per vedere le sue pagine.",
+    "live": "Online",
+    "viewPublished": "Vedi online",
+    "newPage": "Nuova pagina",
+    "viewAll": "Vedi tutte"
   }
 }

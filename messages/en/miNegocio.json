@@ -99,6 +99,10 @@
     "empty": "No pages in this business yet.",
     "draft": "Draft",
     "emptyCta": "Create a page",
-    "newBiz": "Save this business to see its pages."
+    "newBiz": "Save this business to see its pages.",
+    "live": "Live",
+    "viewPublished": "View live",
+    "newPage": "New page",
+    "viewAll": "View all"
   }
 }

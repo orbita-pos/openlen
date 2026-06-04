@@ -99,6 +99,10 @@
     "empty": "Nog geen pagina's in dit bedrijf.",
     "draft": "Concept",
     "emptyCta": "Pagina maken",
-    "newBiz": "Sla dit bedrijf op om de pagina's te zien."
+    "newBiz": "Sla dit bedrijf op om de pagina's te zien.",
+    "live": "Live",
+    "viewPublished": "Bekijk live",
+    "newPage": "Nieuwe pagina",
+    "viewAll": "Alles bekijken"
   }
 }

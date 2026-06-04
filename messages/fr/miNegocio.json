@@ -99,6 +99,10 @@
     "empty": "Aucune page dans cette entreprise pour l’instant.",
     "draft": "Brouillon",
     "emptyCta": "Créer une page",
-    "newBiz": "Enregistre cette entreprise pour voir ses pages."
+    "newBiz": "Enregistre cette entreprise pour voir ses pages.",
+    "live": "En ligne",
+    "viewPublished": "Voir en ligne",
+    "newPage": "Nouvelle page",
+    "viewAll": "Voir tout"
   }
 }
