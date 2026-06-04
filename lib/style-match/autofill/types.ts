@@ -39,6 +39,27 @@ export const ExtractedBusinessDataSchema = z.object({
     .array(z.object({ q: z.string(), a: z.string() }))
     .default([]),
   language_detected: z.string().nullable(),
+  // Contact block (added for the saved business profile). Optional via a null
+  // default so existing extractor output — which doesn't emit contact yet —
+  // still validates against the strict schema. The profile UI + curation fill
+  // populate it.
+  contact: z
+    .object({
+      whatsapp: z.string().nullable(),
+      phone: z.string().nullable(),
+      email: z.string().nullable(),
+      address: z.string().nullable(),
+      socials: z
+        .object({
+          instagram: z.string().nullable(),
+          facebook: z.string().nullable(),
+          tiktok: z.string().nullable(),
+          website: z.string().nullable(),
+        })
+        .nullable(),
+    })
+    .nullable()
+    .optional(),
 });
 
 export type ExtractedBusinessData = z.infer<typeof ExtractedBusinessDataSchema>;
@@ -62,6 +83,26 @@ function asArr(v: unknown): unknown[] {
 }
 function asObj(v: unknown): Record<string, unknown> {
   return v && typeof v === "object" ? (v as Record<string, unknown>) : {};
+}
+
+function coerceContact(raw: unknown): ExtractedBusinessData["contact"] {
+  if (!raw || typeof raw !== "object") return null;
+  const c = asObj(raw);
+  const socials = c.socials && typeof c.socials === "object" ? asObj(c.socials) : null;
+  return {
+    whatsapp: asStrOrNull(c.whatsapp),
+    phone: asStrOrNull(c.phone),
+    email: asStrOrNull(c.email),
+    address: asStrOrNull(c.address),
+    socials: socials
+      ? {
+          instagram: asStrOrNull(socials.instagram),
+          facebook: asStrOrNull(socials.facebook),
+          tiktok: asStrOrNull(socials.tiktok),
+          website: asStrOrNull(socials.website),
+        }
+      : null,
+  };
 }
 
 export function coerceBusinessData(raw: unknown): ExtractedBusinessData {
@@ -89,6 +130,7 @@ export function coerceBusinessData(raw: unknown): ExtractedBusinessData {
       return { q: asStr(o.q), a: asStr(o.a) };
     }),
     language_detected: asStrOrNull(r.language_detected),
+    contact: coerceContact(r.contact),
   };
 }
 

@@ -16,6 +16,9 @@ import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
 import { listTemplates, getTemplateHtml } from "@/lib/templates/store";
 import { pickTemplate, pickWeighted, type TemplateCatalogItem } from "@/lib/curate/pick-template";
 import { fillAssembled } from "@/lib/assemble/fill";
+import { getProfile } from "@/lib/business-profiles/store";
+import type { ExtractedBusinessData } from "@/lib/style-match/autofill/types";
+import type { BusinessProfileData } from "@/lib/business-profiles/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/curate — the FREE-tier page builder (CURATION).
@@ -56,7 +59,7 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  let body: { brief?: unknown };
+  let body: { brief?: unknown; profileId?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -65,6 +68,7 @@ export async function POST(req: Request): Promise<Response> {
   const brief = typeof body.brief === "string" ? body.brief.trim() : "";
   if (brief.length < 10) return errorJson(400, "brief is required — describe the page in at least a sentence");
   if (brief.length > 4000) return errorJson(400, "brief too long (max 4000 characters)");
+  const profileId = typeof body.profileId === "string" ? body.profileId : null;
 
   if (inFlightUsers.has(userId)) {
     return new Response(
@@ -129,6 +133,11 @@ export async function POST(req: Request): Promise<Response> {
         const chosenId = pickWeighted(pick.templateIds);
         const chosen = templates.find((t) => t.id === chosenId);
 
+        // Seed the copy from the user's saved business profile (if one was
+        // picked): real info wins, the model's invented copy fills any gaps.
+        const profile = profileId ? await getProfile(userId, profileId) : null;
+        const copy = profile ? overlayProfile(pick.copy, profile.data) : pick.copy;
+
         // 2. Load the chosen template's HTML.
         emit("progress", { stage: "loading" });
         const templateHtml = await getTemplateHtml(chosenId);
@@ -142,12 +151,12 @@ export async function POST(req: Request): Promise<Response> {
 
         // 3. Fill the invented copy (Gemini); degrades to the template's own copy.
         emit("progress", { stage: "filling" });
-        const fill = await fillAssembled(templateHtml, pick.copy, {
+        const fill = await fillAssembled(templateHtml, copy, {
           onStage: (stage) => emit("progress", { stage }),
         });
 
         // 4. Born-canonical + SEO head, same ingestion as every other project.
-        const title = pick.copy.business_name?.trim() || chosen?.name || "Untitled page";
+        const title = copy.business_name?.trim() || chosen?.name || "Untitled page";
         const finalHtml = ensurePageMeta(normalizeBornCanonical(fill.html), { title });
 
         // 5. Reserved-marker guard + sanitize (defense in depth, like from-html).
@@ -173,6 +182,7 @@ export async function POST(req: Request): Promise<Response> {
             thumbnailUrl: null,
             tags: ["curated"],
             status: "draft",
+            profileId: profile ? profile.id : null,
             data: { html: cleanHtml },
           });
         } catch (err) {
@@ -224,6 +234,31 @@ export async function POST(req: Request): Promise<Response> {
       "x-accel-buffering": "no",
     },
   });
+}
+
+// Overlay the user's saved profile onto the model's invented copy: real values
+// win where present; the invented copy fills any gaps (a profile only SEEDS).
+function overlayProfile(
+  copy: ExtractedBusinessData,
+  data: BusinessProfileData,
+): ExtractedBusinessData {
+  const out: ExtractedBusinessData = { ...copy };
+  const real = (v: string | null | undefined) =>
+    typeof v === "string" && v.trim().length > 0;
+  if (real(data.business_name)) out.business_name = data.business_name;
+  if (real(data.industry)) out.industry = data.industry;
+  if (real(data.tagline_es)) out.tagline_es = data.tagline_es;
+  if (real(data.tagline_en)) out.tagline_en = data.tagline_en;
+  if (real(data.pitch)) out.pitch = data.pitch;
+  if (real(data.hero_keyword)) out.hero_keyword = data.hero_keyword;
+  if (real(data.cta_primary)) out.cta_primary = data.cta_primary;
+  if (real(data.cta_secondary)) out.cta_secondary = data.cta_secondary;
+  if (data.features?.length) out.features = data.features;
+  if (data.pricing?.length) out.pricing = data.pricing;
+  if (data.testimonials?.length) out.testimonials = data.testimonials;
+  if (data.faq_questions?.length) out.faq_questions = data.faq_questions;
+  if (data.contact) out.contact = data.contact;
+  return out;
 }
 
 function errorJson(status: number, message: string): Response {

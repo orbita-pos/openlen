@@ -13,6 +13,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
 import type { ProjectData } from "@/lib/projects/types";
+import type { BusinessProfileData } from "@/lib/business-profiles/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Drizzle schema for auth.
@@ -136,6 +137,13 @@ export const projects = pgTable(
     // Null = no logo set; UI surfaces fall back to a coral-circle SVG
     // with the project's initial letter (lib/branding/default-logo.ts).
     logoUrl: text("logoUrl"),
+    // The saved business profile this page was seeded from (lib/business-
+    // profiles). Nullable — a page can be made with no profile (the AI invents
+    // copy), and a profile only SEEDS the page, so it can diverge freely.
+    // ON DELETE SET NULL: deleting a profile just clears the link.
+    profileId: text("profileId").references(() => businessProfiles.id, {
+      onDelete: "set null",
+    }),
     data: jsonb("data").$type<ProjectData>().notNull(),
     // Per-project AI context — user-controlled instructions that get
     // prepended to every Chat tab prompt sent to the chat model.
@@ -170,6 +178,30 @@ export const projects = pgTable(
     index("projects_userId_idx").on(table.userId, table.updatedAt),
     index("projects_userId_status_idx").on(table.userId, table.status),
   ],
+);
+
+// Saved business profiles — the user's reusable identity ("Mi negocio").
+// `data` is a BusinessProfileData (ExtractedBusinessData + contact + brand +
+// photos), the same shape the fill engine consumes. A user may have several
+// (one per business); `isDefault` marks the one a new page seeds from when none
+// is explicitly picked. A profile only SEEDS — projects keep their own HTML and
+// diverge freely (projects.profileId is ON DELETE SET NULL).
+export const businessProfiles = pgTable(
+  "businessProfiles",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    data: jsonb("data").$type<BusinessProfileData>().notNull(),
+    isDefault: boolean("isDefault").notNull().default(false),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [index("businessProfiles_userId_idx").on(table.userId)],
 );
 
 // Per-project version history. Each row snapshots a moment in the project's
