@@ -918,6 +918,17 @@ function NewV2Inner() {
     },
     [],
   );
+  // Smart background — a solid color that replaces any gradient/image, or an
+  // image fill (background-image) on any element, or clearing the fill.
+  const applyBg = useCallback(
+    (path: string, kind: "color" | "image" | "clear", value: string) => {
+      iframeElRef.current?.contentWindow?.postMessage(
+        { type: "openlen:apply-prop", scope: "style-bg", path, kind, value },
+        "*",
+      );
+    },
+    [],
+  );
   // Theme preset ("5 bolas") — apply a whole {token: value} bundle to <html>
   // at once. The iframe sets them inline (and re-derives --ol-accent-r) in a
   // single reclean, then persists via openlen:html-changed. Deterministic +
@@ -1457,6 +1468,7 @@ function NewV2Inner() {
                     onApplyPageMeta={applyPageMeta}
                     onApplyFormConfig={applyFormConfig}
                     onApplyStyle={applyStyle}
+                    onApplyBg={applyBg}
                     onToggleAnalytics={applyAnalyticsDisabled}
                     onApplyLogoUrl={loadedProject ? applyLogoUrl : undefined}
                     onApplyLook={loadedProject ? applyLook : undefined}

@@ -21,7 +21,22 @@
   "style": {
     "title": "Estilo",
     "textColor": "Color del texto",
-    "background": "Fondo"
+    "background": "Fondo",
+    "fillImage": "Rellenar con imagen",
+    "changeImage": "Cambiar imagen",
+    "removeImage": "Quitar",
+    "gradientHint": "Tiene un degradado — un color sólido o imagen lo reemplaza",
+    "border": "Borde",
+    "borderColor": "Color del borde",
+    "borderWidth": "Grosor del borde",
+    "text": "Texto",
+    "bold": "Negrita",
+    "italic": "Itálica",
+    "align": {
+      "left": "Alinear izquierda",
+      "center": "Centrar",
+      "right": "Alinear derecha"
+    }
   },
   "form": {
     "title": "Formulario",

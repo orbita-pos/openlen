@@ -136,10 +136,26 @@ const INSPECT_SCRIPT = `
     var cs;
     try { cs = getComputedStyle(el); } catch (_) { return {}; }
     var br = parseInt(cs.borderRadius, 10);
+    // Background paint: an element can be filled by a gradient or an image
+    // (background-image), which sits ON TOP of background-color — so editing
+    // the color alone would be invisible. Report the fill state so the panel
+    // can offer the right control (solid color that replaces the fill, or a
+    // "fill with image"). bgImageUrl is the url() if the fill is a picture.
+    var bgImg = cs.backgroundImage || 'none';
+    var urlMatch = bgImg.match(/url\\(["']?(.*?)["']?\\)/i);
+    var bw = parseInt(cs.borderTopWidth, 10);
     return {
       color: rgbToHex(cs.color),
       backgroundColor: rgbToHex(cs.backgroundColor),
       borderRadius: isNaN(br) ? '' : String(br),
+      hasBgImage: bgImg !== 'none' && bgImg !== '',
+      hasGradient: /gradient/i.test(bgImg),
+      bgImageUrl: urlMatch ? urlMatch[1] : '',
+      borderWidth: isNaN(bw) ? '' : String(bw),
+      borderColor: rgbToHex(cs.borderTopColor),
+      fontWeight: (cs.fontWeight || '').toString(),
+      fontStyle: cs.fontStyle || '',
+      textAlign: cs.textAlign || '',
     };
   }
 
@@ -446,6 +462,38 @@ const INSPECT_SCRIPT = `
     if (selected === el) postSelected(el);
   }
 
+  // Smart background — works on ANY element (divs included), so decorative
+  // CSS blocks become image-filled or solid without DOM surgery.
+  //  kind 'color': solid color that WINS over any gradient/image (sets
+  //                background-image:none so the colour is actually visible).
+  //  kind 'image': fill the element's box with a picture (cover/center).
+  //  kind 'clear': drop the fill image, revert to the underlying paint.
+  function applyBg(path, kind, value) {
+    var el = resolvePath(path);
+    if (!el) return;
+    if (kind === 'color') {
+      if (value) {
+        el.style.setProperty('background-color', value);
+        el.style.setProperty('background-image', 'none');
+      } else {
+        el.style.removeProperty('background-color');
+        el.style.removeProperty('background-image');
+      }
+    } else if (kind === 'image' && value) {
+      el.style.setProperty('background-image', 'url("' + value + '")');
+      el.style.setProperty('background-size', 'cover');
+      el.style.setProperty('background-position', 'center');
+      el.style.setProperty('background-repeat', 'no-repeat');
+    } else if (kind === 'clear') {
+      el.style.removeProperty('background-image');
+      el.style.removeProperty('background-size');
+      el.style.removeProperty('background-position');
+      el.style.removeProperty('background-repeat');
+    }
+    postClean();
+    if (selected === el) postSelected(el);
+  }
+
   // Page-level theme tokens (Tier 3) — set as inline custom properties on
   // <html>; they override the :root defaults and persist with the document.
   function hexTriplet(hex) {
@@ -551,6 +599,8 @@ const INSPECT_SCRIPT = `
       applyPageMeta(d.field, typeof d.value === 'string' ? d.value : '');
     } else if (d.scope === 'style' && typeof d.path === 'string' && typeof d.prop === 'string') {
       applyStyle(d.path, d.prop, typeof d.value === 'string' ? d.value : '');
+    } else if (d.scope === 'style-bg' && typeof d.path === 'string' && typeof d.kind === 'string') {
+      applyBg(d.path, d.kind, typeof d.value === 'string' ? d.value : '');
     } else if (d.scope === 'theme' && typeof d.prop === 'string') {
       applyTheme(d.prop, typeof d.value === 'string' ? d.value : '');
     } else if (d.scope === 'theme-bundle' && d.tokens && typeof d.tokens === 'object') {

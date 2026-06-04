@@ -19,6 +19,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type ReactNode,
 } from "react";
 import { useTranslations } from "next-intl";
 import type { FormConfig } from "@/lib/projects/types";
@@ -30,6 +31,7 @@ import {
   type ThemePreset,
 } from "@/lib/theme-presets";
 import { lookFromAccent } from "@/lib/palette-gen";
+import { ReplaceAssetModal } from "../replace-asset-modal";
 import {
   ColorField,
   RadiusField,
@@ -68,6 +70,19 @@ export interface InspectSelection {
     color?: string;
     backgroundColor?: string;
     borderRadius?: string;
+    /** True when the element is painted by a gradient or image (which sits on
+     *  top of background-color) — a solid color edit alone would be invisible. */
+    hasBgImage?: boolean;
+    hasGradient?: boolean;
+    /** The fill image url(), when the element's background is a picture. */
+    bgImageUrl?: string;
+    /** Border (top edge, assumed uniform): integer px width + hex color. */
+    borderWidth?: string;
+    borderColor?: string;
+    /** Text styling: computed font-weight (e.g. "700"), font-style, text-align. */
+    fontWeight?: string;
+    fontStyle?: string;
+    textAlign?: string;
   };
 }
 
@@ -115,6 +130,10 @@ interface PropertiesPanelProps {
   /** Set one inline-style property on the selected element (a CSS prop name
    *  + value; empty value removes it). */
   onApplyStyle: (path: string, prop: string, value: string) => void;
+  /** Set the selected element's background: a solid color (replaces any
+   *  gradient/image fill), an image fill (background-image, any element), or
+   *  clear the fill. */
+  onApplyBg: (path: string, kind: "color" | "image" | "clear", value: string) => void;
   /** Persist the analytics opt-out toggle. Omit to hide the Privacy
    *  section (e.g., on projects that can't be published yet). */
   onToggleAnalytics?: (disabled: boolean) => void;
@@ -158,6 +177,7 @@ export function PropertiesPanel({
   onApplyPageMeta,
   onApplyFormConfig,
   onApplyStyle,
+  onApplyBg,
   onToggleAnalytics,
   onApplyLogoUrl,
   onApplyLook,
@@ -192,9 +212,11 @@ export function PropertiesPanel({
             key={selection.path}
             selection={selection}
             formConfig={formConfig}
+            projectId={projectId}
             onApply={onApplyElementProp}
             onApplyFormConfig={onApplyFormConfig}
             onApplyStyle={onApplyStyle}
+            onApplyBg={onApplyBg}
             onSendTestFormEmail={onSendTestFormEmail}
             onBack={onClearSelection}
           />
@@ -223,17 +245,21 @@ export function PropertiesPanel({
 function ElementView({
   selection,
   formConfig,
+  projectId,
   onApply,
   onApplyFormConfig,
   onApplyStyle,
+  onApplyBg,
   onSendTestFormEmail,
   onBack,
 }: {
   selection: InspectSelection;
   formConfig: FormConfig | null;
+  projectId?: string;
   onApply: (path: string, name: string, value: string | null) => void;
   onApplyFormConfig: (formIndex: number, patch: Partial<FormConfig>) => void;
   onApplyStyle: (path: string, prop: string, value: string) => void;
+  onApplyBg: (path: string, kind: "color" | "image" | "clear", value: string) => void;
   onSendTestFormEmail?: (
     formIndex: number,
   ) => Promise<{ ok: boolean; sentTo?: string; message?: string }>;
@@ -300,7 +326,163 @@ function ElementView({
           onSendTestEmail={onSendTestFormEmail}
         />
       )}
-      <StyleSection path={path} style={style} onApply={onApplyStyle} />
+      <StyleSection
+        path={path}
+        style={style}
+        projectId={projectId}
+        onApply={onApplyStyle}
+        onApplyBg={onApplyBg}
+      />
+    </div>
+  );
+}
+
+// A square active-state icon button (bold / italic / align toggles).
+function ToggleBtn({
+  on,
+  label,
+  onClick,
+  children,
+}: {
+  on: boolean;
+  label: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className={`inline-flex h-7 w-7 items-center justify-center rounded-md border transition ${
+        on
+          ? "bg-[var(--accent-strong)] text-white border-transparent"
+          : "bd bg-app fg-muted hover:fg hover:bg-hover"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+// Three-line align glyph; the middle line shifts to indicate the direction.
+function AlignIcon({ dir }: { dir: "left" | "center" | "right" }) {
+  const midX = dir === "left" ? 1 : dir === "right" ? 5 : 3;
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="currentColor" aria-hidden>
+      <rect x="1" y="2" width="12" height="1.6" rx="0.8" />
+      <rect x={midX} y="6.2" width="8" height="1.6" rx="0.8" />
+      <rect x="1" y="10.4" width="12" height="1.6" rx="0.8" />
+    </svg>
+  );
+}
+
+// Border — width (px) + color, emitted as the `border` shorthand so one inline
+// declaration wins the cascade. Width 0 / empty → `none` (off).
+function BorderControl({
+  width,
+  color,
+  onApply,
+}: {
+  width: string;
+  color: string;
+  onApply: (border: string) => void;
+}) {
+  const t = useTranslations("panelsProps");
+  const [w, setW] = useState(width);
+  const [c, setC] = useState(color || "#e5e7eb");
+  useEffect(() => setW(width), [width]);
+  useEffect(() => {
+    if (color) setC(color);
+  }, [color]);
+  const commit = (nextW: string, nextC: string) => {
+    const n = parseInt(nextW, 10);
+    onApply(!n || n <= 0 ? "none" : `${n}px solid ${nextC}`);
+  };
+  const safeC = /^#[0-9a-fA-F]{6}$/.test(c) ? c : "#e5e7eb";
+  return (
+    <label className="flex items-center gap-2">
+      <span className="text-[10.5px] fg-faint flex-1">{t("style.border")}</span>
+      <input
+        type="color"
+        value={safeC}
+        aria-label={t("style.borderColor")}
+        onChange={(e) => {
+          setC(e.target.value);
+          commit(w, e.target.value);
+        }}
+        className="h-7 w-8 rounded border bd cursor-pointer p-0 focus:outline-none"
+      />
+      <input
+        type="text"
+        inputMode="numeric"
+        value={w}
+        placeholder="0"
+        aria-label={t("style.borderWidth")}
+        onChange={(e) => setW(e.target.value.replace(/[^\d]/g, ""))}
+        onBlur={() => commit(w, c)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        }}
+        className="w-[54px] bg-app border bd rounded-md px-2 py-1 text-[11px] font-mono fg focus:border-[color:var(--accent)] focus:outline-none focus:ring-1 focus:ring-[color:var(--accent-ring)]/30"
+      />
+      <span className="text-[10px] fg-faint">px</span>
+    </label>
+  );
+}
+
+// Text — bold / italic / alignment, cascade-safe inline edits.
+function TextStyleControl({
+  fontWeight,
+  fontStyle,
+  textAlign,
+  onApply,
+}: {
+  fontWeight: string;
+  fontStyle: string;
+  textAlign: string;
+  onApply: (prop: string, value: string) => void;
+}) {
+  const t = useTranslations("panelsProps");
+  const bold = parseInt(fontWeight || "400", 10) >= 600;
+  const italic = fontStyle === "italic";
+  const align =
+    textAlign === "center" || textAlign === "right" ? textAlign : "left";
+  const aligns: Array<"left" | "center" | "right"> = ["left", "center", "right"];
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[10.5px] fg-faint">{t("style.text")}</span>
+      <div className="flex items-center gap-1">
+        <ToggleBtn
+          on={bold}
+          label={t("style.bold")}
+          onClick={() => onApply("font-weight", bold ? "400" : "700")}
+        >
+          <span className="text-[12px] font-bold">B</span>
+        </ToggleBtn>
+        <ToggleBtn
+          on={italic}
+          label={t("style.italic")}
+          onClick={() => onApply("font-style", italic ? "normal" : "italic")}
+        >
+          <span className="text-[12px] italic" style={{ fontFamily: "Georgia, serif" }}>
+            I
+          </span>
+        </ToggleBtn>
+        <span aria-hidden className="mx-0.5 h-5 w-px bg-[color:var(--border)]" />
+        {aligns.map((a) => (
+          <ToggleBtn
+            key={a}
+            on={align === a}
+            label={t(`style.align.${a}`)}
+            onClick={() => onApply("text-align", a)}
+          >
+            <AlignIcon dir={a} />
+          </ToggleBtn>
+        ))}
+      </div>
     </div>
   );
 }
@@ -308,14 +490,20 @@ function ElementView({
 function StyleSection({
   path,
   style,
+  projectId,
   onApply,
+  onApplyBg,
 }: {
   path: string;
   style: InspectSelection["style"];
+  projectId?: string;
   onApply: (path: string, prop: string, value: string) => void;
+  onApplyBg: (path: string, kind: "color" | "image" | "clear", value: string) => void;
 }) {
   const t = useTranslations("panelsProps");
   const s = style ?? {};
+  const [picker, setPicker] = useState(false);
+  const hasImage = !!s.bgImageUrl;
   return (
     <Section label={t("style.title")} icon={<PaletteIcon size={11} />}>
       <ColorField
@@ -323,14 +511,62 @@ function StyleSection({
         value={s.color ?? ""}
         onCommit={(v) => onApply(path, "color", v)}
       />
+      {/* Background — a solid colour REPLACES any gradient/image so the change
+          is actually visible, or fill the element's box with an image. */}
       <ColorField
         label={t("style.background")}
         value={s.backgroundColor ?? ""}
-        onCommit={(v) => onApply(path, "background-color", v)}
+        onCommit={(v) => onApplyBg(path, "color", v)}
+      />
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setPicker(true)}
+          className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md border bd bg-app fg-muted hover:fg hover:bg-hover transition text-[11px]"
+        >
+          <ImageIcon size={12} />
+          {hasImage ? t("style.changeImage") : t("style.fillImage")}
+        </button>
+        {hasImage && (
+          <button
+            type="button"
+            onClick={() => onApplyBg(path, "clear", "")}
+            className="text-[10.5px] fg-faint hover:fg underline-offset-2 hover:underline transition"
+          >
+            {t("style.removeImage")}
+          </button>
+        )}
+      </div>
+      {s.hasGradient && !hasImage && (
+        <p className="text-[10px] fg-faint leading-snug">
+          {t("style.gradientHint")}
+        </p>
+      )}
+      <BorderControl
+        width={s.borderWidth ?? ""}
+        color={s.borderColor ?? ""}
+        onApply={(border) => onApply(path, "border", border)}
       />
       <RadiusField
         value={s.borderRadius ?? ""}
         onCommit={(v) => onApply(path, "border-radius", v)}
+      />
+      <TextStyleControl
+        fontWeight={s.fontWeight ?? ""}
+        fontStyle={s.fontStyle ?? ""}
+        textAlign={s.textAlign ?? ""}
+        onApply={(prop, value) => onApply(path, prop, value)}
+      />
+      <ReplaceAssetModal
+        open={picker}
+        kind={picker ? "image" : null}
+        projectId={projectId ?? null}
+        currentSrc={s.bgImageUrl ?? null}
+        onClose={() => setPicker(false)}
+        onPick={(payload) => {
+          if (payload.url) onApplyBg(path, "image", payload.url);
+          setPicker(false);
+        }}
       />
     </Section>
   );

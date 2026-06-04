@@ -21,7 +21,22 @@
   "style": {
     "title": "Stijl",
     "textColor": "Tekstkleur",
-    "background": "Achtergrond"
+    "background": "Achtergrond",
+    "fillImage": "Vullen met afbeelding",
+    "changeImage": "Afbeelding wijzigen",
+    "removeImage": "Verwijderen",
+    "gradientHint": "Heeft een verloop — een effen kleur of afbeelding vervangt het",
+    "border": "Rand",
+    "borderColor": "Randkleur",
+    "borderWidth": "Randdikte",
+    "text": "Tekst",
+    "bold": "Vet",
+    "italic": "Cursief",
+    "align": {
+      "left": "Links uitlijnen",
+      "center": "Centreren",
+      "right": "Rechts uitlijnen"
+    }
   },
   "form": {
     "title": "Formulier",

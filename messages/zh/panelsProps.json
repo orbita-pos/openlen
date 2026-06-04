@@ -21,7 +21,22 @@
   "style": {
     "title": "样式",
     "textColor": "文字颜色",
-    "background": "背景"
+    "background": "背景",
+    "fillImage": "用图片填充",
+    "changeImage": "更换图片",
+    "removeImage": "移除",
+    "gradientHint": "有渐变 — 纯色或图片会替换它",
+    "border": "边框",
+    "borderColor": "边框颜色",
+    "borderWidth": "边框粗细",
+    "text": "文字",
+    "bold": "加粗",
+    "italic": "斜体",
+    "align": {
+      "left": "左对齐",
+      "center": "居中",
+      "right": "右对齐"
+    }
   },
   "form": {
     "title": "表单",
