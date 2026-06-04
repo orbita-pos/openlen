@@ -660,12 +660,19 @@ function NewV2Inner() {
     };
   }, [loadedProject?.id, refetchProject]);
 
-  const published = loadedProject?.subdomain
-    ? {
-        subdomain: loadedProject.subdomain,
-        hasUnpublishedChanges: loadedProject.hasUnpublishedChanges,
-      }
-    : null;
+  // Memoized so the TopBar's release-list effect (which deps on `published`)
+  // doesn't re-fire GET /releases + flicker on every parent re-render (e.g. the
+  // saving→saved→idle autosave ticks while the Deploy dropdown is open).
+  const published = useMemo(
+    () =>
+      loadedProject?.subdomain
+        ? {
+            subdomain: loadedProject.subdomain,
+            hasUnpublishedChanges: loadedProject.hasUnpublishedChanges,
+          }
+        : null,
+    [loadedProject?.subdomain, loadedProject?.hasUnpublishedChanges],
+  );
 
   const onPublish = loadedProject ? () => setPublishModalOpen(true) : undefined;
   // Editing surface = the right-side Edit toggle (was: the old left "Content"
@@ -1420,6 +1427,13 @@ function NewV2Inner() {
                   <div className="mt-3 text-[11px] fg-faint">
                     {t("aiError.tweak")}
                   </div>
+                  <button
+                    type="button"
+                    onClick={handleAiGenerate}
+                    className="mt-4 inline-flex items-center justify-center h-8 px-4 rounded-md bg-[var(--accent-strong)] text-white text-[12px] font-medium shadow-coral hover:brightness-105 transition"
+                  >
+                    {t("aiError.retry")}
+                  </button>
                 </div>
               </div>
             </section>

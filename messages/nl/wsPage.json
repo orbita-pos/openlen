@@ -27,7 +27,8 @@
   },
   "aiError": {
     "title": "Genereren mislukt",
-    "tweak": "Pas je briefing in de zijbalk aan en probeer het opnieuw."
+    "tweak": "Pas je briefing in de zijbalk aan en probeer het opnieuw.",
+    "retry": "Opnieuw"
   },
   "inserted": {
     "label": "<b>{name}</b> toegevoegd",

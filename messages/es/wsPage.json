@@ -27,7 +27,8 @@
   },
   "aiError": {
     "title": "Falló la generación",
-    "tweak": "Ajusta tu brief en la barra lateral e inténtalo de nuevo."
+    "tweak": "Ajusta tu brief en la barra lateral e inténtalo de nuevo.",
+    "retry": "Reintentar"
   },
   "inserted": {
     "label": "Añadiste <b>{name}</b>",

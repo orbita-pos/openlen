@@ -27,7 +27,8 @@
   },
   "aiError": {
     "title": "Generierung fehlgeschlagen",
-    "tweak": "Passe dein Briefing in der Seitenleiste an und versuche es erneut."
+    "tweak": "Passe dein Briefing in der Seitenleiste an und versuche es erneut.",
+    "retry": "Erneut versuchen"
   },
   "inserted": {
     "label": "<b>{name}</b> hinzugefügt",

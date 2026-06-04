@@ -27,7 +27,8 @@
   },
   "aiError": {
     "title": "Generazione non riuscita",
-    "tweak": "Modifica il brief nella barra laterale e riprova."
+    "tweak": "Modifica il brief nella barra laterale e riprova.",
+    "retry": "Riprova"
   },
   "inserted": {
     "label": "<b>{name}</b> aggiunta",
