@@ -46,66 +46,82 @@ export function DashboardShell({
   active: DashboardSection;
   children: React.ReactNode;
 }) {
-  const t = useTranslations("projects");
-  const [dark, toggleDark] = useDarkMode();
-
   return (
     <div className="flex min-h-screen bg-zinc-50 dark:bg-[#0a0a0a]">
-      <aside className="sticky top-0 z-30 h-screen w-14 shrink-0 flex flex-col items-center gap-1.5 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#0a0a0a] py-3">
-        <Link href="/projects" aria-label="OpenLen" className="mb-1.5">
-          <OpenLenMark className="h-7 w-7" />
-        </Link>
-
-        <Link
-          href="/new"
-          title={t("header.newPage")}
-          aria-label={t("header.newPage")}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-coral-500 text-white shadow-[0_4px_14px_-4px_rgba(255,90,54,0.6)] hover:bg-coral-600 active:scale-95 transition"
-        >
-          <Plus size={18} />
-        </Link>
-
-        <div className="my-1 h-px w-6 bg-zinc-200 dark:bg-zinc-800" />
-
-        {NAV.map((it) => {
-          const I = it.icon;
-          const isActive = active === it.key;
-          return (
-            <Link
-              key={it.key}
-              href={it.href}
-              title={t(it.labelKey)}
-              aria-label={t(it.labelKey)}
-              aria-current={isActive ? "page" : undefined}
-              className={cn(
-                "inline-flex h-9 w-9 items-center justify-center rounded-lg transition",
-                isActive
-                  ? "bg-coral-50 dark:bg-coral-500/15 text-coral-600 dark:text-coral-300"
-                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900",
-              )}
-            >
-              <I size={18} />
-            </Link>
-          );
-        })}
-
-        <div className="flex-1" />
-
-        <LocaleSwitcher />
-        <button
-          type="button"
-          onClick={toggleDark}
-          aria-label={t("appHeader.toggleDarkMode")}
-          title={t("appHeader.toggleDarkMode")}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition"
-        >
-          {dark ? <Sun size={16} /> : <Moon size={16} />}
-        </button>
-        <AccountMenu />
-      </aside>
-
+      <GlobalRail active={active} />
       <div className="flex-1 min-w-0 flex flex-col">{children}</div>
     </div>
+  );
+}
+
+// The shared global rail. Used by the dashboard (with the locale/theme/account
+// footer) AND injected at the far left of the editor (footer off — the editor
+// TopBar already carries account/theme) so the SAME nav lives everywhere.
+export function GlobalRail({
+  active = null,
+  showFooter = true,
+}: {
+  active?: DashboardSection | null;
+  showFooter?: boolean;
+}) {
+  const t = useTranslations("projects");
+  const [dark, toggleDark] = useDarkMode();
+  return (
+    <aside className="sticky top-0 z-30 h-screen w-14 shrink-0 flex flex-col items-center gap-1.5 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#0a0a0a] py-3">
+      <Link href="/projects" aria-label="OpenLen" className="mb-1.5">
+        <OpenLenMark className="h-7 w-7" />
+      </Link>
+
+      <Link
+        href="/new"
+        title={t("header.newPage")}
+        aria-label={t("header.newPage")}
+        className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-coral-500 text-white shadow-[0_4px_14px_-4px_rgba(255,90,54,0.6)] hover:bg-coral-600 active:scale-95 transition"
+      >
+        <Plus size={18} />
+      </Link>
+
+      <div className="my-1 h-px w-6 bg-zinc-200 dark:bg-zinc-800" />
+
+      {NAV.map((it) => {
+        const I = it.icon;
+        const isActive = active === it.key;
+        return (
+          <Link
+            key={it.key}
+            href={it.href}
+            title={t(it.labelKey)}
+            aria-label={t(it.labelKey)}
+            aria-current={isActive ? "page" : undefined}
+            className={cn(
+              "inline-flex h-9 w-9 items-center justify-center rounded-lg transition",
+              isActive
+                ? "bg-coral-50 dark:bg-coral-500/15 text-coral-600 dark:text-coral-300"
+                : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900",
+            )}
+          >
+            <I size={18} />
+          </Link>
+        );
+      })}
+
+      {showFooter && (
+        <>
+          <div className="flex-1" />
+          <LocaleSwitcher />
+          <button
+            type="button"
+            onClick={toggleDark}
+            aria-label={t("appHeader.toggleDarkMode")}
+            title={t("appHeader.toggleDarkMode")}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition"
+          >
+            {dark ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
+          <AccountMenu />
+        </>
+      )}
+    </aside>
   );
 }
 

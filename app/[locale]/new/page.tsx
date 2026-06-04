@@ -52,6 +52,7 @@ import { StatusBar } from "@/components/workspace-v2/status-bar";
 import { TopBar } from "@/components/workspace-v2/top-bar";
 import { stripEditorInstrumentation } from "@/components/workspace-v2/strip-editor-instrumentation";
 import { useDarkMode } from "@/lib/use-dark-mode";
+import { GlobalRail } from "@/components/app/dashboard-shell";
 
 // Outer shell exists so `useSearchParams()` in the inner component has a
 // Suspense boundary, matching the /new V1 pattern.
@@ -1291,7 +1292,9 @@ function NewV2Inner() {
   };
 
   return (
-    <div className="workspace-v2 h-full flex flex-col">
+    <div className="workspace-v2 h-full flex">
+      <GlobalRail showFooter={false} />
+      <div className="flex-1 min-w-0 h-full flex flex-col">
       <TopBar
         projectName={projectName}
         onRename={persistRename}
@@ -1736,6 +1739,7 @@ function NewV2Inner() {
           }}
         />
       )}
+      </div>
     </div>
   );
 }
