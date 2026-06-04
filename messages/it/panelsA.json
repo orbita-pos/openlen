@@ -105,7 +105,9 @@
       "phone": "Telefono",
       "email": "Email",
       "address": "Indirizzo",
-      "instagram": "Instagram"
+      "instagram": "Instagram",
+      "color": "Colore del brand",
+      "takeFromLogo": "Dal logo"
     },
     "errors": {
       "image": "Solo immagini JPG o PNG.",

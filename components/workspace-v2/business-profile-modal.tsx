@@ -26,6 +26,7 @@ interface Draft {
   email: string;
   address: string;
   instagram: string;
+  accent: string; // brand colour hex (derived from the logo or typed)
 }
 
 const EMPTY: Draft = {
@@ -37,6 +38,7 @@ const EMPTY: Draft = {
   email: "",
   address: "",
   instagram: "",
+  accent: "",
 };
 
 export interface BusinessProfileModalProps {
@@ -55,6 +57,7 @@ export function BusinessProfileModal({
   const t = useTranslations("panelsA");
   const trapRef = useFocusTrap(open);
   const fileRef = useRef<HTMLInputElement>(null);
+  const logoColorRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState<Step>("import");
   const [source, setSource] = useState<Source>("image");
@@ -114,6 +117,45 @@ export function BusinessProfileModal({
     };
     reader.readAsDataURL(file);
   }, [t]);
+
+  // Pull a vivid brand accent out of an uploaded logo (node-vibrant, client-
+  // side). The logo itself isn't stored here — only its colour. Fail-open: the
+  // user can always type the hex.
+  const deriveAccentFromLogo = useCallback(async (file: File) => {
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () =>
+          typeof r.result === "string" ? resolve(r.result) : reject(new Error());
+        r.onerror = () => reject(new Error());
+        r.readAsDataURL(file);
+      });
+      const mod = await import("node-vibrant/browser");
+      const Vibrant = mod.Vibrant as unknown as {
+        from(src: string): {
+          getPalette(): Promise<Record<string, { hex?: string } | null>>;
+        };
+      };
+      const palette = await Vibrant.from(dataUrl).getPalette();
+      const order = [
+        "Vibrant",
+        "DarkVibrant",
+        "LightVibrant",
+        "Muted",
+        "DarkMuted",
+        "LightMuted",
+      ];
+      for (const k of order) {
+        const hex = palette[k]?.hex;
+        if (typeof hex === "string") {
+          setDraft((d) => ({ ...d, accent: hex }));
+          return;
+        }
+      }
+    } catch {
+      /* couldn't read the colour — the hex field stays editable */
+    }
+  }, []);
 
   const extract = useCallback(async () => {
     setError(null);
@@ -308,6 +350,44 @@ export function BusinessProfileModal({
               <Field label={t("profile.fields.email")} value={draft.email} onChange={(v) => setDraft((d) => ({ ...d, email: v }))} />
               <Field label={t("profile.fields.address")} value={draft.address} onChange={(v) => setDraft((d) => ({ ...d, address: v }))} />
               <Field label={t("profile.fields.instagram")} value={draft.instagram} onChange={(v) => setDraft((d) => ({ ...d, instagram: v }))} placeholder="@" />
+              <div>
+                <span className="text-[10.5px] font-medium fg-muted uppercase tracking-wider">
+                  {t("profile.fields.color")}
+                </span>
+                <div className="mt-1 flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={/^#[0-9a-fA-F]{6}$/.test(draft.accent) ? draft.accent : "#e8743a"}
+                    onChange={(e) => setDraft((d) => ({ ...d, accent: e.target.value }))}
+                    aria-label={t("profile.fields.color")}
+                    className="h-9 w-11 shrink-0 rounded-md border bd bg-app cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={draft.accent}
+                    onChange={(e) => setDraft((d) => ({ ...d, accent: e.target.value }))}
+                    placeholder="#e8743a"
+                    className="flex-1 min-w-0 px-3 py-2 text-[13px] fg bg-app border bd rounded-md focus:bd-strong focus:outline-none placeholder:fg-faint"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => logoColorRef.current?.click()}
+                    className="shrink-0 px-2.5 py-2 text-[11.5px] fg-muted hover:fg hover:bg-hover rounded-md ring-1 ring-[color:var(--border)] transition"
+                  >
+                    {t("profile.fields.takeFromLogo")}
+                  </button>
+                  <input
+                    ref={logoColorRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) void deriveAccentFromLogo(f);
+                    }}
+                  />
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -391,6 +471,7 @@ function draftFromExtracted(data: Record<string, unknown>): Draft {
     email: str(contact.email),
     address: str(contact.address),
     instagram: str(socials.instagram),
+    accent: "",
   };
 }
 
@@ -406,6 +487,7 @@ function draftFromProfile(p: BusinessProfile): Draft {
     email: str(contact?.email),
     address: str(contact?.address),
     instagram: str(contact?.socials?.instagram),
+    accent: str(data.brand?.accent),
   };
 }
 
@@ -436,7 +518,7 @@ function draftToData(d: Draft): BusinessProfileData {
         website: null,
       },
     },
-    brand: null,
+    brand: d.accent.trim() ? { logoUrl: null, accent: d.accent.trim() } : null,
     photos: [],
   };
 }

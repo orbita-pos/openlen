@@ -17,6 +17,7 @@ import { listTemplates, getTemplateHtml } from "@/lib/templates/store";
 import { pickTemplate, pickWeighted, type TemplateCatalogItem } from "@/lib/curate/pick-template";
 import { fillAssembled } from "@/lib/assemble/fill";
 import { getProfile } from "@/lib/business-profiles/store";
+import { applyAccentToHtml } from "@/lib/business-profiles/apply-accent";
 import type { ExtractedBusinessData } from "@/lib/style-match/autofill/types";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 
@@ -157,7 +158,14 @@ export async function POST(req: Request): Promise<Response> {
 
         // 4. Born-canonical + SEO head, same ingestion as every other project.
         const title = copy.business_name?.trim() || chosen?.name || "Untitled page";
-        const finalHtml = ensurePageMeta(normalizeBornCanonical(fill.html), { title });
+        // Recolour the curated page to the profile's brand accent (if set) —
+        // born-canonical normalization exposes --ol-accent for the override.
+        const normalized = normalizeBornCanonical(fill.html);
+        const brandAccent = profile?.data.brand?.accent;
+        const finalHtml = ensurePageMeta(
+          brandAccent ? applyAccentToHtml(normalized, brandAccent) : normalized,
+          { title },
+        );
 
         // 5. Reserved-marker guard + sanitize (defense in depth, like from-html).
         const sanitized = sanitizeForPublish(finalHtml);

@@ -105,7 +105,9 @@
       "phone": "電話番号",
       "email": "メールアドレス",
       "address": "住所",
-      "instagram": "Instagram"
+      "instagram": "Instagram",
+      "color": "ブランドカラー",
+      "takeFromLogo": "ロゴから取得"
     },
     "errors": {
       "image": "JPGまたはPNGの画像のみです。",

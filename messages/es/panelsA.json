@@ -105,7 +105,9 @@
       "phone": "Teléfono",
       "email": "Correo",
       "address": "Dirección",
-      "instagram": "Instagram"
+      "instagram": "Instagram",
+      "color": "Color de marca",
+      "takeFromLogo": "Del logo"
     },
     "errors": {
       "image": "Solo imágenes JPG o PNG.",
