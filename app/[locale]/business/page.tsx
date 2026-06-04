@@ -689,9 +689,8 @@ function EmptyState({ importing, onPickFile, onDescribe, onManual }: { importing
   const [text, setText] = useState("");
   return (
     <div className="max-w-2xl mx-auto px-5 py-12 sm:py-20 text-center">
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-coral-50 dark:bg-coral-500/15 text-coral-700 dark:text-coral-300 px-3 py-1 text-[12px] font-semibold mb-6"><Sparkles size={13} /> {t("empty.badge")}</span>
-      <h1 className="text-[30px] sm:text-[38px] font-bold tracking-tight leading-[1.05]">{t("empty.h1a")}<br />{t("empty.h1b")}</h1>
-      <p className="mt-4 max-w-md mx-auto text-[15px] text-[#6B6967] dark:text-[#9B9897] leading-relaxed">{t("empty.sub")}</p>
+      <h1 className="text-[24px] sm:text-[28px] font-bold tracking-tight leading-tight">{t("title")}</h1>
+      <p className="mt-2 max-w-md mx-auto text-[14px] text-[#6B6967] dark:text-[#9B9897] leading-relaxed">{t("subtitle")}</p>
 
       {mode === "describe" ? (
         <div className="mt-9 max-w-md mx-auto text-left">
