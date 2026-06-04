@@ -8,7 +8,6 @@
 import { useLocale, useTranslations } from "next-intl";
 import { Globe, Inbox, Mail, MapPin } from "lucide-react";
 import { Link } from "@/i18n/navigation";
-import { AppHeader, DashboardNav } from "@/components/app/app-header";
 
 export interface DashLead {
   id: string;
@@ -24,9 +23,7 @@ export interface DashLead {
 export function MessagesView({ leads }: { leads: DashLead[] }) {
   const t = useTranslations("projects");
   return (
-    <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-[#0a0a0a]">
-      <AppHeader nav={<DashboardNav active="messages" />} />
-      <main className="flex-1 w-full max-w-3xl mx-auto px-4 sm:px-6 py-7 sm:py-9">
+    <main className="flex-1 w-full max-w-3xl mx-auto px-4 sm:px-6 py-7 sm:py-9">
         <div className="mb-6">
           <h1 className="text-[22px] sm:text-[26px] font-bold tracking-tight">
             {t("inbox.title")}
@@ -44,8 +41,7 @@ export function MessagesView({ leads }: { leads: DashLead[] }) {
             ))}
           </div>
         )}
-      </main>
-    </div>
+    </main>
   );
 }
 
