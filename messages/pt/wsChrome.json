@@ -47,8 +47,6 @@
     "toolbar": {
       "editPage": "Editar página (⌘E)",
       "exitEdit": "Sair do modo de edição (⌘E)",
-      "showGrid": "Mostrar grade sobreposta",
-      "hideGrid": "Ocultar grade sobreposta",
       "refresh": "Atualizar pré-visualização",
       "openNewTab": "Abrir em nova aba"
     },

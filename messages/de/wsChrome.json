@@ -47,8 +47,6 @@
     "toolbar": {
       "editPage": "Seite bearbeiten (⌘E)",
       "exitEdit": "Bearbeitungsmodus verlassen (⌘E)",
-      "showGrid": "Raster einblenden",
-      "hideGrid": "Raster ausblenden",
       "refresh": "Vorschau aktualisieren",
       "openNewTab": "In neuem Tab öffnen"
     },

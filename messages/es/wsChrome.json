@@ -47,8 +47,6 @@
     "toolbar": {
       "editPage": "Editar página (⌘E)",
       "exitEdit": "Salir del modo edición (⌘E)",
-      "showGrid": "Mostrar cuadrícula",
-      "hideGrid": "Ocultar cuadrícula",
       "refresh": "Actualizar vista previa",
       "openNewTab": "Abrir en una pestaña nueva"
     },

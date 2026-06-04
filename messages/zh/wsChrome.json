@@ -47,8 +47,6 @@
     "toolbar": {
       "editPage": "编辑页面（⌘E）",
       "exitEdit": "退出编辑模式（⌘E）",
-      "showGrid": "显示网格叠加层",
-      "hideGrid": "隐藏网格叠加层",
       "refresh": "刷新预览",
       "openNewTab": "在新标签页中打开"
     },

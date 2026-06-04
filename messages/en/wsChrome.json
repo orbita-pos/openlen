@@ -47,8 +47,6 @@
     "toolbar": {
       "editPage": "Edit page (⌘E)",
       "exitEdit": "Exit edit mode (⌘E)",
-      "showGrid": "Show grid overlay",
-      "hideGrid": "Hide grid overlay",
       "refresh": "Refresh preview",
       "openNewTab": "Open in new tab"
     },

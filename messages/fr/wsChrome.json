@@ -47,8 +47,6 @@
     "toolbar": {
       "editPage": "Modifier la page (⌘E)",
       "exitEdit": "Quitter le mode édition (⌘E)",
-      "showGrid": "Afficher la grille",
-      "hideGrid": "Masquer la grille",
       "refresh": "Actualiser l'aperçu",
       "openNewTab": "Ouvrir dans un nouvel onglet"
     },
