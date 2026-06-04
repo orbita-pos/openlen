@@ -167,5 +167,11 @@
     "confirmLabel": "输入 {name} 以确认",
     "cancel": "取消",
     "confirm": "删除页面"
+  },
+  "stats": {
+    "views": "浏览",
+    "messages": "消息",
+    "none": "暂无访问",
+    "rangeTip": "最近 7 天"
   }
 }

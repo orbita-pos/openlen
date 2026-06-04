@@ -49,6 +49,9 @@ export interface ProjectSummary {
   /** The business this page belongs to (FK → businessProfiles). Null only for
    *  legacy pages created before the default-business model. */
   profileId: string | null;
+  /** Results-loop stats (visits/clicks/leads in a recent window). Populated by
+   *  the /projects + /business pages, not by listProjects itself. */
+  stats?: { views: number; clicks: number; leads: number };
   createdAt: Date;
   updatedAt: Date;
 }

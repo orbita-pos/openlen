@@ -22,11 +22,13 @@ import {
   Copy,
   Download,
   ExternalLink,
+  Eye,
   Globe,
   Grid3x3,
   Layers,
   List,
   Loader2,
+  Mail,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -1127,6 +1129,33 @@ function ProjectCard({
             </>
           ) : null}
         </div>
+        {project.subdomain &&
+          (project.stats &&
+          (project.stats.views > 0 || project.stats.leads > 0) ? (
+            <div
+              className="mt-2 flex items-center gap-3 text-[11px]"
+              title={t("stats.rangeTip")}
+            >
+              <span
+                className="inline-flex items-center gap-1 text-zinc-500 dark:text-zinc-400"
+                aria-label={t("stats.views")}
+              >
+                <Eye size={12} /> {project.stats.views}
+              </span>
+              {project.stats.leads > 0 && (
+                <span
+                  className="inline-flex items-center gap-1 text-coral-600 dark:text-coral-400 font-medium"
+                  aria-label={t("stats.messages")}
+                >
+                  <Mail size={12} /> {project.stats.leads}
+                </span>
+              )}
+            </div>
+          ) : (
+            <div className="mt-2 text-[11px] text-zinc-400 dark:text-zinc-500">
+              {t("stats.none")}
+            </div>
+          ))}
         {project.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
             {project.tags.slice(0, 3).map((t) => (
@@ -1259,6 +1288,30 @@ function ProjectRow({
           <Tag key={t}>{t}</Tag>
         ))}
       </div>
+
+      {project.subdomain &&
+        project.stats &&
+        (project.stats.views > 0 || project.stats.leads > 0) && (
+          <div
+            className="hidden md:flex shrink-0 items-center gap-2.5 text-[11px] w-20 justify-end"
+            title={t("stats.rangeTip")}
+          >
+            <span
+              className="inline-flex items-center gap-1 text-zinc-500 dark:text-zinc-400"
+              aria-label={t("stats.views")}
+            >
+              <Eye size={12} /> {project.stats.views}
+            </span>
+            {project.stats.leads > 0 && (
+              <span
+                className="inline-flex items-center gap-1 text-coral-600 dark:text-coral-400 font-medium"
+                aria-label={t("stats.messages")}
+              >
+                <Mail size={12} /> {project.stats.leads}
+              </span>
+            )}
+          </div>
+        )}
 
       <div
         suppressHydrationWarning

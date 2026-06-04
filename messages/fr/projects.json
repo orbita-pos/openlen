@@ -167,5 +167,11 @@
     "confirmLabel": "Tapez {name} pour confirmer",
     "cancel": "Annuler",
     "confirm": "Supprimer la page"
+  },
+  "stats": {
+    "views": "Vues",
+    "messages": "Messages",
+    "none": "Aucune visite pour l’instant",
+    "rangeTip": "7 derniers jours"
   }
 }

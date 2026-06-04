@@ -167,5 +167,11 @@
     "confirmLabel": "Typ {name} om te bevestigen",
     "cancel": "Annuleren",
     "confirm": "Pagina verwijderen"
+  },
+  "stats": {
+    "views": "Weergaven",
+    "messages": "Berichten",
+    "none": "Nog geen bezoeken",
+    "rangeTip": "Laatste 7 dagen"
   }
 }

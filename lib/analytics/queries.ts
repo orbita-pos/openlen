@@ -86,6 +86,72 @@ function whereClause(projectId: string, since: Date | null) {
   return eq(schema.pageEvents.projectId, projectId);
 }
 
+// ── results-loop: batched per-project stats for the dashboard cards ─────────
+
+export interface ProjectStat {
+  views: number;
+  clicks: number;
+  leads: number;
+}
+
+/** Per-project {views, clicks, leads} for ALL of a user's projects in the last
+ *  `sinceDays` — one grouped query each for events + leads (no N+1), scoped by
+ *  ownership. Powers the inline stat strip on /projects + /business cards. */
+export async function getProjectStatsForUser(
+  userId: string,
+  sinceDays: number,
+): Promise<Map<string, ProjectStat>> {
+  const since = new Date(Date.now() - sinceDays * DAY_MS);
+  const [events, leads] = await Promise.all([
+    db
+      .select({
+        projectId: schema.pageEvents.projectId,
+        views: sql<number>`COUNT(*) FILTER (WHERE ${schema.pageEvents.type} = 'view')::int`,
+        clicks: sql<number>`COUNT(*) FILTER (WHERE ${schema.pageEvents.type} = 'click')::int`,
+      })
+      .from(schema.pageEvents)
+      .innerJoin(
+        schema.projects,
+        eq(schema.pageEvents.projectId, schema.projects.id),
+      )
+      .where(
+        and(eq(schema.projects.userId, userId), gte(schema.pageEvents.ts, since)),
+      )
+      .groupBy(schema.pageEvents.projectId),
+    db
+      .select({
+        projectId: schema.formSubmissions.projectId,
+        leads: sql<number>`COUNT(*)::int`,
+      })
+      .from(schema.formSubmissions)
+      .innerJoin(
+        schema.projects,
+        eq(schema.formSubmissions.projectId, schema.projects.id),
+      )
+      .where(
+        and(
+          eq(schema.projects.userId, userId),
+          gte(schema.formSubmissions.createdAt, since),
+        ),
+      )
+      .groupBy(schema.formSubmissions.projectId),
+  ]);
+  const map = new Map<string, ProjectStat>();
+  for (const e of events) {
+    map.set(e.projectId, {
+      views: Number(e.views),
+      clicks: Number(e.clicks),
+      leads: 0,
+    });
+  }
+  for (const l of leads) {
+    const cur = map.get(l.projectId) ?? { views: 0, clicks: 0, leads: 0 };
+    cur.leads = Number(l.leads);
+    map.set(l.projectId, cur);
+  }
+  return map;
+}
+
 /** Headline KPIs: total views, unique visitors, total clicks. */
 async function getTotals(
   projectId: string,

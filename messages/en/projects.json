@@ -167,5 +167,11 @@
     "confirmLabel": "Type {name} to confirm",
     "cancel": "Cancel",
     "confirm": "Delete page"
+  },
+  "stats": {
+    "views": "Views",
+    "messages": "Messages",
+    "none": "No visits yet",
+    "rangeTip": "Last 7 days"
   }
 }

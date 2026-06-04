@@ -167,5 +167,11 @@
     "confirmLabel": "{name} 을(를) 입력하여 확인",
     "cancel": "취소",
     "confirm": "페이지 삭제"
+  },
+  "stats": {
+    "views": "조회",
+    "messages": "메시지",
+    "none": "아직 방문이 없습니다",
+    "rangeTip": "최근 7일"
   }
 }

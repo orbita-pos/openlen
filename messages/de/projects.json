@@ -167,5 +167,11 @@
     "confirmLabel": "Tippe {name} zum Bestätigen",
     "cancel": "Abbrechen",
     "confirm": "Seite löschen"
+  },
+  "stats": {
+    "views": "Aufrufe",
+    "messages": "Nachrichten",
+    "none": "Noch keine Besuche",
+    "rangeTip": "Letzte 7 Tage"
   }
 }
