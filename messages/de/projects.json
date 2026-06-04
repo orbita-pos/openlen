@@ -133,7 +133,8 @@
     "manageBilling": "Abrechnung verwalten",
     "apiKeys": "API-Schlüssel",
     "comingSoon": "{label} — demnächst verfügbar",
-    "signOut": "Abmelden"
+    "signOut": "Abmelden",
+    "myBusiness": "Mein Unternehmen"
   },
   "creditPill": {
     "tooltip": "{balance} von {allotment} KI-Credits diesen Monat übrig"
@@ -154,5 +155,9 @@
     "subtitle": "Wähle, zu welchem Unternehmen diese Seite gehört.",
     "current": "Aktuell",
     "cancel": "Abbrechen"
+  },
+  "nav": {
+    "myPages": "Meine Seiten",
+    "myBusiness": "Mein Unternehmen"
   }
 }

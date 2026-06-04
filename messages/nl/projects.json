@@ -133,7 +133,8 @@
     "manageBilling": "Facturatie beheren",
     "apiKeys": "API-sleutels",
     "comingSoon": "{label} — binnenkort beschikbaar",
-    "signOut": "Uitloggen"
+    "signOut": "Uitloggen",
+    "myBusiness": "Mijn bedrijf"
   },
   "creditPill": {
     "tooltip": "{balance} van {allotment} AI-credits over deze maand"
@@ -154,5 +155,9 @@
     "subtitle": "Kies bij welk bedrijf deze pagina hoort.",
     "current": "Huidige",
     "cancel": "Annuleren"
+  },
+  "nav": {
+    "myPages": "Mijn pagina's",
+    "myBusiness": "Mijn bedrijf"
   }
 }

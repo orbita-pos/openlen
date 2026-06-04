@@ -37,7 +37,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { AppHeader } from "@/components/app/app-header";
+import { AppHeader, DashboardNav } from "@/components/app/app-header";
 import { cn } from "@/lib/cn";
 import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
 import type { ProjectStatus, ProjectSummary } from "@/lib/projects";
@@ -361,11 +361,7 @@ export function ProjectsView({
   return (
     <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-[#0a0a0a]">
       <AppHeader
-        nav={
-          <span className="hidden md:inline text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
-            {t("header.myPages")}
-          </span>
-        }
+        nav={<DashboardNav active="pages" />}
         actions={
           <Link
             href="/new"

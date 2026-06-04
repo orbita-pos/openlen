@@ -133,7 +133,8 @@
     "manageBilling": "결제 관리",
     "apiKeys": "API 키",
     "comingSoon": "{label} — 곧 출시 예정",
-    "signOut": "로그아웃"
+    "signOut": "로그아웃",
+    "myBusiness": "내 비즈니스"
   },
   "creditPill": {
     "tooltip": "이번 달 남은 AI 크레딧 {balance} / {allotment}개"
@@ -154,5 +155,9 @@
     "subtitle": "이 페이지가 속한 비즈니스를 선택하세요.",
     "current": "현재",
     "cancel": "취소"
+  },
+  "nav": {
+    "myPages": "내 페이지",
+    "myBusiness": "내 비즈니스"
   }
 }

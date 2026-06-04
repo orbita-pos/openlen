@@ -133,7 +133,8 @@
     "manageBilling": "お支払いを管理",
     "apiKeys": "API キー",
     "comingSoon": "{label} — 近日公開",
-    "signOut": "サインアウト"
+    "signOut": "サインアウト",
+    "myBusiness": "マイビジネス"
   },
   "creditPill": {
     "tooltip": "今月の AI クレジット残り {balance} / {allotment}"
@@ -154,5 +155,9 @@
     "subtitle": "このページが属するビジネスを選んでください。",
     "current": "現在",
     "cancel": "キャンセル"
+  },
+  "nav": {
+    "myPages": "マイページ",
+    "myBusiness": "マイビジネス"
   }
 }

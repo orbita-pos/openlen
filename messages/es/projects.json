@@ -133,7 +133,8 @@
     "manageBilling": "Gestionar facturación",
     "apiKeys": "Claves API",
     "comingSoon": "{label} — próximamente",
-    "signOut": "Cerrar sesión"
+    "signOut": "Cerrar sesión",
+    "myBusiness": "Mi negocio"
   },
   "creditPill": {
     "tooltip": "Te quedan {balance} de {allotment} créditos de IA este mes"
@@ -154,5 +155,9 @@
     "subtitle": "Elige a qué negocio pertenece esta página.",
     "current": "Actual",
     "cancel": "Cancelar"
+  },
+  "nav": {
+    "myPages": "Mis páginas",
+    "myBusiness": "Mi negocio"
   }
 }
