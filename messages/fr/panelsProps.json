@@ -21,7 +21,22 @@
   "style": {
     "title": "Style",
     "textColor": "Couleur du texte",
-    "background": "Arrière-plan"
+    "background": "Arrière-plan",
+    "fillImage": "Remplir d'une image",
+    "changeImage": "Changer l'image",
+    "removeImage": "Retirer",
+    "gradientHint": "A un dégradé — une couleur unie ou une image le remplace",
+    "border": "Bordure",
+    "borderColor": "Couleur de bordure",
+    "borderWidth": "Épaisseur de bordure",
+    "text": "Texte",
+    "bold": "Gras",
+    "italic": "Italique",
+    "align": {
+      "left": "Aligner à gauche",
+      "center": "Centrer",
+      "right": "Aligner à droite"
+    }
   },
   "form": {
     "title": "Formulaire",

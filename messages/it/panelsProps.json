@@ -21,7 +21,22 @@
   "style": {
     "title": "Stile",
     "textColor": "Colore del testo",
-    "background": "Sfondo"
+    "background": "Sfondo",
+    "fillImage": "Riempi con immagine",
+    "changeImage": "Cambia immagine",
+    "removeImage": "Rimuovi",
+    "gradientHint": "Ha una sfumatura — un colore pieno o un'immagine la sostituisce",
+    "border": "Bordo",
+    "borderColor": "Colore bordo",
+    "borderWidth": "Spessore bordo",
+    "text": "Testo",
+    "bold": "Grassetto",
+    "italic": "Corsivo",
+    "align": {
+      "left": "Allinea a sinistra",
+      "center": "Centra",
+      "right": "Allinea a destra"
+    }
   },
   "form": {
     "title": "Modulo",

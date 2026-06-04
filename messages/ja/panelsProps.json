@@ -21,7 +21,22 @@
   "style": {
     "title": "スタイル",
     "textColor": "テキストの色",
-    "background": "背景"
+    "background": "背景",
+    "fillImage": "画像で塗りつぶす",
+    "changeImage": "画像を変更",
+    "removeImage": "削除",
+    "gradientHint": "グラデーションあり — 単色や画像で置き換わります",
+    "border": "枠線",
+    "borderColor": "枠線の色",
+    "borderWidth": "枠線の太さ",
+    "text": "テキスト",
+    "bold": "太字",
+    "italic": "斜体",
+    "align": {
+      "left": "左揃え",
+      "center": "中央揃え",
+      "right": "右揃え"
+    }
   },
   "form": {
     "title": "フォーム",

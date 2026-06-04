@@ -21,7 +21,22 @@
   "style": {
     "title": "Style",
     "textColor": "Text color",
-    "background": "Background"
+    "background": "Background",
+    "fillImage": "Fill with image",
+    "changeImage": "Change image",
+    "removeImage": "Remove",
+    "gradientHint": "Has a gradient — a solid color or image replaces it",
+    "border": "Border",
+    "borderColor": "Border color",
+    "borderWidth": "Border width",
+    "text": "Text",
+    "bold": "Bold",
+    "italic": "Italic",
+    "align": {
+      "left": "Align left",
+      "center": "Align center",
+      "right": "Align right"
+    }
   },
   "form": {
     "title": "Form",

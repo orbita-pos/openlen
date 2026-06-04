@@ -21,7 +21,22 @@
   "style": {
     "title": "Stil",
     "textColor": "Textfarbe",
-    "background": "Hintergrund"
+    "background": "Hintergrund",
+    "fillImage": "Mit Bild füllen",
+    "changeImage": "Bild ändern",
+    "removeImage": "Entfernen",
+    "gradientHint": "Hat einen Verlauf — eine Volltonfarbe oder ein Bild ersetzt ihn",
+    "border": "Rahmen",
+    "borderColor": "Rahmenfarbe",
+    "borderWidth": "Rahmenbreite",
+    "text": "Text",
+    "bold": "Fett",
+    "italic": "Kursiv",
+    "align": {
+      "left": "Linksbündig",
+      "center": "Zentriert",
+      "right": "Rechtsbündig"
+    }
   },
   "form": {
     "title": "Formular",
