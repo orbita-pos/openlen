@@ -74,13 +74,13 @@ export function AiBriefPanel({
           <div className="grid grid-cols-2 gap-1.5">
             {QUICK_PROMPTS.map((p) => (
               <button
-                key={p.label}
+                key={p.key}
                 type="button"
                 disabled={generating}
                 onClick={() => state.setPrompt(p.prompt)}
                 className="text-left text-[11.5px] fg leading-tight px-2.5 py-2 rounded-md ring-1 ring-[color:var(--border)] bg-[color:var(--bg)] hover:bg-hover hover:ring-[color:var(--border-strong)] transition disabled:opacity-50"
               >
-                {p.label}
+                {t(`quickPrompts.${p.key}`)}
               </button>
             ))}
           </div>

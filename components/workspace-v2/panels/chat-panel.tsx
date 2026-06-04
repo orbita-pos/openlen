@@ -403,11 +403,14 @@ function AIDesignChat({
   );
 
   const send = useCallback(
-    async (rawPrompt: string) => {
+    async (rawPrompt: string, imageOverride?: AttachedImage | null) => {
       const prompt = rawPrompt.trim();
       if (!prompt || sending) return;
       if (prompt.length > 2000) return;
 
+      // imageOverride lets Retry re-send the failed turn's original image;
+      // undefined = use the live composer image, null = explicitly none.
+      const img = imageOverride !== undefined ? imageOverride : attachedImage;
       const preEditHtml = projectHtmlRef.current;
       const turnId =
         typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -417,7 +420,7 @@ function AIDesignChat({
       const newTurn: DesignTurn = {
         id: turnId,
         userText: prompt,
-        attachedImage: attachedImage ?? undefined,
+        attachedImage: img ?? undefined,
         assistantReasoning: "",
         status: "streaming",
         preEditHtml,
@@ -480,9 +483,7 @@ function AIDesignChat({
         : null;
       // Same snapshot discipline for any attached image — the in-flight
       // request keeps the one that was set when Send fired.
-      const turnImage = attachedImage
-        ? { url: attachedImage.url, alt: attachedImage.alt }
-        : null;
+      const turnImage = img ? { url: img.url, alt: img.alt } : null;
 
       try {
         const res = await fetch("/api/templates/ai-design", {
@@ -645,6 +646,10 @@ function AIDesignChat({
         });
       } catch (err) {
         clearFlush();
+        // Roll the iframe back to the pre-edit page — a cancel/abort lands here
+        // mid Mode-B drip and would otherwise leave a truncated document onscreen
+        // (the error/noFinalHtml branches above already revert; this one didn't).
+        if (lastFlushedLen > 0) onLocalUpdate(preEditHtml);
         if (abort.signal.aborted) {
           updateTurn(turnId, {
             status: "error",
@@ -679,7 +684,9 @@ function AIDesignChat({
   const handleRetry = useCallback(
     (turn: DesignTurn) => {
       setTurns((prev) => prev.filter((t) => t.id !== turn.id));
-      void send(turn.userText);
+      // Re-send with the turn's ORIGINAL image (the live composer was cleared
+      // after the first send), so a vision/image edit retries as the same request.
+      void send(turn.userText, turn.attachedImage ?? null);
     },
     [send],
   );

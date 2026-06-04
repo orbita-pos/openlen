@@ -11,6 +11,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Monitor, Smartphone, Sparkles, X } from "./icons";
+import { useFocusTrap } from "./use-focus-trap";
 import type { SectionSpec } from "./sections-data";
 
 type Device = "desktop" | "mobile";
@@ -38,6 +39,7 @@ export function SectionPreviewModal({
   const [device, setDevice] = useState<Device>("desktop");
   const stageRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const trapRef = useFocusTrap(true);
 
   // Esc closes (but not mid-commit).
   useEffect(() => {
@@ -73,6 +75,7 @@ export function SectionPreviewModal({
       }}
     >
       <div
+        ref={trapRef}
         role="dialog"
         aria-modal="true"
         aria-label={section.variantLabel}

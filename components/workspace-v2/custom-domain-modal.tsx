@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useFocusTrap } from "./use-focus-trap";
 import {
   AlertCircle,
   CheckCircle2,
@@ -409,10 +410,13 @@ export function CustomDomainModal({
     }
   };
 
+  const trapRef = useFocusTrap(open);
+
   if (!open) return null;
 
   return (
     <div
+      ref={trapRef}
       role="dialog"
       aria-modal="true"
       className="fixed inset-0 z-[100] flex items-center justify-center p-4"

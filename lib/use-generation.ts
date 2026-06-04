@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { AIModel } from "@/lib/ai-provider";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -39,6 +39,10 @@ const SILENCE_TIMEOUT_MS = 780_000;
 export function useGeneration(): UseGenerationResult {
   const [state, setState] = useState<GenerationState>({ kind: "idle" });
   const abortRef = useRef<AbortController | null>(null);
+
+  // Abort any in-flight stream on unmount so a generation the user walked away
+  // from stops server-side (saves Gemini credits / metered usage).
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   const generate = useCallback(async (brief: string, model: AIModel = "gemini-pro") => {
     // Cancel any in-flight generation before starting a new one.
