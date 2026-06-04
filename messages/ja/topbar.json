@@ -48,6 +48,7 @@
   "account": {
     "fallbackName": "アカウント",
     "allProjects": "すべてのプロジェクト",
+    "manageProfiles": "私のお店",
     "signOut": "サインアウト"
   },
   "relativeTime": {

@@ -118,6 +118,15 @@
       "extract": "읽어 오지 못했어요 — 다른 자료로 시도하거나 직접 입력해 주세요.",
       "name": "이 비즈니스에 이름을 지어 주세요.",
       "save": "저장하지 못했어요 — 다시 시도해 주세요."
+    },
+    "manage": {
+      "title": "내 비즈니스 목록",
+      "empty": "아직 저장된 비즈니스가 없어요.",
+      "edit": "수정",
+      "delete": "삭제",
+      "deleteConfirm": "{name}을(를) 삭제할까요?",
+      "setDefault": "기본으로 설정",
+      "isDefault": "기본"
     }
   },
   "profilePicker": {

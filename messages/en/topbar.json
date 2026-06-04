@@ -48,6 +48,7 @@
   "account": {
     "fallbackName": "Account",
     "allProjects": "All projects",
+    "manageProfiles": "My business",
     "signOut": "Sign out"
   },
   "relativeTime": {

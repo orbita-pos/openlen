@@ -118,6 +118,15 @@
       "extract": "Das konnte ich nicht auslesen — probier eine andere Quelle oder trag es von Hand ein.",
       "name": "Gib diesem Unternehmen einen Namen.",
       "save": "Konnte nicht gespeichert werden — versuch es erneut."
+    },
+    "manage": {
+      "title": "Meine Unternehmen",
+      "empty": "Noch keine Unternehmen gespeichert.",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "deleteConfirm": "{name} löschen?",
+      "setDefault": "Als Standard festlegen",
+      "isDefault": "Standard"
     }
   },
   "profilePicker": {

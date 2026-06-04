@@ -48,6 +48,7 @@
   "account": {
     "fallbackName": "账户",
     "allProjects": "所有项目",
+    "manageProfiles": "我的店铺",
     "signOut": "退出登录"
   },
   "relativeTime": {
