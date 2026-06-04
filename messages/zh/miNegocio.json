@@ -99,6 +99,10 @@
     "empty": "此业务还没有页面。",
     "draft": "草稿",
     "emptyCta": "创建页面",
-    "newBiz": "保存此业务以查看其页面。"
+    "newBiz": "保存此业务以查看其页面。",
+    "live": "已发布",
+    "viewPublished": "查看已发布",
+    "newPage": "新建页面",
+    "viewAll": "查看全部"
   }
 }

@@ -269,6 +269,7 @@ export default function BusinessPage() {
   }, [load]);
 
   const active = data.find((p) => p.id === activeId) ?? null;
+  const compact = pages.length > 3;
 
   // Load the active business's pages (saved businesses only).
   useEffect(() => {
@@ -581,10 +582,18 @@ export default function BusinessPage() {
                   <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#FAFAF9] dark:bg-white/5 ring-1 ring-[#E5E3E1] dark:ring-white/10 text-[#1A1A1A] dark:text-[#F4F4F3]">
                     <LayoutIcon size={17} />
                   </span>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <h2 className="text-[15px] font-semibold tracking-tight leading-tight">{t("pages.title")}</h2>
                     <p className="text-[12.5px] text-[#8A8784] dark:text-[#9B9897] mt-0.5 leading-snug">{t("pages.hint")}</p>
                   </div>
+                  {!active.isNew && pages.length > 0 && (
+                    <Link
+                      href={`/${locale}/new?mode=ai&profile=${active.id}`}
+                      className="inline-flex items-center gap-1 h-8 px-2.5 rounded-lg bg-coral-50 dark:bg-coral-500/15 text-coral-700 dark:text-coral-300 text-[12px] font-semibold hover:bg-coral-100 dark:hover:bg-coral-500/25 transition shrink-0"
+                    >
+                      <Plus size={13} /> {t("pages.newPage")}
+                    </Link>
+                  )}
                 </div>
                 {active.isNew ? (
                   <p className="text-[13px] text-[#A8A5A2] dark:text-[#7C7977] py-2">{t("pages.newBiz")}</p>
@@ -593,38 +602,26 @@ export default function BusinessPage() {
                 ) : pages.length === 0 ? (
                   <div className="text-center py-6">
                     <p className="text-[13px] text-[#A8A5A2] dark:text-[#7C7977] mb-3">{t("pages.empty")}</p>
-                    <Link href={`/${locale}/new`} className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-coral-600 text-white text-[13px] font-semibold hover:bg-coral-700 transition">
+                    <Link href={`/${locale}/new?mode=ai&profile=${active.id}`} className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-coral-600 text-white text-[13px] font-semibold hover:bg-coral-700 transition">
                       <Plus size={14} /> {t("pages.emptyCta")}
                     </Link>
                   </div>
                 ) : (
-                  <div className="space-y-2.5 max-h-[60vh] overflow-y-auto -mx-1 px-1">
-                    {pages.map((pg) => (
+                  <>
+                    <div className={`${compact ? "space-y-1.5" : "space-y-2.5"} max-h-[58vh] overflow-y-auto -mx-1 px-1`}>
+                      {pages.map((pg) => (
+                        <PageRow key={pg.id} pg={pg} compact={compact} />
+                      ))}
+                    </div>
+                    {compact && (
                       <Link
-                        key={pg.id}
-                        href={`/${locale}/new?project=${pg.id}`}
-                        className="block group rounded-xl overflow-hidden ring-1 ring-[#E5E3E1] dark:ring-white/10 hover:ring-coral-300 dark:hover:ring-coral-500/40 hover:shadow-sm transition"
+                        href={`/${locale}/projects`}
+                        className="mt-3 inline-flex items-center gap-1 text-[12px] font-semibold text-coral-700 dark:text-coral-300 hover:opacity-80 transition"
                       >
-                        <div className="aspect-[16/10] bg-[#FAFAF9] dark:bg-white/5 overflow-hidden flex items-center justify-center">
-                          {pg.thumbnailUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={pg.thumbnailUrl} alt="" className="h-full w-full object-cover object-top" />
-                          ) : (
-                            <LayoutIcon size={22} className="text-[#C0BDBA] dark:text-[#5C5957]" />
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 px-3 py-2.5">
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-[13px] font-semibold truncate">{pg.title}</span>
-                            <span className="block text-[11px] text-[#A8A5A2] dark:text-[#7C7977] truncate">
-                              {pg.subdomain ? `${pg.subdomain}.openlen.com` : t("pages.draft")}
-                            </span>
-                          </span>
-                          <ChevronRight size={15} className="text-[#C0BDBA] dark:text-[#5C5957] group-hover:text-coral-500 shrink-0" />
-                        </div>
+                        {t("pages.viewAll")} →
                       </Link>
-                    ))}
-                  </div>
+                    )}
+                  </>
                 )}
               </Card>
             </div>
@@ -641,6 +638,76 @@ export default function BusinessPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ───────── One page row (big card, or compact when many) ───────── */
+function PageRow({ pg, compact }: { pg: PageItem; compact: boolean }) {
+  const t = useTranslations("miNegocio");
+  const locale = useLocale();
+  const editor = `/${locale}/new?project=${pg.id}`;
+  const live = pg.subdomain ? `https://${pg.subdomain}.openlen.com` : null;
+  const badge = live ? (
+    <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-emerald-600 dark:text-emerald-400">
+      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> {t("pages.live")}
+    </span>
+  ) : (
+    <span className="text-[10.5px] font-medium text-[#A8A5A2] dark:text-[#7C7977]">{t("pages.draft")}</span>
+  );
+  const thumb = (size: number) =>
+    pg.thumbnailUrl ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={pg.thumbnailUrl} alt="" className="h-full w-full object-cover object-top" />
+    ) : (
+      <LayoutIcon size={size} className="text-[#C0BDBA] dark:text-[#5C5957]" />
+    );
+
+  if (compact) {
+    return (
+      <div className="flex items-center gap-2.5 rounded-lg p-1.5 ring-1 ring-transparent hover:ring-[#E5E3E1] dark:hover:ring-white/10 hover:bg-[#FAFAF9] dark:hover:bg-white/5 transition">
+        <Link href={editor} className="flex items-center gap-2.5 min-w-0 flex-1 group">
+          <span className="h-9 w-12 shrink-0 rounded-md overflow-hidden ring-1 ring-[#E5E3E1] dark:ring-white/10 bg-[#FAFAF9] dark:bg-white/5 flex items-center justify-center">
+            {thumb(13)}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[12.5px] font-medium truncate group-hover:text-coral-700 dark:group-hover:text-coral-300">{pg.title}</span>
+            <span className="block mt-0.5">{badge}</span>
+          </span>
+        </Link>
+        {live && (
+          <a href={live} target="_blank" rel="noopener noreferrer" title={t("pages.viewPublished")}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#A8A5A2] hover:text-coral-600 hover:bg-coral-50 dark:hover:bg-coral-500/10 transition shrink-0">
+            <Globe size={13} />
+          </a>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl overflow-hidden ring-1 ring-[#E5E3E1] dark:ring-white/10 hover:ring-coral-300 dark:hover:ring-coral-500/40 hover:shadow-sm transition">
+      <Link href={editor} className="block">
+        <div className="aspect-[16/10] bg-[#FAFAF9] dark:bg-white/5 overflow-hidden flex items-center justify-center">
+          {thumb(22)}
+        </div>
+      </Link>
+      <div className="flex items-center gap-2 px-3 py-2.5">
+        <Link href={editor} className="min-w-0 flex-1 group">
+          <span className="block text-[13px] font-semibold truncate group-hover:text-coral-700 dark:group-hover:text-coral-300">{pg.title}</span>
+          <span className="block mt-0.5">{badge}</span>
+        </Link>
+        {live ? (
+          <a href={live} target="_blank" rel="noopener noreferrer" title={t("pages.viewPublished")}
+            className="inline-flex items-center gap-1 h-7 px-2 rounded-md text-[11px] font-medium text-[#6B6967] dark:text-[#9B9897] ring-1 ring-[#E5E3E1] dark:ring-white/10 hover:text-coral-600 hover:ring-coral-300 transition shrink-0">
+            <Globe size={12} /> {t("pages.viewPublished")}
+          </a>
+        ) : (
+          <Link href={editor} className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#C0BDBA] dark:text-[#5C5957] hover:text-coral-500 shrink-0">
+            <ChevronRight size={15} />
+          </Link>
+        )}
+      </div>
     </div>
   );
 }

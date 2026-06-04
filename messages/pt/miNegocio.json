@@ -99,6 +99,10 @@
     "empty": "Ainda não há páginas nesta empresa.",
     "draft": "Rascunho",
     "emptyCta": "Criar uma página",
-    "newBiz": "Salve esta empresa para ver suas páginas."
+    "newBiz": "Salve esta empresa para ver suas páginas.",
+    "live": "No ar",
+    "viewPublished": "Ver publicada",
+    "newPage": "Nova página",
+    "viewAll": "Ver todas"
   }
 }

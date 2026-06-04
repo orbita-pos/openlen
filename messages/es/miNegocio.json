@@ -99,6 +99,10 @@
     "empty": "Aún no tienes páginas en este negocio.",
     "draft": "Borrador",
     "emptyCta": "Crear una página",
-    "newBiz": "Guarda este negocio para ver sus páginas."
+    "newBiz": "Guarda este negocio para ver sus páginas.",
+    "live": "En vivo",
+    "viewPublished": "Ver publicada",
+    "newPage": "Nueva página",
+    "viewAll": "Ver todas"
   }
 }

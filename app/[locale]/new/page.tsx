@@ -156,6 +156,7 @@ function NewV2Inner() {
   const router = useRouter();
   const projectParam = searchParams.get("project");
   const modeParam = searchParams.get("mode");
+  const profileParam = searchParams.get("profile");
 
   // Derive the entry mode from URL state. With ?project=<id> we go straight
   // to editing; with ?mode=<ai|template|paste> we enter that guided flow;
@@ -361,13 +362,18 @@ function NewV2Inner() {
       const json = (await res.json()) as { profiles?: BusinessProfile[] };
       const list = json.profiles ?? [];
       setProfiles(list);
-      setSelectedProfileId(
-        (cur) => cur ?? list.find((p) => p.isDefault)?.id ?? null,
-      );
+      setSelectedProfileId((cur) => {
+        if (cur) return cur;
+        // Honor ?profile=<id> (deep link from /business "Nueva página") when it
+        // resolves to a real business; otherwise the default.
+        if (profileParam && list.some((p) => p.id === profileParam))
+          return profileParam;
+        return list.find((p) => p.isDefault)?.id ?? null;
+      });
     } catch {
       /* network — leave the picker empty */
     }
-  }, []);
+  }, [profileParam]);
   useEffect(() => {
     void refreshProfiles();
   }, [refreshProfiles]);
