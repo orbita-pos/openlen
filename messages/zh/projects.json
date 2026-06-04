@@ -159,5 +159,13 @@
   "nav": {
     "myPages": "我的页面",
     "myBusiness": "我的业务"
+  },
+  "deleteDialog": {
+    "title": "删除此页面？",
+    "body": "这将永久删除“{name}”。无法撤销。",
+    "publishedNote": "其发布在 {domain} 的页面将下线。",
+    "confirmLabel": "输入 {name} 以确认",
+    "cancel": "取消",
+    "confirm": "删除页面"
   }
 }

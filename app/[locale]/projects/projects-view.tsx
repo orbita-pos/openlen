@@ -26,6 +26,7 @@ import {
   Grid3x3,
   Layers,
   List,
+  Loader2,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -118,6 +119,8 @@ export function ProjectsView({
     project: ProjectSummary;
   } | null>(null);
   const [moveTarget, setMoveTarget] = useState<ProjectSummary | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ProjectSummary | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [usageDismissed, setUsageDismissed] = useState(false);
   const [usage, setUsage] = useState<UsageInfo | null>(null);
   const [billingNotice, setBillingNotice] = useState<BillingNotice | null>(null);
@@ -193,12 +196,11 @@ export function ProjectsView({
   }, [router]);
 
   const onDelete = useCallback(
-    async (id: string) => {
-      if (!confirm(t("actions.deleteConfirm"))) return;
+    async (id: string): Promise<boolean> => {
       const res = await fetch(`/api/projects/${id}`, { method: "DELETE" });
       if (!res.ok) {
         alert(t("actions.deleteError", { error: res.statusText }));
-        return;
+        return false;
       }
       setProjects((prev) => prev.filter((p) => p.id !== id));
       setSelected((prev) => {
@@ -207,9 +209,21 @@ export function ProjectsView({
         return next;
       });
       refresh();
+      return true;
     },
     [refresh],
   );
+
+  const confirmDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const ok = await onDelete(deleteTarget.id);
+      if (ok) setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
+    }
+  }, [deleteTarget, onDelete]);
 
   const onArchive = useCallback(
     async (id: string) => {
@@ -483,9 +497,9 @@ export function ProjectsView({
             void onArchive(id);
           }}
           onDelete={() => {
-            const id = menu.project.id;
+            const p = menu.project;
             setMenu(null);
-            void onDelete(id);
+            setDeleteTarget(p);
           }}
           canMove={profiles.length >= 2}
           onMove={() => {
@@ -502,6 +516,15 @@ export function ProjectsView({
           profiles={profiles}
           onPick={(profileId) => void onMove(moveTarget.id, profileId)}
           onClose={() => setMoveTarget(null)}
+        />
+      )}
+
+      {deleteTarget && (
+        <DeleteProjectDialog
+          project={deleteTarget}
+          busy={deleting}
+          onConfirm={() => void confirmDelete()}
+          onClose={() => setDeleteTarget(null)}
         />
       )}
     </div>
@@ -1463,6 +1486,74 @@ function MoveToBusinessModal({
           >
             {t("move.cancel")}
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeleteProjectDialog({
+  project,
+  busy,
+  onConfirm,
+  onClose,
+}: {
+  project: ProjectSummary;
+  busy: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  const t = useTranslations("projects");
+  const [typed, setTyped] = useState("");
+  const name = project.title.trim();
+  const match = typed.trim() === name;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+      <button type="button" aria-label={t("deleteDialog.cancel")} onClick={onClose} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+      <div className="relative w-full max-w-md rounded-2xl bg-white dark:bg-[#0a0a0a] ring-1 ring-zinc-200 dark:ring-zinc-800 shadow-xl">
+        <div className="p-5">
+          <div className="flex items-start gap-3">
+            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/15 text-red-600 dark:text-red-400">
+              <AlertTriangle size={18} />
+            </span>
+            <div className="min-w-0">
+              <h2 className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{t("deleteDialog.title")}</h2>
+              <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mt-1 leading-snug">{t("deleteDialog.body", { name })}</p>
+              {project.subdomain && (
+                <p className="text-[12.5px] text-red-600 dark:text-red-400 mt-1.5 leading-snug">
+                  {t("deleteDialog.publishedNote", { domain: `${project.subdomain}.openlen.com` })}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="mt-4">
+            <label className="block text-[12px] font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">{t("deleteDialog.confirmLabel", { name })}</label>
+            <input
+              autoFocus
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              placeholder={name}
+              className="w-full px-3 h-11 rounded-lg bg-white dark:bg-zinc-950 ring-1 ring-zinc-200 dark:ring-zinc-800 focus:ring-2 focus:ring-red-500 focus:outline-none text-[14px] text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
+            />
+          </div>
+          <div className="mt-5 flex items-center justify-end gap-2">
+            <button type="button" onClick={onClose} className="h-9 px-3.5 rounded-lg text-[13px] font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition">{t("deleteDialog.cancel")}</button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={!match || busy}
+              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-red-600 text-white text-[13px] font-semibold hover:bg-red-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {busy ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} {t("deleteDialog.confirm")}
+            </button>
+          </div>
         </div>
       </div>
     </div>

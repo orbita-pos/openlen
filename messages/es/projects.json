@@ -159,5 +159,13 @@
   "nav": {
     "myPages": "Mis páginas",
     "myBusiness": "Mi negocio"
+  },
+  "deleteDialog": {
+    "title": "¿Eliminar esta página?",
+    "body": "Esto elimina “{name}” de forma permanente. No se puede deshacer.",
+    "publishedNote": "Su página publicada en {domain} se desconectará.",
+    "confirmLabel": "Escribe {name} para confirmar",
+    "cancel": "Cancelar",
+    "confirm": "Eliminar página"
   }
 }
