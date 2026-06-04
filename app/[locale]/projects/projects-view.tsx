@@ -97,7 +97,13 @@ const BILLING_ERROR_CODES: BillingErrorCode[] = [
   "portal_failed",
 ];
 
-export function ProjectsView({ projects: initial }: { projects: ProjectSummary[] }) {
+export function ProjectsView({
+  projects: initial,
+  profiles,
+}: {
+  projects: ProjectSummary[];
+  profiles: BusinessOption[];
+}) {
   const t = useTranslations("projects");
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -111,7 +117,6 @@ export function ProjectsView({ projects: initial }: { projects: ProjectSummary[]
     anchor: DOMRect;
     project: ProjectSummary;
   } | null>(null);
-  const [profiles, setProfiles] = useState<BusinessOption[]>([]);
   const [moveTarget, setMoveTarget] = useState<ProjectSummary | null>(null);
   const [usageDismissed, setUsageDismissed] = useState(false);
   const [usage, setUsage] = useState<UsageInfo | null>(null);
@@ -122,18 +127,6 @@ export function ProjectsView({ projects: initial }: { projects: ProjectSummary[]
     void fetch("/api/usage")
       .then((r) => (r.ok ? (r.json() as Promise<UsageInfo>) : null))
       .then((d) => setUsage(d))
-      .catch(() => {});
-  }, []);
-
-  // The user's businesses — powers "Move to business" (shown only at 2+).
-  useEffect(() => {
-    void fetch("/api/profiles")
-      .then((r) =>
-        r.ok ? (r.json() as Promise<{ profiles: BusinessOption[] }>) : null,
-      )
-      .then((d) => {
-        if (d?.profiles) setProfiles(d.profiles);
-      })
       .catch(() => {});
   }, []);
 
@@ -1328,6 +1321,9 @@ function MenuDropdown({
     { icon: Copy, label: t("menu.duplicate"), onClick: onDuplicate },
     { icon: Pencil, label: t("menu.rename"), onClick: onRename },
     { icon: Download, label: t("menu.downloadZip"), onClick: onDownloadZip },
+    ...(canMove
+      ? [{ icon: Store, label: t("menu.moveToBusiness"), onClick: onMove }]
+      : []),
     // Session 11 — replaces the disabled "Share link — Soon" stub. Two
     // variants: an outbound link to the live subdomain when published, or
     // a route into the workspace with publish=1 to auto-open the modal.
@@ -1348,9 +1344,6 @@ function MenuDropdown({
           onClick: () =>
             window.location.assign(`/new?project=${project.id}`),
         },
-    ...(canMove
-      ? [{ icon: Store, label: t("menu.moveToBusiness"), onClick: onMove }]
-      : []),
     { icon: Archive, label: project.status === "archived" ? t("menu.archived") : t("menu.archive"), onClick: onArchive, disabled: project.status === "archived" },
     { icon: Trash2, label: t("menu.delete"), onClick: onDelete, danger: true },
   ];
@@ -1369,7 +1362,7 @@ function MenuDropdown({
         className="fixed z-50 w-52 rounded-xl bg-white dark:bg-zinc-950 ring-1 ring-zinc-200 dark:ring-zinc-800 shadow-xl p-1"
       >
         {items.map((it, i) => {
-          const sep = i === 4;
+          const sep = i === (canMove ? 5 : 4);
           return (
             <span key={i}>
               {sep && (

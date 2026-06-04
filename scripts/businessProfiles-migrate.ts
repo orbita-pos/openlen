@@ -25,6 +25,21 @@ async function main() {
     sql`CREATE INDEX IF NOT EXISTS "businessProfiles_userId_idx" ON "businessProfiles" ("userId");`,
   );
 
+  // Collapse any pre-existing duplicate defaults (keep the most recent) so the
+  // partial unique index can be created, then enforce one default per user.
+  await db.execute(sql`
+    UPDATE "businessProfiles" b SET "isDefault" = false
+    WHERE "isDefault" = true AND "id" <> (
+      SELECT b2."id" FROM "businessProfiles" b2
+      WHERE b2."userId" = b."userId" AND b2."isDefault" = true
+      ORDER BY b2."updatedAt" DESC, b2."id" DESC
+      LIMIT 1
+    );
+  `);
+  await db.execute(
+    sql`CREATE UNIQUE INDEX IF NOT EXISTS "businessProfiles_userId_default_uq" ON "businessProfiles" ("userId") WHERE "isDefault";`,
+  );
+
   await db.execute(
     sql`ALTER TABLE "projects" ADD COLUMN IF NOT EXISTS "profileId" text;`,
   );

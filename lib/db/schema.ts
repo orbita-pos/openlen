@@ -201,7 +201,14 @@ export const businessProfiles = pgTable(
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
   },
-  (table) => [index("businessProfiles_userId_idx").on(table.userId)],
+  (table) => [
+    index("businessProfiles_userId_idx").on(table.userId),
+    // At most one default business per user (partial unique) — guards the
+    // ensureDefaultProfile create-race at the DB level.
+    uniqueIndex("businessProfiles_userId_default_uq")
+      .on(table.userId)
+      .where(sqlOp`"isDefault"`),
+  ],
 );
 
 // Per-project version history. Each row snapshots a moment in the project's

@@ -134,13 +134,24 @@ async function clearDefault(userId: string): Promise<void> {
 export async function ensureDefaultProfile(
   userId: string,
 ): Promise<BusinessProfile> {
-  const existing = await listProfiles(userId); // sorted isDefault-first
-  if (existing.length > 0) return existing[0];
-  return createProfile(userId, {
-    name: "Mi negocio",
-    data: normalizeProfileData({}),
-    isDefault: true,
-  });
+  const existing = await listProfiles(userId); // isDefault-desc, updatedAt-desc
+  const current = existing[0];
+  if (current?.isDefault) return current;
+  // Profiles exist but none is marked default (legacy / cleared) — promote one.
+  if (current) return (await setDefaultProfile(userId, current.id)) ?? current;
+  // No profiles yet — create the default. The partial unique index makes the
+  // create race-safe: a concurrent first-create loses the insert, so refetch.
+  try {
+    return await createProfile(userId, {
+      name: "Mi negocio",
+      data: normalizeProfileData({}),
+      isDefault: true,
+    });
+  } catch {
+    const after = await listProfiles(userId);
+    if (after[0]) return after[0];
+    throw new Error("ensureDefaultProfile: could not create or find a default");
+  }
 }
 
 // Which business a newly created page belongs to: the explicitly picked one

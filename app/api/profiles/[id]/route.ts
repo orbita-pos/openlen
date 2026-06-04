@@ -1,9 +1,11 @@
 import { auth } from "@/auth";
 import {
   deleteProfile,
+  ensureDefaultProfile,
   setDefaultProfile,
   updateProfile,
 } from "@/lib/business-profiles/store";
+import { reassignNullProjects } from "@/lib/projects";
 import { normalizeProfileData } from "@/lib/business-profiles/normalize";
 
 // PATCH  /api/profiles/[id]  — update { name?, data? } OR { setDefault: true }
@@ -61,6 +63,11 @@ export async function DELETE(
   const { id } = await params;
   const ok = await deleteProfile(session.user.id, id);
   if (!ok) return json(404, { error: "profile not found" });
+  // ON DELETE SET NULL orphaned this profile's pages — re-home them (and any
+  // legacy null-profile pages) onto the user's default so every page keeps a
+  // business.
+  const def = await ensureDefaultProfile(session.user.id);
+  await reassignNullProjects(session.user.id, def.id);
   return json(200, { ok: true });
 }
 
