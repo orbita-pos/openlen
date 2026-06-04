@@ -170,7 +170,11 @@ export async function POST(req: Request): Promise<Response> {
         if (profile) {
           themed = injectContactWidget(themed, profile.data, brandAccent ?? "#FF5A36");
         }
-        const finalHtml = ensurePageMeta(themed, { title });
+        const finalHtml = ensurePageMeta(themed, {
+          title,
+          logoUrl: profile?.data.brand?.logoUrl ?? undefined,
+          ogImage: profile?.data.photos?.[0] ?? undefined,
+        });
 
         // 5. Reserved-marker guard + sanitize (defense in depth, like from-html).
         const sanitized = sanitizeForPublish(finalHtml);
@@ -196,6 +200,7 @@ export async function POST(req: Request): Promise<Response> {
             tags: ["curated"],
             status: "draft",
             profileId: profile ? profile.id : null,
+            logoUrl: profile?.data.brand?.logoUrl ?? null,
             data: { html: cleanHtml },
           });
         } catch (err) {

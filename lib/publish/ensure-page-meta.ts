@@ -22,6 +22,17 @@ export interface EnsurePageMetaOptions {
    *  og:image initial when the document carries no non-empty <title> of its
    *  own. Falls back to the first <h1>, then "Untitled page". */
   title?: string;
+  /** Business-profile logo (http(s)/data URL). When set + the page has no
+   *  favicon, it becomes the favicon instead of the default coral-initial mark
+   *  — so a profile's logo flows to the page automatically. */
+  logoUrl?: string;
+  /** Preferred og:image fallback (e.g. a profile photo) when the page itself
+   *  carries no absolute hero image. */
+  ogImage?: string;
+}
+
+function isMediaUrl(u?: string): u is string {
+  return typeof u === "string" && /^(https?:\/\/|data:)/i.test(u.trim());
 }
 
 /** Fill in any missing core <head> metadata. Returns the HTML unchanged when
@@ -66,16 +77,19 @@ export function ensurePageMeta(
 
   if (!hasMeta(out, "property", "og:image")) {
     const hero = firstAbsoluteImage(out);
-    const ogImage = hero || defaultOgCardDataUrl(effectiveTitle);
+    const ogImage =
+      hero ||
+      (isMediaUrl(opts.ogImage) ? opts.ogImage.trim() : defaultOgCardDataUrl(effectiveTitle));
     additions.push(
       `<meta property="og:image" content="${escAttr(ogImage)}" />`,
     );
   }
 
   if (!hasFavicon(out)) {
-    additions.push(
-      `<link rel="icon" href="${escAttr(defaultFaviconDataUrl(effectiveTitle))}" />`,
-    );
+    const icon = isMediaUrl(opts.logoUrl)
+      ? opts.logoUrl.trim()
+      : defaultFaviconDataUrl(effectiveTitle);
+    additions.push(`<link rel="icon" href="${escAttr(icon)}" />`);
   }
 
   if (additions.length === 0) return out;
