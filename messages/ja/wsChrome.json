@@ -47,8 +47,6 @@
     "toolbar": {
       "editPage": "ページを編集（⌘E）",
       "exitEdit": "編集モードを終了（⌘E）",
-      "showGrid": "グリッドを表示",
-      "hideGrid": "グリッドを非表示",
       "refresh": "プレビューを更新",
       "openNewTab": "新しいタブで開く"
     },

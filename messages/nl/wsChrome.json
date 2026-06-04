@@ -47,8 +47,6 @@
     "toolbar": {
       "editPage": "Pagina bewerken (⌘E)",
       "exitEdit": "Bewerkmodus verlaten (⌘E)",
-      "showGrid": "Rasteroverlay tonen",
-      "hideGrid": "Rasteroverlay verbergen",
       "refresh": "Voorbeeld vernieuwen",
       "openNewTab": "Openen in nieuw tabblad"
     },

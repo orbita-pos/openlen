@@ -7,7 +7,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   ExternalLink,
-  Grid3,
   Monitor,
   Pencil,
   RefreshCw,
@@ -118,7 +117,6 @@ export function PreviewArea({
   const t = useTranslations("wsChrome");
   const [device, setDevice] = useState<Device>("desktop");
   const [zoom, setZoom] = useState<Zoom>("fit");
-  const [gridOverlay, setGridOverlay] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeLocalRef = useRef<HTMLIFrameElement | null>(null);
@@ -358,18 +356,6 @@ export function PreviewArea({
             </IconBtn>
           )}
           <IconBtn
-            label={
-              gridOverlay
-                ? t("preview.toolbar.hideGrid")
-                : t("preview.toolbar.showGrid")
-            }
-            size="sm"
-            active={gridOverlay}
-            onClick={() => setGridOverlay((g) => !g)}
-          >
-            <Grid3 size={12} />
-          </IconBtn>
-          <IconBtn
             label={t("preview.toolbar.refresh")}
             size="sm"
             onClick={() => setRefreshTick((tick) => tick + 1)}
@@ -495,15 +481,6 @@ export function PreviewArea({
                 background: pageBg,
               }}
             />
-            {gridOverlay && (
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  backgroundImage: `linear-gradient(to right, rgba(255,90,54,0.18) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,90,54,0.18) 1px, transparent 1px)`,
-                  backgroundSize: `${64 * scale}px ${64 * scale}px`,
-                }}
-              />
-            )}
           </div>
         </div>
       </div>
