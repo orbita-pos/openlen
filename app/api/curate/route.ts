@@ -18,6 +18,7 @@ import { pickTemplate, pickWeighted, type TemplateCatalogItem } from "@/lib/cura
 import { fillAssembled } from "@/lib/assemble/fill";
 import { getProfile } from "@/lib/business-profiles/store";
 import { applyAccentToHtml } from "@/lib/business-profiles/apply-accent";
+import { injectContactWidget } from "@/lib/business-profiles/contact-widget";
 import type { ExtractedBusinessData } from "@/lib/style-match/autofill/types";
 import type { BusinessProfileData } from "@/lib/business-profiles/types";
 
@@ -162,10 +163,14 @@ export async function POST(req: Request): Promise<Response> {
         // born-canonical normalization exposes --ol-accent for the override.
         const normalized = normalizeBornCanonical(fill.html);
         const brandAccent = profile?.data.brand?.accent;
-        const finalHtml = ensurePageMeta(
-          brandAccent ? applyAccentToHtml(normalized, brandAccent) : normalized,
-          { title },
-        );
+        let themed = brandAccent
+          ? applyAccentToHtml(normalized, brandAccent)
+          : normalized;
+        // Append the profile's contact/links widget so they show on the page.
+        if (profile) {
+          themed = injectContactWidget(themed, profile.data, brandAccent ?? "#FF5A36");
+        }
+        const finalHtml = ensurePageMeta(themed, { title });
 
         // 5. Reserved-marker guard + sanitize (defense in depth, like from-html).
         const sanitized = sanitizeForPublish(finalHtml);
