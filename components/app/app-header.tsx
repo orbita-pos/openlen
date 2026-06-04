@@ -146,6 +146,13 @@ function UserMenu() {
           >
             {t("appHeader.myPages")}
           </Link>
+          <Link
+            href="/business"
+            onClick={() => setOpen(false)}
+            className="flex items-center w-full text-left px-3 py-1.5 rounded-md text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+          >
+            {t("appHeader.myBusiness")}
+          </Link>
           {plan === "pro" && (
             <a
               href={`/api/billing/portal?locale=${locale}`}
@@ -185,5 +192,34 @@ export function HeaderChevron({ className }: { className?: string }) {
     >
       <polyline points="9 18 15 12 9 6" />
     </svg>
+  );
+}
+
+// Shared dashboard nav — the same "Mis páginas · Mi negocio" links on /projects
+// and /business so the two feel like one app. `active` highlights the current.
+export function DashboardNav({ active }: { active: "pages" | "business" }) {
+  const t = useTranslations("projects");
+  const items: { key: "pages" | "business"; href: string; label: string }[] = [
+    { key: "pages", href: "/projects", label: t("nav.myPages") },
+    { key: "business", href: "/business", label: t("nav.myBusiness") },
+  ];
+  return (
+    <nav className="flex items-center gap-0.5">
+      {items.map((it) => (
+        <Link
+          key={it.key}
+          href={it.href}
+          aria-current={active === it.key ? "page" : undefined}
+          className={cn(
+            "px-2.5 h-8 inline-flex items-center rounded-md text-sm font-medium transition",
+            active === it.key
+              ? "bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100"
+              : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-900",
+          )}
+        >
+          {it.label}
+        </Link>
+      ))}
+    </nav>
   );
 }

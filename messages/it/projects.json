@@ -133,7 +133,8 @@
     "manageBilling": "Gestisci fatturazione",
     "apiKeys": "Chiavi API",
     "comingSoon": "{label} — in arrivo",
-    "signOut": "Esci"
+    "signOut": "Esci",
+    "myBusiness": "La mia attività"
   },
   "creditPill": {
     "tooltip": "{balance} di {allotment} crediti AI rimasti questo mese"
@@ -154,5 +155,9 @@
     "subtitle": "Scegli a quale attività appartiene questa pagina.",
     "current": "Attuale",
     "cancel": "Annulla"
+  },
+  "nav": {
+    "myPages": "Le mie pagine",
+    "myBusiness": "La mia attività"
   }
 }

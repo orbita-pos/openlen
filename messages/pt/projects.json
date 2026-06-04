@@ -133,7 +133,8 @@
     "manageBilling": "Gerenciar faturamento",
     "apiKeys": "Chaves de API",
     "comingSoon": "{label} — em breve",
-    "signOut": "Sair"
+    "signOut": "Sair",
+    "myBusiness": "Minha empresa"
   },
   "creditPill": {
     "tooltip": "{balance} de {allotment} créditos de IA restantes este mês"
@@ -154,5 +155,9 @@
     "subtitle": "Escolha a que empresa esta página pertence.",
     "current": "Atual",
     "cancel": "Cancelar"
+  },
+  "nav": {
+    "myPages": "Minhas páginas",
+    "myBusiness": "Minha empresa"
   }
 }

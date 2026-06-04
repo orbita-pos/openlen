@@ -133,7 +133,8 @@
     "manageBilling": "管理账单",
     "apiKeys": "API 密钥",
     "comingSoon": "{label} — 即将推出",
-    "signOut": "退出登录"
+    "signOut": "退出登录",
+    "myBusiness": "我的业务"
   },
   "creditPill": {
     "tooltip": "本月还剩 {balance} / {allotment} AI 积分"
@@ -154,5 +155,9 @@
     "subtitle": "选择此页面所属的业务。",
     "current": "当前",
     "cancel": "取消"
+  },
+  "nav": {
+    "myPages": "我的页面",
+    "myBusiness": "我的业务"
   }
 }

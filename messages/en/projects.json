@@ -133,7 +133,8 @@
     "manageBilling": "Manage billing",
     "apiKeys": "API keys",
     "comingSoon": "{label} — coming soon",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "myBusiness": "My business"
   },
   "creditPill": {
     "tooltip": "{balance} of {allotment} AI credits left this month"
@@ -154,5 +155,9 @@
     "subtitle": "Pick which business this page belongs to.",
     "current": "Current",
     "cancel": "Cancel"
+  },
+  "nav": {
+    "myPages": "My pages",
+    "myBusiness": "My business"
   }
 }
