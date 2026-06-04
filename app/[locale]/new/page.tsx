@@ -29,6 +29,7 @@ import type { BusinessProfile } from "@/lib/business-profiles/types";
 import { CustomDomainModal } from "@/components/workspace-v2/custom-domain-modal";
 import { DeployIntegrationModal } from "@/components/workspace-v2/deploy-integration-modal";
 import { EmptyState } from "@/components/workspace-v2/empty-state";
+import { BusinessSection } from "../business/business-section";
 import {
   LeftSidebar,
   type SidebarMode,
@@ -1411,7 +1412,9 @@ function NewV2Inner() {
             sr-only h1 gives every entry state a top-level heading. */}
         <main className="contents">
         <h1 className="sr-only">{t("a11y.workspaceHeading")}</h1>
-        {centerView !== "page" ? (
+        {centerView === "business" ? (
+          <BusinessSection />
+        ) : centerView !== "page" ? (
           <section className="flex-1 min-w-0 min-h-0 flex items-center justify-center bg-preview-a">
             <div className="text-center px-6">
               <div className="text-[15px] font-semibold fg">
