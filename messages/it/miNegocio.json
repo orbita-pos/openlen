@@ -105,5 +105,12 @@
     "newPage": "Nuova pagina",
     "viewAll": "Vedi tutte"
   },
-  "back": "Indietro"
+  "back": "Indietro",
+  "deleteDialog": {
+    "title": "Eliminare questa attività?",
+    "body": "Questo elimina definitivamente “{name}”. Le sue pagine andranno alla tua attività predefinita.",
+    "confirmLabel": "Digita {name} per confermare",
+    "cancel": "Annulla",
+    "confirm": "Elimina attività"
+  }
 }

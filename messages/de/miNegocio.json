@@ -105,5 +105,12 @@
     "newPage": "Neue Seite",
     "viewAll": "Alle ansehen"
   },
-  "back": "Zurück"
+  "back": "Zurück",
+  "deleteDialog": {
+    "title": "Dieses Unternehmen löschen?",
+    "body": "Dies löscht „{name}“ dauerhaft. Seine Seiten gehen an dein Standardunternehmen.",
+    "confirmLabel": "Tippe {name} zum Bestätigen",
+    "cancel": "Abbrechen",
+    "confirm": "Unternehmen löschen"
+  }
 }

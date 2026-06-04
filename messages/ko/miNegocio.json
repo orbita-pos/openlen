@@ -105,5 +105,12 @@
     "newPage": "새 페이지",
     "viewAll": "모두 보기"
   },
-  "back": "뒤로"
+  "back": "뒤로",
+  "deleteDialog": {
+    "title": "이 비즈니스를 삭제할까요?",
+    "body": "“{name}”을(를) 영구적으로 삭제합니다. 페이지는 기본 비즈니스로 이동합니다.",
+    "confirmLabel": "{name} 을(를) 입력하여 확인",
+    "cancel": "취소",
+    "confirm": "비즈니스 삭제"
+  }
 }

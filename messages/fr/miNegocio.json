@@ -105,5 +105,12 @@
     "newPage": "Nouvelle page",
     "viewAll": "Voir tout"
   },
-  "back": "Retour"
+  "back": "Retour",
+  "deleteDialog": {
+    "title": "Supprimer cette entreprise ?",
+    "body": "Ceci supprime définitivement « {name} ». Ses pages iront vers votre entreprise par défaut.",
+    "confirmLabel": "Tapez {name} pour confirmer",
+    "cancel": "Annuler",
+    "confirm": "Supprimer l’entreprise"
+  }
 }

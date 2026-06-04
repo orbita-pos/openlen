@@ -105,5 +105,12 @@
     "newPage": "新しいページ",
     "viewAll": "すべて見る"
   },
-  "back": "戻る"
+  "back": "戻る",
+  "deleteDialog": {
+    "title": "このビジネスを削除しますか？",
+    "body": "「{name}」を完全に削除します。ページはデフォルトのビジネスに移動します。",
+    "confirmLabel": "{name} と入力して確認",
+    "cancel": "キャンセル",
+    "confirm": "ビジネスを削除"
+  }
 }
