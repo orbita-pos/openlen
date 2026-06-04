@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import {
   createProfile,
+  ensureDefaultProfile,
   listProfiles,
 } from "@/lib/business-profiles/store";
 import { normalizeProfileData } from "@/lib/business-profiles/normalize";
@@ -13,6 +14,9 @@ export const runtime = "nodejs";
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return json(401, { error: "unauthenticated" });
+  // Lazy default: guarantee the user has a business by the time they reach the
+  // profiles list (the /business page or the /new picker both call this).
+  await ensureDefaultProfile(session.user.id);
   const profiles = await listProfiles(session.user.id);
   return json(200, { profiles });
 }

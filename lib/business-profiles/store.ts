@@ -5,6 +5,7 @@
 
 import { and, desc, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { normalizeProfileData } from "./normalize";
 import type { BusinessProfile, BusinessProfileData } from "./types";
 
 export async function listProfiles(userId: string): Promise<BusinessProfile[]> {
@@ -125,4 +126,33 @@ async function clearDefault(userId: string): Promise<void> {
         eq(schema.businessProfiles.isDefault, true),
       ),
     );
+}
+
+// The user's default business, creating an empty one ("Mi negocio") if they
+// have none — so every user always has ≥1 business once they reach the
+// profiles list or create a page. Idempotent.
+export async function ensureDefaultProfile(
+  userId: string,
+): Promise<BusinessProfile> {
+  const existing = await listProfiles(userId); // sorted isDefault-first
+  if (existing.length > 0) return existing[0];
+  return createProfile(userId, {
+    name: "Mi negocio",
+    data: normalizeProfileData({}),
+    isDefault: true,
+  });
+}
+
+// Which business a newly created page belongs to: the explicitly picked one
+// (if it's the user's), else their default (created if missing). Association
+// is never optional — every page gets a business.
+export async function resolveProfileForCreation(
+  userId: string,
+  explicitId?: string | null,
+): Promise<BusinessProfile> {
+  if (explicitId) {
+    const picked = await getProfile(userId, explicitId);
+    if (picked) return picked;
+  }
+  return ensureDefaultProfile(userId);
 }

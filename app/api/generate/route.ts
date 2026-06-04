@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { createProject } from "@/lib/projects";
+import { resolveProfileForCreation } from "@/lib/business-profiles/store";
 import { createVersion } from "@/lib/projects/versions";
 import { getCreditState } from "@/lib/credits";
 import { DESIGN_GUIDANCE, DESIGN_REFERENCE } from "@/lib/design-guidance";
@@ -467,10 +468,12 @@ ${brief}`;
 
         let projectId: string;
         try {
+          const business = await resolveProfileForCreation(userId);
           projectId = await createProject(userId, {
             html,
             brief,
             title,
+            profileId: business.id,
           });
         } catch (err) {
           // eslint-disable-next-line no-console

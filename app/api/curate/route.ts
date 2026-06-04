@@ -16,7 +16,7 @@ import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
 import { listTemplates, getTemplateHtml } from "@/lib/templates/store";
 import { pickTemplate, pickWeighted, type TemplateCatalogItem } from "@/lib/curate/pick-template";
 import { fillAssembled } from "@/lib/assemble/fill";
-import { getProfile } from "@/lib/business-profiles/store";
+import { resolveProfileForCreation } from "@/lib/business-profiles/store";
 import { applyAccentToHtml } from "@/lib/business-profiles/apply-accent";
 import { injectContactWidget } from "@/lib/business-profiles/contact-widget";
 import type { ExtractedBusinessData } from "@/lib/style-match/autofill/types";
@@ -137,8 +137,8 @@ export async function POST(req: Request): Promise<Response> {
 
         // Seed the copy from the user's saved business profile (if one was
         // picked): real info wins, the model's invented copy fills any gaps.
-        const profile = profileId ? await getProfile(userId, profileId) : null;
-        const copy = profile ? overlayProfile(pick.copy, profile.data) : pick.copy;
+        const profile = await resolveProfileForCreation(userId, profileId);
+        const copy = overlayProfile(pick.copy, profile.data);
 
         // 2. Load the chosen template's HTML.
         emit("progress", { stage: "loading" });
@@ -199,7 +199,7 @@ export async function POST(req: Request): Promise<Response> {
             thumbnailUrl: null,
             tags: ["curated"],
             status: "draft",
-            profileId: profile ? profile.id : null,
+            profileId: profile.id,
             logoUrl: profile?.data.brand?.logoUrl ?? null,
             data: { html: cleanHtml },
           });
@@ -275,8 +275,25 @@ function overlayProfile(
   if (data.pricing?.length) out.pricing = data.pricing;
   if (data.testimonials?.length) out.testimonials = data.testimonials;
   if (data.faq_questions?.length) out.faq_questions = data.faq_questions;
-  if (data.contact) out.contact = data.contact;
+  if (data.contact && hasRealContact(data.contact)) out.contact = data.contact;
   return out;
+}
+
+// True only if a profile's contact block has at least one real value — so an
+// EMPTY default profile overlays nothing and keeps the model's invented copy.
+function hasRealContact(c: BusinessProfileData["contact"]): boolean {
+  if (!c) return false;
+  const vals = [
+    c.whatsapp,
+    c.phone,
+    c.email,
+    c.address,
+    c.socials?.instagram,
+    c.socials?.facebook,
+    c.socials?.tiktok,
+    c.socials?.website,
+  ];
+  return vals.some((v) => typeof v === "string" && v.trim().length > 0);
 }
 
 function errorJson(status: number, message: string): Response {
