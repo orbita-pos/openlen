@@ -220,8 +220,6 @@ function defaultFaviconDataUrl(name: string): string {
   return `data:image/svg+xml;base64,${Buffer.from(defaultLogoSvg(name), "utf8").toString("base64")}`;
 }
 
-const CARD_CORAL = "#FF5A36";
-
 /** A 1200×630 social card SVG — cream ground, the project's coral initial
  *  disc, and the (wrapped) title. Base64 so publish-time uploads can host it
  *  as a real image for crawlers. */
@@ -242,8 +240,9 @@ function defaultOgCardSvg(name: string): string {
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">`,
     `<rect width="1200" height="630" fill="#FFFDF9"/>`,
-    `<circle cx="600" cy="262" r="72" fill="${CARD_CORAL}"/>`,
-    `<text x="600" y="262" text-anchor="middle" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="76" fill="#ffffff">${letter}</text>`,
+    `<defs><linearGradient id="olcard" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF7152"/><stop offset="1" stop-color="#F03E1A"/></linearGradient></defs>`,
+    `<rect x="528" y="190" width="144" height="144" rx="34" fill="url(#olcard)"/>`,
+    `<text x="600" y="262" text-anchor="middle" dominant-baseline="central" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="72" fill="#ffffff">${letter}</text>`,
     titleSvg,
     `</svg>`,
   ].join("");
