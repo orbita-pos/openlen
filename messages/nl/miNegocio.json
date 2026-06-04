@@ -97,6 +97,8 @@
     "title": "Je pagina's",
     "hint": "De pagina's die bij dit bedrijf horen.",
     "empty": "Nog geen pagina's in dit bedrijf.",
-    "draft": "Concept"
+    "draft": "Concept",
+    "emptyCta": "Pagina maken",
+    "newBiz": "Sla dit bedrijf op om de pagina's te zien."
   }
 }

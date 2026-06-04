@@ -97,6 +97,8 @@
     "title": "Your pages",
     "hint": "The pages that belong to this business.",
     "empty": "No pages in this business yet.",
-    "draft": "Draft"
+    "draft": "Draft",
+    "emptyCta": "Create a page",
+    "newBiz": "Save this business to see its pages."
   }
 }

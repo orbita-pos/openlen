@@ -97,6 +97,8 @@
     "title": "Tus páginas",
     "hint": "Las páginas que pertenecen a este negocio.",
     "empty": "Aún no tienes páginas en este negocio.",
-    "draft": "Borrador"
+    "draft": "Borrador",
+    "emptyCta": "Crear una página",
+    "newBiz": "Guarda este negocio para ver sus páginas."
   }
 }

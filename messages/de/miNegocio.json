@@ -97,6 +97,8 @@
     "title": "Deine Seiten",
     "hint": "Die Seiten, die zu diesem Unternehmen gehören.",
     "empty": "Noch keine Seiten in diesem Unternehmen.",
-    "draft": "Entwurf"
+    "draft": "Entwurf",
+    "emptyCta": "Seite erstellen",
+    "newBiz": "Speichere dieses Unternehmen, um seine Seiten zu sehen."
   }
 }
