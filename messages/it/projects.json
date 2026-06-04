@@ -159,5 +159,13 @@
   "nav": {
     "myPages": "Le mie pagine",
     "myBusiness": "La mia attività"
+  },
+  "deleteDialog": {
+    "title": "Eliminare questa pagina?",
+    "body": "Questo elimina definitivamente “{name}”. Non può essere annullato.",
+    "publishedNote": "La sua pagina pubblicata su {domain} andrà offline.",
+    "confirmLabel": "Digita {name} per confermare",
+    "cancel": "Annulla",
+    "confirm": "Elimina pagina"
   }
 }

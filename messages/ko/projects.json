@@ -159,5 +159,13 @@
   "nav": {
     "myPages": "내 페이지",
     "myBusiness": "내 비즈니스"
+  },
+  "deleteDialog": {
+    "title": "이 페이지를 삭제할까요?",
+    "body": "“{name}”을(를) 영구적으로 삭제합니다. 되돌릴 수 없습니다.",
+    "publishedNote": "{domain} 에 게시된 페이지가 오프라인이 됩니다.",
+    "confirmLabel": "{name} 을(를) 입력하여 확인",
+    "cancel": "취소",
+    "confirm": "페이지 삭제"
   }
 }

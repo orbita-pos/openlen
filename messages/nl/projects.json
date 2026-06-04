@@ -159,5 +159,13 @@
   "nav": {
     "myPages": "Mijn pagina's",
     "myBusiness": "Mijn bedrijf"
+  },
+  "deleteDialog": {
+    "title": "Deze pagina verwijderen?",
+    "body": "Dit verwijdert “{name}” permanent. Kan niet ongedaan worden gemaakt.",
+    "publishedNote": "De gepubliceerde pagina op {domain} gaat offline.",
+    "confirmLabel": "Typ {name} om te bevestigen",
+    "cancel": "Annuleren",
+    "confirm": "Pagina verwijderen"
   }
 }

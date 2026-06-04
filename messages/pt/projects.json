@@ -159,5 +159,13 @@
   "nav": {
     "myPages": "Minhas páginas",
     "myBusiness": "Minha empresa"
+  },
+  "deleteDialog": {
+    "title": "Excluir esta página?",
+    "body": "Isto exclui “{name}” permanentemente. Não pode ser desfeito.",
+    "publishedNote": "Sua página publicada em {domain} ficará offline.",
+    "confirmLabel": "Digite {name} para confirmar",
+    "cancel": "Cancelar",
+    "confirm": "Excluir página"
   }
 }

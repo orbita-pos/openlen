@@ -159,5 +159,13 @@
   "nav": {
     "myPages": "My pages",
     "myBusiness": "My business"
+  },
+  "deleteDialog": {
+    "title": "Delete this page?",
+    "body": "This permanently deletes “{name}”. This can’t be undone.",
+    "publishedNote": "Its published page at {domain} will go offline.",
+    "confirmLabel": "Type {name} to confirm",
+    "cancel": "Cancel",
+    "confirm": "Delete page"
   }
 }

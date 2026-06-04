@@ -159,5 +159,13 @@
   "nav": {
     "myPages": "Mes pages",
     "myBusiness": "Mon entreprise"
+  },
+  "deleteDialog": {
+    "title": "Supprimer cette page ?",
+    "body": "Ceci supprime définitivement « {name} ». Action irréversible.",
+    "publishedNote": "Sa page publiée sur {domain} sera mise hors ligne.",
+    "confirmLabel": "Tapez {name} pour confirmer",
+    "cancel": "Annuler",
+    "confirm": "Supprimer la page"
   }
 }

@@ -159,5 +159,13 @@
   "nav": {
     "myPages": "Meine Seiten",
     "myBusiness": "Mein Unternehmen"
+  },
+  "deleteDialog": {
+    "title": "Diese Seite löschen?",
+    "body": "Dies löscht „{name}“ dauerhaft. Kann nicht rückgängig gemacht werden.",
+    "publishedNote": "Ihre veröffentlichte Seite unter {domain} geht offline.",
+    "confirmLabel": "Tippe {name} zum Bestätigen",
+    "cancel": "Abbrechen",
+    "confirm": "Seite löschen"
   }
 }

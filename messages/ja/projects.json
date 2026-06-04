@@ -159,5 +159,13 @@
   "nav": {
     "myPages": "マイページ",
     "myBusiness": "マイビジネス"
+  },
+  "deleteDialog": {
+    "title": "このページを削除しますか？",
+    "body": "「{name}」を完全に削除します。元に戻せません。",
+    "publishedNote": "{domain} に公開中のページがオフラインになります。",
+    "confirmLabel": "{name} と入力して確認",
+    "cancel": "キャンセル",
+    "confirm": "ページを削除"
   }
 }
