@@ -1,6 +1,6 @@
 // HTML sanitizer for autofilled output. The user's autofilled HTML eventually
 // gets published to <sub>.openlen.com where visitors will execute whatever
-// JavaScript / event handlers it contains. If Kimi obeyed a malicious image
+// JavaScript / event handlers it contains. If the model obeyed a malicious image
 // or text input (prompt injection), it could emit <script> tags or
 // onclick="..." handlers that compromise visitors.
 //

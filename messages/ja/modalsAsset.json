@@ -165,7 +165,7 @@
     "stages": {
       "extracting": "画像を読み取り中…",
       "tagging": "テンプレートを準備中…",
-      "calling-model": "Kimi K2.6 が作成中…",
+      "calling-model": "コピーを作成中…",
       "applying": "変更を適用中…",
       "persisting": "保存中…",
       "done": "完了",

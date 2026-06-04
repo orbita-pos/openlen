@@ -138,7 +138,7 @@
       "cta": "Repo klonen",
       "features": {
         "0": "AGPLv3 — deins zum Anpassen + Weitergeben",
-        "1": "Eigenen Gemini-/Kimi-API-Key nutzen",
+        "1": "Eigenen Gemini-API-Key nutzen",
         "2": "Eine einzige Hetzner-Box betreibt alles",
         "3": "Wildcard-Subdomain über Caddy",
         "4": "Keine Rechnung, kein Rate-Limit, keine Kontrolle von außen"

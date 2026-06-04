@@ -23,7 +23,7 @@ import {
 // Streams Server-Sent Events:
 //   progress  { stage: "extracting" | "tagging" | "calling-model" | "applying" | "persisting" }
 //   extracted { data: ExtractedBusinessData }                    // only in image mode
-//   delta     { bytes: number }                                  // cumulative Kimi bytes
+//   delta     { bytes: number }                                  // cumulative model bytes
 //   done      { newHtml, appliedOps, totalOps, versionId, durationMs, source }
 //   error     { kind, message }
 
@@ -171,7 +171,7 @@ export async function POST(req: Request) {
       };
 
       try {
-        // Credit gate — autofill is a flat charge (Gemini read + Kimi
+        // Credit gate — autofill is a flat charge (Gemini extract + Gemini
         // fill), debited on success below.
         const { balance } = await getCreditState(userId);
         if (balance < 1) {

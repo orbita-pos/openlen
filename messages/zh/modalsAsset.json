@@ -165,7 +165,7 @@
     "stages": {
       "extracting": "正在读取图片…",
       "tagging": "正在准备模板…",
-      "calling-model": "Kimi K2.6 正在撰写…",
+      "calling-model": "正在撰写文案…",
       "applying": "正在应用更改…",
       "persisting": "正在保存…",
       "done": "完成",
