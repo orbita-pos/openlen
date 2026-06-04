@@ -97,6 +97,8 @@
     "title": "Le tue pagine",
     "hint": "Le pagine che appartengono a questa attività.",
     "empty": "Ancora nessuna pagina in questa attività.",
-    "draft": "Bozza"
+    "draft": "Bozza",
+    "emptyCta": "Crea una pagina",
+    "newBiz": "Salva questa attività per vedere le sue pagine."
   }
 }

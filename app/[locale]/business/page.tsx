@@ -139,10 +139,6 @@ function blankProfile(): LocalProfile {
 }
 
 const inicialDe = (name: string) => (name.trim()[0] || "N").toUpperCase();
-const heroBg = (p: LocalProfile, color: string) =>
-  p.data.photos && p.data.photos[0]
-    ? `url(${p.data.photos[0]}) center/cover`
-    : `linear-gradient(135deg, ${color}, ${color}55)`;
 
 async function uploadAsset(file: File): Promise<string | null> {
   const form = new FormData();
@@ -550,43 +546,6 @@ export default function BusinessPage() {
                 </div>
               </Card>
 
-              {!active.isNew && (
-                <Card className="p-6">
-                  <SectionHead icon={LayoutIcon} title={t("pages.title")} hint={t("pages.hint")} />
-                  {pagesLoading ? (
-                    <p className="text-[13px] text-[#A8A5A2] dark:text-[#7C7977] py-1">{t("loading")}</p>
-                  ) : pages.length === 0 ? (
-                    <p className="text-[13px] text-[#A8A5A2] dark:text-[#7C7977] py-1">{t("pages.empty")}</p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {pages.map((pg) => (
-                        <Link
-                          key={pg.id}
-                          href={`/${locale}/new?project=${pg.id}`}
-                          className="group flex items-center gap-3 rounded-xl p-2 ring-1 ring-transparent hover:ring-[#E5E3E1] dark:hover:ring-white/10 hover:bg-[#FAFAF9] dark:hover:bg-white/5 transition"
-                        >
-                          <span className="h-10 w-14 shrink-0 rounded-lg overflow-hidden ring-1 ring-[#E5E3E1] dark:ring-white/10 bg-[#FAFAF9] dark:bg-white/5 flex items-center justify-center">
-                            {pg.thumbnailUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={pg.thumbnailUrl} alt="" className="h-full w-full object-cover" />
-                            ) : (
-                              <LayoutIcon size={15} className="text-[#C0BDBA] dark:text-[#5C5957]" />
-                            )}
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-[13.5px] font-medium truncate">{pg.title}</span>
-                            <span className="block text-[11.5px] text-[#A8A5A2] dark:text-[#7C7977] truncate">
-                              {pg.subdomain ? `${pg.subdomain}.openlen.com` : t("pages.draft")}
-                            </span>
-                          </span>
-                          <ChevronRight size={15} className="text-[#C0BDBA] dark:text-[#5C5957] group-hover:text-coral-500 shrink-0" />
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </Card>
-              )}
-
               <div className="flex items-center justify-between px-1">
                 <button onClick={() => void makeDefault()} disabled={active.isDefault || active.isNew}
                   className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[#6B6967] dark:text-[#9B9897] hover:text-coral-700 dark:hover:text-coral-300 transition disabled:opacity-40">
@@ -599,13 +558,58 @@ export default function BusinessPage() {
               </div>
             </div>
 
-            <div className="lg:sticky lg:top-[88px] lg:self-start space-y-3">
-              <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-coral-700 dark:text-coral-300">
-                <span className="relative flex h-1.5 w-1.5"><span className="absolute inset-0 rounded-full bg-coral-500 opacity-70 animate-ping" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-coral-500" /></span>
-                {t("preview.badge")}
-              </span>
-              <PreviewHero p={active} />
-              <p className="text-[12px] text-[#A8A5A2] dark:text-[#7C7977] leading-snug px-1">{t("preview.hint")}</p>
+            <div className="lg:sticky lg:top-[88px] lg:self-start">
+              <Card className="p-5">
+                <div className="flex items-start gap-3 mb-4">
+                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#FAFAF9] dark:bg-white/5 ring-1 ring-[#E5E3E1] dark:ring-white/10 text-[#1A1A1A] dark:text-[#F4F4F3]">
+                    <LayoutIcon size={17} />
+                  </span>
+                  <div className="min-w-0">
+                    <h2 className="text-[15px] font-semibold tracking-tight leading-tight">{t("pages.title")}</h2>
+                    <p className="text-[12.5px] text-[#8A8784] dark:text-[#9B9897] mt-0.5 leading-snug">{t("pages.hint")}</p>
+                  </div>
+                </div>
+                {active.isNew ? (
+                  <p className="text-[13px] text-[#A8A5A2] dark:text-[#7C7977] py-2">{t("pages.newBiz")}</p>
+                ) : pagesLoading ? (
+                  <p className="text-[13px] text-[#A8A5A2] dark:text-[#7C7977] py-2">{t("loading")}</p>
+                ) : pages.length === 0 ? (
+                  <div className="text-center py-6">
+                    <p className="text-[13px] text-[#A8A5A2] dark:text-[#7C7977] mb-3">{t("pages.empty")}</p>
+                    <Link href={`/${locale}/new`} className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-coral-600 text-white text-[13px] font-semibold hover:bg-coral-700 transition">
+                      <Plus size={14} /> {t("pages.emptyCta")}
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5 max-h-[60vh] overflow-y-auto -mx-1 px-1">
+                    {pages.map((pg) => (
+                      <Link
+                        key={pg.id}
+                        href={`/${locale}/new?project=${pg.id}`}
+                        className="block group rounded-xl overflow-hidden ring-1 ring-[#E5E3E1] dark:ring-white/10 hover:ring-coral-300 dark:hover:ring-coral-500/40 hover:shadow-sm transition"
+                      >
+                        <div className="aspect-[16/10] bg-[#FAFAF9] dark:bg-white/5 overflow-hidden flex items-center justify-center">
+                          {pg.thumbnailUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={pg.thumbnailUrl} alt="" className="h-full w-full object-cover object-top" />
+                          ) : (
+                            <LayoutIcon size={22} className="text-[#C0BDBA] dark:text-[#5C5957]" />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 px-3 py-2.5">
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-[13px] font-semibold truncate">{pg.title}</span>
+                            <span className="block text-[11px] text-[#A8A5A2] dark:text-[#7C7977] truncate">
+                              {pg.subdomain ? `${pg.subdomain}.openlen.com` : t("pages.draft")}
+                            </span>
+                          </span>
+                          <ChevronRight size={15} className="text-[#C0BDBA] dark:text-[#5C5957] group-hover:text-coral-500 shrink-0" />
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </Card>
             </div>
           </div>
         </main>
@@ -675,45 +679,4 @@ function Switcher({ profiles, active, onPick, onNew }: { profiles: LocalProfile[
   );
 }
 
-/* ───────── Mini live preview ───────── */
-function PreviewHero({ p }: { p: LocalProfile }) {
-  const t = useTranslations("miNegocio");
-  const nombre = p.name.trim() || t("preview.fallbackName");
-  const tagline = (p.data.industry ?? "").trim() || t("preview.fallbackTagline");
-  const color = p.data.brand?.accent ?? "#FF5A36";
-  return (
-    <div className="rounded-xl overflow-hidden ring-1 ring-[#E5E3E1] dark:ring-white/10 bg-white dark:bg-[#0E0E10]">
-      <div className="flex items-center gap-1.5 px-3 h-7 bg-[#FAFAF9] dark:bg-white/5 border-b border-[#EEECEA] dark:border-white/8">
-        <span className="h-2 w-2 rounded-full bg-[#E5E3E1] dark:bg-white/15" /><span className="h-2 w-2 rounded-full bg-[#E5E3E1] dark:bg-white/15" /><span className="h-2 w-2 rounded-full bg-[#E5E3E1] dark:bg-white/15" />
-        <span className="ml-2 flex-1 h-3.5 rounded bg-white dark:bg-[#1A1A1D] ring-1 ring-[#E5E3E1] dark:ring-white/10 flex items-center px-2">
-          <span className="text-[8px] text-[#A8A5A2] dark:text-[#7C7977] truncate">tunegocio.openlen.com</span>
-        </span>
-      </div>
-      <div className="relative">
-        <div className="h-24 w-full" style={{ background: heroBg(p, color) }} />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
-        <div className="absolute top-0 inset-x-0 flex items-center justify-between px-3 py-2">
-          <div className="flex items-center gap-1.5">
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded-md text-white text-[10px] font-bold ring-1 ring-white/40 overflow-hidden" style={{ background: color }}>
-              {p.data.brand?.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={p.data.brand.logoUrl} alt="" className="h-full w-full object-contain" />
-              ) : inicialDe(nombre)}
-            </span>
-            <span className="text-[10px] font-semibold text-white drop-shadow">{nombre}</span>
-          </div>
-          <span className="rounded-md px-1.5 py-0.5 text-[8px] font-semibold text-white" style={{ background: color }}>{t("preview.contact")}</span>
-        </div>
-      </div>
-      <div className="px-3.5 py-3.5">
-        <div className="text-[15px] font-bold tracking-tight leading-tight">{nombre}</div>
-        <div className="text-[11px] text-[#6B6967] dark:text-[#9B9897] mt-1 leading-snug">{tagline}</div>
-        <div className="mt-2.5 flex items-center gap-1.5">
-          <span className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[10.5px] font-semibold text-white" style={{ background: color }}><Whats size={11} /> {t("preview.write")}</span>
-          <span className="inline-flex items-center rounded-lg px-2.5 py-1.5 text-[10.5px] font-medium ring-1 ring-[#E5E3E1] dark:ring-white/15 text-[#1A1A1A] dark:text-[#F4F4F3]">{t("preview.more")}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
 
