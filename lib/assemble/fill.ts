@@ -48,7 +48,11 @@ export function hasFillableCopy(c: ExtractedBusinessData): boolean {
       c.features?.length ||
       c.pricing?.length ||
       c.testimonials?.length ||
-      c.faq_questions?.length,
+      c.faq_questions?.length ||
+      c.contact?.whatsapp ||
+      c.contact?.phone ||
+      c.contact?.email ||
+      c.contact?.address,
   );
 }
 
