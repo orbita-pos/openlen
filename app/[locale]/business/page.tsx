@@ -368,6 +368,22 @@ export default function BusinessPage() {
     }
   };
 
+  const doDescribe = async (text: string) => {
+    if (text.trim().length < 10) return;
+    setImporting(true);
+    try {
+      const res = await fetch("/api/profiles/extract", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ source: "text", description: text.trim() }),
+      });
+      const j = (await res.json().catch(() => ({}))) as { ok?: boolean; data?: BusinessProfileData };
+      nuevo(j.ok && j.data ? j.data : emptyData());
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const hasNone = !loading && data.length === 0;
 
   return (
@@ -391,7 +407,7 @@ export default function BusinessPage() {
       {loading ? (
         <div className="max-w-6xl mx-auto px-5 py-20 text-center text-[13px] text-[#8A8784]">Cargando…</div>
       ) : hasNone ? (
-        <EmptyState importing={importing} onPickFile={() => importRef.current?.click()} onManual={() => nuevo()} />
+        <EmptyState importing={importing} onPickFile={() => importRef.current?.click()} onDescribe={(t) => void doDescribe(t)} onManual={() => nuevo()} />
       ) : active ? (
         <main className="max-w-6xl mx-auto px-5 sm:px-6 py-7 sm:py-9">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-7">
@@ -675,28 +691,50 @@ function PreviewHero({ p }: { p: LocalProfile }) {
 }
 
 /* ───────── Empty state ───────── */
-function EmptyState({ importing, onPickFile, onManual }: { importing: boolean; onPickFile: () => void; onManual: () => void }) {
+function EmptyState({ importing, onPickFile, onDescribe, onManual }: { importing: boolean; onPickFile: () => void; onDescribe: (text: string) => void; onManual: () => void }) {
+  const [mode, setMode] = useState<"choose" | "describe">("choose");
+  const [text, setText] = useState("");
   return (
     <div className="max-w-2xl mx-auto px-5 py-12 sm:py-20 text-center">
       <span className="inline-flex items-center gap-1.5 rounded-full bg-coral-50 dark:bg-coral-500/15 text-coral-700 dark:text-coral-300 px-3 py-1 text-[12px] font-semibold mb-6"><Sparkles size={13} /> Empecemos por lo importante</span>
       <h1 className="text-[30px] sm:text-[38px] font-bold tracking-tight leading-[1.05]">Cuéntanos de tu negocio<br />una sola vez.</h1>
       <p className="mt-4 max-w-md mx-auto text-[15px] text-[#6B6967] dark:text-[#9B9897] leading-relaxed">Con esto, cada página que crees ya nace con tu nombre, tus fotos, tu contacto y tu color. Tú no vuelves a llenar nada.</p>
-      <div className="mt-9 grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
-        <button onClick={onPickFile} disabled={importing}
-          className="group rounded-2xl bg-white dark:bg-[#1A1A1D] ring-1 ring-[#E5E3E1] dark:ring-white/10 hover:ring-coral-300 dark:hover:ring-coral-500/40 hover:shadow-md transition p-5 disabled:opacity-70">
-          <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-coral-50 dark:bg-coral-500/15 text-coral-600 dark:text-coral-300 mb-4">{importing ? <Loader size={20} className="animate-spin" /> : <Camera size={20} />}</span>
-          <div className="text-[15px] font-semibold tracking-tight">Sube una captura de tu Instagram</div>
-          <div className="text-[13px] text-[#8A8784] dark:text-[#9B9897] mt-1 leading-snug">Leemos tu nombre, fotos y bio para llenar todo solito.</div>
-          <div className="mt-3 inline-flex items-center gap-1 text-[12.5px] font-semibold text-coral-700 dark:text-coral-300">{importing ? "Leyendo tu perfil…" : <>Subir captura <ArrowRight size={13} /></>}</div>
-        </button>
-        <button onClick={onManual}
-          className="group rounded-2xl bg-white dark:bg-[#1A1A1D] ring-1 ring-[#E5E3E1] dark:ring-white/10 hover:ring-coral-300 dark:hover:ring-coral-500/40 hover:shadow-md transition p-5">
-          <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-coral-50 dark:bg-coral-500/15 text-coral-600 dark:text-coral-300 mb-4"><Pencil size={20} /></span>
-          <div className="text-[15px] font-semibold tracking-tight">Llénalo a mano</div>
-          <div className="text-[13px] text-[#8A8784] dark:text-[#9B9897] mt-1 leading-snug">Escribe tú mismo tu nombre, contacto y demás. Toma 1 minuto.</div>
-          <div className="mt-3 inline-flex items-center gap-1 text-[12.5px] font-semibold text-coral-700 dark:text-coral-300">Empezar <ArrowRight size={13} /></div>
-        </button>
-      </div>
+
+      {mode === "describe" ? (
+        <div className="mt-9 max-w-md mx-auto text-left">
+          <textarea value={text} onChange={(e) => setText(e.target.value)} rows={4} disabled={importing}
+            placeholder="Ej. Tengo una cafetería en la Roma que vende café de especialidad y pan recién horneado. Pedidos por WhatsApp."
+            className="w-full px-3.5 py-3 text-[14px] rounded-xl bg-white dark:bg-[#1A1A1D] ring-1 ring-[#E5E3E1] dark:ring-white/10 focus:ring-2 focus:ring-coral-500 focus:outline-none placeholder:text-[#C0BDBA] dark:placeholder:text-[#5C5957] resize-y leading-relaxed disabled:opacity-70" />
+          <div className="mt-3 flex items-center gap-2">
+            <button onClick={() => onDescribe(text)} disabled={importing || text.trim().length < 10}
+              className="inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-coral-600 text-white text-[14px] font-semibold hover:bg-coral-700 transition disabled:opacity-50">
+              {importing ? <><Loader size={16} className="animate-spin" /> Armando tu perfil…</> : <>Continuar <ArrowRight size={14} /></>}
+            </button>
+            <button onClick={() => setMode("choose")} disabled={importing}
+              className="h-11 px-3 rounded-xl text-[13.5px] font-medium text-[#6B6967] dark:text-[#9B9897] hover:bg-white dark:hover:bg-white/5 transition disabled:opacity-50">Atrás</button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="mt-9 grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+            <button onClick={onPickFile} disabled={importing}
+              className="group rounded-2xl bg-white dark:bg-[#1A1A1D] ring-1 ring-[#E5E3E1] dark:ring-white/10 hover:ring-coral-300 dark:hover:ring-coral-500/40 hover:shadow-md transition p-5 disabled:opacity-70">
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-coral-50 dark:bg-coral-500/15 text-coral-600 dark:text-coral-300 mb-4">{importing ? <Loader size={20} className="animate-spin" /> : <Camera size={20} />}</span>
+              <div className="text-[15px] font-semibold tracking-tight">Sube una captura de tu Instagram</div>
+              <div className="text-[13px] text-[#8A8784] dark:text-[#9B9897] mt-1 leading-snug">Leemos tu nombre, fotos y bio para llenar todo solito.</div>
+              <div className="mt-3 inline-flex items-center gap-1 text-[12.5px] font-semibold text-coral-700 dark:text-coral-300">{importing ? "Leyendo tu perfil…" : <>Subir captura <ArrowRight size={13} /></>}</div>
+            </button>
+            <button onClick={() => setMode("describe")} disabled={importing}
+              className="group rounded-2xl bg-white dark:bg-[#1A1A1D] ring-1 ring-[#E5E3E1] dark:ring-white/10 hover:ring-coral-300 dark:hover:ring-coral-500/40 hover:shadow-md transition p-5 disabled:opacity-70">
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-coral-50 dark:bg-coral-500/15 text-coral-600 dark:text-coral-300 mb-4"><Pencil size={20} /></span>
+              <div className="text-[15px] font-semibold tracking-tight">Descríbelo con tus palabras</div>
+              <div className="text-[13px] text-[#8A8784] dark:text-[#9B9897] mt-1 leading-snug">&quot;Tengo una cafetería en la Roma…&quot; y nosotros armamos el resto.</div>
+              <div className="mt-3 inline-flex items-center gap-1 text-[12.5px] font-semibold text-coral-700 dark:text-coral-300">Escribir <ArrowRight size={13} /></div>
+            </button>
+          </div>
+          <p className="mt-6 text-[12.5px] text-[#A8A5A2] dark:text-[#7C7977]">¿Prefieres a mano? <button onClick={onManual} className="font-semibold text-[#6B6967] dark:text-[#9B9897] hover:text-coral-700 dark:hover:text-coral-300 transition underline underline-offset-2">Llenar yo mismo</button></p>
+        </>
+      )}
     </div>
   );
 }
