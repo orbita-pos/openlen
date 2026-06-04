@@ -38,6 +38,14 @@ body:not([data-openlen-edit-mode]) [data-openlen-inspect-hover],
 body:not([data-openlen-edit-mode]) [data-openlen-inspect-selected] {
   outline: none !important;
 }
+/* "Hide element" — in EDIT mode a hidden element stays visible (dimmed +
+   dashed) so it's still selectable / un-hideable; the persistent rule injected
+   by ensureHiddenStyle() actually hides it everywhere else (preview + publish). */
+body[data-openlen-edit-mode] [data-ol-hidden] {
+  opacity: 0.4 !important;
+  outline: 1px dashed rgba(255,90,54,0.7) !important;
+  outline-offset: -1px !important;
+}
 `;
 
 const INSPECT_SCRIPT = `
@@ -156,6 +164,7 @@ const INSPECT_SCRIPT = `
       fontWeight: (cs.fontWeight || '').toString(),
       fontStyle: cs.fontStyle || '',
       textAlign: cs.textAlign || '',
+      hidden: !!(el.hasAttribute && el.hasAttribute('data-ol-hidden')),
     };
   }
 
@@ -376,7 +385,13 @@ const INSPECT_SCRIPT = `
       n.removeAttribute('data-openlen-inspect-selected');
     });
     var b = clone.querySelector('body');
-    if (b) b.removeAttribute('data-openlen-inspect-mode');
+    if (b) {
+      b.removeAttribute('data-openlen-inspect-mode');
+      // The edit-mode flag is editor-only — it must never reach the saved /
+      // published HTML, or the persistent hide rule (scoped to :not(edit-mode))
+      // would think the published page is "in edit mode" and skip hiding.
+      b.removeAttribute('data-openlen-edit-mode');
+    }
     post({
       type: 'openlen:html-changed',
       outerHtml: '<!doctype html>\\n' + clone.outerHTML,
@@ -494,6 +509,37 @@ const INSPECT_SCRIPT = `
     if (selected === el) postSelected(el);
   }
 
+  // Inject (once) the persistent rule that hides data-ol-hidden elements
+  // everywhere the editor isn't active — i.e. preview + the published page.
+  // It carries NO inspect marker, so postClean keeps it in the saved HTML.
+  // Scoped to :not(edit-mode) so the element keeps its natural display while
+  // editing (the INSPECT_STYLE dims it instead). postClean strips the
+  // edit-mode attr from <body>, so the published page always matches → hides.
+  function ensureHiddenStyle() {
+    if (document.querySelector('style[data-ol-hidden-style]')) return;
+    var s = document.createElement('style');
+    s.setAttribute('data-ol-hidden-style', '');
+    s.textContent =
+      'body:not([data-openlen-edit-mode]) [data-ol-hidden]{display:none !important;}';
+    document.head.appendChild(s);
+  }
+
+  // Hide / show an element. Reversible by design: hiding only tags the element
+  // (no inline display:none), so it stays selectable (dimmed) in the editor and
+  // the toggle can un-hide it.
+  function applyHide(path, on) {
+    var el = resolvePath(path);
+    if (!el) return;
+    if (on) {
+      el.setAttribute('data-ol-hidden', '');
+      ensureHiddenStyle();
+    } else {
+      el.removeAttribute('data-ol-hidden');
+    }
+    postClean();
+    if (selected === el) postSelected(el);
+  }
+
   // Page-level theme tokens (Tier 3) — set as inline custom properties on
   // <html>; they override the :root defaults and persist with the document.
   function hexTriplet(hex) {
@@ -601,6 +647,8 @@ const INSPECT_SCRIPT = `
       applyStyle(d.path, d.prop, typeof d.value === 'string' ? d.value : '');
     } else if (d.scope === 'style-bg' && typeof d.path === 'string' && typeof d.kind === 'string') {
       applyBg(d.path, d.kind, typeof d.value === 'string' ? d.value : '');
+    } else if (d.scope === 'hide' && typeof d.path === 'string') {
+      applyHide(d.path, !!d.on);
     } else if (d.scope === 'theme' && typeof d.prop === 'string') {
       applyTheme(d.prop, typeof d.value === 'string' ? d.value : '');
     } else if (d.scope === 'theme-bundle' && d.tokens && typeof d.tokens === 'object') {

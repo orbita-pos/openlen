@@ -929,6 +929,14 @@ function NewV2Inner() {
     },
     [],
   );
+  // Hide / show an element — reversible (tags data-ol-hidden; the element stays
+  // selectable + dimmed in the editor, hidden in preview + published).
+  const applyHide = useCallback((path: string, on: boolean) => {
+    iframeElRef.current?.contentWindow?.postMessage(
+      { type: "openlen:apply-prop", scope: "hide", path, on },
+      "*",
+    );
+  }, []);
   // Theme preset ("5 bolas") — apply a whole {token: value} bundle to <html>
   // at once. The iframe sets them inline (and re-derives --ol-accent-r) in a
   // single reclean, then persists via openlen:html-changed. Deterministic +
@@ -1469,6 +1477,7 @@ function NewV2Inner() {
                     onApplyFormConfig={applyFormConfig}
                     onApplyStyle={applyStyle}
                     onApplyBg={applyBg}
+                    onApplyHide={applyHide}
                     onToggleAnalytics={applyAnalyticsDisabled}
                     onApplyLogoUrl={loadedProject ? applyLogoUrl : undefined}
                     onApplyLook={loadedProject ? applyLook : undefined}

@@ -83,6 +83,9 @@ export interface InspectSelection {
     fontWeight?: string;
     fontStyle?: string;
     textAlign?: string;
+    /** True when the element carries data-ol-hidden (hidden in preview +
+     *  published; shown dimmed + selectable while editing). */
+    hidden?: boolean;
   };
 }
 
@@ -134,6 +137,7 @@ interface PropertiesPanelProps {
    *  gradient/image fill), an image fill (background-image, any element), or
    *  clear the fill. */
   onApplyBg: (path: string, kind: "color" | "image" | "clear", value: string) => void;
+  onApplyHide: (path: string, on: boolean) => void;
   /** Persist the analytics opt-out toggle. Omit to hide the Privacy
    *  section (e.g., on projects that can't be published yet). */
   onToggleAnalytics?: (disabled: boolean) => void;
@@ -178,6 +182,7 @@ export function PropertiesPanel({
   onApplyFormConfig,
   onApplyStyle,
   onApplyBg,
+  onApplyHide,
   onToggleAnalytics,
   onApplyLogoUrl,
   onApplyLook,
@@ -217,6 +222,7 @@ export function PropertiesPanel({
             onApplyFormConfig={onApplyFormConfig}
             onApplyStyle={onApplyStyle}
             onApplyBg={onApplyBg}
+            onApplyHide={onApplyHide}
             onSendTestFormEmail={onSendTestFormEmail}
             onBack={onClearSelection}
           />
@@ -250,6 +256,7 @@ function ElementView({
   onApplyFormConfig,
   onApplyStyle,
   onApplyBg,
+  onApplyHide,
   onSendTestFormEmail,
   onBack,
 }: {
@@ -260,6 +267,7 @@ function ElementView({
   onApplyFormConfig: (formIndex: number, patch: Partial<FormConfig>) => void;
   onApplyStyle: (path: string, prop: string, value: string) => void;
   onApplyBg: (path: string, kind: "color" | "image" | "clear", value: string) => void;
+  onApplyHide: (path: string, on: boolean) => void;
   onSendTestFormEmail?: (
     formIndex: number,
   ) => Promise<{ ok: boolean; sentTo?: string; message?: string }>;
@@ -332,6 +340,7 @@ function ElementView({
         projectId={projectId}
         onApply={onApplyStyle}
         onApplyBg={onApplyBg}
+        onApplyHide={onApplyHide}
       />
     </div>
   );
@@ -493,12 +502,14 @@ function StyleSection({
   projectId,
   onApply,
   onApplyBg,
+  onApplyHide,
 }: {
   path: string;
   style: InspectSelection["style"];
   projectId?: string;
   onApply: (path: string, prop: string, value: string) => void;
   onApplyBg: (path: string, kind: "color" | "image" | "clear", value: string) => void;
+  onApplyHide: (path: string, on: boolean) => void;
 }) {
   const t = useTranslations("panelsProps");
   const s = style ?? {};
@@ -557,6 +568,18 @@ function StyleSection({
         textAlign={s.textAlign ?? ""}
         onApply={(prop, value) => onApply(path, prop, value)}
       />
+      <div className="pt-0.5">
+        <Toggle
+          label={t("style.hide")}
+          on={!!s.hidden}
+          onChange={(on) => onApplyHide(path, on)}
+        />
+        {s.hidden && (
+          <p className="mt-1 text-[10px] fg-faint leading-snug">
+            {t("style.hideHint")}
+          </p>
+        )}
+      </div>
       <ReplaceAssetModal
         open={picker}
         kind={picker ? "image" : null}

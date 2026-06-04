@@ -36,7 +36,9 @@
       "left": "Links uitlijnen",
       "center": "Centreren",
       "right": "Rechts uitlijnen"
-    }
+    },
+    "hide": "Element verbergen",
+    "hideHint": "Verborgen op de gepubliceerde pagina — hier gedimd zodat je het kunt herstellen"
   },
   "form": {
     "title": "Formulier",
