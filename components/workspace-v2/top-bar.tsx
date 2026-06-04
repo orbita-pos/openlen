@@ -74,8 +74,6 @@ interface TopBarProps {
   onDeployVercel?: () => void;
   /** Open the "Push to GitHub" modal. Undefined hides the entry. */
   onDeployGitHub?: () => void;
-  /** Open the "Mi negocio" management modal (account menu entry). */
-  onManageProfiles?: () => void;
   dark: boolean;
   onToggleDark: () => void;
 }
@@ -93,7 +91,6 @@ export function TopBar({
   onCustomDomain,
   onDeployVercel,
   onDeployGitHub,
-  onManageProfiles,
   dark,
   onToggleDark,
 }: TopBarProps) {
@@ -604,18 +601,13 @@ export function TopBar({
                 <span>{t("account.allProjects")}</span>
                 <ExternalLink size={11} className="fg-faint" />
               </Link>
-              {onManageProfiles && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setProfileOpen(false);
-                    onManageProfiles();
-                  }}
-                  className="flex items-center w-full text-left px-2.5 py-1.5 rounded-md text-[13px] fg hover:bg-hover transition"
-                >
-                  {t("account.manageProfiles")}
-                </button>
-              )}
+              <Link
+                href="/business"
+                onClick={() => setProfileOpen(false)}
+                className="flex items-center w-full text-left px-2.5 py-1.5 rounded-md text-[13px] fg hover:bg-hover transition"
+              >
+                {t("account.manageProfiles")}
+              </Link>
               <button
                 type="button"
                 onClick={() => {

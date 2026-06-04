@@ -9,11 +9,20 @@ export interface BusinessProfileBrand {
   accent: string | null; // hex, e.g. "#e8743a"
 }
 
+// Extra links the user wants on their pages (site/store, Linktree, YouTube,
+// TikTok, etc.). `type` is a loose key (website|menu|youtube|tiktok|other|…).
+export interface BusinessProfileLink {
+  type: string;
+  url: string;
+}
+
 // What a saved profile stores: the same shape the fill engine consumes
-// (ExtractedBusinessData, incl. the new contact block) plus brand + photos.
+// (ExtractedBusinessData, incl. the new contact block) plus brand + photos +
+// extra links.
 export type BusinessProfileData = ExtractedBusinessData & {
   brand?: BusinessProfileBrand | null;
   photos?: string[]; // image URLs
+  links?: BusinessProfileLink[];
 };
 
 // The DB row type (id, userId, name, data, isDefault, timestamps).

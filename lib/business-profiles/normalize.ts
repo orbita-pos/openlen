@@ -21,5 +21,14 @@ export function normalizeProfileData(raw: unknown): BusinessProfileData {
   const photos = Array.isArray(obj.photos)
     ? obj.photos.filter((p): p is string => typeof p === "string")
     : [];
-  return { ...base, brand, photos };
+  const links = Array.isArray(obj.links)
+    ? obj.links
+        .filter((l): l is Record<string, unknown> => !!l && typeof l === "object")
+        .map((l) => ({
+          type: typeof l.type === "string" ? l.type : "other",
+          url: typeof l.url === "string" ? l.url.trim() : "",
+        }))
+        .filter((l) => l.url.length > 0)
+    : [];
+  return { ...base, brand, photos, links };
 }

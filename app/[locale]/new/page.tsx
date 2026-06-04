@@ -25,7 +25,6 @@ import type {
 } from "@/lib/projects/types";
 import { AutofillModal } from "@/components/workspace-v2/autofill-modal";
 import { BusinessProfileModal } from "@/components/workspace-v2/business-profile-modal";
-import { ManageProfilesModal } from "@/components/workspace-v2/manage-profiles-modal";
 import type { BusinessProfile } from "@/lib/business-profiles/types";
 import { CustomDomainModal } from "@/components/workspace-v2/custom-domain-modal";
 import { DeployIntegrationModal } from "@/components/workspace-v2/deploy-integration-modal";
@@ -355,7 +354,6 @@ function NewV2Inner() {
   const [profiles, setProfiles] = useState<BusinessProfile[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
-  const [manageProfilesOpen, setManageProfilesOpen] = useState(false);
   const refreshProfiles = useCallback(async () => {
     try {
       const res = await fetch("/api/profiles");
@@ -1323,7 +1321,6 @@ function NewV2Inner() {
         }
         dark={dark}
         onToggleDark={toggleDark}
-        onManageProfiles={() => setManageProfilesOpen(true)}
       />
       <div className="flex-1 min-h-0 flex relative">
         <LeftSidebar
@@ -1681,11 +1678,6 @@ function NewV2Inner() {
           void refreshProfiles();
           setSelectedProfileId(p.id);
         }}
-      />
-      <ManageProfilesModal
-        open={manageProfilesOpen}
-        onClose={() => setManageProfilesOpen(false)}
-        onChanged={refreshProfiles}
       />
       <ReplaceAssetModal
         open={!!assetModal}
