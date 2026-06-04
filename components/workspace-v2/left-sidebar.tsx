@@ -14,6 +14,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import {
   BarChart3,
   ChatIcon,
@@ -25,6 +26,7 @@ import {
   PanelLeft,
   PanelRight,
   Sparkles,
+  Store,
 } from "./icons";
 import type { Section } from "./mock-data";
 import { BriefPanel } from "./panels/brief-panel";
@@ -46,6 +48,46 @@ import type { SectionSpec } from "./sections-data";
 import { IconBtn, Tooltip } from "./ui";
 
 import type { ComponentType } from "react";
+
+// The account-wide sections — the SAME nav as the dashboard, living inside the
+// editor's existing sidebar (not a second rail) so you can jump anywhere from
+// here. Links navigate away from the editor (the page auto-saves).
+const GLOBAL_SECTIONS: ReadonlyArray<{
+  href: string;
+  icon: typeof FileText;
+  key: string;
+}> = [
+  { href: "/projects", icon: FileText, key: "nav.myPages" },
+  { href: "/analytics", icon: BarChart3, key: "nav.analytics" },
+  { href: "/messages", icon: Inbox, key: "nav.messages" },
+  { href: "/business", icon: Store, key: "nav.myBusiness" },
+];
+
+function GlobalSections({ vertical }: { vertical: boolean }) {
+  const t = useTranslations("projects");
+  return (
+    <>
+      {GLOBAL_SECTIONS.map((s) => {
+        const I = s.icon;
+        return (
+          <Tooltip
+            key={s.href}
+            label={t(s.key)}
+            side={vertical ? "right" : undefined}
+          >
+            <Link
+              href={s.href}
+              aria-label={t(s.key)}
+              className={`${vertical ? "h-8 w-8" : "h-7 w-8"} inline-flex items-center justify-center rounded-md fg-muted hover:fg hover:bg-hover transition`}
+            >
+              <I size={vertical ? 14 : 13} />
+            </Link>
+          </Tooltip>
+        );
+      })}
+    </>
+  );
+}
 
 export type SidebarMode =
   | "chat"
@@ -236,6 +278,8 @@ export function LeftSidebar({
   if (collapsed) {
     return (
       <aside className="h-full w-12 shrink-0 bg-side border-r bd flex flex-col items-center pt-2 gap-1">
+        <GlobalSections vertical />
+        <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
         {visibleTabs.map((tab) => {
           const active = mode === tab.id;
           const locked = isLocked(tab.id);
@@ -283,6 +327,9 @@ export function LeftSidebar({
 
   return (
     <aside className="h-full w-[320px] shrink-0 bg-side border-r bd flex flex-col">
+      <div className="flex items-center gap-0.5 px-2 pt-2 pb-1 border-b bd shrink-0">
+        <GlobalSections vertical={false} />
+      </div>
       <div className="flex items-center justify-between px-2 pt-2 pb-1.5 border-b bd shrink-0">
         <div className="inline-flex items-center gap-0.5">
           {visibleTabs.map((tab) => {
