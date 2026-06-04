@@ -10,6 +10,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { signOut, useSession } from "next-auth/react";
 import {
+  BarChart3,
   FileText,
   Inbox,
   LogOut,
@@ -24,7 +25,7 @@ import { cn } from "@/lib/cn";
 import { OpenLenMark } from "@/components/openlen-logo";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 
-type DashboardSection = "pages" | "business" | "messages";
+type DashboardSection = "pages" | "analytics" | "business" | "messages";
 
 const NAV: ReadonlyArray<{
   key: DashboardSection;
@@ -33,6 +34,7 @@ const NAV: ReadonlyArray<{
   labelKey: string;
 }> = [
   { key: "pages", href: "/projects", icon: FileText, labelKey: "nav.myPages" },
+  { key: "analytics", href: "/analytics", icon: BarChart3, labelKey: "nav.analytics" },
   { key: "messages", href: "/messages", icon: Inbox, labelKey: "nav.messages" },
   { key: "business", href: "/business", icon: Store, labelKey: "nav.myBusiness" },
 ];

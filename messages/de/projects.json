@@ -159,7 +159,8 @@
   "nav": {
     "myPages": "Meine Seiten",
     "myBusiness": "Mein Unternehmen",
-    "messages": "Nachrichten"
+    "messages": "Nachrichten",
+    "analytics": "Statistiken"
   },
   "deleteDialog": {
     "title": "Diese Seite löschen?",
@@ -182,5 +183,15 @@
     "emptyHint": "Wenn jemand auf deinen Seiten ein Kontaktformular ausfüllt, erscheint es hier — und wir mailen es dir.",
     "from": "von {page}",
     "createCta": "Seite erstellen"
+  },
+  "analytics": {
+    "title": "Statistiken",
+    "subtitle": "Wie deine Seiten in den letzten 30 Tagen laufen.",
+    "views": "Aufrufe",
+    "clicks": "Klicks",
+    "leads": "Nachrichten",
+    "perPage": "Pro Seite",
+    "empty": "Noch keine Daten",
+    "emptyHint": "Veröffentliche eine Seite und teile den Link — hier siehst du, wie viele Leute sie besuchen und dich kontaktieren."
   }
 }

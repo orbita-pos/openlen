@@ -159,7 +159,8 @@
   "nav": {
     "myPages": "Minhas páginas",
     "myBusiness": "Minha empresa",
-    "messages": "Mensagens"
+    "messages": "Mensagens",
+    "analytics": "Métricas"
   },
   "deleteDialog": {
     "title": "Excluir esta página?",
@@ -182,5 +183,15 @@
     "emptyHint": "Quando alguém preencher um formulário de contato nas suas páginas, aparecerá aqui — e te avisamos por email.",
     "from": "de {page}",
     "createCta": "Criar uma página"
+  },
+  "analytics": {
+    "title": "Métricas",
+    "subtitle": "Como estão suas páginas nos últimos 30 dias.",
+    "views": "Visitas",
+    "clicks": "Cliques",
+    "leads": "Mensagens",
+    "perPage": "Por página",
+    "empty": "Ainda não há dados",
+    "emptyHint": "Publique uma página e compartilhe o link — aqui você verá quantas pessoas a visitam e te contatam."
   }
 }
