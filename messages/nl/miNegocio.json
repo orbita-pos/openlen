@@ -92,5 +92,11 @@
     "manual": "Met de hand invullen",
     "manualHint": "Typ je naam, contactgegevens en de rest zelf in. Duurt 1 minuut.",
     "start": "Beginnen"
+  },
+  "pages": {
+    "title": "Je pagina's",
+    "hint": "De pagina's die bij dit bedrijf horen.",
+    "empty": "Nog geen pagina's in dit bedrijf.",
+    "draft": "Concept"
   }
 }

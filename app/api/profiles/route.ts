@@ -4,6 +4,7 @@ import {
   ensureDefaultProfile,
   listProfiles,
 } from "@/lib/business-profiles/store";
+import { reassignNullProjects } from "@/lib/projects";
 import { normalizeProfileData } from "@/lib/business-profiles/normalize";
 
 // GET  /api/profiles      — list the signed-in user's saved business profiles
@@ -15,8 +16,11 @@ export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return json(401, { error: "unauthenticated" });
   // Lazy default: guarantee the user has a business by the time they reach the
-  // profiles list (the /business page or the /new picker both call this).
-  await ensureDefaultProfile(session.user.id);
+  // profiles list (the /business page or the /new picker both call this), and
+  // re-home any legacy/orphaned (profileId NULL) pages onto it so every page
+  // shows under a business.
+  const def = await ensureDefaultProfile(session.user.id);
+  await reassignNullProjects(session.user.id, def.id);
   const profiles = await listProfiles(session.user.id);
   return json(200, { profiles });
 }

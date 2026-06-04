@@ -92,5 +92,11 @@
     "manual": "Preencher na mão",
     "manualHint": "Digite seu nome, contato e o resto você mesmo. Leva 1 minuto.",
     "start": "Começar"
+  },
+  "pages": {
+    "title": "Suas páginas",
+    "hint": "As páginas que pertencem a esta empresa.",
+    "empty": "Ainda não há páginas nesta empresa.",
+    "draft": "Rascunho"
   }
 }

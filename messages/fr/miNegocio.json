@@ -92,5 +92,11 @@
     "manual": "Le remplir à la main",
     "manualHint": "Saisissez vous-même votre nom, vos coordonnées et le reste. Ça prend 1 minute.",
     "start": "Commencer"
+  },
+  "pages": {
+    "title": "Vos pages",
+    "hint": "Les pages qui appartiennent à cette entreprise.",
+    "empty": "Aucune page dans cette entreprise pour l’instant.",
+    "draft": "Brouillon"
   }
 }
