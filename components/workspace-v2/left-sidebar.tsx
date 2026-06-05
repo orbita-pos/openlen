@@ -25,11 +25,9 @@ import {
   Monitor,
   PanelLeft,
   PanelRight,
-  Sparkles,
   Store,
 } from "./icons";
 import type { Section } from "./mock-data";
-import { BriefPanel } from "./panels/brief-panel";
 import type { BriefFormState } from "@/components/workspace/types";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { AiBriefPanel } from "./panels/ai-brief-panel";
@@ -111,8 +109,7 @@ export type SidebarMode =
   | "templates"
   | "library"
   | "pages"
-  | "versions"
-  | "brief";
+  | "versions";
 
 interface ModeTab {
   id: SidebarMode;
@@ -125,7 +122,6 @@ const MODE_TABS: ModeTab[] = [
   { id: "library", icon: Layers },
   { id: "pages", icon: FileText },
   { id: "versions", icon: HistoryIcon },
-  { id: "brief", icon: Sparkles },
 ];
 
 interface LeftSidebarProps {
@@ -189,18 +185,12 @@ interface LeftSidebarProps {
   /** Called after a version restore succeeds, with the restored HTML so
    *  the parent can refresh `loadedProject.html` and the preview iframe. */
   onRestoreApplied?: (html: string) => void;
-  /** The persistent AI-context the user wrote in the Brief tab. Loaded
-   *  alongside the project; mirror updates back via `onBriefSaved`. */
-  initialBrief?: string;
-  onBriefSaved?: (brief: string) => void;
   /** Section-select state owned by the parent and threaded into ChatPanel
    *  so the iframe (in PreviewArea) and the chat composer stay in sync. */
   sectionSelectMode?: boolean;
   onToggleSectionSelect?: (active: boolean) => void;
   scopedSelection?: ScopedSelection | null;
   onClearScope?: () => void;
-  /** Open the Autofill modal (labeled pill in chat composer). */
-  onAutofill?: () => void;
   /** When set, ChatPanel applies this string to its draft on the next
    *  effect run. Used by the post-swap "Update copy?" chip to push a
    *  context-aware prompt into the composer. The parent must clear via
@@ -254,13 +244,10 @@ export function LeftSidebar({
   savingStatus = null,
   currentProjectId = null,
   onRestoreApplied,
-  initialBrief = "",
-  onBriefSaved,
   sectionSelectMode = false,
   onToggleSectionSelect,
   scopedSelection = null,
   onClearScope,
-  onAutofill,
   pendingDraft = null,
   onPendingDraftConsumed,
   aiBriefState,
@@ -434,7 +421,6 @@ export function LeftSidebar({
                 onToggleSectionSelect={onToggleSectionSelect}
                 scopedSelection={scopedSelection}
                 onClearScope={onClearScope}
-                onAutofill={onAutofill}
                 pendingDraft={pendingDraft}
                 onPendingDraftConsumed={onPendingDraftConsumed}
               />
@@ -461,13 +447,6 @@ export function LeftSidebar({
               <VersionsPanel
                 currentProjectId={currentProjectId}
                 onRestoreApplied={onRestoreApplied}
-              />
-            )}
-            {mode === "brief" && (
-              <BriefPanel
-                currentProjectId={currentProjectId}
-                initialBrief={initialBrief}
-                onSaved={onBriefSaved}
               />
             )}
           </>
