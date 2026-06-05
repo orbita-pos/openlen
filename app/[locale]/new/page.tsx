@@ -1413,7 +1413,7 @@ function NewV2Inner() {
         <main className="contents">
         <h1 className="sr-only">{t("a11y.workspaceHeading")}</h1>
         {centerView === "business" ? (
-          <BusinessSection />
+          <BusinessSection embedded />
         ) : centerView !== "page" ? (
           <section className="flex-1 min-w-0 min-h-0 flex items-center justify-center bg-preview-a">
             <div className="text-center px-6">

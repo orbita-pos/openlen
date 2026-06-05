@@ -221,7 +221,7 @@ const Field = ({ icon: I, value, onChange, placeholder }: { icon?: (p: IconProps
 );
 
 /* ───────── Section ───────── */
-export function BusinessSection() {
+export function BusinessSection({ embedded = false }: { embedded?: boolean }) {
   const t = useTranslations("miNegocio");
   const router = useRouter();
   const locale = useLocale();
@@ -416,7 +416,13 @@ export function BusinessSection() {
   };
 
   return (
-    <div className="flex-1 min-w-0 overflow-y-auto bg-[#FAFAF9] text-[#1A1A1A] dark:bg-[#0E0E10] dark:text-[#F4F4F3] antialiased">
+    <div
+      className={`flex-1 min-w-0 overflow-y-auto antialiased text-[#1A1A1A] dark:text-[#F4F4F3] ${
+        // In the workspace center, match the editor's black canvas; on the
+        // /business route keep the warm dashboard surface.
+        embedded ? "bg-preview-a" : "bg-[#FAFAF9] dark:bg-[#0E0E10]"
+      }`}
+    >
 
       {loading ? (
         <div className="max-w-6xl mx-auto px-5 py-20 text-center text-[13px] text-[#8A8784]">{t("loading")}</div>
