@@ -30,7 +30,6 @@ import {
 } from "./icons";
 import type { Section } from "./mock-data";
 import { BriefPanel } from "./panels/brief-panel";
-import { InsightsPanel } from "./panels/insights-panel";
 import type { BriefFormState } from "@/components/workspace/types";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { AiBriefPanel } from "./panels/ai-brief-panel";
@@ -41,7 +40,6 @@ import {
 import { PagesPanel } from "./panels/pages-panel";
 import { PastePanel } from "./panels/paste-panel";
 import { SectionsPanel } from "./panels/sections-panel";
-import { SubmissionsPanel } from "./panels/submissions-panel";
 import { TemplatesPanel } from "./panels/templates-panel";
 import { VersionsPanel } from "./panels/versions-panel";
 import type { SectionSpec } from "./sections-data";
@@ -113,8 +111,6 @@ export type SidebarMode =
   | "templates"
   | "library"
   | "pages"
-  | "leads"
-  | "insights"
   | "versions"
   | "brief";
 
@@ -128,8 +124,6 @@ const MODE_TABS: ModeTab[] = [
   { id: "templates", icon: Grid3 },
   { id: "library", icon: Layers },
   { id: "pages", icon: FileText },
-  { id: "leads", icon: Inbox },
-  { id: "insights", icon: BarChart3 },
   { id: "versions", icon: HistoryIcon },
   { id: "brief", icon: Sparkles },
 ];
@@ -290,12 +284,9 @@ export function LeftSidebar({
   // Tab visibility rules:
   // - Templates is an entry-flow surface only — once a project is open there's
   //   nothing to commit to, so we drop it in editing mode.
-  // - Insights is editing-only — there's no project to read analytics for in
-  //   the entry flows (the project doesn't exist yet).
   const visibleTabs = MODE_TABS.filter((tab) => {
     if (entryMode === "editing" && tab.id === "templates") return false;
-    if (entryMode !== "editing" && tab.id === "insights") return false;
-    // Library inserts into the current project — editing-only, like Insights.
+    // Library inserts into the current project — editing-only.
     if (entryMode !== "editing" && tab.id === "library") return false;
     return true;
   });
@@ -466,12 +457,6 @@ export function LeftSidebar({
             )}
             {mode === "pages" && (
               <PagesPanel currentProjectId={currentProjectId} />
-            )}
-            {mode === "leads" && (
-              <SubmissionsPanel currentProjectId={currentProjectId} />
-            )}
-            {mode === "insights" && (
-              <InsightsPanel currentProjectId={currentProjectId} />
             )}
             {mode === "versions" && (
               <VersionsPanel
