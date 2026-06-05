@@ -167,6 +167,7 @@ function Content({ data }: { data: Insights }) {
       <SideBySide
         referrers={data.topReferrers}
         countries={data.topCountries}
+        browsers={data.topBrowsers}
         device={data.deviceSplit}
       />
     </div>
@@ -300,10 +301,12 @@ function LinkRow({ link, total }: { link: InsightsLink; total: number }) {
 function SideBySide({
   referrers,
   countries,
+  browsers,
   device,
 }: {
   referrers: InsightsRow[];
   countries: InsightsRow[];
+  browsers: InsightsRow[];
   device: Insights["deviceSplit"];
 }) {
   const t = useTranslations("panelsB");
@@ -318,6 +321,14 @@ function SideBySide({
         label={t("insights.countries")}
         rows={countries}
         fallback={t("insights.noCountryData")}
+      />
+      <SimpleListCard
+        label={t("insights.browsers")}
+        rows={browsers.map((b) => ({
+          key: b.key.charAt(0).toUpperCase() + b.key.slice(1),
+          count: b.count,
+        }))}
+        fallback="—"
       />
       <DeviceCard device={device} />
     </div>

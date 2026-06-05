@@ -79,7 +79,8 @@
       "mobile": "모바일",
       "desktop": "데스크톱",
       "tablet": "태블릿"
-    }
+    },
+    "browsers": "브라우저"
   },
   "leads": {
     "loadError": "리드를 불러오지 못했습니다",

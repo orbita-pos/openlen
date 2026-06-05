@@ -79,7 +79,8 @@
       "mobile": "手机",
       "desktop": "电脑",
       "tablet": "平板"
-    }
+    },
+    "browsers": "浏览器"
   },
   "leads": {
     "loadError": "加载线索失败",

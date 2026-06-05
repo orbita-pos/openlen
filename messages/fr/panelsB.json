@@ -79,7 +79,8 @@
       "mobile": "Mobile",
       "desktop": "Ordinateur",
       "tablet": "Tablette"
-    }
+    },
+    "browsers": "Navigateurs"
   },
   "leads": {
     "loadError": "Échec du chargement des contacts",

@@ -79,7 +79,8 @@
       "mobile": "Mobiel",
       "desktop": "Desktop",
       "tablet": "Tablet"
-    }
+    },
+    "browsers": "Browsers"
   },
   "leads": {
     "loadError": "Leads laden mislukt",

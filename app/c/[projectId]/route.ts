@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { db, schema } from "@/lib/db";
-import { normalizeCountry, parseUserAgent } from "@/lib/analytics/parse";
+import { isBot, normalizeCountry, parseUserAgent } from "@/lib/analytics/parse";
 import {
   getClientIp,
   shouldDropForRateLimit,
@@ -77,6 +77,9 @@ export async function POST(
   if (!type) return new Response(null, { status: 204 });
 
   const ua = req.headers.get("user-agent") ?? "";
+  // Drop bots / crawlers / link-preview fetchers before they inflate the
+  // headline numbers. Same 204 as every other path — invisible to the page.
+  if (isBot(ua)) return new Response(null, { status: 204 });
   const acceptLanguage = req.headers.get("accept-language") ?? "";
   const country = normalizeCountry(req.headers.get("cf-ipcountry"));
   const { device, browser } = parseUserAgent(ua);

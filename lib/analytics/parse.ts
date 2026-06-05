@@ -37,6 +37,22 @@ export function parseUserAgent(ua: string): ParsedUA {
   return { device, browser };
 }
 
+// Crawlers, link-preview fetchers, monitors, headless browsers and HTTP
+// libraries — none are real visitors. Matched case-insensitively. Same spirit
+// as Vercel/Plausible bot exclusion: keeps headline numbers honest instead of
+// inflated by automated traffic. Deliberately uses `bot/` (versioned crawlers)
+// + explicit names rather than a bare `bot` so it doesn't drop real phones
+// whose UA contains the substring (e.g. the "Cubot" brand) or in-app browsers.
+const BOT_RE =
+  /bot\/|spider|crawler|slurp|mediapartners|facebookexternalhit|whatsapp\/|twitterbot|linkedinbot|slackbot|discordbot|telegrambot|redditbot|pinterest\/|embedly|skypeuripreview|vkshare|tumblr\/|bitlybot|nuzzel|w3c_validator|semrush|ahrefs|mj12bot|dotbot|dataforseo|screaming frog|headless|phantomjs|puppeteer|playwright|lighthouse|pagespeed|gtmetrix|pingdom|uptimerobot|statuscake|site24x7|datadog|newrelic|curl\/|wget\/|python-requests|python-urllib|aiohttp|httpx|axios\/|go-http-client|java\/|okhttp|node-fetch|scrapy|httpclient|libwww|mechanize|guzzle|postman|insomnia/i;
+
+/** True for crawlers / bots / automated traffic that shouldn't count as a real
+ *  visit. An empty UA (no real browser sends one on a beacon) counts as a bot. */
+export function isBot(ua: string): boolean {
+  if (!ua) return true;
+  return BOT_RE.test(ua);
+}
+
 /** ISO-3166 alpha-2 from Cloudflare's `CF-IPCountry` header. Returns null
  *  when CF isn't in front (dev / direct origin hit) or the header is
  *  something non-standard ("XX" for unknown, "T1" for Tor). */
