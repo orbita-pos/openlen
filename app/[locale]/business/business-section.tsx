@@ -7,7 +7,6 @@
 // (import). i18n via the `miNegocio` namespace.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import type {
@@ -58,8 +57,6 @@ const Trash = (p: IconProps) => <Icon {...p}><path d="M3 6h18" /><path d="M19 6v
 const Sparkles = (p: IconProps) => <Icon {...p}><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /></Icon>;
 const Star = (p: IconProps) => <Icon {...p}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></Icon>;
 const Loader = (p: IconProps) => <Icon {...p}><path d="M21 12a9 9 0 1 1-6.219-8.56" /></Icon>;
-const LayoutIcon = (p: IconProps) => <Icon {...p}><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></Icon>;
-const ChevronRight = (p: IconProps) => <Icon {...p}><polyline points="9 18 15 12 9 6" /></Icon>;
 const Alert = (p: IconProps) => <Icon {...p}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></Icon>;
 
 /* ───────── Link presets (label resolved via i18n at render) ───────── */
@@ -83,14 +80,6 @@ interface LocalProfile {
   isDefault: boolean;
   data: BusinessProfileData;
   isNew?: boolean;
-}
-
-interface PageItem {
-  id: string;
-  title: string;
-  status: string;
-  thumbnailUrl: string | null;
-  subdomain: string | null;
 }
 
 function emptyData(): BusinessProfileData {
@@ -234,8 +223,6 @@ export function BusinessSection({ embedded = false }: { embedded?: boolean }) {
   const [busyAsset, setBusyAsset] = useState(false);
   const logoRef = useRef<HTMLInputElement>(null);
   const photosRef = useRef<HTMLInputElement>(null);
-  const [pages, setPages] = useState<PageItem[]>([]);
-  const [pagesLoading, setPagesLoading] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -270,31 +257,6 @@ export function BusinessSection({ embedded = false }: { embedded?: boolean }) {
   }, [load]);
 
   const active = data.find((p) => p.id === activeId) ?? null;
-  const compact = pages.length > 3;
-
-  // Load the active business's pages (saved businesses only).
-  useEffect(() => {
-    if (!active || active.isNew) {
-      setPages([]);
-      return;
-    }
-    const id = active.id;
-    let cancelled = false;
-    setPagesLoading(true);
-    void fetch(`/api/profiles/${id}/projects`)
-      .then((r) => (r.ok ? (r.json() as Promise<{ pages?: PageItem[] }>) : null))
-      .then((d) => {
-        if (!cancelled && d?.pages) setPages(d.pages);
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setPagesLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active?.id, active?.isNew]);
 
   const updateActive = useCallback(
     (fn: (p: LocalProfile) => LocalProfile) => {
@@ -442,8 +404,7 @@ export function BusinessSection({ embedded = false }: { embedded?: boolean }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5">
-            <div className="space-y-5">
+          <div className="max-w-2xl space-y-5">
               <Card className="p-6">
                 <SectionHead icon={Store} title={t("identity.title")} hint={t("identity.hint")} />
                 <div className="space-y-4">
@@ -583,57 +544,6 @@ export function BusinessSection({ embedded = false }: { embedded?: boolean }) {
                 </button>
               </div>
             </div>
-
-            <div className="lg:sticky lg:top-[88px] lg:self-start">
-              <Card className="p-5">
-                <div className="flex items-start gap-3 mb-4">
-                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#FAFAF9] dark:bg-white/5 ring-1 ring-[#E5E3E1] dark:ring-white/10 text-[#1A1A1A] dark:text-[#F4F4F3]">
-                    <LayoutIcon size={17} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <h2 className="text-[15px] font-semibold tracking-tight leading-tight">{t("pages.title")}</h2>
-                    <p className="text-[12.5px] text-[#8A8784] dark:text-[#9B9897] mt-0.5 leading-snug">{t("pages.hint")}</p>
-                  </div>
-                  {!active.isNew && (
-                    <Link
-                      href={`/${locale}/new?mode=ai&profile=${active.id}`}
-                      className="inline-flex items-center gap-1 h-8 px-2.5 rounded-lg bg-coral-50 dark:bg-coral-500/15 text-coral-700 dark:text-coral-300 text-[12px] font-semibold hover:bg-coral-100 dark:hover:bg-coral-500/25 transition shrink-0"
-                    >
-                      <Plus size={13} /> {t("pages.newPage")}
-                    </Link>
-                  )}
-                </div>
-                {active.isNew ? (
-                  <p className="text-[13px] text-[#A8A5A2] dark:text-[#7C7977] py-2">{t("pages.newBiz")}</p>
-                ) : pagesLoading ? (
-                  <p className="text-[13px] text-[#A8A5A2] dark:text-[#7C7977] py-2">{t("loading")}</p>
-                ) : pages.length === 0 ? (
-                  <div className="text-center py-6">
-                    <p className="text-[13px] text-[#A8A5A2] dark:text-[#7C7977] mb-3">{t("pages.empty")}</p>
-                    <Link href={`/${locale}/new?mode=ai&profile=${active.id}`} className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-coral-600 text-white text-[13px] font-semibold hover:bg-coral-700 transition">
-                      <Plus size={14} /> {t("pages.emptyCta")}
-                    </Link>
-                  </div>
-                ) : (
-                  <>
-                    <div className={`${compact ? "space-y-1.5" : "space-y-2.5"} max-h-[58vh] overflow-y-auto -mx-1 px-1`}>
-                      {pages.map((pg) => (
-                        <PageRow key={pg.id} pg={pg} compact={compact} />
-                      ))}
-                    </div>
-                    {compact && (
-                      <Link
-                        href={`/${locale}/projects`}
-                        className="mt-3 inline-flex items-center gap-1 text-[12px] font-semibold text-coral-700 dark:text-coral-300 hover:opacity-80 transition"
-                      >
-                        {t("pages.viewAll")} →
-                      </Link>
-                    )}
-                  </>
-                )}
-              </Card>
-            </div>
-          </div>
         </main>
       ) : null}
 
@@ -707,76 +617,6 @@ function DeleteBusinessDialog({ name, busy, onConfirm, onClose }: { name: string
             </button>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-/* ───────── One page row (big card, or compact when many) ───────── */
-function PageRow({ pg, compact }: { pg: PageItem; compact: boolean }) {
-  const t = useTranslations("miNegocio");
-  const locale = useLocale();
-  const editor = `/${locale}/new?project=${pg.id}`;
-  const live = pg.subdomain ? `https://${pg.subdomain}.openlen.com` : null;
-  const badge = live ? (
-    <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-emerald-600 dark:text-emerald-400">
-      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> {t("pages.live")}
-    </span>
-  ) : (
-    <span className="text-[10.5px] font-medium text-[#A8A5A2] dark:text-[#7C7977]">{t("pages.draft")}</span>
-  );
-  const thumb = (size: number) =>
-    pg.thumbnailUrl ? (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={pg.thumbnailUrl} alt="" className="h-full w-full object-cover object-top" />
-    ) : (
-      <LayoutIcon size={size} className="text-[#C0BDBA] dark:text-[#5C5957]" />
-    );
-
-  if (compact) {
-    return (
-      <div className="flex items-center gap-2.5 rounded-lg p-1.5 ring-1 ring-transparent hover:ring-[#E5E3E1] dark:hover:ring-white/10 hover:bg-[#FAFAF9] dark:hover:bg-white/5 transition">
-        <Link href={editor} className="flex items-center gap-2.5 min-w-0 flex-1 group">
-          <span className="h-9 w-12 shrink-0 rounded-md overflow-hidden ring-1 ring-[#E5E3E1] dark:ring-white/10 bg-[#FAFAF9] dark:bg-white/5 flex items-center justify-center">
-            {thumb(13)}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[12.5px] font-medium truncate group-hover:text-coral-700 dark:group-hover:text-coral-300">{pg.title}</span>
-            <span className="block mt-0.5">{badge}</span>
-          </span>
-        </Link>
-        {live && (
-          <a href={live} target="_blank" rel="noopener noreferrer" title={t("pages.viewPublished")}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#A8A5A2] hover:text-coral-600 hover:bg-coral-50 dark:hover:bg-coral-500/10 transition shrink-0">
-            <Globe size={13} />
-          </a>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-xl overflow-hidden ring-1 ring-[#E5E3E1] dark:ring-white/10 hover:ring-coral-300 dark:hover:ring-coral-500/40 hover:shadow-sm transition">
-      <Link href={editor} className="block">
-        <div className="aspect-[16/10] bg-[#FAFAF9] dark:bg-white/5 overflow-hidden flex items-center justify-center">
-          {thumb(22)}
-        </div>
-      </Link>
-      <div className="flex items-center gap-2 px-3 py-2.5">
-        <Link href={editor} className="min-w-0 flex-1 group">
-          <span className="block text-[13px] font-semibold truncate group-hover:text-coral-700 dark:group-hover:text-coral-300">{pg.title}</span>
-          <span className="block mt-0.5">{badge}</span>
-        </Link>
-        {live ? (
-          <a href={live} target="_blank" rel="noopener noreferrer" title={t("pages.viewPublished")}
-            className="inline-flex items-center gap-1 h-7 px-2 rounded-md text-[11px] font-medium text-[#6B6967] dark:text-[#9B9897] ring-1 ring-[#E5E3E1] dark:ring-white/10 hover:text-coral-600 hover:ring-coral-300 transition shrink-0">
-            <Globe size={12} /> {t("pages.viewPublished")}
-          </a>
-        ) : (
-          <Link href={editor} className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#C0BDBA] dark:text-[#5C5957] hover:text-coral-500 shrink-0">
-            <ChevronRight size={15} />
-          </Link>
-        )}
       </div>
     </div>
   );
