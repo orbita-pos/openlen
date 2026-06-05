@@ -125,7 +125,6 @@ const ALL_TABS: SidebarMode[] = [
   "templates",
   "library",
   "pages",
-  "leads",
   "versions",
   "brief",
 ];
