@@ -182,18 +182,28 @@ function NewV2Inner() {
     entryMode === "template" ? "templates" : "chat",
   );
   const [leftCollapsed, setLeftCollapsed] = useState(false);
-  // Which account section the workspace CENTER renders — "page" = the page
-  // canvas (default; the editor behaves exactly as before). The rail's global
-  // icons switch this; nothing navigates away.
-  const [centerView, setCenterView] = useState<SectionView>("page");
-  // Any real navigation (opening a page from a section, starting a new one)
-  // returns the center to the page/canvas — so you're never stranded on the
-  // section you came from. Switching sections is local state (no URL change),
-  // so this leaves it alone.
-  const searchKey = searchParams.toString();
-  useEffect(() => {
-    setCenterView("page");
-  }, [searchKey]);
+  // Which account section the workspace CENTER renders is kept IN THE URL
+  // (?view=business|projects|analytics|messages; absent = the page canvas) so a
+  // refresh or shared link lands on the same section. Opening a page navigates
+  // to ?project=<id> with no ?view, which naturally falls back to the canvas.
+  const viewParam = searchParams.get("view");
+  const centerView: SectionView =
+    viewParam === "projects" ||
+    viewParam === "analytics" ||
+    viewParam === "messages" ||
+    viewParam === "business"
+      ? viewParam
+      : "page";
+  const setCenterView = useCallback(
+    (v: SectionView) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (v === "page") params.delete("view");
+      else params.set("view", v);
+      const qs = params.toString();
+      router.replace(qs ? `/new?${qs}` : "/new");
+    },
+    [searchParams, router],
+  );
   const [saving, setSaving] = useState(false);
   const [loadedProject, setLoadedProject] = useState<LoadedProject | null>(null);
   const [publishModalOpen, setPublishModalOpen] = useState(false);

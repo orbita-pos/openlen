@@ -387,7 +387,30 @@ export function BusinessSection({ embedded = false }: { embedded?: boolean }) {
     >
 
       {loading ? (
-        <div className="max-w-6xl mx-auto px-5 py-20 text-center text-[13px] text-[#8A8784]">{t("loading")}</div>
+        <main className="max-w-2xl mx-auto px-5 sm:px-6 py-7 sm:py-9" aria-hidden>
+          <div className="h-8 w-44 rounded-lg bg-black/5 dark:bg-white/10 animate-pulse mb-2.5" />
+          <div className="h-4 w-72 max-w-full rounded bg-black/5 dark:bg-white/10 animate-pulse mb-7" />
+          <div className="space-y-5">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="rounded-2xl bg-white dark:bg-[#1A1A1D] ring-1 ring-[#E5E3E1] dark:ring-white/10 p-6"
+              >
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="h-9 w-9 rounded-xl bg-black/5 dark:bg-white/10 animate-pulse shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3.5 w-32 rounded bg-black/5 dark:bg-white/10 animate-pulse" />
+                    <div className="h-3 w-52 max-w-full rounded bg-black/5 dark:bg-white/10 animate-pulse" />
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="h-11 rounded-lg bg-black/5 dark:bg-white/10 animate-pulse" />
+                  <div className="h-11 rounded-lg bg-black/5 dark:bg-white/10 animate-pulse" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </main>
       ) : active ? (
         <main className="max-w-6xl mx-auto px-5 sm:px-6 py-7 sm:py-9">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-7">
@@ -644,7 +667,7 @@ function Switcher({ profiles, active, onPick, onNew }: { profiles: LocalProfile[
         <ChevronDown size={15} className="text-[#A8A5A2] ml-1 shrink-0" />
       </button>
       {open && (
-        <div className="absolute right-0 sm:left-0 mt-2 w-[300px] rounded-2xl bg-white dark:bg-[#1A1A1D] ring-1 ring-[#E5E3E1] dark:ring-white/10 shadow-xl p-1.5 z-30">
+        <div className="absolute right-0 mt-2 w-[300px] max-w-[calc(100vw-2rem)] rounded-2xl bg-white dark:bg-[#1A1A1D] ring-1 ring-[#E5E3E1] dark:ring-white/10 shadow-xl p-1.5 z-30">
           <div className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#8A8784]">{t("switcher.yours")}</div>
           {profiles.map((n) => (
             <button key={n.id} onClick={() => { onPick(n.id); setOpen(false); }}
