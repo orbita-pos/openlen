@@ -57,6 +57,7 @@ export interface Insights {
   byDay: InsightsDayBucket[];
   topReferrers: InsightsRow[];
   topCountries: InsightsRow[];
+  topBrowsers: InsightsRow[];
   deviceSplit: InsightsDeviceSplit;
   topLinks: InsightsLink[];
 }
@@ -339,6 +340,34 @@ async function getTopCountries(
     .map((r) => ({ key: r.country, count: Number(r.count) }));
 }
 
+/** Top browsers (chrome/safari/firefox/edge/other). Raw-only — the rollup
+ *  doesn't carry browser, so for "all" range this is the last ≤90 days. */
+async function getTopBrowsers(
+  projectId: string,
+  since: Date | null,
+): Promise<InsightsRow[]> {
+  const rows = await db
+    .select({
+      browser: schema.pageEvents.browser,
+      count: sql<number>`COUNT(*)::int`,
+    })
+    .from(schema.pageEvents)
+    .where(
+      and(
+        whereClause(projectId, since),
+        eq(schema.pageEvents.type, "view"),
+        sql`${schema.pageEvents.browser} IS NOT NULL`,
+      ),
+    )
+    .groupBy(schema.pageEvents.browser)
+    .orderBy(sql`COUNT(*) DESC`)
+    .limit(8);
+
+  return rows
+    .filter((r): r is { browser: string; count: number } => Boolean(r.browser))
+    .map((r) => ({ key: r.browser, count: Number(r.count) }));
+}
+
 /** Mobile / desktop / tablet view counts. */
 async function getDeviceSplit(
   projectId: string,
@@ -376,15 +405,23 @@ export async function getInsights(
   }
 
   const since = sinceFor(range);
-  const [totals, byDay, topReferrers, topCountries, deviceSplit, topLinks] =
-    await Promise.all([
-      getTotals(projectId, since),
-      getByDay(projectId, since),
-      getTopReferrers(projectId, since),
-      getTopCountries(projectId, since),
-      getDeviceSplit(projectId, since),
-      getTopLinks(projectId, since),
-    ]);
+  const [
+    totals,
+    byDay,
+    topReferrers,
+    topCountries,
+    topBrowsers,
+    deviceSplit,
+    topLinks,
+  ] = await Promise.all([
+    getTotals(projectId, since),
+    getByDay(projectId, since),
+    getTopReferrers(projectId, since),
+    getTopCountries(projectId, since),
+    getTopBrowsers(projectId, since),
+    getDeviceSplit(projectId, since),
+    getTopLinks(projectId, since),
+  ]);
 
   return {
     range,
@@ -392,6 +429,7 @@ export async function getInsights(
     byDay,
     topReferrers,
     topCountries,
+    topBrowsers,
     deviceSplit,
     topLinks,
   };
@@ -401,11 +439,10 @@ export async function getInsights(
 
 /** Headline KPIs for "all" range: rollup for historical days + raw for today. */
 async function getTotalsAllRange(projectId: string): Promise<InsightsTotals> {
-  const [historical, today] = await Promise.all([
+  const [historical, today, uniqueRows] = await Promise.all([
     db
       .select({
         views: sql<number>`COALESCE(SUM(${schema.pageEventsDaily.count}) FILTER (WHERE ${schema.pageEventsDaily.type} = 'view'), 0)::int`,
-        uniques: sql<number>`COALESCE(SUM(${schema.pageEventsDaily.uniques}) FILTER (WHERE ${schema.pageEventsDaily.type} = 'view'), 0)::int`,
         clicks: sql<number>`COALESCE(SUM(${schema.pageEventsDaily.count}) FILTER (WHERE ${schema.pageEventsDaily.type} = 'click'), 0)::int`,
       })
       .from(schema.pageEventsDaily)
@@ -418,7 +455,6 @@ async function getTotalsAllRange(projectId: string): Promise<InsightsTotals> {
     db
       .select({
         views: sql<number>`COUNT(*) FILTER (WHERE ${schema.pageEvents.type} = 'view')::int`,
-        uniques: sql<number>`COUNT(DISTINCT ${schema.pageEvents.uaHash}) FILTER (WHERE ${schema.pageEvents.type} = 'view')::int`,
         clicks: sql<number>`COUNT(*) FILTER (WHERE ${schema.pageEvents.type} = 'click')::int`,
       })
       .from(schema.pageEvents)
@@ -428,13 +464,23 @@ async function getTotalsAllRange(projectId: string): Promise<InsightsTotals> {
           sql`${schema.pageEvents.ts} >= CURRENT_DATE`,
         ),
       ),
+    // Uniques can't be summed across days (returning visitors would
+    // double-count) and can't be exact once raw uaHashes are shed after 90d.
+    // COUNT DISTINCT over ALL retained raw events — exact for the ≤90d window
+    // (which is everything for a young page) instead of inflating the total.
+    db
+      .select({
+        uniques: sql<number>`COUNT(DISTINCT ${schema.pageEvents.uaHash}) FILTER (WHERE ${schema.pageEvents.type} = 'view')::int`,
+      })
+      .from(schema.pageEvents)
+      .where(eq(schema.pageEvents.projectId, projectId)),
   ]);
 
-  const h = historical[0] ?? { views: 0, uniques: 0, clicks: 0 };
-  const t = today[0] ?? { views: 0, uniques: 0, clicks: 0 };
+  const h = historical[0] ?? { views: 0, clicks: 0 };
+  const t = today[0] ?? { views: 0, clicks: 0 };
   return {
     views: Number(h.views) + Number(t.views),
-    uniques: Number(h.uniques) + Number(t.uniques),
+    uniques: Number(uniqueRows[0]?.uniques ?? 0),
     clicks: Number(h.clicks) + Number(t.clicks),
   };
 }
@@ -634,15 +680,23 @@ async function getInsightsAll(projectId: string): Promise<Insights> {
   // Top referrers stays raw-only (rollup doesn't track referrer). For
   // "all" range that effectively shows "last 90 days of referrers" —
   // acceptable v1 limit, fixable by adding referrer to the rollup later.
-  const [totals, byDay, topReferrers, topCountries, deviceSplit, topLinks] =
-    await Promise.all([
-      getTotalsAllRange(projectId),
-      getByDayAllRange(projectId),
-      getTopReferrers(projectId, null),
-      getTopCountriesAllRange(projectId),
-      getDeviceSplitAllRange(projectId),
-      getTopLinksAllRange(projectId),
-    ]);
+  const [
+    totals,
+    byDay,
+    topReferrers,
+    topCountries,
+    topBrowsers,
+    deviceSplit,
+    topLinks,
+  ] = await Promise.all([
+    getTotalsAllRange(projectId),
+    getByDayAllRange(projectId),
+    getTopReferrers(projectId, null),
+    getTopCountriesAllRange(projectId),
+    getTopBrowsers(projectId, null),
+    getDeviceSplitAllRange(projectId),
+    getTopLinksAllRange(projectId),
+  ]);
 
   return {
     range: "all",
@@ -650,6 +704,7 @@ async function getInsightsAll(projectId: string): Promise<Insights> {
     byDay,
     topReferrers,
     topCountries,
+    topBrowsers,
     deviceSplit,
     topLinks,
   };

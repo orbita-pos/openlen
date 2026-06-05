@@ -79,7 +79,8 @@
       "mobile": "モバイル",
       "desktop": "デスクトップ",
       "tablet": "タブレット"
-    }
+    },
+    "browsers": "ブラウザ"
   },
   "leads": {
     "loadError": "リードの読み込みに失敗しました",
