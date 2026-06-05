@@ -594,20 +594,6 @@ export function TopBar({
                   {userEmail || "—"}
                 </div>
               </div>
-              <Link
-                href="/projects"
-                className="flex items-center justify-between w-full text-left px-2.5 py-1.5 rounded-md text-[13px] fg hover:bg-hover transition"
-              >
-                <span>{t("account.allProjects")}</span>
-                <ExternalLink size={11} className="fg-faint" />
-              </Link>
-              <Link
-                href="/business"
-                onClick={() => setProfileOpen(false)}
-                className="flex items-center w-full text-left px-2.5 py-1.5 rounded-md text-[13px] fg hover:bg-hover transition"
-              >
-                {t("account.manageProfiles")}
-              </Link>
               <button
                 type="button"
                 onClick={() => {
