@@ -23,7 +23,6 @@ import type {
   ProjectSettings,
   StoredChatTurn,
 } from "@/lib/projects/types";
-import { AutofillModal } from "@/components/workspace-v2/autofill-modal";
 import { BusinessProfileModal } from "@/components/workspace-v2/business-profile-modal";
 import type { BusinessProfile } from "@/lib/business-profiles/types";
 import { CustomDomainModal } from "@/components/workspace-v2/custom-domain-modal";
@@ -126,7 +125,6 @@ const ALL_TABS: SidebarMode[] = [
   "library",
   "pages",
   "versions",
-  "brief",
 ];
 
 // Build the "Original" theme baseline from a page-meta payload — the resolved
@@ -207,7 +205,6 @@ function NewV2Inner() {
   const [saving, setSaving] = useState(false);
   const [loadedProject, setLoadedProject] = useState<LoadedProject | null>(null);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
-  const [autofillModalOpen, setAutofillModalOpen] = useState(false);
   const [customDomainOpen, setCustomDomainOpen] = useState(false);
   const [vercelOpen, setVercelOpen] = useState(false);
   const [githubOpen, setGithubOpen] = useState(false);
@@ -755,11 +752,6 @@ function NewV2Inner() {
     // scope-selects for chat AND pops the inline-edit overlay (the two modes
     // shared the same edit-mode body attr).
     !sectionSelectMode;
-  // Autofill is a flat-project feature (you fill a template's generic copy
-  // with your business data). It doesn't apply to slot-based AI projects
-  // which already have AI-generated content for each slot.
-  const onAutofill =
-    loadedProject?.isFlat ? () => setAutofillModalOpen(true) : undefined;
 
   // Compute which sidebar tabs are locked based on the entry mode + the
   // loaded project's shape. In an entry flow, only the relevant tab is
@@ -973,7 +965,7 @@ function NewV2Inner() {
         return;
       }
       if (e.key === "Escape") {
-        if (publishModalOpen || autofillModalOpen || assetModal) return;
+        if (publishModalOpen || assetModal) return;
         if (sectionSelectMode) {
           e.preventDefault();
           setSectionSelectMode(false);
@@ -994,7 +986,6 @@ function NewV2Inner() {
     inspectMode,
     sectionSelectMode,
     publishModalOpen,
-    autofillModalOpen,
     assetModal,
   ]);
 
@@ -1402,17 +1393,10 @@ function NewV2Inner() {
               prev ? { ...prev, html: newHtml } : prev,
             )
           }
-          initialBrief={loadedProject?.userBrief ?? ""}
-          onBriefSaved={(newBrief) =>
-            setLoadedProject((prev) =>
-              prev ? { ...prev, userBrief: newBrief } : prev,
-            )
-          }
           sectionSelectMode={sectionSelectMode}
           onToggleSectionSelect={(active) => setSectionSelectMode(active)}
           scopedSelection={scopedSelection}
           onClearScope={() => setScopedSelection(null)}
-          onAutofill={onAutofill}
           pendingDraft={pendingChatDraft}
           onPendingDraftConsumed={() => setPendingChatDraft(null)}
           aiBriefState={aiBriefFormState}
@@ -1706,18 +1690,6 @@ function NewV2Inner() {
                 : prev,
             );
           }}
-        />
-      )}
-      {loadedProject?.isFlat && (
-        <AutofillModal
-          open={autofillModalOpen}
-          projectId={loadedProject.id}
-          onClose={() => setAutofillModalOpen(false)}
-          onApplied={(newHtml) =>
-            setLoadedProject((prev) =>
-              prev ? { ...prev, html: newHtml, hasUnpublishedChanges: true } : prev,
-            )
-          }
         />
       )}
       <BusinessProfileModal
