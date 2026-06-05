@@ -186,6 +186,14 @@ function NewV2Inner() {
   // canvas (default; the editor behaves exactly as before). The rail's global
   // icons switch this; nothing navigates away.
   const [centerView, setCenterView] = useState<SectionView>("page");
+  // Any real navigation (opening a page from a section, starting a new one)
+  // returns the center to the page/canvas — so you're never stranded on the
+  // section you came from. Switching sections is local state (no URL change),
+  // so this leaves it alone.
+  const searchKey = searchParams.toString();
+  useEffect(() => {
+    setCenterView("page");
+  }, [searchKey]);
   const [saving, setSaving] = useState(false);
   const [loadedProject, setLoadedProject] = useState<LoadedProject | null>(null);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
