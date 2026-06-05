@@ -5,12 +5,17 @@
 // in the editor center. JSON turns the date fields into strings — revive them,
 // since ProjectsView calls .getTime() on createdAt/updatedAt.
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import type { ProjectSummary } from "@/lib/projects";
+import { ALL_BUSINESSES } from "@/components/workspace-v2/business-switcher";
 import { ProjectsView, type BusinessOption } from "./projects-view";
 
-export function ProjectsSection() {
+export function ProjectsSection({
+  activeBusinessId,
+}: {
+  activeBusinessId?: string;
+}) {
   const [state, setState] = useState<{
     projects: ProjectSummary[];
     profiles: BusinessOption[];
@@ -43,10 +48,18 @@ export function ProjectsSection() {
     };
   }, []);
 
+  // Scope to the active business (the rail switcher). "all"/none → everything.
+  const visibleProjects = useMemo(() => {
+    if (!state) return [];
+    if (!activeBusinessId || activeBusinessId === ALL_BUSINESSES)
+      return state.projects;
+    return state.projects.filter((p) => p.profileId === activeBusinessId);
+  }, [state, activeBusinessId]);
+
   return (
     <div className="flex-1 min-w-0 overflow-y-auto flex flex-col bg-preview-a">
       {state ? (
-        <ProjectsView projects={state.projects} profiles={state.profiles} />
+        <ProjectsView projects={visibleProjects} profiles={state.profiles} />
       ) : (
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="h-5 w-5 animate-spin text-zinc-400" />

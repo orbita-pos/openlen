@@ -13,7 +13,9 @@
     "noDesc": "아직 소개가 없어요",
     "principal": "기본",
     "new": "새로 만들기",
-    "add": "새 가게"
+    "add": "새 가게",
+    "all": "전체",
+    "openBusiness": "비즈니스 열기"
   },
   "identity": {
     "title": "기본 정보",

@@ -29,11 +29,15 @@ export interface AiBriefPanelProps {
   /** "quick" = curated (free), "scratch" = bespoke from-scratch (Pro). */
   mode: "quick" | "scratch";
   onModeChange: (m: "quick" | "scratch") => void;
-  /** Saved business profiles for the "Mi negocio" picker (curation only). */
+  /** Saved business profiles for the "Mi negocio" picker. */
   profiles?: { id: string; name: string }[];
   selectedProfileId?: string | null;
   onSelectProfile?: (id: string | null) => void;
   onManageProfiles?: () => void;
+  /** Whether ANY saved profile holds real info. False (only the empty lazy
+   *  default) → lead with the prominent "Agregar mi negocio" import CTA so the
+   *  page is born with the user's info. True → show the compact switch picker. */
+  hasBusinessInfo?: boolean;
 }
 
 export function AiBriefPanel({
@@ -46,6 +50,7 @@ export function AiBriefPanel({
   selectedProfileId = null,
   onSelectProfile,
   onManageProfiles,
+  hasBusinessInfo = false,
 }: AiBriefPanelProps) {
   const t = useTranslations("panelsA");
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -96,15 +101,16 @@ export function AiBriefPanel({
         </div>
       </div>
       <div className="shrink-0 px-3 pb-3">
-        {mode === "quick" && (
-          <ProfilePicker
-            profiles={profiles}
-            selectedId={selectedProfileId}
-            onSelect={onSelectProfile ?? (() => {})}
-            onManage={onManageProfiles ?? (() => {})}
-            disabled={generating}
-          />
-        )}
+        {/* Hybrid identity capture — offered on the brief screen in BOTH modes
+            so the first page can be born with the user's real info. */}
+        <BusinessAttach
+          profiles={profiles}
+          selectedId={selectedProfileId}
+          hasBusinessInfo={hasBusinessInfo}
+          onSelect={onSelectProfile ?? (() => {})}
+          onManage={onManageProfiles ?? (() => {})}
+          disabled={generating}
+        />
         <div className="rounded-xl border bd bg-elev focus-within:border-[color:var(--accent)] focus-within:ring-1 focus-within:ring-[color:var(--accent-ring)]/30 transition">
           <textarea
             ref={taRef}
@@ -268,9 +274,52 @@ function ModeSelect({
   );
 }
 
-// "Mi negocio" picker — seeds the curation flow from a saved profile. Hidden in
-// bespoke mode. With no profiles it's a single "add" link; with one or more it's
-// a dropdown (+ "new business"). "None" = let the AI invent the copy.
+// Identity capture entry on the brief screen. With no real business saved yet
+// (the empty lazy default), lead with a prominent "Agregar mi negocio" import
+// CTA so the page is born filled. Once a profile holds real info, show the
+// compact switch picker (which still offers "none" + "new business").
+function BusinessAttach({
+  profiles,
+  selectedId,
+  hasBusinessInfo,
+  onSelect,
+  onManage,
+  disabled,
+}: {
+  profiles: { id: string; name: string }[];
+  selectedId: string | null;
+  hasBusinessInfo: boolean;
+  onSelect: (id: string | null) => void;
+  onManage: () => void;
+  disabled: boolean;
+}) {
+  const t = useTranslations("panelsA");
+  if (!hasBusinessInfo) {
+    return (
+      <button
+        type="button"
+        onClick={onManage}
+        disabled={disabled}
+        className="mb-2 w-full inline-flex items-center justify-center gap-1.5 h-8 rounded-lg text-[11.5px] font-medium text-accent ring-1 ring-[color:var(--accent)]/35 bg-accent-soft hover:brightness-[1.03] transition disabled:opacity-40"
+      >
+        <Sparkles size={12} /> {t("profilePicker.add")}
+      </button>
+    );
+  }
+  return (
+    <ProfilePicker
+      profiles={profiles}
+      selectedId={selectedId}
+      onSelect={onSelect}
+      onManage={onManage}
+      disabled={disabled}
+    />
+  );
+}
+
+// "Mi negocio" picker — seeds generation from a saved profile. With no profiles
+// it's a single "add" link; with one or more it's a dropdown (+ "new business").
+// "None" = let the AI invent the copy.
 function ProfilePicker({
   profiles,
   selectedId,

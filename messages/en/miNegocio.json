@@ -13,7 +13,9 @@
     "noDesc": "No description yet",
     "principal": "Default",
     "new": "New",
-    "add": "New business"
+    "add": "New business",
+    "all": "All",
+    "openBusiness": "Open Business"
   },
   "identity": {
     "title": "Identity",

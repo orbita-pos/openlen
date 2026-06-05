@@ -17,10 +17,8 @@ import { listTemplates, getTemplateHtml } from "@/lib/templates/store";
 import { pickTemplate, pickWeighted, type TemplateCatalogItem } from "@/lib/curate/pick-template";
 import { fillAssembled } from "@/lib/assemble/fill";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
-import { applyAccentToHtml } from "@/lib/business-profiles/apply-accent";
-import { injectContactWidget } from "@/lib/business-profiles/contact-widget";
-import type { ExtractedBusinessData } from "@/lib/style-match/autofill/types";
-import type { BusinessProfileData } from "@/lib/business-profiles/types";
+import { overlayProfile } from "@/lib/business-profiles/overlay";
+import { seedBrandIntoHtml, profileMeta } from "@/lib/business-profiles/seed-html";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/curate — the FREE-tier page builder (CURATION).
@@ -157,23 +155,15 @@ export async function POST(req: Request): Promise<Response> {
           onStage: (stage) => emit("progress", { stage }),
         });
 
-        // 4. Born-canonical + SEO head, same ingestion as every other project.
+        // 4. Born-canonical + brand seed (accent + contact widget — both no-op
+        // for an empty profile) + SEO head: the same ingestion every creation
+        // path uses (lib/business-profiles/seed-html).
         const title = copy.business_name?.trim() || chosen?.name || "Untitled page";
-        // Recolour the curated page to the profile's brand accent (if set) —
-        // born-canonical normalization exposes --ol-accent for the override.
         const normalized = normalizeBornCanonical(fill.html);
-        const brandAccent = profile?.data.brand?.accent;
-        let themed = brandAccent
-          ? applyAccentToHtml(normalized, brandAccent)
-          : normalized;
-        // Append the profile's contact/links widget so they show on the page.
-        if (profile) {
-          themed = injectContactWidget(themed, profile.data, brandAccent ?? "#FF5A36");
-        }
+        const themed = seedBrandIntoHtml(normalized, profile.data);
         const finalHtml = ensurePageMeta(themed, {
           title,
-          logoUrl: profile?.data.brand?.logoUrl ?? undefined,
-          ogImage: profile?.data.photos?.[0] ?? undefined,
+          ...profileMeta(profile.data),
         });
 
         // 5. Reserved-marker guard + sanitize (defense in depth, like from-html).
@@ -252,48 +242,6 @@ export async function POST(req: Request): Promise<Response> {
       "x-accel-buffering": "no",
     },
   });
-}
-
-// Overlay the user's saved profile onto the model's invented copy: real values
-// win where present; the invented copy fills any gaps (a profile only SEEDS).
-function overlayProfile(
-  copy: ExtractedBusinessData,
-  data: BusinessProfileData,
-): ExtractedBusinessData {
-  const out: ExtractedBusinessData = { ...copy };
-  const real = (v: string | null | undefined) =>
-    typeof v === "string" && v.trim().length > 0;
-  if (real(data.business_name)) out.business_name = data.business_name;
-  if (real(data.industry)) out.industry = data.industry;
-  if (real(data.tagline_es)) out.tagline_es = data.tagline_es;
-  if (real(data.tagline_en)) out.tagline_en = data.tagline_en;
-  if (real(data.pitch)) out.pitch = data.pitch;
-  if (real(data.hero_keyword)) out.hero_keyword = data.hero_keyword;
-  if (real(data.cta_primary)) out.cta_primary = data.cta_primary;
-  if (real(data.cta_secondary)) out.cta_secondary = data.cta_secondary;
-  if (data.features?.length) out.features = data.features;
-  if (data.pricing?.length) out.pricing = data.pricing;
-  if (data.testimonials?.length) out.testimonials = data.testimonials;
-  if (data.faq_questions?.length) out.faq_questions = data.faq_questions;
-  if (data.contact && hasRealContact(data.contact)) out.contact = data.contact;
-  return out;
-}
-
-// True only if a profile's contact block has at least one real value — so an
-// EMPTY default profile overlays nothing and keeps the model's invented copy.
-function hasRealContact(c: BusinessProfileData["contact"]): boolean {
-  if (!c) return false;
-  const vals = [
-    c.whatsapp,
-    c.phone,
-    c.email,
-    c.address,
-    c.socials?.instagram,
-    c.socials?.facebook,
-    c.socials?.tiktok,
-    c.socials?.website,
-  ];
-  return vals.some((v) => typeof v === "string" && v.trim().length > 0);
 }
 
 function errorJson(status: number, message: string): Response {

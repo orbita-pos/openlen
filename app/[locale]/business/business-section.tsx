@@ -7,7 +7,7 @@
 // (import). i18n via the `miNegocio` namespace.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import type {
   BusinessProfile,
@@ -39,7 +39,6 @@ const Icon = ({
   </svg>
 );
 const Check = (p: IconProps) => <Icon {...p}><polyline points="20 6 9 17 4 12" /></Icon>;
-const ChevronDown = (p: IconProps) => <Icon {...p}><polyline points="6 9 12 15 18 9" /></Icon>;
 const Plus = (p: IconProps) => <Icon {...p}><path d="M5 12h14" /><path d="M12 5v14" /></Icon>;
 const Store = (p: IconProps) => <Icon {...p}><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7" /><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4" /><path d="M2 7h20" /></Icon>;
 const Upload = (p: IconProps) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" /></Icon>;
@@ -130,22 +129,6 @@ function blankProfile(): LocalProfile {
 const inicialDe = (name: string) => (name.trim()[0] || "N").toUpperCase();
 
 // Business avatar: the brand logo if set, else the name's initial on the accent.
-function BizAvatar({ name, logoUrl, accent, className = "" }: { name: string; logoUrl?: string | null; accent?: string | null; className?: string }) {
-  return (
-    <span
-      className={`inline-flex items-center justify-center overflow-hidden text-white font-bold shrink-0 ${className}`}
-      style={{ background: logoUrl ? "#ffffff" : accent ?? "#FF5A36" }}
-    >
-      {logoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={logoUrl} alt="" className="h-full w-full object-contain" />
-      ) : (
-        inicialDe(name)
-      )}
-    </span>
-  );
-}
-
 async function uploadAsset(file: File): Promise<string | null> {
   const form = new FormData();
   form.append("file", file);
@@ -210,7 +193,15 @@ const Field = ({ icon: I, value, onChange, placeholder }: { icon?: (p: IconProps
 );
 
 /* ───────── Section ───────── */
-export function BusinessSection({ embedded = false }: { embedded?: boolean }) {
+export function BusinessSection({
+  embedded = false,
+  onChanged,
+}: {
+  embedded?: boolean;
+  /** Fired after a profile is saved / made-default / deleted so the rail's
+   *  business switcher refreshes (name, logo, which one is default). */
+  onChanged?: () => void;
+}) {
   const t = useTranslations("miNegocio");
   const router = useRouter();
   const locale = useLocale();
@@ -255,6 +246,19 @@ export function BusinessSection({ embedded = false }: { embedded?: boolean }) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // The rail's active-business switcher (?business) is the ONLY switcher now —
+  // this page just edits whichever business it has selected (concrete id), or
+  // the default when the rail is on "Todos".
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (data.length === 0) return;
+    const bp = searchParams.get("business");
+    setActiveId((cur) => {
+      if (bp && bp !== "all" && data.some((p) => p.id === bp)) return bp;
+      return data.find((p) => p.isDefault)?.id ?? data[0]?.id ?? cur;
+    });
+  }, [searchParams, data]);
 
   const active = data.find((p) => p.id === activeId) ?? null;
 
@@ -307,13 +311,6 @@ export function BusinessSection({ embedded = false }: { embedded?: boolean }) {
   const delEnlace = (i: number) =>
     updateActive((p) => ({ ...p, data: { ...p.data, links: (p.data.links ?? []).filter((_, j) => j !== i) } }));
 
-  const nuevo = (seed?: BusinessProfileData) => {
-    const fresh = blankProfile();
-    if (seed) fresh.data = hydrate(seed);
-    setData((d) => [...d, fresh]);
-    setActiveId(fresh.id);
-  };
-
   const save = async () => {
     if (!active) return;
     setSaving(true);
@@ -333,6 +330,7 @@ export function BusinessSection({ embedded = false }: { embedded?: boolean }) {
         updateActive((p) => ({ ...p, name, data: { ...p.data, business_name: name } }));
       }
       setSaved(true);
+      onChanged?.();
       setTimeout(() => setSaved(false), 2200);
     } finally {
       setSaving(false);
@@ -343,6 +341,7 @@ export function BusinessSection({ embedded = false }: { embedded?: boolean }) {
     if (!active || active.isNew) return;
     await fetch(`/api/profiles/${active.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ setDefault: true }) });
     setData((d) => d.map((p) => ({ ...p, isDefault: p.id === active.id })));
+    onChanged?.();
   };
   const removeActiveLocal = () => {
     setData((d) => {
@@ -372,6 +371,7 @@ export function BusinessSection({ embedded = false }: { embedded?: boolean }) {
       await fetch(`/api/profiles/${active.id}`, { method: "DELETE" });
       setDeleteOpen(false);
       removeActiveLocal();
+      onChanged?.();
     } finally {
       setDeleting(false);
     }
@@ -413,18 +413,9 @@ export function BusinessSection({ embedded = false }: { embedded?: boolean }) {
         </main>
       ) : active ? (
         <main className="max-w-6xl mx-auto px-5 sm:px-6 py-7 sm:py-9">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-7">
-            <div>
-              <h1 className="text-[26px] sm:text-[30px] font-bold tracking-tight leading-tight">{t("title")}</h1>
-              <p className="text-[13.5px] text-[#8A8784] dark:text-[#9B9897] mt-1">{t("subtitle")}</p>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <Switcher profiles={data} active={active} onPick={setActiveId} onNew={() => nuevo()} />
-              <button onClick={() => void save()} disabled={saving}
-                className="inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-coral-600 text-white text-[14px] font-semibold shadow-[0_8px_22px_-8px_rgba(255,90,54,0.55)] hover:bg-coral-700 active:scale-[0.98] transition shrink-0 disabled:opacity-60">
-                {saving ? <Loader size={16} className="animate-spin" /> : <Check size={16} />} {t("save")}
-              </button>
-            </div>
+          <div className="mb-7">
+            <h1 className="text-[26px] sm:text-[30px] font-bold tracking-tight leading-tight">{t("title")}</h1>
+            <p className="text-[13.5px] text-[#8A8784] dark:text-[#9B9897] mt-1">{t("subtitle")}</p>
           </div>
 
           <div className="max-w-2xl space-y-5">
@@ -567,6 +558,17 @@ export function BusinessSection({ embedded = false }: { embedded?: boolean }) {
                 </button>
               </div>
             </div>
+            {/* Floating Save — sticks to the bottom while scrolling so it's
+                always reachable without scrolling back up. */}
+            <div className="sticky bottom-5 z-20 flex justify-end pointer-events-none mt-6">
+              <button
+                onClick={() => void save()}
+                disabled={saving}
+                className="pointer-events-auto inline-flex items-center gap-2 h-11 px-5 rounded-full bg-coral-600 text-white text-[14px] font-semibold shadow-[0_10px_28px_-6px_rgba(255,90,54,0.6)] hover:bg-coral-700 active:scale-[0.98] transition disabled:opacity-60"
+              >
+                {saving ? <Loader size={16} className="animate-spin" /> : <Check size={16} />} {t("save")}
+              </button>
+            </div>
         </main>
       ) : null}
 
@@ -645,53 +647,3 @@ function DeleteBusinessDialog({ name, busy, onConfirm, onClose }: { name: string
   );
 }
 
-/* ───────── Business switcher ───────── */
-function Switcher({ profiles, active, onPick, onNew }: { profiles: LocalProfile[]; active: LocalProfile; onPick: (id: string) => void; onNew: () => void }) {
-  const t = useTranslations("miNegocio");
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-  return (
-    <div className="relative" ref={ref}>
-      <button onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2.5 h-11 pl-1.5 pr-3 rounded-xl bg-white dark:bg-[#1A1A1D] ring-1 ring-[#E5E3E1] dark:ring-white/10 hover:ring-[#D6D3D0] dark:hover:ring-white/20 transition">
-        <BizAvatar name={active.name} logoUrl={active.data.brand?.logoUrl} accent={active.data.brand?.accent} className="h-8 w-8 rounded-lg text-[14px] ring-1 ring-black/5 dark:ring-white/10" />
-        <span className="min-w-0 text-left">
-          <span className="block text-[13.5px] font-semibold leading-tight truncate max-w-[160px]">{active.name.trim() || t("switcher.newBusiness")}</span>
-          <span className="block text-[11px] text-[#8A8784] dark:text-[#9B9897] leading-tight">{t("switcher.change")}</span>
-        </span>
-        <ChevronDown size={15} className="text-[#A8A5A2] ml-1 shrink-0" />
-      </button>
-      {open && (
-        <div className="absolute right-0 mt-2 w-[300px] max-w-[calc(100vw-2rem)] rounded-2xl bg-white dark:bg-[#1A1A1D] ring-1 ring-[#E5E3E1] dark:ring-white/10 shadow-xl p-1.5 z-30">
-          <div className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#8A8784]">{t("switcher.yours")}</div>
-          {profiles.map((n) => (
-            <button key={n.id} onClick={() => { onPick(n.id); setOpen(false); }}
-              className={`flex items-center gap-2.5 w-full text-left px-2 py-2 rounded-xl transition ${n.id === active.id ? "bg-[#FAFAF9] dark:bg-white/5" : "hover:bg-[#FAFAF9] dark:hover:bg-white/5"}`}>
-              <BizAvatar name={n.name} logoUrl={n.data.brand?.logoUrl} accent={n.data.brand?.accent} className="h-9 w-9 rounded-lg text-[14px]" />
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-1.5">
-                  <span className="text-[13.5px] font-semibold truncate">{n.name.trim() || t("switcher.newBusiness")}</span>
-                  {n.isDefault && <span className="inline-flex items-center gap-1 rounded-full bg-coral-50 dark:bg-coral-500/15 text-coral-700 dark:text-coral-300 px-1.5 py-0.5 text-[10px] font-semibold"><Star size={9} /> {t("switcher.principal")}</span>}
-                  {n.isNew && <span className="inline-flex items-center rounded-full bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 text-[10px] font-semibold">{t("switcher.new")}</span>}
-                </span>
-                <span className="block text-[11.5px] text-[#8A8784] dark:text-[#9B9897] truncate">{(n.data.industry ?? "").trim() || t("switcher.noDesc")}</span>
-              </span>
-              {n.id === active.id && <Check size={15} className="text-coral-600 shrink-0" />}
-            </button>
-          ))}
-          <div className="my-1 border-t border-[#EEECEA] dark:border-white/8" />
-          <button onClick={() => { onNew(); setOpen(false); }}
-            className="flex items-center gap-2.5 w-full text-left px-2.5 py-2 rounded-xl text-[13.5px] font-medium text-coral-700 dark:text-coral-300 hover:bg-coral-50 dark:hover:bg-coral-500/10 transition">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg ring-1 ring-dashed ring-coral-300 dark:ring-coral-500/40 shrink-0"><Plus size={16} /></span>
-            {t("switcher.add")}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}

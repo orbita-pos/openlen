@@ -6,14 +6,24 @@
 
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { ALL_BUSINESSES } from "@/components/workspace-v2/business-switcher";
 import { MessagesView, type DashLead } from "./messages-view";
 
-export function MessagesSection() {
+export function MessagesSection({
+  activeBusinessId,
+}: {
+  activeBusinessId?: string;
+}) {
   const [leads, setLeads] = useState<DashLead[] | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    void fetch("/api/messages")
+    setLeads(null);
+    const qs =
+      activeBusinessId && activeBusinessId !== ALL_BUSINESSES
+        ? `?business=${encodeURIComponent(activeBusinessId)}`
+        : "";
+    void fetch(`/api/messages${qs}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d: { leads?: unknown[] } | null) => {
         if (cancelled || !d) return;
@@ -27,7 +37,7 @@ export function MessagesSection() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [activeBusinessId]);
 
   return (
     <div className="flex-1 min-w-0 overflow-y-auto flex flex-col bg-preview-a">

@@ -13,7 +13,9 @@
     "noDesc": "Noch keine Beschreibung",
     "principal": "Standard",
     "new": "Neu",
-    "add": "Neues Geschäft"
+    "add": "Neues Geschäft",
+    "all": "Alle",
+    "openBusiness": "Business öffnen"
   },
   "identity": {
     "title": "Identität",

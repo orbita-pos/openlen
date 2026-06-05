@@ -1,6 +1,8 @@
 import { auth } from "@/auth";
 import { createProject } from "@/lib/projects";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
+import { seedBrandIntoHtml, profileMeta } from "@/lib/business-profiles/seed-html";
+import type { BusinessProfile, BusinessProfileData } from "@/lib/business-profiles/types";
 import { createVersion } from "@/lib/projects/versions";
 import { getCreditState } from "@/lib/credits";
 import { DESIGN_GUIDANCE, DESIGN_REFERENCE } from "@/lib/design-guidance";
@@ -112,6 +114,13 @@ export async function POST(req: Request): Promise<Response> {
       ? (body as { model: string }).model
       : undefined;
 
+  const profileId =
+    body &&
+    typeof body === "object" &&
+    typeof (body as { profileId?: unknown }).profileId === "string"
+      ? (body as { profileId: string }).profileId
+      : null;
+
   const session = await auth();
   const userId = session?.user?.id ?? null;
 
@@ -176,6 +185,19 @@ export async function POST(req: Request): Promise<Response> {
   }
   const aiModel: AIModel = modelParam === "gemini-pro" ? "gemini-pro" : "gemini-flash";
 
+  // Resolve the saved business profile up front so we can feed its real facts
+  // into the prompt AND seed the finished HTML. resolveProfileForCreation always
+  // returns a profile (lazy default); an empty one changes nothing downstream.
+  // Best-effort — a resolve failure just yields an unseeded page, never a
+  // failed generation.
+  let profile: BusinessProfile | null = null;
+  try {
+    profile = await resolveProfileForCreation(userId, profileId);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[generate] profile resolve failed — generating unseeded", err);
+  }
+
   // Quality S2 — pick a curated template screenshot as a multimodal quality
   // reference and attach it (base64 inlineData) to the brief turn, which is
   // the last user message the gateway anchors images on. Best-effort: a
@@ -207,6 +229,14 @@ ${brief}`;
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn("[generate] reference selection failed — text-only", err);
+  }
+
+  // Soft-seed the prompt with the user's REAL business facts (if any) so the
+  // generated COPY uses them instead of inventing. Empty profile → no block,
+  // page is generated exactly as before.
+  const businessFacts = profile ? buildBusinessFacts(profile.data) : null;
+  if (businessFacts) {
+    briefBlock = `${businessFacts}\n\n${briefBlock}`;
   }
 
   const messages = [
@@ -460,20 +490,25 @@ ${brief}`;
           }
         }
 
-        // ── Save the chosen final document ──────────────────────────────────
+        // ── Seed + save the chosen final document ───────────────────────────
         const title = extractTitle(html) ?? brief.slice(0, 60).trim();
-        // Born SEO-healthy: complete the <head> (description / og / favicon)
-        // so the user never has to. No-op for tags the model already emitted.
-        html = ensurePageMeta(html, { title });
 
         let projectId: string;
         try {
-          const business = await resolveProfileForCreation(userId);
+          // Reuse the profile resolved up front (a save-time resolve only if
+          // that failed). Seed brand accent + contact widget (no-op for an empty
+          // profile), then complete the <head> (SEO + brand logo/og).
+          const business = profile ?? (await resolveProfileForCreation(userId));
+          html = ensurePageMeta(seedBrandIntoHtml(html, business.data), {
+            title,
+            ...profileMeta(business.data),
+          });
           projectId = await createProject(userId, {
             html,
             brief,
             title,
             profileId: business.id,
+            logoUrl: business.data.brand?.logoUrl ?? null,
           });
         } catch (err) {
           // eslint-disable-next-line no-console
@@ -527,6 +562,35 @@ function extractTitle(html: string): string | null {
   const m = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
   const inner = m?.[1]?.trim();
   return inner && inner.length > 0 ? inner.slice(0, 200) : null;
+}
+
+// Build a <business> instruction block from the saved profile so the model
+// writes the page around the user's REAL facts (name / what-they-do / contact)
+// instead of inventing them. Returns null when the profile has nothing real —
+// the page is then generated exactly as it was before profiles existed.
+function buildBusinessFacts(data: BusinessProfileData): string | null {
+  const lines: string[] = [];
+  const add = (label: string, v: string | null | undefined) => {
+    if (typeof v === "string" && v.trim()) lines.push(`- ${label}: ${v.trim()}`);
+  };
+  add("Business name", data.business_name);
+  add("What they do", data.industry);
+  add("Tagline", data.tagline_es ?? data.tagline_en);
+  add("Pitch", data.pitch);
+  const c = data.contact;
+  add("WhatsApp", c?.whatsapp);
+  add("Phone", c?.phone);
+  add("Email", c?.email);
+  add("Address", c?.address);
+  add("Instagram", c?.socials?.instagram);
+  add("Facebook", c?.socials?.facebook);
+  add("TikTok", c?.socials?.tiktok);
+  add("Website", c?.socials?.website);
+  if (lines.length === 0) return null;
+  return `<business>
+These are the user's REAL business details. Use them as the page's actual content — the business name, what they do, and any contact info must be these exact values, NOT invented. Weave the contact details into the page naturally (e.g. a contact section / footer). Do not fabricate other contact methods.
+${lines.join("\n")}
+</business>`;
 }
 
 function stripMarkdownFences(s: string): string {

@@ -24,6 +24,7 @@ export default defineConfig({
       "lib/sections/**/*.test.ts",
       "lib/assemble/**/*.test.ts",
       "lib/curate/**/*.test.ts",
+      "lib/business-profiles/**/*.test.ts",
       "lib/billing/**/*.test.ts",
       "lib/theme-derive.test.ts",
       "lib/palette-gen-look.test.ts",

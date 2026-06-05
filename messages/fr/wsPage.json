@@ -41,5 +41,11 @@
   },
   "a11y": {
     "workspaceHeading": "Espace de travail OpenLen"
+  },
+  "makeYours": {
+    "title": "Personnalisez-la",
+    "body": "Ajoutez les infos de votre entreprise à cette page.",
+    "cta": "Ajouter l’entreprise",
+    "dismiss": "Ignorer"
   }
 }

@@ -41,5 +41,11 @@
   },
   "a11y": {
     "workspaceHeading": "Area di lavoro OpenLen"
+  },
+  "makeYours": {
+    "title": "Rendila tua",
+    "body": "Aggiungi le info della tua attività a questa pagina.",
+    "cta": "Aggiungi attività",
+    "dismiss": "Ignora"
   }
 }
