@@ -30,6 +30,9 @@ import { CustomDomainModal } from "@/components/workspace-v2/custom-domain-modal
 import { DeployIntegrationModal } from "@/components/workspace-v2/deploy-integration-modal";
 import { EmptyState } from "@/components/workspace-v2/empty-state";
 import { BusinessSection } from "../business/business-section";
+import { ProjectsSection } from "../projects/projects-section";
+import { AnalyticsSection } from "../analytics/analytics-section";
+import { MessagesSection } from "../messages/messages-section";
 import {
   LeftSidebar,
   type SidebarMode,
@@ -156,7 +159,6 @@ function readThemeBaseline(m: Record<string, unknown>): {
 function NewV2Inner() {
   const t = useTranslations("wsPage");
   const tSections = useTranslations("panelsA");
-  const tNav = useTranslations("projects");
   const [dark, toggleDark] = useDarkMode();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -1414,25 +1416,12 @@ function NewV2Inner() {
         <h1 className="sr-only">{t("a11y.workspaceHeading")}</h1>
         {centerView === "business" ? (
           <BusinessSection embedded />
-        ) : centerView !== "page" ? (
-          <section className="flex-1 min-w-0 min-h-0 flex items-center justify-center bg-preview-a">
-            <div className="text-center px-6">
-              <div className="text-[15px] font-semibold fg">
-                {tNav(
-                  centerView === "projects"
-                    ? "nav.myPages"
-                    : centerView === "analytics"
-                      ? "nav.analytics"
-                      : centerView === "messages"
-                        ? "nav.messages"
-                        : "nav.myBusiness",
-                )}
-              </div>
-              <div className="mt-1 text-[12.5px] fg-faint">
-                {tNav("sections.comingSoon")}
-              </div>
-            </div>
-          </section>
+        ) : centerView === "projects" ? (
+          <ProjectsSection />
+        ) : centerView === "analytics" ? (
+          <AnalyticsSection />
+        ) : centerView === "messages" ? (
+          <MessagesSection />
         ) : (
           <>
         {entryMode === "choosing" && (

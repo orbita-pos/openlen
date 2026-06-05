@@ -53,7 +53,7 @@ type ViewMode = "grid" | "list";
 type FilterId = "all" | "draft" | "published" | "archived";
 type SortId = "edited" | "created" | "name";
 
-interface BusinessOption {
+export interface BusinessOption {
   id: string;
   name: string;
   isDefault: boolean;
