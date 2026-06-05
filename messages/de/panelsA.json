@@ -34,7 +34,9 @@
     "templateCount": "{count, plural, one {# Vorlage} other {# Vorlagen}}",
     "loadError": "Vorlagen konnten nicht geladen werden – {error}",
     "footer": "Vorlagen sind statisches HTML – reines Markup, Tailwind CDN, Google Fonts. Beim Klonen gehören sie dir; nur dein Projekt beansprucht eine Subdomain, wenn du auf Veröffentlichen klickst.",
-    "cannotApply": "Du kannst keine Vorlage auf eine Seite anwenden, die du gerade bearbeitest. Erstelle eine neue Seite, um eine zu verwenden."
+    "cannotApply": "Du kannst keine Vorlage auf eine Seite anwenden, die du gerade bearbeitest. Erstelle eine neue Seite, um eine zu verwenden.",
+    "moreFamilies": "+{count} mehr",
+    "fewerFamilies": "Weniger"
   },
   "sections": {
     "heading": "Abschnitts-Bibliothek",

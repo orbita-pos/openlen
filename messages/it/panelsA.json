@@ -34,7 +34,9 @@
     "templateCount": "{count, plural, one {# template} other {# template}}",
     "loadError": "Impossibile caricare i template — {error}",
     "footer": "I template sono HTML statico — markup puro, Tailwind CDN, Google Fonts. Clonandoli diventano tuoi; solo il tuo progetto rivendica un sottodominio quando premi Pubblica.",
-    "cannotApply": "Non puoi applicare un modello a una pagina che stai già modificando. Crea una nuova pagina per usarne uno."
+    "cannotApply": "Non puoi applicare un modello a una pagina che stai già modificando. Crea una nuova pagina per usarne uno.",
+    "moreFamilies": "+{count} altri",
+    "fewerFamilies": "Mostra meno"
   },
   "sections": {
     "heading": "Libreria di sezioni",
