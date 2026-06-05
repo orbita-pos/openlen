@@ -8,16 +8,22 @@ export const dynamic = "force-dynamic";
 // GET /api/analytics — account-level metrics (last 30 days) across all the
 // user's pages: aggregate totals + a per-page breakdown. Mirrors the /analytics
 // route's server query so the in-workspace Analytics section can fetch it.
-export async function GET(): Promise<Response> {
+export async function GET(req: Request): Promise<Response> {
   const session = await auth();
   if (!session?.user?.id) {
     return json({ error: "unauthorized" }, 401);
   }
   const userId = session.user.id;
-  const [projects, statsMap] = await Promise.all([
+  // Scope to one business (the workspace switcher) when ?business=<profileId>.
+  const businessId = new URL(req.url).searchParams.get("business");
+  const [projectsAll, statsMap] = await Promise.all([
     listProjects(userId),
     getProjectStatsForUser(userId, 30),
   ]);
+  const projects =
+    businessId && businessId !== "all"
+      ? projectsAll.filter((p) => p.profileId === businessId)
+      : projectsAll;
   const perPage = projects
     .map((p) => {
       const s = statsMap.get(p.id) ?? { views: 0, clicks: 0, leads: 0 };

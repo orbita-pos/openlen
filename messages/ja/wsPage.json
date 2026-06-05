@@ -41,5 +41,11 @@
   },
   "a11y": {
     "workspaceHeading": "OpenLen ワークスペース"
+  },
+  "makeYours": {
+    "title": "あなたのものに",
+    "body": "このページにあなたのビジネス情報を追加します。",
+    "cta": "ビジネスを追加",
+    "dismiss": "閉じる"
   }
 }

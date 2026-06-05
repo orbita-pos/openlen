@@ -13,7 +13,9 @@
     "noDesc": "Nog geen omschrijving",
     "principal": "Standaard",
     "new": "Nieuw",
-    "add": "Nieuw bedrijf"
+    "add": "Nieuw bedrijf",
+    "all": "Alle",
+    "openBusiness": "Bedrijf openen"
   },
   "identity": {
     "title": "Wie ben je",

@@ -41,5 +41,11 @@
   },
   "a11y": {
     "workspaceHeading": "OpenLen workspace"
+  },
+  "makeYours": {
+    "title": "Make it yours",
+    "body": "Add your business info to this page.",
+    "cta": "Add business",
+    "dismiss": "Dismiss"
   }
 }

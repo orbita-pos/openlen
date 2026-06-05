@@ -13,7 +13,9 @@
     "noDesc": "まだ説明がありません",
     "principal": "メイン",
     "new": "新規",
-    "add": "新しいお店"
+    "add": "新しいお店",
+    "all": "すべて",
+    "openBusiness": "ビジネスを開く"
   },
   "identity": {
     "title": "お店の基本情報",

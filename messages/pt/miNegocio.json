@@ -13,7 +13,9 @@
     "noDesc": "Ainda sem descrição",
     "principal": "Padrão",
     "new": "Novo",
-    "add": "Novo negócio"
+    "add": "Novo negócio",
+    "all": "Todos",
+    "openBusiness": "Abrir Negócio"
   },
   "identity": {
     "title": "Identidade",

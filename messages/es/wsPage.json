@@ -41,5 +41,11 @@
   },
   "a11y": {
     "workspaceHeading": "Espacio de trabajo de OpenLen"
+  },
+  "makeYours": {
+    "title": "Hazla tuya",
+    "body": "Agrega la info de tu negocio a esta página.",
+    "cta": "Agregar negocio",
+    "dismiss": "Descartar"
   }
 }

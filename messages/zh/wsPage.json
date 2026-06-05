@@ -41,5 +41,11 @@
   },
   "a11y": {
     "workspaceHeading": "OpenLen 工作区"
+  },
+  "makeYours": {
+    "title": "把它变成你的",
+    "body": "将你的业务信息添加到此页面。",
+    "cta": "添加业务",
+    "dismiss": "关闭"
   }
 }

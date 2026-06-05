@@ -15,7 +15,7 @@ import type {
 } from "@/lib/business-profiles/types";
 
 type Step = "import" | "confirm";
-type Source = "image" | "text";
+type Source = "image" | "text" | "url";
 
 interface Draft {
   label: string; // the profile's display name (defaults to business_name)
@@ -68,6 +68,7 @@ export function BusinessProfileModal({
   const [source, setSource] = useState<Source>("image");
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [description, setDescription] = useState("");
+  const [url, setUrl] = useState("");
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [imageMime, setImageMime] = useState<"image/jpeg" | "image/png">("image/jpeg");
   const [busy, setBusy] = useState(false);
@@ -84,6 +85,7 @@ export function BusinessProfileModal({
     } else {
       setDraft(EMPTY);
       setDescription("");
+      setUrl("");
       setImageDataUrl(null);
       setSource("image");
       setStep("import");
@@ -209,6 +211,9 @@ export function BusinessProfileModal({
     if (source === "image") {
       if (!imageDataUrl) return setError(t("profile.errors.uploadFirst"));
       body = { source: "image", image: imageDataUrl, imageMime };
+    } else if (source === "url") {
+      if (!/^https?:\/\//i.test(url.trim())) return setError(t("profile.errors.url"));
+      body = { source: "url", url: url.trim() };
     } else {
       if (description.trim().length < 10) return setError(t("profile.errors.describe"));
       body = { source: "text", description: description.trim() };
@@ -236,7 +241,7 @@ export function BusinessProfileModal({
     } finally {
       setBusy(false);
     }
-  }, [source, imageDataUrl, imageMime, description, t]);
+  }, [source, imageDataUrl, imageMime, description, url, t]);
 
   const save = useCallback(async () => {
     const label = (draft.label || draft.business_name).trim();
@@ -312,7 +317,7 @@ export function BusinessProfileModal({
           {step === "import" ? (
             <div className="space-y-3">
               <div className="flex gap-1 text-[12px]">
-                {(["image", "text"] as const).map((s) => (
+                {(["image", "url", "text"] as const).map((s) => (
                   <button
                     key={s}
                     type="button"
@@ -359,6 +364,17 @@ export function BusinessProfileModal({
                     }}
                   />
                 </div>
+              )}
+
+              {source === "url" && (
+                <input
+                  type="url"
+                  inputMode="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder={t("profile.import.urlPlaceholder")}
+                  className="w-full px-3 py-2.5 text-[13px] fg bg-app border bd rounded-md focus:bd-strong focus:outline-none placeholder:fg-faint"
+                />
               )}
 
               {source === "text" && (

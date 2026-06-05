@@ -25,12 +25,13 @@ import {
   Monitor,
   PanelLeft,
   PanelRight,
-  Store,
 } from "./icons";
 import type { Section } from "./mock-data";
 import type { BriefFormState } from "@/components/workspace/types";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { AiBriefPanel } from "./panels/ai-brief-panel";
+import { RailBusinessSwitcher } from "./business-switcher";
+import type { BusinessProfile } from "@/lib/business-profiles/types";
 import {
   ChatPanel,
   type ScopedSelection,
@@ -64,7 +65,8 @@ const GLOBAL_SECTIONS: ReadonlyArray<{
   { view: "projects", icon: FileText, key: "nav.myPages" },
   { view: "analytics", icon: BarChart3, key: "nav.analytics" },
   { view: "messages", icon: Inbox, key: "nav.messages" },
-  { view: "business", icon: Store, key: "nav.myBusiness" },
+  // "business" lives in the top RailBusinessSwitcher now (avatar → "Abrir
+  // Negocio"), not as a generic section icon here.
 ];
 
 function GlobalSections({
@@ -211,10 +213,19 @@ interface LeftSidebarProps {
   aiSelectedProfileId?: string | null;
   aiOnSelectProfile?: (id: string | null) => void;
   aiOnManageProfiles?: () => void;
+  /** Whether any saved profile holds real info — drives the brief screen's
+   *  cold-start import CTA vs the switch picker. */
+  aiHasBusinessInfo?: boolean;
   /** The account section shown in the workspace CENTER ("page" = the canvas).
    *  The global-section rail icons set this; the parent renders the section. */
   activeSection?: SectionView;
   onSelectSection?: (v: SectionView) => void;
+  /** Active-business switcher (top of the rail). The active business scopes the
+   *  Páginas/Analytics/Mensajes sections + is the default for new pages. */
+  businesses?: BusinessProfile[];
+  activeBusinessId?: string;
+  onPickBusiness?: (id: string) => void;
+  onAddBusiness?: () => void;
 }
 
 export function LeftSidebar({
@@ -259,7 +270,13 @@ export function LeftSidebar({
   aiSelectedProfileId = null,
   aiOnSelectProfile,
   aiOnManageProfiles,
+  aiHasBusinessInfo = false,
+  businesses = [],
+  activeBusinessId = "",
+  onPickBusiness,
+  onAddBusiness,
 }: LeftSidebarProps) {
+  const showBusinessSwitcher = businesses.length > 0 && !!onPickBusiness;
   const t = useTranslations("wsChrome");
   const isFlatProject = flatProjectId !== undefined;
   const lockedSet = new Set(lockedTabs ?? []);
@@ -280,6 +297,18 @@ export function LeftSidebar({
   if (collapsed) {
     return (
       <aside className="h-full w-12 shrink-0 bg-side border-r bd flex flex-col items-center pt-2 gap-1">
+        {showBusinessSwitcher && (
+          <>
+            <RailBusinessSwitcher
+              businesses={businesses}
+              activeId={activeBusinessId}
+              onPick={onPickBusiness ?? (() => {})}
+              onAdd={onAddBusiness ?? (() => {})}
+              onOpenBusiness={() => onSelectSection?.("business")}
+            />
+            <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
+          </>
+        )}
         <GlobalSections
           vertical
           active={activeSection}
@@ -336,6 +365,18 @@ export function LeftSidebar({
       {/* The icon rail stays vertical + fixed — identical to collapsed; the
           panel just opens to its right (it never reflows into a top row). */}
       <div className="h-full w-12 shrink-0 flex flex-col items-center pt-2 gap-1 border-r bd">
+        {showBusinessSwitcher && (
+          <>
+            <RailBusinessSwitcher
+              businesses={businesses}
+              activeId={activeBusinessId}
+              onPick={onPickBusiness ?? (() => {})}
+              onAdd={onAddBusiness ?? (() => {})}
+              onOpenBusiness={() => onSelectSection?.("business")}
+            />
+            <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
+          </>
+        )}
         <GlobalSections
           vertical
           active={activeSection}
@@ -405,6 +446,7 @@ export function LeftSidebar({
             selectedProfileId={aiSelectedProfileId}
             onSelectProfile={aiOnSelectProfile}
             onManageProfiles={aiOnManageProfiles}
+            hasBusinessInfo={aiHasBusinessInfo}
           />
         ) : (
           <>

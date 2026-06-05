@@ -41,5 +41,11 @@
   },
   "a11y": {
     "workspaceHeading": "OpenLen-werkruimte"
+  },
+  "makeYours": {
+    "title": "Maak hem van jou",
+    "body": "Voeg je bedrijfsinfo toe aan deze pagina.",
+    "cta": "Bedrijf toevoegen",
+    "dismiss": "Sluiten"
   }
 }

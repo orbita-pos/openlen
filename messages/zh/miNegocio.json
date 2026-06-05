@@ -13,7 +13,9 @@
     "noDesc": "还没有简介",
     "principal": "默认",
     "new": "新",
-    "add": "新建店铺"
+    "add": "新建店铺",
+    "all": "全部",
+    "openBusiness": "打开业务"
   },
   "identity": {
     "title": "基本信息",

@@ -6,6 +6,7 @@ import { sanitizeForPublish } from "@/lib/html-engine";
 import { normalizeBornCanonical } from "@/lib/normalize";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
+import { seedBrandIntoHtml, profileMeta } from "@/lib/business-profiles/seed-html";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/projects/from-template
@@ -24,6 +25,7 @@ export const runtime = "nodejs";
 
 interface FromTemplateBody {
   templateId?: string;
+  profileId?: string;
 }
 
 export async function POST(req: Request): Promise<Response> {
@@ -65,15 +67,24 @@ export async function POST(req: Request): Promise<Response> {
   }
   const cleanHtml = sanitized.html;
 
-  // Clone the template's HTML through the born-canonical normalizer so the
-  // user's project enters with the same token contract as a generated page
-  // (radius / font / accent become editable in the inspector), then complete
-  // the <head> so it's born SEO-healthy (title / description / og / favicon).
-  const finalHtml = ensurePageMeta(normalizeBornCanonical(cleanHtml), {
-    title: entry.name,
-  });
+  // Resolve the business first so the clone is born with the user's info. A
+  // hand-picked template keeps its OWN look (recolor:false) but still gets the
+  // real contact widget + brand logo/og.
+  const business = await resolveProfileForCreation(
+    session.user.id,
+    typeof body.profileId === "string" ? body.profileId : null,
+  );
 
-  const business = await resolveProfileForCreation(session.user.id);
+  // Clone through the born-canonical normalizer (so radius / font / accent
+  // become editable in the inspector) → seed the contact widget + logo/og
+  // (no-op for an empty profile) → complete the <head> for SEO.
+  const finalHtml = ensurePageMeta(
+    seedBrandIntoHtml(normalizeBornCanonical(cleanHtml), business.data, {
+      recolor: false,
+    }),
+    { title: entry.name, ...profileMeta(business.data) },
+  );
+
   const projectId = crypto.randomUUID();
   try {
     await db.insert(schema.projects).values({
@@ -90,6 +101,7 @@ export async function POST(req: Request): Promise<Response> {
       tags: [entry.id, "template", entry.family],
       status: "draft",
       profileId: business.id,
+      logoUrl: business.data.brand?.logoUrl ?? null,
       data: { html: finalHtml },
     });
   } catch (err) {

@@ -25,6 +25,8 @@ import type {
 } from "@/lib/projects/types";
 import { BusinessProfileModal } from "@/components/workspace-v2/business-profile-modal";
 import type { BusinessProfile } from "@/lib/business-profiles/types";
+import { isProfileFilled } from "@/lib/business-profiles/overlay";
+import { ALL_BUSINESSES } from "@/components/workspace-v2/business-switcher";
 import { CustomDomainModal } from "@/components/workspace-v2/custom-domain-modal";
 import { DeployIntegrationModal } from "@/components/workspace-v2/deploy-integration-modal";
 import { EmptyState } from "@/components/workspace-v2/empty-state";
@@ -37,7 +39,7 @@ import {
   type SidebarMode,
   type SectionView,
 } from "@/components/workspace-v2/left-sidebar";
-import { Check, Undo, X } from "@/components/workspace-v2/icons";
+import { Check, Sparkles, Undo, X } from "@/components/workspace-v2/icons";
 import { SectionPreviewModal } from "@/components/workspace-v2/section-preview-modal";
 import type { SectionSpec } from "@/components/workspace-v2/sections-data";
 import { PreviewPlaceholder } from "@/components/workspace-v2/preview-placeholder";
@@ -403,6 +405,102 @@ function NewV2Inner() {
   useEffect(() => {
     void refreshProfiles();
   }, [refreshProfiles]);
+  // Does the user have ANY real business saved? Drives the brief screen's
+  // cold-start CTA (no info → lead with import; has info → show the picker).
+  const hasBusinessInfo = useMemo(
+    () => profiles.some((p) => isProfileFilled(p.data)),
+    [profiles],
+  );
+  // Active-business context (the rail switcher). Derived from ?business; default
+  // = the default profile; "all" = no scoping. It scopes the Páginas/Analytics/
+  // Mensajes sections + is the business a new page attaches to.
+  const defaultBusinessId = useMemo(
+    () => profiles.find((p) => p.isDefault)?.id ?? profiles[0]?.id ?? "",
+    [profiles],
+  );
+  const businessParam = searchParams.get("business");
+  const activeBusinessId = useMemo(() => {
+    if (businessParam === ALL_BUSINESSES) return ALL_BUSINESSES;
+    if (businessParam && profiles.some((p) => p.id === businessParam))
+      return businessParam;
+    return defaultBusinessId;
+  }, [businessParam, profiles, defaultBusinessId]);
+  const setActiveBusiness = useCallback(
+    (v: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (!v || v === defaultBusinessId) params.delete("business");
+      else params.set("business", v);
+      const qs = params.toString();
+      router.replace(qs ? `/new?${qs}` : "/new");
+    },
+    [searchParams, router, defaultBusinessId],
+  );
+  // The business a NEW page attaches to (never "all" → fall back to default).
+  const creationProfileId =
+    activeBusinessId === ALL_BUSINESSES ? defaultBusinessId : activeBusinessId;
+  // New pages + the AI seed follow the active business. Switching updates the
+  // brief picker (the user can still override to "none" per page afterwards).
+  useEffect(() => {
+    if (activeBusinessId && activeBusinessId !== ALL_BUSINESSES) {
+      setSelectedProfileId(activeBusinessId);
+    }
+  }, [activeBusinessId]);
+  // "Hazla tuya" — a dismissible nudge shown on a page born without business
+  // info. Dismissals persist per-project in localStorage so it's never naggy.
+  const [makeYoursDismissed, setMakeYoursDismissed] = useState<Set<string>>(
+    () => new Set(),
+  );
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("openlen.makeYoursDismissed");
+      if (raw) setMakeYoursDismissed(new Set(JSON.parse(raw) as string[]));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  const dismissMakeYours = useCallback((id: string) => {
+    setMakeYoursDismissed((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      try {
+        localStorage.setItem(
+          "openlen.makeYoursDismissed",
+          JSON.stringify([...next]),
+        );
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
+  // Re-apply the (now-saved) business to the open page — adds the contact widget
+  // + logo, keeps the design. Set when the banner CTA opened the import modal.
+  const pendingReseedRef = useRef(false);
+  const reseedCurrentPage = useCallback(async () => {
+    const id = loadedProject?.id;
+    if (!id) return;
+    try {
+      const res = await fetch(`/api/projects/${id}/seed-profile`, {
+        method: "POST",
+      });
+      if (!res.ok) return;
+      const data = (await res.json().catch(() => null)) as {
+        html?: string;
+      } | null;
+      const html = data?.html;
+      if (html) {
+        setLoadedProject((prev) =>
+          prev && prev.id === id ? { ...prev, html } : prev,
+        );
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [loadedProject?.id]);
+  const onMakeYours = useCallback(() => {
+    pendingReseedRef.current = true;
+    setProfileModalOpen(true);
+  }, []);
   // Brief can be pre-filled from a deep link (homepage hero CTA, projects
   // example cards, etc.) via ?brief=<urlencoded>.
   const briefParam = searchParams.get("brief");
@@ -419,7 +517,7 @@ function NewV2Inner() {
     if (aiGenerating) return;
     const brief = aiPrompt.trim();
     if (brief.length < 10) return;
-    if (aiMode === "scratch") void bespoke.generate(brief, genModel);
+    if (aiMode === "scratch") void bespoke.generate(brief, genModel, selectedProfileId);
     else void curation.curate(brief, selectedProfileId);
   }, [
     aiGenerating,
@@ -1286,7 +1384,10 @@ function NewV2Inner() {
       const res = await fetch("/api/projects/from-template", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ templateId: previewingTemplate.id }),
+        body: JSON.stringify({
+          templateId: previewingTemplate.id,
+          profileId: creationProfileId || undefined,
+        }),
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as {
@@ -1408,6 +1509,11 @@ function NewV2Inner() {
           aiSelectedProfileId={selectedProfileId}
           aiOnSelectProfile={setSelectedProfileId}
           aiOnManageProfiles={() => setProfileModalOpen(true)}
+          aiHasBusinessInfo={hasBusinessInfo}
+          businesses={profiles}
+          activeBusinessId={activeBusinessId}
+          onPickBusiness={setActiveBusiness}
+          onAddBusiness={() => setProfileModalOpen(true)}
         />
         {/* One <main> landmark for the workspace center. `contents` keeps the
             flex layout byte-identical (generates no box) while giving the a11y
@@ -1416,13 +1522,13 @@ function NewV2Inner() {
         <main className="contents">
         <h1 className="sr-only">{t("a11y.workspaceHeading")}</h1>
         {centerView === "business" ? (
-          <BusinessSection embedded />
+          <BusinessSection embedded onChanged={refreshProfiles} />
         ) : centerView === "projects" ? (
-          <ProjectsSection />
+          <ProjectsSection activeBusinessId={activeBusinessId} />
         ) : centerView === "analytics" ? (
-          <AnalyticsSection />
+          <AnalyticsSection activeBusinessId={activeBusinessId} />
         ) : centerView === "messages" ? (
-          <MessagesSection />
+          <MessagesSection activeBusinessId={activeBusinessId} />
         ) : (
           <>
         {entryMode === "choosing" && (
@@ -1562,6 +1668,35 @@ function NewV2Inner() {
                   </button>
                 </div>
               )}
+              {!hasBusinessInfo &&
+                loadedProject &&
+                !makeYoursDismissed.has(loadedProject.id) && (
+                  <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 pl-3.5 pr-1.5 py-1.5 rounded-full bg-elev border bd shadow-card fade-in max-w-[calc(100%-2rem)]">
+                    <span className="inline-flex items-center gap-1.5 text-[12px] fg whitespace-nowrap min-w-0">
+                      <Sparkles size={13} className="text-accent shrink-0" />
+                      <b className="fg">{t("makeYours.title")}</b>
+                      <span className="fg-muted hidden sm:inline truncate">
+                        {t("makeYours.body")}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={onMakeYours}
+                      className="inline-flex items-center h-7 px-3 rounded-full text-[11.5px] font-semibold bg-[var(--accent-strong)] text-white shadow-coral hover:brightness-105 transition whitespace-nowrap"
+                    >
+                      {t("makeYours.cta")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => dismissMakeYours(loadedProject.id)}
+                      aria-label={t("makeYours.dismiss")}
+                      title={t("makeYours.dismiss")}
+                      className="inline-flex items-center justify-center h-7 w-7 rounded-full fg-faint hover:fg hover:bg-hover transition"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                )}
               {inspectMode && (
                 // Floating drawer (overlay, not push). PreviewArea keeps its
                 // full width so the iframe's Fit-scale and content layout stay
@@ -1698,6 +1833,11 @@ function NewV2Inner() {
         onSaved={(p) => {
           void refreshProfiles();
           setSelectedProfileId(p.id);
+          // Opened from the "Hazla tuya" banner → re-seed the open page now.
+          if (pendingReseedRef.current) {
+            pendingReseedRef.current = false;
+            void reseedCurrentPage();
+          }
         }}
       />
       <ReplaceAssetModal

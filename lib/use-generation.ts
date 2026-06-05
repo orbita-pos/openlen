@@ -26,7 +26,11 @@ export type GenerationState =
 
 export interface UseGenerationResult {
   state: GenerationState;
-  generate: (brief: string, model?: AIModel) => Promise<void>;
+  generate: (
+    brief: string,
+    model?: AIModel,
+    profileId?: string | null,
+  ) => Promise<void>;
 }
 
 // No SSE byte for this long → assume the server is wedged and give up.
@@ -44,7 +48,7 @@ export function useGeneration(): UseGenerationResult {
   // from stops server-side (saves Gemini credits / metered usage).
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  const generate = useCallback(async (brief: string, model: AIModel = "gemini-pro") => {
+  const generate = useCallback(async (brief: string, model: AIModel = "gemini-pro", profileId: string | null = null) => {
     // Cancel any in-flight generation before starting a new one.
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -77,7 +81,7 @@ export function useGeneration(): UseGenerationResult {
           "Content-Type": "application/json",
           Accept: "text/event-stream",
         },
-        body: JSON.stringify({ brief, model }),
+        body: JSON.stringify({ brief, model, profileId }),
         signal: controller.signal,
       });
     } catch (err) {

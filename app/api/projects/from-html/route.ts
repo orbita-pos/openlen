@@ -5,6 +5,7 @@ import { sanitizeForPublish } from "@/lib/html-engine";
 import { normalizeBornCanonical } from "@/lib/normalize";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { resolveProfileForCreation } from "@/lib/business-profiles/store";
+import { seedBrandIntoHtml, profileMeta } from "@/lib/business-profiles/seed-html";
 import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -31,6 +32,7 @@ const MAX_HTML_BYTES = 8 * 1024 * 1024;
 interface FromHtmlBody {
   html?: string;
   title?: string;
+  profileId?: string;
 }
 
 export async function POST(req: Request): Promise<Response> {
@@ -66,13 +68,25 @@ export async function POST(req: Request): Promise<Response> {
     extractTitle(html) ||
     "Untitled page";
 
-  // Born-canonical: pasted HTML enters on the same token contract as a
-  // generated page — radius / font / accent become controllable. Then
-  // complete the <head> so it's born SEO-healthy (the user pasting raw HTML
-  // often has no meta description / og tags / favicon).
-  const finalHtml = ensurePageMeta(normalizeBornCanonical(cleanHtml), { title });
+  // Resolve the business first so the paste is born with the user's info. The
+  // user's own HTML keeps its look (recolor:false) but gets the real contact
+  // widget + brand logo/og.
+  const business = await resolveProfileForCreation(
+    session.user.id,
+    typeof body.profileId === "string" ? body.profileId : null,
+  );
 
-  const business = await resolveProfileForCreation(session.user.id);
+  // Born-canonical: pasted HTML enters on the same token contract as a generated
+  // page — radius / font / accent become controllable → seed contact widget +
+  // logo/og (no-op for an empty profile) → complete the <head> for SEO (pasted
+  // raw HTML often has no meta description / og tags / favicon).
+  const finalHtml = ensurePageMeta(
+    seedBrandIntoHtml(normalizeBornCanonical(cleanHtml), business.data, {
+      recolor: false,
+    }),
+    { title, ...profileMeta(business.data) },
+  );
+
   const projectId = crypto.randomUUID();
   try {
     await db.insert(schema.projects).values({
@@ -84,6 +98,7 @@ export async function POST(req: Request): Promise<Response> {
       tags: ["paste"],
       status: "draft",
       profileId: business.id,
+      logoUrl: business.data.brand?.logoUrl ?? null,
       data: { html: finalHtml },
     });
   } catch (err) {
