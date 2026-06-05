@@ -34,7 +34,9 @@
     "templateCount": "{count, plural, one {# modèle} other {# modèles}}",
     "loadError": "Échec du chargement des modèles — {error}",
     "footer": "Les modèles sont du HTML statique — pur balisage, Tailwind CDN, Google Fonts. Les cloner les rend vôtres ; seul votre projet réserve un sous-domaine quand vous cliquez sur Déployer.",
-    "cannotApply": "Vous ne pouvez pas appliquer un modèle à une page en cours d’édition. Créez une nouvelle page pour en utiliser un."
+    "cannotApply": "Vous ne pouvez pas appliquer un modèle à une page en cours d’édition. Créez une nouvelle page pour en utiliser un.",
+    "moreFamilies": "+{count} de plus",
+    "fewerFamilies": "Réduire"
   },
   "sections": {
     "heading": "Bibliothèque de sections",

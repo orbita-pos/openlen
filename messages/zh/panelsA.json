@@ -34,7 +34,9 @@
     "templateCount": "{count, plural, one {# 个模板} other {# 个模板}}",
     "loadError": "加载模板失败 — {error}",
     "footer": "模板是静态 HTML — 纯标记、Tailwind CDN、Google Fonts。克隆后它们就归你所有；只有当你点击发布时，你的项目才会占用一个子域名。",
-    "cannotApply": "无法将模板应用到正在编辑的页面。新建一个页面来使用模板。"
+    "cannotApply": "无法将模板应用到正在编辑的页面。新建一个页面来使用模板。",
+    "moreFamilies": "再 {count} 个",
+    "fewerFamilies": "收起"
   },
   "sections": {
     "heading": "区块库",

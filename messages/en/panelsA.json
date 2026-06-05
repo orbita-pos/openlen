@@ -34,7 +34,9 @@
     "templateCount": "{count, plural, one {# template} other {# templates}}",
     "loadError": "Failed to load templates — {error}",
     "footer": "Templates are static HTML — pure markup, Tailwind CDN, Google Fonts. Cloning makes them yours; only your project claims a subdomain when you hit Deploy.",
-    "cannotApply": "You can’t apply a template to a page you’re already editing. Create a new page to use one."
+    "cannotApply": "You can’t apply a template to a page you’re already editing. Create a new page to use one.",
+    "moreFamilies": "+{count} more",
+    "fewerFamilies": "Show less"
   },
   "sections": {
     "heading": "Section library",

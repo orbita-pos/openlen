@@ -152,6 +152,13 @@ export function TemplatesPanel({
   const [familyFilter, setFamilyFilter] = useState<TemplateFamily | "all">(
     "all",
   );
+  const [familiesExpanded, setFamiliesExpanded] = useState(false);
+  // The gallery has 30+ families — show the first 10 (plus the selected one)
+  // and collapse the rest behind a "+N" chip so the filter row stays compact.
+  const shownFamilyChips = familiesExpanded
+    ? TEMPLATE_FAMILIES
+    : TEMPLATE_FAMILIES.filter((f, i) => i < 10 || f.id === familyFilter);
+  const hiddenFamilyCount = TEMPLATE_FAMILIES.length - shownFamilyChips.length;
   const t = useTranslations("panelsA");
   const searchParams = useSearchParams();
   const currentProjectId = searchParams.get("project");
@@ -200,7 +207,7 @@ export function TemplatesPanel({
           {t("templates.all")}
           {templates.length > 0 ? ` ${templates.length}` : ""}
         </button>
-        {TEMPLATE_FAMILIES.map((f) => (
+        {shownFamilyChips.map((f) => (
           <button
             key={f.id}
             type="button"
@@ -214,6 +221,23 @@ export function TemplatesPanel({
             {tf(`${f.id}.label`)}
           </button>
         ))}
+        {hiddenFamilyCount > 0 ? (
+          <button
+            type="button"
+            onClick={() => setFamiliesExpanded(true)}
+            className="text-[10.5px] px-2.5 py-1 rounded-md transition font-medium text-accent bg-hover hover:fg"
+          >
+            {t("templates.moreFamilies", { count: hiddenFamilyCount })}
+          </button>
+        ) : familiesExpanded ? (
+          <button
+            type="button"
+            onClick={() => setFamiliesExpanded(false)}
+            className="text-[10.5px] px-2.5 py-1 rounded-md transition font-medium fg-muted bg-hover hover:fg"
+          >
+            {t("templates.fewerFamilies")}
+          </button>
+        ) : null}
       </div>
 
       {error && (
