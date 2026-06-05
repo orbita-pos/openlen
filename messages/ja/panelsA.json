@@ -33,7 +33,8 @@
     "previewing": "プレビュー中",
     "templateCount": "{count, plural, one {# 件のテンプレート} other {# 件のテンプレート}}",
     "loadError": "テンプレートの読み込みに失敗しました — {error}",
-    "footer": "テンプレートは静的HTML — 純粋なマークアップ、Tailwind CDN、Google Fontsです。複製すればあなたのものになります。サブドメインを取得するのは、デプロイを押したときのあなたのプロジェクトだけです。"
+    "footer": "テンプレートは静的HTML — 純粋なマークアップ、Tailwind CDN、Google Fontsです。複製すればあなたのものになります。サブドメインを取得するのは、デプロイを押したときのあなたのプロジェクトだけです。",
+    "cannotApply": "編集中のページにはテンプレートを適用できません。新しいページを作成して使ってください。"
   },
   "sections": {
     "heading": "セクションライブラリ",

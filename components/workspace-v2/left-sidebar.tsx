@@ -282,11 +282,10 @@ export function LeftSidebar({
   const activeMeta = MODE_TABS.find((tab) => tab.id === mode) ?? MODE_TABS[0];
 
   // Tab visibility rules:
-  // - Templates is an entry-flow surface only — once a project is open there's
-  //   nothing to commit to, so we drop it in editing mode.
+  // Templates stays visible while editing (the panel is browse-only on an
+  // existing page — you can't swap a page for a template). Library is
+  // editing-only (it inserts into the current project).
   const visibleTabs = MODE_TABS.filter((tab) => {
-    if (entryMode === "editing" && tab.id === "templates") return false;
-    // Library inserts into the current project — editing-only.
     if (entryMode !== "editing" && tab.id === "library") return false;
     return true;
   });

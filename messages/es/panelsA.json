@@ -33,7 +33,8 @@
     "previewing": "En vista previa",
     "templateCount": "{count, plural, one {# plantilla} other {# plantillas}}",
     "loadError": "No se pudieron cargar las plantillas — {error}",
-    "footer": "Las plantillas son HTML estático — markup puro, Tailwind CDN, Google Fonts. Al clonarla se vuelve tuya; solo tu proyecto reclama un subdominio cuando pulsas Deploy."
+    "footer": "Las plantillas son HTML estático — markup puro, Tailwind CDN, Google Fonts. Al clonarla se vuelve tuya; solo tu proyecto reclama un subdominio cuando pulsas Deploy.",
+    "cannotApply": "No puedes aplicar una plantilla a una página que ya estás editando. Crea una página nueva para usar una."
   },
   "sections": {
     "heading": "Biblioteca de secciones",
