@@ -1,10 +1,12 @@
-import { DashboardShell } from "@/components/app/dashboard-shell";
-import { BusinessSection } from "./business-section";
+import { redirect } from "@/i18n/navigation";
 
-export default function BusinessPage() {
-  return (
-    <DashboardShell active="business">
-      <BusinessSection />
-    </DashboardShell>
-  );
+// /business now lives inside the workspace as a section. Keep the URL working
+// (bookmarks, old links) by redirecting to /new with the Business section open.
+export default async function BusinessPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  redirect({ href: "/new?view=business", locale });
 }
