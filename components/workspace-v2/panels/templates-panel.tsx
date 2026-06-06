@@ -68,6 +68,7 @@ function TemplateCard({
       <TemplatePreviewFrame
         url={template.previewUrl}
         name={template.name}
+        imageUrl={template.imageUrl}
         applied={applied}
       />
 

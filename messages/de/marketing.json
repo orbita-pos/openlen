@@ -69,6 +69,45 @@
       }
     }
   },
+  "analyticsLeads": {
+    "badge": "Analytics & Leads",
+    "title": "Kenne deinen Traffic. <muted>Erfasse jeden Lead.</muted>",
+    "subtitle": "Datenschutzfreundliche Analytics und Lead-Formulare, integriert in jede Seite, die du veröffentlichst — kein Google Analytics, keine Cookies, kein Consent-Banner. Und die Daten gehören dir.",
+    "dashboard": {
+      "title": "Übersicht",
+      "range": "Letzte 30 Tage",
+      "live": "Live",
+      "uniques": "Eindeutige Besucher",
+      "pageviews": "Seitenaufrufe",
+      "visitors": "Besucher",
+      "chartAria": "Seitenaufrufe und Besucher der letzten 30 Tage",
+      "tooltipDay": "5. Juni 2026",
+      "sources": "Top-Quellen",
+      "referrer": "Verweisquelle"
+    },
+    "leads": {
+      "title": "Leads",
+      "newCount": "{count} neu",
+      "msg1": "Interesse am Team-Tarif — können wir diese Woche kurz telefonieren?",
+      "msg2": "Die Seite gefällt mir super! Liefert ihr nach Mexiko, und wie sind die Lieferzeiten?",
+      "msg3": "Angebotsanfrage für 50 Stück — welche Mengenrabatte könnt ihr anbieten?",
+      "emailNotice": "Jede Einsendung wird gespeichert und dir sofort per E-Mail zugeschickt"
+    },
+    "perks": {
+      "privacy": {
+        "title": "Datenschutz von Haus aus",
+        "body": "Keine Cookies, kein Consent-Banner, keine IP-Speicherung. DSGVO-konform — dasselbe Modell wie Plausible, aber deins."
+      },
+      "perLink": {
+        "title": "Klick-Tracking pro Link",
+        "body": "Sieh, welche Links, Buttons und CTAs wirklich angeklickt werden — nicht nur Seitenaufrufe."
+      },
+      "inbox": {
+        "title": "Leads landen in deinem Postfach",
+        "body": "Füge jeder Seite ein Formular hinzu. Einsendungen werden gespeichert und dir sofort per E-Mail zugeschickt."
+      }
+    }
+  },
   "comparison": {
     "badge": "Vergleich",
     "title": "Wir haben gerechnet, damit du es nicht musst.",

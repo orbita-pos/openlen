@@ -69,6 +69,45 @@
       }
     }
   },
+  "analyticsLeads": {
+    "badge": "Analytics & leads",
+    "title": "Know your traffic. <muted>Capture every lead.</muted>",
+    "subtitle": "Privacy-first analytics and lead forms, built into every page you publish — no Google Analytics, no cookies, no consent banner. And the data is yours.",
+    "dashboard": {
+      "title": "Overview",
+      "range": "Last 30 days",
+      "live": "Live",
+      "uniques": "Unique visitors",
+      "pageviews": "Pageviews",
+      "visitors": "Visitors",
+      "chartAria": "Pageviews and visitors over the last 30 days",
+      "tooltipDay": "Jun 5, 2026",
+      "sources": "Top sources",
+      "referrer": "Referrer"
+    },
+    "leads": {
+      "title": "Leads",
+      "newCount": "{count} new",
+      "msg1": "Interested in the team plan — can we book a quick call this week?",
+      "msg2": "Loved the page! Do you ship to Mexico, and what are the lead times?",
+      "msg3": "Quote request for 50 units — what volume pricing can you offer?",
+      "emailNotice": "Every submission is stored and emailed to you instantly"
+    },
+    "perks": {
+      "privacy": {
+        "title": "Privacy-first by default",
+        "body": "No cookies, no consent banner, no IP storage. GDPR-clear — the same model as Plausible, but yours."
+      },
+      "perLink": {
+        "title": "Per-link click tracking",
+        "body": "See which links, buttons, and CTAs people actually click — not just page views."
+      },
+      "inbox": {
+        "title": "Leads land in your inbox",
+        "body": "Add a form to any page. Submissions are saved and emailed to you the moment they arrive."
+      }
+    }
+  },
   "comparison": {
     "badge": "Compare",
     "title": "We did the math, so you don't have to.",

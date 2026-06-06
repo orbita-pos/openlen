@@ -53,6 +53,10 @@ export interface TemplateRecord {
   /** Pre-rendered WebP thumbnail URL for gallery / homepage cards. Null
    *  until `templates:thumbnails` has been run for this row. */
   thumbnailUrl: string | null;
+  /** Small right-sized AVIF tile (~600px) for gallery walls + the workspace
+   *  picker. Lighter than thumbnailUrl. Null until `templates:tiles` runs;
+   *  consumers fall back to thumbnailUrl, then the live iframe. */
+  tileUrl: string | null;
   /** Full-page JPG render used as a multimodal AI reference (Quality S2).
    *  Null until `templates:capture-screenshots` has run. Reference-only —
    *  never served to a published page. */
@@ -224,6 +228,7 @@ function rowToRecord(row: typeof schema.templates.$inferSelect): TemplateRecord 
     size: row.size,
     status: row.status as TemplateStatus,
     thumbnailUrl: row.thumbnailUrl,
+    tileUrl: row.tileUrl,
     screenshotUrl: row.screenshotUrl,
     featured: row.featured,
     createdAt: row.createdAt,
@@ -241,6 +246,18 @@ export async function setTemplateThumbnail(
   await db
     .update(schema.templates)
     .set({ thumbnailUrl, updatedAt: new Date() })
+    .where(eq(schema.templates.id, id));
+}
+
+/** Persist the right-sized AVIF tile URL for a template. Used by the
+ *  `templates:tiles` generator after uploading the tile to storage. */
+export async function setTemplateTile(
+  id: string,
+  tileUrl: string,
+): Promise<void> {
+  await db
+    .update(schema.templates)
+    .set({ tileUrl, updatedAt: new Date() })
     .where(eq(schema.templates.id, id));
 }
 

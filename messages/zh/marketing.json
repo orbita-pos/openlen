@@ -69,6 +69,45 @@
       }
     }
   },
+  "analyticsLeads": {
+    "badge": "数据分析与潜在客户",
+    "title": "读懂你的流量。<muted>留住每一位潜客。</muted>",
+    "subtitle": "隐私优先的访问分析与潜客表单，内置于你发布的每一个页面——无需 Google Analytics，无 Cookie，无同意提示横幅。数据完全归你所有。",
+    "dashboard": {
+      "title": "概览",
+      "range": "最近 30 天",
+      "live": "实时",
+      "uniques": "独立访客",
+      "pageviews": "页面浏览量",
+      "visitors": "访客数",
+      "chartAria": "最近 30 天的页面浏览量与访客数",
+      "tooltipDay": "2026年6月5日",
+      "sources": "主要来源",
+      "referrer": "来源页"
+    },
+    "leads": {
+      "title": "潜在客户",
+      "newCount": "{count} 条新消息",
+      "msg1": "我对团队套餐很感兴趣——这周能约个简短的电话沟通吗？",
+      "msg2": "太喜欢这个页面了！请问你们发货到墨西哥吗？大概多久能到？",
+      "msg3": "想咨询 50 件的报价——批量采购能给什么优惠价？",
+      "emailNotice": "每一条提交都会被保存，并即时发送邮件通知你"
+    },
+    "perks": {
+      "privacy": {
+        "title": "默认隐私优先",
+        "body": "无 Cookie，无同意横幅，不存储 IP。符合 GDPR——与 Plausible 同样的理念，但数据归你所有。"
+      },
+      "perLink": {
+        "title": "逐链接点击追踪",
+        "body": "看清访客真正点击了哪些链接、按钮和 CTA——而不只是页面浏览。"
+      },
+      "inbox": {
+        "title": "潜客直达你的收件箱",
+        "body": "为任意页面添加表单。提交内容会被保存，并在送达的那一刻邮件通知你。"
+      }
+    }
+  },
   "comparison": {
     "badge": "对比",
     "title": "我们替你算好了账。",

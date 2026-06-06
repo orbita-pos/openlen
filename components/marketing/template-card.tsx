@@ -22,6 +22,9 @@ export interface TemplateCardData {
    *  the live iframe — cuts page weight ~10x. Null until the script has
    *  run for this template. */
   thumbnailUrl?: string | null;
+  /** Right-sized AVIF tile (~600px) from `templates:tiles`. Preferred over
+   *  thumbnailUrl when present — same crop, ~1/3 the bytes. */
+  tileUrl?: string | null;
   /** Marks top-tier curated templates — renders a coral accent ring +
    *  "Featured" badge on the card. Falsey for the bulk of the gallery. */
   featured?: boolean;
@@ -53,13 +56,20 @@ export function TemplateCard({
   const [mounted, setMounted] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [scale, setScale] = useState(0);
+  const [imgFailed, setImgFailed] = useState(false);
   const nativeWidth = 1280;
   const nativeHeight = 800;
 
-  // Whether we have a pre-rendered WebP. When yes, the iframe path is
-  // skipped entirely — the <img> handles its own lazy-loading via the
-  // native `loading="lazy"` attribute.
-  const hasThumbnail = Boolean(template.thumbnailUrl);
+  // Prefer the small right-sized tile; fall back to the larger thumbnail.
+  // When either exists the iframe path is skipped entirely — the <img>
+  // handles its own lazy-loading via the native `loading="lazy"` attribute.
+  // The crisp 1280px thumbnail is the card image. The small full-page tile
+  // (~600px) upscales blurry on retina, so it's NOT used here — a template
+  // without a thumbnail falls through to the live iframe (sharp), as before.
+  const previewSrc = template.thumbnailUrl ?? null;
+  // Drop to the iframe fallback if the image URL is dead — otherwise a 404
+  // never fires onLoad and the shimmer spins forever over a blank card.
+  const hasThumbnail = Boolean(previewSrc) && !imgFailed;
 
   // Cached-image race: when the browser already has the thumbnail in HTTP
   // cache (typical after a back-nav from /templates), the <img> can finish
@@ -170,7 +180,7 @@ export function TemplateCard({
           // eslint-disable-next-line @next/next/no-img-element
           <img
             ref={imgRef}
-            src={template.thumbnailUrl ?? ""}
+            src={previewSrc ?? ""}
             alt={t("templateCard.previewAlt", { name: template.name })}
             width={nativeWidth}
             height={nativeHeight}
@@ -178,6 +188,7 @@ export function TemplateCard({
             fetchPriority={priority ? "high" : "auto"}
             decoding="async"
             onLoad={() => setLoaded(true)}
+            onError={() => setImgFailed(true)}
             style={{
               position: "absolute",
               inset: 0,

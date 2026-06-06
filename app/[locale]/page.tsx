@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Hero } from "@/components/marketing/hero";
-import { DemoStrip } from "@/components/marketing/demo-strip";
+import { MosaicWall } from "@/components/marketing/mosaic-wall";
 import { Features } from "@/components/marketing/features";
+import { AnalyticsLeads } from "@/components/marketing/analytics-leads";
 import { Comparison } from "@/components/marketing/comparison";
 import { Pricing } from "@/components/marketing/pricing";
 import { FinalCta } from "@/components/marketing/final-cta";
@@ -58,8 +59,9 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col">
       <MarketingChrome>
         <Hero />
-        <DemoStrip />
+        <MosaicWall />
         <Features />
+        <AnalyticsLeads />
         <Comparison />
         <Pricing />
         <FinalCta />

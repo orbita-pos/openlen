@@ -69,6 +69,45 @@
       }
     }
   },
+  "analyticsLeads": {
+    "badge": "Analytics et leads",
+    "title": "Connaissez votre trafic. <muted>Captez chaque lead.</muted>",
+    "subtitle": "Des analytics et des formulaires de leads respectueux de la vie privée, intégrés à chaque page que vous publiez — sans Google Analytics, sans cookies, sans bandeau de consentement. Et les données vous appartiennent.",
+    "dashboard": {
+      "title": "Vue d'ensemble",
+      "range": "30 derniers jours",
+      "live": "En direct",
+      "uniques": "Visiteurs uniques",
+      "pageviews": "Pages vues",
+      "visitors": "Visiteurs",
+      "chartAria": "Pages vues et visiteurs sur les 30 derniers jours",
+      "tooltipDay": "5 juin 2026",
+      "sources": "Top sources",
+      "referrer": "Référent"
+    },
+    "leads": {
+      "title": "Leads",
+      "newCount": "{count} nouveaux",
+      "msg1": "Intéressé par l'offre équipe — pourrait-on caler un appel rapide cette semaine ?",
+      "msg2": "J'ai adoré la page ! Livrez-vous au Mexique, et quels sont les délais ?",
+      "msg3": "Demande de devis pour 50 unités — quels tarifs proposez-vous selon le volume ?",
+      "emailNotice": "Chaque soumission est enregistrée et vous est envoyée par e-mail instantanément"
+    },
+    "perks": {
+      "privacy": {
+        "title": "Respect de la vie privée par défaut",
+        "body": "Aucun cookie, aucun bandeau de consentement, aucune conservation d'IP. Conforme au RGPD — le même modèle que Plausible, mais à vous."
+      },
+      "perLink": {
+        "title": "Suivi des clics par lien",
+        "body": "Voyez quels liens, boutons et CTA les gens cliquent vraiment — pas seulement les pages vues."
+      },
+      "inbox": {
+        "title": "Les leads arrivent dans votre boîte mail",
+        "body": "Ajoutez un formulaire à n'importe quelle page. Les soumissions sont enregistrées et vous sont envoyées par e-mail dès leur arrivée."
+      }
+    }
+  },
   "comparison": {
     "badge": "Comparer",
     "title": "On a fait les calculs pour que vous n'ayez pas à les faire.",

@@ -37,8 +37,12 @@ export interface TemplateSpec {
   pitch: string;
   description: string;
   tags: string[];
-  /** Public URL to the HTML body — passed to <iframe src>. */
+  /** Public URL to the HTML body — passed to <iframe src> (fallback). */
   previewUrl: string;
+  /** Pre-rendered preview image (right-sized tile, else thumbnail). When
+   *  present the card renders a static <img> instead of a live iframe —
+   *  the big perf win for the picker. Null → fall back to the iframe. */
+  imageUrl: string | null;
   /** Brand accent — surfaced in the card chrome for visual identity. */
   accent: string;
 }
@@ -53,6 +57,8 @@ interface ApiListItem {
   mode: TemplateMode;
   storageUrl: string;
   contentHash: string;
+  thumbnailUrl?: string | null;
+  tileUrl?: string | null;
 }
 
 export function apiItemToSpec(t: ApiListItem): TemplateSpec {
@@ -64,6 +70,7 @@ export function apiItemToSpec(t: ApiListItem): TemplateSpec {
     description: t.description,
     tags: [t.family, t.mode],
     previewUrl: t.storageUrl,
+    imageUrl: t.thumbnailUrl ?? null,
     accent: t.accent,
   };
 }

@@ -69,6 +69,45 @@
       }
     }
   },
+  "analyticsLeads": {
+    "badge": "Analytics e lead",
+    "title": "Conosci il tuo traffico. <muted>Cattura ogni lead.</muted>",
+    "subtitle": "Analytics privacy-first e moduli di acquisizione lead, integrati in ogni pagina che pubblichi — niente Google Analytics, niente cookie, niente banner di consenso. E i dati sono tuoi.",
+    "dashboard": {
+      "title": "Panoramica",
+      "range": "Ultimi 30 giorni",
+      "live": "Live",
+      "uniques": "Visitatori unici",
+      "pageviews": "Visualizzazioni",
+      "visitors": "Visitatori",
+      "chartAria": "Visualizzazioni e visitatori negli ultimi 30 giorni",
+      "tooltipDay": "5 giu 2026",
+      "sources": "Sorgenti principali",
+      "referrer": "Referrer"
+    },
+    "leads": {
+      "title": "Lead",
+      "newCount": "{count} nuovi",
+      "msg1": "Mi interessa il piano team — possiamo fissare una chiamata veloce questa settimana?",
+      "msg2": "Pagina fantastica! Effettuate spedizioni in Messico e quali sono i tempi di consegna?",
+      "msg3": "Richiesta di preventivo per 50 unità — che prezzi potete offrire per i volumi?",
+      "emailNotice": "Ogni invio viene salvato e inoltrato via email all'istante"
+    },
+    "perks": {
+      "privacy": {
+        "title": "Privacy-first per impostazione predefinita",
+        "body": "Niente cookie, niente banner di consenso, nessuna memorizzazione degli IP. Conforme al GDPR — lo stesso modello di Plausible, ma tuo."
+      },
+      "perLink": {
+        "title": "Tracciamento dei clic per link",
+        "body": "Scopri quali link, pulsanti e CTA le persone cliccano davvero — non solo le visualizzazioni di pagina."
+      },
+      "inbox": {
+        "title": "I lead arrivano nella tua casella",
+        "body": "Aggiungi un modulo a qualsiasi pagina. Gli invii vengono salvati e inoltrati via email nel momento in cui arrivano."
+      }
+    }
+  },
   "comparison": {
     "badge": "Confronta",
     "title": "Abbiamo fatto i conti noi, così non devi farli tu.",

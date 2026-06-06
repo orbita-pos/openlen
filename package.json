@@ -30,6 +30,8 @@
     "sections:verify-render": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-verify-render.ts",
     "sections:audit": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-audit.ts",
     "templates:thumbnails": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/generate-thumbnails.ts",
+    "templates:tiles": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/generate-tiles.ts",
+    "templates:bootstrap-tile-column": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/bootstrap-tile-column.ts",
     "projects:thumbnails": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/projects/generate-thumbnails.ts",
     "templates:capture-screenshots": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/capture-screenshots.ts",
     "templates:test-select-reference": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/templates/test-select-reference.ts",
