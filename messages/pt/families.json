@@ -1,4 +1,6 @@
 {
+  "aerospace": { "label": "Aeroespacial", "tagline": "Empresas de foguetes, provedores de lançamento, redes de satélites — imagens de missão em tela cheia, títulos em maiúsculas, monocromático cinematográfico." },
+  "architecture": { "label": "Arquitetura", "tagline": "Estúdios e casas pré-fabricadas/modulares — tipografia enorme, monocromático com tons corten, catálogos de modelos e galerias de esboços a traço." },
   "technical-minimal": { "label": "Minimalista Técnico", "tagline": "Visual escuro, detalhes em fonte mono, mockups de terminal. Para devtools e infraestrutura." },
   "editorial": { "label": "Editorial", "tagline": "Títulos com serifa, seções numeradas, ritmo de revista. Para marcas premium e artesanais." },
   "commerce": { "label": "Comércio", "tagline": "Tecnologia de varejo moderna, fluxos de pagamento, mockups de produto. Para PDV e marketplace." },

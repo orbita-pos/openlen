@@ -1,4 +1,6 @@
 {
+  "aerospace": { "label": "Ruimtevaart", "tagline": "Raketbedrijven, lanceringsaanbieders, satellietnetwerken — schermvullende missiebeelden, grote kapitaalkoppen, cinematografisch monochroom." },
+  "architecture": { "label": "Architectuur", "tagline": "Studio's en geprefabriceerde/modulaire woningen — overformaat typografie, monochroom met cortenstaal-accenten, modelcatalogi en lijntekeninggalerijen." },
   "technical-minimal": { "label": "Technisch minimalistisch", "tagline": "Donker, mono-accenten, terminalmockups. Voor devtools en infrastructuur." },
   "editorial": { "label": "Redactioneel", "tagline": "Schreefkoppen, genummerde secties, magazineritme. Voor premium- en ambachtelijke merken." },
   "commerce": { "label": "Handel", "tagline": "Moderne retailtech, betaalflows, productmockups. Voor POS en marktplaats." },

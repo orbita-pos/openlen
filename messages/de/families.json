@@ -1,4 +1,6 @@
 {
+  "aerospace": { "label": "Raumfahrt", "tagline": "Raketenunternehmen, Startdienstleister, Satellitennetze — bildschirmfüllende Missionsbilder, große Versalüberschriften, kinoreifes Monochrom." },
+  "architecture": { "label": "Architektur", "tagline": "Studios und vorgefertigte/modulare Häuser — überdimensionale Typografie, monochrom mit Corten-Akzenten, Modellkataloge und Strichzeichnungsgalerien." },
   "technical-minimal": { "label": "Technisch Minimal", "tagline": "Dunkel, Mono-Akzente, Terminal-Mockups. Für Devtools und Infrastruktur." },
   "editorial": { "label": "Editorial", "tagline": "Serifen-Headlines, nummerierte Abschnitte, Magazin-Rhythmus. Für Premium- und Handwerksmarken." },
   "commerce": { "label": "Commerce", "tagline": "Moderne Retail-Technik, Bezahlflüsse, Produkt-Mockups. Für POS und Marktplätze." },

@@ -17,6 +17,7 @@ export type TemplateFamily =
   | "event"
   | "agency"
   | "real-estate"
+  | "architecture"
   | "hospitality"
   | "ecommerce"
   | "climate"
@@ -31,6 +32,7 @@ export type TemplateFamily =
   | "wellness"
   | "web3"
   | "hardware"
+  | "aerospace"
   | "podcast"
   | "wedding"
   | "travel"
@@ -44,6 +46,16 @@ export const TEMPLATE_FAMILY_META: Record<
   TemplateFamily,
   { label: string; tagline: string }
 > = {
+  aerospace: {
+    label: "Aerospace",
+    tagline:
+      "Rocket companies, launch providers, satellite networks — full-viewport mission imagery, oversized caps headlines, cinematic monochrome.",
+  },
+  architecture: {
+    label: "Architecture",
+    tagline:
+      "Studios + prefab/modular homes. Oversized type, monochrome with corten accents, line-drawing process galleries.",
+  },
   "technical-minimal": {
     label: "Technical Minimal",
     tagline:

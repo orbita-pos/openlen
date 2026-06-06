@@ -26,6 +26,12 @@ const MIRROR_ID = "mirror";
 // one term. This is the v1 the spec endorses — swap for embeddings later if
 // classification quality demands it.
 const FAMILY_KEYWORDS: Record<TemplateFamily, string[]> = {
+  aerospace: [
+    "aerospace", "aeroespacial", "space", "espacial", "rocket", "cohete",
+    "satellite", "satelite", "launch", "lanzamiento", "orbit", "orbita",
+    "spacecraft", "nave", "mars", "marte", "spaceflight", "starship", "lunar",
+    "propulsion", "payload", "constellation", "astronaut", "astronauta",
+  ],
   saas: [
     "saas", "dashboard", "analytic", "metric", "b2b", "platform", "workflow",
     "automat", "integrat", "api", "software", "productiv", "crm", "devtool",
@@ -78,6 +84,13 @@ const FAMILY_KEYWORDS: Record<TemplateFamily, string[]> = {
     "real estate", "realty", "inmobiliaria", "property", "propiedad",
     "listing", "apartment", "departamento", "house for", "home for", "broker",
     "realtor", "mortgage", "alquiler", "condo",
+  ],
+  architecture: [
+    "architect", "architecture", "arquitect", "arquitectura", "building",
+    "edificio", "construccion", "construction", "interior design", "interiorism",
+    "urban", "urbanism", "facade", "structural", "blueprint", "studio",
+    "prefab", "prefabricat", "modular", "cabin", "cabana", "casa", "home",
+    "hogar", "vivienda", "tiny home", "adu", "dwelling",
   ],
   "technical-minimal": [
     "cli", "terminal", "infra", "kubernetes", "docker", "sdk", "command line",
