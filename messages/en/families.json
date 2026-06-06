@@ -1,4 +1,6 @@
 {
+  "aerospace": { "label": "Aerospace", "tagline": "Rocket companies, launch providers, satellite networks — full-viewport mission imagery, oversized caps headlines, cinematic monochrome." },
+  "architecture": { "label": "Architecture", "tagline": "Studios and prefab/modular homes — oversized type, monochrome with corten accents, model catalogs and line-drawing process galleries." },
   "technical-minimal": { "label": "Technical Minimal", "tagline": "Dark, mono accents, terminal mockups. For devtools and infra." },
   "editorial": { "label": "Editorial", "tagline": "Serif headlines, numbered sections, magazine rhythm. For premium and craft brands." },
   "commerce": { "label": "Commerce", "tagline": "Modern retail tech, payment flows, product mockups. For POS and marketplace." },

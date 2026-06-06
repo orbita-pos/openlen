@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>EXODUS — A future among the stars</title>
+<meta name="description" content="EXODUS designs fully reusable rockets to help humanity become a spacefaring civilization — launch services, human spaceflight, and a global satellite network." />
+<meta property="og:title" content="EXODUS — A future among the stars" />
+<meta property="og:description" content="Fully reusable rockets. Launch services, human spaceflight, and high-speed internet from space." />
+<meta property="og:image" content="exodus-assets/hero.webp" />
+<meta name="theme-color" content="#000000" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000000'/%3E%3Cpath d='M16 4l3 9h-6z' fill='%23FFFFFF'/%3E%3Crect x='14' y='12' width='4' height='12' fill='%23FFFFFF'/%3E%3Cpath d='M16 24l-2 4h4z' fill='%234F7DF0'/%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira:wght@300;400;500;600;700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#000000;
+    --surface:#0D0F13;
+    --surface-2:#15181E;
+    --fg:#FFFFFF;
+    --fg-muted:#C8CCD4;
+    --fg-faint:#8A9099;
+    --border:rgba(255,255,255,0.18);
+    --border-strong:rgba(255,255,255,0.4);
+    --accent:#4F7DF0;
+    --accent-r:79,125,240;
+    --accent-ink:#FFFFFF;
+    --mars-a:#D6783F; --mars-b:#A8542E; --mars-c:#7A381E; --mars-d:#140A08;
+    --radius:2px;
+    --radius-sm:2px;
+    --radius-lg:4px;
+    --font-display:'Saira',ui-sans-serif,system-ui,sans-serif;
+    --font-body:'Inter',ui-sans-serif,system-ui,sans-serif;
+  }
+  html, body { background:var(--bg); color:var(--fg); }
+  body { font-family:var(--font-body); -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+  .display { font-family:var(--font-display); }
+
+  /* ---- nav ---- */
+  .wordmark { font-family:var(--font-display); font-weight:600; letter-spacing:0.34em; font-size:22px; }
+  .nav-link { font-family:var(--font-display); font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:0.08em;
+    color:var(--fg); opacity:.92; transition:opacity .15s ease; white-space:nowrap; }
+  .nav-link:hover { opacity:1; }
+  .nav-scrim { background:linear-gradient(180deg, rgba(0,0,0,.55), transparent); }
+  .launch-box { font-family:var(--font-display); font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.08em;
+    border:1px solid var(--border); color:var(--fg); background:rgba(0,0,0,.25); }
+
+  /* ---- panels (full-viewport cinematic sections) ---- */
+  .panel { position:relative; min-height:115vh; display:flex; overflow:hidden; }
+  .media { position:absolute; inset:0; z-index:0; }
+  .media img { width:100%; height:100%; object-fit:cover; display:block; }
+  .scrim-l { position:absolute; inset:0; z-index:1; background:linear-gradient(90deg, rgba(0,0,0,.72) 0%, rgba(0,0,0,.3) 38%, transparent 66%); }
+  .scrim-r { position:absolute; inset:0; z-index:1; background:linear-gradient(270deg, rgba(0,0,0,.72) 0%, rgba(0,0,0,.3) 38%, transparent 66%); }
+  .scrim-b { position:absolute; inset:0; z-index:1; background:linear-gradient(0deg, rgba(0,0,0,.7) 0%, rgba(0,0,0,.15) 34%, transparent 60%); }
+  .panel-content { position:relative; z-index:2; width:100%; }
+
+  /* ---- type ---- */
+  .kicker { font-family:var(--font-display); font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:0.32em; color:var(--fg); }
+  .headline { font-family:var(--font-display); font-weight:700; text-transform:uppercase; line-height:0.96; letter-spacing:-0.005em;
+    font-size:clamp(40px,6.4vw,86px); }
+  .lede { font-size:clamp(15px,1.5vw,18.5px); line-height:1.5; color:var(--fg-muted); max-width:42ch; }
+
+  /* ---- buttons ---- */
+  .btn { display:inline-flex; align-items:center; gap:12px; font-family:var(--font-display); font-weight:600;
+    text-transform:uppercase; letter-spacing:0.1em; font-size:13px; padding:13px 22px; border-radius:var(--radius);
+    border:1px solid var(--border-strong); color:var(--fg); background:rgba(0,0,0,.15); backdrop-filter:blur(2px);
+    transition:background .18s ease, border-color .18s ease; }
+  .btn:hover { background:rgba(255,255,255,.14); border-color:var(--fg); }
+  .btn svg { transition:transform .2s ease; }
+  .btn:hover svg { transform:translateX(4px); }
+
+  /* ---- placeholder media (swap each with a real photo) ---- */
+  .ph-launch { background:
+    radial-gradient(48% 60% at 34% 102%, rgba(255,176,96,.4), transparent 60%),
+    radial-gradient(70% 60% at 26% 70%, rgba(225,225,230,.16), transparent 60%),
+    linear-gradient(180deg, rgba(58,74,96,1) 0%, rgba(70,82,70,1) 38%, rgba(66,58,48,1) 62%, rgba(26,22,20,1) 100%); }
+  .ph-sunset { background:
+    radial-gradient(60% 50% at 50% 64%, rgba(255,150,80,.45), transparent 62%),
+    linear-gradient(180deg, rgba(78,104,150,1) 0%, rgba(150,140,160,1) 42%, rgba(232,150,96,1) 66%, rgba(120,80,70,1) 100%); }
+  .ph-sky { background:
+    linear-gradient(180deg, rgba(40,70,104,1) 0%, rgba(78,120,160,1) 40%, rgba(120,158,186,1) 72%, rgba(70,96,80,1) 100%); }
+  .ph-space { background:
+    radial-gradient(60% 60% at 70% 40%, rgba(40,52,80,.5), transparent 60%),
+    linear-gradient(180deg, rgba(6,8,14,1), rgba(10,12,20,1)); }
+  .ph-dark { background:radial-gradient(80% 80% at 30% 40%, rgba(24,26,32,1), rgba(4,5,8,1)); }
+
+  /* ---- starfield ---- */
+  .stars { background-image:
+    radial-gradient(1.4px 1.4px at 12% 22%, rgba(255,255,255,.9), transparent),
+    radial-gradient(1px 1px at 28% 64%, rgba(255,255,255,.7), transparent),
+    radial-gradient(1.2px 1.2px at 44% 18%, rgba(255,255,255,.8), transparent),
+    radial-gradient(1px 1px at 58% 78%, rgba(255,255,255,.6), transparent),
+    radial-gradient(1.6px 1.6px at 8% 84%, rgba(255,255,255,.85), transparent),
+    radial-gradient(1px 1px at 82% 30%, rgba(255,255,255,.6), transparent),
+    radial-gradient(1.3px 1.3px at 92% 66%, rgba(255,255,255,.75), transparent),
+    radial-gradient(1px 1px at 36% 92%, rgba(255,255,255,.55), transparent),
+    radial-gradient(1px 1px at 66% 12%, rgba(255,255,255,.6), transparent),
+    radial-gradient(1.2px 1.2px at 76% 88%, rgba(255,255,255,.7), transparent); }
+
+  /* ---- Mars sphere (CSS — or swap for a real photo) ---- */
+  .mars { position:relative; width:min(52vw,620px); aspect-ratio:1/1; border-radius:50%;
+    background:
+      radial-gradient(circle at 36% 34%, var(--mars-a) 0%, var(--mars-b) 30%, var(--mars-c) 56%, rgba(60,26,16,1) 74%, var(--mars-d) 90%);
+    box-shadow: inset -34px -22px 90px 8px rgba(0,0,0,.9), 0 0 140px 12px rgba(200,90,50,.16); }
+  .mars::after { content:""; position:absolute; inset:0; border-radius:50%; mix-blend-mode:overlay; opacity:.5;
+    background:radial-gradient(circle at 30% 30%, rgba(255,210,170,.4), transparent 40%),
+      radial-gradient(circle at 60% 62%, rgba(0,0,0,.5), transparent 38%); }
+
+  .rocket-ph { position:absolute; left:50%; bottom:0; transform:translateX(-50%); width:clamp(60px,7vw,110px); height:62%; opacity:.92; }
+
+  #mnav { transition:opacity .2s ease, visibility .2s ease; }
+  #mnav.closed { opacity:0; visibility:hidden; pointer-events:none; }
+
+  /* mobile: SpaceX-style stack — full photo on top, text below on black */
+  @media (max-width:1023px){
+    .panel-stack { min-height:auto; flex-direction:column; align-items:stretch; }
+    .panel-stack .media { position:relative; width:100%; height:auto; aspect-ratio:3/2; }
+    .panel-stack .scrim-l, .panel-stack .scrim-r, .panel-stack .scrim-b { display:none; }
+    .panel-stack .panel-content { padding-block:2.25rem 1.5rem; }
+  }
+</style>
+</head>
+<body class="min-h-screen antialiased bg-[color:var(--bg)]">
+
+<!-- ============================ NAV ============================ -->
+<header class="fixed top-0 left-0 right-0 z-50">
+  <div class="nav-scrim absolute inset-0 -z-10"></div>
+  <div class="max-w-[1560px] mx-auto px-5 sm:px-8 h-[72px] flex items-center justify-between gap-6">
+    <a href="#" class="wordmark shrink-0">EXODUS</a>
+    <nav class="hidden xl:flex items-center gap-8">
+      <a href="#vehicle" class="nav-link">Vehicles</a>
+      <a href="#human" class="nav-link">Human Spaceflight</a>
+      <a href="#network" class="nav-link">Network</a>
+      <a href="#vehicle" class="nav-link">Defense</a>
+      <a href="#mars" class="nav-link">Company</a>
+      <a href="#" class="nav-link">Shop</a>
+    </nav>
+    <div class="flex items-center gap-3">
+      <button class="launch-box hidden md:inline-flex items-center gap-3 rounded-[2px] pl-4 pr-3 h-10">
+        Upcoming Launches
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button id="mbtn" class="xl:hidden w-10 h-10 -mr-2 inline-flex items-center justify-center text-[color:var(--fg)]" aria-label="Menu" aria-expanded="false" aria-controls="mnav">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </div>
+  <div id="mnav" class="closed xl:hidden absolute top-[72px] left-0 right-0 bg-black/95 border-t border-white/10 px-6 py-4">
+    <nav class="flex flex-col">
+      <a href="#vehicle" class="nav-link py-3.5 border-b border-white/10">Vehicles</a>
+      <a href="#human" class="nav-link py-3.5 border-b border-white/10">Human Spaceflight</a>
+      <a href="#network" class="nav-link py-3.5 border-b border-white/10">Network</a>
+      <a href="#vehicle" class="nav-link py-3.5 border-b border-white/10">Defense</a>
+      <a href="#mars" class="nav-link py-3.5 border-b border-white/10">Company</a>
+      <a href="#" class="nav-link py-3.5">Shop</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ============================ 1 · HERO (launch) ============================ -->
+<section class="panel items-end">
+  <div class="media"><img src="exodus-assets/hero.webp" alt="EXODUS super-heavy rocket lifting off over a coastal river delta at golden hour" /></div>
+  <div class="scrim-l"></div><div class="scrim-b"></div>
+  <div class="panel-content">
+    <div class="max-w-[1560px] mx-auto px-5 sm:px-10 pb-20 sm:pb-24">
+      <p class="kicker">May 22, 2026</p>
+      <h1 class="headline mt-5 max-w-[14ch]">Vanguard's<br>Twelfth Flight Test</h1>
+      <a href="#" class="btn mt-9">Watch <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 2 · A FUTURE AMONG THE STARS (Mars) ============================ -->
+<section id="mars" class="panel items-center bg-[color:var(--bg)]">
+  <div class="media ph-space stars"></div>
+  <div class="panel-content">
+    <div class="max-w-[1560px] mx-auto px-5 sm:px-10 grid lg:grid-cols-2 gap-10 items-center">
+      <div class="order-2 lg:order-1">
+        <h2 class="headline">A future among<br>the stars</h2>
+        <p class="lede mt-6">EXODUS exists for one reason — to make a multi-world future not just possible, but inevitable. Everything we build is a step off this planet.</p>
+        <a href="#vehicle" class="btn mt-9">Explore <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </div>
+      <div class="order-1 lg:order-2 flex justify-center lg:justify-end">
+        <img src="exodus-assets/mars.webp" class="block w-[min(52vw,560px)] aspect-square object-contain" alt="The planet Mars against deep space" loading="lazy" />
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 3 · VEHICLE ============================ -->
+<section id="vehicle" class="panel panel-stack lg:items-center">
+  <div class="media"><img src="exodus-assets/vehicle.webp" alt="An EXODUS booster descending toward the launch tower with catch arms at sunset" /></div>
+  <div class="scrim-b lg:hidden"></div>
+  <div class="scrim-r hidden lg:block"></div>
+  <div class="panel-content">
+    <div class="max-w-[1560px] mx-auto px-5 sm:px-10 flex justify-start lg:justify-end">
+      <div class="max-w-[560px] text-left lg:text-right">
+        <h2 class="headline">Reusable from<br>the ground up</h2>
+        <p class="lede lg:ml-auto mt-6">Vanguard and its Super-Heavy booster are fully and rapidly reusable — engineered to lift crew and cargo to orbit, the Moon, Mars, and the worlds beyond.</p>
+        <a href="#" class="btn mt-9">Learn More <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 4 · LAUNCH SERVICE ============================ -->
+<section class="panel panel-stack lg:items-center">
+  <div class="media"><img src="exodus-assets/launch.webp" alt="Two EXODUS boosters landing simultaneously on the coast at dusk" /></div>
+  <div class="scrim-b lg:hidden"></div>
+  <div class="scrim-l hidden lg:block"></div>
+  <div class="panel-content">
+    <div class="max-w-[1560px] mx-auto px-5 sm:px-10">
+      <div class="max-w-[560px]">
+        <h2 class="headline">The world's most<br>trusted ride to orbit</h2>
+        <p class="lede mt-6">Hundreds of flights, landed and flown again. EXODUS turns access to orbit into something dependable enough to put on a calendar.</p>
+        <a href="#" class="btn mt-9">Reserve Your Ride <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 5 · HUMAN SPACEFLIGHT ============================ -->
+<section id="human" class="panel panel-stack lg:items-center">
+  <div class="media"><img src="exodus-assets/human.webp" class="object-[30%_25%]" alt="An astronaut in a spacesuit helmet aboard an EXODUS spacecraft" /></div>
+  <div class="scrim-b lg:hidden"></div>
+  <div class="scrim-r hidden lg:block"></div>
+  <div class="panel-content">
+    <div class="max-w-[1560px] mx-auto px-5 sm:px-10 flex justify-start lg:justify-end">
+      <div class="max-w-[560px] text-left lg:text-right">
+        <h2 class="headline">A new era of<br>human spaceflight</h2>
+        <p class="lede lg:ml-auto mt-6">We're opening orbit to more than a handful of astronauts — to scientists, builders, and one day, to anyone with a reason to go.</p>
+        <a href="#" class="btn mt-9">Join a Mission <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 6 · NETWORK + FOOTER ============================ -->
+<section id="network" class="panel panel-stack lg:items-center">
+  <div class="media"><img src="exodus-assets/network.webp" alt="An EXODUS satellite panel in low-Earth orbit with the curve of Earth below" /></div>
+  <div class="scrim-b lg:hidden"></div>
+  <div class="scrim-l hidden lg:block"></div>
+  <div class="panel-content flex flex-col lg:min-h-[115vh]">
+    <div class="flex-1 flex items-end lg:items-center">
+      <div class="max-w-[1560px] w-full mx-auto px-5 sm:px-10">
+        <div class="max-w-[560px]">
+          <h2 class="headline">High-speed internet,<br>anywhere on Earth</h2>
+          <p class="lede mt-6">A constellation of thousands of satellites in low-Earth orbit, delivering low-latency broadband to the places the ground never reached.</p>
+          <a href="#" class="btn mt-9">Order Now <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        </div>
+      </div>
+    </div>
+    <!-- footer -->
+    <footer class="max-w-[1560px] w-full mx-auto px-5 sm:px-10 py-7 flex items-center justify-between gap-4 flex-wrap border-t border-white/10">
+      <a href="#" class="w-9 h-9 rounded-full border border-white/20 inline-flex items-center justify-center text-[color:var(--fg)] hover:bg-white/10 transition" aria-label="X">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18 3h3l-7 8 8 10h-6l-5-6-5 6H3l8-9L3 3h6l4 5z"/></svg>
+      </a>
+      <nav class="flex items-center gap-7">
+        <a href="#" class="nav-link !text-[12px]">Careers</a>
+        <a href="#" class="nav-link !text-[12px]">Updates</a>
+        <a href="#" class="nav-link !text-[12px]">Privacy Policy</a>
+        <a href="#" class="nav-link !text-[12px]">Suppliers</a>
+      </nav>
+      <span class="display text-[12px] tracking-[0.16em] text-[color:var(--fg-faint)] uppercase">© 2026 EXODUS</span>
+    </footer>
+  </div>
+</section>
+
+<script>
+(function () {
+  var b = document.getElementById('mbtn');
+  var m = document.getElementById('mnav');
+  if (b && m) {
+    b.addEventListener('click', function () {
+      var open = m.classList.toggle('closed') === false;
+      b.setAttribute('aria-expanded', String(open));
+    });
+    m.querySelectorAll('a').forEach(function (a) {
+      a.addEventListener('click', function () { m.classList.add('closed'); b.setAttribute('aria-expanded', 'false'); });
+    });
+  }
+})();
+</script>
+
+</body>
+</html>

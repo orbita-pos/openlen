@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AETHERBORN — Un MOBA 5v5 de estrategia y acción</title>
+<meta name="description" content="AETHERBORN es un MOBA 5v5 donde dos equipos chocan para destruir el Núcleo enemigo. Elige tu campeón, domina con estilo y juega gratis." />
+<meta property="og:title" content="AETHERBORN — Juega gratis" />
+<meta property="og:description" content="Un MOBA 5v5 de estrategia y acción. Más de 40 campeones te esperan en el Aetherium." />
+<meta property="og:image" content="aetherborn-assets/keyart.webp" />
+<meta name="theme-color" content="#010A13" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23010A13'/%3E%3Cpath d='M9 25L16 7l7 18h-3.6l-1-3h-4.8l-1 3z' fill='%23C8AA6E'/%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@400;500;600;700&family=Spectral:ital,wght@0,600;1,700;1,800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#010A13;
+    --surface:#0A1428;
+    --surface-2:#06121C;
+    --fg:#F0E6D2;
+    --fg-muted:#CDD0D6;
+    --fg-faint:#9AA3AC;
+    --fg-bright:#FFFFFF;
+    --fg-dark:#0A1428;
+    --border:rgba(255,255,255,.08);
+    --accent:#C8AA6E;
+    --accent-r:200,170,110;
+    --accent-ink:#0A1428;
+    --gold-1:#C8AA6E;
+    --gold-2:#C89B3C;
+    --gold-3:#785A28;
+    --gold-hi:#E4CE9A;
+    --gold-bright:#F0E6D2;
+    --cyan:#0AC8E6;
+    --cyan-ink:#06303A;
+    --light:#F4F4F5;
+    --grey-label:#5B5A56;
+    --radius:2px;
+    --radius-sm:2px;
+    --radius-lg:4px;
+    --font-display:'Cinzel',Georgia,serif;
+    --font-italic:'Spectral',Georgia,serif;
+    --font-body:'Inter',ui-sans-serif,system-ui,sans-serif;
+  }
+  html, body { background:var(--bg); color:var(--fg); }
+  body {
+    font-family:var(--font-body);
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  .cinzel { font-family:var(--font-display); }
+  .spectral-i { font-family:var(--font-italic); font-style:italic; }
+
+  /* ---- metallic wordmark ---- */
+  .lol-logo {
+    font-family: var(--font-display); font-weight: 900; line-height: 0.92;
+    background: linear-gradient(180deg,var(--gold-bright) 0%,var(--gold-hi) 22%,var(--accent) 44%,var(--gold-2) 62%,var(--gold-3) 82%,var(--accent) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 2px 1px rgba(0,0,0,.45)) drop-shadow(0 0 18px rgba(var(--accent-r),.25));
+    letter-spacing: 0.015em;
+  }
+  .gold-text {
+    background: linear-gradient(180deg,var(--gold-bright) 0%,var(--accent) 52%,var(--gold-3) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  /* two-tier lockup: subtitle smaller + wider beneath the name */
+  .lol-logo > span { display:block; font-size:0.26em; letter-spacing:0.42em; margin-top:0.5em; font-weight:700; }
+
+  /* ---- buttons (sharp, hextech style) ---- */
+  .btn { display:inline-flex; align-items:center; justify-content:center; font-weight:700;
+    letter-spacing:0.06em; text-transform:uppercase; font-size:13px; padding:0 26px; height:48px;
+    border-radius:0; transition:filter .18s ease, box-shadow .18s ease, background .18s ease, color .18s ease; cursor:pointer; white-space:nowrap; }
+  .btn-gold { background:linear-gradient(180deg,var(--accent),var(--gold-2)); color:var(--accent-ink); border:1px solid var(--accent);
+    box-shadow:inset 0 0 0 2px rgba(10,20,40,.18); }
+  .btn-gold:hover { filter:brightness(1.08); box-shadow:inset 0 0 0 2px rgba(10,20,40,.18), 0 8px 26px -10px rgba(200,170,110,.75); }
+  .btn-cyan { background:var(--cyan); color:var(--cyan-ink); border:1px solid var(--cyan); box-shadow:inset 0 0 0 2px rgba(6,48,58,.2); }
+  .btn-cyan:hover { filter:brightness(1.1); box-shadow:inset 0 0 0 2px rgba(6,48,58,.2), 0 8px 26px -10px rgba(10,200,230,.6); }
+  .btn-outline-gold { background:transparent; color:var(--gold-1); border:2px solid var(--gold-2); }
+  .btn-outline-gold:hover { background:rgba(200,170,110,.12); color:var(--gold-bright); border-color:var(--gold-1); }
+  .btn-pill { border-radius:999px; height:40px; padding:0 22px; font-size:12px; }
+  .btn:focus-visible, .ctab:focus-visible, .nav-icon-btn:focus-visible, .nav-link:focus-visible { outline:2px solid var(--cyan); outline-offset:2px; border-radius:1px; }
+
+  /* ---- top nav ---- */
+  .nav-link { font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em;
+    color:var(--fg-muted); display:inline-flex; align-items:center; gap:5px; transition:color .15s ease; }
+  .nav-link:hover { color:var(--fg-bright); }
+  .nav-icon-btn { width:38px; height:38px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center;
+    color:var(--fg-muted); transition:background .15s ease, color .15s ease; }
+  .nav-icon-btn:hover { background:rgba(255,255,255,.08); color:var(--fg-bright); }
+
+  /* ---- art placeholders — swap each .ph-art with your ChatGPT render ---- */
+  .champ-render { position:absolute; left:50%; top:50%; width:96%; height:122%;
+    object-fit:contain; object-position:center bottom;
+    transform:translate(-50%,-50%) scale(1.02);
+    filter:drop-shadow(0 26px 42px rgba(10,20,40,.45));
+    transition:opacity .3s ease, transform .9s ease; }
+  .champ-render.swapping { opacity:0; transform:translate(-50%,-50%) scale(1.06); }
+  .champ-disc { position:absolute; inset:9%; border-radius:999px;
+    background:radial-gradient(circle at 50% 44%, var(--glow,rgba(200,170,110,.5)), transparent 64%);
+    filter:blur(8px); transition:background .4s ease; }
+
+  /* ---- hero arcane backdrop (drop your key art in via --hero-art) ---- */
+  .hero-arcane { background:
+    radial-gradient(82% 90% at 50% 14%, rgba(118,78,196,.34), transparent 60%),
+    radial-gradient(56% 60% at 80% 72%, rgba(200,150,60,.20), transparent 62%),
+    radial-gradient(50% 55% at 20% 66%, rgba(44,150,196,.18), transparent 62%),
+    linear-gradient(180deg, rgba(12,16,42,1), rgba(7,10,26,1) 58%, rgba(4,6,15,1)); }
+
+  /* ---- champion selector ---- */
+  .selector { background:var(--light); color:var(--fg-dark); position:relative; overflow:hidden; }
+  .watermark-v { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+  .watermark-v svg { width:min(86%,1100px); opacity:.06; }
+  .champ-stage { position:relative; width:min(78vw,520px); aspect-ratio:1/1; }
+  .champ-arc { position:absolute; inset:0; }
+  /* champion render (.champ-render) + class aura (.champ-disc) defined above */
+  .ctab { display:flex; flex-direction:column; align-items:center; gap:9px; opacity:.5;
+    transition:opacity .18s ease; background:transparent; border:0; cursor:pointer; padding:4px 2px; min-width:64px; }
+  .ctab:hover { opacity:.85; }
+  .ctab.active { opacity:1; }
+  .ctab svg { width:34px; height:34px; }
+  .ctab .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--grey-label); transition:color .18s ease; }
+  .ctab.active .label { color:var(--fg-dark); }
+  .ctab.active svg { filter:drop-shadow(0 0 8px rgba(var(--accent-r),.55)); }
+
+  /* ---- "domina con estilo" cinematic ---- */
+  .cine { position:relative; overflow:hidden; background:var(--surface-2); }
+  .cine-scene { position:absolute; inset:0; z-index:0; }
+  .cine-overlay { position:absolute; inset:0; z-index:1;
+    background:linear-gradient(90deg, rgba(4,12,20,.55) 0%, rgba(4,12,20,.25) 45%, rgba(4,12,20,.65) 100%),
+               linear-gradient(180deg, rgba(4,12,20,.5) 0%, transparent 30%, rgba(4,12,20,.7) 100%); }
+  .diamond { position:relative; width:clamp(220px,58vw,420px); aspect-ratio:1/1;
+    filter:drop-shadow(0 40px 70px rgba(0,0,0,.6)); }
+  .diamond-clip { position:absolute; inset:0; overflow:hidden; clip-path:polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+  .diamond-clip img { width:100%; height:100%; object-fit:cover; object-position:center 22%; }
+  .diamond-clip::after { content:""; position:absolute; inset:0; box-shadow:inset 0 0 55px rgba(0,0,0,.55); pointer-events:none; }
+  .diamond-frame { position:absolute; inset:0; width:100%; height:100%; }
+
+  /* ---- news cards ---- */
+  .news-card { background:var(--surface); border:1px solid rgba(var(--accent-r),.18); transition:border-color .2s ease, transform .2s ease; }
+  .news-card:hover { border-color:var(--accent); transform:translateY(-3px); }
+  .news-card:hover .news-img img { transform:scale(1.06); }
+  .news-img { overflow:hidden; }
+  .news-img img { width:100%; height:100%; object-fit:cover; transition:transform .6s cubic-bezier(.2,.7,.2,1); }
+  .news-tag { color:var(--accent); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; }
+
+  /* ---- dividers / atmosphere ---- */
+  .gold-rule { height:1px; background:linear-gradient(90deg, transparent, rgba(var(--accent-r),.5), transparent); }
+  .eyebrow { font-family:var(--font-display); font-weight:700; text-transform:uppercase; letter-spacing:0.34em; font-size:14px; }
+  .display-italic { font-family:var(--font-italic); font-style:italic; font-weight:800; line-height:0.92; }
+
+  /* ---- mobile menu ---- */
+  #mobile-menu { transition:opacity .2s ease, visibility .2s ease; }
+  #mobile-menu.hidden-menu { opacity:0; visibility:hidden; pointer-events:none; }
+
+  @media (max-width: 1023px) { .btn { height:46px; } }
+</style>
+</head>
+<body class="min-h-screen antialiased">
+
+<!-- ============================ TOP NAV ============================ -->
+<header class="sticky top-0 z-50" style="background:var(--bg);border-bottom:1px solid rgba(255,255,255,.06)">
+  <div class="max-w-[1480px] mx-auto px-4 sm:px-6 h-[68px] flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3 lg:gap-8 min-w-0">
+      <a href="#" class="flex items-center gap-3 shrink-0">
+        <!-- NOVA GAMES mark -->
+        <span class="flex items-center gap-2">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
+            <path d="M12 1l2.7 7.3L22 11l-7.3 2.7L12 21l-2.7-7.3L2 11l7.3-2.7z"/>
+          </svg>
+          <span class="leading-[0.9] hidden sm:block">
+            <span class="block text-[11px] font-bold tracking-[0.16em] text-white">NOVA</span>
+            <span class="block text-[11px] font-bold tracking-[0.16em] text-white">GAMES</span>
+          </span>
+        </span>
+        <span class="w-px h-7 bg-white/15 hidden sm:block"></span>
+        <!-- AETHERBORN crest -->
+        <svg width="34" height="34" viewBox="0 0 40 40" aria-hidden="true">
+          <path d="M20 2l15 8v14c0 8-7 12-15 14-8-2-15-6-15-14V10z" fill="none" stroke="#C8AA6E" stroke-width="1.6"/>
+          <path d="M14 29L20 11l6 18h-3.4l-1-3.2h-3.2l-1 3.2z" fill="#C8AA6E"/>
+          <path d="M18.7 22.6h2.6" stroke="#0A1428" stroke-width="1.3"/>
+        </svg>
+      </a>
+
+      <nav class="hidden xl:flex items-center gap-7">
+        <a href="#campeones" class="nav-link">Descripción del juego</a>
+        <a href="#campeones" class="nav-link">Campeones</a>
+        <a href="#noticias" class="nav-link">Noticias <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor"><path d="M5 7L1 3h8z"/></svg></a>
+        <a href="#noticias" class="nav-link">Notas de versión</a>
+        <a href="#estilo" class="nav-link">Descubre <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor"><path d="M5 7L1 3h8z"/></svg></a>
+        <a href="#" class="nav-link">Más <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor"><path d="M5 7L1 3h8z"/></svg></a>
+      </nav>
+    </div>
+
+    <div class="flex items-center gap-1.5 sm:gap-2.5">
+      <button class="nav-icon-btn" aria-label="Buscar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/></svg>
+      </button>
+      <button class="nav-icon-btn hidden sm:inline-flex" aria-label="Idioma">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 2.5 15.4 0 18M12 3c-2.5 2.6-2.5 15.4 0 18"/></svg>
+      </button>
+      <a href="#" class="btn btn-cyan ml-1 hidden sm:inline-flex">Jugar Ahora</a>
+      <button id="menu-btn" class="nav-icon-btn xl:hidden" aria-label="Menú" aria-expanded="false" aria-controls="mobile-menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="mobile-menu" class="hidden-menu xl:hidden absolute top-[68px] left-0 right-0 bg-[#010A13] border-b border-white/10 px-6 py-5">
+    <nav class="flex flex-col gap-1">
+      <a href="#campeones" class="nav-link py-3 border-b border-white/5">Descripción del juego</a>
+      <a href="#campeones" class="nav-link py-3 border-b border-white/5">Campeones</a>
+      <a href="#noticias" class="nav-link py-3 border-b border-white/5">Noticias</a>
+      <a href="#noticias" class="nav-link py-3 border-b border-white/5">Notas de versión</a>
+      <a href="#estilo" class="nav-link py-3 border-b border-white/5">Descubre</a>
+      <a href="#" class="nav-link py-3">Más</a>
+      <a href="#" class="btn btn-cyan mt-4">Jugar Ahora</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ============================ HERO ============================ -->
+<!-- To use real key art: add <img class="absolute inset-0 w-full h-full object-cover -z-10" src="..."> above the .hero-arcane div -->
+<section class="relative isolate flex items-center justify-center text-center overflow-hidden"
+  style="min-height:min(88vh,780px)">
+  <img src="aetherborn-assets/keyart.webp" alt="" class="absolute inset-0 w-full h-full object-cover object-[center_42%] -z-10" loading="eager" />
+  <div class="hero-arcane absolute inset-0 -z-10 opacity-0"></div>
+  <div class="absolute inset-0 -z-10" style="background:linear-gradient(180deg, rgba(1,10,19,.5) 0%, rgba(1,10,19,.18) 36%, rgba(1,10,19,.55) 72%, rgba(1,10,19,.96) 100%)"></div>
+  <div class="absolute inset-0 -z-10" style="background:radial-gradient(52% 44% at 50% 46%, rgba(1,10,19,.6), transparent 72%)"></div>
+
+  <div class="relative px-6 max-w-5xl mx-auto">
+    <h1 class="lol-logo cinzel" style="font-size:clamp(38px,7.6vw,94px)">
+      AETHERBORN<span class="block">Leyendas del Aetherium</span>
+    </h1>
+    <p class="spectral-i mt-8 mx-auto max-w-2xl gold-text" style="font-size:clamp(15px,2.4vw,21px); letter-spacing:.02em; font-weight:700">
+      AETHERBORN: un MOBA 5v5 donde dos equipos chocan para destruir el Núcleo enemigo.
+    </p>
+    <div class="mt-10">
+      <a href="#campeones" class="btn btn-outline-gold" style="height:54px; padding:0 40px; font-size:14px">Juega Gratis</a>
+    </div>
+  </div>
+
+  <div class="absolute bottom-5 left-1/2 -translate-x-1/2 text-[color:var(--gold-1)] opacity-70 animate-bounce" aria-hidden="true">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
+</section>
+
+<!-- ============================ CHAMPION SELECTOR ============================ -->
+<section id="campeones" class="selector">
+  <div class="watermark-v" aria-hidden="true">
+    <svg viewBox="0 0 600 400" fill="none" stroke="#0A1428" stroke-width="6">
+      <path d="M60 40 L300 360 L540 40" />
+      <path d="M140 40 L300 270 L460 40" />
+    </svg>
+  </div>
+
+  <div class="relative max-w-[1340px] mx-auto px-6 lg:px-10 py-20 lg:py-28
+              grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+    <div class="order-2 lg:order-1 max-w-xl">
+      <p class="eyebrow text-[color:var(--fg-dark)]/70">Elige tu</p>
+      <h2 class="display-italic mt-2 text-[color:var(--fg-dark)]" style="font-size:clamp(58px,9vw,118px)">Campeón</h2>
+      <p class="mt-6 text-[15.5px] leading-relaxed text-[color:#3a4250] max-w-md">
+        Ya sea que prefieras lanzarte directo a la batalla, apoyar a tus compañeros de equipo,
+        o algo intermedio, hay un lugar para ti en el Aetherium.
+      </p>
+      <div class="mt-9 flex flex-wrap gap-4">
+        <a href="#" class="btn btn-gold">Descubrir más campeones</a>
+        <a href="#" class="btn btn-cyan">Juega Ahora</a>
+      </div>
+
+      <div class="mt-14 flex flex-wrap gap-x-7 gap-y-6" id="champ-tabs" role="tablist" aria-label="Clases de campeón">
+        <button class="ctab active" data-role="asesinos" role="tab" aria-selected="true" aria-controls="champ-panel" aria-label="Asesinos">
+          <svg viewBox="0 0 32 32" fill="none" stroke="#C89B3C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3l3 9 6 2-6 2-3 12-3-12-6-2 6-2z"/><path d="M16 3v26" stroke-width="1"/></svg>
+          <span class="label">Asesinos</span>
+        </button>
+        <button class="ctab" data-role="luchadores" role="tab" aria-selected="false" aria-controls="champ-panel" aria-label="Luchadores">
+          <svg viewBox="0 0 32 32" fill="none" stroke="#C89B3C" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 28L22 10"/><path d="M28 28L10 10"/><path d="M22 6h4v4"/><path d="M10 6H6v4"/><path d="M4 24v4h4"/><path d="M28 24v4h-4"/></svg>
+          <span class="label">Luchadores</span>
+        </button>
+        <button class="ctab" data-role="magos" role="tab" aria-selected="false" aria-controls="champ-panel" aria-label="Magos">
+          <svg viewBox="0 0 32 32" fill="none" stroke="#C89B3C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4v8M16 12l-3 16M16 12l3 16"/><path d="M16 4l2.5 2.5L16 9l-2.5-2.5z" fill="#C89B3C"/><circle cx="16" cy="12" r="2.4" fill="#C89B3C"/></svg>
+          <span class="label">Magos</span>
+        </button>
+        <button class="ctab" data-role="tiradores" role="tab" aria-selected="false" aria-controls="champ-panel" aria-label="Tiradores">
+          <svg viewBox="0 0 32 32" fill="none" stroke="#C89B3C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5a15 15 0 0 0 0 22"/><path d="M11 5v22" stroke-width="1.2"/><path d="M7 16h20"/><path d="M23 12l5 4-5 4"/></svg>
+          <span class="label">Tiradores</span>
+        </button>
+        <button class="ctab" data-role="soportes" role="tab" aria-selected="false" aria-controls="champ-panel" aria-label="Soportes">
+          <svg viewBox="0 0 32 32" fill="none" stroke="#C89B3C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 28c-7-4-11-9-11-15 6-1 9 2 11 5 2-3 5-6 11-5 0 6-4 11-11 15z"/><path d="M16 13v9M12 17h8"/></svg>
+          <span class="label">Soportes</span>
+        </button>
+        <button class="ctab" data-role="tanques" role="tab" aria-selected="false" aria-controls="champ-panel" aria-label="Tanques">
+          <svg viewBox="0 0 32 32" fill="none" stroke="#C89B3C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3l11 4v9c0 7-5 11-11 13C10 27 5 23 5 16V7z"/><path d="M16 3v26" stroke-width="1"/></svg>
+          <span class="label">Tanques</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="order-1 lg:order-2 flex justify-center lg:justify-end">
+      <div class="champ-stage" id="champ-panel" role="tabpanel" tabindex="-1" aria-live="polite">
+        <div class="champ-disc" id="champ-glow" style="--glow:rgba(150,90,220,.55)"></div>
+        <svg class="champ-arc" viewBox="0 0 100 100" fill="none" aria-hidden="true">
+          <path d="M50 4 a46 46 0 0 1 0 92" stroke="#C8AA6E" stroke-width="0.7" stroke-linecap="round"/>
+          <path d="M50 96 a46 46 0 0 1 -32 -12" stroke="#785A28" stroke-width="0.7" stroke-linecap="round" opacity=".7"/>
+          <path d="M50 4 a46 46 0 0 0 -34 14" stroke="#785A28" stroke-width="0.7" stroke-linecap="round" opacity=".7"/>
+        </svg>
+        <img id="champ-img" class="champ-render" src="aetherborn-assets/nyx-nobg.webp" alt="Campeón Nyx" />
+        <div class="absolute bottom-2 left-1/2 -translate-x-1/2 text-center" style="z-index:5">
+          <span id="champ-name" class="cinzel text-[color:var(--gold-bright)] text-[17px] font-bold tracking-[0.2em] uppercase" style="text-shadow:0 0 5px rgba(0,0,0,.7), 0 1px 2px rgba(0,0,0,.9), 0 0 2px rgba(0,0,0,.95)">Nyx</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ DOMINA CON ESTILO ============================ -->
+<section id="estilo" class="cine relative">
+  <div class="cine-scene" aria-hidden="true">
+    <svg viewBox="0 0 1440 620" preserveAspectRatio="xMidYMid slice" class="w-full h-full">
+      <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#0B2236"/><stop offset="0.6" stop-color="#0A1A2A"/><stop offset="1" stop-color="#06121C"/>
+        </linearGradient>
+        <linearGradient id="m1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#21465A"/><stop offset="1" stop-color="#102836"/></linearGradient>
+        <linearGradient id="m2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16323F"/><stop offset="1" stop-color="#0B1E29"/></linearGradient>
+        <linearGradient id="m3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0E2530"/><stop offset="1" stop-color="#081821"/></linearGradient>
+      </defs>
+      <rect width="1440" height="620" fill="url(#sky)"/>
+      <circle cx="1140" cy="120" r="48" fill="#1a3a4d" opacity=".5"/>
+      <circle cx="1140" cy="120" r="34" fill="#cfe4ec" opacity=".18"/>
+      <path d="M0 360 L180 250 L340 330 L520 210 L700 320 L900 230 L1120 330 L1300 250 L1440 320 V620 H0 Z" fill="url(#m3)"/>
+      <path d="M0 430 L160 300 L320 400 L480 280 L640 390 L860 290 L1080 400 L1280 310 L1440 400 V620 H0 Z" fill="url(#m2)"/>
+      <path d="M480 280 L520 340 L500 345 L480 312 L462 345 L445 338 Z" fill="#5d7d86" opacity=".55"/>
+      <path d="M860 290 L900 350 L880 352 L860 320 L842 350 L826 344 Z" fill="#5d7d86" opacity=".5"/>
+      <path d="M0 520 L220 410 L420 500 L620 400 L820 500 L1040 410 L1240 500 L1440 430 V620 H0 Z" fill="url(#m1)"/>
+      <g fill="#0a2029">
+        <path d="M120 560 l22 -70 22 70 z"/><path d="M132 540 l10 -42 10 42 z" transform="translate(-2,0)"/>
+        <path d="M1290 560 l20 -64 20 64 z"/><path d="M1230 568 l16 -52 16 52 z"/>
+        <path d="M60 575 l14 -46 14 46 z"/>
+      </g>
+      <rect width="1440" height="620" fill="#06121C" opacity=".15"/>
+    </svg>
+  </div>
+  <div class="cine-overlay" aria-hidden="true"></div>
+
+  <div class="relative z-10 max-w-[1340px] mx-auto px-6 lg:px-10 py-24 lg:py-32
+              grid md:grid-cols-2 gap-14 items-center">
+    <div class="flex justify-center lg:justify-start">
+      <div class="diamond">
+        <div class="diamond-clip"><img src="aetherborn-assets/aspecto.webp" alt="Aspecto destacado legendario" loading="lazy" /></div>
+        <svg class="diamond-frame" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <polygon points="50,1.4 98.6,50 50,98.6 1.4,50" fill="none" stroke="#C89B3C" stroke-width="0.8"/>
+          <polygon points="50,4.5 95.5,50 50,95.5 4.5,50" fill="none" stroke="#785A28" stroke-width="0.4" opacity="0.55"/>
+        </svg>
+      </div>
+    </div>
+    <div class="text-center md:text-left">
+      <p class="eyebrow gold-text">Domina con</p>
+      <h2 class="display-italic mt-2 text-white" style="font-size:clamp(58px,9vw,120px)">Estilo</h2>
+      <p class="mt-6 text-[16px] leading-relaxed text-[#cdd6dd] max-w-md mx-auto md:mx-0">
+        Cambia la apariencia de tus campeones favoritos con aspectos y personaliza tu estilo
+        dentro y fuera del campo de batalla.
+      </p>
+      <div class="mt-9">
+        <a href="#" class="btn btn-gold">Juega Ahora</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ NOTICIAS ============================ -->
+<section id="noticias" class="bg-[#010A13] py-24 lg:py-28">
+  <div class="max-w-[1340px] mx-auto px-6 lg:px-10">
+    <div class="flex items-end justify-between gap-6 flex-wrap">
+      <div>
+        <p class="eyebrow gold-text">Mantente al día</p>
+        <h2 class="cinzel text-white font-bold mt-2" style="font-size:clamp(30px,4.4vw,46px)">Últimas Noticias</h2>
+      </div>
+      <a href="#" class="btn btn-outline-gold btn-pill">Ver todo</a>
+    </div>
+    <div class="gold-rule mt-8 mb-12"></div>
+
+    <div class="grid md:grid-cols-3 gap-7">
+      <a href="#" class="news-card group block overflow-hidden rounded-sm">
+        <div class="news-img aspect-[16/10]"><img src="aetherborn-assets/news-patch.webp" alt="" loading="lazy" /></div>
+        <div class="p-6">
+          <span class="news-tag">Notas de versión</span>
+          <h3 class="cinzel text-white text-[19px] font-bold mt-3 leading-snug">Parche 3.12: reequilibrio de la línea inferior</h3>
+          <p class="text-[13.5px] text-[#9aa3ac] mt-3">Ajustes a tiradores, nuevos objetos y cambios en la jungla para la nueva temporada competitiva.</p>
+          <span class="block text-[12px] text-[color:var(--gold-2)] mt-4 uppercase tracking-[0.1em]">05 Jun 2026</span>
+        </div>
+      </a>
+      <a href="#" class="news-card group block overflow-hidden rounded-sm">
+        <div class="news-img aspect-[16/10]"><img src="aetherborn-assets/news-aspectos.webp" alt="" loading="lazy" /></div>
+        <div class="p-6">
+          <span class="news-tag">Aspectos</span>
+          <h3 class="cinzel text-white text-[19px] font-bold mt-3 leading-snug">Nueva colección de aspectos: Eclipse Arcano</h3>
+          <p class="text-[13.5px] text-[#9aa3ac] mt-3">Seis campeones reciben aspectos legendarios con animaciones, voces y efectos completamente nuevos.</p>
+          <span class="block text-[12px] text-[color:var(--gold-2)] mt-4 uppercase tracking-[0.1em]">02 Jun 2026</span>
+        </div>
+      </a>
+      <a href="#" class="news-card group block overflow-hidden rounded-sm">
+        <div class="news-img aspect-[16/10]"><img src="aetherborn-assets/news-esports.webp" alt="" loading="lazy" /></div>
+        <div class="p-6">
+          <span class="news-tag">Esports</span>
+          <h3 class="cinzel text-white text-[19px] font-bold mt-3 leading-snug">El Campeonato Mundial AETHERBORN llega a Ciudad de México</h3>
+          <p class="text-[13.5px] text-[#9aa3ac] mt-3">Los mejores equipos del planeta se enfrentan por la Copa del Aetherium. Consigue tus entradas ya.</p>
+          <span class="block text-[12px] text-[color:var(--gold-2)] mt-4 uppercase tracking-[0.1em]">28 May 2026</span>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ CTA BANNER ============================ -->
+<section class="relative isolate overflow-hidden py-24 text-center">
+  <div class="hero-arcane absolute inset-0 -z-10"></div>
+  <div class="absolute inset-0 -z-10" style="background:linear-gradient(180deg, rgba(1,10,19,.8), rgba(1,10,19,.55) 50%, rgba(1,10,19,.92))"></div>
+  <div class="relative px-6 max-w-2xl mx-auto">
+    <h2 class="cinzel gold-text font-bold" style="font-size:clamp(34px,6vw,68px)">Tu leyenda comienza aquí</h2>
+    <p class="mt-5 text-[#cdd6dd] text-[16px] max-w-lg mx-auto">Más de 40 campeones te esperan. Crea tu cuenta gratis y entra al Aetherium hoy mismo.</p>
+    <div class="mt-9 flex justify-center gap-4 flex-wrap">
+      <a href="#" class="btn btn-gold" style="height:54px;padding:0 38px">Crear cuenta gratis</a>
+      <a href="#" class="btn btn-outline-gold" style="height:54px;padding:0 38px">Descargar</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ FOOTER ============================ -->
+<footer class="bg-[#010A13] border-t border-white/8 pt-16 pb-10">
+  <div class="max-w-[1340px] mx-auto px-6 lg:px-10">
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-10">
+      <div class="col-span-2 md:col-span-1">
+        <div class="flex items-center gap-3">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M12 1l2.7 7.3L22 11l-7.3 2.7L12 21l-2.7-7.3L2 11l7.3-2.7z"/></svg>
+          <span class="text-[12px] font-bold tracking-[0.16em] text-white leading-tight">NOVA<br>GAMES</span>
+        </div>
+        <p class="text-[12.5px] text-[#9aa3ac] mt-5 leading-relaxed">Un MOBA 5v5 de estrategia y acción. Juega gratis.</p>
+      </div>
+      <div>
+        <h4 class="cinzel text-[color:var(--gold-1)] text-[13px] font-bold uppercase tracking-[0.12em]">El juego</h4>
+        <ul class="mt-4 space-y-2.5 text-[13.5px] text-[#9aa3ac]">
+          <li><a href="#campeones" class="hover:text-white transition">Campeones</a></li>
+          <li><a href="#estilo" class="hover:text-white transition">Aspectos</a></li>
+          <li><a href="#noticias" class="hover:text-white transition">Notas de versión</a></li>
+          <li><a href="#" class="hover:text-white transition">Descargar</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="cinzel text-[color:var(--gold-1)] text-[13px] font-bold uppercase tracking-[0.12em]">Comunidad</h4>
+        <ul class="mt-4 space-y-2.5 text-[13.5px] text-[#9aa3ac]">
+          <li><a href="#noticias" class="hover:text-white transition">Noticias</a></li>
+          <li><a href="#" class="hover:text-white transition">Esports</a></li>
+          <li><a href="#" class="hover:text-white transition">Universo</a></li>
+          <li><a href="#" class="hover:text-white transition">Foros</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="cinzel text-[color:var(--gold-1)] text-[13px] font-bold uppercase tracking-[0.12em]">Soporte</h4>
+        <ul class="mt-4 space-y-2.5 text-[13.5px] text-[#9aa3ac]">
+          <li><a href="#" class="hover:text-white transition">Centro de ayuda</a></li>
+          <li><a href="#" class="hover:text-white transition">Estado del servicio</a></li>
+          <li><a href="#" class="hover:text-white transition">Contacto</a></li>
+          <li><a href="#" class="hover:text-white transition">Tienda</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="cinzel text-[color:var(--gold-1)] text-[13px] font-bold uppercase tracking-[0.12em]">Síguenos</h4>
+        <div class="flex gap-3 mt-4">
+          <a href="#" class="nav-icon-btn !w-9 !h-9 border border-white/10" aria-label="X"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18 3h3l-7 8 8 10h-6l-5-6-5 6H3l8-9L3 3h6l4 5z"/></svg></a>
+          <a href="#" class="nav-icon-btn !w-9 !h-9 border border-white/10" aria-label="YouTube"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M23 12c0-2.4-.3-4-.3-4a3 3 0 0 0-2-2C18.8 5.5 12 5.5 12 5.5s-6.8 0-8.7.5a3 3 0 0 0-2 2S1 9.6 1 12s.3 4 .3 4a3 3 0 0 0 2 2c1.9.5 8.7.5 8.7.5s6.8 0 8.7-.5a3 3 0 0 0 2-2s.3-1.6.3-4zM10 15V9l5 3z"/></svg></a>
+          <a href="#" class="nav-icon-btn !w-9 !h-9 border border-white/10" aria-label="Twitch"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M4 2L3 6v14h5v3h3l3-3h4l5-5V2zm16 11l-3 3h-5l-3 3v-3H6V4h14zM15 7h-2v5h2zm-5 0H8v5h2z"/></svg></a>
+        </div>
+        <button class="mt-6 flex items-center gap-2 text-[13px] text-[#9aa3ac] hover:text-white transition">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 2.5 15.4 0 18M12 3c-2.5 2.6-2.5 15.4 0 18"/></svg>
+          Español (LATAM)
+        </button>
+      </div>
+    </div>
+
+    <div class="gold-rule mt-12 mb-7"></div>
+    <div class="flex flex-col md:flex-row items-center justify-between gap-4 text-[11.5px] text-[#8893a0]">
+      <p>© 2026 Nova Games, Inc. AETHERBORN es una marca comercial de Nova Games, Inc.</p>
+      <div class="flex items-center gap-5 flex-wrap justify-center">
+        <a href="#" class="hover:text-[#9aa3ac]">Términos del servicio</a>
+        <a href="#" class="hover:text-[#9aa3ac]">Privacidad</a>
+        <a href="#" class="hover:text-[#9aa3ac]">Cookies</a>
+        <a href="#" class="hover:text-[#9aa3ac]">Aviso legal</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  // ---- mobile menu ----
+  var menuBtn = document.getElementById('menu-btn');
+  var mobile = document.getElementById('mobile-menu');
+  if (menuBtn && mobile) {
+    menuBtn.addEventListener('click', function () {
+      var open = !mobile.classList.toggle('hidden-menu');
+      menuBtn.setAttribute('aria-expanded', String(open));
+    });
+    mobile.querySelectorAll('a').forEach(function (a) {
+      a.addEventListener('click', function () {
+        mobile.classList.add('hidden-menu');
+        menuBtn.setAttribute('aria-expanded', 'false');
+      });
+    });
+  }
+
+  // ---- champion class selector ----
+  // When you wire real renders, add an `img:'<url>'` to each entry and set the
+  // portrait <img>.src inside the swap below (see comment).
+  var BASE = 'aetherborn-assets/';
+  var CHAMPS = {
+    asesinos:   { name: 'Nyx',    img: 'nyx-nobg.webp',    glow: 'rgba(150,90,220,.55)' },
+    luchadores: { name: 'Gromm',  img: 'gromm-nobg.webp',  glow: 'rgba(206,86,58,.55)'  },
+    magos:      { name: 'Lyra',   img: 'lyra-nobg.webp',   glow: 'rgba(70,140,230,.55)' },
+    tiradores:  { name: 'Vex',    img: 'vex-nobg.webp',    glow: 'rgba(80,200,140,.55)' },
+    soportes:   { name: 'Sera',   img: 'sera-nobg.webp',   glow: 'rgba(60,200,220,.5)'  },
+    tanques:    { name: 'Thorne', img: 'thorne-nobg.webp', glow: 'rgba(210,165,80,.55)' }
+  };
+  Object.keys(CHAMPS).forEach(function (k) { var i = new Image(); i.src = BASE + CHAMPS[k].img; });
+
+  var img = document.getElementById('champ-img');
+  var glow = document.getElementById('champ-glow');
+  var nameEl = document.getElementById('champ-name');
+  var tabs = document.querySelectorAll('#champ-tabs .ctab');
+
+  tabs.forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      var role = tab.getAttribute('data-role');
+      var data = CHAMPS[role];
+      if (!data || !img) return;
+      tabs.forEach(function (t) { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
+      tab.classList.add('active');
+      tab.setAttribute('aria-selected', 'true');
+      function reveal() { window.requestAnimationFrame(function () { img.classList.remove('swapping'); }); }
+      img.classList.add('swapping');
+      window.setTimeout(function () {
+        img.src = BASE + data.img;
+        img.alt = 'Campeón ' + data.name;
+        if (glow) glow.style.setProperty('--glow', data.glow);
+        if (nameEl) nameEl.textContent = data.name;
+        if (img.decode) { img.decode().then(reveal).catch(reveal); } else { reveal(); }
+      }, 300);
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

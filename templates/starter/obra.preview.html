@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>OBRA — Prefabricated homes, delivered whole</title>
+<meta name="description" content="OBRA designs lightweight, durable, off-grid-ready modular homes. From sketch to structure in weeks — engineered to outlive trends." />
+<meta property="og:title" content="OBRA — Prefab homes, delivered whole" />
+<meta property="og:description" content="Lightweight, durable and adventure-ready modular homes. From sketch to structure in weeks." />
+<meta property="og:image" content="obra-assets/hero.webp" />
+<meta name="theme-color" content="#FFFFFF" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23FFFFFF'/%3E%3Crect x='6' y='6' width='20' height='20' fill='none' stroke='%230A0A0A' stroke-width='3'/%3E%3C/svg%3E" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#FFFFFF;
+    --surface:#F4F2EF;
+    --surface-2:#E9E6E1;
+    --fg:#0A0A0A;
+    --fg-muted:#575450;
+    --fg-faint:#6E6A66;
+    --border:rgba(10,10,10,0.12);
+    --border-strong:rgba(10,10,10,0.2);
+    --accent:#B5532A;
+    --accent-r:181,83,42;
+    --accent-ink:#FFFFFF;
+    --fg-on-dark:#FFFFFF;
+    --corten-hi:#C9663A;
+    --corten-lo:#7E3A1E;
+    --corten-dark:#241410;
+    --radius:4px;
+    --radius-sm:3px;
+    --radius-lg:14px;
+    --font-display:'Archivo',ui-sans-serif,system-ui,sans-serif;
+    --font-body:'Inter',ui-sans-serif,system-ui,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  html, body { background:var(--bg); color:var(--fg); }
+  body { font-family:var(--font-body); -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+  .display { font-family:var(--font-display); }
+  .mono { font-family:var(--font-mono); }
+  .accent { color:var(--accent); }
+
+  /* nav */
+  .nav-link { font-size:14px; color:var(--fg-muted); transition:color .15s ease; }
+  .nav-link:hover { color:var(--fg); }
+  .pill { background:var(--fg); color:var(--bg); border-radius:999px; font-size:13px; font-weight:600;
+    padding:9px 18px; display:inline-flex; align-items:center; gap:6px; transition:opacity .15s ease, transform .15s ease; }
+  .pill:hover { opacity:.85; }
+  .pill-ghost { background:transparent; color:var(--fg); border:1px solid var(--border-strong); }
+  .pill-ghost:hover { border-color:var(--fg); opacity:1; }
+  a:focus-visible, button:focus-visible, .pill:focus-visible, .nav-link:focus-visible { outline:2px solid var(--accent); outline-offset:3px; border-radius:var(--radius-sm); }
+
+  /* hero giant wordmark */
+  .hero { position:relative; overflow:hidden; }
+  .mono-giant { font-family:var(--font-display); font-weight:900; font-size:clamp(94px,26vw,360px);
+    line-height:0.78; letter-spacing:-0.04em; color:var(--fg); text-align:center; white-space:nowrap; display:block; }
+  .hero-photo { position:relative; width:min(62%,760px); margin:calc(-0.45 * clamp(94px,26vw,360px)) auto 0; z-index:2; }
+  .hero-photo::after { content:""; position:absolute; inset:0; background:linear-gradient(180deg, transparent 52%, rgba(0,0,0,.5)); pointer-events:none; z-index:1; }
+  .hero-img { display:block; width:100%; aspect-ratio:16/10; object-fit:cover; border-radius:var(--radius-sm); }
+  .hero-tagline { position:absolute; z-index:2; left:0; right:0; bottom:9%; text-align:center; color:var(--fg-on-dark);
+    font-size:clamp(20px,3vw,40px); font-weight:500; line-height:1.08; letter-spacing:-0.01em;
+    text-shadow:0 2px 14px rgba(0,0,0,.5), 0 1px 3px rgba(0,0,0,.6); padding:0 8%; }
+
+  /* architectural placeholder scene (swap with a real photo) */
+  .struct-scene { position:relative; aspect-ratio:16/10; overflow:hidden; border-radius:var(--radius-sm);
+    background:linear-gradient(180deg, rgba(208,200,188,1) 0%, rgba(188,178,164,1) 40%, rgba(96,90,84,1) 58%, rgba(46,42,38,1) 100%); }
+  .struct-scene .box { position:absolute; left:17%; right:17%; top:15%; bottom:17%;
+    background:linear-gradient(162deg, var(--corten-hi) 0%, var(--accent) 46%, var(--corten-lo) 100%);
+    box-shadow:0 42px 70px -24px rgba(0,0,0,.55); }
+  .struct-scene .box::after { content:""; position:absolute; inset:13% 9% 19% 9%;
+    background:repeating-linear-gradient(90deg, rgba(28,24,20,1) 0 1.5px, rgba(92,86,80,1) 1.5px 6px);
+    box-shadow:inset 0 0 50px rgba(0,0,0,.78); }
+  .struct-scene .refl { position:absolute; left:0; right:0; bottom:0; height:23%;
+    background:linear-gradient(180deg, rgba(30,28,26,.35), rgba(12,10,8,.85)); }
+  .struct-scene.concrete { background:linear-gradient(180deg, rgba(214,212,208,1) 0%, rgba(190,188,184,1) 45%, rgba(120,118,114,1) 70%, rgba(74,72,70,1) 100%); }
+  .struct-scene.concrete .box { background:linear-gradient(160deg, rgba(228,226,222,1), rgba(176,172,166,1) 55%, rgba(120,116,110,1)); }
+  .struct-scene.concrete .box::after { background:repeating-linear-gradient(90deg, rgba(70,68,64,1) 0 1.5px, rgba(150,146,140,1) 1.5px 6px); }
+
+  /* line-sketch image placeholder */
+  .img-ph { position:relative; overflow:hidden; background:linear-gradient(158deg, var(--surface), var(--surface-2));
+    display:grid; place-items:center; }
+  .img-ph svg { width:66%; height:auto; opacity:.82; }
+  .lift { transition:transform .5s cubic-bezier(.2,.7,.2,1); }
+  .group:hover .lift { transform:scale(1.03); }
+
+  /* specs */
+  .stat-num { font-family:var(--font-display); font-weight:800; font-size:clamp(34px,5vw,60px); letter-spacing:-0.03em; line-height:1; }
+  .stat-label { font-family:var(--font-mono); font-size:11px; text-transform:uppercase; letter-spacing:0.14em; color:var(--fg-faint); }
+
+  /* model rows */
+  .model-card { border-top:1px solid var(--border); }
+  .model-meta { font-family:var(--font-mono); font-size:12px; color:var(--fg-muted); letter-spacing:0.02em; }
+  .arrow { transition:transform .25s ease; }
+  .group:hover .arrow { transform:translateX(5px); }
+
+  .eyebrow { font-family:var(--font-mono); font-size:12px; text-transform:uppercase; letter-spacing:0.2em; color:var(--accent); }
+  .rule { height:1px; background:var(--border); }
+  .big-statement { font-family:var(--font-display); font-weight:800; letter-spacing:-0.035em; line-height:0.98; }
+
+  /* sketch tiles */
+  .sketch { background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+  .sketch img { width:100%; height:auto; display:block; }
+
+  #mobile-menu { transition:opacity .2s ease, visibility .2s ease; }
+  #mobile-menu.hidden-menu { opacity:0; visibility:hidden; pointer-events:none; }
+</style>
+</head>
+<body class="min-h-screen antialiased">
+
+<!-- ============================ NAV ============================ -->
+<header class="sticky top-0 z-50" style="background:color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter:blur(8px); border-bottom:1px solid var(--border)">
+  <div class="max-w-[1320px] mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
+    <a href="#" class="display font-extrabold text-[19px] tracking-tight">OBRA</a>
+    <nav class="hidden md:flex items-center gap-9">
+      <a href="#design" class="nav-link">Design</a>
+      <a href="#gallery" class="nav-link">Gallery</a>
+      <a href="#models" class="nav-link">Models</a>
+      <a href="#about" class="nav-link">About</a>
+    </nav>
+    <div class="flex items-center gap-3">
+      <a href="#contact" class="pill hidden sm:inline-flex">Contact</a>
+      <button id="menu-btn" class="md:hidden w-10 h-10 -mr-2 inline-flex items-center justify-center" aria-label="Menu" aria-expanded="false" aria-controls="mobile-menu">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </div>
+  <div id="mobile-menu" class="hidden-menu md:hidden absolute top-16 left-0 right-0 bg-[color:var(--bg)] border-b border-[color:var(--border)] px-6 py-4">
+    <nav class="flex flex-col">
+      <a href="#design" class="nav-link py-3 border-b border-[color:var(--border)]">Design</a>
+      <a href="#gallery" class="nav-link py-3 border-b border-[color:var(--border)]">Gallery</a>
+      <a href="#models" class="nav-link py-3 border-b border-[color:var(--border)]">Models</a>
+      <a href="#about" class="nav-link py-3">About</a>
+      <a href="#contact" class="pill mt-4 justify-center">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ============================ HERO ============================ -->
+<section class="hero pt-8 sm:pt-12 pb-16 sm:pb-24">
+  <h1 class="mono-giant">OBRA</h1>
+  <!-- Swap .hero-photo's inner scene with: <img class="w-full h-full object-cover" src="obra-assets/hero.webp" alt="..."> -->
+  <div class="hero-photo">
+    <img class="hero-img" src="obra-assets/hero.webp" alt="OBRA corten-steel modular house in coastal dunes at sunset, reflected in still water" />
+    <p class="hero-tagline">Lightweight, durable<br>and adventure-ready.</p>
+  </div>
+</section>
+
+<!-- ============================ MANIFESTO ============================ -->
+<section id="about" class="max-w-[1320px] mx-auto px-5 sm:px-8 py-20 sm:py-28">
+  <div class="grid lg:grid-cols-12 gap-10 items-end">
+    <div class="lg:col-span-8">
+      <p class="eyebrow">The studio</p>
+      <h2 class="big-statement mt-5 text-[clamp(30px,5.4vw,68px)]">
+        Prefabricated homes,<br>engineered to outlive trends.
+      </h2>
+    </div>
+    <div class="lg:col-span-4">
+      <p class="text-[15.5px] leading-relaxed text-[color:var(--fg-muted)]">
+        We design and build modular shelters that arrive whole — drawn by architects,
+        cut by robots, raised on site in days. One material language, endlessly configurable.
+      </p>
+      <a href="#models" class="pill-ghost pill mt-7">See the models <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    </div>
+  </div>
+
+  <!-- specs strip -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-y-10 gap-x-6 mt-16 sm:mt-20 pt-12 border-t border-[color:var(--border)]">
+    <div><div class="stat-num">28<span class="text-[0.42em] align-top accent ml-1">m²</span></div><div class="stat-label mt-3">Footprint</div></div>
+    <div><div class="stat-num">3<span class="text-[0.42em] align-top accent ml-1">days</span></div><div class="stat-label mt-3">On-site assembly</div></div>
+    <div><div class="stat-num">50<span class="text-[0.42em] align-top accent ml-1">yr</span></div><div class="stat-label mt-3">Weathering shell</div></div>
+    <div><div class="stat-num">100<span class="text-[0.42em] align-top accent ml-1">%</span></div><div class="stat-label mt-3">Off-grid ready</div></div>
+  </div>
+</section>
+
+<!-- ============================ MODELS ============================ -->
+<section id="models" class="max-w-[1320px] mx-auto px-5 sm:px-8 pb-10">
+  <div class="flex items-end justify-between flex-wrap gap-4">
+    <h2 class="big-statement text-[clamp(26px,4vw,44px)]">The models</h2>
+    <p class="model-meta">03 / configurable</p>
+  </div>
+  <div class="mt-10 grid md:grid-cols-3 gap-x-6 gap-y-12">
+    <!-- M01 -->
+    <a href="#" class="group block">
+      <div class="aspect-[4/3] rounded-[var(--radius)] overflow-hidden bg-[color:var(--surface)]">
+        <img class="lift block w-full h-full object-cover" src="obra-assets/m01.webp" alt="OBRA M01 Dune — compact corten cabin in dunes at dusk" loading="lazy" />
+      </div>
+      <div class="flex items-baseline justify-between mt-4">
+        <h3 class="display font-bold text-[19px]">M01 — Dune</h3>
+        <span class="arrow accent">→</span>
+      </div>
+      <p class="model-meta mt-1">28 m² · 1 room · from $48k</p>
+    </a>
+    <!-- M02 -->
+    <a href="#" class="group block">
+      <div class="aspect-[4/3] rounded-[var(--radius)] overflow-hidden bg-[color:var(--surface)]">
+        <img class="lift block w-full h-full object-cover" src="obra-assets/m02.webp" alt="OBRA M02 Ridge — corten house with a low pitched roof on a grassy ridge at sunset" loading="lazy" />
+      </div>
+      <div class="flex items-baseline justify-between mt-4">
+        <h3 class="display font-bold text-[19px]">M02 — Ridge</h3>
+        <span class="arrow accent">→</span>
+      </div>
+      <p class="model-meta mt-1">42 m² · 2 rooms · from $69k</p>
+    </a>
+    <!-- M03 -->
+    <a href="#" class="group block">
+      <div class="aspect-[4/3] rounded-[var(--radius)] overflow-hidden bg-[color:var(--surface)]">
+        <img class="lift block w-full h-full object-cover" src="obra-assets/m03.webp" alt="OBRA M03 Shore — longer corten house with a deck by the coast at sunset" loading="lazy" />
+      </div>
+      <div class="flex items-baseline justify-between mt-4">
+        <h3 class="display font-bold text-[19px]">M03 — Shore</h3>
+        <span class="arrow accent">→</span>
+      </div>
+      <p class="model-meta mt-1">56 m² · 2 rooms + deck · from $84k</p>
+    </a>
+  </div>
+</section>
+
+<!-- ============================ DESIGN PROCESS (line sketches) ============================ -->
+<section id="design" class="max-w-[1320px] mx-auto px-5 sm:px-8 py-24 sm:py-32">
+  <div class="grid lg:grid-cols-12 gap-6 items-end mb-12">
+    <div class="lg:col-span-7">
+      <p class="eyebrow">Process</p>
+      <h2 class="big-statement mt-5 text-[clamp(28px,4.6vw,56px)]">From sketch to structure.</h2>
+    </div>
+    <p class="lg:col-span-5 text-[15px] leading-relaxed text-[color:var(--fg-muted)]">
+      Every OBRA begins as a line. Each model is drawn in elevation, section and axonometric
+      before a single panel is cut — so what you place on the land is exactly what was imagined.
+    </p>
+  </div>
+
+  <div class="grid grid-cols-2 lg:grid-cols-3 gap-5">
+    <div class="sketch"><img src="obra-assets/sketch-1.webp" alt="Architect's line drawing — front perspective of the open pavilion" loading="lazy" /></div>
+    <div class="sketch"><img src="obra-assets/sketch-2.webp" alt="Architect's line drawing — axonometric view of the modular volume" loading="lazy" /></div>
+    <div class="sketch"><img src="obra-assets/sketch-3.webp" alt="Architect's line drawing — front elevation of the long low house" loading="lazy" /></div>
+    <div class="sketch"><img src="obra-assets/sketch-4.webp" alt="Architect's line drawing — angled perspective of the open pavilion" loading="lazy" /></div>
+    <div class="sketch"><img src="obra-assets/sketch-5.webp" alt="Architect's line drawing — section with a human scale figure" loading="lazy" /></div>
+    <div class="sketch"><img src="obra-assets/sketch-6.webp" alt="Architect's line drawing — floor plan with dimensions" loading="lazy" /></div>
+  </div>
+</section>
+
+<!-- ============================ GALLERY ============================ -->
+<section id="gallery" class="bg-[color:var(--surface)] py-20 sm:py-28">
+  <div class="max-w-[1320px] mx-auto px-5 sm:px-8">
+    <div class="flex items-end justify-between flex-wrap gap-4 mb-10">
+      <h2 class="big-statement text-[clamp(26px,4vw,44px)]">In the wild</h2>
+      <p class="model-meta">Selected sites · 2024–2026</p>
+    </div>
+    <div class="grid md:grid-cols-2 gap-5">
+      <!-- swap each .struct-scene with <img ...> from images.openlen.com/obra/ -->
+      <div class="group rounded-[var(--radius)] overflow-hidden"><img class="lift block w-full object-cover" style="aspect-ratio:16/11" src="obra-assets/wild-1.webp" alt="OBRA corten house in a misty grassland at dawn" loading="lazy" /></div>
+      <div class="group rounded-[var(--radius)] overflow-hidden"><img class="lift block w-full object-cover" style="aspect-ratio:16/11" src="obra-assets/wild-2.webp" alt="OBRA light-concrete modular house in a rocky desert" loading="lazy" /></div>
+      <div class="group rounded-[var(--radius)] overflow-hidden md:col-span-2"><img class="lift block w-full object-cover" style="aspect-ratio:21/9" src="obra-assets/wild-3.webp" alt="A OBRA corten house dwarfed by a vast mountain valley at sunset" loading="lazy" /></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ CTA ============================ -->
+<section id="contact" class="max-w-[1320px] mx-auto px-5 sm:px-8 py-24 sm:py-36 text-center">
+  <p class="eyebrow">Available now</p>
+  <h2 class="display font-extrabold mt-5 text-[clamp(48px,13vw,180px)] leading-[0.82] tracking-[-0.04em]">Build yours.</h2>
+  <p class="mt-7 max-w-md mx-auto text-[15.5px] leading-relaxed text-[color:var(--fg-muted)]">
+    Tell us about your site. We'll send a configurator, a quote, and a delivery window — usually under ten weeks.
+  </p>
+  <div class="mt-9 flex justify-center gap-3 flex-wrap">
+    <a href="#" class="pill">Request a quote <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    <a href="#" class="pill pill-ghost">Download brochure</a>
+  </div>
+</section>
+
+<!-- ============================ FOOTER ============================ -->
+<footer class="border-t border-[color:var(--border)]">
+  <div class="max-w-[1320px] mx-auto px-5 sm:px-8 py-14">
+    <div class="grid md:grid-cols-12 gap-10">
+      <div class="md:col-span-4">
+        <div class="display font-extrabold text-[clamp(40px,7vw,84px)] leading-none tracking-tight">OBRA</div>
+        <p class="mt-5 text-[14px] text-[color:var(--fg-muted)] max-w-xs">Prefabricated homes, delivered whole. Designed in the studio, raised on your land.</p>
+      </div>
+      <div class="md:col-span-2 md:col-start-6">
+        <div class="stat-label">Explore</div>
+        <ul class="mt-4 space-y-2.5 text-[14px] text-[color:var(--fg-muted)]">
+          <li><a href="#design" class="hover:text-[color:var(--fg)]">Design</a></li>
+          <li><a href="#models" class="hover:text-[color:var(--fg)]">Models</a></li>
+          <li><a href="#gallery" class="hover:text-[color:var(--fg)]">Gallery</a></li>
+          <li><a href="#about" class="hover:text-[color:var(--fg)]">About</a></li>
+        </ul>
+      </div>
+      <div class="md:col-span-2">
+        <div class="stat-label">Studio</div>
+        <ul class="mt-4 space-y-2.5 text-[14px] text-[color:var(--fg-muted)]">
+          <li><a href="#" class="hover:text-[color:var(--fg)]">Journal</a></li>
+          <li><a href="#" class="hover:text-[color:var(--fg)]">Careers</a></li>
+          <li><a href="#" class="hover:text-[color:var(--fg)]">Press</a></li>
+          <li><a href="#" class="hover:text-[color:var(--fg)]">Sustainability</a></li>
+        </ul>
+      </div>
+      <div class="md:col-span-3">
+        <div class="stat-label">Say hello</div>
+        <ul class="mt-4 space-y-2.5 text-[14px] text-[color:var(--fg-muted)]">
+          <li><a href="mailto:studio@obra.house" class="hover:text-[color:var(--fg)]">studio@obra.house</a></li>
+          <li><a href="#contact" class="hover:text-[color:var(--fg)]">Book a call</a></li>
+          <li class="text-[color:var(--fg-faint)]">Cph · Lisbon · CDMX</li>
+        </ul>
+      </div>
+    </div>
+    <div class="mt-12 pt-6 border-t border-[color:var(--border)] flex flex-col sm:flex-row items-center justify-between gap-3 text-[12.5px] text-[color:var(--fg-faint)]">
+      <span>© 2026 OBRA Architecture, S.A.</span>
+      <div class="flex items-center gap-5">
+        <a href="#" class="hover:text-[color:var(--fg)]">Privacy</a>
+        <a href="#" class="hover:text-[color:var(--fg)]">Terms</a>
+        <span class="mono">v1 · prefab</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var btn = document.getElementById('menu-btn');
+  var menu = document.getElementById('mobile-menu');
+  if (btn && menu) {
+    btn.addEventListener('click', function () {
+      var open = !menu.classList.toggle('hidden-menu');
+      btn.setAttribute('aria-expanded', String(open));
+    });
+    menu.querySelectorAll('a').forEach(function (a) {
+      a.addEventListener('click', function () { menu.classList.add('hidden-menu'); btn.setAttribute('aria-expanded', 'false'); });
+    });
+  }
+})();
+</script>
+
+</body>
+</html>
