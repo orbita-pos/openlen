@@ -69,6 +69,45 @@
       }
     }
   },
+  "analyticsLeads": {
+    "badge": "Analytics en leads",
+    "title": "Ken je verkeer. <muted>Verzamel elke lead.</muted>",
+    "subtitle": "Privacyvriendelijke analytics en leadformulieren, ingebouwd in elke pagina die je publiceert — geen Google Analytics, geen cookies, geen toestemmingsbanner. En de data is van jou.",
+    "dashboard": {
+      "title": "Overzicht",
+      "range": "Laatste 30 dagen",
+      "live": "Live",
+      "uniques": "Unieke bezoekers",
+      "pageviews": "Paginaweergaven",
+      "visitors": "Bezoekers",
+      "chartAria": "Paginaweergaven en bezoekers over de laatste 30 dagen",
+      "tooltipDay": "5 jun 2026",
+      "sources": "Topbronnen",
+      "referrer": "Verwijzer"
+    },
+    "leads": {
+      "title": "Leads",
+      "newCount": "{count} nieuw",
+      "msg1": "Interesse in het teamplan — kunnen we deze week even kort bellen?",
+      "msg2": "Wat een mooie pagina! Verzenden jullie naar Mexico, en wat zijn de levertijden?",
+      "msg3": "Offerteaanvraag voor 50 stuks — welke staffelprijzen kunnen jullie bieden?",
+      "emailNotice": "Elke inzending wordt opgeslagen en direct naar je gemaild"
+    },
+    "perks": {
+      "privacy": {
+        "title": "Privacy voorop, standaard",
+        "body": "Geen cookies, geen toestemmingsbanner, geen IP-opslag. AVG-proof — hetzelfde model als Plausible, maar dan van jou."
+      },
+      "perLink": {
+        "title": "Kliktracking per link",
+        "body": "Zie op welke links, knoppen en CTA's mensen echt klikken — niet alleen paginaweergaven."
+      },
+      "inbox": {
+        "title": "Leads komen binnen in je inbox",
+        "body": "Voeg een formulier toe aan elke pagina. Inzendingen worden bewaard en naar je gemaild zodra ze binnenkomen."
+      }
+    }
+  },
   "comparison": {
     "badge": "Vergelijk",
     "title": "Wij hebben het uitgerekend, zodat jij dat niet hoeft.",

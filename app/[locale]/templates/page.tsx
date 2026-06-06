@@ -50,6 +50,7 @@ export default async function TemplatesPage() {
     pitch: t.pitch,
     storageUrl: t.storageUrl,
     thumbnailUrl: t.thumbnailUrl,
+    tileUrl: t.tileUrl,
     featured: t.featured,
   }));
 

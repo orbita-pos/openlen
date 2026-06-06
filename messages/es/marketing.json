@@ -69,6 +69,45 @@
       }
     }
   },
+  "analyticsLeads": {
+    "badge": "Analítica y leads",
+    "title": "Conoce tu tráfico. <muted>Captura cada lead.</muted>",
+    "subtitle": "Analítica respetuosa con la privacidad y formularios de leads, integrados en cada página que publicas — sin Google Analytics, sin cookies, sin banner de consentimiento. Y los datos son tuyos.",
+    "dashboard": {
+      "title": "Resumen",
+      "range": "Últimos 30 días",
+      "live": "En vivo",
+      "uniques": "Visitantes únicos",
+      "pageviews": "Páginas vistas",
+      "visitors": "Visitantes",
+      "chartAria": "Páginas vistas y visitantes en los últimos 30 días",
+      "tooltipDay": "5 jun 2026",
+      "sources": "Fuentes principales",
+      "referrer": "Referente"
+    },
+    "leads": {
+      "title": "Leads",
+      "newCount": "{count} nuevos",
+      "msg1": "Me interesa el plan de equipo, ¿podemos agendar una llamada esta semana?",
+      "msg2": "¡Me encantó la página! ¿Envían a México y cuáles son los tiempos de entrega?",
+      "msg3": "Solicito cotización por 50 unidades, ¿qué precio por volumen ofrecen?",
+      "emailNotice": "Cada envío se guarda y te llega al correo al instante"
+    },
+    "perks": {
+      "privacy": {
+        "title": "Privacidad por defecto",
+        "body": "Sin cookies, sin banner de consentimiento, sin almacenar IPs. Claro ante el RGPD — el mismo modelo que Plausible, pero tuyo."
+      },
+      "perLink": {
+        "title": "Clics por enlace",
+        "body": "Mira qué enlaces, botones y CTAs realmente reciben clic — no solo las visitas."
+      },
+      "inbox": {
+        "title": "Los leads llegan a tu correo",
+        "body": "Añade un formulario a cualquier página. Los envíos se guardan y te llegan al correo en cuanto entran."
+      }
+    }
+  },
   "comparison": {
     "badge": "Compara",
     "title": "Hicimos las cuentas para que tú no tengas que hacerlas.",

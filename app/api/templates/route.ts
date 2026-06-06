@@ -35,8 +35,9 @@ function isFamily(v: string | null): v is TemplateFamily {
 }
 
 function stripInternals(t: Awaited<ReturnType<typeof listTemplates>>[number]) {
-  // Drop storageKey + size — internal-only. Keep storageUrl since the
-  // iframe needs it.
+  // Drop storageKey + size — internal-only. Keep storageUrl (the iframe
+  // fallback needs it) and the preview images so the workspace picker can
+  // render a static <img> facade instead of booting a live iframe per card.
   return {
     id: t.id,
     name: t.name,
@@ -47,5 +48,7 @@ function stripInternals(t: Awaited<ReturnType<typeof listTemplates>>[number]) {
     mode: t.mode,
     storageUrl: t.storageUrl,
     contentHash: t.contentHash,
+    thumbnailUrl: t.thumbnailUrl,
+    tileUrl: t.tileUrl,
   };
 }
