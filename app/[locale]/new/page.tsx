@@ -139,17 +139,27 @@ function readThemeBaseline(m: Record<string, unknown>): {
 } {
   const str = (v: unknown) => (typeof v === "string" ? v : "");
   const num = (v: unknown) => (typeof v === "number" ? String(v) : "");
+  // Read the page's AUTHORED theme, not its live tokens. A Look applies + saves
+  // inline --ol-* overrides on <html>, so after a reload the live tokens ARE
+  // the Look — `m.authored` (the :root-declared values, which a Look never
+  // rewrites) keeps "Original" pointing at the page's true starting colors.
+  // Falls back to the flat meta for older iframes that don't report it.
+  const a = (
+    m.authored && typeof m.authored === "object"
+      ? (m.authored as Record<string, unknown>)
+      : m
+  );
   return {
     tokens: {
-      "--ol-bg": str(m.bg),
-      "--ol-surface": str(m.surface),
-      "--ol-fg": str(m.fg),
-      "--ol-border": str(m.border),
-      "--ol-accent": str(m.accent),
-      "--ol-font-display": str(m.displayFont),
-      "--ol-r-scale": num(m.radiusScale),
-      "--ol-text-scale": num(m.typeScale),
-      "--ol-space-scale": num(m.spaceScale),
+      "--ol-bg": str(a.bg),
+      "--ol-surface": str(a.surface),
+      "--ol-fg": str(a.fg),
+      "--ol-border": str(a.border),
+      "--ol-accent": str(a.accent),
+      "--ol-font-display": str(a.displayFont),
+      "--ol-r-scale": num(a.radiusScale),
+      "--ol-text-scale": num(a.typeScale),
+      "--ol-space-scale": num(a.spaceScale),
     },
     mode: m.mode === "dark" ? "dark" : "light",
   };
