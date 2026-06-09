@@ -18,6 +18,17 @@
 // (carrying the data-openlen-form-script marker that gates re-injection on
 // re-publish). The script submits inline (no page reload), with the native
 // POST as the no-JS fallback.
+//
+// Password gate — hard invariant: published OpenLen pages can never collect
+// passwords. Because every <form> is force-wired to /api/f, a fake login
+// page would pipe harvested credentials straight into the attacker's own
+// leads inbox + notification email. So before wiring, every
+// input[type=password] and every autocomplete="one-time-code" (OTP) input
+// in the DOCUMENT is removed — deterministic signals only, no name
+// heuristics (zero false positives: OpenLen is design-only, a landing page
+// never legitimately needs a password field). Pages without forms keep the
+// byte-equal early return: with no submission channel there is nothing to
+// harvest into.
 
 use kuchikiki::traits::TendrilSink;
 use kuchikiki::{NodeData, NodeRef};
@@ -84,6 +95,8 @@ pub fn wire_published_forms(html: &str, action: &str, configs: &[FormConfig]) ->
         return html.to_string();
     }
 
+    strip_credential_inputs(&doc);
+
     for (idx, form) in forms.iter().enumerate() {
         let idx_u32 = idx as u32;
         let form_node = form.as_node().clone();
@@ -147,6 +160,38 @@ pub fn wire_published_forms(html: &str, action: &str, configs: &[FormConfig]) ->
     }
 
     serialize_doc(&doc)
+}
+
+/// Remove every credential-shaped input from the document (see the
+/// password-gate note in the module header). Deterministic signals only:
+/// `type=password` and an `autocomplete` token list containing
+/// `one-time-code`.
+fn strip_credential_inputs(doc: &NodeRef) {
+    let inputs: Vec<NodeRef> = match doc.select("input") {
+        Ok(it) => it.map(|n| n.as_node().clone()).collect(),
+        Err(_) => return,
+    };
+    for input in inputs {
+        let is_credential = {
+            let NodeData::Element(d) = input.data() else { continue };
+            let attrs = d.attributes.borrow();
+            let is_password = attrs
+                .get("type")
+                .map(|t| t.trim().eq_ignore_ascii_case("password"))
+                .unwrap_or(false);
+            let is_otp = attrs
+                .get("autocomplete")
+                .map(|a| {
+                    a.split_whitespace()
+                        .any(|t| t.eq_ignore_ascii_case("one-time-code"))
+                })
+                .unwrap_or(false);
+            is_password || is_otp
+        };
+        if is_credential {
+            input.detach();
+        }
+    }
 }
 
 fn form_has_input_named(form: &NodeRef, name: &str) -> bool {
@@ -284,6 +329,71 @@ mod tests {
         // Once-injected hidden inputs + script don't duplicate; attribute
         // re-set with the same value is a no-op at the serializer level.
         assert_eq!(once, twice);
+    }
+
+    #[test]
+    fn password_inputs_stripped_from_wired_forms() {
+        let html = r#"<body><form>
+            <input name="email" type="email">
+            <input name="pass" type="password">
+            <input name="pass2" type=" PASSWORD ">
+            <button type="submit">Login</button>
+        </form></body>"#;
+        let out = wire_published_forms(html, ACTION, &[]);
+        assert!(!out.contains("password"));
+        assert!(!out.contains(r#"name="pass""#));
+        // The benign fields and the wiring survive.
+        assert!(out.contains(r#"name="email""#));
+        assert!(out.contains("data-openlen-form"));
+        assert!(out.contains(r#"name="_openlen_hp""#));
+    }
+
+    #[test]
+    fn otp_inputs_stripped() {
+        let html = r#"<body><form>
+            <input name="email" autocomplete="email">
+            <input name="code" inputmode="numeric" autocomplete="one-time-code">
+        </form></body>"#;
+        let out = wire_published_forms(html, ACTION, &[]);
+        assert!(!out.contains("one-time-code"));
+        assert!(!out.contains(r#"name="code""#));
+        assert!(out.contains(r#"autocomplete="email""#));
+    }
+
+    #[test]
+    fn password_inputs_outside_forms_also_stripped_when_wiring() {
+        // A fake login box NEXT to a wired form must not survive either —
+        // the strip is document-wide whenever the page has forms.
+        let html = r#"<body>
+            <div class="fake-login"><input type="password" name="pw"></div>
+            <form><input name="email"></form>
+        </body>"#;
+        let out = wire_published_forms(html, ACTION, &[]);
+        assert!(!out.contains("password"));
+        assert!(out.contains("fake-login")); // only the input goes, not the layout
+    }
+
+    #[test]
+    fn formless_page_with_password_input_stays_byte_equal() {
+        // No <form> = no /api/f submission channel = nothing to harvest
+        // into; the early-return byte-equality contract holds.
+        let html = r#"<body><input type="password" name="pw"></body>"#;
+        let out = wire_published_forms(html, ACTION, &[]);
+        assert_eq!(out, html);
+    }
+
+    #[test]
+    fn normal_form_fields_untouched_by_the_gate() {
+        let html = r#"<body><form>
+            <input name="name" type="text">
+            <input name="email" type="email">
+            <input name="phone" type="tel">
+            <textarea name="message"></textarea>
+        </form></body>"#;
+        let out = wire_published_forms(html, ACTION, &[]);
+        for field in ["name=\"name\"", "name=\"email\"", "name=\"phone\"", "name=\"message\""] {
+            assert!(out.contains(field), "missing {field}");
+        }
     }
 
     #[test]
