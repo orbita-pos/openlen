@@ -127,6 +127,10 @@
       "seo": "SEO",
       "practices": "Bonnes pratiques",
       "pending": "Pas encore de mesure — elle est lancée automatiquement à la publication."
+    },
+    "languages": {
+      "title": "Publier aussi en",
+      "hint": "Chaque langue est mise en ligne sur /es/, /en/… traduite automatiquement à chaque publication. La langue d'origine de votre page est ignorée."
     }
   },
   "inspector": {

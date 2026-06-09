@@ -1822,6 +1822,7 @@ function NewV2Inner() {
             subdomain: loadedProject.subdomain,
             publishedAt: loadedProject.publishedAt,
             hasUnpublishedChanges: loadedProject.hasUnpublishedChanges,
+            languages: loadedProject.settings?.languages,
           }}
           onSuccess={(newSubdomain) => {
             setLoadedProject((prev) =>

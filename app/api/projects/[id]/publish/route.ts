@@ -29,6 +29,9 @@ export const dynamic = "force-dynamic";
 
 const PublishBodySchema = z.object({
   subdomain: z.string().min(1).max(63),
+  /** Speak Every Language targets — persisted to the project's settings.
+   *  Omitted = keep the stored setting; [] = turn translations off. */
+  languages: z.array(z.string().min(2).max(5)).max(9).optional(),
 });
 
 export async function POST(
@@ -58,6 +61,7 @@ export async function POST(
       projectId: id,
       userId: session.user.id,
       subdomain: parsed.data.subdomain,
+      languages: parsed.data.languages,
     });
     return json(result, 200);
   } catch (err) {

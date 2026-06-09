@@ -127,6 +127,10 @@
       "seo": "SEO",
       "practices": "Best practices",
       "pending": "Nog geen meting — deze wordt automatisch uitgevoerd bij publicatie."
+    },
+    "languages": {
+      "title": "Publiceer ook in",
+      "hint": "Elke taal gaat live op /es/, /fr/… en wordt bij elke publicatie automatisch vertaald. De oorspronkelijke taal van je pagina wordt overgeslagen."
     }
   },
   "inspector": {

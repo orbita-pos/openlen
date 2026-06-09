@@ -18,6 +18,13 @@ import { sanitizeForPublish, sealRelease } from "@/lib/html-engine";
 import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
 import { bakeResponsiveImages } from "@/lib/publish/image-bake";
 import { bakeGoogleFonts } from "@/lib/publish/font-bake";
+import {
+  annotateLanguageCluster,
+  buildRobots,
+  buildSitemap,
+  detectHtmlLang,
+  type ClusterMember,
+} from "@/lib/publish/language-cluster";
 import { consolidateUnsplashCredits } from "@/lib/publish/credits";
 import { wirePublishedForms } from "@/lib/publish/forms";
 import { injectAnalyticsSnippet } from "@/lib/analytics/snippet";
@@ -78,8 +85,21 @@ function safeJoin(root: string, ...parts: string[]): string {
   return norm;
 }
 
-function computeSha(html: string): string {
-  return createHash("sha256").update(html, "utf8").digest("hex").slice(0, SHA_LEN);
+function computeShaFiles(
+  files: Array<{ path: string; content: string }>,
+): string {
+  const h = createHash("sha256");
+  for (const f of files) {
+    h.update(f.path, "utf8");
+    h.update("\0");
+    h.update(f.content, "utf8");
+    h.update("\0");
+  }
+  return h.digest("hex").slice(0, SHA_LEN);
+}
+
+function publishedBaseHost(): string {
+  return process.env.PUBLISH_BASE_HOST?.trim() || "openlen.com";
 }
 
 export class ReleaseNotFoundError extends Error {
@@ -110,6 +130,16 @@ export interface PublishParams {
    *  og:image meta if the document doesn't already declare one. Null /
    *  undefined leaves the HTML's existing head untouched. */
   logoUrl?: string | null;
+  /** Speak Every Language: called with the fully-baked root HTML right
+   *  before sealing; returns translated locale documents to write as
+   *  /<locale>/index.html inside the same release. Failures (or an empty
+   *  array) degrade to a root-only publish. */
+  buildLocaleDocs?: (
+    html: string,
+  ) => Promise<Array<{ locale: string; html: string }>>;
+  /** The page's own language — hreflang of the root document. Defaults to
+   *  the <html lang> attribute, then "en". */
+  sourceLang?: string;
 }
 
 const ASSET_URL_RE_FOR =
@@ -320,12 +350,14 @@ async function migrateUnsplashAssets(params: {
 }
 
 export interface PublishResult {
-  /** First 12 chars of sha256(optimized HTML). Stable per content. */
+  /** First 12 chars of sha256 over every release file. Stable per content. */
   sha: string;
-  /** The optimized HTML actually written to disk (used by R2 backup). */
+  /** The optimized ROOT HTML actually written to disk (used by R2 backup). */
   html: string;
   /** True if a new release dir was created. False if `releases/<sha>/` already existed (idempotent re-publish). */
   written: boolean;
+  /** Locale codes published as /<locale>/index.html variants. */
+  locales: string[];
 }
 
 /**
@@ -482,21 +514,73 @@ export async function publishToDir(
     migratedHtml = injectAnalyticsSnippet(migratedHtml, params.projectId);
   }
 
+  // Speak Every Language: translated locale variants of the final baked
+  // page, written as /<locale>/index.html inside the same release. Soft-
+  // fail — the root page always publishes; a failed locale is just absent.
+  let localeDocs: Array<{ locale: string; html: string }> = [];
+  if (params.buildLocaleDocs && process.env.OPENLEN_LOCALIZE !== "0") {
+    try {
+      localeDocs = (await params.buildLocaleDocs(migratedHtml)).filter((d) =>
+        /^[a-z]{2,5}$/.test(d.locale),
+      );
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] localization failed; publishing root only", err);
+    }
+  }
+
+  // SEO + navigation cluster: canonical on every doc; with variants, the
+  // reciprocal hreflang set + the pure-<a> language switcher too.
+  const baseUrl = `https://${sub}.${publishedBaseHost()}`;
+  const sourceLang =
+    params.sourceLang?.trim() || detectHtmlLang(migratedHtml) || "en";
+  const cluster: ClusterMember[] = [
+    { lang: sourceLang, path: "/" },
+    ...localeDocs.map((d) => ({ lang: d.locale, path: `/${d.locale}/` })),
+  ];
+  migratedHtml = annotateLanguageCluster(migratedHtml, {
+    baseUrl,
+    selfPath: "/",
+    cluster,
+  });
+  localeDocs = localeDocs.map((d) => ({
+    locale: d.locale,
+    html: annotateLanguageCluster(d.html, {
+      baseUrl,
+      selfPath: `/${d.locale}/`,
+      cluster,
+    }),
+  }));
+
   // Seal the release: hash-locked CSP meta over the page's closed script
-  // set + <base> strip + noopener. MUST stay the LAST html transform —
-  // any script injected after this point would be blocked by the page's
-  // own policy (the pass self-checks and falls back to unsealed output on
-  // drift, so a future mis-ordered injector degrades, never breaks).
+  // set + <base> strip + noopener, per document. MUST stay the LAST html
+  // transform — any script injected after this point would be blocked by
+  // the page's own policy (the pass self-checks and falls back to unsealed
+  // output on drift, so a future mis-ordered injector degrades, never breaks).
   if (process.env.OPENLEN_CSP_SEAL !== "0") {
     try {
       migratedHtml = sealRelease(migratedHtml, submitOrigin()).html;
+      localeDocs = localeDocs.map((d) => ({
+        locale: d.locale,
+        html: sealRelease(d.html, submitOrigin()).html,
+      }));
     } catch (err) {
       // eslint-disable-next-line no-console
       console.warn("[publishToDir] release seal failed; publishing without CSP", err);
     }
   }
 
-  const sha = computeSha(migratedHtml);
+  const releaseFiles: Array<{ path: string; content: string }> = [
+    { path: "index.html", content: migratedHtml },
+    ...localeDocs.map((d) => ({
+      path: `${d.locale}/index.html`,
+      content: d.html,
+    })),
+    { path: "sitemap.xml", content: buildSitemap(baseUrl, cluster) },
+    { path: "robots.txt", content: buildRobots(baseUrl) },
+  ];
+
+  const sha = computeShaFiles(releaseFiles);
 
   const releaseDir = safeJoin(releasesDir, sha);
   let written = false;
@@ -516,7 +600,11 @@ export async function publishToDir(
     const tmpDir = safeJoin(releasesDir, `.tmp-${sha}-${randomUUID()}`);
     await mkdir(tmpDir, { recursive: true });
     try {
-      await writeFile(path.join(tmpDir, "index.html"), migratedHtml, "utf8");
+      for (const f of releaseFiles) {
+        const dst = path.join(tmpDir, f.path);
+        await mkdir(path.dirname(dst), { recursive: true });
+        await writeFile(dst, f.content, "utf8");
+      }
       await rename(tmpDir, releaseDir);
       written = true;
     } finally {
@@ -549,7 +637,12 @@ export async function publishToDir(
   // caller is currently rolling back.
   await pruneOldReleases(releasesDir, sha).catch(() => {});
 
-  return { sha, html: migratedHtml, written };
+  return {
+    sha,
+    html: migratedHtml,
+    written,
+    locales: localeDocs.map((d) => d.locale),
+  };
 }
 
 /**

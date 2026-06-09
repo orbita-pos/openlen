@@ -127,6 +127,10 @@
       "seo": "SEO",
       "practices": "Best practices",
       "pending": "No measurement yet — it runs automatically on deploy."
+    },
+    "languages": {
+      "title": "Also publish in",
+      "hint": "Each language goes live at /es/, /fr/… translated automatically on every deploy. Your page's own language is skipped."
     }
   },
   "inspector": {

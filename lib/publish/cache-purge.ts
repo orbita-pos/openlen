@@ -42,7 +42,10 @@ function getEnv(): { zoneId: string; token: string } | null {
  * Purges both `https://<sub>.<host>/` and `/index.html` since CF treats
  * them as distinct cache keys.
  */
-export async function purgeSubdomain(subdomain: string): Promise<void> {
+export async function purgeSubdomain(
+  subdomain: string,
+  extraPaths: string[] = [],
+): Promise<void> {
   const env = getEnv();
   if (!env) return;
 
@@ -50,6 +53,7 @@ export async function purgeSubdomain(subdomain: string): Promise<void> {
   const urls = [
     `https://${subdomain}.${host}/`,
     `https://${subdomain}.${host}/index.html`,
+    ...extraPaths.map((p) => `https://${subdomain}.${host}${p}`),
   ];
 
   const controller = new AbortController();

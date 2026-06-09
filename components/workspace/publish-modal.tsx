@@ -14,6 +14,7 @@ import {
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/cn";
 import { SpeedCard } from "@/components/workspace/speed-card";
+import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Publish-to-openlen.com modal.
@@ -36,6 +37,8 @@ export interface PublishModalProject {
   subdomain: string | null;
   publishedAt: Date | null;
   hasUnpublishedChanges: boolean;
+  /** Speak Every Language: stored target locales (data.settings.languages). */
+  languages?: string[];
 }
 
 export interface PublishModalProps {
@@ -75,6 +78,7 @@ export function PublishModal({
 }: PublishModalProps) {
   const t = useTranslations("modalsDomain");
   const [value, setValue] = useState(project.subdomain ?? "");
+  const [langs, setLangs] = useState<string[]>(project.languages ?? []);
   const [check, setCheck] = useState<CheckState>({ kind: "idle" });
   const [submitting, setSubmitting] = useState<
     "publishing" | "unpublishing" | null
@@ -89,6 +93,7 @@ export function PublishModal({
   useEffect(() => {
     if (!open) return;
     setValue(project.subdomain ?? "");
+    setLangs(project.languages ?? []);
     setCheck({ kind: "idle" });
     setError(null);
     setSubmitting(null);
@@ -186,7 +191,7 @@ export function PublishModal({
       const res = await fetch(`/api/projects/${project.id}/publish`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subdomain: normalized }),
+        body: JSON.stringify({ subdomain: normalized, languages: langs }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}) as { error?: string });
@@ -215,6 +220,7 @@ export function PublishModal({
     isCurrent,
     project.id,
     normalized,
+    langs,
     onSuccess,
     onClose,
     t,
@@ -370,6 +376,41 @@ export function PublishModal({
             </div>
             <div className="text-[13px] font-mono text-zinc-700 dark:text-zinc-300 break-all">
               {fullUrl}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[11px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-semibold mb-1.5">
+              {t("publish.languages.title")}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {PUBLISH_LOCALES.map((l) => {
+                const on = langs.includes(l.code);
+                return (
+                  <button
+                    key={l.code}
+                    type="button"
+                    aria-pressed={on}
+                    disabled={submitting !== null}
+                    onClick={() =>
+                      setLangs((prev) =>
+                        on ? prev.filter((c) => c !== l.code) : [...prev, l.code],
+                      )
+                    }
+                    className={cn(
+                      "h-7 px-2.5 rounded-full text-[11.5px] font-medium ring-1 transition disabled:opacity-50",
+                      on
+                        ? "bg-coral-500 text-white ring-coral-500"
+                        : "bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 ring-zinc-200 dark:ring-zinc-800 hover:ring-coral-300 dark:hover:ring-coral-500/40",
+                    )}
+                  >
+                    {l.name}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-1.5 text-[10.5px] text-zinc-400">
+              {t("publish.languages.hint")}
             </div>
           </div>
 

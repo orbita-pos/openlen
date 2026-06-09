@@ -13,6 +13,7 @@ pub mod harden;
 pub mod images;
 pub mod logo;
 pub mod seal;
+pub mod translate;
 
 pub use credits::{consolidate_unsplash_credits, ConsolidationResult, UnsplashCredit};
 pub use forms::{wire_published_forms, FormConfig};
@@ -20,6 +21,7 @@ pub use harden::{harden_visual_quality, HardenCounts, HardenResult, HardenWarnin
 pub use images::{rewrite_responsive_images, ResponsiveImage, RewriteImagesResult};
 pub use logo::{extract_logo, inject_logo, ExtractedLogo};
 pub use seal::{seal_release, SealResult};
+pub use translate::{extract_translatables, reinject_translatables};
 
 use kuchikiki::traits::TendrilSink;
 use kuchikiki::NodeRef;
