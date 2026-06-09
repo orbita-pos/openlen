@@ -14,8 +14,10 @@ import {
 import path from "node:path";
 import { legacyWebp2000Variant, processImage } from "@/lib/images";
 import { validateSubdomain } from "@/lib/subdomain/validate";
-import { sanitizeForPublish } from "@/lib/html-engine";
+import { sanitizeForPublish, sealRelease } from "@/lib/html-engine";
 import { optimizeHtmlForProduction } from "@/lib/publish/optimize-html";
+import { bakeResponsiveImages } from "@/lib/publish/image-bake";
+import { bakeGoogleFonts } from "@/lib/publish/font-bake";
 import { consolidateUnsplashCredits } from "@/lib/publish/credits";
 import { wirePublishedForms } from "@/lib/publish/forms";
 import { injectAnalyticsSnippet } from "@/lib/analytics/snippet";
@@ -58,6 +60,12 @@ const SHA_LEN = 12;
 
 function getRoot(): string {
   return process.env.PUBLISH_ROOT?.trim() || "/var/www/openlen";
+}
+
+/** The wildcard publish root — exported for consumers that read releases
+ *  back off disk (flight-check's ephemeral audit server). */
+export function getPublishRoot(): string {
+  return getRoot();
 }
 
 function safeJoin(root: string, ...parts: string[]): string {
@@ -122,6 +130,18 @@ function getUploadDir(): string {
   return (
     process.env.OPENLEN_UPLOAD_DIR ?? path.join(process.cwd(), "uploads")
   );
+}
+
+/** Origin the wired forms POST to (lib/publish/forms.ts submitBase) — the
+ *  seal's form-action must allow it: <sub>.openlen.com pages submit
+ *  cross-origin to the apex. */
+function submitOrigin(): string {
+  const base = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://openlen.com";
+  try {
+    return new URL(base).origin;
+  } catch {
+    return "https://openlen.com";
+  }
 }
 
 /** Find LocalFs asset URLs in the HTML, copy each referenced file to the
@@ -380,6 +400,38 @@ export async function publishToDir(
     }
   }
 
+  // Responsive-image bake: fan <img> sources out into multi-width local
+  // WebP variants + rewrite to srcset/sizes with intrinsic dimensions,
+  // lazy-loading and an LCP-hero preload (Rust rewrite pass). Runs BEFORE
+  // the Unsplash migration so heroes are encoded from the original bytes
+  // (one lossy hop); the legacy step below still localizes the non-<img>
+  // Unsplash refs (CSS url(), og:image) this bake doesn't touch. Soft-fail.
+  if (process.env.OPENLEN_IMAGE_BAKE !== "0") {
+    try {
+      const baked = await bakeResponsiveImages({ html: migratedHtml, subDir });
+      migratedHtml = baked.html;
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] image bake failed; publishing without responsive images", err);
+    }
+  }
+
+  // Self-host Google Fonts: fetch the css2 stylesheet(s) with a modern UA,
+  // download the woff2 files into the shared assets dir, inline the
+  // rewritten CSS and drop the dead preconnects. Kills the last
+  // render-blocking third-party on the published page's critical path
+  // (and the visitor-IP leak to Google). Failed stylesheets keep their
+  // original <link>. Soft-fail.
+  if (process.env.OPENLEN_FONT_BAKE !== "0") {
+    try {
+      const fonts = await bakeGoogleFonts({ html: migratedHtml, subDir });
+      migratedHtml = fonts.html;
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] font bake failed; keeping Google Fonts links", err);
+    }
+  }
+
   // Cache-on-publish for Unsplash hotlinks — download, optimize, and
   // serve from the subdomain's assets dir so the published page doesn't
   // depend on Unsplash being up at every visitor request. Failures fall
@@ -428,6 +480,20 @@ export async function publishToDir(
   const analyticsEnabled = params.analyticsEnabled ?? true;
   if (params.projectId && analyticsEnabled) {
     migratedHtml = injectAnalyticsSnippet(migratedHtml, params.projectId);
+  }
+
+  // Seal the release: hash-locked CSP meta over the page's closed script
+  // set + <base> strip + noopener. MUST stay the LAST html transform —
+  // any script injected after this point would be blocked by the page's
+  // own policy (the pass self-checks and falls back to unsealed output on
+  // drift, so a future mis-ordered injector degrades, never breaks).
+  if (process.env.OPENLEN_CSP_SEAL !== "0") {
+    try {
+      migratedHtml = sealRelease(migratedHtml, submitOrigin()).html;
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] release seal failed; publishing without CSP", err);
+    }
   }
 
   const sha = computeSha(migratedHtml);

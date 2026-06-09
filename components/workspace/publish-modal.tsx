@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/cn";
+import { SpeedCard } from "@/components/workspace/speed-card";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Publish-to-openlen.com modal.
@@ -371,6 +372,8 @@ export function PublishModal({
               {fullUrl}
             </div>
           </div>
+
+          {isPublished && <SpeedCard projectId={project.id} active={open} />}
 
           {error && (
             <div className="flex items-start gap-2 rounded-lg bg-red-50 dark:bg-red-500/10 ring-1 ring-red-200 dark:ring-red-500/30 px-3 py-2 text-[12px] text-red-700 dark:text-red-300">

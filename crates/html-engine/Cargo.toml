@@ -18,6 +18,8 @@ once_cell = "1"
 kuchikiki = "0.8"
 minify-html = "0.16"
 lightningcss = "1.0.0-alpha.71"
+sha2 = "0.10"
+base64 = "0.22"
 
 [build-dependencies]
 napi-build = "2"

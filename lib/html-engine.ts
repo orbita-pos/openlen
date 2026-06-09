@@ -28,8 +28,10 @@ import {
   optimizeForPublish as rustOptimizeForPublish,
   parseOps as rustParseOps,
   resolveOpIdByPath as rustResolveOpIdByPath,
+  rewriteResponsiveImages as rustRewriteResponsiveImages,
   roundTrip as rustRoundTrip,
   sanitizeForPublish as rustSanitizeForPublish,
+  sealRelease as rustSealRelease,
   stripOpIds as rustStripOpIds,
   tagWithOpIds as rustTagWithOpIds,
   wirePublishedForms as rustWirePublishedForms,
@@ -46,8 +48,11 @@ import type {
   OptimizeResult as RustOptimizeResult,
   OptimizeStats,
   ParseResult as RustParseResult,
+  ResponsiveImageEntry,
+  RewriteImagesResult as RustRewriteImagesResult,
   SanitizeRemovedCounts,
   SanitizeResult as RustSanitizeResult,
+  SealResult,
   ScopedView,
   TaggedHtmlResult,
   UnsplashCredit as RustUnsplashCredit,
@@ -65,8 +70,10 @@ export type {
   HtmlStreamRemovedCounts,
   HtmlStreamResult,
   OptimizeStats,
+  ResponsiveImageEntry,
   SanitizeRemovedCounts,
   ScopedView,
+  SealResult,
   TaggedHtmlResult,
   WireFormConfig,
 };
@@ -268,6 +275,46 @@ export function consolidateUnsplashCredits(html: string): ConsolidationResult {
     })),
     anonymousUnsplashCount: r.anonymousUnsplashCount,
   };
+}
+
+export interface RewriteImagesResult {
+  html: string;
+  rewritten: number;
+  lazied: number;
+  heroSrc: string | null;
+}
+
+/** Rewrite manifest-matched `<img>` tags to local srcset variants with
+ *  sizes / intrinsic dimensions / lazy-loading, mark the LCP hero with
+ *  fetchpriority=high and inject its `<link rel=preload imagesrcset>`.
+ *  Author markup wins: existing srcset / <picture> / loading / dimension
+ *  attributes are never overridden. See crates/html-engine/src/publish/
+ *  images.rs for the full contract. */
+export function rewriteResponsiveImages(
+  html: string,
+  images: ResponsiveImageEntry[],
+): RewriteImagesResult {
+  const r = rustRewriteResponsiveImages(html, images) as RustRewriteImagesResult;
+  return {
+    html: r.html,
+    rewritten: r.rewritten,
+    lazied: r.lazied,
+    heroSrc: r.heroSrc ?? null,
+  };
+}
+
+/** Terminal publish pass: hash-locked CSP meta computed from the page's
+ *  closed script set (script-src 'sha256-…' / 'none', object-src 'none',
+ *  base-uri 'none', form-action 'self' + the submit origin), plus <base>
+ *  stripping and rel=noopener on target=_blank anchors. Self-checks the
+ *  serialized output and returns the original html (sealed:false) on any
+ *  hash drift — the seal can fail, the publish never does. MUST run after
+ *  every script-injecting step. See crates/html-engine/src/publish/seal.rs. */
+export function sealRelease(
+  html: string,
+  formActionExtra?: string,
+): SealResult {
+  return rustSealRelease(html, formActionExtra) as SealResult;
 }
 
 /** Wire every `<form>` in `html` to OpenLen's submit endpoint at `action`,

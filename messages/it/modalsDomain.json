@@ -115,6 +115,18 @@
       "reserved": "Questo nome è riservato. Provane un altro.",
       "taken": "Già in uso. Provane un altro.",
       "limit": "Limite del piano raggiunto — rimuovi la pubblicazione di un'altra pagina o passa a un piano superiore."
+    },
+    "speedCard": {
+      "title": "Velocità della pagina",
+      "measuring": "Misurazione della velocità della tua pagina…",
+      "loadsIn": "Si carica in {seconds}s",
+      "weight": "{kb} KB",
+      "requests": "{count} richieste",
+      "labNote": "Test di laboratorio (mobile, 4G lento), eseguito a ogni pubblicazione",
+      "a11y": "Accessibilità",
+      "seo": "SEO",
+      "practices": "Buone pratiche",
+      "pending": "Ancora nessuna misurazione — viene eseguita automaticamente alla pubblicazione."
     }
   },
   "inspector": {

@@ -1,0 +1,359 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Publish-time responsive-image bake.
+//
+// Published pages today carry single-src <img> tags (one 2000px WebP at
+// best), so phones download desktop-sized heroes. This step fans every
+// <img> source out into multi-width WebP variants in the subdomain's
+// shared assets dir and hands the Rust `rewrite_responsive_images` pass a
+// manifest to rewrite the DOM: srcset/sizes, intrinsic width/height (CLS),
+// loading=lazy below the LCP hero, fetchpriority=high + <link rel=preload
+// imagesrcset> on the hero itself.
+//
+// Byte sources, in order of preference:
+//   - relative `/assets/<file>` — LocalFs uploads already migrated to disk
+//     by migrateLocalAssets (read locally, no network)
+//   - absolute URLs on hosts we own (images/uploads/templates.openlen.com,
+//     R2 public bases) plus images.unsplash.com — fixed allowlist, so the
+//     publish-time fetcher never touches arbitrary user-controlled origins
+// Everything else (foreign hotlinks, data URIs, SVG/GIF) passes through
+// untouched.
+//
+// Runs BEFORE migrateUnsplashAssets so Unsplash heroes are encoded from the
+// original bytes (one lossy hop, not two); whatever this step rewrites no
+// longer matches the Unsplash regex, and non-<img> refs (CSS url(),
+// og:image) still get localized by that legacy step.
+//
+// Variants are content-addressed by a hash of the SOURCE bytes with a
+// `<hash>.bake.json` sidecar, so a republish skips both the encode and the
+// writes. AVIF is deliberately out of v1: on the single prod box it would
+// add tens of seconds to an image-heavy Deploy for a marginal win over
+// right-sized WebP.
+//
+// Safety contract mirrors the Tailwind bake: every failure path — fetch,
+// decode, encode, disk — degrades to the original markup for that image,
+// and the caller wraps the whole step in try/catch. Publish is never
+// blocked.
+// ─────────────────────────────────────────────────────────────────────────────
+
+import { createHash } from "node:crypto";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import path from "node:path";
+
+import {
+  rewriteResponsiveImages,
+  type ResponsiveImageEntry,
+} from "@/lib/html-engine";
+import { processImage } from "@/lib/images";
+
+const BAKE_WIDTHS = [400, 800, 1400, 2000];
+const WEBP_QUALITY = 82;
+const FETCH_TIMEOUT_MS = 15_000;
+const MAX_SOURCE_BYTES = 20 * 1024 * 1024;
+const SIDECAR_VERSION = 1;
+
+const IMG_TAG_RE = /<img\b[^>]*>/gi;
+const SRC_ATTR_RE = /\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)')/i;
+const SRCSET_ATTR_RE = /\bsrcset\s*=/i;
+
+/** Same conservative entity set as the Unsplash migration in filesystem.ts —
+ *  only what realistically appears inside an attribute URL. */
+function decodeHtmlEntitiesInUrl(s: string): string {
+  return s
+    .replace(/&amp;/g, "&")
+    .replace(/&#x2F;/gi, "/")
+    .replace(/&#47;/g, "/");
+}
+
+function hostOf(base: string | undefined): string | null {
+  if (!base) return null;
+  try {
+    return new URL(base).hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function allowedRemoteHosts(): Set<string> {
+  const hosts = new Set([
+    "images.unsplash.com",
+    "images.openlen.com",
+    "uploads.openlen.com",
+    "templates.openlen.com",
+  ]);
+  for (const base of [
+    process.env.R2_PUBLIC_URL,
+    process.env.R2_IMAGES_PUBLIC_URL,
+    process.env.R2_TEMPLATES_PUBLIC_URL,
+  ]) {
+    const h = hostOf(base);
+    if (h) hosts.add(h);
+  }
+  return hosts;
+}
+
+type Source =
+  | { kind: "local"; file: string }
+  | { kind: "remote"; url: string };
+
+/** Classify an entity-decoded <img src> URL into a byte source, or null when
+ *  it's out of scope (foreign host, data URI, SVG/GIF, traversal-shaped). */
+function classifySource(url: string): Source | null {
+  if (url.startsWith("/assets/")) {
+    const file = url.slice("/assets/".length).split(/[?#]/)[0];
+    if (!/^[A-Za-z0-9._-]+$/.test(file) || file.includes("..")) return null;
+    if (/\.(svg|gif)$/i.test(file)) return null;
+    return { kind: "local", file };
+  }
+  if (/^https?:\/\//i.test(url)) {
+    let u: URL;
+    try {
+      u = new URL(url);
+    } catch {
+      return null;
+    }
+    if (!allowedRemoteHosts().has(u.hostname.toLowerCase())) return null;
+    if (/\.(svg|gif)$/i.test(u.pathname)) return null;
+    return { kind: "remote", url };
+  }
+  return null;
+}
+
+/** Scan raw HTML for <img> tags without an author srcset and return their
+ *  entity-decoded src values, deduped, in document order. Pure — exported
+ *  for unit tests. */
+export function collectImgSrcCandidates(html: string): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  IMG_TAG_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = IMG_TAG_RE.exec(html)) !== null) {
+    const tag = m[0];
+    if (SRCSET_ATTR_RE.test(tag)) continue;
+    const src = SRC_ATTR_RE.exec(tag);
+    const raw = src?.[1] ?? src?.[2];
+    if (!raw) continue;
+    const decoded = decodeHtmlEntitiesInUrl(raw.trim());
+    if (!decoded || seen.has(decoded)) continue;
+    seen.add(decoded);
+    out.push(decoded);
+  }
+  return out;
+}
+
+function looksLikeGifOrSvg(bytes: Buffer): boolean {
+  if (bytes.length >= 4 && bytes.toString("ascii", 0, 4) === "GIF8") return true;
+  const head = bytes.toString("utf8", 0, Math.min(bytes.length, 256)).trimStart();
+  return head.startsWith("<svg") || head.startsWith("<?xml");
+}
+
+async function resolveBytes(
+  source: Source,
+  assetsDir: string,
+): Promise<Buffer | null> {
+  if (source.kind === "local") {
+    try {
+      const bytes = await readFile(path.join(assetsDir, source.file));
+      return bytes.length > 0 && bytes.length <= MAX_SOURCE_BYTES ? bytes : null;
+    } catch {
+      return null;
+    }
+  }
+  try {
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+    let response: Response;
+    try {
+      response = await fetch(source.url, {
+        redirect: "follow",
+        signal: ctrl.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+    if (!response.ok) return null;
+    const bytes = Buffer.from(await response.arrayBuffer());
+    return bytes.length > 0 && bytes.length <= MAX_SOURCE_BYTES ? bytes : null;
+  } catch {
+    return null;
+  }
+}
+
+interface VariantMeta {
+  file: string;
+  width: number;
+}
+
+interface BakeMeta {
+  /** Intrinsic dimensions of the largest variant (aspect-ratio source). */
+  width: number;
+  height: number;
+  variants: VariantMeta[];
+}
+
+async function readSidecar(
+  sidecarPath: string,
+  assetsDir: string,
+): Promise<BakeMeta | null> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(await readFile(sidecarPath, "utf8"));
+  } catch {
+    return null;
+  }
+  const p = parsed as {
+    v?: unknown;
+    width?: unknown;
+    height?: unknown;
+    variants?: unknown;
+  };
+  if (
+    p?.v !== SIDECAR_VERSION ||
+    typeof p.width !== "number" ||
+    typeof p.height !== "number" ||
+    !Array.isArray(p.variants) ||
+    p.variants.length === 0
+  ) {
+    return null;
+  }
+  const variants: VariantMeta[] = [];
+  for (const v of p.variants as { file?: unknown; width?: unknown }[]) {
+    if (typeof v?.file !== "string" || typeof v?.width !== "number") return null;
+    if (!/^[A-Za-z0-9._-]+$/.test(v.file)) return null;
+    variants.push({ file: v.file, width: v.width });
+  }
+  // All referenced files must still exist — a pruned/partial assets dir
+  // invalidates the sidecar and forces a re-encode.
+  try {
+    await Promise.all(variants.map((v) => stat(path.join(assetsDir, v.file))));
+  } catch {
+    return null;
+  }
+  return { width: p.width, height: p.height, variants };
+}
+
+/** Encode (or reuse) the multi-width variant set for one source image and
+ *  return its metadata. Content-addressed by source-byte hash; the sidecar
+ *  makes republished pages skip the encode entirely. */
+async function ensureVariants(
+  bytes: Buffer,
+  assetsDir: string,
+): Promise<BakeMeta | null> {
+  const hash = createHash("sha256").update(bytes).digest("hex").slice(0, 16);
+  const sidecarPath = path.join(assetsDir, `${hash}.bake.json`);
+  const cached = await readSidecar(sidecarPath, assetsDir);
+  if (cached) return cached;
+
+  const { variants } = await processImage({
+    input: bytes,
+    variants: BAKE_WIDTHS.map((w) => ({
+      width: w,
+      format: "webp" as const,
+      quality: WEBP_QUALITY,
+    })),
+    autoOrient: true,
+    withoutEnlargement: true,
+  });
+  // withoutEnlargement clamps targets to the intrinsic width, so a small
+  // source produces duplicate widths — keep one variant per output width.
+  const byWidth = new Map<number, (typeof variants)[number]>();
+  for (const v of variants) {
+    if (!byWidth.has(v.width)) byWidth.set(v.width, v);
+  }
+  const unique = [...byWidth.values()].sort((a, b) => a.width - b.width);
+  if (unique.length === 0) return null;
+
+  const metas: VariantMeta[] = [];
+  for (const v of unique) {
+    const file = `${hash}-${v.width}w.webp`;
+    const dst = path.join(assetsDir, file);
+    try {
+      await stat(dst);
+    } catch {
+      await writeFile(dst, v.bytes);
+    }
+    metas.push({ file, width: v.width });
+  }
+  const largest = unique[unique.length - 1];
+  const meta: BakeMeta = {
+    width: largest.width,
+    height: largest.height,
+    variants: metas,
+  };
+  await writeFile(
+    sidecarPath,
+    JSON.stringify({ v: SIDECAR_VERSION, ...meta }),
+  );
+  return meta;
+}
+
+export interface ImageBakeResult {
+  html: string;
+  /** <img> tags rewritten to local srcset variants. */
+  rewritten: number;
+  /** Images that gained loading="lazy". */
+  lazied: number;
+  /** Original src of the detected LCP hero, when one was found. */
+  heroSrc: string | null;
+}
+
+/**
+ * Fan <img> sources out into local multi-width WebP variants and rewrite
+ * the HTML to serve them responsively. Per-image failures degrade to the
+ * original markup; an empty manifest returns the input verbatim.
+ */
+export async function bakeResponsiveImages(params: {
+  html: string;
+  subDir: string;
+}): Promise<ImageBakeResult> {
+  const { html, subDir } = params;
+  const unchanged: ImageBakeResult = {
+    html,
+    rewritten: 0,
+    lazied: 0,
+    heroSrc: null,
+  };
+
+  const candidates = collectImgSrcCandidates(html)
+    .map((url) => ({ url, source: classifySource(url) }))
+    .filter((c): c is { url: string; source: Source } => c.source !== null);
+  if (candidates.length === 0) return unchanged;
+
+  const assetsDir = path.join(subDir, "assets");
+  await mkdir(assetsDir, { recursive: true });
+
+  const entries = (
+    await Promise.all(
+      candidates.map(async ({ url, source }): Promise<ResponsiveImageEntry | null> => {
+        try {
+          const bytes = await resolveBytes(source, assetsDir);
+          if (!bytes || looksLikeGifOrSvg(bytes)) return null;
+          const meta = await ensureVariants(bytes, assetsDir);
+          if (!meta) return null;
+          const largest = meta.variants[meta.variants.length - 1];
+          return {
+            src: url,
+            fallbackSrc: `/assets/${largest.file}`,
+            srcset: meta.variants
+              .map((v) => `/assets/${v.file} ${v.width}w`)
+              .join(", "),
+            width: meta.width,
+            height: meta.height,
+          };
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.warn("[image-bake] variant generation failed", url, err);
+          return null;
+        }
+      }),
+    )
+  ).filter((e): e is ResponsiveImageEntry => e !== null);
+  if (entries.length === 0) return unchanged;
+
+  const r = rewriteResponsiveImages(html, entries);
+  return {
+    html: r.html,
+    rewritten: r.rewritten,
+    lazied: r.lazied,
+    heroSrc: r.heroSrc,
+  };
+}

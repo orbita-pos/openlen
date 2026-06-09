@@ -115,6 +115,18 @@
       "reserved": "예약된 이름입니다. 다른 이름을 사용하세요.",
       "taken": "이미 사용 중입니다. 다른 이름을 사용하세요.",
       "limit": "요금제 한도에 도달했습니다 — 다른 페이지의 게시를 해제하거나 업그레이드하세요."
+    },
+    "speedCard": {
+      "title": "페이지 속도",
+      "measuring": "페이지 속도 측정 중…",
+      "loadsIn": "{seconds}초 만에 로드",
+      "weight": "{kb} KB",
+      "requests": "요청 {count}개",
+      "labNote": "랩 테스트(모바일, 느린 4G), 배포할 때마다 실행",
+      "a11y": "접근성",
+      "seo": "SEO",
+      "practices": "모범 사례",
+      "pending": "아직 측정이 없습니다 — 배포 시 자동으로 실행됩니다."
     }
   },
   "inspector": {

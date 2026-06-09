@@ -115,6 +115,18 @@
       "reserved": "Ce nom est réservé. Essayez-en un autre.",
       "taken": "Déjà pris. Essayez-en un autre.",
       "limit": "Plafond du forfait atteint — dépubliez une autre page ou passez à un forfait supérieur."
+    },
+    "speedCard": {
+      "title": "Vitesse de la page",
+      "measuring": "Mesure de la vitesse de votre page…",
+      "loadsIn": "Se charge en {seconds}s",
+      "weight": "{kb} Ko",
+      "requests": "{count} requêtes",
+      "labNote": "Test en laboratoire (mobile, 4G lente), exécuté à chaque publication",
+      "a11y": "Accessibilité",
+      "seo": "SEO",
+      "practices": "Bonnes pratiques",
+      "pending": "Pas encore de mesure — elle est lancée automatiquement à la publication."
     }
   },
   "inspector": {

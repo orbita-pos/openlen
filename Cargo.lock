@@ -2946,6 +2946,7 @@ dependencies = [
 name = "openlen-html-engine"
 version = "0.1.0"
 dependencies = [
+ "base64",
  "criterion",
  "kuchikiki",
  "lightningcss",
@@ -2956,6 +2957,7 @@ dependencies = [
  "napi-derive",
  "once_cell",
  "regex",
+ "sha2",
  "thiserror 1.0.69",
 ]
 

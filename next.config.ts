@@ -49,6 +49,7 @@ const nextConfig = {
     "@openlen/rate-limit",
     "@openlen/images",
     "puppeteer",
+    "lighthouse",
   ],
   // serverExternalPackages alone doesn't always exclude transitively-linked
   // workspace deps from webpack's module graph (the `file:` symlink to

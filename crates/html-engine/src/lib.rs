@@ -303,6 +303,78 @@ pub fn wire_published_forms(
     publish::wire_published_forms(&html, &action, &native_configs)
 }
 
+#[napi(object, js_name = "ResponsiveImageEntry")]
+pub struct JsResponsiveImageEntry {
+    /// Entity-decoded `src` attribute value this entry applies to.
+    pub src: String,
+    /// Largest local variant — becomes the new `src`.
+    pub fallback_src: String,
+    /// Complete srcset value, e.g. `/assets/ab12-400w.webp 400w, …`.
+    pub srcset: String,
+    pub width: u32,
+    pub height: u32,
+}
+
+#[napi(object, js_name = "RewriteImagesResult")]
+pub struct JsRewriteImagesResult {
+    pub html: String,
+    pub rewritten: u32,
+    pub lazied: u32,
+    pub hero_src: Option<String>,
+}
+
+#[napi]
+pub fn rewrite_responsive_images(
+    html: String,
+    images: Vec<JsResponsiveImageEntry>,
+) -> JsRewriteImagesResult {
+    let native: Vec<publish::ResponsiveImage> = images
+        .into_iter()
+        .map(|i| publish::ResponsiveImage {
+            src: i.src,
+            fallback_src: i.fallback_src,
+            srcset: i.srcset,
+            width: i.width,
+            height: i.height,
+        })
+        .collect();
+    let r = publish::rewrite_responsive_images(&html, &native);
+    JsRewriteImagesResult {
+        html: r.html,
+        rewritten: r.rewritten,
+        lazied: r.lazied,
+        hero_src: r.hero_src,
+    }
+}
+
+#[napi(object, js_name = "SealResult")]
+pub struct JsSealResult {
+    pub html: String,
+    /// True when the CSP meta is present in the output.
+    pub sealed: bool,
+    /// `'sha256-…'` source tokens, one per unique inline script.
+    pub script_hashes: Vec<String>,
+    /// Origins of external <script src> elements.
+    pub external_scripts: Vec<String>,
+    pub bases_stripped: u32,
+    pub noopener_added: u32,
+    pub errors: Vec<String>,
+}
+
+#[napi]
+pub fn seal_release(html: String, form_action_extra: Option<String>) -> JsSealResult {
+    let r = publish::seal_release(&html, form_action_extra.as_deref());
+    JsSealResult {
+        html: r.html,
+        sealed: r.sealed,
+        script_hashes: r.script_hashes,
+        external_scripts: r.external_scripts,
+        bases_stripped: r.bases_stripped,
+        noopener_added: r.noopener_added,
+        errors: r.errors,
+    }
+}
+
 // ─── Quality S1: visual-quality hardening ─────────────────────────────────────
 
 #[napi(object, js_name = "HardenCounts")]

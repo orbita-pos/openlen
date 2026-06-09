@@ -55,8 +55,19 @@ async function hostIsBlocked(hostname: string): Promise<boolean> {
 
 /** Install request interception on `page` that blocks subresource fetches to
  *  internal/loopback/link-local hosts. Call BEFORE setContent. Safe for public
- *  CDN/font/asset fetches — they resolve to public IPs and continue. */
-export async function installSubresourceSsrfGuard(page: Page): Promise<void> {
+ *  CDN/font/asset fetches — they resolve to public IPs and continue.
+ *
+ *  `allowOrigins` punches exact `host[:port]` holes through the block — used
+ *  by flight-check, whose audit target is its own ephemeral 127.0.0.1 server
+ *  (navigation + /assets fetches must pass while everything else internal
+ *  stays blocked). */
+export async function installSubresourceSsrfGuard(
+  page: Page,
+  opts?: { allowOrigins?: string[] },
+): Promise<void> {
+  const allowedOrigins = new Set(
+    (opts?.allowOrigins ?? []).map((o) => o.toLowerCase()),
+  );
   await page.setRequestInterception(true);
   page.on("request", (req) => {
     // The handler MUST resolve every request exactly once (continue/abort) or
@@ -74,7 +85,11 @@ export async function installSubresourceSsrfGuard(page: Page): Promise<void> {
           await req.abort("blockedbyclient");
           return;
         }
-        const { hostname } = new URL(url);
+        const { hostname, host } = new URL(url);
+        if (allowedOrigins.has(host.toLowerCase())) {
+          await req.continue();
+          return;
+        }
         if (await hostIsBlocked(hostname)) {
           await req.abort("blockedbyclient");
           return;
