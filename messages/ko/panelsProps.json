@@ -22,6 +22,7 @@
     "title": "스타일",
     "textColor": "텍스트 색상",
     "background": "배경",
+    "editImage": "편집",
     "fillImage": "이미지로 채우기",
     "changeImage": "이미지 변경",
     "removeImage": "제거",

@@ -31,7 +31,7 @@ import {
   type ThemePreset,
 } from "@/lib/theme-presets";
 import { lookFromAccent } from "@/lib/palette-gen";
-import { ReplaceAssetModal } from "../replace-asset-modal";
+import { ReplaceAssetModal, type ImageTab } from "../replace-asset-modal";
 import {
   ColorField,
   RadiusField,
@@ -46,6 +46,7 @@ import {
   ImageIcon,
   Inbox,
   PaletteIcon,
+  Pencil,
   X,
 } from "../icons";
 
@@ -514,7 +515,14 @@ function StyleSection({
   const t = useTranslations("panelsProps");
   const s = style ?? {};
   const [picker, setPicker] = useState(false);
+  // Which image tab the modal opens on: "edit" (crop / remove-bg / AI on the
+  // current fill) vs "openlen" (gallery, to swap the image entirely).
+  const [pickerTab, setPickerTab] = useState<ImageTab>("openlen");
   const hasImage = !!s.bgImageUrl;
+  const openPicker = (tab: ImageTab) => {
+    setPickerTab(tab);
+    setPicker(true);
+  };
   return (
     <Section label={t("style.title")} icon={<PaletteIcon size={11} />}>
       <ColorField
@@ -529,10 +537,20 @@ function StyleSection({
         value={s.backgroundColor ?? ""}
         onCommit={(v) => onApplyBg(path, "color", v)}
       />
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        {hasImage && (
+          <button
+            type="button"
+            onClick={() => openPicker("edit")}
+            className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md border bd bg-app fg-muted hover:fg hover:bg-hover transition text-[11px]"
+          >
+            <Pencil size={12} />
+            {t("style.editImage")}
+          </button>
+        )}
         <button
           type="button"
-          onClick={() => setPicker(true)}
+          onClick={() => openPicker("openlen")}
           className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md border bd bg-app fg-muted hover:fg hover:bg-hover transition text-[11px]"
         >
           <ImageIcon size={12} />
@@ -585,6 +603,7 @@ function StyleSection({
         kind={picker ? "image" : null}
         projectId={projectId ?? null}
         currentSrc={s.bgImageUrl ?? null}
+        initialTab={pickerTab}
         onClose={() => setPicker(false)}
         onPick={(payload) => {
           if (payload.url) onApplyBg(path, "image", payload.url);

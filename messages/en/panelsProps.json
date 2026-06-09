@@ -22,6 +22,7 @@
     "title": "Style",
     "textColor": "Text color",
     "background": "Background",
+    "editImage": "Edit",
     "fillImage": "Fill with image",
     "changeImage": "Change image",
     "removeImage": "Remove",

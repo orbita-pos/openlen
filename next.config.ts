@@ -56,8 +56,23 @@ const nextConfig = {
   // bundled `.node` file). Belt-and-braces: a server-only webpack external
   // that matches each package name AND its workspace symlink path.
   webpack: (config: unknown, ctx: { isServer: boolean }) => {
-    if (!ctx.isServer) return config;
-    const c = config as { externals?: unknown[] };
+    const c = config as {
+      externals?: unknown[];
+      resolve?: { alias?: Record<string, unknown> };
+    };
+    if (!ctx.isServer) {
+      // Client/browser bundle. @huggingface/transformers (client-side
+      // background removal) lazily requires Node-only deps that must be
+      // stubbed for the browser, or webpack chokes trying to bundle them.
+      // ORT-web loads its wasm from CDN at runtime, so nothing else here.
+      c.resolve = c.resolve ?? {};
+      c.resolve.alias = {
+        ...(c.resolve.alias ?? {}),
+        sharp$: false,
+        "onnxruntime-node$": false,
+      };
+      return config;
+    }
     const externals = c.externals ?? [];
     externals.push(
       (
