@@ -115,6 +115,18 @@
       "reserved": "Deze naam is gereserveerd. Probeer een andere.",
       "taken": "Al in gebruik. Probeer een andere.",
       "limit": "Abonnementslimiet bereikt — maak een andere pagina ongepubliceerd of upgrade."
+    },
+    "speedCard": {
+      "title": "Paginasnelheid",
+      "measuring": "Paginasnelheid wordt gemeten…",
+      "loadsIn": "Laadt in {seconds}s",
+      "weight": "{kb} KB",
+      "requests": "{count} verzoeken",
+      "labNote": "Labtest (mobiel, traag 4G), uitgevoerd bij elke publicatie",
+      "a11y": "Toegankelijkheid",
+      "seo": "SEO",
+      "practices": "Best practices",
+      "pending": "Nog geen meting — deze wordt automatisch uitgevoerd bij publicatie."
     }
   },
   "inspector": {

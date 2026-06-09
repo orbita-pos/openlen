@@ -115,6 +115,18 @@
       "reserved": "此名称已被保留。请换一个。",
       "taken": "已被占用。请换一个。",
       "limit": "已达套餐上限——请取消发布其他页面或升级。"
+    },
+    "speedCard": {
+      "title": "页面速度",
+      "measuring": "正在测量页面速度…",
+      "loadsIn": "{seconds} 秒内加载",
+      "weight": "{kb} KB",
+      "requests": "{count} 个请求",
+      "labNote": "实验室测试（移动端、慢速 4G），每次发布时运行",
+      "a11y": "无障碍",
+      "seo": "SEO",
+      "practices": "最佳实践",
+      "pending": "尚无测量数据 — 发布时会自动运行。"
     }
   },
   "inspector": {

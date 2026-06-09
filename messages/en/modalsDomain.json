@@ -115,6 +115,18 @@
       "reserved": "This name is reserved. Try another.",
       "taken": "Already taken. Try another.",
       "limit": "Plan cap reached — unpublish another page or upgrade."
+    },
+    "speedCard": {
+      "title": "Page speed",
+      "measuring": "Measuring your page speed…",
+      "loadsIn": "Loads in {seconds}s",
+      "weight": "{kb} KB",
+      "requests": "{count} requests",
+      "labNote": "Lab test (mobile, slow 4G), run on every deploy",
+      "a11y": "Accessibility",
+      "seo": "SEO",
+      "practices": "Best practices",
+      "pending": "No measurement yet — it runs automatically on deploy."
     }
   },
   "inspector": {

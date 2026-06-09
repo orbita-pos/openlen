@@ -7,6 +7,7 @@ import {
   jsonb,
   pgTable,
   primaryKey,
+  real,
   text,
   timestamp,
   uniqueIndex,
@@ -696,6 +697,57 @@ export const projectDeployments = pgTable(
     uniqueIndex("projectDeployments_projectId_provider_idx").on(
       table.projectId,
       table.provider,
+    ),
+  ],
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Flight reports — post-publish Lighthouse lab measurements (Born-100 F4).
+//
+// One row per (project, release sha), written fire-and-forget by
+// lib/publish/flight-check.ts after the symlink flip. Scores are 0-100
+// category scores; metric columns are the raw Lighthouse numericValues
+// (ms / unitless CLS / bytes). Nullable because a category or audit can
+// individually error without sinking the whole report. Apply DDL via
+// `npm run flight:migrate` (db:push is blocked by unrelated drift).
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const flightReports = pgTable(
+  "flightReports",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    subdomain: text("subdomain").notNull(),
+    releaseSha: text("releaseSha").notNull(),
+    perfScore: integer("perfScore"),
+    a11yScore: integer("a11yScore"),
+    bpScore: integer("bpScore"),
+    seoScore: integer("seoScore"),
+    lcpMs: integer("lcpMs"),
+    cls: real("cls"),
+    tbtMs: integer("tbtMs"),
+    fcpMs: integer("fcpMs"),
+    speedIndexMs: integer("speedIndexMs"),
+    totalBytes: integer("totalBytes"),
+    requestCount: integer("requestCount"),
+    // Top Lighthouse opportunities, pre-digested for future fix-it UI.
+    details: jsonb("details").$type<{
+      opportunities: Array<{ id: string; title: string; savingsMs: number | null }>;
+    }>(),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("flightReports_projectId_createdAt_idx").on(
+      table.projectId,
+      table.createdAt,
+    ),
+    uniqueIndex("flightReports_projectId_releaseSha_idx").on(
+      table.projectId,
+      table.releaseSha,
     ),
   ],
 );

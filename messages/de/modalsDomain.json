@@ -115,6 +115,18 @@
       "reserved": "Dieser Name ist reserviert. Versuche einen anderen.",
       "taken": "Bereits vergeben. Versuche einen anderen.",
       "limit": "Tariflimit erreicht — hebe die Veröffentlichung einer anderen Seite auf oder führe ein Upgrade durch."
+    },
+    "speedCard": {
+      "title": "Seitengeschwindigkeit",
+      "measuring": "Geschwindigkeit deiner Seite wird gemessen…",
+      "loadsIn": "Lädt in {seconds}s",
+      "weight": "{kb} KB",
+      "requests": "{count} Anfragen",
+      "labNote": "Labortest (mobil, langsames 4G), bei jeder Veröffentlichung ausgeführt",
+      "a11y": "Barrierefreiheit",
+      "seo": "SEO",
+      "practices": "Best Practices",
+      "pending": "Noch keine Messung — sie läuft automatisch bei der Veröffentlichung."
     }
   },
   "inspector": {

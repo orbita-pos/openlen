@@ -20,6 +20,7 @@ import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { upgradeDataUriOgImage } from "@/lib/branding/upgrade-og-image";
 import { resolveProjectLogo } from "@/lib/branding/resolve-project-logo";
 import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
+import { runFlightCheck } from "@/lib/publish/flight-check";
 import { getProfile } from "@/lib/business-profiles/store";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -760,6 +761,15 @@ export async function publishProject(
   // forget + soft-fail (same posture as the R2 backup above) — the publish is
   // already done; a stale or missing thumbnail must never block it.
   void renderProjectThumbnail({ projectId: params.projectId, html });
+
+  // 10. Flight Check: Lighthouse the release artifact and persist the lab
+  // report (the publish modal's Speed Card polls it). Fire-and-forget,
+  // serialized to one Chrome at a time, idempotent per (project, sha).
+  void runFlightCheck({
+    projectId: params.projectId,
+    subdomain: v.value,
+    releaseSha: publishResult.sha,
+  });
 
   return {
     subdomain: v.value,
