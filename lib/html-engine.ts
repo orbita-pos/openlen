@@ -22,11 +22,13 @@ import {
   buildScopedView as rustBuildScopedView,
   consolidateUnsplashCredits as rustConsolidateUnsplashCredits,
   extractLogo as rustExtractLogo,
+  extractTranslatables as rustExtractTranslatables,
   HtmlStream as RustHtmlStream,
   injectLogo as rustInjectLogo,
   normalizeBornCanonical as rustNormalizeBornCanonical,
   optimizeForPublish as rustOptimizeForPublish,
   parseOps as rustParseOps,
+  reinjectTranslatables as rustReinjectTranslatables,
   resolveOpIdByPath as rustResolveOpIdByPath,
   rewriteResponsiveImages as rustRewriteResponsiveImages,
   roundTrip as rustRoundTrip,
@@ -301,6 +303,27 @@ export function rewriteResponsiveImages(
     lazied: r.lazied,
     heroSrc: r.heroSrc ?? null,
   };
+}
+
+/** Every translatable string of the document — visible text nodes plus
+ *  human-facing attributes (alt/title/placeholder/aria-label, OG metas,
+ *  submit values) — in document order. Pair with reinjectTranslatables,
+ *  which walks the SAME order. See crates/html-engine/src/publish/
+ *  translate.rs for the slot rules. */
+export function extractTranslatables(html: string): string[] {
+  return rustExtractTranslatables(html);
+}
+
+/** Replace the document's translatable strings with `texts` (extracted from
+ *  the SAME html) and stamp `<html lang>`. Returns null when the slot count
+ *  doesn't match — the caller must skip that locale rather than ship a
+ *  half-translated page. */
+export function reinjectTranslatables(
+  html: string,
+  texts: string[],
+  lang: string,
+): string | null {
+  return rustReinjectTranslatables(html, texts, lang) ?? null;
 }
 
 /** Terminal publish pass: hash-locked CSP meta computed from the page's

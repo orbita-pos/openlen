@@ -27,6 +27,10 @@ export interface ProjectSettings {
    *  with no tracker. The Insights tab still works for whatever rows were
    *  captured before the toggle flipped. */
   analyticsDisabled?: boolean;
+  /** Speak Every Language: locale codes the page is also published in
+   *  (/<code>/index.html variants, translated at publish time). Validated
+   *  against PUBLISH_LOCALES; the page's own language is skipped. */
+  languages?: string[];
 }
 
 export interface ProjectData {

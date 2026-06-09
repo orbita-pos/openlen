@@ -375,6 +375,20 @@ pub fn seal_release(html: String, form_action_extra: Option<String>) -> JsSealRe
     }
 }
 
+#[napi]
+pub fn extract_translatables(html: String) -> Vec<String> {
+    publish::extract_translatables(&html)
+}
+
+#[napi]
+pub fn reinject_translatables(
+    html: String,
+    texts: Vec<String>,
+    lang: String,
+) -> Option<String> {
+    publish::reinject_translatables(&html, &texts, &lang)
+}
+
 // ─── Quality S1: visual-quality hardening ─────────────────────────────────────
 
 #[napi(object, js_name = "HardenCounts")]

@@ -21,6 +21,9 @@ import { upgradeDataUriOgImage } from "@/lib/branding/upgrade-og-image";
 import { resolveProjectLogo } from "@/lib/branding/resolve-project-logo";
 import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
 import { runFlightCheck } from "@/lib/publish/flight-check";
+import { localizeForPublish } from "@/lib/publish/localize";
+import { detectHtmlLang } from "@/lib/publish/language-cluster";
+import { isPublishLocale } from "@/lib/publish/publish-locales";
 import { getProfile } from "@/lib/business-profiles/store";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -522,6 +525,10 @@ interface PublishParams {
   projectId: string;
   userId: string;
   subdomain: string;
+  /** Speak Every Language targets. When provided, persisted to
+   *  data.settings.languages for future republishes; when absent, the
+   *  stored setting drives this publish. */
+  languages?: string[];
 }
 interface PublishResult {
   subdomain: string;
@@ -592,6 +599,16 @@ export async function publishProject(
   }
   const now = new Date();
 
+  // Speak Every Language: which locales to publish alongside the root doc.
+  // An explicit param wins (and is persisted below); otherwise the stored
+  // project setting drives the republish.
+  const settings = project.data?.settings ?? {};
+  const sourceLang = detectHtmlLang(html) ?? "en";
+  const targets = (params.languages ?? settings.languages ?? []).filter(
+    (code) => isPublishLocale(code) && code !== sourceLang,
+  );
+  const persistLanguages = params.languages !== undefined;
+
   // 4. DB upsert — claim the subdomain. We do this BEFORE the filesystem
   // write so a UNIQUE collision short-circuits without leaving an orphan
   // directory. On FS failure below we roll back.
@@ -618,6 +635,14 @@ export async function publishProject(
         status: "published",
         deployUrl: `${v.value}.${publishBaseHost()}`,
         updatedAt: now,
+        ...(persistLanguages && project.data
+          ? {
+              data: {
+                ...project.data,
+                settings: { ...settings, languages: targets },
+              },
+            }
+          : {}),
       })
       .where(eq(schema.projects.id, params.projectId));
   } catch (err) {
@@ -653,7 +678,12 @@ export async function publishProject(
     effectiveLogoUrl = project.logoUrl;
   }
 
-  let publishResult: { sha: string; html: string; written: boolean };
+  let publishResult: {
+    sha: string;
+    html: string;
+    written: boolean;
+    locales: string[];
+  };
   try {
     publishResult = await publishToDir({
       subdomain: v.value,
@@ -662,6 +692,17 @@ export async function publishProject(
       formConfigs: project.data?.settings?.forms,
       analyticsEnabled: !project.data?.settings?.analyticsDisabled,
       logoUrl: effectiveLogoUrl,
+      sourceLang,
+      buildLocaleDocs:
+        targets.length > 0
+          ? (finalHtml) =>
+              localizeForPublish({
+                projectId: params.projectId,
+                html: finalHtml,
+                targets,
+                sourceLang,
+              })
+          : undefined,
     });
   } catch (err) {
     // Roll back DB. We loudly log rollback failures instead of silently
@@ -754,8 +795,11 @@ export async function publishProject(
   // 8. Purge the Cloudflare edge cache so the next visitor sees the
   // new HTML instead of the previous deploy. Soft-fails when CF env
   // vars aren't set or the API call errors — stale edge content will
-  // flush within `s-maxage` anyway.
-  await purgeSubdomain(v.value);
+  // flush within `s-maxage` anyway. Locale variants + sitemap purge too.
+  await purgeSubdomain(v.value, [
+    ...publishResult.locales.map((l) => `/${l}/`),
+    "/sitemap.xml",
+  ]);
 
   // 9. Refresh the card thumbnail from the just-published bytes. Fire-and-
   // forget + soft-fail (same posture as the R2 backup above) — the publish is

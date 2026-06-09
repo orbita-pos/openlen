@@ -702,6 +702,38 @@ export const projectDeployments = pgTable(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Per-project translation cache (Speak Every Language).
+//
+// One row per (project, locale): a per-string cache keyed by sha1-16 of the
+// SOURCE text, so a republish only sends strings that actually changed to
+// Gemini. Rewritten on every publish with exactly the current page's
+// strings — stale entries prune themselves. Apply DDL via
+// `npm run localize:migrate`.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const projectTranslations = pgTable(
+  "projectTranslations",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    locale: text("locale").notNull(),
+    /** sha1-16(source text) → translated text. */
+    entries: jsonb("entries").$type<Record<string, string>>().notNull(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("projectTranslations_projectId_locale_idx").on(
+      table.projectId,
+      table.locale,
+    ),
+  ],
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Flight reports — post-publish Lighthouse lab measurements (Born-100 F4).
 //
 // One row per (project, release sha), written fire-and-forget by

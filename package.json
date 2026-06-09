@@ -22,6 +22,7 @@
     "integrations:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/integrations-migrate.ts",
     "billing:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/billing-migrate.ts",
     "flight:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/flight-migrate.ts",
+    "localize:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/localize-migrate.ts",
     "businessProfiles:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/businessProfiles-migrate.ts",
     "billing:smoke": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/billing-smoke.ts",
     "sections:seed": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sections-seed.ts",
