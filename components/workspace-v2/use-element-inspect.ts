@@ -303,6 +303,71 @@ const INSPECT_SCRIPT = `
     }
   }
 
+  // Read an --ol-* token's AUTHORED value: the value DECLARED in the page's
+  // born-canonical :root token blocks (<style data-ol-*>), independent of any
+  // inline <html> override a Look applied. A Look sets inline custom props on
+  // <html> and PERSISTS them, so the live/computed value drifts to the Look
+  // after a save+reload — but the authored :root blocks are never rewritten,
+  // so they stay the page's true original. Returns null when no :root rule
+  // declares the token (legacy pages whose color was only ever inline).
+  function readAuthoredVar(name) {
+    try {
+      var found = null;
+      var sheets = document.styleSheets;
+      for (var i = 0; i < sheets.length; i++) {
+        var rules;
+        try { rules = sheets[i].cssRules; } catch (_) { continue; }
+        if (!rules) continue;
+        for (var j = 0; j < rules.length; j++) {
+          var r = rules[j];
+          if (!r || r.type !== 1) continue; // CSSRule.STYLE_RULE
+          var parts = (r.selectorText || '').split(',');
+          var isRoot = false;
+          for (var k = 0; k < parts.length; k++) {
+            var p = parts[k].trim();
+            // Exact :root / html only — excludes :root[data-ol-mode="dark"]
+            // (its values are the dark look, not the light baseline).
+            if (p === ':root' || p === 'html') { isRoot = true; break; }
+          }
+          if (!isRoot) continue;
+          var v = r.style.getPropertyValue(name);
+          if (v && v.trim()) found = v.trim(); // last declaration wins (cascade)
+        }
+      }
+      return found;
+    } catch (_) {
+      return null;
+    }
+  }
+  // A :root-declared scale token as a number, else null.
+  function authoredNum(name) {
+    var v = readAuthoredVar(name);
+    if (v == null) return null;
+    var f = parseFloat(v);
+    return isNaN(f) ? null : f;
+  }
+  // The page's AUTHORED theme baseline — what "Original" (↺) re-applies. Read
+  // strictly from the :root token blocks so it stays the page's true original
+  // even after a Look is applied + persisted + reloaded (the Look only writes
+  // inline <html> overrides, never these blocks). A token NOT declared in :root
+  // is left null → the reset REMOVES that override rather than pinning a Look
+  // value. Exception: --ol-bg / --ol-fg fall back to the live value, because on
+  // legacy (non-canonical) pages canonize pins those two inline-only with no
+  // :root block, and dropping them would blank the page background.
+  function readAuthored() {
+    return {
+      accent: readAuthoredVar('--ol-accent'),
+      bg: readAuthoredVar('--ol-bg') || readBg(),
+      surface: readAuthoredVar('--ol-surface'),
+      fg: readAuthoredVar('--ol-fg') || readFg(),
+      border: readAuthoredVar('--ol-border'),
+      displayFont: readAuthoredVar('--ol-font-display'),
+      radiusScale: authoredNum('--ol-r-scale'),
+      typeScale: authoredNum('--ol-text-scale'),
+      spaceScale: authoredNum('--ol-space-scale'),
+    };
+  }
+
   function readPageMeta() {
     function content(sel) {
       var m = document.head.querySelector(sel);
@@ -326,6 +391,9 @@ const INSPECT_SCRIPT = `
       border: readBorder(),
       mode: readMode(),
       hasDark: !!document.querySelector('style[data-ol-modes]'),
+      // The page's authored theme — the "Original" reset baseline. Distinct
+      // from the live tokens above (which reflect any applied Look).
+      authored: readAuthored(),
     };
   }
 
