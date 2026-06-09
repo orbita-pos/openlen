@@ -22,6 +22,7 @@
     "title": "スタイル",
     "textColor": "テキストの色",
     "background": "背景",
+    "editImage": "編集",
     "fillImage": "画像で塗りつぶす",
     "changeImage": "画像を変更",
     "removeImage": "削除",

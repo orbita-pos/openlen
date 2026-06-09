@@ -26,6 +26,24 @@ const INSERT_SCRIPT = `
   var INERT = {SCRIPT:1, STYLE:1, LINK:1, META:1, NOSCRIPT:1, TEMPLATE:1, TITLE:1};
   var ROOT_TAGS = {SECTION:1, HEADER:1, FOOTER:1, NAV:1, MAIN:1, ARTICLE:1, ASIDE:1};
 
+  // Injected editor CHROME (the inline-edit overlay, hover Replace button,
+  // reorder handles) is appended to <body> and carries a data-openlen-* marker.
+  // It is NOT page content, so it must not count as a top-level child — left in,
+  // it makes <body> look like it has 2+ children, so findContentRoot falls back
+  // to <body> and an insert lands OUTSIDE a single full-height wrapper (after
+  // it), which scrolls the sticky navbar away → the "navbar hides / empty band"
+  // bug. We list specific chrome markers (not any data-openlen-*) so content
+  // wrappers tagged editable/just-inserted are never excluded.
+  function isEditorChrome(el) {
+    return !!(
+      el.hasAttribute &&
+      (el.hasAttribute('data-openlen-edit-overlay') ||
+        el.hasAttribute('data-openlen-edit-ghost') ||
+        el.hasAttribute('data-openlen-replace') ||
+        el.hasAttribute('data-openlen-reorder'))
+    );
+  }
+
   // Match the reorder script's content-root logic so an inserted block lands
   // as a sibling of the existing top-level sections (and is then draggable).
   function candidates(parent) {
@@ -34,6 +52,7 @@ const INSERT_SCRIPT = `
     for (var i = 0; i < parent.children.length; i++) {
       var el = parent.children[i];
       if (!el.tagName || INERT[el.tagName]) continue;
+      if (isEditorChrome(el)) continue;
       out.push(el);
     }
     return out;

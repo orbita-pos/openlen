@@ -22,6 +22,7 @@
     "title": "Stijl",
     "textColor": "Tekstkleur",
     "background": "Achtergrond",
+    "editImage": "Bewerken",
     "fillImage": "Vullen met afbeelding",
     "changeImage": "Afbeelding wijzigen",
     "removeImage": "Verwijderen",

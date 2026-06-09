@@ -832,6 +832,18 @@ ${CORE_SRC}
       if (!Object.prototype.hasOwnProperty.call(styles, k)) continue;
       try { overlay.style[k] = styles[k]; } catch (_) {}
     }
+    // When an element centers / right-aligns its text via FLEX justify-content
+    // (not text-align — e.g. a flex justify-center logo cell), the overlay is a
+    // plain block and won't reproduce that, so the editable text drifts left-
+    // aligned and its box gets pushed sideways (the "moves right on click" bug).
+    // Derive the effective alignment from the flex main axis so the overlay text
+    // stays where the real text was. Element-mode only — run-mode mirrors a glyph
+    // rect, which is already alignment-correct.
+    if (mode === 'element' && (cs.display === 'flex' || cs.display === 'inline-flex')) {
+      var jc = cs.justifyContent || '';
+      if (jc.indexOf('center') !== -1) overlay.style.textAlign = 'center';
+      else if (jc.indexOf('end') !== -1 || jc === 'right') overlay.style.textAlign = 'right';
+    }
     if (mode === 'run') {
       // styleSource is the run's PARENT; its padding belongs to the box, not the
       // run. Zero it so the overlay's content box equals the run's glyph rect.

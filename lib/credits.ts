@@ -28,6 +28,12 @@ export const CREDITS_BY_PLAN: Record<Plan, number> = {
  *  isn't token-metered like generate / chat. */
 export const AUTOFILL_CREDIT_COST = 5;
 
+/** Flat charge for one AI image edit (Gemini 2.5 Flash Image). Image output is
+ *  priced per-image, not by the text token rates, so it's a flat cost: ~1290
+ *  output tokens × $30/1M ≈ $0.039 ≈ 4 credits. Debited only on a successful
+ *  edit. */
+export const AI_IMAGE_EDIT_CREDIT_COST = 4;
+
 /** Quality S2 multimodal reference — upper bound on the extra cost of the
  *  reference image attached to a generate / chat-edit call. NO separate debit
  *  is applied: the image is sent as a native `inlineData` part, so its input

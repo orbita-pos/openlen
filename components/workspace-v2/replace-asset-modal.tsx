@@ -10,6 +10,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
+import { Crop, Loader2, Scissors, Sparkles } from "lucide-react";
 import {
   CATEGORY_LABELS,
   CURATED_ICONS,
@@ -17,6 +18,19 @@ import {
   type IconCategory,
 } from "@/lib/lucide-curated";
 import { useFocusTrap } from "./use-focus-trap";
+import { ImageEditor } from "./image-editor";
+import { removeBackground } from "./bg-remove";
+import { aiEditImage, AiEditError } from "./ai-edit";
+
+// Checkerboard so a transparent (background-removed) preview reads as cut-out
+// instead of sitting on an invisible white card. Harmless behind opaque images.
+const CHECKER_STYLE: React.CSSProperties = {
+  backgroundImage:
+    "linear-gradient(45deg,#e2e4e9 25%,transparent 25%),linear-gradient(-45deg,#e2e4e9 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e2e4e9 75%),linear-gradient(-45deg,transparent 75%,#e2e4e9 75%)",
+  backgroundSize: "14px 14px",
+  backgroundPosition: "0 0,0 7px,7px -7px,-7px 0",
+  backgroundColor: "#fff",
+};
 import {
   ResponsiveImage,
   type ResponsiveVariant,
@@ -70,6 +84,10 @@ export interface ReplaceAssetModalProps {
     logoUrl?: string | null;
     photos?: string[];
   } | null;
+  /** Force which image tab opens first. Defaults to "edit" when the current
+   *  image is editable, else "openlen". Callers use "openlen" to open straight
+   *  on the gallery (replace) or "edit" to open on the in-place editor. */
+  initialTab?: ImageTab;
   onClose: () => void;
   onPick: (payload: ReplacePayload) => void;
 }
@@ -81,6 +99,7 @@ export function ReplaceAssetModal({
   currentSrc,
   projectId,
   activeProfile,
+  initialTab,
   onClose,
   onPick,
 }: ReplaceAssetModalProps) {
@@ -146,6 +165,7 @@ export function ReplaceAssetModal({
             currentSrc={currentSrc ?? null}
             projectId={projectId ?? null}
             activeProfile={activeProfile ?? null}
+            initialTab={initialTab}
             onPick={onPick}
           />
         )}
@@ -266,12 +286,19 @@ function IconPicker({
 // Image picker — tabbed: Paste URL · Unsplash · Upload (Upload TBD)
 // ────────────────────────────────────────────────────────────────────────
 
-type ImageTab = "openlen" | "profiles" | "paste" | "unsplash" | "upload";
+export type ImageTab =
+  | "edit"
+  | "openlen"
+  | "profiles"
+  | "paste"
+  | "unsplash"
+  | "upload";
 
 function ImagePicker({
   currentSrc,
   projectId,
   activeProfile,
+  initialTab,
   onPick,
 }: {
   currentSrc: string | null;
@@ -281,6 +308,7 @@ function ImagePicker({
     logoUrl?: string | null;
     photos?: string[];
   } | null;
+  initialTab?: ImageTab;
   onPick: (payload: ReplacePayload) => void;
 }) {
   const t = useTranslations("modalsAsset");
@@ -289,11 +317,27 @@ function ImagePicker({
     (activeProfile.logoUrl ||
       (activeProfile.photos && activeProfile.photos.length))
   );
-  const [tab, setTab] = useState<ImageTab>("openlen");
+  // Editing the clicked image in place needs an http(s) source we can fetch
+  // (canvas/bg-removal read its pixels) and a project to upload the result to.
+  const canEditCurrent =
+    !!currentSrc && !!projectId && /^https?:\/\//i.test(currentSrc);
+  // Caller's choice wins, but "edit" only when it's actually available.
+  const resolvedInitial: ImageTab =
+    initialTab && (initialTab !== "edit" || canEditCurrent)
+      ? initialTab
+      : canEditCurrent
+        ? "edit"
+        : "openlen";
+  const [tab, setTab] = useState<ImageTab>(resolvedInitial);
 
   return (
     <div className="flex flex-col">
       <div className="px-4 sm:px-5 pt-2.5 flex gap-1 text-[12.5px] border-b bd shrink-0">
+        {canEditCurrent && (
+          <TabButton active={tab === "edit"} onClick={() => setTab("edit")}>
+            {t("image.tabs.edit")}
+          </TabButton>
+        )}
         <TabButton active={tab === "openlen"} onClick={() => setTab("openlen")}>
           {t("image.tabs.openlen")}
         </TabButton>
@@ -312,6 +356,13 @@ function ImagePicker({
           {t("image.tabs.upload")}
         </TabButton>
       </div>
+      {tab === "edit" && canEditCurrent && (
+        <UploadTab
+          projectId={projectId}
+          initialSrc={currentSrc}
+          onPick={onPick}
+        />
+      )}
       {tab === "openlen" && <OpenLenTab onPick={onPick} />}
       {tab === "profiles" && hasProfileAssets && activeProfile && (
         <BusinessProfilesTab profile={activeProfile} onPick={onPick} />
@@ -994,9 +1045,14 @@ type UploadStatus = "idle" | "selected" | "uploading" | "done" | "error";
 
 function UploadTab({
   projectId,
+  initialSrc,
   onPick,
 }: {
   projectId: string | null;
+  /** When set, the tab opens with this image already loaded for editing
+   *  (crop / remove-bg / AI) instead of an empty dropzone — the in-place
+   *  "edit the image you clicked" flow. */
+  initialSrc?: string | null;
   onPick: (payload: ReplacePayload) => void;
 }) {
   const t = useTranslations("modalsAsset");
@@ -1007,7 +1063,20 @@ function UploadTab({
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [dragOver, setDragOver] = useState(false);
+  const [seeding, setSeeding] = useState(!!initialSrc);
+  const [editing, setEditing] = useState(false);
+  const [bgBusy, setBgBusy] = useState(false);
+  const [bgError, setBgError] = useState<string | null>(null);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const busy = bgBusy || aiBusy;
+
+  // Crop/adjust + background removal only make sense on raster formats — SVG
+  // would rasterize and GIF would lose animation, so they're hidden for those.
+  const canEdit = !!file && /^image\/(png|jpe?g|webp)$/.test(file.type);
 
   useEffect(() => {
     if (!file) {
@@ -1018,6 +1087,31 @@ function UploadTab({
     setPreviewUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [file]);
+
+  // Seed the editor with the clicked image. Reading its bytes needs CORS, which
+  // R2/Unsplash don't send — so fetchAsImageFile tries a direct read first
+  // (same-origin / CORS-enabled hosts) and falls back to the server proxy.
+  useEffect(() => {
+    if (!initialSrc) return;
+    let cancelled = false;
+    setSeeding(true);
+    setError(null);
+    void (async () => {
+      try {
+        const seeded = await fetchAsImageFile(initialSrc, projectId);
+        if (cancelled) return;
+        setFile(seeded);
+        setStatus("selected");
+      } catch {
+        if (!cancelled) setError(t("editor.loadCurrentFailed"));
+      } finally {
+        if (!cancelled) setSeeding(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [initialSrc, projectId, t]);
 
   const acceptFile = useCallback((next: File) => {
     setError(null);
@@ -1095,6 +1189,55 @@ function UploadTab({
     xhr.send(form);
   }, [file, projectId, alt, onPick, t]);
 
+  const handleRemoveBg = useCallback(async () => {
+    if (!file) return;
+    setBgBusy(true);
+    setBgError(null);
+    // Let the busy state paint before the (WASM-fallback) inference, which can
+    // briefly block the main thread on devices without WebGPU.
+    await new Promise((r) =>
+      requestAnimationFrame(() => requestAnimationFrame(r)),
+    );
+    try {
+      const cut = await removeBackground(file);
+      setFile(cut);
+      setStatus("selected");
+      setError(null);
+      setProgress(0);
+    } catch (err) {
+      setBgError(err instanceof Error ? err.message : t("editor.bgFailed"));
+    } finally {
+      setBgBusy(false);
+    }
+  }, [file, t]);
+
+  const handleAiEdit = useCallback(async () => {
+    const instruction = aiPrompt.trim();
+    if (!file || !projectId || !instruction) return;
+    setAiBusy(true);
+    setAiError(null);
+    try {
+      const edited = await aiEditImage(projectId, file, instruction);
+      setFile(edited);
+      setStatus("selected");
+      setError(null);
+      setProgress(0);
+      setAiOpen(false);
+      setAiPrompt("");
+    } catch (err) {
+      const code = err instanceof AiEditError ? err.code : "";
+      setAiError(
+        code === "insufficient_credits"
+          ? t("editor.aiNoCredits")
+          : err instanceof Error && err.message
+            ? err.message
+            : t("editor.aiFailed"),
+      );
+    } finally {
+      setAiBusy(false);
+    }
+  }, [file, projectId, aiPrompt, t]);
+
   if (!projectId) {
     return (
       <div className="px-4 sm:px-5 py-10 text-center text-[12px] fg-faint">
@@ -1134,18 +1277,130 @@ function UploadTab({
           />
           {previewUrl ? (
             <div className="space-y-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={previewUrl}
-                alt={t("upload.previewAlt")}
-                className="mx-auto max-h-36 object-contain rounded"
-              />
+              <div
+                className="mx-auto inline-block rounded overflow-hidden ring-1 ring-[color:var(--border)]"
+                style={CHECKER_STYLE}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={previewUrl}
+                  alt={t("upload.previewAlt")}
+                  className="max-h-36 object-contain block"
+                />
+              </div>
               <div className="text-[11px] fg-muted">
                 {file?.name} · {prettySize(file?.size ?? 0)}
               </div>
-              <div className="text-[10.5px] fg-faint">
-                {t("upload.swapHint")}
-              </div>
+              {canEdit && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditing(true);
+                      }}
+                      className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-[11.5px] font-medium ring-1 ring-[color:var(--border)] bg-app hover:bg-hover fg-muted hover:fg transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Crop size={13} aria-hidden />
+                      {t("editor.open")}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void handleRemoveBg();
+                      }}
+                      className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-[11.5px] font-medium ring-1 ring-[color:var(--border)] bg-app hover:bg-hover fg-muted hover:fg transition disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {bgBusy ? (
+                        <Loader2 size={13} className="animate-spin" aria-hidden />
+                      ) : (
+                        <Scissors size={13} aria-hidden />
+                      )}
+                      {bgBusy ? t("editor.bgWorking") : t("editor.removeBg")}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      aria-expanded={aiOpen}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAiError(null);
+                        setAiOpen((v) => !v);
+                      }}
+                      className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-[11.5px] font-medium ring-1 transition disabled:opacity-40 disabled:cursor-not-allowed ${
+                        aiOpen
+                          ? "ring-[color:var(--accent)] bg-accent-soft text-[color:var(--accent)]"
+                          : "ring-[color:var(--border)] bg-app fg-muted hover:fg hover:bg-hover"
+                      }`}
+                    >
+                      <Sparkles size={13} aria-hidden />
+                      {t("editor.aiEdit")}
+                    </button>
+                  </div>
+
+                  {aiOpen && (
+                    <div
+                      className="flex items-center gap-1.5"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="text"
+                        value={aiPrompt}
+                        onChange={(e) => setAiPrompt(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && aiPrompt.trim() && !aiBusy) {
+                            e.preventDefault();
+                            void handleAiEdit();
+                          }
+                        }}
+                        disabled={aiBusy}
+                        placeholder={t("editor.aiPlaceholder")}
+                        className="flex-1 h-8 px-2.5 rounded-md border bd bg-app text-[12px] fg placeholder:fg-faint focus:outline-none focus:border-[color:var(--accent)] focus:ring-1 focus:ring-[color:var(--accent-ring)]/30 transition disabled:opacity-60"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void handleAiEdit()}
+                        disabled={aiBusy || !aiPrompt.trim()}
+                        className="shrink-0 inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-md text-[12px] font-medium bg-[var(--accent-strong)] text-white hover:brightness-105 shadow-coral transition disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {aiBusy ? (
+                          <Loader2 size={13} className="animate-spin" aria-hidden />
+                        ) : (
+                          <Sparkles size={13} aria-hidden />
+                        )}
+                        {aiBusy ? t("editor.aiWorking") : t("editor.aiApply")}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {busy ? (
+                <div className="text-[10.5px] fg-faint">
+                  {aiBusy ? t("editor.aiHint") : t("editor.bgHint")}
+                </div>
+              ) : bgError ? (
+                <div className="text-[11px] text-red-600 dark:text-red-400">
+                  {bgError}
+                </div>
+              ) : aiError ? (
+                <div className="text-[11px] text-red-600 dark:text-red-400">
+                  {aiError}
+                </div>
+              ) : (
+                <div className="text-[10.5px] fg-faint">
+                  {t("upload.swapHint")}
+                </div>
+              )}
+            </div>
+          ) : seeding ? (
+            <div className="flex flex-col items-center gap-2 py-3">
+              <Loader2 size={18} className="animate-spin fg-faint" aria-hidden />
+              <div className="text-[11px] fg-faint">{t("common.loading")}</div>
             </div>
           ) : (
             <div className="space-y-1">
@@ -1211,6 +1466,21 @@ function UploadTab({
           {status === "uploading" ? t("upload.uploading") : t("upload.uploadApply")}
         </button>
       </div>
+
+      {editing && previewUrl && file && (
+        <ImageEditor
+          src={previewUrl}
+          fileName={file.name}
+          onCancel={() => setEditing(false)}
+          onApply={(edited) => {
+            setFile(edited);
+            setEditing(false);
+            setStatus("selected");
+            setError(null);
+            setProgress(0);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -1219,4 +1489,66 @@ function prettySize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+const EXT_MIME: Record<string, string> = {
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  webp: "image/webp",
+  gif: "image/gif",
+  svg: "image/svg+xml",
+  avif: "image/avif",
+};
+
+// Fallback when the server omits a content-type on the fetched image.
+function guessImageMime(url: string): string {
+  const ext = url.split("?")[0].split(".").pop()?.toLowerCase() ?? "";
+  return EXT_MIME[ext] ?? "";
+}
+
+function fileNameFromUrl(url: string, mime: string): string {
+  try {
+    const base = new URL(url).pathname.split("/").pop() || "image";
+    if (/\.\w+$/.test(base)) return base;
+    const ext = mime.split("/")[1]?.replace("+xml", "") || "png";
+    return `${base}.${ext}`;
+  } catch {
+    return "image";
+  }
+}
+
+function blobToImageFile(blob: Blob, src: string): File {
+  const type = /^image\//.test(blob.type)
+    ? blob.type
+    : guessImageMime(src) || "image/png";
+  return new File([blob], fileNameFromUrl(src, type), { type });
+}
+
+// Load a (possibly cross-origin) image as a File the in-browser editor can
+// read. Direct fetch works for same-origin + CORS-enabled hosts; for the rest
+// (R2, Unsplash) the browser refuses to expose the bytes, so we route through
+// the project's SSRF-guarded server proxy.
+async function fetchAsImageFile(
+  src: string,
+  projectId: string | null,
+): Promise<File> {
+  try {
+    const res = await fetch(src, { mode: "cors" });
+    if (res.ok) {
+      const blob = await res.blob();
+      const looksImage =
+        blob.size > 0 &&
+        (/^image\//.test(blob.type) || (!blob.type && !!guessImageMime(src)));
+      if (looksImage) return blobToImageFile(blob, src);
+    }
+  } catch {
+    // cross-origin read blocked — fall through to the proxy
+  }
+  if (!projectId) throw new Error("no_proxy");
+  const res = await fetch(
+    `/api/projects/${projectId}/proxy-image?url=${encodeURIComponent(src)}`,
+  );
+  if (!res.ok) throw new Error(`proxy_${res.status}`);
+  return blobToImageFile(await res.blob(), src);
 }

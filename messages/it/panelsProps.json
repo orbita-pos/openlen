@@ -22,6 +22,7 @@
     "title": "Stile",
     "textColor": "Colore del testo",
     "background": "Sfondo",
+    "editImage": "Modifica",
     "fillImage": "Riempi con immagine",
     "changeImage": "Cambia immagine",
     "removeImage": "Rimuovi",
