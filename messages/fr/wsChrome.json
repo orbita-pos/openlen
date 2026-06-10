@@ -1,6 +1,10 @@
 {
   "sidebar": {
     "tabs": {
+      "site": {
+        "label": "Site",
+        "title": "Pages du site"
+      },
       "chat": {
         "label": "Chat",
         "title": "Discuter avec Orchestra"
@@ -162,5 +166,20 @@
     "ariaLabel": "Aperçu en direct de {name}",
     "iframeTitle": "Aperçu en direct de {name}",
     "applied": "Appliqué"
+  },
+  "sitePages": {
+    "home": "Accueil",
+    "addPage": "Nouvelle page",
+    "slugPlaceholder": "menu, a-propos, tarifs…",
+    "create": "Créer la page",
+    "creating": "Création…",
+    "cancel": "Annuler",
+    "deleteLabel": "Supprimer /{slug}",
+    "deleteConfirm": "Supprimer la page /{slug} ? Son contenu sera perdu.",
+    "errInvalid": "Lettres, chiffres et tirets uniquement.",
+    "errReserved": "Ce nom est réservé.",
+    "errExists": "Cette page existe déjà.",
+    "errLimit": "Limite de pages atteinte.",
+    "hint": "Les nouvelles pages naissent comme copie de l’Accueil, avec votre look. Reliez-les avec des liens /slug."
   }
 }

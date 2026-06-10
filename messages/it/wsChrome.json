@@ -1,6 +1,10 @@
 {
   "sidebar": {
     "tabs": {
+      "site": {
+        "label": "Sito",
+        "title": "Pagine del sito"
+      },
       "chat": {
         "label": "Chat",
         "title": "Chatta con Orchestra"
@@ -162,5 +166,20 @@
     "ariaLabel": "Anteprima dal vivo di {name}",
     "iframeTitle": "Anteprima dal vivo di {name}",
     "applied": "Applicato"
+  },
+  "sitePages": {
+    "home": "Home",
+    "addPage": "Nuova pagina",
+    "slugPlaceholder": "menu, chi-siamo, prezzi…",
+    "create": "Crea pagina",
+    "creating": "Creazione…",
+    "cancel": "Annulla",
+    "deleteLabel": "Elimina /{slug}",
+    "deleteConfirm": "Eliminare la pagina /{slug}? Il contenuto andrà perso.",
+    "errInvalid": "Solo lettere, numeri e trattini.",
+    "errReserved": "Questo nome è riservato.",
+    "errExists": "Questa pagina esiste già.",
+    "errLimit": "Limite di pagine raggiunto.",
+    "hint": "Le nuove pagine nascono come copia della Home, con il tuo look. Collegale con link /slug."
   }
 }

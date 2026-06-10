@@ -49,6 +49,10 @@ interface ChatPanelProps {
    *  AI design surface — Gemini streaming + per-turn Undo. */
   flatProjectId?: string;
   flatProjectHtml?: string;
+  /** Multi-page: slug of the site page the canvas is editing (null/absent =
+   *  home). Forwarded to ai-design + the undo PATCH so chat edits land in
+   *  the right document slot. */
+  flatProjectPage?: string | null;
   onFlatHtmlUpdate?: (newHtml: string) => void;
   /** Persisted transcript — seeds the chat so a reload / tab switch
    *  restores the conversation. */
@@ -85,6 +89,7 @@ interface ChatPanelProps {
 export function ChatPanel({
   flatProjectId,
   flatProjectHtml,
+  flatProjectPage = null,
   onFlatHtmlUpdate,
   flatProjectChat,
   onChatChange,
@@ -101,6 +106,7 @@ export function ChatPanel({
   if (flatProjectId && onFlatHtmlUpdate) {
     return (
       <AIDesignChat
+        page={flatProjectPage}
         key={flatProjectId}
         projectId={flatProjectId}
         projectHtml={flatProjectHtml ?? ""}
@@ -205,6 +211,7 @@ const FLUSH_INTERVAL_MS = 800;
 const FLUSH_CHAR_BUDGET = 2000;
 
 function AIDesignChat({
+  page = null,
   projectId,
   projectHtml,
   onLocalUpdate,
@@ -221,6 +228,7 @@ function AIDesignChat({
 }: {
   projectId: string;
   projectHtml: string;
+  page?: string | null;
   onLocalUpdate: (newHtml: string) => void;
   initialChat?: StoredChatTurn[];
   onChatChange?: () => void;
@@ -251,6 +259,10 @@ function AIDesignChat({
 
   const projectHtmlRef = useRef(projectHtml);
   projectHtmlRef.current = projectHtml;
+  // Multi-page: the slug chat edits land on. Ref so in-flight sends/undos
+  // read the value at call time.
+  const pageRef = useRef(page);
+  pageRef.current = page;
 
   const turnsRef = useRef<DesignTurn[]>(turns);
   turnsRef.current = turns;
@@ -495,6 +507,7 @@ function AIDesignChat({
             prompt,
             history,
             model,
+            ...(pageRef.current ? { page: pageRef.current } : {}),
             ...(turnScope ? { scope: turnScope } : {}),
             ...(turnImage ? { attachedImage: turnImage } : {}),
           }),
@@ -709,7 +722,10 @@ function AIDesignChat({
         await fetch(`/api/projects/${projectId}/html`, {
           method: "PATCH",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ html: turn.preEditHtml }),
+          body: JSON.stringify({
+            html: turn.preEditHtml,
+            ...(pageRef.current ? { page: pageRef.current } : {}),
+          }),
         });
       } catch {
         /* iframe restored — DB sync failing is soft */

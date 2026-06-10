@@ -1,6 +1,10 @@
 {
   "sidebar": {
     "tabs": {
+      "site": {
+        "label": "사이트",
+        "title": "사이트 페이지"
+      },
       "chat": {
         "label": "채팅",
         "title": "Orchestra와 채팅"
@@ -162,5 +166,20 @@
     "ariaLabel": "{name} 라이브 미리보기",
     "iframeTitle": "{name} 라이브 미리보기",
     "applied": "적용됨"
+  },
+  "sitePages": {
+    "home": "홈",
+    "addPage": "새 페이지",
+    "slugPlaceholder": "menu, about, prices…",
+    "create": "페이지 만들기",
+    "creating": "만드는 중…",
+    "cancel": "취소",
+    "deleteLabel": "/{slug} 삭제",
+    "deleteConfirm": "/{slug} 페이지를 삭제할까요? 내용이 사라집니다.",
+    "errInvalid": "영문, 숫자, 하이픈만 사용할 수 있어요.",
+    "errReserved": "예약된 이름이에요.",
+    "errExists": "이미 있는 페이지예요.",
+    "errLimit": "페이지 한도에 도달했어요.",
+    "hint": "새 페이지는 홈의 복사본으로, 같은 룩을 입고 태어나요. /slug 링크로 연결하세요."
   }
 }

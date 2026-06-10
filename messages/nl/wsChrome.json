@@ -1,6 +1,10 @@
 {
   "sidebar": {
     "tabs": {
+      "site": {
+        "label": "Site",
+        "title": "Pagina’s van de site"
+      },
       "chat": {
         "label": "Chat",
         "title": "Chat met Orchestra"
@@ -162,5 +166,20 @@
     "ariaLabel": "Live voorbeeld van {name}",
     "iframeTitle": "Live voorbeeld van {name}",
     "applied": "Toegepast"
+  },
+  "sitePages": {
+    "home": "Home",
+    "addPage": "Nieuwe pagina",
+    "slugPlaceholder": "menu, over-ons, prijzen…",
+    "create": "Pagina aanmaken",
+    "creating": "Aanmaken…",
+    "cancel": "Annuleren",
+    "deleteLabel": "/{slug} verwijderen",
+    "deleteConfirm": "Pagina /{slug} verwijderen? De inhoud gaat verloren.",
+    "errInvalid": "Alleen letters, cijfers en streepjes.",
+    "errReserved": "Die naam is gereserveerd.",
+    "errExists": "Die pagina bestaat al.",
+    "errLimit": "Paginalimiet bereikt.",
+    "hint": "Nieuwe pagina’s ontstaan als kopie van Home, in jouw look. Verwijs ernaar met /slug-links."
   }
 }

@@ -1,6 +1,10 @@
 {
   "sidebar": {
     "tabs": {
+      "site": {
+        "label": "Website",
+        "title": "Seiten der Website"
+      },
       "chat": {
         "label": "Chat",
         "title": "Mit Orchestra chatten"
@@ -162,5 +166,20 @@
     "ariaLabel": "Live-Vorschau von {name}",
     "iframeTitle": "{name} Live-Vorschau",
     "applied": "Angewendet"
+  },
+  "sitePages": {
+    "home": "Startseite",
+    "addPage": "Neue Seite",
+    "slugPlaceholder": "menu, ueber-uns, preise…",
+    "create": "Seite erstellen",
+    "creating": "Wird erstellt…",
+    "cancel": "Abbrechen",
+    "deleteLabel": "/{slug} löschen",
+    "deleteConfirm": "Seite /{slug} löschen? Ihr Inhalt geht verloren.",
+    "errInvalid": "Nur Buchstaben, Zahlen und Bindestriche.",
+    "errReserved": "Dieser Name ist reserviert.",
+    "errExists": "Diese Seite existiert bereits.",
+    "errLimit": "Seitenlimit erreicht.",
+    "hint": "Neue Seiten entstehen als Kopie der Startseite, in deinem Look. Verlinke sie mit /slug-Links."
   }
 }

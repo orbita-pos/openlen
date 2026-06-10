@@ -151,6 +151,11 @@ export interface PublishParams {
    *  files are copied into the release's assets dir first so the published
    *  page is self-contained. Applied to the root doc AND locale variants. */
   music?: MusicSettings;
+  /** Multi-page: extra site pages, each written as <slug>/index.html inside
+   *  the same release after running the full per-document bake chain. Slugs
+   *  are assumed pre-validated (lib/projects/site-pages). Locale variants
+   *  stay home-only; subpages get their own canonical. */
+  pages?: Array<{ slug: string; html: string }>;
 }
 
 const ASSET_URL_RE_FOR =
@@ -393,6 +398,138 @@ async function migrateUnsplashAssets(params: {
   });
 }
 
+interface BakeDocumentCtx {
+  sub: string;
+  subDir: string;
+  projectId?: string;
+  formConfigs?: Record<string, FormConfig>;
+  analyticsEnabled: boolean;
+  logoUrl?: string | null;
+  motion?: string;
+  /** Already asset-migrated by the caller — bake only. */
+  music?: MusicSettings;
+}
+
+/** The per-document publish bake — every transform between sanitize and the
+ *  language-cluster/seal steps, in the exact order the root document has
+ *  always used. Runs for the home document AND each site page; all asset
+ *  writes are hash-named + idempotent, so repeated runs share the release's
+ *  assets dir. */
+async function bakeDocument(html: string, ctx: BakeDocumentCtx): Promise<string> {
+  const optimized = await optimizeHtmlForProduction(html);
+
+  // Consolidate Unsplash credits BEFORE the asset migrations below. We need
+  // to see the original `images.unsplash.com` URLs to detect anonymous
+  // (paste-URL / template-baked) photos; after migrateUnsplashAssets rewrites
+  // them to `/assets/<sha>.webp`, the Unsplash provenance is lost. Soft-fail
+  // so a parse hiccup never blocks a publish.
+  let migratedHtml = optimized.html;
+  try {
+    migratedHtml = consolidateUnsplashCredits(optimized.html).html;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[publishToDir] credit consolidation failed; using uncredited HTML", err);
+  }
+
+  // Move LocalFs uploads to the subdomain's shared assets dir and rewrite
+  // their URLs so the web tier serves them directly.
+  if (ctx.projectId) {
+    try {
+      migratedHtml = await migrateLocalAssets({
+        html: migratedHtml,
+        projectId: ctx.projectId,
+        subDir: ctx.subDir,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] asset migration failed; using unrewritten HTML", err);
+    }
+  }
+
+  // Responsive-image bake: fan <img> sources out into multi-width local
+  // WebP variants + rewrite to srcset/sizes with intrinsic dimensions,
+  // lazy-loading and an LCP-hero preload (Rust rewrite pass). Soft-fail.
+  if (process.env.OPENLEN_IMAGE_BAKE !== "0") {
+    try {
+      const baked = await bakeResponsiveImages({ html: migratedHtml, subDir: ctx.subDir });
+      migratedHtml = baked.html;
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] image bake failed; publishing without responsive images", err);
+    }
+  }
+
+  // Self-host Google Fonts. Soft-fail.
+  if (process.env.OPENLEN_FONT_BAKE !== "0") {
+    try {
+      const fonts = await bakeGoogleFonts({ html: migratedHtml, subDir: ctx.subDir });
+      migratedHtml = fonts.html;
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] font bake failed; keeping Google Fonts links", err);
+    }
+  }
+
+  // Cache-on-publish for Unsplash hotlinks. Failures fall back to hotlinks.
+  try {
+    migratedHtml = await migrateUnsplashAssets({
+      html: migratedHtml,
+      subDir: ctx.subDir,
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[publishToDir] unsplash migration failed; using hotlinks", err);
+  }
+
+  // Wire <form>s to the OpenLen submit endpoint. Soft-fail.
+  try {
+    migratedHtml = wirePublishedForms(migratedHtml, ctx.sub, ctx.formConfigs);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[publishToDir] form wiring failed; publishing without it", err);
+  }
+
+  // Per-project logo (favicon + fallback og:image). Soft-fail.
+  if (ctx.logoUrl) {
+    try {
+      migratedHtml = injectLogoIntoHtml({
+        html: migratedHtml,
+        logoUrl: ctx.logoUrl,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] logo injection failed; publishing without it", err);
+    }
+  }
+
+  // Analytics tracker snippet — AFTER all other rewrites.
+  if (ctx.projectId && ctx.analyticsEnabled) {
+    migratedHtml = injectAnalyticsSnippet(migratedHtml, ctx.projectId);
+  }
+
+  // Motion Looks. Soft-fail.
+  if (process.env.OPENLEN_MOTION !== "0") {
+    try {
+      migratedHtml = bakeMotion(migratedHtml, ctx.motion);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] motion bake failed; publishing without it", err);
+    }
+  }
+
+  // Page music — the caller already migrated the track/cover assets.
+  if (process.env.OPENLEN_MUSIC !== "0" && ctx.music?.src) {
+    try {
+      migratedHtml = bakeMusic(migratedHtml, ctx.music);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[publishToDir] music bake failed; publishing without it", err);
+    }
+  }
+
+  return migratedHtml;
+}
+
 export interface PublishResult {
   /** First 12 chars of sha256 over every release file. Stable per content. */
   sha: string;
@@ -402,6 +539,8 @@ export interface PublishResult {
   written: boolean;
   /** Locale codes published as /<locale>/index.html variants. */
   locales: string[];
+  /** Site-page slugs published as /<slug>/index.html. */
+  pages: string[];
 }
 
 /**
@@ -438,167 +577,48 @@ export async function publishToDir(
   const releasesDir = safeJoin(subDir, "releases");
   await mkdir(releasesDir, { recursive: true });
 
-  // Optimize for production before computing the SHA so identical post-
-  // optimization output (e.g. user clicks Deploy twice without editing)
-  // dedupes on disk.
-  const optimized = await optimizeHtmlForProduction(publishHtml);
-
-  // Consolidate Unsplash credits BEFORE the asset migrations below. We need
-  // to see the original `images.unsplash.com` URLs to detect anonymous
-  // (paste-URL / template-baked) photos; after migrateUnsplashAssets rewrites
-  // them to `/assets/<sha>.webp`, the Unsplash provenance is lost. Soft-fail
-  // so a parse hiccup never blocks a publish.
-  let creditedHtml = optimized.html;
-  try {
-    creditedHtml = consolidateUnsplashCredits(optimized.html).html;
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn("[publishToDir] credit consolidation failed; using uncredited HTML", err);
-  }
-
-  // Move LocalFs uploads to the subdomain's shared assets dir and rewrite
-  // their URLs so nginx serves them directly. SHA is computed AFTER this
-  // rewrite so a republish with the same assets still dedupes to one
-  // release. S3-backed URLs (absolute, non-`/api/projects/.../assets/`)
-  // pass through untouched.
-  let migratedHtml = creditedHtml;
-  if (params.projectId) {
+  // Music asset migration runs ONCE per publish (idempotent, hash-named
+  // copies into the release's shared assets dir); the per-document bake
+  // then stamps the player into the home doc, locale variants, and every
+  // site page from the same migrated settings. Soft-fail.
+  let effectiveMusic = params.music;
+  if (params.music?.src && params.projectId) {
     try {
-      migratedHtml = await migrateLocalAssets({
-        html: creditedHtml,
-        projectId: params.projectId,
-        subDir,
-      });
+      effectiveMusic = {
+        ...params.music,
+        src: await migrateSingleAsset(params.music.src, params.projectId, subDir),
+        ...(params.music.cover
+          ? {
+              cover: await migrateSingleAsset(
+                params.music.cover,
+                params.projectId,
+                subDir,
+              ),
+            }
+          : {}),
+      };
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.warn("[publishToDir] asset migration failed; using unrewritten HTML", err);
-      migratedHtml = creditedHtml;
+      console.warn("[publishToDir] music asset migration failed; baking original URLs", err);
+      effectiveMusic = params.music;
     }
   }
 
-  // Responsive-image bake: fan <img> sources out into multi-width local
-  // WebP variants + rewrite to srcset/sizes with intrinsic dimensions,
-  // lazy-loading and an LCP-hero preload (Rust rewrite pass). Runs BEFORE
-  // the Unsplash migration so heroes are encoded from the original bytes
-  // (one lossy hop); the legacy step below still localizes the non-<img>
-  // Unsplash refs (CSS url(), og:image) this bake doesn't touch. Soft-fail.
-  if (process.env.OPENLEN_IMAGE_BAKE !== "0") {
-    try {
-      const baked = await bakeResponsiveImages({ html: migratedHtml, subDir });
-      migratedHtml = baked.html;
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[publishToDir] image bake failed; publishing without responsive images", err);
-    }
-  }
-
-  // Self-host Google Fonts: fetch the css2 stylesheet(s) with a modern UA,
-  // download the woff2 files into the shared assets dir, inline the
-  // rewritten CSS and drop the dead preconnects. Kills the last
-  // render-blocking third-party on the published page's critical path
-  // (and the visitor-IP leak to Google). Failed stylesheets keep their
-  // original <link>. Soft-fail.
-  if (process.env.OPENLEN_FONT_BAKE !== "0") {
-    try {
-      const fonts = await bakeGoogleFonts({ html: migratedHtml, subDir });
-      migratedHtml = fonts.html;
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[publishToDir] font bake failed; keeping Google Fonts links", err);
-    }
-  }
-
-  // Cache-on-publish for Unsplash hotlinks — download, optimize, and
-  // serve from the subdomain's assets dir so the published page doesn't
-  // depend on Unsplash being up at every visitor request. Failures fall
-  // back to the original hotlink.
-  try {
-    migratedHtml = await migrateUnsplashAssets({
-      html: migratedHtml,
-      subDir,
-    });
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn("[publishToDir] unsplash migration failed; using hotlinks", err);
-  }
-
-  // Wire <form>s to the OpenLen submit endpoint + inject the inline-submit
-  // script. Done last so the action lands on the final asset-rewritten HTML.
-  // Soft-fail — a parse hiccup must never block a publish.
-  try {
-    migratedHtml = wirePublishedForms(migratedHtml, sub, params.formConfigs);
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn("[publishToDir] form wiring failed; publishing without it", err);
-  }
-
-  // Inject the per-project logo (favicon + fallback og:image) BEFORE the
-  // analytics snippet so the resulting <head> ordering ends with the
-  // tracker, not the brand assets — matches how every other publish-time
-  // injector layers in. Soft-fail.
-  if (params.logoUrl) {
-    try {
-      migratedHtml = injectLogoIntoHtml({
-        html: migratedHtml,
-        logoUrl: params.logoUrl,
-      });
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[publishToDir] logo injection failed; publishing without it", err);
-    }
-  }
-
-  // Inject the analytics tracker snippet (lib/analytics/snippet.ts). Done
-  // AFTER all other HTML rewrites so the snippet position is stable + the
-  // string-literal projectId in the snippet survives any later transforms.
-  // Skipped when: (a) no projectId (apex/dev publishes), or (b) the
-  // project's settings.analyticsDisabled is true (user opt-out).
-  const analyticsEnabled = params.analyticsEnabled ?? true;
-  if (params.projectId && analyticsEnabled) {
-    migratedHtml = injectAnalyticsSnippet(migratedHtml, params.projectId);
-  }
-
-  // Motion Looks: stamp scroll choreography (CSS + runtime) when the project
-  // chose a preset. Done here so locale variants (built from migratedHtml
-  // below) inherit it and the per-doc seal hashes the runtime. Soft-fail.
-  if (process.env.OPENLEN_MOTION !== "0") {
-    try {
-      migratedHtml = bakeMotion(migratedHtml, params.motion);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[publishToDir] motion bake failed; publishing without it", err);
-    }
-  }
-
-  // Page music: bake the floating tap-to-play player when the project has a
-  // track. Same placement rationale as motion (locale variants inherit it,
-  // the seal hashes the runtime). The track/cover URLs only enter the HTML
-  // here — after migrateLocalAssets already ran — so LocalFs-hosted files
-  // get their own single-asset migration into the release. Soft-fail.
-  if (process.env.OPENLEN_MUSIC !== "0" && params.music?.src) {
-    try {
-      let music = params.music;
-      if (params.projectId) {
-        music = {
-          ...music,
-          src: await migrateSingleAsset(music.src, params.projectId, subDir),
-          ...(music.cover
-            ? {
-                cover: await migrateSingleAsset(
-                  music.cover,
-                  params.projectId,
-                  subDir,
-                ),
-              }
-            : {}),
-        };
-      }
-      migratedHtml = bakeMusic(migratedHtml, music);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("[publishToDir] music bake failed; publishing without it", err);
-    }
-  }
+  // The full per-document bake (optimize → assets → images → fonts →
+  // unsplash → forms → logo → analytics → motion → music). SHA is computed
+  // AFTER these rewrites so a republish with identical content still
+  // dedupes to one release.
+  const bakeCtx: BakeDocumentCtx = {
+    sub,
+    subDir,
+    projectId: params.projectId,
+    formConfigs: params.formConfigs,
+    analyticsEnabled: params.analyticsEnabled ?? true,
+    logoUrl: params.logoUrl,
+    motion: params.motion,
+    music: effectiveMusic,
+  };
+  let migratedHtml = await bakeDocument(publishHtml, bakeCtx);
 
   // Speak Every Language: translated locale variants of the final baked
   // page, written as /<locale>/index.html inside the same release. Soft-
@@ -656,13 +676,55 @@ export async function publishToDir(
     }
   }
 
+  // Multi-page: bake each site page through the same chain, stamp its own
+  // canonical, and seal it. A page that carries editor markers fails the
+  // whole publish — half a site must never ship silently.
+  const pageDocs: Array<{ slug: string; html: string }> = [];
+  for (const page of params.pages ?? []) {
+    const pageSanitized = sanitizeForPublish(page.html);
+    if (pageSanitized.html === null) {
+      throw new Error(
+        `publishToDir: refusing to write page /${page.slug} containing data-slot-path`,
+      );
+    }
+    let doc = await bakeDocument(pageSanitized.html, bakeCtx);
+    doc = annotateLanguageCluster(doc, {
+      baseUrl,
+      selfPath: `/${page.slug}/`,
+      cluster: [{ lang: sourceLang, path: `/${page.slug}/` }],
+    });
+    if (process.env.OPENLEN_CSP_SEAL !== "0") {
+      try {
+        doc = sealRelease(doc, submitOrigin()).html;
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn(`[publishToDir] seal failed for page /${page.slug}; publishing unsealed`, err);
+      }
+    }
+    pageDocs.push({ slug: page.slug, html: doc });
+  }
+
+  // Site pages enter the sitemap as plain entries — they are NOT language
+  // alternates of home, so they stay outside the hreflang cluster.
+  let sitemap = buildSitemap(baseUrl, cluster);
+  if (pageDocs.length > 0) {
+    const extra = pageDocs
+      .map((p) => `  <url>\n    <loc>${baseUrl}/${p.slug}/</loc>\n  </url>`)
+      .join("\n");
+    sitemap = sitemap.replace("</urlset>", `${extra}\n</urlset>`);
+  }
+
   const releaseFiles: Array<{ path: string; content: string }> = [
     { path: "index.html", content: migratedHtml },
     ...localeDocs.map((d) => ({
       path: `${d.locale}/index.html`,
       content: d.html,
     })),
-    { path: "sitemap.xml", content: buildSitemap(baseUrl, cluster) },
+    ...pageDocs.map((p) => ({
+      path: `${p.slug}/index.html`,
+      content: p.html,
+    })),
+    { path: "sitemap.xml", content: sitemap },
     { path: "robots.txt", content: buildRobots(baseUrl) },
   ];
 
@@ -728,6 +790,7 @@ export async function publishToDir(
     html: migratedHtml,
     written,
     locales: localeDocs.map((d) => d.locale),
+    pages: pageDocs.map((p) => p.slug),
   };
 }
 
